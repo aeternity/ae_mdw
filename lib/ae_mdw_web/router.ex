@@ -1,26 +1,61 @@
 defmodule AeMdwWeb.Router do
   use AeMdwWeb, :router
 
-  pipeline :browser do
-    plug :accepts, ["html"]
-    plug :fetch_session
-    plug :fetch_flash
-    plug :protect_from_forgery
-    plug :put_secure_browser_headers
-  end
-
   pipeline :api do
+    plug CORSPlug, origin: "*"
     plug :accepts, ["json"]
   end
 
-  scope "/", AeMdwWeb do
-    pipe_through :browser
+  scope "/middleware", AeMdwWeb do
+    pipe_through :api
 
-    get "/", PageController, :index
+    get "/channels/active", ChannelController, :active_channels
+    get "/channels/transactions/address/:address", ChannelController, :txs_for_channel_address
+
+    get "/oracles/list", OracleController, :oracles_all
+    # seems like there not registered oracles in aeternal
+    get "/oracles/:oracle_id", OracleController, :oracle_requests_responses
+
+    get "/contracts/all", ContractController, :all_contracts
+    get "/contracts/transactions/address/:address", ContractController, :txs_for_contract_address
+    get "/contracts/calls/address/:address", ContractController, :calls_for_contract_address
+    post "/contracts/verify", ContractController, :verify_contract
+
+    get "/names", NameController, :all_names
+    get "/names/:name", NameController, :search_names
+    get "/names/active", NameController, :active_names
+    get "/names/auctions/active", NameController, :active_name_auctions
+    get "/names/auctions/active/count", NameController, :active_name_auctions_count
+    get "/names/auctions/bids/account/:account", NameController, :bids_for_account
+    get "/names/auctions/bids/:name", NameController, :bids_for_name
+    get "/names/reverse/:account", NameController, :reverse_names
+    get "/names/auctions/:name/info", NameController, :info_for_auction
+    get "/names/hash/:hash", NameController, :name_for_hash
+
+    get "/transactions/account/:address/count", TransactionController, :txs_count_for_account
+
+    get "/transactions/account/:sender/to/:receiver",
+        TransactionController,
+        :txs_for_account_to_account
+
+    get "/transactions/account/:account", TransactionController, :txs_for_account
+    # there is a problem in aeternal
+    get "/transactions/interval/:from/:to", TransactionController, :txs_for_interval
+    get "/transactions/rate/:from/:to", TransactionController, :tx_rate
+
+    get "/generations/:from/:to", GenerationController, :generations_by_range
+
+    get "/compilers", UtilController, :get_available_compilers
+    get "/height/at/:milliseconds", UtilController, :height_at_epoch
+    get "/reward/height/:height", UtilController, :reward_at_height
+    get "/size/current", UtilController, :current_size
+    get "/size/height/:height", UtilController, :size
+    get "/status", UtilController, :status
+    get "/count/current", UtilController, :current_count
+
+    # get "/count/height/:height", :count
+    # get "/micro-blocks/hash/:hash/transactions/count", :transaction_count_in_micro_block
+    # get "/contracts/transactions/creation/address/:address, :creation_tx_for_contract_address
+    # get "/new/generations/:from/:to, :generations_by_range2
   end
-
-  # Other scopes may use custom stacks.
-  # scope "/api", AeMdwWeb do
-  #   pipe_through :api
-  # end
 end

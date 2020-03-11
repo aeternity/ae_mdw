@@ -1,5 +1,4 @@
 defmodule AeMdw.Db.Setup do
-
   require AeMdw.Db.Model
   alias AeMdw.Db.Model
 
@@ -36,11 +35,17 @@ defmodule AeMdw.Db.Setup do
 
   defp tab_def(table, type, mode) do
     record = Model.record(table)
-    {table, [:aec_db.tab_copies(mode) |
-             [type: type,
-              record_name: record,
-              attributes: Model.fields(record),
-              user_properties: [vsn: 1]]]}
+
+    {table,
+     [
+       :aec_db.tab_copies(mode)
+       | [
+           type: type,
+           record_name: record,
+           attributes: Model.fields(record),
+           user_properties: [vsn: 1]
+         ]
+     ]}
   end
 
   defp check_table({name, definition}, acc),
@@ -56,12 +61,11 @@ defmodule AeMdw.Db.Setup do
     do: missing_tables(mode())
 
   def missing_tables(mode),
-    do: for {:missing_table, name} <- check_tables(), do: tab_def(name, mode)
+    do: for({:missing_table, name} <- check_tables(), do: tab_def(name, mode))
 
   def mode,
     do: :aec_db.backend_mode()
 
   def check_tables(),
     do: tab_defs(mode()) |> Enum.reduce([], &check_table/2)
-
 end

@@ -9,9 +9,7 @@ defmodule AeMdw.Application do
 
   use Application
 
-
   def start(_type, _args) do
-
     init(:meta)
 
     # List all child processes to be supervised
@@ -31,10 +29,13 @@ defmodule AeMdw.Application do
   def init(:meta) do
     tx_types = ok!(AeMdw.Extract.tx_types())
     Model.set_meta(:tx_types, tx_types)
+
     for {type, mod} <- ok!(AeMdw.Extract.tx_map()),
-      do: Model.set_meta({:tx_mod, type}, mod)
+        do: Model.set_meta({:tx_mod, type}, mod)
+
     for type <- tx_types,
-      do: Model.set_meta({:tx_obj, type}, ok!(AeMdw.Extract.tx_getters(type)))
+        do: Model.set_meta({:tx_obj, type}, ok!(AeMdw.Extract.tx_getters(type)))
+
     :ok
   end
 
