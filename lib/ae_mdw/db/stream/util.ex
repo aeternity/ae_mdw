@@ -1,8 +1,21 @@
 defmodule AeMdw.Db.Stream.Util do
   import AeMdw.{Sigil, Util}
 
+  def read(txi),
+    do: :mnesia.async_dirty(fn -> :mnesia.read(~t[tx], txi) end)
+
   def read_one!(txi),
-    do: :mnesia.async_dirty(fn -> :mnesia.read(~t[tx], txi) end) |> one!
+    do: read(txi) |> one!
+
+  def prev(tab, key) do
+    fn -> :mnesia.prev(tab, key) end
+    |> :mnesia.async_dirty
+  end
+
+  def last(tab) do
+    fn -> :mnesia.last(tab) end
+    |> :mnesia.async_dirty
+  end
 
   def select(tab, match_spec) do
     fn -> :mnesia.select(tab, match_spec, :read) end
