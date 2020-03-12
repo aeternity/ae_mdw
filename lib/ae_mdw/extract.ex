@@ -26,6 +26,27 @@ defmodule AeMdw.Extract do
         do: {:ok, rec_fields}
     end
 
+    def field_name_type({:typed_record_field, {:record_field, _, {:atom, _, name}}, type}),
+      do: {name, type}
+    def field_name_type({:typed_record_field, {:record_field, _, {:atom, _, name}, _}, type}),
+      do: {name, type}
+
+    def aeser_id_type?(abs_code) do
+      case abs_code do
+        {:remote_type, _, [{:atom, _, :aeser_id}, {:atom, _, :id}, []]} -> true
+        _ -> false
+      end
+    end
+
+    def list_of_aeser_id_type?(abs_code) do
+      case abs_code do
+        {:type, _, :list,
+          [{:remote_type, _, [{:atom, _, :aeser_id}, {:atom, _, :id}, []]}]} -> true
+        _ ->
+          false
+      end
+    end
+
   end
 
 
@@ -61,26 +82,22 @@ defmodule AeMdw.Extract do
   defp tx_record(tx_type),           do: tx_type
 
 
-  def tx_getters(:channel_client_reconnect_tx), do: {:ok, %{}}
-  def tx_getters(tx_type) do
-    with {:ok, mod_name} <- AeMdw.Db.Model.get_meta({:tx_mod, tx_type}),
-         {:ok, mod_code} <- AbsCode.module(mod_name),
-         {:ok, rec_code} <- AbsCode.record_fields(mod_code, tx_record(tx_type)),
-      do: {:ok,
-           rec_code
-           |> Stream.with_index(1)
-           |> Stream.map(fn {ast, i} -> {tx_id_field(ast), i} end)
-           |> Stream.reject(fn {field, _} -> is_nil(field) end)
-           |> Enum.into(%{})}
+  def tx_record_info(:channel_client_reconnect_tx),
+    do: {:ok, [], %{}}
+  def tx_record_info(tx_type) do
+    mod_name = AeMdw.Node.tx_mod(tx_type)
+    mod_code = AbsCode.module(mod_name) |> ok!
+    rec_code = AbsCode.record_fields(mod_code, tx_record(tx_type)) |> ok!
+    {rev_names, ids} =
+      rec_code
+      |> Stream.with_index(1)
+      |> Enum.reduce({[], %{}},
+           fn {ast, i}, {names, ids} ->
+             {name, type} = AbsCode.field_name_type(ast)
+             id? = AbsCode.aeser_id_type?(type) || AbsCode.list_of_aeser_id_type?(type)
+             {[name | names], id? && put_in(ids[name], i) || ids}
+           end)
+    {:ok, Enum.reverse(rev_names), ids}
   end
-
-  defp tx_id_field({:typed_record_field, {:record_field, _, {:atom, _, field}},
-                     {:remote_type, _, [{:atom, _, :aeser_id}, {:atom, _, :id}, []]}}),
-    do: field
-  defp tx_id_field({:typed_record_field, {:record_field, _, {:atom, _, field}},
-                     {:type, _, :list,
-                      [{:remote_type, _, [{:atom, _, :aeser_id}, {:atom, _, :id}, []]}]}}),
-    do: field
-  defp tx_id_field(_), do: nil
 
 end

@@ -15,5 +15,6 @@
   "plug_crypto": {:hex, :plug_crypto, "1.1.0", "854843d59062bf104ffe48fd92ad25a26fa3cc47558a13dd14c3025dc987542e", [:mix], [], "hexpm"},
   "ranch": {:hex, :ranch, "1.7.1", "6b1fab51b49196860b733a49c07604465a47bdb78aa10c1c16a3d199f7f8c881", [:rebar3], [], "hexpm"},
   "setup": {:hex, :setup, "2.0.2", "1203f4cda11306c2e34434244576ded0a7bbfb0908d9a572356c809bd0cdf085", [:rebar3], [], "hexpm"},
+  "stream_split": {:hex, :stream_split, "0.1.3", "dbeacc063d426f2d212d1ad4c43cbaaf229fa773ff786e6f2486615665c3956a", [:mix], [], "hexpm"},
   "telemetry": {:hex, :telemetry, "0.4.1", "ae2718484892448a24470e6aa341bc847c3277bfb8d4e9289f7474d752c09c7f", [:rebar3], [], "hexpm"},
 }
