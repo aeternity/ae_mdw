@@ -32,8 +32,8 @@ defmodule AeMdw.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      # for now
       {:ae_plugin, path: "~/Desktop/ae_plugin"},
+      {:stream_split, "~> 0.1.0"},
       {:ex2ms, "~> 1.6.0"},
       {:phoenix, "~> 1.4.13"},
       {:phoenix_pubsub, "~> 1.1"},

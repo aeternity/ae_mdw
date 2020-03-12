@@ -11,6 +11,9 @@ defmodule AeMdw.Db.Sync.History do
 
   @rev_tx_index_freq 50
 
+  def rev_tx_index_freq(),
+    do: @rev_tx_index_freq
+
   def reset(),
     do: for(t <- Model.tables() -- [~t[meta], ~t[block]], do: {t, :mnesia.clear_table(t)})
 
@@ -31,7 +34,7 @@ defmodule AeMdw.Db.Sync.History do
   end
 
   def sync_block(height, {tx_index, rev_cache}) do
-    {:ok, kb_header, mb_headers} = fetch_headers(height)
+    {:ok, _kb_header, mb_headers} = fetch_headers(height)
 
     {:atomic, {{last_tx_index, _mb_index}, last_rev_cache}} =
       :mnesia.transaction(fn ->
@@ -67,7 +70,7 @@ defmodule AeMdw.Db.Sync.History do
       |> :aetx.specialize_callback()
 
     hash = :aetx_sign.hash(signed_tx)
-    size = byte_size(:aetx_sign.serialize_to_binary(signed_tx))
+    # size = byte_size(:aetx_sign.serialize_to_binary(signed_tx))
     type = mod.type()
 
     ~t[tx]
@@ -85,16 +88,16 @@ defmodule AeMdw.Db.Sync.History do
       elem(tx, pos)
       |> List.wrap()
       |> Enum.map(fn aeser_id ->
-        id = :aeser_id.specialize(aeser_id)
-        obj = Model.index(:object, tx_index, %{type: type, object: {id, field}})
+        {id_tag, object_pk} = id = :aeser_id.specialize(aeser_id)
+        obj = Model.index(:object, tx_index, %{type: type, object: id, role: field})
         write(object_tab, obj)
         # returns rev_cache entry
-        {{:object, type, id, field}, tx_index}
+        {{:object, type, object_pk, id_tag, field}, tx_index}
       end)
     end
 
     next_rev_cache =
-      Model.get_meta!({:tx_obj, type})
+      AeMdw.Node.tx_ids(type)
       |> Stream.map(write_obj)
       |> Stream.flat_map(& &1)
       |> Enum.reduce(
@@ -115,9 +118,15 @@ defmodule AeMdw.Db.Sync.History do
           rev_type_tab
           |> write(Model.index(:rev_type, tx_index, %{type: type}))
 
-        {:object, type, id, role} ->
+        {:object, type, object_pk, id_tag, role} ->
           rev_object_tab
-          |> write(Model.index(:rev_object, tx_index, %{type: type, object: {id, role}}))
+          |> write(
+            Model.index(:rev_object, tx_index, %{
+              type: type,
+              object: {id_tag, object_pk},
+              role: role
+            })
+          )
       end
     end
 
