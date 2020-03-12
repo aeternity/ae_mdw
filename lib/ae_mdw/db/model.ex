@@ -3,7 +3,7 @@ defmodule AeMdw.Db.Model do
   require Record
   require Ex2ms
 
-  import Record, only: [defrecord: 2, is_record: 2]
+  import Record, only: [defrecord: 2]
   import AeMdw.{Util, Sigil}
 
   # txs table :
@@ -134,5 +134,43 @@ defmodule AeMdw.Db.Model do
   def defaults(:rev_object), do: @rev_object_defaults
   def defaults(:event),      do: @event_defaults
   def defaults(:meta),       do: @meta_defaults
+
+
+
+  def to_map({:tx, tx_index, tx_hash, {kb_index, mb_index}}) do
+    {:aec_signed_tx, _, db_stx} = one!(:mnesia.dirty_read(:aec_signed_tx, tx_hash))
+    {tx_type, tx_rec} =
+      db_stx
+      |> :aetx_sign.from_db_format
+      |> :aetx_sign.tx
+      |> :aetx.specialize_type
+    tx_map = AeMdw.Node.tx_to_map(tx_type, tx_rec)
+    %{tx_hash: tx_hash,
+      tx_index: tx_index,
+      tx_type: tx_type,
+      height: kb_index,
+      mb_index: mb_index,
+      tx: tx_map}
+  end
+
+
+
+  # def pubkey_tx_types() do
+  #   :mnesia.async_dirty(
+  #     fn ->
+  #       :mnesia.foldl(
+  #         fn {:object, {tx_type, pk, _}, _, _}, acc ->
+  #           f = fn nil -> :gb_sets.from_list([tx_type])
+  #                  set -> :gb_sets.add(tx_type, set)
+  #               end
+  #           update_in(acc[pk], f)
+  #         end,
+  #         %{},
+  #         ~t[object]
+  #       )
+  #     end
+  #   )
+  # end
+
 
 end
