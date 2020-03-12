@@ -34,13 +34,17 @@ defmodule AeMdw.Db.Model do
   defrecord :rev_type, @rev_type_defaults
 
   # txs objects     :
-  #     index = {tx_type, object_id, tx_index, role}, unused = nil
-  @object_defaults [index: {nil, {nil, nil}, -1, nil}, unused: nil]
+  #     index = {tx_type, object_pubkey, tx_index}, id_tag = id_tag, role = role
+  @object_defaults [index: {nil, nil, -1}, id_tag: nil, role: nil]
   defrecord :object, @object_defaults
 
-  # index = {tx_type, object_id, role, -tx_index}
-  @rev_object_defaults [index: {nil, {nil, nil}, -1, nil}, unused: nil]
+  # index = {tx_type, object_pubkey, -tx_index}, id_tag = id_tag, role = role
+  @rev_object_defaults [index: {nil, nil, -1}, id_tag: nil, role: nil]
   defrecord :rev_object, @rev_object_defaults
+
+
+
+
 
   # TODO:
   # contract events :
@@ -59,10 +63,10 @@ defmodule AeMdw.Db.Model do
     do: type([index: {tx_type, tx_index}])
   def index(:rev_type, tx_index, %{type: tx_type}),
     do: rev_type([index: {tx_type, -tx_index}])
-  def index(:object, tx_index, %{type: tx_type, object: {object_id, role}}),
-    do: object([index: {tx_type, object_id, tx_index, role}])
-  def index(:rev_object, tx_index, %{type: tx_type, object: {object_id, role}}),
-    do: rev_object([index: {tx_type, object_id, -tx_index, role}])
+  def index(:object, tx_index, %{type: tx_type, object: {id_tag, object_pubkey}, role: role}),
+    do: object([index: {tx_type, object_pubkey, tx_index}, id_tag: id_tag, role: role])
+  def index(:rev_object, tx_index, %{type: tx_type, object: {id_tag, object_pk}, role: role}),
+    do: rev_object([index: {tx_type, object_pk, -tx_index}, id_tag: id_tag, role: role])
 
 
 
