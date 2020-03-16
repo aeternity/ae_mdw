@@ -1,6 +1,10 @@
 defmodule AeMdwWeb.ChannelController do
   use AeMdwWeb, :controller
 
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.Stream, as: DBS
+  require Model
+
   # Hardcoded DB only for testing purpose
   @active_channels [
     "ch_2tceSwiqxgBcPirX3VYgW3sXgQdJeHjrNWHhLWyfZL7pT4gZF4",
@@ -16,7 +20,7 @@ defmodule AeMdwWeb.ChannelController do
       %{
         "block_height" => 9155,
         "block_hash" => "mh_2C1TrRnqvc8tAyeRpj6YWeuZHCgST1p5uackmJJ5VdyP3rrGMT",
-        "hash" => "th_2kXfesqmRusaiN8CzhjizXztC41TbdMb8EqvKMKJWTnCcfwvrY",
+        "hash" => "th_2fp28uzrnS2kiGddAHpTnkVJ4MtRapoJzEJbCojDznvTwvNdo8",
         "signatures" => [
           "sg_ADWpdrNBXGX9f245Pu8RLDQ5AeRQCiw8UyUrQKoFMkvgUSULNuZPAAo1tvfhyusRgHKtW5Q92hzoqj1MZcVH4ub7dswJy",
           "sg_LRsP3UzUnUb4TtXqPDmUmQsb2aB1GUV8g3JMF4mWpfcChtBuyGtbzFpJfTYkKpvMEpc6AMJM156bCr24BNtUk75NNGJLK"

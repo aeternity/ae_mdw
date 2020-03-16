@@ -9,12 +9,12 @@ defmodule AeMdw.Db.Stream.Util do
 
   def prev(tab, key) do
     fn -> :mnesia.prev(tab, key) end
-    |> :mnesia.async_dirty
+    |> :mnesia.async_dirty()
   end
 
   def last(tab) do
     fn -> :mnesia.last(tab) end
-    |> :mnesia.async_dirty
+    |> :mnesia.async_dirty()
   end
 
   def select(tab, match_spec) do

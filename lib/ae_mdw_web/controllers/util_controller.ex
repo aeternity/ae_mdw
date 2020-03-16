@@ -39,6 +39,8 @@ defmodule AeMdwWeb.UtilController do
     ]
   }
 
+  @height %{"height" => 226_189}
+
   def get_available_compilers(conn, _params) do
     json(conn, @compilers)
   end

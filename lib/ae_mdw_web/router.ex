@@ -39,7 +39,6 @@ defmodule AeMdwWeb.Router do
         :txs_for_account_to_account
 
     get "/transactions/account/:account", TransactionController, :txs_for_account
-    # there is a problem in aeternal
     get "/transactions/interval/:from/:to", TransactionController, :txs_for_interval
     get "/transactions/rate/:from/:to", TransactionController, :tx_rate
 
@@ -57,5 +56,27 @@ defmodule AeMdwWeb.Router do
     # get "/micro-blocks/hash/:hash/transactions/count", :transaction_count_in_micro_block
     # get "/contracts/transactions/creation/address/:address, :creation_tx_for_contract_address
     # get "/new/generations/:from/:to, :generations_by_range2
+  end
+
+  scope "/v2", AeMdwWeb do
+    pipe_through :api
+
+    get "/transactions/:hash", AeNodeController, :tx_by_hash
+    get "/generations/current", AeNodeController, :current_generations
+    get "/generations/height/:height", AeNodeController, :generation_by_height
+    get "/key-blocks/current/height", AeNodeController, :current_key_block_height
+    get "/key-blocks/hash/:hash", AeNodeController, :key_block_by_hash
+    get "/key-blocks/height/:height", AeNodeController, :key_block_by_height
+    get "/micro-blocks/hash/:hash/header", AeNodeController, :micro_block_header_by_hash
+
+    get "/micro-blocks/hash/:hash/transactions",
+        AeNodeController,
+        :micro_block_transactions_by_hash
+
+    get "/micro-blocks/hash/:hash/transactions/count",
+        AeNodeController,
+        :micro_block_transactions_count_by_hash
+
+    get "/accounts/:account", AeNodeController, :get_account_details
   end
 end
