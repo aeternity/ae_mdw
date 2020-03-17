@@ -46,8 +46,6 @@ defmodule AeMdw.Db.Model do
 
 
 
-
-
   # TODO:
   # contract events :
   #     index = {ct_address, event_name, tx_index, ct_address_log_local_id (0..)}, event = event
@@ -158,19 +156,22 @@ defmodule AeMdw.Db.Model do
       AeMdw.Node.tx_ids(tx_type)
       |> Enum.reduce(AeMdw.Node.tx_to_map(tx_type, tx_rec),
            fn {id_key, _}, acc ->
-             update_in(acc[id_key], &AeserEnc.encode(:id_hash, &1))
+             update_in(acc[id_key], &encode_id/1)
            end)
     %{block_hash: AeserEnc.encode(:micro_block_hash, block_hash),
       tx_hash: AeserEnc.encode(:tx_hash, tx_hash),
       tx_type: tx_type,
-      user_tx_type: AeMdwWeb.Util.to_user_tx_type(tx_type),
       tx_index: tx_index,
       tx_signatures: tx_signatures,
       height: kb_index,
       mb_index: mb_index,
-      tx: tx_map}
+      tx: put_in(tx_map[:type], AeMdwWeb.Util.to_user_tx_type(tx_type))}
   end
 
+  def encode_id(xs) when is_list(xs),
+    do: xs |> Enum.map(&AeserEnc.encode(:id_hash, &1))
+  def encode_id({:id, _, _} = x),
+    do: AeserEnc.encode(:id_hash, x)
 
 
   # def pubkey_tx_types() do
