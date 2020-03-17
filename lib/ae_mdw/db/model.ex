@@ -5,6 +5,8 @@ defmodule AeMdw.Db.Model do
   import Record, only: [defrecord: 2]
   import AeMdw.{Util, Sigil}
 
+  alias :aeser_api_encoder, as: AeserEnc
+
   # txs table :
   #     index = tx_index (0..), id = tx_id
   @tx_defaults [index: -1, id: <<>>, block_index: {-1, -1}]
@@ -144,19 +146,31 @@ defmodule AeMdw.Db.Model do
 
   def to_map({:tx, tx_index, tx_hash, {kb_index, mb_index}}) do
     {:aec_signed_tx, _, db_stx} = one!(:mnesia.dirty_read(:aec_signed_tx, tx_hash))
-
+    signed_tx = :aetx_sign.from_db_format(db_stx)
     {tx_type, tx_rec} =
-      db_stx
-      |> :aetx_sign.from_db_format()
-      |> :aetx_sign.tx()
-      |> :aetx.specialize_type()
-
-    tx_map = AeMdw.Node.tx_to_map(tx_type, tx_rec)
-
-    %{
-      tx_hash: tx_hash,
-      tx_index: tx_index,
+      signed_tx
+      |> :aetx_sign.tx
+      |> :aetx.specialize_type
+    block_hash =
+      :mnesia.dirty_read(~t[block], {kb_index, mb_index})
+      |> one!
+      |> block(:hash)
+    tx_signatures =
+      signed_tx
+      |> :aetx_sign.signatures
+      |> Enum.map(&AeserEnc.encode(:signature, &1))
+    tx_map =
+      AeMdw.Node.tx_ids(tx_type)
+      |> Enum.reduce(AeMdw.Node.tx_to_map(tx_type, tx_rec),
+           fn {id_key, _}, acc ->
+             update_in(acc[id_key], &AeserEnc.encode(:id_hash, &1))
+           end)
+    %{block_hash: AeserEnc.encode(:micro_block_hash, block_hash),
+      tx_hash: AeserEnc.encode(:tx_hash, tx_hash),
       tx_type: tx_type,
+      user_tx_type: AeMdwWeb.Util.to_user_tx_type(tx_type),
+      tx_index: tx_index,
+      tx_signatures: tx_signatures,
       height: kb_index,
       mb_index: mb_index,
       tx: tx_map
