@@ -174,11 +174,11 @@ defmodule AeMdw.Db.Model do
 
     %{
       block_hash: AeserEnc.encode(:micro_block_hash, block_hash),
-      tx_hash: AeserEnc.encode(:tx_hash, tx_hash),
+      hash: AeserEnc.encode(:tx_hash, tx_hash),
       tx_type: tx_type,
       tx_index: tx_index,
-      tx_signatures: tx_signatures,
-      height: kb_index,
+      signatures: tx_signatures,
+      block_height: kb_index,
       mb_index: mb_index,
       tx: put_in(tx_map[:type], AeMdwWeb.Util.to_user_tx_type(tx_type))
     }

@@ -4,6 +4,7 @@ defmodule AeMdwWeb.TransactionController do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Db.Stream.Tx, as: DBSTx
+  alias AeMdwWeb.Util
   require Model
 
   # Hardcoded DB only for testing purpose
@@ -141,11 +142,116 @@ defmodule AeMdwWeb.TransactionController do
     json(conn, @txs_for_account)
   end
 
-  def txs_for_interval(conn, _params) do
-    json(conn, @txs_for_interval)
-  end
-
   def tx_rate(conn, _params) do
     json(conn, @tx_rate)
+  end
+
+  # TODO! Work for: :spend_tx, :name_preclaim_tx, :name_claim_tx, :name_transfer_tx, :name_revoke_tx
+  # TODO! Currently there is problem with :name_transfer_tx and :name_revoke_tx, because of StreamSplit bug
+  # TODO!!! check for :name_claim_tx - field name_fee: :prelima
+  # Model.to_map is NOT working for:
+  # 1. :name_update_tx -
+  #                tx: %{
+  #                  account_id: "ak_2WZoa13VKHCamt2zL9Wid8ovmyvTEUzqBjDNGDNwuqwUQJZG4t",
+  #                  client_ttl: 36000,
+  #                  fee: 20000,
+  #                  name_id: "nm_6BcWWon9qDfFxyeoqCVzKnfqMnjSxerKBhfkUhSMf3LRAg2gJ",
+  #                  name_ttl: 36000,
+  #                  nonce: 363,
+  #                  pointers: [                            !!! is not in right format !!!
+  #                    {:pointer, "account_pubkey",
+  #                     {:id, :account,
+  #                      <<198, 212, 13, 163, 124, 167, 118, 43, 66, 61, 54, 12, 73, 234, 122,
+  #                        234, 91, 231, 186, 128, ...>>}}
+  #                  ],
+  #                  ttl: 16700,
+  #                  type: "NameUpdateTx"
+  #                }
+  # 2. :oracle_register_tx -
+  #              tx: %{
+  #                abi_version: 1,
+  #                account_id: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
+  #                fee: 30000,
+  #                nonce: 18524,
+  #                oracle_ttl: {:delta, 1800},       !!! is not in right format !!!
+  #                query_fee: 500000,
+  #                query_format: "string",
+  #                response_format: "string",
+  #                ttl: 50000,
+  #                type: "OracleRegisterTx"
+  #              }
+  # 3. :oracle_query_tx -
+  #             tx: %{
+  #               fee: 600000000000000,
+  #               nonce: 19060,
+  #               oracle_id: "ok_28QDg7fkF5qiKueSdUvUBtCYPJdmMEoS73CztzXCRAwMGKHKZh",
+  #               query: "ae_usdt",
+  #               query_fee: 600000,
+  #               query_ttl: {:delta, 100},     !!! is not in right format !!!
+  #               response_ttl: {:delta, 3},    !!! is not in right format !!!
+  #               sender_id: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
+  #               ttl: 44336,
+  #               type: "OracleQueryTx"
+  #             }
+  # 4. :oracle_response_tx -
+  #               tx: %{
+  #                 fee: 30000000000000,
+  #                 nonce: 622,
+  #                 oracle_id: "ok_28QDg7fkF5qiKueSdUvUBtCYPJdmMEoS73CztzXCRAwMGKHKZh",
+  #                 query_id: <<241, 234, 224, 240, 75, 139, 168, 243, 136, 208, 38, 228, 62,
+  #                   8, 28, 206, 249, 208, 95, 90, 89, 41, 122, 88, 152, 134, 58, 100, 7, 81,
+  #                   86, 202>>,
+  #                 response: "eyJsYXN0IjoiMC40MTc1IiwicmVzdWx0IjoidHJ1ZSIsImxvdzI0aHIiOiIwLjQwMjQiLCJoaWdoMjRociI6IjAuNDQ4NSIsImxvd2VzdEFzayI6IjAuNDE3NCIsImJhc2VWb2x1bWUiOiIxMjk4MTE3LjQ5MjU0Mjk1IiwiaGlnaGVzdEJpZCI6IjAuNDE0MyIsInF1b3RlVm9sdW1lIjoiMzA2ODM0Ny4yODM0NDY0MSIsInBlcmNlbnRDaGFuZ2UiOiItNi40MyIsInRpbWVzdGFtcCI6IjE1NTE3MDg4NTgiLCJkYXRhc291cmNlIjoiZ2F0ZS5pbyJ9",
+  #                 response_ttl: {:delta, 3},    !!! is not in right format !!!
+  #                 ttl: 46498,
+  #                 type: "OracleResponseTx"
+  #               },
+  #               tx_index: 1223111,
+  #               tx_type: :oracle_response_tx
+  #             }
+  # 5. :name_update_tx -
+  #            tx: %{
+  #              account_id: "ak_2TJ5XkWq7UXVvaJNHertv59pPGzvXRX1J7nc1Zh1Q2SFsY6fwr",
+  #              client_ttl: 36000,
+  #              fee: 20000000000000,
+  #              name_id: "nm_oMp9D2dtfj9h6EQezeKPHQhev1AE23fH3Ye6vz9j8cP4bQWCx",
+  #              name_ttl: 50000,
+  #              nonce: 3634,
+  #              pointers: [           !!! is not in right format !!!
+  #                {:pointer, "account_pubkey",
+  #                 {:id, :account,
+  #                  <<53, 55, 180, 211, 41, 147, 10, 247, 24, 35, 151, 47, 125, 174, 118,
+  #                    243, 155, 15, 227, 96, ...>>}}
+  #              ],
+  #              ttl: 60000,
+  #              type: "NameUpdateTx"
+  #            }
+  def txs_for_interval(conn, %{"limit" => limit, "page" => page, "txtype" => type}) do
+    type = AeMdwWeb.Util.to_tx_type(type)
+    json(conn, %{"transactions" => get_txs(limit, page, type)})
+  end
+
+  def txs_for_interval(conn, %{"limit" => limit, "page" => page}) do
+    json(conn, %{"transactions" => get_txs(limit, page)})
+  end
+
+  defp get_txs(limit, page) do
+    limit = String.to_integer(limit)
+    page = String.to_integer(page)
+
+    limit
+    |> Util.pagination(page, [], DBSTx.rev_tx())
+    |> List.first()
+    |> Enum.map(&Model.to_map/1)
+  end
+
+  defp get_txs(limit, page, type) do
+    limit = String.to_integer(limit)
+    page = String.to_integer(page)
+
+    limit
+    |> Util.pagination(page, [], DBS.Type.rev_tx(type))
+    |> List.first()
+    |> Enum.map(&Model.to_map/1)
   end
 end
