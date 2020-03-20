@@ -32,14 +32,17 @@ defmodule AeMdwWeb.Router do
     get "/names/auctions/:name/info", NameController, :info_for_auction
     get "/names/hash/:hash", NameController, :name_for_hash
 
+    # Not need for the frontend
     get "/transactions/account/:address/count", TransactionController, :txs_count_for_account
 
     get "/transactions/account/:sender/to/:receiver",
         TransactionController,
+        # Not need for the frontend
         :txs_for_account_to_account
 
     get "/transactions/account/:account", TransactionController, :txs_for_account
     get "/transactions/interval/:from/:to", TransactionController, :txs_for_interval
+    # Not need for the frontend
     get "/transactions/rate/:from/:to", TransactionController, :tx_rate
 
     get "/generations/:from/:to", GenerationController, :generations_by_range

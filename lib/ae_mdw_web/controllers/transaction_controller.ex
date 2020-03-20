@@ -8,51 +8,6 @@ defmodule AeMdwWeb.TransactionController do
   require Model
 
   # Hardcoded DB only for testing purpose
-  @txs_count_for_account %{
-    "count" => 5
-  }
-
-  @txs_for_account [
-    %{
-      "block_hash" => "mh_z6gWrigkBuH6c6jRF2b9spaX4gABbD9Ygv3W3KXmbwyzmRyg9",
-      "block_height" => 218_464,
-      "hash" => "th_2pfaFwvkky264xH5F7co2RLk4rdf5myUd3JDWS7ipB7xeqpFAF",
-      "signatures" => [
-        "sg_YecgqoepEVvVbZxAE6a9vgZh8qFCAE6WgfGhJ4BwnN8m1t3MPtmcYB2zQ3Z2qRYcMFoHJqLEENp9LrQPhmbfS6UuCcLqM"
-      ],
-      "time" => 1_582_811_950_673,
-      "tx" => %{
-        "amount" => 2.0322363e+21,
-        "fee" => 16_840_000_000_000,
-        "nonce" => 69,
-        "payload" => "ba_Xfbg4g==",
-        "recipient_id" => "ak_S5JTasvPZsbYWbEUFNsme8vz5tqkdhtGx3m7yJC7Dpqi4rS2A",
-        "sender_id" => "ak_2krkF8Sfg9qEFQTLEaa8XkqwaY4rzYjFGsqbf5ptxabFoj5awH",
-        "type" => "SpendTx",
-        "version" => 1
-      }
-    },
-    %{
-      "block_hash" => "mh_z6gWrigkBuH6c6jRF2b9spaX4gABbD9Ygv3W3KXmbwyzmRyg9",
-      "block_height" => 218_464,
-      "hash" => "th_2pfaFwvkky264xH5F7co2RLk4rdf5myUd3JDWS7ipB7xeqpFAF",
-      "signatures" => [
-        "sg_YecgqoepEVvVbZxAE6a9vgZh8qFCAE6WgfGhJ4BwnN8m1t3MPtmcYB2zQ3Z2qRYcMFoHJqLEENp9LrQPhmbfS6UuCcLqM"
-      ],
-      "time" => 1_582_811_950_673,
-      "tx" => %{
-        "amount" => 2.0322363e+21,
-        "fee" => 16_840_000_000_000,
-        "nonce" => 69,
-        "payload" => "ba_Xfbg4g==",
-        "recipient_id" => "ak_S5JTasvPZsbYWbEUFNsme8vz5tqkdhtGx3m7yJC7Dpqi4rS2A",
-        "sender_id" => "ak_2krkF8Sfg9qEFQTLEaa8XkqwaY4rzYjFGsqbf5ptxabFoj5awH",
-        "type" => "SpendTx",
-        "version" => 1
-      }
-    }
-  ]
-
   @txs_for_account_to_account %{
     "transactions" => [
       %{
@@ -84,24 +39,61 @@ defmodule AeMdwWeb.TransactionController do
     }
   ]
 
-  def txs_count_for_account(conn, _params) do
-    json(conn, @txs_count_for_account)
-  end
-
   def txs_for_account_to_account(conn, _params) do
     json(conn, @txs_for_account_to_account)
-  end
-
-  def txs_for_account(conn, _params) do
-    json(conn, @txs_for_account)
   end
 
   def tx_rate(conn, _params) do
     json(conn, @tx_rate)
   end
 
+  def txs_count_for_account(conn, %{"address" => account}) do
+    case :aeser_api_encoder.safe_decode(:account_pubkey, account) do
+      {:ok, pk} ->
+        count =
+          pk
+          |> DBS.Object.rev_tx()
+          |> Stream.map(&Model.to_map/1)
+          |> Enum.count()
+
+        json(conn, %{"count" => count})
+
+      {:error, _} ->
+        conn |> put_status(:bad_request) |> json(%{"reason" => "Invalid public key"})
+    end
+
+    json(conn, @txs_count_for_account)
+  end
+
+  def txs_for_account(conn, %{
+        "account" => account,
+        "limit" => limit,
+        "page" => page,
+        "txtype" => type
+      }) do
+    type = Util.to_tx_type(type)
+
+    case :aeser_api_encoder.safe_decode(:account_pubkey, account) do
+      {:ok, pk} ->
+        json(conn, get_txs(limit, page, pk, type))
+
+      {:error, _} ->
+        conn |> put_status(:bad_request) |> json(%{"reason" => "Invalid public key"})
+    end
+  end
+
+  def txs_for_account(conn, %{"account" => account, "limit" => limit, "page" => page}) do
+    case :aeser_api_encoder.safe_decode(:account_pubkey, account) do
+      {:ok, pk} ->
+        json(conn, get_txs(limit, page, pk))
+
+      {:error, _} ->
+        conn |> put_status(:bad_request) |> json(%{"reason" => "Invalid public key"})
+    end
+  end
+
   # TODO! Work for: :spend_tx, :name_preclaim_tx, :name_claim_tx, :name_transfer_tx, :name_revoke_tx
-  # TODO! Currently there is problem with :name_transfer_tx and :name_revoke_tx, because of StreamSplit bug
+  # TODO! Currently there is a problem with :name_transfer_tx and :name_revoke_tx, because of StreamSplit bug
   # TODO!!! check for :name_claim_tx - field name_fee: :prelima
   # Model.to_map is NOT working for:
   # 1. :name_update_tx -
@@ -180,8 +172,50 @@ defmodule AeMdwWeb.TransactionController do
   #              ttl: 60000,
   #              type: "NameUpdateTx"
   #            }
+  #   tx: %{
+  #   6. :contract_call_tx -   (Jason.EncodeError) invalid byte 0x9F in <<0, 0,..>>
+  #           tx: %{
+  #             abi_version: 1,
+  #             amount: 0,
+  #             call_data: <<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  #               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ...>>,
+  #             call_origin: <<140, 45, 15, 171, 198, 112, 76, 122, 188, 218, 79, 0, 14,
+  #               175, 238, 64, 9, 82, 93, 44, 169, 176, 237, 27, 115, 221, 101, 211, 5,
+  #               168, ...>>,
+  #             call_stack: [],
+  #             caller_id: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
+  #             contract_id: "ct_26idsmrCmVz2s3ZhXmhmmBtNA8Xz6hb9b4h3kUNSEDw5eCVkYG",
+  #             fee: 2034140000000000,
+  #             gas: 1579000,
+  #             gas_price: 1000000000,
+  #             nonce: 19147,
+  #             ttl: 0,
+  #             type: "ContractCallTx"
+  #           },
+  #           tx_index: 1415245,
+  #           tx_type: :contract_call_tx
+  #         }
+  # 7. :channel_create_tx -  !!! the problem is in `state_hash`!!!
+  #          tx: %{
+  #            channel_reserve: 2,
+  #            delegate_ids: [],
+  #            fee: 20000,
+  #            initiator_amount: 70000,
+  #            initiator_id: "ak_28QDg7fkF5qiKueSdUvUBtCYPJdmMEoS73CztzXCRAwMGKHKZh",
+  #            lock_period: 1,
+  #            nonce: 103,
+  #            responder_amount: 40000,
+  #            responder_id: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
+  #            state_hash: <<189, 115, 46, 77, 245, 48, 95, 58, 158, 84, 178, 221, 173,
+  #              160, 40, 200, 252, 186, 172, 74, 57, 131, 131, 201, ...>>,
+  #            ttl: 0,
+  #            type: "ChannelCreateTx"
+  #          },
+  #          tx_index: 610680,
+  #          tx_type: :channel_create_tx
+  #        }
   def txs_for_interval(conn, %{"limit" => limit, "page" => page, "txtype" => type}) do
-    type = AeMdwWeb.Util.to_tx_type(type)
+    type = Util.to_tx_type(type)
     json(conn, %{"transactions" => get_txs(limit, page, type)})
   end
 
@@ -199,13 +233,31 @@ defmodule AeMdwWeb.TransactionController do
     |> Enum.map(&Model.to_map/1)
   end
 
-  defp get_txs(limit, page, type) do
+  defp get_txs(limit, page, pk, type) do
+    limit = String.to_integer(limit)
+    page = String.to_integer(page)
+
+    data =
+      pk
+      |> DBS.Object.rev_tx()
+      |> Stream.map(&Model.to_map/1)
+      |> Stream.filter(fn tx -> tx.tx_type == type end)
+
+    limit
+    |> Util.pagination(page, [], data)
+    |> List.first()
+  end
+
+  defp get_txs(limit, page, data) do
     limit = String.to_integer(limit)
     page = String.to_integer(page)
 
     limit
-    |> Util.pagination(page, [], DBS.Type.rev_tx(type))
+    |> Util.pagination(page, [], exec(data))
     |> List.first()
     |> Enum.map(&Model.to_map/1)
   end
+
+  defp exec(data) when is_binary(data), do: DBS.Object.rev_tx(data)
+  defp exec(data) when is_atom(data), do: DBS.Type.rev_tx(data)
 end
