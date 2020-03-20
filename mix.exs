@@ -19,7 +19,7 @@ defmodule AeMdw.MixProject do
   def application do
     [
       mod: {AeMdw.Application, []},
-      extra_applications: [:logger, :runtime_tools, :httpoison]
+      extra_applications: [:logger, :runtime_tools]
     ]
   end
 
@@ -42,8 +42,7 @@ defmodule AeMdw.MixProject do
       {:gettext, "~> 0.11"},
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.0"},
-      {:cors_plug, "~> 2.0"},
-      {:httpoison, "~> 1.6"}
+      {:cors_plug, "~> 2.0"}
     ]
   end
 end
