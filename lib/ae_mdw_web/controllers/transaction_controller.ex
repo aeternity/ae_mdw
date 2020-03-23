@@ -50,13 +50,7 @@ defmodule AeMdwWeb.TransactionController do
   def txs_count_for_account(conn, %{"address" => account}) do
     case :aeser_api_encoder.safe_decode(:account_pubkey, account) do
       {:ok, pk} ->
-        count =
-          pk
-          |> DBS.Object.rev_tx()
-          |> Stream.map(&Model.to_map/1)
-          |> Enum.count()
-
-        json(conn, %{"count" => count})
+        json(conn, %{"count" => count(pk)})
 
       {:error, _} ->
         conn |> put_status(:bad_request) |> json(%{"reason" => "Invalid public key"})
@@ -136,4 +130,11 @@ defmodule AeMdwWeb.TransactionController do
 
   defp exec(data) when is_binary(data), do: DBS.Object.rev_tx(data)
   defp exec(data) when is_atom(data), do: DBS.Type.rev_tx(data)
+
+  defp count(pk) do
+    pk
+    |> DBS.Object.rev_tx()
+    |> Stream.map(&Model.to_map/1)
+    |> Enum.count()
+  end
 end

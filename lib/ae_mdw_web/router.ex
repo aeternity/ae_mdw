@@ -13,7 +13,7 @@ defmodule AeMdwWeb.Router do
     get "/channels/transactions/address/:address", ChannelController, :txs_for_channel_address
 
     get "/oracles/list", OracleController, :oracles_all
-    # seems like there not registered oracles in aeternal
+    # seems like there are not registered oracles in aeternal
     get "/oracles/:oracle_id", OracleController, :oracle_requests_responses
 
     get "/contracts/all", ContractController, :all_contracts
@@ -35,13 +35,14 @@ defmodule AeMdwWeb.Router do
     # Not need for the frontend
     get "/transactions/account/:address/count", TransactionController, :txs_count_for_account
 
+    # Not need for the frontend
     get "/transactions/account/:sender/to/:receiver",
         TransactionController,
-        # Not need for the frontend
         :txs_for_account_to_account
 
     get "/transactions/account/:account", TransactionController, :txs_for_account
     get "/transactions/interval/:from/:to", TransactionController, :txs_for_interval
+
     # Not need for the frontend
     get "/transactions/rate/:from/:to", TransactionController, :tx_rate
 
