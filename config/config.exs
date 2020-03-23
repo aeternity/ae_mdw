@@ -9,8 +9,8 @@ use Mix.Config
 
 config :ae_plugin,
   node_root: "../aeternity/_build/local/",
-  '$aec_db_create_tables': {AeMdw.Db.Setup, :create_tables},
-  '$aec_db_check_tables': {AeMdw.Db.Setup, :check_tables}
+  "$aec_db_create_tables": {AeMdw.Db.Setup, :create_tables},
+  "$aec_db_check_tables": {AeMdw.Db.Setup, :check_tables}
 
 # Configures the endpoint
 config :ae_mdw, AeMdwWeb.Endpoint,

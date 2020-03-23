@@ -1,5 +1,4 @@
 defmodule AeMdw.Node do
-
   alias AeMdw.Db.Model
 
   def tx_types(),
@@ -17,10 +16,11 @@ defmodule AeMdw.Node do
   def tx_to_map(tx_type, tx_rec) do
     tx_fields(tx_type)
     |> Stream.with_index(1)
-    |> Enum.reduce(%{},
-         fn {field, pos}, acc ->
-           put_in(acc[field], elem(tx_rec, pos))
-         end)
+    |> Enum.reduce(
+      %{},
+      fn {field, pos}, acc ->
+        put_in(acc[field], elem(tx_rec, pos))
+      end
+    )
   end
-
 end
