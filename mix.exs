@@ -33,7 +33,7 @@ defmodule AeMdw.MixProject do
   defp deps do
     [
       {:ae_plugin, path: "~/Desktop/ae_plugin"},
-      {:stream_split, "~> 0.1.0"},
+      {:stream_split, github: "DanielaIvanova/stream_split"},
       {:ex2ms, "~> 1.6.0"},
       {:phoenix, "~> 1.4.13"},
       {:phoenix_pubsub, "~> 1.1"},
