@@ -32,7 +32,7 @@ defmodule AeMdw.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:ae_plugin, path: "~/Desktop/ae_plugin"},
+      {:ae_plugin, github: "aeternity/ae_plugin"},
       {:stream_split, "~> 0.1.4"},
       {:ex2ms, "~> 1.6.0"},
       {:phoenix, "~> 1.4.13"},
