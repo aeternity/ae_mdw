@@ -1,8 +1,11 @@
 defmodule AeMdwWeb.Router do
   use AeMdwWeb, :router
 
+  alias AeMdwWeb.IpBrowserPlug
+
   pipeline :api do
     plug CORSPlug, origin: "*"
+    plug IpBrowserPlug
     plug :accepts, ["json"]
   end
 
