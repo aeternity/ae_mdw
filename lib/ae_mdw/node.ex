@@ -24,15 +24,12 @@ defmodule AeMdw.Node do
     )
   end
 
-
   defmodule Db do
-
     alias AeMdw.Db.Model
     require Model
 
     # we require that block index is in place
     import AeMdw.Db.Util, only: [read_block!: 1]
-
 
     def get_blocks(height) when is_integer(height) do
       kb_hash = Model.block(read_block!({height, -1}), :hash)
@@ -44,25 +41,22 @@ defmodule AeMdw.Node do
 
     defp do_get_micro_blocks(<<next_gen_kb_hash::binary>>) do
       :aec_db.get_header(next_gen_kb_hash)
-      |> :aec_headers.prev_hash
+      |> :aec_headers.prev_hash()
       |> Stream.unfold(&micro_block_walker/1)
-      |> Enum.reverse
+      |> Enum.reverse()
     end
 
     def micro_block_walker(hash) do
-      with block  <- :aec_db.get_block(hash),
+      with block <- :aec_db.get_block(hash),
            :micro <- :aec_blocks.type(block) do
         {block, :aec_blocks.prev_hash(block)}
       else
         :key -> nil
       end
     end
-
   end
 
-
   defmodule Stream do
-
     def header_idx_tx(height) do
       Elixir.Stream.resource(
         fn -> {[], Db.get_micro_blocks(height), nil, -1} end,
@@ -73,13 +67,13 @@ defmodule AeMdw.Node do
 
     def stream_next({[tx | txs], blocks, header, mbi}),
       do: {[{header, mbi, tx}], {txs, blocks, header, mbi}}
+
     def stream_next({[], [], _, _}),
       do: {:halt, :done}
+
     def stream_next({[], [block | blocks], _, mbi}) do
       header = :aec_blocks.to_micro_header(block)
       stream_next({:aec_blocks.txs(block), blocks, header, mbi + 1})
     end
-
   end
-
 end

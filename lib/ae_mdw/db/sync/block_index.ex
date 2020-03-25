@@ -15,13 +15,15 @@ defmodule AeMdw.Db.Sync.BlockIndex do
   def sync(max_height \\ :safe) do
     max_height = Sync.height(max_height)
     min_height = (max_kbi() || -1) + 1
+
     with true <- max_height >= min_height do
-      header  = :aec_chain.get_key_header_by_height(max_height) |> ok!
-      hash    = :aec_headers.hash_header(header) |> ok!
-      syncer  = &sync_key_header(~t[block], &1, &2)
+      header = :aec_chain.get_key_header_by_height(max_height) |> ok!
+      hash = :aec_headers.hash_header(header) |> ok!
+      syncer = &sync_key_header(~t[block], &1, &2)
       tracker = Sync.progress_logger(syncer, @log_freq, &log_msg/2)
       max_height..min_height |> Enum.reduce(hash, tracker)
     end
+
     max_kbi()
   end
 
@@ -40,9 +42,9 @@ defmodule AeMdw.Db.Sync.BlockIndex do
 
   defp sync_key_header(table, height, hash) do
     {:ok, kh} = :aec_chain.get_header(hash)
-    ^height   = :aec_headers.height(kh)
-    :key      = :aec_headers.type(kh)
-    kb_model  = Model.block([index: {height, -1}, hash: hash])
+    ^height = :aec_headers.height(kh)
+    :key = :aec_headers.type(kh)
+    kb_model = Model.block(index: {height, -1}, hash: hash)
     :mnesia.async_dirty(fn -> :mnesia.write(table, kb_model, :write) end)
     :aec_headers.prev_key_hash(kh)
   end

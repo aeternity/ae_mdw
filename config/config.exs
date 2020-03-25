@@ -22,8 +22,7 @@ config :ae_mdw, AeMdwWeb.Endpoint,
 
 # Configures Elixir's Logger
 config :logger,
-  backends: [{LoggerFileBackend, :info},
-             {LoggerFileBackend, :sync}]
+  backends: [{LoggerFileBackend, :info}, {LoggerFileBackend, :sync}]
 
 config :logger, :info,
   path: "#{Path.join(File.cwd!(), "log/info.log")}",
@@ -32,7 +31,6 @@ config :logger, :info,
 config :logger, :sync,
   path: "#{Path.join(File.cwd!(), "log/sync.log")}",
   metadata_filter: [sync: true]
-
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason

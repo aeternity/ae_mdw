@@ -1,5 +1,4 @@
 defmodule AeMdw.Db.Sync.Supervisor do
-
   use Supervisor
 
   def start_link(),
@@ -14,7 +13,7 @@ defmodule AeMdw.Db.Sync.Supervisor do
       AeMdw.Db.Sync,
       AeMdw.Db.Sync.ForkDetector
     ]
+
     Supervisor.init(children, strategy: :one_for_one)
   end
-
 end

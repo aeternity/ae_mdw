@@ -1,5 +1,4 @@
 defmodule AeMdw.Db.Model do
-
   alias :aeser_api_encoder, as: Enc
 
   require Record
@@ -132,38 +131,43 @@ defmodule AeMdw.Db.Model do
   def defaults(:event), do: @event_defaults
   def defaults(:meta), do: @meta_defaults
 
-
   def to_raw_map({:tx, index, hash, {kb_index, mb_index}}) do
     {_, _, db_stx} = one!(:mnesia.dirty_read(:aec_signed_tx, hash))
-    aec_signed_tx  = :aetx_sign.from_db_format(db_stx)
-    {type, rec}    = :aetx.specialize_type(:aetx_sign.tx(aec_signed_tx))
-    %{block_hash: block(read_block!({kb_index, mb_index}), :hash),
+    aec_signed_tx = :aetx_sign.from_db_format(db_stx)
+    {type, rec} = :aetx.specialize_type(:aetx_sign.tx(aec_signed_tx))
+
+    %{
+      block_hash: block(read_block!({kb_index, mb_index}), :hash),
       height: kb_index,
       mb_index: mb_index,
       hash: hash,
       type: type,
       index: index,
       signatures: :aetx_sign.signatures(aec_signed_tx),
-      tx: AeMdw.Node.tx_to_map(type, rec)}
+      tx: AeMdw.Node.tx_to_map(type, rec)
+    }
   end
 
   def to_map({:tx, index, hash, {kb_index, mb_index}}) do
     raw = to_raw_map({:tx, index, hash, {kb_index, mb_index}})
+
     raw
     |> update_in([:block_hash], &Enc.encode(:micro_block_hash, &1))
     |> update_in([:hash], &Enc.encode(:tx_hash, &1))
     |> update_in([:signatures], fn ts -> Enum.map(ts, &Enc.encode(:signature, &1)) end)
-    |> update_in([:tx],
-         fn tx ->
-           AeMdw.Node.tx_ids(raw.type)
-           |> Enum.reduce(tx, fn {k, _}, tx -> update_in(tx[k], &encode_id/1) end)
-         end)
+    |> update_in(
+      [:tx],
+      fn tx ->
+        AeMdw.Node.tx_ids(raw.type)
+        |> Enum.reduce(tx, fn {k, _}, tx -> update_in(tx[k], &encode_id/1) end)
+      end
+    )
     |> put_in([:tx, :type], AeMdwWeb.Util.to_user_tx_type(raw.type))
   end
 
   def encode_id(xs) when is_list(xs),
     do: xs |> Enum.map(&Enc.encode(:id_hash, &1))
+
   def encode_id({:id, _, _} = x),
     do: Enc.encode(:id_hash, x)
-
 end
