@@ -151,7 +151,7 @@ defmodule AeMdw.Db.Model do
     raw = to_raw_map({:tx, index, hash, {kb_index, mb_index}})
     raw
     |> update_in([:block_hash], &Enc.encode(:micro_block_hash, &1))
-    |> update_in([:hash], &Enc.encode(:hash, &1))
+    |> update_in([:hash], &Enc.encode(:tx_hash, &1))
     |> update_in([:signatures], fn ts -> Enum.map(ts, &Enc.encode(:signature, &1)) end)
     |> update_in([:tx],
          fn tx ->

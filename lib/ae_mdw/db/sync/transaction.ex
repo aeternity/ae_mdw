@@ -84,7 +84,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     Enum.reduce(txis, %{},
       fn txi, rev_cache ->
         tx   = Model.to_raw_map(read_tx!(txi))
-        type = tx.tx_type
+        type = tx.type
         AeMdw.Node.tx_ids(type)
         |> Stream.map(fn {field, _} -> obj_field_ids.(field, tx, type, txi) end)
         |> Stream.flat_map(& &1)
@@ -103,7 +103,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     {type_keys, obj_keys} =
       Enum.reduce(tx_keys, {[], []},
         fn txi, {type_keys, obj_keys} ->
-          %{tx_type: tx_type, tx: tx} = read_tx!(txi) |> Model.to_raw_map
+          %{type: tx_type, tx: tx} = read_tx!(txi) |> Model.to_raw_map
           objs = for {id_key, _} <- AeMdw.Node.tx_ids(tx_type),
                    do: {tx_type, pk(tx[id_key]), txi}
           {[{tx_type, txi} | type_keys], objs ++ obj_keys}
