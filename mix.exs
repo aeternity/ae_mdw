@@ -35,6 +35,7 @@ defmodule AeMdw.MixProject do
       {:ae_plugin, github: "aeternity/ae_plugin"},
       {:stream_split, "~> 0.1.4"},
       {:ex2ms, "~> 1.6.0"},
+      {:logger_file_backend, "~> 0.0.11"},
       {:phoenix, "~> 1.4.13"},
       {:phoenix_pubsub, "~> 1.1"},
       {:phoenix_html, "~> 2.11"},

@@ -1,11 +1,13 @@
 defmodule AeMdw.Db.Model do
+  alias :aeser_api_encoder, as: Enc
+
   require Record
   require Ex2ms
 
   import Record, only: [defrecord: 2]
-  import AeMdw.{Util, Sigil}
+  import AeMdw.{Sigil, Util, Db.Util}
 
-  alias :aeser_api_encoder, as: AeserEnc
+  ################################################################################
 
   # txs table :
   #     index = tx_index (0..), id = tx_id
@@ -17,8 +19,10 @@ defmodule AeMdw.Db.Model do
 
   # txs block index :
   #     index = {kb_index (0..), mb_index}, tx_index = tx_index, hash = block (header) hash
-  #     On keyblock boundary - mb_index = -1, tx_index = -1}
-  @block_defaults [index: {-1, -1}, tx_index: -1, hash: <<>>]
+  #     if tx_index == nil -> txs not synced yet on that height
+  #     if tx_index == -1  -> no tx occured yet
+  #     On keyblock boundary: mb_index = -1}
+  @block_defaults [index: {-1, -1}, tx_index: nil, hash: <<>>]
   defrecord :block, @block_defaults
 
   # txs time index :
@@ -52,25 +56,8 @@ defmodule AeMdw.Db.Model do
   # def event(contract_id, event_name, tx_index, ct_local_index, event),
   #   do: event([index: {contract_id, event_name, tx_index, ct_local_index}, event: event])
 
-  def index(:block, tx_index, %{block_index: {key_index, micro_index}, block_hash: hash}),
-    do: block(index: {key_index, micro_index}, tx_index: tx_index, hash: hash)
-
-  def index(:time, tx_index, %{block_index: {kb_index, mb_index}, time: msecs}),
-    do: time(msecs: {msecs, tx_index}, block_index: {kb_index, mb_index})
-
-  def index(:type, tx_index, %{type: tx_type}),
-    do: type(index: {tx_type, tx_index})
-
-  def index(:rev_type, tx_index, %{type: tx_type}),
-    do: rev_type(index: {tx_type, -tx_index})
-
-  def index(:object, tx_index, %{type: tx_type, object: {id_tag, object_pubkey}, role: role}),
-    do: object(index: {tx_type, object_pubkey, tx_index}, id_tag: id_tag, role: role)
-
-  def index(:rev_object, tx_index, %{type: tx_type, object: {id_tag, object_pk}, role: role}),
-    do: rev_object(index: {tx_type, object_pk, -tx_index}, id_tag: id_tag, role: role)
-
   # meta table, storing sync progress and other info
+  # TODO: replace it with fastglobal lib
   @meta_defaults [key: nil, val: nil]
   defrecord :meta, @meta_defaults
 
@@ -144,66 +131,43 @@ defmodule AeMdw.Db.Model do
   def defaults(:event), do: @event_defaults
   def defaults(:meta), do: @meta_defaults
 
-  def to_map({:tx, tx_index, tx_hash, {kb_index, mb_index}}) do
-    {:aec_signed_tx, _, db_stx} = one!(:mnesia.dirty_read(:aec_signed_tx, tx_hash))
-    signed_tx = :aetx_sign.from_db_format(db_stx)
-
-    {tx_type, tx_rec} =
-      signed_tx
-      |> :aetx_sign.tx()
-      |> :aetx.specialize_type()
-
-    block_hash =
-      :mnesia.dirty_read(~t[block], {kb_index, mb_index})
-      |> one!
-      |> block(:hash)
-
-    tx_signatures =
-      signed_tx
-      |> :aetx_sign.signatures()
-      |> Enum.map(&AeserEnc.encode(:signature, &1))
-
-    tx_map =
-      AeMdw.Node.tx_ids(tx_type)
-      |> Enum.reduce(
-        AeMdw.Node.tx_to_map(tx_type, tx_rec),
-        fn {id_key, _}, acc ->
-          update_in(acc[id_key], &encode_id/1)
-        end
-      )
+  def to_raw_map({:tx, index, hash, {kb_index, mb_index}}) do
+    {_, _, db_stx} = one!(:mnesia.dirty_read(:aec_signed_tx, hash))
+    aec_signed_tx = :aetx_sign.from_db_format(db_stx)
+    {type, rec} = :aetx.specialize_type(:aetx_sign.tx(aec_signed_tx))
 
     %{
-      block_hash: AeserEnc.encode(:micro_block_hash, block_hash),
-      hash: AeserEnc.encode(:tx_hash, tx_hash),
-      tx_type: tx_type,
-      tx_index: tx_index,
-      signatures: tx_signatures,
-      block_height: kb_index,
+      block_hash: block(read_block!({kb_index, mb_index}), :hash),
+      height: kb_index,
       mb_index: mb_index,
-      tx: put_in(tx_map[:type], AeMdwWeb.Util.to_user_tx_type(tx_type))
+      hash: hash,
+      type: type,
+      index: index,
+      signatures: :aetx_sign.signatures(aec_signed_tx),
+      tx: AeMdw.Node.tx_to_map(type, rec)
     }
   end
 
+  def to_map({:tx, index, hash, {kb_index, mb_index}}) do
+    raw = to_raw_map({:tx, index, hash, {kb_index, mb_index}})
+
+    raw
+    |> update_in([:block_hash], &Enc.encode(:micro_block_hash, &1))
+    |> update_in([:hash], &Enc.encode(:tx_hash, &1))
+    |> update_in([:signatures], fn ts -> Enum.map(ts, &Enc.encode(:signature, &1)) end)
+    |> update_in(
+      [:tx],
+      fn tx ->
+        AeMdw.Node.tx_ids(raw.type)
+        |> Enum.reduce(tx, fn {k, _}, tx -> update_in(tx[k], &encode_id/1) end)
+      end
+    )
+    |> put_in([:tx, :type], AeMdwWeb.Util.to_user_tx_type(raw.type))
+  end
+
   def encode_id(xs) when is_list(xs),
-    do: xs |> Enum.map(&AeserEnc.encode(:id_hash, &1))
+    do: xs |> Enum.map(&Enc.encode(:id_hash, &1))
 
   def encode_id({:id, _, _} = x),
-    do: AeserEnc.encode(:id_hash, x)
-
-  # def pubkey_tx_types() do
-  #   :mnesia.async_dirty(
-  #     fn ->
-  #       :mnesia.foldl(
-  #         fn {:object, {tx_type, pk, _}, _, _}, acc ->
-  #           f = fn nil -> :gb_sets.from_list([tx_type])
-  #                  set -> :gb_sets.add(tx_type, set)
-  #               end
-  #           update_in(acc[pk], f)
-  #         end,
-  #         %{},
-  #         ~t[object]
-  #       )
-  #     end
-  #   )
-  # end
+    do: Enc.encode(:id_hash, x)
 end

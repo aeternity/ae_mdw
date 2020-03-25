@@ -1,14 +1,29 @@
-defmodule AeMdw.Db.Stream.Util do
+defmodule AeMdw.Db.Util do
+  require Logger
+
   import AeMdw.{Sigil, Util}
 
-  def read(txi),
+  ################################################################################
+
+  def read_tx(txi),
     do: :mnesia.async_dirty(fn -> :mnesia.read(~t[tx], txi) end)
 
-  def read_one!(txi),
-    do: read(txi) |> one!
+  def read_tx!(txi),
+    do: read_tx(txi) |> one!
+
+  def read_block({_, _} = bi),
+    do: :mnesia.async_dirty(fn -> :mnesia.read(~t[block], bi) end)
+
+  def read_block!({_, _} = bi),
+    do: read_block(bi) |> one!
 
   def prev(tab, key) do
     fn -> :mnesia.prev(tab, key) end
+    |> :mnesia.async_dirty()
+  end
+
+  def first(tab) do
+    fn -> :mnesia.first(tab) end
     |> :mnesia.async_dirty()
   end
 
@@ -46,5 +61,15 @@ defmodule AeMdw.Db.Stream.Util do
           {:cont, next_acc} -> do_collect_keys(tab, next_acc, next_key, next_fn, progress_fn)
         end
     end
+  end
+
+  def delete_records(tab_keys) do
+    fn ->
+      for {tab, ks} <- tab_keys,
+          do: ks |> Enum.each(&:mnesia.delete(tab, &1, :write))
+
+      :ok
+    end
+    |> :mnesia.transaction()
   end
 end
