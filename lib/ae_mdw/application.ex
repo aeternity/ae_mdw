@@ -19,17 +19,26 @@ defmodule AeMdw.Application do
   end
 
   def init(:meta) do
-    {:ok, type_mod_map} = AeMdw.Extract.tx_map()
-    Model.set_meta(:tx_types, Map.keys(type_mod_map))
+    alias AeMdw.Extract
 
-    for {type, mod} <- type_mod_map,
-        do: Model.set_meta({:tx_mod, type}, mod)
+    {:ok, type_mod_map} = Extract.tx_map()
+    type_mod_mapper = &Map.fetch!(type_mod_map, &1)
 
-    for {type, _mod} <- type_mod_map do
-      {:ok, fields, ids} = AeMdw.Extract.tx_record_info(type)
-      Model.set_meta({:tx_fields, type}, fields)
-      Model.set_meta({:tx_ids, type}, ids)
-    end
+    {tx_fields, tx_ids} =
+      Enum.reduce(type_mod_map, {%{}, %{}}, fn {type, _}, {tx_fields, tx_ids} ->
+        {:ok, fields, ids} = Extract.tx_record_info(type, type_mod_mapper)
+        {put_in(tx_fields[type], fields), put_in(tx_ids[type], ids)}
+      end)
+
+    SmartGlobal.new(
+      AeMdw.Node,
+      %{
+        tx_mod: type_mod_map,
+        tx_types: [{[], Map.keys(type_mod_map)}],
+        tx_fields: tx_fields,
+        tx_ids: tx_ids
+      }
+    )
   end
 
   # Tell Phoenix to update the endpoint configuration whenever the application is updated.

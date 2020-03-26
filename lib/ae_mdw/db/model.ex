@@ -5,7 +5,7 @@ defmodule AeMdw.Db.Model do
   require Ex2ms
 
   import Record, only: [defrecord: 2]
-  import AeMdw.{Sigil, Util, Db.Util}
+  import AeMdw.{Util, Db.Util}
 
   ################################################################################
 
@@ -56,31 +56,6 @@ defmodule AeMdw.Db.Model do
   # def event(contract_id, event_name, tx_index, ct_local_index, event),
   #   do: event([index: {contract_id, event_name, tx_index, ct_local_index}, event: event])
 
-  # meta table, storing sync progress and other info
-  # TODO: replace it with fastglobal lib
-  @meta_defaults [key: nil, val: nil]
-  defrecord :meta, @meta_defaults
-
-  def get_meta!(key),
-    do: get_meta(key) |> map_ok!(& &1)
-
-  def get_meta(key),
-    do: ~t[meta] |> :mnesia.dirty_read(key) |> map_one(&{:ok, meta(&1, :val)})
-
-  def set_meta(key, val),
-    do: ~t[meta] |> :mnesia.dirty_write(meta(key: key, val: val))
-
-  def del_meta(key),
-    do: ~t[meta] |> :mnesia.dirty_delete(key)
-
-  def list_meta(),
-    do:
-      ~t[meta]
-      |> :mnesia.dirty_select(
-        Ex2ms.fun do
-          {:meta, k, v} -> {k, v}
-        end
-      )
 
   def tables(),
     do: [
@@ -91,12 +66,11 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.RevType,
       AeMdw.Db.Model.Object,
       AeMdw.Db.Model.RevObject,
-      AeMdw.Db.Model.Event,
-      AeMdw.Db.Model.Meta
+      AeMdw.Db.Model.Event
     ]
 
   def records(),
-    do: [:tx, :block, :time, :type, :rev_type, :object, :rev_object, :event, :meta]
+    do: [:tx, :block, :time, :type, :rev_type, :object, :rev_object, :event]
 
   def fields(record),
     do: for({x, _} <- defaults(record), do: x)
@@ -109,7 +83,6 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Object), do: :object
   def record(AeMdw.Db.Model.RevObject), do: :rev_object
   def record(AeMdw.Db.Model.Event), do: :event
-  def record(AeMdw.Db.Model.Meta), do: :meta
 
   def table(:tx), do: AeMdw.Db.Model.Tx
   def table(:block), do: AeMdw.Db.Model.Block
@@ -119,7 +92,6 @@ defmodule AeMdw.Db.Model do
   def table(:object), do: AeMdw.Db.Model.Object
   def table(:rev_object), do: AeMdw.Db.Model.RevObject
   def table(:event), do: AeMdw.Db.Model.Event
-  def table(:meta), do: AeMdw.Db.Model.Meta
 
   def defaults(:tx), do: @tx_defaults
   def defaults(:block), do: @block_defaults
@@ -129,7 +101,7 @@ defmodule AeMdw.Db.Model do
   def defaults(:object), do: @object_defaults
   def defaults(:rev_object), do: @rev_object_defaults
   def defaults(:event), do: @event_defaults
-  def defaults(:meta), do: @meta_defaults
+
 
   def to_raw_map({:tx, index, hash, {kb_index, mb_index}}) do
     {_, _, db_stx} = one!(:mnesia.dirty_read(:aec_signed_tx, hash))
