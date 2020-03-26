@@ -86,11 +86,14 @@ defmodule AeMdw.Extract do
   defp tx_record(:name_revoke_tx), do: :ns_revoke_tx
   defp tx_record(tx_type), do: tx_type
 
-  def tx_record_info(:channel_client_reconnect_tx),
+  def tx_record_info(tx_type),
+    do: tx_record_info(tx_type, &AeMdw.Node.tx_mod/1)
+
+  def tx_record_info(:channel_client_reconnect_tx, _),
     do: {:ok, [], %{}}
 
-  def tx_record_info(tx_type) do
-    mod_name = AeMdw.Node.tx_mod(tx_type)
+  def tx_record_info(tx_type, mod_mapper) do
+    mod_name = mod_mapper.(tx_type)
     mod_code = AbsCode.module(mod_name) |> ok!
     rec_code = AbsCode.record_fields(mod_code, tx_record(tx_type)) |> ok!
 
