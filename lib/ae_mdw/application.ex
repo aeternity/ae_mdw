@@ -10,16 +10,8 @@ defmodule AeMdw.Application do
   def start(_type, _args) do
     init(:meta)
 
-    # List all child processes to be supervised
-    children = [
-      # Start the endpoint when the application starts
-      AeMdwWeb.Endpoint
-      # Starts a worker by calling: AeMdw.Worker.start_link(arg)
-      # {AeMdw.Worker, arg},
-    ]
+    children = [AeMdwWeb.Supervisor]
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: AeMdw.Supervisor]
     Supervisor.start_link(children, opts)
   end

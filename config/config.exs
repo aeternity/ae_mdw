@@ -20,6 +20,10 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   pubsub: [name: AeMdw.PubSub, adapter: Phoenix.PubSub.PG2],
   live_view: [signing_salt: "Oy680JAN"]
 
+config :ae_mdw, AeMdwWeb.GCWorker,
+  gc_time: 300_000,
+  table_name: :users_info
+
 # Configures Elixir's Logger
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",

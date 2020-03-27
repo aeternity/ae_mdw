@@ -4,7 +4,8 @@ defmodule AeMdwWeb.TransactionController do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Db.Stream.Tx, as: DBSTx
-  alias AeMdwWeb.Util
+  alias AeMdwWeb.{ContinuationData, EtsManager, Util}
+
   require Model
 
   # Hardcoded DB only for testing purpose
@@ -57,17 +58,21 @@ defmodule AeMdwWeb.TransactionController do
     end
   end
 
-  def txs_for_account(conn, %{
-        "account" => account,
-        "limit" => limit,
-        "page" => page,
-        "txtype" => type
-      }) do
+  def txs_for_account(
+        conn,
+        %{
+          "account" => account,
+          "limit" => limit,
+          "page" => page,
+          "txtype" => type
+        }
+      ) do
     type = Util.to_tx_type(type)
+    endpoint = conn.path_info ++ [type]
 
     case :aeser_api_encoder.safe_decode(:account_pubkey, account) do
       {:ok, pk} ->
-        json(conn, get_txs(limit, page, pk, type))
+        json(conn, get_txs(conn, endpoint, [pk, type], limit, page))
 
       {:error, _} ->
         conn |> put_status(:bad_request) |> json(%{"reason" => "Invalid public key"})
@@ -77,7 +82,18 @@ defmodule AeMdwWeb.TransactionController do
   def txs_for_account(conn, %{"account" => account, "limit" => limit, "page" => page}) do
     case :aeser_api_encoder.safe_decode(:account_pubkey, account) do
       {:ok, pk} ->
-        json(conn, get_txs(limit, page, pk))
+        json(conn, get_txs(conn, conn.path_info, pk, limit, page))
+
+      {:error, _} ->
+        conn |> put_status(:bad_request) |> json(%{"reason" => "Invalid public key"})
+    end
+  end
+
+  def txs_for_account(conn, %{"account" => account}) do
+    case :aeser_api_encoder.safe_decode(:account_pubkey, account) do
+      {:ok, pk} ->
+        txs = pk |> DBS.Object.rev_tx() |> Enum.map(&Model.to_map/1)
+        json(conn, txs)
 
       {:error, _} ->
         conn |> put_status(:bad_request) |> json(%{"reason" => "Invalid public key"})
@@ -86,50 +102,62 @@ defmodule AeMdwWeb.TransactionController do
 
   def txs_for_interval(conn, %{"limit" => limit, "page" => page, "txtype" => type}) do
     type = Util.to_tx_type(type)
-    json(conn, %{"transactions" => get_txs(limit, page, type)})
+    endpoint = conn.path_info ++ [type]
+
+    json(conn, %{"transactions" => get_txs(conn, endpoint, type, limit, page)})
   end
 
   def txs_for_interval(conn, %{"limit" => limit, "page" => page}) do
-    json(conn, %{"transactions" => get_txs(limit, page)})
+    json(conn, %{"transactions" => get_txs(conn, conn.path_info, :all_txs, limit, page)})
   end
 
-  defp get_txs(limit, page) do
+  defp get_txs(conn, endpoint, data, limit, page) do
     limit = String.to_integer(limit)
     page = String.to_integer(page)
+    key = {conn.assigns.peer_ip, conn.assigns.browser_info}
 
-    limit
-    |> Util.pagination(page, [], DBSTx.rev_tx())
-    |> List.first()
-    |> Enum.map(&Model.to_map/1)
+    with true <- EtsManager.is_member?(key),
+         %ContinuationData{
+           endpoint: endpoint_,
+           continuation: continuation,
+           page: page_,
+           limit: limit_,
+           timestamp: timestamp
+         } <- EtsManager.get(key),
+         true <- endpoint == endpoint_,
+         true <- page == page_ + 1,
+         true <- limit == limit_,
+         {txs_list, new_continuation} <- Util.pagination(continuation, limit) do
+      EtsManager.put(key, endpoint, new_continuation, page, limit)
+      check_txs_list(txs_list)
+    else
+      false ->
+        {txs_list, new_continuation} = Util.pagination(limit, page, exec(data))
+        EtsManager.put(key, endpoint, new_continuation, page, limit)
+        check_txs_list(txs_list)
+    end
   end
 
-  defp get_txs(limit, page, pk, type) do
-    limit = String.to_integer(limit)
-    page = String.to_integer(page)
-
-    data =
-      pk
-      |> DBS.Object.rev_tx()
-      |> Stream.map(&Model.to_map/1)
-      |> Stream.filter(fn tx -> tx.tx_type == type end)
-
-    limit
-    |> Util.pagination(page, [], data)
-    |> List.first()
-  end
-
-  defp get_txs(limit, page, data) do
-    limit = String.to_integer(limit)
-    page = String.to_integer(page)
-
-    limit
-    |> Util.pagination(page, [], exec(data))
-    |> List.first()
-    |> Enum.map(&Model.to_map/1)
-  end
-
+  defp exec(:all_txs), do: DBSTx.rev_tx()
   defp exec(data) when is_binary(data), do: DBS.Object.rev_tx(data)
   defp exec(data) when is_atom(data), do: DBS.Type.rev_tx(data)
+
+  defp exec([pk | t] = data) when is_list(data) do
+    [type] = t
+
+    pk
+    |> DBS.Object.rev_tx()
+    |> Stream.map(&Model.to_map/1)
+    |> Stream.filter(fn tx -> tx.tx_type == type end)
+  end
+
+  defp check_txs_list(txs_list) do
+    if Enum.all?(txs_list, &is_map/1) do
+      txs_list
+    else
+      txs_list |> Enum.map(&Model.to_map/1)
+    end
+  end
 
   defp count(pk) do
     pk
