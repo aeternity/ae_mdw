@@ -25,9 +25,16 @@ config :ae_mdw, AeMdwWeb.GCWorker,
   table_name: :users_info
 
 # Configures Elixir's Logger
-config :logger, :console,
-  format: "$time $metadata[$level] $message\n",
-  metadata: [:request_id]
+config :logger,
+  backends: [{LoggerFileBackend, :info}, {LoggerFileBackend, :sync}]
+
+config :logger, :info,
+  path: "#{Path.join(File.cwd!(), "log/info.log")}",
+  format: "$time $metadata[$level] $message\n"
+
+config :logger, :sync,
+  path: "#{Path.join(File.cwd!(), "log/sync.log")}",
+  metadata_filter: [sync: true]
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason

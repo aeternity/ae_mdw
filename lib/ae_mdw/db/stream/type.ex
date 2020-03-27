@@ -1,9 +1,11 @@
 defmodule AeMdw.Db.Stream.Type do
   require Ex2ms
 
-  import AeMdw.{Sigil, Util, Db.Stream.Util}
+  import AeMdw.{Sigil, Util, Db.Util}
 
   @mnesia_chunk_size 20
+
+  ################################################################################
 
   def index(tx_type) do
     Stream.resource(
@@ -23,7 +25,7 @@ defmodule AeMdw.Db.Stream.Type do
   def tx(tx_type) do
     tx_type
     |> index
-    |> Stream.map(&read_one!/1)
+    |> Stream.map(&read_tx!/1)
   end
 
   def rev_index(tx_type) do
@@ -44,7 +46,7 @@ defmodule AeMdw.Db.Stream.Type do
   def rev_tx(tx_type) do
     tx_type
     |> rev_index
-    |> Stream.map(&read_one!/1)
+    |> Stream.map(&read_tx!/1)
   end
 
   ################################################################################
@@ -71,7 +73,7 @@ defmodule AeMdw.Db.Stream.Type do
         rev_stream_next({tx_type, [], top_mark, {marks, cont}})
 
       _ ->
-        min_mark = top_mark - AeMdw.Db.Sync.History.rev_tx_index_freq()
+        min_mark = top_mark - AeMdw.Db.Sync.Transaction.rev_tx_index_freq()
         progress = bounded_progress(tx_type, min_mark, :backward)
         txis = collect_keys(~t[type], [top_mark], {tx_type, top_mark}, &:mnesia.prev/2, progress)
         rev_stream_next({tx_type, Enum.reverse(txis), nil, {[], nil}})

@@ -4,9 +4,11 @@ defmodule AeMdw.Db.Stream.Tx do
 
   alias AeMdw.Db.Model
 
-  import AeMdw.{Util, Sigil, Db.Stream.Util}
+  import AeMdw.{Sigil, Util, Db.Util}
 
   @mnesia_chunk_size 20
+
+  ################################################################################
 
   def index(),
     do: tx() |> Stream.map(&Model.tx(&1, :index))
@@ -55,7 +57,7 @@ defmodule AeMdw.Db.Stream.Tx do
   defp rev_stream_next({_, :"$end_of_table"}), do: {:halt, :done}
 
   defp rev_stream_next({tab, txi}) do
-    case read(txi) do
+    case read_tx(txi) do
       [tx] -> {[tx], {tab, prev(tab, txi)}}
       [] -> rev_stream_next({tab, prev(tab, txi)})
     end

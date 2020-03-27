@@ -1,7 +1,9 @@
 defmodule AeMdw.Db.Stream.Object do
   require Ex2ms
 
-  import AeMdw.{Util, Sigil, Db.Stream.Util}
+  import AeMdw.{Sigil, Util, Db.Util}
+
+  ################################################################################
 
   def index(pubkey),
     do: index(pubkey, AeMdw.Node.tx_types())
@@ -33,7 +35,7 @@ defmodule AeMdw.Db.Stream.Object do
   def tx(pubkey, tx_types) do
     pubkey
     |> index(tx_types)
-    |> Stream.map(&read_one!/1)
+    |> Stream.map(&read_tx!/1)
   end
 
   def rev_index(pubkey),
@@ -73,7 +75,7 @@ defmodule AeMdw.Db.Stream.Object do
   def rev_tx(pubkey, tx_types) do
     pubkey
     |> rev_index(tx_types)
-    |> Stream.map(&read_one!/1)
+    |> Stream.map(&read_tx!/1)
   end
 
   ################################################################################
@@ -157,7 +159,7 @@ defmodule AeMdw.Db.Stream.Object do
         rev_maybe_pull(pubkey, {[], {marks, top_mark, cont}, tx_type})
 
       _ ->
-        min_mark = top_mark - AeMdw.Db.Sync.History.rev_tx_index_freq()
+        min_mark = top_mark - AeMdw.Db.Sync.Transaction.rev_tx_index_freq()
         from_key = {tx_type, pubkey, top_mark}
         progress = bounded_progress(tx_type, pubkey, min_mark, :backward)
         txis = collect_keys(~t[object], [-top_mark], from_key, &:mnesia.prev/2, progress)
