@@ -148,7 +148,7 @@ defmodule AeMdwWeb.TransactionController do
     pk
     |> DBS.Object.rev_tx()
     |> Stream.map(&Model.to_map/1)
-    |> Stream.filter(fn tx -> tx.tx_type == type end)
+    |> Stream.filter(fn tx -> tx.type == type end)
   end
 
   defp check_txs_list(txs_list) do
