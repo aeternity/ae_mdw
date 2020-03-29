@@ -1,6 +1,8 @@
 defmodule AeMdw.Db.Stream.Type do
   require Ex2ms
 
+  alias AeMdw.Validate
+
   import AeMdw.{Sigil, Util, Db.Util}
 
   @mnesia_chunk_size 20
@@ -8,6 +10,7 @@ defmodule AeMdw.Db.Stream.Type do
   ################################################################################
 
   def index(tx_type) do
+    tx_type = Validate.tx_type!(tx_type)
     Stream.resource(
       fn ->
         mspec =
@@ -29,6 +32,7 @@ defmodule AeMdw.Db.Stream.Type do
   end
 
   def rev_index(tx_type) do
+    tx_type = Validate.tx_type!(tx_type)
     Stream.resource(
       fn ->
         mspec =

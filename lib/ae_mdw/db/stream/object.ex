@@ -1,6 +1,8 @@
 defmodule AeMdw.Db.Stream.Object do
   require Ex2ms
 
+  alias AeMdw.Validate
+
   import AeMdw.{Sigil, Util, Db.Util}
 
   ################################################################################
@@ -9,6 +11,8 @@ defmodule AeMdw.Db.Stream.Object do
     do: index(pubkey, AeMdw.Node.tx_types())
 
   def index(pubkey, tx_types) do
+    pubkey = Validate.id!(pubkey)
+    tx_types = validate_types!(tx_types)
     Stream.resource(
       fn ->
         tab = ~t[object]
@@ -42,6 +46,8 @@ defmodule AeMdw.Db.Stream.Object do
     do: rev_index(pubkey, AeMdw.Node.tx_types())
 
   def rev_index(pubkey, tx_types) do
+    pubkey = Validate.id!(pubkey)
+    tx_types = validate_types!(tx_types)
     Stream.resource(
       fn ->
         tx_types
@@ -79,6 +85,10 @@ defmodule AeMdw.Db.Stream.Object do
   end
 
   ################################################################################
+
+  def validate_types!(tx_types),
+    do: Enum.map(List.wrap(tx_types), &Validate.tx_type!/1)
+
 
   defp match_spec(tx_type, object_pubkey) do
     Ex2ms.fun do
