@@ -90,7 +90,7 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     Enum.reduce(txis, %{}, fn txi, rev_cache ->
       tx = Model.to_raw_map(read_tx!(txi))
-      type = tx.type
+      type = tx.tx.type
 
       AeMdw.Node.tx_ids(type)
       |> Stream.map(fn {field, _} -> obj_field_ids.(field, tx, type, txi) end)

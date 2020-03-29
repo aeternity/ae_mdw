@@ -28,6 +28,18 @@ defmodule AeMdw.Db.Stream.Tx do
     )
   end
 
+  defp stream_next(:"$end_of_table"), do: {:halt, :done}
+  defp stream_next({[tx | txs], cont}), do: {[tx], {txs, cont}}
+
+  defp stream_next({[], cont}) do
+    case select(cont) do
+      {[tx | txs], cont} -> {[tx], {txs, cont}}
+      _ -> {:halt, :done}
+    end
+  end
+
+  ################################################################################
+
   def rev_index(),
     do: rev_tx() |> Stream.map(&Model.tx(&1, :index))
 
@@ -40,18 +52,6 @@ defmodule AeMdw.Db.Stream.Tx do
       &rev_stream_next/1,
       &id/1
     )
-  end
-
-  ################################################################################
-
-  defp stream_next(:"$end_of_table"), do: {:halt, :done}
-  defp stream_next({[tx | txs], cont}), do: {[tx], {txs, cont}}
-
-  defp stream_next({[], cont}) do
-    case select(cont) do
-      {[tx | txs], cont} -> {[tx], {txs, cont}}
-      _ -> {:halt, :done}
-    end
   end
 
   defp rev_stream_next({_, :"$end_of_table"}), do: {:halt, :done}
