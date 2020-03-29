@@ -21,4 +21,7 @@ defmodule AeMdw.Util do
 
   def map_ok!({:ok, x}, f), do: f.(x)
   def map_ok!(err, _), do: raise(RuntimeError, message: "failed on #{inspect(err)}")
+
+  def inverse(%{} = map),
+    do: Enum.reduce(map, %{}, fn {k, v}, map -> put_in(map[v], k) end)
 end
