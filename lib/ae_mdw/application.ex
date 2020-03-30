@@ -12,7 +12,7 @@ defmodule AeMdw.Application do
 
     children = [
       AeMdw.Db.Sync.Supervisor,
-      AeMdwWeb.Endpoint
+      AeMdwWeb.Supervisor
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)

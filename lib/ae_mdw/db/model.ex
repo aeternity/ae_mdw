@@ -56,7 +56,6 @@ defmodule AeMdw.Db.Model do
   # def event(contract_id, event_name, tx_index, ct_local_index, event),
   #   do: event([index: {contract_id, event_name, tx_index, ct_local_index}, event: event])
 
-
   def tables(),
     do: [
       AeMdw.Db.Model.Tx,
@@ -120,7 +119,7 @@ defmodule AeMdw.Db.Model do
 
     %{
       block_hash: block(read_block!({kb_index, mb_index}), :hash),
-      height: kb_index,
+      block_height: kb_index,
       mb_index: mb_index,
       hash: hash,
       type: type,
@@ -147,80 +146,102 @@ defmodule AeMdw.Db.Model do
     |> Enum.reduce(tx_map, fn {k, _}, tx -> update_in(tx[k], &encode_id/1) end)
   end
 
-
   ################################################################################
 
   def custom_encode(%{type: :name_update_tx} = tx),
     do: update_in(tx.tx.pointers, &encode_name_pointer/1)
+
   def custom_encode(%{type: :contract_call_tx} = tx) do
     tx
     |> update_in([:tx, :call_data], &Enc.encode(:contract_bytearray, &1))
     |> update_in([:tx, :call_origin], &Enc.encode(:account_pubkey, &1))
   end
+
   def custom_encode(%{type: :contract_create_tx} = tx) do
     tx
     |> update_in([:tx, :call_data], &Enc.encode(:contract_bytearray, &1))
     |> update_in([:tx, :code], &Enc.encode(:contract_bytearray, &1))
   end
+
   def custom_encode(%{type: :channel_create_tx} = tx),
     do: update_in(tx.tx.state_hash, &Enc.encode(:block_state_hash, &1))
+
   def custom_encode(%{type: :channel_deposit_tx} = tx),
     do: update_in(tx.tx.state_hash, &Enc.encode(:block_state_hash, &1))
+
   def custom_encode(%{type: :channel_force_progress_tx} = tx) do
     tx
     |> update_in([:tx, :state_hash], &Enc.encode(:block_state_hash, &1))
     |> update_in([:tx, :payload], &Enc.encode(:transaction, &1))
     |> update_in([:tx, :update], &:aesc_offchain_update.for_client(&1))
-    |> update_in([:tx, :offchain_trees], &Enc.encode(:state_trees, :aec_trees.serialize_to_binary(&1)))
+    |> update_in(
+      [:tx, :offchain_trees],
+      &Enc.encode(:state_trees, :aec_trees.serialize_to_binary(&1))
+    )
   end
+
   def custom_encode(%{type: :channel_close_solo_tx} = tx) do
     tx
     |> update_in([:tx, :payload], &Enc.encode(:transaction, &1))
     |> update_in([:tx, :poi], &Enc.encode(:poi, :aec_trees.serialize_poi(&1)))
   end
+
   def custom_encode(%{type: :channel_slash_tx} = tx) do
     tx
     |> update_in([:tx, :payload], &Enc.encode(:transaction, &1))
     |> update_in([:tx, :poi], &Enc.encode(:poi, :aec_trees.serialize_poi(&1)))
   end
+
   def custom_encode(%{type: :channel_snapshot_solo_tx} = tx),
     do: update_in(tx.tx.payload, &Enc.encode(:transaction, &1))
-  def custom_encode(%{type: :oracle_register_tx} = tx),
-    do: update_in(tx.tx.oracle_ttl, &encode_ttl(&1, tx.height))
+
+  def custom_encode(%{type: :oracle_register_tx, block_height: block_height} = tx),
+    do: update_in(tx.tx.oracle_ttl, &encode_ttl(&1, block_height))
+
   def custom_encode(%{type: :oracle_extend_tx} = tx),
-    do: update_in(tx.tx.oracle_ttl, &encode_ttl(&1, tx.height))
-  def custom_encode(%{type: :oracle_query_tx, height: height} = tx) do
+    do:
+      put_in(tx.tx.oracle_ttl, %{
+        type: elem(tx.tx.oracle_ttl, 0),
+        value: elem(tx.tx.oracle_ttl, 1)
+      })
+
+  def custom_encode(%{type: :oracle_query_tx, block_height: block_height} = tx) do
     tx
-    |> update_in([:tx, :query_ttl], &encode_ttl(&1, height))
-    |> update_in([:tx, :response_ttl], &encode_ttl(&1, height))
+    |> update_in([:tx, :query_ttl], &encode_ttl(&1, block_height))
+    |> update_in([:tx, :response_ttl], &encode_ttl(&1, block_height))
   end
-  def custom_encode(%{type: :oracle_response_tx} = tx) do
+
+  def custom_encode(%{type: :oracle_response_tx, block_height: block_height} = tx) do
     tx
-    |> update_in([:tx, :response_ttl], &encode_ttl(&1, tx.height))
+    |> update_in([:tx, :response_ttl], &encode_ttl(&1, block_height))
     |> update_in([:tx, :query_id], &Enc.encode(:oracle_query_id, &1))
     |> update_in([:tx, :response], &maybe_base64/1)
   end
+
   def custom_encode(%{type: :ga_attach_tx} = tx) do
     tx
     |> update_in([:tx, :auth_fun], &encode16_lowercased/1)
     |> update_in([:tx, :call_data], &Enc.encode(:contract_bytearray, &1))
     |> update_in([:tx, :code], &Enc.encode(:contract_bytearray, &1))
   end
+
   def custom_encode(%{type: :ga_meta_tx} = tx) do
     tx
     |> update_in([:tx, :auth_data], &Enc.encode(:contract_bytearray, &1))
     |> update_in([:tx, :tx], fn aec_signed_tx ->
       {type, rec} = :aetx.specialize_type(:aetx_sign.tx(aec_signed_tx))
+
       nested_tx =
         tx_record_to_map(type, rec)
         |> encode_ids(type)
         |> put_in([:type], AeMdwWeb.Util.to_user_tx_type(type))
+
       %{tx: nested_tx}
     end)
   end
+
   def custom_encode(tx),
     do: tx
-
 
   def encode_id(xs) when is_list(xs),
     do: xs |> Enum.map(&Enc.encode(:id_hash, &1))
@@ -236,11 +257,12 @@ defmodule AeMdw.Db.Model do
 
   def encode_ttl({:delta, diff}, height),
     do: height + diff
+
   def encode_ttl({:block, height}, _),
     do: height
 
   def encode16_lowercased(bin),
-    do: "0x" <> (bin |> Base.encode16 |> String.downcase)
+    do: "0x" <> (bin |> Base.encode16() |> String.downcase())
 
   def maybe_base64(bin) do
     try do
