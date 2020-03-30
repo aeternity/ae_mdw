@@ -127,7 +127,7 @@ defmodule AeMdwWeb.TransactionController do
          true <- endpoint == endpoint_,
          true <- page == page_ + 1,
          true <- limit == limit_,
-         {txs_list, new_continuation} <- Util.pagination(continuation, limit) do
+         {txs_list, new_continuation} <- Util.pagination(limit, continuation) do
       EtsManager.put(key, endpoint, new_continuation, page, limit)
       check_txs_list(txs_list)
     else

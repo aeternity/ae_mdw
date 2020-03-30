@@ -9,11 +9,13 @@ defmodule AeMdwWeb.Util do
     end
   end
 
-  def pagination(continuation, limit), do: StreamSplit.take_and_drop(continuation, limit)
+  def pagination(limit, temp), do: StreamSplit.take_and_drop(temp, limit)
+
+  def pagination(limit, 1, temp), do: pagination(limit, temp)
 
   def pagination(limit, page, temp) do
     {_, temp1} = StreamSplit.take_and_drop(temp, limit * (page - 1))
-    StreamSplit.take_and_drop(temp1, limit)
+    pagination(limit, temp1)
   end
 
   def pagination(_limit, 0, acc, _temp), do: acc
