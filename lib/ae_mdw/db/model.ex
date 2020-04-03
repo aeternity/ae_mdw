@@ -35,18 +35,10 @@ defmodule AeMdw.Db.Model do
   @type_defaults [index: {nil, -1}, unused: nil]
   defrecord :type, @type_defaults
 
-  # index = {tx_type, -tx_index}
-  @rev_type_defaults [index: {nil, -1}, unused: nil]
-  defrecord :rev_type, @rev_type_defaults
-
   # txs objects     :
   #     index = {tx_type, object_pubkey, tx_index}, id_tag = id_tag, role = role
   @object_defaults [index: {nil, nil, -1}, id_tag: nil, role: nil]
   defrecord :object, @object_defaults
-
-  # index = {tx_type, object_pubkey, -tx_index}, id_tag = id_tag, role = role
-  @rev_object_defaults [index: {nil, nil, -1}, id_tag: nil, role: nil]
-  defrecord :rev_object, @rev_object_defaults
 
   # TODO:
   # contract events :
@@ -62,14 +54,12 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.Block,
       AeMdw.Db.Model.Time,
       AeMdw.Db.Model.Type,
-      AeMdw.Db.Model.RevType,
       AeMdw.Db.Model.Object,
-      AeMdw.Db.Model.RevObject,
       AeMdw.Db.Model.Event
     ]
 
   def records(),
-    do: [:tx, :block, :time, :type, :rev_type, :object, :rev_object, :event]
+    do: [:tx, :block, :time, :type, :object, :event]
 
   def fields(record),
     do: for({x, _} <- defaults(record), do: x)
@@ -78,27 +68,21 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Block), do: :block
   def record(AeMdw.Db.Model.Time), do: :time
   def record(AeMdw.Db.Model.Type), do: :type
-  def record(AeMdw.Db.Model.RevType), do: :rev_type
   def record(AeMdw.Db.Model.Object), do: :object
-  def record(AeMdw.Db.Model.RevObject), do: :rev_object
   def record(AeMdw.Db.Model.Event), do: :event
 
   def table(:tx), do: AeMdw.Db.Model.Tx
   def table(:block), do: AeMdw.Db.Model.Block
   def table(:time), do: AeMdw.Db.Model.Time
   def table(:type), do: AeMdw.Db.Model.Type
-  def table(:rev_type), do: AeMdw.Db.Model.RevType
   def table(:object), do: AeMdw.Db.Model.Object
-  def table(:rev_object), do: AeMdw.Db.Model.RevObject
   def table(:event), do: AeMdw.Db.Model.Event
 
   def defaults(:tx), do: @tx_defaults
   def defaults(:block), do: @block_defaults
   def defaults(:time), do: @time_defaults
   def defaults(:type), do: @type_defaults
-  def defaults(:rev_type), do: @rev_type_defaults
   def defaults(:object), do: @object_defaults
-  def defaults(:rev_object), do: @rev_object_defaults
   def defaults(:event), do: @event_defaults
 
   def tx_record_to_map(tx_type, tx_rec) do
