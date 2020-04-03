@@ -6,60 +6,27 @@ defmodule AeMdw.Db.Stream.Tx do
 
   import AeMdw.{Sigil, Util, Db.Util}
 
-  @mnesia_chunk_size 20
+  @tab ~t[tx]
 
   ################################################################################
 
-  def index(),
-    do: tx() |> Stream.map(&Model.tx(&1, :index))
+  def roots(%{}),
+    do: nil
 
-  def tx() do
-    Stream.resource(
-      fn ->
-        mspec =
-          Ex2ms.fun do
-            {:tx, _, _, _} = tx -> tx
-          end
+  def entry(_, i, Progress) when is_integer(i),
+    do: read_tx(i) == [] && next(@tab, i) || i
+  def entry(_, i, Degress) when is_integer(i),
+    do: read_tx(i) == [] && prev(@tab, i) || i
+  def entry(_, Progress, Progress),
+    do: first(@tab)
+  def entry(_, Degress, Degress),
+    do: last(@tab)
 
-        select(~t[tx], mspec, @mnesia_chunk_size)
-      end,
-      &stream_next/1,
-      &id/1
-    )
-  end
+  def key_checker(_),
+    do: &is_integer/1
+  def key_checker(_, Progress, mark) when is_integer(mark),
+    do: &(&1 <= mark)
+  def key_checker(_, Degress, mark) when is_integer(mark),
+    do: &(&1 >= mark)
 
-  defp stream_next(:"$end_of_table"), do: {:halt, :done}
-  defp stream_next({[tx | txs], cont}), do: {[tx], {txs, cont}}
-
-  defp stream_next({[], cont}) do
-    case select(cont) do
-      {[tx | txs], cont} -> {[tx], {txs, cont}}
-      _ -> {:halt, :done}
-    end
-  end
-
-  ################################################################################
-
-  def rev_index(),
-    do: rev_tx() |> Stream.map(&Model.tx(&1, :index))
-
-  def rev_tx() do
-    Stream.resource(
-      fn ->
-        tab = ~t[tx]
-        {tab, last(tab)}
-      end,
-      &rev_stream_next/1,
-      &id/1
-    )
-  end
-
-  defp rev_stream_next({_, :"$end_of_table"}), do: {:halt, :done}
-
-  defp rev_stream_next({tab, txi}) do
-    case read_tx(txi) do
-      [tx] -> {[tx], {tab, prev(tab, txi)}}
-      [] -> rev_stream_next({tab, prev(tab, txi)})
-    end
-  end
 end

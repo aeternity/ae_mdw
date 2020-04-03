@@ -5,6 +5,12 @@ defmodule AeMdw.Db.Util do
 
   ################################################################################
 
+  def read(tab, key),
+    do: :mnesia.async_dirty(fn -> :mnesia.read(tab, key) end)
+
+  def read!(tab, key),
+    do: read(tab, key) |> one!
+
   def read_tx(txi),
     do: :mnesia.async_dirty(fn -> :mnesia.read(~t[tx], txi) end)
 
@@ -17,8 +23,16 @@ defmodule AeMdw.Db.Util do
   def read_block!({_, _} = bi),
     do: read_block(bi) |> one!
 
+  def range(from, to),
+    do: struct(Range, first: from, last: to)
+
   def prev(tab, key) do
     fn -> :mnesia.prev(tab, key) end
+    |> :mnesia.async_dirty()
+  end
+
+  def next(tab, key) do
+    fn -> :mnesia.next(tab, key) end
     |> :mnesia.async_dirty()
   end
 

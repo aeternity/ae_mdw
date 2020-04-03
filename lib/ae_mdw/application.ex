@@ -1,7 +1,5 @@
 defmodule AeMdw.Application do
-  # See https://hexdocs.pm/elixir/Application.html
-  # for more information on OTP Applications
-  @moduledoc false
+  alias AeMdw.Db.Model
 
   use Application
 
@@ -32,6 +30,13 @@ defmodule AeMdw.Application do
         {put_in(tx_fields[type], fields), put_in(tx_ids[type], ids)}
       end)
 
+    stream_mod = fn db_mod ->
+      ["AeMdw", "Db", "Model", tab] = Module.split(db_mod)
+      Module.concat(AeMdw.Db.Stream, tab)
+    end
+
+    tx_group = &("#{&1}" |> String.split("_") |> hd |> String.to_atom)
+    tx_types = Map.keys(type_mod_map)
     SmartGlobal.new(
       AeMdw.Node,
       %{
@@ -42,9 +47,11 @@ defmodule AeMdw.Application do
         tx_ids: tx_ids,
         id_prefix: id_prefix_type_map,
         # for quicker testing without try/rescue
-        tx_types: [{[], MapSet.new(Map.keys(type_mod_map))}],
+        tx_types: [{[], MapSet.new(tx_types)}],
         tx_names: [{[], MapSet.new(Map.values(type_name_map))}],
-        id_prefixes: [{[], MapSet.new(Map.keys(id_prefix_type_map))}]
+        id_prefixes: [{[], MapSet.new(Map.keys(id_prefix_type_map))}],
+        stream_mod: Enum.reduce(Model.tables, %{}, fn t, acc -> put_in(acc[t], stream_mod.(t)) end),
+        tx_group: Enum.group_by(tx_types, tx_group)
       }
     )
   end

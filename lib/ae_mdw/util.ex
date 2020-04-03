@@ -22,6 +22,20 @@ defmodule AeMdw.Util do
   def map_ok!({:ok, x}, f), do: f.(x)
   def map_ok!(err, _), do: raise(RuntimeError, message: "failed on #{inspect(err)}")
 
+  def flip_tuple({a, b}), do: {b, a}
+
   def inverse(%{} = map),
     do: Enum.reduce(map, %{}, fn {k, v}, map -> put_in(map[v], k) end)
+
+  def prx(x),
+    do: x |> IO.inspect(pretty: true, limit: :infinity)
+  def prx(x, label),
+    do: x |> IO.inspect(label: label, pretty: true, limit: :infinity)
+
+  def is_mapset(%{__struct__: MapSet}), do: true
+  def is_mapset(_), do: false
+
+  def to_list_like(nil), do: [nil]
+  def to_list_like(xs), do: (is_mapset(xs) or is_list(xs)) && xs || List.wrap(xs)
+
 end
