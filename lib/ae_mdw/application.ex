@@ -10,7 +10,8 @@ defmodule AeMdw.Application do
 
     children = [
       AeMdw.Db.Sync.Supervisor,
-      AeMdwWeb.Supervisor
+      AeMdwWeb.Supervisor,
+      {Riverside, [handler: AeWebsocket.SocketHandler]}
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)

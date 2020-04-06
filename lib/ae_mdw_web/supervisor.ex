@@ -15,6 +15,7 @@ defmodule AeMdwWeb.Supervisor do
     EtsCache.new(AeMdwWeb.Continuation.table(), continuation_exp, :ordered_set)
 
     children = [AeMdwWeb.Endpoint]
+
     Supervisor.init(children, strategy: :one_for_one)
   end
 end
