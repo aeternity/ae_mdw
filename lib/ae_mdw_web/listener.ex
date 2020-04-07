@@ -2,7 +2,7 @@ defmodule AeMdwWeb.Listener do
   use GenServer
 
   def start_link(_args) do
-    GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
+    GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
   def init(state) do
@@ -10,30 +10,51 @@ defmodule AeMdwWeb.Listener do
     {:ok, state}
   end
 
-  def handle_info({:gproc_ps_event, :top_changed, %{info: info}}, state) do
+  def new_object(target), do: GenServer.cast(__MODULE__, {:add, target})
+
+  def remove_object(target), do: GenServer.cast(__MODULE__, {:remove, target})
+
+  def handle_info({:gproc_ps_event, :tx_received, %{info: info}}, state) do
     get_key_blocks(info)
-    get_micro_blocks_header(info)
-    get_txs(info)
     get_micro_blocks(info)
+    get_txs(info, state)
+
     {:noreply, state}
   end
 
-  def get_txs(info) do
+  def handle_cast({:add, target}, state), do: {:noreply, [target | state]}
+
+  def handle_cast({:remove, target}, state), do: {:noreply, state -- [target]}
+
+  def get_txs(info, state) do
     case :aehttp_logic.get_micro_block_by_hash(info.block_hash) do
       {:ok, block} ->
         header = :aec_blocks.to_header(block)
 
         txs =
           for tx <- :aec_blocks.txs(block) do
+            ser_tx = :aetx_sign.serialize_for_client(header, tx)
+
             data = %{
-              "payload" => :aetx_sign.serialize_for_client(header, tx),
+              "payload" => ser_tx,
               "subscription" => "Transactions"
             }
 
-            Riverside.LocalDelivery.deliver(
-              {:channel, "Transactions"},
-              {:text, Poison.encode!(data)}
-            )
+            broadcast("Transactions", data)
+
+            Enum.each(state, fn obj ->
+              case ser_tx["tx"]["type"] do
+                "SpendTx" ->
+                  if ser_tx["tx"]["recipient_id"] == obj || ser_tx["tx"]["sender_id"] == obj do
+                    data = %{
+                      "payload" => :aetx_sign.serialize_for_client(header, tx),
+                      "subscription" => "Object"
+                    }
+
+                    broadcast(obj, data)
+                  end
+              end
+            end)
           end
 
       {:error, :block_not_found} ->
@@ -41,7 +62,7 @@ defmodule AeMdwWeb.Listener do
     end
   end
 
-  def get_micro_blocks_header(info) do
+  def get_micro_blocks(info) do
     case :aehttp_logic.get_micro_block_by_hash(info.block_hash) do
       {:ok, block} ->
         prev_block_hash = :aec_blocks.prev_hash(block)
@@ -56,10 +77,7 @@ defmodule AeMdwWeb.Listener do
               "subscription" => "MicroBlocks"
             }
 
-            Riverside.LocalDelivery.deliver(
-              {:channel, "MicroBlocks"},
-              {:text, Poison.encode!(data)}
-            )
+            broadcast("MicroBlocks", data)
 
           :error ->
             {:error, %{"reason" => "Block not found"}}
@@ -82,10 +100,7 @@ defmodule AeMdwWeb.Listener do
               "subscription" => "KeyBlocks"
             }
 
-            Riverside.LocalDelivery.deliver(
-              {:channel, "KeyBlocks"},
-              {:text, Poison.encode!(data)}
-            )
+            broadcast("KeyBlocks", data)
 
           _ ->
             prev_block_hash = :aec_blocks.prev_hash(block)
@@ -99,10 +114,7 @@ defmodule AeMdwWeb.Listener do
                   "subscription" => "KeyBlocks"
                 }
 
-                Riverside.LocalDelivery.deliver(
-                  {:channel, "KeyBlocks"},
-                  {:text, Poison.encode!(data)}
-                )
+                broadcast("KeyBlocks", data)
 
               :error ->
                 {:error, %{"reason" => "Block not found"}}
@@ -114,37 +126,10 @@ defmodule AeMdwWeb.Listener do
     end
   end
 
-  def get_micro_blocks(info) do
-    case :aehttp_logic.get_micro_block_by_hash(info.block_hash) do
-      {:ok, block} ->
-        header = :aec_blocks.to_header(block)
-
-        txs =
-          for tx <- :aec_blocks.txs(block) do
-            :aetx_sign.serialize_for_client(header, tx)
-          end
-
-        prev_block_hash = :aec_blocks.prev_hash(block)
-
-        case :aec_chain.get_block(prev_block_hash) do
-          {:ok, prev_block} ->
-            prev_block_type = :aec_blocks.type(prev_block)
-            header = :aec_blocks.to_header(block)
-            ser_header = :aec_headers.serialize_for_client(header, prev_block_type)
-
-            data = Enum.reduce(txs, %{}, fn %{"hash" => v} = tx, acc -> Map.put(acc, v, tx) end)
-
-            Riverside.LocalDelivery.deliver(
-              {:channel, "MicroBlocks"},
-              {:text, Poison.encode!(data)}
-            )
-
-          :error ->
-            {:error, %{"reason" => "Block not found"}}
-        end
-
-      {:error, :block_not_found} ->
-        {:error, %{"reason" => "Block not found"}}
-    end
-  end
+  def broadcast(channel, msg),
+    do:
+      Riverside.LocalDelivery.deliver(
+        {:channel, channel},
+        {:text, Poison.encode!(msg)}
+      )
 end

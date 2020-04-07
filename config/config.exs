@@ -35,8 +35,8 @@ config :ae_mdw, AeWebsocket.SocketHandler,
   reuse_port: false,
   show_debug_logs: false,
   transmission_limit: [
-    # if 50 frames are sent on a connection
-    capacity: 50,
+    # if 1000 frames are sent on a connection
+    capacity: 1000,
     # in 2 seconds, disconnect it.
     duration: 2000
   ]
