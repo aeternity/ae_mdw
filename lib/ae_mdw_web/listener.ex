@@ -14,11 +14,14 @@ defmodule AeMdwWeb.Listener do
 
   def remove_object(target), do: GenServer.cast(__MODULE__, {:remove, target})
 
-  def handle_info({:gproc_ps_event, :top_changed, %{info: info}}, state) do
-    get_key_blocks(info)
+  def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :micro} = info}}, state) do
     get_micro_blocks(info)
     get_txs(info, state)
+    {:noreply, state}
+  end
 
+  def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :key} = info}}, state) do
+    get_key_blocks(info)
     {:noreply, state}
   end
 
