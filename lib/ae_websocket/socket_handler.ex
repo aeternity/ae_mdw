@@ -16,7 +16,7 @@ defmodule AeWebsocket.SocketHandler do
       ) do
     AeMdwWeb.Listener.new_object(target)
     Riverside.LocalDelivery.join_channel(target)
-    new_state = %{state | info: info ++ [target]}
+    new_state = %{state | info: info ++ [target] |> Enum.uniq()}
 
     deliver_me(new_state.info)
     {:ok, session, new_state}
@@ -24,7 +24,7 @@ defmodule AeWebsocket.SocketHandler do
 
   def handle_message(%{"op" => "Subscribe", "payload" => payload}, session, %{info: info} = state) do
     Riverside.LocalDelivery.join_channel(payload)
-    new_state = %{state | info: info ++ [payload]}
+    new_state = %{state | info: info ++ [payload] |> Enum.uniq()}
     deliver_me(new_state.info)
     {:ok, session, new_state}
   end
@@ -51,6 +51,11 @@ defmodule AeWebsocket.SocketHandler do
 
     deliver_me(new_state.info)
     {:ok, session, new_state}
+  end
+
+  def handle_message(msg, session, state) do
+    deliver_me("wrong request")
+    {:ok, session, state}
   end
 
   @impl Riverside

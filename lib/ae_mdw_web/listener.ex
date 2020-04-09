@@ -14,7 +14,7 @@ defmodule AeMdwWeb.Listener do
 
   def remove_object(target), do: GenServer.cast(__MODULE__, {:remove, target})
 
-  def handle_info({:gproc_ps_event, :tx_received, %{info: info}}, state) do
+  def handle_info({:gproc_ps_event, :top_changed, %{info: info}}, state) do
     get_key_blocks(info)
     get_micro_blocks(info)
     get_txs(info, state)
