@@ -5,6 +5,7 @@ defmodule AeMdw.Node.Db do
   # we require that block index is in place
   import AeMdw.Db.Util, only: [read_block!: 1]
 
+
   def get_blocks(height) when is_integer(height) do
     kb_hash = Model.block(read_block!({height, -1}), :hash)
     {:aec_db.get_block(kb_hash), get_micro_blocks(height)}
@@ -28,4 +29,15 @@ defmodule AeMdw.Node.Db do
       :key -> nil
     end
   end
+
+
+  # NOTE: only needed for manual patching of the DB in case of missing blocks
+  #
+  # def devfix_write_block({:mic_block, header, txs, fraud}) do
+  #   {:ok, hash} = :aec_headers.hash_header(header)
+  #   tx_hashes = txs |> Enum.map(&:aetx_sign.hash/1)
+  #   block = {:aec_blocks, hash, tx_hashes, fraud}
+  #   :mnesia.transaction(fn -> :mnesia.write(block) end)
+  # end
+
 end

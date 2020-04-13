@@ -4,6 +4,15 @@ defmodule AeMdw.Extract do
   import AeMdw.Util
 
   defmodule AbsCode do
+
+    def reduce(mod_name, {fun_name, arity}, init_acc, f) when is_atom(mod_name),
+      do: reduce(ok!(AbsCode.module(mod_name)), {fun_name, arity}, init_acc, f)
+
+    def reduce(mod_code, {fun_name, arity}, init_acc, f) when is_list(mod_code) do
+      {:ok, fn_code} = AbsCode.function(mod_code, fun_name, arity)
+      Enum.reduce(fn_code, init_acc, f)
+    end
+
     def module(module) do
       with [_ | _] = path <- :code.which(module),
            {:ok, chunk} = :beam_lib.chunks(path, [:abstract_code]),
@@ -67,17 +76,48 @@ defmodule AeMdw.Extract do
 
   defp tx_type_variants(_), do: nil
 
-  def tx_map() do
-    with {:ok, mod_code} <- AbsCode.module(:aetx),
-         {:ok, fn_code} <- AbsCode.function(mod_code, :type_to_cb, 1) do
-      type_mod = fn {:clause, _, [{:atom, _, t}], [], [{:atom, _, m}]} -> {t, m} end
 
-      {:ok,
-       fn_code
-       |> Enum.map(type_mod)
-       |> Enum.into(%{})}
-    end
-  end
+  def tx_mod_map(),
+    do: tx_mod_map(ok!(AbsCode.module(:aetx)))
+
+  def tx_mod_map(mod_code),
+    do: AbsCode.reduce(mod_code, {:type_to_cb, 1}, %{},
+          fn {:clause, _, [{:atom, _, t}], [], [{:atom, _, m}]}, acc ->
+            Map.put(acc, t, m)
+          end)
+
+  def tx_name_map(),
+    do: tx_name_map(ok!(AbsCode.module(:aetx)))
+
+  def tx_name_map(mod_code),
+    do: AbsCode.reduce(mod_code, {:type_to_swagger_name, 1}, %{},
+          fn {:clause, _, [{:atom, _, t}], [],
+              [{:bin, _, [{:bin_element, _, {:string, _, n}, _, _}]}]},
+            acc ->
+              Map.put(acc, t, "#{n}")
+          end)
+
+  def id_prefix_type_map(),
+    do: id_prefix_type_map(ok!(AbsCode.module(:aeser_api_encoder)))
+
+  def id_prefix_type_map(mod_code),
+    do: AbsCode.reduce(mod_code, {:pfx2type, 1}, %{},
+          fn {:clause, _,
+              [{:bin, _, [{:bin_element, _, {:string, _, pfx}, _, _}]}],
+              [], [{:atom, _, type}]},
+            acc ->
+              Map.put(acc, "#{pfx}", type)
+          end)
+
+  def id_type_map(),
+    do: id_type_map(ok!(AbsCode.module(:aeser_api_encoder)))
+
+  def id_type_map(mod_code),
+    do: AbsCode.reduce(mod_code, {:id2type, 1}, %{},
+          fn {:clause, _, [{:atom, _, id}], [], [{:atom, _, type}]}, acc ->
+            Map.put(acc, id, type)
+          end)
+
 
   defp tx_record(:name_preclaim_tx), do: :ns_preclaim_tx
   defp tx_record(:name_claim_tx), do: :ns_claim_tx
@@ -90,7 +130,7 @@ defmodule AeMdw.Extract do
     do: tx_record_info(tx_type, &AeMdw.Node.tx_mod/1)
 
   def tx_record_info(:channel_client_reconnect_tx, _),
-    do: {:ok, [], %{}}
+    do: {[], %{}}
 
   def tx_record_info(tx_type, mod_mapper) do
     mod_name = mod_mapper.(tx_type)
@@ -109,6 +149,6 @@ defmodule AeMdw.Extract do
         end
       )
 
-    {:ok, Enum.reverse(rev_names), ids}
+    {Enum.reverse(rev_names), ids}
   end
 end

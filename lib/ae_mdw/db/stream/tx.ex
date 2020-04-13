@@ -1,65 +1,37 @@
 defmodule AeMdw.Db.Stream.Tx do
-  require Ex2ms
-  require AeMdw.Db.Model
-
   alias AeMdw.Db.Model
+  import AeMdw.Db.Util
 
-  import AeMdw.{Sigil, Util, Db.Util}
-
-  @mnesia_chunk_size 20
-
-  ################################################################################
-
-  def index(),
-    do: tx() |> Stream.map(&Model.tx(&1, :index))
-
-  def tx() do
-    Stream.resource(
-      fn ->
-        mspec =
-          Ex2ms.fun do
-            {:tx, _, _, _} = tx -> tx
-          end
-
-        select(~t[tx], mspec, @mnesia_chunk_size)
-      end,
-      &stream_next/1,
-      &id/1
-    )
-  end
-
-  def rev_index(),
-    do: rev_tx() |> Stream.map(&Model.tx(&1, :index))
-
-  def rev_tx() do
-    Stream.resource(
-      fn ->
-        tab = ~t[tx]
-        {tab, last(tab)}
-      end,
-      &rev_stream_next/1,
-      &id/1
-    )
-  end
+  @tab Model.Tx
 
   ################################################################################
 
-  defp stream_next(:"$end_of_table"), do: {:halt, :done}
-  defp stream_next({[tx | txs], cont}), do: {[tx], {txs, cont}}
+  def normalize_query(nil),
+    do: nil
 
-  defp stream_next({[], cont}) do
-    case select(cont) do
-      {[tx | txs], cont} -> {[tx], {txs, cont}}
-      _ -> {:halt, :done}
-    end
-  end
+  def roots(nil),
+    do: nil
 
-  defp rev_stream_next({_, :"$end_of_table"}), do: {:halt, :done}
+  def full_key(sort_k, nil) when is_integer(sort_k),
+    do: sort_k
+  def full_key(sort_k, nil) when sort_k == <<>> or sort_k === -1,
+    do: sort_k
 
-  defp rev_stream_next({tab, txi}) do
-    case read_tx(txi) do
-      [tx] -> {[tx], {tab, prev(tab, txi)}}
-      [] -> rev_stream_next({tab, prev(tab, txi)})
-    end
-  end
+  def first_entry(Progress), do: first(@tab)
+  def first_entry(_, Degress), do: last(@tab)
+
+  def entry(_, i, Progress) when is_integer(i),
+    do: read_tx(i) == [] && next(@tab, i) || i
+  def entry(_, i, Degress) when is_integer(i),
+    do: read_tx(i) == [] && prev(@tab, i) || i
+
+  def key_checker(_),
+    do: fn x -> r = is_integer(x); "KEYCHK A: #{inspect x} -> #{r}" |> AeMdw.Util.prx; r end
+  def key_checker(_, Progress, mark) when is_integer(mark),
+    do: &(&1 <= mark)
+  def key_checker(_, Degress, mark) when is_integer(mark),
+    do: &(&1 >= mark)
+  def key_checker(_, _, nil),
+    do: key_checker(nil)
+
 end

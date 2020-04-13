@@ -1,8 +1,4 @@
 defmodule AeMdw.Application do
-  # See https://hexdocs.pm/elixir/Application.html
-  # for more information on OTP Applications
-  @moduledoc false
-
   alias AeMdw.Db.Model
 
   use Application
@@ -21,22 +17,45 @@ defmodule AeMdw.Application do
   def init(:meta) do
     alias AeMdw.Extract
 
-    {:ok, type_mod_map} = Extract.tx_map()
+    {:ok, aetx_code} = Extract.AbsCode.module(:aetx)
+    {:ok, aeser_code} = Extract.AbsCode.module(:aeser_api_encoder)
+
+    type_mod_map = Extract.tx_mod_map(aetx_code)
+    type_name_map = Extract.tx_name_map(aetx_code)
+    id_prefix_type_map = Extract.id_prefix_type_map(aeser_code)
+    id_type_map = Extract.id_type_map(aeser_code)
     type_mod_mapper = &Map.fetch!(type_mod_map, &1)
 
     {tx_fields, tx_ids} =
       Enum.reduce(type_mod_map, {%{}, %{}}, fn {type, _}, {tx_fields, tx_ids} ->
-        {:ok, fields, ids} = Extract.tx_record_info(type, type_mod_mapper)
+        {fields, ids} = Extract.tx_record_info(type, type_mod_mapper)
         {put_in(tx_fields[type], fields), put_in(tx_ids[type], ids)}
       end)
 
+    stream_mod = fn db_mod ->
+      ["AeMdw", "Db", "Model", tab] = Module.split(db_mod)
+      Module.concat(AeMdw.Db.Stream, tab)
+    end
+
+    tx_group = &("#{&1}" |> String.split("_") |> hd |> String.to_atom)
+    tx_types = Map.keys(type_mod_map)
     SmartGlobal.new(
       AeMdw.Node,
       %{
         tx_mod: type_mod_map,
-        tx_types: [{[], Map.keys(type_mod_map)}],
+        tx_name: type_name_map,
+        tx_type: AeMdw.Util.inverse(type_name_map),
         tx_fields: tx_fields,
-        tx_ids: tx_ids
+        tx_ids: tx_ids,
+        id_prefix: id_prefix_type_map,
+        # for quicker testing without try/rescue
+        tx_types: [{[], MapSet.new(tx_types)}],
+        tx_names: [{[], MapSet.new(Map.values(type_name_map))}],
+        id_prefixes: [{[], MapSet.new(Map.keys(id_prefix_type_map))}],
+        stream_mod: Enum.reduce(Model.tables, %{}, fn t, acc -> put_in(acc[t], stream_mod.(t)) end),
+        tx_group: Enum.group_by(tx_types, tx_group),
+        id_type: id_type_map,
+        type_id: AeMdw.Util.inverse(id_type_map)
       }
     )
   end

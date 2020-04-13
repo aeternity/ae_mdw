@@ -1,119 +1,46 @@
 defmodule AeMdw.Db.Stream.Type do
-  require Ex2ms
+  alias AeMdw.Node, as: AE
+  alias AeMdw.Validate
+  alias AeMdw.Db.Model
 
-  import AeMdw.{Sigil, Util, Db.Util}
+  import AeMdw.{Util, Db.Util}
 
-  @mnesia_chunk_size 20
-
-  ################################################################################
-
-  def index(tx_type) do
-    Stream.resource(
-      fn ->
-        mspec =
-          Ex2ms.fun do
-            {:type, {^tx_type, i}, _} -> i
-          end
-
-        select(~t[type], mspec, @mnesia_chunk_size)
-      end,
-      &stream_next/1,
-      &id/1
-    )
-  end
-
-  def tx(tx_type) do
-    tx_type
-    |> index
-    |> Stream.map(&read_tx!/1)
-  end
-
-  def rev_index(tx_type) do
-    Stream.resource(
-      fn ->
-        mspec =
-          Ex2ms.fun do
-            {:rev_type, {^tx_type, i}, _} -> -i
-          end
-
-        {tx_type, [], nil, select(~t[rev_type], mspec, 1)}
-      end,
-      &rev_stream_next/1,
-      &id/1
-    )
-  end
-
-  def rev_tx(tx_type) do
-    tx_type
-    |> rev_index
-    |> Stream.map(&read_tx!/1)
-  end
+  @tab Model.Type
 
   ################################################################################
 
-  defp stream_next(:"$end_of_table"), do: {:halt, :done}
-  defp stream_next({[txi | txis], cont}), do: {[txi], {txis, cont}}
+  def normalize_query(nil),
+    do: AE.tx_types()
+  def normalize_query(types),
+    do: types |> to_list_like
 
-  defp stream_next({[], cont}) do
-    case select(cont) do
-      {[txi | txis], cont} -> {[txi], {txis, cont}}
-      _ -> {:halt, :done}
+  def roots(types),
+    do: Enum.map(types, &Validate.tx_type!/1)
+
+  def full_key(sort_k, type) when is_integer(sort_k) and sort_k >= 0 and is_atom(type),
+    do: {type, sort_k}
+  def full_key(sort_k, type) when sort_k == <<>> or sort_k === -1,
+    do: {type, sort_k}
+
+  def entry(type, i, kind) when is_atom(type) and is_integer(i) do
+    case read(@tab, {type, i}) do
+      [_] -> {type, i}
+      [] when kind == Progress -> next(@tab, {type, i})
+      [] when kind == Degress -> prev(@tab, {type, i})
     end
   end
+  def entry(type, Progress, Progress) when is_atom(type),
+    do: next(@tab, {type, -1})
+  def entry(type, Degress, Degress) when is_atom(type),
+    do: prev(@tab, {type, <<>>})
 
-  defp rev_stream_next({_tx_type, [], nil, {[], _}}),
-    do: {:halt, :done}
+  def key_checker(type),
+    do: fn {^type, _b} -> true; _ -> false end
+  def key_checker(type, Progress, mark) when is_integer(mark),
+    do: fn {^type, i} -> i <= mark; _ -> false end
+  def key_checker(type, Degress, mark) when is_integer(mark),
+    do: fn {^type, i} -> i >= mark; _ -> false end
+  def key_checker(type, _, nil),
+    do: key_checker(type)
 
-  defp rev_stream_next({tx_type, [txi | txis], top_mark, {marks, cont}}),
-    do: {[txi], {tx_type, txis, top_mark, {marks, cont}}}
-
-  defp rev_stream_next({tx_type, [], top_mark, {[], cont}}) do
-    case select(cont) do
-      {[_ | _] = marks, cont} ->
-        rev_stream_next({tx_type, [], top_mark, {marks, cont}})
-
-      _ ->
-        min_mark = top_mark - AeMdw.Db.Sync.Transaction.rev_tx_index_freq()
-        progress = bounded_progress(tx_type, min_mark, :backward)
-        txis = collect_keys(~t[type], [top_mark], {tx_type, top_mark}, &:mnesia.prev/2, progress)
-        rev_stream_next({tx_type, Enum.reverse(txis), nil, {[], nil}})
-    end
-  end
-
-  defp rev_stream_next({tx_type, [], top_mark, {[mark | marks], cont}}) do
-    txis =
-      collect_keys(
-        ~t[type],
-        [],
-        {tx_type, mark},
-        &:mnesia.next/2,
-        case is_nil(top_mark) do
-          true -> unbounded_progress(tx_type)
-          false -> bounded_progress(tx_type, top_mark, :forward)
-        end
-      )
-
-    rev_stream_next({tx_type, txis, mark, {marks, cont}})
-  end
-
-  defp unbounded_progress(tx_type) do
-    fn
-      {^tx_type, i}, acc -> {:cont, [i | acc]}
-      _, acc -> {:halt, acc}
-    end
-  end
-
-  defp bounded_progress(tx_type, mark, :forward) do
-    fn
-      {^tx_type, i}, acc when i <= mark -> {:cont, [i | acc]}
-      _, acc -> {:halt, acc}
-    end
-  end
-
-  defp bounded_progress(tx_type, mark, :backward) do
-    fn
-      {^tx_type, i}, acc when i >= mark -> {:cont, [i | acc]}
-      _, acc -> {:halt, acc}
-    end
-  end
 end

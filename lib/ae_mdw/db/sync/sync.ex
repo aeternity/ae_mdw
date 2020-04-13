@@ -10,7 +10,7 @@ defmodule AeMdw.Db.Sync do
 
   use GenServer
 
-  defstruct [:pid, :fork, :tx_context]
+  defstruct [:pid, :fork]
 
   @verify_range_kbs 200
 
@@ -25,7 +25,7 @@ defmodule AeMdw.Db.Sync do
   end
 
   def handle_continue(:start_sync, %Sync{pid: nil} = s),
-    do: {:noreply, spawn_action(s)}
+    do: {:noreply, spawn_action({Transaction, :sync, [:safe]}, s)}  # spawn_action(s)}
 
   def handle_info({:fork, height}, %Sync{pid: pid} = s) when is_integer(height) do
     s = %{s | fork: fork_height(height, s.fork)}
@@ -41,11 +41,11 @@ defmodule AeMdw.Db.Sync do
   def handle_info({pid, _act, _res}, %Sync{pid: pid, fork: fork} = s) when not is_nil(fork),
     do: {:noreply, spawn_action(%{s | pid: nil})}
 
-  def handle_info({pid, _, {txi, rev_cache}}, %Sync{pid: pid, fork: nil} = s) do
+  def handle_info({pid, _, _next_txi}, %Sync{pid: pid, fork: nil} = s) do
     top_height = height(:top)
     bi_max_kbi = BlockIndex.max_kbi()
     is_synced? = bi_max_kbi == top_height
-    next_state = %{s | pid: nil, tx_context: {txi, rev_cache}}
+    next_state = %{s | pid: nil}
     {:noreply, (is_synced? && next_state) || spawn_action(next_state)}
   end
 
@@ -75,10 +75,8 @@ defmodule AeMdw.Db.Sync do
 
   ################################################################################
 
-  defp spawn_action(%Sync{pid: nil, fork: nil, tx_context: tx_context} = s) do
-    args = (tx_context && [height(:top) - 1, tx_context]) || [:safe]
-    spawn_action({Transaction, :sync, args}, s)
-  end
+  defp spawn_action(%Sync{pid: nil, fork: nil} = s),
+    do: spawn_action({Transaction, :sync, [height(:top) - 1]}, s)
 
   defp spawn_action(%Sync{pid: nil, fork: height} = s) when not is_nil(height) do
     invalidate(height)
@@ -87,7 +85,7 @@ defmodule AeMdw.Db.Sync do
 
   defp spawn_action({m, f, a}, %Sync{} = s) do
     info("sync action #{inspect(hd(a))}")
-    %{s | tx_context: nil, pid: spawn_link(fn -> run_action({m, f, a}) end)}
+    %{s | pid: spawn_link(fn -> run_action({m, f, a}) end)}
   end
 
   defp run_action({m, f, a} = action) do
