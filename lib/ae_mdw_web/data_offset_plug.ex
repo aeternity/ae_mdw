@@ -8,18 +8,19 @@ defmodule AeMdwWeb.DataOffsetPlug do
       {{limit, ""}, {page, ""}} ->
         conn
         |> assign(:limit_page, {limit, page})
+
       err_state ->
         {context, value} =
           case err_state do
             {{_, ""}, _} -> {"page", page}
             {_, {_, ""}} -> {"limit", limit}
           end
+
         conn
-        |> send_resp(400, Jason.encode!(%{reason: "invalid #{context}: #{inspect value}"}))
+        |> send_resp(400, Jason.encode!(%{reason: "invalid #{context}: #{inspect(value)}"}))
         |> halt
     end
   end
 
   def call(conn, _opts), do: conn
-
 end

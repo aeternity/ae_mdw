@@ -45,6 +45,7 @@ defmodule AeMdw.Util do
 
   def prx(x),
     do: x |> IO.inspect(pretty: true, limit: :infinity)
+
   def prx(x, label),
     do: x |> IO.inspect(label: label, pretty: true, limit: :infinity)
 
@@ -52,18 +53,18 @@ defmodule AeMdw.Util do
   def is_mapset(_), do: false
 
   def to_list_like(nil), do: [nil]
-  def to_list_like(xs), do: (is_mapset(xs) or is_list(xs)) && xs || List.wrap(xs)
+  def to_list_like(xs), do: ((is_mapset(xs) or is_list(xs)) && xs) || List.wrap(xs)
 
   def kvs_to_map(params) when is_list(params) do
     for {k, kvs} <- Enum.group_by(params, &elem(&1, 0)), reduce: %{} do
       acc ->
         case kvs do
-          [_,_|_] ->
-            raise ArgumentError, message: "duplicate key #{inspect k} in #{inspect params}"
+          [_, _ | _] ->
+            raise ArgumentError, message: "duplicate key #{inspect(k)} in #{inspect(params)}"
+
           [{_, val}] ->
             put_in(acc[k], val)
         end
     end
   end
-
 end

@@ -4,7 +4,6 @@ defmodule AeMdw.Extract do
   import AeMdw.Util
 
   defmodule AbsCode do
-
     def reduce(mod_name, {fun_name, arity}, init_acc, f) when is_atom(mod_name),
       do: reduce(ok!(AbsCode.module(mod_name)), {fun_name, arity}, init_acc, f)
 
@@ -76,48 +75,62 @@ defmodule AeMdw.Extract do
 
   defp tx_type_variants(_), do: nil
 
-
   def tx_mod_map(),
     do: tx_mod_map(ok!(AbsCode.module(:aetx)))
 
   def tx_mod_map(mod_code),
-    do: AbsCode.reduce(mod_code, {:type_to_cb, 1}, %{},
-          fn {:clause, _, [{:atom, _, t}], [], [{:atom, _, m}]}, acc ->
-            Map.put(acc, t, m)
-          end)
+    do:
+      AbsCode.reduce(mod_code, {:type_to_cb, 1}, %{}, fn {:clause, _, [{:atom, _, t}], [],
+                                                          [{:atom, _, m}]},
+                                                         acc ->
+        Map.put(acc, t, m)
+      end)
 
   def tx_name_map(),
     do: tx_name_map(ok!(AbsCode.module(:aetx)))
 
   def tx_name_map(mod_code),
-    do: AbsCode.reduce(mod_code, {:type_to_swagger_name, 1}, %{},
-          fn {:clause, _, [{:atom, _, t}], [],
-              [{:bin, _, [{:bin_element, _, {:string, _, n}, _, _}]}]},
-            acc ->
-              Map.put(acc, t, "#{n}")
-          end)
+    do:
+      AbsCode.reduce(mod_code, {:type_to_swagger_name, 1}, %{}, fn {:clause, _, [{:atom, _, t}],
+                                                                    [],
+                                                                    [
+                                                                      {:bin, _,
+                                                                       [
+                                                                         {:bin_element, _,
+                                                                          {:string, _, n}, _, _}
+                                                                       ]}
+                                                                    ]},
+                                                                   acc ->
+        Map.put(acc, t, "#{n}")
+      end)
 
   def id_prefix_type_map(),
     do: id_prefix_type_map(ok!(AbsCode.module(:aeser_api_encoder)))
 
   def id_prefix_type_map(mod_code),
-    do: AbsCode.reduce(mod_code, {:pfx2type, 1}, %{},
-          fn {:clause, _,
-              [{:bin, _, [{:bin_element, _, {:string, _, pfx}, _, _}]}],
-              [], [{:atom, _, type}]},
-            acc ->
-              Map.put(acc, "#{pfx}", type)
-          end)
+    do:
+      AbsCode.reduce(mod_code, {:pfx2type, 1}, %{}, fn {:clause, _,
+                                                        [
+                                                          {:bin, _,
+                                                           [
+                                                             {:bin_element, _, {:string, _, pfx},
+                                                              _, _}
+                                                           ]}
+                                                        ], [], [{:atom, _, type}]},
+                                                       acc ->
+        Map.put(acc, "#{pfx}", type)
+      end)
 
   def id_type_map(),
     do: id_type_map(ok!(AbsCode.module(:aeser_api_encoder)))
 
   def id_type_map(mod_code),
-    do: AbsCode.reduce(mod_code, {:id2type, 1}, %{},
-          fn {:clause, _, [{:atom, _, id}], [], [{:atom, _, type}]}, acc ->
-            Map.put(acc, id, type)
-          end)
-
+    do:
+      AbsCode.reduce(mod_code, {:id2type, 1}, %{}, fn {:clause, _, [{:atom, _, id}], [],
+                                                       [{:atom, _, type}]},
+                                                      acc ->
+        Map.put(acc, id, type)
+      end)
 
   defp tx_record(:name_preclaim_tx), do: :ns_preclaim_tx
   defp tx_record(:name_claim_tx), do: :ns_claim_tx

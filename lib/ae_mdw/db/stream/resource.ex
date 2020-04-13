@@ -14,27 +14,36 @@ defmodule AeMdw.Db.Stream.Resource do
     constructor.(state, tab, order, mapper)
   end
 
-
   defp init(nil, _mod, _order, _query, _prefer_order),
     do: {&empty/4, nil}
+
   defp init({:range, range} = scope, mod, order, query, _prefer_order) do
     case mod.roots(query) do
       [] ->
         {&empty/4, nil}
+
       nil ->
         init_from_scope(scope, mod, order)
-      roots -> # root looks like MapSet<{type, pubkey}>
+
+      # root looks like MapSet<{type, pubkey}>
+      roots ->
         # roots |> prx("##############################")
         scope_check = DBS.Scope.checker(scope, order)
+
         conts =
           roots
           |> Stream.map(&cursor(&1, range, mod, order))
-          |> Stream.filter(fn nil -> false; _ -> true end)
+          |> Stream.filter(fn
+            nil -> false
+            _ -> true
+          end)
           |> Stream.filter(fn {key, _advance} -> scope_check.(sort_key(key)) end)
+
         conts =
           conts
           |> Enum.reduce(%{}, &put_kv/2)
           |> Enum.reduce(:gb_sets.new(), &add_cursor/2)
+
         case :gb_sets.size(conts) do
           0 -> {&empty/4, nil}
           1 -> {&simple/4, elem(:gb_sets.smallest(conts), 1)}
@@ -42,30 +51,33 @@ defmodule AeMdw.Db.Stream.Resource do
         end
     end
   end
+
   defp init(single_val, mod, order, query, prefer_order),
     do: init({:range, {single_val, single_val}}, mod, order, query, prefer_order)
-
 
   # defp init_from_scope({:exact, k}, mod, _order),
   #   do: {&simple/4, {mod.full_key(k, nil), &halter/2}}
 
   defp init_from_scope({:range, {from, to}}, mod, Progress),
-    do: {&simple/4, {mod.full_key(from || -1, nil),
-                     advance_fn(&next/2, mod.key_checker(nil, Progress, to))}}
+    do:
+      {&simple/4,
+       {mod.full_key(from || -1, nil), advance_fn(&next/2, mod.key_checker(nil, Progress, to))}}
+
   defp init_from_scope({:range, {from, to}}, mod, Degress),
-    do: {&simple/4, {mod.full_key(from || <<>>, nil), advance_fn(&prev/2, mod.key_checker(nil, Degress, to))}}
+    do:
+      {&simple/4,
+       {mod.full_key(from || <<>>, nil), advance_fn(&prev/2, mod.key_checker(nil, Degress, to))}}
+
   defp init_from_scope({:range, nil}, mod, Progress),
     do: {&simple/4, {mod.full_key(-1, nil), advance_fn(&next/2, mod.key_checker(nil))}}
+
   defp init_from_scope({:range, nil}, mod, Degress),
     do: {&simple/4, {mod.full_key(<<>>, nil), advance_fn(&prev/2, mod.key_checker(nil))}}
 
-
-#  defp halter(_tab, _succ_k), do: {:halt, :exact}
-
+  #  defp halter(_tab, _succ_k), do: {:halt, :exact}
 
   defp add_cursor({key, advance}, acc),
     do: :gb_sets.add({sort_key(key), {key, advance}}, acc)
-
 
   ################################################################################
 
@@ -73,6 +85,7 @@ defmodule AeMdw.Db.Stream.Resource do
     chk = mod.key_checker(root, Progress, limit)
     do_cursor(mod.entry(root, i, Progress), chk, advance_fn(&next/2, chk))
   end
+
   def cursor(root, {i, limit}, mod, Degress) when i >= limit do
     chk = mod.key_checker(root, Degress, limit)
     do_cursor(mod.entry(root, i, Degress), chk, advance_fn(&prev/2, chk))
@@ -80,16 +93,19 @@ defmodule AeMdw.Db.Stream.Resource do
 
   def do_cursor(:"$end_of_table", _checker, _advance),
     do: nil
+
   def do_cursor(key, _checker, _advance) when elem(key, 0) == :"$end_of_table",
     do: nil
-  def do_cursor(key, checker, advance),
-    do: checker.(key) && {key, advance} || nil
 
+  def do_cursor(key, checker, advance),
+    do: (checker.(key) && {key, advance}) || nil
 
   def advance_fn(succ, key_checker) do
     fn tab, key ->
       case succ.(tab, key) do
-        :"$end_of_table" -> {:halt, :eot}
+        :"$end_of_table" ->
+          {:halt, :eot}
+
         next_key ->
           case key_checker.(next_key) do
             true -> {:cont, next_key}
@@ -105,6 +121,7 @@ defmodule AeMdw.Db.Stream.Resource do
 
   def full_key(root, i) when is_tuple(root),
     do: Tuple.append(root, i)
+
   def full_key(root, i),
     do: {root, i}
 
@@ -135,6 +152,7 @@ defmodule AeMdw.Db.Stream.Resource do
 
   def do_simple(_tab, _key, nil, _mapper),
     do: {:halt, :done}
+
   def do_simple(tab, key, advance, mapper) do
     case {read(tab, key), advance.(tab, key)} do
       {[x], {:cont, next_key}} ->
@@ -142,13 +160,16 @@ defmodule AeMdw.Db.Stream.Resource do
           nil -> do_simple(tab, next_key, advance, mapper)
           val -> {[val], {next_key, advance}}
         end
+
       {[], {:cont, next_key}} ->
         do_simple(tab, next_key, advance, mapper)
+
       {[x], {:halt, _}} ->
         case mapper.(x) do
           nil -> {:halt, :done}
           val -> {[val], {:eot, nil}}
         end
+
       {[], {:halt, _}} ->
         {:halt, :done}
     end
@@ -158,6 +179,7 @@ defmodule AeMdw.Db.Stream.Resource do
 
   def complex(conts, tab, kind, mapper) do
     cont_pop = set_taker(kind)
+
     Stream.resource(
       fn -> conts end,
       fn conts -> do_complex(tab, conts, cont_pop, mapper) end,
@@ -167,11 +189,13 @@ defmodule AeMdw.Db.Stream.Resource do
 
   def do_complex(_tab, {0, nil}, _cont_pop, _mapper),
     do: {:halt, :done}
+
   def do_complex(tab, conts, cont_pop, mapper),
     do: do_complex(tab, nil, nil, conts, cont_pop, mapper)
 
   def do_complex(_tab, _key, nil, {0, nil}, _cont_pop, _mapper),
     do: {:halt, :done}
+
   def do_complex(tab, nil, nil, conts, cont_pop, mapper) do
     {{_sort_key, {key, advance}}, conts} = cont_pop.(conts)
     do_complex(tab, key, advance, conts, cont_pop, mapper)
@@ -183,20 +207,22 @@ defmodule AeMdw.Db.Stream.Resource do
         case mapper.(x) do
           nil ->
             do_complex(tab, next_key, advance, conts, cont_pop, mapper)
+
           val ->
             {[val], add_cursor({next_key, advance}, conts)}
         end
+
       {[], {:cont, next_key}} ->
         do_complex(tab, next_key, advance, conts, cont_pop, mapper)
+
       {[x], {:halt, _}} ->
         case mapper.(x) do
           nil -> {:halt, :done}
           val -> {[val], conts}
         end
+
       {[], {:halt, _}} ->
         {:halt, :done}
     end
   end
-
-
 end

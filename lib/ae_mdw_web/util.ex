@@ -7,30 +7,36 @@ defmodule AeMdwWeb.Util do
   import AeMdw.{Sigil, Db.Util}
 
   def scope(%{"from" => from, "to" => to}) do
-    [from, to] = Enum.map([from, to], &String.to_integer/1) |> Enum.sort
+    [from, to] = Enum.map([from, to], &String.to_integer/1) |> Enum.sort()
     to..from
   end
+
   def scope(%{}),
     do: nil
 
   # can be slow, we index the tx type + sender, but checking for receiver is liner
   def spend_txs(sender, receiver),
     do: spend_txs(sender, receiver, Degress)
+
   def spend_txs(sender, receiver, order) do
     receiver = Enc.encode(:account_pubkey, AeMdw.Validate.id!(receiver))
-    DBS.map(:forward, ~t[object],
+
+    DBS.map(
+      :forward,
+      ~t[object],
       fn x ->
         with :sender_id <- Model.object(x, :role),
              txi <- DBS.Resource.sort_key(Model.object(x, :index)),
              tx <- Model.tx_to_map(read_tx!(txi)),
              ^receiver <- tx["tx"]["recipient_id"] do
-               tx
-             else
-               _ -> nil
-             end
+          tx
+        else
+          _ -> nil
+        end
       end,
       {sender, :spend_tx},
-      order)
+      order
+    )
   end
 
   def pagination(limit, temp), do: StreamSplit.take_and_drop(temp, limit)

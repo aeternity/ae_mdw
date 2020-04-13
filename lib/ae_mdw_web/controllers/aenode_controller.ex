@@ -58,6 +58,7 @@ defmodule AeMdwWeb.AeNodeController do
 
   def get_account_details(conn, %{"account" => account}) do
     allowed_types = [:account_pubkey, :contract_pubkey]
+
     case Validate.id(account, allowed_types) do
       {:ok, pk} ->
         case :aec_chain.get_account(pk) do
@@ -67,6 +68,7 @@ defmodule AeMdwWeb.AeNodeController do
           :none ->
             conn |> put_status(:not_found) |> json(%{"reason" => "Account not found"})
         end
+
       {:error, _} ->
         conn |> put_status(:bad_request) |> json(%{"reason" => "Invalid public key"})
     end

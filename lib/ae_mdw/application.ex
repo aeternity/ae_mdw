@@ -37,8 +37,9 @@ defmodule AeMdw.Application do
       Module.concat(AeMdw.Db.Stream, tab)
     end
 
-    tx_group = &("#{&1}" |> String.split("_") |> hd |> String.to_atom)
+    tx_group = &("#{&1}" |> String.split("_") |> hd |> String.to_atom())
     tx_types = Map.keys(type_mod_map)
+
     SmartGlobal.new(
       AeMdw.Node,
       %{
@@ -52,7 +53,8 @@ defmodule AeMdw.Application do
         tx_types: [{[], MapSet.new(tx_types)}],
         tx_names: [{[], MapSet.new(Map.values(type_name_map))}],
         id_prefixes: [{[], MapSet.new(Map.keys(id_prefix_type_map))}],
-        stream_mod: Enum.reduce(Model.tables, %{}, fn t, acc -> put_in(acc[t], stream_mod.(t)) end),
+        stream_mod:
+          Enum.reduce(Model.tables(), %{}, fn t, acc -> put_in(acc[t], stream_mod.(t)) end),
         tx_group: Enum.group_by(tx_types, tx_group),
         id_type: id_type_map,
         type_id: AeMdw.Util.inverse(id_type_map)

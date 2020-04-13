@@ -50,7 +50,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   def min_kbi(), do: kbi(&first/1)
   def max_kbi(), do: kbi(&last/1)
 
-
   def keys_range(from_txi),
     do: keys_range(from_txi, last(~t[tx]))
 
@@ -73,36 +72,36 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     time_keys = time_keys_range(from_txi, to_txi)
 
-    %{~t[tx] => tx_keys,
-      ~t[type] => type_keys,
-      ~t[time] => time_keys,
-      ~t[object] => obj_keys}
+    %{~t[tx] => tx_keys, ~t[type] => type_keys, ~t[time] => time_keys, ~t[object] => obj_keys}
   end
-
 
   def time_keys_range(from_txi, to_txi) do
     bi_time = fn bi ->
       Model.block(read!(~t[block], bi), :hash)
-      |> :aec_db.get_header
-      |> :aec_headers.time_in_msecs
+      |> :aec_db.get_header()
+      |> :aec_headers.time_in_msecs()
     end
+
     from_bi = Model.tx(read_tx!(from_txi), :block_index)
+
     folder = fn tx, {bi, time, acc} ->
       case Model.tx(tx, :block_index) do
         ^bi ->
           {bi, time, [{time, Model.tx(tx, :index)} | acc]}
+
         new_bi ->
           new_time = bi_time.(new_bi)
           {new_bi, new_time, [{new_time, Model.tx(tx, :index)} | acc]}
       end
     end
+
     {_, _, keys} =
       from_txi..to_txi
       |> DBS.map(~t[tx])
       |> Enum.reduce({from_bi, bi_time.(from_bi), []}, folder)
+
     keys
   end
-
 
   ################################################################################
 
@@ -137,7 +136,13 @@ defmodule AeMdw.Db.Sync.Transaction do
     {mod, tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
     hash = :aetx_sign.hash(signed_tx)
     type = mod.type()
-    :mnesia.write(~t[tx], Model.tx(index: txi, id: hash, block_index: block_index, time: mb_time), :write)
+
+    :mnesia.write(
+      ~t[tx],
+      Model.tx(index: txi, id: hash, block_index: block_index, time: mb_time),
+      :write
+    )
+
     :mnesia.write(~t[type], Model.type(index: {type, txi}), :write)
     :mnesia.write(~t[time], Model.time(index: {mb_time, txi}), :write)
     AE.tx_ids(type) |> Enum.each(&write_object(&1, tx, type, txi))
@@ -161,7 +166,6 @@ defmodule AeMdw.Db.Sync.Transaction do
     end)
   end
 
-
   defp pk({:id, _, _} = id) do
     {_, pk} = :aeser_id.specialize(id)
     pk
@@ -183,5 +187,4 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   defp log_msg(height, _),
     do: "syncing transactions at generation #{height}"
-
 end
