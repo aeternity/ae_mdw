@@ -25,7 +25,7 @@ defmodule AeMdw.Db.Sync do
   end
 
   def handle_continue(:start_sync, %Sync{pid: nil} = s),
-    do: {:noreply, spawn_action(s)}
+    do: {:noreply, spawn_action({Transaction, :sync, [:safe]}, s)}  # spawn_action(s)}
 
   def handle_info({:fork, height}, %Sync{pid: pid} = s) when is_integer(height) do
     s = %{s | fork: fork_height(height, s.fork)}
