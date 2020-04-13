@@ -11,11 +11,11 @@ defmodule AeMdw.Db.Model do
 
   # txs table :
   #     index = tx_index (0..), id = tx_id
-  @tx_defaults [index: -1, id: <<>>, block_index: {-1, -1}]
+  @tx_defaults [index: -1, id: <<>>, block_index: {-1, -1}, time: -1]
   defrecord :tx, @tx_defaults
 
-  def tx(tx_index, tx_id, block_index),
-    do: tx(index: tx_index, id: tx_id, block_index: block_index)
+  # def tx(tx_index, tx_id, block_index),
+  #   do: tx(index: tx_index, id: tx_id, block_index: block_index)
 
   # txs block index :
   #     index = {kb_index (0..), mb_index}, tx_index = tx_index, hash = block (header) hash
@@ -26,8 +26,8 @@ defmodule AeMdw.Db.Model do
   defrecord :block, @block_defaults
 
   # txs time index :
-  #     msecs = {mb_time_msecs (0..), tx_index}, block_index = block_index
-  @time_defaults [msecs: {-1, -1}, block_index: {-1, -1}]
+  #     index = {mb_time_msecs (0..), tx_index = (0...)},
+  @time_defaults [index: {-1, -1}, unused: nil]
   defrecord :time, @time_defaults
 
   # txs type index  :
@@ -85,6 +85,22 @@ defmodule AeMdw.Db.Model do
   def defaults(:object), do: @object_defaults
   def defaults(:event), do: @event_defaults
 
+  ##########
+
+  def block_to_raw_map({:block, {kbi, mbi}, txi, hash}) do
+
+    %{"todo" => "TODO"}
+
+  end
+
+  def block_to_map({:block, {kbi, mbi}, txi, hash}) do
+
+    %{"todo" => "TODO"}
+
+  end
+
+  ##########
+
   def tx_record_to_map(tx_type, tx_rec) do
     AeMdw.Node.tx_fields(tx_type)
     |> Stream.with_index(1)
@@ -97,7 +113,7 @@ defmodule AeMdw.Db.Model do
   end
 
 
-  def to_raw_map({:tx, index, hash, {kb_index, mb_index}}) do
+  def tx_to_raw_map({:tx, index, hash, {kb_index, mb_index}, mb_time}) do
     {_, _, db_stx} = one!(:mnesia.dirty_read(:aec_signed_tx, hash))
     aec_signed_tx = :aetx_sign.from_db_format(db_stx)
     {type, rec} = :aetx.specialize_type(:aetx_sign.tx(aec_signed_tx))
@@ -108,12 +124,13 @@ defmodule AeMdw.Db.Model do
       hash: hash,
       block_height: kb_index,
       micro_index: mb_index,
+      micro_time: mb_time,
       tx_index: index,
       tx: tx_map
     }
   end
 
-  def to_map({:tx, index, hash, {_kb_index, mb_index}}) do
+  def tx_to_map({:tx, index, hash, {_kb_index, mb_index}, mb_time}) do
     {block_hash, signed_tx} = :aec_db.find_tx_with_location(hash)
     {type, _} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
     header = :aec_db.get_header(block_hash)
@@ -121,6 +138,7 @@ defmodule AeMdw.Db.Model do
     custom_encode(type, enc_tx)
     |> put_in(["tx_index"], index)
     |> put_in(["micro_index"], mb_index)
+    |> put_in(["micro_time"], mb_time)
   end
 
 

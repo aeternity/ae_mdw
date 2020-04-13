@@ -1,9 +1,11 @@
 defmodule AeMdw.Db.Sync.Transaction do
   @moduledoc "assumes block index is in place, syncs whole history"
 
+  alias AeMdw.Node, as: AE
   alias AeMdw.Db.Sync
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync.BlockIndex
+  alias AeMdw.Db.Stream, as: DBS
 
   require Model
 
@@ -60,24 +62,52 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     {type_keys, obj_keys} =
       Enum.reduce(tx_keys, {[], []}, fn txi, {type_keys, obj_keys} ->
-        %{type: tx_type, tx: tx} = read_tx!(txi) |> Model.to_raw_map()
+        %{type: tx_type, tx: tx} = read_tx!(txi) |> Model.tx_to_raw_map()
 
         objs =
-          for {id_key, _} <- AeMdw.Node.tx_ids(tx_type),
+          for {id_key, _} <- AE.tx_ids(tx_type),
               do: {tx_type, pk(tx[id_key]), txi}
 
         {[{tx_type, txi} | type_keys], objs ++ obj_keys}
       end)
 
+    time_keys = time_keys_range(from_txi, to_txi)
+
     %{~t[tx] => tx_keys,
       ~t[type] => type_keys,
+      ~t[time] => time_keys,
       ~t[object] => obj_keys}
   end
+
+
+  def time_keys_range(from_txi, to_txi) do
+    bi_time = fn bi ->
+      Model.block(read!(~t[block], bi), :hash)
+      |> :aec_db.get_header
+      |> :aec_headers.time_in_msecs
+    end
+    from_bi = Model.tx(read_tx!(from_txi), :block_index)
+    folder = fn tx, {bi, time, acc} ->
+      case Model.tx(tx, :block_index) do
+        ^bi ->
+          {bi, time, [{time, Model.tx(tx, :index)} | acc]}
+        new_bi ->
+          new_time = bi_time.(new_bi)
+          {new_bi, new_time, [{new_time, Model.tx(tx, :index)} | acc]}
+      end
+    end
+    {_, _, keys} =
+      from_txi..to_txi
+      |> DBS.map(~t[tx])
+      |> Enum.reduce({from_bi, bi_time.(from_bi), []}, folder)
+    keys
+  end
+
 
   ################################################################################
 
   defp sync_generation(height, txi) do
-    {key_block, micro_blocks} = AeMdw.Node.Db.get_blocks(height)
+    {key_block, micro_blocks} = AE.Db.get_blocks(height)
 
     {:atomic, {next_txi, _mb_index}} =
       :mnesia.transaction(fn ->
@@ -93,9 +123,9 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   defp sync_micro_block(mblock, {txi, mbi}) do
     height = :aec_blocks.height(mblock)
-    mb_secs = :aec_blocks.time_in_msecs(mblock)
+    mb_time = :aec_blocks.time_in_msecs(mblock)
     mb_hash = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock)) |> ok!
-    syncer = &sync_transaction(&1, &2, {{height, mbi}, mb_secs})
+    syncer = &sync_transaction(&1, &2, {{height, mbi}, mb_time})
     mb_txi = (txi == 0 && -1) || txi
     mb_model = Model.block(index: {height, mbi}, tx_index: mb_txi, hash: mb_hash)
     :mnesia.write(~t[block], mb_model, :write)
@@ -103,13 +133,14 @@ defmodule AeMdw.Db.Sync.Transaction do
     {next_txi, mbi + 1}
   end
 
-  defp sync_transaction(signed_tx, txi, {block_index, _mb_secs}) do
+  defp sync_transaction(signed_tx, txi, {block_index, mb_time}) do
     {mod, tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
     hash = :aetx_sign.hash(signed_tx)
     type = mod.type()
-    :mnesia.write(~t[tx], Model.tx(index: txi, id: hash, block_index: block_index), :write)
+    :mnesia.write(~t[tx], Model.tx(index: txi, id: hash, block_index: block_index, time: mb_time), :write)
     :mnesia.write(~t[type], Model.type(index: {type, txi}), :write)
-    AeMdw.Node.tx_ids(type) |> Enum.each(&write_object(&1, tx, type, txi))
+    :mnesia.write(~t[time], Model.time(index: {mb_time, txi}), :write)
+    AE.tx_ids(type) |> Enum.each(&write_object(&1, tx, type, txi))
     txi + 1
   end
 
