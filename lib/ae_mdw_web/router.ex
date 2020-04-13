@@ -1,11 +1,12 @@
 defmodule AeMdwWeb.Router do
   use AeMdwWeb, :router
 
-  alias AeMdwWeb.IpBrowserPlug
+  alias AeMdwWeb.{IpBrowserPlug, DataOffsetPlug}
 
   pipeline :api do
     plug CORSPlug, origin: "*"
     plug IpBrowserPlug
+    plug DataOffsetPlug
     plug :accepts, ["json"]
   end
 
@@ -36,18 +37,16 @@ defmodule AeMdwWeb.Router do
     get "/names/hash/:hash", NameController, :name_for_hash
 
     # Not need for the frontend
-    get "/transactions/account/:address/count", TransactionController, :txs_count_for_account
+    get "/transactions/account/:address/count", TransactionController, :count
 
     # Not need for the frontend
-    get "/transactions/account/:sender/to/:receiver",
-        TransactionController,
-        :txs_for_account_to_account
+    get "/transactions/account/:sender/to/:receiver", TransactionController, :account
 
-    get "/transactions/account/:account", TransactionController, :txs_for_account
-    get "/transactions/interval/:from/:to", TransactionController, :txs_for_interval
+    get "/transactions/account/:account", TransactionController, :account
+    get "/transactions/interval/:from/:to", TransactionController, :interval
 
     # Not need for the frontend
-    get "/transactions/rate/:from/:to", TransactionController, :tx_rate
+    get "/transactions/rate/:from/:to", TransactionController, :rate
 
     get "/generations/:from/:to", GenerationController, :generations_by_range
 

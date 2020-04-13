@@ -1,10 +1,10 @@
 defmodule AeMdw.Db.Stream do
   alias __MODULE__, as: DBS
   alias AeMdw.Db.Model
+  alias AeMdw.Node, as: AE
 
   require Model
 
-  import AeMdw.Node, only: [tx_group: 1]
   import AeMdw.{Sigil, Util, Db.Util}
 
   ################################################################################
@@ -134,11 +134,11 @@ defmodule AeMdw.Db.Stream do
 
     # OBJECT tests
     pk = <<140, 45, 15, 171, 198, 112, 76, 122, 188, 218, 79, 0, 14, 175, 238, 64, 9, 82, 93, 44, 169, 176, 237, 27, 115, 221, 101, 211, 5, 168, 169, 235>>
-    obj_recs = {:txi, 250000..500000} |> DBS.map(~t[object], & &1, {pk, tx_group(:name)}) |> Enum.to_list
+    obj_recs = {:txi, 250000..500000} |> DBS.map(~t[object], & &1, {pk, AE.tx_group(:name)}) |> Enum.to_list
     true = Enum.all?(obj_recs, &(elem(Model.object(&1, :index), 0) == :name_preclaim_tx))
     true = Enum.all?(obj_recs, &(elem(Model.object(&1, :index), 1) == pk))
-    ^obj_recs = {:time, 1546835654149..1548764956779} |> DBS.map(~t[object], & &1, {pk, tx_group(:name)}) |> Enum.to_list
-    ^obj_recs = {:gen, 19378..30049} |> DBS.map(~t[object], & &1, {pk, tx_group(:name)}) |> Enum.take(10)
+    ^obj_recs = {:time, 1546835654149..1548764956779} |> DBS.map(~t[object], & &1, {pk, AE.tx_group(:name)}) |> Enum.to_list
+    ^obj_recs = {:gen, 19378..30049} |> DBS.map(~t[object], & &1, {pk, AE.tx_group(:name)}) |> Enum.take(10)
 
 
     :ok

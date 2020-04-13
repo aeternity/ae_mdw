@@ -1,6 +1,9 @@
 defmodule AeMdwWeb.AeNodeController do
   use AeMdwWeb, :controller
 
+  alias AeMdw.Validate
+  alias :aeser_api_encoder, as: Enc
+
   # Hardcoded DB only for testing purpose
   @tx_by_hash %{
     "block_hash" => "mh_MTNTqxHzknFa74v6zekKBrw5X1QgYnesxidzd8tts6dEaHog7",
@@ -53,21 +56,17 @@ defmodule AeMdwWeb.AeNodeController do
     end
   end
 
-  def get_account_details(conn, %{"account" => account_pubkey}) do
+  def get_account_details(conn, %{"account" => account}) do
     allowed_types = [:account_pubkey, :contract_pubkey]
-
-    case :aeser_api_encoder.safe_decode({:id_hash, allowed_types}, account_pubkey) do
-      {:ok, id} ->
-        {_id_type, pub_key} = :aeser_id.specialize(id)
-
-        case :aec_chain.get_account(pub_key) do
+    case Validate.id(account, allowed_types) do
+      {:ok, pk} ->
+        case :aec_chain.get_account(pk) do
           {:value, account} ->
             json(conn, :aec_accounts.serialize_for_client(account))
 
           :none ->
             conn |> put_status(:not_found) |> json(%{"reason" => "Account not found"})
         end
-
       {:error, _} ->
         conn |> put_status(:bad_request) |> json(%{"reason" => "Invalid public key"})
     end

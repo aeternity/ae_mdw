@@ -3,7 +3,6 @@ defmodule AeMdw.Db.Stream.Time do
   import AeMdw.Db.Util
 
   @tab Model.Time
-  @max_range_fit_msecs 1000
 
   ################################################################################
 

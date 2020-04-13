@@ -1,12 +1,36 @@
 defmodule AeMdwWeb.Util do
-  def to_tx_type(<<user_tx_type::binary>>),
-    do: user_tx_type |> Macro.underscore() |> String.to_existing_atom()
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.Stream, as: DBS
+  alias :aeser_api_encoder, as: Enc
+  require Model
 
-  def to_user_tx_type(tx_type) when is_atom(tx_type) do
-    case Macro.camelize("#{tx_type}") do
-      "Ga" <> rest -> "GA" <> rest
-      other -> other
-    end
+  import AeMdw.{Sigil, Db.Util}
+
+  def scope(%{"from" => from, "to" => to}) do
+    [from, to] = Enum.map([from, to], &String.to_integer/1) |> Enum.sort
+    to..from
+  end
+  def scope(%{}),
+    do: nil
+
+  # can be slow, we index the tx type + sender, but checking for receiver is liner
+  def spend_txs(sender, receiver),
+    do: spend_txs(sender, receiver, Degress)
+  def spend_txs(sender, receiver, order) do
+    receiver = Enc.encode(:account_pubkey, AeMdw.Validate.id!(receiver))
+    DBS.map(:forward, ~t[object],
+      fn x ->
+        with :sender_id <- Model.object(x, :role),
+             txi <- DBS.Resource.sort_key(Model.object(x, :index)),
+             tx <- Model.tx_to_map(read_tx!(txi)),
+             ^receiver <- tx["tx"]["recipient_id"] do
+               tx
+             else
+               _ -> nil
+             end
+      end,
+      {sender, :spend_tx},
+      order)
   end
 
   def pagination(limit, temp), do: StreamSplit.take_and_drop(temp, limit)

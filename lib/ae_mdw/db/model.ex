@@ -1,6 +1,4 @@
 defmodule AeMdw.Db.Model do
-  alias :aeser_api_encoder, as: Enc
-
   require Record
   require Ex2ms
 
@@ -87,13 +85,13 @@ defmodule AeMdw.Db.Model do
 
   ##########
 
-  def block_to_raw_map({:block, {kbi, mbi}, txi, hash}) do
+  def block_to_raw_map({:block, {_kbi, _mbi}, _txi, _hash}) do
 
     %{"todo" => "TODO"}
 
   end
 
-  def block_to_map({:block, {kbi, mbi}, txi, hash}) do
+  def block_to_map({:block, {_kbi, _mbi}, _txi, _hash}) do
 
     %{"todo" => "TODO"}
 
