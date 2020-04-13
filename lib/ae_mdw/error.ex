@@ -14,8 +14,8 @@ defmodule AeMdw.Error do
     end
 
     defmodule Scope do
-      def exception(value: {scope, kind, mod}),
-        do: %AeMdw.Error.Input{message: "invalid #{inspect kind} scope: #{inspect scope} on #{inspect mod}"}
+      def exception(value: scope),
+        do: %AeMdw.Error.Input{message: "invalid scope: #{inspect scope}"}
     end
   end
 end

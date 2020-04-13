@@ -17,11 +17,34 @@ defmodule AeMdw.Db.Util do
   def read_tx!(txi),
     do: read_tx(txi) |> one!
 
+
   def read_block({_, _} = bi),
     do: :mnesia.async_dirty(fn -> :mnesia.read(~t[block], bi) end)
+  def read_block(kbi) when is_integer(kbi),
+    do: read_block({kbi, -1})
 
-  def read_block!({_, _} = bi),
+  def read_block!(bi),
     do: read_block(bi) |> one!
+
+
+  def first_txi(),
+    do: ensure_key!(~t[tx], :first)
+
+  def last_txi(),
+    do: ensure_key!(~t[tx], :last)
+
+  def first_gen(),
+    do: ensure_key!(~t[block], :first) |> (fn {h, -1} -> h end).()
+
+  def last_gen(),
+    do: ensure_key!(~t[block], :last) |> (fn {h, -1} -> h end).()
+
+  def first_time(),
+    do: ensure_key!(~t[time], :first) |> (fn {t, _txi} -> t end).()
+
+  def last_time(),
+    do: ensure_key!(~t[time], :last) |> (fn {t, _txi} -> t end).()
+
 
   def range(from, to),
     do: struct(Range, first: from, last: to)
@@ -59,6 +82,15 @@ defmodule AeMdw.Db.Util do
   def select(cont),
     do: :mnesia.async_dirty(fn -> :mnesia.select(cont) end)
 
+  def ensure_key!(tab, getter) do
+    case apply(__MODULE__, getter, [tab]) do
+      :"$end_of_table" ->
+        raise RuntimeError, message: "can't get #{getter} key for table #{tab}"
+      k ->
+        k
+    end
+  end
+
   def collect_keys(tab, acc, start_key, next_fn, progress_fn) do
     fn -> do_collect_keys(tab, acc, start_key, next_fn, progress_fn) end
     |> :mnesia.async_dirty()
@@ -86,4 +118,20 @@ defmodule AeMdw.Db.Util do
     end
     |> :mnesia.transaction()
   end
+
+  ##########
+
+  def msecs(msecs) when is_integer(msecs) and msecs > 0, do: msecs
+  def msecs(%Date{} = d), do: msecs(date_time(d))
+  def msecs(%DateTime{} = d), do: DateTime.to_unix(d) * 1000
+
+  def date_time(%DateTime{} = dt),
+    do: dt
+  def date_time(msecs) when is_integer(msecs) and msecs > 0,
+    do: DateTime.from_unix(div(msecs, 1000)) |> ok!
+  def date_time(%Date{} = d) do
+    {:ok, dt, 0} = DateTime.from_iso8601(Date.to_iso8601(d) <> " 00:00:00.0Z")
+    dt
+  end
+
 end

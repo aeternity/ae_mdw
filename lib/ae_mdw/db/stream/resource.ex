@@ -1,74 +1,89 @@
 defmodule AeMdw.Db.Stream.Resource do
+  alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Node, as: AE
 
   import AeMdw.Db.Util
 
   ################################################################################
 
-  def cursor(mod, :all, root, kind),
-    do: cursor!(mod, root, kind, kind)
-  def cursor(mod, {:from, from}, root, kind),
-    do: cursor!(mod, root, from, kind)
-  def cursor(mod, {:to, to}, root, kind),
-    do: cursor!(mod, root, to, kind)
-  def cursor(mod, {from, to}, root, Progress) when from <= to,
-    do: cursor!(mod, root, from, to, Progress)
-  def cursor(mod, {from, to}, root, Progress) when from > to,
-    do: cursor!(mod, root, to, from, Progress)
-  def cursor(mod, {from, to}, root, Degress) when from >= to,
-    do: cursor!(mod, root, from, to, Degress)
-  def cursor(mod, {from, to}, root, Degress) when from < to,
-    do: cursor!(mod, root, to, from, Degress)
-  def cursor(mod, %{__struct__: Range, first: f, last: l}, root, kind),
-    do: cursor(mod, {f, l}, root, kind)
+  def map(scope, tab, mapper, query, prefer_order) do
+    {scope, order} = DBS.Scope.scope(scope, tab, prefer_order)
+    mod = AE.stream_mod(tab)
+    query = mod.normalize_query(query)
+    {constructor, state} = init(scope, mod, order, query, prefer_order)
+    constructor.(state, tab, order, mapper)
+  end
 
-  def cursor!(mod, root, i, Progress) do
-    chk = mod.key_checker(root)
-    do_cursor!(mod.entry(root, i, Progress), chk, advance_fn(&next/2, chk))
+
+  defp init(nil, _mod, _order, _query, _prefer_order),
+    do: {&empty/4, nil}
+  defp init({:range, range} = scope, mod, order, query, _prefer_order) do
+    case mod.roots(query) do
+      [] ->
+        {&empty/4, nil}
+      nil ->
+        init_from_scope(scope, mod, order)
+      roots -> # root looks like MapSet<{type, pubkey}>
+        # roots |> prx("##############################")
+        scope_check = DBS.Scope.checker(scope, order)
+        conts =
+          roots
+          |> Stream.map(&cursor(&1, range, mod, order))
+          |> Stream.filter(fn nil -> false; _ -> true end)
+          |> Stream.filter(fn {key, _advance} -> scope_check.(sort_key(key)) end)
+        conts =
+          conts
+          |> Enum.reduce(%{}, &put_kv/2)
+          |> Enum.reduce(:gb_sets.new(), &add_cursor/2)
+        case :gb_sets.size(conts) do
+          0 -> {&empty/4, nil}
+          1 -> {&simple/4, elem(:gb_sets.smallest(conts), 1)}
+          _ -> {&complex/4, conts}
+        end
+    end
   end
-  def cursor!(mod, root, i, Degress) do
-    chk = mod.key_checker(root)
-    do_cursor!(mod.entry(root, i, Degress), chk, advance_fn(&prev/2, chk))
-  end
-  def cursor!(mod, root, i, limit, Progress) do
+  defp init(single_val, mod, order, query, prefer_order),
+    do: init({:range, {single_val, single_val}}, mod, order, query, prefer_order)
+
+
+  # defp init_from_scope({:exact, k}, mod, _order),
+  #   do: {&simple/4, {mod.full_key(k, nil), &halter/2}}
+
+  defp init_from_scope({:range, {from, to}}, mod, Progress),
+    do: {&simple/4, {mod.full_key(from || -1, nil),
+                     advance_fn(&next/2, mod.key_checker(nil, Progress, to))}}
+  defp init_from_scope({:range, {from, to}}, mod, Degress),
+    do: {&simple/4, {mod.full_key(from || <<>>, nil), advance_fn(&prev/2, mod.key_checker(nil, Degress, to))}}
+  defp init_from_scope({:range, nil}, mod, Progress),
+    do: {&simple/4, {mod.full_key(-1, nil), advance_fn(&next/2, mod.key_checker(nil))}}
+  defp init_from_scope({:range, nil}, mod, Degress),
+    do: {&simple/4, {mod.full_key(<<>>, nil), advance_fn(&prev/2, mod.key_checker(nil))}}
+
+
+#  defp halter(_tab, _succ_k), do: {:halt, :exact}
+
+
+  defp add_cursor({key, advance}, acc),
+    do: :gb_sets.add({sort_key(key), {key, advance}}, acc)
+
+
+  ################################################################################
+
+  def cursor(root, {i, limit}, mod, Progress) when i <= limit do
     chk = mod.key_checker(root, Progress, limit)
-    do_cursor!(mod.entry(root, i, Progress), chk, advance_fn(&next/2, chk))
+    do_cursor(mod.entry(root, i, Progress), chk, advance_fn(&next/2, chk))
   end
-  def cursor!(mod, root, i, limit, Degress) do
+  def cursor(root, {i, limit}, mod, Degress) when i >= limit do
     chk = mod.key_checker(root, Degress, limit)
-    do_cursor!(mod.entry(root, i, Degress), chk, advance_fn(&prev/2, chk))
+    do_cursor(mod.entry(root, i, Degress), chk, advance_fn(&prev/2, chk))
   end
 
-  def do_cursor!(:"$end_of_table", _checker, _advance),
+  def do_cursor(:"$end_of_table", _checker, _advance),
     do: nil
-  def do_cursor!(key, _checker, _advance) when elem(key, 0) == :"$end_of_table",
+  def do_cursor(key, _checker, _advance) when elem(key, 0) == :"$end_of_table",
     do: nil
-  def do_cursor!(key, checker, advance),
+  def do_cursor(key, checker, advance),
     do: checker.(key) && {key, advance} || nil
-
-
-  def scope_checker(:all, _kind),
-    do: fn _ -> true end
-  def scope_checker({:from, from}, Progress),
-    do: fn i -> i >= from end
-  def scope_checker({:from, from}, Degress),
-    do: fn i -> i <= from end
-  def scope_checker({:to, to}, Progress),
-    do: fn i -> i <= to end
-  def scope_checker({:to, to}, Degress),
-    do: fn i -> i >= to end
-  def scope_checker({from, to}, Progress) when from <= to,
-    do: fn i -> i >= from && i <= to end
-  def scope_checker({from, to}, Progress) when from > to,
-    do: fn i -> i >= to && i <= from end
-  def scope_checker({from, to}, Degress) when from >= to,
-    do: fn i -> i <= from && i >= to end
-  def scope_checker({from, to}, Degress) when from < to,
-    do: fn i -> i >= from && i <= to end
-  def scope_checker(%{__struct__: Range, first: f, last: l}, kind),
-    do: scope_checker({f, l}, kind)
-  def scope_checker({f, l}, kind),
-    do: raise AeMdw.Error.Input.Scope, value: {{f, l}, kind}
 
 
   def advance_fn(succ, key_checker) do
@@ -84,42 +99,14 @@ defmodule AeMdw.Db.Stream.Resource do
     end
   end
 
-  def map(scope, tab, ctx, kind, mapper) do
-    {mode, init_state} = cursors(scope, tab, ctx, kind)
-    mode.(init_state, tab, kind, mapper)
-  end
+  def sort_key(i) when is_integer(i), do: i
+  def sort_key({_, i}), do: i
+  def sort_key({_, _, i}), do: i
 
-
-  def cursors(scope, tab, ctx, kind) do
-    mod = AE.stream_mod(tab)
-    case mod.roots(ctx) do
-      [] ->
-        {&empty/4, nil}
-      nil ->
-        init = cursor(mod, scope, nil, kind)
-        init && {&simple/4, init} || {&empty/4, nil}
-      [x] ->
-        init = cursor(mod, scope, x, kind)
-        init && {&simple/4, init} || {&empty/4, nil}
-      roots ->
-        scope_check = scope_checker(scope, kind)
-        conts =
-          roots
-          |> Stream.map(&cursor(mod, scope, &1, kind))
-          |> Stream.filter(fn nil -> false; _ -> true end)
-          |> Stream.filter(fn {key, _advance} -> scope_check.(sort_key(key)) end)
-          |> Enum.reduce(%{}, &put_kv/2)
-          |> Enum.reduce(:gb_sets.new(),
-               fn {key, advance}, set ->
-                 :gb_sets.add({sort_key(key), {key, advance}}, set)
-               end)
-        {&complex/4, conts}
-    end
-  end
-
-  def sort_key(x) when is_integer(x), do: x
-  def sort_key({_, x}), do: x
-  def sort_key({_, _, x}), do: x
+  def full_key(root, i) when is_tuple(root),
+    do: Tuple.append(root, i)
+  def full_key(root, i),
+    do: {root, i}
 
   def put_kv({k, v}, map), do: Map.put(map, k, v)
 
@@ -197,7 +184,7 @@ defmodule AeMdw.Db.Stream.Resource do
           nil ->
             do_complex(tab, next_key, advance, conts, cont_pop, mapper)
           val ->
-            {[val], :gb_sets.add({sort_key(next_key), {next_key, advance}}, conts)}
+            {[val], add_cursor({next_key, advance}, conts)}
         end
       {[], {:cont, next_key}} ->
         do_complex(tab, next_key, advance, conts, cont_pop, mapper)

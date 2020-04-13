@@ -1,22 +1,26 @@
 defmodule AeMdw.Db.Stream.Type do
   alias AeMdw.Node, as: AE
   alias AeMdw.Validate
-  alias AeMdw.Db.Stream
+  alias AeMdw.Db.Model
 
-  import AeMdw.{Sigil, Util, Db.Util}
+  import AeMdw.{Util, Db.Util}
 
-  @tab ~t[type]
+  @tab Model.Type
 
   ################################################################################
 
-  def roots(%{type: type} = ctx) do
-    case Enum.to_list(to_list_like(type)) do
-      [_|_] = type -> Enum.map(type, &Validate.tx_type!/1)
-      [] -> raise AeMdw.Error.Input, message: ":type not found"
-    end
-  end
-  def roots(%{}),
+  def normalize_query(nil),
     do: AE.tx_types()
+  def normalize_query(types),
+    do: types |> to_list_like
+
+  def roots(types),
+    do: Enum.map(types, &Validate.tx_type!/1)
+
+  def full_key(sort_k, type) when is_integer(sort_k) and sort_k >= 0 and is_atom(type),
+    do: {type, sort_k}
+  def full_key(sort_k, type) when sort_k == <<>> or sort_k === -1,
+    do: {type, sort_k}
 
   def entry(type, i, kind) when is_atom(type) and is_integer(i) do
     case read(@tab, {type, i}) do
@@ -36,5 +40,7 @@ defmodule AeMdw.Db.Stream.Type do
     do: fn {^type, i} -> i <= mark; _ -> false end
   def key_checker(type, Degress, mark) when is_integer(mark),
     do: fn {^type, i} -> i >= mark; _ -> false end
+  def key_checker(type, _, nil),
+    do: key_checker(type)
 
 end

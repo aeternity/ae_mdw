@@ -1,32 +1,37 @@
 defmodule AeMdw.Db.Stream.Tx do
-  require Ex2ms
-  require AeMdw.Db.Model
-
   alias AeMdw.Db.Model
+  import AeMdw.Db.Util
 
-  import AeMdw.{Sigil, Util, Db.Util}
-
-  @tab ~t[tx]
+  @tab Model.Tx
 
   ################################################################################
 
-  def roots(%{}),
+  def normalize_query(nil),
     do: nil
+
+  def roots(nil),
+    do: nil
+
+  def full_key(sort_k, nil) when is_integer(sort_k),
+    do: sort_k
+  def full_key(sort_k, nil) when sort_k == <<>> or sort_k === -1,
+    do: sort_k
+
+  def first_entry(Progress), do: first(@tab)
+  def first_entry(_, Degress), do: last(@tab)
 
   def entry(_, i, Progress) when is_integer(i),
     do: read_tx(i) == [] && next(@tab, i) || i
   def entry(_, i, Degress) when is_integer(i),
     do: read_tx(i) == [] && prev(@tab, i) || i
-  def entry(_, Progress, Progress),
-    do: first(@tab)
-  def entry(_, Degress, Degress),
-    do: last(@tab)
 
   def key_checker(_),
-    do: &is_integer/1
+    do: fn x -> r = is_integer(x); "KEYCHK A: #{inspect x} -> #{r}" |> AeMdw.Util.prx; r end
   def key_checker(_, Progress, mark) when is_integer(mark),
     do: &(&1 <= mark)
   def key_checker(_, Degress, mark) when is_integer(mark),
     do: &(&1 >= mark)
+  def key_checker(_, _, nil),
+    do: key_checker(nil)
 
 end
