@@ -17,15 +17,14 @@ defmodule AeMdw.Db.Util do
   def read_tx!(txi),
     do: read_tx(txi) |> one!
 
-
   def read_block({_, _} = bi),
     do: :mnesia.async_dirty(fn -> :mnesia.read(~t[block], bi) end)
+
   def read_block(kbi) when is_integer(kbi),
     do: read_block({kbi, -1})
 
   def read_block!(bi),
     do: read_block(bi) |> one!
-
 
   def first_txi(),
     do: ensure_key!(~t[tx], :first)
@@ -44,7 +43,6 @@ defmodule AeMdw.Db.Util do
 
   def last_time(),
     do: ensure_key!(~t[time], :last) |> (fn {t, _txi} -> t end).()
-
 
   def range(from, to),
     do: struct(Range, first: from, last: to)
@@ -86,6 +84,7 @@ defmodule AeMdw.Db.Util do
     case apply(__MODULE__, getter, [tab]) do
       :"$end_of_table" ->
         raise RuntimeError, message: "can't get #{getter} key for table #{tab}"
+
       k ->
         k
     end
@@ -127,11 +126,12 @@ defmodule AeMdw.Db.Util do
 
   def date_time(%DateTime{} = dt),
     do: dt
+
   def date_time(msecs) when is_integer(msecs) and msecs > 0,
     do: DateTime.from_unix(div(msecs, 1000)) |> ok!
+
   def date_time(%Date{} = d) do
     {:ok, dt, 0} = DateTime.from_iso8601(Date.to_iso8601(d) <> " 00:00:00.0Z")
     dt
   end
-
 end

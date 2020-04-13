@@ -9,8 +9,7 @@ defmodule AeMdwWeb.Continuation do
     do: AeMdwWeb.Continuation
 
   defmodule Cont,
-    do: defstruct [stream: nil, offset: nil, user: nil, request: nil]
-
+    do: defstruct(stream: nil, offset: nil, user: nil, request: nil)
 
   # until we can modify frontend, we need to use this heuristics...
   # also, different tabs of the same user use the same continuation - not great
@@ -23,7 +22,6 @@ defmodule AeMdwWeb.Continuation do
 
   def key(user, req_kind),
     do: :crypto.hash(:sha256, :erlang.term_to_binary({user, req_kind}))
-
 
   def response(%Plug.Conn{} = conn, stream_maker) do
     {limit, page} = conn.assigns.limit_page
@@ -41,6 +39,7 @@ defmodule AeMdwWeb.Continuation do
           case maybe_cont do
             [{_, %Cont{offset: ^offset, stream: stream}, _tm}] ->
               stream
+
             _ ->
               stream = stream_maker.(conn.params)
               {_, rem_stream} = StreamSplit.take_and_drop(stream, offset)
@@ -48,10 +47,13 @@ defmodule AeMdwWeb.Continuation do
           end
 
         {res_data, rem_stream} = StreamSplit.take_and_drop(stream, limit)
-        new_cont = %Cont{offset: offset + limit,
-                         stream: rem_stream,
-                         user: user_id,
-                         request: req_kind}
+
+        new_cont = %Cont{
+          offset: offset + limit,
+          stream: rem_stream,
+          user: user_id,
+          request: req_kind
+        }
 
         :ets.insert(@cont_tab, {cont_key, new_cont, time()})
 
@@ -59,14 +61,17 @@ defmodule AeMdwWeb.Continuation do
     end
   end
 
-
   def purge(max_age_msecs) do
     boundary = time() - max_age_msecs
-    del_spec = Ex2ms.fun do {_, _, time} -> time < ^boundary end
+
+    del_spec =
+      Ex2ms.fun do
+        {_, _, time} -> time < ^boundary
+      end
+
     :ets.select_delete(@cont_tab, del_spec)
   end
 
   defp time(),
     do: :os.system_time(:millisecond)
-
 end

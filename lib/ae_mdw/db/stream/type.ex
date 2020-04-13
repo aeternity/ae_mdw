@@ -11,6 +11,7 @@ defmodule AeMdw.Db.Stream.Type do
 
   def normalize_query(nil),
     do: AE.tx_types()
+
   def normalize_query(types),
     do: types |> to_list_like
 
@@ -19,6 +20,7 @@ defmodule AeMdw.Db.Stream.Type do
 
   def full_key(sort_k, type) when is_integer(sort_k) and sort_k >= 0 and is_atom(type),
     do: {type, sort_k}
+
   def full_key(sort_k, type) when sort_k == <<>> or sort_k === -1,
     do: {type, sort_k}
 
@@ -29,18 +31,31 @@ defmodule AeMdw.Db.Stream.Type do
       [] when kind == Degress -> prev(@tab, {type, i})
     end
   end
+
   def entry(type, Progress, Progress) when is_atom(type),
     do: next(@tab, {type, -1})
+
   def entry(type, Degress, Degress) when is_atom(type),
     do: prev(@tab, {type, <<>>})
 
   def key_checker(type),
-    do: fn {^type, _b} -> true; _ -> false end
+    do: fn
+      {^type, _b} -> true
+      _ -> false
+    end
+
   def key_checker(type, Progress, mark) when is_integer(mark),
-    do: fn {^type, i} -> i <= mark; _ -> false end
+    do: fn
+      {^type, i} -> i <= mark
+      _ -> false
+    end
+
   def key_checker(type, Degress, mark) when is_integer(mark),
-    do: fn {^type, i} -> i >= mark; _ -> false end
+    do: fn
+      {^type, i} -> i >= mark
+      _ -> false
+    end
+
   def key_checker(type, _, nil),
     do: key_checker(type)
-
 end

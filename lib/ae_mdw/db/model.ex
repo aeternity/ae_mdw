@@ -86,15 +86,11 @@ defmodule AeMdw.Db.Model do
   ##########
 
   def block_to_raw_map({:block, {_kbi, _mbi}, _txi, _hash}) do
-
     %{"todo" => "TODO"}
-
   end
 
   def block_to_map({:block, {_kbi, _mbi}, _txi, _hash}) do
-
     %{"todo" => "TODO"}
-
   end
 
   ##########
@@ -110,12 +106,12 @@ defmodule AeMdw.Db.Model do
     )
   end
 
-
   def tx_to_raw_map({:tx, index, hash, {kb_index, mb_index}, mb_time}) do
     {_, _, db_stx} = one!(:mnesia.dirty_read(:aec_signed_tx, hash))
     aec_signed_tx = :aetx_sign.from_db_format(db_stx)
     {type, rec} = :aetx.specialize_type(:aetx_sign.tx(aec_signed_tx))
     tx_map = tx_record_to_map(type, rec) |> put_in([:type], type)
+
     %{
       block_hash: block(read_block!({kb_index, mb_index}), :hash),
       signatures: :aetx_sign.signatures(aec_signed_tx),
@@ -133,22 +129,23 @@ defmodule AeMdw.Db.Model do
     {type, _} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
     header = :aec_db.get_header(block_hash)
     enc_tx = :aetx_sign.serialize_for_client(header, signed_tx)
+
     custom_encode(type, enc_tx)
     |> put_in(["tx_index"], index)
     |> put_in(["micro_index"], mb_index)
     |> put_in(["micro_time"], mb_time)
   end
 
-
   def custom_encode(:oracle_response_tx, tx),
     do: update_in(tx, ["tx", "response"], &maybe_base64/1)
+
   def custom_encode(_, tx),
     do: tx
 
   def maybe_base64(bin) do
     try do
       dec = :base64.decode(bin)
-      String.valid?(dec) && dec || bin
+      (String.valid?(dec) && dec) || bin
     rescue
       _ -> bin
     end

@@ -42,7 +42,6 @@ defmodule AeMdwWeb.TransactionController do
   #   }
   # ]
 
-
   def rate(_conn, %{"from" => _from_date, "to" => _to_date}) do
     # from = Date.from_iso8601!(from_date)
     # to = Date.from_iso8601!(to_date)
@@ -58,14 +57,15 @@ defmodule AeMdwWeb.TransactionController do
     raise "TODO"
   end
 
-
   def count(conn, %{"address" => id}),
-    do: handle_input(conn,
-          fn ->
-            count = DBS.map(:backward, ~t[object], :json, id) |> Enum.count
-            json(conn, %{"count" => count})
-          end)
-
+    do:
+      handle_input(
+        conn,
+        fn ->
+          count = DBS.map(:backward, ~t[object], :json, id) |> Enum.count()
+          json(conn, %{"count" => count})
+        end
+      )
 
   def account(conn, req),
     do: handle_input(conn, fn -> json(conn, response(conn)) end)
@@ -80,21 +80,25 @@ defmodule AeMdwWeb.TransactionController do
 
   def db_stream(req) do
     scope = WebUtil.scope(req)
-    scope = scope && {:gen, scope} || :backward
+    scope = (scope && {:gen, scope}) || :backward
+
     case req do
       %{"sender" => sender, "receiver" => receiver} ->
         WebUtil.spend_txs(sender, receiver)
+
       %{"account" => id, "txtype" => type} ->
         DBS.map(scope, ~t[object], :json, {:id_type, %{id => type}})
+
       %{"account" => id} ->
         DBS.map(scope, ~t[object], :json, id)
+
       %{"txtype" => type} ->
         DBS.map(scope, ~t[type], :json, type)
+
       %{} ->
         DBS.map(scope, ~t[tx], :json)
     end
   end
-
 
   def handle_input(conn, f) do
     try do
@@ -106,5 +110,4 @@ defmodule AeMdwWeb.TransactionController do
         |> json(%{"reason" => err.msg})
     end
   end
-
 end

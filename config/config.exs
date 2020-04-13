@@ -21,7 +21,6 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   live_view: [signing_salt: "Oy680JAN"],
   cont_expiration_minutes: 30
 
-
 # Configures Elixir's Logger
 config :logger,
   backends: [{LoggerFileBackend, :info}, {LoggerFileBackend, :sync}]

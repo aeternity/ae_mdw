@@ -13,11 +13,11 @@ defmodule AeMdwWeb.Supervisor do
     gc_time = cont_expiration_msecs()
 
     :ets.new(Continuation.table(), [
-          :named_table,
-          :public,
-          {:read_concurrency, true},
-          {:write_concurrency, true}
-        ])
+      :named_table,
+      :public,
+      {:read_concurrency, true},
+      {:write_concurrency, true}
+    ])
 
     {:ok, _} = :timer.apply_interval(gc_time, Continuation, :purge, [gc_time])
 
@@ -30,5 +30,4 @@ defmodule AeMdwWeb.Supervisor do
     minutes = endpoint_config[:cont_expiration_minutes] || @default_cont_expiration_minutes
     :timer.minutes(minutes)
   end
-
 end
