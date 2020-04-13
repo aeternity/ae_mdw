@@ -149,7 +149,8 @@ defmodule AeMdw.Db.Model do
 
   def maybe_base64(bin) do
     try do
-      :base64.decode(bin)
+      dec = :base64.decode(bin)
+      String.valid?(dec) && dec || bin
     rescue
       _ -> bin
     end
