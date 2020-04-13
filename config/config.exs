@@ -18,11 +18,9 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   secret_key_base: "kATf71kudJsgA1dgCQKcmgelicqJHG8EID8rwROwJHpWHb53EdzW7YDclJZ8mxLP",
   render_errors: [view: AeMdwWeb.ErrorView, accepts: ~w(html json)],
   pubsub: [name: AeMdw.PubSub, adapter: Phoenix.PubSub.PG2],
-  live_view: [signing_salt: "Oy680JAN"]
+  live_view: [signing_salt: "Oy680JAN"],
+  cont_expiration_minutes: 30
 
-config :ae_mdw, AeMdwWeb.GCWorker,
-  gc_time: 300_000,
-  table_name: :users_info
 
 # Configures Elixir's Logger
 config :logger,

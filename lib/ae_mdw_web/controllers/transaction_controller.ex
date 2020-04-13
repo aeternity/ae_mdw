@@ -5,6 +5,7 @@ defmodule AeMdwWeb.TransactionController do
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdwWeb.Util, as: WebUtil
+  alias AeMdwWeb.Continuation, as: Cont
   require Model
 
   import AeMdw.{Sigil, Util}
@@ -58,40 +59,33 @@ defmodule AeMdwWeb.TransactionController do
   end
 
 
-  def count(conn, %{"address" => _} = req),
-    do: handle_input(conn, fn -> json(conn, %{"count" => Enum.count(db_stream(req))}) end)
-
-
-  def account(conn, %{"sender" => sender, "receiver" => receiver}),
+  def count(conn, %{"address" => id}),
     do: handle_input(conn,
           fn ->
-            {limit, _page} = conn.assigns.limit_page
-            json(conn, Enum.take(WebUtil.spend_txs(sender, receiver), limit))
-          end)
-  def account(conn, %{"account" => _id} = req),
-    do: handle_input(conn,
-          fn ->
-            {limit, _page} = conn.assigns.limit_page
-            json(conn, Enum.take(db_stream(req), limit))
+            count = DBS.map(:backward, ~t[object], :json, id) |> Enum.count
+            json(conn, %{"count" => count})
           end)
 
+
+  def account(conn, req),
+    do: handle_input(conn, fn -> json(conn, response(conn)) end)
 
   def interval(conn, %{} = req),
-    do: handle_input(conn,
-          fn ->
-            {limit, _page} = conn.assigns.limit_page
-            json(conn, %{"transactions" => Enum.take(db_stream(req), limit)})
-          end)
+    do: handle_input(conn, fn -> json(conn, %{"transactions" => response(conn)}) end)
 
+  ##########
+
+  def response(conn),
+    do: Cont.response(conn, &db_stream/1)
 
   def db_stream(req) do
     scope = WebUtil.scope(req)
     scope = scope && {:gen, scope} || :backward
     case req do
+      %{"sender" => sender, "receiver" => receiver} ->
+        WebUtil.spend_txs(sender, receiver)
       %{"account" => id, "txtype" => type} ->
         DBS.map(scope, ~t[object], :json, {:id_type, %{id => type}})
-      %{"address" => id} ->
-        DBS.map(scope, ~t[object], :json, id)
       %{"account" => id} ->
         DBS.map(scope, ~t[object], :json, id)
       %{"txtype" => type} ->
