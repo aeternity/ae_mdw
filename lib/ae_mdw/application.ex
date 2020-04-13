@@ -18,10 +18,12 @@ defmodule AeMdw.Application do
     alias AeMdw.Extract
 
     {:ok, aetx_code} = Extract.AbsCode.module(:aetx)
+    {:ok, aeser_code} = Extract.AbsCode.module(:aeser_api_encoder)
 
     type_mod_map = Extract.tx_mod_map(aetx_code)
     type_name_map = Extract.tx_name_map(aetx_code)
-    id_prefix_type_map = Extract.id_prefix_type_map()
+    id_prefix_type_map = Extract.id_prefix_type_map(aeser_code)
+    id_type_map = Extract.id_type_map(aeser_code)
     type_mod_mapper = &Map.fetch!(type_mod_map, &1)
 
     {tx_fields, tx_ids} =
@@ -51,7 +53,9 @@ defmodule AeMdw.Application do
         tx_names: [{[], MapSet.new(Map.values(type_name_map))}],
         id_prefixes: [{[], MapSet.new(Map.keys(id_prefix_type_map))}],
         stream_mod: Enum.reduce(Model.tables, %{}, fn t, acc -> put_in(acc[t], stream_mod.(t)) end),
-        tx_group: Enum.group_by(tx_types, tx_group)
+        tx_group: Enum.group_by(tx_types, tx_group),
+        id_type: id_type_map,
+        type_id: AeMdw.Util.inverse(id_type_map)
       }
     )
   end

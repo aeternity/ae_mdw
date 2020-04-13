@@ -103,10 +103,19 @@ defmodule AeMdw.Extract do
   def id_prefix_type_map(mod_code),
     do: AbsCode.reduce(mod_code, {:pfx2type, 1}, %{},
           fn {:clause, _,
-              [{:bin, _, [{:bin_element, _, {:string, _, p}, _, _}]}],
-              [], [{:atom, _, t}]},
+              [{:bin, _, [{:bin_element, _, {:string, _, pfx}, _, _}]}],
+              [], [{:atom, _, type}]},
             acc ->
-              Map.put(acc, "#{p}", t)
+              Map.put(acc, "#{pfx}", type)
+          end)
+
+  def id_type_map(),
+    do: id_type_map(ok!(AbsCode.module(:aeser_api_encoder)))
+
+  def id_type_map(mod_code),
+    do: AbsCode.reduce(mod_code, {:id2type, 1}, %{},
+          fn {:clause, _, [{:atom, _, id}], [], [{:atom, _, type}]}, acc ->
+            Map.put(acc, id, type)
           end)
 
 
