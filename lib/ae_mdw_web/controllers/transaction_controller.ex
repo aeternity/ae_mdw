@@ -1,5 +1,6 @@
 defmodule AeMdwWeb.TransactionController do
   use AeMdwWeb, :controller
+  use PhoenixSwagger
 
   alias AeMdw.Db.Model
   alias AeMdw.Db.Stream, as: DBS
@@ -8,41 +9,24 @@ defmodule AeMdwWeb.TransactionController do
   alias AeMdwWeb.Continuation, as: Cont
   require Model
 
-  import AeMdw.{Sigil, Util}
+  import AeMdw.Sigil
 
-  # Hardcoded DB only for testing purpose
-  @txs_for_account_to_account %{
-    "transactions" => [
-      %{
-        "block_height" => 195_065,
-        "block_hash" => "mh_2fsoWrz5cTRKqPdkRJXcnCn5cC444iyZ9jSUVr6w3tR3ipLH2N",
-        "hash" => "th_2wZfT7JQRoodrJD5SQkUnHK6ZuwaunDWXYvtaWfE6rNduxDqRb",
-        "signatures" => [
-          "sg_ZXp5HWs7UkNLaMf9jorjsXvvpCFVMgEWGiFR3LWp1wRXC1u2meEbMYqrxspYdfc8w39QNk5fbqenEPLwezqbWV2U8R5PS"
-        ],
-        "tx" => %{
-          "amount" => 100_000_000_000_000_000_000,
-          "fee" => 16_840_000_000_000,
-          "nonce" => 2,
-          "payload" => "ba_Xfbg4g==",
-          "recipient_id" => "ak_2ppoxaXnhSadMM8aw9XBH72cmjse1FET6UkM2zwvxX8fEBbM8U",
-          "sender_id" => "ak_S5JTasvPZsbYWbEUFNsme8vz5tqkdhtGx3m7yJC7Dpqi4rS2A",
-          "type" => "SpendTx",
-          "version" => 1
-        }
-      }
-    ]
-  }
+  swagger_path :tx_rate_by_date_range do
+    get("/transactions/rate/{from}/{to}")
+    description("Get transaction amount and count for the date interval")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("tx_rate_by_date_range")
 
-  # @tx_rate [
-  #   %{
-  #     "amount" => "5980801808761449247022144",
-  #     "count" => 36155,
-  #     "date" => "2019-11-04"
-  #   }
-  # ]
+    parameters do
+      from(:path, :string, "Start Date(yyyymmdd)", required: true)
+      to(:path, :string, "End Date(yyyymmdd)", required: true)
+    end
 
-  def rate(_conn, %{"from" => _from_date, "to" => _to_date}) do
+    response(200, "", %{})
+  end
+
+  def tx_rate_by_date_range(_conn, %{"from" => _from_date, "to" => _to_date}) do
     # from = Date.from_iso8601!(from_date)
     # to = Date.from_iso8601!(to_date)
 
@@ -57,7 +41,22 @@ defmodule AeMdwWeb.TransactionController do
     raise "TODO"
   end
 
-  def count(conn, %{"address" => id}),
+  swagger_path :tx_count_by_address do
+    get("transactions/account/{address}/count")
+    description("Get the count of transactions for a given account address")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("tx_count_by_address")
+
+    parameters do
+      address(:path, :string, "Account address", required: true)
+      txtype(:query, :string, "Transaction Type", required: false)
+    end
+
+    response(200, "", %{})
+  end
+
+  def tx_count_by_address(conn, %{"address" => id}),
     do:
       handle_input(
         conn,
@@ -67,10 +66,62 @@ defmodule AeMdwWeb.TransactionController do
         end
       )
 
-  def account(conn, req),
+  swagger_path :tx_by_account do
+    get("/transactions/account/{address}")
+    description("Get list of transactions for a given account")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("tx_by_account")
+
+    parameters do
+      account(:path, :string, "Account address", required: true)
+      limit(:query, :integer, "", required: false, format: "int32")
+      page(:query, :integer, "", required: false, format: "int32")
+    end
+
+    response(200, "", %{})
+  end
+
+  def tx_by_account(conn, _req),
     do: handle_input(conn, fn -> json(conn, response(conn)) end)
 
-  def interval(conn, %{} = req),
+  swagger_path :tx_between_address do
+    get("/transactions/account/{sender}/to/{receiver}")
+    description("Get a list of transactions between two accounts")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("tx_between_address")
+
+    parameters do
+      sender(:path, :string, "Sender account address", required: true)
+      receiver(:path, :string, "Receiver account address", required: true)
+    end
+
+    response(200, "", %{})
+  end
+
+  def tx_between_address(conn, _req),
+    do: handle_input(conn, fn -> json(conn, response(conn)) end)
+
+  swagger_path :tx_by_generation_range do
+    get("/transactions/interval/{from}/{to}")
+    description("Get transactions between an interval of generations")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("tx_by_generation_range")
+
+    parameters do
+      from(:path, :integer, "Start Generation/Key-block height", required: true)
+      to(:path, :integer, "End Generation/Key-block height", required: true)
+      limit(:query, :integer, "", required: false, format: "int32")
+      page(:query, :integer, "", required: false, format: "int32")
+      txtype(:query, :string, "Transaction Type", required: false)
+    end
+
+    response(200, "", %{})
+  end
+
+  def tx_by_generation_range(conn, %{} = _req),
     do: handle_input(conn, fn -> json(conn, %{"transactions" => response(conn)}) end)
 
   ##########

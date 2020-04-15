@@ -1,5 +1,6 @@
 defmodule AeMdwWeb.NameController do
   use AeMdwWeb, :controller
+  use PhoenixSwagger
 
   # Hardcoded DB only for testing purpose
   @names [
@@ -25,7 +26,7 @@ defmodule AeMdwWeb.NameController do
     }
   ]
 
-  @search_names [
+  @search_name [
     %{
       "name" => "dinchotodorov.chain",
       "name_hash" => "nm_R9qPY3oGPmQHmmnPYYXhztTVXojWZrMS8mC5LSRSFWA2bVj2a",
@@ -58,7 +59,7 @@ defmodule AeMdwWeb.NameController do
     "result" => "OK"
   }
 
-  @bids_for_account [
+  @name_auctions_bids_by_address [
     %{
       "name_auction_entry" => %{
         "name" => "keno.chain",
@@ -89,7 +90,7 @@ defmodule AeMdwWeb.NameController do
     }
   ]
 
-  @bids_for_name [
+  @name_auctions_bids_by_name [
     %{
       "block_height" => 195_045,
       "block_hash" => "mh_397S1QJjBDMJ8E5nDbDUSUQGwWcHYjcrQDUx3bLMTZXr3B9Bf",
@@ -112,7 +113,7 @@ defmodule AeMdwWeb.NameController do
     }
   ]
 
-  @reverse_names [
+  @name_by_address [
     %{
       "name" => "kenodressel.chain",
       "name_hash" => "nm_2fALUk7nXnZ8CZqzwa1NUTRWdpoNaYzfWQoYbaVoKSyHyoXyXi",
@@ -130,7 +131,7 @@ defmodule AeMdwWeb.NameController do
     }
   ]
 
-  @info_for_auction %{
+  @auction_info %{
     "bids" => [
       %{
         "block_height" => 195_045,
@@ -179,40 +180,220 @@ defmodule AeMdwWeb.NameController do
     }
   }
 
+  swagger_path :all_names do
+    get("/names")
+    description("Get all names")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("all_names")
+
+    parameters do
+      limit(:query, :integer, "", required: false, format: "int32")
+      page(:query, :integer, "", required: false, format: "int32")
+    end
+
+    response(200, "", %{})
+  end
+
   def all_names(conn, _params) do
     json(conn, @names)
   end
 
-  def search_names(conn, _params) do
-    json(conn, @search_names)
+  swagger_path :search_name do
+    get("/names/{name}")
+    description("Search for a name")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("search_name")
+
+    parameters do
+      name(:path, :string, "String to match and find the name against", required: true)
+    end
+
+    response(200, "", %{})
+  end
+
+  def search_name(conn, _params) do
+    json(conn, @search_name)
+  end
+
+  swagger_path :active_names do
+    get("/names/active")
+    description("Get a list of all the active names")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("active_names")
+
+    parameters do
+      limit(:query, :integer, "", required: false, format: "int32")
+      page(:query, :integer, "", required: false, format: "int32")
+
+      owner(:query, :string, "Address of the owner account to filter the results", required: false)
+    end
+
+    response(200, "", %{})
   end
 
   def active_names(conn, _params) do
     json(conn, @names)
   end
 
+  swagger_path :active_name_auctions do
+    get("/names/auctions/active")
+    description("Get a list of all the active name auctions")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("active_name_auctions")
+
+    parameters do
+      limit(:query, :integer, "", required: false, format: "int32")
+      page(:query, :integer, "", required: false, format: "int32")
+
+      length(:query, :integer, "Returns the names with provided length",
+        required: false,
+        format: "int32"
+      )
+
+      reverse(
+        :query,
+        :string,
+        "No value needs to be provided. If present the response will be reversed",
+        required: false
+      )
+
+      sort(:query, :string, "Can be 'name', 'max_bid' or 'expiration'(default)", required: false)
+    end
+
+    response(200, "", %{})
+  end
+
   def active_name_auctions(conn, _params) do
     json(conn, @active_name_auctions)
+  end
+
+  swagger_path :active_name_auctions_count do
+    get("/names/auctions/active/count")
+    description("Get a count of all the active name auctions")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("active_name_auctions_count")
+
+    parameters do
+      limit(:query, :integer, "", required: false, format: "int32")
+      page(:query, :integer, "", required: false, format: "int32")
+
+      length(:query, :integer, "Returns the names with provided length",
+        required: false,
+        format: "int32"
+      )
+
+      reverse(
+        :query,
+        :string,
+        "No value needs to be provided. If present the response will be reversed",
+        required: false
+      )
+
+      sort(:query, :string, "Can be 'name', 'max_bid' or 'expiration'(default)", required: false)
+    end
+
+    response(200, "", %{})
   end
 
   def active_name_auctions_count(conn, _params) do
     json(conn, @active_name_auctions_count)
   end
 
-  def bids_for_account(conn, _params) do
-    json(conn, @bids_for_account)
+  swagger_path :name_auctions_bids_by_address do
+    get("/names/auctions/bids/account/{account}")
+    description("Get bids made by a given account")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("name_auctions_bids_by_address")
+
+    parameters do
+      account(:path, :string, "Account address", required: true)
+      limit(:query, :integer, "", required: false, format: "int32")
+      page(:query, :integer, "", required: false, format: "int32")
+    end
+
+    response(200, "", %{})
   end
 
-  def bids_for_name(conn, _params) do
-    json(conn, @bids_for_name)
+  def name_auctions_bids_by_address(conn, _params) do
+    json(conn, @name_auctions_bids_by_address)
   end
 
-  def reverse_names(conn, _params) do
-    json(conn, @reverse_names)
+  swagger_path :name_auctions_bids_by_name do
+    get("/names/auctions/bids/{name}")
+    description("Get a bids for a given name")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("name_auctions_bids_by_name")
+
+    parameters do
+      name(:path, :string, "Name to fetch the bids for", required: true)
+      limit(:query, :integer, "", required: false, format: "int32")
+      page(:query, :integer, "", required: false, format: "int32")
+    end
+
+    response(200, "", %{})
   end
 
-  def info_for_auction(conn, _params) do
-    json(conn, @info_for_auction)
+  def name_auctions_bids_by_name(conn, _params) do
+    json(conn, @name_auctions_bids_by_name)
+  end
+
+  swagger_path :name_by_address do
+    get("/names/reverse/{account}")
+    description("Get a list of names mapped to the given address")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("name_by_address")
+
+    parameters do
+      account(:path, :string, "Account address", required: true)
+      limit(:query, :integer, "", required: false, format: "int32")
+      page(:query, :integer, "", required: false, format: "int32")
+    end
+
+    response(200, "", %{})
+  end
+
+  def name_by_address(conn, _params) do
+    json(conn, @name_by_address)
+  end
+
+  swagger_path :auction_info do
+    get("/names/auctions/{name}/info")
+    description("Get info in a given auction")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("auction_info")
+
+    parameters do
+      name(:path, :string, "The name to get info on", required: true)
+    end
+
+    response(200, "", %{})
+  end
+
+  def auction_info(conn, _params) do
+    json(conn, @auction_info)
+  end
+
+  swagger_path :name_for_hash do
+    get("/names/hash/{hash}")
+    description("Given a name hash, return the name and associated info")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("name_for_hash")
+
+    parameters do
+      hash(:path, :string, "The hash of the name", required: true)
+    end
+
+    response(200, "", %{})
   end
 
   def name_for_hash(conn, _params) do

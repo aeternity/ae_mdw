@@ -1,5 +1,6 @@
 defmodule AeMdwWeb.ContractController do
   use AeMdwWeb, :controller
+  use PhoenixSwagger
 
   # Hardcoded DB only for testing purpose
   @all_contracts [
@@ -20,7 +21,7 @@ defmodule AeMdwWeb.ContractController do
     }
   ]
 
-  @txs_for_contract_address %{
+  @contract_tx %{
     "transactions" => [
       %{
         "block_height" => 221_900,
@@ -92,7 +93,7 @@ defmodule AeMdwWeb.ContractController do
     ]
   }
 
-  @calls_for_contract_address [
+  @contract_address_calls [
     %{
       "arguments" => %{
         "arguments" => [
@@ -189,16 +190,90 @@ defmodule AeMdwWeb.ContractController do
     }
   ]
 
+  swagger_path :all_contracts do
+    get("/contracts/all")
+    description("Get all the contracts")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("all_contracts")
+    response(200, "", %{})
+  end
+
   def all_contracts(conn, _params) do
     json(conn, @all_contracts)
   end
 
-  def txs_for_contract_address(conn, _params) do
-    json(conn, @txs_for_contract_address)
+  swagger_path :contract_tx do
+    get("/contracts/transactions/address/{address}")
+    description("Get all the transactions for a contract")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("contract_tx")
+
+    parameters do
+      address(:path, :string, "Contract Address/id", required: true)
+    end
+
+    response(200, "", %{})
   end
 
-  def calls_for_contract_address(conn, _params) do
-    json(conn, @calls_for_contract_address)
+  def contract_tx(conn, _params) do
+    json(conn, @contract_tx)
+  end
+
+  swagger_path :contract_address_calls do
+    get("/contracts/calls/address/{address}")
+    description("Get contract calls for a provided contract")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("contract_address_calls")
+
+    parameters do
+      address(:path, :string, "Contract Address/id", required: true)
+    end
+
+    response(200, "", %{})
+  end
+
+  def contract_address_calls(conn, _params) do
+    json(conn, @contract_address_calls)
+  end
+
+  swagger_path :verify_contract do
+    post("/contracts/verify")
+
+    description(
+      "Verify a contract by submitting the source, compiler version and contract identifier"
+    )
+
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("verify_contract")
+
+    parameters do
+      contract(
+        :body,
+        %{
+          type: "object",
+          required: ["contract_id", "source", "compiler"],
+          properties: %{
+            contract_id: %{
+              type: "string"
+            },
+            source: %{
+              type: "string"
+            },
+            compiler: %{
+              type: "string"
+            }
+          }
+        },
+        "Details of the contract to verify.",
+        required: true
+      )
+    end
+
+    response(200, "", %{})
   end
 
   def verify_contract(conn, params) do

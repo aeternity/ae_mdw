@@ -1,5 +1,6 @@
 defmodule AeMdwWeb.GenerationController do
   use AeMdwWeb, :controller
+  use PhoenixSwagger
 
   # Hardcoded DB only for testing purpose
   @generations_by_range %{
@@ -73,6 +74,23 @@ defmodule AeMdwWeb.GenerationController do
     "total_micro_blocks" => 1,
     "total_transactions" => 1
   }
+
+  swagger_path :generations_by_range do
+    get("/generations/{from}/{to}")
+    description("Get generations between a given range")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("generations_by_range")
+
+    parameters do
+      from(:path, :integer, "Start Generation or Key Block Number", required: true)
+      to(:path, :integer, "End Generation or Key Block Number", required: true)
+      limit(:query, :integer, "", required: false)
+      page(:query, :integer, "", required: false)
+    end
+
+    response(200, "", %{})
+  end
 
   def generations_by_range(conn, _params) do
     json(conn, @generations_by_range)

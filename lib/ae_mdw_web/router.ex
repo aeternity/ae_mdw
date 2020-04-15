@@ -14,49 +14,43 @@ defmodule AeMdwWeb.Router do
     pipe_through :api
 
     get "/channels/active", ChannelController, :active_channels
-    get "/channels/transactions/address/:address", ChannelController, :txs_for_channel_address
+    get "/channels/transactions/address/:address", ChannelController, :channel_tx
 
-    get "/oracles/list", OracleController, :oracles_all
-    # seems like there are not registered oracles in aeternal
-    get "/oracles/:oracle_id", OracleController, :oracle_requests_responses
+    get "/oracles/list", OracleController, :all_oracles
+    get "/oracles/:oracle_id", OracleController, :oracle_data
 
     get "/contracts/all", ContractController, :all_contracts
-    get "/contracts/transactions/address/:address", ContractController, :txs_for_contract_address
-    get "/contracts/calls/address/:address", ContractController, :calls_for_contract_address
+    get "/contracts/transactions/address/:address", ContractController, :contract_tx
+    get "/contracts/calls/address/:address", ContractController, :contract_address_calls
+    # get "/contracts/transactions/creation/address/{address}" TODO: missing
     post "/contracts/verify", ContractController, :verify_contract
 
     get "/names", NameController, :all_names
-    get "/names/:name", NameController, :search_names
+    get "/names/:name", NameController, :search_name
     get "/names/active", NameController, :active_names
     get "/names/auctions/active", NameController, :active_name_auctions
     get "/names/auctions/active/count", NameController, :active_name_auctions_count
-    get "/names/auctions/bids/account/:account", NameController, :bids_for_account
-    get "/names/auctions/bids/:name", NameController, :bids_for_name
-    get "/names/reverse/:account", NameController, :reverse_names
-    get "/names/auctions/:name/info", NameController, :info_for_auction
+    get "/names/auctions/bids/account/:account", NameController, :name_auctions_bids_by_address
+    get "/names/auctions/bids/:name", NameController, :name_auctions_bids_by_name
+    get "/names/reverse/:account", NameController, :name_by_address
+    get "/names/auctions/:name/info", NameController, :auction_info
     get "/names/hash/:hash", NameController, :name_for_hash
 
-    # Not need for the frontend
-    get "/transactions/account/:address/count", TransactionController, :count
-
-    # Not need for the frontend
-    get "/transactions/account/:sender/to/:receiver", TransactionController, :account
-
-    get "/transactions/account/:account", TransactionController, :account
-    get "/transactions/interval/:from/:to", TransactionController, :interval
-
-    # Not need for the frontend
-    get "/transactions/rate/:from/:to", TransactionController, :rate
+    get "/transactions/account/:address/count", TransactionController, :tx_count_by_address
+    get "/transactions/account/:sender/to/:receiver", TransactionController, :tx_between_address
+    get "/transactions/account/:account", TransactionController, :tx_by_account
+    get "/transactions/interval/:from/:to", TransactionController, :tx_by_generation_range
+    get "/transactions/rate/:from/:to", TransactionController, :tx_rate_by_date_range
 
     get "/generations/:from/:to", GenerationController, :generations_by_range
 
-    get "/compilers", UtilController, :get_available_compilers
-    get "/height/at/:milliseconds", UtilController, :height_at_epoch
+    get "/compilers", UtilController, :compilers
+    get "/height/at/:milliseconds", UtilController, :height_by_time
     get "/reward/height/:height", UtilController, :reward_at_height
-    get "/size/current", UtilController, :current_size
-    get "/size/height/:height", UtilController, :size
-    get "/status", UtilController, :status
-    get "/count/current", UtilController, :current_count
+    get "/size/current", UtilController, :chain_size
+    get "/size/height/:height", UtilController, :size_at_height
+    get "/status", UtilController, :mdw_status
+    get "/count/current", UtilController, :current_tx_count
 
     # get "/count/height/:height", :count
     # get "/micro-blocks/hash/:hash/transactions/count", :transaction_count_in_micro_block
@@ -84,5 +78,27 @@ defmodule AeMdwWeb.Router do
         :micro_block_transactions_count_by_hash
 
     get "/accounts/:account", AeNodeController, :get_account_details
+  end
+
+  scope "/swagger" do
+    forward "/", PhoenixSwagger.Plug.SwaggerUI,
+      otp_app: :ae_mdw,
+      swagger_file: "swagger.json",
+      disable_validator: true
+  end
+
+  def swagger_info do
+    %{
+      basePath: "/middleware",
+      schemes: ["http"],
+      consumes: ["application/json"],
+      produces: ["application/json"],
+      info: %{
+        version: "1.0",
+        title: "aeternal",
+        description:
+          "API for [æternal: Aeternity Middleware](https://github.com/aeternity/aeternal)"
+      }
+    }
   end
 end

@@ -21,6 +21,15 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   live_view: [signing_salt: "Oy680JAN"],
   cont_expiration_minutes: 30
 
+config :ae_mdw, :phoenix_swagger,
+  swagger_files: %{
+    "priv/static/swagger.json" => [
+      router: AeMdwWeb.Router
+    ]
+  }
+
+config :phoenix_swagger, json_library: Jason
+
 # Configures Elixir's Logger
 config :logger,
   backends: [{LoggerFileBackend, :info}, {LoggerFileBackend, :sync}]

@@ -1,9 +1,6 @@
 defmodule AeMdwWeb.ChannelController do
   use AeMdwWeb, :controller
-
-  alias AeMdw.Db.Model
-  alias AeMdw.Db.Stream, as: DBS
-  require Model
+  use PhoenixSwagger
 
   # Hardcoded DB only for testing purpose
   @active_channels [
@@ -15,7 +12,7 @@ defmodule AeMdwWeb.ChannelController do
     "ch_284sMWGcDzkf6LGbZVkNwmt2rieeLdPtSJCtVd7QQpTuoZHMkQ"
   ]
 
-  @txs_for_channel_address %{
+  @channel_tx %{
     "transactions" => [
       %{
         "block_height" => 9155,
@@ -43,11 +40,34 @@ defmodule AeMdwWeb.ChannelController do
     ]
   }
 
+  swagger_path :active_channels do
+    get("/channels/active")
+    description("Get Active Channel Names")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("active_channels")
+    response(200, "", %{})
+  end
+
   def active_channels(conn, _params) do
     json(conn, @active_channels)
   end
 
-  def txs_for_channel_address(conn, _params) do
-    json(conn, @txs_for_channel_address)
+  swagger_path :channel_tx do
+    get("/channels/transactions/address/{address}")
+    description("Get all transactions for a state channel")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("channel_tx")
+
+    parameters do
+      address(:path, :string, "", required: true)
+    end
+
+    response(200, "", %{})
+  end
+
+  def channel_tx(conn, _params) do
+    json(conn, @channel_tx)
   end
 end

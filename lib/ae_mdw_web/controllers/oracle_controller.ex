@@ -1,8 +1,9 @@
 defmodule AeMdwWeb.OracleController do
   use AeMdwWeb, :controller
+  use PhoenixSwagger
 
   # Hardcoded DB only for testing purpose
-  @oracles_all [
+  @all_oracles [
     %{
       "block_height" => 221_376,
       "expires_at" => 221_876,
@@ -68,13 +69,45 @@ defmodule AeMdwWeb.OracleController do
     }
   ]
 
-  @oracle_requests_responses []
+  @oracle_data []
 
-  def oracles_all(conn, _params) do
-    json(conn, @oracles_all)
+  swagger_path :all_oracles do
+    get("/oracles/list")
+    description("Get a list of oracles")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("all_oracles")
+
+    parameters do
+      limit(:query, :integer, "", required: false, format: "int32")
+      page(:query, :integer, "", required: false, format: "int32")
+    end
+
+    response(200, "", %{})
   end
 
-  def oracle_requests_responses(conn, _params) do
-    json(conn, @oracle_requests_responses)
+  def all_oracles(conn, _params) do
+    json(conn, @all_oracles)
+  end
+
+  swagger_path :oracle_data do
+    get("/oracles/{oracle_id}")
+    description("Get a list of query and response for a given oracle")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("oracle_data")
+
+    parameters do
+      oracle_id(:path, :string, "Oracle address/id to get the query and responses", required: true)
+
+      limit(:query, :integer, "", required: false, format: "int32")
+      page(:query, :integer, "", required: false, format: "int32")
+    end
+
+    response(200, "", %{})
+  end
+
+  def oracle_data(conn, _params) do
+    json(conn, @oracle_data)
   end
 end
