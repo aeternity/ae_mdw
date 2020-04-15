@@ -45,7 +45,7 @@ defmodule AeMdwWeb.ChannelController do
     description("Get Active Channel Names")
     produces(["application/json"])
     deprecated(false)
-    operation_id("active_channels")
+    operation_id("get_active_channels")
     response(200, "", %{})
   end
 
@@ -58,7 +58,7 @@ defmodule AeMdwWeb.ChannelController do
     description("Get all transactions for a state channel")
     produces(["application/json"])
     deprecated(false)
-    operation_id("channel_tx")
+    operation_id("get_channel_tx")
 
     parameters do
       address(:path, :string, "", required: true)

@@ -76,7 +76,7 @@ defmodule AeMdwWeb.OracleController do
     description("Get a list of oracles")
     produces(["application/json"])
     deprecated(false)
-    operation_id("all_oracles")
+    operation_id("get_all_oracles")
 
     parameters do
       limit(:query, :integer, "", required: false, format: "int32")
@@ -95,7 +95,7 @@ defmodule AeMdwWeb.OracleController do
     description("Get a list of query and response for a given oracle")
     produces(["application/json"])
     deprecated(false)
-    operation_id("oracle_data")
+    operation_id("get_oracle_data")
 
     parameters do
       oracle_id(:path, :string, "Oracle address/id to get the query and responses", required: true)

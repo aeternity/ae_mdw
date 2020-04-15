@@ -185,7 +185,7 @@ defmodule AeMdwWeb.NameController do
     description("Get all names")
     produces(["application/json"])
     deprecated(false)
-    operation_id("all_names")
+    operation_id("get_all_names")
 
     parameters do
       limit(:query, :integer, "", required: false, format: "int32")
@@ -222,7 +222,7 @@ defmodule AeMdwWeb.NameController do
     description("Get a list of all the active names")
     produces(["application/json"])
     deprecated(false)
-    operation_id("active_names")
+    operation_id("get_active_names")
 
     parameters do
       limit(:query, :integer, "", required: false, format: "int32")
@@ -243,7 +243,7 @@ defmodule AeMdwWeb.NameController do
     description("Get a list of all the active name auctions")
     produces(["application/json"])
     deprecated(false)
-    operation_id("active_name_auctions")
+    operation_id("get_active_name_auctions")
 
     parameters do
       limit(:query, :integer, "", required: false, format: "int32")
@@ -276,7 +276,7 @@ defmodule AeMdwWeb.NameController do
     description("Get a count of all the active name auctions")
     produces(["application/json"])
     deprecated(false)
-    operation_id("active_name_auctions_count")
+    operation_id("get_active_name_auctions_count")
 
     parameters do
       limit(:query, :integer, "", required: false, format: "int32")
@@ -309,7 +309,7 @@ defmodule AeMdwWeb.NameController do
     description("Get bids made by a given account")
     produces(["application/json"])
     deprecated(false)
-    operation_id("name_auctions_bids_by_address")
+    operation_id("get_name_auctions_bids_by_address")
 
     parameters do
       account(:path, :string, "Account address", required: true)
@@ -329,7 +329,7 @@ defmodule AeMdwWeb.NameController do
     description("Get a bids for a given name")
     produces(["application/json"])
     deprecated(false)
-    operation_id("name_auctions_bids_by_name")
+    operation_id("get_name_auctions_bids_by_name")
 
     parameters do
       name(:path, :string, "Name to fetch the bids for", required: true)
@@ -349,7 +349,7 @@ defmodule AeMdwWeb.NameController do
     description("Get a list of names mapped to the given address")
     produces(["application/json"])
     deprecated(false)
-    operation_id("name_by_address")
+    operation_id("get_name_by_address")
 
     parameters do
       account(:path, :string, "Account address", required: true)
@@ -369,7 +369,7 @@ defmodule AeMdwWeb.NameController do
     description("Get info in a given auction")
     produces(["application/json"])
     deprecated(false)
-    operation_id("auction_info")
+    operation_id("get_auction_info")
 
     parameters do
       name(:path, :string, "The name to get info on", required: true)
@@ -387,7 +387,7 @@ defmodule AeMdwWeb.NameController do
     description("Given a name hash, return the name and associated info")
     produces(["application/json"])
     deprecated(false)
-    operation_id("name_for_hash")
+    operation_id("get_name_for_hash")
 
     parameters do
       hash(:path, :string, "The hash of the name", required: true)

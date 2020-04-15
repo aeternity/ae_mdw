@@ -16,7 +16,7 @@ defmodule AeMdwWeb.TransactionController do
     description("Get transaction amount and count for the date interval")
     produces(["application/json"])
     deprecated(false)
-    operation_id("tx_rate_by_date_range")
+    operation_id("get_tx_rate_by_date_range")
 
     parameters do
       from(:path, :string, "Start Date(yyyymmdd)", required: true)
@@ -46,7 +46,7 @@ defmodule AeMdwWeb.TransactionController do
     description("Get the count of transactions for a given account address")
     produces(["application/json"])
     deprecated(false)
-    operation_id("tx_count_by_address")
+    operation_id("get_tx_count_by_address")
 
     parameters do
       address(:path, :string, "Account address", required: true)
@@ -67,11 +67,11 @@ defmodule AeMdwWeb.TransactionController do
       )
 
   swagger_path :tx_by_account do
-    get("/transactions/account/{address}")
+    get("/transactions/account/{account}")
     description("Get list of transactions for a given account")
     produces(["application/json"])
     deprecated(false)
-    operation_id("tx_by_account")
+    operation_id("get_tx_by_account")
 
     parameters do
       account(:path, :string, "Account address", required: true)
@@ -90,7 +90,7 @@ defmodule AeMdwWeb.TransactionController do
     description("Get a list of transactions between two accounts")
     produces(["application/json"])
     deprecated(false)
-    operation_id("tx_between_address")
+    operation_id("get_tx_between_address")
 
     parameters do
       sender(:path, :string, "Sender account address", required: true)
@@ -108,7 +108,7 @@ defmodule AeMdwWeb.TransactionController do
     description("Get transactions between an interval of generations")
     produces(["application/json"])
     deprecated(false)
-    operation_id("tx_by_generation_range")
+    operation_id("get_tx_by_generation_range")
 
     parameters do
       from(:path, :integer, "Start Generation/Key-block height", required: true)

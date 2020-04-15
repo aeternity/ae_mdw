@@ -195,7 +195,7 @@ defmodule AeMdwWeb.ContractController do
     description("Get all the contracts")
     produces(["application/json"])
     deprecated(false)
-    operation_id("all_contracts")
+    operation_id("get_all_contracts")
     response(200, "", %{})
   end
 
@@ -208,7 +208,7 @@ defmodule AeMdwWeb.ContractController do
     description("Get all the transactions for a contract")
     produces(["application/json"])
     deprecated(false)
-    operation_id("contract_tx")
+    operation_id("get_contract_tx")
 
     parameters do
       address(:path, :string, "Contract Address/id", required: true)
@@ -226,7 +226,7 @@ defmodule AeMdwWeb.ContractController do
     description("Get contract calls for a provided contract")
     produces(["application/json"])
     deprecated(false)
-    operation_id("contract_address_calls")
+    operation_id("get_contract_address_calls")
 
     parameters do
       address(:path, :string, "Contract Address/id", required: true)

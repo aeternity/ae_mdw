@@ -47,7 +47,7 @@ defmodule AeMdwWeb.UtilController do
     description("Get list of compilers available to the middleware")
     produces(["application/json"])
     deprecated(false)
-    operation_id("compilers")
+    operation_id("get_compilers")
     response(200, "", %{})
   end
 
@@ -60,7 +60,7 @@ defmodule AeMdwWeb.UtilController do
     description("Get middleware status")
     produces(["application/json"])
     deprecated(false)
-    operation_id("mdw_status")
+    operation_id("get_mdw_status")
     response(200, "", %{})
   end
 
@@ -73,7 +73,7 @@ defmodule AeMdwWeb.UtilController do
     description("Get count of transactions at the current height")
     produces(["application/json"])
     deprecated(false)
-    operation_id("current_tx_count")
+    operation_id("get_current_tx_count")
     response(200, "", %{})
   end
 
@@ -86,7 +86,7 @@ defmodule AeMdwWeb.UtilController do
     description("Get size of blockchain at a given height")
     produces(["application/json"])
     deprecated(false)
-    operation_id("size_at_height")
+    operation_id("get_size_at_height")
 
     parameters do
       height(:path, :integer, "Blockchain height", required: true)
@@ -104,7 +104,7 @@ defmodule AeMdwWeb.UtilController do
     description("Get the current of size of blockchain")
     produces(["application/json"])
     deprecated(false)
-    operation_id("chain_size")
+    operation_id("get_chain_size")
     response(200, "", %{})
   end
 
@@ -117,7 +117,7 @@ defmodule AeMdwWeb.UtilController do
     description("Get the block reward for a given block height")
     produces(["application/json"])
     deprecated(false)
-    operation_id("reward_at_height")
+    operation_id("get_reward_at_height")
 
     parameters do
       height(:path, :integer, "Blockchain height", required: true)
@@ -135,7 +135,7 @@ defmodule AeMdwWeb.UtilController do
     description("Get block height at a given time(provided in milliseconds)")
     produces(["application/json"])
     deprecated(false)
-    operation_id("height_by_time")
+    operation_id("get_height_by_time")
 
     parameters do
       milliseconds(:path, :integer, "Time in milliseconds", required: true)

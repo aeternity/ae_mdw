@@ -80,7 +80,7 @@ defmodule AeMdwWeb.GenerationController do
     description("Get generations between a given range")
     produces(["application/json"])
     deprecated(false)
-    operation_id("generations_by_range")
+    operation_id("get_generations_by_range")
 
     parameters do
       from(:path, :integer, "Start Generation or Key Block Number", required: true)
