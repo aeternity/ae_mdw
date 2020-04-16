@@ -19,6 +19,7 @@ defmodule AeMdw.Application do
 
     {:ok, aetx_code} = Extract.AbsCode.module(:aetx)
     {:ok, aeser_code} = Extract.AbsCode.module(:aeser_api_encoder)
+    {:ok, headers_code} = Extract.AbsCode.module(:aec_headers)
 
     type_mod_map = Extract.tx_mod_map(aetx_code)
     type_name_map = Extract.tx_name_map(aetx_code)
@@ -36,9 +37,15 @@ defmodule AeMdw.Application do
       ["AeMdw", "Db", "Model", tab] = Module.split(db_mod)
       Module.concat(AeMdw.Db.Stream, tab)
     end
+    collect_stream_mod = fn t, acc -> put_in(acc[t], stream_mod.(t)) end
 
     tx_group = &("#{&1}" |> String.split("_") |> hd |> String.to_atom())
     tx_types = Map.keys(type_mod_map)
+
+    record_keys = fn mod_code, rec_name ->
+      {:ok, rec_code} = Extract.AbsCode.record_fields(mod_code, rec_name)
+      Enum.map(rec_code, &(elem(Extract.AbsCode.field_name_type(&1), 0)))
+    end
 
     SmartGlobal.new(
       AeMdw.Node,
@@ -53,11 +60,12 @@ defmodule AeMdw.Application do
         tx_types: [{[], MapSet.new(tx_types)}],
         tx_names: [{[], MapSet.new(Map.values(type_name_map))}],
         id_prefixes: [{[], MapSet.new(Map.keys(id_prefix_type_map))}],
-        stream_mod:
-          Enum.reduce(Model.tables(), %{}, fn t, acc -> put_in(acc[t], stream_mod.(t)) end),
+        stream_mod: Enum.reduce(Model.tables(), %{}, collect_stream_mod),
         tx_group: Enum.group_by(tx_types, tx_group),
         id_type: id_type_map,
-        type_id: AeMdw.Util.inverse(id_type_map)
+        type_id: AeMdw.Util.inverse(id_type_map),
+        hdr_fields: %{key: record_keys.(headers_code, :key_header),
+                      micro: record_keys.(headers_code, :mic_header)}
       }
     )
   end
