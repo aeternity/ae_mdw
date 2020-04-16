@@ -2,7 +2,8 @@ defmodule AeMdwWeb.AeNodeController do
   use AeMdwWeb, :controller
 
   alias AeMdw.Validate
-  alias :aeser_api_encoder, as: Enc
+
+  import AeMdw.Db.Util
 
   # Hardcoded DB only for testing purpose
   @tx_by_hash %{
@@ -74,11 +75,8 @@ defmodule AeMdwWeb.AeNodeController do
     end
   end
 
-  def current_key_block_height(conn, _params) do
-    top_block = :aec_chain.top_block()
-    height = :aec_blocks.height(top_block)
-    json(conn, %{"height" => height})
-  end
+  def current_key_block_height(conn, _params),
+    do: json(conn, %{"height" => last_gen()})
 
   def current_generations(conn, _params) do
     :aec_chain.get_current_generation() |> generation_rsp(conn)
