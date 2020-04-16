@@ -1,6 +1,14 @@
 defmodule AeMdwWeb.OracleController do
   use AeMdwWeb, :controller
 
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.Stream, as: DBS
+  alias AeMdw.Validate
+  alias AeMdwWeb.Continuation, as: Cont
+  require Model
+
+  import AeMdw.{Sigil, Util}
+
   # Hardcoded DB only for testing purpose
   @oracles_all [
     %{
@@ -70,11 +78,64 @@ defmodule AeMdwWeb.OracleController do
 
   @oracle_requests_responses []
 
-  def oracles_all(conn, _params) do
-    json(conn, @oracles_all)
+
+  def all(conn, _req),
+    do: json(conn, Cont.response(conn, &db_stream/1))
+
+  def requests_responses(conn, _req) do
+    data = Cont.response(conn, &db_stream/1)
+
+    data |> hd |> prx("////////// ORACLE RESP")
+
+    json(conn, data)
   end
 
-  def oracle_requests_responses(conn, _params) do
-    json(conn, @oracle_requests_responses)
+  def db_stream(req) do
+    case req do
+      %{"oracle_id" => oracle_id} ->
+        :backward
+        |> DBS.map(~t[object], {:json, &to_response/1}, {oracle_id, :oracle_response_tx})
+      %{} ->
+        :backward
+        |> DBS.map(~t[type], {:json, &to_oracle/1}, :oracle_register_tx)
+    end
   end
+
+
+  def to_response(%{} = response_tx) do
+    tx = response_tx["tx"]
+    oracle_id = tx["oracle_id"]
+    query_id = tx["query_id"]
+
+
+    %{"query_id" => query_id,
+      "request" => %{"oracle_id" => oracle_id,
+                     "hash" => "TODO: request_hash",
+                     "query" => "TODO: query"},
+      "response" => %{"hash" => response_tx["hash"],
+                      "response" => tx["response"]}}
+
+  end
+
+
+  def to_oracle(%{} = register_tx) do
+    %{"block_height" => height,
+      "hash" => tx_hash,
+      "tx" => %{"account_id" => account_id,
+                "oracle_ttl" => oracle_ttl}} = register_tx
+    expiration_height =
+      case oracle_ttl do
+        %{"type" => :delta, "value" => ttl_val} -> height + ttl_val
+        %{"type" => :block, "value" => ttl_val} -> ttl_val
+      end
+    oracle_id = :aeser_id.create(:oracle, Validate.id!(account_id))
+    register_tx
+    |> Map.delete("hash")
+    |> Map.put("transaction_hash", tx_hash)
+    |> Map.put("expires_at", expiration_height)
+    |> Map.put("oracle_id", :aeser_api_encoder.encode(:id_hash, oracle_id))
+  end
+
+
+
 end
