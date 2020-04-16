@@ -40,6 +40,14 @@ defmodule AeMdw.Db.Stream do
   defp final_mapper(:raw, table), do: compose(&Model.tx_to_raw_map/1, to_tx(table))
   defp final_mapper({:tx, f}, Model.Tx) when is_function(f, 1), do: f
   defp final_mapper({:tx, f}, table) when is_function(f, 1), do: compose(f, to_tx(table))
+  defp final_mapper({:raw, f}, Model.Tx) when is_function(f, 1),
+    do: compose(f, &Model.tx_to_raw_map/1)
+  defp final_mapper({:raw, f}, table) when is_function(f, 1),
+    do: compose(f, &Model.tx_to_raw_map/1, to_tx(table))
+  defp final_mapper({:json, f}, Model.Tx) when is_function(f, 1),
+    do: compose(f, &Model.tx_to_map/1)
+  defp final_mapper({:json, f}, table) when is_function(f, 1),
+    do: compose(f, &Model.tx_to_map/1, to_tx(table))
   defp final_mapper(f, _table) when is_function(f, 1), do: f
 
   def to_tx(Model.Tx), do: &id/1
