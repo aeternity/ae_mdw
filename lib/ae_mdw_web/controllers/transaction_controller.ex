@@ -62,7 +62,7 @@ defmodule AeMdwWeb.TransactionController do
       handle_input(
         conn,
         fn ->
-          count = DBS.map(:backward, ~t[object], :json, id) |> Enum.count()
+          count = DBS.map(:backward, ~t[object], & &1, id) |> Enum.count()
           json(conn, %{"count" => count})
         end
       )
