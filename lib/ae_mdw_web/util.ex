@@ -6,6 +6,9 @@ defmodule AeMdwWeb.Util do
 
   import AeMdw.{Sigil, Db.Util}
 
+  def scope(%{"from" => "undefined", "to" => "undefined"}), # frontend sent this, wtf?
+    do: nil
+
   def scope(%{"from" => from, "to" => to}) do
     [from, to] = Enum.map([from, to], &String.to_integer/1) |> Enum.sort()
     to..from

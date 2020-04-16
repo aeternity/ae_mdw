@@ -16,11 +16,10 @@ defmodule AeMdwWeb.Router do
     get "/channels/active", ChannelController, :active_channels
     get "/channels/transactions/address/:address", ChannelController, :txs_for_channel_address
 
-    get "/oracles/list", OracleController, :oracles_all
+    get "/oracles/list", OracleController, :all
     # seems like there are not registered oracles in aeternal
-    get "/oracles/:oracle_id", OracleController, :oracle_requests_responses
+    get "/oracles/:oracle_id", OracleController, :requests_responses
 
-    get "/contracts/all", ContractController, :all_contracts
     get "/contracts/transactions/address/:address", ContractController, :txs_for_contract_address
     get "/contracts/calls/address/:address", ContractController, :calls_for_contract_address
     post "/contracts/verify", ContractController, :verify_contract

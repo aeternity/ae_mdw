@@ -42,6 +42,7 @@ defmodule AeMdw.Util do
     do: Enum.reduce(map, %{}, fn {k, v}, map -> put_in(map[v], k) end)
 
   def compose(f1, f2), do: fn x -> f1.(f2.(x)) end
+  def compose(f1, f2, f3), do: fn x -> f1.(f2.(f3.(x))) end
 
   def prx(x),
     do: x |> IO.inspect(pretty: true, limit: :infinity)
@@ -67,4 +68,12 @@ defmodule AeMdw.Util do
         end
     end
   end
+
+  def record_to_map(record, [_|_] = fields) when is_tuple(record) do
+    collect = fn {field, idx}, acc -> put_in(acc, [field], elem(record, idx)) end
+    fields
+    |> Stream.with_index(1)
+    |> Enum.reduce(%{}, collect)
+  end
+
 end

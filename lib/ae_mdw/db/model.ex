@@ -2,6 +2,8 @@ defmodule AeMdw.Db.Model do
   require Record
   require Ex2ms
 
+  alias AeMdw.Node, as: AE
+
   import Record, only: [defrecord: 2]
   import AeMdw.{Util, Db.Util}
 
@@ -85,12 +87,15 @@ defmodule AeMdw.Db.Model do
 
   ##########
 
-  def block_to_raw_map({:block, {_kbi, _mbi}, _txi, _hash}) do
-    %{"todo" => "TODO"}
-  end
+  def block_to_raw_map({:block, {_kbi, mbi}, _txi, hash}),
+    do: record_to_map(:aec_db.get_header(hash), AE.hdr_fields(mbi == -1 && :key || :micro))
 
-  def block_to_map({:block, {_kbi, _mbi}, _txi, _hash}) do
-    %{"todo" => "TODO"}
+  def block_to_map({:block, {_kbi, _mbi}, _txi, hash}) do
+    header = :aec_db.get_header(hash)
+    prev_hash = :aec_headers.prev_hash(header)
+    prev_key_hash = :aec_headers.prev_key_hash(header)
+    prev_block_type = prev_hash == prev_key_hash && :key || :micro
+    :aec_headers.serialize_for_client(header, prev_block_type)
   end
 
   ##########
