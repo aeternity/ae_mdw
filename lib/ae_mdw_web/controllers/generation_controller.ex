@@ -94,8 +94,8 @@ defmodule AeMdwWeb.GenerationController do
     parameters do
       from(:path, :integer, "Start Generation or Key Block Number", required: true)
       to(:path, :integer, "End Generation or Key Block Number", required: true)
-      limit(:query, :integer, "", required: true, format: "int32")
-      page(:query, :integer, "", required: true, format: "int32")
+      limit(:query, :integer, "", required: false, format: "int32")
+      page(:query, :integer, "", required: false, format: "int32")
     end
 
     response(200, "", %{})
