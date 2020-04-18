@@ -46,6 +46,12 @@ defmodule AeMdwWeb.ChannelController do
     produces(["application/json"])
     deprecated(false)
     operation_id("get_active_channels")
+
+    parameters do
+      limit(:query, :integer, "", required: true, format: "int32")
+      page(:query, :integer, "", required: true, format: "int32")
+    end
+
     response(200, "", %{})
   end
 
@@ -62,6 +68,8 @@ defmodule AeMdwWeb.ChannelController do
 
     parameters do
       address(:path, :string, "", required: true)
+      limit(:query, :integer, "", required: true, format: "int32")
+      page(:query, :integer, "", required: true, format: "int32")
     end
 
     response(200, "", %{})

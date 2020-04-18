@@ -188,8 +188,8 @@ defmodule AeMdwWeb.NameController do
     operation_id("get_all_names")
 
     parameters do
-      limit(:query, :integer, "", required: false, format: "int32")
-      page(:query, :integer, "", required: false, format: "int32")
+      limit(:query, :integer, "", required: true, format: "int32")
+      page(:query, :integer, "", required: true, format: "int32")
     end
 
     response(200, "", %{})
@@ -225,8 +225,8 @@ defmodule AeMdwWeb.NameController do
     operation_id("get_active_names")
 
     parameters do
-      limit(:query, :integer, "", required: false, format: "int32")
-      page(:query, :integer, "", required: false, format: "int32")
+      limit(:query, :integer, "", required: true, format: "int32")
+      page(:query, :integer, "", required: true, format: "int32")
 
       owner(:query, :string, "Address of the owner account to filter the results", required: false)
     end
@@ -246,8 +246,8 @@ defmodule AeMdwWeb.NameController do
     operation_id("get_active_name_auctions")
 
     parameters do
-      limit(:query, :integer, "", required: false, format: "int32")
-      page(:query, :integer, "", required: false, format: "int32")
+      limit(:query, :integer, "", required: true, format: "int32")
+      page(:query, :integer, "", required: true, format: "int32")
 
       length(:query, :integer, "Returns the names with provided length",
         required: false,
@@ -279,8 +279,8 @@ defmodule AeMdwWeb.NameController do
     operation_id("get_active_name_auctions_count")
 
     parameters do
-      limit(:query, :integer, "", required: false, format: "int32")
-      page(:query, :integer, "", required: false, format: "int32")
+      limit(:query, :integer, "", required: true, format: "int32")
+      page(:query, :integer, "", required: true, format: "int32")
 
       length(:query, :integer, "Returns the names with provided length",
         required: false,
@@ -333,8 +333,8 @@ defmodule AeMdwWeb.NameController do
 
     parameters do
       name(:path, :string, "Name to fetch the bids for", required: true)
-      limit(:query, :integer, "", required: false, format: "int32")
-      page(:query, :integer, "", required: false, format: "int32")
+      limit(:query, :integer, "", required: true, format: "int32")
+      page(:query, :integer, "", required: true, format: "int32")
     end
 
     response(200, "", %{})

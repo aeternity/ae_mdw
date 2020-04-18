@@ -42,7 +42,7 @@ defmodule AeMdwWeb.TransactionController do
   end
 
   swagger_path :tx_count_by_address do
-    get("transactions/account/{address}/count")
+    get("/transactions/account/{address}/count")
     description("Get the count of transactions for a given account address")
     produces(["application/json"])
     deprecated(false)
@@ -75,8 +75,8 @@ defmodule AeMdwWeb.TransactionController do
 
     parameters do
       account(:path, :string, "Account address", required: true)
-      limit(:query, :integer, "", required: false, format: "int32")
-      page(:query, :integer, "", required: false, format: "int32")
+      limit(:query, :integer, "", required: true, format: "int32")
+      page(:query, :integer, "", required: true, format: "int32")
     end
 
     response(200, "", %{})
@@ -95,6 +95,8 @@ defmodule AeMdwWeb.TransactionController do
     parameters do
       sender(:path, :string, "Sender account address", required: true)
       receiver(:path, :string, "Receiver account address", required: true)
+      limit(:query, :integer, "", required: true, format: "int32")
+      page(:query, :integer, "", required: true, format: "int32")
     end
 
     response(200, "", %{})
@@ -113,8 +115,8 @@ defmodule AeMdwWeb.TransactionController do
     parameters do
       from(:path, :integer, "Start Generation/Key-block height", required: true)
       to(:path, :integer, "End Generation/Key-block height", required: true)
-      limit(:query, :integer, "", required: false, format: "int32")
-      page(:query, :integer, "", required: false, format: "int32")
+      limit(:query, :integer, "", required: true, format: "int32")
+      page(:query, :integer, "", required: true, format: "int32")
       txtype(:query, :string, "Transaction Type", required: false)
     end
 

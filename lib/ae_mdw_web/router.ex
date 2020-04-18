@@ -95,9 +95,8 @@ defmodule AeMdwWeb.Router do
       produces: ["application/json"],
       info: %{
         version: "1.0",
-        title: "aeternal",
-        description:
-          "API for [æternal: Aeternity Middleware](https://github.com/aeternity/aeternal)"
+        title: "Aeternity Middleware",
+        description: "API for [Aeternity Middleware](https://github.com/aeternity/ae_mdw)"
       }
     }
   end

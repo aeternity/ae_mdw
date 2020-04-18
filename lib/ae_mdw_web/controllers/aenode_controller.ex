@@ -4,38 +4,6 @@ defmodule AeMdwWeb.AeNodeController do
   alias AeMdw.Validate
   alias :aeser_api_encoder, as: Enc
 
-  # Hardcoded DB only for testing purpose
-  @tx_by_hash %{
-    "block_hash" => "mh_MTNTqxHzknFa74v6zekKBrw5X1QgYnesxidzd8tts6dEaHog7",
-    "block_height" => 226_184,
-    "hash" => "th_ZvJbxoQjSjFeNTmpf2wgMRXmz1HQhi2BVKY1j3hzsBeBR1cYY",
-    "signatures" => [
-      "sg_jctC2NByGcAj45TnD3DvvGUmp4Jdr75JTjPUaUB3SEUbC879zvG87vCDtCEeicASmANEse6RiQtJTxYcAdjLuSpGnp43"
-    ],
-    "tx" => %{
-      "amount" => 20000,
-      "fee" => 19_320_000_000_000,
-      "nonce" => 1_578_551,
-      "payload" =>
-        "ba_MjI2MTg2OmtoX25tdnM2VVBqNnBtcnl6ckhBV0dvd281S041dkVjVkEyblRFeDZGYXk3VjJlOVNkR1Y6bWhfMmdzVDdYM2JCVHhjZjlYRzROWW5yekdCREtxTG9nR1VQVVVwalVrVnB0c0NKRnpCUUo6MTU4NDIxMDY2N+QC5HQ=",
-      "recipient_id" => "ak_zvU8YQLagjcfng7Tg8yCdiZ1rpiWNp1PBn3vtUs44utSvbJVR",
-      "sender_id" => "ak_zvU8YQLagjcfng7Tg8yCdiZ1rpiWNp1PBn3vtUs44utSvbJVR",
-      "ttl" => 226_196,
-      "type" => "SpendTx",
-      "version" => 1
-    }
-  }
-
-  @get_account_details %{
-    "balance" => 13_700_075_966_340_000_000_000,
-    "id" => "ak_S5JTasvPZsbYWbEUFNsme8vz5tqkdhtGx3m7yJC7Dpqi4rS2A",
-    "kind" => "basic",
-    "nonce" => 2,
-    "payable" => true
-  }
-
-  @current_key_block_height %{"height" => 226_189}
-
   def tx_by_hash(conn, %{"hash" => tx_hash}) do
     case :aeser_api_encoder.safe_decode(:tx_hash, tx_hash) do
       {:ok, hash} ->

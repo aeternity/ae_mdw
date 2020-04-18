@@ -196,6 +196,12 @@ defmodule AeMdwWeb.ContractController do
     produces(["application/json"])
     deprecated(false)
     operation_id("get_all_contracts")
+
+    parameters do
+      limit(:query, :integer, "", required: true, format: "int32")
+      page(:query, :integer, "", required: true, format: "int32")
+    end
+
     response(200, "", %{})
   end
 
@@ -212,6 +218,8 @@ defmodule AeMdwWeb.ContractController do
 
     parameters do
       address(:path, :string, "Contract Address/id", required: true)
+      limit(:query, :integer, "", required: true, format: "int32")
+      page(:query, :integer, "", required: true, format: "int32")
     end
 
     response(200, "", %{})
@@ -230,6 +238,8 @@ defmodule AeMdwWeb.ContractController do
 
     parameters do
       address(:path, :string, "Contract Address/id", required: true)
+      limit(:query, :integer, "", required: true, format: "int32")
+      page(:query, :integer, "", required: true, format: "int32")
     end
 
     response(200, "", %{})

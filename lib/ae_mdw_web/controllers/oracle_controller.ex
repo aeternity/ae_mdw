@@ -79,8 +79,8 @@ defmodule AeMdwWeb.OracleController do
     operation_id("get_all_oracles")
 
     parameters do
-      limit(:query, :integer, "", required: false, format: "int32")
-      page(:query, :integer, "", required: false, format: "int32")
+      limit(:query, :integer, "", required: true, format: "int32")
+      page(:query, :integer, "", required: true, format: "int32")
     end
 
     response(200, "", %{})
@@ -99,9 +99,6 @@ defmodule AeMdwWeb.OracleController do
 
     parameters do
       oracle_id(:path, :string, "Oracle address/id to get the query and responses", required: true)
-
-      limit(:query, :integer, "", required: false, format: "int32")
-      page(:query, :integer, "", required: false, format: "int32")
     end
 
     response(200, "", %{})
