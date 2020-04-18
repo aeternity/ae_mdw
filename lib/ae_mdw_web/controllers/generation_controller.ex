@@ -2,6 +2,15 @@ defmodule AeMdwWeb.GenerationController do
   use AeMdwWeb, :controller
   use PhoenixSwagger
 
+  alias AeMdw.Validate
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.Stream, as: DBS
+  alias AeMdwWeb.Util, as: WebUtil
+  alias AeMdwWeb.Continuation, as: Cont
+  require Model
+
+  import AeMdw.Sigil
+
   # Hardcoded DB only for testing purpose
   @generations_by_range %{
     "data" => %{
@@ -92,7 +101,52 @@ defmodule AeMdwWeb.GenerationController do
     response(200, "", %{})
   end
 
-  def generations_by_range(conn, _params) do
-    json(conn, @generations_by_range)
+  def generations_by_range(%Plug.Conn{assigns: %{limit_page: {_, _}}} = conn, _req) do
+    generations = Cont.response(conn, &db_stream/1)
+
+    resp =
+      generations
+      |> Enum.reduce(%{}, fn gen, acc -> put_in(acc, ["#{gen["height"]}"], gen) end)
+
+    json(conn, %{"data" => resp})
+  end
+
+  def generations_by_range(conn, req),
+    do: generations_by_range(%{conn | assigns: Map.put(conn.assigns, :limit_page, {10, 1})}, req)
+
+  def db_stream(req) do
+    %Range{} = scope = WebUtil.scope(req)
+    Stream.map(scope, &generation/1)
+  end
+
+  def generation(height) when is_integer(height) do
+    block_jsons = height |> DBS.map(~t[block], :json) |> Enum.to_list()
+    generation(block_jsons)
+  end
+
+  def generation([kb_json | mb_jsons]) do
+    kb_json =
+      (Map.has_key?(kb_json, "pow") &&
+         update_in(kb_json["pow"], &"#{inspect(&1)}")) ||
+        kb_json
+
+    mb_jsons =
+      for %{"hash" => mb_hash} = mb_json <- mb_jsons, reduce: %{} do
+        mbs ->
+          micro = :aec_db.get_block(Validate.id!(mb_hash))
+          header = :aec_blocks.to_header(micro)
+
+          txs_json =
+            for tx <- :aec_blocks.txs(micro), reduce: %{} do
+              txs ->
+                %{"hash" => tx_hash} = tx_json = :aetx_sign.serialize_for_client(header, tx)
+                Map.put(txs, tx_hash, tx_json)
+            end
+
+          mb_json = Map.put(mb_json, "transactions", txs_json)
+          Map.put(mbs, mb_hash, mb_json)
+      end
+
+    Map.put(kb_json, "micro_blocks", mb_jsons)
   end
 end
