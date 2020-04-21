@@ -9,7 +9,7 @@ defmodule AeMdw.Application do
     init(:meta)
 
     children = [
-      AeMdw.Db.Sync.Supervisor,
+      # AeMdw.Db.Sync.Supervisor,
       AeMdwWeb.Supervisor,
       {Riverside, [handler: AeWebsocket.SocketHandler]}
     ]

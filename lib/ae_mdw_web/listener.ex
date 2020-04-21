@@ -34,31 +34,14 @@ defmodule AeMdwWeb.Listener do
       {:ok, block} ->
         header = :aec_blocks.to_header(block)
 
-        txs =
-          for tx <- :aec_blocks.txs(block) do
-            ser_tx = :aetx_sign.serialize_for_client(header, tx)
+        Enum.each(:aec_blocks.txs(block), fn tx ->
+          ser_tx = :aetx_sign.serialize_for_client(header, tx)
+          type = ser_tx["tx"]["type"]
 
-            data = %{
-              "payload" => ser_tx,
-              "subscription" => "Transactions"
-            }
-
-            broadcast("Transactions", data)
-
-            Enum.each(state, fn obj ->
-              case ser_tx["tx"]["type"] do
-                "SpendTx" ->
-                  if ser_tx["tx"]["recipient_id"] == obj || ser_tx["tx"]["sender_id"] == obj do
-                    data = %{
-                      "payload" => :aetx_sign.serialize_for_client(header, tx),
-                      "subscription" => "Object"
-                    }
-
-                    broadcast(obj, data)
-                  end
-              end
-            end)
-          end
+          Enum.each(state, fn obj ->
+            broadcast_tx(type, obj, ser_tx)
+          end)
+        end)
 
       {:error, :block_not_found} ->
         {:error, %{"reason" => "Block not found"}}
@@ -75,14 +58,10 @@ defmodule AeMdwWeb.Listener do
             prev_block_type = :aec_blocks.type(prev_block)
             header = :aec_blocks.to_header(block)
 
-            payload = :aec_headers.serialize_for_client(header, prev_block_type)
+            ser_tx = :aec_headers.serialize_for_client(header, prev_block_type)
+            payload = Map.put(ser_tx, "key_block_id", ser_tx["height"])
 
-            data = %{
-              "payload" => Map.put(payload, "key_block_id", payload["height"]),
-              "subscription" => "MicroBlocks"
-            }
-
-            broadcast("MicroBlocks", data)
+            broadcast("MicroBlocks", data(payload, "MicroBlocks"))
 
           :error ->
             {:error, %{"reason" => "Block not found"}}
@@ -100,12 +79,12 @@ defmodule AeMdwWeb.Listener do
 
         case :aec_blocks.height(block) do
           0 ->
-            data = %{
-              "payload" => :aec_headers.serialize_for_client(header, :key),
-              "subscription" => "KeyBlocks"
-            }
-
-            broadcast("KeyBlocks", data)
+            broadcast(
+              "KeyBlocks",
+              header
+              |> :aec_headers.serialize_for_client(:key)
+              |> data("KeyBlocks")
+            )
 
           _ ->
             prev_block_hash = :aec_blocks.prev_hash(block)
@@ -114,12 +93,12 @@ defmodule AeMdwWeb.Listener do
               {:ok, prev_block} ->
                 prev_block_type = :aec_blocks.type(prev_block)
 
-                data = %{
-                  "payload" => :aec_headers.serialize_for_client(header, prev_block_type),
-                  "subscription" => "KeyBlocks"
-                }
-
-                broadcast("KeyBlocks", data)
+                broadcast(
+                  "KeyBlocks",
+                  header
+                  |> :aec_headers.serialize_for_client(prev_block_type)
+                  |> data("KeyBlocks")
+                )
 
               :error ->
                 {:error, %{"reason" => "Block not found"}}
@@ -137,4 +116,118 @@ defmodule AeMdwWeb.Listener do
         {:channel, channel},
         {:text, Poison.encode!(msg)}
       )
+
+  def data(data, sub), do: %{"payload" => data, "subscription" => sub}
+
+  def broadcast_tx("SpendTx", obj, ser_tx) do
+    if ser_tx["tx"]["recipient_id"] == obj || ser_tx["tx"]["sender_id"] == obj do
+      broadcast(obj, data(ser_tx, "Object"))
+    end
+  end
+
+  def broadcast_tx("OracleRegisterTx", obj, ser_tx) do
+    if ser_tx["oracle_id"] == obj || ser_tx["tx"]["account_id"] == obj do
+      broadcast(obj, data(ser_tx, "Object"))
+    end
+  end
+
+  def broadcast_tx("OracleExtendTx", obj, ser_tx) do
+    # TODO logic
+    broadcast(obj, data(ser_tx, "Object"))
+  end
+
+  def broadcast_tx("OracleQueryTx", obj, ser_tx) do
+    # TODO logic
+    broadcast(obj, data(ser_tx, "Object"))
+  end
+
+  def broadcast_tx("ContractCallTx", obj, ser_tx) do
+    # TODO logic
+    broadcast(obj, data(ser_tx, "Object"))
+  end
+
+  def broadcast_tx("ContractCreateTx", obj, ser_tx) do
+    # TODO logic
+    broadcast(obj, data(ser_tx, "Object"))
+  end
+
+  def broadcast_tx("ChannelCreateTx", obj, ser_tx) do
+    # TODO logic
+    broadcast(obj, data(ser_tx, "Object"))
+  end
+
+  def broadcast_tx("ChannelDepositTx", obj, ser_tx) do
+    # TODO logic
+    broadcast(obj, data(ser_tx, "Object"))
+  end
+
+  def broadcast_tx("ChannelWithdrawTx", obj, ser_tx) do
+    # TODO logic
+    broadcast(obj, data(ser_tx, "Object"))
+  end
+
+  def broadcast_tx("ChannelCloseMutualTx", obj, ser_tx) do
+    # TODO logic
+    broadcast(obj, data(ser_tx, "Object"))
+  end
+
+  def broadcast_tx("ChannelForceProgressTx", obj, ser_tx) do
+    # TODO logic
+    broadcast(obj, data(ser_tx, "Object"))
+  end
+
+  def broadcast_tx("ChannelCloseSoloTx", obj, ser_tx) do
+    # TODO logic
+    broadcast(obj, data(ser_tx, "Object"))
+  end
+
+  def broadcast_tx("ChannelSlashTx", obj, ser_tx) do
+    # TODO logic
+    broadcast(obj, data(ser_tx, "Object"))
+  end
+
+  def broadcast_tx("ChannelSettleTx", obj, ser_tx) do
+    # TODO logic
+    broadcast(obj, data(ser_tx, "Object"))
+  end
+
+  def broadcast_tx("ChannelSnapshotSoloTx", obj, ser_tx) do
+    # TODO logic
+    broadcast(obj, data(ser_tx, "Object"))
+  end
+
+  def broadcast_tx("NamePreclaimTx", obj, ser_tx) do
+    # TODO logic
+    broadcast(obj, data(ser_tx, "Object"))
+  end
+
+  def broadcast_tx("NameClaimTx", obj, ser_tx) do
+    # TODO logic
+    broadcast(obj, data(ser_tx, "Object"))
+  end
+
+  def broadcast_tx("NameUpdateTx", obj, ser_tx) do
+    # TODO logic
+    broadcast(obj, data(ser_tx, "Object"))
+  end
+
+  def broadcast_tx("NameTransferTx", obj, ser_tx) do
+    # TODO logic
+    broadcast(obj, data(ser_tx, "Object"))
+  end
+
+  def broadcast_tx("NameRevokeTx", obj, ser_tx) do
+    # TODO logic
+    broadcast(obj, data(ser_tx, "Object"))
+  end
+
+  def broadcast_tx("GAAttachTx", obj, ser_tx) do
+    # TODO logic
+    broadcast(obj, data(ser_tx, "Object"))
+  end
+
+  def broadcast_tx("GAMetaTx", obj, ser_tx) do
+    # TODO logic
+    broadcast(obj, data(ser_tx, "Object"))
+  end
 end

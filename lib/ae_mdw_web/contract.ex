@@ -142,4 +142,5 @@ defmodule AeMdwWeb.Contract do
 
   defp encode(type, val),
     do: :aeser_api_encoder.encode(type, val)
+
 end
