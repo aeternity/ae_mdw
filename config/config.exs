@@ -9,6 +9,7 @@ use Mix.Config
 
 config :ae_plugin,
   node_root: "../aeternity/_build/local/",
+  aesophia_root: "../aesophia/_build/default",
   "$aec_db_create_tables": {AeMdw.Db.Setup, :create_tables},
   "$aec_db_check_tables": {AeMdw.Db.Setup, :check_tables}
 
@@ -19,7 +20,8 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   render_errors: [view: AeMdwWeb.ErrorView, accepts: ~w(html json)],
   pubsub: [name: AeMdw.PubSub, adapter: Phoenix.PubSub.PG2],
   live_view: [signing_salt: "Oy680JAN"],
-  cont_expiration_minutes: 30
+  continuation_cache_expiration_minutes: 30,
+  contract_cache_expiration_minutes: 1440
 
 # Configures Elixir's Logger
 config :logger,
