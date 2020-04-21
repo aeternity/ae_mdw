@@ -40,6 +40,19 @@ defmodule AeMdw.Db.Model do
   @object_defaults [index: {nil, nil, -1}, id_tag: nil, role: nil]
   defrecord :object, @object_defaults
 
+  # object origin :
+  #     index = {:contract | :name | ..., pubkey, tx_index}, tx_id = tx_hash
+  @origin_defaults [index: {nil, nil, nil}, tx_id: nil]
+  defrecord :origin, @origin_defaults
+
+  # we need this one to quickly locate origin keys to delete for invalidating a fork
+  #
+  # rev object origin :
+  #     index = {tx_index, :contract | :name | ..., pubkey}, unused: nil
+  @rev_origin_defaults [index: {nil, nil, nil}, unused: nil]
+  defrecord :rev_origin, @rev_origin_defaults
+
+
   # TODO:
   # contract events :
   #     index = {ct_address, event_name, tx_index, ct_address_log_local_id (0..)}, event = event
@@ -55,11 +68,13 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.Time,
       AeMdw.Db.Model.Type,
       AeMdw.Db.Model.Object,
+      AeMdw.Db.Model.Origin,
+      AeMdw.Db.Model.RevOrigin,
       AeMdw.Db.Model.Event
     ]
 
   def records(),
-    do: [:tx, :block, :time, :type, :object, :event]
+    do: [:tx, :block, :time, :type, :object, :origin, :rev_origin, :event]
 
   def fields(record),
     do: for({x, _} <- defaults(record), do: x)
@@ -69,6 +84,8 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Time), do: :time
   def record(AeMdw.Db.Model.Type), do: :type
   def record(AeMdw.Db.Model.Object), do: :object
+  def record(AeMdw.Db.Model.Origin), do: :origin
+  def record(AeMdw.Db.Model.RevOrigin), do: :rev_origin
   def record(AeMdw.Db.Model.Event), do: :event
 
   def table(:tx), do: AeMdw.Db.Model.Tx
@@ -76,6 +93,8 @@ defmodule AeMdw.Db.Model do
   def table(:time), do: AeMdw.Db.Model.Time
   def table(:type), do: AeMdw.Db.Model.Type
   def table(:object), do: AeMdw.Db.Model.Object
+  def table(:origin), do: AeMdw.Db.Model.Origin
+  def table(:rev_origin), do: AeMdw.Db.Model.RevOrigin
   def table(:event), do: AeMdw.Db.Model.Event
 
   def defaults(:tx), do: @tx_defaults
@@ -83,6 +102,8 @@ defmodule AeMdw.Db.Model do
   def defaults(:time), do: @time_defaults
   def defaults(:type), do: @type_defaults
   def defaults(:object), do: @object_defaults
+  def defaults(:origin), do: @origin_defaults
+  def defaults(:rev_origin), do: @rev_origin_defaults
   def defaults(:event), do: @event_defaults
 
   ##########

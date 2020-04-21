@@ -78,7 +78,9 @@ defmodule AeMdw.Db.Stream do
     # :block, :tx, :type, :time, :object
 
     # FORWARD tests
-    [{0, -1}, {1, -1}, {1, 0}, {2, -1}, {3, -1}, {4, -1}, {5, -1}, {6, -1}, {7, -1}, {8, -1}] ==
+    true =
+      [{0, -1}, {1, -1}, {1, 0}, {2, -1}, {3, -1},
+       {4, -1}, {5, -1}, {6, -1}, {7, -1}, {8, -1}] ==
       :forward |> DBS.map(~t[block], &Model.block(&1, :index)) |> Enum.take(10)
 
     first_10_tx_recs = :forward |> DBS.map(~t[tx]) |> Enum.take(10)

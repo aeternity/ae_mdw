@@ -20,6 +20,6 @@
   "ranch": {:hex, :ranch, "1.7.1", "6b1fab51b49196860b733a49c07604465a47bdb78aa10c1c16a3d199f7f8c881", [:rebar3], [], "hexpm", "451d8527787df716d99dc36162fca05934915db0b6141bbdac2ea8d3c7afc7d7"},
   "setup": {:hex, :setup, "2.0.2", "1203f4cda11306c2e34434244576ded0a7bbfb0908d9a572356c809bd0cdf085", [:rebar3], [], "hexpm", "7d6aaf5281d0b0c40980e128f9dc410dacd03799a8577201d4c8b43e7f97509a"},
   "smart_global": {:git, "https://github.com/ks/smart_global.git", "bd0fd57c8498441579edc0d2add2f1dfc780f123", []},
-  "stream_split": {:hex, :stream_split, "0.1.4", "ea8073779725101127123bd4176500227e958113090741e38b23ee4efd4452f6", [:mix], [], "hexpm", "fd1a8ea510b237c2006bbd33ab0b7ccc6e3831e16b1d7f142dff8434acdbf15e"},
+  "stream_split": {:hex, :stream_split, "0.1.5", "29c4ad0961c50c890cc4bd8f0c658d67dae91c8689fb0d2395bf3914f18d719e", [:mix], [], "hexpm", "da9f8fcebfa6356ab73385e3f0612f2c4fd3ebe4a7e2e594e7421628de4a0236"},
   "telemetry": {:hex, :telemetry, "0.4.1", "ae2718484892448a24470e6aa341bc847c3277bfb8d4e9289f7474d752c09c7f", [:rebar3], [], "hexpm", "4738382e36a0a9a2b6e25d67c960e40e1a2c95560b9f936d8e29de8cd858480f"},
 }
