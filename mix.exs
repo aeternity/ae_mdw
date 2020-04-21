@@ -33,7 +33,7 @@ defmodule AeMdw.MixProject do
   defp deps do
     [
       {:ae_plugin, github: "aeternity/ae_plugin"},
-      {:stream_split, "~> 0.1.4"},
+      {:stream_split, "~> 0.1.5"},
       {:ex2ms, "~> 1.6.0"},
       {:logger_file_backend, "~> 0.0.11"},
       {:smart_global, github: "ks/smart_global"},
