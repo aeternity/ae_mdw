@@ -50,59 +50,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   def min_kbi(), do: kbi(&first/1)
   def max_kbi(), do: kbi(&last/1)
 
-  def keys_range(from_txi),
-    do: keys_range(from_txi, last(~t[tx]))
-
-  def keys_range(from_txi, to_txi) when from_txi > to_txi,
-    do: %{}
-
-  def keys_range(from_txi, to_txi) when from_txi <= to_txi do
-    tx_keys = Enum.to_list(from_txi..to_txi)
-
-    {type_keys, obj_keys} =
-      Enum.reduce(tx_keys, {[], []}, fn txi, {type_keys, obj_keys} ->
-        %{type: tx_type, tx: tx} = read_tx!(txi) |> Model.tx_to_raw_map()
-
-        objs =
-          for {id_key, _} <- AE.tx_ids(tx_type),
-              do: {tx_type, pk(tx[id_key]), txi}
-
-        {[{tx_type, txi} | type_keys], objs ++ obj_keys}
-      end)
-
-    time_keys = time_keys_range(from_txi, to_txi)
-
-    %{~t[tx] => tx_keys, ~t[type] => type_keys, ~t[time] => time_keys, ~t[object] => obj_keys}
-  end
-
-  def time_keys_range(from_txi, to_txi) do
-    bi_time = fn bi ->
-      Model.block(read!(~t[block], bi), :hash)
-      |> :aec_db.get_header()
-      |> :aec_headers.time_in_msecs()
-    end
-
-    from_bi = Model.tx(read_tx!(from_txi), :block_index)
-
-    folder = fn tx, {bi, time, acc} ->
-      case Model.tx(tx, :block_index) do
-        ^bi ->
-          {bi, time, [{time, Model.tx(tx, :index)} | acc]}
-
-        new_bi ->
-          new_time = bi_time.(new_bi)
-          {new_bi, new_time, [{new_time, Model.tx(tx, :index)} | acc]}
-      end
-    end
-
-    {_, _, keys} =
-      from_txi..to_txi
-      |> DBS.map(~t[tx])
-      |> Enum.reduce({from_bi, bi_time.(from_bi), []}, folder)
-
-    keys
-  end
-
   ################################################################################
 
   defp sync_generation(height, txi) do
@@ -145,6 +92,7 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     :mnesia.write(~t[type], Model.type(index: {type, txi}), :write)
     :mnesia.write(~t[time], Model.time(index: {mb_time, txi}), :write)
+    write_origin(type, tx, txi, hash)
     AE.tx_ids(type) |> Enum.each(&write_object(&1, tx, type, txi))
     txi + 1
   end
@@ -165,6 +113,29 @@ defmodule AeMdw.Db.Sync.Transaction do
       key
     end)
   end
+
+
+  def write_origin(:contract_create_tx, tx, txi, tx_hash) do
+    index = {:contract, :aect_contracts.pubkey(:aect_contracts.new(tx)), txi}
+    write_origin(index, tx_hash)
+  end
+
+  def write_origin(:name_claim_tx, tx, txi, tx_hash) do
+    index = {:name, :aens_claim_tx.name(tx), txi}
+    write_origin(index, tx_hash)
+  end
+
+  def write_origin(_, _, _, _),
+    do: :ok
+
+  defp write_origin({pk_type, pubkey, txi}, tx_hash) do
+    origin = Model.origin(index: {pk_type, pubkey, txi}, tx_id: tx_hash)
+    rev_origin = Model.rev_origin(index: {txi, pk_type, pubkey})
+    :mnesia.write(~t[origin], origin, :write)
+    :mnesia.write(~t[rev_origin], rev_origin, :write)
+  end
+
+  ##########
 
   defp pk({:id, _, _} = id) do
     {_, pk} = :aeser_id.specialize(id)
@@ -187,4 +158,121 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   defp log_msg(height, _),
     do: "syncing transactions at generation #{height}"
+
+
+  ################################################################################
+  # Invalidations - keys for records to delete in case of fork
+
+  def keys_range(from_txi),
+    do: keys_range(from_txi, last(~t[tx]))
+
+  def keys_range(from_txi, to_txi) when from_txi > to_txi,
+    do: %{}
+
+  def keys_range(from_txi, to_txi) when from_txi <= to_txi do
+    tx_keys = Enum.to_list(from_txi..to_txi)
+
+    {type_keys, obj_keys} =
+      Enum.reduce(tx_keys, {[], []}, fn txi, {type_keys, obj_keys} ->
+        %{tx: %{type: tx_type} = tx} = read_tx!(txi) |> Model.tx_to_raw_map()
+
+        objs =
+          for {id_key, _} <- AE.tx_ids(tx_type),
+              do: {tx_type, pk(tx[id_key]), txi}
+
+        {[{tx_type, txi} | type_keys], objs ++ obj_keys}
+      end)
+
+    time_keys = time_keys_range(from_txi, to_txi)
+    {origin_keys, rev_origin_keys} = origin_keys_range(from_txi, to_txi)
+
+    %{~t[tx] => tx_keys,
+      ~t[type] => type_keys,
+      ~t[time] => time_keys,
+      ~t[object] => obj_keys,
+      ~t[origin] => origin_keys,
+      ~t[rev_origin] => rev_origin_keys}
+  end
+
+  def time_keys_range(from_txi, to_txi) do
+    bi_time = fn bi ->
+      Model.block(read!(~t[block], bi), :hash)
+      |> :aec_db.get_header()
+      |> :aec_headers.time_in_msecs()
+    end
+
+    from_bi = Model.tx(read_tx!(from_txi), :block_index)
+
+    folder = fn tx, {bi, time, acc} ->
+      case Model.tx(tx, :block_index) do
+        ^bi ->
+          {bi, time, [{time, Model.tx(tx, :index)} | acc]}
+
+        new_bi ->
+          new_time = bi_time.(new_bi)
+          {new_bi, new_time, [{new_time, Model.tx(tx, :index)} | acc]}
+      end
+    end
+
+    {_, _, keys} =
+      from_txi..to_txi
+      |> DBS.map(~t[tx])
+      |> Enum.reduce({from_bi, bi_time.(from_bi), []}, folder)
+
+    keys
+  end
+
+
+  def origin_keys_range(from_txi, to_txi) do
+    case :mnesia.dirty_next(~t[rev_origin], {from_txi, :_, nil}) do
+      :"$end_of_table" ->
+        {[], []}
+      start_key ->
+        push_key = fn {txi, pk_type, pk}, {origins, rev_origins} ->
+          {[{pk_type, pk, txi} | origins],
+           [{txi, pk_type, pk} | rev_origins]}
+        end
+        collect_keys(~t[rev_origin], push_key.(start_key, {[], []}), start_key, &next/2, fn
+          {txi, pk_type, pk}, acc when txi <= to_txi ->
+            {:cont, push_key.({txi, pk_type, pk}, acc)}
+          {txi, _, _}, acc when txi > to_txi ->
+            {:halt, acc}
+        end)
+    end
+  end
+
+
+  ################################################################################
+  # TODO: delete this
+
+  # Sync supervisor should be OFF!!
+  def dev_resync_origin() do
+
+    make_args = fn tx_entry ->
+      txi = Model.tx(tx_entry, :index)
+      tx_hash = Model.tx(tx_entry, :id)
+      {_, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
+      {type, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
+      [type, tx_rec, txi, tx_hash]
+    end
+
+    IO.puts("fetching all contracts and name registrations in history, takes a while ...")
+
+    xs =
+      :forward
+      |> AeMdw.Db.Stream.map(~t[type], {:tx, make_args}, [:contract_create_tx, :name_claim_tx])
+      |> Enum.to_list
+
+    :mnesia.transaction(
+      fn ->
+        for {args, i} <- Stream.with_index(xs, 0) do
+          apply(__MODULE__, :write_origin, args)
+          rem(i, 1000) == 0 && IO.puts("syncing origin #{i}")
+        end
+        :ok
+      end
+    )
+
+  end
+
 end
