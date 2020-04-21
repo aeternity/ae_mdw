@@ -75,8 +75,10 @@ defmodule AeMdwWeb.Listener do
             prev_block_type = :aec_blocks.type(prev_block)
             header = :aec_blocks.to_header(block)
 
+            payload = :aec_headers.serialize_for_client(header, prev_block_type)
+
             data = %{
-              "payload" => :aec_headers.serialize_for_client(header, prev_block_type),
+              "payload" => Map.put(payload, "key_block_id", payload["height"]),
               "subscription" => "MicroBlocks"
             }
 
