@@ -36,6 +36,7 @@ defmodule AeMdwWeb.Listener do
 
         Enum.each(:aec_blocks.txs(block), fn tx ->
           ser_tx = :aetx_sign.serialize_for_client(header, tx)
+          broadcast("Transactions", data(ser_tx, "Transactions"))
           type = ser_tx["tx"]["type"]
 
           Enum.each(state, fn obj ->
