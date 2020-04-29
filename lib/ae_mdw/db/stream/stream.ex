@@ -40,14 +40,19 @@ defmodule AeMdw.Db.Stream do
   defp final_mapper(:raw, table), do: compose(&Model.tx_to_raw_map/1, to_tx(table))
   defp final_mapper({:tx, f}, Model.Tx) when is_function(f, 1), do: f
   defp final_mapper({:tx, f}, table) when is_function(f, 1), do: compose(f, to_tx(table))
+
   defp final_mapper({:raw, f}, Model.Tx) when is_function(f, 1),
     do: compose(f, &Model.tx_to_raw_map/1)
+
   defp final_mapper({:raw, f}, table) when is_function(f, 1),
     do: compose(f, &Model.tx_to_raw_map/1, to_tx(table))
+
   defp final_mapper({:json, f}, Model.Tx) when is_function(f, 1),
     do: compose(f, &Model.tx_to_map/1)
+
   defp final_mapper({:json, f}, table) when is_function(f, 1),
     do: compose(f, &Model.tx_to_map/1, to_tx(table))
+
   defp final_mapper(f, _table) when is_function(f, 1), do: f
 
   def to_tx(Model.Tx), do: &id/1
@@ -79,9 +84,8 @@ defmodule AeMdw.Db.Stream do
 
     # FORWARD tests
     true =
-      [{0, -1}, {1, -1}, {1, 0}, {2, -1}, {3, -1},
-       {4, -1}, {5, -1}, {6, -1}, {7, -1}, {8, -1}] ==
-      :forward |> DBS.map(~t[block], &Model.block(&1, :index)) |> Enum.take(10)
+      [{0, -1}, {1, -1}, {1, 0}, {2, -1}, {3, -1}, {4, -1}, {5, -1}, {6, -1}, {7, -1}, {8, -1}] ==
+        :forward |> DBS.map(~t[block], &Model.block(&1, :index)) |> Enum.take(10)
 
     first_10_tx_recs = :forward |> DBS.map(~t[tx]) |> Enum.take(10)
     txis = Enum.to_list(0..9)

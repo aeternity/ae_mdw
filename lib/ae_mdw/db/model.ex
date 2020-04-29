@@ -52,7 +52,6 @@ defmodule AeMdw.Db.Model do
   @rev_origin_defaults [index: {nil, nil, nil}, unused: nil]
   defrecord :rev_origin, @rev_origin_defaults
 
-
   # TODO:
   # contract events :
   #     index = {ct_address, event_name, tx_index, ct_address_log_local_id (0..)}, event = event
@@ -109,13 +108,13 @@ defmodule AeMdw.Db.Model do
   ##########
 
   def block_to_raw_map({:block, {_kbi, mbi}, _txi, hash}),
-    do: record_to_map(:aec_db.get_header(hash), AE.hdr_fields(mbi == -1 && :key || :micro))
+    do: record_to_map(:aec_db.get_header(hash), AE.hdr_fields((mbi == -1 && :key) || :micro))
 
   def block_to_map({:block, {_kbi, _mbi}, _txi, hash}) do
     header = :aec_db.get_header(hash)
     prev_hash = :aec_headers.prev_hash(header)
     prev_key_hash = :aec_headers.prev_key_hash(header)
-    prev_block_type = prev_hash == prev_key_hash && :key || :micro
+    prev_block_type = (prev_hash == prev_key_hash && :key) || :micro
     :aec_headers.serialize_for_client(header, prev_block_type)
   end
 

@@ -69,11 +69,11 @@ defmodule AeMdw.Util do
     end
   end
 
-  def record_to_map(record, [_|_] = fields) when is_tuple(record) do
+  def record_to_map(record, [_ | _] = fields) when is_tuple(record) do
     collect = fn {field, idx}, acc -> put_in(acc, [field], elem(record, idx)) end
+
     fields
     |> Stream.with_index(1)
     |> Enum.reduce(%{}, collect)
   end
-
 end

@@ -13,7 +13,6 @@ defmodule AeMdwWeb.ContractController do
 
   import AeMdw.{Sigil, Util, Db.Util}
 
-
   # Hardcoded DB only for testing purpose
   @all_contracts [
     %{
@@ -219,16 +218,20 @@ defmodule AeMdwWeb.ContractController do
 
   def db_stream(:all, %{}),
     do: :backward |> DBS.map(~t[type], {:tx, &create_tx_info/1}, :contract_create_tx)
+
   def db_stream(:calls, %{"address" => contract}) do
     pk = Validate.id!(contract)
     callback = &call_tx_info(&1, pk, Contract.get_info(pk))
     :forward |> DBS.map(~t[object], {:tx, callback}, {contract, :contract_call_tx})
   end
+
   def db_stream(:transactions, %{"address" => contract}) do
     pk = Validate.id!(contract)
+
     case Origin.tx_index({:contract, pk}) do
       nil ->
         [] |> Stream.map(& &1)
+
       create_txi ->
         create_stream = {:txi, create_txi} |> DBS.map(~t[tx], :json)
         call_stream = :forward |> DBS.map(~t[object], :json, {pk, :contract_call_tx})
@@ -242,11 +245,13 @@ defmodule AeMdwWeb.ContractController do
     {_, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
     {_, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
     contract_pk = :aect_contracts.pubkey(:aect_contracts.new(tx_rec))
-    %{"block_height" => height,
-      "contract_id" => Enc.encode(:contract_pubkey, contract_pk),
-      "transaction_hash" => Enc.encode(:tx_hash, tx_hash)}
-  end
 
+    %{
+      "block_height" => height,
+      "contract_id" => Enc.encode(:contract_pubkey, contract_pk),
+      "transaction_hash" => Enc.encode(:tx_hash, tx_hash)
+    }
+  end
 
   def call_tx_info(tx, contract_pk, ct_info) do
     tx_hash = Model.tx(tx, :id)
@@ -265,7 +270,8 @@ defmodule AeMdwWeb.ContractController do
     res_val = :aect_call.return_value(call)
     result = Contract.decode_call_result(ct_info, fun, res_type, res_val, &Contract.to_json/1)
 
-    %{"caller_id" => call_info["caller_id"],
+    %{
+      "caller_id" => call_info["caller_id"],
       "contract_id" => call_info["contract_id"],
       "callinfo" => call_info,
       "transaction_id" => Enc.encode(:tx_hash, tx_hash),
@@ -279,5 +285,4 @@ defmodule AeMdwWeb.ContractController do
       }
     }
   end
-
 end

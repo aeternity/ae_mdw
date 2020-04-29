@@ -114,7 +114,6 @@ defmodule AeMdw.Db.Sync.Transaction do
     end)
   end
 
-
   def write_origin(:contract_create_tx, tx, txi, tx_hash) do
     index = {:contract, :aect_contracts.pubkey(:aect_contracts.new(tx)), txi}
     write_origin(index, tx_hash)
@@ -159,7 +158,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   defp log_msg(height, _),
     do: "syncing transactions at generation #{height}"
 
-
   ################################################################################
   # Invalidations - keys for records to delete in case of fork
 
@@ -186,12 +184,14 @@ defmodule AeMdw.Db.Sync.Transaction do
     time_keys = time_keys_range(from_txi, to_txi)
     {origin_keys, rev_origin_keys} = origin_keys_range(from_txi, to_txi)
 
-    %{~t[tx] => tx_keys,
+    %{
+      ~t[tx] => tx_keys,
       ~t[type] => type_keys,
       ~t[time] => time_keys,
       ~t[object] => obj_keys,
       ~t[origin] => origin_keys,
-      ~t[rev_origin] => rev_origin_keys}
+      ~t[rev_origin] => rev_origin_keys
+    }
   end
 
   def time_keys_range(from_txi, to_txi) do
@@ -222,57 +222,23 @@ defmodule AeMdw.Db.Sync.Transaction do
     keys
   end
 
-
   def origin_keys_range(from_txi, to_txi) do
     case :mnesia.dirty_next(~t[rev_origin], {from_txi, :_, nil}) do
       :"$end_of_table" ->
         {[], []}
+
       start_key ->
         push_key = fn {txi, pk_type, pk}, {origins, rev_origins} ->
-          {[{pk_type, pk, txi} | origins],
-           [{txi, pk_type, pk} | rev_origins]}
+          {[{pk_type, pk, txi} | origins], [{txi, pk_type, pk} | rev_origins]}
         end
+
         collect_keys(~t[rev_origin], push_key.(start_key, {[], []}), start_key, &next/2, fn
           {txi, pk_type, pk}, acc when txi <= to_txi ->
             {:cont, push_key.({txi, pk_type, pk}, acc)}
+
           {txi, _, _}, acc when txi > to_txi ->
             {:halt, acc}
         end)
     end
   end
-
-
-  ################################################################################
-  # TODO: delete this
-
-  # Sync supervisor should be OFF!!
-  def dev_resync_origin() do
-
-    make_args = fn tx_entry ->
-      txi = Model.tx(tx_entry, :index)
-      tx_hash = Model.tx(tx_entry, :id)
-      {_, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
-      {type, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
-      [type, tx_rec, txi, tx_hash]
-    end
-
-    IO.puts("fetching all contracts and name registrations in history, takes a while ...")
-
-    xs =
-      :forward
-      |> AeMdw.Db.Stream.map(~t[type], {:tx, make_args}, [:contract_create_tx, :name_claim_tx])
-      |> Enum.to_list
-
-    :mnesia.transaction(
-      fn ->
-        for {args, i} <- Stream.with_index(xs, 0) do
-          apply(__MODULE__, :write_origin, args)
-          rem(i, 1000) == 0 && IO.puts("syncing origin #{i}")
-        end
-        :ok
-      end
-    )
-
-  end
-
 end
