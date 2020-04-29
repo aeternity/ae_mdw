@@ -20,9 +20,10 @@ defmodule AeMdwWeb.Router do
     # seems like there are not registered oracles in aeternal
     get "/oracles/:oracle_id", OracleController, :requests_responses
 
-    get "/contracts/transactions/address/:address", ContractController, :txs_for_contract_address
-    get "/contracts/calls/address/:address", ContractController, :calls_for_contract_address
-    post "/contracts/verify", ContractController, :verify_contract
+    get "/contracts/all", ContractController, :all
+    get "/contracts/transactions/address/:address", ContractController, :transactions
+    get "/contracts/calls/address/:address", ContractController, :calls
+    post "/contracts/verify", ContractController, :verify
 
     get "/names", NameController, :all_names
     get "/names/:name", NameController, :search_names
@@ -47,7 +48,7 @@ defmodule AeMdwWeb.Router do
     # Not need for the frontend
     get "/transactions/rate/:from/:to", TransactionController, :rate
 
-    get "/generations/:from/:to", GenerationController, :generations_by_range
+    get "/generations/:from/:to", GenerationController, :interval
 
     get "/compilers", UtilController, :get_available_compilers
     get "/height/at/:milliseconds", UtilController, :height_at_epoch

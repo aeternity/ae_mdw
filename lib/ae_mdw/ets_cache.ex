@@ -1,16 +1,16 @@
 defmodule AeMdw.EtsCache do
-
   require Ex2ms
 
   ################################################################################
 
   def init(name, expiration_minutes) do
     :ets.new(name, [
-          :named_table,
-          :public,
-          {:read_concurrency, true},
-          {:write_concurrency, true}
-        ])
+      :named_table,
+      :public,
+      {:read_concurrency, true},
+      {:write_concurrency, true}
+    ])
+
     gc_period = :timer.minutes(expiration_minutes)
     {:ok, _} = :timer.apply_interval(gc_period, __MODULE__, :purge, [name, gc_period])
   end
@@ -22,6 +22,7 @@ defmodule AeMdw.EtsCache do
     case :ets.lookup(table, key) do
       [{_, val, insert_time}] ->
         {val, insert_time}
+
       [] ->
         nil
     end
@@ -40,5 +41,4 @@ defmodule AeMdw.EtsCache do
 
   defp time(),
     do: :os.system_time(:millisecond)
-
 end

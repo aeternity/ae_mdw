@@ -59,5 +59,4 @@ defmodule AeMdwWeb.Continuation do
         res_data
     end
   end
-
 end

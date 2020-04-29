@@ -37,6 +37,7 @@ defmodule AeMdw.Application do
       ["AeMdw", "Db", "Model", tab] = Module.split(db_mod)
       Module.concat(AeMdw.Db.Stream, tab)
     end
+
     collect_stream_mod = fn t, acc -> put_in(acc[t], stream_mod.(t)) end
 
     tx_group = &("#{&1}" |> String.split("_") |> hd |> String.to_atom())
@@ -44,7 +45,7 @@ defmodule AeMdw.Application do
 
     record_keys = fn mod_code, rec_name ->
       {:ok, rec_code} = Extract.AbsCode.record_fields(mod_code, rec_name)
-      Enum.map(rec_code, &(elem(Extract.AbsCode.field_name_type(&1), 0)))
+      Enum.map(rec_code, &elem(Extract.AbsCode.field_name_type(&1), 0))
     end
 
     SmartGlobal.new(
@@ -64,8 +65,10 @@ defmodule AeMdw.Application do
         tx_group: Enum.group_by(tx_types, tx_group),
         id_type: id_type_map,
         type_id: AeMdw.Util.inverse(id_type_map),
-        hdr_fields: %{key: record_keys.(headers_code, :key_header),
-                      micro: record_keys.(headers_code, :mic_header)}
+        hdr_fields: %{
+          key: record_keys.(headers_code, :key_header),
+          micro: record_keys.(headers_code, :mic_header)
+        }
       }
     )
   end

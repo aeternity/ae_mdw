@@ -17,5 +17,4 @@ defmodule AeMdwWeb.Supervisor do
     children = [AeMdwWeb.Endpoint]
     Supervisor.init(children, strategy: :one_for_one)
   end
-
 end

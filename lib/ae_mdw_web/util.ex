@@ -6,7 +6,8 @@ defmodule AeMdwWeb.Util do
 
   import AeMdw.{Sigil, Db.Util}
 
-  def scope(%{"from" => "undefined", "to" => "undefined"}), # frontend sent this, wtf?
+  # frontend sent this, wtf?
+  def scope(%{"from" => "undefined", "to" => "undefined"}),
     do: nil
 
   def scope(%{"from" => from, "to" => to}) do
