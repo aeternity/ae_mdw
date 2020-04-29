@@ -211,7 +211,7 @@ defmodule AeMdwWeb.ContractController do
     do: json(conn, Cont.response(conn, &db_stream(:calls, &1)))
 
   def verify(conn, params) do
-    json(conn, %{body: params})
+    raise RuntimeError, message: "NOT IMPLEMENTED - NEEDS SOPHIA COMPILER"
   end
 
   ##########
