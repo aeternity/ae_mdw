@@ -1,6 +1,19 @@
 defmodule AeMdwWeb.ContractController do
   use AeMdwWeb, :controller
 
+  alias AeMdw.Validate
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.Origin
+  alias AeMdw.Db.Stream, as: DBS
+  alias AeMdwWeb.Contract
+  alias AeMdwWeb.Util, as: WebUtil
+  alias AeMdwWeb.Continuation, as: Cont
+  alias :aeser_api_encoder, as: Enc
+  require Model
+
+  import AeMdw.{Sigil, Util, Db.Util}
+
+
   # Hardcoded DB only for testing purpose
   @all_contracts [
     %{
@@ -189,19 +202,82 @@ defmodule AeMdwWeb.ContractController do
     }
   ]
 
-  def all_contracts(conn, _params) do
-    json(conn, @all_contracts)
-  end
+  def all(conn, _req),
+    do: json(conn, Cont.response(conn, &db_stream(:all, &1)))
 
-  def txs_for_contract_address(conn, _params) do
-    json(conn, @txs_for_contract_address)
-  end
+  def transactions(conn, req),
+    do: json(conn, %{"transactions" => Cont.response(conn, &db_stream(:transactions, &1))})
 
-  def calls_for_contract_address(conn, _params) do
-    json(conn, @calls_for_contract_address)
-  end
+  def calls(conn, req),
+    do: json(conn, Cont.response(conn, &db_stream(:calls, &1)))
 
-  def verify_contract(conn, params) do
+  def verify(conn, params) do
     json(conn, %{body: params})
   end
+
+  ##########
+
+  def db_stream(:all, %{}),
+    do: :backward |> DBS.map(~t[type], {:tx, &create_tx_info/1}, :contract_create_tx)
+  def db_stream(:calls, %{"address" => contract}) do
+    pk = Validate.id!(contract)
+    callback = &call_tx_info(&1, pk, Contract.get_info(pk))
+    :forward |> DBS.map(~t[object], {:tx, callback}, {contract, :contract_call_tx})
+  end
+  def db_stream(:transactions, %{"address" => contract}) do
+    pk = Validate.id!(contract)
+    case Origin.tx_index({:contract, pk}) do
+      nil ->
+        [] |> Stream.map(& &1)
+      create_txi ->
+        create_stream = {:txi, create_txi} |> DBS.map(~t[tx], :json)
+        call_stream = :forward |> DBS.map(~t[object], :json, {pk, :contract_call_tx})
+        Stream.concat(create_stream, call_stream)
+    end
+  end
+
+  def create_tx_info(tx) do
+    {height, _} = Model.tx(tx, :block_index)
+    tx_hash = Model.tx(tx, :id)
+    {_, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
+    {_, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
+    contract_pk = :aect_contracts.pubkey(:aect_contracts.new(tx_rec))
+    %{"block_height" => height,
+      "contract_id" => Enc.encode(:contract_pubkey, contract_pk),
+      "transaction_hash" => Enc.encode(:tx_hash, tx_hash)}
+  end
+
+
+  def call_tx_info(tx, contract_pk, ct_info) do
+    tx_hash = Model.tx(tx, :id)
+    {block_hash, stx} = :aec_db.find_tx_with_location(tx_hash)
+    {cb, ctx} = :aetx.specialize_callback(:aetx_sign.tx(stx))
+    true = contract_pk == cb.contract_pubkey(ctx)
+    call_id = cb.call_id(ctx)
+    call_data = cb.call_data(ctx)
+    call = :aec_chain.get_contract_call(contract_pk, call_id, block_hash) |> ok!
+    call_info = :aect_call.serialize_for_client(call)
+
+    {fun, args} = Contract.decode_call_data(ct_info, call_data, &Contract.to_json/1)
+    fun = to_string(fun)
+
+    res_type = :aect_call.return_type(call)
+    res_val = :aect_call.return_value(call)
+    result = Contract.decode_call_result(ct_info, fun, res_type, res_val, &Contract.to_json/1)
+
+    %{"caller_id" => call_info["caller_id"],
+      "contract_id" => call_info["contract_id"],
+      "callinfo" => call_info,
+      "transaction_id" => Enc.encode(:tx_hash, tx_hash),
+      "arguments" => %{
+        "arguments" => args,
+        "function" => fun
+      },
+      "result" => %{
+        "function" => fun,
+        "result" => result
+      }
+    }
+  end
+
 end
