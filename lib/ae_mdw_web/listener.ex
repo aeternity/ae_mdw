@@ -25,7 +25,7 @@ defmodule AeMdwWeb.Listener do
     {:noreply, state}
   end
 
-  def handle_cast({:add, target}, state), do: {:noreply, [target | state]}
+  def handle_cast({:add, target}, state), do: {:noreply, [target | state] |> Enum.uniq()}
 
   def handle_cast({:remove, target}, state), do: {:noreply, state -- [target]}
 
@@ -132,5 +132,6 @@ defmodule AeMdwWeb.Listener do
     |> Map.values()
     |> Enum.map(&elem(naked_tx, &1))
     |> Enum.map(&AeMdw.Validate.id!/1)
+    |> Enum.uniq()
   end
 end

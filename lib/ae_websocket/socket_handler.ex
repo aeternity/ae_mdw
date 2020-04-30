@@ -16,12 +16,12 @@ defmodule AeWebsocket.SocketHandler do
         %{
           "op" => "Subscribe",
           "payload" => "Object",
-          "target" => <<prefix_key::binary-size(3), _rest::binary-size(50)>> = target
+          "target" => <<prefix_key::binary-size(3), rest::binary>> = target
         },
         session,
         %{info: info} = state
       )
-      when prefix_key in @known_prefixes do
+      when prefix_key in @known_prefixes and byte_size(rest) > 38 and byte_size(rest) < 60 do
     id = AeMdw.Validate.id!(target)
 
     AeMdwWeb.Listener.new_object(id)
@@ -65,15 +65,24 @@ defmodule AeWebsocket.SocketHandler do
     {:ok, session, new_state}
   end
 
-  def handle_message(%{"op" => "Subscribe", "payload" => payload}, session, %{info: info} = state) do
-    new_state = %{state | info: (info ++ [payload]) |> Enum.uniq()}
-    deliver_me(new_state.info)
-    {:ok, session, new_state}
+  def handle_message(
+        %{"op" => "Subscribe", "payload" => "Object", "target" => target},
+        session,
+        state
+      ) do
+    deliver_me("invalid target: #{target}")
+    {:ok, session, state}
   end
 
-  def handle_message(_msg, session, state), do: {:ok, session, state}
+  def handle_message(%{"op" => "Subscribe", "payload" => payload}, session, state) do
+    deliver_me("invalid payload: #{payload}")
+    {:ok, session, state}
+  end
 
-
+  def handle_message(msg, session, state) do
+    deliver_me("invalid subscription: #{msg}")
+    {:ok, session, state}
+  end
 
   @impl Riverside
   def handle_info(into, session, state) do
