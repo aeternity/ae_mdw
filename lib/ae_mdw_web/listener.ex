@@ -37,10 +37,13 @@ defmodule AeMdwWeb.Listener do
         Enum.each(:aec_blocks.txs(block), fn tx ->
           ser_tx = :aetx_sign.serialize_for_client(header, tx)
           broadcast("Transactions", data(ser_tx, "Transactions"))
-          type = ser_tx["tx"]["type"]
 
           Enum.each(state, fn obj ->
-            broadcast_tx(type, obj, ser_tx)
+            Enum.each(get_ids_from_tx(tx), fn key ->
+              if key == obj do
+                broadcast(obj, data(ser_tx, "Object"))
+              end
+            end)
           end)
         end)
 
@@ -120,115 +123,14 @@ defmodule AeMdwWeb.Listener do
 
   def data(data, sub), do: %{"payload" => data, "subscription" => sub}
 
-  def broadcast_tx("SpendTx", obj, ser_tx) do
-    if ser_tx["tx"]["recipient_id"] == obj || ser_tx["tx"]["sender_id"] == obj do
-      broadcast(obj, data(ser_tx, "Object"))
-    end
-  end
+  def get_ids_from_tx(tx) do
+    wrapped_tx = :aetx_sign.tx(tx)
+    {tx_type, naked_tx} = :aetx.specialize_type(wrapped_tx)
 
-  def broadcast_tx("OracleRegisterTx", obj, ser_tx) do
-    if ser_tx["oracle_id"] == obj || ser_tx["tx"]["account_id"] == obj do
-      broadcast(obj, data(ser_tx, "Object"))
-    end
-  end
-
-  def broadcast_tx("OracleExtendTx", obj, ser_tx) do
-    # TODO logic
-    broadcast(obj, data(ser_tx, "Object"))
-  end
-
-  def broadcast_tx("OracleQueryTx", obj, ser_tx) do
-    # TODO logic
-    broadcast(obj, data(ser_tx, "Object"))
-  end
-
-  def broadcast_tx("ContractCallTx", obj, ser_tx) do
-    # TODO logic
-    broadcast(obj, data(ser_tx, "Object"))
-  end
-
-  def broadcast_tx("ContractCreateTx", obj, ser_tx) do
-    # TODO logic
-    broadcast(obj, data(ser_tx, "Object"))
-  end
-
-  def broadcast_tx("ChannelCreateTx", obj, ser_tx) do
-    # TODO logic
-    broadcast(obj, data(ser_tx, "Object"))
-  end
-
-  def broadcast_tx("ChannelDepositTx", obj, ser_tx) do
-    # TODO logic
-    broadcast(obj, data(ser_tx, "Object"))
-  end
-
-  def broadcast_tx("ChannelWithdrawTx", obj, ser_tx) do
-    # TODO logic
-    broadcast(obj, data(ser_tx, "Object"))
-  end
-
-  def broadcast_tx("ChannelCloseMutualTx", obj, ser_tx) do
-    # TODO logic
-    broadcast(obj, data(ser_tx, "Object"))
-  end
-
-  def broadcast_tx("ChannelForceProgressTx", obj, ser_tx) do
-    # TODO logic
-    broadcast(obj, data(ser_tx, "Object"))
-  end
-
-  def broadcast_tx("ChannelCloseSoloTx", obj, ser_tx) do
-    # TODO logic
-    broadcast(obj, data(ser_tx, "Object"))
-  end
-
-  def broadcast_tx("ChannelSlashTx", obj, ser_tx) do
-    # TODO logic
-    broadcast(obj, data(ser_tx, "Object"))
-  end
-
-  def broadcast_tx("ChannelSettleTx", obj, ser_tx) do
-    # TODO logic
-    broadcast(obj, data(ser_tx, "Object"))
-  end
-
-  def broadcast_tx("ChannelSnapshotSoloTx", obj, ser_tx) do
-    # TODO logic
-    broadcast(obj, data(ser_tx, "Object"))
-  end
-
-  def broadcast_tx("NamePreclaimTx", obj, ser_tx) do
-    # TODO logic
-    broadcast(obj, data(ser_tx, "Object"))
-  end
-
-  def broadcast_tx("NameClaimTx", obj, ser_tx) do
-    # TODO logic
-    broadcast(obj, data(ser_tx, "Object"))
-  end
-
-  def broadcast_tx("NameUpdateTx", obj, ser_tx) do
-    # TODO logic
-    broadcast(obj, data(ser_tx, "Object"))
-  end
-
-  def broadcast_tx("NameTransferTx", obj, ser_tx) do
-    # TODO logic
-    broadcast(obj, data(ser_tx, "Object"))
-  end
-
-  def broadcast_tx("NameRevokeTx", obj, ser_tx) do
-    # TODO logic
-    broadcast(obj, data(ser_tx, "Object"))
-  end
-
-  def broadcast_tx("GAAttachTx", obj, ser_tx) do
-    # TODO logic
-    broadcast(obj, data(ser_tx, "Object"))
-  end
-
-  def broadcast_tx("GAMetaTx", obj, ser_tx) do
-    # TODO logic
-    broadcast(obj, data(ser_tx, "Object"))
+    tx_type
+    |> AeMdw.Node.tx_ids()
+    |> Map.values()
+    |> Enum.map(&elem(naked_tx, &1))
+    |> Enum.map(&AeMdw.Validate.id!/1)
   end
 end
