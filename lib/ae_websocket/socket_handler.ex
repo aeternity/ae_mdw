@@ -6,7 +6,6 @@ defmodule AeWebsocket.SocketHandler do
 
   @impl Riverside
   def init(session, state) do
-    deliver_me("connected")
     new_state = Map.put(state, :info, [])
     {:ok, session, new_state}
   end
@@ -22,15 +21,19 @@ defmodule AeWebsocket.SocketHandler do
         %{info: info} = state
       )
       when prefix_key in @known_prefixes and byte_size(rest) > 38 and byte_size(rest) < 60 do
-    id = AeMdw.Validate.id!(target)
+    case AeMdw.Validate.id(target) do
+      {:ok, id} ->
+        AeMdwWeb.Listener.new_object(id)
+        Riverside.LocalDelivery.join_channel(id)
+        new_state = %{state | info: (info ++ [target]) |> Enum.uniq()}
 
-    AeMdwWeb.Listener.new_object(id)
-    Riverside.LocalDelivery.join_channel(id)
+        deliver_me(new_state.info)
+        {:ok, session, new_state}
 
-    new_state = %{state | info: (info ++ [target]) |> Enum.uniq()}
-
-    deliver_me(new_state.info)
-    {:ok, session, new_state}
+      {:error, {_, k}} ->
+        deliver_me("invalid target: #{k}")
+        {:ok, session, state}
+    end
   end
 
   def handle_message(%{"op" => "Subscribe", "payload" => payload}, session, %{info: info} = state)
@@ -71,6 +74,12 @@ defmodule AeWebsocket.SocketHandler do
         state
       ) do
     deliver_me("invalid target: #{target}")
+    {:ok, session, state}
+  end
+
+  def handle_message(%{"op" => "Subscribe", "payload" => payload}, session, state)
+      when payload == "Object" do
+    deliver_me("requires target")
     {:ok, session, state}
   end
 
