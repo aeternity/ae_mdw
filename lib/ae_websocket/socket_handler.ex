@@ -36,38 +36,6 @@ defmodule AeWebsocket.SocketHandler do
     end
   end
 
-  def handle_message(%{"op" => "Subscribe", "payload" => payload}, session, %{info: info} = state)
-      when payload in @known_channels do
-    Riverside.LocalDelivery.join_channel(payload)
-    new_state = %{state | info: (info ++ [payload]) |> Enum.uniq()}
-    deliver_me(new_state.info)
-    {:ok, session, new_state}
-  end
-
-  def handle_message(
-        %{"op" => "Unsubscribe", "payload" => "Object", "target" => target},
-        session,
-        %{info: info} = state
-      ) do
-    AeMdwWeb.Listener.remove_object(target)
-    Riverside.LocalDelivery.leave_channel(target)
-    new_state = %{state | info: info -- [target]}
-    deliver_me(new_state.info)
-    {:ok, session, new_state}
-  end
-
-  def handle_message(
-        %{"op" => "Unsubscribe", "payload" => payload},
-        session,
-        %{info: info} = state
-      ) do
-    Riverside.LocalDelivery.leave_channel(payload)
-    new_state = %{state | info: info -- [payload]}
-
-    deliver_me(new_state.info)
-    {:ok, session, new_state}
-  end
-
   def handle_message(
         %{"op" => "Subscribe", "payload" => "Object", "target" => target},
         session,
@@ -77,19 +45,73 @@ defmodule AeWebsocket.SocketHandler do
     {:ok, session, state}
   end
 
+  def handle_message(%{"op" => "Subscribe", "payload" => payload}, session, %{info: info} = state)
+      when payload in @known_channels do
+    Riverside.LocalDelivery.join_channel(payload)
+    new_state = %{state | info: (info ++ [payload]) |> Enum.uniq()}
+    deliver_me(new_state.info)
+    {:ok, session, new_state}
+  end
+
   def handle_message(%{"op" => "Subscribe", "payload" => payload}, session, state)
       when payload == "Object" do
     deliver_me("requires target")
     {:ok, session, state}
   end
 
-  def handle_message(%{"op" => "Subscribe", "payload" => payload}, session, state) do
+  def handle_message(
+        %{
+          "op" => "Unsubscribe",
+          "payload" => "Object",
+          "target" => <<prefix_key::binary-size(3), rest::binary>> = target
+        },
+        session,
+        %{info: info} = state
+      )
+      when prefix_key in @known_prefixes and byte_size(rest) > 38 and byte_size(rest) < 60 do
+    case AeMdw.Validate.id(target) do
+      {:ok, id} ->
+        AeMdwWeb.Listener.remove_object(id)
+        Riverside.LocalDelivery.leave_channel(id)
+        new_state = %{state | info: info -- [target]}
+        deliver_me(new_state.info)
+        {:ok, session, new_state}
+
+      {:error, {_, k}} ->
+        deliver_me("invalid target: #{k}")
+        {:ok, session, state}
+    end
+  end
+
+  def handle_message(
+        %{"op" => "Unsubscribe", "payload" => "Object", "target" => target},
+        session,
+        state
+      ) do
+    deliver_me("invalid target: #{target}")
+    {:ok, session, state}
+  end
+
+  def handle_message(
+        %{"op" => "Unsubscribe", "payload" => payload},
+        session,
+        %{info: info} = state
+      )
+      when payload in @known_channels do
+    Riverside.LocalDelivery.leave_channel(payload)
+    new_state = %{state | info: info -- [payload]}
+
+    deliver_me(new_state.info)
+    {:ok, session, new_state}
+  end
+
+  def handle_message(%{"op" => _, "payload" => payload}, session, state) do
     deliver_me("invalid payload: #{payload}")
     {:ok, session, state}
   end
 
   def handle_message(msg, session, state) do
-    deliver_me("invalid subscription: #{msg}")
+    deliver_me("invalid subscription: #{inspect(msg)}")
     {:ok, session, state}
   end
 
