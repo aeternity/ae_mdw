@@ -1,18 +1,20 @@
 defmodule AeMdwWeb.Listener do
   use GenServer
 
-  def start_link(_args) do
-    GenServer.start_link(__MODULE__, [], name: __MODULE__)
-  end
+  alias AeMdwWeb.Subscription.EtsManager, as: Ets
+
+  @subs_channel_targets :subs_channel_targets
+  @subs_target_channels :subs_target_channels
+  @main :main
+
+  def start_link(_args), do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
+
+  def register(pid), do: GenServer.cast(__MODULE__, {:monitor, pid})
 
   def init(state) do
     :aec_events.subscribe(:top_changed)
     {:ok, state}
   end
-
-  def new_object(target), do: GenServer.cast(__MODULE__, {:add, target})
-
-  def remove_object(target), do: GenServer.cast(__MODULE__, {:remove, target})
 
   def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :micro} = info}}, state) do
     get_micro_blocks(info)
@@ -25,9 +27,24 @@ defmodule AeMdwWeb.Listener do
     {:noreply, state}
   end
 
-  def handle_cast({:add, target}, state), do: {:noreply, [target | state] |> Enum.uniq()}
+  def handle_info({:DOWN, ref, type, pid, info}, state) do
+    case Ets.get(:main, pid) do
+      [{k, _v}] when k == pid ->
+        Ets.delete_all_objects_for_tables([@subs_channel_targets, @subs_target_channels, @main])
 
-  def handle_cast({:remove, target}, state), do: {:noreply, state -- [target]}
+      [] ->
+        Ets.delete_obj_cht_tch(@subs_channel_targets, @subs_target_channels, pid)
+    end
+
+    IO.inspect({:DOWN, ref, type, pid, info}, label: "========== DOWN ===========")
+
+    {:noreply, state}
+  end
+
+  def handle_cast({:monitor, pid}, state) do
+    Process.monitor(pid)
+    {:noreply, state}
+  end
 
   def get_txs(info, state) do
     case :aehttp_logic.get_micro_block_by_hash(info.block_hash) do
@@ -38,12 +55,12 @@ defmodule AeMdwWeb.Listener do
           ser_tx = :aetx_sign.serialize_for_client(header, tx)
           broadcast("Transactions", data(ser_tx, "Transactions"))
 
-          Enum.each(state, fn obj ->
-            Enum.each(get_ids_from_tx(tx), fn key ->
-              if key == obj do
-                broadcast(obj, data(ser_tx, "Object"))
-              end
-            end)
+          Enum.each(get_ids_from_tx(tx), fn key ->
+            objects = for {k, _v} <- Ets.get(@subs_target_channels, key), do: k
+
+            objects
+            |> Enum.uniq()
+            |> Enum.each(fn k -> broadcast(k, data(ser_tx, "Object")) end)
           end)
         end)
 
