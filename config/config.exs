@@ -8,7 +8,7 @@
 use Mix.Config
 
 config :ae_plugin,
-  node_root: "../aeternity/_build/local/",
+  node_root: System.get_env("NODEROOT", "../aeternity/_build/local/"),
   "$aec_db_create_tables": {AeMdw.Db.Setup, :create_tables},
   "$aec_db_check_tables": {AeMdw.Db.Setup, :check_tables}
 
