@@ -22,7 +22,7 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   continuation_cache_expiration_minutes: 30,
   contract_cache_expiration_minutes: 1440
 
-config :ae_mdw, AeWebsocket.SocketHandler,
+config :ae_mdw, AeWebsocket.Websocket.SocketHandler,
   port: 4001,
   path: "/websocket",
   # don't accept connections if server already has this number of connections

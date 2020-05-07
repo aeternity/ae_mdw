@@ -1,7 +1,7 @@
 defmodule AeMdwWeb.Listener do
   use GenServer
 
-  alias AeMdwWeb.Subscription.EtsManager, as: Ets
+  alias AeMdwWeb.Websocket.EtsManager, as: Ets
 
   @subs_channel_targets :subs_channel_targets
   @subs_target_channels :subs_target_channels
@@ -36,7 +36,7 @@ defmodule AeMdwWeb.Listener do
         Ets.delete_obj_cht_tch(@subs_channel_targets, @subs_target_channels, pid)
     end
 
-    IO.inspect({:DOWN, ref, type, pid, info}, label: "========== DOWN ===========")
+    IO.inspect({:DOWN, ref, type, pid, info}, label: "====== DOWN ========")
 
     {:noreply, state}
   end
@@ -51,16 +51,22 @@ defmodule AeMdwWeb.Listener do
       {:ok, block} ->
         header = :aec_blocks.to_header(block)
 
-        Enum.each(:aec_blocks.txs(block), fn tx ->
+        block
+        |> :aec_blocks.txs()
+        |> Enum.each(fn tx ->
           ser_tx = :aetx_sign.serialize_for_client(header, tx)
           broadcast("Transactions", data(ser_tx, "Transactions"))
 
-          Enum.each(get_ids_from_tx(tx), fn key ->
+          tx
+          |> get_ids_from_tx()
+          |> Enum.each(fn key ->
             objects = for {k, _v} <- Ets.get(@subs_target_channels, key), do: k
 
             objects
             |> Enum.uniq()
-            |> Enum.each(fn k -> broadcast(k, data(ser_tx, "Object")) end)
+            |> Enum.each(fn k ->
+              broadcast(k, data(ser_tx, "Object"))
+            end)
           end)
         end)
 

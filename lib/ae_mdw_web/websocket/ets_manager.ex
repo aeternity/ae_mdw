@@ -1,4 +1,4 @@
-defmodule AeMdwWeb.Subscription.EtsManager do
+defmodule AeMdwWeb.Websocket.EtsManager do
   def init_ordered(name), do: :ets.new(name, [:public, :ordered_set, :named_table])
   def init_duplicate_bag(name), do: :ets.new(name, [:public, :duplicate_bag, :named_table])
 

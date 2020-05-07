@@ -1,8 +1,8 @@
-defmodule AeWebsocket.SocketHandler do
+defmodule AeWebsocket.Websocket.SocketHandler do
   use Riverside, otp_app: :ae_mdw
 
-  alias AeMdwWeb.{Util, Listener}
-  alias AeMdwWeb.Subscription.EtsManager, as: Ets
+  alias AeMdwWeb.Listener
+  alias AeMdwWeb.Websocket.EtsManager, as: Ets
 
   @known_prefixes ["ak_", "ct_", "ok_", "nm_", "cm_", "ch_"]
   @known_channels ["KeyBlocks", "MicroBlocks", "Transactions"]
@@ -29,6 +29,7 @@ defmodule AeWebsocket.SocketHandler do
       )
       when prefix_key in @known_prefixes and byte_size(rest) > 38 and byte_size(rest) < 60 do
     if target in info do
+      deliver_me("already subscribed to: #{target}")
       {:ok, session, state}
     else
       case AeMdw.Validate.id(target) do
@@ -63,6 +64,7 @@ defmodule AeWebsocket.SocketHandler do
   def handle_message(%{"op" => "Subscribe", "payload" => payload}, session, %{info: info} = state)
       when payload in @known_channels do
     if payload in info do
+      deliver_me("already subscribed to: #{payload}")
       {:ok, session, state}
     else
       {:ok, pid} = Riverside.LocalDelivery.join_channel(payload)
@@ -78,6 +80,11 @@ defmodule AeWebsocket.SocketHandler do
   def handle_message(%{"op" => "Subscribe", "payload" => payload}, session, state)
       when payload == "Object" do
     deliver_me("requires target")
+    {:ok, session, state}
+  end
+
+  def handle_message(%{"op" => "Subscribe", "payload" => payload}, session, state) do
+    deliver_me("invalid payload: #{payload}")
     {:ok, session, state}
   end
 
@@ -133,13 +140,9 @@ defmodule AeWebsocket.SocketHandler do
       deliver_me(new_state.info)
       {:ok, session, new_state}
     else
+      deliver_me("no subscription for payload: #{payload}")
       {:ok, session, state}
     end
-  end
-
-  def handle_message(%{"op" => "Subscribe", "payload" => payload}, session, state) do
-    deliver_me("invalid payload: #{payload}")
-    {:ok, session, state}
   end
 
   def handle_message(%{"op" => "Unsubscribe", "payload" => payload}, session, state) do

@@ -1,7 +1,7 @@
-defmodule AeMdwWeb.Subscription.Supervisor do
+defmodule AeMdwWeb.Websocket.Supervisor do
   use Supervisor
 
-  alias AeMdwWeb.Subscription.EtsManager, as: Ets
+  alias AeMdwWeb.Websocket.EtsManager, as: Ets
 
   def start_link([]),
     do: Supervisor.start_link(__MODULE__, [], name: __MODULE__)
