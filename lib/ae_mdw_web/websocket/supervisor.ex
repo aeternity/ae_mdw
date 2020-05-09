@@ -11,6 +11,7 @@ defmodule AeMdwWeb.Websocket.Supervisor do
     Ets.init_duplicate_bag(:subs_channel_targets)
     Ets.init_duplicate_bag(:subs_target_channels)
     Ets.init_ordered(:main)
+    Ets.init_ordered(:sub)
 
     children = [AeMdwWeb.Listener]
 

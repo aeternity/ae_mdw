@@ -9,10 +9,10 @@ defmodule AeWebsocket.Websocket.SocketHandler do
   @subs_channel_targets :subs_channel_targets
   @subs_target_channels :subs_target_channels
   @main :main
+  @sub :sub
 
   @impl Riverside
   def init(session, state) do
-    Listener.register(self())
     new_state = Map.put(state, :info, [])
     {:ok, session, new_state}
   end
@@ -36,6 +36,9 @@ defmodule AeWebsocket.Websocket.SocketHandler do
         {:ok, id} ->
           {:ok, pid} = Riverside.LocalDelivery.join_channel(id)
           Listener.register(pid)
+          Listener.register(self())
+
+          Ets.put(@sub, self(), nil)
           Ets.put(@main, pid, nil)
           Ets.put(@subs_target_channels, id, self())
           Ets.put(@subs_channel_targets, self(), id)
@@ -102,6 +105,8 @@ defmodule AeWebsocket.Websocket.SocketHandler do
       case AeMdw.Validate.id(target) do
         {:ok, id} ->
           Ets.delete_obj_tch_cht(@subs_target_channels, @subs_channel_targets, id)
+
+          unless Ets.is_member?(@subs_channel_targets, self()), do: Ets.delete(@sub, self())
 
           Riverside.LocalDelivery.leave_channel(id)
           new_state = %{state | info: info -- [target]}

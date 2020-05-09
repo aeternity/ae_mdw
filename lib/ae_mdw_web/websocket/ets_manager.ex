@@ -7,6 +7,10 @@ defmodule AeMdwWeb.Websocket.EtsManager do
 
   def get(table, key), do: :ets.lookup(table, key)
 
+  def foldl(table, acc, fun), do: :ets.foldl(fun, acc, table)
+
+  def is_member?(table, key), do: :ets.member(table, key)
+
   def delete(table, key), do: :ets.delete(table, key)
 
   def delete_object(table, {key, value}), do: :ets.delete_object(table, {key, value})

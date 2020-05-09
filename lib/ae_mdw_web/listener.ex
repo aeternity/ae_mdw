@@ -6,12 +6,17 @@ defmodule AeMdwWeb.Listener do
   @subs_channel_targets :subs_channel_targets
   @subs_target_channels :subs_target_channels
   @main :main
+  @sub :sub
 
   def start_link(_args), do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
 
   def register(pid), do: GenServer.cast(__MODULE__, {:monitor, pid})
 
   def init(state) do
+    @sub
+    |> Ets.foldl([], fn {k, _v}, acc -> [k | acc] end)
+    |> Enum.each(&register/1)
+
     :aec_events.subscribe(:top_changed)
     {:ok, state}
   end
@@ -30,9 +35,15 @@ defmodule AeMdwWeb.Listener do
   def handle_info({:DOWN, ref, type, pid, info}, state) do
     case Ets.get(:main, pid) do
       [{k, _v}] when k == pid ->
-        Ets.delete_all_objects_for_tables([@subs_channel_targets, @subs_target_channels, @main])
+        Ets.delete_all_objects_for_tables([
+          @subs_channel_targets,
+          @subs_target_channels,
+          @main,
+          @sub
+        ])
 
       [] ->
+        Ets.delete(@sub, pid)
         Ets.delete_obj_cht_tch(@subs_channel_targets, @subs_target_channels, pid)
     end
 
