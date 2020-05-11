@@ -2,6 +2,7 @@ defmodule AeMdwWeb.Listener do
   use GenServer
 
   alias AeMdwWeb.Websocket.EtsManager, as: Ets
+  require Ex2ms
 
   @subs_channel_targets :subs_channel_targets
   @subs_target_channels :subs_target_channels
@@ -32,22 +33,36 @@ defmodule AeMdwWeb.Listener do
     {:noreply, state}
   end
 
-  def handle_info({:DOWN, ref, type, pid, info}, state) do
-    case Ets.get(:main, pid) do
-      [{k, _v}] when k == pid ->
-        Ets.delete_all_objects_for_tables([
+  def handle_info({:DOWN, _ref, _type, pid, _info}, state) do
+    case Ets.is_member?(@main, pid) do
+      true ->
+        # main socket channel dies, all connections are disconnected. Clean all tables.
+        Ets.delete_all_objects_in_all_tables([
           @subs_channel_targets,
           @subs_target_channels,
-          @main,
-          @sub
+          @sub,
+          @main
         ])
 
-      [] ->
-        Ets.delete(@sub, pid)
-        Ets.delete_obj_cht_tch(@subs_channel_targets, @subs_target_channels, pid)
-    end
+      false ->
+        spec =
+          Ex2ms.fun do
+            {{^pid, sub}, _} -> sub
+          end
 
-    IO.inspect({:DOWN, ref, type, pid, info}, label: "====== DOWN ========")
+        for sub <- Ets.select(@subs_channel_targets, spec) do
+          key_to_delete = {sub, pid}
+          Ets.delete(@subs_target_channels, key_to_delete)
+        end
+
+        spec_ =
+          Ex2ms.fun do
+            {{^pid, _}, _} -> true
+          end
+
+        Ets.select_delete(@subs_channel_targets, spec_)
+        Ets.delete(@sub, pid)
+    end
 
     {:noreply, state}
   end
@@ -71,13 +86,13 @@ defmodule AeMdwWeb.Listener do
           tx
           |> get_ids_from_tx()
           |> Enum.each(fn key ->
-            objects = for {k, _v} <- Ets.get(@subs_target_channels, key), do: k
+            spec =
+              Ex2ms.fun do
+                {{^key, _}, _} -> true
+              end
 
-            objects
-            |> Enum.uniq()
-            |> Enum.each(fn k ->
-              broadcast(k, data(ser_tx, "Object"))
-            end)
+            if Ets.select_count(@subs_target_channels, spec) != 0,
+              do: broadcast(key, data(ser_tx, "Object"))
           end)
         end)
 

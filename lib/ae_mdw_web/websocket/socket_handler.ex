@@ -3,6 +3,7 @@ defmodule AeWebsocket.Websocket.SocketHandler do
 
   alias AeMdwWeb.Listener
   alias AeMdwWeb.Websocket.EtsManager, as: Ets
+  require Ex2ms
 
   @known_prefixes ["ak_", "ct_", "ok_", "nm_", "cm_", "ch_"]
   @known_channels ["KeyBlocks", "MicroBlocks", "Transactions"]
@@ -40,8 +41,8 @@ defmodule AeWebsocket.Websocket.SocketHandler do
 
           Ets.put(@sub, self(), nil)
           Ets.put(@main, pid, nil)
-          Ets.put(@subs_target_channels, id, self())
-          Ets.put(@subs_channel_targets, self(), id)
+          Ets.put(@subs_target_channels, {id, self()}, nil)
+          Ets.put(@subs_channel_targets, {self(), id}, nil)
 
           new_state = %{state | info: info ++ [target]}
 
@@ -104,9 +105,16 @@ defmodule AeWebsocket.Websocket.SocketHandler do
     if target in info do
       case AeMdw.Validate.id(target) do
         {:ok, id} ->
-          Ets.delete_obj_tch_cht(@subs_target_channels, @subs_channel_targets, id)
+          pid = self()
+          Ets.delete(@subs_target_channels, {id, pid})
+          Ets.delete(@subs_channel_targets, {pid, id})
 
-          unless Ets.is_member?(@subs_channel_targets, self()), do: Ets.delete(@sub, self())
+          spec =
+            Ex2ms.fun do
+              {{^pid, _}, _} -> true
+            end
+
+          if Ets.select_count(:subs_channel_targets, spec) == 0, do: Ets.delete(@sub, pid)
 
           Riverside.LocalDelivery.leave_channel(id)
           new_state = %{state | info: info -- [target]}

@@ -8,10 +8,10 @@ defmodule AeMdwWeb.Websocket.Supervisor do
 
   @impl true
   def init([]) do
-    Ets.init_duplicate_bag(:subs_channel_targets)
-    Ets.init_duplicate_bag(:subs_target_channels)
-    Ets.init_ordered(:main)
-    Ets.init_ordered(:sub)
+    Ets.init(:main)
+    Ets.init(:sub)
+    Ets.init(:subs_channel_targets)
+    Ets.init(:subs_target_channels)
 
     children = [AeMdwWeb.Listener]
 
