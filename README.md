@@ -5,7 +5,7 @@
 The middleware is a caching and reporting layer which sits in front of the nodes of the [æternity blockchain](https://github.com/aeternity/aeternity). Its purpose is to respond to queries faster than the node can do, and to support queries that for reasons of efficiency the node cannot or will not support itself.
 
 ## Prerequisites
-Ensure that you have [Elixir](https://elixir-lang.org/install.html).
+Ensure that you have [Elixir](https://elixir-lang.org/install.html) installed.
 
 ## Setup the project
 `git clone https://github.com/aeternity/ae_mdw && cd ae_mdw`
@@ -483,15 +483,15 @@ The websocket interface, which listens by default on port `4001`, gives asynchro
 }
 ```
 
-### Supported ops:
+### Supported operations:
   * Subscribe
   * Unsubscribe
 
-### Supported payload:
+### Supported payloads:
   * KeyBlocks
   * MicroBlocks
   * Transactions
-  * Object, which takes a further field, `target` - can be any æternity type. So you may subscribe to any æternity object type, and be sent all transactions which reference the object. For instance if you have an oracle `ok_JcUaMCu9FzTwonCZkFE5BXsgxueagub9fVzywuQRDiCogTzse` you may subscribe to this object and be notified of any events which relate to it - presumable you would be interested in queries, to which you would respond. Of course you can also subscribe to accounts, contracts, names, whatever you like.
+  * Object, which takes a further field, `target` - can be any æternity entity. So you may subscribe to any æternity object type, and be sent all transactions which reference the object. For instance, if you have an oracle `ok_JcUaMCu9FzTwonCZkFE5BXsgxueagub9fVzywuQRDiCogTzse` you may subscribe to this object and be notified of any events which relate to it - presumable you would be interested in queries, to which you would respond. Of course you can also subscribe to accounts, contracts, names, whatever you like.
 
 
 The websocket interface accepts JSON - encoded commands to subscribe and unsubscribe, and answers these with the list of subscriptions. A session will look like this:
