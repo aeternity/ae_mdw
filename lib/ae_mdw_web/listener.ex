@@ -4,10 +4,10 @@ defmodule AeMdwWeb.Listener do
   alias AeMdwWeb.Websocket.EtsManager, as: Ets
   require Ex2ms
 
-  @subs_channel_targets :subs_channel_targets
-  @subs_target_channels :subs_target_channels
-  @main :main
-  @sub :sub
+  @subs_channel_targets Application.fetch_env!(:ae_mdw, AeMdwWeb.Endpoint)[:subs_channel_targets]
+  @subs_target_channels Application.fetch_env!(:ae_mdw, AeMdwWeb.Endpoint)[:subs_target_channels]
+  @main Application.fetch_env!(:ae_mdw, AeMdwWeb.Endpoint)[:main]
+  @sub Application.fetch_env!(:ae_mdw, AeMdwWeb.Endpoint)[:sub]
 
   def start_link(_args), do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
 

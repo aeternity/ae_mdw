@@ -7,10 +7,10 @@ defmodule AeWebsocket.Websocket.SocketHandler do
 
   @known_prefixes ["ak_", "ct_", "ok_", "nm_", "cm_", "ch_"]
   @known_channels ["KeyBlocks", "MicroBlocks", "Transactions"]
-  @subs_channel_targets :subs_channel_targets
-  @subs_target_channels :subs_target_channels
-  @main :main
-  @sub :sub
+  @subs_channel_targets Application.fetch_env!(:ae_mdw, AeMdwWeb.Endpoint)[:subs_channel_targets]
+  @subs_target_channels Application.fetch_env!(:ae_mdw, AeMdwWeb.Endpoint)[:subs_target_channels]
+  @main Application.fetch_env!(:ae_mdw, AeMdwWeb.Endpoint)[:main]
+  @sub Application.fetch_env!(:ae_mdw, AeMdwWeb.Endpoint)[:sub]
 
   @impl Riverside
   def init(session, state) do

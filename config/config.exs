@@ -20,7 +20,11 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   pubsub: [name: AeMdw.PubSub, adapter: Phoenix.PubSub.PG2],
   live_view: [signing_salt: "Oy680JAN"],
   continuation_cache_expiration_minutes: 30,
-  contract_cache_expiration_minutes: 1440
+  contract_cache_expiration_minutes: 1440,
+  subs_channel_targets: :subs_channel_targets,
+  subs_target_channels: :subs_target_channels,
+  main: :main,
+  sub: :sub
 
 config :ae_mdw, AeWebsocket.Websocket.SocketHandler,
   port: 4001,

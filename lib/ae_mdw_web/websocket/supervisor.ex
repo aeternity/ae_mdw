@@ -8,10 +8,11 @@ defmodule AeMdwWeb.Websocket.Supervisor do
 
   @impl true
   def init([]) do
-    Ets.init(:main)
-    Ets.init(:sub)
-    Ets.init(:subs_channel_targets)
-    Ets.init(:subs_target_channels)
+    config = Application.fetch_env!(:ae_mdw, AeMdwWeb.Endpoint)
+    Ets.init(config[:main])
+    Ets.init(config[:sub])
+    Ets.init(config[:subs_channel_targets])
+    Ets.init(config[:subs_target_channels])
 
     children = [AeMdwWeb.Listener]
 
