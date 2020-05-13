@@ -3,6 +3,7 @@ defmodule AeMdw.Db.Model do
   require Ex2ms
 
   alias AeMdw.Node, as: AE
+  alias :aeser_api_encoder, as: Enc
 
   import Record, only: [defrecord: 2]
   import AeMdw.{Util, Db.Util}
@@ -112,10 +113,7 @@ defmodule AeMdw.Db.Model do
 
   def block_to_map({:block, {_kbi, _mbi}, _txi, hash}) do
     header = :aec_db.get_header(hash)
-    prev_hash = :aec_headers.prev_hash(header)
-    prev_key_hash = :aec_headers.prev_key_hash(header)
-    prev_block_type = (prev_hash == prev_key_hash && :key) || :micro
-    :aec_headers.serialize_for_client(header, prev_block_type)
+    :aec_headers.serialize_for_client(header, prev_block_type(header))
   end
 
   ##########
@@ -131,15 +129,18 @@ defmodule AeMdw.Db.Model do
     )
   end
 
-  def tx_to_raw_map({:tx, index, hash, {kb_index, mb_index}, mb_time}) do
-    {_, _, db_stx} = one!(:mnesia.dirty_read(:aec_signed_tx, hash))
-    aec_signed_tx = :aetx_sign.from_db_format(db_stx)
-    {type, rec} = :aetx.specialize_type(:aetx_sign.tx(aec_signed_tx))
-    tx_map = tx_record_to_map(type, rec) |> put_in([:type], type)
+  def tx_to_raw_map({:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} = rec),
+    do: tx_to_raw_map(rec, tx_rec_data(hash))
 
-    %{
-      block_hash: block(read_block!({kb_index, mb_index}), :hash),
-      signatures: :aetx_sign.signatures(aec_signed_tx),
+  def tx_to_raw_map(
+        {:tx, index, hash, {kb_index, mb_index}, mb_time},
+        {block_hash, type, signed_tx, tx_rec}
+      ) do
+    tx_map = tx_record_to_map(type, tx_rec) |> put_in([:type], type)
+
+    raw = %{
+      block_hash: block_hash,
+      signatures: :aetx_sign.signatures(signed_tx),
       hash: hash,
       block_height: kb_index,
       micro_index: mb_index,
@@ -147,11 +148,23 @@ defmodule AeMdw.Db.Model do
       tx_index: index,
       tx: tx_map
     }
+
+    custom_raw_data(type, raw, tx_rec)
+  end
+
   end
 
   def tx_to_map({:tx, index, hash, {_kb_index, mb_index}, mb_time}) do
     {block_hash, signed_tx} = :aec_db.find_tx_with_location(hash)
     {type, _} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
+
+  def tx_to_map({:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} = rec),
+    do: tx_to_map(rec, tx_rec_data(hash))
+
+  def tx_to_map(
+        {:tx, index, hash, {_kb_index, mb_index}, mb_time},
+        {block_hash, type, signed_tx, tx_rec}
+      ) do
     header = :aec_db.get_header(block_hash)
     enc_tx = :aetx_sign.serialize_for_client(header, signed_tx)
 
