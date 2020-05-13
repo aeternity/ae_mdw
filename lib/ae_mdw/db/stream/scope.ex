@@ -416,9 +416,8 @@ defmodule AeMdw.Db.Stream.Scope do
 
   def on_block_txis(f) do
     fn b1, b2 ->
-      # |> prx("////////// [on_block_txis] TXI1")
       txi1 = Model.block(b1, :tx_index)
-      txi2 = Model.block(b2, :tx_index)
+      txi2 = b2 && Model.block(b2, :tx_index)
 
       cond do
         is_nil(txi2) ->
@@ -452,8 +451,13 @@ defmodule AeMdw.Db.Stream.Scope do
 
   def gen_align(from, to, orient, default_fn) do
     case scan_microblock(from, to, orient) do
-      nil -> default_fn.()
-      bi -> Model.block(read_block!(bi), :tx_index) || default_fn.()
+      nil ->
+        default_fn.()
+
+      bi ->
+        mb = read_block!(bi)
+        txi = Model.block(:tx_index)
+        (txi >= 0 && txi) || default_fn.()
     end
   end
 

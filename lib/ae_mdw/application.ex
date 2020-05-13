@@ -3,6 +3,8 @@ defmodule AeMdw.Application do
 
   use Application
 
+  import AeMdw.Util
+
   def start(_type, _args) do
     init(:meta)
 
@@ -33,6 +35,15 @@ defmodule AeMdw.Application do
         {put_in(tx_fields[type], fields), put_in(tx_ids[type], ids)}
       end)
 
+    id_field_type_map =
+      Enum.reduce(tx_ids, %{}, fn {type, ids_map}, acc ->
+        for {field, pos} <- ids_map,
+            reduce: acc,
+            do: (acc -> Map.put(acc, [field], Map.put(Map.get(acc, [field], %{}), type, pos)))
+      end)
+
+    id_fields = Map.keys(id_field_type_map) |> Enum.map(compose(&to_string/1, &hd/1))
+
     stream_mod = fn db_mod ->
       ["AeMdw", "Db", "Model", tab] = Module.split(db_mod)
       Module.concat(AeMdw.Db.Stream, tab)
@@ -40,12 +51,19 @@ defmodule AeMdw.Application do
 
     collect_stream_mod = fn t, acc -> put_in(acc[t], stream_mod.(t)) end
 
-    tx_group = &("#{&1}" |> String.split("_") |> hd |> String.to_atom())
     tx_types = Map.keys(type_mod_map)
+    tx_group = &("#{&1}" |> String.split("_") |> hd |> String.to_atom())
+    tx_group_map = Enum.group_by(tx_types, tx_group)
 
     record_keys = fn mod_code, rec_name ->
       {:ok, rec_code} = Extract.AbsCode.record_fields(mod_code, rec_name)
       Enum.map(rec_code, &elem(Extract.AbsCode.field_name_type(&1), 0))
+    end
+
+    tx_prefix = fn tx_type ->
+      str = to_string(tx_type)
+      # drop "_tx"
+      String.slice(str, 0, String.length(str) - 3)
     end
 
     SmartGlobal.new(
@@ -57,12 +75,15 @@ defmodule AeMdw.Application do
         tx_fields: tx_fields,
         tx_ids: tx_ids,
         id_prefix: id_prefix_type_map,
+        id_field_type: id_field_type_map |> Enum.concat([{[:_], nil}]),
+        id_fields: [{[], MapSet.new(id_fields)}],
         # for quicker testing without try/rescue
         tx_types: [{[], MapSet.new(tx_types)}],
-        tx_names: [{[], MapSet.new(Map.values(type_name_map))}],
+        tx_prefixes: [{[], MapSet.new(tx_types |> Enum.map(tx_prefix))}],
         id_prefixes: [{[], MapSet.new(Map.keys(id_prefix_type_map))}],
         stream_mod: Enum.reduce(Model.tables(), %{}, collect_stream_mod),
-        tx_group: Enum.group_by(tx_types, tx_group),
+        tx_group: tx_group_map,
+        tx_groups: [{[], MapSet.new(Map.keys(tx_group_map))}],
         id_type: id_type_map,
         type_id: AeMdw.Util.inverse(id_type_map),
         hdr_fields: %{

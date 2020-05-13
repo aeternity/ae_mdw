@@ -13,10 +13,10 @@ defmodule AeMdw.Db.Stream.Type do
     do: AE.tx_types()
 
   def normalize_query(types),
-    do: types |> to_list_like
-
-  def roots(types),
     do: Enum.map(types, &Validate.tx_type!/1)
+
+  def roots([_ | _] = types),
+    do: types
 
   def full_key(sort_k, type) when is_integer(sort_k) and sort_k >= 0 and is_atom(type),
     do: {type, sort_k}

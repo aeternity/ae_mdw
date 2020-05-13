@@ -5,10 +5,9 @@ defmodule AeMdwWeb.GenerationController do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdwWeb.Util, as: WebUtil
-  alias AeMdwWeb.Continuation, as: Cont
   require Model
 
-  import AeMdw.Sigil
+  import AeMdw.{Sigil, Db.Util, Util}
 
   # Hardcoded DB only for testing purpose
   @generations_by_range %{
@@ -83,28 +82,30 @@ defmodule AeMdwWeb.GenerationController do
     "total_transactions" => 1
   }
 
-  def interval(%Plug.Conn{assigns: %{limit_page: {_, _}}} = conn, _req) do
-    generations = Cont.response(conn, &db_stream/1)
+  # Each generation can have many micro blocks, each micro blocks can have many transactions...
+  # Now, we do this for several (11) generations - may result in thousands of DB reads
+  # and serializing thousands of TXs...
+  # There's massive amount of work to do at once - the result should be cached!! (TODO)
+  # (why isn't frontend asking generation's inner data (microblocks/txs) lazily ?!?!)
 
-    resp =
-      generations
-      |> Enum.reduce(%{}, fn gen, acc -> put_in(acc, ["#{gen["height"]}"], gen) end)
-
-    json(conn, %{"data" => resp})
+  # this request is spammig server - frontend bug
+  def interval(conn, %{"from" => "undefined", "to" => "undefined"}) do
+    conn
+    |> send_resp(400, "{\"reason\":\"frontend bug\"}")
+    |> halt
   end
 
-  def interval(conn, req),
-    do: interval(%{conn | assigns: Map.put(conn.assigns, :limit_page, {10, 1})}, req)
-
-  def db_stream(req) do
-    %Range{} = scope = WebUtil.scope(req)
-    Stream.map(scope, &generation/1)
+  def interval(conn, req) do
+    last_gen = last_gen()
+    put_gen = fn gen, acc -> put_in(acc, ["#{gen["height"]}"], gen) end
+    generations = Stream.map(scope(req, last_gen), &generation(&1, last_gen))
+    json(conn, %{"data" => Enum.reduce(generations, %{}, put_gen)})
   end
 
-  def generation(height) when is_integer(height) do
-    block_jsons = height |> DBS.map(~t[block], :json) |> Enum.to_list()
-    generation(block_jsons)
-  end
+  ##########
+
+  def generation(height, last_gen),
+    do: generation(block_jsons(height, last_gen))
 
   def generation([kb_json | mb_jsons]) do
     kb_json =
@@ -130,5 +131,23 @@ defmodule AeMdwWeb.GenerationController do
       end
 
     Map.put(kb_json, "micro_blocks", mb_jsons)
+  end
+
+  def block_jsons(height, last_gen) when height < last_gen,
+    do: height |> DBS.map(~t[block], :json) |> Enum.to_list()
+
+  def block_jsons(last_gen, last_gen) do
+    {:ok, %{key_block: kb, micro_blocks: mbs}} = :aec_chain.get_current_generation()
+    ^last_gen = :aec_blocks.height(kb)
+
+    for block <- [kb | mbs] do
+      header = :aec_blocks.to_header(block)
+      :aec_headers.serialize_for_client(header, prev_block_type(header))
+    end
+  end
+
+  defp scope(req, last_gen) do
+    %Range{first: f, last: l} = WebUtil.scope(req)
+    Range.new(min(f, last_gen), l)
   end
 end

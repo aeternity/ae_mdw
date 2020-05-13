@@ -31,6 +31,7 @@ defmodule AeMdw.Db.Stream do
 
   ##########
 
+  defp final_mapper({:id, f}, _) when is_function(f, 1), do: f
   defp final_mapper(:txi, table), do: to_txi(table)
   defp final_mapper(:json, Model.Tx), do: &Model.tx_to_map/1
   defp final_mapper(:json, Model.Block), do: &Model.block_to_map/1
