@@ -152,11 +152,15 @@ defmodule AeMdw.Db.Model do
     custom_raw_data(type, raw, tx_rec)
   end
 
+  def custom_raw_data(:contract_create_tx, tx, tx_rec) do
+    contract_pk = :aect_contracts.pubkey(:aect_contracts.new(tx_rec))
+    put_in(tx, [:tx, :contract_id], contract_pk)
   end
 
-  def tx_to_map({:tx, index, hash, {_kb_index, mb_index}, mb_time}) do
-    {block_hash, signed_tx} = :aec_db.find_tx_with_location(hash)
-    {type, _} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
+  def custom_raw_data(_, tx, _),
+    do: tx
+
+  ##########
 
   def tx_to_map({:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} = rec),
     do: tx_to_map(rec, tx_rec_data(hash))
@@ -168,16 +172,21 @@ defmodule AeMdw.Db.Model do
     header = :aec_db.get_header(block_hash)
     enc_tx = :aetx_sign.serialize_for_client(header, signed_tx)
 
-    custom_encode(type, enc_tx)
+    custom_encode(type, enc_tx, tx_rec)
     |> put_in(["tx_index"], index)
     |> put_in(["micro_index"], mb_index)
     |> put_in(["micro_time"], mb_time)
   end
 
-  def custom_encode(:oracle_response_tx, tx),
+  def custom_encode(:oracle_response_tx, tx, _),
     do: update_in(tx, ["tx", "response"], &maybe_base64/1)
 
-  def custom_encode(_, tx),
+  def custom_encode(:contract_create_tx, tx, tx_rec) do
+    contract_pk = :aect_contracts.pubkey(:aect_contracts.new(tx_rec))
+    put_in(tx, ["tx", "contract_id"], Enc.encode(:contract_pubkey, contract_pk))
+  end
+
+  def custom_encode(_, tx, _),
     do: tx
 
   def maybe_base64(bin) do
