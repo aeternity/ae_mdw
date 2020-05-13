@@ -1,5 +1,8 @@
 defmodule AeMdwWeb.Continuation do
   alias AeMdw.EtsCache
+  alias AeMdw.Error.Input, as: ErrInput
+
+  import AeMdwWeb.Util
 
   @tab AeMdwWeb.Continuation
 
@@ -7,56 +10,63 @@ defmodule AeMdwWeb.Continuation do
 
   def table(), do: @tab
 
-  defmodule Cont,
-    do: defstruct(stream: nil, offset: nil, user: nil, request: nil)
-
-  # until we can modify frontend, we need to use this heuristics...
-  # also, different tabs of the same user use the same continuation - not great
-  # (... and there's some axios client which has very brief user-agent - not great)
-  def infer_user(%Plug.Conn{} = conn),
-    do: {conn.assigns.peer_ip, conn.assigns.browser_info}
-
-  def request_kind(%Plug.Conn{assigns: %{limit_page: {_, _}}} = conn),
-    do: {conn.request_path, Map.drop(conn.params, ["limit", "page"])}
-
-  def key(user, req_kind),
-    do: :crypto.hash(:sha256, :erlang.term_to_binary({user, req_kind}))
-
-  def response(%Plug.Conn{} = conn, stream_maker) do
-    {limit, page} = conn.assigns.limit_page
+  def response(%Plug.Conn{path_info: path, assigns: assigns, private: priv} = conn, ok_fun) do
+    {mod, fun} = {priv.phoenix_controller, priv.phoenix_action}
+    %{scope: scope, offset: {limit, page}} = assigns
     offset = (page - 1) * limit
-    user_id = infer_user(conn)
-    req_kind = request_kind(conn)
-    cont_key = key(user_id, req_kind)
 
-    case EtsCache.get(@tab, cont_key) do
-      {%Cont{offset: cont_offset, stream: []}, _tm} when offset >= cont_offset ->
-        []
+    try do
+      params = query_groups(conn.query_string) |> Map.drop(["limit", "page"])
+      normalized = mod.normalize(fun, params)
 
-      maybe_cont ->
-        stream =
-          case maybe_cont do
-            {%Cont{offset: ^offset, stream: stream}, _tm} ->
-              stream
+      case response_data({mod, fun, normalized, scope, offset}, limit) do
+        {:ok, data, has_cont?} ->
+          next = (has_cont? && next_link(path, scope, params, limit, page)) || nil
+          ok_fun.(conn, %{next: next, data: data})
 
-            _ ->
-              stream = stream_maker.(conn.params)
-              {_, rem_stream} = StreamSplit.take_and_drop(stream, offset)
-              rem_stream
-          end
-
-        {res_data, rem_stream} = StreamSplit.take_and_drop(stream, limit)
-
-        new_cont = %Cont{
-          offset: offset + limit,
-          stream: rem_stream,
-          user: user_id,
-          request: req_kind
-        }
-
-        EtsCache.put(@tab, cont_key, new_cont)
-
-        res_data
+        {:error, reason} ->
+          send_error(conn, :bad_request, error_msg(reason))
+      end
+    rescue
+      err in [ErrInput] ->
+        send_error(conn, :bad_request, error_msg(err))
     end
   end
+
+  def response_data({mod, fun, params, scope, offset} = cont_key, limit) do
+    make_key = fn new_offset -> {mod, fun, params, scope, new_offset} end
+
+    case EtsCache.get(@tab, cont_key) do
+      # beginning
+      nil when offset == 0 ->
+        init_stream = mod.db_stream(fun, params, scope)
+        {data, rem_stream} = StreamSplit.take_and_drop(init_stream, limit)
+        has_cont? = rem_stream != []
+        EtsCache.put(@tab, cont_key, init_stream)
+        has_cont? && EtsCache.put(@tab, make_key.(limit), rem_stream)
+        {:ok, data, has_cont?}
+
+      # middle
+      {stream, _tm} ->
+        {data, rem_stream} = StreamSplit.take_and_drop(stream, limit)
+        has_cont? = rem_stream != []
+        has_cont? && EtsCache.put(@tab, make_key.(offset + limit), rem_stream)
+        {:ok, data, has_cont?}
+
+      nil ->
+        case :ets.prev(@tab, make_key.(<<>>)) do
+          # end
+          {^mod, ^fun, ^params, ^scope, last_offset} when last_offset < offset ->
+            {:ok, [], false}
+
+          _ ->
+            # never seen req with non-zero offset -> Denial Of Service attempt
+            {:error, :dos}
+        end
+    end
+  end
+
+  defp error_msg(%ErrInput{message: msg}), do: msg
+  defp error_msg({:invalid_params, params}), do: "invalid parameters #{inspect(params)}"
+  defp error_msg(:dos), do: "random access not supported"
 end
