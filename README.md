@@ -466,12 +466,370 @@ GET /middleware/height/at/<millis_since_epoch>
 ```
 curl -s 'http://localhost:4000/middleware/height/at/1543375246777'
 
-{
-  "height": 2
-}
+
 
 ```
+---
+  * **Get current generation:**
+```
+GET /v2/generations/current
+```
+```
+curl -s 'http://localhost:4000/v2/generations/current'
 
+{
+   "key_block":{
+      "beneficiary":"ak_2ceZWyHKEaXrufdA3aTvV3fbJop3JQhKQJi62Fpv4RcAG5DYUu",
+      "hash":"kh_3PVTBP8J7vmyoRxtjx5TSZL2jti5A1pXwEvckz3gxeHnxQbaw",
+      "height":254359,
+      "info":"cb_AAACHMKhM24=",
+      "miner":"ak_2uhzKVEFL2NkaSU39upfkCVYTvnJ5apt3v8kQ5eaHAFpcCa2GC",
+      "nonce":72064136078622913,
+      "pow":[
+         7245023,
+         25342761,
+         26178826,
+         26331125,
+         28724592,
+         32138488,
+         66981370,
+         74805514,
+         92443699,
+         99586261,
+         137189151,
+         159108084,
+         167878373,
+         167894268,
+         188118707,
+         207218006,
+         230354445,
+         236046436,
+         262556960,
+         284306859,
+         296779462,
+         297558975,
+         303409349,
+         321531731,
+         339623708,
+         351603577,
+         363945956,
+         370229977,
+         370230655,
+         404673637,
+         405121256,
+         406354260,
+         429985184,
+         447181695,
+         449771865,
+         452473833,
+         466833703,
+         505374672,
+         515537421,
+         521904898,
+         529705096,
+         535797298
+      ],
+      "prev_hash":"kh_2DvN2yWvmcriSxtwT91jFYsLsn12EmYwjsyb63mWu1m7URzAqP",
+      "prev_key_hash":"kh_2DvN2yWvmcriSxtwT91jFYsLsn12EmYwjsyb63mWu1m7URzAqP",
+      "state_hash":"bs_2AtBuoufSQXa47PhzkSXtzDgJNCVwTy8yeYeAiSYmPrU4hMmUa",
+      "target":505848443,
+      "time":1589312240477,
+      "version":4
+   },
+   "micro_blocks":[
+      "mh_2gNtZP3UpoXZyCCANTh2azvVxsW5qb8e12PBPD3MQVx71Qm13r",
+      "mh_2a4SgXfnpx1oCRHrcLpWUpGGeegdXvhDjdx7rYhrNLsPENeJ6H",
+      "mh_2KmWNryLzRBRo3v81am5iUjPEA47aZfUGEj1oHDBenYQk7ifYh",
+      "mh_Pys4rBKfbPN2zj8oTwskZ6FdgpT7rAKndEdGQdfVbSyeseLHA",
+      "mh_2YN7dxsaJmxW9RbumSKyNBLf9TzgfrowxoF91t9vSghragypfU",
+      "mh_MgrC7wiD64Wck4JkDNz8kktYekYCN9V1R4qn5JAJgUv2mP32o",
+      "mh_2jtsj9QBb47cmhqxS4B3nsoANJypf3u2NGEmSLEcs7pao5j7f1",
+      "mh_2bNSvoWvAcMRYpgb5nukxXqkVfe2dnDgnDLawZB8xZur53ieYQ",
+      "mh_2pBETcgXE2Cb7SS5GNGxFaDuQyJcZn65mRonLpfsn6JdYTQB69",
+      "mh_ntV2mgP2axN3P5Uq7n8tbNcbjwo8k4U2mwWyCUptqDFcgk7Yq",
+      "mh_Gky6SgXvQAYAqbBYmgUbRFB7Q31vGXqfZYyXPjMSup38cWV5a",
+      "mh_2cV72D9ZKyyQUrzRK3EaBMPZsBb3hwazUtreGJfZbA2ht1bAna",
+      "mh_xb83duuEXRo4Lj3VhUJv7LP9H7VY4dZE9iRTXKnZvbCeSaWHA",
+      "mh_2KLxHrLSUo8iqzmakEptkskDaukHd27dMumSJfdTjtCuZNPNEh",
+      "mh_2sTUPGXMooUc9SwDUHEg2Z9wKthyjzwRfxMPPjsMoaPuJLk3g5",
+      "mh_kBpTMk6QKeYdDNDShpSk4nMF5ZhYsZzp7HpyVXfwPj7nHF3zt",
+      "mh_ayZmATGUcchZ8oA2kpzjcs2i6jmUMivXdnraH8LUmW5hkCRtn",
+      "mh_Ki5S7BaPPNEztji2s1A5irMmj2JrsbfaS2Hj6AEKzidGKHa16",
+      "mh_2EXR2VtmehPxcv9jmJvepKqxXeeWBKU4312wPdKtrX5hrubhKC",
+      "mh_j9h2NbwH92iPksbjTNB7ZPK6hw66ycepn22Jcs4NLmrnCJdi5",
+      "mh_214Ab6wS4MXaEbPJGbDnbibEhdotZzBFiQJLpKWBziEjf3iZ4z",
+      "mh_2WAPPQXbvRiJGhLrZDVVXSFaTQWHYsRuSN1XL9o4YLEgd9Pj1h",
+      "mh_2gxUTwMSj8RH756XGi7GJY2XoZrJymEYBtq9GsvpwjqLxsjfzf",
+      "mh_2f5xXQSNjdAPKBfbgvVAujcBmMsUXsSqon27HBifLbhbSXYgPx",
+      "mh_2HXR278jNKURJAhV727acN5o272oQVY7e3jNU7Rd7QnzkJyTuV"
+   ]
+}
+```
+---
+  * **Get current key block height:**
+```
+GET /v2/key-blocks/current/height
+```
+```
+curl -s 'http://localhost:4000/v2/key-blocks/current/height'
+
+{
+   "height":254584
+}
+```
+  * **Get transaction by hash:**
+```
+GET /v2/transactions/<hash>
+```
+```
+curl -s 'http://localhost:4000/v2/transactions/th_Yujp7Ey1kzMb8PyMnXhYnwbAaBPJ8wr3JgadS5zndzB2bdye3'
+
+{
+   "block_hash":"mh_GkmbqmxCLieUyPnjKezr2nMr84ULHSyESWvoeXA5GgsZ9s3kp",
+   "block_height":214033,
+   "hash":"th_Yujp7Ey1kzMb8PyMnXhYnwbAaBPJ8wr3JgadS5zndzB2bdye3",
+   "signatures":[
+      "sg_Pfi8Lcv9Nx4wdx4XTsXALijmni7qyKXnGeG5yC3Y3Bi2W3Hs8qAyQuzbDBPmB6sXqd23ptBo4VQP5TvMUJLBwQu7U2ge6"
+   ],
+   "tx":{
+      "amount":50000000000000000000,
+      "fee":50000000000000,
+      "nonce":2,
+      "payload":"ba_Xfbg4g==",
+      "recipient_id":"ak_2tQGvA2fjUjcNzeAt4PiwHpGf27RtmYwvnCvuoDqQRAvKvZkcs",
+      "sender_id":"ak_2YBpaUCUKZWvHgmQXWQk5bBUzmVGKgbf1RQ3saFXneGJXkv3uH",
+      "ttl":214133,
+      "type":"SpendTx",
+      "version":1
+   }
+}
+```
+  * **Get generation by height:**
+```
+GET /v2/generations/height/<height>
+```
+```
+curl -s 'http://localhost:4000/v2/generations/height/228228'
+
+{
+   "key_block":{
+      "beneficiary":"ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv",
+      "hash":"kh_2XsPC1N7ui3UP4iK7fwZWboa1MQqiaXCsDFtRAKthE1uPUnwwq",
+      "height":228228,
+      "info":"cb_AAAAAj0XPPM=",
+      "miner":"ak_2o4YAGkt9jEksmFsNo5h1eb3Hc62bmUTdxiiZ2yWThNELxcb4x",
+      "nonce":1825658102083893643,
+      "pow":[
+         4733220,
+         22283893,
+         34281922,
+         36977021,
+         41796798,
+         80404303,
+         87749697,
+         108215461,
+         108508464,
+         111641520,
+         117576394,
+         125722151,
+         131822681,
+         133819156,
+         134003183,
+         218384754,
+         224270784,
+         246162446,
+         247443290,
+         253306813,
+         259347613,
+         268645624,
+         274147717,
+         279167271,
+         292905860,
+         296137665,
+         300964127,
+         326248737,
+         357478146,
+         358106408,
+         366196895,
+         369969588,
+         376691405,
+         388340222,
+         389904160,
+         426222664,
+         442368387,
+         478767934,
+         479100563,
+         488969114,
+         489656667,
+         520883018
+      ],
+      "prev_hash":"mh_2PqWUimy1JaNbjs4RKUyePVpdQcghWRgQAdN9dyhC63TLUjjEs",
+      "prev_key_hash":"kh_2WrKEPK54XPyDJT6Sqvw1aMGecyThGk64EvGjfg3jCvszQHM6g",
+      "state_hash":"bs_5wn5FTgTDBs12QTt9PYqPXRj4GRHsSm5RpUqsAeD55cipm1kn",
+      "target":504875479,
+      "time":1584588388686,
+      "version":4
+   },
+   "micro_blocks":[
+
+   ]
+}
+```
+---
+  * **Get keyblock by hash:**
+```
+GET /v2/key-blocks/hash/<hash>
+```
+```
+curl -s 'http://localhost:4000/v2/key-blocks/hash/kh_2DvN2yWvmcriSxtwT91jFYsLsn12EmYwjsyb63mWu1m7URzAqP'
+
+{
+   "beneficiary":"ak_2kHmiJN1RzQL6zXZVuoTuFaVLTCeH3BKyDMZKmixCV3QSWs3dd",
+   "hash":"kh_2DvN2yWvmcriSxtwT91jFYsLsn12EmYwjsyb63mWu1m7URzAqP",
+   "height":254358,
+   "info":"cb_AAACHMKhM24=",
+   "miner":"ak_29qGM9vpEYqVZSMJpAxMH71eLAawZWJq6PBUQNyPN2w3YB9XwJ",
+   "nonce":321745395843647,
+   "pow":[
+      3335940,
+      13655387,
+      17149727,
+      24945712,
+      31267851,
+      32142122,
+      58029844,
+      65885170,
+      69178315,
+      69197897,
+      70535798,
+      75654044,
+      77380742,
+      90543931,
+      91118650,
+      98038201,
+      140910261,
+      141702432,
+      142359384,
+      143426218,
+      155784090,
+      157697439,
+      161398839,
+      165348804,
+      166518180,
+      168143064,
+      176227180,
+      193643307,
+      204071402,
+      214861289,
+      218630084,
+      240341496,
+      312812764,
+      319980898,
+      323513725,
+      348404143,
+      407643664,
+      430450433,
+      454447956,
+      481535126,
+      491658162,
+      503720726
+   ],
+   "prev_hash":"mh_2gH6vhmP7Bnf4Rzwa2S8NvMHf1rrmSdkX7JKfMNbJUFmNQc9Wq",
+   "prev_key_hash":"kh_c1FnbTEUx3vA8LSGp9Ktftauoa7RK1ECCZVGiMFTRdS9Cbn8c",
+   "state_hash":"bs_2b66R6p12x2rXgKVxoRSUM4mDWxb7hkXzu3Wx8cgStbWKMMT9e",
+   "target":505856367,
+   "time":1589312177937,
+   "version":4
+}
+```
+---
+  * **Get keyblock by height:**
+```
+GET /v2/key-blocks/height/<height>
+```
+```
+curl -s 'http://localhost:4000/v2/key-blocks/height/224567'
+
+{
+   "beneficiary":"ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv",
+   "hash":"kh_mmBESMZ3FvruQdXgDjCyTTzCKaoThdw2fgAoAErSk6XbKJu1n",
+   "height":224567,
+   "info":"cb_AAAAAj0XPPM=",
+   "miner":"ak_sWXggV6DDDUyLzQNykerwpAh1G3H8HygARW5xZiNbtM4ZFwrW",
+   "nonce":3283176101780412898,
+   "pow":[
+      8843192,
+      24945964,
+      31129112,
+      33320358,
+      55343483,
+      57720524,
+      93069117,
+      94731719,
+      113958900,
+      135658886,
+      147350590,
+      161644156,
+      178813991,
+      185142669,
+      197952307,
+      209095618,
+      212498774,
+      232139126,
+      250750663,
+      251663363,
+      265826529,
+      272306222,
+      276710265,
+      288657684,
+      294034518,
+      315105823,
+      321401278,
+      337114029,
+      358335463,
+      420831887,
+      427436491,
+      428435220,
+      429231160,
+      446068178,
+      475497329,
+      477399482,
+      477520617,
+      496577731,
+      514128016,
+      528506815,
+      530145299,
+      530419923
+   ],
+   "prev_hash":"mh_2mT75kbEGWBTVen6yi9UhwKBF2TTeRYgigPwPkzykvPB5seNcW",
+   "prev_key_hash":"kh_oSgc82vFuzWDnzMhV7joifdz8D13xhivD5BZSceJhr7SCE5Vj",
+   "state_hash":"bs_dUuUT9kuCY7SYBTZztdQBzRaLepz7X6V2sff41mKjh1pGYHVC",
+   "target":504925640,
+   "time":1583914649301,
+   "version":4
+}
+```
+---
+  * **Get microblock header by hash:**
+```
+GET /v2/micro-blocks/hash/<hash>/header
+```
+```
+curl -s 'http://localhost:4000/v2/micro-blocks/hash/mh_214Ab6wS4MXaEbPJGbDnbibEhdotZzBFiQJLpKWBziEjf3iZ4z/header'
+
+{
+   "hash":"mh_214Ab6wS4MXaEbPJGbDnbibEhdotZzBFiQJLpKWBziEjf3iZ4z",
+   "height":254359,
+   "pof_hash":"no_fraud",
+   "prev_hash":"mh_j9h2NbwH92iPksbjTNB7ZPK6hw66ycepn22Jcs4NLmrnCJdi5",
+   "prev_key_hash":"kh_3PVTBP8J7vmyoRxtjx5TSZL2jti5A1pXwEvckz3gxeHnxQbaw",
+   "signature":"sg_NyqnpR5yhXJxU67fLNR9KLbyb3NS7Tbj6EUo9iFf63rHhZkNw7hcCtW95MwtJ8tpH1LqhDf1D3bYoX5AzZpmUqMn5ATxJ",
+   "state_hash":"bs_rRSmHUXRRZhrGN4JsM8ft2LxNRCCa6LZo2HyMx49diGX16Fxx",
+   "time":1589312314705,
+   "txs_hash":"bx_241oUe8TesnPPYrtbdMbKt5B2pURpdQAaspb6Q8KRqpvDohMZz",
+   "version":4
+}
+```
 ## Websocket interface
 The websocket interface, which listens by default on port `4001`, gives asynchronous notifications when various events occur. 
 
