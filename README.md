@@ -419,6 +419,95 @@ curl -s 'http://localhost:4000/middleware/contracts/transactions/address/ct_AhMb
 }
 ```
 ---
+  * **All names:**
+```
+GET /middleware/names
+```
+```
+curl -s 'http://localhost:4000/middleware/names'
+```
+---
+  * **Search a name:**
+```
+GET /middleware/names/<name>
+```
+```
+curl -s 'http://localhost:4000/middleware/names/dinchotodorov.chain'
+```
+---
+  * **All active names:**
+```
+GET /middleware/names/active
+```
+```
+curl -s 'http://localhost:4000/middleware/names/active'
+
+```
+---
+  * **All active auctions:**
+```
+GET /middleware/names/auctions/active
+```
+```
+curl -s 'http://localhost:4000/middleware/names/auctions/active'
+
+```
+---
+  * **Count all active auctions:**
+```
+GET /middleware/names/auctions/active/count
+```
+```
+curl -s 'http://localhost:4000/middleware/names/auctions/active/count'
+
+```
+---
+  * **Bids for account:**
+```
+GET /middleware/names/auctions/bids/account/<account>
+```
+```
+curl -s 'http://localhost:4000//middleware/names/auctions/bids/account/ak_dvNHMgVvdSgDchLsmcUpuFTbMBGfG3E5V9KZnNjLYPyEhcqnL'
+
+
+```
+---
+  * **Bids for name:**
+```
+GET /middleware/names/auctions/bids/<name>
+```
+```
+curl -s 'http://localhost:4000/middleware/names/auctions/bids/keno.chain'
+```
+---
+  * **Returns the name for account**
+```
+GET /middleware/names/reverse/<account>
+```
+```
+curl -s 'http://localhost:4000/middleware/names/reverse/ak_rWHahs7yKku8tFfpPU67ALmmwvD89SAcXYGDM4imzCHSGqhBS'
+
+```
+---
+  * **Info for auction:**
+```
+GET /middleware/names/auctions/<name>/info
+```
+```
+curl -s 'http://localhost:4000/middleware/names/auctions/<keno.chain/info'
+
+```
+---
+  * **Info for hash:**
+```
+GET /middleware/names/hash/<hash>
+```
+```
+curl -s 'http://localhost:4000/middleware/names/hash/'
+
+```
+
+---
   * **The reward at a block height, which is comprised of the mining reward, and the fees for the transactions which are included:**
 ```
 GET /middleware/reward/height/<height>
