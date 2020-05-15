@@ -76,4 +76,7 @@ defmodule AeMdw.Util do
     |> Stream.with_index(1)
     |> Enum.reduce(%{}, collect)
   end
+
+  def product(xs, ys),
+    do: for(x <- xs, y <- ys, do: {x, y})
 end

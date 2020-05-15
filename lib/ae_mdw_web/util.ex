@@ -1,61 +1,80 @@
 defmodule AeMdwWeb.Util do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Stream, as: DBS
+  alias AeMdw.Error.Input, as: ErrInput
   alias :aeser_api_encoder, as: Enc
+
   require Model
 
-  import AeMdw.{Sigil, Db.Util}
+  import AeMdw.{Sigil, Db.Util, Util}
 
-  # frontend sent this, wtf?
-  def scope(%{"from" => "undefined", "to" => "undefined"}),
-    do: nil
+  ##########
 
-  def scope(%{"from" => from, "to" => to}) do
-    [from, to] = Enum.map([from, to], &String.to_integer/1) |> Enum.sort()
-    to..from
+  def query_groups(query_string) do
+    query_string
+    |> URI.query_decoder()
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
   end
 
-  def scope(%{}),
-    do: nil
-
-  # can be slow, we index the tx type + sender, but checking for receiver is liner
-  def spend_txs(sender, receiver),
-    do: spend_txs(sender, receiver, Degress)
-
-  def spend_txs(sender, receiver, order) do
-    receiver = Enc.encode(:account_pubkey, AeMdw.Validate.id!(receiver))
-
-    DBS.map(
-      :forward,
-      ~t[object],
-      fn x ->
-        with :sender_id <- Model.object(x, :role),
-             txi <- DBS.Resource.sort_key(Model.object(x, :index)),
-             tx <- Model.tx_to_map(read_tx!(txi)),
-             ^receiver <- tx["tx"]["recipient_id"] do
-          tx
-        else
-          _ -> nil
-        end
-      end,
-      {sender, :spend_tx},
-      order
-    )
+  def expand_query_group({key, vals}) do
+    vals
+    |> Enum.map(&URI.encode_query(%{key => &1}))
+    |> Enum.join("&")
   end
 
-  def pagination(limit, temp), do: StreamSplit.take_and_drop(temp, limit)
+  def url_encode_scope({scope, %Range{first: a, last: b}}),
+    do: "#{scope}/#{a}-#{b}"
 
-  def pagination(limit, 1, temp), do: pagination(limit, temp)
+  def make_link(path_info, scope, query_groups) do
+    path =
+      List.last(path_info)
+      |> case do
+        dir when dir in ["forward", "backward"] ->
+          :lists.droplast(path_info) ++ [url_encode_scope(scope)]
 
-  def pagination(limit, page, temp) do
-    {_, temp1} = StreamSplit.take_and_drop(temp, limit * (page - 1))
-    pagination(limit, temp1)
+        _ ->
+          path_info
+      end
+      |> Enum.join("/")
+
+    query =
+      query_groups
+      |> Enum.map(&expand_query_group/1)
+      |> Enum.join("&")
+
+    case query do
+      "" -> path
+      _ -> path <> "?" <> query
+    end
   end
 
-  def pagination(_limit, 0, acc, _temp), do: acc
-
-  def pagination(limit, page, acc, temp) do
-    {txs_list, temp1} = StreamSplit.take_and_drop(temp, limit)
-    pagination(limit, page - 1, [txs_list | acc], temp1)
+  def next_link(path_info, scope, query_groups, limit, page) do
+    next_offset = %{"limit" => [to_string(limit)], "page" => [to_string(page + 1)]}
+    make_link(path_info, scope, Map.merge(query_groups, next_offset))
   end
+
+  def handle_input(conn, f) do
+    try do
+      f.()
+    rescue
+      err in [ErrInput] ->
+        conn |> send_error(:bad_request, err.message)
+    end
+  end
+
+  def send_error(conn, status, reason) do
+    conn
+    |> Plug.Conn.put_status(status)
+    |> Phoenix.Controller.json(%{"error" => reason})
+  end
+
+  def user_agent(%Plug.Conn{req_headers: headers}) do
+    case headers |> Enum.find(&(elem(&1, 0) == "user-agent")) do
+      {_, val} -> val
+      nil -> nil
+    end
+  end
+
+  def concat(prefix, val),
+    do: prefix <> ": " <> ((is_binary(val) && String.printable?(val) && val) || inspect(val))
 end

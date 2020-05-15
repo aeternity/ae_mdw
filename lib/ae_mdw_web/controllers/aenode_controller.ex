@@ -3,7 +3,9 @@ defmodule AeMdwWeb.AeNodeController do
 
   alias AeMdw.Validate
 
-  import AeMdw.Db.Util
+  import AeMdwWeb.Util, only: [handle_input: 2]
+
+  import AeMdw.{Util, Db.Util}
 
   # Hardcoded DB only for testing purpose
   @tx_by_hash %{
@@ -52,7 +54,7 @@ defmodule AeMdwWeb.AeNodeController do
             json(conn, :aetx_sign.serialize_for_client(header, tx))
         end
 
-      {error, _} ->
+      {:error, _} ->
         conn |> put_status(:bad_request) |> json(%{"reason" => "Invalid hash"})
     end
   end
@@ -75,10 +77,13 @@ defmodule AeMdwWeb.AeNodeController do
     end
   end
 
-  def current_key_block_height(conn, _params),
-    do: json(conn, %{"height" => last_gen()})
+  def current_key_block_height(conn, _params) do
+    json(conn, %{"height" => last_gen()})
+  end
 
   def current_generations(conn, _params) do
+    prx(WTF, "////////// calling current_generations")
+
     :aec_chain.get_current_generation() |> generation_rsp(conn)
   end
 
@@ -96,99 +101,14 @@ defmodule AeMdwWeb.AeNodeController do
     end
   end
 
-  def key_block_by_hash(conn, %{"hash" => hash}) do
-    case :aeser_api_encoder.safe_decode(:key_block_hash, hash) do
-      {:error, _} ->
-        conn |> put_status(:bad_request) |> json(%{"reason" => "Invalid hash"})
+  def key_block_by_hash(conn, %{"hash" => hash}),
+    do: send_encoded_block(conn, hash, &block_from_hash/1, :key)
 
-      {:ok, hash} ->
-        case :aec_chain.get_block(hash) do
-          {:ok, block} ->
-            case :aec_blocks.is_key_block(block) do
-              true ->
-                header = :aec_blocks.to_header(block)
+  def key_block_by_height(conn, %{"height" => height}),
+    do: send_encoded_block(conn, height, &block_from_height/1, :key)
 
-                case :aec_blocks.height(block) do
-                  0 ->
-                    json(conn, :aec_headers.serialize_for_client(header, :key))
-
-                  _ ->
-                    prev_block_hash = :aec_blocks.prev_hash(block)
-
-                    case :aec_chain.get_block(prev_block_hash) do
-                      {:ok, prev_block} ->
-                        prev_block_type = :aec_blocks.type(prev_block)
-                        json(conn, :aec_headers.serialize_for_client(header, prev_block_type))
-
-                      :error ->
-                        conn |> put_status(:not_found) |> json(%{"reason" => "Block not found"})
-                    end
-                end
-
-              false ->
-                conn |> put_status(:not_found) |> json(%{"reason" => "Block not found"})
-            end
-
-          :error ->
-            conn |> put_status(:not_found) |> json(%{"reason" => "Block not found"})
-        end
-    end
-  end
-
-  def key_block_by_height(conn, %{"height" => height}) do
-    height = String.to_integer(height)
-
-    case :aec_chain.get_key_block_by_height(height) do
-      {:ok, block} ->
-        header = :aec_blocks.to_header(block)
-
-        case :aec_blocks.height(block) do
-          0 ->
-            json(conn, :aec_headers.serialize_for_client(header, :key))
-
-          _ ->
-            prev_block_hash = :aec_blocks.prev_hash(block)
-
-            case :aec_chain.get_block(prev_block_hash) do
-              {:ok, prev_block} ->
-                prev_block_type = :aec_blocks.type(prev_block)
-                json(conn, :aec_headers.serialize_for_client(header, prev_block_type))
-
-              :error ->
-                conn |> put_status(:not_found) |> json(%{"reason" => "Block not found"})
-            end
-        end
-
-      {:error, _rsn} ->
-        conn |> put_status(:not_found) |> json(%{"reason" => "Block not found"})
-    end
-  end
-
-  def micro_block_header_by_hash(conn, %{"hash" => hash}) do
-    case :aeser_api_encoder.safe_decode(:micro_block_hash, hash) do
-      {:ok, hash} ->
-        case :aehttp_logic.get_micro_block_by_hash(hash) do
-          {:ok, block} ->
-            prev_block_hash = :aec_blocks.prev_hash(block)
-
-            case :aec_chain.get_block(prev_block_hash) do
-              {:ok, prev_block} ->
-                prev_block_type = :aec_blocks.type(prev_block)
-                header = :aec_blocks.to_header(block)
-                json(conn, :aec_headers.serialize_for_client(header, prev_block_type))
-
-              :error ->
-                conn |> put_status(:not_found) |> json(%{"reason" => "Block not found"})
-            end
-
-          {:error, :block_not_found} ->
-            conn |> put_status(:not_found) |> json(%{"reason" => "Block not found"})
-        end
-
-      {:error, _} ->
-        conn |> put_status(:bad_request) |> json(%{"reason" => "Invalid hash"})
-    end
-  end
+  def micro_block_header_by_hash(conn, %{"hash" => hash}),
+    do: send_encoded_block(conn, hash, &block_from_hash/1, :micro)
 
   def micro_block_transactions_by_hash(conn, %{"hash" => hash}) do
     case :aeser_api_encoder.safe_decode(:micro_block_hash, hash) do
@@ -264,4 +184,31 @@ defmodule AeMdwWeb.AeNodeController do
         end
     }
   end
+
+  def send_encoded_block(conn, ident, getter, req_type, json_fn \\ & &1) do
+    handle_input(
+      conn,
+      fn ->
+        with {:ok, block} <- getter.(ident),
+             ^req_type <- :aec_blocks.type(block) do
+          send_encoded_block!(conn, block, json_fn)
+        else
+          _ ->
+            conn |> put_status(:not_found) |> json(%{"reason" => "Block not found"})
+        end
+      end
+    )
+  end
+
+  defp send_encoded_block!(conn, block, json_fn) do
+    header = :aec_blocks.to_header(block)
+    serialized = :aec_headers.serialize_for_client(header, prev_block_type(header))
+    conn |> json(json_fn.(serialized))
+  end
+
+  def block_from_hash(hash),
+    do: :aec_chain.get_block(Validate.id!(hash))
+
+  def block_from_height(height),
+    do: :aec_chain.get_key_block_by_height(Validate.nonneg_int!(height))
 end

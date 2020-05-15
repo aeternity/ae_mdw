@@ -1,18 +1,20 @@
 defmodule AeMdw.EtsCache do
   require Ex2ms
 
+  @cache_types [:set, :ordered_set, :bag, :duplicate_bag]
+  @cache_access [:public, :private, :protected]
+
   ################################################################################
 
-  def init(name, expiration_minutes) do
-    :ets.new(name, [
-      :named_table,
-      :public,
-      {:read_concurrency, true},
-      {:write_concurrency, true}
-    ])
+  def new(name, expiration_minutes, type \\ :set, access \\ :public)
+      when is_atom(name) and type in @cache_types and access in @cache_access do
+    params =
+      ((name && [:named_table]) || []) ++
+        [{:read_concurrency, true}, {:write_concurrency, true}, access, type]
 
-    gc_period = :timer.minutes(expiration_minutes)
-    {:ok, _} = :timer.apply_interval(gc_period, __MODULE__, :purge, [name, gc_period])
+    table = :ets.new(name, params)
+    init_gc(table, expiration_minutes)
+    table
   end
 
   def put(table, key, val),
@@ -41,4 +43,11 @@ defmodule AeMdw.EtsCache do
 
   defp time(),
     do: :os.system_time(:millisecond)
+
+  defp init_gc(_table, exp) when exp in [nil, :infinity], do: :ok
+
+  defp init_gc(table, exp) when is_integer(exp) and exp > 0 do
+    gc_period = :timer.minutes(exp)
+    {:ok, _} = :timer.apply_interval(gc_period, __MODULE__, :purge, [table, gc_period])
+  end
 end

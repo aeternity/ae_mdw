@@ -201,31 +201,35 @@ defmodule AeMdwWeb.ContractController do
     }
   ]
 
-  def all(conn, _req),
-    do: json(conn, Cont.response(conn, &db_stream(:all, &1)))
+  def all(conn, _),
+    do: Cont.response(conn, &json/2)
 
-  def transactions(conn, req),
-    do: json(conn, %{"transactions" => Cont.response(conn, &db_stream(:transactions, &1))})
+  def transactions(conn, _),
+    do: Cont.response(conn, &json(&1, %{"transactions" => &2}))
 
-  def calls(conn, req),
-    do: json(conn, Cont.response(conn, &db_stream(:calls, &1)))
+  # do: json(conn, %{"transactions" => Cont.response(conn, &db_stream(:transactions, &1))})
 
-  def verify(conn, params) do
-    raise RuntimeError, message: "NOT IMPLEMENTED - NEEDS SOPHIA COMPILER"
-  end
+  def calls(conn, _),
+    do: Cont.response(conn, &json/2)
+
+  def verify(conn, params),
+    do: raise(RuntimeError, message: "NOT IMPLEMENTED - NEEDS SOPHIA COMPILER")
 
   ##########
 
-  def db_stream(:all, %{}),
-    do: :backward |> DBS.map(~t[type], {:tx, &create_tx_info/1}, :contract_create_tx)
+  def db_scope(_, %{}),
+    do: {:txi, last_txi()..first_txi()}
 
-  def db_stream(:calls, %{"address" => contract}) do
+  def db_stream(:all, %{}, scope),
+    do: scope |> DBS.map(~t[type], {:tx, &create_tx_info/1}, :contract_create_tx)
+
+  def db_stream(:calls, %{"address" => contract}, scope) do
     pk = Validate.id!(contract)
     callback = &call_tx_info(&1, pk, Contract.get_info(pk))
-    :forward |> DBS.map(~t[object], {:tx, callback}, {contract, :contract_call_tx})
+    scope |> DBS.map(~t[object], {:tx, callback}, {contract, :contract_call_tx})
   end
 
-  def db_stream(:transactions, %{"address" => contract}) do
+  def db_stream(:transactions, %{"address" => contract}, scope) do
     pk = Validate.id!(contract)
 
     case Origin.tx_index({:contract, pk}) do

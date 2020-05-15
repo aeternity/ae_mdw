@@ -33,7 +33,15 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   def sync(from_height, to_height, txi) when from_height <= to_height do
     tracker = Sync.progress_logger(&sync_generation/2, @log_freq, &log_msg/2)
-    from_height..to_height |> Enum.reduce(txi, tracker)
+    next_txi = from_height..to_height |> Enum.reduce(txi, tracker)
+
+    :mnesia.transaction(fn ->
+      block_tab = ~t[block]
+      [succ_kb] = :mnesia.read(block_tab, {to_height + 1, -1})
+      :mnesia.write(block_tab, Model.block(succ_kb, tx_index: next_txi), :write)
+    end)
+
+    next_txi
   end
 
   def sync(from_height, to_height, txi) when from_height > to_height,

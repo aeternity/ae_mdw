@@ -15,6 +15,10 @@ defmodule AeMdw.Db.Stream.Object do
         message: "requires query ID* | {:ID_TYPE...} | {:TYPE_ID...} | [QUERY*]"
       )
 
+  # does not validate IDs and TYPEs, trusted!
+  def normalize_query({:roots, %MapSet{} = m}),
+    do: m
+
   def normalize_query({:id_type, %{} = id_type}),
     do: roots_from(id_type, &flip_tuple/1)
 
@@ -22,16 +26,16 @@ defmodule AeMdw.Db.Stream.Object do
     do: roots_from(type_id, &id/1)
 
   def normalize_query({:id_type, id, type}),
-    do: MapSet.new(product(type, id))
+    do: MapSet.new(validate_product(type, id))
 
   def normalize_query({:type_id, type, id}),
-    do: MapSet.new(product(type, id))
+    do: MapSet.new(validate_product(type, id))
 
   def normalize_query({id, type}),
-    do: MapSet.new(product(type, id))
+    do: MapSet.new(validate_product(type, id))
 
   def normalize_query(id) when not is_list(id),
-    do: MapSet.new(product(AE.tx_types(), id))
+    do: MapSet.new(validate_product(AE.tx_types(), id))
 
   def normalize_query(xs) when is_list(xs) do
     xs
@@ -86,17 +90,17 @@ defmodule AeMdw.Db.Stream.Object do
 
   ##########
 
-  defp product({type, id}),
-    do: product(type, id)
+  defp validate_product({type, id}),
+    do: validate_product(type, id)
 
-  defp product(type, id) do
+  defp validate_product(type, id) do
     tys = Enum.map(to_list_like(type), &Validate.tx_type!/1)
     ids = Enum.map(to_list_like(id), &Validate.id!/1)
     Stream.flat_map(tys, fn ty -> Stream.map(ids, fn id -> {ty, id} end) end)
   end
 
   defp roots_from(mapping, tuple_fun) do
-    merger = &MapSet.union(MapSet.new(product(tuple_fun.(&1))), &2)
+    merger = &MapSet.union(MapSet.new(validate_product(tuple_fun.(&1))), &2)
     Enum.reduce(mapping, MapSet.new(), merger)
   end
 end

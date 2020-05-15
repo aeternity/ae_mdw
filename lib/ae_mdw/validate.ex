@@ -4,14 +4,12 @@ defmodule AeMdw.Validate do
   alias :aeser_api_encoder, as: Enc
 
   # returns pubkey
-  def id(<<prefix::2-binary, "_", _::binary>> = id) do
-    case prefix in AE.id_prefixes() do
-      true ->
-        {_id_type, pk} = Enc.decode(id)
-        {:ok, pk}
-
-      false ->
-        {:error, {ErrInput.Id, id}}
+  def id(<<_prefix::2-binary, "_", _::binary>> = id) do
+    try do
+      {_id_type, pk} = Enc.decode(id)
+      {:ok, pk}
+    rescue
+      _ -> {:error, {ErrInput.Id, id}}
     end
   end
 
@@ -55,14 +53,59 @@ defmodule AeMdw.Validate do
     do: (type in AE.tx_types() && {:ok, type}) || {:error, {ErrInput.TxType, type}}
 
   def tx_type(type) when is_binary(type) do
-    case type in AE.tx_names() do
-      true -> {:ok, AE.tx_type(type)}
-      false -> {:error, {ErrInput.TxType, type}}
+    try do
+      tx_type(String.to_existing_atom(type))
+    rescue
+      ArgumentError ->
+        {:error, {ErrInput.TxType, type}}
     end
   end
 
   def tx_type!(type),
     do: unwrap!(&tx_type/1, type)
+
+  def tx_group(group) when is_atom(group),
+    do: (group in AE.tx_groups() && {:ok, group}) || {:error, {ErrInput.TxGroup, group}}
+
+  def tx_group(group) when is_binary(group) do
+    try do
+      tx_group(String.to_existing_atom(group))
+    rescue
+      ArgumentError ->
+        {:error, {ErrInput.TxGroup, group}}
+    end
+  end
+
+  def tx_group!(group),
+    do: unwrap!(&tx_group/1, group)
+
+  def tx_field(field) when is_binary(field),
+    do:
+      (field in AE.id_fields() &&
+         {:ok, String.to_existing_atom(field)}) ||
+        {:error, {ErrInput.TxField, field}}
+
+  def tx_field(field) when is_atom(field),
+    do: tx_field(Atom.to_string(field))
+
+  def tx_field(field),
+    do: {:error, {ErrInput.TxField, field}}
+
+  def tx_field!(field),
+    do: unwrap!(&tx_field/1, field)
+
+  def nonneg_int(s) when is_binary(s) do
+    case Integer.parse(s, 10) do
+      {i, ""} when i >= 0 -> {:ok, i}
+      _ -> {:error, {ErrInput.NonnegInt, s}}
+    end
+  end
+
+  def nonneg_int(x) when is_integer(x) and x >= 0, do: {:ok, x}
+  def nonneg_int(x), do: {:error, {ErrInput.NonnegInt, x}}
+
+  def nonneg_int!(x),
+    do: unwrap!(&nonneg_int/1, x)
 
   defp unwrap!(validator, value) do
     case validator.(value) do

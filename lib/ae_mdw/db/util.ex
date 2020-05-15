@@ -118,6 +118,12 @@ defmodule AeMdw.Db.Util do
     |> :mnesia.transaction()
   end
 
+  def tx_rec_data(<<_::256>> = tx_hash) do
+    {block_hash, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
+    {type, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
+    {block_hash, type, signed_tx, tx_rec}
+  end
+
   ##########
 
   def msecs(msecs) when is_integer(msecs) and msecs > 0, do: msecs
@@ -133,5 +139,16 @@ defmodule AeMdw.Db.Util do
   def date_time(%Date{} = d) do
     {:ok, dt, 0} = DateTime.from_iso8601(Date.to_iso8601(d) <> " 00:00:00.0Z")
     dt
+  end
+
+  def prev_block_type(header) do
+    prev_hash = :aec_headers.prev_hash(header)
+    prev_key_hash = :aec_headers.prev_key_hash(header)
+
+    cond do
+      :aec_headers.height(header) == 0 -> :key
+      prev_hash == prev_key_hash -> :key
+      true -> :micro
+    end
   end
 end

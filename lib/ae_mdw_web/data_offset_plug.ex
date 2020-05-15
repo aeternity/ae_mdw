@@ -22,5 +22,8 @@ defmodule AeMdwWeb.DataOffsetPlug do
     end
   end
 
+  def call(%Plug.Conn{query_params: %{"page" => page}} = conn, opts),
+    do: call(%{conn | query_params: put_in(conn.query_params, ["limit"], "10")}, opts)
+
   def call(conn, _opts), do: conn
 end
