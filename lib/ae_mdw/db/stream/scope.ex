@@ -349,10 +349,10 @@ defmodule AeMdw.Db.Stream.Scope do
   ##########
 
   def align({:gen, l, r}, :txi, :left),
-    do: gen_align(l, r, :left, &first_txi/0)
+    do: gen_align(l, r, :left, fn -> nil end)
 
   def align({:gen, l, r}, :txi, :right),
-    do: gen_align(l, r, :right, &last_txi/0)
+    do: gen_align(l, r, :right, fn -> nil end)
 
   def align({:gen, l, r}, :time, :left),
     do: gen_align(l, r, :left, &first_txi/0) |> read_tx! |> time_key
@@ -419,11 +419,11 @@ defmodule AeMdw.Db.Stream.Scope do
       txi1 = Model.block(b1, :tx_index)
       txi2 = b2 && Model.block(b2, :tx_index)
 
-      cond do
-        is_nil(txi2) ->
+      case txi2 do
+        nil ->
           txi1 && f.({txi1, last_txi()})
 
-        true ->
+        _ ->
           txi2 = txi2 - 1
           txi1 = max(0, txi1)
 
@@ -455,9 +455,7 @@ defmodule AeMdw.Db.Stream.Scope do
         default_fn.()
 
       bi ->
-        mb = read_block!(bi)
-        txi = Model.block(:tx_index)
-        (txi >= 0 && txi) || default_fn.()
+        max(0, Model.block(read_block!(bi), :tx_index))
     end
   end
 
