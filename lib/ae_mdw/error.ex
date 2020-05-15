@@ -2,39 +2,35 @@ defmodule AeMdw.Error do
   defmodule Input do
     defexception [:message]
 
+    def struct(prefix, val),
+      do: %AeMdw.Error.Input{message: AeMdwWeb.Util.concat(prefix, val)}
+
     defmodule Id do
-      def exception(value: value),
-        do: %AeMdw.Error.Input{message: "invalid id: #{inspect(value)}"}
+      def exception(value: value), do: Input.struct("invalid id", value)
     end
 
     defmodule NonnegInt do
-      def exception(value: value),
-        do: %AeMdw.Error.Input{message: "invalid non-negative integer: #{inspect(value)}"}
+      def exception(value: value), do: Input.struct("invalid non-negative integer", value)
     end
 
     defmodule TxField do
-      def exception(value: value),
-        do: %AeMdw.Error.Input{message: "invalid transaction field: #{inspect(value)}"}
+      def exception(value: value), do: Input.struct("invalid transaction field", value)
     end
 
     defmodule TxType do
-      def exception(value: value),
-        do: %AeMdw.Error.Input{message: "invalid transaction type: #{inspect(value)}"}
+      def exception(value: value), do: Input.struct("invalid transaction type", value)
     end
 
     defmodule TxGroup do
-      def exception(value: value),
-        do: %AeMdw.Error.Input{message: "invalid transaction group: #{inspect(value)}"}
+      def exception(value: value), do: Input.struct("invalid transaction group", value)
     end
 
     defmodule Scope do
-      def exception(value: value),
-        do: %AeMdw.Error.Input{message: "invalid scope: #{inspect(value)}"}
+      def exception(value: value), do: Input.struct("invalid scope", value)
     end
 
     defmodule Query do
-      def exception(value: value),
-        do: %AeMdw.Error.Input{message: "invalid query: #{inspect(value)}"}
+      def exception(value: value), do: Input.struct("invalid query", value)
     end
   end
 end

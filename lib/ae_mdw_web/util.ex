@@ -6,32 +6,9 @@ defmodule AeMdwWeb.Util do
 
   require Model
 
-  import AeMdw.{Sigil, Db.Util}
+  import AeMdw.{Sigil, Db.Util, Util}
 
-  # can be slow, we index the tx type + sender, but checking for receiver is liner
-  # def spend_txs(scope, sender, receiver),
-  #   do: spend_txs(scope, sender, receiver, Degress)
-
-  # def spend_txs(scope, sender, receiver, order) do
-  #   receiver = Enc.encode(:account_pubkey, AeMdw.Validate.id!(receiver))
-
-  #   DBS.map(
-  #     scope,
-  #     ~t[object],
-  #     fn x ->
-  #       with :sender_id <- Model.object(x, :role),
-  #            txi <- DBS.Resource.sort_key(Model.object(x, :index)),
-  #            tx <- Model.tx_to_map(read_tx!(txi)),
-  #            ^receiver <- tx["tx"]["recipient_id"] do
-  #         tx
-  #       else
-  #         _ -> nil
-  #       end
-  #     end,
-  #     {sender, :spend_tx},
-  #     order
-  #   )
-  # end
+  ##########
 
   def query_groups(query_string) do
     query_string
@@ -81,7 +58,7 @@ defmodule AeMdwWeb.Util do
       f.()
     rescue
       err in [ErrInput] ->
-        conn |> send_error(:bad_request, err.msg)
+        conn |> send_error(:bad_request, err.message)
     end
   end
 
@@ -97,4 +74,7 @@ defmodule AeMdwWeb.Util do
       nil -> nil
     end
   end
+
+  def concat(prefix, val),
+    do: prefix <> ": " <> ((is_binary(val) && String.printable?(val) && val) || inspect(val))
 end

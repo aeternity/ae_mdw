@@ -67,6 +67,5 @@ defmodule AeMdwWeb.Continuation do
   end
 
   defp error_msg(%ErrInput{message: msg}), do: msg
-  defp error_msg({:invalid_params, params}), do: "invalid parameters #{inspect(params)}"
   defp error_msg(:dos), do: "random access not supported"
 end

@@ -118,7 +118,7 @@ defmodule AeMdw.Db.Util do
     |> :mnesia.transaction()
   end
 
-  def tx_rec_data(tx_hash) do
+  def tx_rec_data(<<_::256>> = tx_hash) do
     {block_hash, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
     {type, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
     {block_hash, type, signed_tx, tx_rec}
