@@ -1,23 +1,18 @@
-defmodule AeMdwWeb.Listener do
+defmodule AeMdwWeb.Websocket.Listener do
   use GenServer
 
-  alias AeMdwWeb.Websocket.EtsManager, as: Ets
   require Ex2ms
 
-  @subs_channel_targets Application.fetch_env!(:ae_mdw, AeMdwWeb.Endpoint)[:subs_channel_targets]
-  @subs_target_channels Application.fetch_env!(:ae_mdw, AeMdwWeb.Endpoint)[:subs_target_channels]
-  @main Application.fetch_env!(:ae_mdw, AeMdwWeb.Endpoint)[:main]
-  @sub Application.fetch_env!(:ae_mdw, AeMdwWeb.Endpoint)[:sub]
+  @subs_main :subs_main
+  @subs_pids :subs_pids
+  @subs_channel_targets :subs_channel_targets
+  @subs_target_channels :subs_target_channels
 
   def start_link(_args), do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
-
   def register(pid), do: GenServer.cast(__MODULE__, {:monitor, pid})
 
   def init(state) do
-    @sub
-    |> Ets.foldl([], fn {k, _v}, acc -> [k | acc] end)
-    |> Enum.each(&register/1)
-
+    :ets.foldl(fn {k, _v}, acc -> [k | acc] end, [], @subs_pids) |> Enum.each(&register/1)
     :aec_events.subscribe(:top_changed)
     {:ok, state}
   end
@@ -34,15 +29,13 @@ defmodule AeMdwWeb.Listener do
   end
 
   def handle_info({:DOWN, _ref, _type, pid, _info}, state) do
-    case Ets.is_member?(@main, pid) do
+    case :ets.member(@subs_main, pid) do
       true ->
         # main socket channel dies, all connections are disconnected. Clean all tables.
-        Ets.delete_all_objects_in_all_tables([
-          @subs_channel_targets,
-          @subs_target_channels,
-          @sub,
-          @main
-        ])
+        Enum.each(
+          [@subs_main, @subs_channel_targets, @subs_target_channels, @subs_pids],
+          &:ets.delete_all_objects/1
+        )
 
       false ->
         spec =
@@ -50,9 +43,9 @@ defmodule AeMdwWeb.Listener do
             {{^pid, sub}, _} -> sub
           end
 
-        for sub <- Ets.select(@subs_channel_targets, spec) do
+        for sub <- :ets.select(@subs_channel_targets, spec) do
           key_to_delete = {sub, pid}
-          Ets.delete(@subs_target_channels, key_to_delete)
+          :ets.delete(@subs_target_channels, key_to_delete)
         end
 
         spec_ =
@@ -60,8 +53,8 @@ defmodule AeMdwWeb.Listener do
             {{^pid, _}, _} -> true
           end
 
-        Ets.select_delete(@subs_channel_targets, spec_)
-        Ets.delete(@sub, pid)
+        :ets.select_delete(@subs_channel_targets, spec_)
+        :ets.delete(@subs_pids, pid)
     end
 
     {:noreply, state}
@@ -91,8 +84,10 @@ defmodule AeMdwWeb.Listener do
                 {{^key, _}, _} -> true
               end
 
-            if Ets.select_count(@subs_target_channels, spec) != 0,
-              do: broadcast(key, data(ser_tx, "Object"))
+            case :ets.select(@subs_target_channels, spec, 1) do
+              :"$end_of_table" -> :ok
+              {[_], _cont} -> broadcast(key, data(ser_tx, "Object"))
+            end
           end)
         end)
 
