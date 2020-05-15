@@ -5,7 +5,6 @@ defmodule AeMdwWeb.Router do
   @scopes ["gen", "txi"]
 
   pipeline :api do
-    plug CORSPlug, origin: "*"
     plug AeMdwWeb.DataStreamPlug, paginables: @paginables, scopes: @scopes
     plug :accepts, ["json"]
   end
@@ -35,10 +34,14 @@ defmodule AeMdwWeb.Router do
     # get "/names/reverse/:account", NameController, :reverse_names
     # get "/names/auctions/:name/info", NameController, :info_for_auction
     # get "/names/hash/:hash", NameController, :name_for_hash
-    # get "/transactions/account/:address/count", TransactionController, :count
 
     get "/tx/:hash", TxController, :tx
     get "/txi/:index", TxController, :txi
+
+    get "/txs/count", TxController, :txs_count
+    get "/txs/:scope_type/:range/count", TxController, :txs_scoped_count
+    get "/txs/:scope_type/:range/count/or", TxController, :txs_scoped_count_or
+    get "/txs/:scope_type/:range/count/and", TxController, :txs_scoped_count_and
 
     get "/txs/:scope_type/:range", TxController, :txs
     get "/txs/:direction", TxController, :txs

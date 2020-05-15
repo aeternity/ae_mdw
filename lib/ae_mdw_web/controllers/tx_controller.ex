@@ -28,16 +28,31 @@ defmodule AeMdwWeb.TxController do
   def txs_and(conn, _req),
     do: Cont.response(conn, &json/2)
 
-      {0, 0, 0} ->
-        :all
+  def txs_count(conn, req),
+    do:
+      handle_input(conn, fn ->
+        (map_size(req) == 0 &&
+           json(conn, %{"count" => last_txi() + 1})) ||
+          Normalize.input_err(:unexpected_parameters)
+      end)
 
-      {0, 0, _} ->
-        {:object_checks,
-         for(
-           {{type, _field, id}, _} <- type_field_ids,
-           reduce: MapSet.new(),
-           do: (acc -> MapSet.put(acc, {type, id}))
-         ), type_field_ids}
+  def txs_scoped_count(conn, req),
+    do:
+      handle_input(conn, fn ->
+        map_size(Map.drop(req, ["range", "scope_type"])) == 0 ||
+          Normalize.input_err(:unexpected_parameters)
+
+        stream = db_stream_raw(:txs_scoped_count, :history, conn.assigns.scope)
+        json(conn, %{"count" => Enum.count(stream)})
+      end)
+
+  def txs_scoped_count_or(conn, _req),
+    do: txs_scoped_count_params(conn, :txs_count_or)
+
+  def txs_scoped_count_and(conn, _req),
+    do: txs_scoped_count_params(conn, :txs_count_and)
+
+  ##########
 
   def db_stream(_, :history, scope),
     do: DBS.map(scope, ~t[tx], :json)
@@ -53,14 +68,21 @@ defmodule AeMdwWeb.TxController do
     DBS.map(scope, ~t[object], {:id, compose(&to_json/1, &checker.(&1, data))}, {:roots, roots})
   end
 
-  def db_stream(:txs, :all, scope),
-    do: DBS.map(scope, ~t[tx], :json)
+  def db_stream_raw(_, :history, scope),
+    do: DBS.map(scope, ~t[tx], &id/1)
 
-  def db_stream(:txs, {:type, types}, scope),
-    do: DBS.map(scope, ~t[type], :json, types)
+  def db_stream_raw(_, {:type, types}, scope),
+    do: DBS.map(scope, ~t[type], &id/1, types)
 
-  def db_stream(:txs, {:object, types, ids}, scope),
-    do: DBS.map(scope, ~t[object], :json, {:id_type, ids, types})
+  def db_stream_raw(_, {:object, types, ids}, scope),
+    do: DBS.map(scope, ~t[object], &id/1, {:id_type, ids, types})
+
+  def db_stream_raw(_, {checker, roots, data}, scope) do
+    checker = obj_check_fn(checker)
+    DBS.map(scope, ~t[object], {:id, &checker.(&1, data)}, {:roots, roots})
+  end
+
+  ##########
 
   defp obj_check_fn(:object_check_fields_any), do: &object_check_fields_any/2
   defp obj_check_fn(:object_check_fields_all), do: &object_check_fields_all/2
@@ -135,6 +157,22 @@ defmodule AeMdwWeb.TxController do
     do: Model.tx_to_map(model_tx, tx_rec_data)
 
   def txs_scoped_count_params(conn, combiner),
+    do:
+      handle_input(conn, fn ->
+        params = query_groups(conn.query_string) |> Map.drop(["limit", "page"])
+
+        count =
+          case normalize(combiner, Map.drop(params, ["range", "scope_type"])) do
+            :history ->
+              last_txi() + 1
+
+            normalized ->
+              Enum.count(db_stream_raw(combiner, normalized, conn.assigns.scope))
+          end
+
+        json(conn, %{"count" => count})
+      end)
+
   ##########
 
   defp combination(x) when x in [:txs_or, :txs_count_or], do: :or
