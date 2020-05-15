@@ -42,20 +42,10 @@ defmodule AeMdwWeb.Router do
 
     get "/txs/:scope_type/:range", TxController, :txs
     get "/txs/:direction", TxController, :txs
-
-    post "/txs/:scope_type/:range", TxController, :txs
-    post "/txs/:direction", TxController, :txs
-
-    # get "/transactions/account/:sender/to/:receiver", TransactionController, :two_parties
-    # get "/transactions/interval/:from/:to/account/:sender/to/:receiver",
-    #   TransactionController, :two_parties
-
-    # get "/transactions/account/:account", TransactionController, :account
-    # get "/transactions/interval/:from/:to/account/:account", TransactionController, :account
-    # get "/transactions/interval/:from/:to", TransactionController, :all
-
-    # # Not need for the frontend
-    # get "/transactions/rate/:from/:to", TransactionController, :rate
+    get "/txs/:scope_type/:range/or", TxController, :txs_or
+    get "/txs/:direction/or", TxController, :txs_or
+    get "/txs/:scope_type/:range/and", TxController, :txs_and
+    get "/txs/:direction/and", TxController, :txs_and
 
     # get "/generations/:from/:to", GenerationController, :interval
 
