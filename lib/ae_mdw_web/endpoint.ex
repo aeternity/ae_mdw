@@ -10,9 +10,9 @@ defmodule AeMdwWeb.Endpoint do
     signing_salt: "0cOe/zsp"
   ]
 
-  socket "/socket", AeMdwWeb.UserSocket,
-    websocket: true,
-    longpoll: false
+  # socket "/", AeMdwWeb.UserSocket,
+  #   websocket: true,
+  #   longpoll: false
 
   # Serve at "/" the static files from "priv/static" directory.
   #
