@@ -1,20 +1,21 @@
 defmodule AeWebsocket.Websocket.SocketHandler do
   use Riverside, otp_app: :ae_mdw
 
-  alias AeMdwWeb.Listener
-  alias AeMdwWeb.Websocket.EtsManager, as: Ets
+  alias AeMdwWeb.Websocket.Listener
+  alias AeMdwWeb.Util
+
   require Ex2ms
 
+  @subs_main :subs_main
+  @subs_pids :subs_pids
+  @subs_channel_targets :subs_channel_targets
+  @subs_target_channels :subs_target_channels
   @known_prefixes ["ak_", "ct_", "ok_", "nm_", "cm_", "ch_"]
   @known_channels ["KeyBlocks", "MicroBlocks", "Transactions"]
-  @subs_channel_targets Application.fetch_env!(:ae_mdw, AeMdwWeb.Endpoint)[:subs_channel_targets]
-  @subs_target_channels Application.fetch_env!(:ae_mdw, AeMdwWeb.Endpoint)[:subs_target_channels]
-  @main Application.fetch_env!(:ae_mdw, AeMdwWeb.Endpoint)[:main]
-  @sub Application.fetch_env!(:ae_mdw, AeMdwWeb.Endpoint)[:sub]
 
   @impl Riverside
   def init(session, state) do
-    new_state = Map.put(state, :info, [])
+    new_state = Map.put(state, :info, MapSet.new())
     {:ok, session, new_state}
   end
 
@@ -28,9 +29,9 @@ defmodule AeWebsocket.Websocket.SocketHandler do
         session,
         %{info: info} = state
       )
-      when prefix_key in @known_prefixes and byte_size(rest) > 38 and byte_size(rest) < 60 do
-    if target in info do
-      deliver_me("already subscribed to: #{target}")
+      when prefix_key in @known_prefixes and byte_size(rest) >= 38 and byte_size(rest) <= 60 do
+    if MapSet.member?(info, target) do
+      Util.concat("already subscribed to target", target) |> deliver_me()
       {:ok, session, state}
     else
       case AeMdw.Validate.id(target) do
@@ -39,18 +40,18 @@ defmodule AeWebsocket.Websocket.SocketHandler do
           Listener.register(pid)
           Listener.register(self())
 
-          Ets.put(@sub, self(), nil)
-          Ets.put(@main, pid, nil)
-          Ets.put(@subs_target_channels, {id, self()}, nil)
-          Ets.put(@subs_channel_targets, {self(), id}, nil)
+          :ets.insert(@subs_pids, {self(), nil})
+          :ets.insert(@subs_main, {pid, nil})
+          :ets.insert(@subs_target_channels, {{id, self()}, nil})
+          :ets.insert(@subs_channel_targets, {{self(), id}, nil})
 
-          new_state = %{state | info: info ++ [target]}
+          new_state = %{state | info: MapSet.put(info, target)}
 
           deliver_me(new_state.info)
           {:ok, session, new_state}
 
         {:error, {_, k}} ->
-          deliver_me("invalid target: #{k}")
+          Util.concat("invalid target", k) |> deliver_me()
           {:ok, session, state}
       end
     end
@@ -61,21 +62,21 @@ defmodule AeWebsocket.Websocket.SocketHandler do
         session,
         state
       ) do
-    deliver_me("invalid target: #{target}")
+    Util.concat("invalid target", target) |> deliver_me()
     {:ok, session, state}
   end
 
   def handle_message(%{"op" => "Subscribe", "payload" => payload}, session, %{info: info} = state)
       when payload in @known_channels do
-    if payload in info do
-      deliver_me("already subscribed to: #{payload}")
+    if MapSet.member?(info, payload) do
+      Util.concat("already subscribed to", payload) |> deliver_me()
       {:ok, session, state}
     else
       {:ok, pid} = Riverside.LocalDelivery.join_channel(payload)
       Listener.register(pid)
-      Ets.put(:main, pid, nil)
+      :ets.insert(@subs_main, {pid, nil})
 
-      new_state = %{state | info: info ++ [payload]}
+      new_state = %{state | info: MapSet.put(info, payload)}
       deliver_me(new_state.info)
       {:ok, session, new_state}
     end
@@ -88,7 +89,7 @@ defmodule AeWebsocket.Websocket.SocketHandler do
   end
 
   def handle_message(%{"op" => "Subscribe", "payload" => payload}, session, state) do
-    deliver_me("invalid payload: #{payload}")
+    Util.concat("invalid payload", payload) |> deliver_me()
     {:ok, session, state}
   end
 
@@ -101,23 +102,23 @@ defmodule AeWebsocket.Websocket.SocketHandler do
         session,
         %{info: info} = state
       )
-      when prefix_key in @known_prefixes and byte_size(rest) > 38 and byte_size(rest) < 60 do
-    if target in info do
+      when prefix_key in @known_prefixes and byte_size(rest) >= 38 and byte_size(rest) <= 60 do
+    if MapSet.member?(info, target) do
       case AeMdw.Validate.id(target) do
         {:ok, id} ->
           pid = self()
-          Ets.delete(@subs_target_channels, {id, pid})
-          Ets.delete(@subs_channel_targets, {pid, id})
+          :ets.delete(@subs_target_channels, {id, pid})
+          :ets.delete(@subs_channel_targets, {pid, id})
 
           spec =
             Ex2ms.fun do
               {{^pid, _}, _} -> true
             end
 
-          if Ets.select_count(:subs_channel_targets, spec) == 0, do: Ets.delete(@sub, pid)
+          if :ets.select_count(@subs_channel_targets, spec) == 0, do: :ets.delete(@subs_pids, pid)
 
           Riverside.LocalDelivery.leave_channel(id)
-          new_state = %{state | info: info -- [target]}
+          new_state = %{state | info: MapSet.delete(info, target)}
           deliver_me(new_state.info)
           {:ok, session, new_state}
 
@@ -126,7 +127,7 @@ defmodule AeWebsocket.Websocket.SocketHandler do
           {:ok, session, state}
       end
     else
-      deliver_me("no subscription for target: #{target}")
+      Util.concat("no subscription for target", target) |> deliver_me()
       {:ok, session, state}
     end
   end
@@ -136,7 +137,7 @@ defmodule AeWebsocket.Websocket.SocketHandler do
         session,
         state
       ) do
-    deliver_me("invalid target: #{target}")
+    Util.concat("invalid target", target) |> deliver_me()
     {:ok, session, state}
   end
 
@@ -146,25 +147,25 @@ defmodule AeWebsocket.Websocket.SocketHandler do
         %{info: info} = state
       )
       when payload in @known_channels do
-    if payload in info do
+    if MapSet.member?(info, payload) do
       Riverside.LocalDelivery.leave_channel(payload)
-      new_state = %{state | info: info -- [payload]}
+      new_state = %{state | info: MapSet.delete(info, payload)}
 
       deliver_me(new_state.info)
       {:ok, session, new_state}
     else
-      deliver_me("no subscription for payload: #{payload}")
+      Util.concat("no subscription for payload", payload) |> deliver_me()
       {:ok, session, state}
     end
   end
 
   def handle_message(%{"op" => "Unsubscribe", "payload" => payload}, session, state) do
-    deliver_me("invalid payload: #{payload}")
+    Util.concat("invalid payload", payload) |> deliver_me()
     {:ok, session, state}
   end
 
   def handle_message(msg, session, state) do
-    deliver_me("invalid subscription: #{inspect(msg)}")
+    Util.concat("invalid subscription", msg) |> deliver_me()
     {:ok, session, state}
   end
 

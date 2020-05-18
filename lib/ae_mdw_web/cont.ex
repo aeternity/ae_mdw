@@ -68,5 +68,4 @@ defmodule AeMdwWeb.Continuation do
 
   defp error_msg(%ErrInput{message: msg}), do: msg
   defp error_msg(:dos), do: "random access not supported"
-
 end
