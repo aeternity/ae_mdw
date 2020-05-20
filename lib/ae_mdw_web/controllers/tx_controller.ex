@@ -106,11 +106,10 @@ defmodule AeMdwWeb.TxController do
 
   def object_check_fields_all(model_obj, data) do
     {_type, model_tx, tx_rec, tx_rec_data} = tx_data(model_obj)
-    tx_field = Model.object(model_obj, :role)
 
     matches? =
       Enum.reduce_while(data, true, fn
-        {^tx_field, {pos, id}}, _ ->
+        {_, {pos, id}}, _ ->
           (Validate.id!(elem(tx_rec, pos)) === id &&
              {:cont, true}) ||
             {:halt, nil}
@@ -193,17 +192,14 @@ defmodule AeMdwWeb.TxController do
   ##########
 
   def read_tx_hash(tx_hash) do
-    case :aec_db.find_tx_location(tx_hash) do
-      :not_found ->
-        nil
-
-      mb_hash ->
-        {:ok, mb_header} = :aec_chain.get_header(mb_hash)
-        height = :aec_headers.height(mb_header)
-
-        {:gen, height}
-        |> DBS.map(~t[tx], & &1)
-        |> Enum.find(&(Model.tx(&1, :id) == tx_hash))
+    with <<_::256>> = mb_hash <- :aec_db.find_tx_location(tx_hash),
+         {:ok, mb_header} <- :aec_chain.get_header(mb_hash),
+         height <- :aec_headers.height(mb_header) do
+      {:gen, height}
+      |> DBS.map(~t[tx], & &1)
+      |> Enum.find(&(Model.tx(&1, :id) == tx_hash))
+    else
+      _ -> nil
     end
   end
 

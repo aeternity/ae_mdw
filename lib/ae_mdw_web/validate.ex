@@ -5,7 +5,12 @@ defmodule AeMdwWeb.Validate do
 
   import AeMdw.Util
 
-  @id_pk_types %{"account" => :account_pubkey}
+  @id_pk_types %{
+    "account" => :account_pubkey,
+    "contract" => :contract_pubkey,
+    "channel" => :channel,
+    "oracle" => :oracle_pubkey
+  }
 
   ##########
 
