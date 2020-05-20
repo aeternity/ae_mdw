@@ -149,15 +149,40 @@ defmodule AeMdw.Db.Model do
       tx: tx_map
     }
 
-    custom_raw_data(type, raw, tx_rec)
+    custom_raw_data(type, raw, tx_rec, signed_tx, block_hash)
   end
 
-  def custom_raw_data(:contract_create_tx, tx, tx_rec) do
+  def custom_raw_data(:contract_create_tx, tx, tx_rec, _signed_tx, _block_hash) do
     contract_pk = :aect_contracts.pubkey(:aect_contracts.new(tx_rec))
-    put_in(tx, [:tx, :contract_id], contract_pk)
+    put_in(tx, [:tx, :contract_id], :aeser_id.create(:contract, contract_pk))
   end
 
-  def custom_raw_data(_, tx, _),
+  def custom_raw_data(:contract_call_tx, tx, tx_rec, _signed_tx, block_hash) do
+    alias AeMdw.Contract, as: C
+    contract_pk = :aect_call_tx.contract_pubkey(tx_rec)
+    {fun_arg_res, call_rec} = C.call_tx_info(tx_rec, contract_pk, block_hash, &C.to_map/1)
+
+    call_info = %{
+      call_id: :aect_call.id(call_rec),
+      return_type: :aect_call.return_type(call_rec),
+      gas_used: :aect_call.gas_used(call_rec),
+      log: :aect_call.log(call_rec)
+    }
+
+    update_in(tx, [:tx], &Map.merge(&1, Map.merge(call_info, fun_arg_res)))
+  end
+
+  def custom_raw_data(:channel_create_tx, tx, _tx_rec, signed_tx, _block_hash) do
+    channel_pk = :aesc_utils.channel_pubkey(signed_tx) |> ok!
+    put_in(tx, [:tx, :channel_id], :aeser_id.create(:channel, channel_pk))
+  end
+
+  def custom_raw_data(:oracle_register_tx, tx, tx_rec, _signed_tx, _block_hash) do
+    oracle_pk = :aeo_register_tx.account_pubkey(tx_rec)
+    put_in(tx, [:tx, :oracle_id], :aeser_id.create(:oracle, oracle_pk))
+  end
+
+  def custom_raw_data(_, tx, _, _, _),
     do: tx
 
   ##########
@@ -172,21 +197,45 @@ defmodule AeMdw.Db.Model do
     header = :aec_db.get_header(block_hash)
     enc_tx = :aetx_sign.serialize_for_client(header, signed_tx)
 
-    custom_encode(type, enc_tx, tx_rec)
+    custom_encode(type, enc_tx, tx_rec, signed_tx, block_hash)
     |> put_in(["tx_index"], index)
     |> put_in(["micro_index"], mb_index)
     |> put_in(["micro_time"], mb_time)
   end
 
-  def custom_encode(:oracle_response_tx, tx, _),
+  def custom_encode(:oracle_response_tx, tx, _tx_rec, _signed_tx, _block_hash),
     do: update_in(tx, ["tx", "response"], &maybe_base64/1)
 
-  def custom_encode(:contract_create_tx, tx, tx_rec) do
+  def custom_encode(:contract_create_tx, tx, tx_rec, _, _block_hash) do
     contract_pk = :aect_contracts.pubkey(:aect_contracts.new(tx_rec))
     put_in(tx, ["tx", "contract_id"], Enc.encode(:contract_pubkey, contract_pk))
   end
 
-  def custom_encode(_, tx, _),
+  def custom_encode(:contract_call_tx, tx, tx_rec, _signed_tx, block_hash) do
+    alias AeMdw.Contract, as: C
+    contract_pk = :aect_call_tx.contract_pubkey(tx_rec)
+    {fun_arg_res, call_rec} = C.call_tx_info(tx_rec, contract_pk, block_hash, &C.to_json/1)
+
+    call_ser =
+      Map.drop(
+        :aect_call.serialize_for_client(call_rec),
+        ["return_value", "gas_price", "height", "contract_id", "caller_nonce"]
+      )
+
+    update_in(tx, ["tx"], &Map.merge(&1, Map.merge(fun_arg_res, call_ser)))
+  end
+
+  def custom_encode(:channel_create_tx, tx, _tx_rec, signed_tx, _block_hash) do
+    channel_pk = :aesc_utils.channel_pubkey(signed_tx) |> ok!
+    put_in(tx, ["tx", "channel_id"], Enc.encode(:channel, channel_pk))
+  end
+
+  def custom_encode(:oracle_register_tx, tx, tx_rec, _signed_tx, _block_hash) do
+    oracle_pk = :aeo_register_tx.account_pubkey(tx_rec)
+    put_in(tx, ["tx", "oracle_id"], Enc.encode(:oracle_pubkey, oracle_pk))
+  end
+
+  def custom_encode(_, tx, _, _, _),
     do: tx
 
   def maybe_base64(bin) do
