@@ -19,908 +19,402 @@ To start your Phoenix server:
   * Install dependencies with `mix deps.get`
   * Install Node.js dependencies with `cd assets && npm install`
   * Start Phoenix endpoint with `mix phx.server`
- 
+
 ## HTTP interface
 
-  * **All transactions for an account:**
-```
-GET /middleware/transactions/account/<account>?<limit>&<page>
-```
-```
-$ curl -s 'http://localhost:4000/middleware/transactions/account/ak_KHfXhF2J6VBt3sUgFygdbpEkWi6AKBkr9jNKUCHbpwwagzHUs?limit=1&page=1'
+HTTP endpoints which return a subset of all possible results allow specifying a scope the client is interested in.
 
-[
-   {
-      "block_hash":"mh_Gk5UMpjjeRz7uwp9h66uhwMZ4hWcHteb8xZDDFVJBf91witgg",
-      "block_height":251931,
-      "hash":"th_BJEmtkSNj7Z5AAvaP8RDXzdDfK6U4WjdgrJ4q4NaU5Apz6YNA",
-      "micro_index":22,
-      "micro_time":1588875498223,
-      "signatures":[
-         "sg_Ks3eGpMpkxvGqhjDaMrKjukNr4CJvnf39SxcQ4qJVR24rhuepXj4MKq1UimSb8E7mMQfadFi9SKeXoDs33ETN5VPudX9W"
+### Scope
+
+Scope determines the range of results to iterate over, as well as direction:
+
+- forward   - from beginning to the end
+- backward  - from end to the beginning
+- gen/A-B   - from generation A to B (forward if A < B, backward otherwise)
+- txi/A-B   - from transaction index A to B (forward if A < B, backward otherwise)
+
+### Query
+
+There are two types of queries, which can't be mixed:
+
+- property based - allowing to specify ID (account) of interest, along with type of transaction (or type_group - grouping channel, contract, ga, name or other types together)
+
+- field based - allowing to query transactions having a specific ID in a particular field(s) of transaction record. The fields must be prefixed with TX type (without `_tx` suffix), e.g.: spend.sender_id. (performance of these queries may need to be addressed later, but API shouldn't change)
+
+
+There are also two types of combinators which specify how to interpret if transaction in question matches the query:
+
+- OR - at least one query (type) parameter matches (except IDs, provided by account parameter)
+- AND - all query parameters must match
+
+(TODO: better explanation of ID/type query combinations)
+
+### Pagination
+
+All endpoints which allow specifying of scope return a link in the reply, which can be used to get the following page in the result set.
+
+
+** TRANSACTION endpoints **
+
+* TX - get transaction by hash
+
+```
+curl -s "http://35.159.10.159:4000/tx/th_zATv7B4RHS45GamShnWgjkvcrQfZUWQkZ8gk1RD4m2uWLJKnq"
+
+{
+  "block_hash": "mh_2kE3N7GCaeAiowu1a7dopJygxQfxvRXYCNy7Pc657arjCa8PPe",
+  "block_height": 257058,
+  "hash": "th_zATv7B4RHS45GamShnWgjkvcrQfZUWQkZ8gk1RD4m2uWLJKnq",
+  "micro_index": 19,
+  "micro_time": 1589801584978,
+  "signatures": [
+    "sg_Z7bbM2a8tDZchtpAkQuMrw5S3cf3yvVizx5qb6hB58KJBBTqhCcpgq2adwNz9SneSQgzD6QQSToiKn3XosS7qybacLpiG"
+  ],
+  "tx": {
+    "amount": 20000,
+    "fee": 19300000000000,
+    "nonce": 2129052,
+    "payload": "ba_MjU3MDU4OmtoXzhVdnp6am9tZG9ZakdMNURic2hhN1RuMnYzYzNXWWNCVlg4cWFQV0JyZjcyVHhSeWQ6bWhfald1dnhrWTZReXBzb25RZVpwM1B2cHNLaG9ZMkp4cHIzOHhhaWR2aWozeVRGaTF4UDoxNTg5ODAxNTkxQa+0cQ==",
+    "recipient_id": "ak_zvU8YQLagjcfng7Tg8yCdiZ1rpiWNp1PBn3vtUs44utSvbJVR",
+    "sender_id": "ak_zvU8YQLagjcfng7Tg8yCdiZ1rpiWNp1PBn3vtUs44utSvbJVR",
+    "ttl": 257068,
+    "type": "SpendTx",
+    "version": 1
+  },
+  "tx_index": 11306257
+}
+```
+
+* TXI - get transaction by index
+
+```
+curl -s "http://35.159.10.159:4000/txi/10000000"
+
+{
+  "block_hash": "mh_2J4A4f7RJ4oVKKCFmBEDMQpqacLZFtJ5oBvx3fUUABmLv5SUZH",
+  "block_height": 240064,
+  "hash": "th_qYi26SEQoW9baWkwfenWxLCveQ1QNSThEzxxWzfHTscfcfovs",
+  "micro_index": 94,
+  "micro_time": 1586725056043,
+  "signatures": [
+    "sg_WomDtVzmhoJ2fitFkHGMEciwgmQ4FqXW1mZ5W9GNFenpsTSSduPA8iswWZnU4xma2g9EzJy8a5EPqtSf1dMZNY1pT7A55"
+  ],
+  "tx": {
+    "amount": 20000,
+    "fee": 19340000000000,
+    "nonce": 1826406,
+    "payload": "ba_MjQwMDY0OmtoXzJ2aFpmRUJSZGpEY2V6Mm5aa3hTU1FHS2tRb0FtQUhrbWhlVU03ZEpFekdBd0pVaVZvOm1oXzJkWEQzVHNqMmU2MUttdFVLRFNLdURrdEVOWXdWZDJjdUhMYUJZTUhKTUZ1RnYydmZpOjE1ODY3MjUwNTYoz+LD",
+    "recipient_id": "ak_2QkttUgEyPixKzqXkJ4LX7ugbRjwCDWPBT4p4M2r8brjxUxUYd",
+    "sender_id": "ak_2QkttUgEyPixKzqXkJ4LX7ugbRjwCDWPBT4p4M2r8brjxUxUYd",
+    "ttl": 240074,
+    "type": "SpendTx",
+    "version": 1
+  },
+  "tx_index": 10000000
+}
+```
+
+* TXS - get transactions or their count
+
+### TXS/COUNT endpoint
+
+Requests where scope is provided should be used carefully.
+It's easy to trigger counting of millions of transactions, which takes significant amount of time. Therefore, the querying power of this endpoint may be limited in the future, depending on the usage patterns.
+
+* All transactions:
+
+```
+curl -s "http://35.159.10.159:4000/txs/count"
+
+{
+  "count": 11339717
+}
+```
+
+* In generations range:
+
+```
+curl -s "http://35.159.10.159:4000/txs/gen/819-1000/count"
+
+{
+  "count": 11
+}
+```
+
+* In generation range 50000-51000, counting any channel OR contract transaction:
+
+```
+curl -s "http://35.159.10.159:4000/txs/gen/50000-51000/count/or?type_group=channel&type_group=contract"
+
+{
+  "count": 12
+}
+```
+
+* In generation range 50000-51000, counting spend transactions where sender_id = ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv AND recipient_id = ak_2FurtphSnS4S512ZioQgXg4yEXTuXPEEMVAUuzdReioYqY6mxa:
+
+```
+curl -s "http://35.159.10.159:4000/txs/gen/50000-51000/count/and?spend.sender_id=ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv&spend.recipient_id=ak_2FurtphSnS4S512ZioQgXg4yEXTuXPEEMVAUuzdReioYqY6mxa"
+
+{
+  "count": 2
+}
+
+```
+
+### TXS endpoint
+
+The `limit` parameter in the query specifies how many results should be in the reply.
+In the following examples, the `limit` parameter is set to 1, for demonstration.
+Usually, it should not be provided and in that case the `limit` defaults to 10.
+
+* All transactions, latest first:
+
+```
+curl -s "http://35.159.10.159:4000/txs/backward?limit=1"
+
+{
+  "data": [
+    {
+      "block_hash": "mh_8baqCgUAPP63M8T9nJnFBU67fLWLbZcjC5nEPsvk8YpXUwjQv",
+      "block_height": 257526,
+      "hash": "th_K7xJW17nMhr86h7hHZseLx4GubDgLTbLuw5q2VcfM2qQZUC16",
+      "micro_index": 85,
+      "micro_time": 1589888424100,
+      "signatures": [
+        "sg_FVGXi2ar4nJUHrJJVheb9iWLZh32pSZhVTwfDBYiji7pyJxaNhZXwPmyHLgSsqzAgqA8g34pDKUtxJnqYS13kAwgWVFwL"
       ],
-      "tx":{
-         "amount":20000,
-         "fee":19320000000000,
-         "nonce":2038361,
-         "payload":"ba_MjUxOTMxOmtoX3BreUVUdlBNekpqb0tzY0RlNHY5SnFFTFBBV0RYZDNXNnNOOEZuOWM1TFJHVGdHNjk6bWhfMndTSFB0VGJNSDY0UVVFc3R4emJqckJERk05WGNER0t3c1pua0h0Y05jaHBzblE3eko6MTU4ODg3NTUwMd6FtiU=",
-         "recipient_id":"ak_KHfXhF2J6VBt3sUgFygdbpEkWi6AKBkr9jNKUCHbpwwagzHUs",
-         "sender_id":"ak_KHfXhF2J6VBt3sUgFygdbpEkWi6AKBkr9jNKUCHbpwwagzHUs",
-         "ttl":251941,
-         "type":"SpendTx",
-         "version":1
+      "tx": {
+        "amount": 20000,
+        "fee": 19320000000000,
+        "nonce": 2139604,
+        "payload": "ba_MjU3NTI2OmtoX3dVM1BodnNIYlNnd1dweHFqb1A4RXdmbzRFZlFveWNURjFWNGtYODg3VVFUdTc4UVA6bWhfMmg5OVNOTXNFYXVCZURjQ3JYblB3U01jWjZUYzM4UTlLekZGbjYzcWNzRk04TkpnYVc6MTU4OTg4ODQyNds7xCg=",
+        "recipient_id": "ak_2QkttUgEyPixKzqXkJ4LX7ugbRjwCDWPBT4p4M2r8brjxUxUYd",
+        "sender_id": "ak_2QkttUgEyPixKzqXkJ4LX7ugbRjwCDWPBT4p4M2r8brjxUxUYd",
+        "ttl": 257536,
+        "type": "SpendTx",
+        "version": 1
       },
-      "tx_index":10925501
-   }
-]
-```
----
-  * **All transactions between two heights(inclusive), optionally of type `tx_type`:**
-```
-GET /middleware/transactions/interval/<from>/<to><limit>&<page>&<txtype>
-```
-
-```
-curl -s curl -s 'http://localhost:4000/middleware/transactions/interval/100/300?limit=1&page=1'
-
-{
-   "transactions":[
-      {
-         "block_hash":"mh_2SPER3HvFjCPcrqVta5AJHYfGswTSVfBvpb6zB68ApFFAfxmEc",
-         "block_height":259,
-         "hash":"th_UUhoMFAZnwxp55wsQ62Y59rsfxLBX8usHSahpY8kJDpaHnQMf",
-         "micro_index":0,
-         "micro_time":1543418748897,
-         "signatures":[
-            "sg_YHNHsFRQL8XSx32yCmmzp1hYoWhLh8Z1n7F7woapH8PTjR2bFnS6DfV2nCBbHsio5Du7fHxuxEsCkfnSa42faSasERpn8"
-         ],
-         "tx":{
-            "amount":1000000,
-            "fee":20000,
-            "nonce":17,
-            "payload":"ba_SGFucyBkb25hdGVzs/BHFA==",
-            "recipient_id":"ak_oscBT9ZCXvcJ6DPW88avjbWLAv8HwsHufHfX9m83sfe6qYFnZ",
-            "sender_id":"ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5",
-            "type":"SpendTx",
-            "version":1
-         },
-         "tx_index":23
-      }
-   ]
+      "tx_index": 11341937
+    }
+  ],
+  "next": "txs/gen/257527-0?limit=1&page=2"
 }
 ```
+
+* All transactions, earliest first:
+
 ```
-curl -s 'http://localhost:4000/middleware/transactions/interval/100/300?limit=1&page=1&txtype=NameClaimTx'
+curl -s "http://35.159.10.159:4000/txs/forward?limit=1"
 
 {
-   "transactions":[
-      {
-         "block_hash":"mh_2MrzaVLDZM7txv7SUQYBUr6V6BRDDWuMELtUQMjtZZe3mNw2Tu",
-         "block_height":194,
-         "hash":"th_24BwirgsY9d979KZJ5wxaNfah2UCyzhvRYqe9RmNB9FWmoTgdz",
-         "micro_index":0,
-         "micro_time":1543407871282,
-         "signatures":[
-            "sg_LdDz6aAr1QWpamG6yxgn9xLco4DnXKxFzFeAbZkjGUQe9N971H7kn9EFF6tXErkbGBCyx2Q8zwMkSZLijMjCdWWuD6LYu"
-         ],
-         "tx":{
-            "account_id":"ak_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM",
-            "fee":20000,
-            "name":"philipp.test",
-            "name_salt":123,
-            "nonce":2,
-            "ttl":1000,
-            "type":"NameClaimTx",
-            "version":2
-         },
-         "tx_index":15
-      }
-   ]
-}
-```
----
-  * **Returns the total of all transfers and the number of transactions for each date in a range:**
-```
-GET /middleware/transactions/rate/<from>/<to>
-```
-```
-curl -s 'http://localhost:4000/middleware/transactions/rate/20190101/20190105'
-
-```
----
-  * **All SpendTX transactions from one account to another with optional type parameter limiting returned values (see above for tx_type example):**
-```
-GET /middleware/transactions/account/<sender>/to/<receiver>&<txtype>
-```
-```
-curl -s 'http://localhost:4000/middleware/transactions/account/ak_2YBpaUCUKZWvHgmQXWQk5bBUzmVGKgbf1RQ3saFXneGJXkv3uH/to/ak_2tQGvA2fjUjcNzeAt4PiwHpGf27RtmYwvnCvuoDqQRAvKvZkcs?limit=1&page=1'
-
-[
-   {
-      "block_hash":"mh_GkmbqmxCLieUyPnjKezr2nMr84ULHSyESWvoeXA5GgsZ9s3kp",
-      "block_height":214033,
-      "hash":"th_Yujp7Ey1kzMb8PyMnXhYnwbAaBPJ8wr3JgadS5zndzB2bdye3",
-      "micro_index":33,
-      "micro_time":1582011698254,
-      "signatures":[
-         "sg_Pfi8Lcv9Nx4wdx4XTsXALijmni7qyKXnGeG5yC3Y3Bi2W3Hs8qAyQuzbDBPmB6sXqd23ptBo4VQP5TvMUJLBwQu7U2ge6"
+  "data": [
+    {
+      "block_hash": "mh_ufiYLdN8am8fBxMnb6xq2K4MQKo4eFSCF5bgixq4EzKMtDUXP",
+      "block_height": 1,
+      "hash": "th_2FHxDzpQMRTiRfpYRV3eCcsheHr1sjf9waxk7z6JDTVcgqZRXR",
+      "micro_index": 0,
+      "micro_time": 1543375246712,
+      "signatures": [
+        "sg_Fipyxq5f3JS9CB3AQVCw1v9skqNBw1cdfe5W3h1t2MkviU19GQckERQZkqkaXWKowdTUvr7B1QbtWdHjJHQcZApwVDdP9"
       ],
-      "tx":{
-         "amount":50000000000000000000,
-         "fee":50000000000000,
-         "nonce":2,
-         "payload":"ba_Xfbg4g==",
-         "recipient_id":"ak_2tQGvA2fjUjcNzeAt4PiwHpGf27RtmYwvnCvuoDqQRAvKvZkcs",
-         "sender_id":"ak_2YBpaUCUKZWvHgmQXWQk5bBUzmVGKgbf1RQ3saFXneGJXkv3uH",
-         "ttl":214133,
-         "type":"SpendTx",
-         "version":1
+      "tx": {
+        "amount": 150425,
+        "fee": 101014,
+        "nonce": 1,
+        "payload": "ba_NzkwOTIxLTgwMTAxOGSbElc=",
+        "recipient_id": "ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5",
+        "sender_id": "ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5",
+        "type": "SpendTx",
+        "version": 1
       },
-      "tx_index":8026455
-   }
-]
-```
-TODO! It is not working for tx_type
-```
-curl -s 'http://localhost:4000/middleware/transactions/account/ak_2YBpaUCUKZWvHgmQXWQk5bBUzmVGKgbf1RQ3saFXneGJXkv3uH/to/ak_2tQGvA2fjUjcNzeAt4PiwHpGf27RtmYwvnCvuoDqQRAvKvZkcs?limit=1&page=1&txtype=NameClaimTx'
-
-
-```
----
-  * **How many transactions does a particular account have:**
-```
-GET /middleware/transactions/account/<account>/count?<txtype>
-```
-```
-curl -s 'http://localhost:4000/middleware/transactions/account/ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR/count
-
-{
-   "count":19301
+      "tx_index": 0
+    }
+  ],
+  "next": "txs/gen/0-257533?limit=1&page=2"
 }
 ```
----
-  * **All generations between two heights:**
+
+* All transactions in range specified by generations:
+
 ```
-GET /middleware/generations/<from>/<to>
-```
-```
-curl -s 'http://localhost:4000/middleware/generations/10/11'
+curl -s "http://35.159.10.159:4000/txs/gen/100000-100010?limit=1"
 
 {
-   "data":{
-      "10":{
-         "beneficiary":"ak_2RGTeERHPm9zCo9EsaVAh8tDcsetFSVsD9VVi5Dk1n94wF3EKm",
-         "hash":"kh_TKBhfcEynk9ttapsacvvuNnPJuq9wzkypVoupm1Mopc9poW2g",
-         "height":10,
-         "info":"cb_Xfbg4g==",
-         "micro_blocks":{
-
-         },
-         "miner":"ak_2ox12gzKj7Av78YFVvDWNjygvBoA6DwKz7hcYeETGLDjahU5j3",
-         "nonce":10003507761901478523,
-         "pow":"[11191616, 26518153, 51581307, 70554579, 71991650, 83744389, 89211791, 91024019, 128834893, 134805543, 160888047, 165620756, 186131583, 186938090, 189016617, 200694827, 209146445, 226101150, 232717310, 254080300, 254271501, 262316567, 286404769, 312575703, 314932667, 320553930, 340842562, 342081223, 353862915, 354901154, 360935701, 378895664, 385928735, 428501613, 441643122, 464285959, 471446623, 489429813, 495455381, 513208695, 515136448, 527369566]",
-         "prev_hash":"kh_2RGA3i6944pw8PM9TUTYanzbd4WgrYjLUamPjW789Vgqx9WWxH",
-         "prev_key_hash":"kh_2RGA3i6944pw8PM9TUTYanzbd4WgrYjLUamPjW789Vgqx9WWxH",
-         "state_hash":"bs_2pAUexcNWE9HFruXUugY28yfUifWDh449JK1dDgdeMix5uk8Q",
-         "target":522133279,
-         "time":1543376870213,
-         "version":1
-      },
-      "11":{
-         "beneficiary":"ak_2BMyg3B2p3KF4bosu7hyjvh2d38scnRyhU1H2peWdM2bMLBxqL",
-         "hash":"kh_2CP6hGvh9SYCkKJXEZE8SBhvhBfPgyJfjW8tKxgdoGYWdzpaqE",
-         "height":11,
-         "info":"cb_Xfbg4g==",
-         "micro_blocks":{
-
-         },
-         "miner":"ak_2frtLw4pPM4GQqf9DKry6xYvt3SyXXec4Lo6dAxGM5Q6KLx4xi",
-         "nonce":5861939462010848357,
-         "pow":"[15519545, 21172513, 29911846, 34789291, 91283456, 107890546, 139870994, 141894398, 147566753, 161714599, 174372444, 193372837, 215762846, 226903366, 241047163, 246122722, 249419984, 260167158, 262246476, 265812782, 277598780, 310962761, 319150867, 329971206, 348404540, 349005655, 361367666, 386467872, 387392797, 399661145, 406166464, 407032332, 407935085, 408271605, 408550883, 423879003, 473513896, 477098686, 479285003, 499658278, 513576771, 527132097]",
-         "prev_hash":"kh_TKBhfcEynk9ttapsacvvuNnPJuq9wzkypVoupm1Mopc9poW2g",
-         "prev_key_hash":"kh_TKBhfcEynk9ttapsacvvuNnPJuq9wzkypVoupm1Mopc9poW2g",
-         "state_hash":"bs_2pAUexcNWE9HFruXUugY28yfUifWDh449JK1dDgdeMix5uk8Q",
-         "target":522133279,
-         "time":1543377442646,
-         "version":1
-      }
-   }
-}
-```
----
-  * **All oracles, most recently registered first:**
-```
-GET /middleware/oracles/list?<limit>&<page>
-```
-```
-curl -s 'http://localhost:4000/middleware/oracles/list?limit=1&page=1'
-
-[
-   {
-      "block_hash":"mh_Bgfjv5j2hwd8kzqv6Px3gjbEuWtK72sCYHtWXfyosKWqRhbeB",
-      "block_height":251298,
-      "expires_at":251798,
-      "micro_index":92,
-      "micro_time":1588758258208,
-      "oracle_id":"ok_NcsdzkY5TWD3DY2f9o87MruJ6FSUYRiuRPpv5Rd2sqsvG1V2m",
-      "signatures":[
-         "sg_8VUnB3LaTfF3yGHP9rKhLwFF4ZT2TgdJe28EGcn4zAJCLQLmCNRc7aj3up6WNgTXtevXKqY9xnAHxx8HWEGbD2ZvTV6Y7"
+  "data": [
+    {
+      "block_hash": "mh_zpiiJYsHZZ9ibKSF1fGLcossdgFjHNaN2Yu6cEF9KSNLqQLbS",
+      "block_height": 100000,
+      "hash": "th_VAGQK8LmPQ5NvQ6kJZz7rhQdMJ5nTJZ9uHRbDKRWDGD4Ex5Gj",
+      "micro_index": 0,
+      "micro_time": 1561390173025,
+      "signatures": [
+        "sg_RXp8FEo8cDwiy61S9fkH6dJrMjZL2Cri5FJLbK8Q7VWXamX5eh2CBvL1cjsy6BW8hizvruXdDt5vUhJH1NA4Ye9qUEX8i"
       ],
-      "transaction_hash":"th_2LFEqBAT3h514UbnH3JuMY3fymzMjnJr62fwu47HU21zso8sjf",
-      "tx":{
-         "abi_version":0,
-         "account_id":"ak_NcsdzkY5TWD3DY2f9o87MruJ6FSUYRiuRPpv5Rd2sqsvG1V2m",
-         "fee":16592000000000,
-         "nonce":415,
-         "oracle_ttl":{
-            "type":"delta",
-            "value":500
-         },
-         "query_fee":20000000000000,
-         "query_format":"string",
-         "response_format":"string",
-         "type":"OracleRegisterTx",
-         "version":1
+      "tx": {
+        "amount": 5e+21,
+        "fee": 20000000000000,
+        "nonce": 720,
+        "payload": "ba_Xfbg4g==",
+        "recipient_id": "ak_2B6nPK6HLK5Yp7qMbMeLMSDJwxNdypbDzW3xm938uw2a7EemdQ",
+        "sender_id": "ak_2mggc8gkx9nhkciBtYbq39T6Jzd7WBms6jgYoLAAeRNgdy3Md6",
+        "ttl": 100500,
+        "type": "SpendTx",
+        "version": 1
       },
-      "tx_index":10877319
-   }
-]
-```
----
-  * **Oracle’s transactions:**
-```
-GET /middleware/oracles/<oracle_id>?<limit>&<page>
-```
-```
-curl -s 'http://localhost:4000/middleware/oracles/ok_28QDg7fkF5qiKueSdUvUBtCYPJdmMEoS73CztzXCRAwMGKHKZh?limit=1&page=1'
-
-
-```
----
-  * **A list of all state channels which have been opened, and not closed:**
-```
-GET /middleware/channels/active
-```
-```
-curl -s 'http://localhost:4000/middleware/channels/active'
-
-
-```
----
-  * **For this state channel, show its on-chain transactions:**
-```
-GET /middleware/channels/transactions/address/<address>
-```
-```
-curl -s 'http://localhost:4000/middleware/channels/transactions/address/ch_2tceSwiqxgBcPirX3VYgW3sXgQdJeHjrNWHhLWyfZL7pT4gZF4'
-
-
-```
----
-  * **All contracts, most recent first:**
-```
-GET /middleware/contracts/all?<limit>&<page>
-```
-```
-curl -s 'http://localhost:4000/middleware/contracts/all?limit=2&page=1'
-
-[
-   {
-      "block_height":250908,
-      "contract_id":"ct_2uyRYUfzxP8nfvaWiw4AVFwHFtgNgdZEMcAvDAFd1Rd8ed18JC",
-      "transaction_hash":"th_27V4UmRhyeSuPEDieXVuAdE3v42dDnLzPY6uism1bFhHCPfWKv"
-   },
-   {
-      "block_height":250873,
-      "contract_id":"ct_vSRAB45Z1kfCFSxDQCJjPiT4RAMWWwa1iehLEXyv2awVdwmKC",
-      "transaction_hash":"th_w1zM6peugDu3mfSqMFksSCY2GbdJ2PjuAZ1dKYwJJqaJDGwb"
-   }
-]
-```
----
-  * **If the contract has calls, this endpoint returns them:**
-```
-GET /middleware/contracts/calls/address/<address>?<limit>&<page>
-```
-```
-curl -s 'http://localhost:4000/middleware/contracts/calls/address/ct_AhMbfHYPBK8Qu1DkqXwQHcMKZoZAUndyYTNZDnyS1AdWh7X9U?limit=2&page=1'
-
-[
-   {
-      "arguments":{
-         "arguments":{
-            "type":"tuple",
-            "value":[
-               {
-                  "type":"list",
-                  "value":[
-                     {
-                        "type":"tuple",
-                        "value":[
-                           {
-                              "type":"word",
-                              "value":14986354656192518382925446047860900756848227528093424515988224583964489617390
-                           },
-                           {
-                              "type":"word",
-                              "value":60000000000
-                           }
-                        ]
-                     }
-                  ]
-               }
-            ]
-         },
-         "function":"payout"
-      },
-      "caller_id":"ak_2vx4yNy2FUi7Fe2ZjKbKvpnabDTJE8RijtfAhQHNjY5zfj1We6",
-      "callinfo":{
-         "caller_id":"ak_2vx4yNy2FUi7Fe2ZjKbKvpnabDTJE8RijtfAhQHNjY5zfj1We6",
-         "caller_nonce":2,
-         "contract_id":"ct_AhMbfHYPBK8Qu1DkqXwQHcMKZoZAUndyYTNZDnyS1AdWh7X9U",
-         "gas_price":1000000000,
-         "gas_used":22150,
-         "height":97941,
-         "log":[
-
-         ],
-         "return_type":"ok",
-         "return_value":"cb_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADfhHWADzMnYB"
-      },
-      "contract_id":"ct_AhMbfHYPBK8Qu1DkqXwQHcMKZoZAUndyYTNZDnyS1AdWh7X9U",
-      "result":{
-         "function":"payout",
-         "result":{
-            "type":"word",
-            "value":60000000000
-         }
-      },
-      "transaction_id":"th_NVCNN7txvnDJwT9S8Qb13ffX3E6GcfmfBLhXco8AwLLDZgpHm"
-   }
-]
-```
----
-  * **All transactions for this contract:**
-```
-GET /middleware/contracts/transactions/address/<address>?<limit>&<page>
-```
-```
-curl -s 'http://localhost:4000/middleware/contracts/transactions/address/ct_AhMbfHYPBK8Qu1DkqXwQHcMKZoZAUndyYTNZDnyS1AdWh7X9U?limit=1&page=1'
-
-{
-   "transactions":[
-      {
-         "block_hash":"mh_bbAzJcovSNLNW1qwPMWkofdRsXShnQcHFzscyxLp7gxhoHuZB",
-         "block_height":97934,
-         "hash":"th_2raHdPQ8xtbE6oKh3z1pFmUpyFC5H7ZTBkNB8TuVydJjwedduL",
-         "micro_index":0,
-         "micro_time":1561019798515,
-         "signatures":[
-            "sg_Q3Ud2LKftTKKKCCWfEFLUs1THsczRS9xJjFvxowDBcvay3azYfyRumaF2aQnqSpHkWZ1GBBE2wbMUA7NBgnEinmLKFwyN"
-         ],
-         "tx":{
-            "abi_version":1,
-            "amount":0,
-            "call_data":"cb_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACC5yVbyizFJqfWYeqUF89obIgnMVzkjQAYrtsG9n5+Z6gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAnHQYrA==",
-            "code":"cb_+QhpRgGgqQNVd4r2/yyoTbBfj5MFzMC1UeBDQro+Ve+ke+6Ev7P5Bs/5Ak2gqmFCUiigORZ09u2r5+47cRipSBbbt8qP5wUU5XnLwWiGcGF5b3V0uQHgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKD//////////////////////////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcD//////////////////////////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAuEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+QHLoLnJVvKLMUmp9Zh6pQXz2hsiCcxXOSNABiu2wb2fn5nqhGluaXS4YAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//////////////////////////////////////////7kBQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEA//////////////////////////////////////////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///////////////////////////////////////////+QKuoPo8c94emJ3PC7jHvg6QmcI3EptLCBFzx9KYmzO4otqLh3BheW91dCe5AkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwP//////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACIP//////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC4QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC5AXFiAACPYgAAr5GAgIBRf7nJVvKLMUmp9Zh6pQXz2hsiCcxXOSNABiu2wb2fn5nqFGIAAUtXUICAUX+qYUJSKKA5FnT27avn7jtxGKlIFtu3yo/nBRTlecvBaBRiAADaV1CAUX/6PHPeHpidzwu4x74OkJnCNxKbSwgRc8fSmJszuKLaixRiAAFXV1BgARlRAFtgABlZYCABkIFSYCCQA2ADgVKQWWAAUVlSYABSYADzW2AAgFJgAPNbWVlgIAGQgVJgIJADYAAZWWAgAZCBUmAgkANgA4FSgVKQVltgIAFRUZBQWVCAkVBQgGAAkJFQW4GAYAEBYgABAFdQgJFQUJBWW4BgAQFiAAEQV1BgARlRAFuAUYBRkGAgAVGRYCABUWAAYABgAIRZYCABkIFSYCCQA2ABgVKGYABa8VCAg4UBlFCUUFBQUGIAAO5WW1BQgpFQUGIAALdWW2AgAVGAUZBgIAFRWVCBgZJQklBQYgAA7lYqt7+f",
-            "deposit":0,
-            "fee":1400000000000000,
-            "gas":100000,
-            "gas_price":1000000000,
-            "nonce":1,
-            "owner_id":"ak_2vx4yNy2FUi7Fe2ZjKbKvpnabDTJE8RijtfAhQHNjY5zfj1We6",
-            "type":"ContractCreateTx",
-            "version":1,
-            "vm_version":4
-         },
-         "tx_index":2152877
-      }
-   ]
+      "tx_index": 2160628
+    }
+  ],
+  "next": "txs/gen/100000-100010?limit=1&page=2"
 }
 ```
----
-  * **All names:**
-```
-GET /middleware/names
-```
-```
-curl -s 'http://localhost:4000/middleware/names'
-```
----
-  * **Search a name:**
-```
-GET /middleware/names/<name>
-```
-```
-curl -s 'http://localhost:4000/middleware/names/dinchotodorov.chain'
-```
----
-  * **All active names:**
-```
-GET /middleware/names/active
-```
-```
-curl -s 'http://localhost:4000/middleware/names/active'
+
+* All transactions in range specified by transaction indices:
 
 ```
----
-  * **All active auctions:**
-```
-GET /middleware/names/auctions/active
-```
-```
-curl -s 'http://localhost:4000/middleware/names/auctions/active'
-
-```
----
-  * **Count all active auctions:**
-```
-GET /middleware/names/auctions/active/count
-```
-```
-curl -s 'http://localhost:4000/middleware/names/auctions/active/count'
-
-```
----
-  * **Bids for account:**
-```
-GET /middleware/names/auctions/bids/account/<account>
-```
-```
-curl -s 'http://localhost:4000//middleware/names/auctions/bids/account/ak_dvNHMgVvdSgDchLsmcUpuFTbMBGfG3E5V9KZnNjLYPyEhcqnL'
-
-
-```
----
-  * **Bids for name:**
-```
-GET /middleware/names/auctions/bids/<name>
-```
-```
-curl -s 'http://localhost:4000/middleware/names/auctions/bids/keno.chain'
-```
----
-  * **Returns the name for account**
-```
-GET /middleware/names/reverse/<account>
-```
-```
-curl -s 'http://localhost:4000/middleware/names/reverse/ak_rWHahs7yKku8tFfpPU67ALmmwvD89SAcXYGDM4imzCHSGqhBS'
-
-```
----
-  * **Info for auction:**
-```
-GET /middleware/names/auctions/<name>/info
-```
-```
-curl -s 'http://localhost:4000/middleware/names/auctions/<keno.chain/info'
-
-```
----
-  * **Info for hash:**
-```
-GET /middleware/names/hash/<hash>
-```
-```
-curl -s 'http://localhost:4000/middleware/names/hash/'
-
-```
-
----
-  * **The reward at a block height, which is comprised of the mining reward, and the fees for the transactions which are included:**
-```
-GET /middleware/reward/height/<height>
-```
-```
-curl -s 'http://localhost:4000/middleware/reward/height/10000'
-
-
-```
----
-  * **The size of all transactions, in bytes, at the current height of the chain. This number is indicative.**
-```
-GET /middleware/size/current
-```
-```
-curl -s 'http://localhost:4000/middleware/size/current'
-
-
-```
----
-  * **The same as above, but at some height:**
-```
-GET /middleware/size/height/<height>
-```
-```
-curl -s 'http://localhost:4000/middleware/size/height/100'
-
-
-```
----
-  * **A status page, for monitoring purposes:**
-```
-GET /middleware/status
-```
-```
-curl -s 'http://localhost:4000/middleware/status'
-
-
-```
----
-  * **What was the height at a certain time, measured in milliseconds since Jan 1 1970 (i.e. UNIX time multiplied by 1,000):**
-```
-GET /middleware/height/at/<millis_since_epoch>
-```
-```
-curl -s 'http://localhost:4000/middleware/height/at/1543375246777'
-
-
-
-```
----
-  * **Get current generation:**
-```
-GET /v2/generations/current
-```
-```
-curl -s 'http://localhost:4000/v2/generations/current'
+curl -s "http://35.159.10.159:4000/txs/txi/1000000-1000010?limit=1"
 
 {
-   "key_block":{
-      "beneficiary":"ak_2ceZWyHKEaXrufdA3aTvV3fbJop3JQhKQJi62Fpv4RcAG5DYUu",
-      "hash":"kh_3PVTBP8J7vmyoRxtjx5TSZL2jti5A1pXwEvckz3gxeHnxQbaw",
-      "height":254359,
-      "info":"cb_AAACHMKhM24=",
-      "miner":"ak_2uhzKVEFL2NkaSU39upfkCVYTvnJ5apt3v8kQ5eaHAFpcCa2GC",
-      "nonce":72064136078622913,
-      "pow":[
-         7245023,
-         25342761,
-         26178826,
-         26331125,
-         28724592,
-         32138488,
-         66981370,
-         74805514,
-         92443699,
-         99586261,
-         137189151,
-         159108084,
-         167878373,
-         167894268,
-         188118707,
-         207218006,
-         230354445,
-         236046436,
-         262556960,
-         284306859,
-         296779462,
-         297558975,
-         303409349,
-         321531731,
-         339623708,
-         351603577,
-         363945956,
-         370229977,
-         370230655,
-         404673637,
-         405121256,
-         406354260,
-         429985184,
-         447181695,
-         449771865,
-         452473833,
-         466833703,
-         505374672,
-         515537421,
-         521904898,
-         529705096,
-         535797298
+  "data": [
+    {
+      "block_hash": "mh_zfnKKWbUt84ZkzGbkNZEQYgsXhcLgypUK4eeMk2ZWARpSpy9b",
+      "block_height": 44495,
+      "hash": "th_84uc6avLpH8WFMbvnYkPWSeiiCpm9wXZUnPMm5JSrjJH4djAB",
+      "micro_index": 43,
+      "micro_time": 1551367578947,
+      "signatures": [
+        "sg_3GcpsLwp53hdcJmXPqyAJoP9hV4xdQBnmCyMCZJoFXzQ5tLvva8tSjU2MoLUEenxUnxjq3JNXPo8CgiJVsSTf9M8LhgUe"
       ],
-      "prev_hash":"kh_2DvN2yWvmcriSxtwT91jFYsLsn12EmYwjsyb63mWu1m7URzAqP",
-      "prev_key_hash":"kh_2DvN2yWvmcriSxtwT91jFYsLsn12EmYwjsyb63mWu1m7URzAqP",
-      "state_hash":"bs_2AtBuoufSQXa47PhzkSXtzDgJNCVwTy8yeYeAiSYmPrU4hMmUa",
-      "target":505848443,
-      "time":1589312240477,
-      "version":4
-   },
-   "micro_blocks":[
-      "mh_2gNtZP3UpoXZyCCANTh2azvVxsW5qb8e12PBPD3MQVx71Qm13r",
-      "mh_2a4SgXfnpx1oCRHrcLpWUpGGeegdXvhDjdx7rYhrNLsPENeJ6H",
-      "mh_2KmWNryLzRBRo3v81am5iUjPEA47aZfUGEj1oHDBenYQk7ifYh",
-      "mh_Pys4rBKfbPN2zj8oTwskZ6FdgpT7rAKndEdGQdfVbSyeseLHA",
-      "mh_2YN7dxsaJmxW9RbumSKyNBLf9TzgfrowxoF91t9vSghragypfU",
-      "mh_MgrC7wiD64Wck4JkDNz8kktYekYCN9V1R4qn5JAJgUv2mP32o",
-      "mh_2jtsj9QBb47cmhqxS4B3nsoANJypf3u2NGEmSLEcs7pao5j7f1",
-      "mh_2bNSvoWvAcMRYpgb5nukxXqkVfe2dnDgnDLawZB8xZur53ieYQ",
-      "mh_2pBETcgXE2Cb7SS5GNGxFaDuQyJcZn65mRonLpfsn6JdYTQB69",
-      "mh_ntV2mgP2axN3P5Uq7n8tbNcbjwo8k4U2mwWyCUptqDFcgk7Yq",
-      "mh_Gky6SgXvQAYAqbBYmgUbRFB7Q31vGXqfZYyXPjMSup38cWV5a",
-      "mh_2cV72D9ZKyyQUrzRK3EaBMPZsBb3hwazUtreGJfZbA2ht1bAna",
-      "mh_xb83duuEXRo4Lj3VhUJv7LP9H7VY4dZE9iRTXKnZvbCeSaWHA",
-      "mh_2KLxHrLSUo8iqzmakEptkskDaukHd27dMumSJfdTjtCuZNPNEh",
-      "mh_2sTUPGXMooUc9SwDUHEg2Z9wKthyjzwRfxMPPjsMoaPuJLk3g5",
-      "mh_kBpTMk6QKeYdDNDShpSk4nMF5ZhYsZzp7HpyVXfwPj7nHF3zt",
-      "mh_ayZmATGUcchZ8oA2kpzjcs2i6jmUMivXdnraH8LUmW5hkCRtn",
-      "mh_Ki5S7BaPPNEztji2s1A5irMmj2JrsbfaS2Hj6AEKzidGKHa16",
-      "mh_2EXR2VtmehPxcv9jmJvepKqxXeeWBKU4312wPdKtrX5hrubhKC",
-      "mh_j9h2NbwH92iPksbjTNB7ZPK6hw66ycepn22Jcs4NLmrnCJdi5",
-      "mh_214Ab6wS4MXaEbPJGbDnbibEhdotZzBFiQJLpKWBziEjf3iZ4z",
-      "mh_2WAPPQXbvRiJGhLrZDVVXSFaTQWHYsRuSN1XL9o4YLEgd9Pj1h",
-      "mh_2gxUTwMSj8RH756XGi7GJY2XoZrJymEYBtq9GsvpwjqLxsjfzf",
-      "mh_2f5xXQSNjdAPKBfbgvVAujcBmMsUXsSqon27HBifLbhbSXYgPx",
-      "mh_2HXR278jNKURJAhV727acN5o272oQVY7e3jNU7Rd7QnzkJyTuV"
-   ]
+      "tx": {
+        "account_id": "ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx",
+        "commitment_id": "cm_NveuxcfftEabuggX1zjyc1n7NhccwvRfKNCXmWFPzhemPqwrx",
+        "fee": 21000000000000,
+        "nonce": 56,
+        "ttl": 44595,
+        "type": "NamePreclaimTx",
+        "version": 1
+      },
+      "tx_index": 1000000
+    }
+  ],
+  "next": "txs/txi/1000000-1000010?limit=1&page=2"
 }
 ```
----
-  * **Get current key block height:**
+
+* All name related transactions for particular account, from latest:
+
 ```
-GET /v2/key-blocks/current/height
-```
-```
-curl -s 'http://localhost:4000/v2/key-blocks/current/height'
+curl -s "http://35.159.10.159:4000/txs/backward/or?limit=1&account=ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx&type_group=name"
 
 {
-   "height":254584
-}
-```
-  * **Get transaction by hash:**
-```
-GET /v2/transactions/<hash>
-```
-```
-curl -s 'http://localhost:4000/v2/transactions/th_Yujp7Ey1kzMb8PyMnXhYnwbAaBPJ8wr3JgadS5zndzB2bdye3'
-
-{
-   "block_hash":"mh_GkmbqmxCLieUyPnjKezr2nMr84ULHSyESWvoeXA5GgsZ9s3kp",
-   "block_height":214033,
-   "hash":"th_Yujp7Ey1kzMb8PyMnXhYnwbAaBPJ8wr3JgadS5zndzB2bdye3",
-   "signatures":[
-      "sg_Pfi8Lcv9Nx4wdx4XTsXALijmni7qyKXnGeG5yC3Y3Bi2W3Hs8qAyQuzbDBPmB6sXqd23ptBo4VQP5TvMUJLBwQu7U2ge6"
-   ],
-   "tx":{
-      "amount":50000000000000000000,
-      "fee":50000000000000,
-      "nonce":2,
-      "payload":"ba_Xfbg4g==",
-      "recipient_id":"ak_2tQGvA2fjUjcNzeAt4PiwHpGf27RtmYwvnCvuoDqQRAvKvZkcs",
-      "sender_id":"ak_2YBpaUCUKZWvHgmQXWQk5bBUzmVGKgbf1RQ3saFXneGJXkv3uH",
-      "ttl":214133,
-      "type":"SpendTx",
-      "version":1
-   }
-}
-```
-  * **Get generation by height:**
-```
-GET /v2/generations/height/<height>
-```
-```
-curl -s 'http://localhost:4000/v2/generations/height/228228'
-
-{
-   "key_block":{
-      "beneficiary":"ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv",
-      "hash":"kh_2XsPC1N7ui3UP4iK7fwZWboa1MQqiaXCsDFtRAKthE1uPUnwwq",
-      "height":228228,
-      "info":"cb_AAAAAj0XPPM=",
-      "miner":"ak_2o4YAGkt9jEksmFsNo5h1eb3Hc62bmUTdxiiZ2yWThNELxcb4x",
-      "nonce":1825658102083893643,
-      "pow":[
-         4733220,
-         22283893,
-         34281922,
-         36977021,
-         41796798,
-         80404303,
-         87749697,
-         108215461,
-         108508464,
-         111641520,
-         117576394,
-         125722151,
-         131822681,
-         133819156,
-         134003183,
-         218384754,
-         224270784,
-         246162446,
-         247443290,
-         253306813,
-         259347613,
-         268645624,
-         274147717,
-         279167271,
-         292905860,
-         296137665,
-         300964127,
-         326248737,
-         357478146,
-         358106408,
-         366196895,
-         369969588,
-         376691405,
-         388340222,
-         389904160,
-         426222664,
-         442368387,
-         478767934,
-         479100563,
-         488969114,
-         489656667,
-         520883018
+  "data": [
+    {
+      "block_hash": "mh_2tL4tRRnH6WLzzYca7T7vQUbdUCRZEeq58S5giwAtnbkjjb3Vj",
+      "block_height": 85694,
+      "hash": "th_2pvhiLSonrEsmJiUf9Q3E3Lkt9ki5MpHGJ9qQsCVt8ACNWpVVc",
+      "micro_index": 30,
+      "micro_time": 1558804725247,
+      "signatures": [
+        "sg_P7UFr4iySfJpidyitDqVTF86uhnuYjQVJ46c96jC4nYZys5mBDQVbsV4CLxYpCqKU55SySmkcSg3Xg4dcYk4aFJGm3VjF"
       ],
-      "prev_hash":"mh_2PqWUimy1JaNbjs4RKUyePVpdQcghWRgQAdN9dyhC63TLUjjEs",
-      "prev_key_hash":"kh_2WrKEPK54XPyDJT6Sqvw1aMGecyThGk64EvGjfg3jCvszQHM6g",
-      "state_hash":"bs_5wn5FTgTDBs12QTt9PYqPXRj4GRHsSm5RpUqsAeD55cipm1kn",
-      "target":504875479,
-      "time":1584588388686,
-      "version":4
-   },
-   "micro_blocks":[
-
-   ]
+      "tx": {
+        "account_id": "ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx",
+        "client_ttl": 84600,
+        "fee": 30000000000000,
+        "name_id": "nm_t13Kcjan1mRu2sFjdMgeeASSSL8QoxmVhTrFCmji1j1DZ4jhb",
+        "name_ttl": 50000,
+        "nonce": 151,
+        "pointers": [
+          {
+            "id": "ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx",
+            "key": "account_pubkey"
+          }
+        ],
+        "type": "NameUpdateTx",
+        "version": 1
+      },
+      "tx_index": 2107840
+    }
+  ],
+  "next": "txs/backward/or?account=ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx&limit=1&page=2&type_group=name"
 }
 ```
----
-  * **Get keyblock by hash:**
-```
-GET /v2/key-blocks/hash/<hash>
-```
-```
-curl -s 'http://localhost:4000/v2/key-blocks/hash/kh_2DvN2yWvmcriSxtwT91jFYsLsn12EmYwjsyb63mWu1m7URzAqP'
 
-{
-   "beneficiary":"ak_2kHmiJN1RzQL6zXZVuoTuFaVLTCeH3BKyDMZKmixCV3QSWs3dd",
-   "hash":"kh_2DvN2yWvmcriSxtwT91jFYsLsn12EmYwjsyb63mWu1m7URzAqP",
-   "height":254358,
-   "info":"cb_AAACHMKhM24=",
-   "miner":"ak_29qGM9vpEYqVZSMJpAxMH71eLAawZWJq6PBUQNyPN2w3YB9XwJ",
-   "nonce":321745395843647,
-   "pow":[
-      3335940,
-      13655387,
-      17149727,
-      24945712,
-      31267851,
-      32142122,
-      58029844,
-      65885170,
-      69178315,
-      69197897,
-      70535798,
-      75654044,
-      77380742,
-      90543931,
-      91118650,
-      98038201,
-      140910261,
-      141702432,
-      142359384,
-      143426218,
-      155784090,
-      157697439,
-      161398839,
-      165348804,
-      166518180,
-      168143064,
-      176227180,
-      193643307,
-      204071402,
-      214861289,
-      218630084,
-      240341496,
-      312812764,
-      319980898,
-      323513725,
-      348404143,
-      407643664,
-      430450433,
-      454447956,
-      481535126,
-      491658162,
-      503720726
-   ],
-   "prev_hash":"mh_2gH6vhmP7Bnf4Rzwa2S8NvMHf1rrmSdkX7JKfMNbJUFmNQc9Wq",
-   "prev_key_hash":"kh_c1FnbTEUx3vA8LSGp9Ktftauoa7RK1ECCZVGiMFTRdS9Cbn8c",
-   "state_hash":"bs_2b66R6p12x2rXgKVxoRSUM4mDWxb7hkXzu3Wx8cgStbWKMMT9e",
-   "target":505856367,
-   "time":1589312177937,
-   "version":4
-}
+* All channel related transactions for particular accounts in generations range:
+
 ```
----
-  * **Get keyblock by height:**
-```
-GET /v2/key-blocks/height/<height>
-```
-```
-curl -s 'http://localhost:4000/v2/key-blocks/height/224567'
+curl -s "http://35.159.10.159:4000/txs/gen/0-100000/or?limit=1&account=ak_ozzwBYeatmuN818LjDDDwRSiBSvrqt4WU7WvbGsZGVre72LTS&account=ak_26xYuZJnxpjuBqkvXQ4EKb4Ludt8w3rGWREvEwm68qdtJLyLwq&type_group=channel"
 
 {
-   "beneficiary":"ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv",
-   "hash":"kh_mmBESMZ3FvruQdXgDjCyTTzCKaoThdw2fgAoAErSk6XbKJu1n",
-   "height":224567,
-   "info":"cb_AAAAAj0XPPM=",
-   "miner":"ak_sWXggV6DDDUyLzQNykerwpAh1G3H8HygARW5xZiNbtM4ZFwrW",
-   "nonce":3283176101780412898,
-   "pow":[
-      8843192,
-      24945964,
-      31129112,
-      33320358,
-      55343483,
-      57720524,
-      93069117,
-      94731719,
-      113958900,
-      135658886,
-      147350590,
-      161644156,
-      178813991,
-      185142669,
-      197952307,
-      209095618,
-      212498774,
-      232139126,
-      250750663,
-      251663363,
-      265826529,
-      272306222,
-      276710265,
-      288657684,
-      294034518,
-      315105823,
-      321401278,
-      337114029,
-      358335463,
-      420831887,
-      427436491,
-      428435220,
-      429231160,
-      446068178,
-      475497329,
-      477399482,
-      477520617,
-      496577731,
-      514128016,
-      528506815,
-      530145299,
-      530419923
-   ],
-   "prev_hash":"mh_2mT75kbEGWBTVen6yi9UhwKBF2TTeRYgigPwPkzykvPB5seNcW",
-   "prev_key_hash":"kh_oSgc82vFuzWDnzMhV7joifdz8D13xhivD5BZSceJhr7SCE5Vj",
-   "state_hash":"bs_dUuUT9kuCY7SYBTZztdQBzRaLepz7X6V2sff41mKjh1pGYHVC",
-   "target":504925640,
-   "time":1583914649301,
-   "version":4
+  "data": [
+    {
+      "block_hash": "mh_2aw4KGSWLq7opXT796a5QZx8Hd7BDaGRSwEcyqzNQMii7MrGrv",
+      "block_height": 1208,
+      "hash": "th_25ofE3Ah8Fm3PV8oo5Trh5rMMiU4E8uqFfncu9EjJHvubumkij",
+      "micro_index": 0,
+      "micro_time": 1543584946527,
+      "signatures": [
+        "sg_2NjzKD4ZKNQiqjAYLVFfVL4ZMCXUhVUEXCmoAZkhAZxsJQmPfzWj3Dq6QnRiXmJDByCPc33qYdwTAaiXDHwpdjFuuxwCT",
+        "sg_Wpm8j6ZhRzo6SLnaqWUb24KwFZ7YLws9zHiUKvWrf89cV2RAYGqftXBAzS6Pj7AVWKQLwSjL384yzG7hK4rHB8dn2d67g"
+      ],
+      "tx": {
+        "channel_reserve": 10,
+        "delegate_ids": [],
+        "fee": 20000,
+        "initiator_amount": 50000,
+        "initiator_id": "ak_ozzwBYeatmuN818LjDDDwRSiBSvrqt4WU7WvbGsZGVre72LTS",
+        "lock_period": 3,
+        "nonce": 1,
+        "responder_amount": 50000,
+        "responder_id": "ak_26xYuZJnxpjuBqkvXQ4EKb4Ludt8w3rGWREvEwm68qdtJLyLwq",
+        "state_hash": "st_MHb9b2dXovoWyhDf12kVJPwXNLCWuSzpwPBvMFbNizRJttaZ",
+        "type": "ChannelCreateTx",
+        "version": 1
+      },
+      "tx_index": 87
+    }
+  ],
+  "next": "txs/gen/0-100000/or?account=ak_ozzwBYeatmuN818LjDDDwRSiBSvrqt4WU7WvbGsZGVre72LTS&account=ak_26xYuZJnxpjuBqkvXQ4EKb4Ludt8w3rGWREvEwm68qdtJLyLwq&limit=1&page=2&type_group=channel"
 }
 ```
----
-  * **Get microblock header by hash:**
+
+* Spend transactions in range between sender and recipient:
+
 ```
-GET /v2/micro-blocks/hash/<hash>/header
-```
-```
-curl -s 'http://localhost:4000/v2/micro-blocks/hash/mh_214Ab6wS4MXaEbPJGbDnbibEhdotZzBFiQJLpKWBziEjf3iZ4z/header'
+curl -s "http://35.159.10.159:4000/txs/gen/50000-51000/and?limit=1&spend.sender_id=ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv&spend.recipient_id=ak_2FurtphSnS4S512ZioQgXg4yEXTuXPEEMVAUuzdReioYqY6mxa"
 
 {
-   "hash":"mh_214Ab6wS4MXaEbPJGbDnbibEhdotZzBFiQJLpKWBziEjf3iZ4z",
-   "height":254359,
-   "pof_hash":"no_fraud",
-   "prev_hash":"mh_j9h2NbwH92iPksbjTNB7ZPK6hw66ycepn22Jcs4NLmrnCJdi5",
-   "prev_key_hash":"kh_3PVTBP8J7vmyoRxtjx5TSZL2jti5A1pXwEvckz3gxeHnxQbaw",
-   "signature":"sg_NyqnpR5yhXJxU67fLNR9KLbyb3NS7Tbj6EUo9iFf63rHhZkNw7hcCtW95MwtJ8tpH1LqhDf1D3bYoX5AzZpmUqMn5ATxJ",
-   "state_hash":"bs_rRSmHUXRRZhrGN4JsM8ft2LxNRCCa6LZo2HyMx49diGX16Fxx",
-   "time":1589312314705,
-   "txs_hash":"bx_241oUe8TesnPPYrtbdMbKt5B2pURpdQAaspb6Q8KRqpvDohMZz",
-   "version":4
+  "data": [
+    {
+      "block_hash": "mh_a5ptAsuxsCc9kHUEvWYf5WDxGzCAX4poGGXVvPpJhY8BDw8Nw",
+      "block_height": 50010,
+      "hash": "th_2mTC1xyFWcSptXiNpGpQ868eB8N9wwLMGogg8WZBZ5JodqZHip",
+      "micro_index": 34,
+      "micro_time": 1552364962104,
+      "signatures": [
+        "sg_XhKx8qtfduR5uqnkLyvPuuES5nsAaRiey8Ag7hbzczxwBj64RxzNGZYha4z5QqfaJw4QwGyt3moMyqLTwZqawuCQTxhtY"
+      ],
+      "tx": {
+        "amount": 37595500000000000000,
+        "fee": 20500000000000,
+        "nonce": 127174,
+        "payload": "ba_VGltZSBpcyBtb25leSwgbXkgZnJpZW5kcy4gL1lvdXJzIEJlZXBvb2wuLyrtvsY=",
+        "recipient_id": "ak_2FurtphSnS4S512ZioQgXg4yEXTuXPEEMVAUuzdReioYqY6mxa",
+        "sender_id": "ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv",
+        "type": "SpendTx",
+        "version": 1
+      },
+      "tx_index": 1516960
+    }
+  ],
+  "next": "txs/gen/50000-51000/and?limit=1&page=2&spend.recipient_id=ak_2FurtphSnS4S512ZioQgXg4yEXTuXPEEMVAUuzdReioYqY6mxa&spend.sender_id=ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv"
 }
 ```
+
+
+
 ## Websocket interface
-The websocket interface, which listens by default on port `4001`, gives asynchronous notifications when various events occur. 
+The websocket interface, which listens by default on port `4001`, gives asynchronous notifications when various events occur.
 
 ### Message format:
 ```
@@ -945,6 +439,7 @@ The websocket interface accepts JSON - encoded commands to subscribe and unsubsc
 
 ```
 wscat -c ws://localhost:4001/websocket
+
 connected (press CTRL+C to quit)
 > {"op":"Subscribe", "payload": "KeyBlocks"}
 < ["KeyBlocks"]
