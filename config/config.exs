@@ -12,6 +12,9 @@ config :ae_plugin,
   "$aec_db_create_tables": {AeMdw.Db.Setup, :create_tables},
   "$aec_db_check_tables": {AeMdw.Db.Setup, :check_tables}
 
+config :ae_mdw,
+  contract_cache_expiration_minutes: 1440
+
 # Configures the endpoint
 config :ae_mdw, AeMdwWeb.Endpoint,
   url: [host: "localhost"],
@@ -19,8 +22,7 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   render_errors: [view: AeMdwWeb.ErrorView, accepts: ~w(html json)],
   pubsub: [name: AeMdw.PubSub, adapter: Phoenix.PubSub.PG2],
   live_view: [signing_salt: "Oy680JAN"],
-  continuation_cache_expiration_minutes: 30,
-  contract_cache_expiration_minutes: 1440
+  continuation_cache_expiration_minutes: 30
 
 config :ae_mdw, AeWebsocket.Websocket.SocketHandler,
   port: 4001,

@@ -1,5 +1,6 @@
 defmodule AeMdw.Application do
   alias AeMdw.Db.Model
+  alias AeMdw.EtsCache
 
   use Application
 
@@ -7,6 +8,9 @@ defmodule AeMdw.Application do
 
   def start(_type, _args) do
     init(:meta)
+
+    contract_exp = Application.fetch_env!(:ae_mdw, :contract_cache_expiration_minutes)
+    EtsCache.new(AeMdw.Contract.table(), contract_exp)
 
     children = [
       AeMdw.Db.Sync.Supervisor,

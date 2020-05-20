@@ -1,11 +1,11 @@
-defmodule AeMdwWeb.Contract do
+defmodule AeMdw.Contract do
   alias AeMdw.EtsCache
 
   import :erlang, only: [tuple_to_list: 1]
 
   import AeMdw.Util
 
-  @tab AeMdwWeb.Contract
+  @tab AeMdw.Contract
 
   ################################################################################
 
@@ -106,7 +106,7 @@ defmodule AeMdwWeb.Contract do
   def fate_val(x, f) when is_list(x), do: f.({:list, Enum.map(x, &fate_val(&1, f))})
 
   def fate_val(x, f) when is_map(x),
-    do: f.({:map, Enum.map(x, fn {k, v} -> {fate_val(k, f), fate_val(v, f)} end)})
+    do: f.({:map, Enum.map(x, fn {k, v} -> %{key: fate_val(k, f), val: fate_val(v, f)} end)})
 
   def fate_val({:variant, _, tag, args}, f),
     do: f.({:variant, [tag | Enum.map(tuple_to_list(args), &fate_val(&1, f))]})
@@ -136,10 +136,34 @@ defmodule AeMdwWeb.Contract do
       f.(
         {:map,
          Enum.map(x, fn {k, v} ->
-           {aevm_val({key_t, k}, f), aevm_val({val_t, v}, f)}
+           %{key: aevm_val({key_t, k}, f), val: aevm_val({val_t, v}, f)}
          end)}
       )
 
   defp encode(type, val),
     do: :aeser_api_encoder.encode(type, val)
+
+  ##########
+
+  def call_tx_info(tx_rec, contract_pk, block_hash, format_fn) do
+    ct_info = get_info(contract_pk)
+    call_id = :aect_call_tx.call_id(tx_rec)
+    call_data = :aect_call_tx.call_data(tx_rec)
+    call = :aec_chain.get_contract_call(contract_pk, call_id, block_hash) |> ok!
+
+    {fun, args} = decode_call_data(ct_info, call_data, format_fn)
+    fun = to_string(fun)
+
+    res_type = :aect_call.return_type(call)
+    res_val = :aect_call.return_value(call)
+    result = decode_call_result(ct_info, fun, res_type, res_val, format_fn)
+
+    fun_arg_res = %{
+      function: fun,
+      arguments: args,
+      result: result
+    }
+
+    {fun_arg_res, call}
+  end
 end
