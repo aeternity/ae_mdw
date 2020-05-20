@@ -1,12 +1,8 @@
 defmodule AeMdwWeb.Util do
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Error.Input, as: ErrInput
-  alias :aeser_api_encoder, as: Enc
 
   require Model
-
-  import AeMdw.{Sigil, Db.Util, Util}
 
   ##########
 

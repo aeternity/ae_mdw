@@ -2,7 +2,9 @@ defmodule AeMdwWeb.DataStreamPlug do
   import Plug.Conn
 
   alias AeMdw.Validate
+
   import AeMdw.Db.Util, only: [first_gen: 0, last_gen: 0]
+  import AeMdwWeb.Util, only: [concat: 2]
 
   @default_limit 10
   @max_limit 1000
@@ -51,11 +53,11 @@ defmodule AeMdwWeb.DataStreamPlug do
             {:ok, {String.to_atom(scope_type), range}}
 
           {:error, detail} ->
-            {:error, "invalid range: #{inspect(detail)}"}
+            {:error, concat("invalid range", detail)}
         end
 
       true ->
-        {:error, "invalid scope: #{inspect(scope_type)}"}
+        {:error, concat("invalid scope", scope_type)}
     end
   end
 
@@ -94,7 +96,7 @@ defmodule AeMdwWeb.DataStreamPlug do
         ensure_limit(limit, 1)
 
       {:error, {_, detail}} ->
-        {:error, "invalid limit: #{detail}"}
+        {:error, concat("invalid limit", detail)}
     end
   end
 
@@ -104,7 +106,7 @@ defmodule AeMdwWeb.DataStreamPlug do
         {:ok, {@default_limit, page}}
 
       {:error, {_, detail}} ->
-        {:error, "invalid page: #{detail}"}
+        {:error, concat("invalid page", detail)}
     end
   end
 
@@ -115,5 +117,5 @@ defmodule AeMdwWeb.DataStreamPlug do
     do: {:ok, {limit, page}}
 
   defp ensure_limit(limit, _page) when limit > @max_limit,
-    do: {:error, "limit #{limit} is too large"}
+    do: {:error, concat("limit too large", limit)}
 end

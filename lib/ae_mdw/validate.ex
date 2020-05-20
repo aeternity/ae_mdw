@@ -54,7 +54,7 @@ defmodule AeMdw.Validate do
 
   def tx_type(type) when is_binary(type) do
     try do
-      tx_type(String.to_existing_atom(type))
+      tx_type(String.to_existing_atom(type <> "_tx"))
     rescue
       ArgumentError ->
         {:error, {ErrInput.TxType, type}}

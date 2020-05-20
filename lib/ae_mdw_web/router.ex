@@ -43,12 +43,12 @@ defmodule AeMdwWeb.Router do
     get "/txs/:scope_type/:range/count/or", TxController, :txs_scoped_count_or
     get "/txs/:scope_type/:range/count/and", TxController, :txs_scoped_count_and
 
-    get "/txs/:scope_type/:range", TxController, :txs
-    get "/txs/:direction", TxController, :txs
     get "/txs/:scope_type/:range/or", TxController, :txs_or
     get "/txs/:direction/or", TxController, :txs_or
     get "/txs/:scope_type/:range/and", TxController, :txs_and
     get "/txs/:direction/and", TxController, :txs_and
+    get "/txs/:scope_type/:range", TxController, :txs
+    get "/txs/:direction", TxController, :txs
 
     # get "/generations/:from/:to", GenerationController, :interval
 
