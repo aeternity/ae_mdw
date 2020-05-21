@@ -17,7 +17,7 @@ compile: ## Compile Elixir code
 
 .PHONY: shell
 shell: ## Launch a mix shell with all modules compiled and loaded
-	clear && iex --sname aeternity@localhost -S $(mix) phx.server
+	clear && iex --sname $(name) -S $(mix) phx.server
 
 .PHONY: format
 format: ## Format Elixir code
