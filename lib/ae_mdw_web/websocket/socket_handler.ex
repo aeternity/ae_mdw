@@ -30,7 +30,7 @@ defmodule AeWebsocket.Websocket.SocketHandler do
         %{info: info} = state
       )
       when prefix_key in @known_prefixes and byte_size(rest) >= 38 and byte_size(rest) <= 60 do
-    if MapSet.member?(info, target) do
+    if target in info do
       Util.concat("already subscribed to target", target) |> deliver_me()
       {:ok, session, state}
     else
@@ -68,7 +68,7 @@ defmodule AeWebsocket.Websocket.SocketHandler do
 
   def handle_message(%{"op" => "Subscribe", "payload" => payload}, session, %{info: info} = state)
       when payload in @known_channels do
-    if MapSet.member?(info, payload) do
+    if payload in info do
       Util.concat("already subscribed to", payload) |> deliver_me()
       {:ok, session, state}
     else
@@ -103,7 +103,7 @@ defmodule AeWebsocket.Websocket.SocketHandler do
         %{info: info} = state
       )
       when prefix_key in @known_prefixes and byte_size(rest) >= 38 and byte_size(rest) <= 60 do
-    if MapSet.member?(info, target) do
+    if target in info do
       case AeMdw.Validate.id(target) do
         {:ok, id} ->
           pid = self()
@@ -147,7 +147,7 @@ defmodule AeWebsocket.Websocket.SocketHandler do
         %{info: info} = state
       )
       when payload in @known_channels do
-    if MapSet.member?(info, payload) do
+    if payload in info do
       Riverside.LocalDelivery.leave_channel(payload)
       new_state = %{state | info: MapSet.delete(info, payload)}
 

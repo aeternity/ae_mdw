@@ -8,13 +8,20 @@ defmodule AeMdwWeb.Websocket.Listener do
   @subs_channel_targets :subs_channel_targets
   @subs_target_channels :subs_target_channels
 
-  def start_link(_args), do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
+  def start_link(arg), do: GenServer.start_link(__MODULE__, arg, name: __MODULE__)
+
   def register(pid), do: GenServer.cast(__MODULE__, {:monitor, pid})
 
-  def init(state) do
+  def init(:subs_events) do
     :ets.foldl(fn {k, _v}, acc -> [k | acc] end, [], @subs_pids) |> Enum.each(&register/1)
     :aec_events.subscribe(:top_changed)
-    {:ok, state}
+    {:ok, []}
+  end
+
+   # for test purpose only
+   def init(:no_events) do
+    :ets.foldl(fn {k, _v}, acc -> [k | acc] end, [], @subs_pids) |> Enum.each(&register/1)
+    {:ok, []}
   end
 
   def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :micro} = info}}, state) do
@@ -106,10 +113,12 @@ defmodule AeMdwWeb.Websocket.Listener do
             prev_block_type = :aec_blocks.type(prev_block)
             header = :aec_blocks.to_header(block)
 
-            ser_tx = :aec_headers.serialize_for_client(header, prev_block_type)
-            payload = Map.put(ser_tx, "key_block_id", ser_tx["height"])
-
-            broadcast("MicroBlocks", data(payload, "MicroBlocks"))
+            broadcast(
+              "MicroBlocks",
+              header
+              |> :aec_headers.serialize_for_client(prev_block_type)
+              |> data("MicroBlocks")
+            )
 
           :error ->
             {:error, %{"reason" => "Block not found"}}
