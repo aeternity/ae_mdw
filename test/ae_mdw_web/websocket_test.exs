@@ -193,10 +193,10 @@ defmodule AeMdwWeb.WebsocketTest do
     send(Listener, {:gproc_ps_event, :top_changed, %{info: setup.mock_info_kb}})
 
     # send request to ws client
-    Process.send_after(setup.client1, {:kb, self()}, 50)
-    Process.send_after(setup.client2, {:mb, self()}, 50)
-    Process.send_after(setup.client3, {:tx, self()}, 50)
-    Process.send_after(setup.client4, {:obj, self()}, 50)
+    Process.send_after(setup.client1, {:kb, self()}, 100)
+    Process.send_after(setup.client2, {:mb, self()}, 100)
+    Process.send_after(setup.client3, {:tx, self()}, 100)
+    Process.send_after(setup.client4, {:obj, self()}, 100)
 
     mock_kb = setup.mock_kb
     mock_mb = setup.mock_mb
