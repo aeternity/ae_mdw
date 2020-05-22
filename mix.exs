@@ -9,6 +9,7 @@ defmodule AeMdw.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: [:phoenix, :gettext] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
+      aliases: aliases(),
       deps: deps()
     ]
   end
@@ -26,6 +27,8 @@ defmodule AeMdw.MixProject do
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
+
+  defp aliases, do: [test: "test --no-start"]
 
   # Specifies your project dependencies.
   #
@@ -46,7 +49,8 @@ defmodule AeMdw.MixProject do
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.0"},
       {:cors_plug, "~> 2.0"},
-      {:riverside, "~> 1.2.3"}
+      {:riverside, "~> 1.2.3"},
+      {:websockex, "~> 0.4.2"}
     ]
   end
 end
