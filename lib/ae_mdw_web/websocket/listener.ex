@@ -18,8 +18,8 @@ defmodule AeMdwWeb.Websocket.Listener do
     {:ok, []}
   end
 
-   # for test purpose only
-   def init(:no_events) do
+  # for test purpose only
+  def init(:no_events) do
     :ets.foldl(fn {k, _v}, acc -> [k | acc] end, [], @subs_pids) |> Enum.each(&register/1)
     {:ok, []}
   end

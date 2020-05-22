@@ -176,7 +176,7 @@ defmodule AeMdwWeb.WebsocketTest do
     ]
   end
 
-  test "subscribe to keyblocks, microblocks, transactions and object", setup do
+  test "subscribe and unsubscribe to keyblocks, microblocks, transactions and object", setup do
     # subscribe to keyblocks, microblocks, transactions and object
     assert :ok == WsClient.subscribe(setup.client1, :key_blocks)
     assert :ok == WsClient.subscribe(setup.client2, :micro_blocks)
@@ -193,6 +193,11 @@ defmodule AeMdwWeb.WebsocketTest do
     send(Listener, {:gproc_ps_event, :top_changed, %{info: setup.mock_info_kb}})
 
     # send request to ws client
+    Process.send_after(setup.client1, {:subs, self()}, 100)
+    Process.send_after(setup.client2, {:subs, self()}, 100)
+    Process.send_after(setup.client3, {:subs, self()}, 100)
+    Process.send_after(setup.client4, {:subs, self()}, 100)
+
     Process.send_after(setup.client1, {:kb, self()}, 100)
     Process.send_after(setup.client2, {:mb, self()}, 100)
     Process.send_after(setup.client3, {:tx, self()}, 100)
@@ -204,10 +209,38 @@ defmodule AeMdwWeb.WebsocketTest do
     mock_obj = setup.mock_obj
 
     # assert incoming data
+    assert_receive ["Transactions"], 200
+    assert_receive ["KeyBlocks"], 200
+    assert_receive ["MicroBlocks"], 200
+    assert_receive ["ak_KHfXhF2J6VBt3sUgFygdbpEkWi6AKBkr9jNKUCHbpwwagzHUs"], 200
+
     assert_receive ^mock_kb, 200
     assert_receive ^mock_mb, 200
     assert_receive ^mock_tx, 200
     assert_receive ^mock_obj, 200
+
+    # unsubscribe to keyblocks, microblocks, transactions and object
+    assert :ok == WsClient.unsubscribe(setup.client1, :key_blocks)
+    assert :ok == WsClient.unsubscribe(setup.client2, :micro_blocks)
+    assert :ok == WsClient.unsubscribe(setup.client3, :transactions)
+
+    assert :ok ==
+             WsClient.unsubscribe(
+               setup.client4,
+               "ak_KHfXhF2J6VBt3sUgFygdbpEkWi6AKBkr9jNKUCHbpwwagzHUs"
+             )
+
+    # send request to ws client
+    Process.send_after(setup.client1, {:subs, self()}, 100)
+    Process.send_after(setup.client2, {:subs, self()}, 100)
+    Process.send_after(setup.client3, {:subs, self()}, 100)
+    Process.send_after(setup.client4, {:subs, self()}, 100)
+
+    # assert incoming data
+    assert_receive [], 200
+    assert_receive [], 200
+    assert_receive [], 200
+    assert_receive [], 200
   end
 
   test "subscribe to unsupported payload and invalid targets", setup do
