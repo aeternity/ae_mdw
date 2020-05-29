@@ -26,7 +26,7 @@ defmodule AeMdwWeb.Websocket.Listener do
 
   def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :micro} = info}}, state) do
     get_micro_blocks(info)
-    get_txs(info, state)
+    get_txs(info)
     {:noreply, state}
   end
 
@@ -72,7 +72,7 @@ defmodule AeMdwWeb.Websocket.Listener do
     {:noreply, state}
   end
 
-  def get_txs(info, state) do
+  def get_txs(info) do
     case :aehttp_logic.get_micro_block_by_hash(info.block_hash) do
       {:ok, block} ->
         header = :aec_blocks.to_header(block)
