@@ -22,7 +22,6 @@ defmodule AeMdwWeb.TxController do
   def txs(conn, _req),
     do: Cont.response(conn, &json/2)
 
-
   # def txs_count(conn, req),
   #   do:
   #     handle_input(conn, fn ->
@@ -59,11 +58,13 @@ defmodule AeMdwWeb.TxController do
     case Query.Planner.plan({ids, types}) do
       nil ->
         Stream.map([], & &1)
+
       {roots, checks} ->
         record_fn =
-          map_size(checks) == 0
-          && :json
-          || {:id, compose(&to_json/1, &checker(&1, checks))}
+          (map_size(checks) == 0 &&
+             :json) ||
+            {:id, compose(&to_json/1, &checker(&1, checks))}
+
         DBS.map(scope, ~t[field], record_fn, {:roots, MapSet.new(roots)})
     end
   end
@@ -89,19 +90,23 @@ defmodule AeMdwWeb.TxController do
     txi = Model.tx(model_tx, :index)
     tx_hash = Model.tx(model_tx, :id)
     type_checks = Map.get(all_checks, type, [])
+
     valid? =
       Enum.reduce_while(type_checks, nil, fn
         {{pk, nil}, pk_pos_checks}, nil ->
           raise RuntimeError, message: "!!!!!!!!!! TODOOOOOO"
+
         {{pk, pos}, pk_pos_checks}, nil ->
           case Validate.id!(elem(tx_rec, pos)) === pk do
             false ->
               {:cont, nil}
+
             true ->
               check = &check_field(&1, tx_rec, type, txi, tx_hash)
               {:halt, Enum.all?(pk_pos_checks, check) || nil}
           end
       end)
+
     valid? && {model_tx, data}
   end
 
@@ -110,7 +115,6 @@ defmodule AeMdwWeb.TxController do
 
   def check_field({pk, pos}, tx_rec, _type, _txi, _hash),
     do: Validate.id!(elem(tx_rec, pos)) === pk
-
 
   def tx_data(model_field) do
     {type, _pos, _pk, txi} = Model.field(model_field, :index)

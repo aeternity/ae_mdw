@@ -35,18 +35,18 @@ defmodule AeMdw.Application do
     type_mod_mapper = &Map.fetch!(type_mod_map, &1)
 
     {tx_field_types, tx_fields, tx_ids} =
-      Enum.reduce(type_mod_map, {%{}, %{}, %{}},
-        fn {type, _}, {tx_field_types, tx_fields, tx_ids} ->
-          {fields, ids} = Extract.tx_record_info(type, type_mod_mapper)
-          tx_field_types =
-            for {id_field, _} <- ids, reduce: tx_field_types do
-              acc ->
-                update_in(acc, [id_field], fn set -> MapSet.put(set || MapSet.new(), type) end)
-            end
-          {tx_field_types,
-           put_in(tx_fields[type], fields),
-           put_in(tx_ids[type], ids)}
-        end)
+      Enum.reduce(type_mod_map, {%{}, %{}, %{}}, fn {type, _},
+                                                    {tx_field_types, tx_fields, tx_ids} ->
+        {fields, ids} = Extract.tx_record_info(type, type_mod_mapper)
+
+        tx_field_types =
+          for {id_field, _} <- ids, reduce: tx_field_types do
+            acc ->
+              update_in(acc, [id_field], fn set -> MapSet.put(set || MapSet.new(), type) end)
+          end
+
+        {tx_field_types, put_in(tx_fields[type], fields), put_in(tx_ids[type], ids)}
+      end)
 
     id_field_type_map =
       Enum.reduce(tx_ids, %{}, fn {type, ids_map}, acc ->

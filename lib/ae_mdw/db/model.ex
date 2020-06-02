@@ -58,7 +58,6 @@ defmodule AeMdw.Db.Model do
   @rev_origin_defaults [index: {nil, nil, nil}, unused: nil]
   defrecord :rev_origin, @rev_origin_defaults
 
-
   def tables(),
     do: [
       AeMdw.Db.Model.Tx,
@@ -68,7 +67,7 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.Field,
       AeMdw.Db.Model.IdCount,
       AeMdw.Db.Model.Origin,
-      AeMdw.Db.Model.RevOrigin,
+      AeMdw.Db.Model.RevOrigin
     ]
 
   def records(),
@@ -104,7 +103,6 @@ defmodule AeMdw.Db.Model do
   def defaults(:origin), do: @origin_defaults
   def defaults(:rev_origin), do: @rev_origin_defaults
 
-
   def write_count(model, delta) do
     total = id_count(model, :count)
     model = id_count(model, count: total + delta)
@@ -119,8 +117,7 @@ defmodule AeMdw.Db.Model do
   end
 
   def incr_count({_, _, _} = field_key),
-    do: update_count(field_key, 1,
-          fn -> write_count(id_count(index: field_key, count: 0), 1) end)
+    do: update_count(field_key, 1, fn -> write_count(id_count(index: field_key, count: 0), 1) end)
 
   ##########
 
