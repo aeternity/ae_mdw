@@ -1,5 +1,4 @@
 defmodule AeMdw.Error do
-
   alias AeMdw.Error.Input, as: Err
 
   import AeMdwWeb.Util, only: [concat: 2]
@@ -12,22 +11,27 @@ defmodule AeMdw.Error do
   def to_string(Err.Scope, x), do: concat("invalid scope", x)
   def to_string(Err.Query, x), do: concat("invalid query", x)
 
-
   defmodule Input do
     defexception [:message]
 
-    defmodule Id, do: def exception(value: value), do: AeMdw.Error.to_string(__MODULE__, value)
+    defmodule Id, do: def(exception(value: value), do: AeMdw.Error.to_string(__MODULE__, value))
 
-    defmodule NonnegInt, do: def exception(value: value), do: AeMdw.Error.to_string(__MODULE__, value)
+    defmodule NonnegInt,
+      do: def(exception(value: value), do: AeMdw.Error.to_string(__MODULE__, value))
 
-    defmodule TxField, do: def exception(value: value), do: AeMdw.Error.to_string(__MODULE__, value)
+    defmodule TxField,
+      do: def(exception(value: value), do: AeMdw.Error.to_string(__MODULE__, value))
 
-    defmodule TxType, do: def exception(value: value), do: AeMdw.Error.to_string(__MODULE__, value)
+    defmodule TxType,
+      do: def(exception(value: value), do: AeMdw.Error.to_string(__MODULE__, value))
 
-    defmodule TxGroup, do: def exception(value: value), do: AeMdw.Error.to_string(__MODULE__, value)
+    defmodule TxGroup,
+      do: def(exception(value: value), do: AeMdw.Error.to_string(__MODULE__, value))
 
-    defmodule Scope, do: def exception(value: value), do: AeMdw.Error.to_string(__MODULE__, value)
+    defmodule Scope,
+      do: def(exception(value: value), do: AeMdw.Error.to_string(__MODULE__, value))
 
-    defmodule Query, do: def exception(value: value), do: AeMdw.Error.to_string(__MODULE__, value)
+    defmodule Query,
+      do: def(exception(value: value), do: AeMdw.Error.to_string(__MODULE__, value))
   end
 end

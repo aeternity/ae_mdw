@@ -16,18 +16,17 @@ defmodule AeMdw.Db.Stream.Field do
   def normalize_query({:roots, %MapSet{} = m}),
     do: m
 
-
   def roots(%MapSet{} = set), do: set
 
   def full_key(sort_k, {type, pos, <<_::256>> = pubkey})
-  when is_integer(sort_k) and is_integer(pos) and is_atom(type),
-    do: {type, pos, pubkey, sort_k}
+      when is_integer(sort_k) and is_integer(pos) and is_atom(type),
+      do: {type, pos, pubkey, sort_k}
 
   def full_key(sort_k, {type, pos, <<_::256>> = pubkey}) when sort_k == <<>> or sort_k === -1,
     do: {type, pos, pubkey, sort_k}
 
   def entry({type, pos, <<_::256>> = pubkey}, i, kind)
-  when is_atom(type) and is_integer(i) do
+      when is_atom(type) and is_integer(i) do
     k = {type, pos, pubkey, i}
 
     case read(@tab, k) do

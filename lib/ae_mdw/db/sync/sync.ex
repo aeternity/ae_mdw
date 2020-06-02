@@ -113,12 +113,10 @@ defmodule AeMdw.Db.Sync do
         tab_keys = Map.merge(bi_keys, tx_keys)
         log_del_keys(tab_keys)
 
-        :mnesia.transaction(
-          fn ->
-            for {tab, keys} <- tab_keys, do: Enum.each(keys, &:mnesia.delete(tab, &1, :write))
-            for {f_key, delta} <- id_counts, do: Model.update_count(f_key, -delta)
-          end
-        )
+        :mnesia.transaction(fn ->
+          for {tab, keys} <- tab_keys, do: Enum.each(keys, &:mnesia.delete(tab, &1, :write))
+          for {f_key, delta} <- id_counts, do: Model.update_count(f_key, -delta)
+        end)
 
       # wasn't synced up to that txi, nothing to do
       true ->

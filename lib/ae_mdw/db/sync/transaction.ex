@@ -95,13 +95,16 @@ defmodule AeMdw.Db.Sync.Transaction do
     :mnesia.write(Model.Type, Model.type(index: {type, txi}), :write)
     :mnesia.write(Model.Time, Model.time(index: {mb_time, txi}), :write)
     write_links(type, tx, signed_tx, txi, hash)
-    Enum.each(AE.tx_ids(type), &write_field(&1, tx, type, txi))
+
+    for {_field, pos} <- AE.tx_ids(type) do
+      {_tag, pk} = :aeser_id.specialize(elem(tx, pos))
+      write_field(type, pos, pk, txi)
+    end
+
     txi + 1
   end
 
-  defp write_field({_field, pos}, tx, type, txi) do
-    aeser_id = elem(tx, pos)
-    {_tag, pk} = :aeser_id.specialize(aeser_id)
+  def write_field(type, pos, pk, txi) do
     model_fld = Model.field(index: {type, pos, pk, txi})
     :mnesia.write(Model.Field, model_fld, :write)
     Model.incr_count({type, pos, pk})
@@ -179,15 +182,18 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   def link_del_pubkey(:contract_create_tx, tx_hash),
     do: :aect_contracts.pubkey(:aect_contracts.new(tx_rec(tx_hash)))
+
   def link_del_pubkey(:channel_create_tx, tx_hash),
     do: ok!(:aesc_utils.channel_pubkey(signed_tx_rec(tx_hash)))
+
   def link_del_pubkey(:oracle_register_tx, tx_hash),
     do: :aeo_register_tx.account_pubkey(tx_rec(tx_hash))
+
   def link_del_pubkey(:name_claim_tx, tx_hash),
     do: ok!(:aens.get_name_hash(:aens_claim_tx.name(tx_rec(tx_hash))))
+
   def link_del_pubkey(_type, _tx_hash),
     do: nil
-
 
   def keys_range(from_txi),
     do: keys_range(from_txi, last(Model.Tx))
@@ -199,44 +205,39 @@ defmodule AeMdw.Db.Sync.Transaction do
     tx_keys = Enum.to_list(from_txi..to_txi)
 
     {type_keys, field_keys, field_counts} =
-      Enum.reduce(tx_keys, {[], [], %{}},
-        fn txi, {type_keys, field_keys, field_counts} ->
-          %{tx: %{type: tx_type} = tx, hash: tx_hash} = read_tx!(txi) |> Model.tx_to_raw_map()
+      Enum.reduce(tx_keys, {[], [], %{}}, fn txi, {type_keys, field_keys, field_counts} ->
+        %{tx: %{type: tx_type} = tx, hash: tx_hash} = read_tx!(txi) |> Model.tx_to_raw_map()
 
-          {fields, f_counts} =
+        {fields, f_counts} =
           for {id_key, pos} <- AE.tx_ids(tx_type), reduce: {[], field_counts} do
             {fxs, fcs} ->
               pk = pk(tx[id_key])
-              {[{tx_type, pos, pk, txi} | fxs],
-               Map.update(fcs, {tx_type, pos, pk}, 1, & &1+1)}
+              {[{tx_type, pos, pk, txi} | fxs], Map.update(fcs, {tx_type, pos, pk}, 1, &(&1 + 1))}
           end
 
-          {fields, f_counts} =
-            case link_del_keys(tx_type, tx_hash, txi) do
-              {link_key_txi, link_key_count} ->
-                {[link_key_txi | fields],
-                 Map.update(f_counts, link_key_count, 1, & &1+1)}
-              nil ->
-                {fields, f_counts}
-            end
+        {fields, f_counts} =
+          case link_del_keys(tx_type, tx_hash, txi) do
+            {link_key_txi, link_key_count} ->
+              {[link_key_txi | fields], Map.update(f_counts, link_key_count, 1, &(&1 + 1))}
 
-          {[{tx_type, txi} | type_keys],
-           fields ++ field_keys,
-           f_counts}
-        end)
+            nil ->
+              {fields, f_counts}
+          end
+
+        {[{tx_type, txi} | type_keys], fields ++ field_keys, f_counts}
+      end)
 
     time_keys = time_keys_range(from_txi, to_txi)
     {origin_keys, rev_origin_keys} = origin_keys_range(from_txi, to_txi)
 
     {%{
-        Model.Tx => tx_keys,
-        Model.Type => type_keys,
-        Model.Time => time_keys,
-        Model.Field => field_keys,
-        Model.Origin => origin_keys,
-        Model.RevOrigin => rev_origin_keys
-     },
-     %{Model.IdCount => field_counts}}
+       Model.Tx => tx_keys,
+       Model.Type => type_keys,
+       Model.Time => time_keys,
+       Model.Field => field_keys,
+       Model.Origin => origin_keys,
+       Model.RevOrigin => rev_origin_keys
+     }, %{Model.IdCount => field_counts}}
   end
 
   def time_keys_range(from_txi, to_txi) do
