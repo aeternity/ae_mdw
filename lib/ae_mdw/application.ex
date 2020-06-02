@@ -34,11 +34,19 @@ defmodule AeMdw.Application do
     id_type_map = Extract.id_type_map(aeser_code)
     type_mod_mapper = &Map.fetch!(type_mod_map, &1)
 
-    {tx_fields, tx_ids} =
-      Enum.reduce(type_mod_map, {%{}, %{}}, fn {type, _}, {tx_fields, tx_ids} ->
-        {fields, ids} = Extract.tx_record_info(type, type_mod_mapper)
-        {put_in(tx_fields[type], fields), put_in(tx_ids[type], ids)}
-      end)
+    {tx_field_types, tx_fields, tx_ids} =
+      Enum.reduce(type_mod_map, {%{}, %{}, %{}},
+        fn {type, _}, {tx_field_types, tx_fields, tx_ids} ->
+          {fields, ids} = Extract.tx_record_info(type, type_mod_mapper)
+          tx_field_types =
+            for {id_field, _} <- ids, reduce: tx_field_types do
+              acc ->
+                update_in(acc, [id_field], fn set -> MapSet.put(set || MapSet.new(), type) end)
+            end
+          {tx_field_types,
+           put_in(tx_fields[type], fields),
+           put_in(tx_ids[type], ids)}
+        end)
 
     id_field_type_map =
       Enum.reduce(tx_ids, %{}, fn {type, ids_map}, acc ->
@@ -82,7 +90,7 @@ defmodule AeMdw.Application do
         id_prefix: id_prefix_type_map,
         id_field_type: id_field_type_map |> Enum.concat([{[:_], nil}]),
         id_fields: [{[], MapSet.new(id_fields)}],
-        # for quicker testing without try/rescue
+        tx_field_types: tx_field_types,
         tx_types: [{[], MapSet.new(tx_types)}],
         tx_prefixes: [{[], MapSet.new(tx_types |> Enum.map(tx_prefix))}],
         id_prefixes: [{[], MapSet.new(Map.keys(id_prefix_type_map))}],

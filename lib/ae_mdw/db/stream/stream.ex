@@ -62,12 +62,12 @@ defmodule AeMdw.Db.Stream do
   def to_txi(Model.Tx), do: &tx_txi/1
   def to_txi(Model.Type), do: &type_txi/1
   def to_txi(Model.Time), do: &time_txi/1
-  def to_txi(Model.Object), do: &object_txi/1
+  def to_txi(Model.Field), do: &field_txi/1
 
   def tx_txi({:tx, txi, _hash, {_kb_index, _mb_index}, _time}), do: txi
   def type_txi({:type, {_type, txi}, nil}), do: txi
   def time_txi({:time, {_time, txi}, nil}), do: txi
-  def object_txi({:object, {_type, _pk, txi}, _, _}), do: txi
+  def field_txi({:field, {_type, _pos, _pk, txi}, nil}), do: txi
 
   ################################################################################
 
@@ -104,9 +104,6 @@ defmodule AeMdw.Db.Stream do
       <<144, 125, 123, 13, 183, 6, 234, 74, 192, 116, 177, 35, 130, 58, 45, 133, 185, 14, 29, 143,
         113, 100, 77, 100, 127, 133, 98, 225, 46, 110, 14, 75>>
 
-    ^txis = :forward |> DBS.map(~t[object], &object_txi/1, genesis_pk) |> Enum.take(10)
-    ^txis = :forward |> DBS.map(~t[object], :txi, genesis_pk) |> Enum.take(10)
-
     # BACKWARD tests
     10 = :backward |> DBS.map(~t[block]) |> Enum.take(10) |> Enum.count()
     [{_, -1} | _] = :backward |> DBS.map(~t[block], &Model.block(&1, :index)) |> Enum.take(5)
@@ -115,9 +112,6 @@ defmodule AeMdw.Db.Stream do
     ^last_10_txis = Enum.reverse(Enum.sort(Enum.uniq(last_10_txis)))
     ^last_10_txis = :backward |> DBS.map(~t[type], :txi) |> Enum.take(10)
     ^last_10_txis = :backward |> DBS.map(~t[time], :txi) |> Enum.take(10)
-    last_10_object_txis = :backward |> DBS.map(~t[object], :txi, genesis_pk) |> Enum.take(10)
-    10 = Enum.count(last_10_object_txis)
-    ^last_10_object_txis = Enum.reverse(Enum.sort(Enum.uniq(last_10_object_txis)))
 
     # GEN tests
     [{1, -1}, {1, 0}] =
@@ -174,26 +168,26 @@ defmodule AeMdw.Db.Stream do
       Enum.to_list(10_009..10_000) ==
         {:txi, 10_009..10_000} |> DBS.map(~t[tx], :txi) |> Enum.take(100)
 
-    # OBJECT tests
-    pk =
-      <<140, 45, 15, 171, 198, 112, 76, 122, 188, 218, 79, 0, 14, 175, 238, 64, 9, 82, 93, 44,
-        169, 176, 237, 27, 115, 221, 101, 211, 5, 168, 169, 235>>
+    # # OBJECT tests
+    # pk =
+    #   <<140, 45, 15, 171, 198, 112, 76, 122, 188, 218, 79, 0, 14, 175, 238, 64, 9, 82, 93, 44,
+    #     169, 176, 237, 27, 115, 221, 101, 211, 5, 168, 169, 235>>
 
-    obj_recs =
-      {:txi, 250_000..500_000}
-      |> DBS.map(~t[object], & &1, {pk, AE.tx_group(:name)})
-      |> Enum.to_list()
+    # obj_recs =
+    #   {:txi, 250_000..500_000}
+    #   |> DBS.map(~t[object], & &1, {pk, AE.tx_group(:name)})
+    #   |> Enum.to_list()
 
-    true = Enum.all?(obj_recs, &(elem(Model.object(&1, :index), 0) == :name_preclaim_tx))
-    true = Enum.all?(obj_recs, &(elem(Model.object(&1, :index), 1) == pk))
+    # true = Enum.all?(obj_recs, &(elem(Model.object(&1, :index), 0) == :name_preclaim_tx))
+    # true = Enum.all?(obj_recs, &(elem(Model.object(&1, :index), 1) == pk))
 
-    ^obj_recs =
-      {:time, 1_546_835_654_149..1_548_764_956_779}
-      |> DBS.map(~t[object], & &1, {pk, AE.tx_group(:name)})
-      |> Enum.to_list()
+    # ^obj_recs =
+    #   {:time, 1_546_835_654_149..1_548_764_956_779}
+    #   |> DBS.map(~t[object], & &1, {pk, AE.tx_group(:name)})
+    #   |> Enum.to_list()
 
-    ^obj_recs =
-      {:gen, 19378..30049} |> DBS.map(~t[object], & &1, {pk, AE.tx_group(:name)}) |> Enum.take(10)
+    # ^obj_recs =
+    #   {:gen, 19378..30049} |> DBS.map(~t[object], & &1, {pk, AE.tx_group(:name)}) |> Enum.take(10)
 
     :ok
   end

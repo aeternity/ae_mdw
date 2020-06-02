@@ -124,6 +124,17 @@ defmodule AeMdw.Db.Util do
     {block_hash, type, signed_tx, tx_rec}
   end
 
+  def tx_rec(<<_::256>> = tx_hash) do
+    {_, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
+    {_, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
+    tx_rec
+  end
+
+  def signed_tx_rec(<<_::256>> = tx_hash) do
+    {_, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
+    signed_tx
+  end
+
   ##########
 
   def msecs(msecs) when is_integer(msecs) and msecs > 0, do: msecs

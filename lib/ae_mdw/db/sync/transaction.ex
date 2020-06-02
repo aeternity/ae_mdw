@@ -47,7 +47,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     do: txi
 
   def clear() do
-    for tab <- [~t[tx], ~t[type], ~t[time], ~t[object], ~t[object], ~t[rev_object]],
+    for tab <- [~t[tx], ~t[type], ~t[time], ~t[field], ~t[id_count], ~t[origin], ~t[rev_origin]],
         do: :mnesia.clear_table(tab)
   end
 
@@ -90,70 +90,54 @@ defmodule AeMdw.Db.Sync.Transaction do
     {mod, tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
     hash = :aetx_sign.hash(signed_tx)
     type = mod.type()
-
-    :mnesia.write(
-      Model.Tx,
-      Model.tx(index: txi, id: hash, block_index: block_index, time: mb_time),
-      :write
-    )
-
+    model_tx = Model.tx(index: txi, id: hash, block_index: block_index, time: mb_time)
+    :mnesia.write(Model.Tx, model_tx, :write)
     :mnesia.write(Model.Type, Model.type(index: {type, txi}), :write)
     :mnesia.write(Model.Time, Model.time(index: {mb_time, txi}), :write)
     write_links(type, tx, signed_tx, txi, hash)
-    AE.tx_ids(type) |> Enum.each(&write_object(&1, tx, type, txi))
+    Enum.each(AE.tx_ids(type), &write_field(&1, tx, type, txi))
     txi + 1
   end
 
-  defp raw_id_cache_key(aeser_id, field, type, txi) do
-    {tag, pubkey} = :aeser_id.specialize(aeser_id)
-    {{:object, type, pubkey, tag, field}, txi}
-  end
-
-  defp write_object({field, pos}, tx, type, txi) do
-    List.wrap(elem(tx, pos))
-    |> Enum.map(fn aeser_id ->
-      {{:object, _, pk, tag, _}, _} = key = raw_id_cache_key(aeser_id, field, type, txi)
-      model = Model.object(index: {type, pk, txi}, id_tag: tag, role: field)
-      :mnesia.write(Model.Object, model, :write)
-      key
-    end)
+  defp write_field({_field, pos}, tx, type, txi) do
+    aeser_id = elem(tx, pos)
+    {_tag, pk} = :aeser_id.specialize(aeser_id)
+    model_fld = Model.field(index: {type, pos, pk, txi})
+    :mnesia.write(Model.Field, model_fld, :write)
+    Model.incr_count({type, pos, pk})
   end
 
   def write_links(:contract_create_tx, tx, _signed_tx, txi, tx_hash) do
     pk = :aect_contracts.pubkey(:aect_contracts.new(tx))
-    model_obj = Model.object(index: {:contract_create_tx, pk, txi})
-    :mnesia.write(Model.Object, model_obj, :write)
-    write_origin({:contract, pk, txi}, tx_hash)
+    write_field(:contract_create_tx, nil, pk, txi)
+    write_origin({:contract_create_tx, pk, txi}, tx_hash)
   end
 
   def write_links(:channel_create_tx, _tx, signed_tx, txi, tx_hash) do
     {:ok, pk} = :aesc_utils.channel_pubkey(signed_tx)
-    model_obj = Model.object(index: {:channel_create_tx, pk, txi})
-    :mnesia.write(Model.Object, model_obj, :write)
-    write_origin({:channel, pk, txi}, tx_hash)
+    write_field(:channel_create_tx, nil, pk, txi)
+    write_origin({:channel_create_tx, pk, txi}, tx_hash)
   end
 
   def write_links(:oracle_register_tx, tx, _signed_tx, txi, tx_hash) do
-    pk = :aeser_id.create(:oracle, :aeo_register_tx.account_pubkey(tx))
-    model_obj = Model.object(index: {:oracle_register_tx, pk, txi})
-    :mnesia.write(Model.Object, model_obj, :write)
-    write_origin({:oracle, pk, txi}, tx_hash)
+    pk = :aeo_register_tx.account_pubkey(tx)
+    write_field(:oracle_register_tx, nil, pk, txi)
+    write_origin({:oracle_register_tx, pk, txi}, tx_hash)
   end
 
   def write_links(:name_claim_tx, tx, _signed_tx, txi, tx_hash) do
     name = :aens_claim_tx.name(tx)
     {:ok, name_hash} = :aens.get_name_hash(name)
-    model_obj = Model.object(index: {:name_claim_tx, name_hash, txi})
-    :mnesia.write(Model.Object, model_obj, :write)
-    write_origin({:name, name_hash, txi}, tx_hash)
+    write_field(:name_claim_tx, nil, name_hash, txi)
+    write_origin({:name_claim_tx, name_hash, txi}, tx_hash)
   end
 
   def write_links(_, _, _, _, _),
     do: :ok
 
-  defp write_origin({pk_type, pubkey, txi}, tx_hash) do
-    origin = Model.origin(index: {pk_type, pubkey, txi}, tx_id: tx_hash)
-    rev_origin = Model.rev_origin(index: {txi, pk_type, pubkey})
+  defp write_origin({tx_type, pubkey, txi}, tx_hash) do
+    origin = Model.origin(index: {tx_type, pubkey, txi}, tx_id: tx_hash)
+    rev_origin = Model.rev_origin(index: {txi, tx_type, pubkey})
     :mnesia.write(Model.Origin, origin, :write)
     :mnesia.write(Model.RevOrigin, rev_origin, :write)
   end
@@ -185,6 +169,26 @@ defmodule AeMdw.Db.Sync.Transaction do
   ################################################################################
   # Invalidations - keys for records to delete in case of fork
 
+  def link_del_keys(tx_type, tx_hash, txi) do
+    with pk = <<_::binary>> <- link_del_pubkey(tx_type, tx_hash) do
+      link_key = {tx_type, nil, pk, txi}
+      incr_key = {tx_type, nil, pk}
+      {link_key, incr_key}
+    end
+  end
+
+  def link_del_pubkey(:contract_create_tx, tx_hash),
+    do: :aect_contracts.pubkey(:aect_contracts.new(tx_rec(tx_hash)))
+  def link_del_pubkey(:channel_create_tx, tx_hash),
+    do: ok!(:aesc_utils.channel_pubkey(signed_tx_rec(tx_hash)))
+  def link_del_pubkey(:oracle_register_tx, tx_hash),
+    do: :aeo_register_tx.account_pubkey(tx_rec(tx_hash))
+  def link_del_pubkey(:name_claim_tx, tx_hash),
+    do: ok!(:aens.get_name_hash(:aens_claim_tx.name(tx_rec(tx_hash))))
+  def link_del_pubkey(_type, _tx_hash),
+    do: nil
+
+
   def keys_range(from_txi),
     do: keys_range(from_txi, last(Model.Tx))
 
@@ -194,28 +198,45 @@ defmodule AeMdw.Db.Sync.Transaction do
   def keys_range(from_txi, to_txi) when from_txi <= to_txi do
     tx_keys = Enum.to_list(from_txi..to_txi)
 
-    {type_keys, obj_keys} =
-      Enum.reduce(tx_keys, {[], []}, fn txi, {type_keys, obj_keys} ->
-        %{tx: %{type: tx_type} = tx} = read_tx!(txi) |> Model.tx_to_raw_map()
+    {type_keys, field_keys, field_counts} =
+      Enum.reduce(tx_keys, {[], [], %{}},
+        fn txi, {type_keys, field_keys, field_counts} ->
+          %{tx: %{type: tx_type} = tx, hash: tx_hash} = read_tx!(txi) |> Model.tx_to_raw_map()
 
-        objs =
-          for {id_key, _} <- AE.tx_ids(tx_type),
-              do: {tx_type, pk(tx[id_key]), txi}
+          {fields, f_counts} =
+          for {id_key, pos} <- AE.tx_ids(tx_type), reduce: {[], field_counts} do
+            {fxs, fcs} ->
+              pk = pk(tx[id_key])
+              {[{tx_type, pos, pk, txi} | fxs],
+               Map.update(fcs, {tx_type, pos, pk}, 1, & &1+1)}
+          end
 
-        {[{tx_type, txi} | type_keys], objs ++ obj_keys}
-      end)
+          {fields, f_counts} =
+            case link_del_keys(tx_type, tx_hash, txi) do
+              {link_key_txi, link_key_count} ->
+                {[link_key_txi | fields],
+                 Map.update(f_counts, link_key_count, 1, & &1+1)}
+              nil ->
+                {fields, f_counts}
+            end
+
+          {[{tx_type, txi} | type_keys],
+           fields ++ field_keys,
+           f_counts}
+        end)
 
     time_keys = time_keys_range(from_txi, to_txi)
     {origin_keys, rev_origin_keys} = origin_keys_range(from_txi, to_txi)
 
-    %{
-      Model.Tx => tx_keys,
-      Model.Type => type_keys,
-      Model.Time => time_keys,
-      Model.Object => obj_keys,
-      Model.Origin => origin_keys,
-      Model.RevOrigin => rev_origin_keys
-    }
+    {%{
+        Model.Tx => tx_keys,
+        Model.Type => type_keys,
+        Model.Time => time_keys,
+        Model.Field => field_keys,
+        Model.Origin => origin_keys,
+        Model.RevOrigin => rev_origin_keys
+     },
+     %{Model.IdCount => field_counts}}
   end
 
   def time_keys_range(from_txi, to_txi) do

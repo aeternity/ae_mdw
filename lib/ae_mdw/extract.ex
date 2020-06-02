@@ -157,8 +157,7 @@ defmodule AeMdw.Extract do
         {[], %{}},
         fn {ast, i}, {names, ids} ->
           {name, type} = AbsCode.field_name_type(ast)
-          id? = AbsCode.aeser_id_type?(type) || AbsCode.list_of_aeser_id_type?(type)
-          {[name | names], (id? && put_in(ids[name], i)) || ids}
+          {[name | names], (AbsCode.aeser_id_type?(type) && put_in(ids[name], i)) || ids}
         end
       )
 
