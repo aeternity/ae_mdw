@@ -95,13 +95,15 @@ defmodule AeMdw.Db.Sync.Transaction do
     :mnesia.write(Model.Type, Model.type(index: {type, txi}), :write)
     :mnesia.write(Model.Time, Model.time(index: {mb_time, txi}), :write)
     write_links(type, tx, signed_tx, txi, hash)
-    Enum.each(AE.tx_ids(type), &write_field(&1, tx, type, txi))
+    for {_field, pos} <- AE.tx_ids(type) do
+      {_tag, pk} = :aeser_id.specialize(elem(tx, pos))
+      write_field(type, pos, pk, txi)
+    end
     txi + 1
   end
 
-  defp write_field({_field, pos}, tx, type, txi) do
-    aeser_id = elem(tx, pos)
-    {_tag, pk} = :aeser_id.specialize(aeser_id)
+
+  def write_field(type, pos, pk, txi) do
     model_fld = Model.field(index: {type, pos, pk, txi})
     :mnesia.write(Model.Field, model_fld, :write)
     Model.incr_count({type, pos, pk})
