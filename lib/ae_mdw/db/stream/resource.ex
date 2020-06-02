@@ -180,48 +180,62 @@ defmodule AeMdw.Db.Stream.Resource do
     cont_pop = set_taker(kind)
 
     Stream.resource(
-      fn -> conts end,
-      fn conts -> do_complex(tab, conts, cont_pop, mapper) end,
+      fn -> {conts, nil} end,
+      fn {conts, last_sort_k} -> do_complex(tab, conts, cont_pop, mapper, last_sort_k) end,
       &AeMdw.Util.id/1
     )
   end
 
-  def do_complex(_tab, {0, nil}, _cont_pop, _mapper),
+  def do_complex(_tab, {0, nil}, _cont_pop, _mapper, _last_sort_k),
     do: {:halt, :done}
 
-  def do_complex(tab, conts, cont_pop, mapper),
-    do: do_complex(tab, nil, nil, conts, cont_pop, mapper)
+  def do_complex(tab, conts, cont_pop, mapper, last_sort_k),
+    do: do_complex(tab, nil, nil, conts, cont_pop, mapper, last_sort_k)
 
-  def do_complex(_tab, _key, nil, {0, nil}, _cont_pop, _mapper),
+  def do_complex(_tab, _key, nil, {0, nil}, _cont_pop, _mapper, _last_sort_k),
     do: {:halt, :done}
 
-  def do_complex(tab, nil, nil, conts, cont_pop, mapper) do
-    {{_sort_key, {key, advance}}, conts} = cont_pop.(conts)
-    do_complex(tab, key, advance, conts, cont_pop, mapper)
+  def do_complex(tab, nil, nil, conts, cont_pop, mapper, last_sort_k) do
+    {{_sort_k, {key, advance}}, conts} = cont_pop.(conts)
+    do_complex(tab, key, advance, conts, cont_pop, mapper, last_sort_k)
   end
 
-  def do_complex(tab, key, advance, conts, cont_pop, mapper) do
-    case {read(tab, key), advance.(tab, key)} do
-      {[x], {:cont, next_key}} ->
-        case mapper.(x) do
-          nil ->
-            do_complex(tab, next_key, advance, conts, cont_pop, mapper)
+  def do_complex(tab, key, advance, conts, cont_pop, mapper, last_sort_k) do
+    sort_k = sort_key(key)
+    case sort_k === last_sort_k do
+      false ->
+        case {read(tab, key), advance.(tab, key)} do
+          {[x], {:cont, next_key}} ->
+            case mapper.(x) do
+              nil ->
+                do_complex(tab, next_key, advance, conts, cont_pop, mapper, sort_k)
 
-          val ->
-            {[val], add_cursor({next_key, advance}, conts)}
+              val ->
+                {[val], {add_cursor({next_key, advance}, conts), sort_k}}
+            end
+
+          {[], {:cont, next_key}} ->
+            do_complex(tab, next_key, advance, conts, cont_pop, mapper, sort_k)
+
+          {[x], {:halt, _}} ->
+            case mapper.(x) do
+              nil -> {:halt, :done}
+              val -> {[val], {conts, sort_k}}
+            end
+
+          {[], {:halt, _}} ->
+            {:halt, :done}
         end
 
-      {[], {:cont, next_key}} ->
-        do_complex(tab, next_key, advance, conts, cont_pop, mapper)
+      true ->
+        case advance.(tab, key) do
+          {:cont, next_key} ->
+            do_complex(tab, next_key, advance, conts, cont_pop, mapper, sort_k)
 
-      {[x], {:halt, _}} ->
-        case mapper.(x) do
-          nil -> {:halt, :done}
-          val -> {[val], conts}
+          {:halt, _} ->
+            do_complex(tab, nil, nil, conts, cont_pop, mapper, sort_k)
         end
-
-      {[], {:halt, _}} ->
-        {:halt, :done}
     end
   end
+
 end
