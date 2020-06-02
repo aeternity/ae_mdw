@@ -36,10 +36,7 @@ defmodule AeMdw.Db.Model do
   @type_defaults [index: {nil, -1}, unused: nil]
   defrecord :type, @type_defaults
 
-  # txs objects     :
-  #     index = {tx_type, object_pubkey, tx_index}, id_tag = id_tag, role = role
-  @object_defaults [index: {nil, nil, -1}, id_tag: nil, role: nil]
-  defrecord :object, @object_defaults
+  # txs fields      :
 
   # object origin :
   #     index = {:contract | :name | ..., pubkey, tx_index}, tx_id = tx_hash
@@ -67,14 +64,14 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.Block,
       AeMdw.Db.Model.Time,
       AeMdw.Db.Model.Type,
-      AeMdw.Db.Model.Object,
+      AeMdw.Db.Model.Field,
+      AeMdw.Db.Model.IdCount,
       AeMdw.Db.Model.Origin,
       AeMdw.Db.Model.RevOrigin,
-      AeMdw.Db.Model.Event
     ]
 
   def records(),
-    do: [:tx, :block, :time, :type, :object, :origin, :rev_origin, :event]
+    do: [:tx, :block, :time, :type, :field, :origin, :rev_origin, :id_count]
 
   def fields(record),
     do: for({x, _} <- defaults(record), do: x)
@@ -83,28 +80,29 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Block), do: :block
   def record(AeMdw.Db.Model.Time), do: :time
   def record(AeMdw.Db.Model.Type), do: :type
-  def record(AeMdw.Db.Model.Object), do: :object
+  def record(AeMdw.Db.Model.Field), do: :field
+  def record(AeMdw.Db.Model.IdCount), do: :id_count
   def record(AeMdw.Db.Model.Origin), do: :origin
   def record(AeMdw.Db.Model.RevOrigin), do: :rev_origin
-  def record(AeMdw.Db.Model.Event), do: :event
 
   def table(:tx), do: AeMdw.Db.Model.Tx
   def table(:block), do: AeMdw.Db.Model.Block
   def table(:time), do: AeMdw.Db.Model.Time
   def table(:type), do: AeMdw.Db.Model.Type
-  def table(:object), do: AeMdw.Db.Model.Object
+  def table(:field), do: AeMdw.Db.Model.Field
+  def table(:id_count), do: AeMdw.Db.Model.IdCount
   def table(:origin), do: AeMdw.Db.Model.Origin
   def table(:rev_origin), do: AeMdw.Db.Model.RevOrigin
-  def table(:event), do: AeMdw.Db.Model.Event
 
   def defaults(:tx), do: @tx_defaults
   def defaults(:block), do: @block_defaults
   def defaults(:time), do: @time_defaults
   def defaults(:type), do: @type_defaults
-  def defaults(:object), do: @object_defaults
+  def defaults(:field), do: @field_defaults
+  def defaults(:id_count), do: @id_count_defaults
   def defaults(:origin), do: @origin_defaults
   def defaults(:rev_origin), do: @rev_origin_defaults
-  def defaults(:event), do: @event_defaults
+
 
   ##########
 

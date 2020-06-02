@@ -194,28 +194,45 @@ defmodule AeMdw.Db.Sync.Transaction do
   def keys_range(from_txi, to_txi) when from_txi <= to_txi do
     tx_keys = Enum.to_list(from_txi..to_txi)
 
-    {type_keys, obj_keys} =
-      Enum.reduce(tx_keys, {[], []}, fn txi, {type_keys, obj_keys} ->
-        %{tx: %{type: tx_type} = tx} = read_tx!(txi) |> Model.tx_to_raw_map()
+    {type_keys, field_keys, field_counts} =
+      Enum.reduce(tx_keys, {[], [], %{}},
+        fn txi, {type_keys, field_keys, field_counts} ->
+          %{tx: %{type: tx_type} = tx, hash: tx_hash} = read_tx!(txi) |> Model.tx_to_raw_map()
 
-        objs =
-          for {id_key, _} <- AE.tx_ids(tx_type),
-              do: {tx_type, pk(tx[id_key]), txi}
+          {fields, f_counts} =
+          for {id_key, pos} <- AE.tx_ids(tx_type), reduce: {[], field_counts} do
+            {fxs, fcs} ->
+              pk = pk(tx[id_key])
+              {[{tx_type, pos, pk, txi} | fxs],
+               Map.update(fcs, {tx_type, pos, pk}, 1, & &1+1)}
+          end
 
-        {[{tx_type, txi} | type_keys], objs ++ obj_keys}
-      end)
+          {fields, f_counts} =
+            case link_del_keys(tx_type, tx_hash, txi) do
+              {link_key_txi, link_key_count} ->
+                {[link_key_txi | fields],
+                 Map.update(f_counts, link_key_count, 1, & &1+1)}
+              nil ->
+                {fields, f_counts}
+            end
+
+          {[{tx_type, txi} | type_keys],
+           fields ++ field_keys,
+           f_counts}
+        end)
 
     time_keys = time_keys_range(from_txi, to_txi)
     {origin_keys, rev_origin_keys} = origin_keys_range(from_txi, to_txi)
 
-    %{
-      Model.Tx => tx_keys,
-      Model.Type => type_keys,
-      Model.Time => time_keys,
-      Model.Object => obj_keys,
-      Model.Origin => origin_keys,
-      Model.RevOrigin => rev_origin_keys
-    }
+    {%{
+        Model.Tx => tx_keys,
+        Model.Type => type_keys,
+        Model.Time => time_keys,
+        Model.Field => field_keys,
+        Model.Origin => origin_keys,
+        Model.RevOrigin => rev_origin_keys
+     },
+     %{Model.IdCount => field_counts}}
   end
 
   def time_keys_range(from_txi, to_txi) do
