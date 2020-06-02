@@ -93,11 +93,8 @@ defmodule AeMdwWeb.TxController do
 
     valid? =
       Enum.reduce_while(type_checks, nil, fn
-        {{pk, nil}, pk_pos_checks}, nil ->
-          raise RuntimeError, message: "!!!!!!!!!! TODOOOOOO"
-
-        {{pk, pos}, pk_pos_checks}, nil ->
-          case Validate.id!(elem(tx_rec, pos)) === pk do
+        {pk_pos, pk_pos_checks}, nil ->
+          case check_field(pk_pos, tx_rec, type, txi, tx_hash) do
             false ->
               {:cont, nil}
 

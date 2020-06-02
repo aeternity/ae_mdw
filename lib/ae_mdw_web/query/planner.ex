@@ -186,8 +186,15 @@ defmodule AeMdwWeb.Query.Planner do
   end
 
   def t12() do
-    "account=ak_HzcS4HvhTtiD3KaVXW9umgqCW6dyg3KWgmyxHfir8x9Rads4a&contract=ct_2rtXsV55jftV36BMeR5gtakN2VjcPtZa3PBURvzShSYWEht3Z7&"
+    "account=ak_HzcS4HvhTtiD3KaVXW9umgqCW6dyg3KWgmyxHfir8x9Rads4a&contract=ct_2rtXsV55jftV36BMeR5gtakN2VjcPtZa3PBURvzShSYWEht3Z7"
     |> AeMdwWeb.Query.Parser.parse()
     |> plan
   end
+
+  def t13() do
+    "account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&type=oracle_register"
+    |> AeMdwWeb.Query.Parser.parse()
+    |> plan
+  end
+
 end
