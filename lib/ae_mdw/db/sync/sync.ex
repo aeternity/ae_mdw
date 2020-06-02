@@ -109,10 +109,16 @@ defmodule AeMdw.Db.Sync do
       is_integer(from_txi) && from_txi >= 0 ->
         info("invalidating from tx #{from_txi} at generation #{prev_kbi}")
         bi_keys = BlockIndex.keys_range({fork_height - 1, 0})
-        tx_keys = Transaction.keys_range(from_txi)
-        all_keys = Map.merge(bi_keys, tx_keys)
-        log_del_keys(all_keys)
-        delete_records(all_keys)
+        {tx_keys, id_counts} = Transaction.keys_range(from_txi)
+        tab_keys = Map.merge(bi_keys, tx_keys)
+        log_del_keys(tab_keys)
+
+        :mnesia.transaction(
+          fn ->
+            for {tab, keys} <- tab_keys, do: Enum.each(keys, &:mnesia.delete(tab, &1, :write))
+            for {f_key, delta} <- id_counts, do: Model.update_count(f_key, -delta)
+          end
+        )
 
       # wasn't synced up to that txi, nothing to do
       true ->

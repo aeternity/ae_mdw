@@ -38,15 +38,11 @@ defmodule AeMdwWeb.Router do
     get "/tx/:hash", TxController, :tx
     get "/txi/:index", TxController, :txi
 
-    get "/txs/count", TxController, :txs_count
-    get "/txs/:scope_type/:range/count", TxController, :txs_scoped_count
-    get "/txs/:scope_type/:range/count/or", TxController, :txs_scoped_count_or
-    get "/txs/:scope_type/:range/count/and", TxController, :txs_scoped_count_and
+    # get "/txs/count", TxController, :txs_count
+    # get "/txs/:scope_type/:range/count", TxController, :txs_scoped_count
+    # get "/txs/:scope_type/:range/count/or", TxController, :txs_scoped_count_or
+    # get "/txs/:scope_type/:range/count/and", TxController, :txs_scoped_count_and
 
-    get "/txs/:scope_type/:range/or", TxController, :txs_or
-    get "/txs/:direction/or", TxController, :txs_or
-    get "/txs/:scope_type/:range/and", TxController, :txs_and
-    get "/txs/:direction/and", TxController, :txs_and
     get "/txs/:scope_type/:range", TxController, :txs
     get "/txs/:direction", TxController, :txs
 
@@ -57,7 +53,7 @@ defmodule AeMdwWeb.Router do
     # get "/reward/height/:height", UtilController, :reward_at_height
     # get "/size/current", UtilController, :current_size
     # get "/size/height/:height", UtilController, :size
-    # get "/status", UtilController, :status
+    get "/status", UtilController, :status
     # get "/count/current", UtilController, :current_count
 
     # get "/count/height/:height", :count

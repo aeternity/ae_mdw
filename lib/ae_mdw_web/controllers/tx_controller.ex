@@ -2,7 +2,7 @@ defmodule AeMdwWeb.TxController do
   use AeMdwWeb, :controller
 
   alias AeMdw.Validate
-  alias AeMdwWeb.Normalize
+  alias AeMdwWeb.Query
   alias AeMdw.Db.Model
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdwWeb.Continuation, as: Cont
@@ -22,128 +22,98 @@ defmodule AeMdwWeb.TxController do
   def txs(conn, _req),
     do: Cont.response(conn, &json/2)
 
-  def txs_or(conn, _req),
-    do: Cont.response(conn, &json/2)
 
-  def txs_and(conn, _req),
-    do: Cont.response(conn, &json/2)
+  # def txs_count(conn, req),
+  #   do:
+  #     handle_input(conn, fn ->
+  #       (map_size(req) == 0 &&
+  #          json(conn, %{"count" => last_txi() + 1})) ||
+  #         Normalize.input_err(:unexpected_parameters)
+  #     end)
 
-  def txs_count(conn, req),
-    do:
-      handle_input(conn, fn ->
-        (map_size(req) == 0 &&
-           json(conn, %{"count" => last_txi() + 1})) ||
-          Normalize.input_err(:unexpected_parameters)
-      end)
+  # def txs_scoped_count(conn, req),
+  #   do:
+  #     handle_input(conn, fn ->
+  #       map_size(Map.drop(req, ["range", "scope_type"])) == 0 ||
+  #         Normalize.input_err(:unexpected_parameters)
 
-  def txs_scoped_count(conn, req),
-    do:
-      handle_input(conn, fn ->
-        map_size(Map.drop(req, ["range", "scope_type"])) == 0 ||
-          Normalize.input_err(:unexpected_parameters)
+  #       stream = db_stream_raw(:txs_scoped_count, :history, conn.assigns.scope)
+  #       json(conn, %{"count" => Enum.count(stream)})
+  #     end)
 
-        stream = db_stream_raw(:txs_scoped_count, :history, conn.assigns.scope)
-        json(conn, %{"count" => Enum.count(stream)})
-      end)
+  # def txs_scoped_count_or(conn, _req),
+  #   do: txs_scoped_count_params(conn, :txs_count_or)
 
-  def txs_scoped_count_or(conn, _req),
-    do: txs_scoped_count_params(conn, :txs_count_or)
-
-  def txs_scoped_count_and(conn, _req),
-    do: txs_scoped_count_params(conn, :txs_count_and)
+  # def txs_scoped_count_and(conn, _req),
+  #   do: txs_scoped_count_params(conn, :txs_count_and)
 
   ##########
 
   def db_stream(_, :history, scope),
     do: DBS.map(scope, ~t[tx], :json)
 
-  def db_stream(_, {:type, types}, scope),
+  def db_stream(_, {ids, types}, scope) when map_size(ids) == 0,
     do: DBS.map(scope, ~t[type], :json, types)
 
-  def db_stream(_, {:object, types, ids}, scope),
-    do: DBS.map(scope, ~t[object], :json, {:id_type, ids, types})
-
-  def db_stream(_, {checker, roots, data}, scope) do
-    checker = obj_check_fn(checker)
-    DBS.map(scope, ~t[object], {:id, compose(&to_json/1, &checker.(&1, data))}, {:roots, roots})
-  end
-
-  def db_stream_raw(_, :history, scope),
-    do: DBS.map(scope, ~t[tx], &id/1)
-
-  def db_stream_raw(_, {:type, types}, scope),
-    do: DBS.map(scope, ~t[type], &id/1, types)
-
-  def db_stream_raw(_, {:object, types, ids}, scope),
-    do: DBS.map(scope, ~t[object], &id/1, {:id_type, ids, types})
-
-  def db_stream_raw(_, {checker, roots, data}, scope) do
-    checker = obj_check_fn(checker)
-    DBS.map(scope, ~t[object], {:id, &checker.(&1, data)}, {:roots, roots})
-  end
-
-  ##########
-
-  defp obj_check_fn(:object_check_fields_any), do: &object_check_fields_any/2
-  defp obj_check_fn(:object_check_fields_all), do: &object_check_fields_all/2
-  defp obj_check_fn(:object_check_ids_all), do: &object_check_ids_all/2
-
-  def object_check_fields_any(model_obj, checks) do
-    {type, pk, txi} = Model.object(model_obj, :index)
-    field = Model.object(model_obj, :role)
-
-    case checks[{type, field, pk}] do
+  def db_stream(_, {ids, types}, scope) when map_size(ids) > 0 do
+    case Query.Planner.plan({ids, types}) do
       nil ->
-        nil
-
-      pos ->
-        model_tx = read_tx!(txi)
-        tx_hash = Model.tx(model_tx, :id)
-        {_, _, _, tx_rec} = tx_rec_data = tx_rec_data(tx_hash)
-        (Validate.id!(elem(tx_rec, pos)) === pk && {model_tx, tx_rec_data}) || nil
+        Stream.map([], & &1)
+      {roots, checks} ->
+        record_fn =
+          map_size(checks) == 0
+          && :json
+          || {:id, compose(&to_json/1, &checker(&1, checks))}
+        DBS.map(scope, ~t[field], record_fn, {:roots, MapSet.new(roots)})
     end
   end
 
-  def object_check_fields_all(model_obj, data) do
-    {_type, model_tx, tx_rec, tx_rec_data} = tx_data(model_obj)
+  # def db_stream(_, {:type, types}, scope),
+  #   do: DBS.map(scope, ~t[type], :json, types)
 
-    matches? =
-      Enum.reduce_while(data, true, fn
-        {_, {pos, id}}, _ ->
-          (Validate.id!(elem(tx_rec, pos)) === id &&
-             {:cont, true}) ||
-            {:halt, nil}
+  # def db_stream(_, {checker, roots, data}, scope) do
+  #   checker = obj_check_fn(checker)
+  #   DBS.map(scope, ~t[object], {:id, compose(&to_json/1, &checker.(&1, data))}, {:roots, roots})
+  # end
 
-        {_, _}, _ ->
-          {:halt, nil}
-      end)
+  # def db_stream_raw(_, :history, scope),
+  #   do: DBS.map(scope, ~t[tx], &id/1)
 
-    (matches? && {model_tx, tx_rec_data}) || nil
-  end
+  # def db_stream_raw(_, {:type, types}, scope),
+  #   do: DBS.map(scope, ~t[type], &id/1, types)
 
-  def object_check_ids_all(model_obj, {ids_len, ids}) do
-    {type, model_tx, tx_rec, tx_rec_data} = tx_data(model_obj)
-    tx_ids = AeMdw.Node.tx_ids(type)
+  ##########
 
-    matches? =
-      map_size(tx_ids) >= ids_len &&
-        Enum.reduce_while(tx_ids, ids_len, fn {_field, pos}, todo ->
-          case todo do
-            0 ->
-              {:halt, true}
-
-            _ ->
-              (MapSet.member?(ids, Validate.id!(elem(tx_rec, pos))) &&
-                 {:cont, todo - 1}) ||
-                {:halt, false}
+  def checker(model_field, all_checks) do
+    {type, model_tx, tx_rec, data} = tx_data(model_field)
+    txi = Model.tx(model_tx, :index)
+    tx_hash = Model.tx(model_tx, :id)
+    type_checks = Map.get(all_checks, type, [])
+    valid? =
+      Enum.reduce_while(type_checks, nil, fn
+        {{pk, nil}, pk_pos_checks}, nil ->
+          raise RuntimeError, message: "!!!!!!!!!! TODOOOOOO"
+        {{pk, pos}, pk_pos_checks}, nil ->
+          case Validate.id!(elem(tx_rec, pos)) === pk do
+            false ->
+              {:cont, nil}
+            true ->
+              check = &check_field(&1, tx_rec, type, txi, tx_hash)
+              {:halt, Enum.all?(pk_pos_checks, check) || nil}
           end
-        end)
-
-    (matches? && {model_tx, tx_rec_data}) || nil
+      end)
+    valid? && {model_tx, data}
   end
 
-  defp tx_data(model_obj) do
-    {type, _pk, txi} = Model.object(model_obj, :index)
+  def check_field({pk, nil}, tx_rec, type, txi, hash),
+    do: read(Model.RevOrigin, {txi, type, hash}) != []
+
+  def check_field({pk, pos}, tx_rec, _type, _txi, _hash),
+    do: Validate.id!(elem(tx_rec, pos)) === pk
+
+
+  def tx_data(model_field) do
+    {type, _pos, _pk, txi} = Model.field(model_field, :index)
     model_tx = read_tx!(txi)
     tx_hash = Model.tx(model_tx, :id)
     {_, _, _, tx_rec} = data = tx_rec_data(tx_hash)
@@ -155,39 +125,27 @@ defmodule AeMdwWeb.TxController do
   defp to_json({model_tx, tx_rec_data}),
     do: Model.tx_to_map(model_tx, tx_rec_data)
 
-  def txs_scoped_count_params(conn, combiner),
-    do:
-      handle_input(conn, fn ->
-        params = query_groups(conn.query_string) |> Map.drop(["limit", "page"])
+  # def txs_scoped_count_params(conn, combiner),
+  #   do:
+  #     handle_input(conn, fn ->
+  #       params = query_groups(conn.query_string) |> Map.drop(["limit", "page"])
 
-        count =
-          case normalize(combiner, Map.drop(params, ["range", "scope_type"])) do
-            :history ->
-              last_txi() + 1
+  #       count =
+  #         case normalize(combiner, Map.drop(params, ["range", "scope_type"])) do
+  #           :history ->
+  #             last_txi() + 1
 
-            normalized ->
-              Enum.count(db_stream_raw(combiner, normalized, conn.assigns.scope))
-          end
+  #           normalized ->
+  #             Enum.count(db_stream_raw(combiner, normalized, conn.assigns.scope))
+  #         end
 
-        json(conn, %{"count" => count})
-      end)
+  #       json(conn, %{"count" => count})
+  #     end)
 
   ##########
 
-  defp combination(x) when x in [:txs_or, :txs_count_or], do: :or
-  defp combination(x) when x in [:txs_and, :txs_count_and], do: :and
-
-  def normalize(:txs, %{} = req),
-    do: (map_size(req) == 0 && :history) || Normalize.input_err(:unexpected_parameters)
-
-  def normalize(action, %{} = req),
-    do: Normalize.normalize(combination(action), validate(req))
-
-  def validate(req) do
-    explicit_tx_types = AeMdwWeb.Validate.tx_types(req)
-    {untyped_ids, type_field_ids} = AeMdwWeb.Validate.ids(Map.drop(req, ["type", "type_group"]))
-    {explicit_tx_types, untyped_ids, type_field_ids}
-  end
+  def normalize(:txs, %{} = query_groups),
+    do: (map_size(query_groups) == 0 && :history) || Query.Parser.parse(query_groups)
 
   ##########
 

@@ -25,9 +25,7 @@ defmodule AeMdw.Db.Stream.Resource do
       nil ->
         init_from_scope(scope, mod, order)
 
-      # root looks like MapSet<{type, pubkey}>
       roots ->
-        # roots |> prx("##############################")
         scope_check = DBS.Scope.checker(scope, order)
 
         conts =
@@ -118,6 +116,7 @@ defmodule AeMdw.Db.Stream.Resource do
   def sort_key(i) when is_integer(i), do: i
   def sort_key({_, i}), do: i
   def sort_key({_, _, i}), do: i
+  def sort_key({_, _, _, i}), do: i
 
   def full_key(root, i) when is_tuple(root),
     do: Tuple.append(root, i)

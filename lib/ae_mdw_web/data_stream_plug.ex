@@ -2,6 +2,7 @@ defmodule AeMdwWeb.DataStreamPlug do
   import Plug.Conn
 
   alias AeMdw.Validate
+  alias AeMdw.Node, as: AE
 
   import AeMdw.Db.Util, only: [first_gen: 0, last_gen: 0]
   import AeMdwWeb.Util, only: [concat: 2]
@@ -21,10 +22,12 @@ defmodule AeMdwWeb.DataStreamPlug do
     cond do
       top_endpoint in paginables ->
         with {:ok, scope} <- parse_scope(rem_path, scopes),
-             {:ok, offset} <- parse_offset(conn.query_params) do
+             {:ok, offset} <- parse_offset(conn.query_params),
+             {:ok, query} <- parse_query(conn.query_string) do
           conn
           |> assign(:scope, scope)
           |> assign(:offset, offset)
+          |> assign(:query, query)
         else
           {:error, reason} ->
             conn
@@ -118,4 +121,50 @@ defmodule AeMdwWeb.DataStreamPlug do
 
   defp ensure_limit(limit, _page) when limit > @max_limit,
     do: {:error, concat("limit too large", limit)}
+
+
+
+  ################################################################################
+
+  def query_norm(types, "type", val) do
+    case Validate.tx_type(val) do
+      {:ok, type} -> {:ok, MapSet.put(types, type)}
+      err -> err
+    end
+  end
+  def query_norm(types, "type_group", val) do
+    case Validate.tx_group(val) do
+      {:ok, group} -> {:ok, MapSet.new(AE.tx_group(group)) |> MapSet.union(types)}
+      err -> err
+    end
+  end
+  def query_norm(ids, key_spec, val) do
+    case Validate.id(val) do
+      {:ok, pk} -> {:ok, MapSet.put(ids, {key_spec, pk})}
+      err -> err
+    end
+  end
+
+  def parse_query("" <> query_string),
+    do: parse_query(URI.query_decoder(query_string))
+
+  @type_params ["type", "type_group"]
+  def parse_query(stream) do
+    get = fn kw, top -> Map.get(top, kw, MapSet.new()) end
+
+    stream
+    |> Enum.filter(fn {k, _v} -> k not in ["limit", "page"] end)
+    |> Enum.reduce_while({:ok, %{}},
+         fn {key, val}, {:ok, top_level} ->
+           kw = key in @type_params && :types || :ids
+           group = get.(kw, top_level)
+           case query_norm(group, key, val) do
+             {:ok, group} ->
+               {:cont, {:ok, Map.put(top_level, kw, group)}}
+             {:error, {err_kind, offender}} ->
+               {:halt, {:error, AeMdw.Error.to_string(err_kind, offender)}}
+           end
+         end)
+  end
+
 end
