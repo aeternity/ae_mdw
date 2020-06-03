@@ -10,14 +10,6 @@ defmodule AeMdw.Db.Model do
 
   ################################################################################
 
-  # txs table :
-  #     index = tx_index (0..), id = tx_id
-  @tx_defaults [index: -1, id: <<>>, block_index: {-1, -1}, time: -1]
-  defrecord :tx, @tx_defaults
-
-  # def tx(tx_index, tx_id, block_index),
-  #   do: tx(index: tx_index, id: tx_id, block_index: block_index)
-
   # txs block index :
   #     index = {kb_index (0..), mb_index}, tx_index = tx_index, hash = block (header) hash
   #     if tx_index == nil -> txs not synced yet on that height
@@ -25,6 +17,11 @@ defmodule AeMdw.Db.Model do
   #     On keyblock boundary: mb_index = -1}
   @block_defaults [index: {-1, -1}, tx_index: nil, hash: <<>>]
   defrecord :block, @block_defaults
+
+  # txs table :
+  #     index = tx_index (0..), id = tx_id
+  @tx_defaults [index: -1, id: <<>>, block_index: {-1, -1}, time: -1]
+  defrecord :tx, @tx_defaults
 
   # txs time index :
   #     index = {mb_time_msecs (0..), tx_index = (0...)},

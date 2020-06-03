@@ -17,9 +17,8 @@ defmodule AeMdwWeb.Continuation do
 
     try do
       params = query_groups(conn.query_string) |> Map.drop(["limit", "page"])
-      normalized = mod.normalize(fun, params)
 
-      case response_data({mod, fun, normalized, scope, offset}, limit) do
+      case response_data({mod, fun, params, scope, offset}, limit) do
         {:ok, data, has_cont?} ->
           next = (has_cont? && next_link(path, scope, params, limit, page)) || nil
           ok_fun.(conn, %{next: next, data: data})
