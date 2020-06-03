@@ -1,13 +1,13 @@
-defmodule AeMdwWeb.Query.Optimizer do
+defmodule AeMdw.Db.Stream.Query.Optimizer do
   alias AeMdw.Db.Model
   alias AeMdw.Node, as: AE
   alias AeMdw.Validate
   alias AeMdw.Error.Input, as: ErrInput
-  alias AeMdwWeb.Query.Util, as: QUtil
+  alias AeMdw.Db.Stream.Query.Util, as: QUtil
 
   require Model
 
-  import AeMdwWeb.Util
+  # import AeMdwWeb.Util
   import AeMdw.{Util, Db.Util}
 
   ##########
