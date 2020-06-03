@@ -3,6 +3,7 @@ defmodule AeMdw.Validate do
   alias AeMdw.Error.Input, as: ErrInput
   alias :aeser_api_encoder, as: Enc
 
+
   # returns pubkey
   def id(<<_prefix::2-binary, "_", _::binary>> = id) do
     try do
@@ -109,8 +110,13 @@ defmodule AeMdw.Validate do
 
   defp unwrap!(validator, value) do
     case validator.(value) do
-      {:ok, res} -> res
-      {:error, {ex, ^value}} -> raise ex, value: value
+      {:ok, res} ->
+        res
+
+      {:error, {ex, ^value}} ->
+        raise ex, value: value
     end
   end
+
+
 end
