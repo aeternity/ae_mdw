@@ -1,10 +1,10 @@
-defmodule AeMdwWeb.Query.Planner do
+defmodule AeMdw.Db.Stream.Query.Planner do
+  alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Node, as: AE
   alias AeMdw.Validate
   alias AeMdw.Error.Input, as: ErrInput
-  alias AeMdwWeb.Query
 
-  import AeMdwWeb.Util
+  # import AeMdwWeb.Util
   import AeMdw.Util
 
   ##########
@@ -26,7 +26,7 @@ defmodule AeMdwWeb.Query.Planner do
 
     initial = initial_assignments(min_bounds, types)
     final = extend_assignments(initial, rem_bounds)
-    final && Query.Optimizer.optimize(final)
+    final && DBS.Query.Optimizer.optimize(final)
   end
 
   def initial_assignments({pubkeys, type_bounds}, types) do
@@ -34,8 +34,8 @@ defmodule AeMdwWeb.Query.Planner do
       acc ->
         case type in types do
           true ->
-            all_positions = Query.Util.tx_positions(type)
-            type_variants = position_variants(type, pubkeys, poss, all_positions)
+            all_positions = DBS.Query.Util.tx_positions(type)
+            type_variants = position_variants(pubkeys, poss, all_positions)
             (type_variants && Map.put(acc, type, {:or, type_variants})) || acc
 
           false ->
@@ -54,7 +54,7 @@ defmodule AeMdwWeb.Query.Planner do
 
         _ ->
           acc =
-            Enum.reduce_while(type_bounds, acc, fn {type, poss}, acc ->
+            Enum.reduce_while(type_bounds, acc, fn {type, _poss}, acc ->
               case extend_position_variants(acc[type], type, pks) do
                 nil ->
                   {:halt, nil}
@@ -71,9 +71,9 @@ defmodule AeMdwWeb.Query.Planner do
 
   def extend_position_variants({:or, curr_variants}, tx_type, pubkeys) do
     Enum.reduce_while(curr_variants, [], fn {free_poss, assignment}, acc ->
-      all_positions = Query.Util.tx_positions(tx_type)
+      all_positions = DBS.Query.Util.tx_positions(tx_type)
 
-      case position_variants(tx_type, pubkeys, free_poss, all_positions) do
+      case position_variants(pubkeys, free_poss, all_positions) do
         nil ->
           {:halt, nil}
 
@@ -89,7 +89,7 @@ defmodule AeMdwWeb.Query.Planner do
     end)
   end
 
-  def position_variants(tx_type, [_ | _] = pubkeys, [_ | _] = positions, all_positions) do
+  def position_variants([_ | _] = pubkeys, [_ | _] = positions, all_positions) do
     num_pubkeys = Enum.count(pubkeys)
     num_positions = Enum.count(positions)
 
@@ -121,79 +121,79 @@ defmodule AeMdwWeb.Query.Planner do
 
   def t1() do
     "spend.sender_id=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&recipient_id=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&account=ak_zvU8YQLagjcfng7Tg8yCdiZ1rpiWNp1PBn3vtUs44utSvbJVR&contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&type_group=channel"
-    |> AeMdwWeb.Query.Parser.parse()
+    |> DBS.Query.Parser.parse()
     |> plan
   end
 
   def t2() do
     "account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&account=ak_zvU8YQLagjcfng7Tg8yCdiZ1rpiWNp1PBn3vtUs44utSvbJVR"
-    |> AeMdwWeb.Query.Parser.parse()
+    |> DBS.Query.Parser.parse()
     |> plan
   end
 
   def t3() do
     "sender_id=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
-    |> AeMdwWeb.Query.Parser.parse()
+    |> DBS.Query.Parser.parse()
     |> plan
   end
 
   def t4() do
     "contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z"
-    |> AeMdwWeb.Query.Parser.parse()
+    |> DBS.Query.Parser.parse()
     |> plan
   end
 
   def t5() do
     "account=ak_zvU8YQLagjcfng7Tg8yCdiZ1rpiWNp1PBn3vtUs44utSvbJVR&contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z"
-    |> AeMdwWeb.Query.Parser.parse()
+    |> DBS.Query.Parser.parse()
     |> plan
   end
 
   def t6() do
     "account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
-    |> AeMdwWeb.Query.Parser.parse()
+    |> DBS.Query.Parser.parse()
     |> plan
   end
 
   def t7() do
     "account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&account=ak_ozzwBYeatmuN818LjDDDwRSiBSvrqt4WU7WvbGsZGVre72LTS"
-    |> AeMdwWeb.Query.Parser.parse()
+    |> DBS.Query.Parser.parse()
     |> plan
   end
 
   def t8() do
     "account=ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF&account=ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN"
-    |> AeMdwWeb.Query.Parser.parse()
+    |> DBS.Query.Parser.parse()
     |> plan
   end
 
   def t9() do
     "name_transfer.recipient_id=ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF&account=ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN"
-    |> AeMdwWeb.Query.Parser.parse()
+    |> DBS.Query.Parser.parse()
     |> plan
   end
 
   def t10() do
     "sender_id=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&account=ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN"
-    |> AeMdwWeb.Query.Parser.parse()
+    |> DBS.Query.Parser.parse()
     |> plan
   end
 
   def t11() do
     "account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&account=ak_ozzwBYeatmuN818LjDDDwRSiBSvrqt4WU7WvbGsZGVre72LTS&account=ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN"
-    |> AeMdwWeb.Query.Parser.parse()
+    |> DBS.Query.Parser.parse()
     |> plan
   end
 
   def t12() do
     "account=ak_HzcS4HvhTtiD3KaVXW9umgqCW6dyg3KWgmyxHfir8x9Rads4a&contract=ct_2rtXsV55jftV36BMeR5gtakN2VjcPtZa3PBURvzShSYWEht3Z7"
-    |> AeMdwWeb.Query.Parser.parse()
+    |> DBS.Query.Parser.parse()
     |> plan
   end
 
   def t13() do
     "account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&type=oracle_register"
-    |> AeMdwWeb.Query.Parser.parse()
+    |> DBS.Query.Parser.parse()
     |> plan
   end
 

@@ -1,0 +1,18 @@
+defmodule AeMdw.Exception do
+
+  defmacro defexception!(name) do
+    quote do
+      defmodule unquote(name) do
+        defexception [:value]
+
+        @impl true
+        def exception(value: value),
+          do: %AeMdw.Error.Input{message: AeMdw.Error.to_string(__MODULE__, value)}
+
+        @impl true
+        def message(%AeMdw.Error.Input{message: m}), do: m
+      end
+    end
+  end
+
+end

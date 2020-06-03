@@ -4,6 +4,8 @@ defmodule AeMdwWeb.Util do
 
   require Model
 
+  import AeMdw.Util
+
   ##########
 
   def query_groups(query_string) do

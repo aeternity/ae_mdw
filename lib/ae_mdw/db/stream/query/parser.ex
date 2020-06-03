@@ -1,10 +1,10 @@
-defmodule AeMdwWeb.Query.Parser do
+defmodule AeMdw.Db.Stream.Query.Parser do
   alias AeMdw.Node, as: AE
   alias AeMdw.Validate
   alias AeMdw.Error.Input, as: ErrInput
-  alias AeMdwWeb.Query.Util, as: QUtil
+  alias AeMdw.Db.Stream.Query.Util, as: QUtil
 
-  import AeMdwWeb.Util
+  # import AeMdwWeb.Util
 
   ##########
 
@@ -19,8 +19,8 @@ defmodule AeMdwWeb.Query.Parser do
   def id_tx_types("channel"), do: AE.tx_group(:channel)
   def id_tx_types("oracle"), do: AE.tx_group(:oracle)
 
-  def parse(query_string) when is_binary(query_string),
-    do: parse(query_groups(query_string))
+  # def parse(query_string) when is_binary(query_string),
+  #   do: parse(query_groups(query_string))
 
   def parse(query_groups) when is_map(query_groups) do
     types = parse_types(query_groups)
@@ -97,8 +97,9 @@ defmodule AeMdwWeb.Query.Parser do
 
   ##########
 
-  def t() do
-    "spend.sender_id=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&recipient_id=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&type_group=channel"
-    |> parse
-  end
+  # def t() do
+  #   "spend.sender_id=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&recipient_id=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&type_group=channel"
+  #   |> parse
+  # end
+
 end

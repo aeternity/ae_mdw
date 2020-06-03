@@ -15,7 +15,7 @@ defmodule AeMdwWeb.DataStreamPlug do
   def init(opts),
     do: {Keyword.fetch!(opts, :paginables), Keyword.fetch!(opts, :scopes)}
 
-  def call(%Plug.Conn{path_info: [_, "count"]} = conn, _),
+  def call(%Plug.Conn{path_info: [_, "count" | _]} = conn, _),
     do: conn
 
   def call(%Plug.Conn{path_info: [top_endpoint | rem_path]} = conn, {paginables, scopes}) do

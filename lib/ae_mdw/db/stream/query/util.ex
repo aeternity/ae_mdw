@@ -1,4 +1,4 @@
-defmodule AeMdwWeb.Query.Util do
+defmodule AeMdw.Db.Stream.Query.Util do
   alias AeMdw.Node, as: AE
 
   def tx_positions(tx_type) do

@@ -1,7 +1,7 @@
 defmodule AeMdwWeb.Router do
   use AeMdwWeb, :router
 
-  @paginables ["txs", "names", "oracles", "channels", "contracts"]
+  @paginables ["txs", "names"]
   @scopes ["gen", "txi"]
 
   pipeline :api do
@@ -12,75 +12,52 @@ defmodule AeMdwWeb.Router do
   scope "/", AeMdwWeb do
     pipe_through :api
 
-    # get "/channels/active", ChannelController, :active_channels
-    # get "/channels/transactions/address/:address", ChannelController, :txs_for_channel_address
-
-    # get "/oracles/list", OracleController, :all
-    # # seems like there are not registered oracles in aeternal
-    # get "/oracles/:oracle_id", OracleController, :requests_responses
-
-    # get "/contracts/all", ContractController, :all
-    # get "/contracts/transactions/address/:address", ContractController, :transactions
-    # get "/contracts/calls/address/:address", ContractController, :calls
-    # post "/contracts/verify", ContractController, :verify
-
-    # get "/names", NameController, :all_names
-    # get "/names/:name", NameController, :search_names
-    # get "/names/active", NameController, :active_names
-    # get "/names/auctions/active", NameController, :active_name_auctions
-    # get "/names/auctions/active/count", NameController, :active_name_auctions_count
-    # get "/names/auctions/bids/account/:account", NameController, :bids_for_account
-    # get "/names/auctions/bids/:name", NameController, :bids_for_name
-    # get "/names/reverse/:account", NameController, :reverse_names
-    # get "/names/auctions/:name/info", NameController, :info_for_auction
-    # get "/names/hash/:hash", NameController, :name_for_hash
-
     get "/tx/:hash", TxController, :tx
     get "/txi/:index", TxController, :txi
 
-    # get "/txs/count", TxController, :txs_count
-    # get "/txs/:scope_type/:range/count", TxController, :txs_scoped_count
-    # get "/txs/:scope_type/:range/count/or", TxController, :txs_scoped_count_or
-    # get "/txs/:scope_type/:range/count/and", TxController, :txs_scoped_count_and
+    get "/txs/count", TxController, :count
+    get "/txs/count/:id", TxController, :count_id
 
     get "/txs/:scope_type/:range", TxController, :txs
     get "/txs/:direction", TxController, :txs
 
-    # get "/generations/:from/:to", GenerationController, :interval
-
-    # get "/compilers", UtilController, :get_available_compilers
-    # get "/height/at/:milliseconds", UtilController, :height_at_epoch
-    # get "/reward/height/:height", UtilController, :reward_at_height
-    # get "/size/current", UtilController, :current_size
-    # get "/size/height/:height", UtilController, :size
     get "/status", UtilController, :status
-    # get "/count/current", UtilController, :current_count
 
+
+    #### variants of these can be implemented when requested:
+
+    # get "/names", :all_names
+    # get "/names/:name", :search_names
+    # get "/names/active", :active_names
+    # get "/names/auctions/active", :active_name_auctions
+    # get "/names/auctions/active/count", :active_name_auctions_count
+    # get "/names/auctions/bids/account/:account", :bids_for_account
+    # get "/names/auctions/bids/:name", :bids_for_name
+    # get "/names/reverse/:account", :reverse_names
+    # get "/names/auctions/:name/info", :info_for_auction
+    # get "/names/hash/:hash", :name_for_hash
+
+    # get "/generations/:from/:to", :interval
+    # get "/compilers", :get_available_compilers
+    # get "/height/at/:milliseconds", :height_at_epoch
+    # get "/reward/height/:height", :reward_at_height
+    # get "/size/current", :current_size
+    # get "/size/height/:height", :size
+    # get "/count/current", :current_count
     # get "/count/height/:height", :count
     # get "/micro-blocks/hash/:hash/transactions/count", :transaction_count_in_micro_block
     # get "/contracts/transactions/creation/address/:address, :creation_tx_for_contract_address
     # get "/new/generations/:from/:to, :generations_by_range2
+    # get "/transactions/:hash", :tx_by_hash
+    # get "/generations/current", :current_generations
+    # get "/generations/height/:height", :generation_by_height
+    # get "/key-blocks/current/height", :current_key_block_height
+    # get "/key-blocks/hash/:hash", :key_block_by_hash
+    # get "/key-blocks/height/:height", :key_block_by_height
+    # get "/micro-blocks/hash/:hash/header", :micro_block_header_by_hash
+    # get "/micro-blocks/hash/:hash/transactions", :micro_block_transactions_by_hash
+    # get "/micro-blocks/hash/:hash/transactions/count", :micro_block_transactions_count_by_hash
+    # get "/accounts/:account", :get_account_details
+
   end
-
-  # scope "/v2", AeMdwWeb do
-  #   pipe_through :api
-
-  #   get "/transactions/:hash", AeNodeController, :tx_by_hash
-  #   get "/generations/current", AeNodeController, :current_generations
-  #   get "/generations/height/:height", AeNodeController, :generation_by_height
-  #   get "/key-blocks/current/height", AeNodeController, :current_key_block_height
-  #   get "/key-blocks/hash/:hash", AeNodeController, :key_block_by_hash
-  #   get "/key-blocks/height/:height", AeNodeController, :key_block_by_height
-  #   get "/micro-blocks/hash/:hash/header", AeNodeController, :micro_block_header_by_hash
-
-  #   get "/micro-blocks/hash/:hash/transactions",
-  #       AeNodeController,
-  #       :micro_block_transactions_by_hash
-
-  #   get "/micro-blocks/hash/:hash/transactions/count",
-  #       AeNodeController,
-  #       :micro_block_transactions_count_by_hash
-
-  #   get "/accounts/:account", AeNodeController, :get_account_details
-  # end
 end

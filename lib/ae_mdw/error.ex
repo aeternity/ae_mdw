@@ -12,26 +12,17 @@ defmodule AeMdw.Error do
   def to_string(Err.Query, x), do: concat("invalid query", x)
 
   defmodule Input do
+    require AeMdw.Exception
+    import AeMdw.Exception, only: [defexception!: 1]
+
     defexception [:message]
 
-    defmodule Id, do: def(exception(value: value), do: AeMdw.Error.to_string(__MODULE__, value))
-
-    defmodule NonnegInt,
-      do: def(exception(value: value), do: AeMdw.Error.to_string(__MODULE__, value))
-
-    defmodule TxField,
-      do: def(exception(value: value), do: AeMdw.Error.to_string(__MODULE__, value))
-
-    defmodule TxType,
-      do: def(exception(value: value), do: AeMdw.Error.to_string(__MODULE__, value))
-
-    defmodule TxGroup,
-      do: def(exception(value: value), do: AeMdw.Error.to_string(__MODULE__, value))
-
-    defmodule Scope,
-      do: def(exception(value: value), do: AeMdw.Error.to_string(__MODULE__, value))
-
-    defmodule Query,
-      do: def(exception(value: value), do: AeMdw.Error.to_string(__MODULE__, value))
+    defexception! Id
+    defexception! NonnegInt
+    defexception! TxField
+    defexception! TxType
+    defexception! TxGroup
+    defexception! Scope
+    defexception! Query
   end
 end
