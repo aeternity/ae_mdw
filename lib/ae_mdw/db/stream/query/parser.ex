@@ -11,7 +11,7 @@ defmodule AeMdw.Db.Stream.Query.Parser do
   def classify_ident("account"), do: {false, &Validate.id!(&1, [:account_pubkey])}
   def classify_ident("contract"), do: {false, &Validate.id!(&1, [:contract_pubkey])}
   def classify_ident("channel"), do: {false, &Validate.id!(&1, [:channel])}
-  def classify_ident("oracle"), do: {false, {false, &Validate.id!(&1, [:oracle_pubkey])}}
+  def classify_ident("oracle"), do: {false, &Validate.id!(&1, [:oracle_pubkey])}
   def classify_ident(_), do: {true, &Validate.id!/1}
 
   def id_tx_types("account"), do: AE.tx_types()
