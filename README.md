@@ -1,5 +1,55 @@
 # AeMdw - Aeternity Middleware
 
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+**Table of Contents**
+
+- [AeMdw - Aeternity Middleware](#aemdw---aeternity-middleware)
+    - [Overview](#overview)
+    - [Prerequisites](#prerequisites)
+    - [Setup](#setup)
+    - [Start](#start)
+    - [HTTP endpoints](#http-endpoints)
+    - [Transaction querying](#transaction-querying)
+        - [Scope](#scope)
+        - [Query parameters](#query-parameters)
+            - [Types](#types)
+                - [Supported types](#supported-types)
+                - [Supported type groups](#supported-type-groups)
+                    - [Examples](#examples)
+            - [Generic IDs](#generic-ids)
+                - [Supported generic IDs](#supported-generic-ids)
+                    - [Examples](#examples-1)
+            - [Transaction fields](#transaction-fields)
+                - [Supported fields with provided transaction type](#supported-fields-with-provided-transaction-type)
+                - [Supported freestanding fields](#supported-freestanding-fields)
+                    - [Examples](#examples-2)
+            - [Pagination](#pagination)
+                - [Examples](#examples-3)
+        - [Mixing of query parameters](#mixing-of-query-parameters)
+            - [Examples](#examples-4)
+    - [Querying from Elixir's shell](#querying-from-elixirs-shell)
+        - [MAP function](#map-function)
+        - [Arguments](#arguments)
+            - [Scope](#scope-1)
+            - [Mapper](#mapper)
+            - [Query](#query)
+            - [Prefer Order](#prefer-order)
+        - [Examples](#examples-5)
+            - [Continuation example](#continuation-example)
+    - [Other endpoints](#other-endpoints)
+        - [TX - get transaction by hash](#tx---get-transaction-by-hash)
+        - [TXI - get transaction by index](#txi---get-transaction-by-index)
+        - [TXS/COUNT endpoint](#txscount-endpoint)
+            - [All transactions:](#all-transactions)
+            - [Transactions by type/field for ID](#transactions-by-typefield-for-id)
+    - [Websocket interface](#websocket-interface)
+        - [Message format:](#message-format)
+        - [Supported operations:](#supported-operations)
+        - [Supported payloads:](#supported-payloads)
+
+<!-- markdown-toc end -->
+
+
 ## Overview
 
 The middleware is a caching and reporting layer which sits in front of the nodes of the [æternity blockchain](https://github.com/aeternity/aeternity). Its purpose is to respond to queries faster than the node can do, and to support queries that for reasons of efficiency the node cannot or will not support itself.
@@ -12,11 +62,11 @@ Ensure that you have [Elixir](https://elixir-lang.org/install.html) installed, u
 
 `git clone https://github.com/aeternity/ae_mdw && cd ae_mdw`
   * This project depends on [æternity](https://github.com/aeternity/aeternity) node. It should be then compiled and the path to the node should be configured in `config.exs`, or you can simply export `NODEROOT`. If the variable is not set, by default the path is `../aeternity/_build/local/`.
-  
+
 ```
 export NODEROOT="path/to/your/node"
 ```
-The NODEROOT directory should contain directories: `bin`, `lib`, `plugins`, `rel` of AE node installation. 
+The NODEROOT directory should contain directories: `bin`, `lib`, `plugins`, `rel` of AE node installation.
 
 ## Start
 
@@ -49,7 +99,7 @@ Scope specifies the time period to look for transactions matching the criteria, 
 
 ### Query parameters
 
-Querying for transactions via `txs` endpoint supports 3 kinds of parameters specifying which transactions should be part of the reply: 
+Querying for transactions via `txs` endpoint supports 3 kinds of parameters specifying which transactions should be part of the reply:
 
 - types
 - generic ids
@@ -65,7 +115,7 @@ Pagination supported via specifying of 2 parameters:
 #### Types
 
 Types of transactions in the resulting set can be constrained by providing `type` and/or `type_group` parameter.
-The query allows providing of multiple type & type_group parameters - they form a union of admissible types. 
+The query allows providing of multiple type & type_group parameters - they form a union of admissible types.
 (In the other words - they are combined with `OR`.)
 
 ##### Supported types
@@ -165,6 +215,7 @@ $ curl -s "http://localhost:4000/txs/forward?type_group=oracle&limit=1" | jq '.'
   "next": "txs/gen/0-265260?limit=1&page=2&type_group=oracle"
 }
 ```
+
 ----
 
 #### Generic IDs
@@ -185,7 +236,7 @@ With generic ids, it is possible to select also `create`/`register` transactions
 ###### Examples
 
 ```
-$ curl -s "http://localhost:4000/txs/forward?contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2" | jq '.'                  
+$ curl -s "http://localhost:4000/txs/forward?contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2" | jq '.'
 {
   "data": [
     {
@@ -310,7 +361,7 @@ $ curl -s "http://localhost:4000/txs/forward?oracle=ok_24jcHLTZQfsou7NvomRJ1hKEn
 ```
 
 ```
-$ curl -s "http://localhost:4000/txs/forward?channel=ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD&limit=2" | jq '.' 
+$ curl -s "http://localhost:4000/txs/forward?channel=ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD&limit=2" | jq '.'
 {
   "data": [
     {
@@ -372,7 +423,7 @@ $ curl -s "http://localhost:4000/txs/forward?channel=ch_22usvXSjYaDPdhecyhub7tZn
 
 #### Transaction fields
 
-Every transaction record has one or more fields with identifier, represented by public key. 
+Every transaction record has one or more fields with identifier, represented by public key.
 Middleware is indexing these fields and allows them to be used in the query.
 
 ##### Supported fields with provided transaction type
@@ -390,7 +441,7 @@ The fields for transaction types are:
 - channel_settle - channel_id, from_id
 - channel_slash - channel_id, from_id
 - channel_snapshot_solo - channel_id, from_id
-- channel_withdraw - channel_id, to_id  
+- channel_withdraw - channel_id, to_id
 - contract_call - caller_id, contract_id
 - contract_create - owner_id
 - ga_attach - owner_id
@@ -490,15 +541,107 @@ curl -s "http://localhost:4000/txs/backward?from_id=ak_ozzwBYeatmuN818LjDDDwRSiB
 
 ----
 
+#### Pagination
+
+Middleware supports 2 optional query parameters:
+
+- limit - limits max number of transactions in the reply (in range 1..1000, default is 10)
+- page - tells which page to return (default is 1)
+
+The client can set `limit` explicitly if he wishes to receive different number of transactions in the reply than 10.
+
+The main function of `page` parameter is to support fetching another page from the reply set.
+Middleware has DOS protection, by only allowing to ask for subsequent page.
+Asking for arbitrary page, without requesting a previous one before results in error:
+
+```
+$ curl -s "http://localhost:4000/txs/forward?account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&page=10" | jq '.'
+{
+  "error": "random access not supported"
+}
+```
+
+The `txs` endpoint returns json in shape `{"data": [...transactions...], "next": continuation-URL or null}`
+
+The `continuation-URL`, when concatenated with host, can be used to retrieve next page of results.
+
+##### Examples
+
+getting the first transaction:
+```
+$ curl -s "http://localhost:4000/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&limit=1" | jq '.'
+{
+  "data": [
+    {
+      "block_hash": "mh_2Rkmk15VeTVWTHt9bVBFcQRuvseKCkuHpm1RexsMcpAdZpFCLx",
+      "block_height": 77216,
+      "hash": "th_MutYY63TMfYQ7z4rWrQd8WGJqszz1h3FdAGHYLVYJBquHoG2V",
+      "micro_index": 0,
+      "micro_time": 1557275476873,
+      "signatures": [
+        "sg_SKC9yVm59qNh3HrpRdqfbkYnoH1ksypECnPxe67iuPadF3KN7HjR4D7qs4gYkeAhbgno2yUjHfZMcTxrF6CKFZQPaGfdq"
+      ],
+      "tx": {
+        "amount": 1e+18,
+        "fee": 16840000000000,
+        "nonce": 7,
+        "payload": "ba_Xfbg4g==",
+        "recipient_id": "ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD",
+        "sender_id": "ak_2cLJfLQPhkTiz7RCVQ9ii8mVPJu8gHLy6qpafmTcHYrFYWBHCG",
+        "type": "SpendTx",
+        "version": 1
+      },
+      "tx_index": 1776073
+    }
+  ],
+  "next": "txs/gen/0-265354?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&limit=1&page=2"
+}
+```
+
+getting the next transaction by prepending host (http://localhost:4000) to the continuation-URL from last request:
+```
+$ curl -s "http://localhost:4000/txs/gen/0-265354?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&limit=1&page=2" | jq '.'
+{
+  "data": [
+    {
+      "block_hash": "mh_SDfdhTd3zfTpAqHMUJsX8RjAm6QyrZYgtqNf3y6EdMMSppEgd",
+      "block_height": 77865,
+      "hash": "th_2RfB4NrPNyAr8gkm5vTQimVo6uBcZMQfmqdY8LZkuRJfhcs3HA",
+      "micro_index": 0,
+      "micro_time": 1557391780018,
+      "signatures": [
+        "sg_XjVTnUbvytX3pAbQQvwYFYXETCqDKzyen7kXqoEqRm5hr6m72k3RzKBHP4GWTHup51ZnxQuDf8R8Rxu5fUwAQGeQMHmh1"
+      ],
+      "tx": {
+        "amount": 1e+18,
+        "fee": 16840000000000,
+        "nonce": 6,
+        "payload": "ba_Xfbg4g==",
+        "recipient_id": "ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD",
+        "sender_id": "ak_2iK7D3t5xyN8GHxQktvBnfoC3tpq1eVMzTpABQY72FXRfg3HMW",
+        "type": "SpendTx",
+        "version": 1
+      },
+      "tx_index": 1779354
+    }
+  ],
+  "next": "txs/gen/0-265354?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&limit=1&page=3"
+}
+```
+
+Once there are no more transactions for a query, the `next` key is set to `null`.
+
+----
+
 ### Mixing of query parameters
 
 The query string can mix types, global ids and transaction fields.
 
-The resulting set of transactions must meet all constraints specified by parameters denoting ID (global ids and transaction fields) - the parameters are combined with `AND`. 
+The resulting set of transactions must meet all constraints specified by parameters denoting ID (global ids and transaction fields) - the parameters are combined with `AND`.
 
 If `type` or `type_group` is provided, the transaction in the result set must be of some type specified by these parameters.
 
-###### Examples
+#### Examples
 
 transactions where each transaction contains both accounts, no matter at which field:
 ```
@@ -595,98 +738,6 @@ $ curl -s "http://localhost:4000/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp2
 
 ----
 
-### Pagination
-
-Middleware supports 2 optional query parameters:
-
-- limit - limits max number of transactions in the reply (in range 1..1000, default is 10)
-- page - tells which page to return (default is 1)
-
-The client can set `limit` explicitly if he wishes to receive different number of transactions in the reply than 10.
-
-The main function of `page` parameter is to support fetching another page from the reply set. 
-Middleware has DOS protection, by only allowing to ask for subsequent page.
-Asking for arbitrary page, without requesting a previous one before results in error:
-
-```
-$ curl -s "http://localhost:4000/txs/forward?account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&page=10" | jq '.'
-{
-  "error": "random access not supported"
-}
-```
-
-The `txs` endpoint returns json in shape `{"data": [...transactions...], "next": continuation-URL or null}`  
-
-The `continuation-URL`, when concatenated with host, can be used to retrieve next page of results.
-
-###### Examples
-
-getting the first transaction:
-```
-$ curl -s "http://localhost:4000/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&limit=1" | jq '.'
-{
-  "data": [
-    {
-      "block_hash": "mh_2Rkmk15VeTVWTHt9bVBFcQRuvseKCkuHpm1RexsMcpAdZpFCLx",
-      "block_height": 77216,
-      "hash": "th_MutYY63TMfYQ7z4rWrQd8WGJqszz1h3FdAGHYLVYJBquHoG2V",
-      "micro_index": 0,
-      "micro_time": 1557275476873,
-      "signatures": [
-        "sg_SKC9yVm59qNh3HrpRdqfbkYnoH1ksypECnPxe67iuPadF3KN7HjR4D7qs4gYkeAhbgno2yUjHfZMcTxrF6CKFZQPaGfdq"
-      ],
-      "tx": {
-        "amount": 1e+18,
-        "fee": 16840000000000,
-        "nonce": 7,
-        "payload": "ba_Xfbg4g==",
-        "recipient_id": "ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD",
-        "sender_id": "ak_2cLJfLQPhkTiz7RCVQ9ii8mVPJu8gHLy6qpafmTcHYrFYWBHCG",
-        "type": "SpendTx",
-        "version": 1
-      },
-      "tx_index": 1776073
-    }
-  ],
-  "next": "txs/gen/0-265354?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&limit=1&page=2"
-}
-```
-
-getting the next transaction by prepending host (http://localhost:4000) to the continuation-URL from last request:
-```
-$ curl -s "http://localhost:4000/txs/gen/0-265354?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&limit=1&page=2" | jq '.'
-{
-  "data": [
-    {
-      "block_hash": "mh_SDfdhTd3zfTpAqHMUJsX8RjAm6QyrZYgtqNf3y6EdMMSppEgd",
-      "block_height": 77865,
-      "hash": "th_2RfB4NrPNyAr8gkm5vTQimVo6uBcZMQfmqdY8LZkuRJfhcs3HA",
-      "micro_index": 0,
-      "micro_time": 1557391780018,
-      "signatures": [
-        "sg_XjVTnUbvytX3pAbQQvwYFYXETCqDKzyen7kXqoEqRm5hr6m72k3RzKBHP4GWTHup51ZnxQuDf8R8Rxu5fUwAQGeQMHmh1"
-      ],
-      "tx": {
-        "amount": 1e+18,
-        "fee": 16840000000000,
-        "nonce": 6,
-        "payload": "ba_Xfbg4g==",
-        "recipient_id": "ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD",
-        "sender_id": "ak_2iK7D3t5xyN8GHxQktvBnfoC3tpq1eVMzTpABQY72FXRfg3HMW",
-        "type": "SpendTx",
-        "version": 1
-      },
-      "tx_index": 1779354
-    }
-  ],
-  "next": "txs/gen/0-265354?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&limit=1&page=3"
-}
-```
-
-Once there are no more transactions for a query, the `next` key is set to `null`.
-
-----
-
 ## Querying from Elixir's shell
 
 One of the goals of the new middleware was to have the querying ability available in the shell, as a function for easy integration with other parts if needed.
@@ -702,7 +753,7 @@ map(scope, mapper, query),
 map(scope, mapper, query, prefer_direction),
 ```
 
-The result of `map` function is a `stream yielding transactions on demand`, not the transctions themselves. 
+The result of `map` function is a `stream yielding transactions on demand`, not the transctions themselves.
 
 To get the transactions from this stream, it must be consumed with one of:
 
@@ -722,8 +773,8 @@ To get the transactions from this stream, it must be consumed with one of:
 #### Mapper
 
 - `:txi`  - extract just transaction index from transactions in result set
-- `:raw`  - translate Erlang transaction record into map, enrich the map with additional data, don't encode IDs 
-- `:json` - translate Erlang transaction record into map, enrich the map with additional data, encode IDs for JSON compatibility 
+- `:raw`  - translate Erlang transaction record into map, enrich the map with additional data, don't encode IDs
+- `:json` - translate Erlang transaction record into map, enrich the map with additional data, encode IDs for JSON compatibility
 
 #### Query
 
@@ -740,12 +791,12 @@ Type constraints combine with `OR`, ids and fields combine with `AND`.
 
 #### Prefer Order
 
-Either `:forward` or `:backward`. 
+Either `:forward` or `:backward`.
 
-This optional parameter is rarely needed. 
+This optional parameter is rarely needed.
 It's purpose is to force direction of iteration, overriding derived direction from `scope`.
 
-###### Examples
+### Examples
 
 For convenience, we alias `AeMdw.Db.Stream` module:
 ```
@@ -837,7 +888,7 @@ iex(aeternity@localhost)62> DBS.map(:backward, :json, account: "ak_24jcHLTZQfsou
 ]
 ```
 
-###### Continuation example
+#### Continuation example
 
 Gets first `name_transfer` transaction with provided `recipient_id`, and different account in any other field, AND also bind the continuation to variable `cont`:
 ```
@@ -897,7 +948,7 @@ iex(aeternity@localhost)69> cont |> Enum.take(1)
 
 The `cont` above could be also passed as parameter to another invocation of `StreamSplit.take_and_drop/2` - producing next result and another continuation.
 
-This design decouples query construction and actual consumption of the result set. 
+This design decouples query construction and actual consumption of the result set.
 
 ----
 
@@ -961,7 +1012,7 @@ $ curl -s "http://localhost:4000/txi/10000000 | jq '.'"
 
 ### TXS/COUNT endpoint
 
-#### All transactions:
+#### All transactions
 
 ```
 $ curl -s "http://localhost:4000/txs/count" | jq '.'
