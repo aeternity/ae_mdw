@@ -18,8 +18,8 @@ defmodule AeMdwWeb.Router do
     get "/txs/count", TxController, :count
     get "/txs/count/:id", TxController, :count_id
 
-    get "/txs/:scope_type/:range", TxController, :txs
     get "/txs/:direction", TxController, :txs
+    get "/txs/:scope_type/:range", TxController, :txs
 
     get "/status", UtilController, :status
 

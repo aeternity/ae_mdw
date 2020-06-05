@@ -30,6 +30,9 @@ defmodule AeMdw.Db.Stream do
   def map(scope, mapper, [_|_] = query, order),
     do: map(scope, mapper, query_groups(query), order)
 
+  def map(scope, mapper, %{} = query_groups, order) when map_size(query_groups) == 0,
+    do: map(scope, mapper, nil, order)
+
   def map(scope, mapper, %{} = query_groups, order),
     do: map(scope, mapper, DBS.Query.Parser.parse(query_groups), order)
 
