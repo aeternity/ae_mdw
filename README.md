@@ -687,6 +687,220 @@ Once there are no more transactions for a query, the `next` key is set to `null`
 
 ----
 
+## Querying from Elixir's shell
+
+One of the goals of the new middleware was to have the querying ability available in the shell, as a function for easy integration with other parts if needed.
+
+### MAP function
+
+The HTTP request is translated to the call to the query function called `map`, in `AeMdw.Db.Stream` module:
+
+```
+map(scope),
+map(scope, mapper),
+map(scope, mapper, query),
+map(scope, mapper, query, prefer_direction),
+```
+
+The result of `map` function is a `stream yielding transactions on demand`, not the transctions themselves. 
+
+To get the transactions from this stream, it must be consumed with one of:
+
+- `Enum.to_list/1`               - get all transaction
+- `Enum.take/2`                  - get chunk of provided size
+- `StreamSplit.take_and_drop/2`  - get chunk of provided size AND stream generating the rest of the result set
+
+### Arguments
+
+#### Scope
+
+- `:forward`     - from beginning (genesis) to the end
+- `:backward`    - from end (top of chain) to the beginning
+- `{:gen, a..b}` - from generation a to b (forward if a < b, backward otherwise)
+- `{:txi, a..b}` - from transaction index a to b (forward if a < b, backward otherwise)
+
+#### Mapper
+
+- `:txi`  - extract just transaction index from transactions in result set
+- `:raw`  - translate Erlang transaction record into map, enrich the map with additional data, don't encode IDs 
+- `:json` - translate Erlang transaction record into map, enrich the map with additional data, encode IDs for JSON compatibility 
+
+#### Query
+
+Query is a key value list of constraints, as described above:
+
+- `:type`, `:type_group`
+- `:account`, `:contract`, `:channel`, `:oracle` (todo: `:name`)
+- fields as described above:
+  - freestanding: for example: `:sender_id`, `:from_id`, `:contract_id`, ...
+  - with type: for example: `:'spend.sender_id'`
+
+As with query string, providing multiple type, or global ids or fields is supported.
+Type constraints combine with `OR`, ids and fields combine with `AND`.
+
+#### Prefer Order
+
+Either `:forward` or `:backward`. 
+
+This optional parameter is rarely needed. 
+It's purpose is to force direction of iteration, overriding derived direction from `scope`.
+
+###### Examples
+
+For convenience, we alias `AeMdw.Db.Stream` module:
+```
+alias AeMdw.Db.Stream, as: DBS
+```
+
+Binding a stream to a "variable":
+```
+iex(aeternity@localhost)47> s = DBS.map(:forward, :raw)
+#Function<55.119101820/2 in Stream.resource/3>
+```
+
+Get first transaction (genesis):
+(note that the mapper (when creating the stream) was `:raw` - it affects the format of the output)
+```
+iex(aeternity@localhost)48> s |> Enum.take(1)
+[
+  %{
+    block_hash: <<119, 150, 138, 100, 62, 23, 145, 61, 204, 61, 156, 228, 43,
+      173, 81, 168, 211, 94, 220, 238, 183, 91, 245, 112, 230, 47, 52, 44, 191,
+      34, 49, 235>>,
+    block_height: 1,
+    hash: <<164, 38, 1, 147, 61, 29, 56, 40, 111, 178, 197, 124, 115, 149, 188,
+      19, 47, 119, 120, 111, 53, 92, 10, 1, 24, 116, 100, 201, 234, 146, 180,
+      157>>,
+    micro_index: 0,
+    micro_time: 1543375246712,
+    signatures: [
+      <<112, 133, 201, 51, 75, 65, 83, 138, 79, 82, 251, 174, 141, 218, 143, 44,
+        179, 103, 222, 101, 139, 79, 218, 201, 230, 109, 149, 134, 13, 231, 40,
+        146, 52, 83, 160, 139, 55, 214, 96, 76, 174, 136, ...>>
+    ],
+    tx: %{
+      amount: 150425,
+      fee: 101014,
+      nonce: 1,
+      payload: "790921-801018",
+      recipient_id: {:id, :account,
+       <<144, 125, 123, 13, 183, 6, 234, 74, 192, 116, 177, 35, 130, 58, 45,
+         133, 185, 14, 29, 143, 113, 100, 77, 100, 127, 133, 98, 225, 46, 110,
+         14, 75>>},
+      sender_id: {:id, :account,
+       <<144, 125, 123, 13, 183, 6, 234, 74, 192, 116, 177, 35, 130, 58, 45,
+         133, 185, 14, 29, 143, 113, 100, 77, 100, 127, 133, 98, 225, 46, 110,
+         14, 75>>},
+      ttl: 0,
+      type: :spend_tx
+    },
+    tx_index: 0
+  }
+]
+```
+
+Get transaction indices (note `txi` mapper) of last 2 transactions of Superhero contract:
+```
+iex(aeternity@localhost)53> DBS.map(:backward, :txi, contract: "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z") |> Enum.take(2)
+[11943361, 11942780]
+```
+
+Get latest contract creation transaction for account, as JSON compatible map:
+```
+iex(aeternity@localhost)62> DBS.map(:backward, :json, account: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR", type: :contract_create) |> Enum.take(1)
+[
+  %{
+    "block_hash" => "mh_2vf1rUd9eGEK3dErZzVPD3DiAdb2tXgqqCpi5omvvZwPD3KYxh",
+    "block_height" => 42860,
+    "hash" => "th_2Turq396oFwxMP9R2DGVbhrRx2pcm2TDvwZYHLRxiLkpDzNFt2",
+    "micro_index" => 217,
+    "micro_time" => 1551072615670,
+    "signatures" => ["sg_2XUcjG9Pc5RxrG7pa84LeJsC3nNUEBrJiJAL82GyFKt5pNrGpaPvbyScB7NMssDEpPFTh3fjP3VQMZzxfZdkYExegHmHB"],
+    "tx" => %{
+      "abi_version" => 1,
+      "amount" => 1,
+      "call_data" => "cb_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACCt9bwh/i9hv+GKi/ANbdv90gR3IIMG58OESu0Pr20OJAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAW845bQ==",
+      "code" => "cb_+SquRgGgkvoZApwagOEb0ECJTcjFb4LREWQmThWornrMZiqU7IL5F1/4zKAkheOHvLYGQ5t7ogUCl4inPWJBXgCJKqHCyoOZqXs1hYZzeW1ib2y4YAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//////////////////////////////////////////7hAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfkB9KAv+IVN5raUdqtpihVQ7AOqCYLAZJbFXpmUWDBtDD6aI410cmFuc2Zlcl9mcm9tuQGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWD//////////////////////////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAuEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+NKgMo8xCDuRufaoEFAEhHE22v57oLigoUKF/hk+BZ0c6q2MdG90YWxfc3VwcGx5uGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//////////////////////////////////////////+4QAAA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" <> ...,
+      "contract_id" => "ct_2aCcWJst7rF6pXd2Sh99QTaqAK2wRa2t1pdsFNn5qVucSfvGmF",
+      "deposit" => 4,
+      "fee" => 1875780,
+      "gas" => 1579000,
+      "gas_price" => 1,
+      "nonce" => 18558,
+      "owner_id" => "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
+      "type" => "ContractCreateTx",
+      "version" => 1,
+      "vm_version" => 1
+    },
+    "tx_index" => 839835
+  }
+]
+```
+
+###### Continuation example
+
+Gets first `name_transfer` transaction with provided `recipient_id`, and different account in any other field, AND also bind the continuation to variable `cont`:
+```
+{_, cont} = DBS.map(:forward, :json, 'name_transfer.recipient_id': "ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF", account: "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN") |> StreamSplit.take_and_drop(1)
+{[
+   %{
+     "block_hash" => "mh_L5MkbeEnyJWdxbvQQS3Q2VXe3WVed7phtJPNirGeG3H4W89Tn",
+     "block_height" => 263155,
+     "hash" => "th_mXbNbgaS8w3wFRd3tHS2mHGVxAnL9jX7SsMN76JqKHHmcrMig",
+     "micro_index" => 0,
+     "micro_time" => 1590901848030,
+     "signatures" => ["sg_8z5HdmBQm5ew51geWDtz3eBXZ1HSc87aPNFJDwEfeKJkBUisMQEQuVMwXpRWCYdbm7sT1DAtLsUAxr6uLPyHmKtou2efH"],
+     "tx" => %{
+       "account_id" => "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN",
+       "fee" => 17360000000000,
+       "name_id" => "nm_2t5eU4gLBmMaw4xn3Xb6LZwoJjB5qh6YxT39jKyCq4dvVh8nwf",
+       "nonce" => 1,
+       "recipient_id" => "ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF",
+       "ttl" => 263654,
+       "type" => "NameTransferTx",
+       "version" => 1
+     },
+     "tx_index" => 11758274
+   }
+ ],
+ %StreamSplit{
+   continuation: #Function<23.119101820/1 in Stream.do_resource/5>,
+   stream: #Function<55.119101820/2 in Stream.resource/3>
+ }}
+```
+
+Get subsequent transaction, using the continuation:
+```
+iex(aeternity@localhost)69> cont |> Enum.take(1)
+[
+  %{
+    "block_hash" => "mh_wybuH39ALrhL3N1MzRuCC4rA8BmWKtsbVbcVu6aCyzSRrvu8s",
+    "block_height" => 263155,
+    "hash" => "th_HZgLPr98rabb5fTha2cAmyQiGcREA4DoZpU2VRt8nhXDJDuXe",
+    "micro_index" => 2,
+    "micro_time" => 1590901854030,
+    "signatures" => ["sg_XxqhRsKyr2a4AqdHZESEVf7SoGFAuvSSbaFt6pprh3376FvvztNXKCR2qmGPfT2SFvRsaFgfmujrtbQKPeGgQnGWvF7mJ"],
+    "tx" => %{
+      "account_id" => "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN",
+      "fee" => 17360000000000,
+      "name_id" => "nm_nCeYsPNhTb4TqEdpAWTMaWMpuJQdA9YfTwCPTGRLjo8ETJh2C",
+      "nonce" => 2,
+      "recipient_id" => "ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF",
+      "ttl" => 263655,
+      "type" => "NameTransferTx",
+      "version" => 1
+    },
+    "tx_index" => 11758279
+  }
+]
+```
+
+The `cont` above could be also passed as parameter to another invocation of `StreamSplit.take_and_drop/2` - producing next result and another continuation.
+
+This design decouples query construction and actual consumption of the result set. 
+
+----
+
 ## Other endpoints
 
 ### TX - get transaction by hash
