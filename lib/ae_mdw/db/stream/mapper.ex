@@ -24,6 +24,8 @@ defmodule AeMdw.Db.Stream.Mapper do
   def function(:txi, Model.Time), do: &time_txi/1
   def function(:txi, Model.Field), do: &field_txi/1
 
+  def function(f, _tab) when is_function(f, 1), do: f
+
   ##########
 
   def type_to_map({:type, {_type, txi}, nil}),

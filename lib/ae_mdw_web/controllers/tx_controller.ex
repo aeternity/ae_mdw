@@ -59,8 +59,7 @@ defmodule AeMdwWeb.TxController do
     with <<_::256>> = mb_hash <- :aec_db.find_tx_location(tx_hash),
          {:ok, mb_header} <- :aec_chain.get_header(mb_hash),
          height <- :aec_headers.height(mb_header) do
-      {:gen, height}
-      |> DBS.map(~t[tx], & &1)
+      DBS.map({:gen, height}, & &1)
       |> Enum.find(&(Model.tx(&1, :id) == tx_hash))
     else
       _ -> nil
