@@ -957,7 +957,7 @@ This design decouples query construction and actual consumption of the result se
 ### TX - get transaction by hash
 
 ```
-$ curl -s "http://localhost:4000/tx/th_zATv7B4RHS45GamShnWgjkvcrQfZUWQkZ8gk1RD4m2uWLJKnq | jq '.'"
+$ curl -s "http://localhost:4000/tx/th_zATv7B4RHS45GamShnWgjkvcrQfZUWQkZ8gk1RD4m2uWLJKnq" | jq '.'
 {
   "block_hash": "mh_2kE3N7GCaeAiowu1a7dopJygxQfxvRXYCNy7Pc657arjCa8PPe",
   "block_height": 257058,
@@ -985,7 +985,7 @@ $ curl -s "http://localhost:4000/tx/th_zATv7B4RHS45GamShnWgjkvcrQfZUWQkZ8gk1RD4m
 ### TXI - get transaction by index
 
 ```
-$ curl -s "http://localhost:4000/txi/10000000 | jq '.'"
+$ curl -s "http://localhost:4000/txi/10000000" | jq '.'
 {
   "block_hash": "mh_2J4A4f7RJ4oVKKCFmBEDMQpqacLZFtJ5oBvx3fUUABmLv5SUZH",
   "block_height": 240064,
