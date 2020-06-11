@@ -11,7 +11,7 @@ defmodule AeMdwWeb.TxController do
   require Model
 
   import AeMdwWeb.Util
-  import AeMdw.{Sigil, Db.Util}
+  import AeMdw.Db.Util
 
   ##########
 
@@ -21,11 +21,11 @@ defmodule AeMdwWeb.TxController do
   def txi(conn, %{"index" => index}),
     do: handle_tx_reply(conn, fn -> read_tx(Validate.nonneg_int!(index)) end)
 
-  def txs_direction(conn, _req),
-    do: Cont.response(conn, &json/2)
+  def txs_direction(conn, req),
+    do: txs(conn, req)
 
-  def txs_range(conn, _req),
-    do: Cont.response(conn, &json/2)
+  def txs_range(conn, req),
+    do: txs(conn, req)
 
   def count(conn, _req),
     do: conn |> json(last_txi())
@@ -70,6 +70,9 @@ defmodule AeMdwWeb.TxController do
     end
   end
 
+  defp txs(conn, _req),
+    do: Cont.response(conn, &json/2)
+
   defp handle_tx_reply(conn, source_fn),
     do: handle_input(conn, fn -> tx_reply(conn, source_fn.()) end)
 
@@ -96,7 +99,10 @@ defmodule AeMdwWeb.TxController do
     tag("Middleware")
 
     parameters do
-      hash(:path, :string, "The transaction hash.", required: true, example: "th_zATv7B4RHS45GamShnWgjkvcrQfZUWQkZ8gk1RD4m2uWLJKnq")
+      hash(:path, :string, "The transaction hash.",
+        required: true,
+        example: "th_zATv7B4RHS45GamShnWgjkvcrQfZUWQkZ8gk1RD4m2uWLJKnq"
+      )
     end
 
     response(200, "Returns the transaction.", %{})
@@ -112,7 +118,7 @@ defmodule AeMdwWeb.TxController do
     tag("Middleware")
 
     parameters do
-      index(:path, :integer, "The transaction index.", required: true, example: 10000000)
+      index(:path, :integer, "The transaction index.", required: true, example: 10_000_000)
     end
 
     response(200, "Returns the transaction.", %{})
@@ -122,15 +128,35 @@ defmodule AeMdwWeb.TxController do
 
   swagger_path :txs_direction do
     get("/txs/{direction}")
-    description("Get a transactions from beginning or end of the chain. More [info](https://github.com/aeternity/ae_mdw#transaction-querying).")
+
+    description(
+      "Get a transactions from beginning or end of the chain. More [info](https://github.com/aeternity/ae_mdw#transaction-querying)."
+    )
+
     produces(["application/json"])
     deprecated(false)
-    operation_id("get_txs_by_criteria")
+    operation_id("get_txs_by_direction")
     tag("Middleware")
     SwaggerParameters.common_params()
 
     parameters do
-      direction(:path, :string, "The direction.", enum: [:forward, :backward], required: true)
+      direction(
+        :path,
+        :string,
+        "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning.",
+        enum: [:forward, :backward],
+        required: true
+      )
+
+      sender_id(:query, :string, "The sender.",
+        required: false,
+        exaple: "ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5"
+      )
+
+      recipient_id(:query, :string, "The recipient.",
+        required: false,
+        exaple: "ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2"
+      )
     end
 
     response(200, "Returns result regarding the according criteria.", %{})
@@ -142,7 +168,7 @@ defmodule AeMdwWeb.TxController do
     description("Get a transactions bounded by scope/range.")
     produces(["application/json"])
     deprecated(false)
-    operation_id("get_txs_by_criteria")
+    operation_id("get_txs_by_scope_type_range")
     tag("Middleware")
     SwaggerParameters.common_params()
 
@@ -174,7 +200,10 @@ defmodule AeMdwWeb.TxController do
     tag("Middleware")
 
     parameters do
-      id(:path, :string, "The ID.", required: true, example: "ak_g5vQK6beY3vsTJHH7KBusesyzq9WMdEYorF8VyvZURXTjLnxT")
+      id(:path, :string, "The ID.",
+        required: true,
+        example: "ak_g5vQK6beY3vsTJHH7KBusesyzq9WMdEYorF8VyvZURXTjLnxT"
+      )
     end
 
     response(200, "Returns transactions count and its type for given aeternity ID.", %{})

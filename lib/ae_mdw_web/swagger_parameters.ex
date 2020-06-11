@@ -9,44 +9,52 @@ defmodule AeMdwWeb.SwaggerParameters do
     |> parameter(
       :type,
       :query,
-      :string,
-      "The transaction type. [Supported types](https://github.com/aeternity/ae_mdw#supported-types).",
-      enum: [
-        :channel_close_mutual,
-        :channel_close_solo,
-        :channel_create,
-        :channel_deposit,
-        :channel_force_progress,
-        :channel_offchain,
-        :channel_settle,
-        :channel_slash,
-        :channel_snapshot_solo,
-        :channel_withdraw,
-        :contract_call,
-        :contract_create,
-        :ga_attach,
-        :ga_meta,
-        :name_claim,
-        :name_preclaim,
-        :name_revoke,
-        :name_transfer,
-        :name_update,
-        :oracle_extend,
-        :oracle_query,
-        :oracle_register,
-        :oracle_response,
-        :paying_for,
-        :spend
+      :array,
+      "The transaction type. The query allows providing of multiple type parameters. [More info](https://github.com/aeternity/ae_mdw#types).",
+      items: [
+        type: :string,
+        enum: [
+          :channel_close_mutual,
+          :channel_close_solo,
+          :channel_create,
+          :channel_deposit,
+          :channel_force_progress,
+          :channel_offchain,
+          :channel_settle,
+          :channel_slash,
+          :channel_snapshot_solo,
+          :channel_withdraw,
+          :contract_call,
+          :contract_create,
+          :ga_attach,
+          :ga_meta,
+          :name_claim,
+          :name_preclaim,
+          :name_revoke,
+          :name_transfer,
+          :name_update,
+          :oracle_extend,
+          :oracle_query,
+          :oracle_register,
+          :oracle_response,
+          :paying_for,
+          :spend
+        ]
       ],
+      collectionFormat: :multi,
       required: false,
       example: "channel_create"
     )
     |> parameter(
       :type_group,
       :query,
-      :string,
-      "The type group. [Supported type groups](https://github.com/aeternity/ae_mdw#supported-type-groups).",
-      enum: [:channel, :contract, :ga, :name, :oracle, :paying_for, :spend],
+      :array,
+      "The type group. The query allows providing of multiple type group parameters. [More info](https://github.com/aeternity/ae_mdw#types).",
+      items: [
+        type: :string,
+        enum: [:channel, :contract, :ga, :name, :oracle, :paying_for, :spend]
+      ],
+      collectionFormat: :multi,
       required: false,
       example: "channel"
     )
@@ -83,18 +91,22 @@ defmodule AeMdwWeb.SwaggerParameters do
       example: "ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
     )
     # |> parameter(:name, :query, :string, "The name ID.", required: false, example: )
-    |> parameter(:page, :query, :integer, "The number of page to show, by default is set to 1.",
+    |> parameter(:page, :query, :integer, "The number of page to show.",
       required: false,
       format: "int32",
+      default: 1,
       example: 1
     )
     |> parameter(
       :limit,
       :query,
       :integer,
-      "Max limit number of results, which are returned in a result. Default is 10.",
+      "The numbers of items to return.",
       required: false,
       format: "int32",
+      default: 10,
+      minimum: 1,
+      maximum: 1000,
       example: 10
     )
   end
