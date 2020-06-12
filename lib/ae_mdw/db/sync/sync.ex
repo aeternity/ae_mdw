@@ -1,9 +1,9 @@
 defmodule AeMdw.Db.Sync do
   alias __MODULE__
-  alias Sync.{BlockIndex, Transaction}
+  alias Sync.{BlockIndex, Transaction, Invalidate}
+  alias AeMdw.Log
   alias AeMdw.Db.Model
 
-  require Logger
   require Model
 
   import AeMdw.{Sigil, Db.Util}
@@ -25,7 +25,6 @@ defmodule AeMdw.Db.Sync do
   end
 
   def handle_continue(:start_sync, %Sync{pid: nil} = s),
-    # spawn_action(s)}
     do: {:noreply, spawn_action({Transaction, :sync, [:safe]}, s)}
 
   def handle_info({:fork, height}, %Sync{pid: pid} = s) when is_integer(height) do
@@ -69,7 +68,7 @@ defmodule AeMdw.Db.Sync do
 
   def progress_logger(work_fn, freq, msg_fn) do
     fn x, acc ->
-      rem(x, freq) == 0 && info(msg_fn.(x, acc))
+      rem(x, freq) == 0 && Log.info(msg_fn.(x, acc))
       work_fn.(x, acc)
     end
   end
@@ -80,12 +79,12 @@ defmodule AeMdw.Db.Sync do
     do: spawn_action({Transaction, :sync, [height(:top) - 1]}, s)
 
   defp spawn_action(%Sync{pid: nil, fork: height} = s) when not is_nil(height) do
-    invalidate(height)
+    Invalidate.invalidate(height)
     spawn_action({Transaction, :sync, [:top]}, %{s | fork: nil})
   end
 
   defp spawn_action({m, f, a}, %Sync{} = s) do
-    info("sync action #{inspect(hd(a))}")
+    Log.info("sync action #{inspect(hd(a))}")
     %{s | pid: spawn_link(fn -> run_action({m, f, a}) end)}
   end
 
@@ -101,44 +100,4 @@ defmodule AeMdw.Db.Sync do
     end
   end
 
-  defp invalidate(fork_height) when is_integer(fork_height) do
-    prev_kbi = fork_height - 1
-    from_txi = Model.block(read_block!({prev_kbi, -1}), :tx_index)
-
-    cond do
-      is_integer(from_txi) && from_txi >= 0 ->
-        info("invalidating from tx #{from_txi} at generation #{prev_kbi}")
-        bi_keys = BlockIndex.keys_range({fork_height - 1, 0})
-        {tx_keys, id_counts} = Transaction.keys_range(from_txi)
-        tab_keys = Map.merge(bi_keys, tx_keys)
-        log_del_keys(tab_keys)
-
-        :mnesia.transaction(fn ->
-          for {tab, keys} <- tab_keys, do: Enum.each(keys, &:mnesia.delete(tab, &1, :write))
-          for {f_key, delta} <- id_counts, do: Model.update_count(f_key, -delta)
-        end)
-
-      # wasn't synced up to that txi, nothing to do
-      true ->
-        :ok
-    end
-  end
-
-  defp log_del_keys(tab_keys) do
-    {blocks, tab_keys} = Map.pop(tab_keys, ~t[block])
-    {txs, tab_keys} = Map.pop(tab_keys, ~t[tx])
-    [b_count, t_count] = [blocks, txs] |> Enum.map(&Enum.count/1)
-    {b1, b2} = {List.last(blocks), List.first(blocks)}
-    {t1, t2} = {List.first(txs), List.last(txs)}
-    info("table block has #{b_count} records to delete: #{inspect(b1)}..#{inspect(b2)}")
-    info("table tx has #{t_count} records to delete: #{t1}..#{t2}")
-
-    for {tab, keys} <- tab_keys,
-        do: info("table #{Model.record(tab)} has #{Enum.count(keys)} records to delete")
-
-    :ok
-  end
-
-  def info(msg),
-    do: Logger.info(msg, sync: true)
 end

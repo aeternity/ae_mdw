@@ -33,11 +33,6 @@ defmodule AeMdw.Db.Sync.BlockIndex do
   def clear(),
     do: :mnesia.clear_table(~t[block])
 
-  def keys_range({_, _} = from_bi) do
-    tab = ~t[block]
-    %{tab => collect_keys(tab, [from_bi], from_bi, &:mnesia.next/2, &{:cont, [&1 | &2]})}
-  end
-
   ################################################################################
 
   defp sync_key_header(table, height, hash) do
