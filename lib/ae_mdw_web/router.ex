@@ -21,6 +21,12 @@ defmodule AeMdwWeb.Router do
     get "/txs/:direction", TxController, :txs_direction
     get "/txs/:scope_type/:range", TxController, :txs_range
 
+
+    get "/names/:direction", NameController, :all_direction
+    get "/names/:scope_type/:range", NameController, :all_range
+
+
+
     get "/status", UtilController, :status
 
     #### variants of these can be implemented when requested:
