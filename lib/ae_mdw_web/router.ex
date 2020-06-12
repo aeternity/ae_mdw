@@ -18,11 +18,10 @@ defmodule AeMdwWeb.Router do
     get "/txs/count", TxController, :count
     get "/txs/count/:id", TxController, :count_id
 
-    get "/txs/:direction", TxController, :txs
-    get "/txs/:scope_type/:range", TxController, :txs
+    get "/txs/:direction", TxController, :txs_direction
+    get "/txs/:scope_type/:range", TxController, :txs_range
 
     get "/status", UtilController, :status
-
 
     #### variants of these can be implemented when requested:
 
@@ -58,6 +57,26 @@ defmodule AeMdwWeb.Router do
     # get "/micro-blocks/hash/:hash/transactions", :micro_block_transactions_by_hash
     # get "/micro-blocks/hash/:hash/transactions/count", :micro_block_transactions_count_by_hash
     # get "/accounts/:account", :get_account_details
+  end
 
+  scope "/swagger" do
+    forward "/", PhoenixSwagger.Plug.SwaggerUI,
+      otp_app: :ae_mdw,
+      swagger_file: "swagger.json",
+      disable_validator: true
+  end
+
+  def swagger_info do
+    %{
+      basePath: "/",
+      schemes: ["http"],
+      consumes: ["application/json"],
+      produces: ["application/json"],
+      info: %{
+        version: "1.0",
+        title: "Aeternity Middleware",
+        description: "API for [Aeternity Middleware](https://github.com/aeternity/ae_mdw)"
+      }
+    }
   end
 end

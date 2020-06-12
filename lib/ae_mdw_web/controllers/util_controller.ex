@@ -1,6 +1,16 @@
 defmodule AeMdwWeb.UtilController do
   use AeMdwWeb, :controller
+  use PhoenixSwagger
 
+  swagger_path :status do
+    get("/status")
+    description("Get middleware status.")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_status")
+    tag("Middleware")
+    response(200, "Returns the status of the MDW.", %{})
+  end
 
   def status(conn, _params) do
     {:ok, top_kb} = :aec_chain.top_key_block()
@@ -15,5 +25,4 @@ defmodule AeMdwWeb.UtilController do
 
     json(conn, status)
   end
-
 end
