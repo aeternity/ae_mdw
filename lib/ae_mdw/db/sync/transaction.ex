@@ -2,9 +2,8 @@ defmodule AeMdw.Db.Sync.Transaction do
   @moduledoc "assumes block index is in place, syncs whole history"
 
   alias AeMdw.Node, as: AE
-  alias AeMdw.Db.Sync
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Sync.BlockIndex
+  alias AeMdw.Db.Sync
   alias AeMdw.Db.Stream, as: DBS
 
   require Model
@@ -17,7 +16,7 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   def sync(max_height \\ :safe) do
     max_height = Sync.height((is_integer(max_height) && max_height + 1) || max_height)
-    bi_max_kbi = BlockIndex.sync(max_height) - 1
+    bi_max_kbi = Sync.BlockIndex.sync(max_height) - 1
 
     case max_txi() do
       nil ->
@@ -94,7 +93,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     :mnesia.write(Model.Tx, model_tx, :write)
     :mnesia.write(Model.Type, Model.type(index: {type, txi}), :write)
     :mnesia.write(Model.Time, Model.time(index: {mb_time, txi}), :write)
-    write_links(type, tx, signed_tx, txi, hash)
+    write_links(type, tx, signed_tx, txi, hash, block_index)
 
     for {_field, pos} <- AE.tx_ids(type) do
       {_tag, pk} = :aeser_id.specialize(elem(tx, pos))
@@ -110,32 +109,38 @@ defmodule AeMdw.Db.Sync.Transaction do
     Model.incr_count({type, pos, pk})
   end
 
-  def write_links(:contract_create_tx, tx, _signed_tx, txi, tx_hash) do
+  def write_links(:contract_create_tx, tx, _signed_tx, txi, tx_hash, _bi) do
     pk = :aect_contracts.pubkey(:aect_contracts.new(tx))
     write_field(:contract_create_tx, nil, pk, txi)
     write_origin({:contract_create_tx, pk, txi}, tx_hash)
   end
 
-  def write_links(:channel_create_tx, _tx, signed_tx, txi, tx_hash) do
+  def write_links(:channel_create_tx, _tx, signed_tx, txi, tx_hash, _bi) do
     {:ok, pk} = :aesc_utils.channel_pubkey(signed_tx)
     write_field(:channel_create_tx, nil, pk, txi)
     write_origin({:channel_create_tx, pk, txi}, tx_hash)
   end
 
-  def write_links(:oracle_register_tx, tx, _signed_tx, txi, tx_hash) do
+  def write_links(:oracle_register_tx, tx, _signed_tx, txi, tx_hash, _bi) do
     pk = :aeo_register_tx.account_pubkey(tx)
     write_field(:oracle_register_tx, nil, pk, txi)
     write_origin({:oracle_register_tx, pk, txi}, tx_hash)
   end
 
-  def write_links(:name_claim_tx, tx, _signed_tx, txi, tx_hash) do
+  def write_links(:name_claim_tx, tx, signed_tx, txi, tx_hash, bi) do
     name = :aens_claim_tx.name(tx)
     {:ok, name_hash} = :aens.get_name_hash(name)
     write_field(:name_claim_tx, nil, name_hash, txi)
     write_origin({:name_claim_tx, name_hash, txi}, tx_hash)
+    :mnesia.write(Model.Name, Model.name(id: name_hash, name: name), :write)
+    #Sync.Name.claim(name, name_hash, tx, txi, tx_hash, bi)
   end
 
-  def write_links(_, _, _, _, _),
+  ## TODO: pointers !!
+  # def write_links(:name_update_tx, tx, signed_tx, txi, tx_hash, bi),
+  #   do: Sync.Name.update(:aens_update_tx.name_hash(tx), tx, txi, tx_hash, bi)
+
+  def write_links(_, _, _, _, _, _),
     do: :ok
 
   defp write_origin({tx_type, pubkey, txi}, tx_hash) do
