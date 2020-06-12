@@ -4,6 +4,7 @@ defmodule AeMdw.Db.Model do
 
   alias AeMdw.Node, as: AE
   alias :aeser_api_encoder, as: Enc
+  alias AeMdw.Validate
 
   import Record, only: [defrecord: 2]
   import AeMdw.{Util, Db.Util}
@@ -222,6 +223,20 @@ defmodule AeMdw.Db.Model do
     put_in(tx, [:tx, :oracle_id], :aeser_id.create(:oracle, oracle_pk))
   end
 
+  def custom_raw_data(:name_claim_tx, tx, tx_rec, _signed_tx, _block_hash) do
+    {:ok, name_id} = :aens.get_name_hash(:aens_claim_tx.name(tx_rec))
+    put_in(tx, [:tx, :name_id], :aeser_id.create(:name, name_id))
+  end
+
+  def custom_raw_data(:name_update_tx, tx, tx_rec, _signed_tx, _block_hash),
+    do: put_in(tx, [:tx, :name], plain_name(:aens_update_tx.name_hash(tx_rec)))
+
+  def custom_raw_data(:name_transfer_tx, tx, tx_rec, _signed_tx, _block_hash),
+    do: put_in(tx, [:tx, :name], plain_name(:aens_transfer_tx.name_hash(tx_rec)))
+
+  def custom_raw_data(:name_revoke_tx, tx, tx_rec, _signed_tx, _block_hash),
+    do: put_in(tx, [:tx, :name], plain_name(:aens_revoke_tx.name_hash(tx_rec)))
+
   def custom_raw_data(_, tx, _, _, _),
     do: tx
 
@@ -275,6 +290,20 @@ defmodule AeMdw.Db.Model do
     put_in(tx, ["tx", "oracle_id"], Enc.encode(:oracle_pubkey, oracle_pk))
   end
 
+  def custom_encode(:name_claim_tx, tx, tx_rec, _signed_tx, _block_hash) do
+    {:ok, name_id} = :aens.get_name_hash(:aens_claim_tx.name(tx_rec))
+    put_in(tx, ["tx", "name_id"], Enc.encode(:name, name_id))
+  end
+
+  def custom_encode(:name_update_tx, tx, tx_rec, _signed_tx, _block_hash),
+    do: put_in(tx, ["tx", "name"], plain_name(:aens_update_tx.name_hash(tx_rec)))
+
+  def custom_encode(:name_transfer_tx, tx, tx_rec, _signed_tx, _block_hash),
+    do: put_in(tx, ["tx", "name"], plain_name(:aens_transfer_tx.name_hash(tx_rec)))
+
+  def custom_encode(:name_revoke_tx, tx, tx_rec, _signed_tx, _block_hash),
+    do: put_in(tx, ["tx", "name"], plain_name(:aens_revoke_tx.name_hash(tx_rec)))
+
   def custom_encode(_, tx, _, _, _),
     do: tx
 
@@ -286,4 +315,8 @@ defmodule AeMdw.Db.Model do
       _ -> bin
     end
   end
+
+  def plain_name(name_id),
+    do: name(read!(AeMdw.Db.Model.Name, Validate.id!(name_id)), :name)
+
 end
