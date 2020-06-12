@@ -10,8 +10,13 @@ defmodule AeMdwWeb.Continuation do
 
   def table(), do: @tab
 
-  def response(%Plug.Conn{path_info: path, assigns: assigns, private: priv} = conn, ok_fun) do
-    {mod, fun} = {priv.phoenix_controller, priv.phoenix_action}
+  def response(%Plug.Conn{} = conn, ok_fun),
+    do: response(conn, ok_fun, %{})
+
+  def response(%Plug.Conn{path_info: path, assigns: assigns} = conn, ok_fun, overrides) do
+    mod = Map.get(overrides, :mod, conn.private.phoenix_controller)
+    fun = Map.get(overrides, :fun, conn.private.phoenix_action)
+
     %{scope: scope, offset: {limit, page}} = assigns
     offset = (page - 1) * limit
 
