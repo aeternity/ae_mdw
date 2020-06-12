@@ -148,12 +148,12 @@ defmodule AeMdwWeb.TxController do
         required: true
       )
 
-      sender_id(:query, :string, "The sender.",
+      sender_id(:query, :string, "The sender ID.",
         required: false,
         exaple: "ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5"
       )
 
-      recipient_id(:query, :string, "The recipient.",
+      recipient_id(:query, :string, "The recipient ID.",
         required: false,
         exaple: "ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2"
       )
