@@ -8,20 +8,14 @@ defmodule AeMdwWeb.Websocket.Listener do
   @subs_channel_targets :subs_channel_targets
   @subs_target_channels :subs_target_channels
 
-  def start_link(arg), do: GenServer.start_link(__MODULE__, arg, name: __MODULE__)
+  def start_link(_arg), do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
 
   def register(pid), do: GenServer.cast(__MODULE__, {:monitor, pid})
 
-  def init(:subs_events) do
+  def init(state) do
     :ets.foldl(fn {k, _v}, acc -> [k | acc] end, [], @subs_pids) |> Enum.each(&register/1)
     :aec_events.subscribe(:top_changed)
-    {:ok, []}
-  end
-
-  # for test purpose only
-  def init(:no_events) do
-    :ets.foldl(fn {k, _v}, acc -> [k | acc] end, [], @subs_pids) |> Enum.each(&register/1)
-    {:ok, []}
+    {:ok, state}
   end
 
   def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :micro} = info}}, state) do

@@ -137,7 +137,7 @@ Type groups for the transactions listed above are:
 * ga
 * name
 * oracle
-* paying_for
+* paying
 * spend
 
 ###### Examples

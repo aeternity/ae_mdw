@@ -4,10 +4,8 @@ defmodule AeMdwWeb.WebsocketTest do
   alias AeMdwWeb.Websocket.Listener
   alias Support.WsClient
 
-  setup do
+  setup_all do
     url = "ws://localhost:4001/websocket"
-    AeMdw.Application.init(:meta)
-    AeMdwWeb.Websocket.Supervisor.start_link(:no_events)
     {:ok, client1} = WsClient.start_link(url)
     {:ok, client2} = WsClient.start_link(url)
     {:ok, client3} = WsClient.start_link(url)
@@ -214,10 +212,10 @@ defmodule AeMdwWeb.WebsocketTest do
     assert_receive ["MicroBlocks"], 200
     assert_receive ["ak_KHfXhF2J6VBt3sUgFygdbpEkWi6AKBkr9jNKUCHbpwwagzHUs"], 200
 
-    assert_receive ^mock_kb, 200
-    assert_receive ^mock_mb, 200
-    assert_receive ^mock_tx, 200
-    assert_receive ^mock_obj, 200
+    assert_receive ^mock_kb, 300
+    assert_receive ^mock_mb, 300
+    assert_receive ^mock_tx, 300
+    assert_receive ^mock_obj, 300
 
     # unsubscribe to keyblocks, microblocks, transactions and object
     assert :ok == WsClient.unsubscribe(setup.client1, :key_blocks)
