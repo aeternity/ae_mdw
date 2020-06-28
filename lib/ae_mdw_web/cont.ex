@@ -12,6 +12,7 @@ defmodule AeMdwWeb.Continuation do
 
   def response(%Plug.Conn{path_info: path, assigns: assigns, private: priv} = conn, ok_fun) do
     {mod, fun} = {priv.phoenix_controller, priv.phoenix_action}
+    fun = if fun == :txs_direction || fun == :txs_range, do: :txs
     %{scope: scope, offset: {limit, page}} = assigns
     offset = (page - 1) * limit
 
