@@ -5,6 +5,7 @@ defmodule AeMdwWeb.TxController do
   alias AeMdw.Node, as: AE
   alias AeMdw.Validate
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Format
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdwWeb.Continuation, as: Cont
   alias AeMdwWeb.SwaggerParameters
@@ -21,11 +22,8 @@ defmodule AeMdwWeb.TxController do
   def txi(conn, %{"index" => index}),
     do: handle_tx_reply(conn, fn -> read_tx(Validate.nonneg_int!(index)) end)
 
-  def txs_direction(conn, req),
-    do: txs(conn, req)
-
-  def txs_range(conn, req),
-    do: txs(conn, req)
+  def txs(conn, _req),
+    do: Cont.response(conn, &json/2)
 
   def count(conn, _req),
     do: conn |> json(last_txi())
@@ -70,8 +68,8 @@ defmodule AeMdwWeb.TxController do
     end
   end
 
-  defp txs(conn, _req),
-    do: Cont.response(conn, &json/2)
+  # defp txs(conn, _req),
+  #   do: Cont.response(conn, &json/2)
 
   defp handle_tx_reply(conn, source_fn),
     do: handle_input(conn, fn -> tx_reply(conn, source_fn.()) end)
@@ -86,7 +84,7 @@ defmodule AeMdwWeb.TxController do
     do: tx_reply(conn, model_tx)
 
   defp tx_reply(conn, model_tx) when is_tuple(model_tx) and elem(model_tx, 0) == :tx,
-    do: conn |> json(Model.tx_to_map(model_tx))
+    do: conn |> json(Format.tx_to_map(model_tx))
 
   ##########
 
@@ -126,44 +124,58 @@ defmodule AeMdwWeb.TxController do
     response(400, "Bad request.", %{})
   end
 
-  swagger_path :txs_direction do
-    get("/txs/{direction}")
+  ## Unfortunately, swagger isn't able to deal with more flexible endpoints and required
+  ## artificial split of `txs` endpoints into 2:
+  ## - txs_direction (for requests like `txs/backward`
+  ## - txs_range (for requests like `txs/txi/200000-0`
+  ##
+  ## This split causes troubles with continuations, since `txs/backward` returns continuation
+  ## in the shape of `txs/last_txi-0`.
+  ##
+  ## Continuation key has function (e.g. :txs) as part of the whole key, and then with split
+  ## endpoints, the continuation key can't be found in the table of continuations...
+  ##
+  ## For now, until this is figured out, swagger info for `txs/direction` is commented out.
 
-    description(
-      "Get a transactions from beginning or end of the chain. More [info](https://github.com/aeternity/ae_mdw#transaction-querying)."
-    )
+  #
+  # swagger_path :txs_direction do
+  #   get("/txs/{direction}")
 
-    produces(["application/json"])
-    deprecated(false)
-    operation_id("get_txs_by_direction")
-    tag("Middleware")
-    SwaggerParameters.common_params()
+  #   description(
+  #     "Get a transactions from beginning or end of the chain. More [info](https://github.com/aeternity/ae_mdw#transaction-querying)."
+  #   )
 
-    parameters do
-      direction(
-        :path,
-        :string,
-        "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning.",
-        enum: [:forward, :backward],
-        required: true
-      )
+  #   produces(["application/json"])
+  #   deprecated(false)
+  #   operation_id("get_txs_by_direction")
+  #   tag("Middleware")
+  #   SwaggerParameters.common_params()
 
-      sender_id(:query, :string, "The sender ID.",
-        required: false,
-        exaple: "ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5"
-      )
+  #   parameters do
+  #     direction(
+  #       :path,
+  #       :string,
+  #       "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning.",
+  #       enum: [:forward, :backward],
+  #       required: true
+  #     )
 
-      recipient_id(:query, :string, "The recipient ID.",
-        required: false,
-        exaple: "ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2"
-      )
-    end
+  #     sender_id(:query, :string, "The sender ID.",
+  #       required: false,
+  #       exaple: "ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5"
+  #     )
 
-    response(200, "Returns result regarding the according criteria.", %{})
-    response(400, "Bad request.", %{})
-  end
+  #     recipient_id(:query, :string, "The recipient ID.",
+  #       required: false,
+  #       exaple: "ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2"
+  #     )
+  #   end
 
-  swagger_path :txs_range do
+  #   response(200, "Returns result regarding the according criteria.", %{})
+  #   response(400, "Bad request.", %{})
+  # end
+
+  swagger_path :txs do
     get("/txs/{scope_type}/{range}")
     description("Get a transactions bounded by scope/range.")
     produces(["application/json"])
