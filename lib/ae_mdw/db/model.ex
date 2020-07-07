@@ -57,7 +57,7 @@ defmodule AeMdw.Db.Model do
   defrecord :rev_origin, @rev_origin_defaults
 
   # name pointee : (updated when name_update_tx changes pointers)
-  #     index = {pointer_val, pointer_key, tx_index}
+  #     index = {pointer_val, tx_index, pointer_key}
   @name_pointee_defaults [index: {nil, nil, nil}, unused: nil]
   defrecord :name_pointee, @name_pointee_defaults
 
@@ -66,10 +66,17 @@ defmodule AeMdw.Db.Model do
   @rev_name_pointee_defaults [index: {nil, nil, nil}, unused: nil]
   defrecord :rev_name_pointee, @rev_name_pointee_defaults
 
-  # name lookup:
-  @name_defaults [id: nil, name: nil]
-  defrecord :name, @name_defaults
+  # name auction :
+  #     index = {expiration_height, name_hash}, name_rec
+  @name_auction_defaults [index: {nil, nil}, name_rec: nil]
+  defrecord :name_auction, @name_auction_defaults
 
+  # name lookup:
+  #     index = {name_hash, claim_height},
+  #     name = plain name, expire = height, revoke = height,
+  #     auction = nil | [tx_index]
+  @name_defaults [index: {nil, nil}, name: nil, expire: nil, revoke: nil, auction: nil]
+  defrecord :name, @name_defaults
 
   def tables(),
     do: [
@@ -83,12 +90,25 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.RevOrigin,
       AeMdw.Db.Model.NamePointee,
       AeMdw.Db.Model.RevNamePointee,
+      AeMdw.Db.Model.NameAuction,
       AeMdw.Db.Model.Name
     ]
 
   def records(),
-    do: [:tx, :block, :time, :type, :field, :id_count, :origin, :rev_origin,
-         :name_pointee, :rev_name_pointee, :name]
+    do: [
+      :tx,
+      :block,
+      :time,
+      :type,
+      :field,
+      :id_count,
+      :origin,
+      :rev_origin,
+      :name_pointee,
+      :rev_name_pointee,
+      :name_auction,
+      :name
+    ]
 
   def fields(record),
     do: for({x, _} <- defaults(record), do: x)
@@ -103,6 +123,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.RevOrigin), do: :rev_origin
   def record(AeMdw.Db.Model.NamePointee), do: :name_pointee
   def record(AeMdw.Db.Model.RevNamePointee), do: :rev_name_pointee
+  def record(AeMdw.Db.Model.NameAuction), do: :name_auction
   def record(AeMdw.Db.Model.Name), do: :name
 
   def table(:tx), do: AeMdw.Db.Model.Tx
@@ -115,8 +136,8 @@ defmodule AeMdw.Db.Model do
   def table(:rev_origin), do: AeMdw.Db.Model.RevOrigin
   def table(:name_pointee), do: AeMdw.Db.Model.NamePointee
   def table(:rev_name_pointee), do: AeMdw.Db.Model.RevNamePointee
+  def table(:name_auction), do: AeMdw.Db.Model.NameAuction
   def table(:name), do: AeMdw.Db.Model.Name
-
 
   def defaults(:tx), do: @tx_defaults
   def defaults(:block), do: @block_defaults
@@ -128,8 +149,8 @@ defmodule AeMdw.Db.Model do
   def defaults(:rev_origin), do: @rev_origin_defaults
   def defaults(:name_pointee), do: @name_pointee_defaults
   def defaults(:rev_name_pointee), do: @rev_name_pointee_defaults
+  def defaults(:name_auction), do: @name_auction_defaults
   def defaults(:name), do: @name_defaults
-
 
   def write_count(model, delta) do
     total = id_count(model, :count)
