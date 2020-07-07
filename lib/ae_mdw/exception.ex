@@ -1,5 +1,4 @@
 defmodule AeMdw.Exception do
-
   defmacro defexception!(name) do
     quote do
       defmodule unquote(name) do
@@ -14,5 +13,4 @@ defmodule AeMdw.Exception do
       end
     end
   end
-
 end

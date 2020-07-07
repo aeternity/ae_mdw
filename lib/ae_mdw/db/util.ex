@@ -108,15 +108,17 @@ defmodule AeMdw.Db.Util do
     end
   end
 
-  def delete_records(tab_keys) do
-    fn ->
-      for {tab, ks} <- tab_keys,
-          do: ks |> Enum.each(&:mnesia.delete(tab, &1, :write))
+  def do_writes(tab_xs, :write),
+    do: Enum.each(tab_xs, fn {tab, xs} -> Enum.each(xs, &:mnesia.write(tab, &1, :write)) end)
 
-      :ok
-    end
-    |> :mnesia.transaction()
-  end
+  def do_writes!(tab_xs, :dirty_write),
+    do: Enum.each(tab_xs, fn {tab, xs} -> Enum.each(xs, &:mnesia.dirty_write(tab, &1)) end)
+
+  def do_dels(tab_keys, :delete),
+    do: Enum.each(tab_keys, fn {tab, ks} -> Enum.each(ks, &:mnesia.delete(tab, &1, :write)) end)
+
+  def do_dels!(tab_keys, :dirty_delete),
+    do: Enum.each(tab_keys, fn {tab, ks} -> Enum.each(ks, &:mnesia.dirty_delete(tab, &1)) end)
 
   def tx_rec_data(<<_::256>> = tx_hash) do
     {block_hash, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
@@ -134,6 +136,18 @@ defmodule AeMdw.Db.Util do
     {_, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
     signed_tx
   end
+
+  def tx_val(tx_rec, field),
+    do: tx_val(tx_rec, elem(tx_rec, 0), field)
+
+  def tx_val(tx_rec, tx_type, field),
+    do: elem(tx_rec, Enum.find_index(AeMdw.Node.tx_fields(tx_type), &(&1 == field)) + 1)
+
+  def dirty_all(tab),
+    do: Enum.map(:mnesia.dirty_all_keys(tab), &one!(:mnesia.dirty_read(tab, &1)))
+
+  def all(tab),
+    do: Enum.map(:mnesia.all_keys(tab), &one!(:mnesia.read(tab, &1)))
 
   ##########
 

@@ -6,11 +6,14 @@ defmodule AeMdw.EtsCache do
 
   ################################################################################
 
-  def new(name, expiration_minutes, type \\ :set, access \\ :public)
-      when is_atom(name) and type in @cache_types and access in @cache_access do
+  def new(name, expiration_minutes, type \\ :set, access \\ :public, concurrency \\ true)
+      when is_atom(name) and
+             type in @cache_types and
+             access in @cache_access and
+             is_boolean(concurrency) do
     params =
       ((name && [:named_table]) || []) ++
-        [{:read_concurrency, true}, {:write_concurrency, true}, access, type]
+        [{:read_concurrency, concurrency}, {:write_concurrency, concurrency}, access, type]
 
     table = :ets.new(name, params)
     init_gc(table, expiration_minutes)
@@ -29,6 +32,9 @@ defmodule AeMdw.EtsCache do
         nil
     end
   end
+
+  def del(table, key),
+    do: :ets.delete(table, key)
 
   def purge(table, max_age_msecs) do
     boundary = time() - max_age_msecs

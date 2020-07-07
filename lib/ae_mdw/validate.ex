@@ -3,8 +3,10 @@ defmodule AeMdw.Validate do
   alias AeMdw.Error.Input, as: ErrInput
   alias :aeser_api_encoder, as: Enc
 
-
   # returns pubkey
+  def id(<<_::256>> = id),
+    do: {:ok, id}
+
   def id(<<_prefix::2-binary, "_", _::binary>> = id) do
     try do
       {_id_type, pk} = Enc.decode(id)
@@ -13,9 +15,6 @@ defmodule AeMdw.Validate do
       _ -> {:error, {ErrInput.Id, id}}
     end
   end
-
-  def id(<<_::256>> = id),
-    do: {:ok, id}
 
   def id({:id, _, <<_::256>> = pk}),
     do: {:ok, pk}
@@ -48,6 +47,23 @@ defmodule AeMdw.Validate do
     do: {:error, {ErrInput.Id, id}}
 
   def id!(id, allowed_types), do: unwrap!(&id(&1, allowed_types), id)
+
+  #
+
+  def name_id(name_ident) do
+    with {:ok, pk} <- id(name_ident) do
+      {:ok, pk}
+    else
+      {:error, {_ex, ^name_ident}} = error ->
+        with {:ok, pk} <- :aens.get_name_hash(name_ident) do
+          {:ok, pk}
+        else
+          _ -> error
+        end
+    end
+  end
+
+  def name_id!(name_ident), do: unwrap!(&name_id/1, name_ident)
 
   # returns transaction type (atom)
   def tx_type(type) when is_atom(type),
@@ -117,6 +133,4 @@ defmodule AeMdw.Validate do
         raise ex, value: value
     end
   end
-
-
 end

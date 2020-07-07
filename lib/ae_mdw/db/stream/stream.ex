@@ -27,7 +27,7 @@ defmodule AeMdw.Db.Stream do
   def map(scope, mapper, [], order),
     do: map(scope, mapper, nil, order)
 
-  def map(scope, mapper, [_|_] = query, order),
+  def map(scope, mapper, [_ | _] = query, order),
     do: map(scope, mapper, query_groups(query), order)
 
   def map(scope, mapper, %{} = query_groups, order) when map_size(query_groups) == 0,
@@ -48,20 +48,60 @@ defmodule AeMdw.Db.Stream do
         Stream.map([], & &1)
 
       {roots, checks} ->
-        tab = Model.Field
-        fun = case map_size(checks) == 0 do
-                true ->
-                  DBS.Mapper.function(mapper, tab)
-
-                false ->
-                  check_compose(DBS.Mapper.function(mapper, tab), &check(&1, checks))
-              end
-
+        {tab, fun} = roots_tab_fun({roots, checks}, mapper)
         DBS.Resource.map(scope, tab, fun, {:roots, MapSet.new(roots)}, order)
     end
   end
 
+  def map(scope, mapper, {:or, [_ | _] = and_queries}, order) do
+    {types, or_roots_checks} =
+      and_queries
+      |> Stream.map(&query_groups/1)
+      |> Stream.map(&DBS.Query.Parser.parse/1)
+      |> Stream.map(&DBS.Query.Planner.plan/1)
+      |> Enum.reduce({MapSet.new(), []}, fn
+        nil, acc ->
+          acc
+
+        {:type, ts}, {types, or_roots_checks} ->
+          {MapSet.union(types, ts), or_roots_checks}
+
+        {roots, checks}, {types, or_roots_checks} ->
+          {Model.Field, check_fun} = roots_tab_fun({roots, checks}, mapper)
+          {types, [{:roots, MapSet.new(roots), check_fun} | or_roots_checks]}
+      end)
+
+    case {Enum.count(types), or_roots_checks} do
+      {0, []} ->
+        Stream.map([], & &1)
+
+      {_, []} ->
+        map(scope, mapper, {%{}, types}, order)
+
+      {_, [{:roots, roots, check_fun}]} ->
+        DBS.Resource.map(scope, Model.Field, check_fun, {:roots, roots}, order)
+
+      {_, [_, _ | _]} ->
+        DBS.Resource.Or.map(scope, mapper, {types, or_roots_checks}, order)
+    end
+  end
+
   ##
+
+  def roots_tab_fun({roots, checks}, mapper) do
+    tab = Model.Field
+
+    fun =
+      case map_size(checks) == 0 do
+        true ->
+          DBS.Mapper.function(mapper, tab)
+
+        false ->
+          check_compose(DBS.Mapper.function(mapper, tab), &check(&1, checks))
+      end
+
+    {tab, fun}
+  end
 
   def check(model_field, all_checks) do
     {type, model_tx, tx_rec, data} = tx_data(model_field)
@@ -107,7 +147,7 @@ defmodule AeMdw.Db.Stream do
     end
   end
 
-  def query_groups([_|_] = query) do
+  def query_groups([_ | _] = query) do
     query
     |> Enum.map(&query_kv/1)
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
@@ -121,15 +161,19 @@ defmodule AeMdw.Db.Stream do
   # examples of queries:
 
   def t1(),
-    do: ['spend.sender_id': "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
-         recipient_id: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
-         account: "ak_zvU8YQLagjcfng7Tg8yCdiZ1rpiWNp1PBn3vtUs44utSvbJVR",
-         contract: "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
-         type_group: :channel]
+    do: [
+      "spend.sender_id": "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
+      recipient_id: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
+      account: "ak_zvU8YQLagjcfng7Tg8yCdiZ1rpiWNp1PBn3vtUs44utSvbJVR",
+      contract: "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+      type_group: :channel
+    ]
 
   def t2(),
-    do: [account: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
-         account: "ak_zvU8YQLagjcfng7Tg8yCdiZ1rpiWNp1PBn3vtUs44utSvbJVR"]
+    do: [
+      account: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
+      account: "ak_zvU8YQLagjcfng7Tg8yCdiZ1rpiWNp1PBn3vtUs44utSvbJVR"
+    ]
 
   def t3(),
     do: [sender_id: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"]
@@ -138,42 +182,56 @@ defmodule AeMdw.Db.Stream do
     do: [contract_id: "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z"]
 
   def t5(),
-    do: [account: "ak_zvU8YQLagjcfng7Tg8yCdiZ1rpiWNp1PBn3vtUs44utSvbJVR",
-         contract: "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z"]
+    do: [
+      account: "ak_zvU8YQLagjcfng7Tg8yCdiZ1rpiWNp1PBn3vtUs44utSvbJVR",
+      contract: "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z"
+    ]
 
   def t6(),
     do: [account: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"]
 
   def t7(),
-    do: [account: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
-         account: "ak_ozzwBYeatmuN818LjDDDwRSiBSvrqt4WU7WvbGsZGVre72LTS"]
+    do: [
+      account: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
+      account: "ak_ozzwBYeatmuN818LjDDDwRSiBSvrqt4WU7WvbGsZGVre72LTS"
+    ]
 
   def t8(),
-    do: [account: "ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF",
-         account: "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN"]
+    do: [
+      account: "ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF",
+      account: "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN"
+    ]
 
   def t9(),
-    do: ['name_transfer.recipient_id': "ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF",
-         account: "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN"]
+    do: [
+      "name_transfer.recipient_id": "ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF",
+      account: "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN"
+    ]
 
   def t10(),
-    do: [sender_id: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
-         account: "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN"]
+    do: [
+      sender_id: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
+      account: "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN"
+    ]
 
   def t11(),
-    do: [account: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
-         account: "ak_ozzwBYeatmuN818LjDDDwRSiBSvrqt4WU7WvbGsZGVre72LTS",
-         account: "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN"]
+    do: [
+      account: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
+      account: "ak_ozzwBYeatmuN818LjDDDwRSiBSvrqt4WU7WvbGsZGVre72LTS",
+      account: "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN"
+    ]
 
   def t12(),
-    do: [account: "ak_HzcS4HvhTtiD3KaVXW9umgqCW6dyg3KWgmyxHfir8x9Rads4a",
-         contract: "ct_2rtXsV55jftV36BMeR5gtakN2VjcPtZa3PBURvzShSYWEht3Z7"]
+    do: [
+      account: "ak_HzcS4HvhTtiD3KaVXW9umgqCW6dyg3KWgmyxHfir8x9Rads4a",
+      contract: "ct_2rtXsV55jftV36BMeR5gtakN2VjcPtZa3PBURvzShSYWEht3Z7"
+    ]
 
   def t13(),
-    do: [account: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
-         type: "oracle_register"]
-
-
+    do: [
+      account: "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
+      type: "oracle_register"
+    ]
 
   # :forward -> {:from, 0}
   # :backward -> {:downto, 0}
@@ -304,5 +362,4 @@ defmodule AeMdw.Db.Stream do
 
   #   :ok
   # end
-
 end

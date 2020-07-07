@@ -18,26 +18,37 @@ defmodule AeMdwWeb.DataStreamPlug do
   def call(%Plug.Conn{path_info: [_, "count" | _]} = conn, _),
     do: conn
 
-  def call(%Plug.Conn{path_info: [top_endpoint | rem_path]} = conn, {paginables, scopes}) do
-    cond do
-      top_endpoint in paginables ->
-        with {:ok, scope} <- parse_scope(rem_path, scopes),
-             {:ok, offset} <- parse_offset(conn.query_params),
-             {:ok, query} <- parse_query(conn.query_string) do
-          conn
-          |> assign(:scope, scope)
-          |> assign(:offset, offset)
-          |> assign(:query, query)
-        else
-          {:error, reason} ->
-            conn
-            |> put_resp_content_type("application/json")
-            |> send_resp(400, Jason.encode!(%{error: reason}))
-            |> halt
-        end
+  def call(%Plug.Conn{} = conn, {[], _scopes}),
+    do: conn
 
-      true ->
+  def call(%Plug.Conn{path_info: path_info} = conn, {[{prefix, hook} | paginables], scopes}) do
+    case {List.starts_with?(path_info, prefix), hook} do
+      {true, nil} ->
+        default_parse(conn, Enum.drop(path_info, Enum.count(prefix)), scopes)
+
+      {true, hook} when is_function(hook, 1) ->
+        hook.(conn)
+
+      {false, _} ->
+        call(conn, {paginables, scopes})
+    end
+  end
+
+  ##########
+
+  def default_parse(conn, rem_path, scopes) do
+    with {:ok, scope} <- parse_scope(rem_path, scopes),
+         {:ok, offset} <- parse_offset(conn.query_params),
+         {:ok, query} <- parse_query(conn.query_string) do
+      conn
+      |> assign(:scope, scope)
+      |> assign(:offset, offset)
+      |> assign(:query, query)
+    else
+      {:error, reason} ->
         conn
+        |> send_resp(400, Jason.encode!(%{error: reason}))
+        |> halt
     end
   end
 

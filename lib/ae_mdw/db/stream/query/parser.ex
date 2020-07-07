@@ -12,21 +12,21 @@ defmodule AeMdw.Db.Stream.Query.Parser do
   def classify_ident("contract"), do: {false, &Validate.id!(&1, [:contract_pubkey])}
   def classify_ident("channel"), do: {false, &Validate.id!(&1, [:channel])}
   def classify_ident("oracle"), do: {false, &Validate.id!(&1, [:oracle_pubkey])}
-  def classify_ident(_), do: {true, &Validate.id!/1}
+  def classify_ident("name"), do: {false, &Validate.name_id!/1}
+  def classify_ident(_ident), do: {true, &Validate.id!/1}
 
   def id_tx_types("account"), do: AE.tx_types()
   def id_tx_types("contract"), do: AE.tx_group(:contract)
   def id_tx_types("channel"), do: AE.tx_group(:channel)
   def id_tx_types("oracle"), do: AE.tx_group(:oracle)
-
-  # def parse(query_string) when is_binary(query_string),
-  #   do: parse(query_groups(query_string))
+  def id_tx_types("name"), do: AE.tx_group(:name)
 
   def parse(query_groups) when is_map(query_groups) do
     types = parse_types(query_groups)
+    id_groups = Map.drop(query_groups, ["type", "type_group"])
 
     ids =
-      Enum.reduce(Map.drop(query_groups, ["type", "type_group"]), %{}, fn {param, elts}, acc ->
+      Enum.reduce(id_groups, %{}, fn {param, elts}, acc ->
         {field?, pk_validator} = classify_ident(param)
         pks = Enum.map(elts, pk_validator)
 
@@ -54,6 +54,7 @@ defmodule AeMdw.Db.Stream.Query.Parser do
       :contract_id -> MapSet.put(base_types, :contract_create_tx)
       :channel_id -> MapSet.put(base_types, :channel_create_tx)
       :oracle_id -> MapSet.put(base_types, :oracle_register_tx)
+      :name_id -> MapSet.put(base_types, :name_claim_tx)
       _ -> base_types
     end
   end
@@ -101,5 +102,4 @@ defmodule AeMdw.Db.Stream.Query.Parser do
   #   "spend.sender_id=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&recipient_id=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&type_group=channel"
   #   |> parse
   # end
-
 end

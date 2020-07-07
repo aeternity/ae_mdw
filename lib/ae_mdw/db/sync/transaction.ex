@@ -2,10 +2,8 @@ defmodule AeMdw.Db.Sync.Transaction do
   @moduledoc "assumes block index is in place, syncs whole history"
 
   alias AeMdw.Node, as: AE
-  alias AeMdw.Db.Sync
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Sync.BlockIndex
-  alias AeMdw.Db.Stream, as: DBS
+  alias AeMdw.Db.Sync
 
   require Model
 
@@ -17,7 +15,7 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   def sync(max_height \\ :safe) do
     max_height = Sync.height((is_integer(max_height) && max_height + 1) || max_height)
-    bi_max_kbi = BlockIndex.sync(max_height) - 1
+    bi_max_kbi = Sync.BlockIndex.sync(max_height) - 1
 
     case max_txi() do
       nil ->
@@ -62,31 +60,42 @@ defmodule AeMdw.Db.Sync.Transaction do
   defp sync_generation(height, txi) do
     {key_block, micro_blocks} = AE.Db.get_blocks(height)
 
-    {:atomic, {next_txi, _mb_index}} =
+    {:atomic, next_txi} =
       :mnesia.transaction(fn ->
         kb_txi = (txi == 0 && -1) || txi
         kb_hash = :aec_headers.hash_header(:aec_blocks.to_key_header(key_block)) |> ok!
         kb_model = Model.block(index: {height, -1}, tx_index: kb_txi, hash: kb_hash)
         :mnesia.write(Model.Block, kb_model, :write)
-        micro_blocks |> Enum.reduce({txi, 0}, &sync_micro_block/2)
+
+        {{next_txi, _mb_index}, name_cache} =
+          micro_blocks |> Enum.reduce({{txi, 0}, %Sync.Name.Cache{}}, &sync_micro_block/2)
+
+        Sync.Name.Cache.persist!(name_cache)
+        next_txi
       end)
 
     next_txi
   end
 
-  defp sync_micro_block(mblock, {txi, mbi}) do
+  defp sync_micro_block(mblock, {{txi, mbi}, name_cache} = st) do
     height = :aec_blocks.height(mblock)
     mb_time = :aec_blocks.time_in_msecs(mblock)
     mb_hash = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock)) |> ok!
-    syncer = &sync_transaction(&1, &2, {{height, mbi}, mb_time})
     mb_txi = (txi == 0 && -1) || txi
     mb_model = Model.block(index: {height, mbi}, tx_index: mb_txi, hash: mb_hash)
     :mnesia.write(Model.Block, mb_model, :write)
-    next_txi = :aec_blocks.txs(mblock) |> Enum.reduce(txi, syncer)
-    {next_txi, mbi + 1}
+    tx_ctx = {{height, mbi}, mb_time}
+    mb_txs = :aec_blocks.txs(mblock)
+
+    {next_txi, name_cache} =
+      Enum.reduce(mb_txs, {txi, name_cache}, fn signed_tx, {txi, nm_cache} ->
+        sync_transaction(signed_tx, txi, tx_ctx, nm_cache)
+      end)
+
+    {{next_txi, mbi + 1}, name_cache}
   end
 
-  defp sync_transaction(signed_tx, txi, {block_index, mb_time}) do
+  def sync_transaction(signed_tx, txi, {block_index, mb_time}, name_cache) do
     {mod, tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
     hash = :aetx_sign.hash(signed_tx)
     type = mod.type()
@@ -94,61 +103,81 @@ defmodule AeMdw.Db.Sync.Transaction do
     :mnesia.write(Model.Tx, model_tx, :write)
     :mnesia.write(Model.Type, Model.type(index: {type, txi}), :write)
     :mnesia.write(Model.Time, Model.time(index: {mb_time, txi}), :write)
-    write_links(type, tx, signed_tx, txi, hash)
+    name_cache = write_links(type, tx, signed_tx, txi, hash, block_index, name_cache)
 
-    for {_field, pos} <- AE.tx_ids(type) do
-      {_tag, pk} = :aeser_id.specialize(elem(tx, pos))
+    for {field, pos} <- AE.tx_ids(type) do
+      <<_::256>> = pk = resolve_pubkey(elem(tx, pos), type, field, block_index, name_cache)
       write_field(type, pos, pk, txi)
     end
 
-    txi + 1
+    {txi + 1, name_cache}
   end
 
-  def write_field(type, pos, pk, txi) do
-    model_fld = Model.field(index: {type, pos, pk, txi})
-    :mnesia.write(Model.Field, model_fld, :write)
-    Model.incr_count({type, pos, pk})
-  end
-
-  def write_links(:contract_create_tx, tx, _signed_tx, txi, tx_hash) do
+  def write_links(:contract_create_tx, tx, _signed_tx, txi, tx_hash, _bi, name_cache) do
     pk = :aect_contracts.pubkey(:aect_contracts.new(tx))
-    write_field(:contract_create_tx, nil, pk, txi)
-    write_origin({:contract_create_tx, pk, txi}, tx_hash)
+    write_origin(:contract_create_tx, pk, txi, tx_hash)
+    name_cache
   end
 
-  def write_links(:channel_create_tx, _tx, signed_tx, txi, tx_hash) do
+  def write_links(:channel_create_tx, _tx, signed_tx, txi, tx_hash, _bi, name_cache) do
     {:ok, pk} = :aesc_utils.channel_pubkey(signed_tx)
-    write_field(:channel_create_tx, nil, pk, txi)
-    write_origin({:channel_create_tx, pk, txi}, tx_hash)
+    write_origin(:channel_create_tx, pk, txi, tx_hash)
+    name_cache
   end
 
-  def write_links(:oracle_register_tx, tx, _signed_tx, txi, tx_hash) do
+  def write_links(:oracle_register_tx, tx, _signed_tx, txi, tx_hash, _bi, name_cache) do
     pk = :aeo_register_tx.account_pubkey(tx)
-    write_field(:oracle_register_tx, nil, pk, txi)
-    write_origin({:oracle_register_tx, pk, txi}, tx_hash)
+    write_origin(:oracle_register_tx, pk, txi, tx_hash)
+    name_cache
   end
 
-  def write_links(:name_claim_tx, tx, _signed_tx, txi, tx_hash) do
+  def write_links(:name_claim_tx, tx, _signed_tx, txi, tx_hash, bi, name_cache) do
     name = :aens_claim_tx.name(tx)
     {:ok, name_hash} = :aens.get_name_hash(name)
-    write_field(:name_claim_tx, nil, name_hash, txi)
-    write_origin({:name_claim_tx, name_hash, txi}, tx_hash)
+    write_origin(:name_claim_tx, name_hash, txi, tx_hash)
+    Sync.Name.Cache.claim(name_cache, name, name_hash, tx, txi, bi)
   end
 
-  def write_links(_, _, _, _, _),
-    do: :ok
+  def write_links(:name_update_tx, tx, _signed_tx, txi, _tx_hash, bi, name_cache),
+    do: Sync.Name.Cache.update(name_cache, :aens_update_tx.name_hash(tx), tx, txi, bi)
 
-  defp write_origin({tx_type, pubkey, txi}, tx_hash) do
-    origin = Model.origin(index: {tx_type, pubkey, txi}, tx_id: tx_hash)
-    rev_origin = Model.rev_origin(index: {txi, tx_type, pubkey})
-    :mnesia.write(Model.Origin, origin, :write)
-    :mnesia.write(Model.RevOrigin, rev_origin, :write)
+  def write_links(:name_revoke_tx, tx, _signed_tx, txi, _tx_hash, bi, name_cache),
+    do: Sync.Name.Cache.revoke(name_cache, :aens_revoke_tx.name_hash(tx), tx, txi, bi)
+
+  def write_links(_, _, _, _, _, _, name_cache),
+    do: name_cache
+
+  ####
+
+  def write_origin(tx_type, pubkey, txi, tx_hash) do
+    m_origin = Model.origin(index: {tx_type, pubkey, txi}, tx_id: tx_hash)
+    m_rev_origin = Model.rev_origin(index: {txi, tx_type, pubkey})
+    :mnesia.write(Model.Origin, m_origin, :write)
+    :mnesia.write(Model.RevOrigin, m_rev_origin, :write)
+    write_field(tx_type, nil, pubkey, txi)
+  end
+
+  def write_field(tx_type, pos, pubkey, txi) do
+    m_field = Model.field(index: {tx_type, pos, pubkey, txi})
+    :mnesia.write(Model.Field, m_field, :write)
+    Model.incr_count({tx_type, pos, pubkey})
   end
 
   ##########
 
-  defp pk({:id, _, _} = id) do
-    {_, pk} = :aeser_id.specialize(id)
+  def resolve_pubkey(id, :spend_tx, :recipient_id, block_index, name_cache) do
+    case :aeser_id.specialize(id) do
+      {:name, name_hash} ->
+        Sync.Name.Cache.ptr_resolve(name_cache, name_hash, "account_pubkey") ||
+          AeMdw.Db.Name.ptr_resolve(block_index, name_hash, "account_pubkey")
+
+      {_tag, pk} ->
+        pk
+    end
+  end
+
+  def resolve_pubkey(id, _, _, _block_index, _name_cache) do
+    {_tag, pk} = :aeser_id.specialize(id)
     pk
   end
 
@@ -168,123 +197,4 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   defp log_msg(height, _),
     do: "syncing transactions at generation #{height}"
-
-  ################################################################################
-  # Invalidations - keys for records to delete in case of fork
-
-  def link_del_keys(tx_type, tx_hash, txi) do
-    with pk = <<_::binary>> <- link_del_pubkey(tx_type, tx_hash) do
-      link_key = {tx_type, nil, pk, txi}
-      incr_key = {tx_type, nil, pk}
-      {link_key, incr_key}
-    end
-  end
-
-  def link_del_pubkey(:contract_create_tx, tx_hash),
-    do: :aect_contracts.pubkey(:aect_contracts.new(tx_rec(tx_hash)))
-
-  def link_del_pubkey(:channel_create_tx, tx_hash),
-    do: ok!(:aesc_utils.channel_pubkey(signed_tx_rec(tx_hash)))
-
-  def link_del_pubkey(:oracle_register_tx, tx_hash),
-    do: :aeo_register_tx.account_pubkey(tx_rec(tx_hash))
-
-  def link_del_pubkey(:name_claim_tx, tx_hash),
-    do: ok!(:aens.get_name_hash(:aens_claim_tx.name(tx_rec(tx_hash))))
-
-  def link_del_pubkey(_type, _tx_hash),
-    do: nil
-
-  def keys_range(from_txi),
-    do: keys_range(from_txi, last(Model.Tx))
-
-  def keys_range(from_txi, to_txi) when from_txi > to_txi,
-    do: %{}
-
-  def keys_range(from_txi, to_txi) when from_txi <= to_txi do
-    tx_keys = Enum.to_list(from_txi..to_txi)
-
-    {type_keys, field_keys, field_counts} =
-      Enum.reduce(tx_keys, {[], [], %{}}, fn txi, {type_keys, field_keys, field_counts} ->
-        %{tx: %{type: tx_type} = tx, hash: tx_hash} = read_tx!(txi) |> Model.tx_to_raw_map()
-
-        {fields, f_counts} =
-          for {id_key, pos} <- AE.tx_ids(tx_type), reduce: {[], field_counts} do
-            {fxs, fcs} ->
-              pk = pk(tx[id_key])
-              {[{tx_type, pos, pk, txi} | fxs], Map.update(fcs, {tx_type, pos, pk}, 1, &(&1 + 1))}
-          end
-
-        {fields, f_counts} =
-          case link_del_keys(tx_type, tx_hash, txi) do
-            {link_key_txi, link_key_count} ->
-              {[link_key_txi | fields], Map.update(f_counts, link_key_count, 1, &(&1 + 1))}
-
-            nil ->
-              {fields, f_counts}
-          end
-
-        {[{tx_type, txi} | type_keys], fields ++ field_keys, f_counts}
-      end)
-
-    time_keys = time_keys_range(from_txi, to_txi)
-    {origin_keys, rev_origin_keys} = origin_keys_range(from_txi, to_txi)
-
-    {%{
-       Model.Tx => tx_keys,
-       Model.Type => type_keys,
-       Model.Time => time_keys,
-       Model.Field => field_keys,
-       Model.Origin => origin_keys,
-       Model.RevOrigin => rev_origin_keys
-     }, %{Model.IdCount => field_counts}}
-  end
-
-  def time_keys_range(from_txi, to_txi) do
-    bi_time = fn bi ->
-      Model.block(read!(Model.Block, bi), :hash)
-      |> :aec_db.get_header()
-      |> :aec_headers.time_in_msecs()
-    end
-
-    from_bi = Model.tx(read_tx!(from_txi), :block_index)
-
-    folder = fn tx, {bi, time, acc} ->
-      case Model.tx(tx, :block_index) do
-        ^bi ->
-          {bi, time, [{time, Model.tx(tx, :index)} | acc]}
-
-        new_bi ->
-          new_time = bi_time.(new_bi)
-          {new_bi, new_time, [{new_time, Model.tx(tx, :index)} | acc]}
-      end
-    end
-
-    {_, _, keys} =
-      from_txi..to_txi
-      |> DBS.map(Model.Tx)
-      |> Enum.reduce({from_bi, bi_time.(from_bi), []}, folder)
-
-    keys
-  end
-
-  def origin_keys_range(from_txi, to_txi) do
-    case :mnesia.dirty_next(Model.RevOrigin, {from_txi, :_, nil}) do
-      :"$end_of_table" ->
-        {[], []}
-
-      start_key ->
-        push_key = fn {txi, pk_type, pk}, {origins, rev_origins} ->
-          {[{pk_type, pk, txi} | origins], [{txi, pk_type, pk} | rev_origins]}
-        end
-
-        collect_keys(Model.RevOrigin, push_key.(start_key, {[], []}), start_key, &next/2, fn
-          {txi, pk_type, pk}, acc when txi <= to_txi ->
-            {:cont, push_key.({txi, pk_type, pk}, acc)}
-
-          {txi, _, _}, acc when txi > to_txi ->
-            {:halt, acc}
-        end)
-    end
-  end
 end

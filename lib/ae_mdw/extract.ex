@@ -29,6 +29,24 @@ defmodule AeMdw.Extract do
            do: {:ok, fn_code}
     end
 
+    def function_body_bin1(mod_code, fun_name, bin_arg) do
+      charlist_arg = String.to_charlist(bin_arg)
+      {:ok, fn_code} = AbsCode.function(mod_code, fun_name, 1)
+
+      Enum.reduce_while(fn_code, nil, fn
+        {:clause, _, [{:bin, _, [{:bin_element, _, {:string, _, ^charlist_arg}, _, _}]}], [],
+         body},
+        _ ->
+          {:halt, body}
+
+        _, _ ->
+          {:cont, nil}
+      end)
+    end
+
+    def literal_map_assocs({:map, _, assocs}),
+      do: for({:map_field_assoc, _, {_, _, k}, {_, _, v}} <- assocs, do: {k, v})
+
     def record_fields(mod_code, name) do
       finder = fn
         {:attribute, _, :record, {^name, fields}} -> fields

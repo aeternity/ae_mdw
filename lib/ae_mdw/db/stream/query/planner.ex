@@ -196,5 +196,4 @@ defmodule AeMdw.Db.Stream.Query.Planner do
     |> DBS.Query.Parser.parse()
     |> plan
   end
-
 end

@@ -17,12 +17,12 @@ defmodule AeMdw.Error do
 
     defexception [:message]
 
-    defexception! Id
-    defexception! NonnegInt
-    defexception! TxField
-    defexception! TxType
-    defexception! TxGroup
-    defexception! Scope
-    defexception! Query
+    defexception!(Id)
+    defexception!(NonnegInt)
+    defexception!(TxField)
+    defexception!(TxType)
+    defexception!(TxGroup)
+    defexception!(Scope)
+    defexception!(Query)
   end
 end
