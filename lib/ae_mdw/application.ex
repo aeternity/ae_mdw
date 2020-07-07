@@ -13,7 +13,7 @@ defmodule AeMdw.Application do
     EtsCache.new(AeMdw.Contract.table(), contract_exp)
 
     children = [
-      #AeMdw.Db.Sync.Supervisor,
+      AeMdw.Db.Sync.Supervisor,
       AeMdwWeb.Supervisor,
       AeMdwWeb.Websocket.Supervisor
     ]
@@ -30,14 +30,20 @@ defmodule AeMdw.Application do
     {:ok, hard_forks_code} = Extract.AbsCode.module(:aec_hard_forks)
 
     network_id = :aec_governance.get_network_id()
+
     hard_fork_heights =
       hard_forks_code
       |> Extract.AbsCode.function_body_bin1(:protocols_from_network_id, network_id)
       |> hd
-      |> Extract.AbsCode.literal_map_assocs
+      |> Extract.AbsCode.literal_map_assocs()
 
     lima_vsn = :aec_hard_forks.protocol_vsn(:lima)
-    lima_height = Enum.find_value(hard_fork_heights, fn {^lima_vsn, h} -> h; _ -> nil end)
+
+    lima_height =
+      Enum.find_value(hard_fork_heights, fn
+        {^lima_vsn, h} -> h
+        _ -> nil
+      end)
 
     type_mod_map = Extract.tx_mod_map(aetx_code)
     type_name_map = Extract.tx_name_map(aetx_code)
