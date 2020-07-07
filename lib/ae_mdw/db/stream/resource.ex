@@ -2,7 +2,8 @@ defmodule AeMdw.Db.Stream.Resource do
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Node, as: AE
 
-  import AeMdw.Db.Util
+  import AeMdw.{Util, Db.Util}
+  import AeMdw.Db.Stream.Resource.Util
 
   ################################################################################
 
@@ -10,14 +11,14 @@ defmodule AeMdw.Db.Stream.Resource do
     {scope, order} = DBS.Scope.scope(scope, tab, prefer_order)
     mod = AE.stream_mod(tab)
     query = mod.normalize_query(query)
-    {constructor, state} = init(scope, mod, order, query, prefer_order)
+    {constructor, state} = init(scope, mod, order, query)
     constructor.(state, tab, order, mapper)
   end
 
-  defp init(nil, _mod, _order, _query, _prefer_order),
+  defp init(nil, _mod, _order, _query),
     do: {&empty/4, nil}
 
-  defp init({:range, range} = scope, mod, order, query, _prefer_order) do
+  defp init({:range, range} = scope, mod, order, query) do
     case mod.roots(query) do
       [] ->
         {&empty/4, nil}
@@ -27,20 +28,7 @@ defmodule AeMdw.Db.Stream.Resource do
 
       roots ->
         scope_check = DBS.Scope.checker(scope, order)
-
-        conts =
-          roots
-          |> Stream.map(&cursor(&1, range, mod, order))
-          |> Stream.filter(fn
-            nil -> false
-            _ -> true
-          end)
-          |> Stream.filter(fn {key, _advance} -> scope_check.(sort_key(key)) end)
-
-        conts =
-          conts
-          |> Enum.reduce(%{}, &put_kv/2)
-          |> Enum.reduce(:gb_sets.new(), &add_cursor/2)
+        conts = continuations(roots, range, scope_check, mod, order, &put_kv/2)
 
         case :gb_sets.size(conts) do
           0 -> {&empty/4, nil}
@@ -50,11 +38,8 @@ defmodule AeMdw.Db.Stream.Resource do
     end
   end
 
-  defp init(single_val, mod, order, query, prefer_order),
-    do: init({:range, {single_val, single_val}}, mod, order, query, prefer_order)
-
-  # defp init_from_scope({:exact, k}, mod, _order),
-  #   do: {&simple/4, {mod.full_key(k, nil), &halter/2}}
+  defp init(single_val, mod, order, query),
+    do: init({:range, {single_val, single_val}}, mod, order, query)
 
   defp init_from_scope({:range, {from, to}}, mod, Progress),
     do:
@@ -72,112 +57,18 @@ defmodule AeMdw.Db.Stream.Resource do
   defp init_from_scope({:range, nil}, mod, Degress),
     do: {&simple/4, {mod.full_key(<<>>, nil), advance_fn(&prev/2, mod.key_checker(nil))}}
 
-  #  defp halter(_tab, _succ_k), do: {:halt, :exact}
+  ################################################################################
 
-  defp add_cursor({key, advance}, acc),
-    do: :gb_sets.add({sort_key(key), {key, advance}}, acc)
+  def empty(nil, _tab, _order, _mapper),
+    do: empty_resource()
+
+  def simple(init_state, tab, _order, mapper),
+    do: simple_resource(init_state, tab, mapper)
 
   ################################################################################
 
-  def cursor(root, {i, limit}, mod, Progress) when i <= limit do
-    chk = mod.key_checker(root, Progress, limit)
-    do_cursor(mod.entry(root, i, Progress), chk, advance_fn(&next/2, chk))
-  end
-
-  def cursor(root, {i, limit}, mod, Degress) when i >= limit do
-    chk = mod.key_checker(root, Degress, limit)
-    do_cursor(mod.entry(root, i, Degress), chk, advance_fn(&prev/2, chk))
-  end
-
-  def do_cursor(:"$end_of_table", _checker, _advance),
-    do: nil
-
-  def do_cursor(key, _checker, _advance) when elem(key, 0) == :"$end_of_table",
-    do: nil
-
-  def do_cursor(key, checker, advance),
-    do: (checker.(key) && {key, advance}) || nil
-
-  def advance_fn(succ, key_checker) do
-    fn tab, key ->
-      case succ.(tab, key) do
-        :"$end_of_table" ->
-          {:halt, :eot}
-
-        next_key ->
-          case key_checker.(next_key) do
-            true -> {:cont, next_key}
-            false -> {:halt, :keychk}
-          end
-      end
-    end
-  end
-
-  def sort_key(i) when is_integer(i), do: i
-  def sort_key({_, i}), do: i
-  def sort_key({_, _, i}), do: i
-  def sort_key({_, _, _, i}), do: i
-
-  def full_key(root, i) when is_tuple(root),
-    do: Tuple.append(root, i)
-
-  def full_key(root, i),
-    do: {root, i}
-
-  def put_kv({k, v}, map), do: Map.put(map, k, v)
-
-  def set_taker(Progress), do: &:gb_sets.take_smallest/1
-  def set_taker(Degress), do: &:gb_sets.take_largest/1
-
-  ################################################################################
-
-  def empty(nil, _tab, _kind, _mapper) do
-    Stream.resource(
-      fn -> nil end,
-      fn nil -> {:halt, :empty} end,
-      &AeMdw.Util.id/1
-    )
-  end
-
-  ################################################################################
-
-  def simple(init_state, tab, _kind, mapper) do
-    Stream.resource(
-      fn -> init_state end,
-      fn {x, advance} -> do_simple(tab, x, advance, mapper) end,
-      &AeMdw.Util.id/1
-    )
-  end
-
-  def do_simple(_tab, _key, nil, _mapper),
-    do: {:halt, :done}
-
-  def do_simple(tab, key, advance, mapper) do
-    case {read(tab, key), advance.(tab, key)} do
-      {[x], {:cont, next_key}} ->
-        case mapper.(x) do
-          nil -> do_simple(tab, next_key, advance, mapper)
-          val -> {[val], {next_key, advance}}
-        end
-
-      {[], {:cont, next_key}} ->
-        do_simple(tab, next_key, advance, mapper)
-
-      {[x], {:halt, _}} ->
-        case mapper.(x) do
-          nil -> {:halt, :done}
-          val -> {[val], {:eot, nil}}
-        end
-
-      {[], {:halt, _}} ->
-        {:halt, :done}
-    end
-  end
-
-  ################################################################################
-
-  def complex(conts, tab, kind, mapper) do
-    cont_pop = set_taker(kind)
+  def complex(conts, tab, order, mapper) do
+    cont_pop = set_taker(order)
 
     Stream.resource(
       fn -> {conts, nil} end,
@@ -202,6 +93,7 @@ defmodule AeMdw.Db.Stream.Resource do
 
   def do_complex(tab, key, advance, conts, cont_pop, mapper, last_sort_k) do
     sort_k = sort_key(key)
+
     case sort_k === last_sort_k do
       false ->
         case {read(tab, key), advance.(tab, key)} do
@@ -237,5 +129,4 @@ defmodule AeMdw.Db.Stream.Resource do
         end
     end
   end
-
 end
