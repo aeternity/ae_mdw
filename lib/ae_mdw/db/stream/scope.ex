@@ -1,5 +1,6 @@
 defmodule AeMdw.Db.Stream.Scope do
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Format
   alias AeMdw.Error
   require Model
 
@@ -514,7 +515,7 @@ defmodule AeMdw.Db.Stream.Scope do
     do: map_one_nil(read_tx(txi), &txi_type/1)
 
   def txi_type(tx),
-    do: Model.tx_to_raw_map(tx).tx.type
+    do: Format.tx_to_raw_map(tx).tx.type
 
   def txi_time(txi) when is_integer(txi),
     do: map_one_nil(read_tx(txi), &Model.tx(&1, :time))
