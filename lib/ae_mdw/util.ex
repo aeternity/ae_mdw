@@ -28,6 +28,9 @@ defmodule AeMdw.Util do
   def map_ok!({:ok, x}, f), do: f.(x)
   def map_ok!(err, _), do: raise(RuntimeError, message: "failed on #{inspect(err)}")
 
+  def ok_nil({:ok, x}), do: x
+  def ok_nil(_error), do: nil
+
   def map_ok_nil({:ok, x}, f), do: f.(x)
   def map_ok_nil(_error, _), do: nil
 
@@ -69,6 +72,9 @@ defmodule AeMdw.Util do
     end
   end
 
+  def gets(x, mod, fkws),
+    do: fkws |> Enum.map(&apply(mod, &1, [x]))
+
   def record_to_map(record, [_ | _] = fields) when is_tuple(record) do
     collect = fn {field, idx}, acc -> put_in(acc, [field], elem(record, idx)) end
 
@@ -91,4 +97,37 @@ defmodule AeMdw.Util do
 
   def permutations(list),
     do: for(elem <- list, rest <- permutations(list -- [elem]), do: [elem | rest])
+
+  def merge_maps([%{} = m0 | rem_maps]),
+    do: Enum.reduce(rem_maps, m0, &Map.merge(&2, &1))
+
+  def merge_maps([%{} = m0 | rem_maps], merger),
+    do: Enum.reduce(rem_maps, m0, &Map.merge(&2, &1, merger))
+
+  defp reduce_skip_while_pull(stream, acc, fun) do
+    case StreamSplit.take_and_drop(stream, 1) do
+      {[], _} ->
+        :halt
+
+      {[x], stream} ->
+        case fun.(x, acc) do
+          :halt -> :halt
+          {:cont, acc, x} -> {:cont, stream, acc, x}
+          {:next, acc} -> reduce_skip_while_pull(stream, acc, fun)
+        end
+    end
+  end
+
+  def reduce_skip_while(stream, acc, fun) do
+    Stream.resource(
+      fn -> {stream, acc} end,
+      fn {stream, acc} ->
+        case reduce_skip_while_pull(stream, acc, fun) do
+          :halt -> {:halt, :done}
+          {:cont, stream, acc, x} -> {[x], {stream, acc}}
+        end
+      end,
+      fn _ -> :ok end
+    )
+  end
 end

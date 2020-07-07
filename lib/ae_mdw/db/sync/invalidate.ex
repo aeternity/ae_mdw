@@ -1,9 +1,10 @@
 defmodule AeMdw.Db.Sync.Invalidate do
-
   alias AeMdw.Node, as: AE
   alias AeMdw.Log
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Format
   alias AeMdw.Db.Stream, as: DBS
+  alias AeMdw.EtsCache
 
   require Model
 
@@ -18,15 +19,26 @@ defmodule AeMdw.Db.Sync.Invalidate do
     cond do
       is_integer(from_txi) && from_txi >= 0 ->
         Log.info("invalidating from tx #{from_txi} at generation #{prev_kbi}")
+        name_tx_types = AE.tx_group(:name)
         bi_keys = block_keys_range({fork_height - 1, 0})
         {tx_keys, id_counts} = tx_keys_range(from_txi)
+        name_txis = Enum.filter(tx_keys[Model.Type], fn {type, _} -> type in name_tx_types end)
+
+        {name_dels, name_writes, {last_claim_dels, last_update_dels}} =
+          AeMdw.Db.Sync.Name.invalidate_txs(Enum.reverse(name_txis))
+
         tab_keys = Map.merge(bi_keys, tx_keys)
         log_del_keys(tab_keys)
 
         :mnesia.transaction(fn ->
-          for {tab, keys} <- tab_keys, do: Enum.each(keys, &:mnesia.delete(tab, &1, :write))
-          for {f_key, delta} <- id_counts, do: Model.update_count(f_key, -delta)
+          do_dels(tab_keys, :delete)
+          do_dels(name_dels, :delete)
+          do_writes(name_writes, :write)
+          Enum.each(id_counts, fn {f_key, delta} -> Model.update_count(f_key, -delta) end)
         end)
+
+        Enum.each(last_claim_dels, &EtsCache.del(:last_name_claim, &1))
+        Enum.each(last_update_dels, &EtsCache.del(:last_name_update, &1))
 
       # wasn't synced up to that txi, nothing to do
       true ->
@@ -42,7 +54,6 @@ defmodule AeMdw.Db.Sync.Invalidate do
     %{tab => collect_keys(tab, [from_bi], from_bi, &:mnesia.next/2, &{:cont, [&1 | &2]})}
   end
 
-
   def tx_keys_range(from_txi),
     do: tx_keys_range(from_txi, last(Model.Tx))
 
@@ -52,28 +63,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
   def tx_keys_range(from_txi, to_txi) when from_txi <= to_txi do
     tx_keys = Enum.to_list(from_txi..to_txi)
 
-    {type_keys, field_keys, field_counts} =
-      Enum.reduce(tx_keys, {[], [], %{}}, fn txi, {type_keys, field_keys, field_counts} ->
-        %{tx: %{type: tx_type} = tx, hash: tx_hash} = read_tx!(txi) |> Model.tx_to_raw_map()
-
-        {fields, f_counts} =
-          for {id_key, pos} <- AE.tx_ids(tx_type), reduce: {[], field_counts} do
-            {fxs, fcs} ->
-              pk = pk(tx[id_key])
-              {[{tx_type, pos, pk, txi} | fxs], Map.update(fcs, {tx_type, pos, pk}, 1, &(&1 + 1))}
-          end
-
-        {fields, f_counts} =
-          case link_del_keys(tx_type, tx_hash, txi) do
-            {link_key_txi, link_key_count} ->
-              {[link_key_txi | fields], Map.update(f_counts, link_key_count, 1, &(&1 + 1))}
-
-            nil ->
-              {fields, f_counts}
-          end
-
-        {[{tx_type, txi} | type_keys], fields ++ field_keys, f_counts}
-      end)
+    {type_keys, field_keys, field_counts} = type_fields_keys(tx_keys)
 
     time_keys = time_keys_range(from_txi, to_txi)
     {origin_keys, rev_origin_keys} = origin_keys_range(from_txi, to_txi)
@@ -88,6 +78,29 @@ defmodule AeMdw.Db.Sync.Invalidate do
      }, %{Model.IdCount => field_counts}}
   end
 
+  def type_fields_keys(txis) do
+    Enum.reduce(txis, {[], [], %{}}, fn txi, {type_keys, field_keys, field_counts} ->
+      %{tx: %{type: tx_type} = tx, hash: tx_hash} = Format.tx_to_raw_map(read_tx!(txi))
+
+      {fields, f_counts} =
+        for {id_key, pos} <- AE.tx_ids(tx_type), reduce: {[], field_counts} do
+          {fxs, fcs} ->
+            pk = pk(tx[id_key])
+            {[{tx_type, pos, pk, txi} | fxs], Map.update(fcs, {tx_type, pos, pk}, 1, &(&1 + 1))}
+        end
+
+      {fields, f_counts} =
+        case link_del_keys(tx_type, tx_hash, txi) do
+          {link_key_txi, link_key_count} ->
+            {[link_key_txi | fields], Map.update(f_counts, link_key_count, 1, &(&1 + 1))}
+
+          nil ->
+            {fields, f_counts}
+        end
+
+      {[{tx_type, txi} | type_keys], fields ++ field_keys, f_counts}
+    end)
+  end
 
   def link_del_keys(tx_type, tx_hash, txi) do
     with pk = <<_::binary>> <- link_del_pubkey(tx_type, tx_hash) do
@@ -112,7 +125,6 @@ defmodule AeMdw.Db.Sync.Invalidate do
   def link_del_pubkey(_type, _tx_hash),
     do: nil
 
-
   def time_keys_range(from_txi, to_txi) do
     bi_time = fn bi ->
       Model.block(read!(Model.Block, bi), :hash)
@@ -134,8 +146,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
     end
 
     {_, _, keys} =
-      from_txi..to_txi
-      |> DBS.map(Model.Tx)
+      DBS.map(from_txi..to_txi, & &1)
       |> Enum.reduce({from_bi, bi_time.(from_bi), []}, folder)
 
     keys
@@ -161,14 +172,12 @@ defmodule AeMdw.Db.Sync.Invalidate do
     end
   end
 
-
   ##########
 
   defp pk({:id, _, _} = id) do
     {_, pk} = :aeser_id.specialize(id)
     pk
   end
-
 
   defp log_del_keys(tab_keys) do
     {blocks, tab_keys} = Map.pop(tab_keys, ~t[block])
@@ -180,10 +189,8 @@ defmodule AeMdw.Db.Sync.Invalidate do
     Log.info("table tx has #{t_count} records to delete: #{t1}..#{t2}")
 
     for {tab, keys} <- tab_keys,
-      do: Log.info("table #{Model.record(tab)} has #{Enum.count(keys)} records to delete")
+        do: Log.info("table #{Model.record(tab)} has #{Enum.count(keys)} records to delete")
 
     :ok
   end
-
-
 end

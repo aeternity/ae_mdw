@@ -99,5 +99,4 @@ defmodule AeMdw.Db.Sync do
       {h1, h2} -> min(h1, h2)
     end
   end
-
 end
