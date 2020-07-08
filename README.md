@@ -36,12 +36,19 @@
             - [Prefer Order](#prefer-order)
         - [Examples](#examples-5)
             - [Continuation example](#continuation-example)
-    - [Other endpoints](#other-endpoints)
+    - [Other transaction related endpoints](#other-transaction-related-endpoints)
         - [TX - get transaction by hash](#tx---get-transaction-by-hash)
         - [TXI - get transaction by index](#txi---get-transaction-by-index)
         - [TXS/COUNT endpoint](#txscount-endpoint)
-            - [All transactions:](#all-transactions)
+            - [All transactions](#all-transactions)
             - [Transactions by type/field for ID](#transactions-by-typefield-for-id)
+    - [Naming System](#naming-system)
+        - [Name Resolution](#name-resolution)
+        - [Listing all names](#listing-all-names)
+        - [Listing active names](#listing-active-names)
+        - [Listing all auctions](#listing-all-auctions)
+        - [Showing name pointers](#showing-name-pointers)
+        - [Showing name pointees](#showing-name-pointees)
     - [Websocket interface](#websocket-interface)
         - [Message format:](#message-format)
         - [Supported operations:](#supported-operations)
@@ -952,7 +959,7 @@ This design decouples query construction and actual consumption of the result se
 
 ----
 
-## Other endpoints
+## Other transaction related endpoints
 
 ### TX - get transaction by hash
 
@@ -1064,6 +1071,707 @@ $ curl -s "http://localhost:4000/txs/count/ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2
   "spend_tx": {
     "recipient_id": 8,
     "sender_id": 18505
+  }
+}
+```
+
+## Naming System
+
+There are several endpoints for querying of the Naming System.
+
+### Name Resolution
+
+```
+$ curl -s "http://localhost:4000/name/wwwbeaconoidcom.chain" | jq '.'
+{
+  "claim_height": 279555,
+  "claimant": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C",
+  "claimed": true,
+  "expiration_height": 329555,
+  "name": "wwwbeaconoidcom.chain",
+  "name_id": "nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj",
+  "owner": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C",
+  "pointers": {
+    "account_pubkey": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
+  },
+  "revoke_height": null
+}
+```
+
+It's possible to use encoded hash as well:
+
+```
+$ curl -s "http://localhost:4000/name/nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj" | jq '.'
+{
+  "claim_height": 279555,
+  "claimant": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C",
+  "claimed": true,
+  "expiration_height": 329555,
+  "name": "wwwbeaconoidcom.chain",
+  "name_id": "nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj",
+  "owner": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C",
+  "pointers": {
+    "account_pubkey": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
+  },
+  "revoke_height": null
+}
+```
+
+### Listing all names
+
+The names in reply are ordered by claim height - from newest to oldest.
+It’s a paginable endpoint - allows supplying `limit` parameter to specify how many results should be in one reply.
+
+```
+$ curl -s "http://localhost:4000/names/all" | jq '.'
+{
+  "data": [
+    {
+      "humphreyakanyijukah.chain": {
+        "claim_height": 280670,
+        "claimant": "ak_2QQr3NMs4TEBEyiZXd2H5z5rEGG9ojR31X7gyu4tuDkiigwKC5",
+        "claimed": true,
+        "expiration_height": 330670,
+        "name_id": "nm_GHnyKjnXb1TPQsBP4ZXvxWCnxVn653ctcZj34RwfgEu4KDyuw",
+        "owner": "ak_2QQr3NMs4TEBEyiZXd2H5z5rEGG9ojR31X7gyu4tuDkiigwKC5",
+        "pointers": {},
+        "revoke_height": null
+      }
+    },
+    {
+      "alaebovictorchima.chain": {
+        "claim_height": 280472,
+        "claimant": "ak_2j76sWZB4B24HA7HVCnGQVXWzwfTAkfvWvcCKUbx138oADk9Ah",
+        "claimed": true,
+        "expiration_height": 330472,
+        "name_id": "nm_2T1CgLqGJMoZvTaH7xLvsU5myeDaGUsR5Zk4aJjV36oSZK1NrL",
+        "owner": "ak_2j76sWZB4B24HA7HVCnGQVXWzwfTAkfvWvcCKUbx138oADk9Ah",
+        "pointers": {},
+        "revoke_height": null
+      }
+    },
+    {
+      "SamuelTownWriter.chain": {
+        "claim_height": 280455,
+        "claimant": "ak_2cFmLzmSWsq5FYY2KyMMintYwrfqCHeRi6pbyeAUjFWKA5Dm2v",
+        "claimed": true,
+        "expiration_height": 330455,
+        "name_id": "nm_2TcAfQYFBvtSGZ9sUt7KqBF1v8vvuX777Fv7bSBVnrWhbDuwXS",
+        "owner": "ak_2cFmLzmSWsq5FYY2KyMMintYwrfqCHeRi6pbyeAUjFWKA5Dm2v",
+        "pointers": {},
+        "revoke_height": null
+      }
+    },
+    {
+      "hudie360harmonydeep.chain": {
+        "claim_height": 279596,
+        "claimant": "ak_hjB43fZej4qzDGs3ptTwM1b1cTNA9Eygpm8ndvqBMHmEKBix4",
+        "claimed": true,
+        "expiration_height": 329596,
+        "name_id": "nm_2N965YVbb8VN28XVhb9jtKaHpm7pd1zTv4a55aJy42zo8zWd1K",
+        "owner": "ak_hjB43fZej4qzDGs3ptTwM1b1cTNA9Eygpm8ndvqBMHmEKBix4",
+        "pointers": {},
+        "revoke_height": null
+      }
+    },
+    {
+      "wwwbeaconoidcom.chain": {
+        "claim_height": 279555,
+        "claimant": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C",
+        "claimed": true,
+        "expiration_height": 329555,
+        "name_id": "nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj",
+        "owner": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C",
+        "pointers": {
+          "account_pubkey": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
+        },
+        "revoke_height": null
+      }
+    },
+    {
+      "Djordje.chain": {
+        "claim_height": 277609,
+        "claimant": "ak_jmofjvvc9qUk2ESVPgHKVbapGVtfPgPfgzwW5QubhJDfEnqVj",
+        "claimed": true,
+        "expiration_height": 342489,
+        "name_id": "nm_8zCxX9VYvh9MNBvcTrfZE3KG5wUuPnRDfDBMXbiZdQW2ndYDU",
+        "owner": "ak_jmofjvvc9qUk2ESVPgHKVbapGVtfPgPfgzwW5QubhJDfEnqVj",
+        "pointers": {},
+        "revoke_height": null
+      }
+    },
+    {
+      "Twitter.chain": {
+        "claim_height": 277010,
+        "claimant": "ak_iNokaxUWd4RXdUpH4RcTbaEh7DPvzzm5FZ3uQ3ydHWDoY6RbS",
+        "claimed": true,
+        "expiration_height": 341890,
+        "name_id": "nm_2tBQEK9ED871VGhNPek6MyTKP2ZwerUVLjoM5GhTMrVoWnob63",
+        "owner": "ak_iNokaxUWd4RXdUpH4RcTbaEh7DPvzzm5FZ3uQ3ydHWDoY6RbS",
+        "pointers": {},
+        "revoke_height": null
+      }
+    },
+    {
+      "OwaenCannomy.chain": {
+        "claim_height": 275849,
+        "claimant": "ak_ht7LpTUz8UaQH5enwpJgB7CExgGfuCHS8kvryu9Psx5uV95PM",
+        "claimed": true,
+        "expiration_height": 326329,
+        "name_id": "nm_2MJNED2VE8dtM3Mf4imHL7iq3dS8YWPzumKBHsWFUDYK3GJXPi",
+        "owner": "ak_ht7LpTUz8UaQH5enwpJgB7CExgGfuCHS8kvryu9Psx5uV95PM",
+        "pointers": {
+          "account_pubkey": "ak_ht7LpTUz8UaQH5enwpJgB7CExgGfuCHS8kvryu9Psx5uV95PM"
+        },
+        "revoke_height": null
+      }
+    },
+    {
+      "girlwithplanetinpocket.chain": {
+        "claim_height": 275769,
+        "claimant": "ak_cEjh5on5RvoBw8zqCGS4VWeY2bmNYNPjn3SCZutYyVLWKf7X1",
+        "claimed": true,
+        "expiration_height": 325769,
+        "name_id": "nm_2wVhJtYp9EBqN8LgRFkmQDavoDA2jGDsAybK8FhcZucCHiTdaf",
+        "owner": "ak_cEjh5on5RvoBw8zqCGS4VWeY2bmNYNPjn3SCZutYyVLWKf7X1",
+        "pointers": {},
+        "revoke_height": null
+      }
+    },
+    {
+      "Successoganiru.chain": {
+        "claim_height": 275661,
+        "claimant": "ak_2A7eB6HoKWUfMKoqNbJqq1zzpWSMxB1RZjTtdhFNjxthxnBaCj",
+        "claimed": true,
+        "expiration_height": 325661,
+        "name_id": "nm_27Gt9NwfpbwFh86oMp3kgJBSx4AqpwzEnknLy3YSbf1fPzCZKK",
+        "owner": "ak_2A7eB6HoKWUfMKoqNbJqq1zzpWSMxB1RZjTtdhFNjxthxnBaCj",
+        "pointers": {
+          "account_pubkey": "ak_2A7eB6HoKWUfMKoqNbJqq1zzpWSMxB1RZjTtdhFNjxthxnBaCj"
+        },
+        "revoke_height": null
+      }
+    }
+  ],
+  "next": "names/all?limit=10&page=2"
+}
+```
+
+### Listing active names
+
+Similar to endpoint listing all names, but lists only `active` names. Paginable.
+
+```
+$ curl -s "http://localhost:4000/names/active" | jq '.'
+{
+  "data": [
+    {
+      "humphreyakanyijukah.chain": {
+        "claim_height": 280670,
+        "claimant": "ak_2QQr3NMs4TEBEyiZXd2H5z5rEGG9ojR31X7gyu4tuDkiigwKC5",
+        "claimed": true,
+        "expiration_height": 330670,
+        "name_id": "nm_GHnyKjnXb1TPQsBP4ZXvxWCnxVn653ctcZj34RwfgEu4KDyuw",
+        "owner": "ak_2QQr3NMs4TEBEyiZXd2H5z5rEGG9ojR31X7gyu4tuDkiigwKC5",
+        "pointers": {},
+        "revoke_height": null
+      }
+    },
+    {
+      "alaebovictorchima.chain": {
+        "claim_height": 280472,
+        "claimant": "ak_2j76sWZB4B24HA7HVCnGQVXWzwfTAkfvWvcCKUbx138oADk9Ah",
+        "claimed": true,
+        "expiration_height": 330472,
+        "name_id": "nm_2T1CgLqGJMoZvTaH7xLvsU5myeDaGUsR5Zk4aJjV36oSZK1NrL",
+        "owner": "ak_2j76sWZB4B24HA7HVCnGQVXWzwfTAkfvWvcCKUbx138oADk9Ah",
+        "pointers": {},
+        "revoke_height": null
+      }
+    },
+    {
+      "SamuelTownWriter.chain": {
+        "claim_height": 280455,
+        "claimant": "ak_2cFmLzmSWsq5FYY2KyMMintYwrfqCHeRi6pbyeAUjFWKA5Dm2v",
+        "claimed": true,
+        "expiration_height": 330455,
+        "name_id": "nm_2TcAfQYFBvtSGZ9sUt7KqBF1v8vvuX777Fv7bSBVnrWhbDuwXS",
+        "owner": "ak_2cFmLzmSWsq5FYY2KyMMintYwrfqCHeRi6pbyeAUjFWKA5Dm2v",
+        "pointers": {},
+        "revoke_height": null
+      }
+    },
+    {
+      "hudie360harmonydeep.chain": {
+        "claim_height": 279596,
+        "claimant": "ak_hjB43fZej4qzDGs3ptTwM1b1cTNA9Eygpm8ndvqBMHmEKBix4",
+        "claimed": true,
+        "expiration_height": 329596,
+        "name_id": "nm_2N965YVbb8VN28XVhb9jtKaHpm7pd1zTv4a55aJy42zo8zWd1K",
+        "owner": "ak_hjB43fZej4qzDGs3ptTwM1b1cTNA9Eygpm8ndvqBMHmEKBix4",
+        "pointers": {},
+        "revoke_height": null
+      }
+    },
+    {
+      "wwwbeaconoidcom.chain": {
+        "claim_height": 279555,
+        "claimant": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C",
+        "claimed": true,
+        "expiration_height": 329555,
+        "name_id": "nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj",
+        "owner": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C",
+        "pointers": {
+          "account_pubkey": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
+        },
+        "revoke_height": null
+      }
+    },
+    {
+      "Djordje.chain": {
+        "claim_height": 277609,
+        "claimant": "ak_jmofjvvc9qUk2ESVPgHKVbapGVtfPgPfgzwW5QubhJDfEnqVj",
+        "claimed": true,
+        "expiration_height": 342489,
+        "name_id": "nm_8zCxX9VYvh9MNBvcTrfZE3KG5wUuPnRDfDBMXbiZdQW2ndYDU",
+        "owner": "ak_jmofjvvc9qUk2ESVPgHKVbapGVtfPgPfgzwW5QubhJDfEnqVj",
+        "pointers": {},
+        "revoke_height": null
+      }
+    },
+    {
+      "Twitter.chain": {
+        "claim_height": 277010,
+        "claimant": "ak_iNokaxUWd4RXdUpH4RcTbaEh7DPvzzm5FZ3uQ3ydHWDoY6RbS",
+        "claimed": true,
+        "expiration_height": 341890,
+        "name_id": "nm_2tBQEK9ED871VGhNPek6MyTKP2ZwerUVLjoM5GhTMrVoWnob63",
+        "owner": "ak_iNokaxUWd4RXdUpH4RcTbaEh7DPvzzm5FZ3uQ3ydHWDoY6RbS",
+        "pointers": {},
+        "revoke_height": null
+      }
+    },
+    {
+      "OwaenCannomy.chain": {
+        "claim_height": 275849,
+        "claimant": "ak_ht7LpTUz8UaQH5enwpJgB7CExgGfuCHS8kvryu9Psx5uV95PM",
+        "claimed": true,
+        "expiration_height": 326329,
+        "name_id": "nm_2MJNED2VE8dtM3Mf4imHL7iq3dS8YWPzumKBHsWFUDYK3GJXPi",
+        "owner": "ak_ht7LpTUz8UaQH5enwpJgB7CExgGfuCHS8kvryu9Psx5uV95PM",
+        "pointers": {
+          "account_pubkey": "ak_ht7LpTUz8UaQH5enwpJgB7CExgGfuCHS8kvryu9Psx5uV95PM"
+        },
+        "revoke_height": null
+      }
+    },
+    {
+      "girlwithplanetinpocket.chain": {
+        "claim_height": 275769,
+        "claimant": "ak_cEjh5on5RvoBw8zqCGS4VWeY2bmNYNPjn3SCZutYyVLWKf7X1",
+        "claimed": true,
+        "expiration_height": 325769,
+        "name_id": "nm_2wVhJtYp9EBqN8LgRFkmQDavoDA2jGDsAybK8FhcZucCHiTdaf",
+        "owner": "ak_cEjh5on5RvoBw8zqCGS4VWeY2bmNYNPjn3SCZutYyVLWKf7X1",
+        "pointers": {},
+        "revoke_height": null
+      }
+    },
+    {
+      "Successoganiru.chain": {
+        "claim_height": 275661,
+        "claimant": "ak_2A7eB6HoKWUfMKoqNbJqq1zzpWSMxB1RZjTtdhFNjxthxnBaCj",
+        "claimed": true,
+        "expiration_height": 325661,
+        "name_id": "nm_27Gt9NwfpbwFh86oMp3kgJBSx4AqpwzEnknLy3YSbf1fPzCZKK",
+        "owner": "ak_2A7eB6HoKWUfMKoqNbJqq1zzpWSMxB1RZjTtdhFNjxthxnBaCj",
+        "pointers": {
+          "account_pubkey": "ak_2A7eB6HoKWUfMKoqNbJqq1zzpWSMxB1RZjTtdhFNjxthxnBaCj"
+        },
+        "revoke_height": null
+      }
+    }
+  ],
+  "next": "names/active?limit=10&page=2"
+}
+```
+
+### Listing all auctions
+
+Lists all auctions, ordered by auction expiration height.
+It's a paginable endpoint, as others accepts optional `limit` parameter.
+Once a auction in reply set has `“active” : false`, all the remaining auctions are expired as well.
+
+The bids in the auction are name claim transactions which happened in the auction, newest first.
+
+```
+$ curl -s "http://localhost:4000/names/auctions" | jq '.'
+{
+  "data": [
+    {
+      "ominous.chain": {
+        "active": true,
+        "bids": [
+          {
+            "block_hash": "mh_2Evf1zwi9YkGLWMBUsXNuj1QaCCXHZr8MtumwkVqSxJqw71GUP",
+            "block_height": 266586,
+            "hash": "th_gbWe2xpSNtiRZPQ8ju4BYW7zUuqt3kQouwLmbVQzN3UgsLChW",
+            "micro_index": 36,
+            "micro_time": 1591519266806,
+            "signatures": [
+              "sg_Ney7PWniDvGNAQnaxnJ1c2mp4zzgciAdRejBEmvGcshnkNaqhcB3NDvj4bovdZmuLyDpgQkYRHJ19d1MDxSSEX49jiaaT"
+            ],
+            "tx": {
+              "account_id": "ak_2vENviBUhrnb3EuvmR2zkQuVwvuBR9Qj3pdQFndiX7xUgLTJPf",
+              "fee": 16580000000000,
+              "name": "ominous.chain",
+              "name_fee": 31781100000000000000,
+              "name_id": "nm_YycxoUrtL94JgDM3e9CtmA9guW3DjP6Bi8rLG18eWstJcEwSg",
+              "name_salt": 4192979466082651,
+              "nonce": 20,
+              "type": "NameClaimTx",
+              "version": 2
+            },
+            "tx_index": 12012397
+          }
+        ],
+        "expiration_height": 281466,
+        "name_id": "nm_YycxoUrtL94JgDM3e9CtmA9guW3DjP6Bi8rLG18eWstJcEwSg"
+      }
+    },
+    {
+      "gokhan.chain": {
+        "active": true,
+        "bids": [
+          {
+            "block_hash": "mh_2bX7jQA3oJfviHTvhm21aT53wN1uP9ttScmWXvpnUQ4VBGNmpk",
+            "block_height": 268133,
+            "hash": "th_BTPkhxqRQingkMjBodK9RYuQDC55odFwspJjK1CH7Mptz9PDf",
+            "micro_index": 0,
+            "micro_time": 1591798093272,
+            "signatures": [
+              "sg_DBHtjcwMR6BsqhJgd9grDDergFHQzStQBf9M7vskTqHPwqHCwDTuSqqwDQPfqEgVaYRwUAWNQVWpkF8gDD3LuZ36eZtMy"
+            ],
+            "tx": {
+              "account_id": "ak_jmofjvvc9qUk2ESVPgHKVbapGVtfPgPfgzwW5QubhJDfEnqVj",
+              "fee": 163600000000000,
+              "name": "gokhan.chain",
+              "name_fee": 51422900000000000000,
+              "name_id": "nm_6y59yVycqm31RmeX6EKMN4tDAD9ZonEWNbKQNN3UzHUrxQfLL",
+              "name_salt": 1881488702326437,
+              "nonce": 2,
+              "type": "NameClaimTx",
+              "version": 2
+            },
+            "tx_index": 12127131
+          }
+        ],
+        "expiration_height": 283013,
+        "name_id": "nm_6y59yVycqm31RmeX6EKMN4tDAD9ZonEWNbKQNN3UzHUrxQfLL"
+      }
+    },
+    {
+      "easy.chain": {
+        "active": true,
+        "bids": [
+          {
+            "block_hash": "mh_2oNnnjqXccCtPkqhzp4iGJDQzmaRwguCVF9cCi14hr8FwQzV9M",
+            "block_height": 253281,
+            "hash": "th_FMjMjxNX3Dn3rYBwV7Tn5RU3cUQZfAR1JtZNLhonkLhGTzAv3",
+            "micro_index": 0,
+            "micro_time": 1589116870077,
+            "signatures": [
+              "sg_84tm6LfMwNzLShz3qKeeonsE3mBu6W5ocd9FACcsLCucQnhMohccTSaBd6S1WU44M6vJt4iWEnXBfTqbYpFc8Gj7Gp8JP"
+            ],
+            "tx": {
+              "account_id": "ak_QyFYYpgJ1vUGk1Lnk8d79WJEVcAtcfuNHqquuP2ADfxsL6yKx",
+              "fee": 17080000000000,
+              "name": "easy.chain",
+              "name_fee": 161552280000000000000,
+              "name_id": "nm_FyiZXmrwh7JZXKQnL8KTWrB5FEzjhHghCMgFUUbTRcudEkcTU",
+              "name_salt": 9.748484512782775e+76,
+              "nonce": 106,
+              "ttl": 253780,
+              "type": "NameClaimTx",
+              "version": 2
+            },
+            "tx_index": 11024671
+          }
+        ],
+        "expiration_height": 283041,
+        "name_id": "nm_FyiZXmrwh7JZXKQnL8KTWrB5FEzjhHghCMgFUUbTRcudEkcTU"
+      }
+    },
+    {
+      "ee.chain": {
+        "active": true,
+        "bids": [
+          {
+            "block_hash": "mh_xrveFatG93ipP1274oG2Q6gkPhkFaj2TGMPbotdNkxUZ6FosB",
+            "block_height": 254060,
+            "hash": "th_2SU2b5z2oKpB4nuDPNZynLBL8JpKxqq9BUFDduAzfWXoDZudzF",
+            "micro_index": 0,
+            "micro_time": 1589257873261,
+            "signatures": [
+              "sg_CbDMrxWPL5RbBBvpBvsjcQrqQrSz4McATka1tMZiGE9SGUhy5JEZkpGnGqjXQcqjJWb35bkMrR4NVN6HkTFiRtJ6Q8dNo"
+            ],
+            "tx": {
+              "account_id": "ak_iNokaxUWd4RXdUpH4RcTbaEh7DPvzzm5FZ3uQ3ydHWDoY6RbS",
+              "fee": 16520000000000,
+              "name": "ee.chain",
+              "name_fee": 352457800000000000000,
+              "name_id": "nm_QNpJqzfERyGneHMXKTmAXoVcz2Py6xigrJKMUuhhH4USE91R7",
+              "name_salt": 6861487644301603,
+              "nonce": 623,
+              "type": "NameClaimTx",
+              "version": 2
+            },
+            "tx_index": 11082419
+          }
+        ],
+        "expiration_height": 283820,
+        "name_id": "nm_QNpJqzfERyGneHMXKTmAXoVcz2Py6xigrJKMUuhhH4USE91R7"
+      }
+    },
+    {
+      "bb.chain": {
+        "active": true,
+        "bids": [
+          {
+            "block_hash": "mh_BufE6SAU8WdbDAtxiRQZVv7V9mHifTPVnFBVBDLTYah3eoY5c",
+            "block_height": 254076,
+            "hash": "th_YqJQWC6v9TJToDoKSXu5Gzgw37ZKkeahV6uzzntnVXYufXJjG",
+            "micro_index": 0,
+            "micro_time": 1589260542649,
+            "signatures": [
+              "sg_DQfS3CvipxjYa5QqwSxTnsDK45s2M2gC7osoQfVSQ8PXss1CkdRYf43WeaBja7K47mX2qLuy44TdWtPmuTrW5YC34eU8"
+            ],
+            "tx": {
+              "account_id": "ak_iNokaxUWd4RXdUpH4RcTbaEh7DPvzzm5FZ3uQ3ydHWDoY6RbS",
+              "fee": 16520000000000,
+              "name": "bb.chain",
+              "name_fee": 352457800000000000000,
+              "name_id": "nm_2g39jvNhugJV6F49oaAFctinuixBeBThdkwiMcf93UCdBFfSjq",
+              "name_salt": 5972095356692947,
+              "nonce": 625,
+              "type": "NameClaimTx",
+              "version": 2
+            },
+            "tx_index": 11083490
+          }
+        ],
+        "expiration_height": 283836,
+        "name_id": "nm_2g39jvNhugJV6F49oaAFctinuixBeBThdkwiMcf93UCdBFfSjq"
+      }
+    },
+    {
+      "dd.chain": {
+        "active": true,
+        "bids": [
+          {
+            "block_hash": "mh_f3hor7oz1JbpYF7Wqmr2Whsakns3PtYu7wF8SvJGHemHYR7zm",
+            "block_height": 254077,
+            "hash": "th_2eoLN9SmJp25e7kUhqjzUTFNCkYheZxSvqDgtS4wHBhdwMAu6V",
+            "micro_index": 0,
+            "micro_time": 1589260605969,
+            "signatures": [
+              "sg_gvk16JP5i9s3E49PEpsRVMTmEpnXbPptfrjiMpbvUQ6iQTYY1muUYvnSvFPmHDepdoqpaJnN6AwRPazK5w3xbWxu8Aba"
+            ],
+            "tx": {
+              "account_id": "ak_iNokaxUWd4RXdUpH4RcTbaEh7DPvzzm5FZ3uQ3ydHWDoY6RbS",
+              "fee": 16520000000000,
+              "name": "dd.chain",
+              "name_fee": 352457800000000000000,
+              "name_id": "nm_2RwSGBUj7uLtEjYCApywEM687z2tvZ4PfeSjBibdypUjqYGxkj",
+              "name_salt": 7957399869698087,
+              "nonce": 627,
+              "type": "NameClaimTx",
+              "version": 2
+            },
+            "tx_index": 11083515
+          }
+        ],
+        "expiration_height": 283837,
+        "name_id": "nm_2RwSGBUj7uLtEjYCApywEM687z2tvZ4PfeSjBibdypUjqYGxkj"
+      }
+    },
+    {
+      "hh.chain": {
+        "active": true,
+        "bids": [
+          {
+            "block_hash": "mh_FCzmpAqtqWGfw3sSR1Y4mBP1TYB9jocBGWu65ieAcQgAFTQHy",
+            "block_height": 254078,
+            "hash": "th_8zGfvj2FFcpcrch9rKXmAV7UffJrJLnHrqG8WTinFCP9yEpto",
+            "micro_index": 0,
+            "micro_time": 1589260681515,
+            "signatures": [
+              "sg_Fh2aj2u6emzZg8MC9dLrEgGCGgfMYGnLVGvJywMWpPqoCpu5eZCRx6Zc7dAtRHSrntVvtVM3cX18pAfeXp5QD8y42nJdU"
+            ],
+            "tx": {
+              "account_id": "ak_iNokaxUWd4RXdUpH4RcTbaEh7DPvzzm5FZ3uQ3ydHWDoY6RbS",
+              "fee": 16520000000000,
+              "name": "hh.chain",
+              "name_fee": 352457800000000000000,
+              "name_id": "nm_E34SoUvCWRa2gfkS3jGsiM98GTEioSEzkJHxRxbnQVzcF4A8p",
+              "name_salt": 4907777260156943,
+              "nonce": 629,
+              "type": "NameClaimTx",
+              "version": 2
+            },
+            "tx_index": 11083552
+          }
+        ],
+        "expiration_height": 283838,
+        "name_id": "nm_E34SoUvCWRa2gfkS3jGsiM98GTEioSEzkJHxRxbnQVzcF4A8p"
+      }
+    },
+    {
+      "ss.chain": {
+        "active": true,
+        "bids": [
+          {
+            "block_hash": "mh_2f28GjFEKBFJYC5YskqaGS8XRQUrunsRgX2nUTFk6TxLLtyNLy",
+            "block_height": 254080,
+            "hash": "th_cmFLdTCHRhrkx63gTM4MYko2qspvcn9tit7xWTDeptvadVfzq",
+            "micro_index": 0,
+            "micro_time": 1589261201505,
+            "signatures": [
+              "sg_ZBvNiMfDdD9WvtXwxuWUSxrWEwBWroNJEGRKgdGgamX4EkC8ZR4mRNp8LRZPYoVR7ZGbZaSLnKLVnuNwEhqWqE6BR4mV2"
+            ],
+            "tx": {
+              "account_id": "ak_iNokaxUWd4RXdUpH4RcTbaEh7DPvzzm5FZ3uQ3ydHWDoY6RbS",
+              "fee": 16520000000000,
+              "name": "ss.chain",
+              "name_fee": 352457800000000000000,
+              "name_id": "nm_u8zjRsdvWLTs4WCdTjmcfdYXAhnHL1MR62B7SmhrmDfDhf2zz",
+              "name_salt": 3203165734438313,
+              "nonce": 632,
+              "type": "NameClaimTx",
+              "version": 2
+            },
+            "tx_index": 11083771
+          }
+        ],
+        "expiration_height": 283840,
+        "name_id": "nm_u8zjRsdvWLTs4WCdTjmcfdYXAhnHL1MR62B7SmhrmDfDhf2zz"
+      }
+    },
+    {
+      "kk.chain": {
+        "active": true,
+        "bids": [
+          {
+            "block_hash": "mh_FhXGBBrQBkoDe45Qnssy7Kr11z5RoXpDejc7273o9hR9aYL3o",
+            "block_height": 254081,
+            "hash": "th_JmZNSqKUyG4ZCvX9h6vEfuQCxiiPAPxwFukEqio9WkPzYt3ac",
+            "micro_index": 0,
+            "micro_time": 1589261854288,
+            "signatures": [
+              "sg_E243icveeCdTxSE5UpvgWd5nsKSFMunwniUrHxiBJpgb5TP9DKnZqBtWqyHqEwCC7ZeFDfjJ6WxYx2WxwNJBMzNRDYysL"
+            ],
+            "tx": {
+              "account_id": "ak_iNokaxUWd4RXdUpH4RcTbaEh7DPvzzm5FZ3uQ3ydHWDoY6RbS",
+              "fee": 16520000000000,
+              "name": "kk.chain",
+              "name_fee": 352457800000000000000,
+              "name_id": "nm_2txkMuy8JNrtd1HFPPKvqSkXSzuBpgq2nwQTn7TWS2Avn6R88H",
+              "name_salt": 5245764596790627,
+              "nonce": 635,
+              "type": "NameClaimTx",
+              "version": 2
+            },
+            "tx_index": 11084058
+          }
+        ],
+        "expiration_height": 283841,
+        "name_id": "nm_2txkMuy8JNrtd1HFPPKvqSkXSzuBpgq2nwQTn7TWS2Avn6R88H"
+      }
+    },
+    {
+      "mm.chain": {
+        "active": true,
+        "bids": [
+          {
+            "block_hash": "mh_MwXzbASR6Ng21fy8yaCtqGuih6hXPTG9Lc4tBibLTcrfZ5bre",
+            "block_height": 254099,
+            "hash": "th_r5vMmo3AzqqCi1oRUxFK14vZ4tjvaHTteQmd3cokU7Fwn74R9",
+            "micro_index": 0,
+            "micro_time": 1589265279995,
+            "signatures": [
+              "sg_7eR2h96sU3ihQdk8aMNWUsAdqUykwJ3XUtqNAEaeDGKdzbvvBvnRPmghayFMdfgKAg5c3dnj3jTpusRn4fYy77PufraVT"
+            ],
+            "tx": {
+              "account_id": "ak_iNokaxUWd4RXdUpH4RcTbaEh7DPvzzm5FZ3uQ3ydHWDoY6RbS",
+              "fee": 16520000000000,
+              "name": "mm.chain",
+              "name_fee": 352457800000000000000,
+              "name_id": "nm_2KxCt5v8HxSCktCpHvz4ufqaabTthPp6HnSxfmsx9GrYmLgLcS",
+              "name_salt": 6354286943105831,
+              "nonce": 694,
+              "type": "NameClaimTx",
+              "version": 2
+            },
+            "tx_index": 11085505
+          }
+        ],
+        "expiration_height": 283859,
+        "name_id": "nm_2KxCt5v8HxSCktCpHvz4ufqaabTthPp6HnSxfmsx9GrYmLgLcS"
+      }
+    }
+  ],
+  "next": "names/auctions?limit=10&page=2"
+}
+```
+
+### Showing name pointers
+
+This is basically a restricted reply from `name/:id` endpoint, returning just pointers.
+
+```
+$ curl -s "http://localhost:4000/names/pointers/wwwbeaconoidcom.chain" | jq '.'
+{
+  "account_pubkey": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
+}
+```
+
+### Showing name pointees
+
+Returns names pointing to a particular pubkey. The reply also has the name update transaction which set up that pointer.
+
+```
+$ curl -s "http://localhost:4000/names/pointees/ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C" | jq '.'
+{
+  "wwwbeaconoidcom.chain": {
+    "pointer_key": "account_pubkey",
+    "update_tx": {
+      "block_hash": "mh_2f9F14PvtVmfqAZnBi5rAsCZinxCK1tmTn1dWQHShJY22KgLBt",
+      "block_height": 279558,
+      "hash": "th_2rnypSgKfSZWat1t8Cw9Svuhwtm8gQVHggahZ4avi3UKBZwUKd",
+      "micro_index": 51,
+      "micro_time": 1593862096625,
+      "signatures": [
+        "sg_4SjeyYWZbLic6QZfiLTY88xED5A1UoYrgUN34bNxQkmqRmeKdRaTC9vC8hr8A8Z8bCzWQD3Z5QxyWHPtEWwV77BkCaHxS"
+      ],
+      "tx": {
+        "account_id": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C",
+        "client_ttl": 84600,
+        "fee": 17780000000000,
+        "name": "wwwbeaconoidcom.chain",
+        "name_id": "nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj",
+        "name_ttl": 50000,
+        "nonce": 3,
+        "pointers": [
+          {
+            "id": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C",
+            "key": "account_pubkey"
+          }
+        ],
+        "type": "NameUpdateTx",
+        "version": 1
+      },
+      "tx_index": 12942695
+    }
   }
 }
 ```
