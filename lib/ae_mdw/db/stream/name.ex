@@ -59,10 +59,10 @@ defmodule AeMdw.Db.Stream.Name do
     end
   end
 
-  def active_auctions(format),
-    do: active_auctions(format, current_height())
+  def all_auctions(format),
+    do: all_auctions(format, current_height())
 
-  def active_auctions(format, current_height)
+  def all_auctions(format, current_height)
       when format in [:raw, :json] do
     alias DBS.Resource.Util, as: RU
     init_key = {current_height + 1, <<>>}
@@ -82,8 +82,8 @@ defmodule AeMdw.Db.Stream.Name do
     } = claim_tx
 
     expiration_height = expiration_height(plain_name, last_claim_height)
-    {revoked_height?, revoked_txi?} = revoke_status(name_hash, claim_txi)
-    pointers = pointers(name_hash, claim_txi, revoked_txi?)
+    {revoke_height?, revoke_txi?} = revoke_status(name_hash, claim_txi)
+    pointers = pointers(name_hash, claim_txi, revoke_txi?)
     {original_owner, current_owner} = ownership(name_hash, claimant, claim_txi)
 
     %{
@@ -93,8 +93,8 @@ defmodule AeMdw.Db.Stream.Name do
         owner: current_owner,
         claim_height: last_claim_height,
         expiration_height: expiration_height,
-        revoked_height: revoked_height?,
-        claimed: is_nil(revoked_txi?) && current_height < expiration_height,
+        revoke_height: revoke_height?,
+        claimed: is_nil(revoke_txi?) && current_height < expiration_height,
         pointers: pointers
       }
     }

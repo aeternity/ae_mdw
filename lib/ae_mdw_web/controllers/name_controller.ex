@@ -33,26 +33,26 @@ defmodule AeMdwWeb.NameController do
   def pointees(conn, %{"id" => ident}),
     do: handle_input(conn, fn -> pointees_reply(conn, Validate.id!(ident)) end)
 
+  def all_auctions(conn, _req),
+    do: Cont.response(conn, &json/2)
+
   def all_names(conn, _req),
     do: Cont.response(conn, &json/2)
 
   def active_names(conn, _req),
     do: Cont.response(conn, &json/2)
 
-  def active_auctions(conn, _req),
-    do: Cont.response(conn, &json/2)
-
   ##########
+
+  # scope is used here only for identification of the continuation
+  def db_stream(:all_auctions, %{}, _scope),
+    do: DBS.Name.all_auctions(:json)
 
   def db_stream(:all_names, %{}, scope),
     do: DBS.Name.all_names(scope, :json)
 
   def db_stream(:active_names, %{}, scope),
     do: DBS.Name.active_names(scope, :json)
-
-  # scope is used here only for identification of the continuation
-  def db_stream(:active_auctions, %{}, _scope),
-    do: DBS.Name.active_auctions(:json)
 
   ##########
 

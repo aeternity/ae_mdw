@@ -35,7 +35,7 @@ defmodule AeMdw.Db.Format do
         "owner" => Enc.encode(:account_pubkey, Validate.id!(data.owner)),
         "claim_height" => data.claim_height,
         "expiration_height" => data.expiration_height,
-        "revoked_height" => data.revoked_height,
+        "revoke_height" => data.revoke_height,
         "claimed" => data.claimed,
         "pointers" => enc_pointers
       }
