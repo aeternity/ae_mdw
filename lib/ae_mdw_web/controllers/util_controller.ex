@@ -25,4 +25,7 @@ defmodule AeMdwWeb.UtilController do
 
     json(conn, status)
   end
+
+  def no_route(conn, _params),
+    do: conn |> AeMdwWeb.Util.send_error(404, "no such route")
 end

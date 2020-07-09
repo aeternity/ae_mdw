@@ -18,6 +18,13 @@ defmodule AeMdwWeb.Router do
     plug :accepts, ["json"]
   end
 
+  scope "/swagger" do
+    forward "/", PhoenixSwagger.Plug.SwaggerUI,
+      otp_app: :ae_mdw,
+      swagger_file: "swagger.json",
+      disable_validator: true
+  end
+
   scope "/", AeMdwWeb do
     pipe_through :api
 
@@ -38,13 +45,8 @@ defmodule AeMdwWeb.Router do
     get "/names/all", NameController, :all_names
 
     get "/status", UtilController, :status
-  end
 
-  scope "/swagger" do
-    forward "/", PhoenixSwagger.Plug.SwaggerUI,
-      otp_app: :ae_mdw,
-      swagger_file: "swagger.json",
-      disable_validator: true
+    match :*, "/*path", UtilController, :no_route
   end
 
   def swagger_info do
