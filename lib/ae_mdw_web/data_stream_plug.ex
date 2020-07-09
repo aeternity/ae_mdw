@@ -47,7 +47,7 @@ defmodule AeMdwWeb.DataStreamPlug do
     else
       {:error, reason} ->
         conn
-        |> send_resp(400, Jason.encode!(%{error: reason}))
+        |> AeMdwWeb.Util.send_error(400, reason)
         |> halt
     end
   end
@@ -76,8 +76,7 @@ defmodule AeMdwWeb.DataStreamPlug do
     end
   end
 
-  def parse_scope([direction | _], _), do:
-    {:error, concat("invalid direction", direction)}
+  def parse_scope([direction | _], _), do: {:error, concat("invalid direction", direction)}
 
   def parse_range(range) do
     case String.split(range, "-") do

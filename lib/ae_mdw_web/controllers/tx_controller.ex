@@ -68,9 +68,6 @@ defmodule AeMdwWeb.TxController do
     end
   end
 
-  # defp txs(conn, _req),
-  #   do: Cont.response(conn, &json/2)
-
   defp handle_tx_reply(conn, source_fn),
     do: handle_input(conn, fn -> tx_reply(conn, source_fn.()) end)
 

@@ -63,6 +63,7 @@ defmodule AeMdwWeb.Util do
   def send_error(conn, status, reason) do
     conn
     |> Plug.Conn.put_status(status)
+    |> Plug.Conn.put_resp_content_type("application/json")
     |> Phoenix.Controller.json(%{"error" => reason})
   end
 

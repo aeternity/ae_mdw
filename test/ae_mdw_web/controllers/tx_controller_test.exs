@@ -389,7 +389,7 @@ defmodule AeMdwWeb.TxControllerTest do
     end
   end
 
-  describe "txs_direction with  given type and type_group parameters" do
+  describe "txs_direction with given type and type_group parameters" do
     # Tests when direction is `forward` and different `type` and `type_group` parameters
     test "get transactions when direction=forward, type=name_claim and type_group=oracle", %{
       conn: conn
