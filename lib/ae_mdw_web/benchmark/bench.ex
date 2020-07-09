@@ -13,7 +13,8 @@ end
 defmodule Mix.Tasks.Bench do
   use Mix.Task
 
-  @default_simultaneous_requests_number 10
+  alias AeMdwWeb.Benchmark.Aggregator
+
   @default_paths [
     "/txi/87450",
     "/txs/count",
@@ -31,96 +32,45 @@ defmodule Mix.Tasks.Bench do
     "/txs/txi/409222-501000?limit=30"
   ]
 
-  def run(["default"]), do: run(@default_paths)
+  def run(arg) do
+    pids = hd(arg) |> String.to_integer() |> Aggregator.spawn_process()
+    info = Aggregator.execute(@default_paths, pids)
 
-  def run(paths) when is_list(paths), do: run(paths, %{all_total_exec_time: 0})
+    Enum.each(info, fn {k, v} ->
+      total_requests = hd(arg) |> String.to_integer()
+      status = calculate_status(v[:status])
+      total_exec_time = Enum.sum(v[:time]) / 1000
+      min = min(v[:time]) / 1000
+      max = max(v[:time]) / 1000
+      average = total_exec_time / total_requests
+      mean = (min + max) / 2
 
-  def run([req | paths], acc) do
-    response = spawn_requests(req, @default_simultaneous_requests_number)
-    status = calculate_status(response.status)
+      percentiles = %{
+        "50th" => percentile(v[:time], 50) / 1000,
+        "80th" => percentile(v[:time], 80) / 1000,
+        "90th" => percentile(v[:time], 90) / 1000,
+        "99th" => percentile(v[:time], 99) / 1000
+      }
 
-    data = "
-          Path: #{inspect(response.req_path)}
-          Number of requests: #{inspect(response.total_requests)}
+      data = "
+          Path: #{inspect(k)}
+          Number of requests: #{inspect(total_requests)}
           Successful requests: #{inspect(status.successful_requests)}
           Failed requests: #{inspect(status.failed_requests)}
-          Total execution time: #{inspect(response.total_exec_time)} ms
-          Min exec time: #{inspect(response.min)} ms
-          Max exec time: #{inspect(response.max)} ms
-          Average: #{inspect(response.average)} ms
-          Mean: #{inspect(response.mean)} ms
+          Total execution time: #{inspect(total_exec_time)} ms
+          Min exec time: #{inspect(min)} ms
+          Max exec time: #{inspect(max)} ms
+          Average: #{inspect(average)} ms
+          Mean: #{inspect(mean)} ms
           Percentiles:
-            50th: #{inspect(response.percentiles["50th"])} ms
-            80th: #{inspect(response.percentiles["80th"])} ms
-            90th: #{inspect(response.percentiles["90th"])} ms
-            99th: #{inspect(response.percentiles["99th"])} ms
+            50th: #{inspect(percentiles["50th"])} ms
+            80th: #{inspect(percentiles["80th"])} ms
+            90th: #{inspect(percentiles["90th"])} ms
+            99th: #{inspect(percentiles["99th"])} ms
           ......................................................................
           "
-    Mix.shell().info(data)
-
-    new_acc = %{acc | all_total_exec_time: acc.all_total_exec_time + response.total_exec_time}
-
-    run(paths, new_acc)
-  end
-
-  def run([], acc) do
-    info = "
-      All tests execution time: #{inspect(acc.all_total_exec_time)} ms
-      "
-
-    Mix.shell().info(info)
-  end
-
-  def spawn_requests(path, n) do
-    fun = fn -> Client.build_request(path) end
-
-    acc = %{
-      total_exec_time: 0,
-      average: 0,
-      mean: 0,
-      min: 0,
-      max: 0,
-      percentiles: %{"50th" => 0, "80th" => 0, "90th" => 0, "99th" => 0},
-      total_requests: n,
-      all_times: [],
-      req_path: path,
-      status: []
-    }
-
-    spawn_requests(fun, n, acc)
-  end
-
-  def spawn_requests(_fun, 0, acc) do
-    mean = (min(acc.all_times) + max(acc.all_times)) / 2
-
-    %{
-      acc
-      | total_exec_time: acc.total_exec_time / 1000,
-        mean: mean / 1000,
-        min: min(acc.all_times) / 1000,
-        max: max(acc.all_times) / 1000,
-        average: acc.total_exec_time / acc.total_requests / 1000,
-        percentiles: %{
-          acc.percentiles
-          | "50th" => percentile(acc.all_times, 50) / 1000,
-            "80th" => percentile(acc.all_times, 80) / 1000,
-            "90th" => percentile(acc.all_times, 90) / 1000,
-            "99th" => percentile(acc.all_times, 99) / 1000
-        }
-    }
-  end
-
-  def spawn_requests(fun, n, acc) do
-    {time, {:ok, %Tesla.Env{status: status}}} = :timer.tc(fun)
-
-    new_acc = %{
-      acc
-      | total_exec_time: acc.total_exec_time + time,
-        all_times: [time | acc.all_times],
-        status: [status | acc.status]
-    }
-
-    spawn_requests(fun, n - 1, new_acc)
+      Mix.shell().info(data)
+    end)
   end
 
   defp percentile([], _), do: nil
