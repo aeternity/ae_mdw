@@ -45,7 +45,8 @@ defmodule AeMdw.MixProject do
       {:plug_cowboy, "~> 2.0"},
       {:riverside, "~> 1.2.3"},
       {:websockex, "~> 0.4.2"},
-      {:phoenix_swagger, "~> 0.8"}
+      {:phoenix_swagger, "~> 0.8"},
+      {:tesla, "~> 1.3.0"}
     ]
   end
 end
