@@ -1,5 +1,6 @@
 defmodule AeMdwWeb.NameController do
   use AeMdwWeb, :controller
+  use PhoenixSwagger
 
   alias AeMdw.Validate
   alias AeMdw.Db.Name
@@ -185,5 +186,100 @@ defmodule AeMdwWeb.NameController do
       :raw,
       {:or, [["name_claim.account_id": pk], ["name_transfer.recipient_id": pk]]}
     )
+  end
+
+  ##########
+  swagger_path :name do
+    get("/name/{id}")
+    description("Get information for given name or encoded hash.")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_name_by_id")
+    tag("Middleware")
+
+    parameters do
+      id(:path, :string, "The name or encoded hash.",
+        required: true,
+        example: "wwwbeaconoidcom.chain"
+      )
+    end
+
+    response(200, "Returns information for given name.", %{})
+    response(400, "Bad request.", %{})
+    response(404, "Not found.", %{})
+  end
+
+  swagger_path :all_names do
+    get("/names/all")
+    description("Get all names.")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_all_names")
+    tag("Middleware")
+    response(200, "Returns information for names.", %{})
+  end
+
+  swagger_path :active_names do
+    get("/names/active")
+    description("Get active names.")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_active_names")
+    tag("Middleware")
+    response(200, "Returns information for active names.", %{})
+  end
+
+  swagger_path :all_auctions do
+    get("/names/auctions")
+    description("Get all auctions.")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_all_auctions")
+    tag("Middleware")
+    response(200, "Returns information for all auctions.", %{})
+  end
+
+  swagger_path :pointers do
+    get("/names/pointers/{id}")
+    description("Get pointers for given name.")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_pointers_by_id")
+    tag("Middleware")
+
+    parameters do
+      id(:path, :string, "The name.",
+        required: true,
+        example: "wwwbeaconoidcom.chain"
+      )
+    end
+
+    response(200, "Returns just pointers for given name.", %{})
+    response(400, "Bad request.", %{})
+    response(404, "Not found.", %{})
+  end
+
+  swagger_path :pointees do
+    get("/names/pointees/{id}")
+    description("Get names pointing to a particular pubkey.")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_pointees_by_id")
+    tag("Middleware")
+
+    parameters do
+      id(:path, :string, "The public key.",
+        required: true,
+        example: "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
+      )
+    end
+
+    response(
+      200,
+      "Returns names pointing to a particular pubkey and name update transaction which set up that pointer.",
+      %{}
+    )
+
+    response(400, "Bad request.", %{})
   end
 end

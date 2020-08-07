@@ -90,7 +90,14 @@ defmodule AeMdwWeb.SwaggerParameters do
       required: false,
       example: "ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
     )
-    # |> parameter(:name, :query, :string, "The name ID.", required: false, example: )
+    # |> parameter(
+    #   :name,
+    #   :query,
+    #   :string,
+    #   "The name. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+    #   required: false,
+    #   example: "wwwbeaconoidcom.chain"
+    # )
     |> parameter(:page, :query, :integer, "The number of page to show.",
       required: false,
       format: "int32",

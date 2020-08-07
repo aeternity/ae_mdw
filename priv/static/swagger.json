@@ -10,6 +10,191 @@
     "version": "1.0"
   },
   "paths": {
+    "/name/{id}": {
+      "get": {
+        "deprecated": false,
+        "description": "Get information for given name or encoded hash.",
+        "operationId": "get_name_by_id",
+        "parameters": [
+          {
+            "description": "The name or encoded hash.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string",
+            "x-example": "wwwbeaconoidcom.chain"
+          }
+        ],
+        "produces": [
+          [
+            "application/json"
+          ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns information for given name.",
+            "schema": {}
+          },
+          "400": {
+            "description": "Bad request.",
+            "schema": {}
+          },
+          "404": {
+            "description": "Not found.",
+            "schema": {}
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Middleware"
+        ]
+      }
+    },
+    "/names/active": {
+      "get": {
+        "deprecated": false,
+        "description": "Get active names.",
+        "operationId": "get_active_names",
+        "parameters": [],
+        "produces": [
+          [
+            "application/json"
+          ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns information for active names.",
+            "schema": {}
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Middleware"
+        ]
+      }
+    },
+    "/names/all": {
+      "get": {
+        "deprecated": false,
+        "description": "Get all names.",
+        "operationId": "get_all_names",
+        "parameters": [],
+        "produces": [
+          [
+            "application/json"
+          ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns information for names.",
+            "schema": {}
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Middleware"
+        ]
+      }
+    },
+    "/names/auctions": {
+      "get": {
+        "deprecated": false,
+        "description": "Get all auctions.",
+        "operationId": "get_all_auctions",
+        "parameters": [],
+        "produces": [
+          [
+            "application/json"
+          ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns information for all auctions.",
+            "schema": {}
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Middleware"
+        ]
+      }
+    },
+    "/names/pointees/{id}": {
+      "get": {
+        "deprecated": false,
+        "description": "Get names pointing to a particular pubkey.",
+        "operationId": "get_pointees_by_id",
+        "parameters": [
+          {
+            "description": "The public key.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string",
+            "x-example": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
+          }
+        ],
+        "produces": [
+          [
+            "application/json"
+          ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns names pointing to a particular pubkey and name update transaction which set up that pointer.",
+            "schema": {}
+          },
+          "400": {
+            "description": "Bad request.",
+            "schema": {}
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Middleware"
+        ]
+      }
+    },
+    "/names/pointers/{id}": {
+      "get": {
+        "deprecated": false,
+        "description": "Get pointers for given name.",
+        "operationId": "get_pointers_by_id",
+        "parameters": [
+          {
+            "description": "The name.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string",
+            "x-example": "wwwbeaconoidcom.chain"
+          }
+        ],
+        "produces": [
+          [
+            "application/json"
+          ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns just pointers for given name.",
+            "schema": {}
+          },
+          "400": {
+            "description": "Bad request.",
+            "schema": {}
+          },
+          "404": {
+            "description": "Not found.",
+            "schema": {}
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Middleware"
+        ]
+      }
+    },
     "/status": {
       "get": {
         "deprecated": false,
