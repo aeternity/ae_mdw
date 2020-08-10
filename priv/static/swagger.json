@@ -168,6 +168,175 @@
         ]
       }
     },
+    "/txs/{direction}": {
+      "get": {
+        "deprecated": false,
+        "description": "Get a transactions from beginning or end of the chain. More [info](https://github.com/aeternity/ae_mdw#transaction-querying).",
+        "operationId": "get_txs_by_direction",
+        "parameters": [
+          {
+            "collectionFormat": "multi",
+            "description": "The transaction type. The query allows providing of multiple type parameters. [More info](https://github.com/aeternity/ae_mdw#types).",
+            "in": "query",
+            "items": {
+              "enum": [
+                "channel_close_mutual",
+                "channel_close_solo",
+                "channel_create",
+                "channel_deposit",
+                "channel_force_progress",
+                "channel_offchain",
+                "channel_settle",
+                "channel_slash",
+                "channel_snapshot_solo",
+                "channel_withdraw",
+                "contract_call",
+                "contract_create",
+                "ga_attach",
+                "ga_meta",
+                "name_claim",
+                "name_preclaim",
+                "name_revoke",
+                "name_transfer",
+                "name_update",
+                "oracle_extend",
+                "oracle_query",
+                "oracle_register",
+                "oracle_response",
+                "paying_for",
+                "spend"
+              ],
+              "type": "string"
+            },
+            "name": "type",
+            "required": false,
+            "type": "array",
+            "x-example": "channel_create"
+          },
+          {
+            "collectionFormat": "multi",
+            "description": "The type group. The query allows providing of multiple type group parameters. [More info](https://github.com/aeternity/ae_mdw#types).",
+            "in": "query",
+            "items": {
+              "enum": [
+                "channel",
+                "contract",
+                "ga",
+                "name",
+                "oracle",
+                "paying_for",
+                "spend"
+              ],
+              "type": "string"
+            },
+            "name": "type_group",
+            "required": false,
+            "type": "array",
+            "x-example": "channel"
+          },
+          {
+            "description": "The account ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+            "in": "query",
+            "name": "account",
+            "required": false,
+            "type": "string",
+            "x-example": "ak_g5vQK6beY3vsTJHH7KBusesyzq9WMdEYorF8VyvZURXTjLnxT"
+          },
+          {
+            "description": "The contract ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+            "in": "query",
+            "name": "contract",
+            "required": false,
+            "type": "string",
+            "x-example": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z"
+          },
+          {
+            "description": "The channel ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+            "in": "query",
+            "name": "channel",
+            "required": false,
+            "type": "string",
+            "x-example": "ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD"
+          },
+          {
+            "description": "The oracle ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+            "in": "query",
+            "name": "oracle",
+            "required": false,
+            "type": "string",
+            "x-example": "ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
+          },
+          {
+            "default": 1,
+            "description": "The number of page to show.",
+            "format": "int32",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "type": "integer",
+            "x-example": 1
+          },
+          {
+            "default": 10,
+            "description": "The numbers of items to return.",
+            "format": "int32",
+            "in": "query",
+            "maximum": 1000,
+            "minimum": 1,
+            "name": "limit",
+            "required": false,
+            "type": "integer",
+            "x-example": 10
+          },
+          {
+            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning.",
+            "enum": [
+              "forward",
+              "backward"
+            ],
+            "in": "path",
+            "name": "direction",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The sender ID.",
+            "exaple": "ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5",
+            "in": "query",
+            "name": "sender_id",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "The recipient ID.",
+            "exaple": "ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2",
+            "in": "query",
+            "name": "recipient_id",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          [
+            "application/json"
+          ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns result regarding the according criteria.",
+            "schema": {}
+          },
+          "400": {
+            "description": "Bad request.",
+            "schema": {}
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Middleware"
+        ]
+      }
+    },
     "/txs/{scope_type}/{range}": {
       "get": {
         "deprecated": false,

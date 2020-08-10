@@ -121,75 +121,6 @@ defmodule AeMdwWeb.TxController do
     response(400, "Bad request.", %{})
   end
 
-  ## Unfortunately, swagger isn't able to deal with more flexible endpoints and required
-  ## artificial split of `txs` endpoints into 2:
-  ## - txs_direction (for requests like `txs/backward`
-  ## - txs_range (for requests like `txs/txi/200000-0`
-  ##
-  ## This split causes troubles with continuations, since `txs/backward` returns continuation
-  ## in the shape of `txs/last_txi-0`.
-  ##
-  ## Continuation key has function (e.g. :txs) as part of the whole key, and then with split
-  ## endpoints, the continuation key can't be found in the table of continuations...
-  ##
-  ## For now, until this is figured out, swagger info for `txs/direction` is commented out.
-
-  #
-  # swagger_path :txs_direction do
-  #   get("/txs/{direction}")
-
-  #   description(
-  #     "Get a transactions from beginning or end of the chain. More [info](https://github.com/aeternity/ae_mdw#transaction-querying)."
-  #   )
-
-  #   produces(["application/json"])
-  #   deprecated(false)
-  #   operation_id("get_txs_by_direction")
-  #   tag("Middleware")
-  #   SwaggerParameters.common_params()
-
-  #   parameters do
-  #     direction(
-  #       :path,
-  #       :string,
-  #       "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning.",
-  #       enum: [:forward, :backward],
-  #       required: true
-  #     )
-
-  #     sender_id(:query, :string, "The sender ID.",
-  #       required: false,
-  #       exaple: "ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5"
-  #     )
-
-  #     recipient_id(:query, :string, "The recipient ID.",
-  #       required: false,
-  #       exaple: "ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2"
-  #     )
-  #   end
-
-  #   response(200, "Returns result regarding the according criteria.", %{})
-  #   response(400, "Bad request.", %{})
-  # end
-
-  swagger_path :txs do
-    get("/txs/{scope_type}/{range}")
-    description("Get a transactions bounded by scope/range.")
-    produces(["application/json"])
-    deprecated(false)
-    operation_id("get_txs_by_scope_type_range")
-    tag("Middleware")
-    SwaggerParameters.common_params()
-
-    parameters do
-      scope_type(:path, :string, "The scope type.", enum: [:gen, :txi], required: true)
-      range(:path, :string, "The range.", required: true, example: "0-265354")
-    end
-
-    response(200, "Returns result regarding the according criteria.", %{})
-    response(400, "Bad request.", %{})
-  end
-
   swagger_path :count do
     get("/txs/count")
     description("Get count of transactions at the current height.")
@@ -218,4 +149,64 @@ defmodule AeMdwWeb.TxController do
     response(200, "Returns transactions count and its type for given aeternity ID.", %{})
     response(400, "Bad request.", %{})
   end
+
+  swagger_path :txs_scope_range do
+    get("/txs/{scope_type}/{range}")
+    description("Get a transactions bounded by scope/range.")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_txs_by_scope_type_range")
+    tag("Middleware")
+    SwaggerParameters.common_params()
+
+    parameters do
+      scope_type(:path, :string, "The scope type.", enum: [:gen, :txi], required: true)
+      range(:path, :string, "The range.", required: true, example: "0-265354")
+    end
+
+    response(200, "Returns result regarding the according criteria.", %{})
+    response(400, "Bad request.", %{})
+  end
+
+  swagger_path :txs_direction do
+    get("/txs/{direction}")
+
+    description(
+      "Get a transactions from beginning or end of the chain. More [info](https://github.com/aeternity/ae_mdw#transaction-querying)."
+    )
+
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_txs_by_direction")
+    tag("Middleware")
+    SwaggerParameters.common_params()
+
+    parameters do
+      direction(
+        :path,
+        :string,
+        "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning.",
+        enum: [:forward, :backward],
+        required: true
+      )
+
+      sender_id(:query, :string, "The sender ID.",
+        required: false,
+        exaple: "ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5"
+      )
+
+      recipient_id(:query, :string, "The recipient ID.",
+        required: false,
+        exaple: "ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2"
+      )
+    end
+
+    response(200, "Returns result regarding the according criteria.", %{})
+    response(400, "Bad request.", %{})
+  end
+
+  def swagger_path_txs(route = %{path: "/txs/{direction}"}), do: swagger_path_txs_direction(route)
+
+  def swagger_path_txs(route = %{path: "/txs/{scope_type}/{range}"}),
+    do: swagger_path_txs_scope_range(route)
 end
