@@ -53,6 +53,9 @@
         - [Message format:](#message-format)
         - [Supported operations:](#supported-operations)
         - [Supported payloads:](#supported-payloads)
+    - [Tests](#tests)
+        - [Controller tests](#controller-tests)
+        - [Performance test](#performance-test)
 
 <!-- markdown-toc end -->
 
@@ -90,6 +93,12 @@ GET  /txs/count/:id           - returns counts of transactions per transaction f
 GET  /txs/:scope_type/:range  - returns transactions bounded by scope/range where query is in query string
 GET  /txs/:direction          - returns transactions from beginning (forward) or end (backward), query is in query string
 GET  /status                  - returns middleware status (version, number of generations indexed)
+GET  /name/:id                - returns information for given name or encoded hash
+GET  /names/auctions          - returns information for all auctions
+GET  /names/pointers/:id      - returns pointers for given name
+GET  /names/pointees/:id      - returns names pointing to a particular pubkey and name update transaction which set up that pointer
+GET  /names/active            - returns information for active names
+GET  /names/all               - returns information for the names
 ```
 (more to come)
 
@@ -1821,3 +1830,259 @@ connected (press CTRL+C to quit)
 < {"subscription":"Object","payload":{"tx":{"version":1,"type":"SpendTx","ttl":252284,"sender_id":"ak_KHfXhF2J6VBt3sUgFygdbpEkWi6AKBkr9jNKUCHbpwwagzHUs","recipient_id":"ak_KHfXhF2J6VBt3sUgFygdbpEkWi6AKBkr9jNKUCHbpwwagzHUs","payload":"ba_MjUyMjc0OmtoX0ZQcm9hNjRGTDQyM2YzeG9rMmZLVGZic3VFUDJRdGRVTTRpZE43R2lkUTI3OXpnWjE6bWhfMmJTcFlDRVRzZ3hMZDd3eEx2Rkw5Wlp5V1ZqaEtNQXF6aGc3eVB6ZUNraThySFVTbzI6MTU4ODkzNTkwMjSozR4=","nonce":2044360,"fee":19320000000000,"amount":20000},"signatures":["sg_Kdh2uaoaiDEHoehDZsRHk7LvqUm5kPqyKR3RD71utjkkh5DTqoJeNWqYv4gRePL9FyBcU7oeL8nsT39zQg4ydCmiKUuhN"],"hash":"th_rGmoP9FCJMQMJKmwDE8gCk7i63vX33St3UiqGQsRGG1twHD7R","block_height":252274,"block_hash":"mh_2gYb8Pv1yLpdsPjxkzq8g9zzBVy42ZLDRvWH6aKYXhb8QjxdvU"}}
 ```
 Actual chain data is wrapped in a JSON structure identifying the subscription to which it relates.
+
+## Tests
+
+### Controller tests
+The database has to be fully synced.
+  * Run the tests with `make test`
+
+### Performance test
+This project has a performance test implemented. It's purpose is to test the availability and concurrency handling of the project. The performance test in this case would be spawning multiple clients, capable of making simultanious requests to the server at almost the same time.
+
+**In order to run performance test:** The project should be up and running, then open a new shell and go to the project's root folder and execute the next command:
+
+```
+mix bench 7
+```
+Where 7 - is a number of clients, performing various requests to the server. At the end of the test, the output of detailed information is printed in a console.
+
+The example output would look like:
+```
+          Path: "/txi/87450"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 288.721 ms
+          Min exec time: 19.315 ms
+          Max exec time: 140.515 ms
+          Average: 41.24585714285714 ms
+          Mean: 79.91499999999999 ms
+          Percentiles:
+            50th: 25.95 ms
+            80th: 31.266600000000004 ms
+            90th: 75.19540000000003 ms
+            99th: 133.98303999999996 ms
+          ......................................................................
+          
+
+          Path: "/txs/backward?account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&account=ak_zUQikTiUMNxfKwuAfQVMPkaxdPsXP8uAxnfn6TkZKZCtmRcUD&limit=1"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 337.618 ms
+          Min exec time: 20.464 ms
+          Max exec time: 172.871 ms
+          Average: 48.231142857142856 ms
+          Mean: 96.6675 ms
+          Percentiles:
+            50th: 27.833 ms
+            80th: 34.619800000000005 ms
+            90th: 90.18680000000005 ms
+            99th: 164.60257999999993 ms
+          ......................................................................
+          
+
+          Path: "/txs/count"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 197.263 ms
+          Min exec time: 15.202 ms
+          Max exec time: 34.976 ms
+          Average: 28.18042857142857 ms
+          Mean: 25.089 ms
+          Percentiles:
+            50th: 31.489 ms
+            80th: 32.842 ms
+            90th: 33.7028 ms
+            99th: 34.84868 ms
+          ......................................................................
+          
+
+          Path: "/txs/count/ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 279.705 ms
+          Min exec time: 15.544 ms
+          Max exec time: 140.428 ms
+          Average: 39.957857142857144 ms
+          Mean: 77.986 ms
+          Percentiles:
+            50th: 25.106 ms
+            80th: 28.861800000000002 ms
+            90th: 73.69660000000003 ms
+            99th: 133.75485999999992 ms
+          ......................................................................
+          
+
+          Path: "/txs/forward?account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 406.254 ms
+          Min exec time: 17.89 ms
+          Max exec time: 125.932 ms
+          Average: 58.03628571428572 ms
+          Mean: 71.911 ms
+          Percentiles:
+            50th: 36.636 ms
+            80th: 108.07120000000008 ms
+            90th: 125.8612 ms
+            99th: 125.92492 ms
+          ......................................................................
+          
+
+          Path: "/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&type_group=name"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 180.596 ms
+          Min exec time: 19.95 ms
+          Max exec time: 29.385 ms
+          Average: 25.79942857142857 ms
+          Mean: 24.6675 ms
+          Percentiles:
+            50th: 27.927 ms
+            80th: 28.7048 ms
+            90th: 29.037 ms
+            99th: 29.3502 ms
+          ......................................................................
+          
+
+          Path: "/txs/forward?contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 302.195 ms
+          Min exec time: 27.1 ms
+          Max exec time: 97.08 ms
+          Average: 43.17071428571428 ms
+          Mean: 62.09 ms
+          Percentiles:
+            50th: 34.142 ms
+            80th: 43.056 ms
+            90th: 65.15940000000002 ms
+            99th: 93.88793999999997 ms
+          ......................................................................
+          
+
+          Path: "/txs/forward?name_transfer.recipient_id=ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF&limit=1"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 305.898 ms
+          Min exec time: 19.572 ms
+          Max exec time: 144.61 ms
+          Average: 43.699714285714286 ms
+          Mean: 82.09100000000001 ms
+          Percentiles:
+            50th: 27.913 ms
+            80th: 32.4152 ms
+            90th: 77.34940000000003 ms
+            99th: 137.88393999999994 ms
+          ......................................................................
+          
+
+          Path: "/txs/forward?oracle=ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&limit=1"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 280.388 ms
+          Min exec time: 13.594 ms
+          Max exec time: 140.548 ms
+          Average: 40.05542857142857 ms
+          Mean: 77.071 ms
+          Percentiles:
+            50th: 24.055 ms
+            80th: 31.335600000000007 ms
+            90th: 75.71200000000003 ms
+            99th: 134.06439999999998 ms
+          ......................................................................
+          
+
+          Path: "/txs/forward?type=channel_create&limit=1"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 169.413 ms
+          Min exec time: 19.445 ms
+          Max exec time: 30.124 ms
+          Average: 24.201857142857143 ms
+          Mean: 24.7845 ms
+          Percentiles:
+            50th: 23.397 ms
+            80th: 27.985800000000005 ms
+            90th: 29.1262 ms
+            99th: 30.024219999999996 ms
+          ......................................................................
+          
+
+          Path: "/txs/forward?type_group=oracle&limit=1"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 179.82 ms
+          Min exec time: 17.984 ms
+          Max exec time: 39.395 ms
+          Average: 25.68857142857143 ms
+          Mean: 28.689500000000002 ms
+          Percentiles:
+            50th: 23.537 ms
+            80th: 32.02700000000001 ms
+            90th: 35.83760000000001 ms
+            99th: 39.03925999999999 ms
+          ......................................................................
+          
+
+          Path: "/txs/gen/223000-223007?limit=30"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 538.766 ms
+          Min exec time: 45.564 ms
+          Max exec time: 166.333 ms
+          Average: 76.96657142857143 ms
+          Mean: 105.9485 ms
+          Percentiles:
+            50th: 48.047 ms
+            80th: 96.5982 ms
+            90th: 126.21220000000002 ms
+            99th: 162.32091999999997 ms
+          ......................................................................
+          
+
+          Path: "/txs/txi/409222-501000?limit=30"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 481.281 ms
+          Min exec time: 43.973 ms
+          Max exec time: 169.334 ms
+          Average: 68.75442857142858 ms
+          Mean: 106.65350000000001 ms
+          Percentiles:
+            50th: 53.573 ms
+            80th: 59.836 ms
+            90th: 104.26400000000002 ms
+            99th: 162.82699999999994 ms
+          ......................................................................
+          
+
+          Path: "/txs/txi/509111"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 389.054 ms
+          Min exec time: 16.093 ms
+          Max exec time: 140.467 ms
+          Average: 55.579142857142855 ms
+          Mean: 78.28 ms
+          Percentiles:
+            50th: 24.174 ms
+            80th: 117.27580000000007 ms
+            90th: 140.4424 ms
+            99th: 140.46454 ms
+          ......................................................................
+```
