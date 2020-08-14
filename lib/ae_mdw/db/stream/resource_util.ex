@@ -1,7 +1,5 @@
 defmodule AeMdw.Db.Stream.Resource.Util do
-  alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Db.Model
-  alias AeMdw.Node, as: AE
 
   require Model
 

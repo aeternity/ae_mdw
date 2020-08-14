@@ -2,7 +2,7 @@ defmodule AeMdw.Db.Stream.Resource do
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Node, as: AE
 
-  import AeMdw.{Util, Db.Util}
+  import AeMdw.Db.Util
   import AeMdw.Db.Stream.Resource.Util
 
   ################################################################################

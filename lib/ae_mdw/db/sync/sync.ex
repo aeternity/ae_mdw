@@ -6,7 +6,7 @@ defmodule AeMdw.Db.Sync do
 
   require Model
 
-  import AeMdw.{Sigil, Db.Util}
+  import AeMdw.Db.Util
 
   use GenServer
 
