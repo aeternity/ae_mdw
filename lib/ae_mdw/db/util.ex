@@ -108,34 +108,16 @@ defmodule AeMdw.Db.Util do
     end
   end
 
-  def do_writes(tab_xs, :write),
-    do: Enum.each(tab_xs, fn {tab, xs} -> Enum.each(xs, &:mnesia.write(tab, &1, :write)) end)
+  def do_writes(tab_xs),
+    do: do_writes(tab_xs, &:mnesia.write(&1, &2, :write))
+  def do_writes(tab_xs, db_write) when is_function(db_write, 2),
+    do: Enum.each(tab_xs, fn {tab, xs} -> Enum.each(xs, &db_write.(tab, &1)) end)
 
-  def do_writes!(tab_xs, :dirty_write),
-    do: Enum.each(tab_xs, fn {tab, xs} -> Enum.each(xs, &:mnesia.dirty_write(tab, &1)) end)
+  def do_dels(tab_keys),
+    do: do_dels(tab_keys, &:mnesia.delete(&1, &2, :write))
+  def do_dels(tab_keys, db_delete) when is_function(db_delete, 2),
+    do: Enum.each(tab_keys, fn {tab, ks} -> Enum.each(ks, &db_delete.(tab, &1)) end)
 
-  def do_dels(tab_keys, :delete),
-    do: Enum.each(tab_keys, fn {tab, ks} -> Enum.each(ks, &:mnesia.delete(tab, &1, :write)) end)
-
-  def do_dels!(tab_keys, :dirty_delete),
-    do: Enum.each(tab_keys, fn {tab, ks} -> Enum.each(ks, &:mnesia.dirty_delete(tab, &1)) end)
-
-  def tx_rec_data(<<_::256>> = tx_hash) do
-    {block_hash, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
-    {type, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
-    {block_hash, type, signed_tx, tx_rec}
-  end
-
-  def tx_rec(<<_::256>> = tx_hash) do
-    {_, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
-    {_, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
-    tx_rec
-  end
-
-  def signed_tx_rec(<<_::256>> = tx_hash) do
-    {_, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
-    signed_tx
-  end
 
   def tx_val(tx_rec, field),
     do: tx_val(tx_rec, elem(tx_rec, 0), field)
@@ -150,6 +132,9 @@ defmodule AeMdw.Db.Util do
     do: Enum.map(:mnesia.all_keys(tab), &one!(:mnesia.read(tab, &1)))
 
   ##########
+
+  def current_height(),
+    do: :aec_blocks.height(ok!(:aec_chain.top_key_block()))
 
   def msecs(msecs) when is_integer(msecs) and msecs > 0, do: msecs
   def msecs(%Date{} = d), do: msecs(date_time(d))

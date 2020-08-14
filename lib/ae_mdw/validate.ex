@@ -65,6 +65,33 @@ defmodule AeMdw.Validate do
 
   def name_id!(name_ident), do: unwrap!(&name_id/1, name_ident)
 
+
+  def plain_name(name_ident) do
+    case id(name_ident) do
+      {:ok, name_hash} ->
+        case AeMdw.Db.Name.plain_name(name_hash) do
+          {:ok, plain_name} -> {:ok, plain_name}
+          nil -> {:error, {ErrInput.NotFound, name_ident}}
+        end
+
+      _ ->
+        ok? = is_binary(name_ident) and name_ident != "" and String.printable?(name_ident)
+        case ok? do
+          true ->
+            plain_name = String.ends_with?(name_ident, [".chain", ".test"])
+            && name_ident
+            || name_ident <> ".chain"
+            {:ok, plain_name}
+
+          false ->
+            {:error, {ErrInput.Id, name_ident}}
+        end
+    end
+  end
+
+  def plain_name!(name_ident), do: unwrap!(&plain_name/1, name_ident)
+
+
   # returns transaction type (atom)
   def tx_type(type) when is_atom(type),
     do: (type in AE.tx_types() && {:ok, type}) || {:error, {ErrInput.TxType, type}}

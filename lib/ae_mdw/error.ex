@@ -10,6 +10,8 @@ defmodule AeMdw.Error do
   def to_string(Err.TxGroup, x), do: concat("invalid transaction group", x)
   def to_string(Err.Scope, x), do: concat("invalid scope", x)
   def to_string(Err.Query, x), do: concat("invalid query", x)
+  def to_string(Err.NotFound, x), do: concat("not found", x)
+  def to_string(Err.Expired, x), do: concat("expired", x)
 
   defmodule Input do
     require AeMdw.Exception
@@ -24,5 +26,7 @@ defmodule AeMdw.Error do
     defexception!(TxGroup)
     defexception!(Scope)
     defexception!(Query)
+    defexception!(NotFound)
+    defexception!(Expired)
   end
 end
