@@ -7,9 +7,10 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   require Model
 
-  import AeMdw.{Sigil, Util, Db.Util}
+  import AeMdw.{Util, Db.Util}
 
   @log_freq 1000
+  @sync_cache_cleanup_freq 150_000
 
   ################################################################################
 
@@ -44,10 +45,8 @@ defmodule AeMdw.Db.Sync.Transaction do
   def sync(from_height, to_height, txi) when from_height > to_height,
     do: txi
 
-  def clear() do
-    for tab <- [~t[tx], ~t[type], ~t[time], ~t[field], ~t[id_count], ~t[origin], ~t[rev_origin]],
-        do: :mnesia.clear_table(tab)
-  end
+  def clear(),
+    do: Enum.each(AeMdw.Db.Model.tables(), &:mnesia.clear_table/1)
 
   def min_txi(), do: txi(&first/1)
   def max_txi(), do: txi(&last/1)
@@ -62,22 +61,24 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     {:atomic, next_txi} =
       :mnesia.transaction(fn ->
+        Sync.Name.expire(height)
+
         kb_txi = (txi == 0 && -1) || txi
         kb_hash = :aec_headers.hash_header(:aec_blocks.to_key_header(key_block)) |> ok!
         kb_model = Model.block(index: {height, -1}, tx_index: kb_txi, hash: kb_hash)
         :mnesia.write(Model.Block, kb_model, :write)
 
-        {{next_txi, _mb_index}, name_cache} =
-          micro_blocks |> Enum.reduce({{txi, 0}, %Sync.Name.Cache{}}, &sync_micro_block/2)
+        {next_txi, _mb_index} = micro_blocks |> Enum.reduce({txi, 0}, &sync_micro_block/2)
 
-        Sync.Name.Cache.persist!(name_cache)
         next_txi
       end)
+
+    rem(height, @sync_cache_cleanup_freq) == 0 && :ets.delete_all_objects(:sync_cache)
 
     next_txi
   end
 
-  defp sync_micro_block(mblock, {{txi, mbi}, name_cache} = st) do
+  defp sync_micro_block(mblock, {txi, mbi}) do
     height = :aec_blocks.height(mblock)
     mb_time = :aec_blocks.time_in_msecs(mblock)
     mb_hash = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock)) |> ok!
@@ -87,15 +88,12 @@ defmodule AeMdw.Db.Sync.Transaction do
     tx_ctx = {{height, mbi}, mb_time}
     mb_txs = :aec_blocks.txs(mblock)
 
-    {next_txi, name_cache} =
-      Enum.reduce(mb_txs, {txi, name_cache}, fn signed_tx, {txi, nm_cache} ->
-        sync_transaction(signed_tx, txi, tx_ctx, nm_cache)
-      end)
+    next_txi = Enum.reduce(mb_txs, txi, &sync_transaction(&1, &2, tx_ctx))
 
-    {{next_txi, mbi + 1}, name_cache}
+    {next_txi, mbi + 1}
   end
 
-  def sync_transaction(signed_tx, txi, {block_index, mb_time}, name_cache) do
+  def sync_transaction(signed_tx, txi, {block_index, mb_time}) do
     {mod, tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
     hash = :aetx_sign.hash(signed_tx)
     type = mod.type()
@@ -103,49 +101,49 @@ defmodule AeMdw.Db.Sync.Transaction do
     :mnesia.write(Model.Tx, model_tx, :write)
     :mnesia.write(Model.Type, Model.type(index: {type, txi}), :write)
     :mnesia.write(Model.Time, Model.time(index: {mb_time, txi}), :write)
-    name_cache = write_links(type, tx, signed_tx, txi, hash, block_index, name_cache)
+    write_links(type, tx, signed_tx, txi, hash, block_index)
 
     for {field, pos} <- AE.tx_ids(type) do
-      <<_::256>> = pk = resolve_pubkey(elem(tx, pos), type, field, block_index, name_cache)
+      <<_::256>> = pk = resolve_pubkey(elem(tx, pos), type, field, block_index)
       write_field(type, pos, pk, txi)
     end
 
-    {txi + 1, name_cache}
+    txi + 1
   end
 
-  def write_links(:contract_create_tx, tx, _signed_tx, txi, tx_hash, _bi, name_cache) do
+  def write_links(:contract_create_tx, tx, _signed_tx, txi, tx_hash, _bi) do
     pk = :aect_contracts.pubkey(:aect_contracts.new(tx))
     write_origin(:contract_create_tx, pk, txi, tx_hash)
-    name_cache
   end
 
-  def write_links(:channel_create_tx, _tx, signed_tx, txi, tx_hash, _bi, name_cache) do
+  def write_links(:channel_create_tx, _tx, signed_tx, txi, tx_hash, _bi) do
     {:ok, pk} = :aesc_utils.channel_pubkey(signed_tx)
     write_origin(:channel_create_tx, pk, txi, tx_hash)
-    name_cache
   end
 
-  def write_links(:oracle_register_tx, tx, _signed_tx, txi, tx_hash, _bi, name_cache) do
+  def write_links(:oracle_register_tx, tx, _signed_tx, txi, tx_hash, _bi) do
     pk = :aeo_register_tx.account_pubkey(tx)
     write_origin(:oracle_register_tx, pk, txi, tx_hash)
-    name_cache
   end
 
-  def write_links(:name_claim_tx, tx, _signed_tx, txi, tx_hash, bi, name_cache) do
-    name = :aens_claim_tx.name(tx)
-    {:ok, name_hash} = :aens.get_name_hash(name)
+  def write_links(:name_claim_tx, tx, _signed_tx, txi, tx_hash, bi) do
+    plain_name = :aens_claim_tx.name(tx)
+    {:ok, name_hash} = :aens.get_name_hash(plain_name)
     write_origin(:name_claim_tx, name_hash, txi, tx_hash)
-    Sync.Name.Cache.claim(name_cache, name, name_hash, tx, txi, bi)
+    Sync.Name.claim(plain_name, name_hash, tx, txi, bi)
   end
 
-  def write_links(:name_update_tx, tx, _signed_tx, txi, _tx_hash, bi, name_cache),
-    do: Sync.Name.Cache.update(name_cache, :aens_update_tx.name_hash(tx), tx, txi, bi)
+  def write_links(:name_update_tx, tx, _signed_tx, txi, _tx_hash, bi),
+    do: Sync.Name.update(:aens_update_tx.name_hash(tx), tx, txi, bi)
 
-  def write_links(:name_revoke_tx, tx, _signed_tx, txi, _tx_hash, bi, name_cache),
-    do: Sync.Name.Cache.revoke(name_cache, :aens_revoke_tx.name_hash(tx), tx, txi, bi)
+  def write_links(:name_transfer_tx, tx, _signed_tx, txi, _tx_hash, bi),
+    do: Sync.Name.transfer(:aens_transfer_tx.name_hash(tx), tx, txi, bi)
 
-  def write_links(_, _, _, _, _, _, name_cache),
-    do: name_cache
+  def write_links(:name_revoke_tx, tx, _signed_tx, txi, _tx_hash, bi),
+    do: Sync.Name.revoke(:aens_revoke_tx.name_hash(tx), tx, txi, bi)
+
+  def write_links(_, _, _, _, _, _),
+    do: :nop
 
   ####
 
@@ -165,18 +163,17 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   ##########
 
-  def resolve_pubkey(id, :spend_tx, :recipient_id, block_index, name_cache) do
+  def resolve_pubkey(id, :spend_tx, :recipient_id, block_index) do
     case :aeser_id.specialize(id) do
       {:name, name_hash} ->
-        Sync.Name.Cache.ptr_resolve(name_cache, name_hash, "account_pubkey") ||
-          AeMdw.Db.Name.ptr_resolve(block_index, name_hash, "account_pubkey")
+        AeMdw.Db.Name.ptr_resolve!(block_index, name_hash, "account_pubkey")
 
       {_tag, pk} ->
         pk
     end
   end
 
-  def resolve_pubkey(id, _, _, _block_index, _name_cache) do
+  def resolve_pubkey(id, _, _, _block_index) do
     {_tag, pk} = :aeser_id.specialize(id)
     pk
   end
@@ -194,6 +191,9 @@ defmodule AeMdw.Db.Sync.Transaction do
       txi -> Model.tx(read_tx!(txi), :block_index) |> elem(0)
     end
   end
+
+  def synced?(last_mdw_height),
+    do: :aec_sync.is_syncing() == false && (current_height() - 1) == last_mdw_height
 
   defp log_msg(height, _),
     do: "syncing transactions at generation #{height}"

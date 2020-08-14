@@ -29,6 +29,27 @@ defmodule AeMdw.Node.Db do
     end
   end
 
+
+
+  def get_tx_data(<<_::256>> = tx_hash) do
+    {block_hash, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
+    {type, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
+    {block_hash, type, signed_tx, tx_rec}
+  end
+
+  def get_tx(<<_::256>> = tx_hash) do
+    {_, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
+    {_, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
+    tx_rec
+  end
+
+  def get_signed_tx(<<_::256>> = tx_hash) do
+    {_, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
+    signed_tx
+  end
+
+
+
   # NOTE: only needed for manual patching of the DB in case of missing blocks
   #
   # def devfix_write_block({:mic_block, header, txs, fraud}) do
