@@ -81,7 +81,7 @@ defmodule AeMdwWeb.TxController do
     do: tx_reply(conn, model_tx)
 
   defp tx_reply(conn, model_tx) when is_tuple(model_tx) and elem(model_tx, 0) == :tx,
-    do: conn |> json(Format.tx_to_map(model_tx))
+    do: conn |> json(Format.to_map(model_tx))
 
   ##########
 
