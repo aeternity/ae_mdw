@@ -28,5 +28,3 @@ npm-debug.log
 .DS_Store
 .elixir_ls/
 log/
-
-my_db/
