@@ -81,6 +81,15 @@ The NODEROOT directory should contain directories: `bin`, `lib`, `plugins`, `rel
 
   * Install dependencies with `mix deps.get`
   * Start middleware with `make shell`
+## Build and start with Docker
+As the project comes with `Dockerfile`, it is possible to run it in Docker
+
+  * To build docker image, execute in root folder of the project: `docker build -t ae_mdw:latest .`
+  * Assign some environmental variables: `export MDW_PORT=4000 HOST_DB_FOLDER=${PWD}/mnesia DOCKER_DB_FOLDER=/home/aeternity/node/local/rel/aeternity/data/mnesia`
+  * Start middleware image with `docker run -it -p ${MDW_PORT}:${MDW_PORT} -v ${HOST_DB_FOLDER}:${DOCKER_DB_FOLDER} ae_mdw`
+
+**IMPORTANT NOTE:** `DOCKER_DB_FOLDER` and `MDW_PORT`  should be set as described, only `HOST_DB_FOLDER` can be set , in order to chose the location of the database produced by container.
+
 
 ## HTTP endpoints
 
