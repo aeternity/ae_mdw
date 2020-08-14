@@ -37,9 +37,17 @@ defmodule AeMdwWeb.DataStreamPlug do
   ##########
 
   def default_parse(conn, rem_path, scopes) do
-    with {:ok, scope} <- parse_scope(rem_path, scopes),
-         {:ok, offset} <- parse_offset(conn.query_params),
-         {:ok, query} <- parse_query(conn.query_string) do
+    handle_assign(
+      conn,
+      parse_scope(rem_path, scopes),
+      parse_offset(conn.query_params),
+      parse_query(conn.query_string))
+  end
+
+  def handle_assign(conn, maybe_scope, maybe_offset, maybe_query) do
+    with {:ok, scope} <- maybe_scope,
+         {:ok, offset} <- maybe_offset,
+         {:ok, query} <- maybe_query do
       conn
       |> assign(:scope, scope)
       |> assign(:offset, offset)

@@ -19,10 +19,11 @@ defmodule AeMdwWeb.NameController do
     alias AeMdwWeb.DataStreamPlug, as: P
 
     rem = rem_path(conn.path_info)
-    conn
-    |> assign(:query, %{})
-    |> assign(:scope, rem == [] && {:gen, last_gen()..0} || ok!(P.parse_scope(rem, ["gen"])))
-    |> assign(:offset, ok!(P.parse_offset(params)))
+    P.handle_assign(
+      conn,
+      rem == [] && {:ok, {:gen, last_gen()..0}} || P.parse_scope(rem, ["gen"]),
+      P.parse_offset(params),
+      {:ok, %{}})
   end
 
   defp rem_path(["names", x | rem]) when x in ["auctions", "inactive", "active"], do: rem
@@ -76,7 +77,7 @@ defmodule AeMdwWeb.NameController do
     with {info, source} <- Name.locate(plain_name) do
       json(conn, Format.to_map(info, source))
     else
-      {:atomic, nil} ->
+      nil ->
         raise ErrInput.NotFound, value: plain_name
     end
   end
