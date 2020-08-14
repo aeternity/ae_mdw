@@ -31,8 +31,14 @@ defmodule AeMdw.Util do
   def ok_nil({:ok, x}), do: x
   def ok_nil(_error), do: nil
 
+  def unwrap_nil({_, val}), do: val
+  def unwrap_nil(_), do: nil
+
   def map_ok_nil({:ok, x}, f), do: f.(x)
   def map_ok_nil(_error, _), do: nil
+
+  def map_some(nil, _f), do: nil
+  def map_some(x, f), do: f.(x)
 
   def map_tuple2({a, b}, f), do: {f.(a), f.(b)}
 
@@ -59,6 +65,9 @@ defmodule AeMdw.Util do
   def to_list_like(nil), do: [nil]
   def to_list_like(xs), do: ((is_mapset(xs) or is_list(xs)) && xs) || List.wrap(xs)
 
+  def chase(nil, _succ), do: []
+  def chase(root, succ), do: [root | chase(succ.(root), succ)]
+
   def kvs_to_map(params) when is_list(params) do
     for {k, kvs} <- Enum.group_by(params, &elem(&1, 0)), reduce: %{} do
       acc ->
@@ -71,6 +80,12 @@ defmodule AeMdw.Util do
         end
     end
   end
+
+  def tuple_to_map({k, v}),
+    do: %{k => v}
+
+  def apply_tuple(mod, fun, tup_args) when is_tuple(tup_args),
+    do: apply(mod, fun, :erlang.tuple_to_list(tup_args))
 
   def gets(x, mod, fkws),
     do: fkws |> Enum.map(&apply(mod, &1, [x]))
@@ -104,6 +119,12 @@ defmodule AeMdw.Util do
   def merge_maps([%{} = m0 | rem_maps], merger),
     do: Enum.reduce(rem_maps, m0, &Map.merge(&2, &1, merger))
 
+  def flatten_map_values(map) do
+    map
+    |> Enum.map(fn {k, vs} -> {k, :lists.flatten(vs)} end)
+    |> Enum.into(%{})
+  end
+
   defp reduce_skip_while_pull(stream, acc, fun) do
     case StreamSplit.take_and_drop(stream, 1) do
       {[], _} ->
@@ -125,6 +146,97 @@ defmodule AeMdw.Util do
         case reduce_skip_while_pull(stream, acc, fun) do
           :halt -> {:halt, :done}
           {:cont, stream, acc, x} -> {[x], {stream, acc}}
+        end
+      end,
+      fn _ -> :ok end
+    )
+  end
+
+  def gb_tree_stream(tree, dir)
+      when dir in [:forward, :backward] do
+    taker =
+      case dir do
+        :forward -> &:gb_trees.take_smallest/1
+        :backward -> &:gb_trees.take_largest/1
+      end
+
+    Stream.resource(
+      fn -> tree end,
+      fn tree ->
+        case :gb_trees.size(tree) do
+          0 ->
+            {:halt, nil}
+
+          _ ->
+            {k, v, tree} = taker.(tree)
+            {[{k, v}], tree}
+        end
+      end,
+      fn _ -> :ok end
+    )
+  end
+
+  def ets_stream_pull({tab, :"$end_of_table", _}),
+    do: {:halt, tab}
+
+  def ets_stream_pull({tab, key, advance}) do
+    case :ets.lookup(tab, key) do
+      [tuple] ->
+        {[tuple], {tab, advance.(tab, key), advance}}
+
+      [] ->
+        ets_stream_pull({tab, advance.(tab, key), advance})
+    end
+  end
+
+  def ets_stream(tab, dir) do
+    {advance, init_key} =
+      case dir do
+        :forward -> {&:ets.next/2, &:ets.first/1}
+        :backward -> {&:ets.prev/2, &:ets.last/1}
+      end
+
+    Stream.resource(
+      fn -> {tab, init_key.(tab), advance} end,
+      &ets_stream_pull/1,
+      fn _ -> :ok end
+    )
+  end
+
+  def merged_stream(streams, key, dir) when is_function(key, 1) do
+    taker =
+      case dir do
+        :forward -> &:gb_sets.take_smallest/1
+        :backward -> &:gb_sets.take_largest/1
+      end
+
+    pop1 = fn stream ->
+      case StreamSplit.take_and_drop(stream, 1) do
+        {[x], rem_stream} ->
+          {key.(x), x, rem_stream}
+
+        {[], _} ->
+          nil
+      end
+    end
+
+    Stream.resource(
+      fn ->
+        streams
+        |> Stream.map(pop1)
+        |> Stream.reject(&is_nil/1)
+        |> Enum.to_list()
+        |> :gb_sets.from_list()
+      end,
+      fn streams ->
+        case :gb_sets.size(streams) do
+          0 ->
+            {:halt, nil}
+
+          _ ->
+            {{_, x, rem_stream}, rem_streams} = taker.(streams)
+            next_elt = pop1.(rem_stream)
+            {[x], (next_elt && :gb_sets.add(next_elt, rem_streams)) || rem_streams}
         end
       end,
       fn _ -> :ok end

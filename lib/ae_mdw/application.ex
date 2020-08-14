@@ -28,6 +28,7 @@ defmodule AeMdw.Application do
     {:ok, aeser_code} = Extract.AbsCode.module(:aeser_api_encoder)
     {:ok, headers_code} = Extract.AbsCode.module(:aec_headers)
     {:ok, hard_forks_code} = Extract.AbsCode.module(:aec_hard_forks)
+    {:ok, aens_state_tree_code} = Extract.AbsCode.module(:aens_state_tree)
 
     network_id = :aec_governance.get_network_id()
 
@@ -96,6 +97,11 @@ defmodule AeMdw.Application do
       String.slice(str, 0, String.length(str) - 3)
     end
 
+    ns_tree_field_pos_map =
+      record_keys.(aens_state_tree_code, :ns_tree)
+      |> Stream.zip(Stream.iterate(1, &(&1 + 1)))
+      |> Enum.into(%{})
+
     SmartGlobal.new(
       AeMdw.Node,
       %{
@@ -120,6 +126,7 @@ defmodule AeMdw.Application do
           key: record_keys.(headers_code, :key_header),
           micro: record_keys.(headers_code, :mic_header)
         },
+        ns_tree_pos: ns_tree_field_pos_map,
         lima_vsn: [{[], lima_vsn}],
         lima_height: [{[], lima_height}]
       }

@@ -1,68 +1,32 @@
 defmodule AeMdw.Db.Format do
-  require Ex2ms
-
   alias AeMdw.Node, as: AE
   alias :aeser_api_encoder, as: Enc
-  alias AeMdw.Validate
+
+  alias AeMdw.Db.{Model, Name}
+
+  require Model
 
   import AeMdw.Db.Name, only: [plain_name!: 1]
   import AeMdw.{Util, Db.Util}
 
   ##########
 
-  def block_to_raw_map({:block, {_kbi, mbi}, _txi, hash}),
+  def bi_txi_txi({{_height, _mbi}, txi}), do: txi
+
+  def to_raw_map({{height, mbi}, txi}),
+    do: %{block_height: height, micro_index: mbi, tx_index: txi}
+
+  def to_raw_map({:block, {_kbi, mbi}, _txi, hash}),
     do: record_to_map(:aec_db.get_header(hash), AE.hdr_fields((mbi == -1 && :key) || :micro))
 
-  def block_to_map({:block, {_kbi, _mbi}, _txi, hash}) do
-    header = :aec_db.get_header(hash)
-    :aec_headers.serialize_for_client(header, prev_block_type(header))
-  end
+  def to_raw_map({:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} = mdw_tx),
+    do: to_raw_map(mdw_tx, AE.Db.get_tx_data(hash))
 
-  ##########
-
-  def name_info_to_map(%{} = info) do
-    [{plain_name, data}] = Map.to_list(info)
-
-    enc_pointers =
-      data.pointers
-      |> Enum.map(fn {key, id} -> {key, Enc.encode(:id_hash, id)} end)
-      |> Enum.into(%{})
-
-    %{
-      plain_name => %{
-        "name_id" => Enc.encode(:name, Validate.id!(data.name_id)),
-        "claimant" => Enc.encode(:account_pubkey, Validate.id!(data.claimant)),
-        "owner" => Enc.encode(:account_pubkey, Validate.id!(data.owner)),
-        "claim_height" => data.claim_height,
-        "expiration_height" => data.expiration_height,
-        "revoke_height" => data.revoke_height,
-        "claimed" => data.claimed,
-        "pointers" => enc_pointers
-      }
-    }
-  end
-
-  ##########
-
-  def tx_record_to_map(tx_type, tx_rec) do
-    AeMdw.Node.tx_fields(tx_type)
-    |> Stream.with_index(1)
-    |> Enum.reduce(
-      %{},
-      fn {field, pos}, acc ->
-        put_in(acc[field], elem(tx_rec, pos))
-      end
-    )
-  end
-
-  def tx_to_raw_map({:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} = rec),
-    do: tx_to_raw_map(rec, tx_rec_data(hash))
-
-  def tx_to_raw_map(
+  def to_raw_map(
         {:tx, index, hash, {kb_index, mb_index}, mb_time},
         {block_hash, type, signed_tx, tx_rec}
       ) do
-    tx_map = tx_record_to_map(type, tx_rec) |> put_in([:type], type)
+    tx_map = to_raw_map(tx_rec, type) |> put_in([:type], type)
 
     raw = %{
       block_hash: block_hash,
@@ -76,6 +40,36 @@ defmodule AeMdw.Db.Format do
     }
 
     custom_raw_data(type, raw, tx_rec, signed_tx, block_hash)
+  end
+
+  def to_raw_map({:auction_bid, key, _}, Model.AuctionBid),
+    do: to_raw_map(key, Model.AuctionBid)
+
+  def to_raw_map({_plain, {{_, _}, _}, _, [{_, _} | _]} = bid, Model.AuctionBid),
+    do: auction_bid(bid, & &1, &to_raw_map/1, & &1)
+
+  def to_raw_map(m_name, source) when elem(m_name, 0) == :name do
+    succ = &Model.name(&1, :previous)
+    prev = chase(succ.(m_name), succ)
+
+    %{
+      name: Model.name(m_name, :index),
+      status: :name,
+      active: source == Model.ActiveName,
+      info: name_info_to_raw_map(m_name),
+      previous: Enum.map(prev, &name_info_to_raw_map/1)
+    }
+  end
+
+  def to_raw_map(ae_tx, tx_type) do
+    AeMdw.Node.tx_fields(tx_type)
+    |> Stream.with_index(1)
+    |> Enum.reduce(
+      %{},
+      fn {field, pos}, acc ->
+        put_in(acc[field], elem(ae_tx, pos))
+      end
+    )
   end
 
   def custom_raw_data(:contract_create_tx, tx, tx_rec, _signed_tx, _block_hash) do
@@ -127,10 +121,18 @@ defmodule AeMdw.Db.Format do
 
   ##########
 
-  def tx_to_map({:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} = rec),
-    do: tx_to_map(rec, tx_rec_data(hash))
+  def to_map({{_height, _mbi}, _txi} = bi_txi),
+    do: raw_to_json(to_raw_map(bi_txi))
 
-  def tx_to_map(
+  def to_map({:block, {_kbi, _mbi}, _txi, hash}) do
+    header = :aec_db.get_header(hash)
+    :aec_headers.serialize_for_client(header, prev_block_type(header))
+  end
+
+  def to_map({:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} = rec),
+    do: to_map(rec, AE.Db.get_tx_data(hash))
+
+  def to_map(
         {:tx, index, _hash, {_kb_index, mb_index}, mb_time},
         {block_hash, type, signed_tx, tx_rec}
       ) do
@@ -142,6 +144,16 @@ defmodule AeMdw.Db.Format do
     |> put_in(["micro_index"], mb_index)
     |> put_in(["micro_time"], mb_time)
   end
+
+  def to_map({:auction_bid, key, _}, Model.AuctionBid),
+    do: to_map(key, Model.AuctionBid)
+
+  def to_map({_plain, {{_, _}, _}, _, [{_, _} | _]} = bid, Model.AuctionBid),
+    do: auction_bid(bid, &to_string/1, &to_map/1, &raw_to_json/1)
+
+  def to_map(name, source)
+      when source in [Model.ActiveName, Model.InactiveName],
+      do: raw_to_json(to_raw_map(name, source))
 
   def custom_encode(:oracle_response_tx, tx, _tx_rec, _signed_tx, _block_hash),
     do: update_in(tx, ["tx", "response"], &maybe_base64/1)
@@ -200,4 +212,58 @@ defmodule AeMdw.Db.Format do
       _ -> bin
     end
   end
+
+  def raw_to_json(x),
+    do: map_raw_values(x, &to_json/1)
+
+  def to_json({:id, idtype, payload}),
+    do: Enc.encode(AE.id_type(idtype), payload)
+
+  def to_json(x),
+    do: x
+
+  def map_raw_values(m, f) when is_map(m),
+    do: m |> Enum.map(fn {k, v} -> {to_string(k), map_raw_values(v, f)} end) |> Enum.into(%{})
+
+  def map_raw_values(l, f) when is_list(l),
+    do: l |> Enum.map(&map_raw_values(&1, f))
+
+  def map_raw_values(x, f),
+    do: f.(x)
+
+  defp name_info_to_raw_map(
+         {:name, _, active_h, expire_h, cs, us, ts, revoke, auction_tm, _prev} = n
+       ),
+       do: %{
+         active_from: active_h,
+         expire_height: expire_h,
+         claims: Enum.map(cs, &bi_txi_txi/1),
+         updates: Enum.map(us, &bi_txi_txi/1),
+         transfers: Enum.map(ts, &bi_txi_txi/1),
+         revoke: (revoke && to_raw_map(revoke)) || nil,
+         auction_timeout: auction_tm,
+         pointers: Name.pointers(n),
+         ownership: Name.ownership(n)
+       }
+
+  defp auction_bid({plain, {_, _}, auction_end, [{_, txi} | _] = bids}, key, tx_fmt, info_fmt),
+    do: %{
+      key.(:name) => plain,
+      key.(:status) => :auction,
+      key.(:active) => false,
+      key.(:info) => %{
+        key.(:auction_end) => auction_end,
+        key.(:last_bid) => tx_fmt.(read_tx!(txi)),
+        key.(:bids) => Enum.map(bids, &bi_txi_txi/1)
+      },
+      key.(:previous) =>
+        case Name.locate(plain) do
+          {m_name, Model.InactiveName} ->
+            succ = &Model.name(&1, :previous)
+            Enum.map(chase(m_name, succ), &info_fmt.(name_info_to_raw_map(&1)))
+
+          _ ->
+            []
+        end
+    }
 end

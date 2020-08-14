@@ -1,5 +1,6 @@
 defmodule AeMdw.Db.Stream do
   alias __MODULE__, as: DBS
+  alias AeMdw.Node, as: AE
   alias AeMdw.Db.Model
   alias AeMdw.Validate
 
@@ -134,7 +135,7 @@ defmodule AeMdw.Db.Stream do
     {type, _pos, _pk, txi} = Model.field(model_field, :index)
     model_tx = read_tx!(txi)
     tx_hash = Model.tx(model_tx, :id)
-    {_, _, _, tx_rec} = data = tx_rec_data(tx_hash)
+    {_, _, _, tx_rec} = data = AE.Db.get_tx_data(tx_hash)
     {type, model_tx, tx_rec, data}
   end
 

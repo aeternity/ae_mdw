@@ -7,8 +7,9 @@ defmodule AeMdwWeb.Router do
   @paginables [
     {["txs"], nil},
     {["names", "auctions"], &NC.stream_plug_hook/1},
+    {["names", "inactive"], &NC.stream_plug_hook/1},
     {["names", "active"], &NC.stream_plug_hook/1},
-    {["names", "all"], &NC.stream_plug_hook/1}
+    {["names"], &NC.stream_plug_hook/1}
   ]
 
   @scopes ["gen", "txi"]
@@ -37,12 +38,20 @@ defmodule AeMdwWeb.Router do
     get "/txs/:scope_type/:range", TxController, :txs
 
     get "/name/:id", NameController, :name
+    get "/name/pointers/:id", NameController, :pointers
+    get "/name/pointees/:id", NameController, :pointees
 
-    get "/names/auctions", NameController, :all_auctions
-    get "/names/pointers/:id", NameController, :pointers
-    get "/names/pointees/:id", NameController, :pointees
+    get "/names/auctions", NameController, :auctions
+    get "/names/auctions/:scope_type/:range", NameController, :auctions
+
+    get "/names/inactive", NameController, :inactive_names
+    get "/names/inactive/:scope_type/:range", NameController, :inactive_names
+
     get "/names/active", NameController, :active_names
-    get "/names/all", NameController, :all_names
+    get "/names/active/:scope_type/:range", NameController, :active_names
+
+    get "/names", NameController, :names
+    get "/names/:scope_type/:range", NameController, :names
 
     get "/status", UtilController, :status
 

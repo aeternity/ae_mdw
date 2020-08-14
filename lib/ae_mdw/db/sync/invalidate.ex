@@ -1,14 +1,12 @@
 defmodule AeMdw.Db.Sync.Invalidate do
   alias AeMdw.Node, as: AE
-  alias AeMdw.Log
-  alias AeMdw.Db.Model
-  alias AeMdw.Db.Format
   alias AeMdw.Db.Stream, as: DBS
-  alias AeMdw.EtsCache
+  alias AeMdw.Db.{Model, Sync, Format}
+  alias AeMdw.Log
 
   require Model
 
-  import AeMdw.{Sigil, Util, Db.Util}
+  import AeMdw.{Util, Db.Util}
 
   ##########
 
@@ -23,22 +21,17 @@ defmodule AeMdw.Db.Sync.Invalidate do
         bi_keys = block_keys_range({fork_height - 1, 0})
         {tx_keys, id_counts} = tx_keys_range(from_txi)
         name_txis = Enum.filter(tx_keys[Model.Type], fn {type, _} -> type in name_tx_types end)
-
-        {name_dels, name_writes, {last_claim_dels, last_update_dels}} =
-          AeMdw.Db.Sync.Name.invalidate_txs(Enum.reverse(name_txis))
-
         tab_keys = Map.merge(bi_keys, tx_keys)
-        log_del_keys(tab_keys)
 
         :mnesia.transaction(fn ->
-          do_dels(tab_keys, :delete)
-          do_dels(name_dels, :delete)
-          do_writes(name_writes, :write)
+          {name_dels, name_writes} = Sync.Name.invalidate(name_txis, fork_height - 1)
+
+          do_dels(tab_keys)
+          do_dels(name_dels, &AeMdw.Db.Name.cache_through_delete/2)
+          do_writes(name_writes, &AeMdw.Db.Name.cache_through_write/2)
+
           Enum.each(id_counts, fn {f_key, delta} -> Model.update_count(f_key, -delta) end)
         end)
-
-        Enum.each(last_claim_dels, &EtsCache.del(:last_name_claim, &1))
-        Enum.each(last_update_dels, &EtsCache.del(:last_name_update, &1))
 
       # wasn't synced up to that txi, nothing to do
       true ->
@@ -49,10 +42,11 @@ defmodule AeMdw.Db.Sync.Invalidate do
   ################################################################################
   # Invalidations - keys for records to delete in case of fork
 
-  def block_keys_range({_, _} = from_bi) do
-    tab = ~t[block]
-    %{tab => collect_keys(tab, [from_bi], from_bi, &:mnesia.next/2, &{:cont, [&1 | &2]})}
-  end
+  def block_keys_range({_, _} = from_bi),
+    do: %{
+      Model.Block =>
+        collect_keys(Model.Block, [from_bi], from_bi, &:mnesia.next/2, &{:cont, [&1 | &2]})
+    }
 
   def tx_keys_range(from_txi),
     do: tx_keys_range(from_txi, last(Model.Tx))
@@ -80,7 +74,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
   def type_fields_keys(txis) do
     Enum.reduce(txis, {[], [], %{}}, fn txi, {type_keys, field_keys, field_counts} ->
-      %{tx: %{type: tx_type} = tx, hash: tx_hash} = Format.tx_to_raw_map(read_tx!(txi))
+      %{tx: %{type: tx_type} = tx, hash: tx_hash} = Format.to_raw_map(read_tx!(txi))
 
       {fields, f_counts} =
         for {id_key, pos} <- AE.tx_ids(tx_type), reduce: {[], field_counts} do
@@ -111,16 +105,16 @@ defmodule AeMdw.Db.Sync.Invalidate do
   end
 
   def link_del_pubkey(:contract_create_tx, tx_hash),
-    do: :aect_contracts.pubkey(:aect_contracts.new(tx_rec(tx_hash)))
+    do: :aect_contracts.pubkey(:aect_contracts.new(AE.Db.get_tx(tx_hash)))
 
   def link_del_pubkey(:channel_create_tx, tx_hash),
-    do: ok!(:aesc_utils.channel_pubkey(signed_tx_rec(tx_hash)))
+    do: ok!(:aesc_utils.channel_pubkey(AE.Db.get_signed_tx(tx_hash)))
 
   def link_del_pubkey(:oracle_register_tx, tx_hash),
-    do: :aeo_register_tx.account_pubkey(tx_rec(tx_hash))
+    do: :aeo_register_tx.account_pubkey(AE.Db.get_tx(tx_hash))
 
   def link_del_pubkey(:name_claim_tx, tx_hash),
-    do: ok!(:aens.get_name_hash(:aens_claim_tx.name(tx_rec(tx_hash))))
+    do: ok!(:aens.get_name_hash(:aens_claim_tx.name(AE.Db.get_tx(tx_hash))))
 
   def link_del_pubkey(_type, _tx_hash),
     do: nil
@@ -179,18 +173,16 @@ defmodule AeMdw.Db.Sync.Invalidate do
     pk
   end
 
-  defp log_del_keys(tab_keys) do
-    {blocks, tab_keys} = Map.pop(tab_keys, ~t[block])
-    {txs, tab_keys} = Map.pop(tab_keys, ~t[tx])
-    [b_count, t_count] = [blocks, txs] |> Enum.map(&Enum.count/1)
-    {b1, b2} = {List.last(blocks), List.first(blocks)}
-    {t1, t2} = {List.first(txs), List.last(txs)}
-    Log.info("table block has #{b_count} records to delete: #{inspect(b1)}..#{inspect(b2)}")
-    Log.info("table tx has #{t_count} records to delete: #{t1}..#{t2}")
-
-    for {tab, keys} <- tab_keys,
-        do: Log.info("table #{Model.record(tab)} has #{Enum.count(keys)} records to delete")
-
-    :ok
-  end
+  # defp log_del_keys(tab_keys) do
+  #   {blocks, tab_keys} = Map.pop(tab_keys, ~t[block])
+  #   {txs, tab_keys} = Map.pop(tab_keys, ~t[tx])
+  #   [b_count, t_count] = [blocks, txs] |> Enum.map(&Enum.count/1)
+  #   {b1, b2} = {List.last(blocks), List.first(blocks)}
+  #   {t1, t2} = {List.first(txs), List.last(txs)}
+  #   Log.info("table block has #{b_count} records to delete: #{inspect(b1)}..#{inspect(b2)}")
+  #   Log.info("table tx has #{t_count} records to delete: #{t1}..#{t2}")
+  #   for {tab, keys} <- tab_keys,
+  #       do: Log.info("table #{Model.record(tab)} has #{Enum.count(keys)} records to delete")
+  #   :ok
+  # end
 end

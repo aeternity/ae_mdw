@@ -2,10 +2,6 @@ defmodule AeMdw.Db.Sync.Supervisor do
   use Supervisor
 
   alias AeMdw.EtsCache
-  alias AeMdw.Db.Sync.Name.Cache, as: NC
-
-  # 3 days
-  @name_last_tx_cache_cleanup_minutes 4320
 
   ##########
 
@@ -17,8 +13,7 @@ defmodule AeMdw.Db.Sync.Supervisor do
 
   @impl true
   def init(_args) do
-    EtsCache.new(:last_name_claim, @name_last_tx_cache_cleanup_minutes)
-    EtsCache.new(:last_name_update, @name_last_tx_cache_cleanup_minutes)
+    :ets.new(:sync_cache, [:named_table, :ordered_set, :public])
 
     children = [
       AeMdw.Db.Sync,

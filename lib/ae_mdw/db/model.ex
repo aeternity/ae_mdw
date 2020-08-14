@@ -52,30 +52,59 @@ defmodule AeMdw.Db.Model do
   @rev_origin_defaults [index: {nil, nil, nil}, unused: nil]
   defrecord :rev_origin, @rev_origin_defaults
 
-  # name pointee : (updated when name_update_tx changes pointers)
-  #     index = {pointer_val, tx_index, pointer_key}
-  @name_pointee_defaults [index: {nil, nil, nil}, unused: nil]
-  defrecord :name_pointee, @name_pointee_defaults
+  # plain name:
+  #     index = name_hash, plain = plain name
+  @plain_name_defaults [index: nil, value: nil]
+  defrecord :plain_name, @plain_name_defaults
 
-  # rev name pointee :
-  #     index = {tx_index, pointer_val, pointer_key}
-  @rev_name_pointee_defaults [index: {nil, nil, nil}, unused: nil]
-  defrecord :rev_name_pointee, @rev_name_pointee_defaults
+  # auction bid:
+  #     index = {plain_name, {block_index, txi}, expire_height = height, prev_bids = []}
+  @auction_bid_defaults [index: {nil, {{nil, nil}, nil}, nil, nil}, unused: nil]
+  defrecord :auction_bid, @auction_bid_defaults
 
-  # name auction :
-  #     index = {expiration_height, name_hash}, name_rec
-  @name_auction_defaults [index: {nil, nil}, name_rec: nil]
-  defrecord :name_auction, @name_auction_defaults
+  # in 3 tables: auction_expiration, name_expiration, inactive_name_expiration
+  #
+  # expiration:
+  #     index = {expire_height, plain_name}, value: any
+  @expiration_defaults [index: {nil, nil}, value: nil]
+  defrecord :expiration, @expiration_defaults
 
-  # name lookup:
-  #     index = {name_hash, claim_height},
-  #     name = plain name, expire = height, revoke = height,
-  #     auction = nil | [tx_index]
-  @name_defaults [index: {nil, nil}, name: nil, expire: nil, revoke: nil, auction: nil]
+  # in 2 tables: active_name, inactive_name
+  #
+  # name:
+  #     index = plain_name,
+  #     active = height                    #
+  #     expire = height                    #
+  #     claims =  [{block_index, txi}]     #
+  #     updates = [{block_index, txi}]     #
+  #     transfers = [{block_index, txi}]   #
+  #     revoke = {block_index, txi} | nil  #
+  #     auction_timeout = int              # 0 if not auctioned
+  #     previous = m_name | nil            # previus epoch of the same name
+  #
+  #     (other info (pointers, owner) is from looking up last update tx)
+  @name_defaults [
+    index: nil,
+    active: nil,
+    expire: nil,
+    claims: [],
+    updates: [],
+    transfers: [],
+    revoke: nil,
+    auction_timeout: 0,
+    previous: nil
+  ]
   defrecord :name, @name_defaults
 
-  def tables(),
-    do: [
+  # pointee : (updated when name_update_tx changes pointers)
+  #     index = {pointer_val, {block_index, txi}, pointer_key}
+  @pointee_defaults [index: {nil, {{nil, nil}, nil}, nil}, unused: nil]
+  defrecord :pointee, @pointee_defaults
+
+  ################################################################################
+
+  def tables() do
+    [
       AeMdw.Db.Model.Tx,
       AeMdw.Db.Model.Block,
       AeMdw.Db.Model.Time,
@@ -83,12 +112,23 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.Field,
       AeMdw.Db.Model.IdCount,
       AeMdw.Db.Model.Origin,
-      AeMdw.Db.Model.RevOrigin,
-      AeMdw.Db.Model.NamePointee,
-      AeMdw.Db.Model.RevNamePointee,
-      AeMdw.Db.Model.NameAuction,
-      AeMdw.Db.Model.Name
+      AeMdw.Db.Model.RevOrigin
+      | name_tables()
     ]
+  end
+
+  def name_tables() do
+    [
+      AeMdw.Db.Model.PlainName,
+      AeMdw.Db.Model.AuctionBid,
+      AeMdw.Db.Model.Pointee,
+      AeMdw.Db.Model.AuctionExpiration,
+      AeMdw.Db.Model.ActiveNameExpiration,
+      AeMdw.Db.Model.InactiveNameExpiration,
+      AeMdw.Db.Model.ActiveName,
+      AeMdw.Db.Model.InactiveName
+    ]
+  end
 
   def records(),
     do: [
@@ -100,10 +140,11 @@ defmodule AeMdw.Db.Model do
       :id_count,
       :origin,
       :rev_origin,
-      :name_pointee,
-      :rev_name_pointee,
-      :name_auction,
-      :name
+      :plain_name,
+      :auction_bid,
+      :expiration,
+      :name,
+      :pointee
     ]
 
   def fields(record),
@@ -117,10 +158,14 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.IdCount), do: :id_count
   def record(AeMdw.Db.Model.Origin), do: :origin
   def record(AeMdw.Db.Model.RevOrigin), do: :rev_origin
-  def record(AeMdw.Db.Model.NamePointee), do: :name_pointee
-  def record(AeMdw.Db.Model.RevNamePointee), do: :rev_name_pointee
-  def record(AeMdw.Db.Model.NameAuction), do: :name_auction
-  def record(AeMdw.Db.Model.Name), do: :name
+  def record(AeMdw.Db.Model.PlainName), do: :plain_name
+  def record(AeMdw.Db.Model.AuctionBid), do: :auction_bid
+  def record(AeMdw.Db.Model.Pointee), do: :pointee
+  def record(AeMdw.Db.Model.AuctionExpiration), do: :expiration
+  def record(AeMdw.Db.Model.ActiveNameExpiration), do: :expiration
+  def record(AeMdw.Db.Model.InactiveNameExpiration), do: :expiration
+  def record(AeMdw.Db.Model.ActiveName), do: :name
+  def record(AeMdw.Db.Model.InactiveName), do: :name
 
   def table(:tx), do: AeMdw.Db.Model.Tx
   def table(:block), do: AeMdw.Db.Model.Block
@@ -130,10 +175,6 @@ defmodule AeMdw.Db.Model do
   def table(:id_count), do: AeMdw.Db.Model.IdCount
   def table(:origin), do: AeMdw.Db.Model.Origin
   def table(:rev_origin), do: AeMdw.Db.Model.RevOrigin
-  def table(:name_pointee), do: AeMdw.Db.Model.NamePointee
-  def table(:rev_name_pointee), do: AeMdw.Db.Model.RevNamePointee
-  def table(:name_auction), do: AeMdw.Db.Model.NameAuction
-  def table(:name), do: AeMdw.Db.Model.Name
 
   def defaults(:tx), do: @tx_defaults
   def defaults(:block), do: @block_defaults
@@ -143,9 +184,10 @@ defmodule AeMdw.Db.Model do
   def defaults(:id_count), do: @id_count_defaults
   def defaults(:origin), do: @origin_defaults
   def defaults(:rev_origin), do: @rev_origin_defaults
-  def defaults(:name_pointee), do: @name_pointee_defaults
-  def defaults(:rev_name_pointee), do: @rev_name_pointee_defaults
-  def defaults(:name_auction), do: @name_auction_defaults
+  def defaults(:plain_name), do: @plain_name_defaults
+  def defaults(:auction_bid), do: @auction_bid_defaults
+  def defaults(:pointee), do: @pointee_defaults
+  def defaults(:expiration), do: @expiration_defaults
   def defaults(:name), do: @name_defaults
 
   def write_count(model, delta) do

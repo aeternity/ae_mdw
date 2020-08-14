@@ -25,10 +25,12 @@ defmodule AeMdwWeb.Util do
 
   def make_link(path_info, scope, query_groups) do
     path =
-      List.last(path_info)
-      |> case do
+      case List.last(path_info) do
         dir when dir in ["forward", "backward"] ->
           :lists.droplast(path_info) ++ [url_encode_scope(scope)]
+
+        _ when scope != nil ->
+          path_info ++ [url_encode_scope(scope)]
 
         _ ->
           path_info
