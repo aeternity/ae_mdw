@@ -2,9 +2,6 @@ defmodule AeMdw.Db.Sync.Supervisor do
   use Supervisor
 
   alias AeMdw.EtsCache
-  alias AeMdw.Db.Sync.Name.Cache, as: NC
-
-  # 3 days
   @name_last_tx_cache_cleanup_minutes 4320
 
   ##########
