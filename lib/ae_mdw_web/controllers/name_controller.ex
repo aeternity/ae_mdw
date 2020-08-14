@@ -19,11 +19,13 @@ defmodule AeMdwWeb.NameController do
     alias AeMdwWeb.DataStreamPlug, as: P
 
     rem = rem_path(conn.path_info)
+
     P.handle_assign(
       conn,
-      rem == [] && {:ok, {:gen, last_gen()..0}} || P.parse_scope(rem, ["gen"]),
+      (rem == [] && {:ok, {:gen, last_gen()..0}}) || P.parse_scope(rem, ["gen"]),
       P.parse_offset(params),
-      {:ok, %{}})
+      {:ok, %{}}
+    )
   end
 
   defp rem_path(["names", x | rem]) when x in ["auctions", "inactive", "active"], do: rem
@@ -38,11 +40,14 @@ defmodule AeMdwWeb.NameController do
     do: handle_input(conn, fn -> pointers_reply(conn, Validate.plain_name!(ident)) end)
 
   def pointees(conn, %{"id" => ident}),
-    do: handle_input(conn, fn ->
-          pk = map_ok_nil(Validate.plain_name(ident), &ok!(:aens.get_name_hash(&1)))
-          || Validate.id!(ident)
-          pointees_reply(conn, pk)
-        end)
+    do:
+      handle_input(conn, fn ->
+        pk =
+          map_ok_nil(Validate.plain_name(ident), &ok!(:aens.get_name_hash(&1))) ||
+            Validate.id!(ident)
+
+        pointees_reply(conn, pk)
+      end)
 
   def auctions(conn, _req),
     do: handle_input(conn, fn -> Cont.response(conn, &json/2) end)
@@ -88,6 +93,7 @@ defmodule AeMdwWeb.NameController do
     else
       {_, Model.InactiveName} ->
         raise ErrInput.Expired, value: plain_name
+
       _ ->
         raise ErrInput.NotFound, value: plain_name
     end
@@ -95,42 +101,46 @@ defmodule AeMdwWeb.NameController do
 
   def pointees_reply(conn, pubkey) do
     {active, inactive} = Name.pointees(pubkey)
-    json(conn, %{"active" => Format.map_raw_values(active, &Format.to_json/1),
-                 "inactive" => Format.map_raw_values(inactive, &Format.to_json/1)})
-  end
 
+    json(conn, %{
+      "active" => Format.map_raw_values(active, &Format.to_json/1),
+      "inactive" => Format.map_raw_values(inactive, &Format.to_json/1)
+    })
+  end
 
   def do_auctions_stream({:name, _} = params),
     do: DBS.Name.auctions(params, &Format.to_map(&1, Model.AuctionBid))
 
   def do_auctions_stream({:expiration, _} = params) do
-    mapper = &:mnesia.async_dirty(fn ->
-      k = Name.auction_bid_key(&1)
-      k && Format.to_map(k, Model.AuctionBid)
-    end)
+    mapper =
+      &:mnesia.async_dirty(fn ->
+        k = Name.auction_bid_key(&1)
+        k && Format.to_map(k, Model.AuctionBid)
+      end)
+
     DBS.Name.auctions(params, mapper)
   end
 
-
   def do_inactive_names_stream({:name, _} = params),
     do: DBS.Name.inactive_names(params, &Format.to_map(&1, Model.InactiveName))
+
   def do_inactive_names_stream({:expiration, _} = params),
     do: DBS.Name.inactive_names(params, exp_to_formatted_name(Model.InactiveName))
 
   def do_active_names_stream({:name, _} = params),
     do: DBS.Name.active_names(params, &Format.to_map(&1, Model.ActiveName))
+
   def do_active_names_stream({:expiration, _} = params),
     do: DBS.Name.active_names(params, exp_to_formatted_name(Model.ActiveName))
 
-
   def do_names_stream({:name, dir}) do
-    streams = [do_inactive_names_stream({:name, dir}),
-               do_active_names_stream({:name, dir})]
+    streams = [do_inactive_names_stream({:name, dir}), do_active_names_stream({:name, dir})]
     merged_stream(streams, & &1["name"], dir)
   end
 
   def do_names_stream({:expiration, :forward} = params),
     do: Stream.concat(do_inactive_names_stream(params), do_active_names_stream(params))
+
   def do_names_stream({:expiration, :backward} = params),
     do: Stream.concat(do_active_names_stream(params), do_inactive_names_stream(params))
 
@@ -153,7 +163,6 @@ defmodule AeMdwWeb.NameController do
   end
 
   def validate_params!(_params), do: {:expiration, :backward}
-
 
   def exp_to_formatted_name(table) do
     fn {:expiration, {_, plain_name}, _} ->

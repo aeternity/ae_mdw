@@ -1,5 +1,4 @@
 defmodule AeMdw.Db.Format do
-
   alias AeMdw.Node, as: AE
   alias :aeser_api_encoder, as: Enc
 
@@ -22,7 +21,6 @@ defmodule AeMdw.Db.Format do
 
   def to_raw_map({:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} = mdw_tx),
     do: to_raw_map(mdw_tx, AE.Db.get_tx_data(hash))
-
 
   def to_raw_map(
         {:tx, index, hash, {kb_index, mb_index}, mb_time},
@@ -53,11 +51,14 @@ defmodule AeMdw.Db.Format do
   def to_raw_map(m_name, source) when elem(m_name, 0) == :name do
     succ = &Model.name(&1, :previous)
     prev = chase(succ.(m_name), succ)
-    %{name: Model.name(m_name, :index),
+
+    %{
+      name: Model.name(m_name, :index),
       status: :name,
       active: source == Model.ActiveName,
       info: name_info_to_raw_map(m_name),
-      previous: Enum.map(prev, &name_info_to_raw_map/1)}
+      previous: Enum.map(prev, &name_info_to_raw_map/1)
+    }
   end
 
   def to_raw_map(ae_tx, tx_type) do
@@ -70,7 +71,6 @@ defmodule AeMdw.Db.Format do
       end
     )
   end
-
 
   def custom_raw_data(:contract_create_tx, tx, tx_rec, _signed_tx, _block_hash) do
     contract_pk = :aect_contracts.pubkey(:aect_contracts.new(tx_rec))
@@ -152,10 +152,8 @@ defmodule AeMdw.Db.Format do
     do: auction_bid(bid, &to_string/1, &to_map/1, &raw_to_json/1)
 
   def to_map(name, source)
-  when source in [Model.ActiveName, Model.InactiveName],
-    do: raw_to_json(to_raw_map(name, source))
-
-
+      when source in [Model.ActiveName, Model.InactiveName],
+      do: raw_to_json(to_raw_map(name, source))
 
   def custom_encode(:oracle_response_tx, tx, _tx_rec, _signed_tx, _block_hash),
     do: update_in(tx, ["tx", "response"], &maybe_base64/1)
@@ -215,52 +213,57 @@ defmodule AeMdw.Db.Format do
     end
   end
 
-
   def raw_to_json(x),
     do: map_raw_values(x, &to_json/1)
 
-
   def to_json({:id, idtype, payload}),
     do: Enc.encode(AE.id_type(idtype), payload)
+
   def to_json(x),
     do: x
 
   def map_raw_values(m, f) when is_map(m),
     do: m |> Enum.map(fn {k, v} -> {to_string(k), map_raw_values(v, f)} end) |> Enum.into(%{})
+
   def map_raw_values(l, f) when is_list(l),
     do: l |> Enum.map(&map_raw_values(&1, f))
+
   def map_raw_values(x, f),
     do: f.(x)
 
-
-  defp name_info_to_raw_map({:name, _, active_h, expire_h,
-                             cs, us, ts, revoke, auction_tm, _prev} = n),
-    do: %{active_from: active_h,
-          expire_height: expire_h,
-          claims: Enum.map(cs, &bi_txi_txi/1),
-          updates: Enum.map(us, &bi_txi_txi/1),
-          transfers: Enum.map(ts, &bi_txi_txi/1),
-          revoke: revoke && to_raw_map(revoke) || nil,
-          auction_timeout: auction_tm,
-          pointers: Name.pointers(n),
-          ownership: Name.ownership(n)}
+  defp name_info_to_raw_map(
+         {:name, _, active_h, expire_h, cs, us, ts, revoke, auction_tm, _prev} = n
+       ),
+       do: %{
+         active_from: active_h,
+         expire_height: expire_h,
+         claims: Enum.map(cs, &bi_txi_txi/1),
+         updates: Enum.map(us, &bi_txi_txi/1),
+         transfers: Enum.map(ts, &bi_txi_txi/1),
+         revoke: (revoke && to_raw_map(revoke)) || nil,
+         auction_timeout: auction_tm,
+         pointers: Name.pointers(n),
+         ownership: Name.ownership(n)
+       }
 
   defp auction_bid({plain, {_, _}, auction_end, [{_, txi} | _] = bids}, key, tx_fmt, info_fmt),
-    do: %{key.(:name) => plain,
-          key.(:status) => :auction,
-          key.(:active) => false,
-          key.(:info) =>
-            %{key.(:auction_end) => auction_end,
-              key.(:last_bid) => tx_fmt.(read_tx!(txi)),
-              key.(:bids) => Enum.map(bids, &bi_txi_txi/1)},
-          key.(:previous) =>
-            case Name.locate(plain) do
-              {m_name, Model.InactiveName} ->
-                succ = &Model.name(&1, :previous)
-                Enum.map(chase(m_name, succ), &info_fmt.(name_info_to_raw_map(&1)))
+    do: %{
+      key.(:name) => plain,
+      key.(:status) => :auction,
+      key.(:active) => false,
+      key.(:info) => %{
+        key.(:auction_end) => auction_end,
+        key.(:last_bid) => tx_fmt.(read_tx!(txi)),
+        key.(:bids) => Enum.map(bids, &bi_txi_txi/1)
+      },
+      key.(:previous) =>
+        case Name.locate(plain) do
+          {m_name, Model.InactiveName} ->
+            succ = &Model.name(&1, :previous)
+            Enum.map(chase(m_name, succ), &info_fmt.(name_info_to_raw_map(&1)))
 
-                _ ->
-                []
-            end}
-
+          _ ->
+            []
+        end
+    }
 end

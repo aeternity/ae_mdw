@@ -83,9 +83,17 @@ defmodule AeMdw.Db.Model do
   #     previous = m_name | nil            # previus epoch of the same name
   #
   #     (other info (pointers, owner) is from looking up last update tx)
-  @name_defaults [index: nil, active: nil, expire: nil,
-                  claims: [], updates: [], transfers: [], revoke: nil,
-                  auction_timeout: 0, previous: nil]
+  @name_defaults [
+    index: nil,
+    active: nil,
+    expire: nil,
+    claims: [],
+    updates: [],
+    transfers: [],
+    revoke: nil,
+    auction_timeout: 0,
+    previous: nil
+  ]
   defrecord :name, @name_defaults
 
   # pointee : (updated when name_update_tx changes pointers)
@@ -168,7 +176,6 @@ defmodule AeMdw.Db.Model do
   def table(:origin), do: AeMdw.Db.Model.Origin
   def table(:rev_origin), do: AeMdw.Db.Model.RevOrigin
 
-
   def defaults(:tx), do: @tx_defaults
   def defaults(:block), do: @block_defaults
   def defaults(:time), do: @time_defaults
@@ -182,7 +189,6 @@ defmodule AeMdw.Db.Model do
   def defaults(:pointee), do: @pointee_defaults
   def defaults(:expiration), do: @expiration_defaults
   def defaults(:name), do: @name_defaults
-
 
   def write_count(model, delta) do
     total = id_count(model, :count)

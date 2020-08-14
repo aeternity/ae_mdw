@@ -41,7 +41,8 @@ defmodule AeMdwWeb.DataStreamPlug do
       conn,
       parse_scope(rem_path, scopes),
       parse_offset(conn.query_params),
-      parse_query(conn.query_string))
+      parse_query(conn.query_string)
+    )
   end
 
   def handle_assign(conn, maybe_scope, maybe_offset, maybe_query) do

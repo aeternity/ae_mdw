@@ -43,8 +43,10 @@ defmodule AeMdw.Db.Sync.Invalidate do
   # Invalidations - keys for records to delete in case of fork
 
   def block_keys_range({_, _} = from_bi),
-    do: %{Model.Block =>
-           collect_keys(Model.Block, [from_bi], from_bi, &:mnesia.next/2, &{:cont, [&1 | &2]})}
+    do: %{
+      Model.Block =>
+        collect_keys(Model.Block, [from_bi], from_bi, &:mnesia.next/2, &{:cont, [&1 | &2]})
+    }
 
   def tx_keys_range(from_txi),
     do: tx_keys_range(from_txi, last(Model.Tx))
@@ -183,5 +185,4 @@ defmodule AeMdw.Db.Sync.Invalidate do
   #       do: Log.info("table #{Model.record(tab)} has #{Enum.count(keys)} records to delete")
   #   :ok
   # end
-
 end

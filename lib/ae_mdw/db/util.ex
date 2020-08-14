@@ -110,14 +110,15 @@ defmodule AeMdw.Db.Util do
 
   def do_writes(tab_xs),
     do: do_writes(tab_xs, &:mnesia.write(&1, &2, :write))
+
   def do_writes(tab_xs, db_write) when is_function(db_write, 2),
     do: Enum.each(tab_xs, fn {tab, xs} -> Enum.each(xs, &db_write.(tab, &1)) end)
 
   def do_dels(tab_keys),
     do: do_dels(tab_keys, &:mnesia.delete(&1, &2, :write))
+
   def do_dels(tab_keys, db_delete) when is_function(db_delete, 2),
     do: Enum.each(tab_keys, fn {tab, ks} -> Enum.each(ks, &db_delete.(tab, &1)) end)
-
 
   def tx_val(tx_rec, field),
     do: tx_val(tx_rec, elem(tx_rec, 0), field)

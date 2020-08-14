@@ -193,7 +193,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   end
 
   def synced?(last_mdw_height),
-    do: :aec_sync.is_syncing() == false && (current_height() - 1) == last_mdw_height
+    do: :aec_sync.is_syncing() == false && current_height() - 1 == last_mdw_height
 
   defp log_msg(height, _),
     do: "syncing transactions at generation #{height}"

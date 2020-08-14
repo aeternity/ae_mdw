@@ -99,7 +99,7 @@ defmodule AeMdw.Application do
 
     ns_tree_field_pos_map =
       record_keys.(aens_state_tree_code, :ns_tree)
-      |> Stream.zip(Stream.iterate(1, & &1 + 1))
+      |> Stream.zip(Stream.iterate(1, &(&1 + 1)))
       |> Enum.into(%{})
 
     SmartGlobal.new(

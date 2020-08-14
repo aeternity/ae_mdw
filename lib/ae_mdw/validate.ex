@@ -65,7 +65,6 @@ defmodule AeMdw.Validate do
 
   def name_id!(name_ident), do: unwrap!(&name_id/1, name_ident)
 
-
   def plain_name(name_ident) do
     case id(name_ident) do
       {:ok, name_hash} ->
@@ -76,11 +75,14 @@ defmodule AeMdw.Validate do
 
       _ ->
         ok? = is_binary(name_ident) and name_ident != "" and String.printable?(name_ident)
+
         case ok? do
           true ->
-            plain_name = String.ends_with?(name_ident, [".chain", ".test"])
-            && name_ident
-            || name_ident <> ".chain"
+            plain_name =
+              (String.ends_with?(name_ident, [".chain", ".test"]) &&
+                 name_ident) ||
+                name_ident <> ".chain"
+
             {:ok, plain_name}
 
           false ->
@@ -90,7 +92,6 @@ defmodule AeMdw.Validate do
   end
 
   def plain_name!(name_ident), do: unwrap!(&plain_name/1, name_ident)
-
 
   # returns transaction type (atom)
   def tx_type(type) when is_atom(type),

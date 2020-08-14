@@ -153,17 +153,20 @@ defmodule AeMdw.Util do
   end
 
   def gb_tree_stream(tree, dir)
-  when dir in [:forward, :backward] do
-    taker = case dir do
-              :forward -> &:gb_trees.take_smallest/1
-              :backward -> &:gb_trees.take_largest/1
-            end
+      when dir in [:forward, :backward] do
+    taker =
+      case dir do
+        :forward -> &:gb_trees.take_smallest/1
+        :backward -> &:gb_trees.take_largest/1
+      end
+
     Stream.resource(
       fn -> tree end,
       fn tree ->
         case :gb_trees.size(tree) do
           0 ->
             {:halt, nil}
+
           _ ->
             {k, v, tree} = taker.(tree)
             {[{k, v}], tree}
@@ -173,9 +176,9 @@ defmodule AeMdw.Util do
     )
   end
 
-
   def ets_stream_pull({tab, :"$end_of_table", _}),
     do: {:halt, tab}
+
   def ets_stream_pull({tab, key, advance}) do
     case :ets.lookup(tab, key) do
       [tuple] ->
@@ -186,13 +189,13 @@ defmodule AeMdw.Util do
     end
   end
 
-
   def ets_stream(tab, dir) do
     {advance, init_key} =
       case dir do
         :forward -> {&:ets.next/2, &:ets.first/1}
         :backward -> {&:ets.prev/2, &:ets.last/1}
       end
+
     Stream.resource(
       fn -> {tab, init_key.(tab), advance} end,
       &ets_stream_pull/1,
@@ -200,16 +203,18 @@ defmodule AeMdw.Util do
     )
   end
 
-
   def merged_stream(streams, key, dir) when is_function(key, 1) do
-    taker = case dir do
-              :forward -> &:gb_sets.take_smallest/1
-              :backward -> &:gb_sets.take_largest/1
-            end
+    taker =
+      case dir do
+        :forward -> &:gb_sets.take_smallest/1
+        :backward -> &:gb_sets.take_largest/1
+      end
+
     pop1 = fn stream ->
       case StreamSplit.take_and_drop(stream, 1) do
         {[x], rem_stream} ->
           {key.(x), x, rem_stream}
+
         {[], _} ->
           nil
       end
@@ -220,20 +225,21 @@ defmodule AeMdw.Util do
         streams
         |> Stream.map(pop1)
         |> Stream.reject(&is_nil/1)
-        |> Enum.to_list
-        |> :gb_sets.from_list
+        |> Enum.to_list()
+        |> :gb_sets.from_list()
       end,
       fn streams ->
         case :gb_sets.size(streams) do
-          0 -> {:halt, nil}
+          0 ->
+            {:halt, nil}
+
           _ ->
             {{_, x, rem_stream}, rem_streams} = taker.(streams)
             next_elt = pop1.(rem_stream)
-            {[x], next_elt && :gb_sets.add(next_elt, rem_streams) || rem_streams}
+            {[x], (next_elt && :gb_sets.add(next_elt, rem_streams)) || rem_streams}
         end
       end,
       fn _ -> :ok end
     )
   end
-
 end
