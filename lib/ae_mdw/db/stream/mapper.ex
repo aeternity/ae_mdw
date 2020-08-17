@@ -20,4 +20,6 @@ defmodule AeMdw.Db.Stream.Mapper do
   def db_txi({:type, {_type, txi}, nil}), do: txi
   def db_txi({:time, {_time, txi}, nil}), do: txi
   def db_txi({:field, {_type, _pos, _pk, txi}, nil}), do: txi
+  def db_txi({{:tx, txi, _hash, {_height, _mbi}, _time}, _tx_data}), do: txi
+
 end
