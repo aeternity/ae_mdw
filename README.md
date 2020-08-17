@@ -95,12 +95,6 @@ GET  /txs/count/:id           - returns counts of transactions per transaction f
 GET  /txs/:scope_type/:range  - returns transactions bounded by scope/range where query is in query string
 GET  /txs/:direction          - returns transactions from beginning (forward) or end (backward), query is in query string
 GET  /status                  - returns middleware status (version, number of generations indexed)
-GET  /name/:id                - returns information for given name or encoded hash
-GET  /names/auctions          - returns information for all auctions
-GET  /names/pointers/:id      - returns pointers for given name
-GET  /names/pointees/:id      - returns names pointing to a particular pubkey and name update transaction which set up that pointer
-GET  /names/active            - returns information for active names
-GET  /names/all               - returns information for the names
 ```
 (more to come)
 
