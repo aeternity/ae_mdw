@@ -37,6 +37,7 @@ defmodule AeMdw.MixProject do
       {:ex2ms, "~> 1.6.0"},
       {:logger_file_backend, "~> 0.0.11"},
       {:smart_global, github: "ks/smart_global"},
+      {:smart_record, github: "ks/smart_record"},
       {:dbg, github: "fishcakez/dbg"},
       {:phoenix, "~> 1.4.13"},
       {:phoenix_pubsub, "~> 1.1"},

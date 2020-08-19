@@ -1,12 +1,14 @@
 defmodule AeMdw.Application do
   alias AeMdw.Db.Model
   alias AeMdw.EtsCache
+  alias AeMdw.Extract
 
   use Application
 
   import AeMdw.Util
 
   def start(_type, _args) do
+    init(:model)
     init(:meta)
 
     contract_exp = Application.fetch_env!(:ae_mdw, :contract_cache_expiration_minutes)
@@ -21,9 +23,10 @@ defmodule AeMdw.Application do
     Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)
   end
 
-  def init(:meta) do
-    alias AeMdw.Extract
+  def init(:model),
+    do: Enum.each(Model.records(), &SmartRecord.new(Model, &1, Model.defaults(&1)))
 
+  def init(:meta) do
     {:ok, aetx_code} = Extract.AbsCode.module(:aetx)
     {:ok, aeser_code} = Extract.AbsCode.module(:aeser_api_encoder)
     {:ok, headers_code} = Extract.AbsCode.module(:aec_headers)

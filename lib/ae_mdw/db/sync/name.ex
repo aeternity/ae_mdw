@@ -16,7 +16,7 @@ defmodule AeMdw.Db.Sync.Name do
       cache_through_delete: 2,
       cache_through_delete_inactive: 1,
       revoke_or_expire_height: 1,
-      source: 2
+      revoke_or_expire_height: 2
     ]
 
   import AeMdw.{Util, Db.Util}
@@ -50,7 +50,7 @@ defmodule AeMdw.Db.Sync.Name do
 
       timeout ->
         auction_end = height + timeout
-        m_auction_exp = Model.expiration(index: {auction_end, plain_name}, value: timeout)
+        m_auction_exp = Model.expiration(index: {auction_end, plain_name})
         make_m_bid = &Model.auction_bid(index: {plain_name, {bi, txi}, auction_end, &1})
 
         m_bid =
@@ -185,300 +185,212 @@ defmodule AeMdw.Db.Sync.Name do
 
   ################################################################################
   #
-  # NEEDS REWORK!
   #
-  # stub for now
+  #
 
-  def invalidate(_type_txis, _new_height),
-    do: {%{}, %{}}
+  # name_txis - must be from newest first to oldest
+  def invalidate(new_height) do
+    inactives = expirations(Model.InactiveNameExpiration, new_height)
+    actives = expirations(Model.ActiveNameExpiration, new_height)
+    auctions = expirations(Model.AuctionExpiration, new_height)
 
-  #  # name_txis - must be from newest first to oldest
-  #  def invalidate(type_txis, new_height) do
-  #    cons_merger = fn _, vs1, vs2 -> [vs1 | vs2] end
-  #    invalidate_name = fn m_name, source, txs ->
-  #      plain_name = Model.name(m_name, :index)
-  #      case Model.name(m_name, :auction_timeout) do
-  #        0 -> invalidate_simple_name(plain_name, m_name, source, txs, new_height)
-  #        _ -> invalidate_auction_name(plain_name, m_name, source, txs, new_height)
-  #      end
-  #    end
+    plain_names = Enum.reduce([actives, auctions], inactives, &MapSet.union/2)
 
-  #    {all_dels_nested, all_writes_nested} =
-  #      type_txis
-  #      |> Stream.map(fn {_type, txi} -> read_raw_tx!(txi) end)
-  #      |> Enum.group_by(& &1.tx.name)
-  #      |> Enum.reduce({%{}, %{}},
-  #           fn {plain_name, txs}, {all_dels, all_writes} ->
-  #             txs = Enum.group_by(txs, & &1.tx.type)
-  #             {dels, writes} =
-  #               case Name.locate(plain_name) do
-  #                 {m_name, Model.InactiveName = source} when Record.is_record(m_name, :name) ->
-  #                   case Name.locate_bid(plain_name) do
-  #                     nil ->
-  #                       invalidate_name.(m_name, source, txs)
-  #                     bid ->
-  #                       invalidate_inactive_name_and_auction_bid(
-  #                         plain_name, m_name, bid, txs, new_height)
-  #                   end
+    {all_dels_nested, all_writes_nested} =
+      Enum.reduce(plain_names, {%{}, %{}}, fn plain_name, {all_dels, all_writes} ->
+        inactive = ok_nil(cache_through_read(Model.InactiveName, plain_name))
+        active = ok_nil(cache_through_read(Model.ActiveName, plain_name))
+        auction = Name.locate_bid(plain_name)
 
-  #                 {m_name, Model.ActiveName = source} when Record.is_record(m_name, :name) ->
-  #                   invalidate_name.(m_name, source, txs)
+        {dels, writes} = invalidate(plain_name, inactive, active, auction, new_height)
 
-  #                 {bid, Model.AuctionBid} ->
-  #                   invalidate_auction_bid(plain_name, bid, txs, new_height)
-  #               end
+        {merge_maps([all_dels, dels], &cons_merger/3),
+         merge_maps([all_writes, writes], &cons_merger/3)}
+      end)
 
-  #             {merge_maps([all_dels, dels], cons_merger),
-  #              merge_maps([all_writes, writes], cons_merger)}
-  #           end)
+    {flatten_map_values(all_dels_nested), flatten_map_values(all_writes_nested)}
+  end
 
-  #    {flatten_map_values(all_dels_nested),
-  #     flatten_map_values(all_writes_nested)}
-  #  end
+  def expirations(table, new_height),
+    do:
+      collect_keys(table, MapSet.new(), {new_height, ""}, &next/2, fn {_, name}, acc ->
+        {:cont, MapSet.put(acc, name)}
+      end)
 
-  #  def invalidate_simple_name(plain_name, m_name, Model.ActiveName, txs, new_height) do
-  #    nil = revoke(txs)
-  #    update_txs = updates(txs)
-  #    expire = revoke_or_expire_height(m_name)
+  def invalidate(_plain_name, inactive_m_name, nil, nil, new_height)
+      when not is_nil(inactive_m_name),
+      do: diff(invalidate1(:inactive, inactive_m_name, new_height))
 
-  #    case {claims(txs), update_txs} do
-  #      {[], [_|_]} ->
-  #        # reverting updates, transfers, revoke
-  #        {new_m_name, new_m_name_exp} = new_m_name(m_name, txs)
-  #        {%{Model.Pointee => pointee_dels(update_txs),
-  #           Model.ActiveNameExpiration => [{expire, plain_name}]},
-  #         %{Model.ActiveName => [new_m_name],
-  #           Model.ActiveNameExpiration => [new_m_name_exp]}}
+  def invalidate(_plain_name, nil, active_m_name, nil, new_height)
+      when not is_nil(active_m_name),
+      do: diff(invalidate1(:active, active_m_name, new_height))
 
-  #      {[], []} ->
-  #        # reverting transfers, revoke
-  #        new_transfers = drop_bi_txis(transfers(m_name), transfers(txs))
-  #        new_m_name = Model.name(m_name, transfers: new_transfers)
-  #        {%{}, %{Model.ActiveName => [new_m_name]}}
+  def invalidate(_plain_name, nil, nil, {_, {_, _}, _, [_ | _]} = auction_bid, new_height),
+    do: diff(invalidate1(:bid, auction_bid, new_height))
 
-  #      {_, _} ->
-  #        # reverting claim (or all-claims for auctioned name)
-  #        {%{Model.Pointee => pointee_dels(plain_name, new_height),
-  #           Model.ActiveName => [plain_name],
-  #           Model.ActiveNameExpiration => [{expire, plain_name}]},
-  #         prevs_writes(chase_prevs(m_name), new_height)}
-  #    end
-  #  end
+  def invalidate(_plain_name, inactive_m_name, nil, auction_bid, new_height)
+      when not is_nil(inactive_m_name) and not is_nil(auction_bid) do
+    {dels1, writes1} = invalidate1(:inactive, inactive_m_name, new_height)
+    {dels2, writes2} = invalidate1(:bid, auction_bid, new_height)
 
-  # def invalidate_simple_name(plain_name, m_name, Model.InactiveName, txs, new_height) do
-  #    update_txs = updates(txs)
-  #    expire = revoke_or_expire_height(m_name)
-  #    dels = fn pointee_dels ->
-  #      %{Model.Pointee => pointee_dels,
-  #        Model.InactiveName => [plain_name],
-  #        Model.InactiveNameExpiration => [{expire, plain_name}]}
-  #    end
+    diff(
+      {merge_maps([dels1, dels2], &uniq_merger/3), merge_maps([writes1, writes2], &uniq_merger/3)}
+    )
+  end
 
-  #    case claims(txs) do
-  #      [] ->
-  #        # reverting updates, transfers, revoke
-  #        {new_m_name, new_m_name_exp} = new_m_name(m_name, txs)
-  #        {dels.(pointee_dels(update_txs)),
-  #         %{Model.ActiveName => [new_m_name],
-  #           Model.ActiveNameExpiration => [new_m_name_exp]}}
+  def invalidate(_plain_name, inactive_m_name, active_m_name, nil, new_height)
+      when not is_nil(inactive_m_name) and not is_nil(active_m_name) do
+    {dels1, writes} = invalidate1(:inactive, inactive_m_name, new_height)
+    {dels2, ^writes} = invalidate1(:active, active_m_name, new_height)
+    diff({merge_maps([dels1, dels2], &uniq_merger/3), writes})
+  end
 
-  #      _ ->
-  #        # reverting claim (or all-claims for auctioned name)
-  #        {dels.(pointee_dels(plain_name, new_height)),
-  #         prevs_writes(chase_prevs(m_name), new_height)}
-  #    end
-  #  end
+  ##########
 
-  #  def invalidate_auction_name(plain_name, m_name, source, txs, new_height) do
-  #    active = Model.name(m_name, :active)
+  def invalidate1(lfcycle, obj, new_height),
+    do: {dels(lfcycle, obj), writes(name_for_epoch(obj, new_height))}
 
-  #    case claims(txs) do
-  #      [] when new_height >= active ->
-  #        # no claims, fork after name activated - invalidation as for simple name
-  #        invalidate_simple_name(plain_name, m_name, source, txs, new_height)
+  defp cons_merger(_k, v1, v2), do: v1 ++ v2
+  defp uniq_merger(_k, v1, v2), do: Enum.uniq(v1 ++ v2)
 
-  #      claim_txs ->
-  #        expire = revoke_or_expire_height(m_name)
-  #        timeout = Model.name(m_name, :auction_timeout)
-  #        dels = fn pointee_dels ->
-  #          %{Model.Pointee => pointee_dels,
-  #            Name.source(source, :name) => [plain_name],
-  #            Name.source(source, :expiration) => [{expire, plain_name}]}
-  #        end
+  def diff({dels, writes}) do
+    {Enum.flat_map(
+       dels,
+       fn {tab, del_ks} ->
+         ws = Map.get(writes, tab, nil)
+         finder = fn k -> Enum.find(ws, &(elem(&1, 1) == k)) end
+         rem_ks = ws && Enum.reject(del_ks, &finder.(&1))
+         rem_nil = is_nil(rem_ks) || rem_ks == []
+         (rem_nil && []) || [{tab, rem_ks}]
+       end
+     )
+     |> Enum.into(%{}), writes}
+  end
 
-  #        case drop_bi_txis(claims(m_name), claim_txs) do
-  #          [] ->
-  #            # all claims reverted
-  #            {dels.(pointee_dels(plain_name, new_height)),
-  #             prevs_writes(chase_prevs(m_name), new_height)}
+  def dels(lfcycle, obj) do
+    plain_name = plain!(obj)
+    map_tabs(lfcycle, fn -> [{activity_end(obj), plain_name}] end, fn -> [plain_name] end)
+  end
 
-  #          [_|_] = bids when new_height < active ->
-  #            # we are in auction again
-  #            {dels.(pointee_dels(updates(txs))),
-  #             auction_writes(plain_name, bids, timeout)}
-  #        end
-  #    end
-  #  end
+  def writes(nil), do: %{}
 
-  #  def invalidate_auction_bid(plain_name, bid, txs, new_height) do
-  #    {_, {{height0, _}, _}, auction_end0, prev_bids} = bid
-  #    dels = %{Model.AuctionBid => [bid],
-  #             Model.AuctionExpiration => [{auction_end0, plain_name}]}
-  #    case drop_bi_txis(prev_bids, claims(txs)) do
-  #      [] ->
-  #        # all claims removed - auction doesn't exist anymore
-  #        {dels, %{}}
+  def writes({:bid, bid_key, expire}),
+    do:
+      map_tabs(
+        :bid,
+        fn -> [m_exp(expire, plain!(bid_key))] end,
+        fn -> [Model.auction_bid(index: bid_key)] end
+      )
 
-  #      [_|_] = bids ->
-  #        # some claims removed - in auction again
-  #        timeout = auction_end0 - height0
-  #        {dels, auction_writes(plain_name, bids, timeout)}
-  #    end
-  #  end
+  def writes({inact, m_name, expire}) when inact in [:inactive, :active],
+    do: map_tabs(inact, fn -> [m_exp(expire, plain!(m_name))] end, fn -> [m_name] end)
 
-  #  def invalidate_inactive_name_and_auction_bid(plain_name, m_name, bid, txs, new_height) do
+  def name_for_epoch(nil, _new_height),
+    do: nil
 
-  #    # {_, {{_, _}, _}, _, prev_bids} = bid
-  #    # {{_first_bid, _}, first_bid_txi} = :lists.last(prev_bids)
+  def name_for_epoch({plain_name, {{_, _}, _} = bi_txi, auction_end, claims}, new_height) do
+    [{{last_claim, _}, _} | _] = claims
+    {{first_claim, _}, _} = :lists.last(claims)
+    proto_vsn = (new_height >= AE.lima_height() && AE.lima_vsn()) || 0
+    timeout = :aec_governance.name_claim_bid_timeout(plain_name, proto_vsn)
 
-  #    # {inactive_name_txs, bid_txs} = partition_txs(txs, & &1.tx_index < first_bid_txi)
+    cond do
+      new_height > last_claim ->
+        {:bid, {plain_name, bi_txi, auction_end, claims}, auction_end}
 
-  #    # case {map_size(inactive_name_txs), map_size(bid_txs)} do
-  #    #   {0, _} ->
-  #    #     {dels, writes} = invalidate_auction_bid(plain_name, bid, bid_txs, new_height)
-  #    #     case map_size(writes) do
-  #    #       0 -> # whole auction gone, we need to check in inactive isn't
+      new_height > first_claim ->
+        [{{kbi, _}, _} = bi_txi | _] = claims = drop_bi_txi(claims, new_height)
+        auction_end = kbi + timeout
+        {:bid, {plain_name, bi_txi, auction_end, claims}, auction_end}
 
-  #    #   {_, 0} ->
-  #    #     :todo
+      new_height <= first_claim ->
+        map_ok_nil(
+          cache_through_read(Model.InactiveName, plain_name),
+          &name_for_epoch(&1, new_height)
+        )
+    end
+  end
 
-  #    #   {_, _} ->
+  def name_for_epoch(m_name, new_height) when Record.is_record(m_name, :name),
+    do: name_for_epoch(&Model.Name.get(m_name, &1), new_height)
 
-  #  end
+  def name_for_epoch(getter, new_height) when is_function(getter, 1) do
+    index = getter.(:index)
+    active = getter.(:active)
+    timeout = getter.(:auction_timeout)
+    [{{last_claim, _}, _} | _] = claims = getter.(:claims)
+    {{first_claim, _}, _} = :lists.last(claims)
 
-  #  ####
+    cond do
+      new_height >= active ->
+        expire = revoke_or_expire_height(getter.(:revoke), getter.(:expire))
+        lfcycle = (new_height < expire && :active) || :inactive
+        updates = drop_bi_txi(getter.(:updates), new_height)
+        transfers = drop_bi_txi(getter.(:transfers), new_height)
+        new_expire = new_expire(active, updates)
 
-  #  def claims(n) when Record.is_record(n, :name), do: Model.name(n, :claims)
-  #  def claims(%{} = m), do: Map.get(m, :name_claim_tx, [])
+        m_name =
+          Model.name(
+            index: index,
+            active: getter.(:active),
+            expire: new_expire,
+            claims: claims,
+            updates: updates,
+            transfers: transfers,
+            revoke: nil,
+            auction_timeout: getter.(:auction_timeout),
+            previous: getter.(:previous)
+          )
 
-  #  def updates(n) when Record.is_record(n, :name), do: Model.name(n, :updates)
-  #  def updates(%{} = m), do: Map.get(m, :name_update_tx, [])
+        {lfcycle, m_name, new_expire}
 
-  #  def transfers(n) when Record.is_record(n, :name), do: Model.name(n, :transfers)
-  #  def transfers(%{} = m), do: Map.get(m, :name_transfer_tx, [])
+      timeout > 0 and new_height >= first_claim and new_height < last_claim + timeout ->
+        [{{last_claim, _}, _} = bi_txi | _] = claims = drop_bi_txi(claims, new_height)
+        auction_end = last_claim + timeout
+        {:bid, {index, bi_txi, auction_end, claims}, auction_end}
 
-  #  def revoke(n) when Record.is_record(n, :name), do: Model.name(n, :revoke)
-  #  def revoke(%{} = m), do: one(Map.get(m, :name_revoke_tx, []))
+      new_height < first_claim ->
+        name_for_epoch(getter.(:previous), new_height)
+    end
+  end
 
-  #  def partition_txs(txs, splitter) do
-  #    Enum.reduce(txs, {%{}, %{}},
-  #      fn {k, vs}, {m1, m2} ->
-  #        {before_h, after_h} = Enum.split_with(vs, splitter)
-  #        {before_h == [] && m1 || Map.put(m1, k, before_h),
-  #         after_h == [] && m2 || Map.put(m2, k, after_h)}
-  #      end)
-  #  end
+  def map_tabs(:inactive, exp_f, name_f),
+    do: %{Model.InactiveNameExpiration => exp_f.(), Model.InactiveName => name_f.()}
 
-  #  def new_expire(m_name, []),
-  #    do: Model.name(m_name, :active) + :aec_governance.name_claim_max_expiration()
-  #  def new_expire(_m_name, [{{height, _}, txi} | _] = _new_updates) do
-  #    %{tx: %{name_ttl: ttl, type: :name_update_tx}} = read_raw_tx!(txi)
-  #    height + ttl
-  #  end
+  def map_tabs(:active, exp_f, name_f),
+    do: %{Model.ActiveNameExpiration => exp_f.(), Model.ActiveName => name_f.()}
 
-  #  def new_m_name(m_name, txs) do
-  #    plain_name = Model.name(m_name, :index)
-  #    new_updates = drop_bi_txis(updates(m_name), updates(txs))
-  #    new_transfers = drop_bi_txis(transfers(m_name), transfers(txs))
-  #    new_expire = new_expire(m_name, new_updates)
-  #    {Model.name(m_name,
-  #        expire: new_expire,
-  #        updates: new_updates,
-  #        transfers: new_transfers,
-  #        revoke: nil),
-  #     Model.expiration(index: {new_expire, plain_name})}
-  #  end
+  def map_tabs(:bid, exp_f, bid_f),
+    do: %{Model.AuctionExpiration => exp_f.(), Model.AuctionBid => bid_f.()}
 
-  #  def auction_writes(plain_name, [{{height, _mbi}, _txi} = bi_txi | _] = bids, timeout) do
-  #    auction_end = height + timeout
-  #    m_auction_exp = Model.expiration(index: {auction_end, plain_name}, value: timeout)
-  #    m_bid = Model.auction_bid(index: {plain_name, bi_txi, auction_end, bids})
-  #    %{Model.AuctionBid => [m_bid],
-  #      Model.AuctionExpiration => [m_auction_exp]}
-  #  end
+  def m_exp(height, plain_name),
+    do: Model.expiration(index: {height, plain_name})
 
-  #  def chase_prevs(m_name) do
-  #    succ = &Model.name(&1, :previous)
-  #    root = succ.(m_name)
-  #    root && chase(root, succ) || []
-  #  end
+  def activity_end(m_name) when Record.is_record(m_name, :name),
+    do: revoke_or_expire_height(m_name)
 
-  #  def prevs_writes([], _new_height),
-  #    do: %{}
-  #  def prevs_writes([top | _] = prevs, new_height) do
-  #    plain_name = Model.name(top, :index)
+  def activity_end({_, _, auction_end, _}),
+    do: auction_end
 
-  #    simple_writes = fn m_name, name_tab ->
-  #      new_expire = Model.name(m_name, :expire)
-  #      %{source(name_tab, :name) => [m_name],
-  #        source(name_tab, :expiration) => [Model.expiration(index: {new_expire, plain_name})]}
-  #    end
+  def plain!(m_name) when Record.is_record(m_name, :name), do: Model.name(m_name, :index)
+  def plain!({plain_name, {_, _}, _, [_ | _]}), do: plain_name
 
-  #    Enum.reduce_while(prevs, %{},
-  #      fn m_name, %{} ->
-  #        active = Model.name(m_name, :active)
-  #        expire = revoke_or_expire_height(m_name)
-  #        claims = Model.name(m_name, :claims)
-  #        {{first_claim, _}, _} = :lists.last(claims)
-  #        timeout = Model.name(m_name, :auction_timeout)
+  def new_expire(active, [] = _new_updates),
+    do: active + :aec_governance.name_claim_max_expiration()
 
-  #        cond do
-  #          new_height < first_claim ->
-  #            {:cont, %{}}
-  #          new_height >= expire ->
-  #            {:halt, simple_writes.(m_name, Model.InactiveName)}
-  #          new_height >= active ->
-  #            {:halt, simple_writes.(m_name, Model.ActiveName)}
-  #          timeout > 0 ->
-  #            [{{last_bid, _}, _} = bi_txi | _] = bids =
-  #              Enum.drop_while(claims, fn {{h, _}, _} -> h >= new_height end)
-
-  #            auction_end = last_bid + timeout
-  #            m_auction_exp = Model.expiration(index: {auction_end, plain_name}, value: timeout)
-  #            m_bid = Model.auction_bid(index: {plain_name, bi_txi, auction_end, bids})
-  #            {:halt, %{Model.AuctionBid => [m_bid],
-  #                      Model.AuctionExpiration => [m_auction_exp]}}
-  #        end
-  #      end)
-  #  end
-
-  #  def pointee_dels(plain_name, new_height) do
-  #    scope = {:gen, last_gen()..new_height}
-  #    query = [name: plain_name, type: :name_update]
-  #    pointee_dels(AeMdw.Db.Stream.map(scope, :raw, query))
-  #  end
-
-  #  def pointee_dels(inv_update_txs) do
-  #    Enum.flat_map(inv_update_txs,
-  #      fn %{tx: %{type: :name_update_tx, pointers: ptrs}} = tx ->
-  #        Enum.map(ptrs, &pointee_key(&1, bi_txi(tx)))
-  #      end)
-  #  end
+  def new_expire(_active, [{{height, _}, txi} | _] = _new_updates) do
+    %{tx: %{name_ttl: ttl, type: :name_update_tx}} = read_raw_tx!(txi)
+    height + ttl
+  end
 
   def pointee_key(ptr, {bi, txi}) do
     {k, v} = Name.pointer_kv(ptr)
     {v, {bi, txi}, k}
   end
 
-  #  def bi_txi(%{block_height: kbi, micro_index: mbi, tx_index: txi}),
-  #    do: {{kbi, mbi}, txi}
+  def drop_bi_txi(bi_txis, new_height),
+    do: Enum.drop_while(bi_txis, fn {{kbi, _mbi}, _txi} -> kbi >= new_height end)
 
-  #  def drop_bi_txis(bi_txis, []),
-  #    do: bi_txis
-  #  def drop_bi_txis([{{kbi, mbi}, txi} | rem_bi_txis],
-  #                    [%{block_height: kbi, micro_index: mbi, tx_index: txi} | rem_txs]),
-  #    do: drop_bi_txis(rem_bi_txis, rem_txs)
-
-  #  def read_raw_tx!(txi),
-  #    do: Format.to_raw_map(read_tx!(txi))
+  def read_raw_tx!(txi),
+    do: Format.to_raw_map(read_tx!(txi))
 end
