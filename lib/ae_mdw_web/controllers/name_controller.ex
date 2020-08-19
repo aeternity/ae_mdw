@@ -281,7 +281,7 @@ defmodule AeMdwWeb.NameController do
     end
 
     response(200, "Returns just pointers for given name.", %{})
-    response(400, "Bad request/Not found.", %{})
+    response(400, "Bad request.", %{})
   end
 
   swagger_path :pointees do

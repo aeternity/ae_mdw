@@ -330,7 +330,7 @@
             "schema": {}
           },
           "400": {
-            "description": "Bad request/Not found.",
+            "description": "Bad request.",
             "schema": {}
           }
         },
