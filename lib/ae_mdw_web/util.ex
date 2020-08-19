@@ -23,12 +23,12 @@ defmodule AeMdwWeb.Util do
   def url_encode_scope({scope, %Range{first: a, last: b}}),
     do: "#{scope}/#{a}-#{b}"
 
-  def path_no_scope([_|_] = path_info),
-    do: Enum.take_while(path_info, &(not &1 in ["gen", "txi", "time", "forward", "backward"]))
+  def path_no_scope([_ | _] = path_info),
+    do: Enum.take_while(path_info, &(!(&1 in ["gen", "txi", "time", "forward", "backward"])))
 
   def make_link(path_info, scope, query_groups) do
     path_info = path_no_scope(path_info)
-    scope_info = scope == nil && [] || [url_encode_scope(scope)]
+    scope_info = (scope == nil && []) || [url_encode_scope(scope)]
     path = Enum.join(path_info ++ scope_info, "/")
 
     query =

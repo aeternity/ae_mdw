@@ -20,11 +20,10 @@ defmodule AeMdw.Db.Sync.Invalidate do
         name_tx_types = AE.tx_group(:name)
         bi_keys = block_keys_range({fork_height - 1, 0})
         {tx_keys, id_counts} = tx_keys_range(from_txi)
-        name_txis = Enum.filter(tx_keys[Model.Type], fn {type, _} -> type in name_tx_types end)
         tab_keys = Map.merge(bi_keys, tx_keys)
 
         :mnesia.transaction(fn ->
-          {name_dels, name_writes} = Sync.Name.invalidate(name_txis, fork_height - 1)
+          {name_dels, name_writes} = Sync.Name.invalidate(fork_height - 1)
 
           do_dels(tab_keys)
           do_dels(name_dels, &AeMdw.Db.Name.cache_through_delete/2)

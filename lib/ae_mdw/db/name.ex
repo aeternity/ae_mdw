@@ -116,15 +116,14 @@ defmodule AeMdw.Db.Name do
     end
   end
 
-  def revoke_or_expire_height(m_name) do
-    case Model.name(m_name, :revoke) do
-      {{height, _}, _} ->
-        height
+  def revoke_or_expire_height(nil = _revoke, expire),
+    do: expire
 
-      nil ->
-        Model.name(m_name, :expire)
-    end
-  end
+  def revoke_or_expire_height({{height, _}, _}, _expire),
+    do: height
+
+  def revoke_or_expire_height(m_name),
+    do: revoke_or_expire_height(Model.name(m_name, :revoke), Model.name(m_name, :expire))
 
   # for use outside mnesia TX - doesn't modify cache, just looks into it
   def cache_through_read(table, key) do

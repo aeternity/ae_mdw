@@ -12,6 +12,7 @@ defmodule AeMdw.Db.Stream.Mapper do
 
   def function(format, table) when format in @formats and table in @tx_tables,
     do: compose(formatter(format), &read_tx!/1, &db_txi/1)
+
   def function(format, table) when is_function(format, 1) and table in @tx_tables,
     do: compose(format, &read_tx!/1, &db_txi/1)
 
@@ -25,5 +26,4 @@ defmodule AeMdw.Db.Stream.Mapper do
   def db_txi({:time, {_time, txi}, nil}), do: txi
   def db_txi({:field, {_type, _pos, _pk, txi}, nil}), do: txi
   def db_txi({{:tx, txi, _hash, {_height, _mbi}, _time}, _tx_data}), do: txi
-
 end
