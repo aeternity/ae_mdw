@@ -9,6 +9,7 @@ defmodule AeMdwWeb.NameController do
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdwWeb.Continuation, as: Cont
+  alias AeMdwWeb.SwaggerParameters
   require Model
 
   import AeMdwWeb.Util
@@ -206,17 +207,20 @@ defmodule AeMdwWeb.NameController do
 
     response(200, "Returns information for given name.", %{})
     response(400, "Bad request.", %{})
-    response(404, "Not found.", %{})
   end
 
-  swagger_path :all_names do
-    get("/names/all")
-    description("Get all names.")
+  swagger_path :names do
+    get("/names")
+    description("Get all active and inactive names, except those in auction.")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_all_names")
     tag("Middleware")
-    response(200, "Returns information for names.", %{})
+    SwaggerParameters.by_and_direction_params()
+    SwaggerParameters.limit_and_page_params()
+
+    response(200, "Returns information for active and inactive names.", %{})
+    response(400, "Bad request.", %{})
   end
 
   swagger_path :active_names do
@@ -226,17 +230,39 @@ defmodule AeMdwWeb.NameController do
     deprecated(false)
     operation_id("get_active_names")
     tag("Middleware")
+    SwaggerParameters.by_and_direction_params()
+    SwaggerParameters.limit_and_page_params()
+
     response(200, "Returns information for active names.", %{})
+    response(400, "Bad request.", %{})
   end
 
-  swagger_path :all_auctions do
+  swagger_path :inactive_names do
+    get("/names/active")
+    description("Get all inactive names.")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_inactive_names")
+    tag("Middleware")
+    SwaggerParameters.by_and_direction_params()
+    SwaggerParameters.limit_and_page_params()
+
+    response(200, "Returns information for inactive names.", %{})
+    response(400, "Bad request.", %{})
+  end
+
+  swagger_path :auctions do
     get("/names/auctions")
     description("Get all auctions.")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_all_auctions")
     tag("Middleware")
+    SwaggerParameters.by_and_direction_params()
+    SwaggerParameters.limit_and_page_params()
+
     response(200, "Returns information for all auctions.", %{})
+    response(400, "Bad request.", %{})
   end
 
   swagger_path :pointers do
@@ -255,8 +281,7 @@ defmodule AeMdwWeb.NameController do
     end
 
     response(200, "Returns just pointers for given name.", %{})
-    response(400, "Bad request.", %{})
-    response(404, "Not found.", %{})
+    response(400, "Bad request/Not found.", %{})
   end
 
   swagger_path :pointees do
@@ -276,7 +301,7 @@ defmodule AeMdwWeb.NameController do
 
     response(
       200,
-      "Returns names pointing to a particular pubkey and name update transaction which set up that pointer.",
+      "Returns names pointing to a particular pubkey, partitioned into active and inactive sets.",
       %{}
     )
 

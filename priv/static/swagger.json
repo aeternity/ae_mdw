@@ -38,9 +38,79 @@
           "400": {
             "description": "Bad request.",
             "schema": {}
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Middleware"
+        ]
+      }
+    },
+    "/names": {
+      "get": {
+        "deprecated": false,
+        "description": "Get all active and inactive names, except those in auction.",
+        "operationId": "get_all_names",
+        "parameters": [
+          {
+            "default": "expiration",
+            "description": "The ordering via parameters.",
+            "enum": [
+              "expiration",
+              "name"
+            ],
+            "in": "query",
+            "name": "by",
+            "required": false,
+            "type": "string"
           },
-          "404": {
-            "description": "Not found.",
+          {
+            "default": "backward",
+            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning.",
+            "enum": [
+              "forward",
+              "backward"
+            ],
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": 1,
+            "description": "The number of page to show.",
+            "format": "int32",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "type": "integer",
+            "x-example": 1
+          },
+          {
+            "default": 10,
+            "description": "The numbers of items to return.",
+            "format": "int32",
+            "in": "query",
+            "maximum": 1000,
+            "minimum": 1,
+            "name": "limit",
+            "required": false,
+            "type": "integer",
+            "x-example": 10
+          }
+        ],
+        "produces": [
+          [
+            "application/json"
+          ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns information for active and inactive names.",
+            "schema": {}
+          },
+          "400": {
+            "description": "Bad request.",
             "schema": {}
           }
         },
@@ -55,7 +125,54 @@
         "deprecated": false,
         "description": "Get active names.",
         "operationId": "get_active_names",
-        "parameters": [],
+        "parameters": [
+          {
+            "default": "expiration",
+            "description": "The ordering via parameters.",
+            "enum": [
+              "expiration",
+              "name"
+            ],
+            "in": "query",
+            "name": "by",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": "backward",
+            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning.",
+            "enum": [
+              "forward",
+              "backward"
+            ],
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": 1,
+            "description": "The number of page to show.",
+            "format": "int32",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "type": "integer",
+            "x-example": 1
+          },
+          {
+            "default": 10,
+            "description": "The numbers of items to return.",
+            "format": "int32",
+            "in": "query",
+            "maximum": 1000,
+            "minimum": 1,
+            "name": "limit",
+            "required": false,
+            "type": "integer",
+            "x-example": 10
+          }
+        ],
         "produces": [
           [
             "application/json"
@@ -65,28 +182,9 @@
           "200": {
             "description": "Returns information for active names.",
             "schema": {}
-          }
-        },
-        "summary": "",
-        "tags": [
-          "Middleware"
-        ]
-      }
-    },
-    "/names/all": {
-      "get": {
-        "deprecated": false,
-        "description": "Get all names.",
-        "operationId": "get_all_names",
-        "parameters": [],
-        "produces": [
-          [
-            "application/json"
-          ]
-        ],
-        "responses": {
-          "200": {
-            "description": "Returns information for names.",
+          },
+          "400": {
+            "description": "Bad request.",
             "schema": {}
           }
         },
@@ -101,7 +199,54 @@
         "deprecated": false,
         "description": "Get all auctions.",
         "operationId": "get_all_auctions",
-        "parameters": [],
+        "parameters": [
+          {
+            "default": "expiration",
+            "description": "The ordering via parameters.",
+            "enum": [
+              "expiration",
+              "name"
+            ],
+            "in": "query",
+            "name": "by",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": "backward",
+            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning.",
+            "enum": [
+              "forward",
+              "backward"
+            ],
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": 1,
+            "description": "The number of page to show.",
+            "format": "int32",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "type": "integer",
+            "x-example": 1
+          },
+          {
+            "default": 10,
+            "description": "The numbers of items to return.",
+            "format": "int32",
+            "in": "query",
+            "maximum": 1000,
+            "minimum": 1,
+            "name": "limit",
+            "required": false,
+            "type": "integer",
+            "x-example": 10
+          }
+        ],
         "produces": [
           [
             "application/json"
@@ -110,6 +255,10 @@
         "responses": {
           "200": {
             "description": "Returns information for all auctions.",
+            "schema": {}
+          },
+          "400": {
+            "description": "Bad request.",
             "schema": {}
           }
         },
@@ -141,7 +290,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Returns names pointing to a particular pubkey and name update transaction which set up that pointer.",
+            "description": "Returns names pointing to a particular pubkey, partitioned into active and inactive sets.",
             "schema": {}
           },
           "400": {
@@ -181,11 +330,7 @@
             "schema": {}
           },
           "400": {
-            "description": "Bad request.",
-            "schema": {}
-          },
-          "404": {
-            "description": "Not found.",
+            "description": "Bad request/Not found.",
             "schema": {}
           }
         },

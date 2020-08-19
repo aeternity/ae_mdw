@@ -90,6 +90,7 @@ defmodule AeMdwWeb.SwaggerParameters do
       required: false,
       example: "ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
     )
+
     # |> parameter(
     #   :name,
     #   :query,
@@ -98,6 +99,10 @@ defmodule AeMdwWeb.SwaggerParameters do
     #   required: false,
     #   example: "wwwbeaconoidcom.chain"
     # )
+  end
+
+  def limit_and_page_params(path = %PathObject{}) do
+    path
     |> parameter(:page, :query, :integer, "The number of page to show.",
       required: false,
       format: "int32",
@@ -115,6 +120,28 @@ defmodule AeMdwWeb.SwaggerParameters do
       minimum: 1,
       maximum: 1000,
       example: 10
+    )
+  end
+
+  def by_and_direction_params(path = %PathObject{}) do
+    path
+    |> parameter(
+      :by,
+      :query,
+      :string,
+      "The ordering via parameters.",
+      enum: [:expiration, :name],
+      required: false,
+      default: :expiration
+    )
+    |> parameter(
+      :direction,
+      :query,
+      :string,
+      "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning.",
+      enum: [:forward, :backward],
+      required: false,
+      default: :backward
     )
   end
 end
