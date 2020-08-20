@@ -158,6 +158,7 @@ defmodule AeMdwWeb.TxController do
     operation_id("get_txs_by_scope_type_range")
     tag("Middleware")
     SwaggerParameters.common_params()
+    SwaggerParameters.limit_and_page_params()
 
     parameters do
       scope_type(:path, :string, "The scope type.", enum: [:gen, :txi], required: true)
@@ -180,6 +181,7 @@ defmodule AeMdwWeb.TxController do
     operation_id("get_txs_by_direction")
     tag("Middleware")
     SwaggerParameters.common_params()
+    SwaggerParameters.limit_and_page_params()
 
     parameters do
       direction(

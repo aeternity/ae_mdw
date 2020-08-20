@@ -1,5 +1,6 @@
 defmodule AeMdwWeb.NameController do
   use AeMdwWeb, :controller
+  use PhoenixSwagger
 
   alias AeMdw.Validate
   alias AeMdw.Db.Name
@@ -8,6 +9,7 @@ defmodule AeMdwWeb.NameController do
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdwWeb.Continuation, as: Cont
+  alias AeMdwWeb.SwaggerParameters
   require Model
 
   import AeMdwWeb.Util
@@ -185,5 +187,124 @@ defmodule AeMdwWeb.NameController do
       :raw,
       {:or, [["name_claim.account_id": pk], ["name_transfer.recipient_id": pk]]}
     )
+  end
+
+  ##########
+  swagger_path :name do
+    get("/name/{id}")
+    description("Get information for given name or encoded hash.")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_name_by_id")
+    tag("Middleware")
+
+    parameters do
+      id(:path, :string, "The name or encoded hash.",
+        required: true,
+        example: "wwwbeaconoidcom.chain"
+      )
+    end
+
+    response(200, "Returns information for given name.", %{})
+    response(400, "Bad request.", %{})
+  end
+
+  swagger_path :names do
+    get("/names")
+    description("Get all active and inactive names, except those in auction.")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_all_names")
+    tag("Middleware")
+    SwaggerParameters.by_and_direction_params()
+    SwaggerParameters.limit_and_page_params()
+
+    response(200, "Returns information for active and inactive names.", %{})
+    response(400, "Bad request.", %{})
+  end
+
+  swagger_path :active_names do
+    get("/names/active")
+    description("Get active names.")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_active_names")
+    tag("Middleware")
+    SwaggerParameters.by_and_direction_params()
+    SwaggerParameters.limit_and_page_params()
+
+    response(200, "Returns information for active names.", %{})
+    response(400, "Bad request.", %{})
+  end
+
+  swagger_path :inactive_names do
+    get("/names/active")
+    description("Get all inactive names.")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_inactive_names")
+    tag("Middleware")
+    SwaggerParameters.by_and_direction_params()
+    SwaggerParameters.limit_and_page_params()
+
+    response(200, "Returns information for inactive names.", %{})
+    response(400, "Bad request.", %{})
+  end
+
+  swagger_path :auctions do
+    get("/names/auctions")
+    description("Get all auctions.")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_all_auctions")
+    tag("Middleware")
+    SwaggerParameters.by_and_direction_params()
+    SwaggerParameters.limit_and_page_params()
+
+    response(200, "Returns information for all auctions.", %{})
+    response(400, "Bad request.", %{})
+  end
+
+  swagger_path :pointers do
+    get("/names/pointers/{id}")
+    description("Get pointers for given name.")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_pointers_by_id")
+    tag("Middleware")
+
+    parameters do
+      id(:path, :string, "The name.",
+        required: true,
+        example: "wwwbeaconoidcom.chain"
+      )
+    end
+
+    response(200, "Returns just pointers for given name.", %{})
+    response(400, "Bad request.", %{})
+  end
+
+  swagger_path :pointees do
+    get("/names/pointees/{id}")
+    description("Get names pointing to a particular pubkey.")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_pointees_by_id")
+    tag("Middleware")
+
+    parameters do
+      id(:path, :string, "The public key.",
+        required: true,
+        example: "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
+      )
+    end
+
+    response(
+      200,
+      "Returns names pointing to a particular pubkey, partitioned into active and inactive sets.",
+      %{}
+    )
+
+    response(400, "Bad request.", %{})
   end
 end
