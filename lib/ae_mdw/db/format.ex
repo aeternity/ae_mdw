@@ -82,11 +82,17 @@ defmodule AeMdw.Db.Format do
     contract_pk = :aect_call_tx.contract_pubkey(tx_rec)
     {fun_arg_res, call_rec} = C.call_tx_info(tx_rec, contract_pk, block_hash, &C.to_map/1)
 
+    logs = fn logs ->
+      Enum.map(logs, fn {addr, topics, data} ->
+        %{address: addr, topics: topics, data: data}
+      end)
+    end
+
     call_info = %{
       call_id: :aect_call.id(call_rec),
       return_type: :aect_call.return_type(call_rec),
       gas_used: :aect_call.gas_used(call_rec),
-      log: :aect_call.log(call_rec)
+      log: logs.(:aect_call.log(call_rec))
     }
 
     update_in(tx, [:tx], &Map.merge(&1, Map.merge(call_info, fun_arg_res)))
@@ -167,12 +173,14 @@ defmodule AeMdw.Db.Format do
     alias AeMdw.Contract, as: C
     contract_pk = :aect_call_tx.contract_pubkey(tx_rec)
     {fun_arg_res, call_rec} = C.call_tx_info(tx_rec, contract_pk, block_hash, &C.to_json/1)
+    fun_arg_res = Enum.into(Enum.map(fun_arg_res, fn {k, v} -> {to_string(k), v} end), %{})
+    stringify = fn xs -> Enum.map(xs, &to_string/1) end
+    log_entry = fn log -> Map.update(log, "topics", [], stringify) end
 
     call_ser =
-      Map.drop(
-        :aect_call.serialize_for_client(call_rec),
-        ["return_value", "gas_price", "height", "contract_id", "caller_nonce"]
-      )
+      :aect_call.serialize_for_client(call_rec)
+      |> Map.drop(["return_value", "gas_price", "height", "contract_id", "caller_nonce"])
+      |> Map.update("log", [], fn logs -> Enum.map(logs, log_entry) end)
 
     update_in(tx, ["tx"], &Map.merge(&1, Map.merge(fun_arg_res, call_ser)))
   end
