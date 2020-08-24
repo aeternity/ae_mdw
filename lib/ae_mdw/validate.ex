@@ -43,6 +43,9 @@ defmodule AeMdw.Validate do
   def id({:id, hash_type, <<_::256>> = pk} = id, [_ | _] = allowed_types),
     do: (AE.id_type(hash_type) in allowed_types && {:ok, pk}) || {:error, {ErrInput.Id, id}}
 
+  def id(<<_::256>> = pk, [_ | _] = allowed_types),
+    do: {:ok, pk}
+
   def id(id, _),
     do: {:error, {ErrInput.Id, id}}
 
