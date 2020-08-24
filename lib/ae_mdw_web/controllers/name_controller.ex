@@ -42,7 +42,7 @@ defmodule AeMdwWeb.NameController do
     do: handle_input(conn, fn -> pointers_reply(conn, Validate.plain_name!(ident)) end)
 
   def pointees(conn, %{"id" => ident}),
-    do: handle_input(conn, fn -> pointees_reply(conn, plain_name_pk!(ident)) end)
+    do: handle_input(conn, fn -> pointees_reply(conn, Validate.name_id!(ident)) end)
 
   def auctions(conn, _req),
     do: handle_input(conn, fn -> Cont.response(conn, &json/2) end)
@@ -168,16 +168,6 @@ defmodule AeMdwWeb.NameController do
     end
   end
 
-
-  def plain_name_pk!(ident) do
-    with {:ok, plain_name} = Validate.plain_name(ident),
-         {:ok, pk} <- :aens.get_name_hash(plain_name) do
-      pk
-    else
-      _ ->
-        Validate.id!(ident)
-    end
-  end
 
   ##########
 
