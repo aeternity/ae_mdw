@@ -8,6 +8,9 @@ defmodule AeMdw.Application do
   import AeMdw.Util
 
   def start(_type, _args) do
+    :lager.set_loglevel(:epoch_sync_lager_event, :lager_console_backend, :undefined, :error)
+    :lager.set_loglevel(:lager_console_backend, :error)
+
     init(:model)
     init(:meta)
 
