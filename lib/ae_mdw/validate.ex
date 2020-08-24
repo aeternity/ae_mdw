@@ -58,7 +58,8 @@ defmodule AeMdw.Validate do
       {:ok, pk}
     else
       {:error, {_ex, ^name_ident}} = error ->
-        with {:ok, pk} <- :aens.get_name_hash(name_ident) do
+        ident = ensure_name_suffix(name_ident)
+        with {:ok, pk} <- :aens.get_name_hash(ident) do
           {:ok, pk}
         else
           _ -> error
@@ -81,12 +82,7 @@ defmodule AeMdw.Validate do
 
         case ok? do
           true ->
-            plain_name =
-              (String.ends_with?(name_ident, [".chain", ".test"]) &&
-                 name_ident) ||
-                name_ident <> ".chain"
-
-            {:ok, plain_name}
+            {:ok, ensure_name_suffix(name_ident)}
 
           false ->
             {:error, {ErrInput.Id, name_ident}}
@@ -164,4 +160,8 @@ defmodule AeMdw.Validate do
         raise ex, value: value
     end
   end
+
+  def ensure_name_suffix(ident) when is_binary(ident),
+    do: String.ends_with?(ident, [".chain", ".test"]) && ident || ident <> ".chain"
+
 end
