@@ -59,6 +59,7 @@ defmodule AeMdw.Validate do
     else
       {:error, {_ex, ^name_ident}} = error ->
         ident = ensure_name_suffix(name_ident)
+
         with {:ok, pk} <- :aens.get_name_hash(ident) do
           {:ok, pk}
         else
@@ -151,6 +152,35 @@ defmodule AeMdw.Validate do
   def nonneg_int!(x),
     do: unwrap!(&nonneg_int/1, x)
 
+  def block_index(x) when is_binary(x) do
+    map_nni = fn s, f ->
+      case nonneg_int(s) do
+        {:ok, i} -> f.(i)
+        _ -> {:error, {ErrInput.BlockIndex, x}}
+      end
+    end
+
+    case String.split(x, ["/"]) do
+      [kbi, mbi] when mbi != "-1" ->
+        with {:ok, kbi} <- map_nni.(kbi, &{:ok, &1}),
+             {:ok, mbi} <- map_nni.(mbi, &{:ok, &1}) do
+          {:ok, {kbi, mbi}}
+        else
+          _ ->
+            {:error, {ErrInput.BlockIndex, x}}
+        end
+
+      [kbi | rem] when rem in [[], ["-1"]] ->
+        map_nni.(kbi, &{:ok, {&1, -1}})
+
+      _ ->
+        {:error, {ErrInput.BlockIndex, x}}
+    end
+  end
+
+  def block_index!(x),
+    do: unwrap!(&block_index/1, x)
+
   defp unwrap!(validator, value) do
     case validator.(value) do
       {:ok, res} ->
@@ -162,6 +192,5 @@ defmodule AeMdw.Validate do
   end
 
   def ensure_name_suffix(ident) when is_binary(ident),
-    do: String.ends_with?(ident, [".chain", ".test"]) && ident || ident <> ".chain"
-
+    do: (String.ends_with?(ident, [".chain", ".test"]) && ident) || ident <> ".chain"
 end
