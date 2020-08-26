@@ -3,7 +3,6 @@ defmodule AeMdwWeb.Continuation do
   alias AeMdw.Error.Input, as: ErrInput
 
   import AeMdwWeb.Util
-  import AeMdw.Util
 
   @tab AeMdwWeb.Continuation
 

@@ -168,7 +168,6 @@ defmodule AeMdwWeb.NameController do
     end
   end
 
-
   ##########
 
   def t() do

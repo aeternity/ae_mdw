@@ -4,15 +4,14 @@ defmodule AeMdw.Db.Origin do
 
   require Model
 
-  import AeMdw.{Sigil, Util, Db.Util}
+  import AeMdw.Db.Util
 
-  ################################################################################
+  ##########
 
   def tx_index({:contract, id}) do
     pk = Validate.id!(id)
-    tab = ~t[origin]
 
-    case prev(tab, {:contract, pk, <<>>}) do
+    case prev(Model.Origin, {:contract, pk, <<>>}) do
       :"$end_of_table" -> nil
       {:contract, ^pk, txi} -> txi
     end

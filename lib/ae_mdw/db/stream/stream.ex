@@ -89,7 +89,7 @@ defmodule AeMdw.Db.Stream do
 
   ##
 
-  def roots_tab_fun({roots, checks}, mapper) do
+  def roots_tab_fun({_roots, checks}, mapper) do
     tab = Model.Field
 
     fun =
