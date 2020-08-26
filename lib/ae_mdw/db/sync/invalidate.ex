@@ -17,7 +17,6 @@ defmodule AeMdw.Db.Sync.Invalidate do
     cond do
       is_integer(from_txi) && from_txi >= 0 ->
         Log.info("invalidating from tx #{from_txi} at generation #{prev_kbi}")
-        name_tx_types = AE.tx_group(:name)
         bi_keys = block_keys_range({fork_height - 1, 0})
         {tx_keys, id_counts} = tx_keys_range(from_txi)
         tab_keys = Map.merge(bi_keys, tx_keys)

@@ -1,9 +1,7 @@
 defmodule AeMdw.Db.Stream.Field do
-  alias AeMdw.Node, as: AE
-  alias AeMdw.Validate
   alias AeMdw.Db.Model
 
-  import AeMdw.{Util, Db.Util}
+  import AeMdw.Db.Util
 
   @tab Model.Field
 

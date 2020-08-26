@@ -6,8 +6,6 @@ defmodule AeMdw.Db.Sync do
 
   require Model
 
-  import AeMdw.Db.Util
-
   use GenServer
 
   defstruct [:pid, :fork]

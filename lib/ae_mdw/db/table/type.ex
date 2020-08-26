@@ -3,7 +3,7 @@ defmodule AeMdw.Db.Stream.Type do
   alias AeMdw.Validate
   alias AeMdw.Db.Model
 
-  import AeMdw.{Util, Db.Util}
+  import AeMdw.Db.Util
 
   @tab Model.Type
 

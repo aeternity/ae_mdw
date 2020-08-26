@@ -1,10 +1,7 @@
 defmodule AeMdw.Db.Stream.Query.Planner do
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Node, as: AE
-  alias AeMdw.Validate
-  alias AeMdw.Error.Input, as: ErrInput
 
-  # import AeMdwWeb.Util
   import AeMdw.Util
 
   ##########

@@ -3,8 +3,6 @@ defmodule AeMdwWeb.Validate do
   alias AeMdw.Validate
   alias AeMdw.Error.Input, as: ErrInput
 
-  import AeMdw.Util
-
   @id_pk_types %{
     "account" => :account_pubkey,
     "contract" => :contract_pubkey,
@@ -70,19 +68,19 @@ defmodule AeMdwWeb.Validate do
     end
   end
 
-  def tx_types(%{"type" => [_ | _] = types, "type_group" => [_ | _] = type_groups} = req) do
+  def tx_types(%{"type" => [_ | _] = types, "type_group" => [_ | _] = type_groups}) do
     from_types = types |> Enum.map(&Validate.tx_type!(&1)) |> MapSet.new()
     from_groups = type_groups |> Enum.flat_map(&expand_tx_group(&1)) |> MapSet.new()
     MapSet.union(from_types, from_groups)
   end
 
-  def tx_types(%{"type_group" => [_ | _] = txgs} = req),
+  def tx_types(%{"type_group" => [_ | _] = txgs}),
     do: txgs |> Enum.flat_map(&expand_tx_group(&1)) |> MapSet.new()
 
-  def tx_types(%{"type" => [_ | _] = types} = req),
+  def tx_types(%{"type" => [_ | _] = types}),
     do: types |> Enum.map(&Validate.tx_type!(&1)) |> MapSet.new()
 
-  def tx_types(%{} = req),
+  def tx_types(%{}),
     do: MapSet.new()
 
   defp expand_tx_group(group),

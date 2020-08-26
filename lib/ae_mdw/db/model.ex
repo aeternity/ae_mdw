@@ -3,7 +3,6 @@ defmodule AeMdw.Db.Model do
   require Ex2ms
 
   import Record, only: [defrecord: 2]
-  import AeMdw.{Util, Db.Util}
 
   ################################################################################
 

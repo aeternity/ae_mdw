@@ -4,8 +4,6 @@ defmodule AeMdwWeb.Util do
 
   require Model
 
-  import AeMdw.Util
-
   ##########
 
   def query_groups(query_string) do
@@ -24,7 +22,11 @@ defmodule AeMdwWeb.Util do
     do: "#{scope}/#{a}-#{b}"
 
   def path_no_scope([_ | _] = path_info),
-    do: Enum.take_while(path_info, &(!(&1 in ["gen", "txi", "time", "forward", "backward"])))
+    do:
+      Enum.take_while(
+        path_info,
+        &(!(&1 in ["gen", "txi", "time", "forward", "backward"] || String.contains?(&1, "-")))
+      )
 
   def make_link(path_info, scope, query_groups) do
     path_info = path_no_scope(path_info)

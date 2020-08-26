@@ -1,11 +1,10 @@
 defmodule AeMdw.Db.Stream.Name do
-  alias AeMdw.Node, as: AE
   alias AeMdw.Db.Stream, as: DBS
-  alias AeMdw.Db.{Model, Format, Name}
+  alias AeMdw.Db.Model
 
   require Model
 
-  import AeMdw.{Util, Db.Util}
+  import AeMdw.Db.Util
 
   ##########
 

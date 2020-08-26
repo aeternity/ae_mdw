@@ -125,6 +125,9 @@ defmodule AeMdw.Util do
     |> Enum.into(%{})
   end
 
+  def ensure_prefix(x, [x | _] = xs), do: xs
+  def ensure_prefix(x, xs), do: [x | xs]
+
   defp reduce_skip_while_pull(stream, acc, fun) do
     case StreamSplit.take_and_drop(stream, 1) do
       {[], _} ->

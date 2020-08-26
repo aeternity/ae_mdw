@@ -4,6 +4,7 @@ defmodule AeMdw.Error do
   import AeMdwWeb.Util, only: [concat: 2]
 
   def to_string(Err.Id, x), do: concat("invalid id", x)
+  def to_string(Err.BlockIndex, x), do: concat("invalid block index", x)
   def to_string(Err.NonnegInt, x), do: concat("invalid non-negative integer", x)
   def to_string(Err.TxField, x), do: concat("invalid transaction field", x)
   def to_string(Err.TxType, x), do: concat("invalid transaction type", x)
@@ -20,6 +21,7 @@ defmodule AeMdw.Error do
     defexception [:message]
 
     defexception!(Id)
+    defexception!(BlockIndex)
     defexception!(NonnegInt)
     defexception!(TxField)
     defexception!(TxType)
