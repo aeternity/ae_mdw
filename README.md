@@ -37,11 +37,15 @@
         - [Examples](#examples-5)
             - [Continuation example](#continuation-example)
     - [Other transaction related endpoints](#other-transaction-related-endpoints)
-        - [TX - get transaction by hash](#tx---get-transaction-by-hash)
-        - [TXI - get transaction by index](#txi---get-transaction-by-index)
-        - [TXS/COUNT endpoint](#txscount-endpoint)
+        - [Get transaction by hash](#get-transaction-by-hash)
+        - [Get transaction by index](#get-transaction-by-index)
+        - [Counting transactions](#counting-transactions)
             - [All transactions](#all-transactions)
             - [Transactions by type/field for ID](#transactions-by-typefield-for-id)
+    - [Block Querying](#block-querying)
+        - [Single block by hash](#single-block-by-hash)
+        - [Single block by index](#single-block-by-index)
+        - [Multiple generations](#multiple-generations)
     - [Naming System](#naming-system)
         - [Name Resolution](#name-resolution)
         - [Listing names](#listing-names)
@@ -88,13 +92,33 @@ The NODEROOT directory should contain directories: `bin`, `lib`, `plugins`, `rel
 ## HTTP endpoints
 
 ```
-GET  /tx/:hash                - returns transaction by hash
-GET  /txi/:index              - returns transaction by index (0 .. last transaction index)
-GET  /txs/count               - returns total number of transactions (last transaction index + 1)
-GET  /txs/count/:id           - returns counts of transactions per transaction field for given id
-GET  /txs/:scope_type/:range  - returns transactions bounded by scope/range where query is in query string
-GET  /txs/:direction          - returns transactions from beginning (forward) or end (backward), query is in query string
-GET  /status                  - returns middleware status (version, number of generations indexed)
+GET  /tx/:hash                          - returns transaction by hash
+GET  /txi/:index                        - returns transaction by index (0 .. last transaction index)
+GET  /txs/count                         - returns total number of transactions (last transaction index + 1)
+GET  /txs/count/:id                     - returns counts of transactions per transaction field for given id
+GET  /txs/:scope_type/:range            - returns transactions bounded by scope/range where query is in query string
+GET  /txs/:direction                    - returns transactions from beginning (forward) or end (backward), query is in query string
+
+GET  /block/:hash                       - returns block by hash
+GET  /blocki/:kbi                       - returns key block by integer index
+GET  /blocki/:kbi/:mbi                  - returns micro block by integer indices
+GET  /blocks/gen/:range                 - returns generation blocks for continuation link
+GET  /blocks/:range_or_dir              - returns generation blocks (key + micro) for given range (or direction)
+
+GET  /name/:id                          - returns name information by hash or plain name
+GET  /name/pointers/:id                 - returns pointers of a name specified by hash of plain name
+GET  /name/pointees/:id                 - returns names which point to id specified by hash
+GET  /names/auctions                    - returns name auctions ordered by (optional) query parameters
+GET  /names/auctions/:scope_type/:range - returns name auctions for continuation link
+GET  /names/inactive                    - returns expired names ordered by (optional) query parameters
+GET  /names/inactive/:scope_type/:range - returns expired names for continuation link
+GET  /names/active                      - returns active names ordered by (optional) query parameters
+GET  /names/active/:scope_type/:range   - returns active names for continuation link
+GET  /names                             - returns all names (active and expired) ordered by (optional) query parameters
+GET  /names/:scope_type/:range          - returns all names for continuation link
+
+GET  /status                            - returns middleware status (version, number of generations indexed)
+
 ```
 (more to come)
 
@@ -966,7 +990,7 @@ This design decouples query construction and actual consumption of the result se
 
 ## Other transaction related endpoints
 
-### TX - get transaction by hash
+### Get transaction by hash
 
 ```
 $ curl -s "http://localhost:4000/tx/th_zATv7B4RHS45GamShnWgjkvcrQfZUWQkZ8gk1RD4m2uWLJKnq" | jq '.'
@@ -994,7 +1018,7 @@ $ curl -s "http://localhost:4000/tx/th_zATv7B4RHS45GamShnWgjkvcrQfZUWQkZ8gk1RD4m
 }
 ```
 
-### TXI - get transaction by index
+### Get transaction by index
 
 ```
 $ curl -s "http://localhost:4000/txi/10000000" | jq '.'
@@ -1022,7 +1046,7 @@ $ curl -s "http://localhost:4000/txi/10000000" | jq '.'
 }
 ```
 
-### TXS/COUNT endpoint
+### Counting transactions
 
 #### All transactions
 
@@ -1077,6 +1101,429 @@ $ curl -s "http://localhost:4000/txs/count/ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2
     "recipient_id": 8,
     "sender_id": 18505
   }
+}
+```
+
+## Block Querying
+
+There are several endpoints for querying block(s) or generation(s).
+A generation can be understood as key block and micro blocks containing transactions.
+
+### Single block by hash
+
+```
+$ curl -s "http://localhost:4000/block/kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6" | jq '.'
+{
+  "beneficiary": "ak_2MR38Zf355m6JtP13T3WEcUcSLVLCxjGvjk6zG95S2mfKohcSS",
+  "hash": "kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6",
+  "height": 123008,
+  "info": "cb_AAAAAfy4hFE=",
+  "miner": "ak_Fqnmm5hRAMaVPWk8wzpodMopZgWghMns4mM7kSV1jgT89p9AV",
+  "nonce": 9223756548132686000,
+  "pow": [12359907, ..., 533633643],                                     # pow removed for clarity
+  "prev_hash": "kh_hwin2p8u87mqiK836FixGa1pL9eBkL1Ju37Yi6EUebCgAf8rm",
+  "prev_key_hash": "kh_hwin2p8u87mqiK836FixGa1pL9eBkL1Ju37Yi6EUebCgAf8rm",
+  "state_hash": "bs_9Dg6mTmiJLpbg9dzgjnNFVidQesvZYZG3dEviUCd4oE1hUcna",
+  "target": 504082055,
+  "time": 1565548832164,
+  "version": 3
+}
+```
+
+```
+$ curl -s "http://localhost:4000/block/mh_25TNGuEkVGckfrH3rVwHiUsm2GFB17mKFEF3hYHR3zQrVXCRrp" | jq '.'
+{
+  "hash": "mh_25TNGuEkVGckfrH3rVwHiUsm2GFB17mKFEF3hYHR3zQrVXCRrp",
+  "height": 123003,
+  "pof_hash": "no_fraud",
+  "prev_hash": "mh_2ALC3nX5Hm9488yhPKn65egU6KWugMnAyhYiBq3eRVn9Bf2mD1",
+  "prev_key_hash": "kh_mrRQL1wvGNvXtF1HcicnPRbcm6uHtvpz5VztyqVsoCvybiEgY",
+  "signature": "sg_JA6we1Pz2Ask15dNnsNF3Ziof2NcdbSsLrrX5xQtsnraQm9ytX7X2DXzAFm2TYcPwGEddkxRTrkvKcSZm6eZPDBDWEi1T",
+  "state_hash": "bs_5xhq7iqCZAdVZx76RjFHFv1CdBoRLPV5L2goD1QDjRwEWXK53",
+  "time": 1565548441990,
+  "txs_hash": "bx_kjjNsYXDHNTaGJgbHryMb3C9eJkKMfijtWtvDDxtGTkzVbnai",
+  "version": 3
+}
+```
+
+### Single block by index
+
+Key block of the whole generation can be identified by one non-negative integer (height).
+
+```
+$ curl -s "http://localhost:4000/blocki/1234" | jq '.'
+{
+  "beneficiary": "ak_2RGTeERHPm9zCo9EsaVAh8tDcsetFSVsD9VVi5Dk1n94wF3EKm",
+  "hash": "kh_2L9i7dMqrYiUs6um71kwnZsNDqD9xBbD71EiVoWFtbMUKs2Tka",
+  "height": 1234,
+  "info": "cb_Xfbg4g==",
+  "miner": "ak_2wfU7H1B5iPNm7Qh6Fe4uqL2Swhuy1P2Y6Mja6FrrA6Lqqgs4U",
+  "nonce": 3506640638825476600,
+  "pow": [13191216, ..., 527787452],                                     # pow removed for clarity
+  "prev_hash": "kh_28dE5V2VhN47H3vFePVvugz5XhwxqYHemo74cLV8xW4vq4vg3i",
+  "prev_key_hash": "kh_28dE5V2VhN47H3vFePVvugz5XhwxqYHemo74cLV8xW4vq4vg3i",
+  "state_hash": "bs_2WAAvA4HPNWWFa4nxScsHp8f332rVpZZz4uGsZg5SYe5pYPTdX",
+  "target": 520781974,
+  "time": 1543589552624,
+  "version": 1
+}
+```
+
+Micro block is identified by height and sequence id (order) withing the generation, starting from 0.
+
+```
+$ curl -s "http://localhost:4000/blocki/300000/0" | jq '.'
+{
+  "hash": "mh_2Nyaoy9CCPa8WBfzGbWXy5rd6AahJpBFxyXM9MMpCrvCqpkFj",
+  "height": 300000,
+  "pof_hash": "no_fraud",
+  "prev_hash": "kh_2kJKKRfu6BMwNzYoDc5sJBSS4X3S1vdmiZitWQ84KEqWnGLoDe",
+  "prev_key_hash": "kh_2kJKKRfu6BMwNzYoDc5sJBSS4X3S1vdmiZitWQ84KEqWnGLoDe",
+  "signature": "sg_Ks256s7x8K3UFeUi6qV9ufZv7q9NtDXiSYJmoCKYivZCqEpJhKnVt3SViLzWWo9Lr149J5iUeZrxNNtv6Svn7eLAk22V5",
+  "state_hash": "bs_EydSYyRMLdUBdtgzCgbmT6CHgisv5UWN18oW9Urjn6V7JUAfe",
+  "time": 1597568157025,
+  "txs_hash": "bx_2pJG7zzAELatCHr8QjNtc3QFx6vdf4p9gvgMwPzSjXeL1DHDkK",
+  "version": 4
+}
+```
+
+### Multiple generations
+
+When provided either direction (`forward`, `backward`) or `non-negative integer range`,
+we can utilize a paginable endpoint returning all blocks AND transactions for generation(s) of interest.
+
+Optional parameter `limit` (by default 10) specifies how many generations we want to return in the result.
+
+The micro blocks, as well as transactions are grouped in maps keyed by hash.
+
+Since we are returning whole generations, replies can be very large.
+
+Examples below are trimmed heavily:
+
+```
+$ curl -s "http://localhost:4000/blocks/backward?limit=1" | jq '.'
+{
+  "data": [
+    {
+      "beneficiary": "ak_542o93BKHiANzqNaFj6UurrJuDuxU61zCGr9LJCwtTUg34kWt",
+      "hash": "kh_2uTZLtee1De3YuoqvsikeVWHHkenWew5NqB3Fa3ryvXtpSajTM",
+      "height": 305297,
+      "info": "cb_AAACKimwwOc=",
+      "micro_blocks": {
+        "mh_2HHmThwzUphj37EqU1KkhKmwxMT2kdiYgCqvY3t9j4kNWbSMiK": {
+          "hash": "mh_2HHmThwzUphj37EqU1KkhKmwxMT2kdiYgCqvY3t9j4kNWbSMiK",
+          "height": 305297,
+          "pof_hash": "no_fraud",
+          "prev_hash": "mh_prMZf41K9gYeAP6LTQtcKYkTLPSoyszbSmjJ4wMN82d2x6gLB",
+          "prev_key_hash": "kh_2uTZLtee1De3YuoqvsikeVWHHkenWew5NqB3Fa3ryvXtpSajTM",
+          "signature": "sg_12aUH1hZxNF25VGjLiR9hVaSiutUc8mkhv6P8j4DowYGTEr2kTWp5edNVvzLmaHPDKoeEyKuNq7AgsbWLZ65zgQowjucC",
+          "state_hash": "bs_qAum5t66dTk8YmqFoAv1DNC7r9rni7s5FhqhcDYgbMgPoUBfE",
+          "time": 1598528679647,
+          "transactions": {
+            "th_WhXKEaYByYc1R8pxV3Lt2LF9ZdZNqkDTZi9tGZ73a3rFs2xS2": {
+              "block_hash": "mh_2HHmThwzUphj37EqU1KkhKmwxMT2kdiYgCqvY3t9j4kNWbSMiK",
+              "block_height": 305297,
+              "hash": "th_WhXKEaYByYc1R8pxV3Lt2LF9ZdZNqkDTZi9tGZ73a3rFs2xS2",
+              "signatures": [
+                "sg_Su935qkL2T8EM9arrkhoJGySk4dEz1taQKdJz3KhTNWYUqrXCcE7RrTA6ooWmy3abLKBBtfvhgwbsZcRMr5M9z4ck6Sbg"
+              ],
+              "tx": {
+                "amount": 20000,
+                "fee": 19320000000000,
+                "nonce": 2977315,
+                "payload": "ba_MzA1Mjk3OmtoXzJ1VFpMdGVlMURlM1l1b3F2c2lrZVZXSEhrZW5XZXc1TnFCM0ZhM3J5dlh0cFNhalRNOm1oX3ByTVpmNDFLOWdZZUFQNkxUUXRjS1lrVExQU295c3piU21qSjR3TU44MmQyeDZnTEI6MTU5ODUyODY3OEbf8w0=",
+                "recipient_id": "ak_KHfXhF2J6VBt3sUgFygdbpEkWi6AKBkr9jNKUCHbpwwagzHUs",
+                "sender_id": "ak_KHfXhF2J6VBt3sUgFygdbpEkWi6AKBkr9jNKUCHbpwwagzHUs",
+                "ttl": 305307,
+                "type": "SpendTx",
+                "version": 1
+              }
+            },
+            "th_orW3hENTFPjj5FezzGXSRCkiPf61vqkDEBREndxFK1wMffBWZ": {...}
+          },
+          "txs_hash": "bx_pLHRGRAJnURuqsyw5BRMkQG9KQmcAkhTFJjh1J8RZFjD79172",
+          "version": 4
+        },
+        "mh_prMZf41K9gYeAP6LTQtcKYkTLPSoyszbSmjJ4wMN82d2x6gLB": {...},
+        ...
+      },
+      "miner": "ak_2ZF3iogwsFpDDyZVJbB2d9GmoMRwc6kCi1K5Z8drv6zqmvEPNb",
+      "nonce": 87920935895956,
+      "pow": [18651626, ..., 535310530],
+      "prev_hash": "mh_2erjymKtrKAgQwx6mn2WDDJ6SKBYJZFnJMZqVjJN2HhHRAUcnu",
+      "prev_key_hash": "kh_XNLDcXke7P3DxmaFV97gvTPSfdiRrFD6opyB3SbwA3Jqg54J6",
+      "state_hash": "bs_2QwTQvY5KisZcDDchUgNxF84RvNMbPDSjKoE6VxHaAVjWEo9yk",
+      "target": 506732153,
+      "time": 1598528595724,
+      "version": 4
+    }
+  ],
+  "next": "blocks/gen/305297-0?limit=1&page=2"
+}
+```
+
+```
+$ curl -s "http://localhost:4000/blocks/forward?limit=2" | jq '.'
+{
+  "data": [
+    {
+      "beneficiary": "ak_11111111111111111111111111111111273Yts",
+      "hash": "kh_pbtwgLrNu23k9PA6XCZnUbtsvEFeQGgavY4FS2do3QP8kcp2z",
+      "height": 0,
+      "info": "cb_Xfbg4g==",
+      "micro_blocks": {},
+      "miner": "ak_11111111111111111111111111111111273Yts",
+      "prev_hash": "kh_2CipHmrBcC5LrmnggBrAGuxAf2fPDrAt79asKnadME4nyPRzBL",
+      "prev_key_hash": "kh_11111111111111111111111111111111273Yts",
+      "state_hash": "bs_QDcwEF8e2DeetViw6ET65Nj1HfPrQh1uRkxtAsaGLntRGXpg7",
+      "target": 522133279,
+      "time": 0,
+      "version": 1
+    },
+    {
+      "beneficiary": "ak_2RGTeERHPm9zCo9EsaVAh8tDcsetFSVsD9VVi5Dk1n94wF3EKm",
+      "hash": "kh_29Gmo8RMdCD5aJ1UUrKd6Kx2c3tvHQu82HKsnVhbprmQnFy5bn",
+      "height": 1,
+      "info": "cb_Xfbg4g==",
+      "micro_blocks": {
+        "mh_ufiYLdN8am8fBxMnb6xq2K4MQKo4eFSCF5bgixq4EzKMtDUXP": {
+          "hash": "mh_ufiYLdN8am8fBxMnb6xq2K4MQKo4eFSCF5bgixq4EzKMtDUXP",
+          "height": 1,
+          "pof_hash": "no_fraud",
+          "prev_hash": "kh_29Gmo8RMdCD5aJ1UUrKd6Kx2c3tvHQu82HKsnVhbprmQnFy5bn",
+          "prev_key_hash": "kh_29Gmo8RMdCD5aJ1UUrKd6Kx2c3tvHQu82HKsnVhbprmQnFy5bn",
+          "signature": "sg_91zukFywhEMuiFCVwgJWEX6mMUgHiB3qLux8QYDHXnbXAcgWxRy7S5JcnbMjdfWNSwFjpXnJVp2Fm5zzvLVzcCqDLT2zC",
+          "state_hash": "bs_2pAUexcNWE9HFruXUugY28yfUifWDh449JK1dDgdeMix5uk8Q",
+          "time": 1543375246712,
+          "transactions": {
+            "th_2FHxDzpQMRTiRfpYRV3eCcsheHr1sjf9waxk7z6JDTVcgqZRXR": {
+              "block_hash": "mh_ufiYLdN8am8fBxMnb6xq2K4MQKo4eFSCF5bgixq4EzKMtDUXP",
+              "block_height": 1,
+              "hash": "th_2FHxDzpQMRTiRfpYRV3eCcsheHr1sjf9waxk7z6JDTVcgqZRXR",
+              "signatures": [
+                "sg_Fipyxq5f3JS9CB3AQVCw1v9skqNBw1cdfe5W3h1t2MkviU19GQckERQZkqkaXWKowdTUvr7B1QbtWdHjJHQcZApwVDdP9"
+              ],
+              "tx": {
+                "amount": 150425,
+                "fee": 101014,
+                "nonce": 1,
+                "payload": "ba_NzkwOTIxLTgwMTAxOGSbElc=",
+                "recipient_id": "ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5",
+                "sender_id": "ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5",
+                "type": "SpendTx",
+                "version": 1
+              }
+            }
+          },
+          "txs_hash": "bx_8K5NtXK56QmUAsriAYocpqAUowJMsbEJmHEGrz7SRiu1g1yjo",
+          "version": 1
+        }
+      },
+      "miner": "ak_q9KDcpGHQ377rVS1TU2VSofby2tXWPjGvKizfGUC86gaq7rie",
+      "nonce": 7537663592980548000,
+      "pow": [26922260,...,532070334],
+      "prev_hash": "kh_pbtwgLrNu23k9PA6XCZnUbtsvEFeQGgavY4FS2do3QP8kcp2z",
+      "prev_key_hash": "kh_pbtwgLrNu23k9PA6XCZnUbtsvEFeQGgavY4FS2do3QP8kcp2z",
+      "state_hash": "bs_QDcwEF8e2DeetViw6ET65Nj1HfPrQh1uRkxtAsaGLntRGXpg7",
+      "target": 522133279,
+      "time": 1543373685748,
+      "version": 1
+    }
+  ],
+  "next": "blocks/gen/0-305302?limit=2&page=2"
+}
+```
+
+Numeric range:
+
+```
+$ curl -s "http://localhost:4000/blocks/100000-100100?limit=3" | jq '.'
+{
+  "data": [
+    {
+      "beneficiary": "ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv",
+      "hash": "kh_foi6pMgz1zi17tYy5eBMQMzCLf7jaAYQTL9WtoJiqR5bk38hg",
+      "height": 100000,
+      "info": "cb_AAAAAfy4hFE=",
+      "micro_blocks": {
+        "mh_zpiiJYsHZZ9ibKSF1fGLcossdgFjHNaN2Yu6cEF9KSNLqQLbS": {
+          "hash": "mh_zpiiJYsHZZ9ibKSF1fGLcossdgFjHNaN2Yu6cEF9KSNLqQLbS",
+          "height": 100000,
+          "pof_hash": "no_fraud",
+          "prev_hash": "kh_foi6pMgz1zi17tYy5eBMQMzCLf7jaAYQTL9WtoJiqR5bk38hg",
+          "prev_key_hash": "kh_foi6pMgz1zi17tYy5eBMQMzCLf7jaAYQTL9WtoJiqR5bk38hg",
+          "signature": "sg_DM1gKHR8acCcXF8i2YPLjMVPrCeG8J4QQYcFeLrpZvy3wjJzQ1dQcgF3H9p5uLWSJ4QTTymgCm3rERD1Q3xVeHrvVqMBa",
+          "state_hash": "bs_2breNSbLBYoUXyo7oCAeeEeR4WYxvDhCU6CpcyxStwyJ24JPhJ",
+          "time": 1561390173025,
+          "transactions": {
+            "th_VAGQK8LmPQ5NvQ6kJZz7rhQdMJ5nTJZ9uHRbDKRWDGD4Ex5Gj": {
+              "block_hash": "mh_zpiiJYsHZZ9ibKSF1fGLcossdgFjHNaN2Yu6cEF9KSNLqQLbS",
+              "block_height": 100000,
+              "hash": "th_VAGQK8LmPQ5NvQ6kJZz7rhQdMJ5nTJZ9uHRbDKRWDGD4Ex5Gj",
+              "signatures": [
+                "sg_RXp8FEo8cDwiy61S9fkH6dJrMjZL2Cri5FJLbK8Q7VWXamX5eh2CBvL1cjsy6BW8hizvruXdDt5vUhJH1NA4Ye9qUEX8i"
+              ],
+              "tx": {
+                "amount": 5e+21,
+                "fee": 20000000000000,
+                "nonce": 720,
+                "payload": "ba_Xfbg4g==",
+                "recipient_id": "ak_2B6nPK6HLK5Yp7qMbMeLMSDJwxNdypbDzW3xm938uw2a7EemdQ",
+                "sender_id": "ak_2mggc8gkx9nhkciBtYbq39T6Jzd7WBms6jgYoLAAeRNgdy3Md6",
+                "ttl": 100500,
+                "type": "SpendTx",
+                "version": 1
+              }
+            }
+          },
+          "txs_hash": "bx_MbpXZycNCDzTXSqb5fVq9Nh217x9P4PjrdpLb5doz8PtPoZsD",
+          "version": 3
+        }
+      },
+      "miner": "ak_2K5fAjna26t2U2V6v2LwNBUZpT9puriPdvxifDmGRoqG1a7R3Z",
+      "nonce": 14620604494251231000,
+      "pow": [8664748,...,485310990],
+      "prev_hash": "mh_2EFE1CxvXM2dKtu4Jt4yLAbW8gS5MkpDtNmGKHP4bPXDvtubKJ",
+      "prev_key_hash": "kh_B18SQZmResYV5yqxbFUizKPqrtrjky3LESGUvRECDp9N2kNmA",
+      "state_hash": "bs_185cZMdvy6wJXjCZDwGnLJ4TCrU18yxGSVkbtQh4DyCm2yPaV",
+      "target": 504047608,
+      "time": 1561390154570,
+      "version": 3
+    },
+    {
+      "beneficiary": "ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv",
+      "hash": "kh_2gJqm1zmvpMGLMiViwwiHE2EhvdzWjm6KBVthRouHM71rCnUuN",
+      "height": 100001,
+      "info": "cb_AAAAAfy4hFE=",
+      "micro_blocks": {
+        "mh_2nCMBDBchfPdEozWwAYsFyq8iBLRKptLpzcTHomRKut3wVUkZJ": {
+          "hash": "mh_2nCMBDBchfPdEozWwAYsFyq8iBLRKptLpzcTHomRKut3wVUkZJ",
+          "height": 100001,
+          "pof_hash": "no_fraud",
+          "prev_hash": "kh_2gJqm1zmvpMGLMiViwwiHE2EhvdzWjm6KBVthRouHM71rCnUuN",
+          "prev_key_hash": "kh_2gJqm1zmvpMGLMiViwwiHE2EhvdzWjm6KBVthRouHM71rCnUuN",
+          "signature": "sg_QJtdAT57RX6rhe51mseBAxq9VVZ46e93q6jm334rQGyk1mZoR52ya9rsh7zzibntdzS9d72GH5XTorSi7ubt8BDhn8A9v",
+          "state_hash": "bs_2BUKS5vTvBgwP8G4gCnaZeExztr4op6xmGv81jUezoS7qBfAya",
+          "time": 1561390314442,
+          "transactions": {
+            "th_HRJe3r5bMYeDWysqJayzbVLr4gQEDXfXcDemeXCJo2HHnxk9U": {
+              "block_hash": "mh_2nCMBDBchfPdEozWwAYsFyq8iBLRKptLpzcTHomRKut3wVUkZJ",
+              "block_height": 100001,
+              "hash": "th_HRJe3r5bMYeDWysqJayzbVLr4gQEDXfXcDemeXCJo2HHnxk9U",
+              "signatures": [
+                "sg_7BFTstKBgmdKiZdW6EctPCV1UM4LdMX7yhkoa6NCQoiGP5mren1VmTEVTtANQagQdEmfJgDE6MgDvCN5YAJcWhw7Dd9qy"
+              ],
+              "tx": {
+                "amount": 4.999e+21,
+                "fee": 28000000001760,
+                "nonce": 2773,
+                "payload": "ba_Xfbg4g==",
+                "recipient_id": "ak_2CZpwotEioaKag2ci6ULVqutbwgupVUdrDSsaVroLWGNrTfHyR",
+                "sender_id": "ak_6sssiKcg7AywyJkfSdHz52RbDUq5cZe4V4hcvghXnrPz4H4Qg",
+                "ttl": 100010,
+                "type": "SpendTx",
+                "version": 1
+              }
+            }
+          },
+          "txs_hash": "bx_xYB1Cnj7B4yPGK97rXQADj53MSdYBBFjBraiZnjYNh2u3t7vn",
+          "version": 3
+        },
+        "mh_NxwB3r43rT4ghZscfuXhHNKNouuVQmU1Lkrf4sgCTPYy3Szdr": {
+          "hash": "mh_NxwB3r43rT4ghZscfuXhHNKNouuVQmU1Lkrf4sgCTPYy3Szdr",
+          "height": 100001,
+          "pof_hash": "no_fraud",
+          "prev_hash": "mh_2nCMBDBchfPdEozWwAYsFyq8iBLRKptLpzcTHomRKut3wVUkZJ",
+          "prev_key_hash": "kh_2gJqm1zmvpMGLMiViwwiHE2EhvdzWjm6KBVthRouHM71rCnUuN",
+          "signature": "sg_JpXtMbaCcx3dCSntGCL5hQpynvQ5zuhvWH8njeB3xiwZL4FAS9PvZHvYHFoZCh4ZRjWXS2RTwUS9q34GUyropGUmyqPaU",
+          "state_hash": "bs_hEFr1wBFMCYa6spbZyaSr3SBiwypjyHGsDKfTRPaAspLKNYWj",
+          "time": 1561390321251,
+          "transactions": {
+            "th_2H3tAA8kuyv3hetRHzMY8At4GTaDz7Ta2KhNKWgG2QNufn9MML": {
+              "block_hash": "mh_NxwB3r43rT4ghZscfuXhHNKNouuVQmU1Lkrf4sgCTPYy3Szdr",
+              "block_height": 100001,
+              "hash": "th_2H3tAA8kuyv3hetRHzMY8At4GTaDz7Ta2KhNKWgG2QNufn9MML",
+              "signatures": [
+                "sg_F1db1TVZaUypoWZVxscXh9GE6QTNJZaaDqDe2gpqbD93jAyRiY2mufByaxnxtZJPC8feiYThcri4p9aie4WsAf4gB1Jod"
+              ],
+              "tx": {
+                "amount": 4.2098e+20,
+                "fee": 20000000000000,
+                "nonce": 721,
+                "payload": "ba_Xfbg4g==",
+                "recipient_id": "ak_2drSE1t9wNjzLqTMUH3LMaGExnZ26E9Vss5WENC9YncnZEZZQW",
+                "sender_id": "ak_2mggc8gkx9nhkciBtYbq39T6Jzd7WBms6jgYoLAAeRNgdy3Md6",
+                "ttl": 100501,
+                "type": "SpendTx",
+                "version": 1
+              }
+            }
+          },
+          "txs_hash": "bx_gsiG1snHbhc9RaUYkdiXc4jUbsxyKWKqshnDKwSsEBQSEuxDf",
+          "version": 3
+        }
+      },
+      "miner": "ak_2AT33FPB7DSvd3XU2nKPh4sUbBjb6jHWtKh6CF2b1eK2y3daA3",
+      "nonce": 8862664339569828000,
+      "pow": [7438320,...,519071892],
+      "prev_hash": "mh_zpiiJYsHZZ9ibKSF1fGLcossdgFjHNaN2Yu6cEF9KSNLqQLbS",
+      "prev_key_hash": "kh_foi6pMgz1zi17tYy5eBMQMzCLf7jaAYQTL9WtoJiqR5bk38hg",
+      "state_hash": "bs_Wqv4So3wfCV2eyJMnjfiGsrb1D7nrUk2r6K9ufgnX22J5wVPA",
+      "target": 504063592,
+      "time": 1561390309740,
+      "version": 3
+    },
+    {
+      "beneficiary": "ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv",
+      "hash": "kh_2BXy8tftXFVj859j4YpkTyf7Ld5AXrvPqUSbYwGoWZpKQ9VNVB",
+      "height": 100002,
+      "info": "cb_AAAAAfy4hFE=",
+      "micro_blocks": {
+        "mh_2DgnYpByRcMdavZUr29dzA6E4Exy6MPmDoGKwJAfbgGqgYkhXo": {
+          "hash": "mh_2DgnYpByRcMdavZUr29dzA6E4Exy6MPmDoGKwJAfbgGqgYkhXo",
+          "height": 100002,
+          "pof_hash": "no_fraud",
+          "prev_hash": "kh_2BXy8tftXFVj859j4YpkTyf7Ld5AXrvPqUSbYwGoWZpKQ9VNVB",
+          "prev_key_hash": "kh_2BXy8tftXFVj859j4YpkTyf7Ld5AXrvPqUSbYwGoWZpKQ9VNVB",
+          "signature": "sg_4AWRGirnV9FFfZdCQZD6xcY422Sfqo32hL18AKBDV6MqZ3PJm3u9FuQ874SQDXkrD4P4aftT4UvFoRXKybKcDYZ1YrTSe",
+          "state_hash": "bs_2f1fKQXp6BW93EMvoo53QCUn4cJJN8EnJ38WHaSVjsNTfFnPs8",
+          "time": 1561390368180,
+          "transactions": {
+            "th_2MNiHqkHKUioTcGpob8mEyyd8stx176gKQwHtHb5jknuf2wggm": {
+              "block_hash": "mh_2DgnYpByRcMdavZUr29dzA6E4Exy6MPmDoGKwJAfbgGqgYkhXo",
+              "block_height": 100002,
+              "hash": "th_2MNiHqkHKUioTcGpob8mEyyd8stx176gKQwHtHb5jknuf2wggm",
+              "signatures": [
+                "sg_RJtTUzjwMgQxay4EksNdHzCxAXQRobdSLxJLD6QqpwFXPkycCZkmWR239G93Q9RAwbXMzEykogPDj4r6MDZyFEJ3WSny2"
+              ],
+              "tx": {
+                "amount": 3.26e+20,
+                "fee": 16880000000000,
+                "nonce": 536,
+                "payload": "ba_Xfbg4g==",
+                "recipient_id": "ak_2UBcNqdXQb4PvZaTz6zd4dVbPuJf29Jvx9gNqvmSQcoQK11RZW",
+                "sender_id": "ak_dnzaNnchT7f3YT3CtrQ7GUjqGT6VaHzPxpf2efHWPuEAWKcht",
+                "type": "SpendTx",
+                "version": 1
+              }
+            }
+          },
+          "txs_hash": "bx_29BoCEp5xcJweJD6Dme4hipvE5VhSE8MwGFFfXnM8en5d48izY",
+          "version": 3
+        }
+      },
+      "miner": "ak_2VJtWGt45q8w9Aj7gYJPz9kZG3EU45xi6YZ4wgXSb25MeYGdfM",
+      "nonce": 5829762670850390000,
+      "pow": [1917903,...,530252456],
+      "prev_hash": "mh_NxwB3r43rT4ghZscfuXhHNKNouuVQmU1Lkrf4sgCTPYy3Szdr",
+      "prev_key_hash": "kh_2gJqm1zmvpMGLMiViwwiHE2EhvdzWjm6KBVthRouHM71rCnUuN",
+      "state_hash": "bs_2E75ChNX5EZo42xek6K64i5MZfQNxDUo5M9DwAufFRqQRqx3Z5",
+      "target": 504062474,
+      "time": 1561390340812,
+      "version": 3
+    }
+  ],
+  "next": "blocks/gen/100000-100100?limit=3&page=2"
 }
 ```
 
@@ -1795,7 +2242,7 @@ The example output would look like:
             90th: 75.19540000000003 ms
             99th: 133.98303999999996 ms
           ......................................................................
-          
+
 
           Path: "/txs/backward?account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&account=ak_zUQikTiUMNxfKwuAfQVMPkaxdPsXP8uAxnfn6TkZKZCtmRcUD&limit=1"
           Number of requests: 7
@@ -1812,7 +2259,7 @@ The example output would look like:
             90th: 90.18680000000005 ms
             99th: 164.60257999999993 ms
           ......................................................................
-          
+
 
           Path: "/txs/count"
           Number of requests: 7
@@ -1829,7 +2276,7 @@ The example output would look like:
             90th: 33.7028 ms
             99th: 34.84868 ms
           ......................................................................
-          
+
 
           Path: "/txs/count/ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
           Number of requests: 7
@@ -1846,7 +2293,7 @@ The example output would look like:
             90th: 73.69660000000003 ms
             99th: 133.75485999999992 ms
           ......................................................................
-          
+
 
           Path: "/txs/forward?account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
           Number of requests: 7
@@ -1863,7 +2310,7 @@ The example output would look like:
             90th: 125.8612 ms
             99th: 125.92492 ms
           ......................................................................
-          
+
 
           Path: "/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&type_group=name"
           Number of requests: 7
@@ -1880,7 +2327,7 @@ The example output would look like:
             90th: 29.037 ms
             99th: 29.3502 ms
           ......................................................................
-          
+
 
           Path: "/txs/forward?contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2"
           Number of requests: 7
@@ -1897,7 +2344,7 @@ The example output would look like:
             90th: 65.15940000000002 ms
             99th: 93.88793999999997 ms
           ......................................................................
-          
+
 
           Path: "/txs/forward?name_transfer.recipient_id=ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF&limit=1"
           Number of requests: 7
@@ -1914,7 +2361,7 @@ The example output would look like:
             90th: 77.34940000000003 ms
             99th: 137.88393999999994 ms
           ......................................................................
-          
+
 
           Path: "/txs/forward?oracle=ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&limit=1"
           Number of requests: 7
@@ -1931,7 +2378,7 @@ The example output would look like:
             90th: 75.71200000000003 ms
             99th: 134.06439999999998 ms
           ......................................................................
-          
+
 
           Path: "/txs/forward?type=channel_create&limit=1"
           Number of requests: 7
@@ -1948,7 +2395,7 @@ The example output would look like:
             90th: 29.1262 ms
             99th: 30.024219999999996 ms
           ......................................................................
-          
+
 
           Path: "/txs/forward?type_group=oracle&limit=1"
           Number of requests: 7
@@ -1965,7 +2412,7 @@ The example output would look like:
             90th: 35.83760000000001 ms
             99th: 39.03925999999999 ms
           ......................................................................
-          
+
 
           Path: "/txs/gen/223000-223007?limit=30"
           Number of requests: 7
@@ -1982,7 +2429,7 @@ The example output would look like:
             90th: 126.21220000000002 ms
             99th: 162.32091999999997 ms
           ......................................................................
-          
+
 
           Path: "/txs/txi/409222-501000?limit=30"
           Number of requests: 7
@@ -1999,7 +2446,7 @@ The example output would look like:
             90th: 104.26400000000002 ms
             99th: 162.82699999999994 ms
           ......................................................................
-          
+
 
           Path: "/txs/txi/509111"
           Number of requests: 7
