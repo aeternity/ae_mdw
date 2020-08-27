@@ -16,11 +16,15 @@ defmodule AeMdwWeb.BlockController do
   def stream_plug_hook(%Plug.Conn{path_info: ["blocks" | rem], params: params} = conn) do
     alias AeMdwWeb.DataStreamPlug, as: P
 
+    scope_info =
+      case rem do
+        [x | _] when x in ["forward", "backward"] -> rem
+        _ -> ensure_prefix("gen", rem)
+      end
+
     P.handle_assign(
       conn,
-      (rem == [] &&
-         {:ok, {:gen, last_gen()..0}}) ||
-        P.parse_scope(ensure_prefix("gen", rem), ["gen"]),
+      P.parse_scope(scope_info, ["gen"]),
       P.parse_offset(params),
       {:ok, %{}}
     )
