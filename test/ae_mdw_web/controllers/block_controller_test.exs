@@ -1,0 +1,238 @@
+defmodule AeMdwWeb.BlockControllerTest do
+  use AeMdwWeb.ConnCase
+
+  alias :aeser_api_encoder, as: Enc
+  alias AeMdw.Validate
+  alias AeMdw.Db.{Model, Format}
+  alias AeMdwWeb.{BlockController, TestUtil}
+  alias AeMdwWeb.Continuation, as: Cont
+  alias AeMdw.Error.Input, as: ErrInput
+  require Model
+
+  import AeMdw.Db.Util
+
+  @default_limit 10
+
+  describe "block" do
+    test "get key block by hash", %{conn: conn} do
+      kb_hash = "kh_WLJX9kzQx882vnWg7TuyH4QyMCjdSdz7nXPS9tA9nEwiRnio4"
+      conn = get(conn, "/block/#{kb_hash}")
+
+      assert json_response(conn, 200) == TestUtil.handle_input(fn -> get_block(kb_hash) end)
+    end
+
+    test "get micro block by hash", %{conn: conn} do
+      mb_hash = "mh_RuKG8scokoAdhqNN3uvq29VZBsSaZdpeaoyBsXLeGV69sud85"
+      conn = get(conn, "/block/#{mb_hash}")
+
+      assert json_response(conn, 200) == TestUtil.handle_input(fn -> get_block(mb_hash) end)
+    end
+
+    test "renders error when the hash is invalid", %{conn: conn} do
+      hash = "kh_NoSuchHash"
+      conn = get(conn, "/block/#{hash}")
+
+      assert json_response(conn, 400) == %{
+               "error" => TestUtil.handle_input(fn -> get_block(hash) end)
+             }
+    end
+  end
+
+  describe "blocki" do
+    test "get key block by key block index(height)", %{conn: conn} do
+      kbi = 305_200
+      conn = get(conn, "/blocki/#{kbi}")
+
+      assert json_response(conn, 200) == TestUtil.handle_input(fn -> get_blocki(conn.params) end)
+    end
+
+    test "get micro block by given key block index(height) and micro block index", %{conn: conn} do
+      kbi = 305_222
+      mbi = 3
+      conn = get(conn, "/blocki/#{kbi}/#{mbi}")
+
+      assert json_response(conn, 200) == TestUtil.handle_input(fn -> get_blocki(conn.params) end)
+    end
+
+    test "renders error when key block index is invalid", %{conn: conn} do
+      kbi = "invalid"
+      conn = get(conn, "/blocki/#{kbi}")
+
+      assert json_response(conn, 400) ==
+               %{"error" => TestUtil.handle_input(fn -> get_blocki(conn.params) end)}
+    end
+
+    test "renders error when mickro block index is not present", %{conn: conn} do
+      kbi = 305_222
+      mbi = 4999
+      conn = get(conn, "/blocki/#{kbi}/#{mbi}")
+
+      assert json_response(conn, 400) ==
+               %{"error" => TestUtil.handle_input(fn -> get_blocki(conn.params) end)}
+    end
+
+    test "renders error when micro block index is invalid", %{conn: conn} do
+      kbi = 305_222
+      mbi = "invalid"
+      conn = get(conn, "/blocki/#{kbi}/#{mbi}")
+
+      assert json_response(conn, 400) ==
+               %{"error" => TestUtil.handle_input(fn -> get_blocki(conn.params) end)}
+    end
+  end
+
+  describe "blocks" do
+    test "get generations when direction=forward and default limit", %{conn: conn} do
+      direction = "forward"
+      conn = get(conn, "/blocks/#{direction}")
+      response = json_response(conn, 200)
+
+      {:ok, data, _has_cont?} =
+        Cont.response_data(
+          {BlockController, :blocks, %{}, conn.assigns.scope, 0},
+          @default_limit
+        )
+
+      assert Enum.count(response["data"]) == @default_limit
+      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+
+      conn_next = get(conn, response["next"])
+      response_next = json_response(conn_next, 200)
+
+      {:ok, next_data, _has_cont?} =
+        Cont.response_data(
+          {BlockController, :blocks, %{}, conn.assigns.scope, @default_limit},
+          @default_limit
+        )
+
+      assert Enum.count(response_next["data"]) == @default_limit
+
+      assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
+    end
+
+    test "get generations when direction=backward and limit=3", %{conn: conn} do
+      direction = "backward"
+      limit = 3
+      conn = get(conn, "/blocks/#{direction}?limit=#{limit}")
+      response = json_response(conn, 200)
+
+      {:ok, data, _has_cont?} =
+        Cont.response_data(
+          {BlockController, :blocks, %{}, conn.assigns.scope, 0},
+          limit
+        )
+
+      assert Enum.count(response["data"]) == limit
+      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+
+      conn_next = get(conn, response["next"])
+      response_next = json_response(conn_next, 200)
+
+      {:ok, next_data, _has_cont?} =
+        Cont.response_data(
+          {BlockController, :blocks, %{}, conn.assigns.scope, limit},
+          limit
+        )
+
+      assert Enum.count(response_next["data"]) == limit
+      assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
+    end
+
+    test "get generations with numeric range and default limit", %{conn: conn} do
+      range = "305000-305100"
+      conn = get(conn, "/blocks/#{range}")
+      response = json_response(conn, 200)
+
+      {:ok, data, _has_cont?} =
+        Cont.response_data(
+          {BlockController, :blocks, %{}, conn.assigns.scope, 0},
+          @default_limit
+        )
+
+      assert Enum.count(response["data"]) == @default_limit
+      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+
+      conn_next = get(conn, response["next"])
+      response_next = json_response(conn_next, 200)
+
+      {:ok, next_data, _has_cont?} =
+        Cont.response_data(
+          {BlockController, :blocks, %{}, conn.assigns.scope, @default_limit},
+          @default_limit
+        )
+
+      assert Enum.count(response_next["data"]) == @default_limit
+      assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
+    end
+
+    test "get generations with numeric range and limit=1", %{conn: conn} do
+      range = "305000-305100"
+      limit = 1
+      conn = get(conn, "/blocks/#{range}?limit=#{limit}")
+      response = json_response(conn, 200)
+
+      {:ok, data, _has_cont?} =
+        Cont.response_data(
+          {BlockController, :blocks, %{}, conn.assigns.scope, 0},
+          limit
+        )
+
+      assert Enum.count(response["data"]) == limit
+      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+
+      conn_next = get(conn, response["next"])
+      response_next = json_response(conn_next, 200)
+
+      {:ok, next_data, _has_cont?} =
+        Cont.response_data(
+          {BlockController, :blocks, %{}, conn.assigns.scope, limit},
+          limit
+        )
+
+      assert Enum.count(response_next["data"]) == limit
+      assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
+    end
+
+    test "renders error when the range is invalid", %{conn: conn} do
+      range = "invalid"
+      conn = get(conn, "/blocks/#{range}")
+
+      assert json_response(conn, 400) ==
+               %{"error" => "invalid range: #{range}"}
+    end
+  end
+
+  ################
+
+  defp get_block(enc_block_hash) when is_binary(enc_block_hash) do
+    block_hash = Validate.id!(enc_block_hash)
+
+    case :aec_chain.get_block(block_hash) do
+      {:ok, _} ->
+        Format.to_map({:block, {nil, nil}, nil, block_hash})
+
+      :error ->
+        raise ErrInput.NotFound, value: enc_block_hash
+    end
+  end
+
+  defp get_block({_, mbi} = block_index) do
+    case read_block(block_index) do
+      [block] ->
+        type = (mbi == -1 && :key_block_hash) || :micro_block_hash
+        hash = Model.block(block, :hash)
+        get_block(Enc.encode(type, hash))
+
+      [] ->
+        raise ErrInput.NotFound, value: block_index
+    end
+  end
+
+  defp get_blocki(%{"kbi" => kbi} = req) do
+    mbi = Map.get(req, "mbi", "-1")
+
+    (kbi <> "/" <> mbi)
+    |> Validate.block_index!()
+    |> get_block()
+  end
+end

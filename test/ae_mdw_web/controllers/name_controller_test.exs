@@ -3,7 +3,7 @@ defmodule AeMdwWeb.NameControllerTest do
 
   alias AeMdw.Validate
   alias AeMdw.Db.{Format, Model, Name}
-  alias AeMdwWeb.NameController
+  alias AeMdwWeb.{NameController, TestUtil}
   alias AeMdwWeb.Continuation, as: Cont
   alias AeMdw.Error.Input, as: ErrInput
 
@@ -316,7 +316,8 @@ defmodule AeMdwWeb.NameControllerTest do
       conn = get(conn, "/name/#{name}")
 
       assert json_response(conn, 200) |> Jason.encode!() ==
-               handle_input(fn -> get_name(Validate.plain_name!(name)) end) |> Jason.encode!()
+               TestUtil.handle_input(fn -> get_name(Validate.plain_name!(name)) end)
+               |> Jason.encode!()
     end
 
     test "get name info by encoded hash ", %{conn: conn} do
@@ -324,7 +325,8 @@ defmodule AeMdwWeb.NameControllerTest do
       conn = get(conn, "/name/#{hash}")
 
       assert json_response(conn, 200) |> Jason.encode!() ==
-               handle_input(fn -> get_name(Validate.plain_name!(hash)) end) |> Jason.encode!()
+               TestUtil.handle_input(fn -> get_name(Validate.plain_name!(hash)) end)
+               |> Jason.encode!()
     end
 
     test "renders error when no such name is present", %{conn: conn} do
@@ -332,7 +334,7 @@ defmodule AeMdwWeb.NameControllerTest do
       conn = get(conn, "/name/#{name}")
 
       assert json_response(conn, 400) == %{
-               "error" => handle_input(fn -> get_name(Validate.plain_name!(name)) end)
+               "error" => TestUtil.handle_input(fn -> get_name(Validate.plain_name!(name)) end)
              }
     end
   end
@@ -343,7 +345,7 @@ defmodule AeMdwWeb.NameControllerTest do
       conn = get(conn, "/name/pointers/#{id}")
 
       assert json_response(conn, 200) ==
-               handle_input(fn -> get_poiters(Validate.plain_name!(id)) end)
+               TestUtil.handle_input(fn -> get_poiters(Validate.plain_name!(id)) end)
     end
 
     test "renders error when the name is missing", %{conn: conn} do
@@ -351,7 +353,7 @@ defmodule AeMdwWeb.NameControllerTest do
       conn = get(conn, "/name/pointers/#{id}")
 
       assert json_response(conn, 400) == %{
-               "error" => handle_input(fn -> get_poiters(Validate.plain_name!(id)) end)
+               "error" => TestUtil.handle_input(fn -> get_poiters(Validate.plain_name!(id)) end)
              }
     end
   end
@@ -362,7 +364,7 @@ defmodule AeMdwWeb.NameControllerTest do
       conn = get(conn, "/name/pointees/#{id}")
 
       assert json_response(conn, 200) ==
-               handle_input(fn -> get_pointees(Validate.name_id!(id)) end)
+               TestUtil.handle_input(fn -> get_pointees(Validate.name_id!(id)) end)
     end
 
     test "renders error when the key is invalid", %{conn: conn} do
@@ -372,7 +374,7 @@ defmodule AeMdwWeb.NameControllerTest do
       assert json_response(conn, 400) ==
                %{
                  "error" =>
-                   handle_input(fn ->
+                   TestUtil.handle_input(fn ->
                      get_pointees(Validate.name_id!(id))
                    end)
                }
@@ -409,14 +411,5 @@ defmodule AeMdwWeb.NameControllerTest do
       "active" => Format.map_raw_values(active, &Format.to_json/1),
       "inactive" => Format.map_raw_values(inactive, &Format.to_json/1)
     }
-  end
-
-  defp handle_input(f) do
-    try do
-      f.()
-    rescue
-      err in [ErrInput] ->
-        err.message
-    end
   end
 end

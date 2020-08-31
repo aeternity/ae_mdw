@@ -1,8 +1,6 @@
 defmodule Support.WsClient do
   use WebSockex
 
-  alias Support.MsgHandler
-
   @known_prefixes ["ak_", "ct_", "ok_", "nm_", "cm_", "ch_"]
   @mock_hash "th_XCzs29JhAh7Jpd5fypNi42Kszc4eVYEadw62cNBc7qBHajhD7"
 
