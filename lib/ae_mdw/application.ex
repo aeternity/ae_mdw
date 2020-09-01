@@ -11,11 +11,10 @@ defmodule AeMdw.Application do
     :lager.set_loglevel(:epoch_sync_lager_event, :lager_console_backend, :undefined, :error)
     :lager.set_loglevel(:lager_console_backend, :error)
 
+    init(:aehttp)
     init(:model)
     init(:meta)
-
-    contract_exp = Application.fetch_env!(:ae_mdw, :contract_cache_expiration_minutes)
-    EtsCache.new(AeMdw.Contract.table(), contract_exp)
+    init(:contract_cache)
 
     children = [
       AeMdw.Db.Sync.Supervisor,
@@ -25,6 +24,9 @@ defmodule AeMdw.Application do
 
     Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)
   end
+
+  def init(:aehttp),
+    do: :application.ensure_all_started(:aehttp)
 
   def init(:model),
     do: Enum.each(Model.records(), &SmartRecord.new(Model, &1, Model.defaults(&1)))
@@ -138,6 +140,11 @@ defmodule AeMdw.Application do
       }
     )
   end
+
+  def init(:contract_cache),
+    do: EtsCache.new(AeMdw.Contract.table(),
+          Application.fetch_env!(:ae_mdw, :contract_cache_expiration_minutes))
+
 
   # Tell Phoenix to update the endpoint configuration whenever the application is updated.
   def config_change(changed, _new, removed) do
