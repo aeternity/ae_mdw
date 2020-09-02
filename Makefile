@@ -15,6 +15,10 @@ deps: ## Get and compile Elixir dependencies
 compile: ## Compile Elixir code
 	$(mix) compile
 
+.PHONY: reset-mdw-db
+reset-mdw-db: ## Reset Middleware DB tables
+	$(mix) reset_db
+
 .PHONY: shell
 shell: ## Launch a mix shell with all modules compiled and loaded
 	clear && iex --sname $(name) -S $(mix) phx.server
