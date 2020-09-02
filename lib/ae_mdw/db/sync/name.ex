@@ -176,11 +176,11 @@ defmodule AeMdw.Db.Sync.Name do
     do: cache_through_read!(Model.PlainName, name_hash) |> Model.plain_name(:value)
 
   def log_expired_name(height, plain_name),
-    do: Log.info("[#{height}] #{inspect(:erlang.timestamp())} expiring name #{plain_name}")
+    do: Log.info("[#{height}] expiring name #{plain_name}")
 
   def log_expired_auction(height, m_name) do
     plain_name = Model.name(m_name, :index)
-    Log.info("[#{height}] #{inspect(:erlang.timestamp())} expiring auction for #{plain_name}")
+    Log.info("[#{height}] expiring auction for #{plain_name}")
   end
 
   ################################################################################
@@ -188,7 +188,6 @@ defmodule AeMdw.Db.Sync.Name do
   #
   #
 
-  # name_txis - must be from newest first to oldest
   def invalidate(new_height) do
     inactives = expirations(Model.InactiveNameExpiration, new_height)
     actives = expirations(Model.ActiveNameExpiration, new_height)

@@ -64,7 +64,7 @@ defmodule AeMdw.Db.Model do
   # in 3 tables: auction_expiration, name_expiration, inactive_name_expiration
   #
   # expiration:
-  #     index = {expire_height, plain_name}, value: any
+  #     index = {expire_height, plain_name | oracle_pk}, value: any
   @expiration_defaults [index: {nil, nil}, value: nil]
   defrecord :expiration, @expiration_defaults
 
@@ -100,6 +100,27 @@ defmodule AeMdw.Db.Model do
   @pointee_defaults [index: {nil, {{nil, nil}, nil}, nil}, unused: nil]
   defrecord :pointee, @pointee_defaults
 
+  # in 2 tables: active_oracle, inactive_oracle
+  #
+  # oracle:
+  #     index: pubkey
+  #     active: height
+  #     expire: height
+  #     register: {block_index, txi}
+  #     extends: [{block_index, txi}]
+  #     previous: m_oracle | nil
+  #
+  #     (other details come from MPT lookup)
+  @oracle_defaults [
+    index: nil,
+    active: nil,
+    expire: nil,
+    register: nil,
+    extends: [],
+    previous: nil
+  ]
+  defrecord :oracle, @oracle_defaults
+
   ################################################################################
 
   def tables() do
@@ -111,9 +132,22 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.Field,
       AeMdw.Db.Model.IdCount,
       AeMdw.Db.Model.Origin,
-      AeMdw.Db.Model.RevOrigin
+      AeMdw.Db.Model.RevOrigin,
+      AeMdw.Db.Model.ActiveOracleExpiration,
+      AeMdw.Db.Model.InactiveOracleExpiration,
+      AeMdw.Db.Model.ActiveOracle,
+      AeMdw.Db.Model.InactiveOracle
       | name_tables()
     ]
+  end
+
+  def oracle_tables() do
+    [
+      AeMdw.Db.Model.ActiveOracleExpiration,
+      AeMdw.Db.Model.InactiveOracleExpiration,
+      AeMdw.Db.Model.ActiveOracle,
+      AeMdw.Db.Model.InactiveOracle
+     ]
   end
 
   def name_tables() do
@@ -143,7 +177,8 @@ defmodule AeMdw.Db.Model do
       :auction_bid,
       :expiration,
       :name,
-      :pointee
+      :pointee,
+      :oracle
     ]
 
   def fields(record),
@@ -165,6 +200,11 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.InactiveNameExpiration), do: :expiration
   def record(AeMdw.Db.Model.ActiveName), do: :name
   def record(AeMdw.Db.Model.InactiveName), do: :name
+  def record(AeMdw.Db.Model.ActiveOracleExpiration), do: :expiration
+  def record(AeMdw.Db.Model.InactiveOracleExpiration), do: :expiration
+  def record(AeMdw.Db.Model.ActiveOracle), do: :oracle
+  def record(AeMdw.Db.Model.InactiveOracle), do: :oracle
+
 
   def table(:tx), do: AeMdw.Db.Model.Tx
   def table(:block), do: AeMdw.Db.Model.Block
@@ -188,6 +228,8 @@ defmodule AeMdw.Db.Model do
   def defaults(:pointee), do: @pointee_defaults
   def defaults(:expiration), do: @expiration_defaults
   def defaults(:name), do: @name_defaults
+  def defaults(:oracle), do: @oracle_defaults
+
 
   def write_count(model, delta) do
     total = id_count(model, :count)
