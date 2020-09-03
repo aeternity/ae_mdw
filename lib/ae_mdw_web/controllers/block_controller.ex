@@ -1,5 +1,6 @@
 defmodule AeMdwWeb.BlockController do
   use AeMdwWeb, :controller
+  use PhoenixSwagger
 
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Validate
@@ -122,4 +123,121 @@ defmodule AeMdwWeb.BlockController do
         raise ErrInput.NotFound, value: block_index
     end
   end
+
+  ########
+
+  swagger_path :block do
+    get("/block/{hash}")
+    description("Get block information by given key/micro block hash.")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_block_by_hash")
+    tag("Middleware")
+
+    parameters do
+      hash(:path, :string, "The key/micro block hash.",
+        required: true,
+        example: "kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6"
+      )
+    end
+
+    response(
+      200,
+      "Returns block information by given key/micro block hash.",
+      %{}
+    )
+
+    response(400, "Bad request.", %{})
+  end
+
+  swagger_path :blocks do
+    get("/blocks/{range_or_dir}")
+    description("Get multiple generations.")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_blocks")
+    tag("Middleware")
+
+    parameters do
+      range_or_dir(
+        :path,
+        :string,
+        "The direction, which could be **forward** or **backward**, or non-negative integer range.",
+        required: true,
+        example: "300000-300100"
+      )
+
+      limit(
+        :query,
+        :integer,
+        "The numbers of items to return.",
+        required: false,
+        format: "int32",
+        default: 10,
+        minimum: 1,
+        maximum: 1000,
+        example: 1
+      )
+    end
+
+    response(200, "Returns multiple generations.", %{})
+    response(400, "Bad request.", %{})
+  end
+
+  swagger_path :blocki_kbi do
+    get("/blocki/{kbi}")
+    description("Get key block information by given key block index(height).")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_block_by_kbi")
+    tag("Middleware")
+
+    parameters do
+      kbi(:path, :integer, "The key block index(height).",
+        required: true,
+        example: 305_000
+      )
+    end
+
+    response(200, "Returns key block information by given key block index(height).", %{})
+    response(400, "Bad request.", %{})
+  end
+
+  swagger_path :blocki_kbi_and_mbi do
+    get("/blocki/{kbi}/{mbi}")
+
+    description(
+      "Get micro block information by given key block index(height) and micro block index."
+    )
+
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_block_by_kbi_and_mbi")
+    tag("Middleware")
+
+    parameters do
+      kbi(:path, :integer, "The key block index(height).",
+        required: true,
+        example: 300_001
+      )
+
+      mbi(:path, :integer, "The micro block index.",
+        required: true,
+        example: 4
+      )
+    end
+
+    response(
+      200,
+      "Returns micro block information by given key block index(height) and micro block index.",
+      %{}
+    )
+
+    response(400, "Bad request.", %{})
+  end
+
+  def swagger_path_blocki(route = %{path: "/blocki/{kbi}"}), do: swagger_path_blocki_kbi(route)
+
+  def swagger_path_blocki(route = %{path: "/blocki/{kbi}/{mbi}"}),
+    do: swagger_path_blocki_kbi_and_mbi(route)
 end

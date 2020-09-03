@@ -10,6 +10,170 @@
     "version": "1.0"
   },
   "paths": {
+    "/block/{hash}": {
+      "get": {
+        "deprecated": false,
+        "description": "Get block information by given key/micro block hash.",
+        "operationId": "get_block_by_hash",
+        "parameters": [
+          {
+            "description": "The key/micro block hash.",
+            "in": "path",
+            "name": "hash",
+            "required": true,
+            "type": "string",
+            "x-example": "kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6"
+          }
+        ],
+        "produces": [
+          [
+            "application/json"
+          ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns block information by given key/micro block hash.",
+            "schema": {}
+          },
+          "400": {
+            "description": "Bad request.",
+            "schema": {}
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Middleware"
+        ]
+      }
+    },
+    "/blocki/{kbi}": {
+      "get": {
+        "deprecated": false,
+        "description": "Get key block information by given key block index(height).",
+        "operationId": "get_block_by_kbi",
+        "parameters": [
+          {
+            "description": "The key block index(height).",
+            "in": "path",
+            "name": "kbi",
+            "required": true,
+            "type": "integer",
+            "x-example": 305000
+          }
+        ],
+        "produces": [
+          [
+            "application/json"
+          ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns key block information by given key block index(height).",
+            "schema": {}
+          },
+          "400": {
+            "description": "Bad request.",
+            "schema": {}
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Middleware"
+        ]
+      }
+    },
+    "/blocki/{kbi}/{mbi}": {
+      "get": {
+        "deprecated": false,
+        "description": "Get micro block information by given key block index(height) and micro block index.",
+        "operationId": "get_block_by_kbi_and_mbi",
+        "parameters": [
+          {
+            "description": "The key block index(height).",
+            "in": "path",
+            "name": "kbi",
+            "required": true,
+            "type": "integer",
+            "x-example": 300001
+          },
+          {
+            "description": "The micro block index.",
+            "in": "path",
+            "name": "mbi",
+            "required": true,
+            "type": "integer",
+            "x-example": 4
+          }
+        ],
+        "produces": [
+          [
+            "application/json"
+          ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns micro block information by given key block index(height) and micro block index.",
+            "schema": {}
+          },
+          "400": {
+            "description": "Bad request.",
+            "schema": {}
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Middleware"
+        ]
+      }
+    },
+    "/blocks/{range_or_dir}": {
+      "get": {
+        "deprecated": false,
+        "description": "Get multiple generations.",
+        "operationId": "get_blocks",
+        "parameters": [
+          {
+            "description": "The direction, which could be **forward** or **backward**, or non-negative integer range.",
+            "in": "path",
+            "name": "range_or_dir",
+            "required": true,
+            "type": "string",
+            "x-example": "300000-300100"
+          },
+          {
+            "default": 10,
+            "description": "The numbers of items to return.",
+            "format": "int32",
+            "in": "query",
+            "maximum": 1000,
+            "minimum": 1,
+            "name": "limit",
+            "required": false,
+            "type": "integer",
+            "x-example": 1
+          }
+        ],
+        "produces": [
+          [
+            "application/json"
+          ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns multiple generations.",
+            "schema": {}
+          },
+          "400": {
+            "description": "Bad request.",
+            "schema": {}
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Middleware"
+        ]
+      }
+    },
     "/name/{id}": {
       "get": {
         "deprecated": false,
