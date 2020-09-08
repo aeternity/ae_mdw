@@ -17,6 +17,7 @@ defmodule Mix.Tasks.Bench do
 
   @default_paths [
     "/txi/87450",
+    "/tx/th_zATv7B4RHS45GamShnWgjkvcrQfZUWQkZ8gk1RD4m2uWLJKnq",
     "/txs/count",
     "/txs/count/ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
     "/txs/forward?type=channel_create&limit=1",
@@ -29,7 +30,23 @@ defmodule Mix.Tasks.Bench do
     "/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&type_group=name",
     "/txs/gen/223000-223007?limit=30",
     "/txs/txi/509111",
-    "/txs/txi/409222-501000?limit=30"
+    "/txs/txi/409222-501000?limit=30",
+    "/names?limit=3",
+    "/name/nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj",
+    "/name/aeternity.chain",
+    "/names/inactive?by=expiration&direction=forward&limit=1",
+    "/names/active?by=name&limit=3",
+    "/names/auctions",
+    "/names/auctions?by=expiration&direction=forward&limit=2",
+    "/name/pointers/wwwbeaconoidcom.chain",
+    "/name/pointees/ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C",
+    "/block/kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6",
+    "/block/mh_25TNGuEkVGckfrH3rVwHiUsm2GFB17mKFEF3hYHR3zQrVXCRrp",
+    "/blocki/300000",
+    "/blocki/300001/2",
+    "/blocks/backward?limit=1",
+    "/blocks/forward?limit=2",
+    "/blocks/100000-100100?limit=3"
   ]
 
   def run(arg) do

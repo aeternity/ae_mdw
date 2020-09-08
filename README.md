@@ -2227,240 +2227,529 @@ Where 7 - is a number of clients, performing various requests to the server. At 
 
 The example output would look like:
 ```
+          Path: "/block/kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 176.828 ms
+          Min exec time: 13.563 ms
+          Max exec time: 31.512 ms
+          Average: 25.261142857142858 ms
+          Mean: 22.5375 ms
+          Percentiles:
+            50th: 27.495 ms
+            80th: 29.977 ms
+            90th: 30.648600000000002 ms
+            99th: 31.42566 ms
+          ......................................................................
+          
+
+          Path: "/block/mh_25TNGuEkVGckfrH3rVwHiUsm2GFB17mKFEF3hYHR3zQrVXCRrp"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 157.818 ms
+          Min exec time: 17.008 ms
+          Max exec time: 28.514 ms
+          Average: 22.545428571428573 ms
+          Mean: 22.761 ms
+          Percentiles:
+            50th: 23.025 ms
+            80th: 24.7916 ms
+            90th: 26.315 ms
+            99th: 28.2941 ms
+          ......................................................................
+          
+
+          Path: "/blocki/300000"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 135.525 ms
+          Min exec time: 14.269 ms
+          Max exec time: 25.508 ms
+          Average: 19.360714285714288 ms
+          Mean: 19.8885 ms
+          Percentiles:
+            50th: 18.409 ms
+            80th: 24.3354 ms
+            90th: 25.107200000000002 ms
+            99th: 25.46792 ms
+          ......................................................................
+          
+
+          Path: "/blocki/300001/2"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 159.536 ms
+          Min exec time: 19.652 ms
+          Max exec time: 29.805 ms
+          Average: 22.790857142857142 ms
+          Mean: 24.7285 ms
+          Percentiles:
+            50th: 22.019 ms
+            80th: 23.2648 ms
+            90th: 26.0232 ms
+            99th: 29.426819999999996 ms
+          ......................................................................
+          
+
+          Path: "/blocks/100000-100100?limit=3"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 204.876 ms
+          Min exec time: 20.126 ms
+          Max exec time: 45.705 ms
+          Average: 29.268 ms
+          Mean: 32.9155 ms
+          Percentiles:
+            50th: 28.178 ms
+            80th: 29.712799999999998 ms
+            90th: 36.205200000000005 ms
+            99th: 44.75501999999999 ms
+          ......................................................................
+          
+
+          Path: "/blocks/backward?limit=1"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 447.735 ms
+          Min exec time: 42.838 ms
+          Max exec time: 148.492 ms
+          Average: 63.96214285714286 ms
+          Mean: 95.66499999999999 ms
+          Percentiles:
+            50th: 49.556 ms
+            80th: 56.7398 ms
+            90th: 93.88960000000003 ms
+            99th: 143.03175999999996 ms
+          ......................................................................
+          
+
+          Path: "/blocks/forward?limit=2"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 197.46 ms
+          Min exec time: 22.418 ms
+          Max exec time: 37.933 ms
+          Average: 28.208571428571428 ms
+          Mean: 30.1755 ms
+          Percentiles:
+            50th: 25.683 ms
+            80th: 33.9802 ms
+            90th: 36.5956 ms
+            99th: 37.799260000000004 ms
+          ......................................................................
+          
+
+          Path: "/name/aeternity.chain"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 173.32 ms
+          Min exec time: 15.835 ms
+          Max exec time: 34.136 ms
+          Average: 24.759999999999998 ms
+          Mean: 24.985500000000002 ms
+          Percentiles:
+            50th: 26.442 ms
+            80th: 29.5968 ms
+            90th: 31.8194 ms
+            99th: 33.90434 ms
+          ......................................................................
+          
+
+          Path: "/name/nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 167.879 ms
+          Min exec time: 12.373 ms
+          Max exec time: 30.138 ms
+          Average: 23.982714285714284 ms
+          Mean: 21.2555 ms
+          Percentiles:
+            50th: 24.172 ms
+            80th: 29.1216 ms
+            90th: 30.0276 ms
+            99th: 30.12696 ms
+          ......................................................................
+          
+
+          Path: "/name/pointees/ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 175.901 ms
+          Min exec time: 18.705 ms
+          Max exec time: 33.428 ms
+          Average: 25.128714285714288 ms
+          Mean: 26.066499999999998 ms
+          Percentiles:
+            50th: 24.118 ms
+            80th: 30.162800000000004 ms
+            90th: 32.2898 ms
+            99th: 33.31418 ms
+          ......................................................................
+          
+
+          Path: "/name/pointers/wwwbeaconoidcom.chain"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 143.89 ms
+          Min exec time: 14.576 ms
+          Max exec time: 26.579 ms
+          Average: 20.555714285714284 ms
+          Mean: 20.5775 ms
+          Percentiles:
+            50th: 21.285 ms
+            80th: 25.435800000000004 ms
+            90th: 26.1386 ms
+            99th: 26.534959999999998 ms
+          ......................................................................
+          
+
+          Path: "/names/active?by=name&limit=3"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 210.383 ms
+          Min exec time: 22.973 ms
+          Max exec time: 37.787 ms
+          Average: 30.054714285714287 ms
+          Mean: 30.38 ms
+          Percentiles:
+            50th: 28.502 ms
+            80th: 35.802 ms
+            90th: 36.6812 ms
+            99th: 37.67642 ms
+          ......................................................................
+          
+
+          Path: "/names/auctions"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 219.486 ms
+          Min exec time: 21.364 ms
+          Max exec time: 42.716 ms
+          Average: 31.355142857142855 ms
+          Mean: 32.04 ms
+          Percentiles:
+            50th: 31.34 ms
+            80th: 35.652800000000006 ms
+            90th: 38.783 ms
+            99th: 42.3227 ms
+          ......................................................................
+          
+
+          Path: "/names/auctions?by=expiration&direction=forward&limit=2"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 279.483 ms
+          Min exec time: 20.293 ms
+          Max exec time: 136.36 ms
+          Average: 39.92614285714286 ms
+          Mean: 78.32650000000001 ms
+          Percentiles:
+            50th: 23.36 ms
+            80th: 29.333600000000004 ms
+            90th: 72.85060000000003 ms
+            99th: 130.00905999999995 ms
+          ......................................................................
+          
+
+          Path: "/names/inactive?by=expiration&direction=forward&limit=1"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 283.889 ms
+          Min exec time: 17.383 ms
+          Max exec time: 136.34 ms
+          Average: 40.55557142857143 ms
+          Mean: 76.8615 ms
+          Percentiles:
+            50th: 24.289 ms
+            80th: 31.131600000000006 ms
+            90th: 74.01860000000003 ms
+            99th: 130.10785999999993 ms
+          ......................................................................
+          
+
+          Path: "/names?limit=3"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 450.27 ms
+          Min exec time: 30.814 ms
+          Max exec time: 140.706 ms
+          Average: 64.32428571428571 ms
+          Mean: 85.75999999999999 ms
+          Percentiles:
+            50th: 32.505 ms
+            80th: 120.68920000000007 ms
+            90th: 140.7012 ms
+            99th: 140.70551999999998 ms
+          ......................................................................
+          
+
+          Path: "/tx/th_zATv7B4RHS45GamShnWgjkvcrQfZUWQkZ8gk1RD4m2uWLJKnq"
+          Number of requests: 7
+          Successful requests: 7
+          Failed requests: 0
+          Total execution time: 205.694 ms
+          Min exec time: 20.858 ms
+          Max exec time: 45.893 ms
+          Average: 29.38485714285714 ms
+          Mean: 33.3755 ms
+          Percentiles:
+            50th: 29.958 ms
+            80th: 31.8316 ms
+            90th: 37.583000000000006 ms
+            99th: 45.06199999999999 ms
+          ......................................................................
+          
+
           Path: "/txi/87450"
           Number of requests: 7
           Successful requests: 7
           Failed requests: 0
-          Total execution time: 288.721 ms
-          Min exec time: 19.315 ms
-          Max exec time: 140.515 ms
-          Average: 41.24585714285714 ms
-          Mean: 79.91499999999999 ms
+          Total execution time: 188.212 ms
+          Min exec time: 19.369 ms
+          Max exec time: 31.328 ms
+          Average: 26.88742857142857 ms
+          Mean: 25.3485 ms
           Percentiles:
-            50th: 25.95 ms
-            80th: 31.266600000000004 ms
-            90th: 75.19540000000003 ms
-            99th: 133.98303999999996 ms
+            50th: 28.58 ms
+            80th: 30.8272 ms
+            90th: 31.1174 ms
+            99th: 31.306939999999997 ms
           ......................................................................
-
+          
 
           Path: "/txs/backward?account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&account=ak_zUQikTiUMNxfKwuAfQVMPkaxdPsXP8uAxnfn6TkZKZCtmRcUD&limit=1"
           Number of requests: 7
           Successful requests: 7
           Failed requests: 0
-          Total execution time: 337.618 ms
-          Min exec time: 20.464 ms
-          Max exec time: 172.871 ms
-          Average: 48.231142857142856 ms
-          Mean: 96.6675 ms
+          Total execution time: 197.012 ms
+          Min exec time: 19.033 ms
+          Max exec time: 41.904 ms
+          Average: 28.144571428571428 ms
+          Mean: 30.468500000000002 ms
           Percentiles:
-            50th: 27.833 ms
-            80th: 34.619800000000005 ms
-            90th: 90.18680000000005 ms
-            99th: 164.60257999999993 ms
+            50th: 28.206 ms
+            80th: 31.817200000000003 ms
+            90th: 36.3588 ms
+            99th: 41.34947999999999 ms
           ......................................................................
-
+          
 
           Path: "/txs/count"
           Number of requests: 7
           Successful requests: 7
           Failed requests: 0
-          Total execution time: 197.263 ms
-          Min exec time: 15.202 ms
-          Max exec time: 34.976 ms
-          Average: 28.18042857142857 ms
-          Mean: 25.089 ms
+          Total execution time: 135.534 ms
+          Min exec time: 13.545 ms
+          Max exec time: 29.477 ms
+          Average: 19.362 ms
+          Mean: 21.511 ms
           Percentiles:
-            50th: 31.489 ms
-            80th: 32.842 ms
-            90th: 33.7028 ms
-            99th: 34.84868 ms
+            50th: 16.793 ms
+            80th: 23.762200000000004 ms
+            90th: 26.596400000000003 ms
+            99th: 29.18894 ms
           ......................................................................
-
+          
 
           Path: "/txs/count/ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
           Number of requests: 7
           Successful requests: 7
           Failed requests: 0
-          Total execution time: 279.705 ms
-          Min exec time: 15.544 ms
-          Max exec time: 140.428 ms
-          Average: 39.957857142857144 ms
-          Mean: 77.986 ms
+          Total execution time: 171.2 ms
+          Min exec time: 15.425 ms
+          Max exec time: 30.858 ms
+          Average: 24.457142857142856 ms
+          Mean: 23.1415 ms
           Percentiles:
-            50th: 25.106 ms
-            80th: 28.861800000000002 ms
-            90th: 73.69660000000003 ms
-            99th: 133.75485999999992 ms
+            50th: 24.968 ms
+            80th: 28.332 ms
+            90th: 29.6628 ms
+            99th: 30.73848 ms
           ......................................................................
-
+          
 
           Path: "/txs/forward?account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
           Number of requests: 7
           Successful requests: 7
           Failed requests: 0
-          Total execution time: 406.254 ms
-          Min exec time: 17.89 ms
-          Max exec time: 125.932 ms
-          Average: 58.03628571428572 ms
-          Mean: 71.911 ms
+          Total execution time: 253.586 ms
+          Min exec time: 23.121 ms
+          Max exec time: 53.231 ms
+          Average: 36.22657142857143 ms
+          Mean: 38.176 ms
           Percentiles:
-            50th: 36.636 ms
-            80th: 108.07120000000008 ms
-            90th: 125.8612 ms
-            99th: 125.92492 ms
+            50th: 33.393 ms
+            80th: 42.5534 ms
+            90th: 47.1206 ms
+            99th: 52.61995999999999 ms
           ......................................................................
-
+          
 
           Path: "/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&type_group=name"
           Number of requests: 7
           Successful requests: 7
           Failed requests: 0
-          Total execution time: 180.596 ms
-          Min exec time: 19.95 ms
-          Max exec time: 29.385 ms
-          Average: 25.79942857142857 ms
-          Mean: 24.6675 ms
+          Total execution time: 187.098 ms
+          Min exec time: 18.951 ms
+          Max exec time: 35.415 ms
+          Average: 26.728285714285715 ms
+          Mean: 27.183 ms
           Percentiles:
-            50th: 27.927 ms
-            80th: 28.7048 ms
-            90th: 29.037 ms
-            99th: 29.3502 ms
+            50th: 25.881 ms
+            80th: 31.3854 ms
+            90th: 33.373200000000004 ms
+            99th: 35.21082 ms
           ......................................................................
-
+          
 
           Path: "/txs/forward?contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2"
           Number of requests: 7
           Successful requests: 7
           Failed requests: 0
-          Total execution time: 302.195 ms
-          Min exec time: 27.1 ms
-          Max exec time: 97.08 ms
-          Average: 43.17071428571428 ms
-          Mean: 62.09 ms
+          Total execution time: 246.696 ms
+          Min exec time: 26.818 ms
+          Max exec time: 45.642 ms
+          Average: 35.242285714285714 ms
+          Mean: 36.230000000000004 ms
           Percentiles:
-            50th: 34.142 ms
-            80th: 43.056 ms
-            90th: 65.15940000000002 ms
-            99th: 93.88793999999997 ms
+            50th: 37.011 ms
+            80th: 39.3294 ms
+            90th: 42.0984 ms
+            99th: 45.287639999999996 ms
           ......................................................................
-
+          
 
           Path: "/txs/forward?name_transfer.recipient_id=ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF&limit=1"
           Number of requests: 7
           Successful requests: 7
           Failed requests: 0
-          Total execution time: 305.898 ms
-          Min exec time: 19.572 ms
-          Max exec time: 144.61 ms
-          Average: 43.699714285714286 ms
-          Mean: 82.09100000000001 ms
+          Total execution time: 274.185 ms
+          Min exec time: 16.974 ms
+          Max exec time: 136.419 ms
+          Average: 39.169285714285714 ms
+          Mean: 76.6965 ms
           Percentiles:
-            50th: 27.913 ms
-            80th: 32.4152 ms
-            90th: 77.34940000000003 ms
-            99th: 137.88393999999994 ms
+            50th: 24.974 ms
+            80th: 28.6234 ms
+            90th: 72.07860000000004 ms
+            99th: 129.98495999999994 ms
           ......................................................................
-
+          
 
           Path: "/txs/forward?oracle=ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&limit=1"
           Number of requests: 7
           Successful requests: 7
           Failed requests: 0
-          Total execution time: 280.388 ms
-          Min exec time: 13.594 ms
-          Max exec time: 140.548 ms
-          Average: 40.05542857142857 ms
-          Mean: 77.071 ms
+          Total execution time: 180.51 ms
+          Min exec time: 23.38 ms
+          Max exec time: 32.873 ms
+          Average: 25.787142857142857 ms
+          Mean: 28.1265 ms
           Percentiles:
-            50th: 24.055 ms
-            80th: 31.335600000000007 ms
-            90th: 75.71200000000003 ms
-            99th: 134.06439999999998 ms
+            50th: 24.847 ms
+            80th: 26.1794 ms
+            90th: 28.9598 ms
+            99th: 32.48168 ms
           ......................................................................
-
+          
 
           Path: "/txs/forward?type=channel_create&limit=1"
           Number of requests: 7
           Successful requests: 7
           Failed requests: 0
-          Total execution time: 169.413 ms
-          Min exec time: 19.445 ms
-          Max exec time: 30.124 ms
-          Average: 24.201857142857143 ms
-          Mean: 24.7845 ms
+          Total execution time: 268.607 ms
+          Min exec time: 20.747 ms
+          Max exec time: 136.401 ms
+          Average: 38.37242857142858 ms
+          Mean: 78.57400000000001 ms
           Percentiles:
-            50th: 23.397 ms
-            80th: 27.985800000000005 ms
-            90th: 29.1262 ms
-            99th: 30.024219999999996 ms
+            50th: 22.225 ms
+            80th: 23.6076 ms
+            90th: 68.81940000000004 ms
+            99th: 129.64283999999995 ms
           ......................................................................
-
+          
 
           Path: "/txs/forward?type_group=oracle&limit=1"
           Number of requests: 7
           Successful requests: 7
           Failed requests: 0
-          Total execution time: 179.82 ms
-          Min exec time: 17.984 ms
-          Max exec time: 39.395 ms
-          Average: 25.68857142857143 ms
-          Mean: 28.689500000000002 ms
+          Total execution time: 158.674 ms
+          Min exec time: 17.687 ms
+          Max exec time: 26.59 ms
+          Average: 22.667714285714286 ms
+          Mean: 22.1385 ms
           Percentiles:
-            50th: 23.537 ms
-            80th: 32.02700000000001 ms
-            90th: 35.83760000000001 ms
-            99th: 39.03925999999999 ms
+            50th: 23.201 ms
+            80th: 25.4078 ms
+            90th: 26.113 ms
+            99th: 26.5423 ms
           ......................................................................
-
+          
 
           Path: "/txs/gen/223000-223007?limit=30"
           Number of requests: 7
           Successful requests: 7
           Failed requests: 0
-          Total execution time: 538.766 ms
-          Min exec time: 45.564 ms
-          Max exec time: 166.333 ms
-          Average: 76.96657142857143 ms
-          Mean: 105.9485 ms
+          Total execution time: 506.611 ms
+          Min exec time: 58.126 ms
+          Max exec time: 84.741 ms
+          Average: 72.373 ms
+          Mean: 71.4335 ms
           Percentiles:
-            50th: 48.047 ms
-            80th: 96.5982 ms
-            90th: 126.21220000000002 ms
-            99th: 162.32091999999997 ms
+            50th: 77.671 ms
+            80th: 80.7548 ms
+            90th: 82.42739999999999 ms
+            99th: 84.50964 ms
           ......................................................................
-
+          
 
           Path: "/txs/txi/409222-501000?limit=30"
           Number of requests: 7
           Successful requests: 7
           Failed requests: 0
-          Total execution time: 481.281 ms
-          Min exec time: 43.973 ms
-          Max exec time: 169.334 ms
-          Average: 68.75442857142858 ms
-          Mean: 106.65350000000001 ms
+          Total execution time: 466.63 ms
+          Min exec time: 55.771 ms
+          Max exec time: 100.134 ms
+          Average: 66.66142857142857 ms
+          Mean: 77.9525 ms
           Percentiles:
-            50th: 53.573 ms
-            80th: 59.836 ms
-            90th: 104.26400000000002 ms
-            99th: 162.82699999999994 ms
+            50th: 60.229 ms
+            80th: 71.7536 ms
+            90th: 84.19800000000001 ms
+            99th: 98.54039999999999 ms
           ......................................................................
-
+          
 
           Path: "/txs/txi/509111"
           Number of requests: 7
           Successful requests: 7
           Failed requests: 0
-          Total execution time: 389.054 ms
-          Min exec time: 16.093 ms
-          Max exec time: 140.467 ms
-          Average: 55.579142857142855 ms
-          Mean: 78.28 ms
+          Total execution time: 160.981 ms
+          Min exec time: 15.854 ms
+          Max exec time: 28.118 ms
+          Average: 22.997285714285713 ms
+          Mean: 21.985999999999997 ms
           Percentiles:
-            50th: 24.174 ms
-            80th: 117.27580000000007 ms
-            90th: 140.4424 ms
-            99th: 140.46454 ms
+            50th: 24.205 ms
+            80th: 26.224 ms
+            90th: 27.2762 ms
+            99th: 28.03382 ms
           ......................................................................
 ```
