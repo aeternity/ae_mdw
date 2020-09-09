@@ -89,6 +89,12 @@ The NODEROOT directory should contain directories: `bin`, `lib`, `plugins`, `rel
   * Install dependencies with `mix deps.get`
   * Start middleware with `make shell`
 
+## Build and start with Docker
+As the project comes with `Dockerfile` and `docker-compose.yml`, it is possible to build and run it by using Docker:
+
+  * To build docker image, execute in root folder of the project: `docker-compose build`
+  * Start middleware image interactively with `docker-compose run --service-ports middleware sh`
+
 ## HTTP endpoints
 
 ```
