@@ -3,7 +3,637 @@
   "consumes": [
     "application/json"
   ],
-  "definitions": {},
+  "definitions": {
+    "ChannelCreateTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in channel create txs",
+      "example": {
+        "initiator_id": 2,
+        "responder_id": 5
+      },
+      "properties": {
+        "initiator_id": {
+          "description": "Count of times, where given pubkey appears as initiator_id",
+          "type": "integer"
+        },
+        "responder_id": {
+          "description": "Count of times, where given pubkey appears as responder_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in channel create txs",
+      "type": "object"
+    },
+    "ChannelOffchainTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in channel offchain txs",
+      "example": {
+        "channel_id": 7
+      },
+      "properties": {
+        "channel_id": {
+          "description": "Count of times, where given pubkey appears as channel_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in channel offchain txs",
+      "type": "object"
+    },
+    "ChannelTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in channel txs",
+      "example": {
+        "channel_id": 5,
+        "from_id": 3
+      },
+      "properties": {
+        "channel_id": {
+          "description": "Count of times, where given pubkey appears as channel_id",
+          "type": "integer"
+        },
+        "from_id": {
+          "description": "Count of times, where given pubkey appears as from_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in channel txs",
+      "type": "object"
+    },
+    "ChannelWithdrawTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in channel withdraw txs",
+      "example": {
+        "channel_id": 8,
+        "to_id": 5
+      },
+      "properties": {
+        "channel_id": {
+          "description": "Count of times, where given pubkey appears as channel_id",
+          "type": "integer"
+        },
+        "to_id": {
+          "description": "Count of times, where given pubkey appears as to_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in channel withdraw txs",
+      "type": "object"
+    },
+    "ContractCallTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in contract call txs",
+      "example": {
+        "caller_id": 2,
+        "contract_id": 3
+      },
+      "properties": {
+        "caller_id": {
+          "description": "Count of times, where given pubkey appears as caller_id",
+          "type": "integer"
+        },
+        "contract_id": {
+          "description": "Count of times, where given pubkey appears as contract_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in contract call txs",
+      "type": "object"
+    },
+    "ContractTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in contract txs",
+      "example": {
+        "owner_id": 6
+      },
+      "properties": {
+        "owner_id": {
+          "description": "Count of times, where given pubkey appears as owner_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in contract txs",
+      "type": "object"
+    },
+    "ErrorResponse": {
+      "description": "Error response from the API",
+      "example": {
+        "error": "invalid id: th_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZF"
+      },
+      "properties": {
+        "error": {
+          "description": "The message of the error raised",
+          "type": "string"
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "title": "Error response",
+      "type": "object"
+    },
+    "GaMetaTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in ga meta txs",
+      "example": {
+        "ga_id": 12
+      },
+      "properties": {
+        "ga_id": {
+          "description": "Count of times, where given pubkey appears as ga_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in ga meta txs",
+      "type": "object"
+    },
+    "NameClaimTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in name claim txs",
+      "example": {
+        "account_id": 2
+      },
+      "properties": {
+        "account_id": {
+          "description": "Count of times, where given pubkey appears as account_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in name claim txs",
+      "type": "object"
+    },
+    "NamePreclaimTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in name preclaim txs",
+      "example": {
+        "account_id": 2,
+        "commitment_id": 3
+      },
+      "properties": {
+        "account_id": {
+          "description": "Count of times, where given pubkey appears as account_id",
+          "type": "integer"
+        },
+        "commitment_id": {
+          "description": "Count of times, where given pubkey appears as commitment_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in name preclaim txs",
+      "type": "object"
+    },
+    "NameTransferTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in name transfer txs",
+      "example": {
+        "account_id": 4,
+        "name_id": 3,
+        "recipient_id": 6
+      },
+      "properties": {
+        "account_id": {
+          "description": "Count of times, where given pubkey appears as account_id",
+          "type": "integer"
+        },
+        "name_id": {
+          "description": "Count of times, where given pubkey appears as name_id",
+          "type": "integer"
+        },
+        "recipient_id": {
+          "description": "Count of times, where given pubkey appears as recipient_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in name transfer txs",
+      "type": "object"
+    },
+    "NameTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in name txs",
+      "example": {
+        "account_id": 2,
+        "name_id": 6
+      },
+      "properties": {
+        "account_id": {
+          "description": "Count of times, where given pubkey appears as account_id",
+          "type": "integer"
+        },
+        "name_id": {
+          "description": "Count of times, where given pubkey appears as name_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in name txs",
+      "type": "object"
+    },
+    "OracleExtendTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in oracle extend txs",
+      "example": {
+        "oracle_id": 5
+      },
+      "properties": {
+        "oracle_id": {
+          "description": "Count of times, where given pubkey appears as oracle_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in oracle extend txs",
+      "type": "object"
+    },
+    "OracleQueryTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in oracle query txs",
+      "example": {
+        "oracle_id": 4,
+        "sender_id": 2
+      },
+      "properties": {
+        "oracle_id": {
+          "description": "Count of times, where given pubkey appears as oracle_id",
+          "type": "integer"
+        },
+        "sender_id": {
+          "description": "Count of times, where given pubkey appears as sender_id:",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in oracle query txs",
+      "type": "object"
+    },
+    "OracleRegisterTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in oracle register txs",
+      "example": {
+        "account_id": 1
+      },
+      "properties": {
+        "account_id": {
+          "description": "Count of times, where given pubkey appears as account_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in oracle register txs",
+      "type": "object"
+    },
+    "OracleResponseTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in oracle response txs",
+      "example": {
+        "oracle_id": 5
+      },
+      "properties": {
+        "oracle_id": {
+          "description": "Count of times, where given pubkey appears as oracle_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in oracle response txs",
+      "type": "object"
+    },
+    "PayingForTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in paying for txs",
+      "example": {
+        "payer_id": 2
+      },
+      "properties": {
+        "payer_id": {
+          "description": "Count of times, where given pubkey appears as payer_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in paying for txs",
+      "type": "object"
+    },
+    "SpendTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in spend txs",
+      "example": {
+        "recipient_id": 1,
+        "sender_id": 2
+      },
+      "properties": {
+        "recipient_id": {
+          "description": "Count of times, where given pubkey appears as recipient_id",
+          "type": "integer"
+        },
+        "sender_id": {
+          "description": "Count of times, where given pubkey appears as sender_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in spend txs",
+      "type": "object"
+    },
+    "StatusResponse": {
+      "description": "Response schema for status",
+      "example": {
+        "mdw_height": 311557,
+        "mdw_synced": true,
+        "mdw_tx_index": 15474067,
+        "mdw_version": "0.1.0",
+        "node_height": 311557,
+        "node_version": "5.5.4"
+      },
+      "properties": {
+        "mdw_height": {
+          "description": "The height of the mdw",
+          "type": "integer"
+        },
+        "mdw_synced": {
+          "description": "The synced status",
+          "type": "boolean"
+        },
+        "mdw_tx_index": {
+          "description": "The last transaction index",
+          "type": "integer"
+        },
+        "mdw_version": {
+          "description": "The mdw version",
+          "type": "string"
+        },
+        "node_height": {
+          "description": "The height of the node",
+          "type": "integer"
+        },
+        "node_version": {
+          "description": "The node version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "node_version",
+        "node_height",
+        "mdw_version",
+        "mdw_tx_index",
+        "mdw_synced",
+        "mdw_height"
+      ],
+      "title": "Status response",
+      "type": "object"
+    },
+    "TxResponse": {
+      "description": "Response schema for transaction",
+      "example": {
+        "block_hash": "mh_2WkLsh7vj7XCqioewSD8CPjktzcT3tZ2CCKGjd6fm4epVw3Roi",
+        "block_height": 300284,
+        "hash": "th_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZFk",
+        "micro_index": 5,
+        "micro_time": 1597619554618,
+        "signatures": [
+          "sg_AWSwU7pAh292uU2LsugssYYjX6u9faXGAS5MYo7tRefp6VXxVwjSuABcF4uHK4AG3WCHSKQ1qdUYVoM6RTWj6yvUubqib"
+        ],
+        "tx": {
+          "abi_version": 0,
+          "account_id": "ak_sezvMRsriPfWdphKmv293hEiyeyUYSoqkWqW7AcAuW9jdkCnT",
+          "fee": 16592000000000,
+          "nonce": 290,
+          "oracle_id": "ok_sezvMRsriPfWdphKmv293hEiyeyUYSoqkWqW7AcAuW9jdkCnT",
+          "oracle_ttl": {
+            "type": "delta",
+            "value": 500
+          },
+          "query_fee": 20000000000000,
+          "query_format": "string",
+          "response_format": "string",
+          "type": "OracleRegisterTx",
+          "version": 1
+        },
+        "tx_index": 14633958
+      },
+      "properties": {
+        "block_hash": {
+          "description": "The block hash",
+          "type": "string"
+        },
+        "block_height": {
+          "description": "The block height",
+          "type": "integer"
+        },
+        "hash": {
+          "description": "The transaction hash",
+          "type": "string"
+        },
+        "micro_index": {
+          "description": "The micro block index",
+          "type": "integer"
+        },
+        "micro_time": {
+          "description": "The unix timestamp",
+          "type": "integer"
+        },
+        "signatures": {
+          "description": "The signatures",
+          "type": "array"
+        },
+        "tx": {
+          "description": "The transaction",
+          "type": "map"
+        },
+        "tx_index": {
+          "description": "The tarnsaction index",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "tx_index",
+        "tx",
+        "signatures",
+        "micro_time",
+        "micro_index",
+        "hash",
+        "block_height",
+        "block_hash"
+      ],
+      "title": "Response for transaction",
+      "type": "object"
+    },
+    "TxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id",
+      "example": {
+        "oracle_extend_tx": {
+          "oracle_id": 2
+        },
+        "oracle_query_tx": {
+          "oracle_id": 2,
+          "sender_id": 2
+        },
+        "oracle_register_tx": {
+          "account_id": 1
+        },
+        "oracle_response_tx": {
+          "oracle_id": 2
+        },
+        "spend_tx": {
+          "recipient_id": 1,
+          "sender_id": 2
+        }
+      },
+      "properties": {
+        "channel_close_mutual_tx": {
+          "$ref": "#/definitions/ChannelTxsCountByIdResponse",
+          "description": "The channel close mutual txs count"
+        },
+        "channel_close_solo_tx": {
+          "$ref": "#/definitions/ChannelTxsCountByIdResponse",
+          "description": "The channel close solo txs count"
+        },
+        "channel_create_tx": {
+          "$ref": "#/definitions/ChannelCreateTxsCountByIdResponse",
+          "description": "The channel create txs count"
+        },
+        "channel_deposit_tx": {
+          "$ref": "#/definitions/ChannelTxsCountByIdResponse",
+          "description": "The channel deposit txs count"
+        },
+        "channel_force_progress_tx": {
+          "$ref": "#/definitions/ChannelTxsCountByIdResponse",
+          "description": "The channel force progress txs count"
+        },
+        "channel_offchain_tx": {
+          "$ref": "#/definitions/ChannelOffchainTxsCountByIdResponse",
+          "description": "The channel offchain txs count"
+        },
+        "channel_settle_tx": {
+          "$ref": "#/definitions/ChannelTxsCountByIdResponse",
+          "description": "The channel settle txs count"
+        },
+        "channel_slash_tx": {
+          "$ref": "#/definitions/ChannelTxsCountByIdResponse",
+          "description": "The channel slash txs count"
+        },
+        "channel_snapshot_solo_tx": {
+          "$ref": "#/definitions/ChannelTxsCountByIdResponse",
+          "description": "The channel snapshot solo txs count"
+        },
+        "channel_withdraw_tx": {
+          "$ref": "#/definitions/ChannelWithdrawTxsCountByIdResponse",
+          "description": "The channel withdraw txs count"
+        },
+        "contract_call_tx": {
+          "$ref": "#/definitions/ContractCallTxsCountByIdResponse",
+          "description": "The contract call txs count"
+        },
+        "contract_create_tx": {
+          "$ref": "#/definitions/ContractTxsCountByIdResponse",
+          "description": "The contract create txs count"
+        },
+        "ga_attach_tx": {
+          "$ref": "#/definitions/ContractTxsCountByIdResponse",
+          "description": "The ga attach txs count"
+        },
+        "ga_meta_tx": {
+          "$ref": "#/definitions/GaMetaTxsCountByIdResponse",
+          "description": "The ga meta txs count"
+        },
+        "name_claim_tx": {
+          "$ref": "#/definitions/NameClaimTxsCountByIdResponse",
+          "description": "The name claim txs count"
+        },
+        "name_preclaim_tx": {
+          "$ref": "#/definitions/NamePreclaimTxsCountByIdResponse",
+          "description": "The name preclaim txs count"
+        },
+        "name_revoke_tx": {
+          "$ref": "#/definitions/NameTxsCountByIdResponse",
+          "description": "The name revoke txs count"
+        },
+        "name_transfer_tx": {
+          "$ref": "#/definitions/NameTransferTxsCountByIdResponse",
+          "description": "The name transfer txs count"
+        },
+        "name_update_tx": {
+          "$ref": "#/definitions/NameTxsCountByIdResponse",
+          "description": "The name update txs count"
+        },
+        "oracle_extend_tx": {
+          "$ref": "#/definitions/OracleExtendTxsCountByIdResponse",
+          "description": "The oracle extend txs count"
+        },
+        "oracle_query_tx": {
+          "$ref": "#/definitions/OracleQueryTxsCountByIdResponse",
+          "description": "The oracle query txs count"
+        },
+        "oracle_register_tx": {
+          "$ref": "#/definitions/OracleRegisterTxsCountByIdResponse",
+          "description": "The oracle register txs count"
+        },
+        "oracle_response_tx": {
+          "$ref": "#/definitions/OracleResponseTxsCountByIdResponse",
+          "description": "The oracle response txs count"
+        },
+        "paying_for_tx": {
+          "$ref": "#/definitions/PayingForTxsCountByIdResponse",
+          "description": "The paying for txs count"
+        },
+        "spend_tx": {
+          "$ref": "#/definitions/SpendTxsCountByIdResponse",
+          "description": "The spend txs count"
+        }
+      },
+      "title": "Response for transactions count by id",
+      "type": "object"
+    },
+    "TxsCountResponse": {
+      "description": "Response schema for transactions count",
+      "example": 15479090,
+      "title": "Response for transactions count",
+      "type": "integer"
+    },
+    "TxsScopeResponse": {
+      "description": "Response schema for transactions by scope type range",
+      "example": {
+        "data": [
+          {
+            "block_hash": "mh_ufiYLdN8am8fBxMnb6xq2K4MQKo4eFSCF5bgixq4EzKMtDUXP",
+            "block_height": 1,
+            "hash": "th_2FHxDzpQMRTiRfpYRV3eCcsheHr1sjf9waxk7z6JDTVcgqZRXR",
+            "micro_index": 0,
+            "micro_time": 1543375246712,
+            "signatures": [
+              "sg_Fipyxq5f3JS9CB3AQVCw1v9skqNBw1cdfe5W3h1t2MkviU19GQckERQZkqkaXWKowdTUvr7B1QbtWdHjJHQcZApwVDdP9"
+            ],
+            "tx": {
+              "amount": 150425,
+              "fee": 101014,
+              "nonce": 1,
+              "payload": "ba_NzkwOTIxLTgwMTAxOGSbElc=",
+              "recipient_id": "ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5",
+              "sender_id": "ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5",
+              "type": "SpendTx",
+              "version": 1
+            },
+            "tx_index": 0
+          },
+          {
+            "block_hash": "mh_2PGJQKB1jX3gshVn4oshcgaGKAtz96W3PAqzW8giaXNRkjsAND",
+            "block_height": 155,
+            "hash": "th_2duufMULhKAadyrEQF5dx35eJT7JpKEY3n7rXznPB1etwQFo5C",
+            "micro_index": 0,
+            "micro_time": 1543400251733,
+            "signatures": [
+              "sg_GvtmZ5NkN1cK3bcdDuLHbq5Mx6nLnepG2h1acGJdNbAjXQPJkZ36ryRpyED1xdhdSp9rvtc72bF8PEymqphWEVxUHRw2o"
+            ],
+            "tx": {
+              "amount": 1000000,
+              "fee": 20001,
+              "nonce": 2,
+              "payload": "ba_SGFucyBkb25hdGVzs/BHFA==",
+              "recipient_id": "ak_2fbhvhopqoWbGXbqUHJhZEM1Rm16eMXBqLtDu5iEVqNrASnzF6",
+              "sender_id": "ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5",
+              "type": "SpendTx",
+              "version": 1
+            },
+            "tx_index": 1
+          }
+        ],
+        "next": "txs/gen/0-265304?limit=2&page=2"
+      },
+      "properties": {
+        "data": {
+          "description": "The transactions responses",
+          "items": {
+            "$ref": "#/definitions/TxResponse"
+          },
+          "type": "array"
+        },
+        "next": {
+          "description": "The continuation link",
+          "type": "string"
+        }
+      },
+      "required": [
+        "next",
+        "data"
+      ],
+      "title": "Response for transactions by scope type range",
+      "type": "object"
+    }
+  },
   "info": {
     "description": "API for [Aeternity Middleware](https://github.com/aeternity/ae_mdw)",
     "title": "Aeternity Middleware",
@@ -507,7 +1137,7 @@
     "/status": {
       "get": {
         "deprecated": false,
-        "description": "Get middleware status.",
+        "description": "Get middleware status",
         "operationId": "get_status",
         "parameters": [],
         "produces": [
@@ -517,8 +1147,10 @@
         ],
         "responses": {
           "200": {
-            "description": "Returns the status of the MDW.",
-            "schema": {}
+            "description": "Returns the status of the MDW",
+            "schema": {
+              "$ref": "#/definitions/StatusResponse"
+            }
           }
         },
         "summary": "",
@@ -530,11 +1162,11 @@
     "/tx/{hash}": {
       "get": {
         "deprecated": false,
-        "description": "Get a transaction by a given hash.",
+        "description": "Get a transaction by a given hash",
         "operationId": "get_tx_by_hash",
         "parameters": [
           {
-            "description": "The transaction hash.",
+            "description": "The transaction hash",
             "in": "path",
             "name": "hash",
             "required": true,
@@ -549,12 +1181,16 @@
         ],
         "responses": {
           "200": {
-            "description": "Returns the transaction.",
-            "schema": {}
+            "description": "Returns the transaction",
+            "schema": {
+              "$ref": "#/definitions/TxResponse"
+            }
           },
           "400": {
-            "description": "Bad request.",
-            "schema": {}
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
           }
         },
         "summary": "",
@@ -566,11 +1202,11 @@
     "/txi/{index}": {
       "get": {
         "deprecated": false,
-        "description": "Get a transaction by a given index.",
+        "description": "Get a transaction by a given index",
         "operationId": "get_tx_by_index",
         "parameters": [
           {
-            "description": "The transaction index.",
+            "description": "The transaction index",
             "in": "path",
             "name": "index",
             "required": true,
@@ -585,16 +1221,22 @@
         ],
         "responses": {
           "200": {
-            "description": "Returns the transaction.",
-            "schema": {}
+            "description": "Returns the transaction",
+            "schema": {
+              "$ref": "#/definitions/TxResponse"
+            }
           },
           "400": {
-            "description": "Bad request.",
-            "schema": {}
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
           },
           "404": {
-            "description": "Not found.",
-            "schema": {}
+            "description": "Not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
           }
         },
         "summary": "",
@@ -606,7 +1248,7 @@
     "/txs/count": {
       "get": {
         "deprecated": false,
-        "description": "Get count of transactions at the current height.",
+        "description": "Get count of transactions at the current height",
         "operationId": "get_current_tx_count",
         "parameters": [],
         "produces": [
@@ -616,8 +1258,10 @@
         ],
         "responses": {
           "200": {
-            "description": "Returns count of all transactions at the current height.",
-            "schema": {}
+            "description": "Returns count of all transactions at the current height",
+            "schema": {
+              "$ref": "#/definitions/TxsCountResponse"
+            }
           }
         },
         "summary": "",
@@ -629,11 +1273,11 @@
     "/txs/count/{id}": {
       "get": {
         "deprecated": false,
-        "description": "Get transactions count and its type for given aeternity ID.",
+        "description": "Get transactions count and its type for given aeternity ID",
         "operationId": "get_tx_count_by_id",
         "parameters": [
           {
-            "description": "The ID.",
+            "description": "The ID",
             "in": "path",
             "name": "id",
             "required": true,
@@ -648,12 +1292,16 @@
         ],
         "responses": {
           "200": {
-            "description": "Returns transactions count and its type for given aeternity ID.",
-            "schema": {}
+            "description": "Returns transactions count and its type for given aeternity ID",
+            "schema": {
+              "$ref": "#/definitions/TxsCountByIdResponse"
+            }
           },
           "400": {
-            "description": "Bad request.",
-            "schema": {}
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
           }
         },
         "summary": "",
@@ -665,7 +1313,7 @@
     "/txs/{direction}": {
       "get": {
         "deprecated": false,
-        "description": "Get a transactions from beginning or end of the chain. More [info](https://github.com/aeternity/ae_mdw#transaction-querying).",
+        "description": "Get a transactions from beginning or end of the chain. More [info](https://github.com/aeternity/ae_mdw#transaction-querying)",
         "operationId": "get_txs_by_direction",
         "parameters": [
           {
@@ -783,7 +1431,7 @@
             "x-example": 10
           },
           {
-            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning.",
+            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning",
             "enum": [
               "forward",
               "backward"
@@ -794,7 +1442,7 @@
             "type": "string"
           },
           {
-            "description": "The sender ID.",
+            "description": "The sender ID",
             "exaple": "ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5",
             "in": "query",
             "name": "sender_id",
@@ -802,7 +1450,7 @@
             "type": "string"
           },
           {
-            "description": "The recipient ID.",
+            "description": "The recipient ID",
             "exaple": "ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2",
             "in": "query",
             "name": "recipient_id",
@@ -817,12 +1465,16 @@
         ],
         "responses": {
           "200": {
-            "description": "Returns result regarding the according criteria.",
-            "schema": {}
+            "description": "Returns result regarding the according criteria",
+            "schema": {
+              "$ref": "#/definitions/TxsScopeResponse"
+            }
           },
           "400": {
-            "description": "Bad request.",
-            "schema": {}
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
           }
         },
         "summary": "",
@@ -834,7 +1486,7 @@
     "/txs/{scope_type}/{range}": {
       "get": {
         "deprecated": false,
-        "description": "Get a transactions bounded by scope/range.",
+        "description": "Get a transactions bounded by scope/range",
         "operationId": "get_txs_by_scope_type_range",
         "parameters": [
           {
@@ -952,7 +1604,7 @@
             "x-example": 10
           },
           {
-            "description": "The scope type.",
+            "description": "The scope type",
             "enum": [
               "gen",
               "txi"
@@ -963,7 +1615,7 @@
             "type": "string"
           },
           {
-            "description": "The range.",
+            "description": "The range",
             "in": "path",
             "name": "range",
             "required": true,
@@ -978,12 +1630,16 @@
         ],
         "responses": {
           "200": {
-            "description": "Returns result regarding the according criteria.",
-            "schema": {}
+            "description": "Returns result regarding the according criteria",
+            "schema": {
+              "$ref": "#/definitions/TxsScopeResponse"
+            }
           },
           "400": {
-            "description": "Bad request.",
-            "schema": {}
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
           }
         },
         "summary": "",
