@@ -5,7 +5,7 @@
   ],
   "definitions": {
     "InfoAuctions": {
-      "description": "Response schema for info auctions",
+      "description": "Schema for info auctions",
       "example": {
         "auction_end": 337254,
         "bids": [
@@ -514,7 +514,7 @@
       "type": "object"
     },
     "Actives": {
-      "description": "Response schema for actives",
+      "description": "Schema for actives",
       "properties": {
         "account_pubkey": {
           "description": "The account info",
@@ -539,6 +539,161 @@
         }
       },
       "title": "Response for transactions count by id in contract txs",
+      "type": "object"
+    },
+    "BlocksResponse": {
+      "description": "Response schema for multiple generations",
+      "example": {
+        "data": [
+          {
+            "beneficiary": "ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv",
+            "hash": "kh_22BuVBCFvW5FvQu3F8h4v351SfJPokR9ytwAD77Lyuo6mqxeeF",
+            "height": 300111,
+            "info": "cb_AAACKbJ2LDk=",
+            "micro_blocks": {
+              "mh_2iTJfCVYbtawdrdYr8sCAwLbJe26Wf8T6UhH7aSfQEYVHeLtsq": {
+                "hash": "mh_2iTJfCVYbtawdrdYr8sCAwLbJe26Wf8T6UhH7aSfQEYVHeLtsq",
+                "height": 300111,
+                "pof_hash": "no_fraud",
+                "prev_hash": "kh_22BuVBCFvW5FvQu3F8h4v351SfJPokR9ytwAD77Lyuo6mqxeeF",
+                "prev_key_hash": "kh_22BuVBCFvW5FvQu3F8h4v351SfJPokR9ytwAD77Lyuo6mqxeeF",
+                "signature": "sg_8fAjbD1LXofZBennTDFwtrnbJC4CnCLZVjuRYemjWNMwaHiLE5ATdcALTuq3NTjzhZMtXZcMtpw54FrbghksnRPsHr4je",
+                "state_hash": "bs_Ryc28k53YEkZJAjGL7hQQ6ndQjnsUdPAyHwYDEQhAFWBGYEGK",
+                "time": 1597586941797,
+                "transactions": {
+                  "th_24eC98mwqVfHNpVwMwMy89BL2nrerLxfD5eGKDfsBUkSavWWMf": {
+                    "block_hash": "mh_2iTJfCVYbtawdrdYr8sCAwLbJe26Wf8T6UhH7aSfQEYVHeLtsq",
+                    "block_height": 300111,
+                    "hash": "th_24eC98mwqVfHNpVwMwMy89BL2nrerLxfD5eGKDfsBUkSavWWMf",
+                    "signatures": [
+                      "sg_QCdArmCTBCvm6SRTqBJfydunNSw5M6civ5pn7qmvrtS5Y1f12zdwiyQMFaN14EVKhrbfURGvzoZH2prwathvQNcoQ11Uy"
+                    ],
+                    "tx": {
+                      "amount": 20000,
+                      "fee": 19340000000000,
+                      "nonce": 2883842,
+                      "payload": "ba_MzAwMTEwOmtoXzJBS2gxc0hueVFUd1JpVmRBY3dQcWc1R0xQUmEyRlBYUjdYZ2RiWm9MUFRqZ3ZxdVpGOm1oXzJVbUY2RjFLVnhSc3ZLNWRFb0tndGZoeFQ2a3p5M0x0THdmTmJOQTR5QUxRVUoyNEZlOjE1OTc1ODY5MzPaWF/X",
+                      "recipient_id": "ak_zvU8YQLagjcfng7Tg8yCdiZ1rpiWNp1PBn3vtUs44utSvbJVR",
+                      "sender_id": "ak_zvU8YQLagjcfng7Tg8yCdiZ1rpiWNp1PBn3vtUs44utSvbJVR",
+                      "ttl": 300120,
+                      "type": "SpendTx",
+                      "version": 1
+                    }
+                  },
+                  "th_27p5PC2JGzm5L5MXUEPSoEZGEGWe2YHxbnp6TAVpdWFgRcN1Kk": {
+                    "block_hash": "mh_2iTJfCVYbtawdrdYr8sCAwLbJe26Wf8T6UhH7aSfQEYVHeLtsq",
+                    "block_height": 300111,
+                    "hash": "th_27p5PC2JGzm5L5MXUEPSoEZGEGWe2YHxbnp6TAVpdWFgRcN1Kk",
+                    "signatures": [
+                      "sg_Cr6awb2Wgi9h9BbenWkdc8r2r2Gfpvsuu5VqX4iJMnpxZMGtSk1JwXiwBunvssMHg1b5w4JpVyUYT8kcQfRTChVJpeFvq"
+                    ],
+                    "tx": {
+                      "amount": 20000,
+                      "fee": 19320000000000,
+                      "nonce": 2884619,
+                      "payload": "ba_MzAwMTEwOmtoXzJBS2gxc0hueVFUd1JpVmRBY3dQcWc1R0xQUmEyRlBYUjdYZ2RiWm9MUFRqZ3ZxdVpGOm1oX1JBaldveUw4enVBZmczZlBtUXk0YlFIaXJVQUVHVGVlNmR0Q0ZyVHR6OURxazJGdjc6MTU5NzU4NjkzN20RnXs=",
+                      "recipient_id": "ak_wTPFpksUJFjjntonTvwK4LJvDw11DPma7kZBneKbumb8yPeFq",
+                      "sender_id": "ak_wTPFpksUJFjjntonTvwK4LJvDw11DPma7kZBneKbumb8yPeFq",
+                      "ttl": 300120,
+                      "type": "SpendTx",
+                      "version": 1
+                    }
+                  },
+                  "th_2HNH4euVw13H5zq5f8EBAU2qL1zAYFDRZz7KZVmotoSd4KurK2": {
+                    "block_hash": "mh_2iTJfCVYbtawdrdYr8sCAwLbJe26Wf8T6UhH7aSfQEYVHeLtsq",
+                    "block_height": 300111,
+                    "hash": "th_2HNH4euVw13H5zq5f8EBAU2qL1zAYFDRZz7KZVmotoSd4KurK2",
+                    "signatures": [
+                      "sg_5qYU16V7FUmUVc7ct3Zaz2mcbfRPvy4u9TjQaSwKc1aT9hbSNYznQLnvn4NJ4QoA7ZxaQ97GDYvz6G1xCPnKj2DnSwyh7"
+                    ],
+                    "tx": {
+                      "amount": 20000,
+                      "fee": 19320000000000,
+                      "nonce": 2884573,
+                      "payload": "ba_MzAwMTEwOmtoXzJBS2gxc0hueVFUd1JpVmRBY3dQcWc1R0xQUmEyRlBYUjdYZ2RiWm9MUFRqZ3ZxdVpGOm1oX1JBaldveUw4enVBZmczZlBtUXk0YlFIaXJVQUVHVGVlNmR0Q0ZyVHR6OURxazJGdjc6MTU5NzU4NjkzNjtuoqw=",
+                      "recipient_id": "ak_KHfXhF2J6VBt3sUgFygdbpEkWi6AKBkr9jNKUCHbpwwagzHUs",
+                      "sender_id": "ak_KHfXhF2J6VBt3sUgFygdbpEkWi6AKBkr9jNKUCHbpwwagzHUs",
+                      "ttl": 300120,
+                      "type": "SpendTx",
+                      "version": 1
+                    }
+                  }
+                },
+                "txs_hash": "bx_VCPWd8hkrDhL922ZqJDVsmzQUv2Mommr5xStCGpRpmYCtxYn4",
+                "version": 4
+              }
+            },
+            "miner": "ak_wGQ59uKFAqAgkQHr3NBWFud1TNZJeS4YgRrpexe7pmqxBrg6t",
+            "nonce": 18429171940868612898,
+            "pow": [
+              768191,
+              11634428,
+              12436610,
+              28959995,
+              31538410,
+              44136935,
+              50232943,
+              84540411,
+              94716421,
+              106227445,
+              141460600,
+              148446520,
+              157095206,
+              192242339,
+              207514671,
+              229105874,
+              230039137,
+              230066004,
+              234245150,
+              240470674,
+              251347269,
+              275059442,
+              296636962,
+              310281198,
+              314699295,
+              316539758,
+              324051349,
+              338239987,
+              341080503,
+              344857362,
+              361046795,
+              362110238,
+              378985679,
+              402618476,
+              408531046,
+              414403747,
+              441213420,
+              441693933,
+              444683146,
+              450052150,
+              516140379,
+              528676885
+            ],
+            "prev_hash": "mh_2UmF6F1KVxRsvK5dEoKgtfhxT6kzy3LtLwfNbNA4yALQUJ24Fe",
+            "prev_key_hash": "kh_2AKh1sHnyQTwRiVdAcwPqg5GLPRa2FPXR7XgdbZoLPTjgvquZF",
+            "state_hash": "bs_2okaX1hWaV47fdnXsJS2crvegdZBoYDh4GQ12EPhu5R9idb4Ue",
+            "target": 508388341,
+            "time": 1597586932827,
+            "version": 4
+          }
+        ],
+        "next": "blocks/gen/300111-300300?limit=1&page=2"
+      },
+      "properties": {
+        "data": {
+          "description": "The data for the multiple generations",
+          "type": "array"
+        },
+        "next": {
+          "description": "The continuation link",
+          "type": "string"
+        }
+      },
+      "required": [
+        "next",
+        "data"
+      ],
+      "title": "Blocks",
       "type": "object"
     },
     "TxsScopeResponse": {
@@ -624,6 +779,143 @@
       "title": "Response for transactions count by id in oracle response txs",
       "type": "object"
     },
+    "BlockResponse": {
+      "description": "Response schema for block information",
+      "example": {
+        "beneficiary": "ak_2MR38Zf355m6JtP13T3WEcUcSLVLCxjGvjk6zG95S2mfKohcSS",
+        "hash": "kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6",
+        "height": 123008,
+        "info": "cb_AAAAAfy4hFE=",
+        "miner": "ak_Fqnmm5hRAMaVPWk8wzpodMopZgWghMns4mM7kSV1jgT89p9AV",
+        "nonce": 9223756548132685562,
+        "pow": [
+          12359907,
+          21243613,
+          31370838,
+          34911479,
+          39070315,
+          39375528,
+          45751339,
+          49864206,
+          56785423,
+          70282271,
+          89781776,
+          136985196,
+          140580763,
+          142415353,
+          145306210,
+          148449813,
+          156037609,
+          161568067,
+          170308922,
+          185345129,
+          192805579,
+          214115188,
+          220339679,
+          243288723,
+          258891016,
+          283001743,
+          284306909,
+          286457285,
+          326405486,
+          352963232,
+          377904500,
+          378120539,
+          380987399,
+          388675008,
+          447958786,
+          457602498,
+          465751225,
+          466823982,
+          475416389,
+          491255227,
+          530197445,
+          533633643
+        ],
+        "prev_hash": "kh_hwin2p8u87mqiK836FixGa1pL9eBkL1Ju37Yi6EUebCgAf8rm",
+        "prev_key_hash": "kh_hwin2p8u87mqiK836FixGa1pL9eBkL1Ju37Yi6EUebCgAf8rm",
+        "state_hash": "bs_9Dg6mTmiJLpbg9dzgjnNFVidQesvZYZG3dEviUCd4oE1hUcna",
+        "target": 504082055,
+        "time": 1565548832164,
+        "version": 3
+      },
+      "properties": {
+        "beneficiary": {
+          "description": "The beneficiary",
+          "type": "string"
+        },
+        "hash": {
+          "description": "The block hash",
+          "type": "string"
+        },
+        "height": {
+          "description": "The block height",
+          "type": "integer"
+        },
+        "info": {
+          "description": "The info",
+          "type": "string"
+        },
+        "miner": {
+          "description": "The miner public key",
+          "type": "string"
+        },
+        "nonce": {
+          "description": "The nonce",
+          "type": "string"
+        },
+        "pof_hash": {
+          "description": "The pof hash",
+          "type": "string"
+        },
+        "pow": {
+          "description": "The pow",
+          "type": "array"
+        },
+        "prev_hash": {
+          "description": "The previous block hash",
+          "type": "string"
+        },
+        "prev_key_hash": {
+          "description": "The previous key block hash",
+          "type": "string"
+        },
+        "signature": {
+          "description": "The signature",
+          "type": "string"
+        },
+        "state_hash": {
+          "description": "The state hash",
+          "type": "string"
+        },
+        "target": {
+          "description": "The target",
+          "type": "integer"
+        },
+        "time": {
+          "description": "The time",
+          "type": "integer"
+        },
+        "txs_hash": {
+          "description": "The txs hash",
+          "type": "string"
+        },
+        "version": {
+          "description": "The version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "version",
+        "state_hash",
+        "prev_key_hash",
+        "prev_hash",
+        "height",
+        "hash"
+      ],
+      "title": "Block",
+      "type": "object"
+    },
     "ChannelWithdrawTxsCountByIdResponse": {
       "description": "Response schema for transactions count by id in channel withdraw txs",
       "example": {
@@ -644,7 +936,7 @@
       "type": "object"
     },
     "Active": {
-      "description": "Response schema for active",
+      "description": "Schema for active",
       "example": {
         "active_from": 279555,
         "expire_height": 329558,
@@ -710,7 +1002,7 @@
       "type": "object"
     },
     "NameAuctions": {
-      "description": "Response schema for name auctions",
+      "description": "Schema for name auctions",
       "example": {
         "active": false,
         "info": {
@@ -1189,7 +1481,7 @@
       "type": "object"
     },
     "NamesAuctionsResponse": {
-      "description": "Response schema for names auctions",
+      "description": "Schema for names auctions",
       "properties": {
         "data": {
           "description": "The data for the names",
@@ -1251,11 +1543,11 @@
     "/block/{hash}": {
       "get": {
         "deprecated": false,
-        "description": "Get block information by given key/micro block hash.",
+        "description": "Get block information by given key/micro block hash",
         "operationId": "get_block_by_hash",
         "parameters": [
           {
-            "description": "The key/micro block hash.",
+            "description": "The key/micro block hash",
             "in": "path",
             "name": "hash",
             "required": true,
@@ -1270,12 +1562,16 @@
         ],
         "responses": {
           "200": {
-            "description": "Returns block information by given key/micro block hash.",
-            "schema": {}
+            "description": "Returns block information by given key/micro block hash",
+            "schema": {
+              "$ref": "#/definitions/BlockResponse"
+            }
           },
           "400": {
-            "description": "Bad request.",
-            "schema": {}
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
           }
         },
         "summary": "",
@@ -1287,11 +1583,11 @@
     "/blocki/{kbi}": {
       "get": {
         "deprecated": false,
-        "description": "Get key block information by given key block index(height).",
+        "description": "Get key block information by given key block index(height)",
         "operationId": "get_block_by_kbi",
         "parameters": [
           {
-            "description": "The key block index(height).",
+            "description": "The key block index(height)",
             "in": "path",
             "name": "kbi",
             "required": true,
@@ -1306,12 +1602,16 @@
         ],
         "responses": {
           "200": {
-            "description": "Returns key block information by given key block index(height).",
-            "schema": {}
+            "description": "Returns key block information by given key block index(height)",
+            "schema": {
+              "$ref": "#/definitions/BlockResponse"
+            }
           },
           "400": {
-            "description": "Bad request.",
-            "schema": {}
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
           }
         },
         "summary": "",
@@ -1323,11 +1623,11 @@
     "/blocki/{kbi}/{mbi}": {
       "get": {
         "deprecated": false,
-        "description": "Get micro block information by given key block index(height) and micro block index.",
+        "description": "Get micro block information by given key block index(height) and micro block index",
         "operationId": "get_block_by_kbi_and_mbi",
         "parameters": [
           {
-            "description": "The key block index(height).",
+            "description": "The key block index(height)",
             "in": "path",
             "name": "kbi",
             "required": true,
@@ -1335,7 +1635,7 @@
             "x-example": 300001
           },
           {
-            "description": "The micro block index.",
+            "description": "The micro block index",
             "in": "path",
             "name": "mbi",
             "required": true,
@@ -1350,12 +1650,16 @@
         ],
         "responses": {
           "200": {
-            "description": "Returns micro block information by given key block index(height) and micro block index.",
-            "schema": {}
+            "description": "Returns micro block information by given key block index(height) and micro block index",
+            "schema": {
+              "$ref": "#/definitions/BlockResponse"
+            }
           },
           "400": {
-            "description": "Bad request.",
-            "schema": {}
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
           }
         },
         "summary": "",
@@ -1367,11 +1671,11 @@
     "/blocks/{range_or_dir}": {
       "get": {
         "deprecated": false,
-        "description": "Get multiple generations.",
+        "description": "Get multiple generations",
         "operationId": "get_blocks",
         "parameters": [
           {
-            "description": "The direction, which could be **forward** or **backward**, or non-negative integer range.",
+            "description": "The direction, which could be **forward** or **backward**, or non-negative integer range",
             "in": "path",
             "name": "range_or_dir",
             "required": true,
@@ -1398,12 +1702,16 @@
         ],
         "responses": {
           "200": {
-            "description": "Returns multiple generations.",
-            "schema": {}
+            "description": "Returns multiple generations",
+            "schema": {
+              "$ref": "#/definitions/BlocksResponse"
+            }
           },
           "400": {
-            "description": "Bad request.",
-            "schema": {}
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
           }
         },
         "summary": "",

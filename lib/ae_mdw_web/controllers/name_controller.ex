@@ -263,7 +263,7 @@ defmodule AeMdwWeb.NameController do
       InfoAuctions:
         swagger_schema do
           title("Info auctions")
-          description("Response schema for info auctions")
+          description("Schema for info auctions")
 
           properties do
             auction_end(:integer, "The key height when the name auction ends")
@@ -379,7 +379,7 @@ defmodule AeMdwWeb.NameController do
       NameAuctions:
         swagger_schema do
           title("Name auctions")
-          description("Response schema for name auctions")
+          description("Schema for name auctions")
 
           properties do
             active(:boolean, "The name auction status", required: true)
@@ -437,7 +437,7 @@ defmodule AeMdwWeb.NameController do
       NamesAuctionsResponse:
         swagger_schema do
           title("Names auctions")
-          description("Response schema for names auctions")
+          description("Schema for names auctions")
 
           properties do
             data(Schema.array(:NameAuctions), "The data for the names", required: true)
@@ -580,7 +580,7 @@ defmodule AeMdwWeb.NameController do
       Active:
         swagger_schema do
           title("Active")
-          description("Response schema for active")
+          description("Schema for active")
 
           properties do
             active_from(:integer, "The height when the name become active")
@@ -599,7 +599,7 @@ defmodule AeMdwWeb.NameController do
       Actives:
         swagger_schema do
           title("Actives")
-          description("Response schema for actives")
+          description("Schema for actives")
 
           properties do
             account_pubkey(Schema.array(:Active), "The account info")
@@ -612,7 +612,7 @@ defmodule AeMdwWeb.NameController do
 
           properties do
             active(Schema.ref(:Actives), "The active info")
-            # What is here!!!
+            # TODO: Describe inactive !!!
             inactive(:map, "The inactive info")
           end
 
