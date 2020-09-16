@@ -426,12 +426,12 @@
       },
       "properties": {
         "active": {
-          "$ref": "#/definitions/Actives",
+          "$ref": "#/definitions/ActivesInactives",
           "description": "The active info"
         },
         "inactive": {
-          "description": "The inactive info",
-          "type": "map"
+          "$ref": "#/definitions/ActivesInactives",
+          "description": "The inactive info"
         }
       },
       "title": "Pointees",
@@ -511,20 +511,6 @@
         "block_hash"
       ],
       "title": "Response for transaction",
-      "type": "object"
-    },
-    "Actives": {
-      "description": "Schema for actives",
-      "properties": {
-        "account_pubkey": {
-          "description": "The account info",
-          "items": {
-            "$ref": "#/definitions/Active"
-          },
-          "type": "array"
-        }
-      },
-      "title": "Actives",
       "type": "object"
     },
     "ContractTxsCountByIdResponse": {
@@ -935,37 +921,18 @@
       "title": "Response for transactions count by id in channel withdraw txs",
       "type": "object"
     },
-    "Active": {
-      "description": "Schema for active",
-      "example": {
-        "active_from": 279555,
-        "expire_height": 329558,
-        "name": "wwwbeaconoidcom.chain",
-        "update": {
-          "block_height": 279558,
-          "micro_index": 51,
-          "tx_index": 12942695
-        }
-      },
+    "ActivesInactives": {
+      "description": "Schema for actives/inactives ",
       "properties": {
-        "active_from": {
-          "description": "The height when the name become active",
-          "type": "integer"
-        },
-        "expire_height": {
-          "description": "The height when the name expire",
-          "type": "integer"
-        },
-        "name": {
-          "description": "The name",
-          "type": "string"
-        },
-        "update": {
-          "$ref": "#/definitions/Update",
-          "description": "The update info"
+        "account_pubkey": {
+          "description": "The account info",
+          "items": {
+            "$ref": "#/definitions/ActiveInactive"
+          },
+          "type": "array"
         }
       },
-      "title": "Active",
+      "title": "Actives/Inactives",
       "type": "object"
     },
     "ChannelOffchainTxsCountByIdResponse": {
@@ -1272,6 +1239,39 @@
         }
       },
       "title": "Response for transactions count by id in name preclaim txs",
+      "type": "object"
+    },
+    "ActiveInactive": {
+      "description": "Schema for active/inactive",
+      "example": {
+        "active_from": 279555,
+        "expire_height": 329558,
+        "name": "wwwbeaconoidcom.chain",
+        "update": {
+          "block_height": 279558,
+          "micro_index": 51,
+          "tx_index": 12942695
+        }
+      },
+      "properties": {
+        "active_from": {
+          "description": "The height when the name become active",
+          "type": "integer"
+        },
+        "expire_height": {
+          "description": "The height when the name expire",
+          "type": "integer"
+        },
+        "name": {
+          "description": "The name",
+          "type": "string"
+        },
+        "update": {
+          "$ref": "#/definitions/Update",
+          "description": "The update info"
+        }
+      },
+      "title": "Active/Inactive",
       "type": "object"
     },
     "PayingForTxsCountByIdResponse": {

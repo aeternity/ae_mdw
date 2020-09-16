@@ -577,10 +577,10 @@ defmodule AeMdwWeb.NameController do
 
           example(%{block_height: 279_558, micro_index: 51, tx_index: 12_942_695})
         end,
-      Active:
+      ActiveInactive:
         swagger_schema do
-          title("Active")
-          description("Schema for active")
+          title("Active/Inactive")
+          description("Schema for active/inactive")
 
           properties do
             active_from(:integer, "The height when the name become active")
@@ -596,13 +596,13 @@ defmodule AeMdwWeb.NameController do
             update: %{block_height: 279_558, micro_index: 51, tx_index: 12_942_695}
           })
         end,
-      Actives:
+      ActivesInactives:
         swagger_schema do
-          title("Actives")
-          description("Schema for actives")
+          title("Actives/Inactives")
+          description("Schema for actives/inactives ")
 
           properties do
-            account_pubkey(Schema.array(:Active), "The account info")
+            account_pubkey(Schema.array(:ActiveInactive), "The account info")
           end
         end,
       PointeesResponse:
@@ -611,9 +611,8 @@ defmodule AeMdwWeb.NameController do
           description("Response schema for pointees")
 
           properties do
-            active(Schema.ref(:Actives), "The active info")
-            # TODO: Describe inactive !!!
-            inactive(:map, "The inactive info")
+            active(Schema.ref(:ActivesInactives), "The active info")
+            inactive(Schema.ref(:ActivesInactives), "The inactive info")
           end
 
           example(%{
