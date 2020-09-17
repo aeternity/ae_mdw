@@ -62,6 +62,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     {:atomic, next_txi} =
       :mnesia.transaction(fn ->
         Sync.Name.expire(height)
+        Sync.Oracle.expire(height - 1)
 
         kb_txi = (txi == 0 && -1) || txi
         kb_hash = :aec_headers.hash_header(:aec_blocks.to_key_header(key_block)) |> ok!
@@ -73,7 +74,10 @@ defmodule AeMdw.Db.Sync.Transaction do
         next_txi
       end)
 
-    rem(height, @sync_cache_cleanup_freq) == 0 && :ets.delete_all_objects(:sync_cache)
+    if rem(height, @sync_cache_cleanup_freq) == 0 do
+      :ets.delete_all_objects(:name_sync_cache)
+      :ets.delete_all_objects(:oracle_sync_cache)
+    end
 
     next_txi
   end
@@ -121,10 +125,14 @@ defmodule AeMdw.Db.Sync.Transaction do
     write_origin(:channel_create_tx, pk, txi, tx_hash)
   end
 
-  def write_links(:oracle_register_tx, tx, _signed_tx, txi, tx_hash, _bi) do
+  def write_links(:oracle_register_tx, tx, _signed_tx, txi, tx_hash, bi) do
     pk = :aeo_register_tx.account_pubkey(tx)
     write_origin(:oracle_register_tx, pk, txi, tx_hash)
+    Sync.Oracle.register(pk, tx, txi, bi)
   end
+
+  def write_links(:oracle_extend_tx, tx, _signed_tx, txi, _tx_hash, bi),
+    do: Sync.Oracle.extend(:aeo_extend_tx.oracle_pubkey(tx), tx, txi, bi)
 
   def write_links(:name_claim_tx, tx, _signed_tx, txi, tx_hash, bi) do
     plain_name = :aens_claim_tx.name(tx)

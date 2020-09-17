@@ -162,9 +162,13 @@ defmodule AeMdwWeb.DataStreamPlug do
   end
 
   def query_norm(ids, key_spec, val) do
-    case Validate.id(val) do
-      {:ok, pk} -> {:ok, MapSet.put(ids, {key_spec, pk})}
-      err -> err
+    {_, validator} = AeMdw.Db.Stream.Query.Parser.classify_ident(key_spec)
+
+    try do
+      {:ok, MapSet.put(ids, {key_spec, validator.(val)})}
+    rescue
+      err in [AeMdw.Error.Input] ->
+        err
     end
   end
 

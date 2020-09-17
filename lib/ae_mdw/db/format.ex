@@ -45,7 +45,7 @@ defmodule AeMdw.Db.Format do
   def to_raw_map({:auction_bid, key, _}, Model.AuctionBid),
     do: to_raw_map(key, Model.AuctionBid)
 
-  def to_raw_map({_plain, {{_, _}, _}, _, [{_, _} | _]} = bid, Model.AuctionBid),
+  def to_raw_map({_plain, {{_, _}, _}, _, _, [{_, _} | _]} = bid, Model.AuctionBid),
     do: auction_bid(bid, & &1, &to_raw_map/1, & &1)
 
   def to_raw_map(m_name, source) when elem(m_name, 0) == :name do
@@ -58,6 +58,32 @@ defmodule AeMdw.Db.Format do
       active: source == Model.ActiveName,
       info: name_info_to_raw_map(m_name),
       previous: Enum.map(prev, &name_info_to_raw_map/1)
+    }
+  end
+
+  def to_raw_map(m_oracle, source) when elem(m_oracle, 0) == :oracle do
+    alias AeMdw.Node, as: AE
+
+    pk = Model.oracle(m_oracle, :index)
+    {{register_height, _}, register_txi} = Model.oracle(m_oracle, :register)
+    expire_height = Model.oracle(m_oracle, :expire)
+
+    kbi = min(expire_height - 1, last_gen())
+    oracle_tree = AeMdw.Db.Oracle.oracle_tree!({kbi, -1})
+    oracle_rec = :aeo_state_tree.get_oracle(pk, oracle_tree)
+
+    %{
+      oracle: :aeser_id.create(:oracle, pk),
+      active: source == Model.ActiveOracle,
+      active_from: register_height,
+      expire_height: expire_height,
+      register: register_txi,
+      extends: Enum.map(Model.oracle(m_oracle, :extends), &bi_txi_txi/1),
+      query_fee: AE.Oracle.get!(oracle_rec, :query_fee),
+      format: %{
+        query: AE.Oracle.get!(oracle_rec, :query_format),
+        response: AE.Oracle.get!(oracle_rec, :response_format)
+      }
     }
   end
 
@@ -154,12 +180,34 @@ defmodule AeMdw.Db.Format do
   def to_map({:auction_bid, key, _}, Model.AuctionBid),
     do: to_map(key, Model.AuctionBid)
 
-  def to_map({_plain, {{_, _}, _}, _, [{_, _} | _]} = bid, Model.AuctionBid),
+  def to_map({_plain, {{_, _}, _}, _, _, [{_, _} | _]} = bid, Model.AuctionBid),
     do: auction_bid(bid, &to_string/1, &to_map/1, &raw_to_json/1)
 
-  def to_map(name, source)
-      when source in [Model.ActiveName, Model.InactiveName],
-      do: raw_to_json(to_raw_map(name, source))
+  def to_map(name, source) when source in [Model.ActiveName, Model.InactiveName],
+    do: raw_to_json(to_raw_map(name, source))
+
+  def to_map(oracle, source) when source in [Model.ActiveOracle, Model.InactiveOracle],
+    do:
+      map_raw_values(to_raw_map(oracle, source), fn
+        {:id, :oracle, pk} -> Enc.encode(:oracle_pubkey, pk)
+        x -> to_json(x)
+      end)
+
+  def to_map(data, source, false = _expand),
+    do: to_map(data, source)
+
+  def to_map(name, source, true = _expand)
+      when source in [Model.ActiveName, Model.InactiveName] do
+    to_map(name, source)
+    |> update_in(["info"], &expand_name_info/1)
+    |> update_in(["previous"], fn prevs -> Enum.map(prevs, &expand_name_info/1) end)
+  end
+
+  def to_map(bid, Model.AuctionBid, true = _expand) do
+    to_map(bid, Model.AuctionBid)
+    |> update_in(["info", "bids"], fn claims -> Enum.map(claims, &expand/1) end)
+    |> update_in(["previous"], fn prevs -> Enum.map(prevs, &expand_name_info/1) end)
+  end
 
   def custom_encode(:oracle_response_tx, tx, _tx_rec, _signed_tx, _block_hash),
     do: update_in(tx, ["tx", "response"], &maybe_base64/1)
@@ -240,7 +288,7 @@ defmodule AeMdw.Db.Format do
     do: f.(x)
 
   defp name_info_to_raw_map(
-         {:name, _, active_h, expire_h, cs, us, ts, revoke, auction_tm, _prev} = n
+         {:name, _, active_h, expire_h, cs, us, ts, revoke, auction_tm, _owner, _prev} = n
        ),
        do: %{
          active_from: active_h,
@@ -248,13 +296,13 @@ defmodule AeMdw.Db.Format do
          claims: Enum.map(cs, &bi_txi_txi/1),
          updates: Enum.map(us, &bi_txi_txi/1),
          transfers: Enum.map(ts, &bi_txi_txi/1),
-         revoke: (revoke && to_raw_map(revoke)) || nil,
+         revoke: (revoke && bi_txi_txi(revoke)) || nil,
          auction_timeout: auction_tm,
          pointers: Name.pointers(n),
          ownership: Name.ownership(n)
        }
 
-  defp auction_bid({plain, {_, _}, auction_end, [{_, txi} | _] = bids}, key, tx_fmt, info_fmt),
+  defp auction_bid({plain, {_, _}, auction_end, _, [{_, txi} | _] = bids}, key, tx_fmt, info_fmt),
     do: %{
       key.(:name) => plain,
       key.(:status) => :auction,
@@ -274,4 +322,21 @@ defmodule AeMdw.Db.Format do
             []
         end
     }
+
+  defp expand_name_info(json) do
+    json
+    |> update_in(["claims"], &expand/1)
+    |> update_in(["updates"], &expand/1)
+    |> update_in(["transfers"], &expand/1)
+    |> update_in(["revoke"], &expand/1)
+  end
+
+  defp expand(txis) when is_list(txis),
+    do: Enum.map(txis, &to_map(read_tx!(&1)))
+
+  defp expand(txi) when is_integer(txi),
+    do: to_map(read_tx!(txi))
+
+  defp expand(nil),
+    do: nil
 end

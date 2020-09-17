@@ -12,7 +12,8 @@ defmodule AeMdw.Application do
     :lager.set_loglevel(:lager_console_backend, :error)
 
     init(:aehttp)
-    init(:model)
+    init(:model_records)
+    init(:node_records)
     init(:meta)
     init(:contract_cache)
 
@@ -28,8 +29,20 @@ defmodule AeMdw.Application do
   def init(:aehttp),
     do: :application.ensure_all_started(:aehttp)
 
-  def init(:model),
+  def init(:model_records),
     do: Enum.each(Model.records(), &SmartRecord.new(Model, &1, Model.defaults(&1)))
+
+  def init(:node_records) do
+    {:ok, aeo_oracles_code} = Extract.AbsCode.module(:aeo_oracles)
+    {:ok, aeo_query_code} = Extract.AbsCode.module(:aeo_query)
+
+    oracle_fields = record_keys(aeo_oracles_code, :oracle)
+    query_fields = record_keys(aeo_query_code, :query)
+
+    SmartRecord.new(AeMdw.Node, :oracle, Enum.zip(oracle_fields, Stream.cycle([nil])))
+    SmartRecord.new(AeMdw.Node, :oracle_query, Enum.zip(query_fields, Stream.cycle([nil])))
+    :ok
+  end
 
   def init(:meta) do
     {:ok, aetx_code} = Extract.AbsCode.module(:aetx)
@@ -37,6 +50,7 @@ defmodule AeMdw.Application do
     {:ok, headers_code} = Extract.AbsCode.module(:aec_headers)
     {:ok, hard_forks_code} = Extract.AbsCode.module(:aec_hard_forks)
     {:ok, aens_state_tree_code} = Extract.AbsCode.module(:aens_state_tree)
+    {:ok, aeo_state_tree_code} = Extract.AbsCode.module(:aeo_state_tree)
 
     network_id = :aec_governance.get_network_id()
 
@@ -94,21 +108,17 @@ defmodule AeMdw.Application do
     tx_group = &("#{&1}" |> String.split("_") |> hd |> String.to_atom())
     tx_group_map = Enum.group_by(tx_types, tx_group)
 
-    record_keys = fn mod_code, rec_name ->
-      {:ok, rec_code} = Extract.AbsCode.record_fields(mod_code, rec_name)
-      Enum.map(rec_code, &elem(Extract.AbsCode.field_name_type(&1), 0))
-    end
-
     tx_prefix = fn tx_type ->
       str = to_string(tx_type)
       # drop "_tx"
       String.slice(str, 0, String.length(str) - 3)
     end
 
-    ns_tree_field_pos_map =
-      record_keys.(aens_state_tree_code, :ns_tree)
+    field_pos_map = fn code, rec ->
+      record_keys(code, rec)
       |> Stream.zip(Stream.iterate(1, &(&1 + 1)))
       |> Enum.into(%{})
+    end
 
     SmartGlobal.new(
       AeMdw.Node,
@@ -131,10 +141,11 @@ defmodule AeMdw.Application do
         id_type: id_type_map,
         type_id: AeMdw.Util.inverse(id_type_map),
         hdr_fields: %{
-          key: record_keys.(headers_code, :key_header),
-          micro: record_keys.(headers_code, :mic_header)
+          key: record_keys(headers_code, :key_header),
+          micro: record_keys(headers_code, :mic_header)
         },
-        ns_tree_pos: ns_tree_field_pos_map,
+        aens_tree_pos: field_pos_map.(aens_state_tree_code, :ns_tree),
+        aeo_tree_pos: field_pos_map.(aeo_state_tree_code, :oracle_tree),
         lima_vsn: [{[], lima_vsn}],
         lima_height: [{[], lima_height}]
       }
@@ -142,9 +153,16 @@ defmodule AeMdw.Application do
   end
 
   def init(:contract_cache),
-    do: EtsCache.new(AeMdw.Contract.table(),
-          Application.fetch_env!(:ae_mdw, :contract_cache_expiration_minutes))
+    do:
+      EtsCache.new(
+        AeMdw.Contract.table(),
+        Application.fetch_env!(:ae_mdw, :contract_cache_expiration_minutes)
+      )
 
+  def record_keys(mod_code, rec_name) do
+    {:ok, rec_code} = Extract.AbsCode.record_fields(mod_code, rec_name)
+    Enum.map(rec_code, &elem(Extract.AbsCode.field_name_type(&1), 0))
+  end
 
   # Tell Phoenix to update the endpoint configuration whenever the application is updated.
   def config_change(changed, _new, removed) do

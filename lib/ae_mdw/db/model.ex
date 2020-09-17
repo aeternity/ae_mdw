@@ -57,14 +57,14 @@ defmodule AeMdw.Db.Model do
   defrecord :plain_name, @plain_name_defaults
 
   # auction bid:
-  #     index = {plain_name, {block_index, txi}, expire_height = height, prev_bids = []}
-  @auction_bid_defaults [index: {nil, {{nil, nil}, nil}, nil, nil}, unused: nil]
+  #     index = {plain_name, {block_index, txi}, expire_height = height, owner = pk, prev_bids = []}
+  @auction_bid_defaults [index: {nil, {{nil, nil}, nil}, nil, nil, nil}, unused: nil]
   defrecord :auction_bid, @auction_bid_defaults
 
   # in 3 tables: auction_expiration, name_expiration, inactive_name_expiration
   #
   # expiration:
-  #     index = {expire_height, plain_name}, value: any
+  #     index = {expire_height, plain_name | oracle_pk}, value: any
   @expiration_defaults [index: {nil, nil}, value: nil]
   defrecord :expiration, @expiration_defaults
 
@@ -79,6 +79,7 @@ defmodule AeMdw.Db.Model do
   #     transfers = [{block_index, txi}]   #
   #     revoke = {block_index, txi} | nil  #
   #     auction_timeout = int              # 0 if not auctioned
+  #     owner = pubkey                     #
   #     previous = m_name | nil            # previus epoch of the same name
   #
   #     (other info (pointers, owner) is from looking up last update tx)
@@ -91,18 +92,48 @@ defmodule AeMdw.Db.Model do
     transfers: [],
     revoke: nil,
     auction_timeout: 0,
+    owner: nil,
     previous: nil
   ]
   defrecord :name, @name_defaults
+
+  # owner: (updated via name claim/transfer)
+  #     index = {pubkey, entity},
+  @owner_defaults [index: nil, unused: nil]
+  defrecord :owner, @owner_defaults
 
   # pointee : (updated when name_update_tx changes pointers)
   #     index = {pointer_val, {block_index, txi}, pointer_key}
   @pointee_defaults [index: {nil, {{nil, nil}, nil}, nil}, unused: nil]
   defrecord :pointee, @pointee_defaults
 
+  # in 2 tables: active_oracle, inactive_oracle
+  #
+  # oracle:
+  #     index: pubkey
+  #     active: height
+  #     expire: height
+  #     register: {block_index, txi}
+  #     extends: [{block_index, txi}]
+  #     previous: m_oracle | nil
+  #
+  #     (other details come from MPT lookup)
+  @oracle_defaults [
+    index: nil,
+    active: nil,
+    expire: nil,
+    register: nil,
+    extends: [],
+    previous: nil
+  ]
+  defrecord :oracle, @oracle_defaults
+
   ################################################################################
 
-  def tables() do
+  def tables(),
+    do: Enum.concat([chain_tables(), name_tables(), oracle_tables()])
+
+  def chain_tables() do
     [
       AeMdw.Db.Model.Tx,
       AeMdw.Db.Model.Block,
@@ -112,7 +143,6 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.IdCount,
       AeMdw.Db.Model.Origin,
       AeMdw.Db.Model.RevOrigin
-      | name_tables()
     ]
   end
 
@@ -125,7 +155,18 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.ActiveNameExpiration,
       AeMdw.Db.Model.InactiveNameExpiration,
       AeMdw.Db.Model.ActiveName,
-      AeMdw.Db.Model.InactiveName
+      AeMdw.Db.Model.InactiveName,
+      AeMdw.Db.Model.AuctionOwner,
+      AeMdw.Db.Model.ActiveNameOwner
+    ]
+  end
+
+  def oracle_tables() do
+    [
+      AeMdw.Db.Model.ActiveOracleExpiration,
+      AeMdw.Db.Model.InactiveOracleExpiration,
+      AeMdw.Db.Model.ActiveOracle,
+      AeMdw.Db.Model.InactiveOracle
     ]
   end
 
@@ -143,7 +184,9 @@ defmodule AeMdw.Db.Model do
       :auction_bid,
       :expiration,
       :name,
-      :pointee
+      :owner,
+      :pointee,
+      :oracle
     ]
 
   def fields(record),
@@ -165,6 +208,12 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.InactiveNameExpiration), do: :expiration
   def record(AeMdw.Db.Model.ActiveName), do: :name
   def record(AeMdw.Db.Model.InactiveName), do: :name
+  def record(AeMdw.Db.Model.AuctionOwner), do: :owner
+  def record(AeMdw.Db.Model.ActiveNameOwner), do: :owner
+  def record(AeMdw.Db.Model.ActiveOracleExpiration), do: :expiration
+  def record(AeMdw.Db.Model.InactiveOracleExpiration), do: :expiration
+  def record(AeMdw.Db.Model.ActiveOracle), do: :oracle
+  def record(AeMdw.Db.Model.InactiveOracle), do: :oracle
 
   def table(:tx), do: AeMdw.Db.Model.Tx
   def table(:block), do: AeMdw.Db.Model.Block
@@ -188,6 +237,8 @@ defmodule AeMdw.Db.Model do
   def defaults(:pointee), do: @pointee_defaults
   def defaults(:expiration), do: @expiration_defaults
   def defaults(:name), do: @name_defaults
+  def defaults(:owner), do: @owner_defaults
+  def defaults(:oracle), do: @oracle_defaults
 
   def write_count(model, delta) do
     total = id_count(model, :count)

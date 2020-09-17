@@ -21,6 +21,13 @@ defmodule AeMdw.Db.Name do
     |> map_ok!(&Validate.id!/1)
   end
 
+  def owned_by(owner_pk) do
+    %{
+      actives: collect_vals(Model.ActiveNameOwner, owner_pk),
+      top_bids: collect_vals(Model.AuctionOwner, owner_pk)
+    }
+  end
+
   ##########
 
   def pointer_kv_raw(ptr),
@@ -30,7 +37,7 @@ defmodule AeMdw.Db.Name do
     do: {:aens_pointer.key(ptr), Validate.id!(:aens_pointer.id(ptr))}
 
   def bid_top_key(plain_name),
-    do: {plain_name, <<>>, <<>>, <<>>}
+    do: {plain_name, <<>>, <<>>, <<>>, <<>>}
 
   def auction_bid_key({:expiration, {_, plain_name}, _}) when is_binary(plain_name),
     do: auction_bid_key(plain_name)
@@ -127,7 +134,7 @@ defmodule AeMdw.Db.Name do
 
   # for use outside mnesia TX - doesn't modify cache, just looks into it
   def cache_through_read(table, key) do
-    case :ets.lookup(:sync_cache, {table, key}) do
+    case :ets.lookup(:name_sync_cache, {table, key}) do
       [{_, record}] -> {:ok, record}
       [] -> map_one_nil(read(table, key), &{:ok, &1})
     end
@@ -153,17 +160,17 @@ defmodule AeMdw.Db.Name do
 
     nf = fn -> :not_found end
     mns_lookup = fn -> lookup.(prev(table, key), & &1, nf, nf) end
-    lookup.(:ets.prev(:sync_cache, {table, key}), &elem(&1, 1), mns_lookup, mns_lookup)
+    lookup.(:ets.prev(:name_sync_cache, {table, key}), &elem(&1, 1), mns_lookup, mns_lookup)
   end
 
   # for use inside mnesia TX - caches writes & deletes in the same TX
   def cache_through_write(table, record) do
-    :ets.insert(:sync_cache, {{table, elem(record, 1)}, record})
+    :ets.insert(:name_sync_cache, {{table, elem(record, 1)}, record})
     :mnesia.write(table, record, :write)
   end
 
   def cache_through_delete(table, key) do
-    :ets.delete(:sync_cache, {table, key})
+    :ets.delete(:name_sync_cache, {table, key})
     :mnesia.delete(table, key, :write)
   end
 
@@ -174,6 +181,13 @@ defmodule AeMdw.Db.Name do
     expire = revoke_or_expire_height(m_name)
     cache_through_delete(Model.InactiveName, plain_name)
     cache_through_delete(Model.InactiveNameExpiration, {expire, plain_name})
+  end
+
+  def collect_vals(tab, key) do
+    collect_keys(tab, [], {key, ""}, &next/2, fn
+      {^key, val}, acc -> {:cont, [val | acc]}
+      {_, _}, acc -> {:halt, acc}
+    end)
   end
 
   ##########
@@ -187,13 +201,13 @@ defmodule AeMdw.Db.Name do
   end
 
   def mtree(ns_tree) when elem(ns_tree, 0) == :ns_tree,
-    do: elem(ns_tree, AE.ns_tree_pos(:mtree))
+    do: elem(ns_tree, AE.aens_tree_pos(:mtree))
 
   def mtree({_, _} = block_index),
     do: mtree(ns_tree!(block_index))
 
   def cache(ns_tree) when elem(ns_tree, 0) == :ns_tree,
-    do: elem(ns_tree, AE.ns_tree_pos(:cache))
+    do: elem(ns_tree, AE.aens_tree_pos(:cache))
 
   def cache({_, _} = block_index),
     do: cache(ns_tree!(block_index))

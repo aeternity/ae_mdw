@@ -10,7 +10,8 @@ defmodule AeMdwWeb.Router do
     {["names", "auctions"], &NC.stream_plug_hook/1},
     {["names", "inactive"], &NC.stream_plug_hook/1},
     {["names", "active"], &NC.stream_plug_hook/1},
-    {["names"], &NC.stream_plug_hook/1}
+    {["names"], &NC.stream_plug_hook/1},
+    {["oracles"], &AeMdwWeb.OracleController.stream_plug_hook/1}
   ]
 
   @scopes ["gen", "txi"]
@@ -47,9 +48,12 @@ defmodule AeMdwWeb.Router do
     get "/txs/:direction", TxController, :txs
     get "/txs/:scope_type/:range", TxController, :txs
 
-    get "/name/:id", NameController, :name
+    get "/name/auction/:id", NameController, :auction
     get "/name/pointers/:id", NameController, :pointers
     get "/name/pointees/:id", NameController, :pointees
+    get "/name/:id", NameController, :name
+
+    get "/names/owned_by/:id", NameController, :owned_by
 
     get "/names/auctions", NameController, :auctions
     get "/names/auctions/:scope_type/:range", NameController, :auctions
@@ -62,6 +66,17 @@ defmodule AeMdwWeb.Router do
 
     get "/names", NameController, :names
     get "/names/:scope_type/:range", NameController, :names
+
+    get "/oracle/:id", OracleController, :oracle
+
+    get "/oracles/inactive", OracleController, :inactive_oracles
+    get "/oracles/inactive/gen/:range", OracleController, :inactive_oracles
+
+    get "/oracles/active", OracleController, :active_oracles
+    get "/oracles/active/gen/:range", OracleController, :active_oracles
+
+    get "/oracles", OracleController, :oracles
+    get "/oracles/gen/:range", OracleController, :oracles
 
     get "/status", UtilController, :status
 

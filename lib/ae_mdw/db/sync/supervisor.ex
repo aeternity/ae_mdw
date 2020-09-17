@@ -13,7 +13,8 @@ defmodule AeMdw.Db.Sync.Supervisor do
 
   @impl true
   def init(_args) do
-    :ets.new(:sync_cache, [:named_table, :ordered_set, :public])
+    :ets.new(:name_sync_cache, [:named_table, :ordered_set, :public])
+    :ets.new(:oracle_sync_cache, [:named_table, :ordered_set, :public])
 
     children = [
       AeMdw.Db.Sync,
