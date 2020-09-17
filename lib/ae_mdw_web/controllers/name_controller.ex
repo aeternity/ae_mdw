@@ -17,6 +17,9 @@ defmodule AeMdwWeb.NameController do
 
   ##########
 
+  def stream_plug_hook(%Plug.Conn{path_info: ["names", "owned_by" | _]} = conn),
+    do: conn
+
   def stream_plug_hook(%Plug.Conn{params: params} = conn) do
     alias AeMdwWeb.DataStreamPlug, as: P
 
@@ -127,6 +130,31 @@ defmodule AeMdwWeb.NameController do
   end
 
   def owned_by_reply(conn, owner_pk, expand?) do
+    %{actives: actives, top_bids: top_bids} = Name.owned_by(owner_pk)
+
+    jsons = fn plains, source, locator ->
+      for plain <- plains, reduce: [] do
+        acc ->
+          with {info, ^source} <- locator.(plain) do
+            [Format.to_map(info, source, expand?) | acc]
+          else
+            _ -> acc
+          end
+      end
+    end
+
+    actives = jsons.(actives, Model.ActiveName, &Name.locate/1)
+
+    top_bids =
+      jsons.(
+        top_bids,
+        Model.AuctionBid,
+        &map_some(Name.locate_bid(&1), fn x -> {x, Model.AuctionBid} end)
+      )
+
+    json(conn, %{"active" => actives, "top_bid" => top_bids})
+  end
+
   ##########
 
   def do_auctions_stream({:name, _} = params, expand?),

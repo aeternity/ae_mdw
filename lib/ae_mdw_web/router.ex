@@ -10,7 +10,7 @@ defmodule AeMdwWeb.Router do
     {["names", "auctions"], &NC.stream_plug_hook/1},
     {["names", "inactive"], &NC.stream_plug_hook/1},
     {["names", "active"], &NC.stream_plug_hook/1},
-    {["names"], &NC.stream_plug_hook/1}
+    {["names"], &NC.stream_plug_hook/1},
     {["oracles"], &AeMdwWeb.OracleController.stream_plug_hook/1}
   ]
 
@@ -48,9 +48,12 @@ defmodule AeMdwWeb.Router do
     get "/txs/:direction", TxController, :txs
     get "/txs/:scope_type/:range", TxController, :txs
 
-    get "/name/:id", NameController, :name
+    get "/name/auction/:id", NameController, :auction
     get "/name/pointers/:id", NameController, :pointers
     get "/name/pointees/:id", NameController, :pointees
+    get "/name/:id", NameController, :name
+
+    get "/names/owned_by/:id", NameController, :owned_by
 
     get "/names/auctions", NameController, :auctions
     get "/names/auctions/:scope_type/:range", NameController, :auctions

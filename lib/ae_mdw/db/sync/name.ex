@@ -1,7 +1,7 @@
 defmodule AeMdw.Db.Sync.Name do
   alias AeMdw.Node, as: AE
   alias AeMdw.Db.{Name, Model, Format}
-  alias AeMdw.Log
+  alias AeMdw.{Log, Validate}
 
   require Record
   require Model
@@ -23,7 +23,10 @@ defmodule AeMdw.Db.Sync.Name do
 
   ##########
 
-  def claim(plain_name, name_hash, _tx, txi, {height, _} = bi) do
+  def claim(plain_name, name_hash, tx, txi, {height, _} = bi) do
+    account_pk = Validate.id!(:aens_claim_tx.account_id(tx))
+    m_owner = Model.owner(index: {account_pk, plain_name})
+
     m_plain_name = Model.plain_name(index: name_hash, value: plain_name)
     cache_through_write(Model.PlainName, m_plain_name)
 
@@ -40,31 +43,38 @@ defmodule AeMdw.Db.Sync.Name do
             active: height,
             expire: expire,
             claims: [{bi, txi}],
+            owner: account_pk,
             previous: previous
           )
 
         m_name_exp = Model.expiration(index: {expire, plain_name})
+
         cache_through_write(Model.ActiveName, m_name)
+        cache_through_write(Model.ActiveNameOwner, m_owner)
         cache_through_write(Model.ActiveNameExpiration, m_name_exp)
         cache_through_delete_inactive(previous)
 
       timeout ->
         auction_end = height + timeout
         m_auction_exp = Model.expiration(index: {auction_end, plain_name})
-        make_m_bid = &Model.auction_bid(index: {plain_name, {bi, txi}, auction_end, &1})
+
+        make_m_bid =
+          &Model.auction_bid(index: {plain_name, {bi, txi}, auction_end, account_pk, &1})
 
         m_bid =
           case cache_through_prev(Model.AuctionBid, Name.bid_top_key(plain_name)) do
             :not_found ->
               make_m_bid.([{bi, txi}])
 
-            {:ok, {^plain_name, _prev_bi_txi, prev_auction_end, prev_bids} = prev_key} ->
+            {:ok, {^plain_name, _, prev_auction_end, prev_owner, prev_bids} = prev_key} ->
               cache_through_delete(Model.AuctionBid, prev_key)
+              cache_through_delete(Model.AuctionOwner, {prev_owner, plain_name})
               cache_through_delete(Model.AuctionExpiration, {prev_auction_end, plain_name})
               make_m_bid.([{bi, txi} | prev_bids])
           end
 
         cache_through_write(Model.AuctionBid, m_bid)
+        cache_through_write(Model.AuctionOwner, m_owner)
         cache_through_write(Model.AuctionExpiration, m_auction_exp)
     end
   end
@@ -79,24 +89,43 @@ defmodule AeMdw.Db.Sync.Name do
     new_expire = height + delta_ttl
     updates = [{bi, txi} | Model.name(m_name, :updates)]
     m_name_exp = Model.expiration(index: {new_expire, plain_name})
-    cache_through_delete(Model.ActiveNameExpiration, {old_expire, plain_name})
-    cache_through_write(Model.ActiveNameExpiration, m_name_exp)
-
     m_name = Model.name(m_name, expire: new_expire, updates: updates)
-    cache_through_write(Model.ActiveName, m_name)
+
+    cache_through_delete(Model.ActiveNameExpiration, {old_expire, plain_name})
 
     for ptr <- pointers do
       m_pointee = Model.pointee(index: pointee_key(ptr, {bi, txi}))
       cache_through_write(Model.Pointee, m_pointee)
     end
+
+    cond do
+      delta_ttl > 0 ->
+        cache_through_write(Model.ActiveNameExpiration, m_name_exp)
+        cache_through_write(Model.ActiveName, m_name)
+
+      delta_ttl == 0 ->
+        owner = Model.name(m_name, :owner)
+        cache_through_delete(Model.ActiveName, plain_name)
+        cache_through_delete(Model.ActiveNameOwner, {owner, plain_name})
+        cache_through_write(Model.InactiveName, m_name)
+        cache_through_write(Model.InactiveNameExpiration, m_name_exp)
+        log_expired_name(height, plain_name)
+    end
   end
 
-  def transfer(name_hash, _tx, txi, {_height, _} = bi) do
+  def transfer(name_hash, tx, txi, {_height, _} = bi) do
     plain_name = plain_name!(name_hash)
 
     m_name = cache_through_read!(Model.ActiveName, plain_name)
+    old_owner = Model.name(m_name, :owner)
+    new_owner = :aens_transfer_tx.recipient_pubkey(tx)
+
     transfers = [{bi, txi} | Model.name(m_name, :transfers)]
-    m_name = Model.name(m_name, transfers: transfers)
+    m_name = Model.name(m_name, transfers: transfers, owner: new_owner)
+    m_owner = Model.owner(index: {new_owner, plain_name})
+
+    cache_through_delete(Model.ActiveNameOwner, {old_owner, plain_name})
+    cache_through_write(Model.ActiveNameOwner, m_owner)
     cache_through_write(Model.ActiveName, m_name)
   end
 
@@ -105,7 +134,9 @@ defmodule AeMdw.Db.Sync.Name do
 
     m_name = cache_through_read!(Model.ActiveName, plain_name)
     expire = Model.name(m_name, :expire)
+    owner = Model.name(m_name, :owner)
     cache_through_delete(Model.ActiveNameExpiration, {expire, plain_name})
+    cache_through_delete(Model.ActiveNameOwner, {owner, plain_name})
     cache_through_delete(Model.ActiveName, plain_name)
 
     m_name = Model.name(m_name, revoke: {bi, txi})
@@ -137,15 +168,17 @@ defmodule AeMdw.Db.Sync.Name do
   def expire_name(height, plain_name) do
     m_name = cache_through_read!(Model.ActiveName, plain_name)
     m_exp = Model.expiration(index: {height, plain_name})
+    owner = Model.name(m_name, :owner)
     cache_through_write(Model.InactiveName, m_name)
     cache_through_write(Model.InactiveNameExpiration, m_exp)
     cache_through_delete(Model.ActiveName, plain_name)
+    cache_through_delete(Model.ActiveNameOwner, {owner, plain_name})
     cache_through_delete(Model.ActiveNameExpiration, {height, plain_name})
     log_expired_name(height, plain_name)
   end
 
   def expire_auction(height, plain_name, timeout) do
-    {_, _, _, bids} =
+    {_, _, _, owner, bids} =
       bid_key = ok!(cache_through_prev(Model.AuctionBid, Name.bid_top_key(plain_name)))
 
     previous = ok_nil(cache_through_read(Model.InactiveName, plain_name))
@@ -158,16 +191,21 @@ defmodule AeMdw.Db.Sync.Name do
         expire: expire,
         claims: bids,
         auction_timeout: timeout,
+        owner: owner,
         previous: previous
       )
 
     m_name_exp = Model.expiration(index: {expire, plain_name})
+    m_owner = Model.owner(index: {owner, plain_name})
+
     cache_through_write(Model.ActiveName, m_name)
+    cache_through_write(Model.ActiveNameOwner, m_owner)
     cache_through_write(Model.ActiveNameExpiration, m_name_exp)
     cache_through_delete(Model.AuctionExpiration, {height, plain_name})
+    cache_through_delete(Model.AuctionOwner, {owner, plain_name})
     cache_through_delete(Model.AuctionBid, bid_key)
     cache_through_delete_inactive(previous)
-    log_expired_auction(height, m_name)
+    log_expired_auction(height, plain_name)
   end
 
   ##########
@@ -178,10 +216,8 @@ defmodule AeMdw.Db.Sync.Name do
   def log_expired_name(height, plain_name),
     do: Log.info("[#{height}] expiring name #{plain_name}")
 
-  def log_expired_auction(height, m_name) do
-    plain_name = Model.name(m_name, :index)
-    Log.info("[#{height}] expiring auction for #{plain_name}")
-  end
+  def log_expired_auction(height, plain_name),
+    do: Log.info("[#{height}] expiring auction for #{plain_name}")
 
   ################################################################################
   #
@@ -210,11 +246,15 @@ defmodule AeMdw.Db.Sync.Name do
     {flatten_map_values(all_dels_nested), flatten_map_values(all_writes_nested)}
   end
 
-  def expirations(table, new_height),
-    do:
-      collect_keys(table, MapSet.new(), {new_height, ""}, &next/2, fn {_, name}, acc ->
+  def expirations(table, new_height) do
+    collect_keys(table, MapSet.new(), {new_height, ""}, &next/2, fn
+      {height, name}, acc when height >= new_height ->
         {:cont, MapSet.put(acc, name)}
-      end)
+
+      {_prev_height, _name}, acc ->
+        {:halt, acc}
+    end)
+  end
 
   def invalidate(_plain_name, inactive_m_name, nil, nil, new_height)
       when not is_nil(inactive_m_name),
@@ -224,7 +264,7 @@ defmodule AeMdw.Db.Sync.Name do
       when not is_nil(active_m_name),
       do: diff(invalidate1(:active, active_m_name, new_height))
 
-  def invalidate(_plain_name, nil, nil, {_, {_, _}, _, [_ | _]} = auction_bid, new_height),
+  def invalidate(_plain_name, nil, nil, {_, {_, _}, _, _, [_ | _]} = auction_bid, new_height),
     do: diff(invalidate1(:bid, auction_bid, new_height))
 
   def invalidate(_plain_name, inactive_m_name, nil, auction_bid, new_height)
@@ -267,27 +307,33 @@ defmodule AeMdw.Db.Sync.Name do
   end
 
   def dels(lfcycle, obj) do
-    plain_name = plain!(obj)
-    map_tabs(lfcycle, fn -> [{activity_end(obj), plain_name}] end, fn -> [plain_name] end)
+    plain_name = plain_name(obj)
+
+    map_tabs(
+      lfcycle,
+      fn -> [{activity_end(obj), plain_name}] end,
+      fn -> [plain_name] end,
+      fn -> [{owner(obj), plain_name}] end
+    )
   end
 
   def writes(nil), do: %{}
 
-  def writes({:bid, bid_key, expire}),
-    do:
-      map_tabs(
-        :bid,
-        fn -> [m_exp(expire, plain!(bid_key))] end,
-        fn -> [Model.auction_bid(index: bid_key)] end
-      )
+  def writes({lfcycle, obj, expire}) do
+    plain_name = plain_name(obj)
 
-  def writes({inact, m_name, expire}) when inact in [:inactive, :active],
-    do: map_tabs(inact, fn -> [m_exp(expire, plain!(m_name))] end, fn -> [m_name] end)
+    map_tabs(
+      lfcycle,
+      fn -> [m_exp(expire, plain_name)] end,
+      fn -> [(lfcycle == :bid && Model.auction_bid(index: obj)) || obj] end,
+      fn -> [Model.owner(index: {owner(obj), plain_name})] end
+    )
+  end
 
   def name_for_epoch(nil, _new_height),
     do: nil
 
-  def name_for_epoch({plain_name, {{_, _}, _} = bi_txi, auction_end, claims}, new_height) do
+  def name_for_epoch({plain_name, bi_txi, auction_end, owner, claims}, new_height) do
     [{{last_claim, _}, _} | _] = claims
     {{first_claim, _}, _} = :lists.last(claims)
     proto_vsn = (new_height >= AE.lima_height() && AE.lima_vsn()) || 0
@@ -295,12 +341,13 @@ defmodule AeMdw.Db.Sync.Name do
 
     cond do
       new_height > last_claim ->
-        {:bid, {plain_name, bi_txi, auction_end, claims}, auction_end}
+        {:bid, {plain_name, bi_txi, auction_end, owner, claims}, auction_end}
 
       new_height > first_claim ->
-        [{{kbi, _}, _} = bi_txi | _] = claims = drop_bi_txi(claims, new_height)
+        [{{kbi, _}, last_claim_txi} = bi_txi | _] = claims = drop_bi_txi(claims, new_height)
+        owner = Validate.id!(read_raw_tx!(last_claim_txi).tx.account_id)
         auction_end = kbi + timeout
-        {:bid, {plain_name, bi_txi, auction_end, claims}, auction_end}
+        {:bid, {plain_name, bi_txi, auction_end, owner, claims}, auction_end}
 
       new_height <= first_claim ->
         map_ok_nil(
@@ -338,6 +385,7 @@ defmodule AeMdw.Db.Sync.Name do
             transfers: transfers,
             revoke: nil,
             auction_timeout: getter.(:auction_timeout),
+            owner: new_owner(claims, transfers),
             previous: getter.(:previous)
           )
 
@@ -346,33 +394,44 @@ defmodule AeMdw.Db.Sync.Name do
       timeout > 0 and new_height >= first_claim and new_height < last_claim + timeout ->
         [{{last_claim, _}, _} = bi_txi | _] = claims = drop_bi_txi(claims, new_height)
         auction_end = last_claim + timeout
-        {:bid, {index, bi_txi, auction_end, claims}, auction_end}
+        {:bid, {index, bi_txi, auction_end, new_owner(claims, []), claims}, auction_end}
 
       new_height < first_claim ->
         name_for_epoch(getter.(:previous), new_height)
     end
   end
 
-  def map_tabs(:inactive, exp_f, name_f),
+  def map_tabs(:inactive, exp_f, name_f, _owner_f),
     do: %{Model.InactiveNameExpiration => exp_f.(), Model.InactiveName => name_f.()}
 
-  def map_tabs(:active, exp_f, name_f),
-    do: %{Model.ActiveNameExpiration => exp_f.(), Model.ActiveName => name_f.()}
+  def map_tabs(:active, exp_f, name_f, owner_f),
+    do: %{
+      Model.ActiveNameExpiration => exp_f.(),
+      Model.ActiveName => name_f.(),
+      Model.ActiveOwner => owner_f.()
+    }
 
-  def map_tabs(:bid, exp_f, bid_f),
-    do: %{Model.AuctionExpiration => exp_f.(), Model.AuctionBid => bid_f.()}
+  def map_tabs(:bid, exp_f, bid_f, owner_f),
+    do: %{
+      Model.AuctionExpiration => exp_f.(),
+      Model.AuctionBid => bid_f.(),
+      Model.AuctionOwner => owner_f.()
+    }
 
   def m_exp(height, plain_name),
     do: Model.expiration(index: {height, plain_name})
 
+  def owner(m_name) when Record.is_record(m_name, :name), do: Model.name(m_name, :owner)
+  def owner({_, _, _, owner, _}), do: owner
+
   def activity_end(m_name) when Record.is_record(m_name, :name),
     do: revoke_or_expire_height(m_name)
 
-  def activity_end({_, _, auction_end, _}),
+  def activity_end({_, _, auction_end, _, _}),
     do: auction_end
 
-  def plain!(m_name) when Record.is_record(m_name, :name), do: Model.name(m_name, :index)
-  def plain!({plain_name, {_, _}, _, [_ | _]}), do: plain_name
+  def plain_name(m_name) when Record.is_record(m_name, :name), do: Model.name(m_name, :index)
+  def plain_name({plain_name, {_, _}, _, _, [_ | _]}), do: plain_name
 
   def new_expire(active, [] = _new_updates),
     do: active + :aec_governance.name_claim_max_expiration()
@@ -381,6 +440,12 @@ defmodule AeMdw.Db.Sync.Name do
     %{tx: %{name_ttl: ttl, type: :name_update_tx}} = read_raw_tx!(txi)
     height + ttl
   end
+
+  def new_owner(_claims, [{{_, _}, transfer_txi} | _] = _transfers),
+    do: Validate.id!(read_raw_tx!(transfer_txi).tx.recipient_id)
+
+  def new_owner([{{_, _}, claim_txi} | _] = _claims, [] = _transfers),
+    do: Validate.id!(read_raw_tx!(claim_txi).tx.account_id)
 
   def pointee_key(ptr, {bi, txi}) do
     {k, v} = Name.pointer_kv(ptr)

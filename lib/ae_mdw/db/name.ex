@@ -21,6 +21,13 @@ defmodule AeMdw.Db.Name do
     |> map_ok!(&Validate.id!/1)
   end
 
+  def owned_by(owner_pk) do
+    %{
+      actives: collect_vals(Model.ActiveNameOwner, owner_pk),
+      top_bids: collect_vals(Model.AuctionOwner, owner_pk)
+    }
+  end
+
   ##########
 
   def pointer_kv_raw(ptr),
@@ -30,7 +37,7 @@ defmodule AeMdw.Db.Name do
     do: {:aens_pointer.key(ptr), Validate.id!(:aens_pointer.id(ptr))}
 
   def bid_top_key(plain_name),
-    do: {plain_name, <<>>, <<>>, <<>>}
+    do: {plain_name, <<>>, <<>>, <<>>, <<>>}
 
   def auction_bid_key({:expiration, {_, plain_name}, _}) when is_binary(plain_name),
     do: auction_bid_key(plain_name)
@@ -174,6 +181,13 @@ defmodule AeMdw.Db.Name do
     expire = revoke_or_expire_height(m_name)
     cache_through_delete(Model.InactiveName, plain_name)
     cache_through_delete(Model.InactiveNameExpiration, {expire, plain_name})
+  end
+
+  def collect_vals(tab, key) do
+    collect_keys(tab, [], {key, ""}, &next/2, fn
+      {^key, val}, acc -> {:cont, [val | acc]}
+      {_, _}, acc -> {:halt, acc}
+    end)
   end
 
   ##########

@@ -45,7 +45,7 @@ defmodule AeMdw.Db.Format do
   def to_raw_map({:auction_bid, key, _}, Model.AuctionBid),
     do: to_raw_map(key, Model.AuctionBid)
 
-  def to_raw_map({_plain, {{_, _}, _}, _, [{_, _} | _]} = bid, Model.AuctionBid),
+  def to_raw_map({_plain, {{_, _}, _}, _, _, [{_, _} | _]} = bid, Model.AuctionBid),
     do: auction_bid(bid, & &1, &to_raw_map/1, & &1)
 
   def to_raw_map(m_name, source) when elem(m_name, 0) == :name do
@@ -180,7 +180,7 @@ defmodule AeMdw.Db.Format do
   def to_map({:auction_bid, key, _}, Model.AuctionBid),
     do: to_map(key, Model.AuctionBid)
 
-  def to_map({_plain, {{_, _}, _}, _, [{_, _} | _]} = bid, Model.AuctionBid),
+  def to_map({_plain, {{_, _}, _}, _, _, [{_, _} | _]} = bid, Model.AuctionBid),
     do: auction_bid(bid, &to_string/1, &to_map/1, &raw_to_json/1)
 
   def to_map(name, source) when source in [Model.ActiveName, Model.InactiveName],
@@ -288,7 +288,7 @@ defmodule AeMdw.Db.Format do
     do: f.(x)
 
   defp name_info_to_raw_map(
-         {:name, _, active_h, expire_h, cs, us, ts, revoke, auction_tm, _prev} = n
+         {:name, _, active_h, expire_h, cs, us, ts, revoke, auction_tm, _owner, _prev} = n
        ),
        do: %{
          active_from: active_h,
@@ -296,13 +296,13 @@ defmodule AeMdw.Db.Format do
          claims: Enum.map(cs, &bi_txi_txi/1),
          updates: Enum.map(us, &bi_txi_txi/1),
          transfers: Enum.map(ts, &bi_txi_txi/1),
-         revoke: (revoke && to_raw_map(revoke)) || nil,
+         revoke: (revoke && bi_txi_txi(revoke)) || nil,
          auction_timeout: auction_tm,
          pointers: Name.pointers(n),
          ownership: Name.ownership(n)
        }
 
-  defp auction_bid({plain, {_, _}, auction_end, [{_, txi} | _] = bids}, key, tx_fmt, info_fmt),
+  defp auction_bid({plain, {_, _}, auction_end, _, [{_, txi} | _] = bids}, key, tx_fmt, info_fmt),
     do: %{
       key.(:name) => plain,
       key.(:status) => :auction,
