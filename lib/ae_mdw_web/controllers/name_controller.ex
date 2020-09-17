@@ -35,14 +35,29 @@ defmodule AeMdwWeb.NameController do
 
   ##########
 
-  def name(conn, %{"id" => ident}),
-    do: handle_input(conn, fn -> name_reply(conn, Validate.plain_name!(ident)) end)
+  def auction(conn, %{"id" => ident} = params),
+    do:
+      handle_input(conn, fn ->
+        auction_reply(conn, Validate.plain_name!(ident), expand?(params))
+      end)
 
   def pointers(conn, %{"id" => ident}),
     do: handle_input(conn, fn -> pointers_reply(conn, Validate.plain_name!(ident)) end)
 
   def pointees(conn, %{"id" => ident}),
     do: handle_input(conn, fn -> pointees_reply(conn, Validate.name_id!(ident)) end)
+
+  def name(conn, %{"id" => ident} = params),
+    do:
+      handle_input(conn, fn ->
+        name_reply(conn, Validate.plain_name!(ident), expand?(params))
+      end)
+
+  def owned_by(conn, %{"id" => owner} = params),
+    do:
+      handle_input(conn, fn ->
+        owned_by_reply(conn, Validate.id!(owner, [:account_pubkey]), expand?(params))
+      end)
 
   def auctions(conn, _req),
     do: handle_input(conn, fn -> Cont.response(conn, &json/2) end)
@@ -60,22 +75,22 @@ defmodule AeMdwWeb.NameController do
 
   # scope is used here only for identification of the continuation
   def db_stream(:auctions, params, _scope),
-    do: do_auctions_stream(validate_params!(params))
+    do: do_auctions_stream(validate_params!(params), expand?(params))
 
   def db_stream(:inactive_names, params, _scope),
-    do: do_inactive_names_stream(validate_params!(params))
+    do: do_inactive_names_stream(validate_params!(params), expand?(params))
 
   def db_stream(:active_names, params, _scope),
-    do: do_active_names_stream(validate_params!(params))
+    do: do_active_names_stream(validate_params!(params), expand?(params))
 
   def db_stream(:names, params, _scope),
-    do: do_names_stream(validate_params!(params))
+    do: do_names_stream(validate_params!(params), expand?(params))
 
   ##########
 
-  def name_reply(conn, plain_name) do
+  def name_reply(conn, plain_name, expand?) do
     with {info, source} <- Name.locate(plain_name) do
-      json(conn, Format.to_map(info, source))
+      json(conn, Format.to_map(info, source, expand?))
     else
       nil ->
         raise ErrInput.NotFound, value: plain_name
@@ -103,66 +118,92 @@ defmodule AeMdwWeb.NameController do
     })
   end
 
-  def do_auctions_stream({:name, _} = params),
-    do: DBS.Name.auctions(params, &Format.to_map(&1, Model.AuctionBid))
+  def auction_reply(conn, plain_name, expand?) do
+    map_some(
+      Name.locate_bid(plain_name),
+      &json(conn, Format.to_map(&1, Model.AuctionBid, expand?))
+    ) ||
+      raise ErrInput.NotFound, value: plain_name
+  end
 
-  def do_auctions_stream({:expiration, _} = params) do
+  def owned_by_reply(conn, owner_pk, expand?) do
+  ##########
+
+  def do_auctions_stream({:name, _} = params, expand?),
+    do: DBS.Name.auctions(params, &Format.to_map(&1, Model.AuctionBid, expand?))
+
+  def do_auctions_stream({:expiration, _} = params, expand?) do
     mapper =
       &:mnesia.async_dirty(fn ->
         k = Name.auction_bid_key(&1)
-        k && Format.to_map(k, Model.AuctionBid)
+        k && Format.to_map(k, Model.AuctionBid, expand?)
       end)
 
     DBS.Name.auctions(params, mapper)
   end
 
-  def do_inactive_names_stream({:name, _} = params),
-    do: DBS.Name.inactive_names(params, &Format.to_map(&1, Model.InactiveName))
+  def do_inactive_names_stream({:name, _} = params, expand?),
+    do: DBS.Name.inactive_names(params, &Format.to_map(&1, Model.InactiveName, expand?))
 
-  def do_inactive_names_stream({:expiration, _} = params),
-    do: DBS.Name.inactive_names(params, exp_to_formatted_name(Model.InactiveName))
+  def do_inactive_names_stream({:expiration, _} = params, expand?),
+    do: DBS.Name.inactive_names(params, exp_to_formatted_name(Model.InactiveName, expand?))
 
-  def do_active_names_stream({:name, _} = params),
-    do: DBS.Name.active_names(params, &Format.to_map(&1, Model.ActiveName))
+  def do_active_names_stream({:name, _} = params, expand?),
+    do: DBS.Name.active_names(params, &Format.to_map(&1, Model.ActiveName, expand?))
 
-  def do_active_names_stream({:expiration, _} = params),
-    do: DBS.Name.active_names(params, exp_to_formatted_name(Model.ActiveName))
+  def do_active_names_stream({:expiration, _} = params, expand?),
+    do: DBS.Name.active_names(params, exp_to_formatted_name(Model.ActiveName, expand?))
 
-  def do_names_stream({:name, dir}) do
-    streams = [do_inactive_names_stream({:name, dir}), do_active_names_stream({:name, dir})]
+  def do_names_stream({:name, dir}, expand?) do
+    streams = [
+      do_inactive_names_stream({:name, dir}, expand?),
+      do_active_names_stream({:name, dir}, expand?)
+    ]
+
     merged_stream(streams, & &1["name"], dir)
   end
 
-  def do_names_stream({:expiration, :forward} = params),
-    do: Stream.concat(do_inactive_names_stream(params), do_active_names_stream(params))
+  def do_names_stream({:expiration, :forward} = params, expand?),
+    do:
+      Stream.concat(
+        do_inactive_names_stream(params, expand?),
+        do_active_names_stream(params, expand?)
+      )
 
-  def do_names_stream({:expiration, :backward} = params),
-    do: Stream.concat(do_active_names_stream(params), do_inactive_names_stream(params))
+  def do_names_stream({:expiration, :backward} = params, expand?),
+    do:
+      Stream.concat(
+        do_active_names_stream(params, expand?),
+        do_inactive_names_stream(params, expand?)
+      )
 
   ##########
 
-  def validate_params!(%{"by" => [what], "direction" => [dir]}) do
+  def validate_params!(params),
+    do: do_validate_params!(Map.delete(params, "expand"))
+
+  def do_validate_params!(%{"by" => [what], "direction" => [dir]}) do
     what in ["name", "expiration"] || raise ErrInput.Query, value: "by=#{what}"
     dir in ["forward", "backward"] || raise ErrInput.Query, value: "direction=#{dir}"
     {String.to_atom(what), String.to_atom(dir)}
   end
 
-  def validate_params!(%{"by" => [what]}) do
+  def do_validate_params!(%{"by" => [what]}) do
     what in ["name", "expiration"] || raise ErrInput.Query, value: "by=#{what}"
     {String.to_atom(what), :forward}
   end
 
-  def validate_params!(params) when map_size(params) > 0 do
+  def do_validate_params!(params) when map_size(params) > 0 do
     badkey = hd(Map.keys(params))
     raise ErrInput.Query, value: "#{badkey}=#{Map.get(params, badkey)}"
   end
 
-  def validate_params!(_params), do: {:expiration, :backward}
+  def do_validate_params!(_params), do: {:expiration, :backward}
 
-  def exp_to_formatted_name(table) do
+  def exp_to_formatted_name(table, expand?) do
     fn {:expiration, {_, plain_name}, _} ->
       case Name.locate(plain_name) do
-        {m_name, ^table} -> Format.to_map(m_name, table)
+        {m_name, ^table} -> Format.to_map(m_name, table, expand?)
         _ -> nil
       end
     end

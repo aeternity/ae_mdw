@@ -157,9 +157,31 @@ defmodule AeMdw.Db.Format do
   def to_map({_plain, {{_, _}, _}, _, [{_, _} | _]} = bid, Model.AuctionBid),
     do: auction_bid(bid, &to_string/1, &to_map/1, &raw_to_json/1)
 
-  def to_map(name, source)
-      when source in [Model.ActiveName, Model.InactiveName],
-      do: raw_to_json(to_raw_map(name, source))
+  def to_map(name, source) when source in [Model.ActiveName, Model.InactiveName],
+    do: raw_to_json(to_raw_map(name, source))
+
+  def to_map(oracle, source) when source in [Model.ActiveOracle, Model.InactiveOracle],
+    do:
+      map_raw_values(to_raw_map(oracle, source), fn
+        {:id, :oracle, pk} -> Enc.encode(:oracle_pubkey, pk)
+        x -> to_json(x)
+      end)
+
+  def to_map(data, source, false = _expand),
+    do: to_map(data, source)
+
+  def to_map(name, source, true = _expand)
+      when source in [Model.ActiveName, Model.InactiveName] do
+    to_map(name, source)
+    |> update_in(["info"], &expand_name_info/1)
+    |> update_in(["previous"], fn prevs -> Enum.map(prevs, &expand_name_info/1) end)
+  end
+
+  def to_map(bid, Model.AuctionBid, true = _expand) do
+    to_map(bid, Model.AuctionBid)
+    |> update_in(["info", "bids"], fn claims -> Enum.map(claims, &expand/1) end)
+    |> update_in(["previous"], fn prevs -> Enum.map(prevs, &expand_name_info/1) end)
+  end
 
   def custom_encode(:oracle_response_tx, tx, _tx_rec, _signed_tx, _block_hash),
     do: update_in(tx, ["tx", "response"], &maybe_base64/1)
@@ -274,4 +296,21 @@ defmodule AeMdw.Db.Format do
             []
         end
     }
+
+  defp expand_name_info(json) do
+    json
+    |> update_in(["claims"], &expand/1)
+    |> update_in(["updates"], &expand/1)
+    |> update_in(["transfers"], &expand/1)
+    |> update_in(["revoke"], &expand/1)
+  end
+
+  defp expand(txis) when is_list(txis),
+    do: Enum.map(txis, &to_map(read_tx!(&1)))
+
+  defp expand(txi) when is_integer(txi),
+    do: to_map(read_tx!(txi))
+
+  defp expand(nil),
+    do: nil
 end

@@ -6,6 +6,9 @@ defmodule AeMdwWeb.Util do
 
   ##########
 
+  def expand?(%{"expand" => x}) when x in [nil, "true", [nil], ["true"]], do: true
+  def expand?(%{}), do: false
+
   def query_groups(query_string) do
     query_string
     |> URI.query_decoder()
