@@ -1,7 +1,6 @@
 defmodule AeMdw.Db.Oracle do
   alias AeMdw.Node, as: AE
-  alias AeMdw.Db.{Model, Format}
-  alias AeMdw.Validate
+  alias AeMdw.Db.Model
 
   require Model
   require Ex2ms
@@ -12,6 +11,11 @@ defmodule AeMdw.Db.Oracle do
 
   def source(Model.ActiveName, :expiration), do: Model.ActiveOracleExpiration
   def source(Model.InactiveName, :expiration), do: Model.InactiveOracleExpiration
+
+  def locate(pubkey) do
+    map_ok_nil(cache_through_read(Model.ActiveOracle, pubkey), &{&1, Model.ActiveOracle}) ||
+      map_ok_nil(cache_through_read(Model.InactiveOracle, pubkey), &{&1, Model.InactiveOracle})
+  end
 
   # for use outside mnesia TX - doesn't modify cache, just looks into it
   def cache_through_read(table, key) do
@@ -66,6 +70,9 @@ defmodule AeMdw.Db.Oracle do
 
   ##########
 
+  # def detail(pubkey, block_index) do
+  # end
+
   def oracle_tree!({_, _} = block_index) do
     block_index
     |> read_block!
@@ -85,5 +92,4 @@ defmodule AeMdw.Db.Oracle do
 
   def cache({_, _} = block_index),
     do: cache(oracle_tree!(block_index))
-
 end

@@ -11,7 +11,6 @@ defmodule AeMdw.Db.Sync.Oracle do
     only: [
       cache_through_read!: 2,
       cache_through_read: 2,
-      cache_through_prev: 2,
       cache_through_write: 2,
       cache_through_delete: 2,
       cache_through_delete_inactive: 1
@@ -25,23 +24,26 @@ defmodule AeMdw.Db.Sync.Oracle do
     delta_ttl = :aeo_utils.ttl_delta(height, :aeo_register_tx.oracle_ttl(tx))
     expire = height + delta_ttl
     previous = ok_nil(cache_through_read(Model.InactiveOracle, pubkey))
-    m_oracle = Model.oracle(
-      index: pubkey,
-      active: height,
-      expire: expire,
-      register: {bi, txi}
-    )
+
+    m_oracle =
+      Model.oracle(
+        index: pubkey,
+        active: height,
+        expire: expire,
+        register: {bi, txi}
+      )
+
     m_exp = Model.expiration(index: {expire, pubkey})
     cache_through_write(Model.ActiveOracle, m_oracle)
     cache_through_write(Model.ActiveOracleExpiration, m_exp)
     cache_through_delete_inactive(previous)
   end
 
-  def extend(pubkey, tx, txi, {height, _} = bi) do
+  def extend(pubkey, tx, txi, bi) do
     {:delta, delta_ttl} = :aeo_extend_tx.oracle_ttl(tx)
     m_oracle = cache_through_read!(Model.ActiveOracle, pubkey)
     old_expire = Model.oracle(m_oracle, :expire)
-    new_expire = height + delta_ttl
+    new_expire = old_expire + delta_ttl
     extends = [{bi, txi} | Model.oracle(m_oracle, :extends)]
     m_exp = Model.expiration(index: {new_expire, pubkey})
     cache_through_delete(Model.ActiveOracleExpiration, {old_expire, pubkey})
@@ -50,7 +52,7 @@ defmodule AeMdw.Db.Sync.Oracle do
     cache_through_write(Model.ActiveOracle, m_oracle)
   end
 
-  # ##########
+  ##########
 
   def expire(height) do
     oracle_mspec =
@@ -109,12 +111,12 @@ defmodule AeMdw.Db.Sync.Oracle do
       end)
 
   def invalidate(_pubkey, inactive_m_oracle, nil, new_height)
-  when not is_nil(inactive_m_oracle),
-    do: diff(invalidate1(:inactive, inactive_m_oracle, new_height))
+      when not is_nil(inactive_m_oracle),
+      do: diff(invalidate1(:inactive, inactive_m_oracle, new_height))
 
   def invalidate(_pubkey, nil, active_m_oracle, new_height)
-  when not is_nil(active_m_oracle),
-    do: diff(invalidate1(:active, active_m_oracle, new_height))
+      when not is_nil(active_m_oracle),
+      do: diff(invalidate1(:active, active_m_oracle, new_height))
 
   ##########
 
@@ -122,7 +124,6 @@ defmodule AeMdw.Db.Sync.Oracle do
     do: {dels(lfcycle, obj), writes(oracle_for_epoch(obj, new_height))}
 
   defp cons_merger(_k, v1, v2), do: v1 ++ v2
-  defp uniq_merger(_k, v1, v2), do: Enum.uniq(v1 ++ v2)
 
   def diff({dels, writes}) do
     {Enum.flat_map(
@@ -147,26 +148,26 @@ defmodule AeMdw.Db.Sync.Oracle do
   def writes(nil), do: %{}
 
   def writes({inact, m_oracle, expire}) when inact in [:inactive, :active],
-    do: map_tabs(inact,
-          fn -> [m_exp(expire, Model.oracle(m_oracle, :index))] end,
-          fn -> [m_oracle] end)
+    do:
+      map_tabs(
+        inact,
+        fn -> [m_exp(expire, Model.oracle(m_oracle, :index))] end,
+        fn -> [m_oracle] end
+      )
 
   def oracle_for_epoch(nil, _new_height),
     do: nil
 
-  def oracle_for_epoch(m_oracle, new_height) when Record.is_record(m_oracle, :oracle),
-    do: oracle_for_epoch(&Model.Oracle.get(m_oracle, &1), new_height)
-
-  def oracle_for_epoch(getter, new_height) when is_function(getter, 1) do
-    index = getter.(:index)
-    active = getter.(:active)
-    {{_, _}, register_txi} = register = getter.(:register)
+  def oracle_for_epoch(m_oracle, new_height) when Record.is_record(m_oracle, :oracle) do
+    index = Model.oracle(m_oracle, :index)
+    active = Model.oracle(m_oracle, :active)
+    {{_, _}, register_txi} = register = Model.oracle(m_oracle, :register)
 
     cond do
       new_height >= active ->
-        expire = getter.(:expire)
+        expire = Model.oracle(m_oracle, :expire)
         lfcycle = (new_height < expire && :active) || :inactive
-        extends = drop_bi_txi(getter.(:extends), new_height)
+        extends = drop_bi_txi(Model.oracle(m_oracle, :extends), new_height)
         new_expire = new_expire(register_txi, extends)
 
         m_oracle =
@@ -176,16 +177,15 @@ defmodule AeMdw.Db.Sync.Oracle do
             expire: new_expire,
             register: register,
             extends: extends,
-            previous: getter.(:previous)
+            previous: Model.oracle(m_oracle, :previous)
           )
 
         {lfcycle, m_oracle, new_expire}
 
       new_height < active ->
-        oracle_for_epoch(getter.(:previous), new_height)
+        oracle_for_epoch(Model.oracle(m_oracle, :previous), new_height)
     end
   end
-
 
   def map_tabs(:inactive, exp_f, name_f),
     do: %{Model.InactiveOracleExpiration => exp_f.(), Model.InactiveOracle => name_f.()}
@@ -193,17 +193,25 @@ defmodule AeMdw.Db.Sync.Oracle do
   def map_tabs(:active, exp_f, name_f),
     do: %{Model.ActiveOracleExpiration => exp_f.(), Model.ActiveOracle => name_f.()}
 
-
   def m_exp(height, pubkey),
     do: Model.expiration(index: {height, pubkey})
 
+  # def new_expire(register_txi, [] = _new_extends) do
+  #   %{block_height: height,
+  #     tx: %{oracle_ttl: {:delta, rel_ttl},
+  #           type: :oracle_register_tx}} = read_raw_tx!(register_txi)
+  #   height + rel_ttl
+  # end
 
-  def new_expire(register_txi, [] = _new_extends),
-    do: active + :aec_governance.name_claim_max_expiration()
+  def new_expire(register_txi, new_extends) do
+    %{block_height: height, tx: %{oracle_ttl: {:delta, rel_ttl}, type: :oracle_register_tx}} =
+      read_raw_tx!(register_txi)
 
-  def new_expire(_register_txi, [{{height, _}, txi} | _] = _new_extends) do
-    %{tx: %{name_ttl: ttl, type: :name_update_tx}} = read_raw_tx!(txi)
-    height + ttl
+    for {{_, _}, txi} <- new_extends, reduce: height + rel_ttl do
+      acc ->
+        %{tx: %{oracle_ttl: {:delta, rel_ttl}, type: :oracle_extend_tx}} = read_raw_tx!(txi)
+        acc + rel_ttl
+    end
   end
 
   def drop_bi_txi(bi_txis, new_height),
@@ -211,4 +219,62 @@ defmodule AeMdw.Db.Sync.Oracle do
 
   def read_raw_tx!(txi),
     do: Format.to_raw_map(read_tx!(txi))
+
+  ################################################################################
+  # for development only
+
+  # def quick_sync() do
+  #   alias AeMdw.Node, as: AE
+  #   alias AeMdw.Db.Stream, as: DBS
+  #   import AeMdw.Db.Util
+
+  #   nil = Process.whereis(AeMdw.Db.Sync.Supervisor)
+  #   range = {1, last_gen() - 1}
+  #   raw_txs =
+  #     DBS.map(:forward, :raw, type: :oracle_register, type: :oracle_extend)
+  #     |> Enum.to_list
+
+  #   run_range(range, raw_txs,
+  #     fn h -> :mnesia.transaction(fn -> expire(h) end) end,
+  #     fn %{block_height: kbi, micro_index: mbi, hash: hash, tx_index: txi,
+  #           tx: %{oracle_id: oracle_id}} ->
+  #       {_block_hash, type, _signed_tx, tx_rec} = AE.Db.get_tx_data(hash)
+  #       pk = AeMdw.Validate.id!(oracle_id)
+  #       bi = {kbi, mbi}
+  #       call = case type do
+  #                :oracle_register_tx -> &register/4
+  #                :oracle_extend_tx -> &extend/4
+  #              end
+  #       :mnesia.transaction(fn -> call.(pk, tx_rec, txi, bi) end)
+  #     end)
+  # end
+
+  # def run_range({from, to}, _txs, _int_fn, _tx_fn) when from > to,
+  #   do: :done
+
+  # def run_range({from, to}, [%{block_height: from} = tx | rem_txs], int_fn, tx_fn) do
+  #   int_fn.(from)
+  #   tx_fn.(tx)
+  #   run_range({from + 1, to}, rem_txs, int_fn, tx_fn)
+  # end
+
+  # def run_range({from, to}, [%{block_height: h} = tx | rem_txs], int_fn, tx_fn) when h < from do
+  #   tx_fn.(tx)
+  #   run_range({from, to}, rem_txs, int_fn, tx_fn)
+  # end
+
+  # def run_range({from, to}, txs, int_fn, tx_fn) do
+  #   int_fn.(from)
+  #   run_range({from + 1, to}, txs, int_fn, tx_fn)
+  # end
+
+  def reset_db() do
+    [
+      Model.ActiveOracle,
+      Model.InactiveOracle,
+      Model.ActiveOracleExpiration,
+      Model.InactiveOracleExpiration
+    ]
+    |> Enum.each(&:mnesia.clear_table/1)
+  end
 end

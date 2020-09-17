@@ -160,6 +160,13 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.InactiveNameExpiration,
       AeMdw.Db.Model.ActiveName,
       AeMdw.Db.Model.InactiveName
+
+  def oracle_tables() do
+    [
+      AeMdw.Db.Model.ActiveOracleExpiration,
+      AeMdw.Db.Model.InactiveOracleExpiration,
+      AeMdw.Db.Model.ActiveOracle,
+      AeMdw.Db.Model.InactiveOracle
     ]
   end
 

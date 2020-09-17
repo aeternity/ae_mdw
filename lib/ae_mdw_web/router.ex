@@ -11,6 +11,7 @@ defmodule AeMdwWeb.Router do
     {["names", "inactive"], &NC.stream_plug_hook/1},
     {["names", "active"], &NC.stream_plug_hook/1},
     {["names"], &NC.stream_plug_hook/1}
+    {["oracles"], &AeMdwWeb.OracleController.stream_plug_hook/1}
   ]
 
   @scopes ["gen", "txi"]
@@ -62,6 +63,17 @@ defmodule AeMdwWeb.Router do
 
     get "/names", NameController, :names
     get "/names/:scope_type/:range", NameController, :names
+
+    get "/oracle/:id", OracleController, :oracle
+
+    get "/oracles/inactive", OracleController, :inactive_oracles
+    get "/oracles/inactive/gen/:range", OracleController, :inactive_oracles
+
+    get "/oracles/active", OracleController, :active_oracles
+    get "/oracles/active/gen/:range", OracleController, :active_oracles
+
+    get "/oracles", OracleController, :oracles
+    get "/oracles/gen/:range", OracleController, :oracles
 
     get "/status", UtilController, :status
 

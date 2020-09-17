@@ -62,6 +62,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     {:atomic, next_txi} =
       :mnesia.transaction(fn ->
         Sync.Name.expire(height)
+        Sync.Oracle.expire(height - 1)
 
         kb_txi = (txi == 0 && -1) || txi
         kb_hash = :aec_headers.hash_header(:aec_blocks.to_key_header(key_block)) |> ok!
@@ -130,6 +131,9 @@ defmodule AeMdw.Db.Sync.Transaction do
     Sync.Oracle.register(pk, tx, txi, bi)
   end
 
+  def write_links(:oracle_extend_tx, tx, _signed_tx, txi, _tx_hash, bi),
+    do: Sync.Oracle.extend(:aeo_extend_tx.oracle_pubkey(tx), tx, txi, bi)
+
   def write_links(:name_claim_tx, tx, _signed_tx, txi, tx_hash, bi) do
     plain_name = :aens_claim_tx.name(tx)
     {:ok, name_hash} = :aens.get_name_hash(plain_name)
@@ -145,9 +149,6 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   def write_links(:name_revoke_tx, tx, _signed_tx, txi, _tx_hash, bi),
     do: Sync.Name.revoke(:aens_revoke_tx.name_hash(tx), tx, txi, bi)
-
-  def write_links(:oracle_extend_tx, tx, _signed_tx, txi, _tx_hash, bi),
-    do: Sync.Oracle.extend(:aeo_extend_tx.oracle_pubkey(tx), tx, txi, bi)
 
   def write_links(_, _, _, _, _, _),
     do: :nop

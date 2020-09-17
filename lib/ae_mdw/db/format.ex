@@ -61,6 +61,32 @@ defmodule AeMdw.Db.Format do
     }
   end
 
+  def to_raw_map(m_oracle, source) when elem(m_oracle, 0) == :oracle do
+    alias AeMdw.Node, as: AE
+
+    pk = Model.oracle(m_oracle, :index)
+    {{register_height, _}, register_txi} = Model.oracle(m_oracle, :register)
+    expire_height = Model.oracle(m_oracle, :expire)
+
+    kbi = min(expire_height - 1, last_gen())
+    oracle_tree = AeMdw.Db.Oracle.oracle_tree!({kbi, -1})
+    oracle_rec = :aeo_state_tree.get_oracle(pk, oracle_tree)
+
+    %{
+      oracle: :aeser_id.create(:oracle, pk),
+      active: source == Model.ActiveOracle,
+      active_from: register_height,
+      expire_height: expire_height,
+      register: register_txi,
+      extends: Enum.map(Model.oracle(m_oracle, :extends), &bi_txi_txi/1),
+      query_fee: AE.Oracle.get!(oracle_rec, :query_fee),
+      format: %{
+        query: AE.Oracle.get!(oracle_rec, :query_format),
+        response: AE.Oracle.get!(oracle_rec, :response_format)
+      }
+    }
+  end
+
   def to_raw_map(ae_tx, tx_type) do
     AeMdw.Node.tx_fields(tx_type)
     |> Stream.with_index(1)

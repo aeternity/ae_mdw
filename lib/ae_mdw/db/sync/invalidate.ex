@@ -23,10 +23,14 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
         :mnesia.transaction(fn ->
           {name_dels, name_writes} = Sync.Name.invalidate(fork_height - 1)
+          {oracle_dels, oracle_writes} = Sync.Oracle.invalidate(fork_height - 1)
 
           do_dels(tab_keys)
           do_dels(name_dels, &AeMdw.Db.Name.cache_through_delete/2)
+          do_dels(oracle_dels, &AeMdw.Db.Oracle.cache_through_delete/2)
+
           do_writes(name_writes, &AeMdw.Db.Name.cache_through_write/2)
+          do_writes(oracle_writes, &AeMdw.Db.Oracle.cache_through_write/2)
 
           Enum.each(id_counts, fn {f_key, delta} -> Model.update_count(f_key, -delta) end)
         end)
