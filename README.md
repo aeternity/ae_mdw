@@ -8,6 +8,7 @@
     - [Prerequisites](#prerequisites)
     - [Setup](#setup)
     - [Start](#start)
+    - [Build and start with Docker](#build-and-start-with-docker)
     - [HTTP endpoints](#http-endpoints)
     - [Transaction querying](#transaction-querying)
         - [Scope](#scope)
@@ -48,6 +49,7 @@
         - [Multiple generations](#multiple-generations)
     - [Naming System](#naming-system)
         - [Name Resolution](#name-resolution)
+        - [Names for owner](#names-for-owner)
         - [Listing names](#listing-names)
             - [All names](#all-names)
             - [Inactive names](#inactive-names)
@@ -55,6 +57,12 @@
             - [Auctions](#auctions)
         - [Pointers](#pointers)
         - [Pointees](#pointees)
+    - [Oracles](#oracles)
+        - [Oracle Resolution](#oracle-resolution)
+        - [Listing oracles](#listing-oracles)
+            - [All oracles](#all-oracles)
+            - [Inactive oracles](#inactive-oracles)
+            - [Active oracles](#active-oracles)
     - [Websocket interface](#websocket-interface)
         - [Message format:](#message-format)
         - [Supported operations:](#supported-operations)
@@ -114,6 +122,8 @@ GET  /blocks/:range_or_dir              - returns generation blocks (key + micro
 GET  /name/:id                          - returns name information by hash or plain name
 GET  /name/pointers/:id                 - returns pointers of a name specified by hash of plain name
 GET  /name/pointees/:id                 - returns names which point to id specified by hash
+GET  /names/owned_by/:id                - returns names owned by account and auctions with top bid from account
+
 GET  /names/auctions                    - returns name auctions ordered by (optional) query parameters
 GET  /names/auctions/:scope_type/:range - returns name auctions for continuation link
 GET  /names/inactive                    - returns expired names ordered by (optional) query parameters
@@ -122,6 +132,15 @@ GET  /names/active                      - returns active names ordered by (optio
 GET  /names/active/:scope_type/:range   - returns active names for continuation link
 GET  /names                             - returns all names (active and expired) ordered by (optional) query parameters
 GET  /names/:scope_type/:range          - returns all names for continuation link
+
+GET /oracle/:id                         - returns oracle information by hash
+
+GET /oracles/inactive                   - returns expired oracles ordered by expiration height
+GET /oracles/inactive/gen/:range        - returns expired oracles for continuation link
+GET /oracles/active                     - returns active oracles ordered by expiration height
+GET /oracles/active/gen/:range          - returns active oracles for continuation link
+GET /oracles                            - returns all oracles from newest (active) to oldest (expired)
+GET /oracles/gen/:range                 - returns all oracles for continuation link
 
 GET  /status                            - returns middleware status (version, number of generations indexed)
 
@@ -1537,6 +1556,18 @@ $ curl -s "http://localhost:4000/blocks/100000-100100?limit=3" | jq '.'
 
 There are several endpoints for querying of the Naming System.
 
+Name objects in Aeternity blockchain have a lifecycle formed by several types of transactions.
+Names can become claimed (directly or via name auction), updated the lifespan or pointers, transferred the ownership and revoked when not needed.
+
+Information about the name returned from the name endpoints summarizes this lifecycle in vectors of transaction indices, under keys `claims`, `updates`, `transfers` and optional transaction index in `revoke`.
+
+Transaction index is useful for retrieving detailed information about the transaction via `txi/:index` endpoint.
+
+Using `txi/:index` endpoint is flexible, on-demand way to get detailed transaction information, but in some situations leads to multiple round trips to the server.
+
+Due to this reason, all name endpoints except `name/pointers` and `name/pointees` support `expand` parameter (either set to `true` or without value), which will replace the transaction indices with the JSON body of the transaction detail.
+
+
 ### Name Resolution
 
 ```
@@ -1703,6 +1734,196 @@ $ curl -s "http://localhost:4000/name/help" | jq '.'
   "status": "auction"
 }
 ```
+
+With `expand` parameter, notice how `claims` and `updates` have the transaction detail inlined:
+
+```
+$ curl -s "http://localhost:4000/name/cryptobase.chain?expand" | jq '.'
+{
+  "active": true,
+  "info": {
+    "active_from": 264318,
+    "auction_timeout": null,
+    "claims": [
+      {
+        "block_hash": "mh_gtErJSZWePyPyr8yoeQb3mUqA7YsjL6Ac7YKKMGqbbyNGcjWk",
+        "block_height": 263838,
+        "hash": "th_2aHZ1hCkuGRdB9f9F1g6brjwvxfzZ6c1rV8TAiGxRLncpdLJRA",
+        "micro_index": 0,
+        "micro_time": 1591023065609,
+        "signatures": [
+          "sg_BDED9YVuq7X7j51ni2jmfbj7tZ4Tx8KcTP3sx3W9C3aZwDLsXYEnNc9yCBbeGC1AcCkVBsGigSFPqNS5CXPCDXramjUNd"
+        ],
+        "tx": {
+          "account_id": "ak_2J1B4qgybwgFVgfHSmPDWpdPogY4TxGnyoyNRL1oNZmhWyyzvr",
+          "fee": 16620000000000,
+          "name": "cryptobase.chain",
+          "name_fee": 7502500000000000000,
+          "name_id": "nm_2vAFLnmRbsQTNeZi9PzFgVWY6Un9rszFDaE3ubYqk1oJURxJ97",
+          "name_salt": 7573518016165599,
+          "nonce": 49,
+          "type": "NameClaimTx",
+          "version": 2
+        },
+        "tx_index": 11807560
+      }
+    ],
+    "expire_height": 361829,
+    "ownership": {
+      "current": "ak_2J1B4qgybwgFVgfHSmPDWpdPogY4TxGnyoyNRL1oNZmhWyyzvr",
+      "original": "ak_2J1B4qgybwgFVgfHSmPDWpdPogY4TxGnyoyNRL1oNZmhWyyzvr"
+    },
+    "pointers": {
+      "account_pubkey": "ak_2J1B4qgybwgFVgfHSmPDWpdPogY4TxGnyoyNRL1oNZmhWyyzvr"
+    },
+    "revoke": null,
+    "transfers": [],
+    "updates": [
+      {
+        "block_hash": "mh_pFixjYGYcqtSMzHprsTB9t1Z3zp11W9yFgJJ7GoRfpBBpFyxS",
+        "block_height": 311829,
+        "hash": "th_W4L8X2FcWSi2cyGCayimNSWojEzyVjXSXk8EEJES2evTqxLzS",
+        "micro_index": 16,
+        "micro_time": 1599712936956,
+        "signatures": [
+          "sg_6PSRErVuLWGZAcRAW2fYDDNSsBPgccgxMjQciGCwqAeCKF16ykBVPghZWe2QPPTs86QTevoAPphtbhMCmZWpQSjrPR24L"
+        ],
+        "tx": {
+          "account_id": "ak_2J1B4qgybwgFVgfHSmPDWpdPogY4TxGnyoyNRL1oNZmhWyyzvr",
+          "client_ttl": 10500,
+          "fee": 17840000000000,
+          "name": "cryptobase.chain",
+          "name_id": "nm_2vAFLnmRbsQTNeZi9PzFgVWY6Un9rszFDaE3ubYqk1oJURxJ97",
+          "name_ttl": 50000,
+          "nonce": 64,
+          "pointers": [
+            {
+              "id": "ak_2J1B4qgybwgFVgfHSmPDWpdPogY4TxGnyoyNRL1oNZmhWyyzvr",
+              "key": "account_pubkey"
+            }
+          ],
+          "ttl": 312329,
+          "type": "NameUpdateTx",
+          "version": 1
+        },
+        "tx_index": 15494052
+      }
+    ]
+  },
+  "name": "cryptobase.chain",
+  "previous": [],
+  "status": "name"
+}
+```
+
+### Names for owner
+
+The endpoint `/names/owned_by/:account` returns names for a given owner.
+
+The reply has two keys:
+
+- active - listing active (not expired) names belonging to the owner
+- top_bid - listing auctions where the owner has placed the highest bid
+
+Example below is fabricated, to present the shape of the responses:
+
+```
+$ curl -s "http://localhost:4000/names/owned_by/ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN" | jq '.'
+{
+  "active": [
+    {
+      "active": true,
+      "info": {
+        "active_from": 162213,
+        "auction_timeout": 0,
+        "claims": [
+          4748820
+        ],
+        "expire_height": 365074,
+        "ownership": {
+          "current": "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN",
+          "original": "ak_2tACpi3fVoP5kGo7aXw4riDNwifU2UR3AxxKzTs7FiCPi4iBa8"
+        },
+        "pointers": {
+          "account_pubkey": "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN"
+        },
+        "revoke": null,
+        "transfers": [
+          15227905,
+          15227448
+        ],
+        "updates": [
+          15736349,
+          15698826,
+          15662790,
+          15626051,
+          15590987,
+          15555002,
+          15518890,
+          15481239,
+          15446118,
+          15410282,
+          15374086,
+          15338216,
+          15301733,
+          15300975,
+          15265489,
+          15227850,
+          11490573,
+          8946568,
+          5770445,
+          5561653,
+          5561576,
+          4776331,
+          4771609,
+          4748827
+        ]
+      },
+      "name": "0000000000000.chain",
+      "previous": [],
+      "status": "name"
+    },
+    ...
+    ],
+  "top_bid": [
+    {
+      "active": false,
+      "info": {
+        "auction_end": 316672,
+        "bids": [
+          14747888
+        ],
+        "last_bid": {
+          "block_hash": "mh_gGVCDKzwBP85BGTiionuZrpibThyPUdqn8VWWVzvAVYN2YuGS",
+          "block_height": 301792,
+          "hash": "th_eWrp3M6REtTmVjGJqEvqXM5ejQ73irAptTtcaqTWNsBYJoxZ5",
+          "micro_index": 0,
+          "micro_time": 1597894719687,
+          "signatures": [
+            "sg_E3dyEYE9mrBXbFRN3PjCakpAN1VZbZAuYq8JKVq6ki8vvwsCaDMd947QHBx5pkcwFX1Y1AqiwhcYx5AUpQD1xYoXYHi63"
+          ],
+          "tx": {
+            "account_id": "ak_2AVeRypSdS4ZosdKWW1C4avWU4eeC2Yq7oP7guBGy8jkxdYVUy",
+            "fee": 16560000000000,
+            "name": "nikita.chain",
+            "name_fee": 51422900000000000000,
+            "name_id": "nm_2s2gjxQFYzcShL9gva2jWvzZ7mHPe4m6X6pqbyuSipZKCg1DLV",
+            "name_salt": 7461157538025441,
+            "nonce": 43,
+            "type": "NameClaimTx",
+            "version": 2
+          },
+          "tx_index": 14747888
+        }
+      },
+      "name": "nikita.chain",
+      "previous": [],
+      "status": "auction"
+    }
+  ]
+}
+```
+
 
 ### Listing names
 
@@ -2169,11 +2390,273 @@ $ curl -s "http://localhost:4000/name/pointees/ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8L
 }
 ```
 
+## Oracles
+
+There are several endpoints for fetching information about the oracles.
+
+Oracles in Aeternity blockchain have a lifecycle formed by several types of transactions, similar to the Name objects.
+
+For the same reason as Names, all oracle endpoints support `expand` parameter (either set to `true` or without value), which will replace the transaction indices with the JSON body of the transaction detail.
+
+
+### Oracle Resolution
+
+```
+$ curl -s "http://localhost:4000/oracle/ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM" | jq '.'
+{
+  "active": false,
+  "active_from": 4660,
+  "expire_height": 6894,
+  "extends": [
+    11025
+  ],
+  "format": {
+    "query": "string",
+    "response": "string"
+  },
+  "oracle": "ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM",
+  "query_fee": 20000,
+  "register": 11023
+}
+```
+
+Provided `expand` parameter replaces transaction indices in `extends` and `register` fields:
+
+```
+$ curl -s "http://localhost:4000/oracle/ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM?expand" | jq '.'
+{
+  "active": false,
+  "active_from": 4660,
+  "expire_height": 6894,
+  "extends": [
+    {
+      "block_hash": "mh_2CbcGSVU1PaFgpvdv3akxUk5aLkPVtqXrYPYcURr5RnPMzBzic",
+      "block_height": 4662,
+      "hash": "th_rPNXqxHg7JVSe7LRUy2KyEXp6west8JgBzzKGk8PPxvCh8p1h",
+      "micro_index": 0,
+      "micro_time": 1544194970900,
+      "signatures": [
+        "sg_a27euq6jBYUJEadCPbxDzAztHmvLXpFEqrB7md2wNKqmUZur7urmiBAYRiHvwcFz3ZbNKb3ESyA4vSTvDam4e6QTHkCGU"
+      ],
+      "tx": {
+        "fee": 20000,
+        "nonce": 196,
+        "oracle_id": "ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM",
+        "oracle_ttl": {
+          "type": "delta",
+          "value": 1000
+        },
+        "type": "OracleExtendTx",
+        "version": 1
+      },
+      "tx_index": 11025
+    }
+  ],
+  "format": {
+    "query": "string",
+    "response": "string"
+  },
+  "oracle": "ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM",
+  "query_fee": 20000,
+  "register": {
+    "block_hash": "mh_25pDFuKkhF6zzAhy2DEwY5ALYpM4u5UKVmqgvNTgZ2ZDLqDbHr",
+    "block_height": 4660,
+    "hash": "th_2SLFNYk5s5u5tRD4Bqx6pSc1mysZMsCr3szbx55nKgVBQSiZv2",
+    "micro_index": 0,
+    "micro_time": 1544194831238,
+    "signatures": [
+      "sg_JwZ2KgLAZvDBgsHVccqYuhmwuCvLnMrxNrZ7y7jmA3NxZUaaoBGcxNXd64MTX142JXMbaLAirZrRh7qf6f5XXp3iN5Qao"
+    ],
+    "tx": {
+      "abi_version": 0,
+      "account_id": "ak_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM",
+      "fee": 20000,
+      "nonce": 195,
+      "oracle_id": "ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM",
+      "oracle_ttl": {
+        "type": "delta",
+        "value": 1234
+      },
+      "query_fee": 20000,
+      "query_format": "string",
+      "response_format": "string",
+      "type": "OracleRegisterTx",
+      "version": 1
+    },
+    "tx_index": 11023
+  }
+}
+```
+
+### Listing oracles
+
+There are 3 paginable endpoints for listing oracles:
+
+- /oracles - for listing ALL oracles (`active` and `inactive`)
+- /oracles/inactive - for listing `inactive` oracles (expired)
+- /oracles/active - for listing `active` oracles
+
+They are ordered by expiration height and support parameter `direction` (with options `forward` and `backward`).
+
+The default direction is `backward`.
+
+The parameter `limit` (by default = 10) is optional, and limits the number of elements in the response.
+
+#### All oracles
+
+```
+$ curl -s "http://localhost:4000/oracles?direction=forward&limit=1&expand" | jq '.'
+{
+  "data": [
+    {
+      "active": false,
+      "active_from": 4608,
+      "expire_height": 5851,
+      "extends": [
+        {
+          "block_hash": "mh_rKmT9rDDFNSNfS4HFrRjNbFqszCvTirHfH2JAFCrhB6x6s85u",
+          "block_height": 4609,
+          "hash": "th_2pJmkk8FRsSNU1aH9H7eMHErTVzJTGnE5xiTsVgyhMjPzdEemZ",
+          "micro_index": 0,
+          "micro_time": 1544185907144,
+          "signatures": [
+            "sg_8tvreNZhhV5a1ZVo7CMiRGbjbgpj65XBa8wttqQmuXRD13FL1RAgfU5fgWkdyxsQUop1dJUqC3bV7ZvbRyvQkDo7NamGT"
+          ],
+          "tx": {
+            "fee": 20000,
+            "nonce": 2,
+            "oracle_id": "ok_2TASQ4QZv584D2ZP7cZxT6sk1L1UyqbWumnWM4g1azGi1qqcR5",
+            "oracle_ttl": {
+              "type": "delta",
+              "value": 9
+            },
+            "type": "OracleExtendTx",
+            "version": 1
+          },
+          "tx_index": 8989
+        }
+      ],
+      "format": {
+        "query": "the query spec",
+        "response": "the response spec"
+      },
+      "oracle": "ok_2TASQ4QZv584D2ZP7cZxT6sk1L1UyqbWumnWM4g1azGi1qqcR5",
+      "query_fee": 20000,
+      "register": {
+        "block_hash": "mh_uQMxaJ6ajKnMsW2M3QqgH1FchXGNbZriRceVggoTnUEGdgSHq",
+        "block_height": 4608,
+        "hash": "th_tboa3XizqaAW3FUx4SxzT2xmuXDYRarQqjZiZ384u4oVDn1EN",
+        "micro_index": 0,
+        "micro_time": 1544185806672,
+        "signatures": [
+          "sg_A7MGMsQxY9VTCxvBnuStmNsDSADf9H7t57c79hWotFC69e1xpcV78QXJfKoMFSgn1s7RErNksFyKcrihwYifCELnEQFQ3"
+        ],
+        "tx": {
+          "abi_version": 0,
+          "account_id": "ak_2TASQ4QZv584D2ZP7cZxT6sk1L1UyqbWumnWM4g1azGi1qqcR5",
+          "fee": 20000,
+          "nonce": 1,
+          "oracle_id": "ok_2TASQ4QZv584D2ZP7cZxT6sk1L1UyqbWumnWM4g1azGi1qqcR5",
+          "oracle_ttl": {
+            "type": "delta",
+            "value": 1234
+          },
+          "query_fee": 20000,
+          "query_format": "the query spec",
+          "response_format": "the response spec",
+          "type": "OracleRegisterTx",
+          "version": 1
+        },
+        "tx_index": 8916
+      }
+    }
+  ],
+  "next": "oracles/gen/315780-0?direction=forward&expand=&limit=1&page=2"
+}
+```
+
+#### Inactive oracles
+
+```
+$ curl -s "http://localhost:4000/oracles/inactive?limit=1" | jq '.'
+{
+  "data": [
+    {
+      "active": false,
+      "active_from": 307850,
+      "expire_height": 308350,
+      "extends": [],
+      "format": {
+        "query": "string",
+        "response": "string"
+      },
+      "oracle": "ok_sezvMRsriPfWdphKmv293hEiyeyUYSoqkWqW7AcAuW9jdkCnT",
+      "query_fee": 20000000000000,
+      "register": 15198855
+    }
+  ],
+  "next": "oracles/inactive/gen/315780-0?limit=1&page=2"
+}
+```
+
+#### Active oracles
+
+```
+$ curl -s "http://localhost:4000/oracles/active?limit=1&expand" | jq '.'
+{
+  "data": [
+    {
+      "active": true,
+      "active_from": 289005,
+      "expire_height": 10289005,
+      "extends": [],
+      "format": {
+        "query": "query",
+        "response": "response"
+      },
+      "oracle": "ok_qJZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN",
+      "query_fee": 0,
+      "register": {
+        "block_hash": "mh_2f1gyBmtMMb8Sd3kbSu95cADRMwsYE8171KXP4W8wa2osRp4tZ",
+        "block_height": 289005,
+        "hash": "th_K5aPLdEN4H6QduiFtqdkv61gUCvaQpDjX3z9pHKNopD8F65LJ",
+        "micro_index": 20,
+        "micro_time": 1595571086808,
+        "signatures": [
+          "sg_CW3T2W6Ryi2kcDcSTeuwvL8xGhKYUDnGHygBCPLrF2aqfWA1RiybKqRRafrctK4c9vvL9DS9kCYzWkWSmD8mN9g6yhQPG"
+        ],
+        "tx": {
+          "abi_version": 0,
+          "account_id": "ak_qJZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN",
+          "fee": 1842945000000000,
+          "nonce": 1,
+          "oracle_id": "ok_qJZPXvWPC7G9kFVEqNjj9NAmwMsQcpRu6E3SSCvCQuwfqpMtN",
+          "oracle_ttl": {
+            "type": "delta",
+            "value": 10000000
+          },
+          "query_fee": 0,
+          "query_format": "query",
+          "response_format": "response",
+          "ttl": 289505,
+          "type": "OracleRegisterTx",
+          "version": 1
+        },
+        "tx_index": 13749762
+      }
+    }
+  ],
+  "next": "oracles/active/gen/315799-0?expand=&limit=1&page=2"
+}
+```
+
 
 ## Websocket interface
+
 The websocket interface, which listens by default on port `4001`, gives asynchronous notifications when various events occur.
 
 ### Message format:
+
 ```
 {
 "op": "<operation to perform>",
@@ -2182,10 +2665,12 @@ The websocket interface, which listens by default on port `4001`, gives asynchro
 ```
 
 ### Supported operations:
+
   * Subscribe
   * Unsubscribe
 
 ### Supported payloads:
+
   * KeyBlocks
   * MicroBlocks
   * Transactions
@@ -2218,10 +2703,12 @@ Actual chain data is wrapped in a JSON structure identifying the subscription to
 ## Tests
 
 ### Controller tests
+
 The database has to be fully synced.
   * Run the tests with `make test`
 
 ### Performance test
+
 This project has a performance test implemented. It's purpose is to test the availability and concurrency handling of the project. The performance test in this case would be spawning multiple clients, capable of making simultanious requests to the server at almost the same time.
 
 **In order to run performance test:** The project should be up and running, then open a new shell and go to the project's root folder and execute the next command:
@@ -2248,7 +2735,7 @@ The example output would look like:
             90th: 30.648600000000002 ms
             99th: 31.42566 ms
           ......................................................................
-          
+
 
           Path: "/block/mh_25TNGuEkVGckfrH3rVwHiUsm2GFB17mKFEF3hYHR3zQrVXCRrp"
           Number of requests: 7
@@ -2265,7 +2752,7 @@ The example output would look like:
             90th: 26.315 ms
             99th: 28.2941 ms
           ......................................................................
-          
+
 
           Path: "/blocki/300000"
           Number of requests: 7
@@ -2282,7 +2769,7 @@ The example output would look like:
             90th: 25.107200000000002 ms
             99th: 25.46792 ms
           ......................................................................
-          
+
 
           Path: "/blocki/300001/2"
           Number of requests: 7
@@ -2299,7 +2786,7 @@ The example output would look like:
             90th: 26.0232 ms
             99th: 29.426819999999996 ms
           ......................................................................
-          
+
 
           Path: "/blocks/100000-100100?limit=3"
           Number of requests: 7
@@ -2316,7 +2803,7 @@ The example output would look like:
             90th: 36.205200000000005 ms
             99th: 44.75501999999999 ms
           ......................................................................
-          
+
 
           Path: "/blocks/backward?limit=1"
           Number of requests: 7
@@ -2333,7 +2820,7 @@ The example output would look like:
             90th: 93.88960000000003 ms
             99th: 143.03175999999996 ms
           ......................................................................
-          
+
 
           Path: "/blocks/forward?limit=2"
           Number of requests: 7
@@ -2350,7 +2837,7 @@ The example output would look like:
             90th: 36.5956 ms
             99th: 37.799260000000004 ms
           ......................................................................
-          
+
 
           Path: "/name/aeternity.chain"
           Number of requests: 7
@@ -2367,7 +2854,7 @@ The example output would look like:
             90th: 31.8194 ms
             99th: 33.90434 ms
           ......................................................................
-          
+
 
           Path: "/name/nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj"
           Number of requests: 7
@@ -2384,7 +2871,7 @@ The example output would look like:
             90th: 30.0276 ms
             99th: 30.12696 ms
           ......................................................................
-          
+
 
           Path: "/name/pointees/ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
           Number of requests: 7
@@ -2401,7 +2888,7 @@ The example output would look like:
             90th: 32.2898 ms
             99th: 33.31418 ms
           ......................................................................
-          
+
 
           Path: "/name/pointers/wwwbeaconoidcom.chain"
           Number of requests: 7
@@ -2418,7 +2905,7 @@ The example output would look like:
             90th: 26.1386 ms
             99th: 26.534959999999998 ms
           ......................................................................
-          
+
 
           Path: "/names/active?by=name&limit=3"
           Number of requests: 7
@@ -2435,7 +2922,7 @@ The example output would look like:
             90th: 36.6812 ms
             99th: 37.67642 ms
           ......................................................................
-          
+
 
           Path: "/names/auctions"
           Number of requests: 7
@@ -2452,7 +2939,7 @@ The example output would look like:
             90th: 38.783 ms
             99th: 42.3227 ms
           ......................................................................
-          
+
 
           Path: "/names/auctions?by=expiration&direction=forward&limit=2"
           Number of requests: 7
@@ -2469,7 +2956,7 @@ The example output would look like:
             90th: 72.85060000000003 ms
             99th: 130.00905999999995 ms
           ......................................................................
-          
+
 
           Path: "/names/inactive?by=expiration&direction=forward&limit=1"
           Number of requests: 7
@@ -2486,7 +2973,7 @@ The example output would look like:
             90th: 74.01860000000003 ms
             99th: 130.10785999999993 ms
           ......................................................................
-          
+
 
           Path: "/names?limit=3"
           Number of requests: 7
@@ -2503,7 +2990,7 @@ The example output would look like:
             90th: 140.7012 ms
             99th: 140.70551999999998 ms
           ......................................................................
-          
+
 
           Path: "/tx/th_zATv7B4RHS45GamShnWgjkvcrQfZUWQkZ8gk1RD4m2uWLJKnq"
           Number of requests: 7
@@ -2520,7 +3007,7 @@ The example output would look like:
             90th: 37.583000000000006 ms
             99th: 45.06199999999999 ms
           ......................................................................
-          
+
 
           Path: "/txi/87450"
           Number of requests: 7
@@ -2537,7 +3024,7 @@ The example output would look like:
             90th: 31.1174 ms
             99th: 31.306939999999997 ms
           ......................................................................
-          
+
 
           Path: "/txs/backward?account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&account=ak_zUQikTiUMNxfKwuAfQVMPkaxdPsXP8uAxnfn6TkZKZCtmRcUD&limit=1"
           Number of requests: 7
@@ -2554,7 +3041,7 @@ The example output would look like:
             90th: 36.3588 ms
             99th: 41.34947999999999 ms
           ......................................................................
-          
+
 
           Path: "/txs/count"
           Number of requests: 7
@@ -2571,7 +3058,7 @@ The example output would look like:
             90th: 26.596400000000003 ms
             99th: 29.18894 ms
           ......................................................................
-          
+
 
           Path: "/txs/count/ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
           Number of requests: 7
@@ -2588,7 +3075,7 @@ The example output would look like:
             90th: 29.6628 ms
             99th: 30.73848 ms
           ......................................................................
-          
+
 
           Path: "/txs/forward?account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
           Number of requests: 7
@@ -2605,7 +3092,7 @@ The example output would look like:
             90th: 47.1206 ms
             99th: 52.61995999999999 ms
           ......................................................................
-          
+
 
           Path: "/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&type_group=name"
           Number of requests: 7
@@ -2622,7 +3109,7 @@ The example output would look like:
             90th: 33.373200000000004 ms
             99th: 35.21082 ms
           ......................................................................
-          
+
 
           Path: "/txs/forward?contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2"
           Number of requests: 7
@@ -2639,7 +3126,7 @@ The example output would look like:
             90th: 42.0984 ms
             99th: 45.287639999999996 ms
           ......................................................................
-          
+
 
           Path: "/txs/forward?name_transfer.recipient_id=ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF&limit=1"
           Number of requests: 7
@@ -2656,7 +3143,7 @@ The example output would look like:
             90th: 72.07860000000004 ms
             99th: 129.98495999999994 ms
           ......................................................................
-          
+
 
           Path: "/txs/forward?oracle=ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&limit=1"
           Number of requests: 7
@@ -2673,7 +3160,7 @@ The example output would look like:
             90th: 28.9598 ms
             99th: 32.48168 ms
           ......................................................................
-          
+
 
           Path: "/txs/forward?type=channel_create&limit=1"
           Number of requests: 7
@@ -2690,7 +3177,7 @@ The example output would look like:
             90th: 68.81940000000004 ms
             99th: 129.64283999999995 ms
           ......................................................................
-          
+
 
           Path: "/txs/forward?type_group=oracle&limit=1"
           Number of requests: 7
@@ -2707,7 +3194,7 @@ The example output would look like:
             90th: 26.113 ms
             99th: 26.5423 ms
           ......................................................................
-          
+
 
           Path: "/txs/gen/223000-223007?limit=30"
           Number of requests: 7
@@ -2724,7 +3211,7 @@ The example output would look like:
             90th: 82.42739999999999 ms
             99th: 84.50964 ms
           ......................................................................
-          
+
 
           Path: "/txs/txi/409222-501000?limit=30"
           Number of requests: 7
@@ -2741,7 +3228,7 @@ The example output would look like:
             90th: 84.19800000000001 ms
             99th: 98.54039999999999 ms
           ......................................................................
-          
+
 
           Path: "/txs/txi/509111"
           Number of requests: 7
