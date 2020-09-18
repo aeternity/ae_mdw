@@ -120,6 +120,7 @@ GET  /blocks/gen/:range                 - returns generation blocks for continua
 GET  /blocks/:range_or_dir              - returns generation blocks (key + micro) for given range (or direction)
 
 GET  /name/:id                          - returns name information by hash or plain name
+GET  /name/auction/:id                  - returns name information for auction, by hash or plain name
 GET  /name/pointers/:id                 - returns pointers of a name specified by hash of plain name
 GET  /name/pointees/:id                 - returns names which point to id specified by hash
 GET  /names/owned_by/:id                - returns names owned by account and auctions with top bid from account
@@ -1654,6 +1655,7 @@ $ curl -s "http://localhost:4000/name/nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJ
 ```
 
 If there's no suffix (`.chain` or `.test`), `.chain` is added by default:
+
 ```
 $ curl -s "http://localhost:4000/name/aeternity" | jq '.'
 {
@@ -1696,6 +1698,7 @@ $ curl -s "http://localhost:4000/name/aeternity" | jq '.'
 ```
 
 If the name is currently in auction, the reply has different shape:
+
 ```
 $ curl -s "http://localhost:4000/name/help" | jq '.'
 {
@@ -1813,6 +1816,46 @@ $ curl -s "http://localhost:4000/name/cryptobase.chain?expand" | jq '.'
   "name": "cryptobase.chain",
   "previous": [],
   "status": "name"
+}
+```
+
+Auction specific name resolution is available behind endpoint `name/auction/:id`:
+
+```
+$ curl -s "http://localhost:4000/name/auction/nikita.chain" | jq '.'
+{
+  "active": false,
+  "info": {
+    "auction_end": 316672,
+    "bids": [
+      14747888
+    ],
+    "last_bid": {
+      "block_hash": "mh_gGVCDKzwBP85BGTiionuZrpibThyPUdqn8VWWVzvAVYN2YuGS",
+      "block_height": 301792,
+      "hash": "th_eWrp3M6REtTmVjGJqEvqXM5ejQ73irAptTtcaqTWNsBYJoxZ5",
+      "micro_index": 0,
+      "micro_time": 1597894719687,
+      "signatures": [
+        "sg_E3dyEYE9mrBXbFRN3PjCakpAN1VZbZAuYq8JKVq6ki8vvwsCaDMd947QHBx5pkcwFX1Y1AqiwhcYx5AUpQD1xYoXYHi63"
+      ],
+      "tx": {
+        "account_id": "ak_2AVeRypSdS4ZosdKWW1C4avWU4eeC2Yq7oP7guBGy8jkxdYVUy",
+        "fee": 16560000000000,
+        "name": "nikita.chain",
+        "name_fee": 51422900000000000000,
+        "name_id": "nm_2s2gjxQFYzcShL9gva2jWvzZ7mHPe4m6X6pqbyuSipZKCg1DLV",
+        "name_salt": 7461157538025441,
+        "nonce": 43,
+        "type": "NameClaimTx",
+        "version": 2
+      },
+      "tx_index": 14747888
+    }
+  },
+  "name": "nikita.chain",
+  "previous": [],
+  "status": "auction"
 }
 ```
 
