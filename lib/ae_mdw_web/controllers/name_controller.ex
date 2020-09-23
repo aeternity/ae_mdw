@@ -509,7 +509,7 @@ defmodule AeMdwWeb.NameController do
           description("Schema for names auctions")
 
           properties do
-            data(Schema.array(:NameAuctions), "The data for the names", required: true)
+            data(Schema.array(:NameAuctions), "The data for the names auctions", required: true)
             next(:string, "The continuation link", required: true)
           end
         end,
@@ -697,6 +697,44 @@ defmodule AeMdwWeb.NameController do
             },
             inactive: %{}
           })
+        end,
+      OwnedByResponse:
+        swagger_schema do
+          title("Owned by")
+          description("Schema for owned by")
+
+          properties do
+            active(Schema.array(:NameByIdResponse), "List of active information")
+            top_bid(Schema.array(:NameAuctions), "List for names auctions")
+          end
+
+          example(%{
+            active: [
+              %{
+                active: true,
+                info: %{
+                  active_from: 314_867,
+                  auction_timeout: 0,
+                  claims: [15_721_403],
+                  expire_height: 364_910,
+                  ownership: %{
+                    current: "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah",
+                    original: "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
+                  },
+                  pointers: %{
+                    account_pubkey: "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
+                  },
+                  revoke: nil,
+                  transfers: [],
+                  updates: [15_723_647]
+                },
+                name: "arandomtrashpanda.chain",
+                previous: [],
+                status: "name"
+              }
+            ],
+            top_bid: []
+          })
         end
     }
   end
@@ -720,6 +758,25 @@ defmodule AeMdwWeb.NameController do
     response(400, "Bad request", Schema.ref(:ErrorResponse))
   end
 
+  swagger_path :owned_by do
+    get("/names/owned_by/{id}")
+    description("Get name information for given acount/owner")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_owned_by")
+    tag("Middleware")
+
+    parameters do
+      id(:path, :string, "The id",
+        required: true,
+        example: "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
+      )
+    end
+
+    response(200, "Returns names for a given owner", Schema.ref(:OwnedByResponse))
+    response(400, "Bad request", Schema.ref(:ErrorResponse))
+  end
+
   swagger_path :names do
     get("/names")
     description("Get all active and inactive names, except those in auction")
@@ -727,7 +784,8 @@ defmodule AeMdwWeb.NameController do
     deprecated(false)
     operation_id("get_all_names")
     tag("Middleware")
-    SwaggerParameters.by_and_direction_params()
+    SwaggerParameters.by_params()
+    SwaggerParameters.direction_params()
     SwaggerParameters.limit_and_page_params()
 
     response(200, "Returns information for active and inactive names", Schema.ref(:NamesResponse))
@@ -741,7 +799,8 @@ defmodule AeMdwWeb.NameController do
     deprecated(false)
     operation_id("get_active_names")
     tag("Middleware")
-    SwaggerParameters.by_and_direction_params()
+    SwaggerParameters.by_params()
+    SwaggerParameters.direction_params()
     SwaggerParameters.limit_and_page_params()
 
     response(200, "Returns information for active names", Schema.ref(:NamesResponse))
@@ -755,7 +814,8 @@ defmodule AeMdwWeb.NameController do
     deprecated(false)
     operation_id("get_inactive_names")
     tag("Middleware")
-    SwaggerParameters.by_and_direction_params()
+    SwaggerParameters.by_params()
+    SwaggerParameters.direction_params()
     SwaggerParameters.limit_and_page_params()
 
     response(200, "Returns information for inactive names", Schema.ref(:NamesResponse))
@@ -769,7 +829,8 @@ defmodule AeMdwWeb.NameController do
     deprecated(false)
     operation_id("get_all_auctions")
     tag("Middleware")
-    SwaggerParameters.by_and_direction_params()
+    SwaggerParameters.by_params()
+    SwaggerParameters.direction_params()
     SwaggerParameters.limit_and_page_params()
 
     response(200, "Returns information for all auctions", Schema.ref(:NamesAuctionsResponse))

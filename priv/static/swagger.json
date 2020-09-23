@@ -4,199 +4,179 @@
     "application/json"
   ],
   "definitions": {
-    "InfoAuctions": {
-      "description": "Schema for info auctions",
+    "Update": {
+      "description": "Response schema for update",
       "example": {
-        "auction_end": 337254,
-        "bids": [
-          15174500,
-          13420324,
-          12162516,
-          10084545,
-          10062546,
-          7880893,
-          7878252,
-          5961322,
-          5931405,
-          5583812,
-          4801808
-        ],
-        "last_bid": {
-          "block_hash": "mh_AMe7YRgxoc6cCy1iDx2QZxeGb9kkFG9Ukfj8dF7srttr8RfGQ",
-          "block_height": 307494,
-          "hash": "th_27bjCRSBgXkzWcYqjwJ6CHweyXVft3KeM7e1Suv6sm3LiPsdRx",
-          "micro_index": 19,
-          "micro_time": 1598932662983,
-          "signatures": [
-            "sg_W2HJKB5ygvL2X6tcdKx8uP3kd2rFJZhTbDPCt4REG1isqopwXdsRLxxiizB7P8WHbY8tkwRkDR2CjnxQNTdMuyvBw6RqN"
-          ],
-          "tx": {
-            "account_id": "ak_e1PYvFVDZAXMiNC7ikkhaQsKpXzYi6XeiWwY6apAT2j4Ujjoo",
-            "fee": 16320000000000,
-            "name": "b.chain",
-            "name_fee": 1100000000000000000000,
-            "name_id": "nm_26sSGSJdjgNW72dGyctY3PPeFuYtAXd8ySEJTpPK5r5fv2i3sW",
-            "name_salt": 0,
-            "nonce": 11,
-            "type": "NameClaimTx",
-            "version": 2
-          },
-          "tx_index": 15174500
-        }
+        "block_height": 279558,
+        "micro_index": 51,
+        "tx_index": 12942695
       },
       "properties": {
-        "auction_end": {
-          "description": "The key height when the name auction ends",
+        "block_height": {
+          "description": "The block height",
           "type": "integer"
         },
-        "bids": {
-          "description": "The bids",
-          "type": "array"
-        },
-        "last_bid": {
-          "$ref": "#/definitions/TxResponse",
-          "description": "The last bid transaction"
-        }
-      },
-      "title": "Info auctions",
-      "type": "object"
-    },
-    "Info": {
-      "description": "Schema for info",
-      "example": {
-        "active_from": 307967,
-        "claims": [
-          15173653,
-          15173471,
-          15173219,
-          15172614,
-          15141698,
-          15141069,
-          15130223,
-          15123418,
-          15111033,
-          15109837,
-          15109343,
-          15109065,
-          15108088,
-          15105072
-        ],
-        "expire_height": 357967,
-        "ownership": {
-          "current": "ak_sWEHSSG5jKNAXYmJgzHsUXgrd5HajBPRcnn72RJLpZ3h5GFUf",
-          "original": "ak_sWEHSSG5jKNAXYmJgzHsUXgrd5HajBPRcnn72RJLpZ3h5GFUf"
-        },
-        "pointers": {},
-        "transfers": [],
-        "updates": []
-      },
-      "properties": {
-        "active_from": {
-          "description": "The height from which the name becomes active",
+        "micro_index": {
+          "description": "The micro block index",
           "type": "integer"
         },
-        "auction_timeout": {
-          "description": "The auction expiry time",
-          "type": "integer",
-          "x-nullable": true
-        },
-        "claims": {
-          "description": "The txs indexes when the name has been claimed",
-          "type": "array"
-        },
-        "expire_height": {
-          "description": "The expiry height",
-          "type": "integer"
-        },
-        "ownership": {
-          "$ref": "#/definitions/Ownership",
-          "description": "The owner/owners of the name"
-        },
-        "pointers": {
-          "$ref": "#/definitions/Pointers",
-          "description": "The pointers"
-        },
-        "revoke": {
-          "description": "The transaction index when the name is revoked",
-          "type": "integer",
-          "x-nullable": true
-        },
-        "transfers": {
-          "description": "The txs indexes when the name has been transferred",
-          "type": "array"
-        },
-        "updates": {
-          "description": "The txs indexes when the name has been updated",
-          "type": "array"
-        }
-      },
-      "title": "Info",
-      "type": "object"
-    },
-    "ChannelCreateTxsCountByIdResponse": {
-      "description": "Response schema for transactions count by id in channel create txs",
-      "example": {
-        "initiator_id": 2,
-        "responder_id": 5
-      },
-      "properties": {
-        "initiator_id": {
-          "description": "Count of times, where given pubkey appears as initiator_id",
-          "type": "integer"
-        },
-        "responder_id": {
-          "description": "Count of times, where given pubkey appears as responder_id",
+        "tx_index": {
+          "description": "The transaction index",
           "type": "integer"
         }
       },
-      "title": "Response for transactions count by id in channel create txs",
+      "title": "Update",
       "type": "object"
     },
-    "ContractCallTxsCountByIdResponse": {
-      "description": "Response schema for transactions count by id in contract call txs",
-      "example": {
-        "caller_id": 2,
-        "contract_id": 3
-      },
-      "properties": {
-        "caller_id": {
-          "description": "Count of times, where given pubkey appears as caller_id",
-          "type": "integer"
-        },
-        "contract_id": {
-          "description": "Count of times, where given pubkey appears as contract_id",
-          "type": "integer"
-        }
-      },
-      "title": "Response for transactions count by id in contract call txs",
-      "type": "object"
-    },
-    "PointersResponse": {
-      "description": "Response schema for pointers",
-      "example": {
-        "account_pubkey": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
-      },
+    "ActivesInactives": {
+      "description": "Schema for actives/inactives ",
       "properties": {
         "account_pubkey": {
-          "description": "The account public key",
+          "description": "The account info",
+          "items": {
+            "$ref": "#/definitions/ActiveInactive"
+          },
+          "type": "array"
+        }
+      },
+      "title": "Actives/Inactives",
+      "type": "object"
+    },
+    "Format": {
+      "description": "Schema for format",
+      "example": {
+        "query": "string",
+        "response": "string"
+      },
+      "properties": {
+        "query": {
+          "description": "The query format",
+          "type": "string"
+        },
+        "response": {
+          "description": "The response format",
           "type": "string"
         }
       },
-      "title": "Pointers",
+      "required": [
+        "response",
+        "query"
+      ],
+      "title": "Format",
       "type": "object"
     },
-    "OracleRegisterTxsCountByIdResponse": {
-      "description": "Response schema for transactions count by id in oracle register txs",
+    "TxResponse": {
+      "description": "Response schema for transaction",
       "example": {
-        "account_id": 1
+        "block_hash": "mh_2WkLsh7vj7XCqioewSD8CPjktzcT3tZ2CCKGjd6fm4epVw3Roi",
+        "block_height": 300284,
+        "hash": "th_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZFk",
+        "micro_index": 5,
+        "micro_time": 1597619554618,
+        "signatures": [
+          "sg_AWSwU7pAh292uU2LsugssYYjX6u9faXGAS5MYo7tRefp6VXxVwjSuABcF4uHK4AG3WCHSKQ1qdUYVoM6RTWj6yvUubqib"
+        ],
+        "tx": {
+          "abi_version": 0,
+          "account_id": "ak_sezvMRsriPfWdphKmv293hEiyeyUYSoqkWqW7AcAuW9jdkCnT",
+          "fee": 16592000000000,
+          "nonce": 290,
+          "oracle_id": "ok_sezvMRsriPfWdphKmv293hEiyeyUYSoqkWqW7AcAuW9jdkCnT",
+          "oracle_ttl": {
+            "type": "delta",
+            "value": 500
+          },
+          "query_fee": 20000000000000,
+          "query_format": "string",
+          "response_format": "string",
+          "type": "OracleRegisterTx",
+          "version": 1
+        },
+        "tx_index": 14633958
+      },
+      "properties": {
+        "block_hash": {
+          "description": "The block hash",
+          "type": "string"
+        },
+        "block_height": {
+          "description": "The block height",
+          "type": "integer"
+        },
+        "hash": {
+          "description": "The transaction hash",
+          "type": "string"
+        },
+        "micro_index": {
+          "description": "The micro block index",
+          "type": "integer"
+        },
+        "micro_time": {
+          "description": "The unix timestamp",
+          "type": "integer"
+        },
+        "signatures": {
+          "description": "The signatures",
+          "type": "array"
+        },
+        "tx": {
+          "description": "The transaction",
+          "type": "map"
+        },
+        "tx_index": {
+          "description": "The tarnsaction index",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "tx_index",
+        "tx",
+        "signatures",
+        "micro_time",
+        "micro_index",
+        "hash",
+        "block_height",
+        "block_hash"
+      ],
+      "title": "Response for transaction",
+      "type": "object"
+    },
+    "NameTransferTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in name transfer txs",
+      "example": {
+        "account_id": 4,
+        "name_id": 3,
+        "recipient_id": 6
       },
       "properties": {
         "account_id": {
           "description": "Count of times, where given pubkey appears as account_id",
           "type": "integer"
+        },
+        "name_id": {
+          "description": "Count of times, where given pubkey appears as name_id",
+          "type": "integer"
+        },
+        "recipient_id": {
+          "description": "Count of times, where given pubkey appears as recipient_id",
+          "type": "integer"
         }
       },
-      "title": "Response for transactions count by id in oracle register txs",
+      "title": "Response for transactions count by id in name transfer txs",
+      "type": "object"
+    },
+    "PayingForTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in paying for txs",
+      "example": {
+        "payer_id": 2
+      },
+      "properties": {
+        "payer_id": {
+          "description": "Count of times, where given pubkey appears as payer_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in paying for txs",
       "type": "object"
     },
     "ChannelTxsCountByIdResponse": {
@@ -218,18 +198,199 @@
       "title": "Response for transactions count by id in channel txs",
       "type": "object"
     },
-    "Pointers": {
-      "description": "Schema for pointers",
+    "ChannelOffchainTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in channel offchain txs",
       "example": {
-        "account_pubkey": "ak_2cJokSy6YHfoE9zuXMygYPkGb1NkrHsXqRUAAj3Y8jD7LdfnU7"
+        "channel_id": 7
       },
       "properties": {
-        "account_pubkey": {
-          "description": "The account public key",
+        "channel_id": {
+          "description": "Count of times, where given pubkey appears as channel_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in channel offchain txs",
+      "type": "object"
+    },
+    "StatusResponse": {
+      "description": "Response schema for status",
+      "example": {
+        "mdw_height": 311557,
+        "mdw_synced": true,
+        "mdw_tx_index": 15474067,
+        "mdw_version": "0.1.0",
+        "node_height": 311557,
+        "node_version": "5.5.4"
+      },
+      "properties": {
+        "mdw_height": {
+          "description": "The height of the mdw",
+          "type": "integer"
+        },
+        "mdw_synced": {
+          "description": "The synced status",
+          "type": "boolean"
+        },
+        "mdw_tx_index": {
+          "description": "The last transaction index",
+          "type": "integer"
+        },
+        "mdw_version": {
+          "description": "The mdw version",
+          "type": "string"
+        },
+        "node_height": {
+          "description": "The height of the node",
+          "type": "integer"
+        },
+        "node_version": {
+          "description": "The node version",
           "type": "string"
         }
       },
-      "title": "Pointers",
+      "required": [
+        "node_version",
+        "node_height",
+        "mdw_version",
+        "mdw_tx_index",
+        "mdw_synced",
+        "mdw_height"
+      ],
+      "title": "Status response",
+      "type": "object"
+    },
+    "OracleResponseTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in oracle response txs",
+      "example": {
+        "oracle_id": 5
+      },
+      "properties": {
+        "oracle_id": {
+          "description": "Count of times, where given pubkey appears as oracle_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in oracle response txs",
+      "type": "object"
+    },
+    "OracleRegisterTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in oracle register txs",
+      "example": {
+        "account_id": 1
+      },
+      "properties": {
+        "account_id": {
+          "description": "Count of times, where given pubkey appears as account_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in oracle register txs",
+      "type": "object"
+    },
+    "OwnedByResponse": {
+      "description": "Schema for owned by",
+      "example": {
+        "active": [
+          {
+            "active": true,
+            "info": {
+              "active_from": 314867,
+              "auction_timeout": 0,
+              "claims": [
+                15721403
+              ],
+              "expire_height": 364910,
+              "ownership": {
+                "current": "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah",
+                "original": "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
+              },
+              "pointers": {
+                "account_pubkey": "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
+              },
+              "transfers": [],
+              "updates": [
+                15723647
+              ]
+            },
+            "name": "arandomtrashpanda.chain",
+            "previous": [],
+            "status": "name"
+          }
+        ],
+        "top_bid": []
+      },
+      "properties": {
+        "active": {
+          "description": "List of active information",
+          "items": {
+            "$ref": "#/definitions/NameByIdResponse"
+          },
+          "type": "array"
+        },
+        "top_bid": {
+          "description": "List for names auctions",
+          "items": {
+            "$ref": "#/definitions/NameAuctions"
+          },
+          "type": "array"
+        }
+      },
+      "title": "Owned by",
+      "type": "object"
+    },
+    "ActiveInactive": {
+      "description": "Schema for active/inactive",
+      "example": {
+        "active_from": 279555,
+        "expire_height": 329558,
+        "name": "wwwbeaconoidcom.chain",
+        "update": {
+          "block_height": 279558,
+          "micro_index": 51,
+          "tx_index": 12942695
+        }
+      },
+      "properties": {
+        "active_from": {
+          "description": "The height when the name become active",
+          "type": "integer"
+        },
+        "expire_height": {
+          "description": "The height when the name expire",
+          "type": "integer"
+        },
+        "name": {
+          "description": "The name",
+          "type": "string"
+        },
+        "update": {
+          "$ref": "#/definitions/Update",
+          "description": "The update info"
+        }
+      },
+      "title": "Active/Inactive",
+      "type": "object"
+    },
+    "NamesAuctionsResponse": {
+      "description": "Schema for names auctions",
+      "properties": {
+        "data": {
+          "description": "The data for the names auctions",
+          "items": {
+            "$ref": "#/definitions/NameAuctions"
+          },
+          "type": "array"
+        },
+        "next": {
+          "description": "The continuation link",
+          "type": "string"
+        }
+      },
+      "required": [
+        "next",
+        "data"
+      ],
+      "title": "Names auctions",
       "type": "object"
     },
     "OracleExtendTxsCountByIdResponse": {
@@ -372,6 +533,176 @@
       "title": "Names",
       "type": "object"
     },
+    "BlockResponse": {
+      "description": "Response schema for block information",
+      "example": {
+        "beneficiary": "ak_2MR38Zf355m6JtP13T3WEcUcSLVLCxjGvjk6zG95S2mfKohcSS",
+        "hash": "kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6",
+        "height": 123008,
+        "info": "cb_AAAAAfy4hFE=",
+        "miner": "ak_Fqnmm5hRAMaVPWk8wzpodMopZgWghMns4mM7kSV1jgT89p9AV",
+        "nonce": 9223756548132685562,
+        "pow": [
+          12359907,
+          21243613,
+          31370838,
+          34911479,
+          39070315,
+          39375528,
+          45751339,
+          49864206,
+          56785423,
+          70282271,
+          89781776,
+          136985196,
+          140580763,
+          142415353,
+          145306210,
+          148449813,
+          156037609,
+          161568067,
+          170308922,
+          185345129,
+          192805579,
+          214115188,
+          220339679,
+          243288723,
+          258891016,
+          283001743,
+          284306909,
+          286457285,
+          326405486,
+          352963232,
+          377904500,
+          378120539,
+          380987399,
+          388675008,
+          447958786,
+          457602498,
+          465751225,
+          466823982,
+          475416389,
+          491255227,
+          530197445,
+          533633643
+        ],
+        "prev_hash": "kh_hwin2p8u87mqiK836FixGa1pL9eBkL1Ju37Yi6EUebCgAf8rm",
+        "prev_key_hash": "kh_hwin2p8u87mqiK836FixGa1pL9eBkL1Ju37Yi6EUebCgAf8rm",
+        "state_hash": "bs_9Dg6mTmiJLpbg9dzgjnNFVidQesvZYZG3dEviUCd4oE1hUcna",
+        "target": 504082055,
+        "time": 1565548832164,
+        "version": 3
+      },
+      "properties": {
+        "beneficiary": {
+          "description": "The beneficiary",
+          "type": "string"
+        },
+        "hash": {
+          "description": "The block hash",
+          "type": "string"
+        },
+        "height": {
+          "description": "The block height",
+          "type": "integer"
+        },
+        "info": {
+          "description": "The info",
+          "type": "string"
+        },
+        "miner": {
+          "description": "The miner public key",
+          "type": "string"
+        },
+        "nonce": {
+          "description": "The nonce",
+          "type": "string"
+        },
+        "pof_hash": {
+          "description": "The pof hash",
+          "type": "string"
+        },
+        "pow": {
+          "description": "The pow",
+          "type": "array"
+        },
+        "prev_hash": {
+          "description": "The previous block hash",
+          "type": "string"
+        },
+        "prev_key_hash": {
+          "description": "The previous key block hash",
+          "type": "string"
+        },
+        "signature": {
+          "description": "The signature",
+          "type": "string"
+        },
+        "state_hash": {
+          "description": "The state hash",
+          "type": "string"
+        },
+        "target": {
+          "description": "The target",
+          "type": "integer"
+        },
+        "time": {
+          "description": "The time",
+          "type": "integer"
+        },
+        "txs_hash": {
+          "description": "The txs hash",
+          "type": "string"
+        },
+        "version": {
+          "description": "The version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "version",
+        "state_hash",
+        "prev_key_hash",
+        "prev_hash",
+        "height",
+        "hash"
+      ],
+      "title": "Block",
+      "type": "object"
+    },
+    "GaMetaTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in ga meta txs",
+      "example": {
+        "ga_id": 12
+      },
+      "properties": {
+        "ga_id": {
+          "description": "Count of times, where given pubkey appears as ga_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in ga meta txs",
+      "type": "object"
+    },
+    "Ownership": {
+      "description": "Schema for ownership",
+      "example": {
+        "current": "ak_2rGuHcjycoZgzhAY3Jexo6e1scj3JRCZu2gkrSxGEMf2SktE3A",
+        "original": "ak_2ruXgsLy9jMwEqsgyQgEsxw8chYDfv2QyBfCsR6qtpQYkektWB"
+      },
+      "properties": {
+        "current": {
+          "description": "The current owner",
+          "type": "string"
+        },
+        "original": {
+          "description": "The original account that claimed the name",
+          "type": "string"
+        }
+      },
+      "title": "Ownership",
+      "type": "object"
+    },
     "SpendTxsCountByIdResponse": {
       "description": "Response schema for transactions count by id in spend txs",
       "example": {
@@ -389,6 +720,347 @@
         }
       },
       "title": "Response for transactions count by id in spend txs",
+      "type": "object"
+    },
+    "NameAuctions": {
+      "description": "Schema for name auctions",
+      "example": {
+        "active": false,
+        "info": {
+          "auction_end": 337254,
+          "bids": [
+            15174500,
+            13420324,
+            12162516,
+            10084545,
+            10062546,
+            7880893,
+            7878252,
+            5961322,
+            5931405,
+            5583812,
+            4801808
+          ],
+          "last_bid": {
+            "block_hash": "mh_AMe7YRgxoc6cCy1iDx2QZxeGb9kkFG9Ukfj8dF7srttr8RfGQ",
+            "block_height": 307494,
+            "hash": "th_27bjCRSBgXkzWcYqjwJ6CHweyXVft3KeM7e1Suv6sm3LiPsdRx",
+            "micro_index": 19,
+            "micro_time": 1598932662983,
+            "signatures": [
+              "sg_W2HJKB5ygvL2X6tcdKx8uP3kd2rFJZhTbDPCt4REG1isqopwXdsRLxxiizB7P8WHbY8tkwRkDR2CjnxQNTdMuyvBw6RqN"
+            ],
+            "tx": {
+              "account_id": "ak_e1PYvFVDZAXMiNC7ikkhaQsKpXzYi6XeiWwY6apAT2j4Ujjoo",
+              "fee": 16320000000000,
+              "name": "b.chain",
+              "name_fee": 1100000000000000000000,
+              "name_id": "nm_26sSGSJdjgNW72dGyctY3PPeFuYtAXd8ySEJTpPK5r5fv2i3sW",
+              "name_salt": 0,
+              "nonce": 11,
+              "type": "NameClaimTx",
+              "version": 2
+            },
+            "tx_index": 15174500
+          }
+        },
+        "name": "b.chain",
+        "previous": [],
+        "status": "auction"
+      },
+      "properties": {
+        "active": {
+          "description": "The name auction status",
+          "type": "boolean"
+        },
+        "info": {
+          "$ref": "#/definitions/InfoAuctions",
+          "description": "The info"
+        },
+        "name": {
+          "description": "The name",
+          "type": "string"
+        },
+        "previous": {
+          "description": "The previous owners",
+          "items": {
+            "$ref": "#/definitions/Info"
+          },
+          "type": "array"
+        },
+        "status": {
+          "description": "The name status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "previous",
+        "name",
+        "info",
+        "active"
+      ],
+      "title": "Name auctions",
+      "type": "object"
+    },
+    "TxsCountResponse": {
+      "description": "Response schema for transactions count",
+      "example": 15479090,
+      "title": "Response for transactions count",
+      "type": "integer"
+    },
+    "Pointers": {
+      "description": "Schema for pointers",
+      "example": {
+        "account_pubkey": "ak_2cJokSy6YHfoE9zuXMygYPkGb1NkrHsXqRUAAj3Y8jD7LdfnU7"
+      },
+      "properties": {
+        "account_pubkey": {
+          "description": "The account public key",
+          "type": "string"
+        }
+      },
+      "title": "Pointers",
+      "type": "object"
+    },
+    "OracleResponse": {
+      "description": "Schema for oracle",
+      "example": {
+        "active": false,
+        "active_from": 4660,
+        "expire_height": 6894,
+        "extends": [
+          11025
+        ],
+        "format": {
+          "query": "string",
+          "response": "string"
+        },
+        "oracle": "ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM",
+        "query_fee": 20000,
+        "register": 11023
+      },
+      "properties": {
+        "active": {
+          "description": "The oracle active status",
+          "type": "boolean"
+        },
+        "active_from": {
+          "description": "The block height when the oracle became active",
+          "type": "integer"
+        },
+        "expire_height": {
+          "description": "The block height when the oracle expires",
+          "type": "integer"
+        },
+        "extends": {
+          "description": "The tx indexes when the oracle has been extended",
+          "type": "array"
+        },
+        "format": {
+          "$ref": "#/definitions/Format",
+          "description": "The oracle's query and response formats"
+        },
+        "oracle": {
+          "description": "The oracle id",
+          "type": "string"
+        },
+        "query_fee": {
+          "description": "The query fee",
+          "type": "integer"
+        },
+        "register": {
+          "description": "The tx index when the oracle is registered",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "register",
+        "query_fee",
+        "oracle",
+        "format",
+        "extends",
+        "expire_height",
+        "active_from",
+        "active"
+      ],
+      "title": "Oracle",
+      "type": "object"
+    },
+    "PointersResponse": {
+      "description": "Response schema for pointers",
+      "example": {
+        "account_pubkey": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
+      },
+      "properties": {
+        "account_pubkey": {
+          "description": "The account public key",
+          "type": "string"
+        }
+      },
+      "title": "Pointers",
+      "type": "object"
+    },
+    "Info": {
+      "description": "Schema for info",
+      "example": {
+        "active_from": 307967,
+        "claims": [
+          15173653,
+          15173471,
+          15173219,
+          15172614,
+          15141698,
+          15141069,
+          15130223,
+          15123418,
+          15111033,
+          15109837,
+          15109343,
+          15109065,
+          15108088,
+          15105072
+        ],
+        "expire_height": 357967,
+        "ownership": {
+          "current": "ak_sWEHSSG5jKNAXYmJgzHsUXgrd5HajBPRcnn72RJLpZ3h5GFUf",
+          "original": "ak_sWEHSSG5jKNAXYmJgzHsUXgrd5HajBPRcnn72RJLpZ3h5GFUf"
+        },
+        "pointers": {},
+        "transfers": [],
+        "updates": []
+      },
+      "properties": {
+        "active_from": {
+          "description": "The height from which the name becomes active",
+          "type": "integer"
+        },
+        "auction_timeout": {
+          "description": "The auction expiry time",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "claims": {
+          "description": "The txs indexes when the name has been claimed",
+          "type": "array"
+        },
+        "expire_height": {
+          "description": "The expiry height",
+          "type": "integer"
+        },
+        "ownership": {
+          "$ref": "#/definitions/Ownership",
+          "description": "The owner/owners of the name"
+        },
+        "pointers": {
+          "$ref": "#/definitions/Pointers",
+          "description": "The pointers"
+        },
+        "revoke": {
+          "description": "The transaction index when the name is revoked",
+          "type": "integer",
+          "x-nullable": true
+        },
+        "transfers": {
+          "description": "The txs indexes when the name has been transferred",
+          "type": "array"
+        },
+        "updates": {
+          "description": "The txs indexes when the name has been updated",
+          "type": "array"
+        }
+      },
+      "title": "Info",
+      "type": "object"
+    },
+    "ChannelCreateTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in channel create txs",
+      "example": {
+        "initiator_id": 2,
+        "responder_id": 5
+      },
+      "properties": {
+        "initiator_id": {
+          "description": "Count of times, where given pubkey appears as initiator_id",
+          "type": "integer"
+        },
+        "responder_id": {
+          "description": "Count of times, where given pubkey appears as responder_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in channel create txs",
+      "type": "object"
+    },
+    "ContractTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in contract txs",
+      "example": {
+        "owner_id": 6
+      },
+      "properties": {
+        "owner_id": {
+          "description": "Count of times, where given pubkey appears as owner_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in contract txs",
+      "type": "object"
+    },
+    "InfoAuctions": {
+      "description": "Schema for info auctions",
+      "example": {
+        "auction_end": 337254,
+        "bids": [
+          15174500,
+          13420324,
+          12162516,
+          10084545,
+          10062546,
+          7880893,
+          7878252,
+          5961322,
+          5931405,
+          5583812,
+          4801808
+        ],
+        "last_bid": {
+          "block_hash": "mh_AMe7YRgxoc6cCy1iDx2QZxeGb9kkFG9Ukfj8dF7srttr8RfGQ",
+          "block_height": 307494,
+          "hash": "th_27bjCRSBgXkzWcYqjwJ6CHweyXVft3KeM7e1Suv6sm3LiPsdRx",
+          "micro_index": 19,
+          "micro_time": 1598932662983,
+          "signatures": [
+            "sg_W2HJKB5ygvL2X6tcdKx8uP3kd2rFJZhTbDPCt4REG1isqopwXdsRLxxiizB7P8WHbY8tkwRkDR2CjnxQNTdMuyvBw6RqN"
+          ],
+          "tx": {
+            "account_id": "ak_e1PYvFVDZAXMiNC7ikkhaQsKpXzYi6XeiWwY6apAT2j4Ujjoo",
+            "fee": 16320000000000,
+            "name": "b.chain",
+            "name_fee": 1100000000000000000000,
+            "name_id": "nm_26sSGSJdjgNW72dGyctY3PPeFuYtAXd8ySEJTpPK5r5fv2i3sW",
+            "name_salt": 0,
+            "nonce": 11,
+            "type": "NameClaimTx",
+            "version": 2
+          },
+          "tx_index": 15174500
+        }
+      },
+      "properties": {
+        "auction_end": {
+          "description": "The key height when the name auction ends",
+          "type": "integer"
+        },
+        "bids": {
+          "description": "The bids",
+          "type": "array"
+        },
+        "last_bid": {
+          "$ref": "#/definitions/TxResponse",
+          "description": "The last bid transaction"
+        }
+      },
+      "title": "Info auctions",
       "type": "object"
     },
     "NameClaimTxsCountByIdResponse": {
@@ -435,96 +1107,6 @@
         }
       },
       "title": "Pointees",
-      "type": "object"
-    },
-    "TxResponse": {
-      "description": "Response schema for transaction",
-      "example": {
-        "block_hash": "mh_2WkLsh7vj7XCqioewSD8CPjktzcT3tZ2CCKGjd6fm4epVw3Roi",
-        "block_height": 300284,
-        "hash": "th_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZFk",
-        "micro_index": 5,
-        "micro_time": 1597619554618,
-        "signatures": [
-          "sg_AWSwU7pAh292uU2LsugssYYjX6u9faXGAS5MYo7tRefp6VXxVwjSuABcF4uHK4AG3WCHSKQ1qdUYVoM6RTWj6yvUubqib"
-        ],
-        "tx": {
-          "abi_version": 0,
-          "account_id": "ak_sezvMRsriPfWdphKmv293hEiyeyUYSoqkWqW7AcAuW9jdkCnT",
-          "fee": 16592000000000,
-          "nonce": 290,
-          "oracle_id": "ok_sezvMRsriPfWdphKmv293hEiyeyUYSoqkWqW7AcAuW9jdkCnT",
-          "oracle_ttl": {
-            "type": "delta",
-            "value": 500
-          },
-          "query_fee": 20000000000000,
-          "query_format": "string",
-          "response_format": "string",
-          "type": "OracleRegisterTx",
-          "version": 1
-        },
-        "tx_index": 14633958
-      },
-      "properties": {
-        "block_hash": {
-          "description": "The block hash",
-          "type": "string"
-        },
-        "block_height": {
-          "description": "The block height",
-          "type": "integer"
-        },
-        "hash": {
-          "description": "The transaction hash",
-          "type": "string"
-        },
-        "micro_index": {
-          "description": "The micro block index",
-          "type": "integer"
-        },
-        "micro_time": {
-          "description": "The unix timestamp",
-          "type": "integer"
-        },
-        "signatures": {
-          "description": "The signatures",
-          "type": "array"
-        },
-        "tx": {
-          "description": "The transaction",
-          "type": "map"
-        },
-        "tx_index": {
-          "description": "The tarnsaction index",
-          "type": "integer"
-        }
-      },
-      "required": [
-        "tx_index",
-        "tx",
-        "signatures",
-        "micro_time",
-        "micro_index",
-        "hash",
-        "block_height",
-        "block_hash"
-      ],
-      "title": "Response for transaction",
-      "type": "object"
-    },
-    "ContractTxsCountByIdResponse": {
-      "description": "Response schema for transactions count by id in contract txs",
-      "example": {
-        "owner_id": 6
-      },
-      "properties": {
-        "owner_id": {
-          "description": "Count of times, where given pubkey appears as owner_id",
-          "type": "integer"
-        }
-      },
-      "title": "Response for transactions count by id in contract txs",
       "type": "object"
     },
     "BlocksResponse": {
@@ -672,7 +1254,8 @@
         },
         "next": {
           "description": "The continuation link",
-          "type": "string"
+          "type": "string",
+          "x-nullable": true
         }
       },
       "required": [
@@ -751,477 +1334,6 @@
       "title": "Response for transactions by scope type range",
       "type": "object"
     },
-    "OracleResponseTxsCountByIdResponse": {
-      "description": "Response schema for transactions count by id in oracle response txs",
-      "example": {
-        "oracle_id": 5
-      },
-      "properties": {
-        "oracle_id": {
-          "description": "Count of times, where given pubkey appears as oracle_id",
-          "type": "integer"
-        }
-      },
-      "title": "Response for transactions count by id in oracle response txs",
-      "type": "object"
-    },
-    "BlockResponse": {
-      "description": "Response schema for block information",
-      "example": {
-        "beneficiary": "ak_2MR38Zf355m6JtP13T3WEcUcSLVLCxjGvjk6zG95S2mfKohcSS",
-        "hash": "kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6",
-        "height": 123008,
-        "info": "cb_AAAAAfy4hFE=",
-        "miner": "ak_Fqnmm5hRAMaVPWk8wzpodMopZgWghMns4mM7kSV1jgT89p9AV",
-        "nonce": 9223756548132685562,
-        "pow": [
-          12359907,
-          21243613,
-          31370838,
-          34911479,
-          39070315,
-          39375528,
-          45751339,
-          49864206,
-          56785423,
-          70282271,
-          89781776,
-          136985196,
-          140580763,
-          142415353,
-          145306210,
-          148449813,
-          156037609,
-          161568067,
-          170308922,
-          185345129,
-          192805579,
-          214115188,
-          220339679,
-          243288723,
-          258891016,
-          283001743,
-          284306909,
-          286457285,
-          326405486,
-          352963232,
-          377904500,
-          378120539,
-          380987399,
-          388675008,
-          447958786,
-          457602498,
-          465751225,
-          466823982,
-          475416389,
-          491255227,
-          530197445,
-          533633643
-        ],
-        "prev_hash": "kh_hwin2p8u87mqiK836FixGa1pL9eBkL1Ju37Yi6EUebCgAf8rm",
-        "prev_key_hash": "kh_hwin2p8u87mqiK836FixGa1pL9eBkL1Ju37Yi6EUebCgAf8rm",
-        "state_hash": "bs_9Dg6mTmiJLpbg9dzgjnNFVidQesvZYZG3dEviUCd4oE1hUcna",
-        "target": 504082055,
-        "time": 1565548832164,
-        "version": 3
-      },
-      "properties": {
-        "beneficiary": {
-          "description": "The beneficiary",
-          "type": "string"
-        },
-        "hash": {
-          "description": "The block hash",
-          "type": "string"
-        },
-        "height": {
-          "description": "The block height",
-          "type": "integer"
-        },
-        "info": {
-          "description": "The info",
-          "type": "string"
-        },
-        "miner": {
-          "description": "The miner public key",
-          "type": "string"
-        },
-        "nonce": {
-          "description": "The nonce",
-          "type": "string"
-        },
-        "pof_hash": {
-          "description": "The pof hash",
-          "type": "string"
-        },
-        "pow": {
-          "description": "The pow",
-          "type": "array"
-        },
-        "prev_hash": {
-          "description": "The previous block hash",
-          "type": "string"
-        },
-        "prev_key_hash": {
-          "description": "The previous key block hash",
-          "type": "string"
-        },
-        "signature": {
-          "description": "The signature",
-          "type": "string"
-        },
-        "state_hash": {
-          "description": "The state hash",
-          "type": "string"
-        },
-        "target": {
-          "description": "The target",
-          "type": "integer"
-        },
-        "time": {
-          "description": "The time",
-          "type": "integer"
-        },
-        "txs_hash": {
-          "description": "The txs hash",
-          "type": "string"
-        },
-        "version": {
-          "description": "The version",
-          "type": "integer"
-        }
-      },
-      "required": [
-        "version",
-        "state_hash",
-        "prev_key_hash",
-        "prev_hash",
-        "height",
-        "hash"
-      ],
-      "title": "Block",
-      "type": "object"
-    },
-    "ChannelWithdrawTxsCountByIdResponse": {
-      "description": "Response schema for transactions count by id in channel withdraw txs",
-      "example": {
-        "channel_id": 8,
-        "to_id": 5
-      },
-      "properties": {
-        "channel_id": {
-          "description": "Count of times, where given pubkey appears as channel_id",
-          "type": "integer"
-        },
-        "to_id": {
-          "description": "Count of times, where given pubkey appears as to_id",
-          "type": "integer"
-        }
-      },
-      "title": "Response for transactions count by id in channel withdraw txs",
-      "type": "object"
-    },
-    "ActivesInactives": {
-      "description": "Schema for actives/inactives ",
-      "properties": {
-        "account_pubkey": {
-          "description": "The account info",
-          "items": {
-            "$ref": "#/definitions/ActiveInactive"
-          },
-          "type": "array"
-        }
-      },
-      "title": "Actives/Inactives",
-      "type": "object"
-    },
-    "ChannelOffchainTxsCountByIdResponse": {
-      "description": "Response schema for transactions count by id in channel offchain txs",
-      "example": {
-        "channel_id": 7
-      },
-      "properties": {
-        "channel_id": {
-          "description": "Count of times, where given pubkey appears as channel_id",
-          "type": "integer"
-        }
-      },
-      "title": "Response for transactions count by id in channel offchain txs",
-      "type": "object"
-    },
-    "OracleQueryTxsCountByIdResponse": {
-      "description": "Response schema for transactions count by id in oracle query txs",
-      "example": {
-        "oracle_id": 4,
-        "sender_id": 2
-      },
-      "properties": {
-        "oracle_id": {
-          "description": "Count of times, where given pubkey appears as oracle_id",
-          "type": "integer"
-        },
-        "sender_id": {
-          "description": "Count of times, where given pubkey appears as sender_id:",
-          "type": "integer"
-        }
-      },
-      "title": "Response for transactions count by id in oracle query txs",
-      "type": "object"
-    },
-    "NameAuctions": {
-      "description": "Schema for name auctions",
-      "example": {
-        "active": false,
-        "info": {
-          "auction_end": 337254,
-          "bids": [
-            15174500,
-            13420324,
-            12162516,
-            10084545,
-            10062546,
-            7880893,
-            7878252,
-            5961322,
-            5931405,
-            5583812,
-            4801808
-          ],
-          "last_bid": {
-            "block_hash": "mh_AMe7YRgxoc6cCy1iDx2QZxeGb9kkFG9Ukfj8dF7srttr8RfGQ",
-            "block_height": 307494,
-            "hash": "th_27bjCRSBgXkzWcYqjwJ6CHweyXVft3KeM7e1Suv6sm3LiPsdRx",
-            "micro_index": 19,
-            "micro_time": 1598932662983,
-            "signatures": [
-              "sg_W2HJKB5ygvL2X6tcdKx8uP3kd2rFJZhTbDPCt4REG1isqopwXdsRLxxiizB7P8WHbY8tkwRkDR2CjnxQNTdMuyvBw6RqN"
-            ],
-            "tx": {
-              "account_id": "ak_e1PYvFVDZAXMiNC7ikkhaQsKpXzYi6XeiWwY6apAT2j4Ujjoo",
-              "fee": 16320000000000,
-              "name": "b.chain",
-              "name_fee": 1100000000000000000000,
-              "name_id": "nm_26sSGSJdjgNW72dGyctY3PPeFuYtAXd8ySEJTpPK5r5fv2i3sW",
-              "name_salt": 0,
-              "nonce": 11,
-              "type": "NameClaimTx",
-              "version": 2
-            },
-            "tx_index": 15174500
-          }
-        },
-        "name": "b.chain",
-        "previous": [],
-        "status": "auction"
-      },
-      "properties": {
-        "active": {
-          "description": "The name auction status",
-          "type": "boolean"
-        },
-        "info": {
-          "$ref": "#/definitions/InfoAuctions",
-          "description": "The info"
-        },
-        "name": {
-          "description": "The name",
-          "type": "string"
-        },
-        "previous": {
-          "description": "The previous owners",
-          "items": {
-            "$ref": "#/definitions/Info"
-          },
-          "type": "array"
-        },
-        "status": {
-          "description": "The name status",
-          "type": "string"
-        }
-      },
-      "required": [
-        "status",
-        "previous",
-        "name",
-        "info",
-        "active"
-      ],
-      "title": "Name auctions",
-      "type": "object"
-    },
-    "Ownership": {
-      "description": "Schema for ownership",
-      "example": {
-        "current": "ak_2rGuHcjycoZgzhAY3Jexo6e1scj3JRCZu2gkrSxGEMf2SktE3A",
-        "original": "ak_2ruXgsLy9jMwEqsgyQgEsxw8chYDfv2QyBfCsR6qtpQYkektWB"
-      },
-      "properties": {
-        "current": {
-          "description": "The current owner",
-          "type": "string"
-        },
-        "original": {
-          "description": "The original account that claimed the name",
-          "type": "string"
-        }
-      },
-      "title": "Ownership",
-      "type": "object"
-    },
-    "TxsCountResponse": {
-      "description": "Response schema for transactions count",
-      "example": 15479090,
-      "title": "Response for transactions count",
-      "type": "integer"
-    },
-    "Update": {
-      "description": "Response schema for update",
-      "example": {
-        "block_height": 279558,
-        "micro_index": 51,
-        "tx_index": 12942695
-      },
-      "properties": {
-        "block_height": {
-          "description": "The block height",
-          "type": "integer"
-        },
-        "micro_index": {
-          "description": "The micro block index",
-          "type": "integer"
-        },
-        "tx_index": {
-          "description": "The transaction index",
-          "type": "integer"
-        }
-      },
-      "title": "Update",
-      "type": "object"
-    },
-    "NameTransferTxsCountByIdResponse": {
-      "description": "Response schema for transactions count by id in name transfer txs",
-      "example": {
-        "account_id": 4,
-        "name_id": 3,
-        "recipient_id": 6
-      },
-      "properties": {
-        "account_id": {
-          "description": "Count of times, where given pubkey appears as account_id",
-          "type": "integer"
-        },
-        "name_id": {
-          "description": "Count of times, where given pubkey appears as name_id",
-          "type": "integer"
-        },
-        "recipient_id": {
-          "description": "Count of times, where given pubkey appears as recipient_id",
-          "type": "integer"
-        }
-      },
-      "title": "Response for transactions count by id in name transfer txs",
-      "type": "object"
-    },
-    "NameByIdResponse": {
-      "description": "Response schema for name or encoded hash",
-      "example": {
-        "active": true,
-        "info": {
-          "active_from": 307967,
-          "claims": [
-            15173653,
-            15173471,
-            15173219,
-            15172614,
-            15141698,
-            15141069,
-            15130223,
-            15123418,
-            15111033,
-            15109837,
-            15109343,
-            15109065,
-            15108088,
-            15105072
-          ],
-          "expire_height": 357967,
-          "ownership": {
-            "current": "ak_sWEHSSG5jKNAXYmJgzHsUXgrd5HajBPRcnn72RJLpZ3h5GFUf",
-            "original": "ak_sWEHSSG5jKNAXYmJgzHsUXgrd5HajBPRcnn72RJLpZ3h5GFUf"
-          },
-          "pointers": {},
-          "transfers": [],
-          "updates": []
-        },
-        "name": "aeternity.chain",
-        "previous": [
-          {
-            "active_from": 162197,
-            "claims": [
-              4712046,
-              4711222,
-              4708228,
-              4693879,
-              4693568,
-              4678533
-            ],
-            "expire_height": 304439,
-            "ownership": {
-              "current": "ak_2rGuHcjycoZgzhAY3Jexo6e1scj3JRCZu2gkrSxGEMf2SktE3A",
-              "original": "ak_2ruXgsLy9jMwEqsgyQgEsxw8chYDfv2QyBfCsR6qtpQYkektWB"
-            },
-            "pointers": {
-              "account_pubkey": "ak_2cJokSy6YHfoE9zuXMygYPkGb1NkrHsXqRUAAj3Y8jD7LdfnU7"
-            },
-            "transfers": [
-              8778162
-            ],
-            "updates": [
-              11110443,
-              10074212,
-              10074008,
-              8322927,
-              7794392
-            ]
-          }
-        ],
-        "status": "name"
-      },
-      "properties": {
-        "active": {
-          "description": "The active status",
-          "type": "boolean"
-        },
-        "info": {
-          "$ref": "#/definitions/Info",
-          "description": "The info"
-        },
-        "name": {
-          "description": "The name",
-          "type": "string"
-        },
-        "previous": {
-          "description": "The previous owners",
-          "items": {
-            "$ref": "#/definitions/Info"
-          },
-          "type": "array"
-        },
-        "status": {
-          "description": "The status",
-          "type": "string"
-        }
-      },
-      "required": [
-        "status",
-        "previous",
-        "name",
-        "info",
-        "active"
-      ],
-      "title": "Response for name or encoded hash",
-      "type": "object"
-    },
     "NamePreclaimTxsCountByIdResponse": {
       "description": "Response schema for transactions count by id in name preclaim txs",
       "example": {
@@ -1241,98 +1353,23 @@
       "title": "Response for transactions count by id in name preclaim txs",
       "type": "object"
     },
-    "ActiveInactive": {
-      "description": "Schema for active/inactive",
+    "NameTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in name txs",
       "example": {
-        "active_from": 279555,
-        "expire_height": 329558,
-        "name": "wwwbeaconoidcom.chain",
-        "update": {
-          "block_height": 279558,
-          "micro_index": 51,
-          "tx_index": 12942695
-        }
+        "account_id": 2,
+        "name_id": 6
       },
       "properties": {
-        "active_from": {
-          "description": "The height when the name become active",
+        "account_id": {
+          "description": "Count of times, where given pubkey appears as account_id",
           "type": "integer"
         },
-        "expire_height": {
-          "description": "The height when the name expire",
-          "type": "integer"
-        },
-        "name": {
-          "description": "The name",
-          "type": "string"
-        },
-        "update": {
-          "$ref": "#/definitions/Update",
-          "description": "The update info"
-        }
-      },
-      "title": "Active/Inactive",
-      "type": "object"
-    },
-    "PayingForTxsCountByIdResponse": {
-      "description": "Response schema for transactions count by id in paying for txs",
-      "example": {
-        "payer_id": 2
-      },
-      "properties": {
-        "payer_id": {
-          "description": "Count of times, where given pubkey appears as payer_id",
+        "name_id": {
+          "description": "Count of times, where given pubkey appears as name_id",
           "type": "integer"
         }
       },
-      "title": "Response for transactions count by id in paying for txs",
-      "type": "object"
-    },
-    "StatusResponse": {
-      "description": "Response schema for status",
-      "example": {
-        "mdw_height": 311557,
-        "mdw_synced": true,
-        "mdw_tx_index": 15474067,
-        "mdw_version": "0.1.0",
-        "node_height": 311557,
-        "node_version": "5.5.4"
-      },
-      "properties": {
-        "mdw_height": {
-          "description": "The height of the mdw",
-          "type": "integer"
-        },
-        "mdw_synced": {
-          "description": "The synced status",
-          "type": "boolean"
-        },
-        "mdw_tx_index": {
-          "description": "The last transaction index",
-          "type": "integer"
-        },
-        "mdw_version": {
-          "description": "The mdw version",
-          "type": "string"
-        },
-        "node_height": {
-          "description": "The height of the node",
-          "type": "integer"
-        },
-        "node_version": {
-          "description": "The node version",
-          "type": "string"
-        }
-      },
-      "required": [
-        "node_version",
-        "node_height",
-        "mdw_version",
-        "mdw_tx_index",
-        "mdw_synced",
-        "mdw_height"
-      ],
-      "title": "Status response",
+      "title": "Response for transactions count by id in name txs",
       "type": "object"
     },
     "TxsCountByIdResponse": {
@@ -1461,59 +1498,64 @@
       "title": "Response for transactions count by id",
       "type": "object"
     },
-    "NameTxsCountByIdResponse": {
-      "description": "Response schema for transactions count by id in name txs",
+    "ChannelWithdrawTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in channel withdraw txs",
       "example": {
-        "account_id": 2,
-        "name_id": 6
+        "channel_id": 8,
+        "to_id": 5
       },
       "properties": {
-        "account_id": {
-          "description": "Count of times, where given pubkey appears as account_id",
+        "channel_id": {
+          "description": "Count of times, where given pubkey appears as channel_id",
           "type": "integer"
         },
-        "name_id": {
-          "description": "Count of times, where given pubkey appears as name_id",
+        "to_id": {
+          "description": "Count of times, where given pubkey appears as to_id",
           "type": "integer"
         }
       },
-      "title": "Response for transactions count by id in name txs",
+      "title": "Response for transactions count by id in channel withdraw txs",
       "type": "object"
     },
-    "NamesAuctionsResponse": {
-      "description": "Schema for names auctions",
+    "OraclesResponse": {
+      "description": "Schema for oracles",
+      "example": {
+        "data": [
+          {
+            "active": false,
+            "active_from": 307850,
+            "expire_height": 308350,
+            "extends": [],
+            "format": {
+              "query": "string",
+              "response": "string"
+            },
+            "oracle": "ok_sezvMRsriPfWdphKmv293hEiyeyUYSoqkWqW7AcAuW9jdkCnT",
+            "query_fee": 20000000000000,
+            "register": 15198855
+          }
+        ],
+        "next": "oracles/inactive/gen/317126-0?limit=1&page=2"
+      },
       "properties": {
         "data": {
-          "description": "The data for the names",
+          "description": "The data for the oracles",
           "items": {
-            "$ref": "#/definitions/NameAuctions"
+            "$ref": "#/definitions/OracleResponse"
           },
           "type": "array"
         },
         "next": {
           "description": "The continuation link",
-          "type": "string"
+          "type": "string",
+          "x-nullable": true
         }
       },
       "required": [
         "next",
         "data"
       ],
-      "title": "Names auctions",
-      "type": "object"
-    },
-    "GaMetaTxsCountByIdResponse": {
-      "description": "Response schema for transactions count by id in ga meta txs",
-      "example": {
-        "ga_id": 12
-      },
-      "properties": {
-        "ga_id": {
-          "description": "Count of times, where given pubkey appears as ga_id",
-          "type": "integer"
-        }
-      },
-      "title": "Response for transactions count by id in ga meta txs",
+      "title": "Oracles",
       "type": "object"
     },
     "ErrorResponse": {
@@ -1531,6 +1573,144 @@
         "error"
       ],
       "title": "Error response",
+      "type": "object"
+    },
+    "ContractCallTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in contract call txs",
+      "example": {
+        "caller_id": 2,
+        "contract_id": 3
+      },
+      "properties": {
+        "caller_id": {
+          "description": "Count of times, where given pubkey appears as caller_id",
+          "type": "integer"
+        },
+        "contract_id": {
+          "description": "Count of times, where given pubkey appears as contract_id",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in contract call txs",
+      "type": "object"
+    },
+    "NameByIdResponse": {
+      "description": "Response schema for name or encoded hash",
+      "example": {
+        "active": true,
+        "info": {
+          "active_from": 307967,
+          "claims": [
+            15173653,
+            15173471,
+            15173219,
+            15172614,
+            15141698,
+            15141069,
+            15130223,
+            15123418,
+            15111033,
+            15109837,
+            15109343,
+            15109065,
+            15108088,
+            15105072
+          ],
+          "expire_height": 357967,
+          "ownership": {
+            "current": "ak_sWEHSSG5jKNAXYmJgzHsUXgrd5HajBPRcnn72RJLpZ3h5GFUf",
+            "original": "ak_sWEHSSG5jKNAXYmJgzHsUXgrd5HajBPRcnn72RJLpZ3h5GFUf"
+          },
+          "pointers": {},
+          "transfers": [],
+          "updates": []
+        },
+        "name": "aeternity.chain",
+        "previous": [
+          {
+            "active_from": 162197,
+            "claims": [
+              4712046,
+              4711222,
+              4708228,
+              4693879,
+              4693568,
+              4678533
+            ],
+            "expire_height": 304439,
+            "ownership": {
+              "current": "ak_2rGuHcjycoZgzhAY3Jexo6e1scj3JRCZu2gkrSxGEMf2SktE3A",
+              "original": "ak_2ruXgsLy9jMwEqsgyQgEsxw8chYDfv2QyBfCsR6qtpQYkektWB"
+            },
+            "pointers": {
+              "account_pubkey": "ak_2cJokSy6YHfoE9zuXMygYPkGb1NkrHsXqRUAAj3Y8jD7LdfnU7"
+            },
+            "transfers": [
+              8778162
+            ],
+            "updates": [
+              11110443,
+              10074212,
+              10074008,
+              8322927,
+              7794392
+            ]
+          }
+        ],
+        "status": "name"
+      },
+      "properties": {
+        "active": {
+          "description": "The active status",
+          "type": "boolean"
+        },
+        "info": {
+          "$ref": "#/definitions/Info",
+          "description": "The info"
+        },
+        "name": {
+          "description": "The name",
+          "type": "string"
+        },
+        "previous": {
+          "description": "The previous owners",
+          "items": {
+            "$ref": "#/definitions/Info"
+          },
+          "type": "array"
+        },
+        "status": {
+          "description": "The status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "previous",
+        "name",
+        "info",
+        "active"
+      ],
+      "title": "Response for name or encoded hash",
+      "type": "object"
+    },
+    "OracleQueryTxsCountByIdResponse": {
+      "description": "Response schema for transactions count by id in oracle query txs",
+      "example": {
+        "oracle_id": 4,
+        "sender_id": 2
+      },
+      "properties": {
+        "oracle_id": {
+          "description": "Count of times, where given pubkey appears as oracle_id",
+          "type": "integer"
+        },
+        "sender_id": {
+          "description": "Count of times, where given pubkey appears as sender_id:",
+          "type": "integer"
+        }
+      },
+      "title": "Response for transactions count by id in oracle query txs",
       "type": "object"
     }
   },
@@ -1675,16 +1855,18 @@
         "operationId": "get_blocks",
         "parameters": [
           {
-            "description": "The direction, which could be **forward** or **backward**, or non-negative integer range",
-            "in": "path",
-            "name": "range_or_dir",
-            "required": true,
-            "type": "string",
-            "x-example": "300000-300100"
+            "default": 1,
+            "description": "The number of page to show",
+            "format": "int32",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "type": "integer",
+            "x-example": 1
           },
           {
             "default": 10,
-            "description": "The numbers of items to return.",
+            "description": "The numbers of items to return",
             "format": "int32",
             "in": "query",
             "maximum": 1000,
@@ -1692,7 +1874,15 @@
             "name": "limit",
             "required": false,
             "type": "integer",
-            "x-example": 1
+            "x-example": 10
+          },
+          {
+            "description": "The direction, which could be **forward** or **backward**, or non-negative integer range",
+            "in": "path",
+            "name": "range_or_dir",
+            "required": true,
+            "type": "string",
+            "x-example": "300000-300100"
           }
         ],
         "produces": [
@@ -1848,7 +2038,7 @@
         "parameters": [
           {
             "default": "expiration",
-            "description": "The ordering via parameters.",
+            "description": "The ordering via parameters",
             "enum": [
               "expiration",
               "name"
@@ -1860,7 +2050,7 @@
           },
           {
             "default": "backward",
-            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning.",
+            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning",
             "enum": [
               "forward",
               "backward"
@@ -1872,7 +2062,7 @@
           },
           {
             "default": 1,
-            "description": "The number of page to show.",
+            "description": "The number of page to show",
             "format": "int32",
             "in": "query",
             "name": "page",
@@ -1882,7 +2072,7 @@
           },
           {
             "default": 10,
-            "description": "The numbers of items to return.",
+            "description": "The numbers of items to return",
             "format": "int32",
             "in": "query",
             "maximum": 1000,
@@ -1926,7 +2116,7 @@
         "parameters": [
           {
             "default": "expiration",
-            "description": "The ordering via parameters.",
+            "description": "The ordering via parameters",
             "enum": [
               "expiration",
               "name"
@@ -1938,7 +2128,7 @@
           },
           {
             "default": "backward",
-            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning.",
+            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning",
             "enum": [
               "forward",
               "backward"
@@ -1950,7 +2140,7 @@
           },
           {
             "default": 1,
-            "description": "The number of page to show.",
+            "description": "The number of page to show",
             "format": "int32",
             "in": "query",
             "name": "page",
@@ -1960,7 +2150,7 @@
           },
           {
             "default": 10,
-            "description": "The numbers of items to return.",
+            "description": "The numbers of items to return",
             "format": "int32",
             "in": "query",
             "maximum": 1000,
@@ -2004,7 +2194,7 @@
         "parameters": [
           {
             "default": "expiration",
-            "description": "The ordering via parameters.",
+            "description": "The ordering via parameters",
             "enum": [
               "expiration",
               "name"
@@ -2016,7 +2206,7 @@
           },
           {
             "default": "backward",
-            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning.",
+            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning",
             "enum": [
               "forward",
               "backward"
@@ -2028,7 +2218,7 @@
           },
           {
             "default": 1,
-            "description": "The number of page to show.",
+            "description": "The number of page to show",
             "format": "int32",
             "in": "query",
             "name": "page",
@@ -2038,7 +2228,7 @@
           },
           {
             "default": 10,
-            "description": "The numbers of items to return.",
+            "description": "The numbers of items to return",
             "format": "int32",
             "in": "query",
             "maximum": 1000,
@@ -2082,7 +2272,7 @@
         "parameters": [
           {
             "default": "expiration",
-            "description": "The ordering via parameters.",
+            "description": "The ordering via parameters",
             "enum": [
               "expiration",
               "name"
@@ -2094,7 +2284,7 @@
           },
           {
             "default": "backward",
-            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning.",
+            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning",
             "enum": [
               "forward",
               "backward"
@@ -2106,7 +2296,7 @@
           },
           {
             "default": 1,
-            "description": "The number of page to show.",
+            "description": "The number of page to show",
             "format": "int32",
             "in": "query",
             "name": "page",
@@ -2116,7 +2306,7 @@
           },
           {
             "default": 10,
-            "description": "The numbers of items to return.",
+            "description": "The numbers of items to return",
             "format": "int32",
             "in": "query",
             "maximum": 1000,
@@ -2137,6 +2327,312 @@
             "description": "Returns information for inactive names",
             "schema": {
               "$ref": "#/definitions/NamesResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Middleware"
+        ]
+      }
+    },
+    "/names/owned_by/{id}": {
+      "get": {
+        "deprecated": false,
+        "description": "Get name information for given acount/owner",
+        "operationId": "get_owned_by",
+        "parameters": [
+          {
+            "description": "The id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string",
+            "x-example": "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
+          }
+        ],
+        "produces": [
+          [
+            "application/json"
+          ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns names for a given owner",
+            "schema": {
+              "$ref": "#/definitions/OwnedByResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Middleware"
+        ]
+      }
+    },
+    "/oracle/{id}": {
+      "get": {
+        "deprecated": false,
+        "description": "Get oracle information for given oracle id",
+        "operationId": "get_oracle",
+        "parameters": [
+          {
+            "description": "The oracle id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string",
+            "x-example": "ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM"
+          },
+          {
+            "description": "Expand tx indexes",
+            "in": "query",
+            "name": "expand",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "produces": [
+          [
+            "application/json"
+          ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns oracle information for given oracle id. If the expand is set to true, the mdw will return the data with full transaction info, otherwise it will return only transaction indexes",
+            "schema": {
+              "$ref": "#/definitions/OracleResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Middleware"
+        ]
+      }
+    },
+    "/oracles": {
+      "get": {
+        "deprecated": false,
+        "description": "Get all oracles",
+        "operationId": "get_oracles",
+        "parameters": [
+          {
+            "default": "backward",
+            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning",
+            "enum": [
+              "forward",
+              "backward"
+            ],
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": 1,
+            "description": "The number of page to show",
+            "format": "int32",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "type": "integer",
+            "x-example": 1
+          },
+          {
+            "default": 10,
+            "description": "The numbers of items to return",
+            "format": "int32",
+            "in": "query",
+            "maximum": 1000,
+            "minimum": 1,
+            "name": "limit",
+            "required": false,
+            "type": "integer",
+            "x-example": 10
+          },
+          {
+            "description": "Expand tx indexes",
+            "in": "query",
+            "name": "expand",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "produces": [
+          [
+            "application/json"
+          ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns information for all oracles. If the expand is set to true, the mdw will return the data with full transaction info, otherwise it will return only transaction indexes",
+            "schema": {
+              "$ref": "#/definitions/OraclesResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Middleware"
+        ]
+      }
+    },
+    "/oracles/active": {
+      "get": {
+        "deprecated": false,
+        "description": "Get active oracles",
+        "operationId": "get_active_oracles",
+        "parameters": [
+          {
+            "default": "backward",
+            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning",
+            "enum": [
+              "forward",
+              "backward"
+            ],
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": 1,
+            "description": "The number of page to show",
+            "format": "int32",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "type": "integer",
+            "x-example": 1
+          },
+          {
+            "default": 10,
+            "description": "The numbers of items to return",
+            "format": "int32",
+            "in": "query",
+            "maximum": 1000,
+            "minimum": 1,
+            "name": "limit",
+            "required": false,
+            "type": "integer",
+            "x-example": 10
+          },
+          {
+            "description": "Expand tx indexes",
+            "in": "query",
+            "name": "expand",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "produces": [
+          [
+            "application/json"
+          ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns information for all active oracles. If the expand is set to true, the mdw will return the data with full transaction info, otherwise it will return only transaction indexes",
+            "schema": {
+              "$ref": "#/definitions/OraclesResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Middleware"
+        ]
+      }
+    },
+    "/oracles/inactive": {
+      "get": {
+        "deprecated": false,
+        "description": "Get inactive/expired oracles",
+        "operationId": "get_inactive_oracles",
+        "parameters": [
+          {
+            "default": "backward",
+            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning",
+            "enum": [
+              "forward",
+              "backward"
+            ],
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": 1,
+            "description": "The number of page to show",
+            "format": "int32",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "type": "integer",
+            "x-example": 1
+          },
+          {
+            "default": 10,
+            "description": "The numbers of items to return",
+            "format": "int32",
+            "in": "query",
+            "maximum": 1000,
+            "minimum": 1,
+            "name": "limit",
+            "required": false,
+            "type": "integer",
+            "x-example": 10
+          },
+          {
+            "description": "Expand tx indexes",
+            "in": "query",
+            "name": "expand",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "produces": [
+          [
+            "application/json"
+          ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns information for all inactive oracles. If the expand is set to true, the mdw will return the data with full transaction info, otherwise it will return only transaction indexes",
+            "schema": {
+              "$ref": "#/definitions/OraclesResponse"
             }
           },
           "400": {
@@ -2336,7 +2832,7 @@
         "parameters": [
           {
             "collectionFormat": "multi",
-            "description": "The transaction type. The query allows providing of multiple type parameters. [More info](https://github.com/aeternity/ae_mdw#types).",
+            "description": "The transaction type. The query allows providing of multiple type parameters. [More info](https://github.com/aeternity/ae_mdw#types)",
             "in": "query",
             "items": {
               "enum": [
@@ -2375,7 +2871,7 @@
           },
           {
             "collectionFormat": "multi",
-            "description": "The type group. The query allows providing of multiple type group parameters. [More info](https://github.com/aeternity/ae_mdw#types).",
+            "description": "The type group. The query allows providing of multiple type group parameters. [More info](https://github.com/aeternity/ae_mdw#types)",
             "in": "query",
             "items": {
               "enum": [
@@ -2395,7 +2891,7 @@
             "x-example": "channel"
           },
           {
-            "description": "The account ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+            "description": "The account ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)",
             "in": "query",
             "name": "account",
             "required": false,
@@ -2403,7 +2899,7 @@
             "x-example": "ak_g5vQK6beY3vsTJHH7KBusesyzq9WMdEYorF8VyvZURXTjLnxT"
           },
           {
-            "description": "The contract ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+            "description": "The contract ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)",
             "in": "query",
             "name": "contract",
             "required": false,
@@ -2411,7 +2907,7 @@
             "x-example": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z"
           },
           {
-            "description": "The channel ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+            "description": "The channel ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)",
             "in": "query",
             "name": "channel",
             "required": false,
@@ -2419,7 +2915,7 @@
             "x-example": "ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD"
           },
           {
-            "description": "The oracle ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+            "description": "The oracle ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)",
             "in": "query",
             "name": "oracle",
             "required": false,
@@ -2428,7 +2924,7 @@
           },
           {
             "default": 1,
-            "description": "The number of page to show.",
+            "description": "The number of page to show",
             "format": "int32",
             "in": "query",
             "name": "page",
@@ -2438,7 +2934,7 @@
           },
           {
             "default": 10,
-            "description": "The numbers of items to return.",
+            "description": "The numbers of items to return",
             "format": "int32",
             "in": "query",
             "maximum": 1000,
@@ -2509,7 +3005,7 @@
         "parameters": [
           {
             "collectionFormat": "multi",
-            "description": "The transaction type. The query allows providing of multiple type parameters. [More info](https://github.com/aeternity/ae_mdw#types).",
+            "description": "The transaction type. The query allows providing of multiple type parameters. [More info](https://github.com/aeternity/ae_mdw#types)",
             "in": "query",
             "items": {
               "enum": [
@@ -2548,7 +3044,7 @@
           },
           {
             "collectionFormat": "multi",
-            "description": "The type group. The query allows providing of multiple type group parameters. [More info](https://github.com/aeternity/ae_mdw#types).",
+            "description": "The type group. The query allows providing of multiple type group parameters. [More info](https://github.com/aeternity/ae_mdw#types)",
             "in": "query",
             "items": {
               "enum": [
@@ -2568,7 +3064,7 @@
             "x-example": "channel"
           },
           {
-            "description": "The account ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+            "description": "The account ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)",
             "in": "query",
             "name": "account",
             "required": false,
@@ -2576,7 +3072,7 @@
             "x-example": "ak_g5vQK6beY3vsTJHH7KBusesyzq9WMdEYorF8VyvZURXTjLnxT"
           },
           {
-            "description": "The contract ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+            "description": "The contract ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)",
             "in": "query",
             "name": "contract",
             "required": false,
@@ -2584,7 +3080,7 @@
             "x-example": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z"
           },
           {
-            "description": "The channel ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+            "description": "The channel ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)",
             "in": "query",
             "name": "channel",
             "required": false,
@@ -2592,7 +3088,7 @@
             "x-example": "ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD"
           },
           {
-            "description": "The oracle ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+            "description": "The oracle ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)",
             "in": "query",
             "name": "oracle",
             "required": false,
@@ -2601,7 +3097,7 @@
           },
           {
             "default": 1,
-            "description": "The number of page to show.",
+            "description": "The number of page to show",
             "format": "int32",
             "in": "query",
             "name": "page",
@@ -2611,7 +3107,7 @@
           },
           {
             "default": 10,
-            "description": "The numbers of items to return.",
+            "description": "The numbers of items to return",
             "format": "int32",
             "in": "query",
             "maximum": 1000,

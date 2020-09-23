@@ -10,7 +10,7 @@ defmodule AeMdwWeb.SwaggerParameters do
       :type,
       :query,
       :array,
-      "The transaction type. The query allows providing of multiple type parameters. [More info](https://github.com/aeternity/ae_mdw#types).",
+      "The transaction type. The query allows providing of multiple type parameters. [More info](https://github.com/aeternity/ae_mdw#types)",
       items: [
         type: :string,
         enum: [
@@ -49,7 +49,7 @@ defmodule AeMdwWeb.SwaggerParameters do
       :type_group,
       :query,
       :array,
-      "The type group. The query allows providing of multiple type group parameters. [More info](https://github.com/aeternity/ae_mdw#types).",
+      "The type group. The query allows providing of multiple type group parameters. [More info](https://github.com/aeternity/ae_mdw#types)",
       items: [
         type: :string,
         enum: [:channel, :contract, :ga, :name, :oracle, :paying_for, :spend]
@@ -62,7 +62,7 @@ defmodule AeMdwWeb.SwaggerParameters do
       :account,
       :query,
       :string,
-      "The account ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+      "The account ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)",
       required: false,
       example: "ak_g5vQK6beY3vsTJHH7KBusesyzq9WMdEYorF8VyvZURXTjLnxT"
     )
@@ -70,7 +70,7 @@ defmodule AeMdwWeb.SwaggerParameters do
       :contract,
       :query,
       :string,
-      "The contract ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+      "The contract ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)",
       required: false,
       example: "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z"
     )
@@ -78,7 +78,7 @@ defmodule AeMdwWeb.SwaggerParameters do
       :channel,
       :query,
       :string,
-      "The channel ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+      "The channel ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)",
       required: false,
       example: "ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD"
     )
@@ -86,7 +86,7 @@ defmodule AeMdwWeb.SwaggerParameters do
       :oracle,
       :query,
       :string,
-      "The oracle ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+      "The oracle ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)",
       required: false,
       example: "ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
     )
@@ -95,7 +95,7 @@ defmodule AeMdwWeb.SwaggerParameters do
     #   :name,
     #   :query,
     #   :string,
-    #   "The name. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+    #   "The name. [More info](https://github.com/aeternity/ae_mdw#generic-ids)",
     #   required: false,
     #   example: "wwwbeaconoidcom.chain"
     # )
@@ -103,7 +103,7 @@ defmodule AeMdwWeb.SwaggerParameters do
 
   def limit_and_page_params(path = %PathObject{}) do
     path
-    |> parameter(:page, :query, :integer, "The number of page to show.",
+    |> parameter(:page, :query, :integer, "The number of page to show",
       required: false,
       format: "int32",
       default: 1,
@@ -113,7 +113,7 @@ defmodule AeMdwWeb.SwaggerParameters do
       :limit,
       :query,
       :integer,
-      "The numbers of items to return.",
+      "The numbers of items to return",
       required: false,
       format: "int32",
       default: 10,
@@ -123,22 +123,26 @@ defmodule AeMdwWeb.SwaggerParameters do
     )
   end
 
-  def by_and_direction_params(path = %PathObject{}) do
+  def by_params(path = %PathObject{}) do
     path
     |> parameter(
       :by,
       :query,
       :string,
-      "The ordering via parameters.",
+      "The ordering via parameters",
       enum: [:expiration, :name],
       required: false,
       default: :expiration
     )
+  end
+
+  def direction_params(path = %PathObject{}) do
+    path
     |> parameter(
       :direction,
       :query,
       :string,
-      "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning.",
+      "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning",
       enum: [:forward, :backward],
       required: false,
       default: :backward

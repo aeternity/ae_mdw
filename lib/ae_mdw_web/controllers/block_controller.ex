@@ -7,6 +7,7 @@ defmodule AeMdwWeb.BlockController do
   alias AeMdw.Db.{Model, Format}
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdwWeb.Continuation, as: Cont
+  alias AeMdwWeb.SwaggerParameters
   require Model
 
   import AeMdwWeb.Util
@@ -217,7 +218,7 @@ defmodule AeMdwWeb.BlockController do
 
           properties do
             data(:array, "The data for the multiple generations", required: true)
-            next(:string, "The continuation link", required: true)
+            next(:string, "The continuation link", required: true, nullable: true)
           end
 
           example(%{
@@ -395,6 +396,7 @@ defmodule AeMdwWeb.BlockController do
     deprecated(false)
     operation_id("get_blocks")
     tag("Middleware")
+    SwaggerParameters.limit_and_page_params()
 
     parameters do
       range_or_dir(
@@ -405,17 +407,17 @@ defmodule AeMdwWeb.BlockController do
         example: "300000-300100"
       )
 
-      limit(
-        :query,
-        :integer,
-        "The numbers of items to return.",
-        required: false,
-        format: "int32",
-        default: 10,
-        minimum: 1,
-        maximum: 1000,
-        example: 1
-      )
+      # limit(
+      #   :query,
+      #   :integer,
+      #   "The numbers of items to return.",
+      #   required: false,
+      #   format: "int32",
+      #   default: 10,
+      #   minimum: 1,
+      #   maximum: 1000,
+      #   example: 1
+      # )
     end
 
     response(200, "Returns multiple generations", Schema.ref(:BlocksResponse))
