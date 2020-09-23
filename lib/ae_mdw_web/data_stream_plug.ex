@@ -191,8 +191,8 @@ defmodule AeMdwWeb.DataStreamPlug do
           {:ok, group} ->
             {:cont, {:ok, Map.put(top_level, kw, group)}}
 
-          {:error, {err_kind, offender}} ->
-            {:halt, {:error, AeMdw.Error.to_string(err_kind, offender)}}
+          err ->
+            {:halt, {:error, err.message}}
         end
       end
     )
