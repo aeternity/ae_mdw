@@ -312,6 +312,47 @@
       "title": "Response for transactions count by id in oracle query txs",
       "type": "object"
     },
+    "OraclesResponse": {
+      "description": "Schema for oracles",
+      "example": {
+        "data": [
+          {
+            "active": false,
+            "active_from": 307850,
+            "expire_height": 308350,
+            "extends": [],
+            "format": {
+              "query": "string",
+              "response": "string"
+            },
+            "oracle": "ok_sezvMRsriPfWdphKmv293hEiyeyUYSoqkWqW7AcAuW9jdkCnT",
+            "query_fee": 20000000000000,
+            "register": 15198855
+          }
+        ],
+        "next": "oracles/inactive/gen/317126-0?limit=1&page=2"
+      },
+      "properties": {
+        "data": {
+          "description": "The data for the oracles",
+          "items": {
+            "$ref": "#/definitions/OracleResponse"
+          },
+          "type": "array"
+        },
+        "next": {
+          "description": "The continuation link",
+          "type": "string",
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "next",
+        "data"
+      ],
+      "title": "Oracles",
+      "type": "object"
+    },
     "NameAuctions": {
       "description": "Schema for name auctions",
       "example": {
@@ -825,6 +866,70 @@
       "title": "Response for transactions count by id in ga meta txs",
       "type": "object"
     },
+    "OracleResponse": {
+      "description": "Schema for oracle",
+      "example": {
+        "active": false,
+        "active_from": 4660,
+        "expire_height": 6894,
+        "extends": [
+          11025
+        ],
+        "format": {
+          "query": "string",
+          "response": "string"
+        },
+        "oracle": "ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM",
+        "query_fee": 20000,
+        "register": 11023
+      },
+      "properties": {
+        "active": {
+          "description": "The oracle active status",
+          "type": "boolean"
+        },
+        "active_from": {
+          "description": "The block height when the oracle became active",
+          "type": "integer"
+        },
+        "expire_height": {
+          "description": "The block height when the oracle expires",
+          "type": "integer"
+        },
+        "extends": {
+          "description": "The tx indexes when the oracle has been extended",
+          "type": "array"
+        },
+        "format": {
+          "$ref": "#/definitions/Format",
+          "description": "The oracle's query and response formats"
+        },
+        "oracle": {
+          "description": "The oracle id",
+          "type": "string"
+        },
+        "query_fee": {
+          "description": "The query fee",
+          "type": "integer"
+        },
+        "register": {
+          "description": "The tx index when the oracle is registered",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "register",
+        "query_fee",
+        "oracle",
+        "format",
+        "extends",
+        "expire_height",
+        "active_from",
+        "active"
+      ],
+      "title": "Oracle",
+      "type": "object"
+    },
     "ChannelWithdrawTxsCountByIdResponse": {
       "description": "Response schema for transactions count by id in channel withdraw txs",
       "example": {
@@ -1254,7 +1359,8 @@
         },
         "next": {
           "description": "The continuation link",
-          "type": "string"
+          "type": "string",
+          "x-nullable": true
         }
       },
       "required": [
@@ -1262,6 +1368,29 @@
         "data"
       ],
       "title": "Blocks",
+      "type": "object"
+    },
+    "Format": {
+      "description": "Schema for format",
+      "example": {
+        "query": "string",
+        "response": "string"
+      },
+      "properties": {
+        "query": {
+          "description": "The query format",
+          "type": "string"
+        },
+        "response": {
+          "description": "The response format",
+          "type": "string"
+        }
+      },
+      "required": [
+        "response",
+        "query"
+      ],
+      "title": "Format",
       "type": "object"
     },
     "ChannelCreateTxsCountByIdResponse": {
@@ -1726,16 +1855,18 @@
         "operationId": "get_blocks",
         "parameters": [
           {
-            "description": "The direction, which could be **forward** or **backward**, or non-negative integer range",
-            "in": "path",
-            "name": "range_or_dir",
-            "required": true,
-            "type": "string",
-            "x-example": "300000-300100"
+            "default": 1,
+            "description": "The number of page to show",
+            "format": "int32",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "type": "integer",
+            "x-example": 1
           },
           {
             "default": 10,
-            "description": "The numbers of items to return.",
+            "description": "The numbers of items to return",
             "format": "int32",
             "in": "query",
             "maximum": 1000,
@@ -1743,7 +1874,15 @@
             "name": "limit",
             "required": false,
             "type": "integer",
-            "x-example": 1
+            "x-example": 10
+          },
+          {
+            "description": "The direction, which could be **forward** or **backward**, or non-negative integer range",
+            "in": "path",
+            "name": "range_or_dir",
+            "required": true,
+            "type": "string",
+            "x-example": "300000-300100"
           }
         ],
         "produces": [
@@ -1899,7 +2038,7 @@
         "parameters": [
           {
             "default": "expiration",
-            "description": "The ordering via parameters.",
+            "description": "The ordering via parameters",
             "enum": [
               "expiration",
               "name"
@@ -1911,7 +2050,7 @@
           },
           {
             "default": "backward",
-            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning.",
+            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning",
             "enum": [
               "forward",
               "backward"
@@ -1923,7 +2062,7 @@
           },
           {
             "default": 1,
-            "description": "The number of page to show.",
+            "description": "The number of page to show",
             "format": "int32",
             "in": "query",
             "name": "page",
@@ -1933,7 +2072,7 @@
           },
           {
             "default": 10,
-            "description": "The numbers of items to return.",
+            "description": "The numbers of items to return",
             "format": "int32",
             "in": "query",
             "maximum": 1000,
@@ -1977,7 +2116,7 @@
         "parameters": [
           {
             "default": "expiration",
-            "description": "The ordering via parameters.",
+            "description": "The ordering via parameters",
             "enum": [
               "expiration",
               "name"
@@ -1989,7 +2128,7 @@
           },
           {
             "default": "backward",
-            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning.",
+            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning",
             "enum": [
               "forward",
               "backward"
@@ -2001,7 +2140,7 @@
           },
           {
             "default": 1,
-            "description": "The number of page to show.",
+            "description": "The number of page to show",
             "format": "int32",
             "in": "query",
             "name": "page",
@@ -2011,7 +2150,7 @@
           },
           {
             "default": 10,
-            "description": "The numbers of items to return.",
+            "description": "The numbers of items to return",
             "format": "int32",
             "in": "query",
             "maximum": 1000,
@@ -2055,7 +2194,7 @@
         "parameters": [
           {
             "default": "expiration",
-            "description": "The ordering via parameters.",
+            "description": "The ordering via parameters",
             "enum": [
               "expiration",
               "name"
@@ -2067,7 +2206,7 @@
           },
           {
             "default": "backward",
-            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning.",
+            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning",
             "enum": [
               "forward",
               "backward"
@@ -2079,7 +2218,7 @@
           },
           {
             "default": 1,
-            "description": "The number of page to show.",
+            "description": "The number of page to show",
             "format": "int32",
             "in": "query",
             "name": "page",
@@ -2089,7 +2228,7 @@
           },
           {
             "default": 10,
-            "description": "The numbers of items to return.",
+            "description": "The numbers of items to return",
             "format": "int32",
             "in": "query",
             "maximum": 1000,
@@ -2133,7 +2272,7 @@
         "parameters": [
           {
             "default": "expiration",
-            "description": "The ordering via parameters.",
+            "description": "The ordering via parameters",
             "enum": [
               "expiration",
               "name"
@@ -2145,7 +2284,7 @@
           },
           {
             "default": "backward",
-            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning.",
+            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning",
             "enum": [
               "forward",
               "backward"
@@ -2157,7 +2296,7 @@
           },
           {
             "default": 1,
-            "description": "The number of page to show.",
+            "description": "The number of page to show",
             "format": "int32",
             "in": "query",
             "name": "page",
@@ -2167,7 +2306,7 @@
           },
           {
             "default": 10,
-            "description": "The numbers of items to return.",
+            "description": "The numbers of items to return",
             "format": "int32",
             "in": "query",
             "maximum": 1000,
@@ -2228,6 +2367,272 @@
             "description": "Returns names for a given owner",
             "schema": {
               "$ref": "#/definitions/OwnedByResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Middleware"
+        ]
+      }
+    },
+    "/oracle/{id}": {
+      "get": {
+        "deprecated": false,
+        "description": "Get oracle information for given oracle id",
+        "operationId": "get_oracle",
+        "parameters": [
+          {
+            "description": "The oracle id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string",
+            "x-example": "ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM"
+          },
+          {
+            "description": "Expand tx indexes",
+            "in": "query",
+            "name": "expand",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "produces": [
+          [
+            "application/json"
+          ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns oracle information for given oracle id. If the expand is set to true, the mdw will return the data with full transaction info, otherwise it will return only transaction indexes",
+            "schema": {
+              "$ref": "#/definitions/OracleResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Middleware"
+        ]
+      }
+    },
+    "/oracles": {
+      "get": {
+        "deprecated": false,
+        "description": "Get all oracles",
+        "operationId": "get_oracles",
+        "parameters": [
+          {
+            "default": "backward",
+            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning",
+            "enum": [
+              "forward",
+              "backward"
+            ],
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": 1,
+            "description": "The number of page to show",
+            "format": "int32",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "type": "integer",
+            "x-example": 1
+          },
+          {
+            "default": 10,
+            "description": "The numbers of items to return",
+            "format": "int32",
+            "in": "query",
+            "maximum": 1000,
+            "minimum": 1,
+            "name": "limit",
+            "required": false,
+            "type": "integer",
+            "x-example": 10
+          },
+          {
+            "description": "Expand tx indexes",
+            "in": "query",
+            "name": "expand",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "produces": [
+          [
+            "application/json"
+          ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns information for all oracles. If the expand is set to true, the mdw will return the data with full transaction info, otherwise it will return only transaction indexes",
+            "schema": {
+              "$ref": "#/definitions/OraclesResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Middleware"
+        ]
+      }
+    },
+    "/oracles/active": {
+      "get": {
+        "deprecated": false,
+        "description": "Get active oracles",
+        "operationId": "get_active_oracles",
+        "parameters": [
+          {
+            "default": "backward",
+            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning",
+            "enum": [
+              "forward",
+              "backward"
+            ],
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": 1,
+            "description": "The number of page to show",
+            "format": "int32",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "type": "integer",
+            "x-example": 1
+          },
+          {
+            "default": 10,
+            "description": "The numbers of items to return",
+            "format": "int32",
+            "in": "query",
+            "maximum": 1000,
+            "minimum": 1,
+            "name": "limit",
+            "required": false,
+            "type": "integer",
+            "x-example": 10
+          },
+          {
+            "description": "Expand tx indexes",
+            "in": "query",
+            "name": "expand",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "produces": [
+          [
+            "application/json"
+          ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns information for all active oracles. If the expand is set to true, the mdw will return the data with full transaction info, otherwise it will return only transaction indexes",
+            "schema": {
+              "$ref": "#/definitions/OraclesResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Middleware"
+        ]
+      }
+    },
+    "/oracles/inactive": {
+      "get": {
+        "deprecated": false,
+        "description": "Get inactive/expired oracles",
+        "operationId": "get_inactive_oracles",
+        "parameters": [
+          {
+            "default": "backward",
+            "description": "The direction - **forward** is from genesis to the end, **backward** is from end to the beginning",
+            "enum": [
+              "forward",
+              "backward"
+            ],
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": 1,
+            "description": "The number of page to show",
+            "format": "int32",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "type": "integer",
+            "x-example": 1
+          },
+          {
+            "default": 10,
+            "description": "The numbers of items to return",
+            "format": "int32",
+            "in": "query",
+            "maximum": 1000,
+            "minimum": 1,
+            "name": "limit",
+            "required": false,
+            "type": "integer",
+            "x-example": 10
+          },
+          {
+            "description": "Expand tx indexes",
+            "in": "query",
+            "name": "expand",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "produces": [
+          [
+            "application/json"
+          ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns information for all inactive oracles. If the expand is set to true, the mdw will return the data with full transaction info, otherwise it will return only transaction indexes",
+            "schema": {
+              "$ref": "#/definitions/OraclesResponse"
             }
           },
           "400": {
@@ -2427,7 +2832,7 @@
         "parameters": [
           {
             "collectionFormat": "multi",
-            "description": "The transaction type. The query allows providing of multiple type parameters. [More info](https://github.com/aeternity/ae_mdw#types).",
+            "description": "The transaction type. The query allows providing of multiple type parameters. [More info](https://github.com/aeternity/ae_mdw#types)",
             "in": "query",
             "items": {
               "enum": [
@@ -2466,7 +2871,7 @@
           },
           {
             "collectionFormat": "multi",
-            "description": "The type group. The query allows providing of multiple type group parameters. [More info](https://github.com/aeternity/ae_mdw#types).",
+            "description": "The type group. The query allows providing of multiple type group parameters. [More info](https://github.com/aeternity/ae_mdw#types)",
             "in": "query",
             "items": {
               "enum": [
@@ -2486,7 +2891,7 @@
             "x-example": "channel"
           },
           {
-            "description": "The account ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+            "description": "The account ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)",
             "in": "query",
             "name": "account",
             "required": false,
@@ -2494,7 +2899,7 @@
             "x-example": "ak_g5vQK6beY3vsTJHH7KBusesyzq9WMdEYorF8VyvZURXTjLnxT"
           },
           {
-            "description": "The contract ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+            "description": "The contract ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)",
             "in": "query",
             "name": "contract",
             "required": false,
@@ -2502,7 +2907,7 @@
             "x-example": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z"
           },
           {
-            "description": "The channel ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+            "description": "The channel ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)",
             "in": "query",
             "name": "channel",
             "required": false,
@@ -2510,7 +2915,7 @@
             "x-example": "ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD"
           },
           {
-            "description": "The oracle ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+            "description": "The oracle ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)",
             "in": "query",
             "name": "oracle",
             "required": false,
@@ -2519,7 +2924,7 @@
           },
           {
             "default": 1,
-            "description": "The number of page to show.",
+            "description": "The number of page to show",
             "format": "int32",
             "in": "query",
             "name": "page",
@@ -2529,7 +2934,7 @@
           },
           {
             "default": 10,
-            "description": "The numbers of items to return.",
+            "description": "The numbers of items to return",
             "format": "int32",
             "in": "query",
             "maximum": 1000,
@@ -2600,7 +3005,7 @@
         "parameters": [
           {
             "collectionFormat": "multi",
-            "description": "The transaction type. The query allows providing of multiple type parameters. [More info](https://github.com/aeternity/ae_mdw#types).",
+            "description": "The transaction type. The query allows providing of multiple type parameters. [More info](https://github.com/aeternity/ae_mdw#types)",
             "in": "query",
             "items": {
               "enum": [
@@ -2639,7 +3044,7 @@
           },
           {
             "collectionFormat": "multi",
-            "description": "The type group. The query allows providing of multiple type group parameters. [More info](https://github.com/aeternity/ae_mdw#types).",
+            "description": "The type group. The query allows providing of multiple type group parameters. [More info](https://github.com/aeternity/ae_mdw#types)",
             "in": "query",
             "items": {
               "enum": [
@@ -2659,7 +3064,7 @@
             "x-example": "channel"
           },
           {
-            "description": "The account ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+            "description": "The account ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)",
             "in": "query",
             "name": "account",
             "required": false,
@@ -2667,7 +3072,7 @@
             "x-example": "ak_g5vQK6beY3vsTJHH7KBusesyzq9WMdEYorF8VyvZURXTjLnxT"
           },
           {
-            "description": "The contract ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+            "description": "The contract ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)",
             "in": "query",
             "name": "contract",
             "required": false,
@@ -2675,7 +3080,7 @@
             "x-example": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z"
           },
           {
-            "description": "The channel ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+            "description": "The channel ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)",
             "in": "query",
             "name": "channel",
             "required": false,
@@ -2683,7 +3088,7 @@
             "x-example": "ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD"
           },
           {
-            "description": "The oracle ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids).",
+            "description": "The oracle ID. [More info](https://github.com/aeternity/ae_mdw#generic-ids)",
             "in": "query",
             "name": "oracle",
             "required": false,
@@ -2692,7 +3097,7 @@
           },
           {
             "default": 1,
-            "description": "The number of page to show.",
+            "description": "The number of page to show",
             "format": "int32",
             "in": "query",
             "name": "page",
@@ -2702,7 +3107,7 @@
           },
           {
             "default": 10,
-            "description": "The numbers of items to return.",
+            "description": "The numbers of items to return",
             "format": "int32",
             "in": "query",
             "maximum": 1000,

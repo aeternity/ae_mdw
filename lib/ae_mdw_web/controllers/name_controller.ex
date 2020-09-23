@@ -784,7 +784,8 @@ defmodule AeMdwWeb.NameController do
     deprecated(false)
     operation_id("get_all_names")
     tag("Middleware")
-    SwaggerParameters.by_and_direction_params()
+    SwaggerParameters.by_params()
+    SwaggerParameters.direction_params()
     SwaggerParameters.limit_and_page_params()
 
     response(200, "Returns information for active and inactive names", Schema.ref(:NamesResponse))
@@ -798,7 +799,8 @@ defmodule AeMdwWeb.NameController do
     deprecated(false)
     operation_id("get_active_names")
     tag("Middleware")
-    SwaggerParameters.by_and_direction_params()
+    SwaggerParameters.by_params()
+    SwaggerParameters.direction_params()
     SwaggerParameters.limit_and_page_params()
 
     response(200, "Returns information for active names", Schema.ref(:NamesResponse))
@@ -812,7 +814,8 @@ defmodule AeMdwWeb.NameController do
     deprecated(false)
     operation_id("get_inactive_names")
     tag("Middleware")
-    SwaggerParameters.by_and_direction_params()
+    SwaggerParameters.by_params()
+    SwaggerParameters.direction_params()
     SwaggerParameters.limit_and_page_params()
 
     response(200, "Returns information for inactive names", Schema.ref(:NamesResponse))
@@ -826,7 +829,8 @@ defmodule AeMdwWeb.NameController do
     deprecated(false)
     operation_id("get_all_auctions")
     tag("Middleware")
-    SwaggerParameters.by_and_direction_params()
+    SwaggerParameters.by_params()
+    SwaggerParameters.direction_params()
     SwaggerParameters.limit_and_page_params()
 
     response(200, "Returns information for all auctions", Schema.ref(:NamesAuctionsResponse))
