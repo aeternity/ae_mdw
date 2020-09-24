@@ -156,8 +156,11 @@ defmodule AeMdwWeb.DataStreamPlug do
 
   def query_norm(types, "type_group", val) do
     case Validate.tx_group(val) do
-      {:ok, group} -> {:ok, MapSet.new(AE.tx_group(group)) |> MapSet.union(types)}
-      err -> err
+      {:ok, group} ->
+        {:ok, MapSet.new(AE.tx_group(group)) |> MapSet.union(types)}
+
+      {:error, {err_kind, offender}} ->
+        {:error, AeMdw.Error.to_string(err_kind, offender)}
     end
   end
 
@@ -168,7 +171,7 @@ defmodule AeMdwWeb.DataStreamPlug do
       {:ok, MapSet.put(ids, {key_spec, validator.(val)})}
     rescue
       err in [AeMdw.Error.Input] ->
-        err
+        {:error, err.message}
     end
   end
 
@@ -191,8 +194,8 @@ defmodule AeMdwWeb.DataStreamPlug do
           {:ok, group} ->
             {:cont, {:ok, Map.put(top_level, kw, group)}}
 
-          err ->
-            {:halt, {:error, err.message}}
+          {:error, message} ->
+            {:halt, {:error, message}}
         end
       end
     )
