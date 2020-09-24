@@ -210,12 +210,11 @@ defmodule AeMdw.Db.Format do
   end
 
   def to_map(oracle, source, true = _expand)
-  when source in [Model.ActiveOracle, Model.InactiveOracle] do
+      when source in [Model.ActiveOracle, Model.InactiveOracle] do
     to_map(oracle, source)
     |> update_in(["extends"], fn exts -> Enum.map(exts, &expand/1) end)
     |> update_in(["register"], &expand/1)
   end
-
 
   def custom_encode(:oracle_response_tx, tx, _tx_rec, _signed_tx, _block_hash),
     do: update_in(tx, ["tx", "response"], &maybe_base64/1)
