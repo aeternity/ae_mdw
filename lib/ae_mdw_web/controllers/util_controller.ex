@@ -8,22 +8,24 @@ defmodule AeMdwWeb.UtilController do
         swagger_schema do
           title("Status response")
           description("Response schema for status")
+
           properties do
-            mdw_height :integer, "The height of the mdw", required: true
-            mdw_synced :boolean, "The synced status", required: true
-            mdw_tx_index :integer, "The last transaction index", required: true
-            mdw_version :string, "The mdw version", required: true
-            node_height :integer, "The height of the node", required: true
-            node_version :string, "The node version", required: true
+            mdw_height(:integer, "The height of the mdw", required: true)
+            mdw_synced(:boolean, "The synced status", required: true)
+            mdw_tx_index(:integer, "The last transaction index", required: true)
+            mdw_version(:string, "The mdw version", required: true)
+            node_height(:integer, "The height of the node", required: true)
+            node_version(:string, "The node version", required: true)
           end
-          example %{
-            mdw_height: 311557,
+
+          example(%{
+            mdw_height: 311_557,
             mdw_synced: true,
-            mdw_tx_index: 15474067,
+            mdw_tx_index: 15_474_067,
             mdw_version: "0.1.0",
-            node_height: 311557,
+            node_height: 311_557,
             node_version: "5.5.4"
-          }
+          })
         end
     }
   end
