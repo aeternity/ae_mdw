@@ -149,8 +149,11 @@ defmodule AeMdwWeb.DataStreamPlug do
 
   def query_norm(types, "type", val) do
     case Validate.tx_type(val) do
-      {:ok, type} -> {:ok, MapSet.put(types, type)}
-      err -> err
+      {:ok, type} ->
+        {:ok, MapSet.put(types, type)}
+
+      {:error, {err_kind, offender}} ->
+        {:error, AeMdw.Error.to_string(err_kind, offender)}
     end
   end
 
