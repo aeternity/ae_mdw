@@ -10,8 +10,18 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   http: [port: 4000],
   debug_errors: true,
   code_reloader: true,
-  check_origin: false,
-  watchers: []
+  # NOTE: this will make nuxtjs to generate frontend's static files as soon as the phoenix server is started
+  watchers: [npm: ["run", "generate", cd: Path.expand("../frontend", __DIR__)]],
+  check_origin: false
+
+config :ae_mdw, AeMdwWeb.Endpoint,
+  live_reload: [
+    patterns: [
+      ~r"priv/gettext/.*(po)$",
+      ~r"lib/test_web/(live|views)/.*(ex)$",
+      ~r"lib/test_web/templates/.*(eex)$"
+    ]
+  ]
 
 # ## SSL Support
 #

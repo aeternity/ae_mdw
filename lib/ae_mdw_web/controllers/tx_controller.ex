@@ -602,8 +602,8 @@ defmodule AeMdwWeb.TxController do
   end
 
   swagger_path :tx do
-    get("/tx/{hash}")
-    description("Get a transaction by a given hash")
+    get("/mdw/tx/{hash}")
+    description("Get a transaction by a given hash.")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_tx_by_hash")
@@ -621,8 +621,8 @@ defmodule AeMdwWeb.TxController do
   end
 
   swagger_path :txi do
-    get("/txi/{index}")
-    description("Get a transaction by a given index")
+    get("/mdw/txi/{index}")
+    description("Get a transaction by a given index.")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_tx_by_index")
@@ -638,8 +638,8 @@ defmodule AeMdwWeb.TxController do
   end
 
   swagger_path :count do
-    get("/txs/count")
-    description("Get count of transactions at the current height")
+    get("/mdw/txs/count")
+    description("Get count of transactions at the current height.")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_current_tx_count")
@@ -653,8 +653,8 @@ defmodule AeMdwWeb.TxController do
   end
 
   swagger_path :count_id do
-    get("/txs/count/{id}")
-    description("Get transactions count and its type for given aeternity ID")
+    get("/mdw/txs/count/{id}")
+    description("Get transactions count and its type for given aeternity ID.")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_tx_count_by_id")
@@ -677,8 +677,8 @@ defmodule AeMdwWeb.TxController do
   end
 
   swagger_path :txs_scope_range do
-    get("/txs/{scope_type}/{range}")
-    description("Get a transactions bounded by scope/range")
+    get("/mdw/txs/{scope_type}/{range}")
+    description("Get a transactions bounded by scope/range.")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_txs_by_scope_type_range")
@@ -701,7 +701,7 @@ defmodule AeMdwWeb.TxController do
   end
 
   swagger_path :txs_direction do
-    get("/txs/{direction}")
+    get("/mdw/txs/{direction}")
 
     description(
       "Get a transactions from beginning or end of the chain. More [info](https://github.com/aeternity/ae_mdw#transaction-querying)"
@@ -743,8 +743,8 @@ defmodule AeMdwWeb.TxController do
     response(400, "Bad request", Schema.ref(:ErrorResponse))
   end
 
-  def swagger_path_txs(route = %{path: "/txs/{direction}"}), do: swagger_path_txs_direction(route)
+  def swagger_path_txs(route = %{path: "/mdw/txs/{direction}"}), do: swagger_path_txs_direction(route)
 
-  def swagger_path_txs(route = %{path: "/txs/{scope_type}/{range}"}),
+  def swagger_path_txs(route = %{path: "/mdw/txs/{scope_type}/{range}"}),
     do: swagger_path_txs_scope_range(route)
 end

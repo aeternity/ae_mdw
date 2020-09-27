@@ -192,7 +192,7 @@ defmodule AeMdwWeb.OracleController do
   end
 
   swagger_path :oracle do
-    get("/oracle/{id}")
+    get("/mdw/oracle/{id}")
     description("Get oracle information for given oracle id")
     produces(["application/json"])
     deprecated(false)
@@ -218,7 +218,7 @@ defmodule AeMdwWeb.OracleController do
   end
 
   swagger_path :inactive_oracles do
-    get("/oracles/inactive")
+    get("/mdw/oracles/inactive")
     description("Get inactive/expired oracles")
     produces(["application/json"])
     deprecated(false)
@@ -238,7 +238,7 @@ defmodule AeMdwWeb.OracleController do
   end
 
   swagger_path :active_oracles do
-    get("/oracles/active")
+    get("/mdw/oracles/active")
     description("Get active oracles")
     produces(["application/json"])
     deprecated(false)
@@ -258,7 +258,7 @@ defmodule AeMdwWeb.OracleController do
   end
 
   swagger_path :oracles do
-    get("/oracles")
+    get("/mdw/oracles")
     description("Get all oracles")
     produces(["application/json"])
     deprecated(false)

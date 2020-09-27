@@ -21,6 +21,14 @@ defmodule AeMdwWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :browser do
+    plug :accepts, ["html"]
+    plug :fetch_session
+    plug :fetch_flash
+    plug :protect_from_forgery
+    plug :put_secure_browser_headers
+  end
+
   scope "/swagger" do
     forward "/", PhoenixSwagger.Plug.SwaggerUI,
       otp_app: :ae_mdw,
@@ -28,7 +36,7 @@ defmodule AeMdwWeb.Router do
       disable_validator: true
   end
 
-  scope "/", AeMdwWeb do
+  scope "/mdw", AeMdwWeb do
     pipe_through :api
 
     get "/block/:hash", BlockController, :block
@@ -81,6 +89,12 @@ defmodule AeMdwWeb.Router do
     get "/status", UtilController, :status
 
     match :*, "/*path", UtilController, :no_route
+  end
+
+  scope "/", AeMdwWeb do
+    pipe_through :browser
+
+    match :*, "/*path", WebPageController, :index
   end
 
   def swagger_info do
