@@ -13,6 +13,13 @@ defmodule AeMdwWeb.Util do
     query_string
     |> URI.query_decoder()
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> case do
+      %{"expand" => [nil]} = groups ->
+        Map.put(groups, "expand", ["true"])
+
+      groups ->
+        groups
+    end
   end
 
   def expand_query_group({key, vals}) do
