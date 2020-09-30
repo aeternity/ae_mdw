@@ -7,6 +7,9 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdwWeb.Continuation, as: Cont
   alias AeMdw.Error.Input, as: ErrInput
 
+  import AeMdw.Util
+  import AeMdwWeb.Util
+
   @default_limit 10
 
   describe "active_names" do
@@ -381,6 +384,32 @@ defmodule AeMdwWeb.NameControllerTest do
     end
   end
 
+  describe "owned_by" do
+    test "get name information for given acount/owner", %{conn: conn} do
+      id = "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
+      conn = get(conn, "/names/owned_by/#{id}")
+
+      assert json_response(conn, 200) |> Jason.encode!() ==
+               TestUtil.handle_input(fn ->
+                 owned_by_reply(Validate.id!(id, [:account_pubkey]), expand?(conn.params))
+               end)
+               |> Jason.encode!()
+    end
+
+    test "renders error when the key is invalid", %{conn: conn} do
+      id = "ak_invalid_key"
+      conn = get(conn, "/names/owned_by/#{id}")
+
+      assert json_response(conn, 400) ==
+               %{
+                 "error" =>
+                   TestUtil.handle_input(fn ->
+                     owned_by_reply(Validate.id!(id, [:account_pubkey]), expand?(conn.params))
+                   end)
+               }
+    end
+  end
+
   ##########
 
   defp get_name(name) do
@@ -411,5 +440,31 @@ defmodule AeMdwWeb.NameControllerTest do
       "active" => Format.map_raw_values(active, &Format.to_json/1),
       "inactive" => Format.map_raw_values(inactive, &Format.to_json/1)
     }
+  end
+
+  defp owned_by_reply(owner_pk, expand?) do
+    %{actives: actives, top_bids: top_bids} = Name.owned_by(owner_pk)
+
+    jsons = fn plains, source, locator ->
+      for plain <- plains, reduce: [] do
+        acc ->
+          with {info, ^source} <- locator.(plain) do
+            [Format.to_map(info, source, expand?) | acc]
+          else
+            _ -> acc
+          end
+      end
+    end
+
+    actives = jsons.(actives, Model.ActiveName, &Name.locate/1)
+
+    top_bids =
+      jsons.(
+        top_bids,
+        Model.AuctionBid,
+        &map_some(Name.locate_bid(&1), fn x -> {x, Model.AuctionBid} end)
+      )
+
+    %{"active" => actives, "top_bid" => top_bids}
   end
 end
