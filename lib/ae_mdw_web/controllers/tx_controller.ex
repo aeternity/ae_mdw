@@ -602,7 +602,7 @@ defmodule AeMdwWeb.TxController do
   end
 
   swagger_path :tx do
-    get("/mdw/tx/{hash}")
+    get("/tx/{hash}")
     description("Get a transaction by a given hash.")
     produces(["application/json"])
     deprecated(false)
@@ -621,7 +621,7 @@ defmodule AeMdwWeb.TxController do
   end
 
   swagger_path :txi do
-    get("/mdw/txi/{index}")
+    get("/txi/{index}")
     description("Get a transaction by a given index.")
     produces(["application/json"])
     deprecated(false)
@@ -638,7 +638,7 @@ defmodule AeMdwWeb.TxController do
   end
 
   swagger_path :count do
-    get("/mdw/txs/count")
+    get("/txs/count")
     description("Get count of transactions at the current height.")
     produces(["application/json"])
     deprecated(false)
@@ -653,7 +653,7 @@ defmodule AeMdwWeb.TxController do
   end
 
   swagger_path :count_id do
-    get("/mdw/txs/count/{id}")
+    get("/txs/count/{id}")
     description("Get transactions count and its type for given aeternity ID.")
     produces(["application/json"])
     deprecated(false)
@@ -677,7 +677,7 @@ defmodule AeMdwWeb.TxController do
   end
 
   swagger_path :txs_scope_range do
-    get("/mdw/txs/{scope_type}/{range}")
+    get("/txs/{scope_type}/{range}")
     description("Get a transactions bounded by scope/range.")
     produces(["application/json"])
     deprecated(false)
@@ -701,7 +701,7 @@ defmodule AeMdwWeb.TxController do
   end
 
   swagger_path :txs_direction do
-    get("/mdw/txs/{direction}")
+    get("/txs/{direction}")
 
     description(
       "Get a transactions from beginning or end of the chain. More [info](https://github.com/aeternity/ae_mdw#transaction-querying)"
@@ -743,8 +743,8 @@ defmodule AeMdwWeb.TxController do
     response(400, "Bad request", Schema.ref(:ErrorResponse))
   end
 
-  def swagger_path_txs(route = %{path: "/mdw/txs/{direction}"}), do: swagger_path_txs_direction(route)
+  def swagger_path_txs(route = %{path: "/txs/{direction}"}), do: swagger_path_txs_direction(route)
 
-  def swagger_path_txs(route = %{path: "/mdw/txs/{scope_type}/{range}"}),
+  def swagger_path_txs(route = %{path: "/txs/{scope_type}/{range}"}),
     do: swagger_path_txs_scope_range(route)
 end

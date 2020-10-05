@@ -1,7 +1,9 @@
 const pkg = require('./package')
 const path = require("path")
 module.exports = {
-  mode: process.env.NUXT_APP_MODE || 'universal',
+  mode: process.env.NUXT_APP_MODE || 'spa',
+
+  target: 'static',
 
   /*
   ** Headers of the page
@@ -41,7 +43,7 @@ module.exports = {
     baseUrl: process.env.BASE_URL || 'http://localhost:4000', // Phoenix server url  
     middlewareURL: process.env.NUXT_APP_NODE_URL || 'https://mainnet.aeternal.io',
     middlewareWS: process.env.NUXT_APP_NODE_WS || 'wss://mainnet.aeternal.io/websocket',
-    networkName: process.env.NUXT_APP_NETWORK_NAME || 'MAIN NET',
+    networkName: process.env.NUXT_APP_NETWORK_NAME || 'MAINNET',
     swaggerHub: process.env.NUXT_APP_SWAGGER_HUB || 'http://localhost:4000/swagger',
     enableFaucet: process.env.NUXT_APP_ENABLE_FAUCET || false,
     faucetAPI: process.env.NUXT_APP_FAUCET_API || 'https://testnet.faucet.aepps.com/account'
@@ -56,11 +58,13 @@ module.exports = {
   ],
   /*
     ** Router config
-    */
+  */
   router: {
+   base: "/frontend/",
     linkActiveClass: 'active-link',
     linkExactActiveClass: 'exact-active-link'
   },
+
   /*
   ** Nuxt.js modules
   */

@@ -13,7 +13,7 @@ deps: ## Get and compile Elixir dependencies
 
 .PHONY: compile
 compile: ## Compile Elixir code
-	$(mix) compile
+	$(mix) compile && $(MAKE) compile-frontend
 
 .PHONY: reset-mdw-db
 reset-mdw-db: ## Reset Middleware DB tables
@@ -26,6 +26,15 @@ shell: ## Launch a mix shell with all modules compiled and loaded
 .PHONY: format
 format: ## Format Elixir code
 	$(mix) format
+
+.PHONY: generate-frontend
+compile-frontend: ## Generate frontend only
+	cd frontend/ && npm run generate
+
+
+.PHONY: clean-frontend
+clean-frontend: ## Clean frontend artifacts
+	rm -rf ./priv/static/frontend/
 
 .PHONY: clean
 clean: ## Clean all artifacts

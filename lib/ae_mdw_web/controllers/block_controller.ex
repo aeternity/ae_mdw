@@ -366,7 +366,7 @@ defmodule AeMdwWeb.BlockController do
   end
 
   swagger_path :block do
-    get("/mdw/block/{hash}")
+    get("/block/{hash}")
     description("Get block information by given key/micro block hash.")
     produces(["application/json"])
     deprecated(false)
@@ -390,7 +390,7 @@ defmodule AeMdwWeb.BlockController do
   end
 
   swagger_path :blocks do
-    get("/mdw/blocks/{range_or_dir}")
+    get("/blocks/{range_or_dir}")
     description("Get multiple generations.")
     produces(["application/json"])
     deprecated(false)
@@ -425,7 +425,7 @@ defmodule AeMdwWeb.BlockController do
   end
 
   swagger_path :blocki_kbi do
-    get("/mdw/blocki/{kbi}")
+    get("/blocki/{kbi}")
     description("Get key block information by given key block index(height).")
     produces(["application/json"])
     deprecated(false)
@@ -449,7 +449,7 @@ defmodule AeMdwWeb.BlockController do
   end
 
   swagger_path :blocki_kbi_and_mbi do
-    get("/mdw/blocki/{kbi}/{mbi}")
+    get("/blocki/{kbi}/{mbi}")
 
     description(
       "Get micro block information by given key block index(height) and micro block index"
@@ -481,8 +481,8 @@ defmodule AeMdwWeb.BlockController do
     response(400, "Bad request", Schema.ref(:ErrorResponse))
   end
 
-  def swagger_path_blocki(route = %{path: "/mdw/blocki/{kbi}"}), do: swagger_path_blocki_kbi(route)
+  def swagger_path_blocki(route = %{path: "/blocki/{kbi}"}), do: swagger_path_blocki_kbi(route)
 
-  def swagger_path_blocki(route = %{path: "/mdw/blocki/{kbi}/{mbi}"}),
+  def swagger_path_blocki(route = %{path: "/blocki/{kbi}/{mbi}"}),
     do: swagger_path_blocki_kbi_and_mbi(route)
 end

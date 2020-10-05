@@ -740,7 +740,7 @@ defmodule AeMdwWeb.NameController do
   end
 
   swagger_path :name do
-    get("/mdw/name/{id}")
+    get("/name/{id}")
     description("Get information for given name or encoded hash.")
     produces(["application/json"])
     deprecated(false)
@@ -759,7 +759,7 @@ defmodule AeMdwWeb.NameController do
   end
 
   swagger_path :owned_by do
-    get("/mdw/names/owned_by/{id}")
+    get("/names/owned_by/{id}")
     description("Get name information for given acount/owner")
     produces(["application/json"])
     deprecated(false)
@@ -778,7 +778,7 @@ defmodule AeMdwWeb.NameController do
   end
 
   swagger_path :names do
-    get("/mdw/names")
+    get("/names")
     description("Get all active and inactive names, except those in auction.")
     produces(["application/json"])
     deprecated(false)
@@ -793,7 +793,7 @@ defmodule AeMdwWeb.NameController do
   end
 
   swagger_path :active_names do
-    get("/mdw/names/active")
+    get("/names/active")
     description("Get active names.")
     produces(["application/json"])
     deprecated(false)
@@ -808,7 +808,7 @@ defmodule AeMdwWeb.NameController do
   end
 
   swagger_path :inactive_names do
-    get("/mdw/names/active")
+    get("/names/active")
     description("Get all inactive names.")
     produces(["application/json"])
     deprecated(false)
@@ -823,7 +823,7 @@ defmodule AeMdwWeb.NameController do
   end
 
   swagger_path :auctions do
-    get("/mdw/names/auctions")
+    get("/names/auctions")
     description("Get all auctions.")
     produces(["application/json"])
     deprecated(false)
@@ -838,7 +838,7 @@ defmodule AeMdwWeb.NameController do
   end
 
   swagger_path :pointers do
-    get("/mdw/names/pointers/{id}")
+    get("/names/pointers/{id}")
     description("Get pointers for given name.")
     produces(["application/json"])
     deprecated(false)
@@ -857,7 +857,7 @@ defmodule AeMdwWeb.NameController do
   end
 
   swagger_path :pointees do
-    get("/mdw/names/pointees/{id}")
+    get("/names/pointees/{id}")
     description("Get names pointing to a particular pubkey.")
     produces(["application/json"])
     deprecated(false)

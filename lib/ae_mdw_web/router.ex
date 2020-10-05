@@ -36,7 +36,13 @@ defmodule AeMdwWeb.Router do
       disable_validator: true
   end
 
-  scope "/mdw", AeMdwWeb do
+  scope "/frontend", AeMdwWeb do
+    pipe_through :browser
+
+    match :*, "/*path", WebPageController, :index
+  end
+
+  scope "/", AeMdwWeb do
     pipe_through :api
 
     get "/block/:hash", BlockController, :block
@@ -89,12 +95,6 @@ defmodule AeMdwWeb.Router do
     get "/status", UtilController, :status
 
     match :*, "/*path", UtilController, :no_route
-  end
-
-  scope "/", AeMdwWeb do
-    pipe_through :browser
-
-    match :*, "/*path", WebPageController, :index
   end
 
   def swagger_info do

@@ -14,7 +14,7 @@ defmodule AeMdwWeb.Endpoint do
   # when deploying your static files in production.
 
   plug Plug.Static,
-    at: "/",
+    at: "/frontend/",
     from: {:ae_mdw, "priv/static/frontend"},
     gzip: false,
     only:

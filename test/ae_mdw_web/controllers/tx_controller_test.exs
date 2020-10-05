@@ -984,48 +984,48 @@ defmodule AeMdwWeb.TxControllerTest do
   defp request_txs(conn, "gen" = scope, criteria),
     do:
       conn
-      |> get("/mdw/txs/#{scope}/#{criteria}")
+      |> get("/txs/#{scope}/#{criteria}")
       |> json_response(200)
 
   defp request_txs(conn, direction, criteria, c),
     do:
       conn
-      |> get("/mdw/txs/#{direction}?#{criteria}=#{c}")
+      |> get("/txs/#{direction}?#{criteria}=#{c}")
       |> json_response(200)
 
   defp request_txs(conn, "gen" = scope, criteria1, criteria2, limit),
     do:
       conn
-      |> get("/mdw/txs/#{scope}/#{criteria1}-#{criteria2}?limit=#{limit}")
+      |> get("/txs/#{scope}/#{criteria1}-#{criteria2}?limit=#{limit}")
       |> json_response(200)
 
   defp request_txs(conn, direction, criteria, c, limit),
     do:
       conn
-      |> get("/mdw/txs/#{direction}?#{criteria}=#{c}&limit=#{limit}")
+      |> get("/txs/#{direction}?#{criteria}=#{c}&limit=#{limit}")
       |> json_response(200)
 
   defp request_txs(conn, direction, criteria1, c1, criteria2, c2),
     do:
       conn
-      |> get("/mdw/txs/#{direction}?#{criteria1}=#{c1}&#{criteria2}=#{c2}")
+      |> get("/txs/#{direction}?#{criteria1}=#{c1}&#{criteria2}=#{c2}")
       |> json_response(200)
 
   defp request_txs(conn, direction, criteria1, c1, criteria2, c2, limit),
     do:
       conn
-      |> get("/mdw/txs/#{direction}?#{criteria1}=#{c1}&#{criteria2}=#{c2}&limit=#{limit}")
+      |> get("/txs/#{direction}?#{criteria1}=#{c1}&#{criteria2}=#{c2}&limit=#{limit}")
       |> json_response(200)
 
   defp request_txs_by_field(conn, direction, criteria, field, c),
     do:
       conn
-      |> get("/mdw/txs/#{direction}?#{criteria}.#{field}=#{c}")
+      |> get("/txs/#{direction}?#{criteria}.#{field}=#{c}")
       |> json_response(200)
 
   defp request_txs_by_field(conn, direction, criteria, field, c, limit) do
     conn
-    |> get("/mdw/txs/#{direction}?#{criteria}.#{field}=#{c}&limit=#{limit}")
+    |> get("/txs/#{direction}?#{criteria}.#{field}=#{c}&limit=#{limit}")
     |> json_response(200)
   end
 
