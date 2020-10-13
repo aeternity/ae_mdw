@@ -6,15 +6,6 @@ name := aeternity@localhost
 
 all: help
 
-.PHONY: deps
-deps: ## Get and compile Elixir dependencies
-	$(mix) deps.get \
-	$(mix) compile
-
-.PHONY: compile
-compile: ## Compile Elixir code
-	$(mix) compile && $(MAKE) compile-frontend
-
 .PHONY: reset-mdw-db
 reset-mdw-db: ## Reset Middleware DB tables
 	$(mix) reset_db
@@ -27,22 +18,33 @@ shell: ## Launch a mix shell with all modules compiled and loaded
 format: ## Format Elixir code
 	$(mix) format
 
-.PHONY: generate-frontend
-compile-frontend: ## Generate frontend only
+.PHONY: compile
+compile: ## Compile backend & frontend
+	$(MAKE) compile-backend && $(MAKE) compile-frontend
+
+.PHONY: compile-backend
+compile-backend: ## Compile backend only
+	$(mix) deps.get && $(mix) compile
+
+.PHONY: compile-frontend
+compile-frontend: ## Compile frontend only
 	cd frontend/ && npm run generate
 
+.PHONY: clean
+clean: ## Clean all artifacts
+	$(MAKE) clean-backend && $(MAKE) clean-frontend
+
+.PHONY: clean-backend
+clean-backend: ## Clean backend artifacts
+	$(mix) clean
+	rm -rf \
+	_build \
+	deps \
+	mix.lock
 
 .PHONY: clean-frontend
 clean-frontend: ## Clean frontend artifacts
 	rm -rf ./priv/static/frontend/
-
-.PHONY: clean
-clean: ## Clean all artifacts
-	$(mix) clean
-	rm -rf \
-		_build \
-		deps \
-		mix.lock
 
 .PHONY: test
 test:
