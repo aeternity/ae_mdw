@@ -25,6 +25,9 @@ ae_mdw-*.tar
 # If NPM crashes, it generates a log, let's ignore it too.
 npm-debug.log
 
+# Ignore generated files from NuxtJS
+priv/static/frontend/
+
 .DS_Store
 .elixir_ls/
 log/

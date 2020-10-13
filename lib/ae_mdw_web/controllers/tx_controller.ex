@@ -603,7 +603,7 @@ defmodule AeMdwWeb.TxController do
 
   swagger_path :tx do
     get("/tx/{hash}")
-    description("Get a transaction by a given hash")
+    description("Get a transaction by a given hash.")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_tx_by_hash")
@@ -622,7 +622,7 @@ defmodule AeMdwWeb.TxController do
 
   swagger_path :txi do
     get("/txi/{index}")
-    description("Get a transaction by a given index")
+    description("Get a transaction by a given index.")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_tx_by_index")
@@ -639,7 +639,7 @@ defmodule AeMdwWeb.TxController do
 
   swagger_path :count do
     get("/txs/count")
-    description("Get count of transactions at the current height")
+    description("Get count of transactions at the current height.")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_current_tx_count")
@@ -654,7 +654,7 @@ defmodule AeMdwWeb.TxController do
 
   swagger_path :count_id do
     get("/txs/count/{id}")
-    description("Get transactions count and its type for given aeternity ID")
+    description("Get transactions count and its type for given aeternity ID.")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_tx_count_by_id")
@@ -678,7 +678,7 @@ defmodule AeMdwWeb.TxController do
 
   swagger_path :txs_scope_range do
     get("/txs/{scope_type}/{range}")
-    description("Get a transactions bounded by scope/range")
+    description("Get a transactions bounded by scope/range.")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_txs_by_scope_type_range")

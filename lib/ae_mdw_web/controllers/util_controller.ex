@@ -32,7 +32,7 @@ defmodule AeMdwWeb.UtilController do
 
   swagger_path :status do
     get("/status")
-    description("Get middleware status")
+    description("Get middleware status.")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_status")

@@ -21,11 +21,25 @@ defmodule AeMdwWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :browser do
+    plug :accepts, ["html"]
+    plug :fetch_session
+    plug :fetch_flash
+    plug :protect_from_forgery
+    plug :put_secure_browser_headers
+  end
+
   scope "/swagger" do
     forward "/", PhoenixSwagger.Plug.SwaggerUI,
       otp_app: :ae_mdw,
       swagger_file: "swagger.json",
       disable_validator: true
+  end
+
+  scope "/frontend", AeMdwWeb do
+    pipe_through :browser
+
+    match :*, "/*path", WebPageController, :index
   end
 
   scope "/", AeMdwWeb do

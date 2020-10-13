@@ -367,7 +367,7 @@ defmodule AeMdwWeb.BlockController do
 
   swagger_path :block do
     get("/block/{hash}")
-    description("Get block information by given key/micro block hash")
+    description("Get block information by given key/micro block hash.")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_block_by_hash")
@@ -391,7 +391,7 @@ defmodule AeMdwWeb.BlockController do
 
   swagger_path :blocks do
     get("/blocks/{range_or_dir}")
-    description("Get multiple generations")
+    description("Get multiple generations.")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_blocks")
@@ -426,7 +426,7 @@ defmodule AeMdwWeb.BlockController do
 
   swagger_path :blocki_kbi do
     get("/blocki/{kbi}")
-    description("Get key block information by given key block index(height)")
+    description("Get key block information by given key block index(height).")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_block_by_kbi")

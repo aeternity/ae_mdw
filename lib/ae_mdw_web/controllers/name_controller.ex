@@ -741,7 +741,7 @@ defmodule AeMdwWeb.NameController do
 
   swagger_path :name do
     get("/name/{id}")
-    description("Get information for given name or encoded hash")
+    description("Get information for given name or encoded hash.")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_name_by_id")
@@ -779,7 +779,7 @@ defmodule AeMdwWeb.NameController do
 
   swagger_path :names do
     get("/names")
-    description("Get all active and inactive names, except those in auction")
+    description("Get all active and inactive names, except those in auction.")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_all_names")
@@ -808,8 +808,8 @@ defmodule AeMdwWeb.NameController do
   end
 
   swagger_path :inactive_names do
-    get("/names/inactive")
-    description("Get all inactive names")
+    get("/names/active")
+    description("Get all inactive names.")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_inactive_names")
@@ -838,8 +838,8 @@ defmodule AeMdwWeb.NameController do
   end
 
   swagger_path :pointers do
-    get("/name/pointers/{id}")
-    description("Get pointers for given name")
+    get("/names/pointers/{id}")
+    description("Get pointers for given name.")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_pointers_by_id")
@@ -857,8 +857,8 @@ defmodule AeMdwWeb.NameController do
   end
 
   swagger_path :pointees do
-    get("/name/pointees/{id}")
-    description("Get names pointing to a particular pubkey")
+    get("/names/pointees/{id}")
+    description("Get names pointing to a particular pubkey.")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_pointees_by_id")

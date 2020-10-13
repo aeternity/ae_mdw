@@ -1,0 +1,61 @@
+//------------------------------
+// *****************************
+// Index
+// *****************************
+//------------------------------
+/**
+ * Global Imports
+ */
+//@import "~@aeternity/aepp-components-3/src/styles/globals/mixins";
+//@import "~@aeternity/aepp-components-3/src/styles/globals/functions";
+@import "~@aeternity/aepp-components-3/src/styles/placeholders/typography";
+//@import "~@aeternity/aepp-components-3/src/styles/variables/animations";
+@import "~@aeternity/aepp-components-3/src/styles/variables/colors";
+//@import "~@aeternity/aepp-components-3/src/styles/variables/paths";
+@import "~@aeternity/aepp-components-3/src/styles/variables/typography";
+/**
+ * Local Imports
+ */
+@import "rules";
+@import "typography";
+
+.filter {
+  display: flex;
+  flex-direction: column;
+  padding: 0.6rem 0.6rem 0 0;
+  border-radius: 0.4rem;
+  margin-bottom: 1rem;
+
+  @media(min-width: 360px) {
+    width: 80%;
+  }
+
+  @media(min-width: 768px) {
+    width: 40%;
+  }
+
+  .multiselect__option--highlight {
+    background: #14CCB7;
+  }
+
+  .multiselect__option--highlight:after {
+    background: #14CCB7;
+  }
+
+  .multiselect__option--selected.multiselect__option--highlight {
+    background: #FF0D6A;
+  }
+
+  .multiselect__option--selected.multiselect__option--highlight:after {
+    background: #FF0D6A;
+  }
+
+  .multiselect__spinner:after,
+  .multiselect__spinner:before {
+    border-top-color: #FF0D6A;
+  }
+}
+
+$themeColor: #ff0a6a;
+$bgColor: #ffa8ca;
+@import '~vue-slider-component/lib/theme/material.scss';

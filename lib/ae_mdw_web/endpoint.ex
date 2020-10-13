@@ -12,11 +12,19 @@ defmodule AeMdwWeb.Endpoint do
 
   # You should set gzip to true if you are running phx.digest
   # when deploying your static files in production.
+
   plug Plug.Static,
-    at: "/",
-    from: :ae_mdw,
+    at: "/frontend/",
+    from: {:ae_mdw, "priv/static/frontend"},
     gzip: false,
-    only: ~w(css fonts images js favicon.ico robots.txt)
+    only:
+      ~w(index.html 200.html favicon.ico robots.txt channels faucet generations names oracles transactions auctions contracts _nuxt)
+
+  plug Plug.Static,
+    at: "/swagger",
+    from: {:ae_mdw, "priv/static"},
+    gzip: false,
+    only: ~w(swagger.json)
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
