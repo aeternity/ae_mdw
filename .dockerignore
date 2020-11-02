@@ -29,3 +29,24 @@ npm-debug.log
 .elixir_ls/
 log/
 
+/priv/
+
+# MDW's produced blockchain database should be ignored
+/mnesia/
+
+# Ignore unrelated docker-build files from frontend part
+/frontend/Dockerfile
+/frontend/Makefile
+/frontend/node_modules/
+/frontend/.nuxt/
+/frontend/package-lock.json
+/frontend/.postcssrc.js
+/frontend/.travis.yml
+/frontend/.editorconfig
+/frontend/.eslintrc.js
+/frontend/.prettierrc
+/frontend/babel.config.js
+/frontend/CHANGELOG.md
+/frontend/.gitignore
+/frontend/deploy.esc
+/frontend/README.md

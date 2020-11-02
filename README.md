@@ -94,14 +94,36 @@ The NODEROOT directory should contain directories: `bin`, `lib`, `plugins`, `rel
 
 ## Start
 
-  * Install dependencies with `mix deps.get`
+#### Start middleware (excluding frontend)
+
+  * Install dependencies with `make compile-backend`
   * Start middleware with `make shell`
+
+The project will compile only backend-related files and start the middleware without frontend.
+
+#### Start middleware (including frontend)
+
+ * Install dependencies with `make compile`
+ * Start middleware with `make shell`
+
+The project will compile both backend and frontend files.
+Frontend should be available at `http://localhost:4000/frontend/`
 
 ## Build and start with Docker
 As the project comes with `Dockerfile` and `docker-compose.yml`, it is possible to build and run it by using Docker:
 
   * To build docker image, execute in root folder of the project: `docker-compose build`
-  * Start middleware image interactively with `docker-compose run --service-ports middleware sh`
+  * Then, start middleware container `docker-compose up`
+
+
+## Docker Configuration
+By default, the `aeternity.yaml` config file which is used for `aeternity` node, is located under `docker/` folder. However, it is also possible to use your own defined `aeternity.yaml` file, by simply replacing the existing one. This file will be copied into container and will be used as a node configuration file. More information regarding configration could be found [here](https://docs.aeternity.io/en/stable/configuration/)
+
+**NOTE:** Currently, only `ae_uat` and `ae_mainnet` network ids are supported!
+
+It is also possible that middleware will produce blockchain database (if `aeternity.yaml` is configured to persist the blockchain database), which is located under `mnesia/` folder. This folder could also be replaced with existing database snapshot.
+
+**NOTE:** `db_path` option under `chain` configuration, **should not** be configured and must be left by default.
 
 ## HTTP endpoints
 

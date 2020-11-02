@@ -27,7 +27,7 @@
     "clipboard-copy": "3.0.0",
     "normalize-scss": "7.0.1",
     "nuxt": "2.9.2",
-    "vue": "2.6.10",
+    "vue": "2.6.12",
     "vue-multiselect": "2.1.6",
     "vue-slider-component": "3.0.41",
     "webpack": "^4.44.1",

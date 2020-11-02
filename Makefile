@@ -28,7 +28,7 @@ compile-backend: ## Compile backend only
 
 .PHONY: compile-frontend
 compile-frontend: ## Compile frontend only
-	cd frontend/ && npm run generate
+	cd frontend/ && npm install && npm run generate
 
 .PHONY: clean
 clean: ## Clean all artifacts
