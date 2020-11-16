@@ -3,6 +3,7 @@ defmodule AeMdw.Db.Format do
   alias :aeser_api_encoder, as: Enc
 
   alias AeMdw.Db.{Model, Name}
+  alias AeMdw.Validate
 
   require Model
 
@@ -49,11 +50,13 @@ defmodule AeMdw.Db.Format do
     do: auction_bid(bid, & &1, &to_raw_map/1, & &1)
 
   def to_raw_map(m_name, source) when elem(m_name, 0) == :name do
+    plain = Model.name(m_name, :index)
     succ = &Model.name(&1, :previous)
     prev = chase(succ.(m_name), succ)
 
     %{
-      name: Model.name(m_name, :index),
+      name: plain,
+      hash: {:id, :name, Validate.name_id!(plain)},
       status: :name,
       active: source == Model.ActiveName,
       info: name_info_to_raw_map(m_name),
@@ -312,6 +315,7 @@ defmodule AeMdw.Db.Format do
   defp auction_bid({plain, {_, _}, auction_end, _, [{_, txi} | _] = bids}, key, tx_fmt, info_fmt),
     do: %{
       key.(:name) => plain,
+      key.(:hash) => info_fmt.({:id, :name, Validate.name_id!(plain)}),
       key.(:status) => :auction,
       key.(:active) => false,
       key.(:info) => %{
