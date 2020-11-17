@@ -36,6 +36,123 @@ defmodule AeMdw.Contract do
     end
   end
 
+  ##########
+
+  # entrypoint aex9_extensions : ()             => list(string)
+  # entrypoint meta_info       : ()             => meta_info
+  # entrypoint total_supply    : ()             => int
+  # entrypoint owner           : ()             => address
+  # entrypoint balances        : ()             => map(address, int)
+  # entrypoint balance         : (address)      => option(int)
+  # entrypoint transfer        : (address, int) => unit
+
+  def aex9_signatures() do
+    %{"aex9_extensions" => {[], {:list, :string}},
+      "meta_info" => {[], {:tuple, [:string, :string, :integer]}},
+      "total_supply" => {[], :integer},
+      "owner" => {[], :address},
+      "balances" => {[], {:map, :address, :integer}},
+      "balance" => {[:address], {:variant, [tuple: [], tuple: [:integer]]}},
+      "transfer" => {[:address, :integer], {:tuple, []}}}
+  end
+
+  def is_aex9?(pubkey) when is_binary(pubkey),
+    do: is_aex9?(get_info(pubkey))
+
+  def is_aex9?({:fcode, functions, _hash_names, _}) do
+    Enum.all?(AeMdw.Node.aex9_signatures(),
+      fn {hash, type} ->
+        case Map.get(functions, hash) do
+          {_, ^type, _body} -> true
+          _ -> false
+        end
+      end)
+  end
+
+  def is_aex9?(_), # AEVM
+    do: false
+
+  def top_height_hash() do
+    top_key_block = :aec_chain.top_key_block() |> ok!
+    top_key_header = :aec_blocks.to_key_header(top_key_block)
+    {:aec_headers.height(top_key_header),
+     ok!(:aec_headers.hash_header(top_key_header))}
+  end
+
+  def aex9_meta_info(contract_pubkey),
+    do: aex9_meta_info(contract_pubkey, top_height_hash())
+
+  def aex9_meta_info(contract_pubkey, {height, hash}) do
+    {:ok, {:tuple, {name, symbol, decimals}}} =
+      call_contract(contract_pubkey, {height, hash}, "meta_info", [])
+    {name, symbol, decimals}
+  end
+
+
+  def call_contract(contract_pubkey, function_name, args) do
+    top_key_block = :aec_chain.top_key_block() |> ok!
+    top_key_header = :aec_blocks.to_key_header(top_key_block)
+    top_height = :aec_headers.height(top_key_header)
+    top_hash = :aec_headers.hash_header(top_key_header) |> ok!
+    call_contract(contract_pubkey, {top_height, top_hash}, function_name, args)
+  end
+
+  def call_contract(contract_pubkey, {key_height, key_hash}, function_name, args) do
+    {tx_env, trees} = :aetx_env.tx_env_and_trees_from_hash(:aetx_contract, key_hash)
+    contracts = :aec_trees.contracts(trees)
+    contract = :aect_state_tree.get_contract(contract_pubkey, contracts)
+
+    version = :aect_contracts.ct_version(contract)
+    creator = :aect_contracts.owner_pubkey(contract)
+    store = :aect_contracts.state(contract)
+
+    caller_pubkey = <<0 :: 256>>
+    origin = <<0 :: 256>>
+    gas_limit = 1_000_000
+    gas_price = 0
+    amount = 0
+    call_stack = []
+
+    caller_id = :aeser_id.create(:account, caller_pubkey)
+    contract_id = :aect_contracts.id(contract)
+
+    call = :aect_call.new(caller_id, 0, contract_id, key_height, gas_price)
+    code = :aect_contracts.code(contract)
+    call_data = :aeb_fate_abi.create_calldata('#{function_name}', args) |> ok!
+
+    call_def = %{
+      caller: caller_pubkey,
+      contract: contract_pubkey,
+      gas: gas_limit,
+      gas_price: gas_price,
+      call_data: call_data,
+      amount: amount,
+      call_stack: call_stack,
+      code: code,
+      store: store,
+      call: call,
+      trees: trees,
+      tx_env: tx_env,
+      off_chain: false,
+      origin: origin,
+      creator: creator
+    }
+
+    {call_res, _trees, _env} = :aect_dispatch.run(version, call_def)
+    case :aect_call.return_type(call_res) do
+      :ok ->
+        res_binary = :aect_call.return_value(call_res)
+        {:ok, :aeb_fate_encoding.deserialize(res_binary)}
+      other ->
+        other
+    end
+  end
+
+  def function_hash(name),
+    do: :binary.part(:aec_hash.blake2b_256_hash(name), 0, 4)
+
+  ##########
+
   def decode_call_data(contract, call_data),
     do: decode_call_data(contract, call_data, &id/1)
 
@@ -140,6 +257,8 @@ defmodule AeMdw.Contract do
          end)}
       )
 
+  # this can't be imported, because Elixir complains with:
+  # module :aeser_api_encoder is not loaded and could not be found
   defp encode(type, val),
     do: :aeser_api_encoder.encode(type, val)
 

@@ -115,10 +115,15 @@ defmodule AeMdw.Db.Sync.Transaction do
     txi + 1
   end
 
-  def write_links(:contract_create_tx, tx, _signed_tx, txi, tx_hash, _bi) do
+  def write_links(:contract_create_tx, tx, _signed_tx, txi, tx_hash, bi) do
     pk = :aect_contracts.pubkey(:aect_contracts.new(tx))
     write_origin(:contract_create_tx, pk, txi, tx_hash)
+    Sync.Contract.create(pk, txi)
   end
+
+  # def write_links(:contract_call_tx, tx, _signed_tx, txi, tx_hash, _bi) do
+  #   # Sync.Contract.call(pk, tx, txi)
+  # end
 
   def write_links(:channel_create_tx, _tx, signed_tx, txi, tx_hash, _bi) do
     {:ok, pk} = :aesc_utils.channel_pubkey(signed_tx)

@@ -92,6 +92,11 @@ defmodule AeMdwWeb.Router do
     get "/oracles", OracleController, :oracles
     get "/oracles/gen/:range", OracleController, :oracles
 
+
+    get "/aex9/by_name", Aex9Controller, :by_names
+    get "/aex9/by_symbol", Aex9Controller, :by_symbols
+
+
     get "/status", UtilController, :status
 
     match :*, "/*path", UtilController, :no_route

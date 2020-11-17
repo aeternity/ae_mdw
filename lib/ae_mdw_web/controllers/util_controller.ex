@@ -43,12 +43,16 @@ defmodule AeMdwWeb.UtilController do
   def status(conn, _params) do
     {:ok, top_kb} = :aec_chain.top_key_block()
     {_, _, node_vsn} = Application.started_applications() |> List.keyfind(:aecore, 0)
+    # node_progress = :aec_sync.sync_progress()
     node_height = :aec_blocks.height(top_kb)
     mdw_height = AeMdw.Db.Util.last_gen()
+
 
     status = %{
       node_version: to_string(node_vsn),
       node_height: node_height,
+      # node_sync_progress: node_progress,
+      # node_synded: :aec_sync.is_syncing() == false && node_progress === 100.0,
       mdw_version: AeMdw.MixProject.project()[:version],
       mdw_height: mdw_height,
       mdw_tx_index: AeMdw.Db.Util.last_txi(),

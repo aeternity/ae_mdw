@@ -2,6 +2,7 @@ defmodule AeMdw.Application do
   alias AeMdw.Db.Model
   alias AeMdw.EtsCache
   alias AeMdw.Extract
+  alias AeMdw.Contract
 
   use Application
 
@@ -11,11 +12,12 @@ defmodule AeMdw.Application do
     :lager.set_loglevel(:epoch_sync_lager_event, :lager_console_backend, :undefined, :error)
     :lager.set_loglevel(:lager_console_backend, :error)
 
-    init(:aehttp)
     init(:model_records)
     init(:node_records)
     init(:meta)
     init(:contract_cache)
+    init(:aehttp)
+    # init(:aesophia)
 
     children = [
       AeMdw.Db.Sync.Supervisor,
@@ -28,6 +30,12 @@ defmodule AeMdw.Application do
 
   def init(:aehttp),
     do: :application.ensure_all_started(:aehttp)
+
+  # def init(:aesophia) do
+  #   Path.join(Application.app_dir(:aesophia), "ebin/*.beam")
+  #   |> Path.wildcard
+  #   |> Enum.map(&:code.load_abs(to_charlist(Path.rootname(&1))))
+  # end
 
   def init(:model_records),
     do: Enum.each(Model.records(), &SmartRecord.new(Model, &1, Model.defaults(&1)))
@@ -120,6 +128,11 @@ defmodule AeMdw.Application do
       |> Enum.into(%{})
     end
 
+    aex9_sigs =
+      AeMdw.Contract.aex9_signatures()
+      |> Enum.map(fn {k, v} -> {Contract.function_hash(k), v} end)
+      |> Enum.into(%{})
+
     SmartGlobal.new(
       AeMdw.Node,
       %{
@@ -147,17 +160,16 @@ defmodule AeMdw.Application do
         aens_tree_pos: field_pos_map.(aens_state_tree_code, :ns_tree),
         aeo_tree_pos: field_pos_map.(aeo_state_tree_code, :oracle_tree),
         lima_vsn: [{[], lima_vsn}],
-        lima_height: [{[], lima_height}]
+        lima_height: [{[], lima_height}],
+        aex9_signatures: [{[], aex9_sigs}]
       }
     )
   end
 
-  def init(:contract_cache),
-    do:
-      EtsCache.new(
-        AeMdw.Contract.table(),
-        Application.fetch_env!(:ae_mdw, :contract_cache_expiration_minutes)
-      )
+  def init(:contract_cache) do
+    cache_exp = Application.fetch_env!(:ae_mdw, :contract_cache_expiration_minutes)
+    EtsCache.new(AeMdw.Contract.table(), cache_exp)
+  end
 
   def record_keys(mod_code, rec_name) do
     {:ok, rec_code} = Extract.AbsCode.record_fields(mod_code, rec_name)

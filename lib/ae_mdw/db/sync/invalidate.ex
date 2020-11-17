@@ -19,6 +19,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
         Log.info("invalidating from tx #{from_txi} at generation #{prev_kbi}")
         bi_keys = block_keys_range({fork_height - 1, 0})
         {tx_keys, id_counts} = tx_keys_range(from_txi)
+        {aex9_keys, aex9_sym_keys, aex9_rev_keys} = aex9_keys_range(from_txi)
         tab_keys = Map.merge(bi_keys, tx_keys)
 
         :mnesia.transaction(fn ->
@@ -28,6 +29,10 @@ defmodule AeMdw.Db.Sync.Invalidate do
           do_dels(tab_keys)
           do_dels(name_dels, &AeMdw.Db.Name.cache_through_delete/2)
           do_dels(oracle_dels, &AeMdw.Db.Oracle.cache_through_delete/2)
+
+          do_dels(%{Model.Aex9Contract => aex9_keys,
+                    Model.Aex9ContractSymbol => aex9_sym_keys,
+                    Model.RevAex9Contract => aex9_rev_keys})
 
           do_writes(name_writes, &AeMdw.Db.Name.cache_through_write/2)
           do_writes(oracle_writes, &AeMdw.Db.Oracle.cache_through_write/2)
@@ -165,6 +170,24 @@ defmodule AeMdw.Db.Sync.Invalidate do
           {txi, _, _}, acc when txi > to_txi ->
             {:halt, acc}
         end)
+    end
+  end
+
+  def aex9_keys_range(from_txi) do
+    case :mnesia.dirty_next(Model.RevAex9Contract, {from_txi, nil, nil, nil}) do
+      :"$end_of_table" ->
+        {[], []}
+
+      start_key ->
+        push_key = fn {txi, name, symbol, decimals}, {contracts, symbols, rev_contracts} ->
+          {[{name, symbol, txi, decimals} | contracts],
+           [{symbol, name, txi, decimals} | symbols],
+           [{txi, name, symbol, decimals} | rev_contracts]}
+        end
+
+        collect_keys(Model.RevAex9Contract,
+          push_key.(start_key, {[], [], []}), start_key, &next/2,
+          fn key, acc -> {:cont, push_key.(key, acc)} end)
     end
   end
 

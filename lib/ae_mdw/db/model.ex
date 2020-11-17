@@ -128,10 +128,34 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :oracle, @oracle_defaults
 
+  # AEX9 contract:
+  #     index: {name, symbol, txi, decimals}
+  @aex9_contract_defaults [
+    index: {nil, nil, nil, nil},
+    unused: nil
+  ]
+  defrecord :aex9_contract, @aex9_contract_defaults
+
+  # AEX9 contract symbol:
+  #     index: {symbol, name, txi, decimals}
+  @aex9_contract_symbol_defaults [
+    index: {nil, nil, nil, nil},
+    unused: nil
+  ]
+  defrecord :aex9_contract_symbol, @aex9_contract_symbol_defaults
+
+  # rev AEX9 contract:
+  #     index: {txi, name, symbol, decimals}
+  @rev_aex9_contract_defaults [
+    index: {nil, nil, nil, nil},
+    unused: nil
+  ]
+  defrecord :rev_aex9_contract, @rev_aex9_contract_defaults
+
   ################################################################################
 
   def tables(),
-    do: Enum.concat([chain_tables(), name_tables(), oracle_tables()])
+    do: Enum.concat([chain_tables(), name_tables(), contract_tables(), oracle_tables()])
 
   def chain_tables() do
     [
@@ -143,6 +167,14 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.IdCount,
       AeMdw.Db.Model.Origin,
       AeMdw.Db.Model.RevOrigin
+    ]
+  end
+
+  def contract_tables() do
+    [
+      AeMdw.Db.Model.Aex9Contract,
+      AeMdw.Db.Model.Aex9ContractSymbol,
+      AeMdw.Db.Model.RevAex9Contract
     ]
   end
 
@@ -180,6 +212,9 @@ defmodule AeMdw.Db.Model do
       :id_count,
       :origin,
       :rev_origin,
+      :aex9_contract,
+      :aex9_contract_symbol,
+      :rev_aex9_contract,
       :plain_name,
       :auction_bid,
       :expiration,
@@ -200,6 +235,9 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.IdCount), do: :id_count
   def record(AeMdw.Db.Model.Origin), do: :origin
   def record(AeMdw.Db.Model.RevOrigin), do: :rev_origin
+  def record(AeMdw.Db.Model.Aex9Contract), do: :aex9_contract
+  def record(AeMdw.Db.Model.Aex9ContractSymbol), do: :aex9_contract_symbol
+  def record(AeMdw.Db.Model.RevAex9Contract), do: :rev_aex9_contract
   def record(AeMdw.Db.Model.PlainName), do: :plain_name
   def record(AeMdw.Db.Model.AuctionBid), do: :auction_bid
   def record(AeMdw.Db.Model.Pointee), do: :pointee
@@ -223,6 +261,9 @@ defmodule AeMdw.Db.Model do
   def table(:id_count), do: AeMdw.Db.Model.IdCount
   def table(:origin), do: AeMdw.Db.Model.Origin
   def table(:rev_origin), do: AeMdw.Db.Model.RevOrigin
+  def table(:aex9_contract), do: AeMdw.Db.Model.Aex9Contract
+  def table(:aex9_contract_symbol), do: AeMdw.Db.Model.Aex9ContractSymbol
+  def table(:rev_aex9_contract), do: AeMdw.Db.Model.RevAex9Contract
 
   def defaults(:tx), do: @tx_defaults
   def defaults(:block), do: @block_defaults
@@ -232,6 +273,9 @@ defmodule AeMdw.Db.Model do
   def defaults(:id_count), do: @id_count_defaults
   def defaults(:origin), do: @origin_defaults
   def defaults(:rev_origin), do: @rev_origin_defaults
+  def defaults(:aex9_contract), do: @aex9_contract_defaults
+  def defaults(:aex9_contract_symbol), do: @aex9_contract_symbol_defaults
+  def defaults(:rev_aex9_contract), do: @rev_aex9_contract_defaults
   def defaults(:plain_name), do: @plain_name_defaults
   def defaults(:auction_bid), do: @auction_bid_defaults
   def defaults(:pointee), do: @pointee_defaults
