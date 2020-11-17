@@ -33,6 +33,7 @@ defmodule AeMdw.MixProject do
   defp deps do
     [
       {:ae_plugin, github: "aeternity/ae_plugin"},
+      # {:aesophia, path: "deps/aesophia", app: false},
       {:stream_split, "~> 0.1.5"},
       {:ex2ms, "~> 1.6.0"},
       {:logger_file_backend, "~> 0.0.11"},
