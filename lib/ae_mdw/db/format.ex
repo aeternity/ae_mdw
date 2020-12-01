@@ -90,6 +90,22 @@ defmodule AeMdw.Db.Format do
     }
   end
 
+  def to_raw_map({name, symbol, txi, decimals}, Model.Aex9Contract) do
+    %{
+      name: name,
+      symbol: symbol,
+      decimals: decimals,
+      contract_txi: txi,
+      contract_id: :aeser_id.create(:contract, AeMdw.Db.Origin.pubkey({:contract, txi}))
+    }
+  end
+
+  def to_raw_map({symbol, name, txi, decimals}, Model.Aex9ContractSymbol),
+    do: to_raw_map({name, symbol, txi, decimals}, Model.Aex9Contract)
+
+  def to_raw_map({txi, name, symbol, decimals}, Model.RevAex9Contract),
+    do: to_raw_map({name, symbol, txi, decimals}, Model.Aex9Contract)
+
   def to_raw_map(ae_tx, tx_type) do
     AeMdw.Node.tx_fields(tx_type)
     |> Stream.with_index(1)
@@ -195,6 +211,10 @@ defmodule AeMdw.Db.Format do
         {:id, :oracle, pk} -> Enc.encode(:oracle_pubkey, pk)
         x -> to_json(x)
       end)
+
+  def to_map({_, _, _, _} = aex9_data, source)
+      when source in [Model.Aex9Contract, Model.Aex9ContractSymbol, Model.RevAex9Contract],
+      do: raw_to_json(to_raw_map(aex9_data, source))
 
   def to_map(data, source, false = _expand),
     do: to_map(data, source)

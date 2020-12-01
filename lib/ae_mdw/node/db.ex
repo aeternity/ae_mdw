@@ -4,6 +4,9 @@ defmodule AeMdw.Node.Db do
 
   # we require that block index is in place
   import AeMdw.Db.Util, only: [read_block!: 1]
+  import AeMdw.Util
+
+  ##########
 
   def get_blocks(height) when is_integer(height) do
     kb_hash = Model.block(read_block!({height, -1}), :hash)
@@ -44,6 +47,39 @@ defmodule AeMdw.Node.Db do
   def get_signed_tx(<<_::256>> = tx_hash) do
     {_, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
     signed_tx
+  end
+
+  def top_height_hash() do
+    top_key_block = :aec_chain.top_key_block() |> ok!
+    top_key_header = :aec_blocks.to_key_header(top_key_block)
+    {:aec_headers.height(top_key_header), ok!(:aec_headers.hash_header(top_key_header))}
+  end
+
+  def height_hash!(bi) do
+    m_block = read_block!(bi)
+    {height, _} = Model.block(m_block, :index)
+    {height, Model.block(m_block, :hash)}
+  end
+
+  def aex9_balance(contract_pk, account_pk),
+    do: aex9_balance(contract_pk, account_pk, top_height_hash())
+
+  def aex9_balance(contract_pk, account_pk, {height, hash}) do
+    case AeMdw.Contract.call_contract(contract_pk, {height, hash}, "balance", [
+           {:address, account_pk}
+         ]) do
+      {:ok, {:variant, [0, 1], 1, {amt}}} -> {amt, {height, hash}}
+      {:ok, {:variant, [0, 1], 0, {}}} -> {nil, {height, hash}}
+    end
+  end
+
+  def aex9_balances(contract_pk),
+    do: aex9_balances(contract_pk, top_height_hash())
+
+  def aex9_balances(contract_pk, {height, hash}) do
+    {:ok, addr_map} = AeMdw.Contract.call_contract(contract_pk, {height, hash}, "balances", [])
+    # %{{:address, acc_pk} => balance}
+    {addr_map, {height, hash}}
   end
 
   # NOTE: only needed for manual patching of the DB in case of missing blocks

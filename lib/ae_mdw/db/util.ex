@@ -26,6 +26,12 @@ defmodule AeMdw.Db.Util do
   def read_block!(bi),
     do: read_block(bi) |> one!
 
+  def next_bi!({_kbi, _mbi} = bi),
+    do: {_, _} = next(Model.Block, bi)
+
+  def next_bi!(kbi) when is_integer(kbi),
+    do: next_bi!({kbi, -1})
+
   def first_txi(),
     do: ensure_key!(~t[tx], :first)
 

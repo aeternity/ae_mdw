@@ -36,6 +36,147 @@ defmodule AeMdw.Contract do
     end
   end
 
+  ##########
+
+  # entrypoint aex9_extensions : ()             => list(string)
+  # entrypoint meta_info       : ()             => meta_info
+  # entrypoint total_supply    : ()             => int
+  # entrypoint owner           : ()             => address
+  # entrypoint balances        : ()             => map(address, int)
+  # entrypoint balance         : (address)      => option(int)
+  # entrypoint transfer        : (address, int) => unit
+
+  def aex9_signatures() do
+    %{
+      "aex9_extensions" => {[], {:list, :string}},
+      "meta_info" => {[], {:tuple, [:string, :string, :integer]}},
+      "total_supply" => {[], :integer},
+      "owner" => {[], :address},
+      "balances" => {[], {:map, :address, :integer}},
+      "balance" => {[:address], {:variant, [tuple: [], tuple: [:integer]]}},
+      "transfer" => {[:address, :integer], {:tuple, []}}
+    }
+  end
+
+  def is_aex9?(pubkey) when is_binary(pubkey),
+    do: is_aex9?(get_info(pubkey))
+
+  def is_aex9?({:fcode, functions, _hash_names, _}) do
+    Enum.all?(
+      AeMdw.Node.aex9_signatures(),
+      fn {hash, type} ->
+        case Map.get(functions, hash) do
+          {_, ^type, _body} -> true
+          _ -> false
+        end
+      end
+    )
+  end
+
+  # AEVM
+  def is_aex9?(_),
+    do: false
+
+  # value of :aec_hash.blake2b_256_hash("Transfer")
+  def aex9_transfer_event_hash(),
+    do:
+      <<34, 60, 57, 226, 157, 255, 100, 103, 254, 221, 160, 151, 88, 217, 23, 129, 197, 55, 46, 9,
+        31, 248, 107, 58, 249, 227, 16, 227, 134, 86, 43, 239>>
+
+  def aex9_meta_info(contract_pk),
+    do: aex9_meta_info(contract_pk, AeMdw.Node.Db.top_height_hash())
+
+  def aex9_meta_info(contract_pk, {height, hash}) do
+    {:ok, {:tuple, {name, symbol, decimals}}} =
+      call_contract(contract_pk, {height, hash}, "meta_info", [])
+
+    {name, symbol, decimals}
+  end
+
+  # def aex9_balances(contract_pk),
+  #   do: aex9_balances(contract_pk, top_height_hash())
+
+  # def aex9_balances(contract_pk, {height, hash}) do
+  #   {:ok, balances} = call_contract(contract_pk, {height, hash}, "balances", [])
+  #   balances
+  # end
+
+  # def aex9_balance(contract_pk, account_pk),
+  #   do: aex9_balance(contract_pk, top_height_hash(), account_pk)
+
+  # def aex9_balance(contract_pk, {height, hash}, account_pk) do
+  #   case call_contract(contract_pk, {height, hash}, "balance", [{:address, account_pk}]) do
+  #     {:ok, {:variant, [0, 1], 1, {amt}}} ->
+  #       amt
+  #     {:ok, {:variant, [0, 1], 0, {}}} ->
+  #       nil
+  #   end
+  # end
+
+  def call_contract(contract_pubkey, function_name, args),
+    do: call_contract(contract_pubkey, AeMdw.Node.Db.top_height_hash(), function_name, args)
+
+  def call_contract(contract_pubkey, {key_height, key_hash}, function_name, args) do
+    {tx_env, trees} = :aetx_env.tx_env_and_trees_from_hash(:aetx_contract, key_hash)
+    contracts = :aec_trees.contracts(trees)
+    contract = :aect_state_tree.get_contract(contract_pubkey, contracts)
+
+    version = :aect_contracts.ct_version(contract)
+    creator = :aect_contracts.owner_pubkey(contract)
+    store = :aect_contracts.state(contract)
+
+    caller_pubkey = <<0::256>>
+    origin = <<0::256>>
+    gas_limit = 1_000_000
+    gas_price = 0
+    amount = 0
+    call_stack = []
+
+    caller_id = :aeser_id.create(:account, caller_pubkey)
+    contract_id = :aect_contracts.id(contract)
+
+    call = :aect_call.new(caller_id, 0, contract_id, key_height, gas_price)
+    code = :aect_contracts.code(contract)
+    call_data = :aeb_fate_abi.create_calldata('#{function_name}', args) |> ok!
+
+    call_def = %{
+      caller: caller_pubkey,
+      contract: contract_pubkey,
+      gas: gas_limit,
+      gas_price: gas_price,
+      call_data: call_data,
+      amount: amount,
+      call_stack: call_stack,
+      code: code,
+      store: store,
+      call: call,
+      trees: trees,
+      tx_env: tx_env,
+      off_chain: false,
+      origin: origin,
+      creator: creator
+    }
+
+    {call_res, _trees, _env} = :aect_dispatch.run(version, call_def)
+
+    case :aect_call.return_type(call_res) do
+      :ok ->
+        res_binary = :aect_call.return_value(call_res)
+        {:ok, :aeb_fate_encoding.deserialize(res_binary)}
+
+      :error ->
+        {:error, :aect_call.return_value(call_res)}
+
+      :revert ->
+        :revert
+    end
+  end
+
+  def function_hash(name),
+    do: :binary.part(:aec_hash.blake2b_256_hash(name), 0, 4)
+
+  ##########
+
   def decode_call_data(contract, call_data),
     do: decode_call_data(contract, call_data, &id/1)
 
@@ -140,6 +281,8 @@ defmodule AeMdw.Contract do
          end)}
       )
 
+  # this can't be imported, because Elixir complains with:
+  # module :aeser_api_encoder is not loaded and could not be found
   defp encode(type, val),
     do: :aeser_api_encoder.encode(type, val)
 

@@ -8,7 +8,10 @@
     - [Prerequisites](#prerequisites)
     - [Setup](#setup)
     - [Start](#start)
+        - [-](#-)
+        - [Start middleware (including frontend)](#start-middleware-including-frontend)
     - [Build and start with Docker](#build-and-start-with-docker)
+    - [Docker Configuration](#docker-configuration)
     - [HTTP endpoints](#http-endpoints)
     - [Transaction querying](#transaction-querying)
         - [Scope](#scope)
@@ -63,6 +66,9 @@
             - [All oracles](#all-oracles)
             - [Inactive oracles](#inactive-oracles)
             - [Active oracles](#active-oracles)
+    - [Listing AEX9 Tokens](#listing-aex9-tokens)
+        - [Listing AEX9 Tokens by name](#listing-aex9-tokens-by-name)
+        - [Listing AEX9 Tokens by Symbol](#listing-aex9-tokens-by-symbol)
     - [Websocket interface](#websocket-interface)
         - [Message format:](#message-format)
         - [Supported operations:](#supported-operations)
@@ -2729,6 +2735,169 @@ $ curl -s "http://localhost:4000/oracles/active?limit=1&expand" | jq '.'
   ],
   "next": "oracles/active/gen/315799-0?expand=&limit=1&page=2"
 }
+```
+
+## Listing AEX9 Tokens
+
+There are 2 endpoints for listing tokens as defined by AEX9 (https://github.com/aeternity/AEXs/blob/master/AEXS/aex-9.md)
+
+- /aex9/by_name - for listing tokens sorted by name
+- /aex9/by_symbol - for listing tokens sorted by symbol
+
+These endpoints support 2 optional parameters:
+
+- prefix - for listing only tokens with name or symbol matching the provided prefix (defalut: "")
+- all - for listing all contract creations for a token, not just the last one (default: false)
+
+### Listing AEX9 Tokens by name
+
+```
+$ curl -s "http://localhost:4000/aex9/by_name" | jq '.'
+[
+  {
+    "decimals": 18,
+    "name": "911058",
+    "symbol": "SPH",
+    "txi": 12361891
+  },
+  {
+    "decimals": 18,
+    "name": "AAA",
+    "symbol": "AAA",
+    "txi": 15672306
+  },
+  {
+    "decimals": 18,
+    "name": "AAA name",
+    "symbol": "AAA",
+    "txi": 12287008
+  },
+  {
+    "decimals": 18,
+    "name": "ABB",
+    "symbol": "ABB",
+    "txi": 12287175
+  },
+  {
+    "decimals": 18,
+    "name": "ABC",
+    "symbol": "ABC",
+    "txi": 17742955
+  },
+  {
+    "decimals": 18,
+    "name": "ABC Test token",
+    "symbol": "ABC",
+    "txi": 12287522
+  },
+  {
+    "decimals": 18,
+    "name": "AE Genesis",
+    "symbol": "AEG",
+    "txi": 5476384
+  },
+  ...
+```
+
+Or, listing tokens with prefix = "ae", along with all contract create transaction ids:
+
+```
+$ curl -s "http://localhost:4000/aex9/by_name?prefix=ae&all" | jq '.'
+[
+  {
+    "decimals": 18,
+    "name": "ae",
+    "symbol": "ae",
+    "txi": 9434572
+  },
+  {
+    "decimals": 18,
+    "name": "ae",
+    "symbol": "ae",
+    "txi": 9434926
+  },
+  {
+    "decimals": 18,
+    "name": "ae",
+    "symbol": "ae",
+    "txi": 9438753
+  },
+  {
+    "decimals": 18,
+    "name": "aea",
+    "symbol": "aea",
+    "txi": 9434498
+  },
+  {
+    "decimals": 18,
+    "name": "aeaeb",
+    "symbol": "aeaeb",
+    "txi": 9770669
+  },
+  {
+    "decimals": 18,
+    "name": "aeb",
+    "symbol": "aeb",
+    "txi": 9770640
+  },
+  {
+    "decimals": 18,
+    "name": "aeb",
+    "symbol": "aeb",
+    "txi": 9771055
+  },
+  {
+    "decimals": 18,
+    "name": "aeblievers",
+    "symbol": "AEB",
+    "txi": 12407023
+  },
+  {
+    "decimals": 18,
+    "name": "aeblievers",
+    "symbol": "AEB",
+    "txi": 12407153
+  }
+]
+```
+
+### Listing AEX9 Tokens by Symbol
+
+Example with prefix:
+```
+$ curl -s "http://localhost:4000/aex9/by_symbol?prefix=T" | jq '.'
+[
+  {
+    "decimals": 10,
+    "name": "TestAA",
+    "symbol": "TAA",
+    "txi": 11146033
+  },
+  {
+    "decimals": 18,
+    "name": "TEST",
+    "symbol": "TEST",
+    "txi": 10491401
+  },
+  {
+    "decimals": 18,
+    "name": "Test Network",
+    "symbol": "TNT",
+    "txi": 8537557
+  },
+  {
+    "decimals": 18,
+    "name": "testnetAE",
+    "symbol": "TTAE",
+    "txi": 11145713
+  },
+  {
+    "decimals": 3,
+    "name": "Taelk",
+    "symbol": "Te",
+    "txi": 11108743
+  }
+]
 ```
 
 

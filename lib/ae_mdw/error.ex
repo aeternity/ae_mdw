@@ -13,6 +13,7 @@ defmodule AeMdw.Error do
   def to_string(Err.Query, x), do: concat("invalid query", x)
   def to_string(Err.NotFound, x), do: concat("not found", x)
   def to_string(Err.Expired, x), do: concat("expired", x)
+  def to_string(Err.NotAex9, x), do: concat("not AEX9 contract", x)
 
   defmodule Input do
     require AeMdw.Exception
@@ -30,5 +31,6 @@ defmodule AeMdw.Error do
     defexception!(Query)
     defexception!(NotFound)
     defexception!(Expired)
+    defexception!(NotAex9)
   end
 end
