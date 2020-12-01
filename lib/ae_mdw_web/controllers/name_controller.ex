@@ -386,6 +386,7 @@ defmodule AeMdwWeb.NameController do
 
           properties do
             active(:boolean, "The active status", required: true)
+            hash(:string, "The hash of the name", required: true)
             info(Schema.ref(:Info), "The info", required: true)
             name(:string, "The name", required: true)
             previous(Schema.array(:Info), "The previous owners", required: true)
@@ -394,6 +395,7 @@ defmodule AeMdwWeb.NameController do
 
           example(%{
             active: true,
+            hash: "nm_S4ofw6861biSJrXgHuJPo7VotLbrY8P9ngTLvgrRwbDEA3svc",
             info: %{
               active_from: 307_967,
               auction_timeout: nil,
@@ -452,6 +454,7 @@ defmodule AeMdwWeb.NameController do
 
           properties do
             active(:boolean, "The name auction status", required: true)
+            hash(:string, "The hash of the name", required: true)
             info(Schema.ref(:InfoAuctions), "The info", required: true)
             name(:string, "The name", required: true)
             previous(Schema.array(:Info), "The previous owners", required: true)
@@ -460,6 +463,7 @@ defmodule AeMdwWeb.NameController do
 
           example(%{
             active: false,
+            hash: "nm_26sSGSJdjgNW72dGyctY3PPeFuYtAXd8ySEJTpPK5r5fv2i3sW",
             info: %{
               auction_end: 337_254,
               bids: [
@@ -527,6 +531,7 @@ defmodule AeMdwWeb.NameController do
             data: [
               %{
                 active: true,
+                hash: "nm_2YmgvoUhVua9wEYGpMj9ybctbQXHPbY9Ppu4CoKoUm8jjFfcsc",
                 info: %{
                   active_from: 163_282,
                   auction_timeout: nil,
@@ -712,6 +717,7 @@ defmodule AeMdwWeb.NameController do
             active: [
               %{
                 active: true,
+                hash: "nm_6oqHuqaHZcTTMMNRXiDpqek1jHqz1cxTtLUeVTdJH8Vs",
                 info: %{
                   active_from: 314_867,
                   auction_timeout: 0,

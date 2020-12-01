@@ -1597,6 +1597,7 @@ Due to this reason, all name endpoints except `name/pointers` and `name/pointees
 $ curl -s "http://localhost:4000/name/bear.test" | jq '.'
 {
   "active": false,
+  "hash": "nm_2aGpF2uJp1wDpuHoNDhhSztpoQr43dAjzZ5SyvfD2RSKTVmL6X",
   "info": {
     "active_from": 85624,              # block height
     "auction_timeout": 0,              # in blocks
@@ -1650,6 +1651,7 @@ It's possible to use encoded hash as well:
 $ curl -s "http://localhost:4000/name/nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj" | jq '.'
 {
   "active": true,
+  "hash": "nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj",
   "info": {
     "active_from": 279555,
     "auction_timeout": 0,
@@ -1682,6 +1684,7 @@ If there's no suffix (`.chain` or `.test`), `.chain` is added by default:
 $ curl -s "http://localhost:4000/name/aeternity" | jq '.'
 {
   "active": true,
+  "hash": "nm_S4ofw6861biSJrXgHuJPo7VotLbrY8P9ngTLvgrRwbDEA3svc",
   "info": {
     "active_from": 162197,
     "auction_timeout": 480,
@@ -1725,6 +1728,7 @@ If the name is currently in auction, the reply has different shape:
 $ curl -s "http://localhost:4000/name/help" | jq '.'
 {
   "active": false,
+  "hash": "nm_2WoR2PCFXeLiLQH8C7GVbGpU57qDBqkQbPvaML8w3ijMQiei7E",
   "info": {
     "auction_end": 302041,                   # block height
     "bids": [
@@ -1766,6 +1770,7 @@ With `expand` parameter, notice how `claims` and `updates` have the transaction 
 $ curl -s "http://localhost:4000/name/cryptobase.chain?expand" | jq '.'
 {
   "active": true,
+  "hash": "nm_2vAFLnmRbsQTNeZi9PzFgVWY6Un9rszFDaE3ubYqk1oJURxJ97",
   "info": {
     "active_from": 264318,
     "auction_timeout": null,
@@ -1847,6 +1852,7 @@ Auction specific name resolution is available behind endpoint `name/auction/:id`
 $ curl -s "http://localhost:4000/name/auction/nikita.chain" | jq '.'
 {
   "active": false,
+  "hash": "nm_2s2gjxQFYzcShL9gva2jWvzZ7mHPe4m6X6pqbyuSipZKCg1DLV",
   "info": {
     "auction_end": 316672,
     "bids": [
@@ -1898,6 +1904,7 @@ $ curl -s "http://localhost:4000/names/owned_by/ak_25BWMx4An9mmQJNPSwJisiENek3bA
   "active": [
     {
       "active": true,
+      "hash": "nm_8oH11atX3dnEsqnhhuFzRkxVdZfkkKSKxtKZQcYFudmgqcVmT",
       "info": {
         "active_from": 162213,
         "auction_timeout": 0,
@@ -1953,6 +1960,7 @@ $ curl -s "http://localhost:4000/names/owned_by/ak_25BWMx4An9mmQJNPSwJisiENek3bA
   "top_bid": [
     {
       "active": false,
+      "hash": "nm_2s2gjxQFYzcShL9gva2jWvzZ7mHPe4m6X6pqbyuSipZKCg1DLV",
       "info": {
         "auction_end": 316672,
         "bids": [
@@ -2014,6 +2022,7 @@ $ curl -s "http://localhost:4000/names?limit=2" | jq '.'
   "data": [
     {
       "active": true,
+      "hash": "nm_qock4y2xnYdyy779vayFfu7YUBTwy9bTfoJeH4pM5EpRyJU3A",
       "info": {
         "active_from": 205194,
         "auction_timeout": 14880,
@@ -2084,6 +2093,7 @@ $ curl -s "http://localhost:4000/names?limit=2" | jq '.'
     },
     {
       "active": true,
+      "hash": "nm_8vYbsvsrBow6jpxPHUtMLKG6EfTKqqwfpu425aJuHKafSxyR6",
       "info": {
         "active_from": 253179,
         "auction_timeout": 480,
@@ -2164,6 +2174,7 @@ $ curl -s "http://localhost:4000/names/inactive?by=expiration&direction=forward&
   "data": [
     {
       "active": false,
+      "hash": "nm_PstDX8VxoTutPJG8YrXkWEwAfBoC5ZmoW1j5RZSNNyXa5oJSB",
       "info": {
         "active_from": 6089,
         "auction_timeout": 0,
@@ -2190,6 +2201,7 @@ $ curl -s "http://localhost:4000/names/inactive?by=expiration&direction=forward&
     },
     {
       "active": false,
+      "hash": "nm_J9wKEZ1Deo4UAnNo5s5VTRccVCLdZexZBQJgA6YHYy67xDpqy",
       "info": {
         "active_from": 6094,
         "auction_timeout": 0,
@@ -2230,6 +2242,7 @@ $ curl -s "http://localhost:4000/names/active?by=name&limit=2" | jq '.'
   "data": [
     {
       "active": true,
+      "hash": "nm_23NKMgfB5igtdWHkY5BPMg75PykVrBTBpPAsE6Y1mYV3kZ8Nbd",
       "info": {
         "active_from": 162213,
         "auction_timeout": 0,
@@ -2263,6 +2276,7 @@ $ curl -s "http://localhost:4000/names/active?by=name&limit=2" | jq '.'
     },
     {
       "active": true,
+      "hash": "nm_2q5bUSTcibKsuRfGnXSFC5JkUSUxiy9UbMuQ2uJn2xiYNZdcbL",
       "info": {
         "active_from": 183423,
         "auction_timeout": 480,
@@ -2309,6 +2323,7 @@ $ curl -s "http://localhost:4000/names/auctions?limit=2" | jq '.'
   "data": [
     {
       "active": false,
+      "hash": "nm_2gck1wvusmLUH1pRJ6dUgHxuVBM5Nf75q64wZHB2TwadpHH6Xv",
       "info": {
         "auction_end": 320279,
         "bids": [
@@ -2343,6 +2358,7 @@ $ curl -s "http://localhost:4000/names/auctions?limit=2" | jq '.'
     },
     {
       "active": false,
+      "hash": "nm_2G8VVfnRqJjxcpNu8vbHJyaYhCoR9Gys42AvaEK3hMN8tfXCr6",
       "info": {
         "auction_end": 316465,
         "bids": [
