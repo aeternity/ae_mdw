@@ -47,55 +47,74 @@ defmodule AeMdw.Contract do
   # entrypoint transfer        : (address, int) => unit
 
   def aex9_signatures() do
-    %{"aex9_extensions" => {[], {:list, :string}},
+    %{
+      "aex9_extensions" => {[], {:list, :string}},
       "meta_info" => {[], {:tuple, [:string, :string, :integer]}},
       "total_supply" => {[], :integer},
       "owner" => {[], :address},
       "balances" => {[], {:map, :address, :integer}},
       "balance" => {[:address], {:variant, [tuple: [], tuple: [:integer]]}},
-      "transfer" => {[:address, :integer], {:tuple, []}}}
+      "transfer" => {[:address, :integer], {:tuple, []}}
+    }
   end
 
   def is_aex9?(pubkey) when is_binary(pubkey),
     do: is_aex9?(get_info(pubkey))
 
   def is_aex9?({:fcode, functions, _hash_names, _}) do
-    Enum.all?(AeMdw.Node.aex9_signatures(),
+    Enum.all?(
+      AeMdw.Node.aex9_signatures(),
       fn {hash, type} ->
         case Map.get(functions, hash) do
           {_, ^type, _body} -> true
           _ -> false
         end
-      end)
+      end
+    )
   end
 
-  def is_aex9?(_), # AEVM
+  # AEVM
+  def is_aex9?(_),
     do: false
 
-  def top_height_hash() do
-    top_key_block = :aec_chain.top_key_block() |> ok!
-    top_key_header = :aec_blocks.to_key_header(top_key_block)
-    {:aec_headers.height(top_key_header),
-     ok!(:aec_headers.hash_header(top_key_header))}
-  end
+  # value of :aec_hash.blake2b_256_hash("Transfer")
+  def aex9_transfer_event_hash(),
+    do:
+      <<34, 60, 57, 226, 157, 255, 100, 103, 254, 221, 160, 151, 88, 217, 23, 129, 197, 55, 46, 9,
+        31, 248, 107, 58, 249, 227, 16, 227, 134, 86, 43, 239>>
 
-  def aex9_meta_info(contract_pubkey),
-    do: aex9_meta_info(contract_pubkey, top_height_hash())
+  def aex9_meta_info(contract_pk),
+    do: aex9_meta_info(contract_pk, AeMdw.Node.Db.top_height_hash())
 
-  def aex9_meta_info(contract_pubkey, {height, hash}) do
+  def aex9_meta_info(contract_pk, {height, hash}) do
     {:ok, {:tuple, {name, symbol, decimals}}} =
-      call_contract(contract_pubkey, {height, hash}, "meta_info", [])
+      call_contract(contract_pk, {height, hash}, "meta_info", [])
+
     {name, symbol, decimals}
   end
 
+  # def aex9_balances(contract_pk),
+  #   do: aex9_balances(contract_pk, top_height_hash())
 
-  def call_contract(contract_pubkey, function_name, args) do
-    top_key_block = :aec_chain.top_key_block() |> ok!
-    top_key_header = :aec_blocks.to_key_header(top_key_block)
-    top_height = :aec_headers.height(top_key_header)
-    top_hash = :aec_headers.hash_header(top_key_header) |> ok!
-    call_contract(contract_pubkey, {top_height, top_hash}, function_name, args)
-  end
+  # def aex9_balances(contract_pk, {height, hash}) do
+  #   {:ok, balances} = call_contract(contract_pk, {height, hash}, "balances", [])
+  #   balances
+  # end
+
+  # def aex9_balance(contract_pk, account_pk),
+  #   do: aex9_balance(contract_pk, top_height_hash(), account_pk)
+
+  # def aex9_balance(contract_pk, {height, hash}, account_pk) do
+  #   case call_contract(contract_pk, {height, hash}, "balance", [{:address, account_pk}]) do
+  #     {:ok, {:variant, [0, 1], 1, {amt}}} ->
+  #       amt
+  #     {:ok, {:variant, [0, 1], 0, {}}} ->
+  #       nil
+  #   end
+  # end
+
+  def call_contract(contract_pubkey, function_name, args),
+    do: call_contract(contract_pubkey, AeMdw.Node.Db.top_height_hash(), function_name, args)
 
   def call_contract(contract_pubkey, {key_height, key_hash}, function_name, args) do
     {tx_env, trees} = :aetx_env.tx_env_and_trees_from_hash(:aetx_contract, key_hash)
@@ -106,8 +125,8 @@ defmodule AeMdw.Contract do
     creator = :aect_contracts.owner_pubkey(contract)
     store = :aect_contracts.state(contract)
 
-    caller_pubkey = <<0 :: 256>>
-    origin = <<0 :: 256>>
+    caller_pubkey = <<0::256>>
+    origin = <<0::256>>
     gas_limit = 1_000_000
     gas_price = 0
     amount = 0
@@ -139,12 +158,17 @@ defmodule AeMdw.Contract do
     }
 
     {call_res, _trees, _env} = :aect_dispatch.run(version, call_def)
+
     case :aect_call.return_type(call_res) do
       :ok ->
         res_binary = :aect_call.return_value(call_res)
         {:ok, :aeb_fate_encoding.deserialize(res_binary)}
-      other ->
-        other
+
+      :error ->
+        {:error, :aect_call.return_value(call_res)}
+
+      :revert ->
+        :revert
     end
   end
 

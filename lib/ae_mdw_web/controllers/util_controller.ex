@@ -47,7 +47,6 @@ defmodule AeMdwWeb.UtilController do
     node_height = :aec_blocks.height(top_kb)
     mdw_height = AeMdw.Db.Util.last_gen()
 
-
     status = %{
       node_version: to_string(node_vsn),
       node_height: node_height,

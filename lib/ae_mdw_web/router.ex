@@ -92,10 +92,20 @@ defmodule AeMdwWeb.Router do
     get "/oracles", OracleController, :oracles
     get "/oracles/gen/:range", OracleController, :oracles
 
-
     get "/aex9/by_name", Aex9Controller, :by_names
     get "/aex9/by_symbol", Aex9Controller, :by_symbols
 
+    get "/aex9/balance/gen/:range/:contract_id/:account_id", Aex9Controller, :balance_range
+
+    get "/aex9/balance/hash/:blockhash/:contract_id/:account_id",
+        Aex9Controller,
+        :balance_for_hash
+
+    get "/aex9/balance/:contract_id/:account_id", Aex9Controller, :balance
+
+    get "/aex9/balances/gen/:range/:contract_id", Aex9Controller, :balances_range
+    get "/aex9/balances/hash/:blockhash/:contract_id", Aex9Controller, :balances_for_hash
+    get "/aex9/balances/:contract_id", Aex9Controller, :balances
 
     get "/status", UtilController, :status
 

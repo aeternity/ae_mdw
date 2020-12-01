@@ -30,9 +30,11 @@ defmodule AeMdw.Db.Sync.Invalidate do
           do_dels(name_dels, &AeMdw.Db.Name.cache_through_delete/2)
           do_dels(oracle_dels, &AeMdw.Db.Oracle.cache_through_delete/2)
 
-          do_dels(%{Model.Aex9Contract => aex9_keys,
-                    Model.Aex9ContractSymbol => aex9_sym_keys,
-                    Model.RevAex9Contract => aex9_rev_keys})
+          do_dels(%{
+            Model.Aex9Contract => aex9_keys,
+            Model.Aex9ContractSymbol => aex9_sym_keys,
+            Model.RevAex9Contract => aex9_rev_keys
+          })
 
           do_writes(name_writes, &AeMdw.Db.Name.cache_through_write/2)
           do_writes(oracle_writes, &AeMdw.Db.Oracle.cache_through_write/2)
@@ -180,14 +182,17 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
       start_key ->
         push_key = fn {txi, name, symbol, decimals}, {contracts, symbols, rev_contracts} ->
-          {[{name, symbol, txi, decimals} | contracts],
-           [{symbol, name, txi, decimals} | symbols],
+          {[{name, symbol, txi, decimals} | contracts], [{symbol, name, txi, decimals} | symbols],
            [{txi, name, symbol, decimals} | rev_contracts]}
         end
 
-        collect_keys(Model.RevAex9Contract,
-          push_key.(start_key, {[], [], []}), start_key, &next/2,
-          fn key, acc -> {:cont, push_key.(key, acc)} end)
+        collect_keys(
+          Model.RevAex9Contract,
+          push_key.(start_key, {[], [], []}),
+          start_key,
+          &next/2,
+          fn key, acc -> {:cont, push_key.(key, acc)} end
+        )
     end
   end
 
