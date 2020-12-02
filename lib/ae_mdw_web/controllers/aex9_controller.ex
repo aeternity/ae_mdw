@@ -13,10 +13,18 @@ defmodule AeMdwWeb.Aex9Controller do
   ##########
 
   def by_names(conn, params),
-    do: by_names_reply(conn, prefix_param(params), all_param(params))
+    do:
+     handle_input(
+       conn,
+       fn -> by_names_reply(conn, search_mode!(params), list_all(params)) end
+     )
 
   def by_symbols(conn, params),
-    do: by_symbols_reply(conn, prefix_param(params), all_param(params))
+    do:
+     handle_input(
+       conn,
+       fn -> by_symbols_reply(conn, search_mode!(params), list_all(params)) end
+     )
 
   def balance(conn, %{"contract_id" => contract_id, "account_id" => account_id}),
     do:
@@ -100,7 +108,7 @@ defmodule AeMdwWeb.Aex9Controller do
 
   def by_names_reply(conn, prefix, all?) do
     entries =
-      Contract.aex9_read_name(prefix, (all? && :all) || :last)
+      Contract.aex9_search_name(prefix, all?)
       |> Enum.map(&Format.to_map(&1, Model.Aex9Contract))
 
     json(conn, entries)
@@ -108,7 +116,7 @@ defmodule AeMdwWeb.Aex9Controller do
 
   def by_symbols_reply(conn, prefix, all?) do
     entries =
-      Contract.aex9_read_symbol(prefix, (all? && :all) || :last)
+      Contract.aex9_search_symbol(prefix, all?)
       |> Enum.map(&Format.to_map(&1, Model.Aex9ContractSymbol))
 
     json(conn, entries)
@@ -175,10 +183,16 @@ defmodule AeMdwWeb.Aex9Controller do
 
   ##########
 
-  def prefix_param(params), do: Map.get(params, "prefix", "")
+  def search_mode!(%{"prefix" => _, "exact" => _}),
+    do: raise ErrInput.Query, value: "can't use both `prefix` and `exact` parameters"
+  def search_mode!(%{"exact" => exact}),
+    do: {:exact, exact}
+  def search_mode!(%{} = params),
+    do: {:prefix, Map.get(params, "prefix", "")}
 
-  def all_param(%{"all" => x}) when x in [nil, "true", [nil], ["true"]], do: true
-  def all_param(%{}), do: false
+
+  def list_all(%{"all" => x}) when x in [nil, "true", [nil], ["true"]], do: true
+  def list_all(%{}), do: false
 
   def parse_range!(range) do
     case DSPlug.parse_range(range) do

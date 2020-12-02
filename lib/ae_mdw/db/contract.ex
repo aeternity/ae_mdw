@@ -47,55 +47,60 @@ defmodule AeMdw.Db.Contract do
   #   # end
   # end
 
-  def aex9_read_name(prefix, mode),
-    do: aex9_read(Model.Aex9Contract, prefix, mode)
 
-  def aex9_read_symbol(prefix, mode),
-    do: aex9_read(Model.Aex9ContractSymbol, prefix, mode)
+  def prefix_tester(""),
+    do: fn _ -> true end
 
-  def aex9_read(table, prefix, :all),
-    do: aex9_read(table, prefix, fn -> [] end, fn _, v, l -> [v | l] end, &Enum.reverse/1)
-
-  def aex9_read(table, prefix, :last),
-    do: aex9_read(table, prefix, &:gb_trees.empty/0, &:gb_trees.enter/3, &:gb_trees.values/1)
-
-  def aex9_read(table, exact, :exact) do
-    case next(table, {exact, "", 0, 0}) do
-      {^exact, _, _, _} = key ->
-        key
-
-      _ ->
-        nil
-    end
+  def prefix_tester(prefix) do
+    len = String.length(prefix)
+    &(String.length(&1) >= len && :binary.part(&1, 0, len) == prefix)
   end
 
-  def aex9_read(table, prefix, new, add, return) do
-    prefix_len = String.length(prefix)
 
-    prefix? =
-      (prefix_len == 0 &&
-         fn _ -> true end) ||
-        (&(String.length(&1) >= prefix_len && :binary.part(&1, 0, prefix_len) == prefix))
+  def aex9_search_name({_, _} = mode, all?),
+    do: aex9_search(Model.Aex9Contract, mode, all?)
 
+  def aex9_search_symbol({_, _} = mode, all?),
+    do: aex9_search(Model.Aex9ContractSymbol, mode, all?)
+
+
+  def aex9_search(table, {:prefix, prefix}, true = _all?),
+    do: aex9_search(table, prefix, prefix_tester(prefix),
+          fn -> [] end, fn _, v, l -> [v | l] end, &Enum.reverse/1)
+
+  def aex9_search(table, {:prefix, prefix}, false = _all?),
+    do: aex9_search(table, prefix, prefix_tester(prefix),
+          &:gb_trees.empty/0, &:gb_trees.enter/3, &:gb_trees.values/1)
+
+  def aex9_search(table, {:exact, exact}, true = _all?),
+    do: aex9_search(table, exact, & &1 == exact,
+          fn -> [] end, fn _, v, l -> [v | l] end, &Enum.reverse/1)
+
+  def aex9_search(table, {:exact, exact}, false = _all?),
+    do: aex9_search(table, exact, & &1 == exact,
+          &:gb_trees.empty/0, &:gb_trees.enter/3, &:gb_trees.values/1)
+
+
+
+  def aex9_search(table, value, key_tester, new, add, return) do
     return.(
-      case next(table, {prefix, "", 0, 0}) do
+      case next(table, {value, "", 0, 0}) do
         :"$end_of_table" ->
           new.()
 
         {s, _, _, _} = start_key ->
-          case prefix?.(s) do
+          case key_tester.(s) do
             false ->
               new.()
 
             true ->
-              collect_keys(table, add.(s, start_key, new.()), start_key, &next/2, fn {s, _, _, _} =
-                                                                                       key,
-                                                                                     acc ->
-                case prefix?.(s) do
-                  false -> {:halt, acc}
-                  true -> {:cont, add.(s, key, acc)}
-                end
-              end)
+              collect_keys(table, add.(s, start_key, new.()), start_key, &next/2,
+                fn {s, _, _, _} = key, acc ->
+                  case key_tester.(s) do
+                    false -> {:halt, acc}
+                    true -> {:cont, add.(s, key, acc)}
+                  end
+                end)
           end
       end
     )
