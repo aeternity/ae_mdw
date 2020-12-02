@@ -62,30 +62,7 @@ defmodule AeMdwWeb.BlockController do
     do: generation(block_jsons(height, last_gen))
 
   ##########
-  # def generation([kb_json | mb_jsons]) do
-  #   mb_jsons =
-  #     for %{"hash" => mb_hash} = mb_json <- mb_jsons, reduce: %{} do
-  #       mbs ->
-  #         micro = :aec_db.get_block(Validate.id!(mb_hash))
-  #         header = :aec_blocks.to_header(micro)
-
-  #         txs_json =
-  #           for tx <- :aec_blocks.txs(micro), reduce: %{} do
-  #             txs ->
-  #               %{"hash" => tx_hash} = tx_json = :aetx_sign.serialize_for_client(header, tx)
-  #               Map.put(txs, tx_hash, tx_json)
-  #           end
-
-  #         mb_json = Map.put(mb_json, "transactions", txs_json)
-  #         Map.put(mbs, mb_hash, mb_json)
-  #     end
-
-  #   Map.put(kb_json, "micro_blocks", mb_jsons)
-  # end
-
-  ##########
   def generation([kb_json | mb_jsons]) do
-    # Add checks for cache
     height = kb_json["height"]
 
     case EtsCache.get(@tab, height) do
