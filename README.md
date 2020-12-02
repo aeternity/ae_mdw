@@ -61,18 +61,25 @@
         - [Pointers](#pointers)
         - [Pointees](#pointees)
     - [Oracles](#oracles)
-        - [Oracle Resolution](#oracle-resolution)
+        - [Oracle resolution](#oracle-resolution)
         - [Listing oracles](#listing-oracles)
             - [All oracles](#all-oracles)
             - [Inactive oracles](#inactive-oracles)
             - [Active oracles](#active-oracles)
-    - [Listing AEX9 Tokens](#listing-aex9-tokens)
-        - [Listing AEX9 Tokens by name](#listing-aex9-tokens-by-name)
-        - [Listing AEX9 Tokens by Symbol](#listing-aex9-tokens-by-symbol)
+    - [AEX9 tokens](#aex9-tokens)
+        - [AEX9 tokens by name](#aex9-tokens-by-name)
+        - [AEX9 tokens by symbol](#aex9-tokens-by-symbol)
+    - [AEX9 contract balances](#aex9-contract-balances)
+        - [AEX9 contract balance for account](#aex9-contract-balance-for-account)
+        - [AEX9 contract balance for account at block](#aex9-contract-balance-for-account-at-block)
+        - [AEX9 contract balance for account at height or range of heights](#aex9-contract-balance-for-account-at-height-or-range-of-heights)
+        - [AEX9 contract balances](#aex9-contract-balances-1)
+        - [AEX9 contract balances at block](#aex9-contract-balances-at-block)
+        - [AEX9 contract balances at height or range of heights](#aex9-contract-balances-at-height-or-range-of-heights)
     - [Websocket interface](#websocket-interface)
-        - [Message format:](#message-format)
-        - [Supported operations:](#supported-operations)
-        - [Supported payloads:](#supported-payloads)
+        - [Message format](#message-format)
+        - [Supported operations](#supported-operations)
+        - [Supported payloads](#supported-payloads)
     - [Tests](#tests)
         - [Controller tests](#controller-tests)
         - [Performance test](#performance-test)
@@ -2486,7 +2493,7 @@ Oracles in Aeternity blockchain have a lifecycle formed by several types of tran
 For the same reason as Names, all oracle endpoints support `expand` parameter (either set to `true` or without value), which will replace the transaction indices with the JSON body of the transaction detail.
 
 
-### Oracle Resolution
+### Oracle resolution
 
 ```
 $ curl -s "http://localhost:4000/oracle/ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM" | jq '.'
@@ -2579,9 +2586,9 @@ $ curl -s "http://localhost:4000/oracle/ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmb
 
 There are 3 paginable endpoints for listing oracles:
 
-- /oracles - for listing ALL oracles (`active` and `inactive`)
-- /oracles/inactive - for listing `inactive` oracles (expired)
-- /oracles/active - for listing `active` oracles
+- `/oracles` - for listing ALL oracles (`active` and `inactive`)
+- `/oracles/inactive` - for listing `inactive` oracles (expired)
+- `/oracles/active` - for listing `active` oracles
 
 They are ordered by expiration height and support parameter `direction` (with options `forward` and `backward`).
 
@@ -2737,19 +2744,19 @@ $ curl -s "http://localhost:4000/oracles/active?limit=1&expand" | jq '.'
 }
 ```
 
-## Listing AEX9 Tokens
+## AEX9 tokens
 
 There are 2 endpoints for listing tokens as defined by AEX9 (https://github.com/aeternity/AEXs/blob/master/AEXS/aex-9.md)
 
-- /aex9/by_name - for listing tokens sorted by name
-- /aex9/by_symbol - for listing tokens sorted by symbol
+- `/aex9/by_name` - for listing tokens sorted by name
+- `/aex9/by_symbol` - for listing tokens sorted by symbol
 
-These endpoints support 2 optional parameters:
+These endpoints optional parameters:
 
-- prefix - for listing only tokens with name or symbol matching the provided prefix (defalut: "")
-- all - for listing all contract creations for a token, not just the last one (default: false)
+- `all` - for listing all contract creations for a token, not just the last one (default: false)
+- `prefix` OR `exact` - for listing tokens with the name or symbol, which are matching either by prefix, or exactly
 
-### Listing AEX9 Tokens by name
+### AEX9 tokens by name
 
 ```
 $ curl -s "http://localhost:4000/aex9/by_name" | jq '.'
@@ -2861,51 +2868,229 @@ $ curl -s "http://localhost:4000/aex9/by_name?prefix=ae&all" | jq '.'
 ]
 ```
 
-### Listing AEX9 Tokens by Symbol
+### AEX9 tokens by symbol
 
-Example with prefix:
+Example with exact parameter:
 ```
-$ curl -s "http://localhost:4000/aex9/by_symbol?prefix=T" | jq '.'
+$ curl -s "http://localhost:4000/aex9/by_symbol?exact=TNT" | jq '.'
 [
   {
-    "decimals": 10,
-    "name": "TestAA",
-    "symbol": "TAA",
-    "txi": 11146033
-  },
-  {
-    "decimals": 18,
-    "name": "TEST",
-    "symbol": "TEST",
-    "txi": 10491401
-  },
-  {
+    "contract_id": "ct_6ZuwbMgcNDaryXTnrLMiPFW2ogE9jxAzz1874BToE81ksWek6",
+    "contract_txi": 8537557,
     "decimals": 18,
     "name": "Test Network",
-    "symbol": "TNT",
-    "txi": 8537557
-  },
-  {
-    "decimals": 18,
-    "name": "testnetAE",
-    "symbol": "TTAE",
-    "txi": 11145713
-  },
-  {
-    "decimals": 3,
-    "name": "Taelk",
-    "symbol": "Te",
-    "txi": 11108743
+    "symbol": "TNT"
   }
 ]
 ```
 
+## AEX9 contract balances
+
+There are 3 endpoints for listing token balance of the contract for given account:
+
+- `/aex9/balance/:contract_id/:account_id` - shows account balance at the current top of the chain
+
+- `/aex9/balance/hash/:blockhash/:contract_id/:account_id` - shows account balance at given block
+
+- `/aex9/balance/gen/:range/:contract_id/:account_id` - show account balances at given height or range of heights
+
+
+Additional 3 endpoints can be used for showing ALL balances for a given contract:
+
+- `/aex9/balances/:contract_id` - shows all balances at the current top of the chain
+
+- `/aex9/balances/hash/:blockhash/:contract_id` - shows all balances at given block
+
+- `/aex9/balances/gen/:range/:contract_id` - shows all balances at given height or range of heights
+
+
+### AEX9 contract balance for account
+
+```
+$ curl -s "http://localhost:4000/aex9/balance/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA/ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48" | jq '.'
+{
+  "account_id": "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48",
+  "amount": 49999999999906850000000000,
+  "block_hash": "kh_2QevaXY7ULF5kTLsddwMzzZmBYWPgfaQbg2Y8maZDLKJaPhwDJ",
+  "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
+  "height": 351666
+}
+```
+
+### AEX9 contract balance for account at block
+
+```
+$ curl -s "http://localhost:4000/aex9/balance/hash/mh_2NkfQ9p29EQtqL6YQAuLpneTRPxEKspNYLKXeexZ664ZJo7fcw/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA/ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48" | jq '.'
+{
+  "account_id": "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48",
+  "amount": 49999999999906850000000000,
+  "block_hash": "mh_2NkfQ9p29EQtqL6YQAuLpneTRPxEKspNYLKXeexZ664ZJo7fcw",
+  "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
+  "height": 350622
+}
+```
+
+### AEX9 contract balance for account at height or range of heights
+
+Single integer identifies the generation:
+```
+$ curl -s "http://localhost:4000/aex9/balance/gen/350700/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA/ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48" | jq '.'
+{
+  "account_id": "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48",
+  "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
+  "range": [
+    {
+      "amount": 49999999999906850000000000,
+      "block_hash": "kh_2dhhsiRAUt1319MyDWLSq2WeKvCXfWoeaaosqNhyHvKsK8dZqJ",
+      "height": 350700
+    }
+  ]
+}
+```
+
+A range can be provided as well:
+
+```
+$ curl -s "http://localhost:4000/aex9/balance/gen/350620-350623/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA/ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48" | jq '.'
+{
+  "account_id": "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48",
+  "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
+  "range": [
+    {
+      "amount": 49999999999906850000000000,
+      "block_hash": "kh_2qXeiNrHh3U1ZfyUifwLVf9e7riyv6Rgp7nJV9bHoQb2vugn8c",
+      "height": 350620
+    },
+    {
+      "amount": 49999999999906850000000000,
+      "block_hash": "kh_29yHf38wCMNdqEsDVQTBSx6A7W8oZedQqTBQuAPN9JiXYxwx2o",
+      "height": 350621
+    },
+    {
+      "amount": 49999999999906850000000000,
+      "block_hash": "kh_21P5Y1rv97MZruUSC9mTRmscFxAFnFi4HjUAoqmqHfmoS1Np4b",
+      "height": 350622
+    },
+    {
+      "amount": 49999999999906850000000000,
+      "block_hash": "kh_2Ya2fM9brRoBQpxR3xz4K39hTqmjiMJ7GfSu3LbCmxLYjX5cHV",
+      "height": 350623
+    }
+  ]
+}
+```
+
+### AEX9 contract balances
+
+```
+$ curl -s "http://localhost:4000/aex9/balances/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA" | jq '.'
+{
+  "amounts": {
+    "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6": 4050000000000,
+    "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK": 8100000000000,
+    "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4": 81000000000000,
+    "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48": 49999999999906850000000000
+  },
+  "block_hash": "kh_2hXEoFTmMphpvCmvdvQTZtGu9a3RndL5fSvVqzKBs2DSNJjQ2V",
+  "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
+  "height": 351669
+}
+```
+
+### AEX9 contract balances at block
+
+```
+$ curl -s "http://localhost:4000/aex9/balances/hash/kh_2Ya2fM9brRoBQpxR3xz4K39hTqmjiMJ7GfSu3LbCmxLYjX5cHV/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA" | jq '.'
+{
+  "amounts": {
+    "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6": 4050000000000,
+    "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK": 8100000000000,
+    "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4": 81000000000000,
+    "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48": 49999999999906850000000000
+  },
+  "block_hash": "kh_2Ya2fM9brRoBQpxR3xz4K39hTqmjiMJ7GfSu3LbCmxLYjX5cHV",
+  "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
+  "height": 350623
+}
+```
+
+### AEX9 contract balances at height or range of heights
+
+```
+$ curl -s "http://localhost:4000/aex9/balances/gen/350580/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA" | jq '.'
+{
+  "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
+  "range": [
+    {
+      "amounts": {
+        "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6": 4050000000000,
+        "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK": 8100000000000,
+        "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4": 81000000000000,
+        "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48": 49999999999906850000000000
+      },
+      "block_hash": "kh_2Jv6ZekDGipPQWrZKitdqtbxgx6bGUMNvkSPmi8pvpheGynKLu",
+      "height": 350580
+    }
+  ]
+}
+```
+
+Or, with range:
+
+```
+$ curl -s "http://localhost:4000/aex9/balances/gen/350600-350603/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA" | jq '.'
+{
+  "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
+  "range": [
+    {
+      "amounts": {
+        "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6": 4050000000000,
+        "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK": 8100000000000,
+        "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4": 81000000000000,
+        "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48": 49999999999906850000000000
+      },
+      "block_hash": "kh_wCXiE3TTbQSCboPictnY7KXH5qmm8kjUoWHJNNqM25H4BWSW8",
+      "height": 350600
+    },
+    {
+      "amounts": {
+        "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6": 4050000000000,
+        "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK": 8100000000000,
+        "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4": 81000000000000,
+        "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48": 49999999999906850000000000
+      },
+      "block_hash": "kh_wGwxc8bMfLZqSAXDGLAv7XeFs9afNxGGZ2jpBRvMQ9pWj14pj",
+      "height": 350601
+    },
+    {
+      "amounts": {
+        "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6": 4050000000000,
+        "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK": 8100000000000,
+        "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4": 81000000000000,
+        "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48": 49999999999906850000000000
+      },
+      "block_hash": "kh_avZRszDXggtiVk8oMCjZmd92JVga6Ng6BRAtuPPdaj2ntZwN6",
+      "height": 350602
+    },
+    {
+      "amounts": {
+        "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6": 4050000000000,
+        "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK": 8100000000000,
+        "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4": 81000000000000,
+        "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48": 49999999999906850000000000
+      },
+      "block_hash": "kh_2QBikn2KuxBgbBdzJBmbydmW5dRNHEDdCKU8Psb19MuWuNLZwf",
+      "height": 350603
+    }
+  ]
+}
+```
 
 ## Websocket interface
 
 The websocket interface, which listens by default on port `4001`, gives asynchronous notifications when various events occur.
 
-### Message format:
+### Message format
 
 ```
 {
@@ -2914,12 +3099,12 @@ The websocket interface, which listens by default on port `4001`, gives asynchro
 }
 ```
 
-### Supported operations:
+### Supported operations
 
   * Subscribe
   * Unsubscribe
 
-### Supported payloads:
+### Supported payloads
 
   * KeyBlocks
   * MicroBlocks
