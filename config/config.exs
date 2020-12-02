@@ -22,7 +22,8 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   render_errors: [view: AeMdwWeb.ErrorView, accepts: ~w(html json)],
   pubsub: [name: AeMdw.PubSub, adapter: Phoenix.PubSub.PG2],
   live_view: [signing_salt: "Oy680JAN"],
-  continuation_cache_expiration_minutes: 30
+  continuation_cache_expiration_minutes: 30,
+  generations_cache_expiration_minutes: 7200 # 5 days default generations cache expiration
 
 config :ae_mdw, AeWebsocket.Websocket.SocketHandler,
   port: 4001,

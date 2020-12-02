@@ -6,6 +6,7 @@ defmodule AeMdwWeb.BlockController do
   alias AeMdw.Validate
   alias AeMdw.Db.{Model, Format}
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.EtsCache
   alias AeMdwWeb.Continuation, as: Cont
   alias AeMdwWeb.SwaggerParameters
   require Model
@@ -13,7 +14,10 @@ defmodule AeMdwWeb.BlockController do
   import AeMdwWeb.Util
   import AeMdw.{Util, Db.Util}
 
+  @tab __MODULE__
   ##########
+
+  def table(), do: @tab
 
   def stream_plug_hook(%Plug.Conn{path_info: ["blocks" | rem], params: params} = conn) do
     alias AeMdwWeb.DataStreamPlug, as: P
@@ -57,25 +61,36 @@ defmodule AeMdwWeb.BlockController do
   def generation(height, last_gen),
     do: generation(block_jsons(height, last_gen))
 
+  ##########
   def generation([kb_json | mb_jsons]) do
-    mb_jsons =
-      for %{"hash" => mb_hash} = mb_json <- mb_jsons, reduce: %{} do
-        mbs ->
-          micro = :aec_db.get_block(Validate.id!(mb_hash))
-          header = :aec_blocks.to_header(micro)
+    height = kb_json["height"]
 
-          txs_json =
-            for tx <- :aec_blocks.txs(micro), reduce: %{} do
-              txs ->
-                %{"hash" => tx_hash} = tx_json = :aetx_sign.serialize_for_client(header, tx)
-                Map.put(txs, tx_hash, tx_json)
-            end
+    case EtsCache.get(@tab, height) do
+      {kb_json, _indx} ->
+        kb_json
 
-          mb_json = Map.put(mb_json, "transactions", txs_json)
-          Map.put(mbs, mb_hash, mb_json)
-      end
+      nil ->
+        mb_jsons =
+          for %{"hash" => mb_hash} = mb_json <- mb_jsons, reduce: %{} do
+            mbs ->
+              micro = :aec_db.get_block(Validate.id!(mb_hash))
+              header = :aec_blocks.to_header(micro)
 
-    Map.put(kb_json, "micro_blocks", mb_jsons)
+              txs_json =
+                for tx <- :aec_blocks.txs(micro), reduce: %{} do
+                  txs ->
+                    %{"hash" => tx_hash} = tx_json = :aetx_sign.serialize_for_client(header, tx)
+                    Map.put(txs, tx_hash, tx_json)
+                end
+
+              mb_json = Map.put(mb_json, "transactions", txs_json)
+              Map.put(mbs, mb_hash, mb_json)
+          end
+
+        Map.put(kb_json, "micro_blocks", mb_jsons)
+        EtsCache.put(@tab, height, kb_json)
+        kb_json
+    end
   end
 
   def block_jsons(height, last_gen) when height < last_gen do
