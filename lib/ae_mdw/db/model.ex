@@ -187,6 +187,30 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :contract_log, @contract_log_defaults
 
+  # aex9 transfer:
+  #    index: {from pk, to pk, amount, call txi, log idx}
+  @aex9_transfer_defaults [
+    index: {nil, nil, -1, -1, -1},
+    unused: nil
+  ]
+  defrecord :aex9_transfer, @aex9_transfer_defaults
+
+  # rev aex9 transfer:
+  #    index: {to pk, from pk, amount, call txi, log idx}
+  @rev_aex9_transfer_defaults [
+    index: {nil, nil, -1, -1, -1},
+    unused: nil
+  ]
+  defrecord :rev_aex9_transfer, @rev_aex9_transfer_defaults
+
+  # idx aex9 transfer:
+  #    index: {call txi, log idx, from pk, to pk, amount}
+  @idx_aex9_transfer_defaults [
+    index: {-1, -1, nil, nil, -1},
+    unused: nil
+  ]
+  defrecord :idx_aex9_transfer, @idx_aex9_transfer_defaults
+
   ################################################################################
 
   def tables(),
@@ -211,6 +235,9 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.Aex9ContractSymbol,
       AeMdw.Db.Model.RevAex9Contract,
       AeMdw.Db.Model.Aex9ContractPubkey,
+      AeMdw.Db.Model.Aex9Transfer,
+      AeMdw.Db.Model.RevAex9Transfer,
+      AeMdw.Db.Model.IdxAex9Transfer,
       AeMdw.Db.Model.ContractCall,
       AeMdw.Db.Model.ContractLog
     ]
@@ -254,6 +281,9 @@ defmodule AeMdw.Db.Model do
       :aex9_contract_symbol,
       :rev_aex9_contract,
       :aex9_contract_pubkey,
+      :aex9_transfer,
+      :rev_aex9_transfer,
+      :idx_aex9_transfer,
       :contract_call,
       :contract_log,
       :plain_name,
@@ -280,6 +310,9 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Aex9ContractSymbol), do: :aex9_contract_symbol
   def record(AeMdw.Db.Model.RevAex9Contract), do: :rev_aex9_contract
   def record(AeMdw.Db.Model.Aex9ContractPubkey), do: :aex9_contract_pubkey
+  def record(AeMdw.Db.Model.Aex9Transfer), do: :aex9_transfer
+  def record(AeMdw.Db.Model.RevAex9Transfer), do: :rev_aex9_transfer
+  def record(AeMdw.Db.Model.IdxAex9Transfer), do: :idx_aex9_transfer
   def record(AeMdw.Db.Model.ContractCall), do: :contract_call
   def record(AeMdw.Db.Model.ContractLog), do: :contract_log
   def record(AeMdw.Db.Model.PlainName), do: :plain_name

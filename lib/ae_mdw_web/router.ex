@@ -107,6 +107,10 @@ defmodule AeMdwWeb.Router do
     get "/aex9/balances/hash/:blockhash/:contract_id", Aex9Controller, :balances_for_hash
     get "/aex9/balances/:contract_id", Aex9Controller, :balances
 
+    get "/aex9/transfers/from/:sender", Aex9Controller, :transfers_from
+    get "/aex9/transfers/to/:recipient", Aex9Controller, :transfers_to
+    get "/aex9/transfers/from-to/:sender/:recipient", Aex9Controller, :transfers_from_to
+
     get "/status", UtilController, :status
 
     match :*, "/*path", UtilController, :no_route

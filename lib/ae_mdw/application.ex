@@ -161,7 +161,9 @@ defmodule AeMdw.Application do
         aeo_tree_pos: field_pos_map.(aeo_state_tree_code, :oracle_tree),
         lima_vsn: [{[], lima_vsn}],
         lima_height: [{[], lima_height}],
-        aex9_signatures: [{[], aex9_sigs}]
+        aex9_signatures: [{[], aex9_sigs}],
+        aex9_transfer_event_hash: [{[], :aec_hash.blake2b_256_hash("Transfer")}],
+        max_blob: [{[], max_blob}]
       }
     )
   end

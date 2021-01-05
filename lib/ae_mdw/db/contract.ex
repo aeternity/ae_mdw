@@ -56,53 +56,63 @@ defmodule AeMdw.Db.Contract do
     &(String.length(&1) >= len && :binary.part(&1, 0, len) == prefix)
   end
 
+  def aex9_search_name({_, _} = mode),
+    do: aex9_search_tokens(Model.Aex9Contract, mode)
 
-  def aex9_search_name({_, _} = mode, all?),
-    do: aex9_search(Model.Aex9Contract, mode, all?)
+  def aex9_search_symbol({_, _} = mode),
+    do: aex9_search_tokens(Model.Aex9ContractSymbol, mode)
 
-  def aex9_search_symbol({_, _} = mode, all?),
-    do: aex9_search(Model.Aex9ContractSymbol, mode, all?)
+  def aex9_search_tokens(table, {:prefix, prefix}),
+    do: aex9_search_tokens(table, prefix, prefix_tester(prefix))
 
+  def aex9_search_tokens(table, {:exact, exact}),
+    do: aex9_search_tokens(table, exact, &(&1 == exact))
 
-  def aex9_search(table, {:prefix, prefix}, true = _all?),
-    do: aex9_search(table, prefix, prefix_tester(prefix),
-          fn -> [] end, fn _, v, l -> [v | l] end, &Enum.reverse/1)
+  def aex9_search_tokens(table, value, key_tester) do
+    gen_collect(
+      table,
+      {value, "", 0, 0},
+      compose(key_tester, &elem(&1, 0)),
+      &next/2,
+      fn -> [] end,
+      fn v, l -> [v | l] end,
+      &Enum.reverse/1
+    )
+  end
 
-  def aex9_search(table, {:prefix, prefix}, false = _all?),
-    do: aex9_search(table, prefix, prefix_tester(prefix),
-          &:gb_trees.empty/0, &:gb_trees.enter/3, &:gb_trees.values/1)
+  def aex9_search_transfers({:from, sender_pk}) do
+    aex9_search_transfers(
+      Model.Aex9Transfer,
+      {sender_pk, nil, 0, 0, 0},
+      fn key -> elem(key, 0) == sender_pk end
+    )
+  end
 
-  def aex9_search(table, {:exact, exact}, true = _all?),
-    do: aex9_search(table, exact, & &1 == exact,
-          fn -> [] end, fn _, v, l -> [v | l] end, &Enum.reverse/1)
+  def aex9_search_transfers({:to, recipient_pk}) do
+    aex9_search_transfers(
+      Model.RevAex9Transfer,
+      {recipient_pk, nil, 0, 0, 0},
+      fn key -> elem(key, 0) == recipient_pk end
+    )
+  end
 
-  def aex9_search(table, {:exact, exact}, false = _all?),
-    do: aex9_search(table, exact, & &1 == exact,
-          &:gb_trees.empty/0, &:gb_trees.enter/3, &:gb_trees.values/1)
+  def aex9_search_transfers({:from_to, sender_pk, recipient_pk}) do
+    aex9_search_transfers(
+      Model.Aex9Transfer,
+      {sender_pk, recipient_pk, 0, 0, 0},
+      fn {s, r, _, _, _} -> s == sender_pk && r == recipient_pk end
+    )
+  end
 
-
-
-  def aex9_search(table, value, key_tester, new, add, return) do
-    return.(
-      case next(table, {value, "", 0, 0}) do
-        :"$end_of_table" ->
-          new.()
-
-        {s, _, _, _} = start_key ->
-          case key_tester.(s) do
-            false ->
-              new.()
-
-            true ->
-              collect_keys(table, add.(s, start_key, new.()), start_key, &next/2,
-                fn {s, _, _, _} = key, acc ->
-                  case key_tester.(s) do
-                    false -> {:halt, acc}
-                    true -> {:cont, add.(s, key, acc)}
-                  end
-                end)
-          end
-      end
+  def aex9_search_transfers(table, init_key, key_tester) do
+    gen_collect(
+      table,
+      init_key,
+      key_tester,
+      &next/2,
+      fn -> [] end,
+      fn v, l -> [v | l] end,
+      &Enum.reverse/1
     )
   end
 
@@ -130,4 +140,5 @@ defmodule AeMdw.Db.Contract do
   #       nil
   #   end
   # end
+
 end

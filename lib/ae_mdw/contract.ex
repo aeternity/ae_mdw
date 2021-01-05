@@ -93,26 +93,6 @@ defmodule AeMdw.Contract do
     {name, symbol, decimals}
   end
 
-  # def aex9_balances(contract_pk),
-  #   do: aex9_balances(contract_pk, top_height_hash())
-
-  # def aex9_balances(contract_pk, {height, hash}) do
-  #   {:ok, balances} = call_contract(contract_pk, {height, hash}, "balances", [])
-  #   balances
-  # end
-
-  # def aex9_balance(contract_pk, account_pk),
-  #   do: aex9_balance(contract_pk, top_height_hash(), account_pk)
-
-  # def aex9_balance(contract_pk, {height, hash}, account_pk) do
-  #   case call_contract(contract_pk, {height, hash}, "balance", [{:address, account_pk}]) do
-  #     {:ok, {:variant, [0, 1], 1, {amt}}} ->
-  #       amt
-  #     {:ok, {:variant, [0, 1], 0, {}}} ->
-  #       nil
-  #   end
-  # end
-
   def call_contract(contract_pubkey, function_name, args),
     do: call_contract(contract_pubkey, AeMdw.Node.Db.top_height_hash(), function_name, args)
 
