@@ -133,6 +133,9 @@ defmodule AeMdw.Application do
       |> Enum.map(fn {k, v} -> {Contract.function_hash(k), v} end)
       |> Enum.into(%{})
 
+    max_int = AeMdw.Util.max_256bit_int()
+    max_blob = :binary.list_to_bin(:lists.duplicate(1024, <<max_int::256>>))
+
     SmartGlobal.new(
       AeMdw.Node,
       %{

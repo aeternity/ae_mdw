@@ -268,25 +268,35 @@ defmodule AeMdw.Contract do
 
   ##########
 
+  def call_rec(tx_rec, contract_pk, block_hash) do
+    call_id = :aect_call_tx.call_id(tx_rec)
+    :aec_chain.get_contract_call(contract_pk, call_id, block_hash) |> ok!
+  end
+
   def call_tx_info(tx_rec, contract_pk, block_hash, format_fn) do
     ct_info = get_info(contract_pk)
     call_id = :aect_call_tx.call_id(tx_rec)
     call_data = :aect_call_tx.call_data(tx_rec)
     call = :aec_chain.get_contract_call(contract_pk, call_id, block_hash) |> ok!
 
-    {fun, args} = decode_call_data(ct_info, call_data, format_fn)
-    fun = to_string(fun)
+    try do
+      {fun, args} = decode_call_data(ct_info, call_data, format_fn)
+      fun = to_string(fun)
 
-    res_type = :aect_call.return_type(call)
-    res_val = :aect_call.return_value(call)
-    result = decode_call_result(ct_info, fun, res_type, res_val, format_fn)
+      res_type = :aect_call.return_type(call)
+      res_val = :aect_call.return_value(call)
+      result = decode_call_result(ct_info, fun, res_type, res_val, format_fn)
 
-    fun_arg_res = %{
-      function: fun,
-      arguments: args,
-      result: result
-    }
+      fun_arg_res = %{
+        function: fun,
+        arguments: args,
+        result: result
+      }
 
-    {fun_arg_res, call}
+      {fun_arg_res, call}
+    catch
+      _, {:badmatch, match_err} ->
+        {{:error, match_err}, call}
+    end
   end
 end

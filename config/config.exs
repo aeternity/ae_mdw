@@ -23,7 +23,8 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   pubsub: [name: AeMdw.PubSub, adapter: Phoenix.PubSub.PG2],
   live_view: [signing_salt: "Oy680JAN"],
   continuation_cache_expiration_minutes: 30,
-  generations_cache_expiration_minutes: 7200 # 5 days default generations cache expiration
+  # 5 days default generations cache expiration
+  generations_cache_expiration_minutes: 7200
 
 config :ae_mdw, AeWebsocket.Websocket.SocketHandler,
   port: 4001,

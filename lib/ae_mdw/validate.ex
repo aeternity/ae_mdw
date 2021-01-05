@@ -181,6 +181,32 @@ defmodule AeMdw.Validate do
   def block_index!(x),
     do: unwrap!(&block_index/1, x)
 
+  def base64(x) when is_binary(x) do
+    case Base.decode64(x) do
+      {:ok, bin} ->
+        {:ok, bin}
+
+      :error ->
+        {:error, {ErrInput.Base64, x}}
+    end
+  end
+
+  def base64!(x) when is_binary(x),
+    do: unwrap!(&base64/1, x)
+
+  def hex32(x) when is_binary(x) do
+    case Base.hex_decode32(x) do
+      {:ok, bin} ->
+        {:ok, bin}
+
+      :error ->
+        {:error, {ErrInput.Hex32, x}}
+    end
+  end
+
+  def hex32!(x) when is_binary(x),
+    do: unwrap!(&hex32/1, x)
+
   defp unwrap!(validator, value) do
     case validator.(value) do
       {:ok, res} ->

@@ -2,16 +2,16 @@ defmodule AeMdwWeb.Router do
   use AeMdwWeb, :router
 
   alias AeMdwWeb.DataStreamPlug
-  alias AeMdwWeb.NameController, as: NC
 
   @paginables [
     {["txs"], nil},
     {["blocks"], &AeMdwWeb.BlockController.stream_plug_hook/1},
-    {["names", "auctions"], &NC.stream_plug_hook/1},
-    {["names", "inactive"], &NC.stream_plug_hook/1},
-    {["names", "active"], &NC.stream_plug_hook/1},
-    {["names"], &NC.stream_plug_hook/1},
-    {["oracles"], &AeMdwWeb.OracleController.stream_plug_hook/1}
+    {["names", "auctions"], &AeMdwWeb.NameController.stream_plug_hook/1},
+    {["names", "inactive"], &AeMdwWeb.NameController.stream_plug_hook/1},
+    {["names", "active"], &AeMdwWeb.NameController.stream_plug_hook/1},
+    {["names"], &AeMdwWeb.NameController.stream_plug_hook/1},
+    {["oracles"], &AeMdwWeb.OracleController.stream_plug_hook/1},
+    {["contracts", "logs"], &AeMdwWeb.ContractController.stream_plug_hook/1}
   ]
 
   @scopes ["gen", "txi"]
@@ -110,6 +110,10 @@ defmodule AeMdwWeb.Router do
     get "/aex9/transfers/from/:sender", Aex9Controller, :transfers_from
     get "/aex9/transfers/to/:recipient", Aex9Controller, :transfers_to
     get "/aex9/transfers/from-to/:sender/:recipient", Aex9Controller, :transfers_from_to
+
+    get "/contracts/logs", ContractController, :logs
+    get "/contracts/logs/:direction", ContractController, :logs
+    get "/contracts/logs/:scope_type/:range", ContractController, :logs
 
     get "/status", UtilController, :status
 
