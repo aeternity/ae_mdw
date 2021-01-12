@@ -2,7 +2,7 @@ defmodule AeMdw.Db.Format do
   alias AeMdw.Node, as: AE
   alias :aeser_api_encoder, as: Enc
 
-  alias AeMdw.Db.{Model, Name}
+  alias AeMdw.Db.{Model, Name, Origin, Sync}
 
   require Model
 
@@ -93,7 +93,7 @@ defmodule AeMdw.Db.Format do
       symbol: symbol,
       decimals: decimals,
       contract_txi: txi,
-      contract_id: :aeser_id.create(:contract, AeMdw.Db.Origin.pubkey({:contract, txi}))
+      contract_id: :aeser_id.create(:contract, Origin.pubkey({:contract, txi}))
     }
   end
 
@@ -102,6 +102,28 @@ defmodule AeMdw.Db.Format do
 
   def to_raw_map({txi, name, symbol, decimals}, Model.RevAex9Contract),
     do: to_raw_map({name, symbol, txi, decimals}, Model.Aex9Contract)
+
+  def to_raw_map({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog) do
+    m_log = read!(Model.ContractLog, {create_txi, call_txi, event_hash, log_idx})
+    ext_ct_pk = Model.contract_log(m_log, :ext_contract)
+    migrate_ct_pk = Sync.Contract.migrate_contract_pk()
+    ct_id = &:aeser_id.create(:contract, &1)
+
+    %{
+      contract_txi: (create_txi != -1 && create_txi) || nil,
+      contract_id:
+        ct_id.((create_txi == -1 && migrate_ct_pk) || Origin.pubkey({:contract, create_txi})),
+      ext_caller_contract_txi:
+        (ext_ct_pk != migrate_ct_pk && Origin.tx_index({:contract, ext_ct_pk})) || nil,
+      ext_caller_contract_id: (ext_ct_pk != nil && ct_id.(ext_ct_pk)) || nil,
+      call_txi: call_txi,
+      call_tx_hash: read!(Model.Tx, call_txi) |> Model.tx(:id),
+      args: Model.contract_log(m_log, :args),
+      data: Model.contract_log(m_log, :data),
+      event_hash: event_hash,
+      log_idx: log_idx
+    }
+  end
 
   def to_raw_map(ae_tx, tx_type) do
     AeMdw.Node.tx_fields(tx_type)
@@ -212,6 +234,17 @@ defmodule AeMdw.Db.Format do
         x -> to_json(x)
       end)
 
+  def to_map({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog),
+    do:
+      to_raw_map({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog)
+      |> update_in([:contract_id], &enc_id/1)
+      |> update_in([:ext_caller_contract_id], fn x -> x && enc_id(x) end)
+      |> update_in([:call_tx_hash], &Enc.encode(:tx_hash, &1))
+      |> update_in([:event_hash], &Base.hex_encode32/1)
+      |> update_in([:args], fn args ->
+        Enum.map(args, fn <<topic::256>> -> to_string(topic) end)
+      end)
+
   def to_map({_, _, _, _} = aex9_data, source)
       when source in [Model.Aex9Contract, Model.Aex9ContractSymbol, Model.RevAex9Contract],
       do: raw_to_json(to_raw_map(aex9_data, source))
@@ -305,11 +338,14 @@ defmodule AeMdw.Db.Format do
     end
   end
 
+  def enc_id({:id, idtype, payload}),
+    do: Enc.encode(AE.id_type(idtype), payload)
+
   def raw_to_json(x),
     do: map_raw_values(x, &to_json/1)
 
   def to_json({:id, idtype, payload}),
-    do: Enc.encode(AE.id_type(idtype), payload)
+    do: enc_id({:id, idtype, payload})
 
   def to_json(x),
     do: x

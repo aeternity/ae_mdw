@@ -27,7 +27,7 @@ defmodule AeMdwWeb.ContractController do
 
   ##########
 
-  def logs(conn, params),
+  def logs(conn, _params),
     do: handle_input(conn, fn -> Cont.response(conn, &json/2) end)
 
   ##########
@@ -39,39 +39,27 @@ defmodule AeMdwWeb.ContractController do
 
     scope_checker = scope_checker(dir, {l, r})
 
-    {tab, init_key, key_tester} =
-      search_context!(params, start_txi, scope_checker, limit(dir))
+    {tab, init_key, key_tester} = search_context!(params, start_txi, scope_checker, limit(dir))
 
     advance = RU.advance_signal_fn(succ, key_tester)
 
     RU.signalled_resource({{:skip, init_key}, advance}, tab, fn m_obj ->
       index = elem(m_obj, 1)
-      format_key(index, tab)
+      Db.Format.to_map(normalize_key(index, tab), Model.ContractLog)
     end)
   end
 
-  def format_key({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog) do
-    %{
-      contract_txi: create_txi,
-      call_txi: call_txi,
-      event_hash: Base.hex_encode32(event_hash),
-      log_idx: log_idx
-    }
-  end
+  def normalize_key({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog),
+    do: {create_txi, call_txi, event_hash, log_idx}
 
-  def format_key({data, call_txi, create_txi, event_hash, log_idx}, Model.DataContractLog),
-    do:
-      Map.put(
-        format_key({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog),
-        :data,
-        data
-      )
+  def normalize_key({_data, call_txi, create_txi, event_hash, log_idx}, Model.DataContractLog),
+    do: {create_txi, call_txi, event_hash, log_idx}
 
-  def format_key({event_hash, call_txi, create_txi, log_idx}, Model.EvtContractLog),
-    do: format_key({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog)
+  def normalize_key({event_hash, call_txi, create_txi, log_idx}, Model.EvtContractLog),
+    do: {create_txi, call_txi, event_hash, log_idx}
 
-  def format_key({call_txi, create_txi, event_hash, log_idx}, Model.IdxContractLog),
-    do: format_key({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog)
+  def normalize_key({call_txi, create_txi, event_hash, log_idx}, Model.IdxContractLog),
+    do: {create_txi, call_txi, event_hash, log_idx}
 
   ##########
 
@@ -171,7 +159,7 @@ defmodule AeMdwWeb.ContractController do
     {Model.DataContractLog,
      {data_prefix <> limit.(:data_prefix), start_txi, create_txi, limit.(:event_hash),
       limit.(:log_idx)},
-     fn {data, call_txi, ct_txi, event, _log_idx} ->
+     fn {data, call_txi, ct_txi, _event, _log_idx} ->
        case data_checker.(data) && scope_checker.(call_txi) do
          true -> ct_txi == create_txi || :skip
          false -> false
@@ -208,7 +196,7 @@ defmodule AeMdwWeb.ContractController do
     {Model.DataContractLog,
      {data_prefix <> limit.(:data_prefix), start_txi, limit.(:create_txi), event_hash,
       limit.(:log_idx)},
-     fn {data, call_txi, ct_txi, event, _log_idx} ->
+     fn {data, call_txi, _ct_txi, event, _log_idx} ->
        case data_checker.(data) && scope_checker.(call_txi) do
          true -> event_checker.(event) || :skip
          false -> false
@@ -216,7 +204,7 @@ defmodule AeMdwWeb.ContractController do
      end}
   end
 
-  def search_context!([create_txi: create_txi], start_txi, scope_checker, limit) do
+  def search_context!([create_txi: create_txi], start_txi, _scope_checker, limit) do
     {Model.ContractLog, {create_txi, start_txi, limit.(:event_hash), limit.(:log_idx)},
      fn {ct_txi, _start_txi, _event, _log_idx} -> ct_txi == create_txi end}
   end
