@@ -138,6 +138,36 @@ defmodule AeMdw.Db.Util do
   def all(tab),
     do: Enum.map(:mnesia.all_keys(tab), &one!(:mnesia.read(tab, &1)))
 
+  def gen_collect(table, init_key_probe, key_tester, progress, new, add, return) do
+    return.(
+      case progress.(table, init_key_probe) do
+        :"$end_of_table" ->
+          new.()
+
+        start_key ->
+          case key_tester.(start_key) do
+            false ->
+              new.()
+
+            other ->
+              init_acc =
+                case other do
+                  :skip -> new.()
+                  true -> add.(start_key, new.())
+                end
+
+              collect_keys(table, init_acc, start_key, progress, fn key, acc ->
+                case key_tester.(key) do
+                  false -> {:halt, acc}
+                  true -> {:cont, add.(key, acc)}
+                  :skip -> {:cont, acc}
+                end
+              end)
+          end
+      end
+    )
+  end
+
   ##########
 
   def current_height(),
@@ -167,5 +197,11 @@ defmodule AeMdw.Db.Util do
       prev_hash == prev_key_hash -> :key
       true -> :micro
     end
+  end
+
+  def proto_vsn(height) do
+    hps = AeMdw.Node.height_proto()
+    [{vsn, _} | _] = Enum.drop_while(hps, fn {_vsn, min_h} -> height < min_h end)
+    vsn
   end
 end

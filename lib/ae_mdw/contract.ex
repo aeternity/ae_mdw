@@ -93,26 +93,6 @@ defmodule AeMdw.Contract do
     {name, symbol, decimals}
   end
 
-  # def aex9_balances(contract_pk),
-  #   do: aex9_balances(contract_pk, top_height_hash())
-
-  # def aex9_balances(contract_pk, {height, hash}) do
-  #   {:ok, balances} = call_contract(contract_pk, {height, hash}, "balances", [])
-  #   balances
-  # end
-
-  # def aex9_balance(contract_pk, account_pk),
-  #   do: aex9_balance(contract_pk, top_height_hash(), account_pk)
-
-  # def aex9_balance(contract_pk, {height, hash}, account_pk) do
-  #   case call_contract(contract_pk, {height, hash}, "balance", [{:address, account_pk}]) do
-  #     {:ok, {:variant, [0, 1], 1, {amt}}} ->
-  #       amt
-  #     {:ok, {:variant, [0, 1], 0, {}}} ->
-  #       nil
-  #   end
-  # end
-
   def call_contract(contract_pubkey, function_name, args),
     do: call_contract(contract_pubkey, AeMdw.Node.Db.top_height_hash(), function_name, args)
 
@@ -288,25 +268,35 @@ defmodule AeMdw.Contract do
 
   ##########
 
+  def call_rec(tx_rec, contract_pk, block_hash) do
+    call_id = :aect_call_tx.call_id(tx_rec)
+    :aec_chain.get_contract_call(contract_pk, call_id, block_hash) |> ok!
+  end
+
   def call_tx_info(tx_rec, contract_pk, block_hash, format_fn) do
     ct_info = get_info(contract_pk)
     call_id = :aect_call_tx.call_id(tx_rec)
     call_data = :aect_call_tx.call_data(tx_rec)
     call = :aec_chain.get_contract_call(contract_pk, call_id, block_hash) |> ok!
 
-    {fun, args} = decode_call_data(ct_info, call_data, format_fn)
-    fun = to_string(fun)
+    try do
+      {fun, args} = decode_call_data(ct_info, call_data, format_fn)
+      fun = to_string(fun)
 
-    res_type = :aect_call.return_type(call)
-    res_val = :aect_call.return_value(call)
-    result = decode_call_result(ct_info, fun, res_type, res_val, format_fn)
+      res_type = :aect_call.return_type(call)
+      res_val = :aect_call.return_value(call)
+      result = decode_call_result(ct_info, fun, res_type, res_val, format_fn)
 
-    fun_arg_res = %{
-      function: fun,
-      arguments: args,
-      result: result
-    }
+      fun_arg_res = %{
+        function: fun,
+        arguments: args,
+        result: result
+      }
 
-    {fun_arg_res, call}
+      {fun_arg_res, call}
+    catch
+      _, {:badmatch, match_err} ->
+        {{:error, match_err}, call}
+    end
   end
 end

@@ -14,6 +14,8 @@ defmodule AeMdw.Error do
   def to_string(Err.NotFound, x), do: concat("not found", x)
   def to_string(Err.Expired, x), do: concat("expired", x)
   def to_string(Err.NotAex9, x), do: concat("not AEX9 contract", x)
+  def to_string(Err.Base64, x), do: concat("invalid base64 encoding", x)
+  def to_string(Err.Hex32, x), do: concat("invalid hex32 encoding", x)
 
   defmodule Input do
     require AeMdw.Exception
@@ -32,5 +34,7 @@ defmodule AeMdw.Error do
     defexception!(NotFound)
     defexception!(Expired)
     defexception!(NotAex9)
+    defexception!(Base64)
+    defexception!(Hex32)
   end
 end

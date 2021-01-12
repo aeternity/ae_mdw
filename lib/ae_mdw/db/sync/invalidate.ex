@@ -19,7 +19,11 @@ defmodule AeMdw.Db.Sync.Invalidate do
         Log.info("invalidating from tx #{from_txi} at generation #{prev_kbi}")
         bi_keys = block_keys_range({fork_height - 1, 0})
         {tx_keys, id_counts} = tx_keys_range(from_txi)
-        {aex9_keys, aex9_sym_keys, aex9_rev_keys} = aex9_keys_range(from_txi)
+        aex9_key_dels = aex9_key_dels(from_txi)
+        aex9_transfer_key_dels = aex9_transfer_key_dels(from_txi)
+        contract_log_key_dels = contract_log_key_dels(from_txi)
+        contract_call_key_dels = contract_call_key_dels(from_txi)
+
         tab_keys = Map.merge(bi_keys, tx_keys)
 
         :mnesia.transaction(fn ->
@@ -30,11 +34,10 @@ defmodule AeMdw.Db.Sync.Invalidate do
           do_dels(name_dels, &AeMdw.Db.Name.cache_through_delete/2)
           do_dels(oracle_dels, &AeMdw.Db.Oracle.cache_through_delete/2)
 
-          do_dels(%{
-            Model.Aex9Contract => aex9_keys,
-            Model.Aex9ContractSymbol => aex9_sym_keys,
-            Model.RevAex9Contract => aex9_rev_keys
-          })
+          do_dels(aex9_key_dels)
+          do_dels(aex9_transfer_key_dels)
+          do_dels(contract_log_key_dels)
+          do_dels(contract_call_key_dels)
 
           do_writes(name_writes, &AeMdw.Db.Name.cache_through_write/2)
           do_writes(oracle_writes, &AeMdw.Db.Oracle.cache_through_write/2)
@@ -175,25 +178,120 @@ defmodule AeMdw.Db.Sync.Invalidate do
     end
   end
 
-  def aex9_keys_range(from_txi) do
-    case :mnesia.dirty_next(Model.RevAex9Contract, {from_txi, nil, nil, nil}) do
-      :"$end_of_table" ->
-        {[], []}
+  def aex9_key_dels(from_txi) do
+    {aex9_keys, aex9_sym_keys, aex9_rev_keys} =
+      case :mnesia.dirty_next(Model.RevAex9Contract, {from_txi, nil, nil, nil}) do
+        :"$end_of_table" ->
+          {[], [], []}
 
-      start_key ->
-        push_key = fn {txi, name, symbol, decimals}, {contracts, symbols, rev_contracts} ->
-          {[{name, symbol, txi, decimals} | contracts], [{symbol, name, txi, decimals} | symbols],
-           [{txi, name, symbol, decimals} | rev_contracts]}
-        end
+        start_key ->
+          push_key = fn {txi, name, symbol, decimals}, {contracts, symbols, rev_contracts} ->
+            {[{name, symbol, txi, decimals} | contracts],
+             [{symbol, name, txi, decimals} | symbols],
+             [{txi, name, symbol, decimals} | rev_contracts]}
+          end
 
-        collect_keys(
-          Model.RevAex9Contract,
-          push_key.(start_key, {[], [], []}),
-          start_key,
-          &next/2,
-          fn key, acc -> {:cont, push_key.(key, acc)} end
-        )
-    end
+          collect_keys(
+            Model.RevAex9Contract,
+            push_key.(start_key, {[], [], []}),
+            start_key,
+            &next/2,
+            fn key, acc -> {:cont, push_key.(key, acc)} end
+          )
+      end
+
+    %{
+      Model.Aex9Contract => aex9_keys,
+      Model.Aex9ContractSymbol => aex9_sym_keys,
+      Model.RevAex9Contract => aex9_rev_keys
+    }
+  end
+
+  def aex9_transfer_key_dels(from_txi) do
+    {aex9_tr_keys, aex9_rev_tr_keys, aex9_idx_tr_keys} =
+      case :mnesia.dirty_next(Model.IdxAex9Transfer, {from_txi, 0, nil, nil, 0}) do
+        :"$end_of_table" ->
+          {[], [], []}
+
+        start_key ->
+          push_key = fn {txi, log_idx, from_pk, to_pk, amount}, {tr_keys, rev_keys, idx_keys} ->
+            tr_key = {from_pk, to_pk, amount, txi, log_idx}
+            rev_key = {to_pk, from_pk, amount, txi, log_idx}
+            idx_key = {txi, log_idx, from_pk, to_pk, amount}
+            {[tr_key | tr_keys], [rev_key | rev_keys], [idx_key | idx_keys]}
+          end
+
+          collect_keys(
+            Model.IdxAex9Transfer,
+            push_key.(start_key, {[], [], []}),
+            start_key,
+            &next/2,
+            fn key, acc -> {:cont, push_key.(key, acc)} end
+          )
+      end
+
+    %{
+      Model.Aex9Transfer => aex9_tr_keys,
+      Model.RevAex9Transfer => aex9_rev_tr_keys,
+      Model.IdxAex9Transfer => aex9_idx_tr_keys
+    }
+  end
+
+  def contract_log_key_dels(from_txi) do
+    {log_keys, data_log_keys, evt_log_keys, idx_log_keys} =
+      case :mnesia.dirty_next(Model.IdxContractLog, {from_txi, 0, nil, 0}) do
+        :"$end_of_table" ->
+          {[], [], [], []}
+
+        start_key ->
+          push_key = fn {call_txi, create_txi, evt_hash, log_idx},
+                        {log_keys, data_keys, evt_keys, idx_keys} ->
+            log_key = {create_txi, call_txi, log_idx, evt_hash}
+            evt_key = {evt_hash, create_txi, call_txi, log_idx}
+            idx_key = {call_txi, create_txi, evt_hash, log_idx}
+
+            m_log = read!(Model.ContractLog, log_key)
+            data = Model.contract_log(m_log, :data)
+            data_key = {data, create_txi, evt_hash, call_txi, log_idx}
+
+            {[log_key | log_keys], [data_key | data_keys], [evt_key | evt_keys],
+             [idx_key | idx_keys]}
+          end
+
+          collect_keys(
+            Model.IdxContractLog,
+            push_key.(start_key, {[], [], [], []}),
+            start_key,
+            &next/2,
+            fn key, acc -> {:cont, push_key.(key, acc)} end
+          )
+      end
+
+    %{
+      Model.ContractLog => log_keys,
+      Model.DataContractLog => data_log_keys,
+      Model.EvtContractLog => evt_log_keys,
+      Model.IdxContractLog => idx_log_keys
+    }
+  end
+
+  def contract_call_key_dels(from_txi) do
+    contract_call_keys =
+      case :mnesia.dirty_next(Model.ContractCall, {from_txi, 0}) do
+        :"$end_of_table" ->
+          []
+
+        start_key ->
+          collect_keys(
+            Model.ContractCall,
+            [start_key],
+            start_key,
+            &next/2,
+            fn key, acc -> {:cont, [key | acc]} end
+          )
+      end
+
+    %{Model.ContractCall => contract_call_keys}
   end
 
   ##########

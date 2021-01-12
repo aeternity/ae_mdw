@@ -13,18 +13,10 @@ defmodule AeMdwWeb.Aex9Controller do
   ##########
 
   def by_names(conn, params),
-    do:
-     handle_input(
-       conn,
-       fn -> by_names_reply(conn, search_mode!(params), list_all(params)) end
-     )
+    do: handle_input(conn, fn -> by_names_reply(conn, search_mode!(params)) end)
 
   def by_symbols(conn, params),
-    do:
-     handle_input(
-       conn,
-       fn -> by_symbols_reply(conn, search_mode!(params), list_all(params)) end
-     )
+    do: handle_input(conn, fn -> by_symbols_reply(conn, search_mode!(params)) end)
 
   def balance(conn, %{"contract_id" => contract_id, "account_id" => account_id}),
     do:
@@ -104,19 +96,43 @@ defmodule AeMdwWeb.Aex9Controller do
         end
       )
 
+  def transfers_from(conn, %{"sender" => sender_id}),
+    do:
+      handle_input(
+        conn,
+        fn -> transfers_reply(conn, {:from, Validate.id!(sender_id)}, :aex9_transfer) end
+      )
+
+  def transfers_to(conn, %{"recipient" => recipient_id}),
+    do:
+      handle_input(
+        conn,
+        fn -> transfers_reply(conn, {:to, Validate.id!(recipient_id)}, :rev_aex9_transfer) end
+      )
+
+  def transfers_from_to(conn, %{"sender" => sender_id, "recipient" => recipient_id}),
+    do:
+      handle_input(
+        conn,
+        fn ->
+          query = {:from_to, Validate.id!(sender_id), Validate.id!(recipient_id)}
+          transfers_reply(conn, query, :aex9_transfer)
+        end
+      )
+
   ##########
 
-  def by_names_reply(conn, prefix, all?) do
+  def by_names_reply(conn, search_mode) do
     entries =
-      Contract.aex9_search_name(prefix, all?)
+      Contract.aex9_search_name(search_mode)
       |> Enum.map(&Format.to_map(&1, Model.Aex9Contract))
 
     json(conn, entries)
   end
 
-  def by_symbols_reply(conn, prefix, all?) do
+  def by_symbols_reply(conn, search_mode) do
     entries =
-      Contract.aex9_search_symbol(prefix, all?)
+      Contract.aex9_search_symbol(search_mode)
       |> Enum.map(&Format.to_map(&1, Model.Aex9ContractSymbol))
 
     json(conn, entries)
@@ -181,18 +197,21 @@ defmodule AeMdwWeb.Aex9Controller do
     json(conn, balances_to_map({amounts, {block_type, height, block_hash}}, contract_pk))
   end
 
+  def transfers_reply(conn, query, key_tag) do
+    transfers = Contract.aex9_search_transfers(query)
+    json(conn, Enum.map(transfers, &transfer_to_map(&1, key_tag)))
+  end
+
   ##########
 
   def search_mode!(%{"prefix" => _, "exact" => _}),
-    do: raise ErrInput.Query, value: "can't use both `prefix` and `exact` parameters"
+    do: raise(ErrInput.Query, value: "can't use both `prefix` and `exact` parameters")
+
   def search_mode!(%{"exact" => exact}),
     do: {:exact, exact}
+
   def search_mode!(%{} = params),
     do: {:prefix, Map.get(params, "prefix", "")}
-
-
-  def list_all(%{"all" => x}) when x in [nil, "true", [nil], ["true"]], do: true
-  def list_all(%{}), do: false
 
   def parse_range!(range) do
     case DSPlug.parse_range(range) do
@@ -275,6 +294,19 @@ defmodule AeMdwWeb.Aex9Controller do
         {h, hash}
       end
     )
+  end
+
+  def transfer_to_map({recipient_pk, sender_pk, amount, call_txi, log_idx}, :rev_aex9_transfer),
+    do: transfer_to_map({sender_pk, recipient_pk, amount, call_txi, log_idx}, :aex9_transfer)
+
+  def transfer_to_map({sender_pk, recipient_pk, amount, call_txi, log_idx}, :aex9_transfer) do
+    %{
+      sender: enc_id(sender_pk),
+      recipient: enc_id(recipient_pk),
+      amount: amount,
+      call_txi: call_txi,
+      log_idx: log_idx
+    }
   end
 
   def enc_block(:key, hash), do: :aeser_api_encoder.encode(:key_block_hash, hash)

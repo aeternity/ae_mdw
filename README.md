@@ -60,6 +60,12 @@
             - [Auctions](#auctions)
         - [Pointers](#pointers)
         - [Pointees](#pointees)
+    - [Contracts](#contracts)
+        - [Querying logs](#querying-logs)
+            - [Log entry fields](#log-entry-fields)
+                - [Note for contract writers](#note-for-contract-writers)
+            - [Scope and direction of logs listing](#scope-and-direction-of-logs-listing)
+            - [Querying of contract logs](#querying-of-contract-logs)
     - [Oracles](#oracles)
         - [Oracle resolution](#oracle-resolution)
         - [Listing oracles](#listing-oracles)
@@ -177,6 +183,25 @@ GET /oracles/active                     - returns active oracles ordered by expi
 GET /oracles/active/gen/:range          - returns active oracles for continuation link
 GET /oracles                            - returns all oracles from newest (active) to oldest (expired)
 GET /oracles/gen/:range                 - returns all oracles for continuation link
+
+GET /aex9/by_name                       - returns AEX9 tokens, filtered by token name
+GET /aex9/by_symbol                     - returns AEX9 tokens, filtered by token symbol
+
+GET /aex9/balance/gen/:range/:contract_id/:account_id      - returns AEX9 token balance in range for given contract and account
+GET /aex9/balance/hash/:blockhash/:contract_id/:account_id - returns AEX9 token balance at block for given contract and account
+GET /aex9/balance/:contract_id/:account_id                 - returns current AEX9 token balance for given contract and account
+
+GET /aex9/balances/gen/:range/:contract_id       - returns all AEX9 token balances in range for given contract
+GET /aex9/balances/hash/:blockhash/:contract_id  - returns all AEX9 token balances at block for given contract
+GET /aex9/balances/:contract_id                  - returns all current AEX9 token balances for given contract
+
+GET /aex9/transfers/from/:sender                 - returns all transfers of AEX9 tokens from sender
+GET /aex9/transfers/to/:recipient                - returns all transfers of AEX9 tokens to recipient
+GET /aex9/transfers/from-to/:sender/:recipient   - returns all transfers of AEX9 tokens between sender and recipient
+
+GET /contracts/logs                     - returns contract logs
+GET /contracts/logs/:direction          - returns contract logs from genesis or from the tip of chain
+GET /contracts/logs/:scope_type/:range  - returns contract logs from in given range
 
 GET  /status                            - returns middleware status (version, number of generations indexed)
 
@@ -2483,6 +2508,372 @@ $ curl -s "http://localhost:4000/name/pointees/ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8L
   "inactive": {}
 }
 ```
+
+## Contracts
+
+### Querying logs
+
+A paginable contract log endpoint allows querying of the contract logs using several querying parameters.
+
+#### Log entry fields
+
+Example output of
+```
+$ curl -s "http://localhost:4000/contracts/logs/forward?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1" | jq '.'
+{
+  "data": [
+    {
+      "args": [
+        "32049452134983951870486158652299990269658301415986031571975774292043131948665",
+        "10000000000000000"
+      ],
+      "call_tx_hash": "th_2JLGkWhXbEQxMuEYTxazPurKiwGvo5R6vgqjSBw3R8z9F6b4rv",
+      "call_txi": 8395071,
+      "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+      "contract_txi": 8392766,
+      "data": "https://github.com/thepiwo",
+      "event_hash": "MVGUQ861EKRNBCGUC35711P9M2HSVQHG5N39CE5CCIUQ7AGK7UU0====",
+      "ext_caller_contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+      "ext_caller_contract_txi": 8392766,
+      "log_idx": 0
+    }
+  ],
+  "next": "contracts/logs/gen/0-370592?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1&page=2"
+}
+```
+
+- `args` - a list of event constructor arguments as big integers. Contract bytecode doesn't contain metadata describing the types of the contract events. As a result, we can only report the binary blobs to the user, which can be either a integer (probably denoting an amount or counter), or public key.
+
+The integer can be converted to public key (256-bits) binary in Elixir (or Erlang) shell:
+
+```
+iex(aeternity@localhost)3> <<32049452134983951870486158652299990269658301415986031571975774292043131948665 :: 256>>
+<<70, 219, 88, 217, 218, 57, 227, 219, 63, 200, 168, 207, 16, 238, 173, 185,
+  185, 214, 3, 207, 227, 124, 221, 54, 36, 147, 13, 144, 171, 6, 142, 121>>
+```
+
+- `call_tx_hash` - hash of contract call transaction which emitted the event log
+
+- `call_txi` - tx index of contract call transaction
+
+- `contract_id` - contract identifier
+
+- `contract_txi` - tx index of contract create transaction
+
+- `data` - decoded (human readable) data field of event log (if any)
+
+- `event_hash` - hex32 encoded blake2b hash of the name of the event constructor
+
+The source of the contract in question has one of the event log constructors named "TipReceived".
+It's encoded hash can be retrieved as:
+
+```
+iex(aeternity@localhost)11> Base.hex_encode32(:aec_hash.blake2b_256_hash("TipReceived"))
+"MVGUQ861EKRNBCGUC35711P9M2HSVQHG5N39CE5CCIUQ7AGK7UU0===="
+```
+
+- `ext_caller_contract_id` - caller contract id, potentially different to `contract_id`, if the contract which emitted the event was called from other contract
+
+- `ext_caller_contract_txi` - tx index of caller's contract create transaction
+
+- `log_idx` - contract call can emit many events. Log idx uniquely identifies the event log inside the contract call.
+
+##### Note for contract writers
+
+From the above, it is obvious that due to the lack of useful metadata in the contract bytecode, browsing contract logs isn't user friendly.
+
+However, logs are still useful for people writing the contracts since they have source code of the contract.
+
+With access to the contract's source code, the developer can:
+
+- identify the event log constructor from the `event_hash` field
+- with the constructor, the developer knows the types of `args` for a particular event log
+- integer arguments are then understandable literally, while hashes need one more step:
+  - after extracting the binary of the argument, this binary should be then passed to:
+    ```
+    :aeser_api_encoder.encode(<id-type>, extracted-binary)
+    ```
+
+    where the `<id-type>` can be one of: `:account_pubkey`, `:contract_pubkey`, `:oracle_pubkey`
+    and others, the full list of known types is here (in Erlang syntax):
+
+    https://github.com/aeternity/aeserialization/blob/master/src/aeser_api_encoder.erl#L16
+
+#### Scope and direction of logs listing
+
+Similarly as with transaction endpoints, contract logs endpoints allow specifying either:
+- direction (`forward` - genesis to chain top, `backward` - chain top back to genesis)
+- scope given by scope type (`gen` or `txi`), and subsequent numeric range (or exact number)
+
+For demonstration, we will use `limit` parameter to limit the amount of output.
+
+Listing the first contract log in the chain:
+
+```
+$ curl -s "http://localhost:4000/contracts/logs/forward?limit=1" | jq '.'
+{
+  "data": [
+    {
+      "args": [
+        "1400508066233309279239239045096033940724811213512939143635043780609290662855",
+        "300000"
+      ],
+      "call_tx_hash": "th_zJWYfwoYcQzq5pbNf33aoQkPNJyhsaB7PWghhwM6uw9jkgM8m",
+      "call_txi": 4000005,
+      "contract_id": "ct_QnzUd9dztc9ZKfK28kuHghr7wNo8X9P3x8bAvRu3FzSTnQG31",
+      "contract_txi": 3826455,
+      "data": "",
+      "event_hash": "QS0FEGR42QJOOJ65BU8F5LHHDSUAI6MLUGP3NAI8MPD4HCIKVCHG====",
+      "ext_caller_contract_id": "ct_QnzUd9dztc9ZKfK28kuHghr7wNo8X9P3x8bAvRu3FzSTnQG31",
+      "ext_caller_contract_txi": 3826455,
+      "log_idx": 0
+    }
+  ],
+  "next": "contracts/logs/gen/0-370592?limit=1&page=2"
+}
+```
+
+Listing the last (to date) contract log in the chain:
+
+```
+$ curl -s "http://localhost:4000/contracts/logs/backward?limit=1" | jq '.'
+{
+  "data": [
+    {
+      "args": [
+        "80808227038564992079558295896388926841596253273977977325246416786468530750284",
+        "23245441236723951035912846601319239080044515685575576534240736154129181748855",
+        "966628800000000000"
+      ],
+      "call_tx_hash": "th_2vDNSLGyBdBNPmyfWtfHEAH2PdJh7t39G3a6JtM4ByfYD1LT1V",
+      "call_txi": 19626064,
+      "contract_id": "ct_2MgX2e9mdM3epVpmxLQim7SAMF2xTbid4jtyVi4WiLF3Q8ZTRZ",
+      "contract_txi": 17708111,
+      "data": "",
+      "event_hash": "48U3JOKTVTI6FVMTK2BLHM8NG72JEBG93VS6MENPSC8E71IM5FNG====",
+      "ext_caller_contract_id": "ct_2M4mVQCDVxu6mvUrEue1xMafLsoA1bgsfC3uT95F3r1xysaCvE",
+      "ext_caller_contract_txi": 17707096,
+      "log_idx": 2
+    }
+  ],
+  "next": "contracts/logs/gen/370592-0?limit=1&page=2"
+}
+```
+
+Listing contract logs in range between generations 200000 and 210000:
+
+```
+$ curl -s "http://localhost:4000/contracts/logs/gen/200000-210000?limit=1" | jq '.'
+{
+  "data": [
+    {
+      "args": [
+        "48550576960427288418928503238185419255781131458428297160617859112449977313818",
+        "1000000000000000000"
+      ],
+      "call_tx_hash": "th_2BjrnHaRHo196AHtpMHV4QUiJqDi6UjfsA5pbPgTGhKpQuB67N",
+      "call_txi": 7004806,
+      "contract_id": "ct_cT9mSpx9989Js39ag45fih2daephb7YsicsvNdUdEB156gT5C",
+      "contract_txi": 6589581,
+      "data": "https://github.com/aeternity",
+      "event_hash": "MVGUQ861EKRNBCGUC35711P9M2HSVQHG5N39CE5CCIUQ7AGK7UU0====",
+      "ext_caller_contract_id": "ct_cT9mSpx9989Js39ag45fih2daephb7YsicsvNdUdEB156gT5C",
+      "ext_caller_contract_txi": 6589581,
+      "log_idx": 0
+    }
+  ],
+  "next": "contracts/logs/gen/200000-210000?limit=1&page=2"
+}
+```
+
+Listing contract logs in generation 250109 only:
+
+```
+$ curl -s "http://localhost:4000/contracts/logs/gen/250109?limit=1" | jq '.'
+{
+  "data": [
+    {
+      "args": [
+        "113825637927817399496888947973485901133216730124575464244310341957325543404011",
+        "100000000000000000"
+      ],
+      "call_tx_hash": "th_22pciXRFnEieCSMEbcEPEfHdxvJobJt2UoCtXXiQ3pnDn6kvaz",
+      "call_txi": 10788741,
+      "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+      "contract_txi": 8392766,
+      "data": "https://twitter.com/LeonBlockchain",
+      "event_hash": "MVGUQ861EKRNBCGUC35711P9M2HSVQHG5N39CE5CCIUQ7AGK7UU0====",
+      "ext_caller_contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+      "ext_caller_contract_txi": 8392766,
+      "log_idx": 0
+    }
+  ],
+  "next": "contracts/logs/gen/250109-250109?limit=1&page=2"
+}
+```
+
+Listing contract logs from transaction index 15000000 downto 5000000 - e.g. backwards (note descending call_txi):
+
+```
+$ curl -s "http://localhost:4000/contracts/logs/txi/15000000-5000000?limit=2" | jq '.'
+{
+  "data": [
+    {
+      "args": [
+        "62059066751890548769948246095111340843449817566010565188117840814896942849080",
+        "585892500000000000000"
+      ],
+      "call_tx_hash": "th_kNDMha7svd7BefFBzGgLqzZAvFpvCSf3KebML1ehBL681ohyc",
+      "call_txi": 14990154,
+      "contract_id": "ct_eJhrbPPS4V97VLKEVbSCJFpdA4uyXiZujQyLqMFoYV88TzDe6",
+      "contract_txi": null,
+      "data": "0X0129E84285A6E158050774C02D0CC0279A952812",
+      "event_hash": "8U30JKGH96FU11A2BB23RPC7BQILKJVEV1HS79QF2QQLMRTN72UG====",
+      "ext_caller_contract_id": "ct_eJhrbPPS4V97VLKEVbSCJFpdA4uyXiZujQyLqMFoYV88TzDe6",
+      "ext_caller_contract_txi": null,
+      "log_idx": 0
+    },
+    {
+      "args": [
+        "40622116278729278568318020744060411462094505710435719316947449635041473609173",
+        "200000000000000000"
+      ],
+      "call_tx_hash": "th_2Hu1vp599wdSHKQdX1Hpn6mj9PhQLwBTnqybYqEdzkUrcjKA7J",
+      "call_txi": 14984615,
+      "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+      "contract_txi": 8392766,
+      "data": "https://kryptokrauts.com/log/superhero-a-truly-decentralized-social-tipping-platform",
+      "event_hash": "MVGUQ861EKRNBCGUC35711P9M2HSVQHG5N39CE5CCIUQ7AGK7UU0====",
+      "ext_caller_contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+      "ext_caller_contract_txi": 8392766,
+      "log_idx": 0
+    }
+  ],
+  "next": "contracts/logs/txi/15000000-5000000?limit=2&page=2"
+}
+```
+
+#### Querying of contract logs
+
+Besides selection of the scope we are interested in, we can list only those logs matching a given query.
+
+The query string can mix any combination of the following parameters:
+
+- `contract_id` - listing only logs emitted by given contract
+
+- `event` - listing only logs emitted by particular event constructor
+
+- `data` - listing only logs which have `data` field matching the provided prefix
+
+Without provided range or direction, the logs are listed from newest to latest.
+
+Listing latest logs for given contract:
+
+```
+$ curl -s "http://localhost:4000/contracts/logs?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2" | jq '.'
+{
+  "data": [
+    {
+      "args": [
+        "87569133758291964643644139664803946495433064832095920406619813370506210782355",
+        "120000000000000000"
+      ],
+      "call_tx_hash": "th_2rQFbvkR2rxvBQLWt4WPUPiSViES8aKDBVDraF4mogdZsVTJSQ",
+      "call_txi": 19625942,
+      "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+      "contract_txi": 8392766,
+      "data": "https://www.youtube.com/watch?v=iLQzaLr1enE",
+      "event_hash": "MVGUQ861EKRNBCGUC35711P9M2HSVQHG5N39CE5CCIUQ7AGK7UU0====",
+      "ext_caller_contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+      "ext_caller_contract_txi": 8392766,
+      "log_idx": 0
+    },
+    {
+      "args": [
+        "19315768272296812419334917756530784329195878521494173087129733615253420217233",
+        "52300000000000000000"
+      ],
+      "call_tx_hash": "th_JgxLwr7WszXNT5tU1ngc6fJJyxTywcLjWxXy8sqrpX7r7byCQ",
+      "call_txi": 19625814,
+      "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+      "contract_txi": 8392766,
+      "data": "https://superhero.com/",
+      "event_hash": "ATPGPVQP8277UG86U0JDA2CPFKQ1F28A51VAG9F029836CU1IG80====",
+      "ext_caller_contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+      "ext_caller_contract_txi": 8392766,
+      "log_idx": 0
+    }
+  ],
+  "next": "contracts/logs/txi/19626064-0?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2&page=2"
+}
+```
+
+Listing first logs where data field points to `aeternity.com`:
+(The value of data parameter needs to be URL encoded, which is not visible in this example)
+
+```
+$ curl -s "http://localhost:4000/contracts/logs/forward?data=aeternity.com&limit=2" | jq '.'
+{
+  "data": [
+    {
+      "args": [
+        "69318356919715896655612698359975736845612647472784537635207689589288608801665"
+      ],
+      "call_tx_hash": "th_29wEBiUVommkJJqtWxczsdTViBSHsCxsQMtyYZb3hju4xW6eFS",
+      "call_txi": 14749000,
+      "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+      "contract_txi": 8392766,
+      "data": "aeternity.com",
+      "event_hash": "K3LIVBOTOG9TTAPTPJH47N5CO4KVF41T5BO7RB1R8UVVOKG17APG====",
+      "ext_caller_contract_id": "ct_7wqP18AHzyoqymwGaqQp8G2UpzBCggYiq7CZdJiB71VUsLpR4",
+      "ext_caller_contract_txi": 11204400,
+      "log_idx": 0
+    },
+    {
+      "args": [
+        "69318356919715896655612698359975736845612647472784537635207689589288608801665"
+      ],
+      "call_tx_hash": "th_nvrmo5YmrWUW9pr2ohiPWB6FHgok9owi5xbLMpV2pHYvECxTD",
+      "call_txi": 14749001,
+      "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+      "contract_txi": 8392766,
+      "data": "aeternity.com",
+      "event_hash": "K3LIVBOTOG9TTAPTPJH47N5CO4KVF41T5BO7RB1R8UVVOKG17APG====",
+      "ext_caller_contract_id": "ct_7wqP18AHzyoqymwGaqQp8G2UpzBCggYiq7CZdJiB71VUsLpR4",
+      "ext_caller_contract_txi": 11204400,
+      "log_idx": 0
+    }
+  ],
+  "next": "contracts/logs/gen/0-370592?data=aeternity.com&limit=2&page=2"
+}
+```
+
+Listing the last "TipReceived" event:
+
+```
+$ curl -s "http://localhost:4000/contracts/logs?event=MVGUQ861EKRNBCGUC35711P9M2HSVQHG5N39CE5CCIUQ7AGK7UU0====&limit=1" | jq '.'
+{
+  "data": [
+    {
+      "args": [
+        "87569133758291964643644139664803946495433064832095920406619813370506210782355",
+        "120000000000000000"
+      ],
+      "call_tx_hash": "th_2rQFbvkR2rxvBQLWt4WPUPiSViES8aKDBVDraF4mogdZsVTJSQ",
+      "call_txi": 19625942,
+      "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+      "contract_txi": 8392766,
+      "data": "https://www.youtube.com/watch?v=iLQzaLr1enE",
+      "event_hash": "MVGUQ861EKRNBCGUC35711P9M2HSVQHG5N39CE5CCIUQ7AGK7UU0====",
+      "ext_caller_contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+      "ext_caller_contract_txi": 8392766,
+      "log_idx": 0
+    }
+  ],
+  "next": "contracts/logs/txi/19626064-0?event=MVGUQ861EKRNBCGUC35711P9M2HSVQHG5N39CE5CCIUQ7AGK7UU0%3D%3D%3D%3D&limit=1&page=2"
+}
+```
+
 
 ## Oracles
 

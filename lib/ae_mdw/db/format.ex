@@ -2,8 +2,7 @@ defmodule AeMdw.Db.Format do
   alias AeMdw.Node, as: AE
   alias :aeser_api_encoder, as: Enc
 
-  alias AeMdw.Db.{Model, Name}
-  alias AeMdw.Validate
+  alias AeMdw.Db.{Model, Name, Origin, Sync}
 
   require Model
 
@@ -50,13 +49,11 @@ defmodule AeMdw.Db.Format do
     do: auction_bid(bid, & &1, &to_raw_map/1, & &1)
 
   def to_raw_map(m_name, source) when elem(m_name, 0) == :name do
-    plain = Model.name(m_name, :index)
     succ = &Model.name(&1, :previous)
     prev = chase(succ.(m_name), succ)
 
     %{
-      name: plain,
-      hash: {:id, :name, Validate.name_id!(plain)},
+      name: Model.name(m_name, :index),
       status: :name,
       active: source == Model.ActiveName,
       info: name_info_to_raw_map(m_name),
@@ -96,7 +93,7 @@ defmodule AeMdw.Db.Format do
       symbol: symbol,
       decimals: decimals,
       contract_txi: txi,
-      contract_id: :aeser_id.create(:contract, AeMdw.Db.Origin.pubkey({:contract, txi}))
+      contract_id: :aeser_id.create(:contract, Origin.pubkey({:contract, txi}))
     }
   end
 
@@ -105,6 +102,28 @@ defmodule AeMdw.Db.Format do
 
   def to_raw_map({txi, name, symbol, decimals}, Model.RevAex9Contract),
     do: to_raw_map({name, symbol, txi, decimals}, Model.Aex9Contract)
+
+  def to_raw_map({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog) do
+    m_log = read!(Model.ContractLog, {create_txi, call_txi, event_hash, log_idx})
+    ext_ct_pk = Model.contract_log(m_log, :ext_contract)
+    migrate_ct_pk = Sync.Contract.migrate_contract_pk()
+    ct_id = &:aeser_id.create(:contract, &1)
+
+    %{
+      contract_txi: (create_txi != -1 && create_txi) || nil,
+      contract_id:
+        ct_id.((create_txi == -1 && migrate_ct_pk) || Origin.pubkey({:contract, create_txi})),
+      ext_caller_contract_txi:
+        (ext_ct_pk != migrate_ct_pk && Origin.tx_index({:contract, ext_ct_pk})) || nil,
+      ext_caller_contract_id: (ext_ct_pk != nil && ct_id.(ext_ct_pk)) || nil,
+      call_txi: call_txi,
+      call_tx_hash: read!(Model.Tx, call_txi) |> Model.tx(:id),
+      args: Model.contract_log(m_log, :args),
+      data: Model.contract_log(m_log, :data),
+      event_hash: event_hash,
+      log_idx: log_idx
+    }
+  end
 
   def to_raw_map(ae_tx, tx_type) do
     AeMdw.Node.tx_fields(tx_type)
@@ -123,9 +142,9 @@ defmodule AeMdw.Db.Format do
   end
 
   def custom_raw_data(:contract_call_tx, tx, tx_rec, _signed_tx, block_hash) do
-    alias AeMdw.Contract, as: C
     contract_pk = :aect_call_tx.contract_pubkey(tx_rec)
-    {fun_arg_res, call_rec} = C.call_tx_info(tx_rec, contract_pk, block_hash, &C.to_map/1)
+    call_rec = AeMdw.Contract.call_rec(tx_rec, contract_pk, block_hash)
+    fun_arg_res = AeMdw.Db.Contract.call_fun_args_res(contract_pk, tx.tx_index)
 
     logs = fn logs ->
       Enum.map(logs, fn {addr, topics, data} ->
@@ -140,7 +159,8 @@ defmodule AeMdw.Db.Format do
       log: logs.(:aect_call.log(call_rec))
     }
 
-    update_in(tx, [:tx], &Map.merge(&1, Map.merge(call_info, fun_arg_res)))
+    m = (is_map(fun_arg_res) && Map.merge(call_info, fun_arg_res)) || call_info
+    update_in(tx, [:tx], &Map.merge(&1, m))
   end
 
   def custom_raw_data(:channel_create_tx, tx, _tx_rec, signed_tx, _block_hash) do
@@ -188,12 +208,14 @@ defmodule AeMdw.Db.Format do
         {block_hash, type, signed_tx, tx_rec}
       ) do
     header = :aec_db.get_header(block_hash)
-    enc_tx = :aetx_sign.serialize_for_client(header, signed_tx)
+
+    enc_tx =
+      :aetx_sign.serialize_for_client(header, signed_tx)
+      |> put_in(["tx_index"], index)
+      |> put_in(["micro_index"], mb_index)
+      |> put_in(["micro_time"], mb_time)
 
     custom_encode(type, enc_tx, tx_rec, signed_tx, block_hash)
-    |> put_in(["tx_index"], index)
-    |> put_in(["micro_index"], mb_index)
-    |> put_in(["micro_time"], mb_time)
   end
 
   def to_map({:auction_bid, key, _}, Model.AuctionBid),
@@ -210,6 +232,17 @@ defmodule AeMdw.Db.Format do
       map_raw_values(to_raw_map(oracle, source), fn
         {:id, :oracle, pk} -> Enc.encode(:oracle_pubkey, pk)
         x -> to_json(x)
+      end)
+
+  def to_map({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog),
+    do:
+      to_raw_map({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog)
+      |> update_in([:contract_id], &enc_id/1)
+      |> update_in([:ext_caller_contract_id], fn x -> x && enc_id(x) end)
+      |> update_in([:call_tx_hash], &Enc.encode(:tx_hash, &1))
+      |> update_in([:event_hash], &Base.hex_encode32/1)
+      |> update_in([:args], fn args ->
+        Enum.map(args, fn <<topic::256>> -> to_string(topic) end)
       end)
 
   def to_map({_, _, _, _} = aex9_data, source)
@@ -248,10 +281,16 @@ defmodule AeMdw.Db.Format do
   end
 
   def custom_encode(:contract_call_tx, tx, tx_rec, _signed_tx, block_hash) do
-    alias AeMdw.Contract, as: C
     contract_pk = :aect_call_tx.contract_pubkey(tx_rec)
-    {fun_arg_res, call_rec} = C.call_tx_info(tx_rec, contract_pk, block_hash, &C.to_json/1)
-    fun_arg_res = Enum.into(Enum.map(fun_arg_res, fn {k, v} -> {to_string(k), v} end), %{})
+    call_rec = AeMdw.Contract.call_rec(tx_rec, contract_pk, block_hash)
+
+    fun_arg_res =
+      AeMdw.Db.Contract.call_fun_args_res(contract_pk, tx["tx_index"])
+      |> map_raw_values(fn
+        x when is_number(x) -> x
+        x -> to_string(x)
+      end)
+
     stringify = fn xs -> Enum.map(xs, &to_string/1) end
     log_entry = fn log -> Map.update(log, "topics", [], stringify) end
 
@@ -299,11 +338,14 @@ defmodule AeMdw.Db.Format do
     end
   end
 
+  def enc_id({:id, idtype, payload}),
+    do: Enc.encode(AE.id_type(idtype), payload)
+
   def raw_to_json(x),
     do: map_raw_values(x, &to_json/1)
 
   def to_json({:id, idtype, payload}),
-    do: Enc.encode(AE.id_type(idtype), payload)
+    do: enc_id({:id, idtype, payload})
 
   def to_json(x),
     do: x
@@ -335,7 +377,6 @@ defmodule AeMdw.Db.Format do
   defp auction_bid({plain, {_, _}, auction_end, _, [{_, txi} | _] = bids}, key, tx_fmt, info_fmt),
     do: %{
       key.(:name) => plain,
-      key.(:hash) => info_fmt.({:id, :name, Validate.name_id!(plain)}),
       key.(:status) => :auction,
       key.(:active) => false,
       key.(:info) => %{

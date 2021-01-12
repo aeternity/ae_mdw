@@ -245,4 +245,7 @@ defmodule AeMdw.Util do
       fn _ -> :ok end
     )
   end
+
+  def max_256bit_int(),
+    do: 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 end
