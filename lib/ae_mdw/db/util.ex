@@ -198,4 +198,10 @@ defmodule AeMdw.Db.Util do
       true -> :micro
     end
   end
+
+  def proto_vsn(height) do
+    hps = AeMdw.Node.height_proto()
+    [{vsn, _} | _] = Enum.drop_while(hps, fn {_vsn, min_h} -> height < min_h end)
+    vsn
+  end
 end

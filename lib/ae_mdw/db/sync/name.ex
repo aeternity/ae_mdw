@@ -1,5 +1,4 @@
 defmodule AeMdw.Db.Sync.Name do
-  alias AeMdw.Node, as: AE
   alias AeMdw.Db.{Name, Model, Format}
   alias AeMdw.{Log, Validate}
 
@@ -30,12 +29,12 @@ defmodule AeMdw.Db.Sync.Name do
     m_plain_name = Model.plain_name(index: name_hash, value: plain_name)
     cache_through_write(Model.PlainName, m_plain_name)
 
-    proto_vsn = (height >= AE.lima_height() && AE.lima_vsn()) || 0
+    proto_vsn = proto_vsn(height)
 
     case :aec_governance.name_claim_bid_timeout(plain_name, proto_vsn) do
       0 ->
         previous = ok_nil(cache_through_read(Model.InactiveName, plain_name))
-        expire = height + :aec_governance.name_claim_max_expiration()
+        expire = height + :aec_governance.name_claim_max_expiration(proto_vsn)
 
         m_name =
           Model.name(
@@ -182,7 +181,7 @@ defmodule AeMdw.Db.Sync.Name do
       bid_key = ok!(cache_through_prev(Model.AuctionBid, Name.bid_top_key(plain_name)))
 
     previous = ok_nil(cache_through_read(Model.InactiveName, plain_name))
-    expire = height + :aec_governance.name_claim_max_expiration()
+    expire = height + :aec_governance.name_claim_max_expiration(proto_vsn(height))
 
     m_name =
       Model.name(
@@ -336,8 +335,7 @@ defmodule AeMdw.Db.Sync.Name do
   def name_for_epoch({plain_name, bi_txi, auction_end, owner, claims}, new_height) do
     [{{last_claim, _}, _} | _] = claims
     {{first_claim, _}, _} = :lists.last(claims)
-    proto_vsn = (new_height >= AE.lima_height() && AE.lima_vsn()) || 0
-    timeout = :aec_governance.name_claim_bid_timeout(plain_name, proto_vsn)
+    timeout = :aec_governance.name_claim_bid_timeout(plain_name, proto_vsn(new_height))
 
     cond do
       new_height > last_claim ->
@@ -373,7 +371,7 @@ defmodule AeMdw.Db.Sync.Name do
         lfcycle = (new_height < expire && :active) || :inactive
         updates = drop_bi_txi(getter.(:updates), new_height)
         transfers = drop_bi_txi(getter.(:transfers), new_height)
-        new_expire = new_expire(active, updates)
+        new_expire = new_expire(active, updates, new_height)
 
         m_name =
           Model.name(
@@ -433,10 +431,10 @@ defmodule AeMdw.Db.Sync.Name do
   def plain_name(m_name) when Record.is_record(m_name, :name), do: Model.name(m_name, :index)
   def plain_name({plain_name, {_, _}, _, _, [_ | _]}), do: plain_name
 
-  def new_expire(active, [] = _new_updates),
-    do: active + :aec_governance.name_claim_max_expiration()
+  def new_expire(active, [] = _new_updates, new_height),
+    do: active + :aec_governance.name_claim_max_expiration(proto_vsn(new_height))
 
-  def new_expire(_active, [{{height, _}, txi} | _] = _new_updates) do
+  def new_expire(_active, [{{height, _}, txi} | _] = _new_updates, _) do
     %{tx: %{name_ttl: ttl, type: :name_update_tx}} = read_raw_tx!(txi)
     height + ttl
   end

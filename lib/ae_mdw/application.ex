@@ -136,6 +136,8 @@ defmodule AeMdw.Application do
     max_int = AeMdw.Util.max_256bit_int()
     max_blob = :binary.list_to_bin(:lists.duplicate(1024, <<max_int::256>>))
 
+    height_proto = :aec_hard_forks.protocols() |> Enum.into([]) |> Enum.sort(&>=/2)
+
     SmartGlobal.new(
       AeMdw.Node,
       %{
@@ -166,7 +168,8 @@ defmodule AeMdw.Application do
         lima_height: [{[], lima_height}],
         aex9_signatures: [{[], aex9_sigs}],
         aex9_transfer_event_hash: [{[], :aec_hash.blake2b_256_hash("Transfer")}],
-        max_blob: [{[], max_blob}]
+        max_blob: [{[], max_blob}],
+        height_proto: [{[], height_proto}]
       }
     )
   end
