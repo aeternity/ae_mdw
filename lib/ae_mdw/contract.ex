@@ -14,25 +14,31 @@ defmodule AeMdw.Contract do
   def get_info(pubkey) do
     case EtsCache.get(@tab, pubkey) do
       {info, _tm} ->
-        info
+        {:ok, info}
 
       nil ->
-        code =
-          ok!(:aec_chain.get_contract(pubkey))
-          |> :aect_contracts.code()
-          |> :aeser_contract_code.deserialize()
+        case :aec_chain.get_contract(pubkey) do
+          {:ok, contract} ->
+            info =
+              contract
+              |> :aect_contracts.code
+              |> :aeser_contract_code.deserialize
+              |> case do
+                   %{type_info: [], byte_code: byte_code} ->
+                     :aeb_fate_code.deserialize(byte_code)
 
-        info =
-          case code do
-            %{type_info: [], byte_code: byte_code} ->
-              :aeb_fate_code.deserialize(byte_code)
+                   %{type_info: type_info} ->
+                     type_info
+                 end
 
-            %{type_info: type_info} ->
-              type_info
-          end
+            EtsCache.put(@tab, pubkey, info)
+            {:ok, info}
 
-        EtsCache.put(@tab, pubkey, info)
-        info
+          {:error, reason} ->
+            # contract's init can fail, contract_create_tx stays on chain
+            # but contract isn't stored in contract store
+            {:error, reason}
+        end
     end
   end
 
@@ -61,7 +67,7 @@ defmodule AeMdw.Contract do
   def is_aex9?(pubkey) when is_binary(pubkey),
     do: is_aex9?(get_info(pubkey))
 
-  def is_aex9?({:fcode, functions, _hash_names, _}) do
+  def is_aex9?({:ok, {:fcode, functions, _hash_names, _}}) do
     Enum.all?(
       AeMdw.Node.aex9_signatures(),
       fn {hash, type} ->
@@ -160,9 +166,6 @@ defmodule AeMdw.Contract do
   def decode_call_data(contract, call_data),
     do: decode_call_data(contract, call_data, &id/1)
 
-  def decode_call_data(<<_::256>> = pubkey, call_data, mapper),
-    do: decode_call_data(get_info(pubkey), call_data, mapper)
-
   def decode_call_data({:fcode, _, _, _} = fate_info, call_data, mapper) do
     {:tuple, {fun_hash, {:tuple, tup_args}}} = :aeb_fate_encoding.deserialize(call_data)
     {:ok, fun_name} = :aeb_fate_abi.get_function_name_from_function_hash(fun_hash, fate_info)
@@ -179,9 +182,6 @@ defmodule AeMdw.Contract do
 
   def decode_call_result(contract, fun_name, result, value),
     do: decode_call_result(contract, fun_name, result, value, &id/1)
-
-  def decode_call_result(<<_::256>> = pubkey, fun_name, result, value, mapper),
-    do: decode_call_result(get_info(pubkey), fun_name, result, value, mapper)
 
   def decode_call_result(_info, _fun_name, :error, value, mapper),
     do: mapper.(%{error: [value]})
@@ -261,6 +261,8 @@ defmodule AeMdw.Contract do
          end)}
       )
 
+  def aevm_val({k, v}, f) when is_atom(k), do: f.({k, v})
+
   # this can't be imported, because Elixir complains with:
   # module :aeser_api_encoder is not loaded and could not be found
   defp encode(type, val),
@@ -274,7 +276,7 @@ defmodule AeMdw.Contract do
   end
 
   def call_tx_info(tx_rec, contract_pk, block_hash, format_fn) do
-    ct_info = get_info(contract_pk)
+    {:ok, ct_info} = get_info(contract_pk)
     call_id = :aect_call_tx.call_id(tx_rec)
     call_data = :aect_call_tx.call_data(tx_rec)
     call = :aec_chain.get_contract_call(contract_pk, call_id, block_hash) |> ok!

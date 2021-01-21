@@ -248,4 +248,17 @@ defmodule AeMdw.Util do
 
   def max_256bit_int(),
     do: 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+
+  def contains_unicode?(string) do
+    string
+    |> String.codepoints
+    |> Enum.reduce_while(false,
+         fn cp, false ->
+           case String.next_grapheme_size(cp) do
+             {1, ""} -> {:cont, false}
+             {_, ""} -> {:halt, true}
+           end
+         end)
+  end
+
 end
