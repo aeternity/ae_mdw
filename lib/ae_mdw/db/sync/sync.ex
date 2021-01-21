@@ -77,6 +77,7 @@ defmodule AeMdw.Db.Sync do
     do: spawn_action({Transaction, :sync, [height(:top) - 1]}, s)
 
   defp spawn_action(%Sync{pid: nil, fork: height} = s) when not is_nil(height) do
+    Log.info("invalidation #{height}")
     Invalidate.invalidate(height)
     spawn_action({Transaction, :sync, [:top]}, %{s | fork: nil})
   end
