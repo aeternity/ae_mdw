@@ -15,6 +15,8 @@ defmodule AeMdwWeb.UtilController do
             mdw_tx_index(:integer, "The last transaction index", required: true)
             mdw_version(:string, "The mdw version", required: true)
             node_height(:integer, "The height of the node", required: true)
+            node_progress(:integer, "Node syncing progress - 100 means synced", required: true)
+            node_syncing(:boolean, "True if node is syncing", required: true)
             node_version(:string, "The node version", required: true)
           end
 
@@ -40,26 +42,8 @@ defmodule AeMdwWeb.UtilController do
     response(200, "Returns the status of the MDW", Schema.ref(:StatusResponse))
   end
 
-  def status(conn, _params) do
-    {:ok, top_kb} = :aec_chain.top_key_block()
-    {_, _, node_vsn} = Application.started_applications() |> List.keyfind(:aecore, 0)
-    # node_progress = :aec_sync.sync_progress()
-    node_height = :aec_blocks.height(top_kb)
-    mdw_height = AeMdw.Db.Util.last_gen()
-
-    status = %{
-      node_version: to_string(node_vsn),
-      node_height: node_height,
-      # node_sync_progress: node_progress,
-      # node_synded: :aec_sync.is_syncing() == false && node_progress === 100.0,
-      mdw_version: AeMdw.MixProject.project()[:version],
-      mdw_height: mdw_height,
-      mdw_tx_index: AeMdw.Db.Util.last_txi(),
-      mdw_synced: node_height == mdw_height
-    }
-
-    json(conn, status)
-  end
+  def status(conn, _params),
+    do: json(conn, AeMdw.Db.Util.status())
 
   def no_route(conn, _params),
     do: conn |> AeMdwWeb.Util.send_error(404, "no such route")

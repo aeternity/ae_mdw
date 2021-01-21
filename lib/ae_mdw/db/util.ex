@@ -204,4 +204,27 @@ defmodule AeMdw.Db.Util do
     [{vsn, _} | _] = Enum.drop_while(hps, fn {_vsn, min_h} -> height < min_h end)
     vsn
   end
+
+  def status() do
+    alias AeMdw.Db.Model
+    require Model
+
+    {:ok, top_kb} = :aec_chain.top_key_block()
+    {_, _, node_vsn} = Application.started_applications() |> List.keyfind(:aecore, 0)
+    {node_syncing?, node_progress} = :aec_sync.sync_progress()
+    node_height = :aec_blocks.height(top_kb)
+    {mdw_height, _} = read_tx!(last_txi()) |> Model.tx(:block_index)
+
+    %{
+      node_version: to_string(node_vsn),
+      node_height: node_height,
+      node_syncing: node_syncing?,
+      node_progress: node_progress,
+      mdw_version: AeMdw.MixProject.project()[:version],
+      mdw_height: mdw_height,
+      mdw_tx_index: AeMdw.Db.Util.last_txi(),
+      mdw_synced: node_height == (mdw_height + 1) # MDW is always 1 generation behind
+    }
+  end
+
 end
