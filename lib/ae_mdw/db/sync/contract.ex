@@ -22,7 +22,7 @@ defmodule AeMdw.Db.Sync.Contract do
             meta_info = Contract.aex9_meta_info(contract_pk)
             DBContract.aex9_creation_write(meta_info, contract_pk, txi)
 
-            false ->
+          false ->
             :ok
         end
 
