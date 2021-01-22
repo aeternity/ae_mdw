@@ -67,7 +67,7 @@ defmodule AeMdw.Contract do
   def is_aex9?(pubkey) when is_binary(pubkey),
     do: is_aex9?(get_info(pubkey))
 
-  def is_aex9?({:ok, {:fcode, functions, _hash_names, _}}) do
+  def is_aex9?({:fcode, functions, _hash_names, _}) do
     Enum.all?(
       AeMdw.Node.aex9_signatures(),
       fn {hash, type} ->
