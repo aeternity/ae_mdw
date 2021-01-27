@@ -376,28 +376,59 @@ defmodule AeMdwWeb.Aex9Controller do
   def enc(type, pk), do: :aeser_api_encoder.encode(type, pk)
 
   # TODO: swagger
+  def swagger_definitions do
+    %{
+      Aex9Response:
+        swagger_schema do
+          title("Aex9Response")
+          description("Response Schema for AEX9 contract")
 
-  # def swagger_definitions do
-  #   %{
-  #     Aex9Response:
-  #       swagger_schema do
-  #         title("Aex9Response")
-  #         description("Schema for AEX9 contract")
+          properties do
+            name(:string, "The name of AEX9 token", required: true)
+            symbol(:string, "The symbol of AEX9 token", required: true)
+            decimals(:integer, "The number of decimals for AEX9 token", required: true)
+            txi(:integer, "The transaction index of contract create transction", required: true)
+          end
 
-  #         properties do
-  #           name(:string, "The name of AEX9 token", required: true)
-  #           symbol(:string, "The symbol of AEX9 token", required: true)
-  #           decimals(:integer, "The number of decimals for AEX9 token", required: true)
-  #           txi(:integer, "The transaction index of contract create transction", required: true)
-  #         end
+          example(%{
+                decimals: 18,
+                name: "testnetAE",
+                symbol: "TTAE",
+                txi: 11145713
+          })
+        end
+    }
+  end
 
-  #         example(%{
-  #               decimals: 18,
-  #               name: "testnetAE",
-  #               symbol: "TTAE",
-  #               txi: 11145713
-  #         })
-  #       end
-  #   }
-  # end
+  swagger_path :aex9_by_name do
+    get("/block/{hash}")
+    description("Get block information by given key/micro block hash.")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("")
+    tag("Middleware")
+
+    parameters do
+      hash(:path, :string, "The key/micro block hash",
+        required: true,
+        example: "kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6"
+      )
+    end
+  end 
+
+  swagger_path :aex9_by_symbol do
+    get("aex9/by_symbol")
+    description("Get AEX9 token information by given symbol.")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("")
+    tag("Middleware")
+
+    parameters do
+      hash(:path, :string, "The key/micro block hash",
+        required: true,
+        example: "kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6"
+      )
+    end
+  end
 end
