@@ -1,5 +1,6 @@
 defmodule AeMdw.Contract do
   alias AeMdw.EtsCache
+  alias AeMdw.Node.Db, as: DBN
 
   import :erlang, only: [tuple_to_list: 1]
 
@@ -94,20 +95,20 @@ defmodule AeMdw.Contract do
         31, 248, 107, 58, 249, 227, 16, 227, 134, 86, 43, 239>>
 
   def aex9_meta_info(contract_pk),
-    do: aex9_meta_info(contract_pk, AeMdw.Node.Db.top_height_hash())
+    do: aex9_meta_info(contract_pk, DBN.top_height_hash(false))
 
-  def aex9_meta_info(contract_pk, {height, hash}) do
+  def aex9_meta_info(contract_pk, {type, height, hash}) do
     {:ok, {:tuple, {name, symbol, decimals}}} =
-      call_contract(contract_pk, {height, hash}, "meta_info", [])
+      call_contract(contract_pk, {type, height, hash}, "meta_info", [])
 
     {name, symbol, decimals}
   end
 
   def call_contract(contract_pubkey, function_name, args),
-    do: call_contract(contract_pubkey, AeMdw.Node.Db.top_height_hash(), function_name, args)
+    do: call_contract(contract_pubkey, DBN.top_height_hash(false), function_name, args)
 
-  def call_contract(contract_pubkey, {key_height, key_hash}, function_name, args) do
-    {tx_env, trees} = :aetx_env.tx_env_and_trees_from_hash(:aetx_contract, key_hash)
+  def call_contract(contract_pubkey, {_, height, block_hash}, function_name, args) do
+    {tx_env, trees} = :aetx_env.tx_env_and_trees_from_hash(:aetx_contract, block_hash)
     contracts = :aec_trees.contracts(trees)
     contract = :aect_state_tree.get_contract(contract_pubkey, contracts)
 
@@ -125,7 +126,7 @@ defmodule AeMdw.Contract do
     caller_id = :aeser_id.create(:account, caller_pubkey)
     contract_id = :aect_contracts.id(contract)
 
-    call = :aect_call.new(caller_id, 0, contract_id, key_height, gas_price)
+    call = :aect_call.new(caller_id, 0, contract_id, height, gas_price)
     code = :aect_contracts.code(contract)
     call_data = :aeb_fate_abi.create_calldata('#{function_name}', args) |> ok!
 

@@ -21,6 +21,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
         {tx_keys, id_counts} = tx_keys_range(from_txi)
         aex9_key_dels = aex9_key_dels(from_txi)
         aex9_transfer_key_dels = aex9_transfer_key_dels(from_txi)
+        aex9_account_presence_key_dels = aex9_account_presence_key_dels(from_txi)
         contract_log_key_dels = contract_log_key_dels(from_txi)
         contract_call_key_dels = contract_call_key_dels(from_txi)
 
@@ -36,6 +37,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
           do_dels(aex9_key_dels)
           do_dels(aex9_transfer_key_dels)
+          do_dels(aex9_account_presence_key_dels)
           do_dels(contract_log_key_dels)
           do_dels(contract_call_key_dels)
 
@@ -234,6 +236,34 @@ defmodule AeMdw.Db.Sync.Invalidate do
       Model.Aex9Transfer => aex9_tr_keys,
       Model.RevAex9Transfer => aex9_rev_tr_keys,
       Model.IdxAex9Transfer => aex9_idx_tr_keys
+    }
+  end
+
+  def aex9_account_presence_key_dels(from_txi) do
+    {aex9_presence_keys, idx_aex9_presence_keys} =
+      case :mnesia.dirty_next(Model.IdxAex9AccountPresence, {from_txi, nil, nil}) do
+        :"$end_of_table" ->
+          {[], []}
+
+        start_key ->
+          push_key = fn {txi, acc_pk, ct_pk}, {acc_keys, idx_keys} ->
+            acc_key = {acc_pk, txi, ct_pk}
+            idx_key = {txi, acc_pk, ct_pk}
+            {[acc_key | acc_keys], [idx_key | idx_keys]}
+          end
+
+          collect_keys(
+            Model.IdxAex9AccountPresence,
+            push_key.(start_key, {[], []}),
+            start_key,
+            &next/2,
+            fn key, acc -> {:cont, push_key.(key, acc)} end
+          )
+      end
+
+    %{
+      Model.Aex9AccountPresence => aex9_presence_keys,
+      Model.IdxAex9AccountPresence => idx_aex9_presence_keys
     }
   end
 
