@@ -49,37 +49,56 @@ defmodule AeMdw.Node.Db do
     signed_tx
   end
 
-  def top_height_hash() do
-    top_key_block = :aec_chain.top_key_block() |> ok!
-    top_key_header = :aec_blocks.to_key_header(top_key_block)
-    {:aec_headers.height(top_key_header), ok!(:aec_headers.hash_header(top_key_header))}
+  def top_height_hash(_the_very_top? = false) do
+    block = :aec_chain.top_key_block() |> ok!
+    header = :aec_blocks.to_key_header(block)
+    {:key, :aec_headers.height(header), ok!(:aec_headers.hash_header(header))}
   end
 
-  def height_hash!(bi) do
-    m_block = read_block!(bi)
-    {height, _} = Model.block(m_block, :index)
-    {height, Model.block(m_block, :hash)}
+  def top_height_hash(_the_very_top? = true) do
+    {type, header} =
+      case :aec_chain.top_block() do
+        {:mic_block, header, _txs, _} -> {:micro, header}
+        {:key_block, header} -> {:key, header}
+      end
+    {type, :aec_headers.height(header), ok!(:aec_headers.hash_header(header))}
   end
+
+  # def height_hash!(bi) do
+  #   m_block = read_block!(bi)
+  #   {height, _} = Model.block(m_block, :index)
+  #   {height, Model.block(m_block, :hash)}
+  # end
 
   def aex9_balance(contract_pk, account_pk),
-    do: aex9_balance(contract_pk, account_pk, top_height_hash())
+    do: aex9_balance(contract_pk, account_pk, false)
 
-  def aex9_balance(contract_pk, account_pk, {height, hash}) do
-    case AeMdw.Contract.call_contract(contract_pk, {height, hash}, "balance", [
+  def aex9_balance(contract_pk, account_pk, the_very_top?) when is_boolean(the_very_top?),
+    do: aex9_balance(contract_pk, account_pk, top_height_hash(the_very_top?))
+
+  def aex9_balance(contract_pk, account_pk, {type, height, hash}) do
+    case AeMdw.Contract.call_contract(contract_pk, {type, height, hash}, "balance", [
            {:address, account_pk}
          ]) do
-      {:ok, {:variant, [0, 1], 1, {amt}}} -> {amt, {height, hash}}
-      {:ok, {:variant, [0, 1], 0, {}}} -> {nil, {height, hash}}
+      {:ok, {:variant, [0, 1], 1, {amt}}} -> {amt, {type, height, hash}}
+      {:ok, {:variant, [0, 1], 0, {}}} -> {nil, {type, height, hash}}
     end
   end
 
   def aex9_balances(contract_pk),
-    do: aex9_balances(contract_pk, top_height_hash())
+    do: aex9_balances(contract_pk, false)
 
-  def aex9_balances(contract_pk, {height, hash}) do
-    {:ok, addr_map} = AeMdw.Contract.call_contract(contract_pk, {height, hash}, "balances", [])
-    # %{{:address, acc_pk} => balance}
-    {addr_map, {height, hash}}
+  def aex9_balances(contract_pk, the_very_top?) when is_boolean(the_very_top?),
+    do: aex9_balances(contract_pk, top_height_hash(the_very_top?))
+
+  def aex9_balances(contract_pk, {type, height, hash}) do
+    {:ok, addr_map} = AeMdw.Contract.call_contract(
+      contract_pk,
+      {type, height, hash},
+      "balances",
+      []
+    )
+    {addr_map, {type, height, hash}}
   end
 
   # NOTE: only needed for manual patching of the DB in case of missing blocks

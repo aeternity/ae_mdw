@@ -1,5 +1,8 @@
 defmodule AeMdw.Db.Util do
+  alias AeMdw.Db.Model
+
   require Logger
+  require Model
 
   import AeMdw.{Sigil, Util}
 
@@ -205,10 +208,40 @@ defmodule AeMdw.Db.Util do
     vsn
   end
 
-  def status() do
-    alias AeMdw.Db.Model
-    require Model
+  def block_txi(bi), do: map_one_nil(read_block(bi), &Model.block(&1, :tx_index))
 
+  def block_hash_to_bi(block_hash) do
+    case :aec_chain.get_block(block_hash) do
+      {:ok, some_block} ->
+        {type, header} =
+          case some_block do
+            {:key_block, header} -> {:key, header}
+            {:mic_block, header, _txs, _fraud} -> {:micro, header}
+          end
+        height = :aec_headers.height(header)
+        case height >= last_gen() do
+          true ->
+            nil
+          false ->
+            case type do
+              :key -> {height, -1}
+              :micro ->
+                collect_keys(Model.Block, nil, {height, <<>>}, &prev/2, fn
+                  {^height, _} = bi, nil ->
+                    Model.block(read_block!(bi), :hash) == block_hash
+                    && {:halt, bi} || {:cont, nil}
+                  _k, nil ->
+                    {:halt, nil}
+                end)
+            end
+        end
+      :error ->
+        nil
+    end
+  end
+
+
+  def status() do
     {:ok, top_kb} = :aec_chain.top_key_block()
     {_, _, node_vsn} = Application.started_applications() |> List.keyfind(:aecore, 0)
     {node_syncing?, node_progress} = :aec_sync.sync_progress()

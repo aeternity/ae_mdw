@@ -237,6 +237,22 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :idx_aex9_transfer, @idx_aex9_transfer_defaults
 
+  # aex9 account presence:
+  #    index: {account pk, create or call txi, contract pk}
+  @aex9_account_presence_defaults [
+    index: {nil, -1, nil},
+    unused: nil
+  ]
+  defrecord :aex9_account_presence, @aex9_account_presence_defaults
+
+  # idx_aex9_account_presence:
+  #    index: {create or call txi, account pk, contract pk}
+  @idx_aex9_account_presence_defaults [
+    index: {-1, nil, nil},
+    unused: nil
+  ]
+  defrecord :idx_aex9_account_presence, @idx_aex9_account_presence_defaults
+
   ################################################################################
 
   def tables(),
@@ -264,6 +280,8 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.Aex9Transfer,
       AeMdw.Db.Model.RevAex9Transfer,
       AeMdw.Db.Model.IdxAex9Transfer,
+      AeMdw.Db.Model.Aex9AccountPresence,
+      AeMdw.Db.Model.IdxAex9AccountPresence,
       AeMdw.Db.Model.ContractCall,
       AeMdw.Db.Model.ContractLog,
       AeMdw.Db.Model.DataContractLog,
@@ -313,6 +331,8 @@ defmodule AeMdw.Db.Model do
       :aex9_transfer,
       :rev_aex9_transfer,
       :idx_aex9_transfer,
+      :aex9_account_presence,
+      :idx_aex9_account_presence,
       :contract_call,
       :contract_log,
       :data_contract_log,
@@ -345,6 +365,8 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Aex9Transfer), do: :aex9_transfer
   def record(AeMdw.Db.Model.RevAex9Transfer), do: :rev_aex9_transfer
   def record(AeMdw.Db.Model.IdxAex9Transfer), do: :idx_aex9_transfer
+  def record(AeMdw.Db.Model.Aex9AccountPresence), do: :aex9_account_presence
+  def record(AeMdw.Db.Model.IdxAex9AccountPresence), do: :idx_aex9_account_presence
   def record(AeMdw.Db.Model.ContractCall), do: :contract_call
   def record(AeMdw.Db.Model.ContractLog), do: :contract_log
   def record(AeMdw.Db.Model.DataContractLog), do: :data_contract_log
@@ -380,6 +402,8 @@ defmodule AeMdw.Db.Model do
   def table(:aex9_transfer), do: AeMdw.Db.Model.Aex9Transfer
   def table(:rev_aex9_transfer), do: AeMdw.Db.Model.RevAex9Transfer
   def table(:idx_aex9_transfer), do: AeMdw.Db.Model.IdxAex9Transfer
+  def table(:aex9_account_presence), do: AeMdw.Db.Model.Aex9AccountPresence
+  def table(:idx_aex9_account_presence), do: AeMdw.Db.Model.IdxAex9AccountPresence
   def table(:contract_call), do: AeMdw.Db.Model.ContractCall
   def table(:contract_log), do: AeMdw.Db.Model.ContractLog
   def table(:data_contract_log), do: AeMdw.Db.Model.DataContractLog
@@ -401,6 +425,8 @@ defmodule AeMdw.Db.Model do
   def defaults(:aex9_transfer), do: @aex9_transfer_defaults
   def defaults(:rev_aex9_transfer), do: @rev_aex9_transfer_defaults
   def defaults(:idx_aex9_transfer), do: @idx_aex9_transfer_defaults
+  def defaults(:aex9_account_presence), do: @aex9_account_presence_defaults
+  def defaults(:idx_aex9_account_presence), do: @idx_aex9_account_presence_defaults
   def defaults(:contract_call), do: @contract_call_defaults
   def defaults(:contract_log), do: @contract_log_defaults
   def defaults(:data_contract_log), do: @data_contract_log_defaults

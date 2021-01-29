@@ -11,15 +11,19 @@ defmodule AeMdw.Db.Contract do
 
   ##########
 
-  def aex9_creation_write({name, symbol, decimals}, contract_pk, txi) do
-    aex9_contract = Model.aex9_contract(index: {name, symbol, txi, decimals})
-    aex9_contract_sym = Model.aex9_contract_symbol(index: {symbol, name, txi, decimals})
-    rev_aex9_contract = Model.rev_aex9_contract(index: {txi, name, symbol, decimals})
-    aex9_contract_pk = Model.aex9_contract_pubkey(index: contract_pk, txi: txi)
-    :mnesia.write(Model.Aex9Contract, aex9_contract, :write)
-    :mnesia.write(Model.Aex9ContractSymbol, aex9_contract_sym, :write)
-    :mnesia.write(Model.RevAex9Contract, rev_aex9_contract, :write)
-    :mnesia.write(Model.Aex9ContractPubkey, aex9_contract_pk, :write)
+  def aex9_creation_write({name, symbol, decimals}, contract_pk, owner_pk, txi) do
+    m_contract = Model.aex9_contract(index: {name, symbol, txi, decimals})
+    m_contract_sym = Model.aex9_contract_symbol(index: {symbol, name, txi, decimals})
+    m_rev_contract = Model.rev_aex9_contract(index: {txi, name, symbol, decimals})
+    m_contract_pk = Model.aex9_contract_pubkey(index: contract_pk, txi: txi)
+    m_acc_presence = Model.aex9_account_presence(index: {owner_pk, txi, contract_pk})
+    m_idx_acc_presence = Model.idx_aex9_account_presence(index: {txi, owner_pk, contract_pk})
+    :mnesia.write(Model.Aex9Contract, m_contract, :write)
+    :mnesia.write(Model.Aex9ContractSymbol, m_contract_sym, :write)
+    :mnesia.write(Model.RevAex9Contract, m_rev_contract, :write)
+    :mnesia.write(Model.Aex9ContractPubkey, m_contract_pk, :write)
+    :mnesia.write(Model.Aex9AccountPresence, m_acc_presence, :write)
+    :mnesia.write(Model.IdxAex9AccountPresence, m_idx_acc_presence, :write)
   end
 
   def call_write(create_txi, txi, %{function: fname, arguments: args, result: %{error: [err]}}),
@@ -82,9 +86,18 @@ defmodule AeMdw.Db.Contract do
             m_transfer = Model.aex9_transfer(index: {from_pk, to_pk, amount, txi, i})
             m_rev_transfer = Model.rev_aex9_transfer(index: {to_pk, from_pk, amount, txi, i})
             m_idx_transfer = Model.idx_aex9_transfer(index: {txi, i, from_pk, to_pk, amount})
+
+            m_acc1_presence = Model.aex9_account_presence(index: {from_pk, txi, contract_pk})
+            m_acc2_presence = Model.aex9_account_presence(index: {to_pk, txi, contract_pk})
+            m_idx_acc1_presence = Model.idx_aex9_account_presence(index: {txi, from_pk, contract_pk})
+            m_idx_acc2_presence = Model.idx_aex9_account_presence(index: {txi, to_pk, contract_pk})
             :mnesia.write(Model.Aex9Transfer, m_transfer, :write)
             :mnesia.write(Model.RevAex9Transfer, m_rev_transfer, :write)
             :mnesia.write(Model.IdxAex9Transfer, m_idx_transfer, :write)
+            :mnesia.write(Model.Aex9AccountPresence, m_acc1_presence, :write)
+            :mnesia.write(Model.Aex9AccountPresence, m_acc2_presence, :write)
+            :mnesia.write(Model.IdxAex9AccountPresence, m_idx_acc1_presence, :write)
+            :mnesia.write(Model.IdxAex9AccountPresence, m_idx_acc2_presence, :write)
 
           {_, _} ->
             :ok
@@ -177,30 +190,19 @@ defmodule AeMdw.Db.Contract do
     )
   end
 
-  # def block_hash_to_bi(block_hash) do
-  #   case :aec_chain.get_block(block_hash) do
-  #     {:ok, {_type, header}} ->
-  #       height = :aec_headers.height(header)
-  #       case height >= last_gen() do
-  #         true ->
-  #           nil
-  #         false ->
-  #           case :aec_headers.type(header) do
-  #             :key -> {height, -1}
-  #             :micro ->
-  #               collect_keys(Model.Block, nil, {height, <<>>}, &prev/2, fn
-  #                 {^height, _} = bi, nil ->
-  #                   Model.block(read_block!(bi), :hash) == block_hash
-  #                   && {:halt, bi} || {:cont, nil}
-  #                 _k, nil ->
-  #                   {:halt, nil}
-  #               end)
-  #           end
-  #       end
-  #     :error ->
-  #       nil
-  #   end
-  # end
+
+  def aex9_search_contract(account_pk, last_txi) do
+    gen_collect(
+      Model.Aex9AccountPresence,
+      {account_pk, last_txi, <<AeMdw.Util.max_256bit_int()::256>>},
+      fn {acc_pk, _, _} -> acc_pk == account_pk end,
+      &prev/2,
+      fn -> %{} end,
+      fn {_, txi, ct_pk}, accum -> Map.put_new(accum, ct_pk, txi) end,
+      & &1
+    )
+  end
+
 
   # def mig1({create_txi, call_txi, log_idx, evt_hash} = log_key) do
   #   [m_log] = :mnesia.read(Model.ContractLog, log_key)

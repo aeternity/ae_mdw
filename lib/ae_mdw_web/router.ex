@@ -103,6 +103,10 @@ defmodule AeMdwWeb.Router do
 
     get "/aex9/balance/:contract_id/:account_id", Aex9Controller, :balance
 
+    get "/aex9/balances/gen/:height/account/:account_id", Aex9Controller, :balances
+    get "/aex9/balances/hash/:blockhash/account/:account_id", Aex9Controller, :balances
+    get "/aex9/balances/account/:account_id", Aex9Controller, :balances
+
     get "/aex9/balances/gen/:range/:contract_id", Aex9Controller, :balances_range
     get "/aex9/balances/hash/:blockhash/:contract_id", Aex9Controller, :balances_for_hash
     get "/aex9/balances/:contract_id", Aex9Controller, :balances

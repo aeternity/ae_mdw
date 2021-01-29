@@ -82,6 +82,9 @@
         - [AEX9 contract balances](#aex9-contract-balances-1)
         - [AEX9 contract balances at block](#aex9-contract-balances-at-block)
         - [AEX9 contract balances at height or range of heights](#aex9-contract-balances-at-height-or-range-of-heights)
+        - [AEX 9 contract balances for account](#aex-9-contract-balances-for-account)
+        - [AEX 9 contract balances for account at height](#aex-9-contract-balances-for-account-at-height)
+        - [AEX 9 contract balances for account at block](#aex-9-contract-balances-for-account-at-block)
     - [Websocket interface](#websocket-interface)
         - [Message format](#message-format)
         - [Supported operations](#supported-operations)
@@ -190,6 +193,10 @@ GET /aex9/by_symbol                     - returns AEX9 tokens, filtered by token
 GET /aex9/balance/gen/:range/:contract_id/:account_id      - returns AEX9 token balance in range for given contract and account
 GET /aex9/balance/hash/:blockhash/:contract_id/:account_id - returns AEX9 token balance at block for given contract and account
 GET /aex9/balance/:contract_id/:account_id                 - returns current AEX9 token balance for given contract and account
+
+GET /aex9/balances/gen/:height/account/:account_id         - returns AEX9 token balances of all contracts at height for given account
+GET /aex9/balances/hash/:blockhash/account/:account_id     - returns AEX9 token balances of all contracts at blockhash for given account
+GET /aex9/balances/account/:account_id                     - returns current AEX9 token balances of all contracts for given account
 
 GET /aex9/balances/gen/:range/:contract_id       - returns all AEX9 token balances in range for given contract
 GET /aex9/balances/hash/:blockhash/:contract_id  - returns all AEX9 token balances at block for given contract
@@ -2851,7 +2858,7 @@ $ curl -s "http://localhost:4000/contracts/logs/forward?data=aeternity.com&limit
 Listing the last "TipReceived" event:
 
 ```
-$ curl -s "http://localhost:4000/contracts/logs?event=MVGUQ861EKRNBCGUC35711P9M2HSVQHG5N39CE5CCIUQ7AGK7UU0====&limit=1" | jq '.'
+$ curl -s "http://localhost:4000/contracts/logs?event=TipReceived&limit=1" | jq '.'
 {
   "data": [
     {
@@ -2870,7 +2877,7 @@ $ curl -s "http://localhost:4000/contracts/logs?event=MVGUQ861EKRNBCGUC35711P9M2
       "log_idx": 0
     }
   ],
-  "next": "contracts/logs/txi/19626064-0?event=MVGUQ861EKRNBCGUC35711P9M2HSVQHG5N39CE5CCIUQ7AGK7UU0%3D%3D%3D%3D&limit=1&page=2"
+  "next": "contracts/logs/txi/19626064-0?event=TipReceived&limit=1&page=2"
 }
 ```
 
@@ -3294,6 +3301,23 @@ Additional 3 endpoints can be used for showing ALL balances for a given contract
 
 - `/aex9/balances/gen/:range/:contract_id` - shows all balances at given height or range of heights
 
+Lastly, 3 endpoints can show balances over all contracts for a given account:
+
+- `/aex9/balances/gen/:height/account/:account_id` - shows balances of all contracts at height for account
+- `/aex9/balances/hash/:blockhash/account/:account_id` - shows balances of all contracts at blockhash for account
+- `/aex9/balances/account/:account_id` - shows token balances of all contracts for given account at the current top of the chain
+
+
+Endpoints which use the current top of the chain:
+- `/aex9/balance/:contract_id/:account_id`
+- `/aex9/balances/:contract_id`
+- `/aex9/balances/account/:account_id`
+
+use the latest key block as a source of information for returning of the balances.
+
+If the user wishes, she can provide a query parameter `top` to the query.
+Its presence or binding it to `true` will use the latest micro block for retrieving balances of the contract(s).
+
 
 ### AEX9 contract balance for account
 
@@ -3476,6 +3500,84 @@ $ curl -s "http://localhost:4000/aex9/balances/gen/350600-350603/ct_RDRJC5EySx4T
   ]
 }
 ```
+
+### AEX 9 contract balances for account
+
+In all account specific balance endpoints, the values of `block_hash`/`tx_hash`/`tx_index` show the last time of when (in what block, transaction) was the balance in a listed contract updated.
+
+```
+$ curl -s "http://localhost:4000/aex9/balances/account/ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4" | jq '.'
+[
+  {
+    "amount": 5e+26,
+    "block_hash": "mh_yDKBNdZdZ7q2n5gr8SryP6XJCnTWcd8rcAaeTZ8mY5TftZK9J",
+    "contract_id": "ct_2vJBVkrBbmZjxovPq21p7Udfp1s5KCaLaixB8MNW41owVgJtWR",
+    "height": 334200,
+    "tx_hash": "th_DEaWuq3966N5DPPwS1x1t4ibT22WJJAMzi85ntrrD6MpygRYM",
+    "tx_index": 17153024,
+    "tx_type": "contract_create_tx"  # account was creator of the contract
+  },
+  {
+    "amount": 0,
+    "block_hash": "mh_kkKtNk2GAgJKjar9ro6amr6AugG9eLP9RL7wUSmdRqjBZrRq9",
+    "contract_id": "ct_2jDFr1iaKxKrftiFge6gPsfgsZnwNLgu1icScBfhuzpgX1faXM",
+    "height": 334268,
+    "tx_hash": "th_26xCyuKpvs3CTUxTbycDXDQbYt2xQbd6Rf2uJEWSNDAyFSucNK",
+    "tx_index": 17157444,
+    "tx_type": "contract_call_tx"    # account received tokens during contract call
+  },
+  ...
+]
+```
+
+The `top` parameter at this endpoint, when present, can show the most up to date balance as a result of contract call, but can't show a account balance of freshly created AEX9 contract.
+
+The awareness that the contract is created by some account comes from syncing, which is inherently one generation behind the top of the chain.
+
+
+### AEX 9 contract balances for account at height
+
+```
+$ curl -s "http://localhost:4000/aex9/balances/gen/334201/account/ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4" | jq '.'
+[
+  {
+    "amount": 5e+26,
+    "block_hash": "mh_yDKBNdZdZ7q2n5gr8SryP6XJCnTWcd8rcAaeTZ8mY5TftZK9J",
+    "contract_id": "ct_2vJBVkrBbmZjxovPq21p7Udfp1s5KCaLaixB8MNW41owVgJtWR",
+    "height": 334200,
+    "tx_hash": "th_DEaWuq3966N5DPPwS1x1t4ibT22WJJAMzi85ntrrD6MpygRYM",
+    "tx_index": 17153024,
+    "tx_type": "contract_create_tx"
+  }
+]
+```
+
+### AEX 9 contract balances for account at block
+
+```
+$ curl -s "http://localhost:4000/aex9/balances/hash/mh_kkKtNk2GAgJKjar9ro6amr6AugG9eLP9RL7wUSmdRqjBZrRq9/account/ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4" | jq '.'
+[
+  {
+    "amount": 5e+26,
+    "block_hash": "mh_yDKBNdZdZ7q2n5gr8SryP6XJCnTWcd8rcAaeTZ8mY5TftZK9J",
+    "contract_id": "ct_2vJBVkrBbmZjxovPq21p7Udfp1s5KCaLaixB8MNW41owVgJtWR",
+    "height": 334200,
+    "tx_hash": "th_DEaWuq3966N5DPPwS1x1t4ibT22WJJAMzi85ntrrD6MpygRYM",
+    "tx_index": 17153024,
+    "tx_type": "contract_create_tx"
+  },
+  {
+    "amount": 0,
+    "block_hash": "mh_kkKtNk2GAgJKjar9ro6amr6AugG9eLP9RL7wUSmdRqjBZrRq9",
+    "contract_id": "ct_2jDFr1iaKxKrftiFge6gPsfgsZnwNLgu1icScBfhuzpgX1faXM",
+    "height": 334268,
+    "tx_hash": "th_26xCyuKpvs3CTUxTbycDXDQbYt2xQbd6Rf2uJEWSNDAyFSucNK",
+    "tx_index": 17157444,
+    "tx_type": "contract_call_tx"
+  }
+]
+```
+
 
 ## Websocket interface
 

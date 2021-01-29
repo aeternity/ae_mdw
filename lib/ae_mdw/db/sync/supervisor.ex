@@ -1,8 +1,6 @@
 defmodule AeMdw.Db.Sync.Supervisor do
   use Supervisor
 
-  alias AeMdw.EtsCache
-
   ##########
 
   def start_link(),
