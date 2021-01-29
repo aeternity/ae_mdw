@@ -250,10 +250,10 @@ defmodule AeMdwWeb.Aex9Controller do
     do: raise(ErrInput.Query, value: "can't use both `prefix` and `exact` parameters")
 
   def search_mode!(%{"exact" => exact}),
-    do: {:exact, exact}
+    do: {:exact, URI.decode(exact)}
 
   def search_mode!(%{} = params),
-    do: {:prefix, Map.get(params, "prefix", "")}
+    do: {:prefix, URI.decode(Map.get(params, "prefix", ""))}
 
   def parse_range!(range) do
     case DSPlug.parse_range(range) do
