@@ -126,8 +126,8 @@ defmodule AeMdw.Db.Contract do
     do: fn _ -> true end
 
   def prefix_tester(prefix) do
-    len = String.length(prefix)
-    &(String.length(&1) >= len && :binary.part(&1, 0, len) == prefix)
+    len = byte_size(prefix)
+    &(byte_size(&1) >= len && :binary.part(&1, 0, len) == prefix)
   end
 
   def aex9_search_name({_, _} = mode),
