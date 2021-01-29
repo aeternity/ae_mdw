@@ -6,8 +6,20 @@ defmodule AeMdwWeb.Util do
 
   ##########
 
-  def expand?(%{"expand" => x}) when x in [nil, "true", [nil], ["true"]], do: true
-  def expand?(%{}), do: false
+  # def expand?(%{"expand" => x}) when x in [nil, "true", [nil], ["true"]], do: true
+  # def expand?(%{}), do: false
+
+  def expand?(query_params), do: presence?(query_params, "expand")
+
+  def presence?(%Plug.Conn{query_params: query_params}, name),
+    do: presence?(query_params, name)
+
+  def presence?(%{} = query_params, name) do
+    case Map.get(query_params, name, :not_found) do
+      x when x in [nil, "true", [nil], ["true"], "", [""]] -> true
+      _ -> false
+    end
+  end
 
   def query_groups(query_string) do
     query_string
