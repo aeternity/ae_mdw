@@ -99,8 +99,8 @@ defmodule AeMdwWeb.ContractController do
   def convert({"data", [data]}),
     do: [data_prefix: URI.decode(data)]
 
-  def convert({"event", [event_hash]}),
-    do: [event_hash: Validate.hex32!(event_hash)]
+  def convert({"event", [constructor_name]}),
+    do: [event_hash: :aec_hash.blake2b_256_hash(constructor_name)]
 
   def convert(other),
     do: raise(ErrInput.Query, value: other)
