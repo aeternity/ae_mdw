@@ -13,17 +13,14 @@ defmodule AeMdw.Db.Sync.Contract do
 
   ##########
 
-  def create(contract_pk, owner_pk, txi, _bi) do
+  def create(contract_pk, owner_pk, call_data, txi, _bi) do
     case Contract.get_info(contract_pk) do
       {:ok, contract_info} ->
 
-        case Contract.is_aex9?(contract_info) do
-          true ->
-            meta_info = Contract.aex9_meta_info(contract_pk)
-            DBContract.aex9_creation_write(meta_info, contract_pk, owner_pk, txi)
-
-          false ->
-            :ok
+        with true <- Contract.is_aex9?(contract_info) do
+          contract_pk
+          |> Contract.aex9_meta_info
+          |> DBContract.aex9_creation_write(contract_pk, owner_pk, call_data, txi)
         end
 
       _ ->

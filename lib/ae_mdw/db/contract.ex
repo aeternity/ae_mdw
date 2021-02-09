@@ -11,19 +11,22 @@ defmodule AeMdw.Db.Contract do
 
   ##########
 
-  def aex9_creation_write({name, symbol, decimals}, contract_pk, owner_pk, txi) do
+  def aex9_creation_write({name, symbol, decimals}, contract_pk, owner_pk, call_data, txi) do
     m_contract = Model.aex9_contract(index: {name, symbol, txi, decimals})
     m_contract_sym = Model.aex9_contract_symbol(index: {symbol, name, txi, decimals})
     m_rev_contract = Model.rev_aex9_contract(index: {txi, name, symbol, decimals})
     m_contract_pk = Model.aex9_contract_pubkey(index: contract_pk, txi: txi)
-    m_acc_presence = Model.aex9_account_presence(index: {owner_pk, txi, contract_pk})
-    m_idx_acc_presence = Model.idx_aex9_account_presence(index: {txi, owner_pk, contract_pk})
     :mnesia.write(Model.Aex9Contract, m_contract, :write)
     :mnesia.write(Model.Aex9ContractSymbol, m_contract_sym, :write)
     :mnesia.write(Model.RevAex9Contract, m_rev_contract, :write)
     :mnesia.write(Model.Aex9ContractPubkey, m_contract_pk, :write)
-    :mnesia.write(Model.Aex9AccountPresence, m_acc_presence, :write)
-    :mnesia.write(Model.IdxAex9AccountPresence, m_idx_acc_presence, :write)
+
+    with {:ok, _} <- aex9_initial_owner_balance(call_data) do
+      m_acc_presence = Model.aex9_account_presence(index: {owner_pk, txi, contract_pk})
+      m_idx_presence = Model.idx_aex9_account_presence(index: {txi, owner_pk, contract_pk})
+      :mnesia.write(Model.Aex9AccountPresence, m_acc_presence, :write)
+      :mnesia.write(Model.IdxAex9AccountPresence, m_idx_presence, :write)
+    end
   end
 
   def call_write(create_txi, txi, %{function: fname, arguments: args, result: %{error: [err]}}),
@@ -120,6 +123,17 @@ defmodule AeMdw.Db.Contract do
       arguments: Model.contract_call(m_call, :args),
       result: Model.contract_call(m_call, :result)
     }
+  end
+
+
+  def aex9_initial_owner_balance(call_data) do
+    with {:tuple, {_, {:tuple, {_, _, _, bal?}}}} <- :aeb_fate_encoding.deserialize(call_data),
+         {:variant, [0, 1], 1, {amount}} <- bal?,
+         true <- is_integer(amount) && amount >= 0 do
+      {:ok, amount}
+    else _ ->
+        nil
+    end
   end
 
   def prefix_tester(""),
