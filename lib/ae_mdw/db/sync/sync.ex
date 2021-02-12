@@ -47,6 +47,11 @@ defmodule AeMdw.Db.Sync do
     {:noreply, (is_synced? && next_state) || spawn_action(next_state)}
   end
 
+  def handle_info(:crash, s) do
+    spawn_link(fn -> 1 / 0 end)
+    {:noreply, s}
+  end
+
   ##########
 
   def safe_height(top_height),
