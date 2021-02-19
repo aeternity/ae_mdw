@@ -13,6 +13,8 @@ config :ae_plugin,
   "$aec_db_check_tables": {AeMdw.Db.Setup, :check_tables}
 
 config :ae_mdw,
+  sync: true,
+  operators: [], # email address where to send sync crash notification
   contract_cache_expiration_minutes: 1440
 
 # Configures the endpoint

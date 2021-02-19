@@ -49,6 +49,7 @@ defmodule AeMdw.MixProject do
       {:riverside, "~> 1.2.3"},
       {:websockex, "~> 0.4.2"},
       {:phoenix_swagger, "~> 0.8"},
+      {:temp, "~> 0.4"},
       {:tesla, "~> 1.3.0"}
     ]
   end

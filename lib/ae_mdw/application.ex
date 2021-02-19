@@ -19,14 +19,21 @@ defmodule AeMdw.Application do
     init(:aehttp)
     # init(:aesophia)
 
-    children = [
-      AeMdw.Db.Sync.Supervisor,
-      AeMdwWeb.Supervisor,
-      AeMdwWeb.Websocket.Supervisor
-    ]
+    children =
+      [AeMdw.Sync.Watcher,
+       AeMdw.Sync.Supervisor,
+       AeMdwWeb.Supervisor,
+       AeMdwWeb.Websocket.Supervisor]
 
-    Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)
+    {:ok, sup_pid} = Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)
+    Application.fetch_env!(:ae_mdw, :sync) && sync(true)
+    {:ok, sup_pid}
   end
+
+
+  def sync(enabled?) when is_boolean(enabled?),
+    do: AeMdw.Sync.Supervisor.sync(enabled?)
+
 
   def init(:aehttp),
     do: :application.ensure_all_started(:aehttp)
