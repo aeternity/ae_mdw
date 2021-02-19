@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.Sync do
   alias __MODULE__
   alias Sync.{BlockIndex, Transaction, Invalidate}
+  alias AeMdw.Sync.Watcher
   alias AeMdw.Log
   alias AeMdw.Db.Model
 
@@ -19,6 +20,7 @@ defmodule AeMdw.Db.Sync do
 
   def init([]) do
     :aec_events.subscribe(:chain)
+    notify_watcher(self())
     {:ok, %Sync{}, {:continue, :start_sync}}
   end
 
@@ -47,12 +49,11 @@ defmodule AeMdw.Db.Sync do
     {:noreply, (is_synced? && next_state) || spawn_action(next_state)}
   end
 
-  def handle_info(:crash, s) do
-    spawn_link(fn -> 1 / 0 end)
-    {:noreply, s}
-  end
-
   ##########
+
+  def notify_watcher(sync_pid),
+    do: GenServer.cast(Watcher, {:sync_process, sync_pid})
+
 
   def safe_height(top_height),
     do: max(0, top_height - @verify_range_kbs)
