@@ -19,11 +19,14 @@ defmodule AeMdw.Db.Sync.Invalidate do
         Log.info("invalidating from tx #{from_txi} at generation #{prev_kbi}")
         bi_keys = block_keys_range({fork_height - 1, 0})
         {tx_keys, id_counts} = tx_keys_range(from_txi)
+
+        contract_log_key_dels = contract_log_key_dels(from_txi)
+        contract_call_key_dels = contract_call_key_dels(from_txi)
+
         aex9_key_dels = aex9_key_dels(from_txi)
         aex9_transfer_key_dels = aex9_transfer_key_dels(from_txi)
         aex9_account_presence_key_dels = aex9_account_presence_key_dels(from_txi)
-        contract_log_key_dels = contract_log_key_dels(from_txi)
-        contract_call_key_dels = contract_call_key_dels(from_txi)
+        aex9_account_presence_key_writes = aex9_account_presence_key_writes(from_txi)
 
         tab_keys = Map.merge(bi_keys, tx_keys)
 
@@ -43,6 +46,8 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
           do_writes(name_writes, &AeMdw.Db.Name.cache_through_write/2)
           do_writes(oracle_writes, &AeMdw.Db.Oracle.cache_through_write/2)
+          do_writes(aex9_account_presence_key_writes,
+            &AeMdw.Db.Contract.aex9_presence_cache_write/2)
 
           Enum.each(id_counts, fn {f_key, delta} -> Model.update_count(f_key, -delta) end)
         end)
@@ -266,6 +271,54 @@ defmodule AeMdw.Db.Sync.Invalidate do
       Model.IdxAex9AccountPresence => idx_aex9_presence_keys
     }
   end
+
+  # computes records to be written to cache, flushed at microblock boundary
+  def aex9_account_presence_key_writes(from_txi) do
+    alias AeMdw.{Contract, Validate}
+
+    bi = Model.tx(read_tx!(from_txi), :block_index)
+    start_txi = Model.block(read_block!(bi), :tx_index)
+    end_txi = from_txi - 1
+
+    cond do
+      start_txi <= end_txi ->
+        scope = {:txi, start_txi..end_txi}
+
+        creates =
+          scope
+          |> DBS.map(:raw, type: :contract_create)
+          |> Stream.map(fn %{} = x ->
+               ct_pk = Validate.id!(x.tx.contract_id)
+               with {:ok, ct_info} <- Contract.get_info(ct_pk),
+                    true <- Contract.is_aex9?(ct_info) do
+                 {{ct_pk, x.tx_index, -1}, Validate.id!(x.tx.owner_id), -1}
+               else
+                 _ -> nil
+               end
+             end)
+          |> Stream.filter(& &1)
+          |> Enum.to_list
+
+        transfer_evt = AeMdw.Node.aex9_transfer_event_hash()
+        contract_calls = fn contract_pk ->
+          scope
+          |> DBS.map(:raw, type: :contract_call, contract_id: contract_pk)
+          |> Enum.flat_map(fn %{tx: %{log: logs}} = x ->
+            idxed_logs = Enum.with_index(logs)
+            for {%{topics: [^transfer_evt, from_pk, to_pk, <<amount::256>>]}, i} <- idxed_logs,
+              do: {{contract_pk, x.tx_index, i}, {from_pk, to_pk}, amount}
+          end)
+        end
+
+        calls = Enum.flat_map(creates, fn {{ct_pk, _, _}, _, _} -> contract_calls.(ct_pk) end)
+
+        %{:aex9_sync_cache => creates ++ calls}
+
+      true ->
+        %{}
+    end
+  end
+
 
   def contract_log_key_dels(from_txi) do
     {log_keys, data_log_keys, evt_log_keys, idx_log_keys} =

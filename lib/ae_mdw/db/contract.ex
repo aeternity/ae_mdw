@@ -11,7 +11,7 @@ defmodule AeMdw.Db.Contract do
 
   ##########
 
-  def aex9_creation_write({name, symbol, decimals}, contract_pk, owner_pk, call_data, txi) do
+  def aex9_creation_write({name, symbol, decimals}, contract_pk, owner_pk, txi) do
     m_contract = Model.aex9_contract(index: {name, symbol, txi, decimals})
     m_contract_sym = Model.aex9_contract_symbol(index: {symbol, name, txi, decimals})
     m_rev_contract = Model.rev_aex9_contract(index: {txi, name, symbol, decimals})
@@ -21,12 +21,14 @@ defmodule AeMdw.Db.Contract do
     :mnesia.write(Model.RevAex9Contract, m_rev_contract, :write)
     :mnesia.write(Model.Aex9ContractPubkey, m_contract_pk, :write)
 
-    with {:ok, _} <- aex9_initial_owner_balance(call_data) do
-      m_acc_presence = Model.aex9_account_presence(index: {owner_pk, txi, contract_pk})
-      m_idx_presence = Model.idx_aex9_account_presence(index: {txi, owner_pk, contract_pk})
-      :mnesia.write(Model.Aex9AccountPresence, m_acc_presence, :write)
-      :mnesia.write(Model.IdxAex9AccountPresence, m_idx_presence, :write)
-    end
+    aex9_presence_cache_write({{contract_pk, txi, -1}, owner_pk, -1})
+  end
+
+  def aex9_write_presence(contract_pk, txi, pubkey) do
+    m_acc_presence = Model.aex9_account_presence(index: {pubkey, txi, contract_pk})
+    m_idx_presence = Model.idx_aex9_account_presence(index: {txi, pubkey, contract_pk})
+    :mnesia.write(Model.Aex9AccountPresence, m_acc_presence, :write)
+    :mnesia.write(Model.IdxAex9AccountPresence, m_idx_presence, :write)
   end
 
   def call_write(create_txi, txi, %{function: fname, arguments: args, result: %{error: [err]}}),
@@ -89,18 +91,12 @@ defmodule AeMdw.Db.Contract do
             m_transfer = Model.aex9_transfer(index: {from_pk, to_pk, amount, txi, i})
             m_rev_transfer = Model.rev_aex9_transfer(index: {to_pk, from_pk, amount, txi, i})
             m_idx_transfer = Model.idx_aex9_transfer(index: {txi, i, from_pk, to_pk, amount})
-
-            m_acc1_presence = Model.aex9_account_presence(index: {from_pk, txi, contract_pk})
-            m_acc2_presence = Model.aex9_account_presence(index: {to_pk, txi, contract_pk})
-            m_idx_acc1_presence = Model.idx_aex9_account_presence(index: {txi, from_pk, contract_pk})
-            m_idx_acc2_presence = Model.idx_aex9_account_presence(index: {txi, to_pk, contract_pk})
             :mnesia.write(Model.Aex9Transfer, m_transfer, :write)
             :mnesia.write(Model.RevAex9Transfer, m_rev_transfer, :write)
             :mnesia.write(Model.IdxAex9Transfer, m_idx_transfer, :write)
-            :mnesia.write(Model.Aex9AccountPresence, m_acc1_presence, :write)
-            :mnesia.write(Model.Aex9AccountPresence, m_acc2_presence, :write)
-            :mnesia.write(Model.IdxAex9AccountPresence, m_idx_acc1_presence, :write)
-            :mnesia.write(Model.IdxAex9AccountPresence, m_idx_acc2_presence, :write)
+            aex9_write_presence(contract_pk, txi, to_pk)
+
+            aex9_presence_cache_write({{contract_pk, txi, i}, {from_pk, to_pk}, amount})
 
           {_, _} ->
             :ok
@@ -125,16 +121,6 @@ defmodule AeMdw.Db.Contract do
     }
   end
 
-
-  def aex9_initial_owner_balance(call_data) do
-    with {:tuple, {_, {:tuple, {_, _, _, bal?}}}} <- :aeb_fate_encoding.deserialize(call_data),
-         {:variant, [0, 1], 1, {amount}} <- bal?,
-         true <- is_integer(amount) && amount >= 0 do
-      {:ok, amount}
-    else _ ->
-        nil
-    end
-  end
 
   def prefix_tester(""),
     do: fn _ -> true end
@@ -233,4 +219,13 @@ defmodule AeMdw.Db.Contract do
   #   end
   #   Enum.map(rev_ct_keys, tran)
   # end
+
+  # - {{contract_pk, txi, -1}, owner_pk, -1}
+  # - {{contract_pk, txi, log_idx}, {from_pk, to_pk}, amount}
+  def aex9_presence_cache_write({{contract_pk, txi, i}, pks, amount}),
+    do: aex9_presence_cache_write(:aex9_sync_cache, {{contract_pk, txi, i}, pks, amount})
+  def aex9_presence_cache_write(ets_tab, {{contract_pk, txi, i}, pks, amount}),
+    do: :ets.insert(ets_tab, {{contract_pk, txi, i}, pks, amount})
+
+
 end

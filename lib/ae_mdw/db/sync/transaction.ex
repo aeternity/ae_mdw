@@ -94,6 +94,8 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     next_txi = Enum.reduce(mb_txs, txi, &sync_transaction(&1, &2, tx_ctx))
 
+    Sync.Contract.aex9_derive_account_presence!({height, mbi})
+
     {next_txi, mbi + 1}
   end
 
@@ -120,9 +122,8 @@ defmodule AeMdw.Db.Sync.Transaction do
   def write_links(:contract_create_tx, tx, _signed_tx, txi, tx_hash, bi) do
     pk = :aect_contracts.pubkey(:aect_contracts.new(tx))
     owner_pk = :aect_create_tx.owner_pubkey(tx)
-    call_data = :aect_create_tx.call_data(tx)
     write_origin(:contract_create_tx, pk, txi, tx_hash)
-    Sync.Contract.create(pk, owner_pk, call_data, txi, bi)
+    Sync.Contract.create(pk, owner_pk, txi, bi)
   end
 
   def write_links(:contract_call_tx, tx, _signed_tx, txi, _tx_hash, bi) do
