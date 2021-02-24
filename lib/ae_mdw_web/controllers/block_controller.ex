@@ -87,7 +87,7 @@ defmodule AeMdwWeb.BlockController do
               Map.put(mbs, mb_hash, mb_json)
           end
 
-        Map.put(kb_json, "micro_blocks", mb_jsons)
+        kb_json = Map.put(kb_json, "micro_blocks", mb_jsons)
         EtsCache.put(@tab, height, kb_json)
         kb_json
     end
