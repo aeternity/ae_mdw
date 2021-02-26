@@ -27,7 +27,8 @@ defmodule AeMdwWeb.Aex9Controller do
           balance_reply(
             conn,
             ensure_aex9_contract_pk!(contract_id),
-            Validate.id!(account_id, [:account_pubkey]))
+            Validate.id!(account_id, [:account_pubkey])
+          )
         end
       )
 
@@ -191,11 +192,10 @@ defmodule AeMdwWeb.Aex9Controller do
     json(conn, balance_to_map({amount, {type, height, block_hash}}, contract_pk, account_pk))
   end
 
-
   def account_balances_reply(conn, account_pk, last_txi) do
     contracts =
       AeMdw.Db.Contract.aex9_search_contract(account_pk, last_txi)
-      |> Map.to_list
+      |> Map.to_list()
       |> Enum.sort_by(&elem(&1, 1), &<=/2)
 
     height_hash = DBN.top_height_hash(top?(conn))
@@ -203,14 +203,13 @@ defmodule AeMdwWeb.Aex9Controller do
     balances =
       contracts
       |> Enum.map(fn {contract_pk, txi} ->
-           {amount, _} = DBN.aex9_balance(contract_pk, account_pk, height_hash)
-           {amount, txi, contract_pk}
-         end)
+        {amount, _} = DBN.aex9_balance(contract_pk, account_pk, height_hash)
+        {amount, txi, contract_pk}
+      end)
       |> Enum.map(&balance_to_map/1)
 
     json(conn, balances)
   end
-
 
   def balances_reply(conn, contract_pk) do
     {amounts, {type, height, hash}} = DBN.aex9_balances(contract_pk, top?(conn))
@@ -302,6 +301,7 @@ defmodule AeMdwWeb.Aex9Controller do
   def balance_to_map({amount, txi, contract_pk}) do
     tx_idx = AeMdw.Db.Util.read_tx!(txi)
     info = Format.to_raw_map(tx_idx)
+
     %{
       contract_id: enc_ct(contract_pk),
       block_hash: enc_block(:micro, info.block_hash),
@@ -375,7 +375,6 @@ defmodule AeMdwWeb.Aex9Controller do
 
   def enc(type, pk), do: :aeser_api_encoder.encode(type, pk)
 
-  # TODO: swagger
   def swagger_definitions do
     %{
       Aex9Response:
@@ -427,6 +426,27 @@ defmodule AeMdwWeb.Aex9Controller do
             block_hash: "kh_2QevaXY7ULF5kTLsddwMzzZmBYWPgfaQbg2Y8maZDLKJaPhwDJ",
             contract_id: "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
             height: 351_666
+          })
+        end,
+      Aex9TransferResponse:
+        swagger_schema do
+          title("Aex9Response")
+          description("Response Schema for AEX9 transfer responses")
+
+          properties do
+            amount(:integer, "Transfer amount of AEX9 token", required: true)
+            call_txi(:integer, "AEX9 token transfer index", required: true)
+            log_idx(:integer, "Log index", required: true)
+            recipient(:string, "Recipient of AEX9 transfer", required: true)
+            sender(:string, "Sender of AEX9 transfer", required: true)
+          end
+
+          example(%{
+            amount: 2,
+            call_txi: 9_564_978,
+            log_idx: 0,
+            recipient: "ak_29GUBTrWTMb3tRUUgbVX1Bgwi2hyVhB8Q1befNsjLnP46Ub1V8",
+            sender: "ak_2CMNYSgoEjb1GSVJfWXjZ9NFWwnJ9jySBd6YY7uyr5DxvwctZU"
           })
         end
     }
@@ -639,7 +659,7 @@ defmodule AeMdwWeb.Aex9Controller do
 
   swagger_path :aex9_balances do
     get("aex9/balances/{contract_id}")
-    description("Get all AEX9 token balances by given AEX9 contract id")
+    description("Get all current AEX9 token balances for given contract")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_aex9_balances")
@@ -666,7 +686,7 @@ defmodule AeMdwWeb.Aex9Controller do
 
   swagger_path :aex9_balances_by_block do
     get("aex9/balances/hash/{blockhash}/{contract_id}")
-    description("Getall AEX9 token balances by given AEX9 contract id and block hash")
+    description("Get all AEX9 token balances at block for given contract")
     produces(["application/json"])
     deprecated(false)
     operation_id("get_aex9_balances_by_block")
@@ -696,12 +716,175 @@ defmodule AeMdwWeb.Aex9Controller do
     response(400, "Bad request", Schema.ref(:ErrorResponse))
   end
 
-  swagger_path :aex9_balances_by_range do
-    get("aex9/balance/gen/{range}/{contract_id}")
+  swagger_path :aex9_balances_for_account_by_height do
+    get("aex9/balances/gen/{height}/account/{account_id}")
+    description("Get AEX9 token balances of all contracts at height for given account")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_aex9_balances_for_account_by_height")
+    tag("Middleware")
 
-    description(
-      "Get all AEX9 token balances by given AEX9 contract id and block generations range"
+    parameters do
+      height(:path, :integer, "Block height",
+        reqired: true,
+        example: "384669"
+      )
+
+      account_id(
+        :path,
+        :string,
+        "Account id",
+        required: true,
+        example: "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48"
+      )
+    end
+
+    response(
+      200,
+      "Returns balance information by given criteria",
+      Schema.ref(:Aex9BalanceResponse)
     )
+
+    response(400, "Bad request", Schema.ref(:ErrorResponse))
+  end
+
+  swagger_path :aex9_balances_for_account_by_blockhash do
+    get("aex9/balances/hash/{blockhash}/account/{account_id}")
+    description("Get AEX9 token balances of all contracts at blockhash for given account")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_aex9_balances_for_account_by_blockhash")
+    tag("Middleware")
+
+    parameters do
+      blockhash(:path, :string, "Block hash",
+        reqired: true,
+        example: "kh_2hXEoFTmMphpvCmvdvQTZtGu9a3RndL5fSvVqzKBs2DSNJjQ2V"
+      )
+
+      account_id(
+        :path,
+        :string,
+        "Account id",
+        required: true,
+        example: "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48"
+      )
+    end
+
+    response(
+      200,
+      "Returns balance information by given criteria",
+      Schema.ref(:Aex9BalanceResponse)
+    )
+
+    response(400, "Bad request", Schema.ref(:ErrorResponse))
+  end
+
+  swagger_path :aex9_balances_by_account do
+    get("aex9/balances/account/{account_id}")
+    description("Get current AEX9 token balances of all contracts for given account")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_aex9_balances_by_account")
+    tag("Middleware")
+
+    parameters do
+      account_id(:path, :string, "Account id",
+        reqired: true,
+        example: "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48"
+      )
+    end
+
+    response(
+      200,
+      "Returns balance information by given criteria",
+      Schema.ref(:Aex9BalanceResponse)
+    )
+
+    response(400, "Bad request", Schema.ref(:ErrorResponse))
+  end
+
+  swagger_path :aex9_transfers_by_sender do
+    get("/aex9/transfers/from/{sender}")
+    description("Get all transfers of AEX9 tokens from sender")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_aex9_transfers_by_sender")
+    tag("Middleware")
+
+    parameters do
+      account_id(:path, :string, "Account id",
+        reqired: true,
+        example: "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48"
+      )
+    end
+
+    response(
+      200,
+      "Returns transfer information by given criteria",
+      Schema.ref(:Aex9TransferResponse)
+    )
+
+    response(400, "Bad request", Schema.ref(:ErrorResponse))
+  end
+
+  swagger_path :aex9_transfers_by_recipient do
+    get("/aex9/transfers/to/{recipient}")
+    description("Get all transfers of AEX9 tokens to recipient")
+    produces(["application/json"])
+    deprecated(false)
+    operation_id("get_aex9_transfers_by_recipient")
+    tag("Middleware")
+
+    parameters do
+      recipient(:path, :string, "Recipient id",
+        reqired: true,
+        example: "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48"
+      )
+    end
+
+    response(
+      200,
+      "Returns transfer information by given criteria",
+      Schema.ref(:Aex9TransferResponse)
+    )
+
+    response(400, "Bad request", Schema.ref(:ErrorResponse))
+  end
+
+  swagger_path :aex9_transfers_by_sender_and_recipient do
+    get("/aex9/transfers/from-to/{sender}/{recipient}")
+    produces(["application/json"])
+    description("Get all transfers of AEX9 tokens between sender and recipient")
+    deprecated(false)
+    operation_id("get_aex9_transfers_by_sender_and_recipient")
+    tag("Middleware")
+
+    parameters do
+      sender(:path, :string, "Sender id",
+        reqired: true,
+        example: "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48"
+      )
+
+      recipient(:path, :string, "Recipient id",
+        reqired: true,
+        example: "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48"
+      )
+    end
+
+    response(
+      200,
+      "Returns balance information by given criteria",
+      Schema.ref(:Aex9TransferResponse)
+    )
+
+    response(400, "Bad request", Schema.ref(:ErrorResponse))
+  end
+
+  swagger_path :aex9_balances_by_range do
+    get("aex9/balances/gen/{range}/{contract_id}")
+
+    description("Get all AEX9 token balances in range for given contract")
 
     produces(["application/json"])
     deprecated(false)
