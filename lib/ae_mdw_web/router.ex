@@ -45,6 +45,8 @@ defmodule AeMdwWeb.Router do
   scope "/", AeMdwWeb do
     pipe_through :api
 
+    get "/middleware/transactions/account/:account", LegacyController, :account_txs
+
     get "/block/:hash", BlockController, :block
     get "/blocki/:kbi", BlockController, :blocki
     get "/blocki/:kbi/:mbi", BlockController, :blocki
