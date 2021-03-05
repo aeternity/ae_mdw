@@ -203,7 +203,6 @@ defmodule AeMdw.Db.Contract do
     )
   end
 
-
   # def mig1({create_txi, call_txi, log_idx, evt_hash} = log_key) do
   #   [m_log] = :mnesia.read(Model.ContractLog, log_key)
   #   data = Model.contract_log(m_log, :data)
@@ -227,5 +226,23 @@ defmodule AeMdw.Db.Contract do
   def aex9_presence_cache_write(ets_tab, {{contract_pk, txi, i}, pks, amount}),
     do: :ets.insert(ets_tab, {{contract_pk, txi, i}, pks, amount})
 
+
+  def int_call_write(create_txi, call_txi, local_idx, fname, tx) do
+    m_call = Model.int_contract_call(
+      index: {call_txi, local_idx},
+      create_txi: create_txi,
+      fname: fname,
+      tx: tx
+    )
+    m_grp_call = Model.grp_int_contract_call(index: {create_txi, call_txi, local_idx})
+    m_fname_call = Model.fname_int_contract_call(index: {fname, call_txi, local_idx})
+    m_fname_grp_call = Model.fname_grp_int_contract_call(
+      index: {fname, create_txi, call_txi, local_idx}
+    )
+    :mnesia.write(Model.IntContractCall, m_call, :write)
+    :mnesia.write(Model.GrpIntContractCall, m_grp_call, :write)
+    :mnesia.write(Model.FnameIntContractCall, m_fname_call, :write)
+    :mnesia.write(Model.FnameGrpIntContractCall, m_fname_grp_call, :write)
+  end
 
 end

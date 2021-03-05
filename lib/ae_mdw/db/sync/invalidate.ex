@@ -28,6 +28,8 @@ defmodule AeMdw.Db.Sync.Invalidate do
         aex9_account_presence_key_dels = aex9_account_presence_key_dels(from_txi)
         aex9_account_presence_key_writes = aex9_account_presence_key_writes(from_txi)
 
+        int_contract_call_key_dels = int_contract_call_key_dels(from_txi)
+
         tab_keys = Map.merge(bi_keys, tx_keys)
 
         :mnesia.transaction(fn ->
@@ -43,6 +45,8 @@ defmodule AeMdw.Db.Sync.Invalidate do
           do_dels(aex9_account_presence_key_dels)
           do_dels(contract_log_key_dels)
           do_dels(contract_call_key_dels)
+
+          do_dels(int_contract_call_key_dels)
 
           do_writes(name_writes, &AeMdw.Db.Name.cache_through_write/2)
           do_writes(oracle_writes, &AeMdw.Db.Oracle.cache_through_write/2)
@@ -376,6 +380,48 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
     %{Model.ContractCall => contract_call_keys}
   end
+
+
+  def int_contract_call_key_dels(from_txi) do
+    {int_keys, grp_keys, fname_keys, fname_grp_keys} =
+      case :mnesia.dirty_next(Model.IntContractCall, {from_txi, -1}) do
+        :"$end_of_table" ->
+          {[], [], [], []}
+
+        start_key ->
+          push_key = fn {call_txi, local_idx},
+                        {int_keys, grp_keys, fname_keys, fname_grp_keys} ->
+            int_key = {call_txi, local_idx}
+
+            m_int_call = read!(Model.IntContractCall, int_key)
+            create_txi = Model.int_contract_call(m_int_call, :create_txi)
+            fname = Model.int_contract_call(m_int_call, :fname)
+
+            grp_key = {create_txi, call_txi, local_idx}
+            fname_key = {fname, call_txi, local_idx}
+            fname_grp_key = {fname, create_txi, call_txi, local_idx}
+
+            {[int_key | int_keys], [grp_key | grp_keys], [fname_key | fname_keys],
+             [fname_grp_key | fname_grp_keys]}
+          end
+
+          collect_keys(
+            Model.IntContractCall,
+            push_key.(start_key, {[], [], [], []}),
+            start_key,
+            &next/2,
+            fn key, acc -> {:cont, push_key.(key, acc)} end
+          )
+      end
+
+    %{
+      Model.IntContractCall => int_keys,
+      Model.GrpIntContractCall => grp_keys,
+      Model.FnameIntContractCall => fname_keys,
+      Model.FnameGrpIntContractCall => fname_grp_keys
+    }
+  end
+
 
   ##########
 

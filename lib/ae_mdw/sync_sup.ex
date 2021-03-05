@@ -11,6 +11,7 @@ defmodule AeMdw.Sync.Supervisor do
     :ets.new(:name_sync_cache, [:named_table, :ordered_set, :public])
     :ets.new(:oracle_sync_cache, [:named_table, :ordered_set, :public])
     :ets.new(:aex9_sync_cache, [:named_table, :ordered_set, :public])
+    :ets.new(:ct_create_sync_cache, [:named_table, :ordered_set, :public])
     DynamicSupervisor.init(max_restarts: 0, max_children: 1, strategy: :one_for_one)
   end
 

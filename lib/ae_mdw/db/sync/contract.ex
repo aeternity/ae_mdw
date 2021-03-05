@@ -31,9 +31,7 @@ defmodule AeMdw.Db.Sync.Contract do
   def call(contract_pk, tx, txi, bi) do
     block_hash = Model.block(DBU.read_block!(bi), :hash)
 
-    create_txi =
-      (contract_pk == @migrate_contract_pk &&
-         -1) || Db.Origin.tx_index({:contract, contract_pk})
+    create_txi = get_txi(contract_pk)
 
     {fun_arg_res, call_rec} =
       Contract.call_tx_info(tx, contract_pk, block_hash, &Contract.to_map/1)
@@ -41,7 +39,6 @@ defmodule AeMdw.Db.Sync.Contract do
     DBContract.call_write(create_txi, txi, fun_arg_res)
     DBContract.logs_write(create_txi, txi, call_rec)
   end
-
 
   def aex9_derive_account_presence!({kbi, mbi}) do
     next_hash =
@@ -73,6 +70,20 @@ defmodule AeMdw.Db.Sync.Contract do
     :ets.delete_all_objects(:aex9_sync_cache)
   end
 
+
+  def events(raw_events, call_txi, create_txi) do
+    for {{{:internal_call_tx, fname}, %{info: tx}}, i} <- Enum.with_index(raw_events),
+      do: DBContract.int_call_write(create_txi, call_txi, i, fname, tx)
+  end
+
+
+  def get_txi(@migrate_contract_pk), do: -1
+  def get_txi(contract_pk) do
+    case :ets.lookup(:ct_create_sync_cache, contract_pk) do
+      [{_, txi}] -> txi
+      [] -> Db.Origin.tx_index({:contract, contract_pk})
+    end
+  end
 
   def migrate_contract_pk(),
     do: @migrate_contract_pk

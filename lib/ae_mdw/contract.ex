@@ -306,4 +306,39 @@ defmodule AeMdw.Contract do
         {{:error, match_err}, call}
     end
   end
+
+  ##########
+
+  def get_events(<<micro_block_hash :: binary>>) do
+    micro_block = :aec_db.get_block(micro_block_hash)
+    :micro = :aec_blocks.type(micro_block)
+    get_events(micro_block)
+  end
+
+  def get_events(micro_block) when elem(micro_block, 0) == :mic_block do
+    [{0, {consensus, %{}}}] = :aec_consensus.get_consensus()
+    node = :aec_chain_state.wrap_block(micro_block)
+    time = :aec_block_insertion.node_time(node)
+    prev_hash = :aec_block_insertion.node_prev_hash(node)
+    prev_key_hash = :aec_block_insertion.node_prev_key_hash(node)
+    {:value, prev_key_header} = :aec_db.find_header(prev_key_hash)
+    {:ok, trees_in, _} = :aec_chain_state.db_find_state(prev_hash, true)
+    trees_in = apply(consensus, :state_pre_transform_micro_node, [node, trees_in])
+    env = :aetx_env.tx_env_from_key_header(prev_key_header, prev_key_hash, time, prev_hash)
+    txs = :aec_blocks.txs(micro_block)
+    {:ok, _, _, events} = :aec_block_micro_candidate.apply_block_txs_strict(txs, trees_in, env)
+    events
+  end
+
+  def get_grouped_events(micro_block),
+    do: Enum.group_by(get_events(micro_block), fn {_, info} -> info.tx_hash end)
+
+  # def t(gen_range) do
+  #   range
+  #   |> Stream.flat_map(&AeMdw.Node.Db.get_micro_blocks/1)
+  #   |> Stream.map(&:aec_blocks.to_micro_header/1)
+  #   |> Stream.map(&ok!(:aec_headers.hash_header(&1)))
+  #   |> Stream.flat_map(&AeMdw.Contract.get_events/1)
+  # end
+
 end

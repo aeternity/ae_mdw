@@ -79,6 +79,8 @@ defmodule AeMdw.Db.Sync.Transaction do
       :ets.delete_all_objects(:oracle_sync_cache)
     end
 
+    :ets.delete_all_objects(:ct_create_sync_cache)
+
     next_txi
   end
 
@@ -89,17 +91,16 @@ defmodule AeMdw.Db.Sync.Transaction do
     mb_txi = (txi == 0 && -1) || txi
     mb_model = Model.block(index: {height, mbi}, tx_index: mb_txi, hash: mb_hash)
     :mnesia.write(Model.Block, mb_model, :write)
-    tx_ctx = {{height, mbi}, mb_time}
     mb_txs = :aec_blocks.txs(mblock)
-
+    events = AeMdw.Contract.get_grouped_events(mblock)
+    tx_ctx = {{height, mbi}, mb_time, events}
     next_txi = Enum.reduce(mb_txs, txi, &sync_transaction(&1, &2, tx_ctx))
-
     Sync.Contract.aex9_derive_account_presence!({height, mbi})
 
     {next_txi, mbi + 1}
   end
 
-  def sync_transaction(signed_tx, txi, {block_index, mb_time}) do
+  def sync_transaction(signed_tx, txi, {block_index, mb_time, mb_events}) do
     {mod, tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
     hash = :aetx_sign.hash(signed_tx)
     type = mod.type()
@@ -108,6 +109,13 @@ defmodule AeMdw.Db.Sync.Transaction do
     :mnesia.write(Model.Type, Model.type(index: {type, txi}), :write)
     :mnesia.write(Model.Time, Model.time(index: {mb_time, txi}), :write)
     write_links(type, tx, signed_tx, txi, hash, block_index)
+
+    with :contract_call_tx <- type do
+      ct_pk = :aect_call_tx.contract_pubkey(tx)
+      ct_txi = Sync.Contract.get_txi(ct_pk)
+      events = Map.get(mb_events, hash, [])
+      Sync.Contract.events(events, txi, ct_txi)
+    end
 
     for {field, pos} <- AE.tx_ids(type) do
       <<_::256>> = pk = resolve_pubkey(elem(tx, pos), type, field, block_index)
@@ -122,6 +130,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   def write_links(:contract_create_tx, tx, _signed_tx, txi, tx_hash, bi) do
     pk = :aect_contracts.pubkey(:aect_contracts.new(tx))
     owner_pk = :aect_create_tx.owner_pubkey(tx)
+    :ets.insert(:ct_create_sync_cache, {pk, txi})
     write_origin(:contract_create_tx, pk, txi, tx_hash)
     Sync.Contract.create(pk, owner_pk, txi, bi)
   end

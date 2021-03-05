@@ -253,6 +253,40 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :idx_aex9_account_presence, @idx_aex9_account_presence_defaults
 
+  # int_contract_call:
+  #    index: {call txi, local idx}
+  @int_contract_call_defaults [
+    index: {-1, -1},
+    create_txi: -1,
+    fname: "",
+    tx: {}
+  ]
+  defrecord :int_contract_call, @int_contract_call_defaults
+
+  # grp_int_contract_call:
+  #    index: {create txi, call txi, local idx}
+  @grp_int_contract_call_defaults [
+    index: {-1, -1, -1},
+    unused: nil
+  ]
+  defrecord :grp_int_contract_call, @grp_int_contract_call_defaults
+
+  # fname_int_contract_call:
+  #    index: {fname, call txi, local idx}
+  @fname_int_contract_call_defaults [
+    index: {"", -1, -1},
+    unused: nil
+  ]
+  defrecord :fname_int_contract_call, @fname_int_contract_call_defaults
+
+  # fname_grp_int_contract_call:
+  #    index: {fname, create txi, call txi, local idx}
+  @fname_grp_int_contract_call_defaults [
+    index: {"", -1, -1, -1},
+    unused: nil
+  ]
+  defrecord :fname_grp_int_contract_call, @fname_grp_int_contract_call_defaults
+
   ################################################################################
 
   def tables(),
@@ -286,7 +320,11 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.ContractLog,
       AeMdw.Db.Model.DataContractLog,
       AeMdw.Db.Model.EvtContractLog,
-      AeMdw.Db.Model.IdxContractLog
+      AeMdw.Db.Model.IdxContractLog,
+      AeMdw.Db.Model.IntContractCall,
+      AeMdw.Db.Model.GrpIntContractCall,
+      AeMdw.Db.Model.FnameIntContractCall,
+      AeMdw.Db.Model.FnameGrpIntContractCall
     ]
   end
 
@@ -338,6 +376,10 @@ defmodule AeMdw.Db.Model do
       :data_contract_log,
       :evt_contract_log,
       :idx_contract_log,
+      :int_contract_call,
+      :grp_int_contract_call,
+      :fname_int_contract_call,
+      :fname_grp_int_contract_call,
       :plain_name,
       :auction_bid,
       :expiration,
@@ -372,6 +414,10 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.DataContractLog), do: :data_contract_log
   def record(AeMdw.Db.Model.EvtContractLog), do: :evt_contract_log
   def record(AeMdw.Db.Model.IdxContractLog), do: :idx_contract_log
+  def record(AeMdw.Db.Model.IntContractCall), do: :int_contract_call
+  def record(AeMdw.Db.Model.GrpIntContractCall), do: :grp_int_contract_call
+  def record(AeMdw.Db.Model.FnameIntContractCall), do: :fname_int_contract_call
+  def record(AeMdw.Db.Model.FnameGrpIntContractCall), do: :fname_grp_int_contract_call
   def record(AeMdw.Db.Model.PlainName), do: :plain_name
   def record(AeMdw.Db.Model.AuctionBid), do: :auction_bid
   def record(AeMdw.Db.Model.Pointee), do: :pointee
@@ -409,6 +455,10 @@ defmodule AeMdw.Db.Model do
   def table(:data_contract_log), do: AeMdw.Db.Model.DataContractLog
   def table(:evt_contract_log), do: AeMdw.Db.Model.EvtContractLog
   def table(:idx_contract_log), do: AeMdw.Db.Model.IdxContractLog
+  def table(:int_contract_call), do: AeMdw.Db.Model.IntContractCall
+  def table(:grp_int_contract_call), do: AeMdw.Db.Model.GrpIntContractCall
+  def table(:fname_int_contract_call), do: AeMdw.Db.Model.FnameIntContractCall
+  def table(:fname_grp_int_contract_call), do: AeMdw.Db.Model.FnameGrpIntContractCall
 
   def defaults(:tx), do: @tx_defaults
   def defaults(:block), do: @block_defaults
@@ -432,6 +482,10 @@ defmodule AeMdw.Db.Model do
   def defaults(:data_contract_log), do: @data_contract_log_defaults
   def defaults(:evt_contract_log), do: @evt_contract_log_defaults
   def defaults(:idx_contract_log), do: @idx_contract_log_defaults
+  def defaults(:int_contract_call), do: @int_contract_call_defaults
+  def defaults(:grp_int_contract_call), do: @grp_int_contract_call_defaults
+  def defaults(:fname_int_contract_call), do: @fname_int_contract_call_defaults
+  def defaults(:fname_grp_int_contract_call), do: @fname_grp_int_contract_call_defaults
   def defaults(:plain_name), do: @plain_name_defaults
   def defaults(:auction_bid), do: @auction_bid_defaults
   def defaults(:pointee), do: @pointee_defaults
