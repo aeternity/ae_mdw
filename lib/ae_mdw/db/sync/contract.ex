@@ -40,12 +40,6 @@ defmodule AeMdw.Db.Sync.Contract do
     DBContract.logs_write(create_txi, txi, call_rec)
   end
 
-  # def events(events, hash_txis) do
-  #   for {{:internal_call_tx, fname}, %{info: tx, tx_hash: tx_hash}} <- events do
-  #   end
-  # end
-
-
   def aex9_derive_account_presence!({kbi, mbi}) do
     next_hash =
       DBU.next_bi!({kbi, mbi})
@@ -77,8 +71,9 @@ defmodule AeMdw.Db.Sync.Contract do
   end
 
 
-  def events(raw_events, txi, ct_create_txi) do
-
+  def events(raw_events, call_txi, create_txi) do
+    for {{{:internal_call_tx, fname}, %{info: tx}}, i} <- Enum.with_index(raw_events),
+      do: DBContract.int_call_write(create_txi, call_txi, i, fname, tx)
   end
 
 

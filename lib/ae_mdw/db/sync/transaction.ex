@@ -130,7 +130,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   def write_links(:contract_create_tx, tx, _signed_tx, txi, tx_hash, bi) do
     pk = :aect_contracts.pubkey(:aect_contracts.new(tx))
     owner_pk = :aect_create_tx.owner_pubkey(tx)
-    :ets.insert(:ct_create_sync_cache, pk, txi)
+    :ets.insert(:ct_create_sync_cache, {pk, txi})
     write_origin(:contract_create_tx, pk, txi, tx_hash)
     Sync.Contract.create(pk, owner_pk, txi, bi)
   end

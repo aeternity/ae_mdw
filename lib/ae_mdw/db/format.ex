@@ -108,20 +108,51 @@ defmodule AeMdw.Db.Format do
     ext_ct_pk = Model.contract_log(m_log, :ext_contract)
     migrate_ct_pk = Sync.Contract.migrate_contract_pk()
     ct_id = &:aeser_id.create(:contract, &1)
+    ct_pk = ct_id.((create_txi == -1 && migrate_ct_pk) || Origin.pubkey({:contract, create_txi}))
+    ext_ct_txi = (ext_ct_pk != migrate_ct_pk && Origin.tx_index({:contract, ext_ct_pk})) || nil
+    m_tx = read!(Model.Tx, call_txi)
+    {height, micro_index} = Model.tx(m_tx, :block_index)
+    block_hash = Model.block(read_block!({height, micro_index}), :hash)
 
     %{
       contract_txi: (create_txi != -1 && create_txi) || nil,
-      contract_id:
-        ct_id.((create_txi == -1 && migrate_ct_pk) || Origin.pubkey({:contract, create_txi})),
-      ext_caller_contract_txi:
-        (ext_ct_pk != migrate_ct_pk && Origin.tx_index({:contract, ext_ct_pk})) || nil,
+      contract_id: ct_pk,
+      ext_caller_contract_txi: ext_ct_txi,
       ext_caller_contract_id: (ext_ct_pk != nil && ct_id.(ext_ct_pk)) || nil,
       call_txi: call_txi,
-      call_tx_hash: read!(Model.Tx, call_txi) |> Model.tx(:id),
+      call_tx_hash: Model.tx(m_tx, :id),
       args: Model.contract_log(m_log, :args),
       data: Model.contract_log(m_log, :data),
       event_hash: event_hash,
+      height: height,
+      micro_index: micro_index,
+      block_hash: block_hash,
       log_idx: log_idx
+    }
+  end
+
+  def to_raw_map({call_txi, local_idx}, Model.IntContractCall) do
+    m_call = read!(Model.IntContractCall, {call_txi, local_idx})
+    create_txi = Model.int_contract_call(m_call, :create_txi)
+    fname = Model.int_contract_call(m_call, :fname)
+    migrate_ct_pk = Sync.Contract.migrate_contract_pk()
+    ct_id = &:aeser_id.create(:contract, &1)
+    ct_pk = ct_id.((create_txi == -1 && migrate_ct_pk) || Origin.pubkey({:contract, create_txi}))
+    m_tx = read!(Model.Tx, call_txi)
+    {height, micro_index} = Model.tx(m_tx, :block_index)
+    block_hash = Model.block(read_block!({height, micro_index}), :hash)
+
+    %{
+      contract_txi: (create_txi != -1 && create_txi) || nil,
+      contract_id: ct_pk,
+      call_txi: call_txi,
+      call_tx_hash: Model.tx(m_tx, :id),
+      function: fname,
+      internal_tx: Model.int_contract_call(m_call, :tx),
+      height: height,
+      micro_index: micro_index,
+      block_hash: block_hash,
+      local_idx: local_idx
     }
   end
 
@@ -240,10 +271,36 @@ defmodule AeMdw.Db.Format do
       |> update_in([:contract_id], &enc_id/1)
       |> update_in([:ext_caller_contract_id], fn x -> x && enc_id(x) end)
       |> update_in([:call_tx_hash], &Enc.encode(:tx_hash, &1))
+      |> update_in([:block_hash], &Enc.encode(:micro_block_hash, &1))
       |> update_in([:event_hash], &Base.hex_encode32/1)
       |> update_in([:args], fn args ->
         Enum.map(args, fn <<topic::256>> -> to_string(topic) end)
       end)
+
+  def to_map({call_txi, local_idx}, Model.IntContractCall) do
+    raw_map = to_raw_map({call_txi, local_idx}, Model.IntContractCall)
+    int_tx = fn tx ->
+      {tx_type, tx_rec} = :aetx.specialize_type(tx)
+      serialized_tx = :aetx.serialize_for_client(tx)
+      case tx_type do
+        :contact_call_tx -> serialized_tx
+        _ ->
+          wrapped_tx = %{"tx" => serialized_tx}
+          signed_tx = :aetx_sign.new(tx, [])
+          %{"tx" => enc_tx} =
+            custom_encode(tx_type, wrapped_tx, tx_rec, signed_tx, raw_map.block_hash)
+          enc_tx
+      end
+    end
+
+    raw_map
+    |> update_in([:contract_id], &enc_id/1)
+    |> update_in([:call_tx_hash], &Enc.encode(:tx_hash, &1))
+    |> update_in([:block_hash], &Enc.encode(:micro_block_hash, &1))
+    |> update_in([:internal_tx], int_tx) #&:aetx.serialize_for_client/1)
+
+  end
+
 
   def to_map({_, _, _, _} = aex9_data, source)
       when source in [Model.Aex9Contract, Model.Aex9ContractSymbol, Model.RevAex9Contract],
@@ -334,7 +391,7 @@ defmodule AeMdw.Db.Format do
       dec = :base64.decode(bin)
       (String.valid?(dec) && dec) || bin
     rescue
-      _ -> bin
+      _ -> :erlang.binary_to_list(bin)
     end
   end
 
