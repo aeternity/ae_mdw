@@ -31,3 +31,5 @@ priv/static/frontend/
 .DS_Store
 .elixir_ls/
 log/
+REVISION
+VERSION
