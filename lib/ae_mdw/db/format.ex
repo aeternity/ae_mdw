@@ -49,12 +49,19 @@ defmodule AeMdw.Db.Format do
     do: auction_bid(bid, & &1, &to_raw_map/1, & &1)
 
   def to_raw_map(m_name, source) when elem(m_name, 0) == :name do
+    name = Model.name(m_name, :index)
     succ = &Model.name(&1, :previous)
     prev = chase(succ.(m_name), succ)
+    {status, auction} =
+      case Name.locate_bid(name) do
+        nil -> {:name, nil}
+        key -> {:auction, to_raw_map(key, Model.AuctionBid)}
+      end
 
     %{
-      name: Model.name(m_name, :index),
-      status: :name,
+      name: name,
+      auction: auction,
+      status: status,
       active: source == Model.ActiveName,
       info: name_info_to_raw_map(m_name),
       previous: Enum.map(prev, &name_info_to_raw_map/1)
@@ -255,12 +262,28 @@ defmodule AeMdw.Db.Format do
   def to_map({_plain, {{_, _}, _}, _, _, [{_, _} | _]} = bid, Model.AuctionBid),
     do: auction_bid(bid, &to_string/1, &to_map/1, &raw_to_json/1)
 
-  def to_map(name, source) when source in [Model.ActiveName, Model.InactiveName],
-    do: raw_to_json(to_raw_map(name, source))
+  def to_map(m_name, source) when source in [Model.ActiveName, Model.InactiveName] do
+    {raw_auction, raw_map} = Map.pop(to_raw_map(m_name, source), :auction)
+    auction = map_some(raw_auction,
+      fn %{info: info} ->
+        info
+        |> raw_to_json
+        |> update_in(["last_bid"], fn bid ->
+             bid
+             |> update_in(["block_hash"], &Enc.encode(:micro_block_hash, &1))
+             |> update_in(["hash"], &Enc.encode(:tx_hash, &1))
+             |> update_in(["signatures"], fn ss -> Enum.map(ss, &Enc.encode(:signature, &1)) end)
+             |> update_in(["tx", "type"], &AE.tx_name/1)
+        end)
+      end)
+    raw_to_json(raw_map)
+    |> put_in(["auction"], auction)
+    |> update_in(["status"], &to_string/1)
+  end
 
-  def to_map(oracle, source) when source in [Model.ActiveOracle, Model.InactiveOracle],
+  def to_map(m_oracle, source) when source in [Model.ActiveOracle, Model.InactiveOracle],
     do:
-      map_raw_values(to_raw_map(oracle, source), fn
+      map_raw_values(to_raw_map(m_oracle, source), fn
         {:id, :oracle, pk} -> Enc.encode(:oracle_pubkey, pk)
         x -> to_json(x)
       end)
