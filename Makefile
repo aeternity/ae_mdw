@@ -62,6 +62,8 @@ clean-backend: ## Clean backend artifacts
 	rm -rf \
 	_build \
 	deps \
+	REVISION \
+	VERSION \
 	mix.lock
 
 .PHONY: clean-frontend
