@@ -246,7 +246,7 @@ defmodule AeMdw.Db.Util do
     {_, _, node_vsn} = Application.started_applications() |> List.keyfind(:aecore, 0)
     {node_syncing?, node_progress} = :aec_sync.sync_progress()
     node_height = :aec_blocks.height(top_kb)
-    {mdw_height, _} = read_tx!(last_txi()) |> Model.tx(:block_index)
+    {mdw_tx_index, mdw_height} = safe_mdw_tx_index_and_height()
     mdw_syncing? = is_pid(Process.whereis(AeMdw.Db.Sync.Supervisor))
 
     %{
@@ -256,10 +256,21 @@ defmodule AeMdw.Db.Util do
       node_progress: node_progress,
       mdw_version: AeMdw.MixProject.project()[:version],
       mdw_height: mdw_height,
-      mdw_tx_index: AeMdw.Db.Util.last_txi(),
+      mdw_tx_index: mdw_tx_index,
       mdw_synced: node_height == (mdw_height + 1), # MDW is always 1 generation behind
       mdw_syncing: mdw_syncing?
     }
+  end
+
+  defp safe_mdw_tx_index_and_height do
+    try do
+      mdw_tx_index = last_txi()
+      {mdw_height, _} = read_tx!(mdw_tx_index) |> Model.tx(:block_index)
+      {mdw_tx_index, mdw_height}
+    rescue
+      _ ->
+        {0, 0}
+    end
   end
 
 end
