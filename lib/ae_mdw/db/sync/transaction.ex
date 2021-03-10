@@ -155,7 +155,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     do: Sync.Oracle.extend(:aeo_extend_tx.oracle_pubkey(tx), tx, txi, bi)
 
   def write_links(:name_claim_tx, tx, _signed_tx, txi, tx_hash, bi) do
-    plain_name = :aens_claim_tx.name(tx)
+    plain_name = String.downcase(:aens_claim_tx.name(tx))
     {:ok, name_hash} = :aens.get_name_hash(plain_name)
     write_origin(:name_claim_tx, name_hash, txi, tx_hash)
     Sync.Name.claim(plain_name, name_hash, tx, txi, bi)
