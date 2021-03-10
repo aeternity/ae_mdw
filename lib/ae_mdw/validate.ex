@@ -83,7 +83,7 @@ defmodule AeMdw.Validate do
 
         case ok? do
           true ->
-            {:ok, ensure_name_suffix(name_ident)}
+            {:ok, String.downcase(ensure_name_suffix(name_ident))}
 
           false ->
             {:error, {ErrInput.Id, name_ident}}

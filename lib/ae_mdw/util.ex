@@ -206,6 +206,32 @@ defmodule AeMdw.Util do
     )
   end
 
+
+  def mnesia_stream_pull({tab, key, advance}) do
+    case :mnesia.dirty_read(tab, key) do
+      [tuple] ->
+        {[tuple], {tab, advance.(tab, key), advance}}
+
+      [] ->
+        mnesia_stream_pull({tab, advance.(tab, key), advance})
+    end
+  end
+
+  def mnesia_stream(tab, dir) do
+    {advance, init_key} =
+      case dir do
+        :forward -> {&:mnesia.dirty_next/2, &:mnesia.dirty_first/1}
+        :backward -> {&:mnesia.dirty_prev/2, &:mnesia.dirty_last/1}
+      end
+
+    Stream.resource(
+      fn -> {tab, init_key.(tab), advance} end,
+      &mnesia_stream_pull/1,
+      fn _ -> :ok end
+    )
+  end
+
+
   def merged_stream(streams, key, dir) when is_function(key, 1) do
     taker =
       case dir do
@@ -259,6 +285,15 @@ defmodule AeMdw.Util do
              {_, ""} -> {:halt, true}
            end
          end)
+  end
+
+  def with_sync_off(fun) when is_function(fun, 0) do
+    try do
+      AeMdw.Application.sync(false)
+      fun.()
+    after
+      AeMdw.Application.sync(true)
+    end
   end
 
 end
