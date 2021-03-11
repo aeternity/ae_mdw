@@ -76,16 +76,21 @@ defmodule AeMdwWeb.Util do
       f.()
     rescue
       err in [ErrInput] ->
-        conn |> send_error(:bad_request, err.message)
+        conn |> send_error(err.reason, err.message)
     end
   end
 
-  def send_error(conn, status, reason) do
+  def send_error(conn, reason, message) do
+    status = error_reason_to_status(reason)
+
     conn
     |> Plug.Conn.put_status(status)
     |> Plug.Conn.put_resp_content_type("application/json")
-    |> Phoenix.Controller.json(%{"error" => reason})
+    |> Phoenix.Controller.json(%{"error" => message})
   end
+
+  defp error_reason_to_status(ErrInput.NotFound), do: :not_found
+  defp error_reason_to_status(_), do: :bad_request
 
   def user_agent(%Plug.Conn{req_headers: headers}) do
     case headers |> Enum.find(&(elem(&1, 0) == "user-agent")) do
