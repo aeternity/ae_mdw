@@ -21,7 +21,7 @@ defmodule AeMdw.Error do
     require AeMdw.Exception
     import AeMdw.Exception, only: [defexception!: 1]
 
-    defexception [:message]
+    defexception [:reason, :message]
 
     defexception!(Id)
     defexception!(BlockIndex)
