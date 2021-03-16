@@ -60,6 +60,9 @@ defmodule AeMdw.Application do
   end
 
   def init(:meta) do
+    {:ok, chain_state_code} = Extract.AbsCode.module(:aec_chain_state)
+    [:header, :hash, :type] = record_keys(chain_state_code, :node)
+    
     {:ok, aetx_code} = Extract.AbsCode.module(:aetx)
     {:ok, aeser_code} = Extract.AbsCode.module(:aeser_api_encoder)
     {:ok, headers_code} = Extract.AbsCode.module(:aec_headers)
@@ -185,7 +188,7 @@ defmodule AeMdw.Application do
     cache_exp = Application.fetch_env!(:ae_mdw, :contract_cache_expiration_minutes)
     EtsCache.new(AeMdw.Contract.table(), cache_exp)
   end
-
+  
   def record_keys(mod_code, rec_name) do
     {:ok, rec_code} = Extract.AbsCode.record_fields(mod_code, rec_name)
     Enum.map(rec_code, &elem(Extract.AbsCode.field_name_type(&1), 0))
