@@ -1,7 +1,7 @@
 defmodule AeMdw.MixProject do
   use Mix.Project
 
-  def project do
+  def project() do
     [
       app: :ae_mdw,
       version: "1.0.3",
@@ -9,14 +9,16 @@ defmodule AeMdw.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: [:phoenix, :gettext] ++ Mix.compilers() ++ [:phoenix_swagger],
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      xref: [exclude: [:mnesia, :aec_chain, :aec_blocks, :aec_headers, :aec_sync, :aetx,
+		       :aeser_api_encoder, :aec_hash]]
     ]
   end
 
   # Configuration for the OTP application.
   #
   # Type `mix help compile.app` for more information.
-  def application do
+  def application() do
     [
       mod: {AeMdw.Application, []},
       extra_applications: [:logger, :runtime_tools]
@@ -30,7 +32,7 @@ defmodule AeMdw.MixProject do
   # Specifies your project dependencies.
   #
   # Type `mix help deps` for examples and options.
-  defp deps do
+  defp deps() do
     [
       {:ae_plugin, github: "aeternity/ae_plugin"},
       # {:aesophia, path: "deps/aesophia", app: false},
@@ -40,13 +42,13 @@ defmodule AeMdw.MixProject do
       {:smart_global, github: "ks/smart_global"},
       {:smart_record, github: "ks/smart_record"},
       {:dbg, github: "fishcakez/dbg"},
-      {:phoenix, "~> 1.4.13"},
-      {:phoenix_pubsub, "~> 1.1"},
+      {:phoenix, "~> 1.5.8"},
+      {:plug, "~> 1.11"},
       {:cors_plug, "~> 2.0"},
       {:gettext, "~> 0.11"},
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.0"},
-      {:riverside, "~> 1.2.3"},
+      {:riverside, "~> 1.2.6"},
       {:websockex, "~> 0.4.2"},
       {:phoenix_swagger, "~> 0.8"},
       {:temp, "~> 0.4"},
