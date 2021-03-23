@@ -2,7 +2,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
   alias AeMdw.Node, as: AE
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Db.{Model, Sync, Format}
-  alias AeMdw.Log
+  alias AeMdw.{Log, Validate}
 
   require Model
 
@@ -383,31 +383,55 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
 
   def int_contract_call_key_dels(from_txi) do
-    {int_keys, grp_keys, fname_keys, fname_grp_keys} =
+    {int_keys, grp_keys, fname_keys, fname_grp_keys,
+     id_keys, grp_id_keys, id_fname_keys, grp_id_fname_keys} =
       case :mnesia.dirty_next(Model.IntContractCall, {from_txi, -1}) do
         :"$end_of_table" ->
-          {[], [], [], []}
+          {[], [], [], [], [], [], [], []}
 
         start_key ->
           push_key = fn {call_txi, local_idx},
-                        {int_keys, grp_keys, fname_keys, fname_grp_keys} ->
+                        {int_keys, grp_keys, fname_keys, fname_grp_keys,
+			 id_keys, grp_id_keys, id_fname_keys, grp_id_fname_keys} ->
             int_key = {call_txi, local_idx}
 
             m_int_call = read!(Model.IntContractCall, int_key)
             create_txi = Model.int_contract_call(m_int_call, :create_txi)
             fname = Model.int_contract_call(m_int_call, :fname)
-
+	    
             grp_key = {create_txi, call_txi, local_idx}
             fname_key = {fname, call_txi, local_idx}
             fname_grp_key = {fname, create_txi, call_txi, local_idx}
 
-            {[int_key | int_keys], [grp_key | grp_keys], [fname_key | fname_keys],
-             [fname_grp_key | fname_grp_keys]}
+	    {tx_type, raw_tx} =
+	      m_int_call
+	      |> Model.int_contract_call(:tx)
+	      |> :aetx.specialize_type
+
+	    {id_keys0, grp_id_keys0, id_fname_keys0, grp_id_fname_keys0} =
+	      for {_, pos} <- AE.tx_ids(tx_type), reduce: {[], [], [], []} do
+		{id_keys0, grp_id_keys0, id_fname_keys0, grp_id_fname_keys0} ->
+		  pk = Validate.id!(elem(raw_tx, pos))
+
+		  {[{pk, pos, call_txi, local_idx} | id_keys0],
+		   [{create_txi, pk, pos, call_txi, local_idx} | grp_id_keys0],
+		   [{pk, fname, pos, call_txi, local_idx} | id_fname_keys0],
+		   [{create_txi, pk, fname, pos, call_txi, local_idx} | grp_id_fname_keys0]}
+	      end
+	    
+            {[int_key | int_keys],
+	     [grp_key | grp_keys],
+	     [fname_key | fname_keys],
+             [fname_grp_key | fname_grp_keys],
+	     Enum.concat(id_keys0, id_keys),
+	     Enum.concat(grp_id_keys0, grp_id_keys),
+	     Enum.concat(id_fname_keys0, id_fname_keys),
+	     Enum.concat(grp_id_fname_keys0, grp_id_fname_keys)}
           end
 
           collect_keys(
             Model.IntContractCall,
-            push_key.(start_key, {[], [], [], []}),
+            push_key.(start_key, {[], [], [], [], [], [], [], []}),
             start_key,
             &next/2,
             fn key, acc -> {:cont, push_key.(key, acc)} end
@@ -418,7 +442,11 @@ defmodule AeMdw.Db.Sync.Invalidate do
       Model.IntContractCall => int_keys,
       Model.GrpIntContractCall => grp_keys,
       Model.FnameIntContractCall => fname_keys,
-      Model.FnameGrpIntContractCall => fname_grp_keys
+      Model.FnameGrpIntContractCall => fname_grp_keys,
+      Model.IdIntContractCall => id_keys,
+      Model.GrpIdIntContractCall => grp_id_keys,
+      Model.IdFnameIntContractCall => id_fname_keys,
+      Model.GrpIdFnameIntContractCall => grp_id_fname_keys
     }
   end
 
