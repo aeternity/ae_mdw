@@ -66,6 +66,10 @@
                 - [Note for contract writers](#note-for-contract-writers)
             - [Scope and direction of logs listing](#scope-and-direction-of-logs-listing)
             - [Querying of contract logs](#querying-of-contract-logs)
+        - [Function calls](#function-calls)
+            - [Using contract id](#using-contract-id)
+            - [Using function prefix](#using-function-prefix)
+            - [Using ID field](#using-id-field)
     - [Oracles](#oracles)
         - [Oracle resolution](#oracle-resolution)
         - [Listing oracles](#listing-oracles)
@@ -209,6 +213,10 @@ GET /aex9/transfers/from-to/:sender/:recipient   - returns all transfers of AEX9
 GET /contracts/logs                     - returns contract logs
 GET /contracts/logs/:direction          - returns contract logs from genesis or from the tip of chain
 GET /contracts/logs/:scope_type/:range  - returns contract logs from in given range
+
+GET /contracts/calls                     - returns function calls inside of the contracts 
+GET /contracts/calls/:direction          - returns function calls inside of the contracts from genesis or from the tip of chain
+GET /contracts/calls/:scope_type/:range  - returns function calls inside of the contracts in a given range
 
 GET  /status                            - returns middleware status (version, number of generations indexed)
 
@@ -2881,6 +2889,126 @@ $ curl -s "http://localhost:4000/contracts/logs?event=TipReceived&limit=1" | jq 
 }
 ```
 
+### Function calls
+
+A running contract can call other functions during execution. These calls are recorded and can be queried later.
+
+Besides specifying of scope and direction as with other streaming endpoints (via forward/backward or gen/txi), the query accepts following filters:
+
+  - contract id
+  - function prefix
+  - ID field
+
+#### Using contract id
+
+```
+$ curl -s "http://localhost:4000/contracts/calls?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1" | jq '.'
+{
+  "data": [
+    {
+      "block_hash": "mh_25eLkLkkMDRg5Sau1ezeNteAXxzAnfECqeN318hTFLifozJkpt",
+      "call_tx_hash": "th_gTNykxuM2MJ4D2Y7L5EoU7wKprmM6rLmAKe2yaBrjbNudMeSq",
+      "call_txi": 20308637,
+      "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+      "contract_txi": 8392766,
+      "function": "Call.amount",
+      "height": 403795,
+      "internal_tx": {
+        "amount": 100000000000000,
+        "fee": 0,
+        "nonce": 0,
+        "payload": "ba_Q2FsbC5hbW91bnTau3mT",
+        "recipient_id": "ak_7wqP18AHzyoqymwGaqQp8G2UpzBCggYiq7CZdJiB71VUsLpR4",
+        "sender_id": "ak_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+        "type": "SpendTx",
+        "version": 1
+      },
+      "local_idx": 5,
+      "micro_index": 9
+    }
+  ],
+  "next": "contracts/calls/txi/20309127-0?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1&page=2"
+}
+```
+
+#### Using function prefix
+
+```
+$ curl -s "http://localhost:4000/contracts/calls/forward?function=Oracle&limit=1" | jq '.'
+{
+  "data": [
+    {
+      "block_hash": "mh_2XAPbotBm5qgkWn165g3J7eRsfV9r5tEwSEqS3rggR6b9fRbW",
+      "call_tx_hash": "th_4q3cLesnXqSSH3HmecGMSUuZZNKsue8rGMACtCRmFpZtpAXPH",
+      "call_txi": 8404781,
+      "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+      "contract_txi": 8392766,
+      "function": "Oracle.query",
+      "height": 219107,
+      "internal_tx": {
+        "fee": 0,
+        "nonce": 0,
+        "oracle_id": "ok_2ChQprgcW1od3URuRWnRtm1sBLGgoGZCDBwkyXD1U7UYtKUYys",
+        "query": "ak_y87WkN4C4QevzjTuEYHg6XLqiWx3rjfYDFLBmZiqiro5mkRag;https://github.com/thepiwo",
+        "query_fee": 20000000000000,
+        "query_ttl": {
+          "type": "delta",
+          "value": 20
+        },
+        "response_ttl": {
+          "type": "delta",
+          "value": 20
+        },
+        "sender_id": "ak_23bfFKQ1vuLeMxyJuCrMHiaGg5wc7bAobKNuDadf8tVZUisKWs",
+        "type": "OracleQueryTx",
+        "version": 1
+      },
+      "local_idx": 0,
+      "micro_index": 0
+    }
+  ],
+  "next": "contracts/calls/gen/0-403807?function=Oracle&limit=1&page=2"
+}
+```
+
+#### Using ID field
+
+Following ID fields are recognized: account_id, caller_id, channel_id, commitment_id,
+ from_id, ga_id, initiator_id, name_id, oracle_id,
+ owner_id, payer_id, recipient_id, responder_id, sender_id, to_id
+        
+Contract_id field is inaccessible via this lookup, as when present in query, it filters only contracts with given contract id and doesn't look into internal transaction's fields.
+
+```
+$ curl -s "http://localhost:4000/contracts/calls?recipient_id=ak_23bfFKQ1vuLeMxyJuCrMHiaGg5wc7bAobKNuDadf8tVZUisKWs&limit=1" | jq '.'
+{
+  "data": [
+    {
+      "block_hash": "mh_2Mp1FfJyEaQUYbBKywWb6kWGm1KoTEyc4SZgt7oA7orz9BpSLD",
+      "call_tx_hash": "th_XnXh22b9XsXGPEE9ZJwm4E9FuMhv47Z2ogQo6Lgt4npEwVF9W",
+      "call_txi": 8820436,
+      "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+      "contract_txi": 8392766,
+      "function": "Call.amount",
+      "height": 224666,
+      "internal_tx": {
+        "amount": 80000000000000,
+        "fee": 0,
+        "nonce": 0,
+        "payload": "ba_Q2FsbC5hbW91bnTau3mT",
+        "recipient_id": "ak_23bfFKQ1vuLeMxyJuCrMHiaGg5wc7bAobKNuDadf8tVZUisKWs",
+        "sender_id": "ak_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+        "type": "SpendTx",
+        "version": 1
+      },
+      "local_idx": 4,
+      "micro_index": 11
+    }
+  ],
+  "next": "contracts/calls/txi/20309760-0?limit=1&page=2&recipient_id=ak_23bfFKQ1vuLeMxyJuCrMHiaGg5wc7bAobKNuDadf8tVZUisKWs"
+}
+```
+	
 
 ## Oracles
 

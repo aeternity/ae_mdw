@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.Contract do
+  alias AeMdw.Node, as: AE
   alias AeMdw.Db.Model
-  alias AeMdw.Log
+  alias AeMdw.{Log, Validate}
 
   require Record
   require Model
@@ -239,10 +240,27 @@ defmodule AeMdw.Db.Contract do
     m_fname_grp_call = Model.fname_grp_int_contract_call(
       index: {fname, create_txi, call_txi, local_idx}
     )
+
+    {tx_type, raw_tx} = :aetx.specialize_type(tx)
+    
     :mnesia.write(Model.IntContractCall, m_call, :write)
     :mnesia.write(Model.GrpIntContractCall, m_grp_call, :write)
     :mnesia.write(Model.FnameIntContractCall, m_fname_call, :write)
     :mnesia.write(Model.FnameGrpIntContractCall, m_fname_grp_call, :write)
+
+    for {_, pos} <- AE.tx_ids(tx_type) do
+      pk = Validate.id!(elem(raw_tx, pos))
+      m_id_call = Model.id_int_contract_call(index: {pk, pos, call_txi, local_idx})
+      m_grp_id_call = Model.grp_id_int_contract_call(index: {create_txi, pk, pos, call_txi, local_idx})
+      m_id_fname_call = Model.id_fname_int_contract_call(index: {pk, fname, pos, call_txi, local_idx})
+      m_grp_id_fname_call = Model.grp_id_fname_int_contract_call(
+	index: {create_txi, pk, fname, pos, call_txi, local_idx}
+      )
+      :mnesia.write(Model.IdIntContractCall, m_id_call, :write)
+      :mnesia.write(Model.GrpIdIntContractCall, m_grp_id_call, :write)
+      :mnesia.write(Model.IdFnameIntContractCall, m_id_fname_call, :write)
+      :mnesia.write(Model.GrpIdFnameIntContractCall, m_grp_id_fname_call, :write)
+    end
   end
 
 end

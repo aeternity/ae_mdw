@@ -287,6 +287,39 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :fname_grp_int_contract_call, @fname_grp_int_contract_call_defaults
 
+  ##
+  # id_int_contract_call:
+  #    index: {id pk, id pos, call txi, local idx}
+  @id_int_contract_call_defaults [
+    index: {<<>>, -1, -1, -1},
+    unused: nil
+  ]
+  defrecord :id_int_contract_call, @id_int_contract_call_defaults
+
+  # grp_id_int_contract_call:
+  #    index: {create txi, id pk, id pos, call txi, local idx}
+  @grp_id_int_contract_call_defaults [
+    index: {-1, <<>>, -1, -1, -1},
+    unused: nil
+  ]
+  defrecord :grp_id_int_contract_call, @grp_id_int_contract_call_defaults
+
+  # id_fname_int_contract_call:
+  #    index: {id pk, fname, id pos, call txi, local idx}
+  @id_fname_int_contract_call_defaults [
+    index: {<<>>, "", -1, -1, -1},
+    unused: nil
+  ]
+  defrecord :id_fname_int_contract_call, @id_fname_int_contract_call_defaults
+
+  # grp_id_fname_int_contract_call:
+  #    index: {create txi, id pk, fname, id pos, call txi, local idx} 
+  @grp_id_fname_int_contract_call_defaults [
+    index: {-1, <<>>, "", -1, -1, -1},
+    unused: nil
+  ]
+  defrecord :grp_id_fname_int_contract_call, @grp_id_fname_int_contract_call_defaults
+  
   ################################################################################
 
   def tables(),
@@ -324,7 +357,12 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.IntContractCall,
       AeMdw.Db.Model.GrpIntContractCall,
       AeMdw.Db.Model.FnameIntContractCall,
-      AeMdw.Db.Model.FnameGrpIntContractCall
+      AeMdw.Db.Model.FnameGrpIntContractCall,
+      AeMdw.Db.Model.IdIntContractCall,
+      AeMdw.Db.Model.GrpIdIntContractCall,
+      AeMdw.Db.Model.IdFnameIntContractCall,
+      AeMdw.Db.Model.GrpIdFnameIntContractCall
+      
     ]
   end
 
@@ -380,6 +418,10 @@ defmodule AeMdw.Db.Model do
       :grp_int_contract_call,
       :fname_int_contract_call,
       :fname_grp_int_contract_call,
+      :id_int_contract_call,
+      :grp_id_int_contract_call,
+      :id_fname_int_contract_call,
+      :grp_id_fname_int_contract_call,      
       :plain_name,
       :auction_bid,
       :expiration,
@@ -418,6 +460,10 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.GrpIntContractCall), do: :grp_int_contract_call
   def record(AeMdw.Db.Model.FnameIntContractCall), do: :fname_int_contract_call
   def record(AeMdw.Db.Model.FnameGrpIntContractCall), do: :fname_grp_int_contract_call
+  def record(AeMdw.Db.Model.IdIntContractCall), do: :id_int_contract_call
+  def record(AeMdw.Db.Model.GrpIdIntContractCall), do: :grp_id_int_contract_call
+  def record(AeMdw.Db.Model.IdFnameIntContractCall), do: :id_fname_int_contract_call
+  def record(AeMdw.Db.Model.GrpIdFnameIntContractCall), do: :grp_id_fname_int_contract_call
   def record(AeMdw.Db.Model.PlainName), do: :plain_name
   def record(AeMdw.Db.Model.AuctionBid), do: :auction_bid
   def record(AeMdw.Db.Model.Pointee), do: :pointee
@@ -459,7 +505,11 @@ defmodule AeMdw.Db.Model do
   def table(:grp_int_contract_call), do: AeMdw.Db.Model.GrpIntContractCall
   def table(:fname_int_contract_call), do: AeMdw.Db.Model.FnameIntContractCall
   def table(:fname_grp_int_contract_call), do: AeMdw.Db.Model.FnameGrpIntContractCall
-
+  def table(:id_int_contract_call), do: AeMdw.Db.Model.IdIntContractCall
+  def table(:grp_id_int_contract_call), do: AeMdw.Db.Model.GrpIdIntContractCall
+  def table(:id_fname_int_contract_call), do: AeMdw.Db.Model.IdFnameIntContractCall
+  def table(:grp_id_fname_int_contract_call), do: AeMdw.Db.Model.GrpIdFnameIntContractCall
+  
   def defaults(:tx), do: @tx_defaults
   def defaults(:block), do: @block_defaults
   def defaults(:time), do: @time_defaults
@@ -486,6 +536,10 @@ defmodule AeMdw.Db.Model do
   def defaults(:grp_int_contract_call), do: @grp_int_contract_call_defaults
   def defaults(:fname_int_contract_call), do: @fname_int_contract_call_defaults
   def defaults(:fname_grp_int_contract_call), do: @fname_grp_int_contract_call_defaults
+  def defaults(:id_int_contract_call), do: @id_int_contract_call_defaults
+  def defaults(:grp_id_int_contract_call), do: @grp_id_int_contract_call_defaults
+  def defaults(:id_fname_int_contract_call), do: @id_fname_int_contract_call_defaults
+  def defaults(:grp_id_fname_int_contract_call), do: @grp_id_fname_int_contract_call_defaults  
   def defaults(:plain_name), do: @plain_name_defaults
   def defaults(:auction_bid), do: @auction_bid_defaults
   def defaults(:pointee), do: @pointee_defaults
@@ -509,4 +563,7 @@ defmodule AeMdw.Db.Model do
 
   def incr_count({_, _, _} = field_key),
     do: update_count(field_key, 1, fn -> write_count(id_count(index: field_key, count: 0), 1) end)
+
+
+  
 end
