@@ -20,17 +20,15 @@ defmodule AeMdw.Contract do
       nil ->
         case :aec_chain.get_contract(pubkey) do
           {:ok, contract} ->
+	    {:code, ser_code} = :aect_contracts.code(contract)
             info =
-              contract
-              |> :aect_contracts.code
-              |> :aeser_contract_code.deserialize
-              |> case do
-                   %{type_info: [], byte_code: byte_code} ->
-                     :aeb_fate_code.deserialize(byte_code)
-
-                   %{type_info: type_info} ->
-                     type_info
-                 end
+              case :aeser_contract_code.deserialize(ser_code) do
+                %{type_info: [], byte_code: byte_code} ->
+                  :aeb_fate_code.deserialize(byte_code)
+		  
+                  %{type_info: type_info} ->
+                  type_info
+              end
 
             EtsCache.put(@tab, pubkey, info)
             {:ok, info}
@@ -127,7 +125,7 @@ defmodule AeMdw.Contract do
     contract_id = :aect_contracts.id(contract)
 
     call = :aect_call.new(caller_id, 0, contract_id, height, gas_price)
-    code = :aect_contracts.code(contract)
+    {:code, code} = :aect_contracts.code(contract)
     call_data = :aeb_fate_abi.create_calldata('#{function_name}', args) |> ok!
 
     call_def = %{
