@@ -52,6 +52,16 @@ defmodule AeMdw.Db.Sync.Oracle do
     cache_through_write(Model.ActiveOracle, m_oracle)
   end
 
+  def respond(pubkey, tx, txi, {height, _} = bi) do
+    query_id = :aeo_response_tx.query_id(tx)
+    o_tree = AeMdw.Db.Oracle.oracle_tree!(bi)
+    fee =
+      pubkey
+      |> :aeo_state_tree.get_query(query_id, o_tree)
+      |> :aeo_query.fee
+    AeMdw.Db.IntTransfer.write({height, txi}, "reward_oracle", pubkey, txi, fee)
+  end
+  
   ##########
 
   def expire(height) do

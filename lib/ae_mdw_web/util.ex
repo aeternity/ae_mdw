@@ -101,4 +101,15 @@ defmodule AeMdwWeb.Util do
 
   def concat(prefix, val),
     do: prefix <> ": " <> ((is_binary(val) && String.printable?(val) && val) || inspect(val))
+
+  def prefix_checker(prefix) do
+    prefix_size = :erlang.size(prefix)
+
+    fn data ->
+      is_binary(data) &&
+        :erlang.size(data) >= prefix_size &&
+        :binary.part(data, {0, prefix_size}) == prefix
+    end
+  end
+  
 end

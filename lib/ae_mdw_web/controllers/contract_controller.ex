@@ -148,16 +148,6 @@ defmodule AeMdwWeb.ContractController do
   def scope_checker(:forward, {f, l}), do: fn x -> x >= f && x <= l end
   def scope_checker(:backward, {f, l}), do: fn x -> x >= l && x <= f end
 
-  def prefix_checker(prefix) do
-    prefix_size = :erlang.size(prefix)
-
-    fn data ->
-      is_binary(data) &&
-        :erlang.size(data) >= prefix_size &&
-        :binary.part(data, {0, prefix_size}) == prefix
-    end
-  end
-
   ##########
 
   def logs_search_context!(%{} = params, start_txi, scope_checker, limit_fn) do

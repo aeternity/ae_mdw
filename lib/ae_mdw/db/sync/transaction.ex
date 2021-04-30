@@ -105,6 +105,8 @@ defmodule AeMdw.Db.Sync.Transaction do
     hash = :aetx_sign.hash(signed_tx)
     type = mod.type()
     model_tx = Model.tx(index: txi, id: hash, block_index: block_index, time: mb_time)
+
+    :ets.insert(:tx_sync_cache, {txi, model_tx})
     :mnesia.write(Model.Tx, model_tx, :write)
     :mnesia.write(Model.Type, Model.type(index: {type, txi}), :write)
     :mnesia.write(Model.Time, Model.time(index: {mb_time, txi}), :write)
@@ -154,6 +156,9 @@ defmodule AeMdw.Db.Sync.Transaction do
   def write_links(:oracle_extend_tx, tx, _signed_tx, txi, _tx_hash, bi),
     do: Sync.Oracle.extend(:aeo_extend_tx.oracle_pubkey(tx), tx, txi, bi)
 
+  def write_links(:oracle_response_tx, tx, _signed_tx, txi, _tx_hash, bi),
+    do: Sync.Oracle.respond(:aeo_response_tx.oracle_pubkey(tx), tx, txi, bi)
+  
   def write_links(:name_claim_tx, tx, _signed_tx, txi, tx_hash, bi) do
     plain_name = String.downcase(:aens_claim_tx.name(tx))
     {:ok, name_hash} = :aens.get_name_hash(plain_name)

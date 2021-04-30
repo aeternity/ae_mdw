@@ -1,5 +1,6 @@
 defmodule AeMdw.Db.Sync.Name do
-  alias AeMdw.Db.{Name, Model, Format}
+  alias AeMdw.Node, as: AE
+  alias AeMdw.Db.{Sync, Name, Model, Format}
   alias AeMdw.{Log, Validate}
 
   require Record
@@ -18,18 +19,20 @@ defmodule AeMdw.Db.Sync.Name do
       revoke_or_expire_height: 2
     ]
 
-  import AeMdw.{Util, Db.Util}
+  import AeMdw.{Ets, Util, Db.Util}
 
   ##########
 
   def claim(plain_name, name_hash, tx, txi, {height, _} = bi) do
     account_pk = Validate.id!(:aens_claim_tx.account_id(tx))
+    name_fee = :aens_claim_tx.name_fee(tx)
     m_owner = Model.owner(index: {account_pk, plain_name})
 
     m_plain_name = Model.plain_name(index: name_hash, value: plain_name)
     cache_through_write(Model.PlainName, m_plain_name)
 
     proto_vsn = proto_vsn(height)
+    is_lima? = proto_vsn >= AE.lima_vsn()
 
     case :aec_governance.name_claim_bid_timeout(plain_name, proto_vsn) do
       0 ->
@@ -53,6 +56,9 @@ defmodule AeMdw.Db.Sync.Name do
         cache_through_write(Model.ActiveNameExpiration, m_name_exp)
         cache_through_delete_inactive(previous)
 
+	lock_amount = is_lima? && name_fee || :aec_governance.name_claim_locked_fee()
+	Sync.IntTransfer.fee({height, txi}, :lock_name, account_pk, txi, lock_amount)
+	inc(:stat_sync_cache, :active_names)
       timeout ->
         auction_end = height + timeout
         m_auction_exp = Model.expiration(index: {auction_end, plain_name})
@@ -60,15 +66,21 @@ defmodule AeMdw.Db.Sync.Name do
         make_m_bid =
           &Model.auction_bid(index: {plain_name, {bi, txi}, auction_end, account_pk, &1})
 
+	Sync.IntTransfer.fee({height, txi}, :spend_name, account_pk, txi, name_fee)
+	
         m_bid =
           case cache_through_prev(Model.AuctionBid, Name.bid_top_key(plain_name)) do
             :not_found ->
               make_m_bid.([{bi, txi}])
 
-            {:ok, {^plain_name, _, prev_auction_end, prev_owner, prev_bids} = prev_key} ->
+            {:ok, {^plain_name, {_, prev_txi}, prev_auction_end, prev_owner, prev_bids} = prev_key} ->
               cache_through_delete(Model.AuctionBid, prev_key)
               cache_through_delete(Model.AuctionOwner, {prev_owner, plain_name})
               cache_through_delete(Model.AuctionExpiration, {prev_auction_end, plain_name})
+
+	      %{tx: prev_tx} = read_cached_raw_tx!(prev_txi)
+	      Sync.IntTransfer.fee({height, txi}, :refund_name, prev_owner, prev_txi, prev_tx.name_fee)
+	
               make_m_bid.([{bi, txi} | prev_bids])
           end
 
@@ -177,7 +189,7 @@ defmodule AeMdw.Db.Sync.Name do
   end
 
   def expire_auction(height, plain_name, timeout) do
-    {_, _, _, owner, bids} =
+    {_, {_, txi}, _, owner, bids} =
       bid_key = ok!(cache_through_prev(Model.AuctionBid, Name.bid_top_key(plain_name)))
 
     previous = ok_nil(cache_through_read(Model.InactiveName, plain_name))
@@ -204,6 +216,10 @@ defmodule AeMdw.Db.Sync.Name do
     cache_through_delete(Model.AuctionOwner, {owner, plain_name})
     cache_through_delete(Model.AuctionBid, bid_key)
     cache_through_delete_inactive(previous)
+
+    %{tx: winning_tx} = read_raw_tx!(txi)
+    Sync.IntTransfer.fee({height, -1}, :lock_name, owner, txi, winning_tx.name_fee)
+    inc(:stat_sync_cache, :active_names)
     log_expired_auction(height, plain_name)
   end
 
@@ -455,4 +471,12 @@ defmodule AeMdw.Db.Sync.Name do
 
   def read_raw_tx!(txi),
     do: Format.to_raw_map(read_tx!(txi))
+
+  def read_cached_raw_tx!(txi) do
+    case :ets.lookup(:tx_sync_cache, txi) do
+      [{^txi, m_tx}] -> Format.to_raw_map(m_tx)
+      [] -> read_raw_tx!(txi)
+    end
+  end
+  
 end

@@ -29,7 +29,8 @@ defmodule AeMdw.Db.Sync.Invalidate do
         aex9_account_presence_key_writes = aex9_account_presence_key_writes(from_txi)
 
         int_contract_call_key_dels = int_contract_call_key_dels(from_txi)
-
+	int_transfer_tx_key_dels = int_transfer_tx_key_dels(prev_kbi)
+	
         tab_keys = Map.merge(bi_keys, tx_keys)
 
         :mnesia.transaction(fn ->
@@ -47,6 +48,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
           do_dels(contract_call_key_dels)
 
           do_dels(int_contract_call_key_dels)
+          do_dels(int_transfer_tx_key_dels)
 
           do_writes(name_writes, &AeMdw.Db.Name.cache_through_write/2)
           do_writes(oracle_writes, &AeMdw.Db.Oracle.cache_through_write/2)
@@ -450,6 +452,36 @@ defmodule AeMdw.Db.Sync.Invalidate do
     }
   end
 
+
+  def int_transfer_tx_key_dels(prev_kbi) do
+    {int_keys, kind_keys, target_keys} =
+      case :mnesia.dirty_next(Model.IntTransferTx, {prev_kbi, -2}) do
+        :"$end_of_table" ->
+          {[], [], []}
+
+        start_key ->
+          push_key = fn {location, kind, target_pk, ref_txi},
+                        {int_keys, kind_keys, target_keys} ->
+            {[{location, kind, target_pk, ref_txi} | int_keys],
+	     [{kind, location, target_pk, ref_txi} | kind_keys],
+	     [{target_pk, location, kind, ref_txi} | target_keys]}
+          end
+
+          collect_keys(
+            Model.IntTransferTx,
+            push_key.(start_key, {[], [], []}),
+            start_key,
+            &next/2,
+            fn key, acc -> {:cont, push_key.(key, acc)} end
+          )
+      end
+
+    %{
+      Model.IntTransferTx => int_keys,
+      Model.KindIntTransferTx => kind_keys,
+      Model.TargetIntTransferTx => target_keys,
+    }
+  end
 
   ##########
 

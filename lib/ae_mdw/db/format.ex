@@ -163,6 +163,19 @@ defmodule AeMdw.Db.Format do
     }
   end
 
+  def to_raw_map({{height, txi}, kind, target_pk, ref_txi} = key, Model.IntTransferTx) do
+    m_transfer = read!(Model.IntTransferTx, key)
+    amount = Model.int_transfer_tx(m_transfer, :amount)
+
+    %{height: height,
+      account_id: target_pk,
+      amount: amount,
+      kind: kind,
+      ref_txi: ref_txi >= 0 && ref_txi || nil
+    }
+  end
+
+  def to_raw_map(m_stat, Model.Stat) do
   def to_raw_map(ae_tx, tx_type) do
     AeMdw.Node.tx_fields(tx_type)
     |> Stream.with_index(1)
@@ -324,7 +337,14 @@ defmodule AeMdw.Db.Format do
 
   end
 
+  def to_map({{_height, _txi}, _kind, _target_pk, _ref_txi} = key, Model.IntTransferTx) do
+    raw_map = to_raw_map(key, Model.IntTransferTx)
 
+    raw_map
+    |> update_in([:account_id], &Enc.encode(:account_pubkey, &1))
+  end  
+
+  def to_map(m_stat, Model.Stat),
   def to_map({_, _, _, _} = aex9_data, source)
       when source in [Model.Aex9Contract, Model.Aex9ContractSymbol, Model.RevAex9Contract],
       do: raw_to_json(to_raw_map(aex9_data, source))

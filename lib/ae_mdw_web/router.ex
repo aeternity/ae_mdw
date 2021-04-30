@@ -12,7 +12,9 @@ defmodule AeMdwWeb.Router do
     {["names"], &AeMdwWeb.NameController.stream_plug_hook/1},
     {["oracles"], &AeMdwWeb.OracleController.stream_plug_hook/1},
     {["contracts", "logs"], &AeMdwWeb.ContractController.stream_plug_hook/1},
-    {["contracts", "calls"], &AeMdwWeb.ContractController.stream_plug_hook/1}
+    {["contracts", "calls"], &AeMdwWeb.ContractController.stream_plug_hook/1},
+    {["transfers"], &AeMdwWeb.TransferController.stream_plug_hook/1},
+    {["stats"], &AeMdwWeb.StatsController.stream_plug_hook/1},
   ]
 
   @scopes ["gen", "txi"]
@@ -126,6 +128,11 @@ defmodule AeMdwWeb.Router do
     get "/contracts/calls/:direction", ContractController, :calls
     get "/contracts/calls/:scope_type/:range", ContractController, :calls
 
+    get "/transfers/gen/:range", TransferController, :transfers
+    get "/transfers/:diretion", TransferController, :transfers
+    get "/transfers", TransferController, :transfers
+
+    get "/stats/", StatsController, :stats
     get "/status", UtilController, :status
 
     match :*, "/*path", UtilController, :no_route
