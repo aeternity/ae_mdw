@@ -4,10 +4,14 @@ defmodule AeMdw.Application do
   alias AeMdw.Extract
   alias AeMdw.Contract
 
+  require Model
+  
   use Application
 
   import AeMdw.Util
 
+  ##########
+  
   def start(_type, _args) do
     :lager.set_loglevel(:epoch_sync_lager_event, :lager_console_backend, :undefined, :error)
     :lager.set_loglevel(:lager_console_backend, :error)
@@ -17,6 +21,7 @@ defmodule AeMdw.Application do
     init(:meta)
     init(:contract_cache)
     init(:aehttp)
+    init(:db_state)
     # init(:aesophia)
 
     children =
@@ -148,6 +153,8 @@ defmodule AeMdw.Application do
 
     height_proto = :aec_hard_forks.protocols() |> Enum.into([]) |> Enum.sort(&>=/2)
 
+    min_block_reward_height = :aec_block_genesis.height() + :aec_governance.beneficiary_reward_delay() + 1
+
     SmartGlobal.new(
       AeMdw.Node,
       %{
@@ -179,7 +186,9 @@ defmodule AeMdw.Application do
         aex9_signatures: [{[], aex9_sigs}],
         aex9_transfer_event_hash: [{[], :aec_hash.blake2b_256_hash("Transfer")}],
         max_blob: [{[], max_blob}],
-        height_proto: [{[], height_proto}]
+        height_proto: [{[], height_proto}],
+	min_block_reward_height: [{[], min_block_reward_height}],
+	token_supply_delta: Enum.map(token_supply_delta(), fn {h, xs} -> {[h], xs} end) ++ [{[:_], 0}]
       }
     )
   end
@@ -188,12 +197,59 @@ defmodule AeMdw.Application do
     cache_exp = Application.fetch_env!(:ae_mdw, :contract_cache_expiration_minutes)
     EtsCache.new(AeMdw.Contract.table(), cache_exp)
   end
+
+  def init(:db_state) do
+    initial_token_supply = AeMdw.Node.token_supply_delta(0)
+    :mnesia.transaction(
+      fn ->
+	case :mnesia.read(Model.SumStat, 0) do
+	  [m_stat] ->
+	    tot_sup = Model.sum_stat(m_stat, :total_supply)
+	    tot_sup == initial_token_supply || raise "initial total supply doesn't match"
+	    
+	  [] ->
+	    m_stat = Model.sum_stat(index: 0, total_supply: initial_token_supply)
+	    :mnesia.write(Model.SumStat, m_stat, :write)
+	end
+      end
+    )
+  end
   
   def record_keys(mod_code, rec_name) do
     {:ok, rec_code} = Extract.AbsCode.record_fields(mod_code, rec_name)
     Enum.map(rec_code, &elem(Extract.AbsCode.field_name_type(&1), 0))
   end
 
+  def mints() do
+    node_dir = Application.fetch_env!(:ae_plugin, :node_root)
+    acc_files = [_|_] = :filelib.wildcard('#{node_dir}/**/accounts.json') # Note: Path.wildcard ignores symlinks...
+    acc_files
+    |> Enum.map(fn f ->
+      f = to_string(f)
+      hf =
+	Path.dirname(f)
+	|> Path.split
+	|> Enum.at(-1)
+	|> String.trim_leading(".")
+      {hf, Jason.decode!(File.read!(f))}
+    end)
+    |> Enum.into(%{})
+  end
+
+  def token_supply_delta() do
+    sum_vals = compose(&Enum.sum/1, &Map.values/1)
+    {genesis_accs, hfs} = Map.pop(mints(), "genesis")
+    [{0, sum_vals.(genesis_accs)} |
+     (hfs
+     |> Enum.map(fn {hf, accs} ->
+         proto = String.to_existing_atom(hf)
+         proto_vsn = :aec_hard_forks.protocol_vsn(proto)
+	 height = :aec_hard_forks.protocols()[proto_vsn]
+	 {height, sum_vals.(accs)}
+       end)
+     |> Enum.sort())]
+  end
+  
   # Tell Phoenix to update the endpoint configuration whenever the application is updated.
   def config_change(changed, _new, removed) do
     AeMdwWeb.Endpoint.config_change(changed, removed)

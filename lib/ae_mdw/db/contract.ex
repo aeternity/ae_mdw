@@ -118,7 +118,8 @@ defmodule AeMdw.Db.Contract do
     %{
       function: Model.contract_call(m_call, :fun),
       arguments: Model.contract_call(m_call, :args),
-      result: Model.contract_call(m_call, :result)
+      result: Model.contract_call(m_call, :result),
+      return: Model.contract_call(m_call, :return)
     }
   end
 

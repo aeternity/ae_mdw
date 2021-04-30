@@ -37,6 +37,8 @@ defmodule AeMdw.Db.Sync.Oracle do
     cache_through_write(Model.ActiveOracle, m_oracle)
     cache_through_write(Model.ActiveOracleExpiration, m_exp)
     cache_through_delete_inactive(previous)
+    AeMdw.Ets.inc(:stat_sync_cache, :active_oracles)
+    previous && AeMdw.Ets.dec(:stat_sync_cache, :inactive_oracles)
   end
 
   def extend(pubkey, tx, txi, bi) do
@@ -52,6 +54,16 @@ defmodule AeMdw.Db.Sync.Oracle do
     cache_through_write(Model.ActiveOracle, m_oracle)
   end
 
+  def respond(pubkey, tx, txi, {height, _} = bi) do
+    query_id = :aeo_response_tx.query_id(tx)
+    o_tree = AeMdw.Db.Oracle.oracle_tree!(bi)
+    fee =
+      pubkey
+      |> :aeo_state_tree.get_query(query_id, o_tree)
+      |> :aeo_query.fee
+    AeMdw.Db.IntTransfer.write({height, txi}, "reward_oracle", pubkey, txi, fee)
+  end
+  
   ##########
 
   def expire(height) do
@@ -71,6 +83,8 @@ defmodule AeMdw.Db.Sync.Oracle do
     cache_through_write(Model.InactiveOracleExpiration, m_exp)
     cache_through_delete(Model.ActiveOracle, pubkey)
     cache_through_delete(Model.ActiveOracleExpiration, {height, pubkey})
+    AeMdw.Ets.inc(:stat_sync_cache, :inactive_oracles)
+    AeMdw.Ets.dec(:stat_sync_cache, :active_oracles)
     log_expired_oracle(height, pubkey)
   end
 

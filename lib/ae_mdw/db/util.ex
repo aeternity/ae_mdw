@@ -89,6 +89,9 @@ defmodule AeMdw.Db.Util do
   def select(cont),
     do: :mnesia.async_dirty(fn -> :mnesia.select(cont) end)
 
+  def count(table),
+    do: :mnesia.foldl(fn _, c -> c + 1 end, 0, table)
+  
   def ensure_key!(tab, getter) do
     case apply(__MODULE__, getter, [tab]) do
       :"$end_of_table" ->

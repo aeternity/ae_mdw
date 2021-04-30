@@ -22,7 +22,8 @@ defmodule AeMdw.Db.Sync.Contract do
           |> Contract.aex9_meta_info
           |> DBContract.aex9_creation_write(contract_pk, owner_pk, txi)
         end
-
+	AeMdw.Ets.inc(:stat_sync_cache, :contracts)
+	
       _ ->
         :invalid_contract
     end
