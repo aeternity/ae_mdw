@@ -70,6 +70,10 @@
             - [Using contract id](#using-contract-id)
             - [Using function prefix](#using-function-prefix)
             - [Using ID field](#using-id-field)
+    - [Internal transfers](#internal-transfers)
+        - [Listing internal transfers in range](#listing-internal-transfers-in-range)
+        - [Listing internal transfers of a specific kind](#listing-internal-transfers-of-a-specific-kind)
+        - [Listing internal transfers related to specific account](#listing-internal-transfers-related-to-specific-account)
     - [Oracles](#oracles)
         - [Oracle resolution](#oracle-resolution)
         - [Listing oracles](#listing-oracles)
@@ -89,6 +93,7 @@
         - [AEX 9 contract balances for account](#aex-9-contract-balances-for-account)
         - [AEX 9 contract balances for account at height](#aex-9-contract-balances-for-account-at-height)
         - [AEX 9 contract balances for account at block](#aex-9-contract-balances-for-account-at-block)
+    - [Statistics](#statistics)
     - [Websocket interface](#websocket-interface)
         - [Message format](#message-format)
         - [Supported operations](#supported-operations)
@@ -413,6 +418,8 @@ $ curl -s "http://localhost:4000/txs/forward?contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq
         "sg_HKk9C1vCuHcZRj9zAdh2WvjvwVJwzNkXgPLsqy2SdR3L3hNkc1oMHjNnQxB558mdRWNPP711DMun3KEy9ZYyvo2QgR8B"
       ],
       "tx": {
+        "abi_version": 3,
+        "amount": 1e+16,
         "arguments": [
           {
             "type": "string",
@@ -423,17 +430,11 @@ $ curl -s "http://localhost:4000/txs/forward?contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq
             "value": "Cool projects!"
           }
         ],
-        "function": "tip",
-        "result": {
-          "type": "unit",
-          "value": ""
-        },
-        "abi_version": 3,
-        "amount": 1e+16,
         "call_data": "cb_KxHt0mtGK2lodHRwczovL2dpdGh1Yi5jb20vdGhlcGl3bzlDb29sIHByb2plY3RzIZ01af4=",
         "caller_id": "ak_YCwfWaW5ER6cRsG9Jg4KMyVU59bQkt45WvcnJJctQojCqBeG2",
         "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
         "fee": 182980000000000,
+        "function": "tip",
         "gas": 1579000,
         "gas_price": 1000000000,
         "gas_used": 3600,
@@ -442,13 +443,18 @@ $ curl -s "http://localhost:4000/txs/forward?contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq
             "address": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
             "data": "cb_aHR0cHM6Ly9naXRodWIuY29tL3RoZXBpd2+QKOcm",
             "topics": [
-              8.317242847728886e+76,
-              3.204945213498395e+76,
-              1e+16
+              "83172428477288860679626635256348428097419935810558542860159024775388982427580",
+              "32049452134983951870486158652299990269658301415986031571975774292043131948665",
+              "10000000000000000"
             ]
           }
         ],
         "nonce": 80,
+        "result": "ok",
+        "return": {
+          "type": "unit",
+          "value": ""
+        },
         "return_type": "ok",
         "type": "ContractCallTx",
         "version": 1
@@ -456,7 +462,7 @@ $ curl -s "http://localhost:4000/txs/forward?contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq
       "tx_index": 8395071
     }
   ],
-  "next": "txs/gen/0-265268?contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2&page=2"
+  "next": "txs/gen/0-413783?contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2&page=2"
 }
 ```
 
@@ -3008,7 +3014,103 @@ $ curl -s "http://localhost:4000/contracts/calls?recipient_id=ak_23bfFKQ1vuLeMxy
   "next": "contracts/calls/txi/20309760-0?limit=1&page=2&recipient_id=ak_23bfFKQ1vuLeMxyJuCrMHiaGg5wc7bAobKNuDadf8tVZUisKWs"
 }
 ```
+
+## Internal transfers
+
+During the operation of the node, several kinds of internal transfers happen which are not visible on general transaction ledger.
+
+Besides specifying of scope and direction as with other streaming endpoints (via forward/backward or gen), the query accepts following filters:
+
+- kind:
+	At the moment, following kinds of transfers can be queried:
 	
+	- fee_spend_name (fee for placing bid to the name auction)
+    - fee_refund_name (returned fee when the new name bid outbids the previous one in the name auction)
+	- fee_lock_name (locked fee of the name auction winning 
+
+	- reward_oracle (reward for the operator of the oracle (on transaction basis))
+    - reward_block (reward for the miner (on block basis))
+    - reward_dev (reward for funding of the development (on block basis))
+
+	It it possible to provide just a prefix of the kind in interest, e.g.: "reward" will return all rewards, "fee" will return all fees.
+
+- account - account which received rewards or was charged fees
+
+### Listing internal transfers in range
+
+```
+$ curl -s "http://localhost:4000/transfers/gen/50002-70000?limit=3" | jq '.'
+{
+  "data": [
+    {
+      "account_id": "ak_542o93BKHiANzqNaFj6UurrJuDuxU61zCGr9LJCwtTUg34kWt",  # target account
+      "amount": 218400000000000,                                             # amount of tokens
+      "height": 50002,                                                       # generation height
+      "kind": "reward_block",                                                # kind of transfer
+      "ref_txi": null                                                        # reference tx id (if any)
+    },
+    {
+      "account_id": "ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv",
+      "amount": 407000327600000000000,
+      "height": 50002,
+      "kind": "reward_block",
+      "ref_txi": null
+    },
+    {
+      "account_id": "ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J",
+      "amount": 3,
+      "height": 50002,
+      "kind": "fee_lock_name",
+      "ref_txi": 1516090
+    }
+  ],
+  "next": "transfers/gen/50002-70000?limit=3&page=2"
+}
+```
+
+### Listing internal transfers of a specific kind
+
+```
+$ curl -s "http://localhost:4000/transfers/forward?kind=reward_dev&limit=2" | jq '.'
+{
+  "data": [
+    {
+      "account_id": "ak_2KAcA2Pp1nrR8Wkt3FtCkReGzAi8vJ9Snxa4PcmrthVx8AhPe8",
+      "amount": 37496010998100000000,
+      "height": 90981,
+      "kind": "reward_dev",
+      "ref_txi": null
+    },
+    {
+      "account_id": "ak_2KAcA2Pp1nrR8Wkt3FtCkReGzAi8vJ9Snxa4PcmrthVx8AhPe8",
+      "amount": 37496003679840000000,
+      "height": 90982,
+      "kind": "reward_dev",
+      "ref_txi": null
+    }
+  ],
+  "next": "transfers/gen/0-413776?kind=reward_dev&limit=2&page=2"
+}
+```
+
+### Listing internal transfers related to specific account
+
+```
+$ curl -s "http://localhost:4000/transfers/backward?account=ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J&limit=1" | jq '.'
+{
+  "data": [
+    {
+      "account_id": "ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J",
+      "amount": 3,
+      "height": 51366,
+      "kind": "fee_lock_name",
+      "ref_txi": 1680384
+    }
+  ],
+  "next": "transfers/gen/413780-0?account=ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J&limit=1&page=2"
+}
+```
+
 
 ## Oracles
 
@@ -3727,6 +3829,49 @@ $ curl -s "http://localhost:4000/aex9/balances/hash/mh_kkKtNk2GAgJKjar9ro6amr6Au
   }
 ]
 ```
+
+## Statistics
+
+To show a statistics for a given height, we can use "stats" endpoint:
+
+```
+$ curl -s "http://localhost:4000/stats?limit=1" | jq '.'
+{
+  "data": [
+    {
+      "active_auctions": 1249,
+      "active_names": 1754,
+      "active_oracles": 9,
+      "block_reward": 97460926597753680000000000,
+      "contracts": 1368,
+      "dev_reward": 7359459527973738000000000,
+      "height": 419208,
+      "inactive_names": 538056,
+      "inactive_oracles": 18
+    }
+  ],
+  "next": "stats/gen/419209-0?limit=1&page=2"
+}
+```
+
+Aggregated (sumarized) statistics are also available, showing the total sum of rewards and the token supply:
+
+```
+$ curl -s "http://localhost:4000/totalstats/gen/421454-0?limit=1&page=2" | jq '.'
+{
+  "data": [
+    {
+      "height": 421453,
+      "sum_block_reward": 2.575586328292814e+31,
+      "sum_dev_reward": 1425114681800906500000000000000,
+      "total_token_supply": 2.718122171075295e+31
+    }
+  ],
+  "next": "totalstats/gen/421454-0?limit=1&page=3"
+}
+```
+
+These endpoints allows pagination, with typical `forward/backward` direction or scope denoted by `gen/from-to`.
 
 
 ## Websocket interface
