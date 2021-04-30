@@ -344,11 +344,32 @@ defmodule AeMdw.Db.Model do
   defrecord :target_int_transfer_tx, @target_int_transfer_tx_defaults
 
   # statistics
+  @stat_defaults [
+    index: 0, # height
+    inactive_names: 0,
+    active_names: 0,
+    active_auctions: 0,
+    inactive_oracles: 0,
+    active_oracles: 0,
+    contracts: 0,
+    block_reward: 0,
+    dev_reward: 0
+  ]
+  defrecord :stat, @stat_defaults
+
+  # summarized statistics
+  @sum_stat_defaults [
+    index: 0, # height
+    block_reward: 0,
+    dev_reward: 0,
+    total_supply: 0
+  ]
+  defrecord :sum_stat, @sum_stat_defaults
   
   ################################################################################
 
   def tables(),
-    do: Enum.concat([chain_tables(), name_tables(), contract_tables(), oracle_tables()])
+    do: Enum.concat([chain_tables(), name_tables(), contract_tables(), oracle_tables(), stat_tables()])
 
   def chain_tables() do
     [
@@ -390,7 +411,6 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.GrpIdIntContractCall,
       AeMdw.Db.Model.IdFnameIntContractCall,
       AeMdw.Db.Model.GrpIdFnameIntContractCall
-      
     ]
   end
 
@@ -418,6 +438,13 @@ defmodule AeMdw.Db.Model do
     ]
   end
 
+  def stat_tables() do
+    [
+      AeMdw.Db.Model.Stat,
+      AeMdw.Db.Model.SumStat
+    ]
+  end
+  
   def records(),
     do: [
       :tx,
@@ -461,6 +488,7 @@ defmodule AeMdw.Db.Model do
       :kind_int_transfer_tx,
       :target_int_transfer_tx,
       :stat,
+      :sum_stat
     ]
 
   def fields(record),
@@ -514,6 +542,8 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.KindIntTransferTx), do: :kind_int_transfer_tx
   def record(AeMdw.Db.Model.TargetIntTransferTx), do: :target_int_transfer_tx
   def record(AeMdw.Db.Model.Stat), do: :stat
+  def record(AeMdw.Db.Model.SumStat), do: :sum_stat
+  
   def table(:tx), do: AeMdw.Db.Model.Tx
   def table(:block), do: AeMdw.Db.Model.Block
   def table(:time), do: AeMdw.Db.Model.Time
@@ -548,6 +578,7 @@ defmodule AeMdw.Db.Model do
   def table(:kind_int_transfer_tx), do: AeMdw.Db.Model.KindIntTransferTx
   def table(:target_int_transfer_tx), do: AeMdw.Db.Model.TargetIntTransferTx
   def table(:stat), do: AeMdw.Db.Model.Stat
+  def table(:sum_stat), do: AeMdw.Db.Model.SumStat
   
   def defaults(:tx), do: @tx_defaults
   def defaults(:block), do: @block_defaults
@@ -590,6 +621,8 @@ defmodule AeMdw.Db.Model do
   def defaults(:kind_int_transfer_tx), do: @kind_int_transfer_tx_defaults
   def defaults(:target_int_transfer_tx), do: @target_int_transfer_tx_defaults
   def defaults(:stat), do: @stat_defaults
+  def defaults(:sum_stat), do: @sum_stat_defaults
+  
   def write_count(model, delta) do
     total = id_count(model, :count)
     model = id_count(model, count: total + delta)
@@ -605,7 +638,5 @@ defmodule AeMdw.Db.Model do
 
   def incr_count({_, _, _} = field_key),
     do: update_count(field_key, 1, fn -> write_count(id_count(index: field_key, count: 0), 1) end)
-
-
   
 end

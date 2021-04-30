@@ -17,9 +17,11 @@ defmodule AeMdw.Db.Sync.Invalidate do
     cond do
       is_integer(from_txi) && from_txi >= 0 ->
         Log.info("invalidating from tx #{from_txi} at generation #{prev_kbi}")
-        bi_keys = block_keys_range({fork_height - 1, 0})
+        bi_keys = block_keys_range({prev_kbi, 0})
         {tx_keys, id_counts} = tx_keys_range(from_txi)
 
+	stat_key_dels = stat_key_dels(prev_kbi)
+	
         contract_log_key_dels = contract_log_key_dels(from_txi)
         contract_call_key_dels = contract_call_key_dels(from_txi)
 
@@ -38,6 +40,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
           {oracle_dels, oracle_writes} = Sync.Oracle.invalidate(fork_height - 1)
 
           do_dels(tab_keys)
+	  do_dels(stat_key_dels)
           do_dels(name_dels, &AeMdw.Db.Name.cache_through_delete/2)
           do_dels(oracle_dels, &AeMdw.Db.Oracle.cache_through_delete/2)
 
@@ -73,6 +76,12 @@ defmodule AeMdw.Db.Sync.Invalidate do
         collect_keys(Model.Block, [from_bi], from_bi, &:mnesia.next/2, &{:cont, [&1 | &2]})
     }
 
+  def stat_key_dels(from_kbi) do
+    keys = from_kbi..last_gen()
+    %{Model.Stat => keys,
+      Model.SumStat => keys}
+  end
+  
   def tx_keys_range(from_txi),
     do: tx_keys_range(from_txi, last(Model.Tx))
 

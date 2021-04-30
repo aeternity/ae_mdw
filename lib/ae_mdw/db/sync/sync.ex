@@ -19,6 +19,7 @@ defmodule AeMdw.Db.Sync do
     do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
 
   def init([]) do
+    :ets.delete_all_objects(:stat_sync_cache)
     :aec_events.subscribe(:chain)
     notify_watcher(self())
     {:ok, %Sync{}, {:continue, :start_sync}}

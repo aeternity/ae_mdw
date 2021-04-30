@@ -59,6 +59,8 @@ defmodule AeMdw.Db.Sync.Name do
 	lock_amount = is_lima? && name_fee || :aec_governance.name_claim_locked_fee()
 	Sync.IntTransfer.fee({height, txi}, :lock_name, account_pk, txi, lock_amount)
 	inc(:stat_sync_cache, :active_names)
+	previous && dec(:stat_sync_cache, :inactive_names)
+	
       timeout ->
         auction_end = height + timeout
         m_auction_exp = Model.expiration(index: {auction_end, plain_name})
@@ -87,6 +89,7 @@ defmodule AeMdw.Db.Sync.Name do
         cache_through_write(Model.AuctionBid, m_bid)
         cache_through_write(Model.AuctionOwner, m_owner)
         cache_through_write(Model.AuctionExpiration, m_auction_exp)
+	inc(:stat_sync_cache, :active_auctions)
     end
   end
 
@@ -154,6 +157,8 @@ defmodule AeMdw.Db.Sync.Name do
     m_exp = Model.expiration(index: {height, plain_name})
     cache_through_write(Model.InactiveName, m_name)
     cache_through_write(Model.InactiveNameExpiration, m_exp)
+    inc(:stat_sync_cache, :inactive_names)
+    dec(:stat_sync_cache, :active_names)
   end
 
   ##########
@@ -185,6 +190,8 @@ defmodule AeMdw.Db.Sync.Name do
     cache_through_delete(Model.ActiveName, plain_name)
     cache_through_delete(Model.ActiveNameOwner, {owner, plain_name})
     cache_through_delete(Model.ActiveNameExpiration, {height, plain_name})
+    inc(:stat_sync_cache, :inactive_names)
+    dec(:stat_sync_cache, :active_names)
     log_expired_name(height, plain_name)
   end
 
@@ -220,6 +227,7 @@ defmodule AeMdw.Db.Sync.Name do
     %{tx: winning_tx} = read_raw_tx!(txi)
     Sync.IntTransfer.fee({height, -1}, :lock_name, owner, txi, winning_tx.name_fee)
     inc(:stat_sync_cache, :active_names)
+    dec(:stat_sync_cache, :active_auctions)
     log_expired_auction(height, plain_name)
   end
 

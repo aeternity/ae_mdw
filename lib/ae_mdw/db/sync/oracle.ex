@@ -37,6 +37,8 @@ defmodule AeMdw.Db.Sync.Oracle do
     cache_through_write(Model.ActiveOracle, m_oracle)
     cache_through_write(Model.ActiveOracleExpiration, m_exp)
     cache_through_delete_inactive(previous)
+    AeMdw.Ets.inc(:stat_sync_cache, :active_oracles)
+    previous && AeMdw.Ets.dec(:stat_sync_cache, :inactive_oracles)
   end
 
   def extend(pubkey, tx, txi, bi) do
@@ -81,6 +83,8 @@ defmodule AeMdw.Db.Sync.Oracle do
     cache_through_write(Model.InactiveOracleExpiration, m_exp)
     cache_through_delete(Model.ActiveOracle, pubkey)
     cache_through_delete(Model.ActiveOracleExpiration, {height, pubkey})
+    AeMdw.Ets.inc(:stat_sync_cache, :inactive_oracles)
+    AeMdw.Ets.dec(:stat_sync_cache, :active_oracles)
     log_expired_oracle(height, pubkey)
   end
 
