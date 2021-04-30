@@ -221,7 +221,7 @@ defmodule AeMdw.Contract do
   def fate_val({:oracle_query, x}, f), do: f.({:oracle_query, encode(:oracle_query_id, x)})
   def fate_val({:contract, x}, f), do: f.({:contract, encode(:contract_pubkey, x)})
   def fate_val({:bytes, x}, f), do: f.({:bytes, encode(:bytearray, x)})
-  def fate_val({:bits, x}, f), do: f.({:bits, encode(:bytearray, x)})
+  def fate_val({:bits, x}, f), do: f.({:bits, x})
   def fate_val({:tuple, {}}, f), do: f.({:unit, <<>>})
   def fate_val({:tuple, x}, f), do: f.({:tuple, Enum.map(tuple_to_list(x), &fate_val(&1, f))})
   def fate_val(x, f) when is_integer(x), do: f.({:int, x})
