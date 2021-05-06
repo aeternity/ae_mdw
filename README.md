@@ -58,6 +58,7 @@
             - [Inactive names](#inactive-names)
             - [Active names](#active-names)
             - [Auctions](#auctions)
+        - [Searching Names](#searching-names)
         - [Pointers](#pointers)
         - [Pointees](#pointees)
     - [Contracts](#contracts)
@@ -2492,6 +2493,246 @@ $ curl -s "http://localhost:4000/names/auctions?by=name&direction=forward&limit=
 "o.chain"
 "s.chain"
 "y.chain"
+```
+
+### Searching Names
+
+Prefix searching of names is possible via `/names/search` endpoint. 
+By default, the prefix search will find names in any of the lifecycle states - auction, active, inactive. 
+
+```
+$ curl -s "http://localhost:4000/names/search/xxxxxx" | jq '.'
+[
+  {
+    "active": false,
+    "auction": null,
+    "info": {
+      "active_from": 80806,
+      "auction_timeout": 0,
+      "claims": [
+        1793852
+      ],
+      "expire_height": 130806,
+      "ownership": {
+        "current": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf",
+        "original": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf"
+      },
+      "pointers": {},
+      "revoke": null,
+      "transfers": [],
+      "updates": []
+    },
+    "name": "xxxxxx.test",
+    "previous": [
+      {
+        "active_from": 23181,
+        "auction_timeout": 0,
+        "claims": [
+          390494
+        ],
+        "expire_height": 73247,
+        "ownership": {
+          "current": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf",
+          "original": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf"
+        },
+        "pointers": {
+          "account_pubkey": "ak_2A8SNUmHvB7LKAN9MjTi6ebvxqo68uztCwRuJ4jM3tcVJFzs8r"
+        },
+        "revoke": null,
+        "transfers": [],
+        "updates": [
+          392606
+        ]
+      }
+    ],
+    "status": "name"
+  },
+  ...
+]
+```
+
+Via the `only` parameter, it's possible to search for a name in particular lifecycle state only. 
+The parameter can be repeated:
+
+```
+$ curl -s "http://localhost:4000/names/search/aaa?only=auction&only=inactive" | jq '.' 
+[
+  {
+    "active": false,
+    "info": {
+      "auction_end": 433568,
+      "bids": [
+        20309433
+      ],
+      "last_bid": {
+        "block_hash": "mh_2j6HpTVpgqVoYLRVSiG7Rm2W6XfkCgMPMYTvtVDoykgAkrDPj3",
+        "block_height": 403808,
+        "hash": "th_swc2vXht9xjrVWXXHSMLaUqDFx21qLdHbwixgSagX8DNhwnVC",
+        "micro_index": 0,
+        "micro_time": 1616501035488,
+        "signatures": [
+          "sg_4RmWff8UECeL5h319TY7RVx7biDU7C36GfzhsbLDvy5DrJ3iRGDx6rk4FiwjgTZrH4hrSz4sJ4hr9AHFJHNGCq32PSkA1"
+        ],
+        "tx": {
+          "account_id": "ak_2VKyfAmVpUjX69TKLBMRqdBgK4YXyrTi8J9L82RgvqaCycHYeq",
+          "fee": 33040000000000,
+          "name": "aaa.chain",
+          "name_fee": 217830900000000000000,
+          "name_id": "nm_246C5HgNYowJwj5p7mFrCrLs999ySoDa334r3SCqj9zRFbonBm",
+          "name_salt": 2674742195530689,
+          "nonce": 140,
+          "type": "NameClaimTx",
+          "version": 2
+        },
+        "tx_index": 20309433
+      }
+    },
+    "name": "aaa.chain",
+    "previous": [],
+    "status": "auction"
+  },
+  {
+    "active": false,
+    "auction": null,
+    "info": {
+      "active_from": 18546,
+      "auction_timeout": 0,
+      "claims": [
+        164943
+      ],
+      "expire_height": 135776,
+      "ownership": {
+        "current": "ak_24tr4igMX67zmJggQ1yUAJDQmofz8MFEU3hqc8EVAx1Un652e8",
+        "original": "ak_24tr4igMX67zmJggQ1yUAJDQmofz8MFEU3hqc8EVAx1Un652e8"
+      },
+      "pointers": {
+        "account_pubkey": "ak_24tr4igMX67zmJggQ1yUAJDQmofz8MFEU3hqc8EVAx1Un652e8"
+      },
+      "revoke": null,
+      "transfers": [],
+      "updates": [
+        2114471,
+        1224905,
+        650357,
+        650355,
+        650354,
+        307848
+      ]
+    },
+    "name": "aaa.test",
+    "previous": [],
+    "status": "name"
+  },
+  ...
+]
+```
+
+This endpoint also accepts the `expand` parameter:
+
+```
+$ curl -s "http://localhost:4000/names/search/asdf?expand" | jq '.'          
+[
+  {
+    "active": false,
+    "auction": null,
+    "info": {
+      "active_from": 80657,
+      "auction_timeout": 0,
+      "claims": [
+        {
+          "block_hash": "mh_2b6pVcaQGkkz8GmttTyzWdM2HpdBgAkY8hSoDQzsJy5sAAcVFX",
+          "block_height": 80657,
+          "hash": "th_q23GahzkBMFmATHi1BrGcPkP1kYVwCs9jE67nectQN6MPddGU",
+          "micro_index": 0,
+          "micro_time": 1557897366141,
+          "signatures": [
+            "sg_3s1kNCWYHRabHwpaYT7UKWgNmkDBJQbf6raK8Nz9KPxQDLfz94N3eUXZw6rL33yPVaf4hAuzFgqWEpbSqAkEiRcwmoLZN"
+          ],
+          "tx": {
+            "account_id": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf",
+            "fee": 20000000000000,
+            "name": "asdf.test",
+            "name_id": "nm_o5JPJRbmDV6EUaauPaP7z1fZvvroauvuF63pmg6NBqxHBGrE7",
+            "name_salt": 123,
+            "nonce": 24965,
+            "ttl": 80756,
+            "type": "NameClaimTx",
+            "version": 2
+          },
+          "tx_index": 1789259
+        }
+      ],
+      "expire_height": 131372,
+      "ownership": {
+        "current": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf",
+        "original": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf"
+      },
+      "pointers": {
+        "account_pubkey": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf"
+      },
+      "revoke": null,
+      "transfers": [],
+      "updates": [
+        {
+          "block_hash": "mh_2oLyC8yeBGvgJgCzaXRzqSsHRszEXsjrVwBFeLC4FGedEdEPpD",
+          "block_height": 81372,
+          "hash": "th_2fREBJgCYVo8nAAzEQAUUq5Qn7nHvrS6baRwUFeHaNDwaS6S83",
+          "micro_index": 2,
+          "micro_time": 1558026126012,
+          "signatures": [
+            "sg_GBc1ZsENYyrBvEi4APVoZFM99Y12Jx7bqKh7pKsdfanqEB7G4iarJedaKGjeWXyiVkfFju1WQkYykwkKkC8jBwRQ2jpRK"
+          ],
+          "tx": {
+            "account_id": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf",
+            "client_ttl": 50000,
+            "fee": 30000000000000,
+            "name": "asdf.test",
+            "name_id": "nm_o5JPJRbmDV6EUaauPaP7z1fZvvroauvuF63pmg6NBqxHBGrE7",
+            "name_ttl": 50000,
+            "nonce": 40517,
+            "pointers": [
+              {
+                "id": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf",
+                "key": "account_pubkey"
+              }
+            ],
+            "type": "NameUpdateTx",
+            "version": 1
+          },
+          "tx_index": 1822284
+        },
+        {
+          "block_hash": "mh_GFJ7tS12D4fKksfz7kQJJwXYs8eK4s2wAD1MA79XCXakuuAVq",
+          "block_height": 81370,
+          "hash": "th_2vZBGDF92GGxy93T11qCsXhrgm51k9mf5mkQ3GuoHVrYzbfPtB",
+          "micro_index": 1,
+          "micro_time": 1558025965641,
+          "signatures": [
+            "sg_Ai54pfkEptae3zrhy5UYD3tDSciHMyCfQSX9HWAHiF4g5M6W5dKHXxXDF2oZaAqeNPhtwH3ZfACwZPmHzCKHvB7C6sKCe"
+          ],
+          "tx": {
+            "account_id": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf",
+            "client_ttl": 50000,
+            "fee": 30000000000000,
+            "name": "asdf.test",
+            "name_id": "nm_o5JPJRbmDV6EUaauPaP7z1fZvvroauvuF63pmg6NBqxHBGrE7",
+            "name_ttl": 50000,
+            "nonce": 40510,
+            "pointers": [
+              {
+                "id": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf",
+                "key": "account_pubkey"
+              }
+            ],
+            "type": "NameUpdateTx",
+            "version": 1
+          },
+          "tx_index": 1822277
+        }
+      ]
+    },
+...
+]
 ```
 
 ### Pointers

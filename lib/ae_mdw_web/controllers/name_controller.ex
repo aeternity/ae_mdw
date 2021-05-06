@@ -20,6 +20,17 @@ defmodule AeMdwWeb.NameController do
   def stream_plug_hook(%Plug.Conn{path_info: ["names", "owned_by" | _]} = conn),
     do: conn
 
+  def stream_plug_hook(%Plug.Conn{path_info: ["names", "search" | _], params: params} = conn) do
+    alias AeMdwWeb.DataStreamPlug, as: P
+
+    P.handle_assign(
+      conn,
+      {:ok, {:gen, last_gen()..0}},
+      P.parse_offset(params),
+      {:ok, %{}}
+    )
+  end
+    
   def stream_plug_hook(%Plug.Conn{params: params} = conn) do
     alias AeMdwWeb.DataStreamPlug, as: P
 
@@ -74,6 +85,13 @@ defmodule AeMdwWeb.NameController do
   def names(conn, _req),
     do: handle_input(conn, fn -> Cont.response(conn, &json/2) end)
 
+  def search(%Plug.Conn{path_info: ["names", "search", prefix]} = conn, _req) do
+    handle_input(conn, fn ->
+      params = Map.put(query_groups(conn.query_string), "prefix", [prefix])
+      json(conn, Enum.to_list(do_prefix_stream(validate_search_params!(params), expand?(params))))
+    end)
+  end
+  
   ##########
 
   # scope is used here only for identification of the continuation
@@ -204,7 +222,15 @@ defmodule AeMdwWeb.NameController do
         do_active_names_stream(params, expand?),
         do_inactive_names_stream(params, expand?)
       )
-
+      
+  def do_prefix_stream({prefix, lifecycles}, expand?) do
+    streams = Enum.map(lifecycles, &prefix_stream(&1, prefix, expand?))
+    case streams do
+      [single] -> single
+      [_|_] -> merged_stream(streams, & &1["name"], :forward)
+    end
+  end
+      
   ##########
 
   def validate_params!(params),
@@ -237,6 +263,37 @@ defmodule AeMdwWeb.NameController do
     end
   end
 
+
+  def validate_search_params!(params),
+    do: do_validate_search_params!(Map.delete(params, "expand"))
+
+  def do_validate_search_params!(%{"prefix" => [prefix], "only" => [_|_] = lifecycles}) do
+    {prefix,
+     lifecycles
+     |> Enum.map(fn
+       "auction" -> :auction
+       "active" -> :active
+       "inactive" -> :inactive
+       invalid -> raise ErrInput.Query, value: "name lifecycle #{invalid}"
+     end)
+     |> Enum.uniq}
+  end
+  
+  def do_validate_search_params!(%{"prefix" => [prefix]}),
+    do: {prefix, [:auction, :active, :inactive]}
+
+  ##########
+
+  def prefix_stream(:auction, prefix, expand?),
+    do: DBS.Name.auction_prefix_resource(prefix, :forward,
+	  &Format.to_map(&1, Model.AuctionBid, expand?))
+  def prefix_stream(:active, prefix, expand?),
+    do: DBS.Name.prefix_resource(Model.ActiveName, prefix, :forward,
+	  &Format.to_map(&1, Model.ActiveName, expand?))
+  def prefix_stream(:inactive, prefix, expand?),
+    do: DBS.Name.prefix_resource(Model.InactiveName, prefix, :forward,
+	  &Format.to_map(&1, Model.InactiveName, expand?))
+  
   ##########
 
   def t() do
