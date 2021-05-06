@@ -73,6 +73,7 @@ defmodule AeMdwWeb.Router do
     get "/name/pointees/:id", NameController, :pointees
     get "/name/:id", NameController, :name
 
+    get "/names/search/:prefix", NameController, :search
     get "/names/owned_by/:id", NameController, :owned_by
 
     get "/names/auctions", NameController, :auctions
