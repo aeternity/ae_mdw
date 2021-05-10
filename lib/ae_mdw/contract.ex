@@ -118,6 +118,7 @@ defmodule AeMdw.Contract do
     origin = <<0::256>>
     gas_limit = 1_000_000
     gas_price = 0
+    fee = 0
     amount = 0
     call_stack = []
 
@@ -131,6 +132,7 @@ defmodule AeMdw.Contract do
     call_def = %{
       caller: caller_pubkey,
       contract: contract_pubkey,
+      fee: fee,
       gas: gas_limit,
       gas_price: gas_price,
       call_data: call_data,
