@@ -178,6 +178,7 @@ GET  /name/auction/:id                  - returns name information for auction, 
 GET  /name/pointers/:id                 - returns pointers of a name specified by hash of plain name
 GET  /name/pointees/:id                 - returns names which point to id specified by hash
 GET  /names/owned_by/:id                - returns names owned by account and auctions with top bid from account
+GET  /names/search/:prefix              - returns names matching the provided prefix
 
 GET  /names/auctions                    - returns name auctions ordered by (optional) query parameters
 GET  /names/auctions/:scope_type/:range - returns name auctions for continuation link
@@ -216,15 +217,27 @@ GET /aex9/transfers/from/:sender                 - returns all transfers of AEX9
 GET /aex9/transfers/to/:recipient                - returns all transfers of AEX9 tokens to recipient
 GET /aex9/transfers/from-to/:sender/:recipient   - returns all transfers of AEX9 tokens between sender and recipient
 
-GET /contracts/logs                     - returns contract logs
-GET /contracts/logs/:direction          - returns contract logs from genesis or from the tip of chain
-GET /contracts/logs/:scope_type/:range  - returns contract logs from in given range
+GET /contracts/logs                      - returns contract logs
+GET /contracts/logs/:direction           - returns contract logs from genesis or from the tip of chain
+GET /contracts/logs/:scope_type/:range   - returns contract logs from in given range
 
 GET /contracts/calls                     - returns function calls inside of the contracts 
 GET /contracts/calls/:direction          - returns function calls inside of the contracts from genesis or from the tip of chain
 GET /contracts/calls/:scope_type/:range  - returns function calls inside of the contracts in a given range
 
-GET  /status                            - returns middleware status (version, number of generations indexed)
+GET /transfers/gen/:range                - returns internal transfers (rewards, fees, ...) in a given range
+GET /transfers/:diretion                 - returns internal transfers from genesis or the tip of the chain
+GET /transfers                           - returns internal transfers from the tip of the chain
+
+GET /stats                               - returns statistics for generations from tip of the chain
+GET /stats/:direction                    - returns statistics for generations from genesis or the tip of the chain
+GET /stats/:scope_type/:range            - returns statistics for generations in a given range
+
+GET /totalstats                          - returns aggregated statistics for generations from tip of the chain
+GET /totalstats/:direction               - returns aggregated statistics for generations from genesis or the tip of the chain
+GET /totalstats/:scope_type/:range       - returns aggregated statistics for generations from genesis or the tip of the chain
+
+GET  /status                             - returns middleware status
 
 ```
 (more to come)
