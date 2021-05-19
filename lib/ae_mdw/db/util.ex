@@ -246,14 +246,14 @@ defmodule AeMdw.Db.Util do
 
   def status() do
     {:ok, top_kb} = :aec_chain.top_key_block()
-    {_, _, node_vsn} = Application.started_applications() |> List.keyfind(:aecore, 0)
     {node_syncing?, node_progress} = :aec_sync.sync_progress()
     node_height = :aec_blocks.height(top_kb)
     {mdw_tx_index, mdw_height} = safe_mdw_tx_index_and_height()
     mdw_syncing? = is_pid(Process.whereis(AeMdw.Db.Sync.Supervisor))
 
     %{
-      node_version: to_string(node_vsn),
+      node_version: :aeu_info.get_version(),
+      node_revision: :aeu_info.get_revision(),
       node_height: node_height,
       node_syncing: node_syncing?,
       node_progress: node_progress,
