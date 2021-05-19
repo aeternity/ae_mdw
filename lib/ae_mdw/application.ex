@@ -71,17 +71,15 @@ defmodule AeMdw.Application do
     {:ok, aetx_code} = Extract.AbsCode.module(:aetx)
     {:ok, aeser_code} = Extract.AbsCode.module(:aeser_api_encoder)
     {:ok, headers_code} = Extract.AbsCode.module(:aec_headers)
-    {:ok, hard_forks_code} = Extract.AbsCode.module(:aec_hard_forks)
     {:ok, aens_state_tree_code} = Extract.AbsCode.module(:aens_state_tree)
     {:ok, aeo_state_tree_code} = Extract.AbsCode.module(:aeo_state_tree)
 
     network_id = :aec_governance.get_network_id()
 
     hard_fork_heights =
-      hard_forks_code
-      |> Extract.AbsCode.function_body_bin1(:protocols_from_network_id, network_id)
-      |> hd
-      |> Extract.AbsCode.literal_map_assocs()
+      network_id
+      |> :aec_hard_forks.protocols_from_network_id
+      |> Enum.sort_by(&elem(&1, 0))
 
     lima_vsn = :aec_hard_forks.protocol_vsn(:lima)
 
