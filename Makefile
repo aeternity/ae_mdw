@@ -41,20 +41,16 @@ format: ## Format Elixir code
 	$(mix) format
 
 .PHONY: compile
-compile: ## Compile backend & frontend
-	$(MAKE) compile-backend && $(MAKE) compile-frontend
+compile: ## Compile backend
+	$(MAKE) compile-backend
 
 .PHONY: compile-backend
 compile-backend: ## Compile backend only
 	$(mix) deps.get && $(mix) compile
 
-.PHONY: compile-frontend
-compile-frontend: ## Compile frontend only
-	cd frontend/ && npm install && npm run generate
-
 .PHONY: clean
 clean: ## Clean all artifacts
-	$(MAKE) clean-backend && $(MAKE) clean-frontend
+	$(MAKE) clean-backend
 
 .PHONY: clean-backend
 clean-backend: ## Clean backend artifacts
@@ -65,10 +61,6 @@ clean-backend: ## Clean backend artifacts
 	REVISION \
 	VERSION \
 	mix.lock
-
-.PHONY: clean-frontend
-clean-frontend: ## Clean frontend artifacts
-	rm -rf ./priv/static/frontend/
 
 .PHONY: test
 test:

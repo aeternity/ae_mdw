@@ -1,5 +1,6 @@
 # AeMdw - Aeternity Middleware
 
+<!-- use emacs or npm markdown-toc with "markdown-toc --bullets=- README.md" -->
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
 
@@ -8,8 +9,7 @@
     - [Prerequisites](#prerequisites)
     - [Setup](#setup)
     - [Start](#start)
-        - [-](#-)
-        - [Start middleware (including frontend)](#start-middleware-including-frontend)
+        - [Start middleware](#start-middleware)
     - [Build and start with Docker](#build-and-start-with-docker)
     - [Docker Configuration](#docker-configuration)
     - [HTTP endpoints](#http-endpoints)
@@ -126,20 +126,12 @@ The NODEROOT directory should contain directories: `bin`, `lib`, `plugins`, `rel
 
 ## Start
 
-#### Start middleware (excluding frontend)
+#### Start middleware 
 
   * Install dependencies with `make compile-backend`
   * Start middleware with `make shell` (if using alternative node directory specify NODEROOT)
 
-The project will compile only backend-related files and start the middleware without frontend.
-
-#### Start middleware (including frontend)
-
- * Install dependencies with `make compile`
- * Start middleware with `make shell`
-
-The project will compile both backend and frontend files.
-Frontend should be available at `http://localhost:4000/frontend/`
+The project will compile only backend-related files and start the middleware.
 
 ## Build and start with Docker
 As the project comes with `Dockerfile` and `docker-compose.yml`, it is possible to build and run it by using Docker:

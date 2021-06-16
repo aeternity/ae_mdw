@@ -40,12 +40,6 @@ defmodule AeMdwWeb.Router do
       disable_validator: true
   end
 
-  scope "/frontend", AeMdwWeb do
-    pipe_through :browser
-
-    match :*, "/*path", WebPageController, :index
-  end
-
   scope "/", AeMdwWeb do
     pipe_through :api
 
