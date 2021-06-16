@@ -129,7 +129,7 @@ The NODEROOT directory should contain directories: `bin`, `lib`, `plugins`, `rel
 #### Start middleware (excluding frontend)
 
   * Install dependencies with `make compile-backend`
-  * Start middleware with `make shell`
+  * Start middleware with `make shell` (if using alternative node directory specify NODEROOT)
 
 The project will compile only backend-related files and start the middleware without frontend.
 

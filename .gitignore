@@ -28,6 +28,9 @@ npm-debug.log
 # Ignore generated files from NuxtJS
 priv/static/frontend/
 
+# Ignore intellij project files
+.idea/
+
 .DS_Store
 .elixir_ls/
 log/
