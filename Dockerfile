@@ -1,13 +1,11 @@
 FROM elixir:1.10
 # Add required files to download and compile only the dependencies
 
-# Install v10 Nodejs (compatible with the frontend)
-RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -
-
 # Install other required dependencies
-RUN apt-get -qq update && apt-get -qq -y install curl nodejs libncurses5 libsodium-dev jq build-essential gcc g++ make libgmp10 \
+RUN apt-get -qq update && apt-get -qq -y install curl libncurses5 libsodium-dev jq build-essential gcc g++ make libgmp10 \
     && ldconfig \
     && rm -rf /var/lib/apt/lists/*
+
 # Prepare working folder
 RUN mkdir -p /home/aeternity/node
 COPY ./docker/aeternity.yaml /home/aeternity/aeternity.yaml
@@ -28,7 +26,6 @@ RUN cp -r ./local/rel/aeternity/lib local/
 RUN mkdir  ae_mdw/
 COPY config ./ae_mdw/config
 COPY lib ./ae_mdw/lib
-COPY frontend/ ./ae_mdw/frontend
 COPY mix.exs ae_mdw
 COPY mix.lock ae_mdw
 COPY Makefile ae_mdw

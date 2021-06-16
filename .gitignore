@@ -22,12 +22,6 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 ae_mdw-*.tar
 
-# If NPM crashes, it generates a log, let's ignore it too.
-npm-debug.log
-
-# Ignore generated files from NuxtJS
-priv/static/frontend/
-
 # Ignore intellij project files
 .idea/
 

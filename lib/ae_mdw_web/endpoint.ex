@@ -14,13 +14,6 @@ defmodule AeMdwWeb.Endpoint do
   # when deploying your static files in production.
 
   plug Plug.Static,
-    at: "/frontend/",
-    from: {:ae_mdw, "priv/static/frontend"},
-    gzip: false,
-    only:
-      ~w(index.html 200.html favicon.ico robots.txt channels faucet generations names oracles transactions auctions contracts _nuxt)
-
-  plug Plug.Static,
     at: "/swagger",
     from: {:ae_mdw, "priv/static"},
     gzip: false,
