@@ -6,6 +6,7 @@ defmodule AeMdwWeb.Aex9Controller do
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db, as: DBN
   alias AeMdw.Db.{Format, Model, Contract}
+  alias AeMdw.Db.Util
   alias AeMdwWeb.SwaggerParameters
   alias AeMdwWeb.DataStreamPlug, as: DSPlug
 
@@ -358,12 +359,16 @@ defmodule AeMdwWeb.Aex9Controller do
     do: transfer_to_map({sender_pk, recipient_pk, amount, call_txi, log_idx}, :aex9_transfer)
 
   def transfer_to_map({sender_pk, recipient_pk, amount, call_txi, log_idx}, :aex9_transfer) do
+    tx = Util.read_tx!(call_txi) |> Format.to_map()
     %{
       sender: enc_id(sender_pk),
       recipient: enc_id(recipient_pk),
       amount: amount,
       call_txi: call_txi,
-      log_idx: log_idx
+      log_idx: log_idx,
+      block_height: tx["block_height"],
+      micro_time: tx["micro_time"],
+      contract_id: tx["tx"]["contract_id"],
     }
   end
 
@@ -439,6 +444,9 @@ defmodule AeMdwWeb.Aex9Controller do
             log_idx(:integer, "Log index", required: true)
             recipient(:string, "Recipient of AEX9 transfer", required: true)
             sender(:string, "Sender of AEX9 transfer", required: true)
+            block_height(:integer, "The block height", required: true)
+            micro_time(:integer, "The unix timestamp", required: true)
+            contract_id(:string, "Contract identifier", required: true)
           end
 
           example(%{
@@ -446,7 +454,10 @@ defmodule AeMdwWeb.Aex9Controller do
             call_txi: 9_564_978,
             log_idx: 0,
             recipient: "ak_29GUBTrWTMb3tRUUgbVX1Bgwi2hyVhB8Q1befNsjLnP46Ub1V8",
-            sender: "ak_2CMNYSgoEjb1GSVJfWXjZ9NFWwnJ9jySBd6YY7uyr5DxvwctZU"
+            sender: "ak_2CMNYSgoEjb1GSVJfWXjZ9NFWwnJ9jySBd6YY7uyr5DxvwctZU",
+            block_height: 234208,
+            micro_time: 1585667337719,
+            contract_id: "ct_pqfbS94uUpE8reSwgtaAy5odGi7cPRMAxbjMyEzpTGqwTWyn5"
           })
         end
     }
