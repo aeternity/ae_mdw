@@ -1,6 +1,7 @@
 defmodule AeMdw.Contract do
   alias AeMdw.EtsCache
   alias AeMdw.Node.Db, as: DBN
+  alias AeMdw.Log
 
   import :erlang, only: [tuple_to_list: 1]
 
@@ -329,8 +330,22 @@ defmodule AeMdw.Contract do
     env = :aetx_env.tx_env_from_key_header(prev_key_header, prev_key_hash, time, prev_hash)
     txs = :aec_blocks.txs(micro_block)
     {:ok, _, _, events} = :aec_block_micro_candidate.apply_block_txs_strict(txs, trees_in, env)
-    events
+    ignore_chain_create_or_clone_events(events)
   end
+
+  def ignore_chain_create_or_clone_events(events) do
+    Enum.reject(events, &chain_create_or_clone_event?/1)
+  end
+
+  defp chain_create_or_clone_event?({{_, "Chain.create"}, _} = event) do
+    Log.info("Ignore Chain.create event #{inspect event}")
+    true
+  end
+  defp chain_create_or_clone_event?({{_, "Chain.clone"}, _} = event) do
+    Log.info("Ignore Chain.clone event #{inspect event}")
+    true
+  end
+  defp chain_create_or_clone_event?(_), do: false
 
   def get_grouped_events(micro_block),
     do: Enum.group_by(get_events(micro_block), fn {_, info} -> info.tx_hash end)
