@@ -216,6 +216,7 @@ defmodule AeMdw.Db.Sync.Name do
     m_name_exp = Model.expiration(index: {expire, plain_name})
     m_owner = Model.owner(index: {owner, plain_name})
 
+    ensure_no_exsiting_active_name_expiration(plain_name)
     cache_through_write(Model.ActiveName, m_name)
     cache_through_write(Model.ActiveNameOwner, m_owner)
     cache_through_write(Model.ActiveNameExpiration, m_name_exp)
@@ -229,6 +230,20 @@ defmodule AeMdw.Db.Sync.Name do
     inc(:stat_sync_cache, :active_names)
     dec(:stat_sync_cache, :active_auctions)
     log_expired_auction(height, plain_name)
+  end
+
+  def ensure_no_exsiting_active_name_expiration(plain_name) do
+    name_mspec =
+      Ex2ms.fun do
+        {:expiration, {height, ^plain_name}, :_} -> {height, ^plain_name}
+      end
+
+    expirations = :mnesia.select(Model.ActiveNameExpiration, name_mspec)
+    if Enum.count(expirations) > 0 do
+      Log.info("Removing exsiting active name expirations #{inspect expirations}")
+      expirations
+      |> Enum.map(fn key -> cache_through_delete(Model.ActiveNameExpiration, key) end)
+    end
   end
 
   ##########
