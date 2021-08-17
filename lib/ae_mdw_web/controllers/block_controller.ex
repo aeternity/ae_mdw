@@ -16,7 +16,7 @@ defmodule AeMdwWeb.BlockController do
 
   @tab __MODULE__
 
-  # number of blocks behind latest that are cached
+  # number of generations congruent to last that are not cached
   @blocks_cache_threshold 6
 
   def table(), do: @tab
