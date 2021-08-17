@@ -15,10 +15,15 @@ defmodule AeMdwWeb.BlockController do
   import AeMdw.{Util, Db.Util}
 
   @tab __MODULE__
-  ##########
+
+  # number of blocks behind latest that are cached
+  @blocks_cache_threshold 6
 
   def table(), do: @tab
 
+  @doc """
+  Pagination hook.
+  """
   def stream_plug_hook(%Plug.Conn{path_info: ["blocks" | rem], params: params} = conn) do
     alias AeMdwWeb.DataStreamPlug, as: P
 
@@ -38,9 +43,15 @@ defmodule AeMdwWeb.BlockController do
 
   ##########
 
+  @doc """
+  Endpoint for block info by hash.
+  """
   def block(conn, %{"hash" => hash}),
     do: handle_input(conn, fn -> block_reply(conn, hash) end)
 
+  @doc """
+  Endpoint for block info by key block index.
+  """
   def blocki(conn, %{"kbi" => kbi} = req),
     do:
       handle_input(conn, fn ->
@@ -48,52 +59,34 @@ defmodule AeMdwWeb.BlockController do
         block_reply(conn, Validate.block_index!(kbi <> "/" <> mbi))
       end)
 
+  @doc """
+  Endpoint for blocks info based on pagination.
+  """
   def blocks(conn, _req),
     do: Cont.response(conn, &json/2)
 
   ##########
 
-  def db_stream(:blocks, _params, {:gen, range}),
-    do: Stream.map(range, &generation(&1, last_gen()))
-
-  ##########
-
-  def generation(height, last_gen),
-    do: generation(block_jsons(height, last_gen))
-
-  ##########
-  def generation([kb_json | mb_jsons]) do
-    height = kb_json["height"]
-
-    case EtsCache.get(@tab, height) do
-      {kb_json, _indx} ->
-        kb_json
-
-      nil ->
-        mb_jsons =
-          for %{"hash" => mb_hash} = mb_json <- mb_jsons, reduce: %{} do
-            mbs ->
-              micro = :aec_db.get_block(Validate.id!(mb_hash))
-              header = :aec_blocks.to_header(micro)
-
-              txs_json =
-                for tx <- :aec_blocks.txs(micro), reduce: %{} do
-                  txs ->
-                    %{"hash" => tx_hash} = tx_json = :aetx_sign.serialize_for_client(header, tx)
-                    Map.put(txs, tx_hash, tx_json)
-                end
-
-              mb_json = Map.put(mb_json, "transactions", txs_json)
-              Map.put(mbs, mb_hash, mb_json)
-          end
-
-        kb_json = Map.put(kb_json, "micro_blocks", mb_jsons)
-        EtsCache.put(@tab, height, kb_json)
-        kb_json
-    end
+  @doc """
+  ETS continuation callback to paginate blocks endpoint.
+  """
+  def db_stream(:blocks, _params, {:gen, range}) do
+    Stream.map(range, &generation_json(&1, last_gen()))
   end
 
-  def block_jsons(height, last_gen) when height < last_gen do
+  defp generation_json(height, last_gen) when height > last_gen-@blocks_cache_threshold do
+    [kb_json | mb_jsons] = block_jsons(height, last_gen)
+
+    put_mbs_from_db(kb_json, mb_jsons)
+  end
+
+  defp generation_json(height, last_gen) do
+    height
+    |> block_jsons(last_gen)
+    |> read_generation()
+  end
+
+  defp block_jsons(height, last_gen) when height < last_gen do
     collect_keys(Model.Block, [], {height, <<>>}, &prev/2, fn
       {^height, _} = k, acc ->
         {:cont, [Format.to_map(read_block!(k)) | acc]}
@@ -103,13 +96,49 @@ defmodule AeMdwWeb.BlockController do
     end)
   end
 
-  def block_jsons(last_gen, last_gen) do
-    {:ok, %{key_block: kb, micro_blocks: mbs}} = :aec_chain.get_current_generation()
+  defp block_jsons(last_gen, last_gen) do
+    # gets by height once the chain current generation might happen to be higher than last_gen in DB
+    {:ok, %{key_block: kb, micro_blocks: mbs}} = :aec_chain.get_generation_by_height(last_gen, :forward)
     ^last_gen = :aec_blocks.height(kb)
 
     for block <- [kb | mbs] do
       header = :aec_blocks.to_header(block)
       :aec_headers.serialize_for_client(header, prev_block_type(header))
+    end
+  end
+
+  defp read_generation([kb_json | mb_jsons]) do
+    height = kb_json["height"]
+
+    case EtsCache.get(@tab, height) do
+      {kb_json, _indx} ->
+        kb_json
+
+      nil ->
+        kb_json = put_mbs_from_db(kb_json, mb_jsons)
+        EtsCache.put(@tab, height, kb_json)
+        kb_json
+    end
+  end
+
+  defp put_mbs_from_db(kb_json, mb_jsons) do
+    mb_jsons = read_mbs_from_db(mb_jsons)
+    Map.put(kb_json, "micro_blocks", mb_jsons)
+  end
+
+  defp read_mbs_from_db(mb_jsons) do
+    for %{"hash" => mb_hash} = mb_json <- mb_jsons, into: %{} do
+      micro = :aec_db.get_block(Validate.id!(mb_hash))
+      header = :aec_blocks.to_header(micro)
+
+      txs_json =
+        for tx <- :aec_blocks.txs(micro), into: %{} do
+          %{"hash" => tx_hash} = tx_json = :aetx_sign.serialize_for_client(header, tx)
+          {tx_hash, tx_json}
+        end
+
+      mb_json = Map.put(mb_json, "transactions", txs_json)
+      {mb_hash, mb_json}
     end
   end
 
