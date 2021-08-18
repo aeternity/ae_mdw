@@ -12,6 +12,7 @@ defmodule AeMdwWeb.BlockControllerTest do
 
   import AeMdw.Db.Util
 
+  @blocks_table AeMdwWeb.BlockController.table()
   @default_limit 10
   @blocks_cache_threshold 6
 
@@ -211,8 +212,8 @@ defmodule AeMdwWeb.BlockControllerTest do
 
       assert Enum.count(response["data"]) == limit
       assert Jason.encode!(response["data"]) == Jason.encode!(data)
-      assert nil == EtsCache.get(AeMdwWeb.BlockController.table(), range_begin)
-      assert nil == EtsCache.get(AeMdwWeb.BlockController.table(), range_end)
+      assert nil == EtsCache.get(@blocks_table, range_begin)
+      assert nil == EtsCache.get(@blocks_table, range_end)
 
       # assert there's nothing next
       conn_next = get(conn, response["next"])
@@ -239,9 +240,9 @@ defmodule AeMdwWeb.BlockControllerTest do
 
       assert Enum.count(response["data"]) == limit
       assert Jason.encode!(response["data"]) == Jason.encode!(data)
-      assert {%{"height" => ^range_begin}, _} = EtsCache.get(AeMdwWeb.BlockController.table(), range_begin)
-      assert nil == EtsCache.get(AeMdwWeb.BlockController.table(), range_end)
-      assert nil == EtsCache.get(AeMdwWeb.BlockController.table(), range_end - @blocks_cache_threshold + 1)
+      assert {%{"height" => ^range_begin}, _} = EtsCache.get(@blocks_table, range_begin)
+      assert nil == EtsCache.get(@blocks_table, range_end)
+      assert nil == EtsCache.get(@blocks_table, range_end - @blocks_cache_threshold + 1)
 
       conn_next = get(conn, response["next"])
       response_next = json_response(conn_next, 200)
