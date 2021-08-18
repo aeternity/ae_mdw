@@ -1,5 +1,5 @@
 defmodule AeMdwWeb.BlockControllerTest do
-  use AeMdwWeb.ConnCase
+  use AeMdwWeb.ConnCase, async: false
 
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Validate
@@ -7,11 +7,14 @@ defmodule AeMdwWeb.BlockControllerTest do
   alias AeMdwWeb.{BlockController, TestUtil}
   alias AeMdwWeb.Continuation, as: Cont
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.EtsCache
   require Model
 
   import AeMdw.Db.Util
 
+  @blocks_table AeMdwWeb.BlockController.table()
   @default_limit 10
+  @blocks_cache_threshold 6
 
   describe "block" do
     test "get key block by hash", %{conn: conn} do
@@ -190,6 +193,67 @@ defmodule AeMdwWeb.BlockControllerTest do
         )
 
       assert Enum.count(response_next["data"]) == limit
+      assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
+    end
+
+    test "get uncached generations with range", %{conn: conn} do
+      range_begin = last_gen() - @blocks_cache_threshold + 1
+      range_end = last_gen()
+      range = "#{range_begin}-#{range_end}"
+      limit = @blocks_cache_threshold
+      conn = get(conn, "/blocks/#{range}?limit=#{limit}")
+      response = json_response(conn, 200)
+
+      {:ok, data, _has_cont?} =
+        Cont.response_data(
+          {BlockController, :blocks, %{}, conn.assigns.scope, 0},
+          limit
+        )
+
+      assert Enum.count(response["data"]) == limit
+      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+      assert nil == EtsCache.get(@blocks_table, range_begin)
+      assert nil == EtsCache.get(@blocks_table, range_end)
+
+      # assert there's nothing next
+      conn_next = get(conn, response["next"])
+      response_next = json_response(conn_next, 200)
+
+      assert Enum.empty?(response_next["data"])
+    end
+
+    test "get a mix of uncached and cached generations with range", %{conn: conn} do
+      remaining = 3
+      range_begin = (last_gen() - @blocks_cache_threshold + 1) - remaining
+      range_end = last_gen()
+      range = "#{range_begin}-#{range_end}"
+      limit = @blocks_cache_threshold
+
+      conn = get(conn, "/blocks/#{range}?limit=#{limit}")
+      response = json_response(conn, 200)
+
+      {:ok, data, _has_cont?} =
+        Cont.response_data(
+          {BlockController, :blocks, %{}, conn.assigns.scope, 0},
+          limit
+        )
+
+      assert Enum.count(response["data"]) == limit
+      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+      assert {%{"height" => ^range_begin}, _} = EtsCache.get(@blocks_table, range_begin)
+      assert nil == EtsCache.get(@blocks_table, range_end)
+      assert nil == EtsCache.get(@blocks_table, range_end - @blocks_cache_threshold + 1)
+
+      conn_next = get(conn, response["next"])
+      response_next = json_response(conn_next, 200)
+
+      {:ok, next_data, _has_cont?} =
+        Cont.response_data(
+          {BlockController, :blocks, %{}, conn.assigns.scope, limit},
+          limit
+        )
+
+      assert Enum.count(response_next["data"]) == remaining
       assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
     end
 
