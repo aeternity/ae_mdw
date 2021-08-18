@@ -218,19 +218,20 @@ defmodule AeMdwWeb.BlockControllerTest do
       conn_next = get(conn, response["next"])
       response_next = json_response(conn_next, 200)
 
-      assert Enum.count(response_next["data"]) == 0
+      assert Enum.empty?(response_next["data"])
     end
 
     test "get a mix of uncached and cached generations with range", %{conn: conn} do
       remaining = 3
       range_begin = (last_gen() - @blocks_cache_threshold + 1) - remaining
-      range_end = last_gen() - remaining
+      range_end = last_gen()
       range = "#{range_begin}-#{range_end}"
       limit = @blocks_cache_threshold
+
       conn = get(conn, "/blocks/#{range}?limit=#{limit}")
       response = json_response(conn, 200)
 
-      {:ok, data, has_cont?} =
+      {:ok, data, _has_cont?} =
         Cont.response_data(
           {BlockController, :blocks, %{}, conn.assigns.scope, 0},
           limit
