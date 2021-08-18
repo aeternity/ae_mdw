@@ -123,7 +123,6 @@ defmodule AeMdw.Db.Contract do
     }
   end
 
-
   def prefix_tester(""),
     do: fn _ -> true end
 
@@ -192,7 +191,6 @@ defmodule AeMdw.Db.Contract do
     )
   end
 
-
   def aex9_search_contract(account_pk, last_txi) do
     gen_collect(
       Model.Aex9AccountPresence,
@@ -225,25 +223,27 @@ defmodule AeMdw.Db.Contract do
   # - {{contract_pk, txi, log_idx}, {from_pk, to_pk}, amount}
   def aex9_presence_cache_write({{contract_pk, txi, i}, pks, amount}),
     do: aex9_presence_cache_write(:aex9_sync_cache, {{contract_pk, txi, i}, pks, amount})
+
   def aex9_presence_cache_write(ets_tab, {{contract_pk, txi, i}, pks, amount}),
     do: :ets.insert(ets_tab, {{contract_pk, txi, i}, pks, amount})
 
-
   def int_call_write(create_txi, call_txi, local_idx, fname, tx) do
-    m_call = Model.int_contract_call(
-      index: {call_txi, local_idx},
-      create_txi: create_txi,
-      fname: fname,
-      tx: tx
-    )
+    m_call =
+      Model.int_contract_call(
+        index: {call_txi, local_idx},
+        create_txi: create_txi,
+        fname: fname,
+        tx: tx
+      )
+
     m_grp_call = Model.grp_int_contract_call(index: {create_txi, call_txi, local_idx})
     m_fname_call = Model.fname_int_contract_call(index: {fname, call_txi, local_idx})
-    m_fname_grp_call = Model.fname_grp_int_contract_call(
-      index: {fname, create_txi, call_txi, local_idx}
-    )
+
+    m_fname_grp_call =
+      Model.fname_grp_int_contract_call(index: {fname, create_txi, call_txi, local_idx})
 
     {tx_type, raw_tx} = :aetx.specialize_type(tx)
-    
+
     :mnesia.write(Model.IntContractCall, m_call, :write)
     :mnesia.write(Model.GrpIntContractCall, m_grp_call, :write)
     :mnesia.write(Model.FnameIntContractCall, m_fname_call, :write)
@@ -252,16 +252,22 @@ defmodule AeMdw.Db.Contract do
     for {_, pos} <- AE.tx_ids(tx_type) do
       pk = Validate.id!(elem(raw_tx, pos))
       m_id_call = Model.id_int_contract_call(index: {pk, pos, call_txi, local_idx})
-      m_grp_id_call = Model.grp_id_int_contract_call(index: {create_txi, pk, pos, call_txi, local_idx})
-      m_id_fname_call = Model.id_fname_int_contract_call(index: {pk, fname, pos, call_txi, local_idx})
-      m_grp_id_fname_call = Model.grp_id_fname_int_contract_call(
-	index: {create_txi, pk, fname, pos, call_txi, local_idx}
-      )
+
+      m_grp_id_call =
+        Model.grp_id_int_contract_call(index: {create_txi, pk, pos, call_txi, local_idx})
+
+      m_id_fname_call =
+        Model.id_fname_int_contract_call(index: {pk, fname, pos, call_txi, local_idx})
+
+      m_grp_id_fname_call =
+        Model.grp_id_fname_int_contract_call(
+          index: {create_txi, pk, fname, pos, call_txi, local_idx}
+        )
+
       :mnesia.write(Model.IdIntContractCall, m_id_call, :write)
       :mnesia.write(Model.GrpIdIntContractCall, m_grp_id_call, :write)
       :mnesia.write(Model.IdFnameIntContractCall, m_id_fname_call, :write)
       :mnesia.write(Model.GrpIdFnameIntContractCall, m_grp_id_fname_call, :write)
     end
   end
-
 end

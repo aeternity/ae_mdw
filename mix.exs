@@ -10,8 +10,18 @@ defmodule AeMdw.MixProject do
       compilers: [:phoenix, :gettext] ++ Mix.compilers() ++ [:phoenix_swagger],
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      xref: [exclude: [:mnesia, :aec_chain, :aec_blocks, :aec_headers, :aec_sync, :aetx,
-		       :aeser_api_encoder, :aec_hash]]
+      xref: [
+        exclude: [
+          :mnesia,
+          :aec_chain,
+          :aec_blocks,
+          :aec_headers,
+          :aec_sync,
+          :aetx,
+          :aeser_api_encoder,
+          :aec_hash
+        ]
+      ]
     ]
   end
 

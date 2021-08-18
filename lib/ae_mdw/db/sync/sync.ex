@@ -55,7 +55,6 @@ defmodule AeMdw.Db.Sync do
   def notify_watcher(sync_pid),
     do: GenServer.cast(Watcher, {:sync_process, sync_pid})
 
-
   def safe_height(top_height),
     do: max(0, top_height - @verify_range_kbs)
 

@@ -20,8 +20,8 @@ defmodule AeMdw.Db.Sync.Invalidate do
         bi_keys = block_keys_range({prev_kbi, 0})
         {tx_keys, id_counts} = tx_keys_range(from_txi)
 
-	stat_key_dels = stat_key_dels(prev_kbi)
-	
+        stat_key_dels = stat_key_dels(prev_kbi)
+
         contract_log_key_dels = contract_log_key_dels(from_txi)
         contract_call_key_dels = contract_call_key_dels(from_txi)
 
@@ -31,8 +31,8 @@ defmodule AeMdw.Db.Sync.Invalidate do
         aex9_account_presence_key_writes = aex9_account_presence_key_writes(from_txi)
 
         int_contract_call_key_dels = int_contract_call_key_dels(from_txi)
-	int_transfer_tx_key_dels = int_transfer_tx_key_dels(prev_kbi)
-	
+        int_transfer_tx_key_dels = int_transfer_tx_key_dels(prev_kbi)
+
         tab_keys = Map.merge(bi_keys, tx_keys)
 
         :mnesia.transaction(fn ->
@@ -40,7 +40,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
           {oracle_dels, oracle_writes} = Sync.Oracle.invalidate(fork_height - 1)
 
           do_dels(tab_keys)
-	  do_dels(stat_key_dels)
+          do_dels(stat_key_dels)
           do_dels(name_dels, &AeMdw.Db.Name.cache_through_delete/2)
           do_dels(oracle_dels, &AeMdw.Db.Oracle.cache_through_delete/2)
 
@@ -55,8 +55,11 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
           do_writes(name_writes, &AeMdw.Db.Name.cache_through_write/2)
           do_writes(oracle_writes, &AeMdw.Db.Oracle.cache_through_write/2)
-          do_writes(aex9_account_presence_key_writes,
-            &AeMdw.Db.Contract.aex9_presence_cache_write/2)
+
+          do_writes(
+            aex9_account_presence_key_writes,
+            &AeMdw.Db.Contract.aex9_presence_cache_write/2
+          )
 
           Enum.each(id_counts, fn {f_key, delta} -> Model.update_count(f_key, -delta) end)
         end)
@@ -78,10 +81,9 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
   def stat_key_dels(from_kbi) do
     keys = from_kbi..last_gen()
-    %{Model.Stat => keys,
-      Model.SumStat => keys}
+    %{Model.Stat => keys, Model.SumStat => keys}
   end
-  
+
   def tx_keys_range(from_txi),
     do: tx_keys_range(from_txi, last(Model.Tx))
 
@@ -303,25 +305,28 @@ defmodule AeMdw.Db.Sync.Invalidate do
           scope
           |> DBS.map(:raw, type: :contract_create)
           |> Stream.map(fn %{} = x ->
-               ct_pk = Validate.id!(x.tx.contract_id)
-               with {:ok, ct_info} <- Contract.get_info(ct_pk),
-                    true <- Contract.is_aex9?(ct_info) do
-                 {{ct_pk, x.tx_index, -1}, Validate.id!(x.tx.owner_id), -1}
-               else
-                 _ -> nil
-               end
-             end)
+            ct_pk = Validate.id!(x.tx.contract_id)
+
+            with {:ok, ct_info} <- Contract.get_info(ct_pk),
+                 true <- Contract.is_aex9?(ct_info) do
+              {{ct_pk, x.tx_index, -1}, Validate.id!(x.tx.owner_id), -1}
+            else
+              _ -> nil
+            end
+          end)
           |> Stream.filter(& &1)
-          |> Enum.to_list
+          |> Enum.to_list()
 
         transfer_evt = AeMdw.Node.aex9_transfer_event_hash()
+
         contract_calls = fn contract_pk ->
           scope
           |> DBS.map(:raw, type: :contract_call, contract_id: contract_pk)
           |> Enum.flat_map(fn %{tx: %{log: logs}} = x ->
             idxed_logs = Enum.with_index(logs)
+
             for {%{topics: [^transfer_evt, from_pk, to_pk, <<amount::256>>]}, i} <- idxed_logs,
-              do: {{contract_pk, x.tx_index, i}, {from_pk, to_pk}, amount}
+                do: {{contract_pk, x.tx_index, i}, {from_pk, to_pk}, amount}
           end)
         end
 
@@ -333,7 +338,6 @@ defmodule AeMdw.Db.Sync.Invalidate do
         %{}
     end
   end
-
 
   def contract_log_key_dels(from_txi) do
     {log_keys, data_log_keys, evt_log_keys, idx_log_keys} =
@@ -392,52 +396,47 @@ defmodule AeMdw.Db.Sync.Invalidate do
     %{Model.ContractCall => contract_call_keys}
   end
 
-
   def int_contract_call_key_dels(from_txi) do
-    {int_keys, grp_keys, fname_keys, fname_grp_keys,
-     id_keys, grp_id_keys, id_fname_keys, grp_id_fname_keys} =
+    {int_keys, grp_keys, fname_keys, fname_grp_keys, id_keys, grp_id_keys, id_fname_keys,
+     grp_id_fname_keys} =
       case :mnesia.dirty_next(Model.IntContractCall, {from_txi, -1}) do
         :"$end_of_table" ->
           {[], [], [], [], [], [], [], []}
 
         start_key ->
           push_key = fn {call_txi, local_idx},
-                        {int_keys, grp_keys, fname_keys, fname_grp_keys,
-			 id_keys, grp_id_keys, id_fname_keys, grp_id_fname_keys} ->
+                        {int_keys, grp_keys, fname_keys, fname_grp_keys, id_keys, grp_id_keys,
+                         id_fname_keys, grp_id_fname_keys} ->
             int_key = {call_txi, local_idx}
 
             m_int_call = read!(Model.IntContractCall, int_key)
             create_txi = Model.int_contract_call(m_int_call, :create_txi)
             fname = Model.int_contract_call(m_int_call, :fname)
-	    
+
             grp_key = {create_txi, call_txi, local_idx}
             fname_key = {fname, call_txi, local_idx}
             fname_grp_key = {fname, create_txi, call_txi, local_idx}
 
-	    {tx_type, raw_tx} =
-	      m_int_call
-	      |> Model.int_contract_call(:tx)
-	      |> :aetx.specialize_type
+            {tx_type, raw_tx} =
+              m_int_call
+              |> Model.int_contract_call(:tx)
+              |> :aetx.specialize_type()
 
-	    {id_keys0, grp_id_keys0, id_fname_keys0, grp_id_fname_keys0} =
-	      for {_, pos} <- AE.tx_ids(tx_type), reduce: {[], [], [], []} do
-		{id_keys0, grp_id_keys0, id_fname_keys0, grp_id_fname_keys0} ->
-		  pk = Validate.id!(elem(raw_tx, pos))
+            {id_keys0, grp_id_keys0, id_fname_keys0, grp_id_fname_keys0} =
+              for {_, pos} <- AE.tx_ids(tx_type), reduce: {[], [], [], []} do
+                {id_keys0, grp_id_keys0, id_fname_keys0, grp_id_fname_keys0} ->
+                  pk = Validate.id!(elem(raw_tx, pos))
 
-		  {[{pk, pos, call_txi, local_idx} | id_keys0],
-		   [{create_txi, pk, pos, call_txi, local_idx} | grp_id_keys0],
-		   [{pk, fname, pos, call_txi, local_idx} | id_fname_keys0],
-		   [{create_txi, pk, fname, pos, call_txi, local_idx} | grp_id_fname_keys0]}
-	      end
-	    
-            {[int_key | int_keys],
-	     [grp_key | grp_keys],
-	     [fname_key | fname_keys],
-             [fname_grp_key | fname_grp_keys],
-	     Enum.concat(id_keys0, id_keys),
-	     Enum.concat(grp_id_keys0, grp_id_keys),
-	     Enum.concat(id_fname_keys0, id_fname_keys),
-	     Enum.concat(grp_id_fname_keys0, grp_id_fname_keys)}
+                  {[{pk, pos, call_txi, local_idx} | id_keys0],
+                   [{create_txi, pk, pos, call_txi, local_idx} | grp_id_keys0],
+                   [{pk, fname, pos, call_txi, local_idx} | id_fname_keys0],
+                   [{create_txi, pk, fname, pos, call_txi, local_idx} | grp_id_fname_keys0]}
+              end
+
+            {[int_key | int_keys], [grp_key | grp_keys], [fname_key | fname_keys],
+             [fname_grp_key | fname_grp_keys], Enum.concat(id_keys0, id_keys),
+             Enum.concat(grp_id_keys0, grp_id_keys), Enum.concat(id_fname_keys0, id_fname_keys),
+             Enum.concat(grp_id_fname_keys0, grp_id_fname_keys)}
           end
 
           collect_keys(
@@ -461,7 +460,6 @@ defmodule AeMdw.Db.Sync.Invalidate do
     }
   end
 
-
   def int_transfer_tx_key_dels(prev_kbi) do
     {int_keys, kind_keys, target_keys} =
       case :mnesia.dirty_next(Model.IntTransferTx, {prev_kbi, -2}) do
@@ -472,8 +470,8 @@ defmodule AeMdw.Db.Sync.Invalidate do
           push_key = fn {location, kind, target_pk, ref_txi},
                         {int_keys, kind_keys, target_keys} ->
             {[{location, kind, target_pk, ref_txi} | int_keys],
-	     [{kind, location, target_pk, ref_txi} | kind_keys],
-	     [{target_pk, location, kind, ref_txi} | target_keys]}
+             [{kind, location, target_pk, ref_txi} | kind_keys],
+             [{target_pk, location, kind, ref_txi} | target_keys]}
           end
 
           collect_keys(
@@ -488,7 +486,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
     %{
       Model.IntTransferTx => int_keys,
       Model.KindIntTransferTx => kind_keys,
-      Model.TargetIntTransferTx => target_keys,
+      Model.TargetIntTransferTx => target_keys
     }
   end
 

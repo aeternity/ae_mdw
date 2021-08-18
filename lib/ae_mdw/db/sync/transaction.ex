@@ -61,26 +61,27 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     {:atomic, next_txi} =
       :mnesia.transaction(fn ->
-	:ets.delete_all_objects(:stat_sync_cache)
-	:ets.delete_all_objects(:ct_create_sync_cache)
-	:ets.delete_all_objects(:tx_sync_cache)
+        :ets.delete_all_objects(:stat_sync_cache)
+        :ets.delete_all_objects(:ct_create_sync_cache)
+        :ets.delete_all_objects(:tx_sync_cache)
 
         Sync.Name.expire(height)
         Sync.Oracle.expire(height - 1)
 
         kb_txi = (txi == 0 && -1) || txi
-	kb_header = :aec_blocks.to_key_header(key_block)
+        kb_header = :aec_blocks.to_key_header(key_block)
         kb_hash = :aec_headers.hash_header(kb_header) |> ok!
         kb_model = Model.block(index: {height, -1}, tx_index: kb_txi, hash: kb_hash)
         :mnesia.write(Model.Block, kb_model, :write)
 
-	height >= AE.min_block_reward_height() && Sync.IntTransfer.block_rewards(kb_header, kb_hash)
-	
+        height >= AE.min_block_reward_height() &&
+          Sync.IntTransfer.block_rewards(kb_header, kb_hash)
+
         {next_txi, _mb_index} = micro_blocks |> Enum.reduce({txi, 0}, &sync_micro_block/2)
 
-	Sync.Stat.store(height)
-	Sync.Stat.sum_store(height)
-	
+        Sync.Stat.store(height)
+        Sync.Stat.sum_store(height)
+
         next_txi
       end)
 
@@ -88,7 +89,7 @@ defmodule AeMdw.Db.Sync.Transaction do
       :ets.delete_all_objects(:name_sync_cache)
       :ets.delete_all_objects(:oracle_sync_cache)
     end
-    
+
     next_txi
   end
 
@@ -166,7 +167,7 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   def write_links(:oracle_response_tx, tx, _signed_tx, txi, _tx_hash, bi),
     do: Sync.Oracle.respond(:aeo_response_tx.oracle_pubkey(tx), tx, txi, bi)
-  
+
   def write_links(:name_claim_tx, tx, _signed_tx, txi, tx_hash, bi) do
     plain_name = String.downcase(:aens_claim_tx.name(tx))
     {:ok, name_hash} = :aens.get_name_hash(plain_name)

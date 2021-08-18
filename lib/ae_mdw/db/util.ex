@@ -91,7 +91,7 @@ defmodule AeMdw.Db.Util do
 
   def count(table),
     do: :mnesia.foldl(fn _, c -> c + 1 end, 0, table)
-  
+
   def ensure_key!(tab, getter) do
     case apply(__MODULE__, getter, [tab]) do
       :"$end_of_table" ->
@@ -125,7 +125,7 @@ defmodule AeMdw.Db.Util do
 
   def do_writes(tab_xs, db_write) when is_function(db_write, 2),
     do: Enum.each(tab_xs, fn {tab, xs} -> Enum.each(xs, &db_write.(tab, &1)) end)
-  
+
   def do_dels(tab_keys),
     do: do_dels(tab_keys, &:mnesia.delete(&1, &2, :write))
 
@@ -221,28 +221,34 @@ defmodule AeMdw.Db.Util do
             {:key_block, header} -> {:key, header}
             {:mic_block, header, _txs, _fraud} -> {:micro, header}
           end
+
         height = :aec_headers.height(header)
+
         case height >= last_gen() do
           true ->
             nil
+
           false ->
             case type do
-              :key -> {height, -1}
+              :key ->
+                {height, -1}
+
               :micro ->
                 collect_keys(Model.Block, nil, {height, <<>>}, &prev/2, fn
                   {^height, _} = bi, nil ->
-                    Model.block(read_block!(bi), :hash) == block_hash
-                    && {:halt, bi} || {:cont, nil}
+                    (Model.block(read_block!(bi), :hash) == block_hash &&
+                       {:halt, bi}) || {:cont, nil}
+
                   _k, nil ->
                     {:halt, nil}
                 end)
             end
         end
+
       :error ->
         nil
     end
   end
-
 
   def status() do
     {:ok, top_kb} = :aec_chain.top_key_block()
@@ -260,7 +266,8 @@ defmodule AeMdw.Db.Util do
       mdw_version: AeMdw.MixProject.project()[:version],
       mdw_height: mdw_height,
       mdw_tx_index: mdw_tx_index,
-      mdw_synced: node_height == (mdw_height + 1), # MDW is always 1 generation behind
+      # MDW is always 1 generation behind
+      mdw_synced: node_height == mdw_height + 1,
       mdw_syncing: mdw_syncing?
     }
   end
@@ -275,5 +282,4 @@ defmodule AeMdw.Db.Util do
         {0, 0}
     end
   end
-
 end

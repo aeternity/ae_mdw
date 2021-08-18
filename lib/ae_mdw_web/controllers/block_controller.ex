@@ -74,7 +74,7 @@ defmodule AeMdwWeb.BlockController do
     Stream.map(range, &generation_json(&1, last_gen()))
   end
 
-  defp generation_json(height, last_gen) when height > last_gen-@blocks_cache_threshold do
+  defp generation_json(height, last_gen) when height > last_gen - @blocks_cache_threshold do
     [kb_json | mb_jsons] = block_jsons(height, last_gen)
 
     put_mbs_from_db(kb_json, mb_jsons)
@@ -98,7 +98,9 @@ defmodule AeMdwWeb.BlockController do
 
   defp block_jsons(last_gen, last_gen) do
     # gets by height once the chain current generation might happen to be higher than last_gen in DB
-    {:ok, %{key_block: kb, micro_blocks: mbs}} = :aec_chain.get_generation_by_height(last_gen, :forward)
+    {:ok, %{key_block: kb, micro_blocks: mbs}} =
+      :aec_chain.get_generation_by_height(last_gen, :forward)
+
     ^last_gen = :aec_blocks.height(kb)
 
     for block <- [kb | mbs] do

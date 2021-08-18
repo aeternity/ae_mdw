@@ -40,8 +40,10 @@ defmodule AeMdwWeb.ContractController do
 
     {{start_txi, _} = {l, r}, dir, succ} = progress(scope)
     scope_checker = scope_checker(dir, {l, r})
+
     {tab, init_key, key_tester} =
       logs_search_context!(params, start_txi, scope_checker, limit(dir))
+
     advance = RU.advance_signal_fn(succ, key_tester)
 
     RU.signalled_resource({{:skip, init_key}, advance}, tab, fn m_obj ->
@@ -55,8 +57,10 @@ defmodule AeMdwWeb.ContractController do
 
     {{start_txi, _} = {l, r}, dir, succ} = progress(scope)
     scope_checker = scope_checker(dir, {l, r})
+
     {tab, init_key, key_tester} =
       calls_search_context!(params, start_txi, scope_checker, limit(dir))
+
     advance = RU.advance_signal_fn(succ, key_tester)
 
     RU.signalled_resource({{:skip, init_key}, advance}, tab, fn m_obj ->
@@ -65,35 +69,45 @@ defmodule AeMdwWeb.ContractController do
     end)
   end
 
-
   def normalize_key({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog),
     do: {create_txi, call_txi, event_hash, log_idx}
+
   def normalize_key({_data, call_txi, create_txi, event_hash, log_idx}, Model.DataContractLog),
     do: {create_txi, call_txi, event_hash, log_idx}
+
   def normalize_key({event_hash, call_txi, create_txi, log_idx}, Model.EvtContractLog),
     do: {create_txi, call_txi, event_hash, log_idx}
+
   def normalize_key({call_txi, create_txi, event_hash, log_idx}, Model.IdxContractLog),
     do: {create_txi, call_txi, event_hash, log_idx}
 
   def normalize_key({call_txi, local_idx}, Model.IntContractCall),
     do: {call_txi, local_idx}
+
   def normalize_key({_create_txi, call_txi, local_idx}, Model.GrpIntContractCall),
     do: {call_txi, local_idx}
+
   def normalize_key({_fname, call_txi, local_idx}, Model.FnameIntContractCall),
     do: {call_txi, local_idx}
+
   def normalize_key({_fname, _create_txi, call_txi, local_idx}, Model.FnameGrpIntContractCall),
     do: {call_txi, local_idx}
 
   def normalize_key({_pk, _pos, call_txi, local_idx}, Model.IdIntContractCall),
     do: {call_txi, local_idx}
+
   def normalize_key({_create_txi, _pk, _pos, call_txi, local_idx}, Model.GrpIdIntContractCall),
     do: {call_txi, local_idx}
+
   def normalize_key({_pk, _fname, _pos, call_txi, local_idx}, Model.IdFnameIntContractCall),
     do: {call_txi, local_idx}
-  def normalize_key({_create_txi, _pk, _fname, _pos, call_txi, local_idx}, Model.GrpIdFnameIntContractCall),
-    do: {call_txi, local_idx}
 
-    
+  def normalize_key(
+        {_create_txi, _pk, _fname, _pos, call_txi, local_idx},
+        Model.GrpIdFnameIntContractCall
+      ),
+      do: {call_txi, local_idx}
+
   ##########
 
   def height_txi(h) when is_integer(h) and h >= 0,
@@ -134,8 +148,10 @@ defmodule AeMdwWeb.ContractController do
   def convert({"data", [data]}), do: [data_prefix: URI.decode(data)]
   def convert({"event", [ctor_name]}), do: [event_hash: :aec_hash.blake2b_256_hash(ctor_name)]
   def convert({"function", [fun_name]}), do: [fname: fun_name]
+
   def convert({id_key, [id_val]}),
     do: [{AeMdw.Db.Stream.Query.Parser.parse_field(id_key), Validate.id!(id_val)}]
+
   # def convert({id_key, [id_val]}),
   #   do: (id_key in AE.id_fields()
   #        && [{{:id, String.to_existing_atom(id_key)}, Validate.id!(id_val)}])
@@ -296,8 +312,7 @@ defmodule AeMdwWeb.ContractController do
   def calls_search_context!([fname: fname_prefix], start_txi, scope_checker, limit) do
     fname_checker = prefix_checker(fname_prefix)
 
-    {Model.FnameIntContractCall,
-     {fname_prefix <> limit.(:fname), start_txi, limit.(:local_idx)},
+    {Model.FnameIntContractCall, {fname_prefix <> limit.(:fname), start_txi, limit.(:local_idx)},
      fn {fname, call_txi, _local_idx} ->
        fname_checker.(fname) && scope_checker.(call_txi)
      end}
@@ -309,107 +324,110 @@ defmodule AeMdwWeb.ContractController do
   end
 
   def calls_search_context!([], start_txi, scope_checker, limit) do
-    {Model.IntContractCall,
-     {start_txi, limit.(:local_idx)},
+    {Model.IntContractCall, {start_txi, limit.(:local_idx)},
      fn {call_txi, _} -> scope_checker.(call_txi) end}
   end
 
   def calls_search_context!(
-    [{:create_txi, create_txi}, {:fname, fname_prefix}, {%{} = type_pos, pk}],
-    start_txi,
-    scope_checker,
-    limit
-  ) do
+        [{:create_txi, create_txi}, {:fname, fname_prefix}, {%{} = type_pos, pk}],
+        start_txi,
+        scope_checker,
+        limit
+      ) do
     fname_checker = prefix_checker(fname_prefix)
-    
+
     {Model.GrpIdFnameIntContractCall,
-     {create_txi, pk, fname_prefix <> limit.(:fname), limit.(:local_idx), start_txi, limit.(:local_idx)},
-     fn {^create_txi, ^pk,  fname, pos, call_txi, local_idx} ->
-       case fname_checker.(fname) do
-         true ->
-	   scope_checker.(call_txi)
-	   && pos_match(type_pos, pos, call_txi, local_idx)
-	   || :skip
-	       
-         false ->
-	   false
-       end
+     {create_txi, pk, fname_prefix <> limit.(:fname), limit.(:local_idx), start_txi,
+      limit.(:local_idx)},
+     fn
+       {^create_txi, ^pk, fname, pos, call_txi, local_idx} ->
+         case fname_checker.(fname) do
+           true ->
+             (scope_checker.(call_txi) &&
+                pos_match(type_pos, pos, call_txi, local_idx)) ||
+               :skip
+
+           false ->
+             false
+         end
+
        {_create_txi, _pk, _fname, _pos, _call_txi, _local_idx} ->
-	 false
+         false
      end}
   end
 
-  
   def calls_search_context!(
-    [{:create_txi, create_txi}, {%{} = type_pos, pk}],
-    start_txi,
-    scope_checker,
-    limit
-  ) do
+        [{:create_txi, create_txi}, {%{} = type_pos, pk}],
+        start_txi,
+        scope_checker,
+        limit
+      ) do
     {Model.GrpIdIntContractCall,
      {create_txi, pk, limit.(:local_idx), start_txi, limit.(:local_idx)},
-     fn {^create_txi, ^pk, pos, call_txi, local_idx} ->
-       scope_checker.(call_txi)
-       && pos_match(type_pos, pos, call_txi, local_idx)
-       || :skip
-	       
+     fn
+       {^create_txi, ^pk, pos, call_txi, local_idx} ->
+         (scope_checker.(call_txi) &&
+            pos_match(type_pos, pos, call_txi, local_idx)) ||
+           :skip
+
        {_create_txi, _pk, _pos, _call_txi, _local_idx} ->
-	 false
+         false
      end}
   end
-  
+
   def calls_search_context!(
-    [{:fname, fname_prefix}, {%{} = type_pos, pk}],
-    start_txi,
-    scope_checker,
-    limit
-  ) do
+        [{:fname, fname_prefix}, {%{} = type_pos, pk}],
+        start_txi,
+        scope_checker,
+        limit
+      ) do
     fname_checker = prefix_checker(fname_prefix)
-    
+
     {Model.IdFnameIntContractCall,
      {pk, fname_prefix <> limit.(:fname), limit.(:local_idx), start_txi, limit.(:local_idx)},
-     fn {^pk, fname, pos, call_txi, local_idx} ->
-       case fname_checker.(fname) do
-         true ->
-	   scope_checker.(call_txi)
-	   && pos_match(type_pos, pos, call_txi, local_idx)
-	   || :skip
-	       
-         false ->
-	   false
-       end
+     fn
+       {^pk, fname, pos, call_txi, local_idx} ->
+         case fname_checker.(fname) do
+           true ->
+             (scope_checker.(call_txi) &&
+                pos_match(type_pos, pos, call_txi, local_idx)) ||
+               :skip
+
+           false ->
+             false
+         end
+
        {_pk, _fname, _pos, _call_txi, _local_idx} ->
-	 false
+         false
      end}
   end
-  
 
   def calls_search_context!([{%{} = type_pos, pk}], start_txi, scope_checker, limit) do
-    {Model.IdIntContractCall,
-     {pk, limit.(:local_idx), start_txi, limit.(:local_idx)},
-     fn {^pk, pos, call_txi, local_idx} ->
-       scope_checker.(call_txi)
-       && pos_match(type_pos, pos, call_txi, local_idx)
-       || :skip
-	       
+    {Model.IdIntContractCall, {pk, limit.(:local_idx), start_txi, limit.(:local_idx)},
+     fn
+       {^pk, pos, call_txi, local_idx} ->
+         (scope_checker.(call_txi) &&
+            pos_match(type_pos, pos, call_txi, local_idx)) ||
+           :skip
+
        {_pk, _pos, _call_txi, _local_idx} ->
-	 false
+         false
      end}
   end
-  
+
   def calls_search_context!(params),
     do: raise(ErrInput.Query, value: params)
-
 
   def pos_match(type_pos, pos, call_txi, local_idx) do
     {tx_type, _tx} =
       Model.IntContractCall
       |> read!({call_txi, local_idx})
       |> Model.int_contract_call(:tx)
-      |> :aetx.specialize_type
+      |> :aetx.specialize_type()
+
     [pos] == Map.get(type_pos, tx_type) || :skip
   end
-  
+
   ##########
 
   def tx_id!(enc_tx_hash) do
@@ -421,5 +439,4 @@ defmodule AeMdwWeb.ContractController do
     pk = Validate.id!(contract_id)
     (pk == Db.Sync.Contract.migrate_contract_pk() && -1) || Db.Origin.tx_index({:contract, pk})
   end
-
 end

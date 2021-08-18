@@ -12,15 +12,20 @@ defmodule AeMdwWeb.LegacyController do
   def account_txs(conn, %{"account" => account} = params) do
     {:ok, {limit, page}} = AeMdwWeb.DataStreamPlug.parse_offset(params)
     offset = (page - 1) * limit
-    handle_input(conn,
+
+    handle_input(
+      conn,
       fn ->
         account_pk = Validate.id!(account)
         cont_key = {__MODULE__, :account_txs, account_pk, client_id(conn), offset}
-        json(conn,
+
+        json(
+          conn,
           case Cont.response_data(cont_key, limit) do
             {:ok, raw_data, _} -> Enum.map(raw_data, &format_tx/1)
             {:error, :dos} -> []
-          end)
+          end
+        )
       end
     )
   end
@@ -38,5 +43,4 @@ defmodule AeMdwWeb.LegacyController do
     |> Map.drop(["micro_index", "micro_time", "tx_index"])
     |> Map.put("time", time)
   end
-
 end

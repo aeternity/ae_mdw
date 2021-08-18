@@ -320,7 +320,6 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :grp_id_fname_int_contract_call, @grp_id_fname_int_contract_call_defaults
 
-
   # int_transfer_tx
   @int_transfer_tx_defaults [
     # {{height, -1 (generation related transfer OR >=0 txi (tx related transfer)}, kind, target, ref txi}
@@ -335,7 +334,7 @@ defmodule AeMdw.Db.Model do
     unused: nil
   ]
   defrecord :kind_int_transfer_tx, @kind_int_transfer_tx_defaults
-  
+
   # target_int_transfer_tx
   @target_int_transfer_tx_defaults [
     index: {<<>>, {-1, -1}, nil, -1},
@@ -345,7 +344,8 @@ defmodule AeMdw.Db.Model do
 
   # statistics
   @stat_defaults [
-    index: 0, # height
+    # height
+    index: 0,
     inactive_names: 0,
     active_names: 0,
     active_auctions: 0,
@@ -359,17 +359,25 @@ defmodule AeMdw.Db.Model do
 
   # summarized statistics
   @sum_stat_defaults [
-    index: 0, # height
+    # height
+    index: 0,
     block_reward: 0,
     dev_reward: 0,
     total_supply: 0
   ]
   defrecord :sum_stat, @sum_stat_defaults
-  
+
   ################################################################################
 
   def tables(),
-    do: Enum.concat([chain_tables(), name_tables(), contract_tables(), oracle_tables(), stat_tables()])
+    do:
+      Enum.concat([
+        chain_tables(),
+        name_tables(),
+        contract_tables(),
+        oracle_tables(),
+        stat_tables()
+      ])
 
   def chain_tables() do
     [
@@ -444,7 +452,7 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.SumStat
     ]
   end
-  
+
   def records(),
     do: [
       :tx,
@@ -476,7 +484,7 @@ defmodule AeMdw.Db.Model do
       :id_int_contract_call,
       :grp_id_int_contract_call,
       :id_fname_int_contract_call,
-      :grp_id_fname_int_contract_call,      
+      :grp_id_fname_int_contract_call,
       :plain_name,
       :auction_bid,
       :expiration,
@@ -543,7 +551,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.TargetIntTransferTx), do: :target_int_transfer_tx
   def record(AeMdw.Db.Model.Stat), do: :stat
   def record(AeMdw.Db.Model.SumStat), do: :sum_stat
-  
+
   def table(:tx), do: AeMdw.Db.Model.Tx
   def table(:block), do: AeMdw.Db.Model.Block
   def table(:time), do: AeMdw.Db.Model.Time
@@ -579,7 +587,7 @@ defmodule AeMdw.Db.Model do
   def table(:target_int_transfer_tx), do: AeMdw.Db.Model.TargetIntTransferTx
   def table(:stat), do: AeMdw.Db.Model.Stat
   def table(:sum_stat), do: AeMdw.Db.Model.SumStat
-  
+
   def defaults(:tx), do: @tx_defaults
   def defaults(:block), do: @block_defaults
   def defaults(:time), do: @time_defaults
@@ -609,7 +617,7 @@ defmodule AeMdw.Db.Model do
   def defaults(:id_int_contract_call), do: @id_int_contract_call_defaults
   def defaults(:grp_id_int_contract_call), do: @grp_id_int_contract_call_defaults
   def defaults(:id_fname_int_contract_call), do: @id_fname_int_contract_call_defaults
-  def defaults(:grp_id_fname_int_contract_call), do: @grp_id_fname_int_contract_call_defaults  
+  def defaults(:grp_id_fname_int_contract_call), do: @grp_id_fname_int_contract_call_defaults
   def defaults(:plain_name), do: @plain_name_defaults
   def defaults(:auction_bid), do: @auction_bid_defaults
   def defaults(:pointee), do: @pointee_defaults
@@ -622,7 +630,7 @@ defmodule AeMdw.Db.Model do
   def defaults(:target_int_transfer_tx), do: @target_int_transfer_tx_defaults
   def defaults(:stat), do: @stat_defaults
   def defaults(:sum_stat), do: @sum_stat_defaults
-  
+
   def write_count(model, delta) do
     total = id_count(model, :count)
     model = id_count(model, count: total + delta)
@@ -638,5 +646,4 @@ defmodule AeMdw.Db.Model do
 
   def incr_count({_, _, _} = field_key),
     do: update_count(field_key, 1, fn -> write_count(id_count(index: field_key, count: 0), 1) end)
-  
 end

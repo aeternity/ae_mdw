@@ -16,14 +16,14 @@ defmodule AeMdw.Db.Sync.Contract do
   def create(contract_pk, owner_pk, txi, _bi) do
     case Contract.get_info(contract_pk) do
       {:ok, contract_info} ->
-
         with true <- Contract.is_aex9?(contract_info) do
           contract_pk
-          |> Contract.aex9_meta_info
+          |> Contract.aex9_meta_info()
           |> DBContract.aex9_creation_write(contract_pk, owner_pk, txi)
         end
-	AeMdw.Ets.inc(:stat_sync_cache, :contracts)
-	
+
+        AeMdw.Ets.inc(:stat_sync_cache, :contracts)
+
       _ ->
         :invalid_contract
     end
@@ -44,11 +44,11 @@ defmodule AeMdw.Db.Sync.Contract do
   def aex9_derive_account_presence!({kbi, mbi}) do
     next_hash =
       DBU.next_bi!({kbi, mbi})
-      |> DBU.read_block!
+      |> DBU.read_block!()
       |> Model.block(:hash)
 
     ct_create? = fn
-      {{_ct_pk, _txi, -1}, <<_::binary>>, -1} -> true;
+      {{_ct_pk, _txi, -1}, <<_::binary>>, -1} -> true
       {{_ct_pk, _txi, _}, {<<_::binary>>, <<_::binary>>}, _} -> false
     end
 
@@ -56,29 +56,31 @@ defmodule AeMdw.Db.Sync.Contract do
     |> Enum.group_by(fn {{ct_pk, _, _}, _, _} -> ct_pk end)
     |> Enum.filter(fn {_ct_pk, [first_entry | _]} -> ct_create?.(first_entry) end)
     |> Enum.map(fn {ct_pk, [{{ct_pk, create_txi, -1}, <<_::binary>>, -1} | transfers]} ->
-         {balances, _} = AeMdw.Node.Db.aex9_balances(ct_pk, {nil, kbi, next_hash})
-         all_pks =
-           Map.keys(balances)
-           |> Enum.map(fn {:address, pk} -> pk end)
-           |> Enum.into(MapSet.new())
+      {balances, _} = AeMdw.Node.Db.aex9_balances(ct_pk, {nil, kbi, next_hash})
 
-         pks = for {_, {_, to_pk}, _} <- transfers, reduce: all_pks,
-           do: (pks -> MapSet.delete(pks, to_pk))
+      all_pks =
+        Map.keys(balances)
+        |> Enum.map(fn {:address, pk} -> pk end)
+        |> Enum.into(MapSet.new())
 
-         Enum.each(pks, &DBContract.aex9_write_presence(ct_pk, create_txi, &1))
-       end)
+      pks =
+        for {_, {_, to_pk}, _} <- transfers,
+            reduce: all_pks,
+            do: (pks -> MapSet.delete(pks, to_pk))
+
+      Enum.each(pks, &DBContract.aex9_write_presence(ct_pk, create_txi, &1))
+    end)
 
     :ets.delete_all_objects(:aex9_sync_cache)
   end
 
-
   def events(raw_events, call_txi, create_txi) do
     for {{{:internal_call_tx, fname}, %{info: tx}}, i} <- Enum.with_index(raw_events),
-      do: DBContract.int_call_write(create_txi, call_txi, i, fname, tx)
+        do: DBContract.int_call_write(create_txi, call_txi, i, fname, tx)
   end
 
-
   def get_txi(@migrate_contract_pk), do: -1
+
   def get_txi(contract_pk) do
     case :ets.lookup(:ct_create_sync_cache, contract_pk) do
       [{_, txi}] -> txi

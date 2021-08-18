@@ -224,7 +224,7 @@ defmodule AeMdwWeb.BlockControllerTest do
 
     test "get a mix of uncached and cached generations with range", %{conn: conn} do
       remaining = 3
-      range_begin = (last_gen() - @blocks_cache_threshold + 1) - remaining
+      range_begin = last_gen() - @blocks_cache_threshold + 1 - remaining
       range_end = last_gen()
       range = "#{range_begin}-#{range_end}"
       limit = @blocks_cache_threshold

@@ -65,7 +65,7 @@ defmodule AeMdw.Extract do
 
     def field_name_type({:record_field, _, {:atom, _, name}}),
       do: {name, :undefined}
-    
+
     def aeser_id_type?(abs_code) do
       case abs_code do
         {:remote_type, _, [{:atom, _, :aeser_id}, {:atom, _, :id}, []]} -> true
