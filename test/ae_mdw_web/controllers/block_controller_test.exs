@@ -241,6 +241,7 @@ defmodule AeMdwWeb.BlockControllerTest do
       assert Jason.encode!(response["data"]) == Jason.encode!(data)
       assert {%{"height" => ^range_begin}, _} = EtsCache.get(AeMdwWeb.BlockController.table(), range_begin)
       assert nil == EtsCache.get(AeMdwWeb.BlockController.table(), range_end)
+      assert nil == EtsCache.get(AeMdwWeb.BlockController.table(), range_end - @blocks_cache_threshold + 1)
 
       conn_next = get(conn, response["next"])
       response_next = json_response(conn_next, 200)
