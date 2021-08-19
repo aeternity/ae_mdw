@@ -21,7 +21,8 @@ defmodule AeMdw.MixProject do
           :aeser_api_encoder,
           :aec_hash
         ]
-      ]
+      ],
+      dialyzer: dialyzer()
     ]
   end
 
@@ -62,7 +63,16 @@ defmodule AeMdw.MixProject do
       {:websockex, "~> 0.4.2"},
       {:phoenix_swagger, "~> 0.8"},
       {:temp, "~> 0.4"},
-      {:tesla, "~> 1.3.0"}
+      {:tesla, "~> 1.3.0"},
+      {:dialyxir, "~> 1.0", only: [:dev], runtime: false}
+    ]
+  end
+
+  defp dialyzer do
+    [
+      plt_ignore_apps: [:mnesia],
+      ignore_warnings: ".dialyzer_ignore.exs",
+      plt_add_apps: [:mix]
     ]
   end
 end

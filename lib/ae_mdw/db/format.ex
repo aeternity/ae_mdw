@@ -234,7 +234,7 @@ defmodule AeMdw.Db.Format do
       log: logs.(:aect_call.log(call_rec))
     }
 
-    m = (is_map(fun_arg_res) && Map.merge(call_info, fun_arg_res)) || call_info
+    m = Map.merge(call_info, fun_arg_res)
     update_in(tx, [:tx], &Map.merge(&1, m))
   end
 

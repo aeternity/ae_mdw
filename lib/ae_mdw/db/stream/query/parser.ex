@@ -45,6 +45,10 @@ defmodule AeMdw.Db.Stream.Query.Parser do
     {ids, types}
   end
 
+  def parse(_query_groups) do
+    {%{}, MapSet.new()}
+  end
+
   ##########
 
   def field_types(field) do

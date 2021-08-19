@@ -92,8 +92,6 @@ defmodule Mix.Tasks.Bench do
 
   defp percentile([], _), do: nil
   defp percentile([x], _), do: x
-  defp percentile(list, 0), do: min(list)
-  defp percentile(list, 100), do: max(list)
 
   defp percentile(list, n) when is_list(list) and is_number(n) do
     s = Enum.sort(list)

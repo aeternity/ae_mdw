@@ -262,8 +262,11 @@ defmodule AeMdw.Util do
 
           _ ->
             {{_, x, rem_stream}, rem_streams} = taker.(streams)
-            next_elt = pop1.(rem_stream)
-            {[x], (next_elt && :gb_sets.add(next_elt, rem_streams)) || rem_streams}
+
+            case pop1.(rem_stream) do
+              nil -> {[x], rem_streams}
+              next_elt -> {[x], :gb_sets.add(next_elt, rem_streams)}
+            end
         end
       end,
       fn _ -> :ok end
