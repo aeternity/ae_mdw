@@ -111,5 +111,4 @@ defmodule AeMdwWeb.Util do
         :binary.part(data, {0, prefix_size}) == prefix
     end
   end
-  
 end

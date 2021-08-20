@@ -61,6 +61,7 @@ defmodule AeMdw.Node.Db do
         {:mic_block, header, _txs, _} -> {:micro, header}
         {:key_block, header} -> {:key, header}
       end
+
     {type, :aec_headers.height(header), ok!(:aec_headers.hash_header(header))}
   end
 
@@ -92,12 +93,14 @@ defmodule AeMdw.Node.Db do
     do: aex9_balances(contract_pk, top_height_hash(the_very_top?))
 
   def aex9_balances(contract_pk, {type, height, hash}) do
-    {:ok, addr_map} = AeMdw.Contract.call_contract(
-      contract_pk,
-      {type, height, hash},
-      "balances",
-      []
-    )
+    {:ok, addr_map} =
+      AeMdw.Contract.call_contract(
+        contract_pk,
+        {type, height, hash},
+        "balances",
+        []
+      )
+
     {addr_map, {type, height, hash}}
   end
 

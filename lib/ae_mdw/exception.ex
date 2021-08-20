@@ -6,9 +6,10 @@ defmodule AeMdw.Exception do
 
         @impl true
         def exception(value: value),
-          do: %AeMdw.Error.Input{reason: __MODULE__,
-                                 message: AeMdw.Error.to_string(__MODULE__, value)}
-
+          do: %AeMdw.Error.Input{
+            reason: __MODULE__,
+            message: AeMdw.Error.to_string(__MODULE__, value)
+          }
 
         @impl true
         def message(%AeMdw.Error.Input{message: m}), do: m

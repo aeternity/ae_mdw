@@ -19,7 +19,7 @@ defmodule AeMdwWeb.UtilControllerTest do
                "mdw_height" => mdw_height,
                "node_height" => node_height,
                "mdw_tx_index" => mdw_tx_index,
-               "mdw_synced" => node_height == (mdw_height + 1),
+               "mdw_synced" => node_height == mdw_height + 1,
                "node_progress" => 100.0,
                "node_syncing" => false
              }

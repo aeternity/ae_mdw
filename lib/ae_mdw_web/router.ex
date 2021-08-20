@@ -135,7 +135,7 @@ defmodule AeMdwWeb.Router do
     get "/totalstats/", StatsController, :sum_stats
     get "/totalstats/:direction", StatsController, :sum_stats
     get "/totalstats/:scope_type/:range", StatsController, :sum_stats
-    
+
     get "/status", UtilController, :status
 
     match :*, "/*path", UtilController, :no_route

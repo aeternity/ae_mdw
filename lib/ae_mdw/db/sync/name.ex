@@ -56,11 +56,11 @@ defmodule AeMdw.Db.Sync.Name do
         cache_through_write(Model.ActiveNameExpiration, m_name_exp)
         cache_through_delete_inactive(previous)
 
-	lock_amount = is_lima? && name_fee || :aec_governance.name_claim_locked_fee()
-	Sync.IntTransfer.fee({height, txi}, :lock_name, account_pk, txi, lock_amount)
-	inc(:stat_sync_cache, :active_names)
-	previous && dec(:stat_sync_cache, :inactive_names)
-	
+        lock_amount = (is_lima? && name_fee) || :aec_governance.name_claim_locked_fee()
+        Sync.IntTransfer.fee({height, txi}, :lock_name, account_pk, txi, lock_amount)
+        inc(:stat_sync_cache, :active_names)
+        previous && dec(:stat_sync_cache, :inactive_names)
+
       timeout ->
         auction_end = height + timeout
         m_auction_exp = Model.expiration(index: {auction_end, plain_name})
@@ -68,28 +68,36 @@ defmodule AeMdw.Db.Sync.Name do
         make_m_bid =
           &Model.auction_bid(index: {plain_name, {bi, txi}, auction_end, account_pk, &1})
 
-	Sync.IntTransfer.fee({height, txi}, :spend_name, account_pk, txi, name_fee)
-	
+        Sync.IntTransfer.fee({height, txi}, :spend_name, account_pk, txi, name_fee)
+
         m_bid =
           case cache_through_prev(Model.AuctionBid, Name.bid_top_key(plain_name)) do
             :not_found ->
               make_m_bid.([{bi, txi}])
 
-            {:ok, {^plain_name, {_, prev_txi}, prev_auction_end, prev_owner, prev_bids} = prev_key} ->
+            {:ok,
+             {^plain_name, {_, prev_txi}, prev_auction_end, prev_owner, prev_bids} = prev_key} ->
               cache_through_delete(Model.AuctionBid, prev_key)
               cache_through_delete(Model.AuctionOwner, {prev_owner, plain_name})
               cache_through_delete(Model.AuctionExpiration, {prev_auction_end, plain_name})
 
-	      %{tx: prev_tx} = read_cached_raw_tx!(prev_txi)
-	      Sync.IntTransfer.fee({height, txi}, :refund_name, prev_owner, prev_txi, prev_tx.name_fee)
-	
+              %{tx: prev_tx} = read_cached_raw_tx!(prev_txi)
+
+              Sync.IntTransfer.fee(
+                {height, txi},
+                :refund_name,
+                prev_owner,
+                prev_txi,
+                prev_tx.name_fee
+              )
+
               make_m_bid.([{bi, txi} | prev_bids])
           end
 
         cache_through_write(Model.AuctionBid, m_bid)
         cache_through_write(Model.AuctionOwner, m_owner)
         cache_through_write(Model.AuctionExpiration, m_auction_exp)
-	inc(:stat_sync_cache, :active_auctions)
+        inc(:stat_sync_cache, :active_auctions)
     end
   end
 
@@ -239,8 +247,10 @@ defmodule AeMdw.Db.Sync.Name do
       end
 
     expirations = :mnesia.select(Model.ActiveNameExpiration, name_mspec)
+
     if Enum.count(expirations) > 0 do
-      Log.info("Removing exsiting active name expirations #{inspect expirations}")
+      Log.info("Removing exsiting active name expirations #{inspect(expirations)}")
+
       expirations
       |> Enum.map(fn key -> cache_through_delete(Model.ActiveNameExpiration, key) end)
     end
@@ -501,5 +511,4 @@ defmodule AeMdw.Db.Sync.Name do
       [] -> read_raw_tx!(txi)
     end
   end
-  
 end

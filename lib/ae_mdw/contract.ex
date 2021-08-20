@@ -21,13 +21,14 @@ defmodule AeMdw.Contract do
       nil ->
         case :aec_chain.get_contract(pubkey) do
           {:ok, contract} ->
-	    {:code, ser_code} = :aect_contracts.code(contract)
+            {:code, ser_code} = :aect_contracts.code(contract)
+
             info =
               case :aeser_contract_code.deserialize(ser_code) do
                 %{type_info: [], byte_code: byte_code} ->
                   :aeb_fate_code.deserialize(byte_code)
-		  
-                  %{type_info: type_info} ->
+
+                %{type_info: type_info} ->
                   type_info
               end
 
@@ -310,7 +311,7 @@ defmodule AeMdw.Contract do
 
   ##########
 
-  def get_events(<<micro_block_hash :: binary>>) do
+  def get_events(<<micro_block_hash::binary>>) do
     micro_block = :aec_db.get_block(micro_block_hash)
     :micro = :aec_blocks.type(micro_block)
     get_events(micro_block)
@@ -338,18 +339,20 @@ defmodule AeMdw.Contract do
   end
 
   defp chain_create_or_clone_event?({{_, "Chain.create"}, _} = event) do
-    Log.info("Ignore Chain.create event #{inspect event}")
+    Log.info("Ignore Chain.create event #{inspect(event)}")
     true
   end
+
   defp chain_create_or_clone_event?({{_, "Chain.clone"}, _} = event) do
-    Log.info("Ignore Chain.clone event #{inspect event}")
+    Log.info("Ignore Chain.clone event #{inspect(event)}")
     true
   end
+
   defp chain_create_or_clone_event?(_), do: false
 
   def get_grouped_events(micro_block),
     do: Enum.group_by(get_events(micro_block), fn {_, info} -> info.tx_hash end)
-  
+
   # def t(gen_range) do
   #   range
   #   |> Stream.flat_map(&AeMdw.Node.Db.get_micro_blocks/1)
@@ -357,5 +360,4 @@ defmodule AeMdw.Contract do
   #   |> Stream.map(&ok!(:aec_headers.hash_header(&1)))
   #   |> Stream.flat_map(&AeMdw.Contract.get_events/1)
   # end
-
 end

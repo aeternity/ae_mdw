@@ -14,7 +14,8 @@ config :ae_plugin,
 
 config :ae_mdw,
   sync: true,
-  operators: [], # email address where to send sync crash notification
+  # email address where to send sync crash notification
+  operators: [],
   contract_cache_expiration_minutes: 1440
 
 # Configures the endpoint

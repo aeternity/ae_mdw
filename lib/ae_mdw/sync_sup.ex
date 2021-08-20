@@ -17,7 +17,6 @@ defmodule AeMdw.Sync.Supervisor do
     DynamicSupervisor.init(max_restarts: 0, max_children: 1, strategy: :one_for_one)
   end
 
-
   def sync(true),
     do: DynamicSupervisor.start_child(__MODULE__, AeMdw.Db.Sync.Supervisor)
 
@@ -28,12 +27,13 @@ defmodule AeMdw.Sync.Supervisor do
           :ok -> :ok
           {:error, :not_found} -> sync(false)
         end
+
       [{:undefined, :restarting, _, _}] ->
         Process.sleep(100)
         sync(false)
+
       [] ->
         :ok
     end
   end
-
 end

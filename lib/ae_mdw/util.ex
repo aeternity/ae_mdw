@@ -206,7 +206,6 @@ defmodule AeMdw.Util do
     )
   end
 
-
   def mnesia_stream_pull({tab, key, advance}) do
     case :mnesia.dirty_read(tab, key) do
       [tuple] ->
@@ -230,7 +229,6 @@ defmodule AeMdw.Util do
       fn _ -> :ok end
     )
   end
-
 
   def merged_stream(streams, key, dir) when is_function(key, 1) do
     taker =
@@ -277,14 +275,16 @@ defmodule AeMdw.Util do
 
   def contains_unicode?(string) do
     string
-    |> String.codepoints
-    |> Enum.reduce_while(false,
-         fn cp, false ->
-           case String.next_grapheme_size(cp) do
-             {1, ""} -> {:cont, false}
-             {_, ""} -> {:halt, true}
-           end
-         end)
+    |> String.codepoints()
+    |> Enum.reduce_while(
+      false,
+      fn cp, false ->
+        case String.next_grapheme_size(cp) do
+          {1, ""} -> {:cont, false}
+          {_, ""} -> {:halt, true}
+        end
+      end
+    )
   end
 
   def with_sync_off(fun) when is_function(fun, 0) do
@@ -295,5 +295,4 @@ defmodule AeMdw.Util do
       AeMdw.Application.sync(true)
     end
   end
-
 end

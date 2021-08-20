@@ -29,8 +29,9 @@ defmodule AeMdw.Sync.Watcher do
 
   def notify_operators(emails, reason) do
     attachment = Temp.path!()
+
     try do
-      File.write!(attachment, "#{inspect reason, pretty: true, limit: :infinity}")
+      File.write!(attachment, "#{inspect(reason, pretty: true, limit: :infinity)}")
       subject = "syncing crashed on #{host_ip_address()}"
       send_mail(emails, subject, attachment)
     after
@@ -41,17 +42,22 @@ defmodule AeMdw.Sync.Watcher do
   def send_mail(emails, subject, attachment) do
     emails = Enum.join(emails, " ")
     cmd = "mail -s \"#{subject}\" -A #{attachment} #{emails}"
+
     try do
       System.cmd(cmd, [])
     rescue
-      _ -> nil # in case `mail` command is not present
+      # in case `mail` command is not present
+      _ -> nil
     end
   end
 
   def host_ip_address() do
     [{ip_addr, _, _} | _] =
-      Enum.reject(ok!(:inet.getif()), fn {{127, _, _, _}, _, _} -> true; _ -> false end)
+      Enum.reject(ok!(:inet.getif()), fn
+        {{127, _, _, _}, _, _} -> true
+        _ -> false
+      end)
+
     "#{:inet.ntoa(ip_addr)}"
   end
-
 end
