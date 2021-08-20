@@ -34,3 +34,10 @@ log/
 REVISION
 VERSION
 *~
+
+# Local dev-only files
+/mnesia/
+
+# Dialyzer generated files
+/priv/plts/*.plt
+/priv/plts/*.plt.hash
