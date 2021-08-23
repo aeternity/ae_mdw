@@ -256,6 +256,7 @@ defmodule AeMdw.Db.Util do
     node_height = :aec_blocks.height(top_kb)
     {mdw_tx_index, mdw_height} = safe_mdw_tx_index_and_height()
     mdw_syncing? = is_pid(Process.whereis(AeMdw.Db.Sync.Supervisor))
+    {:ok, version} = :application.get_key(:ae_mdw, :vsn)
 
     %{
       node_version: :aeu_info.get_version(),
@@ -263,7 +264,7 @@ defmodule AeMdw.Db.Util do
       node_height: node_height,
       node_syncing: node_syncing?,
       node_progress: node_progress,
-      mdw_version: AeMdw.MixProject.project()[:version],
+      mdw_version: to_string(version),
       mdw_height: mdw_height,
       mdw_tx_index: mdw_tx_index,
       # MDW is always 1 generation behind
