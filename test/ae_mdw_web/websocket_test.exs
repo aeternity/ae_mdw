@@ -174,6 +174,7 @@ defmodule AeMdwWeb.WebsocketTest do
     ]
   end
 
+  @tag :integration
   test "subscribe and unsubscribe to keyblocks, microblocks, transactions and object", setup do
     # subscribe to keyblocks, microblocks, transactions and object
     assert :ok == WsClient.subscribe(setup.client1, :key_blocks)
@@ -241,6 +242,7 @@ defmodule AeMdwWeb.WebsocketTest do
     assert_receive [], 200
   end
 
+  @tag :integration
   test "subscribe to unsupported payload and invalid targets", setup do
     # subscribe to unsupported payload and invalid targets
     assert :ok == WsClient.subscribe(setup.client1, :unsupported_payload)
