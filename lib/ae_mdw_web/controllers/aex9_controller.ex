@@ -162,9 +162,7 @@ defmodule AeMdwWeb.Aex9Controller do
         end
       )
 
-  ##########
-
-  def by_names_reply(conn, search_mode) do
+  defp by_names_reply(conn, search_mode) do
     entries =
       Contract.aex9_search_name(search_mode)
       |> Enum.map(&Format.to_map(&1, Model.Aex9Contract))
@@ -172,7 +170,7 @@ defmodule AeMdwWeb.Aex9Controller do
     json(conn, entries)
   end
 
-  def by_symbols_reply(conn, search_mode) do
+  defp by_symbols_reply(conn, search_mode) do
     entries =
       Contract.aex9_search_symbol(search_mode)
       |> Enum.map(&Format.to_map(&1, Model.Aex9ContractSymbol))
@@ -180,12 +178,12 @@ defmodule AeMdwWeb.Aex9Controller do
     json(conn, entries)
   end
 
-  def balance_reply(conn, contract_pk, account_pk) do
+  defp balance_reply(conn, contract_pk, account_pk) do
     {amount, {type, height, hash}} = DBN.aex9_balance(contract_pk, account_pk, top?(conn))
     json(conn, balance_to_map({amount, {type, height, hash}}, contract_pk, account_pk))
   end
 
-  def balance_range_reply(conn, contract_pk, account_pk, range) do
+  defp balance_range_reply(conn, contract_pk, account_pk, range) do
     json(
       conn,
       %{
@@ -203,12 +201,12 @@ defmodule AeMdwWeb.Aex9Controller do
     )
   end
 
-  def balance_for_hash_reply(conn, contract_pk, account_pk, {type, block_hash, height}) do
-    {amount, _} = DBN.aex9_balance(contract_pk, account_pk, {height, block_hash})
+  defp balance_for_hash_reply(conn, contract_pk, account_pk, {type, block_hash, height}) do
+    {amount, _} = DBN.aex9_balance(contract_pk, account_pk, {type, height, block_hash})
     json(conn, balance_to_map({amount, {type, height, block_hash}}, contract_pk, account_pk))
   end
 
-  def account_balances_reply(conn, account_pk, last_txi) do
+  defp account_balances_reply(conn, account_pk, last_txi) do
     contracts =
       AeMdw.Db.Contract.aex9_search_contract(account_pk, last_txi)
       |> Map.to_list()
@@ -227,12 +225,12 @@ defmodule AeMdwWeb.Aex9Controller do
     json(conn, balances)
   end
 
-  def balances_reply(conn, contract_pk) do
+  defp balances_reply(conn, contract_pk) do
     {amounts, {type, height, hash}} = DBN.aex9_balances(contract_pk, top?(conn))
     json(conn, balances_to_map({amounts, {type, height, hash}}, contract_pk))
   end
 
-  def balances_range_reply(conn, contract_pk, range) do
+  defp balances_range_reply(conn, contract_pk, range) do
     json(
       conn,
       %{
@@ -249,28 +247,26 @@ defmodule AeMdwWeb.Aex9Controller do
     )
   end
 
-  def balances_for_hash_reply(conn, contract_pk, {block_type, block_hash, height}) do
-    {amounts, _} = DBN.aex9_balances(contract_pk, {height, block_hash})
+  defp balances_for_hash_reply(conn, contract_pk, {block_type, block_hash, height}) do
+    {amounts, _} = DBN.aex9_balances(contract_pk, {block_type, height, block_hash})
     json(conn, balances_to_map({amounts, {block_type, height, block_hash}}, contract_pk))
   end
 
-  def transfers_reply(conn, query, key_tag) do
+  defp transfers_reply(conn, query, key_tag) do
     transfers = Contract.aex9_search_transfers(query)
     json(conn, Enum.map(transfers, &transfer_to_map(&1, key_tag)))
   end
 
-  ##########
-
-  def search_mode!(%{"prefix" => _, "exact" => _}),
+  defp search_mode!(%{"prefix" => _, "exact" => _}),
     do: raise(ErrInput.Query, value: "can't use both `prefix` and `exact` parameters")
 
-  def search_mode!(%{"exact" => exact}),
+  defp search_mode!(%{"exact" => exact}),
     do: {:exact, URI.decode(exact)}
 
-  def search_mode!(%{} = params),
+  defp search_mode!(%{} = params),
     do: {:prefix, URI.decode(Map.get(params, "prefix", ""))}
 
-  def parse_range!(range) do
+  defp parse_range!(range) do
     case DSPlug.parse_range(range) do
       {:ok, %Range{first: f, last: l}} ->
         {:ok, top_kb} = :aec_chain.top_key_block()
@@ -281,13 +277,13 @@ defmodule AeMdwWeb.Aex9Controller do
     end
   end
 
-  def ensure_aex9_contract_pk!(ct_ident) do
+  defp ensure_aex9_contract_pk!(ct_ident) do
     pk = Validate.id!(ct_ident, [:contract_pubkey])
     AeMdw.Contract.is_aex9?(pk) || raise ErrInput.NotAex9, value: ct_ident
     pk
   end
 
-  def ensure_block_hash_and_height!(block_ident) do
+  defp ensure_block_hash_and_height!(block_ident) do
     case :aeser_api_encoder.safe_decode(:block_hash, block_ident) do
       {:ok, block_hash} ->
         case :aec_chain.get_block(block_hash) do
@@ -303,18 +299,16 @@ defmodule AeMdwWeb.Aex9Controller do
     end
   end
 
-  ##########
+  defp top?(conn), do: presence?(conn, "top")
 
-  def top?(conn), do: presence?(conn, "top")
-
-  def normalize_balances(bals) do
+  defp normalize_balances(bals) do
     for {{:address, pk}, amt} <- bals, reduce: %{} do
       acc ->
         Map.put(acc, :aeser_api_encoder.encode(:account_pubkey, pk), amt)
     end
   end
 
-  def balance_to_map({amount, txi, contract_pk}) do
+  defp balance_to_map({amount, txi, contract_pk}) do
     tx_idx = AeMdw.Db.Util.read_tx!(txi)
     info = Format.to_raw_map(tx_idx)
 
@@ -329,7 +323,7 @@ defmodule AeMdwWeb.Aex9Controller do
     }
   end
 
-  def balance_to_map({amount, {block_type, height, block_hash}}, contract_pk, account_pk) do
+  defp balance_to_map({amount, {block_type, height, block_hash}}, contract_pk, account_pk) do
     %{
       contract_id: enc_ct(contract_pk),
       block_hash: enc_block(block_type, block_hash),
@@ -339,7 +333,7 @@ defmodule AeMdwWeb.Aex9Controller do
     }
   end
 
-  def balances_to_map({amounts, {block_type, height, block_hash}}, contract_pk) do
+  defp balances_to_map({amounts, {block_type, height, block_hash}}, contract_pk) do
     %{
       contract_id: enc_ct(contract_pk),
       block_hash: enc_block(block_type, block_hash),
@@ -348,7 +342,7 @@ defmodule AeMdwWeb.Aex9Controller do
     }
   end
 
-  def map_balances_range(range, f) do
+  defp map_balances_range(range, f) do
     Stream.map(
       height_hash_range(range),
       fn {height, hash} ->
@@ -359,7 +353,7 @@ defmodule AeMdwWeb.Aex9Controller do
     |> Enum.to_list()
   end
 
-  def height_hash_range(range) do
+  defp height_hash_range(range) do
     Stream.map(
       range,
       fn h ->
@@ -370,10 +364,10 @@ defmodule AeMdwWeb.Aex9Controller do
     )
   end
 
-  def transfer_to_map({recipient_pk, sender_pk, amount, call_txi, log_idx}, :rev_aex9_transfer),
+  defp transfer_to_map({recipient_pk, sender_pk, amount, call_txi, log_idx}, :rev_aex9_transfer),
     do: transfer_to_map({sender_pk, recipient_pk, amount, call_txi, log_idx}, :aex9_transfer)
 
-  def transfer_to_map({sender_pk, recipient_pk, amount, call_txi, log_idx}, :aex9_transfer) do
+  defp transfer_to_map({sender_pk, recipient_pk, amount, call_txi, log_idx}, :aex9_transfer) do
     tx = Util.read_tx!(call_txi) |> Format.to_map()
 
     %{
@@ -388,13 +382,13 @@ defmodule AeMdwWeb.Aex9Controller do
     }
   end
 
-  def enc_block(:key, hash), do: :aeser_api_encoder.encode(:key_block_hash, hash)
-  def enc_block(:micro, hash), do: :aeser_api_encoder.encode(:micro_block_hash, hash)
+  defp enc_block(:key, hash), do: :aeser_api_encoder.encode(:key_block_hash, hash)
+  defp enc_block(:micro, hash), do: :aeser_api_encoder.encode(:micro_block_hash, hash)
 
-  def enc_ct(pk), do: :aeser_api_encoder.encode(:contract_pubkey, pk)
-  def enc_id(pk), do: :aeser_api_encoder.encode(:account_pubkey, pk)
+  defp enc_ct(pk), do: :aeser_api_encoder.encode(:contract_pubkey, pk)
+  defp enc_id(pk), do: :aeser_api_encoder.encode(:account_pubkey, pk)
 
-  def enc(type, pk), do: :aeser_api_encoder.encode(type, pk)
+  defp enc(type, pk), do: :aeser_api_encoder.encode(type, pk)
 
   def swagger_definitions do
     %{
