@@ -1,0 +1,81 @@
+on: push
+name: Tests suite
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Common tests setup
+        uses: ./.github/actions/tests-common
+
+      - name: Setup dependencies
+        run: make docker-deps
+
+      - name: Execute tests
+        run: make docker-test
+
+  lint:
+    name: Automated linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Common tests setup
+        uses: ./.github/actions/tests-common
+
+      - name: Setup dependencies
+        run: make docker-deps
+
+      - run: make docker-lint
+
+  dialyzer:
+    name: Dialyzer
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - uses: actions/cache@v1
+        with:
+          path: deps
+          key: dependencies-${{ hashFiles('mix.lock') }}
+
+      - uses: actions/cache@v1
+        with:
+          path: _build
+          key: build-${{ hashFiles('mix.lock') }}
+
+      - uses: actions/cache@v1
+        id: plt-cache
+        with:
+          path: priv/plts
+          key: plts-${{ hashFiles('mix.lock') }}
+
+      - name: Common tests setup
+        uses: ./.github/actions/tests-common
+
+      - name: Setup dependencies
+        run: make docker-deps
+
+      - name: Create PLTs
+        if: steps.plt-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p priv/plts
+          make docker-dialyzer-plt
+
+      - run: make docker-dialyzer

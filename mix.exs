@@ -72,7 +72,9 @@ defmodule AeMdw.MixProject do
     [
       plt_ignore_apps: [:mnesia],
       ignore_warnings: ".dialyzer_ignore.exs",
-      plt_add_apps: [:mix]
+      plt_add_apps: [:mix],
+      plt_core_path: "priv/plts",
+      plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
     ]
   end
 end
