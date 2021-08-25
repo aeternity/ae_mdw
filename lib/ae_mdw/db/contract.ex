@@ -77,12 +77,12 @@ defmodule AeMdw.Db.Contract do
       if addr != contract_pk do
         remote_called_contract_txi = Origin.tx_index({:contract, addr})
 
-        # ext_contract is nil because it's a field for the called contract not the remote caller
-        # (nil also indicates it's a remote/indirect call as for regular calls ext_contract = contract_pk)
+        # on caller log: ext_contract = called contract_pk
+        # on called log: ext_contract = {:parent_contract_pk, caller contract_pk}
         m_log_remote =
           Model.contract_log(
             index: {remote_called_contract_txi, txi, evt_hash, i},
-            ext_contract: nil,
+            ext_contract: {:parent_contract_pk, contract_pk},
             args: args,
             data: data
           )
