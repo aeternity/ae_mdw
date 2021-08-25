@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.Contract do
   alias AeMdw.Node, as: AE
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Origin
   alias AeMdw.{Log, Validate}
 
   require Record
@@ -71,6 +72,22 @@ defmodule AeMdw.Db.Contract do
           args: args,
           data: data
         )
+
+      # if remote call then indexes also with the called contract
+      if addr != contract_pk do
+        remote_called_contract_txi = Origin.tx_index({:contract, addr})
+
+        # ext_contract is nil because it's a field for the called contract not the remote caller
+        # (nil also indicates it's a remote/indirect call as for regular calls ext_contract = contract_pk)
+        m_log_remote =
+          Model.contract_log(
+            index: {remote_called_contract_txi, txi, evt_hash, i},
+            ext_contract: nil,
+            args: args,
+            data: data
+          )
+        :mnesia.write(Model.ContractLog, m_log_remote, :write)
+      end
 
       m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, i})
       m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, i})

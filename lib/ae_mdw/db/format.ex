@@ -117,7 +117,7 @@ defmodule AeMdw.Db.Format do
     migrate_ct_pk = Sync.Contract.migrate_contract_pk()
     ct_id = &:aeser_id.create(:contract, &1)
     ct_pk = ct_id.((create_txi == -1 && migrate_ct_pk) || Origin.pubkey({:contract, create_txi}))
-    ext_ct_txi = (ext_ct_pk != migrate_ct_pk && Origin.tx_index({:contract, ext_ct_pk})) || nil
+    ext_ct_txi = (ext_ct_pk && ext_ct_pk != migrate_ct_pk && Origin.tx_index({:contract, ext_ct_pk})) || nil
     m_tx = read!(Model.Tx, call_txi)
     {height, micro_index} = Model.tx(m_tx, :block_index)
     block_hash = Model.block(read_block!({height, micro_index}), :hash)
@@ -330,8 +330,8 @@ defmodule AeMdw.Db.Format do
         x -> to_json(x)
       end)
 
-  def to_map({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog),
-    do:
+  def to_map({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog) do
+    contract_log =
       to_raw_map({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog)
       |> update_in([:contract_id], &enc_id/1)
       |> update_in([:ext_caller_contract_id], fn x -> x && enc_id(x) end)
@@ -341,6 +341,20 @@ defmodule AeMdw.Db.Format do
       |> update_in([:args], fn args ->
         Enum.map(args, fn <<topic::256>> -> to_string(topic) end)
       end)
+
+    if nil == contract_log.ext_caller_contract_id do
+      parent_contract_id =
+        call_txi
+        |> AeMdw.Validate.nonneg_int!()
+        |> AeMdw.Db.Util.read_tx!()
+        |> AeMdw.Db.Format.to_map()
+        |> get_in(["tx", "contract_id"])
+      Map.put(contract_log, :parent_contract_id, parent_contract_id)
+    else
+      contract_log
+    end
+
+  end
 
   def to_map({call_txi, local_idx}, Model.IntContractCall) do
     raw_map = to_raw_map({call_txi, local_idx}, Model.IntContractCall)
