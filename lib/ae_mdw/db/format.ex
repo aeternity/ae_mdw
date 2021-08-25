@@ -117,7 +117,10 @@ defmodule AeMdw.Db.Format do
     migrate_ct_pk = Sync.Contract.migrate_contract_pk()
     ct_id = &:aeser_id.create(:contract, &1)
     ct_pk = ct_id.((create_txi == -1 && migrate_ct_pk) || Origin.pubkey({:contract, create_txi}))
-    ext_ct_txi = (ext_ct_pk && ext_ct_pk != migrate_ct_pk && Origin.tx_index({:contract, ext_ct_pk})) || nil
+
+    ext_ct_txi =
+      (ext_ct_pk && ext_ct_pk != migrate_ct_pk && Origin.tx_index({:contract, ext_ct_pk})) || nil
+
     m_tx = read!(Model.Tx, call_txi)
     {height, micro_index} = Model.tx(m_tx, :block_index)
     block_hash = Model.block(read_block!({height, micro_index}), :hash)
@@ -349,11 +352,11 @@ defmodule AeMdw.Db.Format do
         |> AeMdw.Db.Util.read_tx!()
         |> AeMdw.Db.Format.to_map()
         |> get_in(["tx", "contract_id"])
+
       Map.put(contract_log, :parent_contract_id, parent_contract_id)
     else
       contract_log
     end
-
   end
 
   def to_map({call_txi, local_idx}, Model.IntContractCall) do

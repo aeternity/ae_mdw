@@ -4,9 +4,11 @@ defmodule AeMdwWeb.ContractControllerTest do
   alias AeMdwWeb.TestUtil
 
   import AeMdw.TestDbUtil
-  import Assertions, only: [
-    assert_maps_equal: 3
-  ]
+
+  import Assertions,
+    only: [
+      assert_maps_equal: 3
+    ]
 
   @default_limit 10
   @second_range 11..20
@@ -32,7 +34,10 @@ defmodule AeMdwWeb.ContractControllerTest do
       response_next = json_response(conn_next, 200)
 
       assert Enum.count(response_next["data"]) == @default_limit
-      assert Jason.encode!(response_next["data"]) == get_contract_logs_json(@contract0, :forward, @second_range)
+
+      assert Jason.encode!(response_next["data"]) ==
+               get_contract_logs_json(@contract0, :forward, @second_range)
+
       assert response_next["data"] != response["data"]
 
       Enum.each(response_next["data"], fn log_next ->
@@ -51,7 +56,10 @@ defmodule AeMdwWeb.ContractControllerTest do
       response_next = json_response(conn_next, 200)
 
       assert Enum.count(response_next["data"]) == @default_limit
-      assert Jason.encode!(response_next["data"]) == get_contract_logs_json(@contract0, :backward, @second_range)
+
+      assert Jason.encode!(response_next["data"]) ==
+               get_contract_logs_json(@contract0, :backward, @second_range)
+
       assert response_next["data"] != response["data"]
 
       Enum.each(response_next["data"], fn log_next ->
@@ -68,9 +76,9 @@ defmodule AeMdwWeb.ContractControllerTest do
 
       # remote call logged in caller (contract2)
       assert log_in_caller =
-        contract2_logs_json
-        |> Jason.decode!()
-        |> Enum.find(fn log -> log["ext_caller_contract_id"] == @contract1 end)
+               contract2_logs_json
+               |> Jason.decode!()
+               |> Enum.find(fn log -> log["ext_caller_contract_id"] == @contract1 end)
 
       conn = get(conn, path, contract_id: @contract1)
       contract1_logs_json = get_contract_logs_json(@contract1)
@@ -78,14 +86,20 @@ defmodule AeMdwWeb.ContractControllerTest do
 
       # remote call logged in called (contract1)
       assert log_in_called =
-        contract1_logs_json
-        |> Jason.decode!()
-        |> Enum.find(fn log -> log["call_txi"] == log_in_caller["call_txi"] end)
+               contract1_logs_json
+               |> Jason.decode!()
+               |> Enum.find(fn log -> log["call_txi"] == log_in_caller["call_txi"] end)
 
       assert log_in_caller["contract_id"] == @contract2
       assert log_in_called["contract_id"] == @contract1
       assert log_in_called["parent_contract_id"] == @contract2
-      assert assert_maps_equal(log_in_caller, log_in_called, [:args, :data, :event_hash, :call_tx_hash])
+
+      assert assert_maps_equal(log_in_caller, log_in_called, [
+               :args,
+               :data,
+               :event_hash,
+               :call_tx_hash
+             ])
     end
 
     test "renders error when the id is invalid", %{conn: conn} do
@@ -97,5 +111,4 @@ defmodule AeMdwWeb.ContractControllerTest do
              }
     end
   end
-
 end

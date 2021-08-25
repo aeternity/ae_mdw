@@ -86,6 +86,7 @@ defmodule AeMdw.Db.Contract do
             args: args,
             data: data
           )
+
         :mnesia.write(Model.ContractLog, m_log_remote, :write)
       end
 

@@ -19,7 +19,7 @@ defmodule AeMdw.TestDbUtil do
     # Format.to_map fetches the log by index and formats it
     contract_id
     |> get_contract_logs_index(direction, range)
-    |> Enum.map(&(Format.to_map(&1, @mnesia_table)))
+    |> Enum.map(&Format.to_map(&1, @mnesia_table))
     |> Jason.encode!()
   end
 
@@ -32,7 +32,8 @@ defmodule AeMdw.TestDbUtil do
 
     log_index_spec =
       Ex2ms.fun do
-        {:contract_log, {^ct_txi, call_txi, event_hash, log_idx}, ext_contract_id, args, data} -> {^ct_txi, call_txi, event_hash, log_idx}
+        {:contract_log, {^ct_txi, call_txi, event_hash, log_idx}, ext_contract_id, args, data} ->
+          {^ct_txi, call_txi, event_hash, log_idx}
       end
 
     {invert_factor, sorting} = if direction == :forward, do: {-1, :asc}, else: {1, :desc}
