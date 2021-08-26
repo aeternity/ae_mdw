@@ -4171,10 +4171,19 @@ Actual chain data is wrapped in a JSON structure identifying the subscription to
 
 ## Tests
 
-### Controller tests
+### Unit tests
 
-The database has to be fully synced.
-  * Run the tests with `make test`
+Running unit tests will not sync the database. To run them:
+```
+elixir --sname aeternity@localhost -S mix test
+```.
+
+### Integration tests
+
+The database has to be fully synced. Then, run the tests with:
+```
+elixir --sname aeternity@localhost -S mix test.integration
+````.
 
 ### Performance test
 

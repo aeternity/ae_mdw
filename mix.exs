@@ -7,6 +7,7 @@ defmodule AeMdw.MixProject do
       version: "1.0.9",
       elixir: "~> 1.5",
       elixirc_paths: elixirc_paths(Mix.env()),
+      aliases: aliases(),
       compilers: [:phoenix, :gettext] ++ Mix.compilers() ++ [:phoenix_swagger],
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -22,7 +23,10 @@ defmodule AeMdw.MixProject do
           :aec_hash
         ]
       ],
-      dialyzer: dialyzer()
+      dialyzer: dialyzer(),
+      preferred_cli_env: [
+        "test.integration": :test
+      ]
     ]
   end
 
@@ -65,8 +69,17 @@ defmodule AeMdw.MixProject do
       {:temp, "~> 0.4"},
       {:tesla, "~> 1.3.0"},
       {:assertions, "~> 0.18.1", only: [:test]},
-      {:dialyxir, "~> 1.0", only: [:dev], runtime: false}
+      {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
+      {:mock, "~> 0.3.0", only: :test},
+      {:phoenix_html, "~> 2.11"}
     ]
+  end
+
+  defp aliases do
+    %{
+      test: ["test --exclude integration"],
+      "test.integration": ["test --only integration"]
+    }
   end
 
   defp dialyzer do
