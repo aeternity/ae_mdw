@@ -95,11 +95,11 @@ defmodule AeMdwWeb.ContractControllerTest do
       assert log_in_called["parent_contract_id"] == @contract2
 
       assert_maps_equal(log_in_caller, log_in_called, [
-               :args,
-               :data,
-               :event_hash,
-               :call_tx_hash
-             ])
+        :args,
+        :data,
+        :event_hash,
+        :call_tx_hash
+      ])
     end
 
     test "renders error when the id is invalid", %{conn: conn} do
