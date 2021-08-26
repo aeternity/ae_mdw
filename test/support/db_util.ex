@@ -32,7 +32,7 @@ defmodule AeMdw.TestDbUtil do
 
     log_index_spec =
       Ex2ms.fun do
-        {:contract_log, {^ct_txi, call_txi, event_hash, log_idx}, ext_contract_id, args, data} ->
+        {:contract_log, {^ct_txi, call_txi, event_hash, log_idx}, _ext_contract_id, _args, _data} ->
           {^ct_txi, call_txi, event_hash, log_idx}
       end
 

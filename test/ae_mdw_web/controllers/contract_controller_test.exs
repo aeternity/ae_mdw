@@ -94,7 +94,7 @@ defmodule AeMdwWeb.ContractControllerTest do
       assert log_in_called["contract_id"] == @contract1
       assert log_in_called["parent_contract_id"] == @contract2
 
-      assert assert_maps_equal(log_in_caller, log_in_called, [
+      assert_maps_equal(log_in_caller, log_in_called, [
                :args,
                :data,
                :event_hash,
