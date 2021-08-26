@@ -2,6 +2,7 @@ defmodule AeMdwWeb.Aex9ControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
   describe "balance_for_hash" do
+    @tag :integration
     test "gets balance for hash", %{conn: conn} do
       mb_hash = "mh_2NkfQ9p29EQtqL6YQAuLpneTRPxEKspNYLKXeexZ664ZJo7fcw"
       contract_id = "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA"
@@ -19,6 +20,7 @@ defmodule AeMdwWeb.Aex9ControllerTest do
   end
 
   describe "balances_for_hash" do
+    @tag :integration
     test "gets balances for hash", %{conn: conn} do
       mb_hash = "mh_2NkfQ9p29EQtqL6YQAuLpneTRPxEKspNYLKXeexZ664ZJo7fcw"
       contract_id = "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA"
