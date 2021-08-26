@@ -19,4 +19,5 @@ count =
   |> Util.select(log_spec)
   |> Enum.filter(fn ext_contract_pk -> reindexed?.(ext_contract_pk) end)
   |> Enum.count()
-IO.inspect "reindexed count: #{count}"
+
+IO.puts "reindexed count: #{count}"
