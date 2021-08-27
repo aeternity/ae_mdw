@@ -13,6 +13,7 @@ defmodule AeMdwWeb.OracleControllerTest do
   @default_limit 10
 
   describe "oracle" do
+    @tag :integration
     test "get oracle information for given oracle id", %{conn: conn} do
       id = "ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM"
       conn = get(conn, "/oracle/#{id}")
@@ -25,6 +26,7 @@ defmodule AeMdwWeb.OracleControllerTest do
                end)
     end
 
+    @tag :integration
     test "get oracle information for given oracle id with expand parameter", %{conn: conn} do
       id = "ok_2TASQ4QZv584D2ZP7cZxT6sk1L1UyqbWumnWM4g1azGi1qqcR5"
       conn = get(conn, "/oracle/#{id}?expand")
@@ -38,6 +40,7 @@ defmodule AeMdwWeb.OracleControllerTest do
                end)
     end
 
+    @tag :integration
     test "renders error when oracle id is invalid", %{conn: conn} do
       id = "invalid_oracle_id"
       conn = get(conn, "/oracle/#{id}")
@@ -47,6 +50,7 @@ defmodule AeMdwWeb.OracleControllerTest do
   end
 
   describe "oracles" do
+    @tag :integration
     test "get all oracles with default direction=backward and default limit", %{conn: conn} do
       conn = get(conn, "/oracles")
       response = json_response(conn, 200)
@@ -73,6 +77,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       assert response_next["data"] == next_data
     end
 
+    @tag :integration
     test "get all oracles with direction=forward and limit=3", %{conn: conn} do
       direction = "forward"
       limit = 3
@@ -102,6 +107,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       assert response_next["data"] == next_data
     end
 
+    @tag :integration
     test "get all oracles with limit=7 and expand parameter ", %{conn: conn} do
       limit = 7
       conn = get(conn, "/oracles?limit=#{limit}&expand")
@@ -129,6 +135,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       assert response_next["data"] |> Jason.encode!() == next_data |> Jason.encode!()
     end
 
+    @tag :integration
     test "renders error when direction is invalid", %{conn: conn} do
       direction = "invalid"
       conn = get(conn, "/oracles?direction=#{direction}")
@@ -136,6 +143,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       assert json_response(conn, 400) == %{"error" => "invalid query: direction=#{direction}"}
     end
 
+    @tag :integration
     test "renders error when limit is invalid", %{conn: conn} do
       limit = "invalid"
       conn = get(conn, "/oracles?limit=#{limit}")
@@ -143,6 +151,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       assert json_response(conn, 400) == %{"error" => "invalid limit: #{limit}"}
     end
 
+    @tag :integration
     test "renders error when limit is to large", %{conn: conn} do
       limit = 10_000
       conn = get(conn, "/oracles?limit=#{limit}")
@@ -150,6 +159,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       assert json_response(conn, 400) == %{"error" => "limit too large: #{limit}"}
     end
 
+    @tag :integration
     test "renders error when the access is random ", %{conn: conn} do
       limit = 6
       page = 2
@@ -160,6 +170,7 @@ defmodule AeMdwWeb.OracleControllerTest do
   end
 
   describe "inactive_oracles" do
+    @tag :integration
     test "get inactive oracles with default direction=backward and default limit", %{conn: conn} do
       conn = get(conn, "/oracles/inactive")
       response = json_response(conn, 200)
@@ -186,6 +197,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       assert response_next["data"] == next_data
     end
 
+    @tag :integration
     test "get inactive oracles with direction=forward and limit=5", %{conn: conn} do
       direction = "forward"
       limit = 5
@@ -216,6 +228,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       assert response_next["data"] == next_data
     end
 
+    @tag :integration
     test "get inactive oracles with limit=1 and expand parameter ", %{conn: conn} do
       limit = 1
       conn = get(conn, "/oracles/inactive?limit=#{limit}&expand")
@@ -244,6 +257,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       assert response_next["data"] |> Jason.encode!() == next_data |> Jason.encode!()
     end
 
+    @tag :integration
     test "renders error when direction is invalid", %{conn: conn} do
       direction = "invalid"
       conn = get(conn, "/oracles/inactive?direction=#{direction}")
@@ -251,6 +265,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       assert json_response(conn, 400) == %{"error" => "invalid query: direction=#{direction}"}
     end
 
+    @tag :integration
     test "renders error when limit is invalid", %{conn: conn} do
       limit = "invalid"
       conn = get(conn, "/oracles/inactive?limit=#{limit}")
@@ -258,6 +273,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       assert json_response(conn, 400) == %{"error" => "invalid limit: #{limit}"}
     end
 
+    @tag :integration
     test "renders error when limit is to large", %{conn: conn} do
       limit = 10_000
       conn = get(conn, "/oracles/inactive?limit=#{limit}")
@@ -265,6 +281,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       assert json_response(conn, 400) == %{"error" => "limit too large: #{limit}"}
     end
 
+    @tag :integration
     test "renders error when the access is random ", %{conn: conn} do
       limit = 2
       page = 3
@@ -275,6 +292,7 @@ defmodule AeMdwWeb.OracleControllerTest do
   end
 
   describe "active_oracles" do
+    @tag :integration
     test "get active oracles with default direction=backward and limit=1", %{conn: conn} do
       limit = 1
       conn = get(conn, "/oracles/active?limit=#{limit}")
@@ -302,6 +320,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       assert response_next["data"] == next_data
     end
 
+    @tag :integration
     test "get active oracles with direction=forward and limit=1", %{conn: conn} do
       direction = "forward"
       limit = 1
@@ -332,6 +351,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       assert response_next["data"] == next_data
     end
 
+    @tag :integration
     test "get active oracles with limit=1 and expand parameter ", %{conn: conn} do
       limit = 1
       conn = get(conn, "/oracles/active?limit=#{limit}&expand")
@@ -360,6 +380,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       assert response_next["data"] |> Jason.encode!() == next_data |> Jason.encode!()
     end
 
+    @tag :integration
     test "renders error when direction is invalid", %{conn: conn} do
       direction = "invalid"
       conn = get(conn, "/oracles/active?direction=#{direction}")
@@ -367,6 +388,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       assert json_response(conn, 400) == %{"error" => "invalid query: direction=#{direction}"}
     end
 
+    @tag :integration
     test "renders error when limit is invalid", %{conn: conn} do
       limit = "invalid"
       conn = get(conn, "/oracles/active?limit=#{limit}")
@@ -374,6 +396,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       assert json_response(conn, 400) == %{"error" => "invalid limit: #{limit}"}
     end
 
+    @tag :integration
     test "renders error when limit is to large", %{conn: conn} do
       limit = 10_000
       conn = get(conn, "/oracles/active?limit=#{limit}")
@@ -381,6 +404,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       assert json_response(conn, 400) == %{"error" => "limit too large: #{limit}"}
     end
 
+    @tag :integration
     test "renders error when the access is random ", %{conn: conn} do
       limit = 2
       page = 2
