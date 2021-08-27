@@ -76,7 +76,7 @@ defmodule AeMdw.Migrations.ReindexRemoteLogs do
           record
       end
 
-    {:atomic, count} = :mnesia.transaction(fn -> Util.count(Model.ContractLog) end)
+    count = :mnesia.async_dirty(fn -> Util.count(Model.ContractLog) end)
     IO.puts("table size: #{count}")
     max_chunk_size = 100
     num_chunks = div(count, max_chunk_size)
