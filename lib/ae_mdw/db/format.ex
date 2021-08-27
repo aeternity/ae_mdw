@@ -113,11 +113,24 @@ defmodule AeMdw.Db.Format do
 
   def to_raw_map({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog) do
     m_log = read!(Model.ContractLog, {create_txi, call_txi, event_hash, log_idx})
-    ext_ct_pk = Model.contract_log(m_log, :ext_contract)
     migrate_ct_pk = Sync.Contract.migrate_contract_pk()
     ct_id = &:aeser_id.create(:contract, &1)
     ct_pk = ct_id.((create_txi == -1 && migrate_ct_pk) || Origin.pubkey({:contract, create_txi}))
-    ext_ct_txi = (ext_ct_pk != migrate_ct_pk && Origin.tx_index({:contract, ext_ct_pk})) || nil
+
+    ext_ct_pk = Model.contract_log(m_log, :ext_contract)
+
+    parent_contract_pk =
+      case ext_ct_pk do
+        {:parent_contract_pk, pct_pk} -> pct_pk
+        _ -> nil
+      end
+
+    # clear ext_ct_pk after saving parent_contract_pk in its own field
+    ext_ct_pk = if not is_tuple(ext_ct_pk), do: ext_ct_pk
+
+    ext_ct_txi =
+      (ext_ct_pk && ext_ct_pk != migrate_ct_pk && Origin.tx_index({:contract, ext_ct_pk})) || nil
+
     m_tx = read!(Model.Tx, call_txi)
     {height, micro_index} = Model.tx(m_tx, :block_index)
     block_hash = Model.block(read_block!({height, micro_index}), :hash)
@@ -127,6 +140,7 @@ defmodule AeMdw.Db.Format do
       contract_id: ct_pk,
       ext_caller_contract_txi: ext_ct_txi,
       ext_caller_contract_id: (ext_ct_pk != nil && ct_id.(ext_ct_pk)) || nil,
+      parent_contract_id: (parent_contract_pk && ct_id.(parent_contract_pk)) || nil,
       call_txi: call_txi,
       call_tx_hash: Model.tx(m_tx, :id),
       args: Model.contract_log(m_log, :args),
@@ -334,7 +348,8 @@ defmodule AeMdw.Db.Format do
     do:
       to_raw_map({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog)
       |> update_in([:contract_id], &enc_id/1)
-      |> update_in([:ext_caller_contract_id], fn x -> x && enc_id(x) end)
+      |> update_in([:ext_caller_contract_id], &enc_id/1)
+      |> update_in([:parent_contract_id], &enc_id/1)
       |> update_in([:call_tx_hash], &Enc.encode(:tx_hash, &1))
       |> update_in([:block_hash], &Enc.encode(:micro_block_hash, &1))
       |> update_in([:event_hash], &Base.hex_encode32/1)
@@ -478,7 +493,9 @@ defmodule AeMdw.Db.Format do
     end
   end
 
-  def enc_id({:id, idtype, payload}),
+  defp enc_id(nil), do: nil
+
+  defp enc_id({:id, idtype, payload}),
     do: Enc.encode(AE.id_type(idtype), payload)
 
   def raw_to_json(x),
