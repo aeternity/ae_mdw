@@ -1,5 +1,6 @@
 defmodule AeMdwWeb.ContractControllerTest do
   use AeMdwWeb.ConnCase
+  @moduletag :integration
 
   alias AeMdwWeb.TestUtil
 
