@@ -92,7 +92,7 @@ defmodule AeMdw.Migrations.ReindexRemoteLogs do
             {:cont, {cont, insert_count + counter}}
 
           :"$end_of_table" ->
-            {:halt, {nil, insert_count}}
+            {:halt, {nil, counter}}
         end
       end)
 
