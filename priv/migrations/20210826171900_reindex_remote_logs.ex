@@ -1,4 +1,8 @@
 defmodule AeMdw.Migrations.ReindexRemoteLogs do
+  @moduledoc """
+  Reindexes remote call event logs with the called contract txi.
+  The logs indexed by the caller contract are not changed.
+  """
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
   alias AeMdw.Db.Util
@@ -12,83 +16,43 @@ defmodule AeMdw.Migrations.ReindexRemoteLogs do
   @blacklisted_pk <<84, 180, 196, 235, 185, 254, 235, 68, 37, 168, 101, 128, 127, 111, 97, 136,
                     141, 11, 134, 251, 228, 200, 73, 71, 175, 98, 22, 115, 172, 159, 234, 177>>
 
-  defp safe_contract_pk({create_txi, _, _, _}) when is_integer(create_txi) and create_txi > 0,
-    do: Origin.pubkey({:contract, create_txi})
+  @max_chunk_size 100
 
-  defp safe_contract_pk(_), do: nil
+  @spec reindex_events([tuple()]) :: integer()
+  defp reindex_events(records_list) do
+    records_list
+    |> filter_map_records()
+    |> save_records()
+  end
 
-  defp safe_contract_txi(@blacklisted_pk), do: nil
-  defp safe_contract_txi(pubkey), do: Origin.tx_index({:contract, pubkey})
-
-  def run() do
-    reindex_events = fn record_list ->
-      new_records =
-        record_list
-        |> Enum.filter(fn {_table, index, ext_contract_pk, _args, _data} ->
-          contract_pk = safe_contract_pk(index)
-          contract_txi = safe_contract_txi(ext_contract_pk)
-
-          is_integer(contract_txi) and
-            contract_txi > 0 and
-            nil != contract_pk and
-            contract_pk != ext_contract_pk
-        end)
-        |> Enum.map(fn {_table, index, ext_contract_pk, args, data} ->
-          contract_pk = safe_contract_pk(index)
-          new_create_txi = safe_contract_txi(ext_contract_pk)
-          new_index = index |> Tuple.delete_at(0) |> Tuple.insert_at(0, new_create_txi)
-
-          Model.contract_log(
-            index: new_index,
-            ext_contract: {:parent_contract_pk, contract_pk},
-            args: args,
-            data: data
-          )
-        end)
-
-      result =
-        :mnesia.sync_transaction(fn ->
-          Enum.reduce(new_records, 0, fn log_record, acc ->
-            # double check before insert
-            {new_create_txi, _, _, _} = elem(log_record, 1)
-
-            if is_integer(new_create_txi) and new_create_txi > 0 do
-              :ok = :mnesia.write(Model.ContractLog, log_record, :write)
-              acc + 1
-            else
-              acc
-            end
-          end)
-        end)
-
-      case result do
-        {:atomic, count} -> count
-        _ -> 0
-      end
-    end
-
+  @doc """
+  Inserts new :contract_log records for remote call event logs indexing by the called contract create_txi.
+  For these new records, the ext_contract field is tagged with {:parent_contract_pk, pubkey} where pubkey
+  is the one of the caller contract.
+  """
+  @spec run() :: {non_neg_integer(), pos_integer()}
+  def run do
     begin = DateTime.utc_now()
+
+    table_size = :mnesia.async_dirty(fn -> Util.count(Model.ContractLog) end)
+    IO.puts("table size: #{table_size}")
+    num_chunks = div(table_size, @max_chunk_size) + 1
 
     log_spec =
       Ex2ms.fun do
         {:contract_log, _index, ext_contract, _args, _data} = record
-        when not is_tuple(ext_contract) ->
+        when not is_tuple(ext_contract) and not is_list(ext_contract) ->
           record
       end
 
-    count = :mnesia.async_dirty(fn -> Util.count(Model.ContractLog) end)
-    IO.puts("table size: #{count}")
-    max_chunk_size = 100
-    num_chunks = div(count, max_chunk_size)
-
-    {chunk, initial_cont} = Util.select(Model.ContractLog, log_spec, max_chunk_size)
-    insert_count = reindex_events.(chunk)
+    {chunk, select_cont} = Util.select(Model.ContractLog, log_spec, @max_chunk_size)
+    insert_count = reindex_events(chunk)
 
     {_, reindexed_count} =
-      Enum.reduce_while(1..num_chunks, {initial_cont, insert_count}, fn _i, {cont, counter} ->
+      Enum.reduce_while(1..num_chunks, {select_cont, insert_count}, fn _i, {cont, counter} ->
         case Util.select(cont) do
           {chunk, cont} ->
-            insert_count = reindex_events.(chunk)
+            insert_count = reindex_events(chunk)
             {:cont, {cont, insert_count + counter}}
 
           :"$end_of_table" ->
@@ -100,5 +64,60 @@ defmodule AeMdw.Migrations.ReindexRemoteLogs do
     IO.puts("Indexed #{reindexed_count} records in #{duration}s")
 
     {reindexed_count, duration}
+  end
+
+  @spec safe_contract_pk({integer(), any(), any(), any()}) :: binary() | nil
+  defp safe_contract_pk({create_txi, _, _, _}) when is_integer(create_txi) and create_txi > 0,
+    do: Origin.pubkey({:contract, create_txi})
+
+  defp safe_contract_pk(_), do: nil
+
+  @spec safe_contract_txi(binary()) :: integer() | nil
+  defp safe_contract_txi(@blacklisted_pk), do: nil
+  defp safe_contract_txi(pubkey), do: Origin.tx_index({:contract, pubkey})
+
+  @spec filter_map_records([tuple()]) :: [tuple()]
+  defp filter_map_records(record_list) do
+    record_list
+    |> Enum.filter(fn {_table, index, ext_contract_pk, _args, _data} ->
+      contract_pk = safe_contract_pk(index)
+      contract_txi = safe_contract_txi(ext_contract_pk)
+
+      is_integer(contract_txi) and
+        contract_txi > 0 and
+        nil != contract_pk and
+        contract_pk != ext_contract_pk
+    end)
+    |> Enum.map(fn {_table, index, ext_contract_pk, args, data} ->
+      contract_pk = safe_contract_pk(index)
+      new_create_txi = safe_contract_txi(ext_contract_pk)
+      new_index = index |> Tuple.delete_at(0) |> Tuple.insert_at(0, new_create_txi)
+
+      Model.contract_log(
+        index: new_index,
+        ext_contract: {:parent_contract_pk, contract_pk},
+        args: args,
+        data: data
+      )
+    end)
+  end
+
+  @spec save_records([tuple()]) :: non_neg_integer()
+  defp save_records([]), do: 0
+
+  defp save_records(new_records) do
+    :mnesia.sync_dirty(fn ->
+      Enum.reduce(new_records, 0, fn log_record, acc ->
+        # double check before insert value set after filtering
+        {new_create_txi, _, _, _} = elem(log_record, 1)
+
+        if is_integer(new_create_txi) and new_create_txi > 0 do
+          :ok = :mnesia.write(Model.ContractLog, log_record, :write)
+          acc + 1
+        else
+          acc
+        end
+      end)
+    end)
   end
 end
