@@ -113,7 +113,7 @@ defmodule AeMdw.Node do
 
   @spec tx_ids(atom()) :: %{atom() => non_neg_integer()}
   def tx_ids(_arg) do
-    %{}
+    %{sender_id: 0, recipient_id: 0}
   end
 
   @spec tx_mod(module()) :: module()

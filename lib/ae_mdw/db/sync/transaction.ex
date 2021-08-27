@@ -128,12 +128,38 @@ defmodule AeMdw.Db.Sync.Transaction do
       Sync.Contract.events(events, txi, ct_txi)
     end
 
-    for {field, pos} <- AE.tx_ids(type) do
-      <<_::256>> = pk = resolve_pubkey(elem(tx, pos), type, field, block_index)
-      write_field(type, pos, pk, txi)
+    case type do
+      :spend_tx ->
+        sync_spend_tx(tx, txi, block_index)
+
+      _ ->
+        for {field, pos} <- AE.tx_ids(type) do
+          <<_::256>> = pk = resolve_pubkey(elem(tx, pos), type, field, block_index)
+          write_field(type, pos, pk, txi)
+        end
     end
 
     txi + 1
+  end
+
+  defp sync_spend_tx(tx, txi, block_index) do
+    ids = AE.tx_ids(:spend_tx)
+
+    <<_::256>> =
+      sender_pk = resolve_pubkey(elem(tx, ids.sender_id), :spend_tx, :sender_id, block_index)
+
+    <<_::256>> =
+      recipient_pk =
+      resolve_pubkey(elem(tx, ids.recipient_id), :spend_tx, :recipient_id, block_index)
+
+    case sender_pk == recipient_pk do
+      true ->
+        write_field(:spend_tx, ids.sender_id, sender_pk, txi)
+
+      false ->
+        write_field(:spend_tx, ids.sender_id, sender_pk, txi)
+        write_field(:spend_tx, ids.recipient_id, recipient_pk, txi)
+    end
   end
 
   ##########
