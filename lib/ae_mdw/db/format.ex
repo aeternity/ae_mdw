@@ -178,7 +178,7 @@ defmodule AeMdw.Db.Format do
     }
   end
 
-  def to_raw_map({{height, txi}, kind, target_pk, ref_txi} = key, Model.IntTransferTx) do
+  def to_raw_map({{height, _txi}, kind, target_pk, ref_txi} = key, Model.IntTransferTx) do
     m_transfer = read!(Model.IntTransferTx, key)
     amount = Model.int_transfer_tx(m_transfer, :amount)
 

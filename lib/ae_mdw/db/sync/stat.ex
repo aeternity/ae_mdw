@@ -3,7 +3,6 @@ defmodule AeMdw.Db.Sync.Stat do
   require Model
 
   import AeMdw.Ets
-  import AeMdw.Util
 
   @stat_field %{
     inactive_names: 1,

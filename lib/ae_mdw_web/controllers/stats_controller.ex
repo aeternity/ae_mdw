@@ -3,8 +3,7 @@ defmodule AeMdwWeb.StatsController do
 
   alias AeMdw.Db.Model
 
-  alias AeMdw.{Db, Validate}
-  alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Db
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdwWeb.Continuation, as: Cont
   alias DBS.Resource.Util, as: RU
@@ -12,7 +11,7 @@ defmodule AeMdwWeb.StatsController do
   require Model
 
   import AeMdwWeb.Util
-  import AeMdw.{Util, Db.Util}
+  import AeMdw.Db.Util
 
   ##########
 
@@ -37,17 +36,19 @@ defmodule AeMdwWeb.StatsController do
 
   ##########
 
-  def db_stream(:stats, params, scope) do
-    {{start, _} = range, dir, succ} = progress(scope)
-    scope_checker = scope_checker(dir, range)
+  def db_stream(:stats, _params, scope) do
+    {{start, _}, _dir, succ} = progress(scope)
+    # TODO: review use of scope_checker
+    # scope_checker = scope_checker(dir, range)
     advance = RU.advance_signal_fn(succ, fn _ -> true end)
 
     RU.signalled_resource({{true, start}, advance}, Model.Stat, &Db.Format.to_map(&1, Model.Stat))
   end
 
-  def db_stream(:sum_stats, params, scope) do
-    {{start, _} = range, dir, succ} = progress(scope)
-    scope_checker = scope_checker(dir, range)
+  def db_stream(:sum_stats, _params, scope) do
+    {{start, _}, _dir, succ} = progress(scope)
+    # TODO: review use of scope_checker
+    # scope_checker = scope_checker(dir, range)
     advance = RU.advance_signal_fn(succ, fn _ -> true end)
 
     RU.signalled_resource(
