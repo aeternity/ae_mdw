@@ -404,36 +404,33 @@ defmodule AeMdw.Db.Sync.Name do
     end
   end
 
-  def name_for_epoch(m_name, new_height) when Record.is_record(m_name, :name),
-    do: name_for_epoch(&Model.Name.get(m_name, &1), new_height)
-
-  def name_for_epoch(getter, new_height) when is_function(getter, 1) do
-    index = getter.(:index)
-    active = getter.(:active)
-    timeout = getter.(:auction_timeout)
-    [{{last_claim, _}, _} | _] = claims = getter.(:claims)
+  def name_for_epoch(m_name, new_height) when Record.is_record(m_name, :name) do
+    index = Model.name(m_name, :index)
+    active = Model.name(m_name, :active)
+    timeout = Model.name(m_name, :auction_timeout)
+    [{{last_claim, _}, _} | _] = claims = Model.name(m_name, :claims)
     {{first_claim, _}, _} = :lists.last(claims)
 
     cond do
       new_height >= active ->
-        expire = revoke_or_expire_height(getter.(:revoke), getter.(:expire))
+        expire = revoke_or_expire_height(Model.name(m_name, :revoke), Model.name(m_name, :expire))
         lfcycle = (new_height < expire && :active) || :inactive
-        updates = drop_bi_txi(getter.(:updates), new_height)
-        transfers = drop_bi_txi(getter.(:transfers), new_height)
+        updates = drop_bi_txi(Model.name(m_name, :updates), new_height)
+        transfers = drop_bi_txi(Model.name(m_name, :transfers), new_height)
         new_expire = new_expire(active, updates, new_height)
 
         m_name =
           Model.name(
             index: index,
-            active: getter.(:active),
+            active: Model.name(m_name, :active),
             expire: new_expire,
             claims: claims,
             updates: updates,
             transfers: transfers,
             revoke: nil,
-            auction_timeout: getter.(:auction_timeout),
+            auction_timeout: Model.name(m_name, :auction_timeout),
             owner: new_owner(claims, transfers),
-            previous: getter.(:previous)
+            previous: Model.name(m_name, :previous)
           )
 
         {lfcycle, m_name, new_expire}
@@ -444,7 +441,7 @@ defmodule AeMdw.Db.Sync.Name do
         {:bid, {index, bi_txi, auction_end, new_owner(claims, []), claims}, auction_end}
 
       new_height < first_claim ->
-        name_for_epoch(getter.(:previous), new_height)
+        name_for_epoch(Model.name(m_name, :previous), new_height)
     end
   end
 

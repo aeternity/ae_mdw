@@ -8,6 +8,10 @@ defmodule AeMdw.Node do
   all of these functions more explicit.
   """
 
+  # defmodule Oracle do
+  #   def get!(_a, _b), do: 0
+  # end
+
   @spec aens_tree_pos(:cache | :mtree) :: non_neg_integer()
   def aens_tree_pos(_tree_type) do
     0
