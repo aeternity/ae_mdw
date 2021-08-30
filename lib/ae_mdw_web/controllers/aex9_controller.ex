@@ -7,7 +7,6 @@ defmodule AeMdwWeb.Aex9Controller do
   alias AeMdw.Node.Db, as: DBN
   alias AeMdw.Db.{Format, Model, Contract}
   alias AeMdw.Db.Util
-  alias AeMdwWeb.SwaggerParameters
   alias AeMdwWeb.DataStreamPlug, as: DSPlug
 
   import AeMdwWeb.Util
