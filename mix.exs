@@ -7,6 +7,9 @@ defmodule AeMdw.MixProject do
       version: "1.0.9",
       elixir: "~> 1.5",
       elixirc_paths: elixirc_paths(Mix.env()),
+      elixirc_options: [
+        warnings_as_errors: true
+      ],
       aliases: aliases(),
       compilers: [:phoenix, :gettext] ++ Mix.compilers() ++ [:phoenix_swagger],
       start_permanent: Mix.env() == :prod,
