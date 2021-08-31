@@ -2,22 +2,16 @@ defmodule Mix.Tasks.MigrateDb do
   use Mix.Task
 
   require Ex2ms
-  require Record
 
   alias AeMdw.Db.Model
   alias AeMdw.Db.Util
   alias AeMdw.Log
 
-  import Record, only: [defrecord: 2]
-
-  # version is like 20210826171900 in 20210826171900_reindex_remote_logs.ex
-  @record_name :migrations
-  @defaults [version: -1, inserted_at: nil]
-
-  defrecord @record_name, @defaults
-
-  @fields for {k,_v} <- @defaults, do: k
+  @table Model.Migrations
+  @record_name Model.record(@table)
   @version_len 14
+
+  @migrations_code_path "priv/migrations/*.ex"
 
   def run(_) do
     :net_kernel.start([:aeternity@localhost, :shortnames])
@@ -25,53 +19,63 @@ defmodule Mix.Tasks.MigrateDb do
     :lager.set_loglevel(:epoch_sync_lager_event, :lager_console_backend, :undefined, :error)
     :lager.set_loglevel(:lager_console_backend, :error)
     Log.info("================================================================================")
-    exists? = Enum.find_value(:mnesia.system_info(:local_tables), false,
-      fn table ->
-        if table == Model.Migrations, do: true
-      end)
+    # create_migration_table()
 
-    if not exists? do
-      :mnesia.create_table(Model.Migrations,
-        record_name: @record_name,
-        attributes: @fields,
-        local_content: true,
-        type: :ordered_set,
-        disc_copies: [Node.self()]
-      )
-    end
+    version_spec =
+      Ex2ms.fun do
+        {_, version, _} -> version
+      end
 
-    version_spec = Ex2ms.fun do
-      {_, version, _} -> version
-    end
+    current_version = Util.select(@table, version_spec) |> Enum.max(fn -> -1 end)
+    Log.info("current migration version: #{current_version}")
 
-    max_version = Util.select(Model.Migrations, version_spec) |> Enum.max(fn -> -1 end)
-    Log.info("current migration version: #{max_version}")
+    @migrations_code_path
+    |> list_migrations_modules()
+    |> Enum.each(&maybe_apply_migration(&1, current_version))
 
-    "priv/migrations/*.ex"
+    :mnesia.dump_log()
+    System.stop(0)
+  end
+
+  # defp create_migration_table do
+  #   exists? = Enum.find_value(:mnesia.system_info(:local_tables), false,
+  #     fn table ->
+  #       if table == @table, do: true
+  #     end)
+
+  #   if not exists? do
+  #     Setup.create_table(@table)
+  #   end
+  #   |> IO.inspect()
+  # end
+
+  defp list_migrations_modules(path) do
+    path
     |> Path.wildcard()
     |> Enum.map(fn path ->
       version =
         path
         |> Path.basename()
-        |> String.slice(0..@version_len-1)
+        |> String.slice(0..(@version_len - 1))
 
       {String.to_integer(version), path}
     end)
     |> Enum.sort_by(fn {version, _path} -> version end)
-    |> Enum.each(fn {int_version, path} ->
-      if int_version > max_version do
-        [{module, _}] = Code.compile_file(path)
-        Log.info("applying version #{int_version} with #{module}...")
-        {:ok, _} = apply(module, :run, [])
-        :mnesia.sync_dirty(fn ->
-          :mnesia.write(Model.Migrations, {@record_name, int_version, DateTime.utc_now()}, :write)
-        end)
-        Log.info("applied version #{int_version}")
-      else
-        Log.info("version #{int_version} already applied")
-      end
-    end)
-    :mnesia.dump_log()
-    System.stop(0)
+  end
+
+  defp maybe_apply_migration({version, path}, current_version) do
+    if version > current_version do
+      [{module, _}] = Code.compile_file(path)
+      Log.info("applying version #{version} with #{module}...")
+      {:ok, _} = apply(module, :run, [])
+
+      :mnesia.sync_dirty(fn ->
+        :mnesia.write(@table, {@record_name, version, DateTime.utc_now()}, :write)
+      end)
+
+      Log.info("applied version #{version}")
+    else
+      Log.info("version #{version} already applied")
+    end
   end
 end
