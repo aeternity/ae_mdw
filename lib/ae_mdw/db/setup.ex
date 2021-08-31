@@ -2,9 +2,6 @@ defmodule AeMdw.Db.Setup do
   require AeMdw.Db.Model
   alias AeMdw.Db.Model
 
-  def create_table(name),
-    do: :mnesia.create_table(name, tab_def(name, mode()))
-
   def create_tables(),
     do: create_tables(mode())
 

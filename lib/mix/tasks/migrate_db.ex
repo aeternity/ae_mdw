@@ -13,42 +13,38 @@ defmodule Mix.Tasks.MigrateDb do
 
   @migrations_code_path "priv/migrations/*.ex"
 
+  @impl Mix.Task
   def run(_) do
     :net_kernel.start([:aeternity@localhost, :shortnames])
     :ae_plugin_utils.start_aecore()
     :lager.set_loglevel(:epoch_sync_lager_event, :lager_console_backend, :undefined, :error)
     :lager.set_loglevel(:lager_console_backend, :error)
     Log.info("================================================================================")
-    # create_migration_table()
+    current_version = read_migration_version(@table)
+    Log.info("current migration version: #{current_version}")
 
+    applied_count =
+      @migrations_code_path
+      |> list_migrations_modules()
+      |> Enum.map(&maybe_apply_migration(&1, current_version))
+      |> Enum.count(&(&1))
+
+    # assure filesystem sync
+    if applied_count > 0, do: :mnesia.dump_log()
+
+    System.stop(0)
+  end
+
+  @spec read_migration_version(atom()) :: integer()
+  defp read_migration_version(table) do
     version_spec =
       Ex2ms.fun do
         {_, version, _} -> version
       end
-
-    current_version = Util.select(@table, version_spec) |> Enum.max(fn -> -1 end)
-    Log.info("current migration version: #{current_version}")
-
-    @migrations_code_path
-    |> list_migrations_modules()
-    |> Enum.each(&maybe_apply_migration(&1, current_version))
-
-    :mnesia.dump_log()
-    System.stop(0)
+      Util.select(table, version_spec) |> Enum.max(fn -> -1 end)
   end
 
-  # defp create_migration_table do
-  #   exists? = Enum.find_value(:mnesia.system_info(:local_tables), false,
-  #     fn table ->
-  #       if table == @table, do: true
-  #     end)
-
-  #   if not exists? do
-  #     Setup.create_table(@table)
-  #   end
-  #   |> IO.inspect()
-  # end
-
+  @spec list_migrations_modules(String.t()) :: [{integer(), String.t()}]
   defp list_migrations_modules(path) do
     path
     |> Path.wildcard()
@@ -63,6 +59,7 @@ defmodule Mix.Tasks.MigrateDb do
     |> Enum.sort_by(fn {version, _path} -> version end)
   end
 
+  @spec maybe_apply_migration({integer(), String.t()}, integer()) :: boolean()
   defp maybe_apply_migration({version, path}, current_version) do
     if version > current_version do
       [{module, _}] = Code.compile_file(path)
@@ -74,8 +71,10 @@ defmodule Mix.Tasks.MigrateDb do
       end)
 
       Log.info("applied version #{version}")
+      true
     else
       Log.info("version #{version} already applied")
+      false
     end
   end
 end
