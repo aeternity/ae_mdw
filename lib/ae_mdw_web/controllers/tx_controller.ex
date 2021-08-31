@@ -7,6 +7,7 @@ defmodule AeMdwWeb.TxController do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Format
   alias AeMdw.Db.Stream, as: DBS
+  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdwWeb.Continuation, as: Cont
   alias AeMdwWeb.SwaggerParameters
   require Model
@@ -75,7 +76,7 @@ defmodule AeMdwWeb.TxController do
     do: tx_reply(conn, nil)
 
   defp tx_reply(conn, nil),
-    do: conn |> send_error(:not_found, "no such transaction")
+    do: conn |> send_error(ErrInput.NotFound, "no such transaction")
 
   defp tx_reply(conn, [model_tx]),
     do: tx_reply(conn, model_tx)

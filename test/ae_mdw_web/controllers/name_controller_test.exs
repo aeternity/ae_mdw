@@ -359,7 +359,7 @@ defmodule AeMdwWeb.NameControllerTest do
       name = "no--such--name--in--the--chain.chain"
       conn = get(conn, "/name/#{name}")
 
-      assert json_response(conn, 400) == %{
+      assert json_response(conn, 404) == %{
                "error" => TestUtil.handle_input(fn -> get_name(Validate.plain_name!(name)) end)
              }
     end
@@ -368,7 +368,7 @@ defmodule AeMdwWeb.NameControllerTest do
   describe "pointers" do
     @tag :integration
     test "get pointers for valid given name", %{conn: conn} do
-      id = "wwwbeaconoidcom.chain"
+      id = "cryptodao21ae.chain"
       conn = get(conn, "/name/pointers/#{id}")
 
       assert json_response(conn, 200) ==
@@ -380,7 +380,7 @@ defmodule AeMdwWeb.NameControllerTest do
       id = "no--such--name--in--the--chain.chain"
       conn = get(conn, "/name/pointers/#{id}")
 
-      assert json_response(conn, 400) == %{
+      assert json_response(conn, 404) == %{
                "error" => TestUtil.handle_input(fn -> get_poiters(Validate.plain_name!(id)) end)
              }
     end

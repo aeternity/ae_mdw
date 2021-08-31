@@ -14,7 +14,7 @@ defmodule AeMdwWeb.UtilControllerTest do
 
       conn = get(conn, "/status")
 
-      assert json_response(conn, 200) == %{
+      assert Map.drop(json_response(conn, 200), ["node_revision", "mdw_syncing"]) == %{
                "mdw_version" => AeMdw.MixProject.project()[:version],
                "node_version" => to_string(node_vsn),
                "mdw_height" => mdw_height,
