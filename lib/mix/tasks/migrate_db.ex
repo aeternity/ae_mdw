@@ -27,7 +27,7 @@ defmodule Mix.Tasks.MigrateDb do
       @migrations_code_path
       |> list_migrations_modules()
       |> Enum.map(&maybe_apply_migration(&1, current_version))
-      |> Enum.count(&(&1))
+      |> Enum.count(& &1)
 
     # assure filesystem sync
     if applied_count > 0, do: :mnesia.dump_log()
@@ -41,7 +41,8 @@ defmodule Mix.Tasks.MigrateDb do
       Ex2ms.fun do
         {_, version, _} -> version
       end
-      Util.select(table, version_spec) |> Enum.max(fn -> -1 end)
+
+    Util.select(table, version_spec) |> Enum.max(fn -> -1 end)
   end
 
   @spec list_migrations_modules(String.t()) :: [{integer(), String.t()}]

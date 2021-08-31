@@ -6,7 +6,7 @@ defmodule AeMdw.Db.Model do
 
   ################################################################################
 
-  # version is like 20210826171900 in 20210826171900_reindex_remote_logs.ex
+  # index is version like 20210826171900 in 20210826171900_reindex_remote_logs.ex
   @migrations_defaults [index: -1, inserted_at: nil]
   defrecord :migrations, @migrations_defaults
 
