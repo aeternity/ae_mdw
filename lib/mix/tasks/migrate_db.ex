@@ -65,7 +65,10 @@ defmodule Mix.Tasks.MigrateDb do
     |> Enum.sort_by(fn {version, _path} -> version end)
   end
 
-  @spec apply_migration!({integer(), String.t()}) :: true
+  # ignore for Code.compile_file
+  @dialyzer {:no_return, apply_migration!: 1}
+
+  @spec apply_migration!({integer(), String.t()}) :: :ok
   defp apply_migration!({version, path}) do
     [{module, _}] = Code.compile_file(path)
     Log.info("applying version #{version} with #{module}...")
@@ -76,6 +79,6 @@ defmodule Mix.Tasks.MigrateDb do
     end)
 
     Log.info("applied version #{version}")
-    true
+    :ok
   end
 end
