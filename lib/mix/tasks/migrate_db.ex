@@ -20,34 +20,38 @@ defmodule Mix.Tasks.MigrateDb do
     :lager.set_loglevel(:epoch_sync_lager_event, :lager_console_backend, :undefined, :error)
     :lager.set_loglevel(:lager_console_backend, :error)
     Log.info("================================================================================")
-    current_version = read_migration_version(@table)
+    current_version = read_migration_version()
     Log.info("current migration version: #{current_version}")
 
     applied_count =
-      @migrations_code_path
-      |> list_migrations_modules()
-      |> Enum.map(&maybe_apply_migration(&1, current_version))
-      |> Enum.count(& &1)
+      current_version
+      |> list_new_migrations()
+      |> Enum.map(&apply_migration!/1)
+      |> length()
 
     # assure filesystem sync
-    if applied_count > 0, do: :mnesia.dump_log()
+    if applied_count > 0 do
+      :mnesia.dump_log()
+    else
+      Log.info("migrations are up to date")
+    end
 
-    System.stop(0)
+    {:ok, applied_count}
   end
 
-  @spec read_migration_version(atom()) :: integer()
-  defp read_migration_version(table) do
+  @spec read_migration_version() :: integer()
+  defp read_migration_version() do
     version_spec =
       Ex2ms.fun do
         {_, version, _} -> version
       end
 
-    Util.select(table, version_spec) |> Enum.max(fn -> -1 end)
+    Util.select(@table, version_spec) |> Enum.max(fn -> -1 end)
   end
 
-  @spec list_migrations_modules(String.t()) :: [{integer(), String.t()}]
-  defp list_migrations_modules(path) do
-    path
+  @spec list_new_migrations(integer()) :: [{integer(), String.t()}]
+  defp list_new_migrations(current_version) do
+    @migrations_code_path
     |> Path.wildcard()
     |> Enum.map(fn path ->
       version =
@@ -57,25 +61,21 @@ defmodule Mix.Tasks.MigrateDb do
 
       {String.to_integer(version), path}
     end)
+    |> Enum.filter(fn {version, _path} -> version > current_version end)
     |> Enum.sort_by(fn {version, _path} -> version end)
   end
 
-  @spec maybe_apply_migration({integer(), String.t()}, integer()) :: boolean()
-  defp maybe_apply_migration({version, path}, current_version) do
-    if version > current_version do
-      [{module, _}] = Code.compile_file(path)
-      Log.info("applying version #{version} with #{module}...")
-      {:ok, _} = apply(module, :run, [])
+  @spec apply_migration!({integer(), String.t()}) :: true
+  defp apply_migration!({version, path}) do
+    [{module, _}] = Code.compile_file(path)
+    Log.info("applying version #{version} with #{module}...")
+    {:ok, _} = apply(module, :run, [])
 
-      :mnesia.sync_dirty(fn ->
-        :mnesia.write(@table, {@record_name, version, DateTime.utc_now()}, :write)
-      end)
+    :mnesia.sync_dirty(fn ->
+      :mnesia.write(@table, {@record_name, version, DateTime.utc_now()}, :write)
+    end)
 
-      Log.info("applied version #{version}")
-      true
-    else
-      Log.info("version #{version} already applied")
-      false
-    end
+    Log.info("applied version #{version}")
+    true
   end
 end
