@@ -24,7 +24,13 @@ defmodule AeMdwWeb.BlockController do
   @doc """
   Pagination hook.
   """
-  def stream_plug_hook(%Plug.Conn{path_info: ["blocks" | rem], params: params} = conn) do
+  def stream_plug_hook(%Plug.Conn{path_info: ["v2", "blocks" | rem]} = conn),
+    do: stream_plug_hook(conn, rem)
+
+  def stream_plug_hook(%Plug.Conn{path_info: ["blocks" | rem]} = conn),
+    do: stream_plug_hook(conn, rem)
+
+  def stream_plug_hook(%Plug.Conn{params: params} = conn, rem) do
     alias AeMdwWeb.DataStreamPlug, as: P
 
     scope_info =
@@ -65,6 +71,12 @@ defmodule AeMdwWeb.BlockController do
   def blocks(conn, _req),
     do: Cont.response(conn, &json/2)
 
+  @doc """
+  Endpoint for paginated blocks with sorted micro blocks per time.
+  """
+  def blocks_v2(conn, _req),
+    do: Cont.response(conn, &json/2)
+
   ##########
 
   @doc """
@@ -74,16 +86,23 @@ defmodule AeMdwWeb.BlockController do
     Stream.map(range, &generation_json(&1, last_gen()))
   end
 
-  defp generation_json(height, last_gen) when height > last_gen - @blocks_cache_threshold do
-    [kb_json | mb_jsons] = block_jsons(height, last_gen)
-
-    put_mbs_from_db(kb_json, mb_jsons)
+  def db_stream(:blocks_v2, _params, {:gen, range}) do
+    Stream.map(range, &generation_json(&1, last_gen(), true))
   end
 
-  defp generation_json(height, last_gen) do
+  defp generation_json(height, last_gen, sort_mbs \\ false)
+
+  defp generation_json(height, last_gen, sort_mbs)
+       when height > last_gen - @blocks_cache_threshold do
+    [kb_json | mb_jsons] = block_jsons(height, last_gen)
+
+    put_mbs_from_db(kb_json, mb_jsons, sort_mbs)
+  end
+
+  defp generation_json(height, last_gen, sort_mbs) do
     height
     |> block_jsons(last_gen)
-    |> read_generation()
+    |> read_generation(sort_mbs)
   end
 
   defp block_jsons(height, last_gen) when height < last_gen do
@@ -109,7 +128,7 @@ defmodule AeMdwWeb.BlockController do
     end
   end
 
-  defp read_generation([kb_json | mb_jsons]) do
+  defp read_generation([kb_json | mb_jsons], sort_mbs) do
     height = kb_json["height"]
 
     case EtsCache.get(@tab, height) do
@@ -117,18 +136,27 @@ defmodule AeMdwWeb.BlockController do
         kb_json
 
       nil ->
-        kb_json = put_mbs_from_db(kb_json, mb_jsons)
+        kb_json = put_mbs_from_db(kb_json, mb_jsons, sort_mbs)
         EtsCache.put(@tab, height, kb_json)
         kb_json
     end
   end
 
-  defp put_mbs_from_db(kb_json, mb_jsons) do
-    mb_jsons = read_mbs_from_db(mb_jsons)
+  defp put_mbs_from_db(kb_json, mb_jsons, _sort_mbs = false) do
+    mb_jsons = db_read_mbs_into_map(mb_jsons)
     Map.put(kb_json, "micro_blocks", mb_jsons)
   end
 
-  defp read_mbs_from_db(mb_jsons) do
+  defp put_mbs_from_db(kb_json, mb_jsons, true) do
+    mb_jsons =
+      mb_jsons
+      |> db_read_mbs_into_list()
+      |> sort_mbs_by_time()
+
+    Map.put(kb_json, "micro_blocks", mb_jsons)
+  end
+
+  defp db_read_mbs_into_map(mb_jsons) do
     for %{"hash" => mb_hash} = mb_json <- mb_jsons, into: %{} do
       micro = :aec_db.get_block(Validate.id!(mb_hash))
       header = :aec_blocks.to_header(micro)
@@ -142,6 +170,25 @@ defmodule AeMdwWeb.BlockController do
       mb_json = Map.put(mb_json, "transactions", txs_json)
       {mb_hash, mb_json}
     end
+  end
+
+  defp db_read_mbs_into_list(mb_jsons) do
+    for %{"hash" => mb_hash} = mb_json <- mb_jsons do
+      micro = :aec_db.get_block(Validate.id!(mb_hash))
+      header = :aec_blocks.to_header(micro)
+
+      txs_json =
+        for tx <- :aec_blocks.txs(micro), into: %{} do
+          %{"hash" => tx_hash} = tx_json = :aetx_sign.serialize_for_client(header, tx)
+          {tx_hash, tx_json}
+        end
+
+      Map.put(mb_json, "transactions", txs_json)
+    end
+  end
+
+  defp sort_mbs_by_time(micro_blocks) do
+    Enum.sort_by(micro_blocks, fn %{"time" => time} -> time end)
   end
 
   ##########
