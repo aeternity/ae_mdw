@@ -5,6 +5,7 @@ defmodule AeMdwWeb.Router do
 
   @paginables [
     {["txs"], nil},
+    {["v2", "blocks"], &AeMdwWeb.BlockController.stream_plug_hook/1},
     {["blocks"], &AeMdwWeb.BlockController.stream_plug_hook/1},
     {["names", "auctions"], &AeMdwWeb.NameController.stream_plug_hook/1},
     {["names", "inactive"], &AeMdwWeb.NameController.stream_plug_hook/1},
@@ -51,8 +52,11 @@ defmodule AeMdwWeb.Router do
 
     # for continuation link only
     get "/blocks/gen/:range", BlockController, :blocks
+    get "/v2/blocks/gen/:range", BlockController, :blocks_v2
+
     # by default no scope_type needed
     get "/blocks/:range_or_dir", BlockController, :blocks
+    get "/v2/blocks/:range_or_dir", BlockController, :blocks_v2
 
     get "/tx/:hash", TxController, :tx
     get "/txi/:index", TxController, :txi
