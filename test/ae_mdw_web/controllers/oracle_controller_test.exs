@@ -407,7 +407,7 @@ defmodule AeMdwWeb.OracleControllerTest do
     @tag :integration
     test "renders error when the access is random ", %{conn: conn} do
       limit = 2
-      page = 2
+      page = 3
       conn = get(conn, "/oracles/active?limit=#{limit}&page=#{page}")
 
       assert json_response(conn, 400) == %{"error" => "random access not supported"}
