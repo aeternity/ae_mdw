@@ -110,6 +110,8 @@
 
 The middleware is a caching and reporting layer which sits in front of the nodes of the [æternity blockchain](https://github.com/aeternity/aeternity). Its purpose is to respond to queries faster than the node can do, and to support queries that for reasons of efficiency the node cannot or will not support itself.
 
+The architecture of the app is explained [here](docs/architecture.md).
+
 ## Prerequisites
 
 Ensure that you have [Elixir](https://elixir-lang.org/install.html) installed, using Erlang 22 or newer.
@@ -126,7 +128,7 @@ The NODEROOT directory should contain directories: `bin`, `lib`, `plugins`, `rel
 
 ## Start
 
-#### Start middleware 
+#### Start middleware
 
   * Install dependencies with `make compile-backend`
   * Start middleware with `make shell` (if using alternative node directory specify NODEROOT)
@@ -213,7 +215,7 @@ GET /contracts/logs                      - returns contract logs
 GET /contracts/logs/:direction           - returns contract logs from genesis or from the tip of chain
 GET /contracts/logs/:scope_type/:range   - returns contract logs from in given range
 
-GET /contracts/calls                     - returns function calls inside of the contracts 
+GET /contracts/calls                     - returns function calls inside of the contracts
 GET /contracts/calls/:direction          - returns function calls inside of the contracts from genesis or from the tip of chain
 GET /contracts/calls/:scope_type/:range  - returns function calls inside of the contracts in a given range
 
@@ -2502,8 +2504,8 @@ $ curl -s "http://localhost:4000/names/auctions?by=name&direction=forward&limit=
 
 ### Searching Names
 
-Prefix searching of names is possible via `/names/search` endpoint. 
-By default, the prefix search will find names in any of the lifecycle states - auction, active, inactive. 
+Prefix searching of names is possible via `/names/search` endpoint.
+By default, the prefix search will find names in any of the lifecycle states - auction, active, inactive.
 
 ```
 $ curl -s "http://localhost:4000/names/search/xxxxxx" | jq '.'
@@ -2556,11 +2558,11 @@ $ curl -s "http://localhost:4000/names/search/xxxxxx" | jq '.'
 ]
 ```
 
-Via the `only` parameter, it's possible to search for a name in particular lifecycle state only. 
+Via the `only` parameter, it's possible to search for a name in particular lifecycle state only.
 The parameter can be repeated:
 
 ```
-$ curl -s "http://localhost:4000/names/search/aaa?only=auction&only=inactive" | jq '.' 
+$ curl -s "http://localhost:4000/names/search/aaa?only=auction&only=inactive" | jq '.'
 [
   {
     "active": false,
@@ -2635,7 +2637,7 @@ $ curl -s "http://localhost:4000/names/search/aaa?only=auction&only=inactive" | 
 This endpoint also accepts the `expand` parameter:
 
 ```
-$ curl -s "http://localhost:4000/names/search/asdf?expand" | jq '.'          
+$ curl -s "http://localhost:4000/names/search/asdf?expand" | jq '.'
 [
   {
     "active": false,
@@ -3228,7 +3230,7 @@ $ curl -s "http://localhost:4000/contracts/calls/forward?function=Oracle&limit=1
 Following ID fields are recognized: account_id, caller_id, channel_id, commitment_id,
  from_id, ga_id, initiator_id, name_id, oracle_id,
  owner_id, payer_id, recipient_id, responder_id, sender_id, to_id
-        
+
 Contract_id field is inaccessible via this lookup, as when present in query, it filters only contracts with given contract id and doesn't look into internal transaction's fields.
 
 ```
@@ -3269,10 +3271,10 @@ Besides specifying of scope and direction as with other streaming endpoints (via
 
 - kind:
 	At the moment, following kinds of transfers can be queried:
-	
+
 	- fee_spend_name (fee for placing bid to the name auction)
     - fee_refund_name (returned fee when the new name bid outbids the previous one in the name auction)
-	- fee_lock_name (locked fee of the name auction winning 
+	- fee_lock_name (locked fee of the name auction winning
 
 	- reward_oracle (reward for the operator of the oracle (on transaction basis))
     - reward_block (reward for the miner (on block basis))
