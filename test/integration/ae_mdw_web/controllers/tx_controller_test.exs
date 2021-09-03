@@ -5,6 +5,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
   alias AeMdw.Db.Util
   alias AeMdwWeb.TxController
 
+  @type_spend_tx "SpendTx"
+
   @default_limit 10
 
   @moduletag :integration
@@ -543,6 +545,34 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       |> check_response_data(rest, :no_prefix, limit)
     end
 
+    test "gets account transactions with name details using forward", %{conn: conn} do
+      limit = 10
+      criteria = "account"
+
+      <<_prefix::3-binary, rest::binary>> =
+        account_id = "ak_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM"
+
+      response = request_txs(conn, "forward", criteria, account_id, limit)
+
+      check_response_data(response["data"], rest, :no_prefix, limit)
+
+      assert Enum.any?(response["data"], fn block -> block["tx"]["type"] == @type_spend_tx end)
+
+      Enum.each(response["data"], fn block ->
+        spend_tx_recipient =
+          if block["tx"]["type"] == @type_spend_tx, do: block["tx"]["recipient_id"]
+
+        if nil != spend_tx_recipient and String.slice(spend_tx_recipient, 0..2) == "nm_" do
+          assert {:ok, name} = Validate.plain_name(spend_tx_recipient)
+          assert Map.get(block, "name") == name
+          assert Map.get(block, "account") == account_id
+        end
+      end)
+
+      get_response_from_next_page(conn, response)
+      |> check_response_data(rest, :no_prefix, limit)
+    end
+
     test "get transactions with direction=forward and given contract ID with default limit", %{
       conn: conn
     } do
@@ -586,6 +616,34 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       response = request_txs(conn, "backward", criteria, id, limit)
 
       check_response_data(response["data"], rest, :no_prefix, limit)
+
+      get_response_from_next_page(conn, response)
+      |> check_response_data(rest, :no_prefix, limit)
+    end
+
+    test "gets account transactions with name details using backward", %{conn: conn} do
+      limit = 25
+      criteria = "account"
+
+      <<_prefix::3-binary, rest::binary>> =
+        account_id = "ak_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM"
+
+      response = request_txs(conn, "backward", criteria, account_id, limit)
+
+      check_response_data(response["data"], rest, :no_prefix, limit)
+
+      assert Enum.any?(response["data"], fn block -> block["tx"]["type"] == @type_spend_tx end)
+
+      Enum.each(response["data"], fn block ->
+        spend_tx_recipient =
+          if block["tx"]["type"] == @type_spend_tx, do: block["tx"]["recipient_id"]
+
+        if nil != spend_tx_recipient and String.slice(spend_tx_recipient, 0..2) == "nm_" do
+          assert {:ok, name} = Validate.plain_name(spend_tx_recipient)
+          assert Map.get(block, "name") == name
+          assert Map.get(block, "account") == account_id
+        end
+      end)
 
       get_response_from_next_page(conn, response)
       |> check_response_data(rest, :no_prefix, limit)
