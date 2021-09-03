@@ -2,6 +2,7 @@ defmodule AeMdwWeb.TxController do
   use AeMdwWeb, :controller
   use PhoenixSwagger
 
+  alias AeMdw.Log
   alias AeMdw.Node, as: AE
   alias AeMdw.Validate
   alias AeMdw.Db.Model
@@ -72,6 +73,9 @@ defmodule AeMdwWeb.TxController do
         case Validate.plain_name(spend_tx_recipient) do
           {:ok, name} ->
             Map.merge(block, %{"name" => name, "account" => account})
+          _ ->
+            Log.warn("missing name for name hash #{spend_tx_recipient}")
+            block
         end
       else
         block
