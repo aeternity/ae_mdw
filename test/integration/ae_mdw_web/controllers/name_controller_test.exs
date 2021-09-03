@@ -1,4 +1,4 @@
-defmodule AeMdwWeb.NameControllerTest do
+defmodule Integration.AeMdwWeb.NameControllerTest do
   use AeMdwWeb.ConnCase
 
   alias AeMdw.Validate
@@ -10,10 +10,11 @@ defmodule AeMdwWeb.NameControllerTest do
   import AeMdw.Util
   import AeMdwWeb.Util
 
+  @moduletag :integration
+
   @default_limit 10
 
   describe "active_names" do
-    @tag :integration
     test "get active names with default limit", %{conn: conn} do
       conn = get(conn, "/names/active")
       response = json_response(conn, 200)
@@ -41,7 +42,6 @@ defmodule AeMdwWeb.NameControllerTest do
       assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
     end
 
-    @tag :integration
     test "get active names with limit=4", %{conn: conn} do
       limit = 4
       conn = get(conn, "/names/active?limit=#{limit}")
@@ -57,7 +57,6 @@ defmodule AeMdwWeb.NameControllerTest do
       assert Jason.encode!(response["data"]) == Jason.encode!(data)
     end
 
-    @tag :integration
     test "get active names with parameters by=name, direction=forward and limit=3", %{conn: conn} do
       by = "name"
       direction = "forward"
@@ -76,7 +75,6 @@ defmodule AeMdwWeb.NameControllerTest do
       assert Jason.encode!(response["data"]) == Jason.encode!(data)
     end
 
-    @tag :integration
     test "renders error when parameter by is invalid", %{conn: conn} do
       by = "invalid_by"
       conn = get(conn, "/names/active?by=#{by}")
@@ -84,7 +82,6 @@ defmodule AeMdwWeb.NameControllerTest do
       assert json_response(conn, 400) == %{"error" => "invalid query: by=#{by}"}
     end
 
-    @tag :integration
     test "renders error when parameter direction is invalid", %{conn: conn} do
       by = "name"
       direction = "invalid_direction"
@@ -95,7 +92,6 @@ defmodule AeMdwWeb.NameControllerTest do
   end
 
   describe "inactive_names" do
-    @tag :integration
     test "get inactive names with default limit", %{conn: conn} do
       conn = get(conn, "/names/inactive")
       response = json_response(conn, 200)
@@ -123,7 +119,6 @@ defmodule AeMdwWeb.NameControllerTest do
       assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
     end
 
-    @tag :integration
     test "get inactive names with limit=6", %{conn: conn} do
       limit = 6
       conn = get(conn, "/names/inactive?limit=#{limit}")
@@ -139,7 +134,6 @@ defmodule AeMdwWeb.NameControllerTest do
       assert Jason.encode!(response["data"]) == Jason.encode!(data)
     end
 
-    @tag :integration
     test "get inactive names with parameters by=name, direction=forward and limit=4", %{
       conn: conn
     } do
@@ -160,7 +154,6 @@ defmodule AeMdwWeb.NameControllerTest do
       assert Jason.encode!(response["data"]) == Jason.encode!(data)
     end
 
-    @tag :integration
     test "renders error when parameter by is invalid", %{conn: conn} do
       by = "invalid_by"
       conn = get(conn, "/names/inactive?by=#{by}")
@@ -168,7 +161,6 @@ defmodule AeMdwWeb.NameControllerTest do
       assert json_response(conn, 400) == %{"error" => "invalid query: by=#{by}"}
     end
 
-    @tag :integration
     test "renders error when parameter direction is invalid", %{conn: conn} do
       by = "name"
       direction = "invalid_direction"
@@ -179,7 +171,6 @@ defmodule AeMdwWeb.NameControllerTest do
   end
 
   describe "auctions" do
-    @tag :integration
     test "get auctions with default limit", %{conn: conn} do
       conn = get(conn, "/names/auctions")
       response = json_response(conn, 200)
@@ -194,7 +185,6 @@ defmodule AeMdwWeb.NameControllerTest do
       assert Jason.encode!(response["data"]) == Jason.encode!(data)
     end
 
-    @tag :integration
     test "get auctions with limit=2", %{conn: conn} do
       limit = 2
       conn = get(conn, "/names/auctions?limit=#{limit}")
@@ -210,7 +200,6 @@ defmodule AeMdwWeb.NameControllerTest do
       assert Jason.encode!(response["data"]) == Jason.encode!(data)
     end
 
-    @tag :integration
     test "get auctions with parameters by=expiration, direction=forward and limit=3", %{
       conn: conn
     } do
@@ -231,7 +220,6 @@ defmodule AeMdwWeb.NameControllerTest do
       assert Jason.encode!(response["data"]) == Jason.encode!(data)
     end
 
-    @tag :integration
     test "renders error when parameter by is invalid", %{conn: conn} do
       by = "invalid_by"
       conn = get(conn, "/names/auctions?by=#{by}")
@@ -239,7 +227,6 @@ defmodule AeMdwWeb.NameControllerTest do
       assert json_response(conn, 400) == %{"error" => "invalid query: by=#{by}"}
     end
 
-    @tag :integration
     test "renders error when parameter direction is invalid", %{conn: conn} do
       by = "name"
       direction = "invalid_direction"
@@ -250,7 +237,6 @@ defmodule AeMdwWeb.NameControllerTest do
   end
 
   describe "names" do
-    @tag :integration
     test "get active and inactive names, except those in auction, with default limit", %{
       conn: conn
     } do
@@ -280,7 +266,6 @@ defmodule AeMdwWeb.NameControllerTest do
       assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
     end
 
-    @tag :integration
     test "get active and inactive names, except those in auction, with limit=2", %{conn: conn} do
       limit = 2
       conn = get(conn, "/names?limit=#{limit}")
@@ -296,7 +281,6 @@ defmodule AeMdwWeb.NameControllerTest do
       assert Jason.encode!(response["data"]) == Jason.encode!(data)
     end
 
-    @tag :integration
     test "get active and inactive names, except those in auction, with parameters by=name, direction=forward and limit=4",
          %{conn: conn} do
       limit = 4
@@ -315,7 +299,6 @@ defmodule AeMdwWeb.NameControllerTest do
       assert Jason.encode!(response["data"]) == Jason.encode!(data)
     end
 
-    @tag :integration
     test "renders error when parameter by is invalid", %{conn: conn} do
       by = "invalid_by"
       conn = get(conn, "/names?by=#{by}")
@@ -323,7 +306,6 @@ defmodule AeMdwWeb.NameControllerTest do
       assert json_response(conn, 400) == %{"error" => "invalid query: by=#{by}"}
     end
 
-    @tag :integration
     test "renders error when parameter direction is invalid", %{conn: conn} do
       by = "name"
       direction = "invalid_direction"
@@ -334,7 +316,6 @@ defmodule AeMdwWeb.NameControllerTest do
   end
 
   describe "name" do
-    @tag :integration
     test "get name info by name", %{conn: conn} do
       name = "wwwbeaconoidcom.chain"
       conn = get(conn, "/name/#{name}")
@@ -344,7 +325,6 @@ defmodule AeMdwWeb.NameControllerTest do
                |> Jason.encode!()
     end
 
-    @tag :integration
     test "get name info by encoded hash ", %{conn: conn} do
       hash = "nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj"
       conn = get(conn, "/name/#{hash}")
@@ -354,7 +334,6 @@ defmodule AeMdwWeb.NameControllerTest do
                |> Jason.encode!()
     end
 
-    @tag :integration
     test "renders error when no such name is present", %{conn: conn} do
       name = "no--such--name--in--the--chain.chain"
       conn = get(conn, "/name/#{name}")
@@ -366,7 +345,6 @@ defmodule AeMdwWeb.NameControllerTest do
   end
 
   describe "pointers" do
-    @tag :integration
     test "get pointers for valid given name", %{conn: conn} do
       id = "cryptodao21ae.chain"
       conn = get(conn, "/name/pointers/#{id}")
@@ -375,7 +353,6 @@ defmodule AeMdwWeb.NameControllerTest do
                TestUtil.handle_input(fn -> get_poiters(Validate.plain_name!(id)) end)
     end
 
-    @tag :integration
     test "renders error when the name is missing", %{conn: conn} do
       id = "no--such--name--in--the--chain.chain"
       conn = get(conn, "/name/pointers/#{id}")
@@ -387,7 +364,6 @@ defmodule AeMdwWeb.NameControllerTest do
   end
 
   describe "pointees" do
-    @tag :integration
     test "get pointees for valid public key", %{conn: conn} do
       id = "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
       conn = get(conn, "/name/pointees/#{id}")
@@ -396,7 +372,6 @@ defmodule AeMdwWeb.NameControllerTest do
                TestUtil.handle_input(fn -> get_pointees(Validate.name_id!(id)) end)
     end
 
-    @tag :integration
     test "renders error when the key is invalid", %{conn: conn} do
       id = "ak_invalidkey"
       conn = get(conn, "/name/pointees/#{id}")
@@ -412,7 +387,6 @@ defmodule AeMdwWeb.NameControllerTest do
   end
 
   describe "owned_by" do
-    @tag :integration
     test "get name information for given acount/owner", %{conn: conn} do
       id = "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
       conn = get(conn, "/names/owned_by/#{id}")
@@ -424,7 +398,6 @@ defmodule AeMdwWeb.NameControllerTest do
                |> Jason.encode!()
     end
 
-    @tag :integration
     test "renders error when the key is invalid", %{conn: conn} do
       id = "ak_invalid_key"
       conn = get(conn, "/names/owned_by/#{id}")

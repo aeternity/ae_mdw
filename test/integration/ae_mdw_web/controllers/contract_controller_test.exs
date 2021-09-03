@@ -1,4 +1,4 @@
-defmodule AeMdwWeb.ContractControllerTest do
+defmodule Integration.AeMdwWeb.ContractControllerTest do
   use AeMdwWeb.ConnCase
   @moduletag :integration
 

@@ -1,4 +1,4 @@
-defmodule AeMdwWeb.TxControllerTest do
+defmodule Integration.AeMdwWeb.TxControllerTest do
   use AeMdwWeb.ConnCase
 
   alias AeMdw.Validate
@@ -7,9 +7,10 @@ defmodule AeMdwWeb.TxControllerTest do
 
   @default_limit 10
 
+  @moduletag :integration
+
   describe "tx" do
     # The test will work only for mainnet, because the tx hash is hardcoded and valid only for mainnet network
-    @tag :integration
     test "get a transaction by a given hash", %{conn: conn} do
       valid_hash = "th_zATv7B4RHS45GamShnWgjkvcrQfZUWQkZ8gk1RD4m2uWLJKnq"
       conn = get(conn, "/tx/#{valid_hash}")
@@ -17,7 +18,6 @@ defmodule AeMdwWeb.TxControllerTest do
       assert json_response(conn, 200)["hash"] == valid_hash
     end
 
-    @tag :integration
     test "renders errors when data is invalid", %{conn: conn} do
       invalid_hash = "some_invalid_hash"
       conn = get(conn, "/tx/#{invalid_hash}")
@@ -27,7 +27,6 @@ defmodule AeMdwWeb.TxControllerTest do
   end
 
   describe "txi" do
-    @tag :integration
     test "get a transaction by a given index", %{conn: conn} do
       valid_index = 10_000_000
       conn = get(conn, "/txi/#{valid_index}")
@@ -35,7 +34,6 @@ defmodule AeMdwWeb.TxControllerTest do
       assert json_response(conn, 200)["tx_index"] == valid_index
     end
 
-    @tag :integration
     test "renders errors when data is invalid", %{conn: conn} do
       invalid_index = -10_000_000
       conn = get(conn, "/txi/#{invalid_index}")
@@ -45,7 +43,6 @@ defmodule AeMdwWeb.TxControllerTest do
              }
     end
 
-    @tag :integration
     test "renders errors when data is not found", %{conn: conn} do
       index = 90_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000
       conn = get(conn, "/txi/#{index}")
@@ -55,7 +52,6 @@ defmodule AeMdwWeb.TxControllerTest do
   end
 
   describe "count" do
-    @tag :integration
     test "get count of transactions at the current height", %{conn: conn} do
       conn = get(conn, "/txs/count")
 
@@ -65,7 +61,6 @@ defmodule AeMdwWeb.TxControllerTest do
 
   describe "count_id" do
     # The test will work only for mainnet, because the account id is hardcoded and valid only for mainnet network
-    @tag :integration
     test "get transactions count and its type for given aeternity ID", %{conn: conn} do
       id = "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
       conn = get(conn, "/txs/count/#{id}")
@@ -74,7 +69,6 @@ defmodule AeMdwWeb.TxControllerTest do
                Validate.id!(id) |> TxController.id_counts() |> keys_to_string()
     end
 
-    @tag :integration
     test "renders errors when data is invalid", %{conn: conn} do
       invalid_id = "some_invalid_id"
       conn = get(conn, "/txs/count/#{invalid_id}")
@@ -84,7 +78,6 @@ defmodule AeMdwWeb.TxControllerTest do
   end
 
   describe "txs_direction only with direction" do
-    @tag :integration
     test "get transactions when direction=forward", %{conn: conn} do
       limit = 33
       conn = get(conn, "/txs/forward?limit=#{limit}")
@@ -108,7 +101,6 @@ defmodule AeMdwWeb.TxControllerTest do
       end)
     end
 
-    @tag :integration
     test "get transactions when direction=backward", %{conn: conn} do
       limit = 24
       conn = get(conn, "/txs/backward?limit=#{limit}")
@@ -133,7 +125,6 @@ defmodule AeMdwWeb.TxControllerTest do
       end)
     end
 
-    @tag :integration
     test "renders errors when direction is invalid", %{conn: conn} do
       invalid_direction = "back"
       conn = get(conn, "/txs/#{invalid_direction}")
@@ -144,7 +135,6 @@ defmodule AeMdwWeb.TxControllerTest do
 
   describe "txs_direction with given type parameter" do
     # Tests with direction is `forward` and different `type` parameters
-    @tag :integration
     test "get transactions when direction=forward and type parameter=channel_create", %{
       conn: conn
     } do
@@ -160,7 +150,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(transform_tx_type, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=forward and type parameter=spend", %{conn: conn} do
       limit = 15
       type = "spend"
@@ -174,7 +163,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(transform_tx_type, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=forward and type parameter=name_claim", %{conn: conn} do
       limit = 19
       type = "name_claim"
@@ -188,7 +176,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(transform_tx_type, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=forward and type parameter=name_preclaim with default limit",
          %{conn: conn} do
       type = "name_preclaim"
@@ -203,7 +190,6 @@ defmodule AeMdwWeb.TxControllerTest do
     end
 
     # Tests when direction is `backward` and different `type` parameters
-    @tag :integration
     test "get transactions when direction=backward and type parameter=spend with default limit",
          %{
            conn: conn
@@ -219,7 +205,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(transform_tx_type, @default_limit)
     end
 
-    @tag :integration
     test "get transactions when direction=backward and type parameter=contract_create", %{
       conn: conn
     } do
@@ -235,7 +220,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(transform_tx_type, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=backward and type parameter=oracle_query", %{conn: conn} do
       limit = 15
       type = "oracle_query"
@@ -249,7 +233,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(transform_tx_type, limit)
     end
 
-    @tag :integration
     test "renders errors when type parameter is invalid", %{conn: conn} do
       invalid_type = "some_invalid_type"
       conn = get(conn, "/txs/forward?type=#{invalid_type}")
@@ -260,7 +243,6 @@ defmodule AeMdwWeb.TxControllerTest do
 
   describe "txs_direction with given type_group parameter" do
     # Tests when direction is `forward` and different `type_group` parameters
-    @tag :integration
     test "get transactions when direction=forward and type_group parameter=oracle", %{conn: conn} do
       limit = 18
       type_group = "oracle"
@@ -274,7 +256,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(txs_types_by_tx_group, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=forward and type_group parameter=contract", %{
       conn: conn
     } do
@@ -290,7 +271,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(txs_types_by_tx_group, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=forward and type_group parameter=ga", %{conn: conn} do
       limit = 2
       type_group = "ga"
@@ -304,7 +284,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(txs_types_by_tx_group, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=forward and type_group parameter=channel", %{conn: conn} do
       limit = 22
       type_group = "channel"
@@ -319,7 +298,6 @@ defmodule AeMdwWeb.TxControllerTest do
     end
 
     # Tests when direction is `backward` and different `type_group` parameters
-    @tag :integration
     test "get transactions when direction=backward and type_group parameter=channel", %{
       conn: conn
     } do
@@ -335,7 +313,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(txs_types_by_tx_group, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=backward and type_group parameter=oracle with default limit",
          %{conn: conn} do
       type_group = "oracle"
@@ -350,7 +327,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(txs_types_by_tx_group, @default_limit)
     end
 
-    @tag :integration
     test "get transactions when direction=backward and type_group parameter=contract", %{
       conn: conn
     } do
@@ -366,7 +342,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(txs_types_by_tx_group, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=backward and type_group parameter=ga", %{conn: conn} do
       limit = 3
       type_group = "ga"
@@ -380,7 +355,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(txs_types_by_tx_group, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=backward and type_group parameter=name", %{conn: conn} do
       limit = 35
       type_group = "name"
@@ -394,7 +368,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(txs_types_by_tx_group, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=backward and type_group parameter=spend", %{conn: conn} do
       limit = 33
       type_group = "spend"
@@ -408,7 +381,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(txs_types_by_tx_group, limit)
     end
 
-    @tag :integration
     test "renders errors when type_group parameter is invalid", %{conn: conn} do
       invalid_type_group = "some_invalid_type_group"
       conn = get(conn, "/txs/backward?type_group=#{invalid_type_group}")
@@ -421,7 +393,6 @@ defmodule AeMdwWeb.TxControllerTest do
 
   describe "txs_direction with given type and type_group parameters" do
     # Tests when direction is `forward` and different `type` and `type_group` parameters
-    @tag :integration
     test "get transactions when direction=forward, type=name_claim and type_group=oracle", %{
       conn: conn
     } do
@@ -439,7 +410,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(txs_types_by_tx_group, transform_tx_type, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=forward, type=contract_create and type_group=channel",
          %{
            conn: conn
@@ -458,7 +428,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(txs_types_by_tx_group, transform_tx_type, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=forward, type=spend and type_group=ga", %{conn: conn} do
       type_group = "ga"
       type = "spend"
@@ -479,7 +448,6 @@ defmodule AeMdwWeb.TxControllerTest do
     end
 
     # Tests when direction `backward` and different `type` and `type_group` parameters
-    @tag :integration
     test "get transactions when direction=backward, type=contract_call and type_group=oracle", %{
       conn: conn
     } do
@@ -497,7 +465,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(txs_types_by_tx_group, transform_tx_type, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=backward, type=channel_close_solo and type_group=name",
          %{
            conn: conn
@@ -516,7 +483,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(txs_types_by_tx_group, transform_tx_type, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=backward, type=oracle_register and type_group=spend with default limit",
          %{conn: conn} do
       type_group = "spend"
@@ -538,7 +504,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(txs_types_by_tx_group, transform_tx_type, @default_limit)
     end
 
-    @tag :integration
     test "renders errors when type_group parameter is invalid", %{conn: conn} do
       invalid_type_group = "some_invalid_type_group"
       type = "spend"
@@ -549,7 +514,6 @@ defmodule AeMdwWeb.TxControllerTest do
              }
     end
 
-    @tag :integration
     test "renders errors when type parameter is invalid", %{conn: conn} do
       type_group = "channel"
       invalid_type = "some_invalid_type"
@@ -564,7 +528,6 @@ defmodule AeMdwWeb.TxControllerTest do
   # These tests will work only for mainnet, because of the hardcoded IDs and they are valid only for mainnet network
   describe "txs_direction with generic id parameter" do
     # Tests when direction `forward` and different `id` parameters
-    @tag :integration
     test "get transactions when direction=forward and given account ID", %{conn: conn} do
       limit = 13
       criteria = "account"
@@ -580,7 +543,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(rest, :no_prefix, limit)
     end
 
-    @tag :integration
     test "get transactions with direction=forward and given contract ID with default limit", %{
       conn: conn
     } do
@@ -597,7 +559,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(rest, :no_prefix, @default_limit)
     end
 
-    @tag :integration
     test "get transactions with direction=forward and given oracle ID with default limit", %{
       conn: conn
     } do
@@ -615,7 +576,6 @@ defmodule AeMdwWeb.TxControllerTest do
     end
 
     # Tests when direction `backward` and different `id` parameters
-    @tag :integration
     test "get transactions when direction=backward and given account ID", %{conn: conn} do
       limit = 3
       criteria = "account"
@@ -631,7 +591,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(rest, :no_prefix, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=backward and given contract ID with default limit", %{
       conn: conn
     } do
@@ -648,7 +607,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(rest, :no_prefix, @default_limit)
     end
 
-    @tag :integration
     test "get transactions when direction=backward and given oracle ID with default limit", %{
       conn: conn
     } do
@@ -665,7 +623,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(rest, :no_prefix, @default_limit)
     end
 
-    @tag :integration
     test "renders errors when direction=forward and invalid ID", %{conn: conn} do
       id = "some_invalid_key"
       conn = get(conn, "/txs/forward?account=#{id}")
@@ -673,7 +630,6 @@ defmodule AeMdwWeb.TxControllerTest do
       assert json_response(conn, 400) == %{"error" => "invalid id: #{id}"}
     end
 
-    @tag :integration
     test "renders errors when direction=forward and the ID is valid, but not pass correctly ",
          %{conn: conn} do
       id = "ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
@@ -687,7 +643,6 @@ defmodule AeMdwWeb.TxControllerTest do
   # These tests will work only for mainnet, because of the hardcoded IDs and they are valid only for mainnet network
   describe "txs_direction with transaction fields" do
     # Tests when direction is `forward`, tx_type and field parameters
-    @tag :integration
     test "get transactions when direction=forward, tx_type=contract_call and field=caller_id ", %{
       conn: conn
     } do
@@ -704,7 +659,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(field, id, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=forward, tx_type=channel_create and field=initiator_id ",
          %{conn: conn} do
       limit = 5
@@ -720,7 +674,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(field, id, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=forward, tx_type=ga_attach and field=owner_id ",
          %{conn: conn} do
       limit = 1
@@ -733,7 +686,6 @@ defmodule AeMdwWeb.TxControllerTest do
       check_response_data(response["data"], field, id, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=forward, tx_type=spend and field=recipient_id ",
          %{conn: conn} do
       tx_type = "spend"
@@ -748,7 +700,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(field, id, @default_limit)
     end
 
-    @tag :integration
     test "get transactions when direction=forward, tx_type=oracle_query and field=sender_id ",
          %{conn: conn} do
       tx_type = "oracle_query"
@@ -764,7 +715,6 @@ defmodule AeMdwWeb.TxControllerTest do
     end
 
     # Tests with direction `backward`, tx_type and field parameters
-    @tag :integration
     test "get transactions when direction=backward, tx_type=channel_deposit and field=channel_id ",
          %{
            conn: conn
@@ -779,7 +729,6 @@ defmodule AeMdwWeb.TxControllerTest do
       check_response_data(response["data"], field, id, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=backward, tx_type=name_update and field=name_id ", %{
       conn: conn
     } do
@@ -796,7 +745,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(field, id, limit)
     end
 
-    @tag :integration
     test "renders errors when direction=forward, tx_type=oracle_query and given transaction field is wrong ",
          %{conn: conn} do
       tx_type = "oracle_query"
@@ -807,7 +755,6 @@ defmodule AeMdwWeb.TxControllerTest do
       assert json_response(conn, 400) == %{"error" => "invalid transaction field: :#{field}"}
     end
 
-    @tag :integration
     test "renders errors when direction=forward, tx_type and field are invalid ",
          %{conn: conn} do
       tx_type = "invalid"
@@ -821,7 +768,6 @@ defmodule AeMdwWeb.TxControllerTest do
 
   # These tests will work only for mainnet, because of the hardcoded IDs and they are valid only for mainnet network
   describe "txs_direction with mixing of query parameters" do
-    @tag :integration
     test "get transactions when direction=forward, where both accounts contains ", %{
       conn: conn
     } do
@@ -844,7 +790,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(id_1, id_2, :with_prefix, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=forward between sender and recipient ", %{
       conn: conn
     } do
@@ -867,7 +812,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(sender_id, recipient_id, :with_prefix, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=forward which are contract related transactions for account ",
          %{
            conn: conn
@@ -900,7 +844,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(account, txs_types_by_tx_group, :with_prefix, limit)
     end
 
-    @tag :integration
     test "get transactions when direction=backward which are oracle_register related transactions for account",
          %{
            conn: conn
@@ -922,7 +865,6 @@ defmodule AeMdwWeb.TxControllerTest do
   end
 
   describe "txs_range bounded by generation" do
-    @tag :integration
     test "get transactions when scope=gen at certain height and continuation", %{conn: conn} do
       height = 273_000
 
@@ -934,7 +876,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(height, @default_limit)
     end
 
-    @tag :integration
     test "get transactions when scope=gen at certain range and continuation", %{conn: conn} do
       height_from = 197_000
       height_to = 197_003
@@ -948,7 +889,6 @@ defmodule AeMdwWeb.TxControllerTest do
       |> check_response_data(height_from, height_to, limit)
     end
 
-    @tag :integration
     test "renders errors when scope=gen with a valid range and random access", %{
       conn: conn
     } do
@@ -962,7 +902,6 @@ defmodule AeMdwWeb.TxControllerTest do
       assert json_response(conn, 400) == %{"error" => "random access not supported"}
     end
 
-    @tag :integration
     test "renders errors when is passed invalid scope", %{conn: conn} do
       height_from = 223_000
       height_to = 223_007
@@ -972,7 +911,6 @@ defmodule AeMdwWeb.TxControllerTest do
       assert json_response(conn, 400) == %{"error" => "invalid scope: invalid_scope"}
     end
 
-    @tag :integration
     test "renders errors when is passed invalid range", %{conn: conn} do
       invalid_range = "invalid_range"
 
@@ -983,7 +921,6 @@ defmodule AeMdwWeb.TxControllerTest do
   end
 
   describe "txs_range bounded by transaction index" do
-    @tag :integration
     test "get transactions when scope=txi and transaction index", %{conn: conn} do
       index = 605_999
 
@@ -996,7 +933,6 @@ defmodule AeMdwWeb.TxControllerTest do
       end)
     end
 
-    @tag :integration
     test "get transactions when scope=txi and in a range transaction indexes", %{conn: conn} do
       index_from = 700_000
       index_to = 700_025
@@ -1013,7 +949,6 @@ defmodule AeMdwWeb.TxControllerTest do
       end)
     end
 
-    @tag :integration
     test "renders errors when is passed invalid index", %{conn: conn} do
       invalid_index = "invalid_index"
 

@@ -1,8 +1,9 @@
-defmodule AeMdwWeb.UtilControllerTest do
+defmodule Integration.AeMdwWeb.UtilControllerTest do
   use AeMdwWeb.ConnCase
 
+  @moduletag :integration
+
   describe "status" do
-    @tag :integration
     test "get middleware status", %{conn: conn} do
       import AeMdw.Db.Util
 
