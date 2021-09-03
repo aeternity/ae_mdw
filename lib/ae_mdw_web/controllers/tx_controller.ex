@@ -64,8 +64,8 @@ defmodule AeMdwWeb.TxController do
   #
   # Private functions
   #
-  defp add_spendtx_details(data_txs, %{"account" => account}) do
-    Enum.map(data_txs, fn block ->
+  defp add_spendtx_details(response_data, %{"account" => account}) do
+    Enum.map(response_data, fn block ->
       spend_tx_recipient =
         if block["tx"]["type"] == @type_spend_tx, do: block["tx"]["recipient_id"]
 
@@ -74,7 +74,7 @@ defmodule AeMdwWeb.TxController do
           {:ok, name} ->
             Map.merge(block, %{"name" => name, "account" => account})
 
-          _ ->
+          {:error, _reason} ->
             Log.warn("missing name for name hash #{spend_tx_recipient}")
             block
         end
@@ -84,7 +84,7 @@ defmodule AeMdwWeb.TxController do
     end)
   end
 
-  defp add_spendtx_details(data_txs, _), do: data_txs
+  defp add_spendtx_details(data_txs, _params), do: data_txs
 
   defp read_tx_hash(tx_hash) do
     with <<_::256>> = mb_hash <- :aec_db.find_tx_location(tx_hash),
