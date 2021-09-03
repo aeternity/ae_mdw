@@ -73,6 +73,7 @@ defmodule AeMdwWeb.TxController do
         case Validate.plain_name(spend_tx_recipient) do
           {:ok, name} ->
             Map.merge(block, %{"name" => name, "account" => account})
+
           _ ->
             Log.warn("missing name for name hash #{spend_tx_recipient}")
             block
