@@ -69,41 +69,46 @@ defmodule AeMdwWeb.TxController do
   # Private functions
   #
   defp add_spendtx_details(response_data, %{"account" => _account}) do
-    Enum.map(response_data, fn block ->
-      spend_tx_recipient =
-        if block["tx"]["type"] == @type_spend_tx, do: block["tx"]["recipient_id"]
+    Enum.map(response_data, fn %{"block_height" => block_height, "tx" => block_tx} = block ->
+      spend_tx_recipient = (block_tx["type"] == @type_spend_tx && block_tx["recipient_id"]) || nil
+      add_details? = nil != spend_tx_recipient and String.slice(spend_tx_recipient, 0..2) == "nm_"
 
-      if nil != spend_tx_recipient and String.slice(spend_tx_recipient, 0..2) == "nm_" do
-        with {:ok, plain_name} <- Validate.plain_name(spend_tx_recipient),
-             {:ok, owner} <- get_name_owner(plain_name) do
-          recipient = %{"name" => plain_name, "account" => owner}
-
-          %{block | "tx" => Map.put(block["tx"], "recipient", recipient)}
-        else
-          {:error, {:owner_not_found, plain_name}} ->
-            Log.warn("missing active or inactive for name #{plain_name}")
-            block
-
-          {:error, _reason} ->
-            Log.warn("missing name for name hash #{spend_tx_recipient}")
-            block
-        end
+      if add_details? do
+        update_in(block, ["tx"], fn block_tx ->
+          Map.merge(block_tx, get_recipient(spend_tx_recipient, block_height))
+        end)
       else
         block
       end
     end)
   end
 
-  defp add_spendtx_details(data_txs, _params), do: data_txs
+  defp add_spendtx_details(response_data, _params), do: response_data
 
-  defp get_name_owner(plain_name) do
+  defp get_recipient(spend_tx_recipient, block_height) do
+    with {:ok, plain_name} <- Validate.plain_name(spend_tx_recipient),
+         {:ok, owner} <- get_name_owner(plain_name, block_height) do
+      %{"recipient" => %{"name" => plain_name, "account" => owner}}
+    else
+      {:error, {:owner_not_found, plain_name}} ->
+        Log.warn("missing active or inactive for name #{plain_name}")
+        %{}
+
+      {:error, _reason} ->
+        Log.warn("missing name for name hash #{spend_tx_recipient}")
+        %{}
+    end
+  end
+
+  defp get_name_owner(plain_name, on_height) do
     case Name.locate(plain_name) do
       {nil, _module} ->
         Log.warn("missing name for plain name #{plain_name}")
         {:error, {:owner_not_found, plain_name}}
 
-      {name, _module} ->
-        owner_pk = Model.name(name, :owner)
+      {m_name, _module} ->
+        {:id, :account, owner_pk} = Name.ownership_at(m_name, on_height)
+
         {:ok, Enc.encode(:account_pubkey, owner_pk)}
     end
   end

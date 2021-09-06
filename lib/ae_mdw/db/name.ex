@@ -123,6 +123,26 @@ defmodule AeMdw.Db.Name do
     end
   end
 
+  def ownership_at(m_name, name_height) do
+    [{{_, _}, last_claim_txi} | _] = Model.name(m_name, :claims)
+
+    case Model.name(m_name, :transfers) do
+      [] ->
+        %{tx: %{account_id: owner_on_height}} = Format.to_raw_map(read_tx!(last_claim_txi))
+        owner_on_height
+
+      transfers ->
+        transfer_txi =
+          transfers
+          |> Enum.reverse()
+          |> Enum.find(fn {{transfer_height, _}, transfer_txi} ->
+              if transfer_height >= name_height, do: transfer_txi
+            end)
+        %{tx: %{recipient_id: owner_on_height}} = Format.to_raw_map(read_tx!(transfer_txi))
+        owner_on_height
+    end
+  end
+
   def revoke_or_expire_height(nil = _revoke, expire),
     do: expire
 
