@@ -6,11 +6,15 @@ defmodule AeMdwWeb.TxController do
   alias AeMdw.Node, as: AE
   alias AeMdw.Validate
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Name
   alias AeMdw.Db.Format
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdwWeb.Continuation, as: Cont
   alias AeMdwWeb.SwaggerParameters
+  alias :aeser_api_encoder, as: Enc
+
+  require Logger
   require Model
 
   import AeMdwWeb.Util
@@ -64,15 +68,21 @@ defmodule AeMdwWeb.TxController do
   #
   # Private functions
   #
-  defp add_spendtx_details(response_data, %{"account" => account}) do
+  defp add_spendtx_details(response_data, %{"account" => _account}) do
     Enum.map(response_data, fn block ->
       spend_tx_recipient =
         if block["tx"]["type"] == @type_spend_tx, do: block["tx"]["recipient_id"]
 
       if nil != spend_tx_recipient and String.slice(spend_tx_recipient, 0..2) == "nm_" do
-        case Validate.plain_name(spend_tx_recipient) do
-          {:ok, name} ->
-            Map.merge(block, %{"name" => name, "account" => account})
+        with {:ok, plain_name} <- Validate.plain_name(spend_tx_recipient),
+             {:ok, owner} <- get_name_owner(plain_name) do
+          recipient = %{"name" => plain_name, "account" => owner}
+
+          %{block | "tx" => Map.put(block["tx"], "recipient", recipient)}
+        else
+          {:error, {:owner_not_found, plain_name}} ->
+            Log.warn("missing active or inactive for name #{plain_name}")
+            block
 
           {:error, _reason} ->
             Log.warn("missing name for name hash #{spend_tx_recipient}")
@@ -85,6 +95,17 @@ defmodule AeMdwWeb.TxController do
   end
 
   defp add_spendtx_details(data_txs, _params), do: data_txs
+
+  defp get_name_owner(plain_name) do
+    case Name.locate(plain_name) do
+      {nil, _module} ->
+        Log.warn("missing name for plain name #{plain_name}")
+        {:error, {:owner_not_found, plain_name}}
+      {name, _module} ->
+        owner_pk = Model.name(name, :owner)
+        {:ok, Enc.encode(:account_pubkey, owner_pk)}
+    end
+  end
 
   defp read_tx_hash(tx_hash) do
     with <<_::256>> = mb_hash <- :aec_db.find_tx_location(tx_hash),

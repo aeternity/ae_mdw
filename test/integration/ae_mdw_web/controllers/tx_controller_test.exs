@@ -3,7 +3,12 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
   alias AeMdw.Validate
   alias AeMdw.Db.Util
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.Name
   alias AeMdwWeb.TxController
+  alias :aeser_api_encoder, as: Enc
+
+  require Model
 
   @type_spend_tx "SpendTx"
 
@@ -563,9 +568,11 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
           if block["tx"]["type"] == @type_spend_tx, do: block["tx"]["recipient_id"]
 
         if nil != spend_tx_recipient and String.slice(spend_tx_recipient, 0..2) == "nm_" do
-          assert {:ok, name} = Validate.plain_name(spend_tx_recipient)
-          assert Map.get(block, "name") == name
-          assert Map.get(block, "account") == account_id
+          assert {:ok, plain_name} = Validate.plain_name(spend_tx_recipient)
+          assert recipient = block["tx"]["recipient"]
+          assert recipient["name"] == plain_name
+          name_ownker_pk = Name.locate(plain_name) |> elem(0) |> Model.name(:owner)
+          assert recipient["account"] == Enc.encode(:account_pubkey, name_ownker_pk)
         end
       end)
 
@@ -639,9 +646,11 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
           if block["tx"]["type"] == @type_spend_tx, do: block["tx"]["recipient_id"]
 
         if nil != spend_tx_recipient and String.slice(spend_tx_recipient, 0..2) == "nm_" do
-          assert {:ok, name} = Validate.plain_name(spend_tx_recipient)
-          assert Map.get(block, "name") == name
-          assert Map.get(block, "account") == account_id
+          assert {:ok, plain_name} = Validate.plain_name(spend_tx_recipient)
+          assert recipient = block["tx"]["recipient"]
+          assert recipient["name"] == plain_name
+          name_ownker_pk = Name.locate(plain_name) |> elem(0) |> Model.name(:owner)
+          assert recipient["account"] == Enc.encode(:account_pubkey, name_ownker_pk)
         end
       end)
 
