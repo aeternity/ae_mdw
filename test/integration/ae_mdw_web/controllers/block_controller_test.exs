@@ -72,7 +72,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
       mbi = 4999
       conn = get(conn, "/blocki/#{kbi}/#{mbi}")
 
-      assert json_response(conn, 400) ==
+      assert json_response(conn, 404) ==
                %{"error" => TestUtil.handle_input(fn -> get_blocki(conn.params) end)}
     end
 
