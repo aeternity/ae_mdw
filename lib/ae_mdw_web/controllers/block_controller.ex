@@ -142,22 +142,26 @@ defmodule AeMdwWeb.BlockController do
     end
   end
 
-  defp put_mbs_from_db(kb_json, mb_jsons, _sort_mbs = false) do
-    mb_jsons = db_read_mbs_into_map(mb_jsons)
-    Map.put(kb_json, "micro_blocks", mb_jsons)
+  defp put_mbs_from_db(kb_json, mbs_jsons, _sort_mbs = false) do
+    mbs_jsons = db_read_mbs_into_map(mbs_jsons)
+    Map.put(kb_json, "micro_blocks", mbs_jsons)
   end
 
-  defp put_mbs_from_db(kb_json, mb_jsons, true) do
-    mb_jsons =
-      mb_jsons
+  defp put_mbs_from_db(kb_json, mbs_jsons, true) do
+    mbs_jsons =
+      mbs_jsons
       |> db_read_mbs_into_list()
       |> sort_mbs_by_time()
 
-    Map.put(kb_json, "micro_blocks", mb_jsons)
+    Map.put(kb_json, "micro_blocks", mbs_jsons)
   end
 
-  defp db_read_mbs_into_map(mb_jsons) do
-    for %{"hash" => mb_hash} = mb_json <- mb_jsons, into: %{} do
+  defp db_read_mbs_into_map(mbs_jsons), do: db_read_mbs(mbs_jsons, Map.new())
+
+  defp db_read_mbs_into_list(mbs_jsons), do: db_read_mbs(mbs_jsons, [])
+
+  defp db_read_mbs(mbs_jsons, list_or_map) do
+    for %{"hash" => mb_hash} = mb_json <- mbs_jsons, into: list_or_map do
       micro = :aec_db.get_block(Validate.id!(mb_hash))
       header = :aec_blocks.to_header(micro)
 
@@ -168,22 +172,12 @@ defmodule AeMdwWeb.BlockController do
         end
 
       mb_json = Map.put(mb_json, "transactions", txs_json)
-      {mb_hash, mb_json}
-    end
-  end
 
-  defp db_read_mbs_into_list(mb_jsons) do
-    for %{"hash" => mb_hash} = mb_json <- mb_jsons do
-      micro = :aec_db.get_block(Validate.id!(mb_hash))
-      header = :aec_blocks.to_header(micro)
-
-      txs_json =
-        for tx <- :aec_blocks.txs(micro), into: %{} do
-          %{"hash" => tx_hash} = tx_json = :aetx_sign.serialize_for_client(header, tx)
-          {tx_hash, tx_json}
-        end
-
-      Map.put(mb_json, "transactions", txs_json)
+      if list_or_map == [] do
+        mb_json
+      else
+        {mb_hash, mb_json}
+      end
     end
   end
 
