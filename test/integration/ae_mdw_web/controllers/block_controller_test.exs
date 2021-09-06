@@ -259,6 +259,46 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
       assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
     end
 
+    test "get blocks and sorted microblocks in a single generation", %{conn: conn} do
+      range = "471542-471542"
+      count = 1
+      conn = get(conn, "/v2/blocks/#{range}")
+      response = json_response(conn, 200)
+
+      assert Enum.count(response["data"]) == count
+
+      Enum.each(response["data"], fn %{"micro_blocks" => mbs} ->
+        assert mbs == Enum.sort_by(mbs, fn %{"time" => time} -> time end)
+      end)
+
+      assert nil == response["next"]
+    end
+
+    test "get blocks and sorted microblocks in multiple generations", %{conn: conn} do
+      range = "471542-471563"
+      limit = 10
+      conn = get(conn, "/v2/blocks/#{range}")
+      response = json_response(conn, 200)
+
+      assert Enum.count(response["data"]) == limit
+
+      Enum.each(response["data"], fn %{"micro_blocks" => mbs} ->
+        assert mbs == Enum.sort_by(mbs, fn %{"time" => time} -> time end)
+      end)
+
+      conn_next = get(conn, response["next"])
+      response_next = json_response(conn_next, 200)
+
+      {:ok, next_data, _has_cont?} =
+        Cont.response_data(
+          {BlockController, :blocks_v2, %{}, conn.assigns.scope, limit},
+          limit
+        )
+
+      assert Enum.count(response_next["data"]) == limit
+      assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
+    end
+
     test "renders error when the range is invalid", %{conn: conn} do
       range = "invalid"
       conn = get(conn, "/blocks/#{range}")
