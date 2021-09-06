@@ -136,8 +136,9 @@ defmodule AeMdw.Db.Name do
           transfers
           |> Enum.reverse()
           |> Enum.find(fn {{transfer_height, _}, transfer_txi} ->
-              if transfer_height >= name_height, do: transfer_txi
-            end)
+            if transfer_height >= name_height, do: transfer_txi
+          end)
+
         %{tx: %{recipient_id: owner_on_height}} = Format.to_raw_map(read_tx!(transfer_txi))
         owner_on_height
     end
