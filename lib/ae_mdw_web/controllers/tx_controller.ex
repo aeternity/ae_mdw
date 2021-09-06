@@ -101,6 +101,7 @@ defmodule AeMdwWeb.TxController do
       {nil, _module} ->
         Log.warn("missing name for plain name #{plain_name}")
         {:error, {:owner_not_found, plain_name}}
+
       {name, _module} ->
         owner_pk = Model.name(name, :owner)
         {:ok, Enc.encode(:account_pubkey, owner_pk)}
