@@ -71,7 +71,7 @@ defmodule AeMdwWeb.TxController do
   defp add_spendtx_details(response_data, %{"account" => _account}) do
     Enum.map(response_data, fn %{"block_height" => block_height, "tx" => block_tx} = block ->
       spend_tx_recipient = (block_tx["type"] == @type_spend_tx && block_tx["recipient_id"]) || nil
-      add_details? = nil != spend_tx_recipient and String.slice(spend_tx_recipient, 0..2) == "nm_"
+      add_details? = String.starts_with?(spend_tx_recipient || "", "nm_")
 
       if add_details? do
         update_in(block, ["tx"], fn block_tx ->
@@ -107,8 +107,7 @@ defmodule AeMdwWeb.TxController do
         {:error, {:owner_not_found, plain_name}}
 
       {m_name, _module} ->
-        {:id, :account, owner_pk} = Name.ownership_at(m_name, on_height)
-
+        owner_pk = Name.ownership_at(m_name, on_height)
         {:ok, Enc.encode(:account_pubkey, owner_pk)}
     end
   end

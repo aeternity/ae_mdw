@@ -1,10 +1,11 @@
 defmodule Integration.AeMdwWeb.TxControllerTest do
   use AeMdwWeb.ConnCase
+  @moduletag :integration
 
   alias AeMdw.Validate
-  alias AeMdw.Db.Util
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
+  alias AeMdw.Db.Util
   alias AeMdwWeb.TxController
   alias :aeser_api_encoder, as: Enc
 
@@ -13,8 +14,6 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
   @type_spend_tx "SpendTx"
 
   @default_limit 10
-
-  @moduletag :integration
 
   describe "tx" do
     # The test will work only for mainnet, because the tx hash is hardcoded and valid only for mainnet network
@@ -578,6 +577,38 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       get_response_from_next_page(conn, response)
       |> check_response_data(rest, :no_prefix, limit)
+    end
+
+    test "gets account transactions with name details after transfered once", %{conn: conn} do
+      limit = 100
+      criteria = "account"
+      account_id = "ak_u2gFpRN5nABqfqb5Q3BkuHCf8c7ytcmqovZ6VyKwxmVNE5jqa"
+
+      response = request_txs(conn, "forward", criteria, account_id, limit)
+
+      assert blocks_with_nm =
+               Enum.filter(response["data"], fn %{"tx" => tx} ->
+                 tx["type"] == @type_spend_tx and
+                   String.starts_with?(tx["recipient_id"] || "", "nm_")
+               end)
+
+      Enum.each(blocks_with_nm, fn %{"block_height" => block_height, "tx" => tx} ->
+        assert {:ok, plain_name} = Validate.plain_name(tx["recipient_id"])
+        assert recipient = tx["recipient"]
+        assert recipient["name"] == plain_name
+
+        {m_name, _module} = Name.locate(plain_name)
+        name_transfers = Model.name(m_name, :transfers)
+
+        if length(name_transfers) == 1 do
+          [{{name_transfer_height, _}, _transfer_txi}] = name_transfers
+
+          assert name_transfer_height < block_height
+
+          assert recipient["account"] ==
+                   Enc.encode(:account_pubkey, Model.name(m_name, :owner))
+        end
+      end)
     end
 
     test "get transactions with direction=forward and given contract ID with default limit", %{
