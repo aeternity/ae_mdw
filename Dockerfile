@@ -1,4 +1,4 @@
-FROM elixir:1.10
+FROM elixir:1.10.4
 # Add required files to download and compile only the dependencies
 
 # Install other required dependencies
@@ -17,7 +17,7 @@ ENV NODEDIR=/home/aeternity/node/local/rel/aeternity
 RUN mkdir -p ./local/rel/aeternity/data/mnesia
 RUN curl -s https://api.github.com/repos/aeternity/aeternity/releases/latest | \
        jq '.assets[1].browser_download_url' | \
-       xargs curl -L --output aeternity.tar.gz  && tar -C ./local/rel/aeternity -xf aeternity.tar.gz 
+       xargs curl -L --output aeternity.tar.gz  && tar -C ./local/rel/aeternity -xf aeternity.tar.gz
 
 RUN chmod +x ${NODEDIR}/bin/aeternity
 RUN cp -r ./local/rel/aeternity/lib local/
