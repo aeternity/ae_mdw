@@ -550,33 +550,15 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     end
 
     test "gets account transactions with name details using forward", %{conn: conn} do
-      limit = 10
-      criteria = "account"
-
-      <<_prefix::3-binary, rest::binary>> =
-        account_id = "ak_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM"
-
-      response = request_txs(conn, "forward", criteria, account_id, limit)
-
-      check_response_data(response["data"], rest, :no_prefix, limit)
-
-      assert Enum.any?(response["data"], fn block -> block["tx"]["type"] == @type_spend_tx end)
-
-      Enum.each(response["data"], fn block ->
-        spend_tx_recipient =
-          if block["tx"]["type"] == @type_spend_tx, do: block["tx"]["recipient_id"]
-
-        if nil != spend_tx_recipient and String.slice(spend_tx_recipient, 0..2) == "nm_" do
-          assert {:ok, plain_name} = Validate.plain_name(spend_tx_recipient)
-          assert recipient = block["tx"]["recipient"]
-          assert recipient["name"] == plain_name
-          name_ownker_pk = Name.locate(plain_name) |> elem(0) |> Model.name(:owner)
-          assert recipient["account"] == Enc.encode(:account_pubkey, name_ownker_pk)
-        end
-      end)
-
-      get_response_from_next_page(conn, response)
-      |> check_response_data(rest, :no_prefix, limit)
+      # "recipient":{"account":"ak_2ZyuUxyfbkNbKZnGStgkCQuRwCPQWducVipxE4Ci7RU8UuTiry","name":"katie.chain"}
+      # "recipient_id":"nm_2mcA6LRcH3bjJvs4qTDRGkN9hCyMj9da83gU5WKy9u1EmrExar"
+      # "tx_index":7090883
+      assert_recipient_for_spend_tx_with_name(
+        conn,
+        "forward",
+        "ak_2ZyuUxyfbkNbKZnGStgkCQuRwCPQWducVipxE4Ci7RU8UuTiry",
+        5
+      )
     end
 
     test "gets account transactions and recipient details on a name with multiple updates (two before spend_tx)",
@@ -587,12 +569,11 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       response = request_txs(conn, "forward", criteria, account_id, limit)
 
-      assert [_at_least_one | _] =
-               blocks_with_nm =
-               Enum.filter(response["data"], fn %{"tx" => tx} ->
-                 tx["type"] == @type_spend_tx and
-                   String.starts_with?(tx["recipient_id"] || "", "nm_")
-               end)
+      blocks_with_nm =
+        Enum.filter(response["data"], fn %{"tx" => tx} ->
+          tx["type"] == @type_spend_tx and
+            String.starts_with?(tx["recipient_id"] || "", "nm_")
+        end)
 
       assert Enum.any?(blocks_with_nm, fn %{"tx" => tx, "tx_index" => spend_txi} ->
                assert {:ok, plain_name} = Validate.plain_name(tx["recipient_id"])
@@ -604,17 +585,20 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
                assert recipient["account"] == Enc.encode(:account_pubkey, recipient_account_pk)
 
                if plain_name == "kiwicrestorchard.chain" do
-                 {m_name, _module} = Name.locate(plain_name)
-                 name_updates = Model.name(m_name, :updates)
-
-                 assert [update_txi_before_spend, first_update_txi_before_spend] =
-                          name_updates
-                          |> Enum.filter(fn {_update_height, update_txi} ->
-                            update_txi < spend_txi
-                          end)
-                          |> Enum.map(&elem(&1, 1))
+                 updates_before_spend_list =
+                   plain_name
+                   |> Name.locate()
+                   |> elem(0)
+                   |> Model.name(:updates)
+                   |> Enum.filter(fn {_update_height, update_txi} ->
+                     update_txi < spend_txi
+                   end)
+                   |> Enum.map(&elem(&1, 1))
 
                  # assure validation of recipient account when there were 2 updates before the spend_tx
+                 assert [update_txi_before_spend, first_update_txi_before_spend] =
+                          updates_before_spend_list
+
                  assert spend_txi > update_txi_before_spend
                  assert update_txi_before_spend > first_update_txi_before_spend
                  true
@@ -673,33 +657,15 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     end
 
     test "gets account transactions with name details using backward", %{conn: conn} do
-      limit = 25
-      criteria = "account"
-
-      <<_prefix::3-binary, rest::binary>> =
-        account_id = "ak_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM"
-
-      response = request_txs(conn, "backward", criteria, account_id, limit)
-
-      check_response_data(response["data"], rest, :no_prefix, limit)
-
-      assert Enum.any?(response["data"], fn block -> block["tx"]["type"] == @type_spend_tx end)
-
-      Enum.each(response["data"], fn block ->
-        spend_tx_recipient =
-          if block["tx"]["type"] == @type_spend_tx, do: block["tx"]["recipient_id"]
-
-        if nil != spend_tx_recipient and String.slice(spend_tx_recipient, 0..2) == "nm_" do
-          assert {:ok, plain_name} = Validate.plain_name(spend_tx_recipient)
-          assert recipient = block["tx"]["recipient"]
-          assert recipient["name"] == plain_name
-          name_ownker_pk = Name.locate(plain_name) |> elem(0) |> Model.name(:owner)
-          assert recipient["account"] == Enc.encode(:account_pubkey, name_ownker_pk)
-        end
-      end)
-
-      get_response_from_next_page(conn, response)
-      |> check_response_data(rest, :no_prefix, limit)
+      # "recipient":{"account":"ak_u2gFpRN5nABqfqb5Q3BkuHCf8c7ytcmqovZ6VyKwxmVNE5jqa","name":"josh.chain"}
+      # "sender_id":"ak_2ZyuUxyfbkNbKZnGStgkCQuRwCPQWducVipxE4Ci7RU8UuTiry"
+      # "tx_index":11896169
+      assert_recipient_for_spend_tx_with_name(
+        conn,
+        "backward",
+        "ak_2ZyuUxyfbkNbKZnGStgkCQuRwCPQWducVipxE4Ci7RU8UuTiry",
+        4
+      )
     end
 
     test "get transactions when direction=backward and given contract ID with default limit", %{
@@ -1230,10 +1196,51 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     end
   end
 
+  defp check_response_data_ignore_recipient(data, criteria1, limit) do
+    assert Enum.count(data) == limit
+
+    Enum.each(data, fn info ->
+      if nil == info["tx"]["recipient"] do
+        assert id_exists?(info["tx"], criteria1, :with_prefix)
+      end
+    end)
+  end
+
   defp get_response_from_next_page(conn, response),
     do:
       conn
       |> get(response["next"])
       |> json_response(200)
       |> Access.get("data")
+
+  defp assert_recipient_for_spend_tx_with_name(conn, direction, account_id, limit) do
+    response = request_txs(conn, direction, "account", account_id, limit)
+
+    check_response_data_ignore_recipient(response["data"], account_id, limit)
+
+    blocks_with_nm =
+      Enum.filter(response["data"], fn %{"tx" => tx} ->
+        tx["type"] == @type_spend_tx and
+          String.starts_with?(tx["recipient_id"] || "", "nm_")
+      end)
+
+    assert Enum.any?(blocks_with_nm, fn %{"tx" => tx, "tx_index" => tx_index} ->
+             assert {:ok, plain_name} = Validate.plain_name(tx["recipient_id"])
+             assert m_name = Name.locate(plain_name) |> elem(0)
+
+             if [] != Model.name(m_name, :updates) do
+               assert recipient = tx["recipient"]
+               assert recipient["name"] == plain_name
+
+               assert {:ok, recipient_account_pk} = Name.account_pointer_at(plain_name, tx_index)
+               assert recipient["account"] == Enc.encode(:account_pubkey, recipient_account_pk)
+               true
+             else
+               false
+             end
+           end)
+
+    get_response_from_next_page(conn, response)
+    |> check_response_data_ignore_recipient(account_id, limit)
+  end
 end
