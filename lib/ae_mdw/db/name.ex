@@ -123,6 +123,24 @@ defmodule AeMdw.Db.Name do
     end
   end
 
+  def ownership_at(m_name, name_height) do
+    case Model.name(m_name, :transfers) do
+      [] ->
+        claimed_by(m_name)
+
+      transfers ->
+        transfer_txi = find_transfer_txi_before(transfers, name_height)
+
+        if is_nil(transfer_txi) do
+          claimed_by(m_name)
+        else
+          %{tx: %{recipient_id: transfered_to}} = Format.to_raw_map(read_tx!(transfer_txi))
+          {:id, :account, owner_pk} = transfered_to
+          owner_pk
+        end
+    end
+  end
+
   def revoke_or_expire_height(nil = _revoke, expire),
     do: expire
 
@@ -211,4 +229,20 @@ defmodule AeMdw.Db.Name do
 
   def cache({_, _} = block_index),
     do: cache(ns_tree!(block_index))
+
+  #
+  # Private functions
+  #
+  defp claimed_by(m_name) do
+    [{{_, _}, last_claim_txi} | _] = Model.name(m_name, :claims)
+    %{tx: %{account_id: orig_owner}} = Format.to_raw_map(read_tx!(last_claim_txi))
+    {:id, :account, first_owner} = orig_owner
+    first_owner
+  end
+
+  defp find_transfer_txi_before(transfers, height) do
+    Enum.find_value(transfers, fn {{transfer_height, _}, transfer_txi} ->
+      if transfer_height <= height, do: transfer_txi
+    end)
+  end
 end

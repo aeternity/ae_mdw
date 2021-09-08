@@ -2,18 +2,25 @@ defmodule AeMdwWeb.TxController do
   use AeMdwWeb, :controller
   use PhoenixSwagger
 
+  alias AeMdw.Log
   alias AeMdw.Node, as: AE
   alias AeMdw.Validate
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Name
   alias AeMdw.Db.Format
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdwWeb.Continuation, as: Cont
   alias AeMdwWeb.SwaggerParameters
+  alias :aeser_api_encoder, as: Enc
+
+  require Logger
   require Model
 
   import AeMdwWeb.Util
   import AeMdw.Db.Util
+
+  @type_spend_tx "SpendTx"
 
   ##########
 
@@ -23,8 +30,8 @@ defmodule AeMdwWeb.TxController do
   def txi(conn, %{"index" => index}),
     do: handle_tx_reply(conn, fn -> read_tx(Validate.nonneg_int!(index)) end)
 
-  def txs(conn, _req),
-    do: Cont.response(conn, &json/2)
+  def txs(conn, params),
+    do: Cont.response(conn, &json/2, &add_spendtx_details(&1, params))
 
   def count(conn, _req),
     do: conn |> json(last_txi())
@@ -58,7 +65,54 @@ defmodule AeMdwWeb.TxController do
     end
   end
 
-  def read_tx_hash(tx_hash) do
+  #
+  # Private functions
+  #
+  defp add_spendtx_details(response_data, %{"account" => _account}) do
+    Enum.map(response_data, fn %{"block_height" => block_height, "tx" => block_tx} = block ->
+      spend_tx_recipient = (block_tx["type"] == @type_spend_tx && block_tx["recipient_id"]) || nil
+      add_details? = String.starts_with?(spend_tx_recipient || "", "nm_")
+
+      if add_details? do
+        update_in(block, ["tx"], fn block_tx ->
+          Map.merge(block_tx, get_recipient(spend_tx_recipient, block_height))
+        end)
+      else
+        block
+      end
+    end)
+  end
+
+  defp add_spendtx_details(response_data, _params), do: response_data
+
+  defp get_recipient(spend_tx_recipient, block_height) do
+    with {:ok, plain_name} <- Validate.plain_name(spend_tx_recipient),
+         {:ok, owner} <- get_name_owner(plain_name, block_height) do
+      %{"recipient" => %{"name" => plain_name, "account" => owner}}
+    else
+      {:error, {:owner_not_found, plain_name}} ->
+        Log.warn("missing active or inactive for name #{plain_name}")
+        %{}
+
+      {:error, _reason} ->
+        Log.warn("missing name for name hash #{spend_tx_recipient}")
+        %{}
+    end
+  end
+
+  defp get_name_owner(plain_name, on_height) do
+    case Name.locate(plain_name) do
+      {nil, _module} ->
+        Log.warn("missing name for plain name #{plain_name}")
+        {:error, {:owner_not_found, plain_name}}
+
+      {m_name, _module} ->
+        owner_pk = Name.ownership_at(m_name, on_height)
+        {:ok, Enc.encode(:account_pubkey, owner_pk)}
+    end
+  end
+
+  defp read_tx_hash(tx_hash) do
     with <<_::256>> = mb_hash <- :aec_db.find_tx_location(tx_hash),
          {:ok, mb_header} <- :aec_chain.get_header(mb_hash),
          height <- :aec_headers.height(mb_header) do

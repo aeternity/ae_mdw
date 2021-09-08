@@ -10,7 +10,7 @@ defmodule AeMdwWeb.Continuation do
 
   def table(), do: @tab
 
-  def response(%Plug.Conn{path_info: path, assigns: assigns} = conn, ok_fun) do
+  def response(%Plug.Conn{path_info: path, assigns: assigns} = conn, ok_fun, data_proc_fun \\ nil) do
     mod = conn.private.phoenix_controller
     fun = conn.private.phoenix_action
 
@@ -23,6 +23,7 @@ defmodule AeMdwWeb.Continuation do
       case response_data({mod, fun, params, scope, offset}, limit) do
         {:ok, data, has_cont?} ->
           next = (has_cont? && next_link(path, scope, params, limit, page)) || nil
+          data = (data_proc_fun && data_proc_fun.(data)) || data
           ok_fun.(conn, %{next: next, data: data})
 
         {:error, reason} ->
@@ -41,6 +42,7 @@ defmodule AeMdwWeb.Continuation do
       # beginning
       nil when offset == 0 ->
         init_stream = mod.db_stream(fun, params, scope)
+
         {data, rem_stream} = StreamSplit.take_and_drop(init_stream, limit)
         has_cont? = rem_stream != []
         EtsCache.put(@tab, cont_key, init_stream)

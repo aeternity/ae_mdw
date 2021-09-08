@@ -3,4 +3,7 @@ defmodule AeMdw.Log do
 
   def info(msg),
     do: Logger.info(msg, sync: true)
+
+  def warn(msg),
+    do: Logger.warn(msg, sync: true)
 end
