@@ -1,5 +1,4 @@
 defmodule AeMdw.Db.Name do
-  alias AeMdw.Log
   alias AeMdw.Node, as: AE
   alias AeMdw.Db.{Model, Format}
   alias AeMdw.Validate
@@ -75,18 +74,10 @@ defmodule AeMdw.Db.Name do
   def account_pointer_at(plain_name, time_reference_txi) do
     case locate(plain_name) do
       {nil, _module} ->
-        Log.warn("missing name for plain name #{plain_name}")
         {:error, :name_not_found}
 
       {m_name, _module} ->
-        case pointee_at(m_name, time_reference_txi) do
-          nil ->
-            Log.warn("missing pointee for plain name #{plain_name} on txi #{time_reference_txi}")
-            {:error, :pointee_not_found}
-
-          pointee_pk ->
-            {:ok, pointee_pk}
-        end
+        pointee_at(m_name, time_reference_txi)
     end
   end
 
@@ -234,14 +225,12 @@ defmodule AeMdw.Db.Name do
   #
   # Private functions
   #
-  defp pointee_at(m_name, ref_txi) do
-    m_name
-    |> Model.name(:updates)
+  defp pointee_at(Model.name(index: name, updates: updates), ref_txi) do
+    updates
     |> find_update_txi_before(ref_txi)
     |> case do
       nil ->
-        Log.warn("name #{elem(m_name, 1)} without pointer at txi #{ref_txi}!")
-        nil
+        {:error, {:pointee_not_found, name, ref_txi}}
 
       update_txi ->
         {:id, :account, pointee_pk} =
@@ -252,7 +241,7 @@ defmodule AeMdw.Db.Name do
           |> Enum.into(%{}, &pointer_kv_raw/1)
           |> Map.get("account_pubkey")
 
-        pointee_pk
+        {:ok, pointee_pk}
     end
   end
 

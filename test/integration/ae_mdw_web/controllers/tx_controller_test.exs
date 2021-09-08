@@ -1226,9 +1226,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
     assert Enum.any?(blocks_with_nm, fn %{"tx" => tx, "tx_index" => tx_index} ->
              assert {:ok, plain_name} = Validate.plain_name(tx["recipient_id"])
-             assert m_name = Name.locate(plain_name) |> elem(0)
+             assert Model.name(updates: name_updates) = Name.locate(plain_name) |> elem(0)
 
-             if [] != Model.name(m_name, :updates) do
+             if [] != name_updates do
                assert recipient = tx["recipient"]
                assert recipient["name"] == plain_name
 
