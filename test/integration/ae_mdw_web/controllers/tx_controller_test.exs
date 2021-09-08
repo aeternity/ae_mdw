@@ -579,36 +579,49 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       |> check_response_data(rest, :no_prefix, limit)
     end
 
-    test "gets account transactions with name details after transfered once", %{conn: conn} do
-      limit = 100
+    test "gets account transactions and recipient details on a name with multiple updates (two before spend_tx)",
+         %{conn: conn} do
+      limit = 63
       criteria = "account"
       account_id = "ak_u2gFpRN5nABqfqb5Q3BkuHCf8c7ytcmqovZ6VyKwxmVNE5jqa"
 
       response = request_txs(conn, "forward", criteria, account_id, limit)
 
-      assert blocks_with_nm =
+      assert [_at_least_one | _] =
+               blocks_with_nm =
                Enum.filter(response["data"], fn %{"tx" => tx} ->
                  tx["type"] == @type_spend_tx and
                    String.starts_with?(tx["recipient_id"] || "", "nm_")
                end)
 
-      Enum.each(blocks_with_nm, fn %{"block_height" => block_height, "tx" => tx} ->
-        assert {:ok, plain_name} = Validate.plain_name(tx["recipient_id"])
-        assert recipient = tx["recipient"]
-        assert recipient["name"] == plain_name
+      assert Enum.any?(blocks_with_nm, fn %{"tx" => tx, "tx_index" => spend_txi} ->
+               assert {:ok, plain_name} = Validate.plain_name(tx["recipient_id"])
+               assert recipient = tx["recipient"]
 
-        {m_name, _module} = Name.locate(plain_name)
-        name_transfers = Model.name(m_name, :transfers)
+               assert recipient["name"] == plain_name
 
-        if length(name_transfers) == 1 do
-          [{{name_transfer_height, _}, _transfer_txi}] = name_transfers
+               assert {:ok, recipient_account_pk} = Name.account_pointer_at(plain_name, spend_txi)
+               assert recipient["account"] == Enc.encode(:account_pubkey, recipient_account_pk)
 
-          assert name_transfer_height < block_height
+               if plain_name == "kiwicrestorchard.chain" do
+                 {m_name, _module} = Name.locate(plain_name)
+                 name_updates = Model.name(m_name, :updates)
 
-          assert recipient["account"] ==
-                   Enc.encode(:account_pubkey, Model.name(m_name, :owner))
-        end
-      end)
+                 assert [update_txi_before_spend, first_update_txi_before_spend] =
+                          name_updates
+                          |> Enum.filter(fn {_update_height, update_txi} ->
+                            update_txi < spend_txi
+                          end)
+                          |> Enum.map(&elem(&1, 1))
+
+                 # assure validation of recipient account when there were 2 updates before the spend_tx
+                 assert spend_txi > update_txi_before_spend
+                 assert update_txi_before_spend > first_update_txi_before_spend
+                 true
+               else
+                 false
+               end
+             end)
     end
 
     test "get transactions with direction=forward and given contract ID with default limit", %{

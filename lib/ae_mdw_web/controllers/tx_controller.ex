@@ -69,13 +69,13 @@ defmodule AeMdwWeb.TxController do
   # Private functions
   #
   defp add_spendtx_details(response_data, %{"account" => _account}) do
-    Enum.map(response_data, fn %{"block_height" => block_height, "tx" => block_tx} = block ->
+    Enum.map(response_data, fn %{"tx" => block_tx, "tx_index" => tx_index} = block ->
       spend_tx_recipient = (block_tx["type"] == @type_spend_tx && block_tx["recipient_id"]) || nil
       add_details? = String.starts_with?(spend_tx_recipient || "", "nm_")
 
       if add_details? do
         update_in(block, ["tx"], fn block_tx ->
-          Map.merge(block_tx, get_recipient(spend_tx_recipient, block_height))
+          Map.merge(block_tx, get_recipient(spend_tx_recipient, tx_index))
         end)
       else
         block
@@ -85,30 +85,15 @@ defmodule AeMdwWeb.TxController do
 
   defp add_spendtx_details(response_data, _params), do: response_data
 
-  defp get_recipient(spend_tx_recipient, block_height) do
-    with {:ok, plain_name} <- Validate.plain_name(spend_tx_recipient),
-         {:ok, owner} <- get_name_owner(plain_name, block_height) do
-      %{"recipient" => %{"name" => plain_name, "account" => owner}}
+  defp get_recipient(spend_tx_recipient_nm, spend_txi) do
+    with {:ok, plain_name} <- Validate.plain_name(spend_tx_recipient_nm),
+         {:ok, pointee_pk} <- Name.account_pointer_at(plain_name, spend_txi) do
+      recipient_account = Enc.encode(:account_pubkey, pointee_pk)
+      %{"recipient" => %{"name" => plain_name, "account" => recipient_account}}
     else
-      {:error, {:owner_not_found, plain_name}} ->
-        Log.warn("missing active or inactive for name #{plain_name}")
+      {:error, reason} ->
+        Log.warn("missing pointee for reason: #{inspect(reason)}")
         %{}
-
-      {:error, _reason} ->
-        Log.warn("missing name for name hash #{spend_tx_recipient}")
-        %{}
-    end
-  end
-
-  defp get_name_owner(plain_name, on_height) do
-    case Name.locate(plain_name) do
-      {nil, _module} ->
-        Log.warn("missing name for plain name #{plain_name}")
-        {:error, {:owner_not_found, plain_name}}
-
-      {m_name, _module} ->
-        owner_pk = Name.ownership_at(m_name, on_height)
-        {:ok, Enc.encode(:account_pubkey, owner_pk)}
     end
   end
 
