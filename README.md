@@ -165,7 +165,9 @@ GET  /block/:hash                       - returns block by hash
 GET  /blocki/:kbi                       - returns key block by integer index
 GET  /blocki/:kbi/:mbi                  - returns micro block by integer indices
 GET  /blocks/gen/:range                 - returns generation blocks for continuation link
+GET  /v2/blocks/gen/:range              - same as above but returning the "micro_blocks" in a sorted list by time 
 GET  /blocks/:range_or_dir              - returns generation blocks (key + micro) for given range (or direction)
+GET  /v2/blocks/:range_or_dir           - same as above but returning the "micro_blocks" in a sorted list by time 
 
 GET  /name/:id                          - returns name information by hash or plain name
 GET  /name/auction/:id                  - returns name information for auction, by hash or plain name
@@ -1446,6 +1448,80 @@ $ curl -s "http://localhost:4000/blocks/forward?limit=2" | jq '.'
     }
   ],
   "next": "blocks/gen/0-305302?limit=2&page=2"
+}
+```
+
+With /v2/blocks endpoint ("micro_blocks" as a sorted list):
+
+```
+$ curl -s "http://localhost:4000/v2/blocks/101125-101125" | jq '.'
+{
+  "data": [
+    {
+      "beneficiary": "ak_2MR38Zf355m6JtP13T3WEcUcSLVLCxjGvjk6zG95S2mfKohcSS",
+      "hash": "kh_2MK98WvTtAMzvNNJSi62iConXWshwDM49pfyQi2uVPXE73vv7p",
+      "height": 101125,
+      "info": "cb_AAAAAfy4hFE=",
+      "micro_blocks": [
+        {
+          "hash": "mh_3cSMUMFHxFzVV7kCSkbi6kcsUNBk6wU5BAfkFxxPRTFuyZsqG",
+          "height": 101125,
+          "pof_hash": "no_fraud",
+          "prev_hash": "kh_2MK98WvTtAMzvNNJSi62iConXWshwDM49pfyQi2uVPXE73vv7p",
+          "prev_key_hash": "kh_2MK98WvTtAMzvNNJSi62iConXWshwDM49pfyQi2uVPXE73vv7p",
+          "signature": "sg_3NZ23RXhgg5NWebsfG6CHSBzpjgB9Nm8pgD9rVczsTcPiXN6tJziSLHGSZban3DLFsnyp3qU1GmnNZLYPG4cFmXvusJiq",
+          "state_hash": "bs_2kR2LUjxrxNtibd4BFpnvgykJTwM9K8i7eYoYN1fJsmhTRUc2h",
+          "time": 1561595880058,
+          "transactions": {
+            "th_28ixRZNWVJXdQ3C43HstKYAr7P1nSkMN1A2X5myE3pZz7Lao6M": {
+              "block_hash": "mh_3cSMUMFHxFzVV7kCSkbi6kcsUNBk6wU5BAfkFxxPRTFuyZsqG",
+              "block_height": 101125,
+              "hash": "th_28ixRZNWVJXdQ3C43HstKYAr7P1nSkMN1A2X5myE3pZz7Lao6M",
+              "signatures": [
+                "sg_9mPr9vVGpqhTokKjzof6PLrEAPgBuR9xr6BbVPr8MxxG4GPwe7LCoBqoE7tWoxxWzkZdTUQHCHCkhL9nDBLxFkN9QLUED"
+              ],
+              "tx": {
+                "amount": 32223629770000000000,
+                "fee": 130000000000000,
+                "nonce": 2547,
+                "payload": "ba_Xfbg4g==",
+                "recipient_id": "ak_2ASdNERRwAYmoNhxVuYC3k6RV5L2tbaK974QM5emcdzPNwSEUd",
+                "sender_id": "ak_dArxCkAsk1mZB1L9CX3cdz1GDN4hN84L3Q8dMLHN4v8cU85TF",
+                "ttl": 101424,
+                "type": "SpendTx",
+                "version": 1
+              }
+            },
+            "th_2ioXeSv9Mbh7nMNtNtJFc8Nc6Nd9dFZBscZnC9YKmMw6FqLodG": {
+              ...
+            },
+            "th_SUXzH48FMioCy3P4NwbwC2hZjc99rgRHZs8HJwcvnsNfwBSDX": {
+              ...
+            },
+            "th_pMGxKY4hELiqu9Xm91DHpzYQZD8gkJrc12aa4hF8mYDMAve4t": {
+              ...
+            }
+          },
+          "txs_hash": "bx_AqKk4fiLGM13cQxgta4apaHPnzgWK4Epb4pnUVQMAic3ncFxs",
+          "version": 3
+        }
+      ],
+      "miner": "ak_2HToRDUsCuBqdGsFqCCE19chrRQ7hhYE5Ebd3LETfwnk3gGnzX",
+      "nonce": 9256408633249850000,
+      "pow": [
+        5377241,
+        6371180,
+        ...
+      ],
+      "prev_hash": "kh_tPiapdedaKhT8egWrtLWsvACbEzTbpECdWg9P8dTtK8P8w48s",
+      "prev_key_hash": "kh_tPiapdedaKhT8egWrtLWsvACbEzTbpECdWg9P8dTtK8P8w48s",
+      "state_hash": "bs_2SF46f1xU4uxiKKVmeT9jqFWJenftFzXTVse9GGLwtit78zHQP",
+      "target": 504458445,
+      "time": 1561595666398,
+      "version": 3
+    }
+  ],
+  "next": null
 }
 ```
 
