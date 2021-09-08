@@ -37,6 +37,7 @@ defmodule AeMdw.MixProject do
           :aec_hard_forks,
           :aec_hash,
           :aec_headers,
+          :aec_spend_tx,
           :aec_sync,
           :aec_trees,
           :aect_call,
@@ -66,7 +67,8 @@ defmodule AeMdw.MixProject do
           :aetx_env,
           :aetx_sign,
           :aeu_info,
-          :aeu_mtrees
+          :aeu_mtrees,
+          :enacl
         ]
       ],
       dialyzer: dialyzer(),
