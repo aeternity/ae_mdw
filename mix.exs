@@ -120,7 +120,8 @@ defmodule AeMdw.MixProject do
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
       {:git_hooks, "~> 0.5.0", only: :dev, runtime: false},
       {:mock, "~> 0.3.0", only: :test},
-      {:phoenix_html, "~> 2.11"}
+      {:phoenix_html, "~> 2.11"},
+      {:credo, "~> 1.5", only: [:dev, :test], runtime: false}
     ]
   end
 
