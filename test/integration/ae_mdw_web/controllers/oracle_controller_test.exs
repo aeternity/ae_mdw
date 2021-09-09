@@ -186,7 +186,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
                  }
                ],
                "next" =>
-                 "/v2/oracles/inactive/forward?cursor=288707-ok_ceRESNanBZ9ddGKZ75JacWQvR6GJnGci3cqXqMSN8yXL2rpkW"
+                 "/v2/oracles/inactive/forward?cursor=288707-ok_ceRESNanBZ9ddGKZ75JacWQvR6GJnGci3cqXqMSN8yXL2rpkW&limit=10"
              } =
                conn
                |> get("/v2/oracles/inactive/forward")
@@ -201,6 +201,113 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       assert Enum.all?(oracles, fn %{"active" => is_active?} -> is_active? end)
     end
+
+    ############################################################################
+    ## BACKWARDS COMPAT TESTING (compare v2 with v2)
+    ############################################################################
+    test "get inactive oracles with default direction=backward and default limit", %{conn: conn} do
+      conn = get(conn, "/v2/oracles/inactive")
+      response = json_response(conn, 200)
+
+      {:ok, data, _has_cont?} =
+        Cont.response_data({OracleController, :inactive_oracles, %{}, :foo, 0}, @default_limit)
+
+      assert Enum.count(response["data"]) == @default_limit
+      assert response["data"] == data
+
+      conn_next = get(conn, response["next"])
+      response_next = json_response(conn_next, 200)
+
+      {:ok, next_data, _has_cont?} =
+        Cont.response_data(
+          {OracleController, :inactive_oracles, %{}, :foo, @default_limit},
+          @default_limit
+        )
+
+      assert Enum.count(response_next["data"]) <= @default_limit
+      assert response_next["data"] == next_data
+    end
+
+    test "get inactive oracles with direction=forward and limit=5", %{conn: conn} do
+      direction = "forward"
+      limit = 5
+      conn = get(conn, "/v2/oracles/inactive?direction=#{direction}&limit=#{limit}")
+      response = json_response(conn, 200)
+
+      {:ok, data, _has_cont?} =
+        Cont.response_data(
+          {OracleController, :inactive_oracles, %{"direction" => [direction]}, :foo, 0},
+          limit
+        )
+
+      assert Enum.count(response["data"]) == limit
+      assert response["data"] == data
+
+      conn_next = get(conn, response["next"])
+      response_next = json_response(conn_next, 200)
+
+      {:ok, next_data, _has_cont?} =
+        Cont.response_data(
+          {OracleController, :inactive_oracles, %{"direction" => [direction]}, :foo, limit},
+          limit
+        )
+
+      assert Enum.count(response_next["data"]) == limit
+      assert response_next["data"] == next_data
+    end
+
+    test "get active oracles with default direction=backward and limit=1", %{conn: conn} do
+      limit = 1
+      conn = get(conn, "/v2/oracles/active?limit=#{limit}")
+      response = json_response(conn, 200)
+
+      {:ok, data, _has_cont?} =
+        Cont.response_data({OracleController, :active_oracles, %{}, :foo, 0}, limit)
+
+      assert Enum.count(response["data"]) == limit
+      assert response["data"] == data
+
+      conn_next = get(conn, response["next"])
+      response_next = json_response(conn_next, 200)
+
+      {:ok, next_data, _has_cont?} =
+        Cont.response_data({OracleController, :active_oracles, %{}, :foo, limit}, limit)
+
+      assert Enum.count(response_next["data"]) == limit
+      assert response_next["data"] == next_data
+    end
+
+    test "get active oracles with direction=forward and limit=1", %{conn: conn} do
+      direction = "forward"
+      limit = 1
+      conn = get(conn, "/v2/oracles/active?direction=#{direction}&limit=#{limit}")
+      response = json_response(conn, 200)
+
+      {:ok, data, _has_cont?} =
+        Cont.response_data(
+          {OracleController, :active_oracles, %{"direction" => [direction]}, :foo, 0},
+          limit
+        )
+
+      assert Enum.count(response["data"]) == limit
+      assert response["data"] == data
+
+      conn_next = get(conn, response["next"])
+      response_next = json_response(conn_next, 200)
+
+      {:ok, next_data, _has_cont?} =
+        Cont.response_data(
+          {OracleController, :active_oracles, %{"direction" => [direction]}, :foo, limit},
+          limit
+        )
+
+      assert Enum.count(response_next["data"]) == limit
+      assert response_next["data"] == next_data
+    end
+
+    ############################################################################
+    ## END BACKWARDS COMPAT
+    ############################################################################
   end
 
   describe "inactive_oracles" do
