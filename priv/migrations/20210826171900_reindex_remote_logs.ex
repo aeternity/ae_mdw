@@ -30,7 +30,7 @@ defmodule AeMdw.Migrations.ReindexRemoteLogs do
   For these new records, the ext_contract field is tagged with {:parent_contract_pk, pubkey} where pubkey
   is the one of the caller contract.
   """
-  @spec run() :: {non_neg_integer(), pos_integer()}
+  @spec run() :: {:ok, {non_neg_integer(), pos_integer()}}
   def run do
     begin = DateTime.utc_now()
 
@@ -63,7 +63,7 @@ defmodule AeMdw.Migrations.ReindexRemoteLogs do
     duration = DateTime.diff(DateTime.utc_now(), begin)
     IO.puts("Indexed #{reindexed_count} records in #{duration}s")
 
-    {reindexed_count, duration}
+    {:ok, {reindexed_count, duration}}
   end
 
   @spec safe_contract_pk({integer(), any(), any(), any()}) :: binary() | nil

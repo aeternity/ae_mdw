@@ -6,6 +6,10 @@ defmodule AeMdw.Db.Model do
 
   ################################################################################
 
+  # index is version like 20210826171900 in 20210826171900_reindex_remote_logs.ex
+  @migrations_defaults [index: -1, inserted_at: nil]
+  defrecord :migrations, @migrations_defaults
+
   # txs block index :
   #     index = {kb_index (0..), mb_index}, tx_index = tx_index, hash = block (header) hash
   #     if tx_index == nil -> txs not synced yet on that height
@@ -313,7 +317,7 @@ defmodule AeMdw.Db.Model do
   defrecord :id_fname_int_contract_call, @id_fname_int_contract_call_defaults
 
   # grp_id_fname_int_contract_call:
-  #    index: {create txi, id pk, fname, id pos, call txi, local idx} 
+  #    index: {create txi, id pk, fname, id pos, call txi, local idx}
   @grp_id_fname_int_contract_call_defaults [
     index: {-1, <<>>, "", -1, -1, -1},
     unused: nil
@@ -376,7 +380,8 @@ defmodule AeMdw.Db.Model do
         name_tables(),
         contract_tables(),
         oracle_tables(),
-        stat_tables()
+        stat_tables(),
+        migration_tables()
       ])
 
   def chain_tables() do
@@ -453,6 +458,10 @@ defmodule AeMdw.Db.Model do
     ]
   end
 
+  def migration_tables() do
+    [AeMdw.Db.Model.Migrations]
+  end
+
   def records(),
     do: [
       :tx,
@@ -496,12 +505,14 @@ defmodule AeMdw.Db.Model do
       :kind_int_transfer_tx,
       :target_int_transfer_tx,
       :stat,
-      :sum_stat
+      :sum_stat,
+      :migrations
     ]
 
   def fields(record),
     do: for({x, _} <- defaults(record), do: x)
 
+  def record(AeMdw.Db.Model.Migrations), do: :migrations
   def record(AeMdw.Db.Model.Tx), do: :tx
   def record(AeMdw.Db.Model.Block), do: :block
   def record(AeMdw.Db.Model.Time), do: :time
@@ -552,6 +563,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Stat), do: :stat
   def record(AeMdw.Db.Model.SumStat), do: :sum_stat
 
+  def table(:migrations), do: AeMdw.Db.Model.Migrations
   def table(:tx), do: AeMdw.Db.Model.Tx
   def table(:block), do: AeMdw.Db.Model.Block
   def table(:time), do: AeMdw.Db.Model.Time
@@ -588,6 +600,7 @@ defmodule AeMdw.Db.Model do
   def table(:stat), do: AeMdw.Db.Model.Stat
   def table(:sum_stat), do: AeMdw.Db.Model.SumStat
 
+  def defaults(:migrations), do: @migrations_defaults
   def defaults(:tx), do: @tx_defaults
   def defaults(:block), do: @block_defaults
   def defaults(:time), do: @time_defaults
