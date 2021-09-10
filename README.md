@@ -1287,7 +1287,7 @@ $ curl -s "http://localhost:4000/blocki/1234" | jq '.'
 ```
 
 Micro block is identified by height and sequence id (order) withing the generation, starting from 0.
-
+ 
 ```
 $ curl -s "http://localhost:4000/blocki/300000/0" | jq '.'
 {
