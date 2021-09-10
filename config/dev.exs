@@ -56,21 +56,6 @@ config :phoenix, :stacktrace_depth, 20
 # Initialize plugs at runtime for faster development compilation
 config :phoenix, :plug_init_mode, :runtime
 
-config :git_hooks,
-  auto_install: false,
-  hooks: [
-    pre_commit: [
-      verbose: true,
-      tasks: [
-        "mix format --check-formatted --dry-run --check-equivalent"
-      ]
-    ],
-    pre_push: [
-      verbose: true,
-      tasks: [
-        "mix compile --all-warnings --warnings-as-errors",
-        "elixir --sname aeternity@localhost -S mix test"
-        # "mix credo --strict",
-      ]
-    ]
-  ]
+if File.exists?(Path.join([__DIR__, "dev.tools.exs"])) do
+  import_config "dev.tools.exs"
+end

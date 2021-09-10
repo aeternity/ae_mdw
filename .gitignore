@@ -41,3 +41,6 @@ VERSION
 # Dialyzer generated files
 /priv/plts/*.plt
 /priv/plts/*.plt.hash
+
+# Customizable dev tools
+/config/dev.tools.exs

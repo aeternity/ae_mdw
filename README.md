@@ -4822,7 +4822,7 @@ On merge to master:
 #### Git hooks
 
 In order to anticipate some of these checks one might run `mix git_hooks.install`.
-This installs pre_commit and pre_push checks as defined by `config :git_hooks` in `dev.exs`.
+This installs pre_commit and pre_push checks as defined by `config :git_hooks` in `dev.tools.exs`.
 
 If sure about the change, if it was for example in a integration test case and it was already tested and formatted, 
-one can use `git push --no-verify` to bypass the hooks.
+one can use `git push --no-verify` to bypass the hook.
