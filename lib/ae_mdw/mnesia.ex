@@ -52,8 +52,8 @@ defmodule AeMdw.Mnesia do
 
   @spec fetch_keys(table(), direction(), cursor(), non_neg_integer()) :: {[record()], cursor()}
   def fetch_keys(tab, :forward, nil, limit) do
-    {:atomic, {keys, cursor}} =
-      :mnesia.transaction(fn ->
+    {keys, cursor} =
+      :mnesia.async_dirty(fn ->
         case :mnesia.first(tab) do
           @end_token -> {[], nil}
           first_key -> fetch_forward_keys(tab, first_key, limit)
@@ -64,8 +64,8 @@ defmodule AeMdw.Mnesia do
   end
 
   def fetch_keys(tab, :forward, first_key, limit) do
-    {:atomic, {keys, cursor}} =
-      :mnesia.transaction(fn ->
+    {keys, cursor} =
+      :mnesia.async_dirty(fn ->
         case :mnesia.read(tab, first_key) do
           @end_token -> {[], nil}
           _first_record -> fetch_forward_keys(tab, first_key, limit)
@@ -76,8 +76,8 @@ defmodule AeMdw.Mnesia do
   end
 
   def fetch_keys(tab, :backward, nil, limit) do
-    {:atomic, {keys, cursor}} =
-      :mnesia.transaction(fn ->
+    {keys, cursor} =
+      :mnesia.async_dirty(fn ->
         case :mnesia.last(tab) do
           @end_token -> {[], nil}
           last_key -> fetch_backward_keys(tab, last_key, limit)
@@ -88,8 +88,8 @@ defmodule AeMdw.Mnesia do
   end
 
   def fetch_keys(tab, :backward, last_key, limit) do
-    {:atomic, {keys, cursor}} =
-      :mnesia.transaction(fn ->
+    {keys, cursor} =
+      :mnesia.async_dirty(fn ->
         case :mnesia.read(tab, last_key) do
           @end_token -> {[], nil}
           _last_record -> fetch_backward_keys(tab, last_key, limit)
