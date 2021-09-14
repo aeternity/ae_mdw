@@ -121,7 +121,8 @@ defmodule AeMdw.MixProject do
       {:git_hooks, "~> 0.5.0", only: :dev, runtime: false},
       {:mock, "~> 0.3.0", only: :test},
       {:phoenix_html, "~> 2.11"},
-      {:credo, "~> 1.5", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
+      {:benchee, "~> 1.0.0", only: [:dev]}
     ]
   end
 
