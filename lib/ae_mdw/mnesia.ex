@@ -114,7 +114,7 @@ defmodule AeMdw.Mnesia do
 
     case Enum.split(keys, limit - 1) do
       {keys, [next_key]} -> {[first_key | keys], next_key}
-      {keys, []} -> {keys, nil}
+      {keys, []} -> {[first_key | keys], nil}
     end
   end
 
@@ -133,7 +133,7 @@ defmodule AeMdw.Mnesia do
 
     case Enum.split(keys, limit - 1) do
       {keys, [prev_key]} -> {[last_key | keys], prev_key}
-      {keys, []} -> {keys, nil}
+      {keys, []} -> {[last_key | keys], nil}
     end
   end
 end
