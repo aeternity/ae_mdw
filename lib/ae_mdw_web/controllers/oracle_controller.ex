@@ -9,12 +9,18 @@ defmodule AeMdwWeb.OracleController do
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Oracles
   alias AeMdwWeb.Continuation, as: Cont
   alias AeMdwWeb.SwaggerParameters
+  alias AeMdwWeb.Plugs.PaginatedPlug
+  alias Plug.Conn
+
   require Model
 
   import AeMdwWeb.Util
   import AeMdw.Db.Util
+
+  plug(PaginatedPlug)
 
   ##########
 
@@ -50,6 +56,40 @@ defmodule AeMdwWeb.OracleController do
 
   def oracles(conn, _req),
     do: handle_input(conn, fn -> Cont.response(conn, &json/2) end)
+
+  def active_oracles_v2(%Conn{assigns: assigns} = conn, _params) do
+    %{direction: direction, limit: limit, cursor: cursor} = assigns
+
+    {oracles, new_cursor} = Oracles.fetch_active_oracles(direction, cursor, limit)
+
+    uri =
+      if new_cursor do
+        %URI{
+          path: "/v2/oracles/active/#{direction}",
+          query: URI.encode_query(%{"cursor" => new_cursor, "limit" => limit})
+        }
+        |> URI.to_string()
+      end
+
+    json(conn, %{"data" => oracles, "next" => uri})
+  end
+
+  def inactive_oracles_v2(%Conn{assigns: assigns} = conn, _params) do
+    %{direction: direction, limit: limit, cursor: cursor} = assigns
+
+    {oracles, new_cursor} = Oracles.fetch_inactive_oracles(direction, cursor, limit)
+
+    uri =
+      if new_cursor do
+        %URI{
+          path: "/v2/oracles/inactive/#{direction}",
+          query: URI.encode_query(%{"cursor" => new_cursor, "limit" => limit})
+        }
+        |> URI.to_string()
+      end
+
+    json(conn, %{"data" => oracles, "next" => uri})
+  end
 
   ##########
 
