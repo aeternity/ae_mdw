@@ -71,6 +71,16 @@ defmodule AeMdw.Db.Name do
     end
   end
 
+  def account_pointer_at(plain_name, time_reference_txi) do
+    case locate(plain_name) do
+      {nil, _module} ->
+        {:error, :name_not_found}
+
+      {m_name, _module} ->
+        pointee_at(m_name, time_reference_txi)
+    end
+  end
+
   def pointee_keys(pk) do
     mspec =
       Ex2ms.fun do
@@ -120,24 +130,6 @@ defmodule AeMdw.Db.Name do
       [{{_, _}, last_transfer_txi} | _] ->
         %{tx: %{recipient_id: curr_owner}} = Format.to_raw_map(read_tx!(last_transfer_txi))
         %{original: orig_owner, current: curr_owner}
-    end
-  end
-
-  def ownership_at(m_name, name_height) do
-    case Model.name(m_name, :transfers) do
-      [] ->
-        claimed_by(m_name)
-
-      transfers ->
-        transfer_txi = find_transfer_txi_before(transfers, name_height)
-
-        if is_nil(transfer_txi) do
-          claimed_by(m_name)
-        else
-          %{tx: %{recipient_id: transfered_to}} = Format.to_raw_map(read_tx!(transfer_txi))
-          {:id, :account, owner_pk} = transfered_to
-          owner_pk
-        end
     end
   end
 
@@ -233,16 +225,29 @@ defmodule AeMdw.Db.Name do
   #
   # Private functions
   #
-  defp claimed_by(m_name) do
-    [{{_, _}, last_claim_txi} | _] = Model.name(m_name, :claims)
-    %{tx: %{account_id: orig_owner}} = Format.to_raw_map(read_tx!(last_claim_txi))
-    {:id, :account, first_owner} = orig_owner
-    first_owner
+  defp pointee_at(Model.name(index: name, updates: updates), ref_txi) do
+    updates
+    |> find_update_txi_before(ref_txi)
+    |> case do
+      nil ->
+        {:error, {:pointee_not_found, name, ref_txi}}
+
+      update_txi ->
+        {:id, :account, pointee_pk} =
+          update_txi
+          |> read_tx!()
+          |> Format.to_raw_map()
+          |> get_in([:tx, :pointers])
+          |> Enum.into(%{}, &pointer_kv_raw/1)
+          |> Map.get("account_pubkey")
+
+        {:ok, pointee_pk}
+    end
   end
 
-  defp find_transfer_txi_before(transfers, height) do
-    Enum.find_value(transfers, fn {{transfer_height, _}, transfer_txi} ->
-      if transfer_height <= height, do: transfer_txi
+  defp find_update_txi_before(updates, ref_txi) do
+    Enum.find_value(updates, fn {_block_height, update_txi} ->
+      if update_txi <= ref_txi, do: update_txi
     end)
   end
 end
