@@ -55,3 +55,7 @@ config :phoenix, :stacktrace_depth, 20
 
 # Initialize plugs at runtime for faster development compilation
 config :phoenix, :plug_init_mode, :runtime
+
+if File.exists?(Path.join([__DIR__, "dev.tools.exs"])) do
+  import_config "dev.tools.exs"
+end

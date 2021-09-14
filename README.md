@@ -102,6 +102,9 @@
     - [Tests](#tests)
         - [Controller tests](#controller-tests)
         - [Performance test](#performance-test)
+    - [CI](#ci)
+        - [Actions](#actions)
+        - [Git hooks](#git-hooks)
 
 <!-- markdown-toc end -->
 
@@ -4802,3 +4805,24 @@ The example output would look like:
             99th: 28.03382 ms
           ......................................................................
 ```
+
+## CI
+
+#### Actions
+
+On push:
+- Commit linter for conventional commit messages
+- Elixir code formatting
+- Dialyzer
+- Unit tests
+
+On merge to master:
+- Release with notes based on git history
+
+#### Git hooks
+
+In order to anticipate some of these checks one might run `mix git_hooks.install`.
+This installs pre_commit and pre_push checks as defined by `config :git_hooks` in `dev.tools.exs`.
+
+If sure about the change, if it was for example in a integration test case and it was already tested and formatted, 
+one can use `git push --no-verify` to bypass the hook.

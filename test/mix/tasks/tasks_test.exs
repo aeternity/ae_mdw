@@ -5,6 +5,8 @@ defmodule AeMdw.MixTasksTest do
   alias AeMdw.Db.Util
   alias Mix.Tasks.BackupDbTable
 
+  # on demand
+  @tag :skip
   test "backup and restore db table" do
     table = Model.ContractLog
     backup_table = BackupDbTable.backup_table(table)
