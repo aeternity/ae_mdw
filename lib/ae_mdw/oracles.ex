@@ -20,16 +20,46 @@ defmodule AeMdw.Oracles do
   @table_inactive AeMdw.Db.Model.InactiveOracle
   @table_inactive_expiration Model.InactiveOracleExpiration
 
+  @spec fetch_oracles(Mnesia.direction(), cursor() | nil, limit()) :: {[oracle()], cursor() | nil}
+  def fetch_oracles(direction, cursor, limit) do
+    cursor = deserialize_cursor(cursor)
+
+    {active_exp_keys, inactive_exp_keys, next_cursor} =
+      case fetch_active_keys(direction, cursor, limit) do
+        {[], nil} ->
+          {inactive_exp_keys, cursor} = fetch_inactive_keys(direction, cursor, limit)
+
+          {[], inactive_exp_keys, cursor}
+
+        {active_exp_keys, nil} ->
+          {inactive_exp_keys, inactive_cursor} =
+            fetch_inactive_keys(direction, nil, limit - length(active_exp_keys))
+
+          {active_exp_keys, inactive_exp_keys, inactive_cursor}
+
+        {active_exp_keys, active_cursor} ->
+          {active_exp_keys, [], active_cursor}
+      end
+
+    {:ok, {last_gen, -1}} = Mnesia.last_key(AeMdw.Db.Model.Block)
+
+    active_oracles =
+      active_exp_keys
+      |> Enum.map(fn {_expiration, oracle_pk} -> fetch_active_oracle(oracle_pk) end)
+      |> render_list(last_gen, true)
+
+    inactive_oracles =
+      inactive_exp_keys
+      |> Enum.map(fn {_expiration, oracle_pk} -> fetch_inactive_oracle(oracle_pk) end)
+      |> render_list(last_gen, true)
+
+    {active_oracles ++ inactive_oracles, serialize_cursor(next_cursor)}
+  end
+
   @spec fetch_active_oracles(Mnesia.direction(), cursor() | nil, limit()) ::
           {[oracle()], cursor() | nil}
   def fetch_active_oracles(direction, cursor, limit) do
-    {exp_keys, next_cursor} =
-      Mnesia.fetch_keys(
-        @table_active_expiration,
-        direction,
-        deserialize_cursor(cursor),
-        limit
-      )
+    {exp_keys, next_cursor} = fetch_active_keys(direction, deserialize_cursor(cursor), limit)
 
     {:ok, {last_gen, -1}} = Mnesia.last_key(AeMdw.Db.Model.Block)
 
@@ -44,13 +74,7 @@ defmodule AeMdw.Oracles do
   @spec fetch_inactive_oracles(Mnesia.direction(), cursor() | nil, limit()) ::
           {[oracle()], cursor() | nil}
   def fetch_inactive_oracles(direction, cursor, limit) do
-    {exp_keys, next_cursor} =
-      Mnesia.fetch_keys(
-        @table_inactive_expiration,
-        direction,
-        deserialize_cursor(cursor),
-        limit
-      )
+    {exp_keys, next_cursor} = fetch_inactive_keys(direction, deserialize_cursor(cursor), limit)
 
     {:ok, {last_gen, -1}} = Mnesia.last_key(AeMdw.Db.Model.Block)
 
@@ -61,6 +85,12 @@ defmodule AeMdw.Oracles do
 
     {oracles, serialize_cursor(next_cursor)}
   end
+
+  defp fetch_active_keys(direction, cursor, limit),
+    do: Mnesia.fetch_keys(@table_active_expiration, direction, cursor, limit)
+
+  defp fetch_inactive_keys(direction, cursor, limit),
+    do: Mnesia.fetch_keys(@table_inactive_expiration, direction, cursor, limit)
 
   defp render_list(oracles, last_gen, is_active?) do
     Enum.map(oracles, &render(&1, last_gen, is_active?))

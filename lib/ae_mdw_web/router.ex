@@ -102,6 +102,8 @@ defmodule AeMdwWeb.Router do
     get "/v2/oracles/active/:direction", OracleController, :active_oracles_v2
     get "/v2/oracles/inactive", OracleController, :inactive_oracles_v2
     get "/v2/oracles/inactive/:direction", OracleController, :inactive_oracles_v2
+    get "/v2/oracles", OracleController, :oracles_v2
+    get "/v2/oracles/:direction", OracleController, :oracles_v2
 
     get "/aex9/by_name", Aex9Controller, :by_names
     get "/aex9/by_symbol", Aex9Controller, :by_symbols

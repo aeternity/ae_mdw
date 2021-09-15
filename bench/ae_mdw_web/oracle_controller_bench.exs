@@ -22,6 +22,16 @@ defmodule AeMdw.OracleControllerBench do
     build_conn()
     |> get("/v2/oracles/inactive/forward")
   end
+
+  def oracles do
+    build_conn()
+    |> get("/oracles")
+  end
+
+  def oracles_v2 do
+    build_conn()
+    |> get("/v2/oracles")
+  end
 end
 
 Benchee.run(
@@ -36,6 +46,14 @@ Benchee.run(
   %{
     inactive_oracles: &AeMdw.OracleControllerBench.inactive_oracles/0,
     inactive_oracles_v2: &AeMdw.OracleControllerBench.inactive_oracles_v2/0
+  },
+  memory_time: 1
+)
+
+Benchee.run(
+  %{
+    oracles: &AeMdw.OracleControllerBench.oracles/0,
+    oracles_v2: &AeMdw.OracleControllerBench.oracles_v2/0
   },
   memory_time: 1
 )
