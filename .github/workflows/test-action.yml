@@ -39,6 +39,11 @@ jobs:
       - name: Setup dependencies
         run: make docker-deps
 
+      - name: Reset master
+        if: ${{ github.ref != 'refs/heads/master' }}
+        run: |
+          git branch -f master origin/master
+
       - run: make docker-lint
 
   dialyzer:
