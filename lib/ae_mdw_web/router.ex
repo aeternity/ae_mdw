@@ -153,6 +153,7 @@ defmodule AeMdwWeb.Router do
     match :*, "/*path", UtilController, :no_route
   end
 
+  @spec swagger_info() :: term()
   def swagger_info do
     %{
       basePath: "/",
