@@ -109,12 +109,17 @@ defmodule AeMdw.Db.Sync.Transaction do
     {next_txi, mbi + 1}
   end
 
-  def sync_transaction(signed_tx, txi, {block_index, mb_time, mb_events}, wrapper_tx_id \\ nil) do
+  def sync_transaction(
+        signed_tx,
+        txi,
+        {block_index, mb_time, mb_events} = tx_ctx,
+        inner_tx? \\ false
+      ) do
     {mod, tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
     hash = :aetx_sign.hash(signed_tx)
     type = mod.type()
 
-    write_tx(type, txi, hash, block_index, mb_time, wrapper_tx_id)
+    write_tx(type, txi, hash, block_index, mb_time, inner_tx?)
     write_links(type, tx, signed_tx, txi, hash, block_index)
 
     if type == :contract_call_tx do
@@ -131,31 +136,26 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     if type == :ga_meta_tx or type == :paying_for_tx do
       inner_signed_tx = Sync.InnerTx.signed_tx(type, tx)
-      sync_transaction(inner_signed_tx, txi + 1, {block_index, mb_time, mb_events}, wrapper_tx_id)
-      txi + 2
-    else
-      txi + 1
+      # indexes the inner with the txi from the wrapper/outer
+      sync_transaction(inner_signed_tx, txi, tx_ctx, false)
     end
+
+    txi + 1
   end
 
   #
   # Private functions
   #
-  defp write_tx(type, txi, tx_hash, block_index, mb_time, wrapper_tx_id) do
+  defp write_tx(type, txi, tx_hash, block_index, mb_time, inner_tx?) do
     model_tx = Model.tx(index: txi, id: tx_hash, block_index: block_index, time: mb_time)
     :ets.insert(:tx_sync_cache, {txi, model_tx})
-    :mnesia.write(Model.Tx, model_tx, :write)
+
+    if not inner_tx? do
+      :mnesia.write(Model.Tx, model_tx, :write)
+    end
+
     :mnesia.write(Model.Type, Model.type(index: {type, txi}), :write)
     :mnesia.write(Model.Time, Model.time(index: {mb_time, txi}), :write)
-
-    if nil != wrapper_tx_id do
-      IO.puts("inner hash: #{:aeser_api_encoder.encode(:tx_hash, tx_hash)}")
-      IO.puts("inner hash: #{inspect(tx_hash)}")
-      IO.puts("wrapper_tx_id: #{:aeser_api_encoder.encode(:tx_hash, wrapper_tx_id)}")
-      IO.puts("wrapper_tx_id: #{inspect(wrapper_tx_id)}")
-      m_inner_tx = Model.inner_tx(index: tx_hash, id: wrapper_tx_id)
-      :mnesia.write(Model.InnerTx, m_inner_tx, :write)
-    end
   end
 
   defp write_links(:contract_create_tx, tx, _signed_tx, txi, tx_hash, bi) do

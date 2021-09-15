@@ -843,6 +843,79 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     end
   end
 
+  describe "txs with inner transactions" do
+    test "on forward and field=recipient_id ", %{conn: conn} do
+      field = "recipient_id"
+      id = "ak_2RUVa9bvHUD8wYSrvixRjy9LonA9L29wRvwDfQ4y37ysMKjgdQ"
+
+      response = request_txs_by_field(conn, "forward", field, id)
+
+      assert Enum.any?(response["data"], fn %{"tx" => block_tx} ->
+               if block_tx["type"] == "GAMetaTx" do
+                 assert block_tx["tx"]["tx"]["recipient_id"] == id
+                 true
+               else
+                 assert block_tx["recipient_id"] == id
+                 false
+               end
+             end)
+    end
+
+    test "on backward and field=sender_id ", %{conn: conn} do
+      field = "sender_id"
+      id = "ak_oTX3ffD9XewhuLAquSKHBdm4jhhKb24NKsesGSWM4UKg6gWp4"
+
+      response = request_txs_by_field(conn, "backward", field, id)
+
+      assert Enum.any?(response["data"], fn %{"tx" => block_tx} ->
+               if block_tx["type"] == "GAMetaTx" do
+                 assert block_tx["tx"]["tx"]["sender_id"] == id
+                 true
+               else
+                 assert block_tx["sender_id"] == id
+                 false
+               end
+             end)
+    end
+
+    test "on range and field=account ", %{conn: conn} do
+      range = 142_398..142_415
+      field = "account"
+      id = "ak_2RUVa9bvHUD8wYSrvixRjy9LonA9L29wRvwDfQ4y37ysMKjgdQ"
+
+      response = request_txs_by_field(conn, range, field, id)
+
+      Enum.each(response["data"], fn %{"block_height" => block_height} ->
+        assert block_height in range
+      end)
+
+      assert Enum.any?(response["data"], fn %{"tx" => block_tx} ->
+               if block_tx["type"] == "GAMetaTx" do
+                 block_tx["tx"]["tx"]["recipient_id"] == id
+               else
+                 false
+               end
+             end)
+
+      assert Enum.any?(response["data"], fn %{"tx" => block_tx} ->
+               if block_tx["type"] == "GAMetaTx" do
+                 block_tx["tx"]["tx"]["sender_id"] == id
+               else
+                 false
+               end
+             end)
+
+      assert Enum.any?(response["data"], fn %{"tx" => block_tx} ->
+               if block_tx["type"] == "SpendTx" do
+                 assert block_tx["recipient_id"] == id or block_tx["sender_id"] == id
+                 true
+               else
+                 false
+               end
+             end)
+    end
+  end
+
   # These tests will work only for mainnet, because of the hardcoded IDs and they are valid only for mainnet network
   describe "txs_direction with mixing of query parameters" do
     test "get transactions when direction=forward, where both accounts contains ", %{
@@ -1094,6 +1167,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     do:
       conn
       |> get("/txs/#{direction}?#{criteria1}=#{c1}&#{criteria2}=#{c2}&limit=#{limit}")
+      |> json_response(200)
+
+  defp request_txs_by_field(conn, %Range{first: first, last: last}, field, c),
+    do:
+      conn
+      |> get("/txs/gen/#{first}-#{last}?#{field}=#{c}")
+      |> json_response(200)
+
+  defp request_txs_by_field(conn, direction, field, c),
+    do:
+      conn
+      |> get("/txs/#{direction}?#{field}=#{c}")
       |> json_response(200)
 
   defp request_txs_by_field(conn, direction, criteria, field, c),

@@ -36,8 +36,7 @@ defmodule AeMdw.Migrations.IndexInnerTxs do
     paying_for_txis = lookup_txis(:paying_for_tx)
 
     txi_list = Enum.sort(ga_meta_txis ++ paying_for_txis)
-    last_txi = Util.last(Model.Tx)
-    indexed_count = reindex_txs(txi_list, last_txi) - last_txi
+    indexed_count = reindex_txs(txi_list)
 
     duration = DateTime.diff(DateTime.utc_now(), begin)
     IO.puts("Indexed #{indexed_count} records in #{duration}s")
@@ -45,50 +44,50 @@ defmodule AeMdw.Migrations.IndexInnerTxs do
     {:ok, {indexed_count, duration}}
   end
 
-  defp reindex_txs(wrapper_txi_list, last_txi) do
+  defp reindex_txs(wrapper_txi_list) do
     wrapper_txi_list
-    |> Enum.reduce(last_txi + 1, fn wrapper_txi, next_txi ->
+    |> Enum.reduce(0, fn wrapper_txi, acc ->
       m_tx = Util.read_tx!(wrapper_txi)
       {tx_kbi, _} = Model.tx(m_tx, :block_index)
-      wrapper_tx_id = Model.tx(m_tx, :id)
 
-      sync_generation_inner_txs(tx_kbi, next_txi, wrapper_tx_id)
+      acc + sync_generation_inner_txs(tx_kbi, wrapper_txi)
     end)
   end
 
-  defp sync_generation_inner_txs(height, next_txi, wrapper_tx_id) do
-    {:atomic, {next_txi, _mbi}} =
+  defp sync_generation_inner_txs(height, wrapper_txi) do
+    {:atomic, {_mbi, count}} =
       :mnesia.transaction(fn ->
         :ets.delete_all_objects(:ct_create_sync_cache)
         :ets.delete_all_objects(:tx_sync_cache)
 
         height
         |> AE.Db.get_micro_blocks()
-        |> Enum.reduce({next_txi, 0}, &sync_micro_block_inner_txs(&1, &2, wrapper_tx_id))
+        |> Enum.reduce({0, 0}, fn mblock, {mbi, acc} ->
+          count = sync_micro_block_inner_txs(mblock, mbi, wrapper_txi)
+          {mbi + 1, acc + count}
+        end)
       end)
 
-    next_txi
+    count
   end
 
-  defp sync_micro_block_inner_txs(mblock, {txi, mbi}, wrapper_tx_id) do
+  defp sync_micro_block_inner_txs(mblock, mbi, wrapper_txi) do
     tx_ctx = tx_context(mblock, mbi)
 
-    new_txi =
-      mblock
-      |> :aec_blocks.txs()
-      |> Enum.filter(fn wrapper_tx ->
-        {tx_type, _raw_tx} = aetx_specialize_type(wrapper_tx)
-        tx_type == :ga_meta_tx or tx_type == :paying_for_tx
-      end)
-      |> Enum.reduce(txi, fn wrapper_tx, txi ->
-        {tx_type, raw_outer_tx} = aetx_specialize_type(wrapper_tx)
+    mblock
+    |> :aec_blocks.txs()
+    |> Enum.filter(fn wrapper_tx ->
+      {tx_type, _raw_tx} = aetx_specialize_type(wrapper_tx)
+      tx_type == :ga_meta_tx or tx_type == :paying_for_tx
+    end)
+    |> Enum.reduce(0, fn wrapper_tx, acc ->
+      {tx_type, raw_tx} = aetx_specialize_type(wrapper_tx)
 
-        tx_type
-        |> SyncInnerTx.signed_tx(raw_outer_tx)
-        |> SyncTx.sync_transaction(txi, tx_ctx, wrapper_tx_id)
-      end)
-
-    {new_txi, mbi + 1}
+      tx_type
+      |> SyncInnerTx.signed_tx(raw_tx)
+      |> SyncTx.sync_transaction(wrapper_txi, tx_ctx, true)
+      acc + 1
+    end)
   end
 
   defp lookup_txis(type) do
