@@ -23,6 +23,11 @@ defmodule AeMdw.Db.Model do
   @tx_defaults [index: -1, id: <<>>, block_index: {-1, -1}, time: -1]
   defrecord :tx, @tx_defaults
 
+  # inner txs mapping table :
+  #     index = inner tx_id (hash), id = wrapper tx_id
+  @inner_tx_defaults [index: <<>>, id: <<>>]
+  defrecord :inner_tx, @inner_tx_defaults
+
   # txs time index :
   #     index = {mb_time_msecs (0..), tx_index = (0...)},
   @time_defaults [index: {-1, -1}, unused: nil]
@@ -387,6 +392,7 @@ defmodule AeMdw.Db.Model do
   def chain_tables() do
     [
       AeMdw.Db.Model.Tx,
+      AeMdw.Db.Model.InnerTx,
       AeMdw.Db.Model.Block,
       AeMdw.Db.Model.Time,
       AeMdw.Db.Model.Type,
@@ -465,6 +471,7 @@ defmodule AeMdw.Db.Model do
   def records(),
     do: [
       :tx,
+      :inner_tx,
       :block,
       :time,
       :type,
@@ -514,6 +521,7 @@ defmodule AeMdw.Db.Model do
 
   def record(AeMdw.Db.Model.Migrations), do: :migrations
   def record(AeMdw.Db.Model.Tx), do: :tx
+  def record(AeMdw.Db.Model.InnerTx), do: :inner_tx
   def record(AeMdw.Db.Model.Block), do: :block
   def record(AeMdw.Db.Model.Time), do: :time
   def record(AeMdw.Db.Model.Type), do: :type
@@ -565,6 +573,7 @@ defmodule AeMdw.Db.Model do
 
   def table(:migrations), do: AeMdw.Db.Model.Migrations
   def table(:tx), do: AeMdw.Db.Model.Tx
+  def table(:inner_tx), do: AeMdw.Db.Model.InnerTx
   def table(:block), do: AeMdw.Db.Model.Block
   def table(:time), do: AeMdw.Db.Model.Time
   def table(:type), do: AeMdw.Db.Model.Type
@@ -602,6 +611,7 @@ defmodule AeMdw.Db.Model do
 
   def defaults(:migrations), do: @migrations_defaults
   def defaults(:tx), do: @tx_defaults
+  def defaults(:inner_tx), do: @inner_tx_defaults
   def defaults(:block), do: @block_defaults
   def defaults(:time), do: @time_defaults
   def defaults(:type), do: @type_defaults

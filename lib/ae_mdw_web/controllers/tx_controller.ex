@@ -97,14 +97,23 @@ defmodule AeMdwWeb.TxController do
     end
   end
 
-  defp read_tx_hash(tx_hash) do
+  defp read_tx_hash(tx_hash, wrapper_lookup? \\ false) do
     with <<_::256>> = mb_hash <- :aec_db.find_tx_location(tx_hash),
          {:ok, mb_header} <- :aec_chain.get_header(mb_hash),
          height <- :aec_headers.height(mb_header) do
-      DBS.map({:gen, height}, & &1)
+      {:gen, height}
+      |> DBS.map(& &1)
       |> Enum.find(&(Model.tx(&1, :id) == tx_hash))
     else
-      _ -> nil
+      _ ->
+        if not wrapper_lookup? do
+          IO.puts("tx_hash: #{:aeser_api_encoder.encode(:tx_hash, tx_hash)}")
+          IO.puts("tx_hash: #{inspect(tx_hash)}")
+          Model.inner_tx(id: wrapper_tx_id) = read_wrapper_tx_id(tx_hash)
+          IO.puts("wrapper_tx_id: #{:aeser_api_encoder.encode(:tx_hash, wrapper_tx_id)}")
+          IO.puts("wrapper_tx_id: #{inspect(wrapper_tx_id)}")
+          read_tx_hash(wrapper_tx_id, true)
+        end
     end
   end
 
