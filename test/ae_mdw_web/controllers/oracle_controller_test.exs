@@ -13,7 +13,7 @@ defmodule AeMdwWeb.OracleControllerTest do
   alias AeMdw.Mnesia
   alias AeMdw.TestSamples, as: TS
 
-  describe "oracles_v2" do
+  describe "oracles" do
     test "it retrieves active oracles first", %{conn: conn} do
       expiration_keys = 1..10 |> Enum.map(fn _index -> TS.oracle_expiration_key(1) end)
       Model.oracle(index: pk) = oracle = TS.oracle()
@@ -35,18 +35,19 @@ defmodule AeMdwWeb.OracleControllerTest do
       ] do
         assert %{"data" => [oracle1 | _rest] = oracles, "next" => next_uri} =
                  conn
-                 |> get("/v2/oracles")
+                 |> get("/oracles")
                  |> json_response(200)
 
         assert 10 = length(oracles)
         assert %{"oracle" => ^encoded_pk} = oracle1
 
         assert %URI{
-                 path: "/v2/oracles/backward",
+                 path: "/oracles",
                  query: query
                } = URI.parse(next_uri)
 
-        assert %{"cursor" => ^next_cursor_query_value} = URI.decode_query(query)
+        assert %{"cursor" => ^next_cursor_query_value, "direction" => "backward"} =
+                 URI.decode_query(query)
 
         assert_called(Mnesia.fetch_keys(ActiveOracleExpiration, :backward, nil, 10))
         assert_not_called(Mnesia.fetch_keys(InactiveOracleExpiration, :_, :_, :_))
@@ -74,7 +75,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       ] do
         assert %{"data" => [oracle1, _oracle2, _oracle3, _oracle4], "next" => nil} =
                  conn
-                 |> get("/v2/oracles")
+                 |> get("/oracles")
                  |> json_response(200)
 
         assert %{"oracle" => ^encoded_pk} = oracle1
@@ -85,7 +86,7 @@ defmodule AeMdwWeb.OracleControllerTest do
     end
   end
 
-  describe "active_oracles_v2" do
+  describe "active_oracles" do
     test "it retrieves all active oracles backwards by default", %{conn: conn} do
       next_cursor = nil
       expiration_keys = [TS.oracle_expiration_key(1), TS.oracle_expiration_key(2)]
@@ -104,7 +105,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       ] do
         assert %{"data" => [oracle1, _oracle2], "next" => nil} =
                  conn
-                 |> get("/v2/oracles/active")
+                 |> get("/oracles/active")
                  |> json_response(200)
 
         assert %{"oracle" => ^encoded_pk} = oracle1
@@ -130,14 +131,15 @@ defmodule AeMdwWeb.OracleControllerTest do
         {Oracle, [], [oracle_tree!: fn _bi -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]}
       ] do
-        assert %{"next" => next_uri} = conn |> get("/v2/oracles/active") |> json_response(200)
+        assert %{"next" => next_uri} = conn |> get("/oracles/active") |> json_response(200)
 
         assert %URI{
-                 path: "/v2/oracles/active/backward",
+                 path: "/oracles/active",
                  query: query
                } = URI.parse(next_uri)
 
-        assert %{"cursor" => ^next_cursor_query_value} = URI.decode_query(query)
+        assert %{"cursor" => ^next_cursor_query_value, "direction" => "backward"} =
+                 URI.decode_query(query)
 
         assert_called(Mnesia.fetch_keys(ActiveOracleExpiration, :backward, nil, 10))
       end

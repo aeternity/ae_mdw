@@ -24,7 +24,8 @@ defmodule AeMdwWeb.OracleController do
 
   ##########
 
-  def stream_plug_hook(%Plug.Conn{params: params} = conn) do
+  @spec stream_plug_hook(Conn.t()) :: Conn.t()
+  def stream_plug_hook(%Plug.Conn{params: %{"gen" => _gen} = params} = conn) do
     alias AeMdwWeb.DataStreamPlug, as: P
 
     rem = rem_path(conn.path_info)
@@ -37,37 +38,40 @@ defmodule AeMdwWeb.OracleController do
     )
   end
 
+  def stream_plug_hook(conn), do: conn
+
   defp rem_path(["oracles", x | rem]) when x in ["inactive", "active"], do: rem
   defp rem_path(["oracles" | rem]), do: rem
 
   ##########
 
+  @spec oracle(Conn.t(), map()) :: Conn.t()
   def oracle(conn, %{"id" => id} = params),
     do:
       handle_input(conn, fn ->
         oracle_reply(conn, Validate.id!(id, [:oracle_pubkey]), expand?(params))
       end)
 
-  def inactive_oracles(conn, _req),
+  @spec inactive_oracles(Conn.t(), map()) :: Conn.t()
+  def inactive_oracles(conn, %{"gen" => _gen}),
     do: handle_input(conn, fn -> Cont.response(conn, &json/2) end)
 
-  def active_oracles(conn, _req),
-    do: handle_input(conn, fn -> Cont.response(conn, &json/2) end)
+  def inactive_oracles(%Conn{assigns: assigns} = conn, _params) do
+    %{direction: direction, limit: limit, cursor: cursor, expand?: expand?} = assigns
 
-  def oracles(conn, _req),
-    do: handle_input(conn, fn -> Cont.response(conn, &json/2) end)
-
-  @spec oracles_v2(Conn.t(), map()) :: Conn.t()
-  def oracles_v2(%Conn{assigns: assigns} = conn, _params) do
-    %{direction: direction, limit: limit, cursor: cursor} = assigns
-
-    {oracles, new_cursor} = Oracles.fetch_oracles(direction, cursor, limit)
+    {oracles, new_cursor} = Oracles.fetch_inactive_oracles(direction, cursor, limit, expand?)
 
     uri =
       if new_cursor do
         %URI{
-          path: "/v2/oracles/#{direction}",
-          query: URI.encode_query(%{"cursor" => new_cursor, "limit" => limit})
+          path: "/oracles/inactive",
+          query:
+            URI.encode_query(%{
+              "cursor" => new_cursor,
+              "limit" => limit,
+              "direction" => direction,
+              "expand" => expand?
+            })
         }
         |> URI.to_string()
       end
@@ -75,17 +79,26 @@ defmodule AeMdwWeb.OracleController do
     json(conn, %{"data" => oracles, "next" => uri})
   end
 
-  @spec active_oracles_v2(Conn.t(), map()) :: Conn.t()
-  def active_oracles_v2(%Conn{assigns: assigns} = conn, _params) do
-    %{direction: direction, limit: limit, cursor: cursor} = assigns
+  @spec active_oracles(Conn.t(), map()) :: Conn.t()
+  def active_oracles(conn, %{"gen" => _gen}),
+    do: handle_input(conn, fn -> Cont.response(conn, &json/2) end)
 
-    {oracles, new_cursor} = Oracles.fetch_active_oracles(direction, cursor, limit)
+  def active_oracles(%Conn{assigns: assigns} = conn, _params) do
+    %{direction: direction, limit: limit, cursor: cursor, expand?: expand?} = assigns
+
+    {oracles, new_cursor} = Oracles.fetch_active_oracles(direction, cursor, limit, expand?)
 
     uri =
       if new_cursor do
         %URI{
-          path: "/v2/oracles/active/#{direction}",
-          query: URI.encode_query(%{"cursor" => new_cursor, "limit" => limit})
+          path: "/oracles/active",
+          query:
+            URI.encode_query(%{
+              "cursor" => new_cursor,
+              "limit" => limit,
+              "direction" => direction,
+              "expand" => expand?
+            })
         }
         |> URI.to_string()
       end
@@ -93,17 +106,26 @@ defmodule AeMdwWeb.OracleController do
     json(conn, %{"data" => oracles, "next" => uri})
   end
 
-  @spec inactive_oracles_v2(Conn.t(), map()) :: Conn.t()
-  def inactive_oracles_v2(%Conn{assigns: assigns} = conn, _params) do
-    %{direction: direction, limit: limit, cursor: cursor} = assigns
+  @spec oracles(Conn.t(), map()) :: Conn.t()
+  def oracles(conn, %{"gen" => _gen}),
+    do: handle_input(conn, fn -> Cont.response(conn, &json/2) end)
 
-    {oracles, new_cursor} = Oracles.fetch_inactive_oracles(direction, cursor, limit)
+  def oracles(%Conn{assigns: assigns} = conn, _params) do
+    %{direction: direction, limit: limit, cursor: cursor, expand?: expand?} = assigns
+
+    {oracles, new_cursor} = Oracles.fetch_oracles(direction, cursor, limit, expand?)
 
     uri =
       if new_cursor do
         %URI{
-          path: "/v2/oracles/inactive/#{direction}",
-          query: URI.encode_query(%{"cursor" => new_cursor, "limit" => limit})
+          path: "/oracles",
+          query:
+            URI.encode_query(%{
+              "cursor" => new_cursor,
+              "limit" => limit,
+              "direction" => direction,
+              "expand" => expand?
+            })
         }
         |> URI.to_string()
       end
