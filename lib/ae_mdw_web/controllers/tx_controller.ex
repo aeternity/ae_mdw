@@ -786,6 +786,7 @@ defmodule AeMdwWeb.TxController do
     response(400, "Bad request", Schema.ref(:ErrorResponse))
   end
 
+  # credo:disable-for-next-line
   def swagger_path_txs(%{path: "/txs/{direction}"} = route), do: swagger_path_txs_direction(route)
 
   # credo:disable-for-next-line

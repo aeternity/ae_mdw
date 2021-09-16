@@ -152,7 +152,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], transform_tx_type, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(transform_tx_type, limit)
     end
 
@@ -165,7 +166,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], transform_tx_type, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(transform_tx_type, limit)
     end
 
@@ -178,7 +180,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], transform_tx_type, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(transform_tx_type, limit)
     end
 
@@ -191,7 +194,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], transform_tx_type, @default_limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(transform_tx_type, @default_limit)
     end
 
@@ -207,7 +211,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], transform_tx_type, @default_limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(transform_tx_type, @default_limit)
     end
 
@@ -222,7 +227,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], transform_tx_type, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(transform_tx_type, limit)
     end
 
@@ -235,7 +241,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], transform_tx_type, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(transform_tx_type, limit)
     end
 
@@ -258,7 +265,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], txs_types_by_tx_group, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(txs_types_by_tx_group, limit)
     end
 
@@ -273,7 +281,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], txs_types_by_tx_group, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(txs_types_by_tx_group, limit)
     end
 
@@ -286,7 +295,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], txs_types_by_tx_group, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(txs_types_by_tx_group, limit)
     end
 
@@ -299,7 +309,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], txs_types_by_tx_group, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(txs_types_by_tx_group, limit)
     end
 
@@ -315,7 +326,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], txs_types_by_tx_group, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(txs_types_by_tx_group, limit)
     end
 
@@ -329,7 +341,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], txs_types_by_tx_group, @default_limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(txs_types_by_tx_group, @default_limit)
     end
 
@@ -344,7 +357,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], txs_types_by_tx_group, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(txs_types_by_tx_group, limit)
     end
 
@@ -357,7 +371,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], txs_types_by_tx_group, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(txs_types_by_tx_group, limit)
     end
 
@@ -370,7 +385,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], txs_types_by_tx_group, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(txs_types_by_tx_group, limit)
     end
 
@@ -383,7 +399,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], txs_types_by_tx_group, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(txs_types_by_tx_group, limit)
     end
 
@@ -412,7 +429,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], txs_types_by_tx_group, transform_tx_type, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(txs_types_by_tx_group, transform_tx_type, limit)
     end
 
@@ -430,7 +448,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], txs_types_by_tx_group, transform_tx_type, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(txs_types_by_tx_group, transform_tx_type, limit)
     end
 
@@ -449,7 +468,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
         @default_limit
       )
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(txs_types_by_tx_group, transform_tx_type, @default_limit)
     end
 
@@ -467,7 +487,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], txs_types_by_tx_group, transform_tx_type, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(txs_types_by_tx_group, transform_tx_type, limit)
     end
 
@@ -485,7 +506,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], txs_types_by_tx_group, transform_tx_type, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(txs_types_by_tx_group, transform_tx_type, limit)
     end
 
@@ -506,7 +528,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
         @default_limit
       )
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(txs_types_by_tx_group, transform_tx_type, @default_limit)
     end
 
@@ -545,7 +568,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], rest, :no_prefix, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(rest, :no_prefix, limit)
     end
 
@@ -620,7 +644,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], rest, :no_prefix, @default_limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(rest, :no_prefix, @default_limit)
     end
 
@@ -636,7 +661,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], rest, :no_prefix, @default_limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(rest, :no_prefix, @default_limit)
     end
 
@@ -652,7 +678,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], rest, :no_prefix, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(rest, :no_prefix, limit)
     end
 
@@ -680,7 +707,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], rest, :no_prefix, @default_limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(rest, :no_prefix, @default_limit)
     end
 
@@ -696,7 +724,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], rest, :no_prefix, @default_limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(rest, :no_prefix, @default_limit)
     end
 
@@ -732,7 +761,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], field, id, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(field, id, limit)
     end
 
@@ -747,7 +777,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], field, id, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(field, id, limit)
     end
 
@@ -773,7 +804,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], field, id, @default_limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(field, id, @default_limit)
     end
 
@@ -787,7 +819,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], field, id, @default_limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(field, id, @default_limit)
     end
 
@@ -818,7 +851,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], field, id, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(field, id, limit)
     end
 
@@ -936,7 +970,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
         limit
       )
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(id_1, id_2, :with_prefix, limit)
     end
 
@@ -958,7 +993,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
         limit
       )
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(sender_id, recipient_id, :with_prefix, limit)
     end
 
@@ -990,7 +1026,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
         limit
       )
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(account, txs_types_by_tx_group, :with_prefix, limit)
     end
 
@@ -1022,7 +1059,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], height, @default_limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(height, @default_limit)
     end
 
@@ -1035,7 +1073,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], height_from, height_to, limit)
 
-      get_response_from_next_page(conn, response)
+      conn
+      |> get_response_from_next_page(response)
       |> check_response_data(height_from, height_to, limit)
     end
 

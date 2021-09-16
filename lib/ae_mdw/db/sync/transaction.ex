@@ -245,7 +245,9 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   defp kbi(f) do
     case f.(Model.Tx) do
-      :"$end_of_table" -> nil
+      :"$end_of_table" ->
+        nil
+
       txi ->
         {kbi, _mbi} = Model.tx(read_tx!(txi), :block_index)
         kbi
