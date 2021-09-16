@@ -137,7 +137,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     if type == :ga_meta_tx or type == :paying_for_tx do
       inner_signed_tx = Sync.InnerTx.signed_tx(type, tx)
       # indexes the inner with the txi from the wrapper/outer
-      sync_transaction(inner_signed_tx, txi, tx_ctx, false)
+      sync_transaction(inner_signed_tx, txi, tx_ctx, true)
     end
 
     txi + 1
