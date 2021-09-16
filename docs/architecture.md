@@ -107,7 +107,7 @@ succeeds it.
 The block index solves this by indexing the block hash with tuple in the format:
 `{key_block_index, micro_block_index}`
 
-`Key_block_index` identifies the generation (or height) of the block,
+`key_block_index` identifies the generation (or height) of the block,
 `micro_block_index` identifies the position of the micro block in the
 generation.
 
