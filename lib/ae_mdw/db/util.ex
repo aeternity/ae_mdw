@@ -17,9 +17,6 @@ defmodule AeMdw.Db.Util do
   def read_tx(txi),
     do: :mnesia.async_dirty(fn -> :mnesia.read(~t[tx], txi) end)
 
-  def read_wrapper_tx_id(inner_tx_id),
-    do: :mnesia.async_dirty(fn -> :mnesia.read(~t[inner_tx], inner_tx_id) |> List.first() end)
-
   def read_tx!(txi),
     do: read_tx(txi) |> one!
 

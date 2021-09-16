@@ -1108,10 +1108,13 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     end
   end
 
-  defp transform_tx_type(type), do: Validate.tx_type!(type) |> AeMdw.Node.tx_name()
+  defp transform_tx_type(type), do: type |> Validate.tx_type!() |> AeMdw.Node.tx_name()
 
   defp get_txs_types_by_tx_group(tx_group) do
-    String.to_atom(tx_group) |> AeMdw.Node.tx_group() |> Enum.map(&AeMdw.Node.tx_name/1)
+    tx_group
+    |> String.to_existing_atom()
+    |> AeMdw.Node.tx_group()
+    |> Enum.map(&AeMdw.Node.tx_name/1)
   end
 
   defp keys_to_string(map) when is_map(map) do
@@ -1121,7 +1124,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
   defp keys_to_string(value), do: value
 
   defp remove_prefix(<<_prefix::3-binary, rest::binary>>), do: rest
-  defp remove_prefix(_), do: false
+  defp remove_prefix(_no_prefix), do: false
 
   defp id_exists?(tx, id, :no_prefix),
     do:
@@ -1311,7 +1314,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
     assert Enum.any?(blocks_with_nm, fn %{"tx" => tx, "tx_index" => tx_index} ->
              assert {:ok, plain_name} = Validate.plain_name(tx["recipient_id"])
-             assert Model.name(updates: name_updates) = Name.locate(plain_name) |> elem(0)
+             assert Model.name(updates: name_updates) = elem(Name.locate(plain_name), 0)
 
              if [] != name_updates do
                assert recipient = tx["recipient"]
@@ -1325,7 +1328,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
              end
            end)
 
-    get_response_from_next_page(conn, response)
+    conn
+    |> get_response_from_next_page(response)
     |> check_response_data_ignore_recipient(account_id, limit)
   end
 end

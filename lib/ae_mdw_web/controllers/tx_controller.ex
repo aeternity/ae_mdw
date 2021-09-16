@@ -105,7 +105,7 @@ defmodule AeMdwWeb.TxController do
       |> DBS.map(& &1)
       |> Enum.find(&(Model.tx(&1, :id) == tx_hash))
     else
-      _ ->
+      _error ->
         nil
     end
   end
@@ -127,6 +127,7 @@ defmodule AeMdwWeb.TxController do
 
   ##########
 
+  # credo:disable-for-next-line
   def swagger_definitions do
     %{
       TxResponse:
@@ -615,7 +616,7 @@ defmodule AeMdwWeb.TxController do
                 ],
                 tx: %{
                   amount: 1_000_000,
-                  fee: 20001,
+                  fee: 20_001,
                   nonce: 2,
                   payload: "ba_SGFucyBkb25hdGVzs/BHFA==",
                   recipient_id: "ak_2fbhvhopqoWbGXbqUHJhZEM1Rm16eMXBqLtDu5iEVqNrASnzF6",
@@ -785,8 +786,9 @@ defmodule AeMdwWeb.TxController do
     response(400, "Bad request", Schema.ref(:ErrorResponse))
   end
 
-  def swagger_path_txs(route = %{path: "/txs/{direction}"}), do: swagger_path_txs_direction(route)
+  def swagger_path_txs(%{path: "/txs/{direction}"} = route), do: swagger_path_txs_direction(route)
 
-  def swagger_path_txs(route = %{path: "/txs/{scope_type}/{range}"}),
+  # credo:disable-for-next-line
+  def swagger_path_txs(%{path: "/txs/{scope_type}/{range}" = route}),
     do: swagger_path_txs_scope_range(route)
 end

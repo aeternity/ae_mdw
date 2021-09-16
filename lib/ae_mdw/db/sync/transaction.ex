@@ -146,7 +146,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   #
   # Private functions
   #
-  defp write_tx(type, txi, tx_hash, block_index, mb_time, inner_tx?) do
+  defp write_tx(type, txi, tx_hash, {_kbi, _mbi} = block_index, mb_time, inner_tx?) do
     model_tx = Model.tx(index: txi, id: tx_hash, block_index: block_index, time: mb_time)
     :ets.insert(:tx_sync_cache, {txi, model_tx})
 
@@ -204,7 +204,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   defp write_links(:name_revoke_tx, tx, _signed_tx, txi, _tx_hash, bi),
     do: Sync.Name.revoke(:aens_revoke_tx.name_hash(tx), tx, txi, bi)
 
-  defp write_links(_, _, _, _, _, _),
+  defp write_links(_type, _tx, _signed_tx, _txi, _tx_hash, _bi),
     do: :nop
 
   defp write_origin(tx_type, pubkey, txi, tx_hash) do
@@ -231,7 +231,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     end
   end
 
-  defp resolve_pubkey(id, _, _, _block_index) do
+  defp resolve_pubkey(id, _type, _field, _block_index) do
     {_tag, pk} = :aeser_id.specialize(id)
     pk
   end
@@ -246,10 +246,12 @@ defmodule AeMdw.Db.Sync.Transaction do
   defp kbi(f) do
     case f.(Model.Tx) do
       :"$end_of_table" -> nil
-      txi -> Model.tx(read_tx!(txi), :block_index) |> elem(0)
+      txi ->
+        {kbi, _mbi} = Model.tx(read_tx!(txi), :block_index)
+        kbi
     end
   end
 
-  defp log_msg(height, _),
+  defp log_msg(height, _ignore),
     do: "syncing transactions at generation #{height}"
 end
