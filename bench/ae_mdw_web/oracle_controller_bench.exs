@@ -17,11 +17,6 @@ defmodule AeMdw.OracleControllerBench do
     build_conn()
     |> get("/oracles")
   end
-
-  def oracles_v2 do
-    build_conn()
-    |> get("/v2/oracles")
-  end
 end
 
 Benchee.run(
