@@ -89,19 +89,12 @@ defmodule AeMdwWeb.Router do
     get "/oracle/:id", OracleController, :oracle
 
     get "/oracles/inactive", OracleController, :inactive_oracles
-    get "/oracles/inactive/gen/:range", OracleController, :inactive_oracles
-
     get "/oracles/active", OracleController, :active_oracles
-    get "/oracles/active/gen/:range", OracleController, :active_oracles
-
     get "/oracles", OracleController, :oracles
-    get "/oracles/gen/:range", OracleController, :oracles
 
-    # v2
-    get "/v2/oracles/active", OracleController, :active_oracles_v2
-    get "/v2/oracles/active/:direction", OracleController, :active_oracles_v2
-    get "/v2/oracles/inactive", OracleController, :inactive_oracles_v2
-    get "/v2/oracles/inactive/:direction", OracleController, :inactive_oracles_v2
+    get "/oracles/inactive/gen/:range", OracleController, :inactive_oracles
+    get "/oracles/active/gen/:range", OracleController, :active_oracles
+    get "/oracles/gen/:range", OracleController, :oracles
 
     get "/aex9/by_name", Aex9Controller, :by_names
     get "/aex9/by_symbol", Aex9Controller, :by_symbols
@@ -151,6 +144,7 @@ defmodule AeMdwWeb.Router do
     match :*, "/*path", UtilController, :no_route
   end
 
+  @spec swagger_info() :: term()
   def swagger_info do
     %{
       basePath: "/",

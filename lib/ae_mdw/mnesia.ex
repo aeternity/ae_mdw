@@ -19,11 +19,27 @@ defmodule AeMdw.Mnesia do
 
   @end_token :"$end_of_table"
 
+  @spec last_key(table(), term()) :: term()
+  def last_key(tab, default) do
+    case last_key(tab) do
+      {:ok, last_key} -> last_key
+      :none -> default
+    end
+  end
+
   @spec last_key(table()) :: {:ok, key()} | :none
   def last_key(tab) do
     case :mnesia.dirty_last(tab) do
       @end_token -> :none
       last_key -> {:ok, last_key}
+    end
+  end
+
+  @spec first_key(table(), term()) :: term()
+  def first_key(tab, default) do
+    case first_key(tab) do
+      {:ok, first_key} -> first_key
+      :none -> default
     end
   end
 
@@ -67,7 +83,7 @@ defmodule AeMdw.Mnesia do
     {keys, cursor} =
       :mnesia.async_dirty(fn ->
         case :mnesia.read(tab, first_key) do
-          @end_token -> {[], nil}
+          [] -> {[], nil}
           _first_record -> fetch_forward_keys(tab, first_key, limit)
         end
       end)
@@ -91,7 +107,7 @@ defmodule AeMdw.Mnesia do
     {keys, cursor} =
       :mnesia.async_dirty(fn ->
         case :mnesia.read(tab, last_key) do
-          @end_token -> {[], nil}
+          [] -> {[], nil}
           _last_record -> fetch_backward_keys(tab, last_key, limit)
         end
       end)
