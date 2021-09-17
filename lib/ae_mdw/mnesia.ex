@@ -83,7 +83,6 @@ defmodule AeMdw.Mnesia do
     {keys, cursor} =
       :mnesia.async_dirty(fn ->
         case :mnesia.read(tab, first_key) do
-          @end_token -> {[], nil}
           [] -> {[], nil}
           _first_record -> fetch_forward_keys(tab, first_key, limit)
         end
@@ -108,7 +107,6 @@ defmodule AeMdw.Mnesia do
     {keys, cursor} =
       :mnesia.async_dirty(fn ->
         case :mnesia.read(tab, last_key) do
-          @end_token -> {[], nil}
           [] -> {[], nil}
           _last_record -> fetch_backward_keys(tab, last_key, limit)
         end
