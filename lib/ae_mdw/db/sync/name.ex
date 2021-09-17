@@ -1,7 +1,11 @@
 defmodule AeMdw.Db.Sync.Name do
+  alias AeMdw.Db.Format
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.Name
+  alias AeMdw.Db.Sync
+  alias AeMdw.Log
   alias AeMdw.Node, as: AE
-  alias AeMdw.Db.{Sync, Name, Model, Format}
-  alias AeMdw.{Log, Validate}
+  alias AeMdw.Validate
 
   require Record
   require Model
@@ -19,7 +23,9 @@ defmodule AeMdw.Db.Sync.Name do
       revoke_or_expire_height: 2
     ]
 
-  import AeMdw.{Ets, Util, Db.Util}
+  import AeMdw.Db.Util
+  import AeMdw.Ets
+  import AeMdw.Util
 
   ##########
 

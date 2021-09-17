@@ -1,9 +1,11 @@
 defmodule AeMdw.Db.Stream.Mapper do
-  alias AeMdw.Db.{Model, Format}
+  import AeMdw.Util
+  import AeMdw.Db.Util
+
+  alias AeMdw.Db.Format
+  alias AeMdw.Db.Model
 
   require Model
-
-  import AeMdw.{Util, Db.Util}
 
   @formats [:json, :raw, :txi]
   @tx_tables [Model.Block, Model.Tx, Model.Type, Model.Time, Model.Field]

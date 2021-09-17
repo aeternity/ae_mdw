@@ -1,12 +1,17 @@
 defmodule AeMdw.Db.Sync.Invalidate do
-  alias AeMdw.Node, as: AE
+  alias AeMdw.Contract
   alias AeMdw.Db.Stream, as: DBS
-  alias AeMdw.Db.{Model, Sync, Format}
-  alias AeMdw.{Log, Validate}
+  alias AeMdw.Db.Format
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.Sync
+  alias AeMdw.Log
+  alias AeMdw.Node, as: AE
+  alias AeMdw.Validate
 
   require Model
 
-  import AeMdw.{Util, Db.Util}
+  import AeMdw.Util
+  import AeMdw.Db.Util
 
   ##########
 
@@ -291,8 +296,6 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
   # computes records to be written to cache, flushed at microblock boundary
   def aex9_account_presence_key_writes(from_txi) do
-    alias AeMdw.{Contract, Validate}
-
     bi = Model.tx(read_tx!(from_txi), :block_index)
     start_txi = Model.block(read_block!(bi), :tx_index)
     end_txi = from_txi - 1

@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.Sync.Oracle do
   alias :aeser_api_encoder, as: Enc
-  alias AeMdw.Db.{Model, Format}
+  alias AeMdw.Db.Format
+  alias AeMdw.Db.Model
   alias AeMdw.Log
 
   require Record
@@ -16,7 +17,8 @@ defmodule AeMdw.Db.Sync.Oracle do
       cache_through_delete_inactive: 1
     ]
 
-  import AeMdw.{Util, Db.Util}
+  import AeMdw.Util
+  import AeMdw.Db.Util
 
   ##########
 

@@ -4,7 +4,8 @@ defmodule AeMdw.Db.Util do
   require Logger
   require Model
 
-  import AeMdw.{Sigil, Util}
+  import AeMdw.Sigil
+  import AeMdw.Util
 
   ################################################################################
 

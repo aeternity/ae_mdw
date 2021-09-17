@@ -1,9 +1,11 @@
 defmodule AeMdw.Db.Sync do
   alias __MODULE__
-  alias Sync.{BlockIndex, Transaction, Invalidate}
-  alias AeMdw.Sync.Watcher
-  alias AeMdw.Log
   alias AeMdw.Db.Model
+  alias AeMdw.Log
+  alias AeMdw.Sync.Watcher
+  alias Sync.BlockIndex
+  alias Sync.Invalidate
+  alias Sync.Transaction
 
   require Model
 
