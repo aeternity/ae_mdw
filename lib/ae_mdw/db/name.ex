@@ -1,12 +1,14 @@
 defmodule AeMdw.Db.Name do
   alias AeMdw.Node, as: AE
-  alias AeMdw.Db.{Model, Format}
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.Format
   alias AeMdw.Validate
 
-  require Model
   require Ex2ms
+  require Model
 
-  import AeMdw.{Util, Db.Util}
+  import AeMdw.Db.Util
+  import AeMdw.Util
 
   ##########
 

@@ -2,12 +2,17 @@ defmodule AeMdw.Db.Format do
   alias AeMdw.Node, as: AE
   alias :aeser_api_encoder, as: Enc
 
-  alias AeMdw.Db.{Model, Name, Origin, Sync}
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.Name
+  alias AeMdw.Db.Origin
+  alias AeMdw.Db.Sync
 
   require Model
 
   import AeMdw.Db.Name, only: [plain_name!: 1]
-  import AeMdw.{Util, Db.Util}
+  import AeMdw.Util
+  import AeMdw.Db.Util
 
   ##########
 

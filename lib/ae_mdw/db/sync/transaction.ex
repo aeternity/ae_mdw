@@ -7,7 +7,8 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   require Model
 
-  import AeMdw.{Util, Db.Util}
+  import AeMdw.Db.Util
+  import AeMdw.Util
 
   @log_freq 1000
   @sync_cache_cleanup_freq 150_000

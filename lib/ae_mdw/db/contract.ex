@@ -2,7 +2,8 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Node, as: AE
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
-  alias AeMdw.{Log, Validate}
+  alias AeMdw.Log
+  alias AeMdw.Validate
 
   require Record
   require Model
