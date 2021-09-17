@@ -53,7 +53,7 @@ defmodule AeMdwWeb.Util do
   def make_link(path_info, scope, query_groups) do
     path_info = path_no_scope(path_info)
     scope_info = (scope == nil && []) || [url_encode_scope(scope)]
-    path = Enum.join(path_info ++ scope_info, "/")
+    path = "/" <> Enum.join(path_info ++ scope_info, "/")
 
     query =
       query_groups
