@@ -1,4 +1,5 @@
 defmodule AeMdw.Sync.Supervisor do
+  # credo:disable-for-this-file
   use DynamicSupervisor
 
   ##########
@@ -8,13 +9,19 @@ defmodule AeMdw.Sync.Supervisor do
 
   @impl true
   def init(_args) do
+    init_tables()
+    DynamicSupervisor.init(max_restarts: 0, max_children: 1, strategy: :one_for_one)
+  end
+
+  @spec init_tables() :: :ok
+  def init_tables do
     :ets.new(:tx_sync_cache, [:named_table, :ordered_set, :public])
     :ets.new(:name_sync_cache, [:named_table, :ordered_set, :public])
     :ets.new(:oracle_sync_cache, [:named_table, :ordered_set, :public])
     :ets.new(:aex9_sync_cache, [:named_table, :ordered_set, :public])
     :ets.new(:ct_create_sync_cache, [:named_table, :ordered_set, :public])
     :ets.new(:stat_sync_cache, [:named_table, :ordered_set, :public])
-    DynamicSupervisor.init(max_restarts: 0, max_children: 1, strategy: :one_for_one)
+    :ok
   end
 
   def sync(true),
