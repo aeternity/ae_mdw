@@ -5,6 +5,7 @@ defmodule AeMdw.Oracles do
 
   require AeMdw.Db.Model
 
+  alias AeMdw.Collection
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Util
@@ -26,47 +27,23 @@ defmodule AeMdw.Oracles do
   def fetch_oracles(direction, cursor, limit, expand?) do
     cursor = deserialize_cursor(cursor)
 
-    {first_table, last_table} =
-      case direction do
-        :forward -> {@table_inactive_expiration, @table_active_expiration}
-        :backward -> {@table_active_expiration, @table_inactive_expiration}
-      end
-
-    {first_keys, last_keys, next_cursor} =
-      case Mnesia.fetch_keys(first_table, direction, cursor, limit) do
-        {[], nil} ->
-          {last_exp_keys, cursor} = Mnesia.fetch_keys(last_table, direction, cursor, limit)
-
-          {[], last_exp_keys, cursor}
-
-        {first_exp_keys, nil} when length(first_exp_keys) == limit ->
-          next_cursor =
-            case direction do
-              :forward -> Mnesia.first_key(last_table, nil)
-              :backward -> Mnesia.last_key(last_table, nil)
-            end
-
-          {first_exp_keys, [], next_cursor}
-
-        {first_exp_keys, nil} ->
-          {last_exp_keys, last_cursor} =
-            Mnesia.fetch_keys(last_table, direction, nil, limit - length(first_exp_keys))
-
-          {first_exp_keys, last_exp_keys, last_cursor}
-
-        {first_exp_keys, last_cursor} ->
-          {first_exp_keys, [], last_cursor}
-      end
+    {exp_keys, next_key} =
+      Collection.concat(
+        @table_inactive_expiration,
+        @table_active_expiration,
+        direction,
+        cursor,
+        limit
+      )
 
     {:ok, {last_gen, -1}} = Mnesia.last_key(AeMdw.Db.Model.Block)
 
-    first_oracles =
-      render_list(first_keys, last_gen, first_table == @table_active_expiration, expand?)
+    oracles =
+      Enum.map(exp_keys, fn {exp_key, source} ->
+        render(exp_key, last_gen, source == @table_active_expiration, expand?)
+      end)
 
-    last_oracles =
-      render_list(last_keys, last_gen, last_table == @table_active_expiration, expand?)
-
-    {first_oracles ++ last_oracles, serialize_cursor(next_cursor)}
+    {oracles, serialize_cursor(next_key)}
   end
 
   @spec fetch_active_oracles(Mnesia.direction(), cursor() | nil, limit(), boolean()) ::
