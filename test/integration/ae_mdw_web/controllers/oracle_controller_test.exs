@@ -55,7 +55,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {OracleController, :oracles, %{}, conn.assigns.scope, 0},
+          {OracleController, :oracles, %{}, :unused_scope, 0},
           @default_limit
         )
 
@@ -67,7 +67,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       {:ok, next_data, _has_cont?} =
         Cont.response_data(
-          {OracleController, :oracles, %{}, conn_next.assigns.scope, @default_limit},
+          {OracleController, :oracles, %{}, :unused_scope, @default_limit},
           @default_limit
         )
 
@@ -83,7 +83,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {OracleController, :oracles, %{"direction" => [direction]}, conn.assigns.scope, 0},
+          {OracleController, :oracles, %{"direction" => [direction]}, :unused_scope, 0},
           limit
         )
 
@@ -95,8 +95,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       {:ok, next_data, _has_cont?} =
         Cont.response_data(
-          {OracleController, :oracles, %{"direction" => [direction]}, conn_next.assigns.scope,
-           limit},
+          {OracleController, :oracles, %{"direction" => [direction]}, :unused_scope, limit},
           limit
         )
 
@@ -111,7 +110,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {OracleController, :oracles, %{"expand" => [nil]}, conn.assigns.scope, 0},
+          {OracleController, :oracles, %{"expand" => [nil]}, :foo, 0},
           limit
         )
 
@@ -123,7 +122,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       {:ok, next_data, _has_cont?} =
         Cont.response_data(
-          {OracleController, :oracles, %{"expand" => [nil]}, conn_next.assigns.scope, limit},
+          {OracleController, :oracles, %{"expand" => [nil]}, :foo, limit},
           limit
         )
 
@@ -160,7 +159,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {OracleController, :inactive_oracles, %{}, conn.assigns.scope, 0},
+          {OracleController, :inactive_oracles, %{}, :unused_scope, 0},
           @default_limit
         )
 
@@ -172,7 +171,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       {:ok, next_data, _has_cont?} =
         Cont.response_data(
-          {OracleController, :inactive_oracles, %{}, conn_next.assigns.scope, @default_limit},
+          {OracleController, :inactive_oracles, %{}, :unused_scope, @default_limit},
           @default_limit
         )
 
@@ -188,8 +187,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {OracleController, :inactive_oracles, %{"direction" => [direction]}, conn.assigns.scope,
-           0},
+          {OracleController, :inactive_oracles, %{"direction" => [direction]}, :unused_scope, 0},
           limit
         )
 
@@ -201,8 +199,8 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       {:ok, next_data, _has_cont?} =
         Cont.response_data(
-          {OracleController, :inactive_oracles, %{"direction" => [direction]},
-           conn_next.assigns.scope, limit},
+          {OracleController, :inactive_oracles, %{"direction" => [direction]}, :unused_scope,
+           limit},
           limit
         )
 
@@ -217,7 +215,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {OracleController, :inactive_oracles, %{"expand" => [nil]}, conn.assigns.scope, 0},
+          {OracleController, :inactive_oracles, %{"expand" => [nil]}, :unused_scope, 0},
           limit
         )
 
@@ -229,8 +227,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       {:ok, next_data, _has_cont?} =
         Cont.response_data(
-          {OracleController, :inactive_oracles, %{"expand" => [nil]}, conn_next.assigns.scope,
-           limit},
+          {OracleController, :inactive_oracles, %{"expand" => [nil]}, :unused_scope, limit},
           limit
         )
 
@@ -268,7 +265,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {OracleController, :active_oracles, %{}, conn.assigns.scope, 0},
+          {OracleController, :active_oracles, %{}, :unused_scope, 0},
           limit
         )
 
@@ -280,7 +277,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       {:ok, next_data, _has_cont?} =
         Cont.response_data(
-          {OracleController, :active_oracles, %{}, conn_next.assigns.scope, limit},
+          {OracleController, :active_oracles, %{}, :unused_scope, limit},
           limit
         )
 
@@ -296,8 +293,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {OracleController, :active_oracles, %{"direction" => [direction]}, conn.assigns.scope,
-           0},
+          {OracleController, :active_oracles, %{"direction" => [direction]}, :unused_scope, 0},
           limit
         )
 
@@ -309,8 +305,8 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       {:ok, next_data, _has_cont?} =
         Cont.response_data(
-          {OracleController, :active_oracles, %{"direction" => [direction]},
-           conn_next.assigns.scope, limit},
+          {OracleController, :active_oracles, %{"direction" => [direction]}, :unused_scope,
+           limit},
           limit
         )
 
@@ -325,7 +321,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {OracleController, :active_oracles, %{"expand" => [nil]}, conn.assigns.scope, 0},
+          {OracleController, :active_oracles, %{"expand" => [nil]}, :unused_scope, 0},
           limit
         )
 
@@ -337,8 +333,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       {:ok, next_data, _has_cont?} =
         Cont.response_data(
-          {OracleController, :active_oracles, %{"expand" => [nil]}, conn_next.assigns.scope,
-           limit},
+          {OracleController, :active_oracles, %{"expand" => [nil]}, :unused_scope, limit},
           limit
         )
 
