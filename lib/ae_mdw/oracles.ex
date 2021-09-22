@@ -27,7 +27,7 @@ defmodule AeMdw.Oracles do
   def fetch_oracles(direction, cursor, limit, expand?) do
     cursor = deserialize_cursor(cursor)
 
-    {exp_keys, next_key} =
+    {{start_table, start_keys}, {end_table, end_keys}, next_key} =
       Collection.concat(
         @table_inactive_expiration,
         @table_active_expiration,
@@ -38,12 +38,16 @@ defmodule AeMdw.Oracles do
 
     {:ok, {last_gen, -1}} = Mnesia.last_key(AeMdw.Db.Model.Block)
 
-    oracles =
-      Enum.map(exp_keys, fn {exp_key, source} ->
-        render(exp_key, last_gen, source == @table_active_expiration, expand?)
-      end)
+    start_oracles =
+      Enum.map(
+        start_keys,
+        &render(&1, last_gen, start_table == @table_active_expiration, expand?)
+      )
 
-    {oracles, serialize_cursor(next_key)}
+    end_oracles =
+      Enum.map(end_keys, &render(&1, last_gen, end_table == @table_active_expiration, expand?))
+
+    {start_oracles ++ end_oracles, serialize_cursor(next_key)}
   end
 
   @spec fetch_active_oracles(Mnesia.direction(), cursor() | nil, limit(), boolean()) ::

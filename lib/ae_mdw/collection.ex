@@ -22,15 +22,15 @@ defmodule AeMdw.Collection do
     iex> :mnesia.dirty_all_keys(:table2)
     [:c, :d, :e]
     iex> AeMdw.Collection.concat(:table1, :table2, :forward, nil, 3)
-    {[{:a, :table1}, {:b, :table1}, {:c, :table1}], :d}
+    {{:table1, [:a, :b]}, {:table2, [:c, :d]}, :d}
     iex> AeMdw.Collection.concat(:table1, :table2, :backward, nil, 4)
-    {[{:e, :table2}, {:d, :table2}, {:c, :table2}, {:b, :table1}], :a}
+    {{:table2, [:e, :d, :c, :b]}, {:table1, []}, :a}
     iex> AeMdw.Collection.concat(:table1, :table2, :forward, :d, 4)
-    {[{:d, :table2}, {:e, :table2}], nil}
+    {{:table2, [:d, :e]}, {:table1, []}, nil}
 
   """
   @spec concat(table(), table(), direction(), cursor(), limit()) ::
-          {[{record(), table()}], cursor()}
+          {{table(), [record()]}, {table(), [record()]}, cursor()}
   def concat(first_table, last_table, direction, cursor, limit) do
     {start_table, end_table} =
       case direction do
@@ -64,6 +64,6 @@ defmodule AeMdw.Collection do
           {start_keys, [], end_cursor}
       end
 
-    {Enum.map(start_keys, &{&1, start_table}) ++ Enum.map(end_keys, &{&1, end_table}), next_key}
+    {{start_table, start_keys}, {end_table, end_keys}, next_key}
   end
 end
