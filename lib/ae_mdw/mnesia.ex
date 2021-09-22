@@ -16,6 +16,7 @@ defmodule AeMdw.Mnesia do
   @type key() :: term()
   @type direction() :: :forward | :backward
   @type cursor() :: key() | nil
+  @type limit() :: pos_integer()
 
   @end_token :"$end_of_table"
 
@@ -66,7 +67,7 @@ defmodule AeMdw.Mnesia do
     record
   end
 
-  @spec fetch_keys(table(), direction(), cursor(), non_neg_integer()) :: {[record()], cursor()}
+  @spec fetch_keys(table(), direction(), cursor(), limit()) :: {[record()], cursor()}
   def fetch_keys(tab, :forward, nil, limit) do
     {keys, cursor} =
       :mnesia.async_dirty(fn ->
