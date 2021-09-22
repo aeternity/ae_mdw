@@ -1,48 +1,79 @@
 defmodule AeMdwWeb.NameControllerTest do
   use AeMdwWeb.ConnCase
 
-  alias AeMdw.EtsCache
-  alias AeMdw.Validate
-  alias AeMdw.Db.{Model, Name, Util}
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.Model.ActiveName
+  alias AeMdw.Db.Model.ActiveNameExpiration
+  alias AeMdw.Db.Model.AuctionBid
+  alias AeMdw.Db.Model.InactiveName
+  alias AeMdw.Db.Model.InactiveNameExpiration
+  alias AeMdw.Db.Model.Tx
+  alias AeMdw.Db.Name
+  alias AeMdw.Db.Util
   alias AeMdw.Db.Stream.Name, as: StreamName
+  alias AeMdw.EtsCache
+  alias AeMdw.Mnesia
+  alias AeMdw.Validate
+  alias AeMdw.TestSamples, as: TS
+  alias AeMdw.Txs
 
   import Mock
 
-  require AeMdw.Db.Model
-
-  @moduletag :integration
+  require Model
 
   @default_limit 10
 
   describe "active_names" do
     test "get active names with default limit", %{conn: conn} do
-      sample_data = %{"foo" => "bar"}
-      response_data = for _i <- 1..@default_limit, do: sample_data
+      sample_keys = for _i <- 1..@default_limit, do: TS.name_expiration_key(0)
+      next_exp_key = TS.name_expiration_key(1)
 
       with_mocks [
-        {Util, [:passthrough], last_gen: fn -> 20 end},
-        {EtsCache, [],
+        {Mnesia, [],
          [
-           get: fn
-             _tab, {_mod, _fun, _arg1, _arg2, 0} -> nil
-             _tab, {_mod, _fun, _arg1, _arg2, 10} -> {response_data, :tm}
+           fetch_keys: fn
+             ActiveNameExpiration, :backward, nil, @default_limit ->
+               {sample_keys, next_exp_key}
+
+             ActiveNameExpiration, :backward, ^next_exp_key, @default_limit ->
+               {[TS.name_expiration_key(1)], nil}
            end,
-           put: fn _tab, _key, _val -> nil end
+           fetch!: fn ActiveName, _plain_name ->
+             Model.name(
+               active: true,
+               expire: 1,
+               claims: [{{0, 0}, 0}],
+               updates: [],
+               transfers: [],
+               revoke: {{0, 0}, 0},
+               auction_timeout: 1
+             )
+           end,
+           fetch: fn Tx, _key ->
+             {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
+           end,
+           prev_key: fn AuctionBid, _key -> :none end
          ]},
-        {StreamName, [],
+        {Txs, [],
          [
-           active_names: fn {:expiration, :backward}, _mapper -> response_data end
+           fetch!: fn _hash ->
+             %{tx: %{account_id: <<>>}}
+           end
          ]}
       ] do
-        assert %{"data" => ^response_data, "next" => next} =
+        assert %{"data" => names, "next" => next} =
                  conn
                  |> get("/names/active")
                  |> json_response(200)
 
-        assert %{"data" => ^response_data} =
+        assert 10 = length(names)
+
+        assert %{"data" => names_next, "next" => nil} =
                  conn
                  |> get(next)
                  |> json_response(200)
+
+        assert 1 = length(names_next)
       end
     end
 
@@ -50,25 +81,41 @@ defmodule AeMdwWeb.NameControllerTest do
       by = "name"
       direction = "forward"
       limit = 3
-      sample_data = %{"foo" => "bar"}
-      response_data = for _i <- 1..limit, do: sample_data
+      sample_keys = for _i <- 1..limit, do: TS.plain_name(0)
 
       with_mocks [
-        {Util, [:passthrough], last_gen: fn -> 20 end},
-        {EtsCache, [],
+        {Mnesia, [],
          [
-           get: fn _tab, _key -> nil end,
-           put: fn _tab, _key, _val -> nil end
+           fetch_keys: fn ActiveName, :forward, nil, ^limit -> {sample_keys, nil} end,
+           fetch!: fn ActiveName, _plain_name ->
+             Model.name(
+               active: true,
+               expire: 1,
+               claims: [{{0, 0}, 0}],
+               updates: [],
+               transfers: [],
+               revoke: {{0, 0}, 0},
+               auction_timeout: 1
+             )
+           end,
+           fetch: fn Tx, _key ->
+             {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
+           end,
+           prev_key: fn AuctionBid, _key -> :none end
          ]},
-        {StreamName, [],
+        {Txs, [],
          [
-           active_names: fn {:name, :forward}, _mapper -> response_data end
+           fetch!: fn _hash ->
+             %{tx: %{account_id: <<>>}}
+           end
          ]}
       ] do
-        assert %{"data" => ^response_data} =
+        assert %{"data" => names} =
                  conn
                  |> get("/names/active?by=#{by}&direction=#{direction}&limit=#{limit}")
                  |> json_response(200)
+
+        assert ^limit = length(names)
       end
     end
 
@@ -76,12 +123,7 @@ defmodule AeMdwWeb.NameControllerTest do
       by = "invalid_by"
       error = "invalid query: by=#{by}"
 
-      with_mocks [
-        {Util, [:passthrough], last_gen: fn -> 20 end},
-        {EtsCache, [], [get: fn _tab, _key -> nil end]}
-      ] do
-        assert %{"error" => ^error} = conn |> get("/names/active?by=#{by}") |> json_response(400)
-      end
+      assert %{"error" => ^error} = conn |> get("/names/active?by=#{by}") |> json_response(400)
     end
 
     test "renders error when parameter direction is invalid", %{conn: conn} do
@@ -89,71 +131,104 @@ defmodule AeMdwWeb.NameControllerTest do
       direction = "invalid_direction"
       error = "invalid query: direction=#{direction}"
 
-      with_mocks [
-        {Util, [:passthrough], last_gen: fn -> 20 end},
-        {EtsCache, [], [get: fn _tab, _key -> nil end]}
-      ] do
-        assert %{"error" => ^error} =
-                 conn
-                 |> get("/names/active?by=#{by}&direction=#{direction}")
-                 |> json_response(400)
-      end
+      assert %{"error" => ^error} =
+               conn
+               |> get("/names/active?by=#{by}&direction=#{direction}")
+               |> json_response(400)
     end
   end
 
   describe "inactive_names" do
     test "get inactive names with default limit", %{conn: conn} do
-      sample_data = %{"foo" => "bar"}
-      response_data = for _i <- 1..@default_limit, do: sample_data
+      sample_keys = for _i <- 1..@default_limit, do: TS.name_expiration_key(0)
+      next_exp_key = TS.name_expiration_key(1)
 
       with_mocks [
-        {Util, [:passthrough], last_gen: fn -> 20 end},
-        {EtsCache, [],
+        {Mnesia, [],
          [
-           get: fn
-             _tab, {_mod, _fun, _arg1, _arg2, 0} -> nil
-             _tab, {_mod, _fun, _arg1, _arg2, 10} -> {response_data, :tm}
+           fetch_keys: fn
+             InactiveNameExpiration, :backward, nil, @default_limit ->
+               {sample_keys, next_exp_key}
+
+             InactiveNameExpiration, :backward, ^next_exp_key, @default_limit ->
+               {[TS.name_expiration_key(1)], nil}
            end,
-           put: fn _tab, _key, _val -> nil end
+           fetch!: fn InactiveName, _plain_name ->
+             Model.name(
+               active: true,
+               expire: 1,
+               claims: [{{0, 0}, 0}],
+               updates: [],
+               transfers: [],
+               revoke: {{0, 0}, 0},
+               auction_timeout: 1
+             )
+           end,
+           fetch: fn Tx, _key ->
+             {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
+           end,
+           prev_key: fn AuctionBid, _key -> :none end
          ]},
-        {StreamName, [],
+        {Txs, [],
          [
-           inactive_names: fn {:expiration, :backward}, _mapper -> response_data end
+           fetch!: fn _hash ->
+             %{tx: %{account_id: <<>>}}
+           end
          ]}
       ] do
-        assert %{"data" => ^response_data, "next" => next} =
+        assert %{"data" => names, "next" => next} =
                  conn
                  |> get("/names/inactive")
                  |> json_response(200)
 
-        assert %{"data" => ^response_data} =
+        assert 10 = length(names)
+
+        assert %{"data" => next_names, "next" => nil} =
                  conn
                  |> get(next)
                  |> json_response(200)
+
+        assert 1 = length(next_names)
       end
     end
 
     test "get inactive names with limit=6", %{conn: conn} do
       limit = 6
-      sample_data = %{"foo" => "bar"}
-      response_data = for _i <- 1..limit, do: sample_data
+      sample_keys = for _i <- 1..limit, do: TS.name_expiration_key(0)
 
       with_mocks [
-        {Util, [:passthrough], last_gen: fn -> 20 end},
-        {EtsCache, [],
+        {Mnesia, [],
          [
-           get: fn _tab, _key -> nil end,
-           put: fn _tab, _key, _val -> nil end
+           fetch_keys: fn InactiveNameExpiration, :backward, nil, ^limit -> {sample_keys, nil} end,
+           fetch!: fn InactiveName, _plain_name ->
+             Model.name(
+               active: true,
+               expire: 1,
+               claims: [{{0, 0}, 0}],
+               updates: [],
+               transfers: [],
+               revoke: {{0, 0}, 0},
+               auction_timeout: 1
+             )
+           end,
+           fetch: fn Tx, _key ->
+             {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
+           end,
+           prev_key: fn AuctionBid, _key -> :none end
          ]},
-        {StreamName, [],
+        {Txs, [],
          [
-           inactive_names: fn {:expiration, :backward}, _mapper -> response_data end
+           fetch!: fn _hash ->
+             %{tx: %{account_id: <<>>}}
+           end
          ]}
       ] do
-        assert %{"data" => ^response_data} =
+        assert %{"data" => names} =
                  conn
                  |> get("/names/inactive?limit=#{limit}")
                  |> json_response(200)
+
+        assert ^limit = length(names)
       end
     end
 
@@ -163,25 +238,41 @@ defmodule AeMdwWeb.NameControllerTest do
       by = "name"
       direction = "forward"
       limit = 3
-      sample_data = %{"foo" => "bar"}
-      response_data = for _i <- 1..limit, do: sample_data
+      sample_keys = for _i <- 1..limit, do: TS.plain_name(0)
 
       with_mocks [
-        {Util, [:passthrough], last_gen: fn -> 20 end},
-        {EtsCache, [],
+        {Mnesia, [],
          [
-           get: fn _tab, _key -> nil end,
-           put: fn _tab, _key, _val -> nil end
+           fetch_keys: fn InactiveName, :forward, nil, ^limit -> {sample_keys, nil} end,
+           fetch!: fn InactiveName, _plain_name ->
+             Model.name(
+               active: true,
+               expire: 1,
+               claims: [{{0, 0}, 0}],
+               updates: [],
+               transfers: [],
+               revoke: {{0, 0}, 0},
+               auction_timeout: 1
+             )
+           end,
+           fetch: fn Tx, _key ->
+             {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
+           end,
+           prev_key: fn AuctionBid, _key -> :none end
          ]},
-        {StreamName, [],
+        {Txs, [],
          [
-           inactive_names: fn {:name, :forward}, _mapper -> response_data end
+           fetch!: fn _hash ->
+             %{tx: %{account_id: <<>>}}
+           end
          ]}
       ] do
-        assert %{"data" => ^response_data} =
+        assert %{"data" => names} =
                  conn
                  |> get("/names/inactive?by=#{by}&direction=#{direction}&limit=#{limit}")
                  |> json_response(200)
+
+        assert ^limit = length(names)
       end
     end
 
@@ -189,13 +280,7 @@ defmodule AeMdwWeb.NameControllerTest do
       by = "invalid_by"
       error = "invalid query: by=#{by}"
 
-      with_mocks [
-        {Util, [:passthrough], last_gen: fn -> 20 end},
-        {EtsCache, [], [get: fn _tab, _key -> nil end]}
-      ] do
-        assert %{"error" => ^error} =
-                 conn |> get("/names/inactive?by=#{by}") |> json_response(400)
-      end
+      assert %{"error" => ^error} = conn |> get("/names/inactive?by=#{by}") |> json_response(400)
     end
 
     test "renders error when parameter direction is invalid", %{conn: conn} do
@@ -203,15 +288,10 @@ defmodule AeMdwWeb.NameControllerTest do
       direction = "invalid_direction"
       error = "invalid query: direction=#{direction}"
 
-      with_mocks [
-        {Util, [:passthrough], last_gen: fn -> 20 end},
-        {EtsCache, [], [get: fn _tab, _key -> nil end]}
-      ] do
-        assert %{"error" => ^error} =
-                 conn
-                 |> get("/names/inactive?by=#{by}&direction=#{direction}")
-                 |> json_response(400)
-      end
+      assert %{"error" => ^error} =
+               conn
+               |> get("/names/inactive?by=#{by}&direction=#{direction}")
+               |> json_response(400)
     end
   end
 
@@ -333,58 +413,80 @@ defmodule AeMdwWeb.NameControllerTest do
     test "get active and inactive names, except those in auction, with default limit", %{
       conn: conn
     } do
-      sample_data = %{"foo" => "bar"}
-      response_data = for _i <- 1..@default_limit, do: sample_data
+      active_sample_keys = for _i <- 1..6, do: TS.name_expiration_key(0)
+      inactive_sample_keys = for _i <- 1..4, do: TS.name_expiration_key(0)
 
       with_mocks [
-        {Util, [:passthrough], last_gen: fn -> 20 end},
-        {EtsCache, [],
+        {Mnesia, [],
          [
-           get: fn
-             _tab, {_mod, _fun, _arg1, _arg2, 0} -> nil
-             _tab, {_mod, _fun, _arg1, _arg2, 10} -> {response_data, :tm}
+           fetch_keys: fn
+             ActiveNameExpiration, :backward, nil, @default_limit -> {active_sample_keys, nil}
+             InactiveNameExpiration, :backward, nil, 4 -> {inactive_sample_keys, nil}
            end,
-           put: fn _tab, _key, _val -> nil end
+           fetch!: fn _tab, _plain_name ->
+             Model.name(
+               active: true,
+               expire: 1,
+               claims: [{{0, 0}, 0}],
+               updates: [],
+               transfers: [],
+               revoke: {{0, 0}, 0},
+               auction_timeout: 1
+             )
+           end,
+           prev_key: fn AuctionBid, _key -> :none end
          ]},
-        {StreamName, [],
+        {Txs, [],
          [
-           active_names: fn {:expiration, :backward}, _mapper -> response_data end,
-           inactive_names: fn {:expiration, :backward}, _mapper -> response_data end
+           fetch!: fn _hash ->
+             %{tx: %{account_id: <<>>}}
+           end
          ]}
       ] do
-        assert %{"data" => ^response_data, "next" => next} =
+        assert %{"data" => names, "next" => nil} =
                  conn
                  |> get("/names")
                  |> json_response(200)
 
-        assert %{"data" => ^response_data} =
-                 conn
-                 |> get(next)
-                 |> json_response(200)
+        assert @default_limit = length(names)
       end
     end
 
     test "get active and inactive names, except those in auction, with limit=2", %{conn: conn} do
       limit = 2
-      sample_data = %{"foo" => "bar"}
+      sample_keys = for _i <- 1..limit, do: TS.name_expiration_key(0)
 
       with_mocks [
-        {Util, [:passthrough], last_gen: fn -> 20 end},
-        {EtsCache, [],
+        {Mnesia, [],
          [
-           get: fn _tab, _key -> nil end,
-           put: fn _tab, _key, _val -> nil end
+           fetch_keys: fn ActiveNameExpiration, :backward, nil, ^limit -> {sample_keys, nil} end,
+           fetch!: fn ActiveName, _plain_name ->
+             Model.name(
+               active: true,
+               expire: 1,
+               claims: [{{0, 0}, 0}],
+               updates: [],
+               transfers: [],
+               revoke: {{0, 0}, 0},
+               auction_timeout: 1
+             )
+           end,
+           prev_key: fn AuctionBid, _key -> :none end,
+           last_key: fn InactiveNameExpiration, nil -> nil end
          ]},
-        {StreamName, [],
+        {Txs, [],
          [
-           active_names: fn {:expiration, :backward}, _mapper -> [sample_data] end,
-           inactive_names: fn {:expiration, :backward}, _mapper -> [sample_data] end
+           fetch!: fn _hash ->
+             %{tx: %{account_id: <<>>}}
+           end
          ]}
       ] do
-        assert %{"data" => [^sample_data, ^sample_data]} =
+        assert %{"data" => names} =
                  conn
                  |> get("/names?limit=#{limit}")
                  |> json_response(200)
+
+        assert ^limit = length(names)
       end
     end
 
@@ -393,25 +495,39 @@ defmodule AeMdwWeb.NameControllerTest do
       limit = 4
       by = "name"
       direction = "forward"
-      sample_data = %{"foo" => "bar"}
+      first_key = TS.plain_name(0)
 
       with_mocks [
-        {Util, [:passthrough], last_gen: fn -> 20 end},
-        {EtsCache, [],
+        {Mnesia, [],
          [
-           get: fn _tab, _key -> nil end,
-           put: fn _tab, _key, _val -> nil end
+           next_key: fn _tab, :forward, _first_key -> {:ok, first_key} end,
+           fetch!: fn ActiveName, _plain_name ->
+             Model.name(
+               active: true,
+               expire: 1,
+               claims: [{{0, 0}, 0}],
+               updates: [],
+               transfers: [],
+               revoke: {{0, 0}, 0},
+               auction_timeout: 1
+             )
+           end,
+           prev_key: fn AuctionBid, _key -> :none end
+           # last_key: fn InactiveNameExpiration, nil -> nil end
          ]},
-        {StreamName, [],
+        {Txs, [],
          [
-           active_names: fn {:name, :forward}, _mapper -> [sample_data, sample_data] end,
-           inactive_names: fn {:name, :forward}, _mapper -> [sample_data, sample_data] end
+           fetch!: fn _hash ->
+             %{tx: %{account_id: <<>>}}
+           end
          ]}
       ] do
-        assert %{"data" => [^sample_data, ^sample_data]} =
+        assert %{"data" => names, "next" => _next} =
                  conn
                  |> get("/names?by=#{by}&direction=#{direction}&limit=#{limit}")
                  |> json_response(200)
+
+        assert ^limit = length(names)
       end
     end
 
@@ -419,12 +535,7 @@ defmodule AeMdwWeb.NameControllerTest do
       by = "invalid_by"
       error = "invalid query: by=#{by}"
 
-      with_mocks [
-        {Util, [:passthrough], last_gen: fn -> 20 end},
-        {EtsCache, [], [get: fn _tab, _key -> nil end]}
-      ] do
-        assert %{"error" => ^error} = conn |> get("/names?by=#{by}") |> json_response(400)
-      end
+      assert %{"error" => ^error} = conn |> get("/names?by=#{by}") |> json_response(400)
     end
 
     test "renders error when parameter direction is invalid", %{conn: conn} do
@@ -432,13 +543,8 @@ defmodule AeMdwWeb.NameControllerTest do
       direction = "invalid_direction"
       error = "invalid query: direction=#{direction}"
 
-      with_mocks [
-        {Util, [:passthrough], last_gen: fn -> 20 end},
-        {EtsCache, [], [get: fn _tab, _key -> nil end]}
-      ] do
-        assert %{"error" => ^error} =
-                 conn |> get("/names?by=#{by}&direction=#{direction}") |> json_response(400)
-      end
+      assert %{"error" => ^error} =
+               conn |> get("/names?by=#{by}&direction=#{direction}") |> json_response(400)
     end
   end
 
@@ -559,7 +665,9 @@ defmodule AeMdwWeb.NameControllerTest do
       id = "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
       owner_id = Validate.id!(id)
 
-      with_mocks [{Name, [], [owned_by: fn ^owner_id -> %{actives: [], top_bids: []} end]}] do
+      with_mocks [
+        {Name, [], [owned_by: fn ^owner_id -> %{actives: [], top_bids: []} end]}
+      ] do
         assert %{"active" => [], "top_bid" => []} =
                  conn |> get("/names/owned_by/#{id}") |> json_response(200)
       end

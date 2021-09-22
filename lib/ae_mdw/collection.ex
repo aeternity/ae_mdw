@@ -66,4 +66,57 @@ defmodule AeMdw.Collection do
 
     {{start_table, start_keys}, {end_table, end_keys}, next_key}
   end
+
+  @doc """
+  Merges the results from different tables into a single table in a sorted order.
+
+  ## Examples
+
+    iex> :mnesia.dirty_all_keys(:table1)
+    [:a, :c]
+    iex> :mnesia.dirty_all_keys(:table2)
+    [:b, :d, :e]
+    iex> AeMdw.Collection.merge([:table1, :table2], :forward, nil, 3)
+    {[{:a, :table1}, {:b, :table2}, {:c, :table1}], :d}
+    iex> AeMdw.Collection.merge([:table1, :table2], :forward, :d, 3)
+    {[{:d, :table2}, {:e, :table2}], nil}
+
+  """
+  @spec merge([table()], direction(), cursor(), limit()) :: {[{record(), table()}], cursor()}
+  def merge(tables, direction, cursor, limit) do
+    next_keys =
+      Enum.reduce(tables, %{}, fn table, acc ->
+        case Mnesia.next_key(table, direction, cursor) do
+          {:ok, next_key} -> Map.put(acc, table, next_key)
+          :not_found -> acc
+        end
+      end)
+
+    keys =
+      Stream.unfold({next_keys, limit + 1}, fn
+        {_next_keys, 0} ->
+          nil
+
+        {next_keys, _limit} when next_keys == %{} ->
+          nil
+
+        {next_keys, limit} ->
+          {table, next_key} =
+            if direction == :backwards do
+              Enum.max_by(next_keys, fn {_table, key} -> key end)
+            else
+              Enum.min_by(next_keys, fn {_table, key} -> key end)
+            end
+
+          case Mnesia.next_key(table, direction, next_key) do
+            {:ok, new_key} -> {{next_key, table}, {Map.put(next_keys, table, new_key), limit - 1}}
+            :not_found -> {{next_key, table}, {Map.delete(next_keys, table), limit - 1}}
+          end
+      end)
+
+    case Enum.split(keys, limit) do
+      {keys, [{cursor, _cursor_table}]} -> {keys, cursor}
+      {keys, []} -> {keys, nil}
+    end
+  end
 end

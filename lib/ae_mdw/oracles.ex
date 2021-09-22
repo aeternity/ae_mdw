@@ -15,7 +15,7 @@ defmodule AeMdw.Oracles do
   @type cursor :: binary()
   # This needs to be an actual type like AeMdw.Db.Oracle.t()
   @type oracle :: term()
-  @typep limit :: pos_integer()
+  @typep limit :: Mnesia.limit()
 
   @table_active AeMdw.Db.Model.ActiveOracle
   @table_active_expiration Model.ActiveOracleExpiration
