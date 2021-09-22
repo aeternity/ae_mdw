@@ -22,7 +22,7 @@ defmodule AeMdw.Collection do
     iex> :mnesia.dirty_all_keys(:table2)
     [:c, :d, :e]
     iex> AeMdw.Collection.concat(:table1, :table2, :forward, nil, 3)
-    {{:table1, [:a, :b]}, {:table2, [:c, :d]}, :d}
+    {{:table1, [:a, :b]}, {:table2, [:c]}, :d}
     iex> AeMdw.Collection.concat(:table1, :table2, :backward, nil, 4)
     {{:table2, [:e, :d, :c, :b]}, {:table1, []}, :a}
     iex> AeMdw.Collection.concat(:table1, :table2, :forward, :d, 4)
