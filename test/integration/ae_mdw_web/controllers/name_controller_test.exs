@@ -21,7 +21,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {NameController, :active_names, %{}, conn.assigns.scope, 0},
+          {NameController, :active_names, %{}, :unused_scope, 0},
           @default_limit
         )
 
@@ -33,7 +33,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
       {:ok, next_data, _has_cont?} =
         Cont.response_data(
-          {NameController, :active_names, %{}, conn.assigns.scope, @default_limit},
+          {NameController, :active_names, %{}, :unused_scope, @default_limit},
           @default_limit
         )
 
@@ -49,7 +49,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {NameController, :active_names, %{}, conn.assigns.scope, 0},
+          {NameController, :active_names, %{}, :unused_scope, 0},
           limit
         )
 
@@ -67,12 +67,12 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       {:ok, data, _has_cont?} =
         Cont.response_data(
           {NameController, :active_names, %{"by" => [by], "direction" => [direction]},
-           conn.assigns.scope, 0},
+           :unused_scope, 0},
           limit
         )
 
       assert Enum.count(response["data"]) <= limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+      assert response["data"] == data
     end
 
     test "renders error when parameter by is invalid", %{conn: conn} do
@@ -98,7 +98,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {NameController, :inactive_names, %{}, conn.assigns.scope, 0},
+          {NameController, :inactive_names, %{}, :unused_scope, 0},
           @default_limit
         )
 
@@ -110,7 +110,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
       {:ok, next_data, _has_cont?} =
         Cont.response_data(
-          {NameController, :inactive_names, %{}, conn.assigns.scope, @default_limit},
+          {NameController, :inactive_names, %{}, :unused_scope, @default_limit},
           @default_limit
         )
 
@@ -126,7 +126,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {NameController, :inactive_names, %{}, conn.assigns.scope, 0},
+          {NameController, :inactive_names, %{}, :unused_scope, 0},
           limit
         )
 
@@ -146,7 +146,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       {:ok, data, _has_cont?} =
         Cont.response_data(
           {NameController, :inactive_names, %{"by" => [by], "direction" => [direction]},
-           conn.assigns.scope, 0},
+           :unused_scope, 0},
           limit
         )
 
@@ -245,7 +245,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {NameController, :names, %{}, conn.assigns.scope, 0},
+          {NameController, :names, %{}, :unused_scope, 0},
           @default_limit
         )
 
@@ -257,7 +257,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
       {:ok, next_data, _has_cont?} =
         Cont.response_data(
-          {NameController, :names, %{}, conn.assigns.scope, @default_limit},
+          {NameController, :names, %{}, :unused_scope, @default_limit},
           @default_limit
         )
 
@@ -273,7 +273,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {NameController, :names, %{}, conn.assigns.scope, 0},
+          {NameController, :names, %{}, :unused_scope, 0},
           limit
         )
 
@@ -291,12 +291,12 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {NameController, :names, %{"by" => [by]}, conn.assigns.scope, 0},
+          {NameController, :names, %{"by" => [by]}, :unused_scope, 0},
           limit
         )
 
       assert Enum.count(response["data"]) == limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+      assert response["data"] == data
     end
 
     test "renders error when parameter by is invalid", %{conn: conn} do

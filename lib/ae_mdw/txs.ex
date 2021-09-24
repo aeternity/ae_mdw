@@ -55,9 +55,9 @@ defmodule AeMdw.Txs do
 
     type
     |> Format.custom_raw_data(raw, tx_rec, signed_tx, block_hash)
-    |> update_in([:tx, :account_id], &render_id/1)
-    |> update_in([:tx, :name_id], &render_id/1)
-    |> update_in([:tx, :recipient_id], &render_id/1)
+    |> update_in_if_present([:tx, :account_id], &render_id/1)
+    |> update_in_if_present([:tx, :name_id], &render_id/1)
+    |> update_in_if_present([:tx, :recipient_id], &render_id/1)
   end
 
   defp render_id({:id, id_type, payload}) do
@@ -65,4 +65,11 @@ defmodule AeMdw.Txs do
   end
 
   defp render_id(id), do: id
+
+  defp update_in_if_present(map, path, fun) do
+    case get_in(map, path) do
+      nil -> map
+      val -> put_in(map, path, fun.(val))
+    end
+  end
 end

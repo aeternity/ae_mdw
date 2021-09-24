@@ -211,8 +211,6 @@ defmodule AeMdw.Names do
     %{auction_info | last_bid: new_last_bid}
   end
 
-  defp serialize_name_cursor(nil), do: nil
-
   defp serialize_name_cursor(name), do: name
 
   defp deserialize_name_cursor(nil), do: nil
