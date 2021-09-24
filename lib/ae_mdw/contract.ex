@@ -309,6 +309,20 @@ defmodule AeMdw.Contract do
     end
   end
 
+  def gas_used_in_create(contract_pk, tx_rec, block_hash) do
+    create_nonce = :aect_create_tx.nonce(tx_rec)
+
+    init_call_id =
+      tx_rec
+      |> :aect_create_tx.owner_pubkey()
+      |> :aect_call.id(create_nonce, contract_pk)
+
+    contract_pk
+    |> :aec_chain.get_contract_call(init_call_id, block_hash)
+    |> ok!
+    |> :aect_call.gas_used()
+  end
+
   ##########
 
   def get_events(<<micro_block_hash::binary>>) do

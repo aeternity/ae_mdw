@@ -2,6 +2,7 @@ defmodule AeMdw.Db.Format do
   alias AeMdw.Node, as: AE
   alias :aeser_api_encoder, as: Enc
 
+  alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
@@ -230,14 +231,17 @@ defmodule AeMdw.Db.Format do
     )
   end
 
-  def custom_raw_data(:contract_create_tx, tx, tx_rec, _signed_tx, _block_hash) do
+  def custom_raw_data(:contract_create_tx, tx, tx_rec, _signed_tx, block_hash) do
     contract_pk = :aect_contracts.pubkey(:aect_contracts.new(tx_rec))
-    put_in(tx, [:tx, :contract_id], :aeser_id.create(:contract, contract_pk))
+
+    tx
+    |> put_in([:tx, :contract_id], :aeser_id.create(:contract, contract_pk))
+    |> put_in([:tx, :gas_used], Contract.gas_used_in_create(contract_pk, tx_rec, block_hash))
   end
 
   def custom_raw_data(:contract_call_tx, tx, tx_rec, _signed_tx, block_hash) do
     contract_pk = :aect_call_tx.contract_pubkey(tx_rec)
-    call_rec = AeMdw.Contract.call_rec(tx_rec, contract_pk, block_hash)
+    call_rec = Contract.call_rec(tx_rec, contract_pk, block_hash)
     fun_arg_res = AeMdw.Db.Contract.call_fun_args_res(contract_pk, tx.tx_index)
 
     logs = fn logs ->
@@ -435,14 +439,17 @@ defmodule AeMdw.Db.Format do
   def custom_encode(:oracle_response_tx, tx, _tx_rec, _signed_tx, _block_hash),
     do: update_in(tx, ["tx", "response"], &maybe_base64/1)
 
-  def custom_encode(:contract_create_tx, tx, tx_rec, _, _block_hash) do
+  def custom_encode(:contract_create_tx, tx, tx_rec, _, block_hash) do
     contract_pk = :aect_contracts.pubkey(:aect_contracts.new(tx_rec))
-    put_in(tx, ["tx", "contract_id"], Enc.encode(:contract_pubkey, contract_pk))
+
+    tx
+    |> put_in(["tx", "contract_id"], Enc.encode(:contract_pubkey, contract_pk))
+    |> put_in(["tx", "gas_used"], Contract.gas_used_in_create(contract_pk, tx_rec, block_hash))
   end
 
   def custom_encode(:contract_call_tx, tx, tx_rec, _signed_tx, block_hash) do
     contract_pk = :aect_call_tx.contract_pubkey(tx_rec)
-    call_rec = AeMdw.Contract.call_rec(tx_rec, contract_pk, block_hash)
+    call_rec = Contract.call_rec(tx_rec, contract_pk, block_hash)
 
     fun_arg_res =
       AeMdw.Db.Contract.call_fun_args_res(contract_pk, tx["tx_index"])

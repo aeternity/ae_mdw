@@ -34,10 +34,13 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
   describe "txi" do
     test "get a transaction by a given index", %{conn: conn} do
-      valid_index = 10_000_000
+      valid_index = 15_499_122
       conn = get(conn, "/txi/#{valid_index}")
 
       assert json_response(conn, 200)["tx_index"] == valid_index
+      assert tx = json_response(conn, 200)["tx"]
+      assert tx["type"] == "ContractCreateTx"
+      assert tx["gas_used"] && tx["gas_used"] > 0
     end
 
     test "renders errors when data is invalid", %{conn: conn} do
