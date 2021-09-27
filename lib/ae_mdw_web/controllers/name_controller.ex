@@ -2,6 +2,7 @@ defmodule AeMdwWeb.NameController do
   use AeMdwWeb, :controller
   use PhoenixSwagger
 
+  alias AeMdw.AuctionBids
   alias AeMdw.Names
   alias AeMdw.Validate
   alias AeMdw.Db.Name
@@ -9,7 +10,6 @@ defmodule AeMdwWeb.NameController do
   alias AeMdw.Db.Format
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Error.Input, as: ErrInput
-  alias AeMdwWeb.Continuation, as: Cont
   alias AeMdwWeb.SwaggerParameters
   alias AeMdwWeb.Plugs.PaginatedPlug
   alias Plug.Conn
@@ -35,6 +35,9 @@ defmodule AeMdwWeb.NameController do
     do: conn
 
   def stream_plug_hook(%Plug.Conn{path_info: ["names"]} = conn),
+    do: conn
+
+  def stream_plug_hook(%Plug.Conn{path_info: ["names", "auctions"]} = conn),
     do: conn
 
   def stream_plug_hook(%Plug.Conn{path_info: ["names", "search" | _], params: params} = conn) do
@@ -96,8 +99,30 @@ defmodule AeMdwWeb.NameController do
       end)
 
   @spec auctions(Conn.t(), map()) :: Conn.t()
-  def auctions(conn, _req),
-    do: handle_input(conn, fn -> Cont.response(conn, &json/2) end)
+  def auctions(%Conn{assigns: assigns} = conn, _req) do
+    %{direction: direction, limit: limit, cursor: cursor, expand?: expand?, order_by: order_by} =
+      assigns
+
+    {auction_bids, new_cursor} =
+      AuctionBids.fetch_auctions(direction, order_by, cursor, limit, expand?)
+
+    uri =
+      if new_cursor do
+        %URI{
+          path: "/names/auctions",
+          query:
+            URI.encode_query(%{
+              "cursor" => new_cursor,
+              "limit" => limit,
+              "direction" => direction,
+              "expand" => expand?
+            })
+        }
+        |> URI.to_string()
+      end
+
+    json(conn, %{"data" => auction_bids, "next" => uri})
+  end
 
   @spec inactive_names(Conn.t(), map()) :: Conn.t()
   def inactive_names(%Conn{assigns: assigns} = conn, _req) do
@@ -176,7 +201,7 @@ defmodule AeMdwWeb.NameController do
   end
 
   @spec search(Conn.t(), map()) :: Conn.t()
-  def search(%Plug.Conn{path_info: ["names", "search", prefix]} = conn, _req) do
+  def search(conn, %{"prefix" => prefix}) do
     handle_input(conn, fn ->
       params = Map.put(query_groups(conn.query_string), "prefix", [prefix])
       json(conn, Enum.to_list(do_prefix_stream(validate_search_params!(params), expand?(params))))

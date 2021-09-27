@@ -11,7 +11,7 @@ defmodule AeMdw.Names do
   alias AeMdw.Db.Util
   alias AeMdw.Collection
   alias AeMdw.Mnesia
-  alias AeMdw.Node
+  # alias AeMdw.Node
   alias AeMdw.Txs
 
   @type cursor :: binary()
@@ -130,15 +130,23 @@ defmodule AeMdw.Names do
     name = Mnesia.fetch!(if(is_active?, do: @table_active, else: @table_inactive), plain_name)
 
     {status, auction_bid} =
-      case AuctionBids.top_auction_bid(plain_name) do
-        {:ok, auction_bid} -> {:auction, auction_bid}
-        :not_found -> {:name, nil}
+      case AuctionBids.top_auction_bid(plain_name, expand?) do
+        {:ok, auction_bid} ->
+          {_version, auction_bid} =
+            auction_bid
+            |> update_in([:info, :last_bid, :tx, "ttl"], fn val -> val || 0 end)
+            |> pop_in([:info, :last_bid, :tx, "version"])
+
+          {:auction, auction_bid}
+
+        :not_found ->
+          {:name, nil}
       end
 
     %{
       name: plain_name,
-      auction: auction_bid && render_auction_bid_info(auction_bid),
-      status: status,
+      auction: auction_bid && auction_bid.info,
+      status: to_string(status),
       active: is_active?,
       info: render_name_info(name, expand?),
       previous: render_previous(name, expand?)
@@ -175,40 +183,25 @@ defmodule AeMdw.Names do
   end
 
   defp render_pointers([{_bi, txi} | _rest_updates]) do
-    %{tx: %{pointers: pointers}} = Txs.fetch!(txi)
+    %{tx: %{"pointers" => pointers}} = Txs.fetch!(txi)
 
     pointers
-    |> Enum.map(fn ptr -> {:aens_pointer.key(ptr), render_account_id(:aens_pointer.id(ptr))} end)
+    |> Enum.map(fn %{"id" => id, "key" => key} -> {key, id} end)
     |> Map.new()
   end
 
   defp render_ownership([{{_bi, _txi}, last_claim_txi} | _rest_claims], transfers) do
-    %{tx: %{account_id: orig_owner}} = Txs.fetch!(last_claim_txi)
+    %{tx: %{"account_id" => orig_owner}} = Txs.fetch!(last_claim_txi)
 
     case transfers do
       [] ->
         %{original: orig_owner, current: orig_owner}
 
       [{{_bi, _txi}, last_transfer_txi} | _rest_transfers] ->
-        %{tx: %{recipient_id: curr_owner}} = Txs.fetch!(last_transfer_txi)
+        %{tx: %{"recipient_id" => curr_owner}} = Txs.fetch!(last_transfer_txi)
 
         %{original: orig_owner, current: curr_owner}
     end
-  end
-
-  defp render_auction_bid_info(%{info: %{last_bid: last_bid} = auction_info}) do
-    %{block_hash: block_hash, hash: hash, signatures: signatures, tx: %{type: type} = tx} =
-      last_bid
-
-    new_last_bid = %{
-      last_bid
-      | block_hash: :aeser_api_encoder.encode(:micro_block_hash, block_hash),
-        hash: :aeser_api_encoder.encode(:tx_hash, hash),
-        signatures: Enum.map(signatures, &:aeser_api_encoder.encode(:signature, &1)),
-        tx: %{tx | type: Node.tx_name(type)}
-    }
-
-    %{auction_info | last_bid: new_last_bid}
   end
 
   defp serialize_name_cursor(name), do: name
@@ -245,9 +238,5 @@ defmodule AeMdw.Names do
       Model.name(previous: previous) -> {previous, previous}
     end)
     |> Enum.map(&render_name_info(&1, expand?))
-  end
-
-  defp render_account_id({:id, id_type, payload}) do
-    :aeser_api_encoder.encode(Node.id_type(id_type), payload)
   end
 end
