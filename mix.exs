@@ -86,6 +86,7 @@ defmodule AeMdw.MixProject do
   def application() do
     [
       mod: {AeMdw.Application, []},
+      start_phases: [migrate_db: [], sync: []],
       extra_applications: [:logger, :runtime_tools]
     ]
   end

@@ -30,8 +30,8 @@ defmodule AeMdw.Migrations.ReindexRemoteLogs do
   For these new records, the ext_contract field is tagged with {:parent_contract_pk, pubkey} where pubkey
   is the one of the caller contract.
   """
-  @spec run() :: {:ok, {non_neg_integer(), pos_integer()}}
-  def run do
+  @spec run(boolean()) :: {:ok, {non_neg_integer(), pos_integer()}}
+  def run(_from_startup?) do
     begin = DateTime.utc_now()
 
     table_size = :mnesia.async_dirty(fn -> Util.count(Model.ContractLog) end)
