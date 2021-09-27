@@ -52,6 +52,14 @@ defmodule AeMdw.Mnesia do
     end
   end
 
+  @spec prev_key(table(), key()) :: {:ok, key()} | :none
+  def prev_key(tab, key) do
+    case :mnesia.dirty_prev(tab, key) do
+      @end_token -> :none
+      record -> {:ok, record}
+    end
+  end
+
   @spec fetch(table(), key()) :: {:ok, record()} | :not_found
   def fetch(tab, key) do
     case :mnesia.dirty_read(tab, key) do
@@ -65,6 +73,25 @@ defmodule AeMdw.Mnesia do
     {:ok, record} = fetch(tab, key)
 
     record
+  end
+
+  @spec next_key(table(), direction(), cursor()) :: {:ok, key()} | :not_found
+  def next_key(tab, :forward, nil), do: first_key(tab)
+
+  def next_key(tab, :forward, cursor) do
+    case :mnesia.dirty_next(tab, cursor) do
+      @end_token -> :not_found
+      record -> {:ok, record}
+    end
+  end
+
+  def next_key(tab, :backward, nil), do: last_key(tab)
+
+  def next_key(tab, :backward, cursor) do
+    case :mnesia.dirty_prev(tab, cursor) do
+      @end_token -> :not_found
+      record -> {:ok, record}
+    end
   end
 
   @spec fetch_keys(table(), direction(), cursor(), limit()) :: {[record()], cursor()}

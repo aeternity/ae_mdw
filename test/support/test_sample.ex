@@ -21,6 +21,20 @@ defmodule AeMdw.TestSamples do
     |> Enum.at(n)
   end
 
+  @spec plain_name(non_neg_integer()) :: binary()
+  def plain_name(n) do
+    ~w(aaaaa.chain bbbbb.chain ccccc.chain dddddd.chain eeeeee.chain)
+    |> Enum.at(n)
+  end
+
+  @spec name_expiration_key(non_neg_integer()) :: {non_neg_integer(), binary()}
+  def name_expiration_key(n) do
+    ~w(aaaaa.chain bbbbb.chain ccccc.chain dddddd.chain eeeeee.chain)
+    |> Enum.with_index()
+    |> Enum.map(fn {plain_name, index} -> {expire_height(index), plain_name} end)
+    |> Enum.at(n)
+  end
+
   @spec expire_height(non_neg_integer()) :: non_neg_integer()
   def expire_height(n) do
     ~w(5851 6894 7499 34919 35040) |> Enum.at(n) |> String.to_integer()
