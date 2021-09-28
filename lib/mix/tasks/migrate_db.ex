@@ -13,6 +13,10 @@ defmodule Mix.Tasks.MigrateDb do
 
   @migrations_code_path "priv/migrations/*.ex"
 
+  # ignore for Code.compile_file/1
+  @dialyzer {:no_return, run: 1}
+  @dialyzer {:no_return, apply_migration!: 2}
+
   def run(from_startup?) when is_boolean(from_startup?), do: run([to_string(from_startup?)])
 
   @impl Mix.Task
@@ -71,9 +75,6 @@ defmodule Mix.Tasks.MigrateDb do
     |> Enum.filter(fn {version, _path} -> version > current_version end)
     |> Enum.sort_by(fn {version, _path} -> version end)
   end
-
-  # ignore for Code.compile_file
-  @dialyzer {:no_return, apply_migration!: 2}
 
   @spec apply_migration!({integer(), String.t()}, boolean()) :: :ok
   defp apply_migration!({version, path}, from_startup?) do
