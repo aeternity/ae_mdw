@@ -1,14 +1,15 @@
 defmodule AeMdw.Application do
+  alias AeMdw.Contract
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Stream, as: DbStream
   alias AeMdw.EtsCache
   alias AeMdw.Extract
-  alias AeMdw.Contract
+  alias AeMdw.NodeHelper
+  alias AeMdw.Util
 
   require Model
 
   use Application
-
-  import AeMdw.Util
 
   ##########
 
@@ -31,13 +32,8 @@ defmodule AeMdw.Application do
       AeMdwWeb.Websocket.Supervisor
     ]
 
-    {:ok, sup_pid} = Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)
-    Application.fetch_env!(:ae_mdw, :sync) && sync(true)
-    {:ok, sup_pid}
+    Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)
   end
-
-  def sync(enabled?) when is_boolean(enabled?),
-    do: AeMdw.Sync.Supervisor.sync(enabled?)
 
   def init(:aehttp),
     do: :application.ensure_all_started(:aehttp)
@@ -55,8 +51,8 @@ defmodule AeMdw.Application do
     {:ok, aeo_oracles_code} = Extract.AbsCode.module(:aeo_oracles)
     {:ok, aeo_query_code} = Extract.AbsCode.module(:aeo_query)
 
-    oracle_fields = record_keys(aeo_oracles_code, :oracle)
-    query_fields = record_keys(aeo_query_code, :query)
+    oracle_fields = NodeHelper.record_keys(aeo_oracles_code, :oracle)
+    query_fields = NodeHelper.record_keys(aeo_query_code, :query)
 
     SmartRecord.new(AeMdw.Node, :oracle, Enum.zip(oracle_fields, Stream.cycle([nil])))
     SmartRecord.new(AeMdw.Node, :oracle_query, Enum.zip(query_fields, Stream.cycle([nil])))
@@ -65,7 +61,7 @@ defmodule AeMdw.Application do
 
   def init(:meta) do
     {:ok, chain_state_code} = Extract.AbsCode.module(:aec_chain_state)
-    [:header, :hash, :type] = record_keys(chain_state_code, :node)
+    [:header, :hash, :type] = NodeHelper.record_keys(chain_state_code, :node)
 
     {:ok, aetx_code} = Extract.AbsCode.module(:aetx)
     {:ok, aeser_code} = Extract.AbsCode.module(:aeser_api_encoder)
@@ -115,11 +111,11 @@ defmodule AeMdw.Application do
             do: (acc -> Map.put(acc, [field], Map.put(Map.get(acc, [field], %{}), type, pos)))
       end)
 
-    id_fields = Map.keys(id_field_type_map) |> Enum.map(compose(&to_string/1, &hd/1))
+    id_fields = Map.keys(id_field_type_map) |> Enum.map(Util.compose(&to_string/1, &hd/1))
 
     stream_mod = fn db_mod ->
       ["AeMdw", "Db", "Model", tab] = Module.split(db_mod)
-      Module.concat(AeMdw.Db.Stream, tab)
+      Module.concat(DbStream, tab)
     end
 
     collect_stream_mod = fn t, acc -> put_in(acc[t], stream_mod.(t)) end
@@ -135,17 +131,17 @@ defmodule AeMdw.Application do
     end
 
     field_pos_map = fn code, rec ->
-      record_keys(code, rec)
+      NodeHelper.record_keys(code, rec)
       |> Stream.zip(Stream.iterate(1, &(&1 + 1)))
       |> Enum.into(%{})
     end
 
     aex9_sigs =
-      AeMdw.Contract.aex9_signatures()
+      Contract.aex9_signatures()
       |> Enum.map(fn {k, v} -> {Contract.function_hash(k), v} end)
       |> Enum.into(%{})
 
-    max_int = AeMdw.Util.max_256bit_int()
+    max_int = Util.max_256bit_int()
     max_blob = :binary.list_to_bin(:lists.duplicate(1024, <<max_int::256>>))
 
     height_proto = :aec_hard_forks.protocols() |> Enum.into([]) |> Enum.sort(&>=/2)
@@ -158,7 +154,7 @@ defmodule AeMdw.Application do
       %{
         tx_mod: type_mod_map,
         tx_name: type_name_map,
-        tx_type: AeMdw.Util.inverse(type_name_map),
+        tx_type: Util.inverse(type_name_map),
         tx_fields: tx_fields,
         tx_ids: tx_ids,
         id_prefix: id_prefix_type_map,
@@ -172,10 +168,10 @@ defmodule AeMdw.Application do
         tx_group: tx_group_map,
         tx_groups: [{[], MapSet.new(Map.keys(tx_group_map))}],
         id_type: id_type_map,
-        type_id: AeMdw.Util.inverse(id_type_map),
+        type_id: Util.inverse(id_type_map),
         hdr_fields: %{
-          key: record_keys(headers_code, :key_header),
-          micro: record_keys(headers_code, :mic_header)
+          key: NodeHelper.record_keys(headers_code, :key_header),
+          micro: NodeHelper.record_keys(headers_code, :mic_header)
         },
         aens_tree_pos: field_pos_map.(aens_state_tree_code, :ns_tree),
         aeo_tree_pos: field_pos_map.(aeo_state_tree_code, :oracle_tree),
@@ -187,14 +183,14 @@ defmodule AeMdw.Application do
         height_proto: [{[], height_proto}],
         min_block_reward_height: [{[], min_block_reward_height}],
         token_supply_delta:
-          Enum.map(token_supply_delta(), fn {h, xs} -> {[h], xs} end) ++ [{[:_], 0}]
+          Enum.map(NodeHelper.token_supply_delta(), fn {h, xs} -> {[h], xs} end) ++ [{[:_], 0}]
       }
     )
   end
 
   def init(:contract_cache) do
     cache_exp = Application.fetch_env!(:ae_mdw, :contract_cache_expiration_minutes)
-    EtsCache.new(AeMdw.Contract.table(), cache_exp)
+    EtsCache.new(Contract.table(), cache_exp)
   end
 
   def init(:db_state) do
@@ -213,47 +209,18 @@ defmodule AeMdw.Application do
     end)
   end
 
-  def record_keys(mod_code, rec_name) do
-    {:ok, rec_code} = Extract.AbsCode.record_fields(mod_code, rec_name)
-    Enum.map(rec_code, &elem(Extract.AbsCode.field_name_type(&1), 0))
+  def start_phase(:migrate_db, _start_type, []) do
+    Mix.Tasks.MigrateDb.run(true)
+    :ok
   end
 
-  def mints() do
-    node_dir = Application.fetch_env!(:ae_plugin, :node_root)
-    # Note: Path.wildcard ignores symlinks...
-    acc_files = [_ | _] = :filelib.wildcard('#{node_dir}/**/accounts.json')
-
-    acc_files
-    |> Enum.map(fn f ->
-      f = to_string(f)
-
-      hf =
-        Path.dirname(f)
-        |> Path.split()
-        |> Enum.at(-1)
-        |> String.trim_leading(".")
-
-      {hf, Jason.decode!(File.read!(f))}
-    end)
-    |> Enum.into(%{})
+  def start_phase(:sync, _start_type, []) do
+    Application.fetch_env!(:ae_mdw, :sync) && sync(true)
+    :ok
   end
 
-  def token_supply_delta() do
-    sum_vals = compose(&Enum.sum/1, &Map.values/1)
-    {genesis_accs, hfs} = Map.pop(mints(), "genesis")
-
-    [
-      {0, sum_vals.(genesis_accs)}
-      | hfs
-        |> Enum.map(fn {hf, accs} ->
-          proto = String.to_existing_atom(hf)
-          proto_vsn = :aec_hard_forks.protocol_vsn(proto)
-          height = :aec_hard_forks.protocols()[proto_vsn]
-          {height, sum_vals.(accs)}
-        end)
-        |> Enum.sort()
-    ]
-  end
+  def sync(enabled?) when is_boolean(enabled?),
+    do: AeMdw.Sync.Supervisor.sync(enabled?)
 
   # Tell Phoenix to update the endpoint configuration whenever the application is updated.
   def config_change(changed, _new, removed) do

@@ -21,11 +21,11 @@ defmodule AeMdw.Migrations.IndexInnerTxs do
   @doc """
   Reindex tx_index for inner transactions after 90800 block when Fortuna upgrade introduced Generalized Accounts.
   """
-  @spec run() :: {:ok, {pos_integer(), pos_integer()}}
-  def run do
+  @spec run(boolean()) :: {:ok, {non_neg_integer(), pos_integer()}}
+  def run(from_startup?) do
     begin = DateTime.utc_now()
 
-    if :ok != Application.ensure_started(:ae_mdw) do
+    if not from_startup? and :ok != Application.ensure_started(:ae_mdw) do
       IO.puts("Ensure sync tables...")
       SyncSup.init_tables()
       MdwApp.init(:contract_cache)

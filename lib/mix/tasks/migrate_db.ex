@@ -13,12 +13,23 @@ defmodule Mix.Tasks.MigrateDb do
 
   @migrations_code_path "priv/migrations/*.ex"
 
+  # ignore for Code.compile_file/1
+  @dialyzer {:no_return, run: 1}
+  @dialyzer {:no_return, apply_migration!: 2}
+
+  def run(from_startup?) when is_boolean(from_startup?), do: run([to_string(from_startup?)])
+
   @impl Mix.Task
-  def run(_) do
-    :net_kernel.start([:aeternity@localhost, :shortnames])
-    :ae_plugin_utils.start_aecore()
-    :lager.set_loglevel(:epoch_sync_lager_event, :lager_console_backend, :undefined, :error)
-    :lager.set_loglevel(:lager_console_backend, :error)
+  def run(args) do
+    from_startup? = (List.first(args) || "false") |> String.to_existing_atom()
+
+    if not from_startup? do
+      :net_kernel.start([:aeternity@localhost, :shortnames])
+      :ae_plugin_utils.start_aecore()
+      :lager.set_loglevel(:epoch_sync_lager_event, :lager_console_backend, :undefined, :error)
+      :lager.set_loglevel(:lager_console_backend, :error)
+    end
+
     Log.info("================================================================================")
     current_version = read_migration_version()
     Log.info("current migration version: #{current_version}")
@@ -26,7 +37,7 @@ defmodule Mix.Tasks.MigrateDb do
     applied_count =
       current_version
       |> list_new_migrations()
-      |> Enum.map(&apply_migration!/1)
+      |> Enum.map(&apply_migration!(&1, from_startup?))
       |> length()
 
     # assure filesystem sync
@@ -65,14 +76,11 @@ defmodule Mix.Tasks.MigrateDb do
     |> Enum.sort_by(fn {version, _path} -> version end)
   end
 
-  # ignore for Code.compile_file
-  @dialyzer {:no_return, apply_migration!: 1}
-
-  @spec apply_migration!({integer(), String.t()}) :: :ok
-  defp apply_migration!({version, path}) do
+  @spec apply_migration!({integer(), String.t()}, boolean()) :: :ok
+  defp apply_migration!({version, path}, from_startup?) do
     [{module, _}] = Code.compile_file(path)
     Log.info("applying version #{version} with #{module}...")
-    {:ok, _} = apply(module, :run, [])
+    {:ok, _} = apply(module, :run, [from_startup?])
 
     :mnesia.sync_dirty(fn ->
       :mnesia.write(@table, {@record_name, version, DateTime.utc_now()}, :write)
