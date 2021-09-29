@@ -10,6 +10,8 @@ defmodule AeMdwWeb.Aex9Controller do
   alias AeMdwWeb.DataStreamPlug, as: DSPlug
 
   import AeMdwWeb.Util
+  import AeMdwWeb.Helpers.Aex9Helper
+  import AeMdwWeb.Views.Aex9ControllerView
 
   ##########
 
@@ -76,7 +78,7 @@ defmodule AeMdwWeb.Aex9Controller do
           account_pk = Validate.id!(account_id, [:account_pubkey])
 
           txi =
-            AeMdw.Db.Util.block_txi(Validate.nonneg_int!(height)) ||
+            Util.block_txi(Validate.nonneg_int!(height)) ||
               raise ErrInput.BlockIndex, value: height
 
           account_balances_reply(conn, account_pk, txi)
@@ -91,10 +93,10 @@ defmodule AeMdwWeb.Aex9Controller do
           account_pk = Validate.id!(account_id, [:account_pubkey])
 
           bi =
-            AeMdw.Db.Util.block_hash_to_bi(Validate.id!(hash)) ||
+            Util.block_hash_to_bi(Validate.id!(hash)) ||
               raise ErrInput.Id, value: hash
 
-          account_balances_reply(conn, account_pk, AeMdw.Db.Util.block_txi(bi))
+          account_balances_reply(conn, account_pk, Util.block_txi(bi))
         end
       )
 
@@ -104,7 +106,7 @@ defmodule AeMdwWeb.Aex9Controller do
         conn,
         fn ->
           account_pk = Validate.id!(account_id, [:account_pubkey])
-          account_balances_reply(conn, account_pk, AeMdw.Db.Util.last_txi())
+          account_balances_reply(conn, account_pk, Util.last_txi())
         end
       )
 
@@ -161,6 +163,9 @@ defmodule AeMdwWeb.Aex9Controller do
         end
       )
 
+  #
+  # Private functions
+  #
   defp by_names_reply(conn, search_mode) do
     entries =
       Contract.aex9_search_name(search_mode)
@@ -300,47 +305,6 @@ defmodule AeMdwWeb.Aex9Controller do
 
   defp top?(conn), do: presence?(conn, "top")
 
-  defp normalize_balances(bals) do
-    for {{:address, pk}, amt} <- bals, reduce: %{} do
-      acc ->
-        Map.put(acc, :aeser_api_encoder.encode(:account_pubkey, pk), amt)
-    end
-  end
-
-  defp balance_to_map({amount, txi, contract_pk}) do
-    tx_idx = AeMdw.Db.Util.read_tx!(txi)
-    info = Format.to_raw_map(tx_idx)
-
-    %{
-      contract_id: enc_ct(contract_pk),
-      block_hash: enc_block(:micro, info.block_hash),
-      tx_hash: enc(:tx_hash, info.hash),
-      tx_index: txi,
-      tx_type: info.tx.type,
-      height: info.block_height,
-      amount: amount
-    }
-  end
-
-  defp balance_to_map({amount, {block_type, height, block_hash}}, contract_pk, account_pk) do
-    %{
-      contract_id: enc_ct(contract_pk),
-      block_hash: enc_block(block_type, block_hash),
-      height: height,
-      account_id: enc_id(account_pk),
-      amount: amount
-    }
-  end
-
-  defp balances_to_map({amounts, {block_type, height, block_hash}}, contract_pk) do
-    %{
-      contract_id: enc_ct(contract_pk),
-      block_hash: enc_block(block_type, block_hash),
-      height: height,
-      amounts: normalize_balances(amounts)
-    }
-  end
-
   defp map_balances_range(range, f) do
     Stream.map(
       height_hash_range(range),
@@ -363,32 +327,9 @@ defmodule AeMdwWeb.Aex9Controller do
     )
   end
 
-  defp transfer_to_map({recipient_pk, sender_pk, amount, call_txi, log_idx}, :rev_aex9_transfer),
-    do: transfer_to_map({sender_pk, recipient_pk, amount, call_txi, log_idx}, :aex9_transfer)
-
-  defp transfer_to_map({sender_pk, recipient_pk, amount, call_txi, log_idx}, :aex9_transfer) do
-    tx = Util.read_tx!(call_txi) |> Format.to_map()
-
-    %{
-      sender: enc_id(sender_pk),
-      recipient: enc_id(recipient_pk),
-      amount: amount,
-      call_txi: call_txi,
-      log_idx: log_idx,
-      block_height: tx["block_height"],
-      micro_time: tx["micro_time"],
-      contract_id: tx["tx"]["contract_id"]
-    }
-  end
-
-  defp enc_block(:key, hash), do: :aeser_api_encoder.encode(:key_block_hash, hash)
-  defp enc_block(:micro, hash), do: :aeser_api_encoder.encode(:micro_block_hash, hash)
-
-  defp enc_ct(pk), do: :aeser_api_encoder.encode(:contract_pubkey, pk)
-  defp enc_id(pk), do: :aeser_api_encoder.encode(:account_pubkey, pk)
-
-  defp enc(type, pk), do: :aeser_api_encoder.encode(type, pk)
-
+  #
+  # Swagger
+  #
   def swagger_definitions do
     %{
       Aex9Response:
