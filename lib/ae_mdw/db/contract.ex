@@ -55,10 +55,12 @@ defmodule AeMdw.Db.Contract do
 
   def aex9_presence_exists?(contract_pk, account_pk) do
     record_name = Model.record(Model.Aex9AccountPresence)
-    presence_spec = Ex2ms.fun do
-      {^record_name, {^account_pk, :_, ^contract_pk}, :_} ->
-        :found
-    end
+
+    presence_spec =
+      Ex2ms.fun do
+        {^record_name, {^account_pk, :_, ^contract_pk}, :_} ->
+          :found
+      end
 
     [] != select(Model.Aex9AccountPresence, presence_spec)
   end
@@ -230,7 +232,7 @@ defmodule AeMdw.Db.Contract do
       fn -> %{} end,
       fn {_, txi, ct_pk}, accum ->
         Map.update(accum, ct_pk, txi, fn old_txi ->
-          old_txi == -1 && txi || old_txi
+          (old_txi == -1 && txi) || old_txi
         end)
       end,
       & &1
@@ -328,6 +330,7 @@ defmodule AeMdw.Db.Contract do
 
     # update account to aex9 contract mapping for all accounts with balance
     {amounts, _last_block_tuple} = DBN.aex9_balances(contract_pk)
+
     Enum.each(amounts, fn {{:address, account_pk}, _amount} ->
       if account_pk == to_pk do
         aex9_delete_presence(contract_pk, -1, to_pk)

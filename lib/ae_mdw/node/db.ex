@@ -3,11 +3,13 @@ defmodule AeMdw.Node.Db do
 
   alias AeMdw.Contract
   alias AeMdw.Db.Model
+  alias AeMdw.Log
 
   # we require that block index is in place
   import AeMdw.Db.Util, only: [read_block!: 1]
   import AeMdw.Util
 
+  require Logger
   require Model
 
   @typep hash_type() :: nil | :key | :key_block | :mic_block
@@ -122,7 +124,7 @@ defmodule AeMdw.Node.Db do
       {addr_map, {type, height, hash}}
     else
       {:error, "Out of gas"} ->
-        IO.puts("Out of gas for #{:aeser_api_encoder.encode(:contract_pubkey, contract_pk)}")
+        Log.warn("Out of gas for #{:aeser_api_encoder.encode(:contract_pubkey, contract_pk)}")
         {%{}, nil}
     end
   end
