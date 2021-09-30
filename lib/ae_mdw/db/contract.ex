@@ -12,11 +12,12 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Log
   alias AeMdw.Validate
 
-  require Record
-  require Model
+  require Ex2ms
   require Log
+  require Model
+  require Record
 
-  import AeMdw.Util, only: [compose: 2]
+  import AeMdw.Util, only: [compose: 2, max_256bit_int: 0]
   import AeMdw.Db.Util
 
   ##########
@@ -39,6 +40,27 @@ defmodule AeMdw.Db.Contract do
     m_idx_presence = Model.idx_aex9_account_presence(index: {txi, pubkey, contract_pk})
     :mnesia.write(Model.Aex9AccountPresence, m_acc_presence, :write)
     :mnesia.write(Model.IdxAex9AccountPresence, m_idx_presence, :write)
+  end
+
+  def aex9_write_new_presence(contract_pk, txi, account_pk) do
+    if not aex9_presence_exists?(contract_pk, account_pk) do
+      aex9_write_presence(contract_pk, txi, account_pk)
+    end
+  end
+
+  def aex9_delete_presence(contract_pk, txi, pubkey) do
+    :mnesia.delete(Model.Aex9AccountPresence, {pubkey, txi, contract_pk}, :write)
+    :mnesia.delete(Model.IdxAex9AccountPresence, {txi, pubkey, contract_pk}, :write)
+  end
+
+  def aex9_presence_exists?(contract_pk, account_pk) do
+    record_name = Model.record(Model.Aex9AccountPresence)
+    presence_spec = Ex2ms.fun do
+      {^record_name, {^account_pk, :_, ^contract_pk}, :_} ->
+        :found
+    end
+
+    [] != select(Model.Aex9AccountPresence, presence_spec)
   end
 
   def call_write(create_txi, txi, %{function: fname, arguments: args, result: %{error: [err]}}),
@@ -202,7 +224,7 @@ defmodule AeMdw.Db.Contract do
   def aex9_search_contract(account_pk, last_txi) do
     gen_collect(
       Model.Aex9AccountPresence,
-      {account_pk, last_txi, <<AeMdw.Util.max_256bit_int()::256>>},
+      {account_pk, last_txi, <<max_256bit_int()::256>>},
       fn {acc_pk, _, _} -> acc_pk == account_pk end,
       &prev/2,
       fn -> %{} end,
@@ -310,15 +332,10 @@ defmodule AeMdw.Db.Contract do
       if account_pk == to_pk do
         aex9_delete_presence(contract_pk, -1, to_pk)
       else
-        aex9_write_presence(contract_pk, -1, account_pk)
+        aex9_write_new_presence(contract_pk, -1, account_pk)
       end
     end)
 
     aex9_presence_cache_write({{contract_pk, txi, i}, {from_pk, to_pk}, amount})
-  end
-
-  defp aex9_delete_presence(contract_pk, txi, pubkey) do
-    :mnesia.dirty_delete(Model.Aex9AccountPresence, {pubkey, txi, contract_pk})
-    :mnesia.dirty_delete(Model.IdxAex9AccountPresence, {txi, pubkey, contract_pk})
   end
 end

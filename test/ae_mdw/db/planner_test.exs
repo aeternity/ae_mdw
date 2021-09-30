@@ -1,4 +1,4 @@
-defmodule PlannerTest do
+defmodule AeMdw.Db.PlannerTest do
   use ExUnit.Case
 
   alias AeMdw.Db.Stream, as: DBS

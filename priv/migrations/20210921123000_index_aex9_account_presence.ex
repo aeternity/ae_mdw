@@ -31,7 +31,7 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresence do
     indexed_count =
       fetch_aex9_contracts()
       |> Enum.chunk_every(@contracts_chunk_size)
-      |> Enum.reduce(0, fn [_ct | _] = contracts_chunk, acc ->
+      |> Enum.reduce(0, fn contracts_chunk, acc ->
         count =
           contracts_chunk
           |> accounts_without_balance()
