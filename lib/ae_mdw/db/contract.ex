@@ -1,7 +1,14 @@
 defmodule AeMdw.Db.Contract do
+  @moduledoc """
+  Data access to read and write Contract related models.
+  """
   alias AeMdw.Node, as: AE
+  alias AeMdw.Node.Db, as: DBN
+
+  alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
+  alias AeMdw.Db.Sync
   alias AeMdw.Log
   alias AeMdw.Validate
 
@@ -61,7 +68,7 @@ defmodule AeMdw.Db.Contract do
 
   def logs_write(create_txi, txi, call_rec) do
     contract_pk = :aect_call.contract_pubkey(call_rec)
-    is_aex9_contract? = AeMdw.Contract.is_aex9?(contract_pk)
+    is_aex9_contract? = Contract.is_aex9?(contract_pk)
     aex9_transfer_evt = AeMdw.Node.aex9_transfer_event_hash()
     raw_logs = :aect_call.log(call_rec)
 
@@ -75,6 +82,7 @@ defmodule AeMdw.Db.Contract do
           args: args,
           data: data
         )
+
       m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, i})
       m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, i})
       m_idx_log = Model.idx_contract_log(index: {txi, create_txi, evt_hash, i})
@@ -100,7 +108,7 @@ defmodule AeMdw.Db.Contract do
         :mnesia.write(Model.ContractLog, m_log_remote, :write)
       end
 
-      aex9_contract_pk = aex9_contract_pubkey(is_aex9_contract?, contract_pk, addr)
+      aex9_contract_pk = which_aex9_contract_pubkey(is_aex9_contract?, contract_pk, addr)
 
       if evt_hash == aex9_transfer_evt and aex9_contract_pk != nil do
         write_aex9_records(aex9_contract_pk, txi, i, args)
@@ -110,8 +118,8 @@ defmodule AeMdw.Db.Contract do
 
   def call_fun_args_res(contract_pk, call_txi) do
     create_txi =
-      (contract_pk == AeMdw.Db.Sync.Contract.migrate_contract_pk() &&
-         -1) || AeMdw.Db.Origin.tx_index({:contract, contract_pk})
+      (contract_pk == Sync.Contract.migrate_contract_pk() &&
+         -1) || Origin.tx_index({:contract, contract_pk})
 
     m_call = read!(Model.ContractCall, {create_txi, call_txi})
 
@@ -198,7 +206,11 @@ defmodule AeMdw.Db.Contract do
       fn {acc_pk, _, _} -> acc_pk == account_pk end,
       &prev/2,
       fn -> %{} end,
-      fn {_, txi, ct_pk}, accum -> Map.put_new(accum, ct_pk, txi) end,
+      fn {_, txi, ct_pk}, accum ->
+        Map.update(accum, ct_pk, txi, fn old_txi ->
+          old_txi == -1 && txi || old_txi
+        end)
+      end,
       & &1
     )
   end
@@ -274,10 +286,11 @@ defmodule AeMdw.Db.Contract do
   #
   # Private functions
   #
-  defp aex9_contract_pubkey(_is_aex9? = true, contract_pk, _addr), do: contract_pk
-  defp aex9_contract_pubkey(false, contract_pk, addr) do
+  defp which_aex9_contract_pubkey(_is_aex9? = true, contract_pk, _addr), do: contract_pk
+
+  defp which_aex9_contract_pubkey(false, contract_pk, addr) do
     # remotely called contract is aex9?
-    if addr != contract_pk and AeMdw.Contract.is_aex9?(addr) do
+    if addr != contract_pk and Contract.is_aex9?(addr) do
       addr
     end
   end
@@ -291,7 +304,21 @@ defmodule AeMdw.Db.Contract do
     :mnesia.write(Model.IdxAex9Transfer, m_idx_transfer, :write)
     aex9_write_presence(contract_pk, txi, to_pk)
 
+    # update account to aex9 contract mapping for all accounts with balance
+    {amounts, _last_block_tuple} = DBN.aex9_balances(contract_pk)
+    Enum.each(amounts, fn {{:address, account_pk}, _amount} ->
+      if account_pk == to_pk do
+        aex9_delete_presence(contract_pk, -1, to_pk)
+      else
+        aex9_write_presence(contract_pk, -1, account_pk)
+      end
+    end)
+
     aex9_presence_cache_write({{contract_pk, txi, i}, {from_pk, to_pk}, amount})
   end
 
+  defp aex9_delete_presence(contract_pk, txi, pubkey) do
+    :mnesia.dirty_delete(Model.Aex9AccountPresence, {pubkey, txi, contract_pk})
+    :mnesia.dirty_delete(Model.IdxAex9AccountPresence, {txi, pubkey, contract_pk})
+  end
 end

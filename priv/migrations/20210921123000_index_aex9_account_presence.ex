@@ -49,7 +49,7 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresence do
 
   defp index_account_aex9_presence(%Account2Fix{
          account_pk: account_pk,
-         contract_pk: contract_pk,
+         contract_pk: contract_pk
        }) do
     :mnesia.transaction(fn ->
       # no call txi then -1 (and balance not necessarily from create)
@@ -96,7 +96,7 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresence do
       |> Enum.map(fn account_id ->
         %Account2Fix{
           account_pk: AeMdw.Validate.id!(account_id, [:account_pubkey]),
-          contract_pk: contract_pk,
+          contract_pk: contract_pk
         }
       end)
     end)
@@ -109,7 +109,7 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresence do
 
   defp account_balances_is_empty?(account_pk, last_txi) do
     contracts =
-      AeMdw.Db.Contract.aex9_search_contract(account_pk, last_txi)
+      DbContract.aex9_search_contract(account_pk, last_txi)
       |> Map.to_list()
       |> Enum.sort_by(&elem(&1, 1), &<=/2)
 

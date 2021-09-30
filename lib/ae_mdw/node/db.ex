@@ -10,7 +10,7 @@ defmodule AeMdw.Node.Db do
 
   require Model
 
-  @typep hash_type() :: :key | :key_block | :mic_block
+  @typep hash_type() :: nil | :key | :key_block | :mic_block
   @typep top_height_hash() :: {hash_type(), pos_integer(), binary()}
 
   def get_blocks(height) when is_integer(height) do
