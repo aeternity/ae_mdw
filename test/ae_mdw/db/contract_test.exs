@@ -14,9 +14,16 @@ defmodule AeMdw.Db.ContractTest do
   @new_cpk Validate.id!("ct_2QKWLinRRozwA6wPAnW269hCHpkL1vcb2YCTrna94nP7rAPVU9")
 
   test "new aex9 presence not created when already exists" do
-    assert [txi] = aex9_presence_txi_list(@existing_cpk, @existing_apk)
-    Contract.aex9_write_new_presence(@existing_cpk, txi + 1, @existing_apk)
-    assert [txi] == aex9_presence_txi_list(@existing_cpk, @existing_apk)
+    :mnesia.transaction(fn ->
+      fake_txi = 1_000_123
+      Contract.aex9_write_presence(@existing_cpk, fake_txi, @existing_apk)
+      assert [fake_txi] == aex9_presence_txi_list(@existing_cpk, @existing_apk)
+
+      Contract.aex9_write_new_presence(@existing_cpk, fake_txi + 1, @existing_apk)
+      assert [fake_txi] == aex9_presence_txi_list(@existing_cpk, @existing_apk)
+
+      Contract.aex9_delete_presence(@existing_cpk, fake_txi, @existing_apk)
+    end)
   end
 
   test "create and delete new aex9 presence" do
