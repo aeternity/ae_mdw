@@ -85,7 +85,7 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresence do
     contract_list
     |> Enum.map(fn contract_pk ->
       # Process.sleep(5000)
-      {amounts, _last_block_tuple} = Aex9Helper.safe_aex9_balances(contract_pk)
+      {amounts, _last_block_tuple} = DBN.aex9_balances(contract_pk)
 
       {contract_pk, normalized_amounts(amounts)}
     end)
@@ -113,12 +113,10 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresence do
       |> Map.to_list()
       |> Enum.sort_by(&elem(&1, 1), &<=/2)
 
-    height_hash = DBN.top_height_hash(false)
-
     balance =
       contracts
       |> Enum.map(fn {contract_pk, txi} ->
-        {amount, _} = DBN.aex9_balance(contract_pk, account_pk, height_hash)
+        {amount, _} = DBN.aex9_balance(contract_pk, account_pk, false)
         {amount, txi, contract_pk}
       end)
       |> Enum.map(&Aex9ControllerView.balance_to_map/1)

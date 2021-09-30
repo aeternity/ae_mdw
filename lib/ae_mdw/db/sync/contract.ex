@@ -56,7 +56,7 @@ defmodule AeMdw.Db.Sync.Contract do
     |> Enum.group_by(fn {{ct_pk, _, _}, _, _} -> ct_pk end)
     |> Enum.filter(fn {_ct_pk, [first_entry | _]} -> ct_create?.(first_entry) end)
     |> Enum.map(fn {ct_pk, [{{ct_pk, create_txi, -1}, <<_::binary>>, -1} | transfers]} ->
-      {balances, _} = AeMdw.Node.Db.aex9_balances(ct_pk, {nil, kbi, next_hash})
+      {balances, _} = AeMdw.Node.Db.aex9_balances!(ct_pk, {nil, kbi, next_hash})
 
       all_pks =
         Map.keys(balances)

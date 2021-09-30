@@ -230,7 +230,7 @@ defmodule AeMdwWeb.Aex9Controller do
   end
 
   defp balances_reply(conn, contract_pk) do
-    {amounts, {type, height, hash}} = DBN.aex9_balances(contract_pk, top?(conn))
+    {amounts, {type, height, hash}} = DBN.aex9_balances!(contract_pk, top?(conn))
     json(conn, balances_to_map({amounts, {type, height, hash}}, contract_pk))
   end
 
@@ -243,7 +243,7 @@ defmodule AeMdwWeb.Aex9Controller do
           map_balances_range(
             range,
             fn height_hash ->
-              {amounts, _} = DBN.aex9_balances(contract_pk, height_hash)
+              {amounts, _} = DBN.aex9_balances!(contract_pk, height_hash)
               {:amounts, normalize_balances(amounts)}
             end
           )
@@ -252,7 +252,7 @@ defmodule AeMdwWeb.Aex9Controller do
   end
 
   defp balances_for_hash_reply(conn, contract_pk, {block_type, block_hash, height}) do
-    {amounts, _} = DBN.aex9_balances(contract_pk, {block_type, height, block_hash})
+    {amounts, _} = DBN.aex9_balances!(contract_pk, {block_type, height, block_hash})
     json(conn, balances_to_map({amounts, {block_type, height, block_hash}}, contract_pk))
   end
 

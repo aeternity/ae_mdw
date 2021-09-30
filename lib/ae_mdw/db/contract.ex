@@ -61,6 +61,8 @@ defmodule AeMdw.Db.Contract do
 
   def logs_write(create_txi, txi, call_rec) do
     contract_pk = :aect_call.contract_pubkey(call_rec)
+    is_aex9_contract? = AeMdw.Contract.is_aex9?(contract_pk)
+    aex9_transfer_evt = AeMdw.Node.aex9_transfer_event_hash()
     raw_logs = :aect_call.log(call_rec)
 
     raw_logs
@@ -73,6 +75,13 @@ defmodule AeMdw.Db.Contract do
           args: args,
           data: data
         )
+      m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, i})
+      m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, i})
+      m_idx_log = Model.idx_contract_log(index: {txi, create_txi, evt_hash, i})
+      :mnesia.write(Model.ContractLog, m_log, :write)
+      :mnesia.write(Model.DataContractLog, m_data_log, :write)
+      :mnesia.write(Model.EvtContractLog, m_evt_log, :write)
+      :mnesia.write(Model.IdxContractLog, m_idx_log, :write)
 
       # if remote call then indexes also with the called contract
       if addr != contract_pk do
@@ -91,40 +100,12 @@ defmodule AeMdw.Db.Contract do
         :mnesia.write(Model.ContractLog, m_log_remote, :write)
       end
 
-      m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, i})
-      m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, i})
-      m_idx_log = Model.idx_contract_log(index: {txi, create_txi, evt_hash, i})
-      :mnesia.write(Model.ContractLog, m_log, :write)
-      :mnesia.write(Model.DataContractLog, m_data_log, :write)
-      :mnesia.write(Model.EvtContractLog, m_evt_log, :write)
-      :mnesia.write(Model.IdxContractLog, m_idx_log, :write)
+      aex9_contract_pk = aex9_contract_pubkey(is_aex9_contract?, contract_pk, addr)
+
+      if evt_hash == aex9_transfer_evt and aex9_contract_pk != nil do
+        write_aex9_records(aex9_contract_pk, txi, i, args)
+      end
     end)
-
-    case AeMdw.Contract.is_aex9?(contract_pk) do
-      true ->
-        transfer_evt = AeMdw.Node.aex9_transfer_event_hash()
-
-        raw_logs
-        |> Enum.with_index()
-        |> Enum.each(fn
-          {{_addr, [^transfer_evt, from_pk, to_pk, <<amount::256>>], ""}, i} ->
-            m_transfer = Model.aex9_transfer(index: {from_pk, to_pk, amount, txi, i})
-            m_rev_transfer = Model.rev_aex9_transfer(index: {to_pk, from_pk, amount, txi, i})
-            m_idx_transfer = Model.idx_aex9_transfer(index: {txi, i, from_pk, to_pk, amount})
-            :mnesia.write(Model.Aex9Transfer, m_transfer, :write)
-            :mnesia.write(Model.RevAex9Transfer, m_rev_transfer, :write)
-            :mnesia.write(Model.IdxAex9Transfer, m_idx_transfer, :write)
-            aex9_write_presence(contract_pk, txi, to_pk)
-
-            aex9_presence_cache_write({{contract_pk, txi, i}, {from_pk, to_pk}, amount})
-
-          {_, _} ->
-            :ok
-        end)
-
-      false ->
-        nil
-    end
   end
 
   def call_fun_args_res(contract_pk, call_txi) do
@@ -289,4 +270,28 @@ defmodule AeMdw.Db.Contract do
       :mnesia.write(Model.GrpIdFnameIntContractCall, m_grp_id_fname_call, :write)
     end
   end
+
+  #
+  # Private functions
+  #
+  defp aex9_contract_pubkey(_is_aex9? = true, contract_pk, _addr), do: contract_pk
+  defp aex9_contract_pubkey(false, contract_pk, addr) do
+    # remotely called contract is aex9?
+    if addr != contract_pk and AeMdw.Contract.is_aex9?(addr) do
+      addr
+    end
+  end
+
+  defp write_aex9_records(contract_pk, txi, i, [from_pk, to_pk, <<amount::256>>]) do
+    m_transfer = Model.aex9_transfer(index: {from_pk, to_pk, amount, txi, i})
+    m_rev_transfer = Model.rev_aex9_transfer(index: {to_pk, from_pk, amount, txi, i})
+    m_idx_transfer = Model.idx_aex9_transfer(index: {txi, i, from_pk, to_pk, amount})
+    :mnesia.write(Model.Aex9Transfer, m_transfer, :write)
+    :mnesia.write(Model.RevAex9Transfer, m_rev_transfer, :write)
+    :mnesia.write(Model.IdxAex9Transfer, m_idx_transfer, :write)
+    aex9_write_presence(contract_pk, txi, to_pk)
+
+    aex9_presence_cache_write({{contract_pk, txi, i}, {from_pk, to_pk}, amount})
+  end
+
 end
