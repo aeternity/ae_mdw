@@ -82,7 +82,8 @@ defmodule AeMdw.Node.Db do
   def aex9_balance(contract_pk, account_pk, the_very_top?) when is_boolean(the_very_top?),
     do: aex9_balance(contract_pk, account_pk, top_height_hash(the_very_top?))
 
-  @spec aex9_balance(pubkey(), pubkey(), top_height_hash()) :: {integer() | nil, top_height_hash()}
+  @spec aex9_balance(pubkey(), pubkey(), top_height_hash()) ::
+          {integer() | nil, top_height_hash()}
   def aex9_balance(contract_pk, account_pk, {type, height, hash}) do
     case Contract.call_contract(contract_pk, {type, height, hash}, "balance", [
            {:address, account_pk}

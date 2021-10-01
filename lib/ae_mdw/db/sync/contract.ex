@@ -13,7 +13,8 @@ defmodule AeMdw.Db.Sync.Contract do
 
   @typep pubkey() :: <<_::256>>
 
-  @spec create(pubkey(), pubkey(), integer(), integer()) :: term()  | :invalid_contract
+  @spec create(pubkey(), pubkey(), integer(), {integer(), integer()}) ::
+          term() | :invalid_contract
   def create(contract_pk, owner_pk, txi, _bi) do
     case Contract.get_info(contract_pk) do
       {:ok, contract_info} ->
@@ -30,7 +31,7 @@ defmodule AeMdw.Db.Sync.Contract do
     end
   end
 
-  @spec call(pubkey(), tuple(), integer(), integer()) :: :ok
+  @spec call(pubkey(), tuple(), integer(), {integer(), integer()}) :: :ok
   def call(contract_pk, tx, txi, bi) do
     block_hash = Model.block(DBU.read_block!(bi), :hash)
 
