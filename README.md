@@ -299,7 +299,7 @@ Type groups for the transactions listed above are:
 
 `type` parameter:
 ```
-$ curl -s "http://localhost:4000/txs/forward?type=channel_create&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?type=channel_create&limit=1" | jq '.'
 {
   "data": [
     {
@@ -336,7 +336,7 @@ $ curl -s "http://localhost:4000/txs/forward?type=channel_create&limit=1" | jq '
 
 `type_group` parameter:
 ```
-$ curl -s "http://localhost:4000/txs/forward?type_group=oracle&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?type_group=oracle&limit=1" | jq '.'
 {
   "data": [
     {
@@ -391,7 +391,7 @@ With generic ids, it is possible to select also `create`/`register` transactions
 ###### Examples
 
 ```
-$ curl -s "http://localhost:4000/txs/forward?contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2" | jq '.'
 {
   "data": [
     {
@@ -480,7 +480,7 @@ $ curl -s "http://localhost:4000/txs/forward?contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq
 ```
 
 ```
-$ curl -s "http://localhost:4000/txs/forward?oracle=ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?oracle=ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&limit=1" | jq '.'
 {
   "data": [
     {
@@ -517,7 +517,7 @@ $ curl -s "http://localhost:4000/txs/forward?oracle=ok_24jcHLTZQfsou7NvomRJ1hKEn
 ```
 
 ```
-$ curl -s "http://localhost:4000/txs/forward?channel=ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?channel=ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD&limit=2" | jq '.'
 {
   "data": [
     {
@@ -641,7 +641,7 @@ The types for freestanding fields are:
 
 with provided transaction type (`name_transfer`):
 ```
-$ curl -s "http://localhost:4000/txs/forward?name_transfer.recipient_id=ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?name_transfer.recipient_id=ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF&limit=1" | jq '.'
 {
   "data": [
     {
@@ -672,7 +672,7 @@ $ curl -s "http://localhost:4000/txs/forward?name_transfer.recipient_id=ak_idkx6
 
 freestanding field `from_id`, and via `jq` extracting only tx_index and transaction type:
 ```
-curl -s "http://localhost:4000/txs/backward?from_id=ak_ozzwBYeatmuN818LjDDDwRSiBSvrqt4WU7WvbGsZGVre72LTS&limit=5" | jq '.data | .[] | [.tx_index, .tx.type]'
+curl -s "https://mainnet.aeternity.io/mdw/txs/backward?from_id=ak_ozzwBYeatmuN818LjDDDwRSiBSvrqt4WU7WvbGsZGVre72LTS&limit=5" | jq '.data | .[] | [.tx_index, .tx.type]'
 [
   98535,
   "ChannelForceProgressTx"
@@ -711,7 +711,7 @@ Middleware has DOS protection, by only allowing to ask for subsequent page.
 Asking for arbitrary page, without requesting a previous one before results in error:
 
 ```
-$ curl -s "http://localhost:4000/txs/forward?account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&page=10" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&page=10" | jq '.'
 {
   "error": "random access not supported"
 }
@@ -725,7 +725,7 @@ The `continuation-URL`, when concatenated with host, can be used to retrieve nex
 
 getting the first transaction:
 ```
-$ curl -s "http://localhost:4000/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&limit=1" | jq '.'
 {
   "data": [
     {
@@ -754,9 +754,9 @@ $ curl -s "http://localhost:4000/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp2
 }
 ```
 
-getting the next transaction by prepending host (http://localhost:4000) to the continuation-URL from last request:
+getting the next transaction by prepending host (https://mainnet.aeternity.io/mdw) to the continuation-URL from last request:
 ```
-$ curl -s "http://localhost:4000/txs/gen/0-265354?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&limit=1&page=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txs/gen/0-265354?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&limit=1&page=2" | jq '.'
 {
   "data": [
     {
@@ -801,7 +801,7 @@ If `type` or `type_group` is provided, the transaction in the result set must be
 
 transactions where each transaction contains both accounts, no matter at which field:
 ```
-$ curl -s "http://localhost:4000/txs/backward?account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&account=ak_zUQikTiUMNxfKwuAfQVMPkaxdPsXP8uAxnfn6TkZKZCtmRcUD&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txs/backward?account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&account=ak_zUQikTiUMNxfKwuAfQVMPkaxdPsXP8uAxnfn6TkZKZCtmRcUD&limit=1" | jq '.'
 {
   "data": [
     {
@@ -833,7 +833,7 @@ $ curl -s "http://localhost:4000/txs/backward?account=ak_24jcHLTZQfsou7NvomRJ1hK
 
 spend transactions between sender and recipient (transaction type = spend is deduced from the fields):
 ```
-$ curl -s "http://localhost:4000/txs/forward?sender_id=ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5&recipient_id=ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?sender_id=ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5&recipient_id=ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2&limit=1" | jq '.'
 {
   "data": [
     {
@@ -864,7 +864,7 @@ $ curl -s "http://localhost:4000/txs/forward?sender_id=ak_26dopN3U2zgfJG4Ao4J4Zv
 
 name related transactions for account:
 ```
-$ curl -s "http://localhost:4000/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&type_group=name" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&type_group=name" | jq '.'
 {
   "data": [
     {
@@ -1113,7 +1113,7 @@ This design decouples query construction and actual consumption of the result se
 ### Get transaction by hash
 
 ```
-$ curl -s "http://localhost:4000/tx/th_zATv7B4RHS45GamShnWgjkvcrQfZUWQkZ8gk1RD4m2uWLJKnq" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/tx/th_zATv7B4RHS45GamShnWgjkvcrQfZUWQkZ8gk1RD4m2uWLJKnq" | jq '.'
 {
   "block_hash": "mh_2kE3N7GCaeAiowu1a7dopJygxQfxvRXYCNy7Pc657arjCa8PPe",
   "block_height": 257058,
@@ -1141,7 +1141,7 @@ $ curl -s "http://localhost:4000/tx/th_zATv7B4RHS45GamShnWgjkvcrQfZUWQkZ8gk1RD4m
 ### Get transaction by index
 
 ```
-$ curl -s "http://localhost:4000/txi/10000000" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txi/10000000" | jq '.'
 {
   "block_hash": "mh_2J4A4f7RJ4oVKKCFmBEDMQpqacLZFtJ5oBvx3fUUABmLv5SUZH",
   "block_height": 240064,
@@ -1171,14 +1171,14 @@ $ curl -s "http://localhost:4000/txi/10000000" | jq '.'
 #### All transactions
 
 ```
-$ curl -s "http://localhost:4000/txs/count" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txs/count" | jq '.'
 11921825
 ```
 
 #### Transactions by type/field for ID
 
 ```
-$ curl -s "http://localhost:4000/txs/count/ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txs/count/ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR" | jq '.'
 {
   "channel_create_tx": {
     "responder_id": 74
@@ -1232,7 +1232,7 @@ A generation can be understood as key block and micro blocks containing transact
 ### Single block by hash
 
 ```
-$ curl -s "http://localhost:4000/block/kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/block/kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6" | jq '.'
 {
   "beneficiary": "ak_2MR38Zf355m6JtP13T3WEcUcSLVLCxjGvjk6zG95S2mfKohcSS",
   "hash": "kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6",
@@ -1251,7 +1251,7 @@ $ curl -s "http://localhost:4000/block/kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6
 ```
 
 ```
-$ curl -s "http://localhost:4000/block/mh_25TNGuEkVGckfrH3rVwHiUsm2GFB17mKFEF3hYHR3zQrVXCRrp" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/block/mh_25TNGuEkVGckfrH3rVwHiUsm2GFB17mKFEF3hYHR3zQrVXCRrp" | jq '.'
 {
   "hash": "mh_25TNGuEkVGckfrH3rVwHiUsm2GFB17mKFEF3hYHR3zQrVXCRrp",
   "height": 123003,
@@ -1271,7 +1271,7 @@ $ curl -s "http://localhost:4000/block/mh_25TNGuEkVGckfrH3rVwHiUsm2GFB17mKFEF3hY
 Key block of the whole generation can be identified by one non-negative integer (height).
 
 ```
-$ curl -s "http://localhost:4000/blocki/1234" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/blocki/1234" | jq '.'
 {
   "beneficiary": "ak_2RGTeERHPm9zCo9EsaVAh8tDcsetFSVsD9VVi5Dk1n94wF3EKm",
   "hash": "kh_2L9i7dMqrYiUs6um71kwnZsNDqD9xBbD71EiVoWFtbMUKs2Tka",
@@ -1292,7 +1292,7 @@ $ curl -s "http://localhost:4000/blocki/1234" | jq '.'
 Micro block is identified by height and sequence id (order) withing the generation, starting from 0.
 
 ```
-$ curl -s "http://localhost:4000/blocki/300000/0" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/blocki/300000/0" | jq '.'
 {
   "hash": "mh_2Nyaoy9CCPa8WBfzGbWXy5rd6AahJpBFxyXM9MMpCrvCqpkFj",
   "height": 300000,
@@ -1321,7 +1321,7 @@ Since we are returning whole generations, replies can be very large.
 Examples below are trimmed heavily:
 
 ```
-$ curl -s "http://localhost:4000/blocks/backward?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/blocks/backward?limit=1" | jq '.'
 {
   "data": [
     {
@@ -1383,7 +1383,7 @@ $ curl -s "http://localhost:4000/blocks/backward?limit=1" | jq '.'
 ```
 
 ```
-$ curl -s "http://localhost:4000/blocks/forward?limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/blocks/forward?limit=2" | jq '.'
 {
   "data": [
     {
@@ -1457,7 +1457,7 @@ $ curl -s "http://localhost:4000/blocks/forward?limit=2" | jq '.'
 With /v2/blocks endpoint ("micro_blocks" as a sorted list):
 
 ```
-$ curl -s "http://localhost:4000/v2/blocks/101125-101125" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks/101125-101125" | jq '.'
 {
   "data": [
     {
@@ -1531,7 +1531,7 @@ $ curl -s "http://localhost:4000/v2/blocks/101125-101125" | jq '.'
 Numeric range:
 
 ```
-$ curl -s "http://localhost:4000/blocks/100000-100100?limit=3" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/blocks/100000-100100?limit=3" | jq '.'
 {
   "data": [
     {
@@ -1740,7 +1740,7 @@ Due to this reason, all name endpoints except `name/pointers` and `name/pointees
 ### Name Resolution
 
 ```
-$ curl -s "http://localhost:4000/name/bear.test" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/name/bear.test" | jq '.'
 {
   "active": false,
   "hash": "nm_2aGpF2uJp1wDpuHoNDhhSztpoQr43dAjzZ5SyvfD2RSKTVmL6X",
@@ -1794,7 +1794,7 @@ $ curl -s "http://localhost:4000/name/bear.test" | jq '.'
 It's possible to use encoded hash as well:
 
 ```
-$ curl -s "http://localhost:4000/name/nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/name/nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj" | jq '.'
 {
   "active": true,
   "hash": "nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj",
@@ -1827,7 +1827,7 @@ $ curl -s "http://localhost:4000/name/nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJ
 If there's no suffix (`.chain` or `.test`), `.chain` is added by default:
 
 ```
-$ curl -s "http://localhost:4000/name/aeternity" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/name/aeternity" | jq '.'
 {
   "active": true,
   "hash": "nm_S4ofw6861biSJrXgHuJPo7VotLbrY8P9ngTLvgrRwbDEA3svc",
@@ -1871,7 +1871,7 @@ $ curl -s "http://localhost:4000/name/aeternity" | jq '.'
 If the name is currently in auction, the reply has different shape:
 
 ```
-$ curl -s "http://localhost:4000/name/help" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/name/help" | jq '.'
 {
   "active": false,
   "hash": "nm_2WoR2PCFXeLiLQH8C7GVbGpU57qDBqkQbPvaML8w3ijMQiei7E",
@@ -1913,7 +1913,7 @@ $ curl -s "http://localhost:4000/name/help" | jq '.'
 With `expand` parameter, notice how `claims` and `updates` have the transaction detail inlined:
 
 ```
-$ curl -s "http://localhost:4000/name/cryptobase.chain?expand" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/name/cryptobase.chain?expand" | jq '.'
 {
   "active": true,
   "hash": "nm_2vAFLnmRbsQTNeZi9PzFgVWY6Un9rszFDaE3ubYqk1oJURxJ97",
@@ -1995,7 +1995,7 @@ $ curl -s "http://localhost:4000/name/cryptobase.chain?expand" | jq '.'
 Auction specific name resolution is available behind endpoint `name/auction/:id`:
 
 ```
-$ curl -s "http://localhost:4000/name/auction/nikita.chain" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/name/auction/nikita.chain" | jq '.'
 {
   "active": false,
   "hash": "nm_2s2gjxQFYzcShL9gva2jWvzZ7mHPe4m6X6pqbyuSipZKCg1DLV",
@@ -2045,7 +2045,7 @@ The reply has two keys:
 Example below is fabricated, to present the shape of the responses:
 
 ```
-$ curl -s "http://localhost:4000/names/owned_by/ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/names/owned_by/ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN" | jq '.'
 {
   "active": [
     {
@@ -2163,7 +2163,7 @@ The parameter `limit` (by default = 10) is optional, and limits the number of el
 #### All names
 
 ```
-$ curl -s "http://localhost:4000/names?limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/names?limit=2" | jq '.'
 {
   "data": [
     {
@@ -2315,7 +2315,7 @@ For demonstration, they are ordered by `expiration` with direction `forward`.
 This means, we list from oldest to newest expired names.
 
 ```
-$ curl -s "http://localhost:4000/names/inactive?by=expiration&direction=forward&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/names/inactive?by=expiration&direction=forward&limit=2" | jq '.'
 {
   "data": [
     {
@@ -2383,7 +2383,7 @@ For demonstration, they are sorted by `name`.
 Without `direction` parameter, default value `backward` is used.
 
 ```
-$ curl -s "http://localhost:4000/names/active?by=name&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/names/active?by=name&limit=2" | jq '.'
 {
   "data": [
     {
@@ -2464,7 +2464,7 @@ $ curl -s "http://localhost:4000/names/active?by=name&limit=2" | jq '.'
 Without ordering parameters, the first auction in reply set expires the latest.
 
 ```
-$ curl -s "http://localhost:4000/names/auctions?limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/names/auctions?limit=2" | jq '.'
 {
   "data": [
     {
@@ -2551,7 +2551,7 @@ $ curl -s "http://localhost:4000/names/auctions?limit=2" | jq '.'
 To show auctions starting with the one expiring the earliest:
 
 ```
-$ curl -s "http://localhost:4000/names/auctions?by=expiration&direction=forward&limit=2" | jq '.data [] .info.auction_end'
+$ curl -s "https://mainnet.aeternity.io/mdw/names/auctions?by=expiration&direction=forward&limit=2" | jq '.data [] .info.auction_end'
 300490
 300636
 ```
@@ -2559,7 +2559,7 @@ $ curl -s "http://localhost:4000/names/auctions?by=expiration&direction=forward&
 Or, ordered by name, from the begining:
 
 ```
-$ curl -s "http://localhost:4000/names/auctions?by=name&direction=forward&limit=1000" | jq '.data [] .name'
+$ curl -s "https://mainnet.aeternity.io/mdw/names/auctions?by=name&direction=forward&limit=1000" | jq '.data [] .name'
 "0.chain"
 "5.chain"
 "6.chain"
@@ -2587,7 +2587,7 @@ Prefix searching of names is possible via `/names/search` endpoint.
 By default, the prefix search will find names in any of the lifecycle states - auction, active, inactive.
 
 ```
-$ curl -s "http://localhost:4000/names/search/xxxxxx" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/names/search/xxxxxx" | jq '.'
 [
   {
     "active": false,
@@ -2641,7 +2641,7 @@ Via the `only` parameter, it's possible to search for a name in particular lifec
 The parameter can be repeated:
 
 ```
-$ curl -s "http://localhost:4000/names/search/aaa?only=auction&only=inactive" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/names/search/aaa?only=auction&only=inactive" | jq '.'
 [
   {
     "active": false,
@@ -2716,7 +2716,7 @@ $ curl -s "http://localhost:4000/names/search/aaa?only=auction&only=inactive" | 
 This endpoint also accepts the `expand` parameter:
 
 ```
-$ curl -s "http://localhost:4000/names/search/asdf?expand" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/names/search/asdf?expand" | jq '.'
 [
   {
     "active": false,
@@ -2826,7 +2826,7 @@ $ curl -s "http://localhost:4000/names/search/asdf?expand" | jq '.'
 This is basically a restricted reply from `name/:id` endpoint, returning just pointers.
 
 ```
-$ curl -s "http://localhost:4000/name/pointers/wwwbeaconoidcom.chain" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/name/pointers/wwwbeaconoidcom.chain" | jq '.'
 {
   "account_pubkey": "ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C"
 }
@@ -2837,7 +2837,7 @@ $ curl -s "http://localhost:4000/name/pointers/wwwbeaconoidcom.chain" | jq '.'
 Returns names pointing to a particular pubkey, partitioned into `active` and `inactive` sets.
 
 ```
-$ curl -s "http://localhost:4000/name/pointees/ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/name/pointees/ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C" | jq '.'
 {
   "active": {
     "account_pubkey": [
@@ -2867,7 +2867,7 @@ A paginable contract log endpoint allows querying of the contract logs using sev
 
 Example output of
 ```
-$ curl -s "http://localhost:4000/contracts/logs/forward?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/forward?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1" | jq '.'
 {
   "data": [
     {
@@ -2958,7 +2958,7 @@ For demonstration, we will use `limit` parameter to limit the amount of output.
 Listing the first contract log in the chain:
 
 ```
-$ curl -s "http://localhost:4000/contracts/logs/forward?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/forward?limit=1" | jq '.'
 {
   "data": [
     {
@@ -2984,7 +2984,7 @@ $ curl -s "http://localhost:4000/contracts/logs/forward?limit=1" | jq '.'
 Listing the last (to date) contract log in the chain:
 
 ```
-$ curl -s "http://localhost:4000/contracts/logs/backward?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/backward?limit=1" | jq '.'
 {
   "data": [
     {
@@ -3011,7 +3011,7 @@ $ curl -s "http://localhost:4000/contracts/logs/backward?limit=1" | jq '.'
 Listing contract logs in range between generations 200000 and 210000:
 
 ```
-$ curl -s "http://localhost:4000/contracts/logs/gen/200000-210000?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/gen/200000-210000?limit=1" | jq '.'
 {
   "data": [
     {
@@ -3037,7 +3037,7 @@ $ curl -s "http://localhost:4000/contracts/logs/gen/200000-210000?limit=1" | jq 
 Listing contract logs in generation 250109 only:
 
 ```
-$ curl -s "http://localhost:4000/contracts/logs/gen/250109?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/gen/250109?limit=1" | jq '.'
 {
   "data": [
     {
@@ -3063,7 +3063,7 @@ $ curl -s "http://localhost:4000/contracts/logs/gen/250109?limit=1" | jq '.'
 Listing contract logs from transaction index 15000000 downto 5000000 - e.g. backwards (note descending call_txi):
 
 ```
-$ curl -s "http://localhost:4000/contracts/logs/txi/15000000-5000000?limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/txi/15000000-5000000?limit=2" | jq '.'
 {
   "data": [
     {
@@ -3118,7 +3118,7 @@ Without provided range or direction, the logs are listed from newest to latest.
 Listing latest logs for given contract:
 
 ```
-$ curl -s "http://localhost:4000/contracts/logs?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2" | jq '.'
 {
   "data": [
     {
@@ -3160,7 +3160,7 @@ Listing first logs where data field points to `aeternity.com`:
 (The value of data parameter needs to be URL encoded, which is not visible in this example)
 
 ```
-$ curl -s "http://localhost:4000/contracts/logs/forward?data=aeternity.com&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/forward?data=aeternity.com&limit=2" | jq '.'
 {
   "data": [
     {
@@ -3199,7 +3199,7 @@ $ curl -s "http://localhost:4000/contracts/logs/forward?data=aeternity.com&limit
 Listing the last "TipReceived" event:
 
 ```
-$ curl -s "http://localhost:4000/contracts/logs?event=TipReceived&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs?event=TipReceived&limit=1" | jq '.'
 {
   "data": [
     {
@@ -3235,7 +3235,7 @@ Besides specifying of scope and direction as with other streaming endpoints (via
 #### Using contract id
 
 ```
-$ curl -s "http://localhost:4000/contracts/calls?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/contracts/calls?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1" | jq '.'
 {
   "data": [
     {
@@ -3267,7 +3267,7 @@ $ curl -s "http://localhost:4000/contracts/calls?contract_id=ct_2AfnEfCSZCTEkxL5
 #### Using function prefix
 
 ```
-$ curl -s "http://localhost:4000/contracts/calls/forward?function=Oracle&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/contracts/calls/forward?function=Oracle&limit=1" | jq '.'
 {
   "data": [
     {
@@ -3313,7 +3313,7 @@ Following ID fields are recognized: account_id, caller_id, channel_id, commitmen
 Contract_id field is inaccessible via this lookup, as when present in query, it filters only contracts with given contract id and doesn't look into internal transaction's fields.
 
 ```
-$ curl -s "http://localhost:4000/contracts/calls?recipient_id=ak_23bfFKQ1vuLeMxyJuCrMHiaGg5wc7bAobKNuDadf8tVZUisKWs&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/contracts/calls?recipient_id=ak_23bfFKQ1vuLeMxyJuCrMHiaGg5wc7bAobKNuDadf8tVZUisKWs&limit=1" | jq '.'
 {
   "data": [
     {
@@ -3366,7 +3366,7 @@ Besides specifying of scope and direction as with other streaming endpoints (via
 ### Listing internal transfers in range
 
 ```
-$ curl -s "http://localhost:4000/transfers/gen/50002-70000?limit=3" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/transfers/gen/50002-70000?limit=3" | jq '.'
 {
   "data": [
     {
@@ -3398,7 +3398,7 @@ $ curl -s "http://localhost:4000/transfers/gen/50002-70000?limit=3" | jq '.'
 ### Listing internal transfers of a specific kind
 
 ```
-$ curl -s "http://localhost:4000/transfers/forward?kind=reward_dev&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/transfers/forward?kind=reward_dev&limit=2" | jq '.'
 {
   "data": [
     {
@@ -3423,7 +3423,7 @@ $ curl -s "http://localhost:4000/transfers/forward?kind=reward_dev&limit=2" | jq
 ### Listing internal transfers related to specific account
 
 ```
-$ curl -s "http://localhost:4000/transfers/backward?account=ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/transfers/backward?account=ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J&limit=1" | jq '.'
 {
   "data": [
     {
@@ -3451,7 +3451,7 @@ For the same reason as Names, all oracle endpoints support `expand` parameter (e
 ### Oracle resolution
 
 ```
-$ curl -s "http://localhost:4000/oracle/ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/oracle/ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM" | jq '.'
 {
   "active": false,
   "active_from": 4660,
@@ -3472,7 +3472,7 @@ $ curl -s "http://localhost:4000/oracle/ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmb
 Provided `expand` parameter replaces transaction indices in `extends` and `register` fields:
 
 ```
-$ curl -s "http://localhost:4000/oracle/ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM?expand" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/oracle/ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM?expand" | jq '.'
 {
   "active": false,
   "active_from": 4660,
@@ -3554,7 +3554,7 @@ The parameter `limit` (by default = 10) is optional, and limits the number of el
 #### All oracles
 
 ```
-$ curl -s "http://localhost:4000/oracles?direction=forward&limit=1&expand" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/oracles?direction=forward&limit=1&expand" | jq '.'
 {
   "data": [
     {
@@ -3627,7 +3627,7 @@ $ curl -s "http://localhost:4000/oracles?direction=forward&limit=1&expand" | jq 
 #### Inactive oracles
 
 ```
-$ curl -s "http://localhost:4000/oracles/inactive?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/oracles/inactive?limit=1" | jq '.'
 {
   "data": [
     {
@@ -3651,7 +3651,7 @@ $ curl -s "http://localhost:4000/oracles/inactive?limit=1" | jq '.'
 #### Active oracles
 
 ```
-$ curl -s "http://localhost:4000/oracles/active?limit=1&expand" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/oracles/active?limit=1&expand" | jq '.'
 {
   "data": [
     {
@@ -3714,7 +3714,7 @@ These endpoints optional parameters:
 ### AEX9 tokens by name
 
 ```
-$ curl -s "http://localhost:4000/aex9/by_name" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/aex9/by_name" | jq '.'
 [
   {
     "decimals": 18,
@@ -3764,7 +3764,7 @@ $ curl -s "http://localhost:4000/aex9/by_name" | jq '.'
 Or, listing tokens with prefix = "ae", along with all contract create transaction ids:
 
 ```
-$ curl -s "http://localhost:4000/aex9/by_name?prefix=ae&all" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/aex9/by_name?prefix=ae&all" | jq '.'
 [
   {
     "decimals": 18,
@@ -3849,7 +3849,7 @@ $ curl -s "http://18.157.58.152/mdw/aex9/by_name?exact=%F0%9D%9D%BA%20Token" | j
 
 Example with exact parameter:
 ```
-$ curl -s "http://localhost:4000/aex9/by_symbol?exact=TNT" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/aex9/by_symbol?exact=TNT" | jq '.'
 [
   {
     "contract_id": "ct_6ZuwbMgcNDaryXTnrLMiPFW2ogE9jxAzz1874BToE81ksWek6",
@@ -3901,7 +3901,7 @@ Its presence or binding it to `true` will use the latest micro block for retriev
 ### AEX9 contract balance for account
 
 ```
-$ curl -s "http://localhost:4000/aex9/balance/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA/ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balance/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA/ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48" | jq '.'
 {
   "account_id": "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48",
   "amount": 49999999999906850000000000,
@@ -3914,7 +3914,7 @@ $ curl -s "http://localhost:4000/aex9/balance/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzs
 ### AEX9 contract balance for account at block
 
 ```
-$ curl -s "http://localhost:4000/aex9/balance/hash/mh_2NkfQ9p29EQtqL6YQAuLpneTRPxEKspNYLKXeexZ664ZJo7fcw/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA/ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balance/hash/mh_2NkfQ9p29EQtqL6YQAuLpneTRPxEKspNYLKXeexZ664ZJo7fcw/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA/ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48" | jq '.'
 {
   "account_id": "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48",
   "amount": 49999999999906850000000000,
@@ -3928,7 +3928,7 @@ $ curl -s "http://localhost:4000/aex9/balance/hash/mh_2NkfQ9p29EQtqL6YQAuLpneTRP
 
 Single integer identifies the generation:
 ```
-$ curl -s "http://localhost:4000/aex9/balance/gen/350700/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA/ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balance/gen/350700/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA/ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48" | jq '.'
 {
   "account_id": "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48",
   "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
@@ -3945,7 +3945,7 @@ $ curl -s "http://localhost:4000/aex9/balance/gen/350700/ct_RDRJC5EySx4TcLtGRWYr
 A range can be provided as well:
 
 ```
-$ curl -s "http://localhost:4000/aex9/balance/gen/350620-350623/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA/ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balance/gen/350620-350623/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA/ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48" | jq '.'
 {
   "account_id": "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48",
   "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
@@ -3977,7 +3977,7 @@ $ curl -s "http://localhost:4000/aex9/balance/gen/350620-350623/ct_RDRJC5EySx4Tc
 ### AEX9 contract balances
 
 ```
-$ curl -s "http://localhost:4000/aex9/balances/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balances/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA" | jq '.'
 {
   "amounts": {
     "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6": 4050000000000,
@@ -3994,7 +3994,7 @@ $ curl -s "http://localhost:4000/aex9/balances/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDz
 ### AEX9 contract balances at block
 
 ```
-$ curl -s "http://localhost:4000/aex9/balances/hash/kh_2Ya2fM9brRoBQpxR3xz4K39hTqmjiMJ7GfSu3LbCmxLYjX5cHV/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balances/hash/kh_2Ya2fM9brRoBQpxR3xz4K39hTqmjiMJ7GfSu3LbCmxLYjX5cHV/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA" | jq '.'
 {
   "amounts": {
     "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6": 4050000000000,
@@ -4011,7 +4011,7 @@ $ curl -s "http://localhost:4000/aex9/balances/hash/kh_2Ya2fM9brRoBQpxR3xz4K39hT
 ### AEX9 contract balances at height or range of heights
 
 ```
-$ curl -s "http://localhost:4000/aex9/balances/gen/350580/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balances/gen/350580/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA" | jq '.'
 {
   "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
   "range": [
@@ -4032,7 +4032,7 @@ $ curl -s "http://localhost:4000/aex9/balances/gen/350580/ct_RDRJC5EySx4TcLtGRWY
 Or, with range:
 
 ```
-$ curl -s "http://localhost:4000/aex9/balances/gen/350600-350603/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balances/gen/350600-350603/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA" | jq '.'
 {
   "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
   "range": [
@@ -4085,7 +4085,7 @@ $ curl -s "http://localhost:4000/aex9/balances/gen/350600-350603/ct_RDRJC5EySx4T
 In all account specific balance endpoints, the values of `block_hash`/`tx_hash`/`tx_index` show the last time of when (in what block, transaction) was the balance in a listed contract updated.
 
 ```
-$ curl -s "http://localhost:4000/aex9/balances/account/ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balances/account/ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4" | jq '.'
 [
   {
     "amount": 5e+26,
@@ -4117,7 +4117,7 @@ The awareness that the contract is created by some account comes from syncing, w
 ### AEX 9 contract balances for account at height
 
 ```
-$ curl -s "http://localhost:4000/aex9/balances/gen/334201/account/ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balances/gen/334201/account/ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4" | jq '.'
 [
   {
     "amount": 5e+26,
@@ -4134,7 +4134,7 @@ $ curl -s "http://localhost:4000/aex9/balances/gen/334201/account/ak_CNcf2oywqbg
 ### AEX 9 contract balances for account at block
 
 ```
-$ curl -s "http://localhost:4000/aex9/balances/hash/mh_kkKtNk2GAgJKjar9ro6amr6AugG9eLP9RL7wUSmdRqjBZrRq9/account/ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balances/hash/mh_kkKtNk2GAgJKjar9ro6amr6AugG9eLP9RL7wUSmdRqjBZrRq9/account/ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4" | jq '.'
 [
   {
     "amount": 5e+26,
@@ -4162,7 +4162,7 @@ $ curl -s "http://localhost:4000/aex9/balances/hash/mh_kkKtNk2GAgJKjar9ro6amr6Au
 To show a statistics for a given height, we can use "stats" endpoint:
 
 ```
-$ curl -s "http://localhost:4000/stats?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/stats?limit=1" | jq '.'
 {
   "data": [
     {
@@ -4184,7 +4184,7 @@ $ curl -s "http://localhost:4000/stats?limit=1" | jq '.'
 Aggregated (sumarized) statistics are also available, showing the total sum of rewards and the token supply:
 
 ```
-$ curl -s "http://localhost:4000/totalstats/gen/421454-0?limit=1&page=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/totalstats/gen/421454-0?limit=1&page=2" | jq '.'
 {
   "data": [
     {
