@@ -5,13 +5,11 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdw.Db.Model.ActiveName
   alias AeMdw.Db.Model.ActiveNameExpiration
   alias AeMdw.Db.Model.AuctionBid
+  alias AeMdw.Db.Model.AuctionExpiration
   alias AeMdw.Db.Model.InactiveName
   alias AeMdw.Db.Model.InactiveNameExpiration
   alias AeMdw.Db.Model.Tx
   alias AeMdw.Db.Name
-  alias AeMdw.Db.Util
-  alias AeMdw.Db.Stream.Name, as: StreamName
-  alias AeMdw.EtsCache
   alias AeMdw.Mnesia
   alias AeMdw.Validate
   alias AeMdw.TestSamples, as: TS
@@ -56,9 +54,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash ->
-             %{tx: %{account_id: <<>>}}
-           end
+           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
          ]}
       ] do
         assert %{"data" => names, "next" => next} =
@@ -105,9 +101,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash ->
-             %{tx: %{account_id: <<>>}}
-           end
+           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
          ]}
       ] do
         assert %{"data" => names} =
@@ -171,9 +165,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash ->
-             %{tx: %{account_id: <<>>}}
-           end
+           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
          ]}
       ] do
         assert %{"data" => names, "next" => next} =
@@ -218,9 +210,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash ->
-             %{tx: %{account_id: <<>>}}
-           end
+           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
          ]}
       ] do
         assert %{"data" => names} =
@@ -262,9 +252,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash ->
-             %{tx: %{account_id: <<>>}}
-           end
+           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
          ]}
       ] do
         assert %{"data" => names} =
@@ -297,57 +285,68 @@ defmodule AeMdwWeb.NameControllerTest do
 
   describe "auctions" do
     test "get auctions with default limit", %{conn: conn} do
-      sample_data = %{"foo" => "bar"}
-      response_data = for _i <- 1..@default_limit, do: sample_data
+      {_exp, plain_name} = expiration_key = TS.name_expiration_key(0)
+      sample_keys = for _i <- 1..@default_limit, do: expiration_key
+      next_key = TS.name_expiration_key(1)
 
       with_mocks [
-        {Util, [:passthrough], last_gen: fn -> 20 end},
-        {EtsCache, [],
+        {Mnesia, [],
          [
-           get: fn
-             _tab, {_mod, _fun, _arg1, _arg2, 0} -> nil
-             _tab, {_mod, _fun, _arg1, _arg2, 10} -> {response_data, :tm}
+           fetch_keys: fn
+             AuctionExpiration, :backward, nil, @default_limit -> {sample_keys, next_key}
+             AuctionExpiration, :backward, ^next_key, @default_limit -> {sample_keys, nil}
            end,
-           put: fn _tab, _key, _val -> nil end
+           fetch: fn InactiveName, ^plain_name -> :not_found end,
+           prev_key: fn AuctionBid, _key ->
+             {:ok, {plain_name, {0, 1}, 0, :owner_pk, [{{2, 3}, 4}]}}
+           end
          ]},
-        {StreamName, [],
+        {Txs, [],
          [
-           auctions: fn {:expiration, :backward}, _mapper -> response_data end
+           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
          ]}
       ] do
-        assert %{"data" => ^response_data, "next" => next} =
+        assert %{"data" => auction_bids, "next" => next} =
                  conn
                  |> get("/names/auctions")
                  |> json_response(200)
 
-        assert %{"data" => ^response_data} =
+        assert @default_limit = length(auction_bids)
+
+        assert %{"data" => auction_bids2} =
                  conn
                  |> get(next)
                  |> json_response(200)
+
+        assert @default_limit = length(auction_bids2)
       end
     end
 
     test "get auctions with limit=2", %{conn: conn} do
       limit = 2
-      sample_data = %{"foo" => "bar"}
-      response_data = for _i <- 1..limit, do: sample_data
+      {_exp, plain_name} = expiration_key = TS.name_expiration_key(0)
+      sample_keys = for _i <- 1..limit, do: expiration_key
 
       with_mocks [
-        {Util, [:passthrough], last_gen: fn -> 20 end},
-        {EtsCache, [],
+        {Mnesia, [],
          [
-           get: fn _tab, _key -> nil end,
-           put: fn _tab, _key, _val -> nil end
+           fetch_keys: fn AuctionExpiration, :backward, nil, ^limit -> {sample_keys, nil} end,
+           fetch: fn InactiveName, ^plain_name -> :not_found end,
+           prev_key: fn AuctionBid, _key ->
+             {:ok, {plain_name, {0, 1}, 0, :owner_pk, [{{2, 3}, 4}]}}
+           end
          ]},
-        {StreamName, [],
+        {Txs, [],
          [
-           auctions: fn {:expiration, :backward}, _mapper -> response_data end
+           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
          ]}
       ] do
-        assert %{"data" => ^response_data} =
+        assert %{"data" => auctions} =
                  conn
                  |> get("/names/auctions?limit=#{limit}")
                  |> json_response(200)
+
+        assert ^limit = length(auctions)
       end
     end
 
@@ -357,25 +356,29 @@ defmodule AeMdwWeb.NameControllerTest do
       by = "expiration"
       direction = "forward"
       limit = 3
-      sample_data = %{"foo" => "bar"}
-      response_data = for _i <- 1..limit, do: sample_data
+      {_exp, plain_name} = expiration_key = TS.name_expiration_key(0)
+      sample_keys = for _i <- 1..limit, do: expiration_key
 
       with_mocks [
-        {Util, [:passthrough], last_gen: fn -> 20 end},
-        {EtsCache, [],
+        {Mnesia, [],
          [
-           get: fn _tab, _key -> nil end,
-           put: fn _tab, _key, _val -> nil end
+           fetch_keys: fn AuctionExpiration, :forward, nil, ^limit -> {sample_keys, nil} end,
+           fetch: fn InactiveName, ^plain_name -> :not_found end,
+           prev_key: fn AuctionBid, _key ->
+             {:ok, {plain_name, {0, 1}, 0, :owner_pk, [{{2, 3}, 4}]}}
+           end
          ]},
-        {StreamName, [],
+        {Txs, [],
          [
-           auctions: fn {:expiration, :forward}, _mapper -> response_data end
+           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
          ]}
       ] do
-        assert %{"data" => ^response_data} =
+        assert %{"data" => auctions} =
                  conn
                  |> get("/names/auctions?by=#{by}&direction=#{direction}&limit=#{limit}")
                  |> json_response(200)
+
+        assert ^limit = length(auctions)
       end
     end
 
@@ -383,13 +386,7 @@ defmodule AeMdwWeb.NameControllerTest do
       by = "invalid_by"
       error = "invalid query: by=#{by}"
 
-      with_mocks [
-        {Util, [:passthrough], last_gen: fn -> 20 end},
-        {EtsCache, [], [get: fn _tab, _key -> nil end]}
-      ] do
-        assert %{"error" => ^error} =
-                 conn |> get("/names/auctions?by=#{by}") |> json_response(400)
-      end
+      assert %{"error" => ^error} = conn |> get("/names/auctions?by=#{by}") |> json_response(400)
     end
 
     test "renders error when parameter direction is invalid", %{conn: conn} do
@@ -397,15 +394,10 @@ defmodule AeMdwWeb.NameControllerTest do
       direction = "invalid_direction"
       error = "invalid query: direction=#{direction}"
 
-      with_mocks [
-        {Util, [:passthrough], last_gen: fn -> 20 end},
-        {EtsCache, [], [get: fn _tab, _key -> nil end]}
-      ] do
-        assert %{"error" => ^error} =
-                 conn
-                 |> get("/names/auctions?by=#{by}&direction=#{direction}")
-                 |> json_response(400)
-      end
+      assert %{"error" => ^error} =
+               conn
+               |> get("/names/auctions?by=#{by}&direction=#{direction}")
+               |> json_response(400)
     end
   end
 
@@ -438,9 +430,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash ->
-             %{tx: %{account_id: <<>>}}
-           end
+           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
          ]}
       ] do
         assert %{"data" => names, "next" => nil} =
@@ -476,9 +466,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash ->
-             %{tx: %{account_id: <<>>}}
-           end
+           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
          ]}
       ] do
         assert %{"data" => names} =
@@ -517,9 +505,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash ->
-             %{tx: %{account_id: <<>>}}
-           end
+           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
          ]}
       ] do
         assert %{"data" => names, "next" => _next} =

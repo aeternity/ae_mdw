@@ -177,7 +177,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {NameController, :auctions, %{}, conn.assigns.scope, 0},
+          {NameController, :auctions, %{}, :unused_scope, 0},
           @default_limit
         )
 
@@ -192,7 +192,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {NameController, :auctions, %{}, conn.assigns.scope, 0},
+          {NameController, :auctions, %{}, :unused_scope, 0},
           limit
         )
 
@@ -211,8 +211,8 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {NameController, :auctions, %{"by" => [by], "direction" => [direction]},
-           conn.assigns.scope, 0},
+          {NameController, :auctions, %{"by" => [by], "direction" => [direction]}, :unused_scope,
+           0},
           limit
         )
 

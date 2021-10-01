@@ -37,27 +37,24 @@ defmodule AeMdw.Txs do
        ) do
     {block_hash, type, signed_tx, tx_rec} = Db.get_tx_data(tx_hash)
 
-    tx_map =
-      tx_rec
-      |> Format.to_raw_map(type)
-      |> put_in([:type], type)
+    header = :aec_db.get_header(block_hash)
+    %{"tx" => tx} = :aetx_sign.serialize_for_client(header, signed_tx)
 
     raw = %{
-      block_hash: block_hash,
-      signatures: :aetx_sign.signatures(signed_tx),
-      hash: tx_hash,
+      block_hash: :aeser_api_encoder.encode(:micro_block_hash, block_hash),
+      signatures:
+        Enum.map(:aetx_sign.signatures(signed_tx), &:aeser_api_encoder.encode(:signature, &1)),
+      hash: :aeser_api_encoder.encode(:tx_hash, tx_hash),
       block_height: kb_index,
       micro_index: mb_index,
       micro_time: mb_time,
       tx_index: tx_index,
-      tx: tx_map
+      tx: tx
     }
 
     type
     |> Format.custom_raw_data(raw, tx_rec, signed_tx, block_hash)
-    |> update_in_if_present([:tx, :account_id], &render_id/1)
-    |> update_in_if_present([:tx, :name_id], &render_id/1)
-    |> update_in_if_present([:tx, :recipient_id], &render_id/1)
+    |> update_if_present([:tx, :name_id], &render_id/1)
   end
 
   defp render_id({:id, id_type, payload}) do
@@ -66,10 +63,10 @@ defmodule AeMdw.Txs do
 
   defp render_id(id), do: id
 
-  defp update_in_if_present(map, path, fun) do
-    case get_in(map, path) do
+  defp update_if_present(map, key_path, fun) do
+    case get_in(map, key_path) do
       nil -> map
-      val -> put_in(map, path, fun.(val))
+      val -> put_in(map, key_path, fun.(val))
     end
   end
 end
