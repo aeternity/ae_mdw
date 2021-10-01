@@ -3,6 +3,8 @@ defmodule AeMdwWeb.Helpers.Aex9Helper do
   Used to format aex9 related info
   """
 
+  @typep pubkey() :: <<_::256>>
+
   @spec normalize_balances(map()) :: map()
   def normalize_balances(bals) do
     for {{:address, pk}, amt} <- bals, reduce: %{} do
@@ -15,12 +17,12 @@ defmodule AeMdwWeb.Helpers.Aex9Helper do
   def enc_block(:key, hash), do: :aeser_api_encoder.encode(:key_block_hash, hash)
   def enc_block(:micro, hash), do: :aeser_api_encoder.encode(:micro_block_hash, hash)
 
-  @spec enc_ct(binary()) :: String.t()
+  @spec enc_ct(pubkey()) :: String.t()
   def enc_ct(pk), do: :aeser_api_encoder.encode(:contract_pubkey, pk)
 
-  @spec enc_id(binary()) :: String.t()
+  @spec enc_id(pubkey()) :: String.t()
   def enc_id(pk), do: :aeser_api_encoder.encode(:account_pubkey, pk)
 
-  @spec enc(atom(), binary()) :: String.t()
+  @spec enc(atom(), pubkey()) :: String.t()
   def enc(type, pk), do: :aeser_api_encoder.encode(type, pk)
 end
