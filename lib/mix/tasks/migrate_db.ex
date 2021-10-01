@@ -78,7 +78,11 @@ defmodule Mix.Tasks.MigrateDb do
 
   @spec apply_migration!({integer(), String.t()}, boolean()) :: :ok
   defp apply_migration!({version, path}, from_startup?) do
-    [{module, _}] = Code.compile_file(path)
+    {module, _} =
+      path
+      |> Code.compile_file()
+      |> List.last()
+
     Log.info("applying version #{version} with #{module}...")
     {:ok, _} = apply(module, :run, [from_startup?])
 

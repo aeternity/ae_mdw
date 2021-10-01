@@ -1,4 +1,5 @@
 defmodule AeMdw.Db.Format do
+  # credo:disable-for-this-file
   alias AeMdw.Node, as: AE
   alias :aeser_api_encoder, as: Enc
 
@@ -452,7 +453,8 @@ defmodule AeMdw.Db.Format do
     call_rec = Contract.call_rec(tx_rec, contract_pk, block_hash)
 
     fun_arg_res =
-      AeMdw.Db.Contract.call_fun_args_res(contract_pk, tx["tx_index"])
+      contract_pk
+      |> AeMdw.Db.Contract.call_fun_args_res(tx["tx_index"])
       |> map_raw_values(fn
         x when is_number(x) -> x
         x -> to_string(x)

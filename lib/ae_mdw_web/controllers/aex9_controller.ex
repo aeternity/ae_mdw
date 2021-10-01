@@ -10,15 +10,18 @@ defmodule AeMdwWeb.Aex9Controller do
   alias AeMdwWeb.DataStreamPlug, as: DSPlug
 
   import AeMdwWeb.Util
+  import AeMdwWeb.Helpers.Aex9Helper
+  import AeMdwWeb.Views.Aex9ControllerView
 
-  ##########
-
+  @spec by_names(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def by_names(conn, params),
     do: handle_input(conn, fn -> by_names_reply(conn, search_mode!(params)) end)
 
+  @spec by_symbols(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def by_symbols(conn, params),
     do: handle_input(conn, fn -> by_symbols_reply(conn, search_mode!(params)) end)
 
+  @spec balance(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def balance(conn, %{"contract_id" => contract_id, "account_id" => account_id}),
     do:
       handle_input(
@@ -32,6 +35,7 @@ defmodule AeMdwWeb.Aex9Controller do
         end
       )
 
+  @spec balance_range(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def balance_range(conn, %{
         "range" => range,
         "contract_id" => contract_id,
@@ -50,6 +54,7 @@ defmodule AeMdwWeb.Aex9Controller do
           end
         )
 
+  @spec balance_for_hash(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def balance_for_hash(conn, %{
         "blockhash" => block_hash_enc,
         "contract_id" => contract_id,
@@ -68,6 +73,7 @@ defmodule AeMdwWeb.Aex9Controller do
           end
         )
 
+  @spec balances(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def balances(conn, %{"height" => height, "account_id" => account_id}),
     do:
       handle_input(
@@ -76,7 +82,7 @@ defmodule AeMdwWeb.Aex9Controller do
           account_pk = Validate.id!(account_id, [:account_pubkey])
 
           txi =
-            AeMdw.Db.Util.block_txi(Validate.nonneg_int!(height)) ||
+            Util.block_txi(Validate.nonneg_int!(height)) ||
               raise ErrInput.BlockIndex, value: height
 
           account_balances_reply(conn, account_pk, txi)
@@ -91,10 +97,10 @@ defmodule AeMdwWeb.Aex9Controller do
           account_pk = Validate.id!(account_id, [:account_pubkey])
 
           bi =
-            AeMdw.Db.Util.block_hash_to_bi(Validate.id!(hash)) ||
+            Util.block_hash_to_bi(Validate.id!(hash)) ||
               raise ErrInput.Id, value: hash
 
-          account_balances_reply(conn, account_pk, AeMdw.Db.Util.block_txi(bi))
+          account_balances_reply(conn, account_pk, Util.block_txi(bi))
         end
       )
 
@@ -104,13 +110,14 @@ defmodule AeMdwWeb.Aex9Controller do
         conn,
         fn ->
           account_pk = Validate.id!(account_id, [:account_pubkey])
-          account_balances_reply(conn, account_pk, AeMdw.Db.Util.last_txi())
+          account_balances_reply(conn, account_pk, Util.last_txi())
         end
       )
 
   def balances(conn, %{"contract_id" => contract_id}),
     do: handle_input(conn, fn -> balances_reply(conn, ensure_aex9_contract_pk!(contract_id)) end)
 
+  @spec balances_range(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def balances_range(conn, %{"range" => range, "contract_id" => contract_id}),
     do:
       handle_input(
@@ -124,6 +131,7 @@ defmodule AeMdwWeb.Aex9Controller do
         end
       )
 
+  @spec balances_for_hash(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def balances_for_hash(conn, %{"blockhash" => block_hash_enc, "contract_id" => contract_id}),
     do:
       handle_input(
@@ -137,6 +145,7 @@ defmodule AeMdwWeb.Aex9Controller do
         end
       )
 
+  @spec transfers_from(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def transfers_from(conn, %{"sender" => sender_id}),
     do:
       handle_input(
@@ -144,6 +153,7 @@ defmodule AeMdwWeb.Aex9Controller do
         fn -> transfers_reply(conn, {:from, Validate.id!(sender_id)}, :aex9_transfer) end
       )
 
+  @spec transfers_to(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def transfers_to(conn, %{"recipient" => recipient_id}),
     do:
       handle_input(
@@ -151,6 +161,7 @@ defmodule AeMdwWeb.Aex9Controller do
         fn -> transfers_reply(conn, {:to, Validate.id!(recipient_id)}, :rev_aex9_transfer) end
       )
 
+  @spec transfers_from_to(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def transfers_from_to(conn, %{"sender" => sender_id, "recipient" => recipient_id}),
     do:
       handle_input(
@@ -161,9 +172,13 @@ defmodule AeMdwWeb.Aex9Controller do
         end
       )
 
+  #
+  # Private functions
+  #
   defp by_names_reply(conn, search_mode) do
     entries =
-      Contract.aex9_search_name(search_mode)
+      search_mode
+      |> Contract.aex9_search_name()
       |> Enum.map(&Format.to_map(&1, Model.Aex9Contract))
 
     json(conn, entries)
@@ -171,7 +186,8 @@ defmodule AeMdwWeb.Aex9Controller do
 
   defp by_symbols_reply(conn, search_mode) do
     entries =
-      Contract.aex9_search_symbol(search_mode)
+      search_mode
+      |> Contract.aex9_search_symbol()
       |> Enum.map(&Format.to_map(&1, Model.Aex9ContractSymbol))
 
     json(conn, entries)
@@ -207,7 +223,8 @@ defmodule AeMdwWeb.Aex9Controller do
 
   defp account_balances_reply(conn, account_pk, last_txi) do
     contracts =
-      AeMdw.Db.Contract.aex9_search_contract(account_pk, last_txi)
+      account_pk
+      |> AeMdw.Db.Contract.aex9_search_contract(last_txi)
       |> Map.to_list()
       |> Enum.sort_by(&elem(&1, 1), &<=/2)
 
@@ -225,7 +242,7 @@ defmodule AeMdwWeb.Aex9Controller do
   end
 
   defp balances_reply(conn, contract_pk) do
-    {amounts, {type, height, hash}} = DBN.aex9_balances(contract_pk, top?(conn))
+    {amounts, {type, height, hash}} = DBN.aex9_balances!(contract_pk, top?(conn))
     json(conn, balances_to_map({amounts, {type, height, hash}}, contract_pk))
   end
 
@@ -238,7 +255,7 @@ defmodule AeMdwWeb.Aex9Controller do
           map_balances_range(
             range,
             fn height_hash ->
-              {amounts, _} = DBN.aex9_balances(contract_pk, height_hash)
+              {amounts, _} = DBN.aex9_balances!(contract_pk, height_hash)
               {:amounts, normalize_balances(amounts)}
             end
           )
@@ -247,7 +264,7 @@ defmodule AeMdwWeb.Aex9Controller do
   end
 
   defp balances_for_hash_reply(conn, contract_pk, {block_type, block_hash, height}) do
-    {amounts, _} = DBN.aex9_balances(contract_pk, {block_type, height, block_hash})
+    {amounts, _} = DBN.aex9_balances!(contract_pk, {block_type, height, block_hash})
     json(conn, balances_to_map({amounts, {block_type, height, block_hash}}, contract_pk))
   end
 
@@ -293,62 +310,20 @@ defmodule AeMdwWeb.Aex9Controller do
             raise ErrInput.NotFound, value: block_ident
         end
 
-      _ ->
+      _any_error ->
         raise ErrInput.Query, value: block_ident
     end
   end
 
   defp top?(conn), do: presence?(conn, "top")
 
-  defp normalize_balances(bals) do
-    for {{:address, pk}, amt} <- bals, reduce: %{} do
-      acc ->
-        Map.put(acc, :aeser_api_encoder.encode(:account_pubkey, pk), amt)
-    end
-  end
-
-  defp balance_to_map({amount, txi, contract_pk}) do
-    tx_idx = AeMdw.Db.Util.read_tx!(txi)
-    info = Format.to_raw_map(tx_idx)
-
-    %{
-      contract_id: enc_ct(contract_pk),
-      block_hash: enc_block(:micro, info.block_hash),
-      tx_hash: enc(:tx_hash, info.hash),
-      tx_index: txi,
-      tx_type: info.tx.type,
-      height: info.block_height,
-      amount: amount
-    }
-  end
-
-  defp balance_to_map({amount, {block_type, height, block_hash}}, contract_pk, account_pk) do
-    %{
-      contract_id: enc_ct(contract_pk),
-      block_hash: enc_block(block_type, block_hash),
-      height: height,
-      account_id: enc_id(account_pk),
-      amount: amount
-    }
-  end
-
-  defp balances_to_map({amounts, {block_type, height, block_hash}}, contract_pk) do
-    %{
-      contract_id: enc_ct(contract_pk),
-      block_hash: enc_block(block_type, block_hash),
-      height: height,
-      amounts: normalize_balances(amounts)
-    }
-  end
-
   defp map_balances_range(range, f) do
-    Stream.map(
-      height_hash_range(range),
-      fn {height, hash} ->
-        {k, v} = f.({height, hash})
-        Map.put(%{height: height, block_hash: enc_block(:key, hash)}, k, v)
-      end
-    )
+    range
+    |> height_hash_range()
+    |> Stream.map(fn {height, hash} ->
+      {k, v} = f.({height, hash})
+      Map.put(%{height: height, block_hash: enc_block(:key, hash)}, k, v)
+    end)
     |> Enum.to_list()
   end
 
@@ -363,32 +338,10 @@ defmodule AeMdwWeb.Aex9Controller do
     )
   end
 
-  defp transfer_to_map({recipient_pk, sender_pk, amount, call_txi, log_idx}, :rev_aex9_transfer),
-    do: transfer_to_map({sender_pk, recipient_pk, amount, call_txi, log_idx}, :aex9_transfer)
-
-  defp transfer_to_map({sender_pk, recipient_pk, amount, call_txi, log_idx}, :aex9_transfer) do
-    tx = Util.read_tx!(call_txi) |> Format.to_map()
-
-    %{
-      sender: enc_id(sender_pk),
-      recipient: enc_id(recipient_pk),
-      amount: amount,
-      call_txi: call_txi,
-      log_idx: log_idx,
-      block_height: tx["block_height"],
-      micro_time: tx["micro_time"],
-      contract_id: tx["tx"]["contract_id"]
-    }
-  end
-
-  defp enc_block(:key, hash), do: :aeser_api_encoder.encode(:key_block_hash, hash)
-  defp enc_block(:micro, hash), do: :aeser_api_encoder.encode(:micro_block_hash, hash)
-
-  defp enc_ct(pk), do: :aeser_api_encoder.encode(:contract_pubkey, pk)
-  defp enc_id(pk), do: :aeser_api_encoder.encode(:account_pubkey, pk)
-
-  defp enc(type, pk), do: :aeser_api_encoder.encode(type, pk)
-
+  #
+  # Swagger
+  #
+  @spec swagger_definitions() :: map()
   def swagger_definitions do
     %{
       Aex9Response:
