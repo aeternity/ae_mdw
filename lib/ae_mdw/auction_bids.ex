@@ -28,10 +28,11 @@ defmodule AeMdw.AuctionBids do
   def top_auction_bid(plain_name, expand?) do
     case Mnesia.prev_key(@table, bid_top_key(plain_name)) do
       {:ok, auction_bid} ->
-        if(elem(auction_bid, 0) == plain_name,
-          do: {:ok, render(auction_bid, expand?)},
-          else: :not_found
-        )
+        if elem(auction_bid, 0) == plain_name do
+          {:ok, render(auction_bid, expand?)}
+        else
+          :not_found
+        end
 
       :none ->
         :not_found
