@@ -10,7 +10,6 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresence do
   alias AeMdw.Db.Util
   alias AeMdw.Validate
   alias AeMdwWeb.Helpers.Aex9Helper
-  alias AeMdwWeb.Views.Aex9ControllerView
 
   require Model
   require Ex2ms
@@ -80,8 +79,6 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresence do
   end
 
   defp accounts_without_balance(contract_list) do
-    last_txi = Util.last_txi()
-
     contract_list
     |> Enum.map(fn contract_pk ->
       # Process.sleep(5000)
@@ -100,27 +97,10 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresence do
         }
       end)
     end)
-    |> Enum.filter(fn %Account2Fix{account_pk: account_pk} ->
-      account_balances_is_empty?(account_pk, last_txi)
+    |> Enum.filter(fn %Account2Fix{contract_pk: contract_pk, account_pk: account_pk} ->
+      not DbContract.aex9_presence_exists?(contract_pk, account_pk)
     end)
   end
 
   defp normalized_amounts(amounts), do: Aex9Helper.normalize_balances(amounts)
-
-  defp account_balances_is_empty?(account_pk, last_txi) do
-    contracts =
-      DbContract.aex9_search_contract(account_pk, last_txi)
-      |> Map.to_list()
-      |> Enum.sort_by(&elem(&1, 1), &<=/2)
-
-    balance =
-      contracts
-      |> Enum.map(fn {contract_pk, txi} ->
-        {amount, _} = DBN.aex9_balance(contract_pk, account_pk, false)
-        {amount, txi, contract_pk}
-      end)
-      |> Enum.map(&Aex9ControllerView.balance_to_map/1)
-
-    Enum.empty?(balance)
-  end
 end
