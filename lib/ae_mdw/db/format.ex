@@ -448,6 +448,10 @@ defmodule AeMdw.Db.Format do
     |> put_in(["tx", "gas_used"], Contract.gas_used_in_create(contract_pk, tx_rec, block_hash))
   end
 
+  def custom_encode(:oracle_query_tx, tx, _tx_rec, _signed_tx, _block_hash) do
+    update_in(tx, ["tx", "query"], &Base.encode64/1)
+  end
+
   def custom_encode(:contract_call_tx, tx, tx_rec, _signed_tx, block_hash) do
     contract_pk = :aect_call_tx.contract_pubkey(tx_rec)
     call_rec = Contract.call_rec(tx_rec, contract_pk, block_hash)

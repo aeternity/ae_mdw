@@ -112,4 +112,19 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
              }
     end
   end
+
+  describe "calls" do
+    test "it gets calls from a contract", %{conn: conn} do
+      contract_id = "ct_2uJthb5s1D8c8F8ZYMAZ6LYGWno5ubFnrmkkHLE1FBzN3JruQw"
+
+      assert %{"data" => calls} =
+               conn
+               |> get("/contracts/calls/forward?contract_id=#{contract_id}")
+               |> json_response(200)
+
+      assert 10 = length(calls)
+      assert %{"internal_tx" => %{"query" => query_b64}} = Enum.at(calls, 2)
+      assert {:ok, _query} = Base.decode64(query_b64)
+    end
+  end
 end
