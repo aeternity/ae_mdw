@@ -249,13 +249,19 @@ defmodule AeMdw.Contract do
   ##########
 
   def call_rec(tx_rec, contract_pk, block_hash) do
-    call_id = :aect_call_tx.call_id(tx_rec)
+    tx_rec
+    |> :aect_call_tx.call_id()
+    |> call_rec_from_id(contract_pk, block_hash)
+  end
+
+  def call_rec_from_id(call_id, contract_pk, block_hash) do
     :aec_chain.get_contract_call(contract_pk, call_id, block_hash) |> ok!
   end
 
   def call_tx_info(tx_rec, contract_pk, block_hash, format_fn) do
     {:ok, ct_info} = get_info(contract_pk)
     call_id = :aect_call_tx.call_id(tx_rec)
+    # TODO: Analyze if available with ContractCreateTx
     call_data = :aect_call_tx.call_data(tx_rec)
     call = :aec_chain.get_contract_call(contract_pk, call_id, block_hash) |> ok!
 

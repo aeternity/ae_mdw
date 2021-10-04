@@ -450,9 +450,15 @@ defmodule AeMdw.Db.Format do
   def custom_encode(:contract_create_tx, tx, tx_rec, _, block_hash) do
     contract_pk = :aect_contracts.pubkey(:aect_contracts.new(tx_rec))
 
+    {:ok, ct_info} = Contract.get_info(contract_pk)
+    call_data = :aect_create_tx.call_data(tx_rec)
+    {"init", args} = Contract.decode_call_data(ct_info, call_data)
+
     tx
     |> put_in(["tx", "contract_id"], Enc.encode(:contract_pubkey, contract_pk))
+    |> put_in(["tx", "args"], Enum.map(args, fn value -> %{value: inspect value} end))
     |> put_in(["tx", "gas_used"], Contract.gas_used_in_create(contract_pk, tx_rec, block_hash))
+    # |> put_in(["tx", "log"], )
   end
 
   def custom_encode(:oracle_query_tx, tx, _tx_rec, _signed_tx, _block_hash) do
@@ -460,6 +466,7 @@ defmodule AeMdw.Db.Format do
   end
 
   def custom_encode(:contract_call_tx, tx, tx_rec, _signed_tx, block_hash) do
+    IO.inspect tx_rec
     contract_pk = :aect_call_tx.contract_pubkey(tx_rec)
     call_rec = Contract.call_rec(tx_rec, contract_pk, block_hash)
 
@@ -479,6 +486,7 @@ defmodule AeMdw.Db.Format do
       |> Map.drop(["return_value", "gas_price", "height", "contract_id", "caller_nonce"])
       |> Map.update("log", [], fn logs -> Enum.map(logs, log_entry) end)
 
+    IO.inspect(Map.keys(call_ser))
     update_in(tx, ["tx"], &Map.merge(&1, Map.merge(fun_arg_res, call_ser)))
   end
 
