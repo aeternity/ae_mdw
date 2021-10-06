@@ -6,6 +6,10 @@ defmodule AeMdw.Db.Model do
 
   ################################################################################
 
+  # index is timestamp (daylight saving order should be handle case by case)
+  @async_tasks_defaults [index: {-1, nil}, args: nil]
+  defrecord :async_tasks, @async_tasks_defaults
+
   # index is version like 20210826171900 in 20210826171900_reindex_remote_logs.ex
   @migrations_defaults [index: -1, inserted_at: nil]
   defrecord :migrations, @migrations_defaults
@@ -381,7 +385,7 @@ defmodule AeMdw.Db.Model do
         contract_tables(),
         oracle_tables(),
         stat_tables(),
-        migration_tables()
+        tasks_tables()
       ])
 
   def chain_tables() do
@@ -458,8 +462,11 @@ defmodule AeMdw.Db.Model do
     ]
   end
 
-  def migration_tables() do
-    [AeMdw.Db.Model.Migrations]
+  def tasks_tables() do
+    [
+      AeMdw.Db.Model.AsyncTasks,
+      AeMdw.Db.Model.Migrations
+    ]
   end
 
   def records(),
@@ -506,12 +513,14 @@ defmodule AeMdw.Db.Model do
       :target_int_transfer_tx,
       :stat,
       :sum_stat,
-      :migrations
+      :migrations,
+      :async_tasks
     ]
 
   def fields(record),
     do: for({x, _} <- defaults(record), do: x)
 
+  def record(AeMdw.Db.Model.AsyncTasks), do: :async_tasks
   def record(AeMdw.Db.Model.Migrations), do: :migrations
   def record(AeMdw.Db.Model.Tx), do: :tx
   def record(AeMdw.Db.Model.Block), do: :block
@@ -563,6 +572,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Stat), do: :stat
   def record(AeMdw.Db.Model.SumStat), do: :sum_stat
 
+  def table(:async_tasks), do: AeMdw.Db.Model.AsyncTasks
   def table(:migrations), do: AeMdw.Db.Model.Migrations
   def table(:tx), do: AeMdw.Db.Model.Tx
   def table(:block), do: AeMdw.Db.Model.Block
@@ -600,6 +610,7 @@ defmodule AeMdw.Db.Model do
   def table(:stat), do: AeMdw.Db.Model.Stat
   def table(:sum_stat), do: AeMdw.Db.Model.SumStat
 
+  def defaults(:async_tasks), do: @async_tasks_defaults
   def defaults(:migrations), do: @migrations_defaults
   def defaults(:tx), do: @tx_defaults
   def defaults(:block), do: @block_defaults

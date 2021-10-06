@@ -3,13 +3,13 @@ defmodule AeMdw.Db.Contract do
   Data access to read and write Contract related models.
   """
   alias AeMdw.Node, as: AE
-  alias AeMdw.Node.Db, as: DBN
 
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
   alias AeMdw.Db.Sync
   alias AeMdw.Log
+  alias AeMdw.Sync.AsyncTasksQueue
   alias AeMdw.Validate
 
   require Ex2ms
@@ -347,16 +347,7 @@ defmodule AeMdw.Db.Contract do
     :mnesia.write(Model.IdxAex9Transfer, m_idx_transfer, :write)
     aex9_write_presence(contract_pk, txi, to_pk)
 
-    # update account to aex9 contract mapping for all accounts with balance
-    {amounts, _last_block_tuple} = DBN.aex9_balances(contract_pk)
-
-    Enum.each(amounts, fn {{:address, account_pk}, _amount} ->
-      if account_pk == to_pk do
-        aex9_delete_presence(contract_pk, -1, to_pk)
-      else
-        aex9_write_new_presence(contract_pk, -1, account_pk)
-      end
-    end)
+    AsyncTasksQueue.enqueue({:update_aex9_presence, [contract_pk, to_pk]})
 
     aex9_presence_cache_write({{contract_pk, txi, i}, {from_pk, to_pk}, amount})
   end
