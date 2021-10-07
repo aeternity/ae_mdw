@@ -125,7 +125,8 @@ defmodule AeMdw.MixProject do
       {:mock, "~> 0.3.0", only: :test},
       {:phoenix_html, "~> 2.11"},
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
-      {:benchee, "~> 1.0.0", only: [:dev]}
+      {:benchee, "~> 1.0.0", only: [:dev]},
+      {:ex_json_schema, "~> 0.7.1"}
     ]
   end
 
