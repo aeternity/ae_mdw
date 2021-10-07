@@ -159,7 +159,7 @@ It is also possible that middleware will produce blockchain database (if `aetern
 
 We currently provide hosted infrastructure at https://mainnet.aeternity.io/mdw/ , all examples here are based on it. 
 
-**NOTE:** Local deploy with default configuration endpoints will not containt `/mdw/` segment on the path.
+**NOTE:** Local deploy with default configuration endpoints **will not** containt `/mdw/` segment on the path.
 
 ## HTTP endpoints
 
