@@ -12,6 +12,7 @@
         - [Start middleware](#start-middleware)
     - [Build and start with Docker](#build-and-start-with-docker)
     - [Docker Configuration](#docker-configuration)
+    - [Hosted infrastructure](#hosted-infrastructure)
     - [HTTP endpoints](#http-endpoints)
     - [Transaction querying](#transaction-querying)
         - [Scope](#scope)
@@ -153,6 +154,12 @@ By default, the `aeternity.yaml` config file which is used for `aeternity` node,
 It is also possible that middleware will produce blockchain database (if `aeternity.yaml` is configured to persist the blockchain database), which is located under `mnesia/` folder. This folder could also be replaced with existing database snapshot.
 
 **NOTE:** `db_path` option under `chain` configuration, **should not** be configured and must be left by default.
+
+## Hosted Infrastructure
+
+We currently provide hosted infrastructure at https://mainnet.aeternity.io/mdw/ , all examples here are based on it. 
+
+**NOTE:** Local deploy with default configuration endpoints will not containt `/mdw/` segment on the path.
 
 ## HTTP endpoints
 
