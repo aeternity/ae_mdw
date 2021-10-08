@@ -11,7 +11,6 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
 
   require Model
 
-  @next_demand_msecs 200
   @base_sleep_msecs 700
 
   @spec start_link(any()) :: GenServer.on_start()
@@ -21,29 +20,36 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
 
   @impl GenServer
   def init(:ok) do
-    Process.send_after(self(), :demand, @next_demand_msecs)
-    {:ok, %{}}
+    {:ok, %{}, {:continue, :demand}}
   end
 
   @impl GenServer
-  def handle_info(:demand, state) do
+  def handle_continue(:demand, _state) do
+    demand()
+  end
+
+  @impl GenServer
+  def handle_info(:demand, _state) do
+    demand()
+  end
+
+  #
+  # Private functions
+  #
+  defp demand() do
     m_task = Producer.dequeue()
 
     if nil != m_task do
       process(m_task)
       Model.async_tasks(index: index) = m_task
       Producer.notify_consumed(index)
-      Process.send_after(self(), :demand, @next_demand_msecs)
+      {:noreply, %{}, {:continue, :demand}}
     else
       Process.send_after(self(), :demand, sleep_msecs())
+      {:noreply, %{}}
     end
-
-    {:noreply, state}
   end
 
-  #
-  # Private functions
-  #
   # Updates the presence/mapping of accounts that have balance in a Aex9 contract
   defp process(
          Model.async_tasks(
