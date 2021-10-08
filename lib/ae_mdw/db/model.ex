@@ -7,6 +7,7 @@ defmodule AeMdw.Db.Model do
   ################################################################################
 
   # index is timestamp (daylight saving order should be handle case by case)
+  @type async_tasks_record :: record(:async_tasks, index: {integer(), atom()}, args: list())
   @async_tasks_defaults [index: {-1, nil}, args: nil]
   defrecord :async_tasks, @async_tasks_defaults
 

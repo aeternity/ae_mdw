@@ -28,11 +28,9 @@ defmodule AeMdw.Application do
     children = [
       AeMdw.Sync.Watcher,
       AeMdw.Sync.Supervisor,
-      AeMdw.Sync.AsyncTasksQueue,
+      AeMdw.Sync.AsyncTasks.Supervisor,
       AeMdwWeb.Supervisor,
-      AeMdwWeb.Websocket.Supervisor,
-      {Task.Supervisor, name: AeMdw.Sync.TaskSupervisor},
-      :poolboy.child_spec(:aex9_balance_worker, poolboy_config())
+      AeMdwWeb.Websocket.Supervisor
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)
@@ -229,14 +227,5 @@ defmodule AeMdw.Application do
   def config_change(changed, _new, removed) do
     AeMdwWeb.Endpoint.config_change(changed, removed)
     :ok
-  end
-
-  defp poolboy_config do
-    [
-      name: {:local, :async_tasks},
-      worker_module: AeMdw.Sync.AsyncTasksWorker,
-      size: 5,
-      max_overflow: 5
-    ]
   end
 end
