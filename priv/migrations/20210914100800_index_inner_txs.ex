@@ -28,8 +28,8 @@ defmodule AeMdw.Migrations.IndexInnerTxs do
     if not from_startup? and :ok != Application.ensure_started(:ae_mdw) do
       IO.puts("Ensure sync tables...")
       SyncSup.init_tables()
-      MdwApp.init(:contract_cache)
-      MdwApp.init(:db_state)
+      MdwApp.init_public(:contract_cache)
+      MdwApp.init_public(:db_state)
     end
 
     ga_meta_txis = lookup_txis(:ga_meta_tx)

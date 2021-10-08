@@ -13,6 +13,7 @@ defmodule AeMdw.Application do
 
   ##########
 
+  @impl Application
   def start(_type, _args) do
     :lager.set_loglevel(:epoch_sync_lager_event, :lager_console_backend, :undefined, :error)
     :lager.set_loglevel(:lager_console_backend, :error)
@@ -20,9 +21,9 @@ defmodule AeMdw.Application do
     init(:model_records)
     init(:node_records)
     init(:meta)
-    init(:contract_cache)
+    init_public(:contract_cache)
     init(:aehttp)
-    init(:db_state)
+    init_public(:db_state)
     # init(:aesophia)
 
     children = [
@@ -36,7 +37,7 @@ defmodule AeMdw.Application do
     Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)
   end
 
-  def init(:aehttp),
+  defp init(:aehttp),
     do: :application.ensure_all_started(:aehttp)
 
   # def init(:aesophia) do
@@ -45,10 +46,10 @@ defmodule AeMdw.Application do
   #   |> Enum.map(&:code.load_abs(to_charlist(Path.rootname(&1))))
   # end
 
-  def init(:model_records),
+  defp init(:model_records),
     do: Enum.each(Model.records(), &SmartRecord.new(Model, &1, Model.defaults(&1)))
 
-  def init(:node_records) do
+  defp init(:node_records) do
     {:ok, aeo_oracles_code} = Extract.AbsCode.module(:aeo_oracles)
     {:ok, aeo_query_code} = Extract.AbsCode.module(:aeo_query)
 
@@ -60,7 +61,7 @@ defmodule AeMdw.Application do
     :ok
   end
 
-  def init(:meta) do
+  defp init(:meta) do
     {:ok, chain_state_code} = Extract.AbsCode.module(:aec_chain_state)
     [:header, :hash, :type] = NodeHelper.record_keys(chain_state_code, :node)
 
@@ -82,7 +83,7 @@ defmodule AeMdw.Application do
     lima_height =
       Enum.find_value(hard_fork_heights, fn
         {^lima_vsn, h} -> h
-        _ -> nil
+        _non_lima_val -> nil
       end)
 
     type_mod_map = Extract.tx_mod_map(aetx_code)
@@ -112,10 +113,11 @@ defmodule AeMdw.Application do
             do: (acc -> Map.put(acc, [field], Map.put(Map.get(acc, [field], %{}), type, pos)))
       end)
 
-    id_fields = Map.keys(id_field_type_map) |> Enum.map(Util.compose(&to_string/1, &hd/1))
+    id_fields = id_field_type_map |> Map.keys() |> Enum.map(Util.compose(&to_string/1, &hd/1))
 
     stream_mod = fn db_mod ->
       ["AeMdw", "Db", "Model", tab] = Module.split(db_mod)
+      # credo:disable-for-next-line
       Module.concat(DbStream, tab)
     end
 
@@ -132,7 +134,8 @@ defmodule AeMdw.Application do
     end
 
     field_pos_map = fn code, rec ->
-      NodeHelper.record_keys(code, rec)
+      code
+      |> NodeHelper.record_keys(rec)
       |> Stream.zip(Stream.iterate(1, &(&1 + 1)))
       |> Enum.into(%{})
     end
@@ -189,12 +192,14 @@ defmodule AeMdw.Application do
     )
   end
 
-  def init(:contract_cache) do
+  @spec init_public(atom()) :: :ok
+  def init_public(:contract_cache) do
     cache_exp = Application.fetch_env!(:ae_mdw, :contract_cache_expiration_minutes)
     EtsCache.new(Contract.table(), cache_exp)
+    :ok
   end
 
-  def init(:db_state) do
+  def init_public(:db_state) do
     initial_token_supply = AeMdw.Node.token_supply_delta(0)
 
     :mnesia.transaction(fn ->
@@ -208,8 +213,11 @@ defmodule AeMdw.Application do
           :mnesia.write(Model.SumStat, m_stat, :write)
       end
     end)
+
+    :ok
   end
 
+  @impl Application
   def start_phase(:migrate_db, _start_type, []) do
     Mix.Tasks.MigrateDb.run(true)
     :ok
@@ -220,10 +228,12 @@ defmodule AeMdw.Application do
     :ok
   end
 
+  @spec sync(boolean()) :: {:ok, pid()}
   def sync(enabled?) when is_boolean(enabled?),
     do: AeMdw.Sync.Supervisor.sync(enabled?)
 
   # Tell Phoenix to update the endpoint configuration whenever the application is updated.
+  @impl Application
   def config_change(changed, _new, removed) do
     AeMdwWeb.Endpoint.config_change(changed, removed)
     :ok
