@@ -60,7 +60,6 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   defp next_state(%{buffer: []} = state) do
     case Store.fetch_unprocessed() do
       [] -> {nil, state}
-      [m_task] -> {m_task, state}
       [m_task | buffer_tasks] -> {m_task, %{buffer: buffer_tasks}}
     end
   end

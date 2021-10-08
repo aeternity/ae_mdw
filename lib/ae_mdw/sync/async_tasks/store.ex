@@ -35,7 +35,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
     {m_tasks, _cont} = Util.select(Model.AsyncTasks, any_spec, @max_buffer_size)
 
     Enum.filter(m_tasks, fn Model.async_tasks(index: index) ->
-      [] == :ets.lookup(:async_tasks_processing, index)
+      not :ets.member(:async_tasks_processing, index)
     end)
   end
 
