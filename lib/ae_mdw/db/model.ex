@@ -1,10 +1,18 @@
 defmodule AeMdw.Db.Model do
+  @moduledoc """
+  Mnesia database model records.
+  """
   require Record
   require Ex2ms
 
   import Record, only: [defrecord: 2]
 
   ################################################################################
+
+  # index is timestamp (daylight saving order should be handle case by case)
+  @type async_tasks_record :: record(:async_tasks, index: {integer(), atom()}, args: list())
+  @async_tasks_defaults [index: {-1, nil}, args: nil]
+  defrecord :async_tasks, @async_tasks_defaults
 
   # index is version like 20210826171900 in 20210826171900_reindex_remote_logs.ex
   @migrations_defaults [index: -1, inserted_at: nil]
@@ -373,6 +381,7 @@ defmodule AeMdw.Db.Model do
 
   ################################################################################
 
+  @spec tables() :: list(atom())
   def tables(),
     do:
       Enum.concat([
@@ -381,10 +390,10 @@ defmodule AeMdw.Db.Model do
         contract_tables(),
         oracle_tables(),
         stat_tables(),
-        migration_tables()
+        tasks_tables()
       ])
 
-  def chain_tables() do
+  defp chain_tables() do
     [
       AeMdw.Db.Model.Tx,
       AeMdw.Db.Model.Block,
@@ -400,7 +409,7 @@ defmodule AeMdw.Db.Model do
     ]
   end
 
-  def contract_tables() do
+  defp contract_tables() do
     [
       AeMdw.Db.Model.Aex9Contract,
       AeMdw.Db.Model.Aex9ContractSymbol,
@@ -427,7 +436,7 @@ defmodule AeMdw.Db.Model do
     ]
   end
 
-  def name_tables() do
+  defp name_tables() do
     [
       AeMdw.Db.Model.PlainName,
       AeMdw.Db.Model.AuctionBid,
@@ -442,7 +451,7 @@ defmodule AeMdw.Db.Model do
     ]
   end
 
-  def oracle_tables() do
+  defp oracle_tables() do
     [
       AeMdw.Db.Model.ActiveOracleExpiration,
       AeMdw.Db.Model.InactiveOracleExpiration,
@@ -451,17 +460,21 @@ defmodule AeMdw.Db.Model do
     ]
   end
 
-  def stat_tables() do
+  defp stat_tables() do
     [
       AeMdw.Db.Model.Stat,
       AeMdw.Db.Model.SumStat
     ]
   end
 
-  def migration_tables() do
-    [AeMdw.Db.Model.Migrations]
+  defp tasks_tables() do
+    [
+      AeMdw.Db.Model.AsyncTasks,
+      AeMdw.Db.Model.Migrations
+    ]
   end
 
+  @spec records() :: list(atom())
   def records(),
     do: [
       :tx,
@@ -506,12 +519,16 @@ defmodule AeMdw.Db.Model do
       :target_int_transfer_tx,
       :stat,
       :sum_stat,
-      :migrations
+      :migrations,
+      :async_tasks
     ]
 
+  @spec fields(atom()) :: list(atom())
   def fields(record),
     do: for({x, _} <- defaults(record), do: x)
 
+  @spec record(atom()) :: atom()
+  def record(AeMdw.Db.Model.AsyncTasks), do: :async_tasks
   def record(AeMdw.Db.Model.Migrations), do: :migrations
   def record(AeMdw.Db.Model.Tx), do: :tx
   def record(AeMdw.Db.Model.Block), do: :block
@@ -563,6 +580,8 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Stat), do: :stat
   def record(AeMdw.Db.Model.SumStat), do: :sum_stat
 
+  @spec table(atom()) :: atom()
+  def table(:async_tasks), do: AeMdw.Db.Model.AsyncTasks
   def table(:migrations), do: AeMdw.Db.Model.Migrations
   def table(:tx), do: AeMdw.Db.Model.Tx
   def table(:block), do: AeMdw.Db.Model.Block
@@ -600,6 +619,8 @@ defmodule AeMdw.Db.Model do
   def table(:stat), do: AeMdw.Db.Model.Stat
   def table(:sum_stat), do: AeMdw.Db.Model.SumStat
 
+  @spec defaults(atom()) :: list()
+  def defaults(:async_tasks), do: @async_tasks_defaults
   def defaults(:migrations), do: @migrations_defaults
   def defaults(:tx), do: @tx_defaults
   def defaults(:block), do: @block_defaults
@@ -644,12 +665,14 @@ defmodule AeMdw.Db.Model do
   def defaults(:stat), do: @stat_defaults
   def defaults(:sum_stat), do: @sum_stat_defaults
 
+  @spec write_count(tuple(), integer()) :: :ok
   def write_count(model, delta) do
     total = id_count(model, :count)
     model = id_count(model, count: total + delta)
     :mnesia.write(AeMdw.Db.Model.IdCount, model, :write)
   end
 
+  @spec update_count(tuple(), integer(), fun()) :: any()
   def update_count({_, _, _} = field_key, delta, empty_fn \\ fn -> :nop end) do
     case :mnesia.read(AeMdw.Db.Model.IdCount, field_key, :write) do
       [] -> empty_fn.()
@@ -657,6 +680,7 @@ defmodule AeMdw.Db.Model do
     end
   end
 
+  @spec incr_count(tuple()) :: any()
   def incr_count({_, _, _} = field_key),
     do: update_count(field_key, 1, fn -> write_count(id_count(index: field_key, count: 0), 1) end)
 end
