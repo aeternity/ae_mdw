@@ -4,7 +4,8 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
   """
 
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Util
+  alias AeMdw.Mnesia
+  # alias AeMdw.Db.Util
   alias AeMdw.Log
 
   require Ex2ms
@@ -12,8 +13,9 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
   require Model
 
   @typep task_index() :: {pos_integer(), atom()}
+  # @eot :"$end_of_table"
 
-  @max_buffer_size 100
+  @max_buffer_size 10
 
   @spec init() :: :ok
   def init do
@@ -29,11 +31,9 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
 
   @spec fetch_unprocessed() :: [Model.async_tasks_record()]
   def fetch_unprocessed() do
-    # safe_fetch()
-
-    {m_tasks, _cont} = Util.select(Model.AsyncTasks, Ex2ms.fun do record -> record end, @max_buffer_size)
-
-    Enum.filter(m_tasks, fn Model.async_tasks(index: index) ->
+    # {m_tasks, _cont} = Util.select(Model.AsyncTasks, Ex2ms.fun do record -> record end, @max_buffer_size)
+    safe_fetch()
+    |> Enum.filter(fn Model.async_tasks(index: index) ->
       not :ets.member(:async_tasks_processing, index)
     end)
   end
@@ -74,6 +74,24 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
 
     :ets.delete_object(:async_tasks_processing, task_index)
     :ok
+  end
+
+  #
+  # Private functions
+  #
+  defp safe_fetch do
+    {keys, _cursor} =
+      Model.AsyncTasks
+      |> Mnesia.fetch_keys(:forward, nil, @max_buffer_size)
+
+    Enum.map(keys, fn key ->
+        Mnesia.fetch!(Model.AsyncTasks, key)
+      end)
+
+    # case :mnesia.dirty_first() do
+    #   @eot -> []
+    #   key -> :mnesia.dirty_read(Model.AsyncTasks, key)
+    # end
   end
 
   # defp safe_fetch() do
