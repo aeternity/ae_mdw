@@ -59,6 +59,7 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
        ) do
     {amounts, _last_block_tuple} = DBN.aex9_balances(contract_pk)
 
+    # credo:disable-for-lines:9
     :mnesia.sync_transaction(fn ->
       Enum.each(amounts, fn {{:address, account_pk}, _amount} ->
         if account_pk == delete_account_pk do
