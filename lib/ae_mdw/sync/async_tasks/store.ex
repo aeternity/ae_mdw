@@ -4,7 +4,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
   """
 
   alias AeMdw.Db.Model
-  alias AeMdw.Mnesia
+  # alias AeMdw.Mnesia
   # alias AeMdw.Db.Util
   alias AeMdw.Log
 
@@ -13,7 +13,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
   require Model
 
   @typep task_index() :: {pos_integer(), atom()}
-  # @eot :"$end_of_table"
+  @eot :"$end_of_table"
 
   @max_buffer_size 10
 
@@ -80,18 +80,30 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
   # Private functions
   #
   defp safe_fetch do
-    {keys, _cursor} =
-      Model.AsyncTasks
-      |> Mnesia.fetch_keys(:forward, nil, @max_buffer_size)
-
-    Enum.map(keys, fn key ->
-        Mnesia.fetch!(Model.AsyncTasks, key)
-      end)
-
-    # case :mnesia.dirty_first() do
-    #   @eot -> []
-    #   key -> :mnesia.dirty_read(Model.AsyncTasks, key)
-    # end
+    fn ->
+      case :mnesia.first(Model.AsyncTasks) do
+        @eot -> []
+        first_key ->
+          Stream.unfold({@max_buffer_size, first_key}, fn
+            {0, _current_key} ->
+              nil
+            {n, current_key} ->
+              case :mnesia.next(Model.AsyncTasks, current_key) do
+                @eot -> nil
+                next_key ->
+                  {
+                    :mnesia.read(Model.AsyncTasks, current_key),
+                    {n-1, next_key}
+                  }
+              end
+          end)
+      end
+    end
+    |> :mnesia.transaction()
+    |> case do
+      {:atomic, m_tasks} -> m_tasks
+      _error -> []
+    end
   end
 
   # defp safe_fetch() do
