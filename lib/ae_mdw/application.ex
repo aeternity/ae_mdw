@@ -25,6 +25,8 @@ defmodule AeMdw.Application do
     init(:aehttp)
     init_public(:db_state)
     # init(:aesophia)
+    init(:app_ctrl_server)
+    init(:aesync)
 
     children = [
       AeMdw.Sync.Watcher,
@@ -191,6 +193,10 @@ defmodule AeMdw.Application do
       }
     )
   end
+
+  defp init(:app_ctrl_server), do: :app_ctrl_server.start()
+
+  defp init(:aesync), do: Application.ensure_all_started(:aesync)
 
   @spec init_public(atom()) :: :ok
   def init_public(:contract_cache) do
