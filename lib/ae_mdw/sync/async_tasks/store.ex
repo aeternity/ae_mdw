@@ -4,9 +4,10 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
   """
 
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Util
+  alias AeMdw.Log
 
   require Ex2ms
+  require Log
   require Model
 
   @typep task_index() :: {pos_integer(), atom()}
@@ -27,21 +28,16 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
 
   @spec fetch_unprocessed() :: [Model.async_tasks_record()]
   def fetch_unprocessed() do
-    any_spec =
-      Ex2ms.fun do
-        record -> record
-      end
-
-    {m_tasks, _cont} = Util.select(Model.AsyncTasks, any_spec, @max_buffer_size)
-
-    Enum.filter(m_tasks, fn Model.async_tasks(index: index) ->
+    Ex2ms.fun do record -> record end
+    |> safe_fetch(@max_buffer_size)
+    |> Enum.filter(fn Model.async_tasks(index: index) ->
       not :ets.member(:async_tasks_processing, index)
     end)
   end
 
   @spec save(atom(), list()) :: :ok
   def save(task_type, args) do
-    :mnesia.sync_dirty(fn ->
+    :mnesia.sync_transaction(fn ->
       index = {System.system_time(), task_type}
       m_task = Model.async_tasks(index: index, args: args)
       :mnesia.write(Model.AsyncTasks, m_task, :write)
@@ -57,10 +53,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
         {:_, {:_, ^task_type}, ^args} -> true
       end
 
-    case Util.select(Model.AsyncTasks, exists_spec, 1) do
-      {[true], _cont} -> true
-      {[], _cont} -> false
-    end
+    [] != safe_fetch(exists_spec)
   end
 
   @spec set_processing(task_index()) :: :ok
@@ -71,8 +64,24 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
 
   @spec set_done(task_index()) :: :ok
   def set_done(task_index) do
-    :mnesia.dirty_delete(Model.AsyncTasks, task_index)
+    :mnesia.sync_transaction(fn ->
+      :mnesia.delete(Model.AsyncTasks, task_index, :write)
+    end)
     :ets.delete_object(:async_tasks_processing, task_index)
     :ok
+  end
+
+  def safe_fetch(record_spec, max_num_records \\ 1) do
+    fn ->
+      :mnesia.select(Model.AsyncTasks, record_spec, max_num_records, :read)
+    end
+    |> :mnesia.transaction()
+    |> case do
+      {:atomic, {m_tasks, _cont}} ->
+        m_tasks
+      {:aborted, reason} ->
+        Log.warn("AsyncTasks fetch aborted due to #{inspect reason}")
+        []
+    end
   end
 end
