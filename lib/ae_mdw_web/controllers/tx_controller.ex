@@ -10,9 +10,12 @@ defmodule AeMdwWeb.TxController do
   alias AeMdw.Db.Format
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Txs
   alias AeMdwWeb.Continuation, as: Cont
+  alias AeMdwWeb.Plugs.PaginatedPlug
   alias AeMdwWeb.SwaggerParameters
   alias :aeser_api_encoder, as: Enc
+  alias Plug.Conn
 
   require Logger
   require Model
@@ -22,28 +25,66 @@ defmodule AeMdwWeb.TxController do
 
   @type_spend_tx "SpendTx"
 
+  plug(PaginatedPlug)
+
   ##########
 
+  @spec tx(Conn.t(), map()) :: Conn.t()
   def tx(conn, %{"hash" => enc_tx_hash}),
     do: handle_tx_reply(conn, fn -> read_tx_hash(Validate.id!(enc_tx_hash)) end)
 
+  @spec txi(Conn.t(), map()) :: Conn.t()
   def txi(conn, %{"index" => index}),
     do: handle_tx_reply(conn, fn -> read_tx(Validate.nonneg_int!(index)) end)
 
-  def txs(conn, params),
-    do: Cont.response(conn, &json/2, &add_spendtx_details(&1, params))
+  @spec txs(Conn.t(), map()) :: Conn.t()
+  def txs(conn, %{"scope_type" => _scope_type} = params) do
+    Cont.response(conn, &json/2, &add_spendtx_details(&1, params))
+  end
 
+  def txs(%Conn{assigns: assigns, query_params: query_params} = conn, params) do
+    %{direction: direction, limit: limit, cursor: cursor, expand?: expand?, query: query} =
+      assigns
+
+    case Txs.fetch_txs(direction, query, cursor, limit, expand?) do
+      {:ok, txs, new_cursor} ->
+        uri =
+          if new_cursor do
+            next_params =
+              Map.merge(query_params, %{
+                "cursor" => new_cursor,
+                "limit" => limit,
+                "expand" => expand?
+              })
+
+            URI.to_string(%URI{path: "/txs/#{direction}", query: URI.encode_query(next_params)})
+          end
+
+        txs = add_spendtx_details(txs, params)
+
+        json(conn, %{"data" => txs, "next" => uri})
+
+      {:error, reason} ->
+        send_error(conn, :bad_request, reason)
+    end
+  end
+
+  @spec count(Conn.t(), map()) :: Conn.t()
   def count(conn, _req),
     do: conn |> json(last_txi())
 
+  @spec count_id(Conn.t(), map()) :: Conn.t()
   def count_id(conn, %{"id" => id}),
     do: handle_input(conn, fn -> conn |> json(id_counts(Validate.id!(id))) end)
 
   ##########
 
-  def db_stream(_, params, scope),
-    do: DBS.map(scope, :json, params)
+  @spec db_stream(atom(), map(), term()) :: Enumerable.t()
+  def db_stream(_stream_name, params, scope) do
+    DBS.map(scope, :json, params)
+  end
 
+  @spec id_counts(binary()) :: map()
   def id_counts(<<_::256>> = pk) do
     for tx_type <- AE.tx_types(), reduce: %{} do
       counts ->

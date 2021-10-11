@@ -17,7 +17,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
   @default_direction :backward
 
   @default_limit 10
-  @max_limit 20
+  @max_limit 100
 
   @spec init(opts()) :: opts()
   def init(opts), do: opts

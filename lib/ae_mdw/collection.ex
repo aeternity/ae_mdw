@@ -10,6 +10,12 @@ defmodule AeMdw.Collection do
   @typep cursor() :: Mnesia.cursor()
   @typep limit() :: Mnesia.limit()
   @typep record() :: Mnesia.record()
+  @typep key() :: Mnesia.key()
+
+  @typep take_while_fn() :: term()
+  @typep is_valid_key_fn() :: term()
+  @typep sort_key_fn() :: term()
+  @typep table_iterator() :: {table(), key(), take_while_fn(), is_valid_key_fn(), sort_key_fn()}
 
   @doc """
   Returns the cursor-paginated results of 2 different mnesia tables, where the
@@ -102,7 +108,7 @@ defmodule AeMdw.Collection do
 
         {next_keys, limit} ->
           {table, next_key} =
-            if direction == :backwards do
+            if direction == :backward do
               Enum.max_by(next_keys, fn {_table, key} -> key end)
             else
               Enum.min_by(next_keys, fn {_table, key} -> key end)
@@ -117,6 +123,114 @@ defmodule AeMdw.Collection do
     case Enum.split(keys, limit) do
       {keys, [{cursor, _cursor_table}]} -> {keys, cursor}
       {keys, []} -> {keys, nil}
+    end
+  end
+
+  @doc """
+  Merges the results from different tables (starting from a key for each table)
+  into a single table in a sorted order.
+
+  ## Examples
+
+    iex> :mnesia.dirty_all_keys(:table1)
+    [:a, :c, :g]
+    iex> :mnesia.dirty_all_keys(:table2)
+    [:b, :d, :e, :f]
+    iex> true_fn = fn _key -> true end
+    #Function<7.126501267/1 in :erl_eval.expr/5>
+    iex> identity_fn = &(&1)
+    #Function<7.126501267/1 in :erl_eval.expr/5>
+
+    iex> table_iterators = [
+    ...>   {:table1, :a, true_fn, true_fn, identity_fn}
+    ...>   {:table2, :a, true_fn, true_fn, identity_fn}
+    ...> ]
+    iex> AeMdw.Collection.merge_with_keys(table_iterators, :forward, 3)
+    {[{:a, :table1}, {:b, :table2}, {:c, :table1}], :d}
+
+
+    iex> table_iterators = [
+    ...>   {:table1, :a, &(&1 < :g), &(&1 != :c), identity_fn},
+    ...>   {:table2, :a, &(&1 < :f), &(&1 != :d), identity_fn}
+    ...> ]
+    iex> AeMdw.Collection.merge_with_keys(table_iterators, :forward, 3)
+    {[{:a, :table1}, {:b, :table2}, {:e, :table1}], nil}
+
+  """
+  @spec merge_with_keys([table_iterator()], direction(), limit()) ::
+          {[{record(), table()}], cursor()}
+  def merge_with_keys(table_iterators, direction, limit) do
+    next_keys =
+      Enum.reduce(table_iterators, %{}, fn {table, initial_key, take_while, is_valid_key?,
+                                            sort_key},
+                                           acc ->
+        case next_key(table, direction, initial_key, take_while) do
+          {:ok, next_key} ->
+            Map.put(acc, {table, next_key}, {take_while, is_valid_key?, sort_key})
+
+          :none ->
+            acc
+        end
+      end)
+
+    keys =
+      Stream.unfold({next_keys, limit + 1}, fn
+        {_next_keys, 0} ->
+          nil
+
+        {next_keys, _limit} when next_keys == %{} ->
+          nil
+
+        {next_keys, limit} ->
+          {{table, next_key}, {take_while, is_valid_key?, sort_key}} =
+            if direction == :backward do
+              Enum.max_by(next_keys, fn {{_table, key}, {_take_while, _is_valid_key?, sort_key}} ->
+                sort_key.(key)
+              end)
+            else
+              Enum.min_by(next_keys, fn {{_table, key}, {_take_while, _is_valid_key?, sort_key}} ->
+                sort_key.(key)
+              end)
+            end
+
+          new_next_keys =
+            case next_key(table, direction, next_key, take_while) do
+              {:ok, new_key} ->
+                Map.put(next_keys, {table, new_key}, {take_while, is_valid_key?, sort_key})
+
+              :none ->
+                Map.delete(next_keys, {table, next_key})
+            end
+
+          if is_valid_key?.(next_key) do
+            {{next_key, table, sort_key.(next_key)}, {new_next_keys, limit - 1}}
+          else
+            {nil, {new_next_keys, limit}}
+          end
+      end)
+
+    keys = Stream.reject(keys, &is_nil/1)
+
+    case Enum.split(keys, limit) do
+      {keys, [{_cursor, _cursor_table, cursor_sort_key}]} ->
+        {Enum.map(keys, fn {key, tab, _sort_key} -> {key, tab} end), cursor_sort_key}
+
+      {keys, []} ->
+        {Enum.map(keys, fn {key, tab, _sort_key} -> {key, tab} end), nil}
+    end
+  end
+
+  defp next_key(table, direction, key, take_while) do
+    case Mnesia.next_key(table, direction, key) do
+      {:ok, new_key} ->
+        if take_while.(new_key) do
+          {:ok, new_key}
+        else
+          :none
+        end
+
+      :not_found ->
+        :none
     end
   end
 end
