@@ -19,15 +19,13 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   @impl GenServer
   def init(:ok) do
     Store.reset()
+    IO.inspect("Producer is #{inspect(self())}")
     {:ok, %{buffer: []}}
   end
 
   @spec enqueue(atom(), list()) :: :ok
   def enqueue(task_type, args) when is_atom(task_type) and is_list(args) do
-    if not Store.is_enqueued?(task_type, args) do
-      Store.save(task_type, args)
-    end
-
+    Store.save_new(task_type, args)
     :ok
   end
 

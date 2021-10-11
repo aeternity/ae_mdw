@@ -11,7 +11,7 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
 
   require Model
 
-  @base_sleep_msecs 700
+  @base_sleep_msecs 900
 
   @spec start_link(any()) :: GenServer.on_start()
   def start_link(_args) do
@@ -20,7 +20,9 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
 
   @impl GenServer
   def init(:ok) do
-    {:ok, %{}, {:continue, :demand}}
+    IO.inspect("Consumer #{inspect(self())}")
+    Process.send_after(self(), :demand, sleep_msecs())
+    {:ok, %{}}
   end
 
   @impl GenServer
