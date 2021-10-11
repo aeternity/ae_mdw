@@ -39,8 +39,8 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
     end)
   end
 
-  @spec save(atom(), list()) :: :ok
-  def save(task_type, args) do
+  @spec save_new(atom(), list()) :: :ok
+  def save_new(task_type, args) do
     :mnesia.sync_transaction(fn ->
       if not is_enqueued?(task_type, args) do
         index = {System.system_time(), task_type}
