@@ -4,6 +4,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
   """
 
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Util
   alias AeMdw.Log
 
   require Ex2ms
@@ -28,8 +29,11 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
 
   @spec fetch_unprocessed() :: [Model.async_tasks_record()]
   def fetch_unprocessed() do
-    safe_fetch()
-    |> Enum.filter(fn Model.async_tasks(index: index) ->
+    # safe_fetch()
+
+    {m_tasks, _cont} = Util.select(Model.AsyncTasks, Ex2ms.fun do record -> record end, @max_buffer_size)
+
+    Enum.filter(m_tasks, fn Model.async_tasks(index: index) ->
       not :ets.member(:async_tasks_processing, index)
     end)
   end
@@ -72,23 +76,23 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
     :ok
   end
 
-  def safe_fetch() do
-    fn ->
-      record_spec =
-        Ex2ms.fun do
-          record -> record
-        end
+  # defp safe_fetch() do
+  #   fn ->
+  #     record_spec =
+  #       Ex2ms.fun do
+  #         record -> record
+  #       end
 
-      :mnesia.select(Model.AsyncTasks, record_spec, @max_buffer_size, :read)
-    end
-    |> :mnesia.transaction()
-    |> case do
-      {:atomic, {m_tasks, _cont}} ->
-        m_tasks
+  #     :mnesia.select(Model.AsyncTasks, record_spec, @max_buffer_size, :read)
+  #   end
+  #   |> :mnesia.transaction()
+  #   |> case do
+  #     {:atomic, {m_tasks, _cont}} ->
+  #       m_tasks
 
-      {:aborted, reason} ->
-        Log.warn("AsyncTasks fetch aborted due to #{inspect(reason)}")
-        []
-    end
-  end
+  #     {:aborted, reason} ->
+  #       Log.warn("AsyncTasks fetch aborted due to #{inspect(reason)}")
+  #       []
+  #   end
+  # end
 end
