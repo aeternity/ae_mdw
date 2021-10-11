@@ -71,7 +71,10 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
 
   @spec set_done(task_index()) :: :ok
   def set_done(task_index) do
-    :mnesia.dirty_delete(Model.AsyncTasks, task_index)
+    :mnesia.sync_dirty(fn ->
+      :mnesia.delete(Model.AsyncTasks, task_index, :write)
+    end)
+
     :ets.delete_object(:async_tasks_processing, task_index)
     :ok
   end
