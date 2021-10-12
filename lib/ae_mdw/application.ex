@@ -194,7 +194,10 @@ defmodule AeMdw.Application do
     )
   end
 
-  defp init(:app_ctrl_server), do: :app_ctrl_server.start()
+  defp init(:app_ctrl_server) do
+    :app_ctrl_server.start()
+    :app_ctrl.set_mode(:normal)
+  end
 
   defp init(:aesync), do: Application.ensure_all_started(:aesync)
 
