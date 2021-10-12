@@ -3,6 +3,8 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
   @moduletag :integration
 
+  @big_balance_contract_id "ct_2M4mVQCDVxu6mvUrEue1xMafLsoA1bgsfC3uT95F3r1xysaCvE"
+
   describe "balance_for_hash" do
     test "gets balance for hash", %{conn: conn} do
       mb_hash = "mh_2NkfQ9p29EQtqL6YQAuLpneTRPxEKspNYLKXeexZ664ZJo7fcw"
@@ -38,6 +40,36 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
                "contract_id" => ^contract_id,
                "height" => 350_622
              } = json_response(conn, 200)
+    end
+  end
+
+  describe "balances" do
+    test "gets all accounts balances for a contract", %{conn: conn} do
+      contract_id = @big_balance_contract_id
+      conn = get(conn, "/aex9/balances/#{contract_id}")
+
+      assert %{
+               "amounts" => amounts_map,
+               "contract_id" => ^contract_id
+             } = json_response(conn, 200)
+
+      Enum.each(amounts_map, fn {account, balance} ->
+        assert String.starts_with?(account, "ak_")
+        assert is_integer(balance) and balance >= 0
+      end)
+    end
+  end
+
+  describe "balance" do
+    test "gets an account balances for multiple contracts", %{conn: conn} do
+      account_id = "ak_WzcSck8B9ZPgHsy5XeqBbtUV4YbTuGyyJUzhSMvSK2JY1nzqJ"
+      conn = get(conn, "/aex9/balances/account/#{account_id}")
+
+      balances_response = json_response(conn, 200)
+
+      assert Enum.any?(balances_response, fn %{"contract_id" => contract_id} ->
+               contract_id == @big_balance_contract_id
+             end)
     end
   end
 end
