@@ -1,6 +1,6 @@
 defmodule AeMdw.DryRun.Runner do
   @moduledoc """
-  Simulates transactions with dry run.
+  Simulates transactions with dry run. This means that the calls won't be added to chain (nor it's results).
   """
 
   alias AeMdw.DryRun.Contract
@@ -8,11 +8,13 @@ defmodule AeMdw.DryRun.Runner do
   @typep pubkey() :: <<_::256>>
   @typep block_hash() :: <<_::256>>
 
+  # arbitrary new pk to run the calls
   @runner_pk <<13, 24, 60, 171, 170, 28, 99, 114, 174, 14, 112, 19, 49, 53, 233, 194, 46, 149,
                172, 14, 114, 22, 38, 51, 153, 136, 58, 149, 27, 56, 30, 105>>
 
   @amount trunc(:math.pow(10, 35))
 
+  @spec dry_run(tuple() | map(), block_hash()) :: {:ok, tuple()}
   def dry_run(tx_or_call_req, block_hash) do
     accounts = [%{pub_key: @runner_pk, amount: @amount}]
     txs = (is_tuple(tx_or_call_req) && [{:tx, tx_or_call_req}]) || [{:call_req, tx_or_call_req}]

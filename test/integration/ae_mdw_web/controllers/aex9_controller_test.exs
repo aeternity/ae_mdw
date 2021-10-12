@@ -67,7 +67,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
       balances_response = json_response(conn, 200)
 
-      assert Enum.find(balances_response, fn %{"contract_id" => contract_id} ->
+      assert Enum.any?(balances_response, fn %{"contract_id" => contract_id} ->
                contract_id == @big_balance_contract_id
              end)
     end

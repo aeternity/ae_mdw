@@ -1,5 +1,5 @@
 defmodule AeMdw.Contract do
-  #credo:disable-for-this-file
+  # credo:disable-for-this-file
   @moduledoc """
   AE Smart Contracts info and calls.
   """

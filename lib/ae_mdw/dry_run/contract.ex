@@ -39,10 +39,10 @@ defmodule AeMdw.DryRun.Contract do
     |> Util.ok!()
   end
 
-  def min_gas_price do
+  defp min_gas_price do
     protocol = :aec_hard_forks.protocol_effective_at_height(1)
 
-    :erlang.max(
+    max(
       :aec_governance.minimum_gas_price(protocol),
       :aec_tx_pool.minimum_miner_gas_price()
     )
