@@ -14,6 +14,9 @@ defmodule AeMdw.DryRun.Runner do
 
   @amount trunc(:math.pow(10, 35))
 
+  @doc """
+  Executes a transaction on a certain state of the chain.
+  """
   @spec dry_run(tuple() | map(), block_hash()) :: {:ok, tuple()}
   def dry_run(tx_or_call_req, block_hash) do
     accounts = [%{pub_key: @runner_pk, amount: @amount}]
@@ -21,6 +24,9 @@ defmodule AeMdw.DryRun.Runner do
     :aec_dry_run.dry_run(block_hash, accounts, txs, tx_events: false)
   end
 
+  @doc """
+  Creates a contract call transaction record (without running it).
+  """
   @spec new_contract_call_tx(pubkey(), block_hash(), String.t(), list()) :: tuple()
   def new_contract_call_tx(contract_pk, block_hash, function_name, args) do
     Contract.new_call_tx(@runner_pk, contract_pk, block_hash, function_name, args)
