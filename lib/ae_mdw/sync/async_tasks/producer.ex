@@ -6,10 +6,13 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
 
   alias AeMdw.Db.Model
   alias AeMdw.Sync.AsyncTasks.Store
+  alias AeMdw.Sync.AsyncTasks.Stats
 
   require Model
 
   @typep task_index() :: {pos_integer(), atom()}
+
+  @max_buffer_size 100
 
   @spec start_link(any()) :: GenServer.on_start()
   def start_link(_args) do
@@ -51,6 +54,10 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
       Store.set_processing(index)
     end
 
+    new_state.buffer
+    |> length()
+    |> Stats.update(@max_buffer_size)
+
     {:reply, m_task, new_state}
   end
 
@@ -58,7 +65,7 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   # Private functions
   #
   defp next_state(%{buffer: []} = state) do
-    case Store.fetch_unprocessed() do
+    case Store.fetch_unprocessed(@max_buffer_size) do
       [] -> {nil, state}
       [m_task | buffer_tasks] -> {m_task, %{buffer: buffer_tasks}}
     end

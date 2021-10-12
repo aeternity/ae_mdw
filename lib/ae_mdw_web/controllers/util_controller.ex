@@ -11,6 +11,7 @@ defmodule AeMdwWeb.UtilController do
 
           properties do
             mdw_height(:integer, "The height of the mdw", required: true)
+            mdw_async_tasks(:map, "Async tasks counters of the mdw", required: true)
             mdw_synced(:boolean, "The synced status", required: true)
             mdw_tx_index(:integer, "The last transaction index", required: true)
             mdw_version(:string, "The mdw version", required: true)

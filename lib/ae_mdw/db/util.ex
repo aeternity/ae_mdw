@@ -1,6 +1,8 @@
 defmodule AeMdw.Db.Util do
   alias AeMdw.Db.Model
 
+  alias AeMdw.Sync.AsyncTasks.Stats
+
   require Logger
   require Model
 
@@ -258,6 +260,7 @@ defmodule AeMdw.Db.Util do
     {mdw_tx_index, mdw_height} = safe_mdw_tx_index_and_height()
     mdw_syncing? = is_pid(Process.whereis(AeMdw.Db.Sync.Supervisor))
     {:ok, version} = :application.get_key(:ae_mdw, :vsn)
+    async_tasks_counters = Stats.counters()
 
     %{
       node_version: :aeu_info.get_version(),
@@ -268,6 +271,7 @@ defmodule AeMdw.Db.Util do
       mdw_version: to_string(version),
       mdw_height: mdw_height,
       mdw_tx_index: mdw_tx_index,
+      mdw_async_tasks: async_tasks_counters,
       # MDW is always 1 generation behind
       mdw_synced: node_height == mdw_height + 1,
       mdw_syncing: mdw_syncing?
