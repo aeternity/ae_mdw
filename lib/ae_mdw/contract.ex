@@ -1,13 +1,17 @@
 defmodule AeMdw.Contract do
+  @moduledoc """
+  AE Smart Contracts info and calls.
+  """
   alias AeMdw.EtsCache
   alias AeMdw.Node.Db, as: DBN
   alias AeMdw.Log
+  alias AeMdw.DryRun
 
   import :erlang, only: [tuple_to_list: 1]
 
   import AeMdw.Util
 
-  @tab AeMdw.Contract
+  @tab __MODULE__
 
   ################################################################################
 
@@ -104,64 +108,29 @@ defmodule AeMdw.Contract do
     {name, symbol, decimals}
   end
 
-  def call_contract(contract_pubkey, function_name, args),
-    do: call_contract(contract_pubkey, DBN.top_height_hash(false), function_name, args)
+  def call_contract(contract_pk, function_name, args),
+    do: call_contract(contract_pk, DBN.top_height_hash(false), function_name, args)
 
-  def call_contract(contract_pubkey, {_, height, block_hash}, function_name, args) do
-    {tx_env, trees} = :aetx_env.tx_env_and_trees_from_hash(:aetx_contract, block_hash)
-    contracts = :aec_trees.contracts(trees)
-    contract = :aect_state_tree.get_contract(contract_pubkey, contracts)
+  def call_contract(contract_pk, {_type, _height, block_hash}, function_name, args) do
+    contract_pk
+    |> DryRun.Runner.new_contract_call_tx(block_hash, function_name, args)
+    |> DryRun.Runner.dry_run(block_hash)
+    |> case do
+      {:ok, {[contract_call_tx: {:ok, call_res}], _events}} ->
+        case :aect_call.return_type(call_res) do
+          :ok ->
+            res_binary = :aect_call.return_value(call_res)
+            {:ok, :aeb_fate_encoding.deserialize(res_binary)}
 
-    version = :aect_contracts.ct_version(contract)
-    creator = :aect_contracts.owner_pubkey(contract)
-    store = :aect_contracts.state(contract)
+          :error ->
+            {:error, :aect_call.return_value(call_res)}
 
-    caller_pubkey = <<0::256>>
-    origin = <<0::256>>
-    gas_limit = 1_000_000
-    gas_price = 0
-    fee = 0
-    amount = 0
-    call_stack = []
+          :revert ->
+            :revert
+        end
 
-    caller_id = :aeser_id.create(:account, caller_pubkey)
-    contract_id = :aect_contracts.id(contract)
-
-    call = :aect_call.new(caller_id, 0, contract_id, height, gas_price)
-    {:code, code} = :aect_contracts.code(contract)
-    call_data = :aeb_fate_abi.create_calldata('#{function_name}', args) |> ok!
-
-    call_def = %{
-      caller: caller_pubkey,
-      contract: contract_pubkey,
-      fee: fee,
-      gas: gas_limit,
-      gas_price: gas_price,
-      call_data: call_data,
-      amount: amount,
-      call_stack: call_stack,
-      code: code,
-      store: store,
-      call: call,
-      trees: trees,
-      tx_env: tx_env,
-      off_chain: false,
-      origin: origin,
-      creator: creator
-    }
-
-    {call_res, _trees, _env} = :aect_dispatch.run(version, call_def)
-
-    case :aect_call.return_type(call_res) do
-      :ok ->
-        res_binary = :aect_call.return_value(call_res)
-        {:ok, :aeb_fate_encoding.deserialize(res_binary)}
-
-      :error ->
-        {:error, :aect_call.return_value(call_res)}
-
-      :revert ->
-        :revert
+      _error ->
+        {:error, :dry_run_error}
     end
   end
 
