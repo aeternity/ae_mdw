@@ -39,28 +39,17 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
     end)
   end
 
-  @spec save(atom(), list()) :: :ok
-  def save(task_type, args) do
-    :mnesia.sync_dirty(fn ->
-      index = {System.system_time(), task_type}
-      m_task = Model.async_tasks(index: index, args: args)
-      :mnesia.write(Model.AsyncTasks, m_task, :write)
+  @spec save_new(atom(), list()) :: :ok
+  def save_new(task_type, args) do
+    :mnesia.sync_transaction(fn ->
+      if not is_enqueued?(task_type, args) do
+        index = {System.system_time(), task_type}
+        m_task = Model.async_tasks(index: index, args: args)
+        :mnesia.write(Model.AsyncTasks, m_task, :write)
+      end
     end)
 
     :ok
-  end
-
-  @spec is_enqueued?(atom(), list()) :: boolean()
-  def is_enqueued?(task_type, args) do
-    exists_spec =
-      Ex2ms.fun do
-        {:_, {:_, ^task_type}, ^args} -> true
-      end
-
-    case Util.select(Model.AsyncTasks, exists_spec, 1) do
-      {[true], _cont} -> true
-      {[], _cont} -> false
-    end
   end
 
   @spec set_processing(task_index()) :: :ok
@@ -71,8 +60,26 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
 
   @spec set_done(task_index()) :: :ok
   def set_done(task_index) do
-    :mnesia.dirty_delete(Model.AsyncTasks, task_index)
+    :mnesia.sync_transaction(fn ->
+      :mnesia.delete(Model.AsyncTasks, task_index, :write)
+    end)
+
     :ets.delete_object(:async_tasks_processing, task_index)
     :ok
+  end
+
+  #
+  # Private functions
+  #
+  defp is_enqueued?(task_type, args) do
+    exists_spec =
+      Ex2ms.fun do
+        {:_, {:_, ^task_type}, ^args} -> true
+      end
+
+    case :mnesia.select(Model.AsyncTasks, exists_spec, 1, :read) do
+      {[true], _cont} -> true
+      {[], _cont} -> false
+    end
   end
 end
