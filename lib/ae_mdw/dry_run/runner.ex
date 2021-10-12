@@ -11,7 +11,7 @@ defmodule AeMdw.DryRun.Runner do
   @runner_pk <<13, 24, 60, 171, 170, 28, 99, 114, 174, 14, 112, 19, 49, 53, 233, 194, 46, 149,
                172, 14, 114, 22, 38, 51, 153, 136, 58, 149, 27, 56, 30, 105>>
 
-  @amount :math.pow(10, 35) |> trunc()
+  @amount trunc(:math.pow(10, 35))
 
   def dry_run(tx_or_call_req, block_hash) do
     accounts = [%{pub_key: @runner_pk, amount: @amount}]

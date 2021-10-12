@@ -1,7 +1,9 @@
 defmodule AeMdw.Contract do
+  #credo:disable-for-this-file
   @moduledoc """
   AE Smart Contracts info and calls.
   """
+
   alias AeMdw.EtsCache
   alias AeMdw.Node.Db, as: DBN
   alias AeMdw.Log
