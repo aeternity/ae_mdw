@@ -15,16 +15,26 @@ defmodule Integration.AeMdwWeb.UtilControllerTest do
 
       conn = get(conn, "/status")
 
-      assert Map.drop(json_response(conn, 200), ["node_revision", "mdw_syncing"]) == %{
-               "mdw_version" => AeMdw.MixProject.project()[:version],
-               "node_version" => to_string(node_vsn),
-               "mdw_height" => mdw_height,
-               "node_height" => node_height,
-               "mdw_tx_index" => mdw_tx_index,
-               "mdw_synced" => node_height == mdw_height + 1,
+      node_version = to_string(node_vsn)
+      mdw_version = AeMdw.MixProject.project()[:version]
+      mdw_synced = node_height == mdw_height + 1
+
+      assert %{
+               "mdw_version" => ^mdw_version,
+               "node_version" => ^node_version,
+               "mdw_height" => ^mdw_height,
+               "node_height" => ^node_height,
+               "mdw_tx_index" => ^mdw_tx_index,
+               "mdw_synced" => ^mdw_synced,
+               "mdw_async_tasks" => async_tasks_map,
                "node_progress" => 100.0,
                "node_syncing" => false
-             }
+             } = Map.drop(json_response(conn, 200), ["node_revision", "mdw_syncing"])
+
+      assert %{"producer_buffer" => producer_buffer, "total_pending" => total_pending} =
+               async_tasks_map
+
+      assert is_integer(producer_buffer) and is_integer(total_pending)
     end
   end
 end

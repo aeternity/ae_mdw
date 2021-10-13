@@ -1,45 +1,39 @@
 defmodule AeMdw.Sync.AsyncTasks.StatsTest do
   use ExUnit.Case
 
-  alias AeMdw.Db.Util
+  alias AeMdw.Db.Model
   alias AeMdw.Sync.AsyncTasks.Stats
 
-  @task_type :update_aex9_presence
+  require Model
+
   @contract_pk "ct_2bwK4mxEe3y9SazQRPXE8NdXikSTqF2T9FhNrawRzFA21yacTo"
-  @account_pk "ak_2CuCtmoExsuW7iG5BbRAoncSZAoZt8Abu21qrPUhqfFNin75iL"
 
-  test "update/2 and counter/0 success without pending db records" do
-    assert Stats.update(10, 100) == :ok
-    assert Stats.counters() == %{producer_buffer: 10, total_pending: 0}
-  end
+  describe "update/2 and counter/0 success" do
+    test "without pending db records" do
+      assert Stats.update(10, 100) == :ok
+      assert Stats.counters() == %{producer_buffer: 10, total_pending: 0}
+    end
 
-  test "with pending db records" do
-    :mnesia.transaction(fn ->
-      delete_after? = not Contract.aex9_presence_exists?(@contract_pk, @account_pk)
-      setup_delete_aex9_presence(@contract_pk, @account_pk)
-      # enqueue and quickly dequeue before any Consumer
-      args = [@contract_pk, @account_pk]
-      assert not Store.is_enqueued?(@task_type, args)
-      Producer.enqueue(@task_type, args)
-      assert Store.is_enqueued?(@task_type, args)
-      assert Model.async_tasks(index: index, args: ^args) = task = Producer.dequeue()
-      assert Util.read(Model.AsyncTasks, index) == [task]
+    test "with pending db records" do
+      :mnesia.transaction(fn ->
+        db_pending_count = 50
+        # setup
+        indexes_to_clean =
+          Enum.map(1..db_pending_count, fn i ->
+            index = {System.system_time() + i, :update_aex9_presence}
+            m_task = Model.async_tasks(index: index, args: [@contract_pk, <<i::256>>])
+            :mnesia.write(Model.AsyncTasks, m_task, :write)
+            index
+          end)
 
-      # discard task as if processed
-      Producer.notify_consumed(index)
-      assert nil == Producer.dequeue()
+        assert Stats.update(10, 100) == :ok
+        assert Stats.counters() == %{producer_buffer: 10, total_pending: db_pending_count}
 
-      # enqueue and check that was processed
-      Producer.enqueue(@task_type, args)
-      Process.sleep(1000)
-      assert Util.read(Model.AsyncTasks, index) == []
-      assert Contract.aex9_presence_exists?(@contract_pk, @account_pk)
-
-      if delete_after?, do: setup_delete_aex9_presence(@contract_pk, @account_pk)
-    end)
-  end
-
-  defp setup_delete_aex9_presence(contract_pk, account_pk) do
-    Util.do_dels([{Model.Aex9AccountPresence, [{account_pk, -1, contract_pk}]}])
+        # clean setup
+        Enum.each(indexes_to_clean, fn index ->
+          :mnesia.delete(Model.AsyncTasks, index, :delete)
+        end)
+      end)
+    end
   end
 end

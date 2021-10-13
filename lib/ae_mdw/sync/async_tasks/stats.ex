@@ -37,7 +37,7 @@ defmodule AeMdw.Sync.AsyncTasks.Stats do
 
     %{
       producer_buffer: producer_buffer_len,
-      total_pending: db_pending_count,
+      total_pending: db_pending_count
     }
   end
 
