@@ -37,7 +37,7 @@ defmodule AeMdw.Db.Status do
   defp safe_mdw_tx_index_and_height do
     try do
       mdw_tx_index = Util.last_txi()
-      {mdw_height, _mbi} = Util.read_tx!(mdw_tx_index) |> Model.tx(:block_index)
+      {mdw_height, _mbi} = mdw_tx_index |> Util.read_tx!() |> Model.tx(:block_index)
       {mdw_tx_index, mdw_height}
     rescue
       _any_error ->
