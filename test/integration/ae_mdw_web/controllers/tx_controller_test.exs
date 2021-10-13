@@ -908,14 +908,6 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       check_response_data(response["data"], rest, :no_prefix, @default_limit)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
-          @default_limit
-        )
-
-      assert ^data = response["data"]
-
       conn
       |> get_response_from_next_page(response)
       |> check_response_data(rest, :no_prefix, @default_limit)
