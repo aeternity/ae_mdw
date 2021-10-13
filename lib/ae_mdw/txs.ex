@@ -45,9 +45,9 @@ defmodule AeMdw.Txs do
     cursor = deserialize_cursor(cursor)
 
     try do
-      tables_keys = parse_tables(ids, types, cursor, direction)
+      tables_iterators = parse_tables(ids, types, cursor, direction)
 
-      {txis, next_cursor} = Collection.merge_with_keys(tables_keys, direction, limit)
+      {txis, next_cursor} = Collection.merge_with_keys(tables_iterators, direction, limit)
 
       {:ok, render_list(txis, expand?), serialize_cursor(next_cursor)}
     rescue
@@ -281,7 +281,7 @@ defmodule AeMdw.Txs do
             {tx_type, Node.tx_ids(tx_type)[field]}
           end)
         else
-          raise ErrInput.TxField, value: field
+          raise ErrInput.TxField, value: ":#{field}"
         end
 
       [type_prefix, field] ->
@@ -294,7 +294,7 @@ defmodule AeMdw.Txs do
             if MapSet.member?(field_types(tx_field), tx_type) do
               [{tx_type, Node.tx_ids(tx_type)[tx_field]}]
             else
-              raise ErrInput.TxField, value: field
+              raise ErrInput.TxField, value: ":#{field}"
             end
 
           type_prefix not in Node.tx_prefixes() ->
@@ -305,7 +305,7 @@ defmodule AeMdw.Txs do
         end
 
       _invalid_field ->
-        raise ErrInput.TxField, value: field
+        raise ErrInput.TxField, value: ":#{field}"
     end
   end
 

@@ -164,9 +164,13 @@ defmodule AeMdw.Collection do
       Enum.reduce(table_iterators, %{}, fn {table, initial_key, take_while, is_valid_key?,
                                             sort_key},
                                            acc ->
-        case next_key(table, direction, initial_key, take_while) do
-          {:ok, next_key} ->
-            Map.put(acc, {table, next_key}, {take_while, is_valid_key?, sort_key})
+        case first_key(table, direction, initial_key) do
+          {:ok, first_key} ->
+            if take_while.(first_key) do
+              Map.put(acc, {table, first_key}, {take_while, is_valid_key?, sort_key})
+            else
+              acc
+            end
 
           :none ->
             acc
@@ -193,13 +197,15 @@ defmodule AeMdw.Collection do
               end)
             end
 
+          new_acc = Map.delete(next_keys, {table, next_key})
+
           new_next_keys =
             case next_key(table, direction, next_key, take_while) do
               {:ok, new_key} ->
-                Map.put(next_keys, {table, new_key}, {take_while, is_valid_key?, sort_key})
+                Map.put(new_acc, {table, new_key}, {take_while, is_valid_key?, sort_key})
 
               :none ->
-                Map.delete(next_keys, {table, next_key})
+                new_acc
             end
 
           if is_valid_key?.(next_key) do
@@ -231,6 +237,15 @@ defmodule AeMdw.Collection do
 
       :not_found ->
         :none
+    end
+  end
+
+  defp first_key(tab, direction, nil), do: Mnesia.next_key(tab, direction, nil)
+
+  defp first_key(tab, direction, key) do
+    case Mnesia.fetch(tab, key) do
+      {:ok, _record} -> {:ok, key}
+      :not_found -> Mnesia.next_key(tab, direction, key)
     end
   end
 end
