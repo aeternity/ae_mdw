@@ -56,13 +56,12 @@ defmodule AeMdw.Txs do
     end
   end
 
-  # The purpose of this function is to generate the tables specification that will be used as input
-  # for Collection.merge_with_keys/3. The function is divided into three clauses. There's an
+  # The purpose of this function is to generate the streams that will be then used as input for
+  # Collection.merge_streams/3 function. The function is divided into three clauses. There's an
   # explanation before each.
   #
   # When no filters are provided, all transactions are displayed, which means that we only need to
-  # use the Txs table. In addition, take_while and is_valid_key always return true, because we want
-  # every key.
+  # use the Txs table, without any filters.
   defp build_streams([], [], cursor, direction) do
     [
       Collection.stream(@table, direction, cursor)
@@ -75,22 +74,13 @@ defmodule AeMdw.Txs do
   # different.
   #
   # Examples
-  #   Given the Type table:
-  #     [
-  #       {:oracle_response_tx, 1},
-  #       {:oracle_response_tx, 4},
-  #       {:paying_for_tx, 3},
-  #       {:spend_tx, 0}
-  #       {:spend_tx, 2}
-  #       {:spend_tx, 5}
-  #     ]
-  #    And types = [:paying_for_tx, :spend_tx]
+  #   Given types = [:paying_for_tx, :spend_tx]
   #
-  #    Then the result of this function (with cursor = nil and direction = forward) will be
-  #    [
-  #      {Type, {:paying_for_tx, 0}, &match?({:paying_for_tx, _txi}, &1), true_fn, identity_fn},
-  #      {Type, {:paying_for_tx, 0}, &match?({:spend_tx, _txi}, &1), true_fn, identity_fn}
-  #    ]
+  #    the result of this function (with cursor = nil and direction = forward) will be two streams:
+  #    - A stream on the Type table that will go from {:paying_for_tx, 0} forward, until a different
+  #      type is found
+  #    - A stream on the Type table that will go from {:spend_tx, 0} forward, until a different type
+  #      is found.
   defp build_streams([], types, cursor, direction) do
     Enum.map(types, fn tx_type ->
       initial_key = if direction == :forward, do: {tx_type, cursor || 0}, else: {tx_type, cursor}
@@ -160,29 +150,19 @@ defmodule AeMdw.Txs do
   #      a new table_key tuple is built (the input of Collection.merge_with_keys/3):
   #        - For {:spend_tx, 1}:
   #            initial_key = {:spend_tx, 1, B, 0}
-  #            take_while = &match?({:spend_tx, 1, B, _tx_index}, &1)
-  #            is_valid_key1? = fn {:spend_tx, 1, B, txi} ->
+  #            Only take txis while it matches the {:spend_tx, 1, B, _tx_index} tuple
+  #            Only take txis where A has a spend_tx transaction (as a sender) too:
   #              Mnesia.exists?(Field, {:spend_tx, 1, A, txi})
-  #            end
-  #          It is a valid key if A is in that spend_tx too in position 1
   #        - For {:spend_tx, 2}:
   #            initial_key = {:spend_tx, 2, B, 0}
-  #            take_while = &match?({:spend_tx, 2, B, _tx_index}, &1)
-  #            is_valid_key2? = fn {:spend_tx, 2, B, txi} ->
+  #            Only take txis while it matches the {:spend_tx, 2, B, _tx_index} tuple
+  #            Only take txis where A has a spend_tx transaction  (as a sender) too:
   #              Mnesia.exists?(Field, {:spend_tx, 1, A, txi})
-  #            end
-  #          It is a valid key if A is in that spend_tx too in position 2
   #        - Same thing for oracle_query_tx fields
-  #   4. All of the table_iterators are returned for Collection.merge_with_keys/3:
-  #      [
-  #        {Field, {:spend_tx, 1, B, 0}, &match?({:spend_tx, 1, B, _tx_index}, &1), is_valid_key_1?, sort_key},
-  #        {Field, {:spend_tx, 2, B, 0}, &match?({:spend_tx, 2, B, _tx_index}, &1), is_valid_key_2?, sort_key},
-  #        {Field, {:oracle_query_tx, 1, B, 0}, &match?({:oracle_query_tx, 1, B, _tx_index}, &1), is_valid_key_3?, sort_key},
-  #        {Field, {:oracle_query_tx, 3, B, 0}, &match?({:oracle_query_tx, 3, B, _tx_index}, &1), is_valid_key_4?, sort_key},
-  #      ]
-  #      which will merge the keys {:spend_tx, 1, B, X} and {:spend_tx, 2, B, X},
-  #      {:oracle_query_tx, 1, B, X} and {:oracle_query_tx, 3, B, X} for any value of X, filtering
-  #      out all those transactions that do not include A in them.
+  #   4. All of the streams are returned for Collection.merge_streams/3 to take, which will merge
+  #      the keys {:spend_tx, 1, B, X} and {:spend_tx, 2, B, X}, {:oracle_query_tx, 1, B, X} and
+  #      {:oracle_query_tx, 3, B, X} for any value of X, filtering out all those transactions that
+  #      do not include A in them.
   defp build_streams(ids, types, cursor, direction) do
     extract_txi = fn {_tx_type, _field_pos, _id, tx_index} -> tx_index end
     initial_cursor = if direction == :backward, do: cursor, else: cursor || 0
