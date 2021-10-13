@@ -10,12 +10,6 @@ defmodule AeMdw.Collection do
   @typep cursor() :: Mnesia.cursor()
   @typep limit() :: Mnesia.limit()
   @typep record() :: Mnesia.record()
-  @typep key() :: Mnesia.key()
-
-  @typep take_while_fn() :: term()
-  @typep is_valid_key_fn() :: term()
-  @typep sort_key_fn() :: term()
-  @typep table_iterator() :: {table(), key(), take_while_fn(), is_valid_key_fn(), sort_key_fn()}
 
   @doc """
   Returns the cursor-paginated results of 2 different mnesia tables, where the
@@ -127,125 +121,85 @@ defmodule AeMdw.Collection do
   end
 
   @doc """
-  Merges the results from different tables (starting from a key for each table)
-  into a single table in a sorted order.
-
-  ## Examples
-
-    iex> :mnesia.dirty_all_keys(:table1)
-    [:a, :c, :g]
-    iex> :mnesia.dirty_all_keys(:table2)
-    [:b, :d, :e, :f]
-    iex> true_fn = fn _key -> true end
-    #Function<7.126501267/1 in :erl_eval.expr/5>
-    iex> identity_fn = &(&1)
-    #Function<7.126501267/1 in :erl_eval.expr/5>
-
-    iex> table_iterators = [
-    ...>   {:table1, :a, true_fn, true_fn, identity_fn}
-    ...>   {:table2, :a, true_fn, true_fn, identity_fn}
-    ...> ]
-    iex> AeMdw.Collection.merge_with_keys(table_iterators, :forward, 3)
-    {[{:a, :table1}, {:b, :table2}, {:c, :table1}], :d}
-
-
-    iex> table_iterators = [
-    ...>   {:table1, :a, &(&1 < :g), &(&1 != :c), identity_fn},
-    ...>   {:table2, :a, &(&1 < :f), &(&1 != :d), identity_fn}
-    ...> ]
-    iex> AeMdw.Collection.merge_with_keys(table_iterators, :forward, 3)
-    {[{:a, :table1}, {:b, :table2}, {:e, :table1}], nil}
-
+  Builds a stream from records from a table starting from the initial_key given.
   """
-  @spec merge_with_keys([table_iterator()], direction(), limit()) ::
-          {[{record(), table()}], cursor()}
-  def merge_with_keys(table_iterators, direction, limit) do
-    next_keys =
-      Enum.reduce(table_iterators, %{}, fn {table, initial_key, take_while, is_valid_key?,
-                                            sort_key},
-                                           acc ->
-        case first_key(table, direction, initial_key) do
-          {:ok, first_key} ->
-            if take_while.(first_key) do
-              Map.put(acc, {table, first_key}, {take_while, is_valid_key?, sort_key})
-            else
-              acc
-            end
+  def stream(tab, direction, initial_key) do
+    case initial_key do
+      nil ->
+        Mnesia.next_key(tab, direction, nil)
 
-          :none ->
-            acc
-        end
-      end)
-
-    keys =
-      Stream.unfold({next_keys, limit + 1}, fn
-        {_next_keys, 0} ->
-          nil
-
-        {next_keys, _limit} when next_keys == %{} ->
-          nil
-
-        {next_keys, limit} ->
-          {{table, next_key}, {take_while, is_valid_key?, sort_key}} =
-            if direction == :backward do
-              Enum.max_by(next_keys, fn {{_table, key}, {_take_while, _is_valid_key?, sort_key}} ->
-                sort_key.(key)
-              end)
-            else
-              Enum.min_by(next_keys, fn {{_table, key}, {_take_while, _is_valid_key?, sort_key}} ->
-                sort_key.(key)
-              end)
-            end
-
-          new_acc = Map.delete(next_keys, {table, next_key})
-
-          new_next_keys =
-            case next_key(table, direction, next_key, take_while) do
-              {:ok, new_key} ->
-                Map.put(new_acc, {table, new_key}, {take_while, is_valid_key?, sort_key})
-
-              :none ->
-                new_acc
-            end
-
-          if is_valid_key?.(next_key) do
-            {{next_key, table, sort_key.(next_key)}, {new_next_keys, limit - 1}}
-          else
-            {nil, {new_next_keys, limit}}
-          end
-      end)
-
-    keys = Stream.reject(keys, &is_nil/1)
-
-    case Enum.split(keys, limit) do
-      {keys, [{_cursor, _cursor_table, cursor_sort_key}]} ->
-        {Enum.map(keys, fn {key, tab, _sort_key} -> {key, tab} end), cursor_sort_key}
-
-      {keys, []} ->
-        {Enum.map(keys, fn {key, tab, _sort_key} -> {key, tab} end), nil}
-    end
-  end
-
-  defp next_key(table, direction, key, take_while) do
-    case Mnesia.next_key(table, direction, key) do
-      {:ok, new_key} ->
-        if take_while.(new_key) do
-          {:ok, new_key}
+      _initial_key ->
+        if Mnesia.exists?(tab, initial_key) do
+          {:ok, initial_key}
         else
-          :none
+          Mnesia.next_key(tab, direction, initial_key)
         end
+    end
+    |> case do
+      {:ok, first_key} ->
+        Stream.unfold(first_key, fn
+          :end_keys ->
+            nil
+
+          key ->
+            case Mnesia.next_key(tab, direction, key) do
+              {:ok, next_key} -> {key, next_key}
+              :not_found -> {key, :end_keys}
+            end
+        end)
 
       :not_found ->
-        :none
+        []
     end
   end
 
-  defp first_key(tab, direction, nil), do: Mnesia.next_key(tab, direction, nil)
+  @doc """
+  """
+  def merge_streams(streams, direction, limit) do
+    streams
+    |> Enum.reduce(:gb_sets.new(), fn stream, acc ->
+      case StreamSplit.take_and_drop(stream, 1) do
+        {[first_key], rest} -> :gb_sets.add_element({first_key, rest}, acc)
+        {[], []} -> acc
+      end
+    end)
+    |> Stream.unfold(fn gb_set ->
+      if :gb_sets.is_empty(gb_set) do
+        nil
+      else
+        {{key, rest_stream}, rest_set} =
+          if direction == :forward do
+            :gb_sets.take_smallest(gb_set)
+          else
+            :gb_sets.take_largest(gb_set)
+          end
 
-  defp first_key(tab, direction, key) do
-    case Mnesia.fetch(tab, key) do
-      {:ok, _record} -> {:ok, key}
-      :not_found -> Mnesia.next_key(tab, direction, key)
+        case StreamSplit.take_and_drop(rest_stream, 1) do
+          {[next_key], next_stream} ->
+            {key, :gb_sets.add_element({next_key, next_stream}, rest_set)}
+
+          {[], []} ->
+            {key, rest_set}
+        end
+      end
+    end)
+    |> remove_dups()
+    |> Stream.take(limit + 1)
+    |> Enum.split(limit)
+    |> case do
+      {keys, [cursor]} -> {keys, cursor}
+      {keys, []} -> {keys, nil}
     end
+  end
+
+  defp remove_dups(stream) do
+    Stream.transform(stream, [], fn
+      item, visited_keys ->
+        if item in visited_keys do
+          {[], [item | visited_keys]}
+        else
+          {[item], [item | visited_keys]}
+        end
+    end)
   end
 end

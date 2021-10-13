@@ -43,19 +43,13 @@ defmodule AeMdwWeb.TxController do
   end
 
   def txs(%Conn{assigns: assigns, query_params: query_params} = conn, params) do
-    %{direction: direction, limit: limit, cursor: cursor, expand?: expand?, query: query} =
-      assigns
+    %{direction: direction, limit: limit, cursor: cursor, query: query} = assigns
 
-    case Txs.fetch_txs(direction, query, cursor, limit, expand?) do
+    case Txs.fetch_txs(direction, query, cursor, limit) do
       {:ok, txs, new_cursor} ->
         uri =
           if new_cursor do
-            next_params =
-              Map.merge(query_params, %{
-                "cursor" => new_cursor,
-                "limit" => limit,
-                "expand" => expand?
-              })
+            next_params = Map.merge(query_params, %{"cursor" => new_cursor, "limit" => limit})
 
             URI.to_string(%URI{path: "/txs/#{direction}", query: URI.encode_query(next_params)})
           end

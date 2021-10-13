@@ -37,19 +37,19 @@ defmodule AeMdw.Txs do
 
   @create_tx_types [:contract_create_tx, :channel_create_tx, :oracle_register_tx, :name_claim_tx]
 
-  @spec fetch_txs(direction(), query(), cursor() | nil, limit(), boolean()) ::
+  @spec fetch_txs(direction(), query(), cursor() | nil, limit()) ::
           {:ok, [tx()], cursor() | nil} | {:error, reason()}
-  def fetch_txs(direction, query, cursor, limit, expand?) do
+  def fetch_txs(direction, query, cursor, limit) do
     ids = query |> Map.get(:ids, MapSet.new()) |> MapSet.to_list()
     types = query |> Map.get(:types, MapSet.new()) |> MapSet.to_list()
     cursor = deserialize_cursor(cursor)
 
     try do
-      tables_iterators = parse_tables(ids, types, cursor, direction)
+      txis_streams = build_streams(ids, types, cursor, direction)
 
-      {txis, next_cursor} = Collection.merge_with_keys(tables_iterators, direction, limit)
+      {txis, next_cursor} = Collection.merge_streams(txis_streams, direction, limit)
 
-      {:ok, render_list(txis, expand?), serialize_cursor(next_cursor)}
+      {:ok, Enum.map(txis, &fetch!/1), serialize_cursor(next_cursor)}
     rescue
       e in ErrInput ->
         {:error, e.message}
@@ -63,13 +63,10 @@ defmodule AeMdw.Txs do
   # When no filters are provided, all transactions are displayed, which means that we only need to
   # use the Txs table. In addition, take_while and is_valid_key always return true, because we want
   # every key.
-  defp parse_tables([], [], cursor, _direction) do
-    initial_key = cursor
-    take_while = fn _key -> true end
-    sort_key = fn key -> key end
-    is_valid_key? = fn _key -> true end
-
-    [{@table, initial_key, take_while, is_valid_key?, sort_key}]
+  defp build_streams([], [], cursor, direction) do
+    [
+      Collection.stream(@table, direction, cursor)
+    ]
   end
 
   # When only tx type filters are provided, then we only need to use the Type table to extract all
@@ -94,15 +91,14 @@ defmodule AeMdw.Txs do
   #      {Type, {:paying_for_tx, 0}, &match?({:paying_for_tx, _txi}, &1), true_fn, identity_fn},
   #      {Type, {:paying_for_tx, 0}, &match?({:spend_tx, _txi}, &1), true_fn, identity_fn}
   #    ]
-  defp parse_tables([], types, cursor, direction) do
-    is_valid_key? = fn _key -> true end
-    sort_key = fn {_tx_type, tx_index} -> tx_index end
-
-    Enum.map(types, fn tx_type when is_atom(tx_type) ->
+  defp build_streams([], types, cursor, direction) do
+    Enum.map(types, fn tx_type ->
       initial_key = if direction == :forward, do: {tx_type, cursor || 0}, else: {tx_type, cursor}
-      take_while = &match?({^tx_type, _txi}, &1)
 
-      {@type_table, initial_key, take_while, is_valid_key?, sort_key}
+      @type_table
+      |> Collection.stream(direction, initial_key)
+      |> Stream.take_while(&match?({^tx_type, _txi}, &1))
+      |> Stream.map(fn {_tx_type, tx_index} -> tx_index end)
     end)
   end
 
@@ -187,9 +183,7 @@ defmodule AeMdw.Txs do
   #      which will merge the keys {:spend_tx, 1, B, X} and {:spend_tx, 2, B, X},
   #      {:oracle_query_tx, 1, B, X} and {:oracle_query_tx, 3, B, X} for any value of X, filtering
   #      out all those transactions that do not include A in them.
-  defp parse_tables(ids, types, cursor, direction) do
-    sort_key = fn {_tx_type, _field_pos, _id, tx_index} -> tx_index end
-
+  defp build_streams(ids, types, cursor, direction) do
     ids_fields =
       Enum.map(ids, fn {field, id} ->
         {id, extract_transaction_types_and_field_pos(field)}
@@ -232,14 +226,13 @@ defmodule AeMdw.Txs do
             {tx_type, field_pos, min_account_id, cursor || 0}
           end
 
-        take_while = &match?({^tx_type, ^field_pos, ^min_account_id, _tx_index}, &1)
-
-        # credo:disable-for-next-line
-        is_valid_key? = fn {_tx_type, _field_pos, _id, tx_index} ->
+        @field_table
+        |> Collection.stream(direction, initial_key)
+        |> Stream.take_while(&match?({^tx_type, ^field_pos, ^min_account_id, _tx_index}, &1))
+        |> Stream.filter(fn {_tx_type, _field_pos, _id, tx_index} ->
           all_accounts_have_tx?(tx_type, tx_index, rest_accounts)
-        end
-
-        {@field_table, initial_key, take_while, is_valid_key?, sort_key}
+        end)
+        |> Stream.map(fn {_tx_type, _field_pos, _id, tx_index} -> tx_index end)
       end)
     end)
   end
@@ -307,14 +300,6 @@ defmodule AeMdw.Txs do
       _invalid_field ->
         raise ErrInput.TxField, value: ":#{field}"
     end
-  end
-
-  defp render_list(table_keys, _expand?) do
-    Enum.map(table_keys, fn
-      {txi, @table} -> fetch!(txi)
-      {{_tx_type, _field_pos, _pubkey, txi}, @field_table} -> fetch!(txi)
-      {{_tx_type, txi}, @type_table} -> fetch!(txi)
-    end)
   end
 
   @spec fetch!(txi()) :: tx()
