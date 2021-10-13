@@ -1,4 +1,6 @@
 defmodule AeMdw.Contract do
+  # credo:disable-for-this-file
+
   alias AeMdw.EtsCache
   alias AeMdw.Node.Db, as: DBN
   alias AeMdw.Log
