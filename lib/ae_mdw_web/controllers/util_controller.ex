@@ -1,7 +1,21 @@
 defmodule AeMdwWeb.UtilController do
+  @moduledoc """
+  Endpoint for observing Mdw state.
+  """
   use AeMdwWeb, :controller
   use PhoenixSwagger
 
+  alias AeMdw.Db.Status
+
+  @spec status(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def status(conn, _params),
+    do: json(conn, Status.node_and_mdw_status())
+
+  @spec no_route(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def no_route(conn, _params),
+    do: conn |> AeMdwWeb.Util.send_error(404, "no such route")
+
+  @spec swagger_definitions() :: map()
   def swagger_definitions do
     %{
       StatusResponse:
@@ -42,10 +56,4 @@ defmodule AeMdwWeb.UtilController do
     tag("Middleware")
     response(200, "Returns the status of the MDW", Schema.ref(:StatusResponse))
   end
-
-  def status(conn, _params),
-    do: json(conn, AeMdw.Db.Util.status())
-
-  def no_route(conn, _params),
-    do: conn |> AeMdwWeb.Util.send_error(404, "no such route")
 end
