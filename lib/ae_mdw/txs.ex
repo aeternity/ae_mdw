@@ -319,17 +319,7 @@ defmodule AeMdw.Txs do
 
   defp serialize_cursor(nil), do: nil
 
-  # defp serialize_cursor({tx_type, tx_field_pos, pk, txi}) when is_integer(txi) do
-  #   "#{tx_type}-#{tx_field_pos}-#{Base.encode64(pk, padding: false)}-#{txi}"
-  # end
-
-  # defp serialize_cursor({tx_type, txi}) when is_integer(txi) do
-  #   "#{tx_type}-0-#{Base.encode64("a", padding: false)}-#{txi}"
-  # end
-
-  defp serialize_cursor(txi) when is_integer(txi) do
-    "#{txi}"
-  end
+  defp serialize_cursor(txi), do: Integer.to_string(txi)
 
   defp deserialize_cursor(nil), do: nil
 
