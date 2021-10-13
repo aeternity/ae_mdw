@@ -184,6 +184,9 @@ defmodule AeMdw.Txs do
   #      {:oracle_query_tx, 1, B, X} and {:oracle_query_tx, 3, B, X} for any value of X, filtering
   #      out all those transactions that do not include A in them.
   defp build_streams(ids, types, cursor, direction) do
+    extract_txi = fn {_tx_type, _field_pos, _id, tx_index} -> tx_index end
+    initial_cursor = if direction == :backward, do: cursor, else: cursor || 0
+
     ids_fields =
       Enum.map(ids, fn {field, id} ->
         {id, extract_transaction_types_and_field_pos(field)}
@@ -219,20 +222,11 @@ defmodule AeMdw.Txs do
       min_fields
       |> Enum.filter(&match?({^tx_type, _pos}, &1))
       |> Enum.map(fn {^tx_type, field_pos} ->
-        initial_key =
-          if direction == :backward do
-            {tx_type, field_pos, min_account_id, cursor}
-          else
-            {tx_type, field_pos, min_account_id, cursor || 0}
-          end
-
         @field_table
-        |> Collection.stream(direction, initial_key)
+        |> Collection.stream(direction, {tx_type, field_pos, min_account_id, initial_cursor})
         |> Stream.take_while(&match?({^tx_type, ^field_pos, ^min_account_id, _tx_index}, &1))
-        |> Stream.filter(fn {_tx_type, _field_pos, _id, tx_index} ->
-          all_accounts_have_tx?(tx_type, tx_index, rest_accounts)
-        end)
-        |> Stream.map(fn {_tx_type, _field_pos, _id, tx_index} -> tx_index end)
+        |> Stream.map(extract_txi)
+        |> Stream.filter(&all_accounts_have_tx?(tx_type, &1, rest_accounts))
       end)
     end)
   end
