@@ -11,8 +11,6 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
 
   @typep task_index() :: {pos_integer(), atom()}
 
-  @max_buffer_size 100
-
   @spec init() :: :ok
   def init do
     :ets.new(:async_tasks_processing, [:named_table, :ordered_set, :public])
@@ -25,14 +23,14 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
     :ok
   end
 
-  @spec fetch_unprocessed() :: [Model.async_tasks_record()]
-  def fetch_unprocessed() do
+  @spec fetch_unprocessed(pos_integer()) :: [Model.async_tasks_record()]
+  def fetch_unprocessed(max_amount) do
     any_spec =
       Ex2ms.fun do
         record -> record
       end
 
-    {m_tasks, _cont} = Util.select(Model.AsyncTasks, any_spec, @max_buffer_size)
+    {m_tasks, _cont} = Util.select(Model.AsyncTasks, any_spec, max_amount)
 
     Enum.filter(m_tasks, fn Model.async_tasks(index: index) ->
       not :ets.member(:async_tasks_processing, index)

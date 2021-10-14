@@ -18,6 +18,7 @@ defmodule AeMdw.Sync.AsyncTasks.Supervisor do
       | consumers()
     ]
 
+    AeMdw.Sync.AsyncTasks.Stats.init()
     AeMdw.Sync.AsyncTasks.Store.init()
 
     Supervisor.init(children, strategy: :one_for_all)

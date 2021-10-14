@@ -17,7 +17,6 @@ defmodule AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
     :mnesia.transaction(fn ->
       delete_after? = not Contract.aex9_presence_exists?(@contract_pk, @account_pk)
       setup_delete_aex9_presence(@contract_pk, @account_pk)
-      # enqueue and quickly dequeue before any Consumer
       args = [@contract_pk, @account_pk]
       Producer.enqueue(@task_type, args)
       assert Model.async_tasks(index: index, args: ^args) = task = Producer.dequeue()
