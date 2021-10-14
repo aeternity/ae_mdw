@@ -304,9 +304,10 @@ defmodule AeMdw.Txs do
   defp deserialize_cursor(nil), do: nil
 
   defp deserialize_cursor(cursor_bin) do
-    case Regex.run(~r/\A\d+\z/, cursor_bin) do
-      [tx_index_bin] -> String.to_integer(tx_index_bin)
-      nil -> nil
+    case Integer.parse(cursor_bin) do
+      {n, ""} -> n
+      {_n, _rest} -> nil
+      :error -> nil
     end
   end
 

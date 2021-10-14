@@ -125,20 +125,8 @@ defmodule AeMdw.Collection do
   Builds a stream from records from a table starting from the initial_key given.
   """
   @spec stream(table(), direction(), cursor()) :: Enumerable.t()
-  def stream(tab, direction, initial_key) do
-    initial_key
-    |> case do
-      nil ->
-        Mnesia.next_key(tab, direction, nil)
-
-      _initial_key ->
-        if Mnesia.exists?(tab, initial_key) do
-          {:ok, initial_key}
-        else
-          Mnesia.next_key(tab, direction, initial_key)
-        end
-    end
-    |> case do
+  def stream(tab, direction, cursor) do
+    case fetch_first_key(tab, direction, cursor) do
       {:ok, first_key} -> unfold_stream(tab, direction, first_key)
       :not_found -> []
     end
@@ -156,26 +144,7 @@ defmodule AeMdw.Collection do
         {[], []} -> acc
       end
     end)
-    |> Stream.unfold(fn gb_set ->
-      if :gb_sets.is_empty(gb_set) do
-        nil
-      else
-        {{key, rest_stream}, rest_set} =
-          if direction == :forward do
-            :gb_sets.take_smallest(gb_set)
-          else
-            :gb_sets.take_largest(gb_set)
-          end
-
-        case StreamSplit.take_and_drop(rest_stream, 1) do
-          {[next_key], next_stream} ->
-            {key, :gb_sets.add_element({next_key, next_stream}, rest_set)}
-
-          {[], []} ->
-            {key, rest_set}
-        end
-      end
-    end)
+    |> merge_streams_by(direction)
     |> remove_dups()
     |> Stream.take(limit + 1)
     |> Enum.split(limit)
@@ -206,6 +175,39 @@ defmodule AeMdw.Collection do
           {:ok, next_key} -> {key, next_key}
           :not_found -> {key, :end_keys}
         end
+    end)
+  end
+
+  defp fetch_first_key(tab, direction, nil), do: Mnesia.next_key(tab, direction, nil)
+
+  defp fetch_first_key(tab, direction, cursor) do
+    if Mnesia.exists?(tab, cursor) do
+      {:ok, cursor}
+    else
+      Mnesia.next_key(tab, direction, cursor)
+    end
+  end
+
+  defp merge_streams_by(gb_set, direction) do
+    Stream.unfold(gb_set, fn gb_set ->
+      if :gb_sets.is_empty(gb_set) do
+        nil
+      else
+        {{key, rest_stream}, rest_set} =
+          if direction == :forward do
+            :gb_sets.take_smallest(gb_set)
+          else
+            :gb_sets.take_largest(gb_set)
+          end
+
+        case StreamSplit.take_and_drop(rest_stream, 1) do
+          {[next_key], next_stream} ->
+            {key, :gb_sets.add_element({next_key, next_stream}, rest_set)}
+
+          {[], []} ->
+            {key, rest_set}
+        end
+      end
     end)
   end
 end
