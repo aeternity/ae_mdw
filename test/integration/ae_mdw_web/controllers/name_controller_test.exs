@@ -2,13 +2,18 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   use AeMdwWeb.ConnCase
 
   alias AeMdw.Validate
-  alias AeMdw.Db.{Format, Model, Name}
+  alias AeMdw.Db.Format
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.Name
+  alias AeMdw.Db.Util
   alias AeMdwWeb.{NameController, TestUtil}
   alias AeMdwWeb.Continuation, as: Cont
   alias AeMdw.Error.Input, as: ErrInput
 
   import AeMdw.Util
   import AeMdwWeb.Util
+
+  require Model
 
   @moduletag :integration
 
@@ -320,18 +325,37 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       name = "wwwbeaconoidcom.chain"
       conn = get(conn, "/name/#{name}")
 
-      assert json_response(conn, 200) |> Jason.encode!() ==
+      assert json_response(conn, 200) ==
                TestUtil.handle_input(fn -> get_name(Validate.plain_name!(name)) end)
-               |> Jason.encode!()
+    end
+
+    test "get name in auction with expand=true", %{conn: conn} do
+      bid_key = Util.first(Model.AuctionBid)
+      name = elem(bid_key, 0)
+      conn = get(conn, "/name/#{name}?expand=true")
+
+      response = json_response(conn, 200)
+      name_map = TestUtil.handle_input(fn -> get_name(Validate.plain_name!(name)) end)
+
+      assert response["status"] == to_string(name_map["status"])
+
+      response = Map.delete(response, "status")
+      name_map = Map.delete(name_map, "status")
+
+      assert name_map ==
+               update_in(response, ["info", "bids"], fn bids ->
+                 Enum.map(bids, & &1["tx_index"])
+               end)
+
+      assert List.first(response["info"]["bids"]) == response["info"]["last_bid"]
     end
 
     test "get name info by encoded hash ", %{conn: conn} do
       hash = "nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj"
       conn = get(conn, "/name/#{hash}")
 
-      assert json_response(conn, 200) |> Jason.encode!() ==
+      assert json_response(conn, 200) ==
                TestUtil.handle_input(fn -> get_name(Validate.plain_name!(hash)) end)
-               |> Jason.encode!()
     end
 
     test "renders error when no such name is present", %{conn: conn} do
