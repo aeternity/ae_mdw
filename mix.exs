@@ -32,6 +32,7 @@ defmodule AeMdw.MixProject do
           :aec_chain,
           :aec_chain_state,
           :aec_dev_reward,
+          :aec_dry_run,
           :aec_events,
           :aec_governance,
           :aec_hard_forks,
@@ -41,6 +42,7 @@ defmodule AeMdw.MixProject do
           :aec_spend_tx,
           :aec_sync,
           :aec_trees,
+          :aec_tx_pool,
           :aect_call,
           :aect_call_tx,
           :aect_contracts,
@@ -125,7 +127,8 @@ defmodule AeMdw.MixProject do
       {:mock, "~> 0.3.0", only: :test},
       {:phoenix_html, "~> 2.11"},
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
-      {:benchee, "~> 1.0.0", only: [:dev]}
+      {:benchee, "~> 1.0.0", only: [:dev]},
+      {:ex_json_schema, "~> 0.7.1"}
     ]
   end
 

@@ -5,7 +5,6 @@ defmodule AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Util
   alias AeMdw.Sync.AsyncTasks.Producer
-  alias AeMdw.Sync.AsyncTasks.Store
 
   require Ex2ms
   require Model
@@ -19,9 +18,7 @@ defmodule AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
       delete_after? = not Contract.aex9_presence_exists?(@contract_pk, @account_pk)
       setup_delete_aex9_presence(@contract_pk, @account_pk)
       args = [@contract_pk, @account_pk]
-      assert not Store.is_enqueued?(@task_type, args)
       Producer.enqueue(@task_type, args)
-      assert Store.is_enqueued?(@task_type, args)
       assert Model.async_tasks(index: index, args: ^args) = task = Producer.dequeue()
       assert Util.read(Model.AsyncTasks, index) == [task]
 
