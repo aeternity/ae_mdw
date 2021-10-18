@@ -1,12 +1,12 @@
 defmodule AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
   use ExUnit.Case
 
+  @moduletag :integration
+
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Util
-  # alias AeMdw.Sync.AsyncTasks.Consumer
   alias AeMdw.Sync.AsyncTasks.Producer
-  # alias AeMdw.Sync.AsyncTasks.Supervisor, as: AsyncTasksSupervisor
   alias AeMdw.Validate
 
   require Ex2ms
