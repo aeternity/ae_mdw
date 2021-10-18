@@ -169,7 +169,7 @@ defmodule AeMdw.Txs do
 
     ids_fields =
       Enum.map(ids, fn {field, id} ->
-        {id, extract_transaction_types_and_field_pos(field)}
+        {id, extract_transaction_by(String.split(field, "."))}
       end)
 
     {[{_id, initial_fields}], ids_fields_rest} = Enum.split(ids_fields, 1)
@@ -220,60 +220,58 @@ defmodule AeMdw.Txs do
     end)
   end
 
-  # credo:disable-for-next-line
-  defp extract_transaction_types_and_field_pos(field) do
-    case String.split(field, ".") do
-      [] ->
-        []
+  defp extract_transaction_by([]), do: []
 
-      [type] when type in ~w(account contract channel oracle name) ->
-        tx_types =
-          if type == "account" do
-            Node.tx_types()
-          else
-            Node.tx_group(String.to_existing_atom(type))
-          end
+  defp extract_transaction_by([type]) when type in ~w(account contract channel oracle name) do
+    tx_types =
+      if type == "account" do
+        Node.tx_types()
+      else
+        Node.tx_group(String.to_existing_atom(type))
+      end
 
-        Enum.flat_map(tx_types, fn tx_type ->
-          poss = tx_type |> Node.tx_ids() |> Map.values() |> Enum.map(&{tx_type, &1})
-          # nil - for link
-          if tx_type in @create_tx_types, do: [{tx_type, nil} | poss], else: poss
-        end)
+    Enum.flat_map(tx_types, fn tx_type ->
+      poss = tx_type |> Node.tx_ids() |> Map.values() |> Enum.map(&{tx_type, &1})
+      # nil - for link
+      if tx_type in @create_tx_types, do: [{tx_type, nil} | poss], else: poss
+    end)
+  end
 
-      [field] ->
-        if field in Node.id_fields() do
-          field = String.to_existing_atom(field)
+  defp extract_transaction_by([field]) do
+    if field in Node.id_fields() do
+      field = String.to_existing_atom(field)
 
-          Enum.map(field_types(field), fn tx_type ->
-            {tx_type, Node.tx_ids(tx_type)[field]}
-          end)
+      Enum.map(field_types(field), fn tx_type ->
+        {tx_type, Node.tx_ids(tx_type)[field]}
+      end)
+    else
+      raise ErrInput.TxField, value: ":#{field}"
+    end
+  end
+
+  defp extract_transaction_by([type_prefix, field]) do
+    cond do
+      type_prefix in Node.tx_prefixes() && field in Node.id_fields() ->
+        tx_type = String.to_existing_atom("#{type_prefix}_tx")
+        tx_field = String.to_existing_atom(field)
+
+        # credo:disable-for-next-line
+        if MapSet.member?(field_types(tx_field), tx_type) do
+          [{tx_type, Node.tx_ids(tx_type)[tx_field]}]
         else
           raise ErrInput.TxField, value: ":#{field}"
         end
 
-      [type_prefix, field] ->
-        cond do
-          type_prefix in Node.tx_prefixes() && field in Node.id_fields() ->
-            tx_type = String.to_existing_atom("#{type_prefix}_tx")
-            tx_field = String.to_existing_atom(field)
+      type_prefix not in Node.tx_prefixes() ->
+        raise ErrInput.TxType, value: type_prefix
 
-            # credo:disable-for-next-line
-            if MapSet.member?(field_types(tx_field), tx_type) do
-              [{tx_type, Node.tx_ids(tx_type)[tx_field]}]
-            else
-              raise ErrInput.TxField, value: ":#{field}"
-            end
-
-          type_prefix not in Node.tx_prefixes() ->
-            raise ErrInput.TxType, value: type_prefix
-
-          true ->
-            raise ErrInput.TxField, value: ":#{type_prefix}"
-        end
-
-      _invalid_field ->
-        raise ErrInput.TxField, value: ":#{field}"
+      true ->
+        raise ErrInput.TxField, value: ":#{type_prefix}"
     end
+  end
+
+  defp extract_transaction_by(invalid_field) do
+    raise ErrInput.TxField, value: ":#{Enum.join(invalid_field, ".")}"
   end
 
   @spec fetch!(txi()) :: tx()
