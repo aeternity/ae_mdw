@@ -32,7 +32,7 @@ defmodule AeMdw.Sync.AsyncTasks.Supervisor do
   defp consumers() do
     for id <- 1..@num_consumers do
       %{
-        id: String.to_atom("#{Consumer}#{id}"),
+        id: "#{Consumer}#{id}",
         start: {Consumer, :start_link, [[]]}
       }
     end
