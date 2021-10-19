@@ -54,7 +54,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
+           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]}
       ] do
         assert %{"data" => names, "next" => next} =
@@ -101,7 +101,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
+           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]}
       ] do
         assert %{"data" => names} =
@@ -165,7 +165,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
+           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]}
       ] do
         assert %{"data" => names, "next" => next} =
@@ -210,7 +210,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
+           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]}
       ] do
         assert %{"data" => names} =
@@ -252,7 +252,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
+           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]}
       ] do
         assert %{"data" => names} =
@@ -303,7 +303,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
+           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]}
       ] do
         assert %{"data" => auction_bids, "next" => next} =
@@ -338,7 +338,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
+           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]}
       ] do
         assert %{"data" => auctions} =
@@ -370,7 +370,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
+           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]}
       ] do
         assert %{"data" => auctions} =
@@ -430,7 +430,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
+           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]}
       ] do
         assert %{"data" => names, "next" => nil} =
@@ -466,7 +466,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
+           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]}
       ] do
         assert %{"data" => names} =
@@ -505,7 +505,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{tx: %{"account_id" => <<>>}} end
+           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]}
       ] do
         assert %{"data" => names, "next" => _next} =
