@@ -111,6 +111,25 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
                "error" => TestUtil.handle_input(fn -> get_contract_logs_json(contract_id) end)
              }
     end
+
+    test "when contract log doesn't have a creation txi, contract_id = nil", %{conn: conn} do
+      contract_id = "ct_eJhrbPPS4V97VLKEVbSCJFpdA4uyXiZujQyLqMFoYV88TzDe6"
+
+      assert %{"data" => contract_logs} =
+               conn
+               |> get(path(:forward), contract_id: contract_id)
+               |> json_response(200)
+
+      [
+        %{
+          "contract_id" => nil,
+          "contract_txi" => -1,
+          "ext_caller_contract_id" => "ct_eJhrbPPS4V97VLKEVbSCJFpdA4uyXiZujQyLqMFoYV88TzDe6",
+          "ext_caller_contract_txi" => -1
+        }
+        | _rest
+      ] = contract_logs
+    end
   end
 
   describe "calls" do

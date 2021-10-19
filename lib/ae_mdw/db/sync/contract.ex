@@ -7,10 +7,6 @@ defmodule AeMdw.Db.Sync.Contract do
 
   require Model
 
-  @migrate_contract_pk <<84, 180, 196, 235, 185, 254, 235, 68, 37, 168, 101, 128, 127, 111, 97,
-                         136, 141, 11, 134, 251, 228, 200, 73, 71, 175, 98, 22, 115, 172, 159,
-                         234, 177>>
-
   @typep pubkey() :: <<_::256>>
 
   @spec create(pubkey(), pubkey(), integer(), {integer(), integer()}) ::
@@ -92,16 +88,10 @@ defmodule AeMdw.Db.Sync.Contract do
   end
 
   @spec get_txi(pubkey()) :: integer()
-  def get_txi(@migrate_contract_pk), do: -1
-
   def get_txi(contract_pk) do
     case :ets.lookup(:ct_create_sync_cache, contract_pk) do
       [{_, txi}] -> txi
-      [] -> Db.Origin.tx_index({:contract, contract_pk})
+      [] -> Db.Origin.tx_index({:contract, contract_pk}) || -1
     end
   end
-
-  @spec migrate_contract_pk() :: pubkey()
-  def migrate_contract_pk(),
-    do: @migrate_contract_pk
 end

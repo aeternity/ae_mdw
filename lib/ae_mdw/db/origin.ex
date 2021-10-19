@@ -25,7 +25,7 @@ defmodule AeMdw.Db.Origin do
         txi
 
       {:contract_create_tx, _pk, _txi} ->
-        # contract_create_tx might not yet have been synced
+        # contract_create_tx does not exist because contract was created on a contract call.
         nil
     end
   end
@@ -35,6 +35,7 @@ defmodule AeMdw.Db.Origin do
     case next(Model.RevOrigin, {txi, :contract_create_tx, <<>>}) do
       :"$end_of_table" -> nil
       {^txi, :contract_create_tx, pubkey} -> pubkey
+      {_txi, _tx_type, _pubkey} -> nil
     end
   end
 end

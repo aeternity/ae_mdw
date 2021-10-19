@@ -7,7 +7,6 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
-  alias AeMdw.Db.Sync
   alias AeMdw.Log
   alias AeMdw.Sync.AsyncTasks
   alias AeMdw.Validate
@@ -160,10 +159,7 @@ defmodule AeMdw.Db.Contract do
 
   @spec call_fun_args_res(pubkey(), integer()) :: call_map()
   def call_fun_args_res(contract_pk, call_txi) do
-    create_txi =
-      (contract_pk == Sync.Contract.migrate_contract_pk() &&
-         -1) || Origin.tx_index({:contract, contract_pk})
-
+    create_txi = Origin.tx_index({:contract, contract_pk}) || -1
     m_call = read!(Model.ContractCall, {create_txi, call_txi})
 
     %{
