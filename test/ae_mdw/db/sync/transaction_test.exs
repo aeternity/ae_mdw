@@ -4,7 +4,6 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   alias AeMdw.Node, as: AE
 
   alias AeMdw.Db.Sync.Transaction
-  alias AeMdw.Db.Util
   alias AeMdw.Db.Model
   alias AeMdw.Validate
 
@@ -16,6 +15,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
 
   @sender_id_pos AE.tx_ids(:spend_tx).sender_id
   @recipient_id_pos AE.tx_ids(:spend_tx).recipient_id
+  @very_high_txi 100_000_000_000
 
   describe "sync_transaction spend_tx" do
     test "when receiver and sender ids are different" do
@@ -26,7 +26,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         %{height: height, time: mb_time, txs: [tx_rec]} = blocks[:mb1]
 
         signed_tx = :aetx_sign.new(tx_rec, [])
-        txi = Util.last_txi() + 1
+        txi = @very_high_txi + 1
         block_index = {height, 0}
 
         fn ->
@@ -70,7 +70,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         %{height: height, time: mb_time, txs: [tx_rec]} = blocks[:mb1]
 
         signed_tx = :aetx_sign.new(tx_rec, [])
-        txi = Util.last_txi() + 1
+        txi = @very_high_txi + 1
         block_index = {height, 0}
 
         fn ->
