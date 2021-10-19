@@ -130,10 +130,7 @@ defmodule AeMdw.Db.Sync.Transaction do
       Sync.Contract.events(events, txi, ct_txi)
     end
 
-    for {field, pos} <- AE.tx_ids(type) do
-      <<_::256>> = pk = resolve_pubkey(elem(tx, pos), type, field, block_index)
-      write_field(type, pos, pk, txi)
-    end
+    write_fields(type, tx, block_index, txi)
 
     if type == :ga_meta_tx or type == :paying_for_tx do
       inner_signed_tx = Sync.InnerTx.signed_tx(type, tx)
@@ -214,6 +211,30 @@ defmodule AeMdw.Db.Sync.Transaction do
     :mnesia.write(Model.Origin, m_origin, :write)
     :mnesia.write(Model.RevOrigin, m_rev_origin, :write)
     write_field(tx_type, nil, pubkey, txi)
+  end
+
+  defp write_fields(:spend_tx, tx, block_index, txi) do
+    tx_ids = AE.tx_ids(:spend_tx)
+    <<_::256>> =
+      sender_pk = resolve_pubkey(elem(tx, tx_ids.sender_id), :spend_tx, :sender_id, block_index)
+
+    <<_::256>> =
+      recipient_pk =
+      resolve_pubkey(elem(tx, tx_ids.recipient_id), :spend_tx, :recipient_id, block_index)
+
+    if sender_pk == recipient_pk do
+      write_field(:spend_tx, tx_ids.sender_id, sender_pk, txi)
+    else
+      write_field(:spend_tx, tx_ids.sender_id, sender_pk, txi)
+      write_field(:spend_tx, tx_ids.recipient_id, recipient_pk, txi)
+    end
+  end
+
+  defp write_fields(tx_type, tx, block_index, txi) do
+    for {field, pos} <- AE.tx_ids(tx_type) do
+      <<_::256>> = pk = resolve_pubkey(elem(tx, pos), tx_type, field, block_index)
+      write_field(tx_type, pos, pk, txi)
+    end
   end
 
   defp write_field(tx_type, pos, pubkey, txi) do
