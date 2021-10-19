@@ -4,6 +4,11 @@ defmodule AeMdw.Sync.AsyncTasks.Supervisor do
   """
   use Supervisor
 
+  alias AeMdw.Sync.AsyncTasks.Consumer
+  alias AeMdw.Sync.AsyncTasks.Producer
+  alias AeMdw.Sync.AsyncTasks.Stats
+  alias AeMdw.Sync.AsyncTasks.Store
+
   @num_consumers 3
 
   @spec start_link(any()) :: Supervisor.on_start()
@@ -14,12 +19,12 @@ defmodule AeMdw.Sync.AsyncTasks.Supervisor do
   @impl Supervisor
   def init(:ok) do
     children = [
-      AeMdw.Sync.AsyncTasks.Producer
+      Producer
       | consumers()
     ]
 
-    AeMdw.Sync.AsyncTasks.Stats.init()
-    AeMdw.Sync.AsyncTasks.Store.init()
+    Stats.init()
+    Store.init()
 
     Supervisor.init(children, strategy: :one_for_all)
   end
@@ -27,8 +32,8 @@ defmodule AeMdw.Sync.AsyncTasks.Supervisor do
   defp consumers() do
     for id <- 1..@num_consumers do
       %{
-        id: id,
-        start: {AeMdw.Sync.AsyncTasks.Consumer, :start_link, [[]]}
+        id: "#{Consumer}#{id}",
+        start: {Consumer, :start_link, [[]]}
       }
     end
   end

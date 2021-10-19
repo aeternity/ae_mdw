@@ -54,19 +54,14 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   defp process(
          Model.async_tasks(
            index: {_ts, :update_aex9_presence},
-           args: [contract_pk, delete_account_pk]
+           args: [contract_pk]
          )
        ) do
     {amounts, _last_block_tuple} = DBN.aex9_balances(contract_pk)
 
-    # credo:disable-for-lines:9
     :mnesia.sync_transaction(fn ->
       Enum.each(amounts, fn {{:address, account_pk}, _amount} ->
-        if account_pk == delete_account_pk do
-          Contract.aex9_delete_presence(contract_pk, -1, delete_account_pk)
-        else
-          Contract.aex9_write_new_presence(contract_pk, -1, account_pk)
-        end
+        Contract.aex9_write_new_presence(contract_pk, -1, account_pk)
       end)
     end)
   end

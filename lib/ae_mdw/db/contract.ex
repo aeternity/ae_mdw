@@ -70,17 +70,14 @@ defmodule AeMdw.Db.Contract do
     :ok
   end
 
-  @spec aex9_presence_exists?(pubkey(), pubkey()) :: boolean()
-  def aex9_presence_exists?(contract_pk, account_pk) do
-    record_name = Model.record(Model.Aex9AccountPresence)
+  @spec aex9_presence_exists?(pubkey(), pubkey(), integer() | nil) :: boolean()
+  def aex9_presence_exists?(contract_pk, account_pk, txi \\ nil) do
+    txi_search_prev = (txi && txi + 1) || nil
 
-    presence_spec =
-      Ex2ms.fun do
-        {^record_name, {^account_pk, :_, ^contract_pk}, :_} ->
-          :found
-      end
-
-    [] != select(Model.Aex9AccountPresence, presence_spec)
+    case :mnesia.prev(Model.Aex9AccountPresence, {account_pk, txi_search_prev, contract_pk}) do
+      {^account_pk, _txi, ^contract_pk} -> true
+      _other_key -> false
+    end
   end
 
   @spec call_write(integer(), integer(), map() | {:error, any()}) :: :ok
@@ -347,7 +344,11 @@ defmodule AeMdw.Db.Contract do
     :mnesia.write(Model.IdxAex9Transfer, m_idx_transfer, :write)
     aex9_write_presence(contract_pk, txi, to_pk)
 
-    AsyncTasks.Producer.enqueue(:update_aex9_presence, [contract_pk, to_pk])
+    if aex9_presence_exists?(contract_pk, to_pk, -1) do
+      aex9_delete_presence(contract_pk, -1, to_pk)
+    end
+
+    AsyncTasks.Producer.enqueue(:update_aex9_presence, [contract_pk])
 
     aex9_presence_cache_write({{contract_pk, txi, i}, {from_pk, to_pk}, amount})
   end
