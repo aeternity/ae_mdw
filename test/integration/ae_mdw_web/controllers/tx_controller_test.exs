@@ -818,9 +818,13 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       hash_sender_equals_to_recipient = "th_3rw5nk53rEQzZr8xrQ6sqt2Y9Cv4U8piqiHK1KVkXCaVFMTCq"
       field = "recipient_id"
 
-      %{"data" => txs1} = conn |> get("txs/gen/421792-0?spend.#{field}=#{id}") |> json_response(200)
+      %{"data" => txs1} =
+        conn |> get("txs/gen/421792-0?spend.#{field}=#{id}") |> json_response(200)
+
       field = "sender_id"
-      %{"data" => txs2} = conn |> get("txs/gen/421792-0?spend.#{field}=#{id}") |> json_response(200)
+
+      %{"data" => txs2} =
+        conn |> get("txs/gen/421792-0?spend.#{field}=#{id}") |> json_response(200)
 
       assert Enum.find(txs1, fn %{"hash" => hash} -> hash == hash_sender_equals_to_recipient end)
       assert Enum.find(txs2, fn %{"hash" => hash} -> hash == hash_sender_equals_to_recipient end)
