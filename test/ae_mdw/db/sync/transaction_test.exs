@@ -18,7 +18,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   @recipient_id_pos AE.tx_ids(:spend_tx).recipient_id
 
   describe "sync_transaction spend_tx" do
-    test "when receiver account != sender account", %{conn: conn} do
+    test "when receiver and sender ids are different" do
       with_blockchain %{alice: 10_000, bob: 20_000},
         mb1: [
           t1: spend_tx(:alice, :bob, 5_000)
@@ -29,8 +29,48 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         txi = Util.last_txi() + 1
         block_index = {height, 0}
 
-        {sender_pk, recipient_pk} = pubkeys_from_tx(signed_tx)
-        assert sender_pk != recipient_pk
+        :mnesia.transaction(fn ->
+          Transaction.sync_transaction(
+            signed_tx,
+            txi,
+            {block_index, mb_time, nil},
+            false
+          )
+
+          {sender_pk, recipient_pk} = pubkeys_from_tx(signed_tx)
+          assert sender_pk != recipient_pk
+
+          assert {:spend_tx, _pos, ^sender_pk, ^txi} =
+                   query_spend_tx_field_index(sender_pk, @sender_id_pos)
+
+          assert {:spend_tx, _pos, ^recipient_pk, ^txi} =
+                   query_spend_tx_field_index(recipient_pk, @recipient_id_pos)
+
+          :mnesia.abort(:rollback)
+        end)
+        |> case do
+          {:aborted, {%ExUnit.AssertionError{} = assertion_error, _stacktrace}} ->
+            raise assertion_error
+
+          {:aborted, :rollback} ->
+            :pass
+
+          other_result ->
+            throw(other_result)
+        end
+      end
+    end
+
+    test "when receiver and sender ids are the same" do
+      with_blockchain %{alice: 10_000},
+        mb1: [
+          t1: spend_tx(:alice, :alice, 5_000)
+        ] do
+        %{height: height, time: mb_time, txs: [tx_rec]} = blocks[:mb1]
+
+        signed_tx = :aetx_sign.new(tx_rec, [])
+        txi = Util.last_txi() + 1
+        block_index = {height, 0}
 
         :mnesia.transaction(fn ->
           Transaction.sync_transaction(
@@ -39,6 +79,9 @@ defmodule AeMdw.Db.Sync.TransactionTest do
             {block_index, mb_time, nil},
             false
           )
+
+          {sender_pk, recipient_pk} = pubkeys_from_tx(signed_tx)
+          assert sender_pk == recipient_pk
 
           assert {:spend_tx, _pos, ^sender_pk, ^txi} =
                    query_spend_tx_field_index(sender_pk, @sender_id_pos)

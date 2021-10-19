@@ -214,10 +214,12 @@ defmodule AeMdw.Db.Sync.Transaction do
   end
 
   defp write_fields(tx_type, tx, block_index, txi) do
-    for {field, pos} <- AE.tx_ids(tx_type) do
+    tx_type
+    |> AE.tx_ids()
+    |> Enum.each(fn {field, pos} ->
       <<_::256>> = pk = resolve_pubkey(elem(tx, pos), tx_type, field, block_index)
       write_field(tx_type, pos, pk, txi)
-    end
+    end)
   end
 
   defp write_field(tx_type, pos, pubkey, txi) do
