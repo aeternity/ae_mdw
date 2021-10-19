@@ -109,17 +109,16 @@ defmodule AeMdwWeb.BlockchainSim do
             :micro -> :micro_block_hash
           end
 
-        txs =
-          if hash_type == :micro_block_hash do
-            block |> :aec_blocks.txs() |> Enum.map(fn {:ok, tx} -> tx end)
-          end
-
-        block_info = %{
-          hash: :aeser_api_encoder.encode(hash_type, block_hash),
-          height: :aec_blocks.height(block),
-          time: :aec_blocks.time_in_msecs(block),
-          txs: txs
-        }
+        block_info =
+          put_micro_block_txs(
+            %{
+              hash: :aeser_api_encoder.encode(hash_type, block_hash),
+              height: :aec_blocks.height(block),
+              time: :aec_blocks.time_in_msecs(block)
+            },
+            hash_type,
+            block
+          )
 
         {block_id, block_info}
       end)
@@ -127,8 +126,15 @@ defmodule AeMdwWeb.BlockchainSim do
     {aec_db_mock, blocks_pkeys, mock_transactions, mock_accounts}
   end
 
+  defp put_micro_block_txs(block_info, :micro_block_hash, block) do
+    txs = block |> :aec_blocks.txs() |> Enum.map(fn {:ok, tx} -> tx end)
+    Map.put(block_info, :txs, txs)
+  end
+
+  defp put_micro_block_txs(block_info, _other_hash, _block), do: block_info
+
   defp mock_key_block(account_id, accounts, height) do
-    miner_pk = Map.fetch!(accounts, account_id) |> :aeser_id.specialize(:account)
+    miner_pk = accounts |> Map.fetch!(account_id) |> :aeser_id.specialize(:account)
 
     :aec_blocks.new_key(height, <<>>, <<>>, <<>>, 0, 0, 0, :default, 0, miner_pk, miner_pk)
   end

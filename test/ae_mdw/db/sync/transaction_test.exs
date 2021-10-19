@@ -29,7 +29,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         txi = Util.last_txi() + 1
         block_index = {height, 0}
 
-        :mnesia.transaction(fn ->
+        fn ->
           Transaction.sync_transaction(
             signed_tx,
             txi,
@@ -47,7 +47,8 @@ defmodule AeMdw.Db.Sync.TransactionTest do
                    query_spend_tx_field_index(recipient_pk, @recipient_id_pos)
 
           :mnesia.abort(:rollback)
-        end)
+        end
+        |> :mnesia.transaction()
         |> case do
           {:aborted, {%ExUnit.AssertionError{} = assertion_error, _stacktrace}} ->
             raise assertion_error
@@ -72,7 +73,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         txi = Util.last_txi() + 1
         block_index = {height, 0}
 
-        :mnesia.transaction(fn ->
+        fn ->
           Transaction.sync_transaction(
             signed_tx,
             txi,
@@ -90,7 +91,8 @@ defmodule AeMdw.Db.Sync.TransactionTest do
                    query_spend_tx_field_index(recipient_pk, @recipient_id_pos)
 
           :mnesia.abort(:rollback)
-        end)
+        end
+        |> :mnesia.transaction()
         |> case do
           {:aborted, {%ExUnit.AssertionError{} = assertion_error, _stacktrace}} ->
             raise assertion_error
