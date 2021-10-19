@@ -9,7 +9,7 @@ defmodule AeMdwWeb.BlockControllerTest do
   describe "block" do
     test "get key block by hash", %{conn: conn} do
       with_blockchain %{alice: 10_000}, b1: {:kb, :alice} do
-        kb_hash = blocks[:b1]
+        %{hash: kb_hash} = blocks[:b1]
 
         assert %{"hash" => ^kb_hash} = get(conn, "/block/#{kb_hash}") |> json_response(200)
       end
@@ -20,7 +20,7 @@ defmodule AeMdwWeb.BlockControllerTest do
         b1: [
           t1: BlockchainSim.spend_tx(:alice, :bob, 5_000)
         ] do
-        mb_hash = blocks[:b1]
+        %{hash: mb_hash} = blocks[:b1]
 
         assert %{"hash" => ^mb_hash} = get(conn, "/block/#{mb_hash}") |> json_response(200)
       end

@@ -215,6 +215,7 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   defp write_fields(:spend_tx, tx, block_index, txi) do
     tx_ids = AE.tx_ids(:spend_tx)
+
     <<_::256>> =
       sender_pk = resolve_pubkey(elem(tx, tx_ids.sender_id), :spend_tx, :sender_id, block_index)
 
