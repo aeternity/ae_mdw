@@ -213,24 +213,6 @@ defmodule AeMdw.Db.Sync.Transaction do
     write_field(tx_type, nil, pubkey, txi)
   end
 
-  defp write_fields(:spend_tx, tx, block_index, txi) do
-    tx_ids = AE.tx_ids(:spend_tx)
-
-    <<_::256>> =
-      sender_pk = resolve_pubkey(elem(tx, tx_ids.sender_id), :spend_tx, :sender_id, block_index)
-
-    <<_::256>> =
-      recipient_pk =
-      resolve_pubkey(elem(tx, tx_ids.recipient_id), :spend_tx, :recipient_id, block_index)
-
-    if sender_pk == recipient_pk do
-      write_field(:spend_tx, tx_ids.sender_id, sender_pk, txi)
-    else
-      write_field(:spend_tx, tx_ids.sender_id, sender_pk, txi)
-      write_field(:spend_tx, tx_ids.recipient_id, recipient_pk, txi)
-    end
-  end
-
   defp write_fields(tx_type, tx, block_index, txi) do
     for {field, pos} <- AE.tx_ids(tx_type) do
       <<_::256>> = pk = resolve_pubkey(elem(tx, pos), tx_type, field, block_index)

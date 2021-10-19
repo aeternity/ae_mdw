@@ -31,7 +31,7 @@ defmodule AeMdwWeb.TxController do
     do: handle_tx_reply(conn, fn -> read_tx(Validate.nonneg_int!(index)) end)
 
   def txs(conn, params),
-    do: Cont.response(conn, &json/2, &add_spendtx_details(&1, params))
+    do: Cont.response(conn, &json/2, &handle_spendtx_details(&1, params))
 
   def count(conn, _req),
     do: conn |> json(last_txi())
@@ -68,8 +68,10 @@ defmodule AeMdwWeb.TxController do
   #
   # Private functions
   #
-  defp add_spendtx_details(response_data, %{"account" => _account}) do
-    Enum.map(response_data, fn %{"tx" => block_tx, "tx_index" => tx_index} = block ->
+  defp handle_spendtx_details(response_data, %{"account" => _account}) do
+    response_data
+    |> Enum.uniq_by(fn %{"hash" => tx_hash} -> tx_hash end)
+    |> Enum.map(fn %{"tx" => block_tx, "tx_index" => tx_index} = block ->
       spend_tx_recipient = (block_tx["type"] == @type_spend_tx && block_tx["recipient_id"]) || nil
       add_details? = String.starts_with?(spend_tx_recipient || "", "nm_")
 
@@ -83,7 +85,7 @@ defmodule AeMdwWeb.TxController do
     end)
   end
 
-  defp add_spendtx_details(response_data, _params), do: response_data
+  defp handle_spendtx_details(response_data, _params), do: response_data
 
   defp get_recipient(spend_tx_recipient_nm, spend_txi) do
     with {:ok, plain_name} <- Validate.plain_name(spend_tx_recipient_nm),
