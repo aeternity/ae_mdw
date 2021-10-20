@@ -78,7 +78,6 @@ jobs:
         run: make docker-deps
 
       - name: Create PLTs
-        if: steps.plt-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p priv/plts
           make docker-dialyzer-plt
