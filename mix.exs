@@ -72,8 +72,6 @@ defmodule AeMdw.MixProject do
           :aetx_sign,
           :aeu_info,
           :aeu_mtrees,
-          :app_ctrl,
-          :app_ctrl_server,
           :enacl
         ]
       ],
