@@ -106,6 +106,7 @@ define docker_execute
 	docker-compose run --rm \
 										 --workdir=/app \
 										 --entrypoint="" \
+										 --service-ports \
 										 ae_mdw \
 										 $(1)
 endef

@@ -13,7 +13,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
 
   @spec init() :: :ok
   def init do
-    :ets.new(:async_tasks_processing, [:named_table, :ordered_set, :public])
+    :ets.new(:async_tasks_processing, [:named_table, :set, :public])
     :ok
   end
 
@@ -52,7 +52,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
 
   @spec set_processing(task_index()) :: :ok
   def set_processing(task_index) do
-    :ets.insert(:async_tasks_processing, task_index)
+    :ets.insert(:async_tasks_processing, {task_index})
     :ok
   end
 
