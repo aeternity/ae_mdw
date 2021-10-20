@@ -644,6 +644,15 @@ The types for freestanding fields are:
 - sender_id - oracle_query, spend
 - to_id - channel_withdraw
 
+##### Supported inner transactions fields
+
+The ga_meta and paying_for transactions have inner transactions which might be filtered as if they were not inner.
+
+For example, for a GAMetaTx with inner SpendTx, one might request with the following query params:
+- spend.recipient_id or
+- spend.sender_id or
+- spend.recipient_id and spend.sender_id
+
 ###### Examples
 
 with provided transaction type (`name_transfer`):
