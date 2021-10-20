@@ -186,7 +186,7 @@ defmodule AeMdwWeb.DataStreamPlug do
     get = fn kw, top -> Map.get(top, kw, MapSet.new()) end
 
     stream
-    |> Enum.filter(fn {k, _v} -> k not in ["limit", "page"] end)
+    |> Enum.filter(fn {k, _v} -> k not in ["limit", "page", "cursor", "expand"] end)
     |> Enum.reduce_while(
       {:ok, %{}},
       fn {key, val}, {:ok, top_level} ->

@@ -75,6 +75,11 @@ defmodule AeMdw.Mnesia do
     record
   end
 
+  @spec exists?(table(), key()) :: boolean()
+  def exists?(tab, key) do
+    match?({:ok, _record}, fetch(tab, key))
+  end
+
   @spec next_key(table(), direction(), cursor()) :: {:ok, key()} | :not_found
   def next_key(tab, :forward, nil), do: first_key(tab)
 

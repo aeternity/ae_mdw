@@ -183,7 +183,7 @@ defmodule AeMdw.Names do
   end
 
   defp render_pointers([{_bi, txi} | _rest_updates]) do
-    %{tx: %{"pointers" => pointers}} = Txs.fetch!(txi)
+    %{"tx" => %{"pointers" => pointers}} = Txs.fetch!(txi)
 
     pointers
     |> Enum.map(fn %{"id" => id, "key" => key} -> {key, id} end)
@@ -191,14 +191,14 @@ defmodule AeMdw.Names do
   end
 
   defp render_ownership([{{_bi, _txi}, last_claim_txi} | _rest_claims], transfers) do
-    %{tx: %{"account_id" => orig_owner}} = Txs.fetch!(last_claim_txi)
+    %{"tx" => %{"account_id" => orig_owner}} = Txs.fetch!(last_claim_txi)
 
     case transfers do
       [] ->
         %{original: orig_owner, current: orig_owner}
 
       [{{_bi, _txi}, last_transfer_txi} | _rest_transfers] ->
-        %{tx: %{"recipient_id" => curr_owner}} = Txs.fetch!(last_transfer_txi)
+        %{"tx" => %{"recipient_id" => curr_owner}} = Txs.fetch!(last_transfer_txi)
 
         %{original: orig_owner, current: curr_owner}
     end

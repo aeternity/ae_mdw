@@ -6,8 +6,11 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Db.Util
+  alias AeMdwWeb.Continuation
   alias AeMdwWeb.TxController
   alias :aeser_api_encoder, as: Enc
+  alias AeMdwWeb.Util, as: WebUtil
+  alias Plug.Conn
 
   require Model
 
@@ -75,7 +78,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       conn = get(conn, "/txs/count/#{id}")
 
       assert json_response(conn, 200) ==
-               Validate.id!(id) |> TxController.id_counts() |> keys_to_string()
+               id |> Validate.id!() |> TxController.id_counts() |> keys_to_string()
     end
 
     test "renders errors when data is invalid", %{conn: conn} do
@@ -90,7 +93,6 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     test "get transactions when direction=forward", %{conn: conn} do
       limit = 33
       conn = get(conn, "/txs/forward?limit=#{limit}")
-
       response = json_response(conn, 200)
 
       assert Enum.count(response["data"]) == limit
@@ -99,8 +101,12 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
         assert data["tx_index"] in 0..(limit - 1)
       end)
 
-      conn_next = get(conn, response["next"])
+      {:ok, data, _has_cont?} =
+        Continuation.response_data({TxController, :txs, %{}, conn.assigns.scope, 0}, limit)
 
+      assert ^data = response["data"]
+
+      conn_next = get(conn, response["next"])
       response_next = json_response(conn_next, 200)
 
       assert Enum.count(response_next["data"]) == limit
@@ -108,12 +114,19 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       Enum.each(response_next["data"], fn data_next ->
         assert data_next["tx_index"] in (limit - 1)..((limit - 1) * (limit - 1))
       end)
+
+      {:ok, data_next, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn_next), conn_next.assigns.scope, limit},
+          limit
+        )
+
+      assert ^data_next = response_next["data"]
     end
 
     test "get transactions when direction=backward", %{conn: conn} do
       limit = 24
       conn = get(conn, "/txs/backward?limit=#{limit}")
-
       response = json_response(conn, 200)
 
       assert Enum.count(response["data"]) == limit
@@ -122,8 +135,12 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
         assert data["tx_index"] in Util.last_txi()..(Util.last_txi() - limit)
       end)
 
-      conn_next = get(conn, response["next"])
+      {:ok, data, _has_cont?} =
+        Continuation.response_data({TxController, :txs, %{}, conn.assigns.scope, 0}, limit)
 
+      assert ^data = response["data"]
+
+      conn_next = get(conn, response["next"])
       response_next = json_response(conn_next, 200)
 
       assert Enum.count(response_next["data"]) == limit
@@ -132,6 +149,14 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
         assert data_next["tx_index"] in (Util.last_txi() - limit)..(Util.last_txi() -
                                                                       limit * limit)
       end)
+
+      {:ok, next_data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn_next), conn_next.assigns.scope, limit},
+          limit
+        )
+
+      assert ^next_data = response_next["data"]
     end
 
     test "renders errors when direction is invalid", %{conn: conn} do
@@ -151,9 +176,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type = "channel_create"
       transform_tx_type = transform_tx_type(type)
 
-      response = request_txs(conn, "forward", "type", type, limit)
+      conn = request_txs(conn, "forward", "type", type, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], transform_tx_type, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -165,7 +199,16 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type = "spend"
       transform_tx_type = transform_tx_type(type)
 
-      response = request_txs(conn, "forward", "type", type, limit)
+      conn = request_txs(conn, "forward", "type", type, limit)
+      response = json_response(conn, 200)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       check_response_data(response["data"], transform_tx_type, limit)
 
@@ -179,9 +222,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type = "name_claim"
       transform_tx_type = transform_tx_type(type)
 
-      response = request_txs(conn, "forward", "type", type, limit)
+      conn = request_txs(conn, "forward", "type", type, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], transform_tx_type, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -193,9 +245,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type = "name_preclaim"
       transform_tx_type = transform_tx_type(type)
 
-      response = request_txs(conn, "forward", "type", type)
+      conn = request_txs(conn, "forward", "type", type)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], transform_tx_type, @default_limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          @default_limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -210,9 +271,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type = "spend"
       transform_tx_type = transform_tx_type(type)
 
-      response = request_txs(conn, "backward", "type", type)
+      conn = request_txs(conn, "backward", "type", type)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], transform_tx_type, @default_limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          @default_limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -226,9 +296,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type = "contract_create"
       transform_tx_type = transform_tx_type(type)
 
-      response = request_txs(conn, "backward", "type", type, limit)
+      conn = request_txs(conn, "backward", "type", type, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], transform_tx_type, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -240,9 +319,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type = "oracle_query"
       transform_tx_type = transform_tx_type(type)
 
-      response = request_txs(conn, "backward", "type", type, limit)
+      conn = request_txs(conn, "backward", "type", type, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], transform_tx_type, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -264,9 +352,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type_group = "oracle"
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      response = request_txs(conn, "forward", "type_group", type_group, limit)
+      conn = request_txs(conn, "forward", "type_group", type_group, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], txs_types_by_tx_group, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -280,9 +377,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type_group = "contract"
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      response = request_txs(conn, "forward", "type_group", type_group, limit)
+      conn = request_txs(conn, "forward", "type_group", type_group, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], txs_types_by_tx_group, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -294,9 +400,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type_group = "ga"
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      response = request_txs(conn, "forward", "type_group", type_group, limit)
+      conn = request_txs(conn, "forward", "type_group", type_group, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], txs_types_by_tx_group, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -308,9 +423,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type_group = "channel"
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      response = request_txs(conn, "forward", "type_group", type_group, limit)
+      conn = request_txs(conn, "forward", "type_group", type_group, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], txs_types_by_tx_group, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -325,9 +449,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type_group = "channel"
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      response = request_txs(conn, "backward", "type_group", type_group, limit)
+      conn = request_txs(conn, "backward", "type_group", type_group, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], txs_types_by_tx_group, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -340,9 +473,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      response = request_txs(conn, "backward", "type_group", type_group)
+      conn = request_txs(conn, "backward", "type_group", type_group)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], txs_types_by_tx_group, @default_limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          @default_limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -356,9 +498,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type_group = "contract"
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      response = request_txs(conn, "backward", "type_group", type_group, limit)
+      conn = request_txs(conn, "backward", "type_group", type_group, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], txs_types_by_tx_group, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -370,7 +521,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type_group = "ga"
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      response = request_txs(conn, "backward", "type_group", type_group, limit)
+      conn = request_txs(conn, "backward", "type_group", type_group, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], txs_types_by_tx_group, limit)
 
@@ -384,9 +536,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type_group = "name"
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      response = request_txs(conn, "backward", "type_group", type_group, limit)
+      conn = request_txs(conn, "backward", "type_group", type_group, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], txs_types_by_tx_group, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -398,9 +559,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type_group = "spend"
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      response = request_txs(conn, "backward", "type_group", type_group, limit)
+      conn = request_txs(conn, "backward", "type_group", type_group, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], txs_types_by_tx_group, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -428,9 +598,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
       transform_tx_type = transform_tx_type(type)
 
-      response = request_txs(conn, "forward", "type", type, "type_group", type_group, limit)
+      conn = request_txs(conn, "forward", "type", type, "type_group", type_group, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], txs_types_by_tx_group, transform_tx_type, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -447,9 +626,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
       transform_tx_type = transform_tx_type(type)
 
-      response = request_txs(conn, "forward", "type", type, "type_group", type_group, limit)
+      conn = request_txs(conn, "forward", "type", type, "type_group", type_group, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], txs_types_by_tx_group, transform_tx_type, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -462,7 +650,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
       transform_tx_type = transform_tx_type(type)
 
-      response = request_txs(conn, "forward", "type", type, "type_group", type_group)
+      conn = request_txs(conn, "forward", "type", type, "type_group", type_group)
+      response = json_response(conn, 200)
 
       check_response_data(
         response["data"],
@@ -470,6 +659,14 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
         transform_tx_type,
         @default_limit
       )
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          @default_limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -486,9 +683,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
       transform_tx_type = transform_tx_type(type)
 
-      response = request_txs(conn, "backward", "type", type, "type_group", type_group, limit)
+      conn = request_txs(conn, "backward", "type", type, "type_group", type_group, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], txs_types_by_tx_group, transform_tx_type, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -505,9 +711,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
       transform_tx_type = transform_tx_type(type)
 
-      response = request_txs(conn, "backward", "type", type, "type_group", type_group, limit)
+      conn = request_txs(conn, "backward", "type", type, "type_group", type_group, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], txs_types_by_tx_group, transform_tx_type, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -522,7 +737,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
       transform_tx_type = transform_tx_type(type)
 
-      response = request_txs(conn, "backward", "type", type, "type_group", type_group)
+      conn = request_txs(conn, "backward", "type", type, "type_group", type_group)
+      response = json_response(conn, 200)
 
       check_response_data(
         response["data"],
@@ -530,6 +746,14 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
         transform_tx_type,
         @default_limit
       )
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          @default_limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -567,9 +791,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       <<_prefix::3-binary, rest::binary>> =
         id = "ak_26ubrEL8sBqYNp4kvKb1t4Cg7XsCciYq4HdznrvfUkW359gf17"
 
-      response = request_txs(conn, "forward", criteria, id, limit)
+      conn = request_txs(conn, "forward", criteria, id, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], rest, :no_prefix, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -594,7 +827,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       criteria = "account"
       account_id = "ak_u2gFpRN5nABqfqb5Q3BkuHCf8c7ytcmqovZ6VyKwxmVNE5jqa"
 
-      response = request_txs(conn, "forward", criteria, account_id, limit)
+      conn = request_txs(conn, "forward", criteria, account_id, limit)
+      response = json_response(conn, 200)
 
       blocks_with_nm =
         Enum.filter(response["data"], fn %{"tx" => tx} ->
@@ -643,9 +877,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       <<_prefix::3-binary, rest::binary>> =
         id = "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z"
 
-      response = request_txs(conn, "forward", criteria, id)
+      conn = request_txs(conn, "forward", criteria, id)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], rest, :no_prefix, @default_limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          @default_limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -660,7 +903,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       <<_prefix::3-binary, rest::binary>> =
         id = "ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
 
-      response = request_txs(conn, "forward", criteria, id)
+      conn = request_txs(conn, "forward", criteria, id)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], rest, :no_prefix, @default_limit)
 
@@ -677,9 +921,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       <<_prefix::3-binary, rest::binary>> =
         id = "ak_wTPFpksUJFjjntonTvwK4LJvDw11DPma7kZBneKbumb8yPeFq"
 
-      response = request_txs(conn, "backward", criteria, id, limit)
+      conn = request_txs(conn, "backward", criteria, id, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], rest, :no_prefix, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -706,9 +959,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       <<_prefix::3-binary, rest::binary>> =
         id = "ct_2rtXsV55jftV36BMeR5gtakN2VjcPtZa3PBURvzShSYWEht3Z7"
 
-      response = request_txs(conn, "backward", criteria, id)
+      conn = request_txs(conn, "backward", criteria, id)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], rest, :no_prefix, @default_limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          @default_limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -723,9 +985,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       <<_prefix::3-binary, rest::binary>> =
         id = "ok_28QDg7fkF5qiKueSdUvUBtCYPJdmMEoS73CztzXCRAwMGKHKZh"
 
-      response = request_txs(conn, "backward", criteria, id)
+      conn = request_txs(conn, "backward", criteria, id)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], rest, :no_prefix, @default_limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          @default_limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -760,9 +1031,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       field = "caller_id"
       id = "ak_YCwfWaW5ER6cRsG9Jg4KMyVU59bQkt45WvcnJJctQojCqBeG2"
 
-      response = request_txs_by_field(conn, "forward", tx_type, field, id, limit)
+      conn = request_txs_by_field(conn, "forward", tx_type, field, id, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], field, id, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -776,9 +1056,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       field = "initiator_id"
       id = "ak_ozzwBYeatmuN818LjDDDwRSiBSvrqt4WU7WvbGsZGVre72LTS"
 
-      response = request_txs_by_field(conn, "forward", tx_type, field, id, limit)
+      conn = request_txs_by_field(conn, "forward", tx_type, field, id, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], field, id, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -792,9 +1081,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       field = "owner_id"
       id = "ak_2RUVa9bvHUD8wYSrvixRjy9LonA9L29wRvwDfQ4y37ysMKjgdQ"
 
-      response = request_txs_by_field(conn, "forward", tx_type, field, id, limit)
+      conn = request_txs_by_field(conn, "forward", tx_type, field, id, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], field, id, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
     end
 
     test "get transactions when direction=forward, tx_type=spend and field=recipient_id ",
@@ -803,9 +1101,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       field = "recipient_id"
       id = "ak_wTPFpksUJFjjntonTvwK4LJvDw11DPma7kZBneKbumb8yPeFq"
 
-      response = request_txs_by_field(conn, "forward", tx_type, field, id, @default_limit)
+      conn = request_txs_by_field(conn, "forward", tx_type, field, id, @default_limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], field, id, @default_limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          @default_limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -818,9 +1125,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       field = "sender_id"
       id = "ak_29Xc6bmHMNQAaTEdUVQvqcCpmx6cWLNevZAfXaRSjZRgypYa6b"
 
-      response = request_txs_by_field(conn, "forward", tx_type, field, id)
+      conn = request_txs_by_field(conn, "forward", tx_type, field, id)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], field, id, @default_limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          @default_limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -837,9 +1153,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       field = "channel_id"
       id = "ch_2KKS3ypddUfYovJSeg4ues2wFdUoGH8ZtunDhrxvGkYNhzP5TC"
 
-      response = request_txs_by_field(conn, "forward", tx_type, field, id, limit)
+      conn = request_txs_by_field(conn, "forward", tx_type, field, id, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], field, id, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
     end
 
     test "get transactions when direction=backward, tx_type=name_update and field=name_id ", %{
@@ -850,9 +1175,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       field = "name_id"
       id = "nm_2ANVLWij71wHMvGyQAEb2zYk8bC7v9C8svVm8HLND6vYaChdnd"
 
-      response = request_txs_by_field(conn, "forward", tx_type, field, id, limit)
+      conn = request_txs_by_field(conn, "forward", tx_type, field, id, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], field, id, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -885,7 +1219,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       field = "recipient_id"
       id = "ak_2RUVa9bvHUD8wYSrvixRjy9LonA9L29wRvwDfQ4y37ysMKjgdQ"
 
-      response = request_txs_by_field(conn, "forward", field, id)
+      conn = request_txs_by_field(conn, "forward", field, id)
+      response = json_response(conn, 200)
 
       assert Enum.any?(response["data"], fn %{"tx" => block_tx} ->
                if block_tx["type"] == "GAMetaTx" do
@@ -896,13 +1231,22 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
                  false
                end
              end)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          @default_limit
+        )
+
+      assert ^data = response["data"]
     end
 
     test "on backward and field=sender_id ", %{conn: conn} do
       field = "sender_id"
       id = "ak_oTX3ffD9XewhuLAquSKHBdm4jhhKb24NKsesGSWM4UKg6gWp4"
 
-      response = request_txs_by_field(conn, "backward", field, id)
+      conn = request_txs_by_field(conn, "backward", field, id)
+      response = json_response(conn, 200)
 
       assert Enum.any?(response["data"], fn %{"tx" => block_tx} ->
                if block_tx["type"] == "GAMetaTx" do
@@ -920,7 +1264,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       field = "account"
       id = "ak_2RUVa9bvHUD8wYSrvixRjy9LonA9L29wRvwDfQ4y37ysMKjgdQ"
 
-      response = request_txs_by_field(conn, range, field, id)
+      conn = request_txs_by_field(conn, range, field, id)
+      response = json_response(conn, 200)
 
       Enum.each(response["data"], fn %{"block_height" => block_height} ->
         assert block_height in range
@@ -950,6 +1295,14 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
                  false
                end
              end)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          @default_limit
+        )
+
+      assert ^data = response["data"]
     end
   end
 
@@ -963,7 +1316,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       id_1 = "ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5"
       id_2 = "ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2"
 
-      response = request_txs(conn, "forward", account, id_1, account, id_2, limit)
+      conn = request_txs(conn, "forward", account, id_1, account, id_2, limit)
+      response = json_response(conn, 200)
 
       check_response_data(
         response["data"],
@@ -972,6 +1326,14 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
         :with_prefix,
         limit
       )
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -985,8 +1347,10 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       sender_id = "ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5"
       recipient_id = "ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2"
 
-      response =
+      conn =
         request_txs(conn, "forward", "sender_id", sender_id, "recipient_id", recipient_id, limit)
+
+      response = json_response(conn, 200)
 
       check_response_data(
         response["data"],
@@ -995,6 +1359,14 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
         :with_prefix,
         limit
       )
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -1010,7 +1382,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       account = "ak_YCwfWaW5ER6cRsG9Jg4KMyVU59bQkt45WvcnJJctQojCqBeG2"
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      response =
+      conn =
         request_txs(
           conn,
           "forward",
@@ -1021,6 +1393,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
           limit
         )
 
+      response = json_response(conn, 200)
+
       check_response_data(
         response["data"],
         account,
@@ -1028,6 +1402,14 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
         :with_prefix,
         limit
       )
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -1042,7 +1424,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type = "oracle_register"
       account = "ak_g5vQK6beY3vsTJHH7KBusesyzq9WMdEYorF8VyvZURXTjLnxT"
 
-      response = request_txs(conn, "forward", "account", account, "type", type, limit)
+      conn = request_txs(conn, "forward", "account", account, "type", type, limit)
+      response = json_response(conn, 200)
 
       check_response_data(
         response["data"],
@@ -1051,6 +1434,14 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
         :with_prefix,
         limit
       )
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
     end
   end
 
@@ -1058,9 +1449,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     test "get transactions when scope=gen at certain height and continuation", %{conn: conn} do
       height = 273_000
 
-      response = request_txs(conn, "gen", height)
+      conn = request_txs(conn, "gen", height)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], height, @default_limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          @default_limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -1072,9 +1472,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       height_to = 197_003
       limit = 50
 
-      response = request_txs(conn, "gen", height_from, height_to, limit)
+      conn = request_txs(conn, "gen", height_from, height_to, limit)
+      response = json_response(conn, 200)
 
       check_response_data(response["data"], height_from, height_to, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          limit
+        )
+
+      assert ^data = response["data"]
 
       conn
       |> get_response_from_next_page(response)
@@ -1179,64 +1588,34 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       |> Enum.any?(fn field -> tx[field] == id end)
 
   defp request_txs(conn, "gen" = scope, criteria),
-    do:
-      conn
-      |> get("/txs/#{scope}/#{criteria}")
-      |> json_response(200)
+    do: get(conn, "/txs/#{scope}/#{criteria}")
 
   defp request_txs(conn, direction, criteria, c),
-    do:
-      conn
-      |> get("/txs/#{direction}?#{criteria}=#{c}")
-      |> json_response(200)
+    do: get(conn, "/txs/#{direction}?#{criteria}=#{c}")
 
   defp request_txs(conn, "gen" = scope, criteria1, criteria2, limit),
-    do:
-      conn
-      |> get("/txs/#{scope}/#{criteria1}-#{criteria2}?limit=#{limit}")
-      |> json_response(200)
+    do: get(conn, "/txs/#{scope}/#{criteria1}-#{criteria2}?limit=#{limit}")
 
   defp request_txs(conn, direction, criteria, c, limit),
-    do:
-      conn
-      |> get("/txs/#{direction}?#{criteria}=#{c}&limit=#{limit}")
-      |> json_response(200)
+    do: get(conn, "/txs/#{direction}?#{criteria}=#{c}&limit=#{limit}")
 
   defp request_txs(conn, direction, criteria1, c1, criteria2, c2),
-    do:
-      conn
-      |> get("/txs/#{direction}?#{criteria1}=#{c1}&#{criteria2}=#{c2}")
-      |> json_response(200)
+    do: get(conn, "/txs/#{direction}?#{criteria1}=#{c1}&#{criteria2}=#{c2}")
 
   defp request_txs(conn, direction, criteria1, c1, criteria2, c2, limit),
-    do:
-      conn
-      |> get("/txs/#{direction}?#{criteria1}=#{c1}&#{criteria2}=#{c2}&limit=#{limit}")
-      |> json_response(200)
+    do: get(conn, "/txs/#{direction}?#{criteria1}=#{c1}&#{criteria2}=#{c2}&limit=#{limit}")
 
   defp request_txs_by_field(conn, %Range{first: first, last: last}, field, c),
-    do:
-      conn
-      |> get("/txs/gen/#{first}-#{last}?#{field}=#{c}")
-      |> json_response(200)
+    do: get(conn, "/txs/gen/#{first}-#{last}?#{field}=#{c}")
 
   defp request_txs_by_field(conn, direction, field, c),
-    do:
-      conn
-      |> get("/txs/#{direction}?#{field}=#{c}")
-      |> json_response(200)
+    do: get(conn, "/txs/#{direction}?#{field}=#{c}")
 
   defp request_txs_by_field(conn, direction, criteria, field, c),
-    do:
-      conn
-      |> get("/txs/#{direction}?#{criteria}.#{field}=#{c}")
-      |> json_response(200)
+    do: get(conn, "/txs/#{direction}?#{criteria}.#{field}=#{c}")
 
-  defp request_txs_by_field(conn, direction, criteria, field, c, limit) do
-    conn
-    |> get("/txs/#{direction}?#{criteria}.#{field}=#{c}&limit=#{limit}")
-    |> json_response(200)
-  end
+  defp request_txs_by_field(conn, direction, criteria, field, c, limit),
+    do: get(conn, "/txs/#{direction}?#{criteria}.#{field}=#{c}&limit=#{limit}")
 
   defp check_response_data(data, criteria, limit) when is_integer(criteria) do
     assert Enum.count(data) == limit
@@ -1344,7 +1723,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       |> Access.get("data")
 
   defp assert_recipient_for_spend_tx_with_name(conn, direction, account_id, limit) do
-    response = request_txs(conn, direction, "account", account_id, limit)
+    conn = request_txs(conn, direction, "account", account_id, limit)
+    response = json_response(conn, 200)
 
     check_response_data_ignore_recipient(response["data"], account_id, limit)
 
@@ -1374,4 +1754,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     |> get_response_from_next_page(response)
     |> check_response_data_ignore_recipient(account_id, limit)
   end
+
+  defp fetch_params(%Conn{query_string: params}),
+    do: params |> WebUtil.query_groups() |> Map.drop(["limit", "page", "cursor", "expand"])
 end
