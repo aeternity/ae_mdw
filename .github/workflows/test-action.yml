@@ -81,7 +81,6 @@ jobs:
         if: steps.plt-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p priv/plts
-          rm priv/plts/dialyzer.plt
           make docker-dialyzer-plt
 
       - run: make docker-dialyzer
