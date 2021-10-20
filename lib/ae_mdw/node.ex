@@ -116,10 +116,6 @@ defmodule AeMdw.Node do
   end
 
   @spec tx_ids(atom()) :: %{atom() => non_neg_integer()}
-  def tx_ids(:spend_tx) do
-    %{sender_id: 0, recipient_id: 0}
-  end
-
   def tx_ids(_arg) do
     %{}
   end
