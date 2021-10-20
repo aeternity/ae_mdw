@@ -79,6 +79,7 @@ jobs:
 
       - name: Create PLTs
         run: |
+          rm -rf priv/plts
           mkdir -p priv/plts
           make docker-dialyzer-plt
 
