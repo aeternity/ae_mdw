@@ -3,6 +3,7 @@ defmodule AeMdw.Error do
 
   import AeMdwWeb.Util, only: [concat: 2]
 
+  @spec to_string(atom(), any()) :: String.t()
   def to_string(Err.Id, x), do: concat("invalid id", x)
   def to_string(Err.BlockIndex, x), do: concat("invalid block index", x)
   def to_string(Err.NonnegInt, x), do: concat("invalid non-negative integer", x)
