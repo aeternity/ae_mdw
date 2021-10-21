@@ -98,7 +98,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
                } = height_map
 
         assert (height < 489_509 && amount == 9_975_045) || amount == 9_975_135
-        assert {:ok, _hash_bin} = Validate.id(hash)
+        assert String.starts_with?(hash, "kh_") and match?({:ok, _hash_bin}, Validate.id(hash))
       end)
     end
   end
@@ -134,7 +134,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
                   amounts["ak_psy8tRXPzGxh6975H7K6XQcMFVsdrxJMt7YkzMY8oUTevutzw"] == 9_975_045) ||
                  amounts["ak_psy8tRXPzGxh6975H7K6XQcMFVsdrxJMt7YkzMY8oUTevutzw"] == 9_975_135
 
-        assert {:ok, _hash_bin} = Validate.id(hash)
+        assert String.starts_with?(hash, "kh_") and match?({:ok, _hash_bin}, Validate.id(hash))
       end)
     end
   end
