@@ -5,7 +5,6 @@ defmodule AeMdw.Db.Format do
 
   alias AeMdw.Contract
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Db.Origin
   alias AeMdw.Db.Sync
@@ -57,18 +56,25 @@ defmodule AeMdw.Db.Format do
     do: auction_bid(bid, & &1, &to_raw_map/1, & &1)
 
   def to_raw_map(m_name, source) when elem(m_name, 0) == :name do
-    name = Model.name(m_name, :index)
+    plain_name = Model.name(m_name, :index)
     succ = &Model.name(&1, :previous)
     prev = chase(succ.(m_name), succ)
 
+    name_hash =
+      case :aens.get_name_hash(plain_name) do
+        {:ok, name_id_bin} -> Enc.encode(:name, name_id_bin)
+        _error -> nil
+      end
+
     {status, auction} =
-      case Name.locate_bid(name) do
+      case Name.locate_bid(plain_name) do
         nil -> {:name, nil}
         key -> {:auction, to_raw_map(key, Model.AuctionBid)}
       end
 
     %{
-      name: name,
+      name: plain_name,
+      hash: name_hash,
       auction: auction,
       status: status,
       active: source == Model.ActiveName,

@@ -9,7 +9,6 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   alias AeMdwWeb.NameController
   alias AeMdwWeb.TestUtil
   alias AeMdwWeb.Continuation, as: Cont
-  alias AeMdw.Error.Input, as: ErrInput
 
   import AeMdw.Util
   import AeMdwWeb.Util
@@ -409,13 +408,27 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
   describe "owned_by" do
     test "get name information for given acount/owner", %{conn: conn} do
-      id = "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
+      id = "ak_KR3a8dukEYVoZPoWFaszFgjKUpBh7J1Q5iWsz9YCamHn2rTCp"
       conn = get(conn, "/names/owned_by/#{id}")
 
-      assert json_response(conn, 200) ==
-               TestUtil.handle_input(fn ->
-                 owned_by_reply(Validate.id!(id, [:account_pubkey]), expand?(conn.params))
-               end)
+      response = json_response(conn, 200)
+
+      assert Jason.encode!(response) ==
+               Jason.encode!(
+                 TestUtil.handle_input(fn ->
+                   owned_by_reply(Validate.id!(id, [:account_pubkey]), expand?(conn.params))
+                 end)
+               )
+
+      assert Enum.each(response["active"], fn owned_entry ->
+               expected_hash =
+                 case :aens.get_name_hash(owned_entry["name"]) do
+                   {:ok, name_id_bin} -> Enc.encode(:name, name_id_bin)
+                   _error -> nil
+                 end
+
+               assert owned_entry["hash"] == expected_hash
+             end)
     end
 
     test "renders error when the key is invalid", %{conn: conn} do

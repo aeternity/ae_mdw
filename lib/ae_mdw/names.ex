@@ -5,6 +5,8 @@ defmodule AeMdw.Names do
 
   require AeMdw.Db.Model
 
+  alias :aeser_api_encoder, as: Enc
+
   alias AeMdw.AuctionBids
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
@@ -129,6 +131,12 @@ defmodule AeMdw.Names do
   defp render(plain_name, is_active?, expand?) do
     name = Mnesia.fetch!(if(is_active?, do: @table_active, else: @table_inactive), plain_name)
 
+    name_hash =
+      case :aens.get_name_hash(plain_name) do
+        {:ok, name_id_bin} -> Enc.encode(:name, name_id_bin)
+        _error -> nil
+      end
+
     {status, auction_bid} =
       case AuctionBids.top_auction_bid(plain_name, expand?) do
         {:ok, auction_bid} ->
@@ -145,6 +153,7 @@ defmodule AeMdw.Names do
 
     %{
       name: plain_name,
+      hash: name_hash,
       auction: auction_bid && auction_bid.info,
       status: to_string(status),
       active: is_active?,
