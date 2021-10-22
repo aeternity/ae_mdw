@@ -5,7 +5,7 @@ defmodule AeMdw.Db.Sync.Oracle do
 
   require Model
   require Ex2ms
-  require AeMdw.Log
+  require Logger
 
   import AeMdw.Db.Oracle,
     only: [
@@ -77,7 +77,7 @@ defmodule AeMdw.Db.Sync.Oracle do
       # TreeId = <<OracleId/binary, QId/binary>>,
       # Serialized = aeu_mtrees:get(TreeId, Tree#oracle_tree.otree)
       # raises error on unexisting tree_id
-      error -> Log.warn(error)
+      error -> Log.error(error)
     end
 
     :ok
@@ -114,61 +114,4 @@ defmodule AeMdw.Db.Sync.Oracle do
   defp log_expired_oracle(height, pubkey),
     do: Log.info("[#{height}] expiring oracle #{Enc.encode(:oracle_pubkey, pubkey)}")
 
-  ################################################################################
-  # for development only
-
-  # def quick_sync() do
-  #   alias AeMdw.Node, as: AE
-  #   alias AeMdw.Db.Stream, as: DBS
-  #   import AeMdw.Db.Util
-
-  #   nil = Process.whereis(AeMdw.Db.Sync.Supervisor)
-  #   range = {1, last_gen() - 1}
-  #   raw_txs =
-  #     DBS.map(:forward, :raw, type: :oracle_register, type: :oracle_extend)
-  #     |> Enum.to_list
-
-  #   run_range(range, raw_txs,
-  #     fn h -> :mnesia.transaction(fn -> expire(h) end) end,
-  #     fn %{block_height: kbi, micro_index: mbi, hash: hash, tx_index: txi,
-  #           tx: %{oracle_id: oracle_id}} ->
-  #       {_block_hash, type, _signed_tx, tx_rec} = AE.Db.get_tx_data(hash)
-  #       pk = AeMdw.Validate.id!(oracle_id)
-  #       bi = {kbi, mbi}
-  #       call = case type do
-  #                :oracle_register_tx -> &register/4
-  #                :oracle_extend_tx -> &extend/4
-  #              end
-  #       :mnesia.transaction(fn -> call.(pk, tx_rec, txi, bi) end)
-  #     end)
-  # end
-
-  # def run_range({from, to}, _txs, _int_fn, _tx_fn) when from > to,
-  #   do: :done
-
-  # def run_range({from, to}, [%{block_height: from} = tx | rem_txs], int_fn, tx_fn) do
-  #   int_fn.(from)
-  #   tx_fn.(tx)
-  #   run_range({from + 1, to}, rem_txs, int_fn, tx_fn)
-  # end
-
-  # def run_range({from, to}, [%{block_height: h} = tx | rem_txs], int_fn, tx_fn) when h < from do
-  #   tx_fn.(tx)
-  #   run_range({from, to}, rem_txs, int_fn, tx_fn)
-  # end
-
-  # def run_range({from, to}, txs, int_fn, tx_fn) do
-  #   int_fn.(from)
-  #   run_range({from + 1, to}, txs, int_fn, tx_fn)
-  # end
-
-  def reset_db() do
-    [
-      Model.ActiveOracle,
-      Model.InactiveOracle,
-      Model.ActiveOracleExpiration,
-      Model.InactiveOracleExpiration
-    ]
-    |> Enum.each(&:mnesia.clear_table/1)
-  end
 end
