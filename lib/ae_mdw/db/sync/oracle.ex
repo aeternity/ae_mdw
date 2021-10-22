@@ -60,12 +60,16 @@ defmodule AeMdw.Db.Sync.Oracle do
     query_id = :aeo_response_tx.query_id(tx)
     o_tree = AeMdw.Db.Oracle.oracle_tree!(bi)
 
-    fee =
-      pubkey
-      |> :aeo_state_tree.get_query(query_id, o_tree)
-      |> :aeo_query.fee()
+    try do
+      fee =
+        pubkey
+        |> :aeo_state_tree.get_query(query_id, o_tree)
+        |> :aeo_query.fee()
 
-    AeMdw.Db.IntTransfer.write({height, txi}, "reward_oracle", pubkey, txi, fee)
+      AeMdw.Db.IntTransfer.write({height, txi}, "reward_oracle", pubkey, txi, fee)
+    rescue
+      error -> Log.warn(error)
+    end
   end
 
   ##########

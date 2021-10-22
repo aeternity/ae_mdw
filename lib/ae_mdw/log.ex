@@ -6,4 +6,7 @@ defmodule AeMdw.Log do
 
   def warn(msg),
     do: Logger.warn(msg, sync: true)
+
+  def error(msg),
+    do: Logger.error(msg, sync: true)
 end
