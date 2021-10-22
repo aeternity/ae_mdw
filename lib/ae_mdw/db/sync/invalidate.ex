@@ -42,7 +42,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
         :mnesia.transaction(fn ->
           {name_dels, name_writes} = Sync.Name.invalidate(fork_height - 1)
-          {oracle_dels, oracle_writes} = Sync.Oracle.invalidate(fork_height - 1)
+          {oracle_dels, oracle_writes} = Sync.OracleInvalidation.invalidate(fork_height - 1)
 
           do_dels(tab_keys)
           do_dels(stat_key_dels)
