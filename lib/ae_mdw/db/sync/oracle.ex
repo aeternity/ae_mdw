@@ -113,5 +113,4 @@ defmodule AeMdw.Db.Sync.Oracle do
 
   defp log_expired_oracle(height, pubkey),
     do: Log.info("[#{height}] expiring oracle #{Enc.encode(:oracle_pubkey, pubkey)}")
-
 end
