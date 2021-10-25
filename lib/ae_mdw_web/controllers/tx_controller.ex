@@ -39,7 +39,7 @@ defmodule AeMdwWeb.TxController do
 
   @spec txs(Conn.t(), map()) :: Conn.t()
   def txs(conn, %{"scope_type" => _scope_type} = params) do
-    Cont.response(conn, &json/2, &add_spendtx_details(&1, params))
+    Cont.response(conn, &json/2, &handle_spendtx_details(&1, params))
   end
 
   def txs(%Conn{assigns: assigns, query_params: query_params} = conn, params) do
@@ -54,7 +54,7 @@ defmodule AeMdwWeb.TxController do
             URI.to_string(%URI{path: "/txs/#{direction}", query: URI.encode_query(next_params)})
           end
 
-        txs = add_spendtx_details(txs, params)
+        txs = handle_spendtx_details(txs, params)
 
         json(conn, %{"data" => txs, "next" => uri})
 
@@ -103,8 +103,10 @@ defmodule AeMdwWeb.TxController do
   #
   # Private functions
   #
-  defp add_spendtx_details(response_data, %{"account" => _account}) do
-    Enum.map(response_data, fn %{"tx" => block_tx, "tx_index" => tx_index} = block ->
+  defp handle_spendtx_details(response_data, %{"account" => _account}) do
+    response_data
+    |> Enum.uniq_by(fn %{"hash" => tx_hash} -> tx_hash end)
+    |> Enum.map(fn %{"tx" => block_tx, "tx_index" => tx_index} = block ->
       spend_tx_recipient = (block_tx["type"] == @type_spend_tx && block_tx["recipient_id"]) || nil
       add_details? = String.starts_with?(spend_tx_recipient || "", "nm_")
 
@@ -118,7 +120,7 @@ defmodule AeMdwWeb.TxController do
     end)
   end
 
-  defp add_spendtx_details(response_data, _params), do: response_data
+  defp handle_spendtx_details(response_data, _params), do: response_data
 
   defp get_recipient(spend_tx_recipient_nm, spend_txi) do
     with {:ok, plain_name} <- Validate.plain_name(spend_tx_recipient_nm),

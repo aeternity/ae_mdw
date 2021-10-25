@@ -54,13 +54,11 @@ defmodule AeMdwWeb.BlockchainSim do
 
   def generate_blockchain(initial_balances, blocks) do
     mock_accounts =
-      initial_balances
-      |> Enum.map(fn {account_id, _balance} ->
+      Enum.into(initial_balances, %{}, fn {account_id, _balance} ->
         %{public: account_pkey} = :enacl.sign_keypair()
 
         {account_id, :aeser_id.create(:account, account_pkey)}
       end)
-      |> Map.new()
 
     {mock_blocks, mock_transactions, _max_height} =
       blocks
@@ -101,8 +99,7 @@ defmodule AeMdwWeb.BlockchainSim do
     ]
 
     blocks_pkeys =
-      mock_blocks
-      |> Enum.map(fn {block_id, block} ->
+      Enum.into(mock_blocks, %{}, fn {block_id, block} ->
         header = :aec_blocks.to_header(block)
         {:ok, block_hash} = :aec_headers.hash_header(header)
 
@@ -112,24 +109,38 @@ defmodule AeMdwWeb.BlockchainSim do
             :micro -> :micro_block_hash
           end
 
-        {block_id, :aeser_api_encoder.encode(hash_type, block_hash)}
+        block_info =
+          put_micro_block_txs(
+            %{
+              hash: :aeser_api_encoder.encode(hash_type, block_hash),
+              height: :aec_blocks.height(block),
+              time: :aec_blocks.time_in_msecs(block)
+            },
+            hash_type,
+            block
+          )
+
+        {block_id, block_info}
       end)
-      |> Map.new()
 
     {aec_db_mock, blocks_pkeys, mock_transactions, mock_accounts}
   end
 
+  defp put_micro_block_txs(block_info, :micro_block_hash, block) do
+    txs = block |> :aec_blocks.txs() |> Enum.map(fn {:ok, tx} -> tx end)
+    Map.put(block_info, :txs, txs)
+  end
+
+  defp put_micro_block_txs(block_info, _other_hash, _block), do: block_info
+
   defp mock_key_block(account_id, accounts, height) do
-    miner_pk = Map.fetch!(accounts, account_id) |> :aeser_id.specialize(:account)
+    miner_pk = accounts |> Map.fetch!(account_id) |> :aeser_id.specialize(:account)
 
     :aec_blocks.new_key(height, <<>>, <<>>, <<>>, 0, 0, 0, :default, 0, miner_pk, miner_pk)
   end
 
   defp mock_micro_block(transactions, accounts, height) do
-    txs =
-      transactions
-      |> Enum.map(fn {tx_id, tx} -> {tx_id, serialize_tx(tx, accounts)} end)
-      |> Map.new()
+    txs = Enum.into(transactions, %{}, fn {tx_id, tx} -> {tx_id, serialize_tx(tx, accounts)} end)
 
     {:aec_blocks.new_micro(height, <<>>, <<>>, <<>>, <<>>, Map.values(txs), 0, :no_fraud, 0), txs}
   end

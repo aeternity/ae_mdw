@@ -1119,6 +1119,28 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       |> check_response_data(field, id, @default_limit)
     end
 
+    test "get transactions when sender_id = recipient_id",
+         %{conn: conn} do
+      id = "ak_gvxNbZf5CuxYVfcUFoKAP4geZatWaC2Yy4jpx5vZoCKank4Gc"
+      hash = "th_3rw5nk53rEQzZr8xrQ6sqt2Y9Cv4U8piqiHK1KVkXCaVFMTCq"
+
+      field = "recipient_id"
+
+      %{"data" => txs1} =
+        conn |> get("txs/gen/421792-0?spend.#{field}=#{id}") |> json_response(200)
+
+      field = "sender_id"
+
+      %{"data" => txs2} =
+        conn |> get("txs/gen/421792-0?spend.#{field}=#{id}") |> json_response(200)
+
+      assert [%{"tx" => %{"sender_id" => ^id, "recipient_id" => ^id}}] =
+               Enum.filter(txs1, fn tx -> tx["hash"] == hash end)
+
+      assert [%{"tx" => %{"sender_id" => ^id, "recipient_id" => ^id}}] =
+               Enum.filter(txs2, fn tx -> tx["hash"] == hash end)
+    end
+
     test "get transactions when direction=forward, tx_type=oracle_query and field=sender_id ",
          %{conn: conn} do
       tx_type = "oracle_query"
