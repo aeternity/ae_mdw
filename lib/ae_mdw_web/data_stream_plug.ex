@@ -3,22 +3,26 @@ defmodule AeMdwWeb.DataStreamPlug do
 
   alias AeMdw.Validate
   alias AeMdw.Node, as: AE
+  alias Plug.Conn
 
   import AeMdw.Db.Util, only: [first_gen: 0, last_gen: 0]
   import AeMdwWeb.Util, only: [concat: 2]
 
   @default_limit 10
   @max_limit 1000
+  @behaviour Plug
 
   ##########
 
+  @impl true
   def init(opts),
     do: {Keyword.fetch!(opts, :paginables), Keyword.fetch!(opts, :scopes)}
 
-  def call(%Plug.Conn{path_info: [_, "count" | _]} = conn, _),
+  @impl true
+  def call(%Conn{path_info: [_path_slice1, "count" | _path_slice3]} = conn, _opts),
     do: conn
 
-  def call(%Plug.Conn{} = conn, {[], _scopes}),
+  def call(%Conn{} = conn, {[], _scopes}),
     do: conn
 
   def call(%Plug.Conn{path_info: path_info} = conn, {[{prefix, hook} | paginables], scopes}) do
@@ -36,7 +40,7 @@ defmodule AeMdwWeb.DataStreamPlug do
 
   ##########
 
-  def default_parse(conn, rem_path, scopes) do
+  defp default_parse(conn, rem_path, scopes) do
     handle_assign(
       conn,
       parse_scope(rem_path, scopes),
@@ -45,6 +49,7 @@ defmodule AeMdwWeb.DataStreamPlug do
     )
   end
 
+  @spec handle_assign(Conn.t(), term(), term(), term()) :: Conn.t()
   def handle_assign(conn, maybe_scope, maybe_offset, maybe_query) do
     with {:ok, scope} <- maybe_scope,
          {:ok, offset} <- maybe_offset,
@@ -63,30 +68,34 @@ defmodule AeMdwWeb.DataStreamPlug do
 
   ##########
 
-  def parse_scope(["forward" | _], _),
+  @spec parse_scope([binary()], [binary()]) :: {:ok, term()} | {:error, binary()}
+  def parse_scope(["forward" | _rem_path], _scopes),
     do: {:ok, {:gen, first_gen()..last_gen()}}
 
-  def parse_scope(["backward" | _], _),
+  def parse_scope(["backward" | _rem_path], _scopes),
     do: {:ok, {:gen, last_gen()..first_gen()}}
 
-  def parse_scope([scope_type, range | _], scopes) do
-    cond do
-      scope_type in scopes ->
-        case parse_range(range) do
-          {:ok, range} ->
-            {:ok, {String.to_atom(scope_type), range}}
+  def parse_scope([], _scopes),
+    do: {:ok, {:gen, last_gen()..first_gen()}}
 
-          {:error, detail} ->
-            {:error, concat("invalid range", detail)}
-        end
+  def parse_scope([scope_type, range | _rem_path], scopes) do
+    if scope_type in scopes do
+      case parse_range(range) do
+        {:ok, range} ->
+          {:ok, {String.to_existing_atom(scope_type), range}}
 
-      true ->
-        {:error, concat("invalid scope", scope_type)}
+        {:error, detail} ->
+          {:error, concat("invalid range", detail)}
+      end
+    else
+      {:error, concat("invalid scope", scope_type)}
     end
   end
 
-  def parse_scope([direction | _], _), do: {:error, concat("invalid direction", direction)}
+  def parse_scope([direction | _rem_path], _scopes),
+    do: {:error, concat("invalid direction", direction)}
 
+  @spec parse_range(binary()) :: {:ok, Range.t()} | {:error, binary}
   def parse_range(range) do
     case String.split(range, "-") do
       [from, to] ->
@@ -102,11 +111,12 @@ defmodule AeMdwWeb.DataStreamPlug do
           {:error, {_, detail}} -> {:error, detail}
         end
 
-      _ ->
+      _invalid_range ->
         {:error, range}
     end
   end
 
+  @spec parse_offset(map()) :: {:ok, {non_neg_integer(), pos_integer()}} | {:error, binary()}
   def parse_offset(%{"limit" => _, "page" => _} = m) do
     with {:ok, {limit, _}} <- parse_offset(Map.drop(m, ["page"])),
          {:ok, {_, page}} <- parse_offset(Map.drop(m, ["limit"])) do
@@ -147,7 +157,7 @@ defmodule AeMdwWeb.DataStreamPlug do
 
   ################################################################################
 
-  def query_norm(types, "type", val) do
+  defp query_norm(types, "type", val) do
     case Validate.tx_type(val) do
       {:ok, type} ->
         {:ok, MapSet.put(types, type)}
@@ -157,17 +167,17 @@ defmodule AeMdwWeb.DataStreamPlug do
     end
   end
 
-  def query_norm(types, "type_group", val) do
+  defp query_norm(types, "type_group", val) do
     case Validate.tx_group(val) do
       {:ok, group} ->
-        {:ok, MapSet.new(AE.tx_group(group)) |> MapSet.union(types)}
+        {:ok, group |> AE.tx_group() |> MapSet.new() |> MapSet.union(types)}
 
       {:error, {err_kind, offender}} ->
         {:error, AeMdw.Error.to_string(err_kind, offender)}
     end
   end
 
-  def query_norm(ids, key_spec, val) do
+  defp query_norm(ids, key_spec, val) do
     {_, validator} = AeMdw.Db.Stream.Query.Parser.classify_ident(key_spec)
 
     try do
@@ -178,11 +188,11 @@ defmodule AeMdwWeb.DataStreamPlug do
     end
   end
 
-  def parse_query("" <> query_string),
+  defp parse_query("" <> query_string),
     do: parse_query(URI.query_decoder(query_string))
 
   @type_params ["type", "type_group"]
-  def parse_query(stream) do
+  defp parse_query(stream) do
     get = fn kw, top -> Map.get(top, kw, MapSet.new()) end
 
     stream
