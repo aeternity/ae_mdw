@@ -13,6 +13,8 @@ defmodule AeMdwWeb.Aex9Controller do
   import AeMdwWeb.Helpers.Aex9Helper
   import AeMdwWeb.Views.Aex9ControllerView
 
+  @max_range_length 10
+
   @spec by_names(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def by_names(conn, params),
     do: handle_input(conn, fn -> by_names_reply(conn, search_mode!(params)) end)
@@ -289,8 +291,8 @@ defmodule AeMdwWeb.Aex9Controller do
         first = max(0, f)
         last = min(l, :aec_blocks.height(top_kb))
 
-        if last - first > 9 do
-          raise ErrInput.RangeTooBig, value: "max range length is 10"
+        if last - first + 1 > @max_range_length do
+          raise ErrInput.RangeTooBig, value: "max range length is #{@max_range_length}"
         end
 
         first..last
