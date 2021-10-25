@@ -13,6 +13,8 @@ defmodule AeMdwWeb.Aex9Controller do
   import AeMdwWeb.Helpers.Aex9Helper
   import AeMdwWeb.Views.Aex9ControllerView
 
+  @max_range_length 10
+
   @spec by_names(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def by_names(conn, params),
     do: handle_input(conn, fn -> by_names_reply(conn, search_mode!(params)) end)
@@ -207,8 +209,8 @@ defmodule AeMdwWeb.Aex9Controller do
         range:
           map_balances_range(
             range,
-            fn height_hash ->
-              {amount, _} = DBN.aex9_balance(contract_pk, account_pk, height_hash)
+            fn type_height_hash ->
+              {amount, _} = DBN.aex9_balance(contract_pk, account_pk, type_height_hash)
               {:amount, amount}
             end
           )
@@ -254,8 +256,8 @@ defmodule AeMdwWeb.Aex9Controller do
         range:
           map_balances_range(
             range,
-            fn height_hash ->
-              {amounts, _} = DBN.aex9_balances!(contract_pk, height_hash)
+            fn type_height_hash ->
+              {amounts, _} = DBN.aex9_balances!(contract_pk, type_height_hash)
               {:amounts, normalize_balances(amounts)}
             end
           )
@@ -286,7 +288,14 @@ defmodule AeMdwWeb.Aex9Controller do
     case DSPlug.parse_range(range) do
       {:ok, %Range{first: f, last: l}} ->
         {:ok, top_kb} = :aec_chain.top_key_block()
-        max(0, f)..min(l, :aec_blocks.height(top_kb))
+        first = max(0, f)
+        last = min(l, :aec_blocks.height(top_kb))
+
+        if last - first + 1 > @max_range_length do
+          raise ErrInput.RangeTooBig, value: "max range length is #{@max_range_length}"
+        end
+
+        first..last
 
       {:error, _detail} ->
         raise ErrInput.NotAex9, value: range
@@ -317,25 +326,23 @@ defmodule AeMdwWeb.Aex9Controller do
 
   defp top?(conn), do: presence?(conn, "top")
 
-  defp map_balances_range(range, f) do
+  defp map_balances_range(range, get_balance_func) do
     range
-    |> height_hash_range()
+    |> Stream.map(&height_hash/1)
     |> Stream.map(fn {height, hash} ->
-      {k, v} = f.({height, hash})
+      {k, v} = get_balance_func.({:key, height, hash})
       Map.put(%{height: height, block_hash: enc_block(:key, hash)}, k, v)
     end)
     |> Enum.to_list()
   end
 
-  defp height_hash_range(range) do
-    Stream.map(
-      range,
-      fn h ->
-        {:ok, block} = :aec_chain.get_key_block_by_height(h)
-        {:ok, hash} = :aec_headers.hash_header(:aec_blocks.to_header(block))
-        {h, hash}
-      end
-    )
+  defp height_hash(height) do
+    with {:ok, block} <- :aec_chain.get_key_block_by_height(height),
+         {:ok, hash} <- :aec_headers.hash_header(:aec_blocks.to_header(block)) do
+      {height, hash}
+    else
+      _error -> {height, <<>>}
+    end
   end
 
   #

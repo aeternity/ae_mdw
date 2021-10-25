@@ -1,9 +1,143 @@
 defmodule Integration.AeMdwWeb.Aex9ControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
+  alias AeMdw.Validate
+
   @moduletag :integration
 
   @big_balance_contract_id "ct_2M4mVQCDVxu6mvUrEue1xMafLsoA1bgsfC3uT95F3r1xysaCvE"
+
+  describe "by_name" do
+    test "gets aex9 tokens sorted by name", %{conn: conn} do
+      response =
+        conn
+        |> get("/aex9/by_name")
+        |> json_response(200)
+
+      assert Enum.any?(response, fn aex9 ->
+               aex9 == %{
+                 "contract_id" => "ct_1DtebWK23btGPEnfiH3fxppd34S75uUryo5yGmb938Dx9Nyjt",
+                 "contract_txi" => 22_313_168,
+                 "decimals" => 18,
+                 "name" => "9GAG",
+                 "symbol" => "9GAG"
+               }
+             end)
+
+      assert Enum.any?(response, fn aex9 ->
+               aex9 ==
+                 %{
+                   "contract_id" => "ct_AdhAL6YZ2wZKKTcR8Gf8CYSGsWC1siWNyv8JRvRpB3RbeAwer",
+                   "contract_txi" => 9_393_007,
+                   "decimals" => 18,
+                   "name" => "AAA",
+                   "symbol" => "AAA"
+                 }
+             end)
+    end
+  end
+
+  describe "by_symbol" do
+    test "gets aex9 tokens sorted by symbol", %{conn: conn} do
+      response =
+        conn
+        |> get("/aex9/by_symbol")
+        |> json_response(200)
+
+      assert Enum.any?(response, fn aex9 ->
+               aex9 ==
+                 %{
+                   "contract_id" => "ct_2TZsPKT5wyahqFrzp8YX7DfXQapQ4Qk65yn3sHbifU9Db9hoav",
+                   "contract_txi" => 12_361_891,
+                   "decimals" => 18,
+                   "name" => "911058",
+                   "symbol" => "SPH"
+                 }
+             end)
+
+      assert Enum.any?(response, fn aex9 ->
+               aex9 == %{
+                 "contract_id" => "ct_1DtebWK23btGPEnfiH3fxppd34S75uUryo5yGmb938Dx9Nyjt",
+                 "contract_txi" => 22_313_168,
+                 "decimals" => 18,
+                 "name" => "9GAG",
+                 "symbol" => "9GAG"
+               }
+             end)
+    end
+  end
+
+  describe "balance_range" do
+    test "gets account balance on a contract for range of generations", %{conn: conn} do
+      contract_id = "ct_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
+      account_id = "ak_psy8tRXPzGxh6975H7K6XQcMFVsdrxJMt7YkzMY8oUTevutzw"
+      first = 489_501
+      last = 489_510
+
+      path =
+        Routes.aex9_path(
+          conn,
+          :balance_range,
+          "#{first}-#{last}",
+          contract_id,
+          account_id
+        )
+
+      response = conn |> get(path) |> json_response(200)
+      assert response["contract_id"] == contract_id
+      assert response["account_id"] == account_id
+      assert is_list(response["range"])
+
+      response["range"]
+      |> Enum.zip(first..last)
+      |> Enum.each(fn {height_map, height} ->
+        assert %{
+                 "amount" => amount,
+                 "block_hash" => hash,
+                 "height" => ^height
+               } = height_map
+
+        assert (height < 489_509 && amount == 9_975_045) || amount == 9_975_135
+        assert String.starts_with?(hash, "kh_") and match?({:ok, _hash_bin}, Validate.id(hash))
+      end)
+    end
+  end
+
+  describe "balances_range" do
+    test "gets balances on a contract for range of generations", %{conn: conn} do
+      contract_id = "ct_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
+      first = 489_501
+      last = 489_510
+
+      path =
+        Routes.aex9_path(
+          conn,
+          :balances_range,
+          "#{first}-#{last}",
+          "ct_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
+        )
+
+      response = conn |> get(path) |> json_response(200)
+      assert response["contract_id"] == contract_id
+      assert is_list(response["range"])
+
+      response["range"]
+      |> Enum.zip(first..last)
+      |> Enum.each(fn {height_map, height} ->
+        assert %{
+                 "amounts" => amounts,
+                 "block_hash" => hash,
+                 "height" => ^height
+               } = height_map
+
+        assert (height < 489_509 &&
+                  amounts["ak_psy8tRXPzGxh6975H7K6XQcMFVsdrxJMt7YkzMY8oUTevutzw"] == 9_975_045) ||
+                 amounts["ak_psy8tRXPzGxh6975H7K6XQcMFVsdrxJMt7YkzMY8oUTevutzw"] == 9_975_135
+
+        assert String.starts_with?(hash, "kh_") and match?({:ok, _hash_bin}, Validate.id(hash))
+      end)
+    end
+  end
 
   describe "balance_for_hash" do
     test "gets balance for hash", %{conn: conn} do
