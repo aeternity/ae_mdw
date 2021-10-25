@@ -437,6 +437,6 @@ defmodule AeMdwWeb.ContractController do
 
   def create_txi!(contract_id) do
     pk = Validate.id!(contract_id)
-    (pk == Db.Sync.Contract.migrate_contract_pk() && -1) || Db.Origin.tx_index({:contract, pk})
+    Db.Origin.tx_index({:contract, pk}) || -1
   end
 end

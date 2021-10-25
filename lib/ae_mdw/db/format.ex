@@ -7,8 +7,6 @@ defmodule AeMdw.Db.Format do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Db.Origin
-  alias AeMdw.Db.Sync
-  alias AeMdw.Txs
 
   require Model
 
@@ -127,10 +125,8 @@ defmodule AeMdw.Db.Format do
 
   def to_raw_map({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog) do
     m_log = read!(Model.ContractLog, {create_txi, call_txi, event_hash, log_idx})
-    migrate_ct_pk = Sync.Contract.migrate_contract_pk()
     ct_id = &:aeser_id.create(:contract, &1)
-    ct_pk = ct_id.((create_txi == -1 && migrate_ct_pk) || Origin.pubkey({:contract, create_txi}))
-
+    ct_pk = Origin.pubkey({:contract, create_txi})
     ext_ct_pk = Model.contract_log(m_log, :ext_contract)
 
     parent_contract_pk =
@@ -141,17 +137,15 @@ defmodule AeMdw.Db.Format do
 
     # clear ext_ct_pk after saving parent_contract_pk in its own field
     ext_ct_pk = if not is_tuple(ext_ct_pk), do: ext_ct_pk
-
-    ext_ct_txi =
-      (ext_ct_pk && ext_ct_pk != migrate_ct_pk && Origin.tx_index({:contract, ext_ct_pk})) || nil
-
+    ext_ct_txi = (ext_ct_pk && Origin.tx_index({:contract, ext_ct_pk})) || -1
     m_tx = read!(Model.Tx, call_txi)
+
     {height, micro_index} = Model.tx(m_tx, :block_index)
     block_hash = Model.block(read_block!({height, micro_index}), :hash)
 
     %{
-      contract_txi: (create_txi != -1 && create_txi) || nil,
-      contract_id: ct_pk,
+      contract_txi: (create_txi != -1 && create_txi) || -1,
+      contract_id: ct_pk && ct_id.(ct_pk),
       ext_caller_contract_txi: ext_ct_txi,
       ext_caller_contract_id: (ext_ct_pk != nil && ct_id.(ext_ct_pk)) || nil,
       parent_contract_id: (parent_contract_pk && ct_id.(parent_contract_pk)) || nil,
@@ -171,9 +165,13 @@ defmodule AeMdw.Db.Format do
     m_call = read!(Model.IntContractCall, {call_txi, local_idx})
     create_txi = Model.int_contract_call(m_call, :create_txi)
     fname = Model.int_contract_call(m_call, :fname)
-    migrate_ct_pk = Sync.Contract.migrate_contract_pk()
-    ct_id = &:aeser_id.create(:contract, &1)
-    ct_pk = ct_id.((create_txi == -1 && migrate_ct_pk) || Origin.pubkey({:contract, create_txi}))
+
+    ct_pk =
+      case Origin.pubkey({:contract, create_txi}) do
+        nil -> nil
+        pk -> :aeser_id.create(:contract, pk)
+      end
+
     m_tx = read!(Model.Tx, call_txi)
     {height, micro_index} = Model.tx(m_tx, :block_index)
     block_hash = Model.block(read_block!({height, micro_index}), :hash)
