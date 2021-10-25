@@ -7,6 +7,7 @@ defmodule AeMdw.Db.Format do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Db.Origin
+  alias AeMdw.Txs
 
   require Model
 
