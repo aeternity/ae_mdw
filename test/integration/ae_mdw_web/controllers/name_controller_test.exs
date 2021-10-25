@@ -1,14 +1,17 @@
 defmodule Integration.AeMdwWeb.NameControllerTest do
   use AeMdwWeb.ConnCase
 
-  alias AeMdw.Validate
+  alias :aeser_api_encoder, as: Enc
+
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
-  alias AeMdw.Db.Util
+  alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Validate
+
+  alias AeMdwWeb.Continuation, as: Cont
   alias AeMdwWeb.NameController
   alias AeMdwWeb.TestUtil
-  alias AeMdwWeb.Continuation, as: Cont
 
   import AeMdw.Util
   import AeMdwWeb.Util
