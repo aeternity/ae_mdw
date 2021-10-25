@@ -22,10 +22,10 @@ defmodule AeMdw.Application do
     init(:node_records)
     init(:meta)
     init_public(:contract_cache)
-    init(:aehttp)
     init_public(:db_state)
     # init(:aesophia)
     init(:app_ctrl_server)
+    init(:aecore_services)
     init(:aesync)
 
     children = [
@@ -39,8 +39,12 @@ defmodule AeMdw.Application do
     Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)
   end
 
-  defp init(:aehttp),
-    do: :application.ensure_all_started(:aehttp)
+  defp init(:aecore_services) do
+    # need to be started after app_ctrl_server
+    Application.ensure_all_started(:aehttp)
+    Application.ensure_all_started(:aestratum)
+    Application.ensure_all_started(:aemon)
+  end
 
   # def init(:aesophia) do
   #   Path.join(Application.app_dir(:aesophia), "ebin/*.beam")
