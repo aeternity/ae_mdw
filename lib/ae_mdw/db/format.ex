@@ -9,6 +9,7 @@ defmodule AeMdw.Db.Format do
   alias AeMdw.Db.Name
   alias AeMdw.Db.Origin
   alias AeMdw.Db.Sync
+  alias AeMdw.Txs
 
   require Model
 
@@ -420,6 +421,7 @@ defmodule AeMdw.Db.Format do
   def to_map(name, source, true = _expand)
       when source in [Model.ActiveName, Model.InactiveName] do
     to_map(name, source)
+    |> update_in(["auction"], &expand_name_auction/1)
     |> update_in(["info"], &expand_name_info/1)
     |> update_in(["previous"], fn prevs -> Enum.map(prevs, &expand_name_info/1) end)
   end
@@ -569,6 +571,12 @@ defmodule AeMdw.Db.Format do
             []
         end
     }
+
+  defp expand_name_auction(nil), do: nil
+
+  defp expand_name_auction(%{"bids" => bids_txis} = auction) do
+    Map.put(auction, "bids", Enum.map(bids_txis, &Txs.fetch!/1))
+  end
 
   defp expand_name_info(json) do
     json

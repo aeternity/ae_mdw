@@ -2,13 +2,19 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   use AeMdwWeb.ConnCase
 
   alias AeMdw.Validate
-  alias AeMdw.Db.{Format, Model, Name}
-  alias AeMdwWeb.{NameController, TestUtil}
+  alias AeMdw.Db.Format
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.Name
+  alias AeMdw.Db.Util
+  alias AeMdwWeb.NameController
+  alias AeMdwWeb.TestUtil
   alias AeMdwWeb.Continuation, as: Cont
   alias AeMdw.Error.Input, as: ErrInput
 
   import AeMdw.Util
   import AeMdwWeb.Util
+
+  require Model
 
   @moduletag :integration
 
@@ -320,18 +326,33 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       name = "wwwbeaconoidcom.chain"
       conn = get(conn, "/name/#{name}")
 
-      assert json_response(conn, 200) |> Jason.encode!() ==
+      assert json_response(conn, 200) ==
                TestUtil.handle_input(fn -> get_name(Validate.plain_name!(name)) end)
-               |> Jason.encode!()
+    end
+
+    test "get name in auction with expand=true", %{conn: conn} do
+      bid_key = Util.first(Model.AuctionBid)
+      name = elem(bid_key, 0)
+      conn = get(conn, "/name/#{name}?expand=true")
+
+      response = json_response(conn, 200)
+      name_map = TestUtil.handle_input(fn -> get_name(Validate.plain_name!(name)) end)
+      name_map = update_in(name_map, ["status"], &to_string/1)
+
+      assert name_map ==
+               update_in(response, ["info", "bids"], fn bids ->
+                 Enum.map(bids, & &1["tx_index"])
+               end)
+
+      assert List.first(response["info"]["bids"]) == response["info"]["last_bid"]
     end
 
     test "get name info by encoded hash ", %{conn: conn} do
       hash = "nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj"
       conn = get(conn, "/name/#{hash}")
 
-      assert json_response(conn, 200) |> Jason.encode!() ==
+      assert json_response(conn, 200) ==
                TestUtil.handle_input(fn -> get_name(Validate.plain_name!(hash)) end)
-               |> Jason.encode!()
     end
 
     test "renders error when no such name is present", %{conn: conn} do
@@ -350,7 +371,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       conn = get(conn, "/name/pointers/#{id}")
 
       assert json_response(conn, 200) ==
-               TestUtil.handle_input(fn -> get_poiters(Validate.plain_name!(id)) end)
+               TestUtil.handle_input(fn -> get_pointers(Validate.plain_name!(id)) end)
     end
 
     test "renders error when the name is missing", %{conn: conn} do
@@ -358,7 +379,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       conn = get(conn, "/name/pointers/#{id}")
 
       assert json_response(conn, 404) == %{
-               "error" => TestUtil.handle_input(fn -> get_poiters(Validate.plain_name!(id)) end)
+               "error" => TestUtil.handle_input(fn -> get_pointers(Validate.plain_name!(id)) end)
              }
     end
   end
@@ -391,11 +412,10 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       id = "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
       conn = get(conn, "/names/owned_by/#{id}")
 
-      assert json_response(conn, 200) |> Jason.encode!() ==
+      assert json_response(conn, 200) ==
                TestUtil.handle_input(fn ->
                  owned_by_reply(Validate.id!(id, [:account_pubkey]), expand?(conn.params))
                end)
-               |> Jason.encode!()
     end
 
     test "renders error when the key is invalid", %{conn: conn} do
@@ -415,22 +435,24 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   ##########
 
   defp get_name(name) do
-    with {info, source} <- Name.locate(name) do
-      Format.to_map(info, source)
-    else
+    case Name.locate(name) do
+      {info, source} ->
+        Format.to_map(info, source)
+
       nil ->
         raise ErrInput.NotFound, value: name
     end
   end
 
-  defp get_poiters(name) do
-    with {m_name, Model.ActiveName} <- Name.locate(name) do
-      Format.map_raw_values(Name.pointers(m_name), &Format.to_json/1)
-    else
-      {_, Model.InactiveName} ->
+  defp get_pointers(name) do
+    case Name.locate(name) do
+      {m_name, Model.ActiveName} ->
+        Format.map_raw_values(Name.pointers(m_name), &Format.to_json/1)
+
+      {_info, Model.InactiveName} ->
         raise ErrInput.Expired, value: name
 
-      _ ->
+      _not_found ->
         raise ErrInput.NotFound, value: name
     end
   end
@@ -450,10 +472,9 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
     jsons = fn plains, source, locator ->
       for plain <- plains, reduce: [] do
         acc ->
-          with {info, ^source} <- locator.(plain) do
-            [Format.to_map(info, source, expand?) | acc]
-          else
-            _ -> acc
+          case locator.(plain) do
+            {info, ^source} -> [Format.to_map(info, source, expand?) | acc]
+            _not_found -> acc
           end
       end
     end
