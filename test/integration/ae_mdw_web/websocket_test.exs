@@ -1,7 +1,7 @@
 defmodule AeMdwWeb.WebsocketTest do
   use ExUnit.Case
 
-  alias AeMdwWeb.Websocket.Listener
+  alias AeMdwWeb.Websocket.ChainListener
   alias Support.WsClient
 
   @moduletag :integration
@@ -189,8 +189,8 @@ defmodule AeMdwWeb.WebsocketTest do
              )
 
     # send mock info to listener
-    send(Listener, {:gproc_ps_event, :top_changed, %{info: setup.mock_info_mb}})
-    send(Listener, {:gproc_ps_event, :top_changed, %{info: setup.mock_info_kb}})
+    send(ChainListener, {:gproc_ps_event, :top_changed, %{info: setup.mock_info_mb}})
+    send(ChainListener, {:gproc_ps_event, :top_changed, %{info: setup.mock_info_kb}})
 
     # send request to ws client
     Process.send_after(setup.client1, {:subs, self()}, 100)

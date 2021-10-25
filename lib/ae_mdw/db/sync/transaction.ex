@@ -5,6 +5,8 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync
 
+  alias AeMdwWeb.Websocket.Broadcaster
+
   require Model
 
   import AeMdw.Db.Util
@@ -85,6 +87,13 @@ defmodule AeMdw.Db.Sync.Transaction do
 
         next_txi
       end)
+
+    Broadcaster.broadcast_key_block(key_block, "mdw")
+
+    Enum.each(micro_blocks, fn mblock ->
+      Broadcaster.broadcast_micro_block(mblock, "mdw")
+      Broadcaster.broadcast_txs(mblock, "mdw")
+    end)
 
     if rem(height, @sync_cache_cleanup_freq) == 0 do
       :ets.delete_all_objects(:name_sync_cache)
