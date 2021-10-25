@@ -82,7 +82,10 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresence do
     contract_list
     |> Enum.map(fn contract_pk ->
       # Process.sleep(5000)
+      contract_id = Aex9Helper.enc_ct(contract_pk)
+      IO.puts("Calling #{contract_id}...")
       {amounts, _last_block_tuple} = DBN.aex9_balances(contract_pk)
+      IO.puts("Called #{contract_id}")
 
       {contract_pk, normalized_amounts(amounts)}
     end)
@@ -98,7 +101,7 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresence do
       end)
     end)
     |> Enum.filter(fn %Account2Fix{contract_pk: contract_pk, account_pk: account_pk} ->
-      not DbContract.aex9_presence_exists?(contract_pk, account_pk)
+      :mnesia.async_dirty(fn -> not DbContract.aex9_presence_exists?(contract_pk, account_pk) end)
     end)
   end
 
