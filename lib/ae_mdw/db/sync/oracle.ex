@@ -46,7 +46,7 @@ defmodule AeMdw.Db.Sync.Oracle do
     previous && AeMdw.Ets.dec(:stat_sync_cache, :inactive_oracles)
   end
 
-  @spec extend(pubkey(), tx_tuple(), pos_integer(), block_index()) :: :ok
+  @spec extend(pubkey(), tx_tuple(), pos_integer(), block_index()) :: boolean()
   def extend(pubkey, tx, txi, bi) do
     case cache_through_read(Model.ActiveOracle, pubkey) do
       {:ok, m_oracle} ->
@@ -59,10 +59,12 @@ defmodule AeMdw.Db.Sync.Oracle do
         cache_through_write(Model.ActiveOracleExpiration, m_exp)
         m_oracle = Model.oracle(m_oracle, expire: new_expire, extends: extends)
         cache_through_write(Model.ActiveOracle, m_oracle)
+        true
+
       _not_found ->
-        Log.warn("Invalid oracle extend at #{elem(bi, 0)} for pk=#{inspect pubkey}")
+        Log.warn("Invalid oracle extend at #{elem(bi, 0)} for pk=#{inspect(pubkey)}")
+        false
     end
-    :ok
   end
 
   @spec respond(pubkey(), tx_tuple(), pos_integer(), block_index()) :: :ok

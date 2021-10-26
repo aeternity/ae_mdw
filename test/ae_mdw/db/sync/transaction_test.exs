@@ -1,5 +1,5 @@
 defmodule AeMdw.Db.Sync.TransactionTest do
-  use AeMdwWeb.ConnCase, async: false
+  use ExUnit.Case, async: false
 
   alias AeMdw.Node, as: AE
 
