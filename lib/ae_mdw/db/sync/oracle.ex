@@ -48,16 +48,20 @@ defmodule AeMdw.Db.Sync.Oracle do
 
   @spec extend(pubkey(), tx_tuple(), pos_integer(), block_index()) :: :ok
   def extend(pubkey, tx, txi, bi) do
-    {:delta, delta_ttl} = :aeo_extend_tx.oracle_ttl(tx)
-    m_oracle = cache_through_read!(Model.ActiveOracle, pubkey)
-    old_expire = Model.oracle(m_oracle, :expire)
-    new_expire = old_expire + delta_ttl
-    extends = [{bi, txi} | Model.oracle(m_oracle, :extends)]
-    m_exp = Model.expiration(index: {new_expire, pubkey})
-    cache_through_delete(Model.ActiveOracleExpiration, {old_expire, pubkey})
-    cache_through_write(Model.ActiveOracleExpiration, m_exp)
-    m_oracle = Model.oracle(m_oracle, expire: new_expire, extends: extends)
-    cache_through_write(Model.ActiveOracle, m_oracle)
+    case cache_through_read(Model.ActiveOracle, pubkey) do
+      {:ok, m_oracle} ->
+        {:delta, delta_ttl} = :aeo_extend_tx.oracle_ttl(tx)
+        old_expire = Model.oracle(m_oracle, :expire)
+        new_expire = old_expire + delta_ttl
+        extends = [{bi, txi} | Model.oracle(m_oracle, :extends)]
+        m_exp = Model.expiration(index: {new_expire, pubkey})
+        cache_through_delete(Model.ActiveOracleExpiration, {old_expire, pubkey})
+        cache_through_write(Model.ActiveOracleExpiration, m_exp)
+        m_oracle = Model.oracle(m_oracle, expire: new_expire, extends: extends)
+        cache_through_write(Model.ActiveOracle, m_oracle)
+      _not_found ->
+        Log.warn("Invalid oracle extend at #{elem(bi, 0)} for pk=#{inspect pubkey}")
+    end
     :ok
   end
 
