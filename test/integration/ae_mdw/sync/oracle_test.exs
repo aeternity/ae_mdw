@@ -71,7 +71,7 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
         oracle_id: :aeser_id.create(:oracle, pubkey),
         nonce: 1,
         oracle_ttl: {:delta, 100},
-        fee: 1000_000_000
+        fee: 1_000_000_000
       })
 
     {_mod, tx} = :aetx.specialize_callback(tx_rec)
