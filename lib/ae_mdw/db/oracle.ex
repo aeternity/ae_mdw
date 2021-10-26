@@ -1,5 +1,7 @@
 defmodule AeMdw.Db.Oracle do
-  alias AeMdw.Node, as: AE
+  @moduledoc """
+  Access to active or inactive oracle models and caches.
+  """
   alias AeMdw.Db.Model
 
   require Model
@@ -8,17 +10,21 @@ defmodule AeMdw.Db.Oracle do
   import AeMdw.Db.Util
   import AeMdw.Util
 
-  ##########
+  @typep pubkey() :: <<_::256>>
 
+  @spec source(atom(), :expiration) ::
+          Model.ActiveOracleExpiration | Model.InactiveOracleExpiration
   def source(Model.ActiveName, :expiration), do: Model.ActiveOracleExpiration
   def source(Model.InactiveName, :expiration), do: Model.InactiveOracleExpiration
 
+  @spec locate(pubkey()) :: tuple() | nil
   def locate(pubkey) do
     map_ok_nil(cache_through_read(Model.ActiveOracle, pubkey), &{&1, Model.ActiveOracle}) ||
       map_ok_nil(cache_through_read(Model.InactiveOracle, pubkey), &{&1, Model.InactiveOracle})
   end
 
   # for use outside mnesia TX - doesn't modify cache, just looks into it
+  @spec cache_through_read(atom(), term()) :: term()
   def cache_through_read(table, key) do
     case :ets.lookup(:oracle_sync_cache, {table, key}) do
       [{_, record}] -> {:ok, record}
@@ -26,12 +32,15 @@ defmodule AeMdw.Db.Oracle do
     end
   end
 
+  @spec cache_through_read!(atom(), term()) :: term()
   def cache_through_read!(table, key),
     do: ok_nil(cache_through_read(table, key)) || raise("#{inspect(key)} not found in #{table}")
 
+  @spec cache_through_prev(atom(), term()) :: term()
   def cache_through_prev(table, key),
     do: cache_through_prev(table, key, &(elem(key, 0) == elem(&1, 0)))
 
+  @spec cache_through_prev(atom(), term(), fun()) :: term()
   def cache_through_prev(table, key, key_checker) do
     lookup = fn k, unwrap, eot, chk_fail ->
       case k do
@@ -50,17 +59,20 @@ defmodule AeMdw.Db.Oracle do
   end
 
   # for use inside mnesia TX - caches writes & deletes in the same TX
+  @spec cache_through_write(atom(), term()) :: :ok
   def cache_through_write(table, record) do
     :ets.insert(:oracle_sync_cache, {{table, elem(record, 1)}, record})
     :mnesia.write(table, record, :write)
   end
 
+  @spec cache_through_delete(atom(), term()) :: :ok
   def cache_through_delete(table, key) do
     :ets.delete(:oracle_sync_cache, {table, key})
     :mnesia.delete(table, key, :write)
   end
 
-  def cache_through_delete_inactive(nil), do: nil
+  @spec cache_through_delete_inactive(nil | tuple()) :: :ok
+  def cache_through_delete_inactive(nil), do: :ok
 
   def cache_through_delete_inactive(m_oracle) do
     pubkey = Model.oracle(m_oracle, :index)
@@ -69,11 +81,7 @@ defmodule AeMdw.Db.Oracle do
     cache_through_delete(Model.InactiveOracleExpiration, {expire, pubkey})
   end
 
-  ##########
-
-  # def detail(pubkey, block_index) do
-  # end
-
+  @spec oracle_tree!({pos_integer(), integer()}) :: :aeo_state_tree.tree()
   def oracle_tree!({_, _} = block_index) do
     block_index
     |> read_block!
@@ -81,16 +89,4 @@ defmodule AeMdw.Db.Oracle do
     |> :aec_db.get_block_state()
     |> :aec_trees.oracles()
   end
-
-  def otree(oracle_tree) when elem(oracle_tree, 0) == :oracle_tree,
-    do: elem(oracle_tree, AE.aeo_tree_pos(:otree))
-
-  def otree({_, _} = block_index),
-    do: otree(oracle_tree!(block_index))
-
-  def cache(oracle_tree) when elem(oracle_tree, 0) == :oracle_tree,
-    do: elem(oracle_tree, AE.aeo_tree_pos(:cache))
-
-  def cache({_, _} = block_index),
-    do: cache(oracle_tree!(block_index))
 end
