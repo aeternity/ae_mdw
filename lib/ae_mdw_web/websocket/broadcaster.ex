@@ -1,8 +1,12 @@
 defmodule AeMdwWeb.Websocket.Broadcaster do
+  @moduledoc """
+  Publishes Node and Middleware sync events to subscriptions.
+  """
   require Ex2ms
 
   @subs_target_channels :subs_target_channels
 
+  @spec broadcast_key_block(:aec_blocks.block(), :node | :mdw) :: :ok | {:error, :block_not_found}
   def broadcast_key_block(block, source) do
     header = :aec_blocks.to_header(block)
 
@@ -26,13 +30,15 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
             |> data("KeyBlocks", source)
 
           broadcast("KeyBlocks", msg)
+          :ok
 
         :error ->
-          {:error, %{"reason" => "Block not found"}}
+          {:error, :block_not_found}
       end
     end
   end
 
+  @spec broadcast_micro_block(:aec_blocks.micro_block(), :node | :mdw) :: :ok | {:error, :block_not_found}
   def broadcast_micro_block(block, source) do
     prev_block_hash = :aec_blocks.prev_hash(block)
 
@@ -47,12 +53,14 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
           |> data("MicroBlocks", source)
 
         broadcast("MicroBlocks", msg)
+        :ok
 
       :error ->
-        {:error, %{"reason" => "Block not found"}}
+        {:error, :block_not_found}
     end
   end
 
+  @spec broadcast_txs(:aec_blocks.micro_block(), :node | :mdw) :: :ok | {:error, :block_not_found}
   def broadcast_txs(block, source) do
     header = :aec_blocks.to_header(block)
 
@@ -78,18 +86,19 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     end)
   end
 
-  defp broadcast(channel, msg),
-    do:
+  defp broadcast(channel, msg) do
       Riverside.LocalDelivery.deliver(
         {:channel, channel},
         {:text, Poison.encode!(msg)}
       )
+      :ok
+  end
 
   defp data(data, sub, source),
     do: %{"payload" => data, "subscription" => sub, "source" => source}
 
-  defp get_ids_from_tx(tx) do
-    wrapped_tx = :aetx_sign.tx(tx)
+  defp get_ids_from_tx(signed_tx) do
+    wrapped_tx = :aetx_sign.tx(signed_tx)
     {tx_type, naked_tx} = :aetx.specialize_type(wrapped_tx)
 
     tx_type

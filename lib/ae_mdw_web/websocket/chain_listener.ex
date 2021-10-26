@@ -26,8 +26,8 @@ defmodule AeMdwWeb.Websocket.ChainListener do
   def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :micro} = info}}, state) do
     case :aehttp_logic.get_micro_block_by_hash(info.block_hash) do
       {:ok, block} ->
-        Broadcaster.broadcast_micro_block(block, "node")
-        Broadcaster.broadcast_txs(block, "node")
+        Broadcaster.broadcast_micro_block(block, :node)
+        Broadcaster.broadcast_txs(block, :node)
 
       {:error, :block_not_found} ->
         Log.warn("gproc_ps_event with block not found: block_hash = #{inspect(info.block_hash)}")
@@ -39,7 +39,7 @@ defmodule AeMdwWeb.Websocket.ChainListener do
   def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :key} = info}}, state) do
     case :aec_chain.get_key_block_by_height(info.height) do
       {:ok, block} ->
-        Broadcaster.broadcast_key_block(block, "node")
+        Broadcaster.broadcast_key_block(block, :node)
 
       {:error, _rsn} ->
         Log.warn("gproc_ps_event with block not found: block_hash = #{inspect(info.block_hash)}")
