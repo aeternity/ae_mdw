@@ -97,9 +97,10 @@
         - [AEX 9 contract balances for account at block](#aex-9-contract-balances-for-account-at-block)
     - [Statistics](#statistics)
     - [Websocket interface](#websocket-interface)
-        - [Message format](#message-format)
+        - [Subscription Message format](#message-format)
         - [Supported operations](#supported-operations)
         - [Supported payloads](#supported-payloads)
+        - [Publishing Message format](#pub-message-format)
     - [Tests](#tests)
         - [Controller tests](#controller-tests)
         - [Performance test](#performance-test)
@@ -4220,17 +4221,19 @@ These endpoints allows pagination, with typical `forward/backward` direction or 
 ## Websocket interface
 
 The websocket interface, which listens by default on port `4001`, gives asynchronous notifications when various events occur.
+Each event is notified twice: firstly when the Node has synced the block or transaction and after when AeMdw indexation is done.
+In order to differentiate, please check the "source" field on [Publishing Message format](#pub-message-format). 
 
-### Message format
+### Subscription Message format
 
 ```
 {
-"op": "<operation to perform>",
-"payload": "<message payload>"
+"op": <subscription operation>,
+"payload": "<message payload>",
 }
 ```
 
-### Supported operations
+### Supported subscription operations
 
   * Subscribe
   * Unsubscribe
@@ -4265,6 +4268,19 @@ connected (press CTRL+C to quit)
 < {"subscription":"Object","payload":{"tx":{"version":1,"type":"SpendTx","ttl":252284,"sender_id":"ak_KHfXhF2J6VBt3sUgFygdbpEkWi6AKBkr9jNKUCHbpwwagzHUs","recipient_id":"ak_KHfXhF2J6VBt3sUgFygdbpEkWi6AKBkr9jNKUCHbpwwagzHUs","payload":"ba_MjUyMjc0OmtoX0ZQcm9hNjRGTDQyM2YzeG9rMmZLVGZic3VFUDJRdGRVTTRpZE43R2lkUTI3OXpnWjE6bWhfMmJTcFlDRVRzZ3hMZDd3eEx2Rkw5Wlp5V1ZqaEtNQXF6aGc3eVB6ZUNraThySFVTbzI6MTU4ODkzNTkwMjSozR4=","nonce":2044360,"fee":19320000000000,"amount":20000},"signatures":["sg_Kdh2uaoaiDEHoehDZsRHk7LvqUm5kPqyKR3RD71utjkkh5DTqoJeNWqYv4gRePL9FyBcU7oeL8nsT39zQg4ydCmiKUuhN"],"hash":"th_rGmoP9FCJMQMJKmwDE8gCk7i63vX33St3UiqGQsRGG1twHD7R","block_height":252274,"block_hash":"mh_2gYb8Pv1yLpdsPjxkzq8g9zzBVy42ZLDRvWH6aKYXhb8QjxdvU"}}
 ```
 Actual chain data is wrapped in a JSON structure identifying the subscription to which it relates.
+
+### Publishing Message format
+
+```
+{
+"payload": "<sync info payload>",
+"source": "node" | "mdw",
+"subscription": "KeyBlocks" | "MicroBlocks" | "Transactions" | "Object"
+}
+```
+
+When the `source` is "node" it means that the Node is synching the block or transaction (not yet indexed by AeMdw). 
+If it's "mdw", it indicates that it's already avaiable through AeMdw Api.
 
 ## Tests
 
