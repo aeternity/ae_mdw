@@ -19,17 +19,17 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     {:ok, @no_state}
   end
 
-  @spec broadcast_key_block(:aec_blocks.block(), :node | :mdw) :: :ok
+  @spec broadcast_key_block(tuple(), :node | :mdw) :: :ok
   def broadcast_key_block(block, source) do
     GenServer.cast(__MODULE__, {:broadcast_key_block, block, source})
   end
 
-  @spec broadcast_micro_block(:aec_blocks.micro_block(), :node | :mdw) :: :ok
+  @spec broadcast_micro_block(tuple(), :node | :mdw) :: :ok
   def broadcast_micro_block(block, source) do
     GenServer.cast(__MODULE__, {:broadcast_micro_block, block, source})
   end
 
-  @spec broadcast_txs(:aec_blocks.micro_block(), :node | :mdw) :: :ok
+  @spec broadcast_txs(tuple(), :node | :mdw) :: :ok
   def broadcast_txs(block, source) do
     GenServer.cast(__MODULE__, {:broadcast_txs, block, source})
   end
@@ -49,6 +49,27 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   @impl GenServer
   def handle_cast({:broadcast_txs, block, source}, _state) do
     do_broadcast_txs(block, source)
+    {:noreply, @no_state}
+  end
+
+  @impl GenServer
+  def handle_info({:broadcast_objects, header, tx, source}, _state) do
+    ser_tx = :aetx_sign.serialize_for_client(header, tx)
+
+    tx
+    |> get_ids_from_tx()
+    |> Enum.each(fn key ->
+      spec =
+        Ex2ms.fun do
+          {{^key, _}, _} -> true
+        end
+
+      case :ets.select(@subs_target_channels, spec, 1) do
+        :"$end_of_table" -> :ok
+        {[_], _cont} -> broadcast(key, data(ser_tx, "Object", source))
+      end
+    end)
+
     {:noreply, @no_state}
   end
 
@@ -115,21 +136,9 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     |> Enum.each(fn tx ->
       ser_tx = :aetx_sign.serialize_for_client(header, tx)
       msg = data(ser_tx, "Transactions", source)
+      # sends Objects in separate message as broadcast has not_return
+      Process.send(__MODULE__, {:broadcast_objects, header, tx, source}, [:noconnect])
       broadcast("Transactions", msg)
-
-      tx
-      |> get_ids_from_tx()
-      |> Enum.each(fn key ->
-        spec =
-          Ex2ms.fun do
-            {{^key, _}, _} -> true
-          end
-
-        case :ets.select(@subs_target_channels, spec, 1) do
-          :"$end_of_table" -> :ok
-          {[_], _cont} -> broadcast(key, data(ser_tx, "Object", source))
-        end
-      end)
     end)
   end
 
@@ -138,8 +147,6 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
       {:channel, channel},
       {:text, Poison.encode!(msg)}
     )
-
-    :ok
   end
 
   defp data(data, sub, source),
