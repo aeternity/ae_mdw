@@ -72,7 +72,8 @@ defmodule AeMdwWeb.WebsocketTest do
         "time" => 1_589_979_942_256,
         "version" => 4
       },
-      "subscription" => "KeyBlocks"
+      "subscription" => "KeyBlocks",
+      "source" => "node"
     }
 
     mock_mb = %{
@@ -89,7 +90,8 @@ defmodule AeMdwWeb.WebsocketTest do
         "txs_hash" => "bx_2PWfRBMf9vfZ6HeSmpuVVdDe481kqJA29o32DT52esd7fhZEpV",
         "version" => 4
       },
-      "subscription" => "MicroBlocks"
+      "subscription" => "MicroBlocks",
+      "source" => "node"
     }
 
     mock_tx = %{
@@ -113,7 +115,8 @@ defmodule AeMdwWeb.WebsocketTest do
           "version" => 1
         }
       },
-      "subscription" => "Transactions"
+      "subscription" => "Transactions",
+      "source" => "node"
     }
 
     mock_obj = %{
@@ -137,7 +140,8 @@ defmodule AeMdwWeb.WebsocketTest do
           "version" => 1
         }
       },
-      "subscription" => "Object"
+      "subscription" => "Object",
+      "source" => "node"
     }
 
     mock_info_mb = %{
