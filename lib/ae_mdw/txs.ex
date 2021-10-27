@@ -233,11 +233,9 @@ defmodule AeMdw.Txs do
     Enum.flat_map(tx_types, fn tx_type ->
       poss = tx_type |> Node.tx_ids() |> Map.values() |> Enum.map(&{tx_type, &1})
       # nil - for link
-      if tx_type in @create_tx_types do
-        [{tx_type, nil}, {:contract_call_tx, nil} | poss]
-      else
-        poss
-      end
+      poss = if tx_type in @create_tx_types, do: [{tx_type, nil} | poss], else: poss
+
+      if tx_type == :contract_create_tx, do: [{:contract_call_tx, nil} | poss], else: poss
     end)
   end
 
