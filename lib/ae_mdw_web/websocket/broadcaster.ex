@@ -6,6 +6,8 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
 
   require Ex2ms
 
+  @dialyzer {:no_return, broadcast: 2}
+
   @no_state %{}
   @subs_target_channels :subs_target_channels
 
@@ -136,6 +138,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
       {:channel, channel},
       {:text, Poison.encode!(msg)}
     )
+
     :ok
   end
 
