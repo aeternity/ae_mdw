@@ -89,7 +89,7 @@ defmodule AeMdw.Collection do
       Enum.reduce(tables, %{}, fn table, acc ->
         case Mnesia.next_key(table, direction, cursor) do
           {:ok, next_key} -> Map.put(acc, table, next_key)
-          :not_found -> acc
+          :none -> acc
         end
       end)
 
@@ -111,7 +111,7 @@ defmodule AeMdw.Collection do
 
           case Mnesia.next_key(table, direction, next_key) do
             {:ok, new_key} -> {{next_key, table}, {Map.put(next_keys, table, new_key), limit - 1}}
-            :not_found -> {{next_key, table}, {Map.delete(next_keys, table), limit - 1}}
+            :none -> {{next_key, table}, {Map.delete(next_keys, table), limit - 1}}
           end
       end)
 
@@ -128,7 +128,7 @@ defmodule AeMdw.Collection do
   def stream(tab, direction, cursor) do
     case fetch_first_key(tab, direction, cursor) do
       {:ok, first_key} -> unfold_stream(tab, direction, first_key)
-      :not_found -> []
+      :none -> []
     end
   end
 
@@ -173,7 +173,7 @@ defmodule AeMdw.Collection do
       key ->
         case Mnesia.next_key(tab, direction, key) do
           {:ok, next_key} -> {key, next_key}
-          :not_found -> {key, :end_keys}
+          :none -> {key, :end_keys}
         end
     end)
   end
