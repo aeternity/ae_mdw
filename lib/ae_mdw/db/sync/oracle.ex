@@ -62,7 +62,10 @@ defmodule AeMdw.Db.Sync.Oracle do
         true
 
       _not_found ->
-        Log.warn("Invalid oracle extend at #{elem(bi, 0)} for pk=#{inspect(pubkey)}")
+        Log.warn(
+          "[#{elem(bi, 0)}] invalid extend for oracle #{Enc.encode(:oracle_pubkey, pubkey)}"
+        )
+
         false
     end
   end
