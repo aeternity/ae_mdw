@@ -16,3 +16,5 @@ services:
       - ${PWD}/docker/aeternity.yaml:/home/aeternity/aeternity.yaml
       - ${PWD}:/app
     expose: [3013, 3014, 3113, 4001, 4000]
+    environment:
+      - AETERNITY_CONFIG=/home/aeternity/aeternity.yaml
