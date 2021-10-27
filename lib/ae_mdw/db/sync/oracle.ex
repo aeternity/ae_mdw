@@ -9,7 +9,6 @@ defmodule AeMdw.Db.Sync.Oracle do
 
   import AeMdw.Db.Oracle,
     only: [
-      cache_through_read!: 2,
       cache_through_read: 2,
       cache_through_write: 2,
       cache_through_delete: 2,
@@ -105,18 +104,22 @@ defmodule AeMdw.Db.Sync.Oracle do
   # Private functions
   #
   defp expire_oracle(height, pubkey) do
-    m_oracle = cache_through_read!(Model.ActiveOracle, pubkey)
-    m_exp = Model.expiration(index: {height, pubkey})
-    cache_through_write(Model.InactiveOracle, m_oracle)
-    cache_through_write(Model.InactiveOracleExpiration, m_exp)
-    cache_through_delete(Model.ActiveOracle, pubkey)
-    cache_through_delete(Model.ActiveOracleExpiration, {height, pubkey})
-    AeMdw.Ets.inc(:stat_sync_cache, :inactive_oracles)
-    AeMdw.Ets.dec(:stat_sync_cache, :active_oracles)
-    log_expired_oracle(height, pubkey)
-    :ok
-  end
+    case cache_through_read(Model.ActiveOracle, pubkey) do
+      {:ok, m_oracle} ->
+        m_exp = Model.expiration(index: {height, pubkey})
+        cache_through_write(Model.InactiveOracle, m_oracle)
+        cache_through_write(Model.InactiveOracleExpiration, m_exp)
+        cache_through_delete(Model.ActiveOracle, pubkey)
+        cache_through_delete(Model.ActiveOracleExpiration, {height, pubkey})
+        AeMdw.Ets.inc(:stat_sync_cache, :inactive_oracles)
+        AeMdw.Ets.dec(:stat_sync_cache, :active_oracles)
 
-  defp log_expired_oracle(height, pubkey),
-    do: Log.info("[#{height}] expiring oracle #{Enc.encode(:oracle_pubkey, pubkey)}")
+        Log.info("[#{height}] expiring oracle #{Enc.encode(:oracle_pubkey, pubkey)}")
+
+      _not_found ->
+        m_oracle_inactive = cache_through_read(Model.InactiveOracle, pubkey)
+        Log.warn("Invalid oracle expire at #{height} for pk=#{inspect(pubkey)}.\nm_oracle_inactive=#{inspect(m_oracle_inactive)}")
+        :noop
+    end
+  end
 end
