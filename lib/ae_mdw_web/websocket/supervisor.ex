@@ -12,6 +12,7 @@ defmodule AeMdwWeb.Websocket.Supervisor do
     :ets.new(:subs_target_channels, [:public, :ordered_set, :named_table])
 
     children = [
+      AeMdwWeb.Websocket.Broadcaster,
       AeMdwWeb.Websocket.ChainListener,
       {Riverside, [handler: AeWebsocket.Websocket.SocketHandler]}
     ]

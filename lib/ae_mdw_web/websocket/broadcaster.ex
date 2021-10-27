@@ -2,12 +2,58 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   @moduledoc """
   Publishes Node and Middleware sync events to subscriptions.
   """
+  use GenServer
+
   require Ex2ms
 
+  @no_state %{}
   @subs_target_channels :subs_target_channels
 
-  @spec broadcast_key_block(:aec_blocks.block(), :node | :mdw) :: :ok | {:error, :block_not_found}
+  @spec start_link(any()) :: GenServer.on_start()
+  def start_link(_arg), do: GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
+
+  @impl GenServer
+  def init(:ok) do
+    {:ok, @no_state}
+  end
+
+  @spec broadcast_key_block(:aec_blocks.block(), :node | :mdw) :: :ok
   def broadcast_key_block(block, source) do
+    GenServer.cast(__MODULE__, {:broadcast_key_block, block, source})
+  end
+
+  @spec broadcast_micro_block(:aec_blocks.micro_block(), :node | :mdw) :: :ok
+  def broadcast_micro_block(block, source) do
+    GenServer.cast(__MODULE__, {:broadcast_micro_block, block, source})
+  end
+
+  @spec broadcast_txs(:aec_blocks.micro_block(), :node | :mdw) :: :ok
+  def broadcast_txs(block, source) do
+    GenServer.cast(__MODULE__, {:broadcast_txs, block, source})
+  end
+
+  @impl GenServer
+  def handle_cast({:broadcast_key_block, block, source}, _state) do
+    do_broadcast_key_block(block, source)
+    {:noreply, @no_state}
+  end
+
+  @impl GenServer
+  def handle_cast({:broadcast_micro_block, block, source}, _state) do
+    do_broadcast_micro_block(block, source)
+    {:noreply, @no_state}
+  end
+
+  @impl GenServer
+  def handle_cast({:broadcast_txs, block, source}, _state) do
+    do_broadcast_txs(block, source)
+    {:noreply, @no_state}
+  end
+
+  #
+  # Private functions
+  #
+  defp do_broadcast_key_block(block, source) do
     header = :aec_blocks.to_header(block)
 
     if :aec_blocks.height(block) == 0 do
@@ -38,8 +84,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     end
   end
 
-  @spec broadcast_micro_block(:aec_blocks.micro_block(), :node | :mdw) :: :ok | {:error, :block_not_found}
-  def broadcast_micro_block(block, source) do
+  defp do_broadcast_micro_block(block, source) do
     prev_block_hash = :aec_blocks.prev_hash(block)
 
     case :aec_chain.get_block(prev_block_hash) do
@@ -60,15 +105,15 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     end
   end
 
-  @spec broadcast_txs(:aec_blocks.micro_block(), :node | :mdw) :: :ok | {:error, :block_not_found}
-  def broadcast_txs(block, source) do
+  defp do_broadcast_txs(block, source) do
     header = :aec_blocks.to_header(block)
 
     block
     |> :aec_blocks.txs()
     |> Enum.each(fn tx ->
       ser_tx = :aetx_sign.serialize_for_client(header, tx)
-      broadcast("Transactions", data(ser_tx, "Transactions", source))
+      msg = data(ser_tx, "Transactions", source)
+      broadcast("Transactions", msg)
 
       tx
       |> get_ids_from_tx()
@@ -87,11 +132,11 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   end
 
   defp broadcast(channel, msg) do
-      Riverside.LocalDelivery.deliver(
-        {:channel, channel},
-        {:text, Poison.encode!(msg)}
-      )
-      :ok
+    Riverside.LocalDelivery.deliver(
+      {:channel, channel},
+      {:text, Poison.encode!(msg)}
+    )
+    :ok
   end
 
   defp data(data, sub, source),
