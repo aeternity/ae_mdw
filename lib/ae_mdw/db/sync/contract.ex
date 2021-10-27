@@ -97,11 +97,8 @@ defmodule AeMdw.Db.Sync.Contract do
     Enum.each(chain_events, fn
       {{{:internal_call_tx, _fname}, _info}, next_event} ->
         {{:internal_call_tx, "Call.amount"}, %{info: aetx}} = next_event
-        # aetx core record
-        {:aetx, :spend_tx, _cb_module, _size, tx} = aetx
-        # spend_tx core record
-        {:spend_tx, _sender_id, recipient_id, _amount, _fee, _ttl, _nonce, _payload} = tx
-
+        {:spend_tx, tx} = :aetx.specialize_type(aetx)
+        recipient_id = :aec_spend_tx.recipient_id(tx)
         {:account, contract_id} = :aeser_id.specialize(recipient_id)
         m_field = Model.field(index: {:contract_call_tx, nil, contract_id, call_txi})
         :mnesia.write(Model.Field, m_field, :write)
