@@ -35,7 +35,7 @@ defmodule AeMdw.Txs do
   @field_table Field
   @id_count_table IdCount
 
-  @create_tx_types [:contract_create_tx, :channel_create_tx, :oracle_register_tx, :name_claim_tx]
+  @create_tx_types ~w(contract_create_tx channel_create_tx oracle_register_tx name_claim_tx)a
 
   @spec fetch_txs(direction(), query(), cursor() | nil, limit()) ::
           {:ok, [tx()], cursor() | nil} | {:error, reason()}
@@ -233,7 +233,11 @@ defmodule AeMdw.Txs do
     Enum.flat_map(tx_types, fn tx_type ->
       poss = tx_type |> Node.tx_ids() |> Map.values() |> Enum.map(&{tx_type, &1})
       # nil - for link
-      if tx_type in @create_tx_types, do: [{tx_type, nil} | poss], else: poss
+      if tx_type in @create_tx_types do
+        [{tx_type, nil}, {:contract_call_tx, nil} | poss]
+      else
+        poss
+      end
     end)
   end
 
