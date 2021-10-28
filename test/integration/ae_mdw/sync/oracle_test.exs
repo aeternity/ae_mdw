@@ -9,6 +9,8 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
 
   require Model
 
+  import Support.TestMnesiaSandbox
+
   describe "extend" do
     test "succeeds when oracle is active" do
       fn ->
@@ -24,17 +26,7 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
 
         :mnesia.abort(:rollback)
       end
-      |> :mnesia.transaction()
-      |> case do
-        {:aborted, {%ExUnit.AssertionError{} = assertion_error, _stacktrace}} ->
-          raise assertion_error
-
-        {:aborted, :rollback} ->
-          :pass
-
-        other_result ->
-          throw(other_result)
-      end
+      |> mnesia_sandbox()
     end
 
     test "fails when oracle is not active" do
@@ -51,20 +43,79 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
 
         :mnesia.abort(:rollback)
       end
-      |> :mnesia.transaction()
-      |> case do
-        {:aborted, {%ExUnit.AssertionError{} = assertion_error, _stacktrace}} ->
-          raise assertion_error
-
-        {:aborted, :rollback} ->
-          :pass
-
-        other_result ->
-          throw(other_result)
-      end
+      |> mnesia_sandbox()
     end
   end
 
+  describe "expire/1" do
+    test "inactivates an oracle that has just expired" do
+      fn ->
+        {height, pubkey} = Util.last(Model.ActiveOracleExpiration)
+        m_oracle = Util.read!(Model.ActiveOracle, pubkey)
+
+        assert Sync.Oracle.expire(height)
+
+        assert [Model.expiration(index: {height, pubkey})] ==
+                 Util.read(Model.InactiveOracleExpiration, {height, pubkey})
+
+        assert [m_oracle] == Util.read(Model.InactiveOracle, pubkey)
+
+        :mnesia.abort(:rollback)
+      end
+      |> mnesia_sandbox()
+    end
+
+    test "does nothing when oracle has multiple expirations and last one is greater than height" do
+      fn ->
+        {height, pubkey} = Util.last(Model.ActiveOracleExpiration)
+        m_oracle = Util.read!(Model.ActiveOracle, pubkey)
+
+        m_old_exp = Model.expiration(index: {height - 1, pubkey})
+        :mnesia.write(Model.ActiveOracleExpiration, m_old_exp, :write)
+
+        refute Sync.Oracle.expire(height - 1)
+        assert {height, pubkey} == Util.last(Model.ActiveOracleExpiration)
+        assert [m_oracle] == Util.read(Model.ActiveOracle, pubkey)
+
+        :mnesia.abort(:rollback)
+      end
+      |> mnesia_sandbox()
+    end
+
+    test "does nothing when oracle has not yet expired" do
+      fn ->
+        {height, pubkey} = Util.last(Model.ActiveOracleExpiration)
+        m_oracle = Util.read!(Model.ActiveOracle, pubkey)
+
+        refute Sync.Oracle.expire(height - 1)
+
+        assert {height, pubkey} == Util.last(Model.ActiveOracleExpiration)
+        assert [m_oracle] == Util.read(Model.ActiveOracle, pubkey)
+
+        :mnesia.abort(:rollback)
+      end
+      |> mnesia_sandbox()
+    end
+
+    test "does nothing when oracle is already inactive" do
+      fn ->
+        {height, pubkey} = Util.last(Model.InactiveOracleExpiration)
+        m_oracle = Util.read!(Model.InactiveOracle, pubkey)
+
+        refute Sync.Oracle.expire(height)
+
+        assert {height, pubkey} == Util.last(Model.InactiveOracleExpiration)
+        assert [m_oracle] == Util.read(Model.InactiveOracle, pubkey)
+
+        :mnesia.abort(:rollback)
+      end
+      |> mnesia_sandbox()
+    end
+  end
+
+  #
+  # Helper functions
+  #
   defp new_oracle_extend_tx(pubkey) do
     {:ok, tx_rec} =
       :aeo_extend_tx.new(%{
