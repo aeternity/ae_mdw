@@ -18,7 +18,7 @@ defmodule AeMdw.Db.Oracle do
   def source(Model.ActiveName, :expiration), do: Model.ActiveOracleExpiration
   def source(Model.InactiveName, :expiration), do: Model.InactiveOracleExpiration
 
-  @spec locate(pubkey()) :: tuple() | nil
+  @spec locate(pubkey()) :: {tuple(), Model.ActiveOracle | Model.InactiveOracle} | nil
   def locate(pubkey) do
     map_ok_nil(cache_through_read(Model.ActiveOracle, pubkey), &{&1, Model.ActiveOracle}) ||
       map_ok_nil(cache_through_read(Model.InactiveOracle, pubkey), &{&1, Model.InactiveOracle})
@@ -32,10 +32,6 @@ defmodule AeMdw.Db.Oracle do
       [] -> map_one_nil(read(table, key), &{:ok, &1})
     end
   end
-
-  @spec cache_through_read!(atom(), cache_key()) :: term()
-  def cache_through_read!(table, key),
-    do: ok_nil(cache_through_read(table, key)) || raise("#{inspect(key)} not found in #{table}")
 
   @spec cache_through_prev(atom(), cache_key()) :: term()
   def cache_through_prev(table, key),
