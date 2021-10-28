@@ -116,9 +116,11 @@ defmodule AeMdw.Db.Sync.Oracle do
       end
 
     expirations = :mnesia.select(Model.ActiveOracleExpiration, oracle_mspec)
-    all_expired? = Enum.reduce(expirations, true, fn pubkey, all_previous_expired? ->
-      expire_oracle(height, pubkey) and all_previous_expired?
-    end)
+
+    all_expired? =
+      Enum.reduce(expirations, true, fn pubkey, all_previous_expired? ->
+        expire_oracle(height, pubkey) and all_previous_expired?
+      end)
 
     expirations != [] and all_expired?
   end
