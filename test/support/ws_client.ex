@@ -1,4 +1,5 @@
 defmodule Support.WsClient do
+  # credo:disable-for-this-file
   use WebSockex
 
   @known_prefixes ["ak_", "ct_", "ok_", "nm_", "cm_", "ch_"]

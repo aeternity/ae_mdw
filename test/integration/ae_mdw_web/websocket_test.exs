@@ -1,4 +1,5 @@
 defmodule Integration.AeMdwWeb.WebsocketTest do
+  # credo:disable-for-this-file
   use ExUnit.Case, async: false
 
   alias AeMdw.Node, as: AE
