@@ -1,4 +1,4 @@
-defmodule AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
+defmodule Integration.AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
   use ExUnit.Case
 
   @moduletag :integration
