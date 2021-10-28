@@ -301,7 +301,7 @@ defmodule AeMdw.Contract do
   ##########
 
   def get_grouped_events(micro_block),
-  do: Enum.group_by(get_events(micro_block), fn {_, info} -> info.tx_hash end)
+    do: Enum.group_by(get_events(micro_block), fn {_, info} -> info.tx_hash end)
 
   def get_events(<<micro_block_hash::binary>>) do
     micro_block = :aec_db.get_block(micro_block_hash)
@@ -350,6 +350,6 @@ defmodule AeMdw.Contract do
     call_data = :aect_create_tx.call_data(tx_rec)
     {"init", args} = decode_call_data(ct_info, call_data)
 
-    Enum.map(args, fn value -> %{value: inspect value} end)
+    Enum.map(args, fn {type, value} -> %{type: type, value: inspect(value)} end)
   end
 end

@@ -63,6 +63,55 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     end
   end
 
+  describe "txi for contract txs" do
+    test "get a ContractCreateTx with init args", %{conn: conn} do
+      valid_index = 26_672_260
+      conn = get(conn, "/txi/#{valid_index}")
+
+      expected_args = [
+        %{
+          "type" => "tuple",
+          "value" =>
+            "[string: \"Facebook Must Die?\", string: \"Facebook\", string: \"https://downdetector.com/status/facebook/map/\", variant: [0]]"
+        },
+        %{
+          "type" => "map",
+          "value" =>
+            "[%{key: {:int, 0}, val: {:string, \"yes\"}}, %{key: {:int, 1}, val: {:string, \"no\"}}, %{key: {:int, 2}, val: {:string, \"I don't care\"}}, %{key: {:int, 3}, val: {:string, \"Facebook is already dead\"}}]"
+        },
+        %{"type" => "variant", "value" => "[1, {:int, 511843}]"}
+      ]
+
+      assert json_response(conn, 200)["tx_index"] == valid_index
+      assert tx = json_response(conn, 200)["tx"]
+      assert tx["type"] == "ContractCreateTx"
+      assert tx["args"] == expected_args
+      assert tx["gas_used"] && tx["gas_used"] > 0
+    end
+
+    test "get a ContractCreateTx with init logs", %{conn: conn} do
+      valid_index = 27_290_793
+      conn = get(conn, "/txi/#{valid_index}")
+
+      expected_logs = [
+        %{
+          "address" => "ct_2Wx8XQFnTL195AbFKnuHaF9VmEJnwMBBvSd6HevN2PXdM6DgKc",
+          "data" => "cb_TmV3IG9yYWNsZSBjcmVhdGVkz9SK+Q==",
+          "topics" => [
+            100_623_342_200_542_524_309_993_745_545_480_803_015_322_198_156_524_156_815_048_512_640_607_290_626_815,
+            90_327_960_487_985_279_702_181_835_269_467_015_518_430_931_571_603_930_406_809_739_954_754_802_244_075
+          ]
+        }
+      ]
+
+      assert json_response(conn, 200)["tx_index"] == valid_index
+      assert tx = json_response(conn, 200)["tx"]
+      assert tx["type"] == "ContractCreateTx"
+      assert tx["log"] == expected_logs
+      assert tx["gas_used"] && tx["gas_used"] > 0
+    end
+  end
+
   describe "count" do
     test "get count of transactions at the current height", %{conn: conn} do
       conn = get(conn, "/txs/count")
