@@ -64,7 +64,7 @@ defmodule AeMdw.Db.Sync.Oracle do
         cache_through_write(Model.ActiveOracle, m_oracle)
         true
 
-      _not_found ->
+      nil ->
         Log.warn(
           "[#{elem(bi, 0)}] invalid extend for oracle #{Enc.encode(:oracle_pubkey, pubkey)}"
         )
@@ -145,7 +145,7 @@ defmodule AeMdw.Db.Sync.Oracle do
           false
         end
 
-      _not_found ->
+      nil ->
         Log.warn("[#{height}] ignored oracle expiration for #{oracle_id}")
         false
     end
