@@ -11,9 +11,6 @@ defmodule Support.TestMnesiaSandbox do
 
       {:aborted, :rollback} ->
         :pass
-
-      other_result ->
-        throw(other_result)
     end
   end
 end
