@@ -1,4 +1,11 @@
 defmodule AeMdw.Db.Sync.Oracle do
+  @moduledoc """
+  Save oracle state operations for each transaction type:
+    - register
+    - extend
+    - expire
+    - respond (query)
+  """
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Model
   alias AeMdw.Log
