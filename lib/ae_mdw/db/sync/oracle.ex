@@ -26,6 +26,11 @@ defmodule AeMdw.Db.Sync.Oracle do
   @typep tx_tuple() :: tuple()
   @typep block_index() :: {pos_integer(), non_neg_integer()}
 
+  @doc """
+  Registers an Oracle using the account pubkey (1 to 1).
+
+  If the account already has an Oracle (previous), it is deleted.
+  """
   @spec register(pubkey(), tx_tuple(), pos_integer(), block_index()) :: :ok
   def register(pubkey, tx, txi, {height, _} = bi) do
     delta_ttl = :aeo_utils.ttl_delta(height, :aeo_register_tx.oracle_ttl(tx))
@@ -73,6 +78,9 @@ defmodule AeMdw.Db.Sync.Oracle do
     end
   end
 
+  @doc """
+  Updates the fees transfered after an Oracle query.
+  """
   @spec respond(pubkey(), tx_tuple(), pos_integer(), block_index()) :: :ok
   def respond(pubkey, tx, txi, {height, _} = bi) do
     query_id = :aeo_response_tx.query_id(tx)
@@ -95,6 +103,11 @@ defmodule AeMdw.Db.Sync.Oracle do
     :ok
   end
 
+  @doc """
+  Deactivate all Oracles that have expired on a block height.
+
+  The expiration height of an Oracle is always a result of the last `register` or `extend` operation.
+  """
   @spec expire(pos_integer()) :: boolean()
   def expire(height) do
     oracle_mspec =
