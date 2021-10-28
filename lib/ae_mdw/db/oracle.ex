@@ -1,4 +1,9 @@
 defmodule AeMdw.Db.Oracle do
+  # credo:disable-for-this-file
+  @moduledoc """
+  Cache through operations for active and inactive oracles.
+  """
+
   alias AeMdw.Node, as: AE
   alias AeMdw.Db.Model
 
@@ -7,8 +12,6 @@ defmodule AeMdw.Db.Oracle do
 
   import AeMdw.Db.Util
   import AeMdw.Util
-
-  ##########
 
   def source(Model.ActiveName, :expiration), do: Model.ActiveOracleExpiration
   def source(Model.InactiveName, :expiration), do: Model.InactiveOracleExpiration
@@ -68,11 +71,6 @@ defmodule AeMdw.Db.Oracle do
     cache_through_delete(Model.InactiveOracle, pubkey)
     cache_through_delete(Model.InactiveOracleExpiration, {expire, pubkey})
   end
-
-  ##########
-
-  # def detail(pubkey, block_index) do
-  # end
 
   def oracle_tree!({_, _} = block_index) do
     block_index
