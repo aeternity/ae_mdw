@@ -286,21 +286,22 @@ defmodule AeMdw.Contract do
     end
   end
 
-  def gas_used_in_create(contract_pk, tx_rec, block_hash) do
+  def get_init_call_details(contract_pk, tx_rec, block_hash) do
     create_nonce = :aect_create_tx.nonce(tx_rec)
 
-    init_call_id =
-      tx_rec
-      |> :aect_create_tx.owner_pubkey()
-      |> :aect_call.id(create_nonce, contract_pk)
-
-    contract_pk
-    |> :aec_chain.get_contract_call(init_call_id, block_hash)
-    |> ok!
-    |> :aect_call.gas_used()
+    tx_rec
+    |> :aect_create_tx.owner_pubkey()
+    |> :aect_call.id(create_nonce, contract_pk)
+    |> call_rec_from_id(contract_pk, block_hash)
+    |> :aect_call.serialize_for_client()
+    |> Map.drop(["gas_price", "height", "caller_nonce"])
+    |> Map.put("args", contract_init_args(contract_pk, tx_rec))
   end
 
   ##########
+
+  def get_grouped_events(micro_block),
+  do: Enum.group_by(get_events(micro_block), fn {_, info} -> info.tx_hash end)
 
   def get_events(<<micro_block_hash::binary>>) do
     micro_block = :aec_db.get_block(micro_block_hash)
@@ -329,6 +330,9 @@ defmodule AeMdw.Contract do
     Enum.reject(events, &chain_create_or_clone_event?/1)
   end
 
+  #
+  # Private functions
+  #
   defp chain_create_or_clone_event?({{_, "Chain.create"}, _} = event) do
     Log.info("Ignore Chain.create event #{inspect(event)}")
     true
@@ -341,14 +345,11 @@ defmodule AeMdw.Contract do
 
   defp chain_create_or_clone_event?(_), do: false
 
-  def get_grouped_events(micro_block),
-    do: Enum.group_by(get_events(micro_block), fn {_, info} -> info.tx_hash end)
+  defp contract_init_args(contract_pk, tx_rec) do
+    {:ok, ct_info} = get_info(contract_pk)
+    call_data = :aect_create_tx.call_data(tx_rec)
+    {"init", args} = decode_call_data(ct_info, call_data)
 
-  # def t(gen_range) do
-  #   range
-  #   |> Stream.flat_map(&AeMdw.Node.Db.get_micro_blocks/1)
-  #   |> Stream.map(&:aec_blocks.to_micro_header/1)
-  #   |> Stream.map(&ok!(:aec_headers.hash_header(&1)))
-  #   |> Stream.flat_map(&AeMdw.Contract.get_events/1)
-  # end
+    Enum.map(args, fn value -> %{value: inspect value} end)
+  end
 end

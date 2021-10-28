@@ -240,10 +240,9 @@ defmodule AeMdw.Db.Format do
 
   def custom_raw_data(:contract_create_tx, tx, tx_rec, _signed_tx, block_hash) do
     contract_pk = :aect_contracts.pubkey(:aect_contracts.new(tx_rec))
+    init_call_details = Contract.get_init_call_details(contract_pk, tx_rec, block_hash)
 
-    tx
-    |> put_in([:tx, :contract_id], :aeser_id.create(:contract, contract_pk))
-    |> put_in([:tx, :gas_used], Contract.gas_used_in_create(contract_pk, tx_rec, block_hash))
+    update_in(tx, [:tx], fn tx_details -> Map.merge(tx_details, init_call_details) end)
   end
 
   def custom_raw_data(:contract_call_tx, tx, tx_rec, _signed_tx, block_hash) do
@@ -449,16 +448,9 @@ defmodule AeMdw.Db.Format do
 
   def custom_encode(:contract_create_tx, tx, tx_rec, _, block_hash) do
     contract_pk = :aect_contracts.pubkey(:aect_contracts.new(tx_rec))
+    init_call_details = Contract.get_init_call_details(contract_pk, tx_rec, block_hash)
 
-    {:ok, ct_info} = Contract.get_info(contract_pk)
-    call_data = :aect_create_tx.call_data(tx_rec)
-    {"init", args} = Contract.decode_call_data(ct_info, call_data)
-
-    tx
-    |> put_in(["tx", "contract_id"], Enc.encode(:contract_pubkey, contract_pk))
-    |> put_in(["tx", "args"], Enum.map(args, fn value -> %{value: inspect value} end))
-    |> put_in(["tx", "gas_used"], Contract.gas_used_in_create(contract_pk, tx_rec, block_hash))
-    # |> put_in(["tx", "log"], )
+    update_in(tx, ["tx"], fn tx_details -> Map.merge(tx_details, init_call_details) end)
   end
 
   def custom_encode(:oracle_query_tx, tx, _tx_rec, _signed_tx, _block_hash) do
@@ -466,7 +458,6 @@ defmodule AeMdw.Db.Format do
   end
 
   def custom_encode(:contract_call_tx, tx, tx_rec, _signed_tx, block_hash) do
-    IO.inspect tx_rec
     contract_pk = :aect_call_tx.contract_pubkey(tx_rec)
     call_rec = Contract.call_rec(tx_rec, contract_pk, block_hash)
 
