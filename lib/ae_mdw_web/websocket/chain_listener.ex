@@ -21,7 +21,10 @@ defmodule AeMdwWeb.Websocket.ChainListener do
 
   @impl GenServer
   def init(state) do
-    :ets.foldl(fn {k, _v}, acc -> [k | acc] end, [], @subs_pids) |> Enum.each(&register/1)
+    fn {k, _v}, acc -> [k | acc] end
+    |> :ets.foldl([], @subs_pids)
+    |> Enum.each(&register/1)
+
     :aec_events.subscribe(:top_changed)
     {:ok, state}
   end

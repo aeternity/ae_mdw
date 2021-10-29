@@ -68,14 +68,14 @@ defmodule AeMdw.Db.Sync.Transaction do
 
         kb_txi = (txi == 0 && -1) || txi
         kb_header = :aec_blocks.to_key_header(key_block)
-        kb_hash = :aec_headers.hash_header(kb_header) |> ok!
+        kb_hash = ok!(:aec_headers.hash_header(kb_header))
         kb_model = Model.block(index: {height, -1}, tx_index: kb_txi, hash: kb_hash)
         :mnesia.write(Model.Block, kb_model, :write)
 
         height >= AE.min_block_reward_height() &&
           Sync.IntTransfer.block_rewards(kb_header, kb_hash)
 
-        {next_txi, _mb_index} = micro_blocks |> Enum.reduce({txi, 0}, &sync_micro_block/2)
+        {next_txi, _mb_index} = Enum.reduce(micro_blocks, {txi, 0}, &sync_micro_block/2)
 
         Sync.Stat.store(height)
         Sync.Stat.sum_store(height)
@@ -101,7 +101,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   defp sync_micro_block(mblock, {txi, mbi}) do
     height = :aec_blocks.height(mblock)
     mb_time = :aec_blocks.time_in_msecs(mblock)
-    mb_hash = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock)) |> ok!
+    mb_hash = ok!(:aec_headers.hash_header(:aec_blocks.to_micro_header(mblock)))
     mb_txi = (txi == 0 && -1) || txi
     mb_model = Model.block(index: {height, mbi}, tx_index: mb_txi, hash: mb_hash)
     :mnesia.write(Model.Block, mb_model, :write)
@@ -114,6 +114,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     {next_txi, mbi + 1}
   end
 
+  @spec sync_transaction(tuple(), non_neg_integer(), tuple(), boolean()) :: pos_integer()
   def sync_transaction(
         signed_tx,
         txi,
