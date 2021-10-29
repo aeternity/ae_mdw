@@ -6,6 +6,7 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdw.Db.Model.ActiveNameExpiration
   alias AeMdw.Db.Model.AuctionBid
   alias AeMdw.Db.Model.AuctionExpiration
+  alias AeMdw.Db.Model.Block
   alias AeMdw.Db.Model.InactiveName
   alias AeMdw.Db.Model.InactiveNameExpiration
   alias AeMdw.Db.Model.Tx
@@ -50,7 +51,9 @@ defmodule AeMdwWeb.NameControllerTest do
            fetch: fn Tx, _key ->
              {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
            end,
-           prev_key: fn AuctionBid, _key -> :none end
+           prev_key: fn AuctionBid, _key -> :none end,
+           last_key: fn Block, _default -> 0 end,
+           first_key: fn Block, _default -> 0 end
          ]},
         {Txs, [],
          [
@@ -97,7 +100,9 @@ defmodule AeMdwWeb.NameControllerTest do
            fetch: fn Tx, _key ->
              {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
            end,
-           prev_key: fn AuctionBid, _key -> :none end
+           prev_key: fn AuctionBid, _key -> :none end,
+           last_key: fn Block, _default -> 0 end,
+           first_key: fn Block, _default -> 0 end
          ]},
         {Txs, [],
          [
@@ -123,7 +128,7 @@ defmodule AeMdwWeb.NameControllerTest do
     test "renders error when parameter direction is invalid", %{conn: conn} do
       by = "name"
       direction = "invalid_direction"
-      error = "invalid query: direction=#{direction}"
+      error = "invalid direction: #{direction}"
 
       assert %{"error" => ^error} =
                conn
@@ -161,7 +166,9 @@ defmodule AeMdwWeb.NameControllerTest do
            fetch: fn Tx, _key ->
              {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
            end,
-           prev_key: fn AuctionBid, _key -> :none end
+           prev_key: fn AuctionBid, _key -> :none end,
+           last_key: fn Block, _default -> 0 end,
+           first_key: fn Block, _default -> 0 end
          ]},
         {Txs, [],
          [
@@ -206,7 +213,9 @@ defmodule AeMdwWeb.NameControllerTest do
            fetch: fn Tx, _key ->
              {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
            end,
-           prev_key: fn AuctionBid, _key -> :none end
+           prev_key: fn AuctionBid, _key -> :none end,
+           last_key: fn Block, _default -> 0 end,
+           first_key: fn Block, _default -> 0 end
          ]},
         {Txs, [],
          [
@@ -248,7 +257,9 @@ defmodule AeMdwWeb.NameControllerTest do
            fetch: fn Tx, _key ->
              {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
            end,
-           prev_key: fn AuctionBid, _key -> :none end
+           prev_key: fn AuctionBid, _key -> :none end,
+           last_key: fn Block, _default -> 0 end,
+           first_key: fn Block, _default -> 0 end
          ]},
         {Txs, [],
          [
@@ -274,7 +285,7 @@ defmodule AeMdwWeb.NameControllerTest do
     test "renders error when parameter direction is invalid", %{conn: conn} do
       by = "name"
       direction = "invalid_direction"
-      error = "invalid query: direction=#{direction}"
+      error = "invalid direction: #{direction}"
 
       assert %{"error" => ^error} =
                conn
@@ -299,7 +310,9 @@ defmodule AeMdwWeb.NameControllerTest do
            fetch: fn InactiveName, ^plain_name -> :not_found end,
            prev_key: fn AuctionBid, _key ->
              {:ok, {plain_name, {0, 1}, 0, :owner_pk, [{{2, 3}, 4}]}}
-           end
+           end,
+           last_key: fn Block, _default -> 0 end,
+           first_key: fn Block, _default -> 0 end
          ]},
         {Txs, [],
          [
@@ -334,7 +347,9 @@ defmodule AeMdwWeb.NameControllerTest do
            fetch: fn InactiveName, ^plain_name -> :not_found end,
            prev_key: fn AuctionBid, _key ->
              {:ok, {plain_name, {0, 1}, 0, :owner_pk, [{{2, 3}, 4}]}}
-           end
+           end,
+           last_key: fn Block, _default -> 0 end,
+           first_key: fn Block, _default -> 0 end
          ]},
         {Txs, [],
          [
@@ -366,7 +381,9 @@ defmodule AeMdwWeb.NameControllerTest do
            fetch: fn InactiveName, ^plain_name -> :not_found end,
            prev_key: fn AuctionBid, _key ->
              {:ok, {plain_name, {0, 1}, 0, :owner_pk, [{{2, 3}, 4}]}}
-           end
+           end,
+           last_key: fn Block, _default -> 0 end,
+           first_key: fn Block, _default -> 0 end
          ]},
         {Txs, [],
          [
@@ -392,7 +409,7 @@ defmodule AeMdwWeb.NameControllerTest do
     test "renders error when parameter direction is invalid", %{conn: conn} do
       by = "name"
       direction = "invalid_direction"
-      error = "invalid query: direction=#{direction}"
+      error = "invalid direction: #{direction}"
 
       assert %{"error" => ^error} =
                conn
@@ -426,7 +443,9 @@ defmodule AeMdwWeb.NameControllerTest do
                auction_timeout: 1
              )
            end,
-           prev_key: fn AuctionBid, _key -> :none end
+           prev_key: fn AuctionBid, _key -> :none end,
+           last_key: fn Block, _default -> 0 end,
+           first_key: fn Block, _default -> 0 end
          ]},
         {Txs, [],
          [
@@ -462,7 +481,11 @@ defmodule AeMdwWeb.NameControllerTest do
              )
            end,
            prev_key: fn AuctionBid, _key -> :none end,
-           last_key: fn InactiveNameExpiration, nil -> nil end
+           last_key: fn
+             InactiveNameExpiration, nil -> nil
+             Block, _default -> 0
+           end,
+           first_key: fn Block, _default -> 0 end
          ]},
         {Txs, [],
          [
@@ -500,8 +523,9 @@ defmodule AeMdwWeb.NameControllerTest do
                auction_timeout: 1
              )
            end,
-           prev_key: fn AuctionBid, _key -> :none end
-           # last_key: fn InactiveNameExpiration, nil -> nil end
+           prev_key: fn AuctionBid, _key -> :none end,
+           last_key: fn Block, _default -> 0 end,
+           first_key: fn Block, _default -> 0 end
          ]},
         {Txs, [],
          [
@@ -527,7 +551,7 @@ defmodule AeMdwWeb.NameControllerTest do
     test "renders error when parameter direction is invalid", %{conn: conn} do
       by = "name"
       direction = "invalid_direction"
-      error = "invalid query: direction=#{direction}"
+      error = "invalid direction: #{direction}"
 
       assert %{"error" => ^error} =
                conn |> get("/names?by=#{by}&direction=#{direction}") |> json_response(400)

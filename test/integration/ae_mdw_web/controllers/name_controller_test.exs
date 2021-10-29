@@ -95,7 +95,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       direction = "invalid_direction"
       conn = get(conn, "/names/active?by=#{by}&direction=#{direction}")
 
-      assert json_response(conn, 400) == %{"error" => "invalid query: direction=#{direction}"}
+      assert json_response(conn, 400) == %{"error" => "invalid direction: #{direction}"}
     end
   end
 
@@ -174,7 +174,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       direction = "invalid_direction"
       conn = get(conn, "/names/inactive?by=#{by}&direction=#{direction}")
 
-      assert json_response(conn, 400) == %{"error" => "invalid query: direction=#{direction}"}
+      assert json_response(conn, 400) == %{"error" => "invalid direction: #{direction}"}
     end
   end
 
@@ -240,7 +240,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       direction = "invalid_direction"
       conn = get(conn, "/names/auctions?by=#{by}&direction=#{direction}")
 
-      assert json_response(conn, 400) == %{"error" => "invalid query: direction=#{direction}"}
+      assert json_response(conn, 400) == %{"error" => "invalid direction: #{direction}"}
     end
   end
 
@@ -319,7 +319,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       direction = "invalid_direction"
       conn = get(conn, "/names?by=#{by}&direction=#{direction}")
 
-      assert json_response(conn, 400) == %{"error" => "invalid query: direction=#{direction}"}
+      assert json_response(conn, 400) == %{"error" => "invalid direction: #{direction}"}
     end
   end
 
