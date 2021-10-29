@@ -175,9 +175,19 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
   defp default_backward_range, do: last_gen()..first_gen()
 
-  defp first_gen, do: Mnesia.first_key(Block, 0)
+  defp first_gen do
+    case Mnesia.first_key(Block, nil) do
+      nil -> 0
+      {kbi, _txi} -> kbi
+    end
+  end
 
-  defp last_gen, do: Mnesia.last_key(Block, 0)
+  defp last_gen do
+    case Mnesia.last_key(Block, nil) do
+      nil -> 0
+      {kbi, _txi} -> kbi
+    end
+  end
 
   # Page extraction from params is for backwards compat and should be removed
   # after getting rid of non-cursor-based pagination.

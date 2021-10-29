@@ -29,8 +29,8 @@ defmodule AeMdwWeb.OracleControllerTest do
            fetch_keys: fn _tab, _dir, _cursor, _limit -> {expiration_keys, next_cursor} end,
            last_key: fn Block -> {:ok, TS.last_gen()} end,
            fetch!: fn _tab, _oracle_pk -> oracle end,
-           last_key: fn Block, _default -> 0 end,
-           first_key: fn Block, _default -> 0 end
+           last_key: fn Block, _default -> {0, 0} end,
+           first_key: fn Block, _default -> {0, 0} end
          ]},
         {Oracle, [], [oracle_tree!: fn _bi -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]}
@@ -70,8 +70,8 @@ defmodule AeMdwWeb.OracleControllerTest do
              InactiveOracleExpiration, _dir, _cursor, _limit -> {inactive_expiration_keys, nil}
            end,
            last_key: fn Block -> {:ok, TS.last_gen()} end,
-           last_key: fn Block, _default -> 0 end,
-           first_key: fn Block, _default -> 0 end,
+           last_key: fn Block, _default -> {0, 0} end,
+           first_key: fn Block, _default -> {0, 0} end,
            fetch!: fn _tab, _oracle_pk -> oracle end
          ]},
         {Oracle, [], [oracle_tree!: fn _bi -> :aeo_state_tree.empty() end]},
@@ -103,8 +103,8 @@ defmodule AeMdwWeb.OracleControllerTest do
            fetch_keys: fn _tab, _dir, _cursor, _limit -> {expiration_keys, next_cursor} end,
            last_key: fn Block -> {:ok, TS.last_gen()} end,
            fetch!: fn _tab, _oracle_pk -> oracle end,
-           last_key: fn Block, _default -> 0 end,
-           first_key: fn Block, _default -> 0 end
+           last_key: fn Block, _default -> {0, 0} end,
+           first_key: fn Block, _default -> {0, 0} end
          ]},
         {Oracle, [], [oracle_tree!: fn _bi -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]}
@@ -133,8 +133,8 @@ defmodule AeMdwWeb.OracleControllerTest do
            fetch_keys: fn _tab, _dir, _cursor, _limit -> {expiration_keys, next_cursor} end,
            last_key: fn Block -> {:ok, TS.last_gen()} end,
            fetch!: fn _tab, _oracle_pk -> TS.oracle() end,
-           last_key: fn Block, _default -> 0 end,
-           first_key: fn Block, _default -> 0 end
+           last_key: fn Block, _default -> {0, 0} end,
+           first_key: fn Block, _default -> {0, 0} end
          ]},
         {Oracle, [], [oracle_tree!: fn _bi -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]}

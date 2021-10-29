@@ -52,8 +52,8 @@ defmodule AeMdwWeb.NameControllerTest do
              {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
            end,
            prev_key: fn AuctionBid, _key -> :none end,
-           last_key: fn Block, _default -> 0 end,
-           first_key: fn Block, _default -> 0 end
+           last_key: fn Block, _default -> {0, 0} end,
+           first_key: fn Block, _default -> {0, 0} end
          ]},
         {Txs, [],
          [
@@ -101,8 +101,8 @@ defmodule AeMdwWeb.NameControllerTest do
              {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
            end,
            prev_key: fn AuctionBid, _key -> :none end,
-           last_key: fn Block, _default -> 0 end,
-           first_key: fn Block, _default -> 0 end
+           last_key: fn Block, _default -> {0, 0} end,
+           first_key: fn Block, _default -> {0, 0} end
          ]},
         {Txs, [],
          [
@@ -167,8 +167,8 @@ defmodule AeMdwWeb.NameControllerTest do
              {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
            end,
            prev_key: fn AuctionBid, _key -> :none end,
-           last_key: fn Block, _default -> 0 end,
-           first_key: fn Block, _default -> 0 end
+           last_key: fn Block, _default -> {0, 0} end,
+           first_key: fn Block, _default -> {0, 0} end
          ]},
         {Txs, [],
          [
@@ -214,8 +214,8 @@ defmodule AeMdwWeb.NameControllerTest do
              {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
            end,
            prev_key: fn AuctionBid, _key -> :none end,
-           last_key: fn Block, _default -> 0 end,
-           first_key: fn Block, _default -> 0 end
+           last_key: fn Block, _default -> {0, 0} end,
+           first_key: fn Block, _default -> {0, 0} end
          ]},
         {Txs, [],
          [
@@ -258,8 +258,8 @@ defmodule AeMdwWeb.NameControllerTest do
              {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
            end,
            prev_key: fn AuctionBid, _key -> :none end,
-           last_key: fn Block, _default -> 0 end,
-           first_key: fn Block, _default -> 0 end
+           last_key: fn Block, _default -> {0, 0} end,
+           first_key: fn Block, _default -> {0, 0} end
          ]},
         {Txs, [],
          [
@@ -311,8 +311,8 @@ defmodule AeMdwWeb.NameControllerTest do
            prev_key: fn AuctionBid, _key ->
              {:ok, {plain_name, {0, 1}, 0, :owner_pk, [{{2, 3}, 4}]}}
            end,
-           last_key: fn Block, _default -> 0 end,
-           first_key: fn Block, _default -> 0 end
+           last_key: fn Block, _default -> {0, 0} end,
+           first_key: fn Block, _default -> {0, 0} end
          ]},
         {Txs, [],
          [
@@ -348,8 +348,8 @@ defmodule AeMdwWeb.NameControllerTest do
            prev_key: fn AuctionBid, _key ->
              {:ok, {plain_name, {0, 1}, 0, :owner_pk, [{{2, 3}, 4}]}}
            end,
-           last_key: fn Block, _default -> 0 end,
-           first_key: fn Block, _default -> 0 end
+           last_key: fn Block, _default -> {0, 0} end,
+           first_key: fn Block, _default -> {0, 0} end
          ]},
         {Txs, [],
          [
@@ -382,8 +382,8 @@ defmodule AeMdwWeb.NameControllerTest do
            prev_key: fn AuctionBid, _key ->
              {:ok, {plain_name, {0, 1}, 0, :owner_pk, [{{2, 3}, 4}]}}
            end,
-           last_key: fn Block, _default -> 0 end,
-           first_key: fn Block, _default -> 0 end
+           last_key: fn Block, _default -> {0, 0} end,
+           first_key: fn Block, _default -> {0, 0} end
          ]},
         {Txs, [],
          [
@@ -444,8 +444,8 @@ defmodule AeMdwWeb.NameControllerTest do
              )
            end,
            prev_key: fn AuctionBid, _key -> :none end,
-           last_key: fn Block, _default -> 0 end,
-           first_key: fn Block, _default -> 0 end
+           last_key: fn Block, _default -> {0, 0} end,
+           first_key: fn Block, _default -> {0, 0} end
          ]},
         {Txs, [],
          [
@@ -483,9 +483,9 @@ defmodule AeMdwWeb.NameControllerTest do
            prev_key: fn AuctionBid, _key -> :none end,
            last_key: fn
              InactiveNameExpiration, nil -> nil
-             Block, _default -> 0
+             Block, _default -> {0, 0}
            end,
-           first_key: fn Block, _default -> 0 end
+           first_key: fn Block, _default -> {0, 0} end
          ]},
         {Txs, [],
          [
@@ -524,8 +524,8 @@ defmodule AeMdwWeb.NameControllerTest do
              )
            end,
            prev_key: fn AuctionBid, _key -> :none end,
-           last_key: fn Block, _default -> 0 end,
-           first_key: fn Block, _default -> 0 end
+           last_key: fn Block, _default -> {0, 0} end,
+           first_key: fn Block, _default -> {0, 0} end
          ]},
         {Txs, [],
          [
