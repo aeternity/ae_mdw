@@ -469,15 +469,11 @@ defmodule AeMdw.Db.Format do
         x -> to_string(x)
       end)
 
-    stringify = fn xs -> Enum.map(xs, &to_string/1) end
-    log_entry = fn log -> Map.update(log, "topics", [], stringify) end
-
     call_ser =
       :aect_call.serialize_for_client(call_rec)
       |> Map.drop(["return_value", "gas_price", "height", "contract_id", "caller_nonce"])
-      |> Map.update("log", [], fn logs -> Enum.map(logs, log_entry) end)
+      |> Map.update("log", [], &Contract.stringfy_log_topics/1)
 
-    IO.inspect(Map.keys(call_ser))
     update_in(tx, ["tx"], &Map.merge(&1, Map.merge(fun_arg_res, call_ser)))
   end
 
@@ -517,6 +513,9 @@ defmodule AeMdw.Db.Format do
     end
   end
 
+  #
+  # Private functions
+  #
   defp enc_id(nil), do: nil
 
   defp enc_id({:id, idtype, payload}),

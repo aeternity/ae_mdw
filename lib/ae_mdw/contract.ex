@@ -295,6 +295,15 @@ defmodule AeMdw.Contract do
     |> :aect_call.serialize_for_client()
     |> Map.drop(["gas_price", "height", "caller_nonce"])
     |> Map.put("args", contract_init_args(contract_pk, tx_rec))
+    |> Map.update("log", [], &stringfy_log_topics/1)
+  end
+
+  def stringfy_log_topics(logs) do
+    Enum.map(logs, fn log ->
+      Map.update(log, "topics", [], fn xs ->
+        Enum.map(xs, &to_string/1)
+      end)
+    end)
   end
 
   ##########
