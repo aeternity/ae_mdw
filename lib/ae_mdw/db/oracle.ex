@@ -3,9 +3,6 @@ defmodule AeMdw.Db.Oracle do
   @moduledoc """
   Cache through operations for active and inactive oracles.
   """
-
-  alias AeMdw.Node, as: AE
-
   alias AeMdw.Db.Model
 
   require Model
