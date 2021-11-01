@@ -66,7 +66,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
 
       case :ets.select(@subs_target_channels, spec, 1) do
         :"$end_of_table" -> :ok
-        {[_], _cont} -> broadcast(key, data(ser_tx, "Object", source))
+        {[_], _cont} -> broadcast(key, encode_message(ser_tx, "Object", source))
       end
     end)
 
@@ -80,12 +80,12 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     header = :aec_blocks.to_header(block)
 
     if :aec_blocks.height(block) == 0 do
-      broadcast(
-        "KeyBlocks",
+      msg =
         header
         |> :aec_headers.serialize_for_client(:key)
-        |> data("KeyBlocks", source)
-      )
+        |> encode_message("KeyBlocks", source)
+
+      broadcast("KeyBlocks", msg)
     else
       prev_block_hash = :aec_blocks.prev_hash(block)
 
@@ -96,7 +96,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
           msg =
             header
             |> :aec_headers.serialize_for_client(prev_block_type)
-            |> data("KeyBlocks", source)
+            |> encode_message("KeyBlocks", source)
 
           broadcast("KeyBlocks", msg)
           :ok
@@ -118,7 +118,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
           block
           |> :aec_blocks.to_header()
           |> :aec_headers.serialize_for_client(prev_block_type)
-          |> data("MicroBlocks", source)
+          |> encode_message("MicroBlocks", source)
 
         broadcast("MicroBlocks", msg)
         :ok
@@ -134,10 +134,14 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     block
     |> :aec_blocks.txs()
     |> Enum.each(fn tx ->
-      ser_tx = :aetx_sign.serialize_for_client(header, tx)
-      msg = data(ser_tx, "Transactions", source)
       # sends Objects in separate message as broadcast has not_return
       Process.send(__MODULE__, {:broadcast_objects, header, tx, source}, [:noconnect])
+
+      msg =
+        header
+        |> :aetx_sign.serialize_for_client(tx)
+        |> encode_message("Transactions", source)
+
       broadcast("Transactions", msg)
     end)
   end
@@ -145,12 +149,12 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   defp broadcast(channel, msg) do
     Riverside.LocalDelivery.deliver(
       {:channel, channel},
-      {:text, Poison.encode!(msg)}
+      {:text, msg}
     )
   end
 
-  defp data(data, sub, source),
-    do: %{"payload" => data, "subscription" => sub, "source" => source}
+  defp encode_message(payload, sub, source),
+    do: Poison.encode!(%{"payload" => payload, "subscription" => sub, "source" => source})
 
   defp get_ids_from_tx(signed_tx) do
     wrapped_tx = :aetx_sign.tx(signed_tx)
