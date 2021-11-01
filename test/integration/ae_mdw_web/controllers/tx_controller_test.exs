@@ -46,6 +46,21 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       assert tx["gas_used"] && tx["gas_used"] > 0
     end
 
+    test "gets spend_tx with recipient details having a name with multiple updates", %{conn: conn} do
+      valid_index = 5_557_826
+      conn = get(conn, "/txi/#{valid_index}")
+
+      assert json_response(conn, 200)["tx_index"] == valid_index
+      assert tx = json_response(conn, 200)["tx"]
+      assert tx["type"] == "SpendTx"
+      assert tx["recipient_id"] == "nm_wy3s5qnkXfq3bEETvnnt6YKaGQjfyGkncSuWQk77hdke9eYpx"
+
+      assert tx["recipient"] == %{
+               "account" => "ak_2e2VkR2yABKqAenxFXSNtgNx4Lbm9aPrD34pM9sharswp5dNAc",
+               "name" => "kiwicrestorchard.chain"
+             }
+    end
+
     test "renders errors when data is invalid", %{conn: conn} do
       invalid_index = -10_000_000
       conn = get(conn, "/txi/#{invalid_index}")
