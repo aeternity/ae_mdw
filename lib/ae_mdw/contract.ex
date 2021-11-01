@@ -6,7 +6,6 @@ defmodule AeMdw.Contract do
 
   alias AeMdw.EtsCache
   alias AeMdw.Node.Db, as: DBN
-  alias AeMdw.Log
   alias AeMdw.DryRun
 
   import :erlang, only: [tuple_to_list: 1]
@@ -14,6 +13,17 @@ defmodule AeMdw.Contract do
   import AeMdw.Util
 
   @tab __MODULE__
+  @typep fname() :: binary()
+  @typep tx_hash() :: binary()
+  @typep event_name() :: {:internal_call_tx, fname()}
+  # :aec_blocks.micro_block()
+  @typep micro_block() :: term()
+  @typep event_info() :: map() | :error
+  # :aetx.tx_type()
+  @typep event_type :: atom()
+  @typep event_data() :: %{tx_hash: tx_hash(), type: event_type(), info: event_info()}
+
+  @type event() :: {event_name(), event_data()}
 
   ################################################################################
 
@@ -313,18 +323,15 @@ defmodule AeMdw.Contract do
     end)
   end
 
-  ##########
-
-  def get_grouped_events(micro_block),
-    do: Enum.group_by(get_events(micro_block), fn {_, info} -> info.tx_hash end)
-
-  def get_events(<<micro_block_hash::binary>>) do
-    micro_block = :aec_db.get_block(micro_block_hash)
-    :micro = :aec_blocks.type(micro_block)
-    get_events(micro_block)
+  @spec get_grouped_events(micro_block()) :: %{tx_hash() => [event()]}
+  def get_grouped_events(micro_block) do
+    Enum.group_by(get_events(micro_block), fn {_event_name, %{tx_hash: tx_hash}} -> tx_hash end)
   end
 
-  def get_events(micro_block) when elem(micro_block, 0) == :mic_block do
+  #
+  # Private functions
+  #
+  defp get_events(micro_block) when elem(micro_block, 0) == :mic_block do
     header = :aec_blocks.to_header(micro_block)
     {:ok, hash} = :aec_headers.hash_header(header)
     consensus = :aec_headers.consensus_module(header)
@@ -338,27 +345,8 @@ defmodule AeMdw.Contract do
     env = :aetx_env.tx_env_from_key_header(prev_key_header, prev_key_hash, time, prev_hash)
     txs = :aec_blocks.txs(micro_block)
     {:ok, _, _, events} = :aec_block_micro_candidate.apply_block_txs_strict(txs, trees_in, env)
-    ignore_chain_create_or_clone_events(events)
+    events
   end
-
-  def ignore_chain_create_or_clone_events(events) do
-    Enum.reject(events, &chain_create_or_clone_event?/1)
-  end
-
-  #
-  # Private functions
-  #
-  defp chain_create_or_clone_event?({{_, "Chain.create"}, _} = event) do
-    Log.info("Ignore Chain.create event #{inspect(event)}")
-    true
-  end
-
-  defp chain_create_or_clone_event?({{_, "Chain.clone"}, _} = event) do
-    Log.info("Ignore Chain.clone event #{inspect(event)}")
-    true
-  end
-
-  defp chain_create_or_clone_event?(_), do: false
 
   defp contract_init_args(contract_pk, tx_rec) do
     {:ok, ct_info} = get_info(contract_pk)
