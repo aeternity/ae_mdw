@@ -1,8 +1,11 @@
 defmodule Support.WsClient do
+  # credo:disable-for-this-file
   use WebSockex
 
   @known_prefixes ["ak_", "ct_", "ok_", "nm_", "cm_", "ch_"]
   @mock_hash "th_XCzs29JhAh7Jpd5fypNi42Kszc4eVYEadw62cNBc7qBHajhD7"
+  @mock_hash_tx_mdw "th_VyepHVU43zbytTihQprS689bbq9pYcHkW9iw7GZnUGmaf8N5o"
+  @mock_hash_obj_mdw "th_2KYycJjNrL4htFhwCVrKnx3nazdzZ3Vu4XPRhoqMpvTB5SGK4Q"
 
   def start_link(url), do: WebSockex.start(url, __MODULE__, %{})
 
@@ -60,10 +63,16 @@ defmodule Support.WsClient do
         %{"subscription" => "Transactions", "payload" => %{"hash" => @mock_hash}} = msg ->
           Map.put(state, :tx, msg)
 
+        %{"subscription" => "Transactions", "payload" => %{"hash" => @mock_hash_tx_mdw}} = msg ->
+          Map.put(state, :tx, msg)
+
         %{"subscription" => "Transactions"} ->
           state
 
         %{"subscription" => "Object", "payload" => %{"hash" => @mock_hash}} = msg ->
+          Map.put(state, :obj, msg)
+
+        %{"subscription" => "Object", "payload" => %{"hash" => @mock_hash_obj_mdw}} = msg ->
           Map.put(state, :obj, msg)
 
         %{"subscription" => "Object"} ->

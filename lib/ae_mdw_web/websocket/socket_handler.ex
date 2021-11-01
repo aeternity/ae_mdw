@@ -1,7 +1,7 @@
 defmodule AeWebsocket.Websocket.SocketHandler do
   use Riverside, otp_app: :ae_mdw
 
-  alias AeMdwWeb.Websocket.Listener
+  alias AeMdwWeb.Websocket.ChainListener
   alias AeMdwWeb.Util
 
   require Ex2ms
@@ -37,8 +37,8 @@ defmodule AeWebsocket.Websocket.SocketHandler do
       case AeMdw.Validate.id(target) do
         {:ok, id} ->
           {:ok, pid} = Riverside.LocalDelivery.join_channel(id)
-          Listener.register(pid)
-          Listener.register(self())
+          ChainListener.register(pid)
+          ChainListener.register(self())
 
           :ets.insert(@subs_pids, {self(), nil})
           :ets.insert(@subs_main, {pid, nil})
@@ -73,7 +73,7 @@ defmodule AeWebsocket.Websocket.SocketHandler do
       {:ok, session, state}
     else
       {:ok, pid} = Riverside.LocalDelivery.join_channel(payload)
-      Listener.register(pid)
+      ChainListener.register(pid)
       :ets.insert(@subs_main, {pid, nil})
 
       new_state = %{state | info: MapSet.put(info, payload)}

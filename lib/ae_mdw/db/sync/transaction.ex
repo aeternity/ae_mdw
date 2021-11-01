@@ -1,9 +1,13 @@
 defmodule AeMdw.Db.Sync.Transaction do
-  @moduledoc "assumes block index is in place, syncs whole history"
+  @moduledoc "
+  Syncs whole history based on Node events (and assumes block index is in place.
+  "
 
   alias AeMdw.Node, as: AE
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync
+
+  alias AeMdwWeb.Websocket.Broadcaster
 
   require Model
 
@@ -15,6 +19,7 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   ################################################################################
 
+  @spec sync(non_neg_integer() | :safe) :: pos_integer()
   def sync(max_height \\ :safe) do
     max_height = Sync.height((is_integer(max_height) && max_height + 1) || max_height)
     bi_max_kbi = Sync.BlockIndex.sync(max_height) - 1
@@ -31,6 +36,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     end
   end
 
+  @spec sync(non_neg_integer(), non_neg_integer(), non_neg_integer()) :: pos_integer()
   def sync(from_height, to_height, txi) when from_height <= to_height do
     tracker = Sync.progress_logger(&sync_generation/2, @log_freq, &log_msg/2)
     next_txi = from_height..to_height |> Enum.reduce(txi, tracker)
@@ -45,15 +51,6 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   def sync(from_height, to_height, txi) when from_height > to_height,
     do: txi
-
-  def clear(),
-    do: Enum.each(AeMdw.Db.Model.tables(), &:mnesia.clear_table/1)
-
-  def min_txi(), do: txi(&first/1)
-  def max_txi(), do: txi(&last/1)
-
-  def min_kbi(), do: kbi(&first/1)
-  def max_kbi(), do: kbi(&last/1)
 
   ################################################################################
 
@@ -71,20 +68,27 @@ defmodule AeMdw.Db.Sync.Transaction do
 
         kb_txi = (txi == 0 && -1) || txi
         kb_header = :aec_blocks.to_key_header(key_block)
-        kb_hash = :aec_headers.hash_header(kb_header) |> ok!
+        kb_hash = ok!(:aec_headers.hash_header(kb_header))
         kb_model = Model.block(index: {height, -1}, tx_index: kb_txi, hash: kb_hash)
         :mnesia.write(Model.Block, kb_model, :write)
 
         height >= AE.min_block_reward_height() &&
           Sync.IntTransfer.block_rewards(kb_header, kb_hash)
 
-        {next_txi, _mb_index} = micro_blocks |> Enum.reduce({txi, 0}, &sync_micro_block/2)
+        {next_txi, _mb_index} = Enum.reduce(micro_blocks, {txi, 0}, &sync_micro_block/2)
 
         Sync.Stat.store(height)
         Sync.Stat.sum_store(height)
 
         next_txi
       end)
+
+    Broadcaster.broadcast_key_block(key_block, :mdw)
+
+    Enum.each(micro_blocks, fn mblock ->
+      Broadcaster.broadcast_micro_block(mblock, :mdw)
+      Broadcaster.broadcast_txs(mblock, :mdw)
+    end)
 
     if rem(height, @sync_cache_cleanup_freq) == 0 do
       :ets.delete_all_objects(:name_sync_cache)
@@ -97,7 +101,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   defp sync_micro_block(mblock, {txi, mbi}) do
     height = :aec_blocks.height(mblock)
     mb_time = :aec_blocks.time_in_msecs(mblock)
-    mb_hash = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock)) |> ok!
+    mb_hash = ok!(:aec_headers.hash_header(:aec_blocks.to_micro_header(mblock)))
     mb_txi = (txi == 0 && -1) || txi
     mb_model = Model.block(index: {height, mbi}, tx_index: mb_txi, hash: mb_hash)
     :mnesia.write(Model.Block, mb_model, :write)
@@ -110,6 +114,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     {next_txi, mbi + 1}
   end
 
+  @spec sync_transaction(tuple(), non_neg_integer(), tuple(), boolean()) :: pos_integer()
   def sync_transaction(
         signed_tx,
         txi,
@@ -250,16 +255,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     end
   end
 
-  defp kbi(f) do
-    case f.(Model.Tx) do
-      :"$end_of_table" ->
-        nil
-
-      txi ->
-        {kbi, _mbi} = Model.tx(read_tx!(txi), :block_index)
-        kbi
-    end
-  end
+  defp max_txi(), do: txi(&last/1)
 
   defp log_msg(height, _ignore),
     do: "syncing transactions at generation #{height}"
