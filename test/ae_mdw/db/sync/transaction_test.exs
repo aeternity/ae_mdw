@@ -9,6 +9,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
 
   import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, spend_tx: 3]
   import Mock
+  import Support.TestMnesiaSandbox
 
   require Ex2ms
   require Model
@@ -48,17 +49,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
 
           :mnesia.abort(:rollback)
         end
-        |> :mnesia.transaction()
-        |> case do
-          {:aborted, {%ExUnit.AssertionError{} = assertion_error, _stacktrace}} ->
-            raise assertion_error
-
-          {:aborted, :rollback} ->
-            :pass
-
-          other_result ->
-            throw(other_result)
-        end
+        |> mnesia_sandbox()
       end
     end
 
@@ -92,17 +83,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
 
           :mnesia.abort(:rollback)
         end
-        |> :mnesia.transaction()
-        |> case do
-          {:aborted, {%ExUnit.AssertionError{} = assertion_error, _stacktrace}} ->
-            raise assertion_error
-
-          {:aborted, :rollback} ->
-            :pass
-
-          other_result ->
-            throw(other_result)
-        end
+        |> mnesia_sandbox()
       end
     end
   end

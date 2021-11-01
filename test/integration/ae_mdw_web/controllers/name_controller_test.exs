@@ -6,6 +6,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
+  alias AeMdw.Db.Util
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Validate
 
