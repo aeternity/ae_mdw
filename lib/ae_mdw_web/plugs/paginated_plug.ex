@@ -6,8 +6,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
   alias Phoenix.Controller
   alias Plug.Conn
-  alias AeMdw.Db.Model.Block
-  alias AeMdw.Mnesia
+  alias AeMdw.Db.Util
   alias AeMdw.Node
   alias AeMdw.Validate
 
@@ -171,23 +170,9 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
     end
   end
 
-  defp default_forward_range, do: first_gen()..last_gen()
+  defp default_forward_range, do: Util.first_gen!()..Util.last_gen!()
 
-  defp default_backward_range, do: last_gen()..first_gen()
-
-  defp first_gen do
-    case Mnesia.first_key(Block, nil) do
-      nil -> 0
-      {kbi, _txi} -> kbi
-    end
-  end
-
-  defp last_gen do
-    case Mnesia.last_key(Block, nil) do
-      nil -> 0
-      {kbi, _txi} -> kbi
-    end
-  end
+  defp default_backward_range, do: Util.last_gen!()..Util.first_gen!()
 
   # Page extraction from params is for backwards compat and should be removed
   # after getting rid of non-cursor-based pagination.

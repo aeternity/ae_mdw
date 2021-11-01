@@ -10,6 +10,7 @@ defmodule AeMdwWeb.OracleControllerTest do
   alias AeMdw.Db.Model.InactiveOracleExpiration
   alias AeMdw.Db.Model.Block
   alias AeMdw.Db.Oracle
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Mnesia
   alias AeMdw.TestSamples, as: TS
 
@@ -29,11 +30,14 @@ defmodule AeMdwWeb.OracleControllerTest do
            fetch_keys: fn _tab, _dir, _cursor, _limit -> {expiration_keys, next_cursor} end,
            last_key: fn Block -> {:ok, TS.last_gen()} end,
            fetch!: fn _tab, _oracle_pk -> oracle end,
-           last_key: fn Block, _default -> {0, 0} end,
-           first_key: fn Block, _default -> {0, 0} end
          ]},
         {Oracle, [], [oracle_tree!: fn _bi -> :aeo_state_tree.empty() end]},
-        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]}
+        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
+        {DbUtil, [], [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
+           ]}
+
       ] do
         assert %{"data" => [oracle1 | _rest] = oracles, "next" => next_uri} =
                  conn
