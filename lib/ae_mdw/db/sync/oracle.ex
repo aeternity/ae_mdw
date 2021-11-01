@@ -1,9 +1,10 @@
 defmodule AeMdw.Db.Sync.Oracle do
   @moduledoc """
-  Updates an Oracle state during sync regarding:
-    - if active or inactive
-    - when expires
-    - the reward for oracle query
+  Save oracle state operations for each transaction type:
+    - register
+    - extend
+    - expire
+    - respond (query)
   """
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Model

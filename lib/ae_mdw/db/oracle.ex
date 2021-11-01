@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.Oracle do
+  # credo:disable-for-this-file
   @moduledoc """
-  Access to active or inactive oracle models and caches.
+  Cache through operations for active and inactive oracles.
   """
   alias AeMdw.Db.Model
 

@@ -156,8 +156,15 @@ defmodule AeMdw.Contract do
 
   def decode_call_data({:fcode, _, _, _} = fate_info, call_data, mapper) do
     {:tuple, {fun_hash, {:tuple, tup_args}}} = :aeb_fate_encoding.deserialize(call_data)
-    {:ok, fun_name} = :aeb_fate_abi.get_function_name_from_function_hash(fun_hash, fate_info)
-    {fun_name, Enum.map(tuple_to_list(tup_args), &fate_val(&1, mapper))}
+
+    # sample fun_hash not matching: <<74, 202, 20, 78, 108, 15, 83, 141, 70, 92, 69, 235, 191, 127, 43, 123, 21, 80, 189, 1, 86, 76, 125, 166, 246, 81, 67, 150, 69, 95, 156, 6>>
+    case :aeb_fate_abi.get_function_name_from_function_hash(fun_hash, fate_info) do
+      {:ok, fun_name} ->
+        {fun_name, Enum.map(tuple_to_list(tup_args), &fate_val(&1, mapper))}
+
+      {:error, :no_function_matching_function_hash} ->
+        {:error, :no_function_matching_function_hash}
+    end
   end
 
   def decode_call_data([_ | _] = aevm_info, call_data, mapper) do
@@ -259,7 +266,12 @@ defmodule AeMdw.Contract do
   ##########
 
   def call_rec(tx_rec, contract_pk, block_hash) do
-    call_id = :aect_call_tx.call_id(tx_rec)
+    tx_rec
+    |> :aect_call_tx.call_id()
+    |> call_rec_from_id(contract_pk, block_hash)
+  end
+
+  def call_rec_from_id(call_id, contract_pk, block_hash) do
     :aec_chain.get_contract_call(contract_pk, call_id, block_hash) |> ok!
   end
 
@@ -290,22 +302,35 @@ defmodule AeMdw.Contract do
     end
   end
 
-  def gas_used_in_create(contract_pk, tx_rec, block_hash) do
+  def get_init_call_details(contract_pk, tx_rec, block_hash) do
     create_nonce = :aect_create_tx.nonce(tx_rec)
 
-    init_call_id =
-      tx_rec
-      |> :aect_create_tx.owner_pubkey()
-      |> :aect_call.id(create_nonce, contract_pk)
-
-    contract_pk
-    |> :aec_chain.get_contract_call(init_call_id, block_hash)
-    |> ok!
-    |> :aect_call.gas_used()
+    tx_rec
+    |> :aect_create_tx.owner_pubkey()
+    |> :aect_call.id(create_nonce, contract_pk)
+    |> call_rec_from_id(contract_pk, block_hash)
+    |> :aect_call.serialize_for_client()
+    |> Map.drop(["gas_price", "height", "caller_nonce"])
+    |> Map.put("args", contract_init_args(contract_pk, tx_rec))
+    |> Map.update("log", [], &stringfy_log_topics/1)
   end
 
-  ##########
+  def stringfy_log_topics(logs) do
+    Enum.map(logs, fn log ->
+      Map.update(log, "topics", [], fn xs ->
+        Enum.map(xs, &to_string/1)
+      end)
+    end)
+  end
 
+  @spec get_grouped_events(micro_block()) :: %{tx_hash() => [event()]}
+  def get_grouped_events(micro_block) do
+    Enum.group_by(get_events(micro_block), fn {_event_name, %{tx_hash: tx_hash}} -> tx_hash end)
+  end
+
+  #
+  # Private functions
+  #
   defp get_events(micro_block) when elem(micro_block, 0) == :mic_block do
     header = :aec_blocks.to_header(micro_block)
     {:ok, hash} = :aec_headers.hash_header(header)
@@ -323,16 +348,43 @@ defmodule AeMdw.Contract do
     events
   end
 
-  @spec get_grouped_events(micro_block()) :: %{tx_hash() => [event()]}
-  def get_grouped_events(micro_block) do
-    Enum.group_by(get_events(micro_block), fn {_event_name, %{tx_hash: tx_hash}} -> tx_hash end)
+  defp contract_init_args(contract_pk, tx_rec) do
+    {:ok, ct_info} = get_info(contract_pk)
+    call_data = :aect_create_tx.call_data(tx_rec)
+
+    case decode_call_data(ct_info, call_data) do
+      {"init", args} ->
+        args_type_value(args)
+
+      {:error, _reason} ->
+        nil
+    end
   end
 
-  # def t(gen_range) do
-  #   range
-  #   |> Stream.flat_map(&AeMdw.Node.Db.get_micro_blocks/1)
-  #   |> Stream.map(&:aec_blocks.to_micro_header/1)
-  #   |> Stream.map(&ok!(:aec_headers.hash_header(&1)))
-  #   |> Stream.flat_map(&AeMdw.Contract.get_events/1)
-  # end
+  defp args_type_value(args) when is_list(args) do
+    Enum.map(args, &type_value_map/1)
+  end
+
+  defp args_type_value(type_value), do: type_value_map(type_value)
+
+  defp type_value_map({type, list}) when is_list(list) do
+    %{
+      "type" => to_string(type),
+      "value" => Enum.map(list, &element_value/1)
+    }
+  end
+
+  defp type_value_map({type, value}) do
+    %{
+      "type" => to_string(type),
+      "value" => value
+    }
+  end
+
+  defp element_value({_type, value}), do: value
+
+  defp element_value(%{key: {_key_type, key_value}, val: {_val_type, val_value}}),
+    do: %{"key" => key_value, "val" => val_value}
+
+  defp element_value(x), do: x
 end
