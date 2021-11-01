@@ -106,21 +106,22 @@ defmodule AeMdwWeb.TxController do
   defp handle_spendtx_details(response_data, %{"account" => _account}) do
     response_data
     |> Enum.uniq_by(fn %{"hash" => tx_hash} -> tx_hash end)
-    |> Enum.map(fn %{"tx" => block_tx, "tx_index" => tx_index} = block ->
-      spend_tx_recipient = (block_tx["type"] == @type_spend_tx && block_tx["recipient_id"]) || nil
-      add_details? = String.starts_with?(spend_tx_recipient || "", "nm_")
-
-      if add_details? do
-        update_in(block, ["tx"], fn block_tx ->
-          Map.merge(block_tx, get_recipient(spend_tx_recipient, tx_index))
-        end)
-      else
-        block
-      end
-    end)
+    |> Enum.map(&maybe_add_spend_tx_details/1)
   end
 
   defp handle_spendtx_details(response_data, _params), do: response_data
+
+  defp maybe_add_spend_tx_details(%{"tx" => block_tx, "tx_index" => tx_index} = block) do
+    recipient_id = block_tx["recipient_id"] || ""
+
+    if block_tx["type"] == @type_spend_tx and String.starts_with?(recipient_id, "nm_") do
+      update_in(block, ["tx"], fn block_tx ->
+        Map.merge(block_tx, get_recipient(recipient_id, tx_index))
+      end)
+    else
+      block
+    end
+  end
 
   defp get_recipient(spend_tx_recipient_nm, spend_txi) do
     with {:ok, plain_name} <- Validate.plain_name(spend_tx_recipient_nm),
@@ -159,8 +160,9 @@ defmodule AeMdwWeb.TxController do
   defp tx_reply(conn, [model_tx]),
     do: tx_reply(conn, model_tx)
 
-  defp tx_reply(conn, model_tx) when is_tuple(model_tx) and elem(model_tx, 0) == :tx,
-    do: conn |> json(Format.to_map(model_tx))
+  defp tx_reply(conn, model_tx) when is_tuple(model_tx) and elem(model_tx, 0) == :tx do
+    json(conn, maybe_add_spend_tx_details(Format.to_map(model_tx)))
+  end
 
   ##########
 
