@@ -71,15 +71,23 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       expected_args = [
         %{
           "type" => "tuple",
-          "value" =>
-            "[string: \"Facebook Must Die?\", string: \"Facebook\", string: \"https://downdetector.com/status/facebook/map/\", variant: [0]]"
+          "value" => [
+            "Facebook Must Die?",
+            "Facebook",
+            "https://downdetector.com/status/facebook/map/",
+            [0]
+          ]
         },
         %{
           "type" => "map",
-          "value" =>
-            "[%{key: {:int, 0}, val: {:string, \"yes\"}}, %{key: {:int, 1}, val: {:string, \"no\"}}, %{key: {:int, 2}, val: {:string, \"I don't care\"}}, %{key: {:int, 3}, val: {:string, \"Facebook is already dead\"}}]"
+          "value" => [
+            %{"key" => 0, "val" => "yes"},
+            %{"key" => 1, "val" => "no"},
+            %{"key" => 2, "val" => "I don't care"},
+            %{"key" => 3, "val" => "Facebook is already dead"}
+          ]
         },
-        %{"type" => "variant", "value" => "[1, {:int, 511843}]"}
+        %{"type" => "variant", "value" => [1, 511_843]}
       ]
 
       assert json_response(conn, 200)["tx_index"] == valid_index

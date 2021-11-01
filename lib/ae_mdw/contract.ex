@@ -146,8 +146,15 @@ defmodule AeMdw.Contract do
 
   def decode_call_data({:fcode, _, _, _} = fate_info, call_data, mapper) do
     {:tuple, {fun_hash, {:tuple, tup_args}}} = :aeb_fate_encoding.deserialize(call_data)
-    {:ok, fun_name} = :aeb_fate_abi.get_function_name_from_function_hash(fun_hash, fate_info)
-    {fun_name, Enum.map(tuple_to_list(tup_args), &fate_val(&1, mapper))}
+
+    # sample fun_hash not matching: <<74, 202, 20, 78, 108, 15, 83, 141, 70, 92, 69, 235, 191, 127, 43, 123, 21, 80, 189, 1, 86, 76, 125, 166, 246, 81, 67, 150, 69, 95, 156, 6>>
+    case :aeb_fate_abi.get_function_name_from_function_hash(fun_hash, fate_info) do
+      {:ok, fun_name} ->
+        {fun_name, Enum.map(tuple_to_list(tup_args), &fate_val(&1, mapper))}
+
+      {:error, :no_function_matching_function_hash} ->
+        {:error, :no_function_matching_function_hash}
+    end
   end
 
   def decode_call_data([_ | _] = aevm_info, call_data, mapper) do
@@ -356,8 +363,40 @@ defmodule AeMdw.Contract do
   defp contract_init_args(contract_pk, tx_rec) do
     {:ok, ct_info} = get_info(contract_pk)
     call_data = :aect_create_tx.call_data(tx_rec)
-    {"init", args} = decode_call_data(ct_info, call_data)
 
-    Enum.map(args, fn {type, value} -> %{type: type, value: inspect(value)} end)
+    case decode_call_data(ct_info, call_data) do
+      {"init", args} ->
+        args_type_value(args)
+
+      {:error, _reason} ->
+        nil
+    end
   end
+
+  defp args_type_value(args) when is_list(args) do
+    Enum.map(args, &type_value_map/1)
+  end
+
+  defp args_type_value(type_value), do: type_value_map(type_value)
+
+  defp type_value_map({type, list}) when is_list(list) do
+    %{
+      "type" => to_string(type),
+      "value" => Enum.map(list, &element_value/1)
+    }
+  end
+
+  defp type_value_map({type, value}) do
+    %{
+      "type" => to_string(type),
+      "value" => value
+    }
+  end
+
+  defp element_value({_type, value}), do: value
+
+  defp element_value(%{key: {_key_type, key_value}, val: {_val_type, val_value}}),
+    do: %{"key" => key_value, "val" => val_value}
+
+  defp element_value(x), do: x
 end
