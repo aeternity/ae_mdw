@@ -11,6 +11,7 @@ defmodule AeMdw.Collection do
   @typep limit() :: Mnesia.limit()
   @typep key() :: Mnesia.key()
   @typep record() :: Mnesia.record()
+  @typep scope() :: {key(), key()} | nil
 
   @doc """
   Returns the cursor-paginated results of 2 different mnesia tables, where the
@@ -124,10 +125,12 @@ defmodule AeMdw.Collection do
   @doc """
   Builds a stream from records from a table starting from the initial_key given.
   """
-  @spec stream(table(), direction(), cursor()) :: Enumerable.t()
-  def stream(tab, direction, cursor) do
-    case fetch_first_key(tab, direction, cursor) do
-      {:ok, first_key} -> unfold_stream(tab, direction, first_key)
+  @spec stream(table(), direction(), scope(), cursor()) :: Enumerable.t()
+  def stream(tab, direction, scope, cursor) do
+    {first, last} = scope || {nil, nil}
+
+    case fetch_first_key(tab, direction, first, cursor) do
+      {:ok, first_key} -> unfold_stream(tab, direction, first_key, last)
       :none -> []
     end
   end
@@ -165,26 +168,45 @@ defmodule AeMdw.Collection do
     end)
   end
 
-  defp unfold_stream(tab, direction, first_key) do
-    Stream.unfold(first_key, fn
-      :end_keys ->
-        nil
+  defp unfold_stream(tab, direction, first_key, last_key) do
+    stream =
+      Stream.unfold(first_key, fn
+        :end_keys ->
+          nil
 
-      key ->
-        case Mnesia.next_key(tab, direction, key) do
-          {:ok, next_key} -> {key, next_key}
-          :none -> {key, :end_keys}
-        end
-    end)
+        key ->
+          case Mnesia.next_key(tab, direction, key) do
+            {:ok, next_key} -> {key, next_key}
+            :none -> {key, :end_keys}
+          end
+      end)
+
+    if last_key do
+      Stream.take_while(stream, fn key ->
+        if direction == :forward, do: key <= last_key, else: key >= last_key
+      end)
+    else
+      stream
+    end
   end
 
-  defp fetch_first_key(tab, direction, nil), do: Mnesia.next_key(tab, direction, nil)
+  defp fetch_first_key(tab, direction, nil, nil), do: Mnesia.next_key(tab, direction, nil)
 
-  defp fetch_first_key(tab, direction, cursor) do
-    if Mnesia.exists?(tab, cursor) do
-      {:ok, cursor}
+  defp fetch_first_key(tab, direction, first, nil), do: fetch_first_key(tab, direction, first)
+
+  defp fetch_first_key(tab, direction, nil, cursor), do: fetch_first_key(tab, direction, cursor)
+
+  defp fetch_first_key(tab, :forward, first, cursor),
+    do: fetch_first_key(tab, :forward, max(first, cursor))
+
+  defp fetch_first_key(tab, :backward, first, cursor),
+    do: fetch_first_key(tab, :backward, min(first, cursor))
+
+  defp fetch_first_key(tab, direction, candidate_cursor) do
+    if Mnesia.exists?(tab, candidate_cursor) do
+      {:ok, candidate_cursor}
     else
-      Mnesia.next_key(tab, direction, cursor)
+      Mnesia.next_key(tab, direction, candidate_cursor)
     end
   end
 
