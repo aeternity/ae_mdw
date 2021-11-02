@@ -6,11 +6,11 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdw.Db.Model.ActiveNameExpiration
   alias AeMdw.Db.Model.AuctionBid
   alias AeMdw.Db.Model.AuctionExpiration
-  alias AeMdw.Db.Model.Block
   alias AeMdw.Db.Model.InactiveName
   alias AeMdw.Db.Model.InactiveNameExpiration
   alias AeMdw.Db.Model.Tx
   alias AeMdw.Db.Name
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Mnesia
   alias AeMdw.Validate
   alias AeMdw.TestSamples, as: TS
@@ -51,13 +51,16 @@ defmodule AeMdwWeb.NameControllerTest do
            fetch: fn Tx, _key ->
              {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
            end,
-           prev_key: fn AuctionBid, _key -> :none end,
-           last_key: fn Block, _default -> {0, 0} end,
-           first_key: fn Block, _default -> {0, 0} end
+           prev_key: fn AuctionBid, _key -> :none end
          ]},
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names, "next" => next} =
@@ -100,13 +103,16 @@ defmodule AeMdwWeb.NameControllerTest do
            fetch: fn Tx, _key ->
              {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
            end,
-           prev_key: fn AuctionBid, _key -> :none end,
-           last_key: fn Block, _default -> {0, 0} end,
-           first_key: fn Block, _default -> {0, 0} end
+           prev_key: fn AuctionBid, _key -> :none end
          ]},
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names} =
@@ -166,13 +172,16 @@ defmodule AeMdwWeb.NameControllerTest do
            fetch: fn Tx, _key ->
              {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
            end,
-           prev_key: fn AuctionBid, _key -> :none end,
-           last_key: fn Block, _default -> {0, 0} end,
-           first_key: fn Block, _default -> {0, 0} end
+           prev_key: fn AuctionBid, _key -> :none end
          ]},
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names, "next" => next} =
@@ -213,13 +222,16 @@ defmodule AeMdwWeb.NameControllerTest do
            fetch: fn Tx, _key ->
              {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
            end,
-           prev_key: fn AuctionBid, _key -> :none end,
-           last_key: fn Block, _default -> {0, 0} end,
-           first_key: fn Block, _default -> {0, 0} end
+           prev_key: fn AuctionBid, _key -> :none end
          ]},
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names} =
@@ -257,13 +269,16 @@ defmodule AeMdwWeb.NameControllerTest do
            fetch: fn Tx, _key ->
              {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
            end,
-           prev_key: fn AuctionBid, _key -> :none end,
-           last_key: fn Block, _default -> {0, 0} end,
-           first_key: fn Block, _default -> {0, 0} end
+           prev_key: fn AuctionBid, _key -> :none end
          ]},
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names} =
@@ -310,13 +325,16 @@ defmodule AeMdwWeb.NameControllerTest do
            fetch: fn InactiveName, ^plain_name -> :not_found end,
            prev_key: fn AuctionBid, _key ->
              {:ok, {plain_name, {0, 1}, 0, :owner_pk, [{{2, 3}, 4}]}}
-           end,
-           last_key: fn Block, _default -> {0, 0} end,
-           first_key: fn Block, _default -> {0, 0} end
+           end
          ]},
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => auction_bids, "next" => next} =
@@ -347,13 +365,16 @@ defmodule AeMdwWeb.NameControllerTest do
            fetch: fn InactiveName, ^plain_name -> :not_found end,
            prev_key: fn AuctionBid, _key ->
              {:ok, {plain_name, {0, 1}, 0, :owner_pk, [{{2, 3}, 4}]}}
-           end,
-           last_key: fn Block, _default -> {0, 0} end,
-           first_key: fn Block, _default -> {0, 0} end
+           end
          ]},
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => auctions} =
@@ -381,13 +402,16 @@ defmodule AeMdwWeb.NameControllerTest do
            fetch: fn InactiveName, ^plain_name -> :not_found end,
            prev_key: fn AuctionBid, _key ->
              {:ok, {plain_name, {0, 1}, 0, :owner_pk, [{{2, 3}, 4}]}}
-           end,
-           last_key: fn Block, _default -> {0, 0} end,
-           first_key: fn Block, _default -> {0, 0} end
+           end
          ]},
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => auctions} =
@@ -443,13 +467,16 @@ defmodule AeMdwWeb.NameControllerTest do
                auction_timeout: 1
              )
            end,
-           prev_key: fn AuctionBid, _key -> :none end,
-           last_key: fn Block, _default -> {0, 0} end,
-           first_key: fn Block, _default -> {0, 0} end
+           prev_key: fn AuctionBid, _key -> :none end
          ]},
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names, "next" => nil} =
@@ -481,15 +508,16 @@ defmodule AeMdwWeb.NameControllerTest do
              )
            end,
            prev_key: fn AuctionBid, _key -> :none end,
-           last_key: fn
-             InactiveNameExpiration, nil -> nil
-             Block, _default -> {0, 0}
-           end,
-           first_key: fn Block, _default -> {0, 0} end
+           last_key: fn InactiveNameExpiration, nil -> nil end
          ]},
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names} =
@@ -523,13 +551,16 @@ defmodule AeMdwWeb.NameControllerTest do
                auction_timeout: 1
              )
            end,
-           prev_key: fn AuctionBid, _key -> :none end,
-           last_key: fn Block, _default -> {0, 0} end,
-           first_key: fn Block, _default -> {0, 0} end
+           prev_key: fn AuctionBid, _key -> :none end
          ]},
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names, "next" => _next} =
