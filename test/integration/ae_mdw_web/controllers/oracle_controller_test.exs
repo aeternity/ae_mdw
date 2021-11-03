@@ -134,7 +134,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
       direction = "invalid"
       conn = get(conn, "/oracles?direction=#{direction}")
 
-      assert json_response(conn, 400) == %{"error" => "invalid query: direction=#{direction}"}
+      assert json_response(conn, 400) == %{"error" => "invalid direction: #{direction}"}
     end
 
     test "renders error when limit is invalid", %{conn: conn} do
@@ -239,7 +239,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
       direction = "invalid"
       conn = get(conn, "/oracles/inactive?direction=#{direction}")
 
-      assert json_response(conn, 400) == %{"error" => "invalid query: direction=#{direction}"}
+      assert json_response(conn, 400) == %{"error" => "invalid direction: #{direction}"}
     end
 
     test "renders error when limit is invalid", %{conn: conn} do
@@ -345,7 +345,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
       direction = "invalid"
       conn = get(conn, "/oracles/active?direction=#{direction}")
 
-      assert json_response(conn, 400) == %{"error" => "invalid query: direction=#{direction}"}
+      assert json_response(conn, 400) == %{"error" => "invalid direction: #{direction}"}
     end
 
     test "renders error when limit is invalid", %{conn: conn} do

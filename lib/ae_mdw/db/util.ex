@@ -1,5 +1,8 @@
 defmodule AeMdw.Db.Util do
+  # credo:disable-for-this-file
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Model.Block
+  alias AeMdw.Mnesia
 
   require Logger
   require Model
@@ -248,6 +251,22 @@ defmodule AeMdw.Db.Util do
 
       :error ->
         nil
+    end
+  end
+
+  @spec first_gen!() :: non_neg_integer()
+  def first_gen! do
+    case Mnesia.first_key(Block, nil) do
+      nil -> 0
+      {kbi, _txi} -> kbi
+    end
+  end
+
+  @spec last_gen!() :: non_neg_integer()
+  def last_gen! do
+    case Mnesia.last_key(Block, nil) do
+      nil -> 0
+      {kbi, _txi} -> kbi
     end
   end
 end

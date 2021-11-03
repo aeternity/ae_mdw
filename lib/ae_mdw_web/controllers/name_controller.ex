@@ -20,7 +20,9 @@ defmodule AeMdwWeb.NameController do
   import AeMdw.Db.Util
   import AeMdw.Util
 
-  plug(PaginatedPlug, order_by: ~w(expiration name)a)
+  plug PaginatedPlug,
+       [order_by: ~w(expiration name)a]
+       when action in ~w(active_names inactive_names names auctions)a
 
   ##########
 

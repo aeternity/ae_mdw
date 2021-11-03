@@ -10,6 +10,7 @@ defmodule AeMdwWeb.OracleControllerTest do
   alias AeMdw.Db.Model.InactiveOracleExpiration
   alias AeMdw.Db.Model.Block
   alias AeMdw.Db.Oracle
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Mnesia
   alias AeMdw.TestSamples, as: TS
 
@@ -31,7 +32,12 @@ defmodule AeMdwWeb.OracleControllerTest do
            fetch!: fn _tab, _oracle_pk -> oracle end
          ]},
         {Oracle, [], [oracle_tree!: fn _bi -> :aeo_state_tree.empty() end]},
-        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]}
+        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
+         ]}
       ] do
         assert %{"data" => [oracle1 | _rest] = oracles, "next" => next_uri} =
                  conn
@@ -71,7 +77,12 @@ defmodule AeMdwWeb.OracleControllerTest do
            fetch!: fn _tab, _oracle_pk -> oracle end
          ]},
         {Oracle, [], [oracle_tree!: fn _bi -> :aeo_state_tree.empty() end]},
-        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]}
+        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
+         ]}
       ] do
         assert %{"data" => [oracle1, _oracle2, _oracle3, _oracle4], "next" => nil} =
                  conn
@@ -101,7 +112,12 @@ defmodule AeMdwWeb.OracleControllerTest do
            fetch!: fn _tab, _oracle_pk -> oracle end
          ]},
         {Oracle, [], [oracle_tree!: fn _bi -> :aeo_state_tree.empty() end]},
-        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]}
+        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
+         ]}
       ] do
         assert %{"data" => [oracle1, _oracle2], "next" => nil} =
                  conn
@@ -129,7 +145,12 @@ defmodule AeMdwWeb.OracleControllerTest do
            fetch!: fn _tab, _oracle_pk -> TS.oracle() end
          ]},
         {Oracle, [], [oracle_tree!: fn _bi -> :aeo_state_tree.empty() end]},
-        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]}
+        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
+         ]}
       ] do
         assert %{"next" => next_uri} = conn |> get("/oracles/active") |> json_response(200)
 

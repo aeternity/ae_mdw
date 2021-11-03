@@ -10,6 +10,7 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdw.Db.Model.InactiveNameExpiration
   alias AeMdw.Db.Model.Tx
   alias AeMdw.Db.Name
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Mnesia
   alias AeMdw.Validate
   alias AeMdw.TestSamples, as: TS
@@ -55,6 +56,11 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names, "next" => next} =
@@ -102,6 +108,11 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names} =
@@ -123,7 +134,7 @@ defmodule AeMdwWeb.NameControllerTest do
     test "renders error when parameter direction is invalid", %{conn: conn} do
       by = "name"
       direction = "invalid_direction"
-      error = "invalid query: direction=#{direction}"
+      error = "invalid direction: #{direction}"
 
       assert %{"error" => ^error} =
                conn
@@ -166,6 +177,11 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names, "next" => next} =
@@ -211,6 +227,11 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names} =
@@ -253,6 +274,11 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names} =
@@ -274,7 +300,7 @@ defmodule AeMdwWeb.NameControllerTest do
     test "renders error when parameter direction is invalid", %{conn: conn} do
       by = "name"
       direction = "invalid_direction"
-      error = "invalid query: direction=#{direction}"
+      error = "invalid direction: #{direction}"
 
       assert %{"error" => ^error} =
                conn
@@ -304,6 +330,11 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => auction_bids, "next" => next} =
@@ -339,6 +370,11 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => auctions} =
@@ -371,6 +407,11 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => auctions} =
@@ -392,7 +433,7 @@ defmodule AeMdwWeb.NameControllerTest do
     test "renders error when parameter direction is invalid", %{conn: conn} do
       by = "name"
       direction = "invalid_direction"
-      error = "invalid query: direction=#{direction}"
+      error = "invalid direction: #{direction}"
 
       assert %{"error" => ^error} =
                conn
@@ -431,6 +472,11 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names, "next" => nil} =
@@ -467,6 +513,11 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names} =
@@ -501,11 +552,15 @@ defmodule AeMdwWeb.NameControllerTest do
              )
            end,
            prev_key: fn AuctionBid, _key -> :none end
-           # last_key: fn InactiveNameExpiration, nil -> nil end
          ]},
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names, "next" => _next} =
@@ -527,7 +582,7 @@ defmodule AeMdwWeb.NameControllerTest do
     test "renders error when parameter direction is invalid", %{conn: conn} do
       by = "name"
       direction = "invalid_direction"
-      error = "invalid query: direction=#{direction}"
+      error = "invalid direction: #{direction}"
 
       assert %{"error" => ^error} =
                conn |> get("/names?by=#{by}&direction=#{direction}") |> json_response(400)
