@@ -1374,6 +1374,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
              end)
 
       assert Enum.any?(response["data"], fn %{"tx" => block_tx} ->
+               assert block_tx["recipient_id"] == id or block_tx["sender_id"] == id
+
                block_tx["type"] == "SpendTx"
              end)
 

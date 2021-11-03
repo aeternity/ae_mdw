@@ -49,7 +49,7 @@ defmodule AeMdw.Txs do
     txis_range =
       case scope do
         {:gen, %Range{first: first_gen, last: last_gen}} ->
-          {gen_to_txi(first_gen, direction), gen_to_txi(last_gen, opposite_dir(direction))}
+          {first_gen_to_txi(first_gen, direction), last_gen_to_txi(last_gen, direction)}
 
         {:txi, %Range{first: first_txi, last: last_txi}} ->
           {first_txi, last_txi}
@@ -70,8 +70,9 @@ defmodule AeMdw.Txs do
     end
   end
 
-  defp opposite_dir(:forward), do: :backward
-  defp opposite_dir(:backward), do: :forward
+  defp first_gen_to_txi(first_gen, direction), do: gen_to_txi(first_gen, direction)
+  defp last_gen_to_txi(last_gen, :forward), do: gen_to_txi(last_gen, :backward)
+  defp last_gen_to_txi(last_gen, :backward), do: gen_to_txi(last_gen, :forward)
 
   defp gen_to_txi(gen, :forward) do
     case Scope.translate1({:gen, gen}, :txi) do
