@@ -150,6 +150,38 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       assert json_response(conn, 400) == %{"error" => "limit too large: #{limit}"}
     end
+
+    test "it returns valid oracles on a given range", %{conn: conn} do
+      first = 100_00
+      last = 1_000_000
+
+      assert %{"data" => data, "next" => next} =
+        conn
+        |> get("/oracles/gen/#{first}-#{last}")
+        |> json_response(200)
+      assert Enum.all?(data, fn %{"expire_height" => kbi} -> first <= kbi && kbi <= last end)
+      assert @default_limit = length(data)
+
+      assert %{"data" => data2} =
+        conn
+        |> get(next)
+        |> json_response(200)
+      assert @default_limit = length(data2)
+      assert Enum.all?(data2, fn %{"expire_height" => kbi} -> first <= kbi && kbi <= last end)
+    end
+
+    test "it returns valid oracles on a given range in reverse", %{conn: conn} do
+      first = 500_000
+      last = 100_000
+
+      assert %{"data" => data} = conn |> get("/oracles/gen/#{first}-#{last}") |> json_response(200)
+
+      assert @default_limit = length(data)
+      assert Enum.all?(data, fn %{"expire_height" => kbi} -> last <= kbi && kbi <= first end)
+
+      kbis = data |> Enum.map(fn %{"expire_height" => kbi} -> kbi end) |> Enum.reverse()
+      assert Enum.sort(kbis) == kbis
+    end
   end
 
   describe "inactive_oracles" do

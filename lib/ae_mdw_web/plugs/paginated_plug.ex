@@ -69,6 +69,14 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
   defp extract_direction_and_scope(%{"scope_type" => scope_type}),
     do: {:error, "invalid scope: #{scope_type}"}
 
+  defp extract_direction_and_scope(%{"range" => range}) do
+    case extract_range(range) do
+      {:ok, first, last} when first <= last -> {:ok, :forward, {:gen, first..last}}
+      {:ok, first, last} -> {:ok, :backward, {:gen, first..last}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   defp extract_direction_and_scope(%{"direction" => "forward"}),
     do: {:ok, :forward, @default_scope}
 
