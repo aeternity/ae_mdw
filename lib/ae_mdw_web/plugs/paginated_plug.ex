@@ -6,7 +6,6 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
   alias Phoenix.Controller
   alias Plug.Conn
-  alias AeMdw.Db.Util
   alias AeMdw.Node
   alias AeMdw.Validate
 
@@ -23,6 +22,8 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
   @type_query_params ~w(type type_group)
   @pagination_param_keys ~w(limit page cursor expand direction scope_type range by)
+
+  @default_scope nil
 
   @spec init(opts()) :: opts()
   def init(opts), do: opts
@@ -69,16 +70,15 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
     do: {:error, "invalid scope: #{scope_type}"}
 
   defp extract_direction_and_scope(%{"direction" => "forward"}),
-    do: {:ok, :forward, {:gen, default_forward_range()}}
+    do: {:ok, :forward, @default_scope}
 
   defp extract_direction_and_scope(%{"direction" => "backward"}),
-    do: {:ok, :backward, {:gen, default_backward_range()}}
+    do: {:ok, :backward, @default_scope}
 
   defp extract_direction_and_scope(%{"direction" => direction}),
     do: {:error, "invalid direction: #{direction}"}
 
-  defp extract_direction_and_scope(_params),
-    do: {:ok, :backward, {:gen, default_backward_range()}}
+  defp extract_direction_and_scope(_params), do: {:ok, :backward, @default_scope}
 
   defp extract_range(range) when is_binary(range) do
     case String.split(range, "-") do
@@ -169,10 +169,6 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
         {:error, err.message}
     end
   end
-
-  defp default_forward_range, do: Util.first_gen!()..Util.last_gen!()
-
-  defp default_backward_range, do: Util.last_gen!()..Util.first_gen!()
 
   # Page extraction from params is for backwards compat and should be removed
   # after getting rid of non-cursor-based pagination.

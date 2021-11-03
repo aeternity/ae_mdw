@@ -10,6 +10,7 @@ defmodule AeMdw.Txs do
   alias AeMdw.Db.Model.IdCount
   alias AeMdw.Db.Model.Tx
   alias AeMdw.Db.Model.Type
+  alias AeMdw.Db.Stream.Scope
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Mnesia
   alias AeMdw.Node
@@ -29,6 +30,7 @@ defmodule AeMdw.Txs do
   @typep reason :: binary()
   @typep direction :: Mnesia.direction()
   @typep limit :: Mnesia.limit()
+  @typep scope :: {:gen, Range.t()} | {:txi, Range.t()} | nil
 
   @table Tx
   @type_table Type
@@ -37,15 +39,27 @@ defmodule AeMdw.Txs do
 
   @create_tx_types ~w(contract_create_tx channel_create_tx oracle_register_tx name_claim_tx)a
 
-  @spec fetch_txs(direction(), query(), cursor() | nil, limit()) ::
+  @spec fetch_txs(direction(), scope(), query(), cursor() | nil, limit()) ::
           {:ok, [tx()], cursor() | nil} | {:error, reason()}
-  def fetch_txs(direction, query, cursor, limit) do
+  def fetch_txs(direction, scope, query, cursor, limit) do
     ids = query |> Map.get(:ids, MapSet.new()) |> MapSet.to_list()
     types = query |> Map.get(:types, MapSet.new()) |> MapSet.to_list()
     cursor = deserialize_cursor(cursor)
 
+    txis_range =
+      case scope do
+        {:gen, %Range{first: first_gen, last: last_gen}} ->
+          {first_gen_to_txi(first_gen, direction), last_gen_to_txi(last_gen, direction)}
+
+        {:txi, %Range{first: first_txi, last: last_txi}} ->
+          {first_txi, last_txi}
+
+        nil ->
+          nil
+      end
+
     try do
-      txis_streams = build_streams(ids, types, cursor, direction)
+      txis_streams = build_streams(ids, types, txis_range, cursor, direction)
 
       {txis, next_cursor} = Collection.merge_streams(txis_streams, direction, limit)
 
@@ -56,15 +70,33 @@ defmodule AeMdw.Txs do
     end
   end
 
+  defp first_gen_to_txi(first_gen, direction), do: gen_to_txi(first_gen, direction)
+  defp last_gen_to_txi(last_gen, :forward), do: gen_to_txi(last_gen, :backward)
+  defp last_gen_to_txi(last_gen, :backward), do: gen_to_txi(last_gen, :forward)
+
+  defp gen_to_txi(gen, :forward) do
+    case Scope.translate1({:gen, gen}, :txi) do
+      {:range, {start_r, _end_r}} -> start_r
+      nil -> 0
+    end
+  end
+
+  defp gen_to_txi(gen, :backward) do
+    case Scope.translate1({:gen, gen}, :txi) do
+      {:range, {_start_r, end_r}} -> end_r
+      nil -> 0
+    end
+  end
+
   # The purpose of this function is to generate the streams that will be then used as input for
   # Collection.merge_streams/3 function. The function is divided into three clauses. There's an
   # explanation before each.
   #
   # When no filters are provided, all transactions are displayed, which means that we only need to
   # use the Txs table, without any filters.
-  defp build_streams([], [], cursor, direction) do
+  defp build_streams([], [], scope, cursor, direction) do
     [
-      Collection.stream(@table, direction, cursor)
+      Collection.stream(@table, direction, scope, cursor)
     ]
   end
 
@@ -81,12 +113,18 @@ defmodule AeMdw.Txs do
   #      type is found
   #    - A stream on the Type table that will go from {:spend_tx, 0} forward, until a different type
   #      is found.
-  defp build_streams([], types, cursor, direction) do
+  defp build_streams([], types, scope, cursor, direction) do
     Enum.map(types, fn tx_type ->
       initial_key = if direction == :forward, do: {tx_type, cursor || 0}, else: {tx_type, cursor}
 
+      scope =
+        case scope do
+          nil -> nil
+          {first, last} -> {{tx_type, first}, {tx_type, last}}
+        end
+
       @type_table
-      |> Collection.stream(direction, initial_key)
+      |> Collection.stream(direction, scope, initial_key)
       |> Stream.take_while(&match?({^tx_type, _txi}, &1))
       |> Stream.map(fn {_tx_type, tx_index} -> tx_index end)
     end)
@@ -163,7 +201,7 @@ defmodule AeMdw.Txs do
   #      the keys {:spend_tx, 1, B, X} and {:spend_tx, 2, B, X}, {:oracle_query_tx, 1, B, X} and
   #      {:oracle_query_tx, 3, B, X} for any value of X, filtering out all those transactions that
   #      do not include A in them.
-  defp build_streams(ids, types, cursor, direction) do
+  defp build_streams(ids, types, scope, cursor, direction) do
     extract_txi = fn {_tx_type, _field_pos, _id, tx_index} -> tx_index end
     initial_cursor = if direction == :backward, do: cursor, else: cursor || 0
 
@@ -202,13 +240,20 @@ defmodule AeMdw.Txs do
       min_fields
       |> Enum.filter(&match?({^tx_type, _pos}, &1))
       |> Enum.map(fn {^tx_type, field_pos} ->
+        field_scope = scope && field_scope(scope, tx_type, field_pos, min_account_id)
+        initial_key = {tx_type, field_pos, min_account_id, initial_cursor}
+
         @field_table
-        |> Collection.stream(direction, {tx_type, field_pos, min_account_id, initial_cursor})
+        |> Collection.stream(direction, field_scope, initial_key)
         |> Stream.take_while(&match?({^tx_type, ^field_pos, ^min_account_id, _tx_index}, &1))
         |> Stream.map(extract_txi)
         |> Stream.filter(&all_accounts_have_tx?(tx_type, &1, rest_accounts))
       end)
     end)
+  end
+
+  defp field_scope({first, last}, tx_type, field_pos, account_id) do
+    {{tx_type, field_pos, account_id, first}, {tx_type, field_pos, account_id, last}}
   end
 
   defp all_accounts_have_tx?(tx_type, tx_index, rest_accounts) do

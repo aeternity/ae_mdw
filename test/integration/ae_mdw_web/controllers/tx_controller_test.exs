@@ -174,7 +174,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       end)
 
       {:ok, data, _has_cont?} =
-        Continuation.response_data({TxController, :txs, %{}, conn.assigns.scope, 0}, limit)
+        Continuation.response_data({TxController, :txs, %{}, build_scope(conn.assigns), 0}, limit)
 
       assert ^data = response["data"]
 
@@ -189,7 +189,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data_next, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn_next), conn_next.assigns.scope, limit},
+          {TxController, :txs, fetch_params(conn_next), build_scope(conn_next.assigns), limit},
           limit
         )
 
@@ -208,7 +208,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       end)
 
       {:ok, data, _has_cont?} =
-        Continuation.response_data({TxController, :txs, %{}, conn.assigns.scope, 0}, limit)
+        Continuation.response_data({TxController, :txs, %{}, build_scope(conn.assigns), 0}, limit)
 
       assert ^data = response["data"]
 
@@ -224,7 +224,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, next_data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn_next), conn_next.assigns.scope, limit},
+          {TxController, :txs, fetch_params(conn_next), build_scope(conn_next.assigns), limit},
           limit
         )
 
@@ -255,7 +255,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -276,7 +276,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -301,7 +301,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -324,7 +324,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           @default_limit
         )
 
@@ -350,7 +350,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           @default_limit
         )
 
@@ -375,7 +375,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -398,7 +398,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -431,7 +431,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -456,7 +456,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -479,7 +479,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -502,7 +502,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -528,7 +528,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -552,7 +552,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           @default_limit
         )
 
@@ -577,7 +577,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -615,7 +615,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -638,7 +638,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -677,7 +677,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -705,7 +705,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -734,7 +734,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           @default_limit
         )
 
@@ -762,7 +762,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -790,7 +790,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -821,7 +821,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           @default_limit
         )
 
@@ -870,7 +870,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -956,7 +956,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           @default_limit
         )
 
@@ -1000,7 +1000,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -1038,7 +1038,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           @default_limit
         )
 
@@ -1064,7 +1064,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           @default_limit
         )
 
@@ -1110,7 +1110,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -1135,7 +1135,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -1160,7 +1160,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -1180,7 +1180,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           @default_limit
         )
 
@@ -1226,7 +1226,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           @default_limit
         )
 
@@ -1254,7 +1254,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -1276,7 +1276,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -1328,7 +1328,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           @default_limit
         )
 
@@ -1366,33 +1366,22 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       end)
 
       assert Enum.any?(response["data"], fn %{"tx" => block_tx} ->
-               if block_tx["type"] == "GAMetaTx" do
-                 block_tx["tx"]["tx"]["recipient_id"] == id
-               else
-                 false
-               end
+               block_tx["type"] == "GAMetaTx" && block_tx["tx"]["tx"]["recipient_id"] == id
              end)
 
       assert Enum.any?(response["data"], fn %{"tx" => block_tx} ->
-               if block_tx["type"] == "GAMetaTx" do
-                 block_tx["tx"]["tx"]["sender_id"] == id
-               else
-                 false
-               end
+               block_tx["type"] == "GAMetaTx" && block_tx["tx"]["tx"]["sender_id"] == id
              end)
 
       assert Enum.any?(response["data"], fn %{"tx" => block_tx} ->
-               if block_tx["type"] == "SpendTx" do
-                 assert block_tx["recipient_id"] == id or block_tx["sender_id"] == id
-                 true
-               else
-                 false
-               end
+               assert block_tx["recipient_id"] == id or block_tx["sender_id"] == id
+
+               block_tx["type"] == "SpendTx"
              end)
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           @default_limit
         )
 
@@ -1423,7 +1412,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -1456,7 +1445,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -1499,7 +1488,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -1531,7 +1520,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -1550,7 +1539,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           @default_limit
         )
 
@@ -1573,7 +1562,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       {:ok, data, _has_cont?} =
         Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), conn.assigns.scope, 0},
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
           limit
         )
 
@@ -1582,19 +1571,6 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       conn
       |> get_response_from_next_page(response)
       |> check_response_data(height_from, height_to, limit)
-    end
-
-    test "renders errors when scope=gen with a valid range and random access", %{
-      conn: conn
-    } do
-      height_from = 223_000
-      height_to = 223_007
-      limit = 15
-      page = 6
-
-      conn = get(conn, "/txs/gen/#{height_from}-#{height_to}?limit=#{limit}&page=#{page}")
-
-      assert json_response(conn, 400) == %{"error" => "random access not supported"}
     end
 
     test "renders errors when is passed invalid scope", %{conn: conn} do
@@ -1851,4 +1827,12 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
   defp fetch_params(%Conn{query_string: params}),
     do: params |> WebUtil.query_groups() |> Map.drop(["limit", "page", "cursor", "expand"])
+
+  defp build_scope(%{scope: nil, direction: :forward}),
+    do: {:gen, Util.first_gen()..Util.last_gen()}
+
+  defp build_scope(%{scope: nil, direction: :backward}),
+    do: {:gen, Util.last_gen()..Util.first_gen()}
+
+  defp build_scope(%{scope: scope}), do: scope
 end

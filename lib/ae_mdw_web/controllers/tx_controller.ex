@@ -11,7 +11,6 @@ defmodule AeMdwWeb.TxController do
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Txs
-  alias AeMdwWeb.Continuation, as: Cont
   alias AeMdwWeb.Plugs.PaginatedPlug
   alias AeMdwWeb.SwaggerParameters
   alias :aeser_api_encoder, as: Enc
@@ -38,20 +37,22 @@ defmodule AeMdwWeb.TxController do
     do: handle_tx_reply(conn, fn -> read_tx(Validate.nonneg_int!(index)) end)
 
   @spec txs(Conn.t(), map()) :: Conn.t()
-  def txs(conn, %{"scope_type" => _scope_type} = params) do
-    Cont.response(conn, &json/2, &handle_spendtx_details(&1, params))
-  end
-
   def txs(%Conn{assigns: assigns, query_params: query_params} = conn, params) do
-    %{direction: direction, limit: limit, cursor: cursor, query: query} = assigns
+    %{direction: direction, limit: limit, cursor: cursor, query: query, scope: scope} = assigns
 
-    case Txs.fetch_txs(direction, query, cursor, limit) do
+    case Txs.fetch_txs(direction, scope, query, cursor, limit) do
       {:ok, txs, new_cursor} ->
+        path =
+          case params do
+            %{"scope_type" => scope_type, "range" => range} -> "/txs/#{scope_type}/#{range}"
+            _params -> "/txs/#{direction}"
+          end
+
         uri =
           if new_cursor do
             next_params = Map.merge(query_params, %{"cursor" => new_cursor, "limit" => limit})
 
-            URI.to_string(%URI{path: "/txs/#{direction}", query: URI.encode_query(next_params)})
+            URI.to_string(%URI{path: path, query: URI.encode_query(next_params)})
           end
 
         txs = handle_spendtx_details(txs, params)
