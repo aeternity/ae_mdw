@@ -6,9 +6,11 @@ defmodule AeMdw.Migrations.ReindexRemoteLogs do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
   alias AeMdw.Db.Util
+  alias AeMdw.Log
 
   require Model
   require Ex2ms
+  require Logger
 
   # single case of pubkey that causes a pk mismatch error:
   # ** (CaseClauseError) no case clause matching: {:contract_create_tx, <<84, 161, 71, 116, 248, 82, 0, 46, 52, 142, 60, 121, 255, 115, 239, 189, 180, 252, 224, 142, 255, 39, 10, 83, 243, 93, 69, 189, 148, 123, 164, 60>>, 22913712}
@@ -35,7 +37,7 @@ defmodule AeMdw.Migrations.ReindexRemoteLogs do
     begin = DateTime.utc_now()
 
     table_size = :mnesia.async_dirty(fn -> Util.count(Model.ContractLog) end)
-    IO.puts("table size: #{table_size}")
+    Log.info("table size: #{table_size}")
     num_chunks = div(table_size, @max_chunk_size) + 1
 
     log_spec =
@@ -61,7 +63,7 @@ defmodule AeMdw.Migrations.ReindexRemoteLogs do
       end)
 
     duration = DateTime.diff(DateTime.utc_now(), begin)
-    IO.puts("Indexed #{reindexed_count} records in #{duration}s")
+    Log.info("Indexed #{reindexed_count} records in #{duration}s")
 
     {:ok, {reindexed_count, duration}}
   end

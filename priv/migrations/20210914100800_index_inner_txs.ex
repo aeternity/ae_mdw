@@ -11,10 +11,12 @@ defmodule AeMdw.Migrations.IndexInnerTxs do
   alias AeMdw.Db.Util
   alias AeMdw.Db.Sync.InnerTx, as: SyncInnerTx
   alias AeMdw.Db.Sync.Transaction, as: SyncTx
+  alias AeMdw.Log
   alias AeMdw.Sync.Supervisor, as: SyncSup
 
   require Model
   require Ex2ms
+  require Logger
 
   @fortuna_txi_begin 2129380
 
@@ -26,7 +28,7 @@ defmodule AeMdw.Migrations.IndexInnerTxs do
     begin = DateTime.utc_now()
 
     if not from_startup? and :ok != Application.ensure_started(:ae_mdw) do
-      IO.puts("Ensure sync tables...")
+      Log.info("Ensure sync tables...")
       SyncSup.init_tables()
       MdwApp.init_public(:contract_cache)
       MdwApp.init_public(:db_state)
@@ -39,7 +41,7 @@ defmodule AeMdw.Migrations.IndexInnerTxs do
     indexed_count = reindex_txs(txi_list)
 
     duration = DateTime.diff(DateTime.utc_now(), begin)
-    IO.puts("Indexed #{indexed_count} records in #{duration}s")
+    Log.info("Indexed #{indexed_count} records in #{duration}s")
 
     {:ok, {indexed_count, duration}}
   end
