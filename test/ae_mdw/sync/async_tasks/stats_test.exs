@@ -4,6 +4,8 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
   alias AeMdw.Db.Model
   alias AeMdw.Sync.AsyncTasks.Stats
 
+  import Support.TestMnesiaSandbox
+
   require Model
 
   @contract_pk "ct_2bwK4mxEe3y9SazQRPXE8NdXikSTqF2T9FhNrawRzFA21yacTo"
@@ -15,25 +17,22 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
     end
 
     test "with pending db records" do
-      :mnesia.transaction(fn ->
+      fn ->
         db_pending_count = 50
         # setup
-        indexes_to_clean =
-          Enum.map(1..db_pending_count, fn i ->
-            index = {System.system_time() + i, :update_aex9_presence}
-            m_task = Model.async_tasks(index: index, args: [@contract_pk, <<i::256>>])
-            :mnesia.write(Model.AsyncTasks, m_task, :write)
-            index
-          end)
+        Enum.map(1..db_pending_count, fn i ->
+          index = {System.system_time() + i, :update_aex9_presence}
+          m_task = Model.async_tasks(index: index, args: [@contract_pk])
+          :mnesia.write(Model.AsyncTasks, m_task, :write)
+          index
+        end)
 
         assert Stats.update(10, 100) == :ok
         assert Stats.counters() == %{producer_buffer: 10, total_pending: db_pending_count}
 
-        # clean setup
-        Enum.each(indexes_to_clean, fn index ->
-          :mnesia.delete(Model.AsyncTasks, index, :delete)
-        end)
-      end)
+        :mnesia.abort(:rollback)
+      end
+      |> mnesia_sandbox()
     end
   end
 end
