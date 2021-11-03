@@ -8,40 +8,54 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresence do
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Util
+  alias AeMdw.Log
   alias AeMdw.Validate
   alias AeMdwWeb.Helpers.Aex9Helper
 
   require Model
   require Ex2ms
+  require Logger
 
-  @contracts_chunk_size 30
+  @max_wait_ms 60_000
+  @tmp_table :tmp_aex9_presence_migration
 
   defmodule Account2Fix do
     defstruct [:account_pk, :contract_pk]
   end
 
   @doc """
-
+  Calls the balance of all AEX9 contracts to check and index accounts presence.
   """
   @spec run(boolean()) :: {:ok, {pos_integer(), pos_integer()}}
   def run(_from_start?) do
     begin = DateTime.utc_now()
 
+    # for tasks/contracts that takes more than @max_wait_ms
+    {:ok, _sup} =
+      Supervisor.start_link([{Task.Supervisor, name: Aex9MigrationSupervisor}],
+        strategy: :one_for_one
+      )
+    :dets.open_file(@tmp_table, type: :set)
+
     indexed_count =
       fetch_aex9_contracts()
-      |> Enum.chunk_every(@contracts_chunk_size)
-      |> Enum.reduce(0, fn contracts_chunk, acc ->
-        count =
-          contracts_chunk
-          |> accounts_without_balance()
-          |> Enum.map(&index_account_aex9_presence/1)
-          |> Enum.count()
-
-        acc + count
+      |> Enum.map(fn contract_pk ->
+        contract_pk
+        |> accounts_without_balance()
+        |> Enum.map(&index_account_aex9_presence/1)
+        |> Enum.count()
       end)
+      |> Enum.sum()
 
     duration = DateTime.diff(DateTime.utc_now(), begin)
-    IO.puts("Indexed #{indexed_count} records in #{duration}s")
+    Log.info("Indexed #{indexed_count} records in #{duration}s")
+
+    if :dets.first(@tmp_table) == :"$end_of_table" do
+      :dets.close(@tmp_table)
+      File.rm(to_string(@tmp_table))
+    else
+      :dets.close(@tmp_table)
+    end
 
     {:ok, {indexed_count, duration}}
   end
@@ -55,7 +69,7 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresence do
       DbContract.aex9_write_presence(contract_pk, -1, account_pk)
       account_id = Aex9Helper.enc_id(account_pk)
       contract_id = Aex9Helper.enc_ct(contract_pk)
-      IO.puts("Fixed #{account_id} mapping to #{contract_id}")
+      Log.info("Fixed #{account_id} mapping to #{contract_id}")
     end)
 
     :ok
@@ -78,32 +92,43 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresence do
     end)
   end
 
-  defp accounts_without_balance(contract_list) do
-    contract_list
-    |> Enum.map(fn contract_pk ->
-      # Process.sleep(5000)
-      contract_id = Aex9Helper.enc_ct(contract_pk)
-      IO.puts("Calling #{contract_id}...")
-      {amounts, _last_block_tuple} = DBN.aex9_balances(contract_pk)
-      IO.puts("Called #{contract_id}")
+  defp accounts_without_balance(contract_pk) do
+    contract_id = Aex9Helper.enc_ct(contract_pk)
+    Log.info("Calling #{contract_id}...")
 
-      {contract_pk, normalized_amounts(amounts)}
-    end)
-    |> Enum.flat_map(fn {contract_pk, amounts} ->
-      amounts
-      |> Map.keys()
-      |> Enum.filter(fn account_id -> Map.get(amounts, account_id) > 0 end)
-      |> Enum.map(fn account_id ->
-        %Account2Fix{
-          account_pk: AeMdw.Validate.id!(account_id, [:account_pubkey]),
-          contract_pk: contract_pk
-        }
+    task = Task.Supervisor.async_nolink(Aex9MigrationSupervisor,
+      fn ->
+        DBN.aex9_balances(contract_pk)
       end)
-    end)
-    |> Enum.filter(fn %Account2Fix{contract_pk: contract_pk, account_pk: account_pk} ->
-      :mnesia.async_dirty(fn -> not DbContract.aex9_presence_exists?(contract_pk, account_pk) end)
-    end)
+
+    case Task.yield(task, @max_wait_ms) || Task.shutdown(task, :brutal_kill) do
+      {:ok, ok_res} ->
+        Log.info("Called #{contract_id}")
+        {amounts, _last_block_tuple} = ok_res
+
+        filter_accounts_without_balance(contract_pk, amounts)
+
+      nil ->
+        Log.warn("Delayed #{contract_id}")
+        :dets.insert(@tmp_table, {contract_pk})
+        []
+    end
   end
 
   defp normalized_amounts(amounts), do: Aex9Helper.normalize_balances(amounts)
+
+  defp filter_accounts_without_balance(contract_pk, amounts) do
+    amounts
+    |> normalized_amounts()
+    |> Map.keys()
+    |> Enum.map(fn account_id ->
+      %Account2Fix{
+        account_pk: AeMdw.Validate.id!(account_id, [:account_pubkey]),
+        contract_pk: contract_pk
+      }
+    end)
+    |> Enum.filter(fn %{contract_pk: contract_pk, account_pk: account_pk} ->
+        :mnesia.async_dirty(fn -> not DbContract.aex9_presence_exists?(contract_pk, account_pk) end)
+    end)
+  end
 end
