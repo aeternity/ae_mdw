@@ -21,8 +21,8 @@ defmodule AeMdw.Collection do
     |> Stream.take(limit + 1)
     |> Enum.split(limit)
     |> case do
-       {records, []} -> {records, nil}
-       {records, [cursor]} -> {records, cursor}
+      {records, []} -> {records, nil}
+      {records, [cursor]} -> {records, cursor}
     end
   end
 

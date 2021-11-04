@@ -27,9 +27,12 @@ defmodule AeMdw.Oracles do
           {[oracle()], cursor() | nil}
   def fetch_oracles(direction, scope, cursor, limit, expand?) do
     cursor = deserialize_cursor(cursor)
+
     gen_range =
       case scope do
-        nil -> nil
+        nil ->
+          nil
+
         {:gen, %Range{first: first_gen, last: last_gen}} ->
           if direction == :forward do
             {{first_gen, <<>>}, {last_gen, <<>>}}
@@ -42,6 +45,7 @@ defmodule AeMdw.Oracles do
       @table_active_expiration
       |> Collection.stream(direction, gen_range, cursor)
       |> Stream.map(fn key -> {key, @table_active_expiration} end)
+
     inactive_stream =
       @table_inactive_expiration
       |> Collection.stream(direction, gen_range, cursor)
@@ -56,8 +60,11 @@ defmodule AeMdw.Oracles do
     {:ok, {last_gen, -1}} = Mnesia.last_key(AeMdw.Db.Model.Block)
 
     {oracles_keys, cursor} = Collection.paginate(stream, limit)
+
     oracles =
-      Enum.map(oracles_keys, fn {key, tab} -> render(key, last_gen, tab == @table_active_expiration, expand?) end)
+      Enum.map(oracles_keys, fn {key, tab} ->
+        render(key, last_gen, tab == @table_active_expiration, expand?)
+      end)
 
     case cursor do
       nil -> {oracles, nil}

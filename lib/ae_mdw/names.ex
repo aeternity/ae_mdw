@@ -113,6 +113,7 @@ defmodule AeMdw.Names do
 
   def fetch_inactive_names(direction, scope, :expiration, cursor, limit, expand?) do
     gen_range = deserialize_scope(scope, direction)
+
     {exp_keys, next_cursor} =
       @table_inactive_expiration
       |> Collection.stream(direction, gen_range, deserialize_expiration_cursor(cursor))

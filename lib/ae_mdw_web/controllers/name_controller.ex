@@ -128,10 +128,17 @@ defmodule AeMdwWeb.NameController do
 
   @spec inactive_names(Conn.t(), map()) :: Conn.t()
   def inactive_names(%Conn{assigns: assigns} = conn, _req) do
-    %{direction: direction, limit: limit, cursor: cursor, expand?: expand?, order_by: order_by, scope: scope} =
-      assigns
+    %{
+      direction: direction,
+      limit: limit,
+      cursor: cursor,
+      expand?: expand?,
+      order_by: order_by,
+      scope: scope
+    } = assigns
 
-    {names, new_cursor} = Names.fetch_inactive_names(direction, scope, order_by, cursor, limit, expand?)
+    {names, new_cursor} =
+      Names.fetch_inactive_names(direction, scope, order_by, cursor, limit, expand?)
 
     uri =
       if new_cursor do
@@ -153,10 +160,17 @@ defmodule AeMdwWeb.NameController do
 
   @spec active_names(Conn.t(), map()) :: Conn.t()
   def active_names(%Conn{assigns: assigns} = conn, _req) do
-    %{direction: direction, limit: limit, cursor: cursor, expand?: expand?, order_by: order_by, scope: scope} =
-      assigns
+    %{
+      direction: direction,
+      limit: limit,
+      cursor: cursor,
+      expand?: expand?,
+      order_by: order_by,
+      scope: scope
+    } = assigns
 
-    {names, new_cursor} = Names.fetch_active_names(direction, scope, order_by, cursor, limit, expand?)
+    {names, new_cursor} =
+      Names.fetch_active_names(direction, scope, order_by, cursor, limit, expand?)
 
     uri =
       if new_cursor do
@@ -178,8 +192,14 @@ defmodule AeMdwWeb.NameController do
 
   @spec names(Conn.t(), map()) :: Conn.t()
   def names(%Conn{assigns: assigns} = conn, params) do
-    %{direction: direction, limit: limit, cursor: cursor, expand?: expand?, order_by: order_by, scope: scope} =
-      assigns
+    %{
+      direction: direction,
+      limit: limit,
+      cursor: cursor,
+      expand?: expand?,
+      order_by: order_by,
+      scope: scope
+    } = assigns
 
     {names, new_cursor} = Names.fetch_names(direction, scope, order_by, cursor, limit, expand?)
 

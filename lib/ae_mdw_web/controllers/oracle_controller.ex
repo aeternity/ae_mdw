@@ -79,7 +79,8 @@ defmodule AeMdwWeb.OracleController do
 
   @spec oracles(Conn.t(), map()) :: Conn.t()
   def oracles(%Conn{assigns: assigns} = conn, params) do
-    %{direction: direction, limit: limit, cursor: cursor, expand?: expand?, scope: scope} = assigns
+    %{direction: direction, limit: limit, cursor: cursor, expand?: expand?, scope: scope} =
+      assigns
 
     {oracles, new_cursor} = Oracles.fetch_oracles(direction, scope, cursor, limit, expand?)
 

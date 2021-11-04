@@ -152,20 +152,22 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
     end
 
     test "it returns valid oracles on a given range", %{conn: conn} do
-      first = 100_00
+      first = 100_000
       last = 1_000_000
 
       assert %{"data" => data, "next" => next} =
-        conn
-        |> get("/oracles/gen/#{first}-#{last}")
-        |> json_response(200)
+               conn
+               |> get("/oracles/gen/#{first}-#{last}")
+               |> json_response(200)
+
       assert Enum.all?(data, fn %{"expire_height" => kbi} -> first <= kbi && kbi <= last end)
       assert @default_limit = length(data)
 
       assert %{"data" => data2} =
-        conn
-        |> get(next)
-        |> json_response(200)
+               conn
+               |> get(next)
+               |> json_response(200)
+
       assert @default_limit = length(data2)
       assert Enum.all?(data2, fn %{"expire_height" => kbi} -> first <= kbi && kbi <= last end)
     end
@@ -174,7 +176,8 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
       first = 500_000
       last = 100_000
 
-      assert %{"data" => data} = conn |> get("/oracles/gen/#{first}-#{last}") |> json_response(200)
+      assert %{"data" => data} =
+               conn |> get("/oracles/gen/#{first}-#{last}") |> json_response(200)
 
       assert @default_limit = length(data)
       assert Enum.all?(data, fn %{"expire_height" => kbi} -> last <= kbi && kbi <= first end)
