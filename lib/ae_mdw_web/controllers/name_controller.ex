@@ -128,10 +128,10 @@ defmodule AeMdwWeb.NameController do
 
   @spec inactive_names(Conn.t(), map()) :: Conn.t()
   def inactive_names(%Conn{assigns: assigns} = conn, _req) do
-    %{direction: direction, limit: limit, cursor: cursor, expand?: expand?, order_by: order_by} =
+    %{direction: direction, limit: limit, cursor: cursor, expand?: expand?, order_by: order_by, scope: scope} =
       assigns
 
-    {names, new_cursor} = Names.fetch_inactive_names(direction, order_by, cursor, limit, expand?)
+    {names, new_cursor} = Names.fetch_inactive_names(direction, scope, order_by, cursor, limit, expand?)
 
     uri =
       if new_cursor do
@@ -153,10 +153,10 @@ defmodule AeMdwWeb.NameController do
 
   @spec active_names(Conn.t(), map()) :: Conn.t()
   def active_names(%Conn{assigns: assigns} = conn, _req) do
-    %{direction: direction, limit: limit, cursor: cursor, expand?: expand?, order_by: order_by} =
+    %{direction: direction, limit: limit, cursor: cursor, expand?: expand?, order_by: order_by, scope: scope} =
       assigns
 
-    {names, new_cursor} = Names.fetch_active_names(direction, order_by, cursor, limit, expand?)
+    {names, new_cursor} = Names.fetch_active_names(direction, scope, order_by, cursor, limit, expand?)
 
     uri =
       if new_cursor do
@@ -177,16 +177,22 @@ defmodule AeMdwWeb.NameController do
   end
 
   @spec names(Conn.t(), map()) :: Conn.t()
-  def names(%Conn{assigns: assigns} = conn, _params) do
-    %{direction: direction, limit: limit, cursor: cursor, expand?: expand?, order_by: order_by} =
+  def names(%Conn{assigns: assigns} = conn, params) do
+    %{direction: direction, limit: limit, cursor: cursor, expand?: expand?, order_by: order_by, scope: scope} =
       assigns
 
-    {names, new_cursor} = Names.fetch_names(direction, order_by, cursor, limit, expand?)
+    {names, new_cursor} = Names.fetch_names(direction, scope, order_by, cursor, limit, expand?)
+
+    path =
+      case params do
+        %{"scope_type" => scope_type, "range" => range} -> "/names/#{scope_type}/#{range}"
+        _params -> "/names"
+      end
 
     uri =
       if new_cursor do
         %URI{
-          path: "/names",
+          path: path,
           query:
             URI.encode_query(%{
               "cursor" => new_cursor,

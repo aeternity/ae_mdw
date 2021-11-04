@@ -22,84 +22,101 @@ defmodule AeMdw.Names do
   @typep order_by :: :expiration | :name
   @typep limit :: Mnesia.limit()
   @typep direction :: Mnesia.direction()
+  @typep scope :: {:gen, Range.t()} | nil
 
   @table_active Model.ActiveName
   @table_active_expiration Model.ActiveNameExpiration
   @table_inactive Model.InactiveName
   @table_inactive_expiration Model.InactiveNameExpiration
 
-  @spec fetch_names(direction(), order_by(), cursor() | nil, limit(), boolean()) ::
+  @spec fetch_names(direction(), scope(), order_by(), cursor() | nil, limit(), boolean()) ::
           {[name()], cursor() | nil}
-  def fetch_names(direction, :expiration, cursor, limit, expand?) do
+  def fetch_names(direction, scope, :expiration, cursor, limit, expand?) do
     cursor = deserialize_expiration_cursor(cursor)
+    gen_range = deserialize_scope(scope, direction)
 
-    {{start_table, start_keys}, {end_table, end_keys}, next_key} =
-      Collection.concat(
-        @table_inactive_expiration,
-        @table_active_expiration,
-        direction,
-        cursor,
-        limit
-      )
+    active_stream =
+      @table_active_expiration
+      |> Collection.stream(direction, gen_range, cursor)
+      |> Stream.map(fn key -> {key, @table_active_expiration} end)
 
-    start_names = render_exp_list(start_keys, start_table == @table_active_expiration, expand?)
-    end_names = render_exp_list(end_keys, end_table == @table_active_expiration, expand?)
+    inactive_stream =
+      @table_inactive_expiration
+      |> Collection.stream(direction, gen_range, cursor)
+      |> Stream.map(fn key -> {key, @table_inactive_expiration} end)
 
-    {start_names ++ end_names, serialize_expiration_cursor(next_key)}
+    stream =
+      case direction do
+        :forward -> Stream.concat(inactive_stream, active_stream)
+        :backward -> Stream.concat(active_stream, inactive_stream)
+      end
+
+    {expiration_keys, {next_cursor, _cursor_table}} = Collection.paginate(stream, limit)
+
+    {render_exp_list(expiration_keys, expand?), serialize_expiration_cursor(next_cursor)}
   end
 
-  def fetch_names(direction, :name, cursor, limit, expand?) do
+  def fetch_names(direction, scope, :name, cursor, limit, expand?) do
     cursor = deserialize_name_cursor(cursor)
+    gen_range = deserialize_scope(scope, direction)
 
-    {name_keys, next_key} =
-      Collection.merge([@table_active, @table_inactive], direction, cursor, limit)
+    active_stream =
+      @table_active
+      |> Collection.stream(direction, gen_range, cursor)
+      |> Stream.map(fn key -> {key, @table_active} end)
 
-    names =
-      Enum.map(name_keys, fn {plain_name, source} ->
-        render(plain_name, source == @table_active, expand?)
-      end)
+    inactive_stream =
+      @table_inactive
+      |> Collection.stream(direction, gen_range, cursor)
+      |> Stream.map(fn key -> {key, @table_inactive} end)
 
-    {names, serialize_name_cursor(next_key)}
+    {name_keys, {next_cursor, _cursor_table}} =
+      [active_stream, inactive_stream]
+      |> Collection.merge(direction)
+      |> Collection.paginate(limit)
+
+    {render_names_list(name_keys, expand?), serialize_name_cursor(next_cursor)}
   end
 
-  @spec fetch_active_names(direction(), order_by(), cursor() | nil, limit(), boolean()) ::
+  @spec fetch_active_names(direction(), scope(), order_by(), cursor() | nil, limit(), boolean()) ::
           {[name()], cursor() | nil}
-  def fetch_active_names(direction, :name, cursor, limit, expand?) do
+  def fetch_active_names(direction, _scope, :name, cursor, limit, expand?) do
     {name_keys, next_cursor} =
-      Mnesia.fetch_keys(@table_active, direction, deserialize_name_cursor(cursor), limit)
+      @table_active
+      |> Collection.stream(direction, nil, cursor)
+      |> Collection.paginate(limit)
 
     {render_names_list(name_keys, true, expand?), serialize_name_cursor(next_cursor)}
   end
 
-  def fetch_active_names(direction, :expiration, cursor, limit, expand?) do
+  def fetch_active_names(direction, scope, :expiration, cursor, limit, expand?) do
+    gen_range = deserialize_scope(scope, direction)
+
     {exp_keys, next_cursor} =
-      Mnesia.fetch_keys(
-        @table_active_expiration,
-        direction,
-        deserialize_expiration_cursor(cursor),
-        limit
-      )
+      @table_active_expiration
+      |> Collection.stream(direction, gen_range, deserialize_expiration_cursor(cursor))
+      |> Collection.paginate(limit)
 
     {render_exp_list(exp_keys, true, expand?), serialize_expiration_cursor(next_cursor)}
   end
 
-  @spec fetch_inactive_names(direction(), order_by(), cursor() | nil, limit(), boolean()) ::
+  @spec fetch_inactive_names(direction(), scope(), order_by(), cursor() | nil, limit(), boolean()) ::
           {[name()], cursor() | nil}
-  def fetch_inactive_names(direction, :name, cursor, limit, expand?) do
+  def fetch_inactive_names(direction, _scope, :name, cursor, limit, expand?) do
     {name_keys, next_cursor} =
-      Mnesia.fetch_keys(@table_inactive, direction, deserialize_name_cursor(cursor), limit)
+      @table_inactive
+      |> Collection.stream(direction, nil, deserialize_name_cursor(cursor))
+      |> Collection.paginate(limit)
 
     {render_names_list(name_keys, false, expand?), serialize_name_cursor(next_cursor)}
   end
 
-  def fetch_inactive_names(direction, :expiration, cursor, limit, expand?) do
+  def fetch_inactive_names(direction, scope, :expiration, cursor, limit, expand?) do
+    gen_range = deserialize_scope(scope, direction)
     {exp_keys, next_cursor} =
-      Mnesia.fetch_keys(
-        @table_inactive_expiration,
-        direction,
-        deserialize_expiration_cursor(cursor),
-        limit
-      )
+      @table_inactive_expiration
+      |> Collection.stream(direction, gen_range, deserialize_expiration_cursor(cursor))
+      |> Collection.paginate(limit)
 
     {render_exp_list(exp_keys, false, expand?), serialize_expiration_cursor(next_cursor)}
   end
@@ -120,12 +137,28 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp render_names_list(names_keys, is_active?, expand?) do
-    Enum.map(names_keys, &render(&1, is_active?, expand?))
+  defp render_exp_list(names_tables_keys, expand?) do
+    Enum.map(names_tables_keys, fn {{_exp, plain_name}, source} ->
+      render(plain_name, source == @table_active_expiration, expand?)
+    end)
   end
 
-  defp render_exp_list(names_keys, is_active?, expand?) do
-    Enum.map(names_keys, fn {_exp, plain_name} -> render(plain_name, is_active?, expand?) end)
+  defp render_exp_list(names_tables_keys, is_active?, expand?) do
+    Enum.map(names_tables_keys, fn {_exp, plain_name} ->
+      render(plain_name, is_active?, expand?)
+    end)
+  end
+
+  defp render_names_list(names_tables_keys, expand?) do
+    Enum.map(names_tables_keys, fn {plain_name, source} ->
+      render(plain_name, source == @table_active, expand?)
+    end)
+  end
+
+  defp render_names_list(names_tables_keys, is_active?, expand?) do
+    Enum.map(names_tables_keys, fn plain_name ->
+      render(plain_name, is_active?, expand?)
+    end)
   end
 
   defp render(plain_name, is_active?, expand?) do
@@ -256,4 +289,14 @@ defmodule AeMdw.Names do
     end)
     |> Enum.map(&render_name_info(&1, expand?))
   end
+
+  defp deserialize_scope({:gen, %Range{first: first_gen, last: last_gen}}, direction) do
+    if direction == :forward do
+      {{first_gen, <<>>}, {last_gen, <<>>}}
+    else
+      {{first_gen, nil}, {last_gen, nil}}
+    end
+  end
+
+  defp deserialize_scope(_nil_or_txis_scope, _direction), do: nil
 end
