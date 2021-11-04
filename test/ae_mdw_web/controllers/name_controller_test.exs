@@ -24,18 +24,17 @@ defmodule AeMdwWeb.NameControllerTest do
 
   describe "active_names" do
     test "get active names with default limit", %{conn: conn} do
-      sample_keys = for _i <- 1..@default_limit, do: TS.name_expiration_key(0)
       next_exp_key = TS.name_expiration_key(1)
 
       with_mocks [
         {Mnesia, [],
          [
-           fetch_keys: fn
-             ActiveNameExpiration, :backward, nil, @default_limit ->
-               {sample_keys, next_exp_key}
+           next_key: fn
+             ActiveNameExpiration, :backward, nil ->
+               {:ok, TS.name_expiration_key(0)}
 
-             ActiveNameExpiration, :backward, ^next_exp_key, @default_limit ->
-               {[TS.name_expiration_key(1)], nil}
+             ActiveNameExpiration, :backward, _exp_key ->
+               {:ok, TS.name_expiration_key(1)}
            end,
            fetch!: fn ActiveName, _plain_name ->
              Model.name(
@@ -51,7 +50,8 @@ defmodule AeMdwWeb.NameControllerTest do
            fetch: fn Tx, _key ->
              {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
            end,
-           prev_key: fn AuctionBid, _key -> :none end
+           prev_key: fn AuctionBid, _key -> :none end,
+           exists?: fn ActiveNameExpiration, ^next_exp_key -> true end
          ]},
         {Txs, [],
          [
@@ -68,14 +68,14 @@ defmodule AeMdwWeb.NameControllerTest do
                  |> get("/names/active")
                  |> json_response(200)
 
-        assert 10 = length(names)
+        assert @default_limit = length(names)
 
-        assert %{"data" => names_next, "next" => nil} =
+        assert %{"data" => names_next, "next" => _next} =
                  conn
                  |> get(next)
                  |> json_response(200)
 
-        assert 1 = length(names_next)
+        assert @default_limit = length(names_next)
       end
     end
 
@@ -83,12 +83,14 @@ defmodule AeMdwWeb.NameControllerTest do
       by = "name"
       direction = "forward"
       limit = 3
-      sample_keys = for _i <- 1..limit, do: TS.plain_name(0)
 
       with_mocks [
         {Mnesia, [],
          [
-           fetch_keys: fn ActiveName, :forward, nil, ^limit -> {sample_keys, nil} end,
+           next_key: fn
+             ActiveName, :forward, _exp_key ->
+               {:ok, TS.plain_name(1)}
+           end,
            fetch!: fn ActiveName, _plain_name ->
              Model.name(
                active: true,
@@ -145,18 +147,15 @@ defmodule AeMdwWeb.NameControllerTest do
 
   describe "inactive_names" do
     test "get inactive names with default limit", %{conn: conn} do
-      sample_keys = for _i <- 1..@default_limit, do: TS.name_expiration_key(0)
-      next_exp_key = TS.name_expiration_key(1)
-
       with_mocks [
         {Mnesia, [],
          [
-           fetch_keys: fn
-             InactiveNameExpiration, :backward, nil, @default_limit ->
-               {sample_keys, next_exp_key}
+           next_key: fn
+             InactiveNameExpiration, :backward, nil ->
+               {:ok, TS.name_expiration_key(0)}
 
-             InactiveNameExpiration, :backward, ^next_exp_key, @default_limit ->
-               {[TS.name_expiration_key(1)], nil}
+             InactiveNameExpiration, :backward, _exp_key ->
+               {:ok, TS.name_expiration_key(1)}
            end,
            fetch!: fn InactiveName, _plain_name ->
              Model.name(
@@ -172,7 +171,8 @@ defmodule AeMdwWeb.NameControllerTest do
            fetch: fn Tx, _key ->
              {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
            end,
-           prev_key: fn AuctionBid, _key -> :none end
+           prev_key: fn AuctionBid, _key -> :none end,
+           exists?: fn InactiveNameExpiration, _key -> true end
          ]},
         {Txs, [],
          [
@@ -189,25 +189,24 @@ defmodule AeMdwWeb.NameControllerTest do
                  |> get("/names/inactive")
                  |> json_response(200)
 
-        assert 10 = length(names)
+        assert @default_limit = length(names)
 
-        assert %{"data" => next_names, "next" => nil} =
+        assert %{"data" => next_names, "next" => _next} =
                  conn
                  |> get(next)
                  |> json_response(200)
 
-        assert 1 = length(next_names)
+        assert @default_limit = length(next_names)
       end
     end
 
     test "get inactive names with limit=6", %{conn: conn} do
       limit = 6
-      sample_keys = for _i <- 1..limit, do: TS.name_expiration_key(0)
 
       with_mocks [
         {Mnesia, [],
          [
-           fetch_keys: fn InactiveNameExpiration, :backward, nil, ^limit -> {sample_keys, nil} end,
+           next_key: fn InactiveNameExpiration, :backward, _exp_key -> {:ok, TS.name_expiration_key(0)} end,
            fetch!: fn InactiveName, _plain_name ->
              Model.name(
                active: true,
@@ -249,12 +248,14 @@ defmodule AeMdwWeb.NameControllerTest do
       by = "name"
       direction = "forward"
       limit = 3
-      sample_keys = for _i <- 1..limit, do: TS.plain_name(0)
 
       with_mocks [
         {Mnesia, [],
          [
-           fetch_keys: fn InactiveName, :forward, nil, ^limit -> {sample_keys, nil} end,
+           next_key: fn
+             InactiveName, :forward, nil -> {:ok, TS.plain_name(0)}
+             InactiveName, :forward, plain_name -> {:ok, "a#{plain_name}"}
+           end,
            fetch!: fn InactiveName, _plain_name ->
              Model.name(
                active: true,
@@ -446,15 +447,13 @@ defmodule AeMdwWeb.NameControllerTest do
     test "get active and inactive names, except those in auction, with default limit", %{
       conn: conn
     } do
-      active_sample_keys = for _i <- 1..6, do: TS.name_expiration_key(0)
-      inactive_sample_keys = for _i <- 1..4, do: TS.name_expiration_key(0)
-
       with_mocks [
         {Mnesia, [],
          [
-           fetch_keys: fn
-             ActiveNameExpiration, :backward, nil, @default_limit -> {active_sample_keys, nil}
-             InactiveNameExpiration, :backward, nil, 4 -> {inactive_sample_keys, nil}
+           next_key: fn
+             ActiveNameExpiration, :backward, nil -> {:ok, TS.name_expiration_key(0)}
+             ActiveNameExpiration, :backward, {exp, plain_name} -> {:ok, {exp - 1, "a#{plain_name}"}}
+             InactiveNameExpiration, :backward, nil -> :none
            end,
            fetch!: fn _tab, _plain_name ->
              Model.name(
@@ -479,7 +478,7 @@ defmodule AeMdwWeb.NameControllerTest do
            first_gen!: fn -> 0 end
          ]}
       ] do
-        assert %{"data" => names, "next" => nil} =
+        assert %{"data" => names, "next" => _next} =
                  conn
                  |> get("/names")
                  |> json_response(200)
@@ -490,12 +489,15 @@ defmodule AeMdwWeb.NameControllerTest do
 
     test "get active and inactive names, except those in auction, with limit=2", %{conn: conn} do
       limit = 2
-      sample_keys = for _i <- 1..limit, do: TS.name_expiration_key(0)
 
       with_mocks [
         {Mnesia, [],
          [
-           fetch_keys: fn ActiveNameExpiration, :backward, nil, ^limit -> {sample_keys, nil} end,
+           next_key: fn
+             ActiveNameExpiration, :backward, nil -> {:ok, TS.name_expiration_key(0)}
+             ActiveNameExpiration, :backward, {exp, plain_name} -> {:ok, {exp - 1, "a#{plain_name}"}}
+             InactiveNameExpiration, :backward, nil -> :none
+           end,
            fetch!: fn ActiveName, _plain_name ->
              Model.name(
                active: true,
@@ -539,7 +541,11 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Mnesia, [],
          [
-           next_key: fn _tab, :forward, _first_key -> {:ok, first_key} end,
+           next_key: fn
+             ActiveName, :forward, nil -> {:ok, first_key}
+             ActiveName, :forward, key -> {:ok, "a#{key}"}
+             InactiveName, :forward, _key -> :none
+           end,
            fetch!: fn ActiveName, _plain_name ->
              Model.name(
                active: true,

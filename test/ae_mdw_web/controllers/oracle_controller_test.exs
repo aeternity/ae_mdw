@@ -16,18 +16,17 @@ defmodule AeMdwWeb.OracleControllerTest do
 
   describe "oracles" do
     test "it retrieves active oracles first", %{conn: conn} do
-      expiration_keys = 1..10 |> Enum.map(fn _index -> TS.oracle_expiration_key(1) end)
       Model.oracle(index: pk) = oracle = TS.oracle()
       encoded_pk = :aeser_api_encoder.encode(:oracle_pubkey, pk)
-
-      next_cursor = {next_cursor_exp, next_cursor_pk} = TS.oracle_expiration_key(2)
-      next_cursor_pk_encoded = :aeser_api_encoder.encode(:oracle_pubkey, next_cursor_pk)
-      next_cursor_query_value = "#{next_cursor_exp}-#{next_cursor_pk_encoded}"
 
       with_mocks [
         {Mnesia, [],
          [
-           fetch_keys: fn _tab, _dir, _cursor, _limit -> {expiration_keys, next_cursor} end,
+           next_key: fn
+             ActiveOracleExpiration, :backward, nil -> {:ok, TS.oracle_expiration_key(1)}
+             ActiveOracleExpiration, :backward, {exp, plain_name} -> {:ok, {exp - 1, "a#{plain_name}"}}
+             InactiveOracleExpiration, :backward, nil -> :none
+           end,
            last_key: fn Block -> {:ok, TS.last_gen()} end,
            fetch!: fn _tab, _oracle_pk -> oracle end
          ]},
@@ -52,26 +51,24 @@ defmodule AeMdwWeb.OracleControllerTest do
                  query: query
                } = URI.parse(next_uri)
 
-        assert %{"cursor" => ^next_cursor_query_value, "direction" => "backward"} =
-                 URI.decode_query(query)
-
-        assert_called(Mnesia.fetch_keys(ActiveOracleExpiration, :backward, nil, 10))
-        assert_not_called(Mnesia.fetch_keys(InactiveOracleExpiration, :_, :_, :_))
+        assert %{"cursor" => _cursor, "direction" => "backward"} = URI.decode_query(query)
       end
     end
 
     test "it retrieves both active and inactive when length(active) < limit", %{conn: conn} do
-      active_expiration_keys = [TS.oracle_expiration_key(1), TS.oracle_expiration_key(2)]
-      inactive_expiration_keys = [TS.oracle_expiration_key(3), TS.oracle_expiration_key(4)]
       Model.oracle(index: pk) = oracle = TS.oracle()
       encoded_pk = :aeser_api_encoder.encode(:oracle_pubkey, pk)
 
       with_mocks [
         {Mnesia, [],
          [
-           fetch_keys: fn
-             ActiveOracleExpiration, _dir, _cursor, _limit -> {active_expiration_keys, nil}
-             InactiveOracleExpiration, _dir, _cursor, _limit -> {inactive_expiration_keys, nil}
+           next_key: fn
+             ActiveOracleExpiration, :backward, nil -> {:ok, {1, "a"}}
+             ActiveOracleExpiration, :backward, {0, _plain_name} -> :none
+             ActiveOracleExpiration, :backward, {exp, "a"} -> {:ok, {exp - 1, "a"}}
+             InactiveOracleExpiration, :backward, nil -> {:ok, {1, "b"}}
+             InactiveOracleExpiration, :backward, {0, "b"} -> :none
+             InactiveOracleExpiration, :backward, {exp, "b"} -> {:ok, {exp - 1, "b"}}
            end,
            last_key: fn Block -> {:ok, TS.last_gen()} end,
            fetch!: fn _tab, _oracle_pk -> oracle end
@@ -90,9 +87,6 @@ defmodule AeMdwWeb.OracleControllerTest do
                  |> json_response(200)
 
         assert %{"oracle" => ^encoded_pk} = oracle1
-
-        assert_called(Mnesia.fetch_keys(ActiveOracleExpiration, :backward, nil, 10))
-        assert_called(Mnesia.fetch_keys(InactiveOracleExpiration, :backward, nil, 8))
       end
     end
   end
