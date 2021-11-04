@@ -206,7 +206,9 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Mnesia, [],
          [
-           next_key: fn InactiveNameExpiration, :backward, _exp_key -> {:ok, TS.name_expiration_key(0)} end,
+           next_key: fn InactiveNameExpiration, :backward, _exp_key ->
+             {:ok, TS.name_expiration_key(0)}
+           end,
            fetch!: fn InactiveName, _plain_name ->
              Model.name(
                active: true,
@@ -451,9 +453,14 @@ defmodule AeMdwWeb.NameControllerTest do
         {Mnesia, [],
          [
            next_key: fn
-             ActiveNameExpiration, :backward, nil -> {:ok, TS.name_expiration_key(0)}
-             ActiveNameExpiration, :backward, {exp, plain_name} -> {:ok, {exp - 1, "a#{plain_name}"}}
-             InactiveNameExpiration, :backward, nil -> :none
+             ActiveNameExpiration, :backward, nil ->
+               {:ok, TS.name_expiration_key(0)}
+
+             ActiveNameExpiration, :backward, {exp, plain_name} ->
+               {:ok, {exp - 1, "a#{plain_name}"}}
+
+             InactiveNameExpiration, :backward, nil ->
+               :none
            end,
            fetch!: fn _tab, _plain_name ->
              Model.name(
@@ -494,9 +501,14 @@ defmodule AeMdwWeb.NameControllerTest do
         {Mnesia, [],
          [
            next_key: fn
-             ActiveNameExpiration, :backward, nil -> {:ok, TS.name_expiration_key(0)}
-             ActiveNameExpiration, :backward, {exp, plain_name} -> {:ok, {exp - 1, "a#{plain_name}"}}
-             InactiveNameExpiration, :backward, nil -> :none
+             ActiveNameExpiration, :backward, nil ->
+               {:ok, TS.name_expiration_key(0)}
+
+             ActiveNameExpiration, :backward, {exp, plain_name} ->
+               {:ok, {exp - 1, "a#{plain_name}"}}
+
+             InactiveNameExpiration, :backward, nil ->
+               :none
            end,
            fetch!: fn ActiveName, _plain_name ->
              Model.name(

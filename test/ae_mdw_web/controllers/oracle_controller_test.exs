@@ -23,9 +23,14 @@ defmodule AeMdwWeb.OracleControllerTest do
         {Mnesia, [],
          [
            next_key: fn
-             ActiveOracleExpiration, :backward, nil -> {:ok, TS.oracle_expiration_key(1)}
-             ActiveOracleExpiration, :backward, {exp, plain_name} -> {:ok, {exp - 1, "a#{plain_name}"}}
-             InactiveOracleExpiration, :backward, nil -> :none
+             ActiveOracleExpiration, :backward, nil ->
+               {:ok, TS.oracle_expiration_key(1)}
+
+             ActiveOracleExpiration, :backward, {exp, plain_name} ->
+               {:ok, {exp - 1, "a#{plain_name}"}}
+
+             InactiveOracleExpiration, :backward, nil ->
+               :none
            end,
            last_key: fn Block -> {:ok, TS.last_gen()} end,
            fetch!: fn _tab, _oracle_pk -> oracle end
