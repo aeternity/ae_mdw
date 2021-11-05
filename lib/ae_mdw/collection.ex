@@ -14,6 +14,8 @@ defmodule AeMdw.Collection do
   @typep scope() :: {key(), key()} | nil
 
   @doc """
+  Paginates a list or stream or records into a list of items and it's next cursor (if
+  any).
   """
   @spec paginate(Enumerable.t(), limit()) :: {[record()], cursor()}
   def paginate(enumerable, limit) do
