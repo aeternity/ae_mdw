@@ -109,7 +109,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
                |> json_response(200)
 
       assert Enum.all?(data, fn %{"info" => %{"expire_height" => kbi}} ->
-               first <= kbi && kbi <= last
+               first <= kbi and kbi <= last
              end)
     end
 
@@ -123,7 +123,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
                |> json_response(200)
 
       assert Enum.all?(data, fn %{"info" => %{"expire_height" => kbi}} ->
-               last <= kbi && kbi <= first
+               last <= kbi and kbi <= first
              end)
 
       kbis =
@@ -221,7 +221,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
                |> json_response(200)
 
       assert Enum.all?(data, fn %{"info" => %{"expire_height" => kbi}} ->
-               first <= kbi && kbi <= last
+               first <= kbi and kbi <= last
              end)
 
       assert @default_limit = length(data)
@@ -234,7 +234,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       assert @default_limit = length(data2)
 
       assert Enum.all?(data2, fn %{"info" => %{"expire_height" => kbi}} ->
-               first <= kbi && kbi <= last
+               first <= kbi and kbi <= last
              end)
     end
 
@@ -248,7 +248,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
                |> json_response(200)
 
       assert Enum.all?(data, fn %{"info" => %{"expire_height" => kbi}} ->
-               last <= kbi && kbi <= first
+               last <= kbi and kbi <= first
              end)
 
       assert @default_limit = length(data)
@@ -414,7 +414,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
                |> json_response(200)
 
       assert Enum.all?(data, fn %{"info" => %{"expire_height" => kbi}} ->
-               first <= kbi && kbi <= last
+               first <= kbi and kbi <= last
              end)
 
       assert @default_limit = length(data)
@@ -427,7 +427,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       assert @default_limit = length(data2)
 
       assert Enum.all?(data2, fn %{"info" => %{"expire_height" => kbi}} ->
-               first <= kbi && kbi <= last
+               first <= kbi and kbi <= last
              end)
     end
 
@@ -441,7 +441,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
                |> json_response(200)
 
       assert Enum.all?(data, fn %{"info" => %{"expire_height" => kbi}} ->
-               last <= kbi && kbi <= first
+               last <= kbi and kbi <= first
              end)
 
       assert @default_limit = length(data)
