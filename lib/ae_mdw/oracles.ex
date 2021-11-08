@@ -16,14 +16,14 @@ defmodule AeMdw.Oracles do
   # This needs to be an actual type like AeMdw.Db.Oracle.t()
   @type oracle :: term()
   @typep limit :: Mnesia.limit()
-  @typep scope :: {:gen, Range.t()} | nil
+  @typep range :: {:gen, Range.t()} | nil
 
   @table_active AeMdw.Db.Model.ActiveOracle
   @table_active_expiration Model.ActiveOracleExpiration
   @table_inactive AeMdw.Db.Model.InactiveOracle
   @table_inactive_expiration Model.InactiveOracleExpiration
 
-  @spec fetch_oracles(Mnesia.direction(), scope(), cursor() | nil, limit(), boolean()) ::
+  @spec fetch_oracles(Mnesia.direction(), range(), cursor() | nil, limit(), boolean()) ::
           {[oracle()], cursor() | nil}
   def fetch_oracles(direction, scope, cursor, limit, expand?) do
     cursor = deserialize_cursor(cursor)
