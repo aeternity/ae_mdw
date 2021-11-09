@@ -16,38 +16,60 @@ defmodule AeMdw.Oracles do
   # This needs to be an actual type like AeMdw.Db.Oracle.t()
   @type oracle :: term()
   @typep limit :: Mnesia.limit()
+  @typep range :: {:gen, Range.t()} | nil
 
   @table_active AeMdw.Db.Model.ActiveOracle
   @table_active_expiration Model.ActiveOracleExpiration
   @table_inactive AeMdw.Db.Model.InactiveOracle
   @table_inactive_expiration Model.InactiveOracleExpiration
 
-  @spec fetch_oracles(Mnesia.direction(), cursor() | nil, limit(), boolean()) ::
+  @spec fetch_oracles(Mnesia.direction(), range(), cursor() | nil, limit(), boolean()) ::
           {[oracle()], cursor() | nil}
-  def fetch_oracles(direction, cursor, limit, expand?) do
+  def fetch_oracles(direction, scope, cursor, limit, expand?) do
     cursor = deserialize_cursor(cursor)
 
-    {{start_table, start_keys}, {end_table, end_keys}, next_key} =
-      Collection.concat(
-        @table_inactive_expiration,
-        @table_active_expiration,
-        direction,
-        cursor,
-        limit
-      )
+    gen_range =
+      case scope do
+        nil ->
+          nil
+
+        {:gen, %Range{first: first_gen, last: last_gen}} ->
+          if direction == :forward do
+            {{first_gen, <<>>}, {last_gen, <<>>}}
+          else
+            {{first_gen, nil}, {last_gen, nil}}
+          end
+      end
+
+    active_stream =
+      @table_active_expiration
+      |> Collection.stream(direction, gen_range, cursor)
+      |> Stream.map(fn key -> {key, @table_active_expiration} end)
+
+    inactive_stream =
+      @table_inactive_expiration
+      |> Collection.stream(direction, gen_range, cursor)
+      |> Stream.map(fn key -> {key, @table_inactive_expiration} end)
+
+    stream =
+      case direction do
+        :forward -> Stream.concat(inactive_stream, active_stream)
+        :backward -> Stream.concat(active_stream, inactive_stream)
+      end
 
     {:ok, {last_gen, -1}} = Mnesia.last_key(AeMdw.Db.Model.Block)
 
-    start_oracles =
-      Enum.map(
-        start_keys,
-        &render(&1, last_gen, start_table == @table_active_expiration, expand?)
-      )
+    {oracles_keys, cursor} = Collection.paginate(stream, limit)
 
-    end_oracles =
-      Enum.map(end_keys, &render(&1, last_gen, end_table == @table_active_expiration, expand?))
+    oracles =
+      Enum.map(oracles_keys, fn {key, tab} ->
+        render(key, last_gen, tab == @table_active_expiration, expand?)
+      end)
 
-    {start_oracles ++ end_oracles, serialize_cursor(next_key)}
+    case cursor do
+      nil -> {oracles, nil}
+      {next_key, _next_key_table} -> {oracles, serialize_cursor(next_key)}
+    end
   end
 
   @spec fetch_active_oracles(Mnesia.direction(), cursor() | nil, limit(), boolean()) ::

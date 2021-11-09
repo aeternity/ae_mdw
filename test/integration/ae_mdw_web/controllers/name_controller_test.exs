@@ -98,6 +98,39 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
       assert json_response(conn, 400) == %{"error" => "invalid direction: #{direction}"}
     end
+
+    test "it returns valid names on a given range", %{conn: conn} do
+      first = 100_000
+      last = 500_000
+
+      assert %{"data" => data} =
+               conn
+               |> get("/names/active/gen/#{first}-#{last}")
+               |> json_response(200)
+
+      assert Enum.all?(data, fn %{"info" => %{"expire_height" => kbi}} ->
+               first <= kbi and kbi <= last
+             end)
+    end
+
+    test "it returns valid names on a given range, in reverse order", %{conn: conn} do
+      first = 4_000_000
+      last = 100_000
+
+      assert %{"data" => data, "next" => next} =
+               conn
+               |> get("/names/active/gen/#{first}-#{last}")
+               |> json_response(200)
+
+      assert Enum.all?(data, fn %{"info" => %{"expire_height" => kbi}} ->
+               last <= kbi and kbi <= first
+             end)
+
+      kbis =
+        data |> Enum.map(fn %{"info" => %{"expire_height" => kbi}} -> kbi end) |> Enum.reverse()
+
+      assert Enum.sort(kbis) == kbis
+    end
   end
 
   describe "inactive_names" do
@@ -176,6 +209,54 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       conn = get(conn, "/names/inactive?by=#{by}&direction=#{direction}")
 
       assert json_response(conn, 400) == %{"error" => "invalid direction: #{direction}"}
+    end
+
+    test "it returns valid names on a given range", %{conn: conn} do
+      first = 100_000
+      last = 500_000
+
+      assert %{"data" => data, "next" => next} =
+               conn
+               |> get("/names/inactive/gen/#{first}-#{last}")
+               |> json_response(200)
+
+      assert Enum.all?(data, fn %{"info" => %{"expire_height" => kbi}} ->
+               first <= kbi and kbi <= last
+             end)
+
+      assert @default_limit = length(data)
+
+      assert %{"data" => data2} =
+               conn
+               |> get(next)
+               |> json_response(200)
+
+      assert @default_limit = length(data2)
+
+      assert Enum.all?(data2, fn %{"info" => %{"expire_height" => kbi}} ->
+               first <= kbi and kbi <= last
+             end)
+    end
+
+    test "it returns valid names on a given range, in reverse order", %{conn: conn} do
+      first = 500_000
+      last = 100_000
+
+      assert %{"data" => data, "next" => next} =
+               conn
+               |> get("/names/inactive/gen/#{first}-#{last}")
+               |> json_response(200)
+
+      assert Enum.all?(data, fn %{"info" => %{"expire_height" => kbi}} ->
+               last <= kbi and kbi <= first
+             end)
+
+      assert @default_limit = length(data)
+
+      kbis =
+        data |> Enum.map(fn %{"info" => %{"expire_height" => kbi}} -> kbi end) |> Enum.reverse()
+
+      assert Enum.sort(kbis) == kbis
     end
   end
 
@@ -321,6 +402,54 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       conn = get(conn, "/names?by=#{by}&direction=#{direction}")
 
       assert json_response(conn, 400) == %{"error" => "invalid direction: #{direction}"}
+    end
+
+    test "it returns valid names on a given range", %{conn: conn} do
+      first = 100_000
+      last = 500_000
+
+      assert %{"data" => data, "next" => next} =
+               conn
+               |> get("/names/gen/#{first}-#{last}")
+               |> json_response(200)
+
+      assert Enum.all?(data, fn %{"info" => %{"expire_height" => kbi}} ->
+               first <= kbi and kbi <= last
+             end)
+
+      assert @default_limit = length(data)
+
+      assert %{"data" => data2} =
+               conn
+               |> get(next)
+               |> json_response(200)
+
+      assert @default_limit = length(data2)
+
+      assert Enum.all?(data2, fn %{"info" => %{"expire_height" => kbi}} ->
+               first <= kbi and kbi <= last
+             end)
+    end
+
+    test "it returns valid names on a given range, in reverse order", %{conn: conn} do
+      first = 500_000
+      last = 100_000
+
+      assert %{"data" => data, "next" => next} =
+               conn
+               |> get("/names/gen/#{first}-#{last}")
+               |> json_response(200)
+
+      assert Enum.all?(data, fn %{"info" => %{"expire_height" => kbi}} ->
+               last <= kbi and kbi <= first
+             end)
+
+      assert @default_limit = length(data)
+
+      kbis =
+        data |> Enum.map(fn %{"info" => %{"expire_height" => kbi}} -> kbi end) |> Enum.reverse()
+
+      assert Enum.sort(kbis) == kbis
     end
   end
 

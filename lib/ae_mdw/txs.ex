@@ -61,7 +61,10 @@ defmodule AeMdw.Txs do
     try do
       txis_streams = build_streams(ids, types, txis_range, cursor, direction)
 
-      {txis, next_cursor} = Collection.merge_streams(txis_streams, direction, limit)
+      {txis, next_cursor} =
+        txis_streams
+        |> Collection.merge(direction)
+        |> Collection.paginate(limit)
 
       {:ok, Enum.map(txis, &fetch!/1), serialize_cursor(next_cursor)}
     rescue
@@ -89,8 +92,8 @@ defmodule AeMdw.Txs do
   end
 
   # The purpose of this function is to generate the streams that will be then used as input for
-  # Collection.merge_streams/3 function. The function is divided into three clauses. There's an
-  # explanation before each.
+  # Collection.merge/2 function. The function is divided into three clauses. There's an explanation
+  # before each.
   #
   # When no filters are provided, all transactions are displayed, which means that we only need to
   # use the Txs table, without any filters.
@@ -197,7 +200,7 @@ defmodule AeMdw.Txs do
   #            Only take txis where A has a spend_tx transaction  (as a sender) too:
   #              Mnesia.exists?(Field, {:spend_tx, 1, A, txi})
   #        - Same thing for oracle_query_tx fields
-  #   4. All of the streams are returned for Collection.merge_streams/3 to take, which will merge
+  #   4. All of the streams are returned for Collection.merge/2 to take, which will merge
   #      the keys {:spend_tx, 1, B, X} and {:spend_tx, 2, B, X}, {:oracle_query_tx, 1, B, X} and
   #      {:oracle_query_tx, 3, B, X} for any value of X, filtering out all those transactions that
   #      do not include A in them.
