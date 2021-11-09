@@ -143,6 +143,54 @@ defmodule AeMdwWeb.NameControllerTest do
                |> get("/names/active?by=#{by}&direction=#{direction}")
                |> json_response(400)
     end
+
+    test "it renders active names with ga_meta transactions", %{conn: conn} do
+      {_exp, plain_name} = key1 = TS.name_expiration_key(0)
+
+      with_mocks [
+        {Mnesia, [],
+         [
+           next_key: fn
+             ActiveNameExpiration, :backward, nil -> {:ok, key1}
+             ActiveNameExpiration, :backward, ^key1 -> :none
+           end,
+           fetch!: fn ActiveName, _plain_name ->
+             Model.name(
+               active: true,
+               expire: 1,
+               claims: [{{0, 0}, 0}],
+               updates: [{{1, 2}, 3}],
+               transfers: [],
+               revoke: {{0, 0}, 0},
+               auction_timeout: 1
+             )
+           end,
+           fetch: fn Tx, _key ->
+             {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
+           end,
+           prev_key: fn AuctionBid, _key -> :none end
+         ]},
+        {Txs, [],
+         [
+           fetch!: fn _hash ->
+             %{"tx" => %{"tx" => %{"tx" => %{"pointers" => [], "account_id" => <<>>}}}}
+           end
+         ]},
+        {DbUtil, [],
+         [
+           last_gen!: fn -> 0 end,
+           first_gen!: fn -> 0 end
+         ]}
+      ] do
+        assert %{"data" => names} =
+                 conn
+                 |> get("/names/active")
+                 |> json_response(200)
+
+        assert 1 = length(names)
+        assert [%{"name" => ^plain_name, "info" => %{"pointers" => %{}}}] = names
+      end
+    end
   end
 
   describe "inactive_names" do
