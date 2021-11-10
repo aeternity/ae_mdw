@@ -44,3 +44,5 @@ VERSION
 
 # Customizable dev tools
 /config/dev.tools.exs
+
+/node_sdk/node_modules

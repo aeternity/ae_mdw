@@ -31,5 +31,7 @@ log/
 
 /priv/
 
+/node_sdk/node_modules
+
 # MDW's produced blockchain database should be ignored
 /mnesia/

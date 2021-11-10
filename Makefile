@@ -4,6 +4,8 @@ mix := mix
 elixir := elixir
 name := aeternity@localhost
 
+BASE_DIR = $(shell pwd)
+
 all: help
 
 .PHONY: deps
@@ -102,11 +104,24 @@ docker-deps:
 docker-dialyzer-plt:
 	$(call docker_execute,/bin/bash -c "mix dialyzer --plt")
 
+.PHONY: docker-sdk
+docker-sdk:
+	docker run --rm \
+						 --interactive \
+						 --tty \
+						 --workdir=/app \
+						 --entrypoint="" \
+						 --volume="$(BASE_DIR)/node_sdk:/app" \
+						 --network=ae_mdw_net \
+						 node \
+						 /bin/bash
+
 define docker_execute
 	docker-compose run --rm \
 										 --workdir=/app \
 										 --entrypoint="" \
 										 --service-ports \
+										 --use-aliases \
 										 ae_mdw \
 										 $(1)
 endef

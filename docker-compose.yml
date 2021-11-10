@@ -18,3 +18,11 @@ services:
     expose: [3013, 3014, 3113, 4001, 4000]
     environment:
       - AETERNITY_CONFIG=/home/aeternity/aeternity.yaml
+    networks:
+      ae_mdw:
+        aliases:
+          - mdw.aeternity.localhost
+networks:
+  ae_mdw:
+    name: ae_mdw_net
+    driver: bridge
