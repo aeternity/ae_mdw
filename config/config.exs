@@ -16,7 +16,9 @@ config :ae_mdw,
   sync: true,
   # email address where to send sync crash notification
   operators: [],
-  contract_cache_expiration_minutes: 1440
+  contract_cache_expiration_minutes: 1440,
+  # 5 days default generations cache expiration
+  generations_cache_expiration_minutes: 7200
 
 # Configures the endpoint
 config :ae_mdw, AeMdwWeb.Endpoint,
@@ -25,9 +27,7 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   render_errors: [view: AeMdwWeb.ErrorView, accepts: ~w(html json)],
   pubsub: [name: AeMdw.PubSub, adapter: Phoenix.PubSub.PG2],
   live_view: [signing_salt: "Oy680JAN"],
-  continuation_cache_expiration_minutes: 30,
-  # 5 days default generations cache expiration
-  generations_cache_expiration_minutes: 7200
+  continuation_cache_expiration_minutes: 30
 
 config :ae_mdw, AeWebsocket.Websocket.SocketHandler,
   port: 4001,

@@ -2,9 +2,12 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
   alias :aeser_api_encoder, as: Enc
+  alias AeMdw.Blocks
   alias AeMdw.Validate
-  alias AeMdw.Db.{Model, Format}
-  alias AeMdwWeb.{BlockController, TestUtil}
+  alias AeMdw.Db.Format
+  alias AeMdw.Db.Model
+  alias AeMdwWeb.BlockController
+  alias AeMdwWeb.TestUtil
   alias AeMdwWeb.Continuation, as: Cont
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.EtsCache
@@ -14,7 +17,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
 
   @moduletag :integration
 
-  @blocks_table AeMdwWeb.BlockController.table()
+  @blocks_table Blocks
   @default_limit 10
   @blocks_cache_threshold 6
 
@@ -94,7 +97,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, 0},
+          {BlockController, :blocks, %{}, build_scope(conn.assigns), 0},
           @default_limit
         )
 
@@ -106,7 +109,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
 
       {:ok, next_data, _has_cont?} =
         Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, @default_limit},
+          {BlockController, :blocks, %{}, build_scope(conn.assigns), @default_limit},
           @default_limit
         )
 
@@ -123,7 +126,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, 0},
+          {BlockController, :blocks, %{}, build_scope(conn.assigns), 0},
           limit
         )
 
@@ -135,7 +138,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
 
       {:ok, next_data, _has_cont?} =
         Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, limit},
+          {BlockController, :blocks, %{}, build_scope(conn.assigns), limit},
           limit
         )
 
@@ -150,7 +153,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, 0},
+          {BlockController, :blocks, %{}, build_scope(conn.assigns), 0},
           @default_limit
         )
 
@@ -162,7 +165,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
 
       {:ok, next_data, _has_cont?} =
         Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, @default_limit},
+          {BlockController, :blocks, %{}, build_scope(conn.assigns), @default_limit},
           @default_limit
         )
 
@@ -178,7 +181,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, 0},
+          {BlockController, :blocks, %{}, build_scope(conn.assigns), 0},
           limit
         )
 
@@ -190,12 +193,13 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
 
       {:ok, next_data, _has_cont?} =
         Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, limit},
+          {BlockController, :blocks, %{}, build_scope(conn_next.assigns), limit},
           limit
         )
 
       assert Enum.count(response_next["data"]) == limit
-      assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
+      assert response_next["data"] == next_data
+      # assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
     end
 
     test "get uncached generations with range", %{conn: conn} do
@@ -208,20 +212,15 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, 0},
+          {BlockController, :blocks, %{}, build_scope(conn.assigns), 0},
           limit
         )
 
       assert Enum.count(response["data"]) == limit
       assert Jason.encode!(response["data"]) == Jason.encode!(data)
-      assert nil == EtsCache.get(@blocks_table, range_begin)
-      assert nil == EtsCache.get(@blocks_table, range_end)
-
-      # assert there's nothing next
-      conn_next = get(conn, response["next"])
-      response_next = json_response(conn_next, 200)
-
-      assert Enum.empty?(response_next["data"])
+      assert is_nil(EtsCache.get(@blocks_table, range_begin))
+      assert is_nil(EtsCache.get(@blocks_table, range_end))
+      assert is_nil(response["next"])
     end
 
     test "get a mix of uncached and cached generations with range", %{conn: conn} do
@@ -236,7 +235,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
 
       {:ok, data, _has_cont?} =
         Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, 0},
+          {BlockController, :blocks, %{}, build_scope(conn.assigns), 0},
           limit
         )
 
@@ -251,7 +250,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
 
       {:ok, next_data, _has_cont?} =
         Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, limit},
+          {BlockController, :blocks, %{}, build_scope(conn.assigns), limit},
           limit
         )
 
@@ -289,14 +288,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
       conn_next = get(conn, response["next"])
       response_next = json_response(conn_next, 200)
 
-      {:ok, next_data, _has_cont?} =
-        Cont.response_data(
-          {BlockController, :blocks_v2, %{}, conn.assigns.scope, limit},
-          limit
-        )
-
       assert Enum.count(response_next["data"]) == limit
-      assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
     end
 
     test "renders error when the range is invalid", %{conn: conn} do
@@ -341,4 +333,12 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
     |> Validate.block_index!()
     |> get_block()
   end
+
+  defp build_scope(%{scope: nil, direction: :forward}),
+    do: {:gen, first_gen()..last_gen()}
+
+  defp build_scope(%{scope: nil, direction: :backward}),
+    do: {:gen, last_gen()..first_gen()}
+
+  defp build_scope(%{scope: scope}), do: scope
 end

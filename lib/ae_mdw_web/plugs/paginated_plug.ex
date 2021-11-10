@@ -55,6 +55,20 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
   def call(conn, _opts), do: conn
 
+  defp extract_direction_and_scope(%{"range_or_dir" => "forward"}),
+    do: {:ok, :forward, @default_scope}
+
+  defp extract_direction_and_scope(%{"range_or_dir" => "backward"}),
+    do: {:ok, :backward, @default_scope}
+
+  defp extract_direction_and_scope(%{"range_or_dir" => range}) do
+    case extract_range(range) do
+      {:ok, first, last} when first <= last -> {:ok, :forward, {:gen, first..last}}
+      {:ok, first, last} -> {:ok, :backward, {:gen, first..last}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   defp extract_direction_and_scope(%{"scope_type" => scope_type, "range" => range})
        when scope_type in @scope_types_keys do
     scope_type = Map.fetch!(@scope_types, scope_type)
