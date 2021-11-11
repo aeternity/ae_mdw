@@ -32,6 +32,7 @@ defmodule AeMdw.Application do
       AeMdw.Sync.Watcher,
       AeMdw.Sync.Supervisor,
       AeMdw.Sync.AsyncTasks.Supervisor,
+      {Task.Supervisor, name: AeMdw.Sync.AsyncTasks.TaskSupervisor},
       AeMdwWeb.Supervisor,
       AeMdwWeb.Websocket.Supervisor
     ]
