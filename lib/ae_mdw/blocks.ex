@@ -35,7 +35,7 @@ defmodule AeMdw.Blocks do
 
   @spec fetch_blocks(direction(), range(), cursor() | nil, limit(), boolean()) ::
           {[block()], cursor() | nil}
-  def fetch_blocks(direction, range, cursor, limit, expand?) do
+  def fetch_blocks(direction, range, cursor, limit, sort_mbs?) do
     {:ok, {last_gen, -1}} = Mnesia.last_key(AeMdw.Db.Model.Block)
 
     range_scope = deserialize_scope(range)
@@ -51,17 +51,17 @@ defmodule AeMdw.Blocks do
 
     case intersect_scopes([range_scope, cursor_scope, global_scope], direction) do
       {:ok, first, last} when last - first > limit ->
-        {render_blocks(first, first + limit - 1, last_gen, expand?),
+        {render_blocks(first, first + limit - 1, last_gen, sort_mbs?),
          serialize_cursor(first + limit)}
 
       {:ok, first, last} when first - last > limit ->
-        {render_blocks(first, first - limit + 1, last_gen, expand?),
+        {render_blocks(first, first - limit + 1, last_gen, sort_mbs?),
          serialize_cursor(first - limit)}
 
       {:ok, first, last} ->
-        {render_blocks(first, last, last_gen, expand?), nil}
+        {render_blocks(first, last, last_gen, sort_mbs?), nil}
 
-      :empty ->
+      :error ->
         {[], nil}
     end
   end
@@ -78,25 +78,25 @@ defmodule AeMdw.Blocks do
     end)
     |> case do
       {first, last} when direction == :forward and first <= last -> {:ok, first, last}
-      {_first, _last} when direction == :forward -> :empty
+      {_first, _last} when direction == :forward -> :error
       {first, last} when direction == :backward and first >= last -> {:ok, first, last}
-      {_first, _last} when direction == :backward -> :empty
+      {_first, _last} when direction == :backward -> :error
     end
   end
 
-  defp render_blocks(from, to, last_gen, expand?),
-    do: Enum.map(from..to, &render(&1, last_gen, expand?))
+  defp render_blocks(from, to, last_gen, sort_mbs?),
+    do: Enum.map(from..to, &render(&1, last_gen, sort_mbs?))
 
-  defp render(gen, last_gen, expand?) when gen > last_gen - @blocks_cache_threshold do
+  defp render(gen, last_gen, sort_mbs?) when gen > last_gen - @blocks_cache_threshold do
     [key_block | micro_blocks] = fetch_gen_blocks(gen, last_gen)
 
-    put_mbs_from_db(key_block, micro_blocks, expand?)
+    put_mbs_from_db(key_block, micro_blocks, sort_mbs?)
   end
 
-  defp render(gen, last_gen, expand?) do
+  defp render(gen, last_gen, sort_mbs?) do
     [key_block | micro_blocks] = fetch_gen_blocks(gen, last_gen)
 
-    fetch_gen_from_cache(gen, key_block, micro_blocks, expand?)
+    fetch_gen_from_cache(gen, key_block, micro_blocks, sort_mbs?)
   end
 
   defp fetch_gen_blocks(last_gen, last_gen) do
@@ -121,13 +121,13 @@ defmodule AeMdw.Blocks do
     |> Enum.map(fn block -> Format.to_map(block) end)
   end
 
-  defp fetch_gen_from_cache(gen, key_block, micro_blocks, expand?) do
+  defp fetch_gen_from_cache(gen, key_block, micro_blocks, sort_mbs?) do
     case EtsCache.get(@cache_table, gen) do
       {key_block, _indx} ->
         key_block
 
       nil ->
-        key_block = put_mbs_from_db(key_block, micro_blocks, expand?)
+        key_block = put_mbs_from_db(key_block, micro_blocks, sort_mbs?)
         EtsCache.put(@cache_table, gen, key_block)
         key_block
     end
