@@ -13,6 +13,9 @@ defmodule AeMdw.Contract do
   import AeMdw.Util
 
   @tab __MODULE__
+
+  @type id :: binary()
+
   @typep fname() :: binary()
   @typep tx_hash() :: binary()
   @typep event_name() :: {:internal_call_tx, fname()}

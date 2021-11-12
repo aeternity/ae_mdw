@@ -127,7 +127,14 @@ defmodule AeMdw.Db.Format do
   def to_raw_map({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog) do
     m_log = read!(Model.ContractLog, {create_txi, call_txi, event_hash, log_idx})
     ct_id = &:aeser_id.create(:contract, &1)
-    ct_pk = Origin.pubkey({:contract, create_txi})
+
+    ct_pk =
+      if create_txi == -1 do
+        Origin.pubkey({:contract_call, call_txi})
+      else
+        Origin.pubkey({:contract, create_txi})
+      end
+
     ext_ct_pk = Model.contract_log(m_log, :ext_contract)
 
     parent_contract_pk =
@@ -146,7 +153,7 @@ defmodule AeMdw.Db.Format do
 
     %{
       contract_txi: (create_txi != -1 && create_txi) || -1,
-      contract_id: ct_pk && ct_id.(ct_pk),
+      contract_id: ct_id.(ct_pk),
       ext_caller_contract_txi: ext_ct_txi,
       ext_caller_contract_id: (ext_ct_pk != nil && ct_id.(ext_ct_pk)) || nil,
       parent_contract_id: (parent_contract_pk && ct_id.(parent_contract_pk)) || nil,
