@@ -9,7 +9,6 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Db.Origin
   alias AeMdw.Log
   alias AeMdw.Sync.AsyncTasks
-  alias AeMdw.Sync.AsyncTasks.UpdateAex9Presence
   alias AeMdw.Validate
 
   require Ex2ms
@@ -345,7 +344,7 @@ defmodule AeMdw.Db.Contract do
       aex9_delete_presence(contract_pk, -1, to_pk)
     end
 
-    AsyncTasks.Producer.enqueue(UpdateAex9Presence, [contract_pk])
+    AsyncTasks.Producer.enqueue(:update_aex9_presence, [contract_pk])
 
     aex9_presence_cache_write({{contract_pk, txi, i}, {from_pk, to_pk}, amount})
   end

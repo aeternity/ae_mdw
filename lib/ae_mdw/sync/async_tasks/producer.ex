@@ -5,6 +5,7 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   use GenServer
 
   alias AeMdw.Db.Model
+  alias AeMdw.Sync.AsyncTasks.LongTaskConsumer
   alias AeMdw.Sync.AsyncTasks.Store
   alias AeMdw.Sync.AsyncTasks.Stats
 
@@ -36,9 +37,19 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
     GenServer.call(__MODULE__, :dequeue)
   end
 
-  @spec notify_consumed(task_index()) :: :ok
-  def notify_consumed(task_index) do
+  @spec notify_consumed(task_index(), boolean()) :: :ok
+  def notify_consumed(task_index, is_long?) do
     Store.set_done(task_index)
+    Stats.update_consumed(is_long?)
+
+    :ok
+  end
+
+  @spec notify_timeout(Model.async_tasks_record()) :: :ok
+  def notify_timeout(m_task) do
+    LongTaskConsumer.enqueue(m_task)
+    Stats.inc_long_tasks_count()
+
     :ok
   end
 
@@ -53,7 +64,7 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
 
     new_state.buffer
     |> length()
-    |> Stats.update(@max_buffer_size)
+    |> Stats.update_buffer_len(@max_buffer_size)
 
     {:reply, m_task, new_state}
   end

@@ -1,4 +1,8 @@
 defmodule AeMdw.Sync.AsyncTasks.UpdateAex9Presence do
+  @moduledoc """
+  Async work to derive AEX9 presence from balance dry-running.
+  """
+  @behaviour AeMdw.Sync.AsyncTasks.Work
 
   alias AeMdw.Node.Db, as: DBN
 
@@ -11,13 +15,8 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9Presence do
 
   @microsecs 1_000_000
 
-  @spec process(Model.async_tasks_record()) :: :ok
-  def process(
-         Model.async_tasks(
-           index: {_ts, __MODULE__},
-           args: [contract_pk]
-         )
-       ) do
+  @spec process(args :: List.t()) :: :ok
+  def process([contract_pk]) do
     Log.info("[update_aex9_presence] #{inspect(contract_pk)} ...")
     {time_delta, {amounts, _last_block_tuple}} = :timer.tc(fn -> DBN.aex9_balances(contract_pk) end)
     Log.info("[update_aex9_presence] #{inspect(contract_pk)} after #{time_delta / @microsecs}s")
