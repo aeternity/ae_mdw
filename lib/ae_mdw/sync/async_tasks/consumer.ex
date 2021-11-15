@@ -65,7 +65,9 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
         :noop
     end
 
-    {:noreply, demand()}
+    schedule_demand()
+
+    {:noreply, %State{}}
   end
 
   @doc """
@@ -109,18 +111,6 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
     {task, timer_ref}
   end
 
-  @spec process(Model.async_tasks_record()) :: :ok
-  def process(Model.async_tasks(index: {_ts, type}, args: args)) do
-    mod = @type_mod[type]
-    apply(mod, :process, [args])
-  end
-
-  @spec set_done(Model.async_tasks_record(), boolean()) :: :ok
-  def set_done(m_task, is_long?) do
-    Model.async_tasks(index: index) = m_task
-    Producer.notify_consumed(index, is_long?)
-  end
-
   #
   # Private functions
   #
@@ -142,8 +132,22 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
     end
   end
 
+  @spec process(Model.async_tasks_record()) :: :ok
+  defp process(Model.async_tasks(index: {_ts, type}, args: args)) do
+    mod = @type_mod[type]
+    apply(mod, :process, [args])
+    :ok
+  end
+
+  @spec set_done(Model.async_tasks_record(), boolean()) :: :ok
+  defp set_done(Model.async_tasks(index: index), is_long?) do
+    Producer.notify_consumed(index, is_long?)
+  end
+
+  @spec schedule_demand() :: :ok
   defp schedule_demand() do
     sleep_msecs = @base_sleep_msecs + Enum.random(-200..200)
     Process.send_after(self(), :demand, sleep_msecs)
+    :ok
   end
 end
