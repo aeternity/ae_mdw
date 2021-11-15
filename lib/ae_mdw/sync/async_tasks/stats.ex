@@ -64,11 +64,11 @@ defmodule AeMdw.Sync.AsyncTasks.Stats do
   #
   # Private functions
   #
-  def dec_db_count() do
+  defp dec_db_count() do
     :ets.update_counter(@tab, @stats_key, {@db_count_pos, -1, 0, 0})
   end
 
-  def dec_long_tasks_count() do
+  defp dec_long_tasks_count() do
     :ets.update_counter(@tab, @stats_key, {@long_count_pos, -1, 0, 0})
   end
 

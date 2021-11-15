@@ -28,6 +28,9 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   # @backoff_msecs 10_000
 
   defmodule State do
+    @moduledoc """
+    GenServer state
+    """
     @type t :: %__MODULE__{}
 
     defstruct task: nil, m_task: nil, timer_ref: nil

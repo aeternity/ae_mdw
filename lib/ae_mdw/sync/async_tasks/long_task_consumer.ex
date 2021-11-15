@@ -15,7 +15,10 @@ defmodule AeMdw.Sync.AsyncTasks.LongTaskConsumer do
   # @backoff_msecs 10_000
 
   defmodule State do
-    defstruct queue: nil, task: nil, timer_ref: nil
+    @moduledoc """
+    GenServer state
+    """
+    defstruct queue: nil, task: nil
   end
 
   @spec start_link(any()) :: GenServer.on_start()
@@ -28,6 +31,7 @@ defmodule AeMdw.Sync.AsyncTasks.LongTaskConsumer do
     {:ok, %State{queue: :queue.new()}}
   end
 
+  @spec enqueue(Model.async_tasks_record()) :: :ok
   def enqueue(m_task) do
     GenServer.cast(__MODULE__, {:enqueue, m_task})
   end
@@ -75,19 +79,17 @@ defmodule AeMdw.Sync.AsyncTasks.LongTaskConsumer do
   defp run_next(queue1) do
     case :queue.out(queue1) do
       {{:value, m_task}, queue2} ->
-        {task, timer_ref} = Consumer.run_supervised(m_task, true)
+        {task, nil} = Consumer.run_supervised(m_task, true)
 
         %State{
           queue: queue2,
-          task: task,
-          timer_ref: timer_ref
+          task: task
         }
 
       {:empty, _queue} ->
         %State{
           queue: queue1,
-          task: nil,
-          timer_ref: nil
+          task: nil
         }
     end
   end

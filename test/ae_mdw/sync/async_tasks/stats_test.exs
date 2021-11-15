@@ -65,7 +65,7 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
       assert :ok == Stats.inc_long_tasks_count()
       assert :ok == Stats.inc_long_tasks_count()
       assert Stats.counters() == %{producer_buffer: 9, long_tasks: 2, total_pending: 0}
-      assert :ok == update_consumed(true)
+      assert :ok == Stats.update_consumed(true)
       assert Stats.counters() == %{producer_buffer: 9, long_tasks: 1, total_pending: 0}
     end
   end
