@@ -5,13 +5,11 @@ defmodule AeMdw.Sync.AsyncTasks.LongTaskConsumer do
   use GenServer
 
   alias AeMdw.Db.Model
-  alias AeMdw.Log
   alias AeMdw.Sync.AsyncTasks.Consumer
 
   require Model
-  require Logger
 
-  @yield_timeout_msecs 100
+  @sleep_msecs 60_000
 
   # @max_retries 2
   # @backoff_msecs 10_000
@@ -42,35 +40,26 @@ defmodule AeMdw.Sync.AsyncTasks.LongTaskConsumer do
     {:noreply, %{state | queue: :queue.in(m_task, queue)}}
   end
 
-  @doc """
-  Check async task timeout.
-  """
   @impl GenServer
-  def handle_info({:timedout, task_ref}, %State{queue: queue, task: task}) do
-    if task_ref == task.ref do
-      Task.yield(task, @yield_timeout_msecs) || Task.shutdown(task)
-    end
-
+  def handle_info(:next, %State{queue: queue}) do
     {:noreply, run_next(queue)}
   end
 
   @doc """
-  If the task succeeds, clean processing state and runs next task.
+  If the task succeeds, only demonitor.
   """
   @impl GenServer
-  def handle_info({ref, task_result}, %State{queue: queue, task: task}) do
-    # The task succeed so we can cancel the monitoring
+  def handle_info({ref, :ok}, state) do
     Process.demonitor(ref, [:flush])
-    Log.info("[#{inspect(task.ref)}] task_result: #{task_result}")
 
-    {:noreply, run_next(queue)}
+    {:noreply, state}
   end
 
-
   @doc """
-  Just acknowledge (ignore) the DOWN event.
+  DOWN event is always received, so schedule next (no evidence for a need to retry).
   """
-  def handle_info({:DOWN, _ref, :process, _pid, _reason}, %State{task: _task} = state) do
+  def handle_info({:DOWN, _ref, :process, _pid, _reason}, state) do
+    schedule_next()
     {:noreply, state}
   end
 
@@ -94,5 +83,9 @@ defmodule AeMdw.Sync.AsyncTasks.LongTaskConsumer do
           timer_ref: nil
         }
     end
+  end
+
+  defp schedule_next() do
+    Process.send_after(self(), :next, @sleep_msecs)
   end
 end

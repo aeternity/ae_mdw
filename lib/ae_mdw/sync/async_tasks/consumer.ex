@@ -16,10 +16,9 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
 
   import AeMdw.Util, only: [ok!: 1]
 
-  @base_sleep_msecs 700
+  @base_sleep_msecs 3_000
   @yield_timeout_msecs 100
   @task_timeout_msecs 20_000
-  @long_timeout_msecs 60 * 60_000
 
   @type_mod %{
     update_aex9_presence: UpdateAex9Presence
@@ -72,19 +71,16 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   @doc """
   When the task finishes, demonitor and demands next task.
   """
-  def handle_info({ref, _task_ok}, %State{task: current_task} = state) do
+  def handle_info({ref, :ok}, %State{task: current_task} = state) do
     Process.demonitor(ref, [:flush])
 
-    new_state =
-      if ref == current_task.ref or not is_nil(Task.yield(current_task, @yield_timeout_msecs)) do
-        schedule_demand()
-        %State{}
-      else
-        # some still running
-        state
-      end
-
-    {:noreply, new_state}
+    if ref == current_task.ref or not is_nil(Task.yield(current_task, @yield_timeout_msecs)) do
+      schedule_demand()
+      {:noreply, %State{}}
+    else
+      # some still running
+      {:noreply, state}
+    end
   end
 
   @doc """
@@ -108,9 +104,7 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
     )
     Log.info("[#{inspect(task.ref)}] #{inspect(m_task)}")
 
-    timeout = if is_long?, do: @long_timeout_msecs, else: @task_timeout_msecs
-
-    timer_ref = timeout |> :timer.send_after({:timedout, task}) |> ok!
+    timer_ref = if is_long?, do: ok!(:timer.send_after(@task_timeout_msecs, {:timedout, task}))
 
     {task, timer_ref}
   end
