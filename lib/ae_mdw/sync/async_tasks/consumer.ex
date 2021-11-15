@@ -104,7 +104,7 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
     )
     Log.info("[#{inspect(task.ref)}] #{inspect(m_task)}")
 
-    timer_ref = if is_long?, do: ok!(:timer.send_after(@task_timeout_msecs, {:timedout, task}))
+    timer_ref = if not is_long?, do: ok!(:timer.send_after(@task_timeout_msecs, {:timedout, task}))
 
     {task, timer_ref}
   end

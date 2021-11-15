@@ -37,7 +37,13 @@ defmodule AeMdw.Sync.AsyncTasks.LongTaskConsumer do
   """
   @impl GenServer
   def handle_cast({:enqueue, m_task}, %State{queue: queue} = state) do
-    {:noreply, %{state | queue: :queue.in(m_task, queue)}}
+    new_queue = :queue.in(m_task, queue)
+
+    if :queue.is_empty(queue) do
+      {:noreply, run_next(new_queue)}
+    else
+      {:noreply, %{state | queue: new_queue}}
+    end
   end
 
   @impl GenServer
