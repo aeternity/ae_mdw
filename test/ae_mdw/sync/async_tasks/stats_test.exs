@@ -59,14 +59,11 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
   describe "update_consumed/2 and counter/0 success" do
     test "without pending db records" do
       assert :ok == Stats.update_buffer_len(10, 100)
-      assert :ok == Stats.update_consumed(false)
-      assert Stats.counters() == %{producer_buffer: 9, long_tasks: 0, total_pending: 0}
-
       assert :ok == Stats.inc_long_tasks_count()
       assert :ok == Stats.inc_long_tasks_count()
-      assert Stats.counters() == %{producer_buffer: 9, long_tasks: 2, total_pending: 0}
+      assert Stats.counters() == %{producer_buffer: 10, long_tasks: 2, total_pending: 0}
       assert :ok == Stats.update_consumed(true)
-      assert Stats.counters() == %{producer_buffer: 9, long_tasks: 1, total_pending: 0}
+      assert Stats.counters() == %{producer_buffer: 10, long_tasks: 1, total_pending: 0}
     end
   end
 end

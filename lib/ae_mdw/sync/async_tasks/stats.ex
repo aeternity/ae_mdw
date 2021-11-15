@@ -45,7 +45,7 @@ defmodule AeMdw.Sync.AsyncTasks.Stats do
 
   @spec inc_long_tasks_count() :: :ok
   def inc_long_tasks_count() do
-    :ets.update_counter(@tab, @stats_key, {@long_count_pos, 1, 0, 0})
+    :ets.update_counter(@tab, @stats_key, {@long_count_pos, 1})
     :ok
   end
 
