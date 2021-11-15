@@ -21,11 +21,11 @@ defmodule Integration.AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
     exists_before? =
       :mnesia.async_dirty(fn -> Contract.aex9_presence_exists?(@contract_pk, @account_pk, -1) end)
 
-    if exists_before?, do: setup_delete_aex9_presence(@contract_pk, @account_pk)
-
     on_exit(fn ->
       if not exists_before?, do: setup_delete_aex9_presence(@contract_pk, @account_pk)
     end)
+
+    if exists_before?, do: setup_delete_aex9_presence(@contract_pk, @account_pk)
 
     # enqueue/dequeue
     args = [@contract_pk]
