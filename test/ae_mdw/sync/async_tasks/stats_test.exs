@@ -12,7 +12,7 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
 
   describe "update/2 and counter/0 success" do
     test "without pending db records" do
-      assert Stats.update(10, 100) == :ok
+      assert Stats.update_buffer_len(10, 100) == :ok
       assert Stats.counters() == %{producer_buffer: 10, total_pending: 0}
     end
 
@@ -27,7 +27,7 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
           index
         end)
 
-        assert Stats.update(10, 100) == :ok
+        assert Stats.update_buffer_len(10, 100) == :ok
         assert Stats.counters() == %{producer_buffer: 10, total_pending: db_pending_count}
 
         :mnesia.abort(:rollback)

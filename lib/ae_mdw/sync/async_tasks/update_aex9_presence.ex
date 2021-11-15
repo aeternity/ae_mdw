@@ -15,10 +15,13 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9Presence do
 
   @microsecs 1_000_000
 
-  @spec process(args :: List.t()) :: :ok
+  @spec process(args :: list()) :: :ok
   def process([contract_pk]) do
     Log.info("[update_aex9_presence] #{inspect(contract_pk)} ...")
-    {time_delta, {amounts, _last_block_tuple}} = :timer.tc(fn -> DBN.aex9_balances(contract_pk) end)
+
+    {time_delta, {amounts, _last_block_tuple}} =
+      :timer.tc(fn -> DBN.aex9_balances(contract_pk) end)
+
     Log.info("[update_aex9_presence] #{inspect(contract_pk)} after #{time_delta / @microsecs}s")
 
     :mnesia.sync_transaction(fn ->

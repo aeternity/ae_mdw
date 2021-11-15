@@ -97,16 +97,19 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   #
   @spec run_supervised(Model.async_tasks_record(), boolean()) :: {Task.t(), term()}
   def run_supervised(m_task, is_long? \\ false) do
-    task = Task.Supervisor.async_nolink(
-      TaskSupervisor,
-      fn ->
-        :ok = process(m_task)
-        set_done(m_task, is_long?)
-      end
-    )
+    task =
+      Task.Supervisor.async_nolink(
+        TaskSupervisor,
+        fn ->
+          :ok = process(m_task)
+          set_done(m_task, is_long?)
+        end
+      )
+
     Log.info("[#{inspect(task.ref)}] #{inspect(m_task)}")
 
-    timer_ref = if not is_long?, do: ok!(:timer.send_after(@task_timeout_msecs, {:timedout, task}))
+    timer_ref =
+      if not is_long?, do: ok!(:timer.send_after(@task_timeout_msecs, {:timedout, task}))
 
     {task, timer_ref}
   end

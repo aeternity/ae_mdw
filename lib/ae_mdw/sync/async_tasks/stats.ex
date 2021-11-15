@@ -51,7 +51,8 @@ defmodule AeMdw.Sync.AsyncTasks.Stats do
 
   @spec counters() :: map()
   def counters do
-    [{@stats_key, producer_buffer_len, db_pending_count, long_count}] = :ets.lookup(@tab, @stats_key)
+    [{@stats_key, producer_buffer_len, db_pending_count, long_count}] =
+      :ets.lookup(@tab, @stats_key)
 
     %{
       producer_buffer: producer_buffer_len,

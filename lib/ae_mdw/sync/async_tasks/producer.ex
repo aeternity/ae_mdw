@@ -44,14 +44,14 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
     Store.set_done(task_index)
     Stats.update_consumed(is_long?)
 
-    if is_long?, do: Log.info("Long task finished: #{inspect task_index}")
+    if is_long?, do: Log.info("Long task finished: #{inspect(task_index)}")
 
     :ok
   end
 
   @spec notify_timeout(Model.async_tasks_record()) :: :ok
   def notify_timeout(m_task) do
-    Log.warn("Long task enqueued: #{inspect m_task}")
+    Log.warn("Long task enqueued: #{inspect(m_task)}")
     LongTaskConsumer.enqueue(m_task)
     Stats.inc_long_tasks_count()
 

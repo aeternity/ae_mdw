@@ -82,6 +82,7 @@ defmodule AeMdw.Sync.AsyncTasks.LongTaskConsumer do
           task: task,
           timer_ref: timer_ref
         }
+
       {:empty, _queue} ->
         %State{
           queue: queue1,
