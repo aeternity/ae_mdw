@@ -11,16 +11,20 @@ defmodule AeMdw.Sync.AsyncTasks.Stats do
   @stats_key :async_tasks_stats_key
   @max_db_count_times 10
 
+  @buffer_len_pos 2
+  @db_count_pos 3
+  @long_count_pos 4
+
   @spec init() :: :ok
   def init do
     :ets.new(@tab, [:named_table, :set, :public])
-    :ets.insert(@tab, {@stats_key, 0, 0})
+    :ets.insert(@tab, {@stats_key, 0, 0, 0})
     :ok
   end
 
-  @spec update(pos_integer(), pos_integer()) :: :ok
-  def update(producer_buffer_len, max_len) do
-    :ets.update_element(@tab, @stats_key, {2, producer_buffer_len})
+  @spec update_buffer_len(pos_integer(), pos_integer()) :: :ok
+  def update_buffer_len(producer_buffer_len, max_len) do
+    :ets.update_element(@tab, @stats_key, {@buffer_len_pos, producer_buffer_len})
 
     cond do
       producer_buffer_len == 0 -> reset_db_count()
@@ -31,12 +35,28 @@ defmodule AeMdw.Sync.AsyncTasks.Stats do
     :ok
   end
 
+  @spec update_consumed(boolean()) :: :ok
+  def update_consumed(is_long?) do
+    dec_db_count()
+    if is_long?, do: dec_long_tasks_count()
+
+    :ok
+  end
+
+  @spec inc_long_tasks_count() :: :ok
+  def inc_long_tasks_count() do
+    :ets.update_counter(@tab, @stats_key, {@long_count_pos, 1})
+    :ok
+  end
+
   @spec counters() :: map()
   def counters do
-    [{@stats_key, producer_buffer_len, db_pending_count}] = :ets.lookup(@tab, @stats_key)
+    [{@stats_key, producer_buffer_len, db_pending_count, long_count}] =
+      :ets.lookup(@tab, @stats_key)
 
     %{
       producer_buffer: producer_buffer_len,
+      long_tasks: long_count,
       total_pending: db_pending_count
     }
   end
@@ -44,12 +64,20 @@ defmodule AeMdw.Sync.AsyncTasks.Stats do
   #
   # Private functions
   #
+  defp dec_db_count() do
+    :ets.update_counter(@tab, @stats_key, {@db_count_pos, -1, 0, 0})
+  end
+
+  defp dec_long_tasks_count() do
+    :ets.update_counter(@tab, @stats_key, {@long_count_pos, -1, 0, 0})
+  end
+
   defp update_db_count() do
     db_pending_count = :mnesia.async_dirty(fn -> Util.count(Model.AsyncTasks) end)
-    :ets.update_element(@tab, @stats_key, {3, db_pending_count})
+    :ets.update_element(@tab, @stats_key, {@db_count_pos, db_pending_count})
   end
 
   defp reset_db_count() do
-    :ets.update_element(@tab, @stats_key, {3, 0})
+    :ets.update_element(@tab, @stats_key, {@db_count_pos, 0})
   end
 end

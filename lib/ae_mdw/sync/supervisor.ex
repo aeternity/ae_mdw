@@ -24,8 +24,9 @@ defmodule AeMdw.Sync.Supervisor do
     :ok
   end
 
-  def sync(true),
-    do: DynamicSupervisor.start_child(__MODULE__, AeMdw.Db.Sync.Supervisor)
+  def sync(true) do
+    DynamicSupervisor.start_child(__MODULE__, AeMdw.Db.Sync.Supervisor)
+  end
 
   def sync(false) do
     case DynamicSupervisor.which_children(__MODULE__) do

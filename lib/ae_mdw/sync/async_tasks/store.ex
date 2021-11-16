@@ -31,6 +31,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
       end
 
     {m_tasks, _cont} = Util.select(Model.AsyncTasks, any_spec, max_amount)
+    m_tasks = dedup_records(m_tasks)
 
     Enum.filter(m_tasks, fn Model.async_tasks(index: index) ->
       not :ets.member(:async_tasks_processing, index)
@@ -79,5 +80,17 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
       {[true], _cont} -> true
       {[], _cont} -> false
     end
+  end
+
+  defp dedup_records(tasks) do
+    tasks
+    |> Enum.group_by(fn Model.async_tasks(args: args) -> args end)
+    |> Enum.map(fn {[_contract_pk], [first | to_delete]} ->
+      Enum.each(to_delete, fn Model.async_tasks(index: index) ->
+        :mnesia.dirty_delete(Model.AsyncTasks, index)
+      end)
+
+      first
+    end)
   end
 end
