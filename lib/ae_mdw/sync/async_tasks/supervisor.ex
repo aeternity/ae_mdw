@@ -9,6 +9,7 @@ defmodule AeMdw.Sync.AsyncTasks.Supervisor do
   alias AeMdw.Sync.AsyncTasks.Producer
   alias AeMdw.Sync.AsyncTasks.Stats
   alias AeMdw.Sync.AsyncTasks.Store
+  alias AeMdw.Sync.AsyncTasks.TaskSupervisor
 
   @num_consumers 3
 
@@ -20,6 +21,7 @@ defmodule AeMdw.Sync.AsyncTasks.Supervisor do
   @impl Supervisor
   def init(:ok) do
     children = [
+      {Task.Supervisor, name: TaskSupervisor},
       Producer,
       LongTaskConsumer | consumers()
     ]
