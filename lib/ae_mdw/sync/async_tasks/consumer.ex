@@ -18,7 +18,7 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
 
   @base_sleep_msecs 3_000
   @yield_timeout_msecs 100
-  @task_timeout_msecs 30_000
+  @task_timeout_msecs 40_000
 
   @type_mod %{
     update_aex9_presence: UpdateAex9Presence
@@ -58,8 +58,8 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   @doc """
   Handle async task timeout.
   """
-  def handle_info({:timedout, timeout_task}, %State{task: task, m_task: m_task}) do
-    case timeout_task.ref == task.ref && Task.yield(task, @yield_timeout_msecs) do
+  def handle_info(:timeout, %State{task: task, m_task: m_task}) do
+    case Task.yield(task, @yield_timeout_msecs) do
       nil ->
         Task.shutdown(task, :brutal_kill)
         Producer.notify_timeout(m_task)
@@ -76,22 +76,24 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   @doc """
   When the task finishes, demonitor and demands next task.
   """
-  def handle_info({ref, :ok}, %State{task: current_task} = state) do
+  def handle_info({ref, ok_res}, %State{task: current_task, timer_ref: timer_ref}) do
     Process.demonitor(ref, [:flush])
 
-    if ref == current_task.ref or not is_nil(Task.yield(current_task, @yield_timeout_msecs)) do
-      schedule_demand()
-      {:noreply, %State{}}
-    else
-      # some still running
-      {:noreply, state}
+    if ok_res != :ok do
+      Log.warn("Async task returned #{ok_res}, task=#{inspect(current_task)}")
     end
+
+    if nil != timer_ref, do: :timer.cancel(timer_ref)
+
+    schedule_demand()
+
+    {:noreply, %State{}}
   end
 
   @doc """
   Just acknowledge (ignore) the DOWN event.
   """
-  def handle_info({:DOWN, _ref, :process, _pid, _reason}, %State{task: _task} = state) do
+  def handle_info({:DOWN, _ref, :process, _pid, _reason}, %State{} = state) do
     {:noreply, state}
   end
 
@@ -111,8 +113,7 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
 
     Log.info("[#{inspect(task.ref)}] #{inspect(m_task)}")
 
-    timer_ref =
-      if not is_long?, do: ok!(:timer.send_after(@task_timeout_msecs, {:timedout, task}))
+    timer_ref = if not is_long?, do: ok!(:timer.send_after(@task_timeout_msecs, :timeout))
 
     {task, timer_ref}
   end
