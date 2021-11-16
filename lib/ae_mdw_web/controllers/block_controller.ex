@@ -3,61 +3,35 @@ defmodule AeMdwWeb.BlockController do
   use PhoenixSwagger
 
   alias :aeser_api_encoder, as: Enc
-  alias AeMdw.Validate
-  alias AeMdw.Db.{Model, Format}
+  alias AeMdw.Blocks
+  alias AeMdw.Db.Format
+  alias AeMdw.Db.Model
   alias AeMdw.Error.Input, as: ErrInput
-  alias AeMdw.EtsCache
-  alias AeMdwWeb.Continuation, as: Cont
+  alias AeMdw.Validate
+  alias AeMdwWeb.Plugs.PaginatedPlug
   alias AeMdwWeb.SwaggerParameters
+  alias Plug.Conn
+
   require Model
 
   import AeMdwWeb.Util
-  import AeMdw.{Util, Db.Util}
+  import AeMdw.Db.Util
 
-  @tab __MODULE__
-
-  # number of generations congruent to last that are not cached
-  @blocks_cache_threshold 6
-
-  def table(), do: @tab
-
-  @doc """
-  Pagination hook.
-  """
-  def stream_plug_hook(%Plug.Conn{path_info: ["v2", "blocks" | rem]} = conn),
-    do: stream_plug_hook(conn, rem)
-
-  def stream_plug_hook(%Plug.Conn{path_info: ["blocks" | rem]} = conn),
-    do: stream_plug_hook(conn, rem)
-
-  def stream_plug_hook(%Plug.Conn{params: params} = conn, rem) do
-    alias AeMdwWeb.DataStreamPlug, as: P
-
-    scope_info =
-      case rem do
-        [x | _] when x in ["forward", "backward"] -> rem
-        _ -> ensure_prefix("gen", rem)
-      end
-
-    P.handle_assign(
-      conn,
-      P.parse_scope(scope_info, ["gen"]),
-      P.parse_offset(params),
-      {:ok, %{}}
-    )
-  end
+  plug(PaginatedPlug)
 
   ##########
 
   @doc """
   Endpoint for block info by hash.
   """
+  @spec block(Conn.t(), map()) :: Conn.t()
   def block(conn, %{"hash" => hash}),
     do: handle_input(conn, fn -> block_reply(conn, hash) end)
 
   @doc """
   Endpoint for block info by key block index.
   """
+  @spec blocki(Conn.t(), map()) :: Conn.t()
   def blocki(conn, %{"kbi" => kbi} = req),
     do:
       handle_input(conn, fn ->
@@ -68,126 +42,62 @@ defmodule AeMdwWeb.BlockController do
   @doc """
   Endpoint for blocks info based on pagination.
   """
-  def blocks(conn, _req),
-    do: Cont.response(conn, &json/2)
+  @spec blocks(Conn.t(), map()) :: Conn.t()
+  def blocks(%Conn{assigns: assigns} = conn, params) do
+    %{direction: direction, limit: limit, cursor: cursor, scope: scope} = assigns
+
+    {blocks, next_cursor} = Blocks.fetch_blocks(direction, scope, cursor, limit, false)
+
+    path =
+      case params do
+        %{"range" => range} -> "/blocks/#{range}"
+        %{"range_or_dir" => range_or_dir} -> "/blocks/#{range_or_dir}"
+        _params -> "/blocks/#{direction}"
+      end
+
+    uri =
+      if next_cursor do
+        %URI{
+          path: path,
+          query: URI.encode_query(%{"cursor" => next_cursor, "limit" => limit})
+        }
+        |> URI.to_string()
+      end
+
+    json(conn, %{"data" => blocks, "next" => uri})
+  end
 
   @doc """
   Endpoint for paginated blocks with sorted micro blocks per time.
   """
-  def blocks_v2(conn, _req),
-    do: Cont.response(conn, &json/2)
+  @spec blocks_v2(Conn.t(), map()) :: Conn.t()
+  def blocks_v2(%Conn{assigns: assigns} = conn, params) do
+    %{direction: direction, limit: limit, cursor: cursor, scope: scope} = assigns
 
-  ##########
+    {blocks, next_cursor} = Blocks.fetch_blocks(direction, scope, cursor, limit, true)
 
-  @doc """
-  ETS continuation callback to paginate blocks endpoint.
-  """
-  def db_stream(:blocks, _params, {:gen, range}) do
-    Stream.map(range, &generation_json(&1, last_gen()))
-  end
-
-  def db_stream(:blocks_v2, _params, {:gen, range}) do
-    Stream.map(range, &generation_json(&1, last_gen(), true))
-  end
-
-  defp generation_json(height, last_gen, sort_mbs \\ false)
-
-  defp generation_json(height, last_gen, sort_mbs)
-       when height > last_gen - @blocks_cache_threshold do
-    [kb_json | mb_jsons] = block_jsons(height, last_gen)
-
-    put_mbs_from_db(kb_json, mb_jsons, sort_mbs)
-  end
-
-  defp generation_json(height, last_gen, sort_mbs) do
-    height
-    |> block_jsons(last_gen)
-    |> read_generation(sort_mbs)
-  end
-
-  defp block_jsons(height, last_gen) when height < last_gen do
-    collect_keys(Model.Block, [], {height, <<>>}, &prev/2, fn
-      {^height, _} = k, acc ->
-        {:cont, [Format.to_map(read_block!(k)) | acc]}
-
-      _k, acc ->
-        {:halt, acc}
-    end)
-  end
-
-  defp block_jsons(last_gen, last_gen) do
-    # gets by height once the chain current generation might happen to be higher than last_gen in DB
-    {:ok, %{key_block: kb, micro_blocks: mbs}} =
-      :aec_chain.get_generation_by_height(last_gen, :forward)
-
-    ^last_gen = :aec_blocks.height(kb)
-
-    for block <- [kb | mbs] do
-      header = :aec_blocks.to_header(block)
-      :aec_headers.serialize_for_client(header, prev_block_type(header))
-    end
-  end
-
-  defp read_generation([kb_json | mb_jsons], sort_mbs) do
-    height = kb_json["height"]
-
-    case EtsCache.get(@tab, height) do
-      {kb_json, _indx} ->
-        kb_json
-
-      nil ->
-        kb_json = put_mbs_from_db(kb_json, mb_jsons, sort_mbs)
-        EtsCache.put(@tab, height, kb_json)
-        kb_json
-    end
-  end
-
-  defp put_mbs_from_db(kb_json, mbs_jsons, _sort_mbs = false) do
-    mbs_jsons = db_read_mbs_into_map(mbs_jsons)
-    Map.put(kb_json, "micro_blocks", mbs_jsons)
-  end
-
-  defp put_mbs_from_db(kb_json, mbs_jsons, true) do
-    mbs_jsons =
-      mbs_jsons
-      |> db_read_mbs_into_list()
-      |> sort_mbs_by_time()
-
-    Map.put(kb_json, "micro_blocks", mbs_jsons)
-  end
-
-  defp db_read_mbs_into_map(mbs_jsons), do: db_read_mbs(mbs_jsons, Map.new())
-
-  defp db_read_mbs_into_list(mbs_jsons), do: db_read_mbs(mbs_jsons, [])
-
-  defp db_read_mbs(mbs_jsons, list_or_map) do
-    for %{"hash" => mb_hash} = mb_json <- mbs_jsons, into: list_or_map do
-      micro = :aec_db.get_block(Validate.id!(mb_hash))
-      header = :aec_blocks.to_header(micro)
-
-      txs_json =
-        for tx <- :aec_blocks.txs(micro), into: %{} do
-          %{"hash" => tx_hash} = tx_json = :aetx_sign.serialize_for_client(header, tx)
-          {tx_hash, tx_json}
-        end
-
-      mb_json = Map.put(mb_json, "transactions", txs_json)
-
-      if list_or_map == [] do
-        mb_json
-      else
-        {mb_hash, mb_json}
+    path =
+      case params do
+        %{"range" => range} -> "/v2/blocks/gen/#{range}"
+        %{"range_or_dir" => range_or_dir} -> "/v2/blocks/#{range_or_dir}"
+        _params -> "/v2/blocks/#{direction}"
       end
-    end
-  end
 
-  defp sort_mbs_by_time(micro_blocks) do
-    Enum.sort_by(micro_blocks, fn %{"time" => time} -> time end)
+    uri =
+      if next_cursor do
+        %URI{
+          path: path,
+          query: URI.encode_query(%{"cursor" => next_cursor, "limit" => limit})
+        }
+        |> URI.to_string()
+      end
+
+    json(conn, %{"data" => blocks, "next" => uri})
   end
 
   ##########
 
-  def block_reply(conn, enc_block_hash) when is_binary(enc_block_hash) do
+  defp block_reply(conn, enc_block_hash) when is_binary(enc_block_hash) do
     block_hash = Validate.id!(enc_block_hash)
 
     case :aec_chain.get_block(block_hash) do
@@ -200,7 +110,7 @@ defmodule AeMdwWeb.BlockController do
     end
   end
 
-  def block_reply(conn, {_, mbi} = block_index) do
+  defp block_reply(conn, {_, mbi} = block_index) do
     case read_block(block_index) do
       [block] ->
         type = (mbi == -1 && :key_block_hash) || :micro_block_hash
@@ -213,6 +123,7 @@ defmodule AeMdwWeb.BlockController do
   end
 
   ########
+  # credo:disable-for-next-line
   def swagger_definitions do
     %{
       BlockResponse:
@@ -335,7 +246,7 @@ defmodule AeMdwWeb.BlockController do
                           "sg_QCdArmCTBCvm6SRTqBJfydunNSw5M6civ5pn7qmvrtS5Y1f12zdwiyQMFaN14EVKhrbfURGvzoZH2prwathvQNcoQ11Uy"
                         ],
                         tx: %{
-                          amount: 20000,
+                          amount: 20_000,
                           fee: 19_340_000_000_000,
                           nonce: 2_883_842,
                           payload:
@@ -355,7 +266,7 @@ defmodule AeMdwWeb.BlockController do
                           "sg_Cr6awb2Wgi9h9BbenWkdc8r2r2Gfpvsuu5VqX4iJMnpxZMGtSk1JwXiwBunvssMHg1b5w4JpVyUYT8kcQfRTChVJpeFvq"
                         ],
                         tx: %{
-                          amount: 20000,
+                          amount: 20_000,
                           fee: 19_320_000_000_000,
                           nonce: 2_884_619,
                           payload:
@@ -375,7 +286,7 @@ defmodule AeMdwWeb.BlockController do
                           "sg_5qYU16V7FUmUVc7ct3Zaz2mcbfRPvy4u9TjQaSwKc1aT9hbSNYznQLnvn4NJ4QoA7ZxaQ97GDYvz6G1xCPnKj2DnSwyh7"
                         ],
                         tx: %{
-                          amount: 20000,
+                          amount: 20_000,
                           fee: 19_320_000_000_000,
                           nonce: 2_884_573,
                           payload:
@@ -568,8 +479,9 @@ defmodule AeMdwWeb.BlockController do
     response(400, "Bad request", Schema.ref(:ErrorResponse))
   end
 
-  def swagger_path_blocki(route = %{path: "/blocki/{kbi}"}), do: swagger_path_blocki_kbi(route)
+  @spec swagger_path_blocki(map()) :: binary()
+  def swagger_path_blocki(%{path: "/blocki/{kbi}"} = route), do: swagger_path_blocki_kbi(route)
 
-  def swagger_path_blocki(route = %{path: "/blocki/{kbi}/{mbi}"}),
+  def swagger_path_blocki(%{path: "/blocki/{kbi}/{mbi}"} = route),
     do: swagger_path_blocki_kbi_and_mbi(route)
 end

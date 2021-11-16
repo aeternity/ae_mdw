@@ -4,8 +4,6 @@ defmodule AeMdwWeb.Router do
   alias AeMdwWeb.DataStreamPlug
 
   @paginables [
-    {["v2", "blocks"], &AeMdwWeb.BlockController.stream_plug_hook/1},
-    {["blocks"], &AeMdwWeb.BlockController.stream_plug_hook/1},
     {["names", "auctions"], &AeMdwWeb.NameController.stream_plug_hook/1},
     {["contracts", "logs"], &AeMdwWeb.ContractController.stream_plug_hook/1},
     {["contracts", "calls"], &AeMdwWeb.ContractController.stream_plug_hook/1},

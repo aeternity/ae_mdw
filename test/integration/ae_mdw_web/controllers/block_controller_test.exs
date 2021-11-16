@@ -2,10 +2,11 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
   alias :aeser_api_encoder, as: Enc
+  alias AeMdw.Blocks
   alias AeMdw.Validate
-  alias AeMdw.Db.{Model, Format}
-  alias AeMdwWeb.{BlockController, TestUtil}
-  alias AeMdwWeb.Continuation, as: Cont
+  alias AeMdw.Db.Format
+  alias AeMdw.Db.Model
+  alias AeMdwWeb.TestUtil
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.EtsCache
   require Model
@@ -14,7 +15,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
 
   @moduletag :integration
 
-  @blocks_table AeMdwWeb.BlockController.table()
+  @blocks_table Blocks
   @default_limit 10
   @blocks_cache_threshold 6
 
@@ -87,118 +88,96 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
   end
 
   describe "blocks" do
-    test "get generations when direction=forward and default limit", %{conn: conn} do
+    test "when direction=forward it gets generations starting from 0", %{conn: conn} do
       direction = "forward"
+
       conn = get(conn, "/blocks/#{direction}")
       response = json_response(conn, 200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, 0},
-          @default_limit
-        )
-
       assert Enum.count(response["data"]) == @default_limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+
+      assert response["data"]
+             |> Enum.with_index()
+             |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
 
       conn_next = get(conn, response["next"])
       response_next = json_response(conn_next, 200)
-
-      {:ok, next_data, _has_cont?} =
-        Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, @default_limit},
-          @default_limit
-        )
 
       assert Enum.count(response_next["data"]) == @default_limit
 
-      assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
+      assert response_next["data"]
+             |> Enum.zip(10..19)
+             |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
     end
 
-    test "get generations when direction=backward and limit=3", %{conn: conn} do
+    test "when direction=backward it gets generations backwards", %{conn: conn} do
       direction = "backward"
       limit = 3
+      last_gen = last_gen()
+
       conn = get(conn, "/blocks/#{direction}?limit=#{limit}")
       response = json_response(conn, 200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, 0},
-          limit
-        )
-
       assert Enum.count(response["data"]) == limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+
+      assert response["data"]
+             |> Enum.zip(last_gen..(last_gen - 2))
+             |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
 
       conn_next = get(conn, response["next"])
       response_next = json_response(conn_next, 200)
 
-      {:ok, next_data, _has_cont?} =
-        Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, limit},
-          limit
-        )
-
       assert Enum.count(response_next["data"]) == limit
-      assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
+
+      assert response_next["data"]
+             |> Enum.zip((last_gen - 3)..(last_gen - 5))
+             |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
     end
 
-    test "get generations with numeric range and default limit", %{conn: conn} do
+    test "it gets generations with numeric range and default limit", %{conn: conn} do
       range = "305000-305100"
       conn = get(conn, "/blocks/#{range}")
       response = json_response(conn, 200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, 0},
-          @default_limit
-        )
-
       assert Enum.count(response["data"]) == @default_limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+
+      assert response["data"]
+             |> Enum.zip(305_000..305_100)
+             |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
 
       conn_next = get(conn, response["next"])
       response_next = json_response(conn_next, 200)
 
-      {:ok, next_data, _has_cont?} =
-        Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, @default_limit},
-          @default_limit
-        )
-
       assert Enum.count(response_next["data"]) == @default_limit
-      assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
+
+      assert response_next["data"]
+             |> Enum.zip(305_010..305_100)
+             |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
     end
 
-    test "get generations with numeric range and limit=1", %{conn: conn} do
+    test "it gets generations with numeric range and limit=1", %{conn: conn} do
       range = "305000-305100"
       limit = 1
       conn = get(conn, "/blocks/#{range}?limit=#{limit}")
       response = json_response(conn, 200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, 0},
-          limit
-        )
-
       assert Enum.count(response["data"]) == limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+
+      assert response["data"]
+             |> Enum.zip(305_000..305_100)
+             |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
 
       conn_next = get(conn, response["next"])
       response_next = json_response(conn_next, 200)
 
-      {:ok, next_data, _has_cont?} =
-        Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, limit},
-          limit
-        )
-
       assert Enum.count(response_next["data"]) == limit
-      assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
+
+      assert response_next["data"]
+             |> Enum.zip(305_001..305_100)
+             |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
     end
 
-    test "get uncached generations with range", %{conn: conn} do
+    test "it gets uncached generations with range", %{conn: conn} do
       range_begin = last_gen() - @blocks_cache_threshold + 1
       range_end = last_gen()
       range = "#{range_begin}-#{range_end}"
@@ -206,22 +185,15 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
       conn = get(conn, "/blocks/#{range}?limit=#{limit}")
       response = json_response(conn, 200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, 0},
-          limit
-        )
-
       assert Enum.count(response["data"]) == limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(data)
-      assert nil == EtsCache.get(@blocks_table, range_begin)
-      assert nil == EtsCache.get(@blocks_table, range_end)
 
-      # assert there's nothing next
-      conn_next = get(conn, response["next"])
-      response_next = json_response(conn_next, 200)
+      assert response["data"]
+             |> Enum.zip(range_begin..range_end)
+             |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
 
-      assert Enum.empty?(response_next["data"])
+      assert is_nil(EtsCache.get(@blocks_table, range_begin))
+      assert is_nil(EtsCache.get(@blocks_table, range_end))
+      assert is_nil(response["next"])
     end
 
     test "get a mix of uncached and cached generations with range", %{conn: conn} do
@@ -234,29 +206,26 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
       conn = get(conn, "/blocks/#{range}?limit=#{limit}")
       response = json_response(conn, 200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, 0},
-          limit
-        )
-
       assert Enum.count(response["data"]) == limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(data)
-      assert {%{"height" => ^range_begin}, _} = EtsCache.get(@blocks_table, range_begin)
-      assert nil == EtsCache.get(@blocks_table, range_end)
-      assert nil == EtsCache.get(@blocks_table, range_end - @blocks_cache_threshold + 1)
+
+      assert response["data"]
+             |> Enum.zip(range_begin..range_end)
+             |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
+
+      assert {%{"height" => ^range_begin}, _insert_time} =
+               EtsCache.get(@blocks_table, range_begin)
+
+      assert is_nil(EtsCache.get(@blocks_table, range_end))
+      assert is_nil(EtsCache.get(@blocks_table, range_end - @blocks_cache_threshold + 1))
 
       conn_next = get(conn, response["next"])
       response_next = json_response(conn_next, 200)
 
-      {:ok, next_data, _has_cont?} =
-        Cont.response_data(
-          {BlockController, :blocks, %{}, conn.assigns.scope, limit},
-          limit
-        )
-
       assert Enum.count(response_next["data"]) == remaining
-      assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
+
+      assert response_next["data"]
+             |> Enum.zip((range_begin + limit)..(range_begin + limit * 2 - 1))
+             |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
     end
 
     test "get blocks and sorted microblocks in a single generation", %{conn: conn} do
@@ -271,7 +240,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
         assert mbs == Enum.sort_by(mbs, fn %{"time" => time} -> time end)
       end)
 
-      assert nil == response["next"]
+      assert is_nil(response["next"])
     end
 
     test "get blocks and sorted microblocks in multiple generations", %{conn: conn} do
@@ -289,14 +258,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
       conn_next = get(conn, response["next"])
       response_next = json_response(conn_next, 200)
 
-      {:ok, next_data, _has_cont?} =
-        Cont.response_data(
-          {BlockController, :blocks_v2, %{}, conn.assigns.scope, limit},
-          limit
-        )
-
       assert Enum.count(response_next["data"]) == limit
-      assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
     end
 
     test "renders error when the range is invalid", %{conn: conn} do
