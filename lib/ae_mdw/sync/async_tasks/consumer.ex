@@ -18,7 +18,7 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
 
   @base_sleep_msecs 3_000
   @yield_timeout_msecs 100
-  @task_timeout_msecs 20_000
+  @task_timeout_msecs 30_000
 
   @type_mod %{
     update_aex9_presence: UpdateAex9Presence
