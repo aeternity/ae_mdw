@@ -112,7 +112,9 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
              }
     end
 
-    test "when contract log doesn't have a creation txi, contract_id = nil", %{conn: conn} do
+    test "when contract log doesn't have a creation txi, contract_id shouldn't be nil", %{
+      conn: conn
+    } do
       contract_id = "ct_eJhrbPPS4V97VLKEVbSCJFpdA4uyXiZujQyLqMFoYV88TzDe6"
 
       assert %{"data" => contract_logs} =
@@ -120,15 +122,21 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
                |> get(path(:forward), contract_id: contract_id)
                |> json_response(200)
 
-      [
-        %{
-          "contract_id" => nil,
-          "contract_txi" => -1,
-          "ext_caller_contract_id" => "ct_eJhrbPPS4V97VLKEVbSCJFpdA4uyXiZujQyLqMFoYV88TzDe6",
-          "ext_caller_contract_txi" => -1
-        }
-        | _rest
-      ] = contract_logs
+      assert [
+               %{
+                 "contract_id" => ^contract_id,
+                 "contract_txi" => -1,
+                 "ext_caller_contract_id" =>
+                   "ct_eJhrbPPS4V97VLKEVbSCJFpdA4uyXiZujQyLqMFoYV88TzDe6",
+                 "ext_caller_contract_txi" => -1
+               }
+               | rest
+             ] = contract_logs
+
+      assert Enum.all?(rest, fn
+               %{"contract_id" => ^contract_id} -> true
+               _contract -> false
+             end)
     end
   end
 
