@@ -8,6 +8,7 @@ defmodule AeMdw.Migrations.IndexInnerTxs do
 
   alias AeMdw.Contract
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Mutation
   alias AeMdw.Db.Util
   alias AeMdw.Db.Sync.InnerTx, as: SyncInnerTx
   alias AeMdw.Db.Sync.Transaction, as: SyncTx
@@ -85,9 +86,12 @@ defmodule AeMdw.Migrations.IndexInnerTxs do
     |> Enum.reduce(0, fn wrapper_tx, acc ->
       {tx_type, raw_tx} = aetx_specialize_type(wrapper_tx)
 
-      tx_type
-      |> SyncInnerTx.signed_tx(raw_tx)
-      |> SyncTx.sync_transaction(wrapper_txi, tx_ctx, true)
+      signed_tx = SyncInnerTx.signed_tx(tx_type, raw_tx)
+
+      {signed_tx, wrapper_txi}
+      |> SyncTx.transaction_mutations(tx_ctx, true)
+      |> Enum.each(&Mutation.mutate/1)
+
       acc + 1
     end)
   end

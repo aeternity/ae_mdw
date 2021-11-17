@@ -5,6 +5,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
 
   alias AeMdw.Db.Sync.Transaction
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Mutation
   alias AeMdw.Validate
 
   import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, spend_tx: 3]
@@ -30,13 +31,15 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         txi = @very_high_txi + 1
         block_index = {height, 0}
 
-        fn ->
-          Transaction.sync_transaction(
-            signed_tx,
-            txi,
+        mutations =
+          Transaction.transaction_mutations(
+            {signed_tx, txi},
             {block_index, mb_time, nil},
             false
           )
+
+        fn ->
+          Enum.each(mutations, &Mutation.mutate/1)
 
           {sender_pk, recipient_pk} = pubkeys_from_tx(signed_tx)
           assert sender_pk != recipient_pk
@@ -64,13 +67,15 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         txi = @very_high_txi + 1
         block_index = {height, 0}
 
-        fn ->
-          Transaction.sync_transaction(
-            signed_tx,
-            txi,
+        mutations =
+          Transaction.transaction_mutations(
+            {signed_tx, txi},
             {block_index, mb_time, nil},
             false
           )
+
+        fn ->
+          Enum.each(mutations, &Mutation.mutate/1)
 
           {sender_pk, recipient_pk} = pubkeys_from_tx(signed_tx)
           assert sender_pk == recipient_pk

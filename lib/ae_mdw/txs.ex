@@ -18,9 +18,9 @@ defmodule AeMdw.Txs do
 
   require Model
 
+  @type tx :: map()
   @type txi :: non_neg_integer()
-  # This needs to be an actual type like AeMdw.Db.Tx.t()
-  @type tx :: term()
+  @type tx_hash() :: binary()
   @type cursor :: binary()
   @type query :: %{
           types: term(),

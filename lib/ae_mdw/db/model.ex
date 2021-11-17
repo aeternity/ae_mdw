@@ -2,6 +2,9 @@ defmodule AeMdw.Db.Model do
   @moduledoc """
   Mnesia database model records.
   """
+  alias AeMdw.Blocks
+  alias AeMdw.Txs
+
   require Record
   require Ex2ms
 
@@ -30,6 +33,14 @@ defmodule AeMdw.Db.Model do
   #     index = tx_index (0..), id = tx_id
   @tx_defaults [index: -1, id: <<>>, block_index: {-1, -1}, time: -1]
   defrecord :tx, @tx_defaults
+
+  @type tx ::
+          record(:tx,
+            index: Txs.txi(),
+            id: Txs.tx_hash(),
+            block_index: Blocks.block_index(),
+            time: Blocks.time()
+          )
 
   # txs time index :
   #     index = {mb_time_msecs (0..), tx_index = (0...)},
