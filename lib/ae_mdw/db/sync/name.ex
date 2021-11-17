@@ -198,15 +198,21 @@ defmodule AeMdw.Db.Sync.Name do
   def expire_name(height, plain_name) do
     m_name = cache_through_read!(Model.ActiveName, plain_name)
     m_exp = Model.expiration(index: {height, plain_name})
-    owner = Model.name(m_name, :owner)
-    cache_through_write(Model.InactiveName, m_name)
-    cache_through_write(Model.InactiveNameExpiration, m_exp)
-    cache_through_delete(Model.ActiveName, plain_name)
-    cache_through_delete(Model.ActiveNameOwner, {owner, plain_name})
-    cache_through_delete(Model.ActiveNameExpiration, {height, plain_name})
-    inc(:stat_sync_cache, :inactive_names)
-    dec(:stat_sync_cache, :active_names)
-    log_expired_name(height, plain_name)
+
+    if Model.name(m_name, :expire) == height do
+      owner = Model.name(m_name, :owner)
+      cache_through_write(Model.InactiveName, m_name)
+      cache_through_write(Model.InactiveNameExpiration, m_exp)
+      cache_through_delete(Model.ActiveName, plain_name)
+      cache_through_delete(Model.ActiveNameOwner, {owner, plain_name})
+      cache_through_delete(Model.ActiveNameExpiration, {height, plain_name})
+      inc(:stat_sync_cache, :inactive_names)
+      dec(:stat_sync_cache, :active_names)
+      log_expired_name(height, plain_name)
+    else
+      cache_through_delete(Model.ActiveNameExpiration, {height, plain_name})
+      Log.info("[#{height}] deleted old expiration for name #{plain_name}")
+    end
   end
 
   def expire_auction(height, plain_name, timeout) do
