@@ -1,4 +1,5 @@
 defmodule AeMdw.Db.Sync.Name do
+  # credo:disable-for-this-file
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
