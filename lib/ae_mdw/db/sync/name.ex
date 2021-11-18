@@ -20,6 +20,8 @@ defmodule AeMdw.Db.Sync.Name do
       cache_through_write: 2,
       cache_through_delete: 2,
       cache_through_delete_inactive: 1,
+      node_auction_end: 2,
+      node_name_ttl: 2,
       revoke_or_expire_height: 1,
       revoke_or_expire_height: 2
     ]
@@ -46,6 +48,11 @@ defmodule AeMdw.Db.Sync.Name do
         previous = ok_nil(cache_through_read(Model.InactiveName, plain_name))
         expire = height + :aec_governance.name_claim_max_expiration(proto_vsn)
 
+        if expire != node_name_ttl(plain_name, height + 1) do
+          Log.error("[#{height}] name expire differ for #{plain_name}")
+          :mnesia.abort(:name_expire_differ)
+        end
+
         m_name =
           Model.name(
             index: plain_name,
@@ -70,6 +77,13 @@ defmodule AeMdw.Db.Sync.Name do
 
       timeout ->
         auction_end = height + timeout
+        node_auction_end = node_auction_end(plain_name, height + 1) || 0
+
+        if auction_end != node_auction_end do
+          Log.error("[#{height}] auction end differ for #{plain_name}")
+          :mnesia.abort(:auction_differ)
+        end
+
         m_auction_exp = Model.expiration(index: {auction_end, plain_name})
 
         make_m_bid =
@@ -80,6 +94,11 @@ defmodule AeMdw.Db.Sync.Name do
         m_bid =
           case cache_through_prev(Model.AuctionBid, Name.bid_top_key(plain_name)) do
             :not_found ->
+              if nil != node_auction_end(plain_name, height) do
+                Log.error("[#{height}] missing auction for #{plain_name}")
+                :mnesia.abort(:auction_exists)
+              end
+
               make_m_bid.([{bi, txi}])
 
             {:ok,
@@ -116,6 +135,13 @@ defmodule AeMdw.Db.Sync.Name do
     m_name = cache_through_read!(Model.ActiveName, plain_name)
     old_expire = Model.name(m_name, :expire)
     new_expire = height + delta_ttl
+
+    # there might be two updates in the same height so may not exactly match
+    if delta_ttl > 0 and new_expire > node_name_ttl(plain_name, height + 1) do
+      Log.error("[#{height}] invalid new name expire for #{plain_name}")
+      :mnesia.abort(:name_expire_exceeded)
+    end
+
     updates = [{bi, txi} | Model.name(m_name, :updates)]
     m_name_exp = Model.expiration(index: {new_expire, plain_name})
     m_name = Model.name(m_name, expire: new_expire, updates: updates)
