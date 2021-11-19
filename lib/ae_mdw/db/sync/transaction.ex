@@ -92,7 +92,7 @@ defmodule AeMdw.Db.Sync.Transaction do
         transaction_mutations({inner_signed_tx, txi}, tx_ctx, true)
       end
 
-    :ets.insert(:tx_sync_cache, {txi, tx})
+    :ets.insert(:tx_sync_cache, {txi, model_tx})
 
     [
       WriteTxMutation.new(model_tx, type, txi, mb_time, inner_tx?),
