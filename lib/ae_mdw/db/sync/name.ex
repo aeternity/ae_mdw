@@ -48,11 +48,6 @@ defmodule AeMdw.Db.Sync.Name do
         previous = ok_nil(cache_through_read(Model.InactiveName, plain_name))
         expire = height + :aec_governance.name_claim_max_expiration(proto_vsn)
 
-        if expire != node_name_ttl(plain_name, height + 1) do
-          Log.error("[#{height}] name expire differ for #{plain_name}")
-          :mnesia.abort(:name_expire_differ)
-        end
-
         m_name =
           Model.name(
             index: plain_name,
