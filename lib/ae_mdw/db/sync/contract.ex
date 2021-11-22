@@ -63,7 +63,7 @@ defmodule AeMdw.Db.Sync.Contract do
           {{_ct_pk, _txi, _i}, {_from, to_pk}, _amount} -> to_pk
           _other -> nil
         end)
-        |> Enum.reject(&(&1 == nil))
+        |> Enum.reject(&is_nil/1)
 
       AsyncTasks.DeriveAex9Presence.cache_recipients(ct_pk, recipients)
 

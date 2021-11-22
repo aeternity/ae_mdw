@@ -10,7 +10,7 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
   alias AeMdw.Contract
   alias AeMdw.Db.Contract, as: DBContract
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Util, as: DBU
+  alias AeMdw.Db.Util
   alias AeMdw.Log
 
   require Model
@@ -24,8 +24,8 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
   def process([contract_pk, kbi, mbi, create_txi]) do
     next_hash =
       {kbi, mbi}
-      |> DBU.next_bi!()
-      |> DBU.read_block!()
+      |> Util.next_bi!()
+      |> Util.read_block!()
       |> Model.block(:hash)
 
     Log.info("[:derive_aex9_presence] #{inspect(contract_pk)} ...")
@@ -48,9 +48,10 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
         MapSet.delete(pks, to_pk)
       end)
 
-    :mnesia.sync_transaction(fn ->
-      Enum.each(pks, &DBContract.aex9_write_presence(contract_pk, create_txi, &1))
-    end)
+    {:atomic, :ok} =
+      :mnesia.transaction(fn ->
+        Enum.each(pks, &DBContract.aex9_write_presence(contract_pk, create_txi, &1))
+      end)
 
     :ets.delete(:derive_aex9_presence_cache, contract_pk)
 
@@ -97,7 +98,7 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
       end)
       |> Enum.map(fn signed_tx ->
         {_mod, tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
-        block_hash = Model.block(DBU.read_block!({kbi, mbi}), :hash)
+        block_hash = {kbi, mbi} |> Util.read_block!() |> Model.block(:hash)
 
         {_fun_arg_res, call_rec} =
           Contract.call_tx_info(tx, contract_pk, block_hash, &Contract.to_map/1)
@@ -119,6 +120,6 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
         [_from_pk, _to_pk, <<_amount::256>>] = args
       end
     end)
-    |> Enum.reject(&(&1 == nil))
+    |> Enum.reject(&is_nil/1)
   end
 end

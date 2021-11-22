@@ -162,7 +162,7 @@ defmodule AeMdw.Db.Contract do
     evt_hash == aex9_transfer_evt and aex9_contract_pk != nil
   end
 
-  @spec which_aex9_contract_pubkey(pubkey(), pubkey()) :: pubkey()
+  @spec which_aex9_contract_pubkey(pubkey(), pubkey()) :: pubkey() | nil
   def which_aex9_contract_pubkey(contract_pk, addr) do
     if Contract.is_aex9?(contract_pk) do
       contract_pk
