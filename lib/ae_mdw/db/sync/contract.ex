@@ -1,9 +1,13 @@
 defmodule AeMdw.Db.Sync.Contract do
+  @moduledoc """
+  Saves contract indexed state for creation, calls and events.
+  """
   alias AeMdw.Contract
   alias AeMdw.Db
   alias AeMdw.Db.Contract, as: DBContract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Util, as: DBU
+  alias AeMdw.Sync.AsyncTasks
 
   require Model
 
@@ -43,12 +47,6 @@ defmodule AeMdw.Db.Sync.Contract do
 
   @spec aex9_derive_account_presence!(tuple()) :: true
   def aex9_derive_account_presence!({kbi, mbi}) do
-    next_hash =
-      {kbi, mbi}
-      |> DBU.next_bi!()
-      |> DBU.read_block!()
-      |> Model.block(:hash)
-
     ct_create? = fn
       {{_ct_pk, _txi, -1}, <<_::binary>>, -1} -> true
       {{_ct_pk, _txi, _}, {<<_::binary>>, <<_::binary>>}, _} -> false
@@ -59,20 +57,17 @@ defmodule AeMdw.Db.Sync.Contract do
     |> Enum.group_by(fn {{ct_pk, _, _}, _, _} -> ct_pk end)
     |> Enum.filter(fn {_ct_pk, [first_entry | _]} -> ct_create?.(first_entry) end)
     |> Enum.each(fn {ct_pk, [{{ct_pk, create_txi, -1}, <<_::binary>>, -1} | transfers]} ->
-      {balances, _} = AeMdw.Node.Db.aex9_balances!(ct_pk, {nil, kbi, next_hash})
+      recipients =
+        transfers
+        |> Enum.map(fn
+          {{_ct_pk, _txi, _i}, {_from, to_pk}, _amount} -> to_pk
+          _other -> nil
+        end)
+        |> Enum.reject(&is_nil/1)
 
-      all_pks =
-        balances
-        |> Map.keys()
-        |> Enum.map(fn {:address, pk} -> pk end)
-        |> Enum.into(MapSet.new())
+      AsyncTasks.DeriveAex9Presence.cache_recipients(ct_pk, recipients)
 
-      pks =
-        for {_, {_, to_pk}, _} <- transfers,
-            reduce: all_pks,
-            do: (pks -> MapSet.delete(pks, to_pk))
-
-      Enum.each(pks, &DBContract.aex9_write_presence(ct_pk, create_txi, &1))
+      AsyncTasks.Producer.enqueue(:derive_aex9_presence, [ct_pk, kbi, mbi, create_txi])
     end)
 
     :ets.delete_all_objects(:aex9_sync_cache)

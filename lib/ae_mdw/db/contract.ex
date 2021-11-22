@@ -19,7 +19,7 @@ defmodule AeMdw.Db.Contract do
   import AeMdw.Util, only: [compose: 2, max_256bit_int: 0]
   import AeMdw.Db.Util
 
-  @typep pubkey() :: <<_::256>>
+  @type pubkey() :: <<_::256>>
   @typep call_map() ::
            %{
              function: any(),
@@ -109,8 +109,6 @@ defmodule AeMdw.Db.Contract do
   @spec logs_write(integer(), integer(), tuple()) :: :ok
   def logs_write(create_txi, txi, call_rec) do
     contract_pk = :aect_call.contract_pubkey(call_rec)
-    is_aex9_contract? = Contract.is_aex9?(contract_pk)
-    aex9_transfer_evt = AeMdw.Node.aex9_transfer_event_hash()
     raw_logs = :aect_call.log(call_rec)
 
     raw_logs
@@ -149,12 +147,29 @@ defmodule AeMdw.Db.Contract do
         :mnesia.write(Model.ContractLog, m_log_remote, :write)
       end
 
-      aex9_contract_pk = which_aex9_contract_pubkey(is_aex9_contract?, contract_pk, addr)
+      aex9_contract_pk = which_aex9_contract_pubkey(contract_pk, addr)
 
-      if evt_hash == aex9_transfer_evt and aex9_contract_pk != nil do
+      if is_aex9_transfer?(evt_hash, aex9_contract_pk) do
         write_aex9_records(aex9_contract_pk, txi, i, args)
       end
     end)
+  end
+
+  @spec is_aex9_transfer?(binary(), pubkey()) :: boolean()
+  def is_aex9_transfer?(evt_hash, aex9_contract_pk) do
+    aex9_transfer_evt = AeMdw.Node.aex9_transfer_event_hash()
+
+    evt_hash == aex9_transfer_evt and aex9_contract_pk != nil
+  end
+
+  @spec which_aex9_contract_pubkey(pubkey(), pubkey()) :: pubkey() | nil
+  def which_aex9_contract_pubkey(contract_pk, addr) do
+    if Contract.is_aex9?(contract_pk) do
+      contract_pk
+    else
+      # remotely called contract is aex9?
+      if addr != contract_pk and Contract.is_aex9?(addr), do: addr
+    end
   end
 
   @spec call_fun_args_res(pubkey(), integer()) :: call_map()
@@ -320,15 +335,6 @@ defmodule AeMdw.Db.Contract do
   defp prefix_tester(prefix) do
     len = byte_size(prefix)
     &(byte_size(&1) >= len && :binary.part(&1, 0, len) == prefix)
-  end
-
-  defp which_aex9_contract_pubkey(true = _is_aex9, contract_pk, _addr), do: contract_pk
-
-  defp which_aex9_contract_pubkey(false, contract_pk, addr) do
-    # remotely called contract is aex9?
-    if addr != contract_pk and Contract.is_aex9?(addr) do
-      addr
-    end
   end
 
   defp write_aex9_records(contract_pk, txi, i, [from_pk, to_pk, <<amount::256>>]) do
