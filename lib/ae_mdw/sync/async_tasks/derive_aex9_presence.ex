@@ -18,6 +18,8 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
 
   @microsecs 1_000_000
 
+  @typep pubkey() :: DBContract.pubkey()
+
   @spec process(args :: list()) :: :ok
   def process([contract_pk, kbi, mbi, create_txi]) do
     next_hash =
@@ -55,6 +57,7 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
     :ok
   end
 
+  @spec cache_recipients(pubkey(), list()) :: :ok
   def cache_recipients(_contract_pk, []), do: :ok
 
   def cache_recipients(contract_pk, recipients) do
@@ -63,6 +66,9 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
     end)
   end
 
+  #
+  # Private functions
+  #
   defp get_aex9_recipients(contract_pk, kbi, mbi) do
     case :ets.lookup(:derive_aex9_presence_cache, contract_pk) do
       [] ->

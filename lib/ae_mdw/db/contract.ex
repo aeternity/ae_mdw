@@ -19,7 +19,7 @@ defmodule AeMdw.Db.Contract do
   import AeMdw.Util, only: [compose: 2, max_256bit_int: 0]
   import AeMdw.Db.Util
 
-  @typep pubkey() :: <<_::256>>
+  @type pubkey() :: <<_::256>>
   @typep call_map() ::
            %{
              function: any(),
