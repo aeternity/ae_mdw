@@ -352,15 +352,12 @@ defmodule AeMdw.Contract do
   end
 
   defp contract_init_args(contract_pk, tx_rec) do
-    {:ok, ct_info} = get_info(contract_pk)
-    call_data = :aect_create_tx.call_data(tx_rec)
-
-    case decode_call_data(ct_info, call_data) do
-      {"init", args} ->
-        args_type_value(args)
-
-      {:error, _reason} ->
-        nil
+    with {:ok, ct_info} <- get_info(contract_pk),
+         call_data <- :aect_create_tx.call_data(tx_rec),
+         {"init", args} <- decode_call_data(ct_info, call_data) do
+      args_type_value(args)
+    else
+      {:error, _reason} -> nil
     end
   end
 
