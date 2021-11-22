@@ -176,8 +176,8 @@ defmodule AeMdw.Names do
         {:ok, auction_bid} ->
           {_version, auction_bid} =
             auction_bid
-            |> update_in([:info, :last_bid, :tx, "ttl"], fn val -> val || 0 end)
-            |> pop_in([:info, :last_bid, :tx, "version"])
+            |> update_in([:info, :last_bid, :tx], fn val -> val || 0 end)
+            |> pop_in([:info, :last_bid, :tx])
 
           {:auction, auction_bid}
 
