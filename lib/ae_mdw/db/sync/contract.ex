@@ -1,4 +1,7 @@
 defmodule AeMdw.Db.Sync.Contract do
+  @moduledoc """
+  Saves contract indexed state for creation, calls and events.
+  """
   alias AeMdw.Contract
   alias AeMdw.Db
   alias AeMdw.Db.Contract, as: DBContract
