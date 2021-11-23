@@ -11,7 +11,7 @@ defmodule AeMdw.Db.Sync.Contract do
 
   require Model
 
-  @typep pubkey() :: <<_::256>>
+  @typep pubkey() :: DBContract.pubkey()
 
   @spec create(pubkey(), pubkey(), integer(), {integer(), integer()}) ::
           term() | :invalid_contract
@@ -45,7 +45,7 @@ defmodule AeMdw.Db.Sync.Contract do
     :ok
   end
 
-  @spec aex9_derive_account_presence!(tuple()) :: true
+  @spec aex9_derive_account_presence!(tuple()) :: :ok
   def aex9_derive_account_presence!({kbi, mbi}) do
     ct_create? = fn
       {{_ct_pk, _txi, -1}, <<_::binary>>, -1} -> true
@@ -71,6 +71,8 @@ defmodule AeMdw.Db.Sync.Contract do
     end)
 
     :ets.delete_all_objects(:aex9_sync_cache)
+
+    :ok
   end
 
   @spec events([Contract.event()], integer(), integer()) :: :ok

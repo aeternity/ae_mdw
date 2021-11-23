@@ -8,7 +8,41 @@ defmodule AeMdw.Node do
   all of these functions more explicit.
   """
 
+  @type tx_type() ::
+          :spend_tx
+          | :oracle_register_tx
+          | :oracle_extend_tx
+          | :oracle_query_tx
+          | :oracle_response_tx
+          | :name_preclaim_tx
+          | :name_claim_tx
+          | :name_transfer_tx
+          | :name_update_tx
+          | :name_revoke_tx
+          | :contract_create_tx
+          | :contract_call_tx
+          | :ga_attach_tx
+          | :ga_meta_tx
+          | :channel_create_tx
+          | :channel_deposit_tx
+          | :channel_withdraw_tx
+          | :channel_force_progress_tx
+          | :channel_close_mutual_tx
+          | :channel_close_solo_tx
+          | :channel_slash_tx
+          | :channel_settle_tx
+          | :channel_snapshot_solo_tx
+          | :channel_set_delegates_tx
+          | :channel_offchain_tx
+          | :channel_client_reconnect_tx
+          | :paying_for_tx
+
+  @type signed_tx() :: term()
+
   defmodule Oracle do
+    @moduledoc false
+
+    @spec get!(term(), term()) :: non_neg_integer()
     def get!(_a, _b), do: 0
   end
 

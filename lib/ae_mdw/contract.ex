@@ -15,6 +15,7 @@ defmodule AeMdw.Contract do
   @tab __MODULE__
 
   @type id :: binary()
+  @type grouped_events() :: %{tx_hash() => [event()]}
 
   @typep fname() :: binary()
   @typep tx_hash() :: binary()
@@ -326,7 +327,7 @@ defmodule AeMdw.Contract do
     end)
   end
 
-  @spec get_grouped_events(micro_block()) :: %{tx_hash() => [event()]}
+  @spec get_grouped_events(micro_block()) :: grouped_events()
   def get_grouped_events(micro_block) do
     Enum.group_by(get_events(micro_block), fn {_event_name, %{tx_hash: tx_hash}} -> tx_hash end)
   end

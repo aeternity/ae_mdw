@@ -13,8 +13,11 @@ defmodule AeMdw.Blocks do
 
   require Model
 
-  # This needs to be an actual type like AeMdw.Db.Tx.t()
-  @type block :: term()
+  @type height() :: non_neg_integer()
+  @type mbi() :: non_neg_integer()
+  @type time() :: non_neg_integer()
+  @type block_index() :: {height(), mbi()}
+  @type block :: map()
   @type cursor :: binary()
 
   @typep direction :: Mnesia.direction()

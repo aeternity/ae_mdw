@@ -148,6 +148,11 @@ defmodule AeMdw.Mnesia do
     {keys, cursor}
   end
 
+  @spec write(table(), record()) :: :ok
+  def write(table, record) do
+    :mnesia.write(table, record, :write)
+  end
+
   defp fetch_forward_keys(tab, first_key, limit) do
     keys =
       Stream.unfold({limit, first_key}, fn
