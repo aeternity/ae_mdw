@@ -6,8 +6,6 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
   alias Phoenix.Controller
   alias Plug.Conn
-  alias AeMdw.Node
-  alias AeMdw.Validate
 
   @type opts() :: [order_by: [atom()] | Plug.opts()]
 
@@ -20,20 +18,16 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
   @default_limit 10
   @max_limit 100
 
-  @type_query_params ~w(type type_group)
-  @pagination_param_keys ~w(limit page cursor expand direction scope_type range by)
-
   @default_scope nil
 
   @spec init(opts()) :: opts()
   def init(opts), do: opts
 
   @spec call(Conn.t(), opts()) :: Conn.t()
-  def call(%Conn{params: params, query_params: query_params} = conn, opts) do
+  def call(%Conn{params: params} = conn, opts) do
     with {:ok, direction, scope} <- extract_direction_and_scope(params),
          {:ok, limit} <- extract_limit(params),
          {:ok, order_by} <- extract_order_by(params, opts),
-         {:ok, query} <- extract_query(query_params),
          {:ok, page} <- extract_page(params) do
       conn
       |> assign(:direction, direction)
@@ -42,7 +36,6 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
       |> assign(:expand?, Map.get(params, "expand", "false") != "false")
       |> assign(:order_by, order_by)
       |> assign(:scope, scope)
-      |> assign(:query, query)
       |> assign(:offset, {limit, page})
     else
       {:error, error_msg} ->
@@ -147,48 +140,6 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
           nil -> {:error, "invalid query: by=#{order_by}"}
           valid_order_by -> {:ok, valid_order_by}
         end
-    end
-  end
-
-  defp extract_query(query_params) do
-    query_params
-    |> Enum.reject(fn {key, _val} -> key in @pagination_param_keys end)
-    |> Enum.reduce_while({:ok, %{}}, fn {key, val}, {:ok, top_level} ->
-      kw = (key in @type_query_params && :types) || :ids
-      group = Map.get(top_level, kw, MapSet.new())
-
-      case extract_group(key, val, group) do
-        {:ok, new_group} -> {:cont, {:ok, Map.put(top_level, kw, new_group)}}
-        {:error, reason} -> {:halt, {:error, reason}}
-      end
-    end)
-  end
-
-  defp extract_group("type", val, group) do
-    case Validate.tx_type(val) do
-      {:ok, type} -> {:ok, MapSet.put(group, type)}
-      {:error, {err_kind, offender}} -> {:error, AeMdw.Error.to_string(err_kind, offender)}
-    end
-  end
-
-  defp extract_group("type_group", val, group) do
-    case Validate.tx_group(val) do
-      {:ok, new_group} ->
-        {:ok, new_group |> Node.tx_group() |> MapSet.new() |> MapSet.union(group)}
-
-      {:error, {err_kind, offender}} ->
-        {:error, AeMdw.Error.to_string(err_kind, offender)}
-    end
-  end
-
-  defp extract_group(key, val, group) do
-    {_is_base_id?, validator} = AeMdw.Db.Stream.Query.Parser.classify_ident(key)
-
-    try do
-      {:ok, MapSet.put(group, {key, validator.(val)})}
-    rescue
-      err in [AeMdw.Error.Input] ->
-        {:error, err.message}
     end
   end
 
