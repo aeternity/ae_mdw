@@ -8,6 +8,7 @@ defmodule AeMdw.Transfers do
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Collection
   alias AeMdw.Mnesia
+  alias AeMdw.Txs
   alias AeMdw.Validate
 
   @type cursor :: binary()
@@ -34,10 +35,9 @@ defmodule AeMdw.Transfers do
           {:ok, [transfer()], cursor() | nil} | {:error, reason()}
   def fetch_transfers(direction, range, query, cursor, limit) do
     cursor = deserialize_cursor(cursor)
+    scope = deserialize_scope(range, direction)
 
     try do
-      scope = deserialize_scope(range, direction)
-
       {transfers, next_cursor} =
         query
         |> Map.drop(@pagination_params)
@@ -45,6 +45,8 @@ defmodule AeMdw.Transfers do
         |> Enum.map(&convert_param/1)
         |> Map.new()
         |> build_stream(scope, cursor, direction)
+        |> Stream.drop_while(&(not inside_txi_range?(range, &1)))
+        |> Stream.take_while(&inside_txi_range?(range, &1))
         |> Collection.paginate(limit)
 
       {:ok, Enum.map(transfers, &render/1), serialize_cursor(next_cursor)}
@@ -53,6 +55,21 @@ defmodule AeMdw.Transfers do
         {:error, e.message}
     end
   end
+
+  defp inside_txi_range?(
+         {:txi, %Range{first: first_txi, last: last_txi}},
+         {_gen_txi, _kind, _account_pk, ref_txi}
+       )
+       when first_txi < last_txi,
+       do: not is_nil(ref_txi) and first_txi <= ref_txi and ref_txi <= last_txi
+
+  defp inside_txi_range?(
+         {:txi, %Range{last: last_txi, first: first_txi}},
+         {_gen_txi, _kind, _account_pk, ref_txi}
+       ),
+       do: not is_nil(ref_txi) and last_txi <= ref_txi and ref_txi <= first_txi
+
+  defp inside_txi_range?(_range, _ref_txi), do: true
 
   # Retrieves transfers within the {account, kind_prefix_*, gen_txi, X} range
   # and then takes transfers until one outside of the scope is reached.
@@ -152,12 +169,17 @@ defmodule AeMdw.Transfers do
     {last, first}
   end
 
-  defp deserialize_scope({:txi, %Range{first: _first_txi, last: _last_txi}}, :forward) do
-    raise ErrInput.Scope, value: "txi"
+  defp deserialize_scope({:txi, %Range{first: first_txi, last: last_txi}}, direction) do
+    deserialize_scope(
+      {:gen, %Range{first: txi_to_gen(first_txi), last: txi_to_gen(last_txi)}},
+      direction
+    )
   end
 
-  defp deserialize_scope({:txi, %Range{first: _first_txi, last: _last_txi}}, :backward) do
-    raise ErrInput.Scope, value: "txi"
+  defp txi_to_gen(txi) do
+    %{"block_height" => block_gen} = Txs.fetch!(txi)
+
+    block_gen
   end
 
   defp deserialize_cursor(nil), do: nil

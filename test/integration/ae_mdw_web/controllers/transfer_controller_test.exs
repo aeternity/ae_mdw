@@ -49,7 +49,7 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
       conn_next = get(conn, response["next"])
       response_next = json_response(conn_next, 200)
 
-      assert Enum.count(response_next["data"]) == limit
+      assert ^limit = Enum.count(response_next["data"])
 
       heights2 = Enum.map(response_next["data"], fn %{"height" => height} -> height end)
       reverse_heights2 = Enum.reverse(heights2)
@@ -58,12 +58,58 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
       assert Enum.at(heights2, 0) <= Enum.at(heights, limit - 1)
     end
 
-    test "it fails when getting transfers with a txis range", %{conn: conn} do
-      range = "0-10"
-      conn = get(conn, "/transfers/txi/#{range}")
-      error_msg = "invalid scope: txi"
+    test "when scoping by txis, it returns transfers inside that range", %{conn: conn} do
+      first = 200_000
+      last = 300_000
+      limit = 3
+      conn = get(conn, "/transfers/txi/#{first}-#{last}?limit=#{limit}")
+      response = json_response(conn, 200)
 
-      assert %{"error" => ^error_msg} = json_response(conn, 400)
+      assert ^limit = Enum.count(response["data"])
+
+      ref_txis = Enum.map(response["data"], fn %{"ref_txi" => ref_txi} -> ref_txi end)
+
+      assert ^ref_txis = Enum.sort(ref_txis)
+      assert Enum.all?(ref_txis, fn ref_txi -> first <= ref_txi and ref_txi <= last end)
+
+      conn_next = get(conn, response["next"])
+      response_next = json_response(conn_next, 200)
+
+      assert ^limit = Enum.count(response_next["data"])
+
+      ref_txis2 = Enum.map(response_next["data"], fn %{"ref_txi" => ref_txi} -> ref_txi end)
+
+      assert ^ref_txis2 = Enum.sort(ref_txis2)
+      assert Enum.at(ref_txis2, 0) >= Enum.at(ref_txis, limit - 1)
+      assert Enum.all?(ref_txis2, fn ref_txi -> first <= ref_txi and ref_txi <= last end)
+    end
+
+    test "when scoping by txis backwards, it returns transfers inside that range", %{conn: conn} do
+      first = 300_000
+      last = 200_000
+      limit = 3
+      conn = get(conn, "/transfers/txi/#{first}-#{last}?limit=#{limit}")
+      response = json_response(conn, 200)
+
+      assert ^limit = Enum.count(response["data"])
+
+      ref_txis = Enum.map(response["data"], fn %{"ref_txi" => ref_txi} -> ref_txi end)
+      ref_txis = Enum.reverse(ref_txis)
+
+      assert ^ref_txis = Enum.sort(ref_txis)
+      assert Enum.all?(ref_txis, fn ref_txi -> last <= ref_txi and ref_txi <= first end)
+
+      conn_next = get(conn, response["next"])
+      response_next = json_response(conn_next, 200)
+
+      assert ^limit = Enum.count(response_next["data"])
+
+      ref_txis2 = Enum.map(response_next["data"], fn %{"ref_txi" => ref_txi} -> ref_txi end)
+      ref_txis2 = Enum.reverse(ref_txis2)
+
+      assert ^ref_txis2 = Enum.sort(ref_txis2)
+      assert Enum.at(ref_txis2, 0) <= Enum.at(ref_txis, limit - 1)
+      assert Enum.all?(ref_txis2, fn ref_txi -> last <= ref_txi and ref_txi <= first end)
     end
 
     test "it gets transfers within gen range and limit=3", %{conn: conn} do
