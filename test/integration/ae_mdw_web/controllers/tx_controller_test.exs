@@ -80,7 +80,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
   describe "txi for contract txs" do
     test "get a ContractCreateTx with init args", %{conn: conn} do
-      valid_index = 26_672_260
+      valid_index = 26_672_277
       conn = get(conn, "/txi/#{valid_index}")
 
       expected_args = [
@@ -113,7 +113,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     end
 
     test "get a ContractCreateTx with init logs", %{conn: conn} do
-      valid_index = 27_290_793
+      valid_index = 27_290_810
       conn = get(conn, "/txi/#{valid_index}")
 
       expected_logs = [
