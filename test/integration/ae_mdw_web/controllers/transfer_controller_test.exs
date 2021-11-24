@@ -112,6 +112,40 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
              end)
     end
 
+    test "when providing account filter backwards, it returns transfers filtered by account", %{
+      conn: conn
+    } do
+      account_pk = "ak_21rna3xrD7p32U3vpXPSmanjsnSGnh6BWFPC9Pe7pYxeAW8PpS"
+
+      conn = get(conn, "/transfers/backward?account=#{account_pk}")
+      response = json_response(conn, 200)
+
+      assert @default_limit = Enum.count(response["data"])
+
+      heights = Enum.map(response["data"], fn %{"height" => height} -> height end)
+      reverse_heights = Enum.reverse(heights)
+
+      assert ^reverse_heights = Enum.sort(heights)
+
+      assert Enum.all?(response["data"], fn %{"account_id" => account_id} ->
+               account_id == account_pk
+             end)
+
+      conn_next = get(conn, response["next"])
+      response_next = json_response(conn_next, 200)
+
+      heights2 = Enum.map(response_next["data"], fn %{"height" => height} -> height end)
+      reverse_heights2 = Enum.reverse(heights2)
+
+      assert ^reverse_heights2 = Enum.sort(heights2)
+
+      assert @default_limit = Enum.count(response_next["data"])
+
+      assert Enum.all?(response_next["data"], fn %{"account_id" => account_id} ->
+               account_id == account_pk
+             end)
+    end
+
     test "when providing kind prefix filter, it returns transfers filtered by kind prefix", %{
       conn: conn
     } do
