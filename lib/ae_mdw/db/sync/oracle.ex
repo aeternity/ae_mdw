@@ -143,6 +143,8 @@ defmodule AeMdw.Db.Sync.Oracle do
   end
 
   defp expire_oracle(height, pubkey) do
+    cache_through_delete(Model.ActiveOracleExpiration, {height, pubkey})
+
     oracle_id = Enc.encode(:oracle_pubkey, pubkey)
 
     case cache_through_read(Model.ActiveOracle, pubkey) do
@@ -153,7 +155,6 @@ defmodule AeMdw.Db.Sync.Oracle do
           cache_through_write(Model.InactiveOracleExpiration, m_exp)
 
           cache_through_delete(Model.ActiveOracle, pubkey)
-          cache_through_delete(Model.ActiveOracleExpiration, {height, pubkey})
           AeMdw.Ets.inc(:stat_sync_cache, :inactive_oracles)
           AeMdw.Ets.dec(:stat_sync_cache, :active_oracles)
 
