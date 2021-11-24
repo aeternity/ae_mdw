@@ -84,6 +84,34 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
       assert Enum.all?(ref_txis2, fn ref_txi -> first <= ref_txi and ref_txi <= last end)
     end
 
+    test "when scoping by txis backwards, it returns transfers inside that range", %{conn: conn} do
+      first = 300_000
+      last = 200_000
+      limit = 3
+      conn = get(conn, "/transfers/txi/#{first}-#{last}?limit=#{limit}")
+      response = json_response(conn, 200)
+
+      assert ^limit = Enum.count(response["data"])
+
+      ref_txis = Enum.map(response["data"], fn %{"ref_txi" => ref_txi} -> ref_txi end)
+      ref_txis = Enum.reverse(ref_txis)
+
+      assert ^ref_txis = Enum.sort(ref_txis)
+      assert Enum.all?(ref_txis, fn ref_txi -> last <= ref_txi and ref_txi <= first end)
+
+      conn_next = get(conn, response["next"])
+      response_next = json_response(conn_next, 200)
+
+      assert ^limit = Enum.count(response_next["data"])
+
+      ref_txis2 = Enum.map(response_next["data"], fn %{"ref_txi" => ref_txi} -> ref_txi end)
+      ref_txis2 = Enum.reverse(ref_txis2)
+
+      assert ^ref_txis2 = Enum.sort(ref_txis2)
+      assert Enum.at(ref_txis2, 0) <= Enum.at(ref_txis, limit - 1)
+      assert Enum.all?(ref_txis2, fn ref_txi -> last <= ref_txi and ref_txi <= first end)
+    end
+
     test "it gets transfers within gen range and limit=3", %{conn: conn} do
       first = 5_000
       last = 0
@@ -184,14 +212,15 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
     test "when providing account and kind prefix filters, it returns transfers filtered by account and kind",
          %{conn: conn} do
       account_pk = "ak_21rna3xrD7p32U3vpXPSmanjsnSGnh6BWFPC9Pe7pYxeAW8PpS"
+      kind_prefix = "reward"
 
-      conn = get(conn, "/transfers/forward?account=#{account_pk}")
+      conn = get(conn, "/transfers/forward?account=#{account_pk}&kind=#{kind_prefix}")
       response = json_response(conn, 200)
 
       assert @default_limit = Enum.count(response["data"])
 
-      assert Enum.all?(response["data"], fn %{"account_id" => account_id} ->
-               account_id == account_pk
+      assert Enum.all?(response["data"], fn %{"account_id" => account_id, "kind" => kind} ->
+               account_id == account_pk and String.starts_with?(kind, kind_prefix)
              end)
 
       conn_next = get(conn, response["next"])
@@ -199,8 +228,8 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
 
       assert @default_limit = Enum.count(response_next["data"])
 
-      assert Enum.all?(response_next["data"], fn %{"account_id" => account_id} ->
-               account_id == account_pk
+      assert Enum.all?(response_next["data"], fn %{"account_id" => account_id, "kind" => kind} ->
+               account_id == account_pk and String.starts_with?(kind, kind_prefix)
              end)
     end
 

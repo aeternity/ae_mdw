@@ -63,8 +63,11 @@ defmodule AeMdw.Transfers do
        when first_txi < last_txi,
        do: not is_nil(ref_txi) and first_txi <= ref_txi and ref_txi <= last_txi
 
-  defp inside_txi_range?({:txi, %Range{last: last_txi}}, {_gen_txi, _kind, _account_pk, ref_txi}),
-    do: not is_nil(ref_txi) and last_txi <= ref_txi and ref_txi >= last_txi
+  defp inside_txi_range?(
+         {:txi, %Range{last: last_txi, first: first_txi}},
+         {_gen_txi, _kind, _account_pk, ref_txi}
+       ),
+       do: not is_nil(ref_txi) and last_txi <= ref_txi and ref_txi <= first_txi
 
   defp inside_txi_range?(_range, _ref_txi), do: true
 
