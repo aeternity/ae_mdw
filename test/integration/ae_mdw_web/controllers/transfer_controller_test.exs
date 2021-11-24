@@ -166,14 +166,15 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
     test "when providing account and kind prefix filters, it returns transfers filtered by account and kind",
          %{conn: conn} do
       account_pk = "ak_21rna3xrD7p32U3vpXPSmanjsnSGnh6BWFPC9Pe7pYxeAW8PpS"
+      kind_prefix = "reward"
 
-      conn = get(conn, "/transfers/forward?account=#{account_pk}")
+      conn = get(conn, "/transfers/forward?account=#{account_pk}&kind=#{kind_prefix}")
       response = json_response(conn, 200)
 
       assert @default_limit = Enum.count(response["data"])
 
-      assert Enum.all?(response["data"], fn %{"account_id" => account_id} ->
-               account_id == account_pk
+      assert Enum.all?(response["data"], fn %{"account_id" => account_id, "kind" => kind} ->
+               account_id == account_pk and String.starts_with?(kind, kind_prefix)
              end)
 
       conn_next = get(conn, response["next"])
@@ -181,8 +182,8 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
 
       assert @default_limit = Enum.count(response_next["data"])
 
-      assert Enum.all?(response_next["data"], fn %{"account_id" => account_id} ->
-               account_id == account_pk
+      assert Enum.all?(response_next["data"], fn %{"account_id" => account_id, "kind" => kind} ->
+               account_id == account_pk and String.starts_with?(kind, kind_prefix)
              end)
     end
 
