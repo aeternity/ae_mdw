@@ -3,7 +3,7 @@ defmodule AeMdwWeb.TxController do
   use PhoenixSwagger
 
   alias AeMdw.Log
-  alias AeMdw.Node, as: AE
+  alias AeMdw.Node
   alias AeMdw.Validate
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
@@ -15,6 +15,7 @@ defmodule AeMdwWeb.TxController do
   alias AeMdwWeb.SwaggerParameters
   alias :aeser_api_encoder, as: Enc
   alias Plug.Conn
+  alias AeMdw.Node
 
   require Logger
   require Model
@@ -23,6 +24,8 @@ defmodule AeMdwWeb.TxController do
   import AeMdw.Db.Util
 
   @type_spend_tx "SpendTx"
+  @type_query_params ~w(type type_group)
+  @pagination_param_keys ~w(limit page cursor expand direction scope_type range by)
 
   plug(PaginatedPlug)
 
@@ -38,27 +41,27 @@ defmodule AeMdwWeb.TxController do
 
   @spec txs(Conn.t(), map()) :: Conn.t()
   def txs(%Conn{assigns: assigns, query_params: query_params} = conn, params) do
-    %{direction: direction, limit: limit, cursor: cursor, query: query, scope: scope} = assigns
+    %{direction: direction, limit: limit, cursor: cursor, scope: scope} = assigns
 
-    case Txs.fetch_txs(direction, scope, query, cursor, limit) do
-      {:ok, txs, new_cursor} ->
-        path =
-          case params do
-            %{"scope_type" => scope_type, "range" => range} -> "/txs/#{scope_type}/#{range}"
-            _params -> "/txs/#{direction}"
-          end
+    with {:ok, query} <- extract_query(query_params),
+         {:ok, txs, new_cursor} <- Txs.fetch_txs(direction, scope, query, cursor, limit) do
+      path =
+        case params do
+          %{"scope_type" => scope_type, "range" => range} -> "/txs/#{scope_type}/#{range}"
+          _params -> "/txs/#{direction}"
+        end
 
-        uri =
-          if new_cursor do
-            next_params = Map.merge(query_params, %{"cursor" => new_cursor, "limit" => limit})
+      uri =
+        if new_cursor do
+          next_params = Map.merge(query_params, %{"cursor" => new_cursor, "limit" => limit})
 
-            URI.to_string(%URI{path: path, query: URI.encode_query(next_params)})
-          end
+          URI.to_string(%URI{path: path, query: URI.encode_query(next_params)})
+        end
 
-        txs = handle_spendtx_details(txs, params)
+      txs = handle_spendtx_details(txs, params)
 
-        json(conn, %{"data" => txs, "next" => uri})
-
+      json(conn, %{"data" => txs, "next" => uri})
+    else
       {:error, reason} ->
         send_error(conn, :bad_request, reason)
     end
@@ -81,10 +84,10 @@ defmodule AeMdwWeb.TxController do
 
   @spec id_counts(binary()) :: map()
   def id_counts(<<_::256>> = pk) do
-    for tx_type <- AE.tx_types(), reduce: %{} do
+    for tx_type <- Node.tx_types(), reduce: %{} do
       counts ->
         tx_counts =
-          for {field, pos} <- AE.tx_ids(tx_type), reduce: %{} do
+          for {field, pos} <- Node.tx_ids(tx_type), reduce: %{} do
             tx_counts ->
               case read(Model.IdCount, {tx_type, pos, pk}) do
                 [] ->
@@ -163,6 +166,48 @@ defmodule AeMdwWeb.TxController do
 
   defp tx_reply(conn, model_tx) when is_tuple(model_tx) and elem(model_tx, 0) == :tx do
     json(conn, maybe_add_spend_tx_details(Format.to_map(model_tx)))
+  end
+
+  defp extract_query(query_params) do
+    query_params
+    |> Enum.reject(fn {key, _val} -> key in @pagination_param_keys end)
+    |> Enum.reduce_while({:ok, %{}}, fn {key, val}, {:ok, top_level} ->
+      kw = (key in @type_query_params && :types) || :ids
+      group = Map.get(top_level, kw, MapSet.new())
+
+      case extract_group(key, val, group) do
+        {:ok, new_group} -> {:cont, {:ok, Map.put(top_level, kw, new_group)}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  defp extract_group("type", val, group) do
+    case Validate.tx_type(val) do
+      {:ok, type} -> {:ok, MapSet.put(group, type)}
+      {:error, {err_kind, offender}} -> {:error, AeMdw.Error.to_string(err_kind, offender)}
+    end
+  end
+
+  defp extract_group("type_group", val, group) do
+    case Validate.tx_group(val) do
+      {:ok, new_group} ->
+        {:ok, new_group |> Node.tx_group() |> MapSet.new() |> MapSet.union(group)}
+
+      {:error, {err_kind, offender}} ->
+        {:error, AeMdw.Error.to_string(err_kind, offender)}
+    end
+  end
+
+  defp extract_group(key, val, group) do
+    {_is_base_id?, validator} = AeMdw.Db.Stream.Query.Parser.classify_ident(key)
+
+    try do
+      {:ok, MapSet.put(group, {key, validator.(val)})}
+    rescue
+      err in [AeMdw.Error.Input] ->
+        {:error, err.message}
+    end
   end
 
   ##########
