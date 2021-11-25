@@ -561,14 +561,19 @@ defmodule AeMdw.Db.Format do
          ownership: Name.ownership(n)
        }
 
-  defp auction_bid({plain, {_, _}, auction_end, _, [{_, txi} | _] = bids}, key, tx_fmt, info_fmt),
-    do: %{
+  defp auction_bid({plain, {_, _}, auction_end, _, [{_, txi} | _] = bids}, key, tx_fmt, info_fmt) do
+    last_bid = tx_fmt.(read_tx!(txi))
+    name_ttl = Name.expire_after(auction_end)
+    keys = if Map.has_key?(last_bid, "tx"), do: ["tx", "ttl"], else: [:tx, :ttl]
+    last_bid = put_in(last_bid, keys, name_ttl)
+
+    %{
       key.(:name) => plain,
       key.(:status) => :auction,
       key.(:active) => false,
       key.(:info) => %{
         key.(:auction_end) => auction_end,
-        key.(:last_bid) => tx_fmt.(read_tx!(txi)),
+        key.(:last_bid) => last_bid,
         key.(:bids) => Enum.map(bids, &bi_txi_txi/1)
       },
       key.(:previous) =>
@@ -581,6 +586,7 @@ defmodule AeMdw.Db.Format do
             []
         end
     }
+  end
 
   defp expand_name_auction(nil), do: nil
 

@@ -30,6 +30,10 @@ defmodule AeMdw.Db.Name do
     }
   end
 
+  def expire_after(auction_end) do
+    auction_end + :aec_governance.name_claim_max_expiration(proto_vsn(auction_end))
+  end
+
   ##########
 
   def pointer_kv_raw(ptr),

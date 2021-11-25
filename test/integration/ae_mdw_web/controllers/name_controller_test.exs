@@ -144,6 +144,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
           @default_limit
         )
 
+      data = add_name_ttl(data, "auction")
       assert Enum.count(response["data"]) <= @default_limit
       assert Jason.encode!(response["data"]) == Jason.encode!(data)
 
@@ -156,8 +157,8 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
           @default_limit
         )
 
+      next_data = add_name_ttl(next_data, "auction")
       assert Enum.count(response_next["data"]) == @default_limit
-
       assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
     end
 
@@ -172,6 +173,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
           limit
         )
 
+      data = add_name_ttl(data, "auction")
       assert Enum.count(response["data"]) <= limit
       assert Jason.encode!(response["data"]) == Jason.encode!(data)
     end
@@ -271,6 +273,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
           @default_limit
         )
 
+      data = add_name_ttl(data, "info")
       assert Enum.count(response["data"]) <= @default_limit
       assert Jason.encode!(response["data"]) == Jason.encode!(data)
     end
@@ -286,6 +289,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
           limit
         )
 
+      data = add_name_ttl(data, "info")
       assert Enum.count(response["data"]) <= limit
       assert Jason.encode!(response["data"]) == Jason.encode!(data)
     end
@@ -306,6 +310,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
           limit
         )
 
+      data = add_name_ttl(data, "info")
       assert Enum.count(response["data"]) <= limit
       assert Jason.encode!(response["data"]) == Jason.encode!(data)
     end
@@ -476,7 +481,8 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
                  Enum.map(bids, & &1["tx_index"])
                end)
 
-      assert List.first(response["info"]["bids"]) == response["info"]["last_bid"]
+      assert List.first(response["info"]["bids"]) ==
+               response["info"]["last_bid"] |> pop_in(["tx", "ttl"]) |> elem(1)
     end
 
     test "get name info by encoded hash ", %{conn: conn} do
@@ -635,5 +641,17 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       )
 
     %{"active" => actives, "top_bid" => top_bids}
+  end
+
+  defp add_name_ttl(data, field) do
+    Enum.map(data, fn
+      %{^field => nil} = name ->
+        name
+
+      %{^field => _auction} = name ->
+        %{"auction_end" => auction_end} = Map.get(name, field)
+        ttl = auction_end + :aec_governance.name_claim_max_expiration(Util.proto_vsn(auction_end))
+        put_in(name, [field, "last_bid", "tx", "ttl"], ttl)
+    end)
   end
 end
