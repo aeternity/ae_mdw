@@ -1,4 +1,5 @@
 defmodule AeMdwWeb.TransferController do
+  # credo:disable-for-this-file
   use AeMdwWeb, :controller
   use PhoenixSwagger
 
