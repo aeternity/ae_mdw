@@ -385,7 +385,8 @@ defmodule AeMdwWeb.NameControllerTest do
         {DbUtil, [],
          [
            last_gen!: fn -> 0 end,
-           first_gen!: fn -> 0 end
+           first_gen!: fn -> 0 end,
+           proto_vsn: fn _height -> 1 end,
          ]}
       ] do
         assert %{"data" => auction_bids, "next" => next} =
@@ -425,7 +426,8 @@ defmodule AeMdwWeb.NameControllerTest do
         {DbUtil, [],
          [
            last_gen!: fn -> 0 end,
-           first_gen!: fn -> 0 end
+           first_gen!: fn -> 0 end,
+           proto_vsn: fn _height -> 1 end,
          ]}
       ] do
         assert %{"data" => auctions} =
@@ -462,7 +464,8 @@ defmodule AeMdwWeb.NameControllerTest do
         {DbUtil, [],
          [
            last_gen!: fn -> 0 end,
-           first_gen!: fn -> 0 end
+           first_gen!: fn -> 0 end,
+           proto_vsn: fn _height -> 1 end,
          ]}
       ] do
         assert %{"data" => auctions} =
