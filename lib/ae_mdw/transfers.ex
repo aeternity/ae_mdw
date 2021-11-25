@@ -124,17 +124,17 @@ defmodule AeMdw.Transfers do
     {{first_gen_txi, _first_kind, first_account_pk, _first_ref_txi},
      {last_gen_txi, _last_kind, last_account_pk, _last_ref_txi}} = scope
 
-    cursor =
-      case cursor do
-        nil -> nil
-        {gen_txi, kind, account_pk, ref_txi} -> {kind, gen_txi, account_pk, ref_txi}
-      end
-
     @kinds
     |> Enum.filter(&String.starts_with?(&1, kind_prefix))
     |> Enum.map(fn kind ->
       scope =
         {{kind, first_gen_txi, first_account_pk, nil}, {kind, last_gen_txi, last_account_pk, nil}}
+
+      cursor =
+        case cursor do
+          nil -> nil
+          {gen_txi, _kind, account_pk, ref_txi} -> {kind, gen_txi, account_pk, ref_txi}
+        end
 
       @kind_int_transfer_tx
       |> Collection.stream(direction, scope, cursor)
