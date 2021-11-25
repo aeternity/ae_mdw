@@ -144,9 +144,8 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
           @default_limit
         )
 
-      data = add_name_ttl(data, "auction")
       assert Enum.count(response["data"]) <= @default_limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+      assert Jason.encode!(response["data"]) == Jason.encode!(add_name_ttl(data, "auction"))
 
       conn_next = get(conn, response["next"])
       response_next = json_response(conn_next, 200)
@@ -157,9 +156,10 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
           @default_limit
         )
 
-      next_data = add_name_ttl(next_data, "auction")
       assert Enum.count(response_next["data"]) == @default_limit
-      assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
+
+      assert Jason.encode!(response_next["data"]) ==
+               Jason.encode!(add_name_ttl(next_data, "auction"))
     end
 
     test "get inactive names with limit=6", %{conn: conn} do
@@ -173,9 +173,8 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
           limit
         )
 
-      data = add_name_ttl(data, "auction")
       assert Enum.count(response["data"]) <= limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+      assert Jason.encode!(response["data"]) == Jason.encode!(add_name_ttl(data, "auction"))
     end
 
     test "get inactive names with parameters by=name, direction=forward and limit=4", %{
@@ -273,9 +272,8 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
           @default_limit
         )
 
-      data = add_name_ttl(data, "info")
       assert Enum.count(response["data"]) <= @default_limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+      assert Jason.encode!(response["data"]) == Jason.encode!(add_name_ttl(data, "info"))
     end
 
     test "get auctions with limit=2", %{conn: conn} do
@@ -289,9 +287,8 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
           limit
         )
 
-      data = add_name_ttl(data, "info")
       assert Enum.count(response["data"]) <= limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+      assert Jason.encode!(response["data"]) == Jason.encode!(add_name_ttl(data, "info"))
     end
 
     test "get auctions with parameters by=expiration, direction=forward and limit=3", %{
@@ -310,9 +307,8 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
           limit
         )
 
-      data = add_name_ttl(data, "info")
       assert Enum.count(response["data"]) <= limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+      assert Jason.encode!(response["data"]) == Jason.encode!(add_name_ttl(data, "info"))
     end
 
     test "renders error when parameter by is invalid", %{conn: conn} do
