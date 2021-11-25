@@ -243,6 +243,33 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
              end)
     end
 
+    test "when filtering by kind prefix filter and gen scope backwards, it returns transfers accordingly",
+         %{conn: conn} do
+      kind_prefix = "fee_"
+      first_gen = 104_553
+      last_gen = 0
+
+      conn = get(conn, "/transfers/gen/#{first_gen}-#{last_gen}?kind=#{kind_prefix}")
+      response = json_response(conn, 200)
+
+      assert @default_limit = Enum.count(response["data"])
+
+      assert Enum.all?(response["data"], fn %{"kind" => kind, "height" => height} ->
+               String.starts_with?(kind, kind_prefix) and last_gen <= height and
+                 height <= first_gen
+             end)
+
+      conn_next = get(conn, response["next"])
+      response_next = json_response(conn_next, 200)
+
+      assert @default_limit = Enum.count(response_next["data"])
+
+      assert Enum.all?(response_next["data"], fn %{"kind" => kind, "height" => height} ->
+               String.starts_with?(kind, kind_prefix) and last_gen <= height and
+                 height <= first_gen
+             end)
+    end
+
     test "when providing account and kind prefix filters, it returns transfers filtered by account and kind",
          %{conn: conn} do
       account_pk = "ak_21rna3xrD7p32U3vpXPSmanjsnSGnh6BWFPC9Pe7pYxeAW8PpS"

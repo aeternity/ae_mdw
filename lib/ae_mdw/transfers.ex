@@ -27,6 +27,8 @@ defmodule AeMdw.Transfers do
 
   @pagination_params ~w(limit cursor)
 
+  @kinds ~w(fee_lock_name fee_refund_name fee_spend_name reward_block reward_dev reward_oracle)
+
   @int_transfer_table Model.IntTransferTx
   @target_int_transfer_tx Model.TargetIntTransferTx
   @kind_int_transfer_tx Model.KindIntTransferTx
@@ -117,15 +119,10 @@ defmodule AeMdw.Transfers do
     end)
   end
 
-  # Retrieves transfers within the {kind_prefix_*, gen_txi, account, X} range
-  # and then takes transfers until one outside of the scope is reached.
+  # Retrieves transfers within the {kind_prefix_*, gen_txi, account, X} range.
   defp build_stream(%{kind_prefix: kind_prefix}, scope, cursor, direction) do
-    {{first_gen_txi, first_kind_prefix, first_account_pk, _first_ref_txi},
-     {last_gen_txi, last_kind_prefix, last_account_pk, _last_ref_txi}} = scope
-
-    scope =
-      {{kind_prefix <> first_kind_prefix, first_gen_txi, first_account_pk, nil},
-       {kind_prefix <> last_kind_prefix, last_gen_txi, last_account_pk, nil}}
+    {{first_gen_txi, _first_kind, first_account_pk, _first_ref_txi},
+     {last_gen_txi, _last_kind, last_account_pk, _last_ref_txi}} = scope
 
     cursor =
       case cursor do
@@ -133,14 +130,19 @@ defmodule AeMdw.Transfers do
         {gen_txi, kind, account_pk, ref_txi} -> {kind, gen_txi, account_pk, ref_txi}
       end
 
-    @kind_int_transfer_tx
-    |> Collection.stream(direction, scope, cursor)
-    |> Stream.take_while(fn {_kind, gen_txi, _account_pk, _ref_txi} ->
-      first_gen_txi <= gen_txi and gen_txi <= last_gen_txi
+    @kinds
+    |> Enum.filter(&String.starts_with?(&1, kind_prefix))
+    |> Enum.map(fn kind ->
+      scope =
+        {{kind, first_gen_txi, first_account_pk, nil}, {kind, last_gen_txi, last_account_pk, nil}}
+
+      @kind_int_transfer_tx
+      |> Collection.stream(direction, scope, cursor)
+      |> Stream.map(fn {kind, gen_txi, account_pk, ref_txi} ->
+        {gen_txi, kind, account_pk, ref_txi}
+      end)
     end)
-    |> Stream.map(fn {kind, gen_txi, account_pk, ref_txi} ->
-      {gen_txi, kind, account_pk, ref_txi}
-    end)
+    |> Collection.merge(direction)
   end
 
   defp build_stream(_query, scope, cursor, direction) do
