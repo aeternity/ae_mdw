@@ -1,4 +1,6 @@
 defmodule AeMdw.Db.Name do
+  # credo:disable-for-this-file
+  alias AeMdw.Blocks
   alias AeMdw.Node, as: AE
   alias AeMdw.Db.Model
   alias AeMdw.Db.Format
@@ -28,6 +30,11 @@ defmodule AeMdw.Db.Name do
       actives: collect_vals(Model.ActiveNameOwner, owner_pk),
       top_bids: collect_vals(Model.AuctionOwner, owner_pk)
     }
+  end
+
+  @spec expire_after(Blocks.height()) :: Blocks.height()
+  def expire_after(auction_end) do
+    auction_end + :aec_governance.name_claim_max_expiration(proto_vsn(auction_end))
   end
 
   ##########

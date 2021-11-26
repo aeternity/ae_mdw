@@ -44,7 +44,7 @@ defmodule AeMdw.Db.Sync.Name do
     case :aec_governance.name_claim_bid_timeout(plain_name, proto_vsn) do
       0 ->
         previous = ok_nil(cache_through_read(Model.InactiveName, plain_name))
-        expire = height + :aec_governance.name_claim_max_expiration(proto_vsn)
+        expire = Name.expire_after(height)
 
         m_name =
           Model.name(
@@ -221,7 +221,7 @@ defmodule AeMdw.Db.Sync.Name do
       bid_key = ok!(cache_through_prev(Model.AuctionBid, Name.bid_top_key(plain_name)))
 
     previous = ok_nil(cache_through_read(Model.InactiveName, plain_name))
-    expire = height + :aec_governance.name_claim_max_expiration(proto_vsn(height))
+    expire = Name.expire_after(height)
 
     m_name =
       Model.name(

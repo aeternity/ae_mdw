@@ -4,6 +4,7 @@ defmodule AeMdw.AuctionBids do
   """
 
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Name
   alias AeMdw.Mnesia
   alias AeMdw.Names
   alias AeMdw.Txs
@@ -70,17 +71,20 @@ defmodule AeMdw.AuctionBids do
   end
 
   defp render(
-         {plain_name, {_block_index, _txi}, expire_height, _owner_pk,
+         {plain_name, {_bid_height, _txi}, expire_height, _owner_pk,
           [{_last_bid_bi, last_bid_txi} | _rest_bids] = bids},
          _expand?
        ) do
+    last_bid = Txs.fetch!(last_bid_txi)
+    name_ttl = Name.expire_after(expire_height)
+
     %{
       name: plain_name,
       status: "auction",
       active: false,
       info: %{
         auction_end: expire_height,
-        last_bid: Txs.fetch!(last_bid_txi),
+        last_bid: put_in(last_bid, ["tx", "ttl"], name_ttl),
         bids: Enum.map(bids, &bi_txi_txi/1)
       },
       previous: Names.fetch_previous_list(plain_name)
