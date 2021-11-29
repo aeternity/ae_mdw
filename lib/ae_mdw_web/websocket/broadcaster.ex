@@ -165,7 +165,6 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     do: Poison.encode!(%{"payload" => payload, "subscription" => sub, "source" => source})
 
   defp encode_payload(%{"tx" => %{"type" => "NameUpdateTx"}} = block_tx) do
-    # update_in(block_tx, ["tx", "pointers"] -> &(Enum.map(&1, &update_pointer/1)))
     encode_name_pointers(block_tx)
   end
 
