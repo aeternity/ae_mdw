@@ -30,8 +30,8 @@ defmodule AeMdw.Transfers do
   @kinds ~w(fee_lock_name fee_refund_name fee_spend_name reward_block reward_dev reward_oracle)
 
   @int_transfer_table Model.IntTransferTx
-  @target_int_transfer_tx Model.TargetIntTransferTx
-  @kind_int_transfer_tx Model.KindIntTransferTx
+  @target_kind_int_transfer_tx_table Model.TargetKindIntTransferTx
+  @kind_int_transfer_tx_table Model.KindIntTransferTx
 
   @spec fetch_transfers(direction(), range(), query(), cursor() | nil, limit()) ::
           {:ok, [transfer()], cursor() | nil} | {:error, reason()}
@@ -73,50 +73,34 @@ defmodule AeMdw.Transfers do
 
   defp inside_txi_range?(_range, _ref_txi), do: true
 
-  # Retrieves transfers within the {account, kind_prefix_*, gen_txi, X} range
-  # and then takes transfers until one outside of the scope is reached.
+  # Retrieves transfers within the {account, kind_prefix_*, gen_txi, X} range.
   defp build_stream(%{account_pk: account_pk, kind_prefix: kind_prefix}, scope, cursor, direction) do
-    {{first_gen_txi, first_kind, _first_account_pk, _first_ref_txi},
-     {last_gen_txi, last_kind, _last_account_pk, _last_ref_txi}} = scope
+    {{first_gen_txi, _first_kind, _first_account_pk, _first_ref_txi},
+     {last_gen_txi, _last_kind, _last_account_pk, _last_ref_txi}} = scope
 
-    scope =
-      {{account_pk, first_gen_txi, first_kind, nil}, {account_pk, last_gen_txi, last_kind, nil}}
+    @kinds
+    |> Enum.filter(&String.starts_with?(&1, kind_prefix))
+    |> Enum.map(fn kind ->
+      scope = {{account_pk, kind, first_gen_txi, nil}, {account_pk, kind, last_gen_txi, nil}}
 
-    cursor =
-      case cursor do
-        nil -> nil
-        {gen_txi, kind, account_pk, ref_txi} -> {account_pk, gen_txi, kind, ref_txi}
-      end
+      cursor =
+        case cursor do
+          nil -> nil
+          {gen_txi, _kind, account_pk, ref_txi} -> {account_pk, kind, gen_txi, ref_txi}
+        end
 
-    @target_int_transfer_tx
-    |> Collection.stream(direction, scope, cursor)
-    |> Stream.take_while(fn {_account_pk, _gen_txi, kind, _ref_txi} ->
-      String.starts_with?(kind, kind_prefix)
+      @target_kind_int_transfer_tx_table
+      |> Collection.stream(direction, scope, cursor)
+      |> Stream.map(fn {account_pk, kind, gen_txi, ref_txi} ->
+        {gen_txi, kind, account_pk, ref_txi}
+      end)
     end)
-    |> Stream.map(fn {account_pk, gen_txi, kind, ref_txi} ->
-      {gen_txi, kind, account_pk, ref_txi}
-    end)
+    |> Collection.merge(direction)
   end
 
   # Retrieves transfers within the {account, gen_txi, X, Y} range.
   defp build_stream(%{account_pk: account_pk}, scope, cursor, direction) do
-    {{first_gen_txi, first_kind, _first_account_pk, _first_ref_txi},
-     {last_gen_txi, last_kind, _last_account_pk, _last_ref_txi}} = scope
-
-    scope =
-      {{account_pk, first_gen_txi, first_kind, nil}, {account_pk, last_gen_txi, last_kind, nil}}
-
-    cursor =
-      case cursor do
-        nil -> nil
-        {gen_txi, kind, account_pk, ref_txi} -> {account_pk, gen_txi, kind, ref_txi}
-      end
-
-    @target_int_transfer_tx
-    |> Collection.stream(direction, scope, cursor)
-    |> Stream.map(fn {account_pk, gen_txi, kind, ref_txi} ->
-      {gen_txi, kind, account_pk, ref_txi}
-    end)
+    build_stream(%{account_pk: account_pk, kind_prefix: ""}, scope, cursor, direction)
   end
 
   # Retrieves transfers within the {kind_prefix_*, gen_txi, account, X} range.
@@ -136,7 +120,7 @@ defmodule AeMdw.Transfers do
           {gen_txi, _kind, account_pk, ref_txi} -> {kind, gen_txi, account_pk, ref_txi}
         end
 
-      @kind_int_transfer_tx
+      @kind_int_transfer_tx_table
       |> Collection.stream(direction, scope, cursor)
       |> Stream.map(fn {kind, gen_txi, account_pk, ref_txi} ->
         {gen_txi, kind, account_pk, ref_txi}
