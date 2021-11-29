@@ -75,7 +75,10 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
       [] ->
         contract_pk
         |> read_aex9_transfers_from_mb(kbi, mbi)
-        |> Enum.map(fn [_from_pk, to_pk, <<_amount::256>>] -> to_pk end)
+        |> Enum.flat_map(fn
+          [_from_pk, to_pk, <<_amount::256>>] -> [to_pk]
+          _other -> []
+        end)
 
       recipients ->
         recipients
