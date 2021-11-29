@@ -93,8 +93,8 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
       mblock
       |> :aec_blocks.txs()
       |> Enum.filter(fn signed_tx ->
-        {mod, _tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
-        mod.type() == :contract_call_tx
+        {mod, tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
+        mod.type() == :contract_call_tx and :aect_call_tx.contract_pubkey(tx) == contract_pk
       end)
       |> Enum.map(fn signed_tx ->
         {_mod, tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
