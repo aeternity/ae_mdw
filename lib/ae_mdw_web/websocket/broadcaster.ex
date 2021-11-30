@@ -153,8 +153,73 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     )
   end
 
+  defp encode_message(payload, "Transactions", source),
+    do:
+      Poison.encode!(%{
+        "payload" => encode_payload(payload),
+        "subscription" => "Transactions",
+        "source" => source
+      })
+
   defp encode_message(payload, sub, source),
     do: Poison.encode!(%{"payload" => payload, "subscription" => sub, "source" => source})
+
+  defp encode_payload(%{"tx" => %{"type" => "NameUpdateTx"}} = block_tx) do
+    encode_name_pointers(block_tx)
+  end
+
+  defp encode_payload(
+         %{"tx" => %{"type" => "GAMetaTx", "tx" => %{"tx" => %{"type" => "NameUpdateTx"}}}} =
+           block_tx
+       ) do
+    encode_gameta_inner(block_tx, &encode_name_pointers/2)
+  end
+
+  defp encode_payload(%{"tx" => %{"type" => "OracleRegisterTx"}} = block_tx) do
+    encode_oracle_register(block_tx)
+  end
+
+  defp encode_payload(
+         %{"tx" => %{"type" => "GAMetaTx", "tx" => %{"tx" => %{"type" => "OracleRegisterTx"}}}} =
+           block_tx
+       ) do
+    encode_gameta_inner(block_tx, &encode_oracle_register/2)
+  end
+
+  defp encode_payload(%{"tx" => %{"type" => "OracleQueryTx"}} = block_tx) do
+    encode_oracle_query(block_tx)
+  end
+
+  defp encode_payload(
+         %{"tx" => %{"type" => "GAMetaTx", "tx" => %{"tx" => %{"type" => "OracleQueryTx"}}}} =
+           block_tx
+       ) do
+    encode_gameta_inner(block_tx, &encode_oracle_query/2)
+  end
+
+  defp encode_payload(block_tx), do: block_tx
+
+  defp encode_name_pointers(block_tx, gameta_keys \\ []) do
+    update_in(block_tx, gameta_keys ++ ["tx", "pointers"], fn pointers ->
+      Enum.map(pointers, &encode_pointer/1)
+    end)
+  end
+
+  defp encode_pointer(ptr), do: Map.update(ptr, "key", "", &Base.encode64/1)
+
+  defp encode_oracle_register(block_tx, gameta_keys \\ []) do
+    block_tx
+    |> update_in(gameta_keys ++ ["tx", "query_format"], &Base.encode64/1)
+    |> update_in(gameta_keys ++ ["tx", "response_format"], &Base.encode64/1)
+  end
+
+  defp encode_oracle_query(block_tx, gameta_keys \\ []) do
+    update_in(block_tx, gameta_keys ++ ["tx", "query"], &Base.encode64/1)
+  end
+
+  defp encode_gameta_inner(block_tx, encode_fn) do
+    encode_fn.(block_tx, ["tx", "tx"])
+  end
 
   defp get_ids_from_tx(signed_tx) do
     wrapped_tx = :aetx_sign.tx(signed_tx)
