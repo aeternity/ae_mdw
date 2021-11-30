@@ -49,7 +49,9 @@ defmodule AeMdw.Db.Sync.Transaction do
   @spec sync(non_neg_integer(), non_neg_integer(), non_neg_integer()) :: pos_integer()
   def sync(from_height, to_height, txi) when from_height <= to_height do
     tracker = Sync.progress_logger(&sync_generation/2, @log_freq, &log_msg/2)
-    next_txi = from_height..to_height |> Enum.reduce(txi, tracker)
+    sync_range = from_height..to_height
+    Sync.GenerationsLoader.load(sync_range)
+    next_txi = Enum.reduce(sync_range, txi, tracker)
 
     :mnesia.transaction(fn ->
       [succ_kb] = :mnesia.read(Model.Block, {to_height + 1, -1})
@@ -108,7 +110,9 @@ defmodule AeMdw.Db.Sync.Transaction do
   ################################################################################
 
   defp sync_generation(height, txi) do
-    {key_block, micro_blocks} = AE.Db.get_blocks(height)
+    %{key_block: key_block, micro_blocks: micro_blocks} =
+      Sync.GenerationsCache.get_generation(height)
+
     kb_txi = (txi == 0 && -1) || txi
     kb_header = :aec_blocks.to_key_header(key_block)
     kb_hash = ok!(:aec_headers.hash_header(kb_header))
@@ -130,8 +134,8 @@ defmodule AeMdw.Db.Sync.Transaction do
         Sync.Name.expire(height)
         Sync.Oracle.expire(height - 1)
 
-        height >= AE.min_block_reward_height() &&
-          Sync.IntTransfer.block_rewards(kb_header, kb_hash)
+        if height >= AE.min_block_reward_height(),
+          do: Sync.IntTransfer.block_rewards(kb_header, kb_hash)
 
         Enum.each(mutations, &Mutation.mutate/1)
 
@@ -140,6 +144,8 @@ defmodule AeMdw.Db.Sync.Transaction do
 
         :ok
       end)
+
+    if rem(height, 10) == 0, do: Sync.GenerationsLoader.notify_sync(height)
 
     Broadcaster.broadcast_key_block(key_block, :mdw)
 
@@ -161,15 +167,18 @@ defmodule AeMdw.Db.Sync.Transaction do
     mb_time = :aec_blocks.time_in_msecs(mblock)
     mb_hash = ok!(:aec_headers.hash_header(:aec_blocks.to_micro_header(mblock)))
     mb_txi = (txi == 0 && -1) || txi
-    mb_model = Model.block(index: {height, mbi}, tx_index: mb_txi, hash: mb_hash)
+
+    block_index = {height, mbi}
     mb_txs = :aec_blocks.txs(mblock)
-    events = AeMdw.Contract.get_grouped_events(mblock)
-    tx_ctx = {{height, mbi}, mb_time, events}
+    events = Sync.GenerationsCache.get_mb_events(block_index)
+    tx_ctx = {block_index, mb_time, events}
 
     txs_mutations =
       mb_txs
       |> Enum.with_index(txi)
       |> Enum.flat_map(&transaction_mutations(&1, tx_ctx))
+
+    mb_model = Model.block(index: block_index, tx_index: mb_txi, hash: mb_hash)
 
     mutations =
       List.flatten([

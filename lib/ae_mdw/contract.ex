@@ -329,7 +329,9 @@ defmodule AeMdw.Contract do
 
   @spec get_grouped_events(micro_block()) :: grouped_events()
   def get_grouped_events(micro_block) do
-    Enum.group_by(get_events(micro_block), fn {_event_name, %{tx_hash: tx_hash}} -> tx_hash end)
+    micro_block
+    |> get_events()
+    |> Enum.group_by(fn {_event_name, %{tx_hash: tx_hash}} -> tx_hash end)
   end
 
   #

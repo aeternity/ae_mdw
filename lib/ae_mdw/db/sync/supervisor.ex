@@ -13,6 +13,8 @@ defmodule AeMdw.Db.Sync.Supervisor do
   def init(_args) do
     children = [
       AeMdw.Db.Sync,
+      AeMdw.Db.Sync.GenerationsLoader,
+      AeMdw.Db.Sync.GenerationsCache,
       AeMdw.Db.Sync.ForkDetector
     ]
 
