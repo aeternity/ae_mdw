@@ -309,8 +309,8 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
 
     test "when providing account and kind prefix filters, it returns transfers filtered by account and kind",
          %{conn: conn} do
-      account_pk = "ak_21rna3xrD7p32U3vpXPSmanjsnSGnh6BWFPC9Pe7pYxeAW8PpS"
-      kind_prefix = "reward"
+      account_pk = "ak_JFkVmYeY9iP4gmKexBHx7t1aAj1R6FGvBdWaZRBVLuuzWv83j"
+      kind_prefix = "fee_"
 
       conn = get(conn, "/transfers/forward?account=#{account_pk}&kind=#{kind_prefix}")
       response = json_response(conn, 200)
@@ -324,7 +324,33 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
       conn_next = get(conn, response["next"])
       response_next = json_response(conn_next, 200)
 
-      assert @default_limit = Enum.count(response_next["data"])
+      assert Enum.count(response_next["data"]) > 0
+
+      assert Enum.all?(response_next["data"], fn %{"account_id" => account_id, "kind" => kind} ->
+               account_id == account_pk and String.starts_with?(kind, kind_prefix)
+             end)
+    end
+
+    test "when providing account and kind prefix filters and backwards, it returns transfers accordingly",
+         %{conn: conn} do
+      account_pk = "ak_JFkVmYeY9iP4gmKexBHx7t1aAj1R6FGvBdWaZRBVLuuzWv83j"
+      kind_prefix = "fee_"
+      from = 500_000
+      to = 50_000
+
+      conn = get(conn, "/transfers/gen/#{from}-#{to}?account=#{account_pk}&kind=#{kind_prefix}")
+      response = json_response(conn, 200)
+
+      assert @default_limit = Enum.count(response["data"])
+
+      assert Enum.all?(response["data"], fn %{"account_id" => account_id, "kind" => kind} ->
+               account_id == account_pk and String.starts_with?(kind, kind_prefix)
+             end)
+
+      conn_next = get(conn, response["next"])
+      response_next = json_response(conn_next, 200)
+
+      assert Enum.count(response_next["data"]) > 0
 
       assert Enum.all?(response_next["data"], fn %{"account_id" => account_id, "kind" => kind} ->
                account_id == account_pk and String.starts_with?(kind, kind_prefix)

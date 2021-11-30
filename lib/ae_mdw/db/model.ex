@@ -358,12 +358,12 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :kind_int_transfer_tx, @kind_int_transfer_tx_defaults
 
-  # target_int_transfer_tx
-  @target_int_transfer_tx_defaults [
-    index: {<<>>, {-1, -1}, nil, -1},
+  # target_kind_int_transfer_tx
+  @target_kind_int_transfer_tx_defaults [
+    index: {<<>>, <<>>, {-1, -1}, -1},
     unused: nil
   ]
-  defrecord :target_int_transfer_tx, @target_int_transfer_tx_defaults
+  defrecord :target_kind_int_transfer_tx, @target_kind_int_transfer_tx_defaults
 
   # statistics
   @stat_defaults [
@@ -416,7 +416,7 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.RevOrigin,
       AeMdw.Db.Model.IntTransferTx,
       AeMdw.Db.Model.KindIntTransferTx,
-      AeMdw.Db.Model.TargetIntTransferTx
+      AeMdw.Db.Model.TargetKindIntTransferTx
     ]
   end
 
@@ -527,7 +527,7 @@ defmodule AeMdw.Db.Model do
       :oracle,
       :int_transfer_tx,
       :kind_int_transfer_tx,
-      :target_int_transfer_tx,
+      :target_kind_int_transfer_tx,
       :stat,
       :sum_stat,
       :migrations,
@@ -587,7 +587,8 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.InactiveOracle), do: :oracle
   def record(AeMdw.Db.Model.IntTransferTx), do: :int_transfer_tx
   def record(AeMdw.Db.Model.KindIntTransferTx), do: :kind_int_transfer_tx
-  def record(AeMdw.Db.Model.TargetIntTransferTx), do: :target_int_transfer_tx
+  def record(AeMdw.Db.Model.TargetKindIntTransferTx), do: :target_kind_int_transfer_tx
+
   def record(AeMdw.Db.Model.Stat), do: :stat
   def record(AeMdw.Db.Model.SumStat), do: :sum_stat
 
@@ -627,6 +628,7 @@ defmodule AeMdw.Db.Model do
   def table(:int_transfer_tx), do: AeMdw.Db.Model.IntTransferTx
   def table(:kind_int_transfer_tx), do: AeMdw.Db.Model.KindIntTransferTx
   def table(:target_int_transfer_tx), do: AeMdw.Db.Model.TargetIntTransferTx
+  def table(:target_kind_int_transfer_tx), do: AeMdw.Db.Model.TargetKindIntTransferTx
   def table(:stat), do: AeMdw.Db.Model.Stat
   def table(:sum_stat), do: AeMdw.Db.Model.SumStat
 
@@ -672,7 +674,7 @@ defmodule AeMdw.Db.Model do
   def defaults(:oracle), do: @oracle_defaults
   def defaults(:int_transfer_tx), do: @int_transfer_tx_defaults
   def defaults(:kind_int_transfer_tx), do: @kind_int_transfer_tx_defaults
-  def defaults(:target_int_transfer_tx), do: @target_int_transfer_tx_defaults
+  def defaults(:target_kind_int_transfer_tx), do: @target_kind_int_transfer_tx_defaults
   def defaults(:stat), do: @stat_defaults
   def defaults(:sum_stat), do: @sum_stat_defaults
 

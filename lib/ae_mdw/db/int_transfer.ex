@@ -25,9 +25,12 @@ defmodule AeMdw.Db.IntTransfer do
       Model.int_transfer_tx(index: {{height, pos_txi}, kind, target_pk, ref_txi}, amount: amount)
 
     kind_tx = Model.kind_int_transfer_tx(index: {kind, {height, pos_txi}, target_pk, ref_txi})
-    target_tx = Model.target_int_transfer_tx(index: {target_pk, {height, pos_txi}, kind, ref_txi})
+
+    target_kind_tx =
+      Model.target_kind_int_transfer_tx(index: {target_pk, kind, {height, pos_txi}, ref_txi})
+
     :mnesia.write(Model.IntTransferTx, int_tx, :write)
     :mnesia.write(Model.KindIntTransferTx, kind_tx, :write)
-    :mnesia.write(Model.TargetIntTransferTx, target_tx, :write)
+    :mnesia.write(Model.TargetKindIntTransferTx, target_kind_tx, :write)
   end
 end
