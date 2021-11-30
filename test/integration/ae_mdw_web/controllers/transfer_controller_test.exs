@@ -331,6 +331,32 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
              end)
     end
 
+    test "when providing account and kind prefix filters and backwards, it returns transfers accordingly",
+         %{conn: conn} do
+      account_pk = "ak_JFkVmYeY9iP4gmKexBHx7t1aAj1R6FGvBdWaZRBVLuuzWv83j"
+      kind_prefix = "fee_"
+      from = 500_000
+      to = 50_000
+
+      conn = get(conn, "/transfers/gen/#{from}-#{to}?account=#{account_pk}&kind=#{kind_prefix}")
+      response = json_response(conn, 200)
+
+      assert @default_limit = Enum.count(response["data"])
+
+      assert Enum.all?(response["data"], fn %{"account_id" => account_id, "kind" => kind} ->
+               account_id == account_pk and String.starts_with?(kind, kind_prefix)
+             end)
+
+      conn_next = get(conn, response["next"])
+      response_next = json_response(conn_next, 200)
+
+      assert Enum.count(response_next["data"]) > 0
+
+      assert Enum.all?(response_next["data"], fn %{"account_id" => account_id, "kind" => kind} ->
+               account_id == account_pk and String.starts_with?(kind, kind_prefix)
+             end)
+    end
+
     test "renders error when the range is invalid", %{conn: conn} do
       range = "invalid"
       error_msg = "invalid range: #{range}"
