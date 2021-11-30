@@ -1,5 +1,81 @@
 # Changelog
 
+## [1.3.0](https://www.github.com/aeternity/ae_mdw/compare/v1.2.1...v1.3.0) (2021-11-30)
+
+
+### Features
+
+* add cursor-based pagination to transfers endpoints ([7f0d4d7](https://www.github.com/aeternity/ae_mdw/commit/7f0d4d7017d5ba5eb6ce40a6b03b202e819f2f73))
+* add mutations abstraction to deal with mnesia updates ([#342](https://www.github.com/aeternity/ae_mdw/issues/342)) ([2f565cf](https://www.github.com/aeternity/ae_mdw/commit/2f565cf937875b3d5aa3e3c7e2a1c48fb3636263)), closes [#331](https://www.github.com/aeternity/ae_mdw/issues/331)
+* allow scoping transfers by txis ([#356](https://www.github.com/aeternity/ae_mdw/issues/356)) ([0cf7058](https://www.github.com/aeternity/ae_mdw/commit/0cf70587a920345fb3bdd96c658cbaffb11eafd9)), closes [#307](https://www.github.com/aeternity/ae_mdw/issues/307)
+* async derive_aex9_presence ([66a358a](https://www.github.com/aeternity/ae_mdw/commit/66a358afcb7eb7f18fa03fa9812eff35616a8b50))
+* dedup existing records ([03708c2](https://www.github.com/aeternity/ae_mdw/commit/03708c2b8e7242ea98b09ed40785424c8b20f772))
+* implement cursor-based pagination for scoped oracles & names ([#324](https://www.github.com/aeternity/ae_mdw/issues/324)) ([a82981c](https://www.github.com/aeternity/ae_mdw/commit/a82981c9f62898fb7b4a8d86f264de1e3a580536))
+* long running async tasks ([cd18e3d](https://www.github.com/aeternity/ae_mdw/commit/cd18e3d6f6fe2c9b166b5065b6c7d4e568a6deeb))
+* use cursor-based pagination for blocks endpoints ([#333](https://www.github.com/aeternity/ae_mdw/issues/333)) ([18a859c](https://www.github.com/aeternity/ae_mdw/commit/18a859c8cd8e7bd961e29ff5be0202cb7276fb06))
+
+
+### Bug Fixes
+
+* add name ttl to last_bid tx ([deede55](https://www.github.com/aeternity/ae_mdw/commit/deede55ce0c4957deb0618524bc0c81d4f8277de))
+* allow filtering transfer by kind when backwards direction ([#360](https://www.github.com/aeternity/ae_mdw/issues/360)) ([78c6648](https://www.github.com/aeternity/ae_mdw/commit/78c664828a1445509d09375ad1b9427c3b345e57))
+* always display the correct contract_id on contract logs ([84b06dc](https://www.github.com/aeternity/ae_mdw/commit/84b06dc6e8a237c6e18a105e50060b860974aa82)), closes [#301](https://www.github.com/aeternity/ae_mdw/issues/301)
+* binary encoding for websocket broadcasting ([9ead4d0](https://www.github.com/aeternity/ae_mdw/commit/9ead4d029e7d53f3ed3e4c43d72bd39bcea9ef32))
+* cancel task timer ([a1d11f9](https://www.github.com/aeternity/ae_mdw/commit/a1d11f9c74196fa0d22dcf0ee1a95bf217c8a366))
+* contract might not be present ([65b18df](https://www.github.com/aeternity/ae_mdw/commit/65b18dfa305453057e910b36c94cf93dd6277637))
+* dedup args for any task type ([af7b9c6](https://www.github.com/aeternity/ae_mdw/commit/af7b9c66c7a34385542cc770b34290bbde6e4cd3))
+* filtering aex9 call ([9c374bd](https://www.github.com/aeternity/ae_mdw/commit/9c374bd9e674ef45a1bee40d6f2d0136f60da164))
+* getting aex9 recipients ([6adf87c](https://www.github.com/aeternity/ae_mdw/commit/6adf87cba8426043699f7d5d3bb46f4d1245e3b6))
+* increase task timeout ([8715600](https://www.github.com/aeternity/ae_mdw/commit/871560064a41ba0190a43b30130aece565ebff84))
+* long task without timeout ([f2256c7](https://www.github.com/aeternity/ae_mdw/commit/f2256c772305a73bad6bccf121da8bf1d0bf7deb))
+* reindex transfers to be able to filter by account + kind ([710ee08](https://www.github.com/aeternity/ae_mdw/commit/710ee0811c2e3abc6c982f75181fcb9ecf495484)), closes [#359](https://www.github.com/aeternity/ae_mdw/issues/359)
+* remove old oracle expiration ([369aa50](https://www.github.com/aeternity/ae_mdw/commit/369aa50894b6d87445ba3d1004c2936f0530736e))
+* remove unexisting auction fields ([#350](https://www.github.com/aeternity/ae_mdw/issues/350)) ([9621d66](https://www.github.com/aeternity/ae_mdw/commit/9621d66a1dde505c9f61d6824e484e8b4be481e8))
+* start long task ([71b3404](https://www.github.com/aeternity/ae_mdw/commit/71b34048594e51d84f366990331f3713a4d05dc8))
+* update contracts txi ([e08334c](https://www.github.com/aeternity/ae_mdw/commit/e08334c1b9d7d522239fef2d2b51ac23ed1b25e7))
+* validate name expiration ([13703a4](https://www.github.com/aeternity/ae_mdw/commit/13703a432342cc44d5b2478e3412840c2b006684))
+
+
+### Refactorings
+
+* code review changes ([e5ce624](https://www.github.com/aeternity/ae_mdw/commit/e5ce624b00fb904971db35283672674d5ac5653e))
+* move task sup to async tasks ([689bb60](https://www.github.com/aeternity/ae_mdw/commit/689bb60650d62336e49b0e752991eba88d2504a9))
+* task sets done and simplified long task consumer ([f88f392](https://www.github.com/aeternity/ae_mdw/commit/f88f392619bc5b13812047d9932240b4d4306469))
+* tests comparision of names with auction ([016e357](https://www.github.com/aeternity/ae_mdw/commit/016e35756802349b33722eb070bfc07718611b19))
+
+
+### CI / CD
+
+* credo fixes ([7255760](https://www.github.com/aeternity/ae_mdw/commit/7255760e3abd72a553cf70a0262025cddfe09a6c))
+* credo moduledoc finding ([713558e](https://www.github.com/aeternity/ae_mdw/commit/713558ece7916a052ce9c70d5cbf2bab337f6dce))
+* credo warnings ([d814bdd](https://www.github.com/aeternity/ae_mdw/commit/d814bdda26aa74183331aceab35deb34991e4d64))
+* disable old credo warnings ([bf258d2](https://www.github.com/aeternity/ae_mdw/commit/bf258d20e83a85863bdfdeabbf0566b83db7f355))
+* format and dialyzer ([1d605f4](https://www.github.com/aeternity/ae_mdw/commit/1d605f498a96cb38c9b2ded2c036403a7e4da78d))
+* ignore existing credo warnings ([a953db1](https://www.github.com/aeternity/ae_mdw/commit/a953db1265e4a002f1534392ae2ccda29de6a5a3))
+* linter ([63e4600](https://www.github.com/aeternity/ae_mdw/commit/63e4600e9fb9e3e222ecb6a34ba97e0a32b29180))
+* new plt ([bb7022b](https://www.github.com/aeternity/ae_mdw/commit/bb7022b3478117284e8ff7fd006848e6e476ddf6))
+* new plt ([90b336e](https://www.github.com/aeternity/ae_mdw/commit/90b336ebdc67272fefc3e6b75648bcb1cbbbe320))
+
+
+### Miscellaneous
+
+* remove comment ([1795c2b](https://www.github.com/aeternity/ae_mdw/commit/1795c2ba02263032f98eba60177c2baa8f15028b))
+* use Blocks.height type ([038fb57](https://www.github.com/aeternity/ae_mdw/commit/038fb576a1b0b36cfc30289aed93355dac0213f8))
+
+
+### Testing
+
+* add aditional test case for transfers ([1a89b38](https://www.github.com/aeternity/ae_mdw/commit/1a89b38d8e44d9b19e96d9f629aadb6115e70ccc))
+* add test case with mixed prefixes ([143bef7](https://www.github.com/aeternity/ae_mdw/commit/143bef77be0c879a8ab8027ec4ed8f83ba84bcd3))
+* add testcase for account filtered transfers backwards ([fc4c00e](https://www.github.com/aeternity/ae_mdw/commit/fc4c00e40af44b66f8d4ffc7d3041409034ed3a9))
+* async store tests ([0584ff8](https://www.github.com/aeternity/ae_mdw/commit/0584ff82515ffb1d908ca5cac6ca6b2edf8ec71c))
+* avoid mutual side effects on stats ([1ca419a](https://www.github.com/aeternity/ae_mdw/commit/1ca419a186dabd096b24cae54dbb05f63a662e20))
+* include kind filter on account transfers test ([9b1e3d5](https://www.github.com/aeternity/ae_mdw/commit/9b1e3d51ffde8e56681a78e5f5360f675b9b9690))
+* long tasks test fixed ([a77b5a6](https://www.github.com/aeternity/ae_mdw/commit/a77b5a661d8c7a15a40a2aa27f2fc49c93321000))
+* longs tasks stats ([598c75e](https://www.github.com/aeternity/ae_mdw/commit/598c75e0337b4604c2fa4bb7b9b0e2306b5a79a9))
+* notify and wait for consumer ([fb03a09](https://www.github.com/aeternity/ae_mdw/commit/fb03a09edd9a6bf47da73adf1085fa9ad0121cee))
+* proto_vsn for name unit tests ([f8aaa10](https://www.github.com/aeternity/ae_mdw/commit/f8aaa1047dc35735137ceee4c3a005625ee7dc7b))
+
 ### [1.2.1](https://www.github.com/aeternity/ae_mdw/compare/v1.2.0...v1.2.1) (2021-11-04)
 
 
