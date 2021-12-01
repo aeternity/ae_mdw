@@ -269,7 +269,7 @@ Querying for transactions via `txs` endpoint supports 3 kinds of parameters spec
 - transaction fields
 
 To be able to traverse through the list of transactions, the `next` field
-provided on the current page response is provided as explained in the
+returned on the current page response is provided as explained in the
 [pagination section](#pagination).
 
 ----
