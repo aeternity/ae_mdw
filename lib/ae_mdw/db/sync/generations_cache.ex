@@ -222,13 +222,17 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
       {height, next_mbi} = block_index ->
         %{micro_blocks: micro_blocks} = Map.get(generations, height)
 
-        mblock =
-          micro_blocks
-          |> Enum.with_index()
-          |> Enum.find_value(state, fn {mblock, mbi} -> if mbi == next_mbi, do: mblock end)
+        mblock = find_micro_block(micro_blocks, next_mbi)
 
         run_task(state, mblock, block_index)
     end
+  end
+
+  # Gets a microblock by index
+  defp find_micro_block(micro_blocks, next_mbi) do
+    micro_blocks
+    |> Enum.with_index()
+    |> Enum.find_value(fn {mblock, mbi} -> if mbi == next_mbi, do: mblock end)
   end
 
   # Runs an event task and check if executes quickly
@@ -284,7 +288,7 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
   defp maybe_pop_generation(%{generations: generations} = state, height) do
     generation = Map.get(generations, height)
 
-    if not is_nil(generation) and length(generation.micro_blocks) == 0 do
+    if not is_nil(generation) and generation.micro_blocks == [] do
       pop_in(state, [:generations, height])
     else
       {generation, state}
