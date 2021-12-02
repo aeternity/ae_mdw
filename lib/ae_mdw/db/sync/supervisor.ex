@@ -1,6 +1,8 @@
 defmodule AeMdw.Db.Sync.Supervisor do
   use Supervisor
 
+  alias AeMdw.Db.Sync.EventsTasksSupervisor
+
   ##########
 
   def start_link(),
@@ -12,6 +14,7 @@ defmodule AeMdw.Db.Sync.Supervisor do
   @impl true
   def init(_args) do
     children = [
+      {Task.Supervisor, name: EventsTasksSupervisor},
       AeMdw.Db.Sync,
       AeMdw.Db.Sync.GenerationsLoader,
       AeMdw.Db.Sync.GenerationsCache,

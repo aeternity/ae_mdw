@@ -8,6 +8,8 @@ defmodule AeMdw.Node do
   all of these functions more explicit.
   """
 
+  alias AeMdw.Blocks
+
   @type tx_type() ::
           :spend_tx
           | :oracle_register_tx
@@ -114,7 +116,7 @@ defmodule AeMdw.Node do
     ""
   end
 
-  @spec min_block_reward_height :: non_neg_integer()
+  @spec min_block_reward_height :: Blocks.height()
   def min_block_reward_height do
     0
   end

@@ -15,6 +15,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.WriteLinksMutation
   alias AeMdw.Db.WriteTxMutation
+  alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Txs
   alias AeMdwWeb.Websocket.Broadcaster
@@ -145,7 +146,10 @@ defmodule AeMdw.Db.Sync.Transaction do
         :ok
       end)
 
-    if rem(height, 10) == 0, do: Sync.GenerationsLoader.notify_sync(height)
+    if rem(height, 10) == 0 do
+      Sync.GenerationsLoader.notify_sync(height)
+      Log.info("synced generation #{height}")
+    end
 
     Broadcaster.broadcast_key_block(key_block, :mdw)
 

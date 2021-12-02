@@ -8,7 +8,7 @@ defmodule AeMdw.Db.Sync.GenerationsLoader do
 
   @max_load 300
   @max_load_per_turn 30
-  @load_delay_msecs 1000
+  @load_delay_msecs 5000
 
   @spec start_link([]) :: GenServer.on_start()
   def start_link([]) do
@@ -17,9 +17,12 @@ defmodule AeMdw.Db.Sync.GenerationsLoader do
 
   @impl GenServer
   def init(:ok) do
-    {:ok, %{ranges: [], height_synced: -1}}
+    {:ok, %{ranges: [], height_cached: -1}}
   end
 
+  @doc """
+  Adds a generation range to be loaded.
+  """
   @spec load(Range.t()) :: :ok
   def load(first..last) when first > last do
     GenServer.cast(__MODULE__, {:add_load, last..first})
@@ -29,20 +32,24 @@ defmodule AeMdw.Db.Sync.GenerationsLoader do
     GenServer.cast(__MODULE__, {:add_load, first..last})
   end
 
+  @doc """
+  Sets a cache height to backpressure loading.
+  """
   @spec notify_sync(Blocks.height()) :: :ok
-  def notify_sync(height_synced) do
-    GenServer.cast(__MODULE__, {:notify_sync, height_synced})
+  def notify_sync(height_cached) do
+    GenServer.cast(__MODULE__, {:notify_sync, height_cached})
   end
 
   @impl GenServer
   def handle_cast({:add_load, first..last}, %{ranges: []} = state) do
-    {generation, mb_events_map} = do_load(first)
-    GenerationsCache.add(generation, mb_events_map)
+    first
+    |> do_load()
+    |> GenerationsCache.add()
 
     if first == last do
       {:noreply, state}
     else
-      new_state = %{state | ranges: [(first + 1)..last]}
+      new_state = %{state | ranges: [(first + 1)..last], height_cached: first}
       {:noreply, new_state, {:continue, :load}}
     end
   end
@@ -53,8 +60,8 @@ defmodule AeMdw.Db.Sync.GenerationsLoader do
   end
 
   @impl GenServer
-  def handle_cast({:notify_sync, height_synced}, state) do
-    {:noreply, %{state | height_synced: height_synced}}
+  def handle_cast({:notify_sync, height_cached}, state) do
+    {:noreply, %{state | height_cached: height_cached}}
   end
 
   @impl GenServer
@@ -70,7 +77,7 @@ defmodule AeMdw.Db.Sync.GenerationsLoader do
   #
   # Private functions
   #
-  defp do_load(%{ranges: [range | next_ranges], height_synced: height_synced} = state) do
+  defp do_load(%{ranges: [range | next_ranges], height_cached: height_cached} = state) do
     Log.info("load #{inspect([range | next_ranges])}")
 
     load_range = %Range{
@@ -78,13 +85,14 @@ defmodule AeMdw.Db.Sync.GenerationsLoader do
       last: Enum.min([range.last, range.first + @max_load_per_turn])
     }
 
-    if height_synced != -1 and load_range.last > height_synced + @max_load do
+    if height_cached != -1 and load_range.last > height_cached + @max_load do
       Process.send_after(self(), :load, @load_delay_msecs)
       {:noreply, state}
     else
       Enum.each(load_range, fn height ->
-        {generation, mb_events_map} = do_load(height)
-        GenerationsCache.add(generation, mb_events_map)
+        height
+        |> do_load()
+        |> GenerationsCache.add()
       end)
 
       new_state =
@@ -106,21 +114,10 @@ defmodule AeMdw.Db.Sync.GenerationsLoader do
   defp do_load(height) do
     {key_block, micro_blocks} = Node.Db.get_blocks(height)
 
-    generation = %Generation{
+    %Generation{
       height: height,
       key_block: key_block,
       micro_blocks: micro_blocks
     }
-
-    mb_events_map =
-      micro_blocks
-      |> Enum.with_index()
-      |> Enum.reduce(%{}, fn {mblock, mbi}, acc ->
-        events = AeMdw.Contract.get_grouped_events(mblock)
-
-        Map.put(acc, {height, mbi}, events)
-      end)
-
-    {generation, mb_events_map}
   end
 end
