@@ -17,6 +17,11 @@ defmodule AeMdw.Blocks do
   @type mbi() :: non_neg_integer()
   @type time() :: non_neg_integer()
   @type block_index() :: {height(), mbi()}
+  @type txi_pos() :: non_neg_integer() | -1
+  @type block_index_txi_pos() :: {height(), txi_pos()}
+  @type key_header() :: term()
+  @type key_hash() :: <<_::32>>
+
   @type block :: map()
   @type cursor :: binary()
 

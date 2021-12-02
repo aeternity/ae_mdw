@@ -1,9 +1,9 @@
 defmodule AeMdw.Db.Sync.Name do
   # credo:disable-for-this-file
   alias AeMdw.Db.Format
+  alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
-  alias AeMdw.Db.Sync
   alias AeMdw.Log
   alias AeMdw.Node, as: AE
   alias AeMdw.Validate
@@ -64,7 +64,7 @@ defmodule AeMdw.Db.Sync.Name do
         cache_through_delete_inactive(previous)
 
         lock_amount = (is_lima? && name_fee) || :aec_governance.name_claim_locked_fee()
-        Sync.IntTransfer.fee({height, txi}, :lock_name, account_pk, txi, lock_amount)
+        IntTransfer.fee({height, txi}, :lock_name, account_pk, txi, lock_amount)
         inc(:stat_sync_cache, :active_names)
         previous && dec(:stat_sync_cache, :inactive_names)
 
@@ -75,7 +75,7 @@ defmodule AeMdw.Db.Sync.Name do
         make_m_bid =
           &Model.auction_bid(index: {plain_name, {bi, txi}, auction_end, account_pk, &1})
 
-        Sync.IntTransfer.fee({height, txi}, :spend_name, account_pk, txi, name_fee)
+        IntTransfer.fee({height, txi}, :spend_name, account_pk, txi, name_fee)
 
         m_bid =
           case cache_through_prev(Model.AuctionBid, Name.bid_top_key(plain_name)) do
@@ -90,7 +90,7 @@ defmodule AeMdw.Db.Sync.Name do
 
               %{tx: prev_tx} = read_cached_raw_tx!(prev_txi)
 
-              Sync.IntTransfer.fee(
+              IntTransfer.fee(
                 {height, txi},
                 :refund_name,
                 prev_owner,
@@ -247,7 +247,7 @@ defmodule AeMdw.Db.Sync.Name do
     cache_through_delete_inactive(previous)
 
     %{tx: winning_tx} = read_raw_tx!(txi)
-    Sync.IntTransfer.fee({height, -1}, :lock_name, owner, txi, winning_tx.name_fee)
+    IntTransfer.fee({height, -1}, :lock_name, owner, txi, winning_tx.name_fee)
     inc(:stat_sync_cache, :active_names)
     dec(:stat_sync_cache, :active_auctions)
     log_expired_auction(height, plain_name)
