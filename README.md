@@ -158,7 +158,7 @@ It is also possible that middleware will produce blockchain database (if `aetern
 
 ## Hosted Infrastructure
 
-We currently provide hosted infrastructure at https://mainnet.aeternity.io/mdw/ , all examples here are based on it. 
+We currently provide hosted infrastructure at https://mainnet.aeternity.io/mdw/ , all examples here are based on it.
 
 **NOTE:** Local deploy with default configuration endpoints **will not** containt `/mdw/` segment on the path.
 
@@ -176,9 +176,9 @@ GET  /block/:hash                       - returns block by hash
 GET  /blocki/:kbi                       - returns key block by integer index
 GET  /blocki/:kbi/:mbi                  - returns micro block by integer indices
 GET  /blocks/gen/:range                 - returns generation blocks for continuation link
-GET  /v2/blocks/gen/:range              - same as above but returning the "micro_blocks" in a sorted list by time 
+GET  /v2/blocks/gen/:range              - same as above but returning the "micro_blocks" in a sorted list by time
 GET  /blocks/:range_or_dir              - returns generation blocks (key + micro) for given range (or direction)
-GET  /v2/blocks/:range_or_dir           - same as above but returning the "micro_blocks" in a sorted list by time 
+GET  /v2/blocks/:range_or_dir           - same as above but returning the "micro_blocks" in a sorted list by time
 
 GET  /name/:id                          - returns name information by hash or plain name
 GET  /name/auction/:id                  - returns name information for auction, by hash or plain name
@@ -268,10 +268,9 @@ Querying for transactions via `txs` endpoint supports 3 kinds of parameters spec
 - generic ids
 - transaction fields
 
-Pagination supported via specifying of 2 parameters:
-
-- limit
-- page
+To be able to traverse through the list of transactions, the `next` field
+returned on the current page response is provided as explained in the
+[pagination section](#pagination).
 
 ----
 
@@ -338,7 +337,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?type=channel_create&limi
       "tx_index": 87
     }
   ],
-  "next": "txs/gen/0-265258?limit=1&page=2&type=channel_create"
+  "next": "/txs/forward?cursor=73270&limit=1&type=channel_create"
 }
 ```
 
@@ -375,7 +374,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?type_group=oracle&limit=
       "tx_index": 8891
     }
   ],
-  "next": "txs/gen/0-265260?limit=1&page=2&type_group=oracle"
+  "next": "/txs/forward?cursor=8892&limit=1&type_group=oracle"
 }
 ```
 
@@ -483,7 +482,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?contract=ct_2AfnEfCSZCTE
       "tx_index": 8395071
     }
   ],
-  "next": "txs/gen/0-413783?contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2&page=2"
+  "next": "/txs/forward?contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&cursor=8401663&limit=2"
 }
 ```
 
@@ -520,7 +519,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?oracle=ok_24jcHLTZQfsou7
       "tx_index": 600284
     }
   ],
-  "next": "txs/gen/0-265268?limit=1&oracle=ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&page=2"
+  "next": "/txs/forward?cursor=600286&limit=1&oracle=ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
 }
 ```
 
@@ -579,7 +578,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?channel=ch_22usvXSjYaDPd
       "tx_index": 94616
     }
   ],
-  "next": "txs/gen/0-265269?channel=ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD&limit=2&page=2"
+  "next": "/txs/forward?channel=ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD&cursor=94617&limit=2"
 }
 ```
 
@@ -683,7 +682,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?name_transfer.recipient_
       "tx_index": 11700056
     }
   ],
-  "next": "txs/gen/0-265290?limit=1&name_transfer.recipient_id=ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF&page=2"
+  "next": "/txs/forward?cursor=11734834&limit=1&name_transfer.recipient_id=ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF"
 }
 ```
 
@@ -716,27 +715,22 @@ curl -s "https://mainnet.aeternity.io/mdw/txs/backward?from_id=ak_ozzwBYeatmuN81
 
 #### Pagination
 
-Middleware supports 2 optional query parameters:
+The client can set `limit` explicitly if he wishes to receive different number
+of transactions in the reply than `10` (max `100`).
 
-- limit - limits max number of transactions in the reply (in range 1..1000, default is 10)
-- page - tells which page to return (default is 1)
+The application does not support paginated page-based endpoints. Instead, a
+cursor-based pagination is offered. This means that in order to traverse through
+a list of pages for any of the pagianted endpoints, the `next` field from the
+current page has to be used instead.
 
-The client can set `limit` explicitly if he wishes to receive different number of transactions in the reply than 10.
+Asking for an arbitrary page, without first retrieving it from the `next` field
+is not supported.
 
-The main function of `page` parameter is to support fetching another page from the reply set.
-Middleware has DOS protection, by only allowing to ask for subsequent page.
-Asking for arbitrary page, without requesting a previous one before results in error:
+The `txs` endpoint returns json in shape
+`{"data": [...transactions...], "next": continuation-URL or null}`
 
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&page=10" | jq '.'
-{
-  "error": "random access not supported"
-}
-```
-
-The `txs` endpoint returns json in shape `{"data": [...transactions...], "next": continuation-URL or null}`
-
-The `continuation-URL`, when concatenated with host, can be used to retrieve next page of results.
+The `continuation-URL`, when concatenated with host, **has to be used** to
+retrieve next page of results.
 
 ##### Examples
 
@@ -767,13 +761,13 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?account=ak_E64bTuWTVj9Hu
       "tx_index": 1776073
     }
   ],
-  "next": "txs/gen/0-265354?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&limit=1&page=2"
+  "next": "/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&cursor=1779354&limit=1"
 }
 ```
 
 getting the next transaction by prepending host (https://mainnet.aeternity.io/mdw) to the continuation-URL from last request:
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/txs/gen/0-265354?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&limit=1&page=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&cursor=1779354&limit=1" | jq '.'
 {
   "data": [
     {
@@ -798,7 +792,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/gen/0-265354?account=ak_E64bTuWT
       "tx_index": 1779354
     }
   ],
-  "next": "txs/gen/0-265354?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&limit=1&page=3"
+  "next": "/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&cursor=1779356&limit=1"
 }
 ```
 
@@ -844,7 +838,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/backward?account=ak_24jcHLTZQfso
       "tx_index": 1747960
     }
   ],
-  "next": "txs/gen/265300-0?account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&account=ak_zUQikTiUMNxfKwuAfQVMPkaxdPsXP8uAxnfn6TkZKZCtmRcUD&limit=1&page=2"
+  "next": "/txs/backward?account=ak_zUQikTiUMNxfKwuAfQVMPkaxdPsXP8uAxnfn6TkZKZCtmRcUD&cursor=17022424&limit=1"
 }
 ```
 
@@ -875,7 +869,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?sender_id=ak_26dopN3U2zg
       "tx_index": 9
     }
   ],
-  "next": "txs/gen/0-265304?limit=1&page=2&recipient_id=ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2&sender_id=ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5"
+  "next": "/txs/forward?cursor=41&limit=1&recipient_id=ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2&sender_id=ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5"
 }
 ```
 
@@ -1395,7 +1389,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/blocks/backward?limit=1" | jq '.'
       "version": 4
     }
   ],
-  "next": "blocks/gen/305297-0?limit=1&page=2"
+  "next": "/blocks/backward?cursor=523667&limit=1"
 }
 ```
 
@@ -1467,7 +1461,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/blocks/forward?limit=2" | jq '.'
       "version": 1
     }
   ],
-  "next": "blocks/gen/0-305302?limit=2&page=2"
+  "next": "/blocks/forward?cursor=2&limit=2"
 }
 ```
 
@@ -1734,7 +1728,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/blocks/100000-100100?limit=3" | jq '
       "version": 3
     }
   ],
-  "next": "blocks/gen/100000-100100?limit=3&page=2"
+  "next": "/blocks/100000-100100?cursor=100003&limit=3"
 }
 ```
 
@@ -2322,7 +2316,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/names?limit=2" | jq '.'
       "status": "name"
     }
   ],
-  "next": "names/gen/299097-0?limit=2&page=2"
+  "next": "/names?by=expiration&cursor=703645-jiangjiajia.chain&direction=backward&expand=false&limit=2"
 }
 ```
 
@@ -2390,7 +2384,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/names/inactive?by=expiration&directi
       "status": "name"
     }
   ],
-  "next": "names/inactive/gen/299100-0?by=expiration&direction=forward&limit=2&page=2"
+  "next": "/names/inactive?cursor=16117-philippsdk1.test&direction=forward&expand=false&limit=2"
 }
 ```
 
@@ -2472,7 +2466,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/names/active?by=name&limit=2" | jq '
       "status": "name"
     }
   ],
-  "next": "names/active/gen/299098-0?by=name&limit=2&page=2"
+  "next": "/names/active?cursor=zz.chain&direction=backward&expand=false&limit=2"
 }
 ```
 
@@ -2561,7 +2555,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/names/auctions?limit=2" | jq '.'
       "status": "auction"
     }
   ],
-  "next": "names/auctions/gen/299100-0?limit=2&page=2"
+  "next": "/names/auctions?cursor=548763-svs.chain&direction=backward&expand=false&limit=2"
 }
 ```
 
@@ -3408,7 +3402,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/transfers/gen/50002-70000?limit=3" |
       "ref_txi": 1516090
     }
   ],
-  "next": "transfers/gen/50002-70000?limit=3&page=2"
+  "next": "/transfers/gen/50002-70000?cursor=6KO30C1I5GOJAC9M60SJ2936CLILUR3FCDLLURJ1DLII85B36T6B4BDUUA3PPOSNFT2NRAQ67SAGJVNC35N46VHNTU4SU3V14GOJAC9M60SJ2&limit=3"
 }
 ```
 
@@ -3433,7 +3427,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/transfers/forward?kind=reward_dev&li
       "ref_txi": null
     }
   ],
-  "next": "transfers/gen/0-413776?kind=reward_dev&limit=2&page=2"
+  "next": "/transfers/forward?cursor=74O3IE1J5GMJ293ICLRM2SJ4BTI6ATH4LJOO0LBKD1ROVHB90J0E1JU8HBJ58RP6B4GUU5E9MUST24PSDM428B9H&kind=reward_dev&limit=2"
 }
 ```
 
@@ -3451,7 +3445,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/transfers/backward?account=ak_7myFYv
       "ref_txi": 1680384
     }
   ],
-  "next": "transfers/gen/413780-0?account=ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J&limit=1&page=2"
+  "next": "/transfers/backward?account=ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J&cursor=6KOJ4CHH5GOJCDHG70PJG936CLILUR3FCDLLURJ1DLII83R2BN0S5LH5TCGCSOIPLQM6D3RI7C7ICPVL44G939G2DR91PR6U4GOJCDHG70PJG&limit=1"
 }
 ```
 
@@ -3637,7 +3631,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/oracles?direction=forward&limit=1&ex
       }
     }
   ],
-  "next": "oracles/gen/315780-0?direction=forward&expand=&limit=1&page=2"
+  "next": "/oracles?cursor=6894-ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM&direction=forward&expand=true&limit=1"
 }
 ```
 
@@ -3661,7 +3655,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/oracles/inactive?limit=1" | jq '.'
       "register": 15198855
     }
   ],
-  "next": "oracles/inactive/gen/315780-0?limit=1&page=2"
+  "next": "/oracles/inactive?cursor=507223-ok_26QSujxMBhg67YhbgvjQvsFfGdBrK9ddG4rENEGUq2EdsyfMTC&direction=backward&expand=false&limit=1"
 }
 ```
 
@@ -3712,7 +3706,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/oracles/active?limit=1&expand" | jq 
       }
     }
   ],
-  "next": "oracles/active/gen/315799-0?expand=&limit=1&page=2"
+  "next": "/oracles/active?cursor=1289003-ok_f9vDQvr1cFAQAesYA16vjvBX9TFeWUB4Gb7WJkwfYSkL1CpDx&direction=backward&expand=true&limit=1"
 }
 ```
 
@@ -4222,7 +4216,7 @@ These endpoints allows pagination, with typical `forward/backward` direction or 
 
 The websocket interface, which listens by default on port `4001`, gives asynchronous notifications when various events occur.
 Each event is notified twice: firstly when the Node has synced the block or transaction and after when AeMdw indexation is done.
-In order to differentiate, please check the "source" field on [Publishing Message format](#pub-message-format). 
+In order to differentiate, please check the "source" field on [Publishing Message format](#pub-message-format).
 
 ### Subscription Message format
 
@@ -4279,7 +4273,7 @@ Actual chain data is wrapped in a JSON structure identifying the subscription to
 }
 ```
 
-When the `source` is "node" it means that the Node is synching the block or transaction (not yet indexed by AeMdw). 
+When the `source` is "node" it means that the Node is synching the block or transaction (not yet indexed by AeMdw).
 If it's "mdw", it indicates that it's already avaiable through AeMdw Api.
 
 ## Tests
@@ -4856,5 +4850,5 @@ On merge to master:
 In order to anticipate some of these checks one might run `mix git_hooks.install`.
 This installs pre_commit and pre_push checks as defined by `config :git_hooks` in `dev.tools.exs`.
 
-If sure about the change, if it was for example in a integration test case and it was already tested and formatted, 
+If sure about the change, if it was for example in a integration test case and it was already tested and formatted,
 one can use `git push --no-verify` to bypass the hook.

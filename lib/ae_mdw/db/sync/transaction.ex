@@ -10,6 +10,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Sync
   alias AeMdw.Db.Aex9AccountPresenceMutation
   alias AeMdw.Db.ContractEventsMutation
+  alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.MnesiaWriteMutation
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.WriteFieldsMutation
@@ -123,9 +124,17 @@ defmodule AeMdw.Db.Sync.Transaction do
     :ets.delete_all_objects(:ct_create_sync_cache)
     :ets.delete_all_objects(:tx_sync_cache)
 
-    initial_mutations = [
-      MnesiaWriteMutation.new(Model.Block, kb_model)
-    ]
+    block_rewards_mutation =
+      if height >= AE.min_block_reward_height() do
+        IntTransfer.block_rewards_mutation(height, kb_header, kb_hash)
+      end
+
+    initial_mutations =
+      [
+        block_rewards_mutation,
+        MnesiaWriteMutation.new(Model.Block, kb_model)
+      ]
+      |> Enum.reject(&is_nil/1)
 
     {next_txi, _mb_index, mutations} =
       Enum.reduce(micro_blocks, {txi, 0, initial_mutations}, &micro_block_mutations/2)
@@ -134,9 +143,6 @@ defmodule AeMdw.Db.Sync.Transaction do
       :mnesia.transaction(fn ->
         Sync.Name.expire(height)
         Sync.Oracle.expire(height - 1)
-
-        if height >= AE.min_block_reward_height(),
-          do: Sync.IntTransfer.block_rewards(kb_header, kb_hash)
 
         Enum.each(mutations, &Mutation.mutate/1)
 
