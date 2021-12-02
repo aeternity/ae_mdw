@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.Sync.GenerationsCache do
   @moduledoc """
-  Cache of load AeMdw.Db.Sync.Generation(s).
+  Cache of loaded AeMdw.Db.Sync.Generation(s)
+  and runs async tasks to load microblock contract events.
   """
   use GenServer
 
@@ -19,11 +20,21 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
   @typep generations() :: %{Blocks.height() => Generation.t()}
   @type microblocks_events() :: %{Blocks.block_index() => Contract.grouped_events()}
 
+  @doc """
+  Starts a single blocks consumer.
+  """
   @spec start_link([]) :: GenServer.on_start()
   def start_link([]) do
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
+  @doc """
+  The state is comprised of:
+  - generations: map of height to generation blocks
+  - pending_mbs: a set of microblock indexes with pending contract events to run
+  - tasks: map of task reference to running contract events task
+  - mbs_events: map of microblock index to contract events
+  """
   @impl GenServer
   @spec init(:ok) ::
           {:ok,
@@ -37,21 +48,41 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
     {:ok, %{generations: %{}, pending_mbs: MapSet.new(), tasks: %{}, mbs_events: %{}}}
   end
 
+  #
+  # Client
+  #
+
+  @doc """
+  Add produced generation blocks.
+  """
   @spec add(Generation.t()) :: :ok
   def add(%Generation{} = generation) do
     GenServer.cast(__MODULE__, {:add, generation})
   end
 
+  @doc """
+  Gets key and micro blocks of a generation.
+  """
   @spec get_generation(Blocks.height()) :: Generation.t()
   def get_generation(height) do
     GenServer.call(__MODULE__, {:get_generation, height}, @get_timeout)
   end
 
+  @doc """
+  Consumes contract events of a micro block.
+  """
   @spec get_mb_events({Blocks.height(), Blocks.mbi()}) :: Contract.grouped_events()
   def get_mb_events({_height, _mbi} = block_index) do
     GenServer.call(__MODULE__, {:get_mb_events, block_index}, @get_events_timeout)
   end
 
+  #
+  # Server
+  #
+
+  @doc """
+  Adds produced generation blocks.
+  """
   @impl GenServer
   def handle_cast({:add, generation}, state) do
     new_state =
@@ -62,6 +93,9 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
     {:noreply, new_state}
   end
 
+  @doc """
+  Gets generation blocks if available otherwise schedule reply.
+  """
   @impl GenServer
   def handle_call({:get_generation, height}, caller, state) do
     {generation, state} = maybe_pop_generation(state, height)
@@ -74,6 +108,9 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
     end
   end
 
+  @doc """
+  Consumes contract events if available otherwise schedule reply.
+  """
   @impl GenServer
   def handle_call({:get_mb_events, block_index}, caller, state) do
     {grouped_events, state} = pop_in(state, [:mbs_events, block_index])
@@ -86,6 +123,9 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
     end
   end
 
+  @doc """
+  Gets generation after reescheduling.
+  """
   @impl GenServer
   def handle_info({:get_generation, caller, height} = request, state) do
     {generation, state} = maybe_pop_generation(state, height)
@@ -99,6 +139,9 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
     {:noreply, state}
   end
 
+  @doc """
+  Consumes contract events after reescheduling.
+  """
   @impl GenServer
   def handle_info({:get_mb_events, caller, block_index} = request, state) do
     {grouped_events, state} = pop_in(state, [:mbs_events, block_index])
@@ -117,6 +160,9 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
     {:noreply, new_state}
   end
 
+  @doc """
+  Handles contract events task result.
+  """
   @impl GenServer
   def handle_info({ref, {block_index, mb_events}}, state) do
     Process.demonitor(ref, [:flush])
@@ -132,6 +178,7 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
   @doc """
   Just acknowledge/ignore the DOWN message when reason is success.
   """
+  @impl GenServer
   def handle_info({:DOWN, _ref, :process, _pid, :normal}, state) do
     {:noreply, state}
   end
@@ -139,6 +186,7 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
   #
   # Private functions
   #
+  # Runs ad-hoc events task or add it to pending set.
   defp add_events_tasks(state, height) do
     %{micro_blocks: micro_blocks} = Map.get(state.generations, height)
 
@@ -161,6 +209,7 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
     end)
   end
 
+  # Runs next task from pending set
   defp run_next_events_task(%{generations: generations, pending_mbs: pending_mbs} = state) do
     pending_mbs
     |> MapSet.to_list()
@@ -182,6 +231,7 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
     end
   end
 
+  # Runs an event task and check if executes quickly
   defp run_task(state, nil, _block_index), do: state
 
   defp run_task(state, mblock, block_index) do
@@ -200,6 +250,7 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
     |> yield_task(task.ref)
   end
 
+  # Checks task result and update tasks execution state
   defp yield_tasks(%{tasks: tasks} = state) do
     tasks
     |> Map.keys()
@@ -229,17 +280,18 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
     new_state
   end
 
+  # Gets generation blocks and consumes it only on last mbi read (txs needed for microblocks events tasks)
   defp maybe_pop_generation(%{generations: generations} = state, height) do
     generation = Map.get(generations, height)
 
     if not is_nil(generation) and length(generation.micro_blocks) == 0 do
       pop_in(state, [:generations, height])
     else
-      # poped on last mbi (txs needed for microblocks events tasks)
       {generation, state}
     end
   end
 
+  # Deletes a generation if the microblock index is the last one (fully consumed)
   defp cleanup_generation(%{generations: generations} = state, {height, mbi}) do
     generation = Map.get(generations, height)
 
@@ -250,6 +302,7 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
     end
   end
 
+  # Schedules to read the state again
   defp schedule_reply(request) do
     Process.send_after(self(), request, @get_delay_msecs)
   end
