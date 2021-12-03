@@ -7,6 +7,7 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
 
   alias AeMdw.Blocks
   alias AeMdw.Contract
+  alias AeMdw.Log
   alias AeMdw.Db.Sync.Generation
   alias AeMdw.Db.Sync.EventsTasksSupervisor
 
@@ -16,6 +17,7 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
 
   @yield_timeout_msecs 100
   @max_events_tasks 2
+  @task_warn_secs 60
 
   @typep generations() :: %{Blocks.height() => Generation.t()}
   @type microblocks_events() :: %{Blocks.block_index() => Contract.grouped_events()}
@@ -113,14 +115,8 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
   """
   @impl GenServer
   def handle_call({:get_mb_events, block_index}, caller, state) do
-    {grouped_events, state} = pop_in(state, [:mbs_events, block_index])
-
-    if is_nil(grouped_events) do
-      schedule_reply({:get_mb_events, caller, block_index})
-      {:noreply, state}
-    else
-      {:reply, grouped_events, state}
-    end
+    new_state = handle_get_mb_events(block_index, caller, state)
+    {:noreply, new_state}
   end
 
   @doc """
@@ -143,20 +139,8 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
   Consumes contract events after reescheduling.
   """
   @impl GenServer
-  def handle_info({:get_mb_events, caller, block_index} = request, state) do
-    {grouped_events, state} = pop_in(state, [:mbs_events, block_index])
-
-    new_state =
-      if is_nil(grouped_events) do
-        schedule_reply(request)
-
-        state
-      else
-        GenServer.reply(caller, grouped_events)
-
-        cleanup_generation(state, block_index)
-      end
-
+  def handle_info({:get_mb_events, block_index, caller}, state) do
+    new_state = handle_get_mb_events(block_index, caller, state)
     {:noreply, new_state}
   end
 
@@ -190,10 +174,8 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
   defp add_events_tasks(state, height) do
     %{micro_blocks: micro_blocks} = Map.get(state.generations, height)
 
-    updated_state =
-      state
-      |> yield_tasks()
-      |> run_next_events_task()
+    # runs as much as possible from pending to avoid "jumping the queue"
+    updated_state = yield_and_run_tasks(state)
 
     micro_blocks
     |> Enum.with_index()
@@ -206,6 +188,44 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
       else
         %{new_state | pending_mbs: MapSet.put(pending_mbs, block_index)}
       end
+    end)
+  end
+
+  # Handles reply to get events of a microblock
+  defp handle_get_mb_events(block_index, caller, state) do
+    case pop_in(state, [:mbs_events, block_index]) do
+      {nil, state} ->
+        state
+        |> yield_and_run_tasks()
+        |> pop_in([:mbs_events, block_index])
+        |> case do
+          {nil, state} ->
+            schedule_reply({:get_mb_events, block_index, caller})
+
+            state
+
+          {grouped_events, state} ->
+            reply_mb_event(caller, grouped_events, block_index, state)
+        end
+
+      {grouped_events, state} ->
+        reply_mb_event(caller, grouped_events, block_index, state)
+    end
+  end
+
+  # Replies the microblock event
+  defp reply_mb_event(caller, grouped_events, block_index, state) do
+    GenServer.reply(caller, grouped_events)
+
+    cleanup_generation(state, block_index)
+  end
+
+  # Yields tasks and always tries to run next ones from the pending set
+  defp yield_and_run_tasks(state) do
+    updated_state = yield_tasks(state)
+
+    Enum.reduce(1..@max_events_tasks, updated_state, fn _i, new_state ->
+      run_next_events_task(new_state)
     end)
   end
 
@@ -235,7 +255,7 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
     |> Enum.find_value(fn {mblock, mbi} -> if mbi == next_mbi, do: mblock end)
   end
 
-  # Runs an event task and check if executes quickly
+  # Runs an event task (without yielding to avoid blocking the Cache for reading)
   defp run_task(state, nil, _block_index), do: state
 
   defp run_task(state, mblock, block_index) do
@@ -247,14 +267,15 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
           {block_index, events}
         end
       )
+      |> Map.put(:block_index, block_index)
+      |> Map.put(:created_at, NaiveDateTime.utc_now())
 
     state
     |> put_in([:tasks, task.ref], task)
     |> update_in([:pending_mbs], fn pending_mbs -> MapSet.delete(pending_mbs, block_index) end)
-    |> yield_task(task.ref)
   end
 
-  # Checks task result and update tasks execution state
+  # Yield all running tasks for faster result (no waiting for scheduled reply)
   defp yield_tasks(%{tasks: tasks} = state) do
     tasks
     |> Map.keys()
@@ -263,18 +284,28 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
     end)
   end
 
+  # Yields a task observing running state or checking result
   defp yield_task(%{tasks: tasks} = state, task_ref) do
     task = Map.get(tasks, task_ref)
 
     case Task.yield(task, @yield_timeout_msecs) do
       nil ->
-        state
+        elapsed_time = NaiveDateTime.diff(NaiveDateTime.utc_now(), Map.get(task, :created_at))
+        warning_notified? = Map.get(task, :warned, false)
+
+        if elapsed_time > @task_warn_secs and not warning_notified? do
+          Log.warn("long contract event task: #{inspect(task)}")
+          put_in(state, [:tasks, task_ref], Map.put(task, :warned, true))
+        else
+          state
+        end
 
       {:ok, {block_index, mb_events}} ->
         handle_task_finished(state, task_ref, block_index, mb_events)
     end
   end
 
+  # Puts microblock events into state and deletes the task
   defp handle_task_finished(state, task_ref, block_index, mb_events) do
     {_task, new_state} =
       state
