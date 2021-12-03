@@ -12,7 +12,7 @@ defmodule AeMdw.Node.Db do
   require Logger
   require Model
 
-  @typep pubkey() :: <<_::256>>
+  @type pubkey() :: <<_::256>>
   @typep hash_type() :: nil | :key | :key_block | :mic_block
   @typep top_height_hash() :: {hash_type(), pos_integer(), binary()}
 
