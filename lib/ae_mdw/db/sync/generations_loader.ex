@@ -1,4 +1,14 @@
 defmodule AeMdw.Db.Sync.GenerationsLoader do
+  @moduledoc """
+  Preloads generation blocks and contract events sequentially.
+
+  Sends each preloaded generation (along with contract events) to the GenerationCache.
+  This avoids the reading to wait for the preloading of a generation that is not yet
+  being synced by `AeMdw.Db.Sync.Transaction.sync_generation`.
+
+  The preloading respects a @max_load limit and it sleeps when this limit is reached
+  in order to wait for consumption.
+  """
   use GenServer
 
   alias AeMdw.Db.Sync.Generation
@@ -8,7 +18,7 @@ defmodule AeMdw.Db.Sync.GenerationsLoader do
 
   @max_load 300
   @max_load_per_turn 30
-  @load_delay_msecs 1000
+  @load_delay_msecs 5000
 
   @spec start_link([]) :: GenServer.on_start()
   def start_link([]) do

@@ -1,6 +1,8 @@
 defmodule AeMdw.Db.Sync.GenerationsCache do
   @moduledoc """
-  Cache of load AeMdw.Db.Sync.Generation(s).
+  Cache of loaded AeMdw.Db.Sync.Generation(s) and microblock/contract events.
+
+  A reply is scheduled if the generation or microblock events are not yet loaded.
   """
   use GenServer
 
@@ -60,6 +62,7 @@ defmodule AeMdw.Db.Sync.GenerationsCache do
 
     if is_nil(generation) do
       schedule_reply(caller, height)
+
       {:noreply, state}
     else
       {:reply, generation, state}
