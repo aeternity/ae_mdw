@@ -104,28 +104,6 @@ defmodule AeMdw.Db.Sync.Oracle do
     :ok
   end
 
-  @doc """
-  Deactivate all Oracles that have expired on a block height.
-
-  The expiration height of an Oracle is always a result of the last `register` or `extend` operation.
-  """
-  @spec expire(pos_integer()) :: boolean()
-  def expire(height) do
-    oracle_mspec =
-      Ex2ms.fun do
-        {:expiration, {^height, pubkey}, :_} -> pubkey
-      end
-
-    expirations = :mnesia.select(Model.ActiveOracleExpiration, oracle_mspec)
-
-    all_expired? =
-      Enum.reduce(expirations, true, fn pubkey, all_previous_expired? ->
-        expire_oracle(height, pubkey) and all_previous_expired?
-      end)
-
-    expirations != [] and all_expired?
-  end
-
   #
   # Private functions
   #
@@ -140,34 +118,5 @@ defmodule AeMdw.Db.Sync.Oracle do
     Model.oracle(index: pubkey, expire: old_expire) = previous
     cache_through_delete(Model.ActiveOracleExpiration, {old_expire, pubkey})
     previous
-  end
-
-  defp expire_oracle(height, pubkey) do
-    cache_through_delete(Model.ActiveOracleExpiration, {height, pubkey})
-
-    oracle_id = Enc.encode(:oracle_pubkey, pubkey)
-
-    case cache_through_read(Model.ActiveOracle, pubkey) do
-      {:ok, m_oracle} ->
-        if height == Model.oracle(m_oracle, :expire) do
-          m_exp = Model.expiration(index: {height, pubkey})
-          cache_through_write(Model.InactiveOracle, m_oracle)
-          cache_through_write(Model.InactiveOracleExpiration, m_exp)
-
-          cache_through_delete(Model.ActiveOracle, pubkey)
-          AeMdw.Ets.inc(:stat_sync_cache, :inactive_oracles)
-          AeMdw.Ets.dec(:stat_sync_cache, :active_oracles)
-
-          Log.info("[#{height}] inactivated oracle #{oracle_id}")
-          true
-        else
-          Log.warn("[#{height}] ignored old oracle expiration for #{oracle_id}")
-          false
-        end
-
-      nil ->
-        Log.warn("[#{height}] ignored oracle expiration for #{oracle_id}")
-        false
-    end
   end
 end

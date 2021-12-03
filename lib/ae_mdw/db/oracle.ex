@@ -1,17 +1,18 @@
 defmodule AeMdw.Db.Oracle do
-  # credo:disable-for-this-file
   @moduledoc """
   Cache through operations for active and inactive oracles.
   """
+  alias AeMdw.Blocks
   alias AeMdw.Db.Model
+  alias AeMdw.Db.OraclesExpirationMutation
 
-  require Model
   require Ex2ms
+  require Model
 
   import AeMdw.Db.Util
   import AeMdw.Util
 
-  @typep pubkey() :: <<_::256>>
+  @type pubkey() :: <<_::256>>
   @typep cache_key() :: pubkey() | {pos_integer(), pubkey()}
 
   @spec source(atom(), :expiration) ::
@@ -86,5 +87,34 @@ defmodule AeMdw.Db.Oracle do
     |> Model.block(:hash)
     |> :aec_db.get_block_state()
     |> :aec_trees.oracles()
+  end
+
+  @spec expirations_mutation(Blocks.height()) :: OraclesExpirationMutation.t()
+  def expirations_mutation(height) do
+    oracle_mspec =
+      Ex2ms.fun do
+        Model.expiration(index: {^height, pubkey}) -> pubkey
+      end
+
+    expired_pubkeys = :mnesia.dirty_select(Model.ActiveOracleExpiration, oracle_mspec)
+
+    OraclesExpirationMutation.new(height, expired_pubkeys)
+  end
+
+  @spec expire_oracle(Blocks.height(), pubkey()) :: :ok
+  def expire_oracle(height, pubkey) do
+    cache_through_delete(Model.ActiveOracleExpiration, {height, pubkey})
+
+    {:ok, m_oracle} = cache_through_read(Model.ActiveOracle, pubkey)
+
+    m_exp = Model.expiration(index: {height, pubkey})
+    cache_through_write(Model.InactiveOracle, m_oracle)
+    cache_through_write(Model.InactiveOracleExpiration, m_exp)
+
+    cache_through_delete(Model.ActiveOracle, pubkey)
+    AeMdw.Ets.inc(:stat_sync_cache, :inactive_oracles)
+    AeMdw.Ets.dec(:stat_sync_cache, :active_oracles)
+
+    :ok
   end
 end

@@ -13,6 +13,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.MnesiaWriteMutation
   alias AeMdw.Db.Mutation
+  alias AeMdw.Db.Oracle
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.WriteLinksMutation
   alias AeMdw.Db.WriteTxMutation
@@ -126,8 +127,9 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     initial_mutations =
       [
-        block_rewards_mutation,
-        MnesiaWriteMutation.new(Model.Block, kb_model)
+        Oracle.expirations_mutation(height - 1),
+        MnesiaWriteMutation.new(Model.Block, kb_model),
+        block_rewards_mutation
       ]
       |> Enum.reject(&is_nil/1)
 
@@ -137,7 +139,6 @@ defmodule AeMdw.Db.Sync.Transaction do
     {:atomic, :ok} =
       :mnesia.transaction(fn ->
         Sync.Name.expire(height)
-        Sync.Oracle.expire(height - 1)
 
         Enum.each(mutations, &Mutation.mutate/1)
 
