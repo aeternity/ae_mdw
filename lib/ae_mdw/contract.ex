@@ -336,20 +336,33 @@ defmodule AeMdw.Contract do
   # Private functions
   #
   defp get_events(micro_block) when elem(micro_block, 0) == :mic_block do
-    header = :aec_blocks.to_header(micro_block)
-    {:ok, hash} = :aec_headers.hash_header(header)
-    consensus = :aec_headers.consensus_module(header)
-    node = {:node, header, hash, :micro}
-    time = :aec_block_insertion.node_time(node)
-    prev_hash = :aec_block_insertion.node_prev_hash(node)
-    prev_key_hash = :aec_block_insertion.node_prev_key_hash(node)
-    {:value, prev_key_header} = :aec_db.find_header(prev_key_hash)
-    {:value, trees_in, _, _, _, _} = :aec_db.find_block_state_and_data(prev_hash, true)
-    trees_in = apply(consensus, :state_pre_transform_micro_node, [node, trees_in])
-    env = :aetx_env.tx_env_from_key_header(prev_key_header, prev_key_hash, time, prev_hash)
     txs = :aec_blocks.txs(micro_block)
-    {:ok, _, _, events} = :aec_block_micro_candidate.apply_block_txs_strict(txs, trees_in, env)
-    events
+
+    if has_contract_call_tx?(txs) do
+      header = :aec_blocks.to_header(micro_block)
+      {:ok, hash} = :aec_headers.hash_header(header)
+      consensus = :aec_headers.consensus_module(header)
+      node = {:node, header, hash, :micro}
+      time = :aec_block_insertion.node_time(node)
+      prev_hash = :aec_block_insertion.node_prev_hash(node)
+      prev_key_hash = :aec_block_insertion.node_prev_key_hash(node)
+      {:value, prev_key_header} = :aec_db.find_header(prev_key_hash)
+      {:value, trees_in, _, _, _, _} = :aec_db.find_block_state_and_data(prev_hash, true)
+      trees_in = apply(consensus, :state_pre_transform_micro_node, [node, trees_in])
+      env = :aetx_env.tx_env_from_key_header(prev_key_header, prev_key_hash, time, prev_hash)
+
+      {:ok, _, _, events} = :aec_block_micro_candidate.apply_block_txs_strict(txs, trees_in, env)
+      events
+    else
+      []
+    end
+  end
+
+  defp has_contract_call_tx?(mb_txs) do
+    Enum.any?(mb_txs, fn signed_tx ->
+      {mod, _tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
+      mod.type() == :contract_call_tx
+    end)
   end
 
   defp contract_init_args(contract_pk, tx_rec) do
