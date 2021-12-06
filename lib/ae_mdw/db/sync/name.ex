@@ -68,6 +68,8 @@ defmodule AeMdw.Db.Sync.Name do
         inc(:stat_sync_cache, :active_names)
         previous && dec(:stat_sync_cache, :inactive_names)
 
+        log_name_change(height, plain_name, "activate")
+
       timeout ->
         auction_end = height + timeout
         m_auction_exp = Model.expiration(index: {auction_end, plain_name})
@@ -105,6 +107,8 @@ defmodule AeMdw.Db.Sync.Name do
         cache_through_write(Model.AuctionOwner, m_owner)
         cache_through_write(Model.AuctionExpiration, m_auction_exp)
         inc(:stat_sync_cache, :active_auctions)
+
+        log_auction_change(height, plain_name, "activate")
     end
   end
 
@@ -132,17 +136,20 @@ defmodule AeMdw.Db.Sync.Name do
         cache_through_write(Model.ActiveNameExpiration, m_name_exp)
         cache_through_write(Model.ActiveName, m_name)
 
+        log_name_change(height, plain_name, "activate")
+
       delta_ttl == 0 ->
         owner = Model.name(m_name, :owner)
         cache_through_delete(Model.ActiveName, plain_name)
         cache_through_delete(Model.ActiveNameOwner, {owner, plain_name})
         cache_through_write(Model.InactiveName, m_name)
         cache_through_write(Model.InactiveNameExpiration, m_name_exp)
-        log_expired_name(height, plain_name)
+
+        log_name_change(height, plain_name, "expire")
     end
   end
 
-  def transfer(name_hash, tx, txi, {_height, _} = bi) do
+  def transfer(name_hash, tx, txi, {height, _} = bi) do
     plain_name = plain_name!(name_hash)
 
     m_name = cache_through_read!(Model.ActiveName, plain_name)
@@ -156,6 +163,8 @@ defmodule AeMdw.Db.Sync.Name do
     cache_through_delete(Model.ActiveNameOwner, {old_owner, plain_name})
     cache_through_write(Model.ActiveNameOwner, m_owner)
     cache_through_write(Model.ActiveName, m_name)
+
+    log_name_change(height, plain_name, "transfer")
   end
 
   def revoke(name_hash, _tx, txi, {height, _} = bi) do
@@ -172,8 +181,11 @@ defmodule AeMdw.Db.Sync.Name do
     m_exp = Model.expiration(index: {height, plain_name})
     cache_through_write(Model.InactiveName, m_name)
     cache_through_write(Model.InactiveNameExpiration, m_exp)
+
     inc(:stat_sync_cache, :inactive_names)
     dec(:stat_sync_cache, :active_names)
+
+    log_name_change(height, plain_name, "revoke")
   end
 
   ##########
@@ -209,10 +221,12 @@ defmodule AeMdw.Db.Sync.Name do
       cache_through_delete(Model.ActiveNameExpiration, {height, plain_name})
       inc(:stat_sync_cache, :inactive_names)
       dec(:stat_sync_cache, :active_names)
-      log_expired_name(height, plain_name)
+
+      log_name_change(height, plain_name, "expire")
     else
       cache_through_delete(Model.ActiveNameExpiration, {height, plain_name})
-      Log.info("[#{height}] deleted old expiration for name #{plain_name}")
+
+      log_name_change(height, plain_name, "old expire")
     end
   end
 
@@ -250,7 +264,8 @@ defmodule AeMdw.Db.Sync.Name do
     IntTransfer.fee({height, -1}, :lock_name, owner, txi, winning_tx.name_fee)
     inc(:stat_sync_cache, :active_names)
     dec(:stat_sync_cache, :active_auctions)
-    log_expired_auction(height, plain_name)
+
+    log_auction_change(height, plain_name, "expire")
   end
 
   def ensure_no_exsiting_active_name_expiration(plain_name) do
@@ -274,11 +289,11 @@ defmodule AeMdw.Db.Sync.Name do
   def plain_name!(name_hash),
     do: cache_through_read!(Model.PlainName, name_hash) |> Model.plain_name(:value)
 
-  def log_expired_name(height, plain_name),
-    do: Log.info("[#{height}] expiring name #{plain_name}")
+  def log_name_change(height, plain_name, change),
+    do: Log.info("[#{height}][name] #{change} #{plain_name}")
 
-  def log_expired_auction(height, plain_name),
-    do: Log.info("[#{height}] expiring auction for #{plain_name}")
+  def log_auction_change(height, plain_name, change),
+    do: Log.info("[#{height}][auction] #{change} #{plain_name}")
 
   ################################################################################
   #
