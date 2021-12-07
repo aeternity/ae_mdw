@@ -105,15 +105,27 @@ defmodule AeMdw.Db.Oracle do
   def expire_oracle(height, pubkey) do
     cache_through_delete(Model.ActiveOracleExpiration, {height, pubkey})
 
-    {:ok, m_oracle} = cache_through_read(Model.ActiveOracle, pubkey)
+    oracle_id = Enc.encode(:oracle_pubkey, pubkey)
 
-    m_exp = Model.expiration(index: {height, pubkey})
-    cache_through_write(Model.InactiveOracle, m_oracle)
-    cache_through_write(Model.InactiveOracleExpiration, m_exp)
+    case cache_through_read(Model.ActiveOracle, pubkey) do
+      {:ok, m_oracle} ->
+        if height == Model.oracle(m_oracle, :expire) do
+          m_exp = Model.expiration(index: {height, pubkey})
+          cache_through_write(Model.InactiveOracle, m_oracle)
+          cache_through_write(Model.InactiveOracleExpiration, m_exp)
 
-    cache_through_delete(Model.ActiveOracle, pubkey)
-    AeMdw.Ets.inc(:stat_sync_cache, :inactive_oracles)
-    AeMdw.Ets.dec(:stat_sync_cache, :active_oracles)
+          cache_through_delete(Model.ActiveOracle, pubkey)
+          AeMdw.Ets.inc(:stat_sync_cache, :inactive_oracles)
+          AeMdw.Ets.dec(:stat_sync_cache, :active_oracles)
+
+          Log.info("[#{height}] inactivated oracle #{oracle_id}")
+        else
+          Log.warn("[#{height}] ignored old oracle expiration for #{oracle_id}")
+        end
+
+      nil ->
+        Log.warn("[#{height}] ignored oracle expiration for #{oracle_id}")
+    end
 
     :ok
   end
