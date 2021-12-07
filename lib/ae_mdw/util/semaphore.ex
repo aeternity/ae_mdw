@@ -3,49 +3,55 @@ defmodule AeMdw.Util.Semaphore do
   Simple BEAM processes semaphores implementation.
   """
 
+  use GenServer
+
   @type limit() :: non_neg_integer()
 
   @opaque t() :: pid()
 
   @spec new(limit()) :: t()
-  def new(i), do: spawn_link(fn -> semaphore(i) end)
+  def new(limit) do
+    {:ok, pid} = GenServer.start_link(__MODULE__, limit)
+
+    pid
+  end
 
   @spec signal(t()) :: :ok
-  def signal(sem), do: Process.send(sem, :signal, [])
+  def signal(sem), do: GenServer.cast(sem, :signal)
 
   @spec wait(t()) :: :ok
-  def wait(sem) do
-    Process.send(sem, {:wait, self()}, [])
-
-    receive do
-      :ok -> :ok
-    end
-  end
+  def wait(sem), do: GenServer.call(sem, :wait, :infinity)
 
   @spec stop(t()) :: :ok
-  def stop(sem) do
-    Process.send(sem, :stop, [])
+  def stop(sem), do: GenServer.cast(sem, :stop)
+
+  @impl true
+  def init(limit) do
+    {:ok, {limit, :queue.new()}}
   end
 
-  defp semaphore(0) do
-    receive do
-      :signal -> semaphore(1)
-      :stop -> :ok
+  @impl true
+  def handle_call(:wait, from, {0, queue}) do
+    {:noreply, {0, :queue.in(from, queue)}}
+  end
+
+  def handle_call(:wait, _from, {limit, queue}) do
+    {:reply, :ok, {limit - 1, queue}}
+  end
+
+  @impl true
+  def handle_cast(:signal, {limit, queue}) do
+    case :queue.out(queue) do
+      {{:value, pid}, queue} ->
+        GenServer.reply(pid, :ok)
+        {:noreply, {limit, queue}}
+
+      {:empty, queue} ->
+        {:noreply, {limit + 1, queue}}
     end
   end
 
-  defp semaphore(n) do
-    receive do
-      :signal ->
-        semaphore(n + 1)
-
-      {:wait, pid} ->
-        Process.send(pid, :ok, [])
-
-        semaphore(n - 1)
-
-      :stop ->
-        :ok
-    end
+  def handle_cast(:stop, state) do
+    {:stop, :normal, state}
   end
 end
