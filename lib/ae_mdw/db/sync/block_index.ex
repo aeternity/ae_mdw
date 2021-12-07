@@ -20,9 +20,21 @@ defmodule AeMdw.Db.Sync.BlockIndex do
     with true <- max_height >= min_height do
       header = :aec_chain.get_key_header_by_height(max_height) |> ok!
       hash = :aec_headers.hash_header(header) |> ok!
-      syncer = &sync_key_header(~t[block], &1, &2)
+
+      syncer = fn {height, _key_block, _micro_blocks}, acc ->
+        sync_key_header(~t[block], height, acc)
+      end
+
       tracker = Sync.progress_logger(syncer, @log_freq, &log_msg/2)
-      :mnesia.transaction(fn -> max_height..min_height |> Enum.reduce(hash, tracker) end)
+
+      :mnesia.transaction(fn ->
+        max_height..min_height
+        |> Enum.map(fn height ->
+          # Bogus values
+          {height, nil, []}
+        end)
+        |> Enum.reduce(hash, tracker)
+      end)
     end
 
     max_kbi()

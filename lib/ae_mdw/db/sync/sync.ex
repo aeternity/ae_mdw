@@ -74,9 +74,9 @@ defmodule AeMdw.Db.Sync do
   end
 
   def progress_logger(work_fn, freq, msg_fn) do
-    fn x, acc ->
+    fn {x, _key_block, _micro_blocks} = element, acc ->
       rem(x, freq) == 0 && Log.info(msg_fn.(x, acc))
-      work_fn.(x, acc)
+      work_fn.(element, acc)
     end
   end
 

@@ -6,8 +6,11 @@ defmodule AeMdw.Util.BufferedStream do
 
   alias AeMdw.Util.Semaphore
 
-  @spec map(Enumerable.t(), (Enum.element() -> any()), pos_integer()) :: Enumerable.t()
-  def map(enumerable, fun, buffer_size) do
+  @type opt() :: {:buffer_size, pos_integer()}
+
+  @spec map(Enumerable.t(), (Enum.element() -> any()), [opt()]) :: Enumerable.t()
+  def map(enumerable, fun, opts) do
+    buffer_size = Keyword.fetch!(opts, :buffer_size)
     empty_count = Semaphore.new(0)
     full_count = Semaphore.new(buffer_size)
     processing = Semaphore.new(1)
@@ -26,6 +29,7 @@ defmodule AeMdw.Util.BufferedStream do
 
         result
       end,
+      max_concurrency: buffer_size,
       timeout: :infinity
     )
     |> Stream.map(fn {:ok, result} ->

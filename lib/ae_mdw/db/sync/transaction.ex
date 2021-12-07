@@ -22,6 +22,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Mnesia
   alias AeMdw.Node
   alias AeMdw.Txs
+  alias AeMdw.Util.BufferedStream
   alias AeMdwWeb.Websocket.Broadcaster
 
   require Model
@@ -31,6 +32,7 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   @log_freq 1000
   @sync_cache_cleanup_freq 150_000
+  @preload_blocks_buffer_size 300
 
   ################################################################################
 
@@ -54,7 +56,18 @@ defmodule AeMdw.Db.Sync.Transaction do
   @spec sync(non_neg_integer(), non_neg_integer(), non_neg_integer()) :: pos_integer()
   def sync(from_height, to_height, txi) when from_height <= to_height do
     tracker = Sync.progress_logger(&sync_generation/2, @log_freq, &log_msg/2)
-    next_txi = from_height..to_height |> Enum.reduce(txi, tracker)
+
+    next_txi =
+      from_height..to_height
+      |> BufferedStream.map(
+        fn height ->
+          {key_block, micro_blocks} = AE.Db.get_blocks(height)
+
+          {height, key_block, micro_blocks}
+        end,
+        buffer_size: @preload_blocks_buffer_size
+      )
+      |> Enum.reduce(txi, tracker)
 
     :mnesia.transaction(fn ->
       [succ_kb] = :mnesia.read(Model.Block, {to_height + 1, -1})
@@ -117,8 +130,7 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   ################################################################################
 
-  defp sync_generation(height, txi) do
-    {key_block, micro_blocks} = AE.Db.get_blocks(height)
+  defp sync_generation({height, key_block, micro_blocks}, txi) do
     kb_txi = (txi == 0 && -1) || txi
     kb_header = :aec_blocks.to_key_header(key_block)
     kb_hash = ok!(:aec_headers.hash_header(kb_header))
