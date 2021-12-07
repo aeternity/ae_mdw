@@ -8,6 +8,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync
+  alias AeMdw.Db.Sync.Stat
   alias AeMdw.Db.Aex9AccountPresenceMutation
   alias AeMdw.Db.ContractEventsMutation
   alias AeMdw.Db.IntTransfer
@@ -18,6 +19,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.WriteLinksMutation
   alias AeMdw.Db.WriteTxMutation
+  alias AeMdw.Mnesia
   alias AeMdw.Node
   alias AeMdw.Txs
   alias AeMdwWeb.Websocket.Broadcaster
@@ -138,17 +140,14 @@ defmodule AeMdw.Db.Sync.Transaction do
     {next_txi, _mb_index, mutations} =
       Enum.reduce(micro_blocks, {txi, 0, initial_mutations}, &micro_block_mutations/2)
 
-    {:atomic, :ok} =
-      :mnesia.transaction(fn ->
-        # Sync.Name.expire(height)
+    mutations =
+      [
+        mutations,
+        Stat.store_mutation(height)
+      ]
+      |> List.flatten()
 
-        Enum.each(mutations, &Mutation.mutate/1)
-
-        Sync.Stat.store(height)
-        Sync.Stat.sum_store(height)
-
-        :ok
-      end)
+    Mnesia.transaction(mutations)
 
     Broadcaster.broadcast_key_block(key_block, :mdw)
 
