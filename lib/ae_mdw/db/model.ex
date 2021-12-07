@@ -380,6 +380,19 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :stat, @stat_defaults
 
+  @type stat ::
+          record(:stat,
+            index: Blocks.height(),
+            inactive_names: integer(),
+            active_names: integer(),
+            active_auctions: integer(),
+            inactive_oracles: integer(),
+            active_oracles: integer(),
+            contracts: integer(),
+            block_reward: integer(),
+            dev_reward: integer()
+          )
+
   # summarized statistics
   @sum_stat_defaults [
     # height
@@ -389,6 +402,14 @@ defmodule AeMdw.Db.Model do
     total_supply: 0
   ]
   defrecord :sum_stat, @sum_stat_defaults
+
+  @type sum_stat ::
+          record(:sum_stat,
+            index: Blocks.height(),
+            block_reward: integer(),
+            dev_reward: integer(),
+            total_supply: integer()
+          )
 
   ################################################################################
 
