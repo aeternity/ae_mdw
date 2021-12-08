@@ -8,14 +8,18 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync
+  alias AeMdw.Db.Sync.Stat
   alias AeMdw.Db.Aex9AccountPresenceMutation
   alias AeMdw.Db.ContractEventsMutation
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.MnesiaWriteMutation
   alias AeMdw.Db.Mutation
+  alias AeMdw.Db.Name
+  alias AeMdw.Db.Oracle
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.WriteLinksMutation
   alias AeMdw.Db.WriteTxMutation
+  alias AeMdw.Mnesia
   alias AeMdw.Node
   alias AeMdw.Txs
   alias AeMdwWeb.Websocket.Broadcaster
@@ -126,26 +130,24 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     initial_mutations =
       [
-        block_rewards_mutation,
-        MnesiaWriteMutation.new(Model.Block, kb_model)
+        Name.expirations_mutation(height),
+        Oracle.expirations_mutation(height - 1),
+        MnesiaWriteMutation.new(Model.Block, kb_model),
+        block_rewards_mutation
       ]
       |> Enum.reject(&is_nil/1)
 
     {next_txi, _mb_index, mutations} =
       Enum.reduce(micro_blocks, {txi, 0, initial_mutations}, &micro_block_mutations/2)
 
-    {:atomic, :ok} =
-      :mnesia.transaction(fn ->
-        Sync.Name.expire(height)
-        Sync.Oracle.expire(height - 1)
+    mutations =
+      [
+        mutations,
+        Stat.store_mutation(height)
+      ]
+      |> List.flatten()
 
-        Enum.each(mutations, &Mutation.mutate/1)
-
-        Sync.Stat.store(height)
-        Sync.Stat.sum_store(height)
-
-        :ok
-      end)
+    Mnesia.transaction(mutations)
 
     Broadcaster.broadcast_key_block(key_block, :mdw)
 

@@ -11,6 +11,8 @@ defmodule AeMdw.Mnesia do
   returned instead.
   """
 
+  alias AeMdw.Db.Mutation
+
   @type table() :: atom()
   @type record() :: tuple()
   @type key() :: term()
@@ -151,6 +153,16 @@ defmodule AeMdw.Mnesia do
   @spec write(table(), record()) :: :ok
   def write(table, record) do
     :mnesia.write(table, record, :write)
+  end
+
+  @spec transaction([Mutation.t()]) :: :ok
+  def transaction(mutations) do
+    {:atomic, :ok} =
+      :mnesia.transaction(fn ->
+        Enum.each(mutations, &Mutation.mutate(&1))
+      end)
+
+    :ok
   end
 
   defp fetch_forward_keys(tab, first_key, limit) do

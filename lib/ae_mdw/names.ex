@@ -19,6 +19,9 @@ defmodule AeMdw.Names do
   @type cursor :: binary()
   # This needs to be an actual type like AeMdw.Db.Name.t()
   @type name :: term()
+  @type plain_name() :: binary()
+  @type auction_timeout :: non_neg_integer()
+
   @typep order_by :: :expiration | :name
   @typep limit :: Mnesia.limit()
   @typep direction :: Mnesia.direction()
@@ -122,7 +125,7 @@ defmodule AeMdw.Names do
     {render_exp_list(exp_keys, false, expand?), serialize_expiration_cursor(next_cursor)}
   end
 
-  @spec fetch_previous_list(name()) :: [name()]
+  @spec fetch_previous_list(plain_name()) :: [name()]
   def fetch_previous_list(plain_name) do
     case Mnesia.fetch(@table_inactive, plain_name) do
       {:ok, name} ->

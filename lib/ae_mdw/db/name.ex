@@ -3,7 +3,12 @@ defmodule AeMdw.Db.Name do
   alias AeMdw.Blocks
   alias AeMdw.Node, as: AE
   alias AeMdw.Db.Model
+  alias AeMdw.Db.NamesExpirationMutation
   alias AeMdw.Db.Format
+  alias AeMdw.Db.IntTransfer
+  alias AeMdw.Ets
+  alias AeMdw.Log
+  alias AeMdw.Names
   alias AeMdw.Validate
 
   require Ex2ms
@@ -35,6 +40,84 @@ defmodule AeMdw.Db.Name do
   @spec expire_after(Blocks.height()) :: Blocks.height()
   def expire_after(auction_end) do
     auction_end + :aec_governance.name_claim_max_expiration(proto_vsn(auction_end))
+  end
+
+  @spec expirations_mutation(Blocks.height()) :: NamesExpirationMutation.t()
+  def expirations_mutation(height) do
+    name_mspec =
+      Ex2ms.fun do
+        Model.expiration(index: {^height, name}) -> name
+      end
+
+    auction_mspec =
+      Ex2ms.fun do
+        {:expiration, {^height, name}, tm} -> {name, tm}
+      end
+
+    expired_names = :mnesia.dirty_select(Model.ActiveNameExpiration, name_mspec)
+    expired_auctions = :mnesia.dirty_select(Model.AuctionExpiration, auction_mspec)
+
+    NamesExpirationMutation.new(height, expired_names, expired_auctions)
+  end
+
+  @spec expire_name(Blocks.height(), Names.plain_name()) :: :ok
+  def expire_name(height, plain_name) do
+    m_name = cache_through_read!(Model.ActiveName, plain_name)
+    m_exp = Model.expiration(index: {height, plain_name})
+
+    if Model.name(m_name, :expire) == height do
+      owner = Model.name(m_name, :owner)
+      cache_through_write(Model.InactiveName, m_name)
+      cache_through_write(Model.InactiveNameExpiration, m_exp)
+      cache_through_delete(Model.ActiveName, plain_name)
+      cache_through_delete(Model.ActiveNameOwner, {owner, plain_name})
+      cache_through_delete(Model.ActiveNameExpiration, {height, plain_name})
+      Ets.inc(:stat_sync_cache, :inactive_names)
+      Ets.dec(:stat_sync_cache, :active_names)
+      Log.info("[#{height}] expiring name #{plain_name}")
+    else
+      cache_through_delete(Model.ActiveNameExpiration, {height, plain_name})
+
+      Log.info("[#{height}][name] old expire #{plain_name}")
+    end
+  end
+
+  @spec expire_auction(Blocks.height(), Names.plain_name(), Names.auction_timeout()) :: :ok
+  def expire_auction(height, plain_name, timeout) do
+    {_, {_, txi}, _, owner, bids} =
+      bid_key = ok!(cache_through_prev(Model.AuctionBid, bid_top_key(plain_name)))
+
+    previous = ok_nil(cache_through_read(Model.InactiveName, plain_name))
+    expire = expire_after(height)
+
+    m_name =
+      Model.name(
+        index: plain_name,
+        active: height,
+        expire: expire,
+        claims: bids,
+        auction_timeout: timeout,
+        owner: owner,
+        previous: previous
+      )
+
+    m_name_exp = Model.expiration(index: {expire, plain_name})
+    m_owner = Model.owner(index: {owner, plain_name})
+
+    ensure_no_exsiting_active_name_expiration(plain_name)
+    cache_through_write(Model.ActiveName, m_name)
+    cache_through_write(Model.ActiveNameOwner, m_owner)
+    cache_through_write(Model.ActiveNameExpiration, m_name_exp)
+    cache_through_delete(Model.AuctionExpiration, {height, plain_name})
+    cache_through_delete(Model.AuctionOwner, {owner, plain_name})
+    cache_through_delete(Model.AuctionBid, bid_key)
+    cache_through_delete_inactive(previous)
+
+    %{tx: winning_tx} = read_raw_tx!(txi)
+    IntTransfer.fee({height, -1}, :lock_name, owner, txi, winning_tx.name_fee)
+    Ets.inc(:stat_sync_cache, :active_names)
+    Ets.dec(:stat_sync_cache, :active_auctions)
+    Log.info("[#{height}] expiring auction for #{plain_name}")
   end
 
   ##########
@@ -259,4 +342,23 @@ defmodule AeMdw.Db.Name do
       if update_txi <= ref_txi, do: update_txi
     end)
   end
+
+  defp ensure_no_exsiting_active_name_expiration(plain_name) do
+    name_mspec =
+      Ex2ms.fun do
+        {:expiration, {height, ^plain_name}, :_} -> {height, ^plain_name}
+      end
+
+    expirations = :mnesia.select(Model.ActiveNameExpiration, name_mspec)
+
+    if Enum.count(expirations) > 0 do
+      Log.info("Removing exsiting active name expirations #{inspect(expirations)}")
+
+      expirations
+      |> Enum.map(fn key -> cache_through_delete(Model.ActiveNameExpiration, key) end)
+    end
+  end
+
+  def read_raw_tx!(txi),
+    do: Format.to_raw_map(read_tx!(txi))
 end
