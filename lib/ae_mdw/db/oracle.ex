@@ -2,12 +2,15 @@ defmodule AeMdw.Db.Oracle do
   @moduledoc """
   Cache through operations for active and inactive oracles.
   """
+  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Db.OraclesExpirationMutation
+  alias AeMdw.Log
 
   require Ex2ms
   require Model
+  require Logger
 
   import AeMdw.Db.Util
   import AeMdw.Util
