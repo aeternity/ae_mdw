@@ -176,8 +176,6 @@ defmodule AeMdw.Db.Sync.Transaction do
     |> Enum.reject(&is_nil/1)
     |> Mnesia.transaction()
 
-    Broadcaster.broadcast_key_block(key_block, :mdw)
-
     if rem(height, @sync_cache_cleanup_freq) == 0 do
       :ets.delete_all_objects(:name_sync_cache)
       :ets.delete_all_objects(:oracle_sync_cache)
