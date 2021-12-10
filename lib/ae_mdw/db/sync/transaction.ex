@@ -133,33 +133,30 @@ defmodule AeMdw.Db.Sync.Transaction do
         IntTransfer.block_rewards_mutation(height, kb_header, kb_hash)
       end
 
-    initial_mutations =
-      [
-        Name.expirations_mutation(height),
-        Oracle.expirations_mutation(height - 1),
-        MnesiaWriteMutation.new(Model.Block, kb_model),
-        block_rewards_mutation
-      ]
-      |> Enum.reject(&is_nil/1)
-
-    {next_txi, _mb_index, mutations} =
-      Enum.reduce(micro_blocks, {txi, 0, initial_mutations}, &micro_block_mutations/2)
-
-    mutations =
-      [
-        mutations,
-        StatsMutation.new(height)
-      ]
-      |> List.flatten()
-
-    Mnesia.transaction(mutations)
+    [
+      Name.expirations_mutation(height),
+      Oracle.expirations_mutation(height - 1),
+      MnesiaWriteMutation.new(Model.Block, kb_model),
+      block_rewards_mutation
+    ]
+    |> Enum.reject(&is_nil/1)
+    |> Mnesia.transaction()
 
     Broadcaster.broadcast_key_block(key_block, :mdw)
 
-    Enum.each(micro_blocks, fn mblock ->
-      Broadcaster.broadcast_micro_block(mblock, :mdw)
-      Broadcaster.broadcast_txs(mblock, :mdw)
-    end)
+    {next_txi, _mb_index} =
+      Enum.reduce(micro_blocks, {txi, 0}, fn mblock, txi_acc ->
+        {mutations, acc} = micro_block_mutations(mblock, txi_acc)
+        Mnesia.transaction(mutations)
+        Broadcaster.broadcast_micro_block(mblock, :mdw)
+        Broadcaster.broadcast_txs(mblock, :mdw)
+
+        acc
+      end)
+
+    Mnesia.transaction([
+      StatsMutation.new(height)
+    ])
 
     if rem(height, @sync_cache_cleanup_freq) == 0 do
       :ets.delete_all_objects(:name_sync_cache)
@@ -169,7 +166,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     next_txi
   end
 
-  defp micro_block_mutations(mblock, {txi, mbi, mutations}) do
+  defp micro_block_mutations(mblock, {txi, mbi}) do
     height = :aec_blocks.height(mblock)
     mb_time = :aec_blocks.time_in_msecs(mblock)
     mb_hash = ok!(:aec_headers.hash_header(:aec_blocks.to_micro_header(mblock)))
@@ -186,13 +183,12 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     mutations =
       List.flatten([
-        mutations,
         MnesiaWriteMutation.new(Model.Block, mb_model),
         txs_mutations,
         Aex9AccountPresenceMutation.new(height, mbi)
       ])
 
-    {txi + length(mb_txs), mbi + 1, mutations}
+    {mutations, {txi + length(mb_txs), mbi + 1}}
   end
 
   defp log_msg(height, _ignore),
