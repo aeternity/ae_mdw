@@ -306,13 +306,18 @@ defmodule AeMdw.Contract do
     end
   end
 
-  def get_init_call_details(contract_pk, tx_rec, block_hash) do
+  def get_init_call_rec(contract_pk, tx_rec, block_hash) do
     create_nonce = :aect_create_tx.nonce(tx_rec)
 
     tx_rec
     |> :aect_create_tx.owner_pubkey()
     |> :aect_call.id(create_nonce, contract_pk)
     |> call_rec_from_id(contract_pk, block_hash)
+  end
+
+  def get_init_call_details(contract_pk, tx_rec, block_hash) do
+    contract_pk
+    |> get_init_call_rec(tx_rec, block_hash)
     |> :aect_call.serialize_for_client()
     |> Map.drop(["gas_price", "height", "caller_nonce"])
     |> Map.put("args", contract_init_args(contract_pk, tx_rec))
@@ -338,7 +343,7 @@ defmodule AeMdw.Contract do
   defp get_events(micro_block) when elem(micro_block, 0) == :mic_block do
     txs = :aec_blocks.txs(micro_block)
 
-    if has_contract_call_tx?(txs) do
+    if has_contract_tx?(txs) do
       header = :aec_blocks.to_header(micro_block)
       {:ok, hash} = :aec_headers.hash_header(header)
       consensus = :aec_headers.consensus_module(header)
@@ -358,10 +363,10 @@ defmodule AeMdw.Contract do
     end
   end
 
-  defp has_contract_call_tx?(mb_txs) do
+  defp has_contract_tx?(mb_txs) do
     Enum.any?(mb_txs, fn signed_tx ->
       {mod, _tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
-      mod.type() == :contract_call_tx
+      mod.type() in [:contract_create_tx, :contract_call_tx]
     end)
   end
 
