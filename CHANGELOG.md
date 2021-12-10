@@ -1,5 +1,29 @@
 # Changelog
 
+### [1.3.1](https://www.github.com/aeternity/ae_mdw/compare/v1.3.0...v1.3.1) (2021-12-09)
+
+
+### Bug Fixes
+
+* add missing aliases on the Db.Oracle module ([4584411](https://www.github.com/aeternity/ae_mdw/commit/4584411b6d4b5bdda363bffda1e67e4afe809985))
+
+
+### Refactorings
+
+* add oracle expiration mutation when syncing ([#371](https://www.github.com/aeternity/ae_mdw/issues/371)) ([51beb6e](https://www.github.com/aeternity/ae_mdw/commit/51beb6eb60385fdb172e5e3e424ff601fcd2390d))
+* extract block rewards syncing into mutation ([#367](https://www.github.com/aeternity/ae_mdw/issues/367)) ([9602804](https://www.github.com/aeternity/ae_mdw/commit/9602804b57bdbd1c370c79bb1d594c1e061e0352))
+
+
+### Testing
+
+* add stats endpoints integration tests ([#383](https://www.github.com/aeternity/ae_mdw/issues/383)) ([72c5001](https://www.github.com/aeternity/ae_mdw/commit/72c500109cfb15afb11a17fdaafe7ef920d5a5a5))
+* name and auction sync logs ([e42a197](https://www.github.com/aeternity/ae_mdw/commit/e42a197ef65c042d73f98a633cdfdb709740deb2))
+
+
+### Miscellaneous
+
+* remove cleanup name expiration ([d63bf1b](https://www.github.com/aeternity/ae_mdw/commit/d63bf1b2f8ebf01b65b352aae186ded529d39301))
+
 ## [1.3.0](https://www.github.com/aeternity/ae_mdw/compare/v1.2.1...v1.3.0) (2021-11-30)
 
 
