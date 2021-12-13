@@ -63,7 +63,7 @@ config :logger,
 
 config :logger, :info,
   path: "#{Path.join(File.cwd!(), "log/info.log")}",
-  format: "$time $metadata[$level] $message\n"
+  format: "$date $time $metadata[$level] $message\n"
 
 config :logger, :sync,
   path: "#{Path.join(File.cwd!(), "log/sync.log")}",
