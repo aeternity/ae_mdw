@@ -6,9 +6,7 @@ defmodule AeMdwWeb.Router do
   @paginables [
     {["names", "auctions"], &AeMdwWeb.NameController.stream_plug_hook/1},
     {["contracts", "logs"], &AeMdwWeb.ContractController.stream_plug_hook/1},
-    {["contracts", "calls"], &AeMdwWeb.ContractController.stream_plug_hook/1},
-    {["stats"], &AeMdwWeb.StatsController.stream_plug_hook/1},
-    {["totalstats"], &AeMdwWeb.StatsController.stream_plug_hook/1}
+    {["contracts", "calls"], &AeMdwWeb.ContractController.stream_plug_hook/1}
   ]
 
   @scopes ["gen", "txi"]
