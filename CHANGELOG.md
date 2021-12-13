@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.3.2](https://www.github.com/aeternity/ae_mdw/compare/v1.3.1...v1.3.2) (2021-12-13)
+
+
+### Miscellaneous
+
+* include date on info.log ([#389](https://www.github.com/aeternity/ae_mdw/issues/389)) ([cee643e](https://www.github.com/aeternity/ae_mdw/commit/cee643e797e687e1c8653bdbb088363da8fe5afb)), closes [#361](https://www.github.com/aeternity/ae_mdw/issues/361)
+
 ### [1.3.1](https://www.github.com/aeternity/ae_mdw/compare/v1.3.0...v1.3.1) (2021-12-09)
 
 
