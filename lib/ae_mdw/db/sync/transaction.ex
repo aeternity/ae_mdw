@@ -90,7 +90,7 @@ defmodule AeMdw.Db.Sync.Transaction do
       end
 
     contract_events_mutation =
-      if not is_nil(ct_pk) do
+      if ct_pk do
         events = Map.get(mb_events, tx_hash, [])
         ContractEventsMutation.new(ct_pk, events, txi)
       end
