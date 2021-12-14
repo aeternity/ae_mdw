@@ -142,7 +142,32 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     [
       Name.expirations_mutation(height),
-      Oracle.expirations_mutation(height - 1),
+      Oracle.expirations_mutation(height - 1)
+    ]
+    |> Mnesia.transaction()
+
+    last_mbi =
+      case Mnesia.prev_key(Model.Block, {height+1, -1}) do
+        {:ok, {^height, last_mbi}} -> last_mbi
+        {:ok, _other_height} -> -1
+        :none -> -1
+      end
+
+    {next_txi, _mb_index} =
+      Enum.reduce(micro_blocks, {txi, 0}, fn mblock, {txi, mbi} = txi_acc ->
+        if mbi > last_mbi do
+          {mutations, acc} = micro_block_mutations(mblock, txi_acc)
+          Mnesia.transaction(mutations)
+          Broadcaster.broadcast_micro_block(mblock, :mdw)
+          Broadcaster.broadcast_txs(mblock, :mdw)
+          acc
+        else
+          {txi, mbi + 1}
+        end
+      end)
+
+    [
+      StatsMutation.new(height),
       MnesiaWriteMutation.new(Model.Block, kb_model),
       block_rewards_mutation
     ]
@@ -150,20 +175,6 @@ defmodule AeMdw.Db.Sync.Transaction do
     |> Mnesia.transaction()
 
     Broadcaster.broadcast_key_block(key_block, :mdw)
-
-    {next_txi, _mb_index} =
-      Enum.reduce(micro_blocks, {txi, 0}, fn mblock, txi_acc ->
-        {mutations, acc} = micro_block_mutations(mblock, txi_acc)
-        Mnesia.transaction(mutations)
-        Broadcaster.broadcast_micro_block(mblock, :mdw)
-        Broadcaster.broadcast_txs(mblock, :mdw)
-
-        acc
-      end)
-
-    Mnesia.transaction([
-      StatsMutation.new(height)
-    ])
 
     if rem(height, @sync_cache_cleanup_freq) == 0 do
       :ets.delete_all_objects(:name_sync_cache)
