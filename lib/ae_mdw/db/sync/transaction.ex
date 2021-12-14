@@ -21,6 +21,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.WriteTxMutation
   alias AeMdw.Mnesia
   alias AeMdw.Node
+  alias AeMdw.Sync.AsyncTasks.Producer
   alias AeMdw.Txs
   alias AeMdwWeb.Websocket.Broadcaster
 
@@ -140,7 +141,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     |> Mnesia.transaction()
 
     last_mbi =
-      case Mnesia.prev_key(Model.Block, {height+1, -1}) do
+      case Mnesia.prev_key(Model.Block, {height + 1, -1}) do
         {:ok, {^height, last_mbi}} -> last_mbi
         {:ok, _other_height} -> -1
         :none -> -1
@@ -151,6 +152,7 @@ defmodule AeMdw.Db.Sync.Transaction do
         if mbi > last_mbi do
           {mutations, acc} = micro_block_mutations(mblock, txi_acc)
           Mnesia.transaction(mutations)
+          Producer.commit_enqueued()
           Broadcaster.broadcast_micro_block(mblock, :mdw)
           Broadcaster.broadcast_txs(mblock, :mdw)
           acc
