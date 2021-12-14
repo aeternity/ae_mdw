@@ -25,13 +25,17 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   @impl GenServer
   def init(:ok) do
     Store.reset()
-    {:ok, %{buffer: []}}
+    {:ok, %{enqueue_buffer: [], dequeue_buffer: []}}
   end
 
   @spec enqueue(atom(), list()) :: :ok
   def enqueue(task_type, args) when is_atom(task_type) and is_list(args) do
-    Store.save_new(task_type, args)
-    :ok
+    GenServer.cast(__MODULE__, {:enqueue, task_type, args})
+  end
+
+  @spec commit_enqueued() :: :ok
+  def commit_enqueued() do
+    GenServer.cast(__MODULE__, :commit_enqueued)
   end
 
   @spec dequeue() :: nil | Model.async_tasks_record()
@@ -59,15 +63,34 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   end
 
   @impl GenServer
+  def handle_cast({:enqueue, task_type, args}, %{enqueue_buffer: enqueue_buffer} = state) do
+    {:noreply, %{state | enqueue_buffer: [{task_type, args} | enqueue_buffer]}}
+  end
+
+  @impl GenServer
+  def handle_cast(:commit_enqueued, %{enqueue_buffer: []} = state) do
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_cast(:commit_enqueued, %{enqueue_buffer: enqueue_buffer} = state) do
+    enqueue_buffer
+    |> Enum.reverse()
+    |> Enum.each(fn {task_type, args} -> Store.save_new(task_type, args) end)
+
+    {:noreply, %{state | enqueue_buffer: []}}
+  end
+
+  @impl GenServer
   def handle_call(:dequeue, _from, state) do
-    {m_task, new_state} = next_state(state)
+    {m_task, %{dequeue_buffer: new_buffer} = new_state} = next_state(state)
 
     if nil != m_task do
       Model.async_tasks(index: index) = m_task
       Store.set_processing(index)
     end
 
-    new_state.buffer
+    new_buffer
     |> length()
     |> Stats.update_buffer_len(@max_buffer_size)
 
@@ -77,14 +100,14 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   #
   # Private functions
   #
-  defp next_state(%{buffer: []} = state) do
+  defp next_state(%{dequeue_buffer: []} = state) do
     case Store.fetch_unprocessed(@max_buffer_size) do
       [] -> {nil, state}
-      [m_task | buffer_tasks] -> {m_task, %{buffer: buffer_tasks}}
+      [m_task | buffer_tasks] -> {m_task, %{state | dequeue_buffer: buffer_tasks}}
     end
   end
 
-  defp next_state(%{buffer: [m_task | buffer_tasks]}) do
-    {m_task, %{buffer: buffer_tasks}}
+  defp next_state(%{dequeue_buffer: [m_task | buffer_tasks]} = state) do
+    {m_task, %{state | dequeue_buffer: buffer_tasks}}
   end
 end
