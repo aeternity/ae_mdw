@@ -82,11 +82,16 @@ defmodule AeMdw.Db.Sync.Transaction do
     type = mod.type()
     model_tx = Model.tx(index: txi, id: tx_hash, block_index: block_index, time: mb_time)
 
-    contract_events_mutation =
-      if type == :contract_call_tx do
-        ct_pk = :aect_call_tx.contract_pubkey(tx)
-        events = Map.get(mb_events, tx_hash, [])
+    ct_pk =
+      case type do
+        :contract_create_tx -> :aect_create_tx.contract_pubkey(tx)
+        :contract_call_tx -> :aect_call_tx.contract_pubkey(tx)
+        _other_tx -> nil
+      end
 
+    contract_events_mutation =
+      if ct_pk do
+        events = Map.get(mb_events, tx_hash, [])
         ContractEventsMutation.new(ct_pk, events, txi)
       end
 

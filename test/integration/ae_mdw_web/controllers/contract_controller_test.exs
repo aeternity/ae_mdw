@@ -103,6 +103,37 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
       ])
     end
 
+    test "get events from a contract init", %{conn: conn} do
+      contract_id = "ct_2PpG8gqRqA5Cp1nidyUka4PRQpdVux295xtqPSosQcJwYM2bYf"
+
+      %{"data" => data} =
+        conn
+        |> get("/contracts/logs/forward", contract_id: contract_id)
+        |> json_response(200)
+
+      assert Jason.encode!(data) == get_contract_logs_json(contract_id)
+
+      assert %{"call_txi" => call_txi, "contract_txi" => contract_txi} = hd(data)
+      assert call_txi == contract_txi
+    end
+
+    test "get internal calls from a contract init", %{conn: conn} do
+      contract_id = "ct_tDn6g6Rz1y5X6TKj4o2yGVgdw73Fv3Grk1iubct47GbYXSYp1"
+
+      %{"data" => data} =
+        conn
+        |> get("/contracts/calls/forward", contract_id: contract_id)
+        |> json_response(200)
+
+      assert %{
+               "function" => "Call.amount",
+               "call_txi" => call_txi,
+               "contract_txi" => contract_txi
+             } = hd(data)
+
+      assert call_txi == contract_txi
+    end
+
     test "renders error when the id is invalid", %{conn: conn} do
       contract_id = "ct_NoSuchContract"
       conn = get(conn, path(:forward), contract_id: contract_id)

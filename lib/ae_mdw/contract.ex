@@ -17,22 +17,39 @@ defmodule AeMdw.Contract do
   @type id :: binary()
   @type grouped_events() :: %{tx_hash() => [event()]}
 
-  @typep fname() :: binary()
-  @typep tx_hash() :: binary()
-  @typep event_name() :: {:internal_call_tx, fname()}
+  @typep fname :: binary()
+  @typep tx_hash :: binary()
+  @typep event_name :: {:internal_call_tx, fname()}
   # :aec_blocks.micro_block()
-  @typep micro_block() :: term()
-  @typep event_info() :: map() | :error
+  @typep micro_block :: term()
+  @typep event_info :: map() | :error
   # :aetx.tx_type()
   @typep event_type :: atom()
-  @typep event_data() :: %{tx_hash: tx_hash(), type: event_type(), info: event_info()}
+  @typep event_data :: %{tx_hash: tx_hash(), type: event_type(), info: event_info()}
 
-  @type event() :: {event_name(), event_data()}
+  @type event :: {event_name(), event_data()}
+  @type event_hash :: <<_::256>>
+
+  @type call :: tuple()
+  # for balances or balance
+  @type call_result :: map() | tuple()
+  @type serialized_call :: map()
+  # fcode or aevm info
+  @type ct_info :: {:fcode, map(), list(), any()} | list()
+  @type function_hash :: <<_::32>>
+
+  @typep tx :: tuple()
+  @typep block_hash :: <<_::256>>
+
+  @aex9_transfer_event_hash <<34, 60, 57, 226, 157, 255, 100, 103, 254, 221, 160, 151, 88, 217,
+                              23, 129, 197, 55, 46, 9, 31, 248, 107, 58, 249, 227, 16, 227, 134,
+                              86, 43, 239>>
 
   ################################################################################
-
+  @spec table() :: atom()
   def table(), do: @tab
 
+  @spec get_info(DBN.pubkey()) :: {:ok, ct_info()} | {:error, any()}
   def get_info(pubkey) do
     case EtsCache.get(@tab, pubkey) do
       {info, _tm} ->
@@ -73,6 +90,7 @@ defmodule AeMdw.Contract do
   # entrypoint balance         : (address)      => option(int)
   # entrypoint transfer        : (address, int) => unit
 
+  @spec aex9_signatures() :: map()
   def aex9_signatures() do
     %{
       "aex9_extensions" => {[], {:list, :string}},
@@ -85,6 +103,7 @@ defmodule AeMdw.Contract do
     }
   end
 
+  @spec is_aex9?(DBN.pubkey() | ct_info()) :: boolean()
   def is_aex9?(pubkey) when is_binary(pubkey) do
     case get_info(pubkey) do
       {:ok, info} -> is_aex9?(info)
@@ -109,11 +128,10 @@ defmodule AeMdw.Contract do
     do: false
 
   # value of :aec_hash.blake2b_256_hash("Transfer")
-  def aex9_transfer_event_hash(),
-    do:
-      <<34, 60, 57, 226, 157, 255, 100, 103, 254, 221, 160, 151, 88, 217, 23, 129, 197, 55, 46, 9,
-        31, 248, 107, 58, 249, 227, 16, 227, 134, 86, 43, 239>>
+  @spec aex9_transfer_event_hash() :: event_hash()
+  def aex9_transfer_event_hash(), do: @aex9_transfer_event_hash
 
+  @spec aex9_meta_info(DBN.pubkey()) :: {String.t(), String.t(), integer()}
   def aex9_meta_info(contract_pk),
     do: aex9_meta_info(contract_pk, DBN.top_height_hash(false))
 
@@ -124,6 +142,8 @@ defmodule AeMdw.Contract do
     {name, symbol, decimals}
   end
 
+  @spec call_contract(DBN.pubkey(), String.t(), list()) ::
+          {:ok, call_result()} | {:error, any()} | :revert
   def call_contract(contract_pk, function_name, args),
     do: call_contract(contract_pk, DBN.top_height_hash(false), function_name, args)
 
@@ -150,15 +170,16 @@ defmodule AeMdw.Contract do
     end
   end
 
+  @spec function_hash(String.t()) :: function_hash()
   def function_hash(name),
     do: :binary.part(:aec_hash.blake2b_256_hash(name), 0, 4)
 
   ##########
 
-  def decode_call_data(contract, call_data),
+  defp decode_call_data(contract, call_data),
     do: decode_call_data(contract, call_data, &id/1)
 
-  def decode_call_data({:fcode, _, _, _} = fate_info, call_data, mapper) do
+  defp decode_call_data({:fcode, _, _, _} = fate_info, call_data, mapper) do
     {:tuple, {fun_hash, {:tuple, tup_args}}} = :aeb_fate_encoding.deserialize(call_data)
 
     # sample fun_hash not matching: <<74, 202, 20, 78, 108, 15, 83, 141, 70, 92, 69, 235, 191, 127, 43, 123, 21, 80, 189, 1, 86, 76, 125, 166, 246, 81, 67, 150, 69, 95, 156, 6>>
@@ -171,7 +192,7 @@ defmodule AeMdw.Contract do
     end
   end
 
-  def decode_call_data([_ | _] = aevm_info, call_data, mapper) do
+  defp decode_call_data([_ | _] = aevm_info, call_data, mapper) do
     {:ok, fun_hash} = :aeb_aevm_abi.get_function_hash_from_calldata(call_data)
     {:ok, fun_name} = :aeb_aevm_abi.function_name_from_type_hash(fun_hash, aevm_info)
     {:ok, arg_type, _} = :aeb_aevm_abi.typereps_from_type_hash(fun_hash, aevm_info)
@@ -179,22 +200,19 @@ defmodule AeMdw.Contract do
     {fun_name, aevm_val({arg_type, vm_args}, mapper)}
   end
 
-  def decode_call_result(contract, fun_name, result, value),
-    do: decode_call_result(contract, fun_name, result, value, &id/1)
-
-  def decode_call_result(_info, _fun_name, :error, value, mapper),
+  defp decode_call_result(_info, _fun_name, :error, value, mapper),
     do: mapper.(%{error: [value]})
 
-  def decode_call_result({:fcode, _, _, _}, _fun_name, :revert, value, mapper),
+  defp decode_call_result({:fcode, _, _, _}, _fun_name, :revert, value, mapper),
     do: mapper.(%{abort: [:aeb_fate_encoding.deserialize(value)]})
 
-  def decode_call_result([_ | _], _fun_name, :revert, value, mapper),
+  defp decode_call_result([_ | _], _fun_name, :revert, value, mapper),
     do: mapper.(%{abort: [ok!(:aeb_heap.from_binary(:string, value))]})
 
-  def decode_call_result({:fcode, _, _, _}, _fun_name, :ok, value, mapper),
+  defp decode_call_result({:fcode, _, _, _}, _fun_name, :ok, value, mapper),
     do: fate_val(:aeb_fate_encoding.deserialize(value), mapper)
 
-  def decode_call_result([_ | _] = info, fun_name, :ok, value, mapper) do
+  defp decode_call_result([_ | _] = info, fun_name, :ok, value, mapper) do
     {:ok, hash} = :aeb_aevm_abi.type_hash_from_function_name(fun_name, info)
     {:ok, _, res_type} = :aeb_aevm_abi.typereps_from_type_hash(hash, info)
     {:ok, vm_res} = :aeb_heap.from_binary(res_type, value)
@@ -208,77 +226,14 @@ defmodule AeMdw.Contract do
   def to_json(%{abort: [reason]}), do: %{"abort" => [reason]}
   def to_json(%{error: [reason]}), do: %{"error" => [reason]}
 
-  ##########
-
-  def fate_val(x), do: fate_val(x, &id/1)
-
-  def fate_val({:address, x}, f), do: f.({:address, encode(:account_pubkey, x)})
-  def fate_val({:oracle, x}, f), do: f.({:oracle, encode(:oracle_pubkey, x)})
-  def fate_val({:oracle_query, x}, f), do: f.({:oracle_query, encode(:oracle_query_id, x)})
-  def fate_val({:contract, x}, f), do: f.({:contract, encode(:contract_pubkey, x)})
-  def fate_val({:bytes, x}, f), do: f.({:bytes, encode(:bytearray, x)})
-  def fate_val({:bits, x}, f), do: f.({:bits, x})
-  def fate_val({:tuple, {}}, f), do: f.({:unit, <<>>})
-  def fate_val({:tuple, x}, f), do: f.({:tuple, Enum.map(tuple_to_list(x), &fate_val(&1, f))})
-  def fate_val(x, f) when is_integer(x), do: f.({:int, x})
-  def fate_val(x, f) when is_boolean(x), do: f.({:bool, x})
-  def fate_val(x, f) when is_binary(x), do: f.({:string, x})
-  def fate_val(x, f) when is_list(x), do: f.({:list, Enum.map(x, &fate_val(&1, f))})
-
-  def fate_val(x, f) when is_map(x),
-    do: f.({:map, Enum.map(x, fn {k, v} -> %{key: fate_val(k, f), val: fate_val(v, f)} end)})
-
-  def fate_val({:variant, _, tag, args}, f),
-    do: f.({:variant, [tag | Enum.map(tuple_to_list(args), &fate_val(&1, f))]})
-
-  def aemv_arg(x), do: aevm_val(x, &id/1)
-
-  def aevm_val({:word, x}, f) when is_integer(x), do: f.({:word, x})
-  def aevm_val({:string, x}, f) when is_binary(x), do: f.({:string, x})
-  def aevm_val({{:option, _t}, :none}, f), do: f.({:option, :none})
-  def aevm_val({{:option, t}, {:some, x}}, f), do: f.({:option, aevm_val({t, x}, f)})
-
-  def aevm_val({{:tuple, t}, x}, f),
-    do: f.({:tuple, Enum.zip(t, tuple_to_list(x)) |> Enum.map(&aevm_val(&1, f))})
-
-  def aevm_val({{:list, t}, x}, f),
-    do: f.({:list, Enum.map(x, &aevm_val({t, &1}, f))})
-
-  def aevm_val({{:variant, cons}, {:variant, tag, args}}, f)
-      when is_integer(tag) and tag < length(cons) do
-    ts = Enum.at(cons, tag)
-    true = length(ts) == length(args)
-    f.({:variant, [tag | Enum.map(Enum.zip(ts, args), &aevm_val(&1, f))]})
-  end
-
-  def aevm_val({{:map, key_t, val_t}, x}, f) when is_map(x),
-    do:
-      f.(
-        {:map,
-         Enum.map(x, fn {k, v} ->
-           %{key: aevm_val({key_t, k}, f), val: aevm_val({val_t, v}, f)}
-         end)}
-      )
-
-  def aevm_val({k, v}, f) when is_atom(k), do: f.({k, v})
-
-  # this can't be imported, because Elixir complains with:
-  # module :aeser_api_encoder is not loaded and could not be found
-  defp encode(type, val),
-    do: :aeser_api_encoder.encode(type, val)
-
-  ##########
-
+  @spec call_rec(tx(), DBN.pubkey(), block_hash()) :: call()
   def call_rec(tx_rec, contract_pk, block_hash) do
     tx_rec
     |> :aect_call_tx.call_id()
     |> call_rec_from_id(contract_pk, block_hash)
   end
 
-  def call_rec_from_id(call_id, contract_pk, block_hash) do
-    :aec_chain.get_contract_call(contract_pk, call_id, block_hash) |> ok!
-  end
-
+  @spec call_tx_info(tx(), DBN.pubkey(), block_hash(), fun()) :: {map(), call()}
   def call_tx_info(tx_rec, contract_pk, block_hash, format_fn) do
     {:ok, ct_info} = get_info(contract_pk)
     call_id = :aect_call_tx.call_id(tx_rec)
@@ -306,19 +261,27 @@ defmodule AeMdw.Contract do
     end
   end
 
-  def get_init_call_details(contract_pk, tx_rec, block_hash) do
+  @spec get_init_call_rec(DBN.pubkey(), tx(), block_hash()) :: call()
+  def get_init_call_rec(contract_pk, tx_rec, block_hash) do
     create_nonce = :aect_create_tx.nonce(tx_rec)
 
     tx_rec
     |> :aect_create_tx.owner_pubkey()
     |> :aect_call.id(create_nonce, contract_pk)
     |> call_rec_from_id(contract_pk, block_hash)
+  end
+
+  @spec get_init_call_details(DBN.pubkey(), tx(), block_hash()) :: serialized_call()
+  def get_init_call_details(contract_pk, tx_rec, block_hash) do
+    contract_pk
+    |> get_init_call_rec(tx_rec, block_hash)
     |> :aect_call.serialize_for_client()
     |> Map.drop(["gas_price", "height", "caller_nonce"])
     |> Map.put("args", contract_init_args(contract_pk, tx_rec))
     |> Map.update("log", [], &stringfy_log_topics/1)
   end
 
+  @spec stringfy_log_topics([map()]) :: [map()]
   def stringfy_log_topics(logs) do
     Enum.map(logs, fn log ->
       Map.update(log, "topics", [], fn xs ->
@@ -335,10 +298,66 @@ defmodule AeMdw.Contract do
   #
   # Private functions
   #
+  # encoding and decoding vm data
+  defp fate_val({:address, x}, f), do: f.({:address, encode(:account_pubkey, x)})
+  defp fate_val({:oracle, x}, f), do: f.({:oracle, encode(:oracle_pubkey, x)})
+  defp fate_val({:oracle_query, x}, f), do: f.({:oracle_query, encode(:oracle_query_id, x)})
+  defp fate_val({:contract, x}, f), do: f.({:contract, encode(:contract_pubkey, x)})
+  defp fate_val({:bytes, x}, f), do: f.({:bytes, encode(:bytearray, x)})
+  defp fate_val({:bits, x}, f), do: f.({:bits, x})
+  defp fate_val({:tuple, {}}, f), do: f.({:unit, <<>>})
+  defp fate_val({:tuple, x}, f), do: f.({:tuple, Enum.map(tuple_to_list(x), &fate_val(&1, f))})
+  defp fate_val(x, f) when is_integer(x), do: f.({:int, x})
+  defp fate_val(x, f) when is_boolean(x), do: f.({:bool, x})
+  defp fate_val(x, f) when is_binary(x), do: f.({:string, x})
+  defp fate_val(x, f) when is_list(x), do: f.({:list, Enum.map(x, &fate_val(&1, f))})
+
+  defp fate_val(x, f) when is_map(x),
+    do: f.({:map, Enum.map(x, fn {k, v} -> %{key: fate_val(k, f), val: fate_val(v, f)} end)})
+
+  defp fate_val({:variant, _, tag, args}, f),
+    do: f.({:variant, [tag | Enum.map(tuple_to_list(args), &fate_val(&1, f))]})
+
+  defp aevm_val({:word, x}, f) when is_integer(x), do: f.({:word, x})
+  defp aevm_val({:string, x}, f) when is_binary(x), do: f.({:string, x})
+  defp aevm_val({{:option, _t}, :none}, f), do: f.({:option, :none})
+  defp aevm_val({{:option, t}, {:some, x}}, f), do: f.({:option, aevm_val({t, x}, f)})
+
+  defp aevm_val({{:tuple, t}, x}, f),
+    do: f.({:tuple, Enum.zip(t, tuple_to_list(x)) |> Enum.map(&aevm_val(&1, f))})
+
+  defp aevm_val({{:list, t}, x}, f),
+    do: f.({:list, Enum.map(x, &aevm_val({t, &1}, f))})
+
+  defp aevm_val({{:variant, cons}, {:variant, tag, args}}, f)
+       when is_integer(tag) and tag < length(cons) do
+    ts = Enum.at(cons, tag)
+    true = length(ts) == length(args)
+    f.({:variant, [tag | Enum.map(Enum.zip(ts, args), &aevm_val(&1, f))]})
+  end
+
+  defp aevm_val({{:map, key_t, val_t}, x}, f) when is_map(x),
+    do:
+      f.(
+        {:map,
+         Enum.map(x, fn {k, v} ->
+           %{key: aevm_val({key_t, k}, f), val: aevm_val({val_t, v}, f)}
+         end)}
+      )
+
+  defp aevm_val({k, v}, f) when is_atom(k), do: f.({k, v})
+
+  # this can't be imported, because Elixir complains with:
+  # module :aeser_api_encoder is not loaded and could not be found
+  defp encode(type, val),
+    do: :aeser_api_encoder.encode(type, val)
+
+  ###
+
   defp get_events(micro_block) when elem(micro_block, 0) == :mic_block do
     txs = :aec_blocks.txs(micro_block)
 
-    if has_contract_call_tx?(txs) do
+    if has_contract_tx?(txs) do
       header = :aec_blocks.to_header(micro_block)
       {:ok, hash} = :aec_headers.hash_header(header)
       consensus = :aec_headers.consensus_module(header)
@@ -358,11 +377,15 @@ defmodule AeMdw.Contract do
     end
   end
 
-  defp has_contract_call_tx?(mb_txs) do
+  defp has_contract_tx?(mb_txs) do
     Enum.any?(mb_txs, fn signed_tx ->
       {mod, _tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
-      mod.type() == :contract_call_tx
+      mod.type() in [:contract_create_tx, :contract_call_tx]
     end)
+  end
+
+  defp call_rec_from_id(call_id, contract_pk, block_hash) do
+    :aec_chain.get_contract_call(contract_pk, call_id, block_hash) |> ok!
   end
 
   defp contract_init_args(contract_pk, tx_rec) do
