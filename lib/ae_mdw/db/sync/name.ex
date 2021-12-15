@@ -90,6 +90,12 @@ defmodule AeMdw.Db.Sync.Name do
               cache_through_delete(Model.AuctionOwner, {prev_owner, plain_name})
               cache_through_delete(Model.AuctionExpiration, {prev_auction_end, plain_name})
 
+              log_auction_change(
+                height,
+                plain_name,
+                "delete auction ending in #{prev_auction_end}"
+              )
+
               %{tx: prev_tx} = read_cached_raw_tx!(prev_txi)
 
               IntTransfer.fee(
@@ -108,7 +114,7 @@ defmodule AeMdw.Db.Sync.Name do
         cache_through_write(Model.AuctionExpiration, m_auction_exp)
         inc(:stat_sync_cache, :active_auctions)
 
-        log_auction_change(height, plain_name, "activate")
+        log_auction_change(height, plain_name, "activate auction expiring in #{auction_end}")
     end
   end
 
