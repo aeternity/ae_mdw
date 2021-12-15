@@ -12,7 +12,7 @@ defmodule AeMdw.Db.WriteLinksMutation do
 
   require Model
 
-  defstruct [:type, :tx, :signed_tx, :txi, :tx_hash, :block_index, :block]
+  defstruct [:type, :tx, :signed_tx, :txi, :tx_hash, :block_index, :block_hash]
 
   @opaque t() :: %__MODULE__{
             type: Node.tx_type(),
@@ -21,7 +21,7 @@ defmodule AeMdw.Db.WriteLinksMutation do
             txi: Txs.txi(),
             tx_hash: Txs.tx_hash(),
             block_index: Blocks.block_index(),
-            block: Model.block()
+            block_hash: Blocks.block_hash()
           }
 
   @spec new(
@@ -31,9 +31,9 @@ defmodule AeMdw.Db.WriteLinksMutation do
           Txs.txi(),
           Txs.tx_hash(),
           Blocks.block_index(),
-          Model.block()
+          Blocks.block_hash()
         ) :: t()
-  def new(type, tx, signed_tx, txi, tx_hash, block_index, block) do
+  def new(type, tx, signed_tx, txi, tx_hash, block_index, block_hash) do
     %__MODULE__{
       type: type,
       tx: tx,
@@ -41,7 +41,7 @@ defmodule AeMdw.Db.WriteLinksMutation do
       txi: txi,
       tx_hash: tx_hash,
       block_index: block_index,
-      block: block
+      block_hash: block_hash
     }
   end
 
@@ -51,18 +51,18 @@ defmodule AeMdw.Db.WriteLinksMutation do
         tx: tx,
         txi: txi,
         tx_hash: tx_hash,
-        block: block
+        block_hash: block_hash
       }) do
     pk = :aect_contracts.pubkey(:aect_contracts.new(tx))
     owner_pk = :aect_create_tx.owner_pubkey(tx)
     :ets.insert(:ct_create_sync_cache, {pk, txi})
     write_origin(:contract_create_tx, pk, txi, tx_hash)
-    Sync.Contract.create(pk, owner_pk, tx, txi, block)
+    Sync.Contract.create(pk, owner_pk, tx, txi, block_hash)
   end
 
-  def mutate(%__MODULE__{type: :contract_call_tx, tx: tx, txi: txi, block: block}) do
+  def mutate(%__MODULE__{type: :contract_call_tx, tx: tx, txi: txi, block_hash: block_hash}) do
     pk = :aect_call_tx.contract_pubkey(tx)
-    Sync.Contract.call(pk, tx, txi, block)
+    Sync.Contract.call(pk, tx, txi, block_hash)
   end
 
   def mutate(%__MODULE__{
