@@ -114,6 +114,6 @@ defmodule AeMdw.Migrations.IndexInnerTxs do
     mb_time = :aec_blocks.time_in_msecs(mblock)
     mb_events = Contract.get_grouped_events(mblock)
 
-    {block_index, mb_time, mb_events}
+    {block_index, mblock, mb_time, mb_events}
   end
 end

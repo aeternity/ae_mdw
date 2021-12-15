@@ -114,7 +114,8 @@ defmodule AeMdwWeb.BlockchainSim do
             %{
               hash: :aeser_api_encoder.encode(hash_type, block_hash),
               height: :aec_blocks.height(block),
-              time: :aec_blocks.time_in_msecs(block)
+              time: :aec_blocks.time_in_msecs(block),
+              block: block
             },
             hash_type,
             block

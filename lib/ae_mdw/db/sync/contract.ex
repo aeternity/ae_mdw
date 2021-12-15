@@ -6,7 +6,6 @@ defmodule AeMdw.Db.Sync.Contract do
   alias AeMdw.Db
   alias AeMdw.Db.Contract, as: DBContract
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Util, as: DBU
   alias AeMdw.Sync.AsyncTasks
 
   require Model
@@ -36,10 +35,9 @@ defmodule AeMdw.Db.Sync.Contract do
     end
   end
 
-  @spec call(pubkey(), tuple(), integer(), {integer(), integer()}) :: :ok
-  def call(contract_pk, tx, txi, bi) do
-    block_hash = Model.block(DBU.read_block!(bi), :hash)
-
+  @spec call(pubkey(), tuple(), integer(), Model.block()) :: :ok
+  def call(contract_pk, tx, txi, block) do
+    block_hash = Model.block(block, :hash)
     create_txi = get_txi(contract_pk)
 
     {fun_arg_res, call_rec} =
@@ -47,6 +45,7 @@ defmodule AeMdw.Db.Sync.Contract do
 
     DBContract.call_write(create_txi, txi, fun_arg_res)
     DBContract.logs_write(create_txi, txi, call_rec)
+
     :ok
   end
 

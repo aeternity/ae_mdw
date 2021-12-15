@@ -12,7 +12,7 @@ defmodule AeMdw.Db.WriteLinksMutation do
 
   require Model
 
-  defstruct [:type, :tx, :signed_tx, :txi, :tx_hash, :block_index]
+  defstruct [:type, :tx, :signed_tx, :txi, :tx_hash, :block_index, :block]
 
   @opaque t() :: %__MODULE__{
             type: Node.tx_type(),
@@ -20,7 +20,8 @@ defmodule AeMdw.Db.WriteLinksMutation do
             signed_tx: Node.signed_tx(),
             txi: Txs.txi(),
             tx_hash: Txs.tx_hash(),
-            block_index: Blocks.block_index()
+            block_index: Blocks.block_index(),
+            block: Model.block()
           }
 
   @spec new(
@@ -29,16 +30,18 @@ defmodule AeMdw.Db.WriteLinksMutation do
           Node.signed_tx(),
           Txs.txi(),
           Txs.tx_hash(),
-          Blocks.block_index()
+          Blocks.block_index(),
+          Model.block()
         ) :: t()
-  def new(type, tx, signed_tx, txi, tx_hash, block_index) do
+  def new(type, tx, signed_tx, txi, tx_hash, block_index, block) do
     %__MODULE__{
       type: type,
       tx: tx,
       signed_tx: signed_tx,
       txi: txi,
       tx_hash: tx_hash,
-      block_index: block_index
+      block_index: block_index,
+      block: block
     }
   end
 
@@ -57,9 +60,9 @@ defmodule AeMdw.Db.WriteLinksMutation do
     Sync.Contract.create(pk, owner_pk, tx, txi, block_index)
   end
 
-  def mutate(%__MODULE__{type: :contract_call_tx, tx: tx, txi: txi, block_index: block_index}) do
+  def mutate(%__MODULE__{type: :contract_call_tx, tx: tx, txi: txi, block: block}) do
     pk = :aect_call_tx.contract_pubkey(tx)
-    Sync.Contract.call(pk, tx, txi, block_index)
+    Sync.Contract.call(pk, tx, txi, block)
   end
 
   def mutate(%__MODULE__{
