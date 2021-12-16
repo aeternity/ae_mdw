@@ -113,7 +113,8 @@ defmodule AeMdw.Migrations.IndexInnerTxs do
     block_index = {:aec_blocks.height(mblock), mbi}
     mb_time = :aec_blocks.time_in_msecs(mblock)
     mb_events = Contract.get_grouped_events(mblock)
+    {:ok, mb_hash} = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock))
 
-    {block_index, mb_time, mb_events}
+    {block_index, mb_hash, mb_time, mb_events}
   end
 end

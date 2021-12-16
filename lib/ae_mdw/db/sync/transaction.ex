@@ -69,12 +69,12 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   @spec transaction_mutations(
           {Node.signed_tx(), Txs.txi()},
-          {Blocks.block_index(), Blocks.time(), Contract.grouped_events()},
+          {Blocks.block_index(), Blocks.block_hash(), Blocks.time(), Contract.grouped_events()},
           boolean()
         ) :: [Mutation.t()]
   def transaction_mutations(
         {signed_tx, txi},
-        {block_index, mb_time, mb_events} = tx_ctx,
+        {block_index, block_hash, mb_time, mb_events} = tx_ctx,
         inner_tx? \\ false
       ) do
     {mod, tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
@@ -106,7 +106,7 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     [
       WriteTxMutation.new(model_tx, type, txi, mb_time, inner_tx?),
-      WriteLinksMutation.new(type, tx, signed_tx, txi, tx_hash, block_index),
+      WriteLinksMutation.new(type, tx, signed_tx, txi, tx_hash, block_index, block_hash),
       contract_events_mutation,
       WriteFieldsMutation.new(type, tx, block_index, txi),
       inner_tx_mutations
@@ -177,7 +177,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     mb_model = Model.block(index: {height, mbi}, tx_index: mb_txi, hash: mb_hash)
     mb_txs = :aec_blocks.txs(mblock)
     events = AeMdw.Contract.get_grouped_events(mblock)
-    tx_ctx = {{height, mbi}, mb_time, events}
+    tx_ctx = {{height, mbi}, mb_hash, mb_time, events}
 
     txs_mutations =
       mb_txs

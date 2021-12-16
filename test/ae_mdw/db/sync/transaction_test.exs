@@ -25,7 +25,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         mb1: [
           t1: spend_tx(:alice, :bob, 5_000)
         ] do
-        %{height: height, time: mb_time, txs: [tx_rec]} = blocks[:mb1]
+        %{height: height, block: mb, time: mb_time, txs: [tx_rec]} = blocks[:mb1]
 
         signed_tx = :aetx_sign.new(tx_rec, [])
         txi = @very_high_txi + 1
@@ -34,7 +34,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         mutations =
           Transaction.transaction_mutations(
             {signed_tx, txi},
-            {block_index, mb_time, nil},
+            {block_index, mb, mb_time, nil},
             false
           )
 
@@ -61,7 +61,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         mb1: [
           t1: spend_tx(:alice, :alice, 5_000)
         ] do
-        %{height: height, time: mb_time, txs: [tx_rec]} = blocks[:mb1]
+        %{height: height, block: mb, time: mb_time, txs: [tx_rec]} = blocks[:mb1]
 
         signed_tx = :aetx_sign.new(tx_rec, [])
         txi = @very_high_txi + 1
@@ -70,7 +70,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         mutations =
           Transaction.transaction_mutations(
             {signed_tx, txi},
-            {block_index, mb_time, nil},
+            {block_index, mb, mb_time, nil},
             false
           )
 

@@ -29,6 +29,13 @@ defmodule AeMdw.Db.Model do
   @block_defaults [index: {-1, -1}, tx_index: nil, hash: <<>>]
   defrecord :block, @block_defaults
 
+  @type block ::
+          record(:block,
+            index: Blocks.block_index(),
+            tx_index: Txs.txi() | nil | -1,
+            hash: Blocks.key_hash()
+          )
+
   # txs table :
   #     index = tx_index (0..), id = tx_id
   @tx_defaults [index: -1, id: <<>>, block_index: {-1, -1}, time: -1]

@@ -2,20 +2,20 @@ defmodule AeMdw.Db.Sync.Contract do
   @moduledoc """
   Saves contract indexed state for creation, calls and events.
   """
+  alias AeMdw.Blocks
   alias AeMdw.Contract
   alias AeMdw.Db
   alias AeMdw.Db.Contract, as: DBContract
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Util, as: DBU
   alias AeMdw.Sync.AsyncTasks
 
   require Model
 
   @typep pubkey() :: DBContract.pubkey()
 
-  @spec create(pubkey(), pubkey(), tuple(), integer(), {integer(), integer()}) ::
+  @spec create(pubkey(), pubkey(), tuple(), integer(), Blocks.key_hash()) ::
           term() | :invalid_contract
-  def create(contract_pk, owner_pk, tx, txi, bi) do
+  def create(contract_pk, owner_pk, tx, txi, block_hash) do
     case Contract.get_info(contract_pk) do
       {:ok, contract_info} ->
         with true <- Contract.is_aex9?(contract_info) do
@@ -25,7 +25,6 @@ defmodule AeMdw.Db.Sync.Contract do
         end
 
         AeMdw.Ets.inc(:stat_sync_cache, :contracts)
-        block_hash = Model.block(DBU.read_block!(bi), :hash)
 
         call_rec = Contract.get_init_call_rec(contract_pk, tx, block_hash)
 
@@ -36,10 +35,8 @@ defmodule AeMdw.Db.Sync.Contract do
     end
   end
 
-  @spec call(pubkey(), tuple(), integer(), {integer(), integer()}) :: :ok
-  def call(contract_pk, tx, txi, bi) do
-    block_hash = Model.block(DBU.read_block!(bi), :hash)
-
+  @spec call(pubkey(), tuple(), integer(), Blocks.block_hash()) :: :ok
+  def call(contract_pk, tx, txi, block_hash) do
     create_txi = get_txi(contract_pk)
 
     {fun_arg_res, call_rec} =
@@ -47,6 +44,7 @@ defmodule AeMdw.Db.Sync.Contract do
 
     DBContract.call_write(create_txi, txi, fun_arg_res)
     DBContract.logs_write(create_txi, txi, call_rec)
+
     :ok
   end
 
