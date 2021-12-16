@@ -8,7 +8,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync
-  alias AeMdw.Db.Sync.Stat
   alias AeMdw.Db.Aex9AccountPresenceMutation
   alias AeMdw.Db.ContractEventsMutation
   alias AeMdw.Db.IntTransfer
@@ -16,6 +15,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Name
   alias AeMdw.Db.Oracle
+  alias AeMdw.Db.StatsMutation
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.WriteLinksMutation
   alias AeMdw.Db.WriteTxMutation
@@ -148,7 +148,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     mutations =
       [
         mutations,
-        Stat.store_mutation(height)
+        StatsMutation.new(height)
       ]
       |> List.flatten()
 
