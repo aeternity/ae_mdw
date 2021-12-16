@@ -123,7 +123,6 @@ defmodule AeMdw.MixProject do
       {:phoenix_swagger, "~> 0.8"},
       {:temp, "~> 0.4"},
       {:tesla, "~> 1.3.0"},
-      {:assertions, "~> 0.18.1", only: :test},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
       {:git_hooks, "~> 0.5.0", only: :dev, runtime: false},
       {:mock, "~> 0.3.0", only: :test},
