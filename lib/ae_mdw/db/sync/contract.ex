@@ -114,8 +114,18 @@ defmodule AeMdw.Db.Sync.Contract do
   @spec get_txi(pubkey()) :: integer()
   def get_txi(contract_pk) do
     case :ets.lookup(:ct_create_sync_cache, contract_pk) do
-      [{_, txi}] -> txi
-      [] -> Db.Origin.tx_index({:contract, contract_pk}) || -1
+      [{^contract_pk, txi}] ->
+        txi
+
+      [] ->
+        case Db.Origin.tx_index({:contract, contract_pk}) do
+          nil ->
+            -1
+
+          txi ->
+            :ets.insert(:ct_create_sync_cache, {contract_pk, txi})
+            txi
+        end
     end
   end
 end
