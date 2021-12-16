@@ -169,9 +169,9 @@ defmodule AeMdw.Db.Sync.Transaction do
       end)
 
     [
-      StatsMutation.new(height),
       MnesiaWriteMutation.new(Model.Block, kb_model),
-      block_rewards_mutation
+      block_rewards_mutation,
+      StatsMutation.new(height, last_mbi == -1)
     ]
     |> Enum.reject(&is_nil/1)
     |> Mnesia.transaction()
