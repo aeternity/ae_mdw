@@ -8,6 +8,7 @@ defmodule AeMdw.Db.IntTransfer do
   alias AeMdw.Db.Model
   alias AeMdw.Mnesia
 
+  require Ex2ms
   require Model
 
   alias AeMdw.Db.BlockRewardsMutation
@@ -24,6 +25,9 @@ defmodule AeMdw.Db.IntTransfer do
 
   @fee_kinds [:lock_name, :spend_name, :refund_name, :earn_oracle]
 
+  @reward_block_kind "reward_block"
+  @reward_dev_kind "reward_dev"
+
   @spec block_rewards_mutation(Blocks.height(), Blocks.key_header(), Blocks.key_hash()) ::
           BlockRewardsMutation.t()
   def block_rewards_mutation(height, key_header, key_hash) do
@@ -37,7 +41,7 @@ defmodule AeMdw.Db.IntTransfer do
       |> :aeu_mtrees.to_list()
       |> Enum.map(fn {target_pk, ser_account} ->
         amount = :aec_accounts.balance(:aec_accounts.deserialize(target_pk, ser_account))
-        kind = (target_pk in dev_benefs && "reward_dev") || "reward_block"
+        kind = (target_pk in dev_benefs && @reward_dev_kind) || @reward_block_kind
 
         {kind, target_pk, amount}
       end)
@@ -69,5 +73,28 @@ defmodule AeMdw.Db.IntTransfer do
     Mnesia.write(Model.IntTransferTx, int_tx)
     Mnesia.write(Model.KindIntTransferTx, kind_tx)
     Mnesia.write(Model.TargetKindIntTransferTx, target_kind_tx)
+  end
+
+  @spec count_block_reward(Blocks.height()) :: pos_integer()
+  def count_block_reward(height) do
+    count_reward(height, @reward_block_kind)
+  end
+
+  @spec count_dev_reward(Blocks.height()) :: pos_integer()
+  def count_dev_reward(height) do
+    count_reward(height, @reward_dev_kind)
+  end
+
+  defp count_reward(height, kind) do
+    height_pos = {height, -1}
+
+    kind_spec =
+      Ex2ms.fun do
+        {:kind_int_transfer_tx, {^kind, ^height_pos, :_, :_}} -> 1
+      end
+
+    Model.KindIntTransferTx
+    |> :mnesia.dirty_select(kind_spec)
+    |> length()
   end
 end
