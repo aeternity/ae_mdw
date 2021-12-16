@@ -33,6 +33,30 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
       assert Enum.at(call_txis, @default_limit - 1) >= Enum.at(next_call_txis, 0)
     end
 
+    test "it get logs backwards without any filters, with backwards path", %{conn: conn} do
+      assert %{"data" => logs, "next" => next} =
+               conn |> get("/contracts/logs/backward") |> json_response(200)
+
+      call_txis =
+        logs
+        |> Enum.map(fn %{"call_txi" => call_txi} -> call_txi end)
+        |> Enum.reverse()
+
+      assert @default_limit = length(call_txis)
+      assert ^call_txis = Enum.sort(call_txis)
+
+      assert %{"data" => next_logs} = conn |> get(next) |> json_response(200)
+
+      next_call_txis =
+        next_logs
+        |> Enum.map(fn %{"call_txi" => call_txi} -> call_txi end)
+        |> Enum.reverse()
+
+      assert @default_limit = length(next_call_txis)
+      assert ^next_call_txis = Enum.sort(next_call_txis)
+      assert Enum.at(call_txis, @default_limit - 1) >= Enum.at(next_call_txis, 0)
+    end
+
     test "is get logs forward without any filters", %{conn: conn} do
       assert %{"data" => logs, "next" => next} =
                conn
@@ -224,9 +248,30 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
   end
 
   describe "calls" do
-    test "it get logs backwards without any filters", %{conn: conn} do
+    test "it get calls backwards without any filters", %{conn: conn} do
       assert %{"data" => calls, "next" => next} =
                conn |> get("/contracts/calls") |> json_response(200)
+
+      call_txis =
+        calls
+        |> Enum.map(fn %{"call_txi" => call_txi} -> call_txi end)
+        |> Enum.reverse()
+
+      assert @default_limit = length(call_txis)
+      assert ^call_txis = Enum.sort(call_txis)
+      assert %{"data" => next_calls} = conn |> get(next) |> json_response(200)
+
+      next_call_txis =
+        next_calls |> Enum.map(fn %{"call_txi" => call_txi} -> call_txi end) |> Enum.reverse()
+
+      assert @default_limit = length(next_call_txis)
+      assert ^next_call_txis = Enum.sort(next_call_txis)
+      assert Enum.at(call_txis, @default_limit - 1) >= Enum.at(next_call_txis, 0)
+    end
+
+    test "it get calls backwards with backward path without any filters", %{conn: conn} do
+      assert %{"data" => calls, "next" => next} =
+               conn |> get("/contracts/calls/backward") |> json_response(200)
 
       call_txis =
         calls
