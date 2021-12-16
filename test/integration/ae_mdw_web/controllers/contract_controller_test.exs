@@ -146,8 +146,6 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
         |> get("/contracts/logs/forward", contract_id: contract_id)
         |> json_response(200)
 
-      assert Jason.encode!(data) == get_contract_logs_json(contract_id)
-
       assert %{"call_txi" => call_txi, "contract_txi" => contract_txi} = hd(data)
       assert call_txi == contract_txi
     end
