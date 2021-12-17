@@ -1,39 +1,51 @@
 defmodule AeMdw.Db.Sync.BlockIndex do
-  @moduledoc "fills :block table from backwards to get {height, nil} -> keyblock_hash"
+  @moduledoc """
+  Fills Model.Block table from backwards to save the key block hashes
+  """
 
-  require AeMdw.Db.Model
-
-  alias AeMdw.Db.Sync
   alias AeMdw.Db.Model
+  alias AeMdw.Node.Chain
+  alias AeMdw.Log
 
-  import AeMdw.{Sigil, Util, Db.Util}
+  require Model
 
-  @log_freq 10000
+  import AeMdw.Db.Util
+  import AeMdw.Sigil
 
-  ################################################################################
+  @log_freq 10_000
 
-  def sync(max_height \\ :safe) do
-    max_height = Sync.height(max_height)
+  @spec sync(Chain.height()) :: Chain.height()
+  def sync(max_height) when is_integer(max_height) do
+    max_height = Chain.checked_height(max_height)
     min_height = (max_kbi() || -1) + 1
 
     with true <- max_height >= min_height do
-      header = :aec_chain.get_key_header_by_height(max_height) |> ok!
-      hash = :aec_headers.hash_header(header) |> ok!
-      syncer = &sync_key_header(~t[block], &1, &2)
-      tracker = Sync.progress_logger(syncer, @log_freq, &log_msg/2)
-      :mnesia.transaction(fn -> max_height..min_height |> Enum.reduce(hash, tracker) end)
+      {:ok, header} = :aec_chain.get_key_header_by_height(max_height)
+      {:ok, hash} = :aec_headers.hash_header(header)
+
+      :mnesia.transaction(fn -> sync_range(max_height..min_height, hash) end)
     end
 
     max_kbi()
   end
 
-  def min_kbi(), do: kbi(&first/1)
+  @spec max_kbi() :: Chain.height() | nil
   def max_kbi(), do: kbi(&last/1)
 
+  @spec clear() :: :ok
   def clear(),
     do: :mnesia.clear_table(~t[block])
 
-  ################################################################################
+  #
+  # Private functions
+  #
+  defp sync_range(max_height..min_height, block_hash) do
+    Enum.reduce(max_height..min_height, block_hash, fn height, next_hash ->
+      if rem(height, @log_freq) == 0, do: Log.info("syncing block index at #{height}")
+
+      sync_key_header(~t[block], height, next_hash)
+    end)
+  end
 
   defp sync_key_header(table, height, hash) do
     {:ok, kh} = :aec_chain.get_header(hash)
@@ -50,7 +62,4 @@ defmodule AeMdw.Db.Sync.BlockIndex do
       {kbi, -1} -> kbi
     end
   end
-
-  defp log_msg(height, _hash),
-    do: "syncing block index at #{height}"
 end
