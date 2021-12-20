@@ -16,7 +16,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Name
   alias AeMdw.Db.Oracle
-  alias AeMdw.Db.StatsMutation
+  alias AeMdw.Db.Sync.Stats
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.WriteLinksMutation
   alias AeMdw.Db.WriteTxMutation
@@ -169,12 +169,14 @@ defmodule AeMdw.Db.Sync.Transaction do
       end)
 
     [
+      Stats.new_mutation(height, last_mbi == -1),
       MnesiaWriteMutation.new(Model.Block, kb_model),
-      block_rewards_mutation,
-      StatsMutation.new(height, last_mbi == -1)
+      block_rewards_mutation
     ]
     |> Enum.reject(&is_nil/1)
     |> Mnesia.transaction()
+
+    Broadcaster.broadcast_key_block(key_block, :mdw)
 
     if rem(height, @sync_cache_cleanup_freq) == 0 do
       :ets.delete_all_objects(:name_sync_cache)
