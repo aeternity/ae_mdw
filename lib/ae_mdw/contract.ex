@@ -56,22 +56,20 @@ defmodule AeMdw.Contract do
         {:ok, info}
 
       nil ->
-        case :aec_chain.get_contract(pubkey) do
-          {:ok, contract} ->
-            {:code, ser_code} = :aect_contracts.code(contract)
+        with {:ok, contract} <- :aec_chain.get_contract(pubkey),
+             {:ok, ser_code} <- get_code(contract) do
+          info =
+            case :aeser_contract_code.deserialize(ser_code) do
+              %{type_info: [], byte_code: byte_code} ->
+                :aeb_fate_code.deserialize(byte_code)
 
-            info =
-              case :aeser_contract_code.deserialize(ser_code) do
-                %{type_info: [], byte_code: byte_code} ->
-                  :aeb_fate_code.deserialize(byte_code)
+              %{type_info: type_info} ->
+                type_info
+            end
 
-                %{type_info: type_info} ->
-                  type_info
-              end
-
-            EtsCache.put(@tab, pubkey, info)
-            {:ok, info}
-
+          EtsCache.put(@tab, pubkey, info)
+          {:ok, info}
+        else
           {:error, reason} ->
             # contract's init can fail, contract_create_tx stays on chain
             # but contract isn't stored in contract store
@@ -175,6 +173,22 @@ defmodule AeMdw.Contract do
     do: :binary.part(:aec_hash.blake2b_256_hash(name), 0, 4)
 
   ##########
+
+  defp get_code(contract) do
+    case :aect_contracts.code(contract) do
+      {:code, ser_code} ->
+        {:ok, ser_code}
+
+      {:ref, {:id, :contract, pubkey}} ->
+        case :aec_chain.get_contract(pubkey) do
+          {:ok, contract} ->
+            get_code(contract)
+
+          error ->
+            error
+        end
+    end
+  end
 
   defp decode_call_data(contract, call_data),
     do: decode_call_data(contract, call_data, &id/1)
