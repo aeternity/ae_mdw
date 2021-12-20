@@ -51,11 +51,16 @@ defmodule AeMdw.Db.Name do
 
     auction_mspec =
       Ex2ms.fun do
-        {:expiration, {^height, name}, tm} -> {name, tm}
+        Model.expiration(index: {^height, name}, value: tm) -> {name, tm}
       end
 
-    expired_names = :mnesia.dirty_select(Model.ActiveNameExpiration, name_mspec)
-    expired_auctions = :mnesia.dirty_select(Model.AuctionExpiration, auction_mspec)
+    {:atomic, {expired_names, expired_auctions}} =
+      :mnesia.transaction(fn ->
+        names = :mnesia.select(Model.ActiveNameExpiration, name_mspec)
+        auctions = :mnesia.select(Model.AuctionExpiration, auction_mspec)
+
+        {names, auctions}
+      end)
 
     NamesExpirationMutation.new(height, expired_names, expired_auctions)
   end
