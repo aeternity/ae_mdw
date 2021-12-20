@@ -5,9 +5,10 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   alias AeMdw.Blocks
   alias AeMdw.Node, as: AE
+  alias AeMdw.Node.Chain
   alias AeMdw.Contract
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Sync
+  alias AeMdw.Db.Sync.BlockIndex
   alias AeMdw.Db.Aex9AccountPresenceMutation
   alias AeMdw.Db.ContractEventsMutation
   alias AeMdw.Db.IntTransfer
@@ -19,6 +20,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.WriteLinksMutation
   alias AeMdw.Db.WriteTxMutation
+  alias AeMdw.Log
   alias AeMdw.Mnesia
   alias AeMdw.Node
   alias AeMdw.Txs
@@ -29,15 +31,15 @@ defmodule AeMdw.Db.Sync.Transaction do
   import AeMdw.Db.Util
   import AeMdw.Util
 
-  @log_freq 1000
+  @log_freq 1_000
   @sync_cache_cleanup_freq 150_000
 
   ################################################################################
 
-  @spec sync(non_neg_integer() | :safe) :: pos_integer()
-  def sync(max_height \\ :safe) do
-    max_height = Sync.height((is_integer(max_height) && max_height + 1) || max_height)
-    bi_max_kbi = Sync.BlockIndex.sync(max_height) - 1
+  @spec sync(non_neg_integer()) :: pos_integer()
+  def sync(max_height) when is_integer(max_height) do
+    max_height = Chain.checked_height(max_height + 1)
+    bi_max_kbi = BlockIndex.sync(max_height) - 1
 
     case last(Model.Tx) do
       :"$end_of_table" ->
@@ -53,8 +55,13 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   @spec sync(non_neg_integer(), non_neg_integer(), non_neg_integer()) :: pos_integer()
   def sync(from_height, to_height, txi) when from_height <= to_height do
-    tracker = Sync.progress_logger(&sync_generation/2, @log_freq, &log_msg/2)
-    next_txi = from_height..to_height |> Enum.reduce(txi, tracker)
+    next_txi =
+      Enum.reduce(from_height..to_height, txi, fn height, next_txi ->
+        if rem(height, @log_freq) == 0,
+          do: Log.info("syncing transactions at generation #{height}")
+
+        sync_generation(height, next_txi)
+      end)
 
     :mnesia.transaction(fn ->
       [succ_kb] = :mnesia.read(Model.Block, {to_height + 1, -1})
@@ -194,7 +201,4 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     {txi + length(mb_txs), mbi + 1, mutations}
   end
-
-  defp log_msg(height, _ignore),
-    do: "syncing transactions at generation #{height}"
 end
