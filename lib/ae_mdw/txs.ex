@@ -376,11 +376,25 @@ defmodule AeMdw.Txs do
     base_types = Node.tx_field_types(field)
 
     case field do
-      :contract_id -> MapSet.put(base_types, :contract_create_tx)
-      :channel_id -> MapSet.put(base_types, :channel_create_tx)
-      :oracle_id -> MapSet.put(base_types, :oracle_register_tx)
-      :name_id -> MapSet.put(base_types, :name_claim_tx)
-      _other_field -> base_types
+      :contract ->
+        MapSet.put(base_types, :ga_attach_tx)
+
+      :contract_id ->
+        base_types
+        |> MapSet.put(:contract_create_tx)
+        |> MapSet.put(:ga_attach_tx)
+
+      :channel_id ->
+        MapSet.put(base_types, :channel_create_tx)
+
+      :oracle_id ->
+        MapSet.put(base_types, :oracle_register_tx)
+
+      :name_id ->
+        MapSet.put(base_types, :name_claim_tx)
+
+      _other_field ->
+        base_types
     end
   end
 end

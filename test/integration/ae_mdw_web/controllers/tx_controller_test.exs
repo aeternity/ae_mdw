@@ -386,6 +386,31 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       |> check_response_data(transform_tx_type, limit)
     end
 
+    test "get transactions when direction=backward and type parameter=ga_attach", %{
+      conn: conn
+    } do
+      limit = 1
+      type = "ga_attach"
+      transform_tx_type = transform_tx_type(type)
+
+      conn = request_txs(conn, "backward", "type", type, limit)
+      response = json_response(conn, 200)
+
+      check_response_data(response["data"], transform_tx_type, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
+          limit
+        )
+
+      assert ^data = response["data"]
+
+      conn
+      |> get_response_from_next_page(response)
+      |> check_response_data(transform_tx_type, limit)
+    end
+
     test "get transactions when direction=backward and type parameter=oracle_query", %{conn: conn} do
       limit = 15
       type = "oracle_query"
@@ -948,6 +973,32 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       <<_prefix::3-binary, rest::binary>> =
         id = "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z"
+
+      conn = request_txs(conn, "forward", criteria, id)
+      response = json_response(conn, 200)
+
+      check_response_data(response["data"], rest, :no_prefix, @default_limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
+          @default_limit
+        )
+
+      assert ^data = response["data"]
+
+      conn
+      |> get_response_from_next_page(response)
+      |> check_response_data(rest, :no_prefix, @default_limit)
+    end
+
+    test "get transactions with direction=forward and given GA contract ID with default limit", %{
+      conn: conn
+    } do
+      criteria = "contract"
+      # Generalized Account contract_id
+      <<_prefix::3-binary, rest::binary>> =
+        id = "ct_Be5LcGEN2SgZh2kSvf3LqZuawN94kn77iNy5off5UfgzbiNv4"
 
       conn = request_txs(conn, "forward", criteria, id)
       response = json_response(conn, 200)

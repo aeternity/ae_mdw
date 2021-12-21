@@ -606,8 +606,8 @@ The fields for transaction types are:
 - channel_snapshot_solo - channel_id, from_id
 - channel_withdraw - channel_id, to_id
 - contract_call - caller_id, contract_id
-- contract_create - owner_id
-- ga_attach - owner_id
+- contract_create - owner_id, contract_id
+- ga_attach - owner_id, contract_id
 - ga_meta - ga_id
 - name_claim - account_id
 - name_preclaim - account_id, commitment_id
