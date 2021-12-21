@@ -20,21 +20,6 @@ defmodule AeMdw.Db.StatsMutation do
           }
 
   @spec new(Blocks.height()) :: t()
-  def new(0) do
-    prev_sum_stat =
-      Model.sum_stat(
-        block_reward: 0,
-        dev_reward: 0,
-        total_supply: 0
-      )
-
-    %__MODULE__{
-      height: 1,
-      prev_sum_stat: prev_sum_stat,
-      token_supply_delta: 0
-    }
-  end
-
   def new(height) do
     token_supply_delta = AeMdw.Node.token_supply_delta(height + 1)
 

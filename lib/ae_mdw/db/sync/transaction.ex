@@ -9,7 +9,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync.BlockIndex
-  alias AeMdw.Db.Sync.InnerTx
   alias AeMdw.Db.Aex9AccountPresenceMutation
   alias AeMdw.Db.ContractEventsMutation
   alias AeMdw.Db.IntTransfer
@@ -37,27 +36,21 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   ################################################################################
 
-  @spec sync(non_neg_integer()) :: non_neg_integer()
-  def sync(0) do
-    BlockIndex.sync(0)
-    Mnesia.transaction([StatsMutation.new(0)])
-  end
-
-  def sync(max_height) when max_height > 0 do
+  @spec sync(non_neg_integer()) :: pos_integer()
+  def sync(max_height) when is_integer(max_height) do
     max_height = Chain.checked_height(max_height + 1)
     bi_max_kbi = BlockIndex.sync(max_height) - 1
 
-    {from_height, next_txi} =
-      case last(Model.Tx) do
-        :"$end_of_table" ->
-          {1, 0}
+    case last(Model.Tx) do
+      :"$end_of_table" ->
+        sync(0, bi_max_kbi, 0)
 
-        max_txi when is_integer(max_txi) ->
-          {tx_kbi, _} = Model.tx(read_tx!(max_txi), :block_index)
-          {tx_kbi + 1, max_txi + 1}
-      end
-
-    sync(from_height, bi_max_kbi, next_txi)
+      max_txi when is_integer(max_txi) ->
+        {tx_kbi, _} = Model.tx(read_tx!(max_txi), :block_index)
+        next_txi = max_txi + 1
+        from_height = tx_kbi + 1
+        sync(from_height, bi_max_kbi, next_txi)
+    end
   end
 
   @spec sync(non_neg_integer(), non_neg_integer(), non_neg_integer()) :: pos_integer()
@@ -111,7 +104,7 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     inner_tx_mutations =
       if type == :ga_meta_tx or type == :paying_for_tx do
-        inner_signed_tx = InnerTx.signed_tx(type, tx)
+        inner_signed_tx = Sync.InnerTx.signed_tx(type, tx)
         # indexes the inner with the txi from the wrapper/outer
         transaction_mutations({inner_signed_tx, txi}, tx_ctx, true)
       end
