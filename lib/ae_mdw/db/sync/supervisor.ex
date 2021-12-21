@@ -12,7 +12,7 @@ defmodule AeMdw.Db.Sync.Supervisor do
   @impl true
   def init(_args) do
     children = [
-      AeMdw.Db.Sync.ChainSubscriber,
+      AeMdw.Db.Sync,
       AeMdw.Db.Sync.ForkDetector
     ]
 
