@@ -1,4 +1,5 @@
 defmodule AeMdw.Db.Sync.BlockIndex do
+  # credo:disable-for-this-file
   @moduledoc "fills :block table from backwards to get {height, nil} -> keyblock_hash"
 
   require AeMdw.Db.Model

@@ -1,4 +1,5 @@
 defmodule AeMdw.Db.Sync do
+  # credo:disable-for-this-file
   alias __MODULE__
   alias AeMdw.Db.Model
   alias AeMdw.Log

@@ -1,4 +1,5 @@
 defmodule AeMdw.Sync.Watcher do
+  # credo:disable-for-this-file
   use GenServer
 
   import AeMdw.Util
