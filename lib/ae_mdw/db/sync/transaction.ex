@@ -32,7 +32,7 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   @log_freq 1000
   @sync_cache_cleanup_freq 150_000
-  @preload_blocks_buffer_size 300
+  @preload_blocks_buffer_size 100
 
   ################################################################################
 

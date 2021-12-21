@@ -14,30 +14,62 @@ defmodule AeMdw.Util.BufferedStream do
     empty_count = Semaphore.new(0)
     full_count = Semaphore.new(buffer_size)
     processing = Semaphore.new(1)
+    {:ok, agent} = Agent.start(fn -> :queue.new() end)
 
-    enumerable
-    |> Task.async_stream(
-      fn entry ->
-        # PRODUCER
-        Semaphore.wait(full_count)
-        Semaphore.wait(processing)
+    task =
+      Task.async(fn ->
+        Enum.each(enumerable, fn entry ->
+          # PRODUCER
+          Semaphore.wait(full_count)
+          Semaphore.wait(processing)
 
-        result = fun.(entry)
+          push_agent_item(agent, fun.(entry))
 
-        Semaphore.signal(processing)
-        Semaphore.signal(empty_count)
+          Semaphore.signal(processing)
+          Semaphore.signal(empty_count)
+        end)
 
-        result
+        Agent.update(agent, fn _queue -> :ended end)
+      end)
+
+    Stream.resource(
+      fn -> :ok end,
+      fn state ->
+        # CONSUMER
+        Semaphore.wait(empty_count)
+
+        result = pop_agent_item(agent)
+
+        Semaphore.signal(full_count)
+
+        case result do
+          {:ok, item} -> {[item], state}
+          :ended -> {:halt, state}
+        end
       end,
-      max_concurrency: buffer_size,
-      timeout: :infinity
+      fn _state ->
+        Semaphore.stop(empty_count)
+        Semaphore.stop(full_count)
+        Semaphore.stop(processing)
+        Agent.stop(agent)
+        Task.shutdown(task)
+      end
     )
-    |> Stream.map(fn {:ok, result} ->
-      # CONSUMER
-      Semaphore.wait(empty_count)
-      Semaphore.signal(full_count)
+  end
 
-      result
+  defp push_agent_item(agent, item) do
+    Agent.update(agent, fn queue -> :queue.in(item, queue) end)
+  end
+
+  defp pop_agent_item(agent) do
+    Agent.get_and_update(agent, fn
+      :ended ->
+        {:ended, :ended}
+
+      queue ->
+        {{:value, item}, new_queue} = :queue.out(queue)
+
+        {{:ok, item}, new_queue}
     end)
   end
 end
