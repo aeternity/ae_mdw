@@ -99,7 +99,7 @@ defmodule AeMdw.Migrations.IndexGaAttachTxs do
             txi = Map.get(hash_to_txi, hash)
             {:ok, mb_hash} = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock))
             mb_time = :aec_blocks.time_in_msecs(mblock)
-            tx_ctx = {{height, mbi}, mb_hash, mb_time, []}
+            tx_ctx = {{height, mbi}, mb_hash, mb_time, %{}}
 
             Transaction.transaction_mutations({signed_tx, txi}, tx_ctx)
           end)
