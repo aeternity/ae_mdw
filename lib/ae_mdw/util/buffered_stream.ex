@@ -11,30 +11,21 @@ defmodule AeMdw.Util.BufferedStream do
   @spec map(Enumerable.t(), (Enum.element() -> any()), [opt()]) :: Enumerable.t()
   def map(enumerable, fun, opts) do
     buffer_size = Keyword.fetch!(opts, :buffer_size)
-    empty_count = Semaphore.new(0)
-    full_count = Semaphore.new(buffer_size)
-    processing = Semaphore.new(1)
-    {:ok, agent} = Agent.start(fn -> :queue.new() end)
-
-    task =
-      Task.async(fn ->
-        Enum.each(enumerable, fn entry ->
-          # PRODUCER
-          Semaphore.wait(full_count)
-          Semaphore.wait(processing)
-
-          push_agent_item(agent, fun.(entry))
-
-          Semaphore.signal(processing)
-          Semaphore.signal(empty_count)
-        end)
-
-        Agent.update(agent, fn _queue -> :ended end)
-      end)
 
     Stream.resource(
-      fn -> :ok end,
-      fn state ->
+      fn ->
+        empty_count = Semaphore.new(0)
+        full_count = Semaphore.new(buffer_size)
+        {:ok, agent} = Agent.start(fn -> :queue.new() end)
+
+        task =
+          Task.async(fn ->
+            produce_results(enumerable, fun, empty_count, full_count, agent)
+          end)
+
+        {task, empty_count, full_count, agent}
+      end,
+      fn {_task, empty_count, full_count, agent} = state ->
         # CONSUMER
         Semaphore.wait(empty_count)
 
@@ -47,10 +38,9 @@ defmodule AeMdw.Util.BufferedStream do
           :ended -> {:halt, state}
         end
       end,
-      fn _state ->
+      fn {task, empty_count, full_count, agent} ->
         Semaphore.stop(empty_count)
         Semaphore.stop(full_count)
-        Semaphore.stop(processing)
         Agent.stop(agent)
         Task.shutdown(task)
       end
@@ -71,5 +61,18 @@ defmodule AeMdw.Util.BufferedStream do
 
         {{:ok, item}, new_queue}
     end)
+  end
+
+  defp produce_results(enumerable, fun, empty_count, full_count, agent) do
+    Enum.each(enumerable, fn entry ->
+      # PRODUCER
+      Semaphore.wait(full_count)
+
+      push_agent_item(agent, fun.(entry))
+
+      Semaphore.signal(empty_count)
+    end)
+
+    Agent.update(agent, fn _queue -> :ended end)
   end
 end
