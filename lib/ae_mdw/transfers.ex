@@ -43,7 +43,6 @@ defmodule AeMdw.Transfers do
       {transfers, next_cursor} =
         query
         |> Map.drop(@pagination_params)
-        |> Enum.sort()
         |> Enum.map(&convert_param/1)
         |> Map.new()
         |> build_stream(scope, cursor, direction)
@@ -196,7 +195,8 @@ defmodule AeMdw.Transfers do
 
   defp deserialize_cursor_kind(kind_bin), do: {:ok, kind_bin}
 
-  defp deserialize_cursor_account_pk(account_pk_bin), do: {:ok, account_pk_bin}
+  defp deserialize_cursor_account_pk(account_pk_bin),
+    do: Base.decode32(account_pk_bin, padding: false)
 
   defp deserialize_cursor_ref_txi(ref_txi_bin) do
     case Integer.parse(ref_txi_bin) do
@@ -221,6 +221,8 @@ defmodule AeMdw.Transfers do
   defp serialize_cursor(nil), do: nil
 
   defp serialize_cursor({{gen, txi}, kind, account_pk, ref_txi}) do
+    account_pk = Base.encode32(account_pk, padding: false)
+
     Base.hex_encode32("#{gen},#{txi}$#{kind}$#{account_pk}$#{ref_txi}", padding: false)
   end
 end
