@@ -33,6 +33,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   @log_freq 1000
   @sync_cache_cleanup_freq 150_000
   @preload_blocks_buffer_size 100
+  @micro_blocks_events_buffer_size 100
 
   ################################################################################
 
@@ -155,7 +156,16 @@ defmodule AeMdw.Db.Sync.Transaction do
       |> Enum.reject(&is_nil/1)
 
     {next_txi, _mb_index, mutations} =
-      Enum.reduce(micro_blocks, {txi, 0, initial_mutations}, &micro_block_mutations/2)
+      micro_blocks
+      |> BufferedStream.async_map(
+        fn mblock ->
+          events = AeMdw.Contract.get_grouped_events(mblock)
+
+          {mblock, events}
+        end,
+        buffer_size: @micro_blocks_events_buffer_size
+      )
+      |> Enum.reduce({txi, 0, initial_mutations}, &micro_block_mutations/2)
 
     mutations =
       [
@@ -181,14 +191,13 @@ defmodule AeMdw.Db.Sync.Transaction do
     next_txi
   end
 
-  defp micro_block_mutations(mblock, {txi, mbi, mutations}) do
+  defp micro_block_mutations({mblock, events}, {txi, mbi, mutations}) do
     height = :aec_blocks.height(mblock)
     mb_time = :aec_blocks.time_in_msecs(mblock)
     mb_hash = ok!(:aec_headers.hash_header(:aec_blocks.to_micro_header(mblock)))
     mb_txi = (txi == 0 && -1) || txi
     mb_model = Model.block(index: {height, mbi}, tx_index: mb_txi, hash: mb_hash)
     mb_txs = :aec_blocks.txs(mblock)
-    events = AeMdw.Contract.get_grouped_events(mblock)
     tx_ctx = {{height, mbi}, mb_hash, mb_time, events}
 
     txs_mutations =
