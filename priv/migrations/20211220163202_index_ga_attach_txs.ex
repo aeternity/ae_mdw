@@ -1,8 +1,7 @@
 defmodule AeMdw.Migrations.IndexGaAttachTxs do
   @moduledoc """
-  Indexes ga_attach transactions in a way that transactions and calls
-  related to the smart contract of the GA might be searched respectively by
-  `/txs` and `/contract/calls` requests using the contract_id field.
+  Indexes ga_attach transactions in a way that can be filtered
+  with `/txs` using `contract` or `contract_id` params.
   """
   alias AeMdw.Application, as: MdwApp
   alias AeMdw.Node, as: AE
