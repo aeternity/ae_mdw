@@ -80,32 +80,29 @@ defmodule AeMdw.Migrations.IndexGaAttachTxs do
       height
       |> AE.Db.get_micro_blocks()
       |> Enum.with_index()
-      |> Enum.flat_map(fn {mblock, mbi} ->
-        has_tx_to_sync? = Enum.any?(bi_txs_list, fn {{_height, tx_mbi}, _tx_hash, _txi} ->
+      |> Enum.filter(fn {_mblock, mbi} ->
+        Enum.any?(bi_txs_list, fn {{_height, tx_mbi}, _tx_hash, _txi} ->
           tx_mbi == mbi
         end)
+      end)
+      |> Enum.flat_map(fn {mblock, mbi} ->
+        hash_to_txi = Enum.into(bi_txs_list, %{}, fn {_bi, tx_hash, txi} -> {tx_hash, txi} end)
 
-        if has_tx_to_sync? do
-          hash_to_txi = Enum.into(bi_txs_list, %{}, fn {_bi, tx_hash, txi} -> {tx_hash, txi} end)
+        mblock
+        |> :aec_blocks.txs()
+        |> Enum.filter(fn signed_tx ->
+          hash = :aetx_sign.hash(signed_tx)
+          Map.has_key?(hash_to_txi, hash)
+        end)
+        |> Enum.map(fn signed_tx ->
+          hash = :aetx_sign.hash(signed_tx)
+          txi = Map.get(hash_to_txi, hash)
+          {:ok, mb_hash} = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock))
+          mb_time = :aec_blocks.time_in_msecs(mblock)
+          tx_ctx = {{height, mbi}, mb_hash, mb_time, %{}}
 
-          mblock
-          |> :aec_blocks.txs()
-          |> Enum.filter(fn signed_tx ->
-            hash = :aetx_sign.hash(signed_tx)
-            Map.has_key?(hash_to_txi, hash)
-          end)
-          |> Enum.map(fn signed_tx ->
-            hash = :aetx_sign.hash(signed_tx)
-            txi = Map.get(hash_to_txi, hash)
-            {:ok, mb_hash} = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock))
-            mb_time = :aec_blocks.time_in_msecs(mblock)
-            tx_ctx = {{height, mbi}, mb_hash, mb_time, %{}}
-
-            Transaction.transaction_mutations({signed_tx, txi}, tx_ctx)
-          end)
-        else
-          []
-        end
+          Transaction.transaction_mutations({signed_tx, txi}, tx_ctx)
+        end)
       end)
 
     txs_mutations
