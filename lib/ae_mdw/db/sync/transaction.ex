@@ -127,10 +127,13 @@ defmodule AeMdw.Db.Sync.Transaction do
     else
       next_txi = do_sync_generation(height, txi)
 
-      :mnesia.transaction(fn ->
-        [succ_kb] = :mnesia.read(Model.Block, {height + 1, -1})
-        :mnesia.write(Model.Block, Model.block(succ_kb, tx_index: next_txi), :write)
-      end)
+      {:atomic, :ok} =
+        :mnesia.transaction(fn ->
+          [next_kb] = :mnesia.read(Model.Block, {height + 1, -1})
+          :mnesia.write(Model.Block, Model.block(next_kb, tx_index: next_txi), :write)
+        end)
+
+      next_txi
     end
   end
 
