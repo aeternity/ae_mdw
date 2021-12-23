@@ -9,9 +9,6 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   alias AeMdw.Db.Util
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Validate
-
-  alias AeMdwWeb.Continuation, as: Cont
-  alias AeMdwWeb.NameController
   alias AeMdwWeb.TestUtil
 
   import AeMdw.Util
@@ -24,79 +21,90 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   @default_limit 10
 
   describe "active_names" do
-    test "get active names with default limit", %{conn: conn} do
-      conn = get(conn, "/names/active")
-      response = json_response(conn, 200)
+    test "it get active names backwards without any filters", %{conn: conn} do
+      assert %{"data" => names, "next" => next} =
+               conn |> get("/names/active") |> json_response(200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {NameController, :active_names, %{}, :unused_scope, 0},
-          @default_limit
-        )
+      expirations =
+        names
+        |> Enum.map(fn %{"info" => %{"expire_height" => expire_height}} -> expire_height end)
+        |> Enum.reverse()
 
-      assert Enum.count(response["data"]) == @default_limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+      assert length(names) <= @default_limit
+      assert ^expirations = Enum.sort(expirations)
 
-      conn_next = get(conn, response["next"])
-      response_next = json_response(conn_next, 200)
+      assert %{"data" => next_names} = conn |> get(next) |> json_response(200)
 
-      {:ok, next_data, _has_cont?} =
-        Cont.response_data(
-          {NameController, :active_names, %{}, :unused_scope, @default_limit},
-          @default_limit
-        )
+      if next do
+        next_expirations =
+          next_names
+          |> Enum.map(fn %{"info" => %{"expire_height" => expire_height}} -> expire_height end)
+          |> Enum.reverse()
 
-      assert Enum.count(response_next["data"]) == @default_limit
-
-      assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
+        assert length(next_names) <= @default_limit
+        assert ^next_expirations = Enum.sort(next_expirations)
+        assert Enum.at(expirations, @default_limit - 1) >= Enum.at(next_expirations, 0)
+      end
     end
 
-    test "get active names with limit=4", %{conn: conn} do
+    test "get active names forward with limit=4", %{conn: conn} do
       limit = 4
-      conn = get(conn, "/names/active?limit=#{limit}")
-      response = json_response(conn, 200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {NameController, :active_names, %{}, :unused_scope, 0},
-          limit
-        )
+      assert %{"data" => names, "next" => next} =
+               conn
+               |> get("/names/active", direction: "forward", limit: limit)
+               |> json_response(200)
 
-      assert Enum.count(response["data"]) <= limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+      expirations =
+        Enum.map(names, fn %{"info" => %{"expire_height" => expire_height}} -> expire_height end)
+
+      assert length(names) <= limit
+      assert ^expirations = Enum.sort(expirations)
+
+      if next do
+        assert %{"data" => next_names} = conn |> get(next) |> json_response(200)
+
+        next_expirations =
+          Enum.map(next_names, fn %{"info" => %{"expire_height" => expire_height}} ->
+            expire_height
+          end)
+
+        assert length(next_names) <= 4
+        assert ^next_expirations = Enum.sort(next_expirations)
+        assert Enum.at(expirations, limit - 1) <= Enum.at(next_expirations, 0)
+      end
     end
 
     test "get active names with parameters by=name, direction=forward and limit=3", %{conn: conn} do
       by = "name"
       direction = "forward"
       limit = 3
-      conn = get(conn, "/names/active?by=#{by}&direction=#{direction}&limit=#{limit}")
-      response = json_response(conn, 200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {NameController, :active_names, %{"by" => [by], "direction" => [direction]},
-           :unused_scope, 0},
-          limit
-        )
+      assert %{"data" => names} =
+               conn
+               |> get("/names/active", by: by, direction: direction, limit: limit)
+               |> json_response(200)
 
-      assert Enum.count(response["data"]) <= limit
-      assert response["data"] == data
+      plain_names = Enum.map(names, fn %{"name" => name} -> name end)
+
+      assert length(names) <= limit
+      assert ^plain_names = Enum.sort(plain_names)
     end
 
     test "renders error when parameter by is invalid", %{conn: conn} do
       by = "invalid_by"
-      conn = get(conn, "/names/active?by=#{by}")
+      error_msg = "invalid query: by=#{by}"
 
-      assert json_response(conn, 400) == %{"error" => "invalid query: by=#{by}"}
+      assert %{"error" => ^error_msg} = conn |> get("/names/active", by: by) |> json_response(400)
     end
 
     test "renders error when parameter direction is invalid", %{conn: conn} do
       by = "name"
       direction = "invalid_direction"
-      conn = get(conn, "/names/active?by=#{by}&direction=#{direction}")
+      error_msg = "invalid direction: #{direction}"
 
-      assert json_response(conn, 400) == %{"error" => "invalid direction: #{direction}"}
+      assert %{"error" => ^error_msg} =
+               conn |> get("/names/active", by: by, direction: direction) |> json_response(400)
     end
 
     test "it returns valid names on a given range", %{conn: conn} do
@@ -135,46 +143,53 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
   describe "inactive_names" do
     test "get inactive names with default limit", %{conn: conn} do
-      conn = get(conn, "/names/inactive")
-      response = json_response(conn, 200)
+      assert %{"data" => names, "next" => next} =
+               conn |> get("/names/inactive") |> json_response(200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {NameController, :inactive_names, %{}, :unused_scope, 0},
-          @default_limit
-        )
+      expirations =
+        names
+        |> Enum.map(fn %{"info" => %{"expire_height" => expire_height}} -> expire_height end)
+        |> Enum.reverse()
 
-      assert Enum.count(response["data"]) <= @default_limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(add_name_ttl(data, "auction"))
+      assert @default_limit = length(names)
+      assert ^expirations = Enum.sort(expirations)
 
-      conn_next = get(conn, response["next"])
-      response_next = json_response(conn_next, 200)
+      assert %{"data" => next_names} = conn |> get(next) |> json_response(200)
 
-      {:ok, next_data, _has_cont?} =
-        Cont.response_data(
-          {NameController, :inactive_names, %{}, :unused_scope, @default_limit},
-          @default_limit
-        )
+      next_expirations =
+        next_names
+        |> Enum.map(fn %{"info" => %{"expire_height" => expire_height}} -> expire_height end)
+        |> Enum.reverse()
 
-      assert Enum.count(response_next["data"]) == @default_limit
-
-      assert Jason.encode!(response_next["data"]) ==
-               Jason.encode!(add_name_ttl(next_data, "auction"))
+      assert @default_limit = length(next_names)
+      assert ^next_expirations = Enum.sort(next_expirations)
+      assert Enum.at(expirations, @default_limit - 1) >= Enum.at(next_expirations, 0)
     end
 
-    test "get inactive names with limit=6", %{conn: conn} do
-      limit = 6
-      conn = get(conn, "/names/inactive?limit=#{limit}")
-      response = json_response(conn, 200)
+    test "get inactive names forward with limit=6", %{conn: conn} do
+      limit = 4
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {NameController, :inactive_names, %{}, :unused_scope, 0},
-          limit
-        )
+      assert %{"data" => names, "next" => next} =
+               conn
+               |> get("/names/inactive", direction: "forward", limit: limit)
+               |> json_response(200)
 
-      assert Enum.count(response["data"]) <= limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(add_name_ttl(data, "auction"))
+      expirations =
+        Enum.map(names, fn %{"info" => %{"expire_height" => expire_height}} -> expire_height end)
+
+      assert ^limit = length(names)
+      assert ^expirations = Enum.sort(expirations)
+
+      assert %{"data" => next_names} = conn |> get(next) |> json_response(200)
+
+      next_expirations =
+        Enum.map(next_names, fn %{"info" => %{"expire_height" => expire_height}} ->
+          expire_height
+        end)
+
+      assert ^limit = length(next_names)
+      assert ^next_expirations = Enum.sort(next_expirations)
+      assert Enum.at(expirations, limit - 1) <= Enum.at(next_expirations, 0)
     end
 
     test "get inactive names with parameters by=name, direction=forward and limit=4", %{
@@ -183,33 +198,33 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       by = "name"
       direction = "forward"
       limit = 4
-      conn = get(conn, "/names/inactive?by=#{by}&direction=#{direction}&limit=#{limit}")
-      response = json_response(conn, 200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {NameController, :inactive_names, %{"by" => [by], "direction" => [direction]},
-           :unused_scope, 0},
-          limit
-        )
+      assert %{"data" => names} =
+               conn
+               |> get("/names/inactive", by: by, direction: direction, limit: limit)
+               |> json_response(200)
 
-      assert Enum.count(response["data"]) <= limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+      plain_names = Enum.map(names, fn %{"name" => name} -> name end)
+
+      assert ^limit = length(names)
+      assert ^plain_names = Enum.sort(plain_names)
     end
 
     test "renders error when parameter by is invalid", %{conn: conn} do
       by = "invalid_by"
-      conn = get(conn, "/names/inactive?by=#{by}")
+      error_msg = "invalid query: by=#{by}"
 
-      assert json_response(conn, 400) == %{"error" => "invalid query: by=#{by}"}
+      assert %{"error" => ^error_msg} =
+               conn |> get("/names/inactive?by=#{by}") |> json_response(400)
     end
 
     test "renders error when parameter direction is invalid", %{conn: conn} do
       by = "name"
       direction = "invalid_direction"
-      conn = get(conn, "/names/inactive?by=#{by}&direction=#{direction}")
+      error_msg = "invalid direction: #{direction}"
 
-      assert json_response(conn, 400) == %{"error" => "invalid direction: #{direction}"}
+      assert %{"error" => ^error_msg} =
+               conn |> get("/names/inactive", by: by, direction: direction) |> json_response(400)
     end
 
     test "it returns valid names on a given range", %{conn: conn} do
@@ -263,32 +278,27 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
   describe "auctions" do
     test "get auctions with default limit", %{conn: conn} do
-      conn = get(conn, "/names/auctions")
-      response = json_response(conn, 200)
+      assert %{"data" => auctions} = conn |> get("/names/auctions") |> json_response(200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {NameController, :auctions, %{}, :unused_scope, 0},
-          @default_limit
-        )
+      expirations =
+        auctions
+        |> Enum.map(fn %{"info" => %{"auction_end" => expire}} -> expire end)
+        |> Enum.reverse()
 
-      assert Enum.count(response["data"]) <= @default_limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(add_name_ttl(data, "info"))
+      assert length(auctions) <= @default_limit
+      assert ^expirations = Enum.sort(expirations)
     end
 
     test "get auctions with limit=2", %{conn: conn} do
       limit = 2
-      conn = get(conn, "/names/auctions?limit=#{limit}")
-      response = json_response(conn, 200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {NameController, :auctions, %{}, :unused_scope, 0},
-          limit
-        )
+      assert %{"data" => auctions} =
+               conn |> get("/names/auctions", limit: limit) |> json_response(200)
 
-      assert Enum.count(response["data"]) <= limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(add_name_ttl(data, "info"))
+      plain_names = Enum.map(auctions, fn %{"name" => plain_name} -> plain_name end)
+
+      assert length(auctions) <= limit
+      assert ^plain_names = Enum.sort(plain_names)
     end
 
     test "get auctions with parameters by=expiration, direction=forward and limit=3", %{
@@ -297,33 +307,32 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       limit = 3
       by = "expiration"
       direction = "forward"
-      conn = get(conn, "/names/auctions?by=#{by}&direction=#{direction}&limit=#{limit}")
-      response = json_response(conn, 200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {NameController, :auctions, %{"by" => [by], "direction" => [direction]}, :unused_scope,
-           0},
-          limit
-        )
+      assert %{"data" => auctions} =
+               conn
+               |> get("/names/auctions", by: by, direction: direction, limit: limit)
+               |> json_response(200)
 
-      assert Enum.count(response["data"]) <= limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(add_name_ttl(data, "info"))
+      expires = Enum.map(auctions, fn %{"info" => %{"auction_end" => expires}} -> expires end)
+
+      assert length(auctions) <= limit
+      assert ^expires = Enum.sort(expires)
     end
 
     test "renders error when parameter by is invalid", %{conn: conn} do
       by = "invalid_by"
-      conn = get(conn, "/names/auctions?by=#{by}")
+      error_msg = "invalid query: by=#{by}"
 
-      assert json_response(conn, 400) == %{"error" => "invalid query: by=#{by}"}
+      %{"error" => ^error_msg} = conn |> get("/names/auctions", by: by) |> json_response(400)
     end
 
     test "renders error when parameter direction is invalid", %{conn: conn} do
       by = "name"
       direction = "invalid_direction"
-      conn = get(conn, "/names/auctions?by=#{by}&direction=#{direction}")
+      error_msg = "invalid direction: #{direction}"
 
-      assert json_response(conn, 400) == %{"error" => "invalid direction: #{direction}"}
+      %{"error" => ^error_msg} =
+        conn |> get("/names/auctions", by: by, direction: direction) |> json_response(400)
     end
   end
 
@@ -331,45 +340,35 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
     test "get active and inactive names, except those in auction, with default limit", %{
       conn: conn
     } do
-      conn = get(conn, "/names")
-      response = json_response(conn, 200)
+      assert %{"data" => names, "next" => next} = conn |> get("/names") |> json_response(200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {NameController, :names, %{}, :unused_scope, 0},
-          @default_limit
-        )
+      expirations =
+        Enum.map(names, fn %{"info" => %{"expire_height" => expire_height}} -> expire_height end)
 
-      assert Enum.count(response["data"]) == @default_limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+      assert @default_limit = length(names)
+      assert ^expirations = Enum.sort(expirations)
 
-      conn_next = get(conn, response["next"])
-      response_next = json_response(conn_next, 200)
+      assert %{"data" => next_names} = conn |> get(next) |> json_response(200)
 
-      {:ok, next_data, _has_cont?} =
-        Cont.response_data(
-          {NameController, :names, %{}, :unused_scope, @default_limit},
-          @default_limit
-        )
+      next_expirations =
+        Enum.map(next_names, fn %{"info" => %{"expire_height" => expire_height}} ->
+          expire_height
+        end)
 
-      assert Enum.count(response_next["data"]) == @default_limit
-
-      assert Jason.encode!(response_next["data"]) == Jason.encode!(next_data)
+      assert @default_limit = length(next_expirations)
+      assert ^next_expirations = Enum.sort(next_expirations)
+      assert Enum.at(expirations, @default_limit - 1) >= Enum.at(next_expirations, 0)
     end
 
     test "get active and inactive names, except those in auction, with limit=2", %{conn: conn} do
       limit = 2
-      conn = get(conn, "/names?limit=#{limit}")
-      response = json_response(conn, 200)
+      assert %{"data" => names} = conn |> get("/names", limit: limit) |> json_response(200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {NameController, :names, %{}, :unused_scope, 0},
-          limit
-        )
+      expirations =
+        Enum.map(names, fn %{"info" => %{"expire_height" => expire_height}} -> expire_height end)
 
-      assert Enum.count(response["data"]) == limit
-      assert Jason.encode!(response["data"]) == Jason.encode!(data)
+      assert ^limit = length(names)
+      assert ^expirations = Enum.sort(expirations)
     end
 
     test "get active and inactive names, except those in auction, with parameters by=name, direction=forward and limit=4",
@@ -377,32 +376,32 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       limit = 4
       by = "name"
       direction = "forward"
-      conn = get(conn, "/names?by=#{by}&direction=#{direction}&limit=#{limit}")
-      response = json_response(conn, 200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {NameController, :names, %{"by" => [by]}, :unused_scope, 0},
-          limit
-        )
+      assert %{"data" => names} =
+               conn
+               |> get("/names", by: by, direction: direction, limit: limit)
+               |> json_response(200)
 
-      assert Enum.count(response["data"]) == limit
-      assert response["data"] == data
+      plain_names = Enum.map(names, fn %{"name" => plain_name} -> plain_name end)
+
+      assert ^limit = length(names)
+      assert ^plain_names = Enum.sort(plain_names)
     end
 
     test "renders error when parameter by is invalid", %{conn: conn} do
       by = "invalid_by"
-      conn = get(conn, "/names?by=#{by}")
+      error_msg = "invalid query: by=#{by}"
 
-      assert json_response(conn, 400) == %{"error" => "invalid query: by=#{by}"}
+      assert %{"error" => ^error_msg} = conn |> get("/names", by: by) |> json_response(400)
     end
 
     test "renders error when parameter direction is invalid", %{conn: conn} do
       by = "name"
       direction = "invalid_direction"
-      conn = get(conn, "/names?by=#{by}&direction=#{direction}")
+      error_msg = "invalid direction: #{direction}"
 
-      assert json_response(conn, 400) == %{"error" => "invalid direction: #{direction}"}
+      %{"error" => ^error_msg} =
+        conn |> get("/names", by: by, direction: direction) |> json_response(400)
     end
 
     test "it returns valid names on a given range", %{conn: conn} do
@@ -450,7 +449,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       kbis =
         data |> Enum.map(fn %{"info" => %{"expire_height" => kbi}} -> kbi end) |> Enum.reverse()
 
-      assert Enum.sort(kbis) == kbis
+      assert ^kbis = Enum.sort(kbis)
     end
   end
 
@@ -637,17 +636,5 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       )
 
     %{"active" => actives, "top_bid" => top_bids}
-  end
-
-  defp add_name_ttl(data, field) do
-    Enum.map(data, fn
-      %{^field => nil} = name ->
-        name
-
-      %{^field => _auction} = name ->
-        %{"auction_end" => auction_end} = Map.get(name, field)
-        ttl = auction_end + :aec_governance.name_claim_max_expiration(Util.proto_vsn(auction_end))
-        put_in(name, [field, "last_bid", "tx", "ttl"], ttl)
-    end)
   end
 end
