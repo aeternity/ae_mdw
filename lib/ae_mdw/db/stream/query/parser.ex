@@ -1,4 +1,5 @@
 defmodule AeMdw.Db.Stream.Query.Parser do
+  # credo:disable-for-this-file
   alias AeMdw.Node, as: AE
   alias AeMdw.Validate
   alias AeMdw.Error.Input, as: ErrInput
@@ -55,11 +56,22 @@ defmodule AeMdw.Db.Stream.Query.Parser do
     base_types = AE.tx_field_types(field)
 
     case field do
-      :contract_id -> MapSet.put(base_types, :contract_create_tx)
-      :channel_id -> MapSet.put(base_types, :channel_create_tx)
-      :oracle_id -> MapSet.put(base_types, :oracle_register_tx)
-      :name_id -> MapSet.put(base_types, :name_claim_tx)
-      _ -> base_types
+      :contract_id ->
+        base_types
+        |> MapSet.put(:contract_create_tx)
+        |> MapSet.put(:ga_attach_tx)
+
+      :channel_id ->
+        MapSet.put(base_types, :channel_create_tx)
+
+      :oracle_id ->
+        MapSet.put(base_types, :oracle_register_tx)
+
+      :name_id ->
+        MapSet.put(base_types, :name_claim_tx)
+
+      _ ->
+        base_types
     end
   end
 

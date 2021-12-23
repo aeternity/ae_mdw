@@ -997,25 +997,15 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     } do
       criteria = "contract"
       # Generalized Account contract_id
-      <<_prefix::3-binary, rest::binary>> =
-        id = "ct_Be5LcGEN2SgZh2kSvf3LqZuawN94kn77iNy5off5UfgzbiNv4"
+      contract_id = "ct_Be5LcGEN2SgZh2kSvf3LqZuawN94kn77iNy5off5UfgzbiNv4"
 
-      conn = request_txs(conn, "forward", criteria, id)
+      conn = request_txs(conn, "forward", criteria, contract_id)
       response = json_response(conn, 200)
 
-      check_response_data(response["data"], rest, :no_prefix, @default_limit)
-
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          @default_limit
-        )
-
-      assert ^data = response["data"]
-
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(rest, :no_prefix, @default_limit)
+      Enum.each(response["data"], fn block_tx ->
+        assert block_tx["tx"]["contract_id"] == contract_id
+        assert block_tx["tx"]["type"] == "GAAttachTx"
+      end)
     end
 
     test "get transactions with direction=forward and given oracle ID with default limit", %{
@@ -1203,6 +1193,27 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       tx_type = "ga_attach"
       field = "owner_id"
       id = "ak_2RUVa9bvHUD8wYSrvixRjy9LonA9L29wRvwDfQ4y37ysMKjgdQ"
+
+      conn = request_txs_by_field(conn, "forward", tx_type, field, id, limit)
+      response = json_response(conn, 200)
+
+      check_response_data(response["data"], field, id, limit)
+
+      {:ok, data, _has_cont?} =
+        Continuation.response_data(
+          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
+          limit
+        )
+
+      assert ^data = response["data"]
+    end
+
+    test "get transactions when direction=forward, tx_type=ga_attach and field=contract_id ",
+         %{conn: conn} do
+      limit = 1
+      tx_type = "ga_attach"
+      field = "contract_id"
+      id = "ct_Be5LcGEN2SgZh2kSvf3LqZuawN94kn77iNy5off5UfgzbiNv4"
 
       conn = request_txs_by_field(conn, "forward", tx_type, field, id, limit)
       response = json_response(conn, 200)

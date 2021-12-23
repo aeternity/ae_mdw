@@ -37,7 +37,7 @@ defmodule AeMdw.Txs do
   @field_table Field
   @id_count_table IdCount
 
-  @create_tx_types ~w(contract_create_tx channel_create_tx oracle_register_tx name_claim_tx)a
+  @create_tx_types ~w(contract_create_tx channel_create_tx oracle_register_tx name_claim_tx ga_attach_tx)a
 
   @spec fetch_txs(direction(), scope(), query(), cursor() | nil, limit()) ::
           {:ok, [tx()], cursor() | nil} | {:error, reason()}
@@ -272,10 +272,16 @@ defmodule AeMdw.Txs do
 
   defp extract_transaction_by([type]) when type in ~w(account contract channel oracle name) do
     tx_types =
-      if type == "account" do
-        Node.tx_types()
-      else
-        Node.tx_group(String.to_existing_atom(type))
+      case type do
+        "account" ->
+          Node.tx_types()
+
+        "contract" ->
+          # less common at the end and called once
+          Node.tx_group(:contract) ++ [:ga_attach_tx]
+
+        _other ->
+          Node.tx_group(String.to_existing_atom(type))
       end
 
     Enum.flat_map(tx_types, fn tx_type ->
@@ -376,9 +382,6 @@ defmodule AeMdw.Txs do
     base_types = Node.tx_field_types(field)
 
     case field do
-      :contract ->
-        MapSet.put(base_types, :ga_attach_tx)
-
       :contract_id ->
         base_types
         |> MapSet.put(:contract_create_tx)
