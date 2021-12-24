@@ -343,7 +343,9 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       assert %{"data" => names, "next" => next} = conn |> get("/names") |> json_response(200)
 
       expirations =
-        Enum.map(names, fn %{"info" => %{"expire_height" => expire_height}} -> expire_height end)
+        names
+        |> Enum.map(fn %{"info" => %{"expire_height" => expire_height}} -> expire_height end)
+        |> Enum.reverse()
 
       assert @default_limit = length(names)
       assert ^expirations = Enum.sort(expirations)
@@ -351,9 +353,9 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       assert %{"data" => next_names} = conn |> get(next) |> json_response(200)
 
       next_expirations =
-        Enum.map(next_names, fn %{"info" => %{"expire_height" => expire_height}} ->
-          expire_height
-        end)
+        next_names
+        |> Enum.map(fn %{"info" => %{"expire_height" => expire_height}} -> expire_height end)
+        |> Enum.reverse()
 
       assert @default_limit = length(next_expirations)
       assert ^next_expirations = Enum.sort(next_expirations)
@@ -365,7 +367,9 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       assert %{"data" => names} = conn |> get("/names", limit: limit) |> json_response(200)
 
       expirations =
-        Enum.map(names, fn %{"info" => %{"expire_height" => expire_height}} -> expire_height end)
+        names
+        |> Enum.map(fn %{"info" => %{"expire_height" => expire_height}} -> expire_height end)
+        |> Enum.reverse()
 
       assert ^limit = length(names)
       assert ^expirations = Enum.sort(expirations)
