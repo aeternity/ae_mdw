@@ -69,7 +69,7 @@ jobs:
         id: plt-cache
         with:
           path: priv/plts
-          key: plts-v4-${{ hashFiles('mix.lock') }}
+          key: plts-v5-${{ hashFiles('mix.lock') }}
 
       - name: Common tests setup
         uses: ./.github/actions/tests-common
