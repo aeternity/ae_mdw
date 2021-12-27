@@ -1,5 +1,44 @@
 # Changelog
 
+## [1.4.0](https://www.github.com/aeternity/ae_mdw/compare/v1.3.1...v1.4.0) (2021-12-27)
+
+
+### Features
+
+* add cursor-based pagination to contract logs/calls ([#392](https://www.github.com/aeternity/ae_mdw/issues/392)) ([f0724ab](https://www.github.com/aeternity/ae_mdw/commit/f0724ab3221e9316fb3f88f1f45f66bf88d51a1f))
+* add cursor-based pagination to stats ([#384](https://www.github.com/aeternity/ae_mdw/issues/384)) ([045ee35](https://www.github.com/aeternity/ae_mdw/commit/045ee3518e38b4cdff92f7163da6f697c905b7d2))
+* db transactions per microblock ([#390](https://www.github.com/aeternity/ae_mdw/issues/390)) ([eb76e5b](https://www.github.com/aeternity/ae_mdw/commit/eb76e5b5ec00465f7b0bb39a5db7f538470a2b4d))
+* index contract init events and internal calls ([#395](https://www.github.com/aeternity/ae_mdw/issues/395)) ([ca7f295](https://www.github.com/aeternity/ae_mdw/commit/ca7f295d9de201c4dd45cdb03dfcddce86b39e21))
+
+
+### Bug Fixes
+
+* base32 encode account cursor on transfers ([8d4c274](https://www.github.com/aeternity/ae_mdw/commit/8d4c274f60e2d25a5523dd4a17d0d1a91d74949e))
+* build expiring mutation using mnesia transaction ([c94f28d](https://www.github.com/aeternity/ae_mdw/commit/c94f28d8651b407dbdec504161341799bbefd461))
+* build oracles expiration transaction using mnesia transaction ([721ad99](https://www.github.com/aeternity/ae_mdw/commit/721ad99869f04751595f6ad7648aa7916b60e055))
+* get info for contract with :ref instead of :code ([5ffcec1](https://www.github.com/aeternity/ae_mdw/commit/5ffcec1f82b9dab63ac8edac581bd430852d1ddc))
+* revert chainsubscriber refactor ([#412](https://www.github.com/aeternity/ae_mdw/issues/412)) ([1b1e52f](https://www.github.com/aeternity/ae_mdw/commit/1b1e52f4395e210d2156d9689a90f73dd675777c))
+* sync height 0 without mbs and txs ([9b9bbdf](https://www.github.com/aeternity/ae_mdw/commit/9b9bbdfc4754b99ff4b5f0be7d7dbf23ae7a2548))
+* use last synced gen for stats and totalstats ([#401](https://www.github.com/aeternity/ae_mdw/issues/401)) ([53b27e7](https://www.github.com/aeternity/ae_mdw/commit/53b27e7a189527ed2a16a327587266e2be7510b3))
+
+
+### Miscellaneous
+
+* add additional logging information for auction updates ([865421c](https://www.github.com/aeternity/ae_mdw/commit/865421cce3ac5ccef8bcfcb21844d34468f818c5)), closes [#396](https://www.github.com/aeternity/ae_mdw/issues/396)
+* include date on info.log ([#389](https://www.github.com/aeternity/ae_mdw/issues/389)) ([cee643e](https://www.github.com/aeternity/ae_mdw/commit/cee643e797e687e1c8653bdbb088363da8fe5afb)), closes [#361](https://www.github.com/aeternity/ae_mdw/issues/361)
+* prev_stat is not used ([#400](https://www.github.com/aeternity/ae_mdw/issues/400)) ([55a7e48](https://www.github.com/aeternity/ae_mdw/commit/55a7e48823ac7c7c6a72d2c49caff9799f79df29))
+
+
+### Refactorings
+
+* remove dep from chain subscriber ([6be7a7f](https://www.github.com/aeternity/ae_mdw/commit/6be7a7f085ee43f75a9377cfd6f91939ac6545e0))
+
+
+### Testing
+
+* add contract controller endpoints integration tests ([#391](https://www.github.com/aeternity/ae_mdw/issues/391)) ([6389fb1](https://www.github.com/aeternity/ae_mdw/commit/6389fb1763b63a8017098513a5ac1af69a017ac0))
+* refactor name controller integration tests ([#421](https://www.github.com/aeternity/ae_mdw/issues/421)) ([2413b7b](https://www.github.com/aeternity/ae_mdw/commit/2413b7b0bcedb95f5d9618965b363b7f0fcb1745))
+
 ### [1.3.1](https://www.github.com/aeternity/ae_mdw/compare/v1.3.0...v1.3.1) (2021-12-09)
 
 
