@@ -15,12 +15,13 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Name
   alias AeMdw.Db.Oracle
-  alias AeMdw.Db.StatsMutation
+  alias AeMdw.Db.Sync.Stats
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.WriteLinksMutation
   alias AeMdw.Db.WriteTxMutation
   alias AeMdw.Mnesia
   alias AeMdw.Node
+  alias AeMdw.Sync.AsyncTasks.Producer
   alias AeMdw.Txs
   alias AeMdwWeb.Websocket.Broadcaster
 
@@ -44,9 +45,9 @@ defmodule AeMdw.Db.Sync.Transaction do
         sync(0, bi_max_kbi, 0)
 
       max_txi when is_integer(max_txi) ->
-        {tx_kbi, _} = Model.tx(read_tx!(max_txi), :block_index)
+        # sync same height again to resume from previous microblock
+        {from_height, _} = Model.tx(read_tx!(max_txi), :block_index)
         next_txi = max_txi + 1
-        from_height = tx_kbi + 1
         sync(from_height, bi_max_kbi, next_txi)
     end
   end
@@ -54,12 +55,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   @spec sync(non_neg_integer(), non_neg_integer(), non_neg_integer()) :: pos_integer()
   def sync(from_height, to_height, txi) when from_height <= to_height do
     tracker = Sync.progress_logger(&sync_generation/2, @log_freq, &log_msg/2)
-    next_txi = from_height..to_height |> Enum.reduce(txi, tracker)
-
-    :mnesia.transaction(fn ->
-      [succ_kb] = :mnesia.read(Model.Block, {to_height + 1, -1})
-      :mnesia.write(Model.Block, Model.block(succ_kb, tx_index: next_txi), :write)
-    end)
+    next_txi = Enum.reduce(from_height..to_height, txi, tracker)
 
     next_txi
   end
@@ -118,6 +114,30 @@ defmodule AeMdw.Db.Sync.Transaction do
   ################################################################################
 
   defp sync_generation(height, txi) do
+    {:atomic, gen_fully_synced?} =
+      :mnesia.transaction(fn ->
+        case :mnesia.read(Model.Block, {height + 1, -1}) do
+          [] -> false
+          [Model.block(tx_index: next_txi)] -> not is_nil(next_txi)
+        end
+      end)
+
+    if gen_fully_synced? do
+      txi
+    else
+      next_txi = do_sync_generation(height, txi)
+
+      {:atomic, :ok} =
+        :mnesia.transaction(fn ->
+          [next_kb] = :mnesia.read(Model.Block, {height + 1, -1})
+          :mnesia.write(Model.Block, Model.block(next_kb, tx_index: next_txi), :write)
+        end)
+
+      next_txi
+    end
+  end
+
+  defp do_sync_generation(height, txi) do
     {key_block, micro_blocks} = AE.Db.get_blocks(height)
     kb_txi = (txi == 0 && -1) || txi
     kb_header = :aec_blocks.to_key_header(key_block)
@@ -133,33 +153,42 @@ defmodule AeMdw.Db.Sync.Transaction do
         IntTransfer.block_rewards_mutation(height, kb_header, kb_hash)
       end
 
-    initial_mutations =
-      [
-        Name.expirations_mutation(height),
-        Oracle.expirations_mutation(height - 1),
-        MnesiaWriteMutation.new(Model.Block, kb_model),
-        block_rewards_mutation
-      ]
-      |> Enum.reject(&is_nil/1)
+    [
+      Name.expirations_mutation(height),
+      Oracle.expirations_mutation(height - 1)
+    ]
+    |> Mnesia.transaction()
 
-    {next_txi, _mb_index, mutations} =
-      Enum.reduce(micro_blocks, {txi, 0, initial_mutations}, &micro_block_mutations/2)
+    last_mbi =
+      case Mnesia.prev_key(Model.Block, {height + 1, -1}) do
+        {:ok, {^height, last_mbi}} -> last_mbi
+        {:ok, _other_height} -> -1
+        :none -> -1
+      end
 
-    mutations =
-      [
-        mutations,
-        StatsMutation.new(height)
-      ]
-      |> List.flatten()
+    {next_txi, _mb_index} =
+      Enum.reduce(micro_blocks, {txi, 0}, fn mblock, {txi, mbi} = txi_acc ->
+        if mbi > last_mbi do
+          {mutations, acc} = micro_block_mutations(mblock, txi_acc)
+          Mnesia.transaction(mutations)
+          Producer.commit_enqueued()
+          Broadcaster.broadcast_micro_block(mblock, :mdw)
+          Broadcaster.broadcast_txs(mblock, :mdw)
+          acc
+        else
+          {txi, mbi + 1}
+        end
+      end)
 
-    Mnesia.transaction(mutations)
+    [
+      Stats.new_mutation(height, last_mbi == -1),
+      MnesiaWriteMutation.new(Model.Block, kb_model),
+      block_rewards_mutation
+    ]
+    |> Enum.reject(&is_nil/1)
+    |> Mnesia.transaction()
 
     Broadcaster.broadcast_key_block(key_block, :mdw)
-
-    Enum.each(micro_blocks, fn mblock ->
-      Broadcaster.broadcast_micro_block(mblock, :mdw)
-      Broadcaster.broadcast_txs(mblock, :mdw)
-    end)
 
     if rem(height, @sync_cache_cleanup_freq) == 0 do
       :ets.delete_all_objects(:name_sync_cache)
@@ -169,7 +198,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     next_txi
   end
 
-  defp micro_block_mutations(mblock, {txi, mbi, mutations}) do
+  defp micro_block_mutations(mblock, {txi, mbi}) do
     height = :aec_blocks.height(mblock)
     mb_time = :aec_blocks.time_in_msecs(mblock)
     mb_hash = ok!(:aec_headers.hash_header(:aec_blocks.to_micro_header(mblock)))
@@ -186,13 +215,12 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     mutations =
       List.flatten([
-        mutations,
         MnesiaWriteMutation.new(Model.Block, mb_model),
         txs_mutations,
         Aex9AccountPresenceMutation.new(height, mbi)
       ])
 
-    {txi + length(mb_txs), mbi + 1, mutations}
+    {mutations, {txi + length(mb_txs), mbi + 1}}
   end
 
   defp log_msg(height, _ignore),
