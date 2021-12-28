@@ -43,8 +43,6 @@ defmodule AeMdw.Db.ContractCreateMutation do
         aex9_meta_info: aex9_meta_info,
         call_rec: call_rec
       }) do
-    :ets.insert(:ct_create_sync_cache, {contract_pk, txi})
-
     if aex9_meta_info do
       DBContract.aex9_creation_write(aex9_meta_info, contract_pk, owner_pk, txi)
     end

@@ -62,9 +62,8 @@ defmodule AeMdw.Db.WriteLinksMutation do
     AeMdw.Ets.inc(:stat_sync_cache, :contracts)
   end
 
-  def mutate(%__MODULE__{type: :contract_call_tx, tx: tx, txi: txi, block_hash: block_hash}) do
-    pk = :aect_call_tx.contract_pubkey(tx)
-    Sync.Contract.call(pk, tx, txi, block_hash)
+  def mutate(%__MODULE__{type: :contract_call_tx}) do
+    :ok
   end
 
   def mutate(%__MODULE__{

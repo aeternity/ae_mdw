@@ -2,29 +2,14 @@ defmodule AeMdw.Db.Sync.Contract do
   @moduledoc """
   Saves contract indexed state for creation, calls and events.
   """
-  alias AeMdw.Blocks
   alias AeMdw.Contract
-  alias AeMdw.Db
   alias AeMdw.Db.Contract, as: DBContract
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Origin
+  alias AeMdw.Node.Db
   alias AeMdw.Sync.AsyncTasks
 
   require Model
-
-  @typep pubkey() :: DBContract.pubkey()
-
-  @spec call(pubkey(), tuple(), integer(), Blocks.block_hash()) :: :ok
-  def call(contract_pk, tx, txi, block_hash) do
-    create_txi = get_txi(contract_pk)
-
-    {fun_arg_res, call_rec} =
-      Contract.call_tx_info(tx, contract_pk, block_hash, &Contract.to_map/1)
-
-    DBContract.call_write(create_txi, txi, fun_arg_res)
-    DBContract.logs_write(create_txi, txi, call_rec)
-
-    :ok
-  end
 
   @spec aex9_derive_account_presence!(tuple()) :: :ok
   def aex9_derive_account_presence!({kbi, mbi}) do
@@ -89,14 +74,14 @@ defmodule AeMdw.Db.Sync.Contract do
     end)
   end
 
-  @spec get_txi(pubkey()) :: integer()
+  @spec get_txi(Db.pubkey()) :: integer()
   def get_txi(contract_pk) do
     case :ets.lookup(:ct_create_sync_cache, contract_pk) do
       [{^contract_pk, txi}] ->
         txi
 
       [] ->
-        case Db.Origin.tx_index({:contract, contract_pk}) do
+        case Origin.tx_index({:contract, contract_pk}) do
           nil ->
             -1
 

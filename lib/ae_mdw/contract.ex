@@ -38,6 +38,7 @@ defmodule AeMdw.Contract do
   # fcode or aevm info
   @type ct_info :: {:fcode, map(), list(), any()} | list()
   @type function_hash :: <<_::32>>
+  @type fun_arg_res() :: map()
 
   @typep tx :: tuple()
   @typep block_hash :: <<_::256>>
@@ -248,7 +249,7 @@ defmodule AeMdw.Contract do
     |> call_rec_from_id(contract_pk, block_hash)
   end
 
-  @spec call_tx_info(tx(), DBN.pubkey(), block_hash(), fun()) :: {map(), call()}
+  @spec call_tx_info(tx(), DBN.pubkey(), block_hash(), fun()) :: {fun_arg_res(), call()}
   def call_tx_info(tx_rec, contract_pk, block_hash, format_fn) do
     {:ok, ct_info} = get_info(contract_pk)
     call_id = :aect_call_tx.call_id(tx_rec)
