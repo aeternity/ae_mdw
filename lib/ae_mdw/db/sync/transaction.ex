@@ -9,14 +9,17 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync
   alias AeMdw.Db.Aex9AccountPresenceMutation
+  alias AeMdw.Db.ContractCreateMutation
   alias AeMdw.Db.ContractEventsMutation
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.MnesiaWriteMutation
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Name
   alias AeMdw.Db.Oracle
+  alias AeMdw.Db.OriginMutation
   alias AeMdw.Db.Sync.Stats
   alias AeMdw.Db.WriteFieldsMutation
+  alias AeMdw.Db.WriteFieldMutation
   alias AeMdw.Db.WriteLinksMutation
   alias AeMdw.Db.WriteTxMutation
   alias AeMdw.Mnesia
@@ -80,7 +83,6 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     ct_pk =
       case type do
-        :contract_create_tx -> :aect_create_tx.contract_pubkey(tx)
         :contract_call_tx -> :aect_call_tx.contract_pubkey(tx)
         _other_tx -> nil
       end
@@ -103,6 +105,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     [
       WriteTxMutation.new(model_tx, type, txi, mb_time, inner_tx?),
       WriteLinksMutation.new(type, tx, signed_tx, txi, tx_hash, block_index, block_hash),
+      tx_mutations(type, tx, signed_tx, txi, tx_hash, block_index, block_hash, mb_events),
       contract_events_mutation,
       WriteFieldsMutation.new(type, tx, block_index, txi),
       inner_tx_mutations
@@ -221,6 +224,61 @@ defmodule AeMdw.Db.Sync.Transaction do
       ])
 
     {mutations, {txi + length(mb_txs), mbi + 1}}
+  end
+
+  defp tx_mutations(
+         :contract_create_tx,
+         tx,
+         _signed_tx,
+         txi,
+         tx_hash,
+         _block_index,
+         block_hash,
+         mb_events
+       ) do
+    contract_pk = :aect_create_tx.contract_pubkey(tx)
+    owner_pk = :aect_create_tx.owner_pubkey(tx)
+    events = Map.get(mb_events, tx_hash, [])
+
+    mutations = [
+      ContractEventsMutation.new(contract_pk, events, txi)
+      | origin_mutations(:contract_create_tx, nil, contract_pk, txi, tx_hash)
+    ]
+
+    case Contract.get_info(contract_pk) do
+      {:ok, contract_info} ->
+        call_rec = Contract.get_init_call_rec(contract_pk, tx, block_hash)
+
+        aex9_meta_info =
+          if Contract.is_aex9?(contract_info) do
+            Contract.aex9_meta_info(contract_pk)
+          end
+
+        [
+          mutations,
+          ContractCreateMutation.new(contract_pk, txi, owner_pk, aex9_meta_info, call_rec)
+        ]
+
+      {:error, _reason} ->
+        mutations
+    end
+  end
+
+  defp tx_mutations(_type, _tx, _signed_tx, _txi, _tx_hash, _block_index, _block_hash, _mb_events) do
+    []
+  end
+
+  defp origin_mutations(tx_type, pos, pubkey, txi, tx_id) do
+    [
+      OriginMutation.new(tx_type, pubkey, txi, tx_id)
+      | write_field_mutations(tx_type, pos, pubkey, txi)
+    ]
+  end
+
+  defp write_field_mutations(tx_type, pos, pubkey, txi) do
+    [
+      WriteFieldMutation.new(tx_type, pos, pubkey, txi)
+    ]
   end
 
   defp log_msg(height, _ignore),

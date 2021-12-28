@@ -13,28 +13,6 @@ defmodule AeMdw.Db.Sync.Contract do
 
   @typep pubkey() :: DBContract.pubkey()
 
-  @spec create(pubkey(), pubkey(), tuple(), integer(), Blocks.key_hash()) ::
-          term() | :invalid_contract
-  def create(contract_pk, owner_pk, tx, txi, block_hash) do
-    case Contract.get_info(contract_pk) do
-      {:ok, contract_info} ->
-        with true <- Contract.is_aex9?(contract_info) do
-          contract_pk
-          |> Contract.aex9_meta_info()
-          |> DBContract.aex9_creation_write(contract_pk, owner_pk, txi)
-        end
-
-        AeMdw.Ets.inc(:stat_sync_cache, :contracts)
-
-        call_rec = Contract.get_init_call_rec(contract_pk, tx, block_hash)
-
-        DBContract.logs_write(txi, txi, call_rec)
-
-      {:error, _reason} ->
-        :invalid_contract
-    end
-  end
-
   @spec call(pubkey(), tuple(), integer(), Blocks.block_hash()) :: :ok
   def call(contract_pk, tx, txi, block_hash) do
     create_txi = get_txi(contract_pk)
