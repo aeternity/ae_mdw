@@ -6,11 +6,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Db.Util
-  alias AeMdwWeb.Continuation
   alias AeMdwWeb.TxController
   alias :aeser_api_encoder, as: Enc
-  alias AeMdwWeb.Util, as: WebUtil
-  alias Plug.Conn
 
   require Model
 
@@ -164,78 +161,45 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
   describe "txs_direction only with direction" do
     test "get transactions when direction=forward", %{conn: conn} do
       limit = 33
-      conn = get(conn, "/txs/forward?limit=#{limit}")
-      response = json_response(conn, 200)
 
-      assert Enum.count(response["data"]) == limit
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/forward", limit: limit) |> json_response(200)
 
-      Enum.each(response["data"], fn data ->
-        assert data["tx_index"] in 0..(limit - 1)
-      end)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data({TxController, :txs, %{}, build_scope(conn.assigns), 0}, limit)
+      assert ^txis = Enum.to_list(0..(limit - 1))
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn_next = get(conn, response["next"])
-      response_next = json_response(conn_next, 200)
+      next_txis = Enum.map(next_txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      assert Enum.count(response_next["data"]) == limit
-
-      Enum.each(response_next["data"], fn data_next ->
-        assert data_next["tx_index"] in (limit - 1)..((limit - 1) * (limit - 1))
-      end)
-
-      {:ok, data_next, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn_next), build_scope(conn_next.assigns), limit},
-          limit
-        )
-
-      assert ^data_next = response_next["data"]
+      assert ^next_txis = Enum.to_list(limit..(2 * limit - 1))
     end
 
     test "get transactions when direction=backward", %{conn: conn} do
       limit = 24
-      conn = get(conn, "/txs/backward?limit=#{limit}")
-      response = json_response(conn, 200)
+      last_txi = Util.last_txi()
 
-      assert Enum.count(response["data"]) == limit
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/backward", limit: limit) |> json_response(200)
 
-      Enum.each(response["data"], fn data ->
-        assert data["tx_index"] in Util.last_txi()..(Util.last_txi() - limit)
-      end)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data({TxController, :txs, %{}, build_scope(conn.assigns), 0}, limit)
+      assert ^txis = Enum.to_list(last_txi..(last_txi - limit + 1))
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn_next = get(conn, response["next"])
-      response_next = json_response(conn_next, 200)
+      next_txis = Enum.map(next_txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      assert Enum.count(response_next["data"]) == limit
-
-      Enum.each(response_next["data"], fn data_next ->
-        assert data_next["tx_index"] in (Util.last_txi() - limit)..(Util.last_txi() -
-                                                                      limit * limit)
-      end)
-
-      {:ok, next_data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn_next), build_scope(conn_next.assigns), limit},
-          limit
-        )
-
-      assert ^next_data = response_next["data"]
+      assert ^next_txis = Enum.to_list((last_txi - limit)..(last_txi - limit * 2 + 1))
     end
 
     test "renders errors when direction is invalid", %{conn: conn} do
       invalid_direction = "back"
-      conn = get(conn, "/txs/#{invalid_direction}")
+      error_msg = "invalid direction: #{invalid_direction}"
 
-      assert json_response(conn, 400) == %{"error" => "invalid direction: #{invalid_direction}"}
+      assert %{"error" => ^error_msg} =
+               conn |> get("/txs/#{invalid_direction}") |> json_response(400)
     end
   end
 
@@ -246,93 +210,65 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     } do
       limit = 4
       type = "channel_create"
-      transform_tx_type = transform_tx_type(type)
 
-      conn = request_txs(conn, "forward", "type", type, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/forward", type: type, limit: limit) |> json_response(200)
 
-      check_response_data(response["data"], transform_tx_type, limit)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type == "ChannelCreateTx" end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(transform_tx_type, limit)
+      next_txis = Enum.map(next_txs, fn %{"tx_index" => tx_index} -> tx_index end)
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type == "ChannelCreateTx" end)
     end
 
     test "get transactions when direction=forward and type parameter=spend", %{conn: conn} do
       limit = 15
       type = "spend"
-      transform_tx_type = transform_tx_type(type)
 
-      conn = request_txs(conn, "forward", "type", type, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/forward", type: type, limit: limit) |> json_response(200)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      assert ^data = response["data"]
-
-      check_response_data(response["data"], transform_tx_type, limit)
-
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(transform_tx_type, limit)
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type == "SpendTx" end)
     end
 
     test "get transactions when direction=forward and type parameter=name_claim", %{conn: conn} do
       limit = 19
       type = "name_claim"
-      transform_tx_type = transform_tx_type(type)
 
-      conn = request_txs(conn, "forward", "type", type, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/forward", type: type, limit: limit) |> json_response(200)
 
-      check_response_data(response["data"], transform_tx_type, limit)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
-
-      assert ^data = response["data"]
-
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(transform_tx_type, limit)
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type == "NameClaimTx" end)
     end
 
     test "get transactions when direction=forward and type parameter=name_preclaim with default limit",
          %{conn: conn} do
       type = "name_preclaim"
-      transform_tx_type = transform_tx_type(type)
 
-      conn = request_txs(conn, "forward", "type", type)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/forward", type: type) |> json_response(200)
 
-      check_response_data(response["data"], transform_tx_type, @default_limit)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          @default_limit
-        )
-
-      assert ^data = response["data"]
-
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(transform_tx_type, @default_limit)
+      assert @default_limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type == "NamePreclaimTx" end)
     end
 
     # Tests when direction is `backward` and different `type` parameters
@@ -341,24 +277,15 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
            conn: conn
          } do
       type = "spend"
-      transform_tx_type = transform_tx_type(type)
 
-      conn = request_txs(conn, "backward", "type", type)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/forward", type: type) |> json_response(200)
 
-      check_response_data(response["data"], transform_tx_type, @default_limit)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          @default_limit
-        )
-
-      assert ^data = response["data"]
-
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(transform_tx_type, @default_limit)
+      assert @default_limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type == "SpendTx" end)
     end
 
     test "get transactions when direction=backward and type parameter=contract_create", %{
@@ -366,54 +293,46 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     } do
       limit = 19
       type = "contract_create"
-      transform_tx_type = transform_tx_type(type)
 
-      conn = request_txs(conn, "backward", "type", type, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/forward", type: type, limit: limit) |> json_response(200)
 
-      check_response_data(response["data"], transform_tx_type, limit)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
-
-      assert ^data = response["data"]
-
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(transform_tx_type, limit)
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type == "ContractCreateTx" end)
     end
 
     test "get transactions when direction=backward and type parameter=oracle_query", %{conn: conn} do
       limit = 15
       type = "oracle_query"
-      transform_tx_type = transform_tx_type(type)
 
-      conn = request_txs(conn, "backward", "type", type, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/backward", type: type, limit: limit) |> json_response(200)
 
-      check_response_data(response["data"], transform_tx_type, limit)
+      txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type == "OracleQueryTx" end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(transform_tx_type, limit)
+      next_txis =
+        next_txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type == "OracleQueryTx" end)
     end
 
     test "renders errors when type parameter is invalid", %{conn: conn} do
       invalid_type = "some_invalid_type"
-      conn = get(conn, "/txs/forward?type=#{invalid_type}")
+      error_msg = "invalid transaction type: #{invalid_type}"
 
-      assert json_response(conn, 400) == %{"error" => "invalid transaction type: #{invalid_type}"}
+      assert %{"error" => ^error_msg} =
+               conn |> get("/txs/forward", type: invalid_type) |> json_response(400)
     end
   end
 
@@ -424,22 +343,24 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type_group = "oracle"
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      conn = request_txs(conn, "forward", "type_group", type_group, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/forward", type_group: type_group, limit: limit)
+               |> json_response(200)
 
-      check_response_data(response["data"], txs_types_by_tx_group, limit)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type in txs_types_by_tx_group end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(txs_types_by_tx_group, limit)
+      next_txis = Enum.map(next_txs, fn %{"tx_index" => tx_index} -> tx_index end)
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type in txs_types_by_tx_group end)
     end
 
     test "get transactions when direction=forward and type_group parameter=contract", %{
@@ -449,22 +370,24 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type_group = "contract"
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      conn = request_txs(conn, "forward", "type_group", type_group, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/forward", type_group: type_group, limit: limit)
+               |> json_response(200)
 
-      check_response_data(response["data"], txs_types_by_tx_group, limit)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type in txs_types_by_tx_group end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(txs_types_by_tx_group, limit)
+      next_txis = Enum.map(next_txs, fn %{"tx_index" => tx_index} -> tx_index end)
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type in txs_types_by_tx_group end)
     end
 
     test "get transactions when direction=forward and type_group parameter=ga", %{conn: conn} do
@@ -472,22 +395,24 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type_group = "ga"
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      conn = request_txs(conn, "forward", "type_group", type_group, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/forward", type_group: type_group, limit: limit)
+               |> json_response(200)
 
-      check_response_data(response["data"], txs_types_by_tx_group, limit)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type in txs_types_by_tx_group end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(txs_types_by_tx_group, limit)
+      next_txis = Enum.map(next_txs, fn %{"tx_index" => tx_index} -> tx_index end)
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type in txs_types_by_tx_group end)
     end
 
     test "get transactions when direction=forward and type_group parameter=channel", %{conn: conn} do
@@ -495,22 +420,24 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type_group = "channel"
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      conn = request_txs(conn, "forward", "type_group", type_group, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/forward", type_group: type_group, limit: limit)
+               |> json_response(200)
 
-      check_response_data(response["data"], txs_types_by_tx_group, limit)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type in txs_types_by_tx_group end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(txs_types_by_tx_group, limit)
+      next_txis = Enum.map(next_txs, fn %{"tx_index" => tx_index} -> tx_index end)
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type in txs_types_by_tx_group end)
     end
 
     # Tests when direction is `backward` and different `type_group` parameters
@@ -521,46 +448,49 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type_group = "channel"
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      conn = request_txs(conn, "backward", "type_group", type_group, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/backward", type_group: type_group, limit: limit)
+               |> json_response(200)
 
-      check_response_data(response["data"], txs_types_by_tx_group, limit)
+      txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type in txs_types_by_tx_group end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(txs_types_by_tx_group, limit)
+      next_txis =
+        next_txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type in txs_types_by_tx_group end)
     end
 
     test "get transactions when direction=backward and type_group parameter=oracle with default limit",
          %{conn: conn} do
       type_group = "oracle"
-
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      conn = request_txs(conn, "backward", "type_group", type_group)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/backward", type_group: type_group) |> json_response(200)
 
-      check_response_data(response["data"], txs_types_by_tx_group, @default_limit)
+      txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          @default_limit
-        )
+      assert @default_limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type in txs_types_by_tx_group end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(txs_types_by_tx_group, @default_limit)
+      next_txis =
+        next_txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
+
+      assert @default_limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type in txs_types_by_tx_group end)
     end
 
     test "get transactions when direction=backward and type_group parameter=contract", %{
@@ -570,22 +500,25 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type_group = "contract"
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      conn = request_txs(conn, "backward", "type_group", type_group, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/backward", type_group: type_group, limit: limit)
+               |> json_response(200)
 
-      check_response_data(response["data"], txs_types_by_tx_group, limit)
+      txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type in txs_types_by_tx_group end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(txs_types_by_tx_group, limit)
+      next_txis =
+        next_txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type in txs_types_by_tx_group end)
     end
 
     test "get transactions when direction=backward and type_group parameter=ga", %{conn: conn} do
@@ -593,14 +526,16 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type_group = "ga"
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      conn = request_txs(conn, "backward", "type_group", type_group, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/backward", type_group: type_group, limit: limit)
+               |> json_response(200)
 
-      check_response_data(response["data"], txs_types_by_tx_group, limit)
+      txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(txs_types_by_tx_group, limit)
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type in txs_types_by_tx_group end)
     end
 
     test "get transactions when direction=backward and type_group parameter=name", %{conn: conn} do
@@ -608,22 +543,25 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type_group = "name"
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      conn = request_txs(conn, "backward", "type_group", type_group, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/backward", type_group: type_group, limit: limit)
+               |> json_response(200)
 
-      check_response_data(response["data"], txs_types_by_tx_group, limit)
+      txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type in txs_types_by_tx_group end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(txs_types_by_tx_group, limit)
+      next_txis =
+        next_txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type in txs_types_by_tx_group end)
     end
 
     test "get transactions when direction=backward and type_group parameter=spend", %{conn: conn} do
@@ -631,31 +569,33 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type_group = "spend"
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      conn = request_txs(conn, "backward", "type_group", type_group, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/backward", type_group: type_group, limit: limit)
+               |> json_response(200)
 
-      check_response_data(response["data"], txs_types_by_tx_group, limit)
+      txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type in txs_types_by_tx_group end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(txs_types_by_tx_group, limit)
+      next_txis =
+        next_txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type in txs_types_by_tx_group end)
     end
 
     test "renders errors when type_group parameter is invalid", %{conn: conn} do
       invalid_type_group = "some_invalid_type_group"
-      conn = get(conn, "/txs/backward?type_group=#{invalid_type_group}")
+      error_msg = "invalid transaction group: #{invalid_type_group}"
 
-      assert json_response(conn, 400) == %{
-               "error" => "invalid transaction group: #{invalid_type_group}"
-             }
+      assert %{"error" => ^error_msg} =
+               conn |> get("/txs/backward", type_group: invalid_type_group) |> json_response(400)
     end
   end
 
@@ -670,22 +610,31 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
       transform_tx_type = transform_tx_type(type)
 
-      conn = request_txs(conn, "forward", "type", type, "type_group", type_group, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/backward", type_group: type_group, type: type, limit: limit)
+               |> json_response(200)
 
-      check_response_data(response["data"], txs_types_by_tx_group, transform_tx_type, limit)
+      txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
 
-      assert ^data = response["data"]
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} ->
+               type in txs_types_by_tx_group or type == transform_tx_type
+             end)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(txs_types_by_tx_group, transform_tx_type, limit)
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
+
+      next_txis =
+        next_txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} ->
+               type in txs_types_by_tx_group or type == transform_tx_type
+             end)
     end
 
     test "get transactions when direction=forward, type=contract_create and type_group=channel",
@@ -698,22 +647,31 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
       transform_tx_type = transform_tx_type(type)
 
-      conn = request_txs(conn, "forward", "type", type, "type_group", type_group, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/backward", type_group: type_group, type: type, limit: limit)
+               |> json_response(200)
 
-      check_response_data(response["data"], txs_types_by_tx_group, transform_tx_type, limit)
+      txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
 
-      assert ^data = response["data"]
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} ->
+               type in txs_types_by_tx_group or type == transform_tx_type
+             end)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(txs_types_by_tx_group, transform_tx_type, limit)
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
+
+      next_txis =
+        next_txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+
+      assert Enum.all?(next_txs, fn %{"tx" => %{"type" => type}} ->
+               type in txs_types_by_tx_group or type == transform_tx_type
+             end)
     end
 
     test "get transactions when direction=forward, type=spend and type_group=ga", %{conn: conn} do
@@ -722,27 +680,31 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
       transform_tx_type = transform_tx_type(type)
 
-      conn = request_txs(conn, "forward", "type", type, "type_group", type_group)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/backward", type_group: type_group, type: type)
+               |> json_response(200)
 
-      check_response_data(
-        response["data"],
-        txs_types_by_tx_group,
-        transform_tx_type,
-        @default_limit
-      )
+      txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          @default_limit
-        )
+      assert @default_limit = length(txs)
+      assert ^txis = Enum.sort(txis)
 
-      assert ^data = response["data"]
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} ->
+               type in txs_types_by_tx_group or type == transform_tx_type
+             end)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(txs_types_by_tx_group, transform_tx_type, @default_limit)
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
+
+      next_txis =
+        next_txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
+
+      assert @default_limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+
+      assert Enum.all?(next_txs, fn %{"tx" => %{"type" => type}} ->
+               type in txs_types_by_tx_group or type == transform_tx_type
+             end)
     end
 
     # Tests when direction `backward` and different `type` and `type_group` parameters
@@ -755,22 +717,31 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
       transform_tx_type = transform_tx_type(type)
 
-      conn = request_txs(conn, "backward", "type", type, "type_group", type_group, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/backward", type_group: type_group, type: type, limit: limit)
+               |> json_response(200)
 
-      check_response_data(response["data"], txs_types_by_tx_group, transform_tx_type, limit)
+      txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
 
-      assert ^data = response["data"]
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} ->
+               type in txs_types_by_tx_group or type == transform_tx_type
+             end)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(txs_types_by_tx_group, transform_tx_type, limit)
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
+
+      next_txis =
+        next_txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+
+      assert Enum.all?(next_txs, fn %{"tx" => %{"type" => type}} ->
+               type in txs_types_by_tx_group or type == transform_tx_type
+             end)
     end
 
     test "get transactions when direction=backward, type=channel_close_solo and type_group=name",
@@ -783,73 +754,87 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
       transform_tx_type = transform_tx_type(type)
 
-      conn = request_txs(conn, "backward", "type", type, "type_group", type_group, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/backward", type_group: type_group, type: type, limit: limit)
+               |> json_response(200)
 
-      check_response_data(response["data"], txs_types_by_tx_group, transform_tx_type, limit)
+      txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
 
-      assert ^data = response["data"]
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} ->
+               type in txs_types_by_tx_group or type == transform_tx_type
+             end)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(txs_types_by_tx_group, transform_tx_type, limit)
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
+
+      next_txis =
+        next_txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+
+      assert Enum.all?(next_txs, fn %{"tx" => %{"type" => type}} ->
+               type in txs_types_by_tx_group or type == transform_tx_type
+             end)
     end
 
     test "get transactions when direction=backward, type=oracle_register and type_group=spend with default limit",
          %{conn: conn} do
       type_group = "spend"
       type = "oracle_register"
-
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
       transform_tx_type = transform_tx_type(type)
 
-      conn = request_txs(conn, "backward", "type", type, "type_group", type_group)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/backward", type_group: type_group, type: type)
+               |> json_response(200)
 
-      check_response_data(
-        response["data"],
-        txs_types_by_tx_group,
-        transform_tx_type,
-        @default_limit
-      )
+      txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          @default_limit
-        )
+      assert @default_limit = length(txs)
+      assert ^txis = Enum.sort(txis)
 
-      assert ^data = response["data"]
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} ->
+               type in txs_types_by_tx_group or type == transform_tx_type
+             end)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(txs_types_by_tx_group, transform_tx_type, @default_limit)
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
+
+      next_txis =
+        next_txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
+
+      assert @default_limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+
+      assert Enum.all?(next_txs, fn %{"tx" => %{"type" => type}} ->
+               type in txs_types_by_tx_group or type == transform_tx_type
+             end)
     end
 
     test "renders errors when type_group parameter is invalid", %{conn: conn} do
       invalid_type_group = "some_invalid_type_group"
       type = "spend"
-      conn = get(conn, "/txs/forward?type=#{type}&type_group=#{invalid_type_group}")
+      error_msg = "invalid transaction group: #{invalid_type_group}"
 
-      assert json_response(conn, 400) == %{
-               "error" => "invalid transaction group: #{invalid_type_group}"
-             }
+      assert %{"error" => ^error_msg} =
+               conn
+               |> get("/txs/forward", type: type, type_group: invalid_type_group)
+               |> json_response(400)
     end
 
     test "renders errors when type parameter is invalid", %{conn: conn} do
       type_group = "channel"
       invalid_type = "some_invalid_type"
-      conn = get(conn, "/txs/forward?type=#{invalid_type}&type_group=#{type_group}")
+      error_msg = "invalid transaction type: #{invalid_type}"
 
-      assert json_response(conn, 400) == %{
-               "error" => "invalid transaction type: #{invalid_type}"
-             }
+      assert %{"error" => ^error_msg} =
+               conn
+               |> get("/txs/forward", type: invalid_type, type_group: type_group)
+               |> json_response(400)
     end
   end
 
@@ -858,237 +843,251 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     # Tests when direction `forward` and different `id` parameters
     test "get transactions when direction=forward and given account ID", %{conn: conn} do
       limit = 13
-      criteria = "account"
 
       <<_prefix::3-binary, rest::binary>> =
         id = "ak_26ubrEL8sBqYNp4kvKb1t4Cg7XsCciYq4HdznrvfUkW359gf17"
 
-      conn = request_txs(conn, "forward", criteria, id, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/forward", account: id, limit: limit) |> json_response(200)
 
-      check_response_data(response["data"], rest, :no_prefix, limit)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => tx} -> id_exists?(tx, rest, :no_prefix) end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(rest, :no_prefix, limit)
+      next_txis = Enum.map(next_txs, fn %{"tx_index" => tx_index} -> tx_index end)
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(next_txs, fn %{"tx" => tx} -> id_exists?(tx, rest, :no_prefix) end)
     end
 
     test "gets account transactions with name details using forward", %{conn: conn} do
       # "recipient":{"account":"ak_2ZyuUxyfbkNbKZnGStgkCQuRwCPQWducVipxE4Ci7RU8UuTiry","name":"katie.chain"}
       # "recipient_id":"nm_2mcA6LRcH3bjJvs4qTDRGkN9hCyMj9da83gU5WKy9u1EmrExar"
       # "tx_index":7090883
-      assert_recipient_for_spend_tx_with_name(
-        conn,
-        "forward",
-        "ak_2ZyuUxyfbkNbKZnGStgkCQuRwCPQWducVipxE4Ci7RU8UuTiry",
-        5
-      )
-    end
+      account_id = "ak_2ZyuUxyfbkNbKZnGStgkCQuRwCPQWducVipxE4Ci7RU8UuTiry"
+      limit = 5
 
-    test "gets account transactions and recipient details on a name with multiple updates (two before spend_tx)",
-         %{conn: conn} do
-      limit = 63
-      criteria = "account"
-      account_id = "ak_u2gFpRN5nABqfqb5Q3BkuHCf8c7ytcmqovZ6VyKwxmVNE5jqa"
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/forward", account: account_id, limit: limit)
+               |> json_response(200)
 
-      conn = request_txs(conn, "forward", criteria, account_id, limit)
-      response = json_response(conn, 200)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
+
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
 
       blocks_with_nm =
-        Enum.filter(response["data"], fn %{"tx" => tx} ->
-          tx["type"] == @type_spend_tx and
-            String.starts_with?(tx["recipient_id"] || "", "nm_")
+        Enum.filter(txs, fn %{"tx" => %{"type" => type} = tx} ->
+          type == @type_spend_tx and String.starts_with?(tx["recipient_id"] || "", "nm_")
         end)
 
-      assert Enum.any?(blocks_with_nm, fn %{"tx" => tx, "tx_index" => spend_txi} ->
+      assert Enum.any?(blocks_with_nm, fn %{"tx" => tx, "tx_index" => tx_index} ->
                assert {:ok, plain_name} = Validate.plain_name(tx["recipient_id"])
-               assert recipient = tx["recipient"]
+               assert Model.name(updates: name_updates) = elem(Name.locate(plain_name), 0)
 
-               assert recipient["name"] == plain_name
+               if [] != name_updates do
+                 assert recipient = tx["recipient"]
+                 assert recipient["name"] == plain_name
 
-               assert {:ok, recipient_account_pk} = Name.account_pointer_at(plain_name, spend_txi)
-               assert recipient["account"] == Enc.encode(:account_pubkey, recipient_account_pk)
+                 assert {:ok, recipient_account_pk} =
+                          Name.account_pointer_at(plain_name, tx_index)
 
-               if plain_name == "kiwicrestorchard.chain" do
-                 updates_before_spend_list =
-                   plain_name
-                   |> Name.locate()
-                   |> elem(0)
-                   |> Model.name(:updates)
-                   |> Enum.filter(fn {_update_height, update_txi} ->
-                     update_txi < spend_txi
-                   end)
-                   |> Enum.map(&elem(&1, 1))
-
-                 # assure validation of recipient account when there were 2 updates before the spend_tx
-                 assert [update_txi_before_spend, first_update_txi_before_spend] =
-                          updates_before_spend_list
-
-                 assert spend_txi > update_txi_before_spend
-                 assert update_txi_before_spend > first_update_txi_before_spend
+                 assert recipient["account"] == Enc.encode(:account_pubkey, recipient_account_pk)
                  true
                else
                  false
                end
              end)
+
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
+
+      next_txis = Enum.map(next_txs, fn %{"tx_index" => tx_index} -> tx_index end)
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+    end
+
+    test "gets account transactions and recipient details on a name with multiple updates (two before spend_tx)",
+         %{conn: conn} do
+      limit = 63
+      account_id = "ak_u2gFpRN5nABqfqb5Q3BkuHCf8c7ytcmqovZ6VyKwxmVNE5jqa"
+
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/forward", account: account_id, limit: limit)
+               |> json_response(200)
+
+      assert ^limit = length(txs)
+      assert_recipient_for_spend_tx_with_name(txs, account_id)
     end
 
     test "get transactions with direction=forward and given contract ID with default limit", %{
       conn: conn
     } do
-      criteria = "contract"
-
       <<_prefix::3-binary, rest::binary>> =
-        id = "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z"
+        contract_id = "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z"
 
-      conn = request_txs(conn, "forward", criteria, id)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/forward", contract: contract_id) |> json_response(200)
 
-      check_response_data(response["data"], rest, :no_prefix, @default_limit)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          @default_limit
-        )
+      assert @default_limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => tx} -> id_exists?(tx, rest, :no_prefix) end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(rest, :no_prefix, @default_limit)
+      next_txis = Enum.map(next_txs, fn %{"tx_index" => tx_index} -> tx_index end)
+
+      assert @default_limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(next_txs, fn %{"tx" => tx} -> id_exists?(tx, rest, :no_prefix) end)
     end
 
     test "get transactions with direction=forward and given oracle ID with default limit", %{
       conn: conn
     } do
-      criteria = "oracle"
-
       <<_prefix::3-binary, rest::binary>> =
-        id = "ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
+        oracle_id = "ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
 
-      conn = request_txs(conn, "forward", criteria, id)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/forward", oracle: oracle_id) |> json_response(200)
 
-      check_response_data(response["data"], rest, :no_prefix, @default_limit)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(rest, :no_prefix, @default_limit)
+      assert @default_limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => tx} -> id_exists?(tx, rest, :no_prefix) end)
+
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
+
+      next_txis = Enum.map(next_txs, fn %{"tx_index" => tx_index} -> tx_index end)
+
+      assert @default_limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(next_txs, fn %{"tx" => tx} -> id_exists?(tx, rest, :no_prefix) end)
     end
 
     # Tests when direction `backward` and different `id` parameters
     test "get transactions when direction=backward and given account ID", %{conn: conn} do
       limit = 3
-      criteria = "account"
 
       <<_prefix::3-binary, rest::binary>> =
-        id = "ak_wTPFpksUJFjjntonTvwK4LJvDw11DPma7kZBneKbumb8yPeFq"
+        account_id = "ak_wTPFpksUJFjjntonTvwK4LJvDw11DPma7kZBneKbumb8yPeFq"
 
-      conn = request_txs(conn, "backward", criteria, id, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/backward", account: account_id, limit: limit)
+               |> json_response(200)
 
-      check_response_data(response["data"], rest, :no_prefix, limit)
+      txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => tx} -> id_exists?(tx, rest, :no_prefix) end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(rest, :no_prefix, limit)
+      next_txis =
+        next_txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(next_txs, fn %{"tx" => tx} -> id_exists?(tx, rest, :no_prefix) end)
     end
 
     test "gets account transactions with name details using backward", %{conn: conn} do
       # "recipient":{"account":"ak_u2gFpRN5nABqfqb5Q3BkuHCf8c7ytcmqovZ6VyKwxmVNE5jqa","name":"josh.chain"}
       # "sender_id":"ak_2ZyuUxyfbkNbKZnGStgkCQuRwCPQWducVipxE4Ci7RU8UuTiry"
       # "tx_index":11896169
-      assert_recipient_for_spend_tx_with_name(
-        conn,
-        "backward",
-        "ak_2ZyuUxyfbkNbKZnGStgkCQuRwCPQWducVipxE4Ci7RU8UuTiry",
-        4
-      )
+      account_id = "ak_2ZyuUxyfbkNbKZnGStgkCQuRwCPQWducVipxE4Ci7RU8UuTiry"
+      limit = 4
+
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/backward", account: account_id, limit: limit)
+               |> json_response(200)
+
+      txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
+
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert_recipient_for_spend_tx_with_name(txs, account_id)
     end
 
     test "get transactions when direction=backward and given contract ID with default limit", %{
       conn: conn
     } do
-      criteria = "contract"
-
       <<_prefix::3-binary, rest::binary>> =
-        id = "ct_2rtXsV55jftV36BMeR5gtakN2VjcPtZa3PBURvzShSYWEht3Z7"
+        contract_id = "ct_2rtXsV55jftV36BMeR5gtakN2VjcPtZa3PBURvzShSYWEht3Z7"
 
-      conn = request_txs(conn, "backward", criteria, id)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/backward", contract: contract_id) |> json_response(200)
 
-      check_response_data(response["data"], rest, :no_prefix, @default_limit)
+      txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          @default_limit
-        )
+      assert @default_limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => tx} -> id_exists?(tx, rest, :no_prefix) end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(rest, :no_prefix, @default_limit)
+      next_txis =
+        next_txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
+
+      assert @default_limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(next_txs, fn %{"tx" => tx} -> id_exists?(tx, rest, :no_prefix) end)
     end
 
     test "get transactions when direction=backward and given oracle ID with default limit", %{
       conn: conn
     } do
-      criteria = "oracle"
-
       <<_prefix::3-binary, rest::binary>> =
-        id = "ok_28QDg7fkF5qiKueSdUvUBtCYPJdmMEoS73CztzXCRAwMGKHKZh"
+        oracle_id = "ok_28QDg7fkF5qiKueSdUvUBtCYPJdmMEoS73CztzXCRAwMGKHKZh"
 
-      conn = request_txs(conn, "backward", criteria, id)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/backward", oracle: oracle_id) |> json_response(200)
 
-      check_response_data(response["data"], rest, :no_prefix, @default_limit)
+      txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          @default_limit
-        )
+      assert @default_limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => tx} -> id_exists?(tx, rest, :no_prefix) end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(rest, :no_prefix, @default_limit)
+      next_txis =
+        next_txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
+
+      assert @default_limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(next_txs, fn %{"tx" => tx} -> id_exists?(tx, rest, :no_prefix) end)
     end
 
     test "renders errors when direction=forward and invalid ID", %{conn: conn} do
       id = "some_invalid_key"
-      conn = get(conn, "/txs/forward?account=#{id}")
+      error_msg = "invalid id: #{id}"
 
-      assert json_response(conn, 400) == %{"error" => "invalid id: #{id}"}
+      assert %{"error" => ^error_msg} =
+               conn |> get("/txs/forward", account: id) |> json_response(400)
     end
 
     test "renders errors when direction=forward and the ID is valid, but not pass correctly ",
          %{conn: conn} do
       id = "ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
       # the oracle id is valid but is passed as account id, which is not correct
-      conn = get(conn, "/txs/backward?account=#{id}")
+      error_msg = "invalid id: #{id}"
 
-      assert json_response(conn, 400) == %{"error" => "invalid id: #{id}"}
+      assert %{"error" => ^error_msg} =
+               conn |> get("/txs/backward", account: id) |> json_response(400)
     end
   end
 
@@ -1101,24 +1100,25 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       limit = 8
       tx_type = "contract_call"
       field = "caller_id"
-      id = "ak_YCwfWaW5ER6cRsG9Jg4KMyVU59bQkt45WvcnJJctQojCqBeG2"
+      account_id = "ak_YCwfWaW5ER6cRsG9Jg4KMyVU59bQkt45WvcnJJctQojCqBeG2"
+      params = [{"#{tx_type}.#{field}", account_id}, {:limit, limit}]
 
-      conn = request_txs_by_field(conn, "forward", tx_type, field, id, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/forward", params) |> json_response(200)
 
-      check_response_data(response["data"], field, id, limit)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => tx} -> tx[field] == account_id end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(field, id, limit)
+      next_txis = Enum.map(next_txs, fn %{"tx_index" => tx_index} -> tx_index end)
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(next_txs, fn %{"tx" => tx} -> tx[field] == account_id end)
     end
 
     test "get transactions when direction=forward, tx_type=channel_create and field=initiator_id ",
@@ -1126,24 +1126,25 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       limit = 5
       tx_type = "channel_create"
       field = "initiator_id"
-      id = "ak_ozzwBYeatmuN818LjDDDwRSiBSvrqt4WU7WvbGsZGVre72LTS"
+      account_id = "ak_ozzwBYeatmuN818LjDDDwRSiBSvrqt4WU7WvbGsZGVre72LTS"
+      params = [{"#{tx_type}.#{field}", account_id}, {:limit, limit}]
 
-      conn = request_txs_by_field(conn, "forward", tx_type, field, id, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/forward", params) |> json_response(200)
 
-      check_response_data(response["data"], field, id, limit)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => tx} -> tx[field] == account_id end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(field, id, limit)
+      next_txis = Enum.map(next_txs, fn %{"tx_index" => tx_index} -> tx_index end)
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(next_txs, fn %{"tx" => tx} -> tx[field] == account_id end)
     end
 
     test "get transactions when direction=forward, tx_type=ga_attach and field=owner_id ",
@@ -1151,44 +1152,42 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       limit = 1
       tx_type = "ga_attach"
       field = "owner_id"
-      id = "ak_2RUVa9bvHUD8wYSrvixRjy9LonA9L29wRvwDfQ4y37ysMKjgdQ"
+      account_id = "ak_2RUVa9bvHUD8wYSrvixRjy9LonA9L29wRvwDfQ4y37ysMKjgdQ"
+      params = [{"#{tx_type}.#{field}", account_id}, {:limit, limit}]
 
-      conn = request_txs_by_field(conn, "forward", tx_type, field, id, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/forward", params) |> json_response(200)
 
-      check_response_data(response["data"], field, id, limit)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
-
-      assert ^data = response["data"]
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => tx} -> tx[field] == account_id end)
     end
 
     test "get transactions when direction=forward, tx_type=spend and field=recipient_id ",
          %{conn: conn} do
       tx_type = "spend"
       field = "recipient_id"
-      id = "ak_wTPFpksUJFjjntonTvwK4LJvDw11DPma7kZBneKbumb8yPeFq"
+      account_id = "ak_wTPFpksUJFjjntonTvwK4LJvDw11DPma7kZBneKbumb8yPeFq"
+      params = [{"#{tx_type}.#{field}", account_id}]
 
-      conn = request_txs_by_field(conn, "forward", tx_type, field, id, @default_limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/forward", params) |> json_response(200)
 
-      check_response_data(response["data"], field, id, @default_limit)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          @default_limit
-        )
+      assert @default_limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => tx} -> tx[field] == account_id end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(field, id, @default_limit)
+      next_txis = Enum.map(next_txs, fn %{"tx_index" => tx_index} -> tx_index end)
+
+      assert @default_limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(next_txs, fn %{"tx" => tx} -> tx[field] == account_id end)
     end
 
     test "get transactions when sender_id = recipient_id",
@@ -1217,24 +1216,25 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
          %{conn: conn} do
       tx_type = "oracle_query"
       field = "sender_id"
-      id = "ak_29Xc6bmHMNQAaTEdUVQvqcCpmx6cWLNevZAfXaRSjZRgypYa6b"
+      account_id = "ak_29Xc6bmHMNQAaTEdUVQvqcCpmx6cWLNevZAfXaRSjZRgypYa6b"
+      params = [{"#{tx_type}.#{field}", account_id}]
 
-      conn = request_txs_by_field(conn, "forward", tx_type, field, id)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/forward", params) |> json_response(200)
 
-      check_response_data(response["data"], field, id, @default_limit)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          @default_limit
-        )
+      assert @default_limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => tx} -> tx[field] == account_id end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(field, id, @default_limit)
+      next_txis = Enum.map(next_txs, fn %{"tx_index" => tx_index} -> tx_index end)
+
+      assert @default_limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(next_txs, fn %{"tx" => tx} -> tx[field] == account_id end)
     end
 
     # Tests with direction `backward`, tx_type and field parameters
@@ -1245,20 +1245,14 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       limit = 1
       tx_type = "channel_deposit"
       field = "channel_id"
-      id = "ch_2KKS3ypddUfYovJSeg4ues2wFdUoGH8ZtunDhrxvGkYNhzP5TC"
+      channel_id = "ch_2KKS3ypddUfYovJSeg4ues2wFdUoGH8ZtunDhrxvGkYNhzP5TC"
+      params = [{"#{tx_type}.#{field}", channel_id}, {:limit, limit}]
 
-      conn = request_txs_by_field(conn, "forward", tx_type, field, id, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/backward", params) |> json_response(200)
 
-      check_response_data(response["data"], field, id, limit)
-
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
-
-      assert ^data = response["data"]
+      assert ^limit = length(txs)
+      assert Enum.all?(txs, fn %{"tx" => tx} -> tx[field] == channel_id end)
     end
 
     test "get transactions when direction=backward, tx_type=name_update and field=name_id ", %{
@@ -1267,24 +1261,26 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       limit = 2
       tx_type = "name_update"
       field = "name_id"
-      id = "nm_2ANVLWij71wHMvGyQAEb2zYk8bC7v9C8svVm8HLND6vYaChdnd"
+      name_id = "nm_2ANVLWij71wHMvGyQAEb2zYk8bC7v9C8svVm8HLND6vYaChdnd"
+      params = [{"#{tx_type}.#{field}", name_id}, {:limit, limit}]
 
-      conn = request_txs_by_field(conn, "forward", tx_type, field, id, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/backward", params) |> json_response(200)
 
-      check_response_data(response["data"], field, id, limit)
+      txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => tx} -> tx[field] == name_id end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(field, id, limit)
+      next_txis =
+        next_txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+      assert Enum.all?(next_txs, fn %{"tx" => tx} -> tx[field] == name_id end)
     end
 
     test "renders errors when direction=forward, tx_type=oracle_query and given transaction field is wrong ",
@@ -1292,9 +1288,10 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       tx_type = "oracle_query"
       field = "account_id"
       id = "ak_29Xc6bmHMNQAaTEdUVQvqcCpmx6cWLNevZAfXaRSjZRgypYa6b"
-      conn = get(conn, "/txs/forward?#{tx_type}.#{field}=#{id}")
+      params = [{"#{tx_type}.#{field}", id}]
+      error_msg = "invalid transaction field: :#{field}"
 
-      assert json_response(conn, 400) == %{"error" => "invalid transaction field: :#{field}"}
+      assert %{"error" => ^error_msg} = conn |> get("/txs/forward", params) |> json_response(400)
     end
 
     test "renders errors when direction=forward, tx_type and field are invalid ",
@@ -1302,90 +1299,79 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       tx_type = "invalid"
       field = "account_id"
       id = "ak_29Xc6bmHMNQAaTEdUVQvqcCpmx6cWLNevZAfXaRSjZRgypYa6b"
-      conn = get(conn, "/txs/forward?#{tx_type}.#{field}=#{id}")
+      params = [{"#{tx_type}.#{field}", id}]
+      error_msg = "invalid transaction type: #{tx_type}"
 
-      assert json_response(conn, 400) == %{"error" => "invalid transaction type: #{tx_type}"}
+      assert %{"error" => ^error_msg} = conn |> get("/txs/forward", params) |> json_response(400)
     end
   end
 
   describe "txs with inner transactions" do
     test "on forward and field=recipient_id ", %{conn: conn} do
-      field = "recipient_id"
-      id = "ak_2RUVa9bvHUD8wYSrvixRjy9LonA9L29wRvwDfQ4y37ysMKjgdQ"
+      account_id = "ak_2RUVa9bvHUD8wYSrvixRjy9LonA9L29wRvwDfQ4y37ysMKjgdQ"
 
-      conn = request_txs_by_field(conn, "forward", field, id)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/forward", recipient_id: account_id) |> json_response(200)
 
-      assert Enum.any?(response["data"], fn %{"tx" => block_tx} ->
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
+
+      assert ^txis = Enum.sort(txis)
+
+      assert Enum.any?(txs, fn %{"tx" => block_tx} ->
                if block_tx["type"] == "GAMetaTx" do
-                 assert block_tx["tx"]["tx"]["recipient_id"] == id
+                 assert block_tx["tx"]["tx"]["recipient_id"] == account_id
                  true
                else
-                 assert block_tx["recipient_id"] == id
+                 assert block_tx["recipient_id"] == account_id
                  false
                end
              end)
-
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          @default_limit
-        )
-
-      assert ^data = response["data"]
     end
 
     test "on backward and field=sender_id ", %{conn: conn} do
-      field = "sender_id"
-      id = "ak_oTX3ffD9XewhuLAquSKHBdm4jhhKb24NKsesGSWM4UKg6gWp4"
+      account_id = "ak_oTX3ffD9XewhuLAquSKHBdm4jhhKb24NKsesGSWM4UKg6gWp4"
 
-      conn = request_txs_by_field(conn, "backward", field, id)
-      response = json_response(conn, 200)
+      assert %{"data" => txs} =
+               conn |> get("/txs/backward", sender_id: account_id) |> json_response(200)
 
-      assert Enum.any?(response["data"], fn %{"tx" => block_tx} ->
+      assert Enum.any?(txs, fn %{"tx" => block_tx} ->
                if block_tx["type"] == "GAMetaTx" do
-                 assert block_tx["tx"]["tx"]["sender_id"] == id
+                 assert block_tx["tx"]["tx"]["sender_id"] == account_id
                  true
                else
-                 assert block_tx["sender_id"] == id
+                 assert block_tx["sender_id"] == account_id
                  false
                end
              end)
     end
 
     test "on range and field=account ", %{conn: conn} do
-      range = 142_398..142_415
-      field = "account"
-      id = "ak_2RUVa9bvHUD8wYSrvixRjy9LonA9L29wRvwDfQ4y37ysMKjgdQ"
+      first = 142_398
+      last = 142_415
+      account_id = "ak_2RUVa9bvHUD8wYSrvixRjy9LonA9L29wRvwDfQ4y37ysMKjgdQ"
 
-      conn = request_txs_by_field(conn, range, field, id)
-      response = json_response(conn, 200)
+      assert %{"data" => txs} =
+               conn |> get("/txs/gen/#{first}-#{last}", account: account_id) |> json_response(200)
 
-      Enum.each(response["data"], fn %{"block_height" => block_height} ->
-        assert block_height in range
-      end)
-
-      assert Enum.any?(response["data"], fn %{"tx" => block_tx} ->
-               block_tx["type"] == "GAMetaTx" && block_tx["tx"]["tx"]["recipient_id"] == id
+      assert Enum.all?(txs, fn %{"block_height" => block_height} ->
+               block_height >= first and block_height <= last
              end)
 
-      assert Enum.any?(response["data"], fn %{"tx" => block_tx} ->
-               block_tx["type"] == "GAMetaTx" && block_tx["tx"]["tx"]["sender_id"] == id
+      assert Enum.any?(txs, fn %{"tx" => block_tx} ->
+               block_tx["type"] == "GAMetaTx" and
+                 block_tx["tx"]["tx"]["recipient_id"] == account_id
              end)
 
-      assert Enum.any?(response["data"], fn %{"tx" => block_tx} ->
-               assert block_tx["recipient_id"] == id or block_tx["sender_id"] == id
+      assert Enum.any?(txs, fn %{"tx" => block_tx} ->
+               block_tx["type"] == "GAMetaTx" and block_tx["tx"]["tx"]["sender_id"] == account_id
+             end)
+
+      assert Enum.any?(txs, fn %{"tx" => block_tx} ->
+               assert block_tx["recipient_id"] == account_id or
+                        block_tx["sender_id"] == account_id
 
                block_tx["type"] == "SpendTx"
              end)
-
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          @default_limit
-        )
-
-      assert ^data = response["data"]
     end
   end
 
@@ -1395,32 +1381,19 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       conn: conn
     } do
       limit = 1
-      account = "account"
       id_1 = "ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5"
       id_2 = "ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2"
 
-      conn = request_txs(conn, "forward", account, id_1, account, id_2, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs} =
+               conn
+               |> get("/txs/forward", account: id_1, account: id_2, limit: limit)
+               |> json_response(200)
 
-      check_response_data(
-        response["data"],
-        id_1,
-        id_2,
-        :with_prefix,
-        limit
-      )
+      assert ^limit = length(txs)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
-
-      assert ^data = response["data"]
-
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(id_1, id_2, :with_prefix, limit)
+      assert Enum.all?(txs, fn %{"tx" => tx} ->
+               id_exists?(tx, id_1, :with_prefix) and id_exists?(tx, id_2, :with_prefix)
+             end)
     end
 
     test "get transactions when direction=forward between sender and recipient ", %{
@@ -1430,30 +1403,20 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       sender_id = "ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5"
       recipient_id = "ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2"
 
-      conn =
-        request_txs(conn, "forward", "sender_id", sender_id, "recipient_id", recipient_id, limit)
+      assert %{"data" => txs} =
+               conn
+               |> get("/txs/forward",
+                 sender_id: sender_id,
+                 recipient_id: recipient_id,
+                 limit: limit
+               )
+               |> json_response(200)
 
-      response = json_response(conn, 200)
+      assert ^limit = length(txs)
 
-      check_response_data(
-        response["data"],
-        sender_id,
-        recipient_id,
-        :with_prefix,
-        limit
-      )
-
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
-
-      assert ^data = response["data"]
-
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(sender_id, recipient_id, :with_prefix, limit)
+      assert Enum.all?(txs, fn %{"tx" => tx} ->
+               tx["sender_id"] == sender_id and tx["recipient_id"] == recipient_id
+             end)
     end
 
     test "get transactions when direction=forward which are contract related transactions for account ",
@@ -1462,41 +1425,33 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
          } do
       limit = 3
       type_group = "contract"
-      account = "ak_YCwfWaW5ER6cRsG9Jg4KMyVU59bQkt45WvcnJJctQojCqBeG2"
+      account_id = "ak_YCwfWaW5ER6cRsG9Jg4KMyVU59bQkt45WvcnJJctQojCqBeG2"
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      conn =
-        request_txs(
-          conn,
-          "forward",
-          "account",
-          account,
-          "type_group",
-          type_group,
-          limit
-        )
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/forward", account: account_id, type_group: type_group, limit: limit)
+               |> json_response(200)
 
-      response = json_response(conn, 200)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      check_response_data(
-        response["data"],
-        account,
-        txs_types_by_tx_group,
-        :with_prefix,
-        limit
-      )
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type} = tx} ->
+               type in txs_types_by_tx_group and id_exists?(tx, account_id, :with_prefix)
+             end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(account, txs_types_by_tx_group, :with_prefix, limit)
+      next_txis = Enum.map(next_txs, fn %{"tx_index" => tx_index} -> tx_index end)
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type} = tx} ->
+               type in txs_types_by_tx_group and id_exists?(tx, account_id, :with_prefix)
+             end)
     end
 
     test "get transactions when direction=backward which are oracle_register related transactions for account",
@@ -1505,26 +1460,19 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
          } do
       limit = 1
       type = "oracle_register"
-      account = "ak_g5vQK6beY3vsTJHH7KBusesyzq9WMdEYorF8VyvZURXTjLnxT"
+      account_id = "ak_g5vQK6beY3vsTJHH7KBusesyzq9WMdEYorF8VyvZURXTjLnxT"
+      transform_tx_type = transform_tx_type(type)
 
-      conn = request_txs(conn, "forward", "account", account, "type", type, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/backward", account: account_id, type: type, limit: limit)
+               |> json_response(200)
 
-      check_response_data(
-        response["data"],
-        account,
-        transform_tx_type(type),
-        :with_prefix,
-        limit
-      )
+      assert ^limit = length(txs)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
-
-      assert ^data = response["data"]
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type} = tx} ->
+               type == transform_tx_type and id_exists?(tx, account_id, :with_prefix)
+             end)
     end
   end
 
@@ -1532,22 +1480,25 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     test "get transactions when scope=gen at certain height and continuation", %{conn: conn} do
       height = 273_000
 
-      conn = request_txs(conn, "gen", height)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/gen/#{height}-#{height}") |> json_response(200)
 
-      check_response_data(response["data"], height, @default_limit)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          @default_limit
-        )
+      assert @default_limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"block_height" => block_height} -> block_height == height end)
 
-      assert ^data = response["data"]
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(height, @default_limit)
+      next_txis = Enum.map(next_txs, fn %{"tx_index" => tx_index} -> tx_index end)
+
+      assert @default_limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+
+      assert Enum.all?(next_txs, fn %{"block_height" => block_height} ->
+               block_height == height
+             end)
     end
 
     test "get transactions when scope=gen at certain range and continuation", %{conn: conn} do
@@ -1555,39 +1506,47 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       height_to = 197_003
       limit = 50
 
-      conn = request_txs(conn, "gen", height_from, height_to, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/gen/#{height_from}-#{height_to}", limit: limit)
+               |> json_response(200)
 
-      check_response_data(response["data"], height_from, height_to, limit)
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
 
-      assert ^data = response["data"]
+      assert Enum.all?(txs, fn %{"block_height" => block_height} ->
+               height_from <= block_height and block_height <= height_to
+             end)
 
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(height_from, height_to, limit)
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
+
+      next_txis = Enum.map(next_txs, fn %{"tx_index" => tx_index} -> tx_index end)
+
+      assert ^limit = length(next_txs)
+      assert ^next_txis = Enum.sort(next_txis)
+
+      assert Enum.all?(next_txs, fn %{"block_height" => block_height} ->
+               height_from <= block_height and block_height <= height_to
+             end)
     end
 
     test "renders errors when is passed invalid scope", %{conn: conn} do
       height_from = 223_000
       height_to = 223_007
+      error_msg = "invalid scope: invalid_scope"
 
-      conn = get(conn, "/txs/invalid_scope/#{height_from}-#{height_to}")
-
-      assert json_response(conn, 400) == %{"error" => "invalid scope: invalid_scope"}
+      assert %{"error" => ^error_msg} =
+               conn |> get("/txs/invalid_scope/#{height_from}-#{height_to}") |> json_response(400)
     end
 
     test "renders errors when is passed invalid range", %{conn: conn} do
       invalid_range = "invalid_range"
+      error_msg = "invalid range: #{invalid_range}"
 
-      conn = get(conn, "/txs/gen/#{invalid_range}")
-
-      assert json_response(conn, 400) == %{"error" => "invalid range: #{invalid_range}"}
+      assert %{"error" => ^error_msg} =
+               conn |> get("/txs/gen/#{invalid_range}") |> json_response(400)
     end
   end
 
@@ -1595,13 +1554,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     test "get transactions when scope=txi and transaction index", %{conn: conn} do
       index = 605_999
 
-      conn = get(conn, "/txs/txi/#{index}")
+      assert %{"data" => txs} = conn |> get("/txs/txi/#{index}") |> json_response(200)
 
-      response = json_response(conn, 200)["data"]
-
-      Enum.each(response, fn data ->
-        assert data["tx_index"] == index
-      end)
+      assert Enum.all?(txs, fn %{"tx_index" => tx_index} -> tx_index == index end)
     end
 
     test "get transactions when scope=txi and in a range transaction indexes", %{conn: conn} do
@@ -1609,23 +1564,21 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       index_to = 700_025
       limit = 25
 
-      conn = get(conn, "/txs/txi/#{index_from}-#{index_to}?limit=#{limit}")
+      assert %{"data" => txs} =
+               conn
+               |> get("/txs/txi/#{index_from}-#{index_to}", limit: limit)
+               |> json_response(200)
 
-      response = json_response(conn, 200)["data"]
-
-      assert Enum.count(response) == limit
-
-      Enum.each(response, fn data ->
-        assert data["tx_index"] in index_from..index_to
-      end)
+      assert ^limit = length(txs)
+      assert Enum.all?(txs, fn %{"tx_index" => tx_index} -> tx_index in index_from..index_to end)
     end
 
     test "renders errors when is passed invalid index", %{conn: conn} do
       invalid_index = "invalid_index"
+      error_msg = "invalid range: #{invalid_index}"
 
-      conn = get(conn, "/txs/txi/#{invalid_index}")
-
-      assert json_response(conn, 400) == %{"error" => "invalid range: #{invalid_index}"}
+      assert %{"error" => ^error_msg} =
+               conn |> get("/txs/txi/#{invalid_index}") |> json_response(400)
     end
   end
 
@@ -1657,149 +1610,15 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       AeMdw.Node.id_fields()
       |> Enum.any?(fn field -> tx[field] == id end)
 
-  defp request_txs(conn, "gen" = scope, criteria),
-    do: get(conn, "/txs/#{scope}/#{criteria}")
-
-  defp request_txs(conn, direction, criteria, c),
-    do: get(conn, "/txs/#{direction}?#{criteria}=#{c}")
-
-  defp request_txs(conn, "gen" = scope, criteria1, criteria2, limit),
-    do: get(conn, "/txs/#{scope}/#{criteria1}-#{criteria2}?limit=#{limit}")
-
-  defp request_txs(conn, direction, criteria, c, limit),
-    do: get(conn, "/txs/#{direction}?#{criteria}=#{c}&limit=#{limit}")
-
-  defp request_txs(conn, direction, criteria1, c1, criteria2, c2),
-    do: get(conn, "/txs/#{direction}?#{criteria1}=#{c1}&#{criteria2}=#{c2}")
-
-  defp request_txs(conn, direction, criteria1, c1, criteria2, c2, limit),
-    do: get(conn, "/txs/#{direction}?#{criteria1}=#{c1}&#{criteria2}=#{c2}&limit=#{limit}")
-
-  defp request_txs_by_field(conn, %Range{first: first, last: last}, field, c),
-    do: get(conn, "/txs/gen/#{first}-#{last}?#{field}=#{c}")
-
-  defp request_txs_by_field(conn, direction, field, c),
-    do: get(conn, "/txs/#{direction}?#{field}=#{c}")
-
-  defp request_txs_by_field(conn, direction, criteria, field, c),
-    do: get(conn, "/txs/#{direction}?#{criteria}.#{field}=#{c}")
-
-  defp request_txs_by_field(conn, direction, criteria, field, c, limit),
-    do: get(conn, "/txs/#{direction}?#{criteria}.#{field}=#{c}&limit=#{limit}")
-
-  defp check_response_data(data, criteria, limit) when is_integer(criteria) do
-    assert Enum.count(data) == limit
-
-    Enum.each(data, fn info ->
-      assert info["block_height"] == criteria
-    end)
-  end
-
-  defp check_response_data(data, criteria, limit) when is_binary(criteria) do
-    assert Enum.count(data) == limit
-
-    Enum.each(data, fn info ->
-      assert info["tx"]["type"] == criteria
-    end)
-  end
-
-  defp check_response_data(data, criteria, limit)
-       when is_list(criteria) do
-    assert Enum.count(data) == limit
-
-    Enum.each(data, fn info ->
-      assert info["tx"]["type"] in criteria
-    end)
-  end
-
-  defp check_response_data(data, criteria1, criteria2, limit)
-       when is_list(criteria1) and is_binary(criteria2) do
-    assert Enum.count(data) == limit
-
-    Enum.each(data, fn info ->
-      assert info["tx"]["type"] in criteria1 || info["tx"]["type"] == criteria2
-    end)
-  end
-
-  defp check_response_data(data, criteria1, criteria2, limit)
-       when is_integer(criteria1) and is_integer(criteria2) do
-    assert Enum.count(data) == limit
-
-    Enum.each(data, fn info ->
-      assert info["block_height"] in criteria1..criteria2
-    end)
-  end
-
-  defp check_response_data(data, criteria1, criteria2, limit) when is_atom(criteria2) do
-    assert Enum.count(data) == limit
-
-    Enum.each(data, fn info ->
-      assert id_exists?(info["tx"], criteria1, criteria2)
-    end)
-  end
-
-  defp check_response_data(data, field, id, limit) do
-    assert Enum.count(data) == limit
-
-    Enum.each(data, fn info ->
-      assert info["tx"][field] == id
-    end)
-  end
-
-  defp check_response_data(data, criteria1, criteria2, criteria3, limit)
-       when is_list(criteria2) and is_atom(criteria3) do
-    assert Enum.count(data) == limit
-
-    Enum.each(data, fn info ->
-      assert info["tx"]["type"] in criteria2
-      assert id_exists?(info["tx"], criteria1, criteria3)
-    end)
-  end
-
-  defp check_response_data(data, criteria1, criteria2, criteria3, limit)
-       when is_binary(criteria2) and is_atom(criteria3) do
-    assert Enum.count(data) == limit
-
-    case byte_size(criteria2) > 30 do
-      true ->
-        Enum.each(data, fn info ->
-          assert id_exists?(info["tx"], criteria1, criteria3) &&
-                   id_exists?(info["tx"], criteria2, criteria3)
-        end)
-
-      false ->
-        Enum.each(data, fn info ->
-          assert info["tx"]["type"] == criteria2 &&
-                   id_exists?(info["tx"], criteria1, criteria3)
-        end)
-    end
-  end
-
-  defp check_response_data_ignore_recipient(data, criteria1, limit) do
-    assert Enum.count(data) == limit
-
-    Enum.each(data, fn info ->
-      if nil == info["tx"]["recipient"] do
-        assert id_exists?(info["tx"], criteria1, :with_prefix)
+  defp assert_recipient_for_spend_tx_with_name(txs, account_id) do
+    Enum.each(txs, fn %{"tx" => tx} ->
+      if nil == tx["recipient"] do
+        assert id_exists?(tx, account_id, :with_prefix)
       end
     end)
-  end
-
-  defp get_response_from_next_page(conn, response),
-    do:
-      conn
-      |> get(response["next"])
-      |> json_response(200)
-      |> Access.get("data")
-
-  defp assert_recipient_for_spend_tx_with_name(conn, direction, account_id, limit) do
-    conn = request_txs(conn, direction, "account", account_id, limit)
-    response = json_response(conn, 200)
-
-    check_response_data_ignore_recipient(response["data"], account_id, limit)
 
     blocks_with_nm =
-      Enum.filter(response["data"], fn %{"tx" => tx} ->
+      Enum.filter(txs, fn %{"tx" => tx} ->
         tx["type"] == @type_spend_tx and
           String.starts_with?(tx["recipient_id"] || "", "nm_")
       end)
@@ -1819,20 +1638,5 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
                false
              end
            end)
-
-    conn
-    |> get_response_from_next_page(response)
-    |> check_response_data_ignore_recipient(account_id, limit)
   end
-
-  defp fetch_params(%Conn{query_string: params}),
-    do: params |> WebUtil.query_groups() |> Map.drop(["limit", "page", "cursor", "expand"])
-
-  defp build_scope(%{scope: nil, direction: :forward}),
-    do: {:gen, Util.first_gen()..Util.last_gen()}
-
-  defp build_scope(%{scope: nil, direction: :backward}),
-    do: {:gen, Util.last_gen()..Util.first_gen()}
-
-  defp build_scope(%{scope: scope}), do: scope
 end
