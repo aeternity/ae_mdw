@@ -228,15 +228,17 @@ defmodule AeMdwWeb.Aex9Controller do
       account_pk
       |> AeMdw.Db.Contract.aex9_search_contract(last_txi)
       |> Map.to_list()
-      |> Enum.sort_by(&elem(&1, 1), &<=/2)
+      |> Enum.sort_by(fn {_ct_pk, txi_list} -> _call_txi = List.last(txi_list) end)
 
     height_hash = DBN.top_height_hash(top?(conn))
 
     balances =
       contracts
-      |> Enum.map(fn {contract_pk, txi} ->
+      |> Enum.map(fn {contract_pk, txi_list} ->
         {amount, _} = DBN.aex9_balance(contract_pk, account_pk, height_hash)
-        {amount, txi, contract_pk}
+        create_txi = List.first(txi_list)
+        call_txi = List.last(txi_list)
+        {amount, create_txi, call_txi, contract_pk}
       end)
       |> Enum.map(&balance_to_map/1)
 

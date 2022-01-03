@@ -54,7 +54,7 @@ defmodule AeMdw.Db.Contract do
 
   @spec aex9_write_new_presence(pubkey(), integer(), pubkey()) :: boolean()
   def aex9_write_new_presence(contract_pk, txi, account_pk) do
-    if aex9_presence_exists?(contract_pk, account_pk) do
+    if aex9_presence_exists?(contract_pk, account_pk, txi) do
       false
     else
       aex9_write_presence(contract_pk, txi, account_pk)
@@ -260,8 +260,8 @@ defmodule AeMdw.Db.Contract do
       &prev/2,
       fn -> %{} end,
       fn {_, txi, ct_pk}, accum ->
-        Map.update(accum, ct_pk, txi, fn old_txi ->
-          (old_txi == -1 && txi) || old_txi
+        Map.update(accum, ct_pk, [txi], fn txi_list ->
+          [txi | txi_list]
         end)
       end,
       & &1
@@ -345,10 +345,6 @@ defmodule AeMdw.Db.Contract do
     :mnesia.write(Model.RevAex9Transfer, m_rev_transfer, :write)
     :mnesia.write(Model.IdxAex9Transfer, m_idx_transfer, :write)
     aex9_write_presence(contract_pk, txi, to_pk)
-
-    if aex9_presence_exists?(contract_pk, to_pk, -1) do
-      aex9_delete_presence(contract_pk, -1, to_pk)
-    end
 
     AsyncTasks.Producer.enqueue(:update_aex9_presence, [contract_pk])
 

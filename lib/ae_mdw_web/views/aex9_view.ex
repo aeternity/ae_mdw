@@ -4,32 +4,34 @@ defmodule AeMdwWeb.Views.Aex9ControllerView do
   """
 
   alias AeMdw.Db.Format
+  alias AeMdw.Db.Model
   alias AeMdw.Db.Util
+
+  require Model
 
   import AeMdwWeb.Helpers.Aex9Helper
 
   @typep pubkey() :: <<_::256>>
 
-  @spec balance_to_map({integer(), integer(), pubkey()}) :: map()
-  def balance_to_map({amount, -1, contract_pk}) do
-    %{
-      contract_id: enc_ct(contract_pk),
-      amount: amount
-    }
-  end
-
-  def balance_to_map({amount, txi, contract_pk}) do
-    tx_idx = Util.read_tx!(txi)
+  @spec balance_to_map({non_neg_integer(), non_neg_integer(), non_neg_integer(), pubkey()}) ::
+          map()
+  def balance_to_map({amount, create_txi, call_txi, contract_pk}) do
+    tx_idx = Util.read_tx!(call_txi)
     info = Format.to_raw_map(tx_idx)
+
+    {^create_txi, name, symbol, _decimals} =
+      Util.next(Model.RevAex9Contract, {create_txi, nil, nil, nil})
 
     %{
       contract_id: enc_ct(contract_pk),
       block_hash: enc_block(:micro, info.block_hash),
       tx_hash: enc(:tx_hash, info.hash),
-      tx_index: txi,
+      tx_index: call_txi,
       tx_type: info.tx.type,
       height: info.block_height,
-      amount: amount
+      amount: amount,
+      token_symbol: symbol,
+      token_name: name
     }
   end
 

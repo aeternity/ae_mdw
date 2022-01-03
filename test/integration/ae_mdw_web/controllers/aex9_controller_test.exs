@@ -1,7 +1,12 @@
 defmodule Integration.AeMdwWeb.Aex9ControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
+  alias AeMdw.Db.Origin
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.Util
   alias AeMdw.Validate
+
+  require Model
 
   @moduletag :integration
 
@@ -203,6 +208,20 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
       assert Enum.any?(balances_response, fn %{"contract_id" => contract_id} ->
                contract_id == @big_balance_contract_id
+             end)
+
+      assert Enum.each(balances_response, fn %{
+                                               "contract_id" => contract_id,
+                                               "token_name" => token_name,
+                                               "token_symbol" => token_symbol
+                                             } ->
+               create_txi = Origin.tx_index({:contract, contract_id})
+
+               {^create_txi, name, symbol, _decimals} =
+                 Util.next(Model.RevAex9Contract, {create_txi, nil, nil, nil})
+
+               assert token_name == name
+               assert token_symbol == symbol
              end)
     end
   end
