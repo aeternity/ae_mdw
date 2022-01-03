@@ -309,24 +309,17 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     } do
       limit = 1
       type = "ga_attach"
-      transform_tx_type = transform_tx_type(type)
 
-      conn = request_txs(conn, "backward", "type", type, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/backward", type: type, limit: limit) |> json_response(200)
 
-      check_response_data(response["data"], transform_tx_type, limit)
+      assert ^limit = length(txs)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type == "GaAttachTx" end)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
+      assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
-      assert ^data = response["data"]
-
-      conn
-      |> get_response_from_next_page(response)
-      |> check_response_data(transform_tx_type, limit)
+      assert ^limit = length(next_txs)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type == "ChannelCreateTx" end)
     end
 
     test "get transactions when direction=backward and type parameter=oracle_query", %{conn: conn} do
@@ -979,17 +972,20 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     test "get transactions with direction=forward and given GA contract ID with default limit", %{
       conn: conn
     } do
-      criteria = "contract"
       # Generalized Account contract_id
+      limit = 1
       contract_id = "ct_Be5LcGEN2SgZh2kSvf3LqZuawN94kn77iNy5off5UfgzbiNv4"
 
-      conn = request_txs(conn, "forward", criteria, contract_id)
-      response = json_response(conn, 200)
+      assert %{"data" => txs, "next" => next} =
+               conn
+               |> get("/txs/forward", contract: contract_id, limit: limit)
+               |> json_response(200)
 
-      Enum.each(response["data"], fn block_tx ->
-        assert block_tx["tx"]["contract_id"] == contract_id
-        assert block_tx["tx"]["type"] == "GAAttachTx"
-      end)
+      assert ^limit = length(txs)
+
+      assert Enum.all?(txs, fn %{"tx" => %{"contract_id" => c_id, "type" => type}} ->
+               type == "GaAttachTx" and contract_id == c_id
+             end)
     end
 
     test "get transactions with direction=forward and given oracle ID with default limit", %{
@@ -1211,20 +1207,16 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       limit = 1
       tx_type = "ga_attach"
       field = "contract_id"
-      id = "ct_Be5LcGEN2SgZh2kSvf3LqZuawN94kn77iNy5off5UfgzbiNv4"
+      contract_id = "ct_Be5LcGEN2SgZh2kSvf3LqZuawN94kn77iNy5off5UfgzbiNv4"
+      params = [{"#{tx_type}.#{field}", contract_id}, {:limit, limit}]
 
-      conn = request_txs_by_field(conn, "forward", tx_type, field, id, limit)
-      response = json_response(conn, 200)
+      assert %{"data" => txs} = conn |> get("/txs/forward", params) |> json_response(200)
 
-      check_response_data(response["data"], field, id, limit)
+      assert ^limit = length(txs)
 
-      {:ok, data, _has_cont?} =
-        Continuation.response_data(
-          {TxController, :txs, fetch_params(conn), build_scope(conn.assigns), 0},
-          limit
-        )
-
-      assert ^data = response["data"]
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type} = tx} ->
+               tx[field] == contract_id and type == "GaAttachTx"
+             end)
     end
 
     test "get transactions when direction=forward, tx_type=spend and field=recipient_id ",
