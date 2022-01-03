@@ -16,7 +16,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Name
   alias AeMdw.Db.Oracle
-  alias AeMdw.Db.OriginMutation
   alias AeMdw.Db.Sync.Stats
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.WriteFieldMutation
@@ -254,10 +253,10 @@ defmodule AeMdw.Db.Sync.Transaction do
             Contract.aex9_meta_info(contract_pk)
           end
 
-        [
-          mutations,
-          ContractCreateMutation.new(contract_pk, txi, owner_pk, aex9_meta_info, call_rec)
-        ]
+        mutations ++
+          [
+            ContractCreateMutation.new(contract_pk, txi, owner_pk, aex9_meta_info, call_rec)
+          ]
 
       {:error, _reason} ->
         mutations
@@ -268,15 +267,13 @@ defmodule AeMdw.Db.Sync.Transaction do
     []
   end
 
-  defp origin_mutations(tx_type, pos, pubkey, txi, tx_id) do
-    [
-      OriginMutation.new(tx_type, pubkey, txi, tx_id)
-      | write_field_mutations(tx_type, pos, pubkey, txi)
-    ]
-  end
+  defp origin_mutations(tx_type, pos, pubkey, txi, tx_hash) do
+    m_origin = Model.origin(index: {tx_type, pubkey, txi}, tx_id: tx_hash)
+    m_rev_origin = Model.rev_origin(index: {txi, tx_type, pubkey})
 
-  defp write_field_mutations(tx_type, pos, pubkey, txi) do
     [
+      MnesiaWriteMutation.new(Model.Origin, m_origin),
+      MnesiaWriteMutation.new(Model.RevOrigin, m_rev_origin),
       WriteFieldMutation.new(tx_type, pos, pubkey, txi)
     ]
   end
