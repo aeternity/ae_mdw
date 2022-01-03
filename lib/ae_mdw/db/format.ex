@@ -453,15 +453,20 @@ defmodule AeMdw.Db.Format do
   def custom_encode(:oracle_response_tx, tx, _tx_rec, _signed_tx, _block_hash),
     do: update_in(tx, ["tx", "response"], &maybe_base64/1)
 
+  def custom_encode(:oracle_query_tx, tx, _tx_rec, _signed_tx, _block_hash) do
+    update_in(tx, ["tx", "query"], &Base.encode64/1)
+  end
+
+  def custom_encode(:ga_attach_tx, tx, tx_rec, _signed_tx, _block_hash) do
+    contract_pk = :aega_attach_tx.contract_pubkey(tx_rec)
+    put_in(tx, ["tx", "contract_id"], Enc.encode(:contract_pubkey, contract_pk))
+  end
+
   def custom_encode(:contract_create_tx, tx, tx_rec, _, block_hash) do
     contract_pk = :aect_contracts.pubkey(:aect_contracts.new(tx_rec))
     init_call_details = Contract.get_init_call_details(contract_pk, tx_rec, block_hash)
 
     update_in(tx, ["tx"], fn tx_details -> Map.merge(tx_details, init_call_details) end)
-  end
-
-  def custom_encode(:oracle_query_tx, tx, _tx_rec, _signed_tx, _block_hash) do
-    update_in(tx, ["tx", "query"], &Base.encode64/1)
   end
 
   def custom_encode(:contract_call_tx, tx, tx_rec, _signed_tx, block_hash) do

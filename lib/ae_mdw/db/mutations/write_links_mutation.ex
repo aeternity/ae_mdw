@@ -60,6 +60,18 @@ defmodule AeMdw.Db.WriteLinksMutation do
     Sync.Contract.create(pk, owner_pk, tx, txi, block_hash)
   end
 
+  def mutate(%__MODULE__{
+        type: :ga_attach_tx,
+        tx: tx,
+        txi: txi,
+        tx_hash: tx_hash
+      }) do
+    pk = :aega_attach_tx.contract_pubkey(tx)
+    :ets.insert(:ct_create_sync_cache, {pk, txi})
+    write_origin(:ga_attach_tx, pk, txi, tx_hash)
+    AeMdw.Ets.inc(:stat_sync_cache, :contracts)
+  end
+
   def mutate(%__MODULE__{type: :contract_call_tx, tx: tx, txi: txi, block_hash: block_hash}) do
     pk = :aect_call_tx.contract_pubkey(tx)
     Sync.Contract.call(pk, tx, txi, block_hash)

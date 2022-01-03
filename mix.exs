@@ -49,6 +49,7 @@ defmodule AeMdw.MixProject do
           :aect_create_tx,
           :aect_dispatch,
           :aect_state_tree,
+          :aega_attach_tx,
           :aega_meta_tx,
           :aehttp_logic,
           :aens,
