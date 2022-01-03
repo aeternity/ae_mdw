@@ -46,18 +46,8 @@ defmodule AeMdw.Db.WriteLinksMutation do
   end
 
   @spec mutate(t()) :: :ok
-  def mutate(%__MODULE__{
-        type: :contract_create_tx,
-        tx: tx,
-        txi: txi,
-        tx_hash: tx_hash,
-        block_hash: block_hash
-      }) do
-    pk = :aect_contracts.pubkey(:aect_contracts.new(tx))
-    owner_pk = :aect_create_tx.owner_pubkey(tx)
-    :ets.insert(:ct_create_sync_cache, {pk, txi})
-    write_origin(:contract_create_tx, pk, txi, tx_hash)
-    Sync.Contract.create(pk, owner_pk, tx, txi, block_hash)
+  def mutate(%__MODULE__{type: :contract_create_tx}) do
+    :ok
   end
 
   def mutate(%__MODULE__{

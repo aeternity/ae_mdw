@@ -31,6 +31,7 @@ defmodule AeMdw.Contract do
   @type event_hash :: <<_::256>>
 
   @type call :: tuple()
+  @type aex9_meta_info() :: {String.t(), String.t(), integer()}
   # for balances or balance
   @type call_result :: map() | tuple()
   @type serialized_call :: map()
@@ -129,7 +130,7 @@ defmodule AeMdw.Contract do
   @spec aex9_transfer_event_hash() :: event_hash()
   def aex9_transfer_event_hash(), do: @aex9_transfer_event_hash
 
-  @spec aex9_meta_info(DBN.pubkey()) :: {String.t(), String.t(), integer()}
+  @spec aex9_meta_info(DBN.pubkey()) :: aex9_meta_info()
   def aex9_meta_info(contract_pk),
     do: aex9_meta_info(contract_pk, DBN.top_height_hash(false))
 
