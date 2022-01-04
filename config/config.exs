@@ -7,6 +7,19 @@
 # General application configuration
 use Mix.Config
 
+mdw_revision =
+  case File.read("AEMDW_REVISION") do
+    {:ok, <<git_commit::binary-7, "\n">>} ->
+      git_commit
+
+    {:error, :enoent} ->
+      {<<git_head_commit::binary-7, "\n">>, 0} = System.cmd("git", ["log", "-1", "--format=%h"])
+      git_head_commit
+  end
+
+config :ae_mdw,
+  build_revision: mdw_revision
+
 config :ae_plugin,
   node_root: System.get_env("NODEROOT", "../aeternity/_build/local/"),
   "$aec_db_create_tables": {AeMdw.Db.Setup, :create_tables},

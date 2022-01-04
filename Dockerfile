@@ -10,6 +10,12 @@ RUN apt-get -qq update && apt-get -qq -y install curl libncurses5 libsodium-dev 
 RUN mkdir -p /home/aeternity/node
 COPY ./docker/aeternity.yaml /home/aeternity/aeternity.yaml
 
+# Set build git revision
+RUN mkdir /home/aeternity/node/ae_mdw
+COPY .git .git
+RUN BUILD_REV="$(git log -1 --format=%h)" && echo $BUILD_REV > /home/aeternity/node/ae_mdw/AEMDW_REVISION
+RUN rm -r .git
+
 WORKDIR /home/aeternity/node
 
 # Download, and unzip latest aeternity release archive
@@ -23,7 +29,6 @@ RUN chmod +x ${NODEDIR}/bin/aeternity
 RUN cp -r ./local/rel/aeternity/lib local/
 
 # Copy all files, needed to build the project
-RUN mkdir  ae_mdw/
 COPY config ./ae_mdw/config
 COPY lib ./ae_mdw/lib
 COPY mix.exs ae_mdw

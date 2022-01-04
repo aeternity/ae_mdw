@@ -17,10 +17,12 @@ defmodule Integration.AeMdwWeb.UtilControllerTest do
 
       node_version = to_string(node_vsn)
       mdw_version = AeMdw.MixProject.project()[:version]
+      mdw_revision = :persistent_term.get({:ae_mdw, :build_revision})
       mdw_synced = node_height == mdw_height + 1
 
       assert %{
                "mdw_version" => ^mdw_version,
+               "mdw_revision" => ^mdw_revision,
                "node_version" => ^node_version,
                "mdw_height" => ^mdw_height,
                "node_height" => ^node_height,
