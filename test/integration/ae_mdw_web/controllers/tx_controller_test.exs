@@ -319,7 +319,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
       assert ^limit = length(next_txs)
-      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type == "ChannelCreateTx" end)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type == "GaAttachTx" end)
     end
 
     test "get transactions when direction=backward and type parameter=oracle_query", %{conn: conn} do
