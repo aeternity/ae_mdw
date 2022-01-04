@@ -8,12 +8,13 @@
 use Mix.Config
 
 mdw_revision =
-  if File.exists?(".git") do
-    {<<git_head_commit::binary-7, "\n">>, 0} = System.cmd("git", ["log", "-1", "--format=%h"])
-    git_head_commit
-  else
-    <<git_commit::binary-7, "\n">> = File.read!("AEMDW_REVISION")
-    git_commit
+  case File.read("AEMDW_REVISION") do
+    {:ok, <<git_commit::binary-7, "\n">>} ->
+      git_commit
+
+    {:error, :enoent} ->
+      {<<git_head_commit::binary-7, "\n">>, 0} = System.cmd("git", ["log", "-1", "--format=%h"])
+      git_head_commit
   end
 
 config :ae_mdw,
