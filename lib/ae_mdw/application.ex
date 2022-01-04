@@ -15,6 +15,9 @@ defmodule AeMdw.Application do
 
   @impl Application
   def start(_type, _args) do
+    build_rev = Application.fetch_env!(:ae_mdw, :build_revision)
+    :persistent_term.put({:ae_mdw, :build_revision}, build_rev)
+
     :lager.set_loglevel(:epoch_sync_lager_event, :lager_console_backend, :undefined, :error)
     :lager.set_loglevel(:lager_console_backend, :error)
 

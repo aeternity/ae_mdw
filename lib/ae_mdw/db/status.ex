@@ -25,6 +25,7 @@ defmodule AeMdw.Db.Status do
       node_syncing: node_syncing?,
       node_progress: node_progress,
       mdw_version: to_string(version),
+      mdw_revision: :persistent_term.get({:ae_mdw, :build_revision}),
       mdw_height: mdw_height,
       mdw_tx_index: mdw_tx_index,
       mdw_async_tasks: async_tasks_counters,

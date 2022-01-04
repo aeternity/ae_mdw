@@ -31,6 +31,7 @@ ae_mdw-*.tar
 .DS_Store
 .elixir_ls/
 log/
+AEMDW_REVISION
 REVISION
 VERSION
 *~
