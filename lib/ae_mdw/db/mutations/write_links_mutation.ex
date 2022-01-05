@@ -66,14 +66,8 @@ defmodule AeMdw.Db.WriteLinksMutation do
     :ok
   end
 
-  def mutate(%__MODULE__{
-        type: :channel_create_tx,
-        signed_tx: signed_tx,
-        txi: txi,
-        tx_hash: tx_hash
-      }) do
-    {:ok, pk} = :aesc_utils.channel_pubkey(signed_tx)
-    write_origin(:channel_create_tx, pk, txi, tx_hash)
+  def mutate(%__MODULE__{type: :channel_create_tx}) do
+    :ok
   end
 
   def mutate(%__MODULE__{
