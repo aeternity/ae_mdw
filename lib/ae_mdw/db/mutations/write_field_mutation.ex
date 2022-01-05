@@ -12,7 +12,8 @@ defmodule AeMdw.Db.WriteFieldMutation do
 
   defstruct [:tx_type, :pos, :pubkey, :txi]
 
-  @typep tx_type() :: :contract_create_tx | :channel_create_tx | :ga_attach_tx
+  @typep tx_type() ::
+           :contract_create_tx | :channel_create_tx | :ga_attach_tx | :oracle_register_tx
   @typep pos() :: non_neg_integer() | nil
 
   @opaque t() :: %__MODULE__{

@@ -60,16 +60,8 @@ defmodule AeMdw.Db.WriteLinksMutation do
     :ok
   end
 
-  def mutate(%__MODULE__{
-        type: :oracle_register_tx,
-        tx: tx,
-        txi: txi,
-        tx_hash: tx_hash,
-        block_index: block_index
-      }) do
-    pk = :aeo_register_tx.account_pubkey(tx)
-    write_origin(:oracle_register_tx, pk, txi, tx_hash)
-    Sync.Oracle.register(pk, tx, txi, block_index)
+  def mutate(%__MODULE__{type: :oracle_register_tx}) do
+    :ok
   end
 
   def mutate(%__MODULE__{type: :oracle_extend_tx, tx: tx, txi: txi, block_index: block_index}) do

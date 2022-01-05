@@ -18,6 +18,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Name
   alias AeMdw.Db.Oracle
+  alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.Sync.Stats
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.WriteFieldMutation
@@ -298,6 +299,26 @@ defmodule AeMdw.Db.Sync.Transaction do
     AeMdw.Ets.inc(:stat_sync_cache, :contracts)
 
     origin_mutations(:ga_attach_tx, nil, contract_pk, txi, tx_hash)
+  end
+
+  defp tx_mutations(
+         :oracle_register_tx,
+         tx,
+         _signed_tx,
+         txi,
+         tx_hash,
+         {height, _mbi} = block_index,
+         _block_hash,
+         _mb_events
+       ) do
+    oracle_pk = :aeo_register_tx.account_pubkey(tx)
+    delta_ttl = :aeo_utils.ttl_delta(height, :aeo_register_tx.oracle_ttl(tx))
+    expire = height + delta_ttl
+
+    [
+      origin_mutations(:oracle_register_tx, nil, oracle_pk, txi, tx_hash),
+      OracleRegisterMutation.new(oracle_pk, block_index, expire, txi)
+    ]
   end
 
   defp tx_mutations(_type, _tx, _signed_tx, _txi, _tx_hash, _block_index, _block_hash, _mb_events) do
