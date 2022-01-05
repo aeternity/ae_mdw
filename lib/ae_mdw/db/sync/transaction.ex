@@ -276,6 +276,21 @@ defmodule AeMdw.Db.Sync.Transaction do
     ]
   end
 
+  defp tx_mutations(
+         :channel_create_tx,
+         _tx,
+         signed_tx,
+         txi,
+         tx_hash,
+         _block_index,
+         _block_hash,
+         _mb_events
+       ) do
+    {:ok, channel_pk} = :aesc_utils.channel_pubkey(signed_tx)
+
+    origin_mutations(:channel_create_tx, nil, channel_pk, txi, tx_hash)
+  end
+
   defp tx_mutations(_type, _tx, _signed_tx, _txi, _tx_hash, _block_index, _block_hash, _mb_events) do
     []
   end
