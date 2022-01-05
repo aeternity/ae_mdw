@@ -314,12 +314,12 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
                conn |> get("/txs/backward", type: type, limit: limit) |> json_response(200)
 
       assert ^limit = length(txs)
-      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type == "GaAttachTx" end)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type == "GAAttachTx" end)
 
       assert %{"data" => next_txs} = conn |> get(next) |> json_response(200)
 
       assert ^limit = length(next_txs)
-      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type == "GaAttachTx" end)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type == "GAAttachTx" end)
     end
 
     test "get transactions when direction=backward and type parameter=oracle_query", %{conn: conn} do
@@ -984,7 +984,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       assert ^limit = length(txs)
 
       assert Enum.all?(txs, fn %{"tx" => %{"contract_id" => c_id, "type" => type}} ->
-               type == "GaAttachTx" and contract_id == c_id
+               type == "GAAttachTx" and contract_id == c_id
              end)
     end
 
@@ -1215,7 +1215,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       assert ^limit = length(txs)
 
       assert Enum.all?(txs, fn %{"tx" => %{"type" => type} = tx} ->
-               tx[field] == contract_id and type == "GaAttachTx"
+               tx[field] == contract_id and type == "GAAttachTx"
              end)
     end
 

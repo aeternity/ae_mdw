@@ -4,6 +4,8 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
   @moduletag :integration
 
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Mutation
+  alias AeMdw.Db.Oracle
   alias AeMdw.Db.Sync
   alias AeMdw.Db.Util
 
@@ -49,11 +51,13 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
 
   describe "expire/1" do
     test "inactivates an oracle that has just expired" do
+      {height, pubkey} = Util.last(Model.ActiveOracleExpiration)
+      mutation = Oracle.expirations_mutation(height)
+
       fn ->
-        {height, pubkey} = Util.last(Model.ActiveOracleExpiration)
         m_oracle = Util.read!(Model.ActiveOracle, pubkey)
 
-        assert Sync.Oracle.expire(height)
+        Mutation.mutate(mutation)
 
         assert [Model.expiration(index: {height, pubkey})] ==
                  Util.read(Model.InactiveOracleExpiration, {height, pubkey})
@@ -73,7 +77,10 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
         m_old_exp = Model.expiration(index: {height - 1, pubkey})
         :mnesia.write(Model.ActiveOracleExpiration, m_old_exp, :write)
 
-        refute Sync.Oracle.expire(height - 1)
+        (height - 1)
+        |> Oracle.expirations_mutation()
+        |> Mutation.mutate()
+
         assert {height, pubkey} == Util.last(Model.ActiveOracleExpiration)
         assert [m_oracle] == Util.read(Model.ActiveOracle, pubkey)
 
@@ -87,7 +94,9 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
         {height, pubkey} = Util.last(Model.ActiveOracleExpiration)
         m_oracle = Util.read!(Model.ActiveOracle, pubkey)
 
-        refute Sync.Oracle.expire(height - 1)
+        (height - 1)
+        |> Oracle.expirations_mutation()
+        |> Mutation.mutate()
 
         assert {height, pubkey} == Util.last(Model.ActiveOracleExpiration)
         assert [m_oracle] == Util.read(Model.ActiveOracle, pubkey)
@@ -102,7 +111,9 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
         {height, pubkey} = Util.last(Model.InactiveOracleExpiration)
         m_oracle = Util.read!(Model.InactiveOracle, pubkey)
 
-        refute Sync.Oracle.expire(height)
+        height
+        |> Oracle.expirations_mutation()
+        |> Mutation.mutate()
 
         assert {height, pubkey} == Util.last(Model.InactiveOracleExpiration)
         assert [m_oracle] == Util.read(Model.InactiveOracle, pubkey)
