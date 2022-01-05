@@ -9,6 +9,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync
   alias AeMdw.Db.Aex9AccountPresenceMutation
+  alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.ContractCreateMutation
   alias AeMdw.Db.ContractEventsMutation
   alias AeMdw.Db.IntTransfer
@@ -80,18 +81,6 @@ defmodule AeMdw.Db.Sync.Transaction do
     type = mod.type()
     model_tx = Model.tx(index: txi, id: tx_hash, block_index: block_index, time: mb_time)
 
-    ct_pk =
-      case type do
-        :contract_call_tx -> :aect_call_tx.contract_pubkey(tx)
-        _other_tx -> nil
-      end
-
-    contract_events_mutation =
-      if ct_pk do
-        events = Map.get(mb_events, tx_hash, [])
-        ContractEventsMutation.new(ct_pk, events, txi)
-      end
-
     inner_tx_mutations =
       if type == :ga_meta_tx or type == :paying_for_tx do
         inner_signed_tx = Sync.InnerTx.signed_tx(type, tx)
@@ -105,7 +94,6 @@ defmodule AeMdw.Db.Sync.Transaction do
       WriteTxMutation.new(model_tx, type, txi, mb_time, inner_tx?),
       WriteLinksMutation.new(type, tx, signed_tx, txi, tx_hash, block_index, block_hash),
       tx_mutations(type, tx, signed_tx, txi, tx_hash, block_index, block_hash, mb_events),
-      contract_events_mutation,
       WriteFieldsMutation.new(type, tx, block_index, txi),
       inner_tx_mutations
     ]
@@ -239,6 +227,8 @@ defmodule AeMdw.Db.Sync.Transaction do
     owner_pk = :aect_create_tx.owner_pubkey(tx)
     events = Map.get(mb_events, tx_hash, [])
 
+    :ets.insert(:ct_create_sync_cache, {contract_pk, txi})
+
     mutations = [
       ContractEventsMutation.new(contract_pk, events, txi)
       | origin_mutations(:contract_create_tx, nil, contract_pk, txi, tx_hash)
@@ -261,6 +251,29 @@ defmodule AeMdw.Db.Sync.Transaction do
       {:error, _reason} ->
         mutations
     end
+  end
+
+  defp tx_mutations(
+         :contract_call_tx,
+         tx,
+         _signed_tx,
+         txi,
+         tx_hash,
+         _block_index,
+         block_hash,
+         mb_events
+       ) do
+    contract_pk = :aect_call_tx.contract_pubkey(tx)
+    create_txi = Sync.Contract.get_txi(contract_pk)
+    events = Map.get(mb_events, tx_hash, [])
+
+    {fun_arg_res, call_rec} =
+      Contract.call_tx_info(tx, contract_pk, block_hash, &Contract.to_map/1)
+
+    [
+      ContractEventsMutation.new(contract_pk, events, txi),
+      ContractCallMutation.new(create_txi, txi, fun_arg_res, call_rec)
+    ]
   end
 
   defp tx_mutations(_type, _tx, _signed_tx, _txi, _tx_hash, _block_index, _block_hash, _mb_events) do
