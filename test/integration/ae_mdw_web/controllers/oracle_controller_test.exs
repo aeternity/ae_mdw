@@ -4,8 +4,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Validate
   alias AeMdw.Db.{Oracle, Format}
-  alias AeMdwWeb.{OracleController, TestUtil}
-  alias AeMdwWeb.Continuation, as: Cont
+  alias AeMdwWeb.TestUtil
   alias AeMdw.Error.Input, as: ErrInput
 
   import AeMdwWeb.Util
@@ -31,7 +30,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
       id = "ok_2TASQ4QZv584D2ZP7cZxT6sk1L1UyqbWumnWM4g1azGi1qqcR5"
       conn = get(conn, "/oracle/#{id}?expand")
 
-      assert json_response(conn, 200) |> Jason.encode!() ==
+      assert conn |> json_response(200) |> Jason.encode!() ==
                TestUtil.handle_input(fn ->
                  id
                  |> Validate.id!([:oracle_pubkey])
@@ -50,91 +49,76 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
   describe "oracles" do
     test "get all oracles with default direction=backward and default limit", %{conn: conn} do
-      conn = get(conn, "/oracles")
-      response = json_response(conn, 200)
+      %{"data" => oracles, "next" => next} = conn |> get("/oracles") |> json_response(200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {OracleController, :oracles, %{}, :unused_scope, 0},
-          @default_limit
-        )
+      expirations =
+        oracles
+        |> Enum.map(fn %{"expire_height" => expire_height} -> expire_height end)
+        |> Enum.reverse()
 
-      assert Enum.count(response["data"]) == @default_limit
-      assert response["data"] == data
+      assert @default_limit = length(oracles)
+      assert ^expirations = Enum.sort(expirations)
 
-      conn_next = get(conn, response["next"])
-      response_next = json_response(conn_next, 200)
+      %{"data" => next_oracles} = conn |> get(next) |> json_response(200)
 
-      {:ok, next_data, _has_cont?} =
-        Cont.response_data(
-          {OracleController, :oracles, %{}, :unused_scope, @default_limit},
-          @default_limit
-        )
+      next_expirations =
+        next_oracles
+        |> Enum.map(fn %{"expire_height" => expire_height} -> expire_height end)
+        |> Enum.reverse()
 
-      assert Enum.count(response_next["data"]) == @default_limit
-      assert response_next["data"] == next_data
+      assert @default_limit = length(next_oracles)
+      assert ^next_expirations = Enum.sort(next_expirations)
+      assert Enum.at(expirations, @default_limit - 1) >= Enum.at(next_expirations, 0)
     end
 
     test "get all oracles with direction=forward and limit=3", %{conn: conn} do
       direction = "forward"
       limit = 3
-      conn = get(conn, "/oracles?direction=#{direction}&limit=#{limit}")
-      response = json_response(conn, 200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {OracleController, :oracles, %{"direction" => [direction]}, :unused_scope, 0},
-          limit
-        )
+      %{"data" => oracles, "next" => next} =
+        conn |> get("/oracles", direction: direction, limit: limit) |> json_response(200)
 
-      assert Enum.count(response["data"]) == limit
-      assert response["data"] == data
+      expirations = Enum.map(oracles, fn %{"expire_height" => expire_height} -> expire_height end)
 
-      conn_next = get(conn, response["next"])
-      response_next = json_response(conn_next, 200)
+      assert ^limit = length(oracles)
+      assert ^expirations = Enum.sort(expirations)
 
-      {:ok, next_data, _has_cont?} =
-        Cont.response_data(
-          {OracleController, :oracles, %{"direction" => [direction]}, :unused_scope, limit},
-          limit
-        )
+      %{"data" => next_oracles} = conn |> get(next) |> json_response(200)
 
-      assert Enum.count(response_next["data"]) == limit
-      assert response_next["data"] == next_data
+      next_expirations =
+        Enum.map(oracles, fn %{"expire_height" => expire_height} -> expire_height end)
+
+      assert ^limit = length(next_oracles)
+      assert ^next_expirations = Enum.sort(next_expirations)
     end
 
     test "get all oracles with limit=7 and expand parameter ", %{conn: conn} do
       limit = 7
-      conn = get(conn, "/oracles?limit=#{limit}&expand")
-      response = json_response(conn, 200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {OracleController, :oracles, %{"expand" => [nil]}, :foo, 0},
-          limit
-        )
+      %{"data" => oracles, "next" => next} =
+        conn |> get("/oracles", limit: limit, expand: true) |> json_response(200)
 
-      assert ^limit = Enum.count(response["data"])
-      assert response["data"] |> Jason.encode!() == data |> Jason.encode!()
+      assert ^limit = length(oracles)
 
-      conn_next = get(conn, response["next"])
-      response_next = json_response(conn_next, 200)
+      assert Enum.all?(oracles, fn %{"register" => register, "extends" => extends} ->
+               is_map(register) and Enum.all?(extends, &is_map/1)
+             end)
 
-      {:ok, next_data, _has_cont?} =
-        Cont.response_data(
-          {OracleController, :oracles, %{"expand" => [nil]}, :foo, limit},
-          limit
-        )
+      %{"data" => next_oracles} = conn |> get(next) |> json_response(200)
 
-      assert Enum.count(response_next["data"]) == limit
-      assert response_next["data"] |> Jason.encode!() == next_data |> Jason.encode!()
+      assert ^limit = length(next_oracles)
+
+      assert Enum.all?(next_oracles, fn %{"register" => register, "extends" => extends} ->
+               is_map(register) and Enum.all?(extends, &is_map/1)
+             end)
     end
 
     test "renders error when direction is invalid", %{conn: conn} do
       direction = "invalid"
-      conn = get(conn, "/oracles?direction=#{direction}")
+      error_msg = "invalid direction: #{direction}"
 
-      assert json_response(conn, 400) == %{"error" => "invalid direction: #{direction}"}
+      %{"error" => ^error_msg} =
+        conn |> get("/oracles", direction: direction) |> json_response(400)
     end
 
     test "renders error when limit is invalid", %{conn: conn} do
@@ -146,9 +130,10 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
     test "renders error when limit is to large", %{conn: conn} do
       limit = 10_000
-      conn = get(conn, "/oracles?limit=#{limit}")
+      error_msg = "limit too large: #{limit}"
 
-      assert json_response(conn, 400) == %{"error" => "limit too large: #{limit}"}
+      assert %{"error" => ^error_msg} =
+               conn |> get("/oracles", limit: limit) |> json_response(400)
     end
 
     test "it returns valid oracles on a given range", %{conn: conn} do
@@ -189,191 +174,171 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
   describe "inactive_oracles" do
     test "get inactive oracles with default direction=backward and default limit", %{conn: conn} do
-      conn = get(conn, "/oracles/inactive")
-      response = json_response(conn, 200)
+      assert %{"data" => oracles, "next" => next} =
+               conn |> get("/oracles/inactive") |> json_response(200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {OracleController, :inactive_oracles, %{}, :unused_scope, 0},
-          @default_limit
-        )
+      expirations =
+        oracles
+        |> Enum.map(fn %{"expire_height" => expire_height} -> expire_height end)
+        |> Enum.reverse()
 
-      assert Enum.count(response["data"]) == @default_limit
-      assert response["data"] == data
+      assert @default_limit = length(oracles)
+      assert ^expirations = Enum.sort(expirations)
 
-      conn_next = get(conn, response["next"])
-      response_next = json_response(conn_next, 200)
+      assert %{"data" => next_oracles} = conn |> get(next) |> json_response(200)
 
-      {:ok, next_data, _has_cont?} =
-        Cont.response_data(
-          {OracleController, :inactive_oracles, %{}, :unused_scope, @default_limit},
-          @default_limit
-        )
+      next_expirations =
+        next_oracles
+        |> Enum.map(fn %{"expire_height" => expire_height} -> expire_height end)
+        |> Enum.reverse()
 
-      assert Enum.count(response_next["data"]) <= @default_limit
-      assert response_next["data"] == next_data
+      assert @default_limit = length(next_oracles)
+      assert ^next_expirations = Enum.sort(next_expirations)
+      assert Enum.at(expirations, @default_limit - 1) >= Enum.at(next_expirations, 0)
     end
 
     test "get inactive oracles with direction=forward and limit=5", %{conn: conn} do
       direction = "forward"
       limit = 5
-      conn = get(conn, "/oracles/inactive?direction=#{direction}&limit=#{limit}")
-      response = json_response(conn, 200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {OracleController, :inactive_oracles, %{"direction" => [direction]}, :unused_scope, 0},
-          limit
-        )
+      assert %{"data" => oracles, "next" => next} =
+               conn
+               |> get("/oracles/inactive", direction: direction, limit: limit)
+               |> json_response(200)
 
-      assert Enum.count(response["data"]) == limit
-      assert response["data"] == data
+      expirations = Enum.map(oracles, fn %{"expire_height" => expire_height} -> expire_height end)
 
-      conn_next = get(conn, response["next"])
-      response_next = json_response(conn_next, 200)
+      assert ^limit = length(oracles)
+      assert ^expirations = Enum.sort(expirations)
 
-      {:ok, next_data, _has_cont?} =
-        Cont.response_data(
-          {OracleController, :inactive_oracles, %{"direction" => [direction]}, :unused_scope,
-           limit},
-          limit
-        )
+      assert %{"data" => next_oracles} = conn |> get(next) |> json_response(200)
 
-      assert Enum.count(response_next["data"]) == limit
-      assert response_next["data"] == next_data
+      next_expirations =
+        Enum.map(next_oracles, fn %{"expire_height" => expire_height} -> expire_height end)
+
+      assert ^limit = length(next_oracles)
+      assert ^next_expirations = Enum.sort(next_expirations)
+      assert Enum.at(expirations, limit - 1) <= Enum.at(next_expirations, 0)
     end
 
     test "get inactive oracles with limit=1 and expand parameter ", %{conn: conn} do
       limit = 1
-      conn = get(conn, "/oracles/inactive?limit=#{limit}&expand")
-      response = json_response(conn, 200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {OracleController, :inactive_oracles, %{"expand" => [nil]}, :unused_scope, 0},
-          limit
-        )
+      assert %{"data" => oracles, "next" => next} =
+               conn
+               |> get("/oracles/inactive", limit: limit, expand: "true")
+               |> json_response(200)
 
-      assert Enum.count(response["data"]) == limit
-      assert response["data"] |> Jason.encode!() == data |> Jason.encode!()
+      assert ^limit = length(oracles)
 
-      conn_next = get(conn, response["next"])
-      response_next = json_response(conn_next, 200)
+      assert Enum.all?(oracles, fn %{"register" => register, "extends" => extends} ->
+               is_map(register) and Enum.all?(extends, &is_map/1)
+             end)
 
-      {:ok, next_data, _has_cont?} =
-        Cont.response_data(
-          {OracleController, :inactive_oracles, %{"expand" => [nil]}, :unused_scope, limit},
-          limit
-        )
+      assert %{"data" => next_oracles} = conn |> get(next) |> json_response(200)
 
-      assert Enum.count(response_next["data"]) == limit
-      assert response_next["data"] |> Jason.encode!() == next_data |> Jason.encode!()
+      assert ^limit = length(next_oracles)
+
+      assert Enum.all?(next_oracles, fn %{"register" => register, "extends" => extends} ->
+               is_map(register) and Enum.all?(extends, &is_map/1)
+             end)
     end
 
     test "renders error when direction is invalid", %{conn: conn} do
       direction = "invalid"
-      conn = get(conn, "/oracles/inactive?direction=#{direction}")
+      error_msg = "invalid direction: #{direction}"
 
-      assert json_response(conn, 400) == %{"error" => "invalid direction: #{direction}"}
+      assert %{"error" => ^error_msg} =
+               conn |> get("/oracles/inactive", direction: direction) |> json_response(400)
     end
 
     test "renders error when limit is invalid", %{conn: conn} do
       limit = "invalid"
-      conn = get(conn, "/oracles/inactive?limit=#{limit}")
+      error_msg = "invalid limit: #{limit}"
 
-      assert json_response(conn, 400) == %{"error" => "invalid limit: #{limit}"}
+      assert %{"error" => ^error_msg} =
+               conn |> get("/oracles/inactive", limit: limit) |> json_response(400)
     end
 
     test "renders error when limit is to large", %{conn: conn} do
       limit = 10_000
-      conn = get(conn, "/oracles/inactive?limit=#{limit}")
+      error_msg = "limit too large: #{limit}"
 
-      assert json_response(conn, 400) == %{"error" => "limit too large: #{limit}"}
+      assert %{"error" => ^error_msg} =
+               conn |> get("/oracles/inactive?limit=#{limit}") |> json_response(400)
     end
   end
 
   describe "active_oracles" do
     test "get active oracles with default direction=backward and limit=1", %{conn: conn} do
       limit = 1
-      conn = get(conn, "/oracles/active?limit=#{limit}")
-      response = json_response(conn, 200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {OracleController, :active_oracles, %{}, :unused_scope, 0},
-          limit
-        )
+      assert %{"data" => oracles, "next" => next} =
+               conn |> get("/oracles/inactive", limit: limit) |> json_response(200)
 
-      assert Enum.count(response["data"]) == limit
-      assert response["data"] == data
+      expirations =
+        oracles
+        |> Enum.map(fn %{"expire_height" => expire_height} -> expire_height end)
+        |> Enum.reverse()
 
-      conn_next = get(conn, response["next"])
-      response_next = json_response(conn_next, 200)
+      assert ^limit = length(oracles)
+      assert ^expirations = Enum.sort(expirations)
 
-      {:ok, next_data, _has_cont?} =
-        Cont.response_data(
-          {OracleController, :active_oracles, %{}, :unused_scope, limit},
-          limit
-        )
+      assert %{"data" => next_oracles} = conn |> get(next) |> json_response(200)
 
-      assert Enum.count(response_next["data"]) == limit
-      assert response_next["data"] == next_data
+      next_expirations =
+        next_oracles
+        |> Enum.map(fn %{"expire_height" => expire_height} -> expire_height end)
+        |> Enum.reverse()
+
+      assert ^limit = length(next_oracles)
+      assert ^next_expirations = Enum.sort(next_expirations)
+      assert Enum.at(expirations, @default_limit - 1) >= Enum.at(next_expirations, 0)
     end
 
     test "get active oracles with direction=forward and limit=1", %{conn: conn} do
       direction = "forward"
       limit = 1
-      conn = get(conn, "/oracles/active?direction=#{direction}&limit=#{limit}")
-      response = json_response(conn, 200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {OracleController, :active_oracles, %{"direction" => [direction]}, :unused_scope, 0},
-          limit
-        )
+      assert %{"data" => oracles, "next" => next} =
+               conn
+               |> get("/oracles/inactive", limit: limit, direction: direction)
+               |> json_response(200)
 
-      assert Enum.count(response["data"]) == limit
-      assert response["data"] == data
+      expirations = Enum.map(oracles, fn %{"expire_height" => expire_height} -> expire_height end)
 
-      conn_next = get(conn, response["next"])
-      response_next = json_response(conn_next, 200)
+      assert ^limit = length(oracles)
+      assert ^expirations = Enum.sort(expirations)
 
-      {:ok, next_data, _has_cont?} =
-        Cont.response_data(
-          {OracleController, :active_oracles, %{"direction" => [direction]}, :unused_scope,
-           limit},
-          limit
-        )
+      assert %{"data" => next_oracles} = conn |> get(next) |> json_response(200)
 
-      assert Enum.count(response_next["data"]) == limit
-      assert response_next["data"] == next_data
+      next_expirations =
+        Enum.map(next_oracles, fn %{"expire_height" => expire_height} -> expire_height end)
+
+      assert ^limit = length(next_oracles)
+      assert ^next_expirations = Enum.sort(next_expirations)
+      assert Enum.at(expirations, limit - 1) <= Enum.at(next_expirations, 0)
     end
 
     test "get active oracles with limit=1 and expand parameter ", %{conn: conn} do
       limit = 1
-      conn = get(conn, "/oracles/active?limit=#{limit}&expand")
-      response = json_response(conn, 200)
 
-      {:ok, data, _has_cont?} =
-        Cont.response_data(
-          {OracleController, :active_oracles, %{"expand" => [nil]}, :unused_scope, 0},
-          limit
-        )
+      assert %{"data" => oracles, "next" => next} =
+               conn |> get("/oracles/inactive", limit: limit, expand: true) |> json_response(200)
 
-      assert Enum.count(response["data"]) == limit
-      assert response["data"] |> Jason.encode!() == data |> Jason.encode!()
+      assert ^limit = length(oracles)
 
-      conn_next = get(conn, response["next"])
-      response_next = json_response(conn_next, 200)
+      assert Enum.all?(oracles, fn %{"register" => register, "extends" => extends} ->
+               is_map(register) and Enum.all?(extends, &is_map/1)
+             end)
 
-      {:ok, next_data, _has_cont?} =
-        Cont.response_data(
-          {OracleController, :active_oracles, %{"expand" => [nil]}, :unused_scope, limit},
-          limit
-        )
+      assert %{"data" => next_oracles} = conn |> get(next) |> json_response(200)
 
-      assert Enum.count(response_next["data"]) == limit
-      assert response_next["data"] |> Jason.encode!() == next_data |> Jason.encode!()
+      assert ^limit = length(next_oracles)
+
+      assert Enum.all?(next_oracles, fn %{"register" => register, "extends" => extends} ->
+               is_map(register) and Enum.all?(extends, &is_map/1)
+             end)
     end
 
     test "renders error when direction is invalid", %{conn: conn} do
