@@ -13,6 +13,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.ContractCreateMutation
   alias AeMdw.Db.ContractEventsMutation
   alias AeMdw.Db.IntTransfer
+  alias AeMdw.Db.KeyBlocksMutation
   alias AeMdw.Db.MnesiaWriteMutation
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Name
@@ -115,15 +116,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     if gen_fully_synced? do
       txi
     else
-      next_txi = do_sync_generation(height, txi)
-
-      {:atomic, :ok} =
-        :mnesia.transaction(fn ->
-          [next_kb] = :mnesia.read(Model.Block, {height + 1, -1})
-          :mnesia.write(Model.Block, Model.block(next_kb, tx_index: next_txi), :write)
-        end)
-
-      next_txi
+      _next_txi = do_sync_generation(height, txi)
     end
   end
 
@@ -132,7 +125,6 @@ defmodule AeMdw.Db.Sync.Transaction do
     kb_txi = (txi == 0 && -1) || txi
     kb_header = :aec_blocks.to_key_header(key_block)
     kb_hash = ok!(:aec_headers.hash_header(kb_header))
-    kb_model = Model.block(index: {height, -1}, tx_index: kb_txi, hash: kb_hash)
 
     :ets.delete_all_objects(:stat_sync_cache)
     :ets.delete_all_objects(:ct_create_sync_cache)
@@ -170,9 +162,11 @@ defmodule AeMdw.Db.Sync.Transaction do
         end
       end)
 
+    kb_model = Model.block(index: {height, -1}, tx_index: kb_txi, hash: kb_hash)
+
     [
       Stats.new_mutation(height, last_mbi == -1),
-      MnesiaWriteMutation.new(Model.Block, kb_model),
+      KeyBlocksMutation.new(kb_model, next_txi),
       block_rewards_mutation
     ]
     |> Enum.reject(&is_nil/1)
