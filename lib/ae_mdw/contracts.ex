@@ -409,7 +409,11 @@ defmodule AeMdw.Contracts do
 
   defp create_txi!(contract_id) do
     pk = Validate.id!(contract_id)
-    Origin.tx_index({:contract, pk}) || -1
+
+    case Origin.tx_index({:contract, pk}) do
+      nil -> raise ErrInput.Id, value: contract_id
+      txi -> txi
+    end
   end
 
   defp fetch_tx_type(call_txi, local_idx) do
