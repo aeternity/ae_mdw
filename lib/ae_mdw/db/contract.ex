@@ -17,7 +17,7 @@ defmodule AeMdw.Db.Contract do
   import AeMdw.Util, only: [compose: 2, max_256bit_int: 0]
   import AeMdw.Db.Util
 
-  @type pubkey :: Node.pubkey()
+  @type pubkey :: AeMdw.Node.Db.pubkey()
 
   @spec aex9_creation_write(tuple(), pubkey(), pubkey(), integer()) :: :ok
   def aex9_creation_write({name, symbol, decimals}, contract_pk, owner_pk, txi) do
@@ -164,7 +164,7 @@ defmodule AeMdw.Db.Contract do
 
   @spec is_aex9_transfer?(binary(), pubkey()) :: boolean()
   def is_aex9_transfer?(evt_hash, aex9_contract_pk) do
-    aex9_transfer_evt = AeMdw.Node.aex9_transfer_event_hash()
+    aex9_transfer_evt = Node.aex9_transfer_event_hash()
 
     evt_hash == aex9_transfer_evt and aex9_contract_pk != nil
   end

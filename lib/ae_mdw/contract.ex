@@ -39,9 +39,11 @@ defmodule AeMdw.Contract do
   # fcode or aevm info
   @type ct_info :: {:fcode, map(), list(), any()} | list()
   @type function_hash :: <<_::32>>
+  @typep method_name :: binary()
+  @typep method_args :: list()
   @type fun_arg_res :: %{
-          function: any(),
-          arguments: list(),
+          function: method_name(),
+          arguments: method_args(),
           result: any(),
           return: any()
         }
@@ -86,12 +88,6 @@ defmodule AeMdw.Contract do
     end
   end
 
-  @spec is_successful_call?(fun_arg_res_or_error()) :: boolean()
-  def is_successful_call?(%{function: _fname, result: %{error: _error}}), do: false
-  def is_successful_call?(%{function: _fname, result: %{abort: _error}}), do: false
-  def is_successful_call?(%{function: _fname}), do: true
-  def is_successful_call?({:error, _reason}), do: false
-
   ##########
 
   # entrypoint aex9_extensions : ()             => list(string)
@@ -115,16 +111,25 @@ defmodule AeMdw.Contract do
     }
   end
 
-  @spec is_non_stateful_aex9_function?(fname()) :: boolean()
-  def is_non_stateful_aex9_function?(fname) do
-    fname in [
-      "aex9_extensions",
-      "meta_info",
-      "total_supply",
-      "owner",
-      "balance",
-      "balances"
-    ]
+  @spec extract_non_stateful_aex9_function(fun_arg_res_or_error()) ::
+          {:ok, method_name(), method_args()} | :not_found
+  def extract_non_stateful_aex9_function({:error, _reason}), do: :not_found
+  def extract_non_stateful_aex9_function(%{result: %{error: _error}}), do: :not_found
+  def extract_non_stateful_aex9_function(%{result: %{abort: _error}}), do: :not_found
+
+  def extract_non_stateful_aex9_function(%{function: method_name, arguments: method_args}) do
+    if method_name not in [
+         "aex9_extensions",
+         "meta_info",
+         "total_supply",
+         "owner",
+         "balance",
+         "balances"
+       ] do
+      {:ok, method_name, method_args}
+    else
+      :not_found
+    end
   end
 
   @spec get_aex9_destination_address(String.t(), term()) :: DBN.pubkey() | nil
