@@ -285,6 +285,23 @@ defmodule AeMdw.Db.Sync.Transaction do
     origin_mutations(:channel_create_tx, nil, channel_pk, txi, tx_hash)
   end
 
+  defp tx_mutations(
+         :ga_attach_tx,
+         tx,
+         _signed_tx,
+         txi,
+         tx_hash,
+         _block_index,
+         _block_hash,
+         _mb_events
+       ) do
+    contract_pk = :aega_attach_tx.contract_pubkey(tx)
+    :ets.insert(:ct_create_sync_cache, {contract_pk, txi})
+    AeMdw.Ets.inc(:stat_sync_cache, :contracts)
+
+    origin_mutations(:ga_attach_tx, nil, contract_pk, txi, tx_hash)
+  end
+
   defp tx_mutations(_type, _tx, _signed_tx, _txi, _tx_hash, _block_index, _block_hash, _mb_events) do
     []
   end
