@@ -31,6 +31,7 @@ defmodule AeMdw.Contract do
   @type event_hash :: <<_::256>>
 
   @type call :: tuple()
+
   @type aex9_meta_info() :: {String.t(), String.t(), integer()}
   # for balances or balance
   @type call_result :: map() | tuple()
@@ -38,8 +39,13 @@ defmodule AeMdw.Contract do
   # fcode or aevm info
   @type ct_info :: {:fcode, map(), list(), any()} | list()
   @type function_hash :: <<_::32>>
-  @type fun_arg_res() :: map()
-
+  @type fun_arg_res :: %{
+          function: any(),
+          arguments: list(),
+          result: any(),
+          return: any()
+        }
+  @type fun_arg_res_or_error :: fun_arg_res() | {:error, any()}
   @typep tx :: tuple()
   @typep block_hash :: <<_::256>>
 
@@ -80,6 +86,12 @@ defmodule AeMdw.Contract do
     end
   end
 
+  @spec is_successful_call?(fun_arg_res_or_error()) :: boolean()
+  def is_successful_call?(%{function: _fname, result: %{error: _error}}), do: false
+  def is_successful_call?(%{function: _fname, result: %{abort: _error}}), do: false
+  def is_successful_call?(%{function: _fname}), do: true
+  def is_successful_call?({:error, _reason}), do: false
+
   ##########
 
   # entrypoint aex9_extensions : ()             => list(string)
@@ -102,6 +114,40 @@ defmodule AeMdw.Contract do
       "transfer" => {[:address, :integer], {:tuple, []}}
     }
   end
+
+  @spec is_non_stateful_aex9_function?(fname()) :: boolean()
+  def is_non_stateful_aex9_function?(fname) do
+    fname in [
+      "aex9_extensions",
+      "meta_info",
+      "total_supply",
+      "owner",
+      "balance",
+      "balances"
+    ]
+  end
+
+  @spec get_aex9_destination_address(String.t(), term()) :: DBN.pubkey() | nil
+  def get_aex9_destination_address("mint", [
+        %{type: :address, value: account_pk},
+        %{type: :int, value: _value}
+      ]),
+      do: account_pk
+
+  def get_aex9_destination_address("transfer", [
+        %{type: :address, value: account_pk},
+        %{type: :int, value: _value}
+      ]),
+      do: account_pk
+
+  def get_aex9_destination_address("transfer_allowance", [
+        %{type: :address, value: _from},
+        %{type: :address, value: account_pk},
+        %{type: :int, value: _value}
+      ]),
+      do: account_pk
+
+  def get_aex9_destination_address(_other_function, _other_args), do: nil
 
   @spec is_aex9?(DBN.pubkey() | ct_info()) :: boolean()
   def is_aex9?(pubkey) when is_binary(pubkey) do
@@ -249,7 +295,7 @@ defmodule AeMdw.Contract do
     |> call_rec_from_id(contract_pk, block_hash)
   end
 
-  @spec call_tx_info(tx(), DBN.pubkey(), block_hash(), fun()) :: {fun_arg_res(), call()}
+  @spec call_tx_info(tx(), DBN.pubkey(), block_hash(), fun()) :: {fun_arg_res_or_error(), call()}
   def call_tx_info(tx_rec, contract_pk, block_hash, format_fn) do
     {:ok, ct_info} = get_info(contract_pk)
     call_id = :aect_call_tx.call_id(tx_rec)

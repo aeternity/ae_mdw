@@ -255,7 +255,7 @@ defmodule AeMdw.Db.Format do
   def custom_raw_data(:contract_call_tx, tx, tx_rec, _signed_tx, block_hash) do
     contract_pk = :aect_call_tx.contract_pubkey(tx_rec)
     call_rec = Contract.call_rec(tx_rec, contract_pk, block_hash)
-    fun_arg_res = AeMdw.Db.Contract.call_fun_args_res(contract_pk, tx.tx_index)
+    fun_arg_res = AeMdw.Db.Contract.call_fun_arg_res(contract_pk, tx.tx_index)
 
     logs = fn logs ->
       Enum.map(logs, fn {addr, topics, data} ->
@@ -480,7 +480,7 @@ defmodule AeMdw.Db.Format do
 
     fun_arg_res =
       contract_pk
-      |> AeMdw.Db.Contract.call_fun_args_res(tx["tx_index"])
+      |> AeMdw.Db.Contract.call_fun_arg_res(tx["tx_index"])
       |> map_raw_values(fn
         x when is_number(x) -> x
         x -> to_string(x)

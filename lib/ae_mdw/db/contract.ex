@@ -2,13 +2,11 @@ defmodule AeMdw.Db.Contract do
   @moduledoc """
   Data access to read and write Contract related models.
   """
-  alias AeMdw.Node, as: AE
-
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
   alias AeMdw.Log
-  alias AeMdw.Sync.AsyncTasks
+  alias AeMdw.Node
   alias AeMdw.Validate
 
   require Ex2ms
@@ -19,14 +17,7 @@ defmodule AeMdw.Db.Contract do
   import AeMdw.Util, only: [compose: 2, max_256bit_int: 0]
   import AeMdw.Db.Util
 
-  @type pubkey() :: <<_::256>>
-  @typep call_map() ::
-           %{
-             function: any(),
-             arguments: list(),
-             result: any(),
-             return: any()
-           }
+  @type pubkey :: Node.pubkey()
 
   @spec aex9_creation_write(tuple(), pubkey(), pubkey(), integer()) :: :ok
   def aex9_creation_write({name, symbol, decimals}, contract_pk, owner_pk, txi) do
@@ -62,6 +53,22 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
+  @spec aex9_delete_presence(pubkey(), pubkey()) :: :ok
+  def aex9_delete_presence(contract_pk, account_pk) do
+    presence_mspec =
+      Ex2ms.fun do
+        Model.aex9_account_presence(index: {^account_pk, txi, ^contract_pk}) ->
+          {^account_pk, txi, ^contract_pk}
+      end
+
+    Model.Aex9AccountPresence
+    |> :mnesia.select(presence_mspec)
+    |> Enum.each(fn {account_pk, txi, contract_pk} ->
+      :mnesia.delete(Model.Aex9AccountPresence, {account_pk, txi, contract_pk}, :write)
+      :mnesia.delete(Model.IdxAex9AccountPresence, {txi, account_pk, contract_pk}, :write)
+    end)
+  end
+
   @spec aex9_delete_presence(pubkey(), integer(), pubkey()) :: :ok
   def aex9_delete_presence(contract_pk, txi, pubkey) do
     :mnesia.delete(Model.Aex9AccountPresence, {pubkey, txi, contract_pk}, :write)
@@ -79,7 +86,7 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  @spec call_write(integer(), integer(), map() | {:error, any()}) :: :ok
+  @spec call_write(integer(), integer(), Contract.fun_arg_res_or_error()) :: :ok
   def call_write(create_txi, txi, %{function: fname, arguments: args, result: %{error: [err]}}),
     do: call_write(create_txi, txi, fname, args, :error, err)
 
@@ -172,8 +179,8 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  @spec call_fun_args_res(pubkey(), integer()) :: call_map()
-  def call_fun_args_res(contract_pk, call_txi) do
+  @spec call_fun_arg_res(pubkey(), integer()) :: Contract.fun_arg_res()
+  def call_fun_arg_res(contract_pk, call_txi) do
     create_txi = Origin.tx_index({:contract, contract_pk}) || -1
     m_call = read!(Model.ContractCall, {create_txi, call_txi})
 
@@ -303,7 +310,7 @@ defmodule AeMdw.Db.Contract do
     :mnesia.write(Model.FnameGrpIntContractCall, m_fname_grp_call, :write)
 
     tx_type
-    |> AE.tx_ids()
+    |> Node.tx_ids()
     |> Enum.each(fn {_, pos} ->
       pk = Validate.id!(elem(raw_tx, pos))
       m_id_call = Model.id_int_contract_call(index: {pk, pos, call_txi, local_idx})
@@ -345,9 +352,6 @@ defmodule AeMdw.Db.Contract do
     :mnesia.write(Model.RevAex9Transfer, m_rev_transfer, :write)
     :mnesia.write(Model.IdxAex9Transfer, m_idx_transfer, :write)
     aex9_write_presence(contract_pk, txi, to_pk)
-
-    AsyncTasks.Producer.enqueue(:update_aex9_presence, [contract_pk])
-
     aex9_presence_cache_write({{contract_pk, txi, i}, {from_pk, to_pk}, amount})
   end
 end

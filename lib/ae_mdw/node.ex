@@ -8,7 +8,7 @@ defmodule AeMdw.Node do
   all of these functions more explicit.
   """
 
-  @type tx_type() ::
+  @type tx_type ::
           :spend_tx
           | :oracle_register_tx
           | :oracle_extend_tx
@@ -37,7 +37,8 @@ defmodule AeMdw.Node do
           | :channel_client_reconnect_tx
           | :paying_for_tx
 
-  @type signed_tx() :: term()
+  @type signed_tx :: term()
+  @type pubkey :: <<_::256>>
 
   defmodule Oracle do
     @moduledoc false
