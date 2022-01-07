@@ -7,6 +7,7 @@ defmodule AeMdw.AuctionBids do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Database
+  alias AeMdw.Collection
   alias AeMdw.Names
   alias AeMdw.Txs
 
@@ -19,8 +20,11 @@ defmodule AeMdw.AuctionBids do
   @type auction_bid() :: term()
 
   @typep order_by :: :expiration | :name
-  @typep plain_name() :: binary()
+  @typep plain_name() :: Names.plain_name()
+  @typep prefix() :: plain_name()
+  @typep direction() :: Database.direction()
   @typep pagination() :: Collection.direction_limit()
+  @typep names_scope() :: {prefix(), prefix()}
 
   @table Model.AuctionBid
   @table_expiration Model.AuctionExpiration
@@ -34,6 +38,13 @@ defmodule AeMdw.AuctionBids do
       :not_found ->
         :not_found
     end
+  end
+
+  @spec fetch!(plain_name(), boolean()) :: auction_bid()
+  def fetch!(plain_name, expand?) do
+    {:ok, auction_bid} = top_auction_bid(plain_name, expand?)
+
+    auction_bid
   end
 
   @spec fetch_auctions(pagination(), order_by(), cursor() | nil, boolean()) ::
@@ -72,6 +83,19 @@ defmodule AeMdw.AuctionBids do
       end)
 
     {serialize_exp_cursor(prev_cursor), auction_bids, serialize_exp_cursor(next_cursor)}
+  end
+
+  @spec auctions_stream(prefix(), direction(), names_scope(), cursor()) :: Enumerable.t()
+  def auctions_stream(prefix, direction, {first_name, last_name}, cursor) do
+    scope = {{first_name, nil, nil, nil, nil}, {last_name, "", nil, nil, nil}}
+    cursor = if cursor, do: {cursor, nil, nil, nil, nil}
+
+    @table
+    |> Collection.stream(direction, scope, cursor)
+    |> Stream.map(fn {plain_name, {_bid_height, _txi}, _expire_height, _owner_pk, _bids} ->
+      plain_name
+    end)
+    |> Stream.take_while(&String.starts_with?(&1, prefix))
   end
 
   defp render(

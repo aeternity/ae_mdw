@@ -34,6 +34,8 @@ defmodule AeMdw.Names do
   @typep pagination :: Collection.direction_limit()
   @typep range :: {:gen, Range.t()} | nil
   @typep reason :: binary()
+  @typep lifecycle() :: :active | :inactive | :auction
+  @typep prefix() :: plain_name()
 
   @table_active Model.ActiveName
   @table_active_expiration Model.ActiveNameExpiration
@@ -44,6 +46,7 @@ defmodule AeMdw.Names do
 
   @pagination_params ~w(limit cursor rev direction by scope)
   @states ~w(active inactive)
+  @all_lifecycles ~w(active inactive auction)a
 
   @spec fetch_names(pagination(), range(), order_by(), query(), cursor() | nil, boolean()) ::
           {:ok, cursor() | nil, [name()], cursor() | nil} | {:error, reason()}
@@ -198,6 +201,43 @@ defmodule AeMdw.Names do
   def fetch_inactive_names(pagination, range, order_by, cursor, expand?),
     do: fetch_names(pagination, range, order_by, %{"state" => "inactive"}, cursor, expand?)
 
+  @spec search_names([lifecycle()], prefix(), pagination(), cursor() | nil, boolean()) ::
+          {cursor() | nil, [name()], cursor() | nil}
+
+  def search_names([], prefix, pagination, cursor, expand?),
+    do: search_names(@all_lifecycles, prefix, pagination, cursor, expand?)
+
+  def search_names(lifecycles, prefix, pagination, cursor, expand?) do
+    cursor = deserialize_name_cursor(cursor)
+    scope = {prefix, prefix <> Util.max_256bit_bin()}
+
+    {prev_cursor, name_keys, next_cursor} =
+      fn direction ->
+        lifecycles
+        |> Enum.map(fn
+          :active ->
+            @table_active
+            |> Collection.stream(direction, scope, cursor)
+            |> Stream.map(&{&1, :active})
+
+          :inactive ->
+            @table_inactive
+            |> Collection.stream(direction, scope, cursor)
+            |> Stream.map(&{&1, :inactive})
+
+          :auction ->
+            prefix
+            |> AuctionBids.auctions_stream(direction, scope, cursor)
+            |> Stream.map(&{&1, :auction})
+        end)
+        |> Collection.merge(direction)
+      end
+      |> Collection.paginate(pagination)
+
+    {serialize_name_cursor(prev_cursor), render_search_list(name_keys, expand?),
+     serialize_name_cursor(next_cursor)}
+  end
+
   @spec fetch_previous_list(plain_name()) :: [name()]
   def fetch_previous_list(plain_name) do
     case Database.fetch(@table_inactive, plain_name) do
@@ -223,6 +263,16 @@ defmodule AeMdw.Names do
   defp render_names_list(names_tables_keys, expand?) do
     Enum.map(names_tables_keys, fn {plain_name, source} ->
       render(plain_name, source == :active, expand?)
+    end)
+  end
+
+  defp render_search_list(names_tables_keys, expand?) do
+    Enum.map(names_tables_keys, fn
+      {plain_name, :auction} ->
+        %{"type" => "auction", "payload" => AuctionBids.fetch!(plain_name, expand?)}
+
+      {plain_name, source} ->
+        %{"type" => "name", "payload" => render(plain_name, source == :active, expand?)}
     end)
   end
 

@@ -22,7 +22,13 @@ defmodule AeMdwWeb.NameController do
 
   plug PaginatedPlug,
        [order_by: ~w(expiration name)a]
-       when action in ~w(active_names inactive_names names auctions)a
+       when action in ~w(active_names inactive_names names auctions search search_v1)a
+
+  @lifecycles_map %{
+    "active" => :active,
+    "inactive" => :inactive,
+    "auction" => :auction
+  }
 
   @spec auction(Conn.t(), map()) :: Conn.t()
   def auction(conn, %{"id" => ident} = params),
@@ -121,12 +127,31 @@ defmodule AeMdwWeb.NameController do
     end
   end
 
-  @spec search(Conn.t(), map()) :: Conn.t()
-  def search(conn, %{"prefix" => prefix}) do
+  @spec search_v1(Conn.t(), map()) :: Conn.t()
+  def search_v1(conn, %{"prefix" => prefix}) do
     handle_input(conn, fn ->
       params = Map.put(query_groups(conn.query_string), "prefix", [prefix])
       json(conn, Enum.to_list(do_prefix_stream(validate_search_params!(params), expand?(params))))
     end)
+  end
+
+  @spec search(Conn.t(), map()) :: Conn.t()
+  def search(%Conn{assigns: assigns, query_string: query_string} = conn, %{"prefix" => prefix}) do
+    lifecycles =
+      query_string
+      |> URI.query_decoder()
+      |> Enum.filter(&match?({"only", _lifecycle}, &1))
+      |> Enum.map(fn {"only", lifecycle} -> lifecycle end)
+      |> Enum.filter(&Map.get(@lifecycles_map, &1))
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+
+    %{pagination: pagination, cursor: cursor, expand?: expand?} = assigns
+
+    {prev_cursor, names, next_cursor} =
+      Names.search_names(lifecycles, prefix, pagination, cursor, expand?)
+
+    Util.paginate(conn, prev_cursor, names, next_cursor)
   end
 
   ##########
@@ -257,20 +282,6 @@ defmodule AeMdwWeb.NameController do
         :forward,
         &Format.to_map(&1, Model.InactiveName, expand?)
       )
-
-  ##########
-
-  # def t() do
-  #   pk =
-  #     <<140, 45, 15, 171, 198, 112, 76, 122, 188, 218, 79, 0, 14, 175, 238, 64, 9, 82, 93, 44,
-  #       169, 176, 237, 27, 115, 221, 101, 211, 5, 168, 169, 235>>
-
-  #   DBS.map(
-  #     :backward,
-  #     :raw,
-  #     {:or, [["name_claim.account_id": pk], ["name_transfer.recipient_id": pk]]}
-  #   )
-  # end
 
   ##########
   @spec swagger_definitions() :: term()

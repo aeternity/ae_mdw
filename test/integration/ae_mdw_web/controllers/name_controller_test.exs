@@ -993,7 +993,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
     end
   end
 
-  describe "search" do
+  describe "search_v1" do
     test "it returns an all matching names & auctions forward", %{conn: conn} do
       prefix = "xyz"
 
@@ -1002,6 +1002,76 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
       assert ^plain_names = Enum.sort(plain_names)
       assert Enum.all?(plain_names, &String.starts_with?(&1, prefix))
+    end
+  end
+
+  describe "search" do
+    test "it returns an all matching names & auctions", %{conn: conn} do
+      prefix = "xyz"
+
+      assert %{"data" => names_and_auctions, "next" => next} =
+               conn |> get("/v2/names/search", prefix: prefix) |> json_response(200)
+
+      plain_names =
+        names_and_auctions
+        |> Enum.map(fn
+          %{"type" => "name", "payload" => %{"name" => name}} -> name
+          %{"type" => "auction", "payload" => %{"name" => name}} -> name
+        end)
+        |> Enum.reverse()
+
+      assert @default_limit = length(names_and_auctions)
+      assert ^plain_names = Enum.sort(plain_names)
+      assert Enum.all?(plain_names, &String.starts_with?(&1, prefix))
+
+      %{"data" => next_names_and_auctions} = conn |> get(next) |> json_response(200)
+
+      next_plain_names =
+        next_names_and_auctions
+        |> Enum.map(fn
+          %{"type" => "name", "payload" => %{"name" => name}} -> name
+          %{"type" => "auction", "payload" => %{"name" => name}} -> name
+        end)
+        |> Enum.reverse()
+
+      assert @default_limit = length(next_names_and_auctions)
+      assert ^next_plain_names = Enum.sort(next_plain_names)
+      assert Enum.all?(next_plain_names, &String.starts_with?(&1, prefix))
+
+      assert Enum.at(plain_names, @default_limit - 1) >= Enum.at(next_plain_names, 0)
+    end
+
+    test "it returns an all matching names & auctions forward", %{conn: conn} do
+      prefix = "xyz"
+
+      assert %{"data" => names_and_auctions, "next" => next} =
+               conn
+               |> get("/v2/names/search", prefix: prefix, direction: "forward")
+               |> json_response(200)
+
+      plain_names =
+        Enum.map(names_and_auctions, fn
+          %{"type" => "name", "payload" => %{"name" => name}} -> name
+          %{"type" => "auction", "payload" => %{"name" => name}} -> name
+        end)
+
+      assert @default_limit = length(names_and_auctions)
+      assert ^plain_names = Enum.sort(plain_names)
+      assert Enum.all?(plain_names, &String.starts_with?(&1, prefix))
+
+      %{"data" => next_names_and_auctions} = conn |> get(next) |> json_response(200)
+
+      next_plain_names =
+        Enum.map(next_names_and_auctions, fn
+          %{"type" => "name", "payload" => %{"name" => name}} -> name
+          %{"type" => "auction", "payload" => %{"name" => name}} -> name
+        end)
+
+      assert @default_limit = length(next_names_and_auctions)
+      assert ^next_plain_names = Enum.sort(next_plain_names)
+      assert Enum.all?(next_plain_names, &String.starts_with?(&1, prefix))
+
+      assert Enum.at(plain_names, @default_limit - 1) >= Enum.at(next_plain_names, 0)
     end
   end
 

@@ -4265,6 +4265,7 @@ This is a list of the exceptions together with the changes that need to be done:
   `/names/inactive/:scope_type/:range` - Can now be accessed via `/v2/names?scope=txi:100-200` or `/v2/names?scope=gen:30-40`.
 * `/names/auctions` - Can now be accessed via `/v2/names/auctions`
 * `/names/auctions/:scope_type/:range` - Can now be accessed via `/v2/auctions?scope=gen:10-100` (or `?scope=txi:1000-2000`).
+* `/names/search/:prefix` - The prefix is no longer part of the path, but a query parameter instead (`?prefix=...`).
 
 ## Websocket interface
 
