@@ -130,11 +130,6 @@ defmodule AeMdw.Db.Sync.Transaction do
     :ets.delete_all_objects(:ct_create_sync_cache)
     :ets.delete_all_objects(:tx_sync_cache)
 
-    block_rewards_mutation =
-      if height >= AE.min_block_reward_height() do
-        IntTransfer.block_rewards_mutation(height, kb_header, kb_hash)
-      end
-
     [
       Name.expirations_mutation(height),
       Oracle.expirations_mutation(height - 1)
@@ -164,13 +159,16 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     kb_model = Model.block(index: {height, -1}, tx_index: kb_txi, hash: kb_hash)
 
-    [
+    if height >= AE.min_block_reward_height() do
+      Mnesia.transaction([
+        IntTransfer.block_rewards_mutation(height, kb_header, kb_hash)
+      ])
+    end
+
+    Mnesia.transaction([
       Stats.new_mutation(height, last_mbi == -1),
-      KeyBlocksMutation.new(kb_model, next_txi),
-      block_rewards_mutation
-    ]
-    |> Enum.reject(&is_nil/1)
-    |> Mnesia.transaction()
+      KeyBlocksMutation.new(kb_model, next_txi)
+    ])
 
     Broadcaster.broadcast_key_block(key_block, :mdw)
 

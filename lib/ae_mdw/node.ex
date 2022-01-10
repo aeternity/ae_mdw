@@ -116,7 +116,7 @@ defmodule AeMdw.Node do
 
   @spec min_block_reward_height :: non_neg_integer()
   def min_block_reward_height do
-    0
+    123
   end
 
   @spec stream_mod(module()) :: module()
