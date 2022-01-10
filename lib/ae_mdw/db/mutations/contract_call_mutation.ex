@@ -72,16 +72,17 @@ defmodule AeMdw.Db.ContractCallMutation do
   # Private functions
   #
   defp update_aex9_presence(contract_pk, caller_pk, txi, method_name, method_args) do
-    account_pk = Contract.get_aex9_destination_address(method_name, method_args)
+    account_pk =
+      if method_name in ["burn", "swap"] do
+        caller_pk
+      else
+        Contract.get_aex9_destination_address(method_name, method_args)
+      end
 
     if account_pk do
       DBContract.aex9_write_presence(contract_pk, txi, account_pk)
     else
-      if method_name in ["burn", "swap"] do
-        DBContract.aex9_delete_presence(contract_pk, caller_pk)
-      else
-        AsyncTasks.Producer.enqueue(:update_aex9_presence, [contract_pk])
-      end
+      AsyncTasks.Producer.enqueue(:update_aex9_presence, [contract_pk])
     end
   end
 end

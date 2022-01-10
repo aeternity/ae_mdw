@@ -14,8 +14,12 @@ defmodule Integration.AeMdw.Db.ContractCallMutationTest do
   require Ex2ms
   require Model
 
+  # contract with mint and transfer on mainnet
   @aex9_ct_pk1 Validate.id!("ct_pqfbS94uUpE8reSwgtaAy5odGi7cPRMAxbjMyEzpTGqwTWyn5")
+  # contract with transfer_allowance
   @aex9_ct_pk2 Validate.id!("ct_2Jm3s7uHMvM7tRSCvFWurCh8LjZoTHa7LshKZSTZigCv1WnvmJ")
+  # contract with burn
+  @aex9_ct_pk3 Validate.id!("ct_kraQeEEaoKKUq3qPHxyrsN1rvD9jPr58QFat5Ha641LtgLwEA")
 
   test "add aex9 presence after a mint" do
     fn ->
@@ -44,10 +48,19 @@ defmodule Integration.AeMdw.Db.ContractCallMutationTest do
     |> mnesia_sandbox()
   end
 
+  test "add aex9 presence after a burn (balance is 0)" do
+    fn ->
+      assert_presence("burn", @aex9_ct_pk3)
+
+      :mnesia.abort(:rollback)
+    end
+    |> mnesia_sandbox()
+  end
+
   defp assert_presence(fname, contract_pk) do
     create_txi = Origin.tx_index({:contract, contract_pk})
 
-    {[mint_args_res], _cont} =
+    {[txi_args_res], _cont} =
       AeMdw.Db.Util.select(
         Model.ContractCall,
         Ex2ms.fun do
@@ -57,16 +70,10 @@ defmodule Integration.AeMdw.Db.ContractCallMutationTest do
         1
       )
 
-    {call_txi, args, res} = mint_args_res
+    {call_txi, args, res} = txi_args_res
     fun_arg_res = %{function: fname, arguments: args, result: res}
 
-    account_pk =
-      case args do
-        [%{type: :address, value: account_pk}, _int_val] -> account_pk
-        [%{type: :address}, %{type: :address, value: account_pk}, _int_val] -> account_pk
-      end
-
-    any_caller_pk = <<1::256>>
+    any_caller_pk = <<12_345_678::256>>
 
     mocked_call_rec =
       :aect_call.new(
@@ -76,6 +83,16 @@ defmodule Integration.AeMdw.Db.ContractCallMutationTest do
         1,
         1
       )
+
+    account_pk =
+      if fname in ["burn", "swap"] do
+        any_caller_pk
+      else
+        case args do
+          [%{type: :address, value: account_pk}, _int_val] -> account_pk
+          [%{type: :address}, %{type: :address, value: account_pk}, _int_val] -> account_pk
+        end
+      end
 
     DBContract.aex9_delete_presence(contract_pk, account_pk)
 
