@@ -16,7 +16,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
   describe "oracle" do
     test "get oracle information for given oracle id", %{conn: conn} do
       id = "ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM"
-      conn = get(conn, "/oracle/#{id}")
+      conn = get(conn, "/oracles/#{id}")
 
       assert json_response(conn, 200) ==
                TestUtil.handle_input(fn ->
@@ -28,7 +28,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
     test "get oracle information for given oracle id with expand parameter", %{conn: conn} do
       id = "ok_2TASQ4QZv584D2ZP7cZxT6sk1L1UyqbWumnWM4g1azGi1qqcR5"
-      conn = get(conn, "/v2/oracle/#{id}?expand")
+      conn = get(conn, "/v2/oracles/#{id}?expand")
 
       assert conn |> json_response(200) |> Jason.encode!() ==
                TestUtil.handle_input(fn ->
@@ -41,7 +41,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
     test "renders error when oracle id is invalid", %{conn: conn} do
       id = "invalid_oracle_id"
-      conn = get(conn, "/oracle/#{id}")
+      conn = get(conn, "/oracles/#{id}")
 
       assert json_response(conn, 400) == %{"error" => "invalid id: #{id}"}
     end

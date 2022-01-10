@@ -11,20 +11,6 @@ defmodule AeMdwWeb.Router do
     {"/txs/count/:id", AeMdwWeb.TxController, :count_id},
     {"/txs/:direction", AeMdwWeb.TxController, :txs},
     {"/txs/:scope_type/:range", AeMdwWeb.TxController, :txs},
-    {"/name/auction/:id", AeMdwWeb.NameController, :auction},
-    {"/name/pointers/:id", AeMdwWeb.NameController, :pointers},
-    {"/name/pointees/:id", AeMdwWeb.NameController, :pointees},
-    {"/name/:id", AeMdwWeb.NameController, :name},
-    {"/names/search/:prefix", AeMdwWeb.NameController, :search},
-    {"/names/owned_by/:id", AeMdwWeb.NameController, :owned_by},
-    {"/names/auctions", AeMdwWeb.NameController, :auctions},
-    {"/names/auctions/:scope_type/:range", AeMdwWeb.NameController, :auctions},
-    {"/names/inactive", AeMdwWeb.NameController, :inactive_names},
-    {"/names/inactive/:scope_type/:range", AeMdwWeb.NameController, :inactive_names},
-    {"/names/active", AeMdwWeb.NameController, :active_names},
-    {"/names/active/:scope_type/:range", AeMdwWeb.NameController, :active_names},
-    {"/names", AeMdwWeb.NameController, :names},
-    {"/names/:scope_type/:range", AeMdwWeb.NameController, :names},
     {"/oracle/:id", AeMdwWeb.OracleController, :oracle},
     {"/oracles/inactive", AeMdwWeb.OracleController, :inactive_oracles},
     {"/oracles/active", AeMdwWeb.OracleController, :active_oracles},
@@ -97,6 +83,13 @@ defmodule AeMdwWeb.Router do
       # v2-only routes
       get "/blocks/gen/:range", BlockController, :blocks_v2
       get "/blocks/:direction", BlockController, :blocks_v2
+
+      get "/names/:id/auctions", NameController, :auction
+      get "/names/:id/pointers", NameController, :pointers
+      get "/names/:id/pointees", NameController, :pointees
+      get "/names/auctions", NameController, :auctions
+      get "/names", NameController, :names
+      get "/names/:id", NameController, :name
     end
 
     Enum.each(@shared_routes, fn {path, controller, fun} ->
@@ -106,6 +99,21 @@ defmodule AeMdwWeb.Router do
     # v1-only routes
     get "/blocks/gen/:range", BlockController, :blocks
     get "/blocks/:range_or_dir", BlockController, :blocks
+
+    get "/name/auction/:id", NameController, :auction
+    get "/name/pointers/:id", NameController, :pointers
+    get "/name/pointees/:id", NameController, :pointees
+    get "/name/owned_by/:id", NameController, :owned_by
+    get "/name/:id", NameController, :name
+    get "/names/search/:prefix", NameController, :search
+    get "/names/auctions", NameController, :auctions
+    get "/names/auctions/:scope_type/:range", NameController, :auctions
+    get "/names/inactive", NameController, :inactive_names
+    get "/names/inactive/:scope_type/:range", NameController, :inactive_names
+    get "/names/active", NameController, :active_names
+    get "/names/active/:scope_type/:range", NameController, :active_names
+    get "/names", NameController, :names
+    get "/names/:scope_type/:range", NameController, :names
 
     match :*, "/*path", UtilController, :no_route
   end

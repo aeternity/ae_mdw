@@ -63,7 +63,7 @@ defmodule AeMdwWeb.NameControllerTest do
       ] do
         assert %{"data" => names, "next" => next} =
                  conn
-                 |> get("/names/active")
+                 |> get("/v2/names", state: "active")
                  |> json_response(200)
 
         assert @default_limit = length(names)
@@ -115,7 +115,7 @@ defmodule AeMdwWeb.NameControllerTest do
       ] do
         assert %{"data" => names} =
                  conn
-                 |> get("/names/active?by=#{by}&direction=#{direction}&limit=#{limit}")
+                 |> get("/v2/names", state: "active", by: by, direction: direction, limit: limit)
                  |> json_response(200)
 
         assert ^limit = length(names)
@@ -126,7 +126,8 @@ defmodule AeMdwWeb.NameControllerTest do
       by = "invalid_by"
       error = "invalid query: by=#{by}"
 
-      assert %{"error" => ^error} = conn |> get("/names/active?by=#{by}") |> json_response(400)
+      assert %{"error" => ^error} =
+               conn |> get("/v2/names", state: "active", by: by) |> json_response(400)
     end
 
     test "renders error when parameter direction is invalid", %{conn: conn} do
@@ -136,7 +137,7 @@ defmodule AeMdwWeb.NameControllerTest do
 
       assert %{"error" => ^error} =
                conn
-               |> get("/names/active?by=#{by}&direction=#{direction}")
+               |> get("/v2/names", state: "active", by: by, direction: direction)
                |> json_response(400)
     end
 
@@ -176,7 +177,7 @@ defmodule AeMdwWeb.NameControllerTest do
       ] do
         assert %{"data" => names} =
                  conn
-                 |> get("/names/active")
+                 |> get("/v2/names", state: "active")
                  |> json_response(200)
 
         assert 1 = length(names)
@@ -224,7 +225,7 @@ defmodule AeMdwWeb.NameControllerTest do
       ] do
         assert %{"data" => names, "next" => next} =
                  conn
-                 |> get("/names/inactive")
+                 |> get("/v2/names", state: "inactive")
                  |> json_response(200)
 
         assert @default_limit = length(names)
@@ -274,7 +275,7 @@ defmodule AeMdwWeb.NameControllerTest do
       ] do
         assert %{"data" => names} =
                  conn
-                 |> get("/names/inactive?limit=#{limit}")
+                 |> get("/v2/names", state: "inactive", limit: limit)
                  |> json_response(200)
 
         assert ^limit = length(names)
@@ -319,7 +320,7 @@ defmodule AeMdwWeb.NameControllerTest do
       ] do
         assert %{"data" => names} =
                  conn
-                 |> get("/names/inactive?by=#{by}&direction=#{direction}&limit=#{limit}")
+                 |> get("/v2/names", state: "inactive", by: by, direction: direction, limit: limit)
                  |> json_response(200)
 
         assert ^limit = length(names)
@@ -330,7 +331,7 @@ defmodule AeMdwWeb.NameControllerTest do
       by = "invalid_by"
       error = "invalid query: by=#{by}"
 
-      assert %{"error" => ^error} = conn |> get("/names/inactive?by=#{by}") |> json_response(400)
+      assert %{"error" => ^error} = conn |> get("/v2/names", by: by) |> json_response(400)
     end
 
     test "renders error when parameter direction is invalid", %{conn: conn} do
@@ -340,7 +341,7 @@ defmodule AeMdwWeb.NameControllerTest do
 
       assert %{"error" => ^error} =
                conn
-               |> get("/names/inactive?by=#{by}&direction=#{direction}")
+               |> get("/v2/names", state: "inactive", by: by, direction: direction)
                |> json_response(400)
     end
   end
@@ -372,7 +373,7 @@ defmodule AeMdwWeb.NameControllerTest do
       ] do
         assert %{"data" => auction_bids, "next" => next} =
                  conn
-                 |> get("/names/auctions")
+                 |> get("/v2/names/auctions")
                  |> json_response(200)
 
         assert @default_limit = length(auction_bids)
@@ -416,7 +417,7 @@ defmodule AeMdwWeb.NameControllerTest do
       ] do
         assert %{"data" => auctions} =
                  conn
-                 |> get("/names/auctions?limit=#{limit}")
+                 |> get("/v2/names/auctions", limit: limit)
                  |> json_response(200)
 
         assert ^limit = length(auctions)
@@ -453,7 +454,7 @@ defmodule AeMdwWeb.NameControllerTest do
       ] do
         assert %{"data" => auctions} =
                  conn
-                 |> get("/names/auctions?by=#{by}&direction=#{direction}&limit=#{limit}")
+                 |> get("/v2/names/auctions", by: by, direction: direction, limit: limit)
                  |> json_response(200)
 
         assert ^limit = length(auctions)
@@ -464,7 +465,8 @@ defmodule AeMdwWeb.NameControllerTest do
       by = "invalid_by"
       error = "invalid query: by=#{by}"
 
-      assert %{"error" => ^error} = conn |> get("/names/auctions?by=#{by}") |> json_response(400)
+      assert %{"error" => ^error} =
+               conn |> get("/v2/names/auctions", by: by) |> json_response(400)
     end
 
     test "renders error when parameter direction is invalid", %{conn: conn} do
@@ -474,7 +476,7 @@ defmodule AeMdwWeb.NameControllerTest do
 
       assert %{"error" => ^error} =
                conn
-               |> get("/names/auctions?by=#{by}&direction=#{direction}")
+               |> get("/v2/names/auctions", by: by, direction: direction)
                |> json_response(400)
     end
   end
@@ -566,7 +568,7 @@ defmodule AeMdwWeb.NameControllerTest do
       ] do
         assert %{"data" => names} =
                  conn
-                 |> get("/names?limit=#{limit}")
+                 |> get("/v2/names", limit: limit)
                  |> json_response(200)
 
         assert ^limit = length(names)
@@ -655,7 +657,7 @@ defmodule AeMdwWeb.NameControllerTest do
                  "info" => %{
                    "ownership" => %{"current" => ^own_current, "original" => ^own_original}
                  }
-               } = conn |> get("/name/#{name}") |> json_response(200)
+               } = conn |> get("/v2/names/#{name}") |> json_response(200)
       end
     end
 
@@ -677,7 +679,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]}
       ] do
         assert %{"active" => true, "name" => ^name} =
-                 conn |> get("/name/#{hash}") |> json_response(200)
+                 conn |> get("/v2/names/#{hash}") |> json_response(200)
       end
     end
 
@@ -686,7 +688,7 @@ defmodule AeMdwWeb.NameControllerTest do
       error = "not found: #{name}"
 
       with_mocks [{Name, [], [locate: fn ^name -> nil end]}] do
-        assert %{"error" => ^error} = conn |> get("/name/#{name}") |> json_response(404)
+        assert %{"error" => ^error} = conn |> get("/v2/names/#{name}") |> json_response(404)
       end
     end
   end
@@ -705,7 +707,7 @@ defmodule AeMdwWeb.NameControllerTest do
            pointers: fn _name_model -> some_reply end
          ]}
       ] do
-        assert ^some_reply = conn |> get("/name/pointers/#{id}") |> json_response(200)
+        assert ^some_reply = conn |> get("/v2/names/#{id}/pointers") |> json_response(200)
       end
     end
 
@@ -714,7 +716,8 @@ defmodule AeMdwWeb.NameControllerTest do
       error = "not found: #{id}"
 
       with_mocks [{Name, [], [locate: fn ^id -> nil end]}] do
-        assert %{"error" => ^error} = conn |> get("/name/pointers/#{id}") |> json_response(404)
+        assert %{"error" => ^error} =
+                 conn |> get("/v2/names/#{id}/pointers") |> json_response(404)
       end
     end
   end
@@ -731,7 +734,7 @@ defmodule AeMdwWeb.NameControllerTest do
       ] do
         assert %{"active" => ^active_pointees, "inactive" => ^inactive_pointees} =
                  conn
-                 |> get("/name/pointees/#{id}")
+                 |> get("/v2/names/#{id}/pointees")
                  |> json_response(200)
       end
     end
@@ -740,7 +743,7 @@ defmodule AeMdwWeb.NameControllerTest do
       id = "ak_invalidkey"
       error = "invalid id: #{id}"
 
-      assert %{"error" => ^error} = conn |> get("/name/pointees/#{id}") |> json_response(400)
+      assert %{"error" => ^error} = conn |> get("/v2/names/#{id}/pointees") |> json_response(400)
     end
   end
 
@@ -753,7 +756,7 @@ defmodule AeMdwWeb.NameControllerTest do
         {Name, [], [owned_by: fn ^owner_id, true -> %{names: [], top_bids: []} end]}
       ] do
         assert %{"active" => [], "top_bid" => []} =
-                 conn |> get("/names/owned_by/#{id}") |> json_response(200)
+                 conn |> get("/name/owned_by/#{id}") |> json_response(200)
       end
     end
 
@@ -765,7 +768,7 @@ defmodule AeMdwWeb.NameControllerTest do
         {Name, [], [owned_by: fn ^owner_id, false -> %{names: []} end]}
       ] do
         assert %{"inactive" => []} =
-                 conn |> get("/names/owned_by/#{id}?active=false") |> json_response(200)
+                 conn |> get("/name/owned_by/#{id}?active=false") |> json_response(200)
       end
     end
 
@@ -773,7 +776,7 @@ defmodule AeMdwWeb.NameControllerTest do
       id = "ak_invalid_key"
       error = "invalid id: #{id}"
 
-      assert %{"error" => ^error} = conn |> get("/names/owned_by/#{id}") |> json_response(400)
+      assert %{"error" => ^error} = conn |> get("/name/owned_by/#{id}") |> json_response(400)
     end
   end
 end
