@@ -36,7 +36,10 @@ defmodule AeMdw.Contract do
   @type call_result :: map() | tuple()
   @type serialized_call :: map()
   # fcode or aevm info
-  @type ct_info :: {:fcode, map(), list(), any()} | list()
+  @type type_info :: {:fcode, map(), list(), any()} | list()
+  @type compiler_vsn :: String.t()
+  @type source_hash :: <<_::256>>
+  @type ct_info :: {type_info(), compiler_vsn(), source_hash()}
   @type function_hash :: <<_::32>>
   @type fun_arg_res() :: map()
 
@@ -60,8 +63,13 @@ defmodule AeMdw.Contract do
       nil ->
         with {:ok, contract} <- :aec_chain.get_contract(pubkey),
              {:ok, ser_code} <- get_code(contract) do
-          info =
-            case :aeser_contract_code.deserialize(ser_code) do
+          code_map = :aeser_contract_code.deserialize(ser_code)
+          # might be stripped
+          compiler_version = Map.get(code_map, :compiler_version)
+          source_hash = Map.get(code_map, :source_hash)
+
+          type_info =
+            case code_map do
               %{type_info: [], byte_code: byte_code} ->
                 :aeb_fate_code.deserialize(byte_code)
 
@@ -69,7 +77,9 @@ defmodule AeMdw.Contract do
                 type_info
             end
 
+          info = {type_info, compiler_version, source_hash}
           EtsCache.put(@tab, pubkey, info)
+
           {:ok, info}
         else
           {:error, reason} ->
@@ -106,8 +116,8 @@ defmodule AeMdw.Contract do
   @spec is_aex9?(DBN.pubkey() | ct_info()) :: boolean()
   def is_aex9?(pubkey) when is_binary(pubkey) do
     case get_info(pubkey) do
-      {:ok, info} -> is_aex9?(info)
-      {:error, _} -> false
+      {:ok, {type_info, _compiler_vsn, _source_hash}} -> is_aex9?(type_info)
+      {:error, _reason} -> false
     end
   end
 
@@ -251,18 +261,18 @@ defmodule AeMdw.Contract do
 
   @spec call_tx_info(tx(), DBN.pubkey(), block_hash(), fun()) :: {fun_arg_res(), call()}
   def call_tx_info(tx_rec, contract_pk, block_hash, format_fn) do
-    {:ok, ct_info} = get_info(contract_pk)
+    {:ok, {type_info, _compiler_vsn, _source_hash}} = get_info(contract_pk)
     call_id = :aect_call_tx.call_id(tx_rec)
     call_data = :aect_call_tx.call_data(tx_rec)
     call = :aec_chain.get_contract_call(contract_pk, call_id, block_hash) |> ok!
 
     try do
-      {fun, args} = decode_call_data(ct_info, call_data, format_fn)
+      {fun, args} = decode_call_data(type_info, call_data, format_fn)
       fun = to_string(fun)
 
       res_type = :aect_call.return_type(call)
       res_val = :aect_call.return_value(call)
-      result = decode_call_result(ct_info, fun, res_type, res_val, format_fn)
+      result = decode_call_result(type_info, fun, res_type, res_val, format_fn)
 
       fun_arg_res = %{
         function: fun,
@@ -289,12 +299,16 @@ defmodule AeMdw.Contract do
 
   @spec get_init_call_details(DBN.pubkey(), tx(), block_hash()) :: serialized_call()
   def get_init_call_details(contract_pk, tx_rec, block_hash) do
+    {compiler_vsn, source_hash} = compilation_info(contract_pk)
+
     contract_pk
     |> get_init_call_rec(tx_rec, block_hash)
     |> :aect_call.serialize_for_client()
     |> Map.drop(["gas_price", "height", "caller_nonce"])
     |> Map.put("args", contract_init_args(contract_pk, tx_rec))
     |> Map.update("log", [], &stringfy_log_topics/1)
+    |> Map.put("compiler_version", compiler_vsn)
+    |> Map.put("source_hash", Base.encode64(source_hash))
   end
 
   @spec stringfy_log_topics([map()]) :: [map()]
@@ -404,10 +418,17 @@ defmodule AeMdw.Contract do
     :aec_chain.get_contract_call(contract_pk, call_id, block_hash) |> ok!
   end
 
+  defp compilation_info(contract_pk) do
+    case get_info(contract_pk) do
+      {:ok, {_type_info, compiler_vsn, source_hash}} -> {compiler_vsn, source_hash}
+      {:error, _reason} -> {nil, nil}
+    end
+  end
+
   defp contract_init_args(contract_pk, tx_rec) do
-    with {:ok, ct_info} <- get_info(contract_pk),
+    with {:ok, {type_info, _compiler_vsn, _source_hash}} <- get_info(contract_pk),
          call_data <- :aect_create_tx.call_data(tx_rec),
-         {"init", args} <- decode_call_data(ct_info, call_data) do
+         {"init", args} <- decode_call_data(type_info, call_data) do
       args_type_value(args)
     else
       {:error, _reason} -> nil
