@@ -16,8 +16,8 @@ defmodule AeMdw.Contract do
 
   @type id :: binary()
   @type grouped_events() :: %{tx_hash() => [event()]}
+  @type fname :: binary()
 
-  @typep fname :: binary()
   @typep tx_hash :: binary()
   @typep event_name :: {:internal_call_tx, fname()}
   # :aec_blocks.micro_block()

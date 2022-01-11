@@ -4,10 +4,13 @@ defmodule AeMdw.Db.Sync.Contract do
   """
   alias AeMdw.Contract
   alias AeMdw.Db.Contract, as: DBContract
+  alias AeMdw.Db.MnesiaWriteMutation
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Mutation
   alias AeMdw.Db.Origin
   alias AeMdw.Node.Db
   alias AeMdw.Sync.AsyncTasks
+  alias AeMdw.Txs
 
   require Model
 
@@ -41,37 +44,39 @@ defmodule AeMdw.Db.Sync.Contract do
     :ok
   end
 
-  @spec events([Contract.event()], integer(), integer()) :: :ok
-  def events(events, call_txi, create_txi) do
+  @spec events_mutations([Contract.event()], Txs.txi(), Txs.txi()) :: [Mutation.t()]
+  def events_mutations(events, call_txi, create_txi) do
     shifted_events = events |> Enum.drop(1) |> Enum.concat([nil])
 
     # This function relies on a property that every Chain.clone and Chain.create
     # always have a subsequent Call.amount transaction which tranfers tokens
     # from the original contract to the newly created contract.
-    {chain_events, non_chain_events} =
+    chain_mutations =
       events
       |> Enum.zip(shifted_events)
-      |> Enum.split_with(fn
+      |> Enum.filter(fn
         {{{:internal_call_tx, "Chain.create"}, _info}, _next_event} -> true
         {{{:internal_call_tx, "Chain.clone"}, _info}, _next_event} -> true
         {{{:internal_call_tx, _fname}, _info}, _next_event} -> false
       end)
+      |> Enum.map(fn
+        {{{:internal_call_tx, _fname}, _info}, next_event} ->
+          {{:internal_call_tx, "Call.amount"}, %{info: aetx}} = next_event
+          {:spend_tx, tx} = :aetx.specialize_type(aetx)
+          recipient_id = :aec_spend_tx.recipient_id(tx)
+          {:account, contract_id} = :aeser_id.specialize(recipient_id)
+          m_field = Model.field(index: {:contract_call_tx, nil, contract_id, call_txi})
+          MnesiaWriteMutation.new(Model.Field, m_field)
+      end)
 
-    Enum.each(chain_events, fn
-      {{{:internal_call_tx, _fname}, _info}, next_event} ->
-        {{:internal_call_tx, "Call.amount"}, %{info: aetx}} = next_event
-        {:spend_tx, tx} = :aetx.specialize_type(aetx)
-        recipient_id = :aec_spend_tx.recipient_id(tx)
-        {:account, contract_id} = :aeser_id.specialize(recipient_id)
-        m_field = Model.field(index: {:contract_call_tx, nil, contract_id, call_txi})
-        :mnesia.write(Model.Field, m_field, :write)
-    end)
+    non_chain_mutations =
+      events
+      |> Enum.with_index()
+      |> Enum.flat_map(fn {{{:internal_call_tx, fname}, %{info: tx}}, i} ->
+        DBContract.int_call_write_mutations(create_txi, call_txi, i, fname, tx)
+      end)
 
-    non_chain_events
-    |> Enum.with_index()
-    |> Enum.each(fn {{{{:internal_call_tx, fname}, %{info: tx}}, _next_event}, i} ->
-      DBContract.int_call_write(create_txi, call_txi, i, fname, tx)
-    end)
+    chain_mutations ++ non_chain_mutations
   end
 
   @spec get_txi(Db.pubkey()) :: integer()

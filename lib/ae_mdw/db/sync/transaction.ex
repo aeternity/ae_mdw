@@ -11,7 +11,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Aex9AccountPresenceMutation
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.ContractCreateMutation
-  alias AeMdw.Db.ContractEventsMutation
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.KeyBlocksMutation
   alias AeMdw.Db.MnesiaWriteMutation
@@ -213,18 +212,14 @@ defmodule AeMdw.Db.Sync.Transaction do
          tx_hash,
          _block_index,
          block_hash,
-         mb_events
+         _mb_events
        ) do
     contract_pk = :aect_create_tx.contract_pubkey(tx)
     owner_pk = :aect_create_tx.owner_pubkey(tx)
-    events = Map.get(mb_events, tx_hash, [])
 
     :ets.insert(:ct_create_sync_cache, {contract_pk, txi})
 
-    mutations = [
-      ContractEventsMutation.new(contract_pk, events, txi)
-      | origin_mutations(:contract_create_tx, nil, contract_pk, txi, tx_hash)
-    ]
+    mutations = origin_mutations(:contract_create_tx, nil, contract_pk, txi, tx_hash)
 
     case Contract.get_info(contract_pk) do
       {:ok, contract_info} ->
@@ -262,10 +257,8 @@ defmodule AeMdw.Db.Sync.Transaction do
     {fun_arg_res, call_rec} =
       Contract.call_tx_info(tx, contract_pk, block_hash, &Contract.to_map/1)
 
-    [
-      ContractEventsMutation.new(contract_pk, events, txi),
-      ContractCallMutation.new(create_txi, txi, fun_arg_res, call_rec)
-    ]
+    Sync.Contract.events_mutations(events, txi, create_txi) ++
+      [ContractCallMutation.new(create_txi, txi, fun_arg_res, call_rec)]
   end
 
   defp tx_mutations(
