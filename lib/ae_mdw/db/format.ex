@@ -453,8 +453,13 @@ defmodule AeMdw.Db.Format do
   def custom_encode(:oracle_response_tx, tx, _tx_rec, _signed_tx, _block_hash),
     do: update_in(tx, ["tx", "response"], &maybe_base64/1)
 
-  def custom_encode(:oracle_query_tx, tx, _tx_rec, _signed_tx, _block_hash) do
-    update_in(tx, ["tx", "query"], &Base.encode64/1)
+  def custom_encode(:oracle_query_tx, tx, tx_rec, _signed_tx, _block_hash) do
+    query_id = :aeo_query_tx.query_id(tx_rec)
+    query_id = Enc.encode(:oracle_query_id, query_id)
+
+    tx
+    |> update_in(["tx", "query"], &Base.encode64/1)
+    |> put_in(["tx", "query_id"], query_id)
   end
 
   def custom_encode(:ga_attach_tx, tx, tx_rec, _signed_tx, _block_hash) do

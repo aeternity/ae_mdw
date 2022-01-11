@@ -60,6 +60,7 @@ defmodule AeMdw.MixProject do
           :aens_transfer_tx,
           :aeo_extend_tx,
           :aeo_query,
+          :aeo_query_tx,
           :aeo_register_tx,
           :aeo_response_tx,
           :aeo_state_tree,
