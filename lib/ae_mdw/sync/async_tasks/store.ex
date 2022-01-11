@@ -78,7 +78,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
   #
   # Private functions
   #
-  def cache_tasks_by_args() do
+  defp cache_tasks_by_args() do
     {:atomic, indexed_args_records} =
       :mnesia.transaction(fn ->
         args_spec =

@@ -103,7 +103,7 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   # Used by consumers only
   #
   @spec run_supervised(Model.async_tasks_record(), boolean()) ::
-          {Task.t() | nil, :timer.tref() | nil}
+          {Task.t(), :timer.tref() | nil}
   def run_supervised(m_task, is_long? \\ false) do
     task =
       Task.Supervisor.async_nolink(
