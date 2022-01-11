@@ -50,11 +50,18 @@ defmodule AeMdw.Db.Sync.Stats do
       dev_reward: prev_dev_reward
     ) = Util.read!(Model.Stat, height - 1)
 
-    current_active_names = :mnesia.table_info(Model.ActiveName, :size)
-    current_active_auctions = :mnesia.table_info(Model.ActiveAuction, :size)
-    current_active_oracles = :mnesia.table_info(Model.ActiveOracle, :size)
-    current_inactive_names = :mnesia.table_info(Model.InactiveName, :size)
-    current_inactive_oracles = :mnesia.table_info(Model.InactiveOracle, :size)
+    {current_active_names, current_active_auctions, current_active_oracles,
+     current_inactive_names,
+     current_inactive_oracles} =
+      :mnesia.async_dirty(fn ->
+        {
+          Util.count(Model.ActiveName),
+          Util.count(Model.AuctionExpiration),
+          Util.count(Model.ActiveOracle),
+          Util.count(Model.InactiveName),
+          Util.count(Model.InactiveOracle)
+        }
+      end)
 
     current_contracts =
       Model.ContractCall

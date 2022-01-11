@@ -107,7 +107,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
 
   describe "sum_stats" do
     test "when no subpath it gets stats in backwards direction", %{conn: conn} do
-      limit = 3
+      limit = 100
       last_gen = Util.last_gen()
 
       conn = get(conn, "/totalstats?limit=#{limit}")
@@ -117,7 +117,15 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
 
       assert response["data"]
              |> Enum.zip(last_gen..0)
-             |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
+             |> Enum.each(fn {%{
+                                "height" => height,
+                                "sum_block_reward" => sum_block_reward,
+                                "sum_dev_reward" => sum_dev_reward
+                              }, index} ->
+               assert height == index
+               assert sum_block_reward > 0
+               assert sum_dev_reward > 0
+             end)
 
       conn_next = get(conn, response["next"])
       response_next = json_response(conn_next, 200)

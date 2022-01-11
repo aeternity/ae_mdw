@@ -90,7 +90,7 @@ defmodule AeMdw.Db.IntTransfer do
 
     kind_spec =
       Ex2ms.fun do
-        {:kind_int_transfer_tx, {^kind, ^height_pos, :_, :_}} -> 1
+        Model.kind_int_transfer_tx(index: {^kind, ^height_pos, :_, :_}) -> 1
       end
 
     Model.KindIntTransferTx
