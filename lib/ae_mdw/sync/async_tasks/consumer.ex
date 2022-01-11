@@ -102,7 +102,8 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   #
   # Used by consumers only
   #
-  @spec run_supervised(Model.async_tasks_record(), boolean()) :: {Task.t(), term()}
+  @spec run_supervised(Model.async_tasks_record(), boolean()) ::
+          {Task.t() | nil, :timer.tref() | nil}
   def run_supervised(m_task, is_long? \\ false) do
     task =
       Task.Supervisor.async_nolink(
@@ -149,8 +150,8 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   end
 
   @spec set_done(Model.async_tasks_record(), boolean()) :: :ok
-  defp set_done(Model.async_tasks(index: index), is_long?) do
-    Producer.notify_consumed(index, is_long?)
+  defp set_done(Model.async_tasks(index: index, args: args), is_long?) do
+    Producer.notify_consumed(index, args, is_long?)
   end
 
   @spec schedule_demand() :: :ok
