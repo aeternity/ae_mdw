@@ -64,12 +64,12 @@ defmodule AeMdw.Db.WriteLinksMutation do
     :ok
   end
 
-  def mutate(%__MODULE__{type: :oracle_extend_tx, tx: tx, txi: txi, block_index: block_index}) do
-    Sync.Oracle.extend(:aeo_extend_tx.oracle_pubkey(tx), tx, txi, block_index)
+  def mutate(%__MODULE__{type: :oracle_extend_tx}) do
+    :ok
   end
 
-  def mutate(%__MODULE__{type: :oracle_response_tx, tx: tx, txi: txi, block_index: block_index}) do
-    Sync.Oracle.respond(:aeo_response_tx.oracle_pubkey(tx), tx, txi, block_index)
+  def mutate(%__MODULE__{type: :oracle_response_tx}) do
+    :ok
   end
 
   def mutate(%__MODULE__{type: :name_claim_tx}) do

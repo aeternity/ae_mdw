@@ -6,6 +6,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Blocks
   alias AeMdw.Node, as: AE
   alias AeMdw.Contract
+  alias AeMdw.Log
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync
   alias AeMdw.Db.Aex9AccountPresenceMutation
@@ -19,7 +20,9 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Name
   alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.Oracle
+  alias AeMdw.Db.OracleExtendMutation
   alias AeMdw.Db.OracleRegisterMutation
+  alias AeMdw.Db.OracleResponseMutation
   alias AeMdw.Db.Sync.Stats
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.WriteFieldMutation
@@ -33,6 +36,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdwWeb.Websocket.Broadcaster
 
   require Model
+  require Logger
 
   import AeMdw.Db.Util
   import AeMdw.Util
@@ -354,6 +358,57 @@ defmodule AeMdw.Db.Sync.Transaction do
         timeout
       )
     ]
+  end
+
+  defp tx_mutations(
+         :oracle_extend_tx,
+         tx,
+         _signed_tx,
+         txi,
+         _tx_hash,
+         block_index,
+         _block_hash,
+         _mb_events
+       ) do
+    oracle_pk = :aeo_extend_tx.oracle_pubkey(tx)
+    {:delta, delta_ttl} = :aeo_extend_tx.oracle_ttl(tx)
+
+    [
+      OracleExtendMutation.new(block_index, txi, oracle_pk, delta_ttl)
+    ]
+  end
+
+  defp tx_mutations(
+         :oracle_response_tx,
+         tx,
+         _signed_tx,
+         txi,
+         _tx_hash,
+         block_index,
+         _block_hash,
+         _mb_events
+       ) do
+    oracle_pk = :aeo_response_tx.oracle_pubkey(tx)
+    query_id = :aeo_response_tx.query_id(tx)
+    o_tree = Oracle.oracle_tree!(block_index)
+
+    try do
+      fee =
+        oracle_pk
+        |> :aeo_state_tree.get_query(query_id, o_tree)
+        |> :aeo_query.fee()
+
+      [
+        OracleResponseMutation.new(block_index, txi, oracle_pk, fee)
+      ]
+    rescue
+      # TreeId = <<OracleId/binary, QId/binary>>,
+      # Serialized = aeu_mtrees:get(TreeId, Tree#oracle_tree.otree)
+      # raises error on unexisting tree_id
+      error ->
+        Log.error(error)
+        []
+    end
   end
 
   defp tx_mutations(_type, _tx, _signed_tx, _txi, _tx_hash, _block_index, _block_hash, _mb_events) do
