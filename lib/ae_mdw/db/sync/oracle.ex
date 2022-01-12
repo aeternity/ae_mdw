@@ -11,49 +11,18 @@ defmodule AeMdw.Db.Sync.Oracle do
   alias AeMdw.Log
 
   require Model
-  require Ex2ms
   require Logger
 
   import AeMdw.Db.Oracle,
     only: [
-      locate: 1,
       cache_through_read: 2,
       cache_through_write: 2,
-      cache_through_delete: 2,
-      cache_through_delete_inactive: 1
+      cache_through_delete: 2
     ]
 
   @typep pubkey() :: <<_::256>>
   @typep tx_tuple() :: tuple()
   @typep block_index() :: {pos_integer(), non_neg_integer()}
-
-  @doc """
-  Registers an Oracle using the account pubkey (1 to 1).
-
-  If the account already has an Oracle (previous), it is deleted.
-  """
-  @spec register(pubkey(), tx_tuple(), pos_integer(), block_index()) :: :ok
-  def register(pubkey, tx, txi, {height, _} = bi) do
-    delta_ttl = :aeo_utils.ttl_delta(height, :aeo_register_tx.oracle_ttl(tx))
-    expire = height + delta_ttl
-    previous = pubkey |> locate() |> delete_previous()
-
-    m_oracle =
-      Model.oracle(
-        index: pubkey,
-        active: height,
-        expire: expire,
-        register: {bi, txi},
-        previous: previous
-      )
-
-    cache_through_write(Model.ActiveOracle, m_oracle)
-    m_exp_new = Model.expiration(index: {expire, pubkey})
-    cache_through_write(Model.ActiveOracleExpiration, m_exp_new)
-
-    AeMdw.Ets.inc(:stat_sync_cache, :active_oracles)
-    previous && AeMdw.Ets.dec(:stat_sync_cache, :inactive_oracles)
-  end
 
   @spec extend(pubkey(), tx_tuple(), pos_integer(), block_index()) :: boolean()
   def extend(pubkey, tx, txi, bi) do
@@ -102,21 +71,5 @@ defmodule AeMdw.Db.Sync.Oracle do
     end
 
     :ok
-  end
-
-  #
-  # Private functions
-  #
-  defp delete_previous(nil), do: nil
-
-  defp delete_previous({previous, Model.InactiveOracle}) do
-    cache_through_delete_inactive(previous)
-    previous
-  end
-
-  defp delete_previous({previous, Model.ActiveOracle}) do
-    Model.oracle(index: pubkey, expire: old_expire) = previous
-    cache_through_delete(Model.ActiveOracleExpiration, {old_expire, pubkey})
-    previous
   end
 end
