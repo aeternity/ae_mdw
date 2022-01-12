@@ -53,22 +53,6 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  @spec aex9_delete_presence(pubkey(), pubkey()) :: :ok
-  def aex9_delete_presence(contract_pk, account_pk) do
-    presence_mspec =
-      Ex2ms.fun do
-        Model.aex9_account_presence(index: {^account_pk, txi, ^contract_pk}) ->
-          {^account_pk, txi, ^contract_pk}
-      end
-
-    Model.Aex9AccountPresence
-    |> :mnesia.select(presence_mspec)
-    |> Enum.each(fn {account_pk, txi, contract_pk} ->
-      :mnesia.delete(Model.Aex9AccountPresence, {account_pk, txi, contract_pk}, :write)
-      :mnesia.delete(Model.IdxAex9AccountPresence, {txi, account_pk, contract_pk}, :write)
-    end)
-  end
-
   @spec aex9_delete_presence(pubkey(), integer(), pubkey()) :: :ok
   def aex9_delete_presence(contract_pk, txi, pubkey) do
     :mnesia.delete(Model.Aex9AccountPresence, {pubkey, txi, contract_pk}, :write)

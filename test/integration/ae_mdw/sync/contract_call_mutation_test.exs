@@ -3,11 +3,11 @@ defmodule Integration.AeMdw.Db.ContractCallMutationTest do
 
   @moduletag :integration
 
-  alias AeMdw.Db.Contract, as: DBContract
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
   alias AeMdw.Validate
+  alias Support.AeMdw.Db.ContractTestUtil
 
   import Support.TestMnesiaSandbox
 
@@ -94,7 +94,7 @@ defmodule Integration.AeMdw.Db.ContractCallMutationTest do
         end
       end
 
-    DBContract.aex9_delete_presence(contract_pk, account_pk)
+    ContractTestUtil.aex9_delete_presence(contract_pk, account_pk)
 
     contract_pk
     |> ContractCallMutation.new(any_caller_pk, create_txi, call_txi, fun_arg_res, mocked_call_rec)
