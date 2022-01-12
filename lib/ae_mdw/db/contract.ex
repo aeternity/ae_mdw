@@ -5,10 +5,13 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Node, as: AE
 
   alias AeMdw.Contract
+  alias AeMdw.Db.MnesiaWriteMutation
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Mutation
   alias AeMdw.Db.Origin
   alias AeMdw.Log
   alias AeMdw.Sync.AsyncTasks
+  alias AeMdw.Txs
   alias AeMdw.Validate
 
   require Ex2ms
@@ -279,8 +282,10 @@ defmodule AeMdw.Db.Contract do
   def aex9_presence_cache_write(ets_tab, {{contract_pk, txi, i}, pks, amount}),
     do: :ets.insert(ets_tab, {{contract_pk, txi, i}, pks, amount})
 
-  @spec int_call_write(integer(), integer(), integer(), String.t(), tuple()) :: :ok
-  def int_call_write(create_txi, call_txi, local_idx, fname, tx) do
+  @spec int_call_write_mutations(Txs.txi(), Txs.txi(), Txs.txi(), Contract.fname(), tuple()) :: [
+          Mutation.t()
+        ]
+  def int_call_write_mutations(create_txi, call_txi, local_idx, fname, tx) do
     m_call =
       Model.int_contract_call(
         index: {call_txi, local_idx},
@@ -297,33 +302,40 @@ defmodule AeMdw.Db.Contract do
 
     {tx_type, raw_tx} = :aetx.specialize_type(tx)
 
-    :mnesia.write(Model.IntContractCall, m_call, :write)
-    :mnesia.write(Model.GrpIntContractCall, m_grp_call, :write)
-    :mnesia.write(Model.FnameIntContractCall, m_fname_call, :write)
-    :mnesia.write(Model.FnameGrpIntContractCall, m_fname_grp_call, :write)
+    initial_mutations = [
+      MnesiaWriteMutation.new(Model.IntContractCall, m_call),
+      MnesiaWriteMutation.new(Model.GrpIntContractCall, m_grp_call),
+      MnesiaWriteMutation.new(Model.FnameIntContractCall, m_fname_call),
+      MnesiaWriteMutation.new(Model.FnameGrpIntContractCall, m_fname_grp_call)
+    ]
 
-    tx_type
-    |> AE.tx_ids()
-    |> Enum.each(fn {_, pos} ->
-      pk = Validate.id!(elem(raw_tx, pos))
-      m_id_call = Model.id_int_contract_call(index: {pk, pos, call_txi, local_idx})
+    ids_mutations =
+      tx_type
+      |> AE.tx_ids()
+      |> Enum.flat_map(fn {_, pos} ->
+        pk = Validate.id!(elem(raw_tx, pos))
+        m_id_call = Model.id_int_contract_call(index: {pk, pos, call_txi, local_idx})
 
-      m_grp_id_call =
-        Model.grp_id_int_contract_call(index: {create_txi, pk, pos, call_txi, local_idx})
+        m_grp_id_call =
+          Model.grp_id_int_contract_call(index: {create_txi, pk, pos, call_txi, local_idx})
 
-      m_id_fname_call =
-        Model.id_fname_int_contract_call(index: {pk, fname, pos, call_txi, local_idx})
+        m_id_fname_call =
+          Model.id_fname_int_contract_call(index: {pk, fname, pos, call_txi, local_idx})
 
-      m_grp_id_fname_call =
-        Model.grp_id_fname_int_contract_call(
-          index: {create_txi, pk, fname, pos, call_txi, local_idx}
-        )
+        m_grp_id_fname_call =
+          Model.grp_id_fname_int_contract_call(
+            index: {create_txi, pk, fname, pos, call_txi, local_idx}
+          )
 
-      :mnesia.write(Model.IdIntContractCall, m_id_call, :write)
-      :mnesia.write(Model.GrpIdIntContractCall, m_grp_id_call, :write)
-      :mnesia.write(Model.IdFnameIntContractCall, m_id_fname_call, :write)
-      :mnesia.write(Model.GrpIdFnameIntContractCall, m_grp_id_fname_call, :write)
-    end)
+        [
+          MnesiaWriteMutation.new(Model.IdIntContractCall, m_id_call),
+          MnesiaWriteMutation.new(Model.GrpIdIntContractCall, m_grp_id_call),
+          MnesiaWriteMutation.new(Model.IdFnameIntContractCall, m_id_fname_call),
+          MnesiaWriteMutation.new(Model.GrpIdFnameIntContractCall, m_grp_id_fname_call)
+        ]
+      end)
+
+    initial_mutations ++ ids_mutations
   end
 
   #
