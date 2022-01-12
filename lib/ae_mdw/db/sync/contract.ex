@@ -69,14 +69,14 @@ defmodule AeMdw.Db.Sync.Contract do
           MnesiaWriteMutation.new(Model.Field, m_field)
       end)
 
-    non_chain_mutations =
+    int_calls_mutations =
       events
       |> Enum.with_index()
       |> Enum.flat_map(fn {{{:internal_call_tx, fname}, %{info: tx}}, i} ->
         DBContract.int_call_write_mutations(create_txi, call_txi, i, fname, tx)
       end)
 
-    chain_mutations ++ non_chain_mutations
+    chain_mutations ++ int_calls_mutations
   end
 
   @spec get_txi(Db.pubkey()) :: integer()

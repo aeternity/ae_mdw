@@ -212,7 +212,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          tx_hash,
          _block_index,
          block_hash,
-         _mb_events
+         mb_events
        ) do
     contract_pk = :aect_create_tx.contract_pubkey(tx)
     owner_pk = :aect_create_tx.owner_pubkey(tx)
@@ -224,6 +224,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     case Contract.get_info(contract_pk) do
       {:ok, contract_info} ->
         call_rec = Contract.get_init_call_rec(contract_pk, tx, block_hash)
+        events = Map.get(mb_events, tx_hash, [])
 
         aex9_meta_info =
           if Contract.is_aex9?(contract_info) do
@@ -231,6 +232,7 @@ defmodule AeMdw.Db.Sync.Transaction do
           end
 
         mutations ++
+          Sync.Contract.events_mutations(events, txi, txi) ++
           [
             ContractCreateMutation.new(contract_pk, txi, owner_pk, aex9_meta_info, call_rec)
           ]
