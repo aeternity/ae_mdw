@@ -113,7 +113,7 @@ defmodule AeMdw.Contract do
     }
   end
 
-  @spec is_aex9?(DBN.pubkey() | ct_info()) :: boolean()
+  @spec is_aex9?(DBN.pubkey() | type_info()) :: boolean()
   def is_aex9?(pubkey) when is_binary(pubkey) do
     case get_info(pubkey) do
       {:ok, {type_info, _compiler_vsn, _source_hash}} -> is_aex9?(type_info)
@@ -134,7 +134,7 @@ defmodule AeMdw.Contract do
   end
 
   # AEVM
-  def is_aex9?(_),
+  def is_aex9?(_no_fcode),
     do: false
 
   # value of :aec_hash.blake2b_256_hash("Transfer")

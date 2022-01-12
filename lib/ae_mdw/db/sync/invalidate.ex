@@ -310,11 +310,10 @@ defmodule AeMdw.Db.Sync.Invalidate do
           |> Stream.map(fn %{} = x ->
             ct_pk = Validate.id!(x.tx.contract_id)
 
-            with {:ok, ct_info} <- Contract.get_info(ct_pk),
-                 true <- Contract.is_aex9?(ct_info) do
+            if Contract.is_aex9?(ct_pk) do
               {{ct_pk, x.tx_index, -1}, Validate.id!(x.tx.owner_id), -1}
             else
-              _ -> nil
+              nil
             end
           end)
           |> Stream.filter(& &1)
