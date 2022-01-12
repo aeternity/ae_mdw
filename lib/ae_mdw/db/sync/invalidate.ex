@@ -1,4 +1,5 @@
 defmodule AeMdw.Db.Sync.Invalidate do
+  # credo:disable-for-this-file
   alias AeMdw.Contract
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Db.Format
