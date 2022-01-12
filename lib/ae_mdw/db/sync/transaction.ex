@@ -17,6 +17,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.MnesiaWriteMutation
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Name
+  alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.Sync.Stats
@@ -28,6 +29,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Node
   alias AeMdw.Sync.AsyncTasks.Producer
   alias AeMdw.Txs
+  alias AeMdw.Validate
   alias AeMdwWeb.Websocket.Broadcaster
 
   require Model
@@ -318,6 +320,39 @@ defmodule AeMdw.Db.Sync.Transaction do
     [
       origin_mutations(:oracle_register_tx, nil, oracle_pk, txi, tx_hash),
       OracleRegisterMutation.new(oracle_pk, block_index, expire, txi)
+    ]
+  end
+
+  defp tx_mutations(
+         :name_claim_tx,
+         tx,
+         _signed_tx,
+         txi,
+         tx_hash,
+         {height, _mbi} = block_index,
+         _block_hash,
+         _mb_events
+       ) do
+    plain_name = String.downcase(:aens_claim_tx.name(tx))
+    {:ok, name_hash} = :aens.get_name_hash(plain_name)
+    owner_pk = Validate.id!(:aens_claim_tx.account_id(tx))
+    name_fee = :aens_claim_tx.name_fee(tx)
+    proto_vsn = proto_vsn(height)
+    is_lima? = proto_vsn >= AE.lima_vsn()
+    timeout = :aec_governance.name_claim_bid_timeout(plain_name, proto_vsn)
+
+    [
+      origin_mutations(:name_claim_tx, nil, name_hash, txi, tx_hash),
+      NameClaimMutation.new(
+        plain_name,
+        name_hash,
+        owner_pk,
+        name_fee,
+        is_lima?,
+        txi,
+        block_index,
+        timeout
+      )
     ]
   end
 
