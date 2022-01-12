@@ -33,6 +33,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Txs
   alias AeMdw.Validate
   alias AeMdwWeb.Websocket.Broadcaster
+  alias __MODULE__.TxContext
 
   require Model
   require Logger
@@ -42,6 +43,25 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   @log_freq 1000
   @sync_cache_cleanup_freq 150_000
+
+  defmodule TxContext do
+    @moduledoc """
+    Transaction context struct that contains necessary information to build a transaction mutation.
+    """
+
+    defstruct [:type, :tx, :signed_tx, :txi, :tx_hash, :block_index, :block_hash, :tx_events]
+
+    @type t() :: %__MODULE__{
+            type: Node.tx_type(),
+            tx: Node.tx(),
+            signed_tx: Node.signed_tx(),
+            txi: Txs.txi(),
+            tx_hash: Txs.tx_hash(),
+            block_index: Blocks.block_index(),
+            block_hash: Blocks.block_hash(),
+            tx_events: [Contract.event()]
+          }
+  end
 
   ################################################################################
 
@@ -88,6 +108,17 @@ defmodule AeMdw.Db.Sync.Transaction do
     type = mod.type()
     model_tx = Model.tx(index: txi, id: tx_hash, block_index: block_index, time: mb_time)
 
+    tx_context = %TxContext{
+      type: type,
+      tx: tx,
+      signed_tx: signed_tx,
+      txi: txi,
+      tx_hash: tx_hash,
+      block_index: block_index,
+      block_hash: block_hash,
+      tx_events: Map.get(mb_events, tx_hash, [])
+    }
+
     inner_tx_mutations =
       if type == :ga_meta_tx or type == :paying_for_tx do
         inner_signed_tx = Sync.InnerTx.signed_tx(type, tx)
@@ -100,7 +131,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     [
       WriteTxMutation.new(model_tx, type, txi, mb_time, inner_tx?),
       WriteLinksMutation.new(type, tx, signed_tx, txi, tx_hash, block_index, block_hash),
-      tx_mutations(type, tx, signed_tx, txi, tx_hash, block_index, block_hash, mb_events),
+      tx_mutations(tx_context),
       WriteFieldsMutation.new(type, tx, block_index, txi),
       inner_tx_mutations
     ]
@@ -211,16 +242,14 @@ defmodule AeMdw.Db.Sync.Transaction do
     {mutations, {txi + length(mb_txs), mbi + 1}}
   end
 
-  defp tx_mutations(
-         :contract_create_tx,
-         tx,
-         _signed_tx,
-         txi,
-         tx_hash,
-         _block_index,
-         block_hash,
-         mb_events
-       ) do
+  defp tx_mutations(%TxContext{
+         type: :contract_create_tx,
+         tx: tx,
+         txi: txi,
+         tx_hash: tx_hash,
+         block_hash: block_hash,
+         tx_events: tx_events
+       }) do
     contract_pk = :aect_create_tx.contract_pubkey(tx)
     owner_pk = :aect_create_tx.owner_pubkey(tx)
 
@@ -231,7 +260,6 @@ defmodule AeMdw.Db.Sync.Transaction do
     case Contract.get_info(contract_pk) do
       {:ok, {type_info, _compiler_vsn, _source_hash}} ->
         call_rec = Contract.get_init_call_rec(contract_pk, tx, block_hash)
-        events = Map.get(mb_events, tx_hash, [])
 
         aex9_meta_info =
           if Contract.is_aex9?(type_info) do
@@ -239,7 +267,7 @@ defmodule AeMdw.Db.Sync.Transaction do
           end
 
         mutations ++
-          Sync.Contract.events_mutations(events, txi, txi) ++
+          Sync.Contract.events_mutations(tx_events, txi, txi) ++
           [
             ContractCreateMutation.new(contract_pk, txi, owner_pk, aex9_meta_info, call_rec)
           ]
@@ -249,52 +277,35 @@ defmodule AeMdw.Db.Sync.Transaction do
     end
   end
 
-  defp tx_mutations(
-         :contract_call_tx,
-         tx,
-         _signed_tx,
-         txi,
-         tx_hash,
-         _block_index,
-         block_hash,
-         mb_events
-       ) do
+  defp tx_mutations(%TxContext{
+         type: :contract_call_tx,
+         tx: tx,
+         txi: txi,
+         block_hash: block_hash,
+         tx_events: tx_events
+       }) do
     contract_pk = :aect_call_tx.contract_pubkey(tx)
     create_txi = Sync.Contract.get_txi(contract_pk)
-    events = Map.get(mb_events, tx_hash, [])
 
     {fun_arg_res, call_rec} =
       Contract.call_tx_info(tx, contract_pk, block_hash, &Contract.to_map/1)
 
-    Sync.Contract.events_mutations(events, txi, create_txi) ++
+    Sync.Contract.events_mutations(tx_events, txi, create_txi) ++
       [ContractCallMutation.new(create_txi, txi, fun_arg_res, call_rec)]
   end
 
-  defp tx_mutations(
-         :channel_create_tx,
-         _tx,
-         signed_tx,
-         txi,
-         tx_hash,
-         _block_index,
-         _block_hash,
-         _mb_events
-       ) do
+  defp tx_mutations(%TxContext{
+         type: :channel_create_tx,
+         signed_tx: signed_tx,
+         txi: txi,
+         tx_hash: tx_hash
+       }) do
     {:ok, channel_pk} = :aesc_utils.channel_pubkey(signed_tx)
 
     origin_mutations(:channel_create_tx, nil, channel_pk, txi, tx_hash)
   end
 
-  defp tx_mutations(
-         :ga_attach_tx,
-         tx,
-         _signed_tx,
-         txi,
-         tx_hash,
-         _block_index,
-         _block_hash,
-         _mb_events
-       ) do
+  defp tx_mutations(%TxContext{type: :ga_attach_tx, tx: tx, txi: txi, tx_hash: tx_hash}) do
     contract_pk = :aega_attach_tx.contract_pubkey(tx)
     :ets.insert(:ct_create_sync_cache, {contract_pk, txi})
     AeMdw.Ets.inc(:stat_sync_cache, :contracts)
@@ -302,16 +313,13 @@ defmodule AeMdw.Db.Sync.Transaction do
     origin_mutations(:ga_attach_tx, nil, contract_pk, txi, tx_hash)
   end
 
-  defp tx_mutations(
-         :oracle_register_tx,
-         tx,
-         _signed_tx,
-         txi,
-         tx_hash,
-         {height, _mbi} = block_index,
-         _block_hash,
-         _mb_events
-       ) do
+  defp tx_mutations(%TxContext{
+         type: :oracle_register_tx,
+         tx: tx,
+         txi: txi,
+         tx_hash: tx_hash,
+         block_index: {height, _mbi} = block_index
+       }) do
     oracle_pk = :aeo_register_tx.account_pubkey(tx)
     delta_ttl = :aeo_utils.ttl_delta(height, :aeo_register_tx.oracle_ttl(tx))
     expire = height + delta_ttl
@@ -322,16 +330,13 @@ defmodule AeMdw.Db.Sync.Transaction do
     ]
   end
 
-  defp tx_mutations(
-         :name_claim_tx,
-         tx,
-         _signed_tx,
-         txi,
-         tx_hash,
-         {height, _mbi} = block_index,
-         _block_hash,
-         _mb_events
-       ) do
+  defp tx_mutations(%TxContext{
+         type: :name_claim_tx,
+         tx: tx,
+         txi: txi,
+         tx_hash: tx_hash,
+         block_index: {height, _mbi} = block_index
+       }) do
     plain_name = String.downcase(:aens_claim_tx.name(tx))
     {:ok, name_hash} = :aens.get_name_hash(plain_name)
     owner_pk = Validate.id!(:aens_claim_tx.account_id(tx))
@@ -355,16 +360,12 @@ defmodule AeMdw.Db.Sync.Transaction do
     ]
   end
 
-  defp tx_mutations(
-         :oracle_extend_tx,
-         tx,
-         _signed_tx,
-         txi,
-         _tx_hash,
-         block_index,
-         _block_hash,
-         _mb_events
-       ) do
+  defp tx_mutations(%TxContext{
+         type: :oracle_extend_tx,
+         tx: tx,
+         txi: txi,
+         block_index: block_index
+       }) do
     oracle_pk = :aeo_extend_tx.oracle_pubkey(tx)
     {:delta, delta_ttl} = :aeo_extend_tx.oracle_ttl(tx)
 
@@ -373,16 +374,12 @@ defmodule AeMdw.Db.Sync.Transaction do
     ]
   end
 
-  defp tx_mutations(
-         :oracle_response_tx,
-         tx,
-         _signed_tx,
-         txi,
-         _tx_hash,
-         block_index,
-         _block_hash,
-         _mb_events
-       ) do
+  defp tx_mutations(%TxContext{
+         type: :oracle_response_tx,
+         tx: tx,
+         txi: txi,
+         block_index: block_index
+       }) do
     oracle_pk = :aeo_response_tx.oracle_pubkey(tx)
     query_id = :aeo_response_tx.query_id(tx)
     o_tree = Oracle.oracle_tree!(block_index)
@@ -406,9 +403,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     end
   end
 
-  defp tx_mutations(_type, _tx, _signed_tx, _txi, _tx_hash, _block_index, _block_hash, _mb_events) do
-    []
-  end
+  defp tx_mutations(_tx_context), do: []
 
   defp origin_mutations(tx_type, pos, pubkey, txi, tx_hash) do
     m_origin = Model.origin(index: {tx_type, pubkey, txi}, tx_id: tx_hash)
