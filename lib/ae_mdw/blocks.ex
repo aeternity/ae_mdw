@@ -75,6 +75,13 @@ defmodule AeMdw.Blocks do
     end
   end
 
+  @spec block_hash(height()) :: block_hash()
+  def block_hash(height) do
+    Model.block(hash: hash) = Mnesia.fetch!(@table, {height, -1})
+
+    hash
+  end
+
   defp intersect_scopes(scopes, direction) do
     scopes
     |> Enum.reject(&is_nil/1)
