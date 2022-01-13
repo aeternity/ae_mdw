@@ -11,7 +11,7 @@ defmodule AeMdw.Migrations.InactiveNameOwner do
   @doc """
   Writes {account_pk, create_txi, contract_pk} aex9 presence and deletes old ones with txi = -1.
   """
-  @spec run(boolean()) :: {:ok, {pos_integer(), pos_integer()}}
+  @spec run(boolean()) :: {:ok, {non_neg_integer(), non_neg_integer()}}
   def run(_from_start?) do
     begin = DateTime.utc_now()
 
