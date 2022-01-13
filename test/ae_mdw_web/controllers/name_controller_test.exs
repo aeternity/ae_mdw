@@ -771,15 +771,27 @@ defmodule AeMdwWeb.NameControllerTest do
   end
 
   describe "owned_by" do
-    test "get name information for given acount/owner", %{conn: conn} do
+    test "get active names for given account/owner", %{conn: conn} do
       id = "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
       owner_id = Validate.id!(id)
 
       with_mocks [
-        {Name, [], [owned_by: fn ^owner_id -> %{actives: [], top_bids: []} end]}
+        {Name, [], [owned_by: fn ^owner_id, true -> %{names: [], top_bids: []} end]}
       ] do
         assert %{"active" => [], "top_bid" => []} =
                  conn |> get("/names/owned_by/#{id}") |> json_response(200)
+      end
+    end
+
+    test "get inactive names for given account/owner", %{conn: conn} do
+      id = "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
+      owner_id = Validate.id!(id)
+
+      with_mocks [
+        {Name, [], [owned_by: fn ^owner_id, false -> %{names: []} end]}
+      ] do
+        assert %{"inactive" => []} =
+                 conn |> get("/names/owned_by/#{id}?active=false") |> json_response(200)
       end
     end
 
