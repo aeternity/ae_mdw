@@ -2046,12 +2046,18 @@ $ curl -s "https://mainnet.aeternity.io/mdw/name/auction/nikita.chain" | jq '.'
 
 ### Names for owner
 
-The endpoint `/names/owned_by/:account` returns names for a given owner.
+The endpoint `/names/owned_by/:account` returns names for a given owner (the active names by default).
 
 The reply has two keys:
 
-- active - listing active (not expired) names belonging to the owner
+- active - listing active (not expired) names belonging to the account
 - top_bid - listing auctions where the owner has placed the highest bid
+
+With paramter active=false, the endpoint returns the inactive names that were owned by the account when it had expired or had been revoked.
+
+In this case the reply has a single key:
+
+- inactive - listing of inactive names objects that belonged to the account
 
 Example below is fabricated, to present the shape of the responses:
 
