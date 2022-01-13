@@ -229,12 +229,12 @@ defmodule AeMdw.Db.Sync.Transaction do
     mutations = origin_mutations(:contract_create_tx, nil, contract_pk, txi, tx_hash)
 
     case Contract.get_info(contract_pk) do
-      {:ok, contract_info} ->
+      {:ok, {type_info, _compiler_vsn, _source_hash}} ->
         call_rec = Contract.get_init_call_rec(contract_pk, tx, block_hash)
         events = Map.get(mb_events, tx_hash, [])
 
         aex9_meta_info =
-          if Contract.is_aex9?(contract_info) do
+          if Contract.is_aex9?(type_info) do
             Contract.aex9_meta_info(contract_pk)
           end
 
