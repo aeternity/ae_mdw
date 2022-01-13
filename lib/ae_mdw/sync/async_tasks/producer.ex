@@ -13,8 +13,6 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   require Model
   require Logger
 
-  @typep task_index() :: {pos_integer(), atom()}
-
   @max_buffer_size 100
 
   @spec start_link(any()) :: GenServer.on_start()
@@ -43,9 +41,9 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
     GenServer.call(__MODULE__, :dequeue)
   end
 
-  @spec notify_consumed(task_index(), boolean()) :: :ok
-  def notify_consumed(task_index, is_long?) do
-    Store.set_done(task_index)
+  @spec notify_consumed(Store.task_index(), Store.task_args(), boolean()) :: :ok
+  def notify_consumed(task_index, task_args, is_long?) do
+    Store.set_done(task_index, task_args)
     Stats.update_consumed(is_long?)
 
     if is_long?, do: Log.info("Long task finished: #{inspect(task_index)}")

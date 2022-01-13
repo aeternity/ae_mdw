@@ -60,14 +60,33 @@ defmodule AeMdw.Db.Contract do
     :ok
   end
 
-  @spec aex9_presence_exists?(pubkey(), pubkey(), integer() | nil) :: boolean()
-  def aex9_presence_exists?(contract_pk, account_pk, txi \\ nil) do
-    txi_search_prev = (txi && txi + 1) || nil
+  @spec aex9_presence_exists?(pubkey(), pubkey(), integer()) :: boolean()
+  def aex9_presence_exists?(contract_pk, account_pk, txi) do
+    txi_search_prev = txi + 1
 
     case :mnesia.prev(Model.Aex9AccountPresence, {account_pk, txi_search_prev, contract_pk}) do
       {^account_pk, _txi, ^contract_pk} -> true
       _other_key -> false
     end
+  end
+
+  @spec aex9_presence_exists?(pubkey(), pubkey()) :: boolean()
+  def aex9_presence_exists?(contract_pk, account_pk) do
+    0
+    |> Stream.unfold(fn
+      :found ->
+        nil
+
+      txi_search_next ->
+        case :mnesia.next(Model.Aex9AccountPresence, {account_pk, txi_search_next, contract_pk}) do
+          {^account_pk, _txi, ^contract_pk} -> {true, :found}
+          {^account_pk, next_txi, _contract_pk} -> {false, next_txi}
+          _not_found -> nil
+        end
+    end)
+    |> Enum.to_list()
+    |> List.last()
+    |> Kernel.||(false)
   end
 
   @spec call_write(integer(), integer(), Contract.fun_arg_res_or_error()) :: :ok
