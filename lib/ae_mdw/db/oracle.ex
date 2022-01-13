@@ -83,11 +83,9 @@ defmodule AeMdw.Db.Oracle do
     cache_through_delete(Model.InactiveOracleExpiration, {expire, pubkey})
   end
 
-  @spec oracle_tree!({pos_integer(), integer()}) :: tuple()
-  def oracle_tree!({_, _} = block_index) do
-    block_index
-    |> read_block!
-    |> Model.block(:hash)
+  @spec oracle_tree!(Blocks.block_hash()) :: tuple()
+  def oracle_tree!(block_hash) do
+    block_hash
     |> :aec_db.get_block_state()
     |> :aec_trees.oracles()
   end

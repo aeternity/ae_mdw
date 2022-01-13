@@ -6,18 +6,22 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Blocks
   alias AeMdw.Node, as: AE
   alias AeMdw.Contract
+  alias AeMdw.Log
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync
   alias AeMdw.Db.Aex9AccountPresenceMutation
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.ContractCreateMutation
-  alias AeMdw.Db.ContractEventsMutation
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.KeyBlocksMutation
   alias AeMdw.Db.MnesiaWriteMutation
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Name
+  alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.Oracle
+  alias AeMdw.Db.OracleExtendMutation
+  alias AeMdw.Db.OracleRegisterMutation
+  alias AeMdw.Db.OracleResponseMutation
   alias AeMdw.Db.Sync.Stats
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.WriteFieldMutation
@@ -27,15 +31,37 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Node
   alias AeMdw.Sync.AsyncTasks.Producer
   alias AeMdw.Txs
+  alias AeMdw.Validate
   alias AeMdwWeb.Websocket.Broadcaster
+  alias __MODULE__.TxContext
 
   require Model
+  require Logger
 
   import AeMdw.Db.Util
   import AeMdw.Util
 
   @log_freq 1000
   @sync_cache_cleanup_freq 150_000
+
+  defmodule TxContext do
+    @moduledoc """
+    Transaction context struct that contains necessary information to build a transaction mutation.
+    """
+
+    defstruct [:type, :tx, :signed_tx, :txi, :tx_hash, :block_index, :block_hash, :tx_events]
+
+    @type t() :: %__MODULE__{
+            type: Node.tx_type(),
+            tx: Node.tx(),
+            signed_tx: Node.signed_tx(),
+            txi: Txs.txi(),
+            tx_hash: Txs.tx_hash(),
+            block_index: Blocks.block_index(),
+            block_hash: Blocks.block_hash(),
+            tx_events: [Contract.event()]
+          }
+  end
 
   ################################################################################
 
@@ -82,6 +108,17 @@ defmodule AeMdw.Db.Sync.Transaction do
     type = mod.type()
     model_tx = Model.tx(index: txi, id: tx_hash, block_index: block_index, time: mb_time)
 
+    tx_context = %TxContext{
+      type: type,
+      tx: tx,
+      signed_tx: signed_tx,
+      txi: txi,
+      tx_hash: tx_hash,
+      block_index: block_index,
+      block_hash: block_hash,
+      tx_events: Map.get(mb_events, tx_hash, [])
+    }
+
     inner_tx_mutations =
       if type == :ga_meta_tx or type == :paying_for_tx do
         inner_signed_tx = Sync.InnerTx.signed_tx(type, tx)
@@ -94,7 +131,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     [
       WriteTxMutation.new(model_tx, type, txi, mb_time, inner_tx?),
       WriteLinksMutation.new(type, tx, signed_tx, txi, tx_hash, block_index, block_hash),
-      tx_mutations(type, tx, signed_tx, txi, tx_hash, block_index, block_hash, mb_events),
+      tx_mutations(tx_context),
       WriteFieldsMutation.new(type, tx, block_index, txi),
       inner_tx_mutations
     ]
@@ -205,37 +242,32 @@ defmodule AeMdw.Db.Sync.Transaction do
     {mutations, {txi + length(mb_txs), mbi + 1}}
   end
 
-  defp tx_mutations(
-         :contract_create_tx,
-         tx,
-         _signed_tx,
-         txi,
-         tx_hash,
-         _block_index,
-         block_hash,
-         mb_events
-       ) do
+  defp tx_mutations(%TxContext{
+         type: :contract_create_tx,
+         tx: tx,
+         txi: txi,
+         tx_hash: tx_hash,
+         block_hash: block_hash,
+         tx_events: tx_events
+       }) do
     contract_pk = :aect_create_tx.contract_pubkey(tx)
     owner_pk = :aect_create_tx.owner_pubkey(tx)
-    events = Map.get(mb_events, tx_hash, [])
 
     :ets.insert(:ct_create_sync_cache, {contract_pk, txi})
 
-    mutations = [
-      ContractEventsMutation.new(contract_pk, events, txi)
-      | origin_mutations(:contract_create_tx, nil, contract_pk, txi, tx_hash)
-    ]
+    mutations = origin_mutations(:contract_create_tx, nil, contract_pk, txi, tx_hash)
 
     case Contract.get_info(contract_pk) do
-      {:ok, contract_info} ->
+      {:ok, {type_info, _compiler_vsn, _source_hash}} ->
         call_rec = Contract.get_init_call_rec(contract_pk, tx, block_hash)
 
         aex9_meta_info =
-          if Contract.is_aex9?(contract_info) do
+          if Contract.is_aex9?(type_info) do
             Contract.aex9_meta_info(contract_pk)
           end
 
         mutations ++
+          Sync.Contract.events_mutations(tx_events, txi, txi) ++
           [
             ContractCreateMutation.new(contract_pk, txi, owner_pk, aex9_meta_info, call_rec)
           ]
@@ -245,55 +277,36 @@ defmodule AeMdw.Db.Sync.Transaction do
     end
   end
 
-  defp tx_mutations(
-         :contract_call_tx,
-         tx,
-         _signed_tx,
-         txi,
-         tx_hash,
-         _block_index,
-         block_hash,
-         mb_events
-       ) do
+  defp tx_mutations(%TxContext{
+         type: :contract_call_tx,
+         tx: tx,
+         txi: txi,
+         block_hash: block_hash,
+         tx_events: tx_events
+       }) do
     contract_pk = :aect_call_tx.contract_pubkey(tx)
     <<caller_pk::binary-32>> = :aect_call_tx.caller_pubkey(tx)
     create_txi = Sync.Contract.get_txi(contract_pk)
-    events = Map.get(mb_events, tx_hash, [])
 
     {fun_arg_res, call_rec} =
       Contract.call_tx_info(tx, contract_pk, block_hash, &Contract.to_map/1)
 
-    [
-      ContractEventsMutation.new(contract_pk, events, txi),
-      ContractCallMutation.new(contract_pk, caller_pk, create_txi, txi, fun_arg_res, call_rec)
-    ]
+    Sync.Contract.events_mutations(tx_events, txi, create_txi) ++
+      [ContractCallMutation.new(contract_pk, caller_pk, create_txi, txi, fun_arg_res, call_rec)]
   end
 
-  defp tx_mutations(
-         :channel_create_tx,
-         _tx,
-         signed_tx,
-         txi,
-         tx_hash,
-         _block_index,
-         _block_hash,
-         _mb_events
-       ) do
+  defp tx_mutations(%TxContext{
+         type: :channel_create_tx,
+         signed_tx: signed_tx,
+         txi: txi,
+         tx_hash: tx_hash
+       }) do
     {:ok, channel_pk} = :aesc_utils.channel_pubkey(signed_tx)
 
     origin_mutations(:channel_create_tx, nil, channel_pk, txi, tx_hash)
   end
 
-  defp tx_mutations(
-         :ga_attach_tx,
-         tx,
-         _signed_tx,
-         txi,
-         tx_hash,
-         _block_index,
-         _block_hash,
-         _mb_events
-       ) do
+  defp tx_mutations(%TxContext{type: :ga_attach_tx, tx: tx, txi: txi, tx_hash: tx_hash}) do
     contract_pk = :aega_attach_tx.contract_pubkey(tx)
     :ets.insert(:ct_create_sync_cache, {contract_pk, txi})
     AeMdw.Ets.inc(:stat_sync_cache, :contracts)
@@ -301,9 +314,98 @@ defmodule AeMdw.Db.Sync.Transaction do
     origin_mutations(:ga_attach_tx, nil, contract_pk, txi, tx_hash)
   end
 
-  defp tx_mutations(_type, _tx, _signed_tx, _txi, _tx_hash, _block_index, _block_hash, _mb_events) do
-    []
+  defp tx_mutations(%TxContext{
+         type: :oracle_register_tx,
+         tx: tx,
+         txi: txi,
+         tx_hash: tx_hash,
+         block_index: {height, _mbi} = block_index
+       }) do
+    oracle_pk = :aeo_register_tx.account_pubkey(tx)
+    delta_ttl = :aeo_utils.ttl_delta(height, :aeo_register_tx.oracle_ttl(tx))
+    expire = height + delta_ttl
+
+    [
+      origin_mutations(:oracle_register_tx, nil, oracle_pk, txi, tx_hash),
+      OracleRegisterMutation.new(oracle_pk, block_index, expire, txi)
+    ]
   end
+
+  defp tx_mutations(%TxContext{
+         type: :name_claim_tx,
+         tx: tx,
+         txi: txi,
+         tx_hash: tx_hash,
+         block_index: {height, _mbi} = block_index
+       }) do
+    plain_name = String.downcase(:aens_claim_tx.name(tx))
+    {:ok, name_hash} = :aens.get_name_hash(plain_name)
+    owner_pk = Validate.id!(:aens_claim_tx.account_id(tx))
+    name_fee = :aens_claim_tx.name_fee(tx)
+    proto_vsn = proto_vsn(height)
+    is_lima? = proto_vsn >= AE.lima_vsn()
+    timeout = :aec_governance.name_claim_bid_timeout(plain_name, proto_vsn)
+
+    [
+      origin_mutations(:name_claim_tx, nil, name_hash, txi, tx_hash),
+      NameClaimMutation.new(
+        plain_name,
+        name_hash,
+        owner_pk,
+        name_fee,
+        is_lima?,
+        txi,
+        block_index,
+        timeout
+      )
+    ]
+  end
+
+  defp tx_mutations(%TxContext{
+         type: :oracle_extend_tx,
+         tx: tx,
+         txi: txi,
+         block_index: block_index
+       }) do
+    oracle_pk = :aeo_extend_tx.oracle_pubkey(tx)
+    {:delta, delta_ttl} = :aeo_extend_tx.oracle_ttl(tx)
+
+    [
+      OracleExtendMutation.new(block_index, txi, oracle_pk, delta_ttl)
+    ]
+  end
+
+  defp tx_mutations(%TxContext{
+         type: :oracle_response_tx,
+         tx: tx,
+         txi: txi,
+         block_hash: block_hash,
+         block_index: block_index
+       }) do
+    oracle_pk = :aeo_response_tx.oracle_pubkey(tx)
+    query_id = :aeo_response_tx.query_id(tx)
+    o_tree = Oracle.oracle_tree!(block_hash)
+
+    try do
+      fee =
+        oracle_pk
+        |> :aeo_state_tree.get_query(query_id, o_tree)
+        |> :aeo_query.fee()
+
+      [
+        OracleResponseMutation.new(block_index, txi, oracle_pk, fee)
+      ]
+    rescue
+      # TreeId = <<OracleId/binary, QId/binary>>,
+      # Serialized = aeu_mtrees:get(TreeId, Tree#oracle_tree.otree)
+      # raises error on unexisting tree_id
+      error ->
+        Log.error(error)
+        []
+    end
+  end
+
+  defp tx_mutations(_tx_context), do: []
 
   defp origin_mutations(tx_type, pos, pubkey, txi, tx_hash) do
     m_origin = Model.origin(index: {tx_type, pubkey, txi}, tx_id: tx_hash)

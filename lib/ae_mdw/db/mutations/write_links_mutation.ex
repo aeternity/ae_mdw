@@ -60,37 +60,20 @@ defmodule AeMdw.Db.WriteLinksMutation do
     :ok
   end
 
-  def mutate(%__MODULE__{
-        type: :oracle_register_tx,
-        tx: tx,
-        txi: txi,
-        tx_hash: tx_hash,
-        block_index: block_index
-      }) do
-    pk = :aeo_register_tx.account_pubkey(tx)
-    write_origin(:oracle_register_tx, pk, txi, tx_hash)
-    Sync.Oracle.register(pk, tx, txi, block_index)
+  def mutate(%__MODULE__{type: :oracle_register_tx}) do
+    :ok
   end
 
-  def mutate(%__MODULE__{type: :oracle_extend_tx, tx: tx, txi: txi, block_index: block_index}) do
-    Sync.Oracle.extend(:aeo_extend_tx.oracle_pubkey(tx), tx, txi, block_index)
+  def mutate(%__MODULE__{type: :oracle_extend_tx}) do
+    :ok
   end
 
-  def mutate(%__MODULE__{type: :oracle_response_tx, tx: tx, txi: txi, block_index: block_index}) do
-    Sync.Oracle.respond(:aeo_response_tx.oracle_pubkey(tx), tx, txi, block_index)
+  def mutate(%__MODULE__{type: :oracle_response_tx}) do
+    :ok
   end
 
-  def mutate(%__MODULE__{
-        type: :name_claim_tx,
-        tx: tx,
-        txi: txi,
-        tx_hash: tx_hash,
-        block_index: block_index
-      }) do
-    plain_name = String.downcase(:aens_claim_tx.name(tx))
-    {:ok, name_hash} = :aens.get_name_hash(plain_name)
-    write_origin(:name_claim_tx, name_hash, txi, tx_hash)
-    Sync.Name.claim(plain_name, name_hash, tx, txi, block_index)
+  def mutate(%__MODULE__{type: :name_claim_tx}) do
+    :ok
   end
 
   def mutate(%__MODULE__{type: :name_update_tx, tx: tx, txi: txi, block_index: block_index}) do
@@ -107,20 +90,6 @@ defmodule AeMdw.Db.WriteLinksMutation do
 
   def mutate(_write_links_mutation) do
     :ok
-  end
-
-  defp write_origin(tx_type, pubkey, txi, tx_hash) do
-    m_origin = Model.origin(index: {tx_type, pubkey, txi}, tx_id: tx_hash)
-    m_rev_origin = Model.rev_origin(index: {txi, tx_type, pubkey})
-    :mnesia.write(Model.Origin, m_origin, :write)
-    :mnesia.write(Model.RevOrigin, m_rev_origin, :write)
-    write_field(tx_type, nil, pubkey, txi)
-  end
-
-  defp write_field(tx_type, pos, pubkey, txi) do
-    m_field = Model.field(index: {tx_type, pos, pubkey, txi})
-    :mnesia.write(Model.Field, m_field, :write)
-    Model.incr_count({tx_type, pos, pubkey})
   end
 end
 

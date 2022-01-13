@@ -76,6 +76,17 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
   end
 
   describe "txi for contract txs" do
+    test "get a ContractCreateTx with compilation info", %{conn: conn} do
+      valid_index = 1_737_468
+      conn = get(conn, "/txi/#{valid_index}")
+
+      assert json_response(conn, 200)["tx_index"] == valid_index
+      assert tx = json_response(conn, 200)["tx"]
+      assert tx["type"] == "ContractCreateTx"
+      assert tx["compiler_version"] == "2.0.0"
+      assert tx["source_hash"] == "eN05+tJcdqKtrzpqKaGf7e7wSc3ARZ/hNSgeuHcoXLk="
+    end
+
     test "get a ContractCreateTx with init args", %{conn: conn} do
       valid_index = 26_672_277
       conn = get(conn, "/txi/#{valid_index}")
@@ -279,13 +290,31 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type = "spend"
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/forward", type: type) |> json_response(200)
+               conn |> get("/txs/backward", type: type) |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
       assert @default_limit = length(txs)
-      assert ^txis = Enum.sort(txis)
+      assert ^txis = Enum.sort(txis, :desc)
       assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type == "SpendTx" end)
+    end
+
+    test "get transactions when direction=forward and type parameter=contract_create", %{
+      conn: conn
+    } do
+      limit = 99
+      type = "contract_create"
+
+      assert %{"data" => txs, "next" => next} =
+               conn |> get("/txs/forward", type: type, limit: limit) |> json_response(200)
+
+      assert_contract_create_fields(hd(txs)["tx"])
+
+      txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
+
+      assert ^limit = length(txs)
+      assert ^txis = Enum.sort(txis)
+      assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type == "ContractCreateTx" end)
     end
 
     test "get transactions when direction=backward and type parameter=contract_create", %{
@@ -295,12 +324,12 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type = "contract_create"
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/forward", type: type, limit: limit) |> json_response(200)
+               conn |> get("/txs/backward", type: type, limit: limit) |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
       assert ^limit = length(txs)
-      assert ^txis = Enum.sort(txis)
+      assert ^txis = Enum.sort(txis, :desc)
       assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type == "ContractCreateTx" end)
     end
 
@@ -1692,5 +1721,37 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
                false
              end
            end)
+  end
+
+  defp assert_contract_create_fields(tx) do
+    assert tx["compiler_version"] == nil
+    assert tx["source_hash"] == "P9ddDnECNFDZtun/Kvi5cOcQRqSHHZPubbCyqVqphpA="
+    assert tx["abi_version"] == 1
+    assert tx["amount"] == 1
+    assert tx["args"] == %{"type" => "tuple", "value" => []}
+
+    assert tx["call_data"] ==
+             "cb_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACC5yVbyizFJqfWYeqUF89obIgnMVzkjQAYrtsG9n5+Z6gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAnHQYrA=="
+
+    assert tx["caller_id"] == "ak_ZLqPe9J2qenismR9FoJ93zJs8To91LQH9iVb2X4HRkRKMpxXt"
+
+    assert tx["code"] ==
+             "cb_+QPvRgGgP9ddDnECNFDZtun/Kvi5cOcQRqSHHZPubbCyqVqphpD5Avv5ASqgaPJnYzj/UIg5q6R3Se/6i+h+8oTyB/s9mZhwHNU4h8WEbWFpbrjAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKD//////////////////////////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAuEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+QHLoLnJVvKLMUmp9Zh6pQXz2hsiCcxXOSNABiu2wb2fn5nqhGluaXS4YAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//////////////////////////////////////////7kBQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEA//////////////////////////////////////////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///////////////////////////////////////////uMxiAABkYgAAhJGAgIBRf7nJVvKLMUmp9Zh6pQXz2hsiCcxXOSNABiu2wb2fn5nqFGIAAMBXUIBRf2jyZ2M4/1CIOaukd0nv+ovofvKE8gf7PZmYcBzVOIfFFGIAAK9XUGABGVEAW2AAGVlgIAGQgVJgIJADYAOBUpBZYABRWVJgAFJgAPNbYACAUmAA81tZWWAgAZCBUmAgkANgABlZYCABkIFSYCCQA2ADgVKBUpBWW2AgAVFRWVCAkVBQgJBQkFZbUFCCkVBQYgAAjFax6Hle"
+
+    assert tx["contract_id"] == "ct_2ostji4QgnbaVCqAyzVhKor8dSZUYVv5MRRB2KsJVxAt4UC33J"
+    assert tx["deposit"] == 4
+    assert tx["fee"] == 1_655_760
+    assert tx["gas"] == 1_579_000
+    assert tx["gas_price"] == 1
+    assert tx["gas_used"] == 193
+    assert tx["log"] == []
+    assert tx["nonce"] == 1
+    assert tx["owner_id"] == "ak_ZLqPe9J2qenismR9FoJ93zJs8To91LQH9iVb2X4HRkRKMpxXt"
+    assert tx["return_type"] == "ok"
+    assert tx["return_value"] == "cb_Xfbg4g=="
+    assert tx["ttl"] == 4543
+    assert tx["type"] == "ContractCreateTx"
+    assert tx["version"] == 1
+    assert tx["vm_version"] == 1
   end
 end

@@ -37,8 +37,8 @@ defmodule AeMdw.Node do
           | :channel_client_reconnect_tx
           | :paying_for_tx
 
-  @type signed_tx :: term()
-  @type pubkey :: <<_::256>>
+  @opaque signed_tx() :: tuple()
+  @opaque tx() :: tuple()
 
   defmodule Oracle do
     @moduledoc false

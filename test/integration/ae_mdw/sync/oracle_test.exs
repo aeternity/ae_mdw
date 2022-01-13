@@ -6,8 +6,10 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Oracle
+  alias AeMdw.Db.OracleExtendMutation
   alias AeMdw.Db.Sync
   alias AeMdw.Db.Util
+  alias AeMdw.Mnesia
 
   require Model
 
@@ -16,15 +18,22 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
   describe "extend" do
     test "succeeds when oracle is active" do
       fn ->
-        {_height, pubkey} = Util.last(Model.ActiveOracleExpiration)
-        tx = new_oracle_extend_tx(pubkey)
+        {height, pubkey} = Util.last(Model.ActiveOracleExpiration)
+        ttl = 123
+        new_expiration = height + ttl
 
-        assert Sync.Oracle.extend(
-                 pubkey,
-                 tx,
-                 Util.last_txi(),
-                 {Sync.height(:top), 0}
-               )
+        mutation =
+          OracleExtendMutation.new(
+            {Sync.height(:top), 0},
+            Util.last_txi(),
+            pubkey,
+            ttl
+          )
+
+        Mnesia.transaction([mutation])
+
+        assert [Model.oracle(index: ^pubkey, expire: ^new_expiration)] =
+                 :mnesia.read(Model.ActiveOracle, pubkey)
 
         :mnesia.abort(:rollback)
       end
@@ -34,14 +43,18 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
     test "fails when oracle is not active" do
       fn ->
         {_height, pubkey} = Util.last(Model.InactiveOracleExpiration)
-        tx = new_oracle_extend_tx(pubkey)
 
-        refute Sync.Oracle.extend(
-                 pubkey,
-                 tx,
-                 Util.last_txi(),
-                 {Sync.height(:top), 0}
-               )
+        mutation =
+          OracleExtendMutation.new(
+            {Sync.height(:top), 0},
+            Util.last_txi(),
+            pubkey,
+            123
+          )
+
+        Mnesia.transaction([mutation])
+
+        assert [] = :mnesia.read(Model.ActiveOracle, pubkey)
 
         :mnesia.abort(:rollback)
       end
@@ -122,21 +135,5 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
       end
       |> mnesia_sandbox()
     end
-  end
-
-  #
-  # Helper functions
-  #
-  defp new_oracle_extend_tx(pubkey) do
-    {:ok, tx_rec} =
-      :aeo_extend_tx.new(%{
-        oracle_id: :aeser_id.create(:oracle, pubkey),
-        nonce: 1,
-        oracle_ttl: {:delta, 100},
-        fee: 1_000_000_000
-      })
-
-    {_mod, tx} = :aetx.specialize_callback(tx_rec)
-    tx
   end
 end

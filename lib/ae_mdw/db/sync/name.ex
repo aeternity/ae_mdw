@@ -1,11 +1,9 @@
 defmodule AeMdw.Db.Sync.Name do
   # credo:disable-for-this-file
   alias AeMdw.Db.Format
-  alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Log
-  alias AeMdw.Node, as: AE
   alias AeMdw.Validate
 
   require Record
@@ -16,10 +14,8 @@ defmodule AeMdw.Db.Sync.Name do
     only: [
       cache_through_read!: 2,
       cache_through_read: 2,
-      cache_through_prev: 2,
       cache_through_write: 2,
       cache_through_delete: 2,
-      cache_through_delete_inactive: 1,
       revoke_or_expire_height: 1,
       revoke_or_expire_height: 2
     ]
@@ -29,94 +25,6 @@ defmodule AeMdw.Db.Sync.Name do
   import AeMdw.Util
 
   ##########
-
-  def claim(plain_name, name_hash, tx, txi, {height, _} = bi) do
-    account_pk = Validate.id!(:aens_claim_tx.account_id(tx))
-    name_fee = :aens_claim_tx.name_fee(tx)
-    m_owner = Model.owner(index: {account_pk, plain_name})
-
-    m_plain_name = Model.plain_name(index: name_hash, value: plain_name)
-    cache_through_write(Model.PlainName, m_plain_name)
-
-    proto_vsn = proto_vsn(height)
-    is_lima? = proto_vsn >= AE.lima_vsn()
-
-    case :aec_governance.name_claim_bid_timeout(plain_name, proto_vsn) do
-      0 ->
-        previous = ok_nil(cache_through_read(Model.InactiveName, plain_name))
-        expire = Name.expire_after(height)
-
-        m_name =
-          Model.name(
-            index: plain_name,
-            active: height,
-            expire: expire,
-            claims: [{bi, txi}],
-            owner: account_pk,
-            previous: previous
-          )
-
-        m_name_exp = Model.expiration(index: {expire, plain_name})
-
-        cache_through_write(Model.ActiveName, m_name)
-        cache_through_write(Model.ActiveNameOwner, m_owner)
-        cache_through_write(Model.ActiveNameExpiration, m_name_exp)
-        cache_through_delete_inactive(previous)
-
-        lock_amount = (is_lima? && name_fee) || :aec_governance.name_claim_locked_fee()
-        IntTransfer.fee({height, txi}, :lock_name, account_pk, txi, lock_amount)
-        inc(:stat_sync_cache, :active_names)
-        previous && dec(:stat_sync_cache, :inactive_names)
-
-        log_name_change(height, plain_name, "activate")
-
-      timeout ->
-        auction_end = height + timeout
-        m_auction_exp = Model.expiration(index: {auction_end, plain_name})
-
-        make_m_bid =
-          &Model.auction_bid(index: {plain_name, {bi, txi}, auction_end, account_pk, &1})
-
-        IntTransfer.fee({height, txi}, :spend_name, account_pk, txi, name_fee)
-
-        m_bid =
-          case cache_through_prev(Model.AuctionBid, Name.bid_top_key(plain_name)) do
-            :not_found ->
-              make_m_bid.([{bi, txi}])
-
-            {:ok,
-             {^plain_name, {_, prev_txi}, prev_auction_end, prev_owner, prev_bids} = prev_key} ->
-              cache_through_delete(Model.AuctionBid, prev_key)
-              cache_through_delete(Model.AuctionOwner, {prev_owner, plain_name})
-              cache_through_delete(Model.AuctionExpiration, {prev_auction_end, plain_name})
-
-              log_auction_change(
-                height,
-                plain_name,
-                "delete auction ending in #{prev_auction_end}"
-              )
-
-              %{tx: prev_tx} = read_cached_raw_tx!(prev_txi)
-
-              IntTransfer.fee(
-                {height, txi},
-                :refund_name,
-                prev_owner,
-                prev_txi,
-                prev_tx.name_fee
-              )
-
-              make_m_bid.([{bi, txi} | prev_bids])
-          end
-
-        cache_through_write(Model.AuctionBid, m_bid)
-        cache_through_write(Model.AuctionOwner, m_owner)
-        cache_through_write(Model.AuctionExpiration, m_auction_exp)
-        inc(:stat_sync_cache, :active_auctions)
-
-        log_auction_change(height, plain_name, "activate auction expiring in #{auction_end}")
-    end
-  end
 
   def update(name_hash, tx, txi, {height, _} = bi) do
     delta_ttl = tx_val(tx, :name_update_tx, :name_ttl)
@@ -201,9 +109,6 @@ defmodule AeMdw.Db.Sync.Name do
 
   def log_name_change(height, plain_name, change),
     do: Log.info("[#{height}][name] #{change} #{plain_name}")
-
-  def log_auction_change(height, plain_name, change),
-    do: Log.info("[#{height}][auction] #{change} #{plain_name}")
 
   ################################################################################
   #
@@ -439,11 +344,4 @@ defmodule AeMdw.Db.Sync.Name do
 
   def read_raw_tx!(txi),
     do: Format.to_raw_map(read_tx!(txi))
-
-  def read_cached_raw_tx!(txi) do
-    case :ets.lookup(:tx_sync_cache, txi) do
-      [{^txi, m_tx}] -> Format.to_raw_map(m_tx)
-      [] -> read_raw_tx!(txi)
-    end
-  end
 end

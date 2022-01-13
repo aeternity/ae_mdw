@@ -34,7 +34,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         mutations =
           Transaction.transaction_mutations(
             {signed_tx, txi},
-            {block_index, mb, mb_time, nil},
+            {block_index, mb, mb_time, %{}},
             false
           )
 
@@ -70,7 +70,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         mutations =
           Transaction.transaction_mutations(
             {signed_tx, txi},
-            {block_index, mb, mb_time, nil},
+            {block_index, mb, mb_time, %{}},
             false
           )
 

@@ -295,10 +295,14 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       assert %{"data" => auctions} =
                conn |> get("/names/auctions", limit: limit) |> json_response(200)
 
-      plain_names = Enum.map(auctions, fn %{"name" => plain_name} -> plain_name end)
+      names =
+        Enum.map(auctions, fn %{"name" => plain_name, "info" => %{"auction_end" => auction_end}} ->
+          {plain_name, auction_end}
+        end)
 
       assert length(auctions) <= limit
-      assert ^plain_names = Enum.sort(plain_names)
+      assert Enum.all?(names, fn {plain_name, _auction_end} -> plain_name != "" end)
+      assert ^names = Enum.sort_by(names, fn {_name, expires} -> expires end, :desc)
     end
 
     test "get auctions with parameters by=expiration, direction=forward and limit=3", %{

@@ -3,7 +3,6 @@ defmodule AeMdw.Db.ContractCallMutation do
   Processes contract_call_tx.
   """
 
-  alias AeMdw.Node
   alias AeMdw.Contract
   alias AeMdw.Db.Contract, as: DBContract
   alias AeMdw.Sync.AsyncTasks
@@ -11,11 +10,12 @@ defmodule AeMdw.Db.ContractCallMutation do
 
   defstruct [:contract_pk, :caller_pk, :create_txi, :txi, :fun_arg_res, :call_rec]
 
+  @typep pubkey() :: AeMdw.Node.Db.pubkey()
   @typep txi_option() :: Txs.txi() | -1
 
   @opaque t() :: %__MODULE__{
-            contract_pk: Node.pubkey(),
-            caller_pk: Node.pubkey(),
+            contract_pk: pubkey(),
+            caller_pk: pubkey(),
             create_txi: txi_option(),
             txi: Txs.txi(),
             fun_arg_res: Contract.fun_arg_res_or_error(),
@@ -23,8 +23,8 @@ defmodule AeMdw.Db.ContractCallMutation do
           }
 
   @spec new(
-          Node.pubkey(),
-          Node.pubkey(),
+          pubkey(),
+          pubkey(),
           txi_option(),
           Txs.txi(),
           Contract.fun_arg_res_or_error(),

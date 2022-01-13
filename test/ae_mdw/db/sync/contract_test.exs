@@ -3,9 +3,9 @@ defmodule AeMdw.Db.Sync.ContractTest do
 
   alias AeMdw.Db.Model
 
-  alias AeMdw.Db.Contract, as: DbContract
-  alias AeMdw.Db.Model.Field
+  alias AeMdw.Db.MnesiaWriteMutation
   alias AeMdw.Db.Sync.Contract
+  alias AeMdw.Node
 
   import Mock
 
@@ -15,32 +15,52 @@ defmodule AeMdw.Db.Sync.ContractTest do
     test "it creates an internal call for each event that's not Chain.create/clone" do
       create_txi = 1
       call_txi = 3
-      tx_1 = :tx1
-      tx_2 = :tx2
+
+      account_id =
+        <<44, 102, 253, 22, 212, 89, 216, 54, 106, 220, 2, 78, 65, 149, 128, 184, 42, 187, 24,
+          251, 165, 15, 161, 139, 112, 108, 233, 167, 103, 44, 158, 24>>
+
+      tx_1 = {:tx1, account_id}
+      tx_2 = {:tx2, account_id}
 
       events = [
         {{:internal_call_tx, "some_funname_1"}, %{info: tx_1}},
         {{:internal_call_tx, "some_funname_2"}, %{info: tx_2}}
       ]
 
-      with_mocks [
-        {DbContract, [],
-         [
-           int_call_write: fn _create_txi, _call_txi, _index, _fname, _tx -> :ok end
-         ]}
-      ] do
-        Contract.events(events, call_txi, create_txi)
+      mutation_1 =
+        MnesiaWriteMutation.new(
+          Model.IdIntContractCall,
+          Model.id_int_contract_call(index: {account_id, 1, 3, 0})
+        )
 
-        assert_called(DbContract.int_call_write(create_txi, call_txi, 0, "some_funname_1", tx_1))
-        assert_called(DbContract.int_call_write(create_txi, call_txi, 1, "some_funname_2", tx_2))
+      mutation_2 =
+        MnesiaWriteMutation.new(
+          Model.IdIntContractCall,
+          Model.id_int_contract_call(index: {account_id, 1, 3, 1})
+        )
+
+      with_mocks [
+        {:aetx, [], [specialize_type: fn _tx -> {:spend_tx, tx_1} end]},
+        {Node, [], [tx_ids: fn :spend_tx -> [{:sender_id, 1}] end]}
+      ] do
+        mutations = Contract.events_mutations(events, call_txi, create_txi)
+
+        assert mutation_1 in mutations
+        assert mutation_2 in mutations
       end
     end
 
     test "it creates an Field record for each Chain.create/clone event, using the next Call.amount event" do
       create_txi = 1
       call_txi = 3
-      tx_1 = :tx1
-      tx_2 = :tx2
+
+      contract_id =
+        <<44, 102, 253, 22, 212, 89, 216, 54, 106, 220, 2, 78, 65, 149, 128, 184, 42, 187, 24,
+          251, 165, 15, 161, 139, 112, 108, 233, 167, 103, 44, 158, 24>>
+
+      tx_1 = {:tx1, contract_id}
+      tx_2 = {:tx2, contract_id}
 
       events = [
         {{:internal_call_tx, "Chain.create"}, %{info: :error}},
@@ -49,39 +69,27 @@ defmodule AeMdw.Db.Sync.ContractTest do
         {{:internal_call_tx, "Call.amount"}, %{info: tx_2}}
       ]
 
-      contract_id =
-        <<44, 102, 253, 22, 212, 89, 216, 54, 106, 220, 2, 78, 65, 149, 128, 184, 42, 187, 24,
-          251, 165, 15, 161, 139, 112, 108, 233, 167, 103, 44, 158, 24>>
+      mutation_1 =
+        MnesiaWriteMutation.new(
+          Model.FnameIntContractCall,
+          Model.fname_int_contract_call(index: {"Call.amount", 3, 1})
+        )
+
+      mutation_2 =
+        MnesiaWriteMutation.new(
+          Model.FnameIntContractCall,
+          Model.fname_int_contract_call(index: {"Chain.clone", 3, 2})
+        )
 
       with_mocks [
-        {DbContract, [],
-         [
-           int_call_write: fn _create_txi, _call_txi, _index, _fname, _tx -> :ok end
-         ]},
-        {:aetx, [], [specialize_type: fn _tx -> {:spend_tx, %{}} end]},
-        {:aec_spend_tx, [], [recipient_id: fn _tx -> {:id, :account, contract_id} end]},
-        {:mnesia, [], [write: fn _tab, _record, _lock -> :ok end]}
+        {:aetx, [], [specialize_type: fn _tx -> {:spend_tx, tx_1} end]},
+        {Node, [], [tx_ids: fn :spend_tx -> [{:sender_id, 1}] end]},
+        {:aec_spend_tx, [], [recipient_id: fn _tx -> {:id, :account, contract_id} end]}
       ] do
-        Contract.events(events, call_txi, create_txi)
+        mutations = Contract.events_mutations(events, call_txi, create_txi)
 
-        assert_called(DbContract.int_call_write(create_txi, call_txi, 0, "Call.amount", tx_1))
-        assert_called(DbContract.int_call_write(create_txi, call_txi, 1, "Call.amount", tx_2))
-
-        assert_called(
-          :mnesia.write(
-            Field,
-            Model.field(index: {:contract_call_tx, nil, contract_id, call_txi}),
-            :write
-          )
-        )
-
-        assert_called(
-          :mnesia.write(
-            Field,
-            Model.field(index: {:contract_call_tx, nil, contract_id, call_txi}),
-            :write
-          )
-        )
+        assert mutation_1 in mutations
+        assert mutation_2 in mutations
       end
     end
   end
