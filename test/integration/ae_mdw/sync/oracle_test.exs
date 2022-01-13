@@ -18,17 +18,22 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
   describe "extend" do
     test "succeeds when oracle is active" do
       fn ->
-        {_height, pubkey} = Util.last(Model.ActiveOracleExpiration)
+        {height, pubkey} = Util.last(Model.ActiveOracleExpiration)
+        ttl = 123
+        new_expiration = height + ttl
 
         mutation =
           OracleExtendMutation.new(
             {Sync.height(:top), 0},
             Util.last_txi(),
             pubkey,
-            123
+            ttl
           )
 
         Mnesia.transaction([mutation])
+
+        assert [Model.oracle(index: ^pubkey, expire: ^new_expiration)] =
+                 :mnesia.read(Model.ActiveOracle, pubkey)
 
         :mnesia.abort(:rollback)
       end
@@ -48,6 +53,8 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
           )
 
         Mnesia.transaction([mutation])
+
+        assert [] = :mnesia.read(Model.ActiveOracle, pubkey)
 
         :mnesia.abort(:rollback)
       end
