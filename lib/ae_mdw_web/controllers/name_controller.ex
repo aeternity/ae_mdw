@@ -95,7 +95,7 @@ defmodule AeMdwWeb.NameController do
   def owned_by(conn, %{"id" => owner} = params),
     do:
       handle_input(conn, fn ->
-        active? = params |> Map.get("active", "true") |> String.to_existing_atom()
+        active? = Map.get(params, "active", "true") == "true"
         owned_by_reply(conn, Validate.id!(owner, [:account_pubkey]), expand?(params), active?)
       end)
 
