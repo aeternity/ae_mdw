@@ -5,6 +5,7 @@ defmodule AeMdw.Oracles do
 
   require AeMdw.Db.Model
 
+  alias AeMdw.Blocks
   alias AeMdw.Collection
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
@@ -113,7 +114,8 @@ defmodule AeMdw.Oracles do
 
     kbi = min(expire_height - 1, last_gen)
 
-    oracle_tree = AeMdw.Db.Oracle.oracle_tree!({kbi, -1})
+    block_hash = Blocks.block_hash(kbi)
+    oracle_tree = AeMdw.Db.Oracle.oracle_tree!(block_hash)
     oracle_rec = :aeo_state_tree.get_oracle(pk, oracle_tree)
 
     %{

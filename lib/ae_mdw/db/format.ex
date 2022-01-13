@@ -3,6 +3,7 @@ defmodule AeMdw.Db.Format do
   alias AeMdw.Node, as: AE
   alias :aeser_api_encoder, as: Enc
 
+  alias AeMdw.Blocks
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
@@ -90,7 +91,8 @@ defmodule AeMdw.Db.Format do
     expire_height = Model.oracle(m_oracle, :expire)
 
     kbi = min(expire_height - 1, last_gen())
-    oracle_tree = AeMdw.Db.Oracle.oracle_tree!({kbi, -1})
+    block_hash = Blocks.block_hash(kbi)
+    oracle_tree = AeMdw.Db.Oracle.oracle_tree!(block_hash)
     oracle_rec = :aeo_state_tree.get_oracle(pk, oracle_tree)
 
     %{

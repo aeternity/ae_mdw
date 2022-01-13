@@ -378,11 +378,12 @@ defmodule AeMdw.Db.Sync.Transaction do
          type: :oracle_response_tx,
          tx: tx,
          txi: txi,
+         block_hash: block_hash,
          block_index: block_index
        }) do
     oracle_pk = :aeo_response_tx.oracle_pubkey(tx)
     query_id = :aeo_response_tx.query_id(tx)
-    o_tree = Oracle.oracle_tree!(block_index)
+    o_tree = Oracle.oracle_tree!(block_hash)
 
     try do
       fee =
