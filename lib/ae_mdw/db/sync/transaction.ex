@@ -18,6 +18,9 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Name
   alias AeMdw.Db.NameClaimMutation
+  alias AeMdw.Db.NameRevokeMutation
+  alias AeMdw.Db.NameTransferMutation
+  alias AeMdw.Db.NameUpdateMutation
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.OracleExtendMutation
   alias AeMdw.Db.OracleRegisterMutation
@@ -25,7 +28,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Sync.Stats
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.WriteFieldMutation
-  alias AeMdw.Db.WriteLinksMutation
   alias AeMdw.Db.WriteTxMutation
   alias AeMdw.Mnesia
   alias AeMdw.Node
@@ -130,7 +132,6 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     [
       WriteTxMutation.new(model_tx, type, txi, mb_time, inner_tx?),
-      WriteLinksMutation.new(type, tx, signed_tx, txi, tx_hash, block_index, block_hash),
       tx_mutations(tx_context),
       WriteFieldsMutation.new(type, tx, block_index, txi),
       inner_tx_mutations
@@ -403,6 +404,48 @@ defmodule AeMdw.Db.Sync.Transaction do
         Log.error(error)
         []
     end
+  end
+
+  defp tx_mutations(%TxContext{
+         type: :name_update_tx,
+         tx: tx,
+         txi: txi,
+         block_index: block_index
+       }) do
+    name_hash = :aens_update_tx.name_hash(tx)
+    name_ttl = :aens_update_tx.name_ttl(tx)
+    pointers = :aens_update_tx.pointers(tx)
+
+    [
+      NameUpdateMutation.new(name_hash, name_ttl, pointers, txi, block_index)
+    ]
+  end
+
+  defp tx_mutations(%TxContext{
+         type: :name_transfer_tx,
+         tx: tx,
+         txi: txi,
+         block_index: block_index
+       }) do
+    name_hash = :aens_transfer_tx.name_hash(tx)
+    new_owner = :aens_transfer_tx.recipient_pubkey(tx)
+
+    [
+      NameTransferMutation.new(name_hash, new_owner, txi, block_index)
+    ]
+  end
+
+  defp tx_mutations(%TxContext{
+         type: :name_revoke_tx,
+         tx: tx,
+         txi: txi,
+         block_index: block_index
+       }) do
+    name_hash = :aens_revoke_tx.name_hash(tx)
+
+    [
+      NameRevokeMutation.new(name_hash, txi, block_index)
+    ]
   end
 
   defp tx_mutations(_tx_context), do: []

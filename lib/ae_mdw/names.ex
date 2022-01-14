@@ -23,6 +23,9 @@ defmodule AeMdw.Names do
   @type name_hash() :: binary()
   @type name_fee() :: non_neg_integer()
   @type auction_timeout :: non_neg_integer()
+  @type ttl :: non_neg_integer()
+  @type pointer :: term()
+  @type pointers :: [pointer()]
 
   @typep order_by :: :expiration | :name
   @typep limit :: Mnesia.limit()
