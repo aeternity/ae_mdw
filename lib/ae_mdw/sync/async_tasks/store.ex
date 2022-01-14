@@ -9,17 +9,24 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
   require Ex2ms
   require Model
 
-  @typep task_index() :: {pos_integer(), atom()}
+  @type task_index() :: {pos_integer(), atom()}
+  @type task_args() :: list()
+
+  @processing_tab :async_tasks_processing
+  @args_tab :async_tasks_args
 
   @spec init() :: :ok
   def init do
-    :ets.new(:async_tasks_processing, [:named_table, :set, :public])
+    :ets.new(@processing_tab, [:named_table, :set, :public])
+    :ets.new(@args_tab, [:named_table, :set, :public])
     :ok
   end
 
   @spec reset() :: :ok
   def reset do
-    :ets.delete_all_objects(:async_tasks_processing)
+    :ets.delete_all_objects(@processing_tab)
+    :ets.delete_all_objects(@args_tab)
+    cache_tasks_by_args()
     :ok
   end
 
@@ -31,10 +38,9 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
       end
 
     {m_tasks, _cont} = Util.select(Model.AsyncTasks, any_spec, max_amount)
-    m_tasks = dedup_records(m_tasks)
 
     Enum.filter(m_tasks, fn Model.async_tasks(index: index) ->
-      not :ets.member(:async_tasks_processing, index)
+      not :ets.member(@processing_tab, index)
     end)
   end
 
@@ -45,6 +51,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
         index = {System.system_time(), task_type}
         m_task = Model.async_tasks(index: index, args: args)
         :mnesia.write(Model.AsyncTasks, m_task, :write)
+        :ets.insert(@args_tab, {{task_type, args}})
       end
     end)
 
@@ -53,44 +60,39 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
 
   @spec set_processing(task_index()) :: :ok
   def set_processing(task_index) do
-    :ets.insert(:async_tasks_processing, {task_index})
+    :ets.insert(@processing_tab, {task_index})
     :ok
   end
 
-  @spec set_done(task_index()) :: :ok
-  def set_done(task_index) do
+  @spec set_done(task_index(), task_args()) :: :ok
+  def set_done({_ts, task_type} = task_index, args) do
     :mnesia.sync_transaction(fn ->
       :mnesia.delete(Model.AsyncTasks, task_index, :write)
     end)
 
-    :ets.delete_object(:async_tasks_processing, task_index)
+    :ets.delete_object(@processing_tab, task_index)
+    :ets.delete(@args_tab, {task_type, args})
     :ok
   end
 
   #
   # Private functions
   #
-  defp is_enqueued?(task_type, args) do
-    exists_spec =
-      Ex2ms.fun do
-        {:_, {:_, ^task_type}, ^args} -> true
-      end
+  defp cache_tasks_by_args() do
+    {:atomic, indexed_args_records} =
+      :mnesia.transaction(fn ->
+        args_spec =
+          Ex2ms.fun do
+            Model.async_tasks(index: {_ts, task_type}, args: args) -> {{task_type, args}}
+          end
 
-    case :mnesia.select(Model.AsyncTasks, exists_spec, 1, :read) do
-      {[true], _cont} -> true
-      {[], _cont} -> false
-    end
-  end
-
-  defp dedup_records(tasks) do
-    tasks
-    |> Enum.group_by(fn Model.async_tasks(args: args) -> args end)
-    |> Enum.map(fn {_args, [first | to_delete]} ->
-      Enum.each(to_delete, fn Model.async_tasks(index: index) ->
-        :mnesia.dirty_delete(Model.AsyncTasks, index)
+        :mnesia.select(Model.AsyncTasks, args_spec)
       end)
 
-      first
-    end)
+    :ets.insert(@args_tab, indexed_args_records)
+  end
+
+  defp is_enqueued?(task_type, args) do
+    :ets.member(@args_tab, {task_type, args})
   end
 end

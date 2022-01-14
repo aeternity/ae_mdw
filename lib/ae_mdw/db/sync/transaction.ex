@@ -285,13 +285,14 @@ defmodule AeMdw.Db.Sync.Transaction do
          tx_events: tx_events
        }) do
     contract_pk = :aect_call_tx.contract_pubkey(tx)
+    <<caller_pk::binary-32>> = :aect_call_tx.caller_pubkey(tx)
     create_txi = Sync.Contract.get_txi(contract_pk)
 
     {fun_arg_res, call_rec} =
       Contract.call_tx_info(tx, contract_pk, block_hash, &Contract.to_map/1)
 
     Sync.Contract.events_mutations(tx_events, txi, create_txi) ++
-      [ContractCallMutation.new(create_txi, txi, fun_arg_res, call_rec)]
+      [ContractCallMutation.new(contract_pk, caller_pk, create_txi, txi, fun_arg_res, call_rec)]
   end
 
   defp tx_mutations(%TxContext{

@@ -10,7 +10,7 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Origin
   alias AeMdw.Log
-  alias AeMdw.Sync.AsyncTasks
+  alias AeMdw.Node
   alias AeMdw.Txs
   alias AeMdw.Validate
 
@@ -22,14 +22,7 @@ defmodule AeMdw.Db.Contract do
   import AeMdw.Util, only: [compose: 2, max_256bit_int: 0]
   import AeMdw.Db.Util
 
-  @type pubkey() :: <<_::256>>
-  @typep call_map() ::
-           %{
-             function: any(),
-             arguments: list(),
-             result: any(),
-             return: any()
-           }
+  @type pubkey :: AeMdw.Node.Db.pubkey()
 
   @spec aex9_creation_write(tuple(), pubkey(), pubkey(), integer()) :: :ok
   def aex9_creation_write({name, symbol, decimals}, contract_pk, owner_pk, txi) do
@@ -72,9 +65,9 @@ defmodule AeMdw.Db.Contract do
     :ok
   end
 
-  @spec aex9_presence_exists?(pubkey(), pubkey(), integer() | nil) :: boolean()
-  def aex9_presence_exists?(contract_pk, account_pk, txi \\ nil) do
-    txi_search_prev = (txi && txi + 1) || nil
+  @spec aex9_presence_exists?(pubkey(), pubkey(), integer()) :: boolean()
+  def aex9_presence_exists?(contract_pk, account_pk, txi) do
+    txi_search_prev = txi + 1
 
     case :mnesia.prev(Model.Aex9AccountPresence, {account_pk, txi_search_prev, contract_pk}) do
       {^account_pk, _txi, ^contract_pk} -> true
@@ -82,7 +75,26 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  @spec call_write(integer(), integer(), map() | {:error, any()}) :: :ok
+  @spec aex9_presence_exists?(pubkey(), pubkey()) :: boolean()
+  def aex9_presence_exists?(contract_pk, account_pk) do
+    0
+    |> Stream.unfold(fn
+      :found ->
+        nil
+
+      txi_search_next ->
+        case :mnesia.next(Model.Aex9AccountPresence, {account_pk, txi_search_next, contract_pk}) do
+          {^account_pk, _txi, ^contract_pk} -> {true, :found}
+          {^account_pk, next_txi, _contract_pk} -> {false, next_txi}
+          _not_found -> nil
+        end
+    end)
+    |> Enum.to_list()
+    |> List.last()
+    |> Kernel.||(false)
+  end
+
+  @spec call_write(integer(), integer(), Contract.fun_arg_res_or_error()) :: :ok
   def call_write(create_txi, txi, %{function: fname, arguments: args, result: %{error: [err]}}),
     do: call_write(create_txi, txi, fname, args, :error, err)
 
@@ -160,7 +172,7 @@ defmodule AeMdw.Db.Contract do
 
   @spec is_aex9_transfer?(binary(), pubkey()) :: boolean()
   def is_aex9_transfer?(evt_hash, aex9_contract_pk) do
-    aex9_transfer_evt = AeMdw.Node.aex9_transfer_event_hash()
+    aex9_transfer_evt = Node.aex9_transfer_event_hash()
 
     evt_hash == aex9_transfer_evt and aex9_contract_pk != nil
   end
@@ -175,8 +187,8 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  @spec call_fun_args_res(pubkey(), integer()) :: call_map()
-  def call_fun_args_res(contract_pk, call_txi) do
+  @spec call_fun_arg_res(pubkey(), integer()) :: Contract.fun_arg_res()
+  def call_fun_arg_res(contract_pk, call_txi) do
     create_txi = Origin.tx_index({:contract, contract_pk}) || -1
     m_call = read!(Model.ContractCall, {create_txi, call_txi})
 
@@ -357,9 +369,6 @@ defmodule AeMdw.Db.Contract do
     :mnesia.write(Model.RevAex9Transfer, m_rev_transfer, :write)
     :mnesia.write(Model.IdxAex9Transfer, m_idx_transfer, :write)
     aex9_write_presence(contract_pk, txi, to_pk)
-
-    AsyncTasks.Producer.enqueue(:update_aex9_presence, [contract_pk])
-
     aex9_presence_cache_write({{contract_pk, txi, i}, {from_pk, to_pk}, amount})
   end
 end

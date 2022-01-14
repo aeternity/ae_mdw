@@ -8,7 +8,7 @@ defmodule AeMdw.Node do
   all of these functions more explicit.
   """
 
-  @type tx_type() ::
+  @type tx_type ::
           :spend_tx
           | :oracle_register_tx
           | :oracle_extend_tx
