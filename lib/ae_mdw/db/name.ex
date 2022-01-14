@@ -79,7 +79,7 @@ defmodule AeMdw.Db.Name do
     if Model.name(m_name, :expire) == height do
       owner = Model.name(m_name, :owner)
       cache_through_write(Model.InactiveName, m_name)
-      cache_through_write(Model.InactiveOwnerName, {owner, plain_name})
+      cache_through_write(Model.InactiveNameOwner, Model.owner(index: {owner, plain_name}))
       cache_through_write(Model.InactiveNameExpiration, m_exp)
       cache_through_delete(Model.ActiveName, plain_name)
       cache_through_delete(Model.ActiveNameOwner, {owner, plain_name})
