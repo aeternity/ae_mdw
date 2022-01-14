@@ -30,10 +30,16 @@ defmodule AeMdw.Db.Name do
     |> map_ok!(&Validate.id!/1)
   end
 
-  def owned_by(owner_pk) do
+  def owned_by(owner_pk, _active? = true) do
     %{
-      actives: collect_vals(Model.ActiveNameOwner, owner_pk),
+      names: collect_vals(Model.ActiveNameOwner, owner_pk),
       top_bids: collect_vals(Model.AuctionOwner, owner_pk)
+    }
+  end
+
+  def owned_by(owner_pk, _active? = false) do
+    %{
+      names: collect_vals(Model.InactiveNameOwner, owner_pk)
     }
   end
 
@@ -73,6 +79,7 @@ defmodule AeMdw.Db.Name do
     if Model.name(m_name, :expire) == height do
       owner = Model.name(m_name, :owner)
       cache_through_write(Model.InactiveName, m_name)
+      cache_through_write(Model.InactiveOwnerName, {owner, plain_name})
       cache_through_write(Model.InactiveNameExpiration, m_exp)
       cache_through_delete(Model.ActiveName, plain_name)
       cache_through_delete(Model.ActiveNameOwner, {owner, plain_name})
@@ -282,10 +289,10 @@ defmodule AeMdw.Db.Name do
 
   def cache_through_delete_inactive(nil), do: nil
 
-  def cache_through_delete_inactive(m_name) do
-    plain_name = Model.name(m_name, :index)
+  def cache_through_delete_inactive(Model.name(index: plain_name, owner: owner_pk) = m_name) do
     expire = revoke_or_expire_height(m_name)
     cache_through_delete(Model.InactiveName, plain_name)
+    cache_through_delete(Model.InactiveNameOwner, {owner_pk, plain_name})
     cache_through_delete(Model.InactiveNameExpiration, {expire, plain_name})
   end
 

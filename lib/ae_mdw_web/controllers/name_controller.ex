@@ -27,8 +27,6 @@ defmodule AeMdwWeb.NameController do
   ##########
 
   @spec stream_plug_hook(Conn.t()) :: Conn.t()
-  def stream_plug_hook(%Plug.Conn{path_info: ["names", "owned_by" | _]} = conn),
-    do: conn
 
   def stream_plug_hook(%Plug.Conn{path_info: ["names", "active"]} = conn),
     do: conn
@@ -97,7 +95,8 @@ defmodule AeMdwWeb.NameController do
   def owned_by(conn, %{"id" => owner} = params),
     do:
       handle_input(conn, fn ->
-        owned_by_reply(conn, Validate.id!(owner, [:account_pubkey]), expand?(params))
+        active? = Map.get(params, "active", "true") == "true"
+        owned_by_reply(conn, Validate.id!(owner, [:account_pubkey]), expand?(params), active?)
       end)
 
   @spec auctions(Conn.t(), map()) :: Conn.t()
@@ -291,8 +290,8 @@ defmodule AeMdwWeb.NameController do
       raise ErrInput.NotFound, value: plain_name
   end
 
-  defp owned_by_reply(conn, owner_pk, expand?) do
-    %{actives: actives, top_bids: top_bids} = Name.owned_by(owner_pk)
+  defp owned_by_reply(conn, owner_pk, expand?, active?) do
+    query_res = Name.owned_by(owner_pk, active?)
 
     jsons = fn plains, source, locator ->
       for plain <- plains, reduce: [] do
@@ -304,16 +303,22 @@ defmodule AeMdwWeb.NameController do
       end
     end
 
-    actives = jsons.(actives, Model.ActiveName, &Name.locate/1)
+    if active? do
+      names = jsons.(query_res.names, Model.ActiveName, &Name.locate/1)
 
-    top_bids =
-      jsons.(
-        top_bids,
-        Model.AuctionBid,
-        &map_some(Name.locate_bid(&1), fn x -> {x, Model.AuctionBid} end)
-      )
+      top_bids =
+        jsons.(
+          query_res.top_bids,
+          Model.AuctionBid,
+          &map_some(Name.locate_bid(&1), fn x -> {x, Model.AuctionBid} end)
+        )
 
-    json(conn, %{"active" => actives, "top_bid" => top_bids})
+      json(conn, %{"active" => names, "top_bid" => top_bids})
+    else
+      names = jsons.(query_res.names, Model.InactiveName, &Name.locate/1)
+
+      json(conn, %{"inactive" => names})
+    end
   end
 
   ##########

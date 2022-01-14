@@ -11,9 +11,6 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   alias AeMdw.Validate
   alias AeMdwWeb.TestUtil
 
-  import AeMdw.Util
-  import AeMdwWeb.Util
-
   require Model
 
   @moduletag :integration
@@ -549,41 +546,49 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   end
 
   describe "owned_by" do
-    test "get name information for given acount/owner", %{conn: conn} do
+    test "get active names owned by an account", %{conn: conn} do
       id = "ak_KR3a8dukEYVoZPoWFaszFgjKUpBh7J1Q5iWsz9YCamHn2rTCp"
       conn = get(conn, "/names/owned_by/#{id}")
 
       response = json_response(conn, 200)
 
-      assert Jason.encode!(response) ==
-               Jason.encode!(
-                 TestUtil.handle_input(fn ->
-                   owned_by_reply(Validate.id!(id, [:account_pubkey]), expand?(conn.params))
-                 end)
-               )
+      assert Enum.each(response["active"], fn %{
+                                                "active" => true,
+                                                "name" => plain_name,
+                                                "hash" => hash,
+                                                "info" => %{"ownership" => %{"current" => owner}}
+                                              } ->
+               assert owner == id
 
-      assert Enum.each(response["active"], fn owned_entry ->
                expected_hash =
-                 case :aens.get_name_hash(owned_entry["name"]) do
+                 case :aens.get_name_hash(plain_name) do
                    {:ok, name_id_bin} -> Enc.encode(:name, name_id_bin)
                    _error -> nil
                  end
 
-               assert owned_entry["hash"] == expected_hash
+               assert hash == expected_hash
              end)
+    end
+
+    test "get inactive names that were owned by an account", %{conn: conn} do
+      id = "ak_fCCw1JEkvXdztZxk8FRGNAkvmArhVeow89e64yX4AxbCPrVh5"
+      conn = get(conn, Routes.name_path(conn, :owned_by, id, active: false))
+
+      response = json_response(conn, 200)
+
+      Enum.each(response["inactive"], fn %{
+                                           "active" => false,
+                                           "info" => %{"ownership" => %{"current" => last_owner}}
+                                         } ->
+        assert last_owner == id
+      end)
     end
 
     test "renders error when the key is invalid", %{conn: conn} do
       id = "ak_invalid_key"
       conn = get(conn, "/names/owned_by/#{id}")
 
-      assert json_response(conn, 400) ==
-               %{
-                 "error" =>
-                   TestUtil.handle_input(fn ->
-                     owned_by_reply(Validate.id!(id, [:account_pubkey]), expand?(conn.params))
-                   end)
-               }
+      assert json_response(conn, 400) == %{"error" => "invalid id: #{id}"}
     end
   end
 
@@ -619,30 +624,5 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       "active" => Format.map_raw_values(active, &Format.to_json/1),
       "inactive" => Format.map_raw_values(inactive, &Format.to_json/1)
     }
-  end
-
-  defp owned_by_reply(owner_pk, expand?) do
-    %{actives: actives, top_bids: top_bids} = Name.owned_by(owner_pk)
-
-    jsons = fn plains, source, locator ->
-      for plain <- plains, reduce: [] do
-        acc ->
-          case locator.(plain) do
-            {info, ^source} -> [Format.to_map(info, source, expand?) | acc]
-            _not_found -> acc
-          end
-      end
-    end
-
-    actives = jsons.(actives, Model.ActiveName, &Name.locate/1)
-
-    top_bids =
-      jsons.(
-        top_bids,
-        Model.AuctionBid,
-        &map_some(Name.locate_bid(&1), fn x -> {x, Model.AuctionBid} end)
-      )
-
-    %{"active" => actives, "top_bid" => top_bids}
   end
 end
