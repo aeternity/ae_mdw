@@ -51,15 +51,17 @@ defmodule AeMdw.Db.Sync.Contract do
     # This function relies on a property that every Chain.clone and Chain.create
     # always have a subsequent Call.amount transaction which tranfers tokens
     # from the original contract to the newly created contract.
-    chain_mutations =
+    {chain_events, non_chain_events} =
       events
       |> Enum.zip(shifted_events)
-      |> Enum.filter(fn
+      |> Enum.split_with(fn
         {{{:internal_call_tx, "Chain.create"}, _info}, _next_event} -> true
         {{{:internal_call_tx, "Chain.clone"}, _info}, _next_event} -> true
         {{{:internal_call_tx, _fname}, _info}, _next_event} -> false
       end)
-      |> Enum.map(fn
+
+    chain_mutations =
+      Enum.map(chain_events, fn
         {{{:internal_call_tx, _fname}, _info}, next_event} ->
           {{:internal_call_tx, "Call.amount"}, %{info: aetx}} = next_event
           {:spend_tx, tx} = :aetx.specialize_type(aetx)
@@ -69,14 +71,15 @@ defmodule AeMdw.Db.Sync.Contract do
           MnesiaWriteMutation.new(Model.Field, m_field)
       end)
 
-    int_calls_mutations =
-      events
+    # Chain.* events don't contain the transaction in the event info, can't be indexed as an internal call
+    non_chain_mutations =
+      non_chain_events
       |> Enum.with_index()
-      |> Enum.flat_map(fn {{{:internal_call_tx, fname}, %{info: tx}}, i} ->
+      |> Enum.flat_map(fn {{{{:internal_call_tx, fname}, %{info: tx}}, _next_event}, i} ->
         DBContract.int_call_write_mutations(create_txi, call_txi, i, fname, tx)
       end)
 
-    chain_mutations ++ int_calls_mutations
+    chain_mutations ++ non_chain_mutations
   end
 
   @spec get_txi(Db.pubkey()) :: integer()

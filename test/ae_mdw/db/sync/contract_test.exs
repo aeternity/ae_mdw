@@ -72,13 +72,13 @@ defmodule AeMdw.Db.Sync.ContractTest do
       mutation_1 =
         MnesiaWriteMutation.new(
           Model.FnameIntContractCall,
-          Model.fname_int_contract_call(index: {"Call.amount", 3, 1})
+          Model.fname_int_contract_call(index: {"Call.amount", 3, 0})
         )
 
       mutation_2 =
         MnesiaWriteMutation.new(
           Model.FnameIntContractCall,
-          Model.fname_int_contract_call(index: {"Chain.clone", 3, 2})
+          Model.fname_int_contract_call(index: {"Call.amount", 3, 1})
         )
 
       with_mocks [
