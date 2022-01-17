@@ -437,8 +437,9 @@ defmodule AeMdw.Contract do
 
   defp get_events(micro_block) when elem(micro_block, 0) == :mic_block do
     txs = :aec_blocks.txs(micro_block)
+    txs_taken = txs_until_last_contract_tx(txs)
 
-    if has_contract_tx?(txs) do
+    if txs_taken != [] do
       header = :aec_blocks.to_header(micro_block)
       {:ok, hash} = :aec_headers.hash_header(header)
       consensus = :aec_headers.consensus_module(header)
@@ -451,18 +452,32 @@ defmodule AeMdw.Contract do
       trees_in = apply(consensus, :state_pre_transform_micro_node, [node, trees_in])
       env = :aetx_env.tx_env_from_key_header(prev_key_header, prev_key_hash, time, prev_hash)
 
-      {:ok, _, _, events} = :aec_block_micro_candidate.apply_block_txs_strict(txs, trees_in, env)
+      {:ok, _, _, events} =
+        :aec_block_micro_candidate.apply_block_txs_strict(txs_taken, trees_in, env)
+
       events
     else
       []
     end
   end
 
-  defp has_contract_tx?(mb_txs) do
-    Enum.any?(mb_txs, fn signed_tx ->
-      {mod, _tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
-      mod.type() in [:contract_create_tx, :contract_call_tx]
-    end)
+  defp txs_until_last_contract_tx(mb_txs) do
+    {tx_pos, last_ct_tx_pos} =
+      Enum.reduce(mb_txs, {1, -1}, fn signed_tx, {tx_pos, last_index} ->
+        {mod, _tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
+
+        if mod.type() in [:contract_create_tx, :contract_call_tx] do
+          {tx_pos + 1, tx_pos}
+        else
+          {tx_pos + 1, last_index}
+        end
+      end)
+
+    case last_ct_tx_pos do
+      -1 -> []
+      ^tx_pos -> mb_txs
+      ^last_ct_tx_pos -> Enum.take(mb_txs, last_ct_tx_pos)
+    end
   end
 
   defp call_rec_from_id(call_id, contract_pk, block_hash) do
