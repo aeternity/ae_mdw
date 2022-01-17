@@ -26,11 +26,8 @@ defmodule AeMdw.Db.Sync.Name do
 
   ##########
 
-  def update(name_hash, tx, txi, {height, _} = bi) do
-    delta_ttl = tx_val(tx, :name_update_tx, :name_ttl)
-    pointers = tx_val(tx, :name_update_tx, :pointers)
+  def update(name_hash, delta_ttl, pointers, txi, {height, _mbi} = bi) do
     plain_name = plain_name!(name_hash)
-
     m_name = cache_through_read!(Model.ActiveName, plain_name)
     old_expire = Model.name(m_name, :expire)
     new_expire = height + delta_ttl
@@ -63,12 +60,11 @@ defmodule AeMdw.Db.Sync.Name do
     end
   end
 
-  def transfer(name_hash, tx, txi, {height, _} = bi) do
+  def transfer(name_hash, new_owner, txi, {height, _mbi} = bi) do
     plain_name = plain_name!(name_hash)
 
     m_name = cache_through_read!(Model.ActiveName, plain_name)
     old_owner = Model.name(m_name, :owner)
-    new_owner = :aens_transfer_tx.recipient_pubkey(tx)
 
     transfers = [{bi, txi} | Model.name(m_name, :transfers)]
     m_name = Model.name(m_name, transfers: transfers, owner: new_owner)
@@ -81,7 +77,7 @@ defmodule AeMdw.Db.Sync.Name do
     log_name_change(height, plain_name, "transfer")
   end
 
-  def revoke(name_hash, _tx, txi, {height, _} = bi) do
+  def revoke(name_hash, txi, {height, _mbi} = bi) do
     plain_name = plain_name!(name_hash)
 
     m_name = cache_through_read!(Model.ActiveName, plain_name)
