@@ -72,7 +72,7 @@ defmodule AeMdw.Migrations.ReindexIntTransfersAccIndex do
   end
 
   defp reindex_transfers(batches_count) do
-    (0..(batches_count - 1))
+    0..(batches_count - 1)
     |> Enum.map(fn index ->
       start_gen = index * @gen_batches_size
       next_gen = start_gen + @gen_batches_size
@@ -93,6 +93,7 @@ defmodule AeMdw.Migrations.ReindexIntTransfersAccIndex do
       |> Stream.unfold(fn
         @end_token ->
           nil
+
         key ->
           next_key = :mnesia.dirty_next(@int_transfer_table, key)
           {next_key, next_key}
@@ -103,13 +104,14 @@ defmodule AeMdw.Migrations.ReindexIntTransfersAccIndex do
         {:target_kind_int_transfer_tx, {account_pk, kind, {gen, txi}, ref_txi}, nil}
       end)
 
-    {:atomic, indexed_count} = :mnesia.transaction(fn ->
-      keys
-      |> Stream.each(fn target_kind_tx ->
-        :mnesia.write(@target_kind_int_transfer_table, target_kind_tx, :write)
+    {:atomic, indexed_count} =
+      :mnesia.transaction(fn ->
+        keys
+        |> Stream.each(fn target_kind_tx ->
+          :mnesia.write(@target_kind_int_transfer_table, target_kind_tx, :write)
+        end)
+        |> Enum.count()
       end)
-      |> Enum.count()
-    end)
 
     indexed_count
   end

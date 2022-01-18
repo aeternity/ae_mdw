@@ -20,6 +20,7 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresence do
   @tmp_table :tmp_aex9_presence_migration
 
   defmodule Account2Fix do
+    @moduledoc false
     defstruct [:account_pk, :contract_pk]
   end
 
@@ -35,6 +36,7 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresence do
       Supervisor.start_link([{Task.Supervisor, name: Aex9MigrationSupervisor}],
         strategy: :one_for_one
       )
+
     :dets.open_file(@tmp_table, type: :set)
 
     indexed_count =
@@ -96,10 +98,13 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresence do
     contract_id = Aex9Helper.enc_ct(contract_pk)
     Log.info("Calling #{contract_id}...")
 
-    task = Task.Supervisor.async_nolink(Aex9MigrationSupervisor,
-      fn ->
-        DBN.aex9_balances(contract_pk)
-      end)
+    task =
+      Task.Supervisor.async_nolink(
+        Aex9MigrationSupervisor,
+        fn ->
+          DBN.aex9_balances(contract_pk)
+        end
+      )
 
     case Task.yield(task, @max_wait_ms) || Task.shutdown(task, :brutal_kill) do
       {:ok, ok_res} ->
@@ -128,7 +133,7 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresence do
       }
     end)
     |> Enum.filter(fn %{contract_pk: contract_pk, account_pk: account_pk} ->
-        :mnesia.async_dirty(fn -> not DbContract.aex9_presence_exists?(contract_pk, account_pk) end)
+      :mnesia.async_dirty(fn -> not DbContract.aex9_presence_exists?(contract_pk, account_pk) end)
     end)
   end
 end

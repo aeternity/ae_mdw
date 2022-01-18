@@ -50,7 +50,7 @@ defmodule AeMdw.Migrations.ReindexRemoteLogs do
     {chunk, select_cont} = Util.select(Model.ContractLog, log_spec, @max_chunk_size)
     insert_count = reindex_events(chunk)
 
-    {_, reindexed_count} =
+    {_mnesia_cont, reindexed_count} =
       Enum.reduce_while(1..num_chunks, {select_cont, insert_count}, fn _i, {cont, counter} ->
         case Util.select(cont) do
           {chunk, cont} ->
@@ -69,10 +69,11 @@ defmodule AeMdw.Migrations.ReindexRemoteLogs do
   end
 
   @spec safe_contract_pk({integer(), any(), any(), any()}) :: binary() | nil
-  defp safe_contract_pk({create_txi, _, _, _}) when is_integer(create_txi) and create_txi > 0,
-    do: Origin.pubkey({:contract, create_txi})
+  defp safe_contract_pk({create_txi, _call_txi, _event_hash, _log_idx})
+       when is_integer(create_txi) and create_txi > 0,
+       do: Origin.pubkey({:contract, create_txi})
 
-  defp safe_contract_pk(_), do: nil
+  defp safe_contract_pk(_key), do: nil
 
   @spec safe_contract_txi(binary()) :: integer() | nil
   defp safe_contract_txi(@blacklisted_pk), do: nil
@@ -111,8 +112,9 @@ defmodule AeMdw.Migrations.ReindexRemoteLogs do
     :mnesia.sync_dirty(fn ->
       Enum.reduce(new_records, 0, fn log_record, acc ->
         # double check before insert value set after filtering
-        {new_create_txi, _, _, _} = elem(log_record, 1)
+        {new_create_txi, _call_txi, _event_hash, _log_idx} = elem(log_record, 1)
 
+        # credo:disable-for-next-line
         if is_integer(new_create_txi) and new_create_txi > 0 do
           :ok = :mnesia.write(Model.ContractLog, log_record, :write)
           acc + 1
