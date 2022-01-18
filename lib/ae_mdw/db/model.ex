@@ -37,7 +37,7 @@ defmodule AeMdw.Db.Model do
           )
 
   # txs table :
-  #     index = tx_index (0..), id = tx_id
+  #     index = tx_index (0..), id = tx_id, block_index = {kbi, mbi}
   @tx_defaults [index: -1, id: <<>>, block_index: {-1, -1}, time: -1]
   defrecord :tx, @tx_defaults
 
