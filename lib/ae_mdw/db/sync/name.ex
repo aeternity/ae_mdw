@@ -4,6 +4,7 @@ defmodule AeMdw.Db.Sync.Name do
   alias AeMdw.Blocks
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Mutation
   alias AeMdw.Db.Name
   alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.Sync.Origin
@@ -29,9 +30,7 @@ defmodule AeMdw.Db.Sync.Name do
   import AeMdw.Ets
   import AeMdw.Util
 
-  @spec name_claim_mutations(Node.tx(), Txs.tx_hash(), Blocks.block_index(), Txs.txi()) :: [
-          Mutation.t()
-        ]
+  @spec name_claim_mutations(Node.tx(), any(), Blocks.block_index(), Txs.txi()) :: [Mutation.t()]
   def name_claim_mutations(tx, tx_hash, block_index, txi) do
     {:ok, name_hash} =
       tx
