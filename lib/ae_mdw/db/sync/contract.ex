@@ -2,9 +2,11 @@ defmodule AeMdw.Db.Sync.Contract do
   @moduledoc """
   Saves contract indexed state for creation, calls and events.
   """
+  alias AeMdw.Blocks
   alias AeMdw.Contract
   alias AeMdw.Db.Contract, as: DBContract
   alias AeMdw.Db.MnesiaWriteMutation
+  alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.NameUpdateMutation
