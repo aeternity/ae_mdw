@@ -86,7 +86,7 @@ defmodule AeMdw.Db.Sync.Contract do
           expire = height + delta_ttl
 
           OracleRegisterMutation.new(oracle_pk, block_index, expire, call_txi)
-    end)
+      end)
 
     # Chain.* events don't contain the transaction in the event info, can't be indexed as an internal call
     non_chain_mutations =

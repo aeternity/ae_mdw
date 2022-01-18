@@ -45,6 +45,28 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
       assert json_response(conn, 400) == %{"error" => "invalid id: #{id}"}
     end
+
+    test "it returns oracles registered through contract calls using Oracle.register", %{
+      conn: conn
+    } do
+      assert %{"data" => [contract_call]} =
+               conn
+               |> get("/contracts/calls/backward", function: "Oracle.register", limit: 1)
+               |> json_response(200)
+
+      assert %{
+               "internal_tx" => %{
+                 "oracle_id" => oracle_id,
+                 "oracle_ttl" => %{"type" => "delta", "value" => ttl}
+               },
+               "height" => height
+             } = contract_call
+
+      expire = height + ttl
+
+      assert %{"expire_height" => ^expire} =
+               conn |> get("/oracle/#{oracle_id}") |> json_response(200)
+    end
   end
 
   describe "oracles" do
