@@ -8,7 +8,7 @@ defmodule AeMdw.Log do
 
   @spec info(String.t()) :: :ok
   def info(msg),
-    do: Logger.info(msg, sync: true)
+    do: Logger.info(msg)
 
   @spec warn(String.t()) :: :ok
   def warn(msg),

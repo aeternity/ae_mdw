@@ -18,8 +18,11 @@ defmodule AeMdw.Db.NameTransferMutation do
             block_index: Blocks.block_index()
           }
 
-  @spec new(Names.name_hash(), Db.pubkey(), Txs.txi(), Blocks.block_index()) :: t()
-  def new(name_hash, new_owner, txi, block_index) do
+  @spec new(tuple(), Txs.txi(), Blocks.block_index()) :: t()
+  def new(ns_transfer_tx, txi, block_index) do
+    name_hash = :aens_transfer_tx.name_id(ns_transfer_tx)
+    new_owner = :aens_transfer_tx.recipient_pubkey(ns_transfer_tx)
+
     %__MODULE__{
       name_hash: name_hash,
       new_owner: new_owner,

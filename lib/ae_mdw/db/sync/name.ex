@@ -1,9 +1,14 @@
 defmodule AeMdw.Db.Sync.Name do
   # credo:disable-for-this-file
+  alias AeMdw.Node
+  alias AeMdw.Blocks
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
+  alias AeMdw.Db.NameClaimMutation
+  alias AeMdw.Db.Sync.Origin
   alias AeMdw.Log
+  alias AeMdw.Txs
   alias AeMdw.Validate
 
   require Record
@@ -24,7 +29,21 @@ defmodule AeMdw.Db.Sync.Name do
   import AeMdw.Ets
   import AeMdw.Util
 
-  ##########
+  @spec name_claim_mutations(Node.tx(), Txs.tx_hash(), Blocks.block_index(), Txs.txi()) :: [
+          Mutation.t()
+        ]
+  def name_claim_mutations(tx, tx_hash, block_index, txi) do
+    {:ok, name_hash} =
+      tx
+      |> :aens_claim_tx.name()
+      |> String.downcase()
+      |> :aens.get_name_hash()
+
+    [
+      NameClaimMutation.new(tx, txi, block_index)
+      | Origin.origin_mutations(:name_claim_tx, nil, name_hash, txi, tx_hash)
+    ]
+  end
 
   def update(name_hash, delta_ttl, pointers, txi, {height, _mbi} = bi) do
     plain_name = plain_name!(name_hash)

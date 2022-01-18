@@ -17,7 +17,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.MnesiaWriteMutation
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Name
-  alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.NameRevokeMutation
   alias AeMdw.Db.NameTransferMutation
   alias AeMdw.Db.NameUpdateMutation
@@ -25,15 +24,14 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.OracleExtendMutation
   alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.OracleResponseMutation
+  alias AeMdw.Db.Sync.Origin
   alias AeMdw.Db.Sync.Stats
   alias AeMdw.Db.WriteFieldsMutation
-  alias AeMdw.Db.WriteFieldMutation
   alias AeMdw.Db.WriteTxMutation
   alias AeMdw.Mnesia
   alias AeMdw.Node
   alias AeMdw.Sync.AsyncTasks.Producer
   alias AeMdw.Txs
-  alias AeMdw.Validate
   alias AeMdwWeb.Websocket.Broadcaster
   alias __MODULE__.TxContext
 
@@ -248,6 +246,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          tx: tx,
          txi: txi,
          tx_hash: tx_hash,
+         block_index: block_index,
          block_hash: block_hash,
          tx_events: tx_events
        }) do
@@ -256,7 +255,7 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     :ets.insert(:ct_create_sync_cache, {contract_pk, txi})
 
-    mutations = origin_mutations(:contract_create_tx, nil, contract_pk, txi, tx_hash)
+    mutations = Origin.origin_mutations(:contract_create_tx, nil, contract_pk, txi, tx_hash)
 
     case Contract.get_info(contract_pk) do
       {:ok, {type_info, _compiler_vsn, _source_hash}} ->
@@ -268,7 +267,7 @@ defmodule AeMdw.Db.Sync.Transaction do
           end
 
         mutations ++
-          Sync.Contract.events_mutations(tx_events, txi, txi) ++
+          Sync.Contract.events_mutations(tx_events, block_index, txi, txi) ++
           [
             ContractCreateMutation.new(contract_pk, txi, owner_pk, aex9_meta_info, call_rec)
           ]
@@ -282,6 +281,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          type: :contract_call_tx,
          tx: tx,
          txi: txi,
+         block_index: block_index,
          block_hash: block_hash,
          tx_events: tx_events
        }) do
@@ -292,7 +292,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     {fun_arg_res, call_rec} =
       Contract.call_tx_info(tx, contract_pk, block_hash, &Contract.to_map/1)
 
-    Sync.Contract.events_mutations(tx_events, txi, create_txi) ++
+    Sync.Contract.events_mutations(tx_events, block_index, txi, create_txi) ++
       [ContractCallMutation.new(contract_pk, caller_pk, create_txi, txi, fun_arg_res, call_rec)]
   end
 
@@ -304,7 +304,7 @@ defmodule AeMdw.Db.Sync.Transaction do
        }) do
     {:ok, channel_pk} = :aesc_utils.channel_pubkey(signed_tx)
 
-    origin_mutations(:channel_create_tx, nil, channel_pk, txi, tx_hash)
+    Origin.origin_mutations(:channel_create_tx, nil, channel_pk, txi, tx_hash)
   end
 
   defp tx_mutations(%TxContext{type: :ga_attach_tx, tx: tx, txi: txi, tx_hash: tx_hash}) do
@@ -312,7 +312,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     :ets.insert(:ct_create_sync_cache, {contract_pk, txi})
     AeMdw.Ets.inc(:stat_sync_cache, :contracts)
 
-    origin_mutations(:ga_attach_tx, nil, contract_pk, txi, tx_hash)
+    Origin.origin_mutations(:ga_attach_tx, nil, contract_pk, txi, tx_hash)
   end
 
   defp tx_mutations(%TxContext{
@@ -327,7 +327,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     expire = height + delta_ttl
 
     [
-      origin_mutations(:oracle_register_tx, nil, oracle_pk, txi, tx_hash),
+      Origin.origin_mutations(:oracle_register_tx, nil, oracle_pk, txi, tx_hash),
       OracleRegisterMutation.new(oracle_pk, block_index, expire, txi)
     ]
   end
@@ -337,29 +337,9 @@ defmodule AeMdw.Db.Sync.Transaction do
          tx: tx,
          txi: txi,
          tx_hash: tx_hash,
-         block_index: {height, _mbi} = block_index
+         block_index: block_index
        }) do
-    plain_name = String.downcase(:aens_claim_tx.name(tx))
-    {:ok, name_hash} = :aens.get_name_hash(plain_name)
-    owner_pk = Validate.id!(:aens_claim_tx.account_id(tx))
-    name_fee = :aens_claim_tx.name_fee(tx)
-    proto_vsn = proto_vsn(height)
-    is_lima? = proto_vsn >= AE.lima_vsn()
-    timeout = :aec_governance.name_claim_bid_timeout(plain_name, proto_vsn)
-
-    [
-      origin_mutations(:name_claim_tx, nil, name_hash, txi, tx_hash),
-      NameClaimMutation.new(
-        plain_name,
-        name_hash,
-        owner_pk,
-        name_fee,
-        is_lima?,
-        txi,
-        block_index,
-        timeout
-      )
-    ]
+    Sync.Name.name_claim_mutations(tx, tx_hash, block_index, txi)
   end
 
   defp tx_mutations(%TxContext{
@@ -412,12 +392,8 @@ defmodule AeMdw.Db.Sync.Transaction do
          txi: txi,
          block_index: block_index
        }) do
-    name_hash = :aens_update_tx.name_hash(tx)
-    name_ttl = :aens_update_tx.name_ttl(tx)
-    pointers = :aens_update_tx.pointers(tx)
-
     [
-      NameUpdateMutation.new(name_hash, name_ttl, pointers, txi, block_index)
+      NameUpdateMutation.new(tx, txi, block_index)
     ]
   end
 
@@ -427,11 +403,8 @@ defmodule AeMdw.Db.Sync.Transaction do
          txi: txi,
          block_index: block_index
        }) do
-    name_hash = :aens_transfer_tx.name_hash(tx)
-    new_owner = :aens_transfer_tx.recipient_pubkey(tx)
-
     [
-      NameTransferMutation.new(name_hash, new_owner, txi, block_index)
+      NameTransferMutation.new(tx, txi, block_index)
     ]
   end
 
@@ -449,17 +422,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   end
 
   defp tx_mutations(_tx_context), do: []
-
-  defp origin_mutations(tx_type, pos, pubkey, txi, tx_hash) do
-    m_origin = Model.origin(index: {tx_type, pubkey, txi}, tx_id: tx_hash)
-    m_rev_origin = Model.rev_origin(index: {txi, tx_type, pubkey})
-
-    [
-      MnesiaWriteMutation.new(Model.Origin, m_origin),
-      MnesiaWriteMutation.new(Model.RevOrigin, m_rev_origin),
-      WriteFieldMutation.new(tx_type, pos, pubkey, txi)
-    ]
-  end
 
   defp log_msg(height, _ignore),
     do: "syncing transactions at generation #{height}"
