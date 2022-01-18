@@ -22,7 +22,7 @@ WORKDIR /home/aeternity/node
 ENV NODEDIR=/home/aeternity/node/local/rel/aeternity
 RUN mkdir -p ./local/rel/aeternity/data/mnesia
 RUN curl -s https://api.github.com/repos/aeternity/aeternity/releases/latest | \
-       jq '.assets[] | .browser_download_url | select(contains("ubuntu-x86_64.tar.gz"))' | \
+       jq '.assets[] | .browser_download_url | select(contains("ubuntu-x86_64.tar.gz")) | select(contains("aeternity-v"))' | \
        xargs curl -L --output aeternity.tar.gz  && tar -C ./local/rel/aeternity -xf aeternity.tar.gz
 
 RUN chmod +x ${NODEDIR}/bin/aeternity
