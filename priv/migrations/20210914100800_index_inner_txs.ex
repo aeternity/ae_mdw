@@ -19,7 +19,7 @@ defmodule AeMdw.Migrations.IndexInnerTxs do
   require Ex2ms
   require Logger
 
-  @fortuna_txi_begin 2129380
+  @fortuna_txi_begin 2_129_380
 
   @doc """
   Reindex tx_index for inner transactions after 90800 block when Fortuna upgrade introduced Generalized Accounts.
@@ -107,7 +107,8 @@ defmodule AeMdw.Migrations.IndexInnerTxs do
     txi_list
   end
 
-  defp aetx_specialize_type(signed_tx), do: signed_tx |> :aetx_sign.tx() |> :aetx.specialize_type()
+  defp aetx_specialize_type(signed_tx),
+    do: signed_tx |> :aetx_sign.tx() |> :aetx.specialize_type()
 
   defp tx_context(mblock, mbi) do
     block_index = {:aec_blocks.height(mblock), mbi}

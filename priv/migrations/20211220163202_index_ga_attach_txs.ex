@@ -16,7 +16,7 @@ defmodule AeMdw.Migrations.IndexGaAttachTxs do
   require Ex2ms
   require Logger
 
-  @fortuna_txi_begin 2129380
+  @fortuna_txi_begin 2_129_380
 
   @doc """
   Reindexes ga_attach_tx transactions and updates stats with contracts count.
@@ -51,17 +51,21 @@ defmodule AeMdw.Migrations.IndexGaAttachTxs do
         Model.type(index: {:ga_attach_tx, txi}) when txi >= @fortuna_txi_begin -> txi
       end
 
-    {:atomic, txi_list} = :mnesia.transaction(fn ->
-      :mnesia.select(Model.Type, txi_spec, :read)
-    end)
+    {:atomic, txi_list} =
+      :mnesia.transaction(fn ->
+        :mnesia.select(Model.Type, txi_spec, :read)
+      end)
+
     Log.info("Found #{length(txi_list)} :ga_attach_tx(s)...")
 
-    {:atomic, bi_txs_list} = :mnesia.transaction(fn ->
-      Enum.map(txi_list, fn txi ->
-        [Model.tx(id: hash, block_index: bi)] = :mnesia.read(Model.Tx, txi, :read)
-        {bi, hash, txi}
+    {:atomic, bi_txs_list} =
+      :mnesia.transaction(fn ->
+        Enum.map(txi_list, fn txi ->
+          [Model.tx(id: hash, block_index: bi)] = :mnesia.read(Model.Tx, txi, :read)
+          {bi, hash, txi}
+        end)
       end)
-    end)
+
     Log.info("Found #{length(bi_txs_list)} :ga_attach_tx(s)...")
 
     bi_txs_list

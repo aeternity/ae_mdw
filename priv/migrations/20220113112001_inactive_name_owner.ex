@@ -15,20 +15,21 @@ defmodule AeMdw.Migrations.InactiveNameOwner do
   def run(_from_start?) do
     begin = DateTime.utc_now()
 
-    indexed_count = :mnesia.sync_dirty(fn ->
-      any_spec =
-        Ex2ms.fun do
-          record -> record
-        end
+    indexed_count =
+      :mnesia.sync_dirty(fn ->
+        any_spec =
+          Ex2ms.fun do
+            record -> record
+          end
 
-      Model.InactiveName
-      |> :mnesia.select(any_spec, :read)
-      |> Enum.map(fn Model.name(index: plain_name, owner: owner) ->
-        m_owner = Model.owner(index: {owner, plain_name})
-        :mnesia.write(Model.InactiveNameOwner, m_owner, :write)
+        Model.InactiveName
+        |> :mnesia.select(any_spec, :read)
+        |> Enum.map(fn Model.name(index: plain_name, owner: owner) ->
+          m_owner = Model.owner(index: {owner, plain_name})
+          :mnesia.write(Model.InactiveNameOwner, m_owner, :write)
+        end)
+        |> Enum.count()
       end)
-      |> Enum.count()
-    end)
 
     duration = DateTime.diff(DateTime.utc_now(), begin)
     Log.info("Indexed #{indexed_count} records in #{duration}s")
