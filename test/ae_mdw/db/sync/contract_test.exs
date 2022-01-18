@@ -44,7 +44,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
         {:aetx, [], [specialize_type: fn _tx -> {:spend_tx, tx_1} end]},
         {Node, [], [tx_ids: fn :spend_tx -> [{:sender_id, 1}] end]}
       ] do
-        mutations = Contract.events_mutations(events, call_txi, create_txi)
+        mutations = Contract.events_mutations(events, {0, 0}, call_txi, create_txi)
 
         assert mutation_1 in mutations
         assert mutation_2 in mutations
@@ -86,7 +86,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
         {Node, [], [tx_ids: fn :spend_tx -> [{:sender_id, 1}] end]},
         {:aec_spend_tx, [], [recipient_id: fn _tx -> {:id, :account, contract_id} end]}
       ] do
-        mutations = Contract.events_mutations(events, call_txi, create_txi)
+        mutations = Contract.events_mutations(events, {0, 0}, call_txi, create_txi)
 
         assert mutation_1 in mutations
         assert mutation_2 in mutations
