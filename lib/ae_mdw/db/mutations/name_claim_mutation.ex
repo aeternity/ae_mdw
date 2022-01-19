@@ -12,11 +12,9 @@ defmodule AeMdw.Db.NameClaimMutation do
   alias AeMdw.Ets
   alias AeMdw.Log
   alias AeMdw.Names
-  alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Txs
   alias AeMdw.Util
-  alias AeMdw.Validate
 
   require Logger
   require Model
@@ -44,19 +42,16 @@ defmodule AeMdw.Db.NameClaimMutation do
           }
 
   @spec new(
-          tuple(),
+          Names.plain_name(),
+          Names.name_hash(),
+          Db.pubkey(),
+          Names.name_fee(),
+          boolean(),
           Txs.txi(),
-          Blocks.block_index()
+          Blocks.block_index(),
+          Names.auction_timeout()
         ) :: t()
-  def new(tx, txi, {height, _mbi} = block_index) do
-    plain_name = String.downcase(:aens_claim_tx.name(tx))
-    {:ok, name_hash} = :aens.get_name_hash(plain_name)
-    owner_pk = Validate.id!(:aens_claim_tx.account_id(tx))
-    name_fee = :aens_claim_tx.name_fee(tx)
-    proto_vsn = DbUtil.proto_vsn(height)
-    is_lima? = proto_vsn >= Node.lima_vsn()
-    timeout = :aec_governance.name_claim_bid_timeout(plain_name, proto_vsn)
-
+  def new(plain_name, name_hash, owner_pk, name_fee, is_lima?, txi, block_index, timeout) do
     %__MODULE__{
       plain_name: plain_name,
       name_hash: name_hash,

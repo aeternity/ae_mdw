@@ -9,6 +9,7 @@ defmodule AeMdw.Db.Sync.Origin do
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.MnesiaWriteMutation
   alias AeMdw.Db.WriteFieldMutation
+  alias AeMdw.Txs
 
   require Model
 

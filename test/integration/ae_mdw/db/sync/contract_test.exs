@@ -1,4 +1,4 @@
-defmodule AeMdw.Db.Sync.ContractTest do
+defmodule Integration.AeMdw.Db.Sync.ContractTest do
   use ExUnit.Case, async: false
 
   @moduletag :integration
