@@ -222,17 +222,21 @@ defmodule AeMdw.Db.Name do
     end
   end
 
-  def ownership(m_name) do
-    [{{_, _}, last_claim_txi} | _] = Model.name(m_name, :claims)
+  def ownership(
+        Model.name(
+          claims: [{{_height, _mbi}, last_claim_txi} | _other],
+          transfers: transfers,
+          owner: owner
+        )
+      ) do
     %{tx: %{account_id: orig_owner}} = Format.to_raw_map(read_tx!(last_claim_txi))
 
-    case Model.name(m_name, :transfers) do
-      [] ->
+    case List.first(transfers) do
+      nil ->
         %{original: orig_owner, current: orig_owner}
 
-      [{{_, _}, last_transfer_txi} | _] ->
-        %{tx: %{recipient_id: curr_owner}} = Format.to_raw_map(read_tx!(last_transfer_txi))
-        %{original: orig_owner, current: curr_owner}
+      _any_transfer ->
+        %{original: orig_owner, current: :aeser_api_encoder.encode(:account_pubkey, owner)}
     end
   end
 

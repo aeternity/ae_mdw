@@ -459,8 +459,16 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   end
 
   describe "name" do
-    test "get name info by name", %{conn: conn} do
+    test "get info by plain name", %{conn: conn} do
       name = "wwwbeaconoidcom.chain"
+      conn = get(conn, "/name/#{name}")
+
+      assert json_response(conn, 200) ==
+               TestUtil.handle_input(fn -> get_name(Validate.plain_name!(name)) end)
+    end
+
+    test "get by plain name a name with transfer by internal call", %{conn: conn} do
+      name = "888888888888.chain"
       conn = get(conn, "/name/#{name}")
 
       assert json_response(conn, 200) ==
