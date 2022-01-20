@@ -210,19 +210,20 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
                contract_id == @big_balance_contract_id
              end)
 
-      assert Enum.each(balances_response, fn %{
-                                               "contract_id" => contract_id,
-                                               "token_name" => token_name,
-                                               "token_symbol" => token_symbol
-                                             } ->
-               create_txi = Origin.tx_index({:contract, contract_id})
+      Enum.each(balances_response, fn %{
+                                        "contract_id" => contract_id,
+                                        "token_name" => token_name,
+                                        "token_symbol" => token_symbol
+                                      } ->
+        {:contract_pubkey, contract_pk} = :aeser_api_encoder.decode(contract_id)
+        create_txi = Origin.tx_index!({:contract, contract_pk})
 
-               {^create_txi, name, symbol, _decimals} =
-                 Util.next(Model.RevAex9Contract, {create_txi, nil, nil, nil})
+        {^create_txi, name, symbol, _decimals} =
+          Util.next(Model.RevAex9Contract, {create_txi, nil, nil, nil})
 
-               assert token_name == name
-               assert token_symbol == symbol
-             end)
+        assert token_name == name
+        assert token_symbol == symbol
+      end)
     end
   end
 end

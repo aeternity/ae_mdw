@@ -267,7 +267,7 @@ defmodule AeMdw.Db.Sync.Transaction do
           end
 
         mutations ++
-          Sync.Contract.events_mutations(tx_events, block_index, txi, txi) ++
+          Sync.Contract.events_mutations(tx_events, block_index, txi, tx_hash, txi) ++
           [
             ContractCreateMutation.new(contract_pk, txi, owner_pk, aex9_meta_info, call_rec)
           ]
@@ -283,16 +283,17 @@ defmodule AeMdw.Db.Sync.Transaction do
          txi: txi,
          block_index: block_index,
          block_hash: block_hash,
-         tx_events: tx_events
+         tx_events: tx_events,
+         tx_hash: tx_hash
        }) do
     contract_pk = :aect_call_tx.contract_pubkey(tx)
     <<caller_pk::binary-32>> = :aect_call_tx.caller_pubkey(tx)
-    create_txi = Sync.Contract.get_txi(contract_pk)
+    create_txi = Sync.Contract.get_txi!(contract_pk)
 
     {fun_arg_res, call_rec} =
       Contract.call_tx_info(tx, contract_pk, block_hash, &Contract.to_map/1)
 
-    Sync.Contract.events_mutations(tx_events, block_index, txi, create_txi) ++
+    Sync.Contract.events_mutations(tx_events, block_index, txi, tx_hash, create_txi) ++
       [ContractCallMutation.new(contract_pk, caller_pk, create_txi, txi, fun_arg_res, call_rec)]
   end
 

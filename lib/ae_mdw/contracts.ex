@@ -411,8 +411,8 @@ defmodule AeMdw.Contracts do
     pk = Validate.id!(contract_id)
 
     case Origin.tx_index({:contract, pk}) do
-      nil -> raise ErrInput.Id, value: contract_id
-      txi -> txi
+      {:ok, txi} -> txi
+      :not_found -> raise ErrInput.Id, value: contract_id
     end
   end
 
@@ -426,8 +426,8 @@ defmodule AeMdw.Contracts do
     tx_type
   end
 
-  defp render_log({create_txi, call_txi, even_hash, log_idx, _data}) do
-    log_key = {create_txi, call_txi, even_hash, log_idx}
+  defp render_log({create_txi, call_txi, event_hash, log_idx, _data}) do
+    log_key = {create_txi, call_txi, event_hash, log_idx}
 
     Format.to_map(log_key, @contract_log_table)
   end

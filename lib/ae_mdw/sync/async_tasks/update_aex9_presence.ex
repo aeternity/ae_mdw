@@ -25,18 +25,13 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9Presence do
 
     Log.info("[update_aex9_presence] #{inspect(contract_pk)} after #{time_delta / @microsecs}s")
 
-    contract_id = :aeser_api_encoder.encode(:contract_pubkey, contract_pk)
-    create_txi = Origin.tx_index({:contract, contract_id})
+    create_txi = Origin.tx_index!({:contract, contract_pk})
 
-    if create_txi do
-      :mnesia.sync_dirty(fn ->
-        Enum.each(amounts, fn {{:address, account_pk}, _amount} ->
-          Contract.aex9_write_new_presence(contract_pk, create_txi, account_pk)
-        end)
+    :mnesia.sync_dirty(fn ->
+      Enum.each(amounts, fn {{:address, account_pk}, _amount} ->
+        Contract.aex9_write_new_presence(contract_pk, create_txi, account_pk)
       end)
-    else
-      Log.error("Missing create_txi for contract #{contract_id}")
-    end
+    end)
 
     :ok
   end

@@ -147,7 +147,7 @@ defmodule AeMdw.Db.Format do
 
     # clear ext_ct_pk after saving parent_contract_pk in its own field
     ext_ct_pk = if not is_tuple(ext_ct_pk), do: ext_ct_pk
-    ext_ct_txi = (ext_ct_pk && Origin.tx_index({:contract, ext_ct_pk})) || -1
+    ext_ct_txi = if ext_ct_pk, do: Origin.tx_index!({:contract, ext_ct_pk}), else: -1
     m_tx = read!(Model.Tx, call_txi)
 
     {height, micro_index} = Model.tx(m_tx, :block_index)

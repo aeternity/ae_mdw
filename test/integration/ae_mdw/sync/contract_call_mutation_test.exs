@@ -58,7 +58,7 @@ defmodule Integration.AeMdw.Db.ContractCallMutationTest do
   end
 
   defp assert_presence(fname, contract_pk) do
-    create_txi = Origin.tx_index({:contract, contract_pk})
+    create_txi = Origin.tx_index!({:contract, contract_pk})
 
     {[txi_args_res], _cont} =
       AeMdw.Db.Util.select(

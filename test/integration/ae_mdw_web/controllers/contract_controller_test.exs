@@ -417,5 +417,36 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
       assert Enum.at(call_txi_local_idxs, @default_limit - 1) <=
                Enum.at(next_call_txi_local_idxs, 0)
     end
+
+    test "it gets calls from the special contracts created by hard-forks", %{conn: conn} do
+      contract_id = "ct_eJhrbPPS4V97VLKEVbSCJFpdA4uyXiZujQyLqMFoYV88TzDe6"
+
+      assert %{"data" => calls, "next" => next} =
+               conn
+               |> get("/contracts/calls/forward", contract_id: contract_id)
+               |> json_response(200)
+
+      call_txi_local_idxs =
+        Enum.map(calls, fn %{"call_txi" => call_txi, "local_idx" => local_idx} ->
+          {call_txi, local_idx}
+        end)
+
+      assert @default_limit = length(call_txi_local_idxs)
+      assert ^call_txi_local_idxs = Enum.sort(call_txi_local_idxs)
+      assert Enum.all?(calls, &match?(%{"contract_id" => ^contract_id}, &1))
+
+      %{"data" => next_calls} = conn |> get(next) |> json_response(200)
+
+      next_call_txi_local_idxs =
+        Enum.map(next_calls, fn %{"call_txi" => call_txi, "local_idx" => local_idx} ->
+          {call_txi, local_idx}
+        end)
+
+      assert @default_limit = length(next_call_txi_local_idxs)
+      assert ^next_call_txi_local_idxs = Enum.sort(next_call_txi_local_idxs)
+
+      assert Enum.at(call_txi_local_idxs, @default_limit - 1) <=
+               Enum.at(next_call_txi_local_idxs, 0)
+    end
   end
 end
