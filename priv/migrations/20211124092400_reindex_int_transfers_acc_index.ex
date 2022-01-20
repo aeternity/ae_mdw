@@ -116,5 +116,5 @@ defmodule AeMdw.Migrations.ReindexIntTransfersAccIndex do
     indexed_count
   end
 
-  defp log(msg), do: Logger.info("[ReindexIntTransfersAccIndex migration] #{msg}", sync: true)
+  defp log(msg), do: Logger.info("[ReindexIntTransfersAccIndex migration] #{msg}")
 end

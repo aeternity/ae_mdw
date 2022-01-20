@@ -8,16 +8,16 @@ defmodule AeMdw.Log do
 
   @spec info(String.t()) :: :ok
   def info(msg),
-    do: Logger.info(msg, sync: true)
+    do: Logger.info(msg)
 
   @spec warn(String.t()) :: :ok
   def warn(msg),
-    do: Logger.warn(msg, sync: true)
+    do: Logger.warn(msg)
 
   @spec error(String.t() | exception()) :: :ok
   def error(msg) when is_binary(msg),
-    do: Logger.error(msg, sync: true)
+    do: Logger.error(msg)
 
   def error(msg),
-    do: Logger.error(inspect(msg, sync: true))
+    do: Logger.error(inspect(msg))
 end
