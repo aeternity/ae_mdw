@@ -78,10 +78,6 @@ config :logger, :info,
   path: "#{Path.join(File.cwd!(), "log/info.log")}",
   format: "$date $time $metadata[$level] $message\n"
 
-config :logger, :sync,
-  path: "#{Path.join(File.cwd!(), "log/sync.log")}",
-  metadata_filter: [sync: true]
-
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
