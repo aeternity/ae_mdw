@@ -30,7 +30,9 @@ defmodule AeMdw.Db.Sync.Name do
   import AeMdw.Ets
   import AeMdw.Util
 
-  @spec name_claim_mutations(Node.tx(), any(), Blocks.block_index(), Txs.txi()) :: [Mutation.t()]
+  @spec name_claim_mutations(Node.tx(), Txs.tx_hash(), Blocks.block_index(), Txs.txi()) :: [
+          Mutation.t()
+        ]
   def name_claim_mutations(tx, tx_hash, {height, _mbi} = block_index, txi) do
     plain_name = String.downcase(:aens_claim_tx.name(tx))
     {:ok, name_hash} = :aens.get_name_hash(plain_name)
