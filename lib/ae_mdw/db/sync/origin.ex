@@ -13,15 +13,13 @@ defmodule AeMdw.Db.Sync.Origin do
 
   require Model
 
-  # @type origin_mutations :: [MnesiaWriteMutation.t() | WriteFieldMutation.t()]
-
   @spec origin_mutations(
           Node.tx_type(),
           WriteFieldMutation.pos(),
           NodeDb.pubkey(),
           Txs.txi(),
           Txs.tx_hash()
-        ) :: Mutation.t()
+        ) :: [Mutation.t()]
   def origin_mutations(tx_type, pos, pubkey, txi, tx_hash) do
     m_origin = Model.origin(index: {tx_type, pubkey, txi}, tx_id: tx_hash)
     m_rev_origin = Model.rev_origin(index: {txi, tx_type, pubkey})
