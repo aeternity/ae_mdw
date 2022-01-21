@@ -1,9 +1,15 @@
 defmodule AeMdw.Db.Sync.Name do
   # credo:disable-for-this-file
+  alias AeMdw.Blocks
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Mutation
   alias AeMdw.Db.Name
+  alias AeMdw.Db.NameClaimMutation
+  alias AeMdw.Db.Sync.Origin
+  alias AeMdw.Node
   alias AeMdw.Log
+  alias AeMdw.Txs
   alias AeMdw.Validate
 
   require Record
@@ -24,7 +30,32 @@ defmodule AeMdw.Db.Sync.Name do
   import AeMdw.Ets
   import AeMdw.Util
 
-  ##########
+  @spec name_claim_mutations(Node.tx(), Txs.tx_hash(), Blocks.block_index(), Txs.txi()) :: [
+          Mutation.t()
+        ]
+  def name_claim_mutations(tx, tx_hash, {height, _mbi} = block_index, txi) do
+    plain_name = String.downcase(:aens_claim_tx.name(tx))
+    {:ok, name_hash} = :aens.get_name_hash(plain_name)
+    owner_pk = Validate.id!(:aens_claim_tx.account_id(tx))
+    name_fee = :aens_claim_tx.name_fee(tx)
+    proto_vsn = proto_vsn(height)
+    is_lima? = proto_vsn >= Node.lima_vsn()
+    timeout = :aec_governance.name_claim_bid_timeout(plain_name, proto_vsn)
+
+    [
+      NameClaimMutation.new(
+        plain_name,
+        name_hash,
+        owner_pk,
+        name_fee,
+        is_lima?,
+        txi,
+        block_index,
+        timeout
+      )
+      | Origin.origin_mutations(:name_claim_tx, nil, name_hash, txi, tx_hash)
+    ]
+  end
 
   def update(name_hash, delta_ttl, pointers, txi, {height, _mbi} = bi) do
     plain_name = plain_name!(name_hash)

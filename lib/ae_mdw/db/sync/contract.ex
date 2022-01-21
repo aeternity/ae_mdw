@@ -9,7 +9,12 @@ defmodule AeMdw.Db.Sync.Contract do
   alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
+  alias AeMdw.Db.NameUpdateMutation
+  alias AeMdw.Db.NameTransferMutation
+  alias AeMdw.Db.NameRevokeMutation
+  alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.Origin
+  alias AeMdw.Db.Sync.Name
   alias AeMdw.Node.Db
   alias AeMdw.Sync.AsyncTasks
   alias AeMdw.Txs
@@ -49,7 +54,7 @@ defmodule AeMdw.Db.Sync.Contract do
   @spec events_mutations([Contract.event()], Blocks.block_index(), Txs.txi(), Txs.txi()) :: [
           Mutation.t()
         ]
-  def events_mutations(events, {height, _mbi} = block_index, call_txi, create_txi) do
+  def events_mutations(events, block_index, call_txi, create_txi) do
     shifted_events = events |> Enum.drop(1) |> Enum.concat([nil])
 
     # This function relies on a property that every Chain.clone and Chain.create
@@ -75,19 +80,6 @@ defmodule AeMdw.Db.Sync.Contract do
           MnesiaWriteMutation.new(Model.Field, m_field)
       end)
 
-    oracle_mutations =
-      events
-      |> Enum.filter(&match?({{:internal_call_tx, "Oracle.register"}, _info}, &1))
-      |> Enum.map(fn
-        {{:internal_call_tx, "Oracle.register"}, %{info: aetx}} ->
-          {:oracle_register_tx, tx} = :aetx.specialize_type(aetx)
-          oracle_pk = :aeo_register_tx.account_pubkey(tx)
-          delta_ttl = :aeo_utils.ttl_delta(height, :aeo_register_tx.oracle_ttl(tx))
-          expire = height + delta_ttl
-
-          OracleRegisterMutation.new(oracle_pk, block_index, expire, call_txi)
-      end)
-
     # Chain.* events don't contain the transaction in the event info, can't be indexed as an internal call
     non_chain_mutations =
       non_chain_events
@@ -96,7 +88,8 @@ defmodule AeMdw.Db.Sync.Contract do
         DBContract.int_call_write_mutations(create_txi, call_txi, i, fname, tx)
       end)
 
-    chain_mutations ++ oracle_mutations ++ non_chain_mutations
+    chain_mutations ++
+      oracle_and_name_mutations(events, block_index, call_txi) ++ non_chain_mutations
   end
 
   @spec get_txi(Db.pubkey()) :: integer()
@@ -115,5 +108,44 @@ defmodule AeMdw.Db.Sync.Contract do
             txi
         end
     end
+  end
+
+  defp oracle_and_name_mutations(events, {height, _mbi} = block_index, call_txi) do
+    events
+    |> Enum.filter(fn
+      {{:internal_call_tx, "Oracle.register"}, _info} -> true
+      {{:internal_call_tx, "AENS.update"}, _info} -> true
+      {{:internal_call_tx, "AENS.transfer"}, _info} -> true
+      {{:internal_call_tx, "AENS.revoke"}, _info} -> true
+      _int_call -> false
+    end)
+    |> Enum.map(fn
+      {{:internal_call_tx, "Oracle.register"}, %{info: aetx}} ->
+        {:oracle_register_tx, tx} = :aetx.specialize_type(aetx)
+        oracle_pk = :aeo_register_tx.account_pubkey(tx)
+        delta_ttl = :aeo_utils.ttl_delta(height, :aeo_register_tx.oracle_ttl(tx))
+        expire = height + delta_ttl
+
+        OracleRegisterMutation.new(oracle_pk, block_index, expire, call_txi)
+
+      {{:internal_call_tx, "AENS.claim"}, %{info: aetx, tx_hash: tx_hash}} ->
+        {:name_claim_tx, tx} = :aetx.specialize_type(aetx)
+        Name.name_claim_mutations(tx, tx_hash, block_index, call_txi)
+
+      {{:internal_call_tx, "AENS.update"}, %{info: aetx}} ->
+        {:name_update_tx, tx} = :aetx.specialize_type(aetx)
+        NameUpdateMutation.new(tx, call_txi, block_index)
+
+      {{:internal_call_tx, "AENS.transfer"}, %{info: aetx}} ->
+        {:name_transfer_tx, tx} = :aetx.specialize_type(aetx)
+        NameTransferMutation.new(tx, call_txi, block_index)
+
+      {{:internal_call_tx, "AENS.revoke"}, %{info: aetx}} ->
+        {:name_revoke_tx, tx} = :aetx.specialize_type(aetx)
+
+        tx
+        |> :aens_revoke_tx.name_hash()
+        |> NameRevokeMutation.new(call_txi, block_index)
+    end)
   end
 end
