@@ -132,9 +132,10 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
 
       assert ^limit = Enum.count(response_next["data"])
 
-      assert response_next["data"]
-             |> Enum.zip((last_gen - 3)..(last_gen - 5))
-             |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
+      stats_with_index =
+        Enum.zip(response_next["data"], (last_gen - limit)..(last_gen - 2 * limit + 1))
+
+      assert Enum.all?(stats_with_index, fn {%{"height" => height}, index} -> height == index end)
     end
 
     test "when direction=forward it gets stats starting from 1", %{conn: conn} do
