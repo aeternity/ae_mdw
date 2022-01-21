@@ -39,6 +39,8 @@ defmodule AeMdw.Application do
     init(:aecore_services)
     init(:aesync)
 
+    :ok = AeMdw.Db.RocksDb.open()
+
     children = [
       AeMdw.Sync.Watcher,
       AeMdw.Sync.Supervisor,
@@ -250,6 +252,11 @@ defmodule AeMdw.Application do
   def start_phase(:sync, _start_type, []) do
     Application.fetch_env!(:ae_mdw, :sync) && sync(true)
     :ok
+  end
+
+  @impl Application
+  def stop(_state) do
+    :ok = AeMdw.Db.RocksDb.close()
   end
 
   @spec sync(boolean()) :: {:ok, pid()}

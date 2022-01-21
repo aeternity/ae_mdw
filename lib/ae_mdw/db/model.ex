@@ -461,6 +461,10 @@ defmodule AeMdw.Db.Model do
 
   ################################################################################
 
+  # starts with only chain_tables and add them progressively by groups
+  @spec column_families() :: list(atom())
+  def column_families, do: chain_tables()
+
   @spec tables() :: list(atom())
   def tables(),
     do:

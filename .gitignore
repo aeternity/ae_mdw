@@ -38,6 +38,7 @@ VERSION
 
 # Local dev-only files
 /mnesia/
+/data.db/
 
 # Dialyzer generated files
 /priv/plts/*.plt
