@@ -5,8 +5,12 @@ defmodule AeMdw.Db.Oracle do
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Oracle
   alias AeMdw.Db.OraclesExpirationMutation
+  alias AeMdw.Db.OracleResponseMutation
   alias AeMdw.Log
+  alias AeMdw.Node
+  alias AeMdw.Txs
 
   require Ex2ms
   require Model
@@ -132,5 +136,29 @@ defmodule AeMdw.Db.Oracle do
     end
 
     :ok
+  end
+
+  @spec response_mutation(Node.tx(), Blocks.block_index(), Blocks.block_hash(), Txs.txi()) ::
+          OracleResponseMutation.t()
+  def response_mutation(tx, block_index, block_hash, txi) do
+    oracle_pk = :aeo_response_tx.oracle_pubkey(tx)
+    query_id = :aeo_response_tx.query_id(tx)
+    o_tree = Oracle.oracle_tree!(block_hash)
+
+    try do
+      fee =
+        oracle_pk
+        |> :aeo_state_tree.get_query(query_id, o_tree)
+        |> :aeo_query.fee()
+
+      OracleResponseMutation.new(block_index, txi, oracle_pk, fee)
+    rescue
+      # TreeId = <<OracleId/binary, QId/binary>>,
+      # Serialized = aeu_mtrees:get(TreeId, Tree#oracle_tree.otree)
+      # raises error on unexisting tree_id
+      error ->
+        Log.error(error)
+        []
+    end
   end
 end

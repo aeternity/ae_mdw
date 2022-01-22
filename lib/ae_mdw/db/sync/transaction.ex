@@ -6,7 +6,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Blocks
   alias AeMdw.Node, as: AE
   alias AeMdw.Contract
-  alias AeMdw.Log
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync
   alias AeMdw.Db.Aex9AccountPresenceMutation
@@ -23,7 +22,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.OracleExtendMutation
   alias AeMdw.Db.OracleRegisterMutation
-  alias AeMdw.Db.OracleResponseMutation
   alias AeMdw.Db.Sync.Origin
   alias AeMdw.Db.Sync.Stats
   alias AeMdw.Db.WriteFieldsMutation
@@ -36,7 +34,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias __MODULE__.TxContext
 
   require Model
-  require Logger
 
   import AeMdw.Db.Util
   import AeMdw.Util
@@ -267,7 +264,7 @@ defmodule AeMdw.Db.Sync.Transaction do
           end
 
         mutations ++
-          Sync.Contract.events_mutations(tx_events, block_index, txi, tx_hash, txi) ++
+          Sync.Contract.events_mutations(tx_events, block_index, block_hash, txi, tx_hash, txi) ++
           [
             ContractCreateMutation.new(contract_pk, txi, owner_pk, aex9_meta_info, call_rec)
           ]
@@ -293,7 +290,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     {fun_arg_res, call_rec} =
       Contract.call_tx_info(tx, contract_pk, block_hash, &Contract.to_map/1)
 
-    Sync.Contract.events_mutations(tx_events, block_index, txi, tx_hash, create_txi) ++
+    Sync.Contract.events_mutations(tx_events, block_index, block_hash, txi, tx_hash, create_txi) ++
       [ContractCallMutation.new(contract_pk, caller_pk, create_txi, txi, fun_arg_res, call_rec)]
   end
 
@@ -364,27 +361,9 @@ defmodule AeMdw.Db.Sync.Transaction do
          block_hash: block_hash,
          block_index: block_index
        }) do
-    oracle_pk = :aeo_response_tx.oracle_pubkey(tx)
-    query_id = :aeo_response_tx.query_id(tx)
-    o_tree = Oracle.oracle_tree!(block_hash)
-
-    try do
-      fee =
-        oracle_pk
-        |> :aeo_state_tree.get_query(query_id, o_tree)
-        |> :aeo_query.fee()
-
-      [
-        OracleResponseMutation.new(block_index, txi, oracle_pk, fee)
-      ]
-    rescue
-      # TreeId = <<OracleId/binary, QId/binary>>,
-      # Serialized = aeu_mtrees:get(TreeId, Tree#oracle_tree.otree)
-      # raises error on unexisting tree_id
-      error ->
-        Log.error(error)
-        []
-    end
+    [
+      Oracle.response_mutation(tx, block_index, block_hash, txi)
+    ]
   end
 
   defp tx_mutations(%TxContext{

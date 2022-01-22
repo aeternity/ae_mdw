@@ -11,6 +11,7 @@ defmodule AeMdw.Db.Sync.Contract do
   alias AeMdw.Db.NameUpdateMutation
   alias AeMdw.Db.NameTransferMutation
   alias AeMdw.Db.NameRevokeMutation
+  alias AeMdw.Db.Oracle
   alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.Origin
   alias AeMdw.Db.Sync.Origin, as: SyncOrigin
@@ -54,13 +55,14 @@ defmodule AeMdw.Db.Sync.Contract do
   @spec events_mutations(
           [Contract.event()],
           Blocks.block_index(),
+          Blocks.block_hash(),
           Txs.txi(),
           Txs.tx_hash(),
           Txs.txi()
         ) :: [
           Mutation.t()
         ]
-  def events_mutations(events, block_index, call_txi, call_tx_hash, create_txi) do
+  def events_mutations(events, block_index, block_hash, call_txi, call_tx_hash, create_txi) do
     shifted_events = events |> Enum.drop(1) |> Enum.concat([nil])
 
     # This function relies on a property that every Chain.clone and Chain.create
@@ -97,7 +99,7 @@ defmodule AeMdw.Db.Sync.Contract do
       end)
 
     chain_mutations ++
-      oracle_and_name_mutations(events, block_index, call_txi) ++ non_chain_mutations
+      oracle_and_name_mutations(events, block_index, block_hash, call_txi) ++ non_chain_mutations
   end
 
   @spec get_txi!(Db.pubkey()) :: Txs.txi()
@@ -115,7 +117,7 @@ defmodule AeMdw.Db.Sync.Contract do
     end
   end
 
-  defp oracle_and_name_mutations(events, {height, _mbi} = block_index, call_txi) do
+  defp oracle_and_name_mutations(events, {height, _mbi} = block_index, block_hash, call_txi) do
     events
     |> Enum.filter(fn
       {{:internal_call_tx, "Oracle.register"}, _info} -> true
@@ -151,6 +153,11 @@ defmodule AeMdw.Db.Sync.Contract do
         tx
         |> :aens_revoke_tx.name_hash()
         |> NameRevokeMutation.new(call_txi, block_index)
+
+      {{:internal_call_tx, "Oracle.respond"}, %{info: aetx}} ->
+        {:oracle_response_tx, tx} = :aetx.specialize_type(aetx)
+
+        Oracle.response_mutation(tx, block_index, block_hash, call_txi)
     end)
   end
 end
