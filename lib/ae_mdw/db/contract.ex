@@ -76,25 +76,6 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  @spec aex9_presence_exists?(pubkey(), pubkey()) :: boolean()
-  def aex9_presence_exists?(contract_pk, account_pk) do
-    0
-    |> Stream.unfold(fn
-      :found ->
-        nil
-
-      txi_search_next ->
-        case :mnesia.next(Model.Aex9AccountPresence, {account_pk, txi_search_next, contract_pk}) do
-          {^account_pk, _txi, ^contract_pk} -> {true, :found}
-          {^account_pk, next_txi, _contract_pk} -> {false, next_txi}
-          _not_found -> nil
-        end
-    end)
-    |> Enum.to_list()
-    |> List.last()
-    |> Kernel.||(false)
-  end
-
   @spec call_write(integer(), integer(), Contract.fun_arg_res_or_error()) :: :ok
   def call_write(create_txi, txi, %{function: fname, arguments: args, result: %{error: [err]}}),
     do: call_write(create_txi, txi, fname, args, :error, err)

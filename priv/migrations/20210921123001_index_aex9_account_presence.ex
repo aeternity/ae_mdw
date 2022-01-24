@@ -7,6 +7,7 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresence do
   alias AeMdw.Db.Contract, as: DbContract
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Origin
   alias AeMdw.Db.Util
   alias AeMdw.Log
   alias AeMdw.Validate
@@ -133,7 +134,15 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresence do
       }
     end)
     |> Enum.filter(fn %{contract_pk: contract_pk, account_pk: account_pk} ->
-      :mnesia.async_dirty(fn -> not DbContract.aex9_presence_exists?(contract_pk, account_pk) end)
+      create_txi =
+        case Origin.tx_index({:contract, contract_pk}) do
+          :not_found -> -1
+          {:ok, create_txi} -> create_txi
+        end
+
+      :mnesia.async_dirty(fn ->
+        not DbContract.aex9_presence_exists?(contract_pk, account_pk, create_txi)
+      end)
     end)
   end
 end

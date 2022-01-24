@@ -28,8 +28,7 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresenceWithCreateTxi do
     indexed_count =
       :mnesia.sync_dirty(fn ->
         Enum.reduce(pairs_to_update, 0, fn {account_pk, contract_pk}, acc ->
-          contract_id = :aeser_api_encoder.encode(:contract_pubkey, contract_pk)
-          create_txi = Origin.tx_index!({:contract, contract_id})
+          create_txi = Origin.tx_index!({:contract, contract_pk})
 
           Contract.aex9_delete_presence(contract_pk, -1, account_pk)
           Contract.aex9_write_presence(contract_pk, create_txi, account_pk)
