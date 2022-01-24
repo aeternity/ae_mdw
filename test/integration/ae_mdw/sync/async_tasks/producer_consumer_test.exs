@@ -5,6 +5,7 @@ defmodule Integration.AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
 
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Origin
   alias AeMdw.Db.Util
   alias AeMdw.Sync.AsyncTasks.Producer
   alias AeMdw.Sync.AsyncTasks
@@ -18,15 +19,34 @@ defmodule Integration.AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
   @account_pk Validate.id!("ak_2CuCtmoExsuW7iG5BbRAoncSZAoZt8Abu21qrPUhqfFNin75iL")
 
   test "enqueue, dequeue and aex9 presence update success" do
+    create_txi = Origin.tx_index!({:contract, @contract_pk})
     # setup
     exists_before? =
-      :mnesia.async_dirty(fn -> Contract.aex9_presence_exists?(@contract_pk, @account_pk) end)
+      :mnesia.async_dirty(fn ->
+        Contract.aex9_presence_exists?(@contract_pk, @account_pk, create_txi)
+      end)
 
     on_exit(fn ->
-      if not exists_before?, do: setup_delete_aex9_presence(@contract_pk, @account_pk)
+      if not exists_before? do
+        :mnesia.sync_dirty(fn ->
+          :mnesia.delete(
+            Model.Aex9AccountPresence,
+            {@account_pk, create_txi, @contract_pk},
+            :write
+          )
+        end)
+      end
     end)
 
-    if exists_before?, do: setup_delete_aex9_presence(@contract_pk, @account_pk)
+    if exists_before? do
+      :mnesia.sync_dirty(fn ->
+        :mnesia.delete(
+          Model.Aex9AccountPresence,
+          {@account_pk, create_txi, @contract_pk},
+          :write
+        )
+      end)
+    end
 
     # check async enqueue and sync dequeue
     args = [@contract_pk]
@@ -70,16 +90,10 @@ defmodule Integration.AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
 
              exists? =
                :mnesia.async_dirty(fn ->
-                 Contract.aex9_presence_exists?(@contract_pk, @account_pk)
+                 Contract.aex9_presence_exists?(@contract_pk, @account_pk, create_txi)
                end)
 
              if exists?, do: {:halt, true}, else: {:cont, false}
            end)
-  end
-
-  defp setup_delete_aex9_presence(contract_pk, account_pk) do
-    :mnesia.sync_dirty(fn ->
-      :mnesia.delete(Model.Aex9AccountPresence, {account_pk, -1, contract_pk}, :write)
-    end)
   end
 end
