@@ -300,7 +300,7 @@ defmodule AeMdw.Db.Model do
             index: {Txs.txi(), Contract.local_idx()},
             create_txi: Txs.txi(),
             fname: Contract.fname(),
-            tx: Node.tx()
+            tx: Node.aetx()
           )
 
   # grp_int_contract_call:

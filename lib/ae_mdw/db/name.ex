@@ -178,7 +178,9 @@ defmodule AeMdw.Db.Name do
           txi
           |> Contracts.fetch_int_contract_calls("AENS.update")
           |> Enum.reverse()
-          |> Enum.find(fn Model.int_contract_call(tx: tx) ->
+          |> Enum.find(fn Model.int_contract_call(tx: aetx) ->
+            {:name_update_tx, tx} = :aetx.specialize_type(aetx)
+
             :aens_update_tx.name_hash(tx) == name_hash
           end)
           |> :aens_update_tx.pointers()

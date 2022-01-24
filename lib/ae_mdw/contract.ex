@@ -23,7 +23,7 @@ defmodule AeMdw.Contract do
   @typep event_name :: {:internal_call_tx, fname()}
   # :aec_blocks.micro_block()
   @typep micro_block :: term()
-  @typep event_info :: Node.tx() | :error
+  @typep event_info :: Node.aetx() | :error
   # :aetx.tx_type()
   @typep event_type :: atom()
   @typep event_data :: %{tx_hash: tx_hash(), type: event_type(), info: event_info()}
