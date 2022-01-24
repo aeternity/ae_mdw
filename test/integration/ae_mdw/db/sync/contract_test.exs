@@ -27,7 +27,7 @@ defmodule Integration.AeMdw.Db.Sync.ContractTest do
         |> Enum.at(mbi)
         |> Contract.get_grouped_events()
         |> Map.fetch!(tx_hash)
-        |> Sync.Contract.events_mutations(block_index, call_txi, <<>>, -1)
+        |> Sync.Contract.events_mutations(block_index, <<>>, call_txi, <<>>, -1)
         |> List.flatten()
 
       assert Enum.any?(event_mutations, fn
@@ -56,7 +56,7 @@ defmodule Integration.AeMdw.Db.Sync.ContractTest do
         |> Enum.at(mbi)
         |> Contract.get_grouped_events()
         |> Map.fetch!(tx_hash)
-        |> Sync.Contract.events_mutations(block_index, call_txi, <<>>, -1)
+        |> Sync.Contract.events_mutations(block_index, <<>>, call_txi, <<>>, -1)
         |> List.flatten()
 
       assert Enum.any?(event_mutations, fn
