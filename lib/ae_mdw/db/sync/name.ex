@@ -91,18 +91,29 @@ defmodule AeMdw.Db.Sync.Name do
     end
   end
 
-  def transfer(name_hash, new_owner, txi, {height, _mbi} = bi) do
+  def transfer(name_hash, new_owner, ttl, txi, {height, _mbi} = bi) do
     plain_name = plain_name!(name_hash)
 
-    m_name = cache_through_read!(Model.ActiveName, plain_name)
-    old_owner = Model.name(m_name, :owner)
+    Model.name(expire: old_expire, owner: old_owner, transfers: transfers) =
+      m_name = cache_through_read!(Model.ActiveName, plain_name)
 
-    transfers = [{bi, txi} | Model.name(m_name, :transfers)]
-    m_name = Model.name(m_name, transfers: transfers, owner: new_owner)
+    new_expire =
+      if ttl != 0 do
+        m_exp = Model.expiration(index: {ttl, plain_name})
+        cache_through_delete(Model.ActiveNameExpiration, {old_expire, plain_name})
+        cache_through_write(Model.ActiveNameExpiration, m_exp)
+        ttl
+      else
+        old_expire
+      end
+
     m_owner = Model.owner(index: {new_owner, plain_name})
-
     cache_through_delete(Model.ActiveNameOwner, {old_owner, plain_name})
     cache_through_write(Model.ActiveNameOwner, m_owner)
+
+    m_name =
+      Model.name(m_name, expire: new_expire, transfers: [{bi, txi} | transfers], owner: new_owner)
+
     cache_through_write(Model.ActiveName, m_name)
 
     log_name_change(height, plain_name, "transfer")
