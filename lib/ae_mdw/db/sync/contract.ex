@@ -5,7 +5,6 @@ defmodule AeMdw.Db.Sync.Contract do
   alias AeMdw.Blocks
   alias AeMdw.Contract
   alias AeMdw.Db.Contract, as: DBContract
-  alias AeMdw.Db.MnesiaWriteMutation
   alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
@@ -14,6 +13,7 @@ defmodule AeMdw.Db.Sync.Contract do
   alias AeMdw.Db.NameRevokeMutation
   alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.Origin
+  alias AeMdw.Db.Sync.Origin, as: SyncOrigin
   alias AeMdw.Db.Sync.Name
   alias AeMdw.Node.Db
   alias AeMdw.Sync.AsyncTasks
@@ -51,10 +51,16 @@ defmodule AeMdw.Db.Sync.Contract do
     :ok
   end
 
-  @spec events_mutations([Contract.event()], Blocks.block_index(), Txs.txi(), Txs.txi()) :: [
+  @spec events_mutations(
+          [Contract.event()],
+          Blocks.block_index(),
+          Txs.txi(),
+          Txs.tx_hash(),
+          Txs.txi()
+        ) :: [
           Mutation.t()
         ]
-  def events_mutations(events, block_index, call_txi, create_txi) do
+  def events_mutations(events, block_index, call_txi, call_tx_hash, create_txi) do
     shifted_events = events |> Enum.drop(1) |> Enum.concat([nil])
 
     # This function relies on a property that every Chain.clone and Chain.create
@@ -75,9 +81,11 @@ defmodule AeMdw.Db.Sync.Contract do
           {{:internal_call_tx, "Call.amount"}, %{info: aetx}} = next_event
           {:spend_tx, tx} = :aetx.specialize_type(aetx)
           recipient_id = :aec_spend_tx.recipient_id(tx)
-          {:account, contract_id} = :aeser_id.specialize(recipient_id)
-          m_field = Model.field(index: {:contract_call_tx, nil, contract_id, call_txi})
-          MnesiaWriteMutation.new(Model.Field, m_field)
+          {:account, contract_pk} = :aeser_id.specialize(recipient_id)
+
+          :ets.insert(:ct_create_sync_cache, {contract_pk, call_txi})
+
+          SyncOrigin.origin_mutations(:contract_call_tx, nil, contract_pk, call_txi, call_tx_hash)
       end)
 
     # Chain.* events don't contain the transaction in the event info, can't be indexed as an internal call
@@ -92,21 +100,18 @@ defmodule AeMdw.Db.Sync.Contract do
       oracle_and_name_mutations(events, block_index, call_txi) ++ non_chain_mutations
   end
 
-  @spec get_txi(Db.pubkey()) :: integer()
-  def get_txi(contract_pk) do
+  @spec get_txi!(Db.pubkey()) :: Txs.txi()
+  def get_txi!(contract_pk) do
     case :ets.lookup(:ct_create_sync_cache, contract_pk) do
       [{^contract_pk, txi}] ->
         txi
 
       [] ->
-        case Origin.tx_index({:contract, contract_pk}) do
-          nil ->
-            -1
+        txi = Origin.tx_index!({:contract, contract_pk})
 
-          txi ->
-            :ets.insert(:ct_create_sync_cache, {contract_pk, txi})
-            txi
-        end
+        :ets.insert(:ct_create_sync_cache, {contract_pk, txi})
+
+        txi
     end
   end
 

@@ -34,6 +34,7 @@ defmodule AeMdw.MixProject do
           :aec_dev_reward,
           :aec_dry_run,
           :aec_events,
+          :aec_fork_block_settings,
           :aec_governance,
           :aec_hard_forks,
           :aec_hash,

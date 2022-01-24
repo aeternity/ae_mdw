@@ -12,13 +12,12 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Util
   alias AeMdw.Log
+  alias AeMdw.Node.Db
 
   require Model
   require Logger
 
   @microsecs 1_000_000
-
-  @typep pubkey() :: DBContract.pubkey()
 
   @spec process(args :: list()) :: :ok
   def process([contract_pk, kbi, mbi, create_txi]) do
@@ -58,7 +57,7 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
     :ok
   end
 
-  @spec cache_recipients(pubkey(), list()) :: :ok
+  @spec cache_recipients(Db.pubkey(), list()) :: :ok
   def cache_recipients(_contract_pk, []), do: :ok
 
   def cache_recipients(contract_pk, recipients) do

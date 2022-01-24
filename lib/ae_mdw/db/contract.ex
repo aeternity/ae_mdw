@@ -11,6 +11,7 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Db.Origin
   alias AeMdw.Log
   alias AeMdw.Node
+  alias AeMdw.Node.Db
   alias AeMdw.Txs
   alias AeMdw.Validate
 
@@ -22,7 +23,7 @@ defmodule AeMdw.Db.Contract do
   import AeMdw.Util, only: [compose: 2, max_256bit_int: 0]
   import AeMdw.Db.Util
 
-  @type pubkey :: AeMdw.Node.Db.pubkey()
+  @typep pubkey :: Db.pubkey()
 
   @spec aex9_creation_write(tuple(), pubkey(), pubkey(), integer()) :: :ok
   def aex9_creation_write({name, symbol, decimals}, contract_pk, owner_pk, txi) do
@@ -107,7 +108,7 @@ defmodule AeMdw.Db.Contract do
   def call_write(create_txi, txi, {:error, detail}),
     do: call_write(create_txi, txi, "<unknown>", nil, :invalid, inspect(detail))
 
-  @spec call_write(integer(), integer(), String.t(), list() | nil, any(), any()) :: :ok
+  @spec call_write(Txs.txi(), Txs.txi(), String.t(), list() | nil, any(), any()) :: :ok
   def call_write(create_txi, txi, fname, args, result, return) do
     m_call =
       Model.contract_call(
@@ -121,7 +122,7 @@ defmodule AeMdw.Db.Contract do
     :mnesia.write(Model.ContractCall, m_call, :write)
   end
 
-  @spec logs_write(integer(), integer(), tuple()) :: :ok
+  @spec logs_write(Txs.txi(), Txs.txi(), tuple()) :: :ok
   def logs_write(create_txi, txi, call_rec) do
     contract_pk = :aect_call.contract_pubkey(call_rec)
     raw_logs = :aect_call.log(call_rec)
@@ -147,7 +148,7 @@ defmodule AeMdw.Db.Contract do
 
       # if remote call then indexes also with the called contract
       if addr != contract_pk do
-        remote_called_contract_txi = Origin.tx_index({:contract, addr})
+        remote_called_contract_txi = Origin.tx_index!({:contract, addr})
 
         # on caller log: ext_contract = called contract_pk
         # on called log: ext_contract = {:parent_contract_pk, caller contract_pk}
@@ -189,7 +190,7 @@ defmodule AeMdw.Db.Contract do
 
   @spec call_fun_arg_res(pubkey(), integer()) :: Contract.fun_arg_res()
   def call_fun_arg_res(contract_pk, call_txi) do
-    create_txi = Origin.tx_index({:contract, contract_pk}) || -1
+    create_txi = Origin.tx_index!({:contract, contract_pk})
     m_call = read!(Model.ContractCall, {create_txi, call_txi})
 
     %{
