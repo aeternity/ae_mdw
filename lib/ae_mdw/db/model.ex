@@ -3,6 +3,8 @@ defmodule AeMdw.Db.Model do
   Mnesia database model records.
   """
   alias AeMdw.Blocks
+  alias AeMdw.Contract
+  alias AeMdw.Node
   alias AeMdw.Txs
 
   require Record
@@ -292,6 +294,14 @@ defmodule AeMdw.Db.Model do
     tx: {}
   ]
   defrecord :int_contract_call, @int_contract_call_defaults
+
+  @type int_contract_call ::
+          record(:int_contract_call,
+            index: {Txs.txi(), Contract.local_idx()},
+            create_txi: Txs.txi(),
+            fname: Contract.fname(),
+            tx: Node.tx()
+          )
 
   # grp_int_contract_call:
   #    index: {create txi, call txi, local idx}
