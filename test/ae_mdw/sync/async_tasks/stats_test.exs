@@ -4,11 +4,7 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
   alias AeMdw.Db.Model
   alias AeMdw.Sync.AsyncTasks.Stats
 
-  import Support.TestMnesiaSandbox
-
   require Model
-
-  @contract_pk "ct_2bwK4mxEe3y9SazQRPXE8NdXikSTqF2T9FhNrawRzFA21yacTo"
 
   setup do
     :ets.insert(:async_tasks_stats, {:async_tasks_stats_key, 0, 0, 0})
@@ -22,40 +18,46 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
     end
 
     test "with pending db records" do
-      fn ->
-        db_pending_count = 50
-        # setup delete existing
-        existing = Model.AsyncTasks |> :mnesia.all_keys()
+      db_pending_count = 10
+      existing_keys = :mnesia.dirty_all_keys(Model.AsyncTasks)
+      existing_tasks = Enum.flat_map(existing_keys, &:mnesia.dirty_read(Model.AsyncTasks, &1))
 
-        if length(existing) > db_pending_count do
-          delete_count = length(existing) - db_pending_count
+      keys_to_delete =
+        if length(existing_keys) > db_pending_count do
+          delete_count = length(existing_keys) - db_pending_count
 
-          existing
+          # delete to expected pending
+          existing_keys
           |> Enum.take(delete_count)
           |> Enum.each(fn key ->
-            :mnesia.delete(Model.AsyncTasks, key, :write)
+            :mnesia.dirty_delete(Model.AsyncTasks, key)
           end)
-        else
-          insert_count = db_pending_count - length(existing)
 
-          # setup new
-          Enum.each(1..insert_count, fn i ->
+          []
+        else
+          insert_count = db_pending_count - length(existing_keys)
+
+          # setup new to expected pending
+          Enum.map(1..insert_count, fn i ->
             index = {System.system_time() + i, :update_aex9_presence}
-            m_task = Model.async_tasks(index: index, args: [@contract_pk])
-            :mnesia.write(Model.AsyncTasks, m_task, :write)
+            m_task = Model.async_tasks(index: index, args: [<<i::256>>])
+            :mnesia.dirty_write(Model.AsyncTasks, m_task)
             index
           end)
         end
 
-        assert %{producer_buffer: 0, total_pending: 0} = Stats.counters()
+      on_exit(fn ->
+        :mnesia.sync_dirty(fn ->
+          Enum.each(keys_to_delete, &:mnesia.delete(Model.AsyncTasks, &1, :write))
+          Enum.each(existing_tasks, &:mnesia.write(Model.AsyncTasks, &1, :write))
+        end)
+      end)
 
-        assert :ok = Stats.update_buffer_len(10, 100)
+      assert %{producer_buffer: 0, total_pending: 0} = Stats.counters()
 
-        assert %{producer_buffer: 10, total_pending: ^db_pending_count} = Stats.counters()
+      assert :ok = Stats.update_buffer_len(10, 100)
 
-        :mnesia.abort(:rollback)
-      end
-      |> mnesia_sandbox()
+      assert %{producer_buffer: 10, total_pending: ^db_pending_count} = Stats.counters()
     end
   end
 
