@@ -4,6 +4,7 @@ defmodule AeMdw.Contracts do
   """
 
   alias AeMdw.Collection
+  alias AeMdw.Contract
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Stream.Query.Parser
@@ -92,6 +93,14 @@ defmodule AeMdw.Contracts do
       e in ErrInput ->
         {:error, e.message}
     end
+  end
+
+  @spec fetch_int_contract_calls(Txs.txi(), Contract.fname()) :: Enumerable.t()
+  def fetch_int_contract_calls(txi, fname) do
+    @int_contract_call_table
+    |> Collection.stream(:backward, {{txi + 1, @min_int}, {txi, @min_int}}, nil)
+    |> Stream.map(&Mnesia.fetch!(@int_contract_call_table, &1))
+    |> Stream.filter(&match?(Model.int_contract_call(fname: ^fname), &1))
   end
 
   defp build_logs_stream(%{data_prefix: data_prefix}, scope, cursor, direction) do

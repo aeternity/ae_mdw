@@ -38,6 +38,7 @@ defmodule AeMdw.Node do
           | :paying_for_tx
 
   @opaque signed_tx() :: tuple()
+  @opaque aetx() :: tuple()
   @opaque tx() :: tuple()
 
   defmodule Oracle do

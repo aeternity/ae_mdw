@@ -5,6 +5,7 @@ defmodule AeMdw.Contract do
   """
 
   alias AeMdw.EtsCache
+  alias AeMdw.Node
   alias AeMdw.Node.Db, as: DBN
   alias AeMdw.DryRun
 
@@ -22,7 +23,7 @@ defmodule AeMdw.Contract do
   @typep event_name :: {:internal_call_tx, fname()}
   # :aec_blocks.micro_block()
   @typep micro_block :: term()
-  @typep event_info :: map() | :error
+  @typep event_info :: Node.aetx() | :error
   # :aetx.tx_type()
   @typep event_type :: atom()
   @typep event_data :: %{tx_hash: tx_hash(), type: event_type(), info: event_info()}
@@ -51,7 +52,8 @@ defmodule AeMdw.Contract do
           return: any()
         }
   @type fun_arg_res_or_error :: fun_arg_res() | {:error, any()}
-  @typep tx :: tuple()
+  @type local_idx() :: non_neg_integer()
+  @typep tx :: Node.tx()
   @typep block_hash :: <<_::256>>
 
   @aex9_transfer_event_hash <<34, 60, 57, 226, 157, 255, 100, 103, 254, 221, 160, 151, 88, 217,

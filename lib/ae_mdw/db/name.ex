@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.Name do
   # credo:disable-for-this-file
   alias AeMdw.Blocks
+  alias AeMdw.Contracts
   alias AeMdw.Node, as: AE
   alias AeMdw.Db.Model
   alias AeMdw.Db.NamesExpirationMutation
@@ -162,16 +163,34 @@ defmodule AeMdw.Db.Name do
       map_some(locate_bid(plain_name), &{&1, Model.AuctionBid})
   end
 
-  def pointers(m_name) do
-    case Model.name(m_name, :updates) do
-      [{_, txi} | _] ->
-        Format.to_raw_map(read_tx!(txi)).tx.pointers
-        |> Stream.map(&pointer_kv_raw/1)
-        |> Enum.into(%{})
+  def pointers(Model.name(updates: [])), do: %{}
 
-      [] ->
-        %{}
-    end
+  def pointers(Model.name(index: plain_name, updates: [{_block_index, txi} | _rest_updates])) do
+    Model.tx(id: tx_hash) = read_tx!(txi)
+    {:ok, name_hash} = :aens.get_name_hash(plain_name)
+
+    pointers =
+      case AE.Db.get_tx_data(tx_hash) do
+        {_block_hash, :name_update_tx, _signed_tx, tx_rec} ->
+          :aens_update_tx.pointers(tx_rec)
+
+        {_block_hash, :contract_call_tx, _signed_tx, _tx_rec} ->
+          txi
+          |> Contracts.fetch_int_contract_calls("AENS.update")
+          |> Stream.map(fn Model.int_contract_call(tx: aetx) ->
+            {:name_update_tx, tx} = :aetx.specialize_type(aetx)
+
+            tx
+          end)
+          |> Enum.find(fn tx ->
+            name_hash == :aens_update_tx.name_hash(tx)
+          end)
+          |> :aens_update_tx.pointers()
+      end
+
+    pointers
+    |> Stream.map(&pointer_kv_raw/1)
+    |> Enum.into(%{})
   end
 
   def account_pointer_at(plain_name, time_reference_txi) do
