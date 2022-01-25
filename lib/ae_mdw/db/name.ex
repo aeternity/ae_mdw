@@ -167,7 +167,7 @@ defmodule AeMdw.Db.Name do
 
   def pointers(Model.name(index: plain_name, updates: [{_block_index, txi} | _rest_updates])) do
     Model.tx(id: tx_hash) = read_tx!(txi)
-    name_hash = :aens.get_name_hash(plain_name)
+    {:ok, name_hash} = :aens.get_name_hash(plain_name)
 
     pointers =
       case AE.Db.get_tx_data(tx_hash) do
@@ -183,7 +183,7 @@ defmodule AeMdw.Db.Name do
             tx
           end)
           |> Enum.find(fn tx ->
-            :aens_update_tx.name_hash(tx) == name_hash
+            name_hash == :aens_update_tx.name_hash(tx)
           end)
           |> :aens_update_tx.pointers()
       end
