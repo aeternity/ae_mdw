@@ -163,12 +163,6 @@ defmodule AeMdw.Db.Sync.Transaction do
     :ets.delete_all_objects(:ct_create_sync_cache)
     :ets.delete_all_objects(:tx_sync_cache)
 
-    [
-      Name.expirations_mutation(height),
-      Oracle.expirations_mutation(height - 1)
-    ]
-    |> Mnesia.transaction()
-
     last_mbi =
       case Mnesia.prev_key(Model.Block, {height + 1, -1}) do
         {:ok, {^height, last_mbi}} -> last_mbi
@@ -199,6 +193,8 @@ defmodule AeMdw.Db.Sync.Transaction do
     end
 
     Mnesia.transaction([
+      Name.expirations_mutation(height),
+      Oracle.expirations_mutation(height - 1),
       Stats.new_mutation(height, last_mbi == -1),
       KeyBlocksMutation.new(kb_model, next_txi)
     ])
