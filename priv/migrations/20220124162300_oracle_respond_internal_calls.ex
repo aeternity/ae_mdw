@@ -4,7 +4,6 @@ defmodule AeMdw.Migrations.OracleRespondInternalCalls do
   """
   alias AeMdw.Db.Model
   alias AeMdw.Db.Oracle
-  alias AeMdw.Db.OracleResponseMutation
   alias AeMdw.Mnesia
   alias AeMdw.Log
 
@@ -27,7 +26,7 @@ defmodule AeMdw.Migrations.OracleRespondInternalCalls do
     mutations =
       Model.FnameIntContractCall
       |> :mnesia.dirty_select(internal_calls_spec)
-      |> Enum.flat_map(fn {call_txi, _local_idx} = key ->
+      |> Enum.map(fn {call_txi, _local_idx} = key ->
         [Model.tx(block_index: {kbi, _mbi} = block_index)] =
           :mnesia.dirty_read(Model.Tx, call_txi)
 
@@ -35,27 +34,7 @@ defmodule AeMdw.Migrations.OracleRespondInternalCalls do
         [Model.int_contract_call(tx: tx)] = :mnesia.dirty_read(Model.IntContractCall, key)
         {:oracle_response_tx, oracle_response_tx} = :aetx.specialize_type(tx)
 
-        oracle_pk = :aeo_response_tx.oracle_pubkey(oracle_response_tx)
-        query_id = :aeo_response_tx.query_id(oracle_response_tx)
-        o_tree = Oracle.oracle_tree!(block_hash)
-
-        try do
-          fee =
-            oracle_pk
-            |> :aeo_state_tree.get_query(query_id, o_tree)
-            |> :aeo_query.fee()
-
-          [
-            OracleResponseMutation.new(block_index, call_txi, oracle_pk, fee)
-          ]
-        rescue
-          # TreeId = <<OracleId/binary, QId/binary>>,
-          # Serialized = aeu_mtrees:get(TreeId, Tree#oracle_tree.otree)
-          # raises error on unexisting tree_id
-          error ->
-            Log.error(error)
-            []
-        end
+        Oracle.response_mutation(oracle_response_tx, block_index, block_hash, call_txi)
       end)
 
     Mnesia.transaction(mutations)
