@@ -177,10 +177,12 @@ defmodule AeMdw.Db.Name do
         {_block_hash, :contract_call_tx, _signed_tx, _tx_rec} ->
           txi
           |> Contracts.fetch_int_contract_calls("AENS.update")
-          |> Enum.reverse()
-          |> Enum.find(fn Model.int_contract_call(tx: aetx) ->
+          |> Stream.map(fn Model.int_contract_call(tx: aetx) ->
             {:name_update_tx, tx} = :aetx.specialize_type(aetx)
 
+            tx
+          end)
+          |> Enum.find(fn tx ->
             :aens_update_tx.name_hash(tx) == name_hash
           end)
           |> :aens_update_tx.pointers()

@@ -98,7 +98,7 @@ defmodule AeMdw.Contracts do
   @spec fetch_int_contract_calls(Txs.txi(), Contract.fname()) :: Enumerable.t()
   def fetch_int_contract_calls(txi, fname) do
     @int_contract_call_table
-    |> Collection.stream(:forward, {{txi, @min_int}, {txi + 1, @min_int}}, nil)
+    |> Collection.stream(:backward, {{txi + 1, @min_int}, {txi, @min_int}}, nil)
     |> Stream.map(&Mnesia.fetch!(@int_contract_call_table, &1))
     |> Stream.filter(&match?(Model.int_contract_call(fname: ^fname), &1))
   end
