@@ -9,18 +9,19 @@ defmodule AeMdw.Db.NameUpdateMutation do
   alias AeMdw.Node
   alias AeMdw.Txs
 
-  defstruct [:name_hash, :name_ttl, :pointers, :txi, :block_index]
+  defstruct [:name_hash, :name_ttl, :pointers, :txi, :block_index, :internal?]
 
   @opaque t() :: %__MODULE__{
             name_hash: Names.name_hash(),
             name_ttl: Names.ttl(),
             pointers: Names.pointers(),
             txi: Txs.txi(),
-            block_index: Blocks.block_index()
+            block_index: Blocks.block_index(),
+            internal?: boolean()
           }
 
-  @spec new(Node.tx(), Txs.txi(), Blocks.block_index()) :: t()
-  def new(tx, txi, block_index) do
+  @spec new(Node.tx(), Txs.txi(), Blocks.block_index(), boolean()) :: t()
+  def new(tx, txi, block_index, internal? \\ false) do
     name_hash = :aens_update_tx.name_hash(tx)
     name_ttl = :aens_update_tx.name_ttl(tx)
     pointers = :aens_update_tx.pointers(tx)
@@ -30,7 +31,8 @@ defmodule AeMdw.Db.NameUpdateMutation do
       name_ttl: name_ttl,
       pointers: pointers,
       txi: txi,
-      block_index: block_index
+      block_index: block_index,
+      internal?: internal?
     }
   end
 
@@ -40,9 +42,10 @@ defmodule AeMdw.Db.NameUpdateMutation do
         name_ttl: name_ttl,
         pointers: pointers,
         txi: txi,
-        block_index: block_index
+        block_index: block_index,
+        internal?: internal?
       }) do
-    Name.update(name_hash, name_ttl, pointers, txi, block_index)
+    Name.update(name_hash, name_ttl, pointers, txi, block_index, internal?)
   end
 end
 

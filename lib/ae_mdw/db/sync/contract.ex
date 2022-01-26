@@ -147,7 +147,7 @@ defmodule AeMdw.Db.Sync.Contract do
 
       {{:internal_call_tx, "AENS.update"}, %{info: aetx}} ->
         {:name_update_tx, tx} = :aetx.specialize_type(aetx)
-        NameUpdateMutation.new(tx, call_txi, block_index)
+        NameUpdateMutation.new(tx, call_txi, block_index, true)
 
       {{:internal_call_tx, "AENS.transfer"}, %{info: aetx}} ->
         {:name_transfer_tx, tx} = :aetx.specialize_type(aetx)
