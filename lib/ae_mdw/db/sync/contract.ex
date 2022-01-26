@@ -121,6 +121,8 @@ defmodule AeMdw.Db.Sync.Contract do
     events
     |> Enum.filter(fn
       {{:internal_call_tx, "Oracle.register"}, _info} -> true
+      {{:internal_call_tx, "Oracle.respond"}, _info} -> true
+      {{:internal_call_tx, "AENS.claim"}, _info} -> true
       {{:internal_call_tx, "AENS.update"}, _info} -> true
       {{:internal_call_tx, "AENS.transfer"}, _info} -> true
       {{:internal_call_tx, "AENS.revoke"}, _info} -> true
@@ -134,6 +136,10 @@ defmodule AeMdw.Db.Sync.Contract do
         expire = height + delta_ttl
 
         OracleRegisterMutation.new(oracle_pk, block_index, expire, call_txi)
+
+      {{:internal_call_tx, "Oracle.respond"}, %{info: aetx}} ->
+        {:oracle_response_tx, tx} = :aetx.specialize_type(aetx)
+        Oracle.response_mutation(tx, block_index, block_hash, call_txi)
 
       {{:internal_call_tx, "AENS.claim"}, %{info: aetx, tx_hash: tx_hash}} ->
         {:name_claim_tx, tx} = :aetx.specialize_type(aetx)
@@ -153,11 +159,6 @@ defmodule AeMdw.Db.Sync.Contract do
         tx
         |> :aens_revoke_tx.name_hash()
         |> NameRevokeMutation.new(call_txi, block_index)
-
-      {{:internal_call_tx, "Oracle.respond"}, %{info: aetx}} ->
-        {:oracle_response_tx, tx} = :aetx.specialize_type(aetx)
-
-        Oracle.response_mutation(tx, block_index, block_hash, call_txi)
     end)
   end
 end
