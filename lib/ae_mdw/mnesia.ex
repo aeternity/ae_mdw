@@ -157,12 +157,14 @@ defmodule AeMdw.Mnesia do
 
   @spec transaction([Mutation.t()]) :: :ok
   def transaction(mutations) do
+    mutations =
+      mutations
+      |> List.flatten()
+      |> Enum.reject(&is_nil/1)
+
     {:atomic, :ok} =
       :mnesia.sync_transaction(fn ->
-        mutations
-        |> List.flatten()
-        |> Enum.reject(&is_nil/1)
-        |> Enum.each(&Mutation.mutate/1)
+        Enum.each(mutations, &Mutation.mutate/1)
       end)
 
     :ok
