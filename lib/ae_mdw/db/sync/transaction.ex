@@ -131,7 +131,6 @@ defmodule AeMdw.Db.Sync.Transaction do
       WriteFieldsMutation.new(type, tx, block_index, txi),
       inner_tx_mutations
     ]
-    |> Enum.reject(&is_nil/1)
     |> List.flatten()
   end
 
@@ -224,12 +223,11 @@ defmodule AeMdw.Db.Sync.Transaction do
       |> Enum.with_index(txi)
       |> Enum.flat_map(&transaction_mutations(&1, tx_ctx))
 
-    mutations =
-      List.flatten([
-        MnesiaWriteMutation.new(Model.Block, mb_model),
-        txs_mutations,
-        Aex9AccountPresenceMutation.new(height, mbi)
-      ])
+    mutations = [
+      MnesiaWriteMutation.new(Model.Block, mb_model),
+      txs_mutations,
+      Aex9AccountPresenceMutation.new(height, mbi)
+    ]
 
     {mutations, {txi + length(mb_txs), mbi + 1}}
   end
