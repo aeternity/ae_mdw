@@ -1,5 +1,74 @@
 # Changelog
 
+## [1.5.0](https://www.github.com/aeternity/ae_mdw/compare/v1.4.0...v1.5.0) (2022-01-28)
+
+
+### Features
+
+* /names/owned_by for inactive names ([#461](https://www.github.com/aeternity/ae_mdw/issues/461)) ([d206326](https://www.github.com/aeternity/ae_mdw/commit/d206326b134403506f6d10afbe134d21cb835771))
+* add encoded query_id on query txs ([#455](https://www.github.com/aeternity/ae_mdw/issues/455)) ([4691bdd](https://www.github.com/aeternity/ae_mdw/commit/4691bdd6d8b14291253b3a3081ec3a47c6728b5b)), closes [#381](https://www.github.com/aeternity/ae_mdw/issues/381) [#60](https://www.github.com/aeternity/ae_mdw/issues/60)
+* aex9 balances for an account with token info ([#424](https://www.github.com/aeternity/ae_mdw/issues/424)) ([658c522](https://www.github.com/aeternity/ae_mdw/commit/658c5221b51eaa12bd6b1a6eb33c0544a1efe78b))
+* aex9 presence on calls other than transfer ([#438](https://www.github.com/aeternity/ae_mdw/issues/438)) ([ceee4b1](https://www.github.com/aeternity/ae_mdw/commit/ceee4b193af2b3c8efb48643359d36607e2d0d30))
+* contract compilation info ([#457](https://www.github.com/aeternity/ae_mdw/issues/457)) ([16a88d0](https://www.github.com/aeternity/ae_mdw/commit/16a88d0e33d1d32159001473a2b35a15b1e05191))
+* index AENS internal calls ([#472](https://www.github.com/aeternity/ae_mdw/issues/472)) ([b089194](https://www.github.com/aeternity/ae_mdw/commit/b089194477033bc031eb2fb1dfaf8065560e3a04))
+* index ga_attach_tx by contract ([#413](https://www.github.com/aeternity/ae_mdw/issues/413)) ([fc2f3cb](https://www.github.com/aeternity/ae_mdw/commit/fc2f3cb99c0e3e6ba0c8099f983d4b974baed4f6))
+
+
+### Bug Fixes
+
+* aex9 migrations origin handling ([#481](https://www.github.com/aeternity/ae_mdw/issues/481)) ([d27dc0e](https://www.github.com/aeternity/ae_mdw/commit/d27dc0ecb0bae0c19f9b7905a480dcc579488843))
+* avoid loading block_hash for building oracle tree when syncing ([#460](https://www.github.com/aeternity/ae_mdw/issues/460)) ([1776b26](https://www.github.com/aeternity/ae_mdw/commit/1776b26dfcbf914563a90153f17409a8da6b10ba))
+* execute block_rewards mutation before stats mutation ([#452](https://www.github.com/aeternity/ae_mdw/issues/452)) ([d1ece21](https://www.github.com/aeternity/ae_mdw/commit/d1ece218661d61924bd5ada7b3ff3246bb88dc22)), closes [#450](https://www.github.com/aeternity/ae_mdw/issues/450)
+* expirations shall run at the end of a height ([#484](https://www.github.com/aeternity/ae_mdw/issues/484)) ([25d9d96](https://www.github.com/aeternity/ae_mdw/commit/25d9d96257895779ffb31d4dba211eb6e75a4671))
+* extract pointers from internal calls ([#486](https://www.github.com/aeternity/ae_mdw/issues/486)) ([4475676](https://www.github.com/aeternity/ae_mdw/commit/44756761983a1e48f335231825b141c4c57a9ddf)), closes [#477](https://www.github.com/aeternity/ae_mdw/issues/477)
+* fix dockerfile for multiple node releases ([67b57a4](https://www.github.com/aeternity/ae_mdw/commit/67b57a4e7b210477b40bcdb41fea05ff2a4ba35b))
+* get aex9 meta info error handling ([#496](https://www.github.com/aeternity/ae_mdw/issues/496)) ([a8fc71d](https://www.github.com/aeternity/ae_mdw/commit/a8fc71dd8facab416e18a5f113a116ea7d2cf7ed))
+* inactive name owner table for sync ([#463](https://www.github.com/aeternity/ae_mdw/issues/463)) ([f936572](https://www.github.com/aeternity/ae_mdw/commit/f93657257cba40861ed7de2c04349374cc9d9563))
+* index Oracle.respond internal contract calls ([#480](https://www.github.com/aeternity/ae_mdw/issues/480)) ([e065bf4](https://www.github.com/aeternity/ae_mdw/commit/e065bf4b8ebefc8eab7e56fbd74d32c241b2040c)), closes [#468](https://www.github.com/aeternity/ae_mdw/issues/468)
+* index the origin of contracts created via Chain.clone/create ([#474](https://www.github.com/aeternity/ae_mdw/issues/474)) ([a0f39e9](https://www.github.com/aeternity/ae_mdw/commit/a0f39e9f85e829f323bf03be97138d19787eeb3b))
+* make db transactions synchronous ([#443](https://www.github.com/aeternity/ae_mdw/issues/443)) ([7ee8347](https://www.github.com/aeternity/ae_mdw/commit/7ee83473c431c01366b8e9299e62f85972fe2b9f))
+* name and oracle int calls filtering ([#488](https://www.github.com/aeternity/ae_mdw/issues/488)) ([b35daa1](https://www.github.com/aeternity/ae_mdw/commit/b35daa16b323d0b2f2a6e84a1f4531229b0e9650))
+* name expiration after aens.update with name_ttl = 0 ([#491](https://www.github.com/aeternity/ae_mdw/issues/491)) ([9ab3502](https://www.github.com/aeternity/ae_mdw/commit/9ab3502cc6b7b20225cad97780a9ce1ea4fd4c23))
+* nested or nil mutation processing ([#493](https://www.github.com/aeternity/ae_mdw/issues/493)) ([fcc9119](https://www.github.com/aeternity/ae_mdw/commit/fcc9119b9bb32ddd351309e03c9b5ce8bf917425))
+* register oracles created through Oracle.register contract calls ([#466](https://www.github.com/aeternity/ae_mdw/issues/466)) ([d2409c7](https://www.github.com/aeternity/ae_mdw/commit/d2409c7d2e5db370abf3c5dcc7805ed3762516bc)), closes [#380](https://www.github.com/aeternity/ae_mdw/issues/380)
+* skip processing internal calls for Chain.* events ([#467](https://www.github.com/aeternity/ae_mdw/issues/467)) ([25bcf4e](https://www.github.com/aeternity/ae_mdw/commit/25bcf4e015b890ddcd64931fd0fe2bd9589627e0))
+* stats count for existing objects ([#454](https://www.github.com/aeternity/ae_mdw/issues/454)) ([5fb8ea2](https://www.github.com/aeternity/ae_mdw/commit/5fb8ea2837c1cc527b83a66e2e14ee82670e0a18))
+* validate existing contract when filtering calls by contract_id ([#446](https://www.github.com/aeternity/ae_mdw/issues/446)) ([35c6054](https://www.github.com/aeternity/ae_mdw/commit/35c6054be47b8d832571b6accebdd593403b312a)), closes [#422](https://www.github.com/aeternity/ae_mdw/issues/422)
+
+
+### Miscellaneous
+
+* disable accoutnt txs legacy endpoint ([9a4480e](https://www.github.com/aeternity/ae_mdw/commit/9a4480e7b88d5c812642ad73efae67e74da21ea0)), closes [#410](https://www.github.com/aeternity/ae_mdw/issues/410)
+
+
+### CI / CD
+
+* invert order to avoid setting git user ([d00e0f7](https://www.github.com/aeternity/ae_mdw/commit/d00e0f7e14c2d204c556fcc0519b197e5978923d))
+
+
+### Testing
+
+* fix auction sorting check ([#449](https://www.github.com/aeternity/ae_mdw/issues/449)) ([efeb945](https://www.github.com/aeternity/ae_mdw/commit/efeb9453fcca75658c403e2efe11cc36f7ae9281))
+* fix oracles and tx_controller integration tests ([#440](https://www.github.com/aeternity/ae_mdw/issues/440)) ([1d6541b](https://www.github.com/aeternity/ae_mdw/commit/1d6541b7cfd37c72e25748cb1fb857ee8f9cad9b))
+* fix the single stats test that is failing ([#479](https://www.github.com/aeternity/ae_mdw/issues/479)) ([79d918e](https://www.github.com/aeternity/ae_mdw/commit/79d918ee3a069807b26b90d88ec9471a5b90593d))
+* restructure oracles integration tests ([#423](https://www.github.com/aeternity/ae_mdw/issues/423)) ([36e0800](https://www.github.com/aeternity/ae_mdw/commit/36e080068c9b4e8ea8b3edd340e63bcd91b81e84))
+* restructure tx_controller integration tests ([#427](https://www.github.com/aeternity/ae_mdw/issues/427)) ([0a17539](https://www.github.com/aeternity/ae_mdw/commit/0a17539c0091891d609321d09c1e6799d4d3c193))
+
+
+### Refactorings
+
+* add name transfer/update/revoke mutations ([#465](https://www.github.com/aeternity/ae_mdw/issues/465)) ([fcaff4a](https://www.github.com/aeternity/ae_mdw/commit/fcaff4a7e6e090b700638227c807923458c55cef))
+* add tx context for dealing with tx mutations ([#439](https://www.github.com/aeternity/ae_mdw/issues/439)) ([a8cc83a](https://www.github.com/aeternity/ae_mdw/commit/a8cc83aa4da53d13477e13b1b3044ad80920a69c))
+* create ContractCreateMutation ([#428](https://www.github.com/aeternity/ae_mdw/issues/428)) ([e74dc17](https://www.github.com/aeternity/ae_mdw/commit/e74dc17d802dc198292cfaf4e96ede2e3ea0859a))
+* extract channel_create_tx syncing to Sync.Transaction ([#429](https://www.github.com/aeternity/ae_mdw/issues/429)) ([9036bf1](https://www.github.com/aeternity/ae_mdw/commit/9036bf177766f879f0bdfe36f48c3688c23a5a89))
+* extract name claim mutation ([#431](https://www.github.com/aeternity/ae_mdw/issues/431)) ([66be18a](https://www.github.com/aeternity/ae_mdw/commit/66be18a6d3ae81fbd6c26276f10611d73c68b55e))
+* extract oracle extand/response mutations ([#444](https://www.github.com/aeternity/ae_mdw/issues/444)) ([9e520e2](https://www.github.com/aeternity/ae_mdw/commit/9e520e20cca4b20864421e0928a6be2cecf31404))
+* extract OracleRegister transaction into mutation ([#430](https://www.github.com/aeternity/ae_mdw/issues/430)) ([8c0933d](https://www.github.com/aeternity/ae_mdw/commit/8c0933d10f431af9b64459cbb6fc6c77911c4ead))
+* key blocks mutation ([#441](https://www.github.com/aeternity/ae_mdw/issues/441)) ([c64fda6](https://www.github.com/aeternity/ae_mdw/commit/c64fda6d8260b22f25369f4ee0dbf5afe98a1406))
+* split contract events mutation into multiple MnesiaWrite ([#458](https://www.github.com/aeternity/ae_mdw/issues/458)) ([1521121](https://www.github.com/aeternity/ae_mdw/commit/15211213bd56f436025610bc24d30ba2aacf270d))
+* split ga_attach_tx mutation to use FieldMutation instead ([#445](https://www.github.com/aeternity/ae_mdw/issues/445)) ([378b74d](https://www.github.com/aeternity/ae_mdw/commit/378b74d543de1e4bc14f0385b7bcf5e4f0587edf))
+* trim unused code from the paginated endpoints ([#494](https://www.github.com/aeternity/ae_mdw/issues/494)) ([5aa92aa](https://www.github.com/aeternity/ae_mdw/commit/5aa92aaa8cafb326bfd1e7f7889f25f67d2c44fb))
+
 ## [1.4.0](https://www.github.com/aeternity/ae_mdw/compare/v1.3.1...v1.4.0) (2021-12-27)
 
 
