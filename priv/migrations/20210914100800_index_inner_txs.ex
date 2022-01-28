@@ -90,6 +90,7 @@ defmodule AeMdw.Migrations.IndexInnerTxs do
 
       {signed_tx, wrapper_txi}
       |> SyncTx.transaction_mutations(tx_ctx, true)
+      |> Enum.reject(&is_nil/1)
       |> Enum.each(&Mutation.mutate/1)
 
       acc + 1
