@@ -8,6 +8,7 @@ defmodule AeMdw.Contract do
   alias AeMdw.Node
   alias AeMdw.Node.Db, as: DBN
   alias AeMdw.DryRun
+  alias AeMdw.Log
 
   import :erlang, only: [tuple_to_list: 1]
 
@@ -194,15 +195,24 @@ defmodule AeMdw.Contract do
   @spec aex9_transfer_event_hash() :: event_hash()
   def aex9_transfer_event_hash(), do: @aex9_transfer_event_hash
 
-  @spec aex9_meta_info(DBN.pubkey()) :: aex9_meta_info()
+  @spec aex9_meta_info(DBN.pubkey()) :: aex9_meta_info() | nil
   def aex9_meta_info(contract_pk),
     do: aex9_meta_info(contract_pk, DBN.top_height_hash(false))
 
   def aex9_meta_info(contract_pk, {type, height, hash}) do
-    {:ok, {:tuple, {name, symbol, decimals}}} =
-      call_contract(contract_pk, {type, height, hash}, "meta_info", [])
+    case call_contract(contract_pk, {type, height, hash}, "meta_info", []) do
+      {:ok, {:tuple, {name, symbol, decimals}}} ->
+        {name, symbol, decimals}
 
-    {name, symbol, decimals}
+      {:error, _call_error} ->
+        Log.info(
+          "aex9_meta_info not available for #{
+            :aeser_api_encoder.encode(:contract_pubkey, contract_pk)
+          }"
+        )
+
+        nil
+    end
   end
 
   @spec call_contract(DBN.pubkey(), String.t(), list()) ::
@@ -340,8 +350,9 @@ defmodule AeMdw.Contract do
     end
   end
 
-  @spec get_init_call_rec(DBN.pubkey(), tx(), block_hash()) :: call()
-  def get_init_call_rec(contract_pk, tx_rec, block_hash) do
+  @spec get_init_call_rec(tx(), block_hash()) :: call()
+  def get_init_call_rec(tx_rec, block_hash) do
+    contract_pk = :aect_create_tx.contract_pubkey(tx_rec)
     create_nonce = :aect_create_tx.nonce(tx_rec)
 
     tx_rec
@@ -350,12 +361,13 @@ defmodule AeMdw.Contract do
     |> call_rec_from_id(contract_pk, block_hash)
   end
 
-  @spec get_init_call_details(DBN.pubkey(), tx(), block_hash()) :: serialized_call()
-  def get_init_call_details(contract_pk, tx_rec, block_hash) do
+  @spec get_init_call_details(tx(), block_hash()) :: serialized_call()
+  def get_init_call_details(tx_rec, block_hash) do
+    contract_pk = :aect_create_tx.contract_pubkey(tx_rec)
     {compiler_vsn, source_hash} = compilation_info(contract_pk)
 
-    contract_pk
-    |> get_init_call_rec(tx_rec, block_hash)
+    tx_rec
+    |> get_init_call_rec(block_hash)
     |> :aect_call.serialize_for_client()
     |> Map.drop(["gas_price", "height", "caller_nonce"])
     |> Map.put("args", contract_init_args(contract_pk, tx_rec))

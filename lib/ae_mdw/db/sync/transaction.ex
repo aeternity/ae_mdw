@@ -250,10 +250,10 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     case Contract.get_info(contract_pk) do
       {:ok, {type_info, _compiler_vsn, _source_hash}} ->
-        call_rec = Contract.get_init_call_rec(contract_pk, tx, block_hash)
+        call_rec = Contract.get_init_call_rec(tx, block_hash)
 
         aex9_meta_info =
-          if Contract.is_aex9?(type_info) do
+          if :aect_call.return_type(call_rec) == :ok and Contract.is_aex9?(type_info) do
             Contract.aex9_meta_info(contract_pk)
           end
 
