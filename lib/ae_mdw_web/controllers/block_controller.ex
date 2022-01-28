@@ -43,17 +43,10 @@ defmodule AeMdwWeb.BlockController do
   Endpoint for blocks info based on pagination.
   """
   @spec blocks(Conn.t(), map()) :: Conn.t()
-  def blocks(%Conn{assigns: assigns} = conn, params) do
+  def blocks(%Conn{assigns: assigns, request_path: path} = conn, _params) do
     %{direction: direction, limit: limit, cursor: cursor, scope: scope} = assigns
 
     {blocks, next_cursor} = Blocks.fetch_blocks(direction, scope, cursor, limit, false)
-
-    path =
-      case params do
-        %{"range" => range} -> "/blocks/#{range}"
-        %{"range_or_dir" => range_or_dir} -> "/blocks/#{range_or_dir}"
-        _params -> "/blocks/#{direction}"
-      end
 
     uri =
       if next_cursor do
@@ -71,17 +64,10 @@ defmodule AeMdwWeb.BlockController do
   Endpoint for paginated blocks with sorted micro blocks per time.
   """
   @spec blocks_v2(Conn.t(), map()) :: Conn.t()
-  def blocks_v2(%Conn{assigns: assigns} = conn, params) do
+  def blocks_v2(%Conn{assigns: assigns, request_path: path} = conn, _params) do
     %{direction: direction, limit: limit, cursor: cursor, scope: scope} = assigns
 
     {blocks, next_cursor} = Blocks.fetch_blocks(direction, scope, cursor, limit, true)
-
-    path =
-      case params do
-        %{"range" => range} -> "/v2/blocks/gen/#{range}"
-        %{"range_or_dir" => range_or_dir} -> "/v2/blocks/#{range_or_dir}"
-        _params -> "/v2/blocks/#{direction}"
-      end
 
     uri =
       if next_cursor do

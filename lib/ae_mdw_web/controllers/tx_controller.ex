@@ -40,17 +40,11 @@ defmodule AeMdwWeb.TxController do
     do: handle_tx_reply(conn, fn -> read_tx(Validate.nonneg_int!(index)) end)
 
   @spec txs(Conn.t(), map()) :: Conn.t()
-  def txs(%Conn{assigns: assigns, query_params: query_params} = conn, params) do
+  def txs(%Conn{assigns: assigns, query_params: query_params, request_path: path} = conn, params) do
     %{direction: direction, limit: limit, cursor: cursor, scope: scope} = assigns
 
     with {:ok, query} <- extract_query(query_params),
          {:ok, txs, new_cursor} <- Txs.fetch_txs(direction, scope, query, cursor, limit) do
-      path =
-        case params do
-          %{"scope_type" => scope_type, "range" => range} -> "/txs/#{scope_type}/#{range}"
-          _params -> "/txs/#{direction}"
-        end
-
       uri =
         if new_cursor do
           next_params = Map.merge(query_params, %{"cursor" => new_cursor, "limit" => limit})

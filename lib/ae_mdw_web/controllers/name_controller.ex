@@ -100,7 +100,7 @@ defmodule AeMdwWeb.NameController do
       end)
 
   @spec auctions(Conn.t(), map()) :: Conn.t()
-  def auctions(%Conn{assigns: assigns} = conn, _req) do
+  def auctions(%Conn{assigns: assigns, request_path: path} = conn, _params) do
     %{direction: direction, limit: limit, cursor: cursor, expand?: expand?, order_by: order_by} =
       assigns
 
@@ -110,7 +110,7 @@ defmodule AeMdwWeb.NameController do
     uri =
       if new_cursor do
         %URI{
-          path: "/names/auctions",
+          path: path,
           query:
             URI.encode_query(%{
               "cursor" => new_cursor,
@@ -126,7 +126,7 @@ defmodule AeMdwWeb.NameController do
   end
 
   @spec inactive_names(Conn.t(), map()) :: Conn.t()
-  def inactive_names(%Conn{assigns: assigns} = conn, _req) do
+  def inactive_names(%Conn{assigns: assigns, request_path: path} = conn, _req) do
     %{
       direction: direction,
       limit: limit,
@@ -142,7 +142,7 @@ defmodule AeMdwWeb.NameController do
     uri =
       if new_cursor do
         %URI{
-          path: "/names/inactive",
+          path: path,
           query:
             URI.encode_query(%{
               "cursor" => new_cursor,
@@ -158,7 +158,7 @@ defmodule AeMdwWeb.NameController do
   end
 
   @spec active_names(Conn.t(), map()) :: Conn.t()
-  def active_names(%Conn{assigns: assigns} = conn, _req) do
+  def active_names(%Conn{assigns: assigns, request_path: path} = conn, _req) do
     %{
       direction: direction,
       limit: limit,
@@ -174,7 +174,7 @@ defmodule AeMdwWeb.NameController do
     uri =
       if new_cursor do
         %URI{
-          path: "/names/active",
+          path: path,
           query:
             URI.encode_query(%{
               "cursor" => new_cursor,
@@ -190,7 +190,7 @@ defmodule AeMdwWeb.NameController do
   end
 
   @spec names(Conn.t(), map()) :: Conn.t()
-  def names(%Conn{assigns: assigns} = conn, params) do
+  def names(%Conn{assigns: assigns, request_path: path} = conn, _params) do
     %{
       direction: direction,
       limit: limit,
@@ -201,12 +201,6 @@ defmodule AeMdwWeb.NameController do
     } = assigns
 
     {names, new_cursor} = Names.fetch_names(direction, scope, order_by, cursor, limit, expand?)
-
-    path =
-      case params do
-        %{"scope_type" => scope_type, "range" => range} -> "/names/#{scope_type}/#{range}"
-        _params -> "/names"
-      end
 
     uri =
       if new_cursor do
@@ -234,22 +228,6 @@ defmodule AeMdwWeb.NameController do
       json(conn, Enum.to_list(do_prefix_stream(validate_search_params!(params), expand?(params))))
     end)
   end
-
-  ##########
-
-  # scope is used here only for identification of the continuation
-  @spec db_stream(atom(), map(), term()) :: Enumerable.t()
-  def db_stream(:auctions, params, _scope),
-    do: do_auctions_stream(validate_params!(params), expand?(params))
-
-  def db_stream(:inactive_names, params, _scope),
-    do: do_inactive_names_stream(validate_params!(params), expand?(params))
-
-  def db_stream(:active_names, params, _scope),
-    do: do_active_names_stream(validate_params!(params), expand?(params))
-
-  def db_stream(:names, params, _scope),
-    do: do_names_stream(validate_params!(params), expand?(params))
 
   ##########
 
@@ -323,54 +301,6 @@ defmodule AeMdwWeb.NameController do
 
   ##########
 
-  defp do_auctions_stream({:name, _} = params, expand?),
-    do: DBS.Name.auctions(params, &Format.to_map(&1, Model.AuctionBid, expand?))
-
-  defp do_auctions_stream({:expiration, _} = params, expand?) do
-    mapper =
-      &:mnesia.async_dirty(fn ->
-        k = Name.auction_bid_key(&1)
-        k && Format.to_map(k, Model.AuctionBid, expand?)
-      end)
-
-    DBS.Name.auctions(params, mapper)
-  end
-
-  defp do_inactive_names_stream({:name, _} = params, expand?),
-    do: DBS.Name.inactive_names(params, &Format.to_map(&1, Model.InactiveName, expand?))
-
-  defp do_inactive_names_stream({:expiration, _} = params, expand?),
-    do: DBS.Name.inactive_names(params, exp_to_formatted_name(Model.InactiveName, expand?))
-
-  defp do_active_names_stream({:name, _} = params, expand?),
-    do: DBS.Name.active_names(params, &Format.to_map(&1, Model.ActiveName, expand?))
-
-  defp do_active_names_stream({:expiration, _} = params, expand?),
-    do: DBS.Name.active_names(params, exp_to_formatted_name(Model.ActiveName, expand?))
-
-  defp do_names_stream({:name, dir}, expand?) do
-    streams = [
-      do_inactive_names_stream({:name, dir}, expand?),
-      do_active_names_stream({:name, dir}, expand?)
-    ]
-
-    merged_stream(streams, & &1["name"], dir)
-  end
-
-  defp do_names_stream({:expiration, :forward} = params, expand?),
-    do:
-      Stream.concat(
-        do_inactive_names_stream(params, expand?),
-        do_active_names_stream(params, expand?)
-      )
-
-  defp do_names_stream({:expiration, :backward} = params, expand?),
-    do:
-      Stream.concat(
-        do_active_names_stream(params, expand?),
-        do_inactive_names_stream(params, expand?)
-      )
-
   defp do_prefix_stream({prefix, lifecycles}, expand?) do
     streams = Enum.map(lifecycles, &prefix_stream(&1, prefix, expand?))
 
@@ -381,36 +311,6 @@ defmodule AeMdwWeb.NameController do
   end
 
   ##########
-
-  defp validate_params!(params),
-    do: do_validate_params!(Map.delete(params, "expand"))
-
-  defp do_validate_params!(%{"by" => [what], "direction" => [dir]}) do
-    what in ["name", "expiration"] || raise ErrInput.Query, value: "by=#{what}"
-    dir in ["forward", "backward"] || raise ErrInput.Query, value: "direction=#{dir}"
-    {String.to_existing_atom(what), String.to_existing_atom(dir)}
-  end
-
-  defp do_validate_params!(%{"by" => [what]}) do
-    what in ["name", "expiration"] || raise ErrInput.Query, value: "by=#{what}"
-    {String.to_existing_atom(what), :forward}
-  end
-
-  defp do_validate_params!(params) when map_size(params) > 0 do
-    badkey = hd(Map.keys(params))
-    raise ErrInput.Query, value: "#{badkey}=#{Map.get(params, badkey)}"
-  end
-
-  defp do_validate_params!(_params), do: {:expiration, :backward}
-
-  defp exp_to_formatted_name(table, expand?) do
-    fn {:expiration, {_, plain_name}, _} ->
-      case Name.locate(plain_name) do
-        {m_name, ^table} -> Format.to_map(m_name, table, expand?)
-        _no_match? -> nil
-      end
-    end
-  end
 
   defp validate_search_params!(params),
     do: do_validate_search_params!(Map.delete(params, "expand"))

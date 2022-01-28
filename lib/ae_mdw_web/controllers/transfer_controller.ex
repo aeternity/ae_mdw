@@ -11,23 +11,14 @@ defmodule AeMdwWeb.TransferController do
   plug(PaginatedPlug)
 
   @spec transfers(Conn.t(), map()) :: Conn.t()
-  def transfers(%Conn{assigns: assigns, query_params: query_params} = conn, params) do
+  def transfers(
+        %Conn{assigns: assigns, query_params: query_params, request_path: path} = conn,
+        _params
+      ) do
     %{direction: direction, limit: limit, cursor: cursor, scope: scope} = assigns
 
     case Transfers.fetch_transfers(direction, scope, query_params, cursor, limit) do
       {:ok, transfers, next_cursor} ->
-        path =
-          case params do
-            %{"scope_type" => scope_type, "range" => range} ->
-              "/transfers/#{scope_type}/#{range}"
-
-            %{"direction" => direction} ->
-              "/transfers/#{direction}"
-
-            _params ->
-              "/transfers"
-          end
-
         uri =
           if next_cursor do
             next_params = Map.merge(query_params, %{"cursor" => next_cursor, "limit" => limit})

@@ -7,7 +7,6 @@ defmodule AeMdwWeb.OracleController do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Format
   alias AeMdw.Db.Oracle
-  alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Oracles
   alias AeMdwWeb.SwaggerParameters
@@ -30,7 +29,7 @@ defmodule AeMdwWeb.OracleController do
       end)
 
   @spec inactive_oracles(Conn.t(), map()) :: Conn.t()
-  def inactive_oracles(%Conn{assigns: assigns} = conn, _params) do
+  def inactive_oracles(%Conn{assigns: assigns, request_path: path} = conn, _params) do
     %{direction: direction, limit: limit, cursor: cursor, expand?: expand?} = assigns
 
     {oracles, new_cursor} = Oracles.fetch_inactive_oracles(direction, cursor, limit, expand?)
@@ -38,7 +37,7 @@ defmodule AeMdwWeb.OracleController do
     uri =
       if new_cursor do
         %URI{
-          path: "/oracles/inactive",
+          path: path,
           query:
             URI.encode_query(%{
               "cursor" => new_cursor,
@@ -54,7 +53,7 @@ defmodule AeMdwWeb.OracleController do
   end
 
   @spec active_oracles(Conn.t(), map()) :: Conn.t()
-  def active_oracles(%Conn{assigns: assigns} = conn, _params) do
+  def active_oracles(%Conn{assigns: assigns, request_path: path} = conn, _params) do
     %{direction: direction, limit: limit, cursor: cursor, expand?: expand?} = assigns
 
     {oracles, new_cursor} = Oracles.fetch_active_oracles(direction, cursor, limit, expand?)
@@ -62,7 +61,7 @@ defmodule AeMdwWeb.OracleController do
     uri =
       if new_cursor do
         %URI{
-          path: "/oracles/active",
+          path: path,
           query:
             URI.encode_query(%{
               "cursor" => new_cursor,
@@ -78,17 +77,11 @@ defmodule AeMdwWeb.OracleController do
   end
 
   @spec oracles(Conn.t(), map()) :: Conn.t()
-  def oracles(%Conn{assigns: assigns} = conn, params) do
+  def oracles(%Conn{assigns: assigns, request_path: path} = conn, _params) do
     %{direction: direction, limit: limit, cursor: cursor, expand?: expand?, scope: scope} =
       assigns
 
     {oracles, new_cursor} = Oracles.fetch_oracles(direction, scope, cursor, limit, expand?)
-
-    path =
-      case params do
-        %{"range" => range} -> "/oracles/gen/#{range}"
-        _params -> "/oracles"
-      end
 
     uri =
       if new_cursor do
@@ -110,68 +103,11 @@ defmodule AeMdwWeb.OracleController do
 
   ##########
 
-  # scope is used here only for identification of the continuation
-  @spec db_stream(atom(), map(), term()) :: Enumerable.t()
-  def db_stream(:inactive_oracles, params, _scope),
-    do: do_inactive_oracles_stream(validate_params!(params), expand?(params))
-
-  def db_stream(:active_oracles, params, _scope),
-    do: do_active_oracles_stream(validate_params!(params), expand?(params))
-
-  def db_stream(:oracles, params, _scope),
-    do: do_oracles_stream(validate_params!(params), expand?(params))
-
-  ##########
-
   @spec oracle_reply(Conn.t(), binary(), boolean()) :: Conn.t()
   def oracle_reply(conn, pubkey, expand?) do
     case Oracle.locate(pubkey) do
       {m_oracle, source} -> json(conn, Format.to_map(m_oracle, source, expand?))
       nil -> raise ErrInput.NotFound, value: Enc.encode(:oracle_pubkey, pubkey)
-    end
-  end
-
-  ##########
-
-  defp do_inactive_oracles_stream(dir, expand?),
-    do: DBS.Oracle.inactive_oracles(dir, exp_to_formatted_oracle(Model.InactiveOracle, expand?))
-
-  defp do_active_oracles_stream(dir, expand?),
-    do: DBS.Oracle.active_oracles(dir, exp_to_formatted_oracle(Model.ActiveOracle, expand?))
-
-  defp do_oracles_stream(:forward, expand?),
-    do:
-      Stream.concat(
-        do_inactive_oracles_stream(:forward, expand?),
-        do_active_oracles_stream(:forward, expand?)
-      )
-
-  defp do_oracles_stream(:backward, expand?),
-    do:
-      Stream.concat(
-        do_active_oracles_stream(:backward, expand?),
-        do_inactive_oracles_stream(:backward, expand?)
-      )
-
-  ##########
-
-  defp validate_params!(params),
-    do: do_validate_params!(Map.delete(params, "expand"))
-
-  defp do_validate_params!(%{"direction" => [dir]}) do
-    dir in ["forward", "backward"] || raise ErrInput.Query, value: "direction=#{dir}"
-    String.to_existing_atom(dir)
-  end
-
-  defp do_validate_params!(_params),
-    do: :backward
-
-  defp exp_to_formatted_oracle(table, expand?) do
-    fn {:expiration, {_, pubkey}, _} ->
-      case Oracle.locate(pubkey) do
-        {m_oracle, ^table} -> Format.to_map(m_oracle, table, expand?)
-        nil -> nil
-      end
     end
   end
 
