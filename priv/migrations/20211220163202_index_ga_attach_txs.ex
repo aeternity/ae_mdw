@@ -108,9 +108,7 @@ defmodule AeMdw.Migrations.IndexGaAttachTxs do
         end)
       end)
 
-    txs_mutations
-    |> List.flatten()
-    |> Mnesia.transaction()
+    Mnesia.transaction(txs_mutations)
 
     new_contracts_count = length(txs_mutations)
 

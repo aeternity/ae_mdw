@@ -39,7 +39,9 @@ defmodule AeMdw.Db.Sync.TransactionTest do
           )
 
         fn ->
-          Enum.each(mutations, &Mutation.mutate/1)
+          mutations
+          |> Enum.reject(&is_nil/1)
+          |> Enum.each(&Mutation.mutate/1)
 
           {sender_pk, recipient_pk} = pubkeys_from_tx(signed_tx)
           assert sender_pk != recipient_pk
@@ -75,7 +77,9 @@ defmodule AeMdw.Db.Sync.TransactionTest do
           )
 
         fn ->
-          Enum.each(mutations, &Mutation.mutate/1)
+          mutations
+          |> Enum.reject(&is_nil/1)
+          |> Enum.each(&Mutation.mutate/1)
 
           {sender_pk, recipient_pk} = pubkeys_from_tx(signed_tx)
           assert sender_pk == recipient_pk
