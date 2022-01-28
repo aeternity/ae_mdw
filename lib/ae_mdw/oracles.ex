@@ -9,9 +9,10 @@ defmodule AeMdw.Oracles do
   alias AeMdw.Collection
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Util
+  alias AeMdw.Db.Util, as: DBUtil
   alias AeMdw.Mnesia
   alias AeMdw.Node
+  alias AeMdw.Util
 
   @type cursor :: binary()
   # This needs to be an actual type like AeMdw.Db.Oracle.t()
@@ -35,11 +36,7 @@ defmodule AeMdw.Oracles do
           nil
 
         {:gen, %Range{first: first_gen, last: last_gen}} ->
-          if direction == :forward do
-            {{first_gen, <<>>}, {last_gen, <<>>}}
-          else
-            {{first_gen, nil}, {last_gen, nil}}
-          end
+          {{first_gen, Util.min_bin()}, {last_gen, Util.max_256bit_bin()}}
       end
 
     active_stream =
@@ -151,5 +148,5 @@ defmodule AeMdw.Oracles do
   end
 
   defp expand_txi(bi_txi, false), do: bi_txi
-  defp expand_txi(bi_txi, true), do: Format.to_map(Util.read_tx!(bi_txi))
+  defp expand_txi(bi_txi, true), do: Format.to_map(DBUtil.read_tx!(bi_txi))
 end

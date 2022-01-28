@@ -57,7 +57,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
   defp extract_direction_and_scope(%{"range_or_dir" => range}) do
     case extract_range(range) do
       {:ok, first, last} when first <= last -> {:ok, :forward, {:gen, first..last}}
-      {:ok, first, last} -> {:ok, :backward, {:gen, first..last}}
+      {:ok, first, last} -> {:ok, :backward, {:gen, last..first}}
       {:error, reason} -> {:error, reason}
     end
   end
@@ -68,7 +68,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
     case extract_range(range) do
       {:ok, first, last} when first <= last -> {:ok, :forward, {scope_type, first..last}}
-      {:ok, first, last} -> {:ok, :backward, {scope_type, first..last}}
+      {:ok, first, last} -> {:ok, :backward, {scope_type, last..first}}
       {:error, reason} -> {:error, reason}
     end
   end
@@ -79,7 +79,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
   defp extract_direction_and_scope(%{"range" => range}) do
     case extract_range(range) do
       {:ok, first, last} when first <= last -> {:ok, :forward, {:gen, first..last}}
-      {:ok, first, last} -> {:ok, :backward, {:gen, first..last}}
+      {:ok, first, last} -> {:ok, :backward, {:gen, last..first}}
       {:error, reason} -> {:error, reason}
     end
   end

@@ -33,7 +33,12 @@ defmodule AeMdw.Collection do
   """
   @spec stream(table(), direction(), scope(), cursor()) :: Enumerable.t()
   def stream(tab, direction, scope, cursor) do
-    {first, last} = scope || {nil, nil}
+    {first, last} =
+      case {scope, direction} do
+        {nil, _dir} -> {nil, nil}
+        {s, :forward} -> s
+        {{last, first}, :backward} -> {first, last}
+      end
 
     case fetch_first_key(tab, direction, first, cursor) do
       {:ok, first_key} -> unfold_stream(tab, direction, first_key, last)

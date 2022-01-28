@@ -10,11 +10,11 @@ defmodule AeMdw.Names do
   alias AeMdw.AuctionBids
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Util
+  alias AeMdw.Db.Util, as: DBUtil
   alias AeMdw.Collection
   alias AeMdw.Mnesia
-  # alias AeMdw.Node
   alias AeMdw.Txs
+  alias AeMdw.Util
 
   @type cursor :: binary()
   # This needs to be an actual type like AeMdw.Db.Name.t()
@@ -41,7 +41,7 @@ defmodule AeMdw.Names do
           {[name()], cursor() | nil}
   def fetch_names(direction, range, :expiration, cursor, limit, expand?) do
     cursor = deserialize_expiration_cursor(cursor)
-    scope = deserialize_scope(range, direction)
+    scope = deserialize_scope(range)
 
     active_stream =
       @table_active_expiration
@@ -66,7 +66,7 @@ defmodule AeMdw.Names do
 
   def fetch_names(direction, range, :name, cursor, limit, expand?) do
     cursor = deserialize_name_cursor(cursor)
-    scope = deserialize_scope(range, direction)
+    scope = deserialize_scope(range)
 
     active_stream =
       @table_active
@@ -98,7 +98,7 @@ defmodule AeMdw.Names do
   end
 
   def fetch_active_names(direction, range, :expiration, cursor, limit, expand?) do
-    scope = deserialize_scope(range, direction)
+    scope = deserialize_scope(range)
 
     {exp_keys, next_cursor} =
       @table_active_expiration
@@ -120,7 +120,7 @@ defmodule AeMdw.Names do
   end
 
   def fetch_inactive_names(direction, range, :expiration, cursor, limit, expand?) do
-    scope = deserialize_scope(range, direction)
+    scope = deserialize_scope(range)
 
     {exp_keys, next_cursor} =
       @table_inactive_expiration
@@ -284,7 +284,7 @@ defmodule AeMdw.Names do
   end
 
   defp expand_txi(bi_txi, false), do: bi_txi
-  defp expand_txi(bi_txi, true), do: Format.to_map(Util.read_tx!(bi_txi))
+  defp expand_txi(bi_txi, true), do: Format.to_map(DBUtil.read_tx!(bi_txi))
 
   defp render_previous(name, expand?) do
     name
@@ -295,13 +295,9 @@ defmodule AeMdw.Names do
     |> Enum.map(&render_name_info(&1, expand?))
   end
 
-  defp deserialize_scope({:gen, %Range{first: first_gen, last: last_gen}}, direction) do
-    if direction == :forward do
-      {{first_gen, <<>>}, {last_gen, <<>>}}
-    else
-      {{first_gen, nil}, {last_gen, nil}}
-    end
+  defp deserialize_scope({:gen, %Range{first: first_gen, last: last_gen}}) do
+    {{first_gen, Util.min_bin()}, {last_gen, Util.max_256bit_bin()}}
   end
 
-  defp deserialize_scope(_nil_or_txis_scope, _direction), do: nil
+  defp deserialize_scope(_nil_or_txis_scope), do: nil
 end
