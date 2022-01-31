@@ -63,8 +63,8 @@ defmodule AeMdw.Db.Sync.Name do
     old_expire = Model.name(m_name, :expire)
     new_expire = height + delta_ttl
     updates = [{bi, txi} | Model.name(m_name, :updates)]
-    m_name_exp = Model.expiration(index: {new_expire, plain_name})
-    m_name = Model.name(m_name, expire: new_expire, updates: updates)
+    new_m_name_exp = Model.expiration(index: {new_expire, plain_name})
+    new_m_name = Model.name(m_name, expire: new_expire, updates: updates)
 
     for ptr <- pointers do
       m_pointee = Model.pointee(index: pointee_key(ptr, {bi, txi}))
@@ -74,8 +74,8 @@ defmodule AeMdw.Db.Sync.Name do
     cond do
       delta_ttl > 0 ->
         cache_through_delete(Model.ActiveNameExpiration, {old_expire, plain_name})
-        cache_through_write(Model.ActiveNameExpiration, m_name_exp)
-        cache_through_write(Model.ActiveName, m_name)
+        cache_through_write(Model.ActiveNameExpiration, new_m_name_exp)
+        cache_through_write(Model.ActiveName, new_m_name)
 
         log_name_change(height, plain_name, "activate")
 
@@ -84,12 +84,17 @@ defmodule AeMdw.Db.Sync.Name do
         cache_through_delete(Model.ActiveName, plain_name)
         cache_through_delete(Model.ActiveNameOwner, {owner, plain_name})
         cache_through_delete(Model.ActiveNameExpiration, {old_expire, plain_name})
-        cache_through_write(Model.InactiveName, m_name)
-        cache_through_write(Model.InactiveNameExpiration, m_name_exp)
+        cache_through_write(Model.InactiveName, new_m_name)
+        cache_through_write(Model.InactiveNameExpiration, new_m_name_exp)
 
         log_name_change(height, plain_name, "expire")
 
       true ->
+        if internal? do
+          m_name = Model.name(m_name, updates: updates)
+          cache_through_write(Model.ActiveName, m_name)
+        end
+
         log_name_change(height, plain_name, "delta_ttl #{delta_ttl} NA")
     end
   end
