@@ -27,7 +27,7 @@ defmodule Integration.AeMdw.Db.Sync.StatsTest do
 
       assert Model.stat(m_stat, :block_reward) == @first_block_reward
 
-      # > 0 because it get's the sum of objects for the last height when all_cached? = false
+      # > 0 because it gets the sum of objects for the last height when all_cached? = false
       if AeMdw.Db.Sync.BlockIndex.max_kbi() > 500_000 do
         assert Model.total_stat(m_total_stat, :dev_reward) > 0
         assert Model.total_stat(m_total_stat, :inactive_names) > 0

@@ -90,9 +90,7 @@ defmodule AeMdw.Migrations.ExtendTotalStats do
     |> Enum.chunk_every(100)
     |> Enum.each(fn chunk ->
       :mnesia.sync_dirty(fn ->
-        Enum.each(chunk, fn m_total_stat ->
-          :mnesia.write(Model.TotalStat, m_total_stat, :write)
-        end)
+        write_total_stat_chunk(chunk)
       end)
     end)
 
@@ -101,5 +99,11 @@ defmodule AeMdw.Migrations.ExtendTotalStats do
     Log.info("Indexed #{indexed_count} records in #{duration}s")
 
     {:ok, {indexed_count, duration}}
+  end
+
+  defp write_total_stat_chunk(chunk) do
+    Enum.each(chunk, fn m_total_stat ->
+      :mnesia.write(Model.TotalStat, m_total_stat, :write)
+    end)
   end
 end
