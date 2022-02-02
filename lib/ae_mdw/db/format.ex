@@ -227,12 +227,32 @@ defmodule AeMdw.Db.Format do
     }
   end
 
-  def to_raw_map(m_stat, Model.SumStat) do
+  def to_raw_map(
+        Model.total_stat(
+          index: height,
+          active_auctions: active_auctions,
+          active_names: active_names,
+          active_oracles: active_oracles,
+          contracts: contracts,
+          inactive_names: inactive_names,
+          inactive_oracles: inactive_oracles,
+          block_reward: block_reward,
+          dev_reward: dev_reward,
+          total_supply: total_supply
+        ),
+        Model.TotalStat
+      ) do
     %{
-      height: Model.stat(m_stat, :index),
-      sum_block_reward: Model.sum_stat(m_stat, :block_reward),
-      sum_dev_reward: Model.sum_stat(m_stat, :dev_reward),
-      total_token_supply: Model.sum_stat(m_stat, :total_supply)
+      height: height,
+      active_auctions: active_auctions,
+      active_names: active_names,
+      active_oracles: active_oracles,
+      contracts: contracts,
+      inactive_names: inactive_names,
+      inactive_oracles: inactive_oracles,
+      sum_block_reward: block_reward,
+      sum_dev_reward: dev_reward,
+      total_token_supply: total_supply
     }
   end
 
@@ -420,8 +440,8 @@ defmodule AeMdw.Db.Format do
   def to_map(m_stat, Model.Stat),
     do: to_raw_map(m_stat, Model.Stat)
 
-  def to_map(m_stat, Model.SumStat),
-    do: to_raw_map(m_stat, Model.SumStat)
+  def to_map(m_stat, Model.TotalStat),
+    do: to_raw_map(m_stat, Model.TotalStat)
 
   def to_map({_, _, _, _} = aex9_data, source)
       when source in [Model.Aex9Contract, Model.Aex9ContractSymbol, Model.RevAex9Contract],

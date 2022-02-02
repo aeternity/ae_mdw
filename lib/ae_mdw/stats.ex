@@ -21,7 +21,7 @@ defmodule AeMdw.Stats do
   @typep range() :: {:gen, Range.t()} | nil
 
   @table Model.Stat
-  @sum_table Model.SumStat
+  @sum_table Model.TotalStat
 
   @spec fetch_stats(direction(), range(), cursor(), limit()) :: {[stat()], cursor()}
   def fetch_stats(direction, range, cursor, limit) do
@@ -51,7 +51,7 @@ defmodule AeMdw.Stats do
 
   @spec fetch_sum_stats(direction(), range(), cursor(), limit()) :: {[sum_stat()], cursor()}
   def fetch_sum_stats(direction, range, cursor, limit) do
-    {:ok, last_gen} = Mnesia.last_key(AeMdw.Db.Model.SumStat)
+    {:ok, last_gen} = Mnesia.last_key(AeMdw.Db.Model.TotalStat)
 
     range_scope = deserialize_scope(range, direction)
 
