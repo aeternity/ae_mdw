@@ -15,6 +15,10 @@ defmodule AeMdwWeb.Aex9Controller do
 
   @max_range_length 10
 
+  @spec by_contract(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def by_contract(conn, %{"id" => contract_id}),
+    do: handle_input(conn, fn -> by_contract_reply(conn, contract_id) end)
+
   @spec by_names(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def by_names(conn, params),
     do: handle_input(conn, fn -> by_names_reply(conn, search_mode!(params)) end)
@@ -177,6 +181,16 @@ defmodule AeMdwWeb.Aex9Controller do
   #
   # Private functions
   #
+  defp by_contract_reply(conn, contract_id) do
+    entry =
+      case Contract.aex9_search_contract_by_id(contract_id) do
+        {:ok, rev_aex9_key} -> Format.to_map(rev_aex9_key, Model.RevAex9Contract)
+        :not_found -> %{}
+      end
+
+    json(conn, %{data: entry})
+  end
+
   defp by_names_reply(conn, search_mode) do
     entries =
       search_mode

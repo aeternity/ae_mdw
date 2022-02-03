@@ -5,6 +5,7 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Node, as: AE
 
   alias AeMdw.Contract
+  alias AeMdw.Mnesia
   alias AeMdw.Db.MnesiaWriteMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
@@ -23,6 +24,7 @@ defmodule AeMdw.Db.Contract do
   import AeMdw.Util, only: [compose: 2, max_256bit_int: 0]
   import AeMdw.Db.Util
 
+  @type rev_aex9_contract_key :: {pos_integer(), String.t(), String.t(), pos_integer()}
   @typep pubkey :: Db.pubkey()
 
   @spec aex9_creation_write(tuple(), pubkey(), pubkey(), integer()) :: :ok
@@ -189,6 +191,17 @@ defmodule AeMdw.Db.Contract do
   @spec aex9_search_symbol(tuple()) :: map()
   def aex9_search_symbol({_, _} = mode),
     do: aex9_search_tokens(Model.Aex9ContractSymbol, mode)
+
+  @spec aex9_search_contract_by_id(String.t()) :: {:ok, rev_aex9_contract_key()} | :not_found
+  def aex9_search_contract_by_id(contract_id) do
+    with pubkey <- Validate.id!(contract_id),
+         {:ok, txi} <- AeMdw.Db.Origin.tx_index({:contract, pubkey}) do
+      {:ok, {^txi, _name, _symbol, _decimals} = rev_aex9_key} =
+        Mnesia.next_key(Model.RevAex9Contract, :forward, {txi, nil, nil, nil})
+
+      {:ok, rev_aex9_key}
+    end
+  end
 
   @spec aex9_search_tokens(atom(), tuple()) :: map()
   def aex9_search_tokens(table, {:prefix, prefix}),

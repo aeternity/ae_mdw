@@ -12,6 +12,42 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
   @big_balance_contract_id "ct_2M4mVQCDVxu6mvUrEue1xMafLsoA1bgsfC3uT95F3r1xysaCvE"
 
+  describe "by_contract" do
+    test "gets aex9 tokens sorted by contract", %{conn: conn} do
+      contract_id = "ct_1DtebWK23btGPEnfiH3fxppd34S75uUryo5yGmb938Dx9Nyjt"
+
+      response =
+        conn
+        |> get("/aex9/by_contract/#{contract_id}")
+        |> json_response(200)
+
+      assert response["data"] ==
+               %{
+                 "contract_id" => "ct_1DtebWK23btGPEnfiH3fxppd34S75uUryo5yGmb938Dx9Nyjt",
+                 "contract_txi" => 22_313_168,
+                 "decimals" => 18,
+                 "name" => "9GAG",
+                 "symbol" => "9GAG"
+               }
+
+      contract_id = "ct_AdhAL6YZ2wZKKTcR8Gf8CYSGsWC1siWNyv8JRvRpB3RbeAwer"
+
+      response =
+        conn
+        |> get("/aex9/by_contract/#{contract_id}")
+        |> json_response(200)
+
+      assert response["data"] ==
+               %{
+                 "contract_id" => "ct_AdhAL6YZ2wZKKTcR8Gf8CYSGsWC1siWNyv8JRvRpB3RbeAwer",
+                 "contract_txi" => 9_393_007,
+                 "decimals" => 18,
+                 "name" => "AAA",
+                 "symbol" => "AAA"
+               }
+    end
+  end
+
   describe "by_name" do
     test "gets aex9 tokens sorted by name", %{conn: conn} do
       response =
