@@ -19,6 +19,7 @@ defmodule AeMdw.Db.Sync.Contract do
   alias AeMdw.Node.Db
   alias AeMdw.Sync.AsyncTasks
   alias AeMdw.Txs
+  alias AeMdw.Validate
 
   require Model
 
@@ -50,6 +51,42 @@ defmodule AeMdw.Db.Sync.Contract do
     :ets.delete_all_objects(:aex9_sync_cache)
 
     :ok
+  end
+
+  @spec child_contract_mutations(
+          boolean(),
+          Contract.fun_arg_res_or_error(),
+          Txs.txi(),
+          Txs.tx_hash()
+        ) ::
+          {[Mutation.t()], Contract.aex9_meta_info() | nil}
+  def child_contract_mutations(true = _call_rec_success, %{result: fun_result}, txi, tx_hash) do
+    with %{type: :contract, value: contract_id} <- fun_result,
+         {:ok, contract_pk} <- Validate.id(contract_id) do
+      aex9_meta_info =
+        case Contract.is_aex9?(contract_pk) && Contract.aex9_meta_info(contract_pk) do
+          {:ok, aex9_meta_info} -> aex9_meta_info
+          _false_or_notfound -> nil
+        end
+
+      :ets.insert(:ct_create_sync_cache, {contract_pk, txi})
+      AeMdw.Ets.inc(:stat_sync_cache, :contracts)
+
+      {
+        SyncOrigin.origin_mutations(:contract_call_tx, nil, contract_pk, txi, tx_hash),
+        aex9_meta_info
+      }
+    else
+      _no_child_contract -> {[], nil}
+    end
+  end
+
+  def child_contract_mutations(true = _call_rec_success, _error_fun_res, _txi, _tx_hash) do
+    {[], nil}
+  end
+
+  def child_contract_mutations(false = _call_rec_success, _fun_res, _txi, _tx_hash) do
+    {[], nil}
   end
 
   @spec events_mutations(
@@ -85,6 +122,7 @@ defmodule AeMdw.Db.Sync.Contract do
           recipient_id = :aec_spend_tx.recipient_id(tx)
           {:account, contract_pk} = :aeser_id.specialize(recipient_id)
 
+          AeMdw.Ets.inc(:stat_sync_cache, :contracts)
           :ets.insert(:ct_create_sync_cache, {contract_pk, call_txi})
 
           SyncOrigin.origin_mutations(:contract_call_tx, nil, contract_pk, call_txi, call_tx_hash)

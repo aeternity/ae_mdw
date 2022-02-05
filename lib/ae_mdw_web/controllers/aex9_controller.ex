@@ -5,7 +5,10 @@ defmodule AeMdwWeb.Aex9Controller do
   alias AeMdw.Validate
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db, as: DBN
-  alias AeMdw.Db.{Format, Model, Contract}
+  alias AeMdw.Db.Contract
+  alias AeMdw.Db.Format
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.Origin
   alias AeMdw.Db.Util
   alias AeMdwWeb.DataStreamPlug, as: DSPlug
 
@@ -226,7 +229,7 @@ defmodule AeMdwWeb.Aex9Controller do
   defp account_balances_reply(conn, account_pk, last_txi) do
     contracts =
       account_pk
-      |> AeMdw.Db.Contract.aex9_search_contract(last_txi)
+      |> Contract.aex9_search_contract(last_txi)
       |> Map.to_list()
       |> Enum.sort_by(fn {_ct_pk, txi_list} -> _call_txi = List.last(txi_list) end)
 
@@ -236,7 +239,7 @@ defmodule AeMdwWeb.Aex9Controller do
       contracts
       |> Enum.map(fn {contract_pk, txi_list} ->
         {amount, _} = DBN.aex9_balance(contract_pk, account_pk, height_hash)
-        create_txi = List.first(txi_list)
+        create_txi = Origin.tx_index!({:contract, contract_pk})
         call_txi = List.last(txi_list)
         {amount, create_txi, call_txi, contract_pk}
       end)

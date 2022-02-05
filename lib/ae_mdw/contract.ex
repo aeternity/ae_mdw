@@ -195,14 +195,14 @@ defmodule AeMdw.Contract do
   @spec aex9_transfer_event_hash() :: event_hash()
   def aex9_transfer_event_hash(), do: @aex9_transfer_event_hash
 
-  @spec aex9_meta_info(DBN.pubkey()) :: aex9_meta_info() | nil
+  @spec aex9_meta_info(DBN.pubkey()) :: {:ok, aex9_meta_info()} | :not_found
   def aex9_meta_info(contract_pk),
     do: aex9_meta_info(contract_pk, DBN.top_height_hash(false))
 
   def aex9_meta_info(contract_pk, {type, height, hash}) do
     case call_contract(contract_pk, {type, height, hash}, "meta_info", []) do
       {:ok, {:tuple, {name, symbol, decimals}}} ->
-        {name, symbol, decimals}
+        {:ok, {name, symbol, decimals}}
 
       {:error, _call_error} ->
         Log.info(
@@ -211,7 +211,7 @@ defmodule AeMdw.Contract do
           }"
         )
 
-        nil
+        :not_found
     end
   end
 
