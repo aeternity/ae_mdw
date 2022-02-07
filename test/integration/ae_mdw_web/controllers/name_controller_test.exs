@@ -320,6 +320,25 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       assert ^expires = Enum.sort(expires)
     end
 
+    test "get auctions with parameters by=name, direction=backward and limit=3", %{
+      conn: conn
+    } do
+      limit = 3
+      by = "name"
+      direction = "backward"
+
+      assert %{"data" => auctions} =
+               conn
+               |> get("/names/auctions", by: by, direction: direction, limit: limit)
+               |> json_response(200)
+
+      plain_names =
+        auctions |> Enum.map(fn %{"name" => plain_name} -> plain_name end) |> Enum.reverse()
+
+      assert length(auctions) <= limit
+      assert ^plain_names = Enum.sort(plain_names)
+    end
+
     test "renders error when parameter by is invalid", %{conn: conn} do
       by = "invalid_by"
       error_msg = "invalid query: by=#{by}"

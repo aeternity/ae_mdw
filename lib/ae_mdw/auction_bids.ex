@@ -28,9 +28,9 @@ defmodule AeMdw.AuctionBids do
   @spec top_auction_bid(plain_name(), boolean()) :: {:ok, auction_bid()} | :not_found
   def top_auction_bid(plain_name, expand?) do
     case Mnesia.prev_key(@table, bid_top_key(plain_name)) do
-      {:ok, auction_bid} ->
-        if elem(auction_bid, 0) == plain_name do
-          {:ok, render(auction_bid, expand?)}
+      {:ok, auction_bid_key} ->
+        if elem(auction_bid_key, 0) == plain_name do
+          {:ok, render(auction_bid_key, expand?)}
         else
           :not_found
         end
@@ -43,15 +43,10 @@ defmodule AeMdw.AuctionBids do
   @spec fetch_auctions(direction(), order_by(), cursor() | nil, limit(), boolean()) ::
           {[auction_bid()], cursor() | nil}
   def fetch_auctions(direction, :name, cursor, limit, expand?) do
-    {name_keys, next_cursor} =
+    {auction_bid_keys, next_cursor} =
       Mnesia.fetch_keys(@table, direction, deserialize_name_cursor(cursor), limit)
 
-    auction_bids =
-      Enum.map(name_keys, fn plain_name ->
-        auction_bid = Mnesia.fetch!(@table, plain_name)
-
-        render(auction_bid, expand?)
-      end)
+    auction_bids = Enum.map(auction_bid_keys, &render(&1, expand?))
 
     {auction_bids, serialize_name_cursor(next_cursor)}
   end
