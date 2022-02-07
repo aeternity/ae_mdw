@@ -82,6 +82,7 @@ defmodule AeMdwWeb.Router do
     get "/oracles/active/gen/:range", OracleController, :active_oracles
     get "/oracles/gen/:range", OracleController, :oracles
 
+    get "/aex9/by_contract/:id", Aex9Controller, :by_contract
     get "/aex9/by_name", Aex9Controller, :by_names
     get "/aex9/by_symbol", Aex9Controller, :by_symbols
 
