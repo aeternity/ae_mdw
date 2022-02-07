@@ -129,6 +129,8 @@ defmodule AeMdw.Db.Name do
     IntTransfer.fee({height, -1}, :lock_name, owner, txi, winning_tx.name_fee)
     Ets.inc(:stat_sync_cache, :active_names)
     Ets.dec(:stat_sync_cache, :active_auctions)
+    previous && Ets.dec(:stat_sync_cache, :inactive_names)
+
     Log.info("[#{height}] expiring auction for #{plain_name}")
   end
 

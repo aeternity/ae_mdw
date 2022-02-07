@@ -77,7 +77,7 @@ defmodule AeMdw.Db.Sync.Name do
         cache_through_write(Model.ActiveNameExpiration, new_m_name_exp)
         cache_through_write(Model.ActiveName, new_m_name)
 
-        log_name_change(height, plain_name, "activate")
+        log_name_change(height, plain_name, "extend")
 
       delta_ttl == 0 and not internal? ->
         owner = Model.name(m_name, :owner)
@@ -86,6 +86,9 @@ defmodule AeMdw.Db.Sync.Name do
         cache_through_delete(Model.ActiveNameExpiration, {old_expire, plain_name})
         cache_through_write(Model.InactiveName, new_m_name)
         cache_through_write(Model.InactiveNameExpiration, new_m_name_exp)
+
+        inc(:stat_sync_cache, :inactive_names)
+        dec(:stat_sync_cache, :active_names)
 
         log_name_change(height, plain_name, "expire")
 
