@@ -253,8 +253,12 @@ defmodule AeMdw.Db.Sync.Transaction do
         call_rec = Contract.get_init_call_rec(tx, block_hash)
 
         aex9_meta_info =
-          if :aect_call.return_type(call_rec) == :ok and Contract.is_aex9?(type_info) do
-            Contract.aex9_meta_info(contract_pk)
+          with :ok <- :aect_call.return_type(call_rec),
+               true <- Contract.is_aex9?(type_info),
+               {:ok, meta_info} <- Contract.aex9_meta_info(contract_pk) do
+            meta_info
+          else
+            _failed -> nil
           end
 
         mutations ++
@@ -284,8 +288,27 @@ defmodule AeMdw.Db.Sync.Transaction do
     {fun_arg_res, call_rec} =
       Contract.call_tx_info(tx, contract_pk, block_hash, &Contract.to_map/1)
 
-    Sync.Contract.events_mutations(tx_events, block_index, block_hash, txi, tx_hash, create_txi) ++
-      [ContractCallMutation.new(contract_pk, caller_pk, create_txi, txi, fun_arg_res, call_rec)]
+    {child_mutations, aex9_meta_info} =
+      Sync.Contract.child_contract_mutations(
+        :aect_call.return_type(call_rec) == :ok,
+        fun_arg_res,
+        txi,
+        tx_hash
+      )
+
+    child_mutations ++
+      Sync.Contract.events_mutations(tx_events, block_index, block_hash, txi, tx_hash, create_txi) ++
+      [
+        ContractCallMutation.new(
+          contract_pk,
+          caller_pk,
+          create_txi,
+          txi,
+          fun_arg_res,
+          aex9_meta_info,
+          call_rec
+        )
+      ]
   end
 
   defp tx_mutations(%TxContext{
