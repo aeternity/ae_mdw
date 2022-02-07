@@ -116,7 +116,8 @@ defmodule AeMdwWeb.NameController do
               "cursor" => new_cursor,
               "limit" => limit,
               "direction" => direction,
-              "expand" => expand?
+              "expand" => expand?,
+              "by" => order_by
             })
         }
         |> URI.to_string()

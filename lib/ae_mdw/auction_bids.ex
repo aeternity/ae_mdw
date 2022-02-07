@@ -27,15 +27,11 @@ defmodule AeMdw.AuctionBids do
 
   @spec top_auction_bid(plain_name(), boolean()) :: {:ok, auction_bid()} | :not_found
   def top_auction_bid(plain_name, expand?) do
-    case Mnesia.prev_key(@table, bid_top_key(plain_name)) do
-      {:ok, auction_bid} ->
-        if elem(auction_bid, 0) == plain_name do
-          {:ok, render(auction_bid, expand?)}
-        else
-          :not_found
-        end
+    case bid_top_key(plain_name) do
+      {:ok, auction_bid_key} ->
+        {:ok, render(auction_bid_key, expand?)}
 
-      :none ->
+      :not_found ->
         :not_found
     end
   end
@@ -43,17 +39,23 @@ defmodule AeMdw.AuctionBids do
   @spec fetch_auctions(direction(), order_by(), cursor() | nil, limit(), boolean()) ::
           {[auction_bid()], cursor() | nil}
   def fetch_auctions(direction, :name, cursor, limit, expand?) do
-    {name_keys, next_cursor} =
-      Mnesia.fetch_keys(@table, direction, deserialize_name_cursor(cursor), limit)
+    cursor =
+      case cursor do
+        nil ->
+          nil
 
-    auction_bids =
-      Enum.map(name_keys, fn plain_name ->
-        auction_bid = Mnesia.fetch!(@table, plain_name)
+        plain_name ->
+          case bid_top_key(plain_name) do
+            {:ok, key} -> key
+            :not_found -> nil
+          end
+      end
 
-        render(auction_bid, expand?)
-      end)
+    {auction_bid_keys, next_cursor} = Mnesia.fetch_keys(@table, direction, cursor, limit)
 
-    {auction_bids, serialize_name_cursor(next_cursor)}
+    auction_bids = Enum.map(auction_bid_keys, &render(&1, expand?))
+
+    {auction_bids, serialize_auction_bid_cursor(next_cursor)}
   end
 
   def fetch_auctions(direction, :expiration, cursor, limit, expand?) do
@@ -91,13 +93,28 @@ defmodule AeMdw.AuctionBids do
     }
   end
 
-  defp bid_top_key(name), do: {name, <<>>, <<>>, <<>>, <<>>}
+  defp bid_top_key(plain_name) do
+    top_key = {plain_name, <<>>, <<>>, <<>>, <<>>}
+
+    case Mnesia.prev_key(@table, top_key) do
+      {:ok, auction_bid_key} ->
+        if elem(auction_bid_key, 0) == plain_name do
+          {:ok, auction_bid_key}
+        else
+          :not_found
+        end
+
+      :none ->
+        :not_found
+    end
+  end
 
   defp bi_txi_txi({{_height, _mbi}, txi}), do: txi
 
-  defp serialize_name_cursor(name), do: name
+  defp serialize_auction_bid_cursor(nil), do: nil
 
-  defp deserialize_name_cursor(cursor), do: cursor
+  defp serialize_auction_bid_cursor({plain_name, _block_index, _expire, _owner_pk, _bids}),
+    do: plain_name
 
   defp serialize_exp_cursor(nil), do: nil
 
