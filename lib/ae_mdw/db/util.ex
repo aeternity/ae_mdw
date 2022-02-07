@@ -1,8 +1,10 @@
 defmodule AeMdw.Db.Util do
   # credo:disable-for-this-file
+  alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Db.Model.Block
   alias AeMdw.Mnesia
+  alias AeMdw.Txs
 
   require Logger
   require Model
@@ -267,6 +269,34 @@ defmodule AeMdw.Db.Util do
     case Mnesia.last_key(Block, nil) do
       nil -> 0
       {kbi, _txi} -> kbi
+    end
+  end
+
+  @spec gen_to_txi(Blocks.height()) :: Txs.txi()
+  def gen_to_txi(gen) do
+    case Mnesia.fetch(Model.Block, {gen, -1}) do
+      {:ok, Model.block(tx_index: txi)} ->
+        txi
+
+      :not_found ->
+        case Mnesia.last_key(Model.Tx) do
+          {:ok, last_txi} -> last_txi + 1
+          :none -> 0
+        end
+    end
+  end
+
+  @spec txi_to_gen(Txs.txi()) :: Blocks.height()
+  def txi_to_gen(txi) do
+    case Mnesia.fetch(Model.Tx, txi) do
+      {:ok, Model.tx(block_index: {kbi, _mbi})} ->
+        kbi
+
+      :not_found ->
+        case Mnesia.last_key(Model.Block) do
+          {:ok, {last_kbi, _mbi}} -> last_kbi + 1
+          :none -> 0
+        end
     end
   end
 end

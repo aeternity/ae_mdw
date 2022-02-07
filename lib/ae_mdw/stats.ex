@@ -27,7 +27,7 @@ defmodule AeMdw.Stats do
   def fetch_stats(direction, range, cursor, limit) do
     {:ok, last_gen} = Mnesia.last_key(AeMdw.Db.Model.Stat)
 
-    range_scope = deserialize_scope(range)
+    range_scope = deserialize_scope(range, direction)
 
     cursor_scope =
       case deserialize_cursor(cursor) do
@@ -53,7 +53,7 @@ defmodule AeMdw.Stats do
   def fetch_sum_stats(direction, range, cursor, limit) do
     {:ok, last_gen} = Mnesia.last_key(AeMdw.Db.Model.SumStat)
 
-    range_scope = deserialize_scope(range)
+    range_scope = deserialize_scope(range, direction)
 
     cursor_scope =
       case deserialize_cursor(cursor) do
@@ -121,8 +121,11 @@ defmodule AeMdw.Stats do
     end
   end
 
-  defp deserialize_scope(nil), do: nil
+  defp deserialize_scope(nil, _direction), do: nil
 
-  defp deserialize_scope({:gen, %Range{first: first_gen, last: last_gen}}),
+  defp deserialize_scope({:gen, %Range{first: first_gen, last: last_gen}}, :forward),
     do: {first_gen, last_gen}
+
+  defp deserialize_scope({:gen, %Range{first: first_gen, last: last_gen}}, :backward),
+    do: {last_gen, first_gen}
 end

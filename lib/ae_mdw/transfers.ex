@@ -5,10 +5,11 @@ defmodule AeMdw.Transfers do
 
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Util, as: DBUtil
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Collection
   alias AeMdw.Mnesia
-  alias AeMdw.Txs
+  alias AeMdw.Util
   alias AeMdw.Validate
 
   @type cursor :: binary()
@@ -19,11 +20,6 @@ defmodule AeMdw.Transfers do
   @typep direction :: Mnesia.direction()
   @typep range :: {:gen, Range.t()} | {:txi, Range.t()} | nil
   @typep reason :: binary()
-
-  @max_256bit_int 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
-  @max_256bit_bin <<@max_256bit_int::256>>
-  @min_int -100
-  @min_binary <<>>
 
   @pagination_params ~w(limit cursor)
 
@@ -37,7 +33,7 @@ defmodule AeMdw.Transfers do
           {:ok, [transfer()], cursor() | nil} | {:error, reason()}
   def fetch_transfers(direction, range, query, cursor, limit) do
     cursor = deserialize_cursor(cursor)
-    scope = deserialize_scope(range, direction)
+    scope = deserialize_scope(range)
 
     try do
       {transfers, next_cursor} =
@@ -46,8 +42,6 @@ defmodule AeMdw.Transfers do
         |> Enum.map(&convert_param/1)
         |> Map.new()
         |> build_stream(scope, cursor, direction)
-        |> Stream.drop_while(&(not inside_txi_range?(range, &1)))
-        |> Stream.take_while(&inside_txi_range?(range, &1))
         |> Collection.paginate(limit)
 
       {:ok, Enum.map(transfers, &render/1), serialize_cursor(next_cursor)}
@@ -56,21 +50,6 @@ defmodule AeMdw.Transfers do
         {:error, e.message}
     end
   end
-
-  defp inside_txi_range?(
-         {:txi, %Range{first: first_txi, last: last_txi}},
-         {_gen_txi, _kind, _account_pk, ref_txi}
-       )
-       when first_txi < last_txi,
-       do: not is_nil(ref_txi) and first_txi <= ref_txi and ref_txi <= last_txi
-
-  defp inside_txi_range?(
-         {:txi, %Range{last: last_txi, first: first_txi}},
-         {_gen_txi, _kind, _account_pk, ref_txi}
-       ),
-       do: not is_nil(ref_txi) and last_txi <= ref_txi and ref_txi <= first_txi
-
-  defp inside_txi_range?(_range, _ref_txi), do: true
 
   # Retrieves transfers within the {account, kind_prefix_*, gen_txi, X} range.
   defp build_stream(%{account_pk: account_pk, kind_prefix: kind_prefix}, scope, cursor, direction) do
@@ -132,39 +111,22 @@ defmodule AeMdw.Transfers do
     Collection.stream(@int_transfer_table, direction, scope, cursor)
   end
 
-  defp deserialize_scope(nil, :forward) do
-    {{{@min_int, @min_int}, @min_binary, @min_binary, @min_int},
-     {{@max_256bit_int, @max_256bit_int}, @max_256bit_bin, @max_256bit_bin, @max_256bit_int}}
+  defp deserialize_scope(nil) do
+    {{{Util.min_int(), Util.min_int()}, Util.min_bin(), Util.min_bin(), Util.min_int()},
+     {{Util.max_256bit_int(), Util.max_256bit_int()}, Util.max_256bit_bin(),
+      Util.max_256bit_bin(), Util.max_256bit_int()}}
   end
 
-  defp deserialize_scope(nil, :backward) do
-    {first, last} = deserialize_scope(nil, :forward)
-
-    {last, first}
+  defp deserialize_scope({:gen, %Range{first: first_gen, last: last_gen}}) do
+    {{{first_gen, Util.min_int()}, Util.min_bin(), Util.min_bin(), Util.min_int()},
+     {{last_gen, Util.max_256bit_int()}, Util.max_256bit_bin(), Util.max_256bit_bin(),
+      Util.max_256bit_int()}}
   end
 
-  defp deserialize_scope({:gen, %Range{first: first_gen, last: last_gen}}, :forward) do
-    {{{first_gen, @min_int}, @min_binary, @min_binary, @min_int},
-     {{last_gen, @max_256bit_int}, @max_256bit_bin, @max_256bit_bin, @max_256bit_int}}
-  end
-
-  defp deserialize_scope({:gen, %Range{first: first_gen, last: last_gen}}, :backward) do
-    {first, last} = deserialize_scope({:gen, %Range{first: last_gen, last: first_gen}}, :forward)
-
-    {last, first}
-  end
-
-  defp deserialize_scope({:txi, %Range{first: first_txi, last: last_txi}}, direction) do
+  defp deserialize_scope({:txi, %Range{first: first_txi, last: last_txi}}) do
     deserialize_scope(
-      {:gen, %Range{first: txi_to_gen(first_txi), last: txi_to_gen(last_txi)}},
-      direction
+      {:gen, %Range{first: DBUtil.txi_to_gen(first_txi), last: DBUtil.txi_to_gen(last_txi)}}
     )
-  end
-
-  defp txi_to_gen(txi) do
-    %{"block_height" => block_gen} = Txs.fetch!(txi)
-
-    block_gen
   end
 
   defp deserialize_cursor(nil), do: nil

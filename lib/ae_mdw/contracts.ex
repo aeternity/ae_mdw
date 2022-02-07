@@ -8,11 +8,12 @@ defmodule AeMdw.Contracts do
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Stream.Query.Parser
-  alias AeMdw.Db.Stream.Scope
+  alias AeMdw.Db.Util, as: DBUtil
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Mnesia
   alias AeMdw.Db.Origin
   alias AeMdw.Txs
+  alias AeMdw.Util
   alias AeMdw.Validate
 
   require Model
@@ -46,16 +47,16 @@ defmodule AeMdw.Contracts do
 
   @pagination_params ~w(limit cursor)
 
-  @max_256bit_int 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
-  @max_256bit_bin <<@max_256bit_int::256>>
-  @min_int -100
-  @min_bin <<>>
+  @max_256bit_int Util.max_256bit_int()
+  @max_256bit_bin Util.max_256bit_bin()
+  @min_int Util.min_int()
+  @min_bin Util.min_bin()
 
   @spec fetch_logs(direction(), range(), query(), cursor(), limit()) ::
           {:ok, [log()], cursor()} | {:error, reason()}
   def fetch_logs(direction, range, query, cursor, limit) do
     cursor = deserialize_logs_cursor(cursor)
-    scope = deserialize_logs_scope(range, direction)
+    scope = deserialize_logs_scope(range)
 
     try do
       {logs, next_cursor} =
@@ -77,7 +78,7 @@ defmodule AeMdw.Contracts do
           {:ok, [call()], cursor()} | {:error, reason()}
   def fetch_calls(direction, range, query, cursor, limit) do
     cursor = deserialize_calls_cursor(cursor)
-    scope = deserialize_calls_scope(range, direction)
+    scope = deserialize_calls_scope(range)
 
     try do
       {calls, next_cursor} =
@@ -361,57 +362,43 @@ defmodule AeMdw.Contracts do
 
   defp convert_param(other), do: raise(ErrInput.Query, value: other)
 
-  defp deserialize_logs_scope(nil, :forward) do
+  defp deserialize_logs_scope(nil) do
     {{@min_int, @min_int, @min_bin, @min_int, @min_bin},
      {@max_256bit_int, @max_256bit_int, max_blob(), @max_256bit_int, max_blob()}}
   end
 
-  defp deserialize_logs_scope({:gen, %Range{first: first_gen, last: last_gen}}, direction) do
+  defp deserialize_logs_scope({:gen, %Range{first: first_gen, last: last_gen}}) do
     deserialize_logs_scope(
       {:txi,
        %Range{
-         first: first_gen_to_txi(first_gen, direction),
-         last: last_gen_to_txi(last_gen, direction)
-       }},
-      :forward
+         first: DBUtil.gen_to_txi(first_gen),
+         last: DBUtil.gen_to_txi(last_gen + 1) - 1
+       }}
     )
   end
 
-  defp deserialize_logs_scope(range, :backward) do
-    {first, last} = deserialize_logs_scope(range, :forward)
-
-    {last, first}
-  end
-
-  defp deserialize_logs_scope({:txi, %Range{first: first_txi, last: last_txi}}, :forward) do
+  defp deserialize_logs_scope({:txi, %Range{first: first_txi, last: last_txi}}) do
     {{first_txi, @min_int, @min_bin, @min_int, @min_bin},
      {last_txi, @max_256bit_int, max_blob(), @max_256bit_int, max_blob()}}
   end
 
-  defp deserialize_calls_scope(nil, :forward) do
+  defp deserialize_calls_scope(nil) do
     {{@min_int, @min_int, @min_int, @min_bin, @min_bin, @min_int},
      {@max_256bit_int, @max_256bit_int, @max_256bit_int, @max_256bit_bin, max_blob(),
       @max_256bit_int}}
   end
 
-  defp deserialize_calls_scope({:gen, %Range{first: first_gen, last: last_gen}}, direction) do
+  defp deserialize_calls_scope({:gen, %Range{first: first_gen, last: last_gen}}) do
     deserialize_calls_scope(
       {:txi,
        %Range{
-         first: first_gen_to_txi(first_gen, direction),
-         last: last_gen_to_txi(last_gen, direction)
-       }},
-      :forward
+         first: DBUtil.gen_to_txi(first_gen),
+         last: DBUtil.gen_to_txi(last_gen + 1) - 1
+       }}
     )
   end
 
-  defp deserialize_calls_scope(range, :backward) do
-    {first, last} = deserialize_calls_scope(range, :forward)
-
-    {last, first}
-  end
-
-  defp deserialize_calls_scope({:txi, %Range{first: first_txi, last: last_txi}}, :forward) do
+  defp deserialize_calls_scope({:txi, %Range{first: first_txi, last: last_txi}}) do
     {{first_txi, @min_int, @min_int, @min_bin, @min_bin, @min_int},
      {last_txi, @max_256bit_int, @max_256bit_int, @max_256bit_bin, max_blob(), @max_256bit_int}}
   end
@@ -520,21 +507,4 @@ defmodule AeMdw.Contracts do
   end
 
   defp max_blob(), do: AeMdw.Node.max_blob()
-  defp first_gen_to_txi(first_gen, direction), do: gen_to_txi(first_gen, direction)
-  defp last_gen_to_txi(last_gen, :forward), do: gen_to_txi(last_gen, :backward)
-  defp last_gen_to_txi(last_gen, :backward), do: gen_to_txi(last_gen, :forward)
-
-  defp gen_to_txi(gen, :forward) do
-    case Scope.translate1({:gen, gen}, :txi) do
-      {:range, {start_r, _end_r}} -> start_r
-      nil -> 0
-    end
-  end
-
-  defp gen_to_txi(gen, :backward) do
-    case Scope.translate1({:gen, gen}, :txi) do
-      {:range, {_start_r, end_r}} -> end_r
-      nil -> 0
-    end
-  end
 end

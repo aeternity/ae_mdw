@@ -273,9 +273,20 @@ defmodule AeMdw.Util do
     )
   end
 
+  @spec max_256bit_int() :: integer()
   def max_256bit_int(),
     do: 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 
+  @spec max_256bit_bin() :: binary()
+  def max_256bit_bin(), do: <<max_256bit_int()::256>>
+
+  @spec min_int() :: integer()
+  def min_int(), do: -100
+
+  @spec min_bin() :: binary()
+  def min_bin(), do: <<>>
+
+  @spec contains_unicode?(binary()) :: boolean()
   def contains_unicode?(string) do
     string
     |> String.codepoints()
@@ -290,6 +301,7 @@ defmodule AeMdw.Util do
     )
   end
 
+  @spec with_sync_off(fun()) :: :ok
   def with_sync_off(fun) when is_function(fun, 0) do
     try do
       AeMdw.Application.sync(false)
