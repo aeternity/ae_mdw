@@ -1,5 +1,17 @@
 # Changelog
 
+### [1.5.1](https://www.github.com/aeternity/ae_mdw/compare/v1.5.0...v1.5.1) (2022-02-07)
+
+
+### Bug Fixes
+
+* updates txi when internal call expiration is unchanged ([#502](https://www.github.com/aeternity/ae_mdw/issues/502)) ([8450838](https://www.github.com/aeternity/ae_mdw/commit/845083883076dc5233433cd77b732bef5488f567))
+
+
+### Refactorings
+
+* extract range independently of the direction requested ([#499](https://www.github.com/aeternity/ae_mdw/issues/499)) ([979c5ab](https://www.github.com/aeternity/ae_mdw/commit/979c5ab0a2d07929794867642d7a6dafa4a7f059))
+
 ## [1.5.0](https://www.github.com/aeternity/ae_mdw/compare/v1.4.0...v1.5.0) (2022-01-28)
 
 
