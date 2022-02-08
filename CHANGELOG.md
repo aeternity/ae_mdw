@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.6.0](https://www.github.com/aeternity/ae_mdw/compare/v1.5.0...v1.6.0) (2022-02-08)
+
+
+### Features
+
+* /aex9/by_contract search ([#505](https://www.github.com/aeternity/ae_mdw/issues/505)) ([117a45d](https://www.github.com/aeternity/ae_mdw/commit/117a45dacfd601548ccb2ec1658cac10143635c0))
+* aex9 contract created by :contract_call_tx ([#514](https://www.github.com/aeternity/ae_mdw/issues/514)) ([7224252](https://www.github.com/aeternity/ae_mdw/commit/7224252fb62a5f59383a589f93b908b843c4b0af))
+* sum of auctions, names, oracles and contracts in total stats ([#504](https://www.github.com/aeternity/ae_mdw/issues/504)) ([3adb25d](https://www.github.com/aeternity/ae_mdw/commit/3adb25d7dcc32515e64b5a6435798c4c6fb47926))
+
+
+### Bug Fixes
+
+* render auctions by name using just the AuctionBid key ([#515](https://www.github.com/aeternity/ae_mdw/issues/515)) ([b3c0f3a](https://www.github.com/aeternity/ae_mdw/commit/b3c0f3a798d7afc5e0535c6b4590fe781e74bbe4))
+* updates txi when internal call expiration is unchanged ([#502](https://www.github.com/aeternity/ae_mdw/issues/502)) ([8450838](https://www.github.com/aeternity/ae_mdw/commit/845083883076dc5233433cd77b732bef5488f567))
+
+
+### Refactorings
+
+* extract range independently of the direction requested ([#499](https://www.github.com/aeternity/ae_mdw/issues/499)) ([979c5ab](https://www.github.com/aeternity/ae_mdw/commit/979c5ab0a2d07929794867642d7a6dafa4a7f059))
+
 ## [1.5.0](https://www.github.com/aeternity/ae_mdw/compare/v1.4.0...v1.5.0) (2022-01-28)
 
 
