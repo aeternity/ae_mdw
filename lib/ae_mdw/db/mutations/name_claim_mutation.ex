@@ -121,8 +121,8 @@ defmodule AeMdw.Db.NameClaimMutation do
         m_bid =
           case DBName.cache_through_prev(Model.AuctionBid, DBName.bid_top_key(plain_name)) do
             :not_found ->
-              make_m_bid.([{block_index, txi}])
               Ets.inc(:stat_sync_cache, :active_auctions)
+              make_m_bid.([{block_index, txi}])
 
             {:ok,
              {^plain_name, {_, prev_txi}, prev_auction_end, prev_owner, prev_bids} = prev_key} ->
