@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.6.1](https://www.github.com/aeternity/ae_mdw/compare/v1.6.0...v1.6.1) (2022-02-08)
+
+
+### Bug Fixes
+
+* properly assign m_bid to actual bid value ([#521](https://www.github.com/aeternity/ae_mdw/issues/521)) ([91b1f0b](https://www.github.com/aeternity/ae_mdw/commit/91b1f0b698015efdc4e5a92d7184f88275cf951d))
+
 ## [1.6.0](https://www.github.com/aeternity/ae_mdw/compare/v1.5.0...v1.6.0) (2022-02-08)
 
 
