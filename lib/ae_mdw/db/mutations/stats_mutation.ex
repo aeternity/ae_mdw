@@ -8,28 +8,28 @@ defmodule AeMdw.Db.StatsMutation do
 
   require Model
 
-  defstruct [:stat, :sum_stat]
+  defstruct [:stat, :total_stat]
 
   @type t() :: %__MODULE__{
           stat: Model.stat(),
-          sum_stat: Model.sum_stat()
+          total_stat: Model.total_stat()
         }
 
-  @spec new(Model.stat(), Model.sum_stat()) :: t()
-  def new(m_stat, m_sum_stat) do
+  @spec new(Model.stat(), Model.total_stat()) :: t()
+  def new(m_stat, m_total_stat) do
     %__MODULE__{
       stat: m_stat,
-      sum_stat: m_sum_stat
+      total_stat: m_total_stat
     }
   end
 
   @spec mutate(t()) :: :ok
   def mutate(%__MODULE__{
         stat: stat,
-        sum_stat: sum_stat
+        total_stat: total_stat
       }) do
     Mnesia.write(Model.Stat, stat)
-    Mnesia.write(Model.SumStat, sum_stat)
+    Mnesia.write(Model.TotalStat, total_stat)
   end
 end
 

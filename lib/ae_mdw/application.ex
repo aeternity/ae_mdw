@@ -219,14 +219,14 @@ defmodule AeMdw.Application do
     initial_token_supply = AeMdw.Node.token_supply_delta(0)
 
     :mnesia.transaction(fn ->
-      case :mnesia.read(Model.SumStat, 0) do
-        [m_stat] ->
-          tot_sup = Model.sum_stat(m_stat, :total_supply)
+      case :mnesia.read(Model.TotalStat, 0) do
+        [m_total_stat] ->
+          tot_sup = Model.total_stat(m_total_stat, :total_supply)
           tot_sup == initial_token_supply || raise "initial total supply doesn't match"
 
         [] ->
-          m_stat = Model.sum_stat(index: 0, total_supply: initial_token_supply)
-          :mnesia.write(Model.SumStat, m_stat, :write)
+          m_total_stat = Model.total_stat(index: 0, total_supply: initial_token_supply)
+          :mnesia.write(Model.TotalStat, m_total_stat, :write)
       end
     end)
 

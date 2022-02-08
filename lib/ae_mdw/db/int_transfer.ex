@@ -41,6 +41,7 @@ defmodule AeMdw.Db.IntTransfer do
       |> :aeu_mtrees.to_list()
       |> Enum.map(fn {target_pk, ser_account} ->
         amount = :aec_accounts.balance(:aec_accounts.deserialize(target_pk, ser_account))
+
         kind = (target_pk in dev_benefs && @reward_dev_kind) || @reward_block_kind
 
         {kind, target_pk, amount}
@@ -75,26 +76,26 @@ defmodule AeMdw.Db.IntTransfer do
     Mnesia.write(Model.TargetKindIntTransferTx, target_kind_tx)
   end
 
-  @spec count_block_reward(Blocks.height()) :: pos_integer()
-  def count_block_reward(height) do
-    count_reward(height, @reward_block_kind)
+  @spec read_block_reward(Blocks.height()) :: pos_integer()
+  def read_block_reward(height) do
+    sum_reward_amount(height, @reward_block_kind)
   end
 
-  @spec count_dev_reward(Blocks.height()) :: pos_integer()
-  def count_dev_reward(height) do
-    count_reward(height, @reward_dev_kind)
+  @spec read_dev_reward(Blocks.height()) :: pos_integer()
+  def read_dev_reward(height) do
+    sum_reward_amount(height, @reward_dev_kind)
   end
 
-  defp count_reward(height, kind) do
+  defp sum_reward_amount(height, kind) do
     height_pos = {height, -1}
 
-    kind_spec =
+    amount_spec =
       Ex2ms.fun do
-        Model.kind_int_transfer_tx(index: {^kind, ^height_pos, :_, :_}) -> 1
+        Model.int_transfer_tx(index: {^height_pos, ^kind, :_, :_}, amount: amount) -> amount
       end
 
-    Model.KindIntTransferTx
-    |> :mnesia.dirty_select(kind_spec)
-    |> length()
+    Model.IntTransferTx
+    |> :mnesia.dirty_select(amount_spec)
+    |> Enum.sum()
   end
 end

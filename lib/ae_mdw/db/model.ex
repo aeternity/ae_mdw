@@ -428,6 +428,36 @@ defmodule AeMdw.Db.Model do
             total_supply: integer()
           )
 
+  # summarized statistics
+  @total_stat_defaults [
+    # height
+    index: 0,
+    block_reward: 0,
+    dev_reward: 0,
+    total_supply: 0,
+    active_auctions: 0,
+    active_names: 0,
+    inactive_names: 0,
+    active_oracles: 0,
+    inactive_oracles: 0,
+    contracts: 0
+  ]
+  defrecord :total_stat, @total_stat_defaults
+
+  @type total_stat ::
+          record(:total_stat,
+            index: Blocks.height(),
+            block_reward: integer(),
+            dev_reward: integer(),
+            total_supply: integer(),
+            active_auctions: integer(),
+            active_names: integer(),
+            inactive_names: integer(),
+            active_oracles: integer(),
+            inactive_oracles: integer(),
+            contracts: integer()
+          )
+
   ################################################################################
 
   @spec tables() :: list(atom())
@@ -513,7 +543,8 @@ defmodule AeMdw.Db.Model do
   defp stat_tables() do
     [
       AeMdw.Db.Model.Stat,
-      AeMdw.Db.Model.SumStat
+      AeMdw.Db.Model.SumStat,
+      AeMdw.Db.Model.TotalStat
     ]
   end
 
@@ -569,6 +600,7 @@ defmodule AeMdw.Db.Model do
       :target_kind_int_transfer_tx,
       :stat,
       :sum_stat,
+      :total_stat,
       :migrations,
       :async_tasks
     ]
@@ -631,6 +663,7 @@ defmodule AeMdw.Db.Model do
 
   def record(AeMdw.Db.Model.Stat), do: :stat
   def record(AeMdw.Db.Model.SumStat), do: :sum_stat
+  def record(AeMdw.Db.Model.TotalStat), do: :total_stat
 
   @spec table(atom()) :: atom()
   def table(:async_tasks), do: AeMdw.Db.Model.AsyncTasks
@@ -671,6 +704,7 @@ defmodule AeMdw.Db.Model do
   def table(:target_kind_int_transfer_tx), do: AeMdw.Db.Model.TargetKindIntTransferTx
   def table(:stat), do: AeMdw.Db.Model.Stat
   def table(:sum_stat), do: AeMdw.Db.Model.SumStat
+  def table(:total_stat), do: AeMdw.Db.Model.TotalStat
 
   @spec defaults(atom()) :: list()
   def defaults(:async_tasks), do: @async_tasks_defaults
@@ -717,6 +751,7 @@ defmodule AeMdw.Db.Model do
   def defaults(:target_kind_int_transfer_tx), do: @target_kind_int_transfer_tx_defaults
   def defaults(:stat), do: @stat_defaults
   def defaults(:sum_stat), do: @sum_stat_defaults
+  def defaults(:total_stat), do: @total_stat_defaults
 
   @spec write_count(tuple(), integer()) :: :ok
   def write_count(model, delta) do

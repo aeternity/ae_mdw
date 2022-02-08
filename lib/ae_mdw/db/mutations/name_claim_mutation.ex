@@ -122,6 +122,7 @@ defmodule AeMdw.Db.NameClaimMutation do
           case DBName.cache_through_prev(Model.AuctionBid, DBName.bid_top_key(plain_name)) do
             :not_found ->
               make_m_bid.([{block_index, txi}])
+              Ets.inc(:stat_sync_cache, :active_auctions)
 
             {:ok,
              {^plain_name, {_, prev_txi}, prev_auction_end, prev_owner, prev_bids} = prev_key} ->
@@ -151,7 +152,6 @@ defmodule AeMdw.Db.NameClaimMutation do
         DBName.cache_through_write(Model.AuctionBid, m_bid)
         DBName.cache_through_write(Model.AuctionOwner, m_owner)
         DBName.cache_through_write(Model.AuctionExpiration, m_auction_exp)
-        Ets.inc(:stat_sync_cache, :active_auctions)
 
         log_auction_change(height, plain_name, "activate auction expiring in #{auction_end}")
     end

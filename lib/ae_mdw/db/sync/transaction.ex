@@ -185,15 +185,21 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     kb_model = Model.block(index: {height, -1}, tx_index: kb_txi, hash: kb_hash)
 
+    expirations_mutations = [
+      Name.expirations_mutation(height),
+      Oracle.expirations_mutation(height - 1)
+    ]
+
     if height >= AE.min_block_reward_height() do
       Mnesia.transaction([
         IntTransfer.block_rewards_mutation(height, kb_header, kb_hash)
+        | expirations_mutations
       ])
+    else
+      Mnesia.transaction(expirations_mutations)
     end
 
     Mnesia.transaction([
-      Name.expirations_mutation(height),
-      Oracle.expirations_mutation(height - 1),
       Stats.new_mutation(height, last_mbi == -1),
       KeyBlocksMutation.new(kb_model, next_txi)
     ])
