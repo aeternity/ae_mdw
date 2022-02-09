@@ -763,7 +763,7 @@ defmodule AeMdw.Db.Model do
 
   @spec update_count(tuple(), integer(), fun()) :: any()
   def update_count({_, _, _} = field_key, delta, empty_fn \\ fn -> :nop end) do
-    case :mnesia.read(AeMdw.Db.Model.IdCount, field_key, :write) do
+    case Mnesia.read(AeMdw.Db.Model.IdCount, field_key, :write) do
       [] -> empty_fn.()
       [model] -> write_count(model, delta)
     end

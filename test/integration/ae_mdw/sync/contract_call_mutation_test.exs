@@ -189,16 +189,14 @@ defmodule Integration.AeMdw.Db.ContractCallMutationTest do
       m_rev_contract = Model.rev_aex9_contract(index: {txi, name, symbol, decimals})
       m_contract_pk = Model.aex9_contract_pubkey(index: contract_pk, txi: txi)
 
-      assert [^m_contract] =
-               :mnesia.read(Model.Aex9Contract, {name, symbol, txi, decimals}, :write)
+      assert [^m_contract] = Mnesia.read(Model.Aex9Contract, {name, symbol, txi, decimals})
 
       assert [^m_contract_sym] =
-               :mnesia.read(Model.Aex9ContractSymbol, {symbol, name, txi, decimals}, :write)
+               Mnesia.read(Model.Aex9ContractSymbol, {symbol, name, txi, decimals})
 
-      assert [^m_rev_contract] =
-               :mnesia.read(Model.RevAex9Contract, {txi, name, symbol, decimals}, :write)
+      assert [^m_rev_contract] = Mnesia.read(Model.RevAex9Contract, {txi, name, symbol, decimals})
 
-      assert [^m_contract_pk] = :mnesia.read(Model.Aex9ContractPubkey, contract_pk, :write)
+      assert [^m_contract_pk] = Mnesia.read(Model.Aex9ContractPubkey, contract_pk)
 
       :mnesia.abort(:rollback)
     end

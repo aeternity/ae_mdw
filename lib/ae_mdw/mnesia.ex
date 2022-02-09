@@ -155,6 +155,16 @@ defmodule AeMdw.Mnesia do
     :mnesia.delete(table, key, :write)
   end
 
+  @spec read(table(), key()) :: [record()]
+  def read(table, key) do
+    :mnesia.read(table, key)
+  end
+
+  @spec read(table(), key(), :read | :write) :: [record()]
+  def read(table, key, lock) do
+    :mnesia.read(table, key, lock)
+  end
+
   @spec write(table(), record()) :: :ok
   def write(table, record) do
     :mnesia.write(table, record, :write)

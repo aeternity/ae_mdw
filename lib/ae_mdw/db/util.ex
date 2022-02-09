@@ -15,19 +15,19 @@ defmodule AeMdw.Db.Util do
   ################################################################################
 
   def read(tab, key),
-    do: :mnesia.async_dirty(fn -> :mnesia.read(tab, key) end)
+    do: :mnesia.async_dirty(fn -> Mnesia.read(tab, key) end)
 
   def read!(tab, key),
     do: read(tab, key) |> one!
 
   def read_tx(txi),
-    do: :mnesia.async_dirty(fn -> :mnesia.read(~t[tx], txi) end)
+    do: :mnesia.async_dirty(fn -> Mnesia.read(~t[tx], txi) end)
 
   def read_tx!(txi),
     do: read_tx(txi) |> one!
 
   def read_block({_, _} = bi),
-    do: :mnesia.async_dirty(fn -> :mnesia.read(~t[block], bi) end)
+    do: :mnesia.async_dirty(fn -> Mnesia.read(~t[block], bi) end)
 
   def read_block(kbi) when is_integer(kbi),
     do: read_block({kbi, -1})
@@ -148,7 +148,7 @@ defmodule AeMdw.Db.Util do
     do: Enum.map(:mnesia.dirty_all_keys(tab), &one!(:mnesia.dirty_read(tab, &1)))
 
   def all(tab),
-    do: Enum.map(:mnesia.all_keys(tab), &one!(:mnesia.read(tab, &1)))
+    do: Enum.map(:mnesia.all_keys(tab), &one!(Mnesia.read(tab, &1)))
 
   def gen_collect(table, init_key_probe, key_tester, progress, new, add, return) do
     return.(
