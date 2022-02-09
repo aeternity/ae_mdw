@@ -3,6 +3,8 @@ services:
   ae_mdw:
     build:
       context: .
+      args:
+        - NETWORK_ID=${NETWORK_ID-ae_mainnet}
       dockerfile: ./Dockerfile
     ports:
       - "4000:4000" #MDW's default port
@@ -15,6 +17,6 @@ services:
       - ${PWD}/mnesia:/home/aeternity/node/local/rel/aeternity/data/mnesia
       - ${PWD}/docker/aeternity.yaml:/home/aeternity/aeternity.yaml
       - ${PWD}:/app
-    expose: [3013, 3014, 3113, 4001, 4000]
+    expose: [ 3013, 3014, 3113, 4001, 4000 ]
     environment:
       - AETERNITY_CONFIG=/home/aeternity/aeternity.yaml
