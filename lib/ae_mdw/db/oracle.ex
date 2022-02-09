@@ -9,6 +9,7 @@ defmodule AeMdw.Db.Oracle do
   alias AeMdw.Db.OraclesExpirationMutation
   alias AeMdw.Db.OracleResponseMutation
   alias AeMdw.Log
+  alias AeMdw.Mnesia
   alias AeMdw.Node
   alias AeMdw.Txs
 
@@ -74,7 +75,7 @@ defmodule AeMdw.Db.Oracle do
   @spec cache_through_delete(atom(), cache_key()) :: :ok
   def cache_through_delete(table, key) do
     :ets.delete(:oracle_sync_cache, {table, key})
-    :mnesia.delete(table, key, :write)
+    Mnesia.delete(table, key)
   end
 
   @spec cache_through_delete_inactive(nil | tuple()) :: :ok

@@ -68,7 +68,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
   @spec set_done(task_index(), task_args()) :: :ok
   def set_done({_ts, task_type} = task_index, args) do
     :mnesia.sync_transaction(fn ->
-      :mnesia.delete(Model.AsyncTasks, task_index, :write)
+      Mnesia.delete(Model.AsyncTasks, task_index)
     end)
 
     :ets.delete_object(@processing_tab, task_index)

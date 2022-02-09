@@ -150,6 +150,11 @@ defmodule AeMdw.Mnesia do
     {keys, cursor}
   end
 
+  @spec delete(table(), key()) :: :ok
+  def delete(table, key) do
+    :mnesia.delete(table, key, :write)
+  end
+
   @spec write(table(), record()) :: :ok
   def write(table, record) do
     :mnesia.write(table, record, :write)

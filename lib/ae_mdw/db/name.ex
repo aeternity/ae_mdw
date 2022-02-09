@@ -310,7 +310,7 @@ defmodule AeMdw.Db.Name do
 
   def cache_through_delete(table, key) do
     :ets.delete(:name_sync_cache, {table, key})
-    :mnesia.delete(table, key, :write)
+    Mnesia.delete(table, key)
   end
 
   def cache_through_delete_inactive(nil), do: nil

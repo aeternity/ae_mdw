@@ -64,8 +64,8 @@ defmodule AeMdw.Db.Contract do
 
   @spec aex9_delete_presence(pubkey(), integer(), pubkey()) :: :ok
   def aex9_delete_presence(contract_pk, txi, pubkey) do
-    :mnesia.delete(Model.Aex9AccountPresence, {pubkey, txi, contract_pk}, :write)
-    :mnesia.delete(Model.IdxAex9AccountPresence, {txi, pubkey, contract_pk}, :write)
+    Mnesia.delete(Model.Aex9AccountPresence, {pubkey, txi, contract_pk})
+    Mnesia.delete(Model.IdxAex9AccountPresence, {txi, pubkey, contract_pk})
     :ok
   end
 

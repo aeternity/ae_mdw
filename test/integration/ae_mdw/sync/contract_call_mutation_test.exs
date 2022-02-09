@@ -10,6 +10,7 @@ defmodule Integration.AeMdw.Db.ContractCallMutationTest do
   alias AeMdw.Db.Origin
   alias AeMdw.Db.Sync
   alias AeMdw.Db.Util
+  alias AeMdw.Mnesia
   alias AeMdw.Validate
   alias Support.AeMdw.Db.ContractTestUtil
 
@@ -165,10 +166,10 @@ defmodule Integration.AeMdw.Db.ContractCallMutationTest do
       assert {^name, ^symbol, ^decimals} = aex9_meta_info
 
       # delete if already synced
-      :mnesia.delete(Model.Aex9Contract, {name, symbol, txi, decimals}, :write)
-      :mnesia.delete(Model.Aex9ContractSymbol, {symbol, name, txi, decimals}, :write)
-      :mnesia.delete(Model.RevAex9Contract, {txi, name, symbol, decimals}, :write)
-      :mnesia.delete(Model.Aex9ContractPubkey, contract_pk, :write)
+      Mnesia.delete(Model.Aex9Contract, {name, symbol, txi, decimals})
+      Mnesia.delete(Model.Aex9ContractSymbol, {symbol, name, txi, decimals})
+      Mnesia.delete(Model.RevAex9Contract, {txi, name, symbol, decimals})
+      Mnesia.delete(Model.Aex9ContractPubkey, contract_pk)
 
       call_mutation =
         ContractCallMutation.new(

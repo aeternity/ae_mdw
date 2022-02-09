@@ -133,7 +133,7 @@ defmodule AeMdw.Db.Util do
     do: Enum.each(tab_xs, fn {tab, xs} -> Enum.each(xs, &db_write.(tab, &1)) end)
 
   def do_dels(tab_keys),
-    do: do_dels(tab_keys, &:mnesia.delete(&1, &2, :write))
+    do: do_dels(tab_keys, &Mnesia.delete(&1, &2))
 
   def do_dels(tab_keys, db_delete) when is_function(db_delete, 2),
     do: Enum.each(tab_keys, fn {tab, ks} -> Enum.each(ks, &db_delete.(tab, &1)) end)
