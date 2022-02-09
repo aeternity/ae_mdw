@@ -58,7 +58,7 @@ defmodule Mix.Tasks.MigrateDb do
         {_, version, _} -> version
       end
 
-    Util.select(@table, version_spec) |> Enum.max(fn -> -1 end)
+    @table |> Util.select(version_spec) |> Enum.max(fn -> -1 end)
   end
 
   @spec list_new_migrations(integer()) :: [{integer(), String.t()}]

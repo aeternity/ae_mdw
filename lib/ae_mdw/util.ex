@@ -206,6 +206,9 @@ defmodule AeMdw.Util do
     )
   end
 
+  @spec merged_stream(any, (any -> any), :backward | :forward) ::
+          ({:cont, any} | {:halt, any} | {:suspend, any}, any ->
+             {:halted, any} | {:suspended, any, (any -> any)})
   def merged_stream(streams, key, dir) when is_function(key, 1) do
     taker =
       case dir do
@@ -236,16 +239,17 @@ defmodule AeMdw.Util do
           0 ->
             {:halt, nil}
 
-          _ ->
-            {{_, x, rem_stream}, rem_streams} = taker.(streams)
+          _bigger ->
+            {{_key, x, rem_stream}, rem_streams} = taker.(streams)
 
+            # credo:disable-for-next-line
             case pop1.(rem_stream) do
               nil -> {[x], rem_streams}
               next_elt -> {[x], :gb_sets.add(next_elt, rem_streams)}
             end
         end
       end,
-      fn _ -> :ok end
+      fn _any -> :ok end
     )
   end
 
