@@ -25,13 +25,12 @@ defmodule AeMdw.Migrations.OracleRespondInternalCalls do
 
     mutations =
       Model.FnameIntContractCall
-      |> :mnesia.dirty_select(internal_calls_spec)
+      |> Mnesia.dirty_select(internal_calls_spec)
       |> Enum.map(fn {call_txi, _local_idx} = key ->
-        [Model.tx(block_index: {kbi, _mbi} = block_index)] =
-          :mnesia.dirty_read(Model.Tx, call_txi)
+        [Model.tx(block_index: {kbi, _mbi} = block_index)] = Mnesia.dirty_read(Model.Tx, call_txi)
 
-        [Model.block(hash: block_hash)] = :mnesia.dirty_read(Model.Block, {kbi, -1})
-        [Model.int_contract_call(tx: tx)] = :mnesia.dirty_read(Model.IntContractCall, key)
+        [Model.block(hash: block_hash)] = Mnesia.dirty_read(Model.Block, {kbi, -1})
+        [Model.int_contract_call(tx: tx)] = Mnesia.dirty_read(Model.IntContractCall, key)
         {:oracle_response_tx, oracle_response_tx} = :aetx.specialize_type(tx)
 
         Oracle.response_mutation(oracle_response_tx, block_index, block_hash, call_txi)

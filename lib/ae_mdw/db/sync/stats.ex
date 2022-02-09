@@ -9,6 +9,7 @@ defmodule AeMdw.Db.Sync.Stats do
   alias AeMdw.Db.StatsMutation
   alias AeMdw.Db.Util
   alias AeMdw.Ets
+  alias AeMdw.Mnesia
 
   require Model
 
@@ -61,7 +62,7 @@ defmodule AeMdw.Db.Sync.Stats do
 
     current_contracts =
       Model.ContractCall
-      |> :mnesia.dirty_all_keys()
+      |> Mnesia.dirty_all_keys()
       |> Enum.map(fn {create_txi, _call_txi} -> create_txi end)
       |> Enum.uniq()
       |> length()

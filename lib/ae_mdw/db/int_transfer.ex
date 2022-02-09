@@ -95,7 +95,7 @@ defmodule AeMdw.Db.IntTransfer do
       end
 
     Model.IntTransferTx
-    |> :mnesia.dirty_select(amount_spec)
+    |> Mnesia.dirty_select(amount_spec)
     |> Enum.sum()
   end
 end

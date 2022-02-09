@@ -212,7 +212,7 @@ defmodule AeMdw.Db.Name do
         {:pointee, {^pk, {bi, txi}, k}, :_} -> {bi, txi, k}
       end
 
-    :mnesia.dirty_select(Model.Pointee, mspec)
+    Mnesia.dirty_select(Model.Pointee, mspec)
   end
 
   def pointees(pk) do

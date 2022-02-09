@@ -22,6 +22,35 @@ defmodule AeMdw.Mnesia do
 
   @end_token :"$end_of_table"
 
+  @spec dirty_all_keys(table()) :: [key()]
+  def dirty_all_keys(table) do
+    :mnesia.dirty_all_keys(table)
+  end
+
+  @spec dirty_delete(table(), key()) :: :ok
+  def dirty_delete(tab, key), do: :mnesia.dirty_delete(tab, key)
+
+  @spec dirty_read(table(), key()) :: [record()]
+  def dirty_read(tab, key), do: :mnesia.dirty_read(tab, key)
+
+  @spec dirty_first(table()) :: key()
+  def dirty_first(tab), do: :mnesia.dirty_first(tab)
+
+  @spec dirty_last(table()) :: key()
+  def dirty_last(tab), do: :mnesia.dirty_last(tab)
+
+  @spec dirty_next(table(), key()) :: key()
+  def dirty_next(tab, key), do: :mnesia.dirty_next(tab, key)
+
+  @spec dirty_prev(table(), key()) :: key()
+  def dirty_prev(tab, key), do: :mnesia.dirty_prev(tab, key)
+
+  @spec dirty_write(table(), record()) :: :ok
+  def dirty_write(table, record), do: :mnesia.dirty_write(table, record)
+
+  @spec dirty_select(table(), list()) :: [term()]
+  def dirty_select(table, fun), do: :mnesia.dirty_select(table, fun)
+
   @spec last_key(table(), term()) :: term()
   def last_key(tab, default) do
     case last_key(tab) do

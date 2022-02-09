@@ -96,7 +96,7 @@ defmodule AeMdw.Db.Util do
     do: :mnesia.async_dirty(fn -> :mnesia.select(cont) end)
 
   def count(table),
-    do: :mnesia.dirty_all_keys(table) |> length()
+    do: Mnesia.dirty_all_keys(table) |> length()
 
   def ensure_key!(tab, getter) do
     case apply(__MODULE__, getter, [tab]) do
@@ -145,7 +145,7 @@ defmodule AeMdw.Db.Util do
     do: elem(tx_rec, Enum.find_index(AeMdw.Node.tx_fields(tx_type), &(&1 == field)) + 1)
 
   def dirty_all(tab),
-    do: Enum.map(:mnesia.dirty_all_keys(tab), &one!(:mnesia.dirty_read(tab, &1)))
+    do: Enum.map(Mnesia.dirty_all_keys(tab), &one!(Mnesia.dirty_read(tab, &1)))
 
   def all(tab),
     do: Enum.map(:mnesia.all_keys(tab), &one!(Mnesia.read(tab, &1)))

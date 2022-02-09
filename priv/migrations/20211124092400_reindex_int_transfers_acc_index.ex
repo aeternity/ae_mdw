@@ -51,7 +51,7 @@ defmodule AeMdw.Migrations.ReindexIntTransfersAccIndex do
   end
 
   defp run(_from_startup?, true) do
-    {{last_gen, _txi}, _kind, _account_pk, _ref_txi} = :mnesia.dirty_last(@int_transfer_table)
+    {{last_gen, _txi}, _kind, _account_pk, _ref_txi} = Mnesia.dirty_last(@int_transfer_table)
     batches_count = div(last_gen + @gen_batches_size - 1, @gen_batches_size)
 
     log("processing #{batches_count} batches of #{@gen_batches_size} generations")
@@ -96,7 +96,7 @@ defmodule AeMdw.Migrations.ReindexIntTransfersAccIndex do
           nil
 
         key ->
-          next_key = :mnesia.dirty_next(@int_transfer_table, key)
+          next_key = Mnesia.dirty_next(@int_transfer_table, key)
           {next_key, next_key}
       end)
       |> Stream.reject(&match?(@end_token, &1))
