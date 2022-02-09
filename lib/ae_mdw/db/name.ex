@@ -64,8 +64,8 @@ defmodule AeMdw.Db.Name do
 
     {:atomic, {expired_names, expired_auctions}} =
       :mnesia.transaction(fn ->
-        names = Mnesia.select(Model.ActiveNameExpiration, name_mspec)
-        auctions = Mnesia.select(Model.AuctionExpiration, auction_mspec)
+        names = :mnesia.select(Model.ActiveNameExpiration, name_mspec)
+        auctions = :mnesia.select(Model.AuctionExpiration, auction_mspec)
 
         {names, auctions}
       end)

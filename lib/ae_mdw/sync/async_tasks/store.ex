@@ -87,7 +87,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
             Model.async_tasks(index: {_ts, task_type}, args: args) -> {{task_type, args}}
           end
 
-        Mnesia.select(Model.AsyncTasks, args_spec)
+        :mnesia.select(Model.AsyncTasks, args_spec)
       end)
 
     :ets.insert(@args_tab, indexed_args_records)

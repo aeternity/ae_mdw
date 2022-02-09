@@ -83,17 +83,17 @@ defmodule AeMdw.Db.Util do
   end
 
   def select(tab, match_spec) do
-    fn -> Mnesia.select(tab, match_spec, :read) end
+    fn -> :mnesia.select(tab, match_spec, :read) end
     |> :mnesia.async_dirty()
   end
 
   def select(tab, match_spec, chunk_size) do
-    fn -> Mnesia.select(tab, match_spec, chunk_size, :read) end
+    fn -> :mnesia.select(tab, match_spec, chunk_size, :read) end
     |> :mnesia.async_dirty()
   end
 
   def select(cont),
-    do: :mnesia.async_dirty(fn -> Mnesia.select(cont) end)
+    do: :mnesia.async_dirty(fn -> :mnesia.select(cont) end)
 
   def count(table),
     do: Mnesia.dirty_all_keys(table) |> length()

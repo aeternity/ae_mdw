@@ -53,7 +53,7 @@ defmodule AeMdw.Migrations.IndexGaAttachTxs do
 
     {:atomic, txi_list} =
       :mnesia.transaction(fn ->
-        Mnesia.select(Model.Type, txi_spec, :read)
+        :mnesia.select(Model.Type, txi_spec, :read)
       end)
 
     Log.info("Found #{length(txi_list)} :ga_attach_tx(s)...")

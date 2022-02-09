@@ -104,7 +104,7 @@ defmodule AeMdw.Db.Oracle do
 
     {:atomic, expired_pubkeys} =
       :mnesia.transaction(fn ->
-        Mnesia.select(Model.ActiveOracleExpiration, oracle_mspec)
+        :mnesia.select(Model.ActiveOracleExpiration, oracle_mspec)
       end)
 
     OraclesExpirationMutation.new(height, expired_pubkeys)
