@@ -18,6 +18,7 @@ defmodule AeMdw.Migrations.ReindexIntTransfersAccIndex do
   """
 
   alias AeMdw.Db.Model
+  alias AeMdw.Mnesia
 
   require Logger
 
@@ -108,7 +109,7 @@ defmodule AeMdw.Migrations.ReindexIntTransfersAccIndex do
       :mnesia.transaction(fn ->
         keys
         |> Stream.each(fn target_kind_tx ->
-          :mnesia.write(@target_kind_int_transfer_table, target_kind_tx, :write)
+          Mnesia.write(@target_kind_int_transfer_table, target_kind_tx)
         end)
         |> Enum.count()
       end)

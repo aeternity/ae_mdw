@@ -4,6 +4,7 @@ defmodule AeMdw.Db.Model do
   """
   alias AeMdw.Blocks
   alias AeMdw.Contract
+  alias AeMdw.Mnesia
   alias AeMdw.Node
   alias AeMdw.Txs
 
@@ -757,7 +758,7 @@ defmodule AeMdw.Db.Model do
   def write_count(model, delta) do
     total = id_count(model, :count)
     model = id_count(model, count: total + delta)
-    :mnesia.write(AeMdw.Db.Model.IdCount, model, :write)
+    Mnesia.write(AeMdw.Db.Model.IdCount, model)
   end
 
   @spec update_count(tuple(), integer(), fun()) :: any()

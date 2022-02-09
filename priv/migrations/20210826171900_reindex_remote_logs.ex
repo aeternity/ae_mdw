@@ -7,6 +7,7 @@ defmodule AeMdw.Migrations.ReindexRemoteLogs do
   alias AeMdw.Db.Origin
   alias AeMdw.Db.Util
   alias AeMdw.Log
+  alias AeMdw.Mnesia
 
   require Model
   require Ex2ms
@@ -116,7 +117,7 @@ defmodule AeMdw.Migrations.ReindexRemoteLogs do
 
         # credo:disable-for-next-line
         if is_integer(new_create_txi) and new_create_txi > 0 do
-          :ok = :mnesia.write(Model.ContractLog, log_record, :write)
+          :ok = Mnesia.write(Model.ContractLog, log_record)
           acc + 1
         else
           acc

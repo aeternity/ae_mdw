@@ -11,6 +11,7 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Origin
   alias AeMdw.Log
+  alias AeMdw.Mnesia
   alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Txs
@@ -33,10 +34,10 @@ defmodule AeMdw.Db.Contract do
     m_contract_sym = Model.aex9_contract_symbol(index: {symbol, name, txi, decimals})
     m_rev_contract = Model.rev_aex9_contract(index: {txi, name, symbol, decimals})
     m_contract_pk = Model.aex9_contract_pubkey(index: contract_pk, txi: txi)
-    :mnesia.write(Model.Aex9Contract, m_contract, :write)
-    :mnesia.write(Model.Aex9ContractSymbol, m_contract_sym, :write)
-    :mnesia.write(Model.RevAex9Contract, m_rev_contract, :write)
-    :mnesia.write(Model.Aex9ContractPubkey, m_contract_pk, :write)
+    Mnesia.write(Model.Aex9Contract, m_contract)
+    Mnesia.write(Model.Aex9ContractSymbol, m_contract_sym)
+    Mnesia.write(Model.RevAex9Contract, m_rev_contract)
+    Mnesia.write(Model.Aex9ContractPubkey, m_contract_pk)
 
     aex9_presence_cache_write({{contract_pk, txi, -1}, owner_pk, -1})
     :ok
@@ -46,8 +47,8 @@ defmodule AeMdw.Db.Contract do
   def aex9_write_presence(contract_pk, txi, pubkey) do
     m_acc_presence = Model.aex9_account_presence(index: {pubkey, txi, contract_pk})
     m_idx_presence = Model.idx_aex9_account_presence(index: {txi, pubkey, contract_pk})
-    :mnesia.write(Model.Aex9AccountPresence, m_acc_presence, :write)
-    :mnesia.write(Model.IdxAex9AccountPresence, m_idx_presence, :write)
+    Mnesia.write(Model.Aex9AccountPresence, m_acc_presence)
+    Mnesia.write(Model.IdxAex9AccountPresence, m_idx_presence)
     :ok
   end
 
@@ -102,7 +103,7 @@ defmodule AeMdw.Db.Contract do
         return: return
       )
 
-    :mnesia.write(Model.ContractCall, m_call, :write)
+    Mnesia.write(Model.ContractCall, m_call)
   end
 
   @spec logs_write(Txs.txi(), Txs.txi(), tuple()) :: :ok
@@ -124,10 +125,10 @@ defmodule AeMdw.Db.Contract do
       m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, i})
       m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, i})
       m_idx_log = Model.idx_contract_log(index: {txi, create_txi, evt_hash, i})
-      :mnesia.write(Model.ContractLog, m_log, :write)
-      :mnesia.write(Model.DataContractLog, m_data_log, :write)
-      :mnesia.write(Model.EvtContractLog, m_evt_log, :write)
-      :mnesia.write(Model.IdxContractLog, m_idx_log, :write)
+      Mnesia.write(Model.ContractLog, m_log)
+      Mnesia.write(Model.DataContractLog, m_data_log)
+      Mnesia.write(Model.EvtContractLog, m_evt_log)
+      Mnesia.write(Model.IdxContractLog, m_idx_log)
 
       # if remote call then indexes also with the called contract
       if addr != contract_pk do
@@ -143,7 +144,7 @@ defmodule AeMdw.Db.Contract do
             data: data
           )
 
-        :mnesia.write(Model.ContractLog, m_log_remote, :write)
+        Mnesia.write(Model.ContractLog, m_log_remote)
       end
 
       aex9_contract_pk = which_aex9_contract_pubkey(contract_pk, addr)
@@ -360,9 +361,9 @@ defmodule AeMdw.Db.Contract do
     m_transfer = Model.aex9_transfer(index: {from_pk, to_pk, amount, txi, i})
     m_rev_transfer = Model.rev_aex9_transfer(index: {to_pk, from_pk, amount, txi, i})
     m_idx_transfer = Model.idx_aex9_transfer(index: {txi, i, from_pk, to_pk, amount})
-    :mnesia.write(Model.Aex9Transfer, m_transfer, :write)
-    :mnesia.write(Model.RevAex9Transfer, m_rev_transfer, :write)
-    :mnesia.write(Model.IdxAex9Transfer, m_idx_transfer, :write)
+    Mnesia.write(Model.Aex9Transfer, m_transfer)
+    Mnesia.write(Model.RevAex9Transfer, m_rev_transfer)
+    Mnesia.write(Model.IdxAex9Transfer, m_idx_transfer)
     aex9_write_presence(contract_pk, txi, to_pk)
     aex9_presence_cache_write({{contract_pk, txi, i}, {from_pk, to_pk}, amount})
   end

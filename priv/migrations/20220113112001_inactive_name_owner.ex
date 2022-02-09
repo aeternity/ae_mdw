@@ -4,6 +4,7 @@ defmodule AeMdw.Migrations.InactiveNameOwner do
   """
   alias AeMdw.Db.Model
   alias AeMdw.Log
+  alias AeMdw.Mnesia
 
   require Ex2ms
   require Model
@@ -26,7 +27,7 @@ defmodule AeMdw.Migrations.InactiveNameOwner do
         |> :mnesia.select(any_spec, :read)
         |> Enum.map(fn Model.name(index: plain_name, owner: owner) ->
           m_owner = Model.owner(index: {owner, plain_name})
-          :mnesia.write(Model.InactiveNameOwner, m_owner, :write)
+          Mnesia.write(Model.InactiveNameOwner, m_owner)
         end)
         |> Enum.count()
       end)

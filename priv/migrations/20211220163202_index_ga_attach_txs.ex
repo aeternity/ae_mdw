@@ -116,7 +116,7 @@ defmodule AeMdw.Migrations.IndexGaAttachTxs do
       :mnesia.transaction(fn ->
         [Model.stat(contracts: contracts) = m_stat] = :mnesia.read(Model.Stat, height + 1)
         new_m_stat = Model.stat(m_stat, contracts: contracts + new_contracts_count)
-        :mnesia.write(Model.Stat, new_m_stat, :write)
+        Mnesia.write(Model.Stat, new_m_stat)
       end)
 
     new_contracts_count

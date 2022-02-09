@@ -127,7 +127,7 @@ defmodule AeMdw.Db.Util do
   end
 
   def do_writes(tab_xs),
-    do: do_writes(tab_xs, &:mnesia.write(&1, &2, :write))
+    do: do_writes(tab_xs, &Mnesia.write(&1, &2))
 
   def do_writes(tab_xs, db_write) when is_function(db_write, 2),
     do: Enum.each(tab_xs, fn {tab, xs} -> Enum.each(xs, &db_write.(tab, &1)) end)

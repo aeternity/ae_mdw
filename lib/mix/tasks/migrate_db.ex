@@ -5,6 +5,7 @@ defmodule Mix.Tasks.MigrateDb do
 
   alias AeMdw.Db.Model
   alias AeMdw.Db.Util
+  alias AeMdw.Mnesia
   alias AeMdw.Log
 
   @table Model.Migrations
@@ -87,7 +88,7 @@ defmodule Mix.Tasks.MigrateDb do
     {:ok, _} = apply(module, :run, [from_startup?])
 
     :mnesia.sync_dirty(fn ->
-      :mnesia.write(@table, {@record_name, version, DateTime.utc_now()}, :write)
+      Mnesia.write(@table, {@record_name, version, DateTime.utc_now()})
     end)
 
     Log.info("applied version #{version}")

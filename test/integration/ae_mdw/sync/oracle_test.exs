@@ -88,7 +88,7 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
         m_oracle = Util.read!(Model.ActiveOracle, pubkey)
 
         m_old_exp = Model.expiration(index: {height - 1, pubkey})
-        :mnesia.write(Model.ActiveOracleExpiration, m_old_exp, :write)
+        Mnesia.write(Model.ActiveOracleExpiration, m_old_exp)
 
         (height - 1)
         |> Oracle.expirations_mutation()

@@ -5,6 +5,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
 
   alias AeMdw.Db.Model
   alias AeMdw.Db.Util
+  alias AeMdw.Mnesia
 
   require Ex2ms
   require Model
@@ -50,7 +51,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
       if not is_enqueued?(task_type, args) do
         index = {System.system_time(), task_type}
         m_task = Model.async_tasks(index: index, args: args)
-        :mnesia.write(Model.AsyncTasks, m_task, :write)
+        Mnesia.write(Model.AsyncTasks, m_task)
         :ets.insert(@args_tab, {{task_type, args}})
       end
     end)

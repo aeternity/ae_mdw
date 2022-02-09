@@ -9,6 +9,7 @@ defmodule AeMdw.Db.Name do
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Ets
   alias AeMdw.Log
+  alias AeMdw.Mnesia
   alias AeMdw.Names
   alias AeMdw.Validate
 
@@ -304,7 +305,7 @@ defmodule AeMdw.Db.Name do
   # for use inside mnesia TX - caches writes & deletes in the same TX
   def cache_through_write(table, record) do
     :ets.insert(:name_sync_cache, {{table, elem(record, 1)}, record})
-    :mnesia.write(table, record, :write)
+    Mnesia.write(table, record)
   end
 
   def cache_through_delete(table, key) do

@@ -3,6 +3,7 @@ defmodule Mix.Tasks.BackupDbTable do
 
   alias AeMdw.Db.Model
   alias AeMdw.Db.Util
+  alias AeMdw.Mnesia
 
   @backup_suffix "Bkp"
   @chunk_size 10_000
@@ -71,7 +72,7 @@ defmodule Mix.Tasks.BackupDbTable do
 
   defp sync_write_chunk(table_atom, records) do
     :mnesia.sync_dirty(fn ->
-      Enum.each(records, &(:ok = :mnesia.write(table_atom, &1, :write)))
+      Enum.each(records, &(:ok = Mnesia.write(table_atom, &1)))
     end)
 
     length(records)

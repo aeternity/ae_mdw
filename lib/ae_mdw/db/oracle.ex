@@ -68,7 +68,7 @@ defmodule AeMdw.Db.Oracle do
   @spec cache_through_write(atom(), tuple()) :: :ok
   def cache_through_write(table, record) do
     :ets.insert(:oracle_sync_cache, {{table, elem(record, 1)}, record})
-    :mnesia.write(table, record, :write)
+    Mnesia.write(table, record)
   end
 
   @spec cache_through_delete(atom(), cache_key()) :: :ok

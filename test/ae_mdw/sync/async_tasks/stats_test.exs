@@ -3,6 +3,7 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
 
   alias AeMdw.Db.Model
   alias AeMdw.Sync.AsyncTasks.Stats
+  alias AeMdw.Mnesia
 
   require Model
 
@@ -49,7 +50,7 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
       on_exit(fn ->
         :mnesia.sync_dirty(fn ->
           Enum.each(keys_to_delete, &:mnesia.delete(Model.AsyncTasks, &1, :write))
-          Enum.each(existing_tasks, &:mnesia.write(Model.AsyncTasks, &1, :write))
+          Enum.each(existing_tasks, &Mnesia.write(Model.AsyncTasks, &1))
         end)
       end)
 
