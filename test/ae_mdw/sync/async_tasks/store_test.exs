@@ -58,7 +58,7 @@ defmodule AeMdw.Sync.AsyncTasks.StoreTest do
 
     :mnesia.sync_dirty(fn ->
       Model.AsyncTasks
-      |> :mnesia.select(task_mspec)
+      |> Mnesia.select(task_mspec)
       |> Enum.each(&Mnesia.delete(Model.AsyncTasks, &1))
     end)
   end

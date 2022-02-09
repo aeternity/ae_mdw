@@ -24,7 +24,7 @@ defmodule AeMdw.Migrations.InactiveNameOwner do
           end
 
         Model.InactiveName
-        |> :mnesia.select(any_spec, :read)
+        |> Mnesia.select(any_spec, :read)
         |> Enum.map(fn Model.name(index: plain_name, owner: owner) ->
           m_owner = Model.owner(index: {owner, plain_name})
           Mnesia.write(Model.InactiveNameOwner, m_owner)

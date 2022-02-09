@@ -194,6 +194,26 @@ defmodule AeMdw.Mnesia do
     :mnesia.read(table, key, lock)
   end
 
+  @spec select(term()) :: [term()]
+  def select(cont) do
+    :mnesia.select(cont)
+  end
+
+  @spec select(table(), list()) :: [term()]
+  def select(table, fun) do
+    :mnesia.select(table, fun)
+  end
+
+  @spec select(table(), list(), :read) :: [term()]
+  def select(table, fun, :read) do
+    :mnesia.select(table, fun, :read)
+  end
+
+  @spec select(table(), list(), pos_integer(), :read) :: [term()]
+  def select(table, fun, num_entries, :read) do
+    :mnesia.select(table, fun, num_entries, :read)
+  end
+
   @spec write(table(), record()) :: :ok
   def write(table, record) do
     :mnesia.write(table, record, :write)

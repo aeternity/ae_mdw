@@ -3,6 +3,7 @@ defmodule AeMdw.Db.ContractTest do
 
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
+  alias AeMdw.Mnesia
   alias AeMdw.Validate
 
   import Support.TestMnesiaSandbox
@@ -57,6 +58,6 @@ defmodule AeMdw.Db.ContractTest do
           txi
       end
 
-    :mnesia.select(Model.Aex9AccountPresence, presence_spec, :read)
+    Mnesia.select(Model.Aex9AccountPresence, presence_spec, :read)
   end
 end
