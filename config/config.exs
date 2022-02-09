@@ -17,6 +17,8 @@ mdw_revision =
       git_head_commit
   end
 
+config :aecore, network_id: System.get_env("NETWORK_ID", "ae_mainnet")
+
 config :ae_mdw,
   build_revision: mdw_revision
 
