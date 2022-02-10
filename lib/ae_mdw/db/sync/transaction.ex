@@ -139,7 +139,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   defp sync_generation(height, txi) do
     {:atomic, gen_fully_synced?} =
       :mnesia.transaction(fn ->
-        case :mnesia.read(Model.Block, {height + 1, -1}) do
+        case Mnesia.read(Model.Block, {height + 1, -1}) do
           [] -> false
           [Model.block(tx_index: next_txi)] -> not is_nil(next_txi)
         end

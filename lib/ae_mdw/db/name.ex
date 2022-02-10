@@ -9,6 +9,7 @@ defmodule AeMdw.Db.Name do
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Ets
   alias AeMdw.Log
+  alias AeMdw.Mnesia
   alias AeMdw.Names
   alias AeMdw.Validate
 
@@ -211,7 +212,7 @@ defmodule AeMdw.Db.Name do
         {:pointee, {^pk, {bi, txi}, k}, :_} -> {bi, txi, k}
       end
 
-    :mnesia.dirty_select(Model.Pointee, mspec)
+    Mnesia.dirty_select(Model.Pointee, mspec)
   end
 
   def pointees(pk) do
@@ -304,12 +305,12 @@ defmodule AeMdw.Db.Name do
   # for use inside mnesia TX - caches writes & deletes in the same TX
   def cache_through_write(table, record) do
     :ets.insert(:name_sync_cache, {{table, elem(record, 1)}, record})
-    :mnesia.write(table, record, :write)
+    Mnesia.write(table, record)
   end
 
   def cache_through_delete(table, key) do
     :ets.delete(:name_sync_cache, {table, key})
-    :mnesia.delete(table, key, :write)
+    Mnesia.delete(table, key)
   end
 
   def cache_through_delete_inactive(nil), do: nil

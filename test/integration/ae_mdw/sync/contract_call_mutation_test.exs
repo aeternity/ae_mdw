@@ -10,6 +10,7 @@ defmodule Integration.AeMdw.Db.ContractCallMutationTest do
   alias AeMdw.Db.Origin
   alias AeMdw.Db.Sync
   alias AeMdw.Db.Util
+  alias AeMdw.Mnesia
   alias AeMdw.Validate
   alias Support.AeMdw.Db.ContractTestUtil
 
@@ -165,10 +166,10 @@ defmodule Integration.AeMdw.Db.ContractCallMutationTest do
       assert {^name, ^symbol, ^decimals} = aex9_meta_info
 
       # delete if already synced
-      :mnesia.delete(Model.Aex9Contract, {name, symbol, txi, decimals}, :write)
-      :mnesia.delete(Model.Aex9ContractSymbol, {symbol, name, txi, decimals}, :write)
-      :mnesia.delete(Model.RevAex9Contract, {txi, name, symbol, decimals}, :write)
-      :mnesia.delete(Model.Aex9ContractPubkey, contract_pk, :write)
+      Mnesia.delete(Model.Aex9Contract, {name, symbol, txi, decimals})
+      Mnesia.delete(Model.Aex9ContractSymbol, {symbol, name, txi, decimals})
+      Mnesia.delete(Model.RevAex9Contract, {txi, name, symbol, decimals})
+      Mnesia.delete(Model.Aex9ContractPubkey, contract_pk)
 
       call_mutation =
         ContractCallMutation.new(
@@ -188,16 +189,14 @@ defmodule Integration.AeMdw.Db.ContractCallMutationTest do
       m_rev_contract = Model.rev_aex9_contract(index: {txi, name, symbol, decimals})
       m_contract_pk = Model.aex9_contract_pubkey(index: contract_pk, txi: txi)
 
-      assert [^m_contract] =
-               :mnesia.read(Model.Aex9Contract, {name, symbol, txi, decimals}, :write)
+      assert [^m_contract] = Mnesia.read(Model.Aex9Contract, {name, symbol, txi, decimals})
 
       assert [^m_contract_sym] =
-               :mnesia.read(Model.Aex9ContractSymbol, {symbol, name, txi, decimals}, :write)
+               Mnesia.read(Model.Aex9ContractSymbol, {symbol, name, txi, decimals})
 
-      assert [^m_rev_contract] =
-               :mnesia.read(Model.RevAex9Contract, {txi, name, symbol, decimals}, :write)
+      assert [^m_rev_contract] = Mnesia.read(Model.RevAex9Contract, {txi, name, symbol, decimals})
 
-      assert [^m_contract_pk] = :mnesia.read(Model.Aex9ContractPubkey, contract_pk, :write)
+      assert [^m_contract_pk] = Mnesia.read(Model.Aex9ContractPubkey, contract_pk)
 
       :mnesia.abort(:rollback)
     end

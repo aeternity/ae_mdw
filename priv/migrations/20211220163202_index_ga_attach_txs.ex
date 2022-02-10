@@ -61,7 +61,7 @@ defmodule AeMdw.Migrations.IndexGaAttachTxs do
     {:atomic, bi_txs_list} =
       :mnesia.transaction(fn ->
         Enum.map(txi_list, fn txi ->
-          [Model.tx(id: hash, block_index: bi)] = :mnesia.read(Model.Tx, txi, :read)
+          [Model.tx(id: hash, block_index: bi)] = Mnesia.read(Model.Tx, txi)
           {bi, hash, txi}
         end)
       end)
@@ -114,9 +114,9 @@ defmodule AeMdw.Migrations.IndexGaAttachTxs do
 
     {:atomic, :ok} =
       :mnesia.transaction(fn ->
-        [Model.stat(contracts: contracts) = m_stat] = :mnesia.read(Model.Stat, height + 1)
+        [Model.stat(contracts: contracts) = m_stat] = Mnesia.read(Model.Stat, height + 1)
         new_m_stat = Model.stat(m_stat, contracts: contracts + new_contracts_count)
-        :mnesia.write(Model.Stat, new_m_stat, :write)
+        Mnesia.write(Model.Stat, new_m_stat)
       end)
 
     new_contracts_count

@@ -15,19 +15,19 @@ defmodule AeMdw.Db.Util do
   ################################################################################
 
   def read(tab, key),
-    do: :mnesia.async_dirty(fn -> :mnesia.read(tab, key) end)
+    do: :mnesia.async_dirty(fn -> Mnesia.read(tab, key) end)
 
   def read!(tab, key),
     do: read(tab, key) |> one!
 
   def read_tx(txi),
-    do: :mnesia.async_dirty(fn -> :mnesia.read(~t[tx], txi) end)
+    do: :mnesia.async_dirty(fn -> Mnesia.read(~t[tx], txi) end)
 
   def read_tx!(txi),
     do: read_tx(txi) |> one!
 
   def read_block({_, _} = bi),
-    do: :mnesia.async_dirty(fn -> :mnesia.read(~t[block], bi) end)
+    do: :mnesia.async_dirty(fn -> Mnesia.read(~t[block], bi) end)
 
   def read_block(kbi) when is_integer(kbi),
     do: read_block({kbi, -1})
@@ -96,7 +96,7 @@ defmodule AeMdw.Db.Util do
     do: :mnesia.async_dirty(fn -> :mnesia.select(cont) end)
 
   def count(table),
-    do: :mnesia.dirty_all_keys(table) |> length()
+    do: Mnesia.dirty_all_keys(table) |> length()
 
   def ensure_key!(tab, getter) do
     case apply(__MODULE__, getter, [tab]) do
@@ -127,13 +127,13 @@ defmodule AeMdw.Db.Util do
   end
 
   def do_writes(tab_xs),
-    do: do_writes(tab_xs, &:mnesia.write(&1, &2, :write))
+    do: do_writes(tab_xs, &Mnesia.write(&1, &2))
 
   def do_writes(tab_xs, db_write) when is_function(db_write, 2),
     do: Enum.each(tab_xs, fn {tab, xs} -> Enum.each(xs, &db_write.(tab, &1)) end)
 
   def do_dels(tab_keys),
-    do: do_dels(tab_keys, &:mnesia.delete(&1, &2, :write))
+    do: do_dels(tab_keys, &Mnesia.delete(&1, &2))
 
   def do_dels(tab_keys, db_delete) when is_function(db_delete, 2),
     do: Enum.each(tab_keys, fn {tab, ks} -> Enum.each(ks, &db_delete.(tab, &1)) end)
@@ -145,10 +145,10 @@ defmodule AeMdw.Db.Util do
     do: elem(tx_rec, Enum.find_index(AeMdw.Node.tx_fields(tx_type), &(&1 == field)) + 1)
 
   def dirty_all(tab),
-    do: Enum.map(:mnesia.dirty_all_keys(tab), &one!(:mnesia.dirty_read(tab, &1)))
+    do: Enum.map(Mnesia.dirty_all_keys(tab), &one!(Mnesia.dirty_read(tab, &1)))
 
   def all(tab),
-    do: Enum.map(:mnesia.all_keys(tab), &one!(:mnesia.read(tab, &1)))
+    do: Enum.map(:mnesia.all_keys(tab), &one!(Mnesia.read(tab, &1)))
 
   def gen_collect(table, init_key_probe, key_tester, progress, new, add, return) do
     return.(

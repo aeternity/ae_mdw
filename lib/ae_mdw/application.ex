@@ -1,17 +1,25 @@
 defmodule AeMdw.Application do
+  @moduledoc """
+  Before starting the supervision tree, the application runs:
+  - a start phase of database migrations
+  - a start phase of managing the ingestion/synchronization of chain data (with DynamicSupervisor)
+  - initializes some deps apps
+  - imports some Node calls
+
+  Then it starts the supervision tree for the Async tasks, Websocket broadcasting and API endpoints.
+  """
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Stream, as: DbStream
   alias AeMdw.EtsCache
   alias AeMdw.Extract
+  alias AeMdw.Mnesia
   alias AeMdw.NodeHelper
   alias AeMdw.Util
 
   require Model
 
   use Application
-
-  ##########
 
   @impl Application
   def start(_type, _args) do
@@ -219,14 +227,14 @@ defmodule AeMdw.Application do
     initial_token_supply = AeMdw.Node.token_supply_delta(0)
 
     :mnesia.transaction(fn ->
-      case :mnesia.read(Model.TotalStat, 0) do
+      case Mnesia.read(Model.TotalStat, 0) do
         [m_total_stat] ->
           tot_sup = Model.total_stat(m_total_stat, :total_supply)
           tot_sup == initial_token_supply || raise "initial total supply doesn't match"
 
         [] ->
           m_total_stat = Model.total_stat(index: 0, total_supply: initial_token_supply)
-          :mnesia.write(Model.TotalStat, m_total_stat, :write)
+          Mnesia.write(Model.TotalStat, m_total_stat)
       end
     end)
 

@@ -6,6 +6,7 @@ defmodule AeMdw.Db.Sync.BlockIndex do
 
   alias AeMdw.Db.Sync
   alias AeMdw.Db.Model
+  alias AeMdw.Mnesia
 
   import AeMdw.{Sigil, Util, Db.Util}
 
@@ -41,7 +42,7 @@ defmodule AeMdw.Db.Sync.BlockIndex do
     ^height = :aec_headers.height(kh)
     :key = :aec_headers.type(kh)
     kb_model = Model.block(index: {height, -1}, hash: hash)
-    :mnesia.write(table, kb_model, :write)
+    Mnesia.write(table, kb_model)
     :aec_headers.prev_key_hash(kh)
   end
 

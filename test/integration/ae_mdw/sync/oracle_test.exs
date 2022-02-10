@@ -33,7 +33,7 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
         Mnesia.transaction([mutation])
 
         assert [Model.oracle(index: ^pubkey, expire: ^new_expiration)] =
-                 :mnesia.read(Model.ActiveOracle, pubkey)
+                 Mnesia.read(Model.ActiveOracle, pubkey)
 
         :mnesia.abort(:rollback)
       end
@@ -54,7 +54,7 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
 
         Mnesia.transaction([mutation])
 
-        assert [] = :mnesia.read(Model.ActiveOracle, pubkey)
+        assert [] = Mnesia.read(Model.ActiveOracle, pubkey)
 
         :mnesia.abort(:rollback)
       end
@@ -88,7 +88,7 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
         m_oracle = Util.read!(Model.ActiveOracle, pubkey)
 
         m_old_exp = Model.expiration(index: {height - 1, pubkey})
-        :mnesia.write(Model.ActiveOracleExpiration, m_old_exp, :write)
+        Mnesia.write(Model.ActiveOracleExpiration, m_old_exp)
 
         (height - 1)
         |> Oracle.expirations_mutation()

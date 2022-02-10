@@ -32,12 +32,12 @@ defmodule AeMdw.Migrations.IndexOracleRegister do
 
     mutations =
       Model.FnameIntContractCall
-      |> :mnesia.dirty_select(oracle_register_mspec)
+      |> Mnesia.dirty_select(oracle_register_mspec)
       |> Enum.map(fn call_txi ->
         [Model.tx(block_index: {kbi, mbi} = block_index, id: tx_hash)] =
-          :mnesia.dirty_read(Model.Tx, call_txi)
+          Mnesia.dirty_read(Model.Tx, call_txi)
 
-        # Model.block(hash: block_hash) = :mnesia.dirty_read(Model.Block, {kbi, -1})
+        # Model.block(hash: block_hash) = Mnesia.dirty_read(Model.Block, {kbi, -1})
         {_key_block, micro_blocks} = AE.Db.get_blocks(kbi)
 
         {{:internal_call_tx, "Oracle.register"}, %{info: aetx}} =
