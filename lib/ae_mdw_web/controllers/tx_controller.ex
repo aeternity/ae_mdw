@@ -40,21 +40,14 @@ defmodule AeMdwWeb.TxController do
     do: handle_tx_reply(conn, fn -> read_tx(Validate.nonneg_int!(index)) end)
 
   @spec txs(Conn.t(), map()) :: Conn.t()
-  def txs(%Conn{assigns: assigns, query_params: query_params, request_path: path} = conn, params) do
-    %{direction: direction, limit: limit, cursor: cursor, scope: scope} = assigns
+  def txs(%Conn{assigns: assigns, query_params: query_params} = conn, params) do
+    %{pagination: pagination, cursor: cursor, scope: scope} = assigns
 
     with {:ok, query} <- extract_query(query_params),
-         {:ok, txs, new_cursor} <- Txs.fetch_txs(direction, scope, query, cursor, limit) do
-      uri =
-        if new_cursor do
-          next_params = Map.merge(query_params, %{"cursor" => new_cursor, "limit" => limit})
-
-          URI.to_string(%URI{path: path, query: URI.encode_query(next_params)})
-        end
-
+         {:ok, prev_cursor, txs, next_cursor} <- Txs.fetch_txs(pagination, scope, query, cursor) do
       txs = handle_spendtx_details(txs, params)
 
-      json(conn, %{"data" => txs, "next" => uri})
+      paginate(conn, prev_cursor, txs, next_cursor)
     else
       {:error, reason} ->
         send_error(conn, :bad_request, reason)

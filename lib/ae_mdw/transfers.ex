@@ -8,20 +8,18 @@ defmodule AeMdw.Transfers do
   alias AeMdw.Db.Util, as: DBUtil
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Collection
-  alias AeMdw.Mnesia
   alias AeMdw.Util
   alias AeMdw.Validate
 
-  @type cursor :: binary()
+  @type cursor :: {Collection.is_reversed?(), binary()}
   @type transfer :: term()
   @type query :: %{binary() => binary()}
 
-  @typep limit :: Mnesia.limit()
-  @typep direction :: Mnesia.direction()
+  @typep pagination :: Collection.pagination()
   @typep range :: {:gen, Range.t()} | {:txi, Range.t()} | nil
   @typep reason :: binary()
 
-  @pagination_params ~w(limit cursor)
+  @pagination_params ~w(limit cursor rev)
 
   @kinds ~w(fee_lock_name fee_refund_name fee_spend_name reward_block reward_dev reward_oracle)
 
@@ -29,22 +27,23 @@ defmodule AeMdw.Transfers do
   @target_kind_int_transfer_tx_table Model.TargetKindIntTransferTx
   @kind_int_transfer_tx_table Model.KindIntTransferTx
 
-  @spec fetch_transfers(direction(), range(), query(), cursor() | nil, limit()) ::
-          {:ok, [transfer()], cursor() | nil} | {:error, reason()}
-  def fetch_transfers(direction, range, query, cursor, limit) do
+  @spec fetch_transfers(pagination(), range(), query(), cursor() | nil) ::
+          {:ok, cursor() | nil, [transfer()], cursor() | nil} | {:error, reason()}
+  def fetch_transfers(pagination, range, query, cursor) do
     cursor = deserialize_cursor(cursor)
     scope = deserialize_scope(range)
 
     try do
-      {transfers, next_cursor} =
+      {prev_cursor, transfers, next_cursor} =
         query
         |> Map.drop(@pagination_params)
         |> Enum.map(&convert_param/1)
         |> Map.new()
-        |> build_stream(scope, cursor, direction)
-        |> Collection.paginate(limit)
+        |> build_pagination(scope, cursor)
+        |> Collection.paginate(pagination)
 
-      {:ok, Enum.map(transfers, &render/1), serialize_cursor(next_cursor)}
+      {:ok, serialize_cursor(prev_cursor), Enum.map(transfers, &render/1),
+       serialize_cursor(next_cursor)}
     rescue
       e in ErrInput ->
         {:error, e.message}
@@ -52,63 +51,87 @@ defmodule AeMdw.Transfers do
   end
 
   # Retrieves transfers within the {account, kind_prefix_*, gen_txi, X} range.
-  defp build_stream(%{account_pk: account_pk, kind_prefix: kind_prefix}, scope, cursor, direction) do
+  defp build_pagination(%{account_pk: account_pk, kind_prefix: kind_prefix}, scope, cursor) do
     {{first_gen_txi, _first_kind, _first_account_pk, _first_ref_txi},
      {last_gen_txi, _last_kind, _last_account_pk, _last_ref_txi}} = scope
 
-    @kinds
-    |> Enum.filter(&String.starts_with?(&1, kind_prefix))
-    |> Enum.map(fn kind ->
-      scope = {{account_pk, kind, first_gen_txi, nil}, {account_pk, kind, last_gen_txi, nil}}
+    tables_spec =
+      @kinds
+      |> Enum.filter(&String.starts_with?(&1, kind_prefix))
+      |> Enum.map(fn kind ->
+        scope = {{account_pk, kind, first_gen_txi, nil}, {account_pk, kind, last_gen_txi, nil}}
 
-      cursor =
-        case cursor do
-          nil -> nil
-          {gen_txi, _kind, account_pk, ref_txi} -> {account_pk, kind, gen_txi, ref_txi}
-        end
+        cursor =
+          case cursor do
+            nil -> nil
+            {gen_txi, _kind, account_pk, ref_txi} -> {account_pk, kind, gen_txi, ref_txi}
+          end
 
-      @target_kind_int_transfer_tx_table
-      |> Collection.stream(direction, scope, cursor)
-      |> Stream.map(fn {account_pk, kind, gen_txi, ref_txi} ->
-        {gen_txi, kind, account_pk, ref_txi}
+        {scope, cursor}
       end)
-    end)
-    |> Collection.merge(direction)
+
+    fn direction ->
+      tables_spec
+      |> Enum.map(fn {scope, cursor} ->
+        build_target_kind_int_transfer_stream(direction, scope, cursor)
+      end)
+      |> Collection.merge(direction)
+    end
   end
 
   # Retrieves transfers within the {account, gen_txi, X, Y} range.
-  defp build_stream(%{account_pk: account_pk}, scope, cursor, direction) do
-    build_stream(%{account_pk: account_pk, kind_prefix: ""}, scope, cursor, direction)
+  defp build_pagination(%{account_pk: account_pk}, scope, cursor) do
+    build_pagination(%{account_pk: account_pk, kind_prefix: ""}, scope, cursor)
   end
 
   # Retrieves transfers within the {kind_prefix_*, gen_txi, account, X} range.
-  defp build_stream(%{kind_prefix: kind_prefix}, scope, cursor, direction) do
+  defp build_pagination(%{kind_prefix: kind_prefix}, scope, cursor) do
     {{first_gen_txi, _first_kind, first_account_pk, _first_ref_txi},
      {last_gen_txi, _last_kind, last_account_pk, _last_ref_txi}} = scope
 
-    @kinds
-    |> Enum.filter(&String.starts_with?(&1, kind_prefix))
-    |> Enum.map(fn kind ->
-      scope =
-        {{kind, first_gen_txi, first_account_pk, nil}, {kind, last_gen_txi, last_account_pk, nil}}
+    tables_spec =
+      @kinds
+      |> Enum.filter(&String.starts_with?(&1, kind_prefix))
+      |> Enum.map(fn kind ->
+        scope =
+          {{kind, first_gen_txi, first_account_pk, nil},
+           {kind, last_gen_txi, last_account_pk, nil}}
 
-      cursor =
-        case cursor do
-          nil -> nil
-          {gen_txi, _kind, account_pk, ref_txi} -> {kind, gen_txi, account_pk, ref_txi}
-        end
+        cursor =
+          case cursor do
+            nil -> nil
+            {gen_txi, _kind, account_pk, ref_txi} -> {kind, gen_txi, account_pk, ref_txi}
+          end
 
-      @kind_int_transfer_tx_table
-      |> Collection.stream(direction, scope, cursor)
-      |> Stream.map(fn {kind, gen_txi, account_pk, ref_txi} ->
-        {gen_txi, kind, account_pk, ref_txi}
+        {scope, cursor}
       end)
-    end)
-    |> Collection.merge(direction)
+
+    fn direction ->
+      tables_spec
+      |> Enum.map(fn {scope, cursor} ->
+        build_kind_int_transfer_stream(direction, scope, cursor)
+      end)
+      |> Collection.merge(direction)
+    end
   end
 
-  defp build_stream(_query, scope, cursor, direction) do
-    Collection.stream(@int_transfer_table, direction, scope, cursor)
+  defp build_pagination(_query, scope, cursor),
+    do: &Collection.stream(@int_transfer_table, &1, scope, cursor)
+
+  defp build_target_kind_int_transfer_stream(direction, scope, cursor) do
+    @target_kind_int_transfer_tx_table
+    |> Collection.stream(direction, scope, cursor)
+    |> Stream.map(fn {account_pk, kind, gen_txi, ref_txi} ->
+      {gen_txi, kind, account_pk, ref_txi}
+    end)
+  end
+
+  defp build_kind_int_transfer_stream(direction, scope, cursor) do
+    @kind_int_transfer_tx_table
+    |> Collection.stream(direction, scope, cursor)
+    |> Stream.map(fn {kind, gen_txi, account_pk, ref_txi} ->
+      {gen_txi, kind, account_pk, ref_txi}
+    end)
   end
 
   defp deserialize_scope(nil) do
@@ -182,9 +205,12 @@ defmodule AeMdw.Transfers do
 
   defp serialize_cursor(nil), do: nil
 
-  defp serialize_cursor({{gen, txi}, kind, account_pk, ref_txi}) do
+  defp serialize_cursor({{{gen, txi}, kind, account_pk, ref_txi}, is_reversed?}) do
     account_pk = Base.encode32(account_pk, padding: false)
 
-    Base.hex_encode32("#{gen},#{txi}$#{kind}$#{account_pk}$#{ref_txi}", padding: false)
+    {
+      Base.hex_encode32("#{gen},#{txi}$#{kind}$#{account_pk}$#{ref_txi}", padding: false),
+      is_reversed?
+    }
   end
 end

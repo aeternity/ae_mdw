@@ -11,11 +11,10 @@ defmodule AeMdwWeb.OracleController do
   alias AeMdw.Oracles
   alias AeMdwWeb.SwaggerParameters
   alias AeMdwWeb.Plugs.PaginatedPlug
+  alias AeMdwWeb.Util
   alias Plug.Conn
 
   require Model
-
-  import AeMdwWeb.Util
 
   plug(PaginatedPlug)
 
@@ -24,81 +23,38 @@ defmodule AeMdwWeb.OracleController do
   @spec oracle(Conn.t(), map()) :: Conn.t()
   def oracle(conn, %{"id" => id} = params),
     do:
-      handle_input(conn, fn ->
-        oracle_reply(conn, Validate.id!(id, [:oracle_pubkey]), expand?(params))
+      Util.handle_input(conn, fn ->
+        oracle_reply(conn, Validate.id!(id, [:oracle_pubkey]), Util.expand?(params))
       end)
 
   @spec inactive_oracles(Conn.t(), map()) :: Conn.t()
-  def inactive_oracles(%Conn{assigns: assigns, request_path: path} = conn, _params) do
-    %{direction: direction, limit: limit, cursor: cursor, expand?: expand?} = assigns
+  def inactive_oracles(%Conn{assigns: assigns} = conn, _params) do
+    %{pagination: pagination, cursor: cursor, expand?: expand?} = assigns
 
-    {oracles, new_cursor} = Oracles.fetch_inactive_oracles(direction, cursor, limit, expand?)
+    {prev_cursor, oracles, next_cursor} =
+      Oracles.fetch_inactive_oracles(pagination, cursor, expand?)
 
-    uri =
-      if new_cursor do
-        %URI{
-          path: path,
-          query:
-            URI.encode_query(%{
-              "cursor" => new_cursor,
-              "limit" => limit,
-              "direction" => direction,
-              "expand" => expand?
-            })
-        }
-        |> URI.to_string()
-      end
-
-    json(conn, %{"data" => oracles, "next" => uri})
+    Util.paginate(conn, prev_cursor, oracles, next_cursor)
   end
 
   @spec active_oracles(Conn.t(), map()) :: Conn.t()
-  def active_oracles(%Conn{assigns: assigns, request_path: path} = conn, _params) do
-    %{direction: direction, limit: limit, cursor: cursor, expand?: expand?} = assigns
+  def active_oracles(%Conn{assigns: assigns} = conn, _params) do
+    %{pagination: pagination, cursor: cursor, expand?: expand?} = assigns
 
-    {oracles, new_cursor} = Oracles.fetch_active_oracles(direction, cursor, limit, expand?)
+    {prev_cursor, oracles, next_cursor} =
+      Oracles.fetch_active_oracles(pagination, cursor, expand?)
 
-    uri =
-      if new_cursor do
-        %URI{
-          path: path,
-          query:
-            URI.encode_query(%{
-              "cursor" => new_cursor,
-              "limit" => limit,
-              "direction" => direction,
-              "expand" => expand?
-            })
-        }
-        |> URI.to_string()
-      end
-
-    json(conn, %{"data" => oracles, "next" => uri})
+    Util.paginate(conn, prev_cursor, oracles, next_cursor)
   end
 
   @spec oracles(Conn.t(), map()) :: Conn.t()
-  def oracles(%Conn{assigns: assigns, request_path: path} = conn, _params) do
-    %{direction: direction, limit: limit, cursor: cursor, expand?: expand?, scope: scope} =
-      assigns
+  def oracles(%Conn{assigns: assigns} = conn, _params) do
+    %{pagination: pagination, cursor: cursor, expand?: expand?, scope: scope} = assigns
 
-    {oracles, new_cursor} = Oracles.fetch_oracles(direction, scope, cursor, limit, expand?)
+    {prev_cursor, oracles, next_cursor} =
+      Oracles.fetch_oracles(pagination, scope, cursor, expand?)
 
-    uri =
-      if new_cursor do
-        %URI{
-          path: path,
-          query:
-            URI.encode_query(%{
-              "cursor" => new_cursor,
-              "limit" => limit,
-              "direction" => direction,
-              "expand" => expand?
-            })
-        }
-        |> URI.to_string()
-      end
-
-    json(conn, %{"data" => oracles, "next" => uri})
+    Util.paginate(conn, prev_cursor, oracles, next_cursor)
   end
 
   ##########

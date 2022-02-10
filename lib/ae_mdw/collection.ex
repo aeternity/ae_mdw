@@ -4,28 +4,53 @@ defmodule AeMdw.Collection do
   """
 
   alias AeMdw.Mnesia
+  alias AeMdw.Util
 
   @typep table() :: Mnesia.table()
   @typep direction() :: Mnesia.direction()
   @typep cursor() :: Mnesia.cursor()
   @typep limit() :: Mnesia.limit()
   @typep key() :: Mnesia.key()
-  @typep record() :: Mnesia.record()
   @typep scope() :: {key(), key()} | nil
+
+  @type is_reversed?() :: boolean()
+  @type pagination() :: {direction(), is_reversed?(), limit()}
+  @type pagination_cursor() :: {cursor(), is_reversed?()} | nil
+  @type stream_fn() :: (direction() -> Enumerable.t())
 
   @doc """
   Paginates a list or stream or records into a list of items and it's next cursor (if
   any).
   """
-  @spec paginate(Enumerable.t(), limit()) :: {[record()], cursor()}
-  def paginate(enumerable, limit) do
-    enumerable
-    |> Stream.take(limit + 1)
-    |> Enum.split(limit)
-    |> case do
-      {records, []} -> {records, nil}
-      {records, [cursor]} -> {records, cursor}
-    end
+  @spec paginate(stream_fn(), pagination()) ::
+          {pagination_cursor(), Enumerable.t(), pagination_cursor()}
+  def paginate(stream_fn, {direction, false, limit} = _p) do
+    prev_cursor =
+      case Enum.at(stream_fn.(Util.opposite_dir(direction)), 1) do
+        nil -> nil
+        cursor -> {cursor, true}
+      end
+
+    res =
+      direction
+      |> stream_fn.()
+      |> Stream.take(limit + 1)
+      |> Enum.split(limit)
+      |> case do
+        {records, []} -> {prev_cursor, records, nil}
+        {records, [next_cursor]} -> {prev_cursor, records, {next_cursor, false}}
+      end
+
+    # IO.inspect(["PAGINATION", p, res])
+
+    res
+  end
+
+  def paginate(stream_fn, {direction, true, limit}) do
+    {prev_cursor, records, next_cursor} =
+      paginate(stream_fn, {Util.opposite_dir(direction), false, limit})
+
+    {next_cursor, Enum.reverse(records), prev_cursor}
   end
 
   @doc """

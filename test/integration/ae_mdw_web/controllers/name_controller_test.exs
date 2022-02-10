@@ -30,7 +30,8 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       assert length(names) <= @default_limit
       assert ^expirations = Enum.sort(expirations)
 
-      assert %{"data" => next_names} = conn |> get(next) |> json_response(200)
+      assert %{"data" => next_names, "prev" => prev_names} =
+               conn |> get(next) |> json_response(200)
 
       if next do
         next_expirations =
@@ -41,6 +42,8 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
         assert length(next_names) <= @default_limit
         assert ^next_expirations = Enum.sort(next_expirations)
         assert Enum.at(expirations, @default_limit - 1) >= Enum.at(next_expirations, 0)
+
+        assert %{"data" => ^names} = conn |> get(prev_names) |> json_response(200)
       end
     end
 
@@ -59,7 +62,8 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       assert ^expirations = Enum.sort(expirations)
 
       if next do
-        assert %{"data" => next_names} = conn |> get(next) |> json_response(200)
+        assert %{"data" => next_names, "prev" => prev_names} =
+                 conn |> get(next) |> json_response(200)
 
         next_expirations =
           Enum.map(next_names, fn %{"info" => %{"expire_height" => expire_height}} ->
@@ -69,6 +73,8 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
         assert length(next_names) <= 4
         assert ^next_expirations = Enum.sort(next_expirations)
         assert Enum.at(expirations, limit - 1) <= Enum.at(next_expirations, 0)
+
+        assert %{"data" => ^names} = conn |> get(prev_names) |> json_response(200)
       end
     end
 
@@ -151,7 +157,8 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       assert @default_limit = length(names)
       assert ^expirations = Enum.sort(expirations)
 
-      assert %{"data" => next_names} = conn |> get(next) |> json_response(200)
+      assert %{"data" => next_names, "prev" => prev_names} =
+               conn |> get(next) |> json_response(200)
 
       next_expirations =
         next_names
@@ -161,6 +168,8 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       assert @default_limit = length(next_names)
       assert ^next_expirations = Enum.sort(next_expirations)
       assert Enum.at(expirations, @default_limit - 1) >= Enum.at(next_expirations, 0)
+
+      assert %{"data" => ^names} = conn |> get(prev_names) |> json_response(200)
     end
 
     test "get inactive names forward with limit=6", %{conn: conn} do
@@ -177,7 +186,8 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       assert ^limit = length(names)
       assert ^expirations = Enum.sort(expirations)
 
-      assert %{"data" => next_names} = conn |> get(next) |> json_response(200)
+      assert %{"data" => next_names, "prev" => prev_names} =
+               conn |> get(next) |> json_response(200)
 
       next_expirations =
         Enum.map(next_names, fn %{"info" => %{"expire_height" => expire_height}} ->
@@ -187,6 +197,8 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       assert ^limit = length(next_names)
       assert ^next_expirations = Enum.sort(next_expirations)
       assert Enum.at(expirations, limit - 1) <= Enum.at(next_expirations, 0)
+
+      assert %{"data" => ^names} = conn |> get(prev_names) |> json_response(200)
     end
 
     test "get inactive names with parameters by=name, direction=forward and limit=4", %{

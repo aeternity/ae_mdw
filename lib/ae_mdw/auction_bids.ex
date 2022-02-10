@@ -3,6 +3,7 @@ defmodule AeMdw.AuctionBids do
   Context module for dealing with AuctionBids.
   """
 
+  alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Mnesia
@@ -18,8 +19,6 @@ defmodule AeMdw.AuctionBids do
   @type auction_bid() :: term()
 
   @typep order_by :: :expiration | :name
-  @typep limit :: Mnesia.limit()
-  @typep direction :: Mnesia.direction()
   @typep plain_name() :: binary()
 
   @table Model.AuctionBid
@@ -36,9 +35,9 @@ defmodule AeMdw.AuctionBids do
     end
   end
 
-  @spec fetch_auctions(direction(), order_by(), cursor() | nil, limit(), boolean()) ::
-          {[auction_bid()], cursor() | nil}
-  def fetch_auctions(direction, :name, cursor, limit, expand?) do
+  @spec fetch_auctions(Collection.pagination(), order_by(), cursor() | nil, boolean()) ::
+          {cursor() | nil, [auction_bid()], cursor() | nil}
+  def fetch_auctions(pagination, :name, cursor, expand?) do
     cursor =
       case cursor do
         nil ->
@@ -51,16 +50,18 @@ defmodule AeMdw.AuctionBids do
           end
       end
 
-    {auction_bid_keys, next_cursor} = Mnesia.fetch_keys(@table, direction, cursor, limit)
+    {prev_cursor, auction_bids, next_cursor} =
+      Collection.paginate(&Collection.stream(@table, &1, nil, cursor), pagination)
 
-    auction_bids = Enum.map(auction_bid_keys, &render(&1, expand?))
-
-    {auction_bids, serialize_auction_bid_cursor(next_cursor)}
+    {serialize_auction_bid_cursor(prev_cursor), Enum.map(auction_bids, &render(&1, expand?)),
+     serialize_auction_bid_cursor(next_cursor)}
   end
 
-  def fetch_auctions(direction, :expiration, cursor, limit, expand?) do
-    {exp_keys, next_cursor} =
-      Mnesia.fetch_keys(@table_expiration, direction, deserialize_exp_cursor(cursor), limit)
+  def fetch_auctions(pagination, :expiration, cursor, expand?) do
+    cursor = deserialize_exp_cursor(cursor)
+
+    {prev_cursor, exp_keys, next_cursor} =
+      Collection.paginate(&Collection.stream(@table_expiration, &1, nil, cursor), pagination)
 
     auction_bids =
       Enum.map(exp_keys, fn {_exp, plain_name} ->
@@ -69,7 +70,7 @@ defmodule AeMdw.AuctionBids do
         auction_bid
       end)
 
-    {auction_bids, serialize_exp_cursor(next_cursor)}
+    {serialize_exp_cursor(prev_cursor), auction_bids, serialize_exp_cursor(next_cursor)}
   end
 
   defp render(
@@ -113,12 +114,15 @@ defmodule AeMdw.AuctionBids do
 
   defp serialize_auction_bid_cursor(nil), do: nil
 
-  defp serialize_auction_bid_cursor({plain_name, _block_index, _expire, _owner_pk, _bids}),
-    do: plain_name
+  defp serialize_auction_bid_cursor(
+         {{plain_name, _block_index, _expire, _owner_pk, _bids}, is_reversed?}
+       ),
+       do: {plain_name, is_reversed?}
 
   defp serialize_exp_cursor(nil), do: nil
 
-  defp serialize_exp_cursor({exp_height, name}), do: "#{exp_height}-#{name}"
+  defp serialize_exp_cursor({{exp_height, name}, is_reversed?}),
+    do: {"#{exp_height}-#{name}", is_reversed?}
 
   defp deserialize_exp_cursor(nil), do: nil
 

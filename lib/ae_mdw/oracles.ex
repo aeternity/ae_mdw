@@ -17,7 +17,7 @@ defmodule AeMdw.Oracles do
   @type cursor :: binary()
   # This needs to be an actual type like AeMdw.Db.Oracle.t()
   @type oracle :: term()
-  @typep limit :: Mnesia.limit()
+  @type pagination :: Collection.pagination()
   @typep range :: {:gen, Range.t()} | nil
 
   @table_active AeMdw.Db.Model.ActiveOracle
@@ -25,9 +25,9 @@ defmodule AeMdw.Oracles do
   @table_inactive AeMdw.Db.Model.InactiveOracle
   @table_inactive_expiration Model.InactiveOracleExpiration
 
-  @spec fetch_oracles(Mnesia.direction(), range(), cursor() | nil, limit(), boolean()) ::
-          {[oracle()], cursor() | nil}
-  def fetch_oracles(direction, scope, cursor, limit, expand?) do
+  @spec fetch_oracles(pagination(), range(), cursor() | nil, boolean()) ::
+          {cursor() | nil, [oracle()], cursor() | nil}
+  def fetch_oracles(pagination, scope, cursor, expand?) do
     cursor = deserialize_cursor(cursor)
 
     gen_range =
@@ -39,61 +39,67 @@ defmodule AeMdw.Oracles do
           {{first_gen, Util.min_bin()}, {last_gen, Util.max_256bit_bin()}}
       end
 
-    active_stream =
-      @table_active_expiration
-      |> Collection.stream(direction, gen_range, cursor)
-      |> Stream.map(fn key -> {key, @table_active_expiration} end)
-
-    inactive_stream =
-      @table_inactive_expiration
-      |> Collection.stream(direction, gen_range, cursor)
-      |> Stream.map(fn key -> {key, @table_inactive_expiration} end)
-
-    stream =
-      case direction do
-        :forward -> Stream.concat(inactive_stream, active_stream)
-        :backward -> Stream.concat(active_stream, inactive_stream)
-      end
-
     {:ok, {last_gen, -1}} = Mnesia.last_key(AeMdw.Db.Model.Block)
 
-    {oracles_keys, cursor} = Collection.paginate(stream, limit)
+    {prev_cursor, expiration_keys, next_cursor} =
+      fn direction ->
+        active_stream =
+          @table_active_expiration
+          |> Collection.stream(direction, gen_range, cursor)
+          |> Stream.map(fn key -> {key, @table_active_expiration} end)
+
+        inactive_stream =
+          @table_inactive_expiration
+          |> Collection.stream(direction, gen_range, cursor)
+          |> Stream.map(fn key -> {key, @table_inactive_expiration} end)
+
+        case direction do
+          :forward -> Stream.concat(inactive_stream, active_stream)
+          :backward -> Stream.concat(active_stream, inactive_stream)
+        end
+      end
+      |> Collection.paginate(pagination)
 
     oracles =
-      Enum.map(oracles_keys, fn {key, tab} ->
+      Enum.map(expiration_keys, fn {key, tab} ->
         render(key, last_gen, tab == @table_active_expiration, expand?)
       end)
 
-    case cursor do
-      nil -> {oracles, nil}
-      {next_key, _next_key_table} -> {oracles, serialize_cursor(next_key)}
-    end
+    {serialize_cursor(prev_cursor), oracles, serialize_cursor(next_cursor)}
   end
 
-  @spec fetch_active_oracles(Mnesia.direction(), cursor() | nil, limit(), boolean()) ::
-          {[oracle()], cursor() | nil}
-  def fetch_active_oracles(direction, cursor, limit, expand?) do
-    {exp_keys, next_cursor} =
-      Mnesia.fetch_keys(@table_active_expiration, direction, deserialize_cursor(cursor), limit)
-
+  @spec fetch_active_oracles(pagination(), cursor() | nil, boolean()) ::
+          {cursor() | nil, [oracle()], cursor() | nil}
+  def fetch_active_oracles(pagination, cursor, expand?) do
+    cursor = deserialize_cursor(cursor)
     {:ok, {last_gen, -1}} = Mnesia.last_key(AeMdw.Db.Model.Block)
+
+    {prev_cursor, exp_keys, next_cursor} =
+      Collection.paginate(
+        &Collection.stream(@table_active_expiration, &1, nil, cursor),
+        pagination
+      )
 
     oracles = render_list(exp_keys, last_gen, true, expand?)
 
-    {oracles, serialize_cursor(next_cursor)}
+    {serialize_cursor(prev_cursor), oracles, serialize_cursor(next_cursor)}
   end
 
-  @spec fetch_inactive_oracles(Mnesia.direction(), cursor() | nil, limit(), boolean()) ::
-          {[oracle()], cursor() | nil}
-  def fetch_inactive_oracles(direction, cursor, limit, expand?) do
-    {exp_keys, next_cursor} =
-      Mnesia.fetch_keys(@table_inactive_expiration, direction, deserialize_cursor(cursor), limit)
-
+  @spec fetch_inactive_oracles(pagination(), cursor() | nil, boolean()) ::
+          {cursor() | nil, [oracle()], cursor() | nil}
+  def fetch_inactive_oracles(pagination, cursor, expand?) do
+    cursor = deserialize_cursor(cursor)
     {:ok, {last_gen, -1}} = Mnesia.last_key(AeMdw.Db.Model.Block)
+
+    {prev_cursor, exp_keys, next_cursor} =
+      Collection.paginate(
+        &Collection.stream(@table_inactive_expiration, &1, nil, cursor),
+        pagination
+      )
 
     oracles = render_list(exp_keys, last_gen, false, expand?)
 
-    {oracles, serialize_cursor(next_cursor)}
+    {serialize_cursor(prev_cursor), oracles, serialize_cursor(next_cursor)}
   end
 
   defp render_list(oracles_keys, last_gen, is_active?, expand?) do
@@ -132,9 +138,11 @@ defmodule AeMdw.Oracles do
 
   defp serialize_cursor(nil), do: nil
 
-  defp serialize_cursor({exp_height, oracle_pk}) do
-    "#{exp_height}-#{:aeser_api_encoder.encode(:oracle_pubkey, oracle_pk)}"
-  end
+  defp serialize_cursor({{{exp_height, oracle_pk}, _tab}, is_reversed?}),
+    do: serialize_cursor({{exp_height, oracle_pk}, is_reversed?})
+
+  defp serialize_cursor({{exp_height, oracle_pk}, is_reversed?}),
+    do: {"#{exp_height}-#{:aeser_api_encoder.encode(:oracle_pubkey, oracle_pk)}", is_reversed?}
 
   defp deserialize_cursor(nil), do: nil
 

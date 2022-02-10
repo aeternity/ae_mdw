@@ -12,6 +12,7 @@ defmodule AeMdwWeb.NameController do
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdwWeb.SwaggerParameters
   alias AeMdwWeb.Plugs.PaginatedPlug
+  alias AeMdwWeb.Util
   alias Plug.Conn
 
   require Model
@@ -100,126 +101,61 @@ defmodule AeMdwWeb.NameController do
       end)
 
   @spec auctions(Conn.t(), map()) :: Conn.t()
-  def auctions(%Conn{assigns: assigns, request_path: path} = conn, _params) do
-    %{direction: direction, limit: limit, cursor: cursor, expand?: expand?, order_by: order_by} =
-      assigns
+  def auctions(%Conn{assigns: assigns} = conn, _params) do
+    %{pagination: pagination, cursor: cursor, expand?: expand?, order_by: order_by} = assigns
 
-    {auction_bids, new_cursor} =
-      AuctionBids.fetch_auctions(direction, order_by, cursor, limit, expand?)
+    {prev_cursor, auction_bids, next_cursor} =
+      AuctionBids.fetch_auctions(pagination, order_by, cursor, expand?)
 
-    uri =
-      if new_cursor do
-        %URI{
-          path: path,
-          query:
-            URI.encode_query(%{
-              "cursor" => new_cursor,
-              "limit" => limit,
-              "direction" => direction,
-              "expand" => expand?,
-              "by" => order_by
-            })
-        }
-        |> URI.to_string()
-      end
-
-    json(conn, %{"data" => auction_bids, "next" => uri})
+    Util.paginate(conn, prev_cursor, auction_bids, next_cursor)
   end
 
   @spec inactive_names(Conn.t(), map()) :: Conn.t()
-  def inactive_names(%Conn{assigns: assigns, request_path: path} = conn, _req) do
+  def inactive_names(%Conn{assigns: assigns} = conn, _req) do
     %{
-      direction: direction,
-      limit: limit,
+      pagination: pagination,
       cursor: cursor,
       expand?: expand?,
       order_by: order_by,
       scope: scope
     } = assigns
 
-    {names, new_cursor} =
-      Names.fetch_inactive_names(direction, scope, order_by, cursor, limit, expand?)
+    {prev_cursor, names, next_cursor} =
+      Names.fetch_inactive_names(pagination, scope, order_by, cursor, expand?)
 
-    uri =
-      if new_cursor do
-        %URI{
-          path: path,
-          query:
-            URI.encode_query(%{
-              "cursor" => new_cursor,
-              "limit" => limit,
-              "direction" => direction,
-              "expand" => expand?
-            })
-        }
-        |> URI.to_string()
-      end
-
-    json(conn, %{"data" => names, "next" => uri})
+    Util.paginate(conn, prev_cursor, names, next_cursor)
   end
 
   @spec active_names(Conn.t(), map()) :: Conn.t()
-  def active_names(%Conn{assigns: assigns, request_path: path} = conn, _req) do
+  def active_names(%Conn{assigns: assigns} = conn, _req) do
     %{
-      direction: direction,
-      limit: limit,
+      pagination: pagination,
       cursor: cursor,
       expand?: expand?,
       order_by: order_by,
       scope: scope
     } = assigns
 
-    {names, new_cursor} =
-      Names.fetch_active_names(direction, scope, order_by, cursor, limit, expand?)
+    {prev_cursor, names, next_cursor} =
+      Names.fetch_active_names(pagination, scope, order_by, cursor, expand?)
 
-    uri =
-      if new_cursor do
-        %URI{
-          path: path,
-          query:
-            URI.encode_query(%{
-              "cursor" => new_cursor,
-              "limit" => limit,
-              "direction" => direction,
-              "expand" => expand?
-            })
-        }
-        |> URI.to_string()
-      end
-
-    json(conn, %{"data" => names, "next" => uri})
+    Util.paginate(conn, prev_cursor, names, next_cursor)
   end
 
   @spec names(Conn.t(), map()) :: Conn.t()
-  def names(%Conn{assigns: assigns, request_path: path} = conn, _params) do
+  def names(%Conn{assigns: assigns} = conn, _params) do
     %{
-      direction: direction,
-      limit: limit,
+      pagination: pagination,
       cursor: cursor,
       expand?: expand?,
       order_by: order_by,
       scope: scope
     } = assigns
 
-    {names, new_cursor} = Names.fetch_names(direction, scope, order_by, cursor, limit, expand?)
+    {prev_cursor, names, next_cursor} =
+      Names.fetch_names(pagination, scope, order_by, cursor, expand?)
 
-    uri =
-      if new_cursor do
-        %URI{
-          path: path,
-          query:
-            URI.encode_query(%{
-              "cursor" => new_cursor,
-              "limit" => limit,
-              "direction" => direction,
-              "expand" => expand?,
-              "by" => order_by
-            })
-        }
-        |> URI.to_string()
-      end
-
-    json(conn, %{"data" => names, "next" => uri})
+    Util.paginate(conn, prev_cursor, names, next_cursor)
   end
 
   @spec search(Conn.t(), map()) :: Conn.t()

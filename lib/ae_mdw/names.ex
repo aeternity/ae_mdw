@@ -28,8 +28,7 @@ defmodule AeMdw.Names do
   @type pointers :: [pointer()]
 
   @typep order_by :: :expiration | :name
-  @typep limit :: Mnesia.limit()
-  @typep direction :: Mnesia.direction()
+  @typep pagination :: Collection.pagination()
   @typep range :: {:gen, Range.t()} | nil
 
   @table_active Model.ActiveName
@@ -37,97 +36,112 @@ defmodule AeMdw.Names do
   @table_inactive Model.InactiveName
   @table_inactive_expiration Model.InactiveNameExpiration
 
-  @spec fetch_names(direction(), range(), order_by(), cursor() | nil, limit(), boolean()) ::
-          {[name()], cursor() | nil}
-  def fetch_names(direction, range, :expiration, cursor, limit, expand?) do
+  @spec fetch_names(pagination(), range(), order_by(), cursor() | nil, boolean()) ::
+          {cursor() | nil, [name()], cursor() | nil}
+  def fetch_names(pagination, range, :expiration, cursor, expand?) do
     cursor = deserialize_expiration_cursor(cursor)
     scope = deserialize_scope(range)
 
-    active_stream =
-      @table_active_expiration
-      |> Collection.stream(direction, scope, cursor)
-      |> Stream.map(fn key -> {key, @table_active_expiration} end)
+    {prev_cursor, expiration_keys, next_cursor} =
+      fn direction ->
+        active_stream =
+          @table_active_expiration
+          |> Collection.stream(direction, scope, cursor)
+          |> Stream.map(fn key -> {key, @table_active_expiration} end)
 
-    inactive_stream =
-      @table_inactive_expiration
-      |> Collection.stream(direction, scope, cursor)
-      |> Stream.map(fn key -> {key, @table_inactive_expiration} end)
+        inactive_stream =
+          @table_inactive_expiration
+          |> Collection.stream(direction, scope, cursor)
+          |> Stream.map(fn key -> {key, @table_inactive_expiration} end)
 
-    stream =
-      case direction do
-        :forward -> Stream.concat(inactive_stream, active_stream)
-        :backward -> Stream.concat(active_stream, inactive_stream)
+        case direction do
+          :forward -> Stream.concat(inactive_stream, active_stream)
+          :backward -> Stream.concat(active_stream, inactive_stream)
+        end
       end
+      |> Collection.paginate(pagination)
 
-    {expiration_keys, {next_cursor, _cursor_table}} = Collection.paginate(stream, limit)
-
-    {render_exp_list(expiration_keys, expand?), serialize_expiration_cursor(next_cursor)}
+    {serialize_expiration_cursor(prev_cursor), render_exp_list(expiration_keys, expand?),
+     serialize_expiration_cursor(next_cursor)}
   end
 
-  def fetch_names(direction, range, :name, cursor, limit, expand?) do
+  def fetch_names(pagination, range, :name, cursor, expand?) do
     cursor = deserialize_name_cursor(cursor)
     scope = deserialize_scope(range)
 
-    active_stream =
-      @table_active
-      |> Collection.stream(direction, scope, cursor)
-      |> Stream.map(fn key -> {key, @table_active} end)
+    {prev_cursor, name_keys, next_cursor} =
+      fn direction ->
+        active_stream =
+          @table_active
+          |> Collection.stream(direction, scope, cursor)
+          |> Stream.map(fn key -> {key, @table_active} end)
 
-    inactive_stream =
-      @table_inactive
-      |> Collection.stream(direction, scope, cursor)
-      |> Stream.map(fn key -> {key, @table_inactive} end)
+        inactive_stream =
+          @table_inactive
+          |> Collection.stream(direction, scope, cursor)
+          |> Stream.map(fn key -> {key, @table_inactive} end)
 
-    {name_keys, {next_cursor, _cursor_table}} =
-      [active_stream, inactive_stream]
-      |> Collection.merge(direction)
-      |> Collection.paginate(limit)
+        Collection.merge([active_stream, inactive_stream], direction)
+      end
+      |> Collection.paginate(pagination)
 
-    {render_names_list(name_keys, expand?), serialize_name_cursor(next_cursor)}
+    {serialize_name_cursor(prev_cursor), render_names_list(name_keys, expand?),
+     serialize_name_cursor(next_cursor)}
   end
 
-  @spec fetch_active_names(direction(), range(), order_by(), cursor() | nil, limit(), boolean()) ::
-          {[name()], cursor() | nil}
-  def fetch_active_names(direction, _range, :name, cursor, limit, expand?) do
-    {name_keys, next_cursor} =
-      @table_active
-      |> Collection.stream(direction, nil, cursor)
-      |> Collection.paginate(limit)
+  @spec fetch_active_names(pagination(), range(), order_by(), cursor() | nil, boolean()) ::
+          {cursor() | nil, [name()], cursor() | nil}
+  def fetch_active_names(pagination, _range, :name, cursor, expand?) do
+    {prev_cursor, name_keys, next_cursor} =
+      Collection.paginate(&Collection.stream(@table_active, &1, nil, cursor), pagination)
 
-    {render_names_list(name_keys, true, expand?), serialize_name_cursor(next_cursor)}
+    {serialize_name_cursor(prev_cursor), render_names_list(name_keys, true, expand?),
+     serialize_name_cursor(next_cursor)}
   end
 
-  def fetch_active_names(direction, range, :expiration, cursor, limit, expand?) do
+  def fetch_active_names(pagination, range, :expiration, cursor, expand?) do
+    scope = deserialize_scope(range)
+    cursor = deserialize_expiration_cursor(cursor)
+
+    {prev_cursor, exp_keys, next_cursor} =
+      Collection.paginate(
+        &Collection.stream(@table_active_expiration, &1, scope, cursor),
+        pagination
+      )
+
+    {serialize_expiration_cursor(prev_cursor), render_exp_list(exp_keys, true, expand?),
+     serialize_expiration_cursor(next_cursor)}
+  end
+
+  @spec fetch_inactive_names(pagination(), range(), order_by(), cursor() | nil, boolean()) ::
+          {cursor() | nil, [name()], cursor() | nil}
+  def fetch_inactive_names(pagination, _range, :name, cursor, expand?) do
+    {prev_cursor, name_keys, next_cursor} =
+      Collection.paginate(
+        &Collection.stream(@table_inactive, &1, nil, deserialize_name_cursor(cursor)),
+        pagination
+      )
+
+    {serialize_name_cursor(prev_cursor), render_names_list(name_keys, false, expand?),
+     serialize_name_cursor(next_cursor)}
+  end
+
+  def fetch_inactive_names(pagination, range, :expiration, cursor, expand?) do
     scope = deserialize_scope(range)
 
-    {exp_keys, next_cursor} =
-      @table_active_expiration
-      |> Collection.stream(direction, scope, deserialize_expiration_cursor(cursor))
-      |> Collection.paginate(limit)
+    {prev_cursor, exp_keys, next_cursor} =
+      Collection.paginate(
+        &Collection.stream(
+          @table_inactive_expiration,
+          &1,
+          scope,
+          deserialize_expiration_cursor(cursor)
+        ),
+        pagination
+      )
 
-    {render_exp_list(exp_keys, true, expand?), serialize_expiration_cursor(next_cursor)}
-  end
-
-  @spec fetch_inactive_names(direction(), range(), order_by(), cursor() | nil, limit(), boolean()) ::
-          {[name()], cursor() | nil}
-  def fetch_inactive_names(direction, _range, :name, cursor, limit, expand?) do
-    {name_keys, next_cursor} =
-      @table_inactive
-      |> Collection.stream(direction, nil, deserialize_name_cursor(cursor))
-      |> Collection.paginate(limit)
-
-    {render_names_list(name_keys, false, expand?), serialize_name_cursor(next_cursor)}
-  end
-
-  def fetch_inactive_names(direction, range, :expiration, cursor, limit, expand?) do
-    scope = deserialize_scope(range)
-
-    {exp_keys, next_cursor} =
-      @table_inactive_expiration
-      |> Collection.stream(direction, scope, deserialize_expiration_cursor(cursor))
-      |> Collection.paginate(limit)
-
-    {render_exp_list(exp_keys, false, expand?), serialize_expiration_cursor(next_cursor)}
+    {serialize_expiration_cursor(prev_cursor), render_exp_list(exp_keys, false, expand?),
+     serialize_expiration_cursor(next_cursor)}
   end
 
   @spec fetch_previous_list(plain_name()) :: [name()]
@@ -259,7 +273,12 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp serialize_name_cursor(name), do: name
+  defp serialize_name_cursor(nil), do: nil
+
+  defp serialize_name_cursor({{name, _tab}, is_reversed?}),
+    do: serialize_name_cursor({name, is_reversed?})
+
+  defp serialize_name_cursor({name, is_reversed?}), do: {name, is_reversed?}
 
   defp deserialize_name_cursor(nil), do: nil
 
@@ -272,7 +291,11 @@ defmodule AeMdw.Names do
 
   defp serialize_expiration_cursor(nil), do: nil
 
-  defp serialize_expiration_cursor({exp_height, name}), do: "#{exp_height}-#{name}"
+  defp serialize_expiration_cursor({{{exp_height, name}, _tab}, is_reversed?}),
+    do: serialize_expiration_cursor({{exp_height, name}, is_reversed?})
+
+  defp serialize_expiration_cursor({{exp_height, name}, is_reversed?}),
+    do: {"#{exp_height}-#{name}", is_reversed?}
 
   defp deserialize_expiration_cursor(nil), do: nil
 

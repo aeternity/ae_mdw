@@ -35,6 +35,9 @@ defmodule AeMdwWeb.NameControllerTest do
 
              ActiveNameExpiration, :backward, _exp_key ->
                {:ok, TS.name_expiration_key(1)}
+
+             ActiveNameExpiration, :forward, _exp_key ->
+               :none
            end,
            fetch!: fn ActiveName, _plain_name ->
              Model.name(
@@ -90,6 +93,9 @@ defmodule AeMdwWeb.NameControllerTest do
            next_key: fn
              ActiveName, :forward, _exp_key ->
                {:ok, TS.plain_name(1)}
+
+             ActiveName, :backward, nil ->
+               :none
            end,
            fetch!: fn ActiveName, _plain_name ->
              Model.name(
@@ -153,6 +159,7 @@ defmodule AeMdwWeb.NameControllerTest do
            next_key: fn
              ActiveNameExpiration, :backward, nil -> {:ok, key1}
              ActiveNameExpiration, :backward, ^key1 -> :none
+             ActiveNameExpiration, :forward, _key -> :none
            end,
            fetch!: fn ActiveName, _plain_name ->
              Model.name(
@@ -204,6 +211,9 @@ defmodule AeMdwWeb.NameControllerTest do
 
              InactiveNameExpiration, :backward, _exp_key ->
                {:ok, TS.name_expiration_key(1)}
+
+             InactiveNameExpiration, :forward, _exp_key ->
+               {:ok, TS.name_expiration_key(1)}
            end,
            fetch!: fn InactiveName, _plain_name ->
              Model.name(
@@ -254,8 +264,12 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Mnesia, [],
          [
-           next_key: fn InactiveNameExpiration, :backward, _exp_key ->
-             {:ok, TS.name_expiration_key(0)}
+           next_key: fn
+             InactiveNameExpiration, :forward, _exp_key ->
+               :none
+
+             InactiveNameExpiration, :backward, _exp_key ->
+               {:ok, TS.name_expiration_key(0)}
            end,
            fetch!: fn InactiveName, _plain_name ->
              Model.name(
@@ -305,6 +319,7 @@ defmodule AeMdwWeb.NameControllerTest do
            next_key: fn
              InactiveName, :forward, nil -> {:ok, TS.plain_name(0)}
              InactiveName, :forward, plain_name -> {:ok, "a#{plain_name}"}
+             InactiveName, :backward, _plain_name -> {:ok, "b"}
            end,
            fetch!: fn InactiveName, _plain_name ->
              Model.name(
@@ -363,20 +378,18 @@ defmodule AeMdwWeb.NameControllerTest do
   describe "auctions" do
     test "get auctions with default limit", %{conn: conn} do
       {_exp, plain_name} = expiration_key = TS.name_expiration_key(0)
-      sample_keys = for _i <- 1..@default_limit, do: expiration_key
-      next_key = TS.name_expiration_key(1)
 
       with_mocks [
         {Mnesia, [],
          [
-           fetch_keys: fn
-             AuctionExpiration, :backward, nil, @default_limit -> {sample_keys, next_key}
-             AuctionExpiration, :backward, ^next_key, @default_limit -> {sample_keys, nil}
-           end,
            fetch: fn InactiveName, ^plain_name -> :not_found end,
            prev_key: fn AuctionBid, _key ->
              {:ok, {plain_name, {0, 1}, 0, :owner_pk, [{{2, 3}, 4}]}}
-           end
+           end,
+           next_key: fn
+             AuctionExpiration, _dir, _key -> {:ok, expiration_key}
+           end,
+           exists?: fn _tab, _key -> true end
          ]},
         {Txs, [],
          [
@@ -408,15 +421,20 @@ defmodule AeMdwWeb.NameControllerTest do
     test "get auctions with limit=2", %{conn: conn} do
       limit = 2
       {_exp, plain_name} = expiration_key = TS.name_expiration_key(0)
-      sample_keys = for _i <- 1..limit, do: expiration_key
 
       with_mocks [
         {Mnesia, [],
          [
-           fetch_keys: fn AuctionExpiration, :backward, nil, ^limit -> {sample_keys, nil} end,
            fetch: fn InactiveName, ^plain_name -> :not_found end,
            prev_key: fn AuctionBid, _key ->
              {:ok, {plain_name, {0, 1}, 0, :owner_pk, [{{2, 3}, 4}]}}
+           end,
+           next_key: fn
+             AuctionBid, _dir, _key ->
+               {:ok, {plain_name, {0, 1}, 0, :owner_pk, [{{2, 3}, 4}]}}
+
+             AuctionExpiration, _dir, _key ->
+               {:ok, expiration_key}
            end
          ]},
         {Txs, [],
@@ -446,15 +464,16 @@ defmodule AeMdwWeb.NameControllerTest do
       direction = "forward"
       limit = 3
       {_exp, plain_name} = expiration_key = TS.name_expiration_key(0)
-      sample_keys = for _i <- 1..limit, do: expiration_key
 
       with_mocks [
         {Mnesia, [],
          [
-           fetch_keys: fn AuctionExpiration, :forward, nil, ^limit -> {sample_keys, nil} end,
            fetch: fn InactiveName, ^plain_name -> :not_found end,
            prev_key: fn AuctionBid, _key ->
              {:ok, {plain_name, {0, 1}, 0, :owner_pk, [{{2, 3}, 4}]}}
+           end,
+           next_key: fn AuctionExpiration, _dir, _key ->
+             {:ok, expiration_key}
            end
          ]},
         {Txs, [],
@@ -512,6 +531,9 @@ defmodule AeMdwWeb.NameControllerTest do
 
              InactiveNameExpiration, :backward, nil ->
                :none
+
+             _tab, :forward, nil ->
+               :none
            end,
            fetch!: fn _tab, _plain_name ->
              Model.name(
@@ -560,6 +582,9 @@ defmodule AeMdwWeb.NameControllerTest do
 
              InactiveNameExpiration, :backward, nil ->
                :none
+
+             _tab, :forward, nil ->
+               :none
            end,
            fetch!: fn ActiveName, _plain_name ->
              Model.name(
@@ -607,7 +632,7 @@ defmodule AeMdwWeb.NameControllerTest do
            next_key: fn
              ActiveName, :forward, nil -> {:ok, first_key}
              ActiveName, :forward, key -> {:ok, "a#{key}"}
-             InactiveName, :forward, _key -> :none
+             _tab, _dir, _key -> :none
            end,
            fetch!: fn ActiveName, _plain_name ->
              Model.name(
