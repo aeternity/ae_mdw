@@ -11,7 +11,6 @@ defmodule AeMdwWeb.OracleControllerTest do
   alias AeMdw.Db.Model.InactiveOracleExpiration
   alias AeMdw.Db.Model.Block
   alias AeMdw.Db.Oracle
-  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Mnesia
   alias AeMdw.TestSamples, as: TS
 
@@ -42,11 +41,6 @@ defmodule AeMdwWeb.OracleControllerTest do
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
-        {DbUtil, [],
-         [
-           last_gen!: fn -> 0 end,
-           first_gen!: fn -> 0 end
-         ]},
         {Blocks, [], [block_hash: fn _height -> "asd" end]}
       ] do
         assert %{"data" => [oracle1 | _rest] = oracles, "next" => next_uri} =
@@ -85,11 +79,6 @@ defmodule AeMdwWeb.OracleControllerTest do
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
-        {DbUtil, [],
-         [
-           last_gen!: fn -> 0 end,
-           first_gen!: fn -> 0 end
-         ]},
         {Blocks, [], [block_hash: fn _height -> "asd" end]}
       ] do
         assert %{"data" => [oracle1, _oracle2, _oracle3, _oracle4], "next" => nil} =
@@ -123,11 +112,6 @@ defmodule AeMdwWeb.OracleControllerTest do
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
-        {DbUtil, [],
-         [
-           last_gen!: fn -> 0 end,
-           first_gen!: fn -> 0 end
-         ]},
         {Blocks, [], [block_hash: fn _height -> "asd" end]}
       ] do
         assert %{"data" => [oracle1, _oracle2], "next" => nil} =
@@ -155,11 +139,6 @@ defmodule AeMdwWeb.OracleControllerTest do
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
-        {DbUtil, [],
-         [
-           last_gen!: fn -> 0 end,
-           first_gen!: fn -> 0 end
-         ]},
         {Blocks, [], [block_hash: fn _height -> "asd" end]}
       ] do
         assert %{"next" => next_uri} = conn |> get("/oracles/active") |> json_response(200)

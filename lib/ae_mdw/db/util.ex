@@ -2,7 +2,6 @@ defmodule AeMdw.Db.Util do
   # credo:disable-for-this-file
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Model.Block
   alias AeMdw.Mnesia
   alias AeMdw.Txs
 
@@ -52,15 +51,6 @@ defmodule AeMdw.Db.Util do
 
   def last_gen(),
     do: ensure_key!(~t[block], :last) |> (fn {h, -1} -> h end).()
-
-  def first_time(),
-    do: ensure_key!(~t[time], :first) |> (fn {t, _txi} -> t end).()
-
-  def last_time(),
-    do: ensure_key!(~t[time], :last) |> (fn {t, _txi} -> t end).()
-
-  def range(from, to),
-    do: struct(Range, first: from, last: to)
 
   def prev(tab, key) do
     fn -> :mnesia.prev(tab, key) end
@@ -144,12 +134,6 @@ defmodule AeMdw.Db.Util do
   def tx_val(tx_rec, tx_type, field),
     do: elem(tx_rec, Enum.find_index(AeMdw.Node.tx_fields(tx_type), &(&1 == field)) + 1)
 
-  def dirty_all(tab),
-    do: Enum.map(Mnesia.dirty_all_keys(tab), &one!(Mnesia.dirty_read(tab, &1)))
-
-  def all(tab),
-    do: Enum.map(:mnesia.all_keys(tab), &one!(Mnesia.read(tab, &1)))
-
   def gen_collect(table, init_key_probe, key_tester, progress, new, add, return) do
     return.(
       case progress.(table, init_key_probe) do
@@ -181,9 +165,6 @@ defmodule AeMdw.Db.Util do
   end
 
   ##########
-
-  def current_height(),
-    do: :aec_blocks.height(ok!(:aec_chain.top_key_block()))
 
   def msecs(msecs) when is_integer(msecs) and msecs > 0, do: msecs
   def msecs(%Date{} = d), do: msecs(date_time(d))
@@ -253,22 +234,6 @@ defmodule AeMdw.Db.Util do
 
       :error ->
         nil
-    end
-  end
-
-  @spec first_gen!() :: non_neg_integer()
-  def first_gen! do
-    case Mnesia.first_key(Block, nil) do
-      nil -> 0
-      {kbi, _txi} -> kbi
-    end
-  end
-
-  @spec last_gen!() :: non_neg_integer()
-  def last_gen! do
-    case Mnesia.last_key(Block, nil) do
-      nil -> 0
-      {kbi, _txi} -> kbi
     end
   end
 
