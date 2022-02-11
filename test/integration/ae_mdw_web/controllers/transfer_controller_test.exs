@@ -31,6 +31,10 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
 
       assert ^heights2 = Enum.sort(heights2)
       assert Enum.at(heights2, 0) >= Enum.at(heights, @default_limit - 1)
+
+      %{"data" => prev_data} = conn |> get(response_next["prev"]) |> json_response(200)
+
+      assert ^prev_data = response["data"]
     end
 
     test "when direction=backward it gets unfiltered transfers backwards", %{conn: conn} do
@@ -57,6 +61,10 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
 
       assert ^reverse_heights2 = Enum.sort(heights2)
       assert Enum.at(heights2, 0) <= Enum.at(heights, limit - 1)
+
+      %{"data" => prev_data} = conn |> get(response_next["prev"]) |> json_response(200)
+
+      assert ^prev_data = response["data"]
     end
 
     test "when scoping by txis, it returns transfers inside that range", %{conn: conn} do
@@ -85,6 +93,10 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
       assert ^heights2 = Enum.sort(heights2)
       assert Enum.at(heights2, 0) >= Enum.at(heights, limit - 1)
       assert List.last(heights2) <= last_gen
+
+      %{"data" => prev_data} = conn |> get(response_next["prev"]) |> json_response(200)
+
+      assert ^prev_data = response["data"]
     end
 
     test "when scoping by txis backwards, it returns transfers inside that range", %{conn: conn} do
@@ -117,6 +129,10 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
       assert ^heights2 = Enum.sort(heights2)
       assert Enum.at(heights2, 0) <= Enum.at(heights, limit - 1)
       assert List.last(heights2) <= first_gen
+
+      %{"data" => prev_data} = conn |> get(response_next["prev"]) |> json_response(200)
+
+      assert ^prev_data = response["data"]
     end
 
     test "it gets transfers within gen range and limit=3", %{conn: conn} do
@@ -141,6 +157,10 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
 
       assert Enum.all?(heights2, fn height -> last <= height and height <= first end)
       assert Enum.at(heights2, 0) <= Enum.at(heights, limit - 1)
+
+      %{"data" => prev_data} = conn |> get(response_next["prev"]) |> json_response(200)
+
+      assert ^prev_data = response["data"]
     end
 
     test "when providing account filter, it returns transfers filtered by account", %{conn: conn} do
@@ -163,6 +183,10 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
       assert Enum.all?(response_next["data"], fn %{"account_id" => account_id} ->
                account_id == account_pk
              end)
+
+      %{"data" => prev_data} = conn |> get(response_next["prev"]) |> json_response(200)
+
+      assert ^prev_data = response["data"]
     end
 
     test "when providing account filter backwards, it returns transfers filtered by account", %{
@@ -197,6 +221,10 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
       assert Enum.all?(response_next["data"], fn %{"account_id" => account_id} ->
                account_id == account_pk
              end)
+
+      %{"data" => prev_data} = conn |> get(response_next["prev"]) |> json_response(200)
+
+      assert ^prev_data = response["data"]
     end
 
     test "when providing kind prefix filter, it returns transfers filtered by kind prefix", %{

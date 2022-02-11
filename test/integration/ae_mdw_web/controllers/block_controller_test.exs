@@ -91,23 +91,25 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
     test "when direction=forward it gets generations starting from 0", %{conn: conn} do
       direction = "forward"
 
-      conn = get(conn, "/blocks/#{direction}")
-      response = json_response(conn, 200)
+      assert %{"data" => blocks, "next" => next_url} =
+               conn |> get("/blocks/#{direction}") |> json_response(200)
 
-      assert Enum.count(response["data"]) == @default_limit
+      assert @default_limit = length(blocks)
 
-      assert response["data"]
+      assert blocks
              |> Enum.with_index()
              |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
 
-      conn_next = get(conn, response["next"])
-      response_next = json_response(conn_next, 200)
+      assert %{"data" => next_blocks, "prev" => prev_url} =
+               conn |> get(next_url) |> json_response(200)
 
-      assert Enum.count(response_next["data"]) == @default_limit
+      assert @default_limit = length(next_blocks)
 
-      assert response_next["data"]
+      assert next_blocks
              |> Enum.zip(10..19)
              |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
+
+      assert %{"data" => ^blocks} = conn |> get(prev_url) |> json_response(200)
     end
 
     test "when direction=backward it gets generations backwards", %{conn: conn} do
@@ -115,66 +117,74 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
       limit = 3
       last_gen = last_gen()
 
-      conn = get(conn, "/blocks/#{direction}?limit=#{limit}")
-      response = json_response(conn, 200)
+      assert %{"data" => blocks, "next" => next_url} =
+               conn |> get("/blocks/#{direction}?limit=#{limit}") |> json_response(200)
 
-      assert Enum.count(response["data"]) == limit
+      assert ^limit = length(blocks)
 
-      assert response["data"]
+      assert blocks
              |> Enum.zip(last_gen..(last_gen - 2))
              |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
 
-      conn_next = get(conn, response["next"])
-      response_next = json_response(conn_next, 200)
+      assert %{"data" => next_blocks, "prev" => prev_url} =
+               conn |> get(next_url) |> json_response(200)
 
-      assert Enum.count(response_next["data"]) == limit
+      assert ^limit = length(next_blocks)
 
-      assert response_next["data"]
+      assert next_blocks
              |> Enum.zip((last_gen - 3)..(last_gen - 5))
              |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
+
+      assert %{"data" => ^blocks} = conn |> get(prev_url) |> json_response(200)
     end
 
     test "it gets generations with numeric range and default limit", %{conn: conn} do
       range = "305000-305100"
-      conn = get(conn, "/blocks/#{range}")
-      response = json_response(conn, 200)
 
-      assert Enum.count(response["data"]) == @default_limit
+      assert %{"data" => blocks, "next" => next_url} =
+               conn |> get("/blocks/#{range}") |> json_response(200)
 
-      assert response["data"]
+      assert @default_limit = length(blocks)
+
+      assert blocks
              |> Enum.zip(305_000..305_100)
              |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
 
-      conn_next = get(conn, response["next"])
-      response_next = json_response(conn_next, 200)
+      assert %{"data" => next_blocks, "prev" => prev_url} =
+               conn |> get(next_url) |> json_response(200)
 
-      assert Enum.count(response_next["data"]) == @default_limit
+      assert @default_limit = length(next_blocks)
 
-      assert response_next["data"]
+      assert next_blocks
              |> Enum.zip(305_010..305_100)
              |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
+
+      assert %{"data" => ^blocks} = conn |> get(prev_url) |> json_response(200)
     end
 
     test "it gets generations with numeric range and limit=1", %{conn: conn} do
       range = "305000-305100"
       limit = 1
-      conn = get(conn, "/blocks/#{range}?limit=#{limit}")
-      response = json_response(conn, 200)
 
-      assert Enum.count(response["data"]) == limit
+      assert %{"data" => blocks, "next" => next_url} =
+               conn |> get("/blocks/#{range}?limit=#{limit}") |> json_response(200)
 
-      assert response["data"]
+      assert ^limit = length(blocks)
+
+      assert blocks
              |> Enum.zip(305_000..305_100)
              |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
 
-      conn_next = get(conn, response["next"])
-      response_next = json_response(conn_next, 200)
+      assert %{"data" => next_blocks, "prev" => prev_url} =
+               conn |> get(next_url) |> json_response(200)
 
-      assert Enum.count(response_next["data"]) == limit
+      assert ^limit = length(next_blocks)
 
-      assert response_next["data"]
+      assert next_blocks
              |> Enum.zip(305_001..305_100)
              |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
+
+      assert %{"data" => ^blocks} = conn |> get(prev_url) |> json_response(200)
     end
 
     test "it gets uncached generations with range", %{conn: conn} do

@@ -1,4 +1,10 @@
 defmodule AeMdw.Util do
+  # credo:disable-for-this-file
+  @moduledoc false
+
+  alias AeMdw.Blocks
+  alias AeMdw.Mnesia
+
   def id(x), do: x
 
   def one!([x]), do: x
@@ -242,7 +248,6 @@ defmodule AeMdw.Util do
           _bigger ->
             {{_key, x, rem_stream}, rem_streams} = taker.(streams)
 
-            # credo:disable-for-next-line
             case pop1.(rem_stream) do
               nil -> {[x], rem_streams}
               next_elt -> {[x], :gb_sets.add(next_elt, rem_streams)}
@@ -290,4 +295,53 @@ defmodule AeMdw.Util do
       AeMdw.Application.sync(true)
     end
   end
+
+  @spec opposite_dir(Mnesia.direction()) :: Mnesia.direction()
+  def opposite_dir(:backward), do: :forward
+  def opposite_dir(:forward), do: :backward
+
+  @doc """
+  Given a cursor (which can be `nil`) and a range (first/last gen) computes the
+  range of generations to be fetched, together with the previous/next generation.
+  """
+  @spec build_gen_pagination(
+          Blocks.height() | nil,
+          Mnesia.direction(),
+          Blocks.height(),
+          Blocks.height(),
+          Mnesia.limit()
+        ) ::
+          {:ok, Blocks.height() | nil, Enumerable.t(), Blocks.height() | nil} | :error
+
+  def build_gen_pagination(nil, :forward, range_first, range_last, limit)
+      when range_last - range_first > limit,
+      do: {:ok, nil, range_first..(range_first + limit - 1), range_first + limit}
+
+  def build_gen_pagination(nil, :forward, range_first, range_last, _limit),
+    do: {:ok, nil, range_first..range_last, nil}
+
+  def build_gen_pagination(nil, :backward, range_first, range_last, limit)
+      when range_last - range_first > limit,
+      do: {:ok, nil, range_last..(range_last - limit + 1), range_last - limit}
+
+  def build_gen_pagination(nil, :backward, range_first, range_last, _limit),
+    do: {:ok, nil, range_last..range_first, nil}
+
+  def build_gen_pagination(cursor, :forward, range_first, range_last, limit)
+      when cursor >= range_first and cursor <= range_last do
+    next_cursor = if cursor + limit <= range_last, do: cursor + limit
+    prev_cursor = if cursor - limit >= range_first, do: cursor - limit
+
+    {:ok, prev_cursor, cursor..min(cursor + limit - 1, range_last), next_cursor}
+  end
+
+  def build_gen_pagination(cursor, :backward, range_first, range_last, limit)
+      when cursor >= range_first and cursor <= range_last do
+    next_cursor = if cursor - limit >= range_first, do: cursor - limit
+    prev_cursor = if cursor + limit >= range_last, do: cursor + limit
+
+    {:ok, prev_cursor, cursor..max(cursor - limit + 1, range_first), next_cursor}
+  end
+
+  def build_gen_pagination(_cursor, _direction, _range_first, _range_last, _limit), do: :error
 end

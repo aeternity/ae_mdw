@@ -3,43 +3,28 @@ defmodule AeMdwWeb.StatsController do
 
   alias AeMdw.Stats
   alias AeMdwWeb.Plugs.PaginatedPlug
+  alias AeMdwWeb.Util
   alias Plug.Conn
 
   plug(PaginatedPlug)
 
   @spec stats(Conn.t(), map()) :: Conn.t()
-  def stats(%Conn{assigns: assigns, request_path: path} = conn, _params) do
-    %{direction: direction, limit: limit, cursor: cursor, scope: scope} = assigns
+  def stats(%Conn{assigns: assigns} = conn, _params) do
+    %{pagination: {direction, _is_reversed?, limit, _has_cursor?}, cursor: cursor, scope: scope} =
+      assigns
 
-    {stats, next_cursor} = Stats.fetch_stats(direction, scope, cursor, limit)
+    {prev_cursor, stats, next_cursor} = Stats.fetch_stats(direction, scope, cursor, limit)
 
-    uri =
-      if next_cursor do
-        %URI{
-          path: path,
-          query: URI.encode_query(%{"cursor" => next_cursor, "limit" => limit})
-        }
-        |> URI.to_string()
-      end
-
-    json(conn, %{"data" => stats, "next" => uri})
+    Util.paginate(conn, prev_cursor, stats, next_cursor)
   end
 
   @spec sum_stats(Conn.t(), map()) :: Conn.t()
-  def sum_stats(%Conn{assigns: assigns, request_path: path} = conn, _params) do
-    %{direction: direction, limit: limit, cursor: cursor, scope: scope} = assigns
+  def sum_stats(%Conn{assigns: assigns} = conn, _params) do
+    %{pagination: {direction, _is_reversed?, limit, _has_cursor?}, cursor: cursor, scope: scope} =
+      assigns
 
-    {stats, next_cursor} = Stats.fetch_sum_stats(direction, scope, cursor, limit)
+    {prev_cursor, stats, next_cursor} = Stats.fetch_sum_stats(direction, scope, cursor, limit)
 
-    uri =
-      if next_cursor do
-        %URI{
-          path: path,
-          query: URI.encode_query(%{"cursor" => next_cursor, "limit" => limit})
-        }
-        |> URI.to_string()
-      end
-
-    json(conn, %{"data" => stats, "next" => uri})
+    Util.paginate(conn, prev_cursor, stats, next_cursor)
   end
 end

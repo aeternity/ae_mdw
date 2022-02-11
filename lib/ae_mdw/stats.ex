@@ -4,10 +4,10 @@ defmodule AeMdw.Stats do
   """
 
   alias AeMdw.Blocks
-  alias AeMdw.Collection
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Mnesia
+  alias AeMdw.Util
 
   require Model
 
@@ -23,55 +23,46 @@ defmodule AeMdw.Stats do
   @table Model.Stat
   @sum_table Model.TotalStat
 
-  @spec fetch_stats(direction(), range(), cursor(), limit()) :: {[stat()], cursor()}
+  @spec fetch_stats(direction(), range(), cursor(), limit()) :: {cursor(), [stat()], cursor()}
   def fetch_stats(direction, range, cursor, limit) do
     {:ok, last_gen} = Mnesia.last_key(AeMdw.Db.Model.Stat)
 
-    range_scope = deserialize_scope(range, direction)
-
-    cursor_scope =
-      case deserialize_cursor(cursor) do
-        nil -> nil
-        cursor when direction == :forward -> {cursor, cursor + limit + 1}
-        cursor -> {cursor, cursor - limit - 1}
+    {range_first, range_last} =
+      case range do
+        nil -> {1, last_gen}
+        {:gen, %Range{first: first, last: last}} -> {max(first, 1), min(last, last_gen)}
       end
 
-    global_scope = if direction == :forward, do: {1, last_gen}, else: {last_gen, 1}
+    cursor = deserialize_cursor(cursor)
 
-    case intersect_scopes([range_scope, cursor_scope, global_scope], direction) do
-      {:ok, first, last} ->
-        {gens, next_cursor} = Collection.paginate(first..last, limit)
-
-        {render_stats(gens), serialize_cursor(next_cursor)}
+    case Util.build_gen_pagination(cursor, direction, range_first, range_last, limit) do
+      {:ok, prev_cursor, range, next_cursor} ->
+        {serialize_cursor(prev_cursor), render_stats(range), serialize_cursor(next_cursor)}
 
       :error ->
-        {[], nil}
+        {nil, [], nil}
     end
   end
 
-  @spec fetch_sum_stats(direction(), range(), cursor(), limit()) :: {[sum_stat()], cursor()}
+  @spec fetch_sum_stats(direction(), range(), cursor(), limit()) ::
+          {cursor(), [sum_stat()], cursor()}
   def fetch_sum_stats(direction, range, cursor, limit) do
     {:ok, last_gen} = Mnesia.last_key(AeMdw.Db.Model.TotalStat)
 
-    range_scope = deserialize_scope(range, direction)
-
-    cursor_scope =
-      case deserialize_cursor(cursor) do
-        nil -> nil
-        cursor when direction == :forward -> {cursor, cursor + limit + 1}
-        cursor -> {cursor, cursor - limit - 1}
+    {range_first, range_last} =
+      case range do
+        nil -> {0, last_gen}
+        {:gen, %Range{first: first, last: last}} -> {max(first, 0), min(last, last_gen)}
       end
 
-    global_scope = if direction == :forward, do: {0, last_gen}, else: {last_gen, 0}
+    cursor = deserialize_cursor(cursor)
 
-    case intersect_scopes([range_scope, cursor_scope, global_scope], direction) do
-      {:ok, first, last} ->
-        {gens, next_cursor} = Collection.paginate(first..last, limit)
-
-        {render_sum_stats(gens), serialize_cursor(next_cursor)}
+    case Util.build_gen_pagination(cursor, direction, range_first, range_last, limit) do
+      {:ok, prev_cursor, range, next_cursor} ->
+        {serialize_cursor(prev_cursor), render_sum_stats(range), serialize_cursor(next_cursor)}
 
       :error ->
-        {[], nil}
+        {nil, [], nil}
     end
   end
 
@@ -80,24 +71,6 @@ defmodule AeMdw.Stats do
 
   @spec fetch_sum_stat!(height()) :: sum_stat()
   def fetch_sum_stat!(height), do: render_sum_stat(Mnesia.fetch!(@sum_table, height))
-
-  defp intersect_scopes(scopes, direction) do
-    scopes
-    |> Enum.reject(&is_nil/1)
-    |> Enum.reduce(fn
-      {first, last}, {acc_first, acc_last} when direction == :forward ->
-        {max(first, acc_first), min(last, acc_last)}
-
-      {first, last}, {acc_first, acc_last} ->
-        {min(first, acc_first), max(last, acc_last)}
-    end)
-    |> case do
-      {first, last} when direction == :forward and first <= last -> {:ok, first, last}
-      {_first, _last} when direction == :forward -> :error
-      {first, last} when direction == :backward and first >= last -> {:ok, first, last}
-      {_first, _last} when direction == :backward -> :error
-    end
-  end
 
   defp render_stats(gens), do: Enum.map(gens, &fetch_stat!/1)
 
@@ -109,7 +82,7 @@ defmodule AeMdw.Stats do
 
   defp serialize_cursor(nil), do: nil
 
-  defp serialize_cursor(gen), do: Integer.to_string(gen)
+  defp serialize_cursor(gen), do: {Integer.to_string(gen), false}
 
   defp deserialize_cursor(nil), do: nil
 
@@ -120,12 +93,4 @@ defmodule AeMdw.Stats do
       :error -> nil
     end
   end
-
-  defp deserialize_scope(nil, _direction), do: nil
-
-  defp deserialize_scope({:gen, %Range{first: first_gen, last: last_gen}}, :forward),
-    do: {first_gen, last_gen}
-
-  defp deserialize_scope({:gen, %Range{first: first_gen, last: last_gen}}, :backward),
-    do: {last_gen, first_gen}
 end

@@ -33,6 +33,9 @@ defmodule AeMdwWeb.OracleControllerTest do
 
              InactiveOracleExpiration, :backward, nil ->
                :none
+
+             _tab, :forward, nil ->
+               :none
            end,
            last_key: fn Block -> {:ok, last_gen} end,
            fetch!: fn _tab, _pk -> oracle end
@@ -58,8 +61,6 @@ defmodule AeMdwWeb.OracleControllerTest do
                  path: "/oracles",
                  query: query
                } = URI.parse(next_uri)
-
-        assert %{"cursor" => _cursor, "direction" => "backward"} = URI.decode_query(query)
       end
     end
 
@@ -77,6 +78,7 @@ defmodule AeMdwWeb.OracleControllerTest do
              InactiveOracleExpiration, :backward, nil -> {:ok, {1, "b"}}
              InactiveOracleExpiration, :backward, {0, "b"} -> :none
              InactiveOracleExpiration, :backward, {exp, "b"} -> {:ok, {exp - 1, "b"}}
+             _tab, :forward, _key -> :none
            end,
            last_key: fn Block -> {:ok, TS.last_gen()} end,
            fetch!: fn _tab, _oracle_pk -> oracle end
@@ -102,17 +104,22 @@ defmodule AeMdwWeb.OracleControllerTest do
 
   describe "active_oracles" do
     test "it retrieves all active oracles backwards by default", %{conn: conn} do
-      next_cursor = nil
-      expiration_keys = [TS.oracle_expiration_key(1), TS.oracle_expiration_key(2)]
+      key1 = TS.oracle_expiration_key(1)
+      key2 = TS.oracle_expiration_key(2)
       Model.oracle(index: pk) = oracle = TS.oracle()
       encoded_pk = :aeser_api_encoder.encode(:oracle_pubkey, pk)
 
       with_mocks [
         {Mnesia, [],
          [
-           fetch_keys: fn _tab, _dir, _cursor, _limit -> {expiration_keys, next_cursor} end,
            last_key: fn Block -> {:ok, TS.last_gen()} end,
-           fetch!: fn _tab, _oracle_pk -> oracle end
+           fetch!: fn _tab, _oracle_pk -> oracle end,
+           next_key: fn
+             _tab, :backward, ^key1 -> {:ok, key2}
+             _tab, :backward, nil -> {:ok, key1}
+             _tab, :backward, ^key2 -> :none
+             _tab, :forward, _key -> :none
+           end
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
@@ -130,22 +137,20 @@ defmodule AeMdwWeb.OracleControllerTest do
 
         assert %{"oracle" => ^encoded_pk} = oracle1
 
-        assert_called(Mnesia.fetch_keys(ActiveOracleExpiration, :backward, nil, 10))
         assert_called(Mnesia.last_key(Block))
       end
     end
 
     test "it provides a 'next' cursor when more than limit of 10", %{conn: conn} do
-      next_cursor = {next_cursor_exp, next_cursor_pk} = TS.oracle_expiration_key(0)
+      expiration_key = {next_cursor_exp, next_cursor_pk} = TS.oracle_expiration_key(0)
       next_cursor_pk_encoded = :aeser_api_encoder.encode(:oracle_pubkey, next_cursor_pk)
       next_cursor_query_value = "#{next_cursor_exp}-#{next_cursor_pk_encoded}"
-      expiration_keys = 0..4 |> Enum.map(fn n -> TS.oracle_expiration_key(n) end)
 
       with_mocks [
         {Mnesia, [],
          [
-           fetch_keys: fn _tab, _dir, _cursor, _limit -> {expiration_keys, next_cursor} end,
            last_key: fn Block -> {:ok, TS.last_gen()} end,
+           next_key: fn ActiveOracleExpiration, _dir, _key -> {:ok, expiration_key} end,
            fetch!: fn _tab, _oracle_pk -> TS.oracle() end
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
@@ -164,10 +169,7 @@ defmodule AeMdwWeb.OracleControllerTest do
                  query: query
                } = URI.parse(next_uri)
 
-        assert %{"cursor" => ^next_cursor_query_value, "direction" => "backward"} =
-                 URI.decode_query(query)
-
-        assert_called(Mnesia.fetch_keys(ActiveOracleExpiration, :backward, nil, 10))
+        assert %{"cursor" => ^next_cursor_query_value} = URI.decode_query(query)
       end
     end
   end

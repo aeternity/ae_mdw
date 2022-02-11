@@ -43,42 +43,28 @@ defmodule AeMdwWeb.BlockController do
   Endpoint for blocks info based on pagination.
   """
   @spec blocks(Conn.t(), map()) :: Conn.t()
-  def blocks(%Conn{assigns: assigns, request_path: path} = conn, _params) do
-    %{direction: direction, limit: limit, cursor: cursor, scope: scope} = assigns
+  def blocks(%Conn{assigns: assigns} = conn, _params) do
+    %{pagination: {direction, _is_reversed?, limit, _has_cursor?}, cursor: cursor, scope: scope} =
+      assigns
 
-    {blocks, next_cursor} = Blocks.fetch_blocks(direction, scope, cursor, limit, false)
+    {prev_cursor, blocks, next_cursor} =
+      Blocks.fetch_blocks(direction, scope, cursor, limit, false)
 
-    uri =
-      if next_cursor do
-        %URI{
-          path: path,
-          query: URI.encode_query(%{"cursor" => next_cursor, "limit" => limit})
-        }
-        |> URI.to_string()
-      end
-
-    json(conn, %{"data" => blocks, "next" => uri})
+    paginate(conn, prev_cursor, blocks, next_cursor)
   end
 
   @doc """
   Endpoint for paginated blocks with sorted micro blocks per time.
   """
   @spec blocks_v2(Conn.t(), map()) :: Conn.t()
-  def blocks_v2(%Conn{assigns: assigns, request_path: path} = conn, _params) do
-    %{direction: direction, limit: limit, cursor: cursor, scope: scope} = assigns
+  def blocks_v2(%Conn{assigns: assigns} = conn, _params) do
+    %{pagination: {direction, _is_reversed?, limit, _has_cursor?}, cursor: cursor, scope: scope} =
+      assigns
 
-    {blocks, next_cursor} = Blocks.fetch_blocks(direction, scope, cursor, limit, true)
+    {prev_cursor, blocks, next_cursor} =
+      Blocks.fetch_blocks(direction, scope, cursor, limit, true)
 
-    uri =
-      if next_cursor do
-        %URI{
-          path: path,
-          query: URI.encode_query(%{"cursor" => next_cursor, "limit" => limit})
-        }
-        |> URI.to_string()
-      end
-
-    json(conn, %{"data" => blocks, "next" => uri})
+    paginate(conn, prev_cursor, blocks, next_cursor)
   end
 
   ##########

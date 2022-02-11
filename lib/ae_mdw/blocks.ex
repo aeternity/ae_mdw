@@ -6,9 +6,10 @@ defmodule AeMdw.Blocks do
   alias AeMdw.Collection
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Util
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.EtsCache
   alias AeMdw.Mnesia
+  alias AeMdw.Util
   alias AeMdw.Validate
 
   require Model
@@ -43,35 +44,25 @@ defmodule AeMdw.Blocks do
   end
 
   @spec fetch_blocks(direction(), range(), cursor() | nil, limit(), boolean()) ::
-          {[block()], cursor() | nil}
+          {cursor() | nil, [block()], cursor() | nil}
   def fetch_blocks(direction, range, cursor, limit, sort_mbs?) do
     {:ok, {last_gen, -1}} = Mnesia.last_key(AeMdw.Db.Model.Block)
 
-    range_scope = deserialize_scope(range)
+    cursor = deserialize_cursor(cursor)
 
-    cursor_scope =
-      case deserialize_cursor(cursor) do
-        nil -> nil
-        cursor when direction == :forward -> {cursor, cursor + limit + 1}
-        cursor -> {cursor, cursor - limit - 1}
+    {range_first, range_last} =
+      case range do
+        nil -> {0, last_gen}
+        {:gen, %Range{first: first, last: last}} -> {max(first, 0), min(last, last_gen)}
       end
 
-    global_scope = if direction == :forward, do: {0, last_gen}, else: {last_gen, 0}
-
-    case intersect_scopes([range_scope, cursor_scope, global_scope], direction) do
-      {:ok, first, last} when last - first > limit ->
-        {render_blocks(first, first + limit - 1, last_gen, sort_mbs?),
-         serialize_cursor(first + limit)}
-
-      {:ok, first, last} when first - last > limit ->
-        {render_blocks(first, first - limit + 1, last_gen, sort_mbs?),
-         serialize_cursor(first - limit)}
-
-      {:ok, first, last} ->
-        {render_blocks(first, last, last_gen, sort_mbs?), nil}
+    case Util.build_gen_pagination(cursor, direction, range_first, range_last, limit) do
+      {:ok, prev_cursor, range, next_cursor} ->
+        {serialize_cursor(prev_cursor), render_blocks(range, last_gen, sort_mbs?),
+         serialize_cursor(next_cursor)}
 
       :error ->
-        {[], nil}
+        {nil, [], nil}
     end
   end
 
@@ -82,26 +73,8 @@ defmodule AeMdw.Blocks do
     hash
   end
 
-  defp intersect_scopes(scopes, direction) do
-    scopes
-    |> Enum.reject(&is_nil/1)
-    |> Enum.reduce(fn
-      {first, last}, {acc_first, acc_last} when direction == :forward ->
-        {max(first, acc_first), min(last, acc_last)}
-
-      {first, last}, {acc_first, acc_last} ->
-        {min(first, acc_first), max(last, acc_last)}
-    end)
-    |> case do
-      {first, last} when direction == :forward and first <= last -> {:ok, first, last}
-      {_first, _last} when direction == :forward -> :error
-      {first, last} when direction == :backward and first >= last -> {:ok, first, last}
-      {_first, _last} when direction == :backward -> :error
-    end
-  end
-
-  defp render_blocks(from, to, last_gen, sort_mbs?),
-    do: Enum.map(from..to, &render(&1, last_gen, sort_mbs?))
+  defp render_blocks(range, last_gen, sort_mbs?),
+    do: Enum.map(range, &render(&1, last_gen, sort_mbs?))
 
   defp render(gen, last_gen, sort_mbs?) when gen > last_gen - @blocks_cache_threshold do
     [key_block | micro_blocks] = fetch_gen_blocks(gen, last_gen)
@@ -124,7 +97,7 @@ defmodule AeMdw.Blocks do
 
     for block <- [kb | mbs] do
       header = :aec_blocks.to_header(block)
-      :aec_headers.serialize_for_client(header, Util.prev_block_type(header))
+      :aec_headers.serialize_for_client(header, DbUtil.prev_block_type(header))
     end
   end
 
@@ -187,7 +160,9 @@ defmodule AeMdw.Blocks do
     end)
   end
 
-  defp serialize_cursor(gen), do: Integer.to_string(gen)
+  defp serialize_cursor(nil), do: nil
+
+  defp serialize_cursor(gen), do: {Integer.to_string(gen), false}
 
   defp deserialize_cursor(nil), do: nil
 
@@ -198,9 +173,4 @@ defmodule AeMdw.Blocks do
       :error -> nil
     end
   end
-
-  defp deserialize_scope(nil), do: nil
-
-  defp deserialize_scope({:gen, %Range{first: first_gen, last: last_gen}}),
-    do: {first_gen, last_gen}
 end
