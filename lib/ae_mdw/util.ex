@@ -300,6 +300,10 @@ defmodule AeMdw.Util do
   def opposite_dir(:backward), do: :forward
   def opposite_dir(:forward), do: :backward
 
+  @doc """
+  Given a cursor (which can be `nil`) and a range (first/last gen) computes the
+  range of generations to be fetched, together with the previous/next generation.
+  """
   @spec build_gen_pagination(
           Blocks.height() | nil,
           Mnesia.direction(),

@@ -44,7 +44,8 @@ defmodule AeMdwWeb.BlockController do
   """
   @spec blocks(Conn.t(), map()) :: Conn.t()
   def blocks(%Conn{assigns: assigns} = conn, _params) do
-    %{pagination: {direction, _is_reversed?, limit}, cursor: cursor, scope: scope} = assigns
+    %{pagination: {direction, _is_reversed?, limit, _has_cursor?}, cursor: cursor, scope: scope} =
+      assigns
 
     {prev_cursor, blocks, next_cursor} =
       Blocks.fetch_blocks(direction, scope, cursor, limit, false)
@@ -57,7 +58,8 @@ defmodule AeMdwWeb.BlockController do
   """
   @spec blocks_v2(Conn.t(), map()) :: Conn.t()
   def blocks_v2(%Conn{assigns: assigns} = conn, _params) do
-    %{pagination: {direction, _is_reversed?, limit}, cursor: cursor, scope: scope} = assigns
+    %{pagination: {direction, _is_reversed?, limit, _has_cursor?}, cursor: cursor, scope: scope} =
+      assigns
 
     {prev_cursor, blocks, next_cursor} =
       Blocks.fetch_blocks(direction, scope, cursor, limit, true)

@@ -10,7 +10,8 @@ defmodule AeMdwWeb.StatsController do
 
   @spec stats(Conn.t(), map()) :: Conn.t()
   def stats(%Conn{assigns: assigns} = conn, _params) do
-    %{pagination: {direction, _is_reversed?, limit}, cursor: cursor, scope: scope} = assigns
+    %{pagination: {direction, _is_reversed?, limit, _has_cursor?}, cursor: cursor, scope: scope} =
+      assigns
 
     {prev_cursor, stats, next_cursor} = Stats.fetch_stats(direction, scope, cursor, limit)
 
@@ -19,7 +20,8 @@ defmodule AeMdwWeb.StatsController do
 
   @spec sum_stats(Conn.t(), map()) :: Conn.t()
   def sum_stats(%Conn{assigns: assigns} = conn, _params) do
-    %{pagination: {direction, _is_reversed?, limit}, cursor: cursor, scope: scope} = assigns
+    %{pagination: {direction, _is_reversed?, limit, _has_cursor?}, cursor: cursor, scope: scope} =
+      assigns
 
     {prev_cursor, stats, next_cursor} = Stats.fetch_sum_stats(direction, scope, cursor, limit)
 

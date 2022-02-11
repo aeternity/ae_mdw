@@ -17,7 +17,7 @@ defmodule AeMdw.Oracles do
   @type cursor :: binary()
   # This needs to be an actual type like AeMdw.Db.Oracle.t()
   @type oracle :: term()
-  @type pagination :: Collection.pagination()
+  @type pagination :: Collection.direction_limit()
   @typep range :: {:gen, Range.t()} | nil
 
   @table_active AeMdw.Db.Model.ActiveOracle

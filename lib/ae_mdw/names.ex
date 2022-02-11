@@ -28,7 +28,7 @@ defmodule AeMdw.Names do
   @type pointers :: [pointer()]
 
   @typep order_by :: :expiration | :name
-  @typep pagination :: Collection.pagination()
+  @typep pagination :: Collection.direction_limit()
   @typep range :: {:gen, Range.t()} | nil
 
   @table_active Model.ActiveName

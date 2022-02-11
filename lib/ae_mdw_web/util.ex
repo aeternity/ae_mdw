@@ -158,7 +158,7 @@ defmodule AeMdwWeb.Util do
       if is_reversed? do
         Map.put(query_params, "rev", "1")
       else
-        query_params
+        Map.delete(query_params, "rev")
       end
 
     query_params = Map.put(query_params, "cursor", cursor)

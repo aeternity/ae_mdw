@@ -14,7 +14,8 @@ defmodule AeMdw.Collection do
   @typep scope() :: {key(), key()} | nil
 
   @type is_reversed?() :: boolean()
-  @type pagination() :: {direction(), is_reversed?(), limit()}
+  @type has_cursor?() :: boolean()
+  @type direction_limit() :: {direction(), is_reversed?(), limit(), has_cursor?()}
   @type pagination_cursor() :: {cursor(), is_reversed?()} | nil
   @type stream_fn() :: (direction() -> Enumerable.t())
 
@@ -22,35 +23,32 @@ defmodule AeMdw.Collection do
   Paginates a list or stream or records into a list of items and it's next cursor (if
   any).
   """
-  @spec paginate(stream_fn(), pagination()) ::
+  @spec paginate(stream_fn(), direction_limit()) ::
           {pagination_cursor(), Enumerable.t(), pagination_cursor()}
-  def paginate(stream_fn, {direction, false, limit} = _p) do
+  def paginate(stream_fn, {direction, false, limit, has_cursor?}) do
     prev_cursor =
-      case Enum.at(stream_fn.(Util.opposite_dir(direction)), 1) do
-        nil -> nil
-        cursor -> {cursor, true}
+      if has_cursor? do
+        case Enum.at(stream_fn.(Util.opposite_dir(direction)), 1) do
+          nil -> nil
+          cursor -> {cursor, true}
+        end
       end
 
-    res =
-      direction
-      |> stream_fn.()
-      |> Stream.take(limit + 1)
-      |> Enum.split(limit)
-      |> case do
-        {records, []} -> {prev_cursor, records, nil}
-        {records, [next_cursor]} -> {prev_cursor, records, {next_cursor, false}}
-      end
-
-    # IO.inspect(["PAGINATION", p, res])
-
-    res
+    direction
+    |> stream_fn.()
+    |> Stream.take(limit + 1)
+    |> Enum.split(limit)
+    |> case do
+      {records, []} -> {prev_cursor, records, nil}
+      {records, [next_cursor]} -> {prev_cursor, records, {next_cursor, false}}
+    end
   end
 
-  def paginate(stream_fn, {direction, true, limit}) do
+  def paginate(stream_fn, {direction, true, limit, has_cursor?}) do
     {prev_cursor, records, next_cursor} =
-      paginate(stream_fn, {Util.opposite_dir(direction), false, limit})
+      paginate(stream_fn, {Util.opposite_dir(direction), false, limit, has_cursor?})
 
-    {next_cursor, Enum.reverse(records), prev_cursor}
+    {reverse_cursor(next_cursor), Enum.reverse(records), reverse_cursor(prev_cursor)}
   end
 
   @doc """
@@ -162,4 +160,7 @@ defmodule AeMdw.Collection do
       end
     end)
   end
+
+  defp reverse_cursor(nil), do: nil
+  defp reverse_cursor({cursor, is_reversed?}), do: {cursor, not is_reversed?}
 end

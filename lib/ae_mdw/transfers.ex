@@ -11,11 +11,11 @@ defmodule AeMdw.Transfers do
   alias AeMdw.Util
   alias AeMdw.Validate
 
-  @type cursor :: {Collection.is_reversed?(), binary()}
+  @type cursor :: {binary(), Collection.is_reversed?()}
   @type transfer :: term()
   @type query :: %{binary() => binary()}
 
-  @typep pagination :: Collection.pagination()
+  @typep pagination :: Collection.direction_limit()
   @typep range :: {:gen, Range.t()} | {:txi, Range.t()} | nil
   @typep reason :: binary()
 
@@ -39,7 +39,7 @@ defmodule AeMdw.Transfers do
         |> Map.drop(@pagination_params)
         |> Enum.map(&convert_param/1)
         |> Map.new()
-        |> build_pagination(scope, cursor)
+        |> build_streamer(scope, cursor)
         |> Collection.paginate(pagination)
 
       {:ok, serialize_cursor(prev_cursor), Enum.map(transfers, &render/1),
@@ -51,7 +51,7 @@ defmodule AeMdw.Transfers do
   end
 
   # Retrieves transfers within the {account, kind_prefix_*, gen_txi, X} range.
-  defp build_pagination(%{account_pk: account_pk, kind_prefix: kind_prefix}, scope, cursor) do
+  defp build_streamer(%{account_pk: account_pk, kind_prefix: kind_prefix}, scope, cursor) do
     {{first_gen_txi, _first_kind, _first_account_pk, _first_ref_txi},
      {last_gen_txi, _last_kind, _last_account_pk, _last_ref_txi}} = scope
 
@@ -80,12 +80,12 @@ defmodule AeMdw.Transfers do
   end
 
   # Retrieves transfers within the {account, gen_txi, X, Y} range.
-  defp build_pagination(%{account_pk: account_pk}, scope, cursor) do
-    build_pagination(%{account_pk: account_pk, kind_prefix: ""}, scope, cursor)
+  defp build_streamer(%{account_pk: account_pk}, scope, cursor) do
+    build_streamer(%{account_pk: account_pk, kind_prefix: ""}, scope, cursor)
   end
 
   # Retrieves transfers within the {kind_prefix_*, gen_txi, account, X} range.
-  defp build_pagination(%{kind_prefix: kind_prefix}, scope, cursor) do
+  defp build_streamer(%{kind_prefix: kind_prefix}, scope, cursor) do
     {{first_gen_txi, _first_kind, first_account_pk, _first_ref_txi},
      {last_gen_txi, _last_kind, last_account_pk, _last_ref_txi}} = scope
 
@@ -115,7 +115,7 @@ defmodule AeMdw.Transfers do
     end
   end
 
-  defp build_pagination(_query, scope, cursor),
+  defp build_streamer(_query, scope, cursor),
     do: &Collection.stream(@int_transfer_table, &1, scope, cursor)
 
   defp build_target_kind_int_transfer_stream(direction, scope, cursor) do

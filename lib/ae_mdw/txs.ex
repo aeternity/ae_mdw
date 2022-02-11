@@ -10,7 +10,7 @@ defmodule AeMdw.Txs do
   alias AeMdw.Db.Model.IdCount
   alias AeMdw.Db.Model.Tx
   alias AeMdw.Db.Model.Type
-  alias AeMdw.Db.Stream.Scope
+  alias AeMdw.Db.Util
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Mnesia
   alias AeMdw.Node
@@ -28,8 +28,8 @@ defmodule AeMdw.Txs do
         }
 
   @typep reason :: binary()
-  @typep pagination :: Collection.pagination()
-  @typep scope :: {:gen, Range.t()} | {:txi, Range.t()} | nil
+  @typep pagination :: Collection.direction_limit()
+  @typep range :: {:gen, Range.t()} | {:txi, Range.t()} | nil
 
   @table Tx
   @type_table Type
@@ -38,9 +38,9 @@ defmodule AeMdw.Txs do
 
   @create_tx_types ~w(contract_create_tx channel_create_tx oracle_register_tx name_claim_tx ga_attach_tx)a
 
-  @spec fetch_txs(pagination(), scope(), query(), cursor() | nil) ::
+  @spec fetch_txs(pagination(), range(), query(), cursor() | nil) ::
           {:ok, cursor() | nil, [tx()], cursor() | nil} | {:error, reason()}
-  def fetch_txs(pagination, scope, query, cursor) do
+  def fetch_txs(pagination, range, query, cursor) do
     ids = query |> Map.get(:ids, MapSet.new()) |> MapSet.to_list()
     types = query |> Map.get(:types, MapSet.new()) |> MapSet.to_list()
     cursor = deserialize_cursor(cursor)
@@ -48,8 +48,8 @@ defmodule AeMdw.Txs do
     try do
       {prev_cursor, txis, next_cursor} =
         fn direction ->
-          txis_range =
-            case scope do
+          scope =
+            case range do
               {:gen, %Range{first: first_gen, last: last_gen}} ->
                 {first_gen_to_txi(first_gen, direction), last_gen_to_txi(last_gen, direction)}
 
@@ -61,7 +61,7 @@ defmodule AeMdw.Txs do
             end
 
           ids
-          |> build_streams(types, txis_range, cursor, direction)
+          |> build_streams(types, scope, cursor, direction)
           |> Collection.merge(direction)
         end
         |> Collection.paginate(pagination)
@@ -74,23 +74,10 @@ defmodule AeMdw.Txs do
     end
   end
 
-  defp first_gen_to_txi(first_gen, direction), do: gen_to_txi(first_gen, direction)
-  defp last_gen_to_txi(last_gen, :forward), do: gen_to_txi(last_gen, :backward)
-  defp last_gen_to_txi(last_gen, :backward), do: gen_to_txi(last_gen, :forward)
-
-  defp gen_to_txi(gen, :forward) do
-    case Scope.translate1({:gen, gen}, :txi) do
-      {:range, {start_r, _end_r}} -> start_r
-      nil -> 0
-    end
-  end
-
-  defp gen_to_txi(gen, :backward) do
-    case Scope.translate1({:gen, gen}, :txi) do
-      {:range, {_start_r, end_r}} -> end_r
-      nil -> 0
-    end
-  end
+  defp first_gen_to_txi(first_gen, :forward), do: Util.gen_to_txi(first_gen)
+  defp first_gen_to_txi(first_gen, :backward), do: Util.gen_to_txi(first_gen + 1) - 1
+  defp last_gen_to_txi(last_gen, :forward), do: Util.gen_to_txi(last_gen + 1) - 1
+  defp last_gen_to_txi(last_gen, :backward), do: Util.gen_to_txi(last_gen)
 
   # The purpose of this function is to generate the streams that will be then used as input for
   # Collection.merge/2 function. The function is divided into three clauses. There's an explanation

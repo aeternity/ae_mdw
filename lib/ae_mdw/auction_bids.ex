@@ -20,6 +20,7 @@ defmodule AeMdw.AuctionBids do
 
   @typep order_by :: :expiration | :name
   @typep plain_name() :: binary()
+  @typep pagination() :: Collection.direction_limit()
 
   @table Model.AuctionBid
   @table_expiration Model.AuctionExpiration
@@ -35,7 +36,7 @@ defmodule AeMdw.AuctionBids do
     end
   end
 
-  @spec fetch_auctions(Collection.pagination(), order_by(), cursor() | nil, boolean()) ::
+  @spec fetch_auctions(pagination(), order_by(), cursor() | nil, boolean()) ::
           {cursor() | nil, [auction_bid()], cursor() | nil}
   def fetch_auctions(pagination, :name, cursor, expand?) do
     cursor =

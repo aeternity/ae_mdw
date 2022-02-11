@@ -31,7 +31,7 @@ defmodule AeMdw.Contracts do
   @typep txi() :: Txs.txi()
   @typep create_txi() :: txi() | -1
   @typep reason() :: binary()
-  @typep pagination() :: Collection.pagination()
+  @typep pagination() :: Collection.direction_limit()
   @typep range() :: {:gen, Range.t()} | {:txi, Range.t()} | nil
 
   @contract_log_table Model.ContractLog

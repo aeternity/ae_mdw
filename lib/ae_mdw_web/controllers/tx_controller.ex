@@ -25,7 +25,7 @@ defmodule AeMdwWeb.TxController do
 
   @type_spend_tx "SpendTx"
   @type_query_params ~w(type type_group)
-  @pagination_param_keys ~w(limit page cursor expand direction scope_type range by)
+  @pagination_param_keys ~w(limit page cursor expand direction scope_type range by rev)
 
   plug(PaginatedPlug)
 
