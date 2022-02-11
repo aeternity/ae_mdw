@@ -720,17 +720,17 @@ of transactions in the reply than `10` (max `100`).
 
 The application does not support paginated page-based endpoints. Instead, a
 cursor-based pagination is offered. This means that in order to traverse through
-a list of pages for any of the pagianted endpoints, the `next` field from the
-current page has to be used instead.
+a list of pages for any of the pagianted endpoints, either the `next` or `prev`
+field from the current page has to be used instead.
 
-Asking for an arbitrary page, without first retrieving it from the `next` field
-is not supported.
+Asking for an arbitrary page, without first retrieving it from the `next` or
+`prev` field is not supported.
 
 The `txs` endpoint returns json in shape
-`{"data": [...transactions...], "next": continuation-URL or null}`
+`{"data": [...transactions...], "next": continuation-URL or null, "prev": continuation-URL or null}`
 
 The `continuation-URL`, when concatenated with host, **has to be used** to
-retrieve next page of results.
+retrieve a new page of results.
 
 ##### Examples
 
@@ -761,7 +761,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?account=ak_E64bTuWTVj9Hu
       "tx_index": 1776073
     }
   ],
-  "next": "/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&cursor=1779354&limit=1"
+  "next": "/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&cursor=1779354&limit=1",
+  "prev": "/txs/backward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&cursor=19813844&limit=1&rev=1"
 }
 ```
 
@@ -792,7 +793,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?account=ak_E64bTuWTVj9Hu
       "tx_index": 1779354
     }
   ],
-  "next": "/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&cursor=1779356&limit=1"
+  "next": "/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&cursor=1779356&limit=1",
+  "prev": "/txs/backward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&cursor=1776073&limit=1&rev=1"
 }
 ```
 
@@ -838,7 +840,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/backward?account=ak_24jcHLTZQfso
       "tx_index": 1747960
     }
   ],
-  "next": "/txs/backward?account=ak_zUQikTiUMNxfKwuAfQVMPkaxdPsXP8uAxnfn6TkZKZCtmRcUD&cursor=17022424&limit=1"
+  "next": "/txs/backward?account=ak_zUQikTiUMNxfKwuAfQVMPkaxdPsXP8uAxnfn6TkZKZCtmRcUD&cursor=17022424&limit=1",
+  "prev": null
 }
 ```
 
@@ -869,7 +872,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?sender_id=ak_26dopN3U2zg
       "tx_index": 9
     }
   ],
-  "next": "/txs/forward?cursor=41&limit=1&recipient_id=ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2&sender_id=ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5"
+  "next": "/txs/forward?cursor=41&limit=1&recipient_id=ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2&sender_id=ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5",
+  "prev": null
 }
 ```
 
@@ -899,7 +903,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?account=ak_E64bTuWTVj9Hu
       "tx_index": 3550045
     }
   ],
-  "next": null
+  "next": null,
+  "prev": null
 }
 ```
 
@@ -1389,7 +1394,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/blocks/backward?limit=1" | jq '.'
       "version": 4
     }
   ],
-  "next": "/blocks/backward?cursor=523667&limit=1"
+  "next": "/blocks/backward?cursor=523667&limit=1",
+  "prev": null
 }
 ```
 
@@ -1461,7 +1467,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/blocks/forward?limit=2" | jq '.'
       "version": 1
     }
   ],
-  "next": "/blocks/forward?cursor=2&limit=2"
+  "next": "/blocks/forward?cursor=2&limit=2",
+  "prev": null
 }
 ```
 
@@ -1535,7 +1542,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks/101125-101125" | jq '.'
       "version": 3
     }
   ],
-  "next": null
+  "next": null,
+  "prev": null
 }
 ```
 
@@ -1728,7 +1736,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/blocks/100000-100100?limit=3" | jq '
       "version": 3
     }
   ],
-  "next": "/blocks/100000-100100?cursor=100003&limit=3"
+  "next": "/blocks/100000-100100?cursor=100003&limit=3",
+  "prev": null
 }
 ```
 
@@ -2322,7 +2331,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/names?limit=2" | jq '.'
       "status": "name"
     }
   ],
-  "next": "/names?by=expiration&cursor=703645-jiangjiajia.chain&direction=backward&expand=false&limit=2"
+  "next": "/names?by=expiration&cursor=703645-jiangjiajia.chain&direction=backward&expand=false&limit=2",
+  "prev": null
 }
 ```
 
@@ -2390,7 +2400,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/names/inactive?by=expiration&directi
       "status": "name"
     }
   ],
-  "next": "/names/inactive?cursor=16117-philippsdk1.test&direction=forward&expand=false&limit=2"
+  "next": "/names/inactive?cursor=16117-philippsdk1.test&direction=forward&expand=false&limit=2",
+  "prev": null
 }
 ```
 
@@ -2472,7 +2483,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/names/active?by=name&limit=2" | jq '
       "status": "name"
     }
   ],
-  "next": "/names/active?cursor=zz.chain&direction=backward&expand=false&limit=2"
+  "next": "/names/active?cursor=zz.chain&direction=backward&expand=false&limit=2",
+  "prev": null
 }
 ```
 
@@ -2561,7 +2573,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/names/auctions?limit=2" | jq '.'
       "status": "auction"
     }
   ],
-  "next": "/names/auctions?cursor=548763-svs.chain&direction=backward&expand=false&limit=2"
+  "next": "/names/auctions?cursor=548763-svs.chain&direction=backward&expand=false&limit=2",
+  "prev": null
 }
 ```
 
@@ -3021,7 +3034,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/backward?limit=1" | j
       "log_idx": 2
     }
   ],
-  "next": "contracts/logs/gen/370592-0?limit=1&page=2"
+  "next": "contracts/logs/gen/370592-0?limit=1&page=2",
+  "prev": null
 }
 ```
 
@@ -3047,7 +3061,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/gen/200000-210000?lim
       "log_idx": 0
     }
   ],
-  "next": "contracts/logs/gen/200000-210000?limit=1&page=2"
+  "next": "contracts/logs/gen/200000-210000?limit=1&page=2",
+  "prev": null
 }
 ```
 
@@ -3073,7 +3088,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/gen/250109?limit=1" |
       "log_idx": 0
     }
   ],
-  "next": "contracts/logs/gen/250109-250109?limit=1&page=2"
+  "next": "contracts/logs/gen/250109-250109?limit=1&page=2",
+  "prev": null
 }
 ```
 
@@ -3114,7 +3130,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/txi/15000000-5000000?
       "log_idx": 0
     }
   ],
-  "next": "contracts/logs/txi/15000000-5000000?limit=2&page=2"
+  "next": "contracts/logs/txi/15000000-5000000?limit=2&page=2",
+  "prev": null
 }
 ```
 
@@ -3169,7 +3186,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs?contract_id=ct_2AfnEf
       "log_idx": 0
     }
   ],
-  "next": "contracts/logs/txi/19626064-0?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2&page=2"
+  "next": "contracts/logs/txi/19626064-0?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2&page=2",
+  "prev": null
 }
 ```
 
@@ -3209,7 +3227,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/forward?data=aeternit
       "log_idx": 0
     }
   ],
-  "next": "contracts/logs/gen/0-370592?data=aeternity.com&limit=2&page=2"
+  "next": "contracts/logs/gen/0-370592?data=aeternity.com&limit=2&page=2",
+  "prev": null
 }
 ```
 
@@ -3235,7 +3254,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs?event=TipReceived&lim
       "log_idx": 0
     }
   ],
-  "next": "contracts/logs/txi/19626064-0?event=TipReceived&limit=1&page=2"
+  "next": "contracts/logs/txi/19626064-0?event=TipReceived&limit=1&page=2",
+  "prev": null
 }
 ```
 
@@ -3277,7 +3297,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/calls?contract_id=ct_2AfnE
       "micro_index": 9
     }
   ],
-  "next": "contracts/calls/txi/20309127-0?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1&page=2"
+  "next": "contracts/calls/txi/20309127-0?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1&page=2",
+  "prev": null
 }
 ```
 
@@ -3317,7 +3338,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/calls/forward?function=Ora
       "micro_index": 0
     }
   ],
-  "next": "contracts/calls/gen/0-403807?function=Oracle&limit=1&page=2"
+  "next": "contracts/calls/gen/0-403807?function=Oracle&limit=1&page=2",
+  "prev": null
 }
 ```
 
@@ -3355,7 +3377,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/calls?recipient_id=ak_23bf
       "micro_index": 11
     }
   ],
-  "next": "contracts/calls/txi/20309760-0?limit=1&page=2&recipient_id=ak_23bfFKQ1vuLeMxyJuCrMHiaGg5wc7bAobKNuDadf8tVZUisKWs"
+  "next": "contracts/calls/txi/20309760-0?limit=1&page=2&recipient_id=ak_23bfFKQ1vuLeMxyJuCrMHiaGg5wc7bAobKNuDadf8tVZUisKWs",
+  "prev": null
 }
 ```
 
@@ -3408,7 +3431,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/transfers/gen/50002-70000?limit=3" |
       "ref_txi": 1516090
     }
   ],
-  "next": "/transfers/gen/50002-70000?cursor=6KO30C1I5GOJAC9M60SJ2936CLILUR3FCDLLURJ1DLII85B36T6B4BDUUA3PPOSNFT2NRAQ67SAGJVNC35N46VHNTU4SU3V14GOJAC9M60SJ2&limit=3"
+  "next": "/transfers/gen/50002-70000?cursor=6KO30C1I5GOJAC9M60SJ2936CLILUR3FCDLLURJ1DLII85B36T6B4BDUUA3PPOSNFT2NRAQ67SAGJVNC35N46VHNTU4SU3V14GOJAC9M60SJ2&limit=3",
+  "prev": null
 }
 ```
 
@@ -3433,7 +3457,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/transfers/forward?kind=reward_dev&li
       "ref_txi": null
     }
   ],
-  "next": "/transfers/forward?cursor=74O3IE1J5GMJ293ICLRM2SJ4BTI6ATH4LJOO0LBKD1ROVHB90J0E1JU8HBJ58RP6B4GUU5E9MUST24PSDM428B9H&kind=reward_dev&limit=2"
+  "next": "/transfers/forward?cursor=74O3IE1J5GMJ293ICLRM2SJ4BTI6ATH4LJOO0LBKD1ROVHB90J0E1JU8HBJ58RP6B4GUU5E9MUST24PSDM428B9H&kind=reward_dev&limit=2",
+  "prev": null
 }
 ```
 
@@ -3451,7 +3476,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/transfers/backward?account=ak_7myFYv
       "ref_txi": 1680384
     }
   ],
-  "next": "/transfers/backward?account=ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J&cursor=6KOJ4CHH5GOJCDHG70PJG936CLILUR3FCDLLURJ1DLII83R2BN0S5LH5TCGCSOIPLQM6D3RI7C7ICPVL44G939G2DR91PR6U4GOJCDHG70PJG&limit=1"
+  "next": "/transfers/backward?account=ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J&cursor=6KOJ4CHH5GOJCDHG70PJG936CLILUR3FCDLLURJ1DLII83R2BN0S5LH5TCGCSOIPLQM6D3RI7C7ICPVL44G939G2DR91PR6U4GOJCDHG70PJG&limit=1",
+  "prev": null
 }
 ```
 
@@ -3637,7 +3663,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/oracles?direction=forward&limit=1&ex
       }
     }
   ],
-  "next": "/oracles?cursor=6894-ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM&direction=forward&expand=true&limit=1"
+  "next": "/oracles?cursor=6894-ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM&direction=forward&expand=true&limit=1",
+  "prev": null
 }
 ```
 
@@ -3661,7 +3688,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/oracles/inactive?limit=1" | jq '.'
       "register": 15198855
     }
   ],
-  "next": "/oracles/inactive?cursor=507223-ok_26QSujxMBhg67YhbgvjQvsFfGdBrK9ddG4rENEGUq2EdsyfMTC&direction=backward&expand=false&limit=1"
+  "next": "/oracles/inactive?cursor=507223-ok_26QSujxMBhg67YhbgvjQvsFfGdBrK9ddG4rENEGUq2EdsyfMTC&direction=backward&expand=false&limit=1",
+  "prev": null
 }
 ```
 
@@ -3712,7 +3740,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/oracles/active?limit=1&expand" | jq 
       }
     }
   ],
-  "next": "/oracles/active?cursor=1289003-ok_f9vDQvr1cFAQAesYA16vjvBX9TFeWUB4Gb7WJkwfYSkL1CpDx&direction=backward&expand=true&limit=1"
+  "next": "/oracles/active?cursor=1289003-ok_f9vDQvr1cFAQAesYA16vjvBX9TFeWUB4Gb7WJkwfYSkL1CpDx&direction=backward&expand=true&limit=1",
+  "prev": null
 }
 ```
 
