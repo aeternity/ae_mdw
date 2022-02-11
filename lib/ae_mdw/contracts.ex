@@ -44,7 +44,7 @@ defmodule AeMdw.Contracts do
   @id_int_contract_call_table Model.IdIntContractCall
   @grp_id_int_contract_call_table Model.GrpIdIntContractCall
 
-  @pagination_params ~w(limit cursor)
+  @pagination_params ~w(limit cursor rev)
 
   @max_256bit_int Util.max_256bit_int()
   @max_256bit_bin Util.max_256bit_bin()
