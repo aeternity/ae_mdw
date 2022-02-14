@@ -167,17 +167,16 @@ defmodule AeMdw.Db.RocksDb do
   @doc """
   Delete a key-value from a column family.
   """
-  @spec delete(table(), binary()) :: boolean()
+  @spec delete(table(), binary()) :: :ok | {:error, any()}
   def delete(table, key) do
     {db_ref, cf_ref} = cf_refs(table)
 
-    case :rocksdb.delete(db_ref, cf_ref, key, []) do
-      :ok ->
-        true
-
-      {:error, reason} ->
-        Log.error("delete failed! reason=#{reason}")
-        false
+    with {:ok, t_ref} <- get_existing_transaction(),
+         {:ok, _value} <- :rocksdb.transaction_get(t_ref, cf_ref, key, []) do
+      :ok = :rocksdb.transaction_delete(db_ref, cf_ref, key)
+    else
+      :not_found ->
+        :rocksdb.delete(db_ref, cf_ref, key, [])
     end
   end
 
