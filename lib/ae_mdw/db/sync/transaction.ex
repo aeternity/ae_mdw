@@ -172,6 +172,7 @@ defmodule AeMdw.Db.Sync.Transaction do
         if mbi > last_mbi do
           {mutations, acc} = micro_block_mutations(mblock, txi_acc)
           Database.transaction(mutations)
+          Database.commit()
           Producer.commit_enqueued()
           Broadcaster.broadcast_micro_block(mblock, :mdw)
           Broadcaster.broadcast_txs(mblock, :mdw)
@@ -201,6 +202,8 @@ defmodule AeMdw.Db.Sync.Transaction do
       Stats.new_mutation(height, last_mbi == -1),
       KeyBlocksMutation.new(kb_model, next_txi)
     ])
+    Database.commit()
+
 
     Broadcaster.broadcast_key_block(key_block, :mdw)
 

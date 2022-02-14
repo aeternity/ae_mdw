@@ -12,7 +12,7 @@ defmodule AeMdw.Db.Util do
   import AeMdw.Sigil
   import AeMdw.Util
 
-  ################################################################################
+  @eot :"$end_of_table"
 
   def read(tab, key),
     do: :mnesia.async_dirty(fn -> Database.read(tab, key) end)
@@ -74,13 +74,17 @@ defmodule AeMdw.Db.Util do
   end
 
   def first(tab) do
-    fn -> :mnesia.first(tab) end
-    |> :mnesia.async_dirty()
+    case Database.first_key(tab) do
+      {:ok, key} -> key
+      :none -> @eot
+    end
   end
 
   def last(tab) do
-    fn -> :mnesia.last(tab) end
-    |> :mnesia.async_dirty()
+    case Database.last_key(tab) do
+      {:ok, key} -> key
+      :none -> @eot
+    end
   end
 
   def select(tab, match_spec) do
@@ -232,8 +236,8 @@ defmodule AeMdw.Db.Util do
                 {height, -1}
 
               :micro ->
-                collect_keys(Model.Block, nil, {height, <<>>}, &prev/2, fn
-                  {^height, _} = bi, nil ->
+                collect_keys(Model.Block, nil, {height, <<>>}, &Database.prev_key/2, fn
+                  {:ok, {^height, _}} = bi, nil ->
                     (Model.block(read_block!(bi), :hash) == block_hash &&
                        {:halt, bi}) || {:cont, nil}
 

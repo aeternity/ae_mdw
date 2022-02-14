@@ -13,6 +13,7 @@ defmodule AeMdw.Database do
 
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
+  alias AeMdw.Db.RocksDb
   alias AeMdw.Db.RocksDbCF
 
   require Model
@@ -67,7 +68,7 @@ defmodule AeMdw.Database do
   end
 
   @doc """
-  Previous key from transaction (before commit).
+  Previous key reading through the transaction.
   """
   @spec dirty_prev_key(table(), key()) :: {:ok, key()} | :none
   def dirty_prev_key(tab, key) do
@@ -216,11 +217,16 @@ defmodule AeMdw.Database do
   end
 
   def write(Model.Tx, record) do
-    RocksDbCF.put(Model.Block, record)
+    RocksDbCF.put(Model.Tx, record)
   end
 
   def write(table, record) do
     :mnesia.write(table, record, :write)
+  end
+
+  @spec commit() :: :ok
+  def commit do
+    RocksDb.commit()
   end
 
   @spec transaction([Mutation.t()]) :: :ok
