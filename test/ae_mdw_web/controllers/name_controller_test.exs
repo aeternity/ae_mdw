@@ -59,11 +59,6 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
-         ]},
-        {DbUtil, [],
-         [
-           last_gen!: fn -> 0 end,
-           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names, "next" => next} =
@@ -116,11 +111,6 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
-         ]},
-        {DbUtil, [],
-         [
-           last_gen!: fn -> 0 end,
-           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names} =
@@ -182,11 +172,6 @@ defmodule AeMdwWeb.NameControllerTest do
            fetch!: fn _hash ->
              %{"tx" => %{"tx" => %{"tx" => %{"pointers" => [], "account_id" => <<>>}}}}
            end
-         ]},
-        {DbUtil, [],
-         [
-           last_gen!: fn -> 0 end,
-           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names} =
@@ -235,11 +220,6 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
-         ]},
-        {DbUtil, [],
-         [
-           last_gen!: fn -> 0 end,
-           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names, "next" => next} =
@@ -290,11 +270,6 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
-         ]},
-        {DbUtil, [],
-         [
-           last_gen!: fn -> 0 end,
-           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names} =
@@ -340,11 +315,6 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
-         ]},
-        {DbUtil, [],
-         [
-           last_gen!: fn -> 0 end,
-           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names} =
@@ -397,8 +367,6 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {DbUtil, [],
          [
-           last_gen!: fn -> 0 end,
-           first_gen!: fn -> 0 end,
            proto_vsn: fn _height -> 1 end
          ]}
       ] do
@@ -443,8 +411,6 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {DbUtil, [],
          [
-           last_gen!: fn -> 0 end,
-           first_gen!: fn -> 0 end,
            proto_vsn: fn _height -> 1 end
          ]}
       ] do
@@ -482,8 +448,6 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {DbUtil, [],
          [
-           last_gen!: fn -> 0 end,
-           first_gen!: fn -> 0 end,
            proto_vsn: fn _height -> 1 end
          ]}
       ] do
@@ -551,11 +515,6 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
-         ]},
-        {DbUtil, [],
-         [
-           last_gen!: fn -> 0 end,
-           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names, "next" => _next} =
@@ -603,11 +562,6 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
-         ]},
-        {DbUtil, [],
-         [
-           last_gen!: fn -> 0 end,
-           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names} =
@@ -650,11 +604,6 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
-         ]},
-        {DbUtil, [],
-         [
-           last_gen!: fn -> 0 end,
-           first_gen!: fn -> 0 end
          ]}
       ] do
         assert %{"data" => names, "next" => _next} =

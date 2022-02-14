@@ -11,9 +11,6 @@ defmodule AeMdw.Util do
   def one!([]), do: raise(ArgumentError, message: "got empty list")
   def one!(err), do: raise(ArgumentError, message: "got #{inspect(err)}")
 
-  def one([x]), do: x
-  def one([]), do: nil
-
   def map_one([x], f), do: f.(x)
   def map_one([], _), do: {:error, :not_found}
   def map_one(_, _), do: {:error, :too_many}
@@ -46,8 +43,6 @@ defmodule AeMdw.Util do
   def map_some(nil, _f), do: nil
   def map_some(x, f), do: f.(x)
 
-  def map_tuple2({a, b}, f), do: {f.(a), f.(b)}
-
   def flip_tuple({a, b}), do: {b, a}
 
   def sort_tuple2({a, b} = t) when a <= b, do: t
@@ -65,12 +60,6 @@ defmodule AeMdw.Util do
   def prx(x, label),
     do: x |> IO.inspect(label: label, pretty: true, limit: :infinity)
 
-  def is_mapset(%{__struct__: MapSet}), do: true
-  def is_mapset(_), do: false
-
-  def to_list_like(nil), do: [nil]
-  def to_list_like(xs), do: ((is_mapset(xs) or is_list(xs)) && xs) || List.wrap(xs)
-
   def chase(nil, _succ), do: []
   def chase(root, succ), do: [root | chase(succ.(root), succ)]
 
@@ -87,15 +76,6 @@ defmodule AeMdw.Util do
     end
   end
 
-  def tuple_to_map({k, v}),
-    do: %{k => v}
-
-  def apply_tuple(mod, fun, tup_args) when is_tuple(tup_args),
-    do: apply(mod, fun, :erlang.tuple_to_list(tup_args))
-
-  def gets(x, mod, fkws),
-    do: fkws |> Enum.map(&apply(mod, &1, [x]))
-
   def record_to_map(record, [_ | _] = fields) when is_tuple(record) do
     collect = fn {field, idx}, acc -> put_in(acc, [field], elem(record, idx)) end
 
@@ -103,9 +83,6 @@ defmodule AeMdw.Util do
     |> Stream.with_index(1)
     |> Enum.reduce(%{}, collect)
   end
-
-  def product(xs, ys),
-    do: for(x <- xs, y <- ys, do: {x, y})
 
   def combinations(list, num)
   def combinations(_list, 0), do: [[]]
@@ -131,9 +108,6 @@ defmodule AeMdw.Util do
     |> Enum.into(%{})
   end
 
-  def ensure_prefix(x, [x | _] = xs), do: xs
-  def ensure_prefix(x, xs), do: [x | xs]
-
   defp reduce_skip_while_pull(stream, acc, fun) do
     case StreamSplit.take_and_drop(stream, 1) do
       {[], _} ->
@@ -157,57 +131,6 @@ defmodule AeMdw.Util do
           {:cont, stream, acc, x} -> {[x], {stream, acc}}
         end
       end,
-      fn _ -> :ok end
-    )
-  end
-
-  def gb_tree_stream(tree, dir)
-      when dir in [:forward, :backward] do
-    taker =
-      case dir do
-        :forward -> &:gb_trees.take_smallest/1
-        :backward -> &:gb_trees.take_largest/1
-      end
-
-    Stream.resource(
-      fn -> tree end,
-      fn tree ->
-        case :gb_trees.size(tree) do
-          0 ->
-            {:halt, nil}
-
-          _ ->
-            {k, v, tree} = taker.(tree)
-            {[{k, v}], tree}
-        end
-      end,
-      fn _ -> :ok end
-    )
-  end
-
-  def ets_stream_pull({tab, :"$end_of_table", _}),
-    do: {:halt, tab}
-
-  def ets_stream_pull({tab, key, advance}) do
-    case :ets.lookup(tab, key) do
-      [tuple] ->
-        {[tuple], {tab, advance.(tab, key), advance}}
-
-      [] ->
-        ets_stream_pull({tab, advance.(tab, key), advance})
-    end
-  end
-
-  def ets_stream(tab, dir) do
-    {advance, init_key} =
-      case dir do
-        :forward -> {&:ets.next/2, &:ets.first/1}
-        :backward -> {&:ets.prev/2, &:ets.last/1}
-      end
-
-    Stream.resource(
-      fn -> {tab, init_key.(tab), advance} end,
-      &ets_stream_pull/1,
       fn _ -> :ok end
     )
   end

@@ -4,17 +4,9 @@ defmodule AeMdwWeb.Util do
   """
 
   alias AeMdw.Collection
-  alias AeMdw.Db.Model
   alias AeMdw.Error.Input, as: ErrInput
   alias Phoenix.Controller
   alias Plug.Conn
-
-  require Model
-
-  ##########
-
-  # def expand?(%{"expand" => x}) when x in [nil, "true", [nil], ["true"]], do: true
-  # def expand?(%{}), do: false
 
   # credo:disable-for-next-line
   def expand?(query_params), do: presence?(query_params, "expand")
@@ -52,20 +44,17 @@ defmodule AeMdwWeb.Util do
     |> Enum.join("&")
   end
 
-  # credo:disable-for-next-line
-  def url_encode_scope({scope, %Range{first: a, last: b}}),
+  defp url_encode_scope({scope, %Range{first: a, last: b}}),
     do: "#{scope}/#{a}-#{b}"
 
-  # credo:disable-for-next-line
-  def path_no_scope([_ | _] = path_info),
+  defp path_no_scope([_ | _] = path_info),
     do:
       Enum.take_while(
         path_info,
         &(!(&1 in ["gen", "txi", "time", "forward", "backward"] || String.contains?(&1, "-")))
       )
 
-  # credo:disable-for-next-line
-  def make_link(path_info, scope, query_groups) do
+  defp make_link(path_info, scope, query_groups) do
     path_info = path_no_scope(path_info)
     scope_info = (scope == nil && []) || [url_encode_scope(scope)]
     path = "/" <> Enum.join(path_info ++ scope_info, "/")

@@ -130,55 +130,6 @@ defmodule AeMdw.Mnesia do
     end
   end
 
-  @spec fetch_keys(table(), direction(), cursor(), limit()) :: {[record()], cursor()}
-  def fetch_keys(tab, :forward, nil, limit) do
-    {keys, cursor} =
-      :mnesia.async_dirty(fn ->
-        case :mnesia.first(tab) do
-          @end_token -> {[], nil}
-          first_key -> fetch_forward_keys(tab, first_key, limit)
-        end
-      end)
-
-    {keys, cursor}
-  end
-
-  def fetch_keys(tab, :forward, first_key, limit) do
-    {keys, cursor} =
-      :mnesia.async_dirty(fn ->
-        case :mnesia.read(tab, first_key) do
-          [] -> {[], nil}
-          _first_record -> fetch_forward_keys(tab, first_key, limit)
-        end
-      end)
-
-    {keys, cursor}
-  end
-
-  def fetch_keys(tab, :backward, nil, limit) do
-    {keys, cursor} =
-      :mnesia.async_dirty(fn ->
-        case :mnesia.last(tab) do
-          @end_token -> {[], nil}
-          last_key -> fetch_backward_keys(tab, last_key, limit)
-        end
-      end)
-
-    {keys, cursor}
-  end
-
-  def fetch_keys(tab, :backward, last_key, limit) do
-    {keys, cursor} =
-      :mnesia.async_dirty(fn ->
-        case :mnesia.read(tab, last_key) do
-          [] -> {[], nil}
-          _last_record -> fetch_backward_keys(tab, last_key, limit)
-        end
-      end)
-
-    {keys, cursor}
-  end
-
   @spec delete(table(), key()) :: :ok
   def delete(table, key) do
     :mnesia.delete(table, key, :write)
@@ -212,43 +163,5 @@ defmodule AeMdw.Mnesia do
       end)
 
     :ok
-  end
-
-  defp fetch_forward_keys(tab, first_key, limit) do
-    keys =
-      Stream.unfold({limit, first_key}, fn
-        {0, _current_key} ->
-          nil
-
-        {n, current_key} ->
-          case :mnesia.next(tab, current_key) do
-            @end_token -> nil
-            next_key -> {next_key, {n - 1, next_key}}
-          end
-      end)
-
-    case Enum.split(keys, limit - 1) do
-      {keys, [next_key]} -> {[first_key | keys], next_key}
-      {keys, []} -> {[first_key | keys], nil}
-    end
-  end
-
-  defp fetch_backward_keys(tab, last_key, limit) do
-    keys =
-      Stream.unfold({limit, last_key}, fn
-        {0, _current_key} ->
-          nil
-
-        {n, current_key} ->
-          case :mnesia.prev(tab, current_key) do
-            @end_token -> nil
-            prev_key -> {prev_key, {n - 1, prev_key}}
-          end
-      end)
-
-    case Enum.split(keys, limit - 1) do
-      {keys, [prev_key]} -> {[last_key | keys], prev_key}
-      {keys, []} -> {[last_key | keys], nil}
-    end
   end
 end
