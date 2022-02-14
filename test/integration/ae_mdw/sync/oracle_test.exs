@@ -9,7 +9,7 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
   alias AeMdw.Db.OracleExtendMutation
   alias AeMdw.Db.Sync
   alias AeMdw.Db.Util
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
 
   require Model
 
@@ -30,10 +30,10 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
             ttl
           )
 
-        Mnesia.transaction([mutation])
+        Database.transaction([mutation])
 
         assert [Model.oracle(index: ^pubkey, expire: ^new_expiration)] =
-                 Mnesia.read(Model.ActiveOracle, pubkey)
+                 Database.read(Model.ActiveOracle, pubkey)
 
         :mnesia.abort(:rollback)
       end
@@ -52,9 +52,9 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
             123
           )
 
-        Mnesia.transaction([mutation])
+        Database.transaction([mutation])
 
-        assert [] = Mnesia.read(Model.ActiveOracle, pubkey)
+        assert [] = Database.read(Model.ActiveOracle, pubkey)
 
         :mnesia.abort(:rollback)
       end
@@ -88,7 +88,7 @@ defmodule Integration.AeMdw.Db.Sync.OracleTest do
         m_oracle = Util.read!(Model.ActiveOracle, pubkey)
 
         m_old_exp = Model.expiration(index: {height - 1, pubkey})
-        Mnesia.write(Model.ActiveOracleExpiration, m_old_exp)
+        Database.write(Model.ActiveOracleExpiration, m_old_exp)
 
         (height - 1)
         |> Oracle.expirations_mutation()

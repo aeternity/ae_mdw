@@ -11,7 +11,7 @@ defmodule AeMdwWeb.OracleControllerTest do
   alias AeMdw.Db.Model.InactiveOracleExpiration
   alias AeMdw.Db.Model.Block
   alias AeMdw.Db.Oracle
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.TestSamples, as: TS
 
   describe "oracles" do
@@ -21,7 +21,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       last_gen = TS.last_gen()
 
       with_mocks [
-        {Mnesia, [],
+        {Database, [],
          [
            next_key: fn
              ActiveOracleExpiration, :backward, nil ->
@@ -63,7 +63,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       encoded_pk = :aeser_api_encoder.encode(:oracle_pubkey, pk)
 
       with_mocks [
-        {Mnesia, [],
+        {Database, [],
          [
            next_key: fn
              ActiveOracleExpiration, :backward, nil -> {:ok, {1, "a"}}
@@ -99,7 +99,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       encoded_pk = :aeser_api_encoder.encode(:oracle_pubkey, pk)
 
       with_mocks [
-        {Mnesia, [],
+        {Database, [],
          [
            last_key: fn Block -> {:ok, TS.last_gen()} end,
            fetch!: fn _tab, _oracle_pk -> oracle end,
@@ -121,7 +121,7 @@ defmodule AeMdwWeb.OracleControllerTest do
 
         assert %{"oracle" => ^encoded_pk} = oracle1
 
-        assert_called(Mnesia.last_key(Block))
+        assert_called(Database.last_key(Block))
       end
     end
 
@@ -131,7 +131,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       next_cursor_query_value = "#{next_cursor_exp}-#{next_cursor_pk_encoded}"
 
       with_mocks [
-        {Mnesia, [],
+        {Database, [],
          [
            last_key: fn Block -> {:ok, TS.last_gen()} end,
            next_key: fn ActiveOracleExpiration, _dir, _key -> {:ok, expiration_key} end,

@@ -5,7 +5,7 @@ defmodule AeMdw.Db.WriteFieldMutation do
 
   alias AeMdw.Txs
   alias AeMdw.Db.Model
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.Node
   alias AeMdw.Node.Db
 
@@ -31,7 +31,7 @@ defmodule AeMdw.Db.WriteFieldMutation do
   @spec mutate(t()) :: :ok
   def mutate(%__MODULE__{tx_type: tx_type, pos: pos, pubkey: pubkey, txi: txi}) do
     m_field = Model.field(index: {tx_type, pos, pubkey, txi})
-    Mnesia.write(Model.Field, m_field)
+    Database.write(Model.Field, m_field)
     Model.incr_count({tx_type, pos, pubkey})
   end
 end

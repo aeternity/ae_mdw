@@ -3,7 +3,7 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
 
   alias AeMdw.Db.Model
   alias AeMdw.Sync.AsyncTasks.Stats
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
 
   require Model
 
@@ -20,8 +20,8 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
 
     test "with pending db records" do
       db_pending_count = 10
-      existing_keys = Mnesia.dirty_all_keys(Model.AsyncTasks)
-      existing_tasks = Enum.flat_map(existing_keys, &Mnesia.dirty_read(Model.AsyncTasks, &1))
+      existing_keys = Database.dirty_all_keys(Model.AsyncTasks)
+      existing_tasks = Enum.flat_map(existing_keys, &Database.dirty_read(Model.AsyncTasks, &1))
 
       keys_to_delete =
         if length(existing_keys) > db_pending_count do
@@ -31,7 +31,7 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
           existing_keys
           |> Enum.take(delete_count)
           |> Enum.each(fn key ->
-            Mnesia.dirty_delete(Model.AsyncTasks, key)
+            Database.dirty_delete(Model.AsyncTasks, key)
           end)
 
           []
@@ -42,15 +42,15 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
           Enum.map(1..insert_count, fn i ->
             index = {System.system_time() + i, :update_aex9_presence}
             m_task = Model.async_tasks(index: index, args: [<<i::256>>])
-            Mnesia.dirty_write(Model.AsyncTasks, m_task)
+            Database.dirty_write(Model.AsyncTasks, m_task)
             index
           end)
         end
 
       on_exit(fn ->
         :mnesia.sync_dirty(fn ->
-          Enum.each(keys_to_delete, &Mnesia.delete(Model.AsyncTasks, &1))
-          Enum.each(existing_tasks, &Mnesia.write(Model.AsyncTasks, &1))
+          Enum.each(keys_to_delete, &Database.delete(Model.AsyncTasks, &1))
+          Enum.each(existing_tasks, &Database.write(Model.AsyncTasks, &1))
         end)
       end)
 

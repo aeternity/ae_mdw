@@ -4,7 +4,7 @@ defmodule AeMdw.Migrations.OracleRespondInternalCalls do
   """
   alias AeMdw.Db.Model
   alias AeMdw.Db.Oracle
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.Log
 
   require Ex2ms
@@ -25,18 +25,19 @@ defmodule AeMdw.Migrations.OracleRespondInternalCalls do
 
     mutations =
       Model.FnameIntContractCall
-      |> Mnesia.dirty_select(internal_calls_spec)
+      |> Database.dirty_select(internal_calls_spec)
       |> Enum.map(fn {call_txi, _local_idx} = key ->
-        [Model.tx(block_index: {kbi, _mbi} = block_index)] = Mnesia.dirty_read(Model.Tx, call_txi)
+        [Model.tx(block_index: {kbi, _mbi} = block_index)] =
+          Database.dirty_read(Model.Tx, call_txi)
 
-        [Model.block(hash: block_hash)] = Mnesia.dirty_read(Model.Block, {kbi, -1})
-        [Model.int_contract_call(tx: tx)] = Mnesia.dirty_read(Model.IntContractCall, key)
+        [Model.block(hash: block_hash)] = Database.dirty_read(Model.Block, {kbi, -1})
+        [Model.int_contract_call(tx: tx)] = Database.dirty_read(Model.IntContractCall, key)
         {:oracle_response_tx, oracle_response_tx} = :aetx.specialize_type(tx)
 
         Oracle.response_mutation(oracle_response_tx, block_index, block_hash, call_txi)
       end)
 
-    Mnesia.transaction(mutations)
+    Database.transaction(mutations)
 
     indexed_count = length(mutations)
 

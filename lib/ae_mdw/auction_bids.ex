@@ -6,7 +6,7 @@ defmodule AeMdw.AuctionBids do
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.Names
   alias AeMdw.Txs
 
@@ -98,7 +98,7 @@ defmodule AeMdw.AuctionBids do
   defp bid_top_key(plain_name) do
     top_key = {plain_name, <<>>, <<>>, <<>>, <<>>}
 
-    case Mnesia.prev_key(@table, top_key) do
+    case Database.prev_key(@table, top_key) do
       {:ok, auction_bid_key} ->
         if elem(auction_bid_key, 0) == plain_name do
           {:ok, auction_bid_key}

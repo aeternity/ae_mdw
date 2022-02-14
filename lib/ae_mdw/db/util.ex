@@ -2,7 +2,7 @@ defmodule AeMdw.Db.Util do
   # credo:disable-for-this-file
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.Txs
 
   require Logger
@@ -14,19 +14,19 @@ defmodule AeMdw.Db.Util do
   ################################################################################
 
   def read(tab, key),
-    do: :mnesia.async_dirty(fn -> Mnesia.read(tab, key) end)
+    do: :mnesia.async_dirty(fn -> Database.read(tab, key) end)
 
   def read!(tab, key),
     do: read(tab, key) |> one!
 
   def read_tx(txi),
-    do: :mnesia.async_dirty(fn -> Mnesia.read(~t[tx], txi) end)
+    do: :mnesia.async_dirty(fn -> Database.read(~t[tx], txi) end)
 
   def read_tx!(txi),
     do: read_tx(txi) |> one!
 
   def read_block({_, _} = bi),
-    do: :mnesia.async_dirty(fn -> Mnesia.read(~t[block], bi) end)
+    do: :mnesia.async_dirty(fn -> Database.read(~t[block], bi) end)
 
   def read_block(kbi) when is_integer(kbi),
     do: read_block({kbi, -1})
@@ -86,7 +86,7 @@ defmodule AeMdw.Db.Util do
     do: :mnesia.async_dirty(fn -> :mnesia.select(cont) end)
 
   def count(table),
-    do: Mnesia.dirty_all_keys(table) |> length()
+    do: Database.dirty_all_keys(table) |> length()
 
   def ensure_key!(tab, getter) do
     case apply(__MODULE__, getter, [tab]) do
@@ -117,13 +117,13 @@ defmodule AeMdw.Db.Util do
   end
 
   def do_writes(tab_xs),
-    do: do_writes(tab_xs, &Mnesia.write(&1, &2))
+    do: do_writes(tab_xs, &Database.write(&1, &2))
 
   def do_writes(tab_xs, db_write) when is_function(db_write, 2),
     do: Enum.each(tab_xs, fn {tab, xs} -> Enum.each(xs, &db_write.(tab, &1)) end)
 
   def do_dels(tab_keys),
-    do: do_dels(tab_keys, &Mnesia.delete(&1, &2))
+    do: do_dels(tab_keys, &Database.delete(&1, &2))
 
   def do_dels(tab_keys, db_delete) when is_function(db_delete, 2),
     do: Enum.each(tab_keys, fn {tab, ks} -> Enum.each(ks, &db_delete.(tab, &1)) end)
@@ -239,12 +239,12 @@ defmodule AeMdw.Db.Util do
 
   @spec gen_to_txi(Blocks.height()) :: Txs.txi()
   def gen_to_txi(gen) do
-    case Mnesia.fetch(Model.Block, {gen, -1}) do
+    case Database.fetch(Model.Block, {gen, -1}) do
       {:ok, Model.block(tx_index: txi)} ->
         txi
 
       :not_found ->
-        case Mnesia.last_key(Model.Tx) do
+        case Database.last_key(Model.Tx) do
           {:ok, last_txi} -> last_txi + 1
           :none -> 0
         end
@@ -253,12 +253,12 @@ defmodule AeMdw.Db.Util do
 
   @spec txi_to_gen(Txs.txi()) :: Blocks.height()
   def txi_to_gen(txi) do
-    case Mnesia.fetch(Model.Tx, txi) do
+    case Database.fetch(Model.Tx, txi) do
       {:ok, Model.tx(block_index: {kbi, _mbi})} ->
         kbi
 
       :not_found ->
-        case Mnesia.last_key(Model.Block) do
+        case Database.last_key(Model.Block) do
           {:ok, {last_kbi, _mbi}} -> last_kbi + 1
           :none -> 0
         end

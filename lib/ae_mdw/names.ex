@@ -12,7 +12,7 @@ defmodule AeMdw.Names do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Util, as: DBUtil
   alias AeMdw.Collection
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.Txs
   alias AeMdw.Util
 
@@ -146,7 +146,7 @@ defmodule AeMdw.Names do
 
   @spec fetch_previous_list(plain_name()) :: [name()]
   def fetch_previous_list(plain_name) do
-    case Mnesia.fetch(@table_inactive, plain_name) do
+    case Database.fetch(@table_inactive, plain_name) do
       {:ok, name} ->
         name
         |> Stream.unfold(fn
@@ -185,7 +185,7 @@ defmodule AeMdw.Names do
   end
 
   defp render(plain_name, is_active?, expand?) do
-    name = Mnesia.fetch!(if(is_active?, do: @table_active, else: @table_inactive), plain_name)
+    name = Database.fetch!(if(is_active?, do: @table_active, else: @table_inactive), plain_name)
 
     name_hash =
       case :aens.get_name_hash(plain_name) do

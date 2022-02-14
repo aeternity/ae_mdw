@@ -1,16 +1,16 @@
 defmodule AeMdw.Collection do
   @moduledoc """
-  Basic module for dealing with paginated lists of items from Mnesia tables.
+  Basic module for dealing with paginated lists of items from Database tables.
   """
 
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.Util
 
-  @typep table() :: Mnesia.table()
-  @typep direction() :: Mnesia.direction()
-  @typep cursor() :: Mnesia.cursor()
-  @typep limit() :: Mnesia.limit()
-  @typep key() :: Mnesia.key()
+  @typep table() :: Database.table()
+  @typep direction() :: Database.direction()
+  @typep cursor() :: Database.cursor()
+  @typep limit() :: Database.limit()
+  @typep key() :: Database.key()
   @typep scope() :: {key(), key()} | nil
 
   @type is_reversed?() :: boolean()
@@ -103,7 +103,7 @@ defmodule AeMdw.Collection do
           nil
 
         key ->
-          case Mnesia.next_key(tab, direction, key) do
+          case Database.next_key(tab, direction, key) do
             {:ok, next_key} -> {key, next_key}
             :none -> {key, :end_keys}
           end
@@ -118,7 +118,7 @@ defmodule AeMdw.Collection do
     end
   end
 
-  defp fetch_first_key(tab, direction, nil, nil), do: Mnesia.next_key(tab, direction, nil)
+  defp fetch_first_key(tab, direction, nil, nil), do: Database.next_key(tab, direction, nil)
 
   defp fetch_first_key(tab, direction, first, nil), do: fetch_first_key(tab, direction, first)
 
@@ -131,10 +131,10 @@ defmodule AeMdw.Collection do
     do: fetch_first_key(tab, :backward, min(first, cursor))
 
   defp fetch_first_key(tab, direction, candidate_cursor) do
-    if Mnesia.exists?(tab, candidate_cursor) do
+    if Database.exists?(tab, candidate_cursor) do
       {:ok, candidate_cursor}
     else
-      Mnesia.next_key(tab, direction, candidate_cursor)
+      Database.next_key(tab, direction, candidate_cursor)
     end
   end
 

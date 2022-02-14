@@ -6,7 +6,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync
   alias AeMdw.Log
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.Node, as: AE
   alias AeMdw.Validate
 
@@ -190,7 +190,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
   end
 
   def origin_keys_range(from_txi, to_txi) do
-    case Mnesia.dirty_next(Model.RevOrigin, {from_txi, :_, nil}) do
+    case Database.dirty_next(Model.RevOrigin, {from_txi, :_, nil}) do
       :"$end_of_table" ->
         {[], []}
 
@@ -211,7 +211,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
   def aex9_key_dels(from_txi) do
     {aex9_keys, aex9_sym_keys, aex9_rev_keys} =
-      case Mnesia.dirty_next(Model.RevAex9Contract, {from_txi, nil, nil, nil}) do
+      case Database.dirty_next(Model.RevAex9Contract, {from_txi, nil, nil, nil}) do
         :"$end_of_table" ->
           {[], [], []}
 
@@ -240,7 +240,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
   def aex9_transfer_key_dels(from_txi) do
     {aex9_tr_keys, aex9_rev_tr_keys, aex9_idx_tr_keys} =
-      case Mnesia.dirty_next(Model.IdxAex9Transfer, {from_txi, 0, nil, nil, 0}) do
+      case Database.dirty_next(Model.IdxAex9Transfer, {from_txi, 0, nil, nil, 0}) do
         :"$end_of_table" ->
           {[], [], []}
 
@@ -270,7 +270,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
   def aex9_account_presence_key_dels(from_txi) do
     {aex9_presence_keys, idx_aex9_presence_keys} =
-      case Mnesia.dirty_next(Model.IdxAex9AccountPresence, {from_txi, nil, nil}) do
+      case Database.dirty_next(Model.IdxAex9AccountPresence, {from_txi, nil, nil}) do
         :"$end_of_table" ->
           {[], []}
 
@@ -345,7 +345,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
   def contract_log_key_dels(from_txi) do
     {log_keys, data_log_keys, evt_log_keys, idx_log_keys} =
-      case Mnesia.dirty_next(Model.IdxContractLog, {from_txi, 0, nil, 0}) do
+      case Database.dirty_next(Model.IdxContractLog, {from_txi, 0, nil, 0}) do
         :"$end_of_table" ->
           {[], [], [], []}
 
@@ -383,7 +383,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
   def contract_call_key_dels(from_txi) do
     contract_call_keys =
-      case Mnesia.dirty_next(Model.ContractCall, {from_txi, 0}) do
+      case Database.dirty_next(Model.ContractCall, {from_txi, 0}) do
         :"$end_of_table" ->
           []
 
@@ -403,7 +403,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
   def int_contract_call_key_dels(from_txi) do
     {int_keys, grp_keys, fname_keys, fname_grp_keys, id_keys, grp_id_keys, id_fname_keys,
      grp_id_fname_keys} =
-      case Mnesia.dirty_next(Model.IntContractCall, {from_txi, -1}) do
+      case Database.dirty_next(Model.IntContractCall, {from_txi, -1}) do
         :"$end_of_table" ->
           {[], [], [], [], [], [], [], []}
 
@@ -466,7 +466,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
   def int_transfer_tx_key_dels(prev_kbi) do
     {int_keys, kind_keys, target_keys} =
-      case Mnesia.dirty_next(Model.IntTransferTx, {prev_kbi, -2}) do
+      case Database.dirty_next(Model.IntTransferTx, {prev_kbi, -2}) do
         :"$end_of_table" ->
           {[], [], []}
 

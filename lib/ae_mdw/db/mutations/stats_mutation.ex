@@ -4,7 +4,7 @@ defmodule AeMdw.Db.StatsMutation do
   """
 
   alias AeMdw.Db.Model
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
 
   require Model
 
@@ -28,8 +28,8 @@ defmodule AeMdw.Db.StatsMutation do
         stat: stat,
         total_stat: total_stat
       }) do
-    Mnesia.write(Model.Stat, stat)
-    Mnesia.write(Model.TotalStat, total_stat)
+    Database.write(Model.Stat, stat)
+    Database.write(Model.TotalStat, total_stat)
   end
 end
 

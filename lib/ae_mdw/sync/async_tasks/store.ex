@@ -5,7 +5,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
 
   alias AeMdw.Db.Model
   alias AeMdw.Db.Util
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
 
   require Ex2ms
   require Model
@@ -51,7 +51,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
       if not is_enqueued?(task_type, args) do
         index = {System.system_time(), task_type}
         m_task = Model.async_tasks(index: index, args: args)
-        Mnesia.write(Model.AsyncTasks, m_task)
+        Database.write(Model.AsyncTasks, m_task)
         :ets.insert(@args_tab, {{task_type, args}})
       end
     end)
@@ -68,7 +68,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
   @spec set_done(task_index(), task_args()) :: :ok
   def set_done({_ts, task_type} = task_index, args) do
     :mnesia.sync_transaction(fn ->
-      Mnesia.delete(Model.AsyncTasks, task_index)
+      Database.delete(Model.AsyncTasks, task_index)
     end)
 
     :ets.delete_object(@processing_tab, task_index)

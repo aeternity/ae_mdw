@@ -9,7 +9,7 @@ defmodule AeMdw.Migrations.IndexGaAttachTxs do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync.Transaction
   alias AeMdw.Log
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.Sync.Supervisor, as: SyncSup
 
   require Model
@@ -61,7 +61,7 @@ defmodule AeMdw.Migrations.IndexGaAttachTxs do
     {:atomic, bi_txs_list} =
       :mnesia.transaction(fn ->
         Enum.map(txi_list, fn txi ->
-          [Model.tx(id: hash, block_index: bi)] = Mnesia.read(Model.Tx, txi)
+          [Model.tx(id: hash, block_index: bi)] = Database.read(Model.Tx, txi)
           {bi, hash, txi}
         end)
       end)
@@ -108,15 +108,15 @@ defmodule AeMdw.Migrations.IndexGaAttachTxs do
         end)
       end)
 
-    Mnesia.transaction(txs_mutations)
+    Database.transaction(txs_mutations)
 
     new_contracts_count = length(txs_mutations)
 
     {:atomic, :ok} =
       :mnesia.transaction(fn ->
-        [Model.stat(contracts: contracts) = m_stat] = Mnesia.read(Model.Stat, height + 1)
+        [Model.stat(contracts: contracts) = m_stat] = Database.read(Model.Stat, height + 1)
         new_m_stat = Model.stat(m_stat, contracts: contracts + new_contracts_count)
-        Mnesia.write(Model.Stat, new_m_stat)
+        Database.write(Model.Stat, new_m_stat)
       end)
 
     new_contracts_count

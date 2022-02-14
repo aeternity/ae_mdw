@@ -1,6 +1,6 @@
-defmodule AeMdw.Mnesia do
+defmodule AeMdw.Database do
   @moduledoc """
-  Mnesia wrapper to provide a simpler API.
+  Database wrapper to provide a simpler API.
 
   In order to iterate throught collections of records we use the
   concept of "cursor". A cursor is just a key of any given table that
@@ -50,6 +50,22 @@ defmodule AeMdw.Mnesia do
 
   @spec dirty_select(table(), list()) :: [term()]
   def dirty_select(table, fun), do: :mnesia.dirty_select(table, fun)
+
+  @spec all_keys(table()) :: [key()]
+  def all_keys(table) do
+    :mnesia.all_keys(table)
+  end
+
+  @doc """
+  Previous key from transaction (before commit).
+  """
+  @spec dirty_prev_key(table(), key()) :: {:ok, key()} | :none
+  def dirty_prev_key(tab, key) do
+    case :mnesia.prev(tab, key) do
+      @end_token -> :none
+      prev_key -> {:ok, prev_key}
+    end
+  end
 
   @spec last_key(table(), term()) :: term()
   def last_key(tab, default) do

@@ -13,7 +13,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.ContractCreateMutation
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.KeyBlocksMutation
-  alias AeMdw.Db.MnesiaWriteMutation
+  alias AeMdw.Db.DatabaseWriteMutation
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Name
   alias AeMdw.Db.NameRevokeMutation
@@ -26,7 +26,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Sync.Stats
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.WriteTxMutation
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.Node
   alias AeMdw.Sync.AsyncTasks.Producer
   alias AeMdw.Txs
@@ -139,7 +139,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   defp sync_generation(height, txi) do
     {:atomic, gen_fully_synced?} =
       :mnesia.transaction(fn ->
-        case Mnesia.read(Model.Block, {height + 1, -1}) do
+        case Database.read(Model.Block, {height + 1, -1}) do
           [] -> false
           [Model.block(tx_index: next_txi)] -> not is_nil(next_txi)
         end
@@ -163,7 +163,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     :ets.delete_all_objects(:tx_sync_cache)
 
     last_mbi =
-      case Mnesia.prev_key(Model.Block, {height + 1, -1}) do
+      case Database.prev_key(Model.Block, {height + 1, -1}) do
         {:ok, {^height, last_mbi}} -> last_mbi
         {:ok, _other_height} -> -1
         :none -> -1
@@ -173,7 +173,7 @@ defmodule AeMdw.Db.Sync.Transaction do
       Enum.reduce(micro_blocks, {txi, 0}, fn mblock, {txi, mbi} = txi_acc ->
         if mbi > last_mbi do
           {mutations, acc} = micro_block_mutations(mblock, txi_acc)
-          Mnesia.transaction(mutations)
+          Database.transaction(mutations)
           Producer.commit_enqueued()
           Broadcaster.broadcast_micro_block(mblock, :mdw)
           Broadcaster.broadcast_txs(mblock, :mdw)
@@ -191,15 +191,15 @@ defmodule AeMdw.Db.Sync.Transaction do
     ]
 
     if height >= AE.min_block_reward_height() do
-      Mnesia.transaction([
+      Database.transaction([
         IntTransfer.block_rewards_mutation(height, kb_header, kb_hash)
         | expirations_mutations
       ])
     else
-      Mnesia.transaction(expirations_mutations)
+      Database.transaction(expirations_mutations)
     end
 
-    Mnesia.transaction([
+    Database.transaction([
       Stats.new_mutation(height, last_mbi == -1),
       KeyBlocksMutation.new(kb_model, next_txi)
     ])
@@ -230,7 +230,7 @@ defmodule AeMdw.Db.Sync.Transaction do
       |> Enum.flat_map(&transaction_mutations(&1, tx_ctx))
 
     mutations = [
-      MnesiaWriteMutation.new(Model.Block, mb_model),
+      DatabaseWriteMutation.new(Model.Block, mb_model),
       txs_mutations,
       Aex9AccountPresenceMutation.new(height, mbi)
     ]

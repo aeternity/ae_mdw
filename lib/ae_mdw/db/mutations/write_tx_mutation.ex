@@ -5,7 +5,7 @@ defmodule AeMdw.Db.WriteTxMutation do
 
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.Node
   alias AeMdw.Txs
 
@@ -35,11 +35,11 @@ defmodule AeMdw.Db.WriteTxMutation do
   @spec mutate(t()) :: :ok
   def mutate(%__MODULE__{tx: tx, type: type, txi: txi, mb_time: mb_time, inner_tx?: inner_tx?}) do
     if not inner_tx? do
-      Mnesia.write(Model.Tx, tx)
+      Database.write(Model.Tx, tx)
     end
 
-    Mnesia.write(Model.Type, Model.type(index: {type, txi}))
-    Mnesia.write(Model.Time, Model.time(index: {mb_time, txi}))
+    Database.write(Model.Type, Model.type(index: {type, txi}))
+    Database.write(Model.Time, Model.time(index: {mb_time, txi}))
   end
 end
 
