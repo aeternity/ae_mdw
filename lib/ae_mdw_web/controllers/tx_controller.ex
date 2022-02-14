@@ -859,6 +859,10 @@ defmodule AeMdwWeb.TxController do
   end
 
   # credo:disable-for-next-line
+  def swagger_path_txs(%{path: <<"/v2", rest::binary>>} = route),
+    do: swagger_path_txs(Map.put(route, :path, rest))
+
+  # credo:disable-for-next-line
   def swagger_path_txs(%{path: "/txs/{direction}"} = route), do: swagger_path_txs_direction(route)
 
   # credo:disable-for-next-line

@@ -360,7 +360,7 @@ defmodule AeMdwWeb.BlockController do
   end
 
   swagger_path :blocks do
-    get("/blocks/{range_or_dir}")
+    get("/v2/blocks/{range_or_dir}")
     description("Get multiple generations.")
     produces(["application/json"])
     deprecated(false)
@@ -452,6 +452,9 @@ defmodule AeMdwWeb.BlockController do
   end
 
   @spec swagger_path_blocki(map()) :: binary()
+  def swagger_path_blocki(%{path: <<"/v2", rest::binary>>} = route),
+    do: swagger_path_blocki_kbi(Map.put(route, :path, rest))
+
   def swagger_path_blocki(%{path: "/blocki/{kbi}"} = route), do: swagger_path_blocki_kbi(route)
 
   def swagger_path_blocki(%{path: "/blocki/{kbi}/{mbi}"} = route),

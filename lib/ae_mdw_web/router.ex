@@ -9,6 +9,72 @@ defmodule AeMdwWeb.Router do
 
   @scopes ["gen", "txi"]
 
+  @shared_routes [
+    {"/block/:hash", AeMdwWeb.BlockController, :block},
+    {"/blocki/:kbi", AeMdwWeb.BlockController, :blocki},
+    {"/blocki/:kbi/:mbi", AeMdwWeb.BlockController, :blocki},
+    {"/tx/:hash", AeMdwWeb.TxController, :tx},
+    {"/txi/:index", AeMdwWeb.TxController, :txi},
+    {"/txs/count", AeMdwWeb.TxController, :count},
+    {"/txs/count/:id", AeMdwWeb.TxController, :count_id},
+    {"/txs/:direction", AeMdwWeb.TxController, :txs},
+    {"/txs/:scope_type/:range", AeMdwWeb.TxController, :txs},
+    {"/name/auction/:id", AeMdwWeb.NameController, :auction},
+    {"/name/pointers/:id", AeMdwWeb.NameController, :pointers},
+    {"/name/pointees/:id", AeMdwWeb.NameController, :pointees},
+    {"/name/:id", AeMdwWeb.NameController, :name},
+    {"/names/search/:prefix", AeMdwWeb.NameController, :search},
+    {"/names/owned_by/:id", AeMdwWeb.NameController, :owned_by},
+    {"/names/auctions", AeMdwWeb.NameController, :auctions},
+    {"/names/auctions/:scope_type/:range", AeMdwWeb.NameController, :auctions},
+    {"/names/inactive", AeMdwWeb.NameController, :inactive_names},
+    {"/names/inactive/:scope_type/:range", AeMdwWeb.NameController, :inactive_names},
+    {"/names/active", AeMdwWeb.NameController, :active_names},
+    {"/names/active/:scope_type/:range", AeMdwWeb.NameController, :active_names},
+    {"/names", AeMdwWeb.NameController, :names},
+    {"/names/:scope_type/:range", AeMdwWeb.NameController, :names},
+    {"/oracle/:id", AeMdwWeb.OracleController, :oracle},
+    {"/oracles/inactive", AeMdwWeb.OracleController, :inactive_oracles},
+    {"/oracles/active", AeMdwWeb.OracleController, :active_oracles},
+    {"/oracles", AeMdwWeb.OracleController, :oracles},
+    {"/oracles/inactive/gen/:range", AeMdwWeb.OracleController, :inactive_oracles},
+    {"/oracles/active/gen/:range", AeMdwWeb.OracleController, :active_oracles},
+    {"/oracles/gen/:range", AeMdwWeb.OracleController, :oracles},
+    {"/aex9/by_contract/:id", AeMdwWeb.Aex9Controller, :by_contract},
+    {"/aex9/by_name", AeMdwWeb.Aex9Controller, :by_names},
+    {"/aex9/by_symbol", AeMdwWeb.Aex9Controller, :by_symbols},
+    {"/aex9/balance/gen/:range/:contract_id/:account_id", AeMdwWeb.Aex9Controller,
+     :balance_range},
+    {"/aex9/balance/hash/:blockhash/:contract_id/:account_id", AeMdwWeb.Aex9Controller,
+     :balance_for_hash},
+    {"/aex9/balance/:contract_id/:account_id", AeMdwWeb.Aex9Controller, :balance},
+    {"/aex9/balances/gen/:height/account/:account_id", AeMdwWeb.Aex9Controller, :balances},
+    {"/aex9/balances/hash/:blockhash/account/:account_id", AeMdwWeb.Aex9Controller, :balances},
+    {"/aex9/balances/account/:account_id", AeMdwWeb.Aex9Controller, :balances},
+    {"/aex9/balances/gen/:range/:contract_id", AeMdwWeb.Aex9Controller, :balances_range},
+    {"/aex9/balances/hash/:blockhash/:contract_id", AeMdwWeb.Aex9Controller, :balances_for_hash},
+    {"/aex9/balances/:contract_id", AeMdwWeb.Aex9Controller, :balances},
+    {"/aex9/transfers/from/:sender", AeMdwWeb.Aex9Controller, :transfers_from},
+    {"/aex9/transfers/to/:recipient", AeMdwWeb.Aex9Controller, :transfers_to},
+    {"/aex9/transfers/from-to/:sender/:recipient", AeMdwWeb.Aex9Controller, :transfers_from_to},
+    {"/contracts/logs", AeMdwWeb.ContractController, :logs},
+    {"/contracts/logs/:direction", AeMdwWeb.ContractController, :logs},
+    {"/contracts/logs/:scope_type/:range", AeMdwWeb.ContractController, :logs},
+    {"/contracts/calls", AeMdwWeb.ContractController, :calls},
+    {"/contracts/calls/:direction", AeMdwWeb.ContractController, :calls},
+    {"/contracts/calls/:scope_type/:range", AeMdwWeb.ContractController, :calls},
+    {"/transfers/:scope_type/:range", AeMdwWeb.TransferController, :transfers},
+    {"/transfers/:direction", AeMdwWeb.TransferController, :transfers},
+    {"/transfers", AeMdwWeb.TransferController, :transfers},
+    {"/stats/", AeMdwWeb.StatsController, :stats},
+    {"/stats/:direction", AeMdwWeb.StatsController, :stats},
+    {"/stats/:scope_type/:range", AeMdwWeb.StatsController, :stats},
+    {"/totalstats/", AeMdwWeb.StatsController, :sum_stats},
+    {"/totalstats/:direction", AeMdwWeb.StatsController, :sum_stats},
+    {"/totalstats/:scope_type/:range", AeMdwWeb.StatsController, :sum_stats},
+    {"/status", AeMdwWeb.UtilController, :status}
+  ]
+
   pipeline :api do
     plug DataStreamPlug, paginables: @paginables, scopes: @scopes
     plug :accepts, ["json"]
@@ -32,101 +98,23 @@ defmodule AeMdwWeb.Router do
   scope "/", AeMdwWeb do
     pipe_through :api
 
-    get "/block/:hash", BlockController, :block
-    get "/blocki/:kbi", BlockController, :blocki
-    get "/blocki/:kbi/:mbi", BlockController, :blocki
+    scope "/v2" do
+      Enum.each(@shared_routes, fn {path, controller, fun} ->
+        get(path, controller, fun, alias: false)
+      end)
 
-    # for continuation link only
+      # v2-only routes
+      get "/blocks/gen/:range", BlockController, :blocks_v2
+      get "/blocks/:range_or_dir", BlockController, :blocks_v2
+    end
+
+    Enum.each(@shared_routes, fn {path, controller, fun} ->
+      get(path, controller, fun, alias: false)
+    end)
+
+    # v1-only routes
     get "/blocks/gen/:range", BlockController, :blocks
-    get "/v2/blocks/gen/:range", BlockController, :blocks_v2
-
-    # by default no scope_type needed
     get "/blocks/:range_or_dir", BlockController, :blocks
-    get "/v2/blocks/:range_or_dir", BlockController, :blocks_v2
-
-    get "/tx/:hash", TxController, :tx
-    get "/txi/:index", TxController, :txi
-
-    get "/txs/count", TxController, :count
-    get "/txs/count/:id", TxController, :count_id
-    get "/txs/:direction", TxController, :txs
-    get "/txs/:scope_type/:range", TxController, :txs
-
-    get "/name/auction/:id", NameController, :auction
-    get "/name/pointers/:id", NameController, :pointers
-    get "/name/pointees/:id", NameController, :pointees
-    get "/name/:id", NameController, :name
-
-    get "/names/search/:prefix", NameController, :search
-    get "/names/owned_by/:id", NameController, :owned_by
-
-    get "/names/auctions", NameController, :auctions
-    get "/names/auctions/:scope_type/:range", NameController, :auctions
-
-    get "/names/inactive", NameController, :inactive_names
-    get "/names/inactive/:scope_type/:range", NameController, :inactive_names
-
-    get "/names/active", NameController, :active_names
-    get "/names/active/:scope_type/:range", NameController, :active_names
-
-    get "/names", NameController, :names
-    get "/names/:scope_type/:range", NameController, :names
-
-    get "/oracle/:id", OracleController, :oracle
-
-    get "/oracles/inactive", OracleController, :inactive_oracles
-    get "/oracles/active", OracleController, :active_oracles
-    get "/oracles", OracleController, :oracles
-
-    get "/oracles/inactive/gen/:range", OracleController, :inactive_oracles
-    get "/oracles/active/gen/:range", OracleController, :active_oracles
-    get "/oracles/gen/:range", OracleController, :oracles
-
-    get "/aex9/by_contract/:id", Aex9Controller, :by_contract
-    get "/aex9/by_name", Aex9Controller, :by_names
-    get "/aex9/by_symbol", Aex9Controller, :by_symbols
-
-    get "/aex9/balance/gen/:range/:contract_id/:account_id", Aex9Controller, :balance_range
-
-    get "/aex9/balance/hash/:blockhash/:contract_id/:account_id",
-        Aex9Controller,
-        :balance_for_hash
-
-    get "/aex9/balance/:contract_id/:account_id", Aex9Controller, :balance
-
-    get "/aex9/balances/gen/:height/account/:account_id", Aex9Controller, :balances
-    get "/aex9/balances/hash/:blockhash/account/:account_id", Aex9Controller, :balances
-    get "/aex9/balances/account/:account_id", Aex9Controller, :balances
-
-    get "/aex9/balances/gen/:range/:contract_id", Aex9Controller, :balances_range
-    get "/aex9/balances/hash/:blockhash/:contract_id", Aex9Controller, :balances_for_hash
-    get "/aex9/balances/:contract_id", Aex9Controller, :balances
-
-    get "/aex9/transfers/from/:sender", Aex9Controller, :transfers_from
-    get "/aex9/transfers/to/:recipient", Aex9Controller, :transfers_to
-    get "/aex9/transfers/from-to/:sender/:recipient", Aex9Controller, :transfers_from_to
-
-    get "/contracts/logs", ContractController, :logs
-    get "/contracts/logs/:direction", ContractController, :logs
-    get "/contracts/logs/:scope_type/:range", ContractController, :logs
-
-    get "/contracts/calls", ContractController, :calls
-    get "/contracts/calls/:direction", ContractController, :calls
-    get "/contracts/calls/:scope_type/:range", ContractController, :calls
-
-    get "/transfers/:scope_type/:range", TransferController, :transfers
-    get "/transfers/:direction", TransferController, :transfers
-    get "/transfers", TransferController, :transfers
-
-    get "/stats/", StatsController, :stats
-    get "/stats/:direction", StatsController, :stats
-    get "/stats/:scope_type/:range", StatsController, :stats
-
-    get "/totalstats/", StatsController, :sum_stats
-    get "/totalstats/:direction", StatsController, :sum_stats
-    get "/totalstats/:scope_type/:range", StatsController, :sum_stats
-
-    get "/status", UtilController, :status
 
     match :*, "/*path", UtilController, :no_route
   end
