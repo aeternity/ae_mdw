@@ -2,6 +2,7 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresenceWithCreateTxi do
   @moduledoc """
   Indexes Aex9AccountPresence with `create_txi` for every {account_pk, contract_pk} pair.
   """
+  alias AeMdw.Database
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
@@ -19,7 +20,7 @@ defmodule AeMdw.Migrations.IndexAex9AccountPresenceWithCreateTxi do
     {:atomic, pairs_to_update} =
       :mnesia.transaction(fn ->
         Model.Aex9AccountPresence
-        |> :mnesia.all_keys()
+        |> Database.all_keys()
         |> Enum.into(MapSet.new(), fn {account_pk, _txi, contract_pk} ->
           {account_pk, contract_pk}
         end)
