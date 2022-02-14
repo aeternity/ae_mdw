@@ -7,7 +7,6 @@ defmodule AeMdw.Db.Sync.Invalidate do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync
   alias AeMdw.Log
-  alias AeMdw.Database
   alias AeMdw.Node, as: AE
   alias AeMdw.Validate
 
@@ -92,8 +91,10 @@ defmodule AeMdw.Db.Sync.Invalidate do
     %{Model.Stat => keys, Model.TotalStat => keys}
   end
 
-  def tx_keys_range(from_txi),
-    do: tx_keys_range(from_txi, last(Model.Tx))
+  def tx_keys_range(from_txi) do
+    {:ok, last_txi} = Database.last_key(Model.Tx)
+    tx_keys_range(from_txi, last_txi)
+  end
 
   def tx_keys_range(from_txi, to_txi) when from_txi > to_txi,
     do: %{}
@@ -165,7 +166,9 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
   def time_keys_range(from_txi, to_txi) do
     bi_time = fn bi ->
-      Model.block(read!(Model.Block, bi), :hash)
+      Model.block(hash: hash) = read_block!(bi)
+
+      hash
       |> :aec_db.get_header()
       |> :aec_headers.time_in_msecs()
     end

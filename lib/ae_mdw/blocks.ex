@@ -46,7 +46,7 @@ defmodule AeMdw.Blocks do
   @spec fetch_blocks(direction(), range(), cursor() | nil, limit(), boolean()) ::
           {cursor() | nil, [block()], cursor() | nil}
   def fetch_blocks(direction, range, cursor, limit, sort_mbs?) do
-    {:ok, {last_gen, -1}} = Database.last_key(AeMdw.Db.Model.Block)
+    {:ok, {last_gen, -1}} = Database.last_key(@table)
 
     cursor = deserialize_cursor(cursor)
 

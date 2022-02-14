@@ -19,7 +19,7 @@ defmodule Integration.AeMdw.Db.Sync.ContractTest do
         Database.dirty_next(Model.FnameIntContractCall, {"AENS.transfer", -1, -1})
 
       [Model.tx(block_index: {height, mbi} = block_index, id: tx_hash)] =
-        Database.dirty_read(Model.Tx, call_txi)
+        Database.read(Model.Tx, call_txi)
 
       {_key_block, micro_blocks} = NodeDb.get_blocks(height)
 
@@ -48,7 +48,7 @@ defmodule Integration.AeMdw.Db.Sync.ContractTest do
         Database.dirty_next(Model.FnameIntContractCall, {"AENS.update", -1, -1})
 
       [Model.tx(block_index: {height, mbi} = block_index, id: tx_hash)] =
-        Database.dirty_read(Model.Tx, call_txi)
+        Database.read(Model.Tx, call_txi)
 
       {_key_block, micro_blocks} = NodeDb.get_blocks(height)
 

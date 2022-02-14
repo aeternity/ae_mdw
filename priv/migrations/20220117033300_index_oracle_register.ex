@@ -35,7 +35,7 @@ defmodule AeMdw.Migrations.IndexOracleRegister do
       |> Database.dirty_select(oracle_register_mspec)
       |> Enum.map(fn call_txi ->
         [Model.tx(block_index: {kbi, mbi} = block_index, id: tx_hash)] =
-          Database.dirty_read(Model.Tx, call_txi)
+          Database.read(Model.Tx, call_txi)
 
         # Model.block(hash: block_hash) = Database.dirty_read(Model.Block, {kbi, -1})
         {_key_block, micro_blocks} = AE.Db.get_blocks(kbi)

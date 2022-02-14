@@ -67,11 +67,11 @@ defmodule AeMdw.Db.Sync.Transaction do
     max_height = Sync.height((is_integer(max_height) && max_height + 1) || max_height)
     bi_max_kbi = Sync.BlockIndex.sync(max_height) - 1
 
-    case last(Model.Tx) do
-      :"$end_of_table" ->
+    case Database.last_key(Model.Tx) do
+      :none ->
         sync(0, bi_max_kbi, 0)
 
-      max_txi when is_integer(max_txi) ->
+      {:ok, max_txi} when is_integer(max_txi) ->
         # sync same height again to resume from previous microblock
         {from_height, _} = Model.tx(read_tx!(max_txi), :block_index)
         next_txi = max_txi + 1
@@ -137,13 +137,11 @@ defmodule AeMdw.Db.Sync.Transaction do
   ################################################################################
 
   defp sync_generation(height, txi) do
-    {:atomic, gen_fully_synced?} =
-      :mnesia.transaction(fn ->
-        case Database.read(Model.Block, {height + 1, -1}) do
-          [] -> false
-          [Model.block(tx_index: next_txi)] -> not is_nil(next_txi)
-        end
-      end)
+    gen_fully_synced? =
+      case Database.read(Model.Block, {height + 1, -1}) do
+        [] -> false
+        [Model.block(tx_index: next_txi)] -> not is_nil(next_txi)
+      end
 
     if gen_fully_synced? do
       txi

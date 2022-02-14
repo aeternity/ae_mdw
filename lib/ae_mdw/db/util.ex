@@ -3,6 +3,7 @@ defmodule AeMdw.Db.Util do
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Database
+  alias AeMdw.Db.RocksDbCF
   alias AeMdw.Txs
 
   require Logger
@@ -19,14 +20,22 @@ defmodule AeMdw.Db.Util do
   def read!(tab, key),
     do: read(tab, key) |> one!
 
-  def read_tx(txi),
-    do: :mnesia.async_dirty(fn -> Database.read(~t[tx], txi) end)
+  def read_tx(txi) do
+    case RocksDbCF.read_tx(txi) do
+      {:ok, m_tx} -> [m_tx]
+      :not_found -> []
+    end
+  end
 
   def read_tx!(txi),
     do: read_tx(txi) |> one!
 
-  def read_block({_, _} = bi),
-    do: :mnesia.async_dirty(fn -> Database.read(~t[block], bi) end)
+  def read_block({_, _} = bi) do
+    case RocksDbCF.read_block(bi) do
+      {:ok, m_block} -> [m_block]
+      :not_found -> []
+    end
+  end
 
   def read_block(kbi) when is_integer(kbi),
     do: read_block({kbi, -1})
@@ -34,8 +43,10 @@ defmodule AeMdw.Db.Util do
   def read_block!(bi),
     do: read_block(bi) |> one!
 
-  def next_bi!({_kbi, _mbi} = bi),
-    do: {_, _} = next(Model.Block, bi)
+  def next_bi!({_kbi, _mbi} = bi) do
+    {:ok, next_bi} = Database.next_key(Model.Block, bi)
+    next_bi
+  end
 
   def next_bi!(kbi) when is_integer(kbi),
     do: next_bi!({kbi, -1})
@@ -239,11 +250,11 @@ defmodule AeMdw.Db.Util do
 
   @spec gen_to_txi(Blocks.height()) :: Txs.txi()
   def gen_to_txi(gen) do
-    case Database.fetch(Model.Block, {gen, -1}) do
-      {:ok, Model.block(tx_index: txi)} ->
+    case read_block({gen, -1}) do
+      [Model.block(tx_index: txi)] ->
         txi
 
-      :not_found ->
+      [] ->
         case Database.last_key(Model.Tx) do
           {:ok, last_txi} -> last_txi + 1
           :none -> 0
@@ -253,11 +264,11 @@ defmodule AeMdw.Db.Util do
 
   @spec txi_to_gen(Txs.txi()) :: Blocks.height()
   def txi_to_gen(txi) do
-    case Database.fetch(Model.Tx, txi) do
-      {:ok, Model.tx(block_index: {kbi, _mbi})} ->
+    case read_tx(txi) do
+      [Model.tx(block_index: {kbi, _mbi})] ->
         kbi
 
-      :not_found ->
+      [] ->
         case Database.last_key(Model.Block) do
           {:ok, {last_kbi, _mbi}} -> last_kbi + 1
           :none -> 0

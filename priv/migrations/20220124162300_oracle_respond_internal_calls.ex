@@ -27,10 +27,8 @@ defmodule AeMdw.Migrations.OracleRespondInternalCalls do
       Model.FnameIntContractCall
       |> Database.dirty_select(internal_calls_spec)
       |> Enum.map(fn {call_txi, _local_idx} = key ->
-        [Model.tx(block_index: {kbi, _mbi} = block_index)] =
-          Database.dirty_read(Model.Tx, call_txi)
-
-        [Model.block(hash: block_hash)] = Database.dirty_read(Model.Block, {kbi, -1})
+        [Model.tx(block_index: {kbi, _mbi} = block_index)] = Database.read(Model.Tx, call_txi)
+        [Model.block(hash: block_hash)] = Database.read(Model.Block, {kbi, -1})
         [Model.int_contract_call(tx: tx)] = Database.dirty_read(Model.IntContractCall, key)
         {:oracle_response_tx, oracle_response_tx} = :aetx.specialize_type(tx)
 

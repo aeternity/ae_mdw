@@ -201,7 +201,7 @@ defmodule AeMdw.Db.Contract do
     with pubkey <- Validate.id!(contract_id),
          {:ok, txi} <- AeMdw.Db.Origin.tx_index({:contract, pubkey}) do
       {:ok, {^txi, _name, _symbol, _decimals} = rev_aex9_key} =
-        Database.next_key(Model.RevAex9Contract, :forward, {txi, nil, nil, nil})
+        Database.next_key(Model.RevAex9Contract, {txi, nil, nil, nil})
 
       {:ok, rev_aex9_key}
     end
