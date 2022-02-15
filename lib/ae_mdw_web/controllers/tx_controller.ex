@@ -2,28 +2,21 @@ defmodule AeMdwWeb.TxController do
   use AeMdwWeb, :controller
   use PhoenixSwagger
 
-  alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Validate
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Name
-  alias AeMdw.Db.Format
-  alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Txs
   alias AeMdwWeb.Plugs.PaginatedPlug
   alias AeMdwWeb.SwaggerParameters
-  alias :aeser_api_encoder, as: Enc
   alias Plug.Conn
   alias AeMdw.Node
 
-  require Logger
   require Model
 
   import AeMdwWeb.Util
   import AeMdw.Db.Util
 
-  @type_spend_tx "SpendTx"
   @type_query_params ~w(type type_group)
   @pagination_param_keys ~w(limit page cursor expand direction scope_type range by rev)
 
@@ -32,21 +25,33 @@ defmodule AeMdwWeb.TxController do
   ##########
 
   @spec tx(Conn.t(), map()) :: Conn.t()
-  def tx(conn, %{"hash" => enc_tx_hash}),
-    do: handle_tx_reply(conn, fn -> read_tx_hash(Validate.id!(enc_tx_hash)) end)
+  def tx(conn, %{"hash" => enc_tx_hash}) do
+    handle_input(conn, fn ->
+      case Txs.fetch_by_hash(Validate.id!(enc_tx_hash)) do
+        {:ok, tx} -> json(conn, tx)
+        :not_found -> tx_reply(conn, nil)
+      end
+    end)
+  end
 
   @spec txi(Conn.t(), map()) :: Conn.t()
-  def txi(conn, %{"index" => index}),
-    do: handle_tx_reply(conn, fn -> read_tx(Validate.nonneg_int!(index)) end)
+  def txi(conn, %{"index" => index}) do
+    handle_input(conn, fn ->
+      case Txs.fetch(Validate.nonneg_int!(index), true) do
+        {:ok, tx} -> json(conn, tx)
+        :not_found -> tx_reply(conn, nil)
+      end
+    end)
+  end
 
   @spec txs(Conn.t(), map()) :: Conn.t()
   def txs(%Conn{assigns: assigns, query_params: query_params} = conn, params) do
     %{pagination: pagination, cursor: cursor, scope: scope} = assigns
+    add_spendtx_details? = Map.has_key?(params, "account")
 
     with {:ok, query} <- extract_query(query_params),
-         {:ok, prev_cursor, txs, next_cursor} <- Txs.fetch_txs(pagination, scope, query, cursor) do
-      txs = handle_spendtx_details(txs, params)
-
+         {:ok, prev_cursor, txs, next_cursor} <-
+           Txs.fetch_txs(pagination, scope, query, cursor, add_spendtx_details?) do
       paginate(conn, prev_cursor, txs, next_cursor)
     else
       {:error, reason} ->
@@ -63,11 +68,6 @@ defmodule AeMdwWeb.TxController do
     do: handle_input(conn, fn -> conn |> json(id_counts(Validate.id!(id))) end)
 
   ##########
-
-  @spec db_stream(atom(), map(), term()) :: Enumerable.t()
-  def db_stream(_stream_name, params, scope) do
-    DBS.map(scope, :json, params)
-  end
 
   @spec id_counts(binary()) :: map()
   def id_counts(<<_::256>> = pk) do
@@ -91,69 +91,8 @@ defmodule AeMdwWeb.TxController do
     end
   end
 
-  #
-  # Private functions
-  #
-  defp handle_spendtx_details(response_data, %{"account" => _account}) do
-    response_data
-    |> Enum.uniq_by(fn %{"hash" => tx_hash} -> tx_hash end)
-    |> Enum.map(&maybe_add_spend_tx_details/1)
-  end
-
-  defp handle_spendtx_details(response_data, _params), do: response_data
-
-  defp maybe_add_spend_tx_details(%{"tx" => block_tx, "tx_index" => tx_index} = block) do
-    recipient_id = block_tx["recipient_id"] || ""
-
-    if block_tx["type"] == @type_spend_tx and String.starts_with?(recipient_id, "nm_") do
-      update_in(block, ["tx"], fn block_tx ->
-        Map.merge(block_tx, get_recipient(recipient_id, tx_index))
-      end)
-    else
-      block
-    end
-  end
-
-  defp get_recipient(spend_tx_recipient_nm, spend_txi) do
-    with {:ok, plain_name} <- Validate.plain_name(spend_tx_recipient_nm),
-         {:ok, pointee_pk} <- Name.account_pointer_at(plain_name, spend_txi) do
-      recipient_account = Enc.encode(:account_pubkey, pointee_pk)
-      %{"recipient" => %{"name" => plain_name, "account" => recipient_account}}
-    else
-      {:error, reason} ->
-        Log.warn("missing pointee for reason: #{inspect(reason)}")
-        %{}
-    end
-  end
-
-  defp read_tx_hash(tx_hash) do
-    with <<_::256>> = mb_hash <- :aec_db.find_tx_location(tx_hash),
-         {:ok, mb_header} <- :aec_chain.get_header(mb_hash),
-         height <- :aec_headers.height(mb_header) do
-      {:gen, height}
-      |> DBS.map(& &1)
-      |> Enum.find(&(Model.tx(&1, :id) == tx_hash))
-    else
-      _error ->
-        nil
-    end
-  end
-
-  defp handle_tx_reply(conn, source_fn),
-    do: handle_input(conn, fn -> tx_reply(conn, source_fn.()) end)
-
-  defp tx_reply(conn, []),
-    do: tx_reply(conn, nil)
-
   defp tx_reply(conn, nil),
     do: conn |> send_error(ErrInput.NotFound, "no such transaction")
-
-  defp tx_reply(conn, [model_tx]),
-    do: tx_reply(conn, model_tx)
-
-  defp tx_reply(conn, model_tx) when is_tuple(model_tx) and elem(model_tx, 0) == :tx do
-    json(conn, maybe_add_spend_tx_details(Format.to_map(model_tx)))
-  end
 
   defp extract_query(query_params) do
     query_params
