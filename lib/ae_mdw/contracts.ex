@@ -10,7 +10,7 @@ defmodule AeMdw.Contracts do
   alias AeMdw.Db.Stream.Query.Parser
   alias AeMdw.Db.Util, as: DBUtil
   alias AeMdw.Error.Input, as: ErrInput
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.Db.Origin
   alias AeMdw.Txs
   alias AeMdw.Util
@@ -101,7 +101,7 @@ defmodule AeMdw.Contracts do
   def fetch_int_contract_calls(txi, fname) do
     @int_contract_call_table
     |> Collection.stream(:backward, {{txi + 1, @min_int}, {txi, @min_int}}, nil)
-    |> Stream.map(&Mnesia.fetch!(@int_contract_call_table, &1))
+    |> Stream.map(&Database.fetch!(@int_contract_call_table, &1))
     |> Stream.filter(&match?(Model.int_contract_call(fname: ^fname), &1))
   end
 
@@ -363,7 +363,7 @@ defmodule AeMdw.Contracts do
     |> Stream.filter(fn {_pk, _pos, call_txi, local_idx} ->
       {tx_type, _tx} =
         Model.IntContractCall
-        |> Mnesia.fetch!({call_txi, local_idx})
+        |> Database.fetch!({call_txi, local_idx})
         |> Model.int_contract_call(:tx)
         |> :aetx.specialize_type()
 
@@ -447,7 +447,7 @@ defmodule AeMdw.Contracts do
   defp fetch_tx_type(call_txi, local_idx) do
     {tx_type, _tx} =
       Model.IntContractCall
-      |> Mnesia.fetch!({call_txi, local_idx})
+      |> Database.fetch!({call_txi, local_idx})
       |> Model.int_contract_call(:tx)
       |> :aetx.specialize_type()
 

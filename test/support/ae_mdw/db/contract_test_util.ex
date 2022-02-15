@@ -4,7 +4,7 @@ defmodule Support.AeMdw.Db.ContractTestUtil do
   """
 
   alias AeMdw.Node.Db
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.Db.Model
 
   require Model
@@ -21,8 +21,8 @@ defmodule Support.AeMdw.Db.ContractTestUtil do
     Model.Aex9AccountPresence
     |> :mnesia.select(presence_mspec)
     |> Enum.each(fn {account_pk, txi, contract_pk} ->
-      Mnesia.delete(Model.Aex9AccountPresence, {account_pk, txi, contract_pk})
-      Mnesia.delete(Model.IdxAex9AccountPresence, {txi, account_pk, contract_pk})
+      Database.delete(Model.Aex9AccountPresence, {account_pk, txi, contract_pk})
+      Database.delete(Model.IdxAex9AccountPresence, {txi, account_pk, contract_pk})
     end)
   end
 end

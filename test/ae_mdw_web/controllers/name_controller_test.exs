@@ -11,7 +11,7 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdw.Db.Model.Tx
   alias AeMdw.Db.Name
   alias AeMdw.Db.Util, as: DbUtil
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.Validate
   alias AeMdw.TestSamples, as: TS
   alias AeMdw.Txs
@@ -27,7 +27,7 @@ defmodule AeMdwWeb.NameControllerTest do
       next_exp_key = TS.name_expiration_key(1)
 
       with_mocks [
-        {Mnesia, [],
+        {Database, [],
          [
            next_key: fn
              ActiveNameExpiration, :backward, nil ->
@@ -83,7 +83,7 @@ defmodule AeMdwWeb.NameControllerTest do
       limit = 3
 
       with_mocks [
-        {Mnesia, [],
+        {Database, [],
          [
            next_key: fn
              ActiveName, :forward, _exp_key ->
@@ -144,7 +144,7 @@ defmodule AeMdwWeb.NameControllerTest do
       {_exp, plain_name} = key1 = TS.name_expiration_key(0)
 
       with_mocks [
-        {Mnesia, [],
+        {Database, [],
          [
            next_key: fn
              ActiveNameExpiration, :backward, nil -> {:ok, key1}
@@ -188,7 +188,7 @@ defmodule AeMdwWeb.NameControllerTest do
   describe "inactive_names" do
     test "get inactive names with default limit", %{conn: conn} do
       with_mocks [
-        {Mnesia, [],
+        {Database, [],
          [
            next_key: fn
              InactiveNameExpiration, :backward, nil ->
@@ -242,7 +242,7 @@ defmodule AeMdwWeb.NameControllerTest do
       limit = 6
 
       with_mocks [
-        {Mnesia, [],
+        {Database, [],
          [
            next_key: fn
              InactiveNameExpiration, :forward, _exp_key ->
@@ -289,7 +289,7 @@ defmodule AeMdwWeb.NameControllerTest do
       limit = 3
 
       with_mocks [
-        {Mnesia, [],
+        {Database, [],
          [
            next_key: fn
              InactiveName, :forward, nil -> {:ok, TS.plain_name(0)}
@@ -350,7 +350,7 @@ defmodule AeMdwWeb.NameControllerTest do
       {_exp, plain_name} = expiration_key = TS.name_expiration_key(0)
 
       with_mocks [
-        {Mnesia, [],
+        {Database, [],
          [
            fetch: fn InactiveName, ^plain_name -> :not_found end,
            prev_key: fn AuctionBid, _key ->
@@ -391,7 +391,7 @@ defmodule AeMdwWeb.NameControllerTest do
       {_exp, plain_name} = expiration_key = TS.name_expiration_key(0)
 
       with_mocks [
-        {Mnesia, [],
+        {Database, [],
          [
            fetch: fn InactiveName, ^plain_name -> :not_found end,
            prev_key: fn AuctionBid, _key ->
@@ -432,7 +432,7 @@ defmodule AeMdwWeb.NameControllerTest do
       {_exp, plain_name} = expiration_key = TS.name_expiration_key(0)
 
       with_mocks [
-        {Mnesia, [],
+        {Database, [],
          [
            fetch: fn InactiveName, ^plain_name -> :not_found end,
            prev_key: fn AuctionBid, _key ->
@@ -484,7 +484,7 @@ defmodule AeMdwWeb.NameControllerTest do
       conn: conn
     } do
       with_mocks [
-        {Mnesia, [],
+        {Database, [],
          [
            next_key: fn
              ActiveNameExpiration, :backward, nil ->
@@ -530,7 +530,7 @@ defmodule AeMdwWeb.NameControllerTest do
       limit = 2
 
       with_mocks [
-        {Mnesia, [],
+        {Database, [],
          [
            next_key: fn
              ActiveNameExpiration, :backward, nil ->
@@ -581,7 +581,7 @@ defmodule AeMdwWeb.NameControllerTest do
       first_key = TS.plain_name(0)
 
       with_mocks [
-        {Mnesia, [],
+        {Database, [],
          [
            next_key: fn
              ActiveName, :forward, nil -> {:ok, first_key}

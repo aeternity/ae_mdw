@@ -3,6 +3,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
 
   alias AeMdw.Node, as: AE
 
+  alias AeMdw.Database
   alias AeMdw.Db.Sync.Transaction
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
@@ -108,6 +109,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   end
 
   defp query_spend_tx_field_index(pubkey, pos) do
-    :mnesia.prev(Model.Field, {:spend_tx, pos, pubkey, nil})
+    {:ok, index} = Database.dirty_prev_key(Model.Field, {:spend_tx, pos, pubkey, nil})
+    index
   end
 end

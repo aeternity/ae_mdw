@@ -6,7 +6,7 @@ defmodule AeMdw.Migrations.IndexOracleRegister do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.OracleRegisterMutation
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.Node, as: AE
   alias AeMdw.Log
 
@@ -32,12 +32,12 @@ defmodule AeMdw.Migrations.IndexOracleRegister do
 
     mutations =
       Model.FnameIntContractCall
-      |> Mnesia.dirty_select(oracle_register_mspec)
+      |> Database.dirty_select(oracle_register_mspec)
       |> Enum.map(fn call_txi ->
         [Model.tx(block_index: {kbi, mbi} = block_index, id: tx_hash)] =
-          Mnesia.dirty_read(Model.Tx, call_txi)
+          Database.dirty_read(Model.Tx, call_txi)
 
-        # Model.block(hash: block_hash) = Mnesia.dirty_read(Model.Block, {kbi, -1})
+        # Model.block(hash: block_hash) = Database.dirty_read(Model.Block, {kbi, -1})
         {_key_block, micro_blocks} = AE.Db.get_blocks(kbi)
 
         {{:internal_call_tx, "Oracle.register"}, %{info: aetx}} =
@@ -65,7 +65,7 @@ defmodule AeMdw.Migrations.IndexOracleRegister do
       end)
       |> Enum.reject(&is_nil/1)
 
-    Mnesia.transaction(mutations)
+    Database.transaction(mutations)
 
     duration = DateTime.diff(DateTime.utc_now(), begin)
     indexed_count = length(mutations)

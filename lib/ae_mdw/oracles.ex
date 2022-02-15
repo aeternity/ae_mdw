@@ -10,7 +10,7 @@ defmodule AeMdw.Oracles do
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Util, as: DBUtil
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.Node
   alias AeMdw.Util
 
@@ -39,7 +39,7 @@ defmodule AeMdw.Oracles do
           {{first_gen, Util.min_bin()}, {last_gen, Util.max_256bit_bin()}}
       end
 
-    {:ok, {last_gen, -1}} = Mnesia.last_key(AeMdw.Db.Model.Block)
+    {:ok, {last_gen, -1}} = Database.last_key(AeMdw.Db.Model.Block)
 
     {prev_cursor, expiration_keys, next_cursor} =
       fn direction ->
@@ -72,7 +72,7 @@ defmodule AeMdw.Oracles do
           {cursor() | nil, [oracle()], cursor() | nil}
   def fetch_active_oracles(pagination, cursor, expand?) do
     cursor = deserialize_cursor(cursor)
-    {:ok, {last_gen, -1}} = Mnesia.last_key(AeMdw.Db.Model.Block)
+    {:ok, {last_gen, -1}} = Database.last_key(AeMdw.Db.Model.Block)
 
     {prev_cursor, exp_keys, next_cursor} =
       Collection.paginate(
@@ -89,7 +89,7 @@ defmodule AeMdw.Oracles do
           {cursor() | nil, [oracle()], cursor() | nil}
   def fetch_inactive_oracles(pagination, cursor, expand?) do
     cursor = deserialize_cursor(cursor)
-    {:ok, {last_gen, -1}} = Mnesia.last_key(AeMdw.Db.Model.Block)
+    {:ok, {last_gen, -1}} = Database.last_key(AeMdw.Db.Model.Block)
 
     {prev_cursor, exp_keys, next_cursor} =
       Collection.paginate(
@@ -113,7 +113,7 @@ defmodule AeMdw.Oracles do
       register: {{register_height, _mbi}, register_txi},
       extends: extends,
       previous: _previous
-    ) = Mnesia.fetch!(if(is_active?, do: @table_active, else: @table_inactive), oracle_pk)
+    ) = Database.fetch!(if(is_active?, do: @table_active, else: @table_inactive), oracle_pk)
 
     kbi = min(expire_height - 1, last_gen)
 

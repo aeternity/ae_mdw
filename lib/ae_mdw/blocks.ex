@@ -8,7 +8,7 @@ defmodule AeMdw.Blocks do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.EtsCache
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.Util
   alias AeMdw.Validate
 
@@ -27,8 +27,8 @@ defmodule AeMdw.Blocks do
   @type block :: map()
   @type cursor :: binary()
 
-  @typep direction :: Mnesia.direction()
-  @typep limit :: Mnesia.limit()
+  @typep direction :: Database.direction()
+  @typep limit :: Database.limit()
   @typep range :: {:gen, Range.t()} | nil
 
   @table Model.Block
@@ -46,7 +46,7 @@ defmodule AeMdw.Blocks do
   @spec fetch_blocks(direction(), range(), cursor() | nil, limit(), boolean()) ::
           {cursor() | nil, [block()], cursor() | nil}
   def fetch_blocks(direction, range, cursor, limit, sort_mbs?) do
-    {:ok, {last_gen, -1}} = Mnesia.last_key(AeMdw.Db.Model.Block)
+    {:ok, {last_gen, -1}} = Database.last_key(AeMdw.Db.Model.Block)
 
     cursor = deserialize_cursor(cursor)
 
@@ -68,7 +68,7 @@ defmodule AeMdw.Blocks do
 
   @spec block_hash(height()) :: block_hash()
   def block_hash(height) do
-    Model.block(hash: hash) = Mnesia.fetch!(@table, {height, -1})
+    Model.block(hash: hash) = Database.fetch!(@table, {height, -1})
 
     hash
   end
@@ -105,7 +105,7 @@ defmodule AeMdw.Blocks do
     @table
     |> Collection.stream(:backward, nil, {gen, <<>>})
     |> Stream.take_while(&match?({^gen, _mb_index}, &1))
-    |> Enum.map(fn key -> Mnesia.fetch!(@table, key) end)
+    |> Enum.map(fn key -> Database.fetch!(@table, key) end)
     |> Enum.reverse()
     |> Enum.map(fn block -> Format.to_map(block) end)
   end

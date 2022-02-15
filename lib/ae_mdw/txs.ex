@@ -12,7 +12,7 @@ defmodule AeMdw.Txs do
   alias AeMdw.Db.Model.Type
   alias AeMdw.Db.Util
   alias AeMdw.Error.Input, as: ErrInput
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.Node
   alias AeMdw.Node.Db
 
@@ -181,12 +181,12 @@ defmodule AeMdw.Txs do
   #            initial_key = {:spend_tx, 1, B, 0}
   #            Only take txis while it matches the {:spend_tx, 1, B, _tx_index} tuple
   #            Only take txis where A has a spend_tx transaction (as a sender) too:
-  #              Mnesia.exists?(Field, {:spend_tx, 1, A, txi})
+  #              Database.exists?(Field, {:spend_tx, 1, A, txi})
   #        - For {:spend_tx, 2}:
   #            initial_key = {:spend_tx, 2, B, 0}
   #            Only take txis while it matches the {:spend_tx, 2, B, _tx_index} tuple
   #            Only take txis where A has a spend_tx transaction  (as a sender) too:
-  #              Mnesia.exists?(Field, {:spend_tx, 1, A, txi})
+  #              Database.exists?(Field, {:spend_tx, 1, A, txi})
   #        - Same thing for oracle_query_tx fields
   #   4. All of the streams are returned for Collection.merge/2 to take, which will merge
   #      the keys {:spend_tx, 1, B, X} and {:spend_tx, 2, B, X}, {:oracle_query_tx, 1, B, X} and
@@ -250,7 +250,7 @@ defmodule AeMdw.Txs do
   defp all_accounts_have_tx?(tx_type, tx_index, rest_accounts) do
     Enum.all?(rest_accounts, fn {id, fields} ->
       Enum.any?(fields, fn
-        {^tx_type, pos} -> Mnesia.exists?(@field_table, {tx_type, pos, id, tx_index})
+        {^tx_type, pos} -> Database.exists?(@field_table, {tx_type, pos, id, tx_index})
         {_tx_type, _pos} -> false
       end)
     end)
@@ -327,7 +327,7 @@ defmodule AeMdw.Txs do
 
   @spec fetch(txi()) :: {:ok, tx()} | :not_found
   def fetch(txi) do
-    case Mnesia.fetch(@table, txi) do
+    case Database.fetch(@table, txi) do
       {:ok, tx} -> {:ok, render(tx)}
       :not_found -> :not_found
     end
@@ -356,7 +356,7 @@ defmodule AeMdw.Txs do
   defp count_txs_for_account(id, fields, tx_type) do
     Enum.reduce(fields, 0, fn
       {^tx_type, pos}, acc ->
-        case Mnesia.fetch(@id_count_table, {tx_type, pos, id}) do
+        case Database.fetch(@id_count_table, {tx_type, pos, id}) do
           {:ok, Model.id_count(count: count)} -> acc + count
           :not_found -> acc
         end

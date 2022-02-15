@@ -2,7 +2,7 @@ defmodule AeMdw.Sync.AsyncTasks.StoreTest do
   use ExUnit.Case
 
   alias AeMdw.Db.Model
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.Sync.AsyncTasks.Store
 
   require Model
@@ -59,7 +59,7 @@ defmodule AeMdw.Sync.AsyncTasks.StoreTest do
     :mnesia.sync_dirty(fn ->
       Model.AsyncTasks
       |> :mnesia.select(task_mspec)
-      |> Enum.each(&Mnesia.delete(Model.AsyncTasks, &1))
+      |> Enum.each(&Database.delete(Model.AsyncTasks, &1))
     end)
   end
 end

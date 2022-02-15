@@ -13,7 +13,7 @@ defmodule AeMdw.Application do
   alias AeMdw.Db.Stream, as: DbStream
   alias AeMdw.EtsCache
   alias AeMdw.Extract
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.NodeHelper
   alias AeMdw.Util
 
@@ -227,14 +227,14 @@ defmodule AeMdw.Application do
     initial_token_supply = AeMdw.Node.token_supply_delta(0)
 
     :mnesia.transaction(fn ->
-      case Mnesia.read(Model.TotalStat, 0) do
+      case Database.read(Model.TotalStat, 0) do
         [m_total_stat] ->
           tot_sup = Model.total_stat(m_total_stat, :total_supply)
           tot_sup == initial_token_supply || raise "initial total supply doesn't match"
 
         [] ->
           m_total_stat = Model.total_stat(index: 0, total_supply: initial_token_supply)
-          Mnesia.write(Model.TotalStat, m_total_stat)
+          Database.write(Model.TotalStat, m_total_stat)
       end
     end)
 

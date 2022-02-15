@@ -4,7 +4,7 @@ defmodule AeMdw.Db.WriteFieldsMutation do
   """
 
   alias AeMdw.Blocks
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.Node
   alias AeMdw.Db.Model
   alias AeMdw.Txs
@@ -42,7 +42,7 @@ defmodule AeMdw.Db.WriteFieldsMutation do
 
   defp write_field(tx_type, pos, pubkey, txi) do
     m_field = Model.field(index: {tx_type, pos, pubkey, txi})
-    Mnesia.write(Model.Field, m_field)
+    Database.write(Model.Field, m_field)
     Model.incr_count({tx_type, pos, pubkey})
   end
 

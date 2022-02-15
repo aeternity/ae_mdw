@@ -22,8 +22,7 @@ By using Elixir for implementation, we can understand middleware as an
 application running alongside the AE node, via
 [](https://github.com/aeternity/ae_plugin).
 
-The extension of this decision is using the same database as AE node does -
-Mnesia.
+The extension of this decision is using the same database as AE node does (RocksDB).
 
 The benefits of these decisions were:
 
@@ -50,7 +49,7 @@ Image below depicts how these two large blocks fit together.
 
 By merging the database types of AE node and Middleware, we can save a
 significant amount of space and work with both datasets in the same way - using
-Mnesia transactions and working with similar data model - sets of records.
+RocksDB transactions and working with similar data model - sets of records.
 
 The Middleware keeps track of several distinct types of information:
 
@@ -170,7 +169,7 @@ The database model of the table record is defined as:
 ```
 defrecord :time,
   [index: {-1, -1}, # as {micro block milliseconds, transaction index}
-  unused: nil # Mnesia entries must have "value" field
+  unused: nil # unused as RocksDB value
 ```
 
 Stored in table `Model.Time`.
@@ -190,7 +189,7 @@ The database model of the table record is defined as:
 ```
 defrecord :type,
   [index: {nil, -1}, # as {transaction type, transaction index}
-  unused: nil] # Mnesia entries must have "value" field
+  unused: nil] # unused as RocksDB value
 ```
 
 Stored in table `Model.Type`.

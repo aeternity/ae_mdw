@@ -6,7 +6,7 @@ defmodule AeMdw.Stats do
   alias AeMdw.Blocks
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
   alias AeMdw.Util
 
   require Model
@@ -16,8 +16,8 @@ defmodule AeMdw.Stats do
   @type cursor() :: binary() | nil
 
   @typep height() :: Blocks.height()
-  @typep direction() :: Mnesia.direction()
-  @typep limit() :: Mnesia.limit()
+  @typep direction() :: Database.direction()
+  @typep limit() :: Database.limit()
   @typep range() :: {:gen, Range.t()} | nil
 
   @table Model.Stat
@@ -25,7 +25,7 @@ defmodule AeMdw.Stats do
 
   @spec fetch_stats(direction(), range(), cursor(), limit()) :: {cursor(), [stat()], cursor()}
   def fetch_stats(direction, range, cursor, limit) do
-    {:ok, last_gen} = Mnesia.last_key(AeMdw.Db.Model.Stat)
+    {:ok, last_gen} = Database.last_key(AeMdw.Db.Model.Stat)
 
     {range_first, range_last} =
       case range do
@@ -47,7 +47,7 @@ defmodule AeMdw.Stats do
   @spec fetch_sum_stats(direction(), range(), cursor(), limit()) ::
           {cursor(), [sum_stat()], cursor()}
   def fetch_sum_stats(direction, range, cursor, limit) do
-    {:ok, last_gen} = Mnesia.last_key(AeMdw.Db.Model.TotalStat)
+    {:ok, last_gen} = Database.last_key(AeMdw.Db.Model.TotalStat)
 
     {range_first, range_last} =
       case range do
@@ -67,10 +67,10 @@ defmodule AeMdw.Stats do
   end
 
   @spec fetch_stat!(height()) :: stat()
-  def fetch_stat!(height), do: render_stat(Mnesia.fetch!(@table, height))
+  def fetch_stat!(height), do: render_stat(Database.fetch!(@table, height))
 
   @spec fetch_sum_stat!(height()) :: sum_stat()
-  def fetch_sum_stat!(height), do: render_sum_stat(Mnesia.fetch!(@sum_table, height))
+  def fetch_sum_stat!(height), do: render_sum_stat(Database.fetch!(@sum_table, height))
 
   defp render_stats(gens), do: Enum.map(gens, &fetch_stat!/1)
 

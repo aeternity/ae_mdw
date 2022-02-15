@@ -6,7 +6,7 @@ defmodule AeMdw.Db.IntTransfer do
   alias AeMdw.Blocks
   alias AeMdw.Txs
   alias AeMdw.Db.Model
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
 
   require Ex2ms
   require Model
@@ -71,9 +71,9 @@ defmodule AeMdw.Db.IntTransfer do
     target_kind_tx =
       Model.target_kind_int_transfer_tx(index: {target_pk, kind, {height, pos_txi}, ref_txi})
 
-    Mnesia.write(Model.IntTransferTx, int_tx)
-    Mnesia.write(Model.KindIntTransferTx, kind_tx)
-    Mnesia.write(Model.TargetKindIntTransferTx, target_kind_tx)
+    Database.write(Model.IntTransferTx, int_tx)
+    Database.write(Model.KindIntTransferTx, kind_tx)
+    Database.write(Model.TargetKindIntTransferTx, target_kind_tx)
   end
 
   @spec read_block_reward(Blocks.height()) :: pos_integer()
@@ -95,7 +95,7 @@ defmodule AeMdw.Db.IntTransfer do
       end
 
     Model.IntTransferTx
-    |> Mnesia.dirty_select(amount_spec)
+    |> Database.dirty_select(amount_spec)
     |> Enum.sum()
   end
 end

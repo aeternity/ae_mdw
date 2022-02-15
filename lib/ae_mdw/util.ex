@@ -3,7 +3,7 @@ defmodule AeMdw.Util do
   @moduledoc false
 
   alias AeMdw.Blocks
-  alias AeMdw.Mnesia
+  alias AeMdw.Database
 
   def id(x), do: x
 
@@ -219,7 +219,7 @@ defmodule AeMdw.Util do
     end
   end
 
-  @spec opposite_dir(Mnesia.direction()) :: Mnesia.direction()
+  @spec opposite_dir(Database.direction()) :: Database.direction()
   def opposite_dir(:backward), do: :forward
   def opposite_dir(:forward), do: :backward
 
@@ -229,10 +229,10 @@ defmodule AeMdw.Util do
   """
   @spec build_gen_pagination(
           Blocks.height() | nil,
-          Mnesia.direction(),
+          Database.direction(),
           Blocks.height(),
           Blocks.height(),
-          Mnesia.limit()
+          Database.limit()
         ) ::
           {:ok, Blocks.height() | nil, Enumerable.t(), Blocks.height() | nil} | :error
 
