@@ -131,36 +131,9 @@ defmodule AeMdw.Db.RocksDbCF do
 
     key_res =
       case do_iterator_move(it, seek_key) do
-        {:ok, index} ->
-          if index != seek_index do
-            {:ok, index}
-          else
-            do_iterator_move(it, :prev)
-          end
-
-        :not_found ->
-          :not_found
+        {:ok, _index} -> do_iterator_move(it, :prev)
+        :not_found -> :not_found
       end
-
-    :rocksdb.iterator_close(it)
-
-    key_res
-  end
-
-  @spec search_prev_key(table(), index(), index(), {pos_integer(), any()}) ::
-          {:ok, index()} | :not_found
-  def search_prev_key(
-        table,
-        lower_bound_index,
-        upper_bound_index,
-        {field_pos, _field_value} = value_to_match
-      )
-      when field_pos > 1 do
-    upper_bound_key = :sext.encode(upper_bound_index)
-    lower_bound_key = :sext.encode(lower_bound_index)
-    {:ok, it} = RocksDb.iterator(table, iterate_lower_bound: lower_bound_key)
-
-    key_res = do_search_prev_key(it, upper_bound_key, value_to_match)
 
     :rocksdb.iterator_close(it)
 
@@ -264,22 +237,6 @@ defmodule AeMdw.Db.RocksDbCF do
 
       [{^index, record}] ->
         {:ok, record}
-    end
-  end
-
-  defp do_search_prev_key(it, key, {field_pos, field_value} = value_to_match) do
-    case :rocksdb.iterator_move(it, {:prev, key}) do
-      {:ok, prev_key, prev_value} ->
-        prev_field_value = prev_value |> :sext.decode() |> elem(field_pos - 1)
-
-        if prev_field_value == field_value do
-          prev_key
-        else
-          do_search_prev_key(it, prev_key, value_to_match)
-        end
-
-      {:error, :invalid_iterator} ->
-        :not_found
     end
   end
 
