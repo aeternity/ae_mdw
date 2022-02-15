@@ -161,7 +161,7 @@ defmodule AeMdw.Db.NameClaimMutation do
     do: Log.info("[#{height}][auction] #{change} #{plain_name}")
 
   defp log_name_change(_height, _plain_name, _change), do: :ok
-    # do: Log.info("[#{height}][name] #{change} #{plain_name}")
+  # do: Log.info("[#{height}][name] #{change} #{plain_name}")
 
   defp read_raw_tx!(txi),
     do: Format.to_raw_map(DbUtil.read_tx!(txi))

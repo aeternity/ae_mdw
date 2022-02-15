@@ -17,15 +17,13 @@ mdw_revision =
       git_head_commit
   end
 
-
 config :ae_mdw, build_revision: mdw_revision
 
 config :aecore, network_id: System.get_env("NETWORK_ID", "ae_mainnet")
 
 config :aecore, network_id: System.get_env("NETWORK_ID", "ae_mainnet")
 
-config :ae_mdw, AeMdw.Db.RocksDb,
-  data_dir: "data.db"
+config :ae_mdw, AeMdw.Db.RocksDb, data_dir: "data.db"
 
 config :ae_plugin,
   node_root: System.get_env("NODEROOT", "../aeternity/_build/local/"),

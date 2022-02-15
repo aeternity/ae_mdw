@@ -11,8 +11,7 @@ data_dir =
   end
 
 # Database
-config :ae_mdw, AeMdw.Db.RocksDb,
-  data_dir: data_dir
+config :ae_mdw, AeMdw.Db.RocksDb, data_dir: data_dir
 
 # HTTP
 config :ae_mdw, AeMdwWeb.Endpoint,

@@ -202,8 +202,8 @@ defmodule AeMdw.Db.Sync.Transaction do
       Stats.new_mutation(height, last_mbi == -1),
       KeyBlocksMutation.new(kb_model, next_txi)
     ])
-    Database.commit()
 
+    Database.commit()
 
     Broadcaster.broadcast_key_block(key_block, :mdw)
 

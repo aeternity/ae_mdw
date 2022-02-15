@@ -149,14 +149,30 @@ defmodule AeMdw.Db.RocksDbCFTest do
 
     test "returns the record from the transaction" do
       key = new_txi()
-      m_tx = Model.tx(index: key, id: :crypto.strong_rand_bytes(32), block_index: {1234, 0}, time: 5678)
+
+      m_tx =
+        Model.tx(
+          index: key,
+          id: :crypto.strong_rand_bytes(32),
+          block_index: {1234, 0},
+          time: 5678
+        )
+
       assert :ok = RocksDbCF.put(Model.Tx, m_tx)
       assert {:ok, ^m_tx} = RocksDbCF.dirty_fetch(Model.Tx, key)
     end
 
     test "returns the committed record of a key" do
       key = new_txi()
-      m_tx = Model.tx(index: key, id: :crypto.strong_rand_bytes(32), block_index: {1234, 0}, time: 5678)
+
+      m_tx =
+        Model.tx(
+          index: key,
+          id: :crypto.strong_rand_bytes(32),
+          block_index: {1234, 0},
+          time: 5678
+        )
+
       assert :ok = RocksDbCF.put(Model.Tx, m_tx)
       RocksDb.commit()
       assert {:ok, ^m_tx} = RocksDbCF.dirty_fetch(Model.Tx, key)
@@ -176,12 +192,21 @@ defmodule AeMdw.Db.RocksDbCFTest do
 
     test "returns the committed record of a key" do
       key = new_txi()
-      m_tx = Model.tx(index: key, id: :crypto.strong_rand_bytes(32), block_index: {1234, 0}, time: 5678)
+
+      m_tx =
+        Model.tx(
+          index: key,
+          id: :crypto.strong_rand_bytes(32),
+          block_index: {1234, 0},
+          time: 5678
+        )
+
       assert :ok = RocksDbCF.put(Model.Tx, m_tx)
       RocksDb.commit()
       assert {:ok, ^m_tx} = RocksDbCF.fetch(Model.Tx, key)
     end
   end
+
   #
   # Helpers
   #

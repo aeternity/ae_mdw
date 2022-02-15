@@ -26,6 +26,7 @@ defmodule AeMdw.Db.Sync.BlockIndex do
 
       Enum.reduce(max_height..min_height, hash, tracker)
     end
+
     Database.commit()
 
     max_kbi()
