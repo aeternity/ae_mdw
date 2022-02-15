@@ -105,7 +105,7 @@ defmodule AeMdwWeb.Router do
 
       # v2-only routes
       get "/blocks/gen/:range", BlockController, :blocks_v2
-      get "/blocks/:range_or_dir", BlockController, :blocks_v2
+      get "/blocks/:direction", BlockController, :blocks_v2
     end
 
     Enum.each(@shared_routes, fn {path, controller, fun} ->
