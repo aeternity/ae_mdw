@@ -6,6 +6,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Db.Util
+  alias AeMdw.MainnetClient
   alias AeMdwWeb.TxController
   alias :aeser_api_encoder, as: Enc
 
@@ -29,6 +30,15 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       conn = get(conn, "/tx/#{invalid_hash}")
 
       assert json_response(conn, 400) == %{"error" => "invalid id: #{invalid_hash}"}
+    end
+
+    test "localhost has same result as mainnet", %{conn: conn} do
+      tx_hash = "th_2aTb36PhLqRq8yxcwU3YvMWkKMnG8qmavGvs5isGwCovox8d8Q"
+      path = "/tx/#{tx_hash}"
+
+      conn = get(conn, path)
+      assert %{"hash" => ^tx_hash} = body = json_response(conn, 200)
+      assert %{body: ^body} = MainnetClient.get!(path)
     end
   end
 
@@ -72,6 +82,15 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       conn = get(conn, "/txi/#{index}")
 
       assert json_response(conn, 404) == %{"error" => "no such transaction"}
+    end
+
+    test "localhost has same result as mainnet", %{conn: conn} do
+      txi = 2_931_545
+      path = "/txi/#{txi}"
+
+      conn = get(conn, path)
+      assert %{"tx_index" => ^txi} = body = json_response(conn, 200)
+      assert %{body: ^body} = MainnetClient.get!(path)
     end
   end
 
