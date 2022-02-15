@@ -85,7 +85,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
       assert %{"data" => names} =
                conn
-               |> get("/names/active", by: by, direction: direction, limit: limit)
+               |> get("/v2/names/active", by: by, direction: direction, limit: limit)
                |> json_response(200)
 
       plain_names = Enum.map(names, fn %{"name" => name} -> name end)
@@ -107,7 +107,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       error_msg = "invalid direction: #{direction}"
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/names/active", by: by, direction: direction) |> json_response(400)
+               conn |> get("/v2/names/active", by: by, direction: direction) |> json_response(400)
     end
 
     test "it returns valid names on a given range", %{conn: conn} do
@@ -130,7 +130,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
       assert %{"data" => data, "next" => next} =
                conn
-               |> get("/names/active/gen/#{first}-#{last}")
+               |> get("/v2/names/active/gen/#{first}-#{last}")
                |> json_response(200)
 
       assert Enum.all?(data, fn %{"info" => %{"expire_height" => kbi}} ->

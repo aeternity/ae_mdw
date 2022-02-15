@@ -28,7 +28,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
 
     test "get oracle information for given oracle id with expand parameter", %{conn: conn} do
       id = "ok_2TASQ4QZv584D2ZP7cZxT6sk1L1UyqbWumnWM4g1azGi1qqcR5"
-      conn = get(conn, "/oracle/#{id}?expand")
+      conn = get(conn, "/v2/oracle/#{id}?expand")
 
       assert conn |> json_response(200) |> Jason.encode!() ==
                TestUtil.handle_input(fn ->
@@ -51,7 +51,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
     } do
       assert %{"data" => [contract_call]} =
                conn
-               |> get("/contracts/calls/backward", function: "Oracle.register", limit: 1)
+               |> get("/v2/contracts/calls/backward", function: "Oracle.register", limit: 1)
                |> json_response(200)
 
       assert %{
@@ -118,7 +118,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
       limit = 7
 
       %{"data" => oracles, "next" => next} =
-        conn |> get("/oracles", limit: limit, expand: true) |> json_response(200)
+        conn |> get("/v2/oracles", limit: limit, expand: true) |> json_response(200)
 
       assert ^limit = length(oracles)
 
