@@ -36,7 +36,7 @@ defmodule AeMdw.Db.Model do
           record(:block,
             index: Blocks.block_index(),
             tx_index: Txs.txi() | nil | -1,
-            hash: Blocks.key_hash()
+            hash: Blocks.block_hash()
           )
 
   # txs table :
