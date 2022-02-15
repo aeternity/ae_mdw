@@ -3,19 +3,24 @@ defmodule AeMdw.Txs do
   Context module for dealing with Transactions.
   """
 
+  alias AeMdw.Blocks
   alias AeMdw.Collection
+  alias AeMdw.Database
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Model.Field
   alias AeMdw.Db.Model.IdCount
   alias AeMdw.Db.Model.Tx
   alias AeMdw.Db.Model.Type
+  alias AeMdw.Db.Name
   alias AeMdw.Db.Util
   alias AeMdw.Error.Input, as: ErrInput
-  alias AeMdw.Database
+  alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Node.Db
+  alias AeMdw.Validate
 
+  require Logger
   require Model
 
   @type tx :: map()
@@ -26,6 +31,7 @@ defmodule AeMdw.Txs do
           types: term(),
           ids: term()
         }
+  @type add_spendtx_details?() :: boolean()
 
   @typep reason :: binary()
   @typep pagination :: Collection.direction_limit()
@@ -38,9 +44,11 @@ defmodule AeMdw.Txs do
 
   @create_tx_types ~w(contract_create_tx channel_create_tx oracle_register_tx name_claim_tx ga_attach_tx)a
 
-  @spec fetch_txs(pagination(), range(), query(), cursor() | nil) ::
+  @type_spend_tx "SpendTx"
+
+  @spec fetch_txs(pagination(), range(), query(), cursor() | nil, add_spendtx_details?()) ::
           {:ok, cursor() | nil, [tx()], cursor() | nil} | {:error, reason()}
-  def fetch_txs(pagination, range, query, cursor) do
+  def fetch_txs(pagination, range, query, cursor, add_spendtx_details?) do
     ids = query |> Map.get(:ids, MapSet.new()) |> MapSet.to_list()
     types = query |> Map.get(:types, MapSet.new()) |> MapSet.to_list()
     cursor = deserialize_cursor(cursor)
@@ -66,8 +74,9 @@ defmodule AeMdw.Txs do
         end
         |> Collection.paginate(pagination)
 
-      {:ok, serialize_cursor(prev_cursor), Enum.map(txis, &fetch!/1),
-       serialize_cursor(next_cursor)}
+      txs = Enum.map(txis, &fetch!(&1, add_spendtx_details?))
+
+      {:ok, serialize_cursor(prev_cursor), txs, serialize_cursor(next_cursor)}
     rescue
       e in ErrInput ->
         {:error, e.message}
@@ -318,25 +327,78 @@ defmodule AeMdw.Txs do
     raise ErrInput.TxField, value: ":#{Enum.join(invalid_field, ".")}"
   end
 
-  @spec fetch!(txi()) :: tx()
-  def fetch!(txi) do
-    {:ok, tx} = fetch(txi)
+  @spec fetch!(txi(), add_spendtx_details?()) :: tx()
+  def fetch!(txi, add_spendtx_details? \\ false) do
+    {:ok, tx} = fetch(txi, add_spendtx_details?)
 
     tx
   end
 
-  @spec fetch(txi()) :: {:ok, tx()} | :not_found
-  def fetch(txi) do
+  @spec fetch(txi(), add_spendtx_details?()) :: {:ok, tx()} | :not_found
+  def fetch(txi, add_spendtx_details?) do
     case Database.fetch(@table, txi) do
-      {:ok, tx} -> {:ok, render(tx)}
+      {:ok, tx} -> {:ok, render(tx, add_spendtx_details?)}
       :not_found -> :not_found
     end
   end
 
-  defp render(Model.tx(id: tx_hash) = tx) do
+  @spec fetch_by_hash(tx_hash()) :: {:ok, tx()} | :not_found
+  def fetch_by_hash(tx_hash) do
+    mb_hash = :aec_db.find_tx_location(tx_hash)
+
+    case :aec_chain.get_header(mb_hash) do
+      {:ok, mb_header} ->
+        mb_header
+        |> :aec_headers.height()
+        |> Blocks.fetch_txis_from_gen()
+        |> Stream.map(&Database.fetch!(@table, &1))
+        |> Enum.find_value(
+          :not_found,
+          fn
+            Model.tx(id: ^tx_hash) = tx -> {:ok, render(tx, true)}
+            _tx -> nil
+          end
+        )
+
+      :error ->
+        :not_found
+    end
+  end
+
+  defp render(Model.tx(id: tx_hash) = tx, add_spendtx_details?) do
     {block_hash, type, signed_tx, tx_rec} = Db.get_tx_data(tx_hash)
 
-    Format.to_map(tx, {block_hash, type, signed_tx, tx_rec})
+    rendered_tx = Format.to_map(tx, {block_hash, type, signed_tx, tx_rec})
+
+    if add_spendtx_details? do
+      maybe_add_spendtx_details(rendered_tx)
+    else
+      rendered_tx
+    end
+  end
+
+  defp maybe_add_spendtx_details(%{"tx" => block_tx, "tx_index" => tx_index} = block) do
+    recipient_id = block_tx["recipient_id"] || ""
+
+    if block_tx["type"] == @type_spend_tx and String.starts_with?(recipient_id, "nm_") do
+      update_in(block, ["tx"], fn block_tx ->
+        Map.merge(block_tx, get_recipient(recipient_id, tx_index))
+      end)
+    else
+      block
+    end
+  end
+
+  defp get_recipient(spend_tx_recipient_nm, spend_txi) do
+    with {:ok, plain_name} <- Validate.plain_name(spend_tx_recipient_nm),
+         {:ok, pointee_pk} <- Name.account_pointer_at(plain_name, spend_txi) do
+      recipient_account = :aeser_api_encoder.encode(:account_pubkey, pointee_pk)
+      %{"recipient" => %{"name" => plain_name, "account" => recipient_account}}
+    else
+      {:error, reason} ->
+        Log.warn("missing pointee for reason: #{inspect(reason)}")
+        %{}
+    end
   end
 
   defp serialize_cursor(nil), do: nil

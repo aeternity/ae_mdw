@@ -73,6 +73,20 @@ defmodule AeMdw.Blocks do
     hash
   end
 
+  @spec fetch_txis_from_gen(height()) :: Enumerable.t()
+  def fetch_txis_from_gen(height) do
+    with {:ok, Model.block(tx_index: tx_index_start)}
+         when is_integer(tx_index_start) and tx_index_start >= 0 <-
+           Database.fetch(@table, {height, -1}),
+         {:ok, Model.block(tx_index: tx_index_end)}
+         when is_integer(tx_index_end) and tx_index_end >= 0 <-
+           Database.fetch(@table, {height + 1, -1}) do
+      tx_index_start..tx_index_end
+    else
+      _full_block_not_found -> []
+    end
+  end
+
   defp render_blocks(range, last_gen, sort_mbs?),
     do: Enum.map(range, &render(&1, last_gen, sort_mbs?))
 

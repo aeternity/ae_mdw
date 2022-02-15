@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.Sync.Invalidate do
   # credo:disable-for-this-file
   alias AeMdw.Contract
+  alias AeMdw.Database
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
@@ -183,7 +184,8 @@ defmodule AeMdw.Db.Sync.Invalidate do
     end
 
     {_, _, keys} =
-      DBS.map(from_txi..to_txi, & &1)
+      from_txi..to_txi
+      |> Enum.map(&Database.fetch!(Model.Tx, &1))
       |> Enum.reduce({from_bi, bi_time.(from_bi), []}, folder)
 
     keys
