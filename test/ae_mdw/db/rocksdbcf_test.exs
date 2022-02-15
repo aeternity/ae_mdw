@@ -81,7 +81,7 @@ defmodule AeMdw.Db.RocksDbCFTest do
   end
 
   describe "first_key/1" do
-    test "returns the lowest key when table is not empty" do
+    test "returns the first key when table is not empty" do
       assert :ok = RocksDbCF.put(Model.Tx, Model.tx(index: new_txi()))
       RocksDb.commit()
       assert {:ok, 0} = RocksDbCF.first_key(Model.Tx)
@@ -89,11 +89,11 @@ defmodule AeMdw.Db.RocksDbCFTest do
   end
 
   describe "last_key/1" do
-    test "returns the lowest key when table is not empty" do
+    test "returns the last key when table is not empty" do
       assert :ok = RocksDbCF.put(Model.Tx, Model.tx(index: new_txi()))
       RocksDb.commit()
-      last_txi = :counters |> :ets.match({:txi, :"$1"}) |> hd |> hd
-      assert {:ok, ^last_txi} = RocksDbCF.last_key(Model.Tx)
+      assert {:ok, last_txi} = RocksDbCF.last_key(Model.Tx)
+      assert {:ok, Model.tx(index: ^last_txi)} = RocksDbCF.fetch(Model.Tx, last_txi)
     end
   end
 
@@ -119,8 +119,7 @@ defmodule AeMdw.Db.RocksDbCFTest do
 
   describe "next_key/2" do
     test "returns :not_found when there is no next key" do
-      last_txi = :counters |> :ets.match({:txi, :"$1"}) |> hd |> hd
-      assert :not_found = RocksDbCF.next_key(Model.Tx, last_txi)
+      assert :not_found = RocksDbCF.next_key(Model.Tx, nil)
     end
 
     test "returns the next key for integer" do

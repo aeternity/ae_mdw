@@ -40,6 +40,7 @@ defmodule AeMdw.Db.Util do
   def read_block(kbi) when is_integer(kbi),
     do: read_block({kbi, -1})
 
+  @spec read_block!(non_neg_integer | {non_neg_integer, integer}) :: Model.block()
   def read_block!(bi),
     do: read_block(bi) |> one!
 
@@ -237,9 +238,14 @@ defmodule AeMdw.Db.Util do
 
               :micro ->
                 collect_keys(Model.Block, nil, {height, <<>>}, &Database.prev_key/2, fn
-                  {:ok, {^height, _}} = bi, nil ->
-                    (Model.block(read_block!(bi), :hash) == block_hash &&
-                       {:halt, bi}) || {:cont, nil}
+                  {:ok, {^height, _} = bi}, nil ->
+                    Model.block(hash: hash) = read_block!(bi)
+
+                    if hash == block_hash do
+                      {:halt, bi}
+                    else
+                      {:cont, nil}
+                    end
 
                   _k, nil ->
                     {:halt, nil}
