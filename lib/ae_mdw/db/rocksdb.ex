@@ -18,8 +18,6 @@ defmodule AeMdw.Db.RocksDb do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
 
-  @data_dir "data.db"
-
   # arround 50 column families * 10
   @max_open_files 500
   # default from https://github.com/facebook/rocksdb/wiki/Space-Tuning
@@ -74,7 +72,7 @@ defmodule AeMdw.Db.RocksDb do
       end)
     else
       {:error, reason} ->
-        Log.error("Failed to open database! path=#{@data_dir}, reason=#{inspect(reason)}")
+        Log.error("Failed to open database! path=#{data_dir()}, reason=#{inspect(reason)}")
         :error
     end
   end
@@ -100,14 +98,12 @@ defmodule AeMdw.Db.RocksDb do
   @doc """
   Commits changes made with put/3
   """
-  # NOTE: As suggested by Sebastian we will probably be able to do commits using only Mutations
-  # so this function is likey to be removed.
   @spec commit() :: :ok | :error
   def commit() do
     case get_existing_transaction() do
       {:ok, t_ref} ->
-        :rocksdb.transaction_commit(t_ref)
-        :persistent_term.put({__MODULE__, :transaction}, nil)
+        :ok = :rocksdb.transaction_commit(t_ref)
+        :ok = :persistent_term.put({__MODULE__, :transaction}, nil)
 
       :not_found ->
         :error
@@ -124,7 +120,7 @@ defmodule AeMdw.Db.RocksDb do
     Enum.each(mutation_list, &Mutation.mutate/1)
 
     :ok = :rocksdb.transaction_commit(t_ref)
-    :persistent_term.put({__MODULE__, :transaction}, nil)
+    :ok = :persistent_term.put({__MODULE__, :transaction}, nil)
   end
 
   @doc """
@@ -203,10 +199,10 @@ defmodule AeMdw.Db.RocksDb do
   # Private functions
   #
   defp create_dir_if_missing() do
-    if File.exists?(@data_dir) do
+    if File.exists?(data_dir()) do
       :ok
     else
-      File.mkdir(@data_dir)
+      File.mkdir(data_dir())
     end
   end
 
@@ -217,7 +213,7 @@ defmodule AeMdw.Db.RocksDb do
         {Atom.to_charlist(cf_name), @cf_options}
       end)
 
-    @data_dir
+    data_dir()
     |> String.to_charlist()
     |> :rocksdb.open_optimistic_transaction_db(@db_options, cf_descriptors)
   end
@@ -254,4 +250,6 @@ defmodule AeMdw.Db.RocksDb do
 
   defp db_ref(), do: :persistent_term.get({__MODULE__, :db_ref})
   defp cf_refs(cf_name), do: :persistent_term.get({__MODULE__, cf_name})
+
+  defp data_dir(), do: Application.fetch_env!(:ae_mdw, __MODULE__)[:data_dir]
 end

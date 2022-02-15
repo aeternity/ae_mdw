@@ -68,6 +68,7 @@ test:
 
 .PHONY: test-integration
 test-integration:
+	export INTEGRATION_TEST=1
 	$(elixir) --sname $(name) -S $(mix) test.integration
 
 .PHONY: help
