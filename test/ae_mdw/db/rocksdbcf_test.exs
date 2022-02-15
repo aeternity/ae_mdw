@@ -126,7 +126,7 @@ defmodule AeMdw.Db.RocksDbCFTest do
       assert :ok = RocksDbCF.put(Model.Tx, Model.tx(index: new_txi()))
       assert :ok = RocksDbCF.put(Model.Tx, Model.tx(index: new_txi()))
       RocksDb.commit()
-      assert {:ok, 1} = RocksDbCF.next_key(Model.Tx, 0)
+      assert {:ok, 2} = RocksDbCF.next_key(Model.Tx, 1)
     end
 
     test "returns the next key for tuple" do
