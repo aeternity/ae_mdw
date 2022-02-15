@@ -8,7 +8,7 @@ defmodule AeMdw.Db.Sync.Name do
   alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.Sync.Origin
   alias AeMdw.Node
-  # alias AeMdw.Log
+  alias AeMdw.Log
   alias AeMdw.Txs
   alias AeMdw.Validate
 
@@ -145,8 +145,8 @@ defmodule AeMdw.Db.Sync.Name do
   def plain_name!(name_hash),
     do: cache_through_read!(Model.PlainName, name_hash) |> Model.plain_name(:value)
 
-  def log_name_change(_height, _plain_name, _change), do: :ok
-  # Log.info("[#{height}][name] #{change} #{plain_name}")
+  def log_name_change(height, plain_name, change),
+    do: Log.info("[#{height}][name] #{change} #{plain_name}")
 
   ################################################################################
   #
