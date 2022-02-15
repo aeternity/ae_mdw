@@ -169,7 +169,7 @@ defmodule AeMdw.Db.RocksDb do
 
     with {:ok, t_ref} <- get_existing_transaction(),
          {:ok, _value} <- :rocksdb.transaction_get(t_ref, cf_ref, key, []) do
-      :ok = :rocksdb.transaction_delete(db_ref, cf_ref, key)
+      :ok = :rocksdb.transaction_delete(t_ref, cf_ref, key)
     else
       :not_found ->
         :rocksdb.delete(db_ref, cf_ref, key, [])

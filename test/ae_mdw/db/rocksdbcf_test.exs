@@ -42,6 +42,27 @@ defmodule AeMdw.Db.RocksDbCFTest do
     end
   end
 
+  describe "delete/2" do
+    test "changes transaction" do
+      txi = new_txi()
+      m_tx = Model.tx(index: txi)
+      assert :ok = RocksDbCF.put(Model.Tx, m_tx)
+      assert {:ok, m_tx} = RocksDbCF.dirty_fetch(Model.Tx, txi)
+      assert :ok = RocksDbCF.delete(Model.Tx, txi)
+      assert :not_found = RocksDbCF.fetch(Model.Tx, txi)
+    end
+
+    test "deletes committed tx" do
+      txi = new_txi()
+      m_tx = Model.tx(index: txi)
+      assert :ok = RocksDbCF.put(Model.Tx, m_tx)
+      RocksDb.commit()
+      assert {:ok, ^m_tx} = RocksDbCF.fetch(Model.Tx, txi)
+      assert :ok = RocksDbCF.delete(Model.Tx, txi)
+      assert :not_found = RocksDbCF.fetch(Model.Tx, txi)
+    end
+  end
+
   #
   # Helpers
   #
