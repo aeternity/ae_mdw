@@ -18,57 +18,11 @@ defmodule AeMdwWeb.NameController do
   require Model
 
   import AeMdwWeb.Util
-  import AeMdw.Db.Util
   import AeMdw.Util
 
   plug PaginatedPlug,
        [order_by: ~w(expiration name)a]
        when action in ~w(active_names inactive_names names auctions)a
-
-  ##########
-
-  @spec stream_plug_hook(Conn.t()) :: Conn.t()
-
-  def stream_plug_hook(%Plug.Conn{path_info: ["names", "active"]} = conn),
-    do: conn
-
-  def stream_plug_hook(%Plug.Conn{path_info: ["names", "inactive"]} = conn),
-    do: conn
-
-  def stream_plug_hook(%Plug.Conn{path_info: ["names"]} = conn),
-    do: conn
-
-  def stream_plug_hook(%Plug.Conn{path_info: ["names", "auctions"]} = conn),
-    do: conn
-
-  def stream_plug_hook(%Plug.Conn{path_info: ["names", "search" | _], params: params} = conn) do
-    alias AeMdwWeb.DataStreamPlug, as: P
-
-    P.handle_assign(
-      conn,
-      {:ok, {:gen, last_gen()..0}},
-      P.parse_offset(params),
-      {:ok, %{}}
-    )
-  end
-
-  def stream_plug_hook(%Plug.Conn{params: params} = conn) do
-    alias AeMdwWeb.DataStreamPlug, as: P
-
-    rem = rem_path(conn.path_info)
-
-    P.handle_assign(
-      conn,
-      (rem == [] && {:ok, {:gen, last_gen()..0}}) || P.parse_scope(rem, ["gen"]),
-      P.parse_offset(params),
-      {:ok, %{}}
-    )
-  end
-
-  defp rem_path(["names", x | rem]) when x in ["auctions", "inactive", "active"], do: rem
-  defp rem_path(["names" | rem]), do: rem
-
-  ##########
 
   @spec auction(Conn.t(), map()) :: Conn.t()
   def auction(conn, %{"id" => ident} = params),
