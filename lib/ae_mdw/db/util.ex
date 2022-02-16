@@ -3,7 +3,6 @@ defmodule AeMdw.Db.Util do
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Database
-  alias AeMdw.Db.RocksDbCF
   alias AeMdw.Txs
 
   require Logger
@@ -21,7 +20,7 @@ defmodule AeMdw.Db.Util do
     do: read(tab, key) |> one!
 
   def read_tx(txi) do
-    case RocksDbCF.dirty_fetch(~t[tx], txi) do
+    case Database.fetch(~t[tx], txi) do
       {:ok, m_tx} -> [m_tx]
       :not_found -> []
     end
@@ -31,7 +30,7 @@ defmodule AeMdw.Db.Util do
     do: read_tx(txi) |> one!
 
   def read_block({_, _} = bi) do
-    case RocksDbCF.dirty_fetch(~t[block], bi) do
+    case Database.fetch(~t[block], bi) do
       {:ok, m_block} -> [m_block]
       :not_found -> []
     end

@@ -212,8 +212,12 @@ defmodule AeMdw.Database do
   end
 
   @spec write(table(), record()) :: :ok
-  def write(tab, record) when use_rocksdb?(tab) do
-    :ok = RocksDbCF.put(tab, record)
+  def write(Model.Block, record) do
+    :ok = RocksDbCF.put(Model.Block, record)
+  end
+
+  def write(Model.Tx, record) do
+    :ok = RocksDbCF.put(Model.Tx, record)
   end
 
   def write(table, record) do
