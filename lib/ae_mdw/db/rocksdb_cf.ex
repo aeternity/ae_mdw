@@ -105,16 +105,9 @@ defmodule AeMdw.Db.RocksDbCF do
     seek_key = :sext.encode(seek_index)
 
     key_res =
-      case do_iterator_move(it, seek_key) do
-        {:ok, index} ->
-          if index != seek_index do
-            {:ok, index}
-          else
-            do_iterator_move(it, :next)
-          end
-
-        :not_found ->
-          :not_found
+      case do_iterator_move(it, {:seek_for_prev, seek_key}) do
+        {:ok, _index} -> do_iterator_move(it, :next)
+        :not_found -> first_key(table)
       end
 
     RocksDb.iterator_close(it)

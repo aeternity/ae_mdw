@@ -7,6 +7,38 @@ defmodule AeMdw.Db.RocksDbCFTest do
 
   require Model
 
+  describe "read_tx/1" do
+    test "reads a tx from transaction" do
+      txi = new_txi()
+      m_tx = Model.tx(index: txi)
+      assert :ok = RocksDbCF.put(Model.Tx, m_tx)
+      assert {:ok, ^m_tx} = RocksDbCF.read_tx(txi)
+    end
+
+    test "reads a committed tx" do
+      txi = new_txi()
+      m_tx = Model.tx(index: txi)
+      assert :ok = RocksDbCF.put(Model.Tx, m_tx)
+      RocksDb.commit()
+      assert {:ok, ^m_tx} = RocksDbCF.read_tx(txi)
+    end
+  end
+
+  describe "read_block/1" do
+    test "read a block from transaction" do
+      Model.block(index: key) = m_block = new_block()
+      assert :ok = RocksDbCF.put(Model.Block, m_block)
+      assert {:ok, ^m_block} = RocksDbCF.read_block(key)
+    end
+
+    test "reads a committed block" do
+      Model.block(index: key) = m_block = new_block()
+      assert :ok = RocksDbCF.put(Model.Block, m_block)
+      RocksDb.commit()
+      assert {:ok, ^m_block} = RocksDbCF.read_block(key)
+    end
+  end
+
   describe "put/2" do
     test "writes only to transaction" do
       txi = new_txi()
@@ -114,14 +146,11 @@ defmodule AeMdw.Db.RocksDbCFTest do
     end
 
     test "returns the next key for tuple" do
-      kbi1 = new_kbi()
-      bi1 = {kbi1, -1}
-      bi2 = {new_kbi(), -1}
-
-      assert :ok = RocksDbCF.put(Model.Block, Model.block(index: bi1))
-      assert :ok = RocksDbCF.put(Model.Block, Model.block(index: bi2))
+      assert :ok = RocksDbCF.put(Model.Block, new_block())
+      assert :ok = RocksDbCF.put(Model.Block, new_block())
       RocksDb.commit()
-      assert {:ok, {^kbi1, -1}} = RocksDbCF.next_key(Model.Block, {kbi1, -2})
+      assert {:ok, {1, -1}} = RocksDbCF.next_key(Model.Block, {0, -1})
+      assert {:ok, {0, -1}} = RocksDbCF.next_key(Model.Block, {0, -2})
     end
   end
 
@@ -215,4 +244,12 @@ defmodule AeMdw.Db.RocksDbCFTest do
   #
   defp new_txi(), do: :ets.update_counter(:counters, :txi, {2, 1})
   defp new_kbi(), do: :ets.update_counter(:counters, :kbi, {2, 1})
+
+  defp new_block() do
+    Model.block(
+      index: {new_kbi(), -1},
+      tx_index: Enum.random(1..1_000_000),
+      hash: :crypto.strong_rand_bytes(32)
+    )
+  end
 end
