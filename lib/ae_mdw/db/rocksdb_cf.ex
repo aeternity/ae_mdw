@@ -8,6 +8,7 @@ defmodule AeMdw.Db.RocksDbCF do
   """
   alias AeMdw.Db.Model
   alias AeMdw.Db.RocksDb
+  alias AeMdw.Blocks
 
   require Model
 
@@ -15,11 +16,31 @@ defmodule AeMdw.Db.RocksDbCF do
   @type table :: atom()
   @type record :: tuple()
 
+  @block_tab :rdbcf_block
+  @tx_tab :rdbcf_tx
+
+  @spec init_tables() :: :ok
+  def init_tables() do
+    :ets.new(@block_tab, [:named_table, :public, :ordered_set])
+    :ets.new(@tx_tab, [:named_table, :public, :ordered_set])
+  end
+
+  @spec read_block(Blocks.block_index_txi_pos()) :: {:ok, Model.block()} | :not_found
+  def read_block(block_index) do
+    read_through(@block_tab, Model.Block, block_index)
+  end
+
+  @spec read_tx(AeMdw.Txs.txi()) :: {:ok, Model.tx()} | :not_found
+  def read_tx(txi) do
+    read_through(@tx_tab, Model.Tx, txi)
+  end
+
   @spec put(table(), record()) :: :ok
   def put(table, record) do
     key = encode_record_index(record)
     value = encode_record_value(record)
 
+    cache_insert(record)
     :ok = RocksDb.put(table, key, value)
   end
 
@@ -51,8 +72,24 @@ defmodule AeMdw.Db.RocksDbCF do
     key_res
   end
 
-  @spec last_key(table()) :: {:ok, key()} | :not_found
-  def last_key(table) do
+  @spec last_key(table(), boolean()) :: {:ok, key()} | :not_found
+  def last_key(table, cached? \\ true)
+
+  def last_key(Model.Block, true) do
+    case :ets.last(@block_tab) do
+      :"$end_of_table" -> last_key(Model.Block, false)
+      key -> {:ok, key}
+    end
+  end
+
+  def last_key(Model.Tx, true) do
+    case :ets.last(@tx_tab) do
+      :"$end_of_table" -> last_key(Model.Tx, false)
+      key -> {:ok, key}
+    end
+  end
+
+  def last_key(table, false) do
     {:ok, it} = RocksDb.iterator(table)
 
     key_res = do_iterator_move(it, :last)
@@ -183,4 +220,31 @@ defmodule AeMdw.Db.RocksDbCF do
         :not_found
     end
   end
+
+  defp read_through(cache_table, table, index) do
+    case :ets.lookup(cache_table, index) do
+      [] ->
+        case fetch(table, index) do
+          {:ok, record} ->
+            cache_insert(record)
+            {:ok, record}
+
+          :not_found ->
+            :not_found
+        end
+
+      [{^index, record}] ->
+        {:ok, record}
+    end
+  end
+
+  defp cache_insert(Model.block(index: block_index) = record) do
+    :ets.insert(@block_tab, {block_index, record})
+  end
+
+  defp cache_insert(Model.tx(index: txi) = record) do
+    :ets.insert(@tx_tab, {txi, record})
+  end
+
+  defp cache_insert(_other_record), do: :ok
 end

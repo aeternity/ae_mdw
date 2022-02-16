@@ -23,6 +23,7 @@ defmodule AeMdw.Sync.Supervisor do
     :ets.new(:ct_create_sync_cache, [:named_table, :ordered_set, :public])
     :ets.new(:stat_sync_cache, [:named_table, :ordered_set, :public])
 
+    AeMdw.Db.RocksDbCF.init_tables()
     :ok
   end
 
