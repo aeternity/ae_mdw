@@ -18,7 +18,7 @@ defmodule AeMdw.Node.Db do
 
   @spec get_blocks(integer()) :: tuple()
   def get_blocks(height) when is_integer(height) do
-    kb_hash = Model.block(read_block!({height, -1}), :hash)
+    Model.block(hash: kb_hash) = read_block!({height, -1})
     {:aec_db.get_block(kb_hash), get_micro_blocks(height)}
   end
 
