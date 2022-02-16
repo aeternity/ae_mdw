@@ -27,7 +27,7 @@ defmodule AeMdw.Db.RocksDbCF do
   def delete(table, index) do
     key = :sext.encode(index)
 
-    RocksDb.delete(table, key)
+    :ok = RocksDb.delete(table, key)
   end
 
   @spec exists?(table(), key()) :: boolean()

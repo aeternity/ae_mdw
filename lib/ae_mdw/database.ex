@@ -88,7 +88,7 @@ defmodule AeMdw.Database do
 
   @spec last_key(table()) :: {:ok, key()} | :none
   def last_key(tab) when use_rocksdb?(tab) do
-    case RocksDbCF.last_key(tab, false) do
+    case RocksDbCF.last_key(tab) do
       {:ok, last_key} -> {:ok, last_key}
       :not_found -> :none
     end
@@ -187,11 +187,11 @@ defmodule AeMdw.Database do
 
   @spec delete(table(), key()) :: :ok | {:error, any()}
   def delete(tab, key) when use_rocksdb?(tab) do
-    RocksDbCF.delete(tab, key)
+    :ok = RocksDbCF.delete(tab, key)
   end
 
   def delete(table, key) do
-    :mnesia.delete(table, key, :write)
+    :ok = :mnesia.delete(table, key, :write)
   end
 
   @spec read(table(), key()) :: [record()]
@@ -213,20 +213,20 @@ defmodule AeMdw.Database do
 
   @spec write(table(), record()) :: :ok
   def write(Model.Block, record) do
-    RocksDbCF.put(Model.Block, record)
+    :ok = RocksDbCF.put(Model.Block, record)
   end
 
   def write(Model.Tx, record) do
-    RocksDbCF.put(Model.Tx, record)
+    :ok = RocksDbCF.put(Model.Tx, record)
   end
 
   def write(table, record) do
-    :mnesia.write(table, record, :write)
+    :ok = :mnesia.write(table, record, :write)
   end
 
   @spec commit() :: :ok
   def commit do
-    RocksDb.commit()
+    :ok = RocksDb.commit()
   end
 
   @spec transaction([Mutation.t()]) :: :ok
