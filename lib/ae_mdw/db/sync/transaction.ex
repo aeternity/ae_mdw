@@ -13,7 +13,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.ContractCreateMutation
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.KeyBlocksMutation
-  alias AeMdw.Db.DatabaseWriteMutation
+  alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Name
   alias AeMdw.Db.NameRevokeMutation
@@ -231,7 +231,7 @@ defmodule AeMdw.Db.Sync.Transaction do
       |> Enum.flat_map(&transaction_mutations(&1, tx_ctx))
 
     mutations = [
-      DatabaseWriteMutation.new(Model.Block, mb_model),
+      WriteMutation.new(Model.Block, mb_model),
       txs_mutations,
       Aex9AccountPresenceMutation.new(height, mbi)
     ]
