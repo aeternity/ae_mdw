@@ -21,8 +21,6 @@ config :ae_mdw, build_revision: mdw_revision
 
 config :aecore, network_id: System.get_env("NETWORK_ID", "ae_mainnet")
 
-config :aecore, network_id: System.get_env("NETWORK_ID", "ae_mainnet")
-
 config :ae_mdw, AeMdw.Db.RocksDb, data_dir: "data.db"
 
 config :ae_plugin,
