@@ -12,7 +12,7 @@ defmodule AeMdw.Db.RocksDbCF do
 
   require Model
 
-  @type index :: term()
+  @type key :: term()
   @type table :: atom()
   @type record :: tuple()
 
@@ -46,14 +46,14 @@ defmodule AeMdw.Db.RocksDbCF do
     :ok = RocksDb.put(table, key, value)
   end
 
-  @spec delete(table(), index()) :: :ok | {:error, any}
+  @spec delete(table(), key()) :: :ok | {:error, any}
   def delete(table, index) do
     key = :sext.encode(index)
 
     RocksDb.delete(table, key)
   end
 
-  @spec exists?(table(), index()) :: boolean()
+  @spec exists?(table(), key()) :: boolean()
   def exists?(table, index) do
     key = :sext.encode(index)
 
@@ -63,7 +63,7 @@ defmodule AeMdw.Db.RocksDbCF do
     end
   end
 
-  @spec first_key(table()) :: {:ok, index()} | :not_found
+  @spec first_key(table()) :: {:ok, key()} | :not_found
   def first_key(table) do
     {:ok, it} = RocksDb.iterator(table)
 
@@ -74,7 +74,7 @@ defmodule AeMdw.Db.RocksDbCF do
     key_res
   end
 
-  @spec last_key(table(), boolean()) :: {:ok, index()} | :not_found
+  @spec last_key(table(), boolean()) :: {:ok, key()} | :not_found
   def last_key(table, cached? \\ true)
 
   def last_key(Model.Block, true) do
@@ -101,7 +101,7 @@ defmodule AeMdw.Db.RocksDbCF do
     key_res
   end
 
-  @spec next_key(table(), index()) :: {:ok, index()} | :not_found
+  @spec next_key(table(), key()) :: {:ok, key()} | :not_found
   def next_key(table, seek_index) do
     {:ok, it} = RocksDb.iterator(table)
     seek_key = :sext.encode(seek_index)
@@ -124,7 +124,7 @@ defmodule AeMdw.Db.RocksDbCF do
     key_res
   end
 
-  @spec prev_key(table(), index()) :: {:ok, index()} | :not_found
+  @spec prev_key(table(), key()) :: {:ok, key()} | :not_found
   def prev_key(table, seek_index) do
     {:ok, it} = RocksDb.iterator(table)
     seek_key = :sext.encode(seek_index)
@@ -140,7 +140,7 @@ defmodule AeMdw.Db.RocksDbCF do
     key_res
   end
 
-  @spec dirty_fetch(table(), index()) :: {:ok, record()} | :not_found
+  @spec dirty_fetch(table(), key()) :: {:ok, record()} | :not_found
   def dirty_fetch(table, index) do
     key = :sext.encode(index)
 
@@ -161,14 +161,14 @@ defmodule AeMdw.Db.RocksDbCF do
     end
   end
 
-  @spec dirty_fetch!(table(), index()) :: record()
+  @spec dirty_fetch!(table(), key()) :: record()
   def dirty_fetch!(table, index) do
     {:ok, record} = dirty_fetch(table, index)
 
     record
   end
 
-  @spec fetch(table(), index()) :: {:ok, record()} | :not_found
+  @spec fetch(table(), key()) :: {:ok, record()} | :not_found
   def fetch(table, index) do
     key = :sext.encode(index)
 
@@ -189,7 +189,7 @@ defmodule AeMdw.Db.RocksDbCF do
     end
   end
 
-  @spec fetch!(table(), index()) :: record()
+  @spec fetch!(table(), key()) :: record()
   def fetch!(table, index) do
     {:ok, record} = dirty_fetch(table, index)
 
