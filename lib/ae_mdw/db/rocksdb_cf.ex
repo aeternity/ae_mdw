@@ -19,8 +19,6 @@ defmodule AeMdw.Db.RocksDbCF do
   @block_tab :rdbcf_block
   @tx_tab :rdbcf_tx
 
-  @tables_with_unused_value [Model.Field, Model.Time, Model.Type]
-
   @spec init_tables() :: :ok
   def init_tables() do
     :ets.new(@block_tab, [:named_table, :public, :ordered_set])
@@ -40,7 +38,7 @@ defmodule AeMdw.Db.RocksDbCF do
   @spec put(table(), record()) :: :ok
   def put(table, record) do
     key = encode_record_index(record)
-    value = encode_record_value(table, record)
+    value = encode_record_value(record)
 
     cache_insert(record)
     :ok = RocksDb.put(table, key, value)
@@ -149,8 +147,8 @@ defmodule AeMdw.Db.RocksDbCF do
         record_type = Model.record(table)
 
         record =
-          table
-          |> decode_value(value)
+          value
+          |> decode_value()
           |> Tuple.insert_at(0, index)
           |> Tuple.insert_at(0, record_type)
 
@@ -177,8 +175,8 @@ defmodule AeMdw.Db.RocksDbCF do
         record_type = Model.record(table)
 
         record =
-          table
-          |> decode_value(value)
+          value
+          |> decode_value()
           |> Tuple.insert_at(0, index)
           |> Tuple.insert_at(0, record_type)
 
@@ -201,17 +199,17 @@ defmodule AeMdw.Db.RocksDbCF do
   #
   defp encode_record_index(record), do: record |> elem(1) |> :sext.encode()
 
-  defp encode_record_value(table, _record) when table in @tables_with_unused_value, do: ""
+  defp encode_record_value({_record_name, _key, nil}), do: ""
 
-  defp encode_record_value(_table, record) do
+  defp encode_record_value(record) do
     record
     |> Tuple.delete_at(0)
     |> Tuple.delete_at(0)
     |> :sext.encode()
   end
 
-  defp decode_value(table, _value) when table in @tables_with_unused_value, do: {}
-  defp decode_value(_table, value), do: :sext.decode(value)
+  defp decode_value(""), do: {nil}
+  defp decode_value(value), do: :sext.decode(value)
 
   defp do_iterator_move(it, action) do
     case :rocksdb.iterator_move(it, action) do
