@@ -16,8 +16,6 @@ defmodule AeMdw.Database do
   alias AeMdw.Db.RocksDb
   alias AeMdw.Db.RocksDbCF
 
-  require Model
-
   @type table() :: atom()
   @type record() :: tuple()
   @type key() :: term()
@@ -185,13 +183,13 @@ defmodule AeMdw.Database do
     match?({:ok, _record}, fetch(tab, key))
   end
 
-  @spec delete(table(), key()) :: :ok | {:error, any()}
+  @spec delete(table(), key()) :: :ok
   def delete(tab, key) when use_rocksdb?(tab) do
     :ok = RocksDbCF.delete(tab, key)
   end
 
   def delete(table, key) do
-    :ok = :mnesia.delete(table, key, :write)
+    :mnesia.delete(table, key, :write)
   end
 
   @spec read(table(), key()) :: [record()]
@@ -213,11 +211,11 @@ defmodule AeMdw.Database do
 
   @spec write(table(), record()) :: :ok
   def write(tab, record) when use_rocksdb?(tab) do
-    :ok = RocksDbCF.put(tab, record)
+    RocksDbCF.put(tab, record)
   end
 
   def write(table, record) do
-    :ok = :mnesia.write(table, record, :write)
+    :mnesia.write(table, record, :write)
   end
 
   @spec commit() :: :ok

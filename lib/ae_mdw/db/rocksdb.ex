@@ -86,16 +86,12 @@ defmodule AeMdw.Db.RocksDb do
   RocksDB raises an exception on conflict which is helpful to identify unwanted parallelism in the future when
   it doesn't respect dependency.
   """
-  @spec put(table(), binary(), binary()) :: :ok | :error
+  @spec put(table(), binary(), binary()) :: :ok
   def put(table, key, value) do
-    with {_db_ref, cf_ref} <- cf_refs(table),
-         {:ok, t_ref} <- get_transaction() do
-      :ok = :rocksdb.transaction_put(t_ref, cf_ref, key, value)
-    else
-      error ->
-        Log.error("put failed! reason=#{error}")
-        :error
-    end
+    {_db_ref, cf_ref} = cf_refs(table)
+    {:ok, t_ref} = get_transaction()
+
+    :rocksdb.transaction_put(t_ref, cf_ref, key, value)
   end
 
   @doc """
@@ -106,7 +102,8 @@ defmodule AeMdw.Db.RocksDb do
     case get_existing_transaction() do
       {:ok, t_ref} ->
         :ok = :rocksdb.transaction_commit(t_ref)
-        :ok = :persistent_term.put({__MODULE__, :transaction}, nil)
+
+        :persistent_term.put({__MODULE__, :transaction}, nil)
 
       :not_found ->
         :error
@@ -116,14 +113,17 @@ defmodule AeMdw.Db.RocksDb do
   @doc """
   Creates a transaction and commits a list of mutations.
   """
-  @spec commit([Mutation.t()]) :: :ok | :error
+  @spec commit([Mutation.t()]) :: :ok | {:error, term()}
   def commit(mutation_list) do
     {:ok, t_ref} = new_transaction()
 
     Enum.each(mutation_list, &Mutation.mutate/1)
 
-    :ok = :rocksdb.transaction_commit(t_ref)
-    :ok = :persistent_term.put({__MODULE__, :transaction}, nil)
+    result = :rocksdb.transaction_commit(t_ref)
+
+    :persistent_term.put({__MODULE__, :transaction}, nil)
+
+    result
   end
 
   @doc """
@@ -247,14 +247,9 @@ defmodule AeMdw.Db.RocksDb do
   end
 
   defp new_transaction() do
-    case :rocksdb.transaction(db_ref(), sync: true) do
-      {:ok, t_ref} ->
-        :persistent_term.put({__MODULE__, :transaction}, t_ref)
-        {:ok, t_ref}
-
-      error ->
-        error
-    end
+    {:ok, t_ref} = :rocksdb.transaction(db_ref(), sync: true)
+    :persistent_term.put({__MODULE__, :transaction}, t_ref)
+    {:ok, t_ref}
   end
 
   defp db_ref(), do: :persistent_term.get({__MODULE__, :db_ref})
