@@ -18,6 +18,11 @@ defmodule AeMdw.Db.RocksDb do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
 
+  @opaque iterator :: reference() | binary()
+  # when transactions are explicit use:
+  # @opaque transaction :: reference() | binary()
+  @typep table :: atom()
+
   # arround 50 column families * 10
   @max_open_files 500
   # default from https://github.com/facebook/rocksdb/wiki/Space-Tuning
@@ -50,8 +55,6 @@ defmodule AeMdw.Db.RocksDb do
     level_compaction_dynamic_level_bytes: true,
     merge_operator: :erlang_merge_operator
   ]
-
-  @typep table :: atom()
 
   @doc """
   Opens an optimistic transaction database with multiple column families in order to allow transactions
@@ -153,7 +156,7 @@ defmodule AeMdw.Db.RocksDb do
   @doc """
   Iterator for a column family.
   """
-  @spec iterator(table(), Keyword.t()) :: {:ok, any()} | {:error, any()}
+  @spec iterator(table(), Keyword.t()) :: {:ok, iterator()} | {:error, any()}
   def iterator(table, read_options \\ []) do
     {db_ref, cf_ref} = cf_refs(table)
 
