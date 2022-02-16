@@ -41,8 +41,7 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   secret_key_base: "kATf71kudJsgA1dgCQKcmgelicqJHG8EID8rwROwJHpWHb53EdzW7YDclJZ8mxLP",
   render_errors: [view: AeMdwWeb.ErrorView, accepts: ~w(html json)],
   pubsub: [name: AeMdw.PubSub, adapter: Phoenix.PubSub.PG2],
-  live_view: [signing_salt: "Oy680JAN"],
-  continuation_cache_expiration_minutes: 30
+  live_view: [signing_salt: "Oy680JAN"]
 
 config :ae_mdw, AeWebsocket.Websocket.SocketHandler,
   port: 4001,

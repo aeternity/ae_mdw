@@ -1,14 +1,6 @@
 defmodule AeMdwWeb.Router do
   use AeMdwWeb, :router
 
-  alias AeMdwWeb.DataStreamPlug
-
-  @paginables [
-    {["names", "auctions"], &AeMdwWeb.NameController.stream_plug_hook/1}
-  ]
-
-  @scopes ["gen", "txi"]
-
   @shared_routes [
     {"/block/:hash", AeMdwWeb.BlockController, :block},
     {"/blocki/:kbi", AeMdwWeb.BlockController, :blocki},
@@ -76,7 +68,6 @@ defmodule AeMdwWeb.Router do
   ]
 
   pipeline :api do
-    plug DataStreamPlug, paginables: @paginables, scopes: @scopes
     plug :accepts, ["json"]
   end
 
