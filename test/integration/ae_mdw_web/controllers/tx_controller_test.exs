@@ -33,7 +33,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     end
 
     test "localhost has same result as mainnet", %{conn: conn} do
-      tx_hash = "th_2aTb36PhLqRq8yxcwU3YvMWkKMnG8qmavGvs5isGwCovox8d8Q"
+      tx_hash = "th_84uc6avLpH8WFMbvnYkPWSeiiCpm9wXZUnPMm5JSrjJH4djAB"
       path = "/tx/#{tx_hash}"
 
       conn = get(conn, path)
@@ -85,7 +85,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     end
 
     test "localhost has same result as mainnet", %{conn: conn} do
-      txi = 2_931_545
+      txi = 1_000_001
       path = "/txi/#{txi}"
 
       conn = get(conn, path)
