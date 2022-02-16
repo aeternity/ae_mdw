@@ -6,7 +6,7 @@ defmodule AeMdw.Db.Contract do
 
   alias AeMdw.Contract
   alias AeMdw.Database
-  alias AeMdw.Db.WriteMutation
+  alias AeMdw.Db.DatabaseWriteMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Origin
@@ -314,10 +314,10 @@ defmodule AeMdw.Db.Contract do
     {tx_type, raw_tx} = :aetx.specialize_type(tx)
 
     initial_mutations = [
-      WriteMutation.new(Model.IntContractCall, m_call),
-      WriteMutation.new(Model.GrpIntContractCall, m_grp_call),
-      WriteMutation.new(Model.FnameIntContractCall, m_fname_call),
-      WriteMutation.new(Model.FnameGrpIntContractCall, m_fname_grp_call)
+      DatabaseWriteMutation.new(Model.IntContractCall, m_call),
+      DatabaseWriteMutation.new(Model.GrpIntContractCall, m_grp_call),
+      DatabaseWriteMutation.new(Model.FnameIntContractCall, m_fname_call),
+      DatabaseWriteMutation.new(Model.FnameGrpIntContractCall, m_fname_grp_call)
     ]
 
     ids_mutations =
@@ -339,10 +339,10 @@ defmodule AeMdw.Db.Contract do
           )
 
         [
-          WriteMutation.new(Model.IdIntContractCall, m_id_call),
-          WriteMutation.new(Model.GrpIdIntContractCall, m_grp_id_call),
-          WriteMutation.new(Model.IdFnameIntContractCall, m_id_fname_call),
-          WriteMutation.new(Model.GrpIdFnameIntContractCall, m_grp_id_fname_call)
+          DatabaseWriteMutation.new(Model.IdIntContractCall, m_id_call),
+          DatabaseWriteMutation.new(Model.GrpIdIntContractCall, m_grp_id_call),
+          DatabaseWriteMutation.new(Model.IdFnameIntContractCall, m_id_fname_call),
+          DatabaseWriteMutation.new(Model.GrpIdFnameIntContractCall, m_grp_id_fname_call)
         ]
       end)
 

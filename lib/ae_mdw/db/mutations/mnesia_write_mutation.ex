@@ -1,4 +1,4 @@
-defmodule AeMdw.Db.WriteMutation do
+defmodule AeMdw.Db.DatabaseWriteMutation do
   @moduledoc """
   This is the most basic kind of transaction, it just inserts a record in a
   mnesia table.
@@ -24,7 +24,7 @@ defmodule AeMdw.Db.WriteMutation do
   end
 end
 
-defimpl AeMdw.Db.Mutation, for: AeMdw.Db.WriteMutation do
+defimpl AeMdw.Db.Mutation, for: AeMdw.Db.DatabaseWriteMutation do
   def mutate(mutation) do
     @for.mutate(mutation)
   end
