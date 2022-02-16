@@ -3,7 +3,6 @@ defmodule AeMdw.Db.Util do
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Database
-  alias AeMdw.Db.RocksDbCF
   alias AeMdw.Txs
 
   require Logger
@@ -21,7 +20,7 @@ defmodule AeMdw.Db.Util do
     do: read(tab, key) |> one!
 
   def read_tx(txi) do
-    case RocksDbCF.read_tx(txi) do
+    case Database.fetch(~t[tx], txi) do
       {:ok, m_tx} -> [m_tx]
       :not_found -> []
     end
@@ -31,7 +30,7 @@ defmodule AeMdw.Db.Util do
     do: read_tx(txi) |> one!
 
   def read_block({_, _} = bi) do
-    case RocksDbCF.read_block(bi) do
+    case Database.fetch(~t[block], bi) do
       {:ok, m_block} -> [m_block]
       :not_found -> []
     end
@@ -103,16 +102,6 @@ defmodule AeMdw.Db.Util do
 
   def count(table),
     do: Database.dirty_all_keys(table) |> length()
-
-  def ensure_key!(tab, getter) do
-    case apply(__MODULE__, getter, [tab]) do
-      :"$end_of_table" ->
-        raise RuntimeError, message: "can't get #{getter} key for table #{tab}"
-
-      k ->
-        k
-    end
-  end
 
   def collect_keys(tab, acc, start_key, next_fn, progress_fn) do
     fn -> do_collect_keys(tab, acc, start_key, next_fn, progress_fn) end
@@ -283,6 +272,19 @@ defmodule AeMdw.Db.Util do
           {:ok, {last_kbi, _mbi}} -> last_kbi + 1
           :none -> 0
         end
+    end
+  end
+
+  #
+  # Private functions
+  #
+  defp ensure_key!(tab, getter) do
+    case apply(__MODULE__, getter, [tab]) do
+      :"$end_of_table" ->
+        raise RuntimeError, message: "can't get #{getter} key for table #{tab}"
+
+      k ->
+        k
     end
   end
 end
