@@ -67,7 +67,7 @@ defmodule AeMdw.Db.RocksDbCF do
 
     key_res = do_iterator_move(it, :first)
 
-    :rocksdb.iterator_close(it)
+    RocksDb.iterator_close(it)
 
     key_res
   end
@@ -94,7 +94,7 @@ defmodule AeMdw.Db.RocksDbCF do
 
     key_res = do_iterator_move(it, :last)
 
-    :rocksdb.iterator_close(it)
+    RocksDb.iterator_close(it)
 
     key_res
   end
@@ -117,7 +117,7 @@ defmodule AeMdw.Db.RocksDbCF do
           :not_found
       end
 
-    :rocksdb.iterator_close(it)
+    RocksDb.iterator_close(it)
 
     key_res
   end
@@ -133,7 +133,7 @@ defmodule AeMdw.Db.RocksDbCF do
         :not_found -> :not_found
       end
 
-    :rocksdb.iterator_close(it)
+    RocksDb.iterator_close(it)
 
     key_res
   end

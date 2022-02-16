@@ -164,6 +164,12 @@ defmodule AeMdw.Db.RocksDb do
   end
 
   @doc """
+  Release iterator.
+  """
+  @spec iterator_close(iterator()) :: :ok
+  defdelegate iterator_close(it), to: :rocksdb
+
+  @doc """
   Delete a key-value from a column family.
   """
   @spec delete(table(), binary()) :: :ok | {:error, any()}
