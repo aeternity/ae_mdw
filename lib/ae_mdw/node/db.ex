@@ -14,7 +14,7 @@ defmodule AeMdw.Node.Db do
 
   @type pubkey() :: <<_::256>>
   @typep hash_type() :: nil | :key | :key_block | :mic_block
-  @typep top_height_hash() :: {hash_type(), pos_integer(), binary()}
+  @typep height_hash() :: {hash_type(), pos_integer(), binary()}
 
   @spec get_blocks(integer()) :: tuple()
   def get_blocks(height) when is_integer(height) do
@@ -57,7 +57,7 @@ defmodule AeMdw.Node.Db do
     signed_tx
   end
 
-  @spec top_height_hash(boolean()) :: top_height_hash()
+  @spec top_height_hash(boolean()) :: height_hash()
   def top_height_hash(false = _the_very_top?) do
     block = :aec_chain.top_key_block() |> ok!
     header = :aec_blocks.to_key_header(block)
@@ -74,16 +74,16 @@ defmodule AeMdw.Node.Db do
     {type, :aec_headers.height(header), ok!(:aec_headers.hash_header(header))}
   end
 
-  @spec aex9_balance(pubkey(), pubkey()) :: {integer() | nil, top_height_hash()}
+  @spec aex9_balance(pubkey(), pubkey()) :: {integer() | nil, height_hash()}
   def aex9_balance(contract_pk, account_pk),
     do: aex9_balance(contract_pk, account_pk, false)
 
-  @spec aex9_balance(pubkey(), pubkey(), boolean()) :: {integer() | nil, top_height_hash()}
+  @spec aex9_balance(pubkey(), pubkey(), boolean()) :: {integer() | nil, height_hash()}
   def aex9_balance(contract_pk, account_pk, the_very_top?) when is_boolean(the_very_top?),
     do: aex9_balance(contract_pk, account_pk, top_height_hash(the_very_top?))
 
-  @spec aex9_balance(pubkey(), pubkey(), top_height_hash()) ::
-          {integer() | nil, top_height_hash()}
+  @spec aex9_balance(pubkey(), pubkey(), height_hash()) ::
+          {integer() | nil, height_hash()}
   def aex9_balance(contract_pk, account_pk, {type, height, hash}) do
     case Contract.call_contract(contract_pk, {type, height, hash}, "balance", [
            {:address, account_pk}
@@ -93,15 +93,15 @@ defmodule AeMdw.Node.Db do
     end
   end
 
-  @spec aex9_balances!(pubkey()) :: {map(), top_height_hash()}
+  @spec aex9_balances!(pubkey()) :: {map(), height_hash()}
   def aex9_balances!(contract_pk),
     do: aex9_balances!(contract_pk, false)
 
-  @spec aex9_balances!(pubkey(), boolean()) :: {map(), top_height_hash()}
+  @spec aex9_balances!(pubkey(), boolean()) :: {map(), height_hash()}
   def aex9_balances!(contract_pk, the_very_top?) when is_boolean(the_very_top?),
     do: aex9_balances!(contract_pk, top_height_hash(the_very_top?))
 
-  @spec aex9_balances!(pubkey(), top_height_hash()) :: {map(), top_height_hash()}
+  @spec aex9_balances!(pubkey(), height_hash()) :: {map(), height_hash()}
   def aex9_balances!(contract_pk, {type, height, hash}) do
     {:ok, addr_map} =
       Contract.call_contract(
@@ -114,20 +114,20 @@ defmodule AeMdw.Node.Db do
     {addr_map, {type, height, hash}}
   end
 
-  @spec aex9_balances(pubkey()) :: {map(), top_height_hash()}
+  @spec aex9_balances(pubkey()) :: {map(), height_hash()}
   def aex9_balances(contract_pk),
     do: aex9_balances(contract_pk, top_height_hash(false))
 
-  @spec aex9_balances(pubkey(), top_height_hash()) :: {map(), top_height_hash()}
-  def aex9_balances(contract_pk, {type, height, hash}) do
+  @spec aex9_balances(pubkey(), height_hash()) :: {map(), height_hash()}
+  def aex9_balances(contract_pk, {_type, _height, _hash} = height_hash) do
     case Contract.call_contract(
            contract_pk,
-           {type, height, hash},
+           height_hash,
            "balances",
            []
          ) do
       {:ok, addr_map} ->
-        {addr_map, {type, height, hash}}
+        {addr_map, height_hash}
 
       {:error, "Out of gas"} ->
         Log.warn("Out of gas for #{:aeser_api_encoder.encode(:contract_pubkey, contract_pk)}")

@@ -58,12 +58,10 @@ defmodule AeMdw.Migrations.IndexGaAttachTxs do
 
     Log.info("Found #{length(txi_list)} :ga_attach_tx(s)...")
 
-    {:atomic, bi_txs_list} =
-      :mnesia.transaction(fn ->
-        Enum.map(txi_list, fn txi ->
-          [Model.tx(id: hash, block_index: bi)] = Database.read(Model.Tx, txi)
-          {bi, hash, txi}
-        end)
+    bi_txs_list =
+      Enum.map(txi_list, fn txi ->
+        [Model.tx(id: hash, block_index: bi)] = Database.read(Model.Tx, txi)
+        {bi, hash, txi}
       end)
 
     Log.info("Found #{length(bi_txs_list)} :ga_attach_tx(s)...")

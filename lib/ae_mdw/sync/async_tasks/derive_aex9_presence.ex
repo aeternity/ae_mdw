@@ -30,7 +30,9 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
     Log.info("[:derive_aex9_presence] #{inspect(contract_pk)} ...")
 
     {time_delta, {balances, _last_block_tuple}} =
-      :timer.tc(fn -> DBN.aex9_balances!(contract_pk, {nil, kbi, next_hash}) end)
+      :timer.tc(fn ->
+        DBN.aex9_balances(contract_pk, {nil, kbi, next_hash})
+      end)
 
     Log.info("[:derive_aex9_presence] #{inspect(contract_pk)} after #{time_delta / @microsecs}s")
 

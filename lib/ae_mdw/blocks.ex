@@ -21,7 +21,6 @@ defmodule AeMdw.Blocks do
   @type txi_pos() :: non_neg_integer() | -1
   @type block_index_txi_pos() :: {height(), txi_pos()}
   @type key_header() :: term()
-  @type key_hash() :: <<_::32>>
   @type block_hash() :: <<_::256>>
 
   @type block :: map()
@@ -46,7 +45,7 @@ defmodule AeMdw.Blocks do
   @spec fetch_blocks(direction(), range(), cursor() | nil, limit(), boolean()) ::
           {cursor() | nil, [block()], cursor() | nil}
   def fetch_blocks(direction, range, cursor, limit, sort_mbs?) do
-    {:ok, {last_gen, -1}} = Database.last_key(AeMdw.Db.Model.Block)
+    {:ok, {last_gen, -1}} = Database.last_key(@table)
 
     cursor = deserialize_cursor(cursor)
 

@@ -28,7 +28,7 @@ defmodule AeMdw.Db.IntTransfer do
   @reward_block_kind "reward_block"
   @reward_dev_kind "reward_dev"
 
-  @spec block_rewards_mutation(Blocks.height(), Blocks.key_header(), Blocks.key_hash()) ::
+  @spec block_rewards_mutation(Blocks.height(), Blocks.key_header(), Blocks.block_hash()) ::
           BlockRewardsMutation.t()
   def block_rewards_mutation(height, key_header, key_hash) do
     delay = :aec_governance.beneficiary_reward_delay()

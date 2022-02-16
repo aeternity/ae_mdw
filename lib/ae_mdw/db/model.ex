@@ -36,7 +36,7 @@ defmodule AeMdw.Db.Model do
           record(:block,
             index: Blocks.block_index(),
             tx_index: Txs.txi() | nil | -1,
-            hash: Blocks.key_hash()
+            hash: Blocks.block_hash()
           )
 
   # txs table :
@@ -460,6 +460,16 @@ defmodule AeMdw.Db.Model do
           )
 
   ################################################################################
+
+  # starts with only chain_tables and add them progressively by groups
+  @spec column_families() :: list(atom())
+  def column_families do
+    # next candidate chain_tables()
+    [
+      AeMdw.Db.Model.Tx,
+      AeMdw.Db.Model.Block
+    ]
+  end
 
   @spec tables() :: list(atom())
   def tables(),

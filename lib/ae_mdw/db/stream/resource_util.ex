@@ -1,9 +1,11 @@
 defmodule AeMdw.Db.Stream.Resource.Util do
+  # credo:disable-for-this-file
+  alias AeMdw.Database
   alias AeMdw.Db.Model
 
   require Model
 
-  import AeMdw.Db.Util
+  import AeMdw.Db.Util, only: [read: 2]
 
   ##########
 
@@ -12,12 +14,12 @@ defmodule AeMdw.Db.Stream.Resource.Util do
 
   def cursor(root, {i, limit}, mod, Progress) when i <= limit do
     chk = mod.key_checker(root, Progress, limit)
-    do_cursor(mod.entry(root, i, Progress), chk, advance_fn(&next/2, chk))
+    do_cursor(mod.entry(root, i, Progress), chk, advance_fn(&Database.next_key/2, chk))
   end
 
   def cursor(root, {i, limit}, mod, Degress) when i >= limit do
     chk = mod.key_checker(root, Degress, limit)
-    do_cursor(mod.entry(root, i, Degress), chk, advance_fn(&prev/2, chk))
+    do_cursor(mod.entry(root, i, Degress), chk, advance_fn(&Database.prev_key/2, chk))
   end
 
   def do_cursor(:"$end_of_table", _checker, _advance),
@@ -32,10 +34,10 @@ defmodule AeMdw.Db.Stream.Resource.Util do
   def advance_fn(succ, key_checker) do
     fn tab, key ->
       case succ.(tab, key) do
-        :"$end_of_table" ->
+        :none ->
           {:halt, :eot}
 
-        next_key ->
+        {:ok, next_key} ->
           case key_checker.(next_key) do
             true -> {:cont, next_key}
             false -> {:halt, :keychk}

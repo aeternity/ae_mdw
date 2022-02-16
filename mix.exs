@@ -77,7 +77,9 @@ defmodule AeMdw.MixProject do
           :aeu_mtrees,
           :app_ctrl,
           :app_ctrl_server,
-          :enacl
+          :enacl,
+          :sext,
+          :rocksdb
         ]
       ],
       dialyzer: dialyzer(),

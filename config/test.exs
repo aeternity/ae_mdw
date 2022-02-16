@@ -1,14 +1,22 @@
 use Mix.Config
 
-# ae_mdw
-config :ae_mdw,
-  sync: false
+# Sync
+config :ae_mdw, sync: false
 
-# We don't run a server during test. If one is required,
-# you can enable the server option below.
+data_dir =
+  if System.get_env("INTEGRATION_TEST") do
+    "data.db"
+  else
+    "test_data.db"
+  end
+
+# Database
+config :ae_mdw, AeMdw.Db.RocksDb, data_dir: data_dir
+
+# HTTP
 config :ae_mdw, AeMdwWeb.Endpoint,
   http: [port: 4002],
   server: false
 
-# Print only warnings and errors during test
+# Log warnings
 config :logger, level: :warn
