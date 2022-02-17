@@ -3,7 +3,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
 
   alias AeMdw.Db.Model
 
-  alias AeMdw.Db.DatabaseWriteMutation
+  alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.Sync.Contract
   alias AeMdw.Node
 
@@ -29,13 +29,13 @@ defmodule AeMdw.Db.Sync.ContractTest do
       ]
 
       mutation_1 =
-        DatabaseWriteMutation.new(
+        WriteMutation.new(
           Model.IdIntContractCall,
           Model.id_int_contract_call(index: {account_id, 1, 3, 0})
         )
 
       mutation_2 =
-        DatabaseWriteMutation.new(
+        WriteMutation.new(
           Model.IdIntContractCall,
           Model.id_int_contract_call(index: {account_id, 1, 3, 1})
         )
@@ -70,13 +70,13 @@ defmodule AeMdw.Db.Sync.ContractTest do
       ]
 
       mutation_1 =
-        DatabaseWriteMutation.new(
+        WriteMutation.new(
           Model.FnameIntContractCall,
           Model.fname_int_contract_call(index: {"Call.amount", 3, 0})
         )
 
       mutation_2 =
-        DatabaseWriteMutation.new(
+        WriteMutation.new(
           Model.FnameIntContractCall,
           Model.fname_int_contract_call(index: {"Call.amount", 3, 1})
         )
