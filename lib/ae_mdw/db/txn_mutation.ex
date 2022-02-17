@@ -6,6 +6,6 @@ defprotocol AeMdw.Db.TxnMutation do
   @doc """
   Abstracted function that performs the actual change into database.
   """
-  @spec execute(AeMdw.Database.transaction(), t()) :: :ok
+  @spec execute(t(), AeMdw.Database.transaction()) :: :ok
   def execute(transaction, mutation)
 end
