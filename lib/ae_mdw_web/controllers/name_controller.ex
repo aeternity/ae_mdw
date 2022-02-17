@@ -74,10 +74,13 @@ defmodule AeMdwWeb.NameController do
       scope: scope
     } = assigns
 
-    {prev_cursor, names, next_cursor} =
-      Names.fetch_inactive_names(pagination, scope, order_by, cursor, expand?)
+    case Names.fetch_inactive_names(pagination, scope, order_by, cursor, expand?) do
+      {:ok, prev_cursor, names, next_cursor} ->
+        Util.paginate(conn, prev_cursor, names, next_cursor)
 
-    Util.paginate(conn, prev_cursor, names, next_cursor)
+      {:error, reason} ->
+        Util.send_error(conn, :bad_request, reason)
+    end
   end
 
   @spec active_names(Conn.t(), map()) :: Conn.t()
@@ -90,10 +93,13 @@ defmodule AeMdwWeb.NameController do
       scope: scope
     } = assigns
 
-    {prev_cursor, names, next_cursor} =
-      Names.fetch_active_names(pagination, scope, order_by, cursor, expand?)
+    case Names.fetch_active_names(pagination, scope, order_by, cursor, expand?) do
+      {:ok, prev_cursor, names, next_cursor} ->
+        Util.paginate(conn, prev_cursor, names, next_cursor)
 
-    Util.paginate(conn, prev_cursor, names, next_cursor)
+      {:error, reason} ->
+        Util.send_error(conn, :bad_request, reason)
+    end
   end
 
   @spec names(Conn.t(), map()) :: Conn.t()
@@ -106,10 +112,13 @@ defmodule AeMdwWeb.NameController do
       scope: scope
     } = assigns
 
-    {prev_cursor, names, next_cursor} =
-      Names.fetch_names(pagination, scope, order_by, query, cursor, expand?)
+    case Names.fetch_names(pagination, scope, order_by, query, cursor, expand?) do
+      {:ok, prev_cursor, names, next_cursor} ->
+        Util.paginate(conn, prev_cursor, names, next_cursor)
 
-    Util.paginate(conn, prev_cursor, names, next_cursor)
+      {:error, reason} ->
+        Util.send_error(conn, :bad_request, reason)
+    end
   end
 
   @spec search(Conn.t(), map()) :: Conn.t()

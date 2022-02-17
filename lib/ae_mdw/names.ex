@@ -33,6 +33,7 @@ defmodule AeMdw.Names do
   @typep order_by :: :expiration | :name
   @typep pagination :: Collection.direction_limit()
   @typep range :: {:gen, Range.t()} | nil
+  @typep reason :: binary()
 
   @table_active Model.ActiveName
   @table_active_expiration Model.ActiveNameExpiration
@@ -45,7 +46,7 @@ defmodule AeMdw.Names do
   @states ~w(active inactive)
 
   @spec fetch_names(pagination(), range(), order_by(), query(), cursor() | nil, boolean()) ::
-          {cursor() | nil, [name()], cursor() | nil}
+          {:ok, cursor() | nil, [name()], cursor() | nil} | {:error, reason()}
   def fetch_names(pagination, range, :expiration, query, cursor, expand?) do
     cursor = deserialize_expiration_cursor(cursor)
     scope = deserialize_scope(range)
@@ -59,7 +60,7 @@ defmodule AeMdw.Names do
         |> build_expiration_streamer(scope, cursor)
         |> Collection.paginate(pagination)
 
-      {serialize_expiration_cursor(prev_cursor), render_exp_list(expiration_keys, expand?),
+      {:ok, serialize_expiration_cursor(prev_cursor), render_exp_list(expiration_keys, expand?),
        serialize_expiration_cursor(next_cursor)}
     rescue
       e in ErrInput ->
@@ -79,7 +80,7 @@ defmodule AeMdw.Names do
         |> build_name_streamer(cursor)
         |> Collection.paginate(pagination)
 
-      {serialize_name_cursor(prev_cursor), render_names_list(name_keys, expand?),
+      {:ok, serialize_name_cursor(prev_cursor), render_names_list(name_keys, expand?),
        serialize_name_cursor(next_cursor)}
     rescue
       e in ErrInput ->
@@ -88,7 +89,12 @@ defmodule AeMdw.Names do
   end
 
   def fetch_names(_pagination, _range, :name, _query, _cursor, _expand?) do
-    raise "cant scope names sorted by name"
+    try do
+      raise(ErrInput.Query, value: "can't scope names sorted by name")
+    rescue
+      e in ErrInput ->
+        {:error, e.message}
+    end
   end
 
   defp build_name_streamer(%{owned_by: owner_pk, state: "active"}, cursor) do
@@ -144,7 +150,7 @@ defmodule AeMdw.Names do
   end
 
   defp build_expiration_streamer(%{owned_by: _owner_pk}, _scope, _cursor) do
-    raise "Can't order by expiration when filtering by owner"
+    raise(ErrInput.Query, value: "can't order by expiration when filtering by owner")
   end
 
   defp build_expiration_streamer(%{state: "active"}, scope, cursor) do
@@ -183,12 +189,12 @@ defmodule AeMdw.Names do
   end
 
   @spec fetch_active_names(pagination(), range(), order_by(), cursor() | nil, boolean()) ::
-          {cursor() | nil, [name()], cursor() | nil}
+          {:ok, cursor() | nil, [name()], cursor() | nil} | {:error, reason()}
   def fetch_active_names(pagination, range, order_by, cursor, expand?),
     do: fetch_names(pagination, range, order_by, %{"state" => "active"}, cursor, expand?)
 
   @spec fetch_inactive_names(pagination(), range(), order_by(), cursor() | nil, boolean()) ::
-          {cursor() | nil, [name()], cursor() | nil}
+          {:ok, cursor() | nil, [name()], cursor() | nil} | {:error, reason()}
   def fetch_inactive_names(pagination, range, order_by, cursor, expand?),
     do: fetch_names(pagination, range, order_by, %{"state" => "inactive"}, cursor, expand?)
 
@@ -361,7 +367,7 @@ defmodule AeMdw.Names do
   defp deserialize_scope(_nil_or_txis_scope), do: nil
 
   defp convert_param({"owned_by", account_id}) when is_binary(account_id),
-    do: {:account_pk, Validate.id!(account_id, [:account_pubkey])}
+    do: {:owned_by, Validate.id!(account_id, [:account_pubkey])}
 
   defp convert_param({"state", state}) when state in @states, do: {:state, state}
 

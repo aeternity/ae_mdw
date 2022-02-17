@@ -585,6 +585,21 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
                conn |> get("/v2/names", by: by, direction: direction) |> json_response(400)
     end
 
+    test "renders error when filtering by owner with expiration order", %{conn: conn} do
+      id = "ak_KR3a8dukEYVoZPoWFaszFgjKUpBh7J1Q5iWsz9YCamHn2rTCp"
+      error_msg = "invalid query: can't order by expiration when filtering by owner"
+
+      assert %{"error" => ^error_msg} =
+               conn |> get("/v2/names", owned_by: id) |> json_response(400)
+    end
+
+    test "renders error when scoping names sorted by name", %{conn: conn} do
+      error_msg = "invalid query: can't scope names sorted by name"
+
+      assert %{"error" => ^error_msg} =
+               conn |> get("/v2/names", by: "name", scope: "gen:10-100") |> json_response(400)
+    end
+
     test "it returns valid names on a given range", %{conn: conn} do
       first = 100_000
       last = 500_000
