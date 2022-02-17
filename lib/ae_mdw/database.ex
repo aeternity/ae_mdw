@@ -216,6 +216,7 @@ defmodule AeMdw.Database do
     RocksDbCF.put(txn, tab, record)
   end
 
+  @spec write(table(), record()) :: :ok
   def write(table, record) do
     :mnesia.write(table, record, :write)
   end

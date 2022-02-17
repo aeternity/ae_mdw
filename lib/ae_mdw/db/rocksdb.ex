@@ -166,9 +166,10 @@ defmodule AeMdw.Db.RocksDb do
   def dirty_delete(t_ref, table, key) do
     {db_ref, cf_ref} = cf_refs(table)
 
-    with {:ok, _value} <- :rocksdb.transaction_get(t_ref, cf_ref, key, []) do
-      :ok = :rocksdb.transaction_delete(t_ref, cf_ref, key)
-    else
+    case :rocksdb.transaction_get(t_ref, cf_ref, key, []) do
+      {:ok, _value} ->
+        :ok = :rocksdb.transaction_delete(t_ref, cf_ref, key)
+
       :not_found ->
         :rocksdb.delete(db_ref, cf_ref, key, [])
 

@@ -9,7 +9,7 @@ defmodule AeMdw.Db.RocksDbCFTest do
 
   require Model
 
-  def setup_transaction(_) do
+  defp setup_transaction(_ctx) do
     {:ok, txn} = RocksDb.transaction_new()
 
     {:ok, txn: txn}
