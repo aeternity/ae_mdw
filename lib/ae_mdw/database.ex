@@ -224,7 +224,7 @@ defmodule AeMdw.Database do
   @doc """
   Creates a transaction and commits the changes of a mutation list.
   """
-  @spec commit([TxnMutation.t()]) :: :ok | {:error, term()}
+  @spec commit([TxnMutation.t()]) :: :ok
   def commit(txn_mutations) do
     {:ok, txn} = RocksDb.transaction_new()
 
