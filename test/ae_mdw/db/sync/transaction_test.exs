@@ -32,7 +32,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         txi = @very_high_txi + 1
         block_index = {height, 0}
 
-        mutations =
+        {_txn_mutations, mutations} =
           Transaction.transaction_mutations(
             {signed_tx, txi},
             {block_index, mb, mb_time, %{}},
@@ -42,6 +42,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         fn ->
           mutations
           |> Enum.reject(&is_nil/1)
+          |> List.flatten()
           |> Enum.each(&Mutation.mutate/1)
 
           {sender_pk, recipient_pk} = pubkeys_from_tx(signed_tx)
@@ -70,7 +71,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         txi = @very_high_txi + 1
         block_index = {height, 0}
 
-        mutations =
+        {_txn_mutations, mutations} =
           Transaction.transaction_mutations(
             {signed_tx, txi},
             {block_index, mb, mb_time, %{}},
@@ -80,6 +81,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         fn ->
           mutations
           |> Enum.reject(&is_nil/1)
+          |> List.flatten()
           |> Enum.each(&Mutation.mutate/1)
 
           {sender_pk, recipient_pk} = pubkeys_from_tx(signed_tx)

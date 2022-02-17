@@ -14,6 +14,7 @@ if :integration not in Keyword.fetch!(config, :include) do
   :ok = RocksDb.close()
   dir = Application.fetch_env!(:ae_mdw, RocksDb)[:data_dir]
   {:ok, _} = File.rm_rf(dir)
+  System.cmd("sync", [])
   :ok = RocksDb.open()
 end
 

@@ -5,108 +5,112 @@ defmodule AeMdw.Db.RocksDbCFTest do
   alias AeMdw.Db.RocksDbCF
   alias AeMdw.Db.RocksDb
 
+  import AeMdw.Db.ModelFixtures
+
   require Model
 
+  def setup_transaction(_) do
+    {:ok, txn} = RocksDb.transaction_new()
+
+    {:ok, txn: txn}
+  end
+
   describe "read_tx/1" do
-    test "reads a tx from transaction" do
+    setup :setup_transaction
+
+    test "reads a tx from transaction", %{txn: txn} do
       txi = new_txi()
       m_tx = Model.tx(index: txi)
-      assert :ok = RocksDbCF.put(Model.Tx, m_tx)
+      assert :ok = RocksDbCF.put(txn, Model.Tx, m_tx)
       assert {:ok, ^m_tx} = RocksDbCF.read_tx(txi)
     end
 
-    test "reads a committed tx" do
+    test "reads a committed tx", %{txn: txn} do
       txi = new_txi()
       m_tx = Model.tx(index: txi)
-      assert :ok = RocksDbCF.put(Model.Tx, m_tx)
-      RocksDb.commit()
+      assert :ok = RocksDbCF.put(txn, Model.Tx, m_tx)
+      assert :ok = RocksDb.transaction_commit(txn)
       assert {:ok, ^m_tx} = RocksDbCF.read_tx(txi)
     end
   end
 
   describe "read_block/1" do
-    test "read a block from transaction" do
+    setup :setup_transaction
+
+    test "read a block from transaction", %{txn: txn} do
       Model.block(index: key) = m_block = new_block()
-      assert :ok = RocksDbCF.put(Model.Block, m_block)
+      assert :ok = RocksDbCF.put(txn, Model.Block, m_block)
       assert {:ok, ^m_block} = RocksDbCF.read_block(key)
     end
 
-    test "reads a committed block" do
+    test "reads a committed block", %{txn: txn} do
       Model.block(index: key) = m_block = new_block()
-      assert :ok = RocksDbCF.put(Model.Block, m_block)
-      RocksDb.commit()
+      assert :ok = RocksDbCF.put(txn, Model.Block, m_block)
+      assert :ok = RocksDb.transaction_commit(txn)
       assert {:ok, ^m_block} = RocksDbCF.read_block(key)
     end
   end
 
   describe "put/2" do
-    test "writes only to transaction" do
+    setup :setup_transaction
+
+    test "writes only to transaction", %{txn: txn} do
       txi = new_txi()
       m_tx = Model.tx(index: txi)
-      assert :ok = RocksDbCF.put(Model.Tx, m_tx)
+      assert :ok = RocksDbCF.put(txn, Model.Tx, m_tx)
       assert :not_found = RocksDbCF.fetch(Model.Tx, txi)
     end
 
-    test "writes after commit" do
+    test "writes after commit", %{txn: txn} do
       txi = new_txi()
       m_tx = Model.tx(index: txi)
-      assert :ok = RocksDbCF.put(Model.Tx, m_tx)
+      assert :ok = RocksDbCF.put(txn, Model.Tx, m_tx)
       assert :not_found = RocksDbCF.fetch(Model.Tx, txi)
-      RocksDb.commit()
+      assert :ok = RocksDb.transaction_commit(txn)
       assert {:ok, ^m_tx} = RocksDbCF.fetch(Model.Tx, txi)
     end
   end
 
   describe "delete/2" do
-    test "changes transaction" do
-      txi = new_txi()
-      m_tx = Model.tx(index: txi)
-      assert :ok = RocksDbCF.put(Model.Tx, m_tx)
-      assert {:ok, m_tx} = RocksDbCF.dirty_fetch(Model.Tx, txi)
-      assert :ok = RocksDbCF.delete(Model.Tx, txi)
-      assert :not_found = RocksDbCF.fetch(Model.Tx, txi)
-    end
-
-    test "deletes committed tx" do
-      txi = new_txi()
-      m_tx = Model.tx(index: txi)
-      assert :ok = RocksDbCF.put(Model.Tx, m_tx)
-      RocksDb.commit()
-      assert {:ok, ^m_tx} = RocksDbCF.fetch(Model.Tx, txi)
-      assert :ok = RocksDbCF.delete(Model.Tx, txi)
-      assert :not_found = RocksDbCF.fetch(Model.Tx, txi)
+    test "deletes a committed record" do
+      key = {654_321, -1}
+      m_block = Model.block(index: key)
+      assert :ok = RocksDbCF.dirty_put(Model.Block, m_block)
+      assert {:ok, ^m_block} = RocksDbCF.fetch(Model.Block, key)
+      assert :ok = RocksDbCF.delete(Model.Block, key)
+      assert :not_found = RocksDbCF.fetch(Model.Block, key)
     end
   end
 
   describe "exists?/2" do
-    test "returns true when is commited" do
+    setup :setup_transaction
+
+    test "returns true when is commited", %{txn: txn} do
       txi = new_txi()
       m_tx = Model.tx(index: txi)
-      assert :ok = RocksDbCF.put(Model.Tx, m_tx)
-      RocksDb.commit()
+      assert :ok = RocksDbCF.put(txn, Model.Tx, m_tx)
+      assert :ok = RocksDb.transaction_commit(txn)
       assert RocksDbCF.exists?(Model.Tx, txi)
     end
 
-    test "returns false when is not commited" do
+    test "returns false when is not commited", %{txn: txn} do
       txi = new_txi()
       m_tx = Model.tx(index: txi)
-      assert :ok = RocksDbCF.put(Model.Tx, m_tx)
+      assert :ok = RocksDbCF.put(txn, Model.Tx, m_tx)
       refute RocksDbCF.exists?(Model.Tx, txi)
     end
   end
 
   describe "first_key/1" do
     test "returns the first key when table is not empty" do
-      assert :ok = RocksDbCF.put(Model.Tx, Model.tx(index: new_txi()))
-      RocksDb.commit()
+      assert :ok = RocksDbCF.dirty_put(Model.Tx, Model.tx(index: 0))
       assert {:ok, 0} = RocksDbCF.first_key(Model.Tx)
     end
   end
 
   describe "last_key/1" do
     test "returns the last key when table is not empty" do
-      assert :ok = RocksDbCF.put(Model.Tx, Model.tx(index: new_txi()))
-      RocksDb.commit()
+      assert :ok = RocksDbCF.dirty_put(Model.Tx, Model.tx(index: new_txi()))
       assert {:ok, last_txi} = RocksDbCF.last_key(Model.Tx)
       assert {:ok, Model.tx(index: ^last_txi)} = RocksDbCF.fetch(Model.Tx, last_txi)
     end
@@ -118,16 +122,14 @@ defmodule AeMdw.Db.RocksDbCFTest do
     end
 
     test "returns the previous key for integer" do
-      assert :ok = RocksDbCF.put(Model.Tx, Model.tx(index: new_txi()))
-      assert :ok = RocksDbCF.put(Model.Tx, Model.tx(index: new_txi()))
-      RocksDb.commit()
+      assert :ok = RocksDbCF.dirty_put(Model.Tx, Model.tx(index: new_txi()))
+      assert :ok = RocksDbCF.dirty_put(Model.Tx, Model.tx(index: new_txi()))
       assert {:ok, 0} = RocksDbCF.prev_key(Model.Tx, 1)
     end
 
     test "returns the previous key for tuple" do
-      assert :ok = RocksDbCF.put(Model.Block, Model.block(index: {new_kbi(), -1}))
-      assert :ok = RocksDbCF.put(Model.Block, Model.block(index: {new_kbi(), -1}))
-      RocksDb.commit()
+      assert :ok = RocksDbCF.dirty_put(Model.Block, Model.block(index: {new_kbi(), -1}))
+      assert :ok = RocksDbCF.dirty_put(Model.Block, Model.block(index: {new_kbi(), -1}))
       assert {:ok, {0, -1}} = RocksDbCF.prev_key(Model.Block, {0, nil})
     end
   end
@@ -138,28 +140,27 @@ defmodule AeMdw.Db.RocksDbCFTest do
     end
 
     test "returns the next key for integer" do
-      assert :ok = RocksDbCF.put(Model.Tx, Model.tx(index: new_txi()))
-      assert :ok = RocksDbCF.put(Model.Tx, Model.tx(index: new_txi()))
-      assert :ok = RocksDbCF.put(Model.Tx, Model.tx(index: new_txi()))
-      RocksDb.commit()
+      assert :ok = RocksDbCF.dirty_put(Model.Tx, Model.tx(index: 1))
+      assert :ok = RocksDbCF.dirty_put(Model.Tx, Model.tx(index: 2))
       assert {:ok, 2} = RocksDbCF.next_key(Model.Tx, 1)
     end
 
     test "returns the next key for tuple" do
-      assert :ok = RocksDbCF.put(Model.Block, new_block())
-      assert :ok = RocksDbCF.put(Model.Block, new_block())
-      RocksDb.commit()
+      assert :ok = RocksDbCF.dirty_put(Model.Block, Model.block(index: {0, -1}))
+      assert :ok = RocksDbCF.dirty_put(Model.Block, Model.block(index: {1, -1}))
       assert {:ok, {1, -1}} = RocksDbCF.next_key(Model.Block, {0, -1})
       assert {:ok, {0, -1}} = RocksDbCF.next_key(Model.Block, {0, -2})
     end
   end
 
   describe "dirty_fetch/2" do
-    test "returns :not_found when key does not exist" do
-      assert :not_found = RocksDbCF.dirty_fetch(Model.Tx, :unknown)
+    setup :setup_transaction
+
+    test "returns :not_found when key does not exist", %{txn: txn} do
+      assert :not_found = RocksDbCF.dirty_fetch(txn, Model.Tx, :unknown)
     end
 
-    test "returns the record from the transaction" do
+    test "returns the record from the transaction", %{txn: txn} do
       key = new_txi()
 
       m_tx =
@@ -170,11 +171,11 @@ defmodule AeMdw.Db.RocksDbCFTest do
           time: 5678
         )
 
-      assert :ok = RocksDbCF.put(Model.Tx, m_tx)
-      assert {:ok, ^m_tx} = RocksDbCF.dirty_fetch(Model.Tx, key)
+      assert :ok = RocksDbCF.put(txn, Model.Tx, m_tx)
+      assert {:ok, ^m_tx} = RocksDbCF.dirty_fetch(txn, Model.Tx, key)
     end
 
-    test "returns the committed record of a key" do
+    test "returns the committed record of a key", %{txn: txn} do
       key = new_txi()
 
       m_tx =
@@ -185,29 +186,32 @@ defmodule AeMdw.Db.RocksDbCFTest do
           time: 5678
         )
 
-      assert :ok = RocksDbCF.put(Model.Tx, m_tx)
-      RocksDb.commit()
-      assert {:ok, ^m_tx} = RocksDbCF.dirty_fetch(Model.Tx, key)
+      assert :ok = RocksDbCF.put(txn, Model.Tx, m_tx)
+      assert :ok = RocksDb.transaction_commit(txn)
+      {:ok, new_txn} = RocksDb.transaction_new()
+      assert {:ok, ^m_tx} = RocksDbCF.dirty_fetch(new_txn, Model.Tx, key)
     end
   end
 
   describe "fetch/2" do
+    setup :setup_transaction
+
     test "returns :not_found when key does not exist" do
       assert :not_found = RocksDbCF.fetch(Model.Tx, :unknown)
       assert :not_found = RocksDbCF.fetch(Model.Block, :unknown)
     end
 
-    test "returns :not_found for a record only in the transaction" do
-      key = new_txi()
-      assert :ok = RocksDbCF.put(Model.Tx, Model.tx(index: key))
-      assert :not_found = RocksDbCF.fetch(Model.Tx, key)
+    test "returns :not_found for a record only in the transaction", %{txn: txn} do
+      txi = 1_234_567_890
+      assert :ok = RocksDbCF.put(txn, Model.Tx, Model.tx(index: txi))
+      assert :not_found = RocksDbCF.fetch(Model.Tx, txi)
 
-      key = {new_kbi(), -1}
-      assert :ok = RocksDbCF.put(Model.Block, Model.block(index: key))
+      key = {7_654_321, -1}
+      assert :ok = RocksDbCF.put(txn, Model.Block, Model.block(index: key))
       assert :not_found = RocksDbCF.fetch(Model.Block, key)
     end
 
-    test "returns a committed tx" do
+    test "returns a committed tx", %{txn: txn} do
       key = new_txi()
 
       m_tx =
@@ -218,12 +222,12 @@ defmodule AeMdw.Db.RocksDbCFTest do
           time: 5678
         )
 
-      assert :ok = RocksDbCF.put(Model.Tx, m_tx)
-      RocksDb.commit()
+      assert :ok = RocksDbCF.put(txn, Model.Tx, m_tx)
+      assert :ok = RocksDb.transaction_commit(txn)
       assert {:ok, ^m_tx} = RocksDbCF.fetch(Model.Tx, key)
     end
 
-    test "returns a committed block" do
+    test "returns a committed block", %{txn: txn} do
       key = {new_kbi(), -1}
 
       m_block =
@@ -233,23 +237,9 @@ defmodule AeMdw.Db.RocksDbCFTest do
           hash: :crypto.strong_rand_bytes(32)
         )
 
-      assert :ok = RocksDbCF.put(Model.Block, m_block)
-      RocksDb.commit()
+      assert :ok = RocksDbCF.put(txn, Model.Block, m_block)
+      assert :ok = RocksDb.transaction_commit(txn)
       assert {:ok, ^m_block} = RocksDbCF.fetch(Model.Block, key)
     end
-  end
-
-  #
-  # Helpers
-  #
-  defp new_txi(), do: :ets.update_counter(:counters, :txi, {2, 1})
-  defp new_kbi(), do: :ets.update_counter(:counters, :kbi, {2, 1})
-
-  defp new_block() do
-    Model.block(
-      index: {new_kbi(), -1},
-      tx_index: Enum.random(1..1_000_000),
-      hash: :crypto.strong_rand_bytes(32)
-    )
   end
 end

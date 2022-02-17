@@ -13,7 +13,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.ContractCreateMutation
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.KeyBlocksMutation
-  alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Name
   alias AeMdw.Db.NameRevokeMutation
@@ -25,7 +24,9 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Sync.Origin
   alias AeMdw.Db.Sync.Stats
   alias AeMdw.Db.WriteFieldsMutation
-  alias AeMdw.Db.WriteTxMutation
+  alias AeMdw.Db.WriteMutation
+  alias AeMdw.Db.WriteTxnMutation
+  alias AeMdw.Db.TxnMutation
   alias AeMdw.Database
   alias AeMdw.Node
   alias AeMdw.Sync.AsyncTasks.Producer
@@ -94,7 +95,7 @@ defmodule AeMdw.Db.Sync.Transaction do
           {Node.signed_tx(), Txs.txi()},
           {Blocks.block_index(), Blocks.block_hash(), Blocks.time(), Contract.grouped_events()},
           boolean()
-        ) :: [Mutation.t()]
+        ) :: {[TxnMutation.t()], [Mutation.t()]}
   def transaction_mutations(
         {signed_tx, txi},
         {block_index, block_hash, mb_time, mb_events} = tx_ctx,
@@ -103,7 +104,6 @@ defmodule AeMdw.Db.Sync.Transaction do
     {mod, tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
     tx_hash = :aetx_sign.hash(signed_tx)
     type = mod.type()
-    model_tx = Model.tx(index: txi, id: tx_hash, block_index: block_index, time: mb_time)
 
     tx_context = %TxContext{
       type: type,
@@ -116,22 +116,36 @@ defmodule AeMdw.Db.Sync.Transaction do
       tx_events: Map.get(mb_events, tx_hash, [])
     }
 
-    inner_tx_mutations =
+    {inner_txn_mutations, inner_mutations} =
       if type == :ga_meta_tx or type == :paying_for_tx do
         inner_signed_tx = Sync.InnerTx.signed_tx(type, tx)
         # indexes the inner with the txi from the wrapper/outer
         transaction_mutations({inner_signed_tx, txi}, tx_ctx, true)
+      else
+        {nil, nil}
       end
 
-    :ets.insert(:tx_sync_cache, {txi, model_tx})
+    m_tx = Model.tx(index: txi, id: tx_hash, block_index: block_index, time: mb_time)
+    :ets.insert(:tx_sync_cache, {txi, m_tx})
 
-    [
-      WriteTxMutation.new(model_tx, type, txi, mb_time, inner_tx?),
-      tx_mutations(tx_context),
-      WriteFieldsMutation.new(type, tx, block_index, txi),
-      inner_tx_mutations
-    ]
-    |> List.flatten()
+    txn_tx_mutation =
+      if not inner_tx? do
+        WriteTxnMutation.new(Model.Tx, m_tx)
+      end
+
+    {
+      [
+        txn_tx_mutation,
+        inner_txn_mutations
+      ],
+      [
+        WriteMutation.new(Model.Type, Model.type(index: {type, txi})),
+        WriteMutation.new(Model.Time, Model.time(index: {mb_time, txi})),
+        tx_mutations(tx_context),
+        WriteFieldsMutation.new(type, tx, block_index, txi),
+        inner_mutations
+      ]
+    }
   end
 
   ################################################################################
@@ -170,10 +184,11 @@ defmodule AeMdw.Db.Sync.Transaction do
     {next_txi, _mb_index} =
       Enum.reduce(micro_blocks, {txi, 0}, fn mblock, {txi, mbi} = txi_acc ->
         if mbi > last_mbi do
-          {mutations, acc} = micro_block_mutations(mblock, txi_acc)
+          {txn_mutations, mutations, acc} = micro_block_mutations(mblock, txi_acc)
+          Database.commit(txn_mutations)
           Database.transaction(mutations)
-          Database.commit()
           Producer.commit_enqueued()
+
           Broadcaster.broadcast_micro_block(mblock, :mdw)
           Broadcaster.broadcast_txs(mblock, :mdw)
           acc
@@ -199,11 +214,12 @@ defmodule AeMdw.Db.Sync.Transaction do
     end
 
     Database.transaction([
-      Stats.new_mutation(height, last_mbi == -1),
-      KeyBlocksMutation.new(kb_model, next_txi)
+      Stats.new_mutation(height, last_mbi == -1)
     ])
 
-    Database.commit()
+    Database.commit([
+      KeyBlocksMutation.new(kb_model, next_txi)
+    ])
 
     Broadcaster.broadcast_key_block(key_block, :mdw)
 
@@ -219,24 +235,38 @@ defmodule AeMdw.Db.Sync.Transaction do
     height = :aec_blocks.height(mblock)
     mb_time = :aec_blocks.time_in_msecs(mblock)
     mb_hash = ok!(:aec_headers.hash_header(:aec_blocks.to_micro_header(mblock)))
-    mb_txi = (txi == 0 && -1) || txi
-    mb_model = Model.block(index: {height, mbi}, tx_index: mb_txi, hash: mb_hash)
     mb_txs = :aec_blocks.txs(mblock)
     events = AeMdw.Contract.get_grouped_events(mblock)
     tx_ctx = {{height, mbi}, mb_hash, mb_time, events}
 
-    txs_mutations =
+    {txn_txs_mutations, txs_mutations} =
       mb_txs
       |> Enum.with_index(txi)
-      |> Enum.flat_map(&transaction_mutations(&1, tx_ctx))
+      |> Enum.reduce({[], []}, fn tx_txi, {txn_mutations_acc, mutations_acc} ->
+        {txn_mutations, mutations} = transaction_mutations(tx_txi, tx_ctx)
 
+        {
+          [txn_mutations_acc, txn_mutations],
+          [mutations_acc, mutations]
+        }
+      end)
+
+    # rocksdb mutations
+    mb_txi = (txi == 0 && -1) || txi
+    mb_model = Model.block(index: {height, mbi}, tx_index: mb_txi, hash: mb_hash)
+
+    txn_mutations = [
+      WriteTxnMutation.new(Model.Block, mb_model),
+      txn_txs_mutations
+    ]
+
+    # mnesia mutations
     mutations = [
-      WriteMutation.new(Model.Block, mb_model),
       txs_mutations,
       Aex9AccountPresenceMutation.new(height, mbi)
     ]
 
-    {mutations, {txi + length(mb_txs), mbi + 1}}
+    {txn_mutations, mutations, {txi + length(mb_txs), mbi + 1}}
   end
 
   defp tx_mutations(%TxContext{
