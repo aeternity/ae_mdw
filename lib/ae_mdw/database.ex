@@ -13,6 +13,7 @@ defmodule AeMdw.Database do
 
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
+  alias AeMdw.Db.TxnMutation
   alias AeMdw.Db.RocksDb
   alias AeMdw.Db.RocksDbCF
 
@@ -22,6 +23,7 @@ defmodule AeMdw.Database do
   @type direction() :: :forward | :backward
   @type cursor() :: key() | nil
   @type limit() :: pos_integer()
+  @type transaction() :: RocksDb.transaction()
 
   @end_token :"$end_of_table"
 
@@ -209,18 +211,29 @@ defmodule AeMdw.Database do
     :mnesia.read(table, key, lock)
   end
 
-  @spec write(table(), record()) :: :ok
-  def write(tab, record) when use_rocksdb?(tab) do
-    RocksDbCF.put(tab, record)
+  @spec write(transaction(), table(), record()) :: :ok
+  def write(txn, tab, record) when use_rocksdb?(tab) do
+    RocksDbCF.put(txn, tab, record)
   end
 
+  @spec write(table(), record()) :: :ok
   def write(table, record) do
     :mnesia.write(table, record, :write)
   end
 
-  @spec commit() :: :ok
-  def commit do
-    :ok = RocksDb.commit()
+  @doc """
+  Creates a transaction and commits the changes of a mutation list.
+  """
+  @spec commit([TxnMutation.t()]) :: :ok
+  def commit(txn_mutations) do
+    {:ok, txn} = RocksDb.transaction_new()
+
+    txn_mutations
+    |> List.flatten()
+    |> Enum.reject(&is_nil/1)
+    |> Enum.each(&TxnMutation.execute(&1, txn))
+
+    :ok = RocksDb.transaction_commit(txn)
   end
 
   @spec transaction([Mutation.t()]) :: :ok

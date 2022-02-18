@@ -20,18 +20,18 @@ defmodule AeMdw.Db.KeyBlocksMutation do
     %__MODULE__{key_block: m_block, next_txi: next_txi}
   end
 
-  @spec mutate(t()) :: :ok
-  def mutate(%__MODULE__{key_block: m_block, next_txi: next_txi}) do
+  @spec execute(t(), Database.transaction()) :: :ok
+  def execute(%__MODULE__{key_block: m_block, next_txi: next_txi}, txn) do
     {height, -1} = Model.block(m_block, :index)
     [next_kb] = Database.read(Model.Block, {height + 1, -1})
 
-    Database.write(Model.Block, m_block)
-    Database.write(Model.Block, Model.block(next_kb, tx_index: next_txi))
+    Database.write(txn, Model.Block, m_block)
+    Database.write(txn, Model.Block, Model.block(next_kb, tx_index: next_txi))
   end
 end
 
-defimpl AeMdw.Db.Mutation, for: AeMdw.Db.KeyBlocksMutation do
-  def mutate(mutation) do
-    @for.mutate(mutation)
+defimpl AeMdw.Db.TxnMutation, for: AeMdw.Db.KeyBlocksMutation do
+  def execute(mutation, txn) do
+    @for.execute(mutation, txn)
   end
 end
