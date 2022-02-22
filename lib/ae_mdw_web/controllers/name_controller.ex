@@ -29,6 +29,7 @@ defmodule AeMdwWeb.NameController do
     "inactive" => :inactive,
     "auction" => :auction
   }
+  @lifecycles Map.keys(@lifecycles_map)
 
   @spec auction(Conn.t(), map()) :: Conn.t()
   def auction(conn, %{"id" => ident} = params),
@@ -140,10 +141,8 @@ defmodule AeMdwWeb.NameController do
     lifecycles =
       query_string
       |> URI.query_decoder()
-      |> Enum.filter(&match?({"only", _lifecycle}, &1))
-      |> Enum.map(fn {"only", lifecycle} -> lifecycle end)
-      |> Enum.filter(&Map.get(@lifecycles_map, &1))
-      |> Enum.reject(&is_nil/1)
+      |> Enum.filter(&match?({"only", lifecycle} when lifecycle in @lifecycles, &1))
+      |> Enum.map(fn {"only", lifecycle} -> Map.fetch!(@lifecycles_map, lifecycle) end)
       |> Enum.uniq()
 
     %{pagination: pagination, cursor: cursor, expand?: expand?} = assigns
