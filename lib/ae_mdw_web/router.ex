@@ -88,6 +88,7 @@ defmodule AeMdwWeb.Router do
       get "/names/:id/pointers", NameController, :pointers
       get "/names/:id/pointees", NameController, :pointees
       get "/names/auctions", NameController, :auctions
+      get "/names/search", NameController, :search
       get "/names", NameController, :names
       get "/names/:id", NameController, :name
     end
@@ -105,7 +106,7 @@ defmodule AeMdwWeb.Router do
     get "/name/pointees/:id", NameController, :pointees
     get "/name/owned_by/:id", NameController, :owned_by
     get "/name/:id", NameController, :name
-    get "/names/search/:prefix", NameController, :search
+    get "/names/search/:prefix", NameController, :search_v1
     get "/names/auctions", NameController, :auctions
     get "/names/auctions/:scope_type/:range", NameController, :auctions
     get "/names/inactive", NameController, :inactive_names
