@@ -129,8 +129,9 @@ defmodule AeMdw.Node.Db do
       {:ok, addr_map} ->
         {addr_map, height_hash}
 
-      {:error, "Out of gas"} ->
-        Log.warn("Out of gas for #{:aeser_api_encoder.encode(:contract_pubkey, contract_pk)}")
+      {:error, reason} ->
+        contract_id = :aeser_api_encoder.encode(:contract_pubkey, contract_pk)
+        Log.warn("balances() failed! ct_id=#{contract_id}, reason=#{inspect(reason)}")
         {%{}, nil}
     end
   end
