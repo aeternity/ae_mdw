@@ -1,48 +1,12 @@
 defmodule AeMdw.Db.Stream.Name do
+  # credo:disable-for-this-file
+  alias AeMdw.Database
   alias AeMdw.Db.Stream.Resource.Util, as: RU
   alias AeMdw.Db.Model
 
   require Model
 
   import AeMdw.Db.Util
-
-  ##########
-
-  def auctions({:expiration, :forward}, mapper),
-    do: simple_resource(Model.AuctionExpiration, nil, &next/2, mapper)
-
-  def auctions({:expiration, :backward}, mapper),
-    do: simple_resource(Model.AuctionExpiration, <<>>, &prev/2, mapper)
-
-  def auctions({:name, :forward}, mapper),
-    do: simple_resource(Model.AuctionBid, nil, &next/2, mapper)
-
-  def auctions({:name, :backward}, mapper),
-    do: simple_resource(Model.AuctionBid, <<>>, &prev/2, mapper)
-
-  def active_names({:expiration, :forward}, mapper),
-    do: simple_resource(Model.ActiveNameExpiration, nil, &next/2, mapper)
-
-  def active_names({:expiration, :backward}, mapper),
-    do: simple_resource(Model.ActiveNameExpiration, <<>>, &prev/2, mapper)
-
-  def active_names({:name, :forward}, mapper),
-    do: simple_resource(Model.ActiveName, nil, &next/2, mapper)
-
-  def active_names({:name, :backward}, mapper),
-    do: simple_resource(Model.ActiveName, last_bin_key(Model.ActiveName), &prev/2, mapper)
-
-  def inactive_names({:expiration, :forward}, mapper),
-    do: simple_resource(Model.InactiveNameExpiration, nil, &next/2, mapper)
-
-  def inactive_names({:expiration, :backward}, mapper),
-    do: simple_resource(Model.InactiveNameExpiration, <<>>, &prev/2, mapper)
-
-  def inactive_names({:name, :forward}, mapper),
-    do: simple_resource(Model.InactiveName, nil, &next/2, mapper)
-
-  def inactive_names({:name, :backward}, mapper),
-    do: simple_resource(Model.InactiveName, last_bin_key(Model.InactiveName), &prev/2, mapper)
 
   ##########
 
@@ -55,8 +19,8 @@ defmodule AeMdw.Db.Stream.Name do
       when direction in [:forward, :backward] do
     {init_k, advance} =
       case direction do
-        :forward -> {prefix, &next/2}
-        :backward -> {prefix <> AeMdw.Node.max_blob(), &prev/2}
+        :forward -> {prefix, &Database.next_key/2}
+        :backward -> {prefix <> AeMdw.Node.max_blob(), &Database.prev_key/2}
       end
 
     advance = RU.advance_fn(advance, AeMdwWeb.Util.prefix_checker(prefix))
@@ -67,8 +31,8 @@ defmodule AeMdw.Db.Stream.Name do
       when direction in [:forward, :backward] do
     {init_k, advance} =
       case direction do
-        :forward -> {{prefix, {}, :_, :_, :_}, &next/2}
-        :backward -> {{prefix <> AeMdw.Node.max_blob(), [], :_, :_, :_}, &prev/2}
+        :forward -> {{prefix, {}, :_, :_, :_}, &Database.next_key/2}
+        :backward -> {{prefix <> AeMdw.Node.max_blob(), [], :_, :_, :_}, &Database.prev_key/2}
       end
 
     prefix_check = AeMdwWeb.Util.prefix_checker(prefix)
