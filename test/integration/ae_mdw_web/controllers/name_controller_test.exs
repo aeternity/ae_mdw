@@ -993,6 +993,18 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
     end
   end
 
+  describe "search" do
+    test "it returns an all matching names & auctions forward", %{conn: conn} do
+      prefix = "xyz"
+
+      names_and_auctions = conn |> get("/names/search/#{prefix}") |> json_response(200)
+      plain_names = Enum.map(names_and_auctions, fn %{"name" => name} -> name end)
+
+      assert ^plain_names = Enum.sort(plain_names)
+      assert Enum.all?(plain_names, &String.starts_with?(&1, prefix))
+    end
+  end
+
   ##########
 
   defp get_name(name) do
