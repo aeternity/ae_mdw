@@ -116,7 +116,7 @@ defmodule AeMdw.Db.Format do
       symbol: symbol,
       decimals: decimals,
       contract_txi: txi,
-      contract_id: :aeser_id.create(:contract, Origin.pubkey({:contract, txi}))
+      contract_id: :aeser_id.create(:contract, Origin.pubkey!({:contract, txi}))
     }
   end
 

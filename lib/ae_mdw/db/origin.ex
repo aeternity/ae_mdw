@@ -61,6 +61,14 @@ defmodule AeMdw.Db.Origin do
     end
   end
 
+  @spec pubkey!(contract_locator()) :: Contract.id()
+  def pubkey!(contract_locator) do
+    case pubkey(contract_locator) do
+      nil -> raise "Invalid contract #{inspect(contract_locator)}"
+      pubkey -> pubkey
+    end
+  end
+
   @spec pubkey(contract_locator()) :: Contract.id() | nil
   def pubkey({:contract, txi}) when txi < 0 do
     preset_contracts()
