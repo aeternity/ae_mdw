@@ -122,8 +122,8 @@ defmodule AeMdw.Db.RocksDbCFTest do
     end
 
     test "returns the previous key for integer" do
-      assert :ok = RocksDbCF.dirty_put(Model.Tx, Model.tx(index: new_txi()))
-      assert :ok = RocksDbCF.dirty_put(Model.Tx, Model.tx(index: new_txi()))
+      assert :ok = RocksDbCF.dirty_put(Model.Tx, Model.tx(index: 0))
+      assert :ok = RocksDbCF.dirty_put(Model.Tx, Model.tx(index: 1))
       assert {:ok, 0} = RocksDbCF.prev_key(Model.Tx, 1)
     end
 
