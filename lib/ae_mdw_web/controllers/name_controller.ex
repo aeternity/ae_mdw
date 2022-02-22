@@ -65,7 +65,7 @@ defmodule AeMdwWeb.NameController do
   end
 
   @spec inactive_names(Conn.t(), map()) :: Conn.t()
-  def inactive_names(%Conn{assigns: assigns} = conn, _req) do
+  def inactive_names(%Conn{assigns: assigns} = conn, _params) do
     %{
       pagination: pagination,
       cursor: cursor,
@@ -74,14 +74,17 @@ defmodule AeMdwWeb.NameController do
       scope: scope
     } = assigns
 
-    {prev_cursor, names, next_cursor} =
-      Names.fetch_inactive_names(pagination, scope, order_by, cursor, expand?)
+    case Names.fetch_inactive_names(pagination, scope, order_by, cursor, expand?) do
+      {:ok, prev_cursor, names, next_cursor} ->
+        Util.paginate(conn, prev_cursor, names, next_cursor)
 
-    Util.paginate(conn, prev_cursor, names, next_cursor)
+      {:error, reason} ->
+        Util.send_error(conn, :bad_request, reason)
+    end
   end
 
   @spec active_names(Conn.t(), map()) :: Conn.t()
-  def active_names(%Conn{assigns: assigns} = conn, _req) do
+  def active_names(%Conn{assigns: assigns} = conn, _params) do
     %{
       pagination: pagination,
       cursor: cursor,
@@ -90,14 +93,17 @@ defmodule AeMdwWeb.NameController do
       scope: scope
     } = assigns
 
-    {prev_cursor, names, next_cursor} =
-      Names.fetch_active_names(pagination, scope, order_by, cursor, expand?)
+    case Names.fetch_active_names(pagination, scope, order_by, cursor, expand?) do
+      {:ok, prev_cursor, names, next_cursor} ->
+        Util.paginate(conn, prev_cursor, names, next_cursor)
 
-    Util.paginate(conn, prev_cursor, names, next_cursor)
+      {:error, reason} ->
+        Util.send_error(conn, :bad_request, reason)
+    end
   end
 
   @spec names(Conn.t(), map()) :: Conn.t()
-  def names(%Conn{assigns: assigns} = conn, _params) do
+  def names(%Conn{assigns: assigns, query_params: query} = conn, _params) do
     %{
       pagination: pagination,
       cursor: cursor,
@@ -106,10 +112,13 @@ defmodule AeMdwWeb.NameController do
       scope: scope
     } = assigns
 
-    {prev_cursor, names, next_cursor} =
-      Names.fetch_names(pagination, scope, order_by, cursor, expand?)
+    case Names.fetch_names(pagination, scope, order_by, query, cursor, expand?) do
+      {:ok, prev_cursor, names, next_cursor} ->
+        Util.paginate(conn, prev_cursor, names, next_cursor)
 
-    Util.paginate(conn, prev_cursor, names, next_cursor)
+      {:error, reason} ->
+        Util.send_error(conn, :bad_request, reason)
+    end
   end
 
   @spec search(Conn.t(), map()) :: Conn.t()

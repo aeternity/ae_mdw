@@ -86,6 +86,16 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
     end
   end
 
+  defp extract_direction_and_scope(%{"scope" => scope}) do
+    case String.split(scope, ":") do
+      [scope_type, range] ->
+        extract_direction_and_scope(%{"scope_type" => scope_type, "range" => range})
+
+      _invalid_scope ->
+        {:error, "invalid scope: #{scope}"}
+    end
+  end
+
   defp extract_direction_and_scope(%{"direction" => "forward"}),
     do: {:ok, :forward, @default_scope}
 

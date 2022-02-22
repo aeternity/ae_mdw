@@ -4254,7 +4254,17 @@ This is a list of the exceptions together with the changes that need to be done:
 
 * `/blocks/:range` route was deleted and either `/v2/blocks/gen/:range` or `/v2/blocks/:direction` should be used instead.
 * `/blocks/gen/:range`, `/blocks/gen/:direction` - Each block now has a list of micro_blocks sorted by time, instead of it being a map.
-
+* `/name/auction/:id` - Was renamed to `/v2/names/:id/auctions`.
+* `/name/pointers/:id` - Was renamed to `/v2/names/:id/pointers`.
+* `/name/pointees/:id` - Was renamed to `/v2/names/:id/pointees`.
+* `/name/:id` - Was renamed to `/v2/names/:id`.
+* `/names/owned_by/:id` - Can now be accessed via `/v2/names?owned_by=:id`, to filter by active a `state=active` or `state=inactive` additional parameter can be used.
+* `/names/active` - Can now be accessed via `/v2/names?state=active`.
+* `/names/inactive` - Can now be accessed via `/v2/names?state=inactive`.
+* `/names/:scope_type/:range`, `/names/active/:scope_type/:range` and
+  `/names/inactive/:scope_type/:range` - Can now be accessed via `/v2/names?scope=txi:100-200` or `/v2/names?scope=gen:30-40`.
+* `/names/auctions` - Can now be accessed via `/v2/names/auctions`
+* `/names/auctions/:scope_type/:range` - Can now be accessed via `/v2/auctions?scope=gen:10-100` (or `?scope=txi:1000-2000`).
 
 ## Websocket interface
 
