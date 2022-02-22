@@ -21,10 +21,12 @@ config :ae_mdw, build_revision: mdw_revision
 
 config :aecore, network_id: System.get_env("NETWORK_ID", "ae_mainnet")
 
-config :ae_mdw, AeMdw.Db.RocksDb, data_dir: "data.db"
+node_root = System.get_env("NODEROOT", "../aeternity/_build/local/")
+
+config :ae_mdw, AeMdw.Db.RocksDb, data_dir: "#{node_root}/rel/aeternity/data/mdw.db"
 
 config :ae_plugin,
-  node_root: System.get_env("NODEROOT", "../aeternity/_build/local/"),
+  node_root: node_root,
   "$aec_db_create_tables": {AeMdw.Db.Setup, :create_tables},
   "$aec_db_check_tables": {AeMdw.Db.Setup, :check_tables}
 
