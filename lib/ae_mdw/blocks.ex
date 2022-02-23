@@ -4,6 +4,7 @@ defmodule AeMdw.Blocks do
   """
 
   alias AeMdw.Collection
+  alias AeMdw.Error
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Util, as: DbUtil
@@ -70,6 +71,25 @@ defmodule AeMdw.Blocks do
     Model.block(hash: hash) = Database.fetch!(@table, {height, -1})
 
     hash
+  end
+
+  @spec fetch(block_index() | block_hash()) :: {:ok, block()} | {:error, Error.t()}
+  def fetch(block_hash) when is_binary(block_hash) do
+    case :aec_chain.get_block(block_hash) do
+      {:ok, _block} ->
+        # note: the `nil` here - for json formatting, we reuse AE node code
+        {:ok, Format.to_map({:block, {nil, nil}, nil, block_hash})}
+
+      :error ->
+        {:error, Error.Input.NotFound.exception(value: block_hash)}
+    end
+  end
+
+  def fetch(block_index) do
+    case DbUtil.read_block(block_index) do
+      [Model.block(hash: block_hash)] -> fetch(block_hash)
+      [] -> {:error, Error.Input.NotFound.exception(value: block_index)}
+    end
   end
 
   @spec fetch_txis_from_gen(height()) :: Enumerable.t()
