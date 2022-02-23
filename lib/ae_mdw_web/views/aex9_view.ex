@@ -61,7 +61,15 @@ defmodule AeMdwWeb.Views.Aex9ControllerView do
     do: transfer_to_map({sender_pk, recipient_pk, amount, call_txi, log_idx}, :aex9_transfer)
 
   def transfer_to_map({sender_pk, recipient_pk, amount, call_txi, log_idx}, :aex9_transfer) do
-    tx = call_txi |> Util.read_tx!() |> Format.to_map()
+    Model.tx(id: hash, block_index: {kbi, mbi}, time: micro_time) = Util.read_tx!(call_txi)
+    {_block_hash, _type, _signed_tx, tx_rec} = AeMdw.Node.Db.get_tx_data(hash)
+
+    contract_pk =
+      if elem(tx_rec, 0) == :contract_call_tx do
+        :aect_call_tx.contract_pubkey(tx_rec)
+      else
+        :aect_create_tx.contract_pubkey(tx_rec)
+      end
 
     %{
       sender: enc_id(sender_pk),
@@ -69,9 +77,10 @@ defmodule AeMdwWeb.Views.Aex9ControllerView do
       amount: amount,
       call_txi: call_txi,
       log_idx: log_idx,
-      block_height: tx["block_height"],
-      micro_time: tx["micro_time"],
-      contract_id: tx["tx"]["contract_id"]
+      block_height: kbi,
+      micro_index: mbi,
+      micro_time: micro_time,
+      contract_id: enc_ct(contract_pk)
     }
   end
 end

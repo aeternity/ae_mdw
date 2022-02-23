@@ -290,7 +290,11 @@ defmodule AeMdwWeb.Aex9Controller do
   end
 
   defp transfers_reply(conn, query, key_tag) do
-    transfers = Contract.aex9_search_transfers(query)
+    transfers =
+      query
+      |> Contract.aex9_search_transfers()
+      |> Enum.sort_by(fn {_sender_pk, _recipient_pk, _amount, call_txi, _log_idx} -> call_txi end)
+
     json(conn, Enum.map(transfers, &transfer_to_map(&1, key_tag)))
   end
 

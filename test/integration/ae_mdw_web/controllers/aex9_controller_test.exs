@@ -262,4 +262,16 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
       end)
     end
   end
+
+  describe "transfers" do
+    test "from a sender with many transfers", %{conn: conn} do
+      account_id = "ak_fCCw1JEkvXdztZxk8FRGNAkvmArhVeow89e64yX4AxbCPrVh5"
+      conn = get(conn, "/aex9/transfers/from/#{account_id}")
+
+      response = json_response(conn, 200)
+
+      assert Enum.all?(response, fn %{"sender" => sender_id} -> sender_id == account_id end)
+      assert response == Enum.sort_by(response, fn %{"call_txi" => call_txi} -> call_txi end)
+    end
+  end
 end
