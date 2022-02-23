@@ -4,10 +4,11 @@ defmodule AeMdwWeb.BlockController do
 
   alias AeMdw.Blocks
   alias AeMdw.Validate
+  alias AeMdw.Util
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
   alias AeMdwWeb.SwaggerParameters
-  alias AeMdwWeb.Util
+  alias AeMdwWeb.Util, as: WebUtil
   alias Plug.Conn
 
   plug(PaginatedPlug)
@@ -16,18 +17,24 @@ defmodule AeMdwWeb.BlockController do
   ##########
 
   @doc """
-  Endpoint for block info by hash.
+  Endpoint for block info by hash or kbi.
   """
   @spec block(Conn.t(), map()) :: Conn.t()
-  def block(conn, %{"hash" => hash}) do
-    with {:ok, block_hash} <- Validate.id(hash),
-         {:ok, block} <- Blocks.fetch(block_hash) do
-      json(conn, block)
+  def block(conn, %{"hash_or_kbi" => hash_or_kbi} = params) do
+    case Util.parse_int(hash_or_kbi) do
+      {:ok, _kbi} ->
+        blocki(conn, Map.put(params, "kbi", hash_or_kbi))
+
+      :error ->
+        with {:ok, block_hash} <- Validate.id(hash_or_kbi),
+             {:ok, block} <- Blocks.fetch(block_hash) do
+          json(conn, block)
+        end
     end
   end
 
   @doc """
-  Endpoint for block info by key block index.
+  Endpoint for block info by kbi.
   """
   @spec blocki(Conn.t(), map()) :: Conn.t()
   def blocki(conn, %{"kbi" => kbi} = params) do
@@ -42,29 +49,29 @@ defmodule AeMdwWeb.BlockController do
   @doc """
   Endpoint for blocks info based on pagination.
   """
-  @spec blocks(Conn.t(), map()) :: Conn.t()
-  def blocks(%Conn{assigns: assigns} = conn, _params) do
+  @spec blocks_v1(Conn.t(), map()) :: Conn.t()
+  def blocks_v1(%Conn{assigns: assigns} = conn, _params) do
     %{pagination: {direction, _is_reversed?, limit, _has_cursor?}, cursor: cursor, scope: scope} =
       assigns
 
     {prev_cursor, blocks, next_cursor} =
       Blocks.fetch_blocks(direction, scope, cursor, limit, false)
 
-    Util.paginate(conn, prev_cursor, blocks, next_cursor)
+    WebUtil.paginate(conn, prev_cursor, blocks, next_cursor)
   end
 
   @doc """
   Endpoint for paginated blocks with sorted micro blocks per time.
   """
-  @spec blocks_v2(Conn.t(), map()) :: Conn.t()
-  def blocks_v2(%Conn{assigns: assigns} = conn, _params) do
+  @spec blocks(Conn.t(), map()) :: Conn.t()
+  def blocks(%Conn{assigns: assigns} = conn, _params) do
     %{pagination: {direction, _is_reversed?, limit, _has_cursor?}, cursor: cursor, scope: scope} =
       assigns
 
     {prev_cursor, blocks, next_cursor} =
       Blocks.fetch_blocks(direction, scope, cursor, limit, true)
 
-    Util.paginate(conn, prev_cursor, blocks, next_cursor)
+    WebUtil.paginate(conn, prev_cursor, blocks, next_cursor)
   end
 
   ########

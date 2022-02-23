@@ -172,13 +172,10 @@ GET  /txs/count/:id                     - returns counts of transactions per tra
 GET  /txs/:scope_type/:range            - returns transactions bounded by scope/range where query is in query string
 GET  /txs/:direction                    - returns transactions from beginning (forward) or end (backward), query is in query string
 
-GET  /block/:hash                       - returns block by hash
-GET  /blocki/:kbi                       - returns key block by integer index
-GET  /blocki/:kbi/:mbi                  - returns micro block by integer indices
-GET  /blocks/gen/:range                 - returns generation blocks for continuation link
-GET  /v2/blocks/gen/:range              - same as above but returning the "micro_blocks" in a sorted list by time
-GET  /blocks/:range_or_dir              - returns generation blocks (key + micro) for given range (or direction)
-GET  /v2/blocks/:range_or_dir           - same as above but returning the "micro_blocks" in a sorted list by time
+GET  /v2/blocks/:hash                      - returns block by hash
+GET  /v2/blocks/:kbi                       - returns key block by integer index
+GET  /v2/blocks/:kbi/:mbi                  - returns micro block by integer indices
+GET  /v2/blocks                            - returns generation blocks
 
 GET  /name/:id                          - returns name information by hash or plain name
 GET  /name/auction/:id                  - returns name information for auction, by hash or plain name
@@ -1248,7 +1245,7 @@ A generation can be understood as key block and micro blocks containing transact
 ### Single block by hash
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/block/kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks/kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6" | jq '.'
 {
   "beneficiary": "ak_2MR38Zf355m6JtP13T3WEcUcSLVLCxjGvjk6zG95S2mfKohcSS",
   "hash": "kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6",
@@ -1267,7 +1264,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/block/kh_uoTGwc4HPzEW9qmiQR1zmVVdHmz
 ```
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/block/mh_25TNGuEkVGckfrH3rVwHiUsm2GFB17mKFEF3hYHR3zQrVXCRrp" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks/mh_25TNGuEkVGckfrH3rVwHiUsm2GFB17mKFEF3hYHR3zQrVXCRrp" | jq '.'
 {
   "hash": "mh_25TNGuEkVGckfrH3rVwHiUsm2GFB17mKFEF3hYHR3zQrVXCRrp",
   "height": 123003,
@@ -1287,7 +1284,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/block/mh_25TNGuEkVGckfrH3rVwHiUsm2GF
 Key block of the whole generation can be identified by one non-negative integer (height).
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/blocki/1234" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks/1234" | jq '.'
 {
   "beneficiary": "ak_2RGTeERHPm9zCo9EsaVAh8tDcsetFSVsD9VVi5Dk1n94wF3EKm",
   "hash": "kh_2L9i7dMqrYiUs6um71kwnZsNDqD9xBbD71EiVoWFtbMUKs2Tka",
@@ -1308,7 +1305,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/blocki/1234" | jq '.'
 Micro block is identified by height and sequence id (order) withing the generation, starting from 0.
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/blocki/300000/0" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks/300000/0" | jq '.'
 {
   "hash": "mh_2Nyaoy9CCPa8WBfzGbWXy5rd6AahJpBFxyXM9MMpCrvCqpkFj",
   "height": 300000,
@@ -4252,8 +4249,9 @@ Most routes will remain the same, and can be updated by only appending the `/v2`
 
 This is a list of the exceptions together with the changes that need to be done:
 
-* `/blocks/:range` route was deleted and either `/v2/blocks/gen/:range` or `/v2/blocks/:direction` should be used instead.
-* `/blocks/gen/:range`, `/blocks/gen/:direction` - Each block now has a list of micro_blocks sorted by time, instead of it being a map.
+* `/blocks/:range_or_dir` - Can now be accessed via `/v2/blocks?scope=gen:100-200` or `/v2/blocks?direction=forward`. In addition, each block now has a list of micro_blocks sorted by time, instead of it being a map.
+* `/blocki/:id` - Was renamed to `/v2/blocks/:id`.
+* `/blocki/:kbi/:mbi` - Was renamed to `/v2/blocks/:kbi/:mbi`.
 * `/name/auction/:id` - Was renamed to `/v2/names/:id/auctions`.
 * `/name/pointers/:id` - Was renamed to `/v2/names/:id/pointers`.
 * `/name/pointees/:id` - Was renamed to `/v2/names/:id/pointees`.
@@ -4360,7 +4358,7 @@ Where 7 - is a number of clients, performing various requests to the server. At 
 
 The example output would look like:
 ```
-          Path: "/block/kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6"
+          Path: "/blocks/kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6"
           Number of requests: 7
           Successful requests: 7
           Failed requests: 0
@@ -4377,7 +4375,7 @@ The example output would look like:
           ......................................................................
 
 
-          Path: "/block/mh_25TNGuEkVGckfrH3rVwHiUsm2GFB17mKFEF3hYHR3zQrVXCRrp"
+          Path: "/blocks/mh_25TNGuEkVGckfrH3rVwHiUsm2GFB17mKFEF3hYHR3zQrVXCRrp"
           Number of requests: 7
           Successful requests: 7
           Failed requests: 0
@@ -4394,7 +4392,7 @@ The example output would look like:
           ......................................................................
 
 
-          Path: "/blocki/300000"
+          Path: "/blocks/300000"
           Number of requests: 7
           Successful requests: 7
           Failed requests: 0
@@ -4411,7 +4409,7 @@ The example output would look like:
           ......................................................................
 
 
-          Path: "/blocki/300001/2"
+          Path: "/blocks/300001/2"
           Number of requests: 7
           Successful requests: 7
           Failed requests: 0
