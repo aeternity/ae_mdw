@@ -2,22 +2,16 @@ defmodule AeMdwWeb.BlockController do
   use AeMdwWeb, :controller
   use PhoenixSwagger
 
-  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
-  alias AeMdw.Db.Format
-  alias AeMdw.Db.Model
-  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Validate
+  alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
   alias AeMdwWeb.SwaggerParameters
+  alias AeMdwWeb.Util
   alias Plug.Conn
 
-  require Model
-
-  import AeMdwWeb.Util
-  import AeMdw.Db.Util
-
   plug(PaginatedPlug)
+  action_fallback(FallbackController)
 
   ##########
 
@@ -25,19 +19,25 @@ defmodule AeMdwWeb.BlockController do
   Endpoint for block info by hash.
   """
   @spec block(Conn.t(), map()) :: Conn.t()
-  def block(conn, %{"hash" => hash}),
-    do: handle_input(conn, fn -> block_reply(conn, hash) end)
+  def block(conn, %{"hash" => hash}) do
+    with {:ok, block_hash} <- Validate.id(hash),
+         {:ok, block} <- Blocks.fetch(block_hash) do
+      json(conn, block)
+    end
+  end
 
   @doc """
   Endpoint for block info by key block index.
   """
   @spec blocki(Conn.t(), map()) :: Conn.t()
-  def blocki(conn, %{"kbi" => kbi} = req),
-    do:
-      handle_input(conn, fn ->
-        mbi = Map.get(req, "mbi", "-1")
-        block_reply(conn, Validate.block_index!(kbi <> "/" <> mbi))
-      end)
+  def blocki(conn, %{"kbi" => kbi} = params) do
+    mbi = Map.get(params, "mbi", "-1")
+
+    with {:ok, block_index} <- Validate.block_index(kbi <> "/" <> mbi),
+         {:ok, block} <- Blocks.fetch(block_index) do
+      json(conn, block)
+    end
+  end
 
   @doc """
   Endpoint for blocks info based on pagination.
@@ -50,7 +50,7 @@ defmodule AeMdwWeb.BlockController do
     {prev_cursor, blocks, next_cursor} =
       Blocks.fetch_blocks(direction, scope, cursor, limit, false)
 
-    paginate(conn, prev_cursor, blocks, next_cursor)
+    Util.paginate(conn, prev_cursor, blocks, next_cursor)
   end
 
   @doc """
@@ -64,34 +64,7 @@ defmodule AeMdwWeb.BlockController do
     {prev_cursor, blocks, next_cursor} =
       Blocks.fetch_blocks(direction, scope, cursor, limit, true)
 
-    paginate(conn, prev_cursor, blocks, next_cursor)
-  end
-
-  ##########
-
-  defp block_reply(conn, enc_block_hash) when is_binary(enc_block_hash) do
-    block_hash = Validate.id!(enc_block_hash)
-
-    case :aec_chain.get_block(block_hash) do
-      {:ok, _} ->
-        # note: the `nil` here - for json formatting, we reuse AE node code
-        json(conn, Format.to_map({:block, {nil, nil}, nil, block_hash}))
-
-      :error ->
-        raise ErrInput.NotFound, value: enc_block_hash
-    end
-  end
-
-  defp block_reply(conn, {_, mbi} = block_index) do
-    case read_block(block_index) do
-      [block] ->
-        type = (mbi == -1 && :key_block_hash) || :micro_block_hash
-        hash = Model.block(block, :hash)
-        block_reply(conn, Enc.encode(type, hash))
-
-      [] ->
-        raise ErrInput.NotFound, value: block_index
-    end
+    Util.paginate(conn, prev_cursor, blocks, next_cursor)
   end
 
   ########
