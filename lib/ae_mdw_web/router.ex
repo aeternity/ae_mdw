@@ -76,10 +76,6 @@ defmodule AeMdwWeb.Router do
     pipe_through :api
 
     scope "/v2" do
-      Enum.each(@shared_routes, fn {path, controller, fun} ->
-        get(path, controller, fun, alias: false)
-      end)
-
       # v2-only routes
       get "/blocks/gen/:range", BlockController, :blocks_v2
       get "/blocks/:direction", BlockController, :blocks_v2
