@@ -5,12 +5,13 @@ defmodule AeMdwWeb.TxController do
   alias AeMdw.Node
   alias AeMdw.Validate
   alias AeMdw.Db.Model
-  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Txs
+  alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
   alias AeMdwWeb.SwaggerParameters
-  alias Plug.Conn
   alias AeMdw.Node
+  alias AeMdw.Util
+  alias Plug.Conn
 
   require Model
 
@@ -18,30 +19,33 @@ defmodule AeMdwWeb.TxController do
   import AeMdw.Db.Util
 
   @type_query_params ~w(type type_group)
-  @pagination_param_keys ~w(limit page cursor expand direction scope_type range by rev)
+  @pagination_param_keys ~w(limit page cursor expand direction scope_type range by rev scope)
 
   plug(PaginatedPlug)
+  action_fallback(FallbackController)
 
   ##########
 
   @spec tx(Conn.t(), map()) :: Conn.t()
-  def tx(conn, %{"hash" => enc_tx_hash}) do
-    handle_input(conn, fn ->
-      case Txs.fetch_by_hash(Validate.id!(enc_tx_hash)) do
-        {:ok, tx} -> json(conn, tx)
-        :not_found -> tx_reply(conn, nil)
-      end
-    end)
+  def tx(conn, %{"hash_or_index" => hash_or_index} = params) do
+    case Util.parse_int(hash_or_index) do
+      {:ok, _txi} ->
+        txi(conn, Map.put(params, "txi", hash_or_index))
+
+      :error ->
+        with {:ok, tx_hash} <- Validate.id(hash_or_index),
+             {:ok, tx} <- Txs.fetch(tx_hash) do
+          json(conn, tx)
+        end
+    end
   end
 
   @spec txi(Conn.t(), map()) :: Conn.t()
   def txi(conn, %{"index" => index}) do
-    handle_input(conn, fn ->
-      case Txs.fetch(Validate.nonneg_int!(index), true) do
-        {:ok, tx} -> json(conn, tx)
-        :not_found -> tx_reply(conn, nil)
-      end
-    end)
+    with {:ok, txi} <- Validate.nonneg_int(index),
+         {:ok, tx} <- Txs.fetch(txi) do
+      json(conn, tx)
+    end
   end
 
   @spec txs(Conn.t(), map()) :: Conn.t()
@@ -90,9 +94,6 @@ defmodule AeMdwWeb.TxController do
           Map.put(counts, tx_type, tx_counts)
     end
   end
-
-  defp tx_reply(conn, nil),
-    do: conn |> send_error(ErrInput.NotFound, "no such transaction")
 
   defp extract_query(query_params) do
     query_params
@@ -730,32 +731,8 @@ defmodule AeMdwWeb.TxController do
     response(400, "Bad request", Schema.ref(:ErrorResponse))
   end
 
-  swagger_path :txs_scope_range do
-    get("/txs/{scope_type}/{range}")
-    description("Get a transactions bounded by scope/range.")
-    produces(["application/json"])
-    deprecated(false)
-    operation_id("get_txs_by_scope_type_range")
-    tag("Middleware")
-    SwaggerParameters.common_params()
-    SwaggerParameters.limit_and_page_params()
-
-    parameters do
-      scope_type(:path, :string, "The scope type", enum: [:gen, :txi], required: true)
-      range(:path, :string, "The range", required: true, example: "0-265354")
-    end
-
-    response(
-      200,
-      "Returns result regarding the according criteria",
-      Schema.ref(:TxsScopeResponse)
-    )
-
-    response(400, "Bad request", Schema.ref(:ErrorResponse))
-  end
-
-  swagger_path :txs_direction do
-    get("/txs/{direction}")
+  swagger_path :txs do
+    get("/txs")
 
     description(
       "Get a transactions from beginning or end of the chain. More [info](https://github.com/aeternity/ae_mdw#transaction-querying)"
@@ -796,15 +773,4 @@ defmodule AeMdwWeb.TxController do
 
     response(400, "Bad request", Schema.ref(:ErrorResponse))
   end
-
-  # credo:disable-for-next-line
-  def swagger_path_txs(%{path: <<"/v2", rest::binary>>} = route),
-    do: swagger_path_txs(Map.put(route, :path, rest))
-
-  # credo:disable-for-next-line
-  def swagger_path_txs(%{path: "/txs/{direction}"} = route), do: swagger_path_txs_direction(route)
-
-  # credo:disable-for-next-line
-  def swagger_path_txs(%{path: "/txs/{scope_type}/{range}" = route}),
-    do: swagger_path_txs_scope_range(route)
 end

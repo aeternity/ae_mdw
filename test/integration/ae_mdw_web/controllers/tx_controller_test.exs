@@ -79,9 +79,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
     test "renders errors when data is not found", %{conn: conn} do
       index = 90_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000
-      conn = get(conn, "/txi/#{index}")
+      error_msg = "not found: #{index}"
 
-      assert json_response(conn, 404) == %{"error" => "no such transaction"}
+      assert %{"error" => ^error_msg} = conn |> get("/txi/#{index}") |> json_response(404)
     end
 
     test "localhost has same result as mainnet", %{conn: conn} do
@@ -164,7 +164,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
   describe "count" do
     test "get count of transactions at the current height", %{conn: conn} do
-      conn = get(conn, "/txs/count")
+      conn = get(conn, "/v2/txs/count")
 
       assert json_response(conn, 200) == Util.last_txi()
     end
@@ -174,7 +174,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     # The test will work only for mainnet, because the account id is hardcoded and valid only for mainnet network
     test "get transactions count and its type for given aeternity ID", %{conn: conn} do
       id = "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
-      conn = get(conn, "/txs/count/#{id}")
+      conn = get(conn, "/v2/txs/count/#{id}")
 
       assert json_response(conn, 200) ==
                id |> Validate.id!() |> TxController.id_counts() |> keys_to_string()
@@ -182,9 +182,10 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
     test "renders errors when data is invalid", %{conn: conn} do
       invalid_id = "some_invalid_id"
-      conn = get(conn, "/txs/count/#{invalid_id}")
+      error_msg = "invalid id: #{invalid_id}"
 
-      assert json_response(conn, 400) == %{"error" => "invalid id: #{invalid_id}"}
+      assert %{"error" => ^error_msg} =
+               conn |> get("/v2/txs/count/#{invalid_id}") |> json_response(400)
     end
   end
 
@@ -193,7 +194,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       limit = 33
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/forward", limit: limit) |> json_response(200)
+               conn |> get("/v2/txs", direction: "forward", limit: limit) |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
@@ -211,7 +212,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       last_txi = Util.last_txi()
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/backward", limit: limit) |> json_response(200)
+               conn |> get("/v2/txs", direction: "backward", limit: limit) |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
@@ -229,7 +230,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       error_msg = "invalid direction: #{invalid_direction}"
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/txs/#{invalid_direction}") |> json_response(400)
+               conn |> get("/v2/txs", direction: invalid_direction) |> json_response(400)
     end
   end
 
@@ -242,7 +243,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type = "channel_create"
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/forward", type: type, limit: limit) |> json_response(200)
+               conn
+               |> get("/v2/txs", direction: "forward", type: type, limit: limit)
+               |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
@@ -264,7 +267,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type = "spend"
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/forward", type: type, limit: limit) |> json_response(200)
+               conn
+               |> get("/v2/txs", direction: "forward", type: type, limit: limit)
+               |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
@@ -278,7 +283,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type = "name_claim"
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/forward", type: type, limit: limit) |> json_response(200)
+               conn
+               |> get("/v2/txs", direction: "forward", type: type, limit: limit)
+               |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
@@ -292,7 +299,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type = "name_preclaim"
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/forward", type: type) |> json_response(200)
+               conn |> get("/v2/txs", direction: "forward", type: type) |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
@@ -309,7 +316,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type = "spend"
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/backward", type: type) |> json_response(200)
+               conn |> get("/v2/txs", direction: "backward", type: type) |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
@@ -325,7 +332,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type = "contract_create"
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/forward", type: type, limit: limit) |> json_response(200)
+               conn
+               |> get("/v2/txs", direction: "forward", type: type, limit: limit)
+               |> json_response(200)
 
       assert_contract_create_fields(hd(txs)["tx"])
 
@@ -343,7 +352,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type = "contract_create"
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/backward", type: type, limit: limit) |> json_response(200)
+               conn
+               |> get("/v2/txs", direction: "backward", type: type, limit: limit)
+               |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
@@ -359,7 +370,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type = "ga_attach"
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/backward", type: type, limit: limit) |> json_response(200)
+               conn
+               |> get("/v2/txs", direction: "backward", type: type, limit: limit)
+               |> json_response(200)
 
       assert ^limit = length(txs)
       assert Enum.all?(txs, fn %{"tx" => %{"type" => type}} -> type == "GAAttachTx" end)
@@ -375,7 +388,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type = "oracle_query"
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/backward", type: type, limit: limit) |> json_response(200)
+               conn
+               |> get("/v2/txs", direction: "backward", type: type, limit: limit)
+               |> json_response(200)
 
       txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
@@ -398,7 +413,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       error_msg = "invalid transaction type: #{invalid_type}"
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/txs/forward", type: invalid_type) |> json_response(400)
+               conn
+               |> get("/v2/txs", direction: "forward", type: invalid_type)
+               |> json_response(400)
     end
   end
 
@@ -411,7 +428,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/forward", type_group: type_group, limit: limit)
+               |> get("/v2/txs", direction: "forward", type_group: type_group, limit: limit)
                |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
@@ -438,7 +455,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/forward", type_group: type_group, limit: limit)
+               |> get("/v2/txs", direction: "forward", type_group: type_group, limit: limit)
                |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
@@ -463,7 +480,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/forward", type_group: type_group, limit: limit)
+               |> get("/v2/txs", direction: "forward", type_group: type_group, limit: limit)
                |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
@@ -488,7 +505,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/forward", type_group: type_group, limit: limit)
+               |> get("/v2/txs", direction: "forward", type_group: type_group, limit: limit)
                |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
@@ -516,7 +533,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/backward", type_group: type_group, limit: limit)
+               |> get("/v2/txs", direction: "backward", type_group: type_group, limit: limit)
                |> json_response(200)
 
       txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
@@ -541,7 +558,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/backward", type_group: type_group) |> json_response(200)
+               conn
+               |> get("/v2/txs", direction: "backward", type_group: type_group)
+               |> json_response(200)
 
       txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
@@ -568,7 +587,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/backward", type_group: type_group, limit: limit)
+               |> get("/v2/txs", direction: "backward", type_group: type_group, limit: limit)
                |> json_response(200)
 
       txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
@@ -594,7 +613,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/backward", type_group: type_group, limit: limit)
+               |> get("/v2/txs", direction: "backward", type_group: type_group, limit: limit)
                |> json_response(200)
 
       txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
@@ -611,7 +630,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/backward", type_group: type_group, limit: limit)
+               |> get("/v2/txs", direction: "backward", type_group: type_group, limit: limit)
                |> json_response(200)
 
       txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
@@ -637,7 +656,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/backward", type_group: type_group, limit: limit)
+               |> get("/v2/txs", direction: "backward", type_group: type_group, limit: limit)
                |> json_response(200)
 
       txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
@@ -661,7 +680,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       error_msg = "invalid transaction group: #{invalid_type_group}"
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/txs/backward", type_group: invalid_type_group) |> json_response(400)
+               conn
+               |> get("/v2/txs", direction: "backward", type_group: invalid_type_group)
+               |> json_response(400)
     end
   end
 
@@ -678,7 +699,12 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/backward", type_group: type_group, type: type, limit: limit)
+               |> get("/v2/txs",
+                 direction: "backward",
+                 type_group: type_group,
+                 type: type,
+                 limit: limit
+               )
                |> json_response(200)
 
       txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
@@ -715,7 +741,12 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/backward", type_group: type_group, type: type, limit: limit)
+               |> get("/v2/txs",
+                 direction: "backward",
+                 type_group: type_group,
+                 type: type,
+                 limit: limit
+               )
                |> json_response(200)
 
       txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
@@ -748,7 +779,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/backward", type_group: type_group, type: type)
+               |> get("/v2/txs", direction: "backward", type_group: type_group, type: type)
                |> json_response(200)
 
       txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
@@ -785,7 +816,12 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/backward", type_group: type_group, type: type, limit: limit)
+               |> get("/v2/txs",
+                 direction: "backward",
+                 type_group: type_group,
+                 type: type,
+                 limit: limit
+               )
                |> json_response(200)
 
       txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
@@ -822,7 +858,12 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/backward", type_group: type_group, type: type, limit: limit)
+               |> get("/v2/txs",
+                 direction: "backward",
+                 type_group: type_group,
+                 type: type,
+                 limit: limit
+               )
                |> json_response(200)
 
       txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
@@ -856,7 +897,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/backward", type_group: type_group, type: type)
+               |> get("/v2/txs", direction: "backward", type_group: type_group, type: type)
                |> json_response(200)
 
       txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
@@ -888,7 +929,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/txs/forward", type: type, type_group: invalid_type_group)
+               |> get("/v2/txs", direction: "forward", type: type, type_group: invalid_type_group)
                |> json_response(400)
     end
 
@@ -899,7 +940,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/txs/forward", type: invalid_type, type_group: type_group)
+               |> get("/v2/txs", direction: "forward", type: invalid_type, type_group: type_group)
                |> json_response(400)
     end
   end
@@ -914,7 +955,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
         id = "ak_26ubrEL8sBqYNp4kvKb1t4Cg7XsCciYq4HdznrvfUkW359gf17"
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/forward", account: id, limit: limit) |> json_response(200)
+               conn
+               |> get("/v2/txs", direction: "forward", account: id, limit: limit)
+               |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
@@ -940,7 +983,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/forward", account: account_id, limit: limit)
+               |> get("/v2/txs", direction: "forward", account: account_id, limit: limit)
                |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
@@ -986,7 +1029,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/forward", account: account_id, limit: limit)
+               |> get("/v2/txs", direction: "forward", account: account_id, limit: limit)
                |> json_response(200)
 
       assert ^limit = length(txs)
@@ -1000,7 +1043,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
         contract_id = "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z"
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/forward", contract: contract_id) |> json_response(200)
+               conn
+               |> get("/v2/txs", direction: "forward", contract: contract_id)
+               |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
@@ -1026,7 +1071,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/forward", contract: contract_id, limit: limit)
+               |> get("/v2/txs", direction: "forward", contract: contract_id, limit: limit)
                |> json_response(200)
 
       assert ^limit = length(txs)
@@ -1043,7 +1088,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
         oracle_id = "ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/forward", oracle: oracle_id) |> json_response(200)
+               conn
+               |> get("/v2/txs", direction: "forward", oracle: oracle_id)
+               |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
@@ -1069,7 +1116,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/backward", account: account_id, limit: limit)
+               |> get("/v2/txs", direction: "backward", account: account_id, limit: limit)
                |> json_response(200)
 
       txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
@@ -1097,7 +1144,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/backward", account: account_id, limit: limit)
+               |> get("/v2/txs", direction: "backward", account: account_id, limit: limit)
                |> json_response(200)
 
       txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
@@ -1114,7 +1161,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
         contract_id = "ct_2rtXsV55jftV36BMeR5gtakN2VjcPtZa3PBURvzShSYWEht3Z7"
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/backward", contract: contract_id) |> json_response(200)
+               conn
+               |> get("/v2/txs", direction: "backward", contract: contract_id)
+               |> json_response(200)
 
       txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
@@ -1139,7 +1188,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
         oracle_id = "ok_28QDg7fkF5qiKueSdUvUBtCYPJdmMEoS73CztzXCRAwMGKHKZh"
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/backward", oracle: oracle_id) |> json_response(200)
+               conn
+               |> get("/v2/txs", direction: "backward", oracle: oracle_id)
+               |> json_response(200)
 
       txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
@@ -1162,7 +1213,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       error_msg = "invalid id: #{id}"
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/txs/forward", account: id) |> json_response(400)
+               conn |> get("/v2/txs", direction: "forward", account: id) |> json_response(400)
     end
 
     test "renders errors when direction=forward and the ID is valid, but not pass correctly ",
@@ -1172,7 +1223,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       error_msg = "invalid id: #{id}"
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/txs/backward", account: id) |> json_response(400)
+               conn |> get("/v2/txs", direction: "backward", account: id) |> json_response(400)
     end
   end
 
@@ -1186,10 +1237,10 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       tx_type = "contract_call"
       field = "caller_id"
       account_id = "ak_YCwfWaW5ER6cRsG9Jg4KMyVU59bQkt45WvcnJJctQojCqBeG2"
-      params = [{"#{tx_type}.#{field}", account_id}, {:limit, limit}]
+      params = [{"#{tx_type}.#{field}", account_id}, {:limit, limit}, {:direction, "forward"}]
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/forward", params) |> json_response(200)
+               conn |> get("/v2/txs", params) |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
@@ -1212,10 +1263,10 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       tx_type = "channel_create"
       field = "initiator_id"
       account_id = "ak_ozzwBYeatmuN818LjDDDwRSiBSvrqt4WU7WvbGsZGVre72LTS"
-      params = [{"#{tx_type}.#{field}", account_id}, {:limit, limit}]
+      params = [{"#{tx_type}.#{field}", account_id}, {:limit, limit}, {:direction, "forward"}]
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/forward", params) |> json_response(200)
+               conn |> get("/v2/txs", params) |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
@@ -1238,10 +1289,10 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       tx_type = "ga_attach"
       field = "owner_id"
       account_id = "ak_2RUVa9bvHUD8wYSrvixRjy9LonA9L29wRvwDfQ4y37ysMKjgdQ"
-      params = [{"#{tx_type}.#{field}", account_id}, {:limit, limit}]
+      params = [{"#{tx_type}.#{field}", account_id}, {:limit, limit}, {:direction, "forward"}]
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/forward", params) |> json_response(200)
+               conn |> get("/v2/txs", params) |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
@@ -1256,9 +1307,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       tx_type = "ga_attach"
       field = "contract_id"
       contract_id = "ct_Be5LcGEN2SgZh2kSvf3LqZuawN94kn77iNy5off5UfgzbiNv4"
-      params = [{"#{tx_type}.#{field}", contract_id}, {:limit, limit}]
+      params = [{"#{tx_type}.#{field}", contract_id}, {:limit, limit}, {:direction, "forward"}]
 
-      assert %{"data" => txs} = conn |> get("/txs/forward", params) |> json_response(200)
+      assert %{"data" => txs} = conn |> get("/v2/txs", params) |> json_response(200)
 
       assert ^limit = length(txs)
 
@@ -1272,10 +1323,10 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       tx_type = "spend"
       field = "recipient_id"
       account_id = "ak_wTPFpksUJFjjntonTvwK4LJvDw11DPma7kZBneKbumb8yPeFq"
-      params = [{"#{tx_type}.#{field}", account_id}]
+      params = [{"#{tx_type}.#{field}", account_id}, {:direction, "forward"}]
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/forward", params) |> json_response(200)
+               conn |> get("/v2/txs", params) |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
@@ -1297,15 +1348,13 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       id = "ak_gvxNbZf5CuxYVfcUFoKAP4geZatWaC2Yy4jpx5vZoCKank4Gc"
       hash = "th_3rw5nk53rEQzZr8xrQ6sqt2Y9Cv4U8piqiHK1KVkXCaVFMTCq"
 
-      field = "recipient_id"
+      params = [{:scope, "gen:421792-0"}, {"spend.recipient_id", id}]
 
-      %{"data" => txs1} =
-        conn |> get("txs/gen/421792-0?spend.#{field}=#{id}") |> json_response(200)
+      %{"data" => txs1} = conn |> get("/v2/txs", params) |> json_response(200)
 
-      field = "sender_id"
+      params2 = [{:scope, "gen:421792-0"}, {"spend.sender_id", id}]
 
-      %{"data" => txs2} =
-        conn |> get("txs/gen/421792-0?spend.#{field}=#{id}") |> json_response(200)
+      %{"data" => txs2} = conn |> get("/v2/txs", params2) |> json_response(200)
 
       assert [%{"tx" => %{"sender_id" => ^id, "recipient_id" => ^id}}] =
                Enum.filter(txs1, fn tx -> tx["hash"] == hash end)
@@ -1319,10 +1368,10 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       tx_type = "oracle_query"
       field = "sender_id"
       account_id = "ak_29Xc6bmHMNQAaTEdUVQvqcCpmx6cWLNevZAfXaRSjZRgypYa6b"
-      params = [{"#{tx_type}.#{field}", account_id}]
+      params = [{"#{tx_type}.#{field}", account_id}, {:direction, "forward"}]
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/forward", params) |> json_response(200)
+               conn |> get("/v2/txs", params) |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
@@ -1348,10 +1397,10 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       tx_type = "channel_deposit"
       field = "channel_id"
       channel_id = "ch_2KKS3ypddUfYovJSeg4ues2wFdUoGH8ZtunDhrxvGkYNhzP5TC"
-      params = [{"#{tx_type}.#{field}", channel_id}, {:limit, limit}]
+      params = [{"#{tx_type}.#{field}", channel_id}, {:limit, limit}, {:direction, "backward"}]
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/backward", params) |> json_response(200)
+               conn |> get("/v2/txs", params) |> json_response(200)
 
       assert ^limit = length(txs)
       assert Enum.all?(txs, fn %{"tx" => tx} -> tx[field] == channel_id end)
@@ -1364,10 +1413,10 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       tx_type = "name_update"
       field = "name_id"
       name_id = "nm_2ANVLWij71wHMvGyQAEb2zYk8bC7v9C8svVm8HLND6vYaChdnd"
-      params = [{"#{tx_type}.#{field}", name_id}, {:limit, limit}]
+      params = [{"#{tx_type}.#{field}", name_id}, {:limit, limit}, {:direction, "backward"}]
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/backward", params) |> json_response(200)
+               conn |> get("/v2/txs", params) |> json_response(200)
 
       txis = txs |> Enum.map(fn %{"tx_index" => tx_index} -> tx_index end) |> Enum.reverse()
 
@@ -1390,10 +1439,10 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       tx_type = "oracle_query"
       field = "account_id"
       id = "ak_29Xc6bmHMNQAaTEdUVQvqcCpmx6cWLNevZAfXaRSjZRgypYa6b"
-      params = [{"#{tx_type}.#{field}", id}]
+      params = [{"#{tx_type}.#{field}", id}, {:direction, "forward"}]
       error_msg = "invalid transaction field: :#{field}"
 
-      assert %{"error" => ^error_msg} = conn |> get("/txs/forward", params) |> json_response(400)
+      assert %{"error" => ^error_msg} = conn |> get("/v2/txs", params) |> json_response(400)
     end
 
     test "renders errors when direction=forward, tx_type and field are invalid ",
@@ -1401,10 +1450,10 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       tx_type = "invalid"
       field = "account_id"
       id = "ak_29Xc6bmHMNQAaTEdUVQvqcCpmx6cWLNevZAfXaRSjZRgypYa6b"
-      params = [{"#{tx_type}.#{field}", id}]
+      params = [{"#{tx_type}.#{field}", id}, {:direction, "forward"}]
       error_msg = "invalid transaction type: #{tx_type}"
 
-      assert %{"error" => ^error_msg} = conn |> get("/txs/forward", params) |> json_response(400)
+      assert %{"error" => ^error_msg} = conn |> get("/v2/txs", params) |> json_response(400)
     end
   end
 
@@ -1413,7 +1462,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       account_id = "ak_2RUVa9bvHUD8wYSrvixRjy9LonA9L29wRvwDfQ4y37ysMKjgdQ"
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/forward", recipient_id: account_id) |> json_response(200)
+               conn
+               |> get("/v2/txs", direction: "forward", recipient_id: account_id)
+               |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
@@ -1434,7 +1485,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       account_id = "ak_oTX3ffD9XewhuLAquSKHBdm4jhhKb24NKsesGSWM4UKg6gWp4"
 
       assert %{"data" => txs} =
-               conn |> get("/txs/backward", sender_id: account_id) |> json_response(200)
+               conn
+               |> get("/v2/txs", direction: "backward", sender_id: account_id)
+               |> json_response(200)
 
       assert Enum.any?(txs, fn %{"tx" => block_tx} ->
                if block_tx["type"] == "GAMetaTx" do
@@ -1453,7 +1506,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       account_id = "ak_2RUVa9bvHUD8wYSrvixRjy9LonA9L29wRvwDfQ4y37ysMKjgdQ"
 
       assert %{"data" => txs} =
-               conn |> get("/txs/gen/#{first}-#{last}", account: account_id) |> json_response(200)
+               conn
+               |> get("/v2/txs", scope: "gen:#{first}-#{last}", account: account_id)
+               |> json_response(200)
 
       assert Enum.all?(txs, fn %{"block_height" => block_height} ->
                block_height >= first and block_height <= last
@@ -1488,7 +1543,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs} =
                conn
-               |> get("/txs/forward", account: id_1, account: id_2, limit: limit)
+               |> get("/v2/txs", direction: "forward", account: id_1, account: id_2, limit: limit)
                |> json_response(200)
 
       assert ^limit = length(txs)
@@ -1507,7 +1562,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs} =
                conn
-               |> get("/txs/forward",
+               |> get("/v2/txs",
+                 direction: "forward",
                  sender_id: sender_id,
                  recipient_id: recipient_id,
                  limit: limit
@@ -1532,7 +1588,12 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/forward", account: account_id, type_group: type_group, limit: limit)
+               |> get("/v2/txs",
+                 direction: "forward",
+                 account: account_id,
+                 type_group: type_group,
+                 limit: limit
+               )
                |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
@@ -1567,7 +1628,12 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/backward", account: account_id, type: type, limit: limit)
+               |> get("/v2/txs",
+                 direction: "backward",
+                 account: account_id,
+                 type: type,
+                 limit: limit
+               )
                |> json_response(200)
 
       assert ^limit = length(txs)
@@ -1583,7 +1649,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       height = 273_000
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/txs/gen/#{height}-#{height}") |> json_response(200)
+               conn |> get("/v2/txs", scope: "gen:#{height}-#{height}") |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
@@ -1610,7 +1676,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs, "next" => next} =
                conn
-               |> get("/txs/gen/#{height_from}-#{height_to}", limit: limit)
+               |> get("/v2/txs", scope: "gen:#{height_from}-#{height_to}", limit: limit)
                |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
@@ -1640,7 +1706,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       error_msg = "invalid scope: invalid_scope"
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/txs/invalid_scope/#{height_from}-#{height_to}") |> json_response(400)
+               conn
+               |> get("/v2/txs", scope: "invalid_scope:#{height_from}-#{height_to}")
+               |> json_response(400)
     end
 
     test "renders errors when is passed invalid range", %{conn: conn} do
@@ -1648,7 +1716,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       error_msg = "invalid range: #{invalid_range}"
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/txs/gen/#{invalid_range}") |> json_response(400)
+               conn |> get("/v2/txs", scope: "gen:#{invalid_range}") |> json_response(400)
     end
   end
 
@@ -1656,7 +1724,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     test "get transactions when scope=txi and transaction index", %{conn: conn} do
       index = 605_999
 
-      assert %{"data" => txs} = conn |> get("/txs/txi/#{index}") |> json_response(200)
+      assert %{"data" => txs} =
+               conn |> get("/v2/txs", scope: "txi:#{index}") |> json_response(200)
 
       assert Enum.all?(txs, fn %{"tx_index" => tx_index} -> tx_index == index end)
     end
@@ -1668,7 +1737,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert %{"data" => txs} =
                conn
-               |> get("/txs/txi/#{index_from}-#{index_to}", limit: limit)
+               |> get("/v2/txs", scope: "txi:#{index_from}-#{index_to}", limit: limit)
                |> json_response(200)
 
       assert ^limit = length(txs)
@@ -1677,10 +1746,10 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
     test "renders errors when is passed invalid index", %{conn: conn} do
       invalid_index = "invalid_index"
-      error_msg = "invalid range: #{invalid_index}"
+      error_msg = "invalid scope: #{invalid_index}"
 
       assert %{"error" => ^error_msg} =
-               conn |> get("/txs/txi/#{invalid_index}") |> json_response(400)
+               conn |> get("/v2/txs", scope: invalid_index) |> json_response(400)
     end
   end
 
