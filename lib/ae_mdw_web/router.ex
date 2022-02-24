@@ -8,13 +8,6 @@ defmodule AeMdwWeb.Router do
     {"/txs/count/:id", AeMdwWeb.TxController, :count_id},
     {"/txs/:direction", AeMdwWeb.TxController, :txs},
     {"/txs/:scope_type/:range", AeMdwWeb.TxController, :txs},
-    {"/oracle/:id", AeMdwWeb.OracleController, :oracle},
-    {"/oracles/inactive", AeMdwWeb.OracleController, :inactive_oracles},
-    {"/oracles/active", AeMdwWeb.OracleController, :active_oracles},
-    {"/oracles", AeMdwWeb.OracleController, :oracles},
-    {"/oracles/inactive/gen/:range", AeMdwWeb.OracleController, :inactive_oracles},
-    {"/oracles/active/gen/:range", AeMdwWeb.OracleController, :active_oracles},
-    {"/oracles/gen/:range", AeMdwWeb.OracleController, :oracles},
     {"/aex9/by_contract/:id", AeMdwWeb.Aex9Controller, :by_contract},
     {"/aex9/by_name", AeMdwWeb.Aex9Controller, :by_names},
     {"/aex9/by_symbol", AeMdwWeb.Aex9Controller, :by_symbols},
@@ -85,6 +78,9 @@ defmodule AeMdwWeb.Router do
       get "/names/search", NameController, :search
       get "/names", NameController, :names
       get "/names/:id", NameController, :name
+
+      get "/oracles/:id", OracleController, :oracle
+      get "/oracles", OracleController, :oracles
     end
 
     Enum.each(@shared_routes, fn {path, controller, fun} ->
@@ -112,6 +108,14 @@ defmodule AeMdwWeb.Router do
     get "/names/active/:scope_type/:range", NameController, :active_names
     get "/names", NameController, :names
     get "/names/:scope_type/:range", NameController, :names
+
+    get "/oracle/:id", OracleController, :oracle
+    get "/oracles/inactive", OracleController, :inactive_oracles
+    get "/oracles/active", OracleController, :active_oracles
+    get "/oracles", OracleController, :oracles
+    get "/oracles/inactive/gen/:range", OracleController, :inactive_oracles
+    get "/oracles/active/gen/:range", OracleController, :active_oracles
+    get "/oracles/gen/:range", OracleController, :oracles
 
     match :*, "/*path", UtilController, :no_route
   end

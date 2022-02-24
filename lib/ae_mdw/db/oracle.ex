@@ -4,13 +4,14 @@ defmodule AeMdw.Db.Oracle do
   """
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
+  alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.OraclesExpirationMutation
   alias AeMdw.Db.OracleResponseMutation
   alias AeMdw.Log
-  alias AeMdw.Database
   alias AeMdw.Node
+  alias AeMdw.Node.Db
   alias AeMdw.Txs
 
   require Ex2ms
@@ -20,7 +21,7 @@ defmodule AeMdw.Db.Oracle do
   import AeMdw.Db.Util
   import AeMdw.Util
 
-  @type pubkey() :: <<_::256>>
+  @typep pubkey() :: Db.pubkey()
   @typep cache_key() :: pubkey() | {pos_integer(), pubkey()}
 
   @spec source(atom(), :expiration) ::
@@ -28,7 +29,7 @@ defmodule AeMdw.Db.Oracle do
   def source(Model.ActiveName, :expiration), do: Model.ActiveOracleExpiration
   def source(Model.InactiveName, :expiration), do: Model.InactiveOracleExpiration
 
-  @spec locate(pubkey()) :: {tuple(), Model.ActiveOracle | Model.InactiveOracle} | nil
+  @spec locate(pubkey()) :: {Model.oracle(), Model.ActiveOracle | Model.InactiveOracle} | nil
   def locate(pubkey) do
     map_ok_nil(cache_through_read(Model.ActiveOracle, pubkey), &{&1, Model.ActiveOracle}) ||
       map_ok_nil(cache_through_read(Model.InactiveOracle, pubkey), &{&1, Model.InactiveOracle})
