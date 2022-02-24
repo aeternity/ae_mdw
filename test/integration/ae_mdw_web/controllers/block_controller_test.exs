@@ -241,7 +241,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
     test "get blocks and sorted microblocks in a single generation", %{conn: conn} do
       range = "471542-471542"
       count = 1
-      conn = get(conn, "/v2/blocks/#{range}")
+      conn = get(conn, "/v2/blocks", scope: "gen:#{range}")
       response = json_response(conn, 200)
 
       assert Enum.count(response["data"]) == count
@@ -256,7 +256,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
     test "get blocks and sorted microblocks in multiple generations", %{conn: conn} do
       range = "471542-471563"
       limit = 10
-      conn = get(conn, "/v2/blocks/#{range}")
+      conn = get(conn, "/v2/blocks", scope: "gen:#{range}")
       response = json_response(conn, 200)
 
       assert Enum.count(response["data"]) == limit
@@ -273,7 +273,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
 
     test "renders error when the range is invalid", %{conn: conn} do
       range = "invalid"
-      conn = get(conn, "/blocks/#{range}")
+      conn = get(conn, "/v2/blocks", scope: "gen:#{range}")
 
       assert json_response(conn, 400) ==
                %{"error" => "invalid range: #{range}"}

@@ -2,9 +2,6 @@ defmodule AeMdwWeb.Router do
   use AeMdwWeb, :router
 
   @shared_routes [
-    {"/block/:hash", AeMdwWeb.BlockController, :block},
-    {"/blocki/:kbi", AeMdwWeb.BlockController, :blocki},
-    {"/blocki/:kbi/:mbi", AeMdwWeb.BlockController, :blocki},
     {"/tx/:hash", AeMdwWeb.TxController, :tx},
     {"/txi/:index", AeMdwWeb.TxController, :txi},
     {"/txs/count", AeMdwWeb.TxController, :count},
@@ -77,8 +74,9 @@ defmodule AeMdwWeb.Router do
 
     scope "/v2" do
       # v2-only routes
-      get "/blocks/gen/:range", BlockController, :blocks_v2
-      get "/blocks/:direction", BlockController, :blocks_v2
+      get "/blocks", BlockController, :blocks
+      get "/blocks/:hash_or_kbi", BlockController, :block
+      get "/blocks/:kbi/:mbi", BlockController, :blocki
 
       get "/names/:id/auctions", NameController, :auction
       get "/names/:id/pointers", NameController, :pointers
@@ -94,8 +92,11 @@ defmodule AeMdwWeb.Router do
     end)
 
     # v1-only routes
-    get "/blocks/gen/:range", BlockController, :blocks
-    get "/blocks/:range_or_dir", BlockController, :blocks
+    get "/blocks/gen/:range", BlockController, :blocks_v1
+    get "/blocks/:range_or_dir", BlockController, :blocks_v1
+    get "/block/:hash_or_kbi", BlockController, :block
+    get "/blocki/:kbi", BlockController, :blocki
+    get "/blocki/:kbi/:mbi", BlockController, :blocki
 
     get "/name/auction/:id", NameController, :auction
     get "/name/pointers/:id", NameController, :pointers

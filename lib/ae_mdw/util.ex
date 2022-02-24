@@ -223,6 +223,14 @@ defmodule AeMdw.Util do
   def opposite_dir(:backward), do: :forward
   def opposite_dir(:forward), do: :backward
 
+  @spec parse_int(binary()) :: {:ok, integer()} | :error
+  def parse_int(int_bin) do
+    case Integer.parse(int_bin) do
+      {int, ""} -> {:ok, int}
+      _invalid_int -> :error
+    end
+  end
+
   @doc """
   Given a cursor (which can be `nil`) and a range (first/last gen) computes the
   range of generations to be fetched, together with the previous/next generation.
