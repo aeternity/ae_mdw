@@ -10,11 +10,16 @@ defmodule AeMdwWeb.Aex9Controller do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
   alias AeMdw.Db.Util
+  alias AeMdw.Aex9
   alias AeMdwWeb.DataStreamPlug, as: DSPlug
+  alias AeMdwWeb.Plugs.PaginatedPlug
+  alias Plug.Conn
 
-  import AeMdwWeb.Util
+  import AeMdwWeb.Util, only: [handle_input: 2, paginate: 4, presence?: 2]
   import AeMdwWeb.Helpers.Aex9Helper
   import AeMdwWeb.Views.Aex9ControllerView
+
+  plug(PaginatedPlug)
 
   @max_range_length 10
 
@@ -154,36 +159,91 @@ defmodule AeMdwWeb.Aex9Controller do
         end
       )
 
-  @spec transfers_from(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def transfers_from(conn, %{"sender" => sender_id}),
+  @spec transfers_from_v1(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def transfers_from_v1(conn, %{"sender" => sender_id}),
     do:
       handle_input(
         conn,
         fn -> transfers_reply(conn, {:from, Validate.id!(sender_id)}, :aex9_transfer) end
       )
 
-  @spec transfers_to(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def transfers_to(conn, %{"recipient" => recipient_id}),
+  @spec transfers_to_v1(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def transfers_to_v1(conn, %{"recipient" => recipient_id}),
     do:
       handle_input(
         conn,
         fn -> transfers_reply(conn, {:to, Validate.id!(recipient_id)}, :rev_aex9_transfer) end
       )
 
-  @spec transfers_from_to(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def transfers_from_to(conn, %{"sender" => sender_id, "recipient" => recipient_id}),
+  @spec transfers_from_to_v1(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def transfers_from_to_v1(conn, %{"sender" => sender_id, "recipient" => recipient_id}),
     do:
       handle_input(
         conn,
         fn ->
           query = {:from_to, Validate.id!(sender_id), Validate.id!(recipient_id)}
-          transfers_reply(conn, query, :aex9_transfer)
+          transfers_reply(conn, query, :aex9_pair_transfer)
         end
       )
+
+  @spec transfers_from(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def transfers_from(%Conn{assigns: assigns} = conn, %{"sender" => sender_id}) do
+    %{pagination: pagination, cursor: cursor} = assigns
+
+    {prev_cursor, transfers_keys, next_cursor} =
+      sender_id
+      |> Validate.id!()
+      |> Aex9.fetch_sender_transfers(pagination, cursor)
+
+    data = Enum.map(transfers_keys, &sender_transfer_to_map/1)
+
+    paginate(conn, prev_cursor, data, next_cursor)
+  end
+
+  @spec transfers_to(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def transfers_to(%Conn{assigns: assigns} = conn, %{"recipient" => recipient_id}) do
+    %{pagination: pagination, cursor: cursor} = assigns
+
+    {prev_cursor, transfers_keys, next_cursor} =
+      recipient_id
+      |> Validate.id!()
+      |> Aex9.fetch_recipient_transfers(pagination, cursor)
+
+    data = Enum.map(transfers_keys, &recipient_transfer_to_map/1)
+
+    paginate(conn, prev_cursor, data, next_cursor)
+  end
+
+  @spec transfers_from_to(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def transfers_from_to(%Conn{assigns: assigns} = conn, %{
+        "sender" => sender_id,
+        "recipient" => recipient_id
+      }) do
+    %{pagination: pagination, cursor: cursor} = assigns
+
+    sender_pk = Validate.id!(sender_id)
+    recipient_pk = Validate.id!(recipient_id)
+
+    {prev_cursor, transfers_keys, next_cursor} =
+      Aex9.fetch_pair_transfers(sender_pk, recipient_pk, pagination, cursor)
+
+    data = Enum.map(transfers_keys, &pair_transfer_to_map/1)
+
+    paginate(conn, prev_cursor, data, next_cursor)
+  end
 
   #
   # Private functions
   #
+  defp transfers_reply(conn, query, key_tag) do
+    transfers =
+      query
+      |> Contract.aex9_search_transfers()
+      |> Enum.sort_by(fn {_sender_pk, _recipient_pk, _amount, call_txi, _log_idx} -> call_txi end)
+
+    json(conn, Enum.map(transfers, &transfer_to_map(&1, key_tag)))
+  end
+
   defp by_contract_reply(conn, contract_id) do
     entry =
       case Contract.aex9_search_contract_by_id(contract_id) do
@@ -287,15 +347,6 @@ defmodule AeMdwWeb.Aex9Controller do
   defp balances_for_hash_reply(conn, contract_pk, {block_type, block_hash, height}) do
     {amounts, _} = DBN.aex9_balances!(contract_pk, {block_type, height, block_hash})
     json(conn, balances_to_map({amounts, {block_type, height, block_hash}}, contract_pk))
-  end
-
-  defp transfers_reply(conn, query, key_tag) do
-    transfers =
-      query
-      |> Contract.aex9_search_transfers()
-      |> Enum.sort_by(fn {_sender_pk, _recipient_pk, _amount, call_txi, _log_idx} -> call_txi end)
-
-    json(conn, Enum.map(transfers, &transfer_to_map(&1, key_tag)))
   end
 
   defp search_mode!(%{"prefix" => _, "exact" => _}),

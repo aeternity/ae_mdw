@@ -247,20 +247,28 @@ defmodule AeMdw.Db.Model do
   defrecord :idx_contract_log, @idx_contract_log_defaults
 
   # aex9 transfer:
-  #    index: {from pk, to pk, amount, call txi, log idx}
+  #    index: {from pk, call txi, to pk, amount, log idx}
   @aex9_transfer_defaults [
-    index: {nil, nil, -1, -1, -1},
+    index: {nil, -1, nil, -1, -1},
     unused: nil
   ]
   defrecord :aex9_transfer, @aex9_transfer_defaults
 
   # rev aex9 transfer:
-  #    index: {to pk, from pk, amount, call txi, log idx}
+  #    index: {to pk, call txi, from pk, amount, log idx}
   @rev_aex9_transfer_defaults [
-    index: {nil, nil, -1, -1, -1},
+    index: {nil, -1, nil, -1, -1},
     unused: nil
   ]
   defrecord :rev_aex9_transfer, @rev_aex9_transfer_defaults
+
+  # aex9 pair transfer:
+  #    index: {from pk, to pk, call txi, amount, log idx}
+  @aex9_pair_transfer_defaults [
+    index: {nil, nil, -1, -1, -1},
+    unused: nil
+  ]
+  defrecord :aex9_pair_transfer, @aex9_pair_transfer_defaults
 
   # idx aex9 transfer:
   #    index: {call txi, log idx, from pk, to pk, amount}
@@ -507,6 +515,7 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.Aex9ContractPubkey,
       AeMdw.Db.Model.Aex9Transfer,
       AeMdw.Db.Model.RevAex9Transfer,
+      AeMdw.Db.Model.Aex9PairTransfer,
       AeMdw.Db.Model.IdxAex9Transfer,
       AeMdw.Db.Model.Aex9AccountPresence,
       AeMdw.Db.Model.IdxAex9AccountPresence,
@@ -583,6 +592,7 @@ defmodule AeMdw.Db.Model do
       :aex9_contract_pubkey,
       :aex9_transfer,
       :rev_aex9_transfer,
+      :aex9_pair_transfer,
       :idx_aex9_transfer,
       :aex9_account_presence,
       :idx_aex9_account_presence,
@@ -637,6 +647,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Aex9ContractPubkey), do: :aex9_contract_pubkey
   def record(AeMdw.Db.Model.Aex9Transfer), do: :aex9_transfer
   def record(AeMdw.Db.Model.RevAex9Transfer), do: :rev_aex9_transfer
+  def record(AeMdw.Db.Model.Aex9PairTransfer), do: :aex9_pair_transfer
   def record(AeMdw.Db.Model.IdxAex9Transfer), do: :idx_aex9_transfer
   def record(AeMdw.Db.Model.Aex9AccountPresence), do: :aex9_account_presence
   def record(AeMdw.Db.Model.IdxAex9AccountPresence), do: :idx_aex9_account_presence
@@ -693,6 +704,7 @@ defmodule AeMdw.Db.Model do
   def table(:aex9_contract_pubkey), do: AeMdw.Db.Model.Aex9ContractPubkey
   def table(:aex9_transfer), do: AeMdw.Db.Model.Aex9Transfer
   def table(:rev_aex9_transfer), do: AeMdw.Db.Model.RevAex9Transfer
+  def table(:aex9_pair_transfer), do: AeMdw.Db.Model.Aex9PairTransfer
   def table(:idx_aex9_transfer), do: AeMdw.Db.Model.IdxAex9Transfer
   def table(:aex9_account_presence), do: AeMdw.Db.Model.Aex9AccountPresence
   def table(:idx_aex9_account_presence), do: AeMdw.Db.Model.IdxAex9AccountPresence
@@ -734,6 +746,7 @@ defmodule AeMdw.Db.Model do
   def defaults(:aex9_contract_pubkey), do: @aex9_contract_pubkey_defaults
   def defaults(:aex9_transfer), do: @aex9_transfer_defaults
   def defaults(:rev_aex9_transfer), do: @rev_aex9_transfer_defaults
+  def defaults(:aex9_pair_transfer), do: @aex9_pair_transfer_defaults
   def defaults(:idx_aex9_transfer), do: @idx_aex9_transfer_defaults
   def defaults(:aex9_account_presence), do: @aex9_account_presence_defaults
   def defaults(:idx_aex9_account_presence), do: @idx_aex9_account_presence_defaults

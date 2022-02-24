@@ -361,12 +361,16 @@ defmodule AeMdw.Db.Contract do
   end
 
   defp write_aex9_records(contract_pk, txi, i, [from_pk, to_pk, <<amount::256>>]) do
-    m_transfer = Model.aex9_transfer(index: {from_pk, to_pk, amount, txi, i})
-    m_rev_transfer = Model.rev_aex9_transfer(index: {to_pk, from_pk, amount, txi, i})
+    m_transfer = Model.aex9_transfer(index: {from_pk, txi, to_pk, amount, i})
+    m_rev_transfer = Model.rev_aex9_transfer(index: {to_pk, txi, from_pk, amount, i})
     m_idx_transfer = Model.idx_aex9_transfer(index: {txi, i, from_pk, to_pk, amount})
+    m_pair_transfer = Model.aex9_pair_transfer(index: {to_pk, from_pk, amount, txi, i})
+
     Database.write(Model.Aex9Transfer, m_transfer)
     Database.write(Model.RevAex9Transfer, m_rev_transfer)
     Database.write(Model.IdxAex9Transfer, m_idx_transfer)
+    Database.write(Model.Aex9PairTransfer, m_pair_transfer)
+
     aex9_write_presence(contract_pk, txi, to_pk)
     aex9_presence_cache_write({{contract_pk, txi, i}, {from_pk, to_pk}, amount})
   end

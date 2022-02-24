@@ -69,6 +69,21 @@ defmodule AeMdw.Collection do
     end
   end
 
+  @spec stream(table(), direction(), key()) :: Enumerable.t()
+  def stream(table, direction, cursor_key) do
+    Stream.unfold(
+      cursor_key,
+      fn key ->
+        if key != :none do
+          case Database.next_key(table, direction, key) do
+            :none -> {key, :none}
+            {:ok, next_key} -> {key, next_key}
+          end
+        end
+      end
+    )
+  end
+
   @doc """
   Merges any given stream of keys into a single stream, in sorted order and without dups.
   """
