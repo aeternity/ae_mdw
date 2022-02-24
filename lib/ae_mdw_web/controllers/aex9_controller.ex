@@ -239,7 +239,15 @@ defmodule AeMdwWeb.Aex9Controller do
     transfers =
       query
       |> Contract.aex9_search_transfers()
-      |> Enum.sort_by(fn {_sender_pk, _recipient_pk, _amount, call_txi, _log_idx} -> call_txi end)
+      |> Enum.sort_by(fn key ->
+        if key_tag == :aex9_pair_transfer do
+          {_sender_pk, _recipient_pk, call_txi, _amount, _log_idx} = key
+          call_txi
+        else
+          {_pk1, call_txi, _pk2, _amount, _log_idx} = key
+          call_txi
+        end
+      end)
 
     json(conn, Enum.map(transfers, &transfer_to_map(&1, key_tag)))
   end

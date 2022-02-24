@@ -231,7 +231,7 @@ defmodule AeMdw.Db.Contract do
   def aex9_search_transfers({:from, sender_pk}) do
     aex9_search_transfers(
       Model.Aex9Transfer,
-      {sender_pk, nil, 0, 0, 0},
+      {sender_pk, 0, 0, 0, 0},
       fn key -> elem(key, 0) == sender_pk end
     )
   end
@@ -239,7 +239,7 @@ defmodule AeMdw.Db.Contract do
   def aex9_search_transfers({:to, recipient_pk}) do
     aex9_search_transfers(
       Model.RevAex9Transfer,
-      {recipient_pk, nil, 0, 0, 0},
+      {recipient_pk, 0, 0, 0, 0},
       fn key -> elem(key, 0) == recipient_pk end
     )
   end
