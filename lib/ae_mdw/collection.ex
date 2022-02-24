@@ -74,11 +74,12 @@ defmodule AeMdw.Collection do
     Stream.unfold(
       cursor_key,
       fn key ->
-        if key != :none do
-          case Database.next_key(table, direction, key) do
-            :none -> {key, :none}
-            {:ok, next_key} -> {key, next_key}
-          end
+        with true <- key != :none,
+             {:ok, next_key} <- Database.next_key(table, direction, key) do
+          {key, next_key}
+        else
+          false -> nil
+          :none -> {key, :none}
         end
       end
     )
