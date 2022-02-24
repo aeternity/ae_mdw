@@ -2,30 +2,26 @@ defmodule AeMdwWeb.OracleController do
   use AeMdwWeb, :controller
   use PhoenixSwagger
 
-  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Validate
-  alias AeMdw.Db.Model
-  alias AeMdw.Db.Format
-  alias AeMdw.Db.Oracle
-  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Oracles
+  alias AeMdwWeb.FallbackController
   alias AeMdwWeb.SwaggerParameters
   alias AeMdwWeb.Plugs.PaginatedPlug
   alias AeMdwWeb.Util
   alias Plug.Conn
 
-  require Model
-
   plug(PaginatedPlug)
+  action_fallback(FallbackController)
 
   ##########
 
   @spec oracle(Conn.t(), map()) :: Conn.t()
-  def oracle(conn, %{"id" => id} = params),
-    do:
-      Util.handle_input(conn, fn ->
-        oracle_reply(conn, Validate.id!(id, [:oracle_pubkey]), Util.expand?(params))
-      end)
+  def oracle(conn, %{"id" => id} = params) do
+    with {:ok, oracle_pk} <- Validate.id(id, [:oracle_pubkey]),
+         {:ok, oracle} <- Oracles.fetch(oracle_pk, Util.expand?(params)) do
+      json(conn, oracle)
+    end
+  end
 
   @spec inactive_oracles(Conn.t(), map()) :: Conn.t()
   def inactive_oracles(%Conn{assigns: assigns} = conn, _params) do
@@ -48,22 +44,15 @@ defmodule AeMdwWeb.OracleController do
   end
 
   @spec oracles(Conn.t(), map()) :: Conn.t()
-  def oracles(%Conn{assigns: assigns} = conn, _params) do
+  def oracles(%Conn{assigns: assigns, query_params: query_params} = conn, _params) do
     %{pagination: pagination, cursor: cursor, expand?: expand?, scope: scope} = assigns
 
-    {prev_cursor, oracles, next_cursor} =
-      Oracles.fetch_oracles(pagination, scope, cursor, expand?)
+    case Oracles.fetch_oracles(pagination, scope, query_params, cursor, expand?) do
+      {:ok, prev_cursor, oracles, next_cursor} ->
+        Util.paginate(conn, prev_cursor, oracles, next_cursor)
 
-    Util.paginate(conn, prev_cursor, oracles, next_cursor)
-  end
-
-  ##########
-
-  @spec oracle_reply(Conn.t(), binary(), boolean()) :: Conn.t()
-  def oracle_reply(conn, pubkey, expand?) do
-    case Oracle.locate(pubkey) do
-      {m_oracle, source} -> json(conn, Format.to_map(m_oracle, source, expand?))
-      nil -> raise ErrInput.NotFound, value: Enc.encode(:oracle_pubkey, pubkey)
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
