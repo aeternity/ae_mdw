@@ -11,7 +11,7 @@ defmodule AeMdw.Collection do
   @typep cursor() :: Database.cursor()
   @typep limit() :: Database.limit()
   @typep key() :: Database.key()
-  @typep scope() :: {key(), key()} | nil
+  @typep key_boundary() :: {key(), key()} | nil
 
   @type is_reversed?() :: boolean()
   @type has_cursor?() :: boolean()
@@ -54,10 +54,10 @@ defmodule AeMdw.Collection do
   @doc """
   Builds a stream from records from a table starting from the initial_key given.
   """
-  @spec stream(table(), direction(), scope(), cursor()) :: Enumerable.t()
-  def stream(tab, direction, scope, cursor) do
+  @spec stream(table(), direction(), key_boundary(), cursor()) :: Enumerable.t()
+  def stream(tab, direction, key_boundary, cursor) do
     {first, last} =
-      case {scope, direction} do
+      case {key_boundary, direction} do
         {nil, _dir} -> {nil, nil}
         {s, :forward} -> s
         {{last, first}, :backward} -> {first, last}
@@ -67,22 +67,6 @@ defmodule AeMdw.Collection do
       {:ok, first_key} -> unfold_stream(tab, direction, first_key, last)
       :none -> []
     end
-  end
-
-  @spec stream(table(), direction(), key()) :: Enumerable.t()
-  def stream(table, direction, cursor_key) do
-    Stream.unfold(
-      cursor_key,
-      fn key ->
-        with true <- key != :none,
-             {:ok, next_key} <- Database.next_key(table, direction, key) do
-          {key, next_key}
-        else
-          false -> nil
-          :none -> {key, :none}
-        end
-      end
-    )
   end
 
   @doc """
