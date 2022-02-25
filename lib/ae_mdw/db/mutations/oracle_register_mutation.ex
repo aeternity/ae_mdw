@@ -6,6 +6,7 @@ defmodule AeMdw.Db.OracleRegisterMutation do
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Db.Oracle
+  alias AeMdw.Node.Db
   alias AeMdw.Txs
 
   require Model
@@ -15,13 +16,13 @@ defmodule AeMdw.Db.OracleRegisterMutation do
   @typep expiration() :: Blocks.height()
 
   @opaque t() :: %__MODULE__{
-            oracle_pk: Oracle.pubkey(),
+            oracle_pk: Db.pubkey(),
             block_index: Blocks.block_index(),
             expire: expiration(),
             txi: Txs.txi()
           }
 
-  @spec new(Oracle.pubkey(), Blocks.block_index(), expiration(), Txs.txi()) :: t()
+  @spec new(Db.pubkey(), Blocks.block_index(), expiration(), Txs.txi()) :: t()
   def new(oracle_pk, block_index, expire, txi) do
     %__MODULE__{
       oracle_pk: oracle_pk,

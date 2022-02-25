@@ -8,15 +8,16 @@ defmodule AeMdw.Db.OraclesExpirationMutation do
 
   alias AeMdw.Blocks
   alias AeMdw.Db.Oracle
+  alias AeMdw.Node.Db
 
   defstruct [:height, :expired_pubkeys]
 
   @opaque t() :: %__MODULE__{
             height: Blocks.height(),
-            expired_pubkeys: [Oracle.pubkey()]
+            expired_pubkeys: [Db.pubkey()]
           }
 
-  @spec new(Blocks.height(), [Oracle.pubkey()]) :: t()
+  @spec new(Blocks.height(), [Db.pubkey()]) :: t()
   def new(height, expired_pubkeys) do
     %__MODULE__{height: height, expired_pubkeys: expired_pubkeys}
   end

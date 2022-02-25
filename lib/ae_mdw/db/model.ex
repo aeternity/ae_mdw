@@ -6,6 +6,7 @@ defmodule AeMdw.Db.Model do
   alias AeMdw.Contract
   alias AeMdw.Database
   alias AeMdw.Node
+  alias AeMdw.Node.Db
   alias AeMdw.Txs
 
   require Record
@@ -160,6 +161,16 @@ defmodule AeMdw.Db.Model do
     previous: nil
   ]
   defrecord :oracle, @oracle_defaults
+
+  @type oracle() ::
+          record(:oracle,
+            index: Db.pubkey(),
+            active: Blocks.height(),
+            expire: Blocks.height(),
+            register: {Blocks.block_index(), Txs.txi()},
+            extends: [{Blocks.block_index(), Txs.txi()}],
+            previous: oracle() | nil
+          )
 
   # AEX9 contract:
   #     index: {name, symbol, txi, decimals}
