@@ -22,9 +22,6 @@ defmodule AeMdwWeb.Router do
     {"/aex9/balances/gen/:range/:contract_id", AeMdwWeb.Aex9Controller, :balances_range},
     {"/aex9/balances/hash/:blockhash/:contract_id", AeMdwWeb.Aex9Controller, :balances_for_hash},
     {"/aex9/balances/:contract_id", AeMdwWeb.Aex9Controller, :balances},
-    {"/aex9/transfers/from/:sender", AeMdwWeb.Aex9Controller, :transfers_from},
-    {"/aex9/transfers/to/:recipient", AeMdwWeb.Aex9Controller, :transfers_to},
-    {"/aex9/transfers/from-to/:sender/:recipient", AeMdwWeb.Aex9Controller, :transfers_from_to},
     {"/contracts/logs", AeMdwWeb.ContractController, :logs},
     {"/contracts/logs/:direction", AeMdwWeb.ContractController, :logs},
     {"/contracts/logs/:scope_type/:range", AeMdwWeb.ContractController, :logs},
@@ -79,6 +76,10 @@ defmodule AeMdwWeb.Router do
       get "/names", NameController, :names
       get "/names/:id", NameController, :name
 
+      get "/aex9/transfers/from/:sender", Aex9Controller, :transfers_from
+      get "/aex9/transfers/to/:recipient", Aex9Controller, :transfers_to
+      get "/aex9/transfers/from-to/:sender/:recipient", Aex9Controller, :transfers_from_to
+
       get "/oracles/:id", OracleController, :oracle
       get "/oracles", OracleController, :oracles
     end
@@ -108,6 +109,10 @@ defmodule AeMdwWeb.Router do
     get "/names/active/:scope_type/:range", NameController, :active_names
     get "/names", NameController, :names
     get "/names/:scope_type/:range", NameController, :names
+
+    get "/aex9/transfers/from/:sender", Aex9Controller, :transfers_from_v1
+    get "/aex9/transfers/to/:recipient", Aex9Controller, :transfers_to_v1
+    get "/aex9/transfers/from-to/:sender/:recipient", Aex9Controller, :transfers_from_to_v1
 
     get "/oracle/:id", OracleController, :oracle
     get "/oracles/inactive", OracleController, :inactive_oracles

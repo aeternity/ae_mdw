@@ -11,7 +11,10 @@ defmodule AeMdwWeb.Views.Aex9ControllerView do
 
   import AeMdwWeb.Helpers.Aex9Helper
 
-  @typep pubkey() :: <<_::256>>
+  @typep pubkey :: AeMdw.Node.Db.pubkey()
+  @typep account_transfer_key :: AeMdw.Aex9.account_transfer_key()
+  @typep pair_transfer_key :: AeMdw.Aex9.pair_transfer_key()
+  @typep transfer_key_type :: :aex9_transfer | :rev_aex9_transfer | :aex9_pair_transfer
 
   @spec balance_to_map({non_neg_integer(), non_neg_integer(), non_neg_integer(), pubkey()}) ::
           map()
@@ -56,11 +59,29 @@ defmodule AeMdwWeb.Views.Aex9ControllerView do
     }
   end
 
-  @spec transfer_to_map(tuple(), atom()) :: map()
-  def transfer_to_map({recipient_pk, sender_pk, amount, call_txi, log_idx}, :rev_aex9_transfer),
-    do: transfer_to_map({sender_pk, recipient_pk, amount, call_txi, log_idx}, :aex9_transfer)
+  @spec sender_transfer_to_map(account_transfer_key()) :: map()
+  def sender_transfer_to_map(key), do: do_transfer_to_map(key)
 
-  def transfer_to_map({sender_pk, recipient_pk, amount, call_txi, log_idx}, :aex9_transfer) do
+  @spec recipient_transfer_to_map(account_transfer_key()) :: map()
+  def recipient_transfer_to_map({pk1, call_txi, pk2, amount, log_idx}),
+    do: do_transfer_to_map({pk2, call_txi, pk1, amount, log_idx})
+
+  @spec pair_transfer_to_map(pair_transfer_key()) :: map()
+  def pair_transfer_to_map({pk1, pk2, call_txi, amount, log_idx}),
+    do: do_transfer_to_map({pk1, call_txi, pk2, amount, log_idx})
+
+  @spec transfer_to_map(account_transfer_key() | pair_transfer_key(), transfer_key_type()) ::
+          map()
+  def transfer_to_map({sender_pk, call_txi, recipient_pk, amount, log_idx}, :aex9_transfer),
+    do: do_transfer_to_map({sender_pk, call_txi, recipient_pk, amount, log_idx})
+
+  def transfer_to_map({recipient_pk, call_txi, sender_pk, amount, log_idx}, :rev_aex9_transfer),
+    do: do_transfer_to_map({sender_pk, call_txi, recipient_pk, amount, log_idx})
+
+  def transfer_to_map({sender_pk, recipient_pk, call_txi, amount, log_idx}, :aex9_pair_transfer),
+    do: do_transfer_to_map({sender_pk, call_txi, recipient_pk, amount, log_idx})
+
+  defp do_transfer_to_map({sender_pk, call_txi, recipient_pk, amount, log_idx}) do
     Model.tx(id: hash, block_index: {kbi, mbi}, time: micro_time) = Util.read_tx!(call_txi)
     {_block_hash, type, _signed_tx, tx_rec} = AeMdw.Node.Db.get_tx_data(hash)
 

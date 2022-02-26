@@ -11,6 +11,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
   @moduletag :integration
 
   @big_balance_contract_id "ct_2M4mVQCDVxu6mvUrEue1xMafLsoA1bgsfC3uT95F3r1xysaCvE"
+  @default_limit 10
 
   describe "by_contract" do
     test "gets aex9 tokens sorted by contract", %{conn: conn} do
@@ -263,7 +264,394 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
     end
   end
 
-  describe "transfers" do
+  describe "transfers from" do
+    test "a sender paginated backwards with limit = 100", %{conn: conn} do
+      account_id = "ak_fCCw1JEkvXdztZxk8FRGNAkvmArhVeow89e64yX4AxbCPrVh5"
+      limit = 100
+
+      %{"data" => data1, "next" => next_uri1} =
+        conn
+        |> get("/v2/aex9/transfers/from/#{account_id}", limit: limit)
+        |> json_response(200)
+
+      assert Enum.all?(data1, fn %{"sender" => sender_id} -> sender_id == account_id end)
+      assert data1 == Enum.sort_by(data1, fn %{"call_txi" => call_txi} -> call_txi end, :desc)
+      assert length(data1) == limit
+
+      %{"prev" => prev_uri, "data" => data2, "next" => next_uri2} =
+        conn
+        |> get(next_uri1)
+        |> json_response(200)
+
+      assert Enum.all?(data2, fn %{"sender" => sender_id} -> sender_id == account_id end)
+      assert data2 == Enum.sort_by(data2, fn %{"call_txi" => call_txi} -> call_txi end, :desc)
+      assert length(data2) == limit
+      assert next_uri2 != next_uri1 and String.contains?(next_uri2, account_id)
+
+      assert %{"data" => ^data1, "next" => ^next_uri1} =
+               conn
+               |> get(prev_uri)
+               |> json_response(200)
+    end
+
+    test "a sender paginated backwards with default limit", %{conn: conn} do
+      account_id = "ak_fCCw1JEkvXdztZxk8FRGNAkvmArhVeow89e64yX4AxbCPrVh5"
+
+      %{"data" => data1, "next" => next_uri1} =
+        conn
+        |> get("/v2/aex9/transfers/from/#{account_id}")
+        |> json_response(200)
+
+      assert Enum.all?(data1, fn %{"sender" => sender_id} -> sender_id == account_id end)
+      assert data1 == Enum.sort_by(data1, fn %{"call_txi" => call_txi} -> call_txi end, :desc)
+      assert length(data1) == @default_limit
+
+      %{"prev" => prev_uri, "data" => data2, "next" => next_uri2} =
+        conn
+        |> get(next_uri1)
+        |> json_response(200)
+
+      assert Enum.all?(data2, fn %{"sender" => sender_id} -> sender_id == account_id end)
+      assert data2 == Enum.sort_by(data2, fn %{"call_txi" => call_txi} -> call_txi end, :desc)
+      assert length(data2) == @default_limit
+      assert next_uri2 != next_uri1 and String.contains?(next_uri2, account_id)
+
+      assert %{"data" => ^data1, "next" => ^next_uri1} =
+               conn
+               |> get(prev_uri)
+               |> json_response(200)
+    end
+
+    test "a sender paginated forward with limit = 100", %{conn: conn} do
+      account_id = "ak_fCCw1JEkvXdztZxk8FRGNAkvmArhVeow89e64yX4AxbCPrVh5"
+      limit = 100
+
+      %{"data" => data1, "next" => next_uri1} =
+        conn
+        |> get("/v2/aex9/transfers/from/#{account_id}", limit: limit, direction: "forward")
+        |> json_response(200)
+
+      assert Enum.all?(data1, fn %{"sender" => sender_id} -> sender_id == account_id end)
+      assert data1 == Enum.sort_by(data1, fn %{"call_txi" => call_txi} -> call_txi end)
+      assert length(data1) == limit
+
+      %{"prev" => prev_uri, "data" => data2, "next" => next_uri2} =
+        conn
+        |> get(next_uri1)
+        |> json_response(200)
+
+      assert Enum.all?(data2, fn %{"sender" => sender_id} -> sender_id == account_id end)
+      assert data2 == Enum.sort_by(data2, fn %{"call_txi" => call_txi} -> call_txi end)
+      assert length(data2) == limit
+      assert next_uri2 != next_uri1 and String.contains?(next_uri2, account_id)
+
+      assert %{"data" => ^data1, "next" => ^next_uri1} =
+               conn
+               |> get(prev_uri)
+               |> json_response(200)
+    end
+
+    test "a sender paginated forward with default limit", %{conn: conn} do
+      account_id = "ak_fCCw1JEkvXdztZxk8FRGNAkvmArhVeow89e64yX4AxbCPrVh5"
+
+      %{"data" => data1, "next" => next_uri1} =
+        conn
+        |> get("/v2/aex9/transfers/from/#{account_id}", direction: "forward")
+        |> json_response(200)
+
+      assert Enum.all?(data1, fn %{"sender" => sender_id} -> sender_id == account_id end)
+      assert data1 == Enum.sort_by(data1, fn %{"call_txi" => call_txi} -> call_txi end)
+      assert length(data1) == @default_limit
+
+      %{"prev" => prev_uri, "data" => data2, "next" => next_uri2} =
+        conn
+        |> get(next_uri1)
+        |> json_response(200)
+
+      assert Enum.all?(data2, fn %{"sender" => sender_id} -> sender_id == account_id end)
+      assert data2 == Enum.sort_by(data2, fn %{"call_txi" => call_txi} -> call_txi end)
+      assert length(data2) == @default_limit
+      assert next_uri2 != next_uri1 and String.contains?(next_uri2, account_id)
+
+      assert %{"data" => ^data1, "next" => ^next_uri1} =
+               conn
+               |> get(prev_uri)
+               |> json_response(200)
+    end
+  end
+
+  describe "transfers to" do
+    test "a recipient paginated backwards with limit = 100", %{conn: conn} do
+      account_id = "ak_2UqKYBBgVWfBeFYdn5sBS75B1cfLMPFSCy95xQoRo9SKNvvLgb"
+      limit = 50
+
+      %{"data" => data1, "next" => next_uri1} =
+        conn
+        |> get("/v2/aex9/transfers/to/#{account_id}", limit: limit)
+        |> json_response(200)
+
+      assert Enum.all?(data1, fn %{"recipient" => recipient_id} -> recipient_id == account_id end)
+      assert data1 == Enum.sort_by(data1, fn %{"call_txi" => call_txi} -> call_txi end, :desc)
+      assert length(data1) == limit
+
+      %{"prev" => prev_uri, "data" => data2, "next" => next_uri2} =
+        conn
+        |> get(next_uri1)
+        |> json_response(200)
+
+      assert Enum.all?(data2, fn %{"recipient" => recipient_id} -> recipient_id == account_id end)
+      assert data2 == Enum.sort_by(data2, fn %{"call_txi" => call_txi} -> call_txi end, :desc)
+      assert length(data2) == limit
+      assert next_uri2 != next_uri1 and String.contains?(next_uri2, account_id)
+
+      assert %{"data" => ^data1, "next" => ^next_uri1} =
+               conn
+               |> get(prev_uri)
+               |> json_response(200)
+    end
+
+    test "a recipient paginated backwards with default limit", %{conn: conn} do
+      account_id = "ak_2UqKYBBgVWfBeFYdn5sBS75B1cfLMPFSCy95xQoRo9SKNvvLgb"
+
+      %{"data" => data1, "next" => next_uri1} =
+        conn
+        |> get("/v2/aex9/transfers/to/#{account_id}")
+        |> json_response(200)
+
+      assert Enum.all?(data1, fn %{"recipient" => recipient_id} -> recipient_id == account_id end)
+      assert data1 == Enum.sort_by(data1, fn %{"call_txi" => call_txi} -> call_txi end, :desc)
+      assert length(data1) == @default_limit
+
+      %{"prev" => prev_uri, "data" => data2, "next" => next_uri2} =
+        conn
+        |> get(next_uri1)
+        |> json_response(200)
+
+      assert Enum.all?(data2, fn %{"recipient" => recipient_id} -> recipient_id == account_id end)
+      assert data2 == Enum.sort_by(data2, fn %{"call_txi" => call_txi} -> call_txi end, :desc)
+      assert length(data2) == @default_limit
+      assert next_uri2 != next_uri1 and String.contains?(next_uri2, account_id)
+
+      assert %{"data" => ^data1, "next" => ^next_uri1} =
+               conn
+               |> get(prev_uri)
+               |> json_response(200)
+    end
+
+    test "a recipient paginated forward with limit = 100", %{conn: conn} do
+      account_id = "ak_2UqKYBBgVWfBeFYdn5sBS75B1cfLMPFSCy95xQoRo9SKNvvLgb"
+      limit = 50
+
+      %{"data" => data1, "next" => next_uri1} =
+        conn
+        |> get("/v2/aex9/transfers/to/#{account_id}", limit: limit, direction: "forward")
+        |> json_response(200)
+
+      assert Enum.all?(data1, fn %{"recipient" => recipient_id} -> recipient_id == account_id end)
+      assert data1 == Enum.sort_by(data1, fn %{"call_txi" => call_txi} -> call_txi end)
+      assert length(data1) == limit
+
+      %{"prev" => prev_uri, "data" => data2, "next" => next_uri2} =
+        conn
+        |> get(next_uri1)
+        |> json_response(200)
+
+      assert Enum.all?(data2, fn %{"recipient" => recipient_id} -> recipient_id == account_id end)
+      assert data2 == Enum.sort_by(data2, fn %{"call_txi" => call_txi} -> call_txi end)
+      assert length(data2) == limit
+      assert next_uri2 != next_uri1 and String.contains?(next_uri2, account_id)
+
+      assert %{"data" => ^data1, "next" => ^next_uri1} =
+               conn
+               |> get(prev_uri)
+               |> json_response(200)
+    end
+
+    test "a recipient paginated forward with default limit", %{conn: conn} do
+      account_id = "ak_2UqKYBBgVWfBeFYdn5sBS75B1cfLMPFSCy95xQoRo9SKNvvLgb"
+
+      %{"data" => data1, "next" => next_uri1} =
+        conn
+        |> get("/v2/aex9/transfers/to/#{account_id}", direction: "forward")
+        |> json_response(200)
+
+      assert Enum.all?(data1, fn %{"recipient" => recipient_id} -> recipient_id == account_id end)
+      assert data1 == Enum.sort_by(data1, fn %{"call_txi" => call_txi} -> call_txi end)
+      assert length(data1) == @default_limit
+
+      %{"prev" => prev_uri, "data" => data2, "next" => next_uri2} =
+        conn
+        |> get(next_uri1)
+        |> json_response(200)
+
+      assert Enum.all?(data2, fn %{"recipient" => recipient_id} -> recipient_id == account_id end)
+      assert data2 == Enum.sort_by(data2, fn %{"call_txi" => call_txi} -> call_txi end)
+      assert length(data2) == @default_limit
+      assert next_uri2 != next_uri1 and String.contains?(next_uri2, account_id)
+
+      assert %{"data" => ^data1, "next" => ^next_uri1} =
+               conn
+               |> get(prev_uri)
+               |> json_response(200)
+    end
+  end
+
+  describe "transfers from-to" do
+    test "paginated backwards with limit = 100", %{conn: conn} do
+      from_id = "ak_fCCw1JEkvXdztZxk8FRGNAkvmArhVeow89e64yX4AxbCPrVh5"
+      to_id = "ak_2UqKYBBgVWfBeFYdn5sBS75B1cfLMPFSCy95xQoRo9SKNvvLgb"
+      limit = 30
+
+      %{"data" => data1, "next" => next_uri1} =
+        conn
+        |> get("/v2/aex9/transfers/from-to/#{from_id}/#{to_id}", limit: limit)
+        |> json_response(200)
+
+      assert Enum.all?(data1, fn %{"sender" => sender_id, "recipient" => recipient_id} ->
+               sender_id == from_id and recipient_id == to_id
+             end)
+
+      assert data1 == Enum.sort_by(data1, fn %{"call_txi" => call_txi} -> call_txi end, :desc)
+      assert length(data1) == limit
+
+      %{"prev" => prev_uri, "data" => data2, "next" => next_uri2} =
+        conn
+        |> get(next_uri1)
+        |> json_response(200)
+
+      assert Enum.all?(data2, fn %{"sender" => sender_id, "recipient" => recipient_id} ->
+               sender_id == from_id and recipient_id == to_id
+             end)
+
+      assert data2 == Enum.sort_by(data2, fn %{"call_txi" => call_txi} -> call_txi end, :desc)
+      assert length(data2) == limit
+
+      assert next_uri2 != next_uri1 and String.contains?(next_uri2, from_id) and
+               String.contains?(next_uri2, to_id)
+
+      assert %{"data" => ^data1, "next" => ^next_uri1} =
+               conn
+               |> get(prev_uri)
+               |> json_response(200)
+    end
+
+    test "paginated backwards with default limit", %{conn: conn} do
+      from_id = "ak_fCCw1JEkvXdztZxk8FRGNAkvmArhVeow89e64yX4AxbCPrVh5"
+      to_id = "ak_2UqKYBBgVWfBeFYdn5sBS75B1cfLMPFSCy95xQoRo9SKNvvLgb"
+
+      %{"data" => data1, "next" => next_uri1} =
+        conn
+        |> get("/v2/aex9/transfers/from-to/#{from_id}/#{to_id}")
+        |> json_response(200)
+
+      assert Enum.all?(data1, fn %{"sender" => sender_id, "recipient" => recipient_id} ->
+               sender_id == from_id and recipient_id == to_id
+             end)
+
+      assert data1 == Enum.sort_by(data1, fn %{"call_txi" => call_txi} -> call_txi end, :desc)
+      assert length(data1) == @default_limit
+
+      %{"prev" => prev_uri, "data" => data2, "next" => next_uri2} =
+        conn
+        |> get(next_uri1)
+        |> json_response(200)
+
+      assert Enum.all?(data2, fn %{"sender" => sender_id, "recipient" => recipient_id} ->
+               sender_id == from_id and recipient_id == to_id
+             end)
+
+      assert data2 == Enum.sort_by(data2, fn %{"call_txi" => call_txi} -> call_txi end, :desc)
+      assert length(data2) == @default_limit
+
+      assert next_uri2 != next_uri1 and String.contains?(next_uri2, from_id) and
+               String.contains?(next_uri2, to_id)
+
+      assert %{"data" => ^data1, "next" => ^next_uri1} =
+               conn
+               |> get(prev_uri)
+               |> json_response(200)
+    end
+
+    test "paginated forward with limit = 100", %{conn: conn} do
+      from_id = "ak_fCCw1JEkvXdztZxk8FRGNAkvmArhVeow89e64yX4AxbCPrVh5"
+      to_id = "ak_2UqKYBBgVWfBeFYdn5sBS75B1cfLMPFSCy95xQoRo9SKNvvLgb"
+      limit = 30
+
+      %{"data" => data1, "next" => next_uri1} =
+        conn
+        |> get("/v2/aex9/transfers/from-to/#{from_id}/#{to_id}",
+          limit: limit,
+          direction: "forward"
+        )
+        |> json_response(200)
+
+      assert Enum.all?(data1, fn %{"sender" => sender_id, "recipient" => recipient_id} ->
+               sender_id == from_id and recipient_id == to_id
+             end)
+
+      assert data1 == Enum.sort_by(data1, fn %{"call_txi" => call_txi} -> call_txi end)
+      assert length(data1) == limit
+
+      %{"prev" => prev_uri, "data" => data2, "next" => next_uri2} =
+        conn
+        |> get(next_uri1)
+        |> json_response(200)
+
+      assert Enum.all?(data2, fn %{"sender" => sender_id, "recipient" => recipient_id} ->
+               sender_id == from_id and recipient_id == to_id
+             end)
+
+      assert data2 == Enum.sort_by(data2, fn %{"call_txi" => call_txi} -> call_txi end)
+      assert length(data2) == limit
+
+      assert next_uri2 != next_uri1 and String.contains?(next_uri2, from_id) and
+               String.contains?(next_uri2, to_id)
+
+      assert %{"data" => ^data1, "next" => ^next_uri1} =
+               conn
+               |> get(prev_uri)
+               |> json_response(200)
+    end
+
+    test "paginated forward with default limit", %{conn: conn} do
+      from_id = "ak_fCCw1JEkvXdztZxk8FRGNAkvmArhVeow89e64yX4AxbCPrVh5"
+      to_id = "ak_2UqKYBBgVWfBeFYdn5sBS75B1cfLMPFSCy95xQoRo9SKNvvLgb"
+
+      %{"data" => data1, "next" => next_uri1} =
+        conn
+        |> get("/v2/aex9/transfers/from-to/#{from_id}/#{to_id}", direction: "forward")
+        |> json_response(200)
+
+      assert Enum.all?(data1, fn %{"sender" => sender_id, "recipient" => recipient_id} ->
+               sender_id == from_id and recipient_id == to_id
+             end)
+
+      assert data1 == Enum.sort_by(data1, fn %{"call_txi" => call_txi} -> call_txi end)
+      assert length(data1) == @default_limit
+
+      %{"prev" => prev_uri, "data" => data2, "next" => next_uri2} =
+        conn
+        |> get(next_uri1)
+        |> json_response(200)
+
+      assert Enum.all?(data2, fn %{"sender" => sender_id, "recipient" => recipient_id} ->
+               sender_id == from_id and recipient_id == to_id
+             end)
+
+      assert data2 == Enum.sort_by(data2, fn %{"call_txi" => call_txi} -> call_txi end)
+      assert length(data2) == @default_limit
+
+      assert next_uri2 != next_uri1 and String.contains?(next_uri2, from_id) and
+               String.contains?(next_uri2, to_id)
+
+      assert %{"data" => ^data1, "next" => ^next_uri1} =
+               conn
+               |> get(prev_uri)
+               |> json_response(200)
+    end
+  end
+
+  describe "transfers_from_v1" do
     test "from a sender with many transfers", %{conn: conn} do
       account_id = "ak_fCCw1JEkvXdztZxk8FRGNAkvmArhVeow89e64yX4AxbCPrVh5"
       conn = get(conn, "/aex9/transfers/from/#{account_id}")
@@ -271,6 +659,37 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
       response = json_response(conn, 200)
 
       assert Enum.all?(response, fn %{"sender" => sender_id} -> sender_id == account_id end)
+      assert response == Enum.sort_by(response, fn %{"call_txi" => call_txi} -> call_txi end)
+    end
+  end
+
+  describe "transfers_to_v1" do
+    test "to a recipient with many transfers", %{conn: conn} do
+      account_id = "ak_2UqKYBBgVWfBeFYdn5sBS75B1cfLMPFSCy95xQoRo9SKNvvLgb"
+      conn = get(conn, "/aex9/transfers/to/#{account_id}")
+
+      response = json_response(conn, 200)
+
+      assert Enum.all?(response, fn %{"recipient" => recipient_id} ->
+               recipient_id == account_id
+             end)
+
+      assert response == Enum.sort_by(response, fn %{"call_txi" => call_txi} -> call_txi end)
+    end
+  end
+
+  describe "transfers_from_to_v1" do
+    test "from a pair with many transfers", %{conn: conn} do
+      from_id = "ak_fCCw1JEkvXdztZxk8FRGNAkvmArhVeow89e64yX4AxbCPrVh5"
+      to_id = "ak_2UqKYBBgVWfBeFYdn5sBS75B1cfLMPFSCy95xQoRo9SKNvvLgb"
+      conn = get(conn, "/aex9/transfers/from-to/#{from_id}/#{to_id}")
+
+      response = json_response(conn, 200)
+
+      assert Enum.all?(response, fn %{"sender" => sender_id, "recipient" => recipient_id} ->
+               sender_id == from_id and recipient_id == to_id
+             end)
+
       assert response == Enum.sort_by(response, fn %{"call_txi" => call_txi} -> call_txi end)
     end
   end

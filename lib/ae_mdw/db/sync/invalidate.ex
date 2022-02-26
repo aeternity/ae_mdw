@@ -244,22 +244,26 @@ defmodule AeMdw.Db.Sync.Invalidate do
   end
 
   def aex9_transfer_key_dels(from_txi) do
-    {aex9_tr_keys, aex9_rev_tr_keys, aex9_idx_tr_keys} =
+    {aex9_tr_keys, aex9_rev_tr_keys, aex9_idx_tr_keys, aex9_pair_tr_keys} =
       case Database.dirty_next(Model.IdxAex9Transfer, {from_txi, 0, nil, nil, 0}) do
         :"$end_of_table" ->
-          {[], [], []}
+          {[], [], [], []}
 
         start_key ->
-          push_key = fn {txi, log_idx, from_pk, to_pk, amount}, {tr_keys, rev_keys, idx_keys} ->
-            tr_key = {from_pk, to_pk, amount, txi, log_idx}
-            rev_key = {to_pk, from_pk, amount, txi, log_idx}
+          push_key = fn {txi, log_idx, from_pk, to_pk, amount},
+                        {tr_keys, rev_keys, idx_keys, pair_keys} ->
+            tr_key = {from_pk, txi, to_pk, amount, log_idx}
+            rev_key = {to_pk, txi, from_pk, amount, log_idx}
             idx_key = {txi, log_idx, from_pk, to_pk, amount}
-            {[tr_key | tr_keys], [rev_key | rev_keys], [idx_key | idx_keys]}
+            pair_key = {from_pk, to_pk, amount, txi, log_idx}
+
+            {[tr_key | tr_keys], [rev_key | rev_keys], [idx_key | idx_keys],
+             [pair_key | pair_keys]}
           end
 
           collect_keys(
             Model.IdxAex9Transfer,
-            push_key.(start_key, {[], [], []}),
+            push_key.(start_key, {[], [], [], []}),
             start_key,
             &next/2,
             fn key, acc -> {:cont, push_key.(key, acc)} end
@@ -269,7 +273,8 @@ defmodule AeMdw.Db.Sync.Invalidate do
     %{
       Model.Aex9Transfer => aex9_tr_keys,
       Model.RevAex9Transfer => aex9_rev_tr_keys,
-      Model.IdxAex9Transfer => aex9_idx_tr_keys
+      Model.IdxAex9Transfer => aex9_idx_tr_keys,
+      Model.Aex9PairTransfer => aex9_pair_tr_keys
     }
   end
 
