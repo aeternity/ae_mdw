@@ -11,6 +11,7 @@ defmodule AeMdw.Db.OracleRegisterMutation do
 
   require Model
 
+  @derive AeMdw.Db.Mutation
   defstruct [:oracle_pk, :block_index, :expire, :txi]
 
   @typep expiration() :: Blocks.height()
@@ -71,11 +72,5 @@ defmodule AeMdw.Db.OracleRegisterMutation do
     previous && AeMdw.Ets.dec(:stat_sync_cache, :inactive_oracles)
 
     :ok
-  end
-end
-
-defimpl AeMdw.Db.Mutation, for: AeMdw.Db.OracleRegisterMutation do
-  def mutate(mutation) do
-    @for.mutate(mutation)
   end
 end

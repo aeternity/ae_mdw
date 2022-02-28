@@ -11,6 +11,7 @@ defmodule AeMdw.Db.WriteFieldsMutation do
 
   require Model
 
+  @derive AeMdw.Db.Mutation
   defstruct [:type, :tx, :block_index, :txi]
 
   @opaque t() :: %__MODULE__{
@@ -59,11 +60,5 @@ defmodule AeMdw.Db.WriteFieldsMutation do
   defp resolve_pubkey(id, _type, _field, _block_index) do
     {_tag, pk} = :aeser_id.specialize(id)
     pk
-  end
-end
-
-defimpl AeMdw.Db.Mutation, for: AeMdw.Db.WriteFieldsMutation do
-  def mutate(mutation) do
-    @for.mutate(mutation)
   end
 end

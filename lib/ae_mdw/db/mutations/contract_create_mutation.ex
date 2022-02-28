@@ -8,6 +8,7 @@ defmodule AeMdw.Db.ContractCreateMutation do
   alias AeMdw.Node.Db
   alias AeMdw.Txs
 
+  @derive AeMdw.Db.Mutation
   defstruct [:contract_pk, :txi, :owner_pk, :aex9_meta_info, :call_rec]
 
   @opaque t() :: %__MODULE__{
@@ -49,11 +50,5 @@ defmodule AeMdw.Db.ContractCreateMutation do
 
     AeMdw.Ets.inc(:stat_sync_cache, :contracts)
     DBContract.logs_write(txi, txi, call_rec)
-  end
-end
-
-defimpl AeMdw.Db.Mutation, for: AeMdw.Db.ContractCreateMutation do
-  def mutate(mutation) do
-    @for.mutate(mutation)
   end
 end

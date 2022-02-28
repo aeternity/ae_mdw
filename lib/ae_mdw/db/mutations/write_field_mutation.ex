@@ -11,6 +11,7 @@ defmodule AeMdw.Db.WriteFieldMutation do
 
   require Model
 
+  @derive AeMdw.Db.Mutation
   defstruct [:tx_type, :pos, :pubkey, :txi]
 
   @type pos() :: non_neg_integer() | nil
@@ -33,11 +34,5 @@ defmodule AeMdw.Db.WriteFieldMutation do
     m_field = Model.field(index: {tx_type, pos, pubkey, txi})
     Database.write(Model.Field, m_field)
     Model.incr_count({tx_type, pos, pubkey})
-  end
-end
-
-defimpl AeMdw.Db.Mutation, for: AeMdw.Db.WriteFieldMutation do
-  def mutate(mutation) do
-    @for.mutate(mutation)
   end
 end

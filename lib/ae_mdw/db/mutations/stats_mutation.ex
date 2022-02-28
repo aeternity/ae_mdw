@@ -8,6 +8,7 @@ defmodule AeMdw.Db.StatsMutation do
 
   require Model
 
+  @derive AeMdw.Db.Mutation
   defstruct [:stat, :total_stat]
 
   @type t() :: %__MODULE__{
@@ -30,11 +31,5 @@ defmodule AeMdw.Db.StatsMutation do
       }) do
     Database.write(Model.Stat, stat)
     Database.write(Model.TotalStat, total_stat)
-  end
-end
-
-defimpl AeMdw.Db.Mutation, for: AeMdw.Db.StatsMutation do
-  def mutate(mutation) do
-    @for.mutate(mutation)
   end
 end

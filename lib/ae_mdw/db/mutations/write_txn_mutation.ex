@@ -6,6 +6,7 @@ defmodule AeMdw.Db.WriteTxnMutation do
 
   alias AeMdw.Database
 
+  @derive AeMdw.Db.TxnMutation
   defstruct [:table, :record]
 
   @opaque t() :: %__MODULE__{
@@ -21,11 +22,5 @@ defmodule AeMdw.Db.WriteTxnMutation do
   @spec execute(t(), Database.transaction()) :: :ok
   def execute(%__MODULE__{table: table, record: record}, txn) do
     Database.write(txn, table, record)
-  end
-end
-
-defimpl AeMdw.Db.TxnMutation, for: AeMdw.Db.WriteTxnMutation do
-  def execute(mutation, txn) do
-    @for.execute(mutation, txn)
   end
 end

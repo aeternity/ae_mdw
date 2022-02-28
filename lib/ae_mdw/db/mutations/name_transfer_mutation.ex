@@ -10,6 +10,7 @@ defmodule AeMdw.Db.NameTransferMutation do
   alias AeMdw.Node.Db
   alias AeMdw.Txs
 
+  @derive AeMdw.Db.Mutation
   defstruct [:name_hash, :new_owner, :txi, :block_index]
 
   @opaque t() :: %__MODULE__{
@@ -40,11 +41,5 @@ defmodule AeMdw.Db.NameTransferMutation do
         block_index: block_index
       }) do
     Name.transfer(name_hash, new_owner, txi, block_index)
-  end
-end
-
-defimpl AeMdw.Db.Mutation, for: AeMdw.Db.NameTransferMutation do
-  def mutate(mutation) do
-    @for.mutate(mutation)
   end
 end
