@@ -12,7 +12,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
       limit = 3
       last_gen = Util.last_gen()
 
-      conn = get(conn, "/stats?limit=#{limit}")
+      conn = get(conn, "/v2/stats", limit: limit)
       response = json_response(conn, 200)
 
       assert ^limit = Enum.count(response["data"])
@@ -32,7 +32,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
     end
 
     test "when direction=forward it gets stats starting from 1", %{conn: conn} do
-      conn = get(conn, "/stats/forward")
+      conn = get(conn, "/v2/stats", direction: "forward")
       response = json_response(conn, 200)
 
       assert @default_limit = Enum.count(response["data"])
@@ -54,7 +54,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
     test "it gets generations with numeric range and default limit", %{conn: conn} do
       first = 305_000
       last = 305_100
-      conn = get(conn, "/stats/gen/#{first}-#{last}")
+      conn = get(conn, "/v2/stats", scope: "gen:#{first}-#{last}")
       response = json_response(conn, 200)
 
       assert @default_limit = Enum.count(response["data"])
@@ -77,7 +77,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
       first = 305_100
       last = 305_000
       limit = 1
-      conn = get(conn, "/stats/gen/#{first}-#{last}?limit=#{limit}")
+      conn = get(conn, "/v2/stats", scope: "gen:#{first}-#{last}", limit: limit)
       response = json_response(conn, 200)
 
       assert ^limit = Enum.count(response["data"])
@@ -98,7 +98,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
 
     test "renders error when the range is invalid", %{conn: conn} do
       range = "invalid"
-      conn = get(conn, "/stats/gen/#{range}")
+      conn = get(conn, "/v2/stats", scope: "gen:#{range}")
       error_msg = "invalid range: #{range}"
 
       assert %{"error" => ^error_msg} = json_response(conn, 400)
@@ -110,7 +110,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
       limit = 100
       last_gen = Util.last_gen()
 
-      conn = get(conn, "/totalstats?limit=#{limit}")
+      conn = get(conn, "/v2/totalstats", limit: limit)
       response = json_response(conn, 200)
 
       assert ^limit = Enum.count(response["data"])
@@ -139,7 +139,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
     end
 
     test "when direction=forward it gets stats starting from 1", %{conn: conn} do
-      conn = get(conn, "/totalstats/forward")
+      conn = get(conn, "/v2/totalstats", direction: "forward")
       response = json_response(conn, 200)
 
       assert @default_limit = Enum.count(response["data"])
@@ -161,7 +161,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
     test "it gets generations with numeric range and default limit", %{conn: conn} do
       first = 305_000
       last = 305_100
-      conn = get(conn, "/totalstats/gen/#{first}-#{last}")
+      conn = get(conn, "/v2/totalstats", scope: "gen:#{first}-#{last}")
       response = json_response(conn, 200)
 
       assert @default_limit = Enum.count(response["data"])
@@ -184,7 +184,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
       first = 305_100
       last = 305_000
       limit = 1
-      conn = get(conn, "/totalstats/gen/#{first}-#{last}?limit=#{limit}")
+      conn = get(conn, "/v2/totalstats", scope: "gen:#{first}-#{last}", limit: limit)
       response = json_response(conn, 200)
 
       assert ^limit = Enum.count(response["data"])
@@ -205,7 +205,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
 
     test "renders error when the range is invalid", %{conn: conn} do
       range = "invalid"
-      conn = get(conn, "/totalstats/gen/#{range}")
+      conn = get(conn, "/v2/totalstats", scope: "gen:#{range}")
       error_msg = "invalid range: #{range}"
 
       assert %{"error" => ^error_msg} = json_response(conn, 400)

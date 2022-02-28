@@ -224,15 +224,10 @@ GET /contracts/calls/:scope_type/:range  - returns function calls inside of the 
 
 GET /v2/transfers                        - returns internal transfers from the top of the chain
 
-GET /stats                               - returns statistics for generations from tip of the chain
-GET /stats/:direction                    - returns statistics for generations from genesis or the tip of the chain
-GET /stats/:scope_type/:range            - returns statistics for generations in a given range
+GET /v2/stats                            - returns statistics for generations from tip of the chain
+GET /v2/totalstats                       - returns aggregated statistics for generations from tip of the chain
 
-GET /totalstats                          - returns aggregated statistics for generations from tip of the chain
-GET /totalstats/:direction               - returns aggregated statistics for generations from genesis or the tip of the chain
-GET /totalstats/:scope_type/:range       - returns aggregated statistics for generations from genesis or the tip of the chain
-
-GET  /status                             - returns middleware status
+GET  /v2/status                             - returns middleware status
 
 ```
 (more to come)
@@ -4192,7 +4187,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/aex9/balances/hash/mh_kkKtNk2GAgJKja
 To show a statistics for a given height, we can use "stats" endpoint:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/stats?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/stats?limit=1" | jq '.'
 {
   "data": [
     {
@@ -4207,14 +4202,14 @@ $ curl -s "https://mainnet.aeternity.io/mdw/stats?limit=1" | jq '.'
       "inactive_oracles": 18
     }
   ],
-  "next": "/stats/gen/419209-0?limit=1&page=2"
+  "next": "/v2/stats?scope=gen:419209-0&limit=1&cursor=419208"
 }
 ```
 
 Aggregated (sumarized) statistics are also available, showing the total sum of rewards and the token supply:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/totalstats/gen/421454-0?limit=1&page=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/totalstats?gen:421454-0&limit=1" | jq '.'
 {
   "data": [
     {
@@ -4224,7 +4219,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/totalstats/gen/421454-0?limit=1&page
       "total_token_supply": 2.718122171075295e+31
     }
   ],
-  "next": "/totalstats/gen/421454-0?limit=1&page=3"
+  "next": "/v2/totalstats?scope=gen:421454-0&limit=1&cursor=42152"
 }
 ```
 
@@ -4253,6 +4248,9 @@ This is a list of the exceptions together with the changes that need to be done:
 * `/names/search/:prefix` - The prefix is no longer part of the path, but a query parameter instead (`?prefix=...`).
 * `/oracles/:state/:scope_scope/:range`, `/oracles/:scope_scope/:range` - Can now all be accessed via `/v2/oracles?state=inactive&scope=gen:100-200`.
 * `/transfers/:direction`, `/transfers/:scope_type/:range` - Can now be accessed via `/v2/transfers?scope=txi:100-200` or `/v2/transfers?scope=gen:30-40`.
+* `/stats/:direction`, `/stats/:scope_type/:range` - Can now be accessed via `/v2/stats?direction=forward` or `/v2/stats?scope=gen:100-200`.
+* `/totalstats/:direction`, `/totalstats/:scope_type/:range` - Can now be accessed via `/v2/totalstats?direction=forward` or `/v2/totalstats?scope=gen:100-200`.
+* `/status` - Can now be accessed via `/v2/status`.
 
 ## Websocket interface
 
