@@ -32,4 +32,4 @@ log/
 /priv/
 
 # MDW's produced blockchain database should be ignored
-/mnesia/
+/data/

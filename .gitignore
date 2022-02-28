@@ -37,8 +37,7 @@ VERSION
 *~
 
 # Local dev-only files
-/mnesia/
-/data.db/
+/data/
 /test_data.db/
 
 # Dialyzer generated files
