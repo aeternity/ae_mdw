@@ -4,7 +4,10 @@ defmodule AeMdwWeb.Router do
   @shared_routes [
     {"/txs/count", AeMdwWeb.TxController, :count},
     {"/txs/count/:id", AeMdwWeb.TxController, :count_id},
-    {"/transfers", AeMdwWeb.TransferController, :transfers}
+    {"/transfers", AeMdwWeb.TransferController, :transfers},
+    {"/stats/", AeMdwWeb.StatsController, :stats},
+    {"/totalstats/", AeMdwWeb.StatsController, :sum_stats},
+    {"/status", AeMdwWeb.UtilController, :status}
   ]
 
   @non_migrated_routes [
@@ -27,14 +30,7 @@ defmodule AeMdwWeb.Router do
     {"/contracts/logs/:scope_type/:range", AeMdwWeb.ContractController, :logs},
     {"/contracts/calls", AeMdwWeb.ContractController, :calls},
     {"/contracts/calls/:direction", AeMdwWeb.ContractController, :calls},
-    {"/contracts/calls/:scope_type/:range", AeMdwWeb.ContractController, :calls},
-    {"/stats/", AeMdwWeb.StatsController, :stats},
-    {"/stats/:direction", AeMdwWeb.StatsController, :stats},
-    {"/stats/:scope_type/:range", AeMdwWeb.StatsController, :stats},
-    {"/totalstats/", AeMdwWeb.StatsController, :sum_stats},
-    {"/totalstats/:direction", AeMdwWeb.StatsController, :sum_stats},
-    {"/totalstats/:scope_type/:range", AeMdwWeb.StatsController, :sum_stats},
-    {"/status", AeMdwWeb.UtilController, :status}
+    {"/contracts/calls/:scope_type/:range", AeMdwWeb.ContractController, :calls}
   ]
 
   pipeline :api do
@@ -133,6 +129,11 @@ defmodule AeMdwWeb.Router do
 
     get "/transfers/:scope_type/:range", TransferController, :transfers
     get "/transfers/:direction", TransferController, :transfers
+
+    get "/stats/:direction", StatsController, :stats
+    get "/stats/:scope_type/:range", StatsController, :stats
+    get "/totalstats/:direction", StatsController, :sum_stats
+    get "/totalstats/:scope_type/:range", StatsController, :sum_stats
 
     match :*, "/*path", UtilController, :no_route
   end
