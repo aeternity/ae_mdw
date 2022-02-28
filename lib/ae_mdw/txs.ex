@@ -13,7 +13,8 @@ defmodule AeMdw.Txs do
   alias AeMdw.Db.Model.Tx
   alias AeMdw.Db.Model.Type
   alias AeMdw.Db.Name
-  alias AeMdw.Db.Util
+  alias AeMdw.Db.Util, as: DbUtil
+  alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Log
   alias AeMdw.Node
@@ -83,10 +84,10 @@ defmodule AeMdw.Txs do
     end
   end
 
-  defp first_gen_to_txi(first_gen, :forward), do: Util.gen_to_txi(first_gen)
-  defp first_gen_to_txi(first_gen, :backward), do: Util.gen_to_txi(first_gen + 1) - 1
-  defp last_gen_to_txi(last_gen, :forward), do: Util.gen_to_txi(last_gen + 1) - 1
-  defp last_gen_to_txi(last_gen, :backward), do: Util.gen_to_txi(last_gen)
+  defp first_gen_to_txi(first_gen, :forward), do: DbUtil.gen_to_txi(first_gen)
+  defp first_gen_to_txi(first_gen, :backward), do: DbUtil.gen_to_txi(first_gen + 1) - 1
+  defp last_gen_to_txi(last_gen, :forward), do: DbUtil.gen_to_txi(last_gen + 1) - 1
+  defp last_gen_to_txi(last_gen, :backward), do: DbUtil.gen_to_txi(last_gen)
 
   # The purpose of this function is to generate the streams that will be then used as input for
   # Collection.merge/2 function. The function is divided into three clauses. There's an explanation
@@ -334,16 +335,10 @@ defmodule AeMdw.Txs do
     tx
   end
 
-  @spec fetch(txi(), add_spendtx_details?()) :: {:ok, tx()} | :not_found
-  def fetch(txi, add_spendtx_details?) do
-    case Database.fetch(@table, txi) do
-      {:ok, tx} -> {:ok, render(tx, add_spendtx_details?)}
-      :not_found -> :not_found
-    end
-  end
+  @spec fetch(txi() | tx_hash(), add_spendtx_details?()) :: {:ok, tx()} | {:error, Error.t()}
+  def fetch(tx_hash, add_spendtx_details? \\ true)
 
-  @spec fetch_by_hash(tx_hash()) :: {:ok, tx()} | :not_found
-  def fetch_by_hash(tx_hash) do
+  def fetch(tx_hash, add_spendtx_details?) when is_binary(tx_hash) do
     mb_hash = :aec_db.find_tx_location(tx_hash)
 
     case :aec_chain.get_header(mb_hash) do
@@ -353,15 +348,22 @@ defmodule AeMdw.Txs do
         |> Blocks.fetch_txis_from_gen()
         |> Stream.map(&Database.fetch!(@table, &1))
         |> Enum.find_value(
-          :not_found,
+          {:error, ErrInput.NotFound.exception(value: tx_hash)},
           fn
-            Model.tx(id: ^tx_hash) = tx -> {:ok, render(tx, true)}
+            Model.tx(id: ^tx_hash) = tx -> {:ok, render(tx, add_spendtx_details?)}
             _tx -> nil
           end
         )
 
-      :error ->
-        :not_found
+      :not_found ->
+        {:error, ErrInput.NotFound.exception(value: tx_hash)}
+    end
+  end
+
+  def fetch(txi, add_spendtx_details?) do
+    case Database.fetch(@table, txi) do
+      {:ok, tx} -> {:ok, render(tx, add_spendtx_details?)}
+      :not_found -> {:error, ErrInput.NotFound.exception(value: txi)}
     end
   end
 

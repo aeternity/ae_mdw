@@ -2,12 +2,11 @@ defmodule AeMdwWeb.Router do
   use AeMdwWeb, :router
 
   @shared_routes [
-    {"/tx/:hash", AeMdwWeb.TxController, :tx},
-    {"/txi/:index", AeMdwWeb.TxController, :txi},
     {"/txs/count", AeMdwWeb.TxController, :count},
-    {"/txs/count/:id", AeMdwWeb.TxController, :count_id},
-    {"/txs/:direction", AeMdwWeb.TxController, :txs},
-    {"/txs/:scope_type/:range", AeMdwWeb.TxController, :txs},
+    {"/txs/count/:id", AeMdwWeb.TxController, :count_id}
+  ]
+
+  @non_migrated_routes [
     {"/aex9/by_contract/:id", AeMdwWeb.Aex9Controller, :by_contract},
     {"/aex9/by_name", AeMdwWeb.Aex9Controller, :by_names},
     {"/aex9/by_symbol", AeMdwWeb.Aex9Controller, :by_symbols},
@@ -63,10 +62,17 @@ defmodule AeMdwWeb.Router do
     pipe_through :api
 
     scope "/v2" do
+      Enum.each(@shared_routes, fn {path, controller, fun} ->
+        get(path, controller, fun, alias: false)
+      end)
+
       # v2-only routes
       get "/blocks", BlockController, :blocks
       get "/blocks/:hash_or_kbi", BlockController, :block
       get "/blocks/:kbi/:mbi", BlockController, :blocki
+
+      get "/txs", TxController, :txs
+      get "/txs/:hash_or_index", TxController, :tx
 
       get "/names/:id/auctions", NameController, :auction
       get "/names/:id/pointers", NameController, :pointers
@@ -84,7 +90,7 @@ defmodule AeMdwWeb.Router do
       get "/oracles", OracleController, :oracles
     end
 
-    Enum.each(@shared_routes, fn {path, controller, fun} ->
+    Enum.each(@shared_routes ++ @non_migrated_routes, fn {path, controller, fun} ->
       get(path, controller, fun, alias: false)
     end)
 
@@ -94,6 +100,11 @@ defmodule AeMdwWeb.Router do
     get "/block/:hash_or_kbi", BlockController, :block
     get "/blocki/:kbi", BlockController, :blocki
     get "/blocki/:kbi/:mbi", BlockController, :blocki
+
+    get "/tx/:hash_or_index", TxController, :tx
+    get "/txi/:index", TxController, :txi
+    get "/txs/:direction", TxController, :txs
+    get "/txs/:scope_type/:range", TxController, :txs
 
     get "/name/auction/:id", NameController, :auction
     get "/name/pointers/:id", NameController, :pointers

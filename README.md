@@ -165,17 +165,15 @@ We currently provide hosted infrastructure at https://mainnet.aeternity.io/mdw/ 
 ## HTTP endpoints
 
 ```
-GET  /tx/:hash                          - returns transaction by hash
-GET  /txi/:index                        - returns transaction by index (0 .. last transaction index)
-GET  /txs/count                         - returns total number of transactions (last transaction index + 1)
-GET  /txs/count/:id                     - returns counts of transactions per transaction field for given id
-GET  /txs/:scope_type/:range            - returns transactions bounded by scope/range where query is in query string
-GET  /txs/:direction                    - returns transactions from beginning (forward) or end (backward), query is in query string
+GET  /v2/txs/:hash_or_index             - returns transaction by hash or index
+GET  /v2/txs/count                      - returns total number of transactions (last transaction index + 1)
+GET  /v2/txs/count/:id                  - returns counts of transactions per transaction field for given id
+GET  /v2/txs                            - returns transactions in any direction
 
-GET  /v2/blocks/:hash                      - returns block by hash
-GET  /v2/blocks/:kbi                       - returns key block by integer index
-GET  /v2/blocks/:kbi/:mbi                  - returns micro block by integer indices
-GET  /v2/blocks                            - returns generation blocks
+GET  /v2/blocks/:hash                   - returns block by hash
+GET  /v2/blocks/:kbi                    - returns key block by integer index
+GET  /v2/blocks/:kbi/:mbi               - returns micro block by integer indices
+GET  /v2/blocks                         - returns generation blocks
 
 GET  /name/:id                          - returns name information by hash or plain name
 GET  /name/auction/:id                  - returns name information for auction, by hash or plain name
@@ -193,14 +191,9 @@ GET  /names/active/:scope_type/:range   - returns active names for continuation 
 GET  /names                             - returns all names (active and expired) ordered by (optional) query parameters
 GET  /names/:scope_type/:range          - returns all names for continuation link
 
-GET /oracle/:id                         - returns oracle information by hash
+GET /v2/oracles/:id                     - returns oracle information by hash
 
-GET /oracles/inactive                   - returns expired oracles ordered by expiration height
-GET /oracles/inactive/gen/:range        - returns expired oracles for continuation link
-GET /oracles/active                     - returns active oracles ordered by expiration height
-GET /oracles/active/gen/:range          - returns active oracles for continuation link
-GET /oracles                            - returns all oracles from newest (active) to oldest (expired)
-GET /oracles/gen/:range                 - returns all oracles for continuation link
+GET /v2/oracles                         - returns expired oracles ordered by expiration height, filtered by active/inactive state and scope
 
 GET /aex9/by_name                       - returns AEX9 tokens, filtered by token name
 GET /aex9/by_symbol                     - returns AEX9 tokens, filtered by token symbol
@@ -303,7 +296,7 @@ Type groups for the transactions listed above are:
 
 `type` parameter:
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?type=channel_create&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txs?direction=forward&type=channel_create&limit=1" | jq '.'
 {
   "data": [
     {
@@ -340,7 +333,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?type=channel_create&limi
 
 `type_group` parameter:
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?type_group=oracle&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txs?direction=forward&type_group=oracle&limit=1" | jq '.'
 {
   "data": [
     {
@@ -395,7 +388,7 @@ With generic ids, it is possible to select also `create`/`register` transactions
 ###### Examples
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txs?direction=forward&contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2" | jq '.'
 {
   "data": [
     {
@@ -484,7 +477,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?contract=ct_2AfnEfCSZCTE
 ```
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?oracle=ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txs?direction=forward&oracle=ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&limit=1" | jq '.'
 {
   "data": [
     {
@@ -521,7 +514,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?oracle=ok_24jcHLTZQfsou7
 ```
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?channel=ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txs?direction=forward&channel=ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD&limit=2" | jq '.'
 {
   "data": [
     {
@@ -654,7 +647,7 @@ For example, for a GAMetaTx with inner SpendTx, one might request with the follo
 
 with provided transaction type (`name_transfer`):
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?name_transfer.recipient_id=ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/txs?direction=forward&name_transfer.recipient_id=ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF&limit=1" | jq '.'
 {
   "data": [
     {
@@ -685,7 +678,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?name_transfer.recipient_
 
 freestanding field `from_id`, and via `jq` extracting only tx_index and transaction type:
 ```
-curl -s "https://mainnet.aeternity.io/mdw/txs/backward?from_id=ak_ozzwBYeatmuN818LjDDDwRSiBSvrqt4WU7WvbGsZGVre72LTS&limit=5" | jq '.data | .[] | [.tx_index, .tx.type]'
+curl -s "https://mainnet.aeternity.io/mdw/v2/txs?from_id=ak_ozzwBYeatmuN818LjDDDwRSiBSvrqt4WU7WvbGsZGVre72LTS&limit=5" | jq '.data | .[] | [.tx_index, .tx.type]'
 [
   98535,
   "ChannelForceProgressTx"
@@ -733,7 +726,7 @@ retrieve a new page of results.
 
 getting the first transaction:
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&limit=1" | jq '.'
 {
   "data": [
     {
@@ -765,7 +758,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?account=ak_E64bTuWTVj9Hu
 
 getting the next transaction by prepending host (https://mainnet.aeternity.io/mdw) to the continuation-URL from last request:
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&cursor=1779354&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&cursor=1779354&limit=1" | jq '.'
 {
   "data": [
     {
@@ -811,7 +804,7 @@ If `type` or `type_group` is provided, the transaction in the result set must be
 
 transactions where each transaction contains both accounts, no matter at which field:
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/txs/backward?account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&account=ak_zUQikTiUMNxfKwuAfQVMPkaxdPsXP8uAxnfn6TkZKZCtmRcUD&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&account=ak_zUQikTiUMNxfKwuAfQVMPkaxdPsXP8uAxnfn6TkZKZCtmRcUD&limit=1" | jq '.'
 {
   "data": [
     {
@@ -844,7 +837,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/backward?account=ak_24jcHLTZQfso
 
 spend transactions between sender and recipient (transaction type = spend is deduced from the fields):
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?sender_id=ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5&recipient_id=ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&sender_id=ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5&recipient_id=ak_r7wvMxmhnJ3cMp75D8DUnxNiAvXs8qcdfbJ1gUWfH8Ufrx2A2&limit=1" | jq '.'
 {
   "data": [
     {
@@ -876,7 +869,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?sender_id=ak_26dopN3U2zg
 
 name related transactions for account:
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/txs/forward?account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&type_group=name" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&account=ak_E64bTuWTVj9Hu5EQSgyTGZp27diFKohTQWw3AYnmgVSWCnfnD&type_group=name" | jq '.'
 {
   "data": [
     {
@@ -1184,14 +1177,14 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txi/10000000" | jq '.'
 #### All transactions
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/txs/count" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs/count" | jq '.'
 11921825
 ```
 
 #### Transactions by type/field for ID
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/txs/count/ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs/count/ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR" | jq '.'
 {
   "channel_create_tx": {
     "responder_id": 74
@@ -3579,11 +3572,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/oracle/ok_R7cQfVN15F5ek1wBSYaMRjW2Xb
 
 ### Listing oracles
 
-There are 3 paginable endpoints for listing oracles:
-
-- `/oracles` - for listing ALL oracles (`active` and `inactive`)
-- `/oracles/inactive` - for listing `inactive` oracles (expired)
-- `/oracles/active` - for listing `active` oracles
+There is only one paginable endpoints for listing oracles: `/v2/oracles` - for listing oracles, with filters that include the `scope` (e.g. `gen:100-200`) or state (`active` or `inactive`).
 
 They are ordered by expiration height and support parameter `direction` (with options `forward` and `backward`).
 
@@ -3668,7 +3657,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/oracles?direction=forward&limit=1&ex
 #### Inactive oracles
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/oracles/inactive?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/oracles?state=inactive&limit=1" | jq '.'
 {
   "data": [
     {
@@ -3685,7 +3674,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/oracles/inactive?limit=1" | jq '.'
       "register": 15198855
     }
   ],
-  "next": "/oracles/inactive?cursor=507223-ok_26QSujxMBhg67YhbgvjQvsFfGdBrK9ddG4rENEGUq2EdsyfMTC&direction=backward&expand=false&limit=1",
+  "next": "/v2/oracles?state=inactive&cursor=507223-ok_26QSujxMBhg67YhbgvjQvsFfGdBrK9ddG4rENEGUq2EdsyfMTC&direction=backward&expand=false&limit=1",
   "prev": null
 }
 ```
@@ -3693,7 +3682,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/oracles/inactive?limit=1" | jq '.'
 #### Active oracles
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/oracles/active?limit=1&expand" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/oracles?state=active&limit=1&expand" | jq '.'
 {
   "data": [
     {
@@ -3737,7 +3726,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/oracles/active?limit=1&expand" | jq 
       }
     }
   ],
-  "next": "/oracles/active?cursor=1289003-ok_f9vDQvr1cFAQAesYA16vjvBX9TFeWUB4Gb7WJkwfYSkL1CpDx&direction=backward&expand=true&limit=1",
+  "next": "/v2/oracles?state=active&cursor=1289003-ok_f9vDQvr1cFAQAesYA16vjvBX9TFeWUB4Gb7WJkwfYSkL1CpDx&direction=backward&expand=true&limit=1",
   "prev": null
 }
 ```
@@ -4264,6 +4253,7 @@ This is a list of the exceptions together with the changes that need to be done:
 * `/names/auctions` - Can now be accessed via `/v2/names/auctions`
 * `/names/auctions/:scope_type/:range` - Can now be accessed via `/v2/auctions?scope=gen:10-100` (or `?scope=txi:1000-2000`).
 * `/names/search/:prefix` - The prefix is no longer part of the path, but a query parameter instead (`?prefix=...`).
+* `/oracles/:state/:scope_scope/:range`, `/oracles/:scope_scope/:range` - Can now all be accessed via `/v2/oracles?state=inactive&scope=gen:100-200`.
 
 ## Websocket interface
 
