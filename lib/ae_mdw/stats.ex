@@ -12,7 +12,7 @@ defmodule AeMdw.Stats do
   require Model
 
   @type stat() :: map()
-  @type sum_stat() :: map()
+  @type total_stat() :: map()
   @type cursor() :: binary() | nil
 
   @typep height() :: Blocks.height()
@@ -21,7 +21,7 @@ defmodule AeMdw.Stats do
   @typep range() :: {:gen, Range.t()} | nil
 
   @table Model.Stat
-  @sum_table Model.TotalStat
+  @totals_table Model.TotalStat
 
   @spec fetch_stats(direction(), range(), cursor(), limit()) :: {cursor(), [stat()], cursor()}
   def fetch_stats(direction, range, cursor, limit) do
@@ -44,9 +44,9 @@ defmodule AeMdw.Stats do
     end
   end
 
-  @spec fetch_sum_stats(direction(), range(), cursor(), limit()) ::
-          {cursor(), [sum_stat()], cursor()}
-  def fetch_sum_stats(direction, range, cursor, limit) do
+  @spec fetch_total_stats(direction(), range(), cursor(), limit()) ::
+          {cursor(), [total_stat()], cursor()}
+  def fetch_total_stats(direction, range, cursor, limit) do
     {:ok, last_gen} = Database.last_key(AeMdw.Db.Model.TotalStat)
 
     {range_first, range_last} =
@@ -59,7 +59,7 @@ defmodule AeMdw.Stats do
 
     case Util.build_gen_pagination(cursor, direction, range_first, range_last, limit) do
       {:ok, prev_cursor, range, next_cursor} ->
-        {serialize_cursor(prev_cursor), render_sum_stats(range), serialize_cursor(next_cursor)}
+        {serialize_cursor(prev_cursor), render_total_stats(range), serialize_cursor(next_cursor)}
 
       :error ->
         {nil, [], nil}
@@ -69,16 +69,16 @@ defmodule AeMdw.Stats do
   @spec fetch_stat!(height()) :: stat()
   def fetch_stat!(height), do: render_stat(Database.fetch!(@table, height))
 
-  @spec fetch_sum_stat!(height()) :: sum_stat()
-  def fetch_sum_stat!(height), do: render_sum_stat(Database.fetch!(@sum_table, height))
+  @spec fetch_total_stat!(height()) :: total_stat()
+  def fetch_total_stat!(height), do: render_total_stat(Database.fetch!(@totals_table, height))
 
   defp render_stats(gens), do: Enum.map(gens, &fetch_stat!/1)
 
-  defp render_sum_stats(gens), do: Enum.map(gens, &fetch_sum_stat!/1)
+  defp render_total_stats(gens), do: Enum.map(gens, &fetch_total_stat!/1)
 
   defp render_stat(stat), do: Format.to_map(stat, @table)
 
-  defp render_sum_stat(sum_stat), do: Format.to_map(sum_stat, @sum_table)
+  defp render_total_stat(total_stat), do: Format.to_map(total_stat, @totals_table)
 
   defp serialize_cursor(nil), do: nil
 

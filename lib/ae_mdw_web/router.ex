@@ -6,7 +6,7 @@ defmodule AeMdwWeb.Router do
     {"/txs/count/:id", AeMdwWeb.TxController, :count_id},
     {"/transfers", AeMdwWeb.TransferController, :transfers},
     {"/stats/", AeMdwWeb.StatsController, :stats},
-    {"/totalstats/", AeMdwWeb.StatsController, :sum_stats},
+    {"/totalstats/", AeMdwWeb.StatsController, :total_stats},
     {"/status", AeMdwWeb.UtilController, :status}
   ]
 
@@ -132,8 +132,8 @@ defmodule AeMdwWeb.Router do
 
     get "/stats/:direction", StatsController, :stats
     get "/stats/:scope_type/:range", StatsController, :stats
-    get "/totalstats/:direction", StatsController, :sum_stats
-    get "/totalstats/:scope_type/:range", StatsController, :sum_stats
+    get "/totalstats/:direction", StatsController, :total_stats
+    get "/totalstats/:scope_type/:range", StatsController, :total_stats
 
     match :*, "/*path", UtilController, :no_route
   end
