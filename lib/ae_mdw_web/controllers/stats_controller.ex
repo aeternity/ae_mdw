@@ -18,12 +18,12 @@ defmodule AeMdwWeb.StatsController do
     Util.paginate(conn, prev_cursor, stats, next_cursor)
   end
 
-  @spec sum_stats(Conn.t(), map()) :: Conn.t()
-  def sum_stats(%Conn{assigns: assigns} = conn, _params) do
+  @spec total_stats(Conn.t(), map()) :: Conn.t()
+  def total_stats(%Conn{assigns: assigns} = conn, _params) do
     %{pagination: {direction, _is_reversed?, limit, _has_cursor?}, cursor: cursor, scope: scope} =
       assigns
 
-    {prev_cursor, stats, next_cursor} = Stats.fetch_sum_stats(direction, scope, cursor, limit)
+    {prev_cursor, stats, next_cursor} = Stats.fetch_total_stats(direction, scope, cursor, limit)
 
     Util.paginate(conn, prev_cursor, stats, next_cursor)
   end

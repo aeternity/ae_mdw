@@ -431,24 +431,6 @@ defmodule AeMdw.Db.Model do
           )
 
   # summarized statistics
-  @sum_stat_defaults [
-    # height
-    index: 0,
-    block_reward: 0,
-    dev_reward: 0,
-    total_supply: 0
-  ]
-  defrecord :sum_stat, @sum_stat_defaults
-
-  @type sum_stat ::
-          record(:sum_stat,
-            index: Blocks.height(),
-            block_reward: integer(),
-            dev_reward: integer(),
-            total_supply: integer()
-          )
-
-  # summarized statistics
   @total_stat_defaults [
     # height
     index: 0,
@@ -574,7 +556,6 @@ defmodule AeMdw.Db.Model do
   defp stat_tables() do
     [
       AeMdw.Db.Model.Stat,
-      AeMdw.Db.Model.SumStat,
       AeMdw.Db.Model.TotalStat
     ]
   end
@@ -631,7 +612,6 @@ defmodule AeMdw.Db.Model do
       :kind_int_transfer_tx,
       :target_kind_int_transfer_tx,
       :stat,
-      :sum_stat,
       :total_stat,
       :migrations,
       :async_tasks
@@ -695,7 +675,6 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.TargetKindIntTransferTx), do: :target_kind_int_transfer_tx
 
   def record(AeMdw.Db.Model.Stat), do: :stat
-  def record(AeMdw.Db.Model.SumStat), do: :sum_stat
   def record(AeMdw.Db.Model.TotalStat), do: :total_stat
 
   @spec table(atom()) :: atom()
@@ -737,7 +716,6 @@ defmodule AeMdw.Db.Model do
   def table(:target_int_transfer_tx), do: AeMdw.Db.Model.TargetIntTransferTx
   def table(:target_kind_int_transfer_tx), do: AeMdw.Db.Model.TargetKindIntTransferTx
   def table(:stat), do: AeMdw.Db.Model.Stat
-  def table(:sum_stat), do: AeMdw.Db.Model.SumStat
   def table(:total_stat), do: AeMdw.Db.Model.TotalStat
 
   @spec defaults(atom()) :: list()
@@ -785,7 +763,6 @@ defmodule AeMdw.Db.Model do
   def defaults(:kind_int_transfer_tx), do: @kind_int_transfer_tx_defaults
   def defaults(:target_kind_int_transfer_tx), do: @target_kind_int_transfer_tx_defaults
   def defaults(:stat), do: @stat_defaults
-  def defaults(:sum_stat), do: @sum_stat_defaults
   def defaults(:total_stat), do: @total_stat_defaults
 
   @spec write_count(tuple(), integer()) :: :ok

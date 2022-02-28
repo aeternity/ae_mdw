@@ -105,7 +105,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
     end
   end
 
-  describe "sum_stats" do
+  describe "total_stats" do
     test "when no subpath it gets stats in backwards direction", %{conn: conn} do
       limit = 100
       last_gen = Util.last_gen()
