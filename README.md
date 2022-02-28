@@ -2880,7 +2880,7 @@ A paginable contract log endpoint allows querying of the contract logs using sev
 
 Example output of
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/forward?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?direction=forward&contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1" | jq '.'
 {
   "data": [
     {
@@ -2971,7 +2971,7 @@ For demonstration, we will use `limit` parameter to limit the amount of output.
 Listing the first contract log in the chain:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/forward?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?direction=forward&limit=1" | jq '.'
 {
   "data": [
     {
@@ -2990,14 +2990,14 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/forward?limit=1" | jq
       "log_idx": 0
     }
   ],
-  "next": "contracts/logs/gen/0-370592?limit=1&page=2"
+  "next": "/v2/contracts/logs?cursor=6CS34DHK6KQI8D1G60O38DPP4H2KIDI4AHCLAD9N6L9KEK1NASQLAGQCAP95EIAOA5446L2F9H8KKH1N6H3LEJQOB8Q4QIAF91156LQ6A1C52F9T7KUI8C14&direction=forward&limit=1"
 }
 ```
 
 Listing the last (to date) contract log in the chain:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/backward?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?limit=1" | jq '.'
 {
   "data": [
     {
@@ -3017,7 +3017,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/backward?limit=1" | j
       "log_idx": 2
     }
   ],
-  "next": "contracts/logs/gen/370592-0?limit=1&page=2",
+  "next": "/v2/contracts/logs?cursor=68PJACHK74O3E91J60QJADHG6OR28HA96P258MAL6KRJAKQ7A0RLEDAL8D65CKIN95C52I23AH7KOKAA8GRJ8HQN9TC5KD2D957KGGIJAT350M2H7KUJQF9460I0&limit=1",
   "prev": null
 }
 ```
@@ -3025,7 +3025,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/backward?limit=1" | j
 Listing contract logs in range between generations 200000 and 210000:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/gen/200000-210000?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?scope=gen:200000-210000&limit=1" | jq '.'
 {
   "data": [
     {
@@ -3044,7 +3044,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/gen/200000-210000?lim
       "log_idx": 0
     }
   ],
-  "next": "contracts/logs/gen/200000-210000?limit=1&page=2",
+  "next": "/v2/contracts/logs?cursor=6CS34DHK6KQI8D1G60O38DPP4H2KIDI4AHCLAD9N6L9KEK1NASQLAGQCAP95EIAOA5446L2F9H8KKH1N6H3LEJQOB8Q4QIAF91156LQ6A1C52F9T7KUI8C14&limit=1&scope=gen%3A200000-210000",
   "prev": null
 }
 ```
@@ -3052,7 +3052,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/gen/200000-210000?lim
 Listing contract logs in generation 250109 only:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/gen/250109?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?scope=gen:250109&limit=1" | jq '.'
 {
   "data": [
     {
@@ -3071,7 +3071,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/gen/250109?limit=1" |
       "log_idx": 0
     }
   ],
-  "next": "contracts/logs/gen/250109-250109?limit=1&page=2",
+  "next": "/v2/contracts/logs?cursor=6CS34DHK6KQI8D1G60O38DPP4H2KIDI4AHCLAD9N6L9KEK1NASQLAGQCAP95EIAOA5446L2F9H8KKH1N6H3LEJQOB8Q4QIAF91156LQ6A1C52F9T7KUI8C14&limit=1&scope=gen%3A250109",
   "prev": null
 }
 ```
@@ -3079,7 +3079,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/gen/250109?limit=1" |
 Listing contract logs from transaction index 15000000 downto 5000000 - e.g. backwards (note descending call_txi):
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/txi/15000000-5000000?limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?scope=txi:15000000-5000000&limit=2" | jq '.'
 {
   "data": [
     {
@@ -3113,7 +3113,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/txi/15000000-5000000?
       "log_idx": 0
     }
   ],
-  "next": "contracts/logs/txi/15000000-5000000?limit=2&page=2",
+  "next": "/v2/contracts/logs?cursor=68PJACHK74O3E91J60QJAD9N6CQI8HA96P258MAL6KRJAKQ7A0RLEDAL8D65CKIN95C52I23AH7KOKAA8GRJ8HQN9TC5KD2D957KGGIJAT350M2H7KUJQF9460I0&limit=2&scope=txi%3A15000000-5000000",
   "prev": null
 }
 ```
@@ -3135,7 +3135,7 @@ Without provided range or direction, the logs are listed from newest to latest.
 Listing latest logs for given contract:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2" | jq '.'
 {
   "data": [
     {
@@ -3169,7 +3169,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs?contract_id=ct_2AfnEf
       "log_idx": 0
     }
   ],
-  "next": "contracts/logs/txi/19626064-0?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2&page=2",
+  "next": "/v2/contracts/logs?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&cursor=70PJICHN6OR28CPG6GR3GDHK6OI5AH2MACRKOM9LB58KKD9L9DD3AMIKA92KGM269LCKAL9NA12K4DA69HCKGCQC88PKIDHN6TCLAKA2915LKK9T7KUJQ91G4G&limit=2",
   "prev": null
 }
 ```
@@ -3178,7 +3178,7 @@ Listing first logs where data field points to `aeternity.com`:
 (The value of data parameter needs to be URL encoded, which is not visible in this example)
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/forward?data=aeternity.com&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?direction=forward&data=aeternity.com&limit=2" | jq '.'
 {
   "data": [
     {
@@ -3210,7 +3210,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/forward?data=aeternit
       "log_idx": 0
     }
   ],
-  "next": "contracts/logs/gen/0-370592?data=aeternity.com&limit=2&page=2",
+  "next": "/v2/contracts/logs?cursor=70PJICHN6OR28C9K6SQ3IC1L74I5EDQH6OP4IHQ29TAJ6M2C9L8JCJA48P444GIQ99BK6KHK6SP54KA6B124KJAF8P6KQKPM6944MKAL90R3CG9T7KUJQ91G4HGMAT35E9N6IT3P5PHMUR8&data=aeternity.com&direction=forward&limit=2",
   "prev": null
 }
 ```
@@ -3218,7 +3218,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs/forward?data=aeternit
 Listing the last "TipReceived" event:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs?event=TipReceived&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?event=TipReceived&limit=1" | jq '.'
 {
   "data": [
     {
@@ -3237,7 +3237,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/logs?event=TipReceived&lim
       "log_idx": 0
     }
   ],
-  "next": "contracts/logs/txi/19626064-0?event=TipReceived&limit=1&page=2",
+  "next": "/v2/contracts/logs?cursor=70PJICHN6OR28CPG64R3ADHN6CI5EDQH6OP4IHQ29TAJ6M2C9L8JCJA48P444GIQ99BK6KHK6SP54KA6B124KJAF8P6KQKPM6944MKAL90R3CG9T7KUJQ91G4G&event=TipReceived&limit=1",
   "prev": null
 }
 ```
@@ -3255,7 +3255,7 @@ Besides specifying of scope and direction as with other streaming endpoints (via
 #### Using contract id
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/contracts/calls?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/calls?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1" | jq '.'
 {
   "data": [
     {
@@ -3280,7 +3280,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/calls?contract_id=ct_2AfnE
       "micro_index": 9
     }
   ],
-  "next": "contracts/calls/txi/20309127-0?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1&page=2",
+  "next": "/v2/contracts/calls?contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&cursor=6CO3ACPK6GRJI91J4GS36E9I6SR3C9144GMJ2C1G&limit=1",
   "prev": null
 }
 ```
@@ -3288,7 +3288,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/calls?contract_id=ct_2AfnE
 #### Using function prefix
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/contracts/calls/forward?function=Oracle&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/calls?direction=forward&function=Oracle&limit=1" | jq '.'
 {
   "data": [
     {
@@ -3321,7 +3321,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/calls/forward?function=Ora
       "micro_index": 0
     }
   ],
-  "next": "contracts/calls/gen/0-403807?function=Oracle&limit=1&page=2",
+  "next": "/v2/contracts/calls?cursor=70Q30D1N70OI8C945KOJ0C144H53AMI78DCJ6JADALC4GGPL9H34UIHKA4I2QC9G60&direction=forward&function=Oracle&limit=1",
   "prev": null
 }
 ```
@@ -3335,7 +3335,7 @@ Following ID fields are recognized: account_id, caller_id, channel_id, commitmen
 Contract_id field is inaccessible via this lookup, as when present in query, it filters only contracts with given contract id and doesn't look into internal transaction's fields.
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/contracts/calls?recipient_id=ak_23bfFKQ1vuLeMxyJuCrMHiaGg5wc7bAobKNuDadf8tVZUisKWs&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/calls?recipient_id=ak_23bfFKQ1vuLeMxyJuCrMHiaGg5wc7bAobKNuDadf8tVZUisKWs&limit=1" | jq '.'
 {
   "data": [
     {
@@ -3360,7 +3360,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/contracts/calls?recipient_id=ak_23bf
       "micro_index": 11
     }
   ],
-  "next": "contracts/calls/txi/20309760-0?limit=1&page=2&recipient_id=ak_23bfFKQ1vuLeMxyJuCrMHiaGg5wc7bAobKNuDadf8tVZUisKWs",
+  "next": "/v2/contracts/calls?cursor=70S34C1K68S28D145KOJ0C14A93KQGHK9D3K4I258H546JQC99A5IL25AHCL6GPN9T4KIMIB6D2KSKI88P4LKL2M6923AJA16T65ILPJ698I891I&limit=1&recipient_id=ak_23bfFKQ1vuLeMxyJuCrMHiaGg5wc7bAobKNuDadf8tVZUisKWs",
   "prev": null
 }
 ```
@@ -4247,6 +4247,8 @@ This is a list of the exceptions together with the changes that need to be done:
 * `/names/auctions/:scope_type/:range` - Can now be accessed via `/v2/auctions?scope=gen:10-100` (or `?scope=txi:1000-2000`).
 * `/names/search/:prefix` - The prefix is no longer part of the path, but a query parameter instead (`?prefix=...`).
 * `/oracles/:state/:scope_scope/:range`, `/oracles/:scope_scope/:range` - Can now all be accessed via `/v2/oracles?state=inactive&scope=gen:100-200`.
+* `/contracts/logs/:direction`, `/contracts/logs/:scope_type/:range` - Can now be accessed via `/v2/contracts/logs?scope=txi:100-200` or `/v2/contracts/logs?scope=gen:30-40`.
+* `/contracts/calls/:direction`, `/contracts/calls/:scope_type/:range` - Can now be accessed via `/v2/contracts/calls?scope=txi:100-200` or `/v2/contracts/calls?scope=gen:30-40`.
 * `/transfers/:direction`, `/transfers/:scope_type/:range` - Can now be accessed via `/v2/transfers?scope=txi:100-200` or `/v2/transfers?scope=gen:30-40`.
 * `/stats/:direction`, `/stats/:scope_type/:range` - Can now be accessed via `/v2/stats?direction=forward` or `/v2/stats?scope=gen:100-200`.
 * `/totalstats/:direction`, `/totalstats/:scope_type/:range` - Can now be accessed via `/v2/totalstats?direction=forward` or `/v2/totalstats?scope=gen:100-200`.
