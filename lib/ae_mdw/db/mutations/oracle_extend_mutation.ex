@@ -14,6 +14,7 @@ defmodule AeMdw.Db.OracleExtendMutation do
   require Model
   require Logger
 
+  @derive AeMdw.Db.Mutation
   defstruct [:block_index, :txi, :oracle_pk, :delta_ttl]
 
   @opaque t() :: %__MODULE__{
@@ -53,11 +54,5 @@ defmodule AeMdw.Db.OracleExtendMutation do
       nil ->
         Log.warn("[#{height}] invalid extend for oracle #{Enc.encode(:oracle_pubkey, oracle_pk)}")
     end
-  end
-end
-
-defimpl AeMdw.Db.Mutation, for: AeMdw.Db.OracleExtendMutation do
-  def mutate(mutation) do
-    @for.mutate(mutation)
   end
 end

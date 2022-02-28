@@ -8,6 +8,7 @@ defmodule AeMdw.Db.NameRevokeMutation do
   alias AeMdw.Names
   alias AeMdw.Txs
 
+  @derive AeMdw.Db.Mutation
   defstruct [:name_hash, :txi, :block_index]
 
   @opaque t() :: %__MODULE__{
@@ -28,11 +29,5 @@ defmodule AeMdw.Db.NameRevokeMutation do
   @spec mutate(t()) :: :ok
   def mutate(%__MODULE__{name_hash: name_hash, txi: txi, block_index: block_index}) do
     Name.revoke(name_hash, txi, block_index)
-  end
-end
-
-defimpl AeMdw.Db.Mutation, for: AeMdw.Db.NameRevokeMutation do
-  def mutate(mutation) do
-    @for.mutate(mutation)
   end
 end

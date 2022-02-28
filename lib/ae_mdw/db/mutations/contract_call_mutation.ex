@@ -8,6 +8,7 @@ defmodule AeMdw.Db.ContractCallMutation do
   alias AeMdw.Sync.AsyncTasks
   alias AeMdw.Txs
 
+  @derive AeMdw.Db.Mutation
   defstruct [
     :contract_pk,
     :caller_pk,
@@ -100,11 +101,5 @@ defmodule AeMdw.Db.ContractCallMutation do
     else
       AsyncTasks.Producer.enqueue(:update_aex9_presence, [contract_pk])
     end
-  end
-end
-
-defimpl AeMdw.Db.Mutation, for: AeMdw.Db.ContractCallMutation do
-  def mutate(mutation) do
-    @for.mutate(mutation)
   end
 end

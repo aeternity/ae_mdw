@@ -15,3 +15,9 @@ defprotocol AeMdw.Db.Mutation do
   @spec mutate(t()) :: :ok
   def mutate(mutation)
 end
+
+defimpl AeMdw.Db.Mutation, for: Any do
+  def mutate(%mod{} = mutation) do
+    mod.mutate(mutation)
+  end
+end

@@ -9,6 +9,7 @@ defmodule AeMdw.Db.NameUpdateMutation do
   alias AeMdw.Node
   alias AeMdw.Txs
 
+  @derive AeMdw.Db.Mutation
   defstruct [:name_hash, :name_ttl, :pointers, :txi, :block_index, :internal?]
 
   @opaque t() :: %__MODULE__{
@@ -46,11 +47,5 @@ defmodule AeMdw.Db.NameUpdateMutation do
         internal?: internal?
       }) do
     Name.update(name_hash, name_ttl, pointers, txi, block_index, internal?)
-  end
-end
-
-defimpl AeMdw.Db.Mutation, for: AeMdw.Db.NameUpdateMutation do
-  def mutate(mutation) do
-    @for.mutate(mutation)
   end
 end

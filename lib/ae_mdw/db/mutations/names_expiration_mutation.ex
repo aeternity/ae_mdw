@@ -7,6 +7,7 @@ defmodule AeMdw.Db.NamesExpirationMutation do
   alias AeMdw.Db.Name
   alias AeMdw.Names
 
+  @derive AeMdw.Db.Mutation
   defstruct [:height, :expired_names, :expired_auctions]
 
   @typep auction_key() :: {Names.plain_name(), Names.auction_timeout()}
@@ -33,11 +34,5 @@ defmodule AeMdw.Db.NamesExpirationMutation do
     Enum.each(expired_auctions, fn {plain_name, auction_timeout} ->
       Name.expire_auction(height, plain_name, auction_timeout)
     end)
-  end
-end
-
-defimpl AeMdw.Db.Mutation, for: AeMdw.Db.NamesExpirationMutation do
-  def mutate(mutation) do
-    @for.mutate(mutation)
   end
 end

@@ -8,6 +8,7 @@ defmodule AeMdw.Db.OracleResponseMutation do
   alias AeMdw.Node.Db
   alias AeMdw.Txs
 
+  @derive AeMdw.Db.Mutation
   defstruct [:block_index, :txi, :oracle_pk, :fee]
 
   @opaque t() :: %__MODULE__{
@@ -35,11 +36,5 @@ defmodule AeMdw.Db.OracleResponseMutation do
         fee: fee
       }) do
     IntTransfer.write({height, txi}, "reward_oracle", oracle_pk, txi, fee)
-  end
-end
-
-defimpl AeMdw.Db.Mutation, for: AeMdw.Db.OracleResponseMutation do
-  def mutate(mutation) do
-    @for.mutate(mutation)
   end
 end

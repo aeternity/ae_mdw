@@ -7,6 +7,7 @@ defmodule AeMdw.Db.BlockRewardsMutation do
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Ets
 
+  @derive AeMdw.Db.Mutation
   defstruct [:height, :block_rewards]
 
   @type block_reward() :: {IntTransfer.kind(), IntTransfer.target(), IntTransfer.amount()}
@@ -32,11 +33,5 @@ defmodule AeMdw.Db.BlockRewardsMutation do
       IntTransfer.write(gen_txi_pos, kind, target_pk, @ref_txi, amount)
       Ets.inc(:stat_sync_cache, (kind == "reward_dev" && :dev_reward) || :block_reward, amount)
     end)
-  end
-end
-
-defimpl AeMdw.Db.Mutation, for: AeMdw.Db.BlockRewardsMutation do
-  def mutate(mutation) do
-    @for.mutate(mutation)
   end
 end

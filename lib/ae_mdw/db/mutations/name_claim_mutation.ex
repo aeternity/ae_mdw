@@ -19,6 +19,7 @@ defmodule AeMdw.Db.NameClaimMutation do
   require Logger
   require Model
 
+  @derive AeMdw.Db.Mutation
   defstruct [
     :plain_name,
     :name_hash,
@@ -171,11 +172,5 @@ defmodule AeMdw.Db.NameClaimMutation do
       [{^txi, m_tx}] -> Format.to_raw_map(m_tx)
       [] -> read_raw_tx!(txi)
     end
-  end
-end
-
-defimpl AeMdw.Db.Mutation, for: AeMdw.Db.NameClaimMutation do
-  def mutate(mutation) do
-    @for.mutate(mutation)
   end
 end

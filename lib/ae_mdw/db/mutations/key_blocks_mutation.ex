@@ -8,6 +8,7 @@ defmodule AeMdw.Db.KeyBlocksMutation do
 
   require Model
 
+  @derive AeMdw.Db.TxnMutation
   defstruct [:key_block, :next_txi]
 
   @opaque t() :: %__MODULE__{
@@ -27,11 +28,5 @@ defmodule AeMdw.Db.KeyBlocksMutation do
 
     Database.write(txn, Model.Block, m_block)
     Database.write(txn, Model.Block, Model.block(next_kb, tx_index: next_txi))
-  end
-end
-
-defimpl AeMdw.Db.TxnMutation, for: AeMdw.Db.KeyBlocksMutation do
-  def execute(mutation, txn) do
-    @for.execute(mutation, txn)
   end
 end
