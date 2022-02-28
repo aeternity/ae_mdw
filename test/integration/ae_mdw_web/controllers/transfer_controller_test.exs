@@ -13,7 +13,7 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
   describe "transfers" do
     test "when direction=forward it gets unfiltered transfers forwards", %{conn: conn} do
       direction = "forward"
-      conn = get(conn, "/transfers/#{direction}")
+      conn = get(conn, "/v2/transfers", direction: direction)
       response = json_response(conn, 200)
 
       assert @default_limit = Enum.count(response["data"])
@@ -41,7 +41,7 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
       direction = "backward"
       limit = 3
 
-      conn = get(conn, "/transfers/#{direction}?limit=#{limit}")
+      conn = get(conn, "/v2/transfers", direction: direction, limit: limit)
       response = json_response(conn, 200)
 
       assert ^limit = Enum.count(response["data"])
@@ -71,7 +71,7 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
       first = 200_000
       last = 300_000
       limit = 3
-      conn = get(conn, "/transfers/txi/#{first}-#{last}?limit=#{limit}")
+      conn = get(conn, "/transfers", scope: "txi:#{first}-#{last}", limit: limit)
       response = json_response(conn, 200)
       first_gen = Util.txi_to_gen(first)
       last_gen = Util.txi_to_gen(last)
@@ -103,7 +103,7 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
       first = 300_000
       last = 200_000
       limit = 3
-      conn = get(conn, "/transfers/txi/#{first}-#{last}?limit=#{limit}")
+      conn = get(conn, "/transfers", scope: "txi:#{first}-#{last}", limit: limit)
       response = json_response(conn, 200)
       first_gen = Util.txi_to_gen(first)
       last_gen = Util.txi_to_gen(last)
@@ -140,7 +140,7 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
       last = 0
       range = "#{first}-#{last}"
       limit = 3
-      conn = get(conn, "/transfers/gen/#{range}?limit=#{limit}")
+      conn = get(conn, "/transfers", scope: "gen:#{range}", limit: limit)
       response = json_response(conn, 200)
 
       assert ^limit = Enum.count(response["data"])
@@ -166,7 +166,7 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
     test "when providing account filter, it returns transfers filtered by account", %{conn: conn} do
       account_pk = "ak_21rna3xrD7p32U3vpXPSmanjsnSGnh6BWFPC9Pe7pYxeAW8PpS"
 
-      conn = get(conn, "/transfers/forward?account=#{account_pk}")
+      conn = get(conn, "/v2/transfers", direction: "forward", account: account_pk)
       response = json_response(conn, 200)
 
       assert @default_limit = Enum.count(response["data"])
@@ -194,7 +194,7 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
     } do
       account_pk = "ak_21rna3xrD7p32U3vpXPSmanjsnSGnh6BWFPC9Pe7pYxeAW8PpS"
 
-      conn = get(conn, "/transfers/backward?account=#{account_pk}")
+      conn = get(conn, "/v2/transfers", account: account_pk)
       response = json_response(conn, 200)
 
       assert @default_limit = Enum.count(response["data"])
@@ -232,7 +232,7 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
     } do
       kind_prefix = "fee_"
 
-      conn = get(conn, "/transfers/forward?kind=#{kind_prefix}")
+      conn = get(conn, "/v2/transfers", direction: "forward", kind: kind_prefix)
       response = json_response(conn, 200)
 
       assert @default_limit = Enum.count(response["data"])
@@ -257,7 +257,7 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
       first_gen = 0
       last_gen = 104_553
 
-      conn = get(conn, "/transfers/gen/#{first_gen}-#{last_gen}?kind=#{kind_prefix}")
+      conn = get(conn, "/transfers", scope: "gen:#{first_gen}-#{last_gen}", kind: kind_prefix)
       response = json_response(conn, 200)
 
       assert @default_limit = Enum.count(response["data"])
@@ -284,7 +284,7 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
       first_gen = 104_553
       last_gen = 0
 
-      conn = get(conn, "/transfers/gen/#{first_gen}-#{last_gen}?kind=#{kind_prefix}")
+      conn = get(conn, "/transfers", scope: "gen:#{first_gen}-#{last_gen}", kind: kind_prefix)
       response = json_response(conn, 200)
 
       assert @default_limit = Enum.count(response["data"])
@@ -309,7 +309,7 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
          %{conn: conn} do
       kind_prefix = "fee_"
 
-      conn = get(conn, "/transfers/backward?kind=#{kind_prefix}")
+      conn = get(conn, "/transfers", kind: kind_prefix)
       response = json_response(conn, 200)
 
       assert @default_limit = Enum.count(response["data"])
@@ -347,7 +347,9 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
       account_pk = "ak_JFkVmYeY9iP4gmKexBHx7t1aAj1R6FGvBdWaZRBVLuuzWv83j"
       kind_prefix = "fee_"
 
-      conn = get(conn, "/transfers/forward?account=#{account_pk}&kind=#{kind_prefix}")
+      conn =
+        get(conn, "/v2/transfers", direction: "forward", account: account_pk, kind: kind_prefix)
+
       response = json_response(conn, 200)
 
       assert @default_limit = Enum.count(response["data"])
@@ -373,7 +375,13 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
       from = 500_000
       to = 50_000
 
-      conn = get(conn, "/transfers/gen/#{from}-#{to}?account=#{account_pk}&kind=#{kind_prefix}")
+      conn =
+        get(conn, "/v2/transfers",
+          scope: "gen:#{from}-#{to}",
+          account: account_pk,
+          kind: kind_prefix
+        )
+
       response = json_response(conn, 200)
 
       assert @default_limit = Enum.count(response["data"])
@@ -395,7 +403,7 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
     test "renders error when the range is invalid", %{conn: conn} do
       range = "invalid"
       error_msg = "invalid range: #{range}"
-      conn = get(conn, "/transfers/gen/#{range}")
+      conn = get(conn, "/transfers", scope: "gen:#{range}")
 
       assert %{"error" => ^error_msg} = json_response(conn, 400)
     end

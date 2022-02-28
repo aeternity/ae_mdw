@@ -3,7 +3,8 @@ defmodule AeMdwWeb.Router do
 
   @shared_routes [
     {"/txs/count", AeMdwWeb.TxController, :count},
-    {"/txs/count/:id", AeMdwWeb.TxController, :count_id}
+    {"/txs/count/:id", AeMdwWeb.TxController, :count_id},
+    {"/transfers", AeMdwWeb.TransferController, :transfers}
   ]
 
   @non_migrated_routes [
@@ -27,9 +28,6 @@ defmodule AeMdwWeb.Router do
     {"/contracts/calls", AeMdwWeb.ContractController, :calls},
     {"/contracts/calls/:direction", AeMdwWeb.ContractController, :calls},
     {"/contracts/calls/:scope_type/:range", AeMdwWeb.ContractController, :calls},
-    {"/transfers/:scope_type/:range", AeMdwWeb.TransferController, :transfers},
-    {"/transfers/:direction", AeMdwWeb.TransferController, :transfers},
-    {"/transfers", AeMdwWeb.TransferController, :transfers},
     {"/stats/", AeMdwWeb.StatsController, :stats},
     {"/stats/:direction", AeMdwWeb.StatsController, :stats},
     {"/stats/:scope_type/:range", AeMdwWeb.StatsController, :stats},
@@ -132,6 +130,9 @@ defmodule AeMdwWeb.Router do
     get "/oracles/inactive/gen/:range", OracleController, :inactive_oracles
     get "/oracles/active/gen/:range", OracleController, :active_oracles
     get "/oracles/gen/:range", OracleController, :oracles
+
+    get "/transfers/:scope_type/:range", TransferController, :transfers
+    get "/transfers/:direction", TransferController, :transfers
 
     match :*, "/*path", UtilController, :no_route
   end

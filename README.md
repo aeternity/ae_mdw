@@ -222,9 +222,7 @@ GET /contracts/calls                     - returns function calls inside of the 
 GET /contracts/calls/:direction          - returns function calls inside of the contracts from genesis or from the tip of chain
 GET /contracts/calls/:scope_type/:range  - returns function calls inside of the contracts in a given range
 
-GET /transfers/gen/:range                - returns internal transfers (rewards, fees, ...) in a given range
-GET /transfers/:diretion                 - returns internal transfers from genesis or the tip of the chain
-GET /transfers                           - returns internal transfers from the tip of the chain
+GET /v2/transfers                        - returns internal transfers from the top of the chain
 
 GET /stats                               - returns statistics for generations from tip of the chain
 GET /stats/:direction                    - returns statistics for generations from genesis or the tip of the chain
@@ -3396,7 +3394,7 @@ Besides specifying of scope and direction as with other streaming endpoints (via
 ### Listing internal transfers in range
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/transfers/gen/50002-70000?limit=3" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/transfers?scope=gen:50002-70000&limit=3" | jq '.'
 {
   "data": [
     {
@@ -3421,7 +3419,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/transfers/gen/50002-70000?limit=3" |
       "ref_txi": 1516090
     }
   ],
-  "next": "/transfers/gen/50002-70000?cursor=6KO30C1I5GOJAC9M60SJ2936CLILUR3FCDLLURJ1DLII85B36T6B4BDUUA3PPOSNFT2NRAQ67SAGJVNC35N46VHNTU4SU3V14GOJAC9M60SJ2&limit=3",
+  "next": "/v2/transfers?scope=gen:50002-70000&cursor=6KO30C1I5GOJAC9M60SJ2936CLILUR3FCDLLURJ1DLII85B36T6B4BDUUA3PPOSNFT2NRAQ67SAGJVNC35N46VHNTU4SU3V14GOJAC9M60SJ2&limit=3",
   "prev": null
 }
 ```
@@ -3429,7 +3427,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/transfers/gen/50002-70000?limit=3" |
 ### Listing internal transfers of a specific kind
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/transfers/forward?kind=reward_dev&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/transfers?direction=forward&kind=reward_dev&limit=2" | jq '.'
 {
   "data": [
     {
@@ -3447,7 +3445,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/transfers/forward?kind=reward_dev&li
       "ref_txi": null
     }
   ],
-  "next": "/transfers/forward?cursor=74O3IE1J5GMJ293ICLRM2SJ4BTI6ATH4LJOO0LBKD1ROVHB90J0E1JU8HBJ58RP6B4GUU5E9MUST24PSDM428B9H&kind=reward_dev&limit=2",
+  "next": "/v2/transfers/forward?cursor=74O3IE1J5GMJ293ICLRM2SJ4BTI6ATH4LJOO0LBKD1ROVHB90J0E1JU8HBJ58RP6B4GUU5E9MUST24PSDM428B9H&kind=reward_dev&limit=2",
   "prev": null
 }
 ```
@@ -3455,7 +3453,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/transfers/forward?kind=reward_dev&li
 ### Listing internal transfers related to specific account
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/transfers/backward?account=ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/transfers?account=ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J&limit=1" | jq '.'
 {
   "data": [
     {
@@ -3466,7 +3464,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/transfers/backward?account=ak_7myFYv
       "ref_txi": 1680384
     }
   ],
-  "next": "/transfers/backward?account=ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J&cursor=6KOJ4CHH5GOJCDHG70PJG936CLILUR3FCDLLURJ1DLII83R2BN0S5LH5TCGCSOIPLQM6D3RI7C7ICPVL44G939G2DR91PR6U4GOJCDHG70PJG&limit=1",
+  "next": "/v2/transfers?account=ak_7myFYvagcqh8AtWEuHL4zKDGfJj5bmacNZS8RoUh5qmam1a3J&cursor=6KOJ4CHH5GOJCDHG70PJG936CLILUR3FCDLLURJ1DLII83R2BN0S5LH5TCGCSOIPLQM6D3RI7C7ICPVL44G939G2DR91PR6U4GOJCDHG70PJG&limit=1",
   "prev": null
 }
 ```
@@ -4254,6 +4252,7 @@ This is a list of the exceptions together with the changes that need to be done:
 * `/names/auctions/:scope_type/:range` - Can now be accessed via `/v2/auctions?scope=gen:10-100` (or `?scope=txi:1000-2000`).
 * `/names/search/:prefix` - The prefix is no longer part of the path, but a query parameter instead (`?prefix=...`).
 * `/oracles/:state/:scope_scope/:range`, `/oracles/:scope_scope/:range` - Can now all be accessed via `/v2/oracles?state=inactive&scope=gen:100-200`.
+* `/transfers/:direction`, `/transfers/:scope_type/:range` - Can now be accessed via `/v2/transfers?scope=txi:100-200` or `/v2/transfers?scope=gen:30-40`.
 
 ## Websocket interface
 
