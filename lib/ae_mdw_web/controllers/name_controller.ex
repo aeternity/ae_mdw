@@ -801,7 +801,7 @@ defmodule AeMdwWeb.NameController do
     description("Get name information for given acount/owner")
     produces(["application/json"])
     deprecated(false)
-    operation_id("get_owned_by")
+    operation_id("get_names_owned_by")
     tag("Middleware")
 
     parameters do
@@ -880,7 +880,7 @@ defmodule AeMdwWeb.NameController do
     description("Get pointers for given name.")
     produces(["application/json"])
     deprecated(false)
-    operation_id("get_pointers_by_id")
+    operation_id("get_name_pointers")
     tag("Middleware")
 
     parameters do
@@ -899,7 +899,7 @@ defmodule AeMdwWeb.NameController do
     description("Get names pointing to a particular pubkey.")
     produces(["application/json"])
     deprecated(false)
-    operation_id("get_pointees_by_id")
+    operation_id("get_name_pointees")
     tag("Middleware")
 
     parameters do
