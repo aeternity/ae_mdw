@@ -13,7 +13,7 @@ defmodule AeMdwWeb.StatsController do
     %{pagination: {direction, _is_reversed?, limit, _has_cursor?}, cursor: cursor, scope: scope} =
       assigns
 
-    {prev_cursor, stats, next_cursor} = Stats.fetch_delta_stats(direction, scope, cursor, limit)
+    {prev_cursor, stats, next_cursor} = Stats.fetch_stats_v1(direction, scope, cursor, limit)
 
     Util.paginate(conn, prev_cursor, stats, next_cursor)
   end

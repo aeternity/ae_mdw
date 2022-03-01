@@ -242,7 +242,7 @@ defmodule AeMdw.Util do
           Blocks.height(),
           Database.limit()
         ) ::
-          {:ok, Blocks.height() | nil, Enumerable.t(), Blocks.height() | nil} | :error
+          {:ok, Blocks.height() | nil, Range.t(), Blocks.height() | nil} | :error
 
   def build_gen_pagination(nil, :forward, range_first, range_last, limit)
       when range_last - range_first > limit,

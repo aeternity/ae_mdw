@@ -455,8 +455,8 @@ defmodule AeMdw.Db.Format do
   def to_map(m_delta_stat, Model.DeltaStat),
     do: to_raw_map(m_delta_stat, Model.DeltaStat)
 
-  def to_map(m_delta_stat, Model.TotalStat),
-    do: to_raw_map(m_delta_stat, Model.TotalStat)
+  def to_map(m_total_stat, Model.TotalStat),
+    do: to_raw_map(m_total_stat, Model.TotalStat)
 
   def to_map({_, _, _, _} = aex9_data, source)
       when source in [Model.Aex9Contract, Model.Aex9ContractSymbol, Model.RevAex9Contract],
