@@ -86,8 +86,9 @@ defmodule AeMdw.Db.Name do
       cache_through_delete(Model.ActiveName, plain_name)
       cache_through_delete(Model.ActiveNameOwner, {owner, plain_name})
       cache_through_delete(Model.ActiveNameExpiration, {height, plain_name})
-      Ets.inc(:stat_sync_cache, :inactive_names)
-      Ets.dec(:stat_sync_cache, :active_names)
+
+      Ets.inc(:stat_sync_cache, :names_expired)
+
       Log.info("[#{height}] expiring name #{plain_name}")
     else
       cache_through_delete(Model.ActiveNameExpiration, {height, plain_name})
@@ -128,11 +129,15 @@ defmodule AeMdw.Db.Name do
 
     %{tx: winning_tx} = read_raw_tx!(txi)
     IntTransfer.fee({height, -1}, :lock_name, owner, txi, winning_tx.name_fee)
-    Ets.inc(:stat_sync_cache, :active_names)
-    Ets.dec(:stat_sync_cache, :active_auctions)
-    previous && Ets.dec(:stat_sync_cache, :inactive_names)
+    Ets.inc(:stat_sync_cache, :names_activated)
+    Ets.inc(:stat_sync_cache, :auctions_expired)
 
     Log.info("[#{height}] expiring auction for #{plain_name}")
+  end
+
+  @spec list_inactivated_at(Blocks.height()) :: [Names.plain_name()]
+  def list_inactivated_at(height) do
+    do_list_inactivated_at([], height, <<>>)
   end
 
   ##########
@@ -354,6 +359,17 @@ defmodule AeMdw.Db.Name do
   #
   # Private functions
   #
+  defp do_list_inactivated_at(plain_names, height, prev_plain_name) do
+    # includes revoked
+    case Database.next_key(Model.InactiveNameExpiration, {height, prev_plain_name}) do
+      {:ok, {^height, plain_name}} ->
+        do_list_inactivated_at([plain_name | plain_names], height, plain_name)
+
+      _other_height ->
+        plain_names
+    end
+  end
+
   defp pointee_at(Model.name(index: name, updates: updates), ref_txi) do
     updates
     |> find_update_txi_before(ref_txi)

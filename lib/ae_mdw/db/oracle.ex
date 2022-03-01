@@ -125,8 +125,7 @@ defmodule AeMdw.Db.Oracle do
           cache_through_write(Model.InactiveOracleExpiration, m_exp)
 
           cache_through_delete(Model.ActiveOracle, pubkey)
-          AeMdw.Ets.inc(:stat_sync_cache, :inactive_oracles)
-          AeMdw.Ets.dec(:stat_sync_cache, :active_oracles)
+          AeMdw.Ets.inc(:stat_sync_cache, :oracles_expired)
 
           Log.info("[#{height}] inactivated oracle #{oracle_id}")
         else
@@ -161,6 +160,22 @@ defmodule AeMdw.Db.Oracle do
       error ->
         Log.error(error)
         []
+    end
+  end
+
+  @spec list_expired_at(Blocks.height()) :: [pubkey()]
+  def list_expired_at(height) do
+    do_list_expired_at([], height, <<>>)
+  end
+
+  defp do_list_expired_at(oracle_pks, height, prev_pubkey) do
+    # includes revoked
+    case Database.next_key(Model.InactiveOracleExpiration, {height, prev_pubkey}) do
+      {:ok, {^height, oracle_pk}} ->
+        do_list_expired_at([oracle_pk | oracle_pks], height, oracle_pk)
+
+      _other_height ->
+        oracle_pks
     end
   end
 end

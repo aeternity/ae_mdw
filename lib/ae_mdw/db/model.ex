@@ -403,29 +403,31 @@ defmodule AeMdw.Db.Model do
   defrecord :target_kind_int_transfer_tx, @target_kind_int_transfer_tx_defaults
 
   # statistics
-  @stat_defaults [
+  @delta_stat_defaults [
     # height
     index: 0,
-    inactive_names: 0,
-    active_names: 0,
-    active_auctions: 0,
-    inactive_oracles: 0,
-    active_oracles: 0,
-    contracts: 0,
+    auctions_started: 0,
+    names_activated: 0,
+    names_expired: 0,
+    names_revoked: 0,
+    oracles_registered: 0,
+    oracles_expired: 0,
+    contracts_created: 0,
     block_reward: 0,
     dev_reward: 0
   ]
-  defrecord :stat, @stat_defaults
+  defrecord :delta_stat, @delta_stat_defaults
 
-  @type stat ::
-          record(:stat,
+  @type delta_stat ::
+          record(:delta_stat,
             index: Blocks.height(),
-            inactive_names: integer(),
-            active_names: integer(),
-            active_auctions: integer(),
-            inactive_oracles: integer(),
-            active_oracles: integer(),
-            contracts: integer(),
+            auctions_started: integer(),
+            names_activated: integer(),
+            names_expired: integer(),
+            names_revoked: integer(),
+            oracles_registered: integer(),
+            oracles_expired: integer(),
+            contracts_created: integer(),
             block_reward: integer(),
             dev_reward: integer()
           )
@@ -555,7 +557,7 @@ defmodule AeMdw.Db.Model do
 
   defp stat_tables() do
     [
-      AeMdw.Db.Model.Stat,
+      AeMdw.Db.Model.DeltaStat,
       AeMdw.Db.Model.TotalStat
     ]
   end
@@ -611,7 +613,7 @@ defmodule AeMdw.Db.Model do
       :int_transfer_tx,
       :kind_int_transfer_tx,
       :target_kind_int_transfer_tx,
-      :stat,
+      :delta_stat,
       :total_stat,
       :migrations,
       :async_tasks
@@ -674,7 +676,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.KindIntTransferTx), do: :kind_int_transfer_tx
   def record(AeMdw.Db.Model.TargetKindIntTransferTx), do: :target_kind_int_transfer_tx
 
-  def record(AeMdw.Db.Model.Stat), do: :stat
+  def record(AeMdw.Db.Model.DeltaStat), do: :delta_stat
   def record(AeMdw.Db.Model.TotalStat), do: :total_stat
 
   @spec table(atom()) :: atom()
@@ -715,7 +717,7 @@ defmodule AeMdw.Db.Model do
   def table(:kind_int_transfer_tx), do: AeMdw.Db.Model.KindIntTransferTx
   def table(:target_int_transfer_tx), do: AeMdw.Db.Model.TargetIntTransferTx
   def table(:target_kind_int_transfer_tx), do: AeMdw.Db.Model.TargetKindIntTransferTx
-  def table(:stat), do: AeMdw.Db.Model.Stat
+  def table(:delta_stat), do: AeMdw.Db.Model.DeltaStat
   def table(:total_stat), do: AeMdw.Db.Model.TotalStat
 
   @spec defaults(atom()) :: list()
@@ -762,7 +764,7 @@ defmodule AeMdw.Db.Model do
   def defaults(:int_transfer_tx), do: @int_transfer_tx_defaults
   def defaults(:kind_int_transfer_tx), do: @kind_int_transfer_tx_defaults
   def defaults(:target_kind_int_transfer_tx), do: @target_kind_int_transfer_tx_defaults
-  def defaults(:stat), do: @stat_defaults
+  def defaults(:delta_stat), do: @delta_stat_defaults
   def defaults(:total_stat), do: @total_stat_defaults
 
   @spec write_count(tuple(), integer()) :: :ok

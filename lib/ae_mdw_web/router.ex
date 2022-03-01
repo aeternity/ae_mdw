@@ -5,7 +5,6 @@ defmodule AeMdwWeb.Router do
     {"/txs/count", AeMdwWeb.TxController, :count},
     {"/txs/count/:id", AeMdwWeb.TxController, :count_id},
     {"/transfers", AeMdwWeb.TransferController, :transfers},
-    {"/stats/", AeMdwWeb.StatsController, :stats},
     {"/totalstats/", AeMdwWeb.StatsController, :total_stats},
     {"/status", AeMdwWeb.UtilController, :status}
   ]
@@ -30,7 +29,8 @@ defmodule AeMdwWeb.Router do
     {"/contracts/logs/:scope_type/:range", AeMdwWeb.ContractController, :logs},
     {"/contracts/calls", AeMdwWeb.ContractController, :calls},
     {"/contracts/calls/:direction", AeMdwWeb.ContractController, :calls},
-    {"/contracts/calls/:scope_type/:range", AeMdwWeb.ContractController, :calls}
+    {"/contracts/calls/:scope_type/:range", AeMdwWeb.ContractController, :calls},
+    {"/stats", AeMdwWeb.StatsController, :stats}
   ]
 
   pipeline :api do
@@ -82,6 +82,8 @@ defmodule AeMdwWeb.Router do
 
       get "/oracles/:id", OracleController, :oracle
       get "/oracles", OracleController, :oracles
+
+      get "/deltastats", StatsController, :delta_stats
     end
 
     Enum.each(@shared_routes ++ @non_migrated_routes, fn {path, controller, fun} ->

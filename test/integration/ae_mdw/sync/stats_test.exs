@@ -3,6 +3,7 @@ defmodule Integration.AeMdw.Db.Sync.StatsTest do
 
   @moduletag :integration
 
+  alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync.Stats
   alias AeMdw.Db.StatsMutation
@@ -17,45 +18,47 @@ defmodule Integration.AeMdw.Db.Sync.StatsTest do
 
   describe "new_mutation/2" do
     test "with all_cached? = false and 1st block reward" do
-      %StatsMutation{stat: m_stat, total_stat: m_total_stat} =
+      %StatsMutation{delta_stat: m_delta_stat, total_stat: m_total_stat} =
         Stats.new_mutation(@first_block_reward_height, false)
 
+      assert Model.delta_stat(m_delta_stat, :block_reward) == @first_block_reward
       assert Model.total_stat(m_total_stat, :block_reward) == @first_block_reward
 
       assert Model.total_stat(m_total_stat, :total_supply) ==
                @initial_token_offer + @first_block_reward
 
-      assert Model.stat(m_stat, :block_reward) == @first_block_reward
+      assert Model.total_stat(m_total_stat, :dev_reward) >= 0
+      assert Model.total_stat(m_total_stat, :active_names) >= 0
+      assert Model.total_stat(m_total_stat, :inactive_names) >= 0
+      assert Model.total_stat(m_total_stat, :active_auctions) >= 0
+      assert Model.total_stat(m_total_stat, :inactive_oracles) >= 0
+      assert Model.total_stat(m_total_stat, :active_oracles) >= 0
+      assert Model.total_stat(m_total_stat, :contracts) >= 0
 
-      # > 0 because it gets the sum of objects for the last height when all_cached? = false
-      if AeMdw.Db.Sync.BlockIndex.max_kbi() > 500_000 do
-        assert Model.total_stat(m_total_stat, :dev_reward) > 0
-        assert Model.total_stat(m_total_stat, :inactive_names) > 0
-        assert Model.total_stat(m_total_stat, :active_names) > 0
-        assert Model.total_stat(m_total_stat, :active_auctions) > 0
-        assert Model.total_stat(m_total_stat, :inactive_oracles) > 0
-        assert Model.total_stat(m_total_stat, :active_oracles) > 0
-        assert Model.total_stat(m_total_stat, :contracts) > 0
-
-        assert Model.stat(m_stat, :dev_reward) > 0
-        assert Model.stat(m_stat, :inactive_names) > 0
-        assert Model.stat(m_stat, :active_names) > 0
-        assert Model.stat(m_stat, :active_auctions) > 0
-        assert Model.stat(m_stat, :inactive_oracles) > 0
-        assert Model.stat(m_stat, :active_oracles) > 0
-        assert Model.stat(m_stat, :contracts) > 0
-      end
+      Model.DeltaStat
+      |> Database.dirty_all_keys()
+      |> Enum.map(&Database.fetch!(Model.DeltaStat, &1))
+      |> Enum.each(fn m_delta_stat ->
+        assert Model.delta_stat(m_delta_stat, :dev_reward) >= 0
+        assert Model.delta_stat(m_delta_stat, :auctions_started) >= 0
+        assert Model.delta_stat(m_delta_stat, :names_activated) >= 0
+        assert Model.delta_stat(m_delta_stat, :names_expired) >= 0
+        assert Model.delta_stat(m_delta_stat, :names_revoked) >= 0
+        assert Model.delta_stat(m_delta_stat, :oracles_registered) >= 0
+        assert Model.delta_stat(m_delta_stat, :oracles_expired) >= 0
+        assert Model.delta_stat(m_delta_stat, :contracts_created) >= 0
+      end)
     end
   end
 
   test "with all_cached? = true and 1st block reward" do
-    AeMdw.Ets.inc(:stat_sync_cache, :block_reward, @first_block_reward)
-
     on_exit(fn ->
       AeMdw.Ets.clear(:stat_sync_cache)
     end)
 
-    %StatsMutation{stat: m_stat, total_stat: m_total_stat} =
+    AeMdw.Ets.inc(:stat_sync_cache, :block_reward, @first_block_reward)
+
+    %StatsMutation{delta_stat: m_delta_stat, total_stat: m_total_stat} =
       Stats.new_mutation(@first_block_reward_height, true)
 
     assert Model.total_stat(m_total_stat, :block_reward) == @first_block_reward
@@ -71,37 +74,40 @@ defmodule Integration.AeMdw.Db.Sync.StatsTest do
     assert Model.total_stat(m_total_stat, :active_oracles) == 0
     assert Model.total_stat(m_total_stat, :contracts) == 0
 
-    assert Model.stat(m_stat, :block_reward) == @first_block_reward
-    assert Model.stat(m_stat, :dev_reward) == 0
-    assert Model.stat(m_stat, :inactive_names) == 0
-    assert Model.stat(m_stat, :active_names) == 0
-    assert Model.stat(m_stat, :active_auctions) == 0
-    assert Model.stat(m_stat, :inactive_oracles) == 0
-    assert Model.stat(m_stat, :active_oracles) == 0
-    assert Model.stat(m_stat, :contracts) == 0
+    assert Model.delta_stat(m_delta_stat, :block_reward) == @first_block_reward
+    assert Model.delta_stat(m_delta_stat, :auctions_started) == 0
+    assert Model.delta_stat(m_delta_stat, :names_activated) == 0
+    assert Model.delta_stat(m_delta_stat, :names_expired) == 0
+    assert Model.delta_stat(m_delta_stat, :names_revoked) == 0
+    assert Model.delta_stat(m_delta_stat, :oracles_registered) == 0
+    assert Model.delta_stat(m_delta_stat, :oracles_expired) == 0
+    assert Model.delta_stat(m_delta_stat, :contracts_created) == 0
   end
 
   test "with all_cached? = true and 1st contract" do
-    AeMdw.Ets.inc(:stat_sync_cache, :contracts)
-
     on_exit(fn ->
       AeMdw.Ets.clear(:stat_sync_cache)
     end)
 
-    %StatsMutation{stat: m_stat, total_stat: m_total_stat} =
-      Stats.new_mutation(@first_contract_height, true)
+    AeMdw.Ets.inc(:stat_sync_cache, :contracts_created)
+    %StatsMutation{delta_stat: m_delta_stat} = Stats.new_mutation(@first_contract_height, true)
+    # delta/transitions are only reflected at height + 1
+    AeMdw.Ets.clear(:stat_sync_cache)
+
+    %StatsMutation{total_stat: m_total_stat} =
+      Stats.new_mutation(@first_contract_height + 1, true)
 
     total_block_reward =
-      1..(@first_contract_height - 1) |> Enum.map(&IntTransfer.read_block_reward/1) |> Enum.sum()
+      1..@first_contract_height |> Enum.map(&IntTransfer.read_block_reward/1) |> Enum.sum()
 
     total_dev_reward =
-      1..(@first_contract_height - 1) |> Enum.map(&IntTransfer.read_dev_reward/1) |> Enum.sum()
+      1..@first_contract_height |> Enum.map(&IntTransfer.read_dev_reward/1) |> Enum.sum()
 
     assert Model.total_stat(m_total_stat, :block_reward) == total_block_reward
     assert Model.total_stat(m_total_stat, :dev_reward) == total_dev_reward
 
     total_supply =
-      0..@first_contract_height |> Enum.map(&AeMdw.Node.token_supply_delta/1) |> Enum.sum()
+      0..(@first_contract_height + 1) |> Enum.map(&AeMdw.Node.token_supply_delta/1) |> Enum.sum()
 
     assert Model.total_stat(m_total_stat, :total_supply) ==
              total_supply + total_block_reward + total_dev_reward
@@ -113,13 +119,12 @@ defmodule Integration.AeMdw.Db.Sync.StatsTest do
     assert Model.total_stat(m_total_stat, :active_oracles) == 1
     assert Model.total_stat(m_total_stat, :contracts) == 1
 
-    assert Model.stat(m_stat, :block_reward) == 0
-    assert Model.stat(m_stat, :dev_reward) == 0
-    assert Model.stat(m_stat, :inactive_names) == 0
-    assert Model.stat(m_stat, :active_names) == 0
-    assert Model.stat(m_stat, :active_auctions) == 0
-    assert Model.stat(m_stat, :inactive_oracles) == 0
-    assert Model.stat(m_stat, :active_oracles) == 0
-    assert Model.stat(m_stat, :contracts) == 1
+    assert Model.delta_stat(m_delta_stat, :auctions_started) == 0
+    assert Model.delta_stat(m_delta_stat, :names_activated) == 0
+    assert Model.delta_stat(m_delta_stat, :names_expired) == 0
+    assert Model.delta_stat(m_delta_stat, :names_revoked) == 0
+    assert Model.delta_stat(m_delta_stat, :oracles_registered) == 0
+    assert Model.delta_stat(m_delta_stat, :oracles_expired) == 0
+    assert Model.delta_stat(m_delta_stat, :contracts_created) == 1
   end
 end

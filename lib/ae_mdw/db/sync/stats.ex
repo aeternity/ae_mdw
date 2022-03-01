@@ -4,100 +4,108 @@ defmodule AeMdw.Db.Sync.Stats do
   """
 
   alias AeMdw.Blocks
+  alias AeMdw.Database
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Name
+  alias AeMdw.Db.Oracle
+  alias AeMdw.Db.Origin
   alias AeMdw.Db.StatsMutation
   alias AeMdw.Db.Util
   alias AeMdw.Ets
-  alias AeMdw.Database
 
   require Model
 
   @spec new_mutation(Blocks.height(), boolean()) :: StatsMutation.t()
   def new_mutation(height, all_cached?) do
-    m_stat = make_stat(height + 1, all_cached?)
-    m_total_stat = make_total_stat(height + 1, m_stat)
-    StatsMutation.new(m_stat, m_total_stat)
+    m_delta_stat = make_delta_stat(height, all_cached?)
+    # delta/transitions are only reflected on total stats at height + 1
+    m_total_stat = make_total_stat(height + 1, m_delta_stat)
+    StatsMutation.new(m_delta_stat, m_total_stat)
   end
 
   #
   # Private functions
   #
-  defp make_stat(height, true = _all_cached?) do
-    Model.stat(
+  @spec make_delta_stat(Blocks.height(), boolean()) :: Model.delta_stat()
+  defp make_delta_stat(height, true = _all_cached?) do
+    Model.delta_stat(
       index: height,
-      inactive_names: get(:inactive_names, 0),
-      active_names: get(:active_names, 0),
-      active_auctions: get(:active_auctions, 0),
-      inactive_oracles: get(:inactive_oracles, 0),
-      active_oracles: get(:active_oracles, 0),
-      contracts: get(:contracts, 0),
+      auctions_started: get(:auctions_started, 0),
+      names_activated: get(:names_activated, 0),
+      names_expired: get(:names_expired, 0),
+      names_revoked: get(:names_revoked, 0),
+      oracles_registered: get(:oracles_registered, 0),
+      oracles_expired: get(:oracles_expired, 0),
+      contracts_created: get(:contracts_created, 0),
       block_reward: get(:block_reward, 0),
       dev_reward: get(:dev_reward, 0)
     )
   end
 
-  defp make_stat(height, false = _all_cached?) do
-    Model.stat(
-      inactive_names: prev_inactive_names,
-      active_names: prev_active_names,
+  defp make_delta_stat(height, false = _all_cached?) do
+    Model.total_stat(
       active_auctions: prev_active_auctions,
-      inactive_oracles: prev_inactive_oracles,
+      active_names: prev_active_names,
       active_oracles: prev_active_oracles,
       contracts: prev_contracts
-    ) = Util.read!(Model.Stat, height - 1)
+    ) = Util.read!(Model.TotalStat, height)
 
-    {current_active_names, current_active_auctions, current_active_oracles,
-     current_inactive_names,
-     current_inactive_oracles} =
+    {current_active_names, current_active_auctions, current_active_oracles} =
       :mnesia.async_dirty(fn ->
         {
           Util.count(Model.ActiveName),
           Util.count(Model.AuctionExpiration),
-          Util.count(Model.ActiveOracle),
-          Util.count(Model.InactiveName),
-          Util.count(Model.InactiveOracle)
+          Util.count(Model.ActiveOracle)
         }
       end)
 
-    current_contracts =
-      Model.ContractCall
-      |> Database.dirty_all_keys()
-      |> Enum.map(fn {create_txi, _call_txi} -> create_txi end)
+    {height_revoked_names, height_expired_names} =
+      height
+      |> Name.list_inactivated_at()
+      |> Enum.map(fn plain_name -> Database.fetch!(Model.InactiveName, plain_name) end)
+      |> Enum.split_with(fn Model.name(revoke: {{kbi, _mbi}, _txi}) -> kbi == height end)
+
+    all_contracts_count = Origin.count_contracts()
+
+    oracles_expired_count =
+      height
+      |> Oracle.list_expired_at()
       |> Enum.uniq()
-      |> length()
+      |> Enum.count()
 
-    current_block_reward = IntTransfer.read_block_reward(height - 1)
-    current_dev_reward = IntTransfer.read_dev_reward(height - 1)
+    current_block_reward = IntTransfer.read_block_reward(height)
+    current_dev_reward = IntTransfer.read_dev_reward(height)
 
-    Model.stat(
+    Model.delta_stat(
       index: height,
-      inactive_names: Enum.max([0, current_inactive_names - prev_inactive_names]),
-      active_names: Enum.max([0, current_active_names - prev_active_names]),
-      active_auctions: Enum.max([0, current_active_auctions - prev_active_auctions]),
-      inactive_oracles: Enum.max([0, current_inactive_oracles - prev_inactive_oracles]),
-      active_oracles: Enum.max([0, current_active_oracles - prev_active_oracles]),
-      contracts: Enum.max([0, current_contracts - prev_contracts]),
+      auctions_started: max(0, current_active_auctions - prev_active_auctions),
+      names_activated: max(0, current_active_names - prev_active_names),
+      names_expired: length(height_expired_names),
+      names_revoked: length(height_revoked_names),
+      oracles_registered: max(0, current_active_oracles - prev_active_oracles),
+      oracles_expired: oracles_expired_count,
+      contracts_created: all_contracts_count - prev_contracts,
       block_reward: current_block_reward,
       dev_reward: current_dev_reward
     )
   end
 
+  @spec make_total_stat(Blocks.height(), Model.delta_stat()) :: Model.total_stat()
   defp make_total_stat(
          height,
-         Model.stat(
+         Model.delta_stat(
+           auctions_started: auctions_started,
+           names_activated: names_activated,
+           names_expired: names_expired,
+           names_revoked: names_revoked,
+           oracles_registered: oracles_registered,
+           oracles_expired: oracles_expired,
+           contracts_created: contracts_created,
            block_reward: inc_block_reward,
-           dev_reward: inc_dev_reward,
-           active_auctions: inc_active_auctions,
-           active_names: inc_active_names,
-           inactive_names: inc_inactive_names,
-           active_oracles: inc_active_oracles,
-           inactive_oracles: inc_inactive_oracles,
-           contracts: inc_contracts
+           dev_reward: inc_dev_reward
          )
        ) do
-    token_supply_delta = AeMdw.Node.token_supply_delta(height)
-
     Model.total_stat(
       block_reward: prev_block_reward,
       dev_reward: prev_dev_reward,
@@ -110,17 +118,20 @@ defmodule AeMdw.Db.Sync.Stats do
       contracts: prev_contracts
     ) = Util.read!(Model.TotalStat, height - 1)
 
+    token_supply_delta = AeMdw.Node.token_supply_delta(height)
+    auctions_expired = get(:auctions_expired, 0)
+
     Model.total_stat(
       index: height,
       block_reward: prev_block_reward + inc_block_reward,
       dev_reward: prev_dev_reward + inc_dev_reward,
       total_supply: prev_total_supply + token_supply_delta + inc_block_reward + inc_dev_reward,
-      active_auctions: prev_active_auctions + inc_active_auctions,
-      active_names: prev_active_names + inc_active_names,
-      inactive_names: prev_inactive_names + inc_inactive_names,
-      active_oracles: prev_active_oracles + inc_active_oracles,
-      inactive_oracles: prev_inactive_oracles + inc_inactive_oracles,
-      contracts: prev_contracts + inc_contracts
+      active_auctions: prev_active_auctions + auctions_started - auctions_expired,
+      active_names: prev_active_names + names_activated - (names_expired + names_revoked),
+      inactive_names: prev_inactive_names + names_expired + names_revoked,
+      active_oracles: prev_active_oracles + oracles_registered - oracles_expired,
+      inactive_oracles: prev_inactive_oracles + oracles_expired,
+      contracts: prev_contracts + contracts_created
     )
   end
 

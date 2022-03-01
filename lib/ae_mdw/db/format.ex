@@ -213,17 +213,32 @@ defmodule AeMdw.Db.Format do
     }
   end
 
-  def to_raw_map(m_stat, Model.Stat) do
+  def to_raw_map(
+        Model.delta_stat(
+          index: height,
+          auctions_started: auctions_started,
+          names_activated: names_activated,
+          names_expired: names_expired,
+          names_revoked: names_revoked,
+          oracles_registered: oracles_registered,
+          oracles_expired: oracles_expired,
+          contracts_created: contracts_created,
+          block_reward: block_reward,
+          dev_reward: dev_reward
+        ),
+        Model.DeltaStat
+      ) do
     %{
-      height: Model.stat(m_stat, :index),
-      inactive_names: Model.stat(m_stat, :inactive_names),
-      active_names: Model.stat(m_stat, :active_names),
-      active_auctions: Model.stat(m_stat, :active_auctions),
-      inactive_oracles: Model.stat(m_stat, :inactive_oracles),
-      active_oracles: Model.stat(m_stat, :active_oracles),
-      contracts: Model.stat(m_stat, :contracts),
-      block_reward: Model.stat(m_stat, :block_reward),
-      dev_reward: Model.stat(m_stat, :dev_reward)
+      height: height,
+      auctions_started: auctions_started,
+      names_activated: names_activated,
+      names_expired: names_expired,
+      names_revoked: names_revoked,
+      oracles_registered: oracles_registered,
+      oracles_expired: oracles_expired,
+      contracts_created: contracts_created,
+      block_reward: block_reward,
+      dev_reward: dev_reward
     }
   end
 
@@ -437,11 +452,11 @@ defmodule AeMdw.Db.Format do
     |> update_in([:account_id], &Enc.encode(:account_pubkey, &1))
   end
 
-  def to_map(m_stat, Model.Stat),
-    do: to_raw_map(m_stat, Model.Stat)
+  def to_map(m_delta_stat, Model.DeltaStat),
+    do: to_raw_map(m_delta_stat, Model.DeltaStat)
 
-  def to_map(m_stat, Model.TotalStat),
-    do: to_raw_map(m_stat, Model.TotalStat)
+  def to_map(m_delta_stat, Model.TotalStat),
+    do: to_raw_map(m_delta_stat, Model.TotalStat)
 
   def to_map({_, _, _, _} = aex9_data, source)
       when source in [Model.Aex9Contract, Model.Aex9ContractSymbol, Model.RevAex9Contract],

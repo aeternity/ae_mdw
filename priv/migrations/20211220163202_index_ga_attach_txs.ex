@@ -112,9 +112,13 @@ defmodule AeMdw.Migrations.IndexGaAttachTxs do
 
     {:atomic, :ok} =
       :mnesia.transaction(fn ->
-        [Model.stat(contracts: contracts) = m_stat] = Database.read(Model.Stat, height + 1)
-        new_m_stat = Model.stat(m_stat, contracts: contracts + new_contracts_count)
-        Database.write(Model.Stat, new_m_stat)
+        [Model.delta_stat(contracts_created: contracts) = m_delta_stat] =
+          Database.read(Model.DeltaStat, height + 1)
+
+        new_m_delta_stat =
+          Model.delta_stat(m_delta_stat, contracts_created: contracts + new_contracts_count)
+
+        Database.write(Model.DeltaStat, new_m_delta_stat)
       end)
 
     new_contracts_count
