@@ -27,7 +27,7 @@ defmodule AeMdw.Stats do
   # Legacy v1 is a blending between /totalstats and /deltastats.
   # The active and inactive object counters are totals while the rewards are delta.
   @spec fetch_stats_v1(direction(), range(), cursor(), limit()) ::
-          {cursor(), [delta_stat()], cursor()}
+          {cursor(), [stat()], cursor()}
   def fetch_stats_v1(direction, range, cursor, limit) do
     {:ok, last_gen} = Database.last_key(AeMdw.Db.Model.TotalStat)
 
