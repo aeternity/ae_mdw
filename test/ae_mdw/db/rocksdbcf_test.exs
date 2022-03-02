@@ -128,8 +128,7 @@ defmodule AeMdw.Db.RocksDbCFTest do
     end
 
     test "returns the previous key for tuple" do
-      assert :ok = RocksDbCF.dirty_put(Model.Block, Model.block(index: {new_kbi(), -1}))
-      assert :ok = RocksDbCF.dirty_put(Model.Block, Model.block(index: {new_kbi(), -1}))
+      assert :ok = RocksDbCF.dirty_put(Model.Block, Model.block(index: {0, -1}))
       assert {:ok, {0, -1}} = RocksDbCF.prev_key(Model.Block, {0, nil})
     end
   end

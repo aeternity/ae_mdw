@@ -68,8 +68,7 @@ defmodule AeMdw.Db.OracleRegisterMutation do
     m_exp_new = Model.expiration(index: {expire, oracle_pk})
     Oracle.cache_through_write(Model.ActiveOracleExpiration, m_exp_new)
 
-    AeMdw.Ets.inc(:stat_sync_cache, :active_oracles)
-    previous && AeMdw.Ets.dec(:stat_sync_cache, :inactive_oracles)
+    AeMdw.Ets.inc(:stat_sync_cache, :oracles_registered)
 
     :ok
   end

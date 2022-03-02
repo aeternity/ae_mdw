@@ -105,8 +105,7 @@ defmodule AeMdw.Db.NameClaimMutation do
 
         lock_amount = (is_lima? && name_fee) || :aec_governance.name_claim_locked_fee()
         IntTransfer.fee({height, txi}, :lock_name, owner_pk, txi, lock_amount)
-        Ets.inc(:stat_sync_cache, :active_names)
-        previous && Ets.dec(:stat_sync_cache, :inactive_names)
+        Ets.inc(:stat_sync_cache, :names_activated)
 
         log_name_change(height, plain_name, "activate")
 
@@ -122,7 +121,6 @@ defmodule AeMdw.Db.NameClaimMutation do
         m_bid =
           case DBName.cache_through_prev(Model.AuctionBid, DBName.bid_top_key(plain_name)) do
             :not_found ->
-              Ets.inc(:stat_sync_cache, :active_auctions)
               make_m_bid.([{block_index, txi}])
 
             {:ok,
@@ -153,6 +151,8 @@ defmodule AeMdw.Db.NameClaimMutation do
         DBName.cache_through_write(Model.AuctionBid, m_bid)
         DBName.cache_through_write(Model.AuctionOwner, m_owner)
         DBName.cache_through_write(Model.AuctionExpiration, m_auction_exp)
+
+        Ets.inc(:stat_sync_cache, :auctions_started)
 
         log_auction_change(height, plain_name, "activate auction expiring in #{auction_end}")
     end

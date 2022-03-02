@@ -70,7 +70,7 @@ defmodule AeMdw.Db.Sync.Contract do
         end
 
       :ets.insert(:ct_create_sync_cache, {contract_pk, txi})
-      AeMdw.Ets.inc(:stat_sync_cache, :contracts)
+      AeMdw.Ets.inc(:stat_sync_cache, :contracts_created)
 
       {
         SyncOrigin.origin_mutations(:contract_call_tx, nil, contract_pk, txi, tx_hash),
@@ -122,7 +122,7 @@ defmodule AeMdw.Db.Sync.Contract do
           recipient_id = :aec_spend_tx.recipient_id(tx)
           {:account, contract_pk} = :aeser_id.specialize(recipient_id)
 
-          AeMdw.Ets.inc(:stat_sync_cache, :contracts)
+          AeMdw.Ets.inc(:stat_sync_cache, :contracts_created)
           :ets.insert(:ct_create_sync_cache, {contract_pk, call_txi})
 
           SyncOrigin.origin_mutations(:contract_call_tx, nil, contract_pk, call_txi, call_tx_hash)

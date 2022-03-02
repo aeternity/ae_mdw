@@ -7,12 +7,12 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
 
   @default_limit 10
 
-  describe "stats" do
+  describe "delta stats" do
     test "when no subpath it gets stats in backwards direction", %{conn: conn} do
       limit = 3
       last_gen = Util.last_gen()
 
-      conn = get(conn, "/v2/stats", limit: limit)
+      conn = get(conn, "/v2/deltastats", limit: limit)
       response = json_response(conn, 200)
 
       assert ^limit = Enum.count(response["data"])
@@ -32,7 +32,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
     end
 
     test "when direction=forward it gets stats starting from 1", %{conn: conn} do
-      conn = get(conn, "/v2/stats", direction: "forward")
+      conn = get(conn, "/v2/deltastats", direction: "forward")
       response = json_response(conn, 200)
 
       assert @default_limit = Enum.count(response["data"])
@@ -52,9 +52,9 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
     end
 
     test "it gets generations with numeric range and default limit", %{conn: conn} do
-      first = 305_000
-      last = 305_100
-      conn = get(conn, "/v2/stats", scope: "gen:#{first}-#{last}")
+      first = 47_800
+      last = 48_000
+      conn = get(conn, "/v2/deltastats", scope: "gen:#{first}-#{last}")
       response = json_response(conn, 200)
 
       assert @default_limit = Enum.count(response["data"])
@@ -74,10 +74,10 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
     end
 
     test "it gets generations backwards with numeric range and limit=1", %{conn: conn} do
-      first = 305_100
-      last = 305_000
+      first = 49_300
+      last = 49_000
       limit = 1
-      conn = get(conn, "/v2/stats", scope: "gen:#{first}-#{last}", limit: limit)
+      conn = get(conn, "/v2/deltastats", scope: "gen:#{first}-#{last}", limit: limit)
       response = json_response(conn, 200)
 
       assert ^limit = Enum.count(response["data"])
@@ -98,7 +98,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
 
     test "renders error when the range is invalid", %{conn: conn} do
       range = "invalid"
-      conn = get(conn, "/v2/stats", scope: "gen:#{range}")
+      conn = get(conn, "/v2/deltastats", scope: "gen:#{range}")
       error_msg = "invalid range: #{range}"
 
       assert %{"error" => ^error_msg} = json_response(conn, 400)
@@ -159,8 +159,8 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
     end
 
     test "it gets generations with numeric range and default limit", %{conn: conn} do
-      first = 305_000
-      last = 305_100
+      first = 50_000
+      last = 50_500
       conn = get(conn, "/v2/totalstats", scope: "gen:#{first}-#{last}")
       response = json_response(conn, 200)
 
@@ -181,8 +181,8 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
     end
 
     test "it gets generations backwards with numeric range and limit=1", %{conn: conn} do
-      first = 305_100
-      last = 305_000
+      first = 50_400
+      last = 50_000
       limit = 1
       conn = get(conn, "/v2/totalstats", scope: "gen:#{first}-#{last}", limit: limit)
       response = json_response(conn, 200)

@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.Name do
   # credo:disable-for-this-file
   alias AeMdw.Blocks
+  alias AeMdw.Collection
   alias AeMdw.Contracts
   alias AeMdw.Node, as: AE
   alias AeMdw.Db.Model
@@ -86,8 +87,9 @@ defmodule AeMdw.Db.Name do
       cache_through_delete(Model.ActiveName, plain_name)
       cache_through_delete(Model.ActiveNameOwner, {owner, plain_name})
       cache_through_delete(Model.ActiveNameExpiration, {height, plain_name})
-      Ets.inc(:stat_sync_cache, :inactive_names)
-      Ets.dec(:stat_sync_cache, :active_names)
+
+      Ets.inc(:stat_sync_cache, :names_expired)
+
       Log.info("[#{height}] expiring name #{plain_name}")
     else
       cache_through_delete(Model.ActiveNameExpiration, {height, plain_name})
@@ -128,11 +130,20 @@ defmodule AeMdw.Db.Name do
 
     %{tx: winning_tx} = read_raw_tx!(txi)
     IntTransfer.fee({height, -1}, :lock_name, owner, txi, winning_tx.name_fee)
-    Ets.inc(:stat_sync_cache, :active_names)
-    Ets.dec(:stat_sync_cache, :active_auctions)
-    previous && Ets.dec(:stat_sync_cache, :inactive_names)
+    Ets.inc(:stat_sync_cache, :names_activated)
+    Ets.inc(:stat_sync_cache, :auctions_expired)
 
     Log.info("[#{height}] expiring auction for #{plain_name}")
+  end
+
+  @doc """
+  Returns a stream of Names.plain_name()
+  """
+  @spec list_inactivated_at(Blocks.height()) :: Enumerable.t()
+  def list_inactivated_at(height) do
+    Model.InactiveNameExpiration
+    |> Collection.stream(:forward, {{height, <<>>}, {height + 1, <<>>}}, nil)
+    |> Stream.map(fn {_height, plain_name} -> plain_name end)
   end
 
   ##########

@@ -5,8 +5,8 @@ if :integration not in Keyword.fetch!(config, :include) do
   Application.stop(:aecore)
 
   :ets.new(:counters, [:named_table, :set, :public])
-  :ets.insert(:counters, {:txi, -1})
-  :ets.insert(:counters, {:kbi, -1})
+  :ets.insert(:counters, {:txi, 0})
+  :ets.insert(:counters, {:kbi, 0})
 
   # reset database
   alias AeMdw.Db.RocksDb

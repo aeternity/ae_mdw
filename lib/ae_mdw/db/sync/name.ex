@@ -87,8 +87,7 @@ defmodule AeMdw.Db.Sync.Name do
         cache_through_write(Model.InactiveName, new_m_name)
         cache_through_write(Model.InactiveNameExpiration, new_m_name_exp)
 
-        inc(:stat_sync_cache, :inactive_names)
-        dec(:stat_sync_cache, :active_names)
+        inc(:stat_sync_cache, :names_expired)
 
         log_name_change(height, plain_name, "expire")
 
@@ -134,8 +133,7 @@ defmodule AeMdw.Db.Sync.Name do
     cache_through_write(Model.InactiveName, m_name)
     cache_through_write(Model.InactiveNameExpiration, m_exp)
 
-    inc(:stat_sync_cache, :inactive_names)
-    dec(:stat_sync_cache, :active_names)
+    inc(:stat_sync_cache, :names_revoked)
 
     log_name_change(height, plain_name, "revoke")
   end

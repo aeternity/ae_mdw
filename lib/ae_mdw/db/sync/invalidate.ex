@@ -88,7 +88,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
   def stat_key_dels(from_kbi) do
     keys = from_kbi..last_gen()
-    %{Model.Stat => keys, Model.TotalStat => keys}
+    %{Model.DeltaStat => keys, Model.TotalStat => keys}
   end
 
   def tx_keys_range(from_txi) do

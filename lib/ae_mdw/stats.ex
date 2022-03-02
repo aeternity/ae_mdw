@@ -11,7 +11,7 @@ defmodule AeMdw.Stats do
 
   require Model
 
-  @type stat() :: map()
+  @type delta_stat() :: map()
   @type total_stat() :: map()
   @type cursor() :: binary() | nil
 
@@ -20,12 +20,13 @@ defmodule AeMdw.Stats do
   @typep limit() :: Database.limit()
   @typep range() :: {:gen, Range.t()} | nil
 
-  @table Model.Stat
+  @delta_table Model.DeltaStat
   @totals_table Model.TotalStat
 
-  @spec fetch_stats(direction(), range(), cursor(), limit()) :: {cursor(), [stat()], cursor()}
-  def fetch_stats(direction, range, cursor, limit) do
-    {:ok, last_gen} = Database.last_key(AeMdw.Db.Model.Stat)
+  @spec fetch_delta_stats(direction(), range(), cursor(), limit()) ::
+          {cursor(), [delta_stat()], cursor()}
+  def fetch_delta_stats(direction, range, cursor, limit) do
+    {:ok, last_gen} = Database.last_key(AeMdw.Db.Model.DeltaStat)
 
     {range_first, range_last} =
       case range do
@@ -66,8 +67,8 @@ defmodule AeMdw.Stats do
     end
   end
 
-  @spec fetch_stat!(height()) :: stat()
-  def fetch_stat!(height), do: render_stat(Database.fetch!(@table, height))
+  @spec fetch_stat!(height()) :: delta_stat()
+  def fetch_stat!(height), do: render_stat(Database.fetch!(@delta_table, height))
 
   @spec fetch_total_stat!(height()) :: total_stat()
   def fetch_total_stat!(height), do: render_total_stat(Database.fetch!(@totals_table, height))
@@ -76,7 +77,7 @@ defmodule AeMdw.Stats do
 
   defp render_total_stats(gens), do: Enum.map(gens, &fetch_total_stat!/1)
 
-  defp render_stat(stat), do: Format.to_map(stat, @table)
+  defp render_stat(stat), do: Format.to_map(stat, @delta_table)
 
   defp render_total_stat(total_stat), do: Format.to_map(total_stat, @totals_table)
 
