@@ -48,6 +48,8 @@ defmodule AeMdw.Db.ContractCreateMutation do
       DBContract.aex9_creation_write(aex9_meta_info, contract_pk, owner_pk, txi)
     end
 
+    AeMdw.Ets.inc(:stat_sync_cache, :contracts_created)
+
     DBContract.logs_write(txi, txi, call_rec)
   end
 end

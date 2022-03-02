@@ -282,7 +282,6 @@ defmodule AeMdw.Db.Sync.Transaction do
     owner_pk = :aect_create_tx.owner_pubkey(tx)
 
     :ets.insert(:ct_create_sync_cache, {contract_pk, txi})
-    AeMdw.Ets.inc(:stat_sync_cache, :contracts_created)
 
     mutations = Origin.origin_mutations(:contract_create_tx, nil, contract_pk, txi, tx_hash)
 
