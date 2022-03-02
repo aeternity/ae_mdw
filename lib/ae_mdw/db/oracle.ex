@@ -4,6 +4,7 @@ defmodule AeMdw.Db.Oracle do
   """
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
+  alias AeMdw.Collection
   alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.Oracle
@@ -163,19 +164,14 @@ defmodule AeMdw.Db.Oracle do
     end
   end
 
-  @spec list_expired_at(Blocks.height()) :: [pubkey()]
+  @doc """
+  Returns stream of oracle pubkey() that expired at a certain height.
+  """
+  @spec list_expired_at(Blocks.height()) :: Enumerable.t()
   def list_expired_at(height) do
-    do_list_expired_at([], height, <<>>)
-  end
-
-  defp do_list_expired_at(oracle_pks, height, prev_pubkey) do
-    # includes revoked
-    case Database.next_key(Model.InactiveOracleExpiration, {height, prev_pubkey}) do
-      {:ok, {^height, oracle_pk}} ->
-        do_list_expired_at([oracle_pk | oracle_pks], height, oracle_pk)
-
-      _other_height ->
-        oracle_pks
-    end
+    Model.InactiveOracleExpiration
+    |> Collection.stream(:forward, {{height, <<>>}, {height + 1, <<>>}}, nil)
+    |> Stream.map(fn {_height, pubkey} -> pubkey end)
+    |> Stream.uniq()
   end
 end
