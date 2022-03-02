@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.Name do
   # credo:disable-for-this-file
   alias AeMdw.Blocks
+  alias AeMdw.Collection
   alias AeMdw.Contracts
   alias AeMdw.Node, as: AE
   alias AeMdw.Db.Model
@@ -135,9 +136,14 @@ defmodule AeMdw.Db.Name do
     Log.info("[#{height}] expiring auction for #{plain_name}")
   end
 
-  @spec list_inactivated_at(Blocks.height()) :: [Names.plain_name()]
+  @doc """
+  Returns a stream of Names.plain_name()
+  """
+  @spec list_inactivated_at(Blocks.height()) :: Enumerable.t()
   def list_inactivated_at(height) do
-    do_list_inactivated_at([], height, <<>>)
+    Model.InactiveNameExpiration
+    |> Collection.stream(:forward, {{height, <<>>}, {height + 1, <<>>}}, nil)
+    |> Stream.map(fn {_height, plain_name} -> plain_name end)
   end
 
   ##########
@@ -359,17 +365,6 @@ defmodule AeMdw.Db.Name do
   #
   # Private functions
   #
-  defp do_list_inactivated_at(plain_names, height, prev_plain_name) do
-    # includes revoked
-    case Database.next_key(Model.InactiveNameExpiration, {height, prev_plain_name}) do
-      {:ok, {^height, plain_name}} ->
-        do_list_inactivated_at([plain_name | plain_names], height, plain_name)
-
-      _other_height ->
-        plain_names
-    end
-  end
-
   defp pointee_at(Model.name(index: name, updates: updates), ref_txi) do
     updates
     |> find_update_txi_before(ref_txi)
