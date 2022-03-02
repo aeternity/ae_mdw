@@ -52,8 +52,8 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
     end
 
     test "it gets generations with numeric range and default limit", %{conn: conn} do
-      first = 55_000
-      last = 55_200
+      first = 47_800
+      last = 48_000
       conn = get(conn, "/v2/deltastats", scope: "gen:#{first}-#{last}")
       response = json_response(conn, 200)
 
@@ -74,8 +74,8 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
     end
 
     test "it gets generations backwards with numeric range and limit=1", %{conn: conn} do
-      first = 56_300
-      last = 56_000
+      first = 49_300
+      last = 49_000
       limit = 1
       conn = get(conn, "/v2/deltastats", scope: "gen:#{first}-#{last}", limit: limit)
       response = json_response(conn, 200)
@@ -159,8 +159,8 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
     end
 
     test "it gets generations with numeric range and default limit", %{conn: conn} do
-      first = 305_000
-      last = 305_100
+      first = 50_000
+      last = 50_500
       conn = get(conn, "/v2/totalstats", scope: "gen:#{first}-#{last}")
       response = json_response(conn, 200)
 
@@ -181,8 +181,8 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
     end
 
     test "it gets generations backwards with numeric range and limit=1", %{conn: conn} do
-      first = 305_100
-      last = 305_000
+      first = 50_400
+      last = 50_000
       limit = 1
       conn = get(conn, "/v2/totalstats", scope: "gen:#{first}-#{last}", limit: limit)
       response = json_response(conn, 200)
