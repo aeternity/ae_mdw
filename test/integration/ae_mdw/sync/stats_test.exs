@@ -3,13 +3,12 @@ defmodule Integration.AeMdw.Db.Sync.StatsTest do
 
   @moduletag :integration
 
+  alias AeMdw.Collection
   alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync.Stats
   alias AeMdw.Db.StatsMutation
   alias AeMdw.Db.IntTransfer
-  alias AeMdw.Db.Origin
-  alias AeMdw.Db.Util
 
   require Model
 
@@ -175,16 +174,12 @@ defmodule Integration.AeMdw.Db.Sync.StatsTest do
       assert Model.total_stat(m_total_stat, :total_supply) ==
                total_supply + total_block_reward + total_dev_reward
 
-      assert Model.total_stat(m_total_stat, :inactive_names) == Util.count(Model.InactiveName)
-      assert Model.total_stat(m_total_stat, :active_names) == Util.count(Model.ActiveName)
+      inactive_names =
+        Model.InactiveNameExpiration
+        |> Collection.stream(:forward, {{0, <<>>}, {@first_name_revoked_height + 1, <<>>}}, nil)
+        |> Enum.count()
 
-      assert Model.total_stat(m_total_stat, :active_auctions) ==
-               Util.count(Model.AuctionExpiration)
-
-      assert Model.total_stat(m_total_stat, :inactive_oracles) == Util.count(Model.InactiveOracle)
-      assert Model.total_stat(m_total_stat, :active_oracles) == Util.count(Model.ActiveOracle)
-      assert Model.total_stat(m_total_stat, :contracts) == Origin.count_contracts()
-
+      assert Model.total_stat(m_total_stat, :inactive_names) == inactive_names
       assert Model.delta_stat(m_delta_stat, :auctions_started) == 0
       assert Model.delta_stat(m_delta_stat, :names_activated) == 0
       assert Model.delta_stat(m_delta_stat, :names_expired) == 0
