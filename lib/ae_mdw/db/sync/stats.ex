@@ -126,10 +126,10 @@ defmodule AeMdw.Db.Sync.Stats do
       block_reward: prev_block_reward + inc_block_reward,
       dev_reward: prev_dev_reward + inc_dev_reward,
       total_supply: prev_total_supply + token_supply_delta + inc_block_reward + inc_dev_reward,
-      active_auctions: prev_active_auctions + auctions_started - auctions_expired,
-      active_names: prev_active_names + names_activated - (names_expired + names_revoked),
+      active_auctions: max(0, prev_active_auctions + auctions_started - auctions_expired),
+      active_names: max(0, prev_active_names + names_activated - (names_expired + names_revoked)),
       inactive_names: prev_inactive_names + names_expired + names_revoked,
-      active_oracles: prev_active_oracles + oracles_registered - oracles_expired,
+      active_oracles: max(0, prev_active_oracles + oracles_registered - oracles_expired),
       inactive_oracles: prev_inactive_oracles + oracles_expired,
       contracts: prev_contracts + contracts_created
     )
