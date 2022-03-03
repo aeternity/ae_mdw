@@ -285,4 +285,12 @@ defmodule AeMdw.Db.Util do
         end
     end
   end
+
+  @spec height_hash(Blocks.height()) :: Blocks.block_hash()
+  def height_hash(height) do
+    {:ok, block} = :aec_chain.get_key_block_by_height(height)
+    {:ok, hash} = :aec_headers.hash_header(:aec_blocks.to_header(block))
+
+    hash
+  end
 end
