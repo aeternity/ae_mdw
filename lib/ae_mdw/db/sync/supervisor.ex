@@ -16,6 +16,6 @@ defmodule AeMdw.Db.Sync.Supervisor do
       AeMdw.Db.Sync.ForkDetector
     ]
 
-    Supervisor.init(children, max_restarts: 0, strategy: :one_for_one)
+    Supervisor.init(children, strategy: :one_for_one)
   end
 end
