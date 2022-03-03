@@ -9,6 +9,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync
   alias AeMdw.Db.Aex9AccountPresenceMutation
+  alias AeMdw.Db.Aex9AccountBalanceMutation
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.ContractCreateMutation
   alias AeMdw.Db.IntTransfer
@@ -333,18 +334,27 @@ defmodule AeMdw.Db.Sync.Transaction do
         tx_hash
       )
 
+    aex9_balance_mutation =
+      with true <- aex9_meta_info != nil,
+           {:ok, method_name, method_args} <- Contract.extract_successful_function(fun_arg_res) do
+        Aex9AccountBalanceMutation.new(method_name, method_args, contract_pk, caller_pk)
+      else
+        _false_not_found -> nil
+      end
+
     child_mutations ++
       Sync.Contract.events_mutations(tx_events, block_index, block_hash, txi, tx_hash, create_txi) ++
       [
-        ContractCallMutation.new(
-          contract_pk,
-          caller_pk,
-          create_txi,
-          txi,
-          fun_arg_res,
-          aex9_meta_info,
-          call_rec
-        )
+        aex9_balance_mutation
+        | ContractCallMutation.new(
+            contract_pk,
+            caller_pk,
+            create_txi,
+            txi,
+            fun_arg_res,
+            aex9_meta_info,
+            call_rec
+          )
       ]
   end
 

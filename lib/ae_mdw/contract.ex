@@ -124,11 +124,21 @@ defmodule AeMdw.Contract do
     }
   end
 
-  @spec is_aex9_successful_call?(fun_arg_res_or_error()) :: boolean
-  def is_aex9_successful_call?({:error, _reason}), do: false
-  def is_aex9_successful_call?(%{result: %{error: _error}}), do: false
-  def is_aex9_successful_call?(%{result: %{abort: _error}}), do: false
-  def is_aex9_successful_call?(_result_ok), do: true
+  @spec extract_successful_function(fun_arg_res_or_error()) ::
+          {:ok, method_name(), method_args()} | :not_found
+  def extract_successful_function({:error, _reason}), do: :not_found
+  def extract_successful_function(%{result: %{error: _error}}), do: :not_found
+  def extract_successful_function(%{result: %{abort: _error}}), do: :not_found
+
+  def extract_successful_function(%{function: method_name, arguments: method_args}) do
+    {:ok, method_name, method_args}
+  end
+
+  @spec is_success_ct_call?(fun_arg_res_or_error()) :: boolean
+  def is_success_ct_call?({:error, _reason}), do: false
+  def is_success_ct_call?(%{result: %{error: _error}}), do: false
+  def is_success_ct_call?(%{result: %{abort: _error}}), do: false
+  def is_success_ct_call?(_result_ok), do: true
 
   @spec is_non_stateful_aex9_function?(method_name()) :: boolean()
   def is_non_stateful_aex9_function?(<<method_name::binary>>) do
@@ -150,14 +160,14 @@ defmodule AeMdw.Contract do
       ]),
       do: {from_pk, to_pk, value}
 
-  def get_aex9_transfer("transfer_allowance", [
+  def get_aex9_transfer(_caller_pk, "transfer_allowance", [
         %{type: :address, value: from_pk},
         %{type: :address, value: to_pk},
         %{type: :int, value: value}
       ]),
       do: {from_pk, to_pk, value}
 
-  def get_aex9_transfer(_other_function, _other_args), do: nil
+  def get_aex9_transfer(_caller_pk, _other_function, _other_args), do: nil
 
   @spec is_aex9?(DBN.pubkey() | type_info()) :: boolean()
   def is_aex9?(pubkey) when is_binary(pubkey) do

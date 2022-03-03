@@ -28,6 +28,7 @@ defmodule AeMdw.Db.Contract do
 
   @type rev_aex9_contract_key :: {pos_integer(), String.t(), String.t(), pos_integer()}
   @typep pubkey :: Db.pubkey()
+  @typep transaction :: Database.transaction()
 
   @spec aex9_creation_write(tuple(), pubkey(), pubkey(), integer()) :: :ok
   def aex9_creation_write({name, symbol, decimals}, contract_pk, owner_pk, txi) do
@@ -119,9 +120,9 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  @spec aex9_delete_balance(pubkey(), pubkey()) :: :ok
-  def aex9_delete_balance(contract_pk, account_pk) do
-    Database.delete(Model.Aex9Balance, {contract_pk, account_pk})
+  @spec aex9_delete_balance(transaction(), pubkey(), pubkey()) :: :ok
+  def aex9_delete_balance(txn, contract_pk, account_pk) do
+    Database.dirty_delete(txn, Model.Aex9Balance, {contract_pk, account_pk})
   end
 
   @spec aex9_invalidate_balances(pubkey()) :: :ok

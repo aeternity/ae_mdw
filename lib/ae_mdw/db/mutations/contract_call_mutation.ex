@@ -66,10 +66,9 @@ defmodule AeMdw.Db.ContractCallMutation do
     DBContract.call_write(create_txi, txi, fun_arg_res)
     DBContract.logs_write(create_txi, txi, call_rec)
 
-    if Contract.is_aex9?(contract_pk) and Contract.is_aex9_successful_call?(fun_arg_res) do
-      %{function: method_name, arguments: method_args} = fun_arg_res
-
-      if not Contract.is_non_stateful_aex9_function?(method_name) do
+    with true <- Contract.is_aex9?(contract_pk),
+      {:ok, method_name, method_args} <- Contract.extract_successful_function(fun_arg_res),
+      false <- Contract.is_non_stateful_aex9_function?(method_name) do
         update_aex9_presence(
           contract_pk,
           caller_pk,
@@ -77,7 +76,6 @@ defmodule AeMdw.Db.ContractCallMutation do
           method_name,
           method_args
         )
-      end
     end
 
     if aex9_meta_info do
