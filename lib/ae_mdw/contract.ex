@@ -44,8 +44,8 @@ defmodule AeMdw.Contract do
   @type source_hash :: <<_::256>>
   @type ct_info :: {type_info(), compiler_vsn(), source_hash()}
   @type function_hash :: <<_::32>>
-  @typep method_name :: binary()
-  @typep method_args :: list()
+  @type method_name :: binary()
+  @type method_args :: list()
   @type fun_arg_res :: %{
           function: method_name(),
           arguments: method_args(),
@@ -124,48 +124,40 @@ defmodule AeMdw.Contract do
     }
   end
 
-  @spec extract_non_stateful_aex9_function(fun_arg_res_or_error()) ::
-          {:ok, method_name(), method_args()} | :not_found
-  def extract_non_stateful_aex9_function({:error, _reason}), do: :not_found
-  def extract_non_stateful_aex9_function(%{result: %{error: _error}}), do: :not_found
-  def extract_non_stateful_aex9_function(%{result: %{abort: _error}}), do: :not_found
+  @spec is_aex9_successful_call?(fun_arg_res_or_error()) :: boolean
+  def is_aex9_successful_call?({:error, _reason}), do: false
+  def is_aex9_successful_call?(%{result: %{error: _error}}), do: false
+  def is_aex9_successful_call?(%{result: %{abort: _error}}), do: false
+  def is_aex9_successful_call?(_result_ok), do: true
 
-  def extract_non_stateful_aex9_function(%{function: method_name, arguments: method_args}) do
-    if method_name not in [
-         "aex9_extensions",
-         "meta_info",
-         "total_supply",
-         "owner",
-         "balance",
-         "balances"
-       ] do
-      {:ok, method_name, method_args}
-    else
-      :not_found
-    end
+  @spec is_non_stateful_aex9_function?(method_name()) :: boolean()
+  def is_non_stateful_aex9_function?(<<method_name::binary>>) do
+    method_name in [
+      "aex9_extensions",
+      "meta_info",
+      "total_supply",
+      "owner",
+      "balance",
+      "balances"
+    ]
   end
 
-  @spec get_aex9_destination_address(String.t(), term()) :: DBN.pubkey() | nil
-  def get_aex9_destination_address("mint", [
-        %{type: :address, value: account_pk},
-        %{type: :int, value: _value}
+  @spec get_aex9_transfer(DBN.pubkey(), String.t(), term()) ::
+          {DBN.pubkey(), DBN.pubkey(), non_neg_integer()} | nil
+  def get_aex9_transfer(from_pk, "transfer", [
+        %{type: :address, value: to_pk},
+        %{type: :int, value: value}
       ]),
-      do: account_pk
+      do: {from_pk, to_pk, value}
 
-  def get_aex9_destination_address("transfer", [
-        %{type: :address, value: account_pk},
-        %{type: :int, value: _value}
+  def get_aex9_transfer("transfer_allowance", [
+        %{type: :address, value: from_pk},
+        %{type: :address, value: to_pk},
+        %{type: :int, value: value}
       ]),
-      do: account_pk
+      do: {from_pk, to_pk, value}
 
-  def get_aex9_destination_address("transfer_allowance", [
-        %{type: :address, value: _from},
-        %{type: :address, value: account_pk},
-        %{type: :int, value: _value}
-      ]),
-      do: account_pk
-
-  def get_aex9_destination_address(_other_function, _other_args), do: nil
+  def get_aex9_transfer(_other_function, _other_args), do: nil
 
   @spec is_aex9?(DBN.pubkey() | type_info()) :: boolean()
   def is_aex9?(pubkey) when is_binary(pubkey) do
