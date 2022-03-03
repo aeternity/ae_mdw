@@ -11,7 +11,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
   describe "logs" do
     test "it get logs backwards without any filters", %{conn: conn} do
       assert %{"data" => logs, "next" => next} =
-               conn |> get("/contracts/logs") |> json_response(200)
+               conn |> get("/v2/contracts/logs") |> json_response(200)
 
       call_txis =
         logs
@@ -35,7 +35,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
 
     test "it get logs backwards without any filters, with backwards path", %{conn: conn} do
       assert %{"data" => logs, "next" => next} =
-               conn |> get("/contracts/logs/backward") |> json_response(200)
+               conn |> get("/v2/contracts/logs") |> json_response(200)
 
       call_txis =
         logs
@@ -60,7 +60,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
     test "is get logs forward without any filters", %{conn: conn} do
       assert %{"data" => logs, "next" => next} =
                conn
-               |> get("/contracts/logs/forward")
+               |> get("/v2/contracts/logs", direction: "forward")
                |> json_response(200)
 
       call_txis = Enum.map(logs, fn %{"call_txi" => call_txi} -> call_txi end)
@@ -82,7 +82,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
 
       assert %{"data" => logs, "next" => next} =
                conn
-               |> get("/contracts/logs/forward", contract_id: contract_id)
+               |> get("/v2/contracts/logs", direction: "forward", contract_id: contract_id)
                |> json_response(200)
 
       create_txis = Enum.map(logs, fn %{"contract_txi" => create_txi} -> create_txi end)
@@ -107,7 +107,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
 
       assert %{"data" => caller_logs, "next" => next} =
                conn
-               |> get("/contracts/logs/forward", contract_id: contract_id)
+               |> get("/v2/contracts/logs", direction: "forward", contract_id: contract_id)
                |> json_response(200)
 
       assert Enum.all?(caller_logs, &match?(%{"contract_id" => ^contract_id}, &1))
@@ -121,7 +121,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
 
       assert %{"data" => called_logs} =
                conn
-               |> get("/contracts/logs/forward", contract_id: ext_contract_id)
+               |> get("/v2/contracts/logs", direction: "forward", contract_id: ext_contract_id)
                |> json_response(200)
 
       # remote call logged in called (contract1)
@@ -143,7 +143,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
 
       %{"data" => data} =
         conn
-        |> get("/contracts/logs/forward", contract_id: contract_id)
+        |> get("/v2/contracts/logs", direction: "forward", contract_id: contract_id)
         |> json_response(200)
 
       assert %{"call_txi" => call_txi, "contract_txi" => contract_txi} = hd(data)
@@ -155,7 +155,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
 
       %{"data" => data} =
         conn
-        |> get("/contracts/calls/forward", contract_id: contract_id)
+        |> get("/v2/contracts/calls", direction: "forward", contract_id: contract_id)
         |> json_response(200)
 
       assert %{
@@ -173,7 +173,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/contracts/logs/forward", contract_id: contract_id)
+               |> get("/v2/contracts/logs", direction: "forward", contract_id: contract_id)
                |> json_response(400)
     end
 
@@ -184,7 +184,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
 
       assert %{"data" => logs} =
                conn
-               |> get("/contracts/logs/forward", contract_id: contract_id)
+               |> get("/v2/contracts/logs", direction: "forward", contract_id: contract_id)
                |> json_response(200)
 
       assert [
@@ -207,7 +207,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
 
       assert %{"data" => logs, "next" => next} =
                conn
-               |> get("/contracts/logs", event: event)
+               |> get("/v2/contracts/logs", event: event)
                |> json_response(200)
 
       call_txis = logs |> Enum.map(fn %{"call_txi" => call_txi} -> call_txi end) |> Enum.reverse()
@@ -231,7 +231,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
 
       assert %{"data" => logs, "next" => next} =
                conn
-               |> get("/contracts/logs", data: URI.encode(data_prefix))
+               |> get("/v2/contracts/logs", data: URI.encode(data_prefix))
                |> json_response(200)
 
       data_call_txis =
@@ -248,7 +248,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
   describe "calls" do
     test "it get calls backwards without any filters", %{conn: conn} do
       assert %{"data" => calls, "next" => next} =
-               conn |> get("/contracts/calls") |> json_response(200)
+               conn |> get("/v2/contracts/calls") |> json_response(200)
 
       call_txis =
         calls
@@ -269,7 +269,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
 
     test "it get calls backwards with backward path without any filters", %{conn: conn} do
       assert %{"data" => calls, "next" => next} =
-               conn |> get("/contracts/calls/backward") |> json_response(200)
+               conn |> get("/v2/contracts/calls") |> json_response(200)
 
       call_txis =
         calls
@@ -291,7 +291,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
     test "is get calls forward without any filters", %{conn: conn} do
       assert %{"data" => calls, "next" => next} =
                conn
-               |> get("/contracts/calls/forward")
+               |> get("/v2/contracts/calls", direction: "forward")
                |> json_response(200)
 
       call_txis = Enum.map(calls, fn %{"call_txi" => call_txi} -> call_txi end)
@@ -312,7 +312,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
 
       assert %{"data" => calls, "next" => next} =
                conn
-               |> get("/contracts/calls/forward", contract_id: contract_id)
+               |> get("/v2/contracts/calls", direction: "forward", contract_id: contract_id)
                |> json_response(200)
 
       create_txis = Enum.map(calls, fn %{"contract_txi" => create_txi} -> create_txi end)
@@ -337,7 +337,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
 
       assert %{"data" => calls, "next" => next} =
                conn
-               |> get("/contracts/calls/forward", function: fname_prefix)
+               |> get("/v2/contracts/calls", direction: "forward", function: fname_prefix)
                |> json_response(200)
 
       fnames = Enum.map(calls, fn %{"function" => fname} -> fname end)
@@ -359,7 +359,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
 
       assert %{"data" => calls, "next" => next} =
                conn
-               |> get("/contracts/calls/forward", recipient_id: recipient_id)
+               |> get("/v2/contracts/calls", direction: "forward", recipient_id: recipient_id)
                |> json_response(200)
 
       call_txi_local_idxs =
@@ -391,7 +391,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
 
       assert %{"data" => calls, "next" => next} =
                conn
-               |> get("/contracts/calls/forward", recipient_id: recipient_id)
+               |> get("/v2/contracts/calls", direction: "forward", recipient_id: recipient_id)
                |> json_response(200)
 
       call_txi_local_idxs =
@@ -423,7 +423,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
 
       assert %{"data" => calls, "next" => next} =
                conn
-               |> get("/contracts/calls/forward", contract_id: contract_id)
+               |> get("/v2/contracts/calls", direction: "forward", contract_id: contract_id)
                |> json_response(200)
 
       call_txi_local_idxs =

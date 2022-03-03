@@ -5,6 +5,8 @@ defmodule AeMdwWeb.Router do
     {"/txs/count", AeMdwWeb.TxController, :count},
     {"/txs/count/:id", AeMdwWeb.TxController, :count_id},
     {"/transfers", AeMdwWeb.TransferController, :transfers},
+    {"/contracts/logs", AeMdwWeb.ContractController, :logs},
+    {"/contracts/calls", AeMdwWeb.ContractController, :calls},
     {"/totalstats/", AeMdwWeb.StatsController, :total_stats},
     {"/status", AeMdwWeb.UtilController, :status}
   ]
@@ -24,12 +26,6 @@ defmodule AeMdwWeb.Router do
     {"/aex9/balances/gen/:range/:contract_id", AeMdwWeb.Aex9Controller, :balances_range},
     {"/aex9/balances/hash/:blockhash/:contract_id", AeMdwWeb.Aex9Controller, :balances_for_hash},
     {"/aex9/balances/:contract_id", AeMdwWeb.Aex9Controller, :balances},
-    {"/contracts/logs", AeMdwWeb.ContractController, :logs},
-    {"/contracts/logs/:direction", AeMdwWeb.ContractController, :logs},
-    {"/contracts/logs/:scope_type/:range", AeMdwWeb.ContractController, :logs},
-    {"/contracts/calls", AeMdwWeb.ContractController, :calls},
-    {"/contracts/calls/:direction", AeMdwWeb.ContractController, :calls},
-    {"/contracts/calls/:scope_type/:range", AeMdwWeb.ContractController, :calls},
     {"/stats", AeMdwWeb.StatsController, :stats}
   ]
 
@@ -120,6 +116,11 @@ defmodule AeMdwWeb.Router do
     get "/aex9/transfers/from/:sender", Aex9Controller, :transfers_from_v1
     get "/aex9/transfers/to/:recipient", Aex9Controller, :transfers_to_v1
     get "/aex9/transfers/from-to/:sender/:recipient", Aex9Controller, :transfers_from_to_v1
+
+    get "/contracts/logs/:direction", ContractController, :logs
+    get "/contracts/logs/:scope_type/:range", ContractController, :logs
+    get "/contracts/calls/:direction", ContractController, :calls
+    get "/contracts/calls/:scope_type/:range", ContractController, :calls
 
     get "/oracle/:id", OracleController, :oracle
     get "/oracles/inactive", OracleController, :inactive_oracles
