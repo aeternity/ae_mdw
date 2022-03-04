@@ -95,16 +95,6 @@ defmodule AeMdw.Db.RocksDb do
   end
 
   @doc """
-  Delete a key-value from a column family.
-  """
-  @spec delete(table(), binary()) :: :ok | {:error, any()}
-  def delete(table, key) do
-    {db_ref, cf_ref} = cf_refs(table)
-
-    :rocksdb.delete(db_ref, cf_ref, key, [])
-  end
-
-  @doc """
   Starts a new empty transaction with fsync option.
   """
   @spec transaction_new() :: {:ok, transaction()}
@@ -135,7 +125,17 @@ defmodule AeMdw.Db.RocksDb do
   defdelegate iterator_close(it), to: :rocksdb
 
   @doc """
-  Write directly without transaction for single writes.
+  Delete a key without a transaction.
+  """
+  @spec dirty_delete(table(), binary()) :: :ok | {:error, any()}
+  def dirty_delete(table, key) do
+    {db_ref, cf_ref} = cf_refs(table)
+
+    :rocksdb.delete(db_ref, cf_ref, key, [])
+  end
+
+  @doc """
+  Write a key-value directly without a transaction.
   """
   @spec dirty_put(table(), binary(), binary()) :: :ok
   def dirty_put(table, key, value) do
@@ -162,8 +162,8 @@ defmodule AeMdw.Db.RocksDb do
   @doc """
   Delete a key-value from a column family.
   """
-  @spec dirty_delete(transaction(), table(), binary()) :: :ok | {:error, any()}
-  def dirty_delete(t_ref, table, key) do
+  @spec delete(transaction(), table(), binary()) :: :ok | {:error, any()}
+  def delete(t_ref, table, key) do
     {db_ref, cf_ref} = cf_refs(table)
 
     case :rocksdb.transaction_get(t_ref, cf_ref, key, []) do

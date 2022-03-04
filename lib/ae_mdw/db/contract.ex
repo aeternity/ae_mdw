@@ -12,7 +12,6 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Origin
   alias AeMdw.Log
-  alias AeMdw.Database
   alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Txs
@@ -120,13 +119,20 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  @spec aex9_delete_balance(transaction(), pubkey(), pubkey()) :: :ok
-  def aex9_delete_balance(txn, contract_pk, account_pk) do
-    Database.dirty_delete(txn, Model.Aex9Balance, {contract_pk, account_pk})
+  @spec aex9_invalidate_balance(transaction(), pubkey(), pubkey()) :: :ok
+  def aex9_invalidate_balance(txn, contract_pk, account_pk) do
+    with {:ok, m_aex9_balance} <-
+           Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, account_pk}) do
+      m_aex9_balance = Model.aex9_balance(m_aex9_balance, amount: -1)
+      Database.write(txn, Model.Aex9Balance, m_aex9_balance)
+    else
+      :not_found ->
+        :error
+    end
   end
 
-  @spec aex9_invalidate_balances(pubkey()) :: :ok
-  def aex9_invalidate_balances(contract_pk) do
+  @spec aex9_delete_balances(transaction(), pubkey()) :: :ok
+  def aex9_delete_balances(txn, contract_pk) do
     Model.Aex9Balance
     |> Collection.stream(
       :forward,
@@ -134,7 +140,7 @@ defmodule AeMdw.Db.Contract do
       nil
     )
     |> Enum.each(fn account_pk ->
-      Database.delete(Model.Aex9Balance, {contract_pk, account_pk})
+      Database.delete(txn, Model.Aex9Balance, {contract_pk, account_pk})
     end)
   end
 

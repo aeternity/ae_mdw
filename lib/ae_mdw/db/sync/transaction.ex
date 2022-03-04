@@ -345,16 +345,16 @@ defmodule AeMdw.Db.Sync.Transaction do
     child_mutations ++
       Sync.Contract.events_mutations(tx_events, block_index, block_hash, txi, tx_hash, create_txi) ++
       [
-        aex9_balance_mutation
-        | ContractCallMutation.new(
-            contract_pk,
-            caller_pk,
-            create_txi,
-            txi,
-            fun_arg_res,
-            aex9_meta_info,
-            call_rec
-          )
+        aex9_balance_mutation,
+        ContractCallMutation.new(
+          contract_pk,
+          caller_pk,
+          create_txi,
+          txi,
+          fun_arg_res,
+          aex9_meta_info,
+          call_rec
+        )
       ]
   end
 

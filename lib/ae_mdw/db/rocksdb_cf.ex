@@ -45,11 +45,11 @@ defmodule AeMdw.Db.RocksDbCF do
     :ok = RocksDb.put(txn, table, key, value)
   end
 
-  @spec delete(table(), key()) :: :ok | {:error, any}
-  def delete(table, index) do
+  @spec delete(transaction(), table(), key()) :: :ok
+  def delete(txn, table, index) do
     key = :sext.encode(index)
 
-    :ok = RocksDb.delete(table, key)
+    :ok = RocksDb.delete(txn, table, key)
   end
 
   @spec exists?(table(), key()) :: boolean()
@@ -131,11 +131,11 @@ defmodule AeMdw.Db.RocksDbCF do
     :ok = RocksDb.dirty_put(table, key, value)
   end
 
-  @spec dirty_delete(transaction(), table(), key()) :: :ok | {:error, any}
-  def dirty_delete(txn, table, index) do
+  @spec dirty_delete(table(), key()) :: :ok | {:error, any}
+  def dirty_delete(table, index) do
     key = :sext.encode(index)
 
-    :ok = RocksDb.dirty_delete(txn, table, key)
+    :ok = RocksDb.dirty_delete(table, key)
   end
 
   @spec dirty_fetch(transaction(), table(), key()) :: {:ok, record()} | :not_found

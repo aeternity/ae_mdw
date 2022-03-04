@@ -3,10 +3,8 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutation do
   Computes and derives Aex9 tokens, and stores it into the appropriate indexes.
   """
 
-  alias AeMdw.Database
   alias AeMdw.Contract
   alias AeMdw.Db.Contract, as: DbContract
-  alias AeMdw.Db.Model
   alias AeMdw.Node.Db
 
   @derive AeMdw.Db.TxnMutation
@@ -29,7 +27,7 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutation do
     }
   end
 
-  @spec execute(t(), Database.transaction()) :: :ok
+  @spec execute(t(), AeMdw.Database.transaction()) :: :ok
   def execute(
         %__MODULE__{
           method_name: method_name,
@@ -54,7 +52,7 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutation do
   end
 
   defp update_aex9_balance(txn, "swap", [], contract_pk, caller_pk) do
-    Database.dirty_delete(txn, Model.Aex9Balance, {contract_pk, caller_pk})
+    DbContract.aex9_invalidate_balance(txn, contract_pk, caller_pk)
   end
 
   defp update_aex9_balance(
@@ -74,6 +72,9 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutation do
     with {from_pk, to_pk, value} <-
            Contract.get_aex9_transfer(caller_pk, method_name, method_args) do
       DbContract.aex9_transfer_balance(txn, contract_pk, from_pk, to_pk, value)
+    else
+      nil ->
+        DbContract.aex9_delete_balances(txn, contract_pk)
     end
   end
 end

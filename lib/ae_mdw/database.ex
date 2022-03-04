@@ -38,12 +38,11 @@ defmodule AeMdw.Database do
     :mnesia.dirty_all_keys(table)
   end
 
-  @spec dirty_delete(transaction(), table(), key()) :: :ok
-  def dirty_delete(txn, table, key) when use_rocksdb?(table) do
-    :ok = RocksDbCF.dirty_delete(txn, table, key)
+  @spec dirty_delete(table(), key()) :: :ok
+  def dirty_delete(tab, key) when use_rocksdb?(tab) do
+    :ok = RocksDbCF.dirty_delete(tab, key)
   end
 
-  @spec dirty_delete(table(), key()) :: :ok
   def dirty_delete(tab, key), do: :mnesia.dirty_delete(tab, key)
 
   @spec dirty_fetch(transaction(), table(), record()) :: {:ok, record()} | :not_found
@@ -199,15 +198,6 @@ defmodule AeMdw.Database do
     match?({:ok, _record}, fetch(tab, key))
   end
 
-  @spec delete(table(), key()) :: :ok
-  def delete(tab, key) when use_rocksdb?(tab) do
-    :ok = RocksDbCF.delete(tab, key)
-  end
-
-  def delete(table, key) do
-    :mnesia.delete(table, key, :write)
-  end
-
   @spec read(table(), key()) :: [record()]
   def read(tab, key) when use_rocksdb?(tab) do
     case RocksDbCF.fetch(tab, key) do
@@ -233,6 +223,16 @@ defmodule AeMdw.Database do
   @spec write(table(), record()) :: :ok
   def write(table, record) do
     :mnesia.write(table, record, :write)
+  end
+
+  @spec delete(transaction(), table(), key()) :: :ok
+  def delete(txn, table, key) when use_rocksdb?(table) do
+    :ok = RocksDbCF.delete(txn, table, key)
+  end
+
+  @spec delete(table(), key()) :: :ok
+  def delete(table, key) do
+    :mnesia.delete(table, key, :write)
   end
 
   @doc """
