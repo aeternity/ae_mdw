@@ -123,7 +123,7 @@ defmodule AeMdw.Db.Contract do
   def aex9_invalidate_balance(txn, contract_pk, account_pk) do
     with {:ok, m_aex9_balance} <-
            Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, account_pk}) do
-      m_aex9_balance = Model.aex9_balance(m_aex9_balance, amount: -1)
+      m_aex9_balance = Model.aex9_balance(m_aex9_balance, amount: nil)
       Database.write(txn, Model.Aex9Balance, m_aex9_balance)
     else
       :not_found ->
