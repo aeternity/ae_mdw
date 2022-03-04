@@ -46,3 +46,5 @@ VERSION
 
 # Customizable dev tools
 /config/dev.tools.exs
+
+.check_endpoints_tmp.json
