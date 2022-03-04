@@ -227,7 +227,7 @@ GET /v2/transfers                        - returns internal transfers from the t
 GET /v2/stats                            - returns statistics for generations from tip of the chain
 GET /v2/totalstats                       - returns aggregated statistics for generations from tip of the chain
 
-GET  /v2/status                             - returns middleware status
+GET /v2/status                             - returns middleware status
 
 ```
 (more to come)
@@ -1458,7 +1458,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/blocks/forward?limit=2" | jq '.'
 With /v2/blocks endpoint ("micro_blocks" as a sorted list):
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks/101125-101125" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks?scope=gen:101125-101125" | jq '.'
 {
   "data": [
     {
@@ -1533,7 +1533,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks/101125-101125" | jq '.'
 Numeric range:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks/100000-100100?limit=3" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks?scope=gen:100000-100100&limit=3" | jq '.'
 {
   "data": [
     {
@@ -2572,7 +2572,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/names/auctions?by=expiration&dire
 Or, ordered by name, from the begining:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/auctions?by=name&direction=forward&limit=1000" | jq '.data [] .name'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/auctions?by=name&direction=forward&limit=100" | jq '.data [] .name'
 "0.chain"
 "5.chain"
 "6.chain"
