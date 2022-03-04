@@ -289,7 +289,7 @@ Type groups for the transactions listed above are:
 
 `type` parameter:
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/txs?direction=forward&type=channel_create&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&type=channel_create&limit=1" | jq '.'
 {
   "data": [
     {
@@ -326,7 +326,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs?direction=forward&type=channel_c
 
 `type_group` parameter:
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/txs?direction=forward&type_group=oracle&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&type_group=oracle&limit=1" | jq '.'
 {
   "data": [
     {
@@ -381,7 +381,7 @@ With generic ids, it is possible to select also `create`/`register` transactions
 ###### Examples
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/txs?direction=forward&contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&contract=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=2" | jq '.'
 {
   "data": [
     {
@@ -470,7 +470,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs?direction=forward&contract=ct_2A
 ```
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/txs?direction=forward&oracle=ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&oracle=ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&limit=1" | jq '.'
 {
   "data": [
     {
@@ -507,7 +507,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/txs?direction=forward&oracle=ok_24jc
 ```
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/txs?direction=forward&channel=ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&channel=ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD&limit=2" | jq '.'
 {
   "data": [
     {
@@ -640,7 +640,7 @@ For example, for a GAMetaTx with inner SpendTx, one might request with the follo
 
 with provided transaction type (`name_transfer`):
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/txs?direction=forward&name_transfer.recipient_id=ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF&limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?direction=forward&name_transfer.recipient_id=ak_idkx6m3bgRr7WiKXuB8EBYBoRqVsaSc6qo4dsd23HKgj3qiCF&limit=1" | jq '.'
 {
   "data": [
     {
