@@ -38,7 +38,7 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutationTest do
         @transfer_pk1,
         @transfer_pk2,
         @transfer_allowance_pk1,
-        @transfer_allowance_pk2,
+        @transfer_allowance_pk2
       ],
       fn account_pk ->
         Database.dirty_write(
@@ -162,11 +162,9 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutationTest do
         amount: @initial_amount + transfer_value
       )
 
-    assert ^expected_balance1 =
-             Database.fetch!(Model.Aex9Balance, {@ct_pk1, @transfer_pk1})
+    assert ^expected_balance1 = Database.fetch!(Model.Aex9Balance, {@ct_pk1, @transfer_pk1})
 
-    assert ^expected_balance2 =
-             Database.fetch!(Model.Aex9Balance, {@ct_pk1, @transfer_pk2})
+    assert ^expected_balance2 = Database.fetch!(Model.Aex9Balance, {@ct_pk1, @transfer_pk2})
   end
 
   test "update aex9 balance after a transer allowance" do

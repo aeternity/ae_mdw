@@ -4,8 +4,11 @@ defmodule AeMdw.Aex9 do
   """
 
   alias AeMdw.Collection
+  alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Node.Db
+  alias AeMdw.Util
 
   require Model
 
@@ -22,6 +25,26 @@ defmodule AeMdw.Aex9 do
 
   @typep pagination :: Collection.direction_limit()
   @typep pubkey :: AeMdw.Node.Db.pubkey()
+  @type amounts :: map()
+
+  @spec fetch_balances(pubkey(), boolean()) :: amounts()
+  def fetch_balances(contract_pk, top?) do
+    if top? do
+      {amounts, _height} = Db.aex9_balances!(contract_pk)
+      amounts
+    else
+      Model.Aex9Balance
+      |> Collection.stream(
+        :forward,
+        {{contract_pk, <<>>}, {contract_pk, Util.max_256bit_bin()}},
+        nil
+      )
+      |> Stream.map(&Database.fetch!(Model.Aex9Balance, &1))
+      |> Enum.into(%{}, fn Model.aex9_balance(index: {_ct_pk, account_pk}, amount: amount) ->
+        {{:address, account_pk}, amount}
+      end)
+    end
+  end
 
   @spec fetch_sender_transfers(pubkey(), pagination(), cursor() | nil) ::
           account_paginated_transfers()

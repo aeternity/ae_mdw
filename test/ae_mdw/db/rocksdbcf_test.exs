@@ -71,13 +71,13 @@ defmodule AeMdw.Db.RocksDbCFTest do
     end
   end
 
-  describe "delete/2" do
-    test "deletes a committed record" do
+  describe "dirty_delete/2" do
+    test "dirty_delete directly a committed record" do
       key = {654_321, -1}
       m_block = Model.block(index: key)
       assert :ok = RocksDbCF.dirty_put(Model.Block, m_block)
       assert {:ok, ^m_block} = RocksDbCF.fetch(Model.Block, key)
-      assert :ok = RocksDbCF.delete(Model.Block, key)
+      assert :ok = RocksDbCF.dirty_delete(Model.Block, key)
       assert :not_found = RocksDbCF.fetch(Model.Block, key)
     end
   end

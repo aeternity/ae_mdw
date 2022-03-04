@@ -10,7 +10,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
   @moduletag :integration
 
-  @big_balance_contract_id "ct_2M4mVQCDVxu6mvUrEue1xMafLsoA1bgsfC3uT95F3r1xysaCvE"
+  @big_balance_contract_id "ct_BwJcRRa7jTAvkpzc2D16tJzHMGCJurtJMUBtyyfGi2QjPuMVv"
   @default_limit 10
 
   describe "by_contract" do
