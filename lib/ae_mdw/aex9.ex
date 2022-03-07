@@ -40,8 +40,14 @@ defmodule AeMdw.Aex9 do
         nil
       )
       |> Stream.map(&Database.fetch!(Model.Aex9Balance, &1))
-      |> Enum.into(%{}, fn Model.aex9_balance(index: {_ct_pk, account_pk}, amount: amount) ->
-        {{:address, account_pk}, amount}
+      |> Enum.into(%{}, fn Model.aex9_balance(index: {_ct_pk, account_pk}, amount: amount) = m_bal ->
+        if amount == nil do
+          {amount, _key_height_hash} = Db.aex9_balance(contract_pk, account_pk)
+          Database.dirty_write(Model.Aex9Balance, Model.aex9_balance(m_bal, amount: amount))
+          {{:address, account_pk}, amount}
+        else
+          {{:address, account_pk}, amount}
+        end
       end)
     end
   end
