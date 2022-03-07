@@ -8,8 +8,6 @@ defmodule AeMdw.Migrations.RocksdbTxsBlocks  do
 
   @spec run() :: :ok
   def run do
-    AeMdw.Application.sync(false)
-
     Model.Block
     |> :mnesia.dirty_all_keys()
     |> Enum.each(fn bi ->
