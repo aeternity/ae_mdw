@@ -9,9 +9,6 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutationTest do
 
   @ct_pk1 <<1::256>>
   @ct_pk2 <<2::256>>
-  # @ct_pk3 <<3::256>>
-  # @ct_pk4 <<4::256>>
-  # @ct_pk5 <<5::256>>
 
   @initial_amount 1_000_000
 
@@ -101,7 +98,7 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutationTest do
     Database.commit([mutation])
 
     expected_balance =
-      Model.aex9_balance(index: {@ct_pk1, @swap_pk}, block_index: @block_index1, amount: nil)
+      Model.aex9_balance(index: {@ct_pk1, @swap_pk}, block_index: @block_index1, amount: 0)
 
     assert ^expected_balance = Database.fetch!(Model.Aex9Balance, {@ct_pk1, @swap_pk})
   end

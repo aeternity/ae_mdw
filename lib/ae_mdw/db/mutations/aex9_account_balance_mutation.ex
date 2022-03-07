@@ -52,7 +52,7 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutation do
   end
 
   defp update_aex9_balance(txn, "swap", [], contract_pk, caller_pk) do
-    DbContract.aex9_invalidate_balance(txn, contract_pk, caller_pk)
+    DbContract.aex9_swap_balance(txn, contract_pk, caller_pk)
   end
 
   defp update_aex9_balance(
