@@ -31,7 +31,7 @@ defmodule AeMdw.Db.RocksDbTest do
       value = new_block() |> :erlang.term_to_binary()
 
       assert :ok = RocksDb.put(txn, Model.Block, key, value)
-      assert :ok = RocksDb.dirty_delete(txn, Model.Block, key)
+      assert :ok = RocksDb.delete(txn, Model.Block, key)
       assert :not_found = RocksDb.dirty_get(txn, Model.Block, key)
     end
   end
