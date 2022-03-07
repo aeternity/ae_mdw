@@ -46,8 +46,11 @@ defmodule AeMdw.Aex9 do
         {{:address, account_pk}, amount}
       end)
       |> case do
-        amounts when map_size(amounts) == 0 -> raise ErrInput.Aex9BalanceNotAvailable, value: "contract #{enc_ct(contract_pk)}"
-        amounts -> amounts
+        amounts when map_size(amounts) == 0 ->
+          raise ErrInput.Aex9BalanceNotAvailable, value: "contract #{enc_ct(contract_pk)}"
+
+        amounts ->
+          amounts
       end
     end
   end
