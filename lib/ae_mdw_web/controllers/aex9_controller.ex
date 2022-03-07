@@ -331,8 +331,9 @@ defmodule AeMdwWeb.Aex9Controller do
   end
 
   defp balances_reply(conn, contract_pk) do
-    {amounts, {type, height, hash}} = DBN.aex9_balances!(contract_pk, top?(conn))
-    json(conn, balances_to_map({amounts, {type, height, hash}}, contract_pk))
+    amounts = Aex9.fetch_balances(contract_pk, top?(conn))
+    hash_tuple = DBN.top_height_hash(top?(conn))
+    json(conn, balances_to_map({amounts, hash_tuple}, contract_pk))
   end
 
   defp balances_range_reply(conn, contract_pk, range) do

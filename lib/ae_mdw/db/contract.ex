@@ -4,6 +4,7 @@ defmodule AeMdw.Db.Contract do
   """
   alias AeMdw.Node, as: AE
 
+  alias AeMdw.Collection
   alias AeMdw.Contract
   alias AeMdw.Database
   alias AeMdw.Db.WriteMutation
@@ -11,7 +12,6 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Origin
   alias AeMdw.Log
-  alias AeMdw.Database
   alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Txs
@@ -22,11 +22,12 @@ defmodule AeMdw.Db.Contract do
   require Model
   require Record
 
-  import AeMdw.Util, only: [compose: 2, max_256bit_int: 0]
+  import AeMdw.Util, only: [compose: 2, min_bin: 0, max_256bit_bin: 0, max_256bit_int: 0]
   import AeMdw.Db.Util
 
   @type rev_aex9_contract_key :: {pos_integer(), String.t(), String.t(), pos_integer()}
   @typep pubkey :: Db.pubkey()
+  @typep transaction :: Database.transaction()
 
   @spec aex9_creation_write(tuple(), pubkey(), pubkey(), integer()) :: :ok
   def aex9_creation_write({name, symbol, decimals}, contract_pk, owner_pk, txi) do
@@ -66,7 +67,58 @@ defmodule AeMdw.Db.Contract do
   def aex9_delete_presence(contract_pk, txi, pubkey) do
     Database.delete(Model.Aex9AccountPresence, {pubkey, txi, contract_pk})
     Database.delete(Model.IdxAex9AccountPresence, {txi, pubkey, contract_pk})
-    :ok
+  end
+
+  @spec aex9_burn_balance(transaction(), pubkey(), pubkey(), non_neg_integer()) :: :ok | :error
+  def aex9_burn_balance(txn, contract_pk, account_pk, burned_value) do
+    aex9_update_balance(txn, contract_pk, account_pk, fn amount -> amount - burned_value end)
+  end
+
+  @spec aex9_swap_balance(transaction(), pubkey(), pubkey()) :: :ok | :error
+  def aex9_swap_balance(txn, contract_pk, caller_pk) do
+    aex9_update_balance(txn, contract_pk, caller_pk, fn _any -> 0 end)
+  end
+
+  @spec aex9_mint_balance(transaction(), pubkey(), pubkey(), non_neg_integer()) :: :ok | :error
+  def aex9_mint_balance(txn, contract_pk, to_pk, minted_value) do
+    aex9_update_balance(txn, contract_pk, to_pk, fn amount -> amount + minted_value end)
+  end
+
+  @spec aex9_transfer_balance(transaction(), pubkey(), pubkey(), pubkey(), non_neg_integer()) ::
+          :ok | :error
+  def aex9_transfer_balance(txn, contract_pk, from_pk, to_pk, transfered_value) do
+    with {:ok, m_aex9_balance_from} <-
+           Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, from_pk}),
+         {:ok, m_aex9_balance_to} <-
+           Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, to_pk}) do
+      from_amount = Model.aex9_balance(m_aex9_balance_from, :amount)
+      to_amount = Model.aex9_balance(m_aex9_balance_to, :amount)
+
+      m_aex9_balance_from =
+        Model.aex9_balance(m_aex9_balance_from, amount: from_amount - transfered_value)
+
+      m_aex9_balance_to =
+        Model.aex9_balance(m_aex9_balance_to, amount: to_amount + transfered_value)
+
+      Database.write(txn, Model.Aex9Balance, m_aex9_balance_from)
+      Database.write(txn, Model.Aex9Balance, m_aex9_balance_to)
+    else
+      :not_found ->
+        :error
+    end
+  end
+
+  @spec aex9_delete_balances(transaction(), pubkey()) :: :ok
+  def aex9_delete_balances(txn, contract_pk) do
+    Model.Aex9Balance
+    |> Collection.stream(
+      :forward,
+      {{contract_pk, min_bin()}, {contract_pk, max_256bit_bin()}},
+      nil
+    )
+    |> Enum.each(fn account_pk ->
+      Database.delete(txn, Model.Aex9Balance, {contract_pk, account_pk})
+    end)
   end
 
   @spec aex9_presence_exists?(pubkey(), pubkey(), integer()) :: boolean()
@@ -352,6 +404,17 @@ defmodule AeMdw.Db.Contract do
   #
   # Private functions
   #
+  defp aex9_update_balance(txn, contract_pk, account_pk, new_amount_fn) do
+    case Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, account_pk}) do
+      {:ok, Model.aex9_balance(amount: old_amount) = m_aex9_balance} ->
+        m_aex9_balance = Model.aex9_balance(m_aex9_balance, amount: new_amount_fn.(old_amount))
+        Database.write(txn, Model.Aex9Balance, m_aex9_balance)
+
+      :not_found ->
+        :error
+    end
+  end
+
   defp prefix_tester(""),
     do: fn _any -> true end
 

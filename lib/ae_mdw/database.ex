@@ -29,7 +29,7 @@ defmodule AeMdw.Database do
 
   defmacro use_rocksdb?(tab) do
     quote do
-      unquote(tab) == Model.Block or unquote(tab) == Model.Tx
+      unquote(tab) == Model.Block or unquote(tab) == Model.Tx or unquote(tab) == Model.Aex9Balance
     end
   end
 
@@ -39,7 +39,16 @@ defmodule AeMdw.Database do
   end
 
   @spec dirty_delete(table(), key()) :: :ok
+  def dirty_delete(tab, key) when use_rocksdb?(tab) do
+    :ok = RocksDbCF.dirty_delete(tab, key)
+  end
+
   def dirty_delete(tab, key), do: :mnesia.dirty_delete(tab, key)
+
+  @spec dirty_fetch(transaction(), table(), record()) :: {:ok, record()} | :not_found
+  def dirty_fetch(txn, table, record) when use_rocksdb?(table) do
+    RocksDbCF.dirty_fetch(txn, table, record)
+  end
 
   @spec dirty_read(table(), key()) :: [record()]
   def dirty_read(tab, key), do: :mnesia.dirty_read(tab, key)
@@ -57,6 +66,10 @@ defmodule AeMdw.Database do
   def dirty_prev(tab, key), do: :mnesia.dirty_prev(tab, key)
 
   @spec dirty_write(table(), record()) :: :ok
+  def dirty_write(table, record) when use_rocksdb?(table) do
+    RocksDbCF.dirty_put(table, record)
+  end
+
   def dirty_write(table, record), do: :mnesia.dirty_write(table, record)
 
   @spec dirty_select(table(), list()) :: [term()]
@@ -185,15 +198,6 @@ defmodule AeMdw.Database do
     match?({:ok, _record}, fetch(tab, key))
   end
 
-  @spec delete(table(), key()) :: :ok
-  def delete(tab, key) when use_rocksdb?(tab) do
-    :ok = RocksDbCF.delete(tab, key)
-  end
-
-  def delete(table, key) do
-    :mnesia.delete(table, key, :write)
-  end
-
   @spec read(table(), key()) :: [record()]
   def read(tab, key) when use_rocksdb?(tab) do
     case RocksDbCF.fetch(tab, key) do
@@ -219,6 +223,16 @@ defmodule AeMdw.Database do
   @spec write(table(), record()) :: :ok
   def write(table, record) do
     :mnesia.write(table, record, :write)
+  end
+
+  @spec delete(transaction(), table(), key()) :: :ok
+  def delete(txn, table, key) when use_rocksdb?(table) do
+    :ok = RocksDbCF.delete(txn, table, key)
+  end
+
+  @spec delete(table(), key()) :: :ok
+  def delete(table, key) do
+    :mnesia.delete(table, key, :write)
   end
 
   @doc """

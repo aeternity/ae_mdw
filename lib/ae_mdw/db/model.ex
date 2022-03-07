@@ -172,6 +172,19 @@ defmodule AeMdw.Db.Model do
             previous: oracle() | nil
           )
 
+  # AEX9 balance:
+  #     index = {contract_pk, account_pk}
+  #     block_index = {kbi, mbi}
+  #     amounts: float
+  @type aex9_balance ::
+          record(:aex9_balance,
+            index: {Db.pubkey(), Db.pubkey()},
+            block_index: Blocks.block_index(),
+            amount: float()
+          )
+  @aex9_balance_defaults [index: {<<>>, <<>>}, block_index: {-1, -1}, amount: nil]
+  defrecord :aex9_balance, @aex9_balance_defaults
+
   # AEX9 contract:
   #     index: {name, symbol, txi, decimals}
   @aex9_contract_defaults [
@@ -470,7 +483,8 @@ defmodule AeMdw.Db.Model do
     # next candidate chain_tables()
     [
       AeMdw.Db.Model.Tx,
-      AeMdw.Db.Model.Block
+      AeMdw.Db.Model.Block,
+      AeMdw.Db.Model.Aex9Balance
     ]
   end
 
@@ -580,6 +594,7 @@ defmodule AeMdw.Db.Model do
       :id_count,
       :origin,
       :rev_origin,
+      :aex9_balance,
       :aex9_contract,
       :aex9_contract_symbol,
       :rev_aex9_contract,
@@ -634,6 +649,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.IdCount), do: :id_count
   def record(AeMdw.Db.Model.Origin), do: :origin
   def record(AeMdw.Db.Model.RevOrigin), do: :rev_origin
+  def record(AeMdw.Db.Model.Aex9Balance), do: :aex9_balance
   def record(AeMdw.Db.Model.Aex9Contract), do: :aex9_contract
   def record(AeMdw.Db.Model.Aex9ContractSymbol), do: :aex9_contract_symbol
   def record(AeMdw.Db.Model.RevAex9Contract), do: :rev_aex9_contract
@@ -690,6 +706,7 @@ defmodule AeMdw.Db.Model do
   def table(:id_count), do: AeMdw.Db.Model.IdCount
   def table(:origin), do: AeMdw.Db.Model.Origin
   def table(:rev_origin), do: AeMdw.Db.Model.RevOrigin
+  def table(:aex9_balance), do: AeMdw.Db.Model.Aex9Balance
   def table(:aex9_contract), do: AeMdw.Db.Model.Aex9Contract
   def table(:aex9_contract_symbol), do: AeMdw.Db.Model.Aex9ContractSymbol
   def table(:rev_aex9_contract), do: AeMdw.Db.Model.RevAex9Contract
@@ -731,6 +748,7 @@ defmodule AeMdw.Db.Model do
   def defaults(:id_count), do: @id_count_defaults
   def defaults(:origin), do: @origin_defaults
   def defaults(:rev_origin), do: @rev_origin_defaults
+  def defaults(:aex9_balance), do: @aex9_balance_defaults
   def defaults(:aex9_contract), do: @aex9_contract_defaults
   def defaults(:aex9_contract_symbol), do: @aex9_contract_symbol_defaults
   def defaults(:rev_aex9_contract), do: @rev_aex9_contract_defaults
