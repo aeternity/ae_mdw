@@ -41,7 +41,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   import AeMdw.Util
 
   @log_freq 1000
-  @sync_cache_cleanup_freq 150_000
 
   defmodule TxContext do
     @moduledoc """
@@ -174,6 +173,8 @@ defmodule AeMdw.Db.Sync.Transaction do
     :ets.delete_all_objects(:stat_sync_cache)
     :ets.delete_all_objects(:ct_create_sync_cache)
     :ets.delete_all_objects(:tx_sync_cache)
+    :ets.delete_all_objects(:name_sync_cache)
+    :ets.delete_all_objects(:oracle_sync_cache)
 
     last_mbi =
       case Database.prev_key(Model.Block, {height + 1, -1}) do
@@ -223,11 +224,6 @@ defmodule AeMdw.Db.Sync.Transaction do
     ])
 
     Broadcaster.broadcast_key_block(key_block, :mdw)
-
-    if rem(height, @sync_cache_cleanup_freq) == 0 do
-      :ets.delete_all_objects(:name_sync_cache)
-      :ets.delete_all_objects(:oracle_sync_cache)
-    end
 
     next_txi
   end

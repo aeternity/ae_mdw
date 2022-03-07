@@ -209,16 +209,6 @@ defmodule AeMdw.Util do
     )
   end
 
-  @spec with_sync_off(fun()) :: :ok
-  def with_sync_off(fun) when is_function(fun, 0) do
-    try do
-      AeMdw.Application.sync(false)
-      fun.()
-    after
-      AeMdw.Application.sync(true)
-    end
-  end
-
   @spec opposite_dir(Database.direction()) :: Database.direction()
   def opposite_dir(:backward), do: :forward
   def opposite_dir(:forward), do: :backward

@@ -38,16 +38,23 @@ defmodule AeMdw.Application do
     init(:app_ctrl_server)
     init(:aecore_services)
     init(:aesync)
+    init(:tables)
 
     :ok = AeMdw.Db.RocksDb.open()
 
     children = [
       AeMdw.Sync.Watcher,
-      AeMdw.Sync.Supervisor,
       AeMdw.Sync.AsyncTasks.Supervisor,
       AeMdwWeb.Supervisor,
       AeMdwWeb.Websocket.Supervisor
     ]
+
+    children =
+      if Application.fetch_env!(:ae_mdw, :sync) do
+        [AeMdw.Db.Sync.Supervisor | children]
+      else
+        children
+      end
 
     Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)
   end
@@ -218,6 +225,18 @@ defmodule AeMdw.Application do
 
   defp init(:aesync), do: Application.ensure_all_started(:aesync)
 
+  defp init(:tables) do
+    :ets.new(:tx_sync_cache, [:named_table, :ordered_set, :public])
+    :ets.new(:name_sync_cache, [:named_table, :ordered_set, :public])
+    :ets.new(:oracle_sync_cache, [:named_table, :ordered_set, :public])
+    :ets.new(:aex9_sync_cache, [:named_table, :ordered_set, :public])
+    :ets.new(:derive_aex9_presence_cache, [:named_table, :duplicate_bag, :public])
+    :ets.new(:ct_create_sync_cache, [:named_table, :ordered_set, :public])
+    :ets.new(:stat_sync_cache, [:named_table, :ordered_set, :public])
+
+    AeMdw.Db.RocksDbCF.init_tables()
+  end
+
   @spec init_public(atom()) :: :ok
   def init_public(:contract_cache) do
     cache_exp = Application.fetch_env!(:ae_mdw, :contract_cache_expiration_minutes)
@@ -249,19 +268,10 @@ defmodule AeMdw.Application do
     :ok
   end
 
-  def start_phase(:sync, _start_type, []) do
-    Application.fetch_env!(:ae_mdw, :sync) && sync(true)
-    :ok
-  end
-
   @impl Application
   def stop(_state) do
     :ok = AeMdw.Db.RocksDb.close()
   end
-
-  @spec sync(boolean()) :: {:ok, pid()}
-  def sync(enabled?) when is_boolean(enabled?),
-    do: AeMdw.Sync.Supervisor.sync(enabled?)
 
   # Tell Phoenix to update the endpoint configuration whenever the application is updated.
   @impl Application
