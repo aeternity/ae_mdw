@@ -30,7 +30,7 @@ defmodule AeMdw.Aex9 do
   @spec fetch_balances(pubkey(), boolean()) :: amounts()
   def fetch_balances(contract_pk, top?) do
     if top? do
-      {amounts, _height} = Db.aex9_balances!(contract_pk)
+      {amounts, _height} = Db.aex9_balances!(contract_pk, true)
       amounts
     else
       Model.Aex9Balance
