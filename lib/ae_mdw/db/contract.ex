@@ -84,12 +84,15 @@ defmodule AeMdw.Db.Contract do
 
   @spec aex9_mint_balance(transaction(), pubkey(), pubkey(), non_neg_integer()) :: :ok | :error
   def aex9_mint_balance(txn, contract_pk, to_pk, minted_value) do
-    with {:ok, m_aex9_balance_to} <-
-           Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, to_pk}) do
-      to_amount = Model.aex9_balance(m_aex9_balance_to, :amount)
-      m_aex9_balance_to = Model.aex9_balance(m_aex9_balance_to, amount: to_amount + minted_value)
-      Database.write(txn, Model.Aex9Balance, m_aex9_balance_to)
-    else
+    case Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, to_pk}) do
+      {:ok, m_aex9_balance_to} ->
+        to_amount = Model.aex9_balance(m_aex9_balance_to, :amount)
+
+        m_aex9_balance_to =
+          Model.aex9_balance(m_aex9_balance_to, amount: to_amount + minted_value)
+
+        Database.write(txn, Model.Aex9Balance, m_aex9_balance_to)
+
       :not_found ->
         :error
     end
@@ -121,11 +124,11 @@ defmodule AeMdw.Db.Contract do
 
   @spec aex9_invalidate_balance(transaction(), pubkey(), pubkey()) :: :ok
   def aex9_invalidate_balance(txn, contract_pk, account_pk) do
-    with {:ok, m_aex9_balance} <-
-           Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, account_pk}) do
-      m_aex9_balance = Model.aex9_balance(m_aex9_balance, amount: nil)
-      Database.write(txn, Model.Aex9Balance, m_aex9_balance)
-    else
+    case Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, account_pk}) do
+      {:ok, m_aex9_balance} ->
+        m_aex9_balance = Model.aex9_balance(m_aex9_balance, amount: nil)
+        Database.write(txn, Model.Aex9Balance, m_aex9_balance)
+
       :not_found ->
         :error
     end

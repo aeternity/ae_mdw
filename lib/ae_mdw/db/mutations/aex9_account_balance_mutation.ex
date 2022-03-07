@@ -69,10 +69,10 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutation do
   end
 
   defp update_aex9_balance(txn, method_name, method_args, contract_pk, caller_pk) do
-    with {from_pk, to_pk, value} <-
-           Contract.get_aex9_transfer(caller_pk, method_name, method_args) do
-      DbContract.aex9_transfer_balance(txn, contract_pk, from_pk, to_pk, value)
-    else
+    case Contract.get_aex9_transfer(caller_pk, method_name, method_args) do
+      {from_pk, to_pk, value} ->
+        DbContract.aex9_transfer_balance(txn, contract_pk, from_pk, to_pk, value)
+
       nil ->
         DbContract.aex9_delete_balances(txn, contract_pk)
     end
