@@ -71,31 +71,17 @@ defmodule AeMdw.Db.Contract do
 
   @spec aex9_burn_balance(transaction(), pubkey(), pubkey(), non_neg_integer()) :: :ok | :error
   def aex9_burn_balance(txn, contract_pk, account_pk, burned_value) do
-    case Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, account_pk}) do
-      {:ok, m_aex9_balance} ->
-        amount = Model.aex9_balance(m_aex9_balance, :amount)
-        m_aex9_balance = Model.aex9_balance(m_aex9_balance, amount: amount - burned_value)
-        Database.write(txn, Model.Aex9Balance, m_aex9_balance)
+    aex9_update_balance(txn, contract_pk, account_pk, fn amount -> amount - burned_value end)
+  end
 
-      :not_found ->
-        :error
-    end
+  @spec aex9_swap_balance(transaction(), pubkey(), pubkey()) :: :ok | :error
+  def aex9_swap_balance(txn, contract_pk, caller_pk) do
+    aex9_update_balance(txn, contract_pk, caller_pk, fn _any -> 0 end)
   end
 
   @spec aex9_mint_balance(transaction(), pubkey(), pubkey(), non_neg_integer()) :: :ok | :error
   def aex9_mint_balance(txn, contract_pk, to_pk, minted_value) do
-    case Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, to_pk}) do
-      {:ok, m_aex9_balance_to} ->
-        to_amount = Model.aex9_balance(m_aex9_balance_to, :amount)
-
-        m_aex9_balance_to =
-          Model.aex9_balance(m_aex9_balance_to, amount: to_amount + minted_value)
-
-        Database.write(txn, Model.Aex9Balance, m_aex9_balance_to)
-
-      :not_found ->
-        :error
-    end
+    aex9_update_balance(txn, contract_pk, to_pk, fn amount -> amount + minted_value end)
   end
 
   @spec aex9_transfer_balance(transaction(), pubkey(), pubkey(), pubkey(), non_neg_integer()) ::
@@ -117,18 +103,6 @@ defmodule AeMdw.Db.Contract do
       Database.write(txn, Model.Aex9Balance, m_aex9_balance_from)
       Database.write(txn, Model.Aex9Balance, m_aex9_balance_to)
     else
-      :not_found ->
-        :error
-    end
-  end
-
-  @spec aex9_invalidate_balance(transaction(), pubkey(), pubkey()) :: :ok
-  def aex9_invalidate_balance(txn, contract_pk, account_pk) do
-    case Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, account_pk}) do
-      {:ok, m_aex9_balance} ->
-        m_aex9_balance = Model.aex9_balance(m_aex9_balance, amount: nil)
-        Database.write(txn, Model.Aex9Balance, m_aex9_balance)
-
       :not_found ->
         :error
     end
@@ -430,6 +404,17 @@ defmodule AeMdw.Db.Contract do
   #
   # Private functions
   #
+  defp aex9_update_balance(txn, contract_pk, account_pk, new_amount_fn) do
+    case Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, account_pk}) do
+      {:ok, Model.aex9_balance(amount: old_amount) = m_aex9_balance} ->
+        m_aex9_balance = Model.aex9_balance(m_aex9_balance, amount: new_amount_fn.(old_amount))
+        Database.write(txn, Model.Aex9Balance, m_aex9_balance)
+
+      :not_found ->
+        :error
+    end
+  end
+
   defp prefix_tester(""),
     do: fn _any -> true end
 

@@ -10,6 +10,8 @@ defmodule AeMdw.Aex9 do
   alias AeMdw.Node.Db
   alias AeMdw.Util
 
+  import AeMdwWeb.Helpers.Aex9Helper, only: [enc_ct: 1]
+
   require Model
 
   @type account_transfer_key ::
@@ -43,6 +45,10 @@ defmodule AeMdw.Aex9 do
       |> Enum.into(%{}, fn Model.aex9_balance(index: {_ct_pk, account_pk}, amount: amount) ->
         {{:address, account_pk}, amount}
       end)
+      |> case do
+        amounts when map_size(amounts) == 0 -> raise ErrInput.Aex9BalanceNotAvailable, value: "contract #{enc_ct(contract_pk)}"
+        amounts -> amounts
+      end
     end
   end
 
