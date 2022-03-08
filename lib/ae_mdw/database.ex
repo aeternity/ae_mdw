@@ -29,7 +29,8 @@ defmodule AeMdw.Database do
 
   defmacro use_rocksdb?(tab) do
     quote do
-      unquote(tab) == Model.Block or unquote(tab) == Model.Tx or unquote(tab) == Model.Aex9Balance
+      unquote(tab) == Model.Block or unquote(tab) == Model.Tx or unquote(tab) == Model.Aex9Balance or
+        unquote(tab) == Model.Migrations
     end
   end
 

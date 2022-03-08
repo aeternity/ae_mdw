@@ -4,7 +4,6 @@ defmodule Mix.Tasks.MigrateDb do
   require Ex2ms
 
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Util
   alias AeMdw.Database
   alias AeMdw.Log
 
@@ -41,10 +40,7 @@ defmodule Mix.Tasks.MigrateDb do
       |> Enum.map(&apply_migration!(&1, from_startup?))
       |> length()
 
-    # assure filesystem sync
-    if applied_count > 0 do
-      :mnesia.dump_log()
-    else
+    if applied_count <= 0 do
       Log.info("migrations are up to date")
     end
 
@@ -53,12 +49,10 @@ defmodule Mix.Tasks.MigrateDb do
 
   @spec read_migration_version() :: integer()
   defp read_migration_version() do
-    version_spec =
-      Ex2ms.fun do
-        {_, version, _} -> version
-      end
-
-    @table |> Util.select(version_spec) |> Enum.max(fn -> -1 end)
+    case Database.last_key(@table) do
+      {:ok, version} -> version
+      :none -> -1
+    end
   end
 
   @spec list_new_migrations(integer()) :: [{integer(), String.t()}]
@@ -87,9 +81,7 @@ defmodule Mix.Tasks.MigrateDb do
     Log.info("applying version #{version} with #{module}...")
     {:ok, _} = apply(module, :run, [from_startup?])
 
-    :mnesia.sync_dirty(fn ->
-      Database.write(@table, {@record_name, version, DateTime.utc_now()})
-    end)
+    Database.dirty_write(@table, {@record_name, version, DateTime.utc_now()})
 
     Log.info("applied version #{version}")
     :ok
