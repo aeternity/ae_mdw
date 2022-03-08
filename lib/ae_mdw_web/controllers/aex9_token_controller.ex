@@ -72,4 +72,19 @@ defmodule AeMdwWeb.Aex9TokenController do
       Util.paginate(conn, prev_cursor, account_balances, next_cursor)
     end
   end
+
+  @spec aex9_token_balance_history(Conn.t(), map()) :: Conn.t()
+  def aex9_token_balance_history(%Conn{assigns: assigns} = conn, %{
+        "contract_id" => contract_id,
+        "account_id" => account_id
+      }) do
+    %{pagination: pagination, cursor: cursor, scope: scope} = assigns
+
+    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
+         {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
+         {:ok, prev_cursor, balance_history_items, next_cursor} <-
+           Aex9.fetch_balance_history(contract_pk, account_pk, scope, cursor, pagination) do
+      Util.paginate(conn, prev_cursor, balance_history_items, next_cursor)
+    end
+  end
 end

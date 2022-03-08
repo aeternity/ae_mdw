@@ -63,6 +63,10 @@ defmodule AeMdwWeb.Router do
       get "/aex9/transfers/to/:recipient", Aex9Controller, :transfers_to
       get "/aex9/transfers/from-to/:sender/:recipient", Aex9Controller, :transfers_from_to
 
+      get "/aex9/:contract_id/balances/:account_id/history",
+          Aex9TokenController,
+          :aex9_token_balance_history
+
       get "/oracles/:id", OracleController, :oracle
       get "/oracles", OracleController, :oracles
 

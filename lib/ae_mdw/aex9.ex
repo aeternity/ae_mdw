@@ -23,6 +23,7 @@ defmodule AeMdw.Aex9 do
   @type aex9_token() :: map()
   @type aex9_balance() :: map()
   @type account_balance() :: map()
+  @type aex9_balance_history_item() :: map()
 
   @type account_transfer_key ::
           {pubkey(), AeMdw.Txs.txi(), pubkey(), pos_integer(), non_neg_integer()}
@@ -41,6 +42,8 @@ defmodule AeMdw.Aex9 do
   @typep query :: %{binary() => binary()}
   @typep balances_cursor() :: binary()
   @typep account_balance_cursor() :: binary()
+  @typep history_cursor() :: binary()
+  @typep range() :: {:gen, Range.t()}
 
   @type amounts :: map()
 
@@ -241,6 +244,33 @@ defmodule AeMdw.Aex9 do
     end
   end
 
+  @spec fetch_balance_history(pubkey(), pubkey(), range(), history_cursor(), pagination()) ::
+          {:ok, history_cursor() | nil, [aex9_balance_history_item()], history_cursor() | nil}
+          | {:error, Error.t()}
+  def fetch_balance_history(contract_pk, account_pk, range, cursor, pagination) do
+    with :ok <- validate_aex9(contract_pk),
+         {:ok, cursor} <- deserialize_history_cursor(cursor) do
+      {first_gen, last_gen} =
+        case range do
+          {:gen, %Range{first: first, last: last}} -> {first, last}
+          nil -> {0, DbUtil.last_gen()}
+        end
+
+      streamer = fn
+        :forward when first_gen <= cursor and cursor <= last_gen -> cursor..last_gen
+        :backward when cursor == nil -> last_gen..first_gen
+        :backward when first_gen <= cursor and cursor <= last_gen -> cursor..first_gen
+        _dir -> first_gen..last_gen
+      end
+
+      {prev_cursor, gens, next_cursor} = Collection.paginate(streamer, pagination)
+
+      balance_items = Enum.map(gens, &render_balance_history_item(contract_pk, account_pk, &1))
+
+      {:ok, prev_cursor, balance_items, next_cursor}
+    end
+  end
+
   defp serialize_account_balance_cursor(nil), do: nil
 
   defp serialize_account_balance_cursor({cursor, is_reversed?}),
@@ -348,6 +378,25 @@ defmodule AeMdw.Aex9 do
       account: :aeser_api_encoder.encode(:account_pubkey, account_pk),
       amount: amount
     }
+  end
+
+  defp render_balance_history_item(contract_pk, account_pk, gen) do
+    type_height_hash = {:key, gen, DbUtil.height_hash(gen)}
+
+    {amount_or_nil, _height_hash} = Db.aex9_balance(contract_pk, account_pk, type_height_hash)
+
+    balance = render_balance(contract_pk, {:address, account_pk}, amount_or_nil)
+
+    Map.put(balance, :height, gen)
+  end
+
+  defp deserialize_history_cursor(nil), do: {:ok, nil}
+
+  defp deserialize_history_cursor(cursor) do
+    case Util.parse_int(cursor) do
+      {:ok, height} -> {:ok, height}
+      :error -> {:error, ErrInput.Cursor.exception(value: cursor)}
+    end
   end
 
   defp serialize_balances_cursor(nil), do: nil
