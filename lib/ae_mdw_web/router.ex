@@ -11,24 +11,6 @@ defmodule AeMdwWeb.Router do
     {"/status", AeMdwWeb.UtilController, :status}
   ]
 
-  @non_migrated_routes [
-    {"/aex9/by_contract/:id", AeMdwWeb.Aex9Controller, :by_contract},
-    {"/aex9/by_name", AeMdwWeb.Aex9Controller, :by_names},
-    {"/aex9/by_symbol", AeMdwWeb.Aex9Controller, :by_symbols},
-    {"/aex9/balance/gen/:range/:contract_id/:account_id", AeMdwWeb.Aex9Controller,
-     :balance_range},
-    {"/aex9/balance/hash/:blockhash/:contract_id/:account_id", AeMdwWeb.Aex9Controller,
-     :balance_for_hash},
-    {"/aex9/balance/:contract_id/:account_id", AeMdwWeb.Aex9Controller, :balance},
-    {"/aex9/balances/gen/:height/account/:account_id", AeMdwWeb.Aex9Controller, :balances},
-    {"/aex9/balances/hash/:blockhash/account/:account_id", AeMdwWeb.Aex9Controller, :balances},
-    {"/aex9/balances/account/:account_id", AeMdwWeb.Aex9Controller, :balances},
-    {"/aex9/balances/gen/:range/:contract_id", AeMdwWeb.Aex9Controller, :balances_range},
-    {"/aex9/balances/hash/:blockhash/:contract_id", AeMdwWeb.Aex9Controller, :balances_for_hash},
-    {"/aex9/balances/:contract_id", AeMdwWeb.Aex9Controller, :balances},
-    {"/stats", AeMdwWeb.StatsController, :stats}
-  ]
-
   pipeline :api do
     plug :accepts, ["json"]
   end
@@ -72,6 +54,11 @@ defmodule AeMdwWeb.Router do
       get "/names", NameController, :names
       get "/names/:id", NameController, :name
 
+      get "/aex9", Aex9TokenController, :aex9_tokens
+      get "/aex9/:contract_id", Aex9TokenController, :aex9_token
+      get "/aex9/:contract_id/balances", Aex9TokenController, :aex9_token_balances
+      get "/aex9/:contract_id/balances/:account_id", Aex9TokenController, :aex9_token_balance
+      get "/aex9/account-balances/:account_id", Aex9TokenController, :aex9_account_balances
       get "/aex9/transfers/from/:sender", Aex9Controller, :transfers_from
       get "/aex9/transfers/to/:recipient", Aex9Controller, :transfers_to
       get "/aex9/transfers/from-to/:sender/:recipient", Aex9Controller, :transfers_from_to
@@ -82,7 +69,7 @@ defmodule AeMdwWeb.Router do
       get "/deltastats", StatsController, :delta_stats
     end
 
-    Enum.each(@shared_routes ++ @non_migrated_routes, fn {path, controller, fun} ->
+    Enum.each(@shared_routes, fn {path, controller, fun} ->
       get(path, controller, fun, alias: false)
     end)
 
@@ -132,6 +119,23 @@ defmodule AeMdwWeb.Router do
 
     get "/transfers/:scope_type/:range", TransferController, :transfers
     get "/transfers/:direction", TransferController, :transfers
+
+    get "/aex9/by_contract/:id", Aex9Controller, :by_contract
+    get "/aex9/by_name", Aex9Controller, :by_names
+    get "/aex9/by_symbol", Aex9Controller, :by_symbols
+    get "/aex9/balance/gen/:range/:contract_id/:account_id", Aex9Controller, :balance_range
+
+    get "/aex9/balance/hash/:blockhash/:contract_id/:account_id",
+        Aex9Controller,
+        :balance_for_hash
+
+    get "/aex9/balance/:contract_id/:account_id", Aex9Controller, :balance
+    get "/aex9/balances/gen/:height/account/:account_id", Aex9Controller, :balances
+    get "/aex9/balances/hash/:blockhash/account/:account_id", Aex9Controller, :balances
+    get "/aex9/balances/account/:account_id", Aex9Controller, :balances
+    get "/aex9/balances/gen/:range/:contract_id", Aex9Controller, :balances_range
+    get "/aex9/balances/hash/:blockhash/:contract_id", Aex9Controller, :balances_for_hash
+    get "/aex9/balances/:contract_id", Aex9Controller, :balance
 
     get "/stats/:direction", StatsController, :stats
     get "/stats/:scope_type/:range", StatsController, :stats
