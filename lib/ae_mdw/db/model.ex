@@ -484,7 +484,8 @@ defmodule AeMdw.Db.Model do
     [
       AeMdw.Db.Model.Tx,
       AeMdw.Db.Model.Block,
-      AeMdw.Db.Model.Aex9Balance
+      AeMdw.Db.Model.Aex9Balance,
+      AeMdw.Db.Model.Migrations
     ]
   end
 
