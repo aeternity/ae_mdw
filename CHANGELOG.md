@@ -1,5 +1,69 @@
 # Changelog
 
+## [1.7.0](https://www.github.com/aeternity/ae_mdw/compare/v1.6.1...v1.7.0) (2022-03-09)
+
+
+### Features
+
+* /v2/deltastats ([#560](https://www.github.com/aeternity/ae_mdw/issues/560)) ([0f8961a](https://www.github.com/aeternity/ae_mdw/commit/0f8961a585a7f650322d763d4684e7573daaad5a))
+* add /v2 routes to support versioning ([#530](https://www.github.com/aeternity/ae_mdw/issues/530)) ([539042b](https://www.github.com/aeternity/ae_mdw/commit/539042bcccc5d5838c9563e11083834920350f99))
+* add AEX9 v2 endpoint to retrieve balance history ([#575](https://www.github.com/aeternity/ae_mdw/issues/575)) ([d3abb00](https://www.github.com/aeternity/ae_mdw/commit/d3abb00c9505cfb2e493eb549c8bb306bbabcc4c))
+* add aex9 v2 endpoints ([#563](https://www.github.com/aeternity/ae_mdw/issues/563)) ([13a0a07](https://www.github.com/aeternity/ae_mdw/commit/13a0a07e904f2d9110eaae74618506fcb6e4a489))
+* add contracts v2 endpoints ([#559](https://www.github.com/aeternity/ae_mdw/issues/559)) ([74aadab](https://www.github.com/aeternity/ae_mdw/commit/74aadabbb733c03d4311679907011d003881ce63))
+* add paginated /names/search/:prefix endpoint ([#447](https://www.github.com/aeternity/ae_mdw/issues/447)) ([3f213d7](https://www.github.com/aeternity/ae_mdw/commit/3f213d78ddab696cb0b57836d29118ae64d39304))
+* add prev link cursor on paginated endpoints ([#526](https://www.github.com/aeternity/ae_mdw/issues/526)) ([0eca223](https://www.github.com/aeternity/ae_mdw/commit/0eca223483aa77d42b2822e804f4baf4d5813364))
+* add v2 blocks endpoints ([#549](https://www.github.com/aeternity/ae_mdw/issues/549)) ([24c4020](https://www.github.com/aeternity/ae_mdw/commit/24c402006d231ca550b2c31857b90cd20e20da4c)), closes [#498](https://www.github.com/aeternity/ae_mdw/issues/498)
+* add v2 oracles endpoints ([#550](https://www.github.com/aeternity/ae_mdw/issues/550)) ([76d47a0](https://www.github.com/aeternity/ae_mdw/commit/76d47a063759e207ac1267ab9e357f0157ab46e2)), closes [#498](https://www.github.com/aeternity/ae_mdw/issues/498)
+* add v2 stats endpoints ([#556](https://www.github.com/aeternity/ae_mdw/issues/556)) ([11dd8f6](https://www.github.com/aeternity/ae_mdw/commit/11dd8f6b9fc72b36700cbc8cb69361dbea71be28))
+* add v2 transfers endpoints ([#554](https://www.github.com/aeternity/ae_mdw/issues/554)) ([bd94755](https://www.github.com/aeternity/ae_mdw/commit/bd94755a557b5e561875668bd0bcca2e32c77ff3))
+* add v2 txs endpoints ([#552](https://www.github.com/aeternity/ae_mdw/issues/552)) ([86daad0](https://www.github.com/aeternity/ae_mdw/commit/86daad05ad87bb60840adfd6cb5d43bc4ebc1c88))
+* aex9 transfers pagination ([#551](https://www.github.com/aeternity/ae_mdw/issues/551)) ([d765a25](https://www.github.com/aeternity/ae_mdw/commit/d765a25b552b2382f3ad4fde6d0d82285d75ea5b))
+* allow mdw sync module to restart after a failure ([#564](https://www.github.com/aeternity/ae_mdw/issues/564)) ([f6b7b47](https://www.github.com/aeternity/ae_mdw/commit/f6b7b47366fd262eb7751b29a8abdb5aa8c43e02))
+* cached aex9 balances ([#571](https://www.github.com/aeternity/ae_mdw/issues/571)) ([d53ba6b](https://www.github.com/aeternity/ae_mdw/commit/d53ba6bc33a08620248cff2137566904d86a908a))
+* rocksdb without mnesia ([#475](https://www.github.com/aeternity/ae_mdw/issues/475)) ([37f5889](https://www.github.com/aeternity/ae_mdw/commit/37f5889bf4d9db2b7ba8f1fdea81cafb00e049ec))
+* use Mnesia module ([#506](https://www.github.com/aeternity/ae_mdw/issues/506)) ([9b50a8e](https://www.github.com/aeternity/ae_mdw/commit/9b50a8ef64f3280b016cb5c07dda391246e57d45))
+
+
+### Bug Fixes
+
+* /aex9/transfers/from timeout ([#546](https://www.github.com/aeternity/ae_mdw/issues/546)) ([1010cac](https://www.github.com/aeternity/ae_mdw/commit/1010cac922178195b4c44d3fb4a63d2a15db47ea))
+* /stats counters with negative values ([#562](https://www.github.com/aeternity/ae_mdw/issues/562)) ([4c60302](https://www.github.com/aeternity/ae_mdw/commit/4c60302e357f8e046dd41701eb4fc4ed24784566))
+* derive aex9 presence error handling ([#537](https://www.github.com/aeternity/ae_mdw/issues/537)) ([348e3d9](https://www.github.com/aeternity/ae_mdw/commit/348e3d9e08a6dc0176d3bfa25fff35d7d003cfcc))
+* fix missing streams errors  ([#531](https://www.github.com/aeternity/ae_mdw/issues/531)) ([a97f3e7](https://www.github.com/aeternity/ae_mdw/commit/a97f3e7e3d5a877554ffe4e2b82279a87bf8e0a9))
+* integration tests db path ([#542](https://www.github.com/aeternity/ae_mdw/issues/542)) ([90c4961](https://www.github.com/aeternity/ae_mdw/commit/90c49614888be76a175105aa103facf74df40639))
+* raise exception when aex9 contract doesn't exist ([#540](https://www.github.com/aeternity/ae_mdw/issues/540)) ([26044d5](https://www.github.com/aeternity/ae_mdw/commit/26044d59d83adba99908b007c12decd8ef0bece0))
+* update names search streams to use new Database module ([#544](https://www.github.com/aeternity/ae_mdw/issues/544)) ([507bc94](https://www.github.com/aeternity/ae_mdw/commit/507bc94d801fd353d05228bb9b9b50809b642424))
+
+
+### Testing
+
+* fix intermittent prev_key async test ([#543](https://www.github.com/aeternity/ae_mdw/issues/543)) ([04b004c](https://www.github.com/aeternity/ae_mdw/commit/04b004cbaf0b2aa629b7d8809bd0939675908346))
+
+
+### Refactorings
+
+* add fallback controller to deal with errors consistently ([#547](https://www.github.com/aeternity/ae_mdw/issues/547)) ([2664124](https://www.github.com/aeternity/ae_mdw/commit/2664124fa0019dbec052c06b9c71afc3472882a5))
+* change name routes to be consistent with core ([#451](https://www.github.com/aeternity/ae_mdw/issues/451)) ([40f598c](https://www.github.com/aeternity/ae_mdw/commit/40f598cdb1fa12dbfd9a8ebc2c13c8a3a5deabed)), closes [#110](https://www.github.com/aeternity/ae_mdw/issues/110) [#498](https://www.github.com/aeternity/ae_mdw/issues/498)
+* commit only through mutations ([#534](https://www.github.com/aeternity/ae_mdw/issues/534)) ([42b09e8](https://www.github.com/aeternity/ae_mdw/commit/42b09e8ea3c9ccc5b36f18f54901e656ed344d66))
+* migrations with rocksdb ([#573](https://www.github.com/aeternity/ae_mdw/issues/573)) ([fac84b4](https://www.github.com/aeternity/ae_mdw/commit/fac84b40b0c35bedd6026fc709c4f7e6a54b4113))
+* Mnesia to Database ([#528](https://www.github.com/aeternity/ae_mdw/issues/528)) ([934ebd8](https://www.github.com/aeternity/ae_mdw/commit/934ebd862c3703fb9f19e4db1c363fb844f80fbe))
+* mutations derive to default impl ([#553](https://www.github.com/aeternity/ae_mdw/issues/553)) ([c406a57](https://www.github.com/aeternity/ae_mdw/commit/c406a57c212b3efedd73167f3b9429ee3d15baac))
+* remove and make private unused modules/functions ([#527](https://www.github.com/aeternity/ae_mdw/issues/527)) ([d6fc8e9](https://www.github.com/aeternity/ae_mdw/commit/d6fc8e983f4dedfdbca1588ad68bcfc85c551aad))
+* remove unused web code ([#532](https://www.github.com/aeternity/ae_mdw/issues/532)) ([93c2487](https://www.github.com/aeternity/ae_mdw/commit/93c248740f01dd17ea4b156bff9a0b696eee52b4))
+* rename write mutation ([#533](https://www.github.com/aeternity/ae_mdw/issues/533)) ([ec1badd](https://www.github.com/aeternity/ae_mdw/commit/ec1baddb34aee959c2ffb530ecbbef0900eab42c))
+* update name routes to be consistent with core ([40f598c](https://www.github.com/aeternity/ae_mdw/commit/40f598cdb1fa12dbfd9a8ebc2c13c8a3a5deabed))
+
+
+### Miscellaneous
+
+* added check script for readme routes ([4c57a1e](https://www.github.com/aeternity/ae_mdw/commit/4c57a1e6c55aadbed1180448a3c59b75fc6827ab))
+* drop old model sum_stat ([#558](https://www.github.com/aeternity/ae_mdw/issues/558)) ([7dc65c2](https://www.github.com/aeternity/ae_mdw/commit/7dc65c2108b1f3fccf681c6fc0b9b283730fcde3))
+* ignore data directory on docker/git ([#555](https://www.github.com/aeternity/ae_mdw/issues/555)) ([c10a9b8](https://www.github.com/aeternity/ae_mdw/commit/c10a9b86a28dea341734da7c92f4f1921392ff55))
+* mnesia and mdw.db under same data dir ([#539](https://www.github.com/aeternity/ae_mdw/issues/539)) ([f7e636f](https://www.github.com/aeternity/ae_mdw/commit/f7e636f69271dbce3043a5dea478a03e0c2ff133))
+* remove no longer needed migrations ([#576](https://www.github.com/aeternity/ae_mdw/issues/576)) ([de01738](https://www.github.com/aeternity/ae_mdw/commit/de017386b560486af782662b3302a2ef8509e639))
+* rename name endpoints swagger operation ids ([#561](https://www.github.com/aeternity/ae_mdw/issues/561)) ([308c556](https://www.github.com/aeternity/ae_mdw/commit/308c5564c047137a7479662bf0a258ded0bbda27)), closes [#179](https://www.github.com/aeternity/ae_mdw/issues/179)
+* withhold non-migrated v2 routes ([#548](https://www.github.com/aeternity/ae_mdw/issues/548)) ([f73f27d](https://www.github.com/aeternity/ae_mdw/commit/f73f27dc7a6624061ff352643ad63edde9f0f57b))
+
 ### [1.6.1](https://www.github.com/aeternity/ae_mdw/compare/v1.6.0...v1.6.1) (2022-02-08)
 
 
