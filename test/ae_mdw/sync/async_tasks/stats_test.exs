@@ -19,18 +19,20 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
     end
 
     test "with pending db records" do
-      ct_pks = [
-        "ct_M9yohHgcLjhpp1Z8SaA1UTmRMQzR4FWjJHajGga8KBoZTEPwC",
-        "ct_6ZuwbMgcNDaryXTnrLMiPFW2ogE9jxAzz1874BToE81ksWek6",
-        "ct_2M2dJU2wLWPE73HpLPmFezqqJbu9PZ8rwKxeDvrids4y1nPYA2",
-        "ct_X8sNFxiae4xmEdrzipFAQSaHnC3jwBhiPo51Le4JmDw1bMhSF",
-        "ct_wevncvzDCpbG28Myuq2Ec48CLqte1vJPFdwTxtiYPJFJ9cZEe",
-        "ct_2vSP4tmmxuTpkLzvxN2oU3MpS2yCSRYwsXBSyGWLY6Pcw116Dz",
-        "ct_v86iyqGjPGDQGtgH2wqLfzz13k4kGxpsoJwZMqgCiLxP3Wb97",
-        "ct_2iC3WZQLgPshQm4wUDgnKyz1YaDjARcT7VfowZPaqMrkKELUR1",
-        "ct_x4ybvRpo1fXXEVWtcxyawzqbh6vdMyB4Srb6VSCZfrMAfRobD",
-        "ct_2L2EDASxVEoMW7praTCsAVJS1Ar7khqDn1WTzkYxKPTFqGMaiL"
-      ]
+      ct_pks =
+        [
+          "ct_M9yohHgcLjhpp1Z8SaA1UTmRMQzR4FWjJHajGga8KBoZTEPwC",
+          "ct_6ZuwbMgcNDaryXTnrLMiPFW2ogE9jxAzz1874BToE81ksWek6",
+          "ct_2M2dJU2wLWPE73HpLPmFezqqJbu9PZ8rwKxeDvrids4y1nPYA2",
+          "ct_X8sNFxiae4xmEdrzipFAQSaHnC3jwBhiPo51Le4JmDw1bMhSF",
+          "ct_wevncvzDCpbG28Myuq2Ec48CLqte1vJPFdwTxtiYPJFJ9cZEe",
+          "ct_2vSP4tmmxuTpkLzvxN2oU3MpS2yCSRYwsXBSyGWLY6Pcw116Dz",
+          "ct_v86iyqGjPGDQGtgH2wqLfzz13k4kGxpsoJwZMqgCiLxP3Wb97",
+          "ct_2iC3WZQLgPshQm4wUDgnKyz1YaDjARcT7VfowZPaqMrkKELUR1",
+          "ct_x4ybvRpo1fXXEVWtcxyawzqbh6vdMyB4Srb6VSCZfrMAfRobD",
+          "ct_2L2EDASxVEoMW7praTCsAVJS1Ar7khqDn1WTzkYxKPTFqGMaiL"
+        ]
+        |> Enum.map(&AeMdw.Validate.id!/1)
 
       pending_count = length(ct_pks)
 

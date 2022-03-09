@@ -2,6 +2,7 @@ defmodule AeMdw.Sync.AsyncTasks.StoreTest do
   use ExUnit.Case
 
   alias AeMdw.Db.Model
+  alias AeMdw.Database
   alias AeMdw.Sync.AsyncTasks.Store
 
   require Model
@@ -13,6 +14,10 @@ defmodule AeMdw.Sync.AsyncTasks.StoreTest do
 
   describe "save_new/2 and fetch_unprocessed/1 success" do
     test "for an unprocessed task" do
+      on_exit(fn ->
+        setup_delete_async_task(@args1)
+      end)
+
       Store.save_new(@task_type, @args1)
       Store.save_new(@task_type, @args1)
       tasks = Store.fetch_unprocessed(1000)
@@ -21,6 +26,10 @@ defmodule AeMdw.Sync.AsyncTasks.StoreTest do
     end
 
     test "for a task being processed" do
+      on_exit(fn ->
+        setup_delete_async_task(@args2)
+      end)
+
       Store.save_new(@task_type, @args2)
       tasks_before = Store.fetch_unprocessed(1000)
 
@@ -37,5 +46,15 @@ defmodule AeMdw.Sync.AsyncTasks.StoreTest do
                  args == @args2
                end)
     end
+  end
+
+  defp setup_delete_async_task(args) do
+    Model.async_tasks(index: key) =
+      Model.AsyncTasks
+      |> Database.all_keys()
+      |> Enum.map(&Database.fetch!(Model.AsyncTasks, &1))
+      |> Enum.find(fn m_task -> Model.async_tasks(m_task, :args) == args end)
+
+    Database.dirty_delete(Model.AsyncTasks, key)
   end
 end
