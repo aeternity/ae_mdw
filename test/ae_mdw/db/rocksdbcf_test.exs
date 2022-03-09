@@ -86,17 +86,15 @@ defmodule AeMdw.Db.RocksDbCFTest do
     setup :setup_transaction
 
     test "returns all commited keys", %{txn: txn} do
-      Enum.each(1..10, fn i ->
-        index = {System.system_time() + i, :update_aex9_presence}
-        m_task = Model.async_tasks(index: index, args: [<<i::256>>])
-        assert :ok = RocksDbCF.put(txn, Model.AsyncTasks, m_task)
+      Enum.each(1..20, fn _i ->
+        assert :ok = RocksDbCF.put(txn, Model.Block, new_block())
       end)
 
-      assert keys_before = RocksDbCF.all_keys(Model.AsyncTasks)
-      assert length(keys_before) < 10
+      assert keys_before = RocksDbCF.all_keys(Model.Block)
+      assert length(keys_before) < 20
       assert :ok = RocksDb.transaction_commit(txn)
-      assert keys_after = RocksDbCF.all_keys(Model.AsyncTasks)
-      assert length(keys_after) >= 10
+      assert keys_after = RocksDbCF.all_keys(Model.Block)
+      assert length(keys_after) >= 20
     end
   end
 
