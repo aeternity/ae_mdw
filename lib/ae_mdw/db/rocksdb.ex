@@ -97,9 +97,11 @@ defmodule AeMdw.Db.RocksDb do
   @doc """
   Starts a new empty transaction with fsync option.
   """
-  @spec transaction_new() :: {:ok, transaction()}
+  @spec transaction_new() :: transaction()
   def transaction_new do
-    {:ok, _t_ref} = :rocksdb.transaction(db_ref(), sync: true)
+    {:ok, t_ref} = :rocksdb.transaction(db_ref(), sync: true)
+
+    t_ref
   end
 
   @doc """

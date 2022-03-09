@@ -43,6 +43,7 @@ defmodule AeMdw.Application do
     :ok = AeMdw.Db.RocksDb.open()
 
     children = [
+      AeMdw.Db.State,
       AeMdw.Sync.Watcher,
       AeMdw.Sync.AsyncTasks.Supervisor,
       AeMdwWeb.Supervisor,

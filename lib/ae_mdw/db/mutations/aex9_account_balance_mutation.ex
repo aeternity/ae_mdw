@@ -5,6 +5,7 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutation do
 
   alias AeMdw.Contract
   alias AeMdw.Db.Contract, as: DbContract
+  alias AeMdw.Db.State
   alias AeMdw.Node.Db
 
   @derive AeMdw.Db.TxnMutation
@@ -27,7 +28,7 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutation do
     }
   end
 
-  @spec execute(t(), AeMdw.Database.transaction()) :: :ok
+  @spec execute(t(), State.t()) :: State.t()
   def execute(
         %__MODULE__{
           method_name: method_name,
@@ -35,28 +36,27 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutation do
           contract_pk: contract_pk,
           caller_pk: caller_pk
         },
-        txn
+        state
       ) do
-    update_aex9_balance(txn, method_name, method_args, contract_pk, caller_pk)
-    :ok
+    update_aex9_balance(state, method_name, method_args, contract_pk, caller_pk)
   end
 
   defp update_aex9_balance(
-         txn,
+         state,
          "burn",
          [%{type: :int, value: value}],
          contract_pk,
          account_pk
        ) do
-    DbContract.aex9_burn_balance(txn, contract_pk, account_pk, value)
+    DbContract.aex9_burn_balance(state, contract_pk, account_pk, value)
   end
 
-  defp update_aex9_balance(txn, "swap", [], contract_pk, caller_pk) do
-    DbContract.aex9_swap_balance(txn, contract_pk, caller_pk)
+  defp update_aex9_balance(state, "swap", [], contract_pk, caller_pk) do
+    DbContract.aex9_swap_balance(state, contract_pk, caller_pk)
   end
 
   defp update_aex9_balance(
-         txn,
+         state,
          "mint",
          [
            %{type: :address, value: to_pk},
@@ -65,16 +65,16 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutation do
          contract_pk,
          _caller_pk
        ) do
-    DbContract.aex9_mint_balance(txn, contract_pk, to_pk, value)
+    DbContract.aex9_mint_balance(state, contract_pk, to_pk, value)
   end
 
-  defp update_aex9_balance(txn, method_name, method_args, contract_pk, caller_pk) do
+  defp update_aex9_balance(state, method_name, method_args, contract_pk, caller_pk) do
     case Contract.get_aex9_transfer(caller_pk, method_name, method_args) do
       {from_pk, to_pk, value} ->
-        DbContract.aex9_transfer_balance(txn, contract_pk, from_pk, to_pk, value)
+        DbContract.aex9_transfer_balance(state, contract_pk, from_pk, to_pk, value)
 
       nil ->
-        DbContract.aex9_delete_balances(txn, contract_pk)
+        DbContract.aex9_delete_balances(state, contract_pk)
     end
   end
 end

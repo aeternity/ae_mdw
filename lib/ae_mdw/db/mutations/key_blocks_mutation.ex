@@ -3,6 +3,7 @@ defmodule AeMdw.Db.KeyBlocksMutation do
   Writes key block full model for the current height and next_txi for next height.
   """
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Database
   alias AeMdw.Txs
 
@@ -21,12 +22,13 @@ defmodule AeMdw.Db.KeyBlocksMutation do
     %__MODULE__{key_block: m_block, next_txi: next_txi}
   end
 
-  @spec execute(t(), Database.transaction()) :: :ok
-  def execute(%__MODULE__{key_block: m_block, next_txi: next_txi}, txn) do
+  @spec execute(t(), State.t()) :: State.t()
+  def execute(%__MODULE__{key_block: m_block, next_txi: next_txi}, state) do
     {height, -1} = Model.block(m_block, :index)
-    [next_kb] = Database.read(Model.Block, {height + 1, -1})
+    {:ok, next_kb} = State.get(state, Model.Block, {height + 1, -1})
 
-    Database.write(txn, Model.Block, m_block)
-    Database.write(txn, Model.Block, Model.block(next_kb, tx_index: next_txi))
+    state
+    |> State.put(Model.Block, m_block)
+    |> State.put(Model.Block, Model.block(next_kb, tx_index: next_txi))
   end
 end

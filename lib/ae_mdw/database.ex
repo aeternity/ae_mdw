@@ -13,7 +13,6 @@ defmodule AeMdw.Database do
 
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
-  alias AeMdw.Db.TxnMutation
   alias AeMdw.Db.RocksDb
   alias AeMdw.Db.RocksDbCF
 
@@ -236,20 +235,20 @@ defmodule AeMdw.Database do
     :mnesia.delete(table, key, :write)
   end
 
-  @doc """
-  Creates a transaction and commits the changes of a mutation list.
-  """
-  @spec commit([TxnMutation.t()]) :: :ok
-  def commit(txn_mutations) do
-    {:ok, txn} = RocksDb.transaction_new()
+  # @doc """
+  # Creates a transaction and commits the changes of a mutation list.
+  # """
+  # @spec commit([TxnMutation.t()]) :: :ok
+  # def commit(txn_mutations) do
+  #   txn = RocksDb.transaction_new()
 
-    txn_mutations
-    |> List.flatten()
-    |> Enum.reject(&is_nil/1)
-    |> Enum.each(&TxnMutation.execute(&1, txn))
+  #   txn_mutations
+  #   |> List.flatten()
+  #   |> Enum.reject(&is_nil/1)
+  #   |> Enum.each(&TxnMutation.execute(&1, txn))
 
-    :ok = RocksDb.transaction_commit(txn)
-  end
+  #   :ok = RocksDb.transaction_commit(txn)
+  # end
 
   @spec transaction([Mutation.t()]) :: :ok
   def transaction(mutations) do

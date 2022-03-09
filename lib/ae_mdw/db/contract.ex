@@ -11,6 +11,7 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Origin
+  alias AeMdw.Db.State
   alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Node.Db
@@ -27,7 +28,7 @@ defmodule AeMdw.Db.Contract do
 
   @type rev_aex9_contract_key :: {pos_integer(), String.t(), String.t(), pos_integer()}
   @typep pubkey :: Db.pubkey()
-  @typep transaction :: Database.transaction()
+  @typep state :: State.t()
 
   @spec aex9_creation_write(tuple(), pubkey(), pubkey(), integer()) :: :ok
   def aex9_creation_write({name, symbol, decimals}, contract_pk, owner_pk, txi) do
@@ -69,28 +70,28 @@ defmodule AeMdw.Db.Contract do
     Database.delete(Model.IdxAex9AccountPresence, {txi, pubkey, contract_pk})
   end
 
-  @spec aex9_burn_balance(transaction(), pubkey(), pubkey(), non_neg_integer()) :: :ok | :error
-  def aex9_burn_balance(txn, contract_pk, account_pk, burned_value) do
-    aex9_update_balance(txn, contract_pk, account_pk, fn amount -> amount - burned_value end)
+  @spec aex9_burn_balance(state(), pubkey(), pubkey(), non_neg_integer()) :: state()
+  def aex9_burn_balance(state, contract_pk, account_pk, burned_value) do
+    aex9_update_balance(state, contract_pk, account_pk, fn amount -> amount - burned_value end)
   end
 
-  @spec aex9_swap_balance(transaction(), pubkey(), pubkey()) :: :ok | :error
-  def aex9_swap_balance(txn, contract_pk, caller_pk) do
-    aex9_update_balance(txn, contract_pk, caller_pk, fn _any -> 0 end)
+  @spec aex9_swap_balance(state(), pubkey(), pubkey()) :: state()
+  def aex9_swap_balance(state, contract_pk, caller_pk) do
+    aex9_update_balance(state, contract_pk, caller_pk, fn _any -> 0 end)
   end
 
-  @spec aex9_mint_balance(transaction(), pubkey(), pubkey(), non_neg_integer()) :: :ok | :error
-  def aex9_mint_balance(txn, contract_pk, to_pk, minted_value) do
-    aex9_update_balance(txn, contract_pk, to_pk, fn amount -> amount + minted_value end)
+  @spec aex9_mint_balance(state(), pubkey(), pubkey(), non_neg_integer()) :: state()
+  def aex9_mint_balance(state, contract_pk, to_pk, minted_value) do
+    aex9_update_balance(state, contract_pk, to_pk, fn amount -> amount + minted_value end)
   end
 
-  @spec aex9_transfer_balance(transaction(), pubkey(), pubkey(), pubkey(), non_neg_integer()) ::
-          :ok | :error
-  def aex9_transfer_balance(txn, contract_pk, from_pk, to_pk, transfered_value) do
+  @spec aex9_transfer_balance(state(), pubkey(), pubkey(), pubkey(), non_neg_integer()) ::
+          state()
+  def aex9_transfer_balance(state, contract_pk, from_pk, to_pk, transfered_value) do
     with {:ok, m_aex9_balance_from} <-
-           Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, from_pk}),
+           State.get(state, Model.Aex9Balance, {contract_pk, from_pk}),
          {:ok, m_aex9_balance_to} <-
-           Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, to_pk}) do
+           State.get(state, Model.Aex9Balance, {contract_pk, to_pk}) do
       from_amount = Model.aex9_balance(m_aex9_balance_from, :amount)
       to_amount = Model.aex9_balance(m_aex9_balance_to, :amount)
 
@@ -100,24 +101,25 @@ defmodule AeMdw.Db.Contract do
       m_aex9_balance_to =
         Model.aex9_balance(m_aex9_balance_to, amount: to_amount + transfered_value)
 
-      Database.write(txn, Model.Aex9Balance, m_aex9_balance_from)
-      Database.write(txn, Model.Aex9Balance, m_aex9_balance_to)
+      state
+      |> State.put(Model.Aex9Balance, m_aex9_balance_from)
+      |> State.put(Model.Aex9Balance, m_aex9_balance_to)
     else
       :not_found ->
-        :error
+        state
     end
   end
 
-  @spec aex9_delete_balances(transaction(), pubkey()) :: :ok
-  def aex9_delete_balances(txn, contract_pk) do
+  @spec aex9_delete_balances(state(), pubkey()) :: state()
+  def aex9_delete_balances(state, contract_pk) do
     Model.Aex9Balance
     |> Collection.stream(
       :forward,
       {{contract_pk, min_bin()}, {contract_pk, max_256bit_bin()}},
       nil
     )
-    |> Enum.each(fn account_pk ->
-      Database.delete(txn, Model.Aex9Balance, {contract_pk, account_pk})
+    |> Enum.reduce(state, fn account_pk, state ->
+      State.delete(state, Model.Aex9Balance, {contract_pk, account_pk})
     end)
   end
 
@@ -404,14 +406,14 @@ defmodule AeMdw.Db.Contract do
   #
   # Private functions
   #
-  defp aex9_update_balance(txn, contract_pk, account_pk, new_amount_fn) do
-    case Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, account_pk}) do
+  defp aex9_update_balance(state, contract_pk, account_pk, new_amount_fn) do
+    case State.get(state, Model.Aex9Balance, {contract_pk, account_pk}) do
       {:ok, Model.aex9_balance(amount: old_amount) = m_aex9_balance} ->
         m_aex9_balance = Model.aex9_balance(m_aex9_balance, amount: new_amount_fn.(old_amount))
-        Database.write(txn, Model.Aex9Balance, m_aex9_balance)
+        State.put(state, Model.Aex9Balance, m_aex9_balance)
 
       :not_found ->
-        :error
+        state
     end
   end
 

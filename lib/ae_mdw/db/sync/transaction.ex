@@ -7,6 +7,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Node, as: AE
   alias AeMdw.Contract
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.Sync
   alias AeMdw.Db.Aex9AccountPresenceMutation
   alias AeMdw.Db.Aex9AccountBalanceMutation
@@ -82,8 +83,9 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   @spec sync(non_neg_integer(), non_neg_integer(), non_neg_integer()) :: pos_integer()
   def sync(from_height, to_height, txi) when from_height <= to_height do
+    state = State.current_state()
     tracker = Sync.progress_logger(&sync_generation/2, @log_freq, &log_msg/2)
-    next_txi = Enum.reduce(from_height..to_height, txi, tracker)
+    next_txi = Enum.reduce(from_height..to_height, {txi, state}, tracker)
 
     next_txi
   end
@@ -150,7 +152,7 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   ################################################################################
 
-  defp sync_generation(height, txi) do
+  defp sync_generation(height, {txi, state}) do
     gen_fully_synced? =
       case Database.read(Model.Block, {height + 1, -1}) do
         [] -> false
@@ -160,11 +162,11 @@ defmodule AeMdw.Db.Sync.Transaction do
     if gen_fully_synced? do
       txi
     else
-      _next_txi = do_sync_generation(height, txi)
+      _next_txi = do_sync_generation(height, txi, state)
     end
   end
 
-  defp do_sync_generation(height, txi) do
+  defp do_sync_generation(height, txi, state) do
     {key_block, micro_blocks} = AE.Db.get_blocks(height)
     kb_txi = (txi == 0 && -1) || txi
     kb_header = :aec_blocks.to_key_header(key_block)
@@ -184,18 +186,21 @@ defmodule AeMdw.Db.Sync.Transaction do
       end
 
     {next_txi, _mb_index} =
-      Enum.reduce(micro_blocks, {txi, 0}, fn mblock, {txi, mbi} = txi_acc ->
+      Enum.reduce(micro_blocks, {state, txi, 0}, fn mblock, {state, txi, mbi} ->
         if mbi > last_mbi do
-          {txn_mutations, mutations, acc} = micro_block_mutations(mblock, txi_acc)
-          Database.commit(txn_mutations)
+          {txn_mutations, mutations, {txi, mbi}} = micro_block_mutations(mblock, {txi, mbi})
+
+          state = State.commit(state, txn_mutations)
+
           Database.transaction(mutations)
           Producer.commit_enqueued()
 
           Broadcaster.broadcast_micro_block(mblock, :mdw)
           Broadcaster.broadcast_txs(mblock, :mdw)
-          acc
+
+          {state, txi, mbi}
         else
-          {txi, mbi + 1}
+          {state, txi, mbi + 1}
         end
       end)
 
@@ -219,13 +224,14 @@ defmodule AeMdw.Db.Sync.Transaction do
       Stats.new_mutation(height, last_mbi == -1)
     ])
 
-    Database.commit([
-      KeyBlocksMutation.new(kb_model, next_txi)
-    ])
+    state =
+      State.commit(state, [
+        KeyBlocksMutation.new(kb_model, next_txi)
+      ])
 
     Broadcaster.broadcast_key_block(key_block, :mdw)
 
-    next_txi
+    {state, next_txi}
   end
 
   defp micro_block_mutations(mblock, {txi, mbi}) do

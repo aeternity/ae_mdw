@@ -5,6 +5,7 @@ defmodule AeMdw.Db.WriteTxnMutation do
   """
 
   alias AeMdw.Database
+  alias AeMdw.Db.State
 
   @derive AeMdw.Db.TxnMutation
   defstruct [:table, :record]
@@ -19,8 +20,8 @@ defmodule AeMdw.Db.WriteTxnMutation do
     %__MODULE__{table: table, record: record}
   end
 
-  @spec execute(t(), Database.transaction()) :: :ok
-  def execute(%__MODULE__{table: table, record: record}, txn) do
-    Database.write(txn, table, record)
+  @spec execute(t(), State.t()) :: State.t()
+  def execute(%__MODULE__{table: table, record: record}, state) do
+    State.put(state, table, record)
   end
 end

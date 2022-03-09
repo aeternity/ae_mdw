@@ -7,7 +7,7 @@ defmodule AeMdw.Db.Sync.BlockIndex do
   alias AeMdw.Db.Sync
   alias AeMdw.Db.Model
   alias AeMdw.Database
-  alias AeMdw.Db.WriteTxnMutation
+  # alias AeMdw.Db.WriteTxnMutation
   alias AeMdw.Log
 
   import AeMdw.Util
@@ -24,7 +24,7 @@ defmodule AeMdw.Db.Sync.BlockIndex do
       header = :aec_chain.get_key_header_by_height(max_height) |> ok!
       initial_hash = :aec_headers.hash_header(header) |> ok!
 
-      {m_block_list, _} =
+      {_m_block_list, _} =
         Enum.reduce(max_height..min_height, {[], initial_hash}, fn height, {m_block_list, hash} ->
           if rem(height, @log_freq) == 0, do: Log.info("syncing block index at #{height}")
 
@@ -33,9 +33,9 @@ defmodule AeMdw.Db.Sync.BlockIndex do
           {[m_key_block | m_block_list], prev_hash}
         end)
 
-      m_block_list
-      |> Enum.map(&WriteTxnMutation.new(Model.Block, &1))
-      |> Database.commit()
+      # m_block_list
+      # |> Enum.map(&WriteTxnMutation.new(Model.Block, &1))
+      # |> Database.commit()
     end
 
     max_kbi()
