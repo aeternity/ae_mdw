@@ -2,8 +2,9 @@ defmodule AeMdw.Sync.AsyncTasks.Stats do
   @moduledoc """
   Stats of AsyncTasks processing.
   """
+
+  alias AeMdw.Database
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Util
 
   require Model
 
@@ -73,7 +74,7 @@ defmodule AeMdw.Sync.AsyncTasks.Stats do
   end
 
   defp update_db_count() do
-    db_pending_count = :mnesia.async_dirty(fn -> Util.count(Model.AsyncTasks) end)
+    db_pending_count = Database.count_keys(Model.AsyncTasks)
     :ets.update_element(@tab, @stats_key, {@db_count_pos, db_pending_count})
   end
 

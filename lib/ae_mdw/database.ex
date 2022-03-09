@@ -29,7 +29,10 @@ defmodule AeMdw.Database do
 
   defmacro use_rocksdb?(tab) do
     quote do
-      unquote(tab) == Model.Block or unquote(tab) == Model.Tx or unquote(tab) == Model.Aex9Balance or
+      unquote(tab) == Model.Block or
+        unquote(tab) == Model.Tx or
+        unquote(tab) == Model.Aex9Balance or
+        unquote(tab) == Model.AsyncTasks or
         unquote(tab) == Model.Migrations or
         unquote(tab) == Model.DeltaStat or
         unquote(tab) == Model.TotalStat
@@ -88,6 +91,10 @@ defmodule AeMdw.Database do
   def dirty_select(table, fun), do: :mnesia.dirty_select(table, fun)
 
   @spec all_keys(table()) :: [key()]
+  def all_keys(table) when use_rocksdb?(table) do
+    RocksDbCF.all_keys(table)
+  end
+
   def all_keys(table) do
     :mnesia.all_keys(table)
   end
