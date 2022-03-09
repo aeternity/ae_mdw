@@ -234,6 +234,9 @@ defmodule AeMdw.Application do
     :ets.new(:ct_create_sync_cache, [:named_table, :ordered_set, :public])
     :ets.new(:stat_sync_cache, [:named_table, :ordered_set, :public])
 
+    AeMdw.Sync.AsyncTasks.Stats.init()
+    AeMdw.Sync.AsyncTasks.Store.init()
+
     AeMdw.Db.RocksDbCF.init_tables()
   end
 

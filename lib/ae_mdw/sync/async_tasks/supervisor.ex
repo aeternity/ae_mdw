@@ -7,8 +7,6 @@ defmodule AeMdw.Sync.AsyncTasks.Supervisor do
   alias AeMdw.Sync.AsyncTasks.Consumer
   alias AeMdw.Sync.AsyncTasks.LongTaskConsumer
   alias AeMdw.Sync.AsyncTasks.Producer
-  alias AeMdw.Sync.AsyncTasks.Stats
-  alias AeMdw.Sync.AsyncTasks.Store
   alias AeMdw.Sync.AsyncTasks.TaskSupervisor
 
   @num_consumers 3
@@ -25,9 +23,6 @@ defmodule AeMdw.Sync.AsyncTasks.Supervisor do
       Producer,
       LongTaskConsumer | consumers()
     ]
-
-    Stats.init()
-    Store.init()
 
     Supervisor.init(children, strategy: :one_for_all)
   end
