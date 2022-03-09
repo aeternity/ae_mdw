@@ -19,12 +19,25 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
     end
 
     test "with pending db records" do
-      pending_count = 10
+      ct_pks = [
+        "ct_M9yohHgcLjhpp1Z8SaA1UTmRMQzR4FWjJHajGga8KBoZTEPwC",
+        "ct_6ZuwbMgcNDaryXTnrLMiPFW2ogE9jxAzz1874BToE81ksWek6",
+        "ct_2M2dJU2wLWPE73HpLPmFezqqJbu9PZ8rwKxeDvrids4y1nPYA2",
+        "ct_X8sNFxiae4xmEdrzipFAQSaHnC3jwBhiPo51Le4JmDw1bMhSF",
+        "ct_wevncvzDCpbG28Myuq2Ec48CLqte1vJPFdwTxtiYPJFJ9cZEe",
+        "ct_2vSP4tmmxuTpkLzvxN2oU3MpS2yCSRYwsXBSyGWLY6Pcw116Dz",
+        "ct_v86iyqGjPGDQGtgH2wqLfzz13k4kGxpsoJwZMqgCiLxP3Wb97",
+        "ct_2iC3WZQLgPshQm4wUDgnKyz1YaDjARcT7VfowZPaqMrkKELUR1",
+        "ct_x4ybvRpo1fXXEVWtcxyawzqbh6vdMyB4Srb6VSCZfrMAfRobD",
+        "ct_2L2EDASxVEoMW7praTCsAVJS1Ar7khqDn1WTzkYxKPTFqGMaiL"
+      ]
+
+      pending_count = length(ct_pks)
 
       # setup new to expected pending
       Enum.each(1..pending_count, fn i ->
         index = {System.system_time() + i, :update_aex9_presence}
-        m_task = Model.async_tasks(index: index, args: [<<i::256>>])
+        m_task = Model.async_tasks(index: index, args: [Enum.at(ct_pks, i)])
         Database.dirty_write(Model.AsyncTasks, m_task)
       end)
 
