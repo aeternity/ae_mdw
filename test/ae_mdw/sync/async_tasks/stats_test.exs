@@ -39,7 +39,7 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
       # setup new to expected pending
       Enum.each(1..pending_count, fn i ->
         index = {System.system_time() + i, :update_aex9_presence}
-        m_task = Model.async_tasks(index: index, args: [Enum.at(ct_pks, i)])
+        m_task = Model.async_tasks(index: index, args: [Enum.at(ct_pks, i - 1)])
         Database.dirty_write(Model.AsyncTasks, m_task)
       end)
 
