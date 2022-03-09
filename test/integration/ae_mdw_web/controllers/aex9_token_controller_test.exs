@@ -261,4 +261,60 @@ defmodule Integration.AeMdwWeb.Aex9TokenControllerTest do
       end
     end
   end
+
+  describe "aex9_token_balance_history" do
+    test "it returns the paginated balances of an aex9 contract for a given account", %{
+      conn: conn
+    } do
+      limit = 3
+
+      assert %{"data" => balances, "next" => next} =
+               conn
+               |> get("/v2/aex9/#{@aex9_token_id}/balances/#{@aex9_token_account_id}/history",
+                 limit: limit
+               )
+               |> json_response(200)
+
+      balances_heights =
+        balances |> Enum.map(fn %{"height" => height} -> height end) |> Enum.reverse()
+
+      assert ^limit = length(balances)
+      assert ^balances_heights = Enum.sort(balances_heights)
+
+      if next do
+        assert %{"data" => next_balances, "prev" => prev} =
+                 conn |> get(next) |> json_response(200)
+
+        next_balances_accounts =
+          next_balances |> Enum.map(fn %{"account" => account} -> account end) |> Enum.reverse()
+
+        assert ^limit = length(next_balances)
+        assert ^next_balances_accounts = Enum.sort(next_balances_accounts)
+
+        assert %{"data" => ^balances} = conn |> get(prev) |> json_response(200)
+      end
+    end
+
+    test "it returns the paginated balances of an aex9 contract for a given account and a given scope",
+         %{conn: conn} do
+      limit = 3
+      first = 500_000
+      last = 600_000
+
+      assert %{"data" => balances, "next" => next} =
+               conn
+               |> get("/v2/aex9/#{@aex9_token_id}/balances/#{@aex9_token_account_id}/history",
+                 scope: "gen:#{first}-#{last}",
+                 limit: limit
+               )
+               |> json_response(200)
+
+      balances_heights = Enum.map(balances, fn %{"height" => height} -> height end)
+
+      assert ^limit = length(balances)
+      assert ^balances_heights = Enum.sort(balances_heights)
+      assert Enum.at(balances_heights, 0) >= first
+      assert Enum.at(balances_heights, limit - 1) <= last
+    end
+  end
 end
