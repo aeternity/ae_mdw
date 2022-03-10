@@ -8,7 +8,7 @@ defmodule AeMdw.Db.StatsMutation do
 
   require Model
 
-  @derive AeMdw.Db.Mutation
+  @derive AeMdw.Db.TxnMutation
   defstruct [:delta_stat, :total_stat]
 
   @type t() :: %__MODULE__{
@@ -24,12 +24,15 @@ defmodule AeMdw.Db.StatsMutation do
     }
   end
 
-  @spec mutate(t()) :: :ok
-  def mutate(%__MODULE__{
-        delta_stat: delta_stat,
-        total_stat: total_stat
-      }) do
-    Database.write(Model.DeltaStat, delta_stat)
-    Database.write(Model.TotalStat, total_stat)
+  @spec execute(t(), Database.transaction()) :: :ok
+  def execute(
+        %__MODULE__{
+          delta_stat: delta_stat,
+          total_stat: total_stat
+        },
+        txn
+      ) do
+    Database.write(txn, Model.DeltaStat, delta_stat)
+    Database.write(txn, Model.TotalStat, total_stat)
   end
 end

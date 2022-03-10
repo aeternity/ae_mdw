@@ -21,15 +21,12 @@ defmodule AeMdw.Stats do
   @typep limit() :: Database.limit()
   @typep range() :: {:gen, Range.t()} | nil
 
-  @delta_table Model.DeltaStat
-  @totals_table Model.TotalStat
-
   # Legacy v1 is a blending between /totalstats and /deltastats.
   # The active and inactive object counters are totals while the rewards are delta.
   @spec fetch_stats_v1(direction(), range(), cursor(), limit()) ::
           {cursor(), [stat()], cursor()}
   def fetch_stats_v1(direction, range, cursor, limit) do
-    {:ok, last_gen} = Database.last_key(AeMdw.Db.Model.TotalStat)
+    {:ok, last_gen} = Database.last_key(Model.TotalStat)
 
     {range_first, range_last} =
       case range do
@@ -51,7 +48,7 @@ defmodule AeMdw.Stats do
   @spec fetch_delta_stats(direction(), range(), cursor(), limit()) ::
           {cursor(), [delta_stat()], cursor()}
   def fetch_delta_stats(direction, range, cursor, limit) do
-    {:ok, last_gen} = Database.last_key(AeMdw.Db.Model.DeltaStat)
+    {:ok, last_gen} = Database.last_key(Model.DeltaStat)
 
     {range_first, range_last} =
       case range do
@@ -73,7 +70,7 @@ defmodule AeMdw.Stats do
   @spec fetch_total_stats(direction(), range(), cursor(), limit()) ::
           {cursor(), [total_stat()], cursor()}
   def fetch_total_stats(direction, range, cursor, limit) do
-    {:ok, last_gen} = Database.last_key(AeMdw.Db.Model.TotalStat)
+    {:ok, last_gen} = Database.last_key(Model.TotalStat)
 
     {range_first, range_last} =
       case range do
@@ -93,10 +90,10 @@ defmodule AeMdw.Stats do
   end
 
   @spec fetch_delta_stat!(height()) :: delta_stat()
-  def fetch_delta_stat!(height), do: render_delta_stat(Database.fetch!(@delta_table, height))
+  def fetch_delta_stat!(height), do: render_delta_stat(Database.fetch!(Model.DeltaStat, height))
 
   @spec fetch_total_stat!(height()) :: total_stat()
-  def fetch_total_stat!(height), do: render_total_stat(Database.fetch!(@totals_table, height))
+  def fetch_total_stat!(height), do: render_total_stat(Database.fetch!(Model.TotalStat, height))
 
   defp render_stats(%Range{first: first, last: last}) do
     Enum.map(first..last, fn height ->
@@ -132,9 +129,9 @@ defmodule AeMdw.Stats do
 
   defp render_total_stats(gens), do: Enum.map(gens, &fetch_total_stat!/1)
 
-  defp render_delta_stat(stat), do: Format.to_map(stat, @delta_table)
+  defp render_delta_stat(stat), do: Format.to_map(stat, Model.DeltaStat)
 
-  defp render_total_stat(total_stat), do: Format.to_map(total_stat, @totals_table)
+  defp render_total_stat(total_stat), do: Format.to_map(total_stat, Model.TotalStat)
 
   defp serialize_cursor(nil), do: nil
 

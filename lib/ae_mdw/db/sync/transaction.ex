@@ -215,11 +215,8 @@ defmodule AeMdw.Db.Sync.Transaction do
       Database.transaction(expirations_mutations)
     end
 
-    Database.transaction([
-      Stats.new_mutation(height, last_mbi == -1)
-    ])
-
     Database.commit([
+      Stats.new_mutation(height, last_mbi == -1),
       KeyBlocksMutation.new(kb_model, next_txi)
     ])
 

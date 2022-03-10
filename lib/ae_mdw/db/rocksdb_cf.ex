@@ -36,6 +36,19 @@ defmodule AeMdw.Db.RocksDbCF do
     read_through(@tx_tab, Model.Tx, txi)
   end
 
+  @spec count(table()) :: non_neg_integer()
+  def count(table) do
+    {:ok, it} = RocksDb.iterator(table)
+
+    key_res = do_iterator_move(it, :first)
+
+    count = do_count(0, it, key_res)
+
+    RocksDb.iterator_close(it)
+
+    count
+  end
+
   @spec put(transaction(), table(), record()) :: :ok
   def put(txn, table, record) do
     key = encode_record_index(record)
@@ -197,6 +210,13 @@ defmodule AeMdw.Db.RocksDbCF do
   #
   # Private functions
   #
+
+  defp do_count(counter, _it, :not_found), do: counter
+
+  defp do_count(counter, it, _key_res) do
+    do_count(counter + 1, it, do_iterator_move(it, :next))
+  end
+
   defp encode_record_index(record), do: record |> elem(1) |> :sext.encode()
 
   defp encode_record_value({_record_name, _key, nil}), do: ""
