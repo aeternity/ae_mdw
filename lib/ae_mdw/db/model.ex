@@ -480,13 +480,15 @@ defmodule AeMdw.Db.Model do
   # starts with only chain_tables and add them progressively by groups
   @spec column_families() :: list(atom())
   def column_families do
-    # next candidate chain_tables()
-    [
-      AeMdw.Db.Model.Tx,
-      AeMdw.Db.Model.Block,
-      AeMdw.Db.Model.Aex9Balance,
-      AeMdw.Db.Model.Migrations
-    ]
+    Enum.concat([
+      [
+        AeMdw.Db.Model.Tx,
+        AeMdw.Db.Model.Block,
+        AeMdw.Db.Model.Aex9Balance
+      ],
+      stat_tables(),
+      tasks_tables()
+    ])
   end
 
   @spec tables() :: list(atom())

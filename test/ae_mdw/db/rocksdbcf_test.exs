@@ -82,6 +82,19 @@ defmodule AeMdw.Db.RocksDbCFTest do
     end
   end
 
+  describe "count/1" do
+    test "returns the count of writen records" do
+      assert RocksDbCF.count(Model.Tx) < 50
+
+      Enum.each(1..50, fn _i ->
+        m_tx = Model.tx(index: new_txi())
+        assert :ok = RocksDbCF.dirty_put(Model.Tx, m_tx)
+      end)
+
+      assert RocksDbCF.count(Model.Tx) >= 50
+    end
+  end
+
   describe "exists?/2" do
     setup :setup_transaction
 

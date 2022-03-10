@@ -30,8 +30,19 @@ defmodule AeMdw.Database do
   defmacro use_rocksdb?(tab) do
     quote do
       unquote(tab) == Model.Block or unquote(tab) == Model.Tx or unquote(tab) == Model.Aex9Balance or
-        unquote(tab) == Model.Migrations
+        unquote(tab) == Model.Migrations or
+        unquote(tab) == Model.DeltaStat or
+        unquote(tab) == Model.TotalStat
     end
+  end
+
+  @spec count_keys(table()) :: non_neg_integer()
+  def count_keys(table) when use_rocksdb?(table) do
+    RocksDbCF.count(table)
+  end
+
+  def count_keys(table) do
+    table |> :mnesia.dirty_all_keys() |> length()
   end
 
   @spec dirty_all_keys(table()) :: [key()]

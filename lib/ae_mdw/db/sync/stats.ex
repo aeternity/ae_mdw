@@ -11,7 +11,6 @@ defmodule AeMdw.Db.Sync.Stats do
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.Origin
   alias AeMdw.Db.StatsMutation
-  alias AeMdw.Db.Util
   alias AeMdw.Ets
 
   require Model
@@ -49,16 +48,11 @@ defmodule AeMdw.Db.Sync.Stats do
       active_names: prev_active_names,
       active_oracles: prev_active_oracles,
       contracts: prev_contracts
-    ) = Util.read!(Model.TotalStat, height)
+    ) = Database.fetch!(Model.TotalStat, height)
 
-    {current_active_names, current_active_auctions, current_active_oracles} =
-      :mnesia.async_dirty(fn ->
-        {
-          Util.count(Model.ActiveName),
-          Util.count(Model.AuctionExpiration),
-          Util.count(Model.ActiveOracle)
-        }
-      end)
+    current_active_names = Database.count_keys(Model.ActiveName)
+    current_active_auctions = Database.count_keys(Model.AuctionExpiration)
+    current_active_oracles = Database.count_keys(Model.ActiveOracle)
 
     {height_revoked_names, height_expired_names} =
       height
@@ -116,7 +110,7 @@ defmodule AeMdw.Db.Sync.Stats do
       active_oracles: prev_active_oracles,
       inactive_oracles: prev_inactive_oracles,
       contracts: prev_contracts
-    ) = Util.read!(Model.TotalStat, height - 1)
+    ) = fetch_total_stat(height - 1)
 
     token_supply_delta = AeMdw.Node.token_supply_delta(height)
     auctions_expired = get(:auctions_expired, 0)
@@ -136,4 +130,12 @@ defmodule AeMdw.Db.Sync.Stats do
   end
 
   defp get(stat_sync_key, default), do: Ets.get(:stat_sync_cache, stat_sync_key, default)
+
+  defp fetch_total_stat(0) do
+    Model.total_stat()
+  end
+
+  defp fetch_total_stat(height) do
+    Database.fetch!(Model.TotalStat, height)
+  end
 end
