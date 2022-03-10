@@ -112,7 +112,7 @@ defmodule AeMdw.Db.Sync.Stats do
       contracts: prev_contracts
     ) = fetch_total_stat(height - 1)
 
-    token_supply_delta = AeMdw.Node.token_supply_delta(height)
+    token_supply_delta = AeMdw.Node.token_supply_delta(height - 1)
     auctions_expired = get(:auctions_expired, 0)
 
     Model.total_stat(
