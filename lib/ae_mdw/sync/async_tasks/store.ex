@@ -4,7 +4,6 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
   """
 
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Util
   alias AeMdw.Database
 
   require Ex2ms
@@ -33,28 +32,22 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
 
   @spec fetch_unprocessed(pos_integer()) :: [Model.async_tasks_record()]
   def fetch_unprocessed(max_amount) do
-    any_spec =
-      Ex2ms.fun do
-        record -> record
-      end
-
-    {m_tasks, _cont} = Util.select(Model.AsyncTasks, any_spec, max_amount)
-
-    Enum.filter(m_tasks, fn Model.async_tasks(index: index) ->
+    fetch_all()
+    |> Enum.take(max_amount)
+    |> Enum.filter(fn Model.async_tasks(index: index) ->
       not :ets.member(@processing_tab, index)
     end)
   end
 
   @spec save_new(atom(), list()) :: :ok
   def save_new(task_type, args) do
-    :mnesia.sync_transaction(fn ->
-      if not is_enqueued?(task_type, args) do
-        index = {System.system_time(), task_type}
-        m_task = Model.async_tasks(index: index, args: args)
-        Database.write(Model.AsyncTasks, m_task)
-        :ets.insert(@args_tab, {{task_type, args}})
-      end
-    end)
+    if not is_enqueued?(task_type, args) do
+      index = {System.system_time(), task_type}
+      m_task = Model.async_tasks(index: index, args: args)
+      Database.dirty_write(Model.AsyncTasks, m_task)
+
+      :ets.insert(@args_tab, {{task_type, args}})
+    end
 
     :ok
   end
@@ -67,9 +60,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
 
   @spec set_done(task_index(), task_args()) :: :ok
   def set_done({_ts, task_type} = task_index, args) do
-    :mnesia.sync_transaction(fn ->
-      Database.delete(Model.AsyncTasks, task_index)
-    end)
+    Database.dirty_delete(Model.AsyncTasks, task_index)
 
     :ets.delete_object(@processing_tab, task_index)
     :ets.delete(@args_tab, {task_type, args})
@@ -79,15 +70,17 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
   #
   # Private functions
   #
-  defp cache_tasks_by_args() do
-    {:atomic, indexed_args_records} =
-      :mnesia.transaction(fn ->
-        args_spec =
-          Ex2ms.fun do
-            Model.async_tasks(index: {_ts, task_type}, args: args) -> {{task_type, args}}
-          end
+  defp fetch_all() do
+    Model.AsyncTasks
+    |> Database.all_keys()
+    |> Enum.map(&Database.fetch!(Model.AsyncTasks, &1))
+  end
 
-        :mnesia.select(Model.AsyncTasks, args_spec)
+  defp cache_tasks_by_args() do
+    indexed_args_records =
+      fetch_all()
+      |> Enum.map(fn Model.async_tasks(index: {_ts, task_type}, args: args) ->
+        {{task_type, args}}
       end)
 
     :ets.insert(@args_tab, indexed_args_records)

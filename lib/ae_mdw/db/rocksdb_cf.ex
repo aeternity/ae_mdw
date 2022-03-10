@@ -36,6 +36,19 @@ defmodule AeMdw.Db.RocksDbCF do
     read_through(@tx_tab, Model.Tx, txi)
   end
 
+  @spec all_keys(table()) :: [key()]
+  def all_keys(table) do
+    {:ok, it} = RocksDb.iterator(table)
+
+    key_res = do_iterator_move(it, :first)
+
+    all_keys_list = do_all_keys([], it, key_res)
+
+    RocksDb.iterator_close(it)
+
+    all_keys_list
+  end
+
   @spec count(table()) :: non_neg_integer()
   def count(table) do
     {:ok, it} = RocksDb.iterator(table)
@@ -210,6 +223,11 @@ defmodule AeMdw.Db.RocksDbCF do
   #
   # Private functions
   #
+  defp do_all_keys(keys, _it, :not_found), do: Enum.reverse(keys)
+
+  defp do_all_keys(keys, it, {:ok, key}) do
+    do_all_keys([key | keys], it, do_iterator_move(it, :next))
+  end
 
   defp do_count(counter, _it, :not_found), do: counter
 

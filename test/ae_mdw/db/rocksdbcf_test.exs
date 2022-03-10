@@ -82,6 +82,22 @@ defmodule AeMdw.Db.RocksDbCFTest do
     end
   end
 
+  describe "all_keys/1" do
+    setup :setup_transaction
+
+    test "returns all commited keys", %{txn: txn} do
+      Enum.each(1..20, fn _i ->
+        assert :ok = RocksDbCF.put(txn, Model.Block, new_block())
+      end)
+
+      assert keys_before = RocksDbCF.all_keys(Model.Block)
+      assert length(keys_before) < 20
+      assert :ok = RocksDb.transaction_commit(txn)
+      assert keys_after = RocksDbCF.all_keys(Model.Block)
+      assert length(keys_after) >= 20
+    end
+  end
+
   describe "count/1" do
     test "returns the count of writen records" do
       assert RocksDbCF.count(Model.Tx) < 50

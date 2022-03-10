@@ -49,17 +49,12 @@ defmodule AeMdw.Sync.AsyncTasks.StoreTest do
   end
 
   defp setup_delete_async_task(args) do
-    task_type = @task_type
-
-    task_mspec =
-      Ex2ms.fun do
-        {:async_tasks, {ts, ^task_type}, ^args} -> {ts, @task_type}
-      end
-
-    :mnesia.sync_dirty(fn ->
+    Model.async_tasks(index: key) =
       Model.AsyncTasks
-      |> :mnesia.select(task_mspec)
-      |> Enum.each(&Database.delete(Model.AsyncTasks, &1))
-    end)
+      |> Database.all_keys()
+      |> Enum.map(&Database.fetch!(Model.AsyncTasks, &1))
+      |> Enum.find(fn m_task -> Model.async_tasks(m_task, :args) == args end)
+
+    Database.dirty_delete(Model.AsyncTasks, key)
   end
 end

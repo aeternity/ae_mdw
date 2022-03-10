@@ -19,46 +19,30 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
     end
 
     test "with pending db records" do
-      db_pending_count = 10
-      existing_keys = Database.dirty_all_keys(Model.AsyncTasks)
-      existing_tasks = Enum.flat_map(existing_keys, &Database.dirty_read(Model.AsyncTasks, &1))
-
-      keys_to_delete =
-        if length(existing_keys) > db_pending_count do
-          delete_count = length(existing_keys) - db_pending_count
-
-          # delete to expected pending
-          existing_keys
-          |> Enum.take(delete_count)
-          |> Enum.each(fn key ->
-            Database.dirty_delete(Model.AsyncTasks, key)
-          end)
-
-          []
-        else
-          insert_count = db_pending_count - length(existing_keys)
-
-          # setup new to expected pending
-          Enum.map(1..insert_count, fn i ->
-            index = {System.system_time() + i, :update_aex9_presence}
-            m_task = Model.async_tasks(index: index, args: [<<i::256>>])
-            Database.dirty_write(Model.AsyncTasks, m_task)
-            index
-          end)
-        end
+      ct_pks =
+        [
+          "ct_M9yohHgcLjhpp1Z8SaA1UTmRMQzR4FWjJHajGga8KBoZTEPwC",
+          "ct_6ZuwbMgcNDaryXTnrLMiPFW2ogE9jxAzz1874BToE81ksWek6",
+          "ct_2M2dJU2wLWPE73HpLPmFezqqJbu9PZ8rwKxeDvrids4y1nPYA2"
+        ]
+        |> Enum.map(&AeMdw.Validate.id!/1)
 
       on_exit(fn ->
-        :mnesia.sync_dirty(fn ->
-          Enum.each(keys_to_delete, &Database.delete(Model.AsyncTasks, &1))
-          Enum.each(existing_tasks, &Database.write(Model.AsyncTasks, &1))
-        end)
+        Enum.each(ct_pks, &setup_delete_async_task/1)
+      end)
+
+      pending_count = length(ct_pks)
+
+      # setup new to expected pending
+      Enum.each(ct_pks, fn ct_pk ->
+        index = {System.system_time(), :update_aex9_presence}
+        m_task = Model.async_tasks(index: index, args: [ct_pk])
+        Database.dirty_write(Model.AsyncTasks, m_task)
       end)
 
       assert %{producer_buffer: 0, total_pending: 0} = Stats.counters()
-
-      assert :ok = Stats.update_buffer_len(10, 100)
-
-      assert %{producer_buffer: 10, total_pending: ^db_pending_count} = Stats.counters()
+      assert :ok = Stats.update_buffer_len(5, 100)
+      assert %{producer_buffer: 5, total_pending: ^pending_count} = Stats.counters()
     end
   end
 
@@ -71,5 +55,15 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
       assert :ok = Stats.update_consumed(true)
       assert %{producer_buffer: 15, long_tasks: 1} = Stats.counters()
     end
+  end
+
+  defp setup_delete_async_task(ct_pk) do
+    Model.async_tasks(index: key) =
+      Model.AsyncTasks
+      |> Database.all_keys()
+      |> Enum.map(&Database.fetch!(Model.AsyncTasks, &1))
+      |> Enum.find(fn m_task -> Model.async_tasks(m_task, :args) == [ct_pk] end)
+
+    Database.dirty_delete(Model.AsyncTasks, key)
   end
 end
