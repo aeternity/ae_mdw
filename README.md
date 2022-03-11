@@ -4249,6 +4249,15 @@ This is a list of the exceptions together with the changes that need to be done:
 * `/oracles/:state/:scope_scope/:range`, `/oracles/:scope_scope/:range` - Can now all be accessed via `/v2/oracles?state=inactive&scope=gen:100-200`.
 * `/contracts/logs/:direction`, `/contracts/logs/:scope_type/:range` - Can now be accessed via `/v2/contracts/logs?scope=txi:100-200` or `/v2/contracts/logs?scope=gen:30-40`.
 * `/contracts/calls/:direction`, `/contracts/calls/:scope_type/:range` - Can now be accessed via `/v2/contracts/calls?scope=txi:100-200` or `/v2/contracts/calls?scope=gen:30-40`.
+* `/aex9/by_name/:prefix` - Is now `/v2/aex9?by=name&prefix=<prefix>`, a paginated endpoint.
+* `/aex9/by_symbol/:prefix` - Is now `/v2/aex9?by=symbol&prefix=<prefix>`, a paginated endpoint.
+* `/aex9/by_contract/:id` - Is now `/v2/aex9/:contract_id`.
+* `/aex9/balances/:contract_id` - Is now `/v2/aex9/:contract_id/balances`, a paginated endpoint.
+* `/aex9/balance/:contract_id/:account_id` - Is now `/v2/aex9/:contract_id/balances/:account_id`.
+* `/aex9/gen/:range/:contract_id` - Removed on v2.
+* `/aex9/hash/:blockhash/:contract_id` - Removed on v2.
+* `/aex9/balances/gen/:height/account/:account_id`, `/aex9/balances/hash/:blockhash/account/:account_id` - Is now `/v2/aex9/account-balances/:account_id?scope=gen:5000-6000`.
+* `/aex9/balances/account/:account_id` - Is now `/v2/aex9/account-balances/:account_id?scope=gen:5000-6000`.
 * `/transfers/:direction`, `/transfers/:scope_type/:range` - Can now be accessed via `/v2/transfers?scope=txi:100-200` or `/v2/transfers?scope=gen:30-40`.
 * `/stats/:direction`, `/stats/:scope_type/:range` - Can now be accessed via `/v2/stats?direction=forward` or `/v2/stats?scope=gen:100-200`.
 * `/totalstats/:direction`, `/totalstats/:scope_type/:range` - Can now be accessed via `/v2/totalstats?direction=forward` or `/v2/totalstats?scope=gen:100-200`.
