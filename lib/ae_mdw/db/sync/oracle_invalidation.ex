@@ -9,7 +9,7 @@ defmodule AeMdw.Db.Sync.OracleInvalidation do
 
   import AeMdw.Db.Oracle,
     only: [
-      cache_through_read: 2
+      cache_through_read: 3
     ]
 
   import AeMdw.Util
@@ -23,8 +23,8 @@ defmodule AeMdw.Db.Sync.OracleInvalidation do
 
     {all_dels_nested, all_writes_nested} =
       Enum.reduce(pubkeys, {%{}, %{}}, fn pubkey, {all_dels, all_writes} ->
-        inactive = ok_nil(cache_through_read(Model.InactiveOracle, pubkey))
-        active = ok_nil(cache_through_read(Model.ActiveOracle, pubkey))
+        inactive = ok_nil(cache_through_read(nil, Model.InactiveOracle, pubkey))
+        active = ok_nil(cache_through_read(nil, Model.ActiveOracle, pubkey))
 
         {dels, writes} = invalidate(pubkey, inactive, active, new_height)
 

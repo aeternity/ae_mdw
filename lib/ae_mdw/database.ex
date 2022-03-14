@@ -32,6 +32,10 @@ defmodule AeMdw.Database do
       unquote(tab) == Model.Block or
         unquote(tab) == Model.Tx or
         unquote(tab) == Model.Aex9Balance or
+        unquote(tab) == Model.ActiveOracleExpiration or
+        unquote(tab) == Model.InactiveOracleExpiration or
+        unquote(tab) == Model.ActiveOracle or
+        unquote(tab) == Model.InactiveOracle or
         unquote(tab) == Model.AsyncTasks or
         unquote(tab) == Model.Migrations or
         unquote(tab) == Model.DeltaStat or
