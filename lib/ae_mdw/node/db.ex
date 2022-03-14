@@ -1,12 +1,11 @@
 defmodule AeMdw.Node.Db do
   @moduledoc false
 
+  alias AeMdw.Blocks
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Log
 
-  # we require that block index is in place
-  import AeMdw.Db.Util, only: [read_block!: 1]
   import AeMdw.Util
 
   require Logger
@@ -16,24 +15,18 @@ defmodule AeMdw.Node.Db do
   @typep hash_type() :: nil | :key | :key_block | :mic_block
   @typep height_hash() :: {hash_type(), pos_integer(), binary()}
 
-  @spec get_blocks(integer()) :: tuple()
-  def get_blocks(height) when is_integer(height) do
-    kb_hash = Model.block(read_block!({height, -1}), :hash)
-    {:aec_db.get_block(kb_hash), get_micro_blocks(height)}
+  @spec get_blocks(Blocks.block_hash(), Blocks.block_hash()) :: tuple()
+  def get_blocks(kb_hash, next_gen_kb_hash) do
+    {:aec_db.get_block(kb_hash), get_micro_blocks(next_gen_kb_hash)}
   end
 
-  @spec get_micro_blocks(integer()) :: list()
-  def get_micro_blocks(height) when is_integer(height),
-    do: do_get_micro_blocks(Model.block(read_block!({height + 1, -1}), :hash))
-
-  @spec micro_block_walker(binary()) :: tuple() | nil
-  def micro_block_walker(hash) do
-    with block <- :aec_db.get_block(hash),
-         :micro <- :aec_blocks.type(block) do
-      {block, :aec_blocks.prev_hash(block)}
-    else
-      :key -> nil
-    end
+  @spec get_micro_blocks(Blocks.block_hash()) :: list()
+  def get_micro_blocks(next_gen_kb_hash) do
+    next_gen_kb_hash
+    |> :aec_db.get_header()
+    |> :aec_headers.prev_hash()
+    |> Stream.unfold(&micro_block_walker/1)
+    |> Enum.reverse()
   end
 
   @spec get_tx_data(binary()) :: tuple()
@@ -136,15 +129,13 @@ defmodule AeMdw.Node.Db do
     end
   end
 
-  #
-  # Private functions
-  #
-  defp do_get_micro_blocks(<<next_gen_kb_hash::binary>>) do
-    next_gen_kb_hash
-    |> :aec_db.get_header()
-    |> :aec_headers.prev_hash()
-    |> Stream.unfold(&micro_block_walker/1)
-    |> Enum.reverse()
+  defp micro_block_walker(hash) do
+    with block <- :aec_db.get_block(hash),
+         :micro <- :aec_blocks.type(block) do
+      {block, :aec_blocks.prev_hash(block)}
+    else
+      :key -> nil
+    end
   end
 
   # NOTE: only needed for manual patching of the DB in case of missing blocks

@@ -33,8 +33,6 @@ defmodule AeMdw.Db.Model do
 
   # txs block index :
   #     index = {kb_index (0..), mb_index}, tx_index = tx_index, hash = block (header) hash
-  #     if tx_index == nil -> txs not synced yet on that height
-  #     if tx_index == -1  -> no tx occured yet
   #     On keyblock boundary: mb_index = -1}
   @block_defaults [index: {-1, -1}, tx_index: nil, hash: <<>>]
   defrecord :block, @block_defaults
@@ -42,7 +40,7 @@ defmodule AeMdw.Db.Model do
   @type block ::
           record(:block,
             index: Blocks.block_index(),
-            tx_index: Txs.txi() | nil | -1,
+            tx_index: Txs.txi(),
             hash: Blocks.block_hash()
           )
 

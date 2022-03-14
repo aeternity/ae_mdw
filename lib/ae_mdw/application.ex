@@ -10,7 +10,7 @@ defmodule AeMdw.Application do
   """
   alias AeMdw.Contract
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Sync
+  alias AeMdw.Sync.Server
   alias AeMdw.EtsCache
   alias AeMdw.Extract
   alias AeMdw.NodeHelper
@@ -47,11 +47,7 @@ defmodule AeMdw.Application do
 
     children =
       if Application.fetch_env!(:ae_mdw, :sync) do
-        [
-          AeMdw.Sync.AsyncTasks.Supervisor,
-          AeMdw.Db.Sync.Supervisor
-          | children
-        ]
+        [AeMdw.Sync.AsyncTasks.Supervisor, Server | children]
       else
         children
       end
@@ -242,7 +238,7 @@ defmodule AeMdw.Application do
   end
 
   def start_phase(:start_sync, _start_type, []) do
-    Sync.start_sync()
+    Server.start_sync()
   end
 
   @impl Application
