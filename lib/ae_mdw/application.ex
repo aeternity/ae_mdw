@@ -44,14 +44,17 @@ defmodule AeMdw.Application do
 
     children = [
       AeMdw.Sync.Watcher,
-      AeMdw.Sync.AsyncTasks.Supervisor,
       AeMdwWeb.Supervisor,
       AeMdwWeb.Websocket.Supervisor
     ]
 
     children =
       if Application.fetch_env!(:ae_mdw, :sync) do
-        [AeMdw.Db.Sync.Supervisor | children]
+        [
+          AeMdw.Sync.AsyncTasks.Supervisor,
+          AeMdw.Db.Sync.Supervisor
+          | children
+        ]
       else
         children
       end
