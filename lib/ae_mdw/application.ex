@@ -13,7 +13,6 @@ defmodule AeMdw.Application do
   alias AeMdw.Db.Stream, as: DbStream
   alias AeMdw.EtsCache
   alias AeMdw.Extract
-  alias AeMdw.Database
   alias AeMdw.NodeHelper
   alias AeMdw.Util
 
@@ -33,7 +32,6 @@ defmodule AeMdw.Application do
     init(:node_records)
     init(:meta)
     init_public(:contract_cache)
-    init_public(:db_state)
     # init(:aesophia)
     init(:app_ctrl_server)
     init(:aecore_services)
@@ -44,14 +42,17 @@ defmodule AeMdw.Application do
 
     children = [
       AeMdw.Sync.Watcher,
-      AeMdw.Sync.AsyncTasks.Supervisor,
       AeMdwWeb.Supervisor,
       AeMdwWeb.Websocket.Supervisor
     ]
 
     children =
       if Application.fetch_env!(:ae_mdw, :sync) do
-        [AeMdw.Db.Sync.Supervisor | children]
+        [
+          AeMdw.Sync.AsyncTasks.Supervisor,
+          AeMdw.Db.Sync.Supervisor
+          | children
+        ]
       else
         children
       end
@@ -244,24 +245,6 @@ defmodule AeMdw.Application do
   def init_public(:contract_cache) do
     cache_exp = Application.fetch_env!(:ae_mdw, :contract_cache_expiration_minutes)
     EtsCache.new(Contract.table(), cache_exp)
-    :ok
-  end
-
-  def init_public(:db_state) do
-    initial_token_supply = AeMdw.Node.token_supply_delta(0)
-
-    :mnesia.transaction(fn ->
-      case Database.read(Model.TotalStat, 0) do
-        [m_total_stat] ->
-          tot_sup = Model.total_stat(m_total_stat, :total_supply)
-          tot_sup == initial_token_supply || raise "initial total supply doesn't match"
-
-        [] ->
-          m_total_stat = Model.total_stat(index: 0, total_supply: initial_token_supply)
-          Database.write(Model.TotalStat, m_total_stat)
-      end
-    end)
-
     :ok
   end
 
