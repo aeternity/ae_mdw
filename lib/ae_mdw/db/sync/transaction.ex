@@ -203,7 +203,7 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     expirations_mutations = [
       Name.expirations_mutation(height),
-      Oracle.expirations_mutation(height - 1)
+      Oracle.expirations_mutation(height)
     ]
 
     if height >= AE.min_block_reward_height() do
