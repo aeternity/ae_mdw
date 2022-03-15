@@ -21,14 +21,21 @@ defmodule AeMdw.Db.Sync do
   def start_link(_),
     do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
 
+  def start_sync, do: GenServer.cast(__MODULE__, :start_sync)
+
   def init([]) do
     :aec_events.subscribe(:chain)
     notify_watcher(self())
-    {:ok, %Sync{}, {:continue, :start_sync}}
+    {:ok, %Sync{}}
   end
 
-  def handle_continue(:start_sync, %Sync{pid: nil} = s),
-    do: {:noreply, spawn_action({Transaction, :sync, [:safe]}, s)}
+  def handle_cast(:start_sync, %Sync{pid: nil} = state) do
+    {:noreply, spawn_action({Transaction, :sync, [:safe]}, state)}
+  end
+
+  def handle_cast(:start_sync, state) do
+    {:noreply, state}
+  end
 
   def handle_info({:fork, height}, %Sync{pid: pid} = s) when is_integer(height) do
     s = %{s | fork: fork_height(height, s.fork)}
