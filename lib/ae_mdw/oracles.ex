@@ -122,7 +122,7 @@ defmodule AeMdw.Oracles do
   def fetch(oracle_pk, expand?) do
     {:ok, {last_gen, -1}} = Database.last_key(Model.Block)
 
-    case Oracle.locate(oracle_pk) do
+    case Oracle.locate(nil, oracle_pk) do
       {m_oracle, source} ->
         {:ok, render(m_oracle, last_gen, source == Model.ActiveOracle, expand?)}
 

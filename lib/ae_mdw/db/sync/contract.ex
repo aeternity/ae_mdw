@@ -5,7 +5,6 @@ defmodule AeMdw.Db.Sync.Contract do
   alias AeMdw.Blocks
   alias AeMdw.Contract
   alias AeMdw.Db.Contract, as: DBContract
-  alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.NameUpdateMutation

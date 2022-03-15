@@ -11,6 +11,7 @@ defmodule AeMdw.Application do
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Stream, as: DbStream
+  alias AeMdw.Db.Sync
   alias AeMdw.EtsCache
   alias AeMdw.Extract
   alias AeMdw.NodeHelper
@@ -252,6 +253,10 @@ defmodule AeMdw.Application do
   def start_phase(:migrate_db, _start_type, []) do
     Mix.Tasks.MigrateDb.run(true)
     :ok
+  end
+
+  def start_phase(:start_sync, _start_type, []) do
+    Sync.start_sync()
   end
 
   @impl Application
