@@ -27,6 +27,7 @@ defmodule AeMdw.Database do
 
   @end_token :"$end_of_table"
 
+  # credo:disable-for-next-line
   defmacro use_rocksdb?(tab) do
     quote do
       unquote(tab) == Model.Block or
