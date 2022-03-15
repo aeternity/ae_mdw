@@ -4,7 +4,6 @@ defmodule AeMdw.Db.Model do
   """
   alias AeMdw.Blocks
   alias AeMdw.Contract
-  alias AeMdw.Database
   alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Txs
@@ -13,6 +12,11 @@ defmodule AeMdw.Db.Model do
   require Ex2ms
 
   import Record, only: [defrecord: 2]
+
+  @opaque table :: atom()
+  @opaque key :: tuple() | integer() | pubkey()
+
+  @typep pubkey :: Db.pubkey()
 
   ################################################################################
 
@@ -67,6 +71,9 @@ defmodule AeMdw.Db.Model do
   #     index = {tx_type, tx_field_pos, object_pubkey, tx_index},
   @field_defaults [index: {nil, -1, nil, -1}, unused: nil]
   defrecord :field, @field_defaults
+
+  @type id_count_key :: {atom(), non_neg_integer(), pubkey()}
+  @type id_count :: record(:id_count, index: id_count_key(), count: non_neg_integer())
 
   # id counts       :
   #     index = {tx_type, tx_field_pos, object_pubkey}
@@ -481,9 +488,8 @@ defmodule AeMdw.Db.Model do
   @spec column_families() :: list(atom())
   def column_families do
     Enum.concat([
+      chain_tables(),
       [
-        AeMdw.Db.Model.Tx,
-        AeMdw.Db.Model.Block,
         AeMdw.Db.Model.Aex9Balance
       ],
       oracle_tables(),
@@ -788,23 +794,4 @@ defmodule AeMdw.Db.Model do
   def defaults(:target_kind_int_transfer_tx), do: @target_kind_int_transfer_tx_defaults
   def defaults(:delta_stat), do: @delta_stat_defaults
   def defaults(:total_stat), do: @total_stat_defaults
-
-  @spec write_count(tuple(), integer()) :: :ok
-  def write_count(model, delta) do
-    total = id_count(model, :count)
-    model = id_count(model, count: total + delta)
-    Database.write(AeMdw.Db.Model.IdCount, model)
-  end
-
-  @spec update_count(tuple(), integer(), fun()) :: any()
-  def update_count({_, _, _} = field_key, delta, empty_fn \\ fn -> :nop end) do
-    case Database.read(AeMdw.Db.Model.IdCount, field_key, :write) do
-      [] -> empty_fn.()
-      [model] -> write_count(model, delta)
-    end
-  end
-
-  @spec incr_count(tuple()) :: any()
-  def incr_count({_, _, _} = field_key),
-    do: update_count(field_key, 1, fn -> write_count(id_count(index: field_key, count: 0), 1) end)
 end

@@ -5,6 +5,8 @@ defmodule AeMdw.Db.Sync.Invalidate do
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
+  alias AeMdw.Db.UpdateIdsCountsMutation
+  alias AeMdw.Db.DeleteKeysMutation
   alias AeMdw.Db.Sync
   alias AeMdw.Log
   alias AeMdw.Node, as: AE
@@ -42,12 +44,18 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
         tab_keys = Map.merge(bi_keys, tx_keys)
 
+        fields_counts = Map.get(id_counts, Model.IdCount)
+
+        Database.commit([
+          DeleteKeysMutation.new(tab_keys),
+          DeleteKeysMutation.new(stat_key_dels),
+          UpdateIdsCountsMutation.new(fields_counts)
+        ])
+
         :mnesia.transaction(fn ->
           {name_dels, name_writes} = Sync.Name.invalidate(fork_height - 1)
           {oracle_dels, oracle_writes} = Sync.OracleInvalidation.invalidate(fork_height - 1)
 
-          do_dels(tab_keys)
-          do_dels(stat_key_dels)
           do_dels(name_dels, &AeMdw.Db.Name.cache_through_delete/2)
           do_dels(oracle_dels, &AeMdw.Db.Oracle.cache_through_delete/2)
 
@@ -67,8 +75,6 @@ defmodule AeMdw.Db.Sync.Invalidate do
             aex9_account_presence_key_writes,
             &AeMdw.Db.Contract.aex9_presence_cache_write/2
           )
-
-          Enum.each(id_counts, fn {f_key, delta} -> Model.update_count(f_key, -delta) end)
         end)
 
       # wasn't synced up to that txi, nothing to do

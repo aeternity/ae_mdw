@@ -32,6 +32,12 @@ defmodule AeMdw.Database do
     quote do
       unquote(tab) == Model.Block or
         unquote(tab) == Model.Tx or
+        unquote(tab) == Model.Time or
+        unquote(tab) == Model.Type or
+        unquote(tab) == Model.Field or
+        unquote(tab) == Model.IdCount or
+        unquote(tab) == Model.Origin or
+        unquote(tab) == Model.RevOrigin or
         unquote(tab) == Model.Aex9Balance or
         unquote(tab) == Model.ActiveOracleExpiration or
         unquote(tab) == Model.InactiveOracleExpiration or
@@ -54,6 +60,10 @@ defmodule AeMdw.Database do
   end
 
   @spec dirty_all_keys(table()) :: [key()]
+  def dirty_all_keys(table) when use_rocksdb?(table) do
+    RocksDbCF.all_keys(table)
+  end
+
   def dirty_all_keys(table) do
     :mnesia.dirty_all_keys(table)
   end
@@ -70,19 +80,18 @@ defmodule AeMdw.Database do
     RocksDbCF.dirty_fetch(txn, table, record)
   end
 
-  @spec dirty_read(table(), key()) :: [record()]
-  def dirty_read(tab, key), do: :mnesia.dirty_read(tab, key)
-
-  @spec dirty_first(table()) :: key()
-  def dirty_first(tab), do: :mnesia.dirty_first(tab)
-
-  @spec dirty_last(table()) :: key()
-  def dirty_last(tab), do: :mnesia.dirty_last(tab)
-
   @spec dirty_next(table(), key()) :: key()
+  def dirty_next(table, record) when use_rocksdb?(table) do
+    RocksDbCF.next_key(table, record)
+  end
+
   def dirty_next(tab, key), do: :mnesia.dirty_next(tab, key)
 
   @spec dirty_prev(table(), key()) :: key()
+  def dirty_prev(table, record) when use_rocksdb?(table) do
+    RocksDbCF.prev_key(table, record)
+  end
+
   def dirty_prev(tab, key), do: :mnesia.dirty_prev(tab, key)
 
   @spec dirty_write(table(), record()) :: :ok

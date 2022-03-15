@@ -24,8 +24,8 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.Sync.Origin
   alias AeMdw.Db.Sync.Stats
+  alias AeMdw.Db.WriteFieldMutation
   alias AeMdw.Db.WriteFieldsMutation
-  alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.WriteTxnMutation
   alias AeMdw.Db.TxnMutation
   alias AeMdw.Database
@@ -128,31 +128,34 @@ defmodule AeMdw.Db.Sync.Transaction do
     m_tx = Model.tx(index: txi, id: tx_hash, block_index: block_index, time: mb_time)
     :ets.insert(:tx_sync_cache, {txi, m_tx})
 
-    txn_tx_mutation =
+    model_tx_mutation =
       if not inner_tx? do
         WriteTxnMutation.new(Model.Tx, m_tx)
       end
 
-    {oracle_txn_mutation, tx_mutations} =
+    {tx_txn_mutations, tx_mutations} =
       tx_context
       |> tx_mutations()
+      |> List.flatten()
       |> Enum.split_with(fn
         %OracleRegisterMutation{} -> true
         %OracleExtendMutation{} -> true
+        %WriteTxnMutation{} -> true
+        %WriteFieldMutation{} -> true
         _other_mutation -> false
       end)
 
     {
       [
-        txn_tx_mutation,
+        model_tx_mutation,
+        WriteTxnMutation.new(Model.Type, Model.type(index: {type, txi})),
+        WriteTxnMutation.new(Model.Time, Model.time(index: {mb_time, txi})),
+        WriteFieldsMutation.new(type, tx, block_index, txi),
+        tx_txn_mutations,
         inner_txn_mutations,
-        oracle_txn_mutation
       ],
       [
-        WriteMutation.new(Model.Type, Model.type(index: {type, txi})),
-        WriteMutation.new(Model.Time, Model.time(index: {mb_time, txi})),
         tx_mutations,
-        WriteFieldsMutation.new(type, tx, block_index, txi),
         inner_mutations
       ]
     }
