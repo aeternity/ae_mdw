@@ -31,16 +31,22 @@ defmodule AeMdw.Db.Oracle do
   def source(Model.ActiveName, :expiration), do: Model.ActiveOracleExpiration
   def source(Model.InactiveName, :expiration), do: Model.InactiveOracleExpiration
 
-  @spec locate(nil | transaction(), pubkey()) :: {Model.oracle(), Model.ActiveOracle | Model.InactiveOracle} | nil
+  @spec locate(nil | transaction(), pubkey()) ::
+          {Model.oracle(), Model.ActiveOracle | Model.InactiveOracle} | nil
   def locate(txn, pubkey) do
     map_ok_nil(cache_through_read(txn, Model.ActiveOracle, pubkey), &{&1, Model.ActiveOracle}) ||
-      map_ok_nil(cache_through_read(txn, Model.InactiveOracle, pubkey), &{&1, Model.InactiveOracle})
+      map_ok_nil(
+        cache_through_read(txn, Model.InactiveOracle, pubkey),
+        &{&1, Model.InactiveOracle}
+      )
   end
 
   @spec cache_through_read(nil | transaction(), atom(), cache_key()) :: {:ok, tuple()} | nil
   def cache_through_read(nil, table, key) do
     case :ets.lookup(:oracle_sync_cache, {table, key}) do
-      [{_, record}] -> {:ok, record}
+      [{_, record}] ->
+        {:ok, record}
+
       [] ->
         case Database.fetch(table, key) do
           {:ok, record} -> {:ok, record}
@@ -51,7 +57,9 @@ defmodule AeMdw.Db.Oracle do
 
   def cache_through_read(txn, table, key) do
     case :ets.lookup(:oracle_sync_cache, {table, key}) do
-      [{_, record}] -> {:ok, record}
+      [{_, record}] ->
+        {:ok, record}
+
       [] ->
         case Database.dirty_fetch(txn, table, key) do
           {:ok, record} -> {:ok, record}

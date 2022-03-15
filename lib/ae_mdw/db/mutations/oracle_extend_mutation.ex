@@ -36,12 +36,15 @@ defmodule AeMdw.Db.OracleExtendMutation do
   end
 
   @spec execute(t(), Database.transaction()) :: :ok
-  def execute(%__MODULE__{
-        block_index: {height, _mbi} = block_index,
-        txi: txi,
-        oracle_pk: oracle_pk,
-        delta_ttl: delta_ttl
-      }, txn) do
+  def execute(
+        %__MODULE__{
+          block_index: {height, _mbi} = block_index,
+          txi: txi,
+          oracle_pk: oracle_pk,
+          delta_ttl: delta_ttl
+        },
+        txn
+      ) do
     case Oracle.cache_through_read(txn, Model.ActiveOracle, oracle_pk) do
       {:ok, Model.oracle(expire: old_expire, extends: extends) = m_oracle} ->
         new_expire = old_expire + delta_ttl

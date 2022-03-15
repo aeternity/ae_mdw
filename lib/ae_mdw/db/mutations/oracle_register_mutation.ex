@@ -35,12 +35,15 @@ defmodule AeMdw.Db.OracleRegisterMutation do
   end
 
   @spec execute(t(), Database.transaction()) :: :ok
-  def execute(%__MODULE__{
-        oracle_pk: oracle_pk,
-        block_index: {height, _mbi} = block_index,
-        expire: expire,
-        txi: txi
-      }, txn) do
+  def execute(
+        %__MODULE__{
+          oracle_pk: oracle_pk,
+          block_index: {height, _mbi} = block_index,
+          expire: expire,
+          txi: txi
+        },
+        txn
+      ) do
     previous =
       case Oracle.locate(txn, oracle_pk) do
         nil ->
