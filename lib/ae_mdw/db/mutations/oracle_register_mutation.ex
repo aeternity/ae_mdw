@@ -4,6 +4,7 @@ defmodule AeMdw.Db.OracleRegisterMutation do
   """
 
   alias AeMdw.Blocks
+  alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.Oracle
   alias AeMdw.Node.Db
@@ -11,7 +12,7 @@ defmodule AeMdw.Db.OracleRegisterMutation do
 
   require Model
 
-  @derive AeMdw.Db.Mutation
+  @derive AeMdw.Db.TxnMutation
   defstruct [:oracle_pk, :block_index, :expire, :txi]
 
   @typep expiration() :: Blocks.height()
@@ -33,25 +34,28 @@ defmodule AeMdw.Db.OracleRegisterMutation do
     }
   end
 
-  @spec mutate(t()) :: :ok
-  def mutate(%__MODULE__{
-        oracle_pk: oracle_pk,
-        block_index: {height, _mbi} = block_index,
-        expire: expire,
-        txi: txi
-      }) do
+  @spec execute(t(), Database.transaction()) :: :ok
+  def execute(
+        %__MODULE__{
+          oracle_pk: oracle_pk,
+          block_index: {height, _mbi} = block_index,
+          expire: expire,
+          txi: txi
+        },
+        txn
+      ) do
     previous =
-      case Oracle.locate(oracle_pk) do
+      case Oracle.locate(txn, oracle_pk) do
         nil ->
           nil
 
         {previous, Model.InactiveOracle} ->
-          Oracle.cache_through_delete_inactive(previous)
+          Oracle.cache_through_delete_inactive(txn, previous)
           previous
 
         {previous, Model.ActiveOracle} ->
           Model.oracle(index: pubkey, expire: old_expire) = previous
-          Oracle.cache_through_delete(Model.ActiveOracleExpiration, {old_expire, pubkey})
+          Oracle.cache_through_delete(txn, Model.ActiveOracleExpiration, {old_expire, pubkey})
           previous
       end
 
@@ -64,9 +68,9 @@ defmodule AeMdw.Db.OracleRegisterMutation do
         previous: previous
       )
 
-    Oracle.cache_through_write(Model.ActiveOracle, m_oracle)
+    Oracle.cache_through_write(txn, Model.ActiveOracle, m_oracle)
     m_exp_new = Model.expiration(index: {expire, oracle_pk})
-    Oracle.cache_through_write(Model.ActiveOracleExpiration, m_exp_new)
+    Oracle.cache_through_write(txn, Model.ActiveOracleExpiration, m_exp_new)
 
     AeMdw.Ets.inc(:stat_sync_cache, :oracles_registered)
 

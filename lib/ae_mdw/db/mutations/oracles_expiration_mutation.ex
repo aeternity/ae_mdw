@@ -7,10 +7,11 @@ defmodule AeMdw.Db.OraclesExpirationMutation do
   """
 
   alias AeMdw.Blocks
+  alias AeMdw.Database
   alias AeMdw.Db.Oracle
   alias AeMdw.Node.Db
 
-  @derive AeMdw.Db.Mutation
+  @derive AeMdw.Db.TxnMutation
   defstruct [:height, :expired_pubkeys]
 
   @opaque t() :: %__MODULE__{
@@ -23,8 +24,8 @@ defmodule AeMdw.Db.OraclesExpirationMutation do
     %__MODULE__{height: height, expired_pubkeys: expired_pubkeys}
   end
 
-  @spec mutate(t()) :: :ok
-  def mutate(%__MODULE__{height: height, expired_pubkeys: expired_pubkeys}) do
-    Enum.each(expired_pubkeys, &Oracle.expire_oracle(height, &1))
+  @spec execute(t(), Database.transaction()) :: :ok
+  def execute(%__MODULE__{height: height, expired_pubkeys: expired_pubkeys}, txn) do
+    Enum.each(expired_pubkeys, &Oracle.expire_oracle(txn, height, &1))
   end
 end

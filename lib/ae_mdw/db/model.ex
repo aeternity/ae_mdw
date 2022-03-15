@@ -486,6 +486,7 @@ defmodule AeMdw.Db.Model do
         AeMdw.Db.Model.Block,
         AeMdw.Db.Model.Aex9Balance
       ],
+      oracle_tables(),
       stat_tables(),
       tasks_tables()
     ])

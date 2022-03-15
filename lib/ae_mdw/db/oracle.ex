@@ -22,26 +22,49 @@ defmodule AeMdw.Db.Oracle do
   import AeMdw.Db.Util
   import AeMdw.Util
 
-  @typep pubkey() :: Db.pubkey()
-  @typep cache_key() :: pubkey() | {pos_integer(), pubkey()}
+  @typep pubkey :: Db.pubkey()
+  @typep cache_key :: pubkey() | {pos_integer(), pubkey()}
+  @typep transaction :: Database.transaction()
 
   @spec source(atom(), :expiration) ::
           Model.ActiveOracleExpiration | Model.InactiveOracleExpiration
   def source(Model.ActiveName, :expiration), do: Model.ActiveOracleExpiration
   def source(Model.InactiveName, :expiration), do: Model.InactiveOracleExpiration
 
-  @spec locate(pubkey()) :: {Model.oracle(), Model.ActiveOracle | Model.InactiveOracle} | nil
-  def locate(pubkey) do
-    map_ok_nil(cache_through_read(Model.ActiveOracle, pubkey), &{&1, Model.ActiveOracle}) ||
-      map_ok_nil(cache_through_read(Model.InactiveOracle, pubkey), &{&1, Model.InactiveOracle})
+  @spec locate(nil | transaction(), pubkey()) ::
+          {Model.oracle(), Model.ActiveOracle | Model.InactiveOracle} | nil
+  def locate(txn, pubkey) do
+    map_ok_nil(cache_through_read(txn, Model.ActiveOracle, pubkey), &{&1, Model.ActiveOracle}) ||
+      map_ok_nil(
+        cache_through_read(txn, Model.InactiveOracle, pubkey),
+        &{&1, Model.InactiveOracle}
+      )
   end
 
-  # for use outside mnesia TX - doesn't modify cache, just looks into it
-  @spec cache_through_read(atom(), cache_key()) :: {:ok, tuple()} | nil
-  def cache_through_read(table, key) do
+  @spec cache_through_read(nil | transaction(), atom(), cache_key()) :: {:ok, tuple()} | nil
+  def cache_through_read(nil, table, key) do
     case :ets.lookup(:oracle_sync_cache, {table, key}) do
-      [{_, record}] -> {:ok, record}
-      [] -> map_one_nil(read(table, key), &{:ok, &1})
+      [{_, record}] ->
+        {:ok, record}
+
+      [] ->
+        case Database.fetch(table, key) do
+          {:ok, record} -> {:ok, record}
+          :not_found -> nil
+        end
+    end
+  end
+
+  def cache_through_read(txn, table, key) do
+    case :ets.lookup(:oracle_sync_cache, {table, key}) do
+      [{_, record}] ->
+        {:ok, record}
+
+      [] ->
+        case Database.dirty_fetch(txn, table, key) do
+          {:ok, record} -> {:ok, record}
+          :not_found -> nil
+        end
     end
   end
 
@@ -67,27 +90,38 @@ defmodule AeMdw.Db.Oracle do
     lookup.(:ets.prev(:oracle_sync_cache, {table, key}), &elem(&1, 1), mns_lookup, mns_lookup)
   end
 
-  # for use inside mnesia TX - caches writes & deletes in the same TX
+  @spec cache_through_write(transaction(), atom(), tuple()) :: :ok
+  def cache_through_write(txn, table, record) do
+    :ets.insert(:oracle_sync_cache, {{table, elem(record, 1)}, record})
+    Database.write(txn, table, record)
+  end
+
   @spec cache_through_write(atom(), tuple()) :: :ok
   def cache_through_write(table, record) do
     :ets.insert(:oracle_sync_cache, {{table, elem(record, 1)}, record})
-    Database.write(table, record)
+    Database.dirty_write(table, record)
+  end
+
+  @spec cache_through_delete(transaction(), atom(), cache_key()) :: :ok
+  def cache_through_delete(txn, table, key) do
+    :ets.delete(:oracle_sync_cache, {table, key})
+    Database.delete(txn, table, key)
   end
 
   @spec cache_through_delete(atom(), cache_key()) :: :ok
   def cache_through_delete(table, key) do
     :ets.delete(:oracle_sync_cache, {table, key})
-    Database.delete(table, key)
+    Database.dirty_delete(table, key)
   end
 
-  @spec cache_through_delete_inactive(nil | tuple()) :: :ok
-  def cache_through_delete_inactive(nil), do: :ok
+  @spec cache_through_delete_inactive(transaction(), nil | tuple()) :: :ok
+  def cache_through_delete_inactive(_txn, nil), do: :ok
 
-  def cache_through_delete_inactive(m_oracle) do
+  def cache_through_delete_inactive(txn, m_oracle) do
     pubkey = Model.oracle(m_oracle, :index)
     expire = Model.oracle(m_oracle, :expire)
-    cache_through_delete(Model.InactiveOracle, pubkey)
-    cache_through_delete(Model.InactiveOracleExpiration, {expire, pubkey})
+    cache_through_delete(txn, Model.InactiveOracle, pubkey)
+    cache_through_delete(txn, Model.InactiveOracleExpiration, {expire, pubkey})
   end
 
   @spec oracle_tree!(Blocks.block_hash()) :: tuple()
@@ -99,33 +133,28 @@ defmodule AeMdw.Db.Oracle do
 
   @spec expirations_mutation(Blocks.height()) :: OraclesExpirationMutation.t()
   def expirations_mutation(height) do
-    oracle_mspec =
-      Ex2ms.fun do
-        Model.expiration(index: {^height, pubkey}) -> pubkey
-      end
-
-    {:atomic, expired_pubkeys} =
-      :mnesia.transaction(fn ->
-        :mnesia.select(Model.ActiveOracleExpiration, oracle_mspec)
-      end)
+    expired_pubkeys =
+      Model.ActiveOracleExpiration
+      |> Collection.stream(:forward, {{height, <<>>}, {height + 1, <<>>}}, nil)
+      |> Enum.map(fn {^height, pubkey} -> pubkey end)
 
     OraclesExpirationMutation.new(height, expired_pubkeys)
   end
 
-  @spec expire_oracle(Blocks.height(), pubkey()) :: :ok
-  def expire_oracle(height, pubkey) do
-    cache_through_delete(Model.ActiveOracleExpiration, {height, pubkey})
+  @spec expire_oracle(transaction(), Blocks.height(), pubkey()) :: :ok
+  def expire_oracle(txn, height, pubkey) do
+    cache_through_delete(txn, Model.ActiveOracleExpiration, {height, pubkey})
 
     oracle_id = Enc.encode(:oracle_pubkey, pubkey)
 
-    case cache_through_read(Model.ActiveOracle, pubkey) do
+    case cache_through_read(txn, Model.ActiveOracle, pubkey) do
       {:ok, m_oracle} ->
         if height == Model.oracle(m_oracle, :expire) do
           m_exp = Model.expiration(index: {height, pubkey})
-          cache_through_write(Model.InactiveOracle, m_oracle)
-          cache_through_write(Model.InactiveOracleExpiration, m_exp)
+          cache_through_write(txn, Model.InactiveOracle, m_oracle)
+          cache_through_write(txn, Model.InactiveOracleExpiration, m_exp)
 
-          cache_through_delete(Model.ActiveOracle, pubkey)
+          cache_through_delete(txn, Model.ActiveOracle, pubkey)
           AeMdw.Ets.inc(:stat_sync_cache, :oracles_expired)
 
           Log.info("[#{height}] inactivated oracle #{oracle_id}")

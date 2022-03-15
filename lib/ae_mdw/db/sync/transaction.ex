@@ -133,15 +133,25 @@ defmodule AeMdw.Db.Sync.Transaction do
         WriteTxnMutation.new(Model.Tx, m_tx)
       end
 
+    {oracle_txn_mutation, tx_mutations} =
+      tx_context
+      |> tx_mutations()
+      |> Enum.split_with(fn
+        %OracleRegisterMutation{} -> true
+        %OracleExtendMutation{} -> true
+        _other_mutation -> false
+      end)
+
     {
       [
         txn_tx_mutation,
-        inner_txn_mutations
+        inner_txn_mutations,
+        oracle_txn_mutation
       ],
       [
         WriteMutation.new(Model.Type, Model.type(index: {type, txi})),
         WriteMutation.new(Model.Time, Model.time(index: {mb_time, txi})),
-        tx_mutations(tx_context),
+        tx_mutations,
         WriteFieldsMutation.new(type, tx, block_index, txi),
         inner_mutations
       ]
@@ -201,19 +211,16 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     kb_model = Model.block(index: {height, -1}, tx_index: kb_txi, hash: kb_hash)
 
-    expirations_mutations = [
-      Name.expirations_mutation(height),
-      Oracle.expirations_mutation(height - 1)
-    ]
-
     if height >= AE.min_block_reward_height() do
       Database.transaction([
-        IntTransfer.block_rewards_mutation(height, kb_header, kb_hash)
-        | expirations_mutations
+        IntTransfer.block_rewards_mutation(height, kb_header, kb_hash),
+        Name.expirations_mutation(height)
       ])
     else
-      Database.transaction(expirations_mutations)
+      Database.transaction([Name.expirations_mutation(height)])
     end
+
+    Database.commit([Oracle.expirations_mutation(height)])
 
     Database.commit([
       Stats.new_mutation(height, last_mbi == -1),
