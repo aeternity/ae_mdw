@@ -20,6 +20,7 @@ defmodule Integration.AeMdw.Db.Sync.StatsTest do
   # block_height from /txs/forward?type={tx_type} for respective tx_type below
   @first_name_claim_height 194
   @first_oracle_register_height 4165
+  @first_oracle_expired_height 5851
   @first_contract_create_height 4187
   @first_name_revoked_height 34_923
 
@@ -237,6 +238,38 @@ defmodule Integration.AeMdw.Db.Sync.StatsTest do
       assert Model.delta_stat(m_delta_stat, :names_revoked) == 0
       assert Model.delta_stat(m_delta_stat, :oracles_registered) == 1
       assert Model.delta_stat(m_delta_stat, :oracles_expired) == 0
+      assert Model.delta_stat(m_delta_stat, :contracts_created) == 0
+    end
+
+    test "on 1st oracle expiration" do
+      on_exit(fn ->
+        AeMdw.Ets.clear(:stat_sync_cache)
+      end)
+
+      AeMdw.Ets.inc(:stat_sync_cache, :oracles_expired)
+
+      %StatsMutation{delta_stat: m_delta_stat} =
+        Stats.new_mutation(@first_oracle_expired_height, true)
+
+      # delta/transitions are only reflected at height + 1
+      AeMdw.Ets.clear(:stat_sync_cache)
+
+      %StatsMutation{total_stat: m_total_stat} =
+        Stats.new_mutation(@first_oracle_expired_height + 1, true)
+
+      assert Model.total_stat(m_total_stat, :inactive_names) == 0
+      assert Model.total_stat(m_total_stat, :active_names) == 5
+      assert Model.total_stat(m_total_stat, :active_auctions) == 0
+      assert Model.total_stat(m_total_stat, :inactive_oracles) == 1
+      assert Model.total_stat(m_total_stat, :active_oracles) == 2
+      assert Model.total_stat(m_total_stat, :contracts) == 1
+
+      assert Model.delta_stat(m_delta_stat, :auctions_started) == 0
+      assert Model.delta_stat(m_delta_stat, :names_activated) == 0
+      assert Model.delta_stat(m_delta_stat, :names_expired) == 0
+      assert Model.delta_stat(m_delta_stat, :names_revoked) == 0
+      assert Model.delta_stat(m_delta_stat, :oracles_registered) == 0
+      assert Model.delta_stat(m_delta_stat, :oracles_expired) == 1
       assert Model.delta_stat(m_delta_stat, :contracts_created) == 0
     end
 
