@@ -388,7 +388,14 @@ defmodule AeMdw.Db.Name do
     end
 
     nf = fn -> :not_found end
-    mns_lookup = fn -> lookup.(prev(table, key), & &1, nf, nf) end
+
+    mns_lookup = fn ->
+      case Database.prev_key(table, key) do
+        {:ok, prev_key} -> lookup.(prev_key, & &1, nf, nf)
+        :none -> :not_found
+      end
+    end
+
     lookup.(:ets.prev(:name_sync_cache, {table, key}), &elem(&1, 1), mns_lookup, mns_lookup)
   end
 

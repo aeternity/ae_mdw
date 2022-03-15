@@ -88,8 +88,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
   def block_keys_range({_, _} = from_bi),
     do: %{
-      Model.Block =>
-        collect_keys(Model.Block, [from_bi], from_bi, &:mnesia.next/2, &{:cont, [&1 | &2]})
+      Model.Block => collect_keys(Model.Block, [from_bi], from_bi, &next/2, &{:cont, [&1 | &2]})
     }
 
   def stat_key_dels(from_kbi) do

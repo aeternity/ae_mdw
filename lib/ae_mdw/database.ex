@@ -88,14 +88,20 @@ defmodule AeMdw.Database do
 
   @spec dirty_next(table(), key()) :: key()
   def dirty_next(table, record) when use_rocksdb?(table) do
-    RocksDbCF.next_key(table, record)
+    case RocksDbCF.next_key(table, record) do
+      {:ok, next_key} -> next_key
+      :not_found -> :"$end_of_table"
+    end
   end
 
   def dirty_next(tab, key), do: :mnesia.dirty_next(tab, key)
 
   @spec dirty_prev(table(), key()) :: key()
   def dirty_prev(table, record) when use_rocksdb?(table) do
-    RocksDbCF.prev_key(table, record)
+    case RocksDbCF.prev_key(table, record) do
+      {:ok, prev_key} -> prev_key
+      :not_found -> :"$end_of_table"
+    end
   end
 
   def dirty_prev(tab, key), do: :mnesia.dirty_prev(tab, key)

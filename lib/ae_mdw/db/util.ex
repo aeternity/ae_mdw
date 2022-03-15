@@ -65,13 +65,17 @@ defmodule AeMdw.Db.Util do
     do: ensure_key!(~t[block], :last) |> (fn {h, -1} -> h end).()
 
   def prev(tab, key) do
-    fn -> :mnesia.prev(tab, key) end
-    |> :mnesia.async_dirty()
+    case Database.prev_key(tab, key) do
+      {:ok, prev_key} -> prev_key
+      :none -> @eot
+    end
   end
 
   def next(tab, key) do
-    fn -> :mnesia.next(tab, key) end
-    |> :mnesia.async_dirty()
+    case Database.next_key(tab, key) do
+      {:ok, next_key} -> next_key
+      :none -> @eot
+    end
   end
 
   def first(tab) do
