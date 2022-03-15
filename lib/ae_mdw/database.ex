@@ -30,23 +30,29 @@ defmodule AeMdw.Database do
   # credo:disable-for-next-line
   defmacro use_rocksdb?(tab) do
     quote do
-      unquote(tab) == Model.Block or
-        unquote(tab) == Model.Tx or
-        unquote(tab) == Model.Time or
-        unquote(tab) == Model.Type or
-        unquote(tab) == Model.Field or
-        unquote(tab) == Model.IdCount or
-        unquote(tab) == Model.Origin or
-        unquote(tab) == Model.RevOrigin or
-        unquote(tab) == Model.Aex9Balance or
-        unquote(tab) == Model.ActiveOracleExpiration or
-        unquote(tab) == Model.InactiveOracleExpiration or
-        unquote(tab) == Model.ActiveOracle or
-        unquote(tab) == Model.InactiveOracle or
-        unquote(tab) == Model.AsyncTasks or
-        unquote(tab) == Model.Migrations or
-        unquote(tab) == Model.DeltaStat or
-        unquote(tab) == Model.TotalStat
+      unquote(tab) != Model.Aex9Contract and
+        unquote(tab) != Model.Aex9ContractSymbol and
+        unquote(tab) != Model.RevAex9Contract and
+        unquote(tab) != Model.Aex9ContractPubkey and
+        unquote(tab) != Model.Aex9Transfer and
+        unquote(tab) != Model.RevAex9Transfer and
+        unquote(tab) != Model.Aex9PairTransfer and
+        unquote(tab) != Model.IdxAex9Transfer and
+        unquote(tab) != Model.Aex9AccountPresence and
+        unquote(tab) != Model.IdxAex9AccountPresence and
+        unquote(tab) != Model.ContractCall and
+        unquote(tab) != Model.ContractLog and
+        unquote(tab) != Model.DataContractLog and
+        unquote(tab) != Model.EvtContractLog and
+        unquote(tab) != Model.IdxContractLog and
+        unquote(tab) != Model.IntContractCall and
+        unquote(tab) != Model.GrpIntContractCall and
+        unquote(tab) != Model.FnameIntContractCall and
+        unquote(tab) != Model.FnameGrpIntContractCall and
+        unquote(tab) != Model.IdIntContractCall and
+        unquote(tab) != Model.GrpIdIntContractCall and
+        unquote(tab) != Model.IdFnameIntContractCall and
+        unquote(tab) != Model.GrpIdFnameIntContractCall
     end
   end
 

@@ -13,7 +13,7 @@ defmodule AeMdw.Db.Model do
 
   import Record, only: [defrecord: 2]
 
-  @opaque table :: atom()
+  @type table :: atom()
   @opaque key :: tuple() | integer() | pubkey()
 
   @typep pubkey :: Db.pubkey()
@@ -72,13 +72,13 @@ defmodule AeMdw.Db.Model do
   @field_defaults [index: {nil, -1, nil, -1}, unused: nil]
   defrecord :field, @field_defaults
 
-  @type id_count_key :: {atom(), non_neg_integer(), pubkey()}
-  @type id_count :: record(:id_count, index: id_count_key(), count: non_neg_integer())
-
   # id counts       :
   #     index = {tx_type, tx_field_pos, object_pubkey}
   @id_count_defaults [index: {nil, nil, nil}, count: 0]
   defrecord :id_count, @id_count_defaults
+
+  @type id_count_key :: {atom(), non_neg_integer(), pubkey()}
+  @type id_count :: record(:id_count, index: id_count_key(), count: non_neg_integer())
 
   # object origin :
   #     index = {tx_type, pubkey, tx_index}, tx_id = tx_hash
@@ -97,10 +97,21 @@ defmodule AeMdw.Db.Model do
   @plain_name_defaults [index: nil, value: nil]
   defrecord :plain_name, @plain_name_defaults
 
+  @type plain_name ::
+          record(:plain_name, index: binary(), value: String.t())
+
   # auction bid:
   #     index = {plain_name, {block_index, txi}, expire_height = height, owner = pk, prev_bids = []}
   @auction_bid_defaults [index: {nil, {{nil, nil}, nil}, nil, nil, nil}, unused: nil]
   defrecord :auction_bid, @auction_bid_defaults
+
+  @type auction_bid_key ::
+          {String.t(), {Blocks.block_index(), Txs.txi()}, Blocks.height(), Db.pubkey(), list()}
+  @type auction_bid ::
+          record(:auction_bid,
+            index: auction_bid_key(),
+            unused: nil
+          )
 
   # in 3 tables: auction_expiration, name_expiration, inactive_name_expiration
   #
@@ -108,6 +119,9 @@ defmodule AeMdw.Db.Model do
   #     index = {expire_height, plain_name | oracle_pk}, value: any
   @expiration_defaults [index: {nil, nil}, value: nil]
   defrecord :expiration, @expiration_defaults
+
+  @type expiration ::
+          record(:expiration, index: {pos_integer(), String.t() | pubkey()}, value: nil)
 
   # in 2 tables: active_name, inactive_name
   #
@@ -138,15 +152,41 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :name, @name_defaults
 
+  @type name ::
+          record(:name,
+            index: String.t(),
+            active: Blocks.height(),
+            expire: Blocks.height(),
+            claims: list(),
+            updates: list(),
+            transfers: list(),
+            revoke: {Blocks.block_index(), Txs.txi()} | nil,
+            auction_timeout: non_neg_integer(),
+            owner: pubkey(),
+            previous: record(:name) | nil
+          )
+
   # owner: (updated via name claim/transfer)
   #     index = {pubkey, entity},
   @owner_defaults [index: nil, unused: nil]
   defrecord :owner, @owner_defaults
 
+  @type owner() ::
+          record(:owner,
+            index: {Db.pubkey(), binary()},
+            unused: nil
+          )
+
   # pointee : (updated when name_update_tx changes pointers)
   #     index = {pointer_val, {block_index, txi}, pointer_key}
   @pointee_defaults [index: {nil, {{nil, nil}, nil}, nil}, unused: nil]
   defrecord :pointee, @pointee_defaults
+
+  @type pointee() ::
+          record(:pointee,
+            index: {Db.pubkey(), {Blocks.block_index(), Txs.txi()}, Db.pubkey()},
+            unused: nil
+          )
 
   # in 2 tables: active_oracle, inactive_oracle
   #
@@ -492,6 +532,7 @@ defmodule AeMdw.Db.Model do
       [
         AeMdw.Db.Model.Aex9Balance
       ],
+      name_tables(),
       oracle_tables(),
       stat_tables(),
       tasks_tables()

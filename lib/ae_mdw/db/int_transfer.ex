@@ -7,6 +7,7 @@ defmodule AeMdw.Db.IntTransfer do
   alias AeMdw.Txs
   alias AeMdw.Db.Model
   alias AeMdw.Database
+  alias AeMdw.Collection
 
   require Ex2ms
   require Model
@@ -50,19 +51,34 @@ defmodule AeMdw.Db.IntTransfer do
     BlockRewardsMutation.new(height, block_rewards)
   end
 
-  @spec fee(Blocks.block_index_txi_pos(), kind_suffix(), target(), ref_txi(), amount()) :: :ok
-  def fee({height, txi_pos}, kind, target, ref_txi, amount) when kind in @fee_kinds,
-    do:
-      write(
-        {height, txi_pos},
-        "fee_" <> to_string(kind),
-        target,
-        ref_txi,
-        amount
-      )
+  @spec fee(
+          Database.transaction(),
+          Blocks.block_index_txi_pos(),
+          kind_suffix(),
+          target(),
+          ref_txi(),
+          amount()
+        ) :: :ok
+  def fee(txn, {height, txi_pos}, kind, target, ref_txi, amount) when kind in @fee_kinds do
+    write(
+      txn,
+      {height, txi_pos},
+      "fee_" <> to_string(kind),
+      target,
+      ref_txi,
+      amount
+    )
+  end
 
-  @spec write(Blocks.block_index_txi_pos(), kind(), target(), ref_txi(), amount()) :: :ok
-  def write({height, pos_txi}, kind, target_pk, ref_txi, amount) do
+  @spec write(
+          Database.transaction(),
+          Blocks.block_index_txi_pos(),
+          kind(),
+          target(),
+          ref_txi(),
+          amount()
+        ) :: :ok
+  def write(txn, {height, pos_txi}, kind, target_pk, ref_txi, amount) do
     int_tx =
       Model.int_transfer_tx(index: {{height, pos_txi}, kind, target_pk, ref_txi}, amount: amount)
 
@@ -71,9 +87,9 @@ defmodule AeMdw.Db.IntTransfer do
     target_kind_tx =
       Model.target_kind_int_transfer_tx(index: {target_pk, kind, {height, pos_txi}, ref_txi})
 
-    Database.write(Model.IntTransferTx, int_tx)
-    Database.write(Model.KindIntTransferTx, kind_tx)
-    Database.write(Model.TargetKindIntTransferTx, target_kind_tx)
+    Database.write(txn, Model.IntTransferTx, int_tx)
+    Database.write(txn, Model.KindIntTransferTx, kind_tx)
+    Database.write(txn, Model.TargetKindIntTransferTx, target_kind_tx)
   end
 
   @spec read_block_reward(Blocks.height()) :: pos_integer()
@@ -89,13 +105,16 @@ defmodule AeMdw.Db.IntTransfer do
   defp sum_reward_amount(height, kind) do
     height_pos = {height, -1}
 
-    amount_spec =
-      Ex2ms.fun do
-        Model.int_transfer_tx(index: {^height_pos, ^kind, :_, :_}, amount: amount) -> amount
-      end
-
     Model.IntTransferTx
-    |> Database.dirty_select(amount_spec)
+    |> Collection.stream(:forward, {height_pos, kind, <<>>, nil})
+    |> Stream.take_while(fn
+      {^height_pos, ^kind, _target, _ref} -> true
+      _other_height_kind -> false
+    end)
+    |> Enum.map(fn key ->
+      Model.int_transfer_tx(amount: amount) = Database.fetch!(Model.IntTransferTx, key)
+      amount
+    end)
     |> Enum.sum()
   end
 end

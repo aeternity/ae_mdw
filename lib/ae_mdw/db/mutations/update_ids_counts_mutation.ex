@@ -15,8 +15,8 @@ defmodule AeMdw.Db.UpdateIdsCountsMutation do
   @typep update_key :: {Model.id_count_key(), integer()}
 
   @opaque t() :: %__MODULE__{
-    ids_counts: [update_key()]
-  }
+            ids_counts: [update_key()]
+          }
 
   @spec new([update_key()]) :: t()
   def new(ids_counts) do
@@ -25,6 +25,8 @@ defmodule AeMdw.Db.UpdateIdsCountsMutation do
 
   @spec execute(t(), Database.transaction()) :: :ok
   def execute(%__MODULE__{ids_counts: ids_counts}, txn) do
-    Enum.each(ids_counts, fn {id_count_key, delta} -> IdCounter.update_count(txn, id_count_key, -delta) end)
+    Enum.each(ids_counts, fn {id_count_key, delta} ->
+      IdCounter.update_count(txn, id_count_key, -delta)
+    end)
   end
 end

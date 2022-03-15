@@ -3,7 +3,7 @@ defmodule AeMdw.Db.Sync.Name do
   alias AeMdw.Blocks
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Mutation
+  alias AeMdw.Db.TxnMutation
   alias AeMdw.Db.Name
   alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.Sync.Origin
@@ -18,10 +18,11 @@ defmodule AeMdw.Db.Sync.Name do
 
   import AeMdw.Db.Name,
     only: [
-      cache_through_read!: 2,
+      cache_through_read!: 3,
       cache_through_read: 2,
-      cache_through_write: 2,
-      cache_through_delete: 2,
+      cache_through_read: 3,
+      cache_through_write: 3,
+      cache_through_delete: 3,
       revoke_or_expire_height: 1,
       revoke_or_expire_height: 2
     ]
@@ -31,7 +32,7 @@ defmodule AeMdw.Db.Sync.Name do
   import AeMdw.Util
 
   @spec name_claim_mutations(Node.tx(), Txs.tx_hash(), Blocks.block_index(), Txs.txi()) :: [
-          Mutation.t()
+          TxnMutation.t()
         ]
   def name_claim_mutations(tx, tx_hash, {height, _mbi} = block_index, txi) do
     plain_name = String.downcase(:aens_claim_tx.name(tx))
@@ -57,9 +58,9 @@ defmodule AeMdw.Db.Sync.Name do
     ]
   end
 
-  def update(name_hash, delta_ttl, pointers, txi, {height, _mbi} = bi, internal?) do
+  def update(txn, name_hash, delta_ttl, pointers, txi, {height, _mbi} = bi, internal?) do
     plain_name = plain_name!(name_hash)
-    m_name = cache_through_read!(Model.ActiveName, plain_name)
+    m_name = cache_through_read!(txn, Model.ActiveName, plain_name)
     old_expire = Model.name(m_name, :expire)
     new_expire = height + delta_ttl
     updates = [{bi, txi} | Model.name(m_name, :updates)]
@@ -68,24 +69,24 @@ defmodule AeMdw.Db.Sync.Name do
 
     for ptr <- pointers do
       m_pointee = Model.pointee(index: pointee_key(ptr, {bi, txi}))
-      cache_through_write(Model.Pointee, m_pointee)
+      cache_through_write(txn, Model.Pointee, m_pointee)
     end
 
     cond do
       delta_ttl > 0 ->
-        cache_through_delete(Model.ActiveNameExpiration, {old_expire, plain_name})
-        cache_through_write(Model.ActiveNameExpiration, new_m_name_exp)
-        cache_through_write(Model.ActiveName, new_m_name)
+        cache_through_delete(txn, Model.ActiveNameExpiration, {old_expire, plain_name})
+        cache_through_write(txn, Model.ActiveNameExpiration, new_m_name_exp)
+        cache_through_write(txn, Model.ActiveName, new_m_name)
 
         log_name_change(height, plain_name, "extend")
 
       delta_ttl == 0 and not internal? ->
         owner = Model.name(m_name, :owner)
-        cache_through_delete(Model.ActiveName, plain_name)
-        cache_through_delete(Model.ActiveNameOwner, {owner, plain_name})
-        cache_through_delete(Model.ActiveNameExpiration, {old_expire, plain_name})
-        cache_through_write(Model.InactiveName, new_m_name)
-        cache_through_write(Model.InactiveNameExpiration, new_m_name_exp)
+        cache_through_delete(txn, Model.ActiveName, plain_name)
+        cache_through_delete(txn, Model.ActiveNameOwner, {owner, plain_name})
+        cache_through_delete(txn, Model.ActiveNameExpiration, {old_expire, plain_name})
+        cache_through_write(txn, Model.InactiveName, new_m_name)
+        cache_through_write(txn, Model.InactiveNameExpiration, new_m_name_exp)
 
         inc(:stat_sync_cache, :names_expired)
 
@@ -94,44 +95,44 @@ defmodule AeMdw.Db.Sync.Name do
       true ->
         if internal? do
           m_name = Model.name(m_name, updates: updates)
-          cache_through_write(Model.ActiveName, m_name)
+          cache_through_write(txn, Model.ActiveName, m_name)
         end
 
         log_name_change(height, plain_name, "delta_ttl #{delta_ttl} NA")
     end
   end
 
-  def transfer(name_hash, new_owner, txi, {height, _mbi} = bi) do
-    plain_name = plain_name!(name_hash)
+  def transfer(txn, name_hash, new_owner, txi, {height, _mbi} = bi) do
+    plain_name = plain_name!(txn, name_hash)
 
-    m_name = cache_through_read!(Model.ActiveName, plain_name)
+    m_name = cache_through_read!(txn, Model.ActiveName, plain_name)
     old_owner = Model.name(m_name, :owner)
 
     transfers = [{bi, txi} | Model.name(m_name, :transfers)]
     m_name = Model.name(m_name, transfers: transfers, owner: new_owner)
     m_owner = Model.owner(index: {new_owner, plain_name})
 
-    cache_through_delete(Model.ActiveNameOwner, {old_owner, plain_name})
-    cache_through_write(Model.ActiveNameOwner, m_owner)
-    cache_through_write(Model.ActiveName, m_name)
+    cache_through_delete(txn, Model.ActiveNameOwner, {old_owner, plain_name})
+    cache_through_write(txn, Model.ActiveNameOwner, m_owner)
+    cache_through_write(txn, Model.ActiveName, m_name)
 
     log_name_change(height, plain_name, "transfer")
   end
 
-  def revoke(name_hash, txi, {height, _mbi} = bi) do
+  def revoke(txn, name_hash, txi, {height, _mbi} = bi) do
     plain_name = plain_name!(name_hash)
 
-    m_name = cache_through_read!(Model.ActiveName, plain_name)
+    m_name = cache_through_read!(txn, Model.ActiveName, plain_name)
     expire = Model.name(m_name, :expire)
     owner = Model.name(m_name, :owner)
-    cache_through_delete(Model.ActiveNameExpiration, {expire, plain_name})
-    cache_through_delete(Model.ActiveNameOwner, {owner, plain_name})
-    cache_through_delete(Model.ActiveName, plain_name)
+    cache_through_delete(txn, Model.ActiveNameExpiration, {expire, plain_name})
+    cache_through_delete(txn, Model.ActiveNameOwner, {owner, plain_name})
+    cache_through_delete(txn, Model.ActiveName, plain_name)
 
     m_name = Model.name(m_name, revoke: {bi, txi})
     m_exp = Model.expiration(index: {height, plain_name})
-    cache_through_write(Model.InactiveName, m_name)
-    cache_through_write(Model.InactiveNameExpiration, m_exp)
+    cache_through_write(txn, Model.InactiveName, m_name)
+    cache_through_write(txn, Model.InactiveNameExpiration, m_exp)
 
     inc(:stat_sync_cache, :names_revoked)
 
@@ -140,8 +141,17 @@ defmodule AeMdw.Db.Sync.Name do
 
   ##########
 
-  def plain_name!(name_hash),
-    do: cache_through_read!(Model.PlainName, name_hash) |> Model.plain_name(:value)
+  def plain_name!(name_hash) do
+    {:ok, m_plain_name} = cache_through_read(Model.PlainName, name_hash)
+
+    Model.plain_name(m_plain_name, :value)
+  end
+
+  defp plain_name!(txn, name_hash) do
+    {:ok, m_plain_name} = cache_through_read(txn, Model.PlainName, name_hash)
+
+    Model.plain_name(m_plain_name, :value)
+  end
 
   def log_name_change(height, plain_name, change),
     do: Log.info("[#{height}][name] #{change} #{plain_name}")
@@ -371,8 +381,12 @@ defmodule AeMdw.Db.Sync.Name do
     do: Validate.id!(read_raw_tx!(claim_txi).tx.account_id)
 
   def pointee_key(ptr, {bi, txi}) do
-    {k, v} = Name.pointer_kv(ptr)
+    {k, v} = pointer_kv(ptr)
     {v, {bi, txi}, k}
+  end
+
+  defp pointer_kv(ptr) do
+    {:aens_pointer.key(ptr), Validate.id!(:aens_pointer.id(ptr))}
   end
 
   def drop_bi_txi(bi_txis, new_height),
