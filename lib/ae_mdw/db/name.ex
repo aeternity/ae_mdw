@@ -268,7 +268,7 @@ defmodule AeMdw.Db.Name do
   @spec pointee_keys(any) :: list
   def pointee_keys(pk) do
     Model.Pointee
-    |> Collection.stream(:forward, {pk, nil, nil})
+    |> Collection.stream({pk, nil, nil})
     |> Stream.take_while(fn
       {^pk, _bi_txi, _pointee} -> true
       _other_key -> false

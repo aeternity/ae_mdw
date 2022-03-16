@@ -69,17 +69,17 @@ defmodule AeMdw.Collection do
     end
   end
 
-  @spec stream(table(), direction(), key()) :: Enumerable.t()
-  def stream(table, direction, boundary_first_key) do
+  @doc """
+  Streams forward a table seeking the iterator to a boundary start key.
+  """
+  @spec stream(table(), key()) :: Enumerable.t()
+  def stream(table, boundary_start_key) do
     Stream.unfold(
-      boundary_first_key,
+      boundary_start_key,
       fn key ->
-        with true <- key != :none,
-             {:ok, next_key} <- Database.next_key(table, direction, key) do
-          {key, next_key}
-        else
-          false -> nil
-          :none -> {key, :none}
+        case Database.next_key(table, key) do
+          {:ok, next_key} -> {next_key, next_key}
+          :none -> nil
         end
       end
     )

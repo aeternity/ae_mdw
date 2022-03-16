@@ -106,7 +106,7 @@ defmodule AeMdw.Db.IntTransfer do
     height_pos = {height, -1}
 
     Model.IntTransferTx
-    |> Collection.stream(:forward, {height_pos, kind, <<>>, nil})
+    |> Collection.stream({height_pos, kind, <<>>, -1})
     |> Stream.take_while(fn
       {^height_pos, ^kind, _target, _ref} -> true
       _other_height_kind -> false
