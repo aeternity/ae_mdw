@@ -29,18 +29,27 @@ defmodule AeMdw.Db.Contract do
   @typep pubkey :: Db.pubkey()
   @typep transaction :: Database.transaction()
 
-  @spec aex9_creation_write(tuple(), pubkey(), pubkey(), integer()) :: :ok
-  def aex9_creation_write({name, symbol, decimals}, contract_pk, owner_pk, txi) do
+  @spec aex9_creation_write(transaction(), tuple(), pubkey(), pubkey(), integer()) :: :ok
+  def aex9_creation_write(txn, {name, symbol, decimals}, contract_pk, owner_pk, txi) do
     m_contract = Model.aex9_contract(index: {name, symbol, txi, decimals})
     m_contract_sym = Model.aex9_contract_symbol(index: {symbol, name, txi, decimals})
     m_rev_contract = Model.rev_aex9_contract(index: {txi, name, symbol, decimals})
     m_contract_pk = Model.aex9_contract_pubkey(index: contract_pk, txi: txi)
-    Database.write(Model.Aex9Contract, m_contract)
-    Database.write(Model.Aex9ContractSymbol, m_contract_sym)
-    Database.write(Model.RevAex9Contract, m_rev_contract)
-    Database.write(Model.Aex9ContractPubkey, m_contract_pk)
+    Database.write(txn, Model.Aex9Contract, m_contract)
+    Database.write(txn, Model.Aex9ContractSymbol, m_contract_sym)
+    Database.write(txn, Model.RevAex9Contract, m_rev_contract)
+    Database.write(txn, Model.Aex9ContractPubkey, m_contract_pk)
 
     aex9_presence_cache_write({{contract_pk, txi, -1}, owner_pk, -1})
+    :ok
+  end
+
+  @spec aex9_write_presence(transaction(), pubkey(), integer(), pubkey()) :: :ok
+  def aex9_write_presence(txn, contract_pk, txi, pubkey) do
+    m_acc_presence = Model.aex9_account_presence(index: {pubkey, txi, contract_pk})
+    m_idx_presence = Model.idx_aex9_account_presence(index: {txi, pubkey, contract_pk})
+    Database.write(txn, Model.Aex9AccountPresence, m_acc_presence)
+    Database.write(txn, Model.IdxAex9AccountPresence, m_idx_presence)
     :ok
   end
 
@@ -48,8 +57,8 @@ defmodule AeMdw.Db.Contract do
   def aex9_write_presence(contract_pk, txi, pubkey) do
     m_acc_presence = Model.aex9_account_presence(index: {pubkey, txi, contract_pk})
     m_idx_presence = Model.idx_aex9_account_presence(index: {txi, pubkey, contract_pk})
-    Database.write(Model.Aex9AccountPresence, m_acc_presence)
-    Database.write(Model.IdxAex9AccountPresence, m_idx_presence)
+    Database.dirty_write(Model.Aex9AccountPresence, m_acc_presence)
+    Database.dirty_write(Model.IdxAex9AccountPresence, m_idx_presence)
     :ok
   end
 
@@ -61,12 +70,6 @@ defmodule AeMdw.Db.Contract do
       aex9_write_presence(contract_pk, txi, account_pk)
       true
     end
-  end
-
-  @spec aex9_delete_presence(pubkey(), integer(), pubkey()) :: :ok
-  def aex9_delete_presence(contract_pk, txi, pubkey) do
-    Database.delete(Model.Aex9AccountPresence, {pubkey, txi, contract_pk})
-    Database.delete(Model.IdxAex9AccountPresence, {txi, pubkey, contract_pk})
   end
 
   @spec aex9_burn_balance(transaction(), pubkey(), pubkey(), non_neg_integer()) :: :ok | :error
@@ -125,7 +128,7 @@ defmodule AeMdw.Db.Contract do
   def aex9_presence_exists?(contract_pk, account_pk, txi) do
     txi_search_prev = txi + 1
 
-    case Database.dirty_prev_key(
+    case Database.prev_key(
            Model.Aex9AccountPresence,
            {account_pk, txi_search_prev, contract_pk}
          ) do
@@ -134,21 +137,21 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  @spec call_write(integer(), integer(), Contract.fun_arg_res_or_error()) :: :ok
-  def call_write(create_txi, txi, %{function: fname, arguments: args, result: %{error: [err]}}),
+  @spec call_write(transaction(), integer(), integer(), Contract.fun_arg_res_or_error()) :: :ok
+  def call_write(txn, create_txi, txi, %{function: fname, arguments: args, result: %{error: [err]}}),
     do: call_write(create_txi, txi, fname, args, :error, err)
 
-  def call_write(create_txi, txi, %{function: fname, arguments: args, result: %{abort: [err]}}),
-    do: call_write(create_txi, txi, fname, args, :abort, err)
+  def call_write(txn, create_txi, txi, %{function: fname, arguments: args, result: %{abort: [err]}}),
+    do: call_write(txn, create_txi, txi, fname, args, :abort, err)
 
-  def call_write(create_txi, txi, %{function: fname, arguments: args, result: val}),
-    do: call_write(create_txi, txi, fname, args, :ok, val)
+  def call_write(txn, create_txi, txi, %{function: fname, arguments: args, result: val}),
+    do: call_write(txn, create_txi, txi, fname, args, :ok, val)
 
-  def call_write(create_txi, txi, {:error, detail}),
-    do: call_write(create_txi, txi, "<unknown>", nil, :invalid, inspect(detail))
+  def call_write(txn, create_txi, txi, {:error, detail}),
+    do: call_write(txn, create_txi, txi, "<unknown>", nil, :invalid, inspect(detail))
 
-  @spec call_write(Txs.txi(), Txs.txi(), String.t(), list() | nil, any(), any()) :: :ok
-  def call_write(create_txi, txi, fname, args, result, return) do
+  @spec call_write(transaction(), Txs.txi(), Txs.txi(), String.t(), list() | nil, any(), any()) :: :ok
+  def call_write(txn, create_txi, txi, fname, args, result, return) do
     m_call =
       Model.contract_call(
         index: {create_txi, txi},
@@ -158,11 +161,11 @@ defmodule AeMdw.Db.Contract do
         return: return
       )
 
-    Database.write(Model.ContractCall, m_call)
+    Database.write(txn, Model.ContractCall, m_call)
   end
 
-  @spec logs_write(Txs.txi(), Txs.txi(), tuple()) :: :ok
-  def logs_write(create_txi, txi, call_rec) do
+  @spec logs_write(transaction(), Txs.txi(), Txs.txi(), tuple()) :: :ok
+  def logs_write(txn, create_txi, txi, call_rec) do
     contract_pk = :aect_call.contract_pubkey(call_rec)
     raw_logs = :aect_call.log(call_rec)
 
@@ -180,10 +183,10 @@ defmodule AeMdw.Db.Contract do
       m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, i})
       m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, i})
       m_idx_log = Model.idx_contract_log(index: {txi, create_txi, evt_hash, i})
-      Database.write(Model.ContractLog, m_log)
-      Database.write(Model.DataContractLog, m_data_log)
-      Database.write(Model.EvtContractLog, m_evt_log)
-      Database.write(Model.IdxContractLog, m_idx_log)
+      Database.write(txn, Model.ContractLog, m_log)
+      Database.write(txn, Model.DataContractLog, m_data_log)
+      Database.write(txn, Model.EvtContractLog, m_evt_log)
+      Database.write(txn, Model.IdxContractLog, m_idx_log)
 
       # if remote call then indexes also with the called contract
       if addr != contract_pk do
@@ -199,13 +202,13 @@ defmodule AeMdw.Db.Contract do
             data: data
           )
 
-        Database.write(Model.ContractLog, m_log_remote)
+        Database.write(txn, Model.ContractLog, m_log_remote)
       end
 
       aex9_contract_pk = which_aex9_contract_pubkey(contract_pk, addr)
 
       if is_aex9_transfer?(evt_hash, aex9_contract_pk) do
-        write_aex9_records(aex9_contract_pk, txi, i, args)
+        write_aex9_records(txn, aex9_contract_pk, txi, i, args)
       end
     end)
   end

@@ -44,7 +44,7 @@ defmodule Integration.AeMdw.Db.Sync.StatsTest do
       assert Model.total_stat(m_total_stat, :contracts) >= 0
 
       Model.DeltaStat
-      |> Database.dirty_all_keys()
+      |> Database.all_keys()
       |> Enum.map(&Database.fetch!(Model.DeltaStat, &1))
       |> Enum.each(fn m_delta_stat ->
         assert Model.delta_stat(m_delta_stat, :dev_reward) >= 0
