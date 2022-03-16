@@ -74,15 +74,10 @@ defmodule AeMdw.Collection do
   """
   @spec stream(table(), key()) :: Enumerable.t()
   def stream(table, boundary_start_key) do
-    Stream.unfold(
-      boundary_start_key,
-      fn key ->
-        case Database.next_key(table, key) do
-          {:ok, next_key} -> {next_key, next_key}
-          :none -> nil
-        end
-      end
-    )
+    case fetch_first_key(table, :forward, boundary_start_key, nil) do
+      {:ok, first_key} -> unfold_stream(table, :forward, first_key, nil)
+      :none -> []
+    end
   end
 
   @doc """
