@@ -4,6 +4,7 @@ defmodule AeMdw.Db.Model do
   """
   alias AeMdw.Blocks
   alias AeMdw.Contract
+  alias AeMdw.Names
   alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Txs
@@ -98,7 +99,7 @@ defmodule AeMdw.Db.Model do
   defrecord :plain_name, @plain_name_defaults
 
   @type plain_name ::
-          record(:plain_name, index: binary(), value: String.t())
+          record(:plain_name, index: Names.name_hash(), value: Names.plain_name())
 
   # auction bid:
   #     index = {plain_name, {block_index, txi}, expire_height = height, owner = pk, prev_bids = []}
@@ -173,7 +174,7 @@ defmodule AeMdw.Db.Model do
 
   @type owner() ::
           record(:owner,
-            index: {Db.pubkey(), binary()},
+            index: {Db.pubkey(), Names.plain_name()},
             unused: nil
           )
 
