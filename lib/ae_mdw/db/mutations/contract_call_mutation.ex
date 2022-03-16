@@ -8,7 +8,7 @@ defmodule AeMdw.Db.ContractCallMutation do
   alias AeMdw.Sync.AsyncTasks
   alias AeMdw.Txs
 
-  @derive AeMdw.Db.Mutation
+  @derive AeMdw.Db.TxnMutation
   defstruct [
     :contract_pk,
     :caller_pk,
@@ -49,6 +49,7 @@ defmodule AeMdw.Db.ContractCallMutation do
     }
   end
 
+<<<<<<< HEAD
   @spec mutate(t()) :: :ok
   def mutate(%__MODULE__{
         contract_pk: contract_pk,
@@ -60,6 +61,23 @@ defmodule AeMdw.Db.ContractCallMutation do
       }) do
     DBContract.call_write(create_txi, txi, fun_arg_res)
     DBContract.logs_write(create_txi, txi, call_rec)
+=======
+  @spec execute(t(), AeMdw.Database.transaction()) :: :ok
+  def execute(
+        %__MODULE__{
+          contract_pk: contract_pk,
+          caller_pk: caller_pk,
+          create_txi: create_txi,
+          txi: txi,
+          fun_arg_res: fun_arg_res,
+          aex9_meta_info: aex9_meta_info,
+          call_rec: call_rec
+        },
+        txn
+      ) do
+    DBContract.call_write(txn, create_txi, txi, fun_arg_res)
+    DBContract.logs_write(txn, create_txi, txi, call_rec)
+>>>>>>> refactor: contract tables persisted with rocksdb
 
     with true <- Contract.is_aex9?(contract_pk),
          {:ok, method_name, method_args} <- Contract.extract_successful_function(fun_arg_res),
@@ -73,6 +91,13 @@ defmodule AeMdw.Db.ContractCallMutation do
       )
     end
 
+<<<<<<< HEAD
+=======
+    if aex9_meta_info do
+      DBContract.aex9_creation_write(txn, aex9_meta_info, contract_pk, caller_pk, txi)
+    end
+
+>>>>>>> refactor: contract tables persisted with rocksdb
     :ok
   end
 

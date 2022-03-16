@@ -530,9 +530,7 @@ defmodule AeMdw.Db.Model do
   def column_families do
     Enum.concat([
       chain_tables(),
-      [
-        AeMdw.Db.Model.Aex9Balance
-      ],
+      contract_tables(),
       name_tables(),
       oracle_tables(),
       stat_tables(),
@@ -570,6 +568,7 @@ defmodule AeMdw.Db.Model do
 
   defp contract_tables() do
     [
+      AeMdw.Db.Model.Aex9Balance,
       AeMdw.Db.Model.Aex9Contract,
       AeMdw.Db.Model.Aex9ContractSymbol,
       AeMdw.Db.Model.RevAex9Contract,

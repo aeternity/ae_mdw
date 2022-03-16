@@ -40,7 +40,7 @@ defmodule AeMdw.Db.ContractTest do
       Contract.aex9_write_new_presence(@new_cpk, -1, @existing_apk)
 
       assert [-1] == aex9_presence_txi_list(@new_cpk, @existing_apk)
-      Contract.aex9_delete_presence(@new_cpk, -1, @existing_apk)
+      ContractTestUtil.aex9_delete_presence(@new_cpk, @existing_apk)
       assert [] == aex9_presence_txi_list(@new_cpk, @existing_apk)
 
       :mnesia.abort(:rollback)
