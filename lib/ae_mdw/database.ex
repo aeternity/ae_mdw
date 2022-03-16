@@ -239,6 +239,10 @@ defmodule AeMdw.Database do
   end
 
   @spec exists?(table(), key()) :: boolean()
+  def exists?(tab, key) when use_rocksdb?(tab) do
+    RocksDbCF.exists?(tab, key)
+  end
+
   def exists?(tab, key) do
     match?({:ok, _record}, fetch(tab, key))
   end

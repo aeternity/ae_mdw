@@ -59,7 +59,7 @@ defmodule AeMdw.Db.Sync.Name do
   end
 
   def update(txn, name_hash, delta_ttl, pointers, txi, {height, _mbi} = bi, internal?) do
-    plain_name = plain_name!(name_hash)
+    plain_name = plain_name!(txn, name_hash)
     m_name = cache_through_read!(txn, Model.ActiveName, plain_name)
     old_expire = Model.name(m_name, :expire)
     new_expire = height + delta_ttl
