@@ -15,8 +15,7 @@ defmodule AeMdw.Db.ContractCallMutation do
     :create_txi,
     :txi,
     :fun_arg_res,
-    :call_rec,
-    :aex9_meta_info
+    :call_rec
   ]
 
   @typep pubkey() :: AeMdw.Node.Db.pubkey()
@@ -28,7 +27,6 @@ defmodule AeMdw.Db.ContractCallMutation do
             create_txi: txi_option(),
             txi: Txs.txi(),
             fun_arg_res: Contract.fun_arg_res_or_error(),
-            aex9_meta_info: Contract.aex9_meta_info() | nil,
             call_rec: Contract.call()
           }
 
@@ -38,17 +36,15 @@ defmodule AeMdw.Db.ContractCallMutation do
           txi_option(),
           Txs.txi(),
           Contract.fun_arg_res_or_error(),
-          Contract.aex9_meta_info() | nil,
           Contract.call()
         ) :: t()
-  def new(contract_pk, caller_pk, create_txi, txi, fun_arg_res, aex9_meta_info, call_rec) do
+  def new(contract_pk, caller_pk, create_txi, txi, fun_arg_res, call_rec) do
     %__MODULE__{
       contract_pk: contract_pk,
       caller_pk: caller_pk,
       create_txi: create_txi,
       txi: txi,
       fun_arg_res: fun_arg_res,
-      aex9_meta_info: aex9_meta_info,
       call_rec: call_rec
     }
   end
@@ -60,7 +56,6 @@ defmodule AeMdw.Db.ContractCallMutation do
         create_txi: create_txi,
         txi: txi,
         fun_arg_res: fun_arg_res,
-        aex9_meta_info: aex9_meta_info,
         call_rec: call_rec
       }) do
     DBContract.call_write(create_txi, txi, fun_arg_res)
@@ -76,10 +71,6 @@ defmodule AeMdw.Db.ContractCallMutation do
         method_name,
         method_args
       )
-    end
-
-    if aex9_meta_info do
-      DBContract.aex9_creation_write(aex9_meta_info, contract_pk, caller_pk, txi)
     end
 
     :ok

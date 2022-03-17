@@ -8,9 +8,7 @@ defmodule Integration.AeMdw.Db.ContractCallMutationTest do
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
-  alias AeMdw.Db.Sync
   alias AeMdw.Db.Util
-  alias AeMdw.Database
   alias AeMdw.Validate
   alias Support.AeMdw.Db.ContractTestUtil
 
@@ -25,8 +23,6 @@ defmodule Integration.AeMdw.Db.ContractCallMutationTest do
   @aex9_ct_pk2 Validate.id!("ct_2Jm3s7uHMvM7tRSCvFWurCh8LjZoTHa7LshKZSTZigCv1WnvmJ")
   # contract with burn
   @aex9_ct_pk3 Validate.id!("ct_kraQeEEaoKKUq3qPHxyrsN1rvD9jPr58QFat5Ha641LtgLwEA")
-  # aex9 created by contract call
-  @aex9_ct_pk4 Validate.id!("ct_6MFUZmk8wE76qnQqEqitQztabxZrp8AhEiSSMuyQYeSWUU467")
 
   test "add aex9 presence after a mint" do
     fn ->
@@ -123,88 +119,7 @@ defmodule Integration.AeMdw.Db.ContractCallMutationTest do
     |> mnesia_sandbox()
   end
 
-  # credo:disable-for-next-line
-  @tag (Application.get_env(:aecore, :network_id) != "ae_uat" && :skip) || :integration
-  test "aex9 contract creation by a contract call" do
-    fn ->
-      txi = 25_729_031
-      contract_pk = @aex9_ct_pk4
-      tx_hash = Validate.id!("th_2c6Nipg2ijrpyS4UXWsE1Fd7t5cNtYJqYT3ecj3EAFgdtB1Gw9")
-      {block_hash, :contract_call_tx, _signed_tx, tx} = NodeDb.get_tx_data(tx_hash)
-
-      ^contract_pk = :aect_call_tx.contract_pubkey(tx)
-
-      {fun_arg_res, call_rec} =
-        Contract.call_tx_info(tx, contract_pk, block_hash, &Contract.to_map/1)
-
-      {child_mutations, aex9_meta_info} =
-        Sync.Contract.child_contract_mutations(
-          :aect_call.return_type(call_rec) == :ok,
-          fun_arg_res,
-          txi,
-          tx_hash
-        )
-
-      child_contract_pk =
-        <<115, 58, 92, 73, 111, 85, 214, 223, 85, 240, 254, 40, 105, 205, 139, 88, 161, 42, 130,
-          241, 100, 162, 118, 163, 59, 130, 156, 123, 249, 57, 234, 13>>
-
-      assert child_contract_pk != contract_pk
-
-      assert ^child_mutations =
-               Sync.Origin.origin_mutations(
-                 :contract_call_tx,
-                 nil,
-                 child_contract_pk,
-                 txi,
-                 tx_hash
-               )
-
-      name = "TestAEX9-B vs TestAEX9-A"
-      symbol = "TAEX9-B/TAEX9-A"
-      decimals = 18
-      assert {^name, ^symbol, ^decimals} = aex9_meta_info
-
-      # delete if already synced
-      Database.delete(Model.Aex9Contract, {name, symbol, txi, decimals})
-      Database.delete(Model.Aex9ContractSymbol, {symbol, name, txi, decimals})
-      Database.delete(Model.RevAex9Contract, {txi, name, symbol, decimals})
-      Database.delete(Model.Aex9ContractPubkey, contract_pk)
-
-      call_mutation =
-        ContractCallMutation.new(
-          contract_pk,
-          :aect_call_tx.caller_pubkey(tx),
-          txi,
-          txi,
-          fun_arg_res,
-          aex9_meta_info,
-          call_rec
-        )
-
-      ContractCallMutation.mutate(call_mutation)
-
-      m_contract = Model.aex9_contract(index: {name, symbol, txi, decimals})
-      m_contract_sym = Model.aex9_contract_symbol(index: {symbol, name, txi, decimals})
-      m_rev_contract = Model.rev_aex9_contract(index: {txi, name, symbol, decimals})
-      m_contract_pk = Model.aex9_contract_pubkey(index: contract_pk, txi: txi)
-
-      assert [^m_contract] = Database.read(Model.Aex9Contract, {name, symbol, txi, decimals})
-
-      assert [^m_contract_sym] =
-               Database.read(Model.Aex9ContractSymbol, {symbol, name, txi, decimals})
-
-      assert [^m_rev_contract] =
-               Database.read(Model.RevAex9Contract, {txi, name, symbol, decimals})
-
-      assert [^m_contract_pk] = Database.read(Model.Aex9ContractPubkey, contract_pk)
-
-      :mnesia.abort(:rollback)
-    end
-    |> mnesia_sandbox()
-  end
-
-  defp contract_call_mutation(fname, contract_pk, call_txi, aex9_meta_info \\ nil) do
+  defp contract_call_mutation(fname, call_txi, contract_pk) do
     Model.tx(id: tx_hash) = Util.read_tx!(call_txi)
     {block_hash, :contract_call_tx, _signed_tx, tx} = NodeDb.get_tx_data(tx_hash)
     ^contract_pk = :aect_call_tx.contract_pubkey(tx)
@@ -231,7 +146,6 @@ defmodule Integration.AeMdw.Db.ContractCallMutationTest do
         Origin.tx_index!({:contract, contract_pk}),
         call_txi,
         fun_arg_res,
-        aex9_meta_info,
         call_rec
       )
 
