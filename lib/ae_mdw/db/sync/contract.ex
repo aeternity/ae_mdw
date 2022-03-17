@@ -6,7 +6,7 @@ defmodule AeMdw.Db.Sync.Contract do
   alias AeMdw.Contract
   alias AeMdw.Db.Contract, as: DBContract
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Mutation
+  alias AeMdw.Db.TxnMutation
   alias AeMdw.Db.NameUpdateMutation
   alias AeMdw.Db.NameTransferMutation
   alias AeMdw.Db.NameRevokeMutation
@@ -58,7 +58,7 @@ defmodule AeMdw.Db.Sync.Contract do
           Db.pubkey(),
           Txs.txi(),
           Txs.tx_hash()
-        ) :: [Mutation.t()]
+        ) :: [TxnMutation.t()]
   def child_contract_mutations({:error, _any}, _caller_pk, _txi, _tx_hash), do: []
 
   def child_contract_mutations(%{result: fun_result}, caller_pk, txi, tx_hash) do

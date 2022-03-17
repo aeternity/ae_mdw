@@ -7,10 +7,10 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Collection
   alias AeMdw.Contract
   alias AeMdw.Database
-  alias AeMdw.Db.WriteTxnMutation
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Mutation
   alias AeMdw.Db.Origin
+  alias AeMdw.Db.TxnMutation
+  alias AeMdw.Db.WriteTxnMutation
   alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Node.Db
@@ -358,7 +358,7 @@ defmodule AeMdw.Db.Contract do
     do: :ets.insert(ets_tab, {{contract_pk, txi, i}, pks, amount})
 
   @spec int_call_write_mutations(Txs.txi(), Txs.txi(), Txs.txi(), Contract.fname(), tuple()) :: [
-          Mutation.t()
+          TxnMutation.t()
         ]
   def int_call_write_mutations(create_txi, call_txi, local_idx, fname, tx) do
     m_call =

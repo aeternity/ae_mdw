@@ -120,20 +120,18 @@ defmodule AeMdw.Db.Sync.Transaction do
         inner_signed_tx = Sync.InnerTx.signed_tx(type, tx)
         # indexes the inner with the txi from the wrapper/outer
         transaction_mutations({inner_signed_tx, txi}, tx_ctx, true)
-      else
-        {nil, nil}
       end
 
     m_tx = Model.tx(index: txi, id: tx_hash, block_index: block_index, time: mb_time)
     :ets.insert(:tx_sync_cache, {txi, m_tx})
 
-    model_tx_mutation =
+    m_tx_mutation =
       if not inner_tx? do
         WriteTxnMutation.new(Model.Tx, m_tx)
       end
 
     [
-      model_tx_mutation,
+      m_tx_mutation,
       WriteTxnMutation.new(Model.Type, Model.type(index: {type, txi})),
       WriteTxnMutation.new(Model.Time, Model.time(index: {mb_time, txi})),
       WriteFieldsMutation.new(type, tx, block_index, txi),
