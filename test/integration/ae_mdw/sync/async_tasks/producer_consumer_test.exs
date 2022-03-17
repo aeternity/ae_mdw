@@ -27,8 +27,7 @@ defmodule Integration.AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
       if not exists_before? do
         Database.dirty_delete(
           Model.Aex9AccountPresence,
-          {@account_pk, create_txi, @contract_pk},
-          :write
+          {@account_pk, create_txi, @contract_pk}
         )
       end
     end)
@@ -36,8 +35,7 @@ defmodule Integration.AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
     if exists_before? do
       Database.dirty_delete(
         Model.Aex9AccountPresence,
-        {@account_pk, create_txi, @contract_pk},
-        :write
+        {@account_pk, create_txi, @contract_pk}
       )
     end
 
