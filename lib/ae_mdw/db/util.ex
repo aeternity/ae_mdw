@@ -9,7 +9,6 @@ defmodule AeMdw.Db.Util do
   require Logger
   require Model
 
-  import AeMdw.Sigil
   import AeMdw.Util
 
   @eot :"$end_of_table"
@@ -54,16 +53,16 @@ defmodule AeMdw.Db.Util do
     do: next_bi!({kbi, -1})
 
   def first_txi(),
-    do: ensure_key!(~t[tx], :first)
+    do: ensure_key!(Model.Tx, :first)
 
   def last_txi(),
-    do: ensure_key!(~t[tx], :last)
+    do: ensure_key!(Model.Tx, :last)
 
   def first_gen(),
-    do: ensure_key!(~t[block], :first) |> (fn {h, -1} -> h end).()
+    do: ensure_key!(Model.Block, :first) |> (fn {h, -1} -> h end).()
 
   def last_gen(),
-    do: ensure_key!(~t[block], :last) |> (fn {h, -1} -> h end).()
+    do: ensure_key!(Model.Block, :last) |> (fn {h, -1} -> h end).()
 
   def prev(tab, key) do
     case Database.prev_key(tab, key) do
