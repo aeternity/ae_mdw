@@ -7,6 +7,7 @@ defmodule AeMdw.Db.Aex9CreateContractMutation do
   alias AeMdw.Db.Contract, as: DBContract
   alias AeMdw.Txs
 
+  @derive AeMdw.Db.TxnMutation
   defstruct [
     :contract_pk,
     :aex9_meta_info,
@@ -38,20 +39,14 @@ defmodule AeMdw.Db.Aex9CreateContractMutation do
     }
   end
 
-  @spec mutate(t()) :: :ok
-  def mutate(%__MODULE__{
+  @spec execute(t(), AeMdw.Database.transaction()) :: :ok
+  def execute(%__MODULE__{
         contract_pk: contract_pk,
         aex9_meta_info: aex9_meta_info,
         caller_pk: caller_pk,
         create_txi: create_txi
-      }) do
-    DBContract.aex9_creation_write(aex9_meta_info, contract_pk, caller_pk, create_txi)
+      }, txn) do
+    DBContract.aex9_creation_write(txn, aex9_meta_info, contract_pk, caller_pk, create_txi)
     :ok
-  end
-end
-
-defimpl AeMdw.Db.Mutation, for: AeMdw.Db.Aex9CreateContractMutation do
-  def mutate(mutation) do
-    @for.mutate(mutation)
   end
 end
