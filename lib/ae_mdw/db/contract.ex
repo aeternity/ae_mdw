@@ -116,7 +116,7 @@ defmodule AeMdw.Db.Contract do
       {{contract_pk, min_bin()}, {contract_pk, max_256bit_bin()}},
       nil
     )
-    |> Enum.each(fn account_pk ->
+    |> Enum.each(fn {contract_pk, account_pk} ->
       Database.delete(txn, Model.Aex9Balance, {contract_pk, account_pk})
     end)
   end

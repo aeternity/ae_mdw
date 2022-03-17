@@ -10,6 +10,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Sync
   alias AeMdw.Db.Aex9AccountPresenceMutation
   alias AeMdw.Db.Aex9AccountBalanceMutation
+  alias AeMdw.Db.Aex9CreateContractMutation
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.ContractCreateMutation
   alias AeMdw.Db.IntTransfer
@@ -288,11 +289,11 @@ defmodule AeMdw.Db.Sync.Transaction do
       {:ok, {type_info, _compiler_vsn, _source_hash}} ->
         call_rec = Contract.get_init_call_rec(tx, block_hash)
 
-        aex9_meta_info =
+        aex9_create_contract_mutation =
           with :ok <- :aect_call.return_type(call_rec),
                true <- Contract.is_aex9?(type_info),
-               {:ok, meta_info} <- Contract.aex9_meta_info(contract_pk) do
-            meta_info
+               {:ok, aex9_meta_info} <- Contract.aex9_meta_info(contract_pk) do
+            Aex9CreateContractMutation.new(contract_pk, aex9_meta_info, owner_pk, txi)
           else
             _failed -> nil
           end
@@ -300,7 +301,8 @@ defmodule AeMdw.Db.Sync.Transaction do
         mutations ++
           Sync.Contract.events_mutations(tx_events, block_index, block_hash, txi, tx_hash, txi) ++
           [
-            ContractCreateMutation.new(contract_pk, txi, owner_pk, aex9_meta_info, call_rec)
+            aex9_create_contract_mutation,
+            ContractCreateMutation.new(txi, call_rec)
           ]
 
       {:error, _reason} ->
@@ -324,24 +326,40 @@ defmodule AeMdw.Db.Sync.Transaction do
     {fun_arg_res, call_rec} =
       Contract.call_tx_info(tx, contract_pk, block_hash, &Contract.to_map/1)
 
-    {child_mutations, aex9_meta_info} =
-      Sync.Contract.child_contract_mutations(
-        :aect_call.return_type(call_rec) == :ok,
-        fun_arg_res,
+    child_mutations =
+      if :aect_call.return_type(call_rec) == :ok do
+        Sync.Contract.child_contract_mutations(
+          fun_arg_res,
+          caller_pk,
+          txi,
+          tx_hash
+        )
+      else
+        []
+      end
+
+    events_mutations =
+      Sync.Contract.events_mutations(
+        tx_events,
+        block_index,
+        block_hash,
         txi,
-        tx_hash
+        tx_hash,
+        create_txi
       )
 
     aex9_balance_mutation =
-      with true <- aex9_meta_info != nil,
+      with :ok <- :aect_call.return_type(call_rec),
+           true <- Contract.is_aex9?(contract_pk),
            {:ok, method_name, method_args} <- Contract.extract_successful_function(fun_arg_res) do
         Aex9AccountBalanceMutation.new(method_name, method_args, contract_pk, caller_pk)
       else
-        _false_not_found -> nil
+        _error_or_false -> nil
       end
 
-    child_mutations ++
-      Sync.Contract.events_mutations(tx_events, block_index, block_hash, txi, tx_hash, create_txi) ++
+    Enum.concat([
+      child_mutations,
+      events_mutations,
       [
         aex9_balance_mutation,
         ContractCallMutation.new(
@@ -350,10 +368,10 @@ defmodule AeMdw.Db.Sync.Transaction do
           create_txi,
           txi,
           fun_arg_res,
-          aex9_meta_info,
           call_rec
         )
       ]
+    ])
   end
 
   defp tx_mutations(%TxContext{
