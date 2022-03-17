@@ -15,8 +15,8 @@ defmodule Integration.AeMdw.Db.Sync.ContractTest do
 
   describe "events_mutations/4" do
     test "creates name transfer mutation" do
-      {"AENS.transfer", call_txi, _local_idx} =
-        Database.dirty_next(Model.FnameIntContractCall, {"AENS.transfer", -1, -1})
+      {:ok, {"AENS.transfer", call_txi, _local_idx}} =
+        Database.next_key(Model.FnameIntContractCall, {"AENS.transfer", -1, -1})
 
       [Model.tx(block_index: {height, mbi} = block_index, id: tx_hash)] =
         Database.read(Model.Tx, call_txi)
@@ -44,8 +44,8 @@ defmodule Integration.AeMdw.Db.Sync.ContractTest do
     end
 
     test "creates name update mutation" do
-      {"AENS.update", call_txi, _local_idx} =
-        Database.dirty_next(Model.FnameIntContractCall, {"AENS.update", -1, -1})
+      {:ok, {"AENS.update", call_txi, _local_idx}} =
+        Database.next_key(Model.FnameIntContractCall, {"AENS.update", -1, -1})
 
       [Model.tx(block_index: {height, mbi} = block_index, id: tx_hash)] =
         Database.read(Model.Tx, call_txi)
