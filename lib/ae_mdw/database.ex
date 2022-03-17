@@ -30,17 +30,29 @@ defmodule AeMdw.Database do
   # credo:disable-for-next-line
   defmacro use_rocksdb?(tab) do
     quote do
-      unquote(tab) == Model.Block or
-        unquote(tab) == Model.Tx or
-        unquote(tab) == Model.Aex9Balance or
-        unquote(tab) == Model.ActiveOracleExpiration or
-        unquote(tab) == Model.InactiveOracleExpiration or
-        unquote(tab) == Model.ActiveOracle or
-        unquote(tab) == Model.InactiveOracle or
-        unquote(tab) == Model.AsyncTasks or
-        unquote(tab) == Model.Migrations or
-        unquote(tab) == Model.DeltaStat or
-        unquote(tab) == Model.TotalStat
+      unquote(tab) != Model.Aex9Contract and
+        unquote(tab) != Model.Aex9ContractSymbol and
+        unquote(tab) != Model.RevAex9Contract and
+        unquote(tab) != Model.Aex9ContractPubkey and
+        unquote(tab) != Model.Aex9Transfer and
+        unquote(tab) != Model.RevAex9Transfer and
+        unquote(tab) != Model.Aex9PairTransfer and
+        unquote(tab) != Model.IdxAex9Transfer and
+        unquote(tab) != Model.Aex9AccountPresence and
+        unquote(tab) != Model.IdxAex9AccountPresence and
+        unquote(tab) != Model.ContractCall and
+        unquote(tab) != Model.ContractLog and
+        unquote(tab) != Model.DataContractLog and
+        unquote(tab) != Model.EvtContractLog and
+        unquote(tab) != Model.IdxContractLog and
+        unquote(tab) != Model.IntContractCall and
+        unquote(tab) != Model.GrpIntContractCall and
+        unquote(tab) != Model.FnameIntContractCall and
+        unquote(tab) != Model.FnameGrpIntContractCall and
+        unquote(tab) != Model.IdIntContractCall and
+        unquote(tab) != Model.GrpIdIntContractCall and
+        unquote(tab) != Model.IdFnameIntContractCall and
+        unquote(tab) != Model.GrpIdFnameIntContractCall
     end
   end
 
@@ -54,6 +66,10 @@ defmodule AeMdw.Database do
   end
 
   @spec dirty_all_keys(table()) :: [key()]
+  def dirty_all_keys(table) when use_rocksdb?(table) do
+    RocksDbCF.all_keys(table)
+  end
+
   def dirty_all_keys(table) do
     :mnesia.dirty_all_keys(table)
   end
@@ -70,19 +86,24 @@ defmodule AeMdw.Database do
     RocksDbCF.dirty_fetch(txn, table, record)
   end
 
-  @spec dirty_read(table(), key()) :: [record()]
-  def dirty_read(tab, key), do: :mnesia.dirty_read(tab, key)
-
-  @spec dirty_first(table()) :: key()
-  def dirty_first(tab), do: :mnesia.dirty_first(tab)
-
-  @spec dirty_last(table()) :: key()
-  def dirty_last(tab), do: :mnesia.dirty_last(tab)
-
   @spec dirty_next(table(), key()) :: key()
+  def dirty_next(table, record) when use_rocksdb?(table) do
+    case RocksDbCF.next_key(table, record) do
+      {:ok, next_key} -> next_key
+      :not_found -> :"$end_of_table"
+    end
+  end
+
   def dirty_next(tab, key), do: :mnesia.dirty_next(tab, key)
 
   @spec dirty_prev(table(), key()) :: key()
+  def dirty_prev(table, record) when use_rocksdb?(table) do
+    case RocksDbCF.prev_key(table, record) do
+      {:ok, prev_key} -> prev_key
+      :not_found -> :"$end_of_table"
+    end
+  end
+
   def dirty_prev(tab, key), do: :mnesia.dirty_prev(tab, key)
 
   @spec dirty_write(table(), record()) :: :ok
@@ -218,6 +239,10 @@ defmodule AeMdw.Database do
   end
 
   @spec exists?(table(), key()) :: boolean()
+  def exists?(tab, key) when use_rocksdb?(tab) do
+    RocksDbCF.exists?(tab, key)
+  end
+
   def exists?(tab, key) do
     match?({:ok, _record}, fetch(tab, key))
   end

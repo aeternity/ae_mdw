@@ -25,7 +25,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Sync.Origin
   alias AeMdw.Db.Sync.Stats
   alias AeMdw.Db.WriteFieldsMutation
-  alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.WriteTxnMutation
   alias AeMdw.Db.TxnMutation
   alias AeMdw.Database
@@ -128,31 +127,32 @@ defmodule AeMdw.Db.Sync.Transaction do
     m_tx = Model.tx(index: txi, id: tx_hash, block_index: block_index, time: mb_time)
     :ets.insert(:tx_sync_cache, {txi, m_tx})
 
-    txn_tx_mutation =
+    model_tx_mutation =
       if not inner_tx? do
         WriteTxnMutation.new(Model.Tx, m_tx)
       end
 
-    {oracle_txn_mutation, tx_mutations} =
+    {tx_mutations, tx_txn_mutations} =
       tx_context
       |> tx_mutations()
+      |> List.flatten()
       |> Enum.split_with(fn
-        %OracleRegisterMutation{} -> true
-        %OracleExtendMutation{} -> true
+        %ContractCreateMutation{} -> true
+        %ContractCallMutation{} -> true
         _other_mutation -> false
       end)
 
     {
       [
-        txn_tx_mutation,
-        inner_txn_mutations,
-        oracle_txn_mutation
+        model_tx_mutation,
+        WriteTxnMutation.new(Model.Type, Model.type(index: {type, txi})),
+        WriteTxnMutation.new(Model.Time, Model.time(index: {mb_time, txi})),
+        WriteFieldsMutation.new(type, tx, block_index, txi),
+        tx_txn_mutations,
+        inner_txn_mutations
       ],
       [
-        WriteMutation.new(Model.Type, Model.type(index: {type, txi})),
-        WriteMutation.new(Model.Time, Model.time(index: {mb_time, txi})),
         tx_mutations,
-        WriteFieldsMutation.new(type, tx, block_index, txi),
         inner_mutations
       ]
     }
@@ -183,8 +183,6 @@ defmodule AeMdw.Db.Sync.Transaction do
     :ets.delete_all_objects(:stat_sync_cache)
     :ets.delete_all_objects(:ct_create_sync_cache)
     :ets.delete_all_objects(:tx_sync_cache)
-    :ets.delete_all_objects(:name_sync_cache)
-    :ets.delete_all_objects(:oracle_sync_cache)
 
     last_mbi =
       case Database.prev_key(Model.Block, {height + 1, -1}) do
@@ -211,16 +209,16 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     kb_model = Model.block(index: {height, -1}, tx_index: kb_txi, hash: kb_hash)
 
-    if height >= AE.min_block_reward_height() do
-      Database.transaction([
-        IntTransfer.block_rewards_mutation(height, kb_header, kb_hash),
-        Name.expirations_mutation(height)
-      ])
-    else
-      Database.transaction([Name.expirations_mutation(height)])
-    end
+    block_rewards_mutation =
+      if height >= AE.min_block_reward_height() do
+        IntTransfer.block_rewards_mutation(height, kb_header, kb_hash)
+      end
 
-    Database.commit([Oracle.expirations_mutation(height)])
+    Database.commit([
+      block_rewards_mutation,
+      Name.expirations_mutation(height),
+      Oracle.expirations_mutation(height)
+    ])
 
     Database.commit([
       Stats.new_mutation(height, last_mbi == -1),
