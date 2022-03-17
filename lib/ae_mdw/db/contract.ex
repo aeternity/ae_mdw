@@ -7,7 +7,7 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Collection
   alias AeMdw.Contract
   alias AeMdw.Database
-  alias AeMdw.Db.WriteMutation
+  alias AeMdw.Db.WriteTxnMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Origin
@@ -138,11 +138,19 @@ defmodule AeMdw.Db.Contract do
   end
 
   @spec call_write(transaction(), integer(), integer(), Contract.fun_arg_res_or_error()) :: :ok
-  def call_write(txn, create_txi, txi, %{function: fname, arguments: args, result: %{error: [err]}}),
-    do: call_write(create_txi, txi, fname, args, :error, err)
+  def call_write(txn, create_txi, txi, %{
+        function: fname,
+        arguments: args,
+        result: %{error: [err]}
+      }),
+      do: call_write(txn, create_txi, txi, fname, args, :error, err)
 
-  def call_write(txn, create_txi, txi, %{function: fname, arguments: args, result: %{abort: [err]}}),
-    do: call_write(txn, create_txi, txi, fname, args, :abort, err)
+  def call_write(txn, create_txi, txi, %{
+        function: fname,
+        arguments: args,
+        result: %{abort: [err]}
+      }),
+      do: call_write(txn, create_txi, txi, fname, args, :abort, err)
 
   def call_write(txn, create_txi, txi, %{function: fname, arguments: args, result: val}),
     do: call_write(txn, create_txi, txi, fname, args, :ok, val)
@@ -150,7 +158,8 @@ defmodule AeMdw.Db.Contract do
   def call_write(txn, create_txi, txi, {:error, detail}),
     do: call_write(txn, create_txi, txi, "<unknown>", nil, :invalid, inspect(detail))
 
-  @spec call_write(transaction(), Txs.txi(), Txs.txi(), String.t(), list() | nil, any(), any()) :: :ok
+  @spec call_write(transaction(), Txs.txi(), Txs.txi(), String.t(), list() | nil, any(), any()) ::
+          :ok
   def call_write(txn, create_txi, txi, fname, args, result, return) do
     m_call =
       Model.contract_call(
@@ -369,10 +378,10 @@ defmodule AeMdw.Db.Contract do
     {tx_type, raw_tx} = :aetx.specialize_type(tx)
 
     initial_mutations = [
-      WriteMutation.new(Model.IntContractCall, m_call),
-      WriteMutation.new(Model.GrpIntContractCall, m_grp_call),
-      WriteMutation.new(Model.FnameIntContractCall, m_fname_call),
-      WriteMutation.new(Model.FnameGrpIntContractCall, m_fname_grp_call)
+      WriteTxnMutation.new(Model.IntContractCall, m_call),
+      WriteTxnMutation.new(Model.GrpIntContractCall, m_grp_call),
+      WriteTxnMutation.new(Model.FnameIntContractCall, m_fname_call),
+      WriteTxnMutation.new(Model.FnameGrpIntContractCall, m_fname_grp_call)
     ]
 
     ids_mutations =
@@ -394,10 +403,10 @@ defmodule AeMdw.Db.Contract do
           )
 
         [
-          WriteMutation.new(Model.IdIntContractCall, m_id_call),
-          WriteMutation.new(Model.GrpIdIntContractCall, m_grp_id_call),
-          WriteMutation.new(Model.IdFnameIntContractCall, m_id_fname_call),
-          WriteMutation.new(Model.GrpIdFnameIntContractCall, m_grp_id_fname_call)
+          WriteTxnMutation.new(Model.IdIntContractCall, m_id_call),
+          WriteTxnMutation.new(Model.GrpIdIntContractCall, m_grp_id_call),
+          WriteTxnMutation.new(Model.IdFnameIntContractCall, m_id_fname_call),
+          WriteTxnMutation.new(Model.GrpIdFnameIntContractCall, m_grp_id_fname_call)
         ]
       end)
 
@@ -426,16 +435,16 @@ defmodule AeMdw.Db.Contract do
     &(byte_size(&1) >= len && :binary.part(&1, 0, len) == prefix)
   end
 
-  defp write_aex9_records(contract_pk, txi, i, [from_pk, to_pk, <<amount::256>>]) do
+  defp write_aex9_records(txn, contract_pk, txi, i, [from_pk, to_pk, <<amount::256>>]) do
     m_transfer = Model.aex9_transfer(index: {from_pk, txi, to_pk, amount, i})
     m_rev_transfer = Model.rev_aex9_transfer(index: {to_pk, txi, from_pk, amount, i})
     m_idx_transfer = Model.idx_aex9_transfer(index: {txi, i, from_pk, to_pk, amount})
     m_pair_transfer = Model.aex9_pair_transfer(index: {to_pk, from_pk, amount, txi, i})
 
-    Database.write(Model.Aex9Transfer, m_transfer)
-    Database.write(Model.RevAex9Transfer, m_rev_transfer)
-    Database.write(Model.IdxAex9Transfer, m_idx_transfer)
-    Database.write(Model.Aex9PairTransfer, m_pair_transfer)
+    Database.write(txn, Model.Aex9Transfer, m_transfer)
+    Database.write(txn, Model.RevAex9Transfer, m_rev_transfer)
+    Database.write(txn, Model.IdxAex9Transfer, m_idx_transfer)
+    Database.write(txn, Model.Aex9PairTransfer, m_pair_transfer)
 
     aex9_write_presence(contract_pk, txi, to_pk)
     aex9_presence_cache_write({{contract_pk, txi, i}, {from_pk, to_pk}, amount})
