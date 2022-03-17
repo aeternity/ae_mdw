@@ -133,17 +133,8 @@ defmodule AeMdw.Db.Util do
     end
   end
 
-  def do_writes(tab_xs),
-    do: do_writes(tab_xs, &Database.write(&1, &2))
-
   def do_writes(tab_xs, db_write) when is_function(db_write, 2),
     do: Enum.each(tab_xs, fn {tab, xs} -> Enum.each(xs, &db_write.(tab, &1)) end)
-
-  def do_dels(tab_keys),
-    do: do_dels(tab_keys, &Database.delete(&1, &2))
-
-  def do_dels(tab_keys, db_delete) when is_function(db_delete, 2),
-    do: Enum.each(tab_keys, fn {tab, ks} -> Enum.each(ks, &db_delete.(tab, &1)) end)
 
   def tx_val(tx_rec, field),
     do: tx_val(tx_rec, elem(tx_rec, 0), field)

@@ -43,22 +43,6 @@ defmodule AeMdw.Database do
     RocksDbCF.dirty_fetch(txn, table, record)
   end
 
-  @spec dirty_next(table(), key()) :: key()
-  def dirty_next(table, record) do
-    case RocksDbCF.next_key(table, record) do
-      {:ok, next_key} -> next_key
-      :not_found -> :"$end_of_table"
-    end
-  end
-
-  @spec dirty_prev(table(), key()) :: key()
-  def dirty_prev(table, record) do
-    case RocksDbCF.prev_key(table, record) do
-      {:ok, prev_key} -> prev_key
-      :not_found -> :"$end_of_table"
-    end
-  end
-
   @spec dirty_write(table(), record()) :: :ok
   def dirty_write(table, record) do
     RocksDbCF.dirty_put(table, record)
@@ -79,7 +63,6 @@ defmodule AeMdw.Database do
       :not_found -> :none
     end
   end
-
 
   @spec first_key(table(), term()) :: term()
   def first_key(tab, default) do
@@ -133,12 +116,8 @@ defmodule AeMdw.Database do
   end
 
   @spec exists?(table(), key()) :: boolean()
-  def exists?(tab, key) when use_rocksdb?(tab) do
-    RocksDbCF.exists?(tab, key)
-  end
-
   def exists?(tab, key) do
-    match?({:ok, _record}, fetch(tab, key))
+    RocksDbCF.exists?(tab, key)
   end
 
   @spec read(table(), key()) :: [record()]
