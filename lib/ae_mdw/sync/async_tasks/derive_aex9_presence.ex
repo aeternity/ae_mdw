@@ -48,23 +48,20 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
 
     account_amount_map = Enum.into(balances, %{}, fn {{:address, pk}, amount} -> {pk, amount} end)
 
-    {:atomic, :ok} =
-      :mnesia.transaction(fn ->
-        Enum.each(pks, fn account_pk ->
-          DBContract.aex9_write_presence(contract_pk, create_txi, account_pk)
+    Enum.each(pks, fn account_pk ->
+      DBContract.aex9_write_presence(contract_pk, create_txi, account_pk)
 
-          amount = Map.get(account_amount_map, account_pk)
+      amount = Map.get(account_amount_map, account_pk)
 
-          m_balance =
-            Model.aex9_balance(
-              index: {contract_pk, account_pk},
-              block_index: {kbi, mbi},
-              amount: amount
-            )
+      m_balance =
+        Model.aex9_balance(
+          index: {contract_pk, account_pk},
+          block_index: {kbi, mbi},
+          amount: amount
+        )
 
-          Database.dirty_write(Model.Aex9Balance, m_balance)
-        end)
-      end)
+      Database.dirty_write(Model.Aex9Balance, m_balance)
+    end)
 
     :ets.delete(:derive_aex9_presence_cache, contract_pk)
 

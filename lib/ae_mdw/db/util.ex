@@ -14,8 +14,9 @@ defmodule AeMdw.Db.Util do
 
   @eot :"$end_of_table"
 
-  def read(tab, key),
-    do: :mnesia.async_dirty(fn -> Database.read(tab, key) end)
+  def read(tab, key) do
+    Database.read(tab, key)
+  end
 
   def read!(tab, key),
     do: read(tab, key) |> one!
