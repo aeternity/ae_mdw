@@ -29,19 +29,17 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9Presence do
     {:key, height, _hash} = DBN.top_height_hash(false)
     create_txi = Origin.tx_index!({:contract, contract_pk})
 
-    :mnesia.sync_dirty(fn ->
-      Enum.each(balances, fn {{:address, account_pk}, amount} ->
-        Contract.aex9_write_new_presence(contract_pk, create_txi, account_pk)
+    Enum.each(balances, fn {{:address, account_pk}, amount} ->
+      Contract.aex9_write_new_presence(contract_pk, create_txi, account_pk)
 
-        m_balance =
-          Model.aex9_balance(
-            index: {contract_pk, account_pk},
-            block_index: {height, -1},
-            amount: amount
-          )
+      m_balance =
+        Model.aex9_balance(
+          index: {contract_pk, account_pk},
+          block_index: {height, -1},
+          amount: amount
+        )
 
-        Database.dirty_write(Model.Aex9Balance, m_balance)
-      end)
+      Database.dirty_write(Model.Aex9Balance, m_balance)
     end)
 
     :ok

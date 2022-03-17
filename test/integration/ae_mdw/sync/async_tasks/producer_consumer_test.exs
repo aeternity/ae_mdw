@@ -21,31 +21,24 @@ defmodule Integration.AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
   test "enqueue, dequeue and aex9 presence update success" do
     create_txi = Origin.tx_index!({:contract, @contract_pk})
     # setup
-    exists_before? =
-      :mnesia.async_dirty(fn ->
-        Contract.aex9_presence_exists?(@contract_pk, @account_pk, create_txi)
-      end)
+    exists_before? = Contract.aex9_presence_exists?(@contract_pk, @account_pk, create_txi)
 
     on_exit(fn ->
       if not exists_before? do
-        :mnesia.sync_dirty(fn ->
-          :mnesia.delete(
-            Model.Aex9AccountPresence,
-            {@account_pk, create_txi, @contract_pk},
-            :write
-          )
-        end)
-      end
-    end)
-
-    if exists_before? do
-      :mnesia.sync_dirty(fn ->
-        :mnesia.delete(
+        Database.dirty_delete(
           Model.Aex9AccountPresence,
           {@account_pk, create_txi, @contract_pk},
           :write
         )
-      end)
+      end
+    end)
+
+    if exists_before? do
+      Database.dirty_delete(
+        Model.Aex9AccountPresence,
+        {@account_pk, create_txi, @contract_pk},
+        :write
+      )
     end
 
     # check async enqueue and sync dequeue
@@ -88,12 +81,11 @@ defmodule Integration.AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
              Process.send(pid, :demand, [:noconnect])
              Process.sleep(100)
 
-             exists? =
-               :mnesia.async_dirty(fn ->
-                 Contract.aex9_presence_exists?(@contract_pk, @account_pk, create_txi)
-               end)
-
-             if exists?, do: {:halt, true}, else: {:cont, false}
+            if Contract.aex9_presence_exists?(@contract_pk, @account_pk, create_txi) do
+              {:halt, true}
+            else
+              {:cont, false}
+             end
            end)
   end
 end
