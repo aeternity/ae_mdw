@@ -5,14 +5,13 @@ defmodule Integration.AeMdw.Db.ContractCallMutationTest do
 
   alias AeMdw.Node.Db, as: NodeDb
   alias AeMdw.Contract
+  alias AeMdw.Database
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
   alias AeMdw.Db.Util
   alias AeMdw.Validate
   alias Support.AeMdw.Db.ContractTestUtil
-
-  import Support.TestMnesiaSandbox
 
   require Ex2ms
   require Model
@@ -25,98 +24,78 @@ defmodule Integration.AeMdw.Db.ContractCallMutationTest do
   @aex9_ct_pk3 Validate.id!("ct_kraQeEEaoKKUq3qPHxyrsN1rvD9jPr58QFat5Ha641LtgLwEA")
 
   test "add aex9 presence after a mint" do
-    fn ->
-      contract_pk = @aex9_ct_pk1
-      # mint
-      call_txi = 10_552_888
+    contract_pk = @aex9_ct_pk1
+    # mint
+    call_txi = 10_552_888
 
-      assert {account_pk,
-              %ContractCallMutation{
-                txi: ^call_txi,
-                contract_pk: ^contract_pk
-              }} = mutation = contract_call_mutation("mint", call_txi, @aex9_ct_pk1)
+    assert {account_pk,
+            %ContractCallMutation{
+              txi: ^call_txi,
+              contract_pk: ^contract_pk
+            }} = mutation = contract_call_mutation("mint", call_txi, @aex9_ct_pk1)
 
-      # delete and create presence
-      ContractTestUtil.aex9_delete_presence(contract_pk, account_pk)
-      ContractCallMutation.mutate(mutation)
+    # delete and create presence
+    ContractTestUtil.aex9_delete_presence(contract_pk, account_pk)
+    Database.commit([mutation])
 
-      assert {^account_pk, ^call_txi, ^contract_pk} =
-               :mnesia.next(Model.Aex9AccountPresence, {account_pk, -1, nil})
-
-      :mnesia.abort(:rollback)
-    end
-    |> mnesia_sandbox()
+    assert {:ok, {^account_pk, ^call_txi, ^contract_pk}} =
+             Database.next_key(Model.Aex9AccountPresence, {account_pk, -1, nil})
   end
 
   test "add aex9 presence after a transfer" do
-    fn ->
-      contract_pk = @aex9_ct_pk1
-      # transfer
-      call_txi = 10_587_359
+    contract_pk = @aex9_ct_pk1
+    # transfer
+    call_txi = 10_587_359
 
-      assert {account_pk,
-              %ContractCallMutation{
-                txi: ^call_txi,
-                contract_pk: ^contract_pk
-              }} = mutation = contract_call_mutation("transfer", call_txi, @aex9_ct_pk1)
+    assert {account_pk,
+            %ContractCallMutation{
+              txi: ^call_txi,
+              contract_pk: ^contract_pk
+            }} = mutation = contract_call_mutation("transfer", call_txi, @aex9_ct_pk1)
 
-      # delete and create presence
-      ContractTestUtil.aex9_delete_presence(contract_pk, account_pk)
-      ContractCallMutation.mutate(mutation)
+    # delete and create presence
+    ContractTestUtil.aex9_delete_presence(contract_pk, account_pk)
+    Database.commit([mutation])
 
-      assert {^account_pk, ^call_txi, ^contract_pk} =
-               :mnesia.next(Model.Aex9AccountPresence, {account_pk, -1, nil})
-
-      :mnesia.abort(:rollback)
-    end
-    |> mnesia_sandbox()
+    assert {:ok, {^account_pk, ^call_txi, ^contract_pk}} =
+             Database.next_key(Model.Aex9AccountPresence, {account_pk, -1, nil})
   end
 
   test "add aex9 presence after a transfer allowance" do
-    fn ->
-      contract_pk = @aex9_ct_pk2
-      # transfer_allowance
-      call_txi = 11_440_639
+    contract_pk = @aex9_ct_pk2
+    # transfer_allowance
+    call_txi = 11_440_639
 
-      assert {account_pk,
-              %ContractCallMutation{
-                txi: ^call_txi,
-                contract_pk: ^contract_pk
-              }} = mutation = contract_call_mutation("transfer_allowance", call_txi, @aex9_ct_pk2)
+    assert {account_pk,
+            %ContractCallMutation{
+              txi: ^call_txi,
+              contract_pk: ^contract_pk
+            }} = mutation = contract_call_mutation("transfer_allowance", call_txi, @aex9_ct_pk2)
 
-      # delete and create presence
-      ContractTestUtil.aex9_delete_presence(contract_pk, account_pk)
-      ContractCallMutation.mutate(mutation)
+    # delete and create presence
+    ContractTestUtil.aex9_delete_presence(contract_pk, account_pk)
+    Database.commit([mutation])
 
-      assert {^account_pk, ^call_txi, ^contract_pk} =
-               :mnesia.next(Model.Aex9AccountPresence, {account_pk, -1, nil})
-
-      :mnesia.abort(:rollback)
-    end
-    |> mnesia_sandbox()
+    assert {:ok, {^account_pk, ^call_txi, ^contract_pk}} =
+             Database.next_key(Model.Aex9AccountPresence, {account_pk, -1, nil})
   end
 
   test "add aex9 presence after a burn (balance is 0)" do
-    fn ->
-      contract_pk = @aex9_ct_pk3
-      call_txi = 11_213_118
+    contract_pk = @aex9_ct_pk3
+    call_txi = 11_213_118
 
-      assert {account_pk,
-              %ContractCallMutation{
-                txi: ^call_txi,
-                contract_pk: ^contract_pk
-              }} = mutation = contract_call_mutation("burn", call_txi, @aex9_ct_pk3)
+    assert {account_pk,
+            %ContractCallMutation{
+              txi: ^call_txi,
+              contract_pk: ^contract_pk
+            }} = mutation = contract_call_mutation("burn", call_txi, @aex9_ct_pk3)
 
-      # delete and create presence
-      ContractTestUtil.aex9_delete_presence(contract_pk, account_pk)
-      ContractCallMutation.mutate(mutation)
+    # delete and create presence
+    ContractTestUtil.aex9_delete_presence(contract_pk, account_pk)
+    Database.commit([mutation])
 
-      assert {^account_pk, ^call_txi, ^contract_pk} =
-               :mnesia.next(Model.Aex9AccountPresence, {account_pk, -1, nil})
-
-      :mnesia.abort(:rollback)
-    end
-    |> mnesia_sandbox()
+    assert {:ok, {^account_pk, ^call_txi, ^contract_pk}} =
+             Database.next_key(Model.Aex9AccountPresence, {account_pk, -1, nil})
   end
 
   defp contract_call_mutation(fname, call_txi, contract_pk) do

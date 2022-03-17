@@ -31,7 +31,7 @@ defmodule AeMdw.Db.ContractCreateMutation do
         %__MODULE__{
           txi: txi,
           call_rec: call_rec
-          },
+        },
         txn
       ) do
     AeMdw.Ets.inc(:stat_sync_cache, :contracts_created)

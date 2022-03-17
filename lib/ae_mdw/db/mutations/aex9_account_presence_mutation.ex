@@ -6,7 +6,7 @@ defmodule AeMdw.Db.Aex9AccountPresenceMutation do
   alias AeMdw.Db.Sync
   alias AeMdw.Blocks
 
-  @derive AeMdw.Db.Mutation
+  @derive AeMdw.Db.TxnMutation
   defstruct [:height, :mbi]
 
   @opaque t() :: %__MODULE__{
@@ -19,8 +19,8 @@ defmodule AeMdw.Db.Aex9AccountPresenceMutation do
     %__MODULE__{height: height, mbi: mbi}
   end
 
-  @spec mutate(t()) :: :ok
-  def mutate(%__MODULE__{height: height, mbi: mbi}) do
+  @spec execute(t(), AeMdw.Database.transaction()) :: :ok
+  def execute(%__MODULE__{height: height, mbi: mbi}, _txn) do
     Sync.Contract.aex9_derive_account_presence!({height, mbi})
   end
 end
