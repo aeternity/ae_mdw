@@ -90,7 +90,7 @@ defmodule AeMdw.Db.Sync.Contract do
           Txs.tx_hash(),
           Txs.txi()
         ) :: [
-          Mutation.t()
+          TxnMutation.t()
         ]
   def events_mutations(events, block_index, block_hash, call_txi, call_tx_hash, create_txi) do
     shifted_events = events |> Enum.drop(1) |> Enum.concat([nil])
