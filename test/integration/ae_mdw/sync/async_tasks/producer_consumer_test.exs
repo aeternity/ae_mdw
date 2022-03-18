@@ -79,10 +79,10 @@ defmodule Integration.AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
              Process.send(pid, :demand, [:noconnect])
              Process.sleep(100)
 
-            if Contract.aex9_presence_exists?(@contract_pk, @account_pk, create_txi) do
-              {:halt, true}
-            else
-              {:cont, false}
+             if Contract.aex9_presence_exists?(@contract_pk, @account_pk, create_txi) do
+               {:halt, true}
+             else
+               {:cont, false}
              end
            end)
   end

@@ -49,13 +49,13 @@ defmodule Integration.AeMdw.Db.Aex9CreateContractMutationTest do
     assert {^name, ^symbol, ^decimals} = aex9_meta_info
 
     assert ^origin_mutations =
-              Sync.Origin.origin_mutations(
-                :contract_call_tx,
-                nil,
-                child_contract_pk,
-                txi,
-                tx_hash
-              )
+             Sync.Origin.origin_mutations(
+               :contract_call_tx,
+               nil,
+               child_contract_pk,
+               txi,
+               tx_hash
+             )
 
     # delete if already synced
     Database.dirty_delete(Model.Aex9Contract, {name, symbol, txi, decimals})
@@ -70,14 +70,12 @@ defmodule Integration.AeMdw.Db.Aex9CreateContractMutationTest do
     m_rev_contract = Model.rev_aex9_contract(index: {txi, name, symbol, decimals})
     m_contract_pk = Model.aex9_contract_pubkey(index: child_contract_pk, txi: txi)
 
-    assert [^m_contract] =
-              Database.read(Model.Aex9Contract, {name, symbol, txi, decimals})
+    assert [^m_contract] = Database.read(Model.Aex9Contract, {name, symbol, txi, decimals})
 
     assert [^m_contract_sym] =
-              Database.read(Model.Aex9ContractSymbol, {symbol, name, txi, decimals})
+             Database.read(Model.Aex9ContractSymbol, {symbol, name, txi, decimals})
 
-    assert [^m_rev_contract] =
-              Database.read(Model.RevAex9Contract, {txi, name, symbol, decimals})
+    assert [^m_rev_contract] = Database.read(Model.RevAex9Contract, {txi, name, symbol, decimals})
 
     assert [^m_contract_pk] = Database.read(Model.Aex9ContractPubkey, child_contract_pk)
   end
