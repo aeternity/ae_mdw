@@ -58,7 +58,14 @@ defmodule AeMdw.Db.Sync.Stats do
       height
       |> Name.list_inactivated_at()
       |> Enum.map(fn plain_name -> Database.fetch!(Model.InactiveName, plain_name) end)
-      |> Enum.split_with(fn Model.name(revoke: {{kbi, _mbi}, _txi}) -> kbi == height end)
+      |> Enum.split_with(fn Model.name(revoke: revoke) ->
+        if revoke do
+          {{kbi, _mbi}, _txi} = revoke
+          kbi == height
+        else
+          false
+        end
+      end)
 
     all_contracts_count = Origin.count_contracts()
 
