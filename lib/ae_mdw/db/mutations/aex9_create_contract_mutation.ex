@@ -40,12 +40,15 @@ defmodule AeMdw.Db.Aex9CreateContractMutation do
   end
 
   @spec execute(t(), AeMdw.Database.transaction()) :: :ok
-  def execute(%__MODULE__{
-        contract_pk: contract_pk,
-        aex9_meta_info: aex9_meta_info,
-        caller_pk: caller_pk,
-        create_txi: create_txi
-      }, txn) do
+  def execute(
+        %__MODULE__{
+          contract_pk: contract_pk,
+          aex9_meta_info: aex9_meta_info,
+          caller_pk: caller_pk,
+          create_txi: create_txi
+        },
+        txn
+      ) do
     DBContract.aex9_creation_write(txn, aex9_meta_info, contract_pk, caller_pk, create_txi)
     :ok
   end
