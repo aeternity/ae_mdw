@@ -18,6 +18,7 @@ defmodule AeMdw.Sync.Server do
   defstruct [:sync_pid, :fork_height, :current_height]
 
   @unsynced_gens 1
+  @max_blocks_sync 600
 
   @spec start_link(GenServer.options()) :: GenServer.on_start()
   def start_link(_opts),
@@ -95,7 +96,8 @@ defmodule AeMdw.Sync.Server do
           spawn_invalidate(fork_height)
 
         current_height < top_height ->
-          spawn_sync(current_height + 1, top_height)
+          spawn_sync(current_height + 1, min(current_height + @max_blocks_sync, top_height))
+
 
         true ->
           nil
