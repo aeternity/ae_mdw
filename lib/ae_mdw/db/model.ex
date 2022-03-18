@@ -15,6 +15,7 @@ defmodule AeMdw.Db.Model do
   import Record, only: [defrecord: 2]
 
   @type table :: atom()
+  @type m_record :: tuple()
   @opaque key :: tuple() | integer() | pubkey()
 
   @typep pubkey :: Db.pubkey()
