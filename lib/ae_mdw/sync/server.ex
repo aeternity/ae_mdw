@@ -98,7 +98,6 @@ defmodule AeMdw.Sync.Server do
         current_height < top_height ->
           spawn_sync(current_height + 1, min(current_height + @max_blocks_sync, top_height))
 
-
         true ->
           nil
       end

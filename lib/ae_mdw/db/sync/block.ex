@@ -76,8 +76,8 @@ defmodule AeMdw.Db.Sync.Block do
     {key_block, micro_blocks} = AE.Db.get_blocks(kb_hash, next_kb_hash)
     kb_header = :aec_blocks.to_key_header(key_block)
 
-    {:ok, {^height, last_mbi} = key} = Database.prev_key(Model.Block, {height + 1, -1})
-    Model.block(tx_index: last_txi) = Database.fetch!(Model.Block, key)
+    {:ok, {^height, last_mbi}} = Database.prev_key(Model.Block, {height + 1, -1})
+    last_txi = Database.last_key(Model.Tx, -1) + 1
 
     :ets.delete_all_objects(:stat_sync_cache)
     :ets.delete_all_objects(:ct_create_sync_cache)
@@ -156,14 +156,9 @@ defmodule AeMdw.Db.Sync.Block do
 
   @spec synced_height :: Blocks.height() | -1
   def synced_height do
-    case Database.last_key(Model.Tx) do
-      :none ->
-        -1
-
-      {:ok, key} ->
-        Model.tx(block_index: {height, _txi}) = Database.fetch!(Model.Tx, key)
-
-        height
+    case Database.last_key(Model.DeltaStat) do
+      :none -> -1
+      {:ok, height} -> height
     end
   end
 end
