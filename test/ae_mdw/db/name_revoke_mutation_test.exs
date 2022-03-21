@@ -3,7 +3,6 @@ defmodule AeMdw.Db.NameRevokeMutationTest do
 
   alias AeMdw.Database
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Sync
 
   require Model
 
@@ -12,7 +11,7 @@ defmodule AeMdw.Db.NameRevokeMutationTest do
 
     name_hash =
       case :aens.get_name_hash(plain_name) do
-        {:ok, name_id_bin} -> Enc.encode(:name, name_id_bin)
+        {:ok, name_id_bin} -> :aeser_api_encoder.encode(:name, name_id_bin)
         _error -> nil
       end
 
