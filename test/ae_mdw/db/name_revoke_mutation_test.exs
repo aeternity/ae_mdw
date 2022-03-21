@@ -32,12 +32,10 @@ defmodule AeMdw.Db.NameRevokeMutationTest do
         updates: [],
         transfers: [],
         revoke: nil,
-        auction: 0,
         owner: owner_pk,
         previous: nil
       )
 
-    cache_through_read(Model.PlainName, name_hash)
     Database.dirty_write(Model.PlainName, Model.plain_name(index: name_hash, value: plain_name))
     Database.dirty_write(Model.ActiveName, active_name)
 
