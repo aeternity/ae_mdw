@@ -6,9 +6,9 @@ defmodule AeMdw.Db.Sync.Origin do
   alias AeMdw.Node
   alias AeMdw.Node.Db, as: NodeDb
   alias AeMdw.Db.Model
-  alias AeMdw.Db.TxnMutation
+  alias AeMdw.Db.Mutation
+  alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.WriteFieldMutation
-  alias AeMdw.Db.WriteTxnMutation
   alias AeMdw.Txs
 
   require Model
@@ -19,14 +19,14 @@ defmodule AeMdw.Db.Sync.Origin do
           NodeDb.pubkey(),
           Txs.txi(),
           Txs.tx_hash()
-        ) :: [TxnMutation.t()]
+        ) :: [Mutation.t()]
   def origin_mutations(tx_type, pos, pubkey, txi, tx_hash) do
     m_origin = Model.origin(index: {tx_type, pubkey, txi}, tx_id: tx_hash)
     m_rev_origin = Model.rev_origin(index: {txi, tx_type, pubkey})
 
     [
-      WriteTxnMutation.new(Model.Origin, m_origin),
-      WriteTxnMutation.new(Model.RevOrigin, m_rev_origin),
+      WriteMutation.new(Model.Origin, m_origin),
+      WriteMutation.new(Model.RevOrigin, m_rev_origin),
       WriteFieldMutation.new(tx_type, pos, pubkey, txi)
     ]
   end

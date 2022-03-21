@@ -70,17 +70,6 @@ defmodule AeMdw.Collection do
   end
 
   @doc """
-  Streams forward a table seeking the iterator to a boundary start key.
-  """
-  @spec stream(table(), key()) :: Enumerable.t()
-  def stream(table, boundary_start_key) do
-    case fetch_first_key(table, :forward, boundary_start_key, nil) do
-      {:ok, first_key} -> unfold_stream(table, :forward, first_key, nil)
-      :none -> []
-    end
-  end
-
-  @doc """
   Merges any given stream of keys into a single stream, in sorted order and without dups.
   """
   @spec merge([Enumerable.t()], direction()) :: Enumerable.t()

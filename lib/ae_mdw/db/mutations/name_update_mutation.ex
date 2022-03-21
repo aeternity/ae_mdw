@@ -4,13 +4,12 @@ defmodule AeMdw.Db.NameUpdateMutation do
   """
 
   alias AeMdw.Blocks
-  alias AeMdw.Database
   alias AeMdw.Db.Sync.Name
   alias AeMdw.Names
   alias AeMdw.Node
   alias AeMdw.Txs
 
-  @derive AeMdw.Db.TxnMutation
+  @derive AeMdw.Db.Mutation
   defstruct [:name_hash, :name_ttl, :pointers, :txi, :block_index, :internal?]
 
   @opaque t() :: %__MODULE__{
@@ -38,18 +37,15 @@ defmodule AeMdw.Db.NameUpdateMutation do
     }
   end
 
-  @spec execute(t(), Database.transaction()) :: :ok
-  def execute(
-        %__MODULE__{
-          name_hash: name_hash,
-          name_ttl: name_ttl,
-          pointers: pointers,
-          txi: txi,
-          block_index: block_index,
-          internal?: internal?
-        },
-        txn
-      ) do
-    Name.update(txn, name_hash, name_ttl, pointers, txi, block_index, internal?)
+  @spec mutate(t()) :: :ok
+  def mutate(%__MODULE__{
+        name_hash: name_hash,
+        name_ttl: name_ttl,
+        pointers: pointers,
+        txi: txi,
+        block_index: block_index,
+        internal?: internal?
+      }) do
+    Name.update(name_hash, name_ttl, pointers, txi, block_index, internal?)
   end
 end

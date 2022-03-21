@@ -6,10 +6,12 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   alias AeMdw.Database
   alias AeMdw.Db.Sync.Transaction
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Mutation
   alias AeMdw.Validate
 
   import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, spend_tx: 3]
   import Mock
+  import Support.TestMnesiaSandbox
 
   require Ex2ms
   require Model
@@ -30,23 +32,31 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         txi = @very_high_txi + 1
         block_index = {height, 0}
 
-        {txn_mutations, _mutations} =
+        {_txn_mutations, mutations} =
           Transaction.transaction_mutations(
             {signed_tx, txi},
             {block_index, mb, mb_time, %{}},
             false
           )
 
-        Database.commit(txn_mutations)
+        fn ->
+          mutations
+          |> Enum.reject(&is_nil/1)
+          |> List.flatten()
+          |> Enum.each(&Mutation.mutate/1)
 
-        {sender_pk, recipient_pk} = pubkeys_from_tx(signed_tx)
-        assert sender_pk != recipient_pk
+          {sender_pk, recipient_pk} = pubkeys_from_tx(signed_tx)
+          assert sender_pk != recipient_pk
 
-        assert {:spend_tx, _pos, ^sender_pk, ^txi} =
-                 query_spend_tx_field_index(sender_pk, @sender_id_pos)
+          assert {:spend_tx, _pos, ^sender_pk, ^txi} =
+                   query_spend_tx_field_index(sender_pk, @sender_id_pos)
 
-        assert {:spend_tx, _pos, ^recipient_pk, ^txi} =
-                 query_spend_tx_field_index(recipient_pk, @recipient_id_pos)
+          assert {:spend_tx, _pos, ^recipient_pk, ^txi} =
+                   query_spend_tx_field_index(recipient_pk, @recipient_id_pos)
+
+          :mnesia.abort(:rollback)
+        end
+        |> mnesia_sandbox()
       end
     end
 
@@ -61,23 +71,31 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         txi = @very_high_txi + 1
         block_index = {height, 0}
 
-        {txn_mutations, _mutations} =
+        {_txn_mutations, mutations} =
           Transaction.transaction_mutations(
             {signed_tx, txi},
             {block_index, mb, mb_time, %{}},
             false
           )
 
-        Database.commit(txn_mutations)
+        fn ->
+          mutations
+          |> Enum.reject(&is_nil/1)
+          |> List.flatten()
+          |> Enum.each(&Mutation.mutate/1)
 
-        {sender_pk, recipient_pk} = pubkeys_from_tx(signed_tx)
-        assert sender_pk == recipient_pk
+          {sender_pk, recipient_pk} = pubkeys_from_tx(signed_tx)
+          assert sender_pk == recipient_pk
 
-        assert {:spend_tx, _pos, ^sender_pk, ^txi} =
-                 query_spend_tx_field_index(sender_pk, @sender_id_pos)
+          assert {:spend_tx, _pos, ^sender_pk, ^txi} =
+                   query_spend_tx_field_index(sender_pk, @sender_id_pos)
 
-        assert {:spend_tx, _pos, ^recipient_pk, ^txi} =
-                 query_spend_tx_field_index(recipient_pk, @recipient_id_pos)
+          assert {:spend_tx, _pos, ^recipient_pk, ^txi} =
+                   query_spend_tx_field_index(recipient_pk, @recipient_id_pos)
+
+          :mnesia.abort(:rollback)
+        end
+        |> mnesia_sandbox()
       end
     end
   end
@@ -93,7 +111,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   end
 
   defp query_spend_tx_field_index(pubkey, pos) do
-    {:ok, index} = Database.prev_key(Model.Field, {:spend_tx, pos, pubkey, nil})
+    {:ok, index} = Database.dirty_prev_key(Model.Field, {:spend_tx, pos, pubkey, nil})
     index
   end
 end

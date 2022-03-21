@@ -2,14 +2,13 @@ defmodule AeMdw.Db.Origin do
   @moduledoc false
 
   alias AeMdw.Contract
-  alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Node.Db
   alias AeMdw.Txs
 
   require Model
 
-  import AeMdw.Db.Util, only: [read_tx!: 1]
+  import AeMdw.Db.Util
   import AeMdw.Util
 
   @typep contract_locator() :: {:contract, Txs.txi()} | {:contract_call, Txs.txi()}
@@ -69,9 +68,10 @@ defmodule AeMdw.Db.Origin do
   end
 
   def pubkey({:contract, txi}) do
-    case Database.next_key(Model.RevOrigin, {txi, :contract_create_tx, <<>>}) do
-      {:ok, {^txi, :contract_create_tx, pubkey}} -> pubkey
-      _key_mismatch -> nil
+    case next(Model.RevOrigin, {txi, :contract_create_tx, <<>>}) do
+      :"$end_of_table" -> nil
+      {^txi, :contract_create_tx, pubkey} -> pubkey
+      {_txi, _tx_type, _pubkey} -> nil
     end
   end
 
@@ -100,19 +100,17 @@ defmodule AeMdw.Db.Origin do
   # Private functions
   #
   defp field_txi(tx_type, pos, pk) do
-    case Database.next_key(Model.Field, {tx_type, pos, pk, -1}) do
-      {:ok, {^tx_type, ^pos, ^pk, txi}} -> {:ok, txi}
-      _key_mismatch -> :error
+    case next(Model.Field, {tx_type, pos, pk, -1}) do
+      :"$end_of_table" -> :error
+      {^tx_type, ^pos, ^pk, txi} -> {:ok, txi}
+      {_tx_type, _pos, _pk, _txi} -> :error
     end
   end
 
   defp do_list_by_tx_type(origin_pks, {type, _pk, _txi} = key) do
-    case Database.next_key(Model.Origin, key) do
-      {:ok, {^type, pubkey, _txi} = next_key} ->
-        do_list_by_tx_type([pubkey | origin_pks], next_key)
-
-      _key_mismatch ->
-        origin_pks
+    case next(Model.Origin, key) do
+      {^type, pubkey, _txi} = next_key -> do_list_by_tx_type([pubkey | origin_pks], next_key)
+      _not_the_type -> origin_pks
     end
   end
 

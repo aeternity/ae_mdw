@@ -4,7 +4,7 @@ defmodule AeMdw.Db.Model do
   """
   alias AeMdw.Blocks
   alias AeMdw.Contract
-  alias AeMdw.Names
+  alias AeMdw.Database
   alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Txs
@@ -13,11 +13,6 @@ defmodule AeMdw.Db.Model do
   require Ex2ms
 
   import Record, only: [defrecord: 2]
-
-  @type table :: atom()
-  @opaque key :: tuple() | integer() | pubkey()
-
-  @typep pubkey :: Db.pubkey()
 
   ################################################################################
 
@@ -78,9 +73,6 @@ defmodule AeMdw.Db.Model do
   @id_count_defaults [index: {nil, nil, nil}, count: 0]
   defrecord :id_count, @id_count_defaults
 
-  @type id_count_key :: {atom(), non_neg_integer(), pubkey()}
-  @type id_count :: record(:id_count, index: id_count_key(), count: non_neg_integer())
-
   # object origin :
   #     index = {tx_type, pubkey, tx_index}, tx_id = tx_hash
   @origin_defaults [index: {nil, nil, nil}, tx_id: nil]
@@ -98,21 +90,10 @@ defmodule AeMdw.Db.Model do
   @plain_name_defaults [index: nil, value: nil]
   defrecord :plain_name, @plain_name_defaults
 
-  @type plain_name ::
-          record(:plain_name, index: Names.name_hash(), value: Names.plain_name())
-
   # auction bid:
   #     index = {plain_name, {block_index, txi}, expire_height = height, owner = pk, prev_bids = []}
   @auction_bid_defaults [index: {nil, {{nil, nil}, nil}, nil, nil, nil}, unused: nil]
   defrecord :auction_bid, @auction_bid_defaults
-
-  @type auction_bid_key ::
-          {String.t(), {Blocks.block_index(), Txs.txi()}, Blocks.height(), Db.pubkey(), list()}
-  @type auction_bid ::
-          record(:auction_bid,
-            index: auction_bid_key(),
-            unused: nil
-          )
 
   # in 3 tables: auction_expiration, name_expiration, inactive_name_expiration
   #
@@ -120,9 +101,6 @@ defmodule AeMdw.Db.Model do
   #     index = {expire_height, plain_name | oracle_pk}, value: any
   @expiration_defaults [index: {nil, nil}, value: nil]
   defrecord :expiration, @expiration_defaults
-
-  @type expiration ::
-          record(:expiration, index: {pos_integer(), String.t() | pubkey()}, value: nil)
 
   # in 2 tables: active_name, inactive_name
   #
@@ -153,41 +131,15 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :name, @name_defaults
 
-  @type name ::
-          record(:name,
-            index: String.t(),
-            active: Blocks.height(),
-            expire: Blocks.height(),
-            claims: list(),
-            updates: list(),
-            transfers: list(),
-            revoke: {Blocks.block_index(), Txs.txi()} | nil,
-            auction_timeout: non_neg_integer(),
-            owner: pubkey(),
-            previous: record(:name) | nil
-          )
-
   # owner: (updated via name claim/transfer)
   #     index = {pubkey, entity},
   @owner_defaults [index: nil, unused: nil]
   defrecord :owner, @owner_defaults
 
-  @type owner() ::
-          record(:owner,
-            index: {Db.pubkey(), Names.plain_name()},
-            unused: nil
-          )
-
   # pointee : (updated when name_update_tx changes pointers)
   #     index = {pointer_val, {block_index, txi}, pointer_key}
   @pointee_defaults [index: {nil, {{nil, nil}, nil}, nil}, unused: nil]
   defrecord :pointee, @pointee_defaults
-
-  @type pointee() ::
-          record(:pointee,
-            index: {Db.pubkey(), {Blocks.block_index(), Txs.txi()}, Db.pubkey()},
-            unused: nil
-          )
 
   # in 2 tables: active_oracle, inactive_oracle
   #
@@ -529,11 +481,11 @@ defmodule AeMdw.Db.Model do
   @spec column_families() :: list(atom())
   def column_families do
     Enum.concat([
-      chain_tables(),
       [
+        AeMdw.Db.Model.Tx,
+        AeMdw.Db.Model.Block,
         AeMdw.Db.Model.Aex9Balance
       ],
-      name_tables(),
       oracle_tables(),
       stat_tables(),
       tasks_tables()
@@ -836,4 +788,23 @@ defmodule AeMdw.Db.Model do
   def defaults(:target_kind_int_transfer_tx), do: @target_kind_int_transfer_tx_defaults
   def defaults(:delta_stat), do: @delta_stat_defaults
   def defaults(:total_stat), do: @total_stat_defaults
+
+  @spec write_count(tuple(), integer()) :: :ok
+  def write_count(model, delta) do
+    total = id_count(model, :count)
+    model = id_count(model, count: total + delta)
+    Database.write(AeMdw.Db.Model.IdCount, model)
+  end
+
+  @spec update_count(tuple(), integer(), fun()) :: any()
+  def update_count({_, _, _} = field_key, delta, empty_fn \\ fn -> :nop end) do
+    case Database.read(AeMdw.Db.Model.IdCount, field_key, :write) do
+      [] -> empty_fn.()
+      [model] -> write_count(model, delta)
+    end
+  end
+
+  @spec incr_count(tuple()) :: any()
+  def incr_count({_, _, _} = field_key),
+    do: update_count(field_key, 1, fn -> write_count(id_count(index: field_key, count: 0), 1) end)
 end

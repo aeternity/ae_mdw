@@ -6,13 +6,12 @@ defmodule AeMdw.Db.WriteFieldMutation do
   alias AeMdw.Txs
   alias AeMdw.Db.Model
   alias AeMdw.Database
-  alias AeMdw.Node.Db
   alias AeMdw.Node
-  alias AeMdw.Db.Sync.IdCounter
+  alias AeMdw.Node.Db
 
   require Model
 
-  @derive AeMdw.Db.TxnMutation
+  @derive AeMdw.Db.Mutation
   defstruct [:tx_type, :pos, :pubkey, :txi]
 
   @type pos() :: non_neg_integer() | nil
@@ -30,10 +29,10 @@ defmodule AeMdw.Db.WriteFieldMutation do
     %__MODULE__{tx_type: tx_type, pos: pos, pubkey: pubkey, txi: txi}
   end
 
-  @spec execute(t(), Database.transaction()) :: :ok
-  def execute(%__MODULE__{tx_type: tx_type, pos: pos, pubkey: pubkey, txi: txi}, txn) do
+  @spec mutate(t()) :: :ok
+  def mutate(%__MODULE__{tx_type: tx_type, pos: pos, pubkey: pubkey, txi: txi}) do
     m_field = Model.field(index: {tx_type, pos, pubkey, txi})
-    Database.write(txn, Model.Field, m_field)
-    IdCounter.incr_count(txn, {tx_type, pos, pubkey})
+    Database.write(Model.Field, m_field)
+    Model.incr_count({tx_type, pos, pubkey})
   end
 end

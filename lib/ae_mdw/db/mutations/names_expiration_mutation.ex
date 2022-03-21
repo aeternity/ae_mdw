@@ -4,11 +4,10 @@ defmodule AeMdw.Db.NamesExpirationMutation do
   """
 
   alias AeMdw.Blocks
-  alias AeMdw.Database
   alias AeMdw.Db.Name
   alias AeMdw.Names
 
-  @derive AeMdw.Db.TxnMutation
+  @derive AeMdw.Db.Mutation
   defstruct [:height, :expired_names, :expired_auctions]
 
   @typep auction_key() :: {Names.plain_name(), Names.auction_timeout()}
@@ -24,19 +23,16 @@ defmodule AeMdw.Db.NamesExpirationMutation do
     %__MODULE__{height: height, expired_names: expired_names, expired_auctions: expired_auctions}
   end
 
-  @spec execute(t(), Database.transaction()) :: :ok
-  def execute(
-        %__MODULE__{
-          height: height,
-          expired_names: expired_names,
-          expired_auctions: expired_auctions
-        },
-        txn
-      ) do
-    Enum.each(expired_names, &Name.expire_name(txn, height, &1))
+  @spec mutate(t()) :: :ok
+  def mutate(%__MODULE__{
+        height: height,
+        expired_names: expired_names,
+        expired_auctions: expired_auctions
+      }) do
+    Enum.each(expired_names, &Name.expire_name(height, &1))
 
     Enum.each(expired_auctions, fn {plain_name, auction_timeout} ->
-      Name.expire_auction(txn, height, plain_name, auction_timeout)
+      Name.expire_auction(height, plain_name, auction_timeout)
     end)
   end
 end

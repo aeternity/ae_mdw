@@ -4,7 +4,6 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutation do
   """
 
   alias AeMdw.Contract
-  alias AeMdw.Database
   alias AeMdw.Db.Contract, as: DbContract
   alias AeMdw.Node.Db
 
@@ -28,7 +27,7 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutation do
     }
   end
 
-  @spec execute(t(), Database.transaction()) :: :ok
+  @spec execute(t(), AeMdw.Database.transaction()) :: :ok
   def execute(
         %__MODULE__{
           method_name: method_name,

@@ -1,26 +1,16 @@
 defmodule AeMdw.Db.Name do
-  @moduledoc """
-  Retrieves name information from database in regards to:
-    - name state
-    - expiration
-    - plain_name
-    - owner
-    - pointee
-    - auction_bid
-
-  All name related data models are read and written by cache through operations.
-  """
+  # credo:disable-for-this-file
   alias AeMdw.Blocks
   alias AeMdw.Collection
   alias AeMdw.Contracts
-  alias AeMdw.Database
   alias AeMdw.Node, as: AE
-  alias AeMdw.Node.Db
   alias AeMdw.Db.Model
   alias AeMdw.Db.NamesExpirationMutation
   alias AeMdw.Db.Format
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Ets
+  alias AeMdw.Log
+  alias AeMdw.Database
   alias AeMdw.Names
   alias AeMdw.Validate
 
@@ -30,62 +20,27 @@ defmodule AeMdw.Db.Name do
   import AeMdw.Db.Util
   import AeMdw.Util
 
-  @typep pubkey :: Db.pubkey()
-  @typep cache_key ::
-           String.t()
-           | {Blocks.height(), pubkey()}
-           | {pubkey(), String.t()}
-           | pubkey()
-           | Model.auction_bid_key()
-           | {String.t(), <<>>, <<>>, <<>>, <<>>}
-  @typep transaction :: Database.transaction()
-  @typep table ::
-           Model.ActiveName
-           | Model.InactiveName
-           | Model.ActiveNameExpiration
-           | Model.InactiveNameExpiration
-           | Model.AuctionExpiration
-           | Model.AuctionBid
-           | Model.AuctionOwner
-           | Model.PlainName
-           | Model.ActiveNameOwner
-           | Model.InactiveNameOwner
-           | Model.Pointee
-  @typep name_record() ::
-           Model.name()
-           | Model.expiration()
-           | Model.plain_name()
-           | Model.owner()
-           | Model.pointee()
-           | Model.auction_bid()
+  ##########
 
-  @spec plain_name(binary()) :: {:ok, String.t()} | nil
   def plain_name(name_hash),
     do: map_one_nil(read(Model.PlainName, name_hash), &{:ok, Model.plain_name(&1, :value)})
 
-  @spec plain_name!(binary()) :: String.t()
   def plain_name!(name_hash),
     do: Model.plain_name(read!(Model.PlainName, name_hash), :value)
 
-  @spec ptr_resolve!(Blocks.block_index(), binary(), String.t()) :: binary()
   def ptr_resolve!(block_index, name_hash, key) do
-    key
-    |> :aens.resolve_hash(name_hash, ns_tree!(block_index))
+    :aens.resolve_hash(key, name_hash, ns_tree!(block_index))
     |> map_ok!(&Validate.id!/1)
   end
 
-  @spec owned_by(owner_pk :: pubkey(), active? :: boolean()) :: %{
-          :names => list(),
-          optional(:top_bids) => list()
-        }
-  def owned_by(owner_pk, true) do
+  def owned_by(owner_pk, _active? = true) do
     %{
       names: collect_vals(Model.ActiveNameOwner, owner_pk),
       top_bids: collect_vals(Model.AuctionOwner, owner_pk)
     }
   end
 
-  def owned_by(owner_pk, false) do
+  def owned_by(owner_pk, _active? = false) do
     %{
       names: collect_vals(Model.InactiveNameOwner, owner_pk)
     }
@@ -98,51 +53,53 @@ defmodule AeMdw.Db.Name do
 
   @spec expirations_mutation(Blocks.height()) :: NamesExpirationMutation.t()
   def expirations_mutation(height) do
-    expired_names =
-      Model.ActiveNameExpiration
-      |> Collection.stream(:forward, {{height, <<>>}, {height + 1, <<>>}}, nil)
-      |> Enum.map(fn {^height, plain_name} -> plain_name end)
+    name_mspec =
+      Ex2ms.fun do
+        Model.expiration(index: {^height, name}) -> name
+      end
 
-    expired_auctions =
-      Model.AuctionExpiration
-      |> Collection.stream(:forward, {{height, <<>>}, {height + 1, <<>>}}, nil)
-      |> Enum.map(fn key ->
-        Model.expiration(index: {^height, name}, value: tm) =
-          Database.fetch!(Model.AuctionExpiration, key)
+    auction_mspec =
+      Ex2ms.fun do
+        Model.expiration(index: {^height, name}, value: tm) -> {name, tm}
+      end
 
-        {name, tm}
+    {:atomic, {expired_names, expired_auctions}} =
+      :mnesia.transaction(fn ->
+        names = :mnesia.select(Model.ActiveNameExpiration, name_mspec)
+        auctions = :mnesia.select(Model.AuctionExpiration, auction_mspec)
+
+        {names, auctions}
       end)
 
     NamesExpirationMutation.new(height, expired_names, expired_auctions)
   end
 
-  @spec expire_name(transaction(), Blocks.height(), Names.plain_name()) :: :ok
-  def expire_name(txn, height, plain_name) do
-    m_name = cache_through_read!(txn, Model.ActiveName, plain_name)
+  @spec expire_name(Blocks.height(), Names.plain_name()) :: :ok
+  def expire_name(height, plain_name) do
+    m_name = cache_through_read!(Model.ActiveName, plain_name)
     m_exp = Model.expiration(index: {height, plain_name})
 
     if Model.name(m_name, :expire) == height do
       owner = Model.name(m_name, :owner)
-      cache_through_write(txn, Model.InactiveName, m_name)
-      cache_through_write(txn, Model.InactiveNameOwner, Model.owner(index: {owner, plain_name}))
-      cache_through_write(txn, Model.InactiveNameExpiration, m_exp)
-      cache_through_delete(txn, Model.ActiveName, plain_name)
-      cache_through_delete(txn, Model.ActiveNameOwner, {owner, plain_name})
-      cache_through_delete(txn, Model.ActiveNameExpiration, {height, plain_name})
+      cache_through_write(Model.InactiveName, m_name)
+      cache_through_write(Model.InactiveNameOwner, Model.owner(index: {owner, plain_name}))
+      cache_through_write(Model.InactiveNameExpiration, m_exp)
+      cache_through_delete(Model.ActiveName, plain_name)
+      cache_through_delete(Model.ActiveNameOwner, {owner, plain_name})
+      cache_through_delete(Model.ActiveNameExpiration, {height, plain_name})
 
       Ets.inc(:stat_sync_cache, :names_expired)
+
+      Log.info("[#{height}] expiring name #{plain_name}")
     else
-      cache_through_delete(txn, Model.ActiveNameExpiration, {height, plain_name})
+      cache_through_delete(Model.ActiveNameExpiration, {height, plain_name})
+
+      Log.info("[#{height}][name] old expire #{plain_name}")
     end
   end
 
-  @spec expire_auction(
-          transaction(),
-          Blocks.height(),
-          Names.plain_name(),
-          Names.auction_timeout()
-        ) :: :ok
-  def expire_auction(txn, height, plain_name, timeout) do
+  @spec expire_auction(Blocks.height(), Names.plain_name(), Names.auction_timeout()) :: :ok
+  def expire_auction(height, plain_name, timeout) do
     {_, {_, txi}, _, owner, bids} =
       bid_key = ok!(cache_through_prev(Model.AuctionBid, bid_top_key(plain_name)))
 
@@ -163,18 +120,20 @@ defmodule AeMdw.Db.Name do
     m_name_exp = Model.expiration(index: {expire, plain_name})
     m_owner = Model.owner(index: {owner, plain_name})
 
-    cache_through_write(txn, Model.ActiveName, m_name)
-    cache_through_write(txn, Model.ActiveNameOwner, m_owner)
-    cache_through_write(txn, Model.ActiveNameExpiration, m_name_exp)
-    cache_through_delete(txn, Model.AuctionExpiration, {height, plain_name})
-    cache_through_delete(txn, Model.AuctionOwner, {owner, plain_name})
-    cache_through_delete(txn, Model.AuctionBid, bid_key)
-    cache_through_delete_inactive(txn, previous)
+    cache_through_write(Model.ActiveName, m_name)
+    cache_through_write(Model.ActiveNameOwner, m_owner)
+    cache_through_write(Model.ActiveNameExpiration, m_name_exp)
+    cache_through_delete(Model.AuctionExpiration, {height, plain_name})
+    cache_through_delete(Model.AuctionOwner, {owner, plain_name})
+    cache_through_delete(Model.AuctionBid, bid_key)
+    cache_through_delete_inactive(previous)
 
     %{tx: winning_tx} = read_raw_tx!(txi)
-    IntTransfer.fee(txn, {height, -1}, :lock_name, owner, txi, winning_tx.name_fee)
+    IntTransfer.fee({height, -1}, :lock_name, owner, txi, winning_tx.name_fee)
     Ets.inc(:stat_sync_cache, :names_activated)
     Ets.inc(:stat_sync_cache, :auctions_expired)
+
+    Log.info("[#{height}] expiring auction for #{plain_name}")
   end
 
   @doc """
@@ -187,42 +146,37 @@ defmodule AeMdw.Db.Name do
     |> Stream.map(fn {_height, plain_name} -> plain_name end)
   end
 
-  @spec bid_top_key(String.t()) :: {String.t(), <<>>, <<>>, <<>>, <<>>}
+  ##########
+
+  def pointer_kv_raw(ptr),
+    do: {:aens_pointer.key(ptr), :aens_pointer.id(ptr)}
+
+  def pointer_kv(ptr),
+    do: {:aens_pointer.key(ptr), Validate.id!(:aens_pointer.id(ptr))}
+
   def bid_top_key(plain_name),
     do: {plain_name, <<>>, <<>>, <<>>, <<>>}
 
-  @spec auction_bid_key(Model.expiration() | String.t()) :: any
   def auction_bid_key({:expiration, {_, plain_name}, _}) when is_binary(plain_name),
     do: auction_bid_key(plain_name)
 
   def auction_bid_key(plain_name) when is_binary(plain_name),
     do: ok_nil(cache_through_prev(Model.AuctionBid, bid_top_key(plain_name)))
 
-  @spec source(AeMdw.Db.Model.ActiveName | AeMdw.Db.Model.InactiveName, :expiration | :name) ::
-          AeMdw.Db.Model.ActiveName
-          | AeMdw.Db.Model.ActiveNameExpiration
-          | AeMdw.Db.Model.InactiveName
-          | AeMdw.Db.Model.InactiveNameExpiration
   def source(Model.ActiveName, :name), do: Model.ActiveName
   def source(Model.ActiveName, :expiration), do: Model.ActiveNameExpiration
   def source(Model.InactiveName, :name), do: Model.InactiveName
   def source(Model.InactiveName, :expiration), do: Model.InactiveNameExpiration
 
-  @spec locate_bid(String.t()) :: any
   def locate_bid(plain_name),
     do: ok_nil(cache_through_prev(Model.AuctionBid, bid_top_key(plain_name)))
 
-  @spec locate(String.t()) ::
-          {Model.name(), Model.ActiveName | Model.InactiveName}
-          | {Model.auction_bid(), Model.AuctionBid}
-          | nil
   def locate(plain_name) do
     map_ok_nil(cache_through_read(Model.ActiveName, plain_name), &{&1, Model.ActiveName}) ||
       map_ok_nil(cache_through_read(Model.InactiveName, plain_name), &{&1, Model.InactiveName}) ||
       map_some(locate_bid(plain_name), &{&1, Model.AuctionBid})
   end
 
-  @spec pointers(Model.name()) :: map()
   def pointers(Model.name(updates: [])), do: %{}
 
   def pointers(Model.name(index: plain_name, updates: [{_block_index, txi} | _rest_updates])) do
@@ -253,11 +207,9 @@ defmodule AeMdw.Db.Name do
     |> Enum.into(%{})
   end
 
-  @spec account_pointer_at(String.t(), AeMdw.Txs.txi()) ::
-          {:error, :name_not_found | {:pointee_not_found, any, any}} | {:ok, any}
   def account_pointer_at(plain_name, time_reference_txi) do
     case locate(plain_name) do
-      nil ->
+      {nil, _module} ->
         {:error, :name_not_found}
 
       {m_name, _module} ->
@@ -265,18 +217,15 @@ defmodule AeMdw.Db.Name do
     end
   end
 
-  @spec pointee_keys(any) :: list
   def pointee_keys(pk) do
-    Model.Pointee
-    |> Collection.stream({pk, nil, nil})
-    |> Stream.take_while(fn
-      {^pk, _bi_txi, _pointee} -> true
-      _other_key -> false
-    end)
-    |> Enum.map(fn {^pk, {bi, txi}, pointee} -> {bi, txi, pointee} end)
+    mspec =
+      Ex2ms.fun do
+        {:pointee, {^pk, {bi, txi}, k}, :_} -> {bi, txi, k}
+      end
+
+    Database.dirty_select(Model.Pointee, mspec)
   end
 
-  @spec pointees(pubkey()) :: {map(), map()}
   def pointees(pk) do
     push = fn place, m_name, {update_bi, update_txi, ptr_k} ->
       pointee = %{
@@ -306,7 +255,6 @@ defmodule AeMdw.Db.Name do
     end
   end
 
-  @spec ownership(Model.name()) :: %{current: pubkey(), original: pubkey()}
   def ownership(
         Model.name(
           claims: [{{_height, _mbi}, last_claim_txi} | _other],
@@ -325,57 +273,30 @@ defmodule AeMdw.Db.Name do
     end
   end
 
-  @spec revoke_or_expire_height(nil | {Blocks.block_index(), AeMdw.Txs.txi()}, Blocks.height()) ::
-          Blocks.height()
   def revoke_or_expire_height(nil = _revoke, expire),
     do: expire
 
   def revoke_or_expire_height({{height, _}, _}, _expire),
     do: height
 
-  @spec revoke_or_expire_height(Model.name()) :: Blocks.height()
   def revoke_or_expire_height(m_name),
     do: revoke_or_expire_height(Model.name(m_name, :revoke), Model.name(m_name, :expire))
 
-  @spec cache_through_read(table(), cache_key()) :: {:ok, name_record()} | nil
+  # for use outside mnesia TX - doesn't modify cache, just looks into it
   def cache_through_read(table, key) do
     case :ets.lookup(:name_sync_cache, {table, key}) do
-      [{_, record}] ->
-        {:ok, record}
-
-      [] ->
-        case Database.fetch(table, key) do
-          {:ok, record} -> {:ok, record}
-          :not_found -> nil
-        end
+      [{_, record}] -> {:ok, record}
+      [] -> map_one_nil(read(table, key), &{:ok, &1})
     end
   end
 
-  @spec cache_through_read(transaction(), table(), cache_key()) :: {:ok, name_record()} | nil
-  def cache_through_read(txn, table, key) do
-    case :ets.lookup(:name_sync_cache, {table, key}) do
-      [{_, record}] ->
-        {:ok, record}
+  def cache_through_read!(table, key),
+    do: ok_nil(cache_through_read(table, key)) || raise("#{inspect(key)} not found in #{table}")
 
-      [] ->
-        case Database.dirty_fetch(txn, table, key) do
-          {:ok, record} -> {:ok, record}
-          :not_found -> nil
-        end
-    end
-  end
-
-  @spec cache_through_read!(transaction(), table(), cache_key()) :: name_record() | nil
-  def cache_through_read!(txn, table, key) do
-    ok_nil(cache_through_read(txn, table, key)) ||
-      raise("#{inspect(key)} not found in #{table}")
-  end
-
-  @spec cache_through_prev(table(), cache_key()) :: {:ok, cache_key()} | :not_found
   def cache_through_prev(table, key),
     do: cache_through_prev(table, key, &(elem(key, 0) == elem(&1, 0)))
 
-  defp cache_through_prev(table, key, key_checker) do
+  def cache_through_prev(table, key, key_checker) do
     lookup = fn k, unwrap, eot, chk_fail ->
       case k do
         :"$end_of_table" ->
@@ -388,67 +309,40 @@ defmodule AeMdw.Db.Name do
     end
 
     nf = fn -> :not_found end
-
-    mns_lookup = fn ->
-      case Database.prev_key(table, key) do
-        {:ok, prev_key} -> lookup.(prev_key, & &1, nf, nf)
-        :none -> :not_found
-      end
-    end
-
+    mns_lookup = fn -> lookup.(prev(table, key), & &1, nf, nf) end
     lookup.(:ets.prev(:name_sync_cache, {table, key}), &elem(&1, 1), mns_lookup, mns_lookup)
   end
 
-  @spec cache_through_write(transaction(), table(), name_record()) :: :ok
-  def cache_through_write(txn, table, record) do
-    :ets.insert(:name_sync_cache, {{table, elem(record, 1)}, record})
-    Database.write(txn, table, record)
-  end
-
-  @spec cache_through_write(table(), name_record()) :: :ok
+  # for use inside mnesia TX - caches writes & deletes in the same TX
   def cache_through_write(table, record) do
     :ets.insert(:name_sync_cache, {{table, elem(record, 1)}, record})
-    Database.dirty_write(table, record)
+    Database.write(table, record)
   end
 
-  @spec cache_through_delete(transaction(), table(), cache_key()) :: :ok
-  def cache_through_delete(txn, table, key) do
-    :ets.delete(:name_sync_cache, {table, key})
-    Database.delete(txn, table, key)
-  end
-
-  @spec cache_through_delete(table(), cache_key()) :: :ok
   def cache_through_delete(table, key) do
     :ets.delete(:name_sync_cache, {table, key})
-    Database.dirty_delete(table, key)
+    Database.delete(table, key)
   end
 
-  @spec cache_through_delete_inactive(transaction(), nil | Model.name()) :: :ok
-  def cache_through_delete_inactive(_txn, nil), do: :ok
+  def cache_through_delete_inactive(nil), do: nil
 
-  def cache_through_delete_inactive(txn, Model.name(index: plain_name, owner: owner_pk) = m_name) do
+  def cache_through_delete_inactive(Model.name(index: plain_name, owner: owner_pk) = m_name) do
     expire = revoke_or_expire_height(m_name)
-    cache_through_delete(txn, Model.InactiveName, plain_name)
-    cache_through_delete(txn, Model.InactiveNameOwner, {owner_pk, plain_name})
-    cache_through_delete(txn, Model.InactiveNameExpiration, {expire, plain_name})
-
-    :ok
+    cache_through_delete(Model.InactiveName, plain_name)
+    cache_through_delete(Model.InactiveNameOwner, {owner_pk, plain_name})
+    cache_through_delete(Model.InactiveNameExpiration, {expire, plain_name})
   end
 
-  #
-  # Private functions
-  #
-  defp pointer_kv_raw(ptr),
-    do: {:aens_pointer.key(ptr), :aens_pointer.id(ptr)}
-
-  defp collect_vals(tab, key) do
+  def collect_vals(tab, key) do
     collect_keys(tab, [], {key, ""}, &next/2, fn
       {^key, val}, acc -> {:cont, [val | acc]}
       {_, _}, acc -> {:halt, acc}
     end)
   end
 
-  defp ns_tree!({_, _} = block_index) do
+  ##########
+
+  def ns_tree!({_, _} = block_index) do
     block_index
     |> read_block!
     |> Model.block(:hash)
@@ -456,6 +350,21 @@ defmodule AeMdw.Db.Name do
     |> :aec_trees.ns()
   end
 
+  def mtree(ns_tree) when elem(ns_tree, 0) == :ns_tree,
+    do: elem(ns_tree, AE.aens_tree_pos(:mtree))
+
+  def mtree({_, _} = block_index),
+    do: mtree(ns_tree!(block_index))
+
+  def cache(ns_tree) when elem(ns_tree, 0) == :ns_tree,
+    do: elem(ns_tree, AE.aens_tree_pos(:cache))
+
+  def cache({_, _} = block_index),
+    do: cache(ns_tree!(block_index))
+
+  #
+  # Private functions
+  #
   defp pointee_at(Model.name(index: name, updates: updates), ref_txi) do
     updates
     |> find_update_txi_before(ref_txi)
@@ -482,6 +391,6 @@ defmodule AeMdw.Db.Name do
     end)
   end
 
-  defp read_raw_tx!(txi),
+  def read_raw_tx!(txi),
     do: Format.to_raw_map(read_tx!(txi))
 end

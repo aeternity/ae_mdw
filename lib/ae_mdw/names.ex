@@ -21,7 +21,7 @@ defmodule AeMdw.Names do
   @type cursor :: binary()
   # This needs to be an actual type like AeMdw.Db.Name.t()
   @type name :: term()
-  @type plain_name() :: String.t()
+  @type plain_name() :: binary()
   @type name_hash() :: binary()
   @type name_fee() :: non_neg_integer()
   @type auction_timeout :: non_neg_integer()
