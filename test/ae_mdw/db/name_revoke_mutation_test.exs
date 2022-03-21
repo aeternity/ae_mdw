@@ -3,6 +3,7 @@ defmodule AeMdw.Db.NameRevokeMutationTest do
 
   alias AeMdw.Database
   alias AeMdw.Db.Model
+  alias AeMdw.Db.NameRevokeMutation
 
   require Model
 
@@ -45,7 +46,7 @@ defmodule AeMdw.Db.NameRevokeMutationTest do
 
     Database.dirty_write(Model.ActiveNameOwner, Model.owner(index: {owner_pk, plain_name}))
 
-    Database.commit([AeMdw.Db.NameRevokeMutation.new(name_hash, revoke_txi, revoke_block_index)])
+    Database.commit([NameRevokeMutation.new(name_hash, revoke_txi, revoke_block_index)])
 
     assert {:ok,
             Model.name(

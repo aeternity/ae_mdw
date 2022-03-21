@@ -5,6 +5,8 @@ defmodule AeMdw.Db.NameClaimMutationTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync
 
+  import Mock
+
   require Model
 
   test "claim an inactive name with timeout 0" do
@@ -52,9 +54,13 @@ defmodule AeMdw.Db.NameClaimMutationTest do
       Model.owner(index: {Model.name(inactive_name, :owner), plain_name})
     )
 
-    tx
-    |> Sync.Name.name_claim_mutations(tx_hash, block_index, txi)
-    |> Database.commit()
+    with_mocks [
+      {AeMdw.Db.Util, [], [proto_vsn: fn _height -> 3 end]}
+    ] do
+      tx
+      |> Sync.Name.name_claim_mutations(tx_hash, block_index, txi)
+      |> Database.commit()
+    end
 
     assert {:ok,
             Model.name(
