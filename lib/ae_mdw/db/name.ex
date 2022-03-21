@@ -319,7 +319,7 @@ defmodule AeMdw.Db.Name do
 
   @spec revoke_or_expire_height(Model.name()) :: Blocks.height()
   def revoke_or_expire_height(m_name) do
-    do_revoke_or_expire_height(Model.name(m_name, :revoke), Model.name(m_name, :expire))
+    revoke_or_expire_height(Model.name(m_name, :revoke), Model.name(m_name, :expire))
   end
 
   @spec cache_through_read(table(), cache_key()) :: {:ok, name_record()} | nil
@@ -439,8 +439,8 @@ defmodule AeMdw.Db.Name do
   #
   # Private functions
   #
-  defp do_revoke_or_expire_height(nil = _revoke, expire), do: expire
-  defp do_revoke_or_expire_height({{revoke_height, _}, _}, _expire), do: revoke_height
+  defp revoke_or_expire_height(nil = _revoke, expire), do: expire
+  defp revoke_or_expire_height({{revoke_height, _}, _}, _expire), do: revoke_height
 
   defp cache_through_delete_active(
          txn,
