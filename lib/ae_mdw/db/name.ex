@@ -119,17 +119,9 @@ defmodule AeMdw.Db.Name do
   @spec expire_name(transaction(), Blocks.height(), Names.plain_name()) :: :ok
   def expire_name(txn, height, plain_name) do
     m_name = cache_through_read!(txn, Model.ActiveName, plain_name)
-    m_exp = Model.expiration(index: {height, plain_name})
 
     if Model.name(m_name, :expire) == height do
-      owner = Model.name(m_name, :owner)
-      cache_through_write(txn, Model.InactiveName, m_name)
-      cache_through_write(txn, Model.InactiveNameOwner, Model.owner(index: {owner, plain_name}))
-      cache_through_write(txn, Model.InactiveNameExpiration, m_exp)
-      cache_through_delete(txn, Model.ActiveName, plain_name)
-      cache_through_delete(txn, Model.ActiveNameOwner, {owner, plain_name})
-      cache_through_delete(txn, Model.ActiveNameExpiration, {height, plain_name})
-
+      deactivate_name(txn, height, m_name)
       Ets.inc(:stat_sync_cache, :names_expired)
     else
       cache_through_delete(txn, Model.ActiveNameExpiration, {height, plain_name})
@@ -325,17 +317,10 @@ defmodule AeMdw.Db.Name do
     end
   end
 
-  @spec revoke_or_expire_height(nil | {Blocks.block_index(), AeMdw.Txs.txi()}, Blocks.height()) ::
-          Blocks.height()
-  def revoke_or_expire_height(nil = _revoke, expire),
-    do: expire
-
-  def revoke_or_expire_height({{height, _}, _}, _expire),
-    do: height
-
   @spec revoke_or_expire_height(Model.name()) :: Blocks.height()
-  def revoke_or_expire_height(m_name),
-    do: revoke_or_expire_height(Model.name(m_name, :revoke), Model.name(m_name, :expire))
+  def revoke_or_expire_height(m_name) do
+    do_revoke_or_expire_height(Model.name(m_name, :revoke), Model.name(m_name, :expire))
+  end
 
   @spec cache_through_read(table(), cache_key()) :: {:ok, name_record()} | nil
   def cache_through_read(table, key) do
@@ -435,9 +420,37 @@ defmodule AeMdw.Db.Name do
     :ok
   end
 
+  @spec deactivate_name(transaction(), Blocks.height(), Model.name()) :: :ok
+  def deactivate_name(
+        txn,
+        deactivate_height,
+        Model.name(index: plain_name, owner: owner_pk) = m_name
+      ) do
+    cache_through_delete_active(txn, m_name)
+
+    m_exp = Model.expiration(index: {deactivate_height, plain_name})
+    m_owner = Model.owner(index: {owner_pk, plain_name})
+
+    cache_through_write(txn, Model.InactiveName, m_name)
+    cache_through_write(txn, Model.InactiveNameExpiration, m_exp)
+    cache_through_write(txn, Model.InactiveNameOwner, m_owner)
+  end
+
   #
   # Private functions
   #
+  defp do_revoke_or_expire_height(nil = _revoke, expire), do: expire
+  defp do_revoke_or_expire_height({{revoke_height, _}, _}, _expire), do: revoke_height
+
+  defp cache_through_delete_active(
+         txn,
+         Model.name(index: plain_name, expire: expire, owner: owner_pk)
+       ) do
+    cache_through_delete(txn, Model.ActiveName, plain_name)
+    cache_through_delete(txn, Model.ActiveNameOwner, {owner_pk, plain_name})
+    cache_through_delete(txn, Model.ActiveNameExpiration, {expire, plain_name})
+  end
+
   defp pointer_kv_raw(ptr),
     do: {:aens_pointer.key(ptr), :aens_pointer.id(ptr)}
 
