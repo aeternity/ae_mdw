@@ -331,11 +331,13 @@ defmodule AeMdw.Names do
     }
   end
 
+  # For some reason we're only grabbing the last pointer to build a hash that
+  # contains "account_pubkey" as the only key.
   defp render_pointers(name) do
     name
     |> Name.pointers()
-    |> Enum.reverse()
-    |> Enum.at(0)
+    |> Enum.to_list()
+    |> List.last()
     |> case do
       {_k, id} -> %{"account_pubkey" => Format.enc_id(id)}
       nil -> %{}

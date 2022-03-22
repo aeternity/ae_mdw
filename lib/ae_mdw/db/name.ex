@@ -246,11 +246,16 @@ defmodule AeMdw.Db.Name do
   end
 
   @spec ownership(Model.name()) :: %{current: Format.aeser_id(), original: Format.aeser_id()}
+  def ownership(Model.name(transfers: [], owner: owner)) do
+    pubkey = :aeser_id.create(:account, owner)
+
+    %{original: pubkey, current: pubkey}
+  end
+
   def ownership(
         Model.name(
           index: plain_name,
           claims: [{_block_index, last_claim_txi} | _rest_claims],
-          transfers: transfers,
           owner: owner
         )
       ) do
@@ -276,13 +281,7 @@ defmodule AeMdw.Db.Name do
           |> :aens_transfer_tx.account_id()
       end
 
-    case List.first(transfers) do
-      nil ->
-        %{original: orig_owner, current: orig_owner}
-
-      _any_transfer ->
-        %{original: orig_owner, current: :aeser_api_encoder.encode(:account_pubkey, owner)}
-    end
+    %{original: orig_owner, current: :aeser_id.create(:account, owner)}
   end
 
   @spec account_pointer_at(String.t(), AeMdw.Txs.txi()) ::
