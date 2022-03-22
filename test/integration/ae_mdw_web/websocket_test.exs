@@ -2,12 +2,15 @@ defmodule Integration.AeMdwWeb.WebsocketTest do
   # credo:disable-for-this-file
   use ExUnit.Case, async: false
 
-  alias AeMdw.Node, as: AE
-
+  alias AeMdw.Db.Model
   alias AeMdw.Util
   alias AeMdwWeb.Websocket.Broadcaster
   alias AeMdwWeb.Websocket.ChainListener
   alias Support.WsClient
+
+  import AeMdw.Db.Util, only: [read_block!: 1]
+
+  require Model
 
   @moduletag :integration
 
@@ -427,7 +430,7 @@ defmodule Integration.AeMdwWeb.WebsocketTest do
       assert_receive ["MicroBlocks"], 200
       assert_receive [^recipient_id], 200
 
-      {key_block, micro_blocks} = AE.Db.get_blocks(311_860)
+      {key_block, micro_blocks} = get_blocks(311_860)
       Broadcaster.broadcast_key_block(key_block, :mdw)
       Process.send_after(client1, {:kb, self()}, 100)
 
@@ -451,5 +454,12 @@ defmodule Integration.AeMdwWeb.WebsocketTest do
       obj_payload = @object_mdw
       assert_receive ^obj_payload, 500
     end
+  end
+
+  defp get_blocks(height) do
+    Model.block(hash: kb_hash) = read_block!({height, -1})
+    Model.block(hash: next_kb_hash) = read_block!({height + 1, -1})
+
+    AeMdw.Node.Db.get_blocks(kb_hash, next_kb_hash)
   end
 end
