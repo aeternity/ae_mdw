@@ -23,8 +23,8 @@ defmodule AeMdw.Db.Sync.Name do
       cache_through_read: 3,
       cache_through_write: 3,
       cache_through_delete: 3,
-      revoke_or_expire_height: 1,
-      revoke_or_expire_height: 2
+      deactivate_name: 3,
+      revoke_or_expire_height: 1
     ]
 
   import AeMdw.Db.Util
@@ -81,12 +81,7 @@ defmodule AeMdw.Db.Sync.Name do
         log_name_change(height, plain_name, "extend")
 
       delta_ttl == 0 and not internal? ->
-        owner = Model.name(m_name, :owner)
-        cache_through_delete(txn, Model.ActiveName, plain_name)
-        cache_through_delete(txn, Model.ActiveNameOwner, {owner, plain_name})
-        cache_through_delete(txn, Model.ActiveNameExpiration, {old_expire, plain_name})
-        cache_through_write(txn, Model.InactiveName, new_m_name)
-        cache_through_write(txn, Model.InactiveNameExpiration, new_m_name_exp)
+        deactivate_name(txn, height, new_m_name)
 
         inc(:stat_sync_cache, :names_expired)
 
@@ -123,16 +118,8 @@ defmodule AeMdw.Db.Sync.Name do
     plain_name = plain_name!(name_hash)
 
     m_name = cache_through_read!(txn, Model.ActiveName, plain_name)
-    expire = Model.name(m_name, :expire)
-    owner = Model.name(m_name, :owner)
-    cache_through_delete(txn, Model.ActiveNameExpiration, {expire, plain_name})
-    cache_through_delete(txn, Model.ActiveNameOwner, {owner, plain_name})
-    cache_through_delete(txn, Model.ActiveName, plain_name)
-
     m_name = Model.name(m_name, revoke: {bi, txi})
-    m_exp = Model.expiration(index: {height, plain_name})
-    cache_through_write(txn, Model.InactiveName, m_name)
-    cache_through_write(txn, Model.InactiveNameExpiration, m_exp)
+    deactivate_name(txn, height, m_name)
 
     inc(:stat_sync_cache, :names_revoked)
 
@@ -302,7 +289,7 @@ defmodule AeMdw.Db.Sync.Name do
 
     cond do
       new_height >= active ->
-        expire = revoke_or_expire_height(Model.name(m_name, :revoke), Model.name(m_name, :expire))
+        expire = revoke_or_expire_height(m_name)
         lfcycle = (new_height < expire && :active) || :inactive
         updates = drop_bi_txi(Model.name(m_name, :updates), new_height)
         transfers = drop_bi_txi(Model.name(m_name, :transfers), new_height)
