@@ -2,6 +2,8 @@ defmodule AeMdwWeb.Router do
   use AeMdwWeb, :router
 
   @shared_routes [
+    {"/blocks", AeMdwWeb.BlockController, :blocks},
+    {"/txs", AeMdwWeb.TxController, :txs},
     {"/txs/count", AeMdwWeb.TxController, :count},
     {"/txs/count/:id", AeMdwWeb.TxController, :count_id},
     {"/transfers", AeMdwWeb.TransferController, :transfers},
@@ -39,11 +41,9 @@ defmodule AeMdwWeb.Router do
       end)
 
       # v2-only routes
-      get "/blocks", BlockController, :blocks
       get "/blocks/:hash_or_kbi", BlockController, :block
       get "/blocks/:kbi/:mbi", BlockController, :blocki
 
-      get "/txs", TxController, :txs
       get "/txs/:hash_or_index", TxController, :tx
 
       get "/names/:id/auctions", NameController, :auction
