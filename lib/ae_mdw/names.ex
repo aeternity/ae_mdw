@@ -12,9 +12,9 @@ defmodule AeMdw.Names do
   alias AeMdw.Database
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Name
   alias AeMdw.Db.Util, as: DBUtil
   alias AeMdw.Error.Input, as: ErrInput
-  alias AeMdw.Txs
   alias AeMdw.Util
   alias AeMdw.Validate
 
@@ -315,7 +315,7 @@ defmodule AeMdw.Names do
            transfers: transfers,
            revoke: revoke,
            auction_timeout: auction_timeout
-         ),
+         ) = name,
          expand?
        ) do
     %{
@@ -326,43 +326,31 @@ defmodule AeMdw.Names do
       transfers: Enum.map(transfers, &expand_txi(Format.bi_txi_txi(&1), expand?)),
       revoke: (revoke && expand_txi(Format.bi_txi_txi(revoke), expand?)) || nil,
       auction_timeout: auction_timeout,
-      pointers: render_pointers(updates),
-      ownership: render_ownership(claims, transfers)
+      pointers: render_pointers(name),
+      ownership: render_ownership(name)
     }
   end
 
-  defp render_pointers([]) do
-    %{}
-  end
-
-  defp render_pointers([{_bi, txi} | _rest_updates]) do
-    txi
-    |> Txs.fetch!()
+  # For some reason we're only grabbing the last pointer to build a hash that
+  # contains "account_pubkey" as the only key.
+  defp render_pointers(name) do
+    name
+    |> Name.pointers()
+    |> Enum.to_list()
+    |> List.last()
     |> case do
-      %{"tx" => %{"pointers" => pointers}} -> pointers
-      %{"tx" => %{"tx" => %{"tx" => %{"pointers" => pointers}}}} -> pointers
+      {_k, id} -> %{"account_pubkey" => Format.enc_id(id)}
+      nil -> %{}
     end
-    |> Enum.into(%{}, fn %{"id" => id} -> {"account_pubkey", id} end)
   end
 
-  defp render_ownership([{{_bi, _txi}, last_claim_txi} | _rest_claims], transfers) do
-    orig_owner =
-      last_claim_txi
-      |> Txs.fetch!()
-      |> case do
-        %{"tx" => %{"account_id" => account_id}} -> account_id
-        %{"tx" => %{"tx" => %{"tx" => %{"account_id" => account_id}}}} -> account_id
-      end
+  defp render_ownership(name) do
+    %{current: current_owner, original: original_owner} = Name.ownership(name)
 
-    case transfers do
-      [] ->
-        %{original: orig_owner, current: orig_owner}
-
-      [{{_bi, _txi}, last_transfer_txi} | _rest_transfers] ->
-        %{"tx" => %{"recipient_id" => curr_owner}} = Txs.fetch!(last_transfer_txi)
-
-        %{original: orig_owner, current: curr_owner}
-    end
+    %{
+      current: Format.enc_id(current_owner),
+      original: Format.enc_id(original_owner)
+    }
   end
 
   defp serialize_name_cursor(nil), do: nil

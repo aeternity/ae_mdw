@@ -59,6 +59,11 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {Name, [],
+         [
+           pointers: fn _mnme -> %{} end,
+           ownership: fn _mname -> %{current: nil, original: nil} end
          ]}
       ] do
         assert %{"data" => names, "next" => next} =
@@ -111,6 +116,11 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {Name, [],
+         [
+           pointers: fn _mnme -> %{} end,
+           ownership: fn _mname -> %{current: nil, original: nil} end
          ]}
       ] do
         assert %{"data" => names} =
@@ -173,6 +183,11 @@ defmodule AeMdwWeb.NameControllerTest do
            fetch!: fn _hash ->
              %{"tx" => %{"tx" => %{"tx" => %{"pointers" => [], "account_id" => <<>>}}}}
            end
+         ]},
+        {Name, [],
+         [
+           pointers: fn _mnme -> %{} end,
+           ownership: fn _mname -> %{current: nil, original: nil} end
          ]}
       ] do
         assert %{"data" => names} =
@@ -221,6 +236,11 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {Name, [],
+         [
+           pointers: fn _mnme -> %{} end,
+           ownership: fn _mname -> %{current: nil, original: nil} end
          ]}
       ] do
         assert %{"data" => names, "next" => next} =
@@ -271,7 +291,15 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
-         ]}
+         ]},
+        {
+          Name,
+          [],
+          [
+            pointers: fn _mnme -> %{} end,
+            ownership: fn _mname -> %{current: nil, original: nil} end
+          ]
+        }
       ] do
         assert %{"data" => names} =
                  conn
@@ -316,6 +344,11 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {Name, [],
+         [
+           pointers: fn _mnme -> %{} end,
+           ownership: fn _mname -> %{current: nil, original: nil} end
          ]}
       ] do
         assert %{"data" => names} =
@@ -517,6 +550,11 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {Name, [],
+         [
+           pointers: fn _mnme -> %{} end,
+           ownership: fn _mname -> %{current: nil, original: nil} end
          ]}
       ] do
         assert %{"data" => names, "next" => _next} =
@@ -564,6 +602,11 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {Name, [],
+         [
+           pointers: fn _mnme -> %{} end,
+           ownership: fn _mname -> %{current: nil, original: nil} end
          ]}
       ] do
         assert %{"data" => names} =
@@ -606,6 +649,11 @@ defmodule AeMdwWeb.NameControllerTest do
         {Txs, [],
          [
            fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {Name, [],
+         [
+           pointers: fn _mnme -> %{} end,
+           ownership: fn _mname -> %{current: nil, original: nil} end
          ]}
       ] do
         assert %{"data" => names, "next" => _next} =

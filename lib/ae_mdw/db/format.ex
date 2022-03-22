@@ -16,6 +16,8 @@ defmodule AeMdw.Db.Format do
   import AeMdw.Util
   import AeMdw.Db.Util
 
+  @type aeser_id() :: {:id, atom(), binary()}
+
   ##########
 
   def bi_txi_txi({{_height, _mbi}, txi}), do: txi
@@ -565,9 +567,10 @@ defmodule AeMdw.Db.Format do
     end
   end
 
-  defp enc_id(nil), do: nil
+  @spec enc_id(aeser_id() | nil) :: binary() | nil
+  def enc_id(nil), do: nil
 
-  defp enc_id({:id, idtype, payload}),
+  def enc_id({:id, idtype, payload}),
     do: Enc.encode(AE.id_type(idtype), payload)
 
   defp raw_to_json(x),

@@ -245,6 +245,45 @@ defmodule AeMdw.Db.Name do
     |> Enum.into(%{})
   end
 
+  @spec ownership(Model.name()) :: %{current: Format.aeser_id(), original: Format.aeser_id()}
+  def ownership(Model.name(transfers: [], owner: owner)) do
+    pubkey = :aeser_id.create(:account, owner)
+
+    %{original: pubkey, current: pubkey}
+  end
+
+  def ownership(
+        Model.name(
+          index: plain_name,
+          claims: [{_block_index, last_claim_txi} | _rest_claims],
+          owner: owner
+        )
+      ) do
+    Model.tx(id: tx_hash) = read_tx!(last_claim_txi)
+    {:ok, name_hash} = :aens.get_name_hash(plain_name)
+
+    orig_owner =
+      case AE.Db.get_tx_data(tx_hash) do
+        {_block_hash, :name_claim_tx, _signed_tx, tx_rec} ->
+          :aens_claim_tx.account_id(tx_rec)
+
+        {_block_hash, :contract_call_tx, _signed_tx, _tx_rec} ->
+          last_claim_txi
+          |> Contracts.fetch_int_contract_calls("AENS.claim")
+          |> Stream.map(fn Model.int_contract_call(tx: aetx) ->
+            {:name_claim_tx, tx} = :aetx.specialize_type(aetx)
+
+            tx
+          end)
+          |> Enum.find(fn tx ->
+            name_hash == :aens_transfer_tx.name_hash(tx)
+          end)
+          |> :aens_transfer_tx.account_id()
+      end
+
+    %{original: orig_owner, current: :aeser_id.create(:account, owner)}
+  end
+
   @spec account_pointer_at(String.t(), AeMdw.Txs.txi()) ::
           {:error, :name_not_found | {:pointee_not_found, any, any}} | {:ok, any}
   def account_pointer_at(plain_name, time_reference_txi) do
@@ -295,25 +334,6 @@ defmodule AeMdw.Db.Name do
           {m_name, Model.InactiveName} ->
             {active, push.(inactive, m_name, p_keys)}
         end
-    end
-  end
-
-  @spec ownership(Model.name()) :: %{current: pubkey(), original: pubkey()}
-  def ownership(
-        Model.name(
-          claims: [{{_height, _mbi}, last_claim_txi} | _other],
-          transfers: transfers,
-          owner: owner
-        )
-      ) do
-    %{tx: %{account_id: orig_owner}} = Format.to_raw_map(read_tx!(last_claim_txi))
-
-    case List.first(transfers) do
-      nil ->
-        %{original: orig_owner, current: orig_owner}
-
-      _any_transfer ->
-        %{original: orig_owner, current: :aeser_api_encoder.encode(:account_pubkey, owner)}
     end
   end
 
