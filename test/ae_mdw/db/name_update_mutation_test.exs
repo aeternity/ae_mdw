@@ -52,7 +52,7 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
       assert {:ok,
               Model.name(
                 index: ^plain_name,
-                expire: ^expire,
+                expire: ^update_height,
                 owner: ^owner_pk,
                 updates: [{^block_index, ^txi}],
                 revoke: nil
