@@ -118,14 +118,11 @@ defmodule AeMdw.Db.Name do
 
   @spec expire_name(transaction(), Blocks.height(), Names.plain_name()) :: :ok
   def expire_name(txn, height, plain_name) do
-    m_name = cache_through_read!(txn, Model.ActiveName, plain_name)
+    Model.name(expire: expiration) =
+      m_name = cache_through_read!(txn, Model.ActiveName, plain_name)
 
-    if Model.name(m_name, :expire) == height do
-      deactivate_name(txn, height, m_name)
-      Ets.inc(:stat_sync_cache, :names_expired)
-    else
-      cache_through_delete(txn, Model.ActiveNameExpiration, {height, plain_name})
-    end
+    deactivate_name(txn, height, expiration, m_name)
+    Ets.inc(:stat_sync_cache, :names_expired)
   end
 
   @spec expire_auction(
@@ -158,6 +155,7 @@ defmodule AeMdw.Db.Name do
     cache_through_write(txn, Model.ActiveName, m_name)
     cache_through_write(txn, Model.ActiveNameOwner, m_owner)
     cache_through_write(txn, Model.ActiveNameExpiration, m_name_exp)
+
     cache_through_delete(txn, Model.AuctionExpiration, {height, plain_name})
     cache_through_delete(txn, Model.AuctionOwner, {owner, plain_name})
     cache_through_delete(txn, Model.AuctionBid, bid_key)
@@ -433,6 +431,7 @@ defmodule AeMdw.Db.Name do
 
   def cache_through_delete_inactive(txn, Model.name(index: plain_name, owner: owner_pk) = m_name) do
     expire = revoke_or_expire_height(m_name)
+
     cache_through_delete(txn, Model.InactiveName, plain_name)
     cache_through_delete(txn, Model.InactiveNameOwner, {owner_pk, plain_name})
     cache_through_delete(txn, Model.InactiveNameExpiration, {expire, plain_name})
@@ -440,13 +439,14 @@ defmodule AeMdw.Db.Name do
     :ok
   end
 
-  @spec deactivate_name(transaction(), Blocks.height(), Model.name()) :: :ok
+  @spec deactivate_name(transaction(), Blocks.height(), Blocks.height(), Model.name()) :: :ok
   def deactivate_name(
         txn,
         deactivate_height,
+        expiration,
         Model.name(index: plain_name, owner: owner_pk) = m_name
       ) do
-    cache_through_delete_active(txn, m_name)
+    cache_through_delete_active(txn, expiration, m_name)
 
     m_exp = Model.expiration(index: {deactivate_height, plain_name})
     m_owner = Model.owner(index: {owner_pk, plain_name})
@@ -464,11 +464,12 @@ defmodule AeMdw.Db.Name do
 
   defp cache_through_delete_active(
          txn,
-         Model.name(index: plain_name, expire: expire, owner: owner_pk)
+         expiration,
+         Model.name(index: plain_name, owner: owner_pk)
        ) do
     cache_through_delete(txn, Model.ActiveName, plain_name)
     cache_through_delete(txn, Model.ActiveNameOwner, {owner_pk, plain_name})
-    cache_through_delete(txn, Model.ActiveNameExpiration, {expire, plain_name})
+    cache_through_delete(txn, Model.ActiveNameExpiration, {expiration, plain_name})
   end
 
   defp pointer_kv_raw(ptr),
