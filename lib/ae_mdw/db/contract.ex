@@ -9,6 +9,7 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
+  alias AeMdw.Db.Sync
   alias AeMdw.Db.TxnMutation
   alias AeMdw.Db.WriteTxnMutation
   alias AeMdw.Log
@@ -199,7 +200,7 @@ defmodule AeMdw.Db.Contract do
 
       # if remote call then indexes also with the called contract
       if addr != contract_pk do
-        remote_called_contract_txi = Origin.tx_index!({:contract, addr})
+        remote_called_contract_txi = Sync.Contract.get_txi!(addr)
 
         # on caller log: ext_contract = called contract_pk
         # on called log: ext_contract = {:parent_contract_pk, caller contract_pk}
