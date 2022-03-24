@@ -23,7 +23,7 @@ defmodule AeMdw.Db.Sync.Name do
       cache_through_read: 3,
       cache_through_write: 3,
       cache_through_delete: 3,
-      deactivate_name: 3,
+      deactivate_name: 4,
       revoke_or_expire_height: 1
     ]
 
@@ -81,7 +81,7 @@ defmodule AeMdw.Db.Sync.Name do
         log_name_change(height, plain_name, "extend")
 
       delta_ttl == 0 and not internal? ->
-        deactivate_name(txn, height, new_m_name)
+        deactivate_name(txn, height, old_expire, new_m_name)
 
         inc(:stat_sync_cache, :names_expired)
 
@@ -117,9 +117,12 @@ defmodule AeMdw.Db.Sync.Name do
   def revoke(txn, name_hash, txi, {height, _mbi} = bi) do
     plain_name = plain_name!(name_hash)
 
-    m_name = cache_through_read!(txn, Model.ActiveName, plain_name)
+    Model.name(expire: expiration) =
+      m_name = cache_through_read!(txn, Model.ActiveName, plain_name)
+
     m_name = Model.name(m_name, revoke: {bi, txi})
-    deactivate_name(txn, height, m_name)
+
+    deactivate_name(txn, height, expiration, m_name)
 
     inc(:stat_sync_cache, :names_revoked)
 
