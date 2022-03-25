@@ -64,17 +64,20 @@ defmodule AeMdw.Db.Sync.Contract do
   def child_contract_mutations(%{result: fun_result}, caller_pk, txi, tx_hash) do
     with %{type: :contract, value: contract_id} <- fun_result,
          {:ok, contract_pk} <- Validate.id(contract_id) do
-      aex9_meta_info =
+      aex9_create_mutation =
         case Contract.is_aex9?(contract_pk) && Contract.aex9_meta_info(contract_pk) do
-          {:ok, aex9_meta_info} -> aex9_meta_info
-          _false_or_notfound -> nil
+          {:ok, aex9_meta_info} ->
+            Aex9CreateContractMutation.new(contract_pk, aex9_meta_info, caller_pk, txi)
+
+          _false_or_notfound ->
+            nil
         end
 
       :ets.insert(:ct_create_sync_cache, {contract_pk, txi})
       AeMdw.Ets.inc(:stat_sync_cache, :contracts_created)
 
       [
-        Aex9CreateContractMutation.new(contract_pk, aex9_meta_info, caller_pk, txi)
+        aex9_create_mutation
         | SyncOrigin.origin_mutations(:contract_call_tx, nil, contract_pk, txi, tx_hash)
       ]
     else

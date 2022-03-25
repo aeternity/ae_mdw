@@ -19,14 +19,14 @@ defmodule AeMdw.Db.Aex9CreateContractMutation do
 
   @opaque t() :: %__MODULE__{
             contract_pk: pubkey(),
-            aex9_meta_info: Contract.aex9_meta_info() | nil,
+            aex9_meta_info: Contract.aex9_meta_info(),
             caller_pk: pubkey(),
             create_txi: Txs.txi()
           }
 
   @spec new(
           pubkey(),
-          Contract.aex9_meta_info() | nil,
+          Contract.aex9_meta_info(),
           pubkey(),
           Txs.txi()
         ) :: t()
