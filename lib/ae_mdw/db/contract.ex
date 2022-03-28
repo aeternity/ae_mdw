@@ -440,7 +440,7 @@ defmodule AeMdw.Db.Contract do
     m_transfer = Model.aex9_transfer(index: {from_pk, txi, to_pk, amount, i})
     m_rev_transfer = Model.rev_aex9_transfer(index: {to_pk, txi, from_pk, amount, i})
     m_idx_transfer = Model.idx_aex9_transfer(index: {txi, i, from_pk, to_pk, amount})
-    m_pair_transfer = Model.aex9_pair_transfer(index: {to_pk, from_pk, amount, txi, i})
+    m_pair_transfer = Model.aex9_pair_transfer(index: {to_pk, from_pk, txi, amount, i})
 
     Database.write(txn, Model.Aex9Transfer, m_transfer)
     Database.write(txn, Model.RevAex9Transfer, m_rev_transfer)
