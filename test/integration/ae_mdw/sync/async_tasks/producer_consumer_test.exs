@@ -55,12 +55,13 @@ defmodule Integration.AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
     end)
 
     assert Enum.reduce_while(1..50, false, fn _i, _acc ->
-      Process.sleep(100)
+             Process.sleep(100)
 
-      if Contract.aex9_presence_exists?(@contract_pk, @account_pk, create_txi) do
-        {:halt, true}
-      else
-        {:cont, false}
-      end
-    end)  end
+             if Contract.aex9_presence_exists?(@contract_pk, @account_pk, create_txi) do
+               {:halt, true}
+             else
+               {:cont, false}
+             end
+           end)
+  end
 end
