@@ -14,8 +14,10 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
   @moduletag :integration
 
-  @big_balance_contract_id "ct_BwJcRRa7jTAvkpzc2D16tJzHMGCJurtJMUBtyyfGi2QjPuMVv"
-  @another_big_balance_contract_id "ct_M9yohHgcLjhpp1Z8SaA1UTmRMQzR4FWjJHajGga8KBoZTEPwC"
+  @big_balance_contract_id1 "ct_BwJcRRa7jTAvkpzc2D16tJzHMGCJurtJMUBtyyfGi2QjPuMVv"
+  @big_balance_contract_id2 "ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM"
+  @big_balance_contract_id3 "ct_M9yohHgcLjhpp1Z8SaA1UTmRMQzR4FWjJHajGga8KBoZTEPwC"
+
   @default_limit 10
 
   describe "by_contract" do
@@ -226,7 +228,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
   describe "balances" do
     test "gets all accounts balances for a contract", %{conn: conn} do
-      contract_id = @big_balance_contract_id
+      contract_id = @big_balance_contract_id1
       conn = get(conn, "/aex9/balances/#{contract_id}")
 
       assert %{
@@ -241,7 +243,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
     end
 
     test "returns an error message when the balance is not available", %{conn: conn} do
-      contract_id = @another_big_balance_contract_id
+      cid3 = @big_balance_contract_id3
       contract_pk = Validate.id!(contract_id)
 
       Model.Aex9Balance
@@ -271,7 +273,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
       balances_response = json_response(conn, 200)
 
       assert Enum.any?(balances_response, fn %{"contract_id" => contract_id} ->
-               contract_id == @big_balance_contract_id
+               contract_id == @big_balance_contract_id2
              end)
 
       Enum.each(balances_response, fn %{
