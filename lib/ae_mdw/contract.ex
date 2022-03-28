@@ -183,7 +183,7 @@ defmodule AeMdw.Contract do
       fn {hash, type} ->
         case Map.get(functions, hash) do
           {_, ^type, _body} -> true
-          _ -> false
+          _function -> false
         end
       end
     )
