@@ -141,6 +141,7 @@ defmodule AeMdwWeb.Router do
     get "/aex9/balances/hash/:blockhash/:contract_id", Aex9Controller, :balances_for_hash
     get "/aex9/balances/:contract_id", Aex9Controller, :balance
 
+    get "/stats", StatsController, :stats
     get "/stats/:direction", StatsController, :stats
     get "/stats/:scope_type/:range", StatsController, :stats
     get "/totalstats/:direction", StatsController, :total_stats

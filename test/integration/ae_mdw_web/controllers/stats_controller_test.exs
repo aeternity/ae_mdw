@@ -1,6 +1,8 @@
 defmodule Integration.AeMdwWeb.StatsControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
+  alias AeMdw.Database
+  alias AeMdw.Db.Model
   alias AeMdw.Db.Util
 
   @moduletag :integration
@@ -54,7 +56,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
     test "it gets generations with numeric range and default limit", %{conn: conn} do
       first = 305_000
       last = 305_100
-      conn = get(conn, "/stats", scope: "gen:#{first}-#{last}")
+      conn = get(conn, "/stats", scope_type: "gen", range: "#{first}-#{last}")
       response = json_response(conn, 200)
 
       assert @default_limit = Enum.count(response["data"])
@@ -98,7 +100,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
 
     test "renders error when the range is invalid", %{conn: conn} do
       range = "invalid"
-      conn = get(conn, "/stats", scope: "gen:#{range}")
+      conn = get(conn, "/stats", scope_type: "gen", range: range)
       error_msg = "invalid range: #{range}"
 
       assert %{"error" => ^error_msg} = json_response(conn, 400)
@@ -108,7 +110,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
   describe "delta stats" do
     test "when no subpath it gets stats in backwards direction", %{conn: conn} do
       limit = 3
-      last_gen = Util.last_gen()
+      {:ok, last_gen} = Database.last_key(Model.DeltaStat)
 
       conn = get(conn, "/v2/deltastats", limit: limit)
       response = json_response(conn, 200)
@@ -237,13 +239,13 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
     end
 
     test "when direction=forward it gets stats starting from 1", %{conn: conn} do
-      conn = get(conn, "/v2/totalstats", direction: "forward")
+      conn = get(conn, Routes.stats_path(conn, :total_stats, direction: "forward"))
       response = json_response(conn, 200)
 
       assert @default_limit = Enum.count(response["data"])
 
       assert response["data"]
-             |> Enum.with_index(0)
+             |> Enum.with_index(1)
              |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
 
       conn_next = get(conn, response["next"])
@@ -252,7 +254,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
       assert @default_limit = Enum.count(response_next["data"])
 
       assert response_next["data"]
-             |> Enum.zip(10..19)
+             |> Enum.zip(11..20)
              |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
     end
 
