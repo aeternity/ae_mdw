@@ -74,8 +74,8 @@ defmodule AeMdw.Stats do
 
     {range_first, range_last} =
       case range do
-        nil -> {0, last_gen}
-        {:gen, %Range{first: first, last: last}} -> {max(first, 0), min(last, last_gen)}
+        nil -> {1, last_gen}
+        {:gen, %Range{first: first, last: last}} -> {max(first, 1), min(last, last_gen)}
       end
 
     cursor = deserialize_cursor(cursor)
