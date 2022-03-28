@@ -86,7 +86,7 @@ defmodule AeMdw.Db.Sync.Stats do
       names_revoked: length(height_revoked_names),
       oracles_registered: max(0, current_active_oracles - prev_active_oracles),
       oracles_expired: oracles_expired_count,
-      contracts_created: all_contracts_count - prev_contracts,
+      contracts_created: max(0, all_contracts_count - prev_contracts),
       block_reward: current_block_reward,
       dev_reward: current_dev_reward
     )
