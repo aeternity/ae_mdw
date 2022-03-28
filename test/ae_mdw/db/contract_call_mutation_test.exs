@@ -68,7 +68,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
     assert {account_pk, mutation} =
              contract_call_mutation(
-               "transfer",
+               "transfer_allowance",
                call_txi,
                @transfer_allow_ct_pk,
                @transfer_allow_caller_pk
@@ -115,6 +115,13 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           [%{type: :address}, %{type: :address, value: account_pk}, _int_val] -> account_pk
         end
       end
+
+    functions =
+      AeMdw.Node.aex9_signatures()
+      |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+    type_info = {:fcode, functions, nil, nil}
+    AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
     mutation =
       ContractCallMutation.new(

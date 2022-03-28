@@ -56,7 +56,7 @@ defmodule AeMdw.Node.ContractCallFixtures do
         %{type: :int, value: 1}
       ],
       function: "transfer_allowance",
-      result: %{abort: ["ALLOWANCE_NOT_EXISTENT"]}
+      result: %{type: :unit, value: ""}
     }
   end
 
