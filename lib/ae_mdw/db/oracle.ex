@@ -8,7 +8,6 @@ defmodule AeMdw.Db.Oracle do
   alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.Oracle
-  alias AeMdw.Db.OraclesExpirationMutation
   alias AeMdw.Db.OracleResponseMutation
   alias AeMdw.Log
   alias AeMdw.Node
@@ -135,16 +134,6 @@ defmodule AeMdw.Db.Oracle do
     block_hash
     |> :aec_db.get_block_state()
     |> :aec_trees.oracles()
-  end
-
-  @spec expirations_mutation(Blocks.height()) :: OraclesExpirationMutation.t()
-  def expirations_mutation(height) do
-    expired_pubkeys =
-      Model.ActiveOracleExpiration
-      |> Collection.stream(:forward, {{height, <<>>}, {height + 1, <<>>}}, nil)
-      |> Enum.map(fn {^height, pubkey} -> pubkey end)
-
-    OraclesExpirationMutation.new(height, expired_pubkeys)
   end
 
   @spec expire_oracle(transaction(), Blocks.height(), pubkey()) :: :ok

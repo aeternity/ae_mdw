@@ -17,7 +17,6 @@ defmodule AeMdw.Db.Name do
   alias AeMdw.Node, as: AE
   alias AeMdw.Node.Db
   alias AeMdw.Db.Model
-  alias AeMdw.Db.NamesExpirationMutation
   alias AeMdw.Db.Format
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Ets
@@ -94,26 +93,6 @@ defmodule AeMdw.Db.Name do
   @spec expire_after(Blocks.height()) :: Blocks.height()
   def expire_after(auction_end) do
     auction_end + :aec_governance.name_claim_max_expiration(proto_vsn(auction_end))
-  end
-
-  @spec expirations_mutation(Blocks.height()) :: NamesExpirationMutation.t()
-  def expirations_mutation(height) do
-    expired_names =
-      Model.ActiveNameExpiration
-      |> Collection.stream(:forward, {{height, <<>>}, {height + 1, <<>>}}, nil)
-      |> Enum.map(fn {^height, plain_name} -> plain_name end)
-
-    expired_auctions =
-      Model.AuctionExpiration
-      |> Collection.stream(:forward, {{height, <<>>}, {height + 1, <<>>}}, nil)
-      |> Enum.map(fn key ->
-        Model.expiration(index: {^height, name}, value: tm) =
-          Database.fetch!(Model.AuctionExpiration, key)
-
-        {name, tm}
-      end)
-
-    NamesExpirationMutation.new(height, expired_names, expired_auctions)
   end
 
   @spec expire_name(transaction(), Blocks.height(), Names.plain_name()) :: :ok
