@@ -1,14 +1,10 @@
 defmodule Integration.AeMdwWeb.Aex9ControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
-  alias AeMdw.Collection
-  alias AeMdw.Database
   alias AeMdw.Db.Origin
   alias AeMdw.Db.Model
   alias AeMdw.Db.Util
   alias AeMdw.Validate
-
-  import AeMdw.Util
 
   require Model
 
@@ -16,7 +12,6 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
   @big_balance_contract_id1 "ct_BwJcRRa7jTAvkpzc2D16tJzHMGCJurtJMUBtyyfGi2QjPuMVv"
   @big_balance_contract_id2 "ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM"
-  @big_balance_contract_id3 "ct_M9yohHgcLjhpp1Z8SaA1UTmRMQzR4FWjJHajGga8KBoZTEPwC"
 
   @default_limit 10
 
@@ -240,28 +235,6 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
         assert String.starts_with?(account, "ak_")
         assert is_integer(balance) and balance >= 0
       end)
-    end
-
-    test "returns an error message when the balance is not available", %{conn: conn} do
-      cid3 = @big_balance_contract_id3
-      contract_pk = Validate.id!(contract_id)
-
-      Model.Aex9Balance
-      |> Collection.stream(
-        :forward,
-        {{contract_pk, min_bin()}, {contract_pk, max_256bit_bin()}},
-        nil
-      )
-      |> Enum.each(fn account_pk ->
-        Database.dirty_delete(Model.Aex9Balance, {contract_pk, account_pk})
-      end)
-
-      conn = get(conn, "/aex9/balances/#{contract_id}")
-
-      assert %{"error" => msg} = json_response(conn, 400)
-
-      assert msg ==
-               "balance is not yet available: contract ct_M9yohHgcLjhpp1Z8SaA1UTmRMQzR4FWjJHajGga8KBoZTEPwC"
     end
   end
 
