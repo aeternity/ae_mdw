@@ -1,5 +1,37 @@
 # Changelog
 
+### [1.7.1](https://www.github.com/aeternity/ae_mdw/compare/v1.7.0...v1.7.1) (2022-03-29)
+
+
+### Bug Fixes
+
+* aex9 creation for child contracts ([#592](https://www.github.com/aeternity/ae_mdw/issues/592)) ([ce586bf](https://www.github.com/aeternity/ae_mdw/commit/ce586bf43d6f766f219374aaca078a26671b6958))
+* deactivate name on update with ttl 0 ([#602](https://www.github.com/aeternity/ae_mdw/issues/602)) ([6e1a2b7](https://www.github.com/aeternity/ae_mdw/commit/6e1a2b76444a2bedb53d7938e0107fe75bae337e))
+* delta stat resume when name is not revoked ([#593](https://www.github.com/aeternity/ae_mdw/issues/593)) ([83af31b](https://www.github.com/aeternity/ae_mdw/commit/83af31b5e947f7dfda35e9a3b340b6b0c5b85c6b))
+* fix /names/owned_by path ([#612](https://www.github.com/aeternity/ae_mdw/issues/612)) ([80adf01](https://www.github.com/aeternity/ae_mdw/commit/80adf01dae1e32383670aa55c626a5775d45f790))
+* fix aex9 balances route for a contract ([#606](https://www.github.com/aeternity/ae_mdw/issues/606)) ([59bb989](https://www.github.com/aeternity/ae_mdw/commit/59bb9890382b8cab685429e6ff49301ea9b840be))
+* handle name ownership and pointers when tx is internal ([#601](https://www.github.com/aeternity/ae_mdw/issues/601)) ([95b2f5a](https://www.github.com/aeternity/ae_mdw/commit/95b2f5af138bc9f5372c2675f134ef667ca209e7))
+* missing InactiveNameOwner record ([#598](https://www.github.com/aeternity/ae_mdw/issues/598)) ([85f6c74](https://www.github.com/aeternity/ae_mdw/commit/85f6c74a7135c01d918cb58791dad9e00481126b))
+* oracle expiration stats ([#585](https://www.github.com/aeternity/ae_mdw/issues/585)) ([859b452](https://www.github.com/aeternity/ae_mdw/commit/859b452f6070f5649da11e5618a946fe5440f861))
+* set contract created stats min value to 0 ([#609](https://www.github.com/aeternity/ae_mdw/issues/609)) ([9be2d02](https://www.github.com/aeternity/ae_mdw/commit/9be2d02bd716207b73e2d5cc0fe35f946268fe71))
+* start syncing mdw after running migrations ([#587](https://www.github.com/aeternity/ae_mdw/issues/587)) ([5b580b1](https://www.github.com/aeternity/ae_mdw/commit/5b580b1f37da84334c3cd2c7afc351dc81e32530))
+* update readme for /v2/deltastats ([#613](https://www.github.com/aeternity/ae_mdw/issues/613)) ([bd8570b](https://www.github.com/aeternity/ae_mdw/commit/bd8570b79adb6b4d73c19ea151f82f4703ab685d))
+
+
+### Testing
+
+* disable async tasks ([#583](https://www.github.com/aeternity/ae_mdw/issues/583)) ([b451b4d](https://www.github.com/aeternity/ae_mdw/commit/b451b4d84f1bd915974316c4435179415b04503e))
+* fix v1/v2 stats tests ([#608](https://www.github.com/aeternity/ae_mdw/issues/608)) ([a216b83](https://www.github.com/aeternity/ae_mdw/commit/a216b83e6d33898b9c59aac54f011a3f1c44d512))
+
+
+### Refactorings
+
+* async tasks persisted with rocksdb ([#577](https://www.github.com/aeternity/ae_mdw/issues/577)) ([0810dde](https://www.github.com/aeternity/ae_mdw/commit/0810dde0bda5726e61375671a84bca552c11e266))
+* chain and name tables persisted with rocksdb ([#590](https://www.github.com/aeternity/ae_mdw/issues/590)) ([3d8d22f](https://www.github.com/aeternity/ae_mdw/commit/3d8d22f5dc00f6ab1f31408985fbec755f045a1c))
+* contract tables persisted with rocksdb ([#594](https://www.github.com/aeternity/ae_mdw/issues/594)) ([93de2b3](https://www.github.com/aeternity/ae_mdw/commit/93de2b3c86d30542e2cff712ce5f56ade0e3755e))
+* oracles persisted with rocksdb ([#588](https://www.github.com/aeternity/ae_mdw/issues/588)) ([3d8aae4](https://www.github.com/aeternity/ae_mdw/commit/3d8aae47a4d3f83fd90befba56f6ccbd16f01fd0))
+* stats tables persisted with rocksdb ([#579](https://www.github.com/aeternity/ae_mdw/issues/579)) ([2860bbd](https://www.github.com/aeternity/ae_mdw/commit/2860bbd98fee105938d7506c4653d87b36c7ac27))
+
 ## [1.7.0](https://www.github.com/aeternity/ae_mdw/compare/v1.6.1...v1.7.0) (2022-03-09)
 
 
