@@ -1,5 +1,6 @@
 defmodule AeMdw.Db.Sync.Invalidate do
   # credo:disable-for-this-file
+  alias AeMdw.Blocks
   alias AeMdw.Contract
   alias AeMdw.Database
   alias AeMdw.Db.Stream, as: DBS
@@ -20,55 +21,50 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
   ##########
 
+  @spec invalidate(Blocks.height()) :: :ok
   def invalidate(fork_height) when is_integer(fork_height) do
     prev_kbi = fork_height - 1
     from_txi = Model.block(read_block!({prev_kbi, -1}), :tx_index)
 
-    # else: wasn't synced up to that txi, nothing to do
-    if is_integer(from_txi) && from_txi >= 0 do
-      Log.info("invalidating from tx #{from_txi} at generation #{prev_kbi}")
-      bi_keys = block_keys_range({prev_kbi, 0})
-      {tx_keys, id_counts} = tx_keys_range(from_txi)
+    Log.info("invalidating from tx #{from_txi} at generation #{prev_kbi}")
+    bi_keys = block_keys_range({prev_kbi, 0})
+    {tx_keys, id_counts} = tx_keys_range(from_txi)
 
-      stat_key_dels = stat_key_dels(prev_kbi)
+    stat_key_dels = stat_key_dels(prev_kbi)
 
-      contract_log_key_dels = contract_log_key_dels(from_txi)
-      contract_call_key_dels = contract_call_key_dels(from_txi)
+    contract_log_key_dels = contract_log_key_dels(from_txi)
+    contract_call_key_dels = contract_call_key_dels(from_txi)
 
-      aex9_key_dels = aex9_key_dels(from_txi)
-      aex9_transfer_key_dels = aex9_transfer_key_dels(from_txi)
-      aex9_account_presence_key_dels = aex9_account_presence_key_dels(from_txi)
-      aex9_account_presence_key_writes = aex9_account_presence_key_writes(from_txi)
+    aex9_key_dels = aex9_key_dels(from_txi)
+    aex9_transfer_key_dels = aex9_transfer_key_dels(from_txi)
+    aex9_account_presence_key_dels = aex9_account_presence_key_dels(from_txi)
+    aex9_account_presence_key_writes = aex9_account_presence_key_writes(from_txi)
 
-      int_contract_call_key_dels = int_contract_call_key_dels(from_txi)
-      int_transfer_tx_key_dels = int_transfer_tx_key_dels(prev_kbi)
+    int_contract_call_key_dels = int_contract_call_key_dels(from_txi)
+    int_transfer_tx_key_dels = int_transfer_tx_key_dels(prev_kbi)
 
-      blocks_and_txs_keys = Map.merge(bi_keys, tx_keys)
+    blocks_and_txs_keys = Map.merge(bi_keys, tx_keys)
 
-      fields_counts = Map.get(id_counts, Model.IdCount)
+    fields_counts = Map.get(id_counts, Model.IdCount)
 
-      Database.commit([
-        DeleteKeysMutation.new(blocks_and_txs_keys),
-        DeleteKeysMutation.new(stat_key_dels),
-        NameInvalidationMutation.new(fork_height - 1),
-        OracleInvalidationMutation.new(fork_height - 1),
-        DeleteKeysMutation.new(aex9_key_dels),
-        DeleteKeysMutation.new(aex9_transfer_key_dels),
-        DeleteKeysMutation.new(aex9_account_presence_key_dels),
-        DeleteKeysMutation.new(contract_log_key_dels),
-        DeleteKeysMutation.new(contract_call_key_dels),
-        DeleteKeysMutation.new(int_contract_call_key_dels),
-        DeleteKeysMutation.new(int_transfer_tx_key_dels),
-        DeleteKeysMutation.new(int_transfer_tx_key_dels),
-        UpdateIdsCountsMutation.new(fields_counts)
-      ])
+    Database.commit([
+      DeleteKeysMutation.new(blocks_and_txs_keys),
+      DeleteKeysMutation.new(stat_key_dels),
+      NameInvalidationMutation.new(fork_height - 1),
+      OracleInvalidationMutation.new(fork_height - 1),
+      DeleteKeysMutation.new(aex9_key_dels),
+      DeleteKeysMutation.new(aex9_transfer_key_dels),
+      DeleteKeysMutation.new(aex9_account_presence_key_dels),
+      DeleteKeysMutation.new(contract_log_key_dels),
+      DeleteKeysMutation.new(contract_call_key_dels),
+      DeleteKeysMutation.new(int_contract_call_key_dels),
+      DeleteKeysMutation.new(int_transfer_tx_key_dels),
+      DeleteKeysMutation.new(int_transfer_tx_key_dels),
+      UpdateIdsCountsMutation.new(fields_counts)
+    ])
 
-      # only ets writes
-      do_writes(
-        aex9_account_presence_key_writes,
-        &AeMdw.Db.Contract.aex9_presence_cache_write/2
-      )
-    end
+    # only ets writes
+    do_writes(aex9_account_presence_key_writes, &AeMdw.Db.Contract.aex9_presence_cache_write/2)
   end
 
   ################################################################################

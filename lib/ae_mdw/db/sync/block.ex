@@ -88,10 +88,9 @@ defmodule AeMdw.Db.Sync.Block do
       |> Enum.with_index()
       |> Enum.drop(last_mbi + 1)
       |> Enum.reduce(last_txi, fn {micro_block, mbi}, txi ->
-        {txn_mutations, mutations, txi} = micro_block_mutations(micro_block, mbi, txi)
+        {txn_mutations, txi} = micro_block_mutations(micro_block, mbi, txi)
 
         Database.commit(txn_mutations)
-        Database.transaction(mutations)
         Producer.commit_enqueued()
 
         Broadcaster.broadcast_micro_block(micro_block, :mdw)
@@ -126,32 +125,20 @@ defmodule AeMdw.Db.Sync.Block do
     events = AeMdw.Contract.get_grouped_events(mblock)
     tx_ctx = {{height, mbi}, mb_hash, mb_time, events}
 
-    {txn_txs_mutations, txs_mutations} =
+    txn_txs_mutations =
       mb_txs
       |> Enum.with_index(txi)
-      |> Enum.reduce({[], []}, fn {signed_tx, txi}, {txn_mutations_acc, mutations_acc} ->
-        {txn_mutations, mutations} = Transaction.transaction_mutations(signed_tx, txi, tx_ctx)
+      |> Enum.reduce([], fn {signed_tx, txi}, txn_mutations_acc ->
+        txn_mutations = Transaction.transaction_mutations(signed_tx, txi, tx_ctx)
 
-        {
-          [txn_mutations_acc, txn_mutations],
-          [mutations_acc, mutations]
-        }
+        txn_mutations_acc ++ txn_mutations
       end)
 
-    # rocksdb mutations
     mb_model = Model.block(index: {height, mbi}, tx_index: txi, hash: mb_hash)
 
-    txn_mutations = [
-      WriteTxnMutation.new(Model.Block, mb_model),
-      txn_txs_mutations
-    ]
+    txn_mutations = [WriteTxnMutation.new(Model.Block, mb_model) | txn_txs_mutations]
 
-    # mnesia mutations
-    mutations = [
-      txs_mutations
-    ]
-
-    {txn_mutations, mutations, txi + length(mb_txs)}
+    {txn_mutations, txi + length(mb_txs)}
   end
 
   @spec synced_height :: Blocks.height() | -1
