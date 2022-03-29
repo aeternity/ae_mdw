@@ -804,7 +804,7 @@ defmodule AeMdwWeb.NameControllerTest do
         {Name, [], [owned_by: fn ^owner_id, true -> %{names: [], top_bids: []} end]}
       ] do
         assert %{"active" => [], "top_bid" => []} =
-                 conn |> get("/name/owned_by/#{id}") |> json_response(200)
+                 conn |> get("/names/owned_by/#{id}") |> json_response(200)
       end
     end
 
@@ -816,7 +816,7 @@ defmodule AeMdwWeb.NameControllerTest do
         {Name, [], [owned_by: fn ^owner_id, false -> %{names: []} end]}
       ] do
         assert %{"inactive" => []} =
-                 conn |> get("/name/owned_by/#{id}?active=false") |> json_response(200)
+                 conn |> get("/names/owned_by/#{id}?active=false") |> json_response(200)
       end
     end
 
@@ -824,7 +824,7 @@ defmodule AeMdwWeb.NameControllerTest do
       id = "ak_invalid_key"
       error = "invalid id: #{id}"
 
-      assert %{"error" => ^error} = conn |> get("/name/owned_by/#{id}") |> json_response(400)
+      assert %{"error" => ^error} = conn |> get("/names/owned_by/#{id}") |> json_response(400)
     end
   end
 end

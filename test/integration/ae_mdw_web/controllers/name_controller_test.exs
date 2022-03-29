@@ -949,7 +949,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   describe "owned_by" do
     test "get active names owned by an account", %{conn: conn} do
       id = "ak_KR3a8dukEYVoZPoWFaszFgjKUpBh7J1Q5iWsz9YCamHn2rTCp"
-      conn = get(conn, "/name/owned_by/#{id}")
+      conn = get(conn, "/names/owned_by/#{id}")
 
       response = json_response(conn, 200)
 
@@ -987,7 +987,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
     test "renders error when the key is invalid", %{conn: conn} do
       id = "ak_invalid_key"
-      conn = get(conn, "/name/owned_by/#{id}")
+      conn = get(conn, "/names/owned_by/#{id}")
 
       assert json_response(conn, 400) == %{"error" => "invalid id: #{id}"}
     end
