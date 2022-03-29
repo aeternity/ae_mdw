@@ -224,7 +224,7 @@ GET /contracts/calls/:scope_type/:range  - returns function calls inside of the 
 
 GET /v2/transfers                        - returns internal transfers from the top of the chain
 
-GET /v2/stats                            - returns statistics for generations from tip of the chain
+GET /v2/deltastats                       - returns statistics for generations from tip of the chain
 GET /v2/totalstats                       - returns aggregated statistics for generations from tip of the chain
 
 GET /v2/status                             - returns middleware status
@@ -4187,7 +4187,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/aex9/balances/hash/mh_kkKtNk2GAgJKja
 To show a statistics for a given height, we can use "stats" endpoint:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/stats?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/deltastats?limit=1" | jq '.'
 {
   "data": [
     {
@@ -4202,7 +4202,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/stats?limit=1" | jq '.'
       "inactive_oracles": 18
     }
   ],
-  "next": "/v2/stats?scope=gen:419209-0&limit=1&cursor=419208"
+  "next": "/v2/deltastats?scope=gen:419209-0&limit=1&cursor=419208"
 }
 ```
 
@@ -4259,7 +4259,7 @@ This is a list of the exceptions together with the changes that need to be done:
 * `/aex9/balances/gen/:height/account/:account_id`, `/aex9/balances/hash/:blockhash/account/:account_id` - Is now `/v2/aex9/account-balances/:account_id?scope=gen:5000-6000`.
 * `/aex9/balances/account/:account_id` - Is now `/v2/aex9/account-balances/:account_id?scope=gen:5000-6000`.
 * `/transfers/:direction`, `/transfers/:scope_type/:range` - Can now be accessed via `/v2/transfers?scope=txi:100-200` or `/v2/transfers?scope=gen:30-40`.
-* `/stats/:direction`, `/stats/:scope_type/:range` - Can now be accessed via `/v2/stats?direction=forward` or `/v2/stats?scope=gen:100-200`.
+* `/stats/:direction`, `/stats/:scope_type/:range` - Can now be accessed via `/v2/deltastats?direction=forward` or `/v2/deltastats?scope=gen:100-200`.
 * `/totalstats/:direction`, `/totalstats/:scope_type/:range` - Can now be accessed via `/v2/totalstats?direction=forward` or `/v2/totalstats?scope=gen:100-200`.
 * `/status` - Can now be accessed via `/v2/status`.
 
