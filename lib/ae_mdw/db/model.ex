@@ -15,6 +15,7 @@ defmodule AeMdw.Db.Model do
   import Record, only: [defrecord: 2]
 
   @type table :: atom()
+  @type m_record :: tuple()
   @opaque key :: tuple() | integer() | pubkey()
 
   @typep pubkey :: Db.pubkey()
@@ -530,27 +531,13 @@ defmodule AeMdw.Db.Model do
   def column_families do
     Enum.concat([
       chain_tables(),
-      [
-        AeMdw.Db.Model.Aex9Balance
-      ],
+      contract_tables(),
       name_tables(),
       oracle_tables(),
       stat_tables(),
       tasks_tables()
     ])
   end
-
-  @spec tables() :: list(atom())
-  def tables(),
-    do:
-      Enum.concat([
-        chain_tables(),
-        name_tables(),
-        contract_tables(),
-        oracle_tables(),
-        stat_tables(),
-        tasks_tables()
-      ])
 
   defp chain_tables() do
     [
@@ -570,6 +557,7 @@ defmodule AeMdw.Db.Model do
 
   defp contract_tables() do
     [
+      AeMdw.Db.Model.Aex9Balance,
       AeMdw.Db.Model.Aex9Contract,
       AeMdw.Db.Model.Aex9ContractSymbol,
       AeMdw.Db.Model.RevAex9Contract,
@@ -635,61 +623,6 @@ defmodule AeMdw.Db.Model do
     ]
   end
 
-  @spec records() :: list(atom())
-  def records(),
-    do: [
-      :tx,
-      :block,
-      :time,
-      :type,
-      :field,
-      :id_count,
-      :origin,
-      :rev_origin,
-      :aex9_balance,
-      :aex9_contract,
-      :aex9_contract_symbol,
-      :rev_aex9_contract,
-      :aex9_contract_pubkey,
-      :aex9_transfer,
-      :rev_aex9_transfer,
-      :aex9_pair_transfer,
-      :idx_aex9_transfer,
-      :aex9_account_presence,
-      :idx_aex9_account_presence,
-      :contract_call,
-      :contract_log,
-      :data_contract_log,
-      :evt_contract_log,
-      :idx_contract_log,
-      :int_contract_call,
-      :grp_int_contract_call,
-      :fname_int_contract_call,
-      :fname_grp_int_contract_call,
-      :id_int_contract_call,
-      :grp_id_int_contract_call,
-      :id_fname_int_contract_call,
-      :grp_id_fname_int_contract_call,
-      :plain_name,
-      :auction_bid,
-      :expiration,
-      :name,
-      :owner,
-      :pointee,
-      :oracle,
-      :int_transfer_tx,
-      :kind_int_transfer_tx,
-      :target_kind_int_transfer_tx,
-      :delta_stat,
-      :total_stat,
-      :migrations,
-      :async_tasks
-    ]
-
-  @spec fields(atom()) :: list(atom())
-  def fields(record),
-    do: for({x, _} <- defaults(record), do: x)
-
   @spec record(atom()) :: atom()
   def record(AeMdw.Db.Model.AsyncTasks), do: :async_tasks
   def record(AeMdw.Db.Model.Migrations), do: :migrations
@@ -743,97 +676,28 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.IntTransferTx), do: :int_transfer_tx
   def record(AeMdw.Db.Model.KindIntTransferTx), do: :kind_int_transfer_tx
   def record(AeMdw.Db.Model.TargetKindIntTransferTx), do: :target_kind_int_transfer_tx
-
   def record(AeMdw.Db.Model.DeltaStat), do: :delta_stat
   def record(AeMdw.Db.Model.TotalStat), do: :total_stat
+  def record(AeMdw.Db.Model.None), do: :none
+
+  #
+  # Stub for Node-Mdw database management
+  #
+  @none_defaults [index: 0, value: 0]
+  defrecord :none, @none_defaults
+
+  @spec tables() :: list(atom())
+  def tables(), do: [AeMdw.Db.Model.None]
+
+  @spec records() :: list(atom())
+  def records(), do: [:none]
 
   @spec table(atom()) :: atom()
-  def table(:async_tasks), do: AeMdw.Db.Model.AsyncTasks
-  def table(:migrations), do: AeMdw.Db.Model.Migrations
-  def table(:tx), do: AeMdw.Db.Model.Tx
-  def table(:block), do: AeMdw.Db.Model.Block
-  def table(:time), do: AeMdw.Db.Model.Time
-  def table(:type), do: AeMdw.Db.Model.Type
-  def table(:field), do: AeMdw.Db.Model.Field
-  def table(:id_count), do: AeMdw.Db.Model.IdCount
-  def table(:origin), do: AeMdw.Db.Model.Origin
-  def table(:rev_origin), do: AeMdw.Db.Model.RevOrigin
-  def table(:aex9_balance), do: AeMdw.Db.Model.Aex9Balance
-  def table(:aex9_contract), do: AeMdw.Db.Model.Aex9Contract
-  def table(:aex9_contract_symbol), do: AeMdw.Db.Model.Aex9ContractSymbol
-  def table(:rev_aex9_contract), do: AeMdw.Db.Model.RevAex9Contract
-  def table(:aex9_contract_pubkey), do: AeMdw.Db.Model.Aex9ContractPubkey
-  def table(:aex9_transfer), do: AeMdw.Db.Model.Aex9Transfer
-  def table(:rev_aex9_transfer), do: AeMdw.Db.Model.RevAex9Transfer
-  def table(:aex9_pair_transfer), do: AeMdw.Db.Model.Aex9PairTransfer
-  def table(:idx_aex9_transfer), do: AeMdw.Db.Model.IdxAex9Transfer
-  def table(:aex9_account_presence), do: AeMdw.Db.Model.Aex9AccountPresence
-  def table(:idx_aex9_account_presence), do: AeMdw.Db.Model.IdxAex9AccountPresence
-  def table(:contract_call), do: AeMdw.Db.Model.ContractCall
-  def table(:contract_log), do: AeMdw.Db.Model.ContractLog
-  def table(:data_contract_log), do: AeMdw.Db.Model.DataContractLog
-  def table(:evt_contract_log), do: AeMdw.Db.Model.EvtContractLog
-  def table(:idx_contract_log), do: AeMdw.Db.Model.IdxContractLog
-  def table(:int_contract_call), do: AeMdw.Db.Model.IntContractCall
-  def table(:grp_int_contract_call), do: AeMdw.Db.Model.GrpIntContractCall
-  def table(:fname_int_contract_call), do: AeMdw.Db.Model.FnameIntContractCall
-  def table(:fname_grp_int_contract_call), do: AeMdw.Db.Model.FnameGrpIntContractCall
-  def table(:id_int_contract_call), do: AeMdw.Db.Model.IdIntContractCall
-  def table(:grp_id_int_contract_call), do: AeMdw.Db.Model.GrpIdIntContractCall
-  def table(:id_fname_int_contract_call), do: AeMdw.Db.Model.IdFnameIntContractCall
-  def table(:grp_id_fname_int_contract_call), do: AeMdw.Db.Model.GrpIdFnameIntContractCall
-  def table(:int_transfer_tx), do: AeMdw.Db.Model.IntTransferTx
-  def table(:kind_int_transfer_tx), do: AeMdw.Db.Model.KindIntTransferTx
-  def table(:target_int_transfer_tx), do: AeMdw.Db.Model.TargetIntTransferTx
-  def table(:target_kind_int_transfer_tx), do: AeMdw.Db.Model.TargetKindIntTransferTx
-  def table(:delta_stat), do: AeMdw.Db.Model.DeltaStat
-  def table(:total_stat), do: AeMdw.Db.Model.TotalStat
+  def table(:none), do: AeMdw.Db.Model.None
+
+  @spec fields(atom()) :: list(atom())
+  def fields(record), do: for({x, _} <- defaults(record), do: x)
 
   @spec defaults(atom()) :: list()
-  def defaults(:async_tasks), do: @async_tasks_defaults
-  def defaults(:migrations), do: @migrations_defaults
-  def defaults(:tx), do: @tx_defaults
-  def defaults(:block), do: @block_defaults
-  def defaults(:time), do: @time_defaults
-  def defaults(:type), do: @type_defaults
-  def defaults(:field), do: @field_defaults
-  def defaults(:id_count), do: @id_count_defaults
-  def defaults(:origin), do: @origin_defaults
-  def defaults(:rev_origin), do: @rev_origin_defaults
-  def defaults(:aex9_balance), do: @aex9_balance_defaults
-  def defaults(:aex9_contract), do: @aex9_contract_defaults
-  def defaults(:aex9_contract_symbol), do: @aex9_contract_symbol_defaults
-  def defaults(:rev_aex9_contract), do: @rev_aex9_contract_defaults
-  def defaults(:aex9_contract_pubkey), do: @aex9_contract_pubkey_defaults
-  def defaults(:aex9_transfer), do: @aex9_transfer_defaults
-  def defaults(:rev_aex9_transfer), do: @rev_aex9_transfer_defaults
-  def defaults(:aex9_pair_transfer), do: @aex9_pair_transfer_defaults
-  def defaults(:idx_aex9_transfer), do: @idx_aex9_transfer_defaults
-  def defaults(:aex9_account_presence), do: @aex9_account_presence_defaults
-  def defaults(:idx_aex9_account_presence), do: @idx_aex9_account_presence_defaults
-  def defaults(:contract_call), do: @contract_call_defaults
-  def defaults(:contract_log), do: @contract_log_defaults
-  def defaults(:data_contract_log), do: @data_contract_log_defaults
-  def defaults(:evt_contract_log), do: @evt_contract_log_defaults
-  def defaults(:idx_contract_log), do: @idx_contract_log_defaults
-  def defaults(:int_contract_call), do: @int_contract_call_defaults
-  def defaults(:grp_int_contract_call), do: @grp_int_contract_call_defaults
-  def defaults(:fname_int_contract_call), do: @fname_int_contract_call_defaults
-  def defaults(:fname_grp_int_contract_call), do: @fname_grp_int_contract_call_defaults
-  def defaults(:id_int_contract_call), do: @id_int_contract_call_defaults
-  def defaults(:grp_id_int_contract_call), do: @grp_id_int_contract_call_defaults
-  def defaults(:id_fname_int_contract_call), do: @id_fname_int_contract_call_defaults
-  def defaults(:grp_id_fname_int_contract_call), do: @grp_id_fname_int_contract_call_defaults
-  def defaults(:plain_name), do: @plain_name_defaults
-  def defaults(:auction_bid), do: @auction_bid_defaults
-  def defaults(:pointee), do: @pointee_defaults
-  def defaults(:expiration), do: @expiration_defaults
-  def defaults(:name), do: @name_defaults
-  def defaults(:owner), do: @owner_defaults
-  def defaults(:oracle), do: @oracle_defaults
-  def defaults(:int_transfer_tx), do: @int_transfer_tx_defaults
-  def defaults(:kind_int_transfer_tx), do: @kind_int_transfer_tx_defaults
-  def defaults(:target_kind_int_transfer_tx), do: @target_kind_int_transfer_tx_defaults
-  def defaults(:delta_stat), do: @delta_stat_defaults
-  def defaults(:total_stat), do: @total_stat_defaults
+  def defaults(:none), do: @none_defaults
 end

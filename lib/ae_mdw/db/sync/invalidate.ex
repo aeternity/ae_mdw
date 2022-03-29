@@ -7,7 +7,8 @@ defmodule AeMdw.Db.Sync.Invalidate do
   alias AeMdw.Db.Model
   alias AeMdw.Db.UpdateIdsCountsMutation
   alias AeMdw.Db.DeleteKeysMutation
-  alias AeMdw.Db.Sync
+  alias AeMdw.Db.NameInvalidationMutation
+  alias AeMdw.Db.OracleInvalidationMutation
   alias AeMdw.Log
   alias AeMdw.Node, as: AE
   alias AeMdw.Validate
@@ -23,63 +24,50 @@ defmodule AeMdw.Db.Sync.Invalidate do
     prev_kbi = fork_height - 1
     from_txi = Model.block(read_block!({prev_kbi, -1}), :tx_index)
 
-    cond do
-      is_integer(from_txi) && from_txi >= 0 ->
-        Log.info("invalidating from tx #{from_txi} at generation #{prev_kbi}")
-        bi_keys = block_keys_range({prev_kbi, 0})
-        {tx_keys, id_counts} = tx_keys_range(from_txi)
+    # else: wasn't synced up to that txi, nothing to do
+    if is_integer(from_txi) && from_txi >= 0 do
+      Log.info("invalidating from tx #{from_txi} at generation #{prev_kbi}")
+      bi_keys = block_keys_range({prev_kbi, 0})
+      {tx_keys, id_counts} = tx_keys_range(from_txi)
 
-        stat_key_dels = stat_key_dels(prev_kbi)
+      stat_key_dels = stat_key_dels(prev_kbi)
 
-        contract_log_key_dels = contract_log_key_dels(from_txi)
-        contract_call_key_dels = contract_call_key_dels(from_txi)
+      contract_log_key_dels = contract_log_key_dels(from_txi)
+      contract_call_key_dels = contract_call_key_dels(from_txi)
 
-        aex9_key_dels = aex9_key_dels(from_txi)
-        aex9_transfer_key_dels = aex9_transfer_key_dels(from_txi)
-        aex9_account_presence_key_dels = aex9_account_presence_key_dels(from_txi)
-        aex9_account_presence_key_writes = aex9_account_presence_key_writes(from_txi)
+      aex9_key_dels = aex9_key_dels(from_txi)
+      aex9_transfer_key_dels = aex9_transfer_key_dels(from_txi)
+      aex9_account_presence_key_dels = aex9_account_presence_key_dels(from_txi)
+      aex9_account_presence_key_writes = aex9_account_presence_key_writes(from_txi)
 
-        int_contract_call_key_dels = int_contract_call_key_dels(from_txi)
-        int_transfer_tx_key_dels = int_transfer_tx_key_dels(prev_kbi)
+      int_contract_call_key_dels = int_contract_call_key_dels(from_txi)
+      int_transfer_tx_key_dels = int_transfer_tx_key_dels(prev_kbi)
 
-        tab_keys = Map.merge(bi_keys, tx_keys)
+      blocks_and_txs_keys = Map.merge(bi_keys, tx_keys)
 
-        fields_counts = Map.get(id_counts, Model.IdCount)
+      fields_counts = Map.get(id_counts, Model.IdCount)
 
-        Database.commit([
-          DeleteKeysMutation.new(tab_keys),
-          DeleteKeysMutation.new(stat_key_dels),
-          UpdateIdsCountsMutation.new(fields_counts)
-        ])
+      Database.commit([
+        DeleteKeysMutation.new(blocks_and_txs_keys),
+        DeleteKeysMutation.new(stat_key_dels),
+        NameInvalidationMutation.new(fork_height - 1),
+        OracleInvalidationMutation.new(fork_height - 1),
+        DeleteKeysMutation.new(aex9_key_dels),
+        DeleteKeysMutation.new(aex9_transfer_key_dels),
+        DeleteKeysMutation.new(aex9_account_presence_key_dels),
+        DeleteKeysMutation.new(contract_log_key_dels),
+        DeleteKeysMutation.new(contract_call_key_dels),
+        DeleteKeysMutation.new(int_contract_call_key_dels),
+        DeleteKeysMutation.new(int_transfer_tx_key_dels),
+        DeleteKeysMutation.new(int_transfer_tx_key_dels),
+        UpdateIdsCountsMutation.new(fields_counts)
+      ])
 
-        :mnesia.transaction(fn ->
-          {name_dels, name_writes} = Sync.Name.invalidate(fork_height - 1)
-          {oracle_dels, oracle_writes} = Sync.OracleInvalidation.invalidate(fork_height - 1)
-
-          do_dels(name_dels, &AeMdw.Db.Name.cache_through_delete/2)
-          do_dels(oracle_dels, &AeMdw.Db.Oracle.cache_through_delete/2)
-
-          do_dels(aex9_key_dels)
-          do_dels(aex9_transfer_key_dels)
-          do_dels(aex9_account_presence_key_dels)
-          do_dels(contract_log_key_dels)
-          do_dels(contract_call_key_dels)
-
-          do_dels(int_contract_call_key_dels)
-          do_dels(int_transfer_tx_key_dels)
-
-          do_writes(name_writes, &AeMdw.Db.Name.cache_through_write/2)
-          do_writes(oracle_writes, &AeMdw.Db.Oracle.cache_through_write/2)
-
-          do_writes(
-            aex9_account_presence_key_writes,
-            &AeMdw.Db.Contract.aex9_presence_cache_write/2
-          )
-        end)
-
-      # wasn't synced up to that txi, nothing to do
-      true ->
-        :ok
+      # only ets writes
+      do_writes(
+        aex9_account_presence_key_writes,
+        &AeMdw.Db.Contract.aex9_presence_cache_write/2
+      )
     end
   end
 
@@ -200,11 +188,11 @@ defmodule AeMdw.Db.Sync.Invalidate do
   end
 
   def origin_keys_range(from_txi, to_txi) do
-    case Database.dirty_next(Model.RevOrigin, {from_txi, :_, nil}) do
-      :"$end_of_table" ->
+    case Database.next_key(Model.RevOrigin, {from_txi, :_, nil}) do
+      :none ->
         {[], []}
 
-      start_key ->
+      {:ok, start_key} ->
         push_key = fn {txi, pk_type, pk}, {origins, rev_origins} ->
           {[{pk_type, pk, txi} | origins], [{txi, pk_type, pk} | rev_origins]}
         end
@@ -221,11 +209,11 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
   def aex9_key_dels(from_txi) do
     {aex9_keys, aex9_sym_keys, aex9_rev_keys} =
-      case Database.dirty_next(Model.RevAex9Contract, {from_txi, nil, nil, nil}) do
-        :"$end_of_table" ->
+      case Database.next_key(Model.RevAex9Contract, {from_txi, nil, nil, nil}) do
+        :none ->
           {[], [], []}
 
-        start_key ->
+        {:ok, start_key} ->
           push_key = fn {txi, name, symbol, decimals}, {contracts, symbols, rev_contracts} ->
             {[{name, symbol, txi, decimals} | contracts],
              [{symbol, name, txi, decimals} | symbols],
@@ -250,11 +238,11 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
   def aex9_transfer_key_dels(from_txi) do
     {aex9_tr_keys, aex9_rev_tr_keys, aex9_idx_tr_keys, aex9_pair_tr_keys} =
-      case Database.dirty_next(Model.IdxAex9Transfer, {from_txi, 0, nil, nil, 0}) do
-        :"$end_of_table" ->
+      case Database.next_key(Model.IdxAex9Transfer, {from_txi, 0, nil, nil, 0}) do
+        :none ->
           {[], [], [], []}
 
-        start_key ->
+        {:ok, start_key} ->
           push_key = fn {txi, log_idx, from_pk, to_pk, amount},
                         {tr_keys, rev_keys, idx_keys, pair_keys} ->
             tr_key = {from_pk, txi, to_pk, amount, log_idx}
@@ -285,11 +273,11 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
   def aex9_account_presence_key_dels(from_txi) do
     {aex9_presence_keys, idx_aex9_presence_keys} =
-      case Database.dirty_next(Model.IdxAex9AccountPresence, {from_txi, nil, nil}) do
-        :"$end_of_table" ->
+      case Database.next_key(Model.IdxAex9AccountPresence, {from_txi, nil, nil}) do
+        :none ->
           {[], []}
 
-        start_key ->
+        {:ok, start_key} ->
           push_key = fn {txi, acc_pk, ct_pk}, {acc_keys, idx_keys} ->
             acc_key = {acc_pk, txi, ct_pk}
             idx_key = {txi, acc_pk, ct_pk}
@@ -317,54 +305,52 @@ defmodule AeMdw.Db.Sync.Invalidate do
     start_txi = Model.block(read_block!(bi), :tx_index)
     end_txi = from_txi - 1
 
-    cond do
-      start_txi <= end_txi ->
-        scope = {:txi, start_txi..end_txi}
+    if start_txi <= end_txi do
+      scope = {:txi, start_txi..end_txi}
 
-        creates =
-          scope
-          |> DBS.map(:raw, type: :contract_create)
-          |> Stream.map(fn %{} = x ->
-            ct_pk = Validate.id!(x.tx.contract_id)
+      creates =
+        scope
+        |> DBS.map(:raw, type: :contract_create)
+        |> Stream.map(fn %{} = x ->
+          ct_pk = Validate.id!(x.tx.contract_id)
 
-            if Contract.is_aex9?(ct_pk) do
-              {{ct_pk, x.tx_index, -1}, Validate.id!(x.tx.owner_id), -1}
-            else
-              nil
-            end
-          end)
-          |> Stream.filter(& &1)
-          |> Enum.to_list()
+          if Contract.is_aex9?(ct_pk) do
+            {{ct_pk, x.tx_index, -1}, Validate.id!(x.tx.owner_id), -1}
+          else
+            nil
+          end
+        end)
+        |> Stream.filter(& &1)
+        |> Enum.to_list()
 
-        transfer_evt = AeMdw.Node.aex9_transfer_event_hash()
+      transfer_evt = AeMdw.Node.aex9_transfer_event_hash()
 
-        contract_calls = fn contract_pk ->
-          scope
-          |> DBS.map(:raw, type: :contract_call, contract_id: contract_pk)
-          |> Enum.flat_map(fn %{tx: %{log: logs}} = x ->
-            idxed_logs = Enum.with_index(logs)
+      contract_calls = fn contract_pk ->
+        scope
+        |> DBS.map(:raw, type: :contract_call, contract_id: contract_pk)
+        |> Enum.flat_map(fn %{tx: %{log: logs}} = x ->
+          idxed_logs = Enum.with_index(logs)
 
-            for {%{topics: [^transfer_evt, from_pk, to_pk, <<amount::256>>]}, i} <- idxed_logs,
-                do: {{contract_pk, x.tx_index, i}, {from_pk, to_pk}, amount}
-          end)
-        end
+          for {%{topics: [^transfer_evt, from_pk, to_pk, <<amount::256>>]}, i} <- idxed_logs,
+              do: {{contract_pk, x.tx_index, i}, {from_pk, to_pk}, amount}
+        end)
+      end
 
-        calls = Enum.flat_map(creates, fn {{ct_pk, _, _}, _, _} -> contract_calls.(ct_pk) end)
+      calls = Enum.flat_map(creates, fn {{ct_pk, _, _}, _, _} -> contract_calls.(ct_pk) end)
 
-        %{:aex9_sync_cache => creates ++ calls}
-
-      true ->
-        %{}
+      %{:aex9_sync_cache => creates ++ calls}
+    else
+      %{}
     end
   end
 
   def contract_log_key_dels(from_txi) do
     {log_keys, data_log_keys, evt_log_keys, idx_log_keys} =
-      case Database.dirty_next(Model.IdxContractLog, {from_txi, 0, nil, 0}) do
-        :"$end_of_table" ->
+      case Database.next_key(Model.IdxContractLog, {from_txi, 0, nil, 0}) do
+        :none ->
           {[], [], [], []}
 
-        start_key ->
+        {:ok, start_key} ->
           push_key = fn {call_txi, create_txi, evt_hash, log_idx},
                         {log_keys, data_keys, evt_keys, idx_keys} ->
             log_key = {create_txi, call_txi, log_idx, evt_hash}
@@ -398,11 +384,11 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
   def contract_call_key_dels(from_txi) do
     contract_call_keys =
-      case Database.dirty_next(Model.ContractCall, {from_txi, 0}) do
-        :"$end_of_table" ->
+      case Database.next_key(Model.ContractCall, {from_txi, 0}) do
+        :none ->
           []
 
-        start_key ->
+        {:ok, start_key} ->
           collect_keys(
             Model.ContractCall,
             [start_key],
@@ -418,11 +404,11 @@ defmodule AeMdw.Db.Sync.Invalidate do
   def int_contract_call_key_dels(from_txi) do
     {int_keys, grp_keys, fname_keys, fname_grp_keys, id_keys, grp_id_keys, id_fname_keys,
      grp_id_fname_keys} =
-      case Database.dirty_next(Model.IntContractCall, {from_txi, -1}) do
-        :"$end_of_table" ->
+      case Database.next_key(Model.IntContractCall, {from_txi, -1}) do
+        :none ->
           {[], [], [], [], [], [], [], []}
 
-        start_key ->
+        {:ok, start_key} ->
           push_key = fn {call_txi, local_idx},
                         {int_keys, grp_keys, fname_keys, fname_grp_keys, id_keys, grp_id_keys,
                          id_fname_keys, grp_id_fname_keys} ->
@@ -481,11 +467,11 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
   def int_transfer_tx_key_dels(prev_kbi) do
     {int_keys, kind_keys, target_keys} =
-      case Database.dirty_next(Model.IntTransferTx, {prev_kbi, -2}) do
-        :"$end_of_table" ->
+      case Database.next_key(Model.IntTransferTx, {prev_kbi, -2}) do
+        :none ->
           {[], [], []}
 
-        start_key ->
+        {:ok, start_key} ->
           push_key = fn {location, kind, target_pk, ref_txi},
                         {int_keys, kind_keys, target_keys} ->
             {[{location, kind, target_pk, ref_txi} | int_keys],

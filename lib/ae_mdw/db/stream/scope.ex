@@ -1,11 +1,11 @@
 defmodule AeMdw.Db.Stream.Scope do
+  # credo:disable-for-this-file
   alias AeMdw.Db.Model
   alias AeMdw.Db.Format
   alias AeMdw.Error
   require Model
 
   import AeMdw.Db.Util
-  import AeMdw.Sigil
   import AeMdw.Util
 
   # second
@@ -284,7 +284,7 @@ defmodule AeMdw.Db.Stream.Scope do
     do: {:range, {first_txi(), last_txi()}}
 
   def translate1({nil, nil}, :time),
-    do: {:range, {first(~t[time]), last(~t[time])}}
+    do: {:range, {first(Model.Time), last(Model.Time)}}
 
   def translate1({nil, nil}, :txi),
     do: {:range, {first_txi(), last_txi()}}
@@ -464,7 +464,7 @@ defmodule AeMdw.Db.Stream.Scope do
 
   def scan_microblock(h, limit_i, :left),
     do:
-      collect_keys(~t[block], nil, {h, -1}, &next/2, fn
+      collect_keys(Model.Block, nil, {h, -1}, &next/2, fn
         {k, mbi}, nil when k <= limit_i ->
           (mbi >= 0 && {:halt, {k, mbi}}) || {:cont, nil}
 
@@ -474,7 +474,7 @@ defmodule AeMdw.Db.Stream.Scope do
 
   def scan_microblock(h, limit_i, :right),
     do:
-      collect_keys(~t[block], nil, {h + 1, -1}, &prev/2, fn
+      collect_keys(Model.Block, nil, {h + 1, -1}, &prev/2, fn
         {k, mbi}, nil when k >= limit_i ->
           (mbi >= 0 && {:halt, {k, mbi}}) || {:cont, nil}
 
@@ -498,20 +498,20 @@ defmodule AeMdw.Db.Stream.Scope do
     do: {Model.tx(tx, :time), Model.tx(tx, :index)}
 
   def next_time_key(t) do
-    n = next(~t[time], {t, -1})
+    n = next(Model.Time, {t, -1})
     (n != :"$end_of_table" && n) || nil
   end
 
   def prev_time_key(t) do
-    p = prev(~t[time], {t, <<>>})
+    p = prev(Model.Time, {t, <<>>})
     (p != :"$end_of_table" && p) || nil
   end
 
   def on_microblock_key(g, :first),
-    do: next(~t[block], {g, -1})
+    do: next(Model.Block, {g, -1})
 
   def on_microblock_key(g, :last),
-    do: prev(~t[block], {g, <<>>})
+    do: prev(Model.Block, {g, <<>>})
 
   def txi_type(txi) when is_integer(txi),
     do: map_one_nil(read_tx(txi), &txi_type/1)

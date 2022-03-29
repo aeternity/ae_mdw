@@ -30,7 +30,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         txi = @very_high_txi + 1
         block_index = {height, 0}
 
-        {txn_mutations, _mutations} =
+        txn_mutations =
           Transaction.transaction_mutations(
             {signed_tx, txi},
             {block_index, mb, mb_time, %{}},
@@ -61,7 +61,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         txi = @very_high_txi + 1
         block_index = {height, 0}
 
-        {txn_mutations, _mutations} =
+        txn_mutations =
           Transaction.transaction_mutations(
             {signed_tx, txi},
             {block_index, mb, mb_time, %{}},

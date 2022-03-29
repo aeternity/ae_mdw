@@ -1,14 +1,17 @@
 defmodule Mix.Tasks.MigrateDb do
+  @moduledoc """
+  Executes new database migrations present in priv/migrations likewise Ecto.
+  """
   use Mix.Task
-
-  require Ex2ms
 
   alias AeMdw.Db.Model
   alias AeMdw.Database
   alias AeMdw.Log
 
+  require Model
+
   @table Model.Migrations
-  @record_name Model.record(@table)
+
   @version_len 14
 
   @migrations_code_path "priv/migrations/*.ex"
@@ -81,7 +84,10 @@ defmodule Mix.Tasks.MigrateDb do
     Log.info("applying version #{version} with #{module}...")
     {:ok, _} = apply(module, :run, [from_startup?])
 
-    Database.dirty_write(@table, {@record_name, version, DateTime.utc_now()})
+    Database.dirty_write(
+      @table,
+      Model.migrations(index: version, inserted_at: DateTime.utc_now())
+    )
 
     Log.info("applied version #{version}")
     :ok

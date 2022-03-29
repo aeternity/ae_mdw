@@ -6,7 +6,7 @@ defmodule AeMdw.Db.Sync.Contract do
   alias AeMdw.Contract
   alias AeMdw.Db.Contract, as: DBContract
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Mutation
+  alias AeMdw.Db.TxnMutation
   alias AeMdw.Db.NameUpdateMutation
   alias AeMdw.Db.NameTransferMutation
   alias AeMdw.Db.NameRevokeMutation
@@ -58,23 +58,26 @@ defmodule AeMdw.Db.Sync.Contract do
           Db.pubkey(),
           Txs.txi(),
           Txs.tx_hash()
-        ) :: [Mutation.t()]
+        ) :: [TxnMutation.t()]
   def child_contract_mutations({:error, _any}, _caller_pk, _txi, _tx_hash), do: []
 
   def child_contract_mutations(%{result: fun_result}, caller_pk, txi, tx_hash) do
     with %{type: :contract, value: contract_id} <- fun_result,
          {:ok, contract_pk} <- Validate.id(contract_id) do
-      aex9_meta_info =
+      aex9_create_mutation =
         case Contract.is_aex9?(contract_pk) && Contract.aex9_meta_info(contract_pk) do
-          {:ok, aex9_meta_info} -> aex9_meta_info
-          _false_or_notfound -> nil
+          {:ok, aex9_meta_info} ->
+            Aex9CreateContractMutation.new(contract_pk, aex9_meta_info, caller_pk, txi)
+
+          _false_or_notfound ->
+            nil
         end
 
       :ets.insert(:ct_create_sync_cache, {contract_pk, txi})
       AeMdw.Ets.inc(:stat_sync_cache, :contracts_created)
 
       [
-        Aex9CreateContractMutation.new(contract_pk, aex9_meta_info, caller_pk, txi)
+        aex9_create_mutation
         | SyncOrigin.origin_mutations(:contract_call_tx, nil, contract_pk, txi, tx_hash)
       ]
     else
@@ -90,7 +93,7 @@ defmodule AeMdw.Db.Sync.Contract do
           Txs.tx_hash(),
           Txs.txi()
         ) :: [
-          Mutation.t()
+          TxnMutation.t()
         ]
   def events_mutations(events, block_index, block_hash, call_txi, call_tx_hash, create_txi) do
     shifted_events = events |> Enum.drop(1) |> Enum.concat([nil])

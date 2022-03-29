@@ -9,13 +9,13 @@ defmodule AeMdw.Db.Util do
   require Logger
   require Model
 
-  import AeMdw.Sigil
   import AeMdw.Util
 
   @eot :"$end_of_table"
 
-  def read(tab, key),
-    do: :mnesia.async_dirty(fn -> Database.read(tab, key) end)
+  def read(tab, key) do
+    Database.read(tab, key)
+  end
 
   def read!(tab, key),
     do: read(tab, key) |> one!
@@ -53,16 +53,16 @@ defmodule AeMdw.Db.Util do
     do: next_bi!({kbi, -1})
 
   def first_txi(),
-    do: ensure_key!(~t[tx], :first)
+    do: ensure_key!(Model.Tx, :first)
 
   def last_txi(),
-    do: ensure_key!(~t[tx], :last)
+    do: ensure_key!(Model.Tx, :last)
 
   def first_gen(),
-    do: ensure_key!(~t[block], :first) |> (fn {h, -1} -> h end).()
+    do: ensure_key!(Model.Block, :first) |> (fn {h, -1} -> h end).()
 
   def last_gen(),
-    do: ensure_key!(~t[block], :last) |> (fn {h, -1} -> h end).()
+    do: ensure_key!(Model.Block, :last) |> (fn {h, -1} -> h end).()
 
   def prev(tab, key) do
     case Database.prev_key(tab, key) do
@@ -92,19 +92,6 @@ defmodule AeMdw.Db.Util do
     end
   end
 
-  def select(tab, match_spec) do
-    fn -> :mnesia.select(tab, match_spec, :read) end
-    |> :mnesia.async_dirty()
-  end
-
-  def select(tab, match_spec, chunk_size) do
-    fn -> :mnesia.select(tab, match_spec, chunk_size, :read) end
-    |> :mnesia.async_dirty()
-  end
-
-  def select(cont),
-    do: :mnesia.async_dirty(fn -> :mnesia.select(cont) end)
-
   def ensure_key!(tab, getter) do
     case apply(__MODULE__, getter, [tab]) do
       :"$end_of_table" ->
@@ -116,11 +103,6 @@ defmodule AeMdw.Db.Util do
   end
 
   def collect_keys(tab, acc, start_key, next_fn, progress_fn) do
-    fn -> do_collect_keys(tab, acc, start_key, next_fn, progress_fn) end
-    |> :mnesia.async_dirty()
-  end
-
-  def do_collect_keys(tab, acc, start_key, next_fn, progress_fn) do
     case next_fn.(tab, start_key) do
       :"$end_of_table" ->
         acc
@@ -128,22 +110,13 @@ defmodule AeMdw.Db.Util do
       next_key ->
         case progress_fn.(next_key, acc) do
           {:halt, res_acc} -> res_acc
-          {:cont, next_acc} -> do_collect_keys(tab, next_acc, next_key, next_fn, progress_fn)
+          {:cont, next_acc} -> collect_keys(tab, next_acc, next_key, next_fn, progress_fn)
         end
     end
   end
 
-  def do_writes(tab_xs),
-    do: do_writes(tab_xs, &Database.write(&1, &2))
-
   def do_writes(tab_xs, db_write) when is_function(db_write, 2),
     do: Enum.each(tab_xs, fn {tab, xs} -> Enum.each(xs, &db_write.(tab, &1)) end)
-
-  def do_dels(tab_keys),
-    do: do_dels(tab_keys, &Database.delete(&1, &2))
-
-  def do_dels(tab_keys, db_delete) when is_function(db_delete, 2),
-    do: Enum.each(tab_keys, fn {tab, ks} -> Enum.each(ks, &db_delete.(tab, &1)) end)
 
   def tx_val(tx_rec, field),
     do: tx_val(tx_rec, elem(tx_rec, 0), field)
