@@ -193,9 +193,8 @@ defmodule AeMdw.Db.Util do
 
   @spec block_hash_to_bi(Blocks.block_hash()) :: Blocks.block_index() | nil
   def block_hash_to_bi(block_hash) do
-    last_gen = last_gen()
-
     with {:ok, node_block} <- :aec_chain.get_block(block_hash),
+         last_gen <- last_gen(),
          {:micro, height} when height < last_gen <- block_type_height(node_block) do
       Model.Block
       |> Collection.stream(:forward, {{height, 0}, {height, nil}}, nil)
