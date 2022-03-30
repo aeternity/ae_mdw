@@ -4,11 +4,185 @@ defmodule AeMdw.Db.StatsMutationTest do
   alias AeMdw.Collection
   alias AeMdw.Database
   alias AeMdw.Db.Model
+  alias AeMdw.Db.RocksDb
+
   alias AeMdw.Db.StatsMutation
 
   import Mock
 
   require Model
+
+  @initial_token_offer AeMdw.Node.token_supply_delta(0)
+  @first_block_reward 1_000_000_000_000_000_000
+
+  describe "new_mutation/2 with all_cached? = false" do
+    test "on 1st block reward" do
+      height = 300
+      prev_delta_stat = Model.delta_stat(index: height, block_reward: @first_block_reward)
+
+      prev_total_stat =
+        Model.total_stat(
+          index: height,
+          block_reward: @first_block_reward,
+          total_supply: @initial_token_offer + @first_block_reward
+        )
+
+      Database.dirty_write(Model.DeltaStat, prev_delta_stat)
+      Database.dirty_write(Model.TotalStat, prev_total_stat)
+
+      mutation = StatsMutation.new(height, false)
+      {:ok, txn} = RocksDb.transaction_new()
+
+      StatsMutation.execute(mutation, txn)
+
+      {:ok, m_delta_stat} = Database.dirty_fetch(txn, Model.DeltaStat, height)
+      {:ok, m_total_stat} = Database.dirty_fetch(txn, Model.TotalStat, height)
+
+      assert Model.delta_stat(m_delta_stat, :dev_reward) >= 0
+      assert Model.delta_stat(m_delta_stat, :auctions_started) >= 0
+      assert Model.delta_stat(m_delta_stat, :names_activated) >= 0
+      assert Model.delta_stat(m_delta_stat, :names_expired) >= 0
+      assert Model.delta_stat(m_delta_stat, :names_revoked) >= 0
+      assert Model.delta_stat(m_delta_stat, :oracles_registered) >= 0
+      assert Model.delta_stat(m_delta_stat, :oracles_expired) >= 0
+      assert Model.delta_stat(m_delta_stat, :contracts_created) >= 0
+
+      assert Model.total_stat(m_total_stat, :block_reward) == @first_block_reward
+
+      assert Model.total_stat(m_total_stat, :total_supply) ==
+               @initial_token_offer + @first_block_reward
+
+      assert Model.total_stat(m_total_stat, :dev_reward) >= 0
+      assert Model.total_stat(m_total_stat, :active_names) >= 0
+      assert Model.total_stat(m_total_stat, :inactive_names) >= 0
+      assert Model.total_stat(m_total_stat, :active_auctions) >= 0
+      assert Model.total_stat(m_total_stat, :inactive_oracles) >= 0
+      assert Model.total_stat(m_total_stat, :active_oracles) >= 0
+      assert Model.total_stat(m_total_stat, :contracts) >= 0
+    end
+  end
+
+  describe "new_mutation/2 with all_cached? = true" do
+    test "on 1st block reward" do
+      height = 300
+      prev_delta_stat = Model.delta_stat(index: height, block_reward: @first_block_reward)
+
+      prev_total_stat =
+        Model.total_stat(
+          index: height,
+          block_reward: @first_block_reward,
+          total_supply: @initial_token_offer + @first_block_reward
+        )
+
+      Database.dirty_write(Model.DeltaStat, prev_delta_stat)
+      Database.dirty_write(Model.TotalStat, prev_total_stat)
+
+      AeMdw.Ets.inc(:stat_sync_cache, :block_reward, @first_block_reward)
+
+      mutation = StatsMutation.new(height, true)
+      {:ok, txn} = RocksDb.transaction_new()
+
+      StatsMutation.execute(mutation, txn)
+
+      {:ok, m_delta_stat} = Database.dirty_fetch(txn, Model.DeltaStat, height)
+      {:ok, m_total_stat} = Database.dirty_fetch(txn, Model.TotalStat, height)
+
+      assert Model.total_stat(m_total_stat, :block_reward) == @first_block_reward
+      assert Model.total_stat(m_total_stat, :dev_reward) == 0
+
+      assert Model.total_stat(m_total_stat, :total_supply) ==
+               @initial_token_offer + @first_block_reward
+
+      assert Model.total_stat(m_total_stat, :inactive_names) == 0
+      assert Model.total_stat(m_total_stat, :active_names) == 0
+      assert Model.total_stat(m_total_stat, :active_auctions) == 0
+      assert Model.total_stat(m_total_stat, :inactive_oracles) == 0
+      assert Model.total_stat(m_total_stat, :active_oracles) == 0
+      assert Model.total_stat(m_total_stat, :contracts) == 0
+
+      assert Model.delta_stat(m_delta_stat, :block_reward) == @first_block_reward
+      assert Model.delta_stat(m_delta_stat, :auctions_started) == 0
+      assert Model.delta_stat(m_delta_stat, :names_activated) == 0
+      assert Model.delta_stat(m_delta_stat, :names_expired) == 0
+      assert Model.delta_stat(m_delta_stat, :names_revoked) == 0
+      assert Model.delta_stat(m_delta_stat, :oracles_registered) == 0
+      assert Model.delta_stat(m_delta_stat, :oracles_expired) == 0
+      assert Model.delta_stat(m_delta_stat, :contracts_created) == 0
+    end
+
+    test "when there's names activated on the cache, it grabs it to store the stats" do
+      height = 300
+      dev_amount = 50
+      block_amount = 120
+      increased_block_reward = 340
+      increased_dev_reward = 340
+      prev_delta_stat = Model.delta_stat(index: height, block_reward: 33)
+
+      prev_total_stat =
+        Model.total_stat(
+          index: height,
+          block_reward: @first_block_reward,
+          total_supply: @initial_token_offer + @first_block_reward
+        )
+
+      int_transfer_tx =
+        Model.int_transfer_tx(index: {{height, -1}, "reward_dev", <<>>, <<>>}, amount: dev_amount)
+
+      int_transfer_tx2 =
+        Model.int_transfer_tx(
+          index: {{height, -1}, "reward_block", <<>>, <<>>},
+          amount: block_amount
+        )
+
+      Database.dirty_write(Model.IntTransferTx, int_transfer_tx)
+      Database.dirty_write(Model.IntTransferTx, int_transfer_tx2)
+      Database.dirty_write(Model.DeltaStat, prev_delta_stat)
+      Database.dirty_write(Model.TotalStat, prev_total_stat)
+
+      # delta/transitions are only reflected at height + 1
+      AeMdw.Ets.clear(:stat_sync_cache)
+
+      AeMdw.Ets.set(:stat_sync_cache, :block_reward, increased_block_reward)
+      AeMdw.Ets.set(:stat_sync_cache, :dev_reward, increased_dev_reward)
+      AeMdw.Ets.inc(:stat_sync_cache, :names_activated)
+
+      mutation = StatsMutation.new(height, true)
+      {:ok, txn} = RocksDb.transaction_new()
+      StatsMutation.execute(mutation, txn)
+
+      {:ok, m_delta_stat} = Database.dirty_fetch(txn, Model.DeltaStat, height)
+      {:ok, m_total_stat} = Database.dirty_fetch(txn, Model.TotalStat, height + 1)
+
+      total_block_reward = @first_block_reward + increased_block_reward
+      total_dev_reward = increased_dev_reward
+
+      assert ^total_block_reward = Model.total_stat(m_total_stat, :block_reward)
+      assert ^total_dev_reward = Model.total_stat(m_total_stat, :dev_reward)
+
+      total_supply =
+        0..height
+        |> Enum.map(&AeMdw.Node.token_supply_delta/1)
+        |> Enum.sum()
+
+      assert Model.total_stat(m_total_stat, :total_supply) ==
+               total_supply + total_block_reward + total_dev_reward
+
+      assert Model.total_stat(m_total_stat, :inactive_names) == 0
+      assert Model.total_stat(m_total_stat, :active_names) == 1
+      assert Model.total_stat(m_total_stat, :active_auctions) == 0
+      assert Model.total_stat(m_total_stat, :inactive_oracles) == 0
+      assert Model.total_stat(m_total_stat, :active_oracles) == 0
+      assert Model.total_stat(m_total_stat, :contracts) == 0
+
+      assert Model.delta_stat(m_delta_stat, :auctions_started) == 0
+      assert Model.delta_stat(m_delta_stat, :names_activated) == 1
+      assert Model.delta_stat(m_delta_stat, :names_expired) == 0
+      assert Model.delta_stat(m_delta_stat, :names_revoked) == 0
+      assert Model.delta_stat(m_delta_stat, :oracles_registered) == 0
+      assert Model.delta_stat(m_delta_stat, :oracles_expired) == 0
+      assert Model.delta_stat(m_delta_stat, :contracts_created) == 0
+    end
+  end
 
   describe "execute/2" do
     test "with all_cached? = false, on 1st block reward it stores the stat using database counts" do
