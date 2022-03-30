@@ -201,7 +201,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
   end
 
   describe "balances_for_hash" do
-    test "gets balances for hash", %{conn: conn} do
+    test "gets balances for hash and contract", %{conn: conn} do
       mb_hash = "mh_2NkfQ9p29EQtqL6YQAuLpneTRPxEKspNYLKXeexZ664ZJo7fcw"
       contract_id = "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA"
       conn = get(conn, "/aex9/balances/hash/#{mb_hash}/#{contract_id}")
@@ -218,6 +218,35 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
                "contract_id" => ^contract_id,
                "height" => 350_622
              } = json_response(conn, 200)
+    end
+
+    test "gets balances for hash and account", %{conn: conn} do
+      mb_height = 578_684
+      mb_hash = "mh_2eSwMRK7KXtPZqkciBWU2o764yZ8QCttWUSxvh2aRWwDE15oVm"
+      account_id = "ak_QyFYYpgJ1vUGk1Lnk8d79WJEVcAtcfuNHqquuP2ADfxsL6yKx"
+      conn = get(conn, "/aex9/balances/hash/#{mb_hash}/account/#{account_id}")
+
+      response_list = json_response(conn, 200)
+
+      assert Enum.any?(response_list, fn balance ->
+               balance == %{
+                 "amount" => 100_000_000_000_000_000_000_000_000,
+                 "block_hash" => "mh_26Rfn9fBcaKc2YcpDKD11Aai8jMSdbuqt22DFdqisqLdS8sg6n",
+                 "contract_id" => "ct_wi5be3qiXGWe1DbMTGVyBqkQiNz1K7kch7go9zJDeiHbbAMZ1",
+                 "height" => 466_128,
+                 "token_name" => "AVT",
+                 "token_symbol" => "ae vegas token",
+                 "tx_hash" => "th_2F529Nr3LQBjSwiiWSs2XHW2cNrKi4f9KedH34CBSBPSzbEcNP",
+                 "tx_index" => 24_439_019,
+                 "tx_type" => "contract_call_tx"
+               }
+             end)
+
+      assert Enum.all?(response_list, fn %{"height" => height, "tx_type" => "contract_call_tx"} ->
+               height < mb_height
+             end)
+
+      assert length(response_list) == 31
     end
   end
 
