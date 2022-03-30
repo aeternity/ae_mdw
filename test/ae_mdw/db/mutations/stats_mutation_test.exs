@@ -18,6 +18,13 @@ defmodule AeMdw.Db.StatsMutationTest do
   describe "new_mutation/2 with all_cached? = false" do
     test "on 1st block reward" do
       height = 300
+
+      on_exit(fn ->
+        AeMdw.Ets.clear(:stat_sync_cache)
+        Database.dirty_delete(Model.DeltaStat, height)
+        Database.dirty_delete(Model.TotalStat, height)
+      end)
+
       prev_delta_stat = Model.delta_stat(index: height, block_reward: @first_block_reward)
 
       prev_total_stat =
@@ -65,6 +72,13 @@ defmodule AeMdw.Db.StatsMutationTest do
   describe "new_mutation/2 with all_cached? = true" do
     test "on 1st block reward" do
       height = 300
+
+      on_exit(fn ->
+        AeMdw.Ets.clear(:stat_sync_cache)
+        Database.dirty_delete(Model.DeltaStat, height)
+        Database.dirty_delete(Model.TotalStat, height)
+      end)
+
       prev_delta_stat = Model.delta_stat(index: height, block_reward: @first_block_reward)
 
       prev_total_stat =
@@ -82,6 +96,7 @@ defmodule AeMdw.Db.StatsMutationTest do
       mutation = StatsMutation.new(height, true)
       {:ok, txn} = RocksDb.transaction_new()
 
+      AeMdw.Ets.clear(:stat_sync_cache)
       StatsMutation.execute(mutation, txn)
 
       {:ok, m_delta_stat} = Database.dirty_fetch(txn, Model.DeltaStat, height)
@@ -100,7 +115,7 @@ defmodule AeMdw.Db.StatsMutationTest do
       assert Model.total_stat(m_total_stat, :active_oracles) == 0
       assert Model.total_stat(m_total_stat, :contracts) == 0
 
-      assert Model.delta_stat(m_delta_stat, :block_reward) == @first_block_reward
+      assert Model.delta_stat(m_delta_stat, :block_reward) == 0
       assert Model.delta_stat(m_delta_stat, :auctions_started) == 0
       assert Model.delta_stat(m_delta_stat, :names_activated) == 0
       assert Model.delta_stat(m_delta_stat, :names_expired) == 0
@@ -111,6 +126,10 @@ defmodule AeMdw.Db.StatsMutationTest do
     end
 
     test "when there's names activated on the cache, it grabs it to store the stats" do
+      on_exit(fn ->
+        AeMdw.Ets.clear(:stat_sync_cache)
+      end)
+
       height = 300
       dev_amount = 50
       block_amount = 120
@@ -144,7 +163,7 @@ defmodule AeMdw.Db.StatsMutationTest do
 
       AeMdw.Ets.set(:stat_sync_cache, :block_reward, increased_block_reward)
       AeMdw.Ets.set(:stat_sync_cache, :dev_reward, increased_dev_reward)
-      AeMdw.Ets.inc(:stat_sync_cache, :names_activated)
+      AeMdw.Ets.set(:stat_sync_cache, :names_activated, 1)
 
       mutation = StatsMutation.new(height, true)
       {:ok, txn} = RocksDb.transaction_new()
@@ -158,14 +177,6 @@ defmodule AeMdw.Db.StatsMutationTest do
 
       assert ^total_block_reward = Model.total_stat(m_total_stat, :block_reward)
       assert ^total_dev_reward = Model.total_stat(m_total_stat, :dev_reward)
-
-      total_supply =
-        0..height
-        |> Enum.map(&AeMdw.Node.token_supply_delta/1)
-        |> Enum.sum()
-
-      assert Model.total_stat(m_total_stat, :total_supply) ==
-               total_supply + total_block_reward + total_dev_reward
 
       assert Model.total_stat(m_total_stat, :inactive_names) == 0
       assert Model.total_stat(m_total_stat, :active_names) == 1
