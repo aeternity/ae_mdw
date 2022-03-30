@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.Util do
   # credo:disable-for-this-file
   alias AeMdw.Blocks
+  alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Database
   alias AeMdw.Db.RocksDbCF
@@ -190,45 +191,24 @@ defmodule AeMdw.Db.Util do
 
   def block_txi(bi), do: map_one_nil(read_block(bi), &Model.block(&1, :tx_index))
 
+  @spec block_hash_to_bi(Blocks.block_hash()) :: Blocks.block_index() | nil
   def block_hash_to_bi(block_hash) do
-    case :aec_chain.get_block(block_hash) do
-      {:ok, some_block} ->
-        {type, header} =
-          case some_block do
-            {:key_block, header} -> {:key, header}
-            {:mic_block, header, _txs, _fraud} -> {:micro, header}
-          end
+    last_gen = last_gen()
 
-        height = :aec_headers.height(header)
-
-        case height >= last_gen() do
-          true ->
-            nil
-
-          false ->
-            case type do
-              :key ->
-                {height, -1}
-
-              :micro ->
-                collect_keys(Model.Block, nil, {height, <<>>}, &Database.prev_key/2, fn
-                  {:ok, {^height, _} = bi}, nil ->
-                    Model.block(hash: hash) = read_block!(bi)
-
-                    if hash == block_hash do
-                      {:halt, bi}
-                    else
-                      {:cont, nil}
-                    end
-
-                  _k, nil ->
-                    {:halt, nil}
-                end)
-            end
+    with {:ok, node_block} <- :aec_chain.get_block(block_hash),
+         {:micro, height} when height < last_gen <- block_type_height(node_block) do
+      Model.Block
+      |> Collection.stream(:forward, {{height, 0}, {height, nil}}, nil)
+      |> Enum.find(fn bi ->
+        case read_block!(bi) do
+          Model.block(hash: ^block_hash) -> bi
+          _other_block -> nil
         end
-
-      :error ->
-        nil
+      end)
+    else
+      :error -> nil
+      {:key, height} -> {height, -1}
+      {:micro, _non_synced_height} -> nil
     end
   end
 
@@ -266,5 +246,15 @@ defmodule AeMdw.Db.Util do
     {:ok, hash} = :aec_headers.hash_header(:aec_blocks.to_header(block))
 
     hash
+  end
+
+  defp block_type_height(node_block) do
+    {type, header} =
+      case node_block do
+        {:key_block, header} -> {:key, header}
+        {:mic_block, header, _txs, _fraud} -> {:micro, header}
+      end
+
+    {type, :aec_headers.height(header)}
   end
 end
