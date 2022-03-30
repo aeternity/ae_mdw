@@ -105,6 +105,30 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
 
       assert %{"error" => ^error_msg} = json_response(conn, 400)
     end
+
+    test "it returns correct results for a given height", %{conn: conn} do
+      height = 506_056
+      range = "#{height}-#{height}"
+
+      assert %{
+               "data" => [
+                 %{
+                   "active_auctions" => 1138,
+                   "active_names" => 2634,
+                   "active_oracles" => 33,
+                   "block_reward" => 94_447_969_004_862_000_000,
+                   "contracts" => 1681,
+                   "dev_reward" => 11_554_240_877_138_000_000,
+                   "height" => ^height,
+                   "inactive_names" => 557_159,
+                   "inactive_oracles" => 149
+                 }
+               ]
+             } =
+               conn
+               |> get("/stats", scope_type: "gen", range: range, limit: 1)
+               |> json_response(200)
+    end
   end
 
   describe "delta stats" do
@@ -202,6 +226,31 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
       error_msg = "invalid range: #{range}"
 
       assert %{"error" => ^error_msg} = json_response(conn, 400)
+    end
+
+    test "it returns correct results for a given height", %{conn: conn} do
+      height = 501_015
+      range = "#{height}-#{height}"
+
+      assert %{
+               "data" => [
+                 %{
+                   "auctions_started" => 0,
+                   "block_reward" => 95_338_643_538_600_000_000,
+                   "contracts_created" => 0,
+                   "dev_reward" => 11_663_201_061_400_000_000,
+                   "height" => ^height,
+                   "names_activated" => 0,
+                   "names_expired" => 0,
+                   "names_revoked" => 0,
+                   "oracles_expired" => 1,
+                   "oracles_registered" => 0
+                 }
+               ]
+             } =
+               conn
+               |> get("/v2/deltastats", scope_type: "gen", range: range, limit: 1)
+               |> json_response(200)
     end
   end
 
@@ -309,6 +358,30 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
       error_msg = "invalid range: #{range}"
 
       assert %{"error" => ^error_msg} = json_response(conn, 400)
+    end
+
+    test "it returns correct results for a given height", %{conn: conn} do
+      height = 506_056
+      range = "#{height}-#{height}"
+
+      assert %{
+               "data" => [
+                 %{
+                   "active_auctions" => 1138,
+                   "active_names" => 2634,
+                   "active_oracles" => 33,
+                   "sum_block_reward" => 106_403_172_824_736_927_928_811_744,
+                   "contracts" => 1681,
+                   "sum_dev_reward" => 8_453_404_352_599_072_614_268_863,
+                   "height" => ^height,
+                   "inactive_names" => 557_159,
+                   "inactive_oracles" => 149
+                 }
+               ]
+             } =
+               conn
+               |> get("/v2/totalstats", scope_type: "gen", range: range, limit: 1)
+               |> json_response(200)
     end
   end
 end
