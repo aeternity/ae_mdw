@@ -229,7 +229,7 @@ defmodule AeMdw.Db.Model do
             index: {Db.pubkey(), Db.pubkey()},
             amount: float()
           )
-  @aex9_balance_defaults [index: {<<>>, <<>>}, block_index: {-1, -1}, amount: nil]
+  @aex9_balance_defaults [index: {<<>>, <<>>}, amount: nil]
   defrecord :aex9_balance, @aex9_balance_defaults
 
   # AEX9 contract:
