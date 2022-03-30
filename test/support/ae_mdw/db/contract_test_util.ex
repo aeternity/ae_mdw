@@ -35,4 +35,7 @@ defmodule Support.AeMdw.Db.ContractTestUtil do
       Database.dirty_delete(Model.IdxAex9AccountPresence, {txi, account_pk, contract_pk})
     end)
   end
+
+  @spec encode_account(Db.pubkey()) :: String.t()
+  def encode_account(account_pk), do: :aeser_api_encoder.encode(:account_pubkey, account_pk)
 end

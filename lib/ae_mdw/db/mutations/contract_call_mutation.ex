@@ -7,6 +7,7 @@ defmodule AeMdw.Db.ContractCallMutation do
   alias AeMdw.Db.Contract, as: DBContract
   alias AeMdw.Sync.AsyncTasks
   alias AeMdw.Txs
+  alias AeMdw.Validate
 
   @derive AeMdw.Db.TxnMutation
   defstruct [
@@ -109,13 +110,14 @@ defmodule AeMdw.Db.ContractCallMutation do
   defp write_aex9_presence(
          "mint",
          [
-           %{type: :address, value: to_pk},
+           %{type: :address, value: to_account_id},
            %{type: :int, value: _value}
          ],
          contract_pk,
          _caller_pk,
          txi
        ) do
+    to_pk = Validate.id!(to_account_id)
     DBContract.aex9_write_presence(contract_pk, txi, to_pk)
     true
   end

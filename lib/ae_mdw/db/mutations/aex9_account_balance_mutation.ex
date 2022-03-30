@@ -7,6 +7,7 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutation do
   alias AeMdw.Database
   alias AeMdw.Db.Contract, as: DbContract
   alias AeMdw.Node.Db
+  alias AeMdw.Validate
 
   @derive AeMdw.Db.TxnMutation
   defstruct [:method_name, :method_args, :contract_pk, :caller_pk]
@@ -60,12 +61,13 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutation do
          txn,
          "mint",
          [
-           %{type: :address, value: to_pk},
+           %{type: :address, value: to_account_id},
            %{type: :int, value: value}
          ],
          contract_pk,
          _caller_pk
        ) do
+    to_pk = Validate.id!(to_account_id)
     DbContract.aex9_mint_balance(txn, contract_pk, to_pk, value)
   end
 

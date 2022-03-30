@@ -26,7 +26,6 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9Presence do
 
     Log.info("[update_aex9_presence] #{inspect(contract_pk)} after #{time_delta / @microsecs}s")
 
-    {:key, height, _hash} = DBN.top_height_hash(false)
     create_txi = Origin.tx_index!({:contract, contract_pk})
 
     Enum.each(balances, fn {{:address, account_pk}, amount} ->
@@ -35,7 +34,6 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9Presence do
       m_balance =
         Model.aex9_balance(
           index: {contract_pk, account_pk},
-          block_index: {height, -1},
           amount: amount
         )
 

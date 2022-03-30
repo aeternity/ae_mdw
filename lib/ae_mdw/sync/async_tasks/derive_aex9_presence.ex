@@ -56,7 +56,6 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
       m_balance =
         Model.aex9_balance(
           index: {contract_pk, account_pk},
-          block_index: {kbi, mbi},
           amount: amount
         )
 

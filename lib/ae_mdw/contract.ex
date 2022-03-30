@@ -9,6 +9,7 @@ defmodule AeMdw.Contract do
   alias AeMdw.Node.Db, as: DBN
   alias AeMdw.DryRun
   alias AeMdw.Log
+  alias AeMdw.Validate
 
   import :erlang, only: [tuple_to_list: 1]
 
@@ -155,17 +156,17 @@ defmodule AeMdw.Contract do
   @spec get_aex9_transfer(DBN.pubkey(), String.t(), term()) ::
           {DBN.pubkey(), DBN.pubkey(), non_neg_integer()} | nil
   def get_aex9_transfer(from_pk, "transfer", [
-        %{type: :address, value: to_pk},
+        %{type: :address, value: to_account_id},
         %{type: :int, value: value}
       ]),
-      do: {from_pk, to_pk, value}
+      do: {from_pk, Validate.id!(to_account_id), value}
 
   def get_aex9_transfer(_caller_pk, "transfer_allowance", [
-        %{type: :address, value: from_pk},
-        %{type: :address, value: to_pk},
+        %{type: :address, value: from_account_id},
+        %{type: :address, value: to_account_id},
         %{type: :int, value: value}
       ]),
-      do: {from_pk, to_pk, value}
+      do: {Validate.id!(from_account_id), Validate.id!(to_account_id), value}
 
   def get_aex9_transfer(_caller_pk, _other_function, _other_args), do: nil
 

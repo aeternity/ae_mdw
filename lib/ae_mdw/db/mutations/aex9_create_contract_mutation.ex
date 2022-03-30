@@ -50,6 +50,7 @@ defmodule AeMdw.Db.Aex9CreateContractMutation do
         txn
       ) do
     DBContract.aex9_creation_write(txn, aex9_meta_info, contract_pk, caller_pk, create_txi)
+    DBContract.aex9_write_new_presence(contract_pk, create_txi, caller_pk)
     :ok
   end
 end

@@ -111,8 +111,11 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         caller_pk
       else
         case args do
-          [%{type: :address, value: account_pk}, _int_val] -> account_pk
-          [%{type: :address}, %{type: :address, value: account_pk}, _int_val] -> account_pk
+          [%{type: :address, value: account_id}, _int_val] ->
+            Validate.id!(account_id)
+
+          [%{type: :address}, %{type: :address, value: account_id}, _int_val] ->
+            Validate.id!(account_id)
         end
       end
 
