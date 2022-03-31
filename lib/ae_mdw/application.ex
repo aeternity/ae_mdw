@@ -10,7 +10,6 @@ defmodule AeMdw.Application do
   """
   alias AeMdw.Contract
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Stream, as: DbStream
   alias AeMdw.Db.Sync
   alias AeMdw.EtsCache
   alias AeMdw.Extract
@@ -29,7 +28,6 @@ defmodule AeMdw.Application do
     :lager.set_loglevel(:epoch_sync_lager_event, :lager_console_backend, :undefined, :error)
     :lager.set_loglevel(:lager_console_backend, :error)
 
-    init(:model_records)
     init(:node_records)
     init(:meta)
     init_public(:contract_cache)
@@ -73,9 +71,6 @@ defmodule AeMdw.Application do
   #   |> Path.wildcard
   #   |> Enum.map(&:code.load_abs(to_charlist(Path.rootname(&1))))
   # end
-
-  defp init(:model_records),
-    do: Enum.each(Model.records(), &SmartRecord.new(Model, &1, Model.defaults(&1)))
 
   defp init(:node_records) do
     {:ok, aeo_oracles_code} = Extract.AbsCode.module(:aeo_oracles)
@@ -143,14 +138,6 @@ defmodule AeMdw.Application do
 
     id_fields = id_field_type_map |> Map.keys() |> Enum.map(Util.compose(&to_string/1, &hd/1))
 
-    stream_mod = fn db_mod ->
-      ["AeMdw", "Db", "Model", tab] = Module.split(db_mod)
-      # credo:disable-for-next-line
-      Module.concat(DbStream, tab)
-    end
-
-    collect_stream_mod = fn t, acc -> put_in(acc[t], stream_mod.(t)) end
-
     tx_types = Map.keys(type_mod_map)
     tx_group = &("#{&1}" |> String.split("_") |> hd |> String.to_atom())
     tx_group_map = Enum.group_by(tx_types, tx_group)
@@ -196,7 +183,6 @@ defmodule AeMdw.Application do
         tx_types: [{[], MapSet.new(tx_types)}],
         tx_prefixes: [{[], MapSet.new(tx_types |> Enum.map(tx_prefix))}],
         id_prefixes: [{[], MapSet.new(Map.keys(id_prefix_type_map))}],
-        stream_mod: Enum.reduce(Model.tables(), %{}, collect_stream_mod),
         tx_group: tx_group_map,
         tx_groups: [{[], MapSet.new(Map.keys(tx_group_map))}],
         id_type: id_type_map,

@@ -27,8 +27,8 @@ config :ae_mdw, AeMdw.Db.RocksDb, data_dir: "#{node_root}/rel/aeternity/data/mdw
 
 config :ae_plugin,
   node_root: node_root,
-  "$aec_db_create_tables": {AeMdw.Db.Setup, :create_tables},
-  "$aec_db_check_tables": {AeMdw.Db.Setup, :check_tables}
+  "$aec_db_create_tables": {AeMdw.Db.NodeStub, :create_tables},
+  "$aec_db_check_tables": {AeMdw.Db.NodeStub, :check_tables}
 
 config :ae_mdw,
   sync: true,
