@@ -1,5 +1,13 @@
 # Changelog
 
+### [1.7.2](https://www.github.com/aeternity/ae_mdw/compare/v1.7.1...v1.7.2) (2022-03-31)
+
+
+### Bug Fixes
+
+* get bi for a block hash ([#614](https://www.github.com/aeternity/ae_mdw/issues/614)) ([6b15215](https://www.github.com/aeternity/ae_mdw/commit/6b152159555d5725bad0b416d9fe35f50e776e0c))
+* initialize aex9 balance when not exists ([#616](https://www.github.com/aeternity/ae_mdw/issues/616)) ([de283b5](https://www.github.com/aeternity/ae_mdw/commit/de283b54e80ee1f7f03412cafaaa38e3d2c6eb10))
+
 ### [1.7.1](https://www.github.com/aeternity/ae_mdw/compare/v1.7.0...v1.7.1) (2022-03-29)
 
 
