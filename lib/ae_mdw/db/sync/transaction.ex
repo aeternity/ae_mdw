@@ -21,8 +21,8 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.OracleExtendMutation
   alias AeMdw.Db.OracleRegisterMutation
+  alias AeMdw.Db.StatsMutation
   alias AeMdw.Db.Sync.Origin
-  alias AeMdw.Db.Sync.Stats
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.WriteTxnMutation
   alias AeMdw.Db.TxnMutation
@@ -201,7 +201,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     kb_model = Model.block(index: {height, -1}, tx_index: kb_txi, hash: kb_hash)
 
     Database.commit([
-      Stats.new_mutation(height, last_mbi == -1),
+      StatsMutation.new(height, last_mbi == -1),
       KeyBlocksMutation.new(kb_model, next_txi)
     ])
 
