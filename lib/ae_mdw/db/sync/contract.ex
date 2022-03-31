@@ -17,57 +17,32 @@ defmodule AeMdw.Db.Sync.Contract do
   alias AeMdw.Db.Sync.Origin, as: SyncOrigin
   alias AeMdw.Db.Sync.Name
   alias AeMdw.Node.Db
-  alias AeMdw.Sync.AsyncTasks
-  alias AeMdw.Txs
   alias AeMdw.Validate
 
   require Model
 
-  @spec aex9_derive_account_presence!(tuple()) :: :ok
-  def aex9_derive_account_presence!({kbi, mbi}) do
-    ct_create? = fn
-      {{_ct_pk, _txi, -1}, <<_::binary>>, -1} -> true
-      {{_ct_pk, _txi, _}, {<<_::binary>>, <<_::binary>>}, _} -> false
-    end
-
-    :aex9_sync_cache
-    |> :ets.tab2list()
-    |> Enum.group_by(fn {{ct_pk, _, _}, _, _} -> ct_pk end)
-    |> Enum.filter(fn {_ct_pk, [first_entry | _]} -> ct_create?.(first_entry) end)
-    |> Enum.each(fn {ct_pk, [{{ct_pk, create_txi, -1}, <<_::binary>>, -1} | transfers]} ->
-      recipients =
-        transfers
-        |> Enum.map(fn
-          {{_ct_pk, _txi, _i}, {_from, to_pk}, _amount} -> to_pk
-          _other -> nil
-        end)
-        |> Enum.reject(&is_nil/1)
-
-      AsyncTasks.DeriveAex9Presence.cache_recipients(ct_pk, recipients)
-
-      AsyncTasks.Producer.enqueue(:derive_aex9_presence, [ct_pk, kbi, mbi, create_txi])
-    end)
-
-    :ets.delete_all_objects(:aex9_sync_cache)
-
-    :ok
-  end
-
   @spec child_contract_mutations(
           Contract.fun_arg_res_or_error(),
           Db.pubkey(),
+          Blocks.block_index(),
           Txs.txi(),
           Txs.tx_hash()
         ) :: [TxnMutation.t()]
-  def child_contract_mutations({:error, _any}, _caller_pk, _txi, _tx_hash), do: []
+  def child_contract_mutations({:error, _any}, _caller_pk, _block_index, _txi, _tx_hash), do: []
 
-  def child_contract_mutations(%{result: fun_result}, caller_pk, txi, tx_hash) do
+  def child_contract_mutations(%{result: fun_result}, caller_pk, block_index, txi, tx_hash) do
     with %{type: :contract, value: contract_id} <- fun_result,
          {:ok, contract_pk} <- Validate.id(contract_id) do
       aex9_create_mutation =
         case Contract.is_aex9?(contract_pk) && Contract.aex9_meta_info(contract_pk) do
           {:ok, aex9_meta_info} ->
-            Aex9CreateContractMutation.new(contract_pk, aex9_meta_info, caller_pk, txi)
+            Aex9CreateContractMutation.new(
+              contract_pk,
+              aex9_meta_info,
+              caller_pk,
+              block_index,
+              txi
+            )
 
           _false_or_notfound ->
             nil

@@ -8,7 +8,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync
-  alias AeMdw.Db.Aex9AccountPresenceMutation
   alias AeMdw.Db.Aex9AccountBalanceMutation
   alias AeMdw.Db.Aex9CreateContractMutation
   alias AeMdw.Db.ContractCallMutation
@@ -233,8 +232,7 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     txn_mutations = [
       WriteTxnMutation.new(Model.Block, mb_model),
-      txn_txs_mutations,
-      Aex9AccountPresenceMutation.new(height, mbi)
+      txn_txs_mutations
     ]
 
     {txn_mutations, {txi + length(mb_txs), mbi + 1}}
@@ -264,7 +262,13 @@ defmodule AeMdw.Db.Sync.Transaction do
           with :ok <- :aect_call.return_type(call_rec),
                true <- Contract.is_aex9?(type_info),
                {:ok, aex9_meta_info} <- Contract.aex9_meta_info(contract_pk) do
-            Aex9CreateContractMutation.new(contract_pk, aex9_meta_info, owner_pk, txi)
+            Aex9CreateContractMutation.new(
+              contract_pk,
+              aex9_meta_info,
+              owner_pk,
+              block_index,
+              txi
+            )
           else
             _failed -> nil
           end
@@ -302,6 +306,7 @@ defmodule AeMdw.Db.Sync.Transaction do
         Sync.Contract.child_contract_mutations(
           fun_arg_res,
           caller_pk,
+          block_index,
           txi,
           tx_hash
         )
