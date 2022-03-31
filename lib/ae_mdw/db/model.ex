@@ -223,15 +223,13 @@ defmodule AeMdw.Db.Model do
 
   # AEX9 balance:
   #     index = {contract_pk, account_pk}
-  #     block_index = {kbi, mbi}
   #     amounts: float
   @type aex9_balance ::
           record(:aex9_balance,
             index: {Db.pubkey(), Db.pubkey()},
-            block_index: Blocks.block_index(),
             amount: float()
           )
-  @aex9_balance_defaults [index: {<<>>, <<>>}, block_index: {-1, -1}, amount: nil]
+  @aex9_balance_defaults [index: {<<>>, <<>>}, amount: nil]
   defrecord :aex9_balance, @aex9_balance_defaults
 
   # AEX9 contract:

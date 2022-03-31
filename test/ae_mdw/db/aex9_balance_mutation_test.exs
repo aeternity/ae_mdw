@@ -5,6 +5,8 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutationTest do
   alias AeMdw.Db.Aex9AccountBalanceMutation
   alias AeMdw.Db.Model
 
+  import Support.AeMdw.Db.ContractTestUtil
+
   require Model
 
   @ct_pk1 <<1::256>>
@@ -19,12 +21,12 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutationTest do
   @mint_pk <<13::256>>
   @transfer_pk1 <<141::256>>
   @transfer_pk2 <<142::256>>
+  @transfer_pk3 <<143::256>>
+  @transfer_pk4 <<144::256>>
   @transfer_allowance_pk1 <<151::256>>
   @transfer_allowance_pk2 <<152::256>>
   @other_call_pk1 <<161::256>>
   @other_call_pk2 <<162::256>>
-
-  @block_index1 {1234, 0}
 
   setup_all _ctx do
     Enum.each(
@@ -34,6 +36,7 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutationTest do
         @mint_pk,
         @transfer_pk1,
         @transfer_pk2,
+        @transfer_pk3,
         @transfer_allowance_pk1,
         @transfer_allowance_pk2
       ],
@@ -42,7 +45,6 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutationTest do
           Model.Aex9Balance,
           Model.aex9_balance(
             index: {@ct_pk1, account_pk},
-            block_index: @block_index1,
             amount: @initial_amount
           )
         )
@@ -59,7 +61,6 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutationTest do
           Model.Aex9Balance,
           Model.aex9_balance(
             index: {@ct_pk2, account_pk},
-            block_index: @block_index1,
             amount: @initial_amount
           )
         )
@@ -85,7 +86,6 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutationTest do
     expected_balance =
       Model.aex9_balance(
         index: {@ct_pk1, @burn_pk},
-        block_index: @block_index1,
         amount: @initial_amount - burn_value
       )
 
@@ -97,8 +97,7 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutationTest do
 
     Database.commit([mutation])
 
-    expected_balance =
-      Model.aex9_balance(index: {@ct_pk1, @swap_pk}, block_index: @block_index1, amount: 0)
+    expected_balance = Model.aex9_balance(index: {@ct_pk1, @swap_pk}, amount: 0)
 
     assert ^expected_balance = Database.fetch!(Model.Aex9Balance, {@ct_pk1, @swap_pk})
   end
@@ -122,21 +121,20 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutationTest do
     expected_balance =
       Model.aex9_balance(
         index: {@ct_pk1, @mint_pk},
-        block_index: @block_index1,
         amount: @initial_amount + minted_value
       )
 
     assert ^expected_balance = Database.fetch!(Model.Aex9Balance, {@ct_pk1, @mint_pk})
   end
 
-  test "update aex9 balance after a transer" do
+  test "update aex9 balance after a transfer" do
     transfer_value = 234_567_890
 
     mutation =
       Aex9AccountBalanceMutation.new(
         "transfer",
         [
-          %{type: :address, value: @transfer_pk2},
+          %{type: :address, value: encode_account(@transfer_pk2)},
           %{type: :int, value: transfer_value}
         ],
         @ct_pk1,
@@ -148,20 +146,51 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutationTest do
     expected_balance1 =
       Model.aex9_balance(
         index: {@ct_pk1, @transfer_pk1},
-        block_index: @block_index1,
         amount: @initial_amount - transfer_value
       )
 
     expected_balance2 =
       Model.aex9_balance(
         index: {@ct_pk1, @transfer_pk2},
-        block_index: @block_index1,
         amount: @initial_amount + transfer_value
       )
 
     assert ^expected_balance1 = Database.fetch!(Model.Aex9Balance, {@ct_pk1, @transfer_pk1})
 
     assert ^expected_balance2 = Database.fetch!(Model.Aex9Balance, {@ct_pk1, @transfer_pk2})
+  end
+
+  test "update aex9 balance after a first transfer to dest account" do
+    transfer_value = 234_567_890
+
+    mutation =
+      Aex9AccountBalanceMutation.new(
+        "transfer",
+        [
+          %{type: :address, value: encode_account(@transfer_pk4)},
+          %{type: :int, value: transfer_value}
+        ],
+        @ct_pk1,
+        @transfer_pk3
+      )
+
+    Database.commit([mutation])
+
+    expected_balance1 =
+      Model.aex9_balance(
+        index: {@ct_pk1, @transfer_pk3},
+        amount: @initial_amount - transfer_value
+      )
+
+    expected_balance2 =
+      Model.aex9_balance(
+        index: {@ct_pk1, @transfer_pk4},
+        amount: transfer_value
+      )
+
+    assert ^expected_balance1 = Database.fetch!(Model.Aex9Balance, {@ct_pk1, @transfer_pk3})
+
+    assert ^expected_balance2 = Database.fetch!(Model.Aex9Balance, {@ct_pk1, @transfer_pk4})
   end
 
   test "update aex9 balance after a transer allowance" do
@@ -171,8 +200,8 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutationTest do
       Aex9AccountBalanceMutation.new(
         "transfer_allowance",
         [
-          %{type: :address, value: @transfer_allowance_pk1},
-          %{type: :address, value: @transfer_allowance_pk2},
+          %{type: :address, value: encode_account(@transfer_allowance_pk1)},
+          %{type: :address, value: encode_account(@transfer_allowance_pk2)},
           %{type: :int, value: transfer_value}
         ],
         @ct_pk1,
@@ -184,14 +213,12 @@ defmodule AeMdw.Db.Aex9AccountBalanceMutationTest do
     expected_balance1 =
       Model.aex9_balance(
         index: {@ct_pk1, @transfer_allowance_pk1},
-        block_index: @block_index1,
         amount: @initial_amount - transfer_value
       )
 
     expected_balance2 =
       Model.aex9_balance(
         index: {@ct_pk1, @transfer_allowance_pk2},
-        block_index: @block_index1,
         amount: @initial_amount + transfer_value
       )
 

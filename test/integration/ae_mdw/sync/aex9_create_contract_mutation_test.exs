@@ -34,6 +34,7 @@ defmodule Integration.AeMdw.Db.Aex9CreateContractMutationTest do
       Sync.Contract.child_contract_mutations(
         fun_arg_res,
         caller_pk,
+        {485_061, 76},
         txi,
         tx_hash
       )

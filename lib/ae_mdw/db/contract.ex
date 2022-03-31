@@ -91,22 +91,21 @@ defmodule AeMdw.Db.Contract do
   @spec aex9_transfer_balance(transaction(), pubkey(), pubkey(), pubkey(), non_neg_integer()) ::
           :ok | :error
   def aex9_transfer_balance(txn, contract_pk, from_pk, to_pk, transfered_value) do
-    with {:ok, m_aex9_balance_from} <-
-           Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, from_pk}),
-         {:ok, m_aex9_balance_to} <-
-           Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, to_pk}) do
-      from_amount = Model.aex9_balance(m_aex9_balance_from, :amount)
-      to_amount = Model.aex9_balance(m_aex9_balance_to, :amount)
+    case Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, from_pk}) do
+      {:ok, m_aex9_balance_from} ->
+        m_aex9_balance_to = fetch_aex9_balance_or_new(txn, contract_pk, to_pk)
+        from_amount = Model.aex9_balance(m_aex9_balance_from, :amount)
+        to_amount = Model.aex9_balance(m_aex9_balance_to, :amount)
 
-      m_aex9_balance_from =
-        Model.aex9_balance(m_aex9_balance_from, amount: from_amount - transfered_value)
+        m_aex9_balance_from =
+          Model.aex9_balance(m_aex9_balance_from, amount: from_amount - transfered_value)
 
-      m_aex9_balance_to =
-        Model.aex9_balance(m_aex9_balance_to, amount: to_amount + transfered_value)
+        m_aex9_balance_to =
+          Model.aex9_balance(m_aex9_balance_to, amount: to_amount + transfered_value)
 
-      Database.write(txn, Model.Aex9Balance, m_aex9_balance_from)
-      Database.write(txn, Model.Aex9Balance, m_aex9_balance_to)
-    else
+        Database.write(txn, Model.Aex9Balance, m_aex9_balance_from)
+        :ok = Database.write(txn, Model.Aex9Balance, m_aex9_balance_to)
+
       :not_found ->
         :error
     end
@@ -449,5 +448,12 @@ defmodule AeMdw.Db.Contract do
 
     aex9_write_presence(contract_pk, txi, to_pk)
     aex9_presence_cache_write({{contract_pk, txi, i}, {from_pk, to_pk}, amount})
+  end
+
+  defp fetch_aex9_balance_or_new(txn, contract_pk, account_pk) do
+    case Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, account_pk}) do
+      {:ok, m_balance} -> m_balance
+      :not_found -> Model.aex9_balance(index: {contract_pk, account_pk}, amount: 0)
+    end
   end
 end
