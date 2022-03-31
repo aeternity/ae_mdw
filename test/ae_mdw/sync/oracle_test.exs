@@ -2,8 +2,8 @@ defmodule AeMdw.Db.Sync.OracleTest do
   use ExUnit.Case, async: false
 
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Oracle
   alias AeMdw.Db.OracleExtendMutation
+  alias AeMdw.Db.OraclesExpirationMutation
   alias AeMdw.Db.Util
   alias AeMdw.Database
 
@@ -145,7 +145,7 @@ defmodule AeMdw.Db.Sync.OracleTest do
 
       pubkey = @pubkey2
       sync_height = @sync_height
-      mutation = Oracle.expirations_mutation(sync_height)
+      mutation = OraclesExpirationMutation.new(sync_height)
       Database.commit([mutation])
 
       assert :not_found = Database.fetch(Model.ActiveOracleExpiration, {sync_height, pubkey})
@@ -158,7 +158,7 @@ defmodule AeMdw.Db.Sync.OracleTest do
       pubkey = @pubkey4
       m_oracle = Util.read!(Model.ActiveOracle, pubkey)
 
-      mutation = Oracle.expirations_mutation(@sync_height)
+      mutation = OraclesExpirationMutation.new(@sync_height)
       Database.commit([mutation])
 
       assert Model.expiration(index: {@expire4, pubkey}) ==
@@ -173,7 +173,7 @@ defmodule AeMdw.Db.Sync.OracleTest do
       assert expire == @expire5
       assert expire > @sync_height
 
-      mutation = Oracle.expirations_mutation(@sync_height)
+      mutation = OraclesExpirationMutation.new(@sync_height)
       Database.commit([mutation])
 
       assert Model.expiration(index: {@expire5, pubkey}) ==
@@ -187,7 +187,7 @@ defmodule AeMdw.Db.Sync.OracleTest do
       assert :not_found = Database.fetch(Model.ActiveOracle, @pubkey1)
       assert m_oracle = Util.read!(Model.InactiveOracle, pubkey)
 
-      mutation = Oracle.expirations_mutation(@sync_height)
+      mutation = OraclesExpirationMutation.new(@sync_height)
       Database.commit([mutation])
 
       assert Model.expiration(index: {@expire1, pubkey}) ==

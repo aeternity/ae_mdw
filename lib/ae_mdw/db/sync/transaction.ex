@@ -14,12 +14,13 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.ContractCreateMutation
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.KeyBlocksMutation
-  alias AeMdw.Db.Name
   alias AeMdw.Db.NameRevokeMutation
   alias AeMdw.Db.NameTransferMutation
   alias AeMdw.Db.NameUpdateMutation
+  alias AeMdw.Db.NamesExpirationMutation
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.OracleExtendMutation
+  alias AeMdw.Db.OraclesExpirationMutation
   alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.StatsMutation
   alias AeMdw.Db.Sync.Origin
@@ -192,16 +193,13 @@ defmodule AeMdw.Db.Sync.Transaction do
         IntTransfer.block_rewards_mutation(height, kb_header, kb_hash)
       end
 
-    Database.commit([
-      block_rewards_mutation,
-      Name.expirations_mutation(height),
-      Oracle.expirations_mutation(height)
-    ])
-
     kb_model = Model.block(index: {height, -1}, tx_index: kb_txi, hash: kb_hash)
 
     Database.commit([
+      block_rewards_mutation,
       StatsMutation.new(height, last_mbi == -1),
+      NamesExpirationMutation.new(height),
+      OraclesExpirationMutation.new(height),
       KeyBlocksMutation.new(kb_model, next_txi)
     ])
 

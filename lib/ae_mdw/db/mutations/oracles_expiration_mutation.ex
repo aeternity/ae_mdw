@@ -7,25 +7,26 @@ defmodule AeMdw.Db.OraclesExpirationMutation do
   """
 
   alias AeMdw.Blocks
+  alias AeMdw.Collection
   alias AeMdw.Database
+  alias AeMdw.Db.Model
   alias AeMdw.Db.Oracle
-  alias AeMdw.Node.Db
 
   @derive AeMdw.Db.TxnMutation
-  defstruct [:height, :expired_pubkeys]
+  defstruct [:height]
 
   @opaque t() :: %__MODULE__{
-            height: Blocks.height(),
-            expired_pubkeys: [Db.pubkey()]
+            height: Blocks.height()
           }
 
-  @spec new(Blocks.height(), [Db.pubkey()]) :: t()
-  def new(height, expired_pubkeys) do
-    %__MODULE__{height: height, expired_pubkeys: expired_pubkeys}
-  end
+  @spec new(Blocks.height()) :: t()
+  def new(height), do: %__MODULE__{height: height}
 
   @spec execute(t(), Database.transaction()) :: :ok
-  def execute(%__MODULE__{height: height, expired_pubkeys: expired_pubkeys}, txn) do
-    Enum.each(expired_pubkeys, &Oracle.expire_oracle(txn, height, &1))
+  def execute(%__MODULE__{height: height}, txn) do
+    Model.ActiveOracleExpiration
+    |> Collection.stream({height, <<>>})
+    |> Stream.take_while(&match?({^height, _pk}, &1))
+    |> Enum.each(fn {^height, pubkey} -> Oracle.expire_oracle(txn, height, pubkey) end)
   end
 end
