@@ -14,10 +14,8 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.NameRevokeMutation
   alias AeMdw.Db.NameTransferMutation
   alias AeMdw.Db.NameUpdateMutation
-  alias AeMdw.Db.NamesExpirationMutation
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.OracleExtendMutation
-  alias AeMdw.Db.OraclesExpirationMutation
   alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.Sync.Contract, as: SyncContract
   alias AeMdw.Db.Sync.InnerTx

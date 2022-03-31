@@ -18,10 +18,10 @@ defmodule AeMdw.Db.Sync.Block do
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Database
-  alias AeMdw.Db.Aex9AccountBalanceMutation
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.NamesExpirationMutation
   alias AeMdw.Db.OraclesExpirationMutation
+  alias AeMdw.Db.StatsMutation
   alias AeMdw.Db.Sync.Transaction
   alias AeMdw.Db.WriteTxnMutation
   alias AeMdw.Log
