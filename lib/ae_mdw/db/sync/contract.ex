@@ -18,6 +18,7 @@ defmodule AeMdw.Db.Sync.Contract do
   alias AeMdw.Db.Sync.Name
   alias AeMdw.Node.Db
   alias AeMdw.Validate
+  alias AeMdw.Txs
 
   require Model
 
