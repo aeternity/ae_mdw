@@ -676,26 +676,4 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.TargetKindIntTransferTx), do: :target_kind_int_transfer_tx
   def record(AeMdw.Db.Model.DeltaStat), do: :delta_stat
   def record(AeMdw.Db.Model.TotalStat), do: :total_stat
-  def record(AeMdw.Db.Model.None), do: :none
-
-  #
-  # Stub for Node-Mdw database management
-  #
-  @none_defaults [index: 0, value: 0]
-  defrecord :none, @none_defaults
-
-  @spec tables() :: list(atom())
-  def tables(), do: [AeMdw.Db.Model.None]
-
-  @spec records() :: list(atom())
-  def records(), do: [:none]
-
-  @spec table(atom()) :: atom()
-  def table(:none), do: AeMdw.Db.Model.None
-
-  @spec fields(atom()) :: list(atom())
-  def fields(record), do: for({x, _} <- defaults(record), do: x)
-
-  @spec defaults(atom()) :: list()
-  def defaults(:none), do: @none_defaults
 end
