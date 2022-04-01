@@ -4,42 +4,31 @@ defmodule AeMdw.Db.Sync.Transaction do
   "
 
   alias AeMdw.Blocks
-  alias AeMdw.Node, as: AE
   alias AeMdw.Contract
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Sync
   alias AeMdw.Db.Aex9AccountBalanceMutation
   alias AeMdw.Db.Aex9CreateContractMutation
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.ContractCreateMutation
-  alias AeMdw.Db.IntTransfer
-  alias AeMdw.Db.KeyBlocksMutation
+  alias AeMdw.Db.Model
   alias AeMdw.Db.NameRevokeMutation
   alias AeMdw.Db.NameTransferMutation
   alias AeMdw.Db.NameUpdateMutation
-  alias AeMdw.Db.NamesExpirationMutation
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.OracleExtendMutation
-  alias AeMdw.Db.OraclesExpirationMutation
   alias AeMdw.Db.OracleRegisterMutation
-  alias AeMdw.Db.StatsMutation
+  alias AeMdw.Db.Sync.Contract, as: SyncContract
+  alias AeMdw.Db.Sync.InnerTx
+  alias AeMdw.Db.Sync.Name, as: SyncName
   alias AeMdw.Db.Sync.Origin
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.WriteTxnMutation
   alias AeMdw.Db.TxnMutation
-  alias AeMdw.Database
   alias AeMdw.Node
-  alias AeMdw.Sync.AsyncTasks.Producer
   alias AeMdw.Txs
-  alias AeMdwWeb.Websocket.Broadcaster
   alias __MODULE__.TxContext
 
   require Model
-
-  import AeMdw.Db.Util
-  import AeMdw.Util
-
-  @log_freq 1000
 
   defmodule TxContext do
     @moduledoc """
@@ -60,43 +49,15 @@ defmodule AeMdw.Db.Sync.Transaction do
           }
   end
 
-  ################################################################################
-
-  @spec sync(non_neg_integer() | :safe) :: pos_integer()
-  def sync(max_height \\ :safe) do
-    max_height = Sync.height((is_integer(max_height) && max_height + 1) || max_height)
-    bi_max_kbi = Sync.BlockIndex.sync(max_height) - 1
-
-    case Database.last_key(Model.Tx) do
-      :none ->
-        sync(0, bi_max_kbi, 0)
-
-      {:ok, max_txi} when is_integer(max_txi) ->
-        # sync same height again to resume from previous microblock
-        {from_height, _} = Model.tx(read_tx!(max_txi), :block_index)
-        next_txi = max_txi + 1
-        sync(from_height, bi_max_kbi, next_txi)
-    end
-  end
-
-  @spec sync(non_neg_integer(), non_neg_integer(), non_neg_integer()) :: pos_integer()
-  def sync(from_height, to_height, txi) when from_height <= to_height do
-    tracker = Sync.progress_logger(&sync_generation/2, @log_freq, &log_msg/2)
-    next_txi = Enum.reduce(from_height..to_height, txi, tracker)
-
-    next_txi
-  end
-
-  def sync(from_height, to_height, txi) when from_height > to_height,
-    do: txi
-
   @spec transaction_mutations(
-          {Node.signed_tx(), Txs.txi()},
+          Node.signed_tx(),
+          Txs.txi(),
           {Blocks.block_index(), Blocks.block_hash(), Blocks.time(), Contract.grouped_events()},
           boolean()
         ) :: [TxnMutation.t()]
   def transaction_mutations(
-        {signed_tx, txi},
+        signed_tx,
+        txi,
         {block_index, block_hash, mb_time, mb_events} = tx_ctx,
         inner_tx? \\ false
       ) do
@@ -117,9 +78,9 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     inner_txn_mutations =
       if type == :ga_meta_tx or type == :paying_for_tx do
-        inner_signed_tx = Sync.InnerTx.signed_tx(type, tx)
+        inner_signed_tx = InnerTx.signed_tx(type, tx)
         # indexes the inner with the txi from the wrapper/outer
-        transaction_mutations({inner_signed_tx, txi}, tx_ctx, true)
+        transaction_mutations(inner_signed_tx, txi, tx_ctx, true)
       end
 
     m_tx = Model.tx(index: txi, id: tx_hash, block_index: block_index, time: mb_time)
@@ -138,102 +99,6 @@ defmodule AeMdw.Db.Sync.Transaction do
       tx_mutations(tx_context),
       inner_txn_mutations
     ]
-  end
-
-  ################################################################################
-
-  defp sync_generation(height, txi) do
-    gen_fully_synced? =
-      case Database.read(Model.Block, {height + 1, -1}) do
-        [] -> false
-        [Model.block(tx_index: next_txi)] -> not is_nil(next_txi)
-      end
-
-    if gen_fully_synced? do
-      txi
-    else
-      _next_txi = do_sync_generation(height, txi)
-    end
-  end
-
-  defp do_sync_generation(height, txi) do
-    {key_block, micro_blocks} = AE.Db.get_blocks(height)
-    kb_txi = (txi == 0 && -1) || txi
-    kb_header = :aec_blocks.to_key_header(key_block)
-    kb_hash = ok!(:aec_headers.hash_header(kb_header))
-
-    :ets.delete_all_objects(:stat_sync_cache)
-    :ets.delete_all_objects(:ct_create_sync_cache)
-    :ets.delete_all_objects(:tx_sync_cache)
-
-    last_mbi =
-      case Database.prev_key(Model.Block, {height + 1, -1}) do
-        {:ok, {^height, last_mbi}} -> last_mbi
-        {:ok, _other_height} -> -1
-        :none -> -1
-      end
-
-    {next_txi, _mb_index} =
-      Enum.reduce(micro_blocks, {txi, 0}, fn mblock, {txi, mbi} = txi_acc ->
-        if mbi > last_mbi do
-          {txn_mutations, acc} = micro_block_mutations(mblock, txi_acc)
-          Database.commit(txn_mutations)
-          Producer.commit_enqueued()
-
-          Broadcaster.broadcast_micro_block(mblock, :mdw)
-          Broadcaster.broadcast_txs(mblock, :mdw)
-          acc
-        else
-          {txi, mbi + 1}
-        end
-      end)
-
-    block_rewards_mutation =
-      if height >= AE.min_block_reward_height() do
-        IntTransfer.block_rewards_mutation(height, kb_header, kb_hash)
-      end
-
-    kb_model = Model.block(index: {height, -1}, tx_index: kb_txi, hash: kb_hash)
-
-    Database.commit([
-      block_rewards_mutation,
-      StatsMutation.new(height, last_mbi == -1),
-      NamesExpirationMutation.new(height),
-      OraclesExpirationMutation.new(height),
-      KeyBlocksMutation.new(kb_model, next_txi)
-    ])
-
-    Broadcaster.broadcast_key_block(key_block, :mdw)
-
-    next_txi
-  end
-
-  defp micro_block_mutations(mblock, {txi, mbi}) do
-    height = :aec_blocks.height(mblock)
-    mb_time = :aec_blocks.time_in_msecs(mblock)
-    mb_hash = ok!(:aec_headers.hash_header(:aec_blocks.to_micro_header(mblock)))
-    mb_txs = :aec_blocks.txs(mblock)
-    events = AeMdw.Contract.get_grouped_events(mblock)
-    tx_ctx = {{height, mbi}, mb_hash, mb_time, events}
-
-    txn_txs_mutations =
-      mb_txs
-      |> Enum.with_index(txi)
-      |> Enum.reduce([], fn tx_txi, txn_mutations_acc ->
-        txn_mutations = transaction_mutations(tx_txi, tx_ctx)
-
-        [txn_mutations_acc, txn_mutations]
-      end)
-
-    mb_txi = (txi == 0 && -1) || txi
-    mb_model = Model.block(index: {height, mbi}, tx_index: mb_txi, hash: mb_hash)
-
-    txn_mutations = [
-      WriteTxnMutation.new(Model.Block, mb_model),
-      txn_txs_mutations
-    ]
-
-    {txn_mutations, {txi + length(mb_txs), mbi + 1}}
   end
 
   defp tx_mutations(%TxContext{
@@ -272,7 +137,7 @@ defmodule AeMdw.Db.Sync.Transaction do
           end
 
         mutations ++
-          Sync.Contract.events_mutations(tx_events, block_index, block_hash, txi, tx_hash, txi) ++
+          SyncContract.events_mutations(tx_events, block_index, block_hash, txi, tx_hash, txi) ++
           [
             aex9_create_contract_mutation,
             ContractCreateMutation.new(txi, call_rec)
@@ -294,14 +159,14 @@ defmodule AeMdw.Db.Sync.Transaction do
        }) do
     contract_pk = :aect_call_tx.contract_pubkey(tx)
     <<caller_pk::binary-32>> = :aect_call_tx.caller_pubkey(tx)
-    create_txi = Sync.Contract.get_txi!(contract_pk)
+    create_txi = SyncContract.get_txi!(contract_pk)
 
     {fun_arg_res, call_rec} =
       Contract.call_tx_info(tx, contract_pk, block_hash, &Contract.to_map/1)
 
     child_mutations =
       if :aect_call.return_type(call_rec) == :ok do
-        Sync.Contract.child_contract_mutations(
+        SyncContract.child_contract_mutations(
           fun_arg_res,
           caller_pk,
           block_index,
@@ -313,7 +178,7 @@ defmodule AeMdw.Db.Sync.Transaction do
       end
 
     events_mutations =
-      Sync.Contract.events_mutations(
+      SyncContract.events_mutations(
         tx_events,
         block_index,
         block_hash,
@@ -391,7 +256,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          tx_hash: tx_hash,
          block_index: block_index
        }) do
-    Sync.Name.name_claim_mutations(tx, tx_hash, block_index, txi)
+    SyncName.name_claim_mutations(tx, tx_hash, block_index, txi)
   end
 
   defp tx_mutations(%TxContext{
@@ -456,7 +321,4 @@ defmodule AeMdw.Db.Sync.Transaction do
   end
 
   defp tx_mutations(_tx_context), do: []
-
-  defp log_msg(height, _ignore),
-    do: "syncing transactions at generation #{height}"
 end

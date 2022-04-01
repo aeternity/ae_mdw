@@ -11,10 +11,7 @@ defmodule AeMdw.Db.Sync.Supervisor do
 
   @impl true
   def init(_args) do
-    children = [
-      AeMdw.Db.Sync,
-      AeMdw.Db.Sync.ForkDetector
-    ]
+    children = [AeMdw.Db.Sync]
 
     Supervisor.init(children, strategy: :one_for_one)
   end
