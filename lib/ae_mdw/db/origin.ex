@@ -69,8 +69,8 @@ defmodule AeMdw.Db.Origin do
   end
 
   def pubkey({:contract, txi}) do
-    case Database.next_key(Model.RevOrigin, {txi, :contract_create_tx, <<>>}) do
-      {:ok, {^txi, :contract_create_tx, pubkey}} -> pubkey
+    case Database.next_key(Model.RevOrigin, {txi, -1, <<>>}) do
+      {:ok, {^txi, type, pubkey}} when type in [:contract_create_tx, :contract_call_tx] -> pubkey
       _key_mismatch -> nil
     end
   end
