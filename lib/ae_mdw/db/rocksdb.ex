@@ -119,6 +119,16 @@ defmodule AeMdw.Db.RocksDb do
   end
 
   @doc """
+  Dirty iterator for a column family.
+  """
+  @spec dirty_iterator(transaction(), table(), Keyword.t()) :: {:ok, iterator()} | {:error, any()}
+  def dirty_iterator(transaction, table, read_options \\ []) do
+    {db_ref, cf_ref} = cf_refs(table)
+
+    :rocksdb.transaction_iterator(db_ref, transaction, cf_ref, read_options)
+  end
+
+  @doc """
   Release iterator.
   """
   @spec iterator_close(iterator()) :: :ok

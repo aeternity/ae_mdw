@@ -561,7 +561,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
   end
 
   defp get_oracle(pubkey, expand?) do
-    case Oracle.locate(nil, pubkey) do
+    case Oracle.locate(pubkey) do
       {m_oracle, source} -> Format.to_map(m_oracle, source, expand?)
       nil -> raise ErrInput.NotFound, value: Enc.encode(:oracle_pubkey, pubkey)
     end

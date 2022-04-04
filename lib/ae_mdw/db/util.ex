@@ -63,7 +63,7 @@ defmodule AeMdw.Db.Util do
     do: ensure_key!(Model.Block, :first) |> (fn {h, -1} -> h end).()
 
   def last_gen(),
-    do: ensure_key!(Model.Block, :last) |> (fn {h, -1} -> h end).()
+    do: ensure_key!(Model.Block, :last) |> (fn {h, _mbi} -> h end).()
 
   def prev(tab, key) do
     case Database.prev_key(tab, key) do

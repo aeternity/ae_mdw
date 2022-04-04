@@ -3,10 +3,10 @@ defmodule AeMdw.Db.Sync.ContractTest do
 
   alias AeMdw.Db.Model
 
-  alias AeMdw.Contract
   alias AeMdw.Db.Aex9CreateContractMutation
-  alias AeMdw.Db.WriteTxnMutation
-  alias AeMdw.Db.Sync
+  alias AeMdw.Db.IntCallsMutation
+  alias AeMdw.Db.Sync.Contract, as: SyncContract
+  alias AeMdw.Contract
   alias AeMdw.Node
   alias AeMdw.Validate
 
@@ -16,11 +16,14 @@ defmodule AeMdw.Db.Sync.ContractTest do
 
   describe "events/3" do
     test "it creates an internal call for each event that's not Chain.create/clone" do
-      create_txi = 1
       call_txi = 3
 
       account_id =
         <<44, 102, 253, 22, 212, 89, 216, 54, 106, 220, 2, 78, 65, 149, 128, 184, 42, 187, 24,
+          251, 165, 15, 161, 139, 112, 108, 233, 167, 103, 44, 158, 24>>
+
+      contract_pk =
+        <<42, 102, 253, 22, 212, 89, 216, 54, 106, 220, 2, 78, 65, 149, 128, 184, 42, 187, 24,
           251, 165, 15, 161, 139, 112, 108, 233, 167, 103, 44, 158, 24>>
 
       tx_1 = {:tx1, account_id}
@@ -31,40 +34,33 @@ defmodule AeMdw.Db.Sync.ContractTest do
         {{:internal_call_tx, "some_funname_2"}, %{info: tx_2}}
       ]
 
-      mutation_1 =
-        WriteTxnMutation.new(
-          Model.IdIntContractCall,
-          Model.id_int_contract_call(index: {account_id, 1, 3, 0})
-        )
+      int_calls = [
+        {"some_funname_1", :spend_tx, tx_1, tx_1},
+        {"some_funname_2", :spend_tx, tx_2, tx_1}
+      ]
 
-      mutation_2 =
-        WriteTxnMutation.new(
-          Model.IdIntContractCall,
-          Model.id_int_contract_call(index: {account_id, 1, 3, 1})
-        )
+      mutation = IntCallsMutation.new(contract_pk, call_txi, int_calls)
 
       with_mocks [
         {:aetx, [], [specialize_type: fn _tx -> {:spend_tx, tx_1} end]},
         {Node, [], [tx_ids: fn :spend_tx -> [{:sender_id, 1}] end]}
       ] do
         mutations =
-          Sync.Contract.events_mutations(events, {0, 0}, <<>>, call_txi, <<>>, create_txi)
+          SyncContract.events_mutations(events, {0, 0}, <<>>, call_txi, <<>>, contract_pk)
 
-        assert mutation_1 in mutations
-        assert mutation_2 in mutations
+        assert mutation in List.flatten(mutations)
       end
     end
 
     test "it creates an Field record for each Chain.create/clone event, using the next Call.amount event" do
-      create_txi = 1
       call_txi = 3
 
-      contract_id =
+      contract_pk =
         <<44, 102, 253, 22, 212, 89, 216, 54, 106, 220, 2, 78, 65, 149, 128, 184, 42, 187, 24,
           251, 165, 15, 161, 139, 112, 108, 233, 167, 103, 44, 158, 24>>
 
-      tx_1 = {:tx1, contract_id}
-      tx_2 = {:tx2, contract_id}
+      tx_1 = {:tx1, contract_pk}
+      tx_2 = {:tx2, contract_pk}
 
       events = [
         {{:internal_call_tx, "Chain.create"}, %{info: :error}},
@@ -73,28 +69,22 @@ defmodule AeMdw.Db.Sync.ContractTest do
         {{:internal_call_tx, "Call.amount"}, %{info: tx_2}}
       ]
 
-      mutation_1 =
-        WriteTxnMutation.new(
-          Model.FnameIntContractCall,
-          Model.fname_int_contract_call(index: {"Call.amount", 3, 0})
-        )
+      int_calls = [
+        {"Call.amount", :spend_tx, tx_1, tx_1},
+        {"Call.amount", :spend_tx, tx_2, tx_1}
+      ]
 
-      mutation_2 =
-        WriteTxnMutation.new(
-          Model.FnameIntContractCall,
-          Model.fname_int_contract_call(index: {"Call.amount", 3, 1})
-        )
+      mutation = IntCallsMutation.new(contract_pk, call_txi, int_calls)
 
       with_mocks [
         {:aetx, [], [specialize_type: fn _tx -> {:spend_tx, tx_1} end]},
         {Node, [], [tx_ids: fn :spend_tx -> [{:sender_id, 1}] end]},
-        {:aec_spend_tx, [], [recipient_id: fn _tx -> {:id, :account, contract_id} end]}
+        {:aec_spend_tx, [], [recipient_id: fn _tx -> {:id, :account, contract_pk} end]}
       ] do
         mutations =
-          Sync.Contract.events_mutations(events, {0, 0}, <<>>, call_txi, <<>>, create_txi)
+          SyncContract.events_mutations(events, {0, 0}, <<>>, call_txi, <<>>, contract_pk)
 
-        assert mutation_1 in mutations
-        assert mutation_2 in mutations
+        assert mutation in List.flatten(mutations)
       end
     end
 
@@ -137,7 +127,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
          ]}
       ] do
         mutations =
-          Sync.Contract.events_mutations(
+          SyncContract.events_mutations(
             tx_events,
             {554_178, 13},
             <<1::256>>,

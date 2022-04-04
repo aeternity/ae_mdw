@@ -113,17 +113,15 @@ defmodule AeMdw.Db.RocksDbCF do
   @spec next_key(table(), key()) :: {:ok, key()} | :not_found
   def next_key(table, seek_index) do
     {:ok, it} = RocksDb.iterator(table)
-    seek_key = :sext.encode(seek_index)
 
-    key_res =
-      case do_iterator_move(it, {:seek_for_prev, seek_key}) do
-        {:ok, _index} -> do_iterator_move(it, :next)
-        :not_found -> first_key(table)
-      end
+    next_key_iterator(it, table, seek_index)
+  end
 
-    RocksDb.iterator_close(it)
+  @spec dirty_next(transaction(), table(), key()) :: {:ok, key()} | :not_found
+  def dirty_next(txn, table, seek_index) do
+    {:ok, it} = RocksDb.dirty_iterator(txn, table)
 
-    key_res
+    next_key_iterator(it, table, seek_index)
   end
 
   @spec prev_key(table(), key()) :: {:ok, key()} | :not_found
@@ -223,6 +221,20 @@ defmodule AeMdw.Db.RocksDbCF do
   #
   # Private functions
   #
+  defp next_key_iterator(it, table, seek_index) do
+    seek_key = :sext.encode(seek_index)
+
+    key_res =
+      case do_iterator_move(it, {:seek_for_prev, seek_key}) do
+        {:ok, _index} -> do_iterator_move(it, :next)
+        :not_found -> first_key(table)
+      end
+
+    RocksDb.iterator_close(it)
+
+    key_res
+  end
+
   defp do_all_keys(keys, _it, :not_found), do: Enum.reverse(keys)
 
   defp do_all_keys(keys, it, {:ok, key}) do

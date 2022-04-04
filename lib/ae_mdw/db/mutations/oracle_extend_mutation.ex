@@ -5,9 +5,9 @@ defmodule AeMdw.Db.OracleExtendMutation do
 
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
-  alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.Oracle
+  alias AeMdw.Db.State
   alias AeMdw.Log
   alias AeMdw.Node.Db
   alias AeMdw.Txs
@@ -15,7 +15,7 @@ defmodule AeMdw.Db.OracleExtendMutation do
   require Model
   require Logger
 
-  @derive AeMdw.Db.TxnMutation
+  @derive AeMdw.Db.Mutation
   defstruct [:block_index, :txi, :oracle_pk, :delta_ttl]
 
   @opaque t() :: %__MODULE__{
@@ -35,7 +35,7 @@ defmodule AeMdw.Db.OracleExtendMutation do
     }
   end
 
-  @spec execute(t(), Database.transaction()) :: :ok
+  @spec execute(t(), State.t()) :: State.t()
   def execute(
         %__MODULE__{
           block_index: {height, _mbi} = block_index,
@@ -43,20 +43,23 @@ defmodule AeMdw.Db.OracleExtendMutation do
           oracle_pk: oracle_pk,
           delta_ttl: delta_ttl
         },
-        txn
+        state
       ) do
-    case Oracle.cache_through_read(txn, Model.ActiveOracle, oracle_pk) do
+    case Oracle.cache_through_read(state, Model.ActiveOracle, oracle_pk) do
       {:ok, Model.oracle(expire: old_expire, extends: extends) = m_oracle} ->
         new_expire = old_expire + delta_ttl
         extends = [{block_index, txi} | extends]
         m_exp = Model.expiration(index: {new_expire, oracle_pk})
-        Oracle.cache_through_delete(txn, Model.ActiveOracleExpiration, {old_expire, oracle_pk})
-        Oracle.cache_through_write(txn, Model.ActiveOracleExpiration, m_exp)
         m_oracle = Model.oracle(m_oracle, expire: new_expire, extends: extends)
-        Oracle.cache_through_write(txn, Model.ActiveOracle, m_oracle)
+
+        state
+        |> Oracle.cache_through_delete(Model.ActiveOracleExpiration, {old_expire, oracle_pk})
+        |> Oracle.cache_through_write(Model.ActiveOracleExpiration, m_exp)
+        |> Oracle.cache_through_write(Model.ActiveOracle, m_oracle)
 
       nil ->
         Log.warn("[#{height}] invalid extend for oracle #{Enc.encode(:oracle_pubkey, oracle_pk)}")
+        state
     end
   end
 end

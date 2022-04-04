@@ -4,12 +4,12 @@ defmodule AeMdw.Db.OracleResponseMutation do
   """
 
   alias AeMdw.Blocks
-  alias AeMdw.Database
   alias AeMdw.Db.IntTransfer
+  alias AeMdw.Db.State
   alias AeMdw.Node.Db
   alias AeMdw.Txs
 
-  @derive AeMdw.Db.TxnMutation
+  @derive AeMdw.Db.Mutation
   defstruct [:block_index, :txi, :oracle_pk, :fee]
 
   @opaque t() :: %__MODULE__{
@@ -29,7 +29,7 @@ defmodule AeMdw.Db.OracleResponseMutation do
     }
   end
 
-  @spec execute(t(), Database.transaction()) :: :ok
+  @spec execute(t(), State.t()) :: State.t()
   def execute(
         %__MODULE__{
           block_index: {height, _mbi},
@@ -37,8 +37,8 @@ defmodule AeMdw.Db.OracleResponseMutation do
           oracle_pk: oracle_pk,
           fee: fee
         },
-        txn
+        state
       ) do
-    IntTransfer.write(txn, {height, txi}, "reward_oracle", oracle_pk, txi, fee)
+    IntTransfer.write(state, {height, txi}, "reward_oracle", oracle_pk, txi, fee)
   end
 end

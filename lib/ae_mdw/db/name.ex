@@ -19,7 +19,7 @@ defmodule AeMdw.Db.Name do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Format
   alias AeMdw.Db.IntTransfer
-  alias AeMdw.Ets
+  alias AeMdw.Db.State
   alias AeMdw.Names
   alias AeMdw.Validate
 
@@ -37,7 +37,7 @@ defmodule AeMdw.Db.Name do
            | pubkey()
            | Model.auction_bid_key()
            | {String.t(), <<>>, <<>>, <<>>, <<>>}
-  @typep transaction :: Database.transaction()
+  @typep state() :: State.t()
   @typep table ::
            Model.ActiveName
            | Model.InactiveName
@@ -95,23 +95,24 @@ defmodule AeMdw.Db.Name do
     auction_end + :aec_governance.name_claim_max_expiration(proto_vsn(auction_end))
   end
 
-  @spec expire_name(transaction(), Blocks.height(), Names.plain_name()) :: :ok
-  def expire_name(txn, height, plain_name) do
+  @spec expire_name(state(), Blocks.height(), Names.plain_name()) :: state()
+  def expire_name(state, height, plain_name) do
     Model.name(expire: expiration) =
-      m_name = cache_through_read!(txn, Model.ActiveName, plain_name)
+      m_name = cache_through_read!(state, Model.ActiveName, plain_name)
 
-    deactivate_name(txn, height, expiration, m_name)
-    Ets.inc(:stat_sync_cache, :names_expired)
+    state
+    |> deactivate_name(height, expiration, m_name)
+    |> State.inc_stat(:names_expired)
   end
 
   @spec expire_auction(
-          transaction(),
+          state(),
           Blocks.height(),
           Names.plain_name(),
           Names.auction_timeout()
-        ) :: :ok
-  def expire_auction(txn, height, plain_name, timeout) do
-    {_, {_, txi}, _, owner, bids} =
+        ) :: state()
+  def expire_auction(state, height, plain_name, timeout) do
+    {^plain_name, {_block_index, txi}, _expiration, owner, bids} =
       bid_key = ok!(cache_through_prev(Model.AuctionBid, bid_top_key(plain_name)))
 
     previous = ok_nil(cache_through_read(Model.InactiveName, plain_name))
@@ -130,20 +131,19 @@ defmodule AeMdw.Db.Name do
 
     m_name_exp = Model.expiration(index: {expire, plain_name})
     m_owner = Model.owner(index: {owner, plain_name})
-
-    cache_through_write(txn, Model.ActiveName, m_name)
-    cache_through_write(txn, Model.ActiveNameOwner, m_owner)
-    cache_through_write(txn, Model.ActiveNameExpiration, m_name_exp)
-
-    cache_through_delete(txn, Model.AuctionExpiration, {height, plain_name})
-    cache_through_delete(txn, Model.AuctionOwner, {owner, plain_name})
-    cache_through_delete(txn, Model.AuctionBid, bid_key)
-    cache_through_delete_inactive(txn, previous)
-
     %{tx: winning_tx} = read_raw_tx!(txi)
-    IntTransfer.fee(txn, {height, -1}, :lock_name, owner, txi, winning_tx.name_fee)
-    Ets.inc(:stat_sync_cache, :names_activated)
-    Ets.inc(:stat_sync_cache, :auctions_expired)
+
+    state
+    |> cache_through_write(Model.ActiveName, m_name)
+    |> cache_through_write(Model.ActiveNameOwner, m_owner)
+    |> cache_through_write(Model.ActiveNameExpiration, m_name_exp)
+    |> cache_through_delete(Model.AuctionExpiration, {height, plain_name})
+    |> cache_through_delete(Model.AuctionOwner, {owner, plain_name})
+    |> cache_through_delete(Model.AuctionBid, bid_key)
+    |> cache_through_delete_inactive(previous)
+    |> IntTransfer.fee({height, -1}, :lock_name, owner, txi, winning_tx.name_fee)
+    |> State.inc_stat(:names_activated)
+    |> State.inc_stat(:auctions_expired)
   end
 
   @doc """
@@ -333,23 +333,23 @@ defmodule AeMdw.Db.Name do
     end
   end
 
-  @spec cache_through_read(transaction(), table(), cache_key()) :: {:ok, name_record()} | nil
-  def cache_through_read(txn, table, key) do
-    case :ets.lookup(:name_sync_cache, {table, key}) do
-      [{_, record}] ->
+  @spec cache_through_read(state(), table(), cache_key()) :: {:ok, name_record()} | nil
+  def cache_through_read(state, table, key) do
+    case State.cache_get(state, :name_sync_cache, {table, key}) do
+      {:ok, record} ->
         {:ok, record}
 
-      [] ->
-        case Database.dirty_fetch(txn, table, key) do
+      :not_found ->
+        case State.get(state, table, key) do
           {:ok, record} -> {:ok, record}
           :not_found -> nil
         end
     end
   end
 
-  @spec cache_through_read!(transaction(), table(), cache_key()) :: name_record() | nil
-  def cache_through_read!(txn, table, key) do
-    ok_nil(cache_through_read(txn, table, key)) ||
+  @spec cache_through_read!(state(), table(), cache_key()) :: name_record() | nil
+  def cache_through_read!(state, table, key) do
+    ok_nil(cache_through_read(state, table, key)) ||
       raise("#{inspect(key)} not found in #{table}")
   end
 
@@ -381,58 +381,50 @@ defmodule AeMdw.Db.Name do
     lookup.(:ets.prev(:name_sync_cache, {table, key}), &elem(&1, 1), mns_lookup, mns_lookup)
   end
 
-  @spec cache_through_write(transaction(), table(), name_record()) :: :ok
-  def cache_through_write(txn, table, record) do
-    :ets.insert(:name_sync_cache, {{table, elem(record, 1)}, record})
-    Database.write(txn, table, record)
+  @spec cache_through_write(state(), table(), name_record()) :: state()
+  def cache_through_write(state, table, record) do
+    state
+    |> State.cache_put(:name_sync_cache, {table, elem(record, 1)}, record)
+    |> State.put(table, record)
   end
 
-  @spec cache_through_write(table(), name_record()) :: :ok
-  def cache_through_write(table, record) do
-    :ets.insert(:name_sync_cache, {{table, elem(record, 1)}, record})
-    Database.dirty_write(table, record)
+  @spec cache_through_delete(state(), table(), cache_key()) :: state()
+  def cache_through_delete(state, table, key) do
+    state
+    |> State.cache_delete(:name_sync_cache, {table, key})
+    |> State.delete(table, key)
   end
 
-  @spec cache_through_delete(transaction(), table(), cache_key()) :: :ok
-  def cache_through_delete(txn, table, key) do
-    :ets.delete(:name_sync_cache, {table, key})
-    Database.delete(txn, table, key)
-  end
+  @spec cache_through_delete_inactive(State.t(), nil | Model.name()) :: State.t()
+  def cache_through_delete_inactive(state, nil), do: state
 
-  @spec cache_through_delete(table(), cache_key()) :: :ok
-  def cache_through_delete(table, key) do
-    :ets.delete(:name_sync_cache, {table, key})
-    Database.dirty_delete(table, key)
-  end
-
-  @spec cache_through_delete_inactive(transaction(), nil | Model.name()) :: :ok
-  def cache_through_delete_inactive(_txn, nil), do: :ok
-
-  def cache_through_delete_inactive(txn, Model.name(index: plain_name, owner: owner_pk) = m_name) do
+  def cache_through_delete_inactive(
+        state,
+        Model.name(index: plain_name, owner: owner_pk) = m_name
+      ) do
     expire = revoke_or_expire_height(m_name)
 
-    cache_through_delete(txn, Model.InactiveName, plain_name)
-    cache_through_delete(txn, Model.InactiveNameOwner, {owner_pk, plain_name})
-    cache_through_delete(txn, Model.InactiveNameExpiration, {expire, plain_name})
-
-    :ok
+    state
+    |> cache_through_delete(Model.InactiveName, plain_name)
+    |> cache_through_delete(Model.InactiveNameOwner, {owner_pk, plain_name})
+    |> cache_through_delete(Model.InactiveNameExpiration, {expire, plain_name})
   end
 
-  @spec deactivate_name(transaction(), Blocks.height(), Blocks.height(), Model.name()) :: :ok
+  @spec deactivate_name(State.t(), Blocks.height(), Blocks.height(), Model.name()) :: State.t()
   def deactivate_name(
-        txn,
+        state,
         deactivate_height,
         expiration,
         Model.name(index: plain_name, owner: owner_pk) = m_name
       ) do
-    cache_through_delete_active(txn, expiration, m_name)
-
     m_exp = Model.expiration(index: {deactivate_height, plain_name})
     m_owner = Model.owner(index: {owner_pk, plain_name})
 
-    cache_through_write(txn, Model.InactiveName, m_name)
-    cache_through_write(txn, Model.InactiveNameExpiration, m_exp)
-    cache_through_write(txn, Model.InactiveNameOwner, m_owner)
+    state
+    |> cache_through_delete_active(expiration, m_name)
+    |> cache_through_write(Model.InactiveName, m_name)
+    |> cache_through_write(Model.InactiveNameExpiration, m_exp)
+    |> cache_through_write(Model.InactiveNameOwner, m_owner)
   end
 
   #
@@ -442,13 +434,14 @@ defmodule AeMdw.Db.Name do
   defp revoke_or_expire_height({{revoke_height, _}, _}, _expire), do: revoke_height
 
   defp cache_through_delete_active(
-         txn,
+         state,
          expiration,
          Model.name(index: plain_name, owner: owner_pk)
        ) do
-    cache_through_delete(txn, Model.ActiveName, plain_name)
-    cache_through_delete(txn, Model.ActiveNameOwner, {owner_pk, plain_name})
-    cache_through_delete(txn, Model.ActiveNameExpiration, {expiration, plain_name})
+    state
+    |> cache_through_delete(Model.ActiveName, plain_name)
+    |> cache_through_delete(Model.ActiveNameOwner, {owner_pk, plain_name})
+    |> cache_through_delete(Model.ActiveNameExpiration, {expiration, plain_name})
   end
 
   defp pointer_kv_raw(ptr),

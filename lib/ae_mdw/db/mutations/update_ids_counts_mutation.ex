@@ -4,12 +4,12 @@ defmodule AeMdw.Db.UpdateIdsCountsMutation do
   """
 
   alias AeMdw.Db.Model
-  alias AeMdw.Database
+  alias AeMdw.Db.State
   alias AeMdw.Db.Sync.IdCounter
 
   require Model
 
-  @derive AeMdw.Db.TxnMutation
+  @derive AeMdw.Db.Mutation
   defstruct [:ids_counts]
 
   @typep update_key :: {Model.id_count_key(), integer()}
@@ -23,10 +23,10 @@ defmodule AeMdw.Db.UpdateIdsCountsMutation do
     %__MODULE__{ids_counts: ids_counts}
   end
 
-  @spec execute(t(), Database.transaction()) :: :ok
-  def execute(%__MODULE__{ids_counts: ids_counts}, txn) do
-    Enum.each(ids_counts, fn {id_count_key, delta} ->
-      IdCounter.update_count(txn, id_count_key, -delta)
+  @spec execute(t(), State.t()) :: State.t()
+  def execute(%__MODULE__{ids_counts: ids_counts}, state) do
+    Enum.reduce(ids_counts, state, fn {id_count_key, delta}, state ->
+      IdCounter.update_count(state, id_count_key, -delta)
     end)
   end
 end

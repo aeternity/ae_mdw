@@ -1,12 +1,13 @@
-defmodule AeMdw.Db.WriteTxnMutation do
+defmodule AeMdw.Db.WriteMutation do
   @moduledoc """
-  This is the most basic kind of transaction, it just inserts a record in a
-  mnesia table.
+  This is the most basic kind of writing, it just inserts a record in a
+  table.
   """
 
   alias AeMdw.Database
+  alias AeMdw.Db.State
 
-  @derive AeMdw.Db.TxnMutation
+  @derive AeMdw.Db.Mutation
   defstruct [:table, :record]
 
   @opaque t() :: %__MODULE__{
@@ -19,8 +20,8 @@ defmodule AeMdw.Db.WriteTxnMutation do
     %__MODULE__{table: table, record: record}
   end
 
-  @spec execute(t(), Database.transaction()) :: :ok
-  def execute(%__MODULE__{table: table, record: record}, txn) do
-    Database.write(txn, table, record)
+  @spec execute(t(), State.t()) :: State.t()
+  def execute(%__MODULE__{table: table, record: record}, state) do
+    State.put(state, table, record)
   end
 end

@@ -3,14 +3,10 @@ defmodule AeMdw.Db.Sync.OracleInvalidation do
 
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Oracle
 
   require Model
   require Record
-
-  import AeMdw.Db.Oracle,
-    only: [
-      cache_through_read: 3
-    ]
 
   import AeMdw.Util
   import AeMdw.Db.Util
@@ -23,8 +19,12 @@ defmodule AeMdw.Db.Sync.OracleInvalidation do
 
     {all_dels_nested, all_writes_nested} =
       Enum.reduce(pubkeys, {%{}, %{}}, fn pubkey, {all_dels, all_writes} ->
-        inactive = ok_nil(cache_through_read(nil, Model.InactiveOracle, pubkey))
-        active = ok_nil(cache_through_read(nil, Model.ActiveOracle, pubkey))
+        {active, inactive} =
+          case Oracle.locate(pubkey) do
+            nil -> {nil, nil}
+            {oracle, Model.ActiveOracle} -> {oracle, nil}
+            {oracle, Model.InactiveOracle} -> {nil, oracle}
+          end
 
         {dels, writes} = invalidate(pubkey, inactive, active, new_height)
 

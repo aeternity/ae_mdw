@@ -41,8 +41,6 @@ defmodule AeMdw.Oracles do
     cursor = deserialize_cursor(cursor)
     scope = deserialize_scope(range)
 
-    {:ok, {last_gen, -1}} = Database.last_key(Model.Block)
-
     try do
       {prev_cursor, expiration_keys, next_cursor} =
         query
@@ -52,7 +50,7 @@ defmodule AeMdw.Oracles do
         |> build_streamer(scope, cursor)
         |> Collection.paginate(pagination)
 
-      oracles = render_list(expiration_keys, last_gen, expand?)
+      oracles = render_list(expiration_keys, expand?)
 
       {:ok, serialize_cursor(prev_cursor), oracles, serialize_cursor(next_cursor)}
     rescue
@@ -88,7 +86,6 @@ defmodule AeMdw.Oracles do
           {cursor() | nil, [oracle()], cursor() | nil}
   def fetch_active_oracles(pagination, cursor, expand?) do
     cursor = deserialize_cursor(cursor)
-    {:ok, {last_gen, -1}} = Database.last_key(Model.Block)
 
     {prev_cursor, exp_keys, next_cursor} =
       Collection.paginate(
@@ -96,7 +93,7 @@ defmodule AeMdw.Oracles do
         pagination
       )
 
-    oracles = render_list(exp_keys, last_gen, true, expand?)
+    oracles = render_list(exp_keys, true, expand?)
 
     {serialize_cursor(prev_cursor), oracles, serialize_cursor(next_cursor)}
   end
@@ -105,7 +102,6 @@ defmodule AeMdw.Oracles do
           {cursor() | nil, [oracle()], cursor() | nil}
   def fetch_inactive_oracles(pagination, cursor, expand?) do
     cursor = deserialize_cursor(cursor)
-    {:ok, {last_gen, -1}} = Database.last_key(Model.Block)
 
     {prev_cursor, exp_keys, next_cursor} =
       Collection.paginate(
@@ -113,16 +109,16 @@ defmodule AeMdw.Oracles do
         pagination
       )
 
-    oracles = render_list(exp_keys, last_gen, false, expand?)
+    oracles = render_list(exp_keys, false, expand?)
 
     {serialize_cursor(prev_cursor), oracles, serialize_cursor(next_cursor)}
   end
 
   @spec fetch(pubkey(), expand?()) :: {:ok, oracle()} | {:error, Error.t()}
   def fetch(oracle_pk, expand?) do
-    {:ok, {last_gen, -1}} = Database.last_key(Model.Block)
+    last_gen = DBUtil.last_gen()
 
-    case Oracle.locate(nil, oracle_pk) do
+    case Oracle.locate(oracle_pk) do
       {m_oracle, source} ->
         {:ok, render(m_oracle, last_gen, source == Model.ActiveOracle, expand?)}
 
@@ -132,7 +128,9 @@ defmodule AeMdw.Oracles do
     end
   end
 
-  defp render_list(oracles_exp_source_keys, last_gen, expand?) do
+  defp render_list(oracles_exp_source_keys, expand?) do
+    last_gen = DBUtil.last_gen()
+
     Enum.map(oracles_exp_source_keys, fn {{_exp, oracle_pk}, source} ->
       is_active? = source == @table_active_expiration
 
@@ -143,7 +141,9 @@ defmodule AeMdw.Oracles do
     end)
   end
 
-  defp render_list(oracles_exp_keys, last_gen, is_active?, expand?) do
+  defp render_list(oracles_exp_keys, is_active?, expand?) do
+    last_gen = DBUtil.last_gen()
+
     oracles_exp_keys
     |> Enum.map(fn {_exp, oracle_pk} ->
       Database.fetch!(if(is_active?, do: @table_active, else: @table_inactive), oracle_pk)

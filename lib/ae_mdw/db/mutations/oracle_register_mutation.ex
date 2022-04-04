@@ -4,15 +4,15 @@ defmodule AeMdw.Db.OracleRegisterMutation do
   """
 
   alias AeMdw.Blocks
-  alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.Oracle
+  alias AeMdw.Db.State
   alias AeMdw.Node.Db
   alias AeMdw.Txs
 
   require Model
 
-  @derive AeMdw.Db.TxnMutation
+  @derive AeMdw.Db.Mutation
   defstruct [:oracle_pk, :block_index, :expire, :txi]
 
   @typep expiration() :: Blocks.height()
@@ -34,7 +34,7 @@ defmodule AeMdw.Db.OracleRegisterMutation do
     }
   end
 
-  @spec execute(t(), Database.transaction()) :: :ok
+  @spec execute(t(), State.t()) :: State.t()
   def execute(
         %__MODULE__{
           oracle_pk: oracle_pk,
@@ -42,21 +42,21 @@ defmodule AeMdw.Db.OracleRegisterMutation do
           expire: expire,
           txi: txi
         },
-        txn
+        state
       ) do
-    previous =
-      case Oracle.locate(txn, oracle_pk) do
+    {previous, state2} =
+      case Oracle.locate(state, oracle_pk) do
         nil ->
-          nil
+          {nil, state}
 
         {previous, Model.InactiveOracle} ->
-          Oracle.cache_through_delete_inactive(txn, previous)
-          previous
+          {previous, Oracle.cache_through_delete_inactive(state, previous)}
 
         {previous, Model.ActiveOracle} ->
           Model.oracle(index: pubkey, expire: old_expire) = previous
-          Oracle.cache_through_delete(txn, Model.ActiveOracleExpiration, {old_expire, pubkey})
-          previous
+
+          {previous,
+           Oracle.cache_through_delete(state, Model.ActiveOracleExpiration, {old_expire, pubkey})}
       end
 
     m_oracle =
@@ -68,12 +68,11 @@ defmodule AeMdw.Db.OracleRegisterMutation do
         previous: previous
       )
 
-    Oracle.cache_through_write(txn, Model.ActiveOracle, m_oracle)
     m_exp_new = Model.expiration(index: {expire, oracle_pk})
-    Oracle.cache_through_write(txn, Model.ActiveOracleExpiration, m_exp_new)
 
-    AeMdw.Ets.inc(:stat_sync_cache, :oracles_registered)
-
-    :ok
+    state2
+    |> Oracle.cache_through_write(Model.ActiveOracle, m_oracle)
+    |> Oracle.cache_through_write(Model.ActiveOracleExpiration, m_exp_new)
+    |> State.inc_stat(:oracles_registered)
   end
 end

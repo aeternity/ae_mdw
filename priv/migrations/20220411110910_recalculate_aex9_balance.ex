@@ -4,6 +4,7 @@ defmodule AeMdw.Migrations.RecalculateAex9Balance do
   """
   alias AeMdw.Database
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Log
   alias AeMdw.Sync.AsyncTasks
 
@@ -15,7 +16,7 @@ defmodule AeMdw.Migrations.RecalculateAex9Balance do
 
     all_keys = Database.all_keys(Model.Aex9Balance)
 
-    Database.commit([
+    State.commit(State.new(), [
       AeMdw.Db.DeleteKeysMutation.new(%{Model.Aex9Balance => all_keys})
     ])
 

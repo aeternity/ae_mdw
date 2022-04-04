@@ -8,10 +8,11 @@ defmodule AeMdw.Db.NamesExpirationMutation do
   alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
+  alias AeMdw.Db.State
 
   require Model
 
-  @derive AeMdw.Db.TxnMutation
+  @derive AeMdw.Db.Mutation
   defstruct [:height]
 
   @opaque t() :: %__MODULE__{
@@ -21,19 +22,26 @@ defmodule AeMdw.Db.NamesExpirationMutation do
   @spec new(Blocks.height()) :: t()
   def new(height), do: %__MODULE__{height: height}
 
-  @spec execute(t(), Database.transaction()) :: :ok
-  def execute(%__MODULE__{height: height}, txn) do
-    Model.ActiveNameExpiration
-    |> Collection.stream({height, <<>>})
-    |> Stream.take_while(&match?({^height, _plain_name}, &1))
-    |> Enum.each(fn {_height, plain_name} -> Name.expire_name(txn, height, plain_name) end)
+  @spec execute(t(), State.t()) :: State.t()
+  def execute(%__MODULE__{height: height}, state) do
+    new_state =
+      Model.ActiveNameExpiration
+      |> Collection.stream({height, <<>>})
+      |> Stream.take_while(&match?({^height, _plain_name}, &1))
+      |> Enum.reduce(state, fn {_height, plain_name}, state ->
+        Name.expire_name(state, height, plain_name)
+      end)
 
     Model.AuctionExpiration
     |> Collection.stream({height, <<>>})
     |> Stream.take_while(&match?({^height, _plain_name}, &1))
     |> Enum.map(&Database.fetch!(Model.AuctionExpiration, &1))
-    |> Enum.each(fn Model.expiration(index: {_height, plain_name}, value: auction_timeout) ->
-      Name.expire_auction(txn, height, plain_name, auction_timeout)
+    |> Enum.reduce(new_state, fn Model.expiration(
+                                   index: {_height, plain_name},
+                                   value: auction_timeout
+                                 ),
+                                 state ->
+      Name.expire_auction(state, height, plain_name, auction_timeout)
     end)
   end
 end

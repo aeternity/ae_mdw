@@ -3,6 +3,8 @@ defmodule AeMdw.Db.ContractTest do
 
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
+  alias AeMdw.Db.RocksDb
+  alias AeMdw.Db.State
   alias AeMdw.Validate
 
   alias Support.AeMdw.Db.ContractTestUtil
@@ -16,13 +18,20 @@ defmodule AeMdw.Db.ContractTest do
 
   test "new aex9 presence not created when already exists" do
     fake_txi = 1_000_123
-    Contract.aex9_write_presence(@existing_cpk, fake_txi, @existing_apk)
+    {:ok, txn} = RocksDb.transaction_new()
+    state = State.new() |> Map.put(:txn, txn)
+
+    Contract.aex9_write_presence(state, @existing_cpk, fake_txi, @existing_apk)
+    RocksDb.transaction_commit(txn)
 
     assert @existing_cpk
            |> ContractTestUtil.aex9_presence_txi_list(@existing_apk)
            |> Enum.find(&(&1 == fake_txi))
 
-    Contract.aex9_write_new_presence(@existing_cpk, fake_txi + 1, @existing_apk)
+    {:ok, txn} = RocksDb.transaction_new()
+    state = State.new() |> Map.put(:txn, txn)
+    Contract.aex9_write_new_presence(state, @existing_cpk, fake_txi + 1, @existing_apk)
+    RocksDb.transaction_commit(txn)
 
     refute @existing_cpk
            |> ContractTestUtil.aex9_presence_txi_list(@existing_apk)
@@ -30,10 +39,15 @@ defmodule AeMdw.Db.ContractTest do
   end
 
   test "create and delete new aex9 presence" do
-    assert [] == ContractTestUtil.aex9_presence_txi_list(@new_cpk, @existing_apk)
-    Contract.aex9_write_new_presence(@new_cpk, -1, @existing_apk)
+    {:ok, txn} = RocksDb.transaction_new()
+    state = State.new() |> Map.put(:txn, txn)
 
+    assert [] == ContractTestUtil.aex9_presence_txi_list(@new_cpk, @existing_apk)
+
+    Contract.aex9_write_new_presence(state, @new_cpk, -1, @existing_apk)
+    RocksDb.transaction_commit(txn)
     assert [-1] == ContractTestUtil.aex9_presence_txi_list(@new_cpk, @existing_apk)
+
     ContractTestUtil.aex9_delete_presence(@new_cpk, @existing_apk)
     assert [] == ContractTestUtil.aex9_presence_txi_list(@new_cpk, @existing_apk)
   end

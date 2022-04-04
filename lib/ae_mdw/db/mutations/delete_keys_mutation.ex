@@ -4,11 +4,11 @@ defmodule AeMdw.Db.DeleteKeysMutation do
   """
 
   alias AeMdw.Db.Model
-  alias AeMdw.Database
+  alias AeMdw.Db.State
 
   require Model
 
-  @derive AeMdw.Db.TxnMutation
+  @derive AeMdw.Db.Mutation
   defstruct [:tables_keys]
 
   @typep tables_keys :: %{Model.table() => Range.t() | [Model.key()]}
@@ -22,10 +22,10 @@ defmodule AeMdw.Db.DeleteKeysMutation do
     %__MODULE__{tables_keys: tables_keys}
   end
 
-  @spec execute(t(), Database.transaction()) :: :ok
-  def execute(%__MODULE__{tables_keys: tables_keys}, txn) do
-    Enum.each(tables_keys, fn {table, keys} ->
-      Enum.each(keys, &Database.delete(txn, table, &1))
+  @spec execute(t(), State.t()) :: State.t()
+  def execute(%__MODULE__{tables_keys: tables_keys}, state) do
+    Enum.reduce(tables_keys, state, fn {table, keys}, state ->
+      Enum.reduce(keys, state, &State.delete(&2, table, &1))
     end)
   end
 end

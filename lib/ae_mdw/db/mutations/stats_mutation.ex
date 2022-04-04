@@ -12,11 +12,11 @@ defmodule AeMdw.Db.StatsMutation do
   alias AeMdw.Db.Name
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.Origin
-  alias AeMdw.Ets
+  alias AeMdw.Db.State
 
   require Model
 
-  @derive AeMdw.Db.TxnMutation
+  @derive AeMdw.Db.Mutation
   defstruct [:height, :all_cached?]
 
   @type t() :: %__MODULE__{
@@ -32,36 +32,37 @@ defmodule AeMdw.Db.StatsMutation do
     }
   end
 
-  @spec execute(t(), Database.transaction()) :: :ok
-  def execute(%__MODULE__{height: height, all_cached?: all_cached?}, txn) do
-    m_delta_stat = make_delta_stat(height, all_cached?)
+  @spec execute(t(), State.t()) :: State.t()
+  def execute(%__MODULE__{height: height, all_cached?: all_cached?}, state) do
+    m_delta_stat = make_delta_stat(state, height, all_cached?)
     # delta/transitions are only reflected on total stats at height + 1
-    m_total_stat = make_total_stat(height + 1, m_delta_stat)
+    m_total_stat = make_total_stat(state, height + 1, m_delta_stat)
 
-    Database.write(txn, Model.DeltaStat, m_delta_stat)
-    Database.write(txn, Model.TotalStat, m_total_stat)
+    state
+    |> State.put(Model.DeltaStat, m_delta_stat)
+    |> State.put(Model.TotalStat, m_total_stat)
   end
 
   #
   # Private functions
   #
-  @spec make_delta_stat(Blocks.height(), boolean()) :: Model.delta_stat()
-  defp make_delta_stat(height, true = _all_cached?) do
+  @spec make_delta_stat(State.t(), Blocks.height(), boolean()) :: Model.delta_stat()
+  defp make_delta_stat(state, height, true = _all_cached?) do
     Model.delta_stat(
       index: height,
-      auctions_started: get(:auctions_started, 0),
-      names_activated: get(:names_activated, 0),
-      names_expired: get(:names_expired, 0),
-      names_revoked: get(:names_revoked, 0),
-      oracles_registered: get(:oracles_registered, 0),
-      oracles_expired: get(:oracles_expired, 0),
-      contracts_created: get(:contracts_created, 0),
-      block_reward: get(:block_reward, 0),
-      dev_reward: get(:dev_reward, 0)
+      auctions_started: get(state, :auctions_started, 0),
+      names_activated: get(state, :names_activated, 0),
+      names_expired: get(state, :names_expired, 0),
+      names_revoked: get(state, :names_revoked, 0),
+      oracles_registered: get(state, :oracles_registered, 0),
+      oracles_expired: get(state, :oracles_expired, 0),
+      contracts_created: get(state, :contracts_created, 0),
+      block_reward: get(state, :block_reward, 0),
+      dev_reward: get(state, :dev_reward, 0)
     )
   end
 
-  defp make_delta_stat(height, false = _all_cached?) do
+  defp make_delta_stat(_state, height, false = _all_cached?) do
     Model.total_stat(
       active_auctions: prev_active_auctions,
       active_names: prev_active_names,
@@ -111,8 +112,9 @@ defmodule AeMdw.Db.StatsMutation do
     )
   end
 
-  @spec make_total_stat(Blocks.height(), Model.delta_stat()) :: Model.total_stat()
+  @spec make_total_stat(State.t(), Blocks.height(), Model.delta_stat()) :: Model.total_stat()
   defp make_total_stat(
+         state,
          height,
          Model.delta_stat(
            auctions_started: auctions_started,
@@ -139,7 +141,7 @@ defmodule AeMdw.Db.StatsMutation do
     ) = fetch_total_stat(height - 1)
 
     token_supply_delta = AeMdw.Node.token_supply_delta(height - 1)
-    auctions_expired = get(:auctions_expired, 0)
+    auctions_expired = get(state, :auctions_expired, 0)
 
     Model.total_stat(
       index: height,
@@ -155,7 +157,7 @@ defmodule AeMdw.Db.StatsMutation do
     )
   end
 
-  defp get(stat_sync_key, default), do: Ets.get(:stat_sync_cache, stat_sync_key, default)
+  defp get(state, stat_sync_key, default), do: State.get_stat(state, stat_sync_key, default)
 
   defp fetch_total_stat(0) do
     Model.total_stat()

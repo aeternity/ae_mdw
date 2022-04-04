@@ -2,16 +2,13 @@ defmodule AeMdw.Db.Contract do
   @moduledoc """
   Data access to read and write Contract related models.
   """
-  alias AeMdw.Node, as: AE
-
   alias AeMdw.Collection
   alias AeMdw.Contract
   alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
   alias AeMdw.Db.Sync
-  alias AeMdw.Db.TxnMutation
-  alias AeMdw.Db.WriteTxnMutation
+  alias AeMdw.Db.State
   alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Node.Db
@@ -28,70 +25,61 @@ defmodule AeMdw.Db.Contract do
 
   @type rev_aex9_contract_key :: {pos_integer(), String.t(), String.t(), pos_integer()}
   @typep pubkey :: Db.pubkey()
-  @typep transaction :: Database.transaction()
+  @typep state() :: State.t()
 
-  @spec aex9_creation_write(transaction(), tuple(), pubkey(), integer()) :: :ok
-  def aex9_creation_write(txn, {name, symbol, decimals}, contract_pk, txi) do
+  @spec aex9_creation_write(state(), tuple(), pubkey(), integer()) :: state()
+  def aex9_creation_write(state, {name, symbol, decimals}, contract_pk, txi) do
     m_contract = Model.aex9_contract(index: {name, symbol, txi, decimals})
     m_contract_sym = Model.aex9_contract_symbol(index: {symbol, name, txi, decimals})
     m_rev_contract = Model.rev_aex9_contract(index: {txi, name, symbol, decimals})
     m_contract_pk = Model.aex9_contract_pubkey(index: contract_pk, txi: txi)
-    Database.write(txn, Model.Aex9Contract, m_contract)
-    Database.write(txn, Model.Aex9ContractSymbol, m_contract_sym)
-    Database.write(txn, Model.RevAex9Contract, m_rev_contract)
-    Database.write(txn, Model.Aex9ContractPubkey, m_contract_pk)
-    :ok
+
+    state
+    |> State.put(Model.Aex9Contract, m_contract)
+    |> State.put(Model.Aex9ContractSymbol, m_contract_sym)
+    |> State.put(Model.RevAex9Contract, m_rev_contract)
+    |> State.put(Model.Aex9ContractPubkey, m_contract_pk)
   end
 
-  @spec aex9_write_presence(transaction(), pubkey(), integer(), pubkey()) :: :ok
-  def aex9_write_presence(txn, contract_pk, txi, pubkey) do
+  @spec aex9_write_presence(state(), pubkey(), integer(), pubkey()) :: state()
+  def aex9_write_presence(state, contract_pk, txi, pubkey) do
     m_acc_presence = Model.aex9_account_presence(index: {pubkey, txi, contract_pk})
     m_idx_presence = Model.idx_aex9_account_presence(index: {txi, pubkey, contract_pk})
-    Database.write(txn, Model.Aex9AccountPresence, m_acc_presence)
-    Database.write(txn, Model.IdxAex9AccountPresence, m_idx_presence)
-    :ok
+
+    state
+    |> State.put(Model.Aex9AccountPresence, m_acc_presence)
+    |> State.put(Model.IdxAex9AccountPresence, m_idx_presence)
   end
 
-  @spec aex9_write_presence(pubkey(), integer(), pubkey()) :: :ok
-  def aex9_write_presence(contract_pk, txi, pubkey) do
-    m_acc_presence = Model.aex9_account_presence(index: {pubkey, txi, contract_pk})
-    m_idx_presence = Model.idx_aex9_account_presence(index: {txi, pubkey, contract_pk})
-    Database.dirty_write(Model.Aex9AccountPresence, m_acc_presence)
-    Database.dirty_write(Model.IdxAex9AccountPresence, m_idx_presence)
-    :ok
-  end
-
-  @spec aex9_write_new_presence(pubkey(), integer(), pubkey()) :: boolean()
-  def aex9_write_new_presence(contract_pk, txi, account_pk) do
+  @spec aex9_write_new_presence(state(), pubkey(), integer(), pubkey()) :: {boolean(), state()}
+  def aex9_write_new_presence(state, contract_pk, txi, account_pk) do
     if aex9_presence_exists?(contract_pk, account_pk, txi) do
-      false
+      {false, state}
     else
-      aex9_write_presence(contract_pk, txi, account_pk)
-      true
+      {true, aex9_write_presence(state, contract_pk, txi, account_pk)}
     end
   end
 
-  @spec aex9_burn_balance(transaction(), pubkey(), pubkey(), non_neg_integer()) :: :ok | :error
-  def aex9_burn_balance(txn, contract_pk, account_pk, burned_value) do
-    aex9_update_balance(txn, contract_pk, account_pk, fn amount -> amount - burned_value end)
+  @spec aex9_burn_balance(state(), pubkey(), pubkey(), non_neg_integer()) :: state()
+  def aex9_burn_balance(state, contract_pk, account_pk, burned_value) do
+    aex9_update_balance(state, contract_pk, account_pk, fn amount -> amount - burned_value end)
   end
 
-  @spec aex9_swap_balance(transaction(), pubkey(), pubkey()) :: :ok | :error
-  def aex9_swap_balance(txn, contract_pk, caller_pk) do
-    aex9_update_balance(txn, contract_pk, caller_pk, fn _any -> 0 end)
+  @spec aex9_swap_balance(state(), pubkey(), pubkey()) :: state()
+  def aex9_swap_balance(state, contract_pk, caller_pk) do
+    aex9_update_balance(state, contract_pk, caller_pk, fn _any -> 0 end)
   end
 
-  @spec aex9_mint_balance(transaction(), pubkey(), pubkey(), non_neg_integer()) :: :ok | :error
-  def aex9_mint_balance(txn, contract_pk, to_pk, minted_value) do
-    aex9_update_balance(txn, contract_pk, to_pk, fn amount -> amount + minted_value end)
+  @spec aex9_mint_balance(state(), pubkey(), pubkey(), non_neg_integer()) :: state()
+  def aex9_mint_balance(state, contract_pk, to_pk, minted_value) do
+    aex9_update_balance(state, contract_pk, to_pk, fn amount -> amount + minted_value end)
   end
 
-  @spec aex9_transfer_balance(transaction(), pubkey(), pubkey(), pubkey(), non_neg_integer()) ::
-          :ok | :error
-  def aex9_transfer_balance(txn, contract_pk, from_pk, to_pk, transfered_value) do
-    case Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, from_pk}) do
+  @spec aex9_transfer_balance(state(), pubkey(), pubkey(), pubkey(), non_neg_integer()) :: state()
+  def aex9_transfer_balance(state, contract_pk, from_pk, to_pk, transfered_value) do
+    case State.get(state, Model.Aex9Balance, {contract_pk, from_pk}) do
       {:ok, m_aex9_balance_from} ->
-        m_aex9_balance_to = fetch_aex9_balance_or_new(txn, contract_pk, to_pk)
+        m_aex9_balance_to = fetch_aex9_balance_or_new(state, contract_pk, to_pk)
         from_amount = Model.aex9_balance(m_aex9_balance_from, :amount)
         to_amount = Model.aex9_balance(m_aex9_balance_to, :amount)
 
@@ -101,24 +89,25 @@ defmodule AeMdw.Db.Contract do
         m_aex9_balance_to =
           Model.aex9_balance(m_aex9_balance_to, amount: to_amount + transfered_value)
 
-        Database.write(txn, Model.Aex9Balance, m_aex9_balance_from)
-        :ok = Database.write(txn, Model.Aex9Balance, m_aex9_balance_to)
+        state
+        |> State.put(Model.Aex9Balance, m_aex9_balance_from)
+        |> State.put(Model.Aex9Balance, m_aex9_balance_to)
 
       :not_found ->
-        :error
+        state
     end
   end
 
-  @spec aex9_delete_balances(transaction(), pubkey()) :: :ok
-  def aex9_delete_balances(txn, contract_pk) do
+  @spec aex9_delete_balances(state(), pubkey()) :: state()
+  def aex9_delete_balances(state, contract_pk) do
     Model.Aex9Balance
     |> Collection.stream(
       :forward,
       {{contract_pk, min_bin()}, {contract_pk, max_256bit_bin()}},
       nil
     )
-    |> Enum.each(fn {contract_pk, account_pk} ->
-      Database.delete(txn, Model.Aex9Balance, {contract_pk, account_pk})
+    |> Enum.reduce(state, fn {contract_pk, account_pk}, state ->
+      State.delete(state, Model.Aex9Balance, {contract_pk, account_pk})
     end)
   end
 
@@ -135,30 +124,30 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  @spec call_write(transaction(), integer(), integer(), Contract.fun_arg_res_or_error()) :: :ok
-  def call_write(txn, create_txi, txi, %{
+  @spec call_write(state(), integer(), integer(), Contract.fun_arg_res_or_error()) :: state()
+  def call_write(state, create_txi, txi, %{
         function: fname,
         arguments: args,
         result: %{error: [err]}
       }),
-      do: call_write(txn, create_txi, txi, fname, args, :error, err)
+      do: call_write(state, create_txi, txi, fname, args, :error, err)
 
-  def call_write(txn, create_txi, txi, %{
+  def call_write(state, create_txi, txi, %{
         function: fname,
         arguments: args,
         result: %{abort: [err]}
       }),
-      do: call_write(txn, create_txi, txi, fname, args, :abort, err)
+      do: call_write(state, create_txi, txi, fname, args, :abort, err)
 
-  def call_write(txn, create_txi, txi, %{function: fname, arguments: args, result: val}),
-    do: call_write(txn, create_txi, txi, fname, args, :ok, val)
+  def call_write(state, create_txi, txi, %{function: fname, arguments: args, result: val}),
+    do: call_write(state, create_txi, txi, fname, args, :ok, val)
 
-  def call_write(txn, create_txi, txi, {:error, detail}),
-    do: call_write(txn, create_txi, txi, "<unknown>", nil, :invalid, inspect(detail))
+  def call_write(state, create_txi, txi, {:error, detail}),
+    do: call_write(state, create_txi, txi, "<unknown>", nil, :invalid, inspect(detail))
 
-  @spec call_write(transaction(), Txs.txi(), Txs.txi(), String.t(), list() | nil, any(), any()) ::
-          :ok
-  def call_write(txn, create_txi, txi, fname, args, result, return) do
+  @spec call_write(state(), Txs.txi(), Txs.txi(), String.t(), list() | nil, any(), any()) ::
+          state()
+  def call_write(state, create_txi, txi, fname, args, result, return) do
     m_call =
       Model.contract_call(
         index: {create_txi, txi},
@@ -168,17 +157,17 @@ defmodule AeMdw.Db.Contract do
         return: return
       )
 
-    Database.write(txn, Model.ContractCall, m_call)
+    State.put(state, Model.ContractCall, m_call)
   end
 
-  @spec logs_write(transaction(), Txs.txi(), Txs.txi(), tuple()) :: :ok
-  def logs_write(txn, create_txi, txi, call_rec) do
+  @spec logs_write(state(), Txs.txi(), Txs.txi(), tuple()) :: state()
+  def logs_write(state, create_txi, txi, call_rec) do
     contract_pk = :aect_call.contract_pubkey(call_rec)
     raw_logs = :aect_call.log(call_rec)
 
     raw_logs
     |> Enum.with_index()
-    |> Enum.each(fn {{addr, [evt_hash | args], data}, i} ->
+    |> Enum.reduce(state, fn {{addr, [evt_hash | args], data}, i}, state ->
       m_log =
         Model.contract_log(
           index: {create_txi, txi, evt_hash, i},
@@ -190,32 +179,40 @@ defmodule AeMdw.Db.Contract do
       m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, i})
       m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, i})
       m_idx_log = Model.idx_contract_log(index: {txi, create_txi, evt_hash, i})
-      Database.write(txn, Model.ContractLog, m_log)
-      Database.write(txn, Model.DataContractLog, m_data_log)
-      Database.write(txn, Model.EvtContractLog, m_evt_log)
-      Database.write(txn, Model.IdxContractLog, m_idx_log)
+
+      state2 =
+        state
+        |> State.put(Model.ContractLog, m_log)
+        |> State.put(Model.DataContractLog, m_data_log)
+        |> State.put(Model.EvtContractLog, m_evt_log)
+        |> State.put(Model.IdxContractLog, m_idx_log)
 
       # if remote call then indexes also with the called contract
-      if addr != contract_pk do
-        remote_called_contract_txi = Sync.Contract.get_txi!(addr)
+      state3 =
+        if addr != contract_pk do
+          {remote_called_contract_txi, state3} = Sync.Contract.get_txi!(state2, addr)
 
-        # on caller log: ext_contract = called contract_pk
-        # on called log: ext_contract = {:parent_contract_pk, caller contract_pk}
-        m_log_remote =
-          Model.contract_log(
-            index: {remote_called_contract_txi, txi, evt_hash, i},
-            ext_contract: {:parent_contract_pk, contract_pk},
-            args: args,
-            data: data
-          )
+          # on caller log: ext_contract = called contract_pk
+          # on called log: ext_contract = {:parent_contract_pk, caller contract_pk}
+          m_log_remote =
+            Model.contract_log(
+              index: {remote_called_contract_txi, txi, evt_hash, i},
+              ext_contract: {:parent_contract_pk, contract_pk},
+              args: args,
+              data: data
+            )
 
-        Database.write(txn, Model.ContractLog, m_log_remote)
-      end
+          State.put(state3, Model.ContractLog, m_log_remote)
+        else
+          state2
+        end
 
       aex9_contract_pk = which_aex9_contract_pubkey(contract_pk, addr)
 
       if is_aex9_transfer?(evt_hash, aex9_contract_pk) do
-        write_aex9_records(txn, aex9_contract_pk, txi, i, args)
+        write_aex9_records(state3, aex9_contract_pk, txi, i, args)
+      else
+        state3
       end
     end)
   end
@@ -344,73 +341,17 @@ defmodule AeMdw.Db.Contract do
     )
   end
 
-  @spec int_call_write_mutations(Txs.txi(), Txs.txi(), Txs.txi(), Contract.fname(), tuple()) :: [
-          TxnMutation.t()
-        ]
-  def int_call_write_mutations(create_txi, call_txi, local_idx, fname, tx) do
-    m_call =
-      Model.int_contract_call(
-        index: {call_txi, local_idx},
-        create_txi: create_txi,
-        fname: fname,
-        tx: tx
-      )
-
-    m_grp_call = Model.grp_int_contract_call(index: {create_txi, call_txi, local_idx})
-    m_fname_call = Model.fname_int_contract_call(index: {fname, call_txi, local_idx})
-
-    m_fname_grp_call =
-      Model.fname_grp_int_contract_call(index: {fname, create_txi, call_txi, local_idx})
-
-    {tx_type, raw_tx} = :aetx.specialize_type(tx)
-
-    initial_mutations = [
-      WriteTxnMutation.new(Model.IntContractCall, m_call),
-      WriteTxnMutation.new(Model.GrpIntContractCall, m_grp_call),
-      WriteTxnMutation.new(Model.FnameIntContractCall, m_fname_call),
-      WriteTxnMutation.new(Model.FnameGrpIntContractCall, m_fname_grp_call)
-    ]
-
-    ids_mutations =
-      tx_type
-      |> AE.tx_ids()
-      |> Enum.flat_map(fn {_, pos} ->
-        pk = Validate.id!(elem(raw_tx, pos))
-        m_id_call = Model.id_int_contract_call(index: {pk, pos, call_txi, local_idx})
-
-        m_grp_id_call =
-          Model.grp_id_int_contract_call(index: {create_txi, pk, pos, call_txi, local_idx})
-
-        m_id_fname_call =
-          Model.id_fname_int_contract_call(index: {pk, fname, pos, call_txi, local_idx})
-
-        m_grp_id_fname_call =
-          Model.grp_id_fname_int_contract_call(
-            index: {create_txi, pk, fname, pos, call_txi, local_idx}
-          )
-
-        [
-          WriteTxnMutation.new(Model.IdIntContractCall, m_id_call),
-          WriteTxnMutation.new(Model.GrpIdIntContractCall, m_grp_id_call),
-          WriteTxnMutation.new(Model.IdFnameIntContractCall, m_id_fname_call),
-          WriteTxnMutation.new(Model.GrpIdFnameIntContractCall, m_grp_id_fname_call)
-        ]
-      end)
-
-    initial_mutations ++ ids_mutations
-  end
-
   #
   # Private functions
   #
-  defp aex9_update_balance(txn, contract_pk, account_pk, new_amount_fn) do
-    case Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, account_pk}) do
+  defp aex9_update_balance(state, contract_pk, account_pk, new_amount_fn) do
+    case State.get(state, Model.Aex9Balance, {contract_pk, account_pk}) do
       {:ok, Model.aex9_balance(amount: old_amount) = m_aex9_balance} ->
         m_aex9_balance = Model.aex9_balance(m_aex9_balance, amount: new_amount_fn.(old_amount))
-        Database.write(txn, Model.Aex9Balance, m_aex9_balance)
+        State.put(state, Model.Aex9Balance, m_aex9_balance)
 
       :not_found ->
-        :error
+        state
     end
   end
 
@@ -422,22 +363,22 @@ defmodule AeMdw.Db.Contract do
     &(byte_size(&1) >= len && :binary.part(&1, 0, len) == prefix)
   end
 
-  defp write_aex9_records(txn, contract_pk, txi, i, [from_pk, to_pk, <<amount::256>>]) do
+  defp write_aex9_records(state, contract_pk, txi, i, [from_pk, to_pk, <<amount::256>>]) do
     m_transfer = Model.aex9_transfer(index: {from_pk, txi, to_pk, amount, i})
     m_rev_transfer = Model.rev_aex9_transfer(index: {to_pk, txi, from_pk, amount, i})
     m_idx_transfer = Model.idx_aex9_transfer(index: {txi, i, from_pk, to_pk, amount})
     m_pair_transfer = Model.aex9_pair_transfer(index: {to_pk, from_pk, txi, amount, i})
 
-    Database.write(txn, Model.Aex9Transfer, m_transfer)
-    Database.write(txn, Model.RevAex9Transfer, m_rev_transfer)
-    Database.write(txn, Model.IdxAex9Transfer, m_idx_transfer)
-    Database.write(txn, Model.Aex9PairTransfer, m_pair_transfer)
-
-    aex9_write_presence(contract_pk, txi, to_pk)
+    state
+    |> State.put(Model.Aex9Transfer, m_transfer)
+    |> State.put(Model.RevAex9Transfer, m_rev_transfer)
+    |> State.put(Model.IdxAex9Transfer, m_idx_transfer)
+    |> State.put(Model.Aex9PairTransfer, m_pair_transfer)
+    |> aex9_write_presence(contract_pk, txi, to_pk)
   end
 
-  defp fetch_aex9_balance_or_new(txn, contract_pk, account_pk) do
-    case Database.dirty_fetch(txn, Model.Aex9Balance, {contract_pk, account_pk}) do
+  defp fetch_aex9_balance_or_new(state, contract_pk, account_pk) do
+    case State.get(state, Model.Aex9Balance, {contract_pk, account_pk}) do
       {:ok, m_balance} -> m_balance
       :not_found -> Model.aex9_balance(index: {contract_pk, account_pk}, amount: 0)
     end
