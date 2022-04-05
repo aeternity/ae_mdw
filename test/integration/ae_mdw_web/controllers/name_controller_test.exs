@@ -47,6 +47,35 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       end
     end
 
+    test "it get active names backwards by default with by=expiration", %{conn: conn} do
+      assert %{"data" => names, "next" => next} =
+               conn |> get("/names/active?by=expiration") |> json_response(200)
+
+      expirations =
+        names
+        |> Enum.map(fn %{"info" => %{"expire_height" => expire_height}} -> expire_height end)
+        |> Enum.reverse()
+
+      assert length(names) <= @default_limit
+      assert ^expirations = Enum.sort(expirations)
+
+      assert %{"data" => next_names, "prev" => prev_names} =
+               conn |> get(next) |> json_response(200)
+
+      if next do
+        next_expirations =
+          next_names
+          |> Enum.map(fn %{"info" => %{"expire_height" => expire_height}} -> expire_height end)
+          |> Enum.reverse()
+
+        assert length(next_names) <= @default_limit
+        assert ^next_expirations = Enum.sort(next_expirations)
+        assert Enum.at(expirations, @default_limit - 1) >= Enum.at(next_expirations, 0)
+
+        assert %{"data" => ^names} = conn |> get(prev_names) |> json_response(200)
+      end
+    end
+
     test "get active names forward with limit=4", %{conn: conn} do
       limit = 4
 
@@ -505,6 +534,35 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
     test "it get active names backwards without any filters", %{conn: conn} do
       assert %{"data" => names, "next" => next} =
                conn |> get("/v2/names", state: "active") |> json_response(200)
+
+      expirations =
+        names
+        |> Enum.map(fn %{"info" => %{"expire_height" => expire_height}} -> expire_height end)
+        |> Enum.reverse()
+
+      assert length(names) <= @default_limit
+      assert ^expirations = Enum.sort(expirations)
+
+      assert %{"data" => next_names, "prev" => prev_names} =
+               conn |> get(next) |> json_response(200)
+
+      if next do
+        next_expirations =
+          next_names
+          |> Enum.map(fn %{"info" => %{"expire_height" => expire_height}} -> expire_height end)
+          |> Enum.reverse()
+
+        assert length(next_names) <= @default_limit
+        assert ^next_expirations = Enum.sort(next_expirations)
+        assert Enum.at(expirations, @default_limit - 1) >= Enum.at(next_expirations, 0)
+
+        assert %{"data" => ^names} = conn |> get(prev_names) |> json_response(200)
+      end
+    end
+
+    test "it get active names backwards by default with by=deactivation", %{conn: conn} do
+      assert %{"data" => names, "next" => next} =
+               conn |> get("/v2/names?by=deactivation", state: "active") |> json_response(200)
 
       expirations =
         names
