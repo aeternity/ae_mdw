@@ -1,5 +1,30 @@
 # Changelog
 
+### [1.7.3](https://www.github.com/aeternity/ae_mdw/compare/v1.7.2...v1.7.3) (2022-04-05)
+
+
+### Bug Fixes
+
+* get pubkey for child contracts ([#620](https://www.github.com/aeternity/ae_mdw/issues/620)) ([6e8c2da](https://www.github.com/aeternity/ae_mdw/commit/6e8c2da9aa995fbf011549ed1be595adb5ae9e8f))
+
+
+### Miscellaneous
+
+* clean node db hooks from mdw ([#619](https://www.github.com/aeternity/ae_mdw/issues/619)) ([ce75528](https://www.github.com/aeternity/ae_mdw/commit/ce75528babc84d2fd8ccd2336efa76cea27708b7))
+
+
+### Testing
+
+* fix integration inactive names cases by expiration/deactivation ([#622](https://www.github.com/aeternity/ae_mdw/issues/622)) ([43a661b](https://www.github.com/aeternity/ae_mdw/commit/43a661b82bd752a62568cffdc425b6f9c758861f))
+
+
+### Refactorings
+
+* fetch expired oracle/names inside mutation ([#611](https://www.github.com/aeternity/ae_mdw/issues/611)) ([0910e84](https://www.github.com/aeternity/ae_mdw/commit/0910e84233072aeb1ba3c1a7eb910e79711566dd))
+* include code to fetch stats inside StatsMutation ([#610](https://www.github.com/aeternity/ae_mdw/issues/610)) ([5991bc4](https://www.github.com/aeternity/ae_mdw/commit/5991bc41f7510d104f0a9bace3bf21e43afa1ef7))
+* perform async invalidations on a sync server ([#589](https://www.github.com/aeternity/ae_mdw/issues/589)) ([32c2575](https://www.github.com/aeternity/ae_mdw/commit/32c25753cd74ff93d4e03515cb65a36dc1eccf7b))
+* rename /v2/names/* by=expiration to by=deactivation ([#623](https://www.github.com/aeternity/ae_mdw/issues/623)) ([a360c8b](https://www.github.com/aeternity/ae_mdw/commit/a360c8b3ad3cd4a9d1b6e0ff6b0b67e79011b955))
+
 ### [1.7.2](https://www.github.com/aeternity/ae_mdw/compare/v1.7.1...v1.7.2) (2022-03-31)
 
 
