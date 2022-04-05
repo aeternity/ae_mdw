@@ -50,7 +50,8 @@ defmodule AeMdw.Names do
 
   @spec fetch_names(pagination(), range(), order_by(), query(), cursor() | nil, boolean()) ::
           {:ok, cursor() | nil, [name()], cursor() | nil} | {:error, reason()}
-  def fetch_names(pagination, range, :expiration, query, cursor, expand?) do
+  def fetch_names(pagination, range, order_by, query, cursor, expand?)
+      when order_by in [:expiration, :deactivation] do
     cursor = deserialize_expiration_cursor(cursor)
     scope = deserialize_scope(range)
 
@@ -58,8 +59,7 @@ defmodule AeMdw.Names do
       {prev_cursor, expiration_keys, next_cursor} =
         query
         |> Map.drop(@pagination_params)
-        |> Enum.map(&convert_param/1)
-        |> Map.new()
+        |> Enum.into(%{}, &convert_param/1)
         |> build_expiration_streamer(scope, cursor)
         |> Collection.paginate(pagination)
 
@@ -78,8 +78,7 @@ defmodule AeMdw.Names do
       {prev_cursor, name_keys, next_cursor} =
         query
         |> Map.drop(@pagination_params)
-        |> Enum.map(&convert_param/1)
-        |> Map.new()
+        |> Enum.into(%{}, &convert_param/1)
         |> build_name_streamer(cursor)
         |> Collection.paginate(pagination)
 

@@ -21,7 +21,7 @@ defmodule AeMdwWeb.NameController do
   import AeMdw.Util
 
   plug PaginatedPlug,
-       [order_by: ~w(expiration name)a]
+       [order_by: ~w(expiration deactivation name)a]
        when action in ~w(active_names inactive_names names auctions search search_v1)a
 
   @lifecycles_map %{
