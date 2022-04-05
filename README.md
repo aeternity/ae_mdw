@@ -2162,9 +2162,12 @@ There are 4 paginable endpoints for listing names:
 - /names/active - for listing `active` names
 - /names/auctions - for listing `auctions`
 
-They support ordering via parameters `by` (with options `expiration` and `name`), and `direction` (with options `forward` and `backward`).
+They support ordering via parameters `by` (with options `deactivation` and `name`), and `direction` (with options `forward` and `backward`).
 
-Without these parameters, the endpoints return results ordered as if `by=expiration` and `direction=backward` were provided.
+Using the `by=deactivation` means for inactive names that they are sorted by the height of deactivation, whether the name had expired or had been revoked. 
+For active names it means they are sorted by expiration height.
+
+Without these parameters, the endpoints return results ordered as if `by=deactivation` and `direction=backward` were provided.
 
 The parameter `limit` (by default = 10) is optional, and limits the number of elements in the response.
 
@@ -2314,18 +2317,18 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/names?limit=2" | jq '.'
       "status": "name"
     }
   ],
-  "next": "/v2/names?by=expiration&cursor=703645-jiangjiajia.chain&direction=backward&expand=false&limit=2",
+  "next": "/v2/names?by=deactivation&cursor=703645-jiangjiajia.chain&direction=backward&expand=false&limit=2",
   "prev": null
 }
 ```
 
 #### Inactive names
 
-For demonstration, they are ordered by `expiration` with direction `forward`.
+For demonstration, they are ordered by `deactivation` with direction `forward`.
 This means, we list from oldest to newest expired names.
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/names/inactive?by=expiration&direction=forward&limit=2" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/names/inactive?by=deactivation&direction=forward&limit=2" | jq '.'
 {
   "data": [
     {
@@ -4594,7 +4597,7 @@ The example output would look like:
           ......................................................................
 
 
-          Path: "/names/inactive?by=expiration&direction=forward&limit=1"
+          Path: "/names/inactive?by=deactivation&direction=forward&limit=1"
           Number of requests: 7
           Successful requests: 7
           Failed requests: 0
