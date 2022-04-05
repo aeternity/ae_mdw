@@ -181,7 +181,10 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
                |> json_response(200)
 
       expirations =
-        Enum.map(names, fn %{"info" => %{"expire_height" => expire_height}} -> expire_height end)
+        Enum.map(names, fn %{"info" => %{"expire_height" => expire_height, "revoke" => revoke}} ->
+          revoke_height = if revoke, do: Util.txi_to_gen(revoke)
+          min(revoke_height, expire_height)
+        end)
 
       assert ^limit = length(names)
       assert ^expirations = Enum.sort(expirations)
@@ -190,8 +193,14 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
                conn |> get(next) |> json_response(200)
 
       next_expirations =
-        Enum.map(next_names, fn %{"info" => %{"expire_height" => expire_height}} ->
-          expire_height
+        Enum.map(next_names, fn %{
+                                  "info" => %{
+                                    "expire_height" => expire_height,
+                                    "revoke" => revoke
+                                  }
+                                } ->
+          revoke_height = if revoke, do: Util.txi_to_gen(revoke)
+          min(revoke_height, expire_height)
         end)
 
       assert ^limit = length(next_names)
@@ -669,7 +678,10 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
                |> json_response(200)
 
       expirations =
-        Enum.map(names, fn %{"info" => %{"expire_height" => expire_height}} -> expire_height end)
+        Enum.map(names, fn %{"info" => %{"expire_height" => expire_height, "revoke" => revoke}} ->
+          revoke_height = if revoke, do: Util.txi_to_gen(revoke)
+          min(revoke_height, expire_height)
+        end)
 
       assert ^limit = length(names)
       assert ^expirations = Enum.sort(expirations)
@@ -678,8 +690,14 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
                conn |> get(next) |> json_response(200)
 
       next_expirations =
-        Enum.map(next_names, fn %{"info" => %{"expire_height" => expire_height}} ->
-          expire_height
+        Enum.map(next_names, fn %{
+                                  "info" => %{
+                                    "expire_height" => expire_height,
+                                    "revoke" => revoke
+                                  }
+                                } ->
+          revoke_height = if revoke, do: Util.txi_to_gen(revoke)
+          min(revoke_height, expire_height)
         end)
 
       assert ^limit = length(next_names)
