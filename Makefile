@@ -87,10 +87,6 @@ docker-lint:
 docker-test:
 	$(call docker_execute,./scripts/test.sh)
 
-.PHONY: docker-coveralls
-docker-coveralls:
-	$(call docker_execute,./scripts/coveralls.sh)
-
 .PHONY: docker-dialyzer
 docker-dialyzer:
 	$(call docker_execute,./scripts/dialyzer.sh)
