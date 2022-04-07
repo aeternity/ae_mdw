@@ -79,17 +79,9 @@ help:
 ## DOCKER TARGETS
 ################################################################################
 
-.PHONY: docker-lint
-docker-lint:
-	$(call docker_execute,./scripts/lint.sh)
-
 .PHONY: docker-test
 docker-test:
 	$(call docker_execute,./scripts/test.sh)
-
-.PHONY: docker-coveralls
-docker-coveralls:
-	$(call docker_execute,./scripts/coveralls.sh)
 
 .PHONY: docker-dialyzer
 docker-dialyzer:
