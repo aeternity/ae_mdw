@@ -183,6 +183,15 @@ defmodule Integration.AeMdwWeb.Aex9TokenControllerTest do
       end
     end
 
+    test "returns the empty amounts for aex9 contract without balance", %{conn: conn} do
+      contract_id = "ct_U7whpYJo4xXoXjEpw39mWEPKgKM2kgSZk9em5FLK8Xq2FrRWE"
+
+      assert %{"data" => [], "next" => nil} =
+               conn
+               |> get("/v2/aex9/#{contract_id}/balances")
+               |> json_response(200)
+    end
+
     test "when not an aex9 contract, it returns an error", %{conn: conn} do
       non_existent_id = "ct_y7gojSY8rXW6tztE9Ftqe3kmNrqEXsREiPwGCeG3MJL38jkFo"
       error_msg = "not AEX9 contract: #{non_existent_id}"
