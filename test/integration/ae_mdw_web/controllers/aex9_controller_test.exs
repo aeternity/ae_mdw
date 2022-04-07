@@ -265,6 +265,30 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
         assert is_integer(balance) and balance >= 0
       end)
     end
+
+    test "gets accounts balances for a contract with less than 100 amounts", %{conn: conn} do
+      contract_id = "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA"
+      conn = get(conn, "/aex9/balances/#{contract_id}")
+
+      assert %{
+               "amounts" => amounts,
+               "contract_id" => ^contract_id
+             } = json_response(conn, 200)
+
+      assert is_map(amounts) and map_size(amounts) > 0 and map_size(amounts) < 100
+    end
+
+    test "returns the empty amounts for aex9 contract without balance", %{conn: conn} do
+      contract_id = "ct_U7whpYJo4xXoXjEpw39mWEPKgKM2kgSZk9em5FLK8Xq2FrRWE"
+      conn = get(conn, "/aex9/balances/#{contract_id}")
+
+      assert %{
+               "amounts" => amounts,
+               "contract_id" => ^contract_id
+             } = json_response(conn, 200)
+
+      assert is_map(amounts) and map_size(amounts) == 0
+    end
   end
 
   describe "balance" do

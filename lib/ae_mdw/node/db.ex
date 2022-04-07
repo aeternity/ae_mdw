@@ -22,9 +22,23 @@ defmodule AeMdw.Node.Db do
     {:aec_db.get_block(kb_hash), get_micro_blocks(height)}
   end
 
+  @spec get_blocks(Blocks.block_hash(), Blocks.block_hash()) :: tuple()
+  def get_blocks(kb_hash, next_kb_hash) do
+    {:aec_db.get_block(kb_hash), get_micro_blocks(next_kb_hash)}
+  end
+
   @spec get_micro_blocks(integer()) :: list()
   def get_micro_blocks(height) when is_integer(height),
     do: do_get_micro_blocks(Model.block(read_block!({height + 1, -1}), :hash))
+
+  @spec get_micro_blocks(Blocks.block_hash()) :: list()
+  def get_micro_blocks(next_kb_hash) do
+    next_kb_hash
+    |> :aec_db.get_header()
+    |> :aec_headers.prev_hash()
+    |> Stream.unfold(&micro_block_walker/1)
+    |> Enum.reverse()
+  end
 
   @spec micro_block_walker(binary()) :: tuple() | nil
   def micro_block_walker(hash) do
@@ -34,10 +48,30 @@ defmodule AeMdw.Node.Db do
     else
       :key -> nil
     end
+
+  @spec get_next_hash(Blocks.block_hash(), Blocks.mbi()) :: Blocks.block_hash()
+  def get_next_hash(next_kb_hash, mbi) do
+    next_kb_hash
+    |> get_micro_blocks()
+    |> Enum.reduce_while(0, fn mblock, index ->
+      if index == mbi + 1 do
+        ok_mb_hash =
+          mblock
+          |> :aec_blocks.to_micro_header()
+          |> :aec_headers.hash_header()
+
+        {:halt, ok_mb_hash}
+      else
+        {:cont, index + 1}
+      end
+    end)
+    |> case do
+      {:ok, mb_hash} -> mb_hash
+      _mb_count -> next_kb_hash
+    end
   end
 
   @spec get_tx_data(binary()) :: tuple()
-
   def get_tx_data(<<_::256>> = tx_hash) do
     {block_hash, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
     {type, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
