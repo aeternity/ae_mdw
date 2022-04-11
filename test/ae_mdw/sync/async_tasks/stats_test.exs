@@ -28,7 +28,7 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
           ],
           fn ct_id ->
             ct_pk = AeMdw.Validate.id!(ct_id)
-            index = {System.system_time(), :update_aex9_presence}
+            index = {System.system_time(), :update_aex9_state}
             Model.async_tasks(index: index, args: [ct_pk])
           end
         )

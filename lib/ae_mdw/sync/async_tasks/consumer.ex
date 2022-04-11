@@ -10,7 +10,7 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   alias AeMdw.Sync.AsyncTasks.Producer
   alias AeMdw.Sync.AsyncTasks.TaskSupervisor
   alias AeMdw.Sync.AsyncTasks.DeriveAex9Presence
-  alias AeMdw.Sync.AsyncTasks.UpdateAex9Presence
+  alias AeMdw.Sync.AsyncTasks.UpdateAex9State
 
   require Model
   require Logger
@@ -23,7 +23,7 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
 
   @type_mod %{
     derive_aex9_presence: DeriveAex9Presence,
-    update_aex9_presence: UpdateAex9Presence
+    update_aex9_state: UpdateAex9State
   }
 
   # @max_retries 2

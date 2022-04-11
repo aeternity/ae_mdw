@@ -14,7 +14,7 @@ defmodule Integration.AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
   require Ex2ms
   require Model
 
-  @task_type :update_aex9_presence
+  @task_type :update_aex9_state
   @contract_pk Validate.id!("ct_2bwK4mxEe3y9SazQRPXE8NdXikSTqF2T9FhNrawRzFA21yacTo")
   @account_pk Validate.id!("ak_2CuCtmoExsuW7iG5BbRAoncSZAoZt8Abu21qrPUhqfFNin75iL")
 
