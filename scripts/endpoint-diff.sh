@@ -6,6 +6,8 @@ URL_2="${2:-http://localhost:4000/}"
 ERROR=0
 SUCCESS=0
 
+mkdir -p /tmp
+
 echo "Diffing $URL_1 and $URL_2 ..."
 
 while read LINE; do
@@ -17,7 +19,7 @@ while read LINE; do
     curl -so '.endpoint-diff.json1.tmp' "$URL_1$ROUTE"
     curl -so '.endpoint-diff.json2.tmp' "$URL_2$ROUTE"
 
-    if diff .endpoint-diff.json1.tmp .endpoint-diff.json2.tmp; then
+    if diff .endpoint-diff.json1.tmp .endpoint-diff.json2.tmp >>/tmp/endpoint-diff.output; then
         ((SUCCESS=SUCCESS + 1))
     else
         ((ERROR=ERROR + 1))
