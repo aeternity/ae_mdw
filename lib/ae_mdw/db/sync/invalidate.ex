@@ -39,6 +39,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
     aex9_transfer_key_dels = aex9_transfer_key_dels(from_txi)
     aex9_account_presence_key_dels = aex9_account_presence_key_dels(from_txi)
     aex9_account_presence_key_writes = aex9_account_presence_key_writes(from_txi)
+    aex9_balance_key_dels = aex9_balance_key_dels(fork_height)
 
     int_contract_call_key_dels = int_contract_call_key_dels(from_txi)
     int_transfer_tx_key_dels = int_transfer_tx_key_dels(prev_kbi)
@@ -55,6 +56,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
       DeleteKeysMutation.new(aex9_key_dels),
       DeleteKeysMutation.new(aex9_transfer_key_dels),
       DeleteKeysMutation.new(aex9_account_presence_key_dels),
+      DeleteKeysMutation.new(aex9_balance_key_dels),
       DeleteKeysMutation.new(contract_log_key_dels),
       DeleteKeysMutation.new(contract_call_key_dels),
       DeleteKeysMutation.new(int_contract_call_key_dels),
@@ -292,6 +294,18 @@ defmodule AeMdw.Db.Sync.Invalidate do
     %{
       Model.Aex9AccountPresence => aex9_presence_keys,
       Model.IdxAex9AccountPresence => idx_aex9_presence_keys
+    }
+  end
+
+  defp aex9_balance_key_dels(height) do
+    aex9_balance_keys =
+      Model.Aex9Balance
+      |> Database.all_keys()
+      |> Stream.map(&Database.fetch!(Model.Aex9Balance, &1))
+      |> Enum.filter(fn Model.aex9_balance(block_index: {kbi, _mbi}) -> kbi >= height end)
+
+    %{
+      Model.Aex9Balance => aex9_balance_keys
     }
   end
 
