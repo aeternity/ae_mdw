@@ -1,4 +1,4 @@
-name: 'Mdw and Node setup'
+name: 'Node setup'
 
 inputs:
   deploy-key:
@@ -7,15 +7,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: erlef/setup-beam@v1
-      with:
-        otp-version: 22.3.4.24
-        elixir-version: 1.10.4
-
-    - name: Get Mdw dependencies
-      shell: bash
-      run: mix deps.get
-
     - name: Setup Node
       shell: bash
       run: |

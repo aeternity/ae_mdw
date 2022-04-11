@@ -38,8 +38,11 @@ jobs:
         with:
           fetch-depth: 0
           
-      - name: Mdw and Node Setup
-        uses: ./.github/actions/mdw-node-setup
+      - name: Mdw Setup
+        uses: ./.github/actions/mdw-setup
+
+      - name: Node Setup
+        uses: ./.github/actions/node-setup
 
       - name: Execute coverage
         run: elixir --sname aeternity@localhost -S mix coveralls
@@ -56,13 +59,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: erlef/setup-beam@v1
-        with:
-          otp-version: 22.3.4.24
-          elixir-version: 1.10.4
-
-      - name: Get dependencies
-        run: mix deps.get
+      - name: Mdw Setup
+        uses: ./.github/actions/mdw-setup
 
       - name: Reset master
         if: ${{ github.ref != 'refs/heads/master' }}
@@ -95,18 +93,15 @@ jobs:
         id: plt-cache
         with:
           path: priv/plts
-          key: plts-v6-${{ hashFiles('mix.lock') }}
+          key: plts-v7-${{ hashFiles('mix.lock') }}
 
-      - name: Common tests setup
-        uses: ./.github/actions/tests-common
-
-      - name: Setup dependencies
-        run: make docker-deps
+      - name: Mdw Setup
+        uses: ./.github/actions/mdw-setup
 
       - name: Create PLTs
         if: steps.plt-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p priv/plts
-          make docker-dialyzer-plt
+          mix dialyzer --plt
 
-      - run: make docker-dialyzer
+      - run: mix dialyzer
