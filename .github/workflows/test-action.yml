@@ -24,27 +24,53 @@ jobs:
       - name: Execute tests
         run: make docker-test
 
+  test-coverage:
+    name: Test coverage
+    runs-on: ubuntu-latest
+    
+    env:
+      MIX_ENV: test
+      NODEROOT: ./node/local
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          
+      - name: Mdw and Node Setup
+        uses: ./.github/actions/mdw-node-setup
+
+      - name: Execute coverage
+        run: elixir --sname aeternity@localhost -S mix coveralls
+          
   lint:
     name: Automated linting
     runs-on: ubuntu-latest
+
+    env:
+      NODEROOT: ./node/local
 
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
 
-      - name: Common tests setup
-        uses: ./.github/actions/tests-common
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: 22.3.4.24
+          elixir-version: 1.10.4
 
-      - name: Setup dependencies
-        run: make docker-deps
+      - name: Get dependencies
+        run: mix deps.get
 
       - name: Reset master
         if: ${{ github.ref != 'refs/heads/master' }}
         run: |
           git branch -f master origin/master
 
-      - run: make docker-lint
+      - run: mix format --check-formatted && mix credo diff master
+
 
   dialyzer:
     name: Dialyzer

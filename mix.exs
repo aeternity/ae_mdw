@@ -83,7 +83,9 @@ defmodule AeMdw.MixProject do
         ]
       ],
       dialyzer: dialyzer(),
+      test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
+        coveralls: :test,
         "test.integration": :test
       ]
     ]
@@ -134,7 +136,8 @@ defmodule AeMdw.MixProject do
       {:phoenix_html, "~> 2.11"},
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
       {:benchee, "~> 1.0.0", only: [:dev]},
-      {:ex_json_schema, "~> 0.7.1"}
+      {:ex_json_schema, "~> 0.7.1"},
+      {:excoveralls, "~> 0.10", only: :test}
     ]
   end
 

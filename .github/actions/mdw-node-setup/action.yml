@@ -1,0 +1,23 @@
+name: 'Mdw and Node setup'
+
+inputs:
+  deploy-key:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - uses: erlef/setup-beam@v1
+      with:
+        otp-version: 22.3.4.24
+        elixir-version: 1.10.4
+
+    - name: Get Mdw dependencies
+      shell: bash
+      run: mix deps.get
+
+    - name: Setup Node
+      shell: bash
+      run: |
+        curl -L https://github.com/aeternity/aeternity/releases/download/v6.4.0/aeternity-v6.4.0-ubuntu-x86_64.tar.gz -o aeternity.tgz \
+        && mkdir -p ${NODEROOT}/rel/aeternity && tar xf aeternity.tgz -C ${NODEROOT}/rel/aeternity && cp -rf ${NODEROOT}/rel/aeternity/lib/ ${NODEROOT}
