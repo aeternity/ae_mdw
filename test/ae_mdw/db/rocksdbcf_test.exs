@@ -55,14 +55,14 @@ defmodule AeMdw.Db.RocksDbCFTest do
     setup :setup_transaction
 
     test "writes only to transaction", %{txn: txn} do
-      txi = new_txi()
+      txi = Enum.random(100_000_000..999_999_999)
       m_tx = Model.tx(index: txi)
       assert :ok = RocksDbCF.put(txn, Model.Tx, m_tx)
       assert :not_found = RocksDbCF.fetch(Model.Tx, txi)
     end
 
     test "writes after commit", %{txn: txn} do
-      txi = new_txi()
+      txi = Enum.random(100_000_000..999_999_999)
       m_tx = Model.tx(index: txi)
       assert :ok = RocksDbCF.put(txn, Model.Tx, m_tx)
       assert :not_found = RocksDbCF.fetch(Model.Tx, txi)
