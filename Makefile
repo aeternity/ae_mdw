@@ -83,10 +83,6 @@ help:
 docker-test:
 	$(call docker_execute,./scripts/test.sh)
 
-.PHONY: docker-dialyzer
-docker-dialyzer:
-	$(call docker_execute,./scripts/dialyzer.sh)
-
 .PHONY: docker-shell
 docker-shell:
 	$(call docker_execute,/bin/bash)
@@ -94,10 +90,6 @@ docker-shell:
 .PHONY: docker-deps
 docker-deps:
 	$(call docker_execute,/bin/bash -c "mix deps.get")
-
-.PHONY: docker-dialyzer-plt
-docker-dialyzer-plt:
-	$(call docker_execute,/bin/bash -c "mix dialyzer --plt")
 
 define docker_execute
 	docker-compose run --rm \
