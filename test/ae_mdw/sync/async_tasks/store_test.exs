@@ -8,7 +8,7 @@ defmodule AeMdw.Sync.AsyncTasks.StoreTest do
   require Model
   require Ex2ms
 
-  @task_type :update_aex9_presence
+  @task_type :update_aex9_state
   @args1 [<<123_456::256>>]
   @args2 [<<123_457::256>>]
 

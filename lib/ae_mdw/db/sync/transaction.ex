@@ -6,7 +6,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Blocks
   alias AeMdw.Contract
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Aex9AccountBalanceMutation
   alias AeMdw.Db.Aex9CreateContractMutation
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.ContractCreateMutation
@@ -187,20 +186,10 @@ defmodule AeMdw.Db.Sync.Transaction do
         create_txi
       )
 
-    aex9_balance_mutation =
-      with :ok <- :aect_call.return_type(call_rec),
-           true <- Contract.is_aex9?(contract_pk),
-           {:ok, method_name, method_args} <- Contract.extract_successful_function(fun_arg_res) do
-        Aex9AccountBalanceMutation.new(method_name, method_args, contract_pk, caller_pk)
-      else
-        _error_or_false -> nil
-      end
-
     Enum.concat([
       child_mutations,
       events_mutations,
       [
-        aex9_balance_mutation,
         ContractCallMutation.new(
           contract_pk,
           caller_pk,

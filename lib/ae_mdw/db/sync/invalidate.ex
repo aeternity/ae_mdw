@@ -2,6 +2,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
   # credo:disable-for-this-file
   alias AeMdw.Blocks
   alias AeMdw.Contract
+  alias AeMdw.Collection
   alias AeMdw.Database
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Db.Format
@@ -12,6 +13,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
   alias AeMdw.Db.OracleInvalidationMutation
   alias AeMdw.Log
   alias AeMdw.Node, as: AE
+  alias AeMdw.Sync.AsyncTasks
   alias AeMdw.Validate
 
   require Model
@@ -39,6 +41,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
     aex9_transfer_key_dels = aex9_transfer_key_dels(from_txi)
     aex9_account_presence_key_dels = aex9_account_presence_key_dels(from_txi)
     aex9_account_presence_key_writes = aex9_account_presence_key_writes(from_txi)
+    aex9_balance_key_dels = aex9_balance_key_dels(fork_height)
 
     int_contract_call_key_dels = int_contract_call_key_dels(from_txi)
     int_transfer_tx_key_dels = int_transfer_tx_key_dels(prev_kbi)
@@ -55,6 +58,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
       DeleteKeysMutation.new(aex9_key_dels),
       DeleteKeysMutation.new(aex9_transfer_key_dels),
       DeleteKeysMutation.new(aex9_account_presence_key_dels),
+      DeleteKeysMutation.new(aex9_balance_key_dels),
       DeleteKeysMutation.new(contract_log_key_dels),
       DeleteKeysMutation.new(contract_call_key_dels),
       DeleteKeysMutation.new(int_contract_call_key_dels),
@@ -62,6 +66,15 @@ defmodule AeMdw.Db.Sync.Invalidate do
       DeleteKeysMutation.new(int_transfer_tx_key_dels),
       UpdateIdsCountsMutation.new(fields_counts)
     ])
+
+    aex9_balance_key_dels
+    |> Enum.map(fn {contract_pk, _account_pk} -> contract_pk end)
+    |> Enum.uniq()
+    |> Enum.each(fn contract_pk ->
+      AsyncTasks.Producer.enqueue(:update_aex9_state, [contract_pk])
+    end)
+
+    AsyncTasks.Producer.commit_enqueued()
 
     # only ets writes
     do_writes(aex9_account_presence_key_writes, &AeMdw.Db.Contract.aex9_presence_cache_write/2)
@@ -293,6 +306,19 @@ defmodule AeMdw.Db.Sync.Invalidate do
       Model.Aex9AccountPresence => aex9_presence_keys,
       Model.IdxAex9AccountPresence => idx_aex9_presence_keys
     }
+  end
+
+  defp aex9_balance_key_dels(height) do
+    aex9_balance_keys =
+      Model.Aex9Balance
+      |> Collection.stream({<<>>, <<>>})
+      |> Stream.filter(fn key ->
+        Model.aex9_balance(block_index: {kbi, _mbi}) = Database.fetch!(Model.Aex9Balance, key)
+        kbi >= height
+      end)
+      |> Enum.to_list()
+
+    %{Model.Aex9Balance => aex9_balance_keys}
   end
 
   # computes records to be written to cache, flushed at microblock boundary
