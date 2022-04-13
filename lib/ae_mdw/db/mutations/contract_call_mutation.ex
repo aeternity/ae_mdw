@@ -68,6 +68,7 @@ defmodule AeMdw.Db.ContractCallMutation do
     with true <- Contract.is_aex9?(contract_pk),
          {:ok, method_name, method_args} <- Contract.extract_successful_function(fun_arg_res),
          false <- Contract.is_non_stateful_aex9_function?(method_name) do
+      # writes already known presence
       update_aex9_presence(
         contract_pk,
         caller_pk,
@@ -77,6 +78,9 @@ defmodule AeMdw.Db.ContractCallMutation do
       )
     end
 
+    # update balance on any call
+    AsyncTasks.Producer.enqueue(:update_aex9_state, [contract_pk])
+
     :ok
   end
 
@@ -84,11 +88,7 @@ defmodule AeMdw.Db.ContractCallMutation do
   # Private functions
   #
   defp update_aex9_presence(contract_pk, caller_pk, txi, method_name, method_args) do
-    updated? = write_aex9_presence(method_name, method_args, contract_pk, caller_pk, txi)
-
-    if not updated? do
-      AsyncTasks.Producer.enqueue(:update_aex9_presence, [contract_pk])
-    end
+    :ok = write_aex9_presence(method_name, method_args, contract_pk, caller_pk, txi)
   end
 
   defp write_aex9_presence(
@@ -99,12 +99,10 @@ defmodule AeMdw.Db.ContractCallMutation do
          txi
        ) do
     DBContract.aex9_write_presence(contract_pk, txi, caller_pk)
-    true
   end
 
   defp write_aex9_presence("swap", [], contract_pk, caller_pk, txi) do
     DBContract.aex9_write_presence(contract_pk, txi, caller_pk)
-    true
   end
 
   defp write_aex9_presence(
@@ -119,7 +117,6 @@ defmodule AeMdw.Db.ContractCallMutation do
        ) do
     to_pk = Validate.id!(to_account_id)
     DBContract.aex9_write_presence(contract_pk, txi, to_pk)
-    true
   end
 
   defp write_aex9_presence(method_name, method_args, contract_pk, caller_pk, txi) do
@@ -127,10 +124,9 @@ defmodule AeMdw.Db.ContractCallMutation do
       {from_pk, to_pk, _value} ->
         DBContract.aex9_write_presence(contract_pk, txi, from_pk)
         DBContract.aex9_write_presence(contract_pk, txi, to_pk)
-        true
 
       nil ->
-        false
+        :ok
     end
   end
 end

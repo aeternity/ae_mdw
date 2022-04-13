@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.Sync.Invalidate do
   # credo:disable-for-this-file
   alias AeMdw.Contract
+  alias AeMdw.Collection
   alias AeMdw.Database
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Db.Format
@@ -11,6 +12,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
   alias AeMdw.Db.OracleInvalidationMutation
   alias AeMdw.Log
   alias AeMdw.Node, as: AE
+  alias AeMdw.Sync.AsyncTasks
   alias AeMdw.Validate
 
   require Model
@@ -24,51 +26,56 @@ defmodule AeMdw.Db.Sync.Invalidate do
     prev_kbi = fork_height - 1
     from_txi = Model.block(read_block!({prev_kbi, -1}), :tx_index)
 
-    # else: wasn't synced up to that txi, nothing to do
-    if is_integer(from_txi) && from_txi >= 0 do
-      Log.info("invalidating from tx #{from_txi} at generation #{prev_kbi}")
-      bi_keys = block_keys_range({prev_kbi, 0})
-      {tx_keys, id_counts} = tx_keys_range(from_txi)
+    Log.info("invalidating from tx #{from_txi} at generation #{prev_kbi}")
+    bi_keys = block_keys_range({prev_kbi, 0})
+    {tx_keys, id_counts} = tx_keys_range(from_txi)
 
-      stat_key_dels = stat_key_dels(prev_kbi)
+    stat_key_dels = stat_key_dels(prev_kbi)
 
-      contract_log_key_dels = contract_log_key_dels(from_txi)
-      contract_call_key_dels = contract_call_key_dels(from_txi)
+    contract_log_key_dels = contract_log_key_dels(from_txi)
+    contract_call_key_dels = contract_call_key_dels(from_txi)
 
-      aex9_key_dels = aex9_key_dels(from_txi)
-      aex9_transfer_key_dels = aex9_transfer_key_dels(from_txi)
-      aex9_account_presence_key_dels = aex9_account_presence_key_dels(from_txi)
-      aex9_account_presence_key_writes = aex9_account_presence_key_writes(from_txi)
+    aex9_key_dels = aex9_key_dels(from_txi)
+    aex9_transfer_key_dels = aex9_transfer_key_dels(from_txi)
+    aex9_account_presence_key_dels = aex9_account_presence_key_dels(from_txi)
+    aex9_account_presence_key_writes = aex9_account_presence_key_writes(from_txi)
+    aex9_balance_key_dels = aex9_balance_key_dels(fork_height)
 
-      int_contract_call_key_dels = int_contract_call_key_dels(from_txi)
-      int_transfer_tx_key_dels = int_transfer_tx_key_dels(prev_kbi)
+    int_contract_call_key_dels = int_contract_call_key_dels(from_txi)
+    int_transfer_tx_key_dels = int_transfer_tx_key_dels(prev_kbi)
 
-      blocks_and_txs_keys = Map.merge(bi_keys, tx_keys)
+    blocks_and_txs_keys = Map.merge(bi_keys, tx_keys)
 
-      fields_counts = Map.get(id_counts, Model.IdCount)
+    fields_counts = Map.get(id_counts, Model.IdCount)
 
-      Database.commit([
-        DeleteKeysMutation.new(blocks_and_txs_keys),
-        DeleteKeysMutation.new(stat_key_dels),
-        NameInvalidationMutation.new(fork_height - 1),
-        OracleInvalidationMutation.new(fork_height - 1),
-        DeleteKeysMutation.new(aex9_key_dels),
-        DeleteKeysMutation.new(aex9_transfer_key_dels),
-        DeleteKeysMutation.new(aex9_account_presence_key_dels),
-        DeleteKeysMutation.new(contract_log_key_dels),
-        DeleteKeysMutation.new(contract_call_key_dels),
-        DeleteKeysMutation.new(int_contract_call_key_dels),
-        DeleteKeysMutation.new(int_transfer_tx_key_dels),
-        DeleteKeysMutation.new(int_transfer_tx_key_dels),
-        UpdateIdsCountsMutation.new(fields_counts)
-      ])
+    Database.commit([
+      DeleteKeysMutation.new(blocks_and_txs_keys),
+      DeleteKeysMutation.new(stat_key_dels),
+      NameInvalidationMutation.new(fork_height - 1),
+      OracleInvalidationMutation.new(fork_height - 1),
+      DeleteKeysMutation.new(aex9_key_dels),
+      DeleteKeysMutation.new(aex9_transfer_key_dels),
+      DeleteKeysMutation.new(aex9_account_presence_key_dels),
+      DeleteKeysMutation.new(aex9_balance_key_dels),
+      DeleteKeysMutation.new(contract_log_key_dels),
+      DeleteKeysMutation.new(contract_call_key_dels),
+      DeleteKeysMutation.new(int_contract_call_key_dels),
+      DeleteKeysMutation.new(int_transfer_tx_key_dels),
+      DeleteKeysMutation.new(int_transfer_tx_key_dels),
+      UpdateIdsCountsMutation.new(fields_counts)
+    ])
 
-      # only ets writes
-      do_writes(
-        aex9_account_presence_key_writes,
-        &AeMdw.Db.Contract.aex9_presence_cache_write/2
-      )
-    end
+    aex9_balance_key_dels
+    |> Enum.map(fn {contract_pk, _account_pk} -> contract_pk end)
+    |> Enum.uniq()
+    |> Enum.each(fn contract_pk ->
+      AsyncTasks.Producer.enqueue(:update_aex9_state, [contract_pk])
+    end)
+
+    AsyncTasks.Producer.commit_enqueued()
+
+    # only ets writes
+    do_writes(aex9_account_presence_key_writes, &AeMdw.Db.Contract.aex9_presence_cache_write/2)
   end
 
   ################################################################################
@@ -297,6 +304,19 @@ defmodule AeMdw.Db.Sync.Invalidate do
       Model.Aex9AccountPresence => aex9_presence_keys,
       Model.IdxAex9AccountPresence => idx_aex9_presence_keys
     }
+  end
+
+  defp aex9_balance_key_dels(height) do
+    aex9_balance_keys =
+      Model.Aex9Balance
+      |> Collection.stream({<<>>, <<>>})
+      |> Stream.filter(fn key ->
+        Model.aex9_balance(block_index: {kbi, _mbi}) = Database.fetch!(Model.Aex9Balance, key)
+        kbi >= height
+      end)
+      |> Enum.to_list()
+
+    %{Model.Aex9Balance => aex9_balance_keys}
   end
 
   # computes records to be written to cache, flushed at microblock boundary
