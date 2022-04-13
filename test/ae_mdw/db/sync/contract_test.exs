@@ -4,17 +4,20 @@ defmodule AeMdw.Db.Sync.ContractTest do
   alias AeMdw.Db.Model
 
   alias AeMdw.Db.Aex9CreateContractMutation
+  alias AeMdw.Contract
   alias AeMdw.Db.IntCallsMutation
   alias AeMdw.Db.Sync.Contract, as: SyncContract
-  alias AeMdw.Contract
+  alias AeMdw.Db.NameTransferMutation
+  alias AeMdw.Db.NameUpdateMutation
   alias AeMdw.Node
   alias AeMdw.Validate
 
+  import AeMdw.Node.ContractEventsFixtures
   import Mock
 
   require Model
 
-  describe "events/3" do
+  describe "events_mutations/4" do
     test "it creates an internal call for each event that's not Chain.create/clone" do
       call_txi = 3
 
@@ -143,6 +146,50 @@ defmodule AeMdw.Db.Sync.ContractTest do
                  _other -> false
                end)
       end
+    end
+
+    test "creates name transfer mutation" do
+      block_index = {262_167, 0}
+      call_txi = 11_684_918
+
+      event_mutations =
+        "AENS.transfer"
+        |> contract_events()
+        |> SyncContract.events_mutations(block_index, <<>>, call_txi, <<>>, -1)
+        |> List.flatten()
+
+      assert Enum.any?(event_mutations, fn
+               %NameTransferMutation{
+                 txi: ^call_txi,
+                 block_index: ^block_index
+               } ->
+                 true
+
+               %{} ->
+                 false
+             end)
+    end
+
+    test "creates name update mutation" do
+      block_index = {443_440, 0}
+      call_txi = 23_198_023
+
+      event_mutations =
+        "AENS.update"
+        |> contract_events()
+        |> SyncContract.events_mutations(block_index, <<>>, call_txi, <<>>, -1)
+        |> List.flatten()
+
+      assert Enum.any?(event_mutations, fn
+               %NameUpdateMutation{
+                 txi: ^call_txi,
+                 block_index: ^block_index
+               } ->
+                 true
+
+               %{} ->
+                 false
+             end)
     end
   end
 end
