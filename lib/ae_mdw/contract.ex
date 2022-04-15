@@ -376,7 +376,7 @@ defmodule AeMdw.Contract do
     |> Map.put("args", contract_init_args(contract_pk, tx_rec))
     |> Map.update("log", [], &stringfy_log_topics/1)
     |> Map.put("compiler_version", compiler_vsn)
-    |> Map.put("source_hash", Base.encode64(source_hash))
+    |> Map.put("source_hash", source_hash && Base.encode64(source_hash))
   end
 
   @spec stringfy_log_topics([map()]) :: [map()]
