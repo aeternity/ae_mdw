@@ -34,7 +34,6 @@ defmodule AeMdw.Db.ContractCreateMutation do
         },
         txn
       ) do
-    AeMdw.Ets.inc(:stat_sync_cache, :contracts_created)
     DBContract.logs_write(txn, txi, txi, call_rec)
   end
 end

@@ -24,7 +24,6 @@ defmodule Integration.AeMdw.Db.Aex9CreateContractMutationTest do
     tx_hash = Validate.id!("th_2c6Nipg2ijrpyS4UXWsE1Fd7t5cNtYJqYT3ecj3EAFgdtB1Gw9")
     {block_hash, :contract_call_tx, _signed_tx, tx} = NodeDb.get_tx_data(tx_hash)
 
-    <<caller_pk::binary-32>> = :aect_call_tx.caller_pubkey(tx)
     ^contract_pk = :aect_call_tx.contract_pubkey(tx)
 
     {fun_arg_res, _call_rec} =
@@ -33,7 +32,6 @@ defmodule Integration.AeMdw.Db.Aex9CreateContractMutationTest do
     child_mutations =
       Sync.Contract.child_contract_mutations(
         fun_arg_res,
-        caller_pk,
         {485_061, 76},
         txi,
         tx_hash

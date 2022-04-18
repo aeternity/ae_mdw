@@ -30,8 +30,8 @@ defmodule AeMdw.Db.Contract do
   @typep pubkey :: Db.pubkey()
   @typep transaction :: Database.transaction()
 
-  @spec aex9_creation_write(transaction(), tuple(), pubkey(), pubkey(), integer()) :: :ok
-  def aex9_creation_write(txn, {name, symbol, decimals}, contract_pk, owner_pk, txi) do
+  @spec aex9_creation_write(transaction(), tuple(), pubkey(), integer()) :: :ok
+  def aex9_creation_write(txn, {name, symbol, decimals}, contract_pk, txi) do
     m_contract = Model.aex9_contract(index: {name, symbol, txi, decimals})
     m_contract_sym = Model.aex9_contract_symbol(index: {symbol, name, txi, decimals})
     m_rev_contract = Model.rev_aex9_contract(index: {txi, name, symbol, decimals})
@@ -40,8 +40,6 @@ defmodule AeMdw.Db.Contract do
     Database.write(txn, Model.Aex9ContractSymbol, m_contract_sym)
     Database.write(txn, Model.RevAex9Contract, m_rev_contract)
     Database.write(txn, Model.Aex9ContractPubkey, m_contract_pk)
-
-    aex9_presence_cache_write({{contract_pk, txi, -1}, owner_pk, -1})
     :ok
   end
 
@@ -346,17 +344,6 @@ defmodule AeMdw.Db.Contract do
     )
   end
 
-  # - {{contract_pk, txi, -1}, owner_pk, -1}
-  # - {{contract_pk, txi, log_idx}, {from_pk, to_pk}, amount}
-  @spec aex9_presence_cache_write({tuple(), pubkey() | {pubkey(), pubkey()}, integer()}) :: true
-  def aex9_presence_cache_write({{contract_pk, txi, i}, pks, amount}),
-    do: aex9_presence_cache_write(:aex9_sync_cache, {{contract_pk, txi, i}, pks, amount})
-
-  @spec aex9_presence_cache_write(atom(), {tuple(), pubkey() | {pubkey(), pubkey()}, integer()}) ::
-          true
-  def aex9_presence_cache_write(ets_tab, {{contract_pk, txi, i}, pks, amount}),
-    do: :ets.insert(ets_tab, {{contract_pk, txi, i}, pks, amount})
-
   @spec int_call_write_mutations(Txs.txi(), Txs.txi(), Txs.txi(), Contract.fname(), tuple()) :: [
           TxnMutation.t()
         ]
@@ -447,7 +434,6 @@ defmodule AeMdw.Db.Contract do
     Database.write(txn, Model.Aex9PairTransfer, m_pair_transfer)
 
     aex9_write_presence(contract_pk, txi, to_pk)
-    aex9_presence_cache_write({{contract_pk, txi, i}, {from_pk, to_pk}, amount})
   end
 
   defp fetch_aex9_balance_or_new(txn, contract_pk, account_pk) do
