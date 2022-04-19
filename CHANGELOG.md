@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.8.1](https://www.github.com/aeternity/ae_mdw/compare/v1.8.0...v1.8.1) (2022-04-19)
+
+
+### Bug Fixes
+
+* enable sync server to receive old :DOWN messages ([#642](https://www.github.com/aeternity/ae_mdw/issues/642)) ([53d716c](https://www.github.com/aeternity/ae_mdw/commit/53d716c9eba327f92d7017cf4cc982722c0df2b6))
+
 ## [1.8.0](https://www.github.com/aeternity/ae_mdw/compare/v1.7.3...v1.8.0) (2022-04-19)
 
 
