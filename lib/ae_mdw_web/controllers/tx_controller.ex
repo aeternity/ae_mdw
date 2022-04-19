@@ -30,7 +30,7 @@ defmodule AeMdwWeb.TxController do
   def tx(conn, %{"hash_or_index" => hash_or_index} = params) do
     case Util.parse_int(hash_or_index) do
       {:ok, _txi} ->
-        txi(conn, Map.put(params, "txi", hash_or_index))
+        txi(conn, Map.put(params, "index", hash_or_index))
 
       :error ->
         with {:ok, tx_hash} <- Validate.id(hash_or_index),
