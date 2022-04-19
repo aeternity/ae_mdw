@@ -1,5 +1,31 @@
 # Changelog
 
+### [1.7.4](https://www.github.com/aeternity/ae_mdw/compare/v1.7.3...v1.7.4) (2022-04-19)
+
+
+### Bug Fixes
+
+* don't display source_hash when invalid compilation info ([#636](https://www.github.com/aeternity/ae_mdw/issues/636)) ([f68fc0f](https://www.github.com/aeternity/ae_mdw/commit/f68fc0f458e0e30d34a95f9491a5081c32b0cb5f)), closes [#635](https://www.github.com/aeternity/ae_mdw/issues/635)
+* fix displaying single txis for v2 ([#637](https://www.github.com/aeternity/ae_mdw/issues/637)) ([2642d24](https://www.github.com/aeternity/ae_mdw/commit/2642d24292ebad327fbf8b85fb0c34728934578d))
+* get next block hash on async task ([#624](https://www.github.com/aeternity/ae_mdw/issues/624)) ([4c5e1b1](https://www.github.com/aeternity/ae_mdw/commit/4c5e1b1e521e8c2535af72f7bae8e849bf564278))
+* update aex9 balance on any call and invalidate it on fork ([#630](https://www.github.com/aeternity/ae_mdw/issues/630)) ([685ba96](https://www.github.com/aeternity/ae_mdw/commit/685ba96fa6e5e811bd844263c015e679fb5217f3))
+
+
+### Testing
+
+* coverage analysis ([#599](https://www.github.com/aeternity/ae_mdw/issues/599)) ([4657cb7](https://www.github.com/aeternity/ae_mdw/commit/4657cb7bf3c64d0b02931e7b41b97f017098e59f))
+* fix intermittent RocksDbCF concurrent error ([#631](https://www.github.com/aeternity/ae_mdw/issues/631)) ([9b844d7](https://www.github.com/aeternity/ae_mdw/commit/9b844d78d0c01850d4c8c5fc4e25fbe16114022a))
+
+
+### CI / CD
+
+* speed up dialyzer without docker ([#632](https://www.github.com/aeternity/ae_mdw/issues/632)) ([8a77729](https://www.github.com/aeternity/ae_mdw/commit/8a77729a27606ee4a923945c041418c5c5cdc3c6))
+
+
+### Miscellaneous
+
+* add diffing script to compare two different environments ([#628](https://www.github.com/aeternity/ae_mdw/issues/628)) ([b238c0f](https://www.github.com/aeternity/ae_mdw/commit/b238c0fe2dd25994e9879a30d71f4dcfb37d47f6))
+
 ### [1.7.3](https://www.github.com/aeternity/ae_mdw/compare/v1.7.2...v1.7.3) (2022-04-05)
 
 
