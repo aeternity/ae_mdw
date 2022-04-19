@@ -3,9 +3,12 @@ defmodule AeMdw.Db.Sync.ContractTest do
 
   alias AeMdw.Db.Model
 
+  alias AeMdw.Contract
+  alias AeMdw.Db.Aex9CreateContractMutation
   alias AeMdw.Db.WriteTxnMutation
-  alias AeMdw.Db.Sync.Contract
+  alias AeMdw.Db.Sync
   alias AeMdw.Node
+  alias AeMdw.Validate
 
   import Mock
 
@@ -44,7 +47,8 @@ defmodule AeMdw.Db.Sync.ContractTest do
         {:aetx, [], [specialize_type: fn _tx -> {:spend_tx, tx_1} end]},
         {Node, [], [tx_ids: fn :spend_tx -> [{:sender_id, 1}] end]}
       ] do
-        mutations = Contract.events_mutations(events, {0, 0}, <<>>, call_txi, <<>>, create_txi)
+        mutations =
+          Sync.Contract.events_mutations(events, {0, 0}, <<>>, call_txi, <<>>, create_txi)
 
         assert mutation_1 in mutations
         assert mutation_2 in mutations
@@ -86,10 +90,68 @@ defmodule AeMdw.Db.Sync.ContractTest do
         {Node, [], [tx_ids: fn :spend_tx -> [{:sender_id, 1}] end]},
         {:aec_spend_tx, [], [recipient_id: fn _tx -> {:id, :account, contract_id} end]}
       ] do
-        mutations = Contract.events_mutations(events, {0, 0}, <<>>, call_txi, <<>>, create_txi)
+        mutations =
+          Sync.Contract.events_mutations(events, {0, 0}, <<>>, call_txi, <<>>, create_txi)
 
         assert mutation_1 in mutations
         assert mutation_2 in mutations
+      end
+    end
+
+    test "create aex9 contract with Chain.clone" do
+      aex9_contract_pk = Validate.id!("ct_2n7xLuQPWWw8Yj8yXPyrhZz3nucu2Cpjg7FxnoTmuVTgGAsUbJ")
+
+      tx_events = [
+        {{:internal_call_tx, "Chain.clone"},
+         %{
+           info: :error,
+           tx_hash:
+             <<50, 175, 183, 105, 50, 158, 138, 149, 125, 12, 47, 89, 117, 207, 2, 97, 50, 90,
+               155, 225, 217, 103, 11, 202, 211, 247, 57, 189, 103, 224, 171, 230>>,
+           type: :contract_call_tx
+         }},
+        {{:internal_call_tx, "Call.amount"},
+         %{
+           info:
+             {:aetx, :spend_tx, :aec_spend_tx, 88,
+              {:spend_tx,
+               {:id, :account,
+                <<119, 188, 109, 120, 250, 56, 247, 180, 131, 241, 75, 129, 38, 118, 119, 224,
+                  142, 113, 227, 78, 233, 147, 100, 188, 163, 26, 145, 253, 121, 183, 62, 80>>},
+               {:id, :account, aex9_contract_pk}, 0, 0, 0, 0, "Call.amount"}},
+           tx_hash:
+             <<50, 175, 183, 105, 50, 158, 138, 149, 125, 12, 47, 89, 117, 207, 2, 97, 50, 90,
+               155, 225, 217, 103, 11, 202, 211, 247, 57, 189, 103, 224, 171, 230>>,
+           type: :contract_call_tx
+         }}
+      ]
+
+      with_mocks [
+        {Contract, [],
+         [
+           is_aex9?: fn ct_pk -> ct_pk == aex9_contract_pk end,
+           aex9_meta_info: fn ct_pk ->
+             if ct_pk == aex9_contract_pk,
+               do: {:ok, {"TestAEX9-A vs Wrapped Aeternity", "TAEX9-A/WAE", 18}}
+           end
+         ]}
+      ] do
+        mutations =
+          Sync.Contract.events_mutations(
+            tx_events,
+            {554_178, 13},
+            <<1::256>>,
+            25_866_736,
+            <<2::256>>,
+            25_866_736
+          )
+
+        assert mutations
+               |> List.flatten()
+               |> Enum.any?(fn
+                 %Aex9CreateContractMutation{} -> true
+                 _other -> false
+               end)
       end
     end
   end

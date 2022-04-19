@@ -48,6 +48,7 @@ defmodule AeMdw.Node.Db do
     else
       :key -> nil
     end
+  end
 
   @spec get_next_hash(Blocks.block_hash(), Blocks.mbi()) :: Blocks.block_hash()
   def get_next_hash(next_kb_hash, mbi) do

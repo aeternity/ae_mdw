@@ -217,8 +217,6 @@ defmodule AeMdw.Application do
     :ets.new(:tx_sync_cache, [:named_table, :ordered_set, :public])
     :ets.new(:name_sync_cache, [:named_table, :ordered_set, :public])
     :ets.new(:oracle_sync_cache, [:named_table, :ordered_set, :public])
-    :ets.new(:aex9_sync_cache, [:named_table, :ordered_set, :public])
-    :ets.new(:derive_aex9_presence_cache, [:named_table, :duplicate_bag, :public])
     :ets.new(:ct_create_sync_cache, [:named_table, :ordered_set, :public])
     :ets.new(:stat_sync_cache, [:named_table, :ordered_set, :public])
 
