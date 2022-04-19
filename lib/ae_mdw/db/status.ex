@@ -5,6 +5,7 @@ defmodule AeMdw.Db.Status do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Util
   alias AeMdw.Sync.AsyncTasks.Stats
+  alias AeMdw.Sync.Server
 
   require Model
 
@@ -14,7 +15,7 @@ defmodule AeMdw.Db.Status do
     {node_syncing?, node_progress} = :aec_sync.sync_progress()
     node_height = :aec_blocks.height(top_kb)
     {mdw_tx_index, mdw_height} = safe_mdw_tx_index_and_height()
-    mdw_syncing? = is_pid(Process.whereis(AeMdw.Sync.Server))
+    mdw_syncing? = Server.syncing?()
     {:ok, version} = :application.get_key(:ae_mdw, :vsn)
     async_tasks_counters = Stats.counters()
 
