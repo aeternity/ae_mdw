@@ -124,6 +124,8 @@ defmodule AeMdw.Sync.Server do
     {:noreply, process_state(%__MODULE__{s | syncing?: false, sync_pid_ref: nil})}
   end
 
+  def handle_info(_msg, state), do: {:noreply, state}
+
   defp process_state(
          %__MODULE__{
            current_height: current_height,
