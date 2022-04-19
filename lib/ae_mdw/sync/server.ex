@@ -15,10 +15,12 @@ defmodule AeMdw.Sync.Server do
 
   use GenServer
 
-  defstruct [:sync_pid, :fork_height, :current_height]
+  defstruct [:sync_pid_ref, :fork_height, :current_height, :restarts, :syncing?]
 
   @unsynced_gens 1
   @max_blocks_sync 600
+  @max_restarts 5
+  @retry_time 3_600_000
 
   @spec start_link(GenServer.options()) :: GenServer.on_start()
   def start_link(_opts),
@@ -27,11 +29,19 @@ defmodule AeMdw.Sync.Server do
   @spec start_sync() :: :ok
   def start_sync, do: GenServer.cast(__MODULE__, :start_sync)
 
+  @spec syncing?() :: boolean()
+  def syncing?, do: GenServer.call(__MODULE__, :syncing?)
+
   @impl true
   def init([]) do
     current_height = Block.synced_height()
 
-    {:ok, %__MODULE__{current_height: current_height}}
+    {:ok, %__MODULE__{current_height: current_height, restarts: 0, syncing?: false}}
+  end
+
+  @impl true
+  def handle_call(:syncing?, _from, %__MODULE__{syncing?: syncing?} = state) do
+    {:reply, syncing?, state}
   end
 
   @impl true
@@ -39,11 +49,11 @@ defmodule AeMdw.Sync.Server do
     :aec_events.subscribe(:chain)
     :aec_events.subscribe(:top_changed)
 
-    {:noreply, process_state(state)}
+    {:noreply, process_state(%__MODULE__{state | syncing?: true, restarts: 0})}
   end
 
   def handle_cast({:done, height}, state) do
-    new_state = process_state(%__MODULE__{state | current_height: height, sync_pid: nil})
+    new_state = process_state(%__MODULE__{state | current_height: height, sync_pid_ref: nil})
 
     {:noreply, new_state}
   end
@@ -85,8 +95,42 @@ defmodule AeMdw.Sync.Server do
   def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :micro}}}, s),
     do: {:noreply, s}
 
+  def handle_info(
+        {:DOWN, ref, :process, pid, reason},
+        %__MODULE__{sync_pid_ref: {pid, ref}, restarts: restarts} = s
+      )
+      when restarts < @max_restarts do
+    Log.info("Sync.Server error: #{inspect(reason)}")
+
+    current_height = Block.synced_height()
+
+    {:noreply,
+     process_state(%__MODULE__{
+       s
+       | restarts: restarts + 1,
+         sync_pid_ref: nil,
+         current_height: current_height
+     })}
+  end
+
+  def handle_info({:DOWN, ref, :process, pid, reason}, %__MODULE__{sync_pid_ref: {pid, ref}} = s) do
+    Log.info("Sync.Server error: #{inspect(reason)}. Stopping..")
+
+    :aec_events.unsubscribe(:chain)
+    :aec_events.unsubscribe(:top_changed)
+
+    :timer.apply_after(@retry_time, __MODULE__, :start_sync, [])
+
+    {:noreply, process_state(%__MODULE__{s | syncing?: false, sync_pid_ref: nil})}
+  end
+
   defp process_state(
-         %__MODULE__{current_height: current_height, sync_pid: nil, fork_height: fork_height} = s
+         %__MODULE__{
+           current_height: current_height,
+           sync_pid_ref: nil,
+           fork_height: fork_height,
+           syncing?: true
+         } = s
        ) do
     top_height = height() - @unsynced_gens
 
@@ -102,13 +146,15 @@ defmodule AeMdw.Sync.Server do
           nil
       end
 
-    %__MODULE__{s | sync_pid: sync_pid, fork_height: nil}
+    sync_pid_ref = {sync_pid, Process.monitor(sync_pid)}
+
+    %__MODULE__{s | sync_pid_ref: sync_pid_ref, fork_height: nil}
   end
 
   defp process_state(s), do: s
 
   defp spawn_sync(from_height, to_height) do
-    spawn_link(fn ->
+    spawn(fn ->
       Block.sync(from_height, to_height)
 
       GenServer.cast(__MODULE__, {:done, to_height})
@@ -116,7 +162,7 @@ defmodule AeMdw.Sync.Server do
   end
 
   defp spawn_invalidate(height) do
-    spawn_link(fn ->
+    spawn(fn ->
       Log.info("invalidation #{height}")
       Invalidate.invalidate(height)
 
