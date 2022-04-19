@@ -6,7 +6,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Blocks
   alias AeMdw.Contract
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Aex9CreateContractMutation
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.ContractCreateMutation
   alias AeMdw.Db.Model
@@ -110,40 +109,33 @@ defmodule AeMdw.Db.Sync.Transaction do
          tx_events: tx_events
        }) do
     contract_pk = :aect_create_tx.contract_pubkey(tx)
-    owner_pk = :aect_create_tx.owner_pubkey(tx)
 
     :ets.insert(:ct_create_sync_cache, {contract_pk, txi})
+    AeMdw.Ets.inc(:stat_sync_cache, :contracts_created)
 
     mutations = Origin.origin_mutations(:contract_create_tx, nil, contract_pk, txi, tx_hash)
 
-    case Contract.get_info(contract_pk) do
-      {:ok, {type_info, _compiler_vsn, _source_hash}} ->
-        call_rec = Contract.get_init_call_rec(tx, block_hash)
+    if Contract.is_contract?(contract_pk) do
+      call_rec = Contract.get_init_call_rec(tx, block_hash)
 
-        aex9_create_contract_mutation =
-          with :ok <- :aect_call.return_type(call_rec),
-               true <- Contract.is_aex9?(type_info),
-               {:ok, aex9_meta_info} <- Contract.aex9_meta_info(contract_pk) do
-            Aex9CreateContractMutation.new(
-              contract_pk,
-              aex9_meta_info,
-              owner_pk,
-              block_index,
-              txi
-            )
-          else
-            _failed -> nil
-          end
+      events_mutations =
+        SyncContract.events_mutations(tx_events, block_index, block_hash, txi, tx_hash, txi)
 
-        mutations ++
-          SyncContract.events_mutations(tx_events, block_index, block_hash, txi, tx_hash, txi) ++
-          [
-            aex9_create_contract_mutation,
-            ContractCreateMutation.new(txi, call_rec)
-          ]
+      aex9_create_contract_mutation =
+        if :ok == :aect_call.return_type(call_rec) do
+          SyncContract.aex9_create_contract_mutation(contract_pk, block_index, txi)
+        end
 
-      {:error, _reason} ->
-        mutations
+      Enum.concat([
+        mutations,
+        events_mutations,
+        [
+          aex9_create_contract_mutation,
+          ContractCreateMutation.new(txi, call_rec)
+        ]
+      ])
+    else
+      mutations
     end
   end
 
@@ -167,7 +159,6 @@ defmodule AeMdw.Db.Sync.Transaction do
       if :aect_call.return_type(call_rec) == :ok do
         SyncContract.child_contract_mutations(
           fun_arg_res,
-          caller_pk,
           block_index,
           txi,
           tx_hash

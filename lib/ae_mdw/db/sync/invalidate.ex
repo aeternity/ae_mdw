@@ -1,10 +1,8 @@
 defmodule AeMdw.Db.Sync.Invalidate do
   # credo:disable-for-this-file
   alias AeMdw.Blocks
-  alias AeMdw.Contract
   alias AeMdw.Collection
   alias AeMdw.Database
-  alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.UpdateIdsCountsMutation
@@ -40,7 +38,6 @@ defmodule AeMdw.Db.Sync.Invalidate do
     aex9_key_dels = aex9_key_dels(from_txi)
     aex9_transfer_key_dels = aex9_transfer_key_dels(from_txi)
     aex9_account_presence_key_dels = aex9_account_presence_key_dels(from_txi)
-    aex9_account_presence_key_writes = aex9_account_presence_key_writes(from_txi)
     aex9_balance_key_dels = aex9_balance_key_dels(fork_height)
 
     int_contract_call_key_dels = int_contract_call_key_dels(from_txi)
@@ -75,9 +72,6 @@ defmodule AeMdw.Db.Sync.Invalidate do
     end)
 
     AsyncTasks.Producer.commit_enqueued()
-
-    # only ets writes
-    do_writes(aex9_account_presence_key_writes, &AeMdw.Db.Contract.aex9_presence_cache_write/2)
   end
 
   ################################################################################
@@ -319,51 +313,6 @@ defmodule AeMdw.Db.Sync.Invalidate do
       |> Enum.to_list()
 
     %{Model.Aex9Balance => aex9_balance_keys}
-  end
-
-  # computes records to be written to cache, flushed at microblock boundary
-  def aex9_account_presence_key_writes(from_txi) do
-    bi = Model.tx(read_tx!(from_txi), :block_index)
-    start_txi = Model.block(read_block!(bi), :tx_index)
-    end_txi = from_txi - 1
-
-    if start_txi <= end_txi do
-      scope = {:txi, start_txi..end_txi}
-
-      creates =
-        scope
-        |> DBS.map(:raw, type: :contract_create)
-        |> Stream.map(fn %{} = x ->
-          ct_pk = Validate.id!(x.tx.contract_id)
-
-          if Contract.is_aex9?(ct_pk) do
-            {{ct_pk, x.tx_index, -1}, Validate.id!(x.tx.owner_id), -1}
-          else
-            nil
-          end
-        end)
-        |> Stream.filter(& &1)
-        |> Enum.to_list()
-
-      transfer_evt = AeMdw.Node.aex9_transfer_event_hash()
-
-      contract_calls = fn contract_pk ->
-        scope
-        |> DBS.map(:raw, type: :contract_call, contract_id: contract_pk)
-        |> Enum.flat_map(fn %{tx: %{log: logs}} = x ->
-          idxed_logs = Enum.with_index(logs)
-
-          for {%{topics: [^transfer_evt, from_pk, to_pk, <<amount::256>>]}, i} <- idxed_logs,
-              do: {{contract_pk, x.tx_index, i}, {from_pk, to_pk}, amount}
-        end)
-      end
-
-      calls = Enum.flat_map(creates, fn {{ct_pk, _, _}, _, _} -> contract_calls.(ct_pk) end)
-
-      %{:aex9_sync_cache => creates ++ calls}
-    else
-      %{}
-    end
   end
 
   def contract_log_key_dels(from_txi) do

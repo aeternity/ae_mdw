@@ -66,6 +66,14 @@ defmodule AeMdw.Contract do
   @spec table() :: atom()
   def table(), do: @tab
 
+  @spec is_contract?(DBN.pubkey()) :: boolean()
+  def is_contract?(pubkey) do
+    case EtsCache.get(@tab, pubkey) do
+      {_info, _tm} -> true
+      nil -> match?({:ok, _contract}, :aec_chain.get_contract(pubkey))
+    end
+  end
+
   @spec get_info(DBN.pubkey()) :: {:ok, ct_info()} | {:error, any()}
   def get_info(pubkey) do
     case EtsCache.get(@tab, pubkey) do

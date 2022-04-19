@@ -22,38 +22,24 @@ defmodule AeMdw.Db.Sync.Contract do
 
   require Model
 
+  @type call_record() :: tuple()
+
   @spec child_contract_mutations(
           Contract.fun_arg_res_or_error(),
-          Db.pubkey(),
           Blocks.block_index(),
           Txs.txi(),
           Txs.tx_hash()
         ) :: [TxnMutation.t()]
-  def child_contract_mutations({:error, _any}, _caller_pk, _block_index, _txi, _tx_hash), do: []
+  def child_contract_mutations({:error, _any}, _block_index, _txi, _tx_hash), do: []
 
-  def child_contract_mutations(%{result: fun_result}, caller_pk, block_index, txi, tx_hash) do
+  def child_contract_mutations(%{result: fun_result}, block_index, txi, tx_hash) do
     with %{type: :contract, value: contract_id} <- fun_result,
          {:ok, contract_pk} <- Validate.id(contract_id) do
-      aex9_create_mutation =
-        case Contract.is_aex9?(contract_pk) && Contract.aex9_meta_info(contract_pk) do
-          {:ok, aex9_meta_info} ->
-            Aex9CreateContractMutation.new(
-              contract_pk,
-              aex9_meta_info,
-              caller_pk,
-              block_index,
-              txi
-            )
-
-          _false_or_notfound ->
-            nil
-        end
-
       :ets.insert(:ct_create_sync_cache, {contract_pk, txi})
       AeMdw.Ets.inc(:stat_sync_cache, :contracts_created)
 
       [
-        aex9_create_mutation
+        aex9_create_contract_mutation(contract_pk, block_index, txi)
         | SyncOrigin.origin_mutations(:contract_call_tx, nil, contract_pk, txi, tx_hash)
       ]
     else
@@ -97,7 +83,16 @@ defmodule AeMdw.Db.Sync.Contract do
           AeMdw.Ets.inc(:stat_sync_cache, :contracts_created)
           :ets.insert(:ct_create_sync_cache, {contract_pk, call_txi})
 
-          SyncOrigin.origin_mutations(:contract_call_tx, nil, contract_pk, call_txi, call_tx_hash)
+          [
+            aex9_create_contract_mutation(contract_pk, block_index, call_txi)
+            | SyncOrigin.origin_mutations(
+                :contract_call_tx,
+                nil,
+                contract_pk,
+                call_txi,
+                call_tx_hash
+              )
+          ]
       end)
 
     # Chain.* events don't contain the transaction in the event info, can't be indexed as an internal call
@@ -110,6 +105,23 @@ defmodule AeMdw.Db.Sync.Contract do
 
     chain_mutations ++
       oracle_and_name_mutations(events, block_index, block_hash, call_txi) ++ non_chain_mutations
+  end
+
+  @spec aex9_create_contract_mutation(Db.pubkey(), Blocks.block_index(), Txs.txi()) ::
+          nil | Aex9CreateContractMutation.t()
+  def aex9_create_contract_mutation(contract_pk, block_index, txi) do
+    case Contract.is_aex9?(contract_pk) && Contract.aex9_meta_info(contract_pk) do
+      {:ok, aex9_meta_info} ->
+        Aex9CreateContractMutation.new(
+          contract_pk,
+          aex9_meta_info,
+          block_index,
+          txi
+        )
+
+      _false_or_notfound ->
+        nil
+    end
   end
 
   @spec get_txi!(Db.pubkey()) :: Txs.txi()
