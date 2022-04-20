@@ -29,7 +29,9 @@ defmodule AeMdw.Db.Origin do
     `{:contract_create_tx, nil, pk, txi}`.
   * From the Field table, where the key would be
     `{:contract_call_tx, nil, pk, txi}` (contracts created via `Chain.clone` or
-    `Chain.create`.
+    `Chain.create`).
+  * From the Field table, where the key would be
+    `{:ga_attach_tx, nil, pk, txi}` (GA contracts created via GaAttachTx).
   * From the list of whitelisted contracts that weren't created via contract
     create transactions or via contract calls. These contracts are hard-coded
     and created through core hard-forks. These contracts will have a negative
@@ -38,7 +40,8 @@ defmodule AeMdw.Db.Origin do
   @spec tx_index(creation_txi_locator()) :: {:ok, Txs.txi() | -1} | :not_found
   def tx_index({:contract, pk}) do
     with :error <- field_txi(:contract_create_tx, nil, pk),
-         :error <- field_txi(:contract_call_tx, nil, pk) do
+         :error <- field_txi(:contract_call_tx, nil, pk),
+         :error <- field_txi(:ga_attach_tx, nil, pk) do
       case Enum.find_index(preset_contracts(), &match?(^pk, &1)) do
         nil -> :not_found
         index -> {:ok, -index - 1}

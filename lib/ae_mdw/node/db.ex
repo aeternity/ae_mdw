@@ -27,11 +27,10 @@ defmodule AeMdw.Node.Db do
     {:aec_db.get_block(kb_hash), get_micro_blocks(next_kb_hash)}
   end
 
-  @spec get_micro_blocks(integer()) :: list()
+  @spec get_micro_blocks(integer() | Blocks.block_hash()) :: list()
   def get_micro_blocks(height) when is_integer(height),
     do: do_get_micro_blocks(Model.block(read_block!({height + 1, -1}), :hash))
 
-  @spec get_micro_blocks(Blocks.block_hash()) :: list()
   def get_micro_blocks(next_kb_hash) do
     next_kb_hash
     |> :aec_db.get_header()
