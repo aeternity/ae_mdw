@@ -42,12 +42,13 @@ defmodule AeMdw.Application do
     children = [
       AeMdw.Sync.Watcher,
       AeMdwWeb.Supervisor,
-      AeMdwWeb.Websocket.Supervisor
+      AeMdwWeb.Websocket.Supervisor,
+      Server
     ]
 
     children =
       if Application.fetch_env!(:ae_mdw, :sync) do
-        [AeMdw.Sync.AsyncTasks.Supervisor, Server | children]
+        [AeMdw.Sync.AsyncTasks.Supervisor | children]
       else
         children
       end
@@ -236,7 +237,11 @@ defmodule AeMdw.Application do
   end
 
   def start_phase(:start_sync, _start_type, []) do
-    Server.start_sync()
+    if Application.fetch_env!(:ae_mdw, :sync) do
+      Server.start_sync()
+    end
+
+    :ok
   end
 
   @impl Application
