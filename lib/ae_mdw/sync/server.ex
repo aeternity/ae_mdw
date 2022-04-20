@@ -4,8 +4,15 @@ defmodule AeMdw.Sync.Server do
   invalidations.
 
   Internally keeps track of the generations that have been synced.
+
+  There's 1 valid messages that arrive from core that we handle, plus 1
+  message that we handle internally:
+  * `:top_changed` (new key block added) - If there's a fork, we mark
+    `fork_height` to be the (height - 1) that we need to revert to.
+  * `{:done, height}` - The latest height synced by mdw was updated to.
   """
 
+  alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync.Block
   alias AeMdw.Db.Sync.Invalidate
@@ -22,6 +29,14 @@ defmodule AeMdw.Sync.Server do
   @max_restarts 5
   @retry_time 3_600_000
 
+  @opaque t() :: %__MODULE__{
+            sync_pid_ref: nil | {pid(), reference()},
+            fork_height: Blocks.height() | nil,
+            current_height: Blocks.height() | -1,
+            restarts: non_neg_integer(),
+            syncing?: boolean()
+          }
+
   @spec start_link(GenServer.options()) :: GenServer.on_start()
   def start_link(_opts),
     do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
@@ -34,22 +49,31 @@ defmodule AeMdw.Sync.Server do
 
   @impl true
   def init([]) do
-    current_height = Block.synced_height()
-
-    {:ok, %__MODULE__{current_height: current_height, restarts: 0, syncing?: false}}
+    {:ok, %__MODULE__{restarts: 0, syncing?: false}}
   end
 
   @impl true
+  @spec handle_call(:syncing?, GenServer.from(), t()) :: {:reply, boolean(), t()}
   def handle_call(:syncing?, _from, %__MODULE__{syncing?: syncing?} = state) do
     {:reply, syncing?, state}
   end
 
   @impl true
+  @spec handle_cast(:start_sync, t()) :: {:noreply, t()}
+  @spec handle_cast({:done, Blocks.height()}, t()) :: {:noreply, t()}
   def handle_cast(:start_sync, state) do
     :aec_events.subscribe(:chain)
     :aec_events.subscribe(:top_changed)
 
-    {:noreply, process_state(%__MODULE__{state | syncing?: true, restarts: 0})}
+    current_height = Block.synced_height()
+
+    {:noreply,
+     process_state(%__MODULE__{
+       state
+       | current_height: current_height,
+         syncing?: true,
+         restarts: 0
+     })}
   end
 
   def handle_cast({:done, height}, state) do
@@ -59,6 +83,7 @@ defmodule AeMdw.Sync.Server do
   end
 
   @impl true
+  @spec handle_info(term(), t()) :: {:noreply, t()}
   def handle_info(
         {:gproc_ps_event, :top_changed, %{info: %{block_type: :key, height: height}}},
         %__MODULE__{fork_height: old_fork_height} = s
@@ -126,6 +151,7 @@ defmodule AeMdw.Sync.Server do
 
   def handle_info(_msg, state), do: {:noreply, state}
 
+  @spec process_state(t()) :: t()
   defp process_state(
          %__MODULE__{
            current_height: current_height,
@@ -148,7 +174,7 @@ defmodule AeMdw.Sync.Server do
           nil
       end
 
-    sync_pid_ref = {sync_pid, Process.monitor(sync_pid)}
+    sync_pid_ref = if sync_pid, do: {sync_pid, Process.monitor(sync_pid)}, else: nil
 
     %__MODULE__{s | sync_pid_ref: sync_pid_ref, fork_height: nil}
   end
