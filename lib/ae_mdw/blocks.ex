@@ -50,13 +50,13 @@ defmodule AeMdw.Blocks do
 
     cursor = deserialize_cursor(cursor)
 
-    {range_first, range_last} =
+    range =
       case range do
         nil -> {0, last_gen}
-        {:gen, %Range{first: first, last: last}} -> {max(first, 0), min(last, last_gen)}
+        {:gen, %Range{first: first, last: last}} -> {first, last}
       end
 
-    case Util.build_gen_pagination(cursor, direction, range_first, range_last, limit) do
+    case Util.build_gen_pagination(cursor, direction, range, limit, last_gen) do
       {:ok, prev_cursor, range, next_cursor} ->
         {serialize_cursor(prev_cursor), render_blocks(range, last_gen, sort_mbs?),
          serialize_cursor(next_cursor)}

@@ -228,41 +228,42 @@ defmodule AeMdw.Util do
   @spec build_gen_pagination(
           Blocks.height() | nil,
           Database.direction(),
-          Blocks.height(),
-          Blocks.height(),
-          Database.limit()
+          {Blocks.height(), Blocks.height()},
+          Database.limit(),
+          Blocks.height()
         ) ::
           {:ok, Blocks.height() | nil, Range.t(), Blocks.height() | nil} | :error
 
-  def build_gen_pagination(nil, :forward, range_first, range_last, limit)
-      when range_last - range_first > limit,
-      do: {:ok, nil, range_first..(range_first + limit - 1), range_first + limit}
+  def build_gen_pagination(cursor, direction, {range_first, range_last}, limit, last_gen) do
+    build_gen_pagination(
+      cursor,
+      direction,
+      {max(range_first, 0), min(range_last, last_gen)},
+      limit
+    )
+  end
 
-  def build_gen_pagination(nil, :forward, range_first, range_last, _limit),
-    do: {:ok, nil, range_first..range_last, nil}
+  defp build_gen_pagination(nil, :forward, {range_first, range_last}, limit),
+    do: build_gen_pagination(range_first, :forward, {range_first, range_last}, limit)
 
-  def build_gen_pagination(nil, :backward, range_first, range_last, limit)
-      when range_last - range_first > limit,
-      do: {:ok, nil, range_last..(range_last - limit + 1), range_last - limit}
-
-  def build_gen_pagination(nil, :backward, range_first, range_last, _limit),
-    do: {:ok, nil, range_last..range_first, nil}
-
-  def build_gen_pagination(cursor, :forward, range_first, range_last, limit)
-      when cursor >= range_first and cursor <= range_last do
+  defp build_gen_pagination(cursor, :forward, {range_first, range_last}, limit)
+       when range_first <= cursor and cursor <= range_last do
     next_cursor = if cursor + limit <= range_last, do: cursor + limit
     prev_cursor = if cursor - limit >= range_first, do: cursor - limit
 
     {:ok, prev_cursor, cursor..min(cursor + limit - 1, range_last), next_cursor}
   end
 
-  def build_gen_pagination(cursor, :backward, range_first, range_last, limit)
-      when cursor >= range_first and cursor <= range_last do
+  defp build_gen_pagination(nil, :backward, {range_first, range_last}, limit),
+    do: build_gen_pagination(range_last, :backward, {range_first, range_last}, limit)
+
+  defp build_gen_pagination(cursor, :backward, {range_first, range_last}, limit)
+       when range_first <= cursor and cursor <= range_last do
     next_cursor = if cursor - limit >= range_first, do: cursor - limit
     prev_cursor = if cursor + limit >= range_last, do: cursor + limit
 
     {:ok, prev_cursor, cursor..max(cursor - limit + 1, range_first), next_cursor}
   end
 
-  def build_gen_pagination(_cursor, _direction, _range_first, _range_last, _limit), do: :error
+  defp build_gen_pagination(_cursor, _direction, _range, _limit), do: :error
 end
