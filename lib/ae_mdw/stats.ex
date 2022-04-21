@@ -28,15 +28,15 @@ defmodule AeMdw.Stats do
   def fetch_stats_v1(direction, range, cursor, limit) do
     {:ok, last_gen} = Database.last_key(Model.TotalStat)
 
-    {range_first, range_last} =
+    range =
       case range do
         nil -> {1, last_gen}
-        {:gen, %Range{first: first, last: last}} -> {max(first, 1), min(last, last_gen)}
+        {:gen, %Range{first: first, last: last}} -> {max(first, 1), last}
       end
 
     cursor = deserialize_cursor(cursor)
 
-    case Util.build_gen_pagination(cursor, direction, range_first, range_last, limit) do
+    case Util.build_gen_pagination(cursor, direction, range, limit, last_gen) do
       {:ok, prev_cursor, range, next_cursor} ->
         {serialize_cursor(prev_cursor), render_stats(range), serialize_cursor(next_cursor)}
 
@@ -50,15 +50,15 @@ defmodule AeMdw.Stats do
   def fetch_delta_stats(direction, range, cursor, limit) do
     {:ok, last_gen} = Database.last_key(Model.DeltaStat)
 
-    {range_first, range_last} =
+    range =
       case range do
         nil -> {1, last_gen}
-        {:gen, %Range{first: first, last: last}} -> {max(first, 1), min(last, last_gen)}
+        {:gen, %Range{first: first, last: last}} -> {max(first, 1), last}
       end
 
     cursor = deserialize_cursor(cursor)
 
-    case Util.build_gen_pagination(cursor, direction, range_first, range_last, limit) do
+    case Util.build_gen_pagination(cursor, direction, range, limit, last_gen) do
       {:ok, prev_cursor, range, next_cursor} ->
         {serialize_cursor(prev_cursor), render_delta_stats(range), serialize_cursor(next_cursor)}
 
@@ -72,15 +72,15 @@ defmodule AeMdw.Stats do
   def fetch_total_stats(direction, range, cursor, limit) do
     {:ok, last_gen} = Database.last_key(Model.TotalStat)
 
-    {range_first, range_last} =
+    range =
       case range do
         nil -> {1, last_gen}
-        {:gen, %Range{first: first, last: last}} -> {max(first, 1), min(last, last_gen)}
+        {:gen, %Range{first: first, last: last}} -> {max(first, 1), last}
       end
 
     cursor = deserialize_cursor(cursor)
 
-    case Util.build_gen_pagination(cursor, direction, range_first, range_last, limit) do
+    case Util.build_gen_pagination(cursor, direction, range, limit, last_gen) do
       {:ok, prev_cursor, range, next_cursor} ->
         {serialize_cursor(prev_cursor), render_total_stats(range), serialize_cursor(next_cursor)}
 

@@ -252,6 +252,16 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
                |> get("/v2/deltastats", scope_type: "gen", range: range, limit: 1)
                |> json_response(200)
     end
+
+    test "it returns no results when specifying an non-existent range", %{conn: conn} do
+      invalid_gen = 10_000_000
+      range = "#{invalid_gen}-#{invalid_gen}"
+
+      assert %{"data" => [], "next" => nil, "prev" => nil} =
+               conn
+               |> get("/v2/deltastats", scope: "gen:#{range}")
+               |> json_response(200)
+    end
   end
 
   describe "total_stats" do
