@@ -1,5 +1,19 @@
 # Changelog
 
+### [1.8.2](https://www.github.com/aeternity/ae_mdw/compare/v1.8.1...v1.8.2) (2022-04-22)
+
+
+### Bug Fixes
+
+* allow contract call to GA contract ([#645](https://www.github.com/aeternity/ae_mdw/issues/645)) ([0934873](https://www.github.com/aeternity/ae_mdw/commit/0934873dea9499abbb0aed942693b59248848e9d))
+* handle requests for blocks that don't exist gracefully ([#646](https://www.github.com/aeternity/ae_mdw/issues/646)) ([eebe129](https://www.github.com/aeternity/ae_mdw/commit/eebe129323b9f8a26a887e71db43272c8537f8bf))
+* handle stating server when syncing from scratch ([#647](https://www.github.com/aeternity/ae_mdw/issues/647)) ([54f9d59](https://www.github.com/aeternity/ae_mdw/commit/54f9d596de8825f6b2f70fa7c116826ab5cf0764))
+
+
+### Refactorings
+
+* use declarative state for executing mutations ([#621](https://www.github.com/aeternity/ae_mdw/issues/621)) ([02132ff](https://www.github.com/aeternity/ae_mdw/commit/02132ff03146fd22c194138d293e67f03b28dcd9))
+
 ### [1.8.1](https://www.github.com/aeternity/ae_mdw/compare/v1.8.0...v1.8.1) (2022-04-19)
 
 
