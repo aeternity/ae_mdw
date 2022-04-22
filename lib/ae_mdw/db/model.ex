@@ -102,15 +102,22 @@ defmodule AeMdw.Db.Model do
 
   # auction bid:
   #     index = {plain_name, {block_index, txi}, expire_height = height, owner = pk, prev_bids = []}
-  @auction_bid_defaults [index: {nil, {{nil, nil}, nil}, nil, nil, nil}, unused: nil]
+  @auction_bid_defaults [
+    index: nil,
+    block_index_txi: nil,
+    expire_height: nil,
+    owner: nil,
+    bids: []
+  ]
   defrecord :auction_bid, @auction_bid_defaults
 
-  @type auction_bid_key ::
-          {String.t(), {Blocks.block_index(), Txs.txi()}, Blocks.height(), Db.pubkey(), list()}
   @type auction_bid ::
           record(:auction_bid,
-            index: auction_bid_key(),
-            unused: nil
+            index: Names.plain_name(),
+            block_index_txi: Blocks.block_index_txi(),
+            expire_height: Blocks.height(),
+            owner: pubkey(),
+            bids: [Blocks.block_index_txi()]
           )
 
   # in 3 tables: auction_expiration, name_expiration, inactive_name_expiration

@@ -12,6 +12,7 @@ defmodule AeMdw.Blocks do
   alias AeMdw.Database
   alias AeMdw.Util
   alias AeMdw.Validate
+  alias AeMdw.Txs
 
   require Model
 
@@ -21,6 +22,7 @@ defmodule AeMdw.Blocks do
   @type block_index() :: {height(), mbi() | -1}
   @type txi_pos() :: non_neg_integer() | -1
   @type block_index_txi_pos() :: {height(), txi_pos()}
+  @type block_index_txi() :: {block_index(), Txs.txi()}
   @type key_header() :: term()
   @type block_hash() :: <<_::256>>
 

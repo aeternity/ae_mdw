@@ -211,13 +211,13 @@ defmodule AeMdw.Db.Sync.Name do
       when not is_nil(active_m_name),
       do: diff(invalidate1(:active, active_m_name, new_height))
 
-  def invalidate(_plain_name, nil, nil, {_, {_, _}, _, _, [_ | _]} = auction_bid, new_height),
-    do: diff(invalidate1(:bid, auction_bid, new_height))
+  def invalidate(_plain_name, nil, nil, m_auction_bid, new_height),
+    do: diff(invalidate1(:bid, m_auction_bid, new_height))
 
-  def invalidate(_plain_name, inactive_m_name, nil, auction_bid, new_height)
-      when not is_nil(inactive_m_name) and not is_nil(auction_bid) do
+  def invalidate(_plain_name, inactive_m_name, nil, m_auction_bid, new_height)
+      when not is_nil(inactive_m_name) and not is_nil(m_auction_bid) do
     {dels1, writes1} = invalidate1(:inactive, inactive_m_name, new_height)
-    {dels2, writes2} = invalidate1(:bid, auction_bid, new_height)
+    {dels2, writes2} = invalidate1(:bid, m_auction_bid, new_height)
 
     diff(
       {merge_maps([dels1, dels2], &uniq_merger/3), merge_maps([writes1, writes2], &uniq_merger/3)}

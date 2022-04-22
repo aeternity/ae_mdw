@@ -23,8 +23,6 @@ defmodule AeMdw.Db.NameClaimMutation do
       cache_through_write: 3,
       cache_through_delete: 3,
       cache_through_delete_inactive: 2,
-      cache_through_prev: 2,
-      bid_top_key: 1,
       expire_after: 1
     ]
 
@@ -124,22 +122,33 @@ defmodule AeMdw.Db.NameClaimMutation do
         m_auction_exp = Model.expiration(index: {auction_end, plain_name})
 
         make_m_bid =
-          &Model.auction_bid(index: {plain_name, {block_index, txi}, auction_end, owner_pk, &1})
+          &Model.auction_bid(
+            index: plain_name,
+            block_index_txi: {block_index, txi},
+            expire_height: auction_end,
+            owner: owner_pk,
+            bids: &1
+          )
 
         state3 = IntTransfer.fee(state2, {height, txi}, :spend_name, owner_pk, txi, name_fee)
 
         {m_bid, state4} =
-          case cache_through_prev(Model.AuctionBid, bid_top_key(plain_name)) do
-            :not_found ->
+          case cache_through_read(state, Model.AuctionBid, plain_name) do
+            nil ->
               {make_m_bid.([{block_index, txi}]), state3}
 
             {:ok,
-             {^plain_name, {_, prev_txi}, prev_auction_end, prev_owner, prev_bids} = prev_key} ->
+             Model.auction_bid(
+               block_index_txi: {_bi, prev_txi},
+               expire_height: prev_auction_end,
+               owner: prev_owner,
+               bids: prev_bids
+             )} ->
               %{tx: prev_tx} = read_cached_raw_tx!(prev_txi)
 
               state4 =
                 state3
-                |> cache_through_delete(Model.AuctionBid, prev_key)
+                |> cache_through_delete(Model.AuctionBid, plain_name)
                 |> cache_through_delete(Model.AuctionOwner, {prev_owner, plain_name})
                 |> cache_through_delete(Model.AuctionExpiration, {prev_auction_end, plain_name})
                 |> IntTransfer.fee(

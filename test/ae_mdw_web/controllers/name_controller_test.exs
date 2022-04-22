@@ -50,10 +50,13 @@ defmodule AeMdwWeb.NameControllerTest do
                auction_timeout: 1
              )
            end,
-           fetch: fn Tx, _key ->
-             {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
+           fetch: fn
+             Tx, _key ->
+               {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
+
+             AuctionBid, _key ->
+               :not_found
            end,
-           prev_key: fn AuctionBid, _key -> :none end,
            exists?: fn ActiveNameExpiration, ^next_exp_key -> true end
          ]},
         {Txs, [],
@@ -108,10 +111,13 @@ defmodule AeMdwWeb.NameControllerTest do
                auction_timeout: 1
              )
            end,
-           fetch: fn Tx, _key ->
-             {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
-           end,
-           prev_key: fn AuctionBid, _key -> :none end
+           fetch: fn
+             Tx, _key ->
+               {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
+
+             AuctionBid, _key ->
+               :not_found
+           end
          ]},
         {Txs, [],
          [
@@ -173,10 +179,13 @@ defmodule AeMdwWeb.NameControllerTest do
                auction_timeout: 1
              )
            end,
-           fetch: fn Tx, _key ->
-             {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
-           end,
-           prev_key: fn AuctionBid, _key -> :none end
+           fetch: fn
+             Tx, _key ->
+               {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
+
+             AuctionBid, _key ->
+               :not_found
+           end
          ]},
         {Txs, [],
          [
@@ -227,10 +236,13 @@ defmodule AeMdwWeb.NameControllerTest do
                auction_timeout: 1
              )
            end,
-           fetch: fn Tx, _key ->
-             {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
+           fetch: fn
+             Tx, _key ->
+               {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
+
+             AuctionBid, _key ->
+               :not_found
            end,
-           prev_key: fn AuctionBid, _key -> :none end,
            exists?: fn InactiveNameExpiration, _key -> true end
          ]},
         {Txs, [],
@@ -283,10 +295,13 @@ defmodule AeMdwWeb.NameControllerTest do
                auction_timeout: 1
              )
            end,
-           fetch: fn Tx, _key ->
-             {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
-           end,
-           prev_key: fn AuctionBid, _key -> :none end
+           fetch: fn
+             Tx, _key ->
+               {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
+
+             AuctionBid, _key ->
+               :not_found
+           end
          ]},
         {Txs, [],
          [
@@ -336,10 +351,13 @@ defmodule AeMdwWeb.NameControllerTest do
                auction_timeout: 1
              )
            end,
-           fetch: fn Tx, _key ->
-             {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
-           end,
-           prev_key: fn AuctionBid, _key -> :none end
+           fetch: fn
+             Tx, _key ->
+               {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
+
+             AuctionBid, _key ->
+               :not_found
+           end
          ]},
         {Txs, [],
          [
@@ -386,9 +404,18 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Database, [],
          [
-           fetch: fn InactiveName, ^plain_name -> :not_found end,
-           prev_key: fn AuctionBid, _key ->
-             {:ok, {plain_name, {0, 1}, 0, :owner_pk, [{{2, 3}, 4}]}}
+           fetch: fn
+             InactiveName, ^plain_name ->
+               :not_found
+
+             AuctionBid, ^plain_name ->
+               {:ok,
+                Model.auction_bid(
+                  index: plain_name,
+                  block_index_txi: {{0, 1}, 0},
+                  expire_height: 0,
+                  bids: [{{2, 3}, 4}]
+                )}
            end,
            next_key: fn
              AuctionExpiration, _dir, _key -> {:ok, expiration_key}
@@ -427,9 +454,18 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Database, [],
          [
-           fetch: fn InactiveName, ^plain_name -> :not_found end,
-           prev_key: fn AuctionBid, _key ->
-             {:ok, {plain_name, {0, 1}, 0, :owner_pk, [{{2, 3}, 4}]}}
+           fetch: fn
+             InactiveName, ^plain_name ->
+               :not_found
+
+             AuctionBid, ^plain_name ->
+               {:ok,
+                Model.auction_bid(
+                  index: plain_name,
+                  block_index_txi: {{0, 1}, 3},
+                  expire_height: 0,
+                  bids: [{{2, 3}, 4}]
+                )}
            end,
            next_key: fn
              AuctionBid, _dir, _key ->
@@ -468,9 +504,18 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Database, [],
          [
-           fetch: fn InactiveName, ^plain_name -> :not_found end,
-           prev_key: fn AuctionBid, _key ->
-             {:ok, {plain_name, {0, 1}, 0, :owner_pk, [{{2, 3}, 4}]}}
+           fetch: fn
+             InactiveName, ^plain_name ->
+               :not_found
+
+             AuctionBid, ^plain_name ->
+               {:ok,
+                Model.auction_bid(
+                  index: plain_name,
+                  block_index_txi: {{0, 1}, 0},
+                  expire_height: 30,
+                  bids: [{{2, 3}, 4}]
+                )}
            end,
            next_key: fn AuctionExpiration, _dir, _key ->
              {:ok, expiration_key}
@@ -545,7 +590,7 @@ defmodule AeMdwWeb.NameControllerTest do
                auction_timeout: 1
              )
            end,
-           prev_key: fn AuctionBid, _key -> :none end
+           fetch: fn AuctionBid, _key -> :not_found end
          ]},
         {Txs, [],
          [
@@ -596,7 +641,7 @@ defmodule AeMdwWeb.NameControllerTest do
                auction_timeout: 1
              )
            end,
-           prev_key: fn AuctionBid, _key -> :none end,
+           fetch: fn AuctionBid, _key -> :not_found end,
            last_key: fn InactiveNameExpiration, nil -> nil end
          ]},
         {Txs, [],
@@ -644,7 +689,7 @@ defmodule AeMdwWeb.NameControllerTest do
                auction_timeout: 1
              )
            end,
-           prev_key: fn AuctionBid, _key -> :none end
+           fetch: fn AuctionBid, _key -> :not_found end
          ]},
         {Txs, [],
          [

@@ -285,7 +285,7 @@ defmodule AeMdw.Names do
       end
 
     {status, auction_bid} =
-      case AuctionBids.top_auction_bid(plain_name, expand?) do
+      case AuctionBids.fetch(plain_name, expand?) do
         {:ok, auction_bid} ->
           {_version, auction_bid} = pop_in(auction_bid, [:info, :last_bid, "tx", "version"])
           {:auction, auction_bid}

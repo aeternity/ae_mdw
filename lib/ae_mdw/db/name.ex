@@ -35,7 +35,6 @@ defmodule AeMdw.Db.Name do
            | {Blocks.height(), pubkey()}
            | {pubkey(), String.t()}
            | pubkey()
-           | Model.auction_bid_key()
            | {String.t(), <<>>, <<>>, <<>>, <<>>}
   @typep state() :: State.t()
   @typep table ::
@@ -112,8 +111,8 @@ defmodule AeMdw.Db.Name do
           Names.auction_timeout()
         ) :: state()
   def expire_auction(state, height, plain_name, timeout) do
-    {^plain_name, {_block_index, txi}, _expiration, owner, bids} =
-      bid_key = ok!(cache_through_prev(Model.AuctionBid, bid_top_key(plain_name)))
+    Model.auction_bid(block_index_txi: {_block_index, txi}, owner: owner, bids: bids) =
+      ok!(cache_through_read(Model.AuctionBid, plain_name))
 
     previous = ok_nil(cache_through_read(Model.InactiveName, plain_name))
     expire = expire_after(height)
@@ -139,7 +138,7 @@ defmodule AeMdw.Db.Name do
     |> cache_through_write(Model.ActiveNameExpiration, m_name_exp)
     |> cache_through_delete(Model.AuctionExpiration, {height, plain_name})
     |> cache_through_delete(Model.AuctionOwner, {owner, plain_name})
-    |> cache_through_delete(Model.AuctionBid, bid_key)
+    |> cache_through_delete(Model.AuctionBid, plain_name)
     |> cache_through_delete_inactive(previous)
     |> IntTransfer.fee({height, -1}, :lock_name, owner, txi, winning_tx.name_fee)
     |> State.inc_stat(:names_activated)
@@ -156,17 +155,6 @@ defmodule AeMdw.Db.Name do
     |> Stream.map(fn {_height, plain_name} -> plain_name end)
   end
 
-  @spec bid_top_key(String.t()) :: {String.t(), <<>>, <<>>, <<>>, <<>>}
-  def bid_top_key(plain_name),
-    do: {plain_name, <<>>, <<>>, <<>>, <<>>}
-
-  @spec auction_bid_key(Model.expiration() | String.t()) :: any
-  def auction_bid_key({:expiration, {_, plain_name}, _}) when is_binary(plain_name),
-    do: auction_bid_key(plain_name)
-
-  def auction_bid_key(plain_name) when is_binary(plain_name),
-    do: ok_nil(cache_through_prev(Model.AuctionBid, bid_top_key(plain_name)))
-
   @spec source(AeMdw.Db.Model.ActiveName | AeMdw.Db.Model.InactiveName, :expiration | :name) ::
           AeMdw.Db.Model.ActiveName
           | AeMdw.Db.Model.ActiveNameExpiration
@@ -177,9 +165,8 @@ defmodule AeMdw.Db.Name do
   def source(Model.InactiveName, :name), do: Model.InactiveName
   def source(Model.InactiveName, :expiration), do: Model.InactiveNameExpiration
 
-  @spec locate_bid(String.t()) :: any
-  def locate_bid(plain_name),
-    do: ok_nil(cache_through_prev(Model.AuctionBid, bid_top_key(plain_name)))
+  @spec locate_bid(Names.plain_name()) :: {:ok, Model.auction_bid()} | nil
+  def locate_bid(plain_name), do: ok_nil(cache_through_read(Model.AuctionBid, plain_name))
 
   @spec locate(String.t()) ::
           {Model.name(), Model.ActiveName | Model.InactiveName}
