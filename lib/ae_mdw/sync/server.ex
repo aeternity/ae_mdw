@@ -25,19 +25,21 @@ defmodule AeMdw.Sync.Server do
 
   use GenServer
 
-  defstruct [:sync_pid_ref, :fork_height, :current_height, :restarts, :syncing?]
+  defstruct [:sync_pid_ref, :fork_height, :current_height, :restarts, :syncing?, :gens_per_min]
 
   @unsynced_gens 1
   @max_restarts 5
   @retry_time 3_600_000
-  @max_blocks_sync 6
+  @max_blocks_sync 15
+  @gens_per_min_weight 0.1
 
   @opaque t() :: %__MODULE__{
             sync_pid_ref: nil | {pid(), reference()},
             fork_height: Blocks.height() | nil,
             current_height: Blocks.height() | -1,
             restarts: non_neg_integer(),
-            syncing?: boolean()
+            syncing?: boolean(),
+            gens_per_min: number()
           }
 
   @spec start_link(GenServer.options()) :: GenServer.on_start()
@@ -47,18 +49,26 @@ defmodule AeMdw.Sync.Server do
   @spec start_sync() :: :ok
   def start_sync, do: GenServer.cast(__MODULE__, :start_sync)
 
+  @spec gens_per_min() :: number()
+  def gens_per_min, do: GenServer.call(__MODULE__, :gens_per_min)
+
   @spec syncing?() :: boolean()
   def syncing?, do: GenServer.call(__MODULE__, :syncing?)
 
   @impl true
   def init([]) do
-    {:ok, %__MODULE__{restarts: 0, syncing?: false}}
+    {:ok, %__MODULE__{restarts: 0, syncing?: false, gens_per_min: 0}}
   end
 
   @impl true
   @spec handle_call(:syncing?, GenServer.from(), t()) :: {:reply, boolean(), t()}
   def handle_call(:syncing?, _from, %__MODULE__{syncing?: syncing?} = state) do
     {:reply, syncing?, state}
+  end
+
+  @impl true
+  def handle_call(:gens_per_min, _from, %__MODULE__{gens_per_min: gens_per_min} = state) do
+    {:reply, gens_per_min, state}
   end
 
   @impl true
@@ -75,13 +85,23 @@ defmodule AeMdw.Sync.Server do
        state
        | current_height: current_height,
          syncing?: true,
-         restarts: 0
+         restarts: 0,
+         gens_per_min: 0
      })}
   end
 
   @impl true
-  def handle_cast({:done, height}, state) do
-    new_state = process_state(%__MODULE__{state | current_height: height, sync_pid_ref: nil})
+  def handle_cast(
+        {:done, height, gens_per_min},
+        %__MODULE__{gens_per_min: prev_gens_per_min} = state
+      ) do
+    new_state =
+      process_state(%__MODULE__{
+        state
+        | current_height: height,
+          sync_pid_ref: nil,
+          gens_per_min: calculate_gens_per_min(prev_gens_per_min, gens_per_min)
+      })
 
     {:noreply, new_state}
   end
@@ -199,15 +219,21 @@ defmodule AeMdw.Sync.Server do
     from_txi = Block.next_txi()
 
     spawn(fn ->
-      {blocks_mutations, _next_txi} =
-        Block.blocks_mutations(from_height, from_mbi, from_txi, to_height)
-
-      _new_state =
-        Enum.reduce(blocks_mutations, db_state, fn {block_index, block, mutations}, state ->
-          commit_mutations(state, block_index, block, mutations)
+      {mutations_time, {blocks_mutations, _next_txi}} =
+        :timer.tc(fn ->
+          Block.blocks_mutations(from_height, from_mbi, from_txi, to_height)
         end)
 
-      GenServer.cast(__MODULE__, {:done, to_height})
+      {exec_time, _new_state} =
+        :timer.tc(fn ->
+          Enum.reduce(blocks_mutations, db_state, fn {block_index, block, mutations}, state ->
+            commit_mutations(state, block_index, block, mutations)
+          end)
+        end)
+
+      gens_per_min = (to_height + 1 - from_height) * 60_000_000 / (mutations_time + exec_time)
+
+      GenServer.cast(__MODULE__, {:done, to_height, gens_per_min})
     end)
   end
 
@@ -216,7 +242,7 @@ defmodule AeMdw.Sync.Server do
       Log.info("invalidation #{height}")
       Invalidate.invalidate(height)
 
-      GenServer.cast(__MODULE__, {:done, height - 1})
+      GenServer.cast(__MODULE__, {:done, height - 1, 0})
     end)
   end
 
@@ -235,5 +261,10 @@ defmodule AeMdw.Sync.Server do
     end
 
     new_state
+  end
+
+  defp calculate_gens_per_min(prev_gens_per_min, gens_per_min) do
+    # exponential moving average
+    (1 - @gens_per_min_weight) * prev_gens_per_min + @gens_per_min_weight * gens_per_min
   end
 end

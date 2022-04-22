@@ -18,6 +18,7 @@ defmodule AeMdw.Db.Status do
     mdw_syncing? = Server.syncing?()
     {:ok, version} = :application.get_key(:ae_mdw, :vsn)
     async_tasks_counters = Stats.counters()
+    gens_per_minute = Server.gens_per_min()
 
     %{
       node_version: :aeu_info.get_version(),
@@ -32,7 +33,8 @@ defmodule AeMdw.Db.Status do
       mdw_async_tasks: async_tasks_counters,
       # MDW is always 1 generation behind
       mdw_synced: node_height == mdw_height + 1,
-      mdw_syncing: mdw_syncing?
+      mdw_syncing: mdw_syncing?,
+      mdw_gens_per_minute: round(gens_per_minute * 100) / 100
     }
   end
 
