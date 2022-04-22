@@ -65,7 +65,7 @@ defmodule AeMdw.Node do
 
   @spec aex9_transfer_event_hash :: binary()
   def aex9_transfer_event_hash do
-    ""
+    :aec_hash.blake2b_256_hash("Transfer")
   end
 
   @spec hdr_fields(:key | :micro) :: [atom()]

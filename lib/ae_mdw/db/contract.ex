@@ -286,41 +286,28 @@ defmodule AeMdw.Db.Contract do
     )
   end
 
-  @spec aex9_search_transfers({atom(), pubkey()} | {atom(), pubkey(), pubkey()}) :: map()
+  @spec aex9_search_transfers(
+          {:from, pubkey()}
+          | {:to, pubkey()}
+          | {:from_to, pubkey(), pubkey()}
+        ) :: Enumerable.t()
   def aex9_search_transfers({:from, sender_pk}) do
-    aex9_search_transfers(
-      Model.Aex9Transfer,
-      {sender_pk, 0, 0, 0, 0},
-      fn key -> elem(key, 0) == sender_pk end
-    )
+    aex9_search_transfers(Model.Aex9Transfer, {sender_pk, -1, nil, -1, -1}, fn key ->
+      elem(key, 0) == sender_pk
+    end)
   end
 
   def aex9_search_transfers({:to, recipient_pk}) do
-    aex9_search_transfers(
-      Model.RevAex9Transfer,
-      {recipient_pk, 0, 0, 0, 0},
-      fn key -> elem(key, 0) == recipient_pk end
-    )
+    aex9_search_transfers(Model.RevAex9Transfer, {recipient_pk, -1, nil, -1, -1}, fn key ->
+      elem(key, 0) == recipient_pk
+    end)
   end
 
   def aex9_search_transfers({:from_to, sender_pk, recipient_pk}) do
     aex9_search_transfers(
-      Model.Aex9Transfer,
-      {sender_pk, recipient_pk, 0, 0, 0},
-      fn {s, r, _, _, _} -> s == sender_pk && r == recipient_pk end
-    )
-  end
-
-  @spec aex9_search_transfers(atom(), any(), any()) :: map()
-  def aex9_search_transfers(table, init_key, key_tester) do
-    gen_collect(
-      table,
-      init_key,
-      key_tester,
-      &next/2,
-      fn -> [] end,
-      fn v, l -> [v | l] end,
-      &Enum.reverse/1
+      Model.Aex9PairTransfer,
+      {sender_pk, recipient_pk, -1, -1, -1},
+      fn key -> elem(key, 0) == sender_pk && elem(key, 1) == recipient_pk end
     )
   end
 
@@ -344,6 +331,12 @@ defmodule AeMdw.Db.Contract do
   #
   # Private functions
   #
+  defp aex9_search_transfers(table, init_key, key_tester) do
+    table
+    |> Collection.stream(init_key)
+    |> Stream.take_while(key_tester)
+  end
+
   defp aex9_update_balance(state, contract_pk, account_pk, new_amount_fn) do
     case State.get(state, Model.Aex9Balance, {contract_pk, account_pk}) do
       {:ok, Model.aex9_balance(amount: old_amount) = m_aex9_balance} ->
@@ -367,7 +360,7 @@ defmodule AeMdw.Db.Contract do
     m_transfer = Model.aex9_transfer(index: {from_pk, txi, to_pk, amount, i})
     m_rev_transfer = Model.rev_aex9_transfer(index: {to_pk, txi, from_pk, amount, i})
     m_idx_transfer = Model.idx_aex9_transfer(index: {txi, i, from_pk, to_pk, amount})
-    m_pair_transfer = Model.aex9_pair_transfer(index: {to_pk, from_pk, txi, amount, i})
+    m_pair_transfer = Model.aex9_pair_transfer(index: {from_pk, to_pk, txi, amount, i})
 
     state
     |> State.put(Model.Aex9Transfer, m_transfer)
