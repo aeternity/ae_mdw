@@ -224,12 +224,7 @@ defmodule AeMdw.Sync.Server do
           Block.blocks_mutations(from_height, from_mbi, from_txi, to_height)
         end)
 
-      {exec_time, _new_state} =
-        :timer.tc(fn ->
-          Enum.reduce(blocks_mutations, db_state, fn {block_index, block, mutations}, state ->
-            commit_mutations(state, block_index, block, mutations)
-          end)
-        end)
+      {exec_time, _new_state} = :timer.tc(fn -> exec_mutations(blocks_mutations, db_state) end)
 
       gens_per_min = (to_height + 1 - from_height) * 60_000_000 / (mutations_time + exec_time)
 
@@ -266,5 +261,11 @@ defmodule AeMdw.Sync.Server do
   defp calculate_gens_per_min(prev_gens_per_min, gens_per_min) do
     # exponential moving average
     (1 - @gens_per_min_weight) * prev_gens_per_min + @gens_per_min_weight * gens_per_min
+  end
+
+  defp exec_mutations(blocks_mutations, db_state) do
+    Enum.reduce(blocks_mutations, db_state, fn {block_index, block, mutations}, state ->
+      commit_mutations(state, block_index, block, mutations)
+    end)
   end
 end
