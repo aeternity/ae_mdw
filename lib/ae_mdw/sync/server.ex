@@ -14,9 +14,12 @@ defmodule AeMdw.Sync.Server do
 
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Block
   alias AeMdw.Db.Sync.Invalidate
   alias AeMdw.Log
+  alias AeMdw.Sync.AsyncTasks.Producer
+  alias AeMdwWeb.Websocket.Broadcaster
 
   require Model
 
@@ -25,9 +28,9 @@ defmodule AeMdw.Sync.Server do
   defstruct [:sync_pid_ref, :fork_height, :current_height, :restarts, :syncing?]
 
   @unsynced_gens 1
-  @max_blocks_sync 600
   @max_restarts 5
   @retry_time 3_600_000
+  @max_blocks_sync 6
 
   @opaque t() :: %__MODULE__{
             sync_pid_ref: nil | {pid(), reference()},
@@ -76,6 +79,7 @@ defmodule AeMdw.Sync.Server do
      })}
   end
 
+  @impl true
   def handle_cast({:done, height}, state) do
     new_state = process_state(%__MODULE__{state | current_height: height, sync_pid_ref: nil})
 
@@ -168,7 +172,10 @@ defmodule AeMdw.Sync.Server do
           spawn_invalidate(fork_height)
 
         current_height < top_height ->
-          spawn_sync(current_height + 1, min(current_height + @max_blocks_sync, top_height))
+          spawn_sync(
+            current_height + 1,
+            min(current_height + @max_blocks_sync, top_height)
+          )
 
         true ->
           nil
@@ -182,8 +189,23 @@ defmodule AeMdw.Sync.Server do
   defp process_state(s), do: s
 
   defp spawn_sync(from_height, to_height) do
+    from_mbi =
+      case Block.last_synced_mbi(from_height) do
+        {:ok, mbi} -> mbi + 1
+        :none -> -1
+      end
+
+    db_state = State.new()
+    from_txi = Block.next_txi()
+
     spawn(fn ->
-      Block.sync(from_height, to_height)
+      {blocks_mutations, _next_txi} =
+        Block.blocks_mutations(from_height, from_mbi, from_txi, to_height)
+
+      _new_state =
+        Enum.reduce(blocks_mutations, db_state, fn {block_index, block, mutations}, state ->
+          commit_mutations(state, block_index, block, mutations)
+        end)
 
       GenServer.cast(__MODULE__, {:done, to_height})
     end)
@@ -199,4 +221,19 @@ defmodule AeMdw.Sync.Server do
   end
 
   defp height, do: :aec_headers.height(:aec_chain.top_header())
+
+  defp commit_mutations(state, {_height, mbi}, block, mutations) do
+    new_state = State.commit(state, mutations)
+
+    Producer.commit_enqueued()
+
+    if mbi == -1 do
+      Broadcaster.broadcast_key_block(block, :mdw)
+    else
+      Broadcaster.broadcast_micro_block(block, :mdw)
+      Broadcaster.broadcast_txs(block, :mdw)
+    end
+
+    new_state
+  end
 end

@@ -19,32 +19,35 @@ defmodule AeMdw.Db.Sync.Block do
   alias AeMdw.Db.Model
   alias AeMdw.Database
   alias AeMdw.Db.IntTransfer
+  alias AeMdw.Db.KeyBlockMutation
   alias AeMdw.Db.NamesExpirationMutation
   alias AeMdw.Db.OraclesExpirationMutation
   alias AeMdw.Db.StatsMutation
   alias AeMdw.Db.Sync.Transaction
-  alias AeMdw.Db.WriteTxnMutation
+  alias AeMdw.Db.WriteMutation
+  alias AeMdw.Db.Mutation
   alias AeMdw.Log
   alias AeMdw.Node, as: AE
-  alias AeMdw.Sync.AsyncTasks.Producer
-  alias AeMdwWeb.Websocket.Broadcaster
+  alias AeMdw.Txs
 
   require Model
   require Logger
 
-  @log_freq 10_000
+  @log_freq 1_000
+
+  @typep block() :: term()
+  @typep height_mutations() :: {{Blocks.height(), Blocks.mbi()}, block(), [Mutation.t()]}
 
   ################################################################################
 
-  @spec sync(Blocks.height(), Blocks.height()) :: :ok
-  def sync(from_height, to_height) do
+  @spec blocks_mutations(Blocks.height(), Blocks.mbi(), Txs.txi(), Blocks.height()) ::
+          {[height_mutations()], Txs.txi()}
+  def blocks_mutations(from_height, from_mbi, from_txi, to_height) do
     {:ok, header} = :aec_chain.get_key_header_by_height(to_height + 1)
     {:ok, initial_hash} = :aec_headers.hash_header(header)
 
     {heights_hashes, _prev_hash} =
       Enum.map_reduce((to_height + 1)..from_height, initial_hash, fn height, hash ->
-        if rem(height, @log_freq) == 0, do: Log.info("syncing block index at #{height}")
-
         {:ok, kh} = :aec_chain.get_header(hash)
         ^height = :aec_headers.height(kh)
         :key = :aec_headers.type(kh)
@@ -55,66 +58,59 @@ defmodule AeMdw.Db.Sync.Block do
     heights_hashes = Enum.reverse(heights_hashes)
 
     heights_hashes
-    |> Enum.drop(if from_height == 0, do: 0, else: 1)
-    |> Enum.map(fn {height, hash} ->
-      kb_model = Model.block(index: {height, -1}, hash: hash, tx_index: 0)
-
-      WriteTxnMutation.new(Model.Block, kb_model)
-    end)
-    |> Database.commit()
-
-    heights_hashes
     |> Enum.zip(Enum.drop(heights_hashes, 1))
-    |> Enum.each(fn {{height, kb_hash}, {_next_height, next_kb_hash}} ->
-      if rem(height, @log_freq) == 0, do: Log.info("syncing transactions at generation #{height}")
+    |> Enum.reduce({[], from_txi}, fn {{height, kb_hash}, {_next_height, next_kb_hash}},
+                                      {blocks_mutations, txi} ->
+      {key_block, micro_blocks} = AE.Db.get_blocks(kb_hash, next_kb_hash)
+      kb_header = :aec_blocks.to_key_header(key_block)
 
-      sync_generation(height, kb_hash, next_kb_hash)
+      if rem(height, @log_freq) == 0, do: Log.info("creating mutations for block at #{height}")
+
+      pending_micro_blocks =
+        if from_height == height and from_mbi != 0 do
+          micro_blocks
+          |> Enum.drop(from_mbi)
+          |> Enum.with_index(from_mbi)
+        else
+          Enum.with_index(micro_blocks)
+        end
+
+      {micro_blocks_gens, txi} =
+        Enum.map_reduce(pending_micro_blocks, txi, fn {micro_block, mbi}, txi ->
+          {mutations, txi} = micro_block_mutations(micro_block, mbi, txi)
+
+          {{{height, mbi}, micro_block, mutations}, txi}
+        end)
+
+      next_kb_model = Model.block(index: {height + 1, -1}, hash: next_kb_hash, tx_index: txi)
+
+      kb0_mutation =
+        if height == 0 do
+          key_block = Model.block(index: {0, -1}, hash: kb_hash, tx_index: 0)
+          WriteMutation.new(Model.Block, key_block)
+        end
+
+      block_rewards_mutation =
+        if height >= AE.min_block_reward_height() do
+          IntTransfer.block_rewards_mutation(height, kb_header, kb_hash)
+        end
+
+      gen_mutations = [
+        kb0_mutation,
+        KeyBlockMutation.new(next_kb_model),
+        block_rewards_mutation,
+        NamesExpirationMutation.new(height),
+        OraclesExpirationMutation.new(height),
+        StatsMutation.new(height, from_height != height or from_mbi != 0)
+      ]
+
+      blocks_mutations =
+        blocks_mutations ++
+          micro_blocks_gens ++
+          [{{height, -1}, key_block, gen_mutations}]
+
+      {blocks_mutations, txi}
     end)
-  end
-
-  defp sync_generation(height, kb_hash, next_kb_hash) do
-    {key_block, micro_blocks} = AE.Db.get_blocks(kb_hash, next_kb_hash)
-    kb_header = :aec_blocks.to_key_header(key_block)
-
-    {:ok, {^height, last_mbi}} = Database.prev_key(Model.Block, {height + 1, -1})
-    last_txi = Database.last_key(Model.Tx, -1) + 1
-
-    :ets.delete_all_objects(:stat_sync_cache)
-    :ets.delete_all_objects(:ct_create_sync_cache)
-    :ets.delete_all_objects(:tx_sync_cache)
-
-    next_txi =
-      micro_blocks
-      |> Enum.with_index()
-      |> Enum.drop(last_mbi + 1)
-      |> Enum.reduce(last_txi, fn {micro_block, mbi}, txi ->
-        {txn_mutations, txi} = micro_block_mutations(micro_block, mbi, txi)
-
-        Database.commit(txn_mutations)
-        Producer.commit_enqueued()
-
-        Broadcaster.broadcast_micro_block(micro_block, :mdw)
-        Broadcaster.broadcast_txs(micro_block, :mdw)
-
-        txi
-      end)
-
-    next_kb_model = Model.block(index: {height + 1, -1}, tx_index: next_txi, hash: next_kb_hash)
-
-    block_rewards_mutation =
-      if height >= AE.min_block_reward_height() do
-        IntTransfer.block_rewards_mutation(height, kb_header, kb_hash)
-      end
-
-    Database.commit([
-      block_rewards_mutation,
-      NamesExpirationMutation.new(height),
-      OraclesExpirationMutation.new(height),
-      StatsMutation.new(height, last_mbi == -1),
-      WriteTxnMutation.new(Model.Block, next_kb_model)
-    ])
-
-    Broadcaster.broadcast_key_block(key_block, :mdw)
   end
 
   defp micro_block_mutations(mblock, mbi, txi) do
@@ -124,21 +120,19 @@ defmodule AeMdw.Db.Sync.Block do
     mb_txs = :aec_blocks.txs(mblock)
     events = AeMdw.Contract.get_grouped_events(mblock)
     tx_ctx = {{height, mbi}, mb_hash, mb_time, events}
+    mb_model = Model.block(index: {height, mbi}, tx_index: txi, hash: mb_hash)
+    block_mutation = WriteMutation.new(Model.Block, mb_model)
 
-    txn_txs_mutations =
+    mutations =
       mb_txs
       |> Enum.with_index(txi)
-      |> Enum.reduce([], fn {signed_tx, txi}, txn_mutations_acc ->
-        txn_mutations = Transaction.transaction_mutations(signed_tx, txi, tx_ctx)
+      |> Enum.reduce([block_mutation], fn {signed_tx, txi}, mutations ->
+        transaction_mutations = Transaction.transaction_mutations(signed_tx, txi, tx_ctx)
 
-        txn_mutations_acc ++ txn_mutations
+        mutations ++ transaction_mutations
       end)
 
-    mb_model = Model.block(index: {height, mbi}, tx_index: txi, hash: mb_hash)
-
-    txn_mutations = [WriteTxnMutation.new(Model.Block, mb_model) | txn_txs_mutations]
-
-    {txn_mutations, txi + length(mb_txs)}
+    {mutations, txi + length(mb_txs)}
   end
 
   @spec synced_height :: Blocks.height() | -1
@@ -147,5 +141,24 @@ defmodule AeMdw.Db.Sync.Block do
       :none -> -1
       {:ok, height} -> height
     end
+  end
+
+  @spec last_synced_mbi(Blocks.height()) :: {:ok, Blocks.mbi()} | :none
+  def last_synced_mbi(height) do
+    case Database.prev_key(Model.Block, {height + 1, -1}) do
+      {:ok, {^height, mbi}} -> {:ok, mbi}
+      {:ok, _prev_key} -> :none
+      :none -> :none
+    end
+  end
+
+  @spec next_txi() :: Txs.txi()
+  def next_txi do
+    Database.last_key(Model.Tx, -1) + 1
+  end
+
+  @spec fetch_micro_block(Blocks.block_index()) :: Model.block()
+  def fetch_micro_block(block_index) do
+    Database.fetch!(Model.Block, block_index)
   end
 end

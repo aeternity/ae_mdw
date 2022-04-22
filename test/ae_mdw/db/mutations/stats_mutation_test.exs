@@ -4,8 +4,7 @@ defmodule AeMdw.Db.StatsMutationTest do
   alias AeMdw.Collection
   alias AeMdw.Database
   alias AeMdw.Db.Model
-  alias AeMdw.Db.RocksDb
-
+  alias AeMdw.Db.State
   alias AeMdw.Db.StatsMutation
 
   import Mock
@@ -38,12 +37,11 @@ defmodule AeMdw.Db.StatsMutationTest do
       Database.dirty_write(Model.TotalStat, prev_total_stat)
 
       mutation = StatsMutation.new(height, false)
-      {:ok, txn} = RocksDb.transaction_new()
 
-      StatsMutation.execute(mutation, txn)
+      State.commit(State.new(), [mutation])
 
-      {:ok, m_delta_stat} = Database.dirty_fetch(txn, Model.DeltaStat, height)
-      {:ok, m_total_stat} = Database.dirty_fetch(txn, Model.TotalStat, height)
+      {:ok, m_delta_stat} = Database.fetch(Model.DeltaStat, height)
+      {:ok, m_total_stat} = Database.fetch(Model.TotalStat, height)
 
       assert Model.delta_stat(m_delta_stat, :dev_reward) >= 0
       assert Model.delta_stat(m_delta_stat, :auctions_started) >= 0
@@ -91,16 +89,16 @@ defmodule AeMdw.Db.StatsMutationTest do
       Database.dirty_write(Model.DeltaStat, prev_delta_stat)
       Database.dirty_write(Model.TotalStat, prev_total_stat)
 
-      AeMdw.Ets.inc(:stat_sync_cache, :block_reward, @first_block_reward)
+      state =
+        State.new()
+        |> State.inc_stat(:block_reward, @first_block_reward)
 
       mutation = StatsMutation.new(height, true)
-      {:ok, txn} = RocksDb.transaction_new()
 
-      AeMdw.Ets.clear(:stat_sync_cache)
-      StatsMutation.execute(mutation, txn)
+      State.commit(state, [mutation])
 
-      {:ok, m_delta_stat} = Database.dirty_fetch(txn, Model.DeltaStat, height)
-      {:ok, m_total_stat} = Database.dirty_fetch(txn, Model.TotalStat, height)
+      {:ok, m_delta_stat} = Database.fetch(Model.DeltaStat, height)
+      {:ok, m_total_stat} = Database.fetch(Model.TotalStat, height)
 
       assert Model.total_stat(m_total_stat, :block_reward) == @first_block_reward
       assert Model.total_stat(m_total_stat, :dev_reward) == 0
@@ -115,7 +113,7 @@ defmodule AeMdw.Db.StatsMutationTest do
       assert Model.total_stat(m_total_stat, :active_oracles) == 0
       assert Model.total_stat(m_total_stat, :contracts) == 0
 
-      assert Model.delta_stat(m_delta_stat, :block_reward) == 0
+      assert Model.delta_stat(m_delta_stat, :block_reward) == @first_block_reward
       assert Model.delta_stat(m_delta_stat, :auctions_started) == 0
       assert Model.delta_stat(m_delta_stat, :names_activated) == 0
       assert Model.delta_stat(m_delta_stat, :names_expired) == 0
@@ -158,19 +156,18 @@ defmodule AeMdw.Db.StatsMutationTest do
       Database.dirty_write(Model.DeltaStat, prev_delta_stat)
       Database.dirty_write(Model.TotalStat, prev_total_stat)
 
-      # delta/transitions are only reflected at height + 1
-      AeMdw.Ets.clear(:stat_sync_cache)
-
-      AeMdw.Ets.set(:stat_sync_cache, :block_reward, increased_block_reward)
-      AeMdw.Ets.set(:stat_sync_cache, :dev_reward, increased_dev_reward)
-      AeMdw.Ets.set(:stat_sync_cache, :names_activated, 1)
+      state =
+        State.new()
+        |> State.inc_stat(:block_reward, increased_block_reward)
+        |> State.inc_stat(:dev_reward, increased_dev_reward)
+        |> State.inc_stat(:names_activated, 1)
 
       mutation = StatsMutation.new(height, true)
-      {:ok, txn} = RocksDb.transaction_new()
-      StatsMutation.execute(mutation, txn)
 
-      {:ok, m_delta_stat} = Database.dirty_fetch(txn, Model.DeltaStat, height)
-      {:ok, m_total_stat} = Database.dirty_fetch(txn, Model.TotalStat, height + 1)
+      State.commit(state, [mutation])
+
+      {:ok, m_delta_stat} = Database.fetch(Model.DeltaStat, height)
+      {:ok, m_total_stat} = Database.fetch(Model.TotalStat, height + 1)
 
       total_block_reward = @first_block_reward + increased_block_reward
       total_dev_reward = increased_dev_reward
@@ -201,7 +198,6 @@ defmodule AeMdw.Db.StatsMutationTest do
 
       height = 21
       mutation = StatsMutation.new(height, false)
-      txn = :txn
 
       expected_delta =
         Model.delta_stat(
@@ -243,9 +239,9 @@ defmodule AeMdw.Db.StatsMutationTest do
              Model.ActiveOracle -> 4
              Model.AuctionExpiration -> 5
            end,
-           write: fn ^txn, _tab, _record -> :ok end,
            next_key: fn _tab, _init_key -> :none end
          ]},
+        {State, [:passthrough], put: fn state, _tab, _record -> state end},
         {Collection, [],
          [
            stream: fn
@@ -261,19 +257,21 @@ defmodule AeMdw.Db.StatsMutationTest do
            end
          ]}
       ] do
-        assert StatsMutation.execute(mutation, txn)
+        state = State.new()
+        assert StatsMutation.execute(mutation, state)
 
-        assert_called(Database.write(txn, Model.DeltaStat, expected_delta))
-        assert_called(Database.write(txn, Model.TotalStat, expected_total))
+        assert_called(State.put(state, Model.DeltaStat, expected_delta))
+        assert_called(State.put(state, Model.TotalStat, expected_total))
       end
     end
 
     test "with all_cached? = true, on 1st block reward, it stores stats using ets cache" do
-      AeMdw.Ets.clear(:stat_sync_cache)
-      AeMdw.Ets.inc(:stat_sync_cache, :block_reward, 5)
-
       height = 30
-      txn = :txn
+
+      state =
+        State.new()
+        |> State.inc_stat(:block_reward, 5)
+
       mutation = StatsMutation.new(height, true)
 
       expected_delta =
@@ -307,14 +305,14 @@ defmodule AeMdw.Db.StatsMutationTest do
       with_mocks [
         {Database, [],
          [
-           fetch!: fn Model.TotalStat, ^height -> Model.total_stat(active_auctions: 1) end,
-           write: fn ^txn, _tab, _record -> :ok end
-         ]}
+           fetch!: fn Model.TotalStat, ^height -> Model.total_stat(active_auctions: 1) end
+         ]},
+        {State, [:passthrough], put: fn state, _tab, _record -> state end}
       ] do
-        assert StatsMutation.execute(mutation, txn)
+        assert StatsMutation.execute(mutation, state)
 
-        assert_called(Database.write(txn, Model.DeltaStat, expected_delta))
-        assert_called(Database.write(txn, Model.TotalStat, expected_total))
+        assert_called(State.put(state, Model.DeltaStat, expected_delta))
+        assert_called(State.put(state, Model.TotalStat, expected_total))
       end
     end
   end

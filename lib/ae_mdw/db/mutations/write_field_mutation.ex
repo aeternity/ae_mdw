@@ -3,16 +3,16 @@ defmodule AeMdw.Db.WriteFieldMutation do
   Stores the index for the Fields table.
   """
 
-  alias AeMdw.Txs
   alias AeMdw.Db.Model
-  alias AeMdw.Database
+  alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.IdCounter
   alias AeMdw.Node.Db
   alias AeMdw.Node
-  alias AeMdw.Db.Sync.IdCounter
+  alias AeMdw.Txs
 
   require Model
 
-  @derive AeMdw.Db.TxnMutation
+  @derive AeMdw.Db.Mutation
   defstruct [:tx_type, :pos, :pubkey, :txi]
 
   @type pos() :: non_neg_integer() | nil
@@ -30,10 +30,12 @@ defmodule AeMdw.Db.WriteFieldMutation do
     %__MODULE__{tx_type: tx_type, pos: pos, pubkey: pubkey, txi: txi}
   end
 
-  @spec execute(t(), Database.transaction()) :: :ok
-  def execute(%__MODULE__{tx_type: tx_type, pos: pos, pubkey: pubkey, txi: txi}, txn) do
+  @spec execute(t(), State.t()) :: State.t()
+  def execute(%__MODULE__{tx_type: tx_type, pos: pos, pubkey: pubkey, txi: txi}, state) do
     m_field = Model.field(index: {tx_type, pos, pubkey, txi})
-    Database.write(txn, Model.Field, m_field)
-    IdCounter.incr_count(txn, {tx_type, pos, pubkey})
+
+    state
+    |> State.put(Model.Field, m_field)
+    |> IdCounter.incr_count({tx_type, pos, pubkey})
   end
 end

@@ -4,12 +4,11 @@ defmodule AeMdw.Db.NameClaimMutation do
   """
 
   alias AeMdw.Blocks
-  alias AeMdw.Database
   alias AeMdw.Db.Format
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
-  alias AeMdw.Ets
   alias AeMdw.Names
   alias AeMdw.Node.Db
   alias AeMdw.Txs
@@ -29,7 +28,7 @@ defmodule AeMdw.Db.NameClaimMutation do
       expire_after: 1
     ]
 
-  @derive AeMdw.Db.TxnMutation
+  @derive AeMdw.Db.Mutation
   defstruct [
     :plain_name,
     :name_hash,
@@ -75,7 +74,7 @@ defmodule AeMdw.Db.NameClaimMutation do
     }
   end
 
-  @spec execute(t(), Database.transaction()) :: :ok
+  @spec execute(t(), State.t()) :: State.t()
   def execute(
         %__MODULE__{
           plain_name: plain_name,
@@ -87,16 +86,16 @@ defmodule AeMdw.Db.NameClaimMutation do
           block_index: {height, _mbi} = block_index,
           timeout: timeout
         },
-        txn
+        state
       ) do
     m_owner = Model.owner(index: {owner_pk, plain_name})
     m_plain_name = Model.plain_name(index: name_hash, value: plain_name)
 
-    cache_through_write(txn, Model.PlainName, m_plain_name)
+    state2 = cache_through_write(state, Model.PlainName, m_plain_name)
 
     case timeout do
       0 ->
-        previous = Util.ok_nil(cache_through_read(txn, Model.InactiveName, plain_name))
+        previous = Util.ok_nil(cache_through_read(state, Model.InactiveName, plain_name))
         expire = expire_after(height)
 
         m_name =
@@ -110,15 +109,15 @@ defmodule AeMdw.Db.NameClaimMutation do
           )
 
         m_name_exp = Model.expiration(index: {expire, plain_name})
-
-        cache_through_write(txn, Model.ActiveName, m_name)
-        cache_through_write(txn, Model.ActiveNameOwner, m_owner)
-        cache_through_write(txn, Model.ActiveNameExpiration, m_name_exp)
-        cache_through_delete_inactive(txn, previous)
-
         lock_amount = (is_lima? && name_fee) || :aec_governance.name_claim_locked_fee()
-        IntTransfer.fee(txn, {height, txi}, :lock_name, owner_pk, txi, lock_amount)
-        Ets.inc(:stat_sync_cache, :names_activated)
+
+        state2
+        |> cache_through_write(Model.ActiveName, m_name)
+        |> cache_through_write(Model.ActiveNameOwner, m_owner)
+        |> cache_through_write(Model.ActiveNameExpiration, m_name_exp)
+        |> cache_through_delete_inactive(previous)
+        |> IntTransfer.fee({height, txi}, :lock_name, owner_pk, txi, lock_amount)
+        |> State.inc_stat(:names_activated)
 
       timeout ->
         auction_end = height + timeout
@@ -127,43 +126,38 @@ defmodule AeMdw.Db.NameClaimMutation do
         make_m_bid =
           &Model.auction_bid(index: {plain_name, {block_index, txi}, auction_end, owner_pk, &1})
 
-        IntTransfer.fee(txn, {height, txi}, :spend_name, owner_pk, txi, name_fee)
+        state3 = IntTransfer.fee(state2, {height, txi}, :spend_name, owner_pk, txi, name_fee)
 
-        m_bid =
+        {m_bid, state4} =
           case cache_through_prev(Model.AuctionBid, bid_top_key(plain_name)) do
             :not_found ->
-              make_m_bid.([{block_index, txi}])
+              {make_m_bid.([{block_index, txi}]), state3}
 
             {:ok,
              {^plain_name, {_, prev_txi}, prev_auction_end, prev_owner, prev_bids} = prev_key} ->
-              cache_through_delete(txn, Model.AuctionBid, prev_key)
-              cache_through_delete(txn, Model.AuctionOwner, {prev_owner, plain_name})
-
-              cache_through_delete(
-                txn,
-                Model.AuctionExpiration,
-                {prev_auction_end, plain_name}
-              )
-
               %{tx: prev_tx} = read_cached_raw_tx!(prev_txi)
 
-              IntTransfer.fee(
-                txn,
-                {height, txi},
-                :refund_name,
-                prev_owner,
-                prev_txi,
-                prev_tx.name_fee
-              )
+              state4 =
+                state3
+                |> cache_through_delete(Model.AuctionBid, prev_key)
+                |> cache_through_delete(Model.AuctionOwner, {prev_owner, plain_name})
+                |> cache_through_delete(Model.AuctionExpiration, {prev_auction_end, plain_name})
+                |> IntTransfer.fee(
+                  {height, txi},
+                  :refund_name,
+                  prev_owner,
+                  prev_txi,
+                  prev_tx.name_fee
+                )
 
-              make_m_bid.([{block_index, txi} | prev_bids])
+              {make_m_bid.([{block_index, txi} | prev_bids]), state4}
           end
 
-        cache_through_write(txn, Model.AuctionBid, m_bid)
-        cache_through_write(txn, Model.AuctionOwner, m_owner)
-        cache_through_write(txn, Model.AuctionExpiration, m_auction_exp)
-
-        Ets.inc(:stat_sync_cache, :auctions_started)
+        state4
+        |> cache_through_write(Model.AuctionBid, m_bid)
+        |> cache_through_write(Model.AuctionOwner, m_owner)
+        |> cache_through_write(Model.AuctionExpiration, m_auction_exp)
+        |> State.inc_stat(:auctions_started)
     end
   end
 

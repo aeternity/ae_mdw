@@ -1,11 +1,14 @@
 defmodule AeMdw.Db.Origin do
   @moduledoc false
 
+  alias AeMdw.Collection
   alias AeMdw.Contract
   alias AeMdw.Database
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Node.Db
   alias AeMdw.Txs
+  alias AeMdw.Util
 
   require Model
 
@@ -49,11 +52,37 @@ defmodule AeMdw.Db.Origin do
     end
   end
 
+  @spec tx_index(State.t(), creation_txi_locator()) :: {:ok, Txs.txi() | -1} | :not_found
+  def tx_index(state, {:contract, pk}) do
+    with :error <- field_txi(state, :contract_create_tx, nil, pk),
+         :error <- field_txi(state, :contract_call_tx, nil, pk),
+         :error <- field_txi(state, :ga_attach_tx, nil, pk) do
+      case Enum.find_index(preset_contracts(), &match?(^pk, &1)) do
+        nil -> :not_found
+        index -> {:ok, -index - 1}
+      end
+    end
+  end
+
   @spec tx_index!(creation_txi_locator()) :: Txs.txi()
   def tx_index!(creation_txi_locator) do
     case tx_index(creation_txi_locator) do
       {:ok, txi} -> txi
       :not_found -> raise "Origin #{inspect(creation_txi_locator)} not found"
+    end
+  end
+
+  @spec tx_index!(State.t(), creation_txi_locator()) :: Txs.txi()
+  def tx_index!(state, {:contract, pk} = creation_txi_locator) do
+    case State.cache_get(state, :ct_create_sync_cache, pk) do
+      {:ok, txi} ->
+        txi
+
+      :not_found ->
+        case tx_index(state, creation_txi_locator) do
+          {:ok, txi} -> txi
+          :not_found -> raise "Origin #{inspect(creation_txi_locator)} not found"
+        end
     end
   end
 
@@ -93,10 +122,7 @@ defmodule AeMdw.Db.Origin do
 
   @spec count_contracts() :: non_neg_integer()
   def count_contracts do
-    ct_list1 = do_list_by_tx_type([], {:contract_create_tx, <<>>, -1})
-    ct_list2 = do_list_by_tx_type([], {:contract_call_tx, <<>>, -1})
-
-    length(ct_list1) + length(ct_list2)
+    count_by_tx_type(:contract_create_tx) + count_by_tx_type(:contract_call_tx)
   end
 
   #
@@ -109,14 +135,18 @@ defmodule AeMdw.Db.Origin do
     end
   end
 
-  defp do_list_by_tx_type(origin_pks, {type, _pk, _txi} = key) do
-    case Database.next_key(Model.Origin, key) do
-      {:ok, {^type, pubkey, _txi} = next_key} ->
-        do_list_by_tx_type([pubkey | origin_pks], next_key)
-
-      _key_mismatch ->
-        origin_pks
+  defp field_txi(state, tx_type, pos, pk) do
+    case State.next(state, Model.Field, {tx_type, pos, pk, -1}) do
+      {:ok, {^tx_type, ^pos, ^pk, txi}} -> {:ok, txi}
+      _key_mismatch -> :error
     end
+  end
+
+  defp count_by_tx_type(tx_type) do
+    Model.Origin
+    |> Collection.stream({tx_type, Util.min_bin(), nil})
+    |> Stream.take_while(&match?({^tx_type, _pubkey, _txi}, &1))
+    |> Enum.count()
   end
 
   defp preset_contracts do

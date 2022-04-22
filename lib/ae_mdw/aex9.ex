@@ -24,6 +24,7 @@ defmodule AeMdw.Aex9 do
   @type aex9_balance() :: map()
   @type account_balance() :: map()
   @type aex9_balance_history_item() :: map()
+  @type amount() :: non_neg_integer()
 
   @type account_transfer_key ::
           {pubkey(), AeMdw.Txs.txi(), pubkey(), pos_integer(), non_neg_integer()}

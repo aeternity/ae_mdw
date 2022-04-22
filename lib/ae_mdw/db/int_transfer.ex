@@ -6,6 +6,7 @@ defmodule AeMdw.Db.IntTransfer do
   alias AeMdw.Blocks
   alias AeMdw.Txs
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Database
   alias AeMdw.Collection
 
@@ -52,16 +53,16 @@ defmodule AeMdw.Db.IntTransfer do
   end
 
   @spec fee(
-          Database.transaction(),
+          State.t(),
           Blocks.block_index_txi_pos(),
           kind_suffix(),
           target(),
           ref_txi(),
           amount()
-        ) :: :ok
-  def fee(txn, {height, txi_pos}, kind, target, ref_txi, amount) when kind in @fee_kinds do
+        ) :: State.t()
+  def fee(state, {height, txi_pos}, kind, target, ref_txi, amount) when kind in @fee_kinds do
     write(
-      txn,
+      state,
       {height, txi_pos},
       "fee_" <> to_string(kind),
       target,
@@ -71,14 +72,14 @@ defmodule AeMdw.Db.IntTransfer do
   end
 
   @spec write(
-          Database.transaction(),
+          State.t(),
           Blocks.block_index_txi_pos(),
           kind(),
           target(),
           ref_txi(),
           amount()
-        ) :: :ok
-  def write(txn, {height, pos_txi}, kind, target_pk, ref_txi, amount) do
+        ) :: State.t()
+  def write(state, {height, pos_txi}, kind, target_pk, ref_txi, amount) do
     int_tx =
       Model.int_transfer_tx(index: {{height, pos_txi}, kind, target_pk, ref_txi}, amount: amount)
 
@@ -87,9 +88,10 @@ defmodule AeMdw.Db.IntTransfer do
     target_kind_tx =
       Model.target_kind_int_transfer_tx(index: {target_pk, kind, {height, pos_txi}, ref_txi})
 
-    Database.write(txn, Model.IntTransferTx, int_tx)
-    Database.write(txn, Model.KindIntTransferTx, kind_tx)
-    Database.write(txn, Model.TargetKindIntTransferTx, target_kind_tx)
+    state
+    |> State.put(Model.IntTransferTx, int_tx)
+    |> State.put(Model.KindIntTransferTx, kind_tx)
+    |> State.put(Model.TargetKindIntTransferTx, target_kind_tx)
   end
 
   @spec read_block_reward(Blocks.height()) :: pos_integer()

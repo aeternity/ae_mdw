@@ -4,7 +4,7 @@ defmodule AeMdw.Db.WriteFieldsMutation do
   """
 
   alias AeMdw.Blocks
-  alias AeMdw.Database
+  alias AeMdw.Db.State
   alias AeMdw.Node
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync.IdCounter
@@ -12,7 +12,7 @@ defmodule AeMdw.Db.WriteFieldsMutation do
 
   require Model
 
-  @derive AeMdw.Db.TxnMutation
+  @derive AeMdw.Db.Mutation
   defstruct [:type, :tx, :block_index, :txi]
 
   @opaque t() :: %__MODULE__{
@@ -32,20 +32,22 @@ defmodule AeMdw.Db.WriteFieldsMutation do
     }
   end
 
-  @spec execute(t(), Database.transaction()) :: :ok
-  def execute(%__MODULE__{type: tx_type, tx: tx, block_index: block_index, txi: txi}, txn) do
+  @spec execute(t(), State.t()) :: State.t()
+  def execute(%__MODULE__{type: tx_type, tx: tx, block_index: block_index, txi: txi}, state) do
     tx_type
     |> Node.tx_ids()
-    |> Enum.each(fn {field, pos} ->
+    |> Enum.reduce(state, fn {field, pos}, state ->
       <<_::256>> = pk = resolve_pubkey(elem(tx, pos), tx_type, field, block_index)
-      write_field(txn, tx_type, pos, pk, txi)
+      write_field(state, tx_type, pos, pk, txi)
     end)
   end
 
-  defp write_field(txn, tx_type, pos, pubkey, txi) do
+  defp write_field(state, tx_type, pos, pubkey, txi) do
     m_field = Model.field(index: {tx_type, pos, pubkey, txi})
-    Database.write(txn, Model.Field, m_field)
-    IdCounter.incr_count(txn, {tx_type, pos, pubkey})
+
+    state
+    |> State.put(Model.Field, m_field)
+    |> IdCounter.incr_count({tx_type, pos, pubkey})
   end
 
   defp resolve_pubkey(id, :spend_tx, :recipient_id, block_index) do

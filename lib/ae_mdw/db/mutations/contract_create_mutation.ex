@@ -5,9 +5,10 @@ defmodule AeMdw.Db.ContractCreateMutation do
 
   alias AeMdw.Contract
   alias AeMdw.Db.Contract, as: DBContract
+  alias AeMdw.Db.State
   alias AeMdw.Txs
 
-  @derive AeMdw.Db.TxnMutation
+  @derive AeMdw.Db.Mutation
   defstruct [:txi, :call_rec]
 
   @opaque t() :: %__MODULE__{
@@ -26,14 +27,19 @@ defmodule AeMdw.Db.ContractCreateMutation do
     }
   end
 
-  @spec execute(t(), AeMdw.Database.transaction()) :: :ok
+  @spec execute(t(), State.t()) :: State.t()
   def execute(
         %__MODULE__{
           txi: txi,
           call_rec: call_rec
         },
-        txn
+        state
       ) do
-    DBContract.logs_write(txn, txi, txi, call_rec)
+    contract_pk = :aect_call.contract_pubkey(call_rec)
+
+    state
+    |> State.inc_stat(:contracts_created)
+    |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
+    |> DBContract.logs_write(txi, txi, call_rec)
   end
 end

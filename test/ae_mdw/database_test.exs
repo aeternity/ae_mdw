@@ -3,7 +3,7 @@ defmodule AeMdw.DatabaseTest do
 
   alias AeMdw.Database
   alias AeMdw.Db.Model
-  alias AeMdw.Db.WriteTxnMutation
+  alias AeMdw.Db.WriteMutation
 
   import AeMdw.Db.ModelFixtures, only: [new_block: 0]
 
@@ -15,7 +15,7 @@ defmodule AeMdw.DatabaseTest do
 
       assert :ok =
                Database.commit([
-                 WriteTxnMutation.new(Model.Block, m_block)
+                 WriteMutation.new(Model.Block, m_block)
                ])
 
       assert {:ok, ^m_block} = Database.fetch(Model.Block, key)
@@ -25,7 +25,7 @@ defmodule AeMdw.DatabaseTest do
       {txn_mutations, records} =
         Enum.reduce(1..100, {[], []}, fn _i, {txn_mutations_acc, records_acc} ->
           m_block = new_block()
-          txn_mutation = WriteTxnMutation.new(Model.Block, m_block)
+          txn_mutation = WriteMutation.new(Model.Block, m_block)
 
           {
             [txn_mutation | txn_mutations_acc],
@@ -44,7 +44,7 @@ defmodule AeMdw.DatabaseTest do
       {txn_mutations, records} =
         Enum.reduce(1..10, {[], []}, fn _i, {txn_mutations_acc, records_acc} ->
           m_block = new_block()
-          txn_mutation = WriteTxnMutation.new(Model.Block, m_block)
+          txn_mutation = WriteMutation.new(Model.Block, m_block)
 
           {
             [txn_mutation | txn_mutations_acc],
@@ -69,7 +69,7 @@ defmodule AeMdw.DatabaseTest do
       {txn_mutations, records} =
         Enum.reduce(1..10, {[], []}, fn _i, {txn_mutations_acc, records_acc} ->
           m_block = new_block()
-          txn_mutation = WriteTxnMutation.new(Model.Block, m_block)
+          txn_mutation = WriteMutation.new(Model.Block, m_block)
 
           {
             [txn_mutation | txn_mutations_acc],

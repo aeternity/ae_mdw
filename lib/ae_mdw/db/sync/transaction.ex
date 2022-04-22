@@ -8,6 +8,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Model
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.ContractCreateMutation
+  alias AeMdw.Db.ContractCreateCacheMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.NameRevokeMutation
   alias AeMdw.Db.NameTransferMutation
@@ -20,8 +21,8 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Sync.Name, as: SyncName
   alias AeMdw.Db.Sync.Origin
   alias AeMdw.Db.WriteFieldsMutation
-  alias AeMdw.Db.WriteTxnMutation
-  alias AeMdw.Db.TxnMutation
+  alias AeMdw.Db.WriteMutation
+  alias AeMdw.Db.Mutation
   alias AeMdw.Node
   alias AeMdw.Txs
   alias __MODULE__.TxContext
@@ -52,7 +53,7 @@ defmodule AeMdw.Db.Sync.Transaction do
           Txs.txi(),
           {Blocks.block_index(), Blocks.block_hash(), Blocks.time(), Contract.grouped_events()},
           boolean()
-        ) :: [TxnMutation.t()]
+        ) :: [Mutation.t()]
   def transaction_mutations(
         signed_tx,
         txi,
@@ -86,13 +87,13 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     m_tx_mutation =
       if not inner_tx? do
-        WriteTxnMutation.new(Model.Tx, m_tx)
+        WriteMutation.new(Model.Tx, m_tx)
       end
 
     [
       m_tx_mutation,
-      WriteTxnMutation.new(Model.Type, Model.type(index: {type, txi})),
-      WriteTxnMutation.new(Model.Time, Model.time(index: {mb_time, txi})),
+      WriteMutation.new(Model.Type, Model.type(index: {type, txi})),
+      WriteMutation.new(Model.Time, Model.time(index: {mb_time, txi})),
       WriteFieldsMutation.new(type, tx, block_index, txi),
       tx_mutations(tx_context),
       inner_txn_mutations
@@ -110,16 +111,20 @@ defmodule AeMdw.Db.Sync.Transaction do
        }) do
     contract_pk = :aect_create_tx.contract_pubkey(tx)
 
-    :ets.insert(:ct_create_sync_cache, {contract_pk, txi})
-    AeMdw.Ets.inc(:stat_sync_cache, :contracts_created)
-
     mutations = Origin.origin_mutations(:contract_create_tx, nil, contract_pk, txi, tx_hash)
 
     if Contract.is_contract?(contract_pk) do
       call_rec = Contract.get_init_call_rec(tx, block_hash)
 
       events_mutations =
-        SyncContract.events_mutations(tx_events, block_index, block_hash, txi, tx_hash, txi)
+        SyncContract.events_mutations(
+          tx_events,
+          block_index,
+          block_hash,
+          txi,
+          tx_hash,
+          contract_pk
+        )
 
       aex9_create_contract_mutation =
         if :ok == :aect_call.return_type(call_rec) do
@@ -150,7 +155,6 @@ defmodule AeMdw.Db.Sync.Transaction do
        }) do
     contract_pk = :aect_call_tx.contract_pubkey(tx)
     <<caller_pk::binary-32>> = :aect_call_tx.caller_pubkey(tx)
-    create_txi = SyncContract.get_txi!(contract_pk)
 
     {fun_arg_res, call_rec} =
       Contract.call_tx_info(tx, contract_pk, block_hash, &Contract.to_map/1)
@@ -174,7 +178,7 @@ defmodule AeMdw.Db.Sync.Transaction do
         block_hash,
         txi,
         tx_hash,
-        create_txi
+        contract_pk
       )
 
     Enum.concat([
@@ -184,7 +188,6 @@ defmodule AeMdw.Db.Sync.Transaction do
         ContractCallMutation.new(
           contract_pk,
           caller_pk,
-          create_txi,
           txi,
           fun_arg_res,
           call_rec
@@ -206,10 +209,11 @@ defmodule AeMdw.Db.Sync.Transaction do
 
   defp tx_mutations(%TxContext{type: :ga_attach_tx, tx: tx, txi: txi, tx_hash: tx_hash}) do
     contract_pk = :aega_attach_tx.contract_pubkey(tx)
-    :ets.insert(:ct_create_sync_cache, {contract_pk, txi})
-    AeMdw.Ets.inc(:stat_sync_cache, :contracts_created)
 
-    Origin.origin_mutations(:ga_attach_tx, nil, contract_pk, txi, tx_hash)
+    [
+      Origin.origin_mutations(:ga_attach_tx, nil, contract_pk, txi, tx_hash),
+      ContractCreateCacheMutation.new(contract_pk, txi)
+    ]
   end
 
   defp tx_mutations(%TxContext{

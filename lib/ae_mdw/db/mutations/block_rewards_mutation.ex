@@ -4,11 +4,10 @@ defmodule AeMdw.Db.BlockRewardsMutation do
   """
 
   alias AeMdw.Blocks
-  alias AeMdw.Database
   alias AeMdw.Db.IntTransfer
-  alias AeMdw.Ets
+  alias AeMdw.Db.State
 
-  @derive AeMdw.Db.TxnMutation
+  @derive AeMdw.Db.Mutation
   defstruct [:height, :block_rewards]
 
   @type block_reward() :: {IntTransfer.kind(), IntTransfer.target(), IntTransfer.amount()}
@@ -26,13 +25,14 @@ defmodule AeMdw.Db.BlockRewardsMutation do
     %__MODULE__{height: height, block_rewards: block_rewards}
   end
 
-  @spec execute(t(), Database.transaction()) :: :ok
-  def execute(%__MODULE__{height: height, block_rewards: block_rewards}, txn) do
+  @spec execute(t(), State.t()) :: State.t()
+  def execute(%__MODULE__{height: height, block_rewards: block_rewards}, state) do
     gen_txi_pos = {height, @txi_pos}
 
-    Enum.each(block_rewards, fn {kind, target_pk, amount} ->
-      IntTransfer.write(txn, gen_txi_pos, kind, target_pk, @ref_txi, amount)
-      Ets.inc(:stat_sync_cache, (kind == "reward_dev" && :dev_reward) || :block_reward, amount)
+    Enum.reduce(block_rewards, state, fn {kind, target_pk, amount}, state ->
+      state
+      |> IntTransfer.write(gen_txi_pos, kind, target_pk, @ref_txi, amount)
+      |> State.inc_stat((kind == "reward_dev" && :dev_reward) || :block_reward, amount)
     end)
   end
 end

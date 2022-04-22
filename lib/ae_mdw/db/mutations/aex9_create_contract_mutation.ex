@@ -6,10 +6,11 @@ defmodule AeMdw.Db.Aex9CreateContractMutation do
   alias AeMdw.Blocks
   alias AeMdw.Contract
   alias AeMdw.Db.Contract, as: DBContract
+  alias AeMdw.Db.State
   alias AeMdw.Sync.AsyncTasks
   alias AeMdw.Txs
 
-  @derive AeMdw.Db.TxnMutation
+  @derive AeMdw.Db.Mutation
   defstruct [
     :contract_pk,
     :aex9_meta_info,
@@ -41,7 +42,7 @@ defmodule AeMdw.Db.Aex9CreateContractMutation do
     }
   end
 
-  @spec execute(t(), AeMdw.Database.transaction()) :: :ok
+  @spec execute(t(), State.t()) :: State.t()
   def execute(
         %__MODULE__{
           contract_pk: contract_pk,
@@ -49,11 +50,12 @@ defmodule AeMdw.Db.Aex9CreateContractMutation do
           block_index: {kbi, mbi},
           create_txi: create_txi
         },
-        txn
+        state
       ) do
-    DBContract.aex9_creation_write(txn, aex9_meta_info, contract_pk, create_txi)
+    state = DBContract.aex9_creation_write(state, aex9_meta_info, contract_pk, create_txi)
+
     AsyncTasks.Producer.enqueue(:derive_aex9_presence, [contract_pk, kbi, mbi, create_txi])
     AsyncTasks.Producer.commit_enqueued()
-    :ok
+    state
   end
 end

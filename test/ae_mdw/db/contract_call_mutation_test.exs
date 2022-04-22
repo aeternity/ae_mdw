@@ -40,6 +40,12 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
     # delete and create presence
     ContractTestUtil.aex9_delete_presence(contract_pk, account_pk)
+
+    Database.dirty_write(
+      Model.Field,
+      Model.field(index: {:contract_create_tx, nil, @mint_ct_pk, 123})
+    )
+
     Database.commit([mutation])
 
     assert {:ok, {^account_pk, ^call_txi, ^contract_pk}} =
@@ -53,6 +59,12 @@ defmodule AeMdw.Db.ContractCallMutationTest do
              contract_call_mutation("transfer", call_txi, @transfer_ct_pk, @transfer_caller_pk)
 
     contract_pk = @transfer_ct_pk
+
+    Database.dirty_write(
+      Model.Field,
+      Model.field(index: {:contract_create_tx, nil, @transfer_ct_pk, 123})
+    )
+
     assert %ContractCallMutation{txi: ^call_txi, contract_pk: ^contract_pk} = mutation
 
     # delete and create presence
@@ -75,6 +87,12 @@ defmodule AeMdw.Db.ContractCallMutationTest do
              )
 
     contract_pk = @transfer_allow_ct_pk
+
+    Database.dirty_write(
+      Model.Field,
+      Model.field(index: {:contract_create_tx, nil, @transfer_allow_ct_pk, 123})
+    )
+
     assert %ContractCallMutation{txi: ^call_txi, contract_pk: ^contract_pk} = mutation
 
     # delete and create presence
@@ -92,6 +110,12 @@ defmodule AeMdw.Db.ContractCallMutationTest do
              contract_call_mutation("burn", call_txi, @burn_ct_pk, @burn_caller_pk)
 
     contract_pk = @burn_ct_pk
+
+    Database.dirty_write(
+      Model.Field,
+      Model.field(index: {:contract_create_tx, nil, @burn_ct_pk, 123})
+    )
+
     assert %ContractCallMutation{txi: ^call_txi, contract_pk: ^contract_pk} = mutation
 
     # delete and create presence
@@ -130,7 +154,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       ContractCallMutation.new(
         contract_pk,
         caller_pk,
-        call_txi - 1,
         call_txi,
         fun_arg_res,
         call_rec

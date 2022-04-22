@@ -4,9 +4,11 @@ defmodule AeMdw.Db.OracleInvalidationMutation do
   """
 
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.Sync
+  alias AeMdw.Db.Oracle
 
-  @derive AeMdw.Db.TxnMutation
+  @derive AeMdw.Db.Mutation
   defstruct [:keys_delete, :records_write]
 
   @type table_keys :: {Model.table(), [Model.key()]}
@@ -23,14 +25,15 @@ defmodule AeMdw.Db.OracleInvalidationMutation do
     %__MODULE__{keys_delete: name_dels, records_write: name_writes}
   end
 
-  @spec execute(t(), AeMdw.Database.transaction()) :: :ok
-  def execute(%__MODULE__{keys_delete: keys_delete, records_write: records_write}, txn) do
-    Enum.each(keys_delete, fn {tab, keys} ->
-      Enum.each(keys, fn key -> AeMdw.Db.Name.cache_through_delete(txn, tab, key) end)
-    end)
+  @spec execute(t(), State.t()) :: State.t()
+  def execute(%__MODULE__{keys_delete: keys_delete, records_write: records_write}, state) do
+    new_state =
+      Enum.reduce(keys_delete, state, fn {tab, keys}, state ->
+        Enum.reduce(keys, state, &Oracle.cache_through_delete(&2, tab, &1))
+      end)
 
-    Enum.each(records_write, fn {tab, records} ->
-      Enum.each(records, fn record -> AeMdw.Db.Name.cache_through_write(txn, tab, record) end)
+    Enum.reduce(records_write, new_state, fn {tab, records}, state ->
+      Enum.reduce(records, state, &Oracle.cache_through_write(&2, tab, &1))
     end)
   end
 end

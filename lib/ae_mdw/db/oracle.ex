@@ -9,6 +9,7 @@ defmodule AeMdw.Db.Oracle do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.OracleResponseMutation
+  alias AeMdw.Db.State
   alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Node.Db
@@ -22,44 +23,42 @@ defmodule AeMdw.Db.Oracle do
 
   @typep pubkey :: Db.pubkey()
   @typep cache_key :: pubkey() | {pos_integer(), pubkey()}
-  @typep transaction :: Database.transaction()
+  @typep state :: State.t()
 
   @spec source(atom(), :expiration) ::
           Model.ActiveOracleExpiration | Model.InactiveOracleExpiration
   def source(Model.ActiveName, :expiration), do: Model.ActiveOracleExpiration
   def source(Model.InactiveName, :expiration), do: Model.InactiveOracleExpiration
 
-  @spec locate(nil | transaction(), pubkey()) ::
+  @spec locate(pubkey()) :: {Model.oracle(), Model.ActiveOracle | Model.InactiveOracle} | nil
+  def locate(pubkey) do
+    with {:active, :not_found} <- {:active, Database.fetch(Model.ActiveOracle, pubkey)},
+         {:inactive, :not_found} <- {:inactive, Database.fetch(Model.InactiveOracle, pubkey)} do
+      nil
+    else
+      {:active, {:ok, oracle}} -> {oracle, Model.ActiveOracle}
+      {:inactive, {:ok, oracle}} -> {oracle, Model.InactiveOracle}
+    end
+  end
+
+  @spec locate(state(), pubkey()) ::
           {Model.oracle(), Model.ActiveOracle | Model.InactiveOracle} | nil
-  def locate(txn, pubkey) do
-    map_ok_nil(cache_through_read(txn, Model.ActiveOracle, pubkey), &{&1, Model.ActiveOracle}) ||
+  def locate(state, pubkey) do
+    map_ok_nil(cache_through_read(state, Model.ActiveOracle, pubkey), &{&1, Model.ActiveOracle}) ||
       map_ok_nil(
-        cache_through_read(txn, Model.InactiveOracle, pubkey),
+        cache_through_read(state, Model.InactiveOracle, pubkey),
         &{&1, Model.InactiveOracle}
       )
   end
 
-  @spec cache_through_read(nil | transaction(), atom(), cache_key()) :: {:ok, tuple()} | nil
-  def cache_through_read(nil, table, key) do
-    case :ets.lookup(:oracle_sync_cache, {table, key}) do
-      [{_, record}] ->
+  @spec cache_through_read(state(), atom(), cache_key()) :: {:ok, Model.oracle()} | nil
+  def cache_through_read(state, table, key) do
+    case State.cache_get(state, table, key) do
+      {:ok, record} ->
         {:ok, record}
 
-      [] ->
-        case Database.fetch(table, key) do
-          {:ok, record} -> {:ok, record}
-          :not_found -> nil
-        end
-    end
-  end
-
-  def cache_through_read(txn, table, key) do
-    case :ets.lookup(:oracle_sync_cache, {table, key}) do
-      [{_, record}] ->
-        {:ok, record}
-
-      [] ->
-        case Database.dirty_fetch(txn, table, key) do
+      :not_found ->
+        case State.get(state, table, key) do
           {:ok, record} -> {:ok, record}
           :not_found -> nil
         end
@@ -95,38 +94,30 @@ defmodule AeMdw.Db.Oracle do
     lookup.(:ets.prev(:oracle_sync_cache, {table, key}), &elem(&1, 1), mns_lookup, mns_lookup)
   end
 
-  @spec cache_through_write(transaction(), atom(), tuple()) :: :ok
-  def cache_through_write(txn, table, record) do
-    :ets.insert(:oracle_sync_cache, {{table, elem(record, 1)}, record})
-    Database.write(txn, table, record)
+  @spec cache_through_write(state(), atom(), tuple()) :: state()
+  def cache_through_write(state, table, record) do
+    state
+    |> State.cache_put(:oracle_sync_cache, {table, elem(record, 1)}, record)
+    |> State.put(table, record)
   end
 
-  @spec cache_through_write(atom(), tuple()) :: :ok
-  def cache_through_write(table, record) do
-    :ets.insert(:oracle_sync_cache, {{table, elem(record, 1)}, record})
-    Database.dirty_write(table, record)
+  @spec cache_through_delete(state(), atom(), cache_key()) :: state()
+  def cache_through_delete(state, table, key) do
+    state
+    |> State.cache_delete(:oracle_sync_cache, {table, key})
+    |> State.delete(table, key)
   end
 
-  @spec cache_through_delete(transaction(), atom(), cache_key()) :: :ok
-  def cache_through_delete(txn, table, key) do
-    :ets.delete(:oracle_sync_cache, {table, key})
-    Database.delete(txn, table, key)
-  end
+  @spec cache_through_delete_inactive(state(), nil | Model.oracle()) :: state()
+  def cache_through_delete_inactive(state, nil), do: state
 
-  @spec cache_through_delete(atom(), cache_key()) :: :ok
-  def cache_through_delete(table, key) do
-    :ets.delete(:oracle_sync_cache, {table, key})
-    Database.dirty_delete(table, key)
-  end
-
-  @spec cache_through_delete_inactive(transaction(), nil | tuple()) :: :ok
-  def cache_through_delete_inactive(_txn, nil), do: :ok
-
-  def cache_through_delete_inactive(txn, m_oracle) do
+  def cache_through_delete_inactive(state, m_oracle) do
     pubkey = Model.oracle(m_oracle, :index)
     expire = Model.oracle(m_oracle, :expire)
-    cache_through_delete(txn, Model.InactiveOracle, pubkey)
-    cache_through_delete(txn, Model.InactiveOracleExpiration, {expire, pubkey})
+
+    state
+    |> cache_through_delete(Model.InactiveOracle, pubkey)
+    |> cache_through_delete(Model.InactiveOracleExpiration, {expire, pubkey})
   end
 
   @spec oracle_tree!(Blocks.block_hash()) :: tuple()
@@ -136,32 +127,32 @@ defmodule AeMdw.Db.Oracle do
     |> :aec_trees.oracles()
   end
 
-  @spec expire_oracle(transaction(), Blocks.height(), pubkey()) :: :ok
-  def expire_oracle(txn, height, pubkey) do
-    cache_through_delete(txn, Model.ActiveOracleExpiration, {height, pubkey})
-
+  @spec expire_oracle(state(), Blocks.height(), pubkey()) :: state()
+  def expire_oracle(state, height, pubkey) do
     oracle_id = Enc.encode(:oracle_pubkey, pubkey)
+    state2 = cache_through_delete(state, Model.ActiveOracleExpiration, {height, pubkey})
 
-    case cache_through_read(txn, Model.ActiveOracle, pubkey) do
+    case cache_through_read(state2, Model.ActiveOracle, pubkey) do
       {:ok, m_oracle} ->
         if height == Model.oracle(m_oracle, :expire) do
           m_exp = Model.expiration(index: {height, pubkey})
-          cache_through_write(txn, Model.InactiveOracle, m_oracle)
-          cache_through_write(txn, Model.InactiveOracleExpiration, m_exp)
-
-          cache_through_delete(txn, Model.ActiveOracle, pubkey)
-          AeMdw.Ets.inc(:stat_sync_cache, :oracles_expired)
 
           Log.info("[#{height}] inactivated oracle #{oracle_id}")
+
+          state2
+          |> cache_through_write(Model.InactiveOracle, m_oracle)
+          |> cache_through_write(Model.InactiveOracleExpiration, m_exp)
+          |> cache_through_delete(Model.ActiveOracle, pubkey)
+          |> State.inc_stat(:oracles_expired)
         else
           Log.warn("[#{height}] ignored old oracle expiration for #{oracle_id}")
+          state2
         end
 
       nil ->
         Log.warn("[#{height}] ignored oracle expiration for #{oracle_id}")
+        state2
     end
-
-    :ok
   end
 
   @spec response_mutation(Node.tx(), Blocks.block_index(), Blocks.block_hash(), Txs.txi()) ::

@@ -11,9 +11,10 @@ defmodule AeMdw.Database do
   returned instead.
   """
 
-  alias AeMdw.Db.TxnMutation
+  alias AeMdw.Db.Mutation
   alias AeMdw.Db.RocksDb
   alias AeMdw.Db.RocksDbCF
+  alias AeMdw.Db.State
 
   @type table() :: atom()
   @type record() :: tuple()
@@ -38,9 +39,9 @@ defmodule AeMdw.Database do
     :ok = RocksDbCF.dirty_delete(tab, key)
   end
 
-  @spec dirty_fetch(transaction(), table(), record()) :: {:ok, record()} | :not_found
-  def dirty_fetch(txn, table, record) do
-    RocksDbCF.dirty_fetch(txn, table, record)
+  @spec dirty_fetch(transaction(), table(), key()) :: {:ok, record()} | :not_found
+  def dirty_fetch(txn, table, key) do
+    RocksDbCF.dirty_fetch(txn, table, key)
   end
 
   @spec dirty_write(table(), record()) :: :ok
@@ -96,6 +97,14 @@ defmodule AeMdw.Database do
     end
   end
 
+  @spec dirty_next(transaction(), table(), key()) :: {:ok, key()} | :none
+  def dirty_next(txn, tab, key) do
+    case RocksDbCF.dirty_next(txn, tab, key) do
+      {:ok, next_key} -> {:ok, next_key}
+      :not_found -> :none
+    end
+  end
+
   @spec next_key(table(), direction(), key()) :: {:ok, key()} | :none
   def next_key(tab, :forward, nil), do: first_key(tab)
   def next_key(tab, :forward, cursor), do: next_key(tab, cursor)
@@ -140,16 +149,14 @@ defmodule AeMdw.Database do
 
   @doc """
   Creates a transaction and commits the changes of a mutation list.
+
+  Left for backwards compat to deal with invalidations.
   """
-  @spec commit([TxnMutation.t()]) :: :ok
-  def commit(txn_mutations) do
-    {:ok, txn} = RocksDb.transaction_new()
+  @spec commit([Mutation.t()]) :: :ok
+  def commit(mutations) do
+    State.new()
+    |> State.commit(mutations)
 
-    txn_mutations
-    |> List.flatten()
-    |> Enum.reject(&is_nil/1)
-    |> Enum.each(&TxnMutation.execute(&1, txn))
-
-    :ok = RocksDb.transaction_commit(txn)
+    :ok
   end
 end
