@@ -9,7 +9,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
   import AeMdw.Node.ContractCallFixtures
 
-  import Mock
+  # import Mock
   require Model
 
   @mint_ct_pk Validate.id!("ct_pqfbS94uUpE8reSwgtaAy5odGi7cPRMAxbjMyEzpTGqwTWyn5")
@@ -191,34 +191,27 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           call_rec
         )
 
-      Database.dirty_write(Model.Field, Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1}))
+      Database.dirty_write(
+        Model.Field,
+        Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
+      )
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      Database.commit([mutation])
 
       [{^contract_pk, [_transfer_evt_hash | [from_pk, to_pk, <<amount::256>>]], _data}] =
         :aect_call.log(call_rec)
 
-      with_mocks [
-        {
-          AeMdw.Contract,
-          [],
-          [
-            is_aex9?: fn ^contract_pk -> true end,
-            extract_successful_function: fn %{function: function, arguments: args} ->
-              {:ok, function, args}
-            end,
-            is_non_stateful_aex9_function?: fn _fun_arg_res -> false end,
-            get_aex9_transfer: fn _caller_pk, _method_name, _method_args ->
-              {from_pk, to_pk, amount}
-            end
-          ]
-        }
-      ] do
-        Database.commit([mutation])
-
-        assert Database.exists?(Model.Aex9Transfer, {from_pk, call_txi, to_pk, amount, 0})
-        assert Database.exists?(Model.RevAex9Transfer, {to_pk, call_txi, from_pk, amount, 0})
-        assert Database.exists?(Model.IdxAex9Transfer, {call_txi, 0, from_pk, to_pk, amount})
-        assert Database.exists?(Model.Aex9PairTransfer, {from_pk, to_pk, call_txi, amount, 0})
-      end
+      assert Database.exists?(Model.Aex9Transfer, {from_pk, call_txi, to_pk, amount, 0})
+      assert Database.exists?(Model.RevAex9Transfer, {to_pk, call_txi, from_pk, amount, 0})
+      assert Database.exists?(Model.IdxAex9Transfer, {call_txi, 0, from_pk, to_pk, amount})
+      assert Database.exists?(Model.Aex9PairTransfer, {from_pk, to_pk, call_txi, amount, 0})
     end
   end
 
