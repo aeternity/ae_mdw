@@ -31,12 +31,11 @@ defmodule AeMdw.Db.Stream.Name do
       when direction in [:forward, :backward] do
     {init_k, advance} =
       case direction do
-        :forward -> {{prefix, {}, :_, :_, :_}, &Database.next_key/2}
-        :backward -> {{prefix <> AeMdw.Node.max_blob(), [], :_, :_, :_}, &Database.prev_key/2}
+        :forward -> {prefix, &Database.next_key/2}
+        :backward -> {prefix <> AeMdw.Node.max_blob(), &Database.prev_key/2}
       end
 
-    prefix_check = AeMdwWeb.Util.prefix_checker(prefix)
-    advance = RU.advance_fn(advance, fn {name, _, _, _, _} -> prefix_check.(name) end)
+    advance = RU.advance_fn(advance, AeMdwWeb.Util.prefix_checker(prefix))
     RU.simple_resource({init_k, advance}, Model.AuctionBid, mapper)
   end
 

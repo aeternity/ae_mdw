@@ -48,7 +48,7 @@ defmodule AeMdw.AuctionBids do
     {prev_cursor, auction_bids, next_cursor} =
       Collection.paginate(&Collection.stream(@table, &1, nil, cursor), pagination)
 
-    {prev_cursor, Enum.map(auction_bids, &render(&1, expand?)), next_cursor}
+    {prev_cursor, Enum.map(auction_bids, &fetch!(&1, expand?)), next_cursor}
   end
 
   def fetch_auctions(pagination, :expiration, cursor, expand?) do
