@@ -453,9 +453,9 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
       end)
     end
 
-    @tag timeout: 180_000
-    # @tag :iteration
-    @tag :skip
+    @tag timeout: 300_000
+    @tag :iteration
+    # @tag :skip
     test "gets balances for each account with aex9 presence", %{conn: conn} do
       Model.Aex9AccountPresence
       |> Database.all_keys()
@@ -466,6 +466,21 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
       |> Enum.each(fn account_id ->
         conn = get(conn, "/aex9/balances/account/#{account_id}")
         assert balances_response = json_response(conn, 200)
+
+        Enum.each(balances_response, fn %{
+                                          "contract_id" => contract_id,
+                                          "token_name" => token_name,
+                                          "token_symbol" => token_symbol
+                                        } ->
+          {:contract_pubkey, contract_pk} = :aeser_api_encoder.decode(contract_id)
+          create_txi = Origin.tx_index!({:contract, contract_pk})
+
+          {^create_txi, name, symbol, _decimals} =
+            Util.next(Model.RevAex9Contract, {create_txi, nil, nil, nil})
+
+          assert token_name == name
+          assert token_symbol == symbol
+        end)
       end)
     end
   end
