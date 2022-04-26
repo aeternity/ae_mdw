@@ -230,9 +230,9 @@ defmodule AeMdw.Db.StatsMutationTest do
       with_mocks [
         {Database, [],
          [
-           fetch!: fn
-             Model.TotalStat, ^height -> Model.total_stat(active_auctions: 1)
-             Model.InactiveName, _plain_name -> Model.name()
+           dirty_fetch: fn
+             _txn, Model.TotalStat, ^height -> {:ok, Model.total_stat(active_auctions: 1)}
+             _txn, Model.InactiveName, _plain_name -> {:ok, Model.name()}
            end,
            count_keys: fn
              Model.ActiveName -> 3
@@ -245,15 +245,15 @@ defmodule AeMdw.Db.StatsMutationTest do
         {Collection, [],
          [
            stream: fn
-             Model.InactiveNameExpiration, _dir, _scope, _cursor ->
+             _state, Model.InactiveNameExpiration, _dir, _scope, _cursor ->
                [{1, "a.chain"}, {2, "b.chain"}]
 
-             Model.InactiveOracleExpiration, _dir, _scope, _cursor ->
+             _state, Model.InactiveOracleExpiration, _dir, _scope, _cursor ->
                []
            end,
            stream: fn
-             Model.Origin, _start_key -> [1, 2, 3]
-             Model.IntTransferTx, _start_key -> []
+             _state, Model.Origin, _start_key -> [1, 2, 3]
+             _state, Model.IntTransferTx, _start_key -> []
            end
          ]}
       ] do
@@ -305,7 +305,9 @@ defmodule AeMdw.Db.StatsMutationTest do
       with_mocks [
         {Database, [],
          [
-           fetch!: fn Model.TotalStat, ^height -> Model.total_stat(active_auctions: 1) end
+           dirty_fetch: fn _txn, Model.TotalStat, ^height ->
+             {:ok, Model.total_stat(active_auctions: 1)}
+           end
          ]},
         {State, [:passthrough], put: fn state, _tab, _record -> state end}
       ] do

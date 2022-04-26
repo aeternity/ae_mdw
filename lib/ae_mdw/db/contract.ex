@@ -100,8 +100,9 @@ defmodule AeMdw.Db.Contract do
 
   @spec aex9_delete_balances(state(), pubkey()) :: state()
   def aex9_delete_balances(state, contract_pk) do
-    Model.Aex9Balance
+    state
     |> Collection.stream(
+      Model.Aex9Balance,
       :forward,
       {{contract_pk, min_bin()}, {contract_pk, max_256bit_bin()}},
       nil
