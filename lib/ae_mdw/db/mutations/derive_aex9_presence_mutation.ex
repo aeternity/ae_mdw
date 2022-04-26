@@ -50,6 +50,7 @@ defmodule AeMdw.Db.DeriveAex9PresenceMutation do
         Model.aex9_balance(
           index: {contract_pk, account_pk},
           block_index: block_index,
+          txi: create_txi,
           amount: amount
         )
 

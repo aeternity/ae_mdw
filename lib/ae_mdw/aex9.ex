@@ -15,7 +15,7 @@ defmodule AeMdw.Aex9 do
   alias AeMdw.Util
   alias AeMdw.Validate
 
-  import AeMdwWeb.Helpers.Aex9Helper, only: [enc_ct: 1]
+  import AeMdwWeb.Helpers.Aex9Helper, only: [enc_ct: 1, enc_id: 1]
 
   require Model
 
@@ -26,10 +26,12 @@ defmodule AeMdw.Aex9 do
   @type aex9_balance_history_item() :: map()
   @type amount() :: non_neg_integer()
 
+  @typep txi :: AeMdw.Txs.txi()
+
   @type account_transfer_key ::
-          {pubkey(), AeMdw.Txs.txi(), pubkey(), pos_integer(), non_neg_integer()}
+          {pubkey(), txi(), pubkey(), pos_integer(), non_neg_integer()}
   @type pair_transfer_key ::
-          {pubkey(), pubkey(), AeMdw.Txs.txi(), pos_integer(), non_neg_integer()}
+          {pubkey(), pubkey(), txi(), pos_integer(), non_neg_integer()}
 
   @type cursor :: binary()
   @type account_paginated_transfers ::
@@ -190,14 +192,26 @@ defmodule AeMdw.Aex9 do
 
   @spec fetch_balance(pubkey(), pubkey()) :: {:ok, aex9_balance()} | {:error, Error.t()}
   def fetch_balance(contract_pk, account_pk) do
-    case validate_aex9(contract_pk) do
-      :ok ->
-        {amount_or_nil, _height_hash} = Db.aex9_balance(contract_pk, account_pk)
-
-        {:ok, render_balance(contract_pk, {:address, account_pk}, amount_or_nil)}
-
+    with :ok <- validate_aex9(contract_pk),
+         {:ok, {amount, _txi}} <- fetch_amount(contract_pk, account_pk) do
+      {:ok, render_balance(contract_pk, {:address, account_pk}, amount)}
+    else
       {:error, reason} ->
         {:error, reason}
+    end
+  end
+
+  @spec fetch_amount(pubkey(), pubkey()) :: {:ok, {number(), txi()}} | {:error, Error.t()}
+  def fetch_amount(contract_pk, account_pk) do
+    case Database.fetch(Model.Aex9Balance, {contract_pk, account_pk}) do
+      {:ok, Model.aex9_balance(amount: amount, txi: call_txi)} ->
+        {:ok, {amount, call_txi}}
+
+      :not_found ->
+        {:error,
+         ErrInput.Aex9BalanceNotAvailable.exception(
+           value: "{#{enc_ct(contract_pk)}, #{enc_id(account_pk)}}"
+         )}
     end
   end
 
