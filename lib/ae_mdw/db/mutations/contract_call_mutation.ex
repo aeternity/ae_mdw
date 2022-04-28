@@ -3,6 +3,7 @@ defmodule AeMdw.Db.ContractCallMutation do
   Processes contract_call_tx.
   """
 
+  alias AeMdw.Blocks
   alias AeMdw.Contract
   alias AeMdw.Db.Contract, as: DBContract
   alias AeMdw.Db.Origin
