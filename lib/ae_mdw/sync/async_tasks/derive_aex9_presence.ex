@@ -8,7 +8,6 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
   alias AeMdw.Node.Db, as: DBN
 
   alias AeMdw.Database
-  alias AeMdw.Db.Contract, as: DBContract
   alias AeMdw.Db.Model
   alias AeMdw.Log
 
@@ -35,18 +34,14 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
       m_empty_balance = Model.aex9_balance(index: {contract_pk, <<>>})
       Database.dirty_write(Model.Aex9Balance, m_empty_balance)
     else
-      Enum.each(balances, fn {{:address, account_pk}, amount} ->
-        DBContract.aex9_write_presence(contract_pk, create_txi, account_pk)
+      balances =
+        Enum.map(balances, fn {{:address, account_pk}, amount} ->
+          {account_pk, amount}
+        end)
 
-        m_balance =
-          Model.aex9_balance(
-            index: {contract_pk, account_pk},
-            block_index: {kbi, mbi},
-            amount: amount
-          )
+      mutation = DeriveAex9PresenceMutation.new(contract_pk, {kbi, mbi}, create_txi, balances)
 
-        Database.dirty_write(Model.Aex9Balance, m_balance)
-      end)
+      Database.commit([mutation])
     end
 
     :ok
