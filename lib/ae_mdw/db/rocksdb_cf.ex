@@ -53,13 +53,14 @@ defmodule AeMdw.Db.RocksDbCF do
   def count(table) do
     {:ok, it} = RocksDb.iterator(table)
 
-    key_res = do_iterator_move(it, :first)
+    iterator_count(it)
+  end
 
-    count = do_count(0, it, key_res)
+  @spec dirty_count(transaction(), table()) :: non_neg_integer()
+  def dirty_count(txn, table) do
+    {:ok, it} = RocksDb.dirty_iterator(txn, table)
 
-    RocksDb.iterator_close(it)
-
-    count
+    iterator_count(it)
   end
 
   @spec put(transaction(), table(), record()) :: :ok
@@ -114,37 +115,28 @@ defmodule AeMdw.Db.RocksDbCF do
   def next_key(table, seek_index) do
     {:ok, it} = RocksDb.iterator(table)
 
-    next_key_iterator(it, table, seek_index)
+    iterator_next_key(it, table, seek_index)
   end
 
   @spec dirty_next(transaction(), table(), key()) :: {:ok, key()} | :not_found
   def dirty_next(txn, table, seek_index) do
     {:ok, it} = RocksDb.dirty_iterator(txn, table)
 
-    next_key_iterator(it, table, seek_index)
+    iterator_next_key(it, table, seek_index)
+  end
+
+  @spec dirty_prev(transaction(), table(), key()) :: {:ok, key()} | :not_found
+  def dirty_prev(txn, table, seek_index) do
+    {:ok, it} = RocksDb.dirty_iterator(txn, table)
+
+    iterator_prev_key(it, table, seek_index)
   end
 
   @spec prev_key(table(), key()) :: {:ok, key()} | :not_found
   def prev_key(table, seek_index) do
     {:ok, it} = RocksDb.iterator(table)
-    seek_key = :sext.encode(seek_index)
 
-    key_res =
-      case do_iterator_move(it, {:seek_for_prev, seek_key}) do
-        {:ok, index} ->
-          if index < seek_index do
-            {:ok, index}
-          else
-            do_iterator_move(it, :prev)
-          end
-
-        :not_found ->
-          :not_found
-      end
-
-    RocksDb.iterator_close(it)
-
-    key_res
+    iterator_prev_key(it, table, seek_index)
   end
 
   @spec dirty_put(table(), record()) :: :ok | {:error, any}
@@ -221,13 +213,34 @@ defmodule AeMdw.Db.RocksDbCF do
   #
   # Private functions
   #
-  defp next_key_iterator(it, table, seek_index) do
+  defp iterator_next_key(it, table, seek_index) do
     seek_key = :sext.encode(seek_index)
 
     key_res =
       case do_iterator_move(it, {:seek_for_prev, seek_key}) do
         {:ok, _index} -> do_iterator_move(it, :next)
         :not_found -> first_key(table)
+      end
+
+    RocksDb.iterator_close(it)
+
+    key_res
+  end
+
+  defp iterator_prev_key(it, table, seek_index) do
+    seek_key = :sext.encode(seek_index)
+
+    key_res =
+      case do_iterator_move(it, {:seek_for_prev, seek_key}) do
+        {:ok, index} ->
+          if index < seek_index do
+            {:ok, index}
+          else
+            do_iterator_move(it, :prev)
+          end
+
+        :not_found ->
+          last_key(table)
       end
 
     RocksDb.iterator_close(it)
@@ -297,4 +310,14 @@ defmodule AeMdw.Db.RocksDbCF do
   end
 
   defp cache_insert(_other_record), do: :ok
+
+  defp iterator_count(it) do
+    key_res = do_iterator_move(it, :first)
+
+    count = do_count(0, it, key_res)
+
+    RocksDb.iterator_close(it)
+
+    count
+  end
 end

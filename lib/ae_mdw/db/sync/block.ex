@@ -22,6 +22,7 @@ defmodule AeMdw.Db.Sync.Block do
   alias AeMdw.Db.KeyBlockMutation
   alias AeMdw.Db.NamesExpirationMutation
   alias AeMdw.Db.OraclesExpirationMutation
+  alias AeMdw.Db.State
   alias AeMdw.Db.StatsMutation
   alias AeMdw.Db.Sync.Transaction
   alias AeMdw.Db.WriteMutation
@@ -97,11 +98,11 @@ defmodule AeMdw.Db.Sync.Block do
 
       gen_mutations = [
         kb0_mutation,
-        KeyBlockMutation.new(next_kb_model),
         block_rewards_mutation,
         NamesExpirationMutation.new(height),
         OraclesExpirationMutation.new(height),
-        StatsMutation.new(height, from_height != height or from_mbi != 0)
+        StatsMutation.new(height, from_height != height or from_mbi != 0),
+        KeyBlockMutation.new(next_kb_model)
       ]
 
       blocks_mutations =
@@ -143,18 +144,21 @@ defmodule AeMdw.Db.Sync.Block do
     end
   end
 
-  @spec last_synced_mbi(Blocks.height()) :: {:ok, Blocks.mbi()} | :none
-  def last_synced_mbi(height) do
-    case Database.prev_key(Model.Block, {height + 1, -1}) do
+  @spec last_synced_mbi(State.t(), Blocks.height()) :: {:ok, Blocks.mbi()} | :none
+  def last_synced_mbi(state, height) do
+    case State.prev(state, Model.Block, {height + 1, -1}) do
       {:ok, {^height, mbi}} -> {:ok, mbi}
       {:ok, _prev_key} -> :none
       :none -> :none
     end
   end
 
-  @spec next_txi() :: Txs.txi()
-  def next_txi do
-    Database.last_key(Model.Tx, -1) + 1
+  @spec next_txi(State.t()) :: Txs.txi()
+  def next_txi(state) do
+    case State.prev(state, Model.Tx, nil) do
+      :none -> 0
+      {:ok, txi} -> txi + 1
+    end
   end
 
   @spec fetch_micro_block(Blocks.block_index()) :: Model.block()

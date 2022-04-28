@@ -23,19 +23,17 @@ defmodule AeMdwWeb.OracleControllerTest do
       with_mocks [
         {Database, [],
          [
-           next_key: fn
-             ActiveOracleExpiration, :backward, nil ->
+           prev_key: fn
+             ActiveOracleExpiration, nil ->
                {:ok, TS.oracle_expiration_key(1)}
 
-             ActiveOracleExpiration, :backward, {exp, plain_name} ->
+             ActiveOracleExpiration, {exp, plain_name} ->
                {:ok, {exp - 1, "a#{plain_name}"}}
 
-             InactiveOracleExpiration, :backward, nil ->
-               :none
-
-             _tab, :forward, nil ->
+             InactiveOracleExpiration, nil ->
                :none
            end,
+           next_key: fn _tab, nil -> :none end,
            last_key: fn Block -> {:ok, last_gen} end,
            fetch!: fn _tab, _pk -> oracle end
          ]},
@@ -65,14 +63,14 @@ defmodule AeMdwWeb.OracleControllerTest do
       with_mocks [
         {Database, [],
          [
-           next_key: fn
-             ActiveOracleExpiration, :backward, nil -> {:ok, {1, "a"}}
-             ActiveOracleExpiration, :backward, {0, _plain_name} -> :none
-             ActiveOracleExpiration, :backward, {exp, "a"} -> {:ok, {exp - 1, "a"}}
-             InactiveOracleExpiration, :backward, nil -> {:ok, {1, "b"}}
-             InactiveOracleExpiration, :backward, {0, "b"} -> :none
-             InactiveOracleExpiration, :backward, {exp, "b"} -> {:ok, {exp - 1, "b"}}
-             _tab, :forward, _key -> :none
+           next_key: fn _tab, _key -> :none end,
+           prev_key: fn
+             ActiveOracleExpiration, nil -> {:ok, {1, "a"}}
+             ActiveOracleExpiration, {0, _plain_name} -> :none
+             ActiveOracleExpiration, {exp, "a"} -> {:ok, {exp - 1, "a"}}
+             InactiveOracleExpiration, nil -> {:ok, {1, "b"}}
+             InactiveOracleExpiration, {0, "b"} -> :none
+             InactiveOracleExpiration, {exp, "b"} -> {:ok, {exp - 1, "b"}}
            end,
            last_key: fn Block -> {:ok, TS.last_gen()} end,
            fetch!: fn _tab, _oracle_pk -> oracle end
@@ -103,11 +101,11 @@ defmodule AeMdwWeb.OracleControllerTest do
          [
            last_key: fn Block -> {:ok, TS.last_gen()} end,
            fetch!: fn _tab, _oracle_pk -> oracle end,
-           next_key: fn
-             _tab, :backward, ^key1 -> {:ok, key2}
-             _tab, :backward, nil -> {:ok, key1}
-             _tab, :backward, ^key2 -> :none
-             _tab, :forward, _key -> :none
+           next_key: fn _tab, _key -> :none end,
+           prev_key: fn
+             _tab, ^key1 -> {:ok, key2}
+             _tab, nil -> {:ok, key1}
+             _tab, ^key2 -> :none
            end
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
@@ -134,7 +132,8 @@ defmodule AeMdwWeb.OracleControllerTest do
         {Database, [],
          [
            last_key: fn Block -> {:ok, TS.last_gen()} end,
-           next_key: fn ActiveOracleExpiration, _dir, _key -> {:ok, expiration_key} end,
+           next_key: fn ActiveOracleExpiration, _key -> {:ok, expiration_key} end,
+           prev_key: fn ActiveOracleExpiration, _key -> {:ok, expiration_key} end,
            fetch!: fn _tab, _oracle_pk -> TS.oracle() end
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},

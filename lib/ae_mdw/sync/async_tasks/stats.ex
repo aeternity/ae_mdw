@@ -74,7 +74,7 @@ defmodule AeMdw.Sync.AsyncTasks.Stats do
   end
 
   defp update_db_count() do
-    db_pending_count = Database.count_keys(Model.AsyncTasks)
+    db_pending_count = Database.count(Model.AsyncTasks)
     :ets.update_element(@tab, @stats_key, {@db_count_pos, db_pending_count})
   end
 

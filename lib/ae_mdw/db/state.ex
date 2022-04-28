@@ -6,10 +6,12 @@ defmodule AeMdw.Db.State do
   """
 
   alias AeMdw.Database
-  alias AeMdw.Db.RocksDb
   alias AeMdw.Db.Mutation
+  alias AeMdw.Db.DbStore
+  alias AeMdw.Db.Store
+  alias AeMdw.Db.TxnDbStore
 
-  defstruct [:txn, :stats, :cache]
+  defstruct [:store, :stats, :cache]
 
   @typep key() :: Database.key()
   @typep record() :: Database.record()
@@ -20,74 +22,64 @@ defmodule AeMdw.Db.State do
   @typep cache_name() :: atom()
 
   @opaque t() :: %__MODULE__{
-            txn: Database.transaction() | nil,
+            store: Store.t(),
             stats: stats(),
             cache: %{cache_name() => map()}
           }
 
   @spec new() :: t()
-  def new do
-    %__MODULE__{stats: %{}, cache: %{}}
-  end
+  def new, do: %__MODULE__{store: DbStore.new(), stats: %{}, cache: %{}}
 
   @spec commit(t(), [Mutation.t()]) :: t()
-  def commit(state, mutations) do
-    {:ok, txn} = RocksDb.transaction_new()
-    state2 = %__MODULE__{state | txn: txn}
+  def commit(%__MODULE__{store: prev_store} = state, mutations) do
+    state3 =
+      TxnDbStore.transaction(fn store ->
+        state2 = %__MODULE__{state | store: store}
 
-    new_state =
-      mutations
-      |> List.flatten()
-      |> Enum.reject(&is_nil/1)
-      |> Enum.reduce(state2, &Mutation.execute/2)
+        mutations
+        |> List.flatten()
+        |> Enum.reject(&is_nil/1)
+        |> Enum.reduce(state2, &Mutation.execute/2)
+      end)
 
-    :ok = RocksDb.transaction_commit(txn)
-
-    %__MODULE__{new_state | txn: nil}
+    %__MODULE__{state3 | store: prev_store}
   end
 
   @spec put(t(), table(), record()) :: t()
-  def put(%__MODULE__{txn: txn} = state, tab, record) do
-    Database.write(txn, tab, record)
-
-    state
-  end
+  def put(%__MODULE__{store: store} = state, tab, record),
+    do: %__MODULE__{state | store: Store.put(store, tab, record)}
 
   @spec get(t(), table(), key()) :: {:ok, record()} | :not_found
-  def get(%__MODULE__{txn: txn}, table, key) do
-    Database.dirty_fetch(txn, table, key)
-  end
+  def get(%__MODULE__{store: store}, table, key), do: Store.get(store, table, key)
 
   @spec fetch!(t(), table(), key()) :: record() | :not_found
   def fetch!(state, table, key) do
     case get(state, table, key) do
       {:ok, record} -> record
-      :not_found -> raise "#{inspect(key)} not found"
+      :not_found -> raise "#{inspect(key)} not found in #{table}"
     end
   end
 
-  @spec count_keys(t(), table()) :: non_neg_integer()
-  def count_keys(_state, table) do
-    Database.count_keys(table)
-  end
+  @spec count_keys(t(), table()) :: Enumerable.t()
+  def count_keys(%__MODULE__{store: store}, table), do: Store.count_keys(store, table)
 
   @spec exists?(t(), table(), key()) :: boolean()
-  def exists?(_state, table, key) do
-    Database.exists?(table, key)
-  end
+  def exists?(state, table, key), do: match?({:ok, _record}, get(state, table, key))
 
   @spec delete(t(), table(), key()) :: t()
-  def delete(%__MODULE__{txn: txn} = state, tab, key) do
-    Database.delete(txn, tab, key)
-
-    state
-  end
+  def delete(%__MODULE__{store: store} = state, tab, key),
+    do: %__MODULE__{state | store: Store.delete(store, tab, key)}
 
   @spec next(t(), table(), key()) :: {:ok, key()} | :none
-  def next(%__MODULE__{txn: txn}, table, key), do: Database.dirty_next(txn, table, key)
+  def next(%__MODULE__{store: store}, table, key), do: Store.next(store, table, key)
+
+  @spec prev(t(), table(), key()) :: {:ok, key()} | :none
+  def prev(%__MODULE__{store: store}, table, key), do: Store.prev(store, table, key)
 
   @spec next(t(), table(), direction(), key()) :: {:ok, key()} | :none
-  def next(_state, tab, direction, cursor), do: Database.next_key(tab, direction, cursor)
+  def next(state, table, :backward, cursor), do: prev(state, table, cursor)
+
+  def next(state, table, :forward, cursor), do: next(state, table, cursor)
 
   @spec inc_stat(t(), stat_name(), integer()) :: t()
   def inc_stat(state, name, delta \\ 1)
