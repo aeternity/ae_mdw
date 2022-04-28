@@ -54,7 +54,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       Database.commit([mutation])
 
       assert {:ok, {^account_pk, ^call_txi, ^contract_pk}} =
-               Database.next_key(Model.Aex9AccountPresence, {account_pk, -1, nil})
+               Database.next_key(Model.Aex9AccountPresence, {account_pk, call_txi, nil})
     end
 
     test "add aex9 presence after a transfer" do
@@ -77,7 +77,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       Database.commit([mutation])
 
       assert {:ok, {^account_pk, ^call_txi, ^contract_pk}} =
-               Database.next_key(Model.Aex9AccountPresence, {account_pk, -1, nil})
+               Database.next_key(Model.Aex9AccountPresence, {account_pk, call_txi, nil})
     end
 
     test "add aex9 presence after a transfer allowance" do
@@ -105,7 +105,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       Database.commit([mutation])
 
       assert {:ok, {^account_pk, ^call_txi, ^contract_pk}} =
-               Database.next_key(Model.Aex9AccountPresence, {account_pk, -1, nil})
+               Database.next_key(Model.Aex9AccountPresence, {account_pk, call_txi, nil})
     end
 
     test "add aex9 presence after a burn (balance is 0)" do
@@ -128,7 +128,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       Database.commit([mutation])
 
       assert {:ok, {^account_pk, ^call_txi, ^contract_pk}} =
-               Database.next_key(Model.Aex9AccountPresence, {account_pk, -1, nil})
+               Database.next_key(Model.Aex9AccountPresence, {account_pk, call_txi, nil})
     end
   end
 
