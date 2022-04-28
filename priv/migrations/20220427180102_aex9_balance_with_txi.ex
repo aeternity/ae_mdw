@@ -36,7 +36,6 @@ defmodule AeMdw.Migrations.Aex9BalanceWithTxi do
         create_txi = Origin.tx_index!({:contract, contract_pk})
         bi = bi || Model.tx(read_tx!(create_txi), :block_index)
         txi = txi || create_txi
-        txi = if txi == -1, do: create_txi, else: txi
 
         WriteMutation.new(
           Model.Aex9Balance,
