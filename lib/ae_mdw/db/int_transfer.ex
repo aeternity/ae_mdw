@@ -94,21 +94,21 @@ defmodule AeMdw.Db.IntTransfer do
     |> State.put(Model.TargetKindIntTransferTx, target_kind_tx)
   end
 
-  @spec read_block_reward(Blocks.height()) :: pos_integer()
-  def read_block_reward(height) do
-    sum_reward_amount(height, @reward_block_kind)
+  @spec read_block_reward(State.t(), Blocks.height()) :: pos_integer()
+  def read_block_reward(state, height) do
+    sum_reward_amount(state, height, @reward_block_kind)
   end
 
-  @spec read_dev_reward(Blocks.height()) :: pos_integer()
-  def read_dev_reward(height) do
-    sum_reward_amount(height, @reward_dev_kind)
+  @spec read_dev_reward(State.t(), Blocks.height()) :: pos_integer()
+  def read_dev_reward(state, height) do
+    sum_reward_amount(state, height, @reward_dev_kind)
   end
 
-  defp sum_reward_amount(height, kind) do
+  defp sum_reward_amount(state, height, kind) do
     height_pos = {height, -1}
 
-    Model.IntTransferTx
-    |> Collection.stream({height_pos, kind, <<>>, -1})
+    state
+    |> Collection.stream(Model.IntTransferTx, {height_pos, kind, <<>>, -1})
     |> Stream.take_while(fn
       {^height_pos, ^kind, _target, _ref} -> true
       _other_height_kind -> false

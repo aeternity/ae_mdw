@@ -120,9 +120,9 @@ defmodule AeMdw.Db.Origin do
     contract_id
   end
 
-  @spec count_contracts() :: non_neg_integer()
-  def count_contracts do
-    count_by_tx_type(:contract_create_tx) + count_by_tx_type(:contract_call_tx)
+  @spec count_contracts(State.t()) :: non_neg_integer()
+  def count_contracts(state) do
+    count_by_tx_type(state, :contract_create_tx) + count_by_tx_type(state, :contract_call_tx)
   end
 
   #
@@ -142,9 +142,9 @@ defmodule AeMdw.Db.Origin do
     end
   end
 
-  defp count_by_tx_type(tx_type) do
-    Model.Origin
-    |> Collection.stream({tx_type, Util.min_bin(), nil})
+  defp count_by_tx_type(state, tx_type) do
+    state
+    |> Collection.stream(Model.Origin, {tx_type, Util.min_bin(), nil})
     |> Stream.take_while(&match?({^tx_type, _pubkey, _txi}, &1))
     |> Enum.count()
   end

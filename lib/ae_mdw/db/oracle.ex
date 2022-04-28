@@ -182,10 +182,15 @@ defmodule AeMdw.Db.Oracle do
   @doc """
   Returns stream of oracle pubkey() that expired at a certain height.
   """
-  @spec list_expired_at(Blocks.height()) :: Enumerable.t()
-  def list_expired_at(height) do
-    Model.InactiveOracleExpiration
-    |> Collection.stream(:forward, {{height, <<>>}, {height + 1, <<>>}}, nil)
+  @spec list_expired_at(State.t(), Blocks.height()) :: Enumerable.t()
+  def list_expired_at(state, height) do
+    state
+    |> Collection.stream(
+      Model.InactiveOracleExpiration,
+      :forward,
+      {{height, <<>>}, {height + 1, <<>>}},
+      nil
+    )
     |> Stream.map(fn {_height, pubkey} -> pubkey end)
     |> Stream.uniq()
   end

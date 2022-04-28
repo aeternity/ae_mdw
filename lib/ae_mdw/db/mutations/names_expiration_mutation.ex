@@ -25,15 +25,15 @@ defmodule AeMdw.Db.NamesExpirationMutation do
   @spec execute(t(), State.t()) :: State.t()
   def execute(%__MODULE__{height: height}, state) do
     new_state =
-      Model.ActiveNameExpiration
-      |> Collection.stream({height, <<>>})
+      state
+      |> Collection.stream(Model.ActiveNameExpiration, {height, <<>>})
       |> Stream.take_while(&match?({^height, _plain_name}, &1))
       |> Enum.reduce(state, fn {_height, plain_name}, state ->
         Name.expire_name(state, height, plain_name)
       end)
 
-    Model.AuctionExpiration
-    |> Collection.stream({height, <<>>})
+    state
+    |> Collection.stream(Model.AuctionExpiration, {height, <<>>})
     |> Stream.take_while(&match?({^height, _plain_name}, &1))
     |> Enum.map(&Database.fetch!(Model.AuctionExpiration, &1))
     |> Enum.reduce(new_state, fn Model.expiration(

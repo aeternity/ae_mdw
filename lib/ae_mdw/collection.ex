@@ -4,6 +4,7 @@ defmodule AeMdw.Collection do
   """
 
   alias AeMdw.Database
+  alias AeMdw.Db.State
   alias AeMdw.Util
 
   @typep table() :: Database.table()
@@ -53,9 +54,20 @@ defmodule AeMdw.Collection do
 
   @doc """
   Builds a stream from records from a table starting from the initial_key given.
+
+  It will use a new database State to retrieve the data for the stream, which
+  will obtain non-dirty data (e.g. without a rocksdb transaction).
   """
   @spec stream(table(), direction(), key_boundary(), cursor()) :: Enumerable.t()
-  def stream(tab, direction, key_boundary, cursor) do
+  def stream(tab, direction, key_boundary, cursor),
+    do: stream(State.new(), tab, direction, key_boundary, cursor)
+
+  @doc """
+  Builds a stream from records from a table starting from the initial_key given using
+  a State.
+  """
+  @spec stream(State.t(), table(), direction(), key_boundary(), cursor()) :: Enumerable.t()
+  def stream(state, tab, direction, key_boundary, cursor) do
     {first, last} =
       case {key_boundary, direction} do
         {nil, _dir} -> {nil, nil}
@@ -63,19 +75,28 @@ defmodule AeMdw.Collection do
         {{last, first}, :backward} -> {first, last}
       end
 
-    case fetch_first_key(tab, direction, first, cursor) do
-      {:ok, first_key} -> unfold_stream(tab, direction, first_key, last)
+    case fetch_first_key(state, tab, direction, first, cursor) do
+      {:ok, first_key} -> unfold_stream(state, tab, direction, first_key, last)
       :none -> []
     end
   end
 
   @doc """
   Streams forward a table seeking the iterator to a boundary start key.
+
+  It will use a new database State to retrieve the data for the stream, which
+  will obtain non-dirty data (e.g. without a rocksdb transaction).
   """
   @spec stream(table(), key()) :: Enumerable.t()
-  def stream(table, boundary_start_key) do
-    case fetch_first_key(table, :forward, boundary_start_key, nil) do
-      {:ok, first_key} -> unfold_stream(table, :forward, first_key, nil)
+  def stream(table, boundary_start_key), do: stream(State.new(), table, boundary_start_key)
+
+  @doc """
+  Same as stream/3 but using the State instead.
+  """
+  @spec stream(State.t(), table(), key()) :: Enumerable.t()
+  def stream(state, table, boundary_start_key) do
+    case fetch_first_key(state, table, :forward, boundary_start_key, nil) do
+      {:ok, first_key} -> unfold_stream(state, table, :forward, first_key, nil)
       :none -> []
     end
   end
@@ -107,14 +128,14 @@ defmodule AeMdw.Collection do
     end)
   end
 
-  defp unfold_stream(tab, direction, first_key, last_key) do
+  defp unfold_stream(state, tab, direction, first_key, last_key) do
     stream =
       Stream.unfold(first_key, fn
         :end_keys ->
           nil
 
         key ->
-          case Database.next_key(tab, direction, key) do
+          case State.next(state, tab, direction, key) do
             {:ok, next_key} -> {key, next_key}
             :none -> {key, :end_keys}
           end
@@ -129,23 +150,26 @@ defmodule AeMdw.Collection do
     end
   end
 
-  defp fetch_first_key(tab, direction, nil, nil), do: Database.next_key(tab, direction, nil)
+  defp fetch_first_key(state, tab, direction, nil, nil),
+    do: State.next(state, tab, direction, nil)
 
-  defp fetch_first_key(tab, direction, first, nil), do: fetch_first_key(tab, direction, first)
+  defp fetch_first_key(state, tab, direction, first, nil),
+    do: fetch_first_key(state, tab, direction, first)
 
-  defp fetch_first_key(tab, direction, nil, cursor), do: fetch_first_key(tab, direction, cursor)
+  defp fetch_first_key(state, tab, direction, nil, cursor),
+    do: fetch_first_key(state, tab, direction, cursor)
 
-  defp fetch_first_key(tab, :forward, first, cursor),
-    do: fetch_first_key(tab, :forward, max(first, cursor))
+  defp fetch_first_key(state, tab, :forward, first, cursor),
+    do: fetch_first_key(state, tab, :forward, max(first, cursor))
 
-  defp fetch_first_key(tab, :backward, first, cursor),
-    do: fetch_first_key(tab, :backward, min(first, cursor))
+  defp fetch_first_key(state, tab, :backward, first, cursor),
+    do: fetch_first_key(state, tab, :backward, min(first, cursor))
 
-  defp fetch_first_key(tab, direction, candidate_cursor) do
-    if Database.exists?(tab, candidate_cursor) do
+  defp fetch_first_key(state, tab, direction, candidate_cursor) do
+    if State.exists?(state, tab, candidate_cursor) do
       {:ok, candidate_cursor}
     else
-      Database.next_key(tab, direction, candidate_cursor)
+      State.next(state, tab, direction, candidate_cursor)
     end
   end
 

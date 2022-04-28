@@ -4,9 +4,7 @@ defmodule AeMdw.Db.StatsMutation do
   """
 
   alias AeMdw.Db.Model
-  alias AeMdw.Database
   alias AeMdw.Blocks
-  alias AeMdw.Database
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
@@ -62,22 +60,22 @@ defmodule AeMdw.Db.StatsMutation do
     )
   end
 
-  defp make_delta_stat(_state, height, false = _all_cached?) do
+  defp make_delta_stat(state, height, false = _all_cached?) do
     Model.total_stat(
       active_auctions: prev_active_auctions,
       active_names: prev_active_names,
       active_oracles: prev_active_oracles,
       contracts: prev_contracts
-    ) = Database.fetch!(Model.TotalStat, height)
+    ) = State.fetch!(state, Model.TotalStat, height)
 
-    current_active_names = Database.count_keys(Model.ActiveName)
-    current_active_auctions = Database.count_keys(Model.AuctionExpiration)
-    current_active_oracles = Database.count_keys(Model.ActiveOracle)
+    current_active_names = State.count_keys(state, Model.ActiveName)
+    current_active_auctions = State.count_keys(state, Model.AuctionExpiration)
+    current_active_oracles = State.count_keys(state, Model.ActiveOracle)
 
     {height_revoked_names, height_expired_names} =
-      height
-      |> Name.list_inactivated_at()
-      |> Enum.map(fn plain_name -> Database.fetch!(Model.InactiveName, plain_name) end)
+      state
+      |> Name.list_inactivated_at(height)
+      |> Enum.map(fn plain_name -> State.fetch!(state, Model.InactiveName, plain_name) end)
       |> Enum.split_with(fn Model.name(revoke: revoke) ->
         if revoke do
           {{kbi, _mbi}, _txi} = revoke
@@ -87,16 +85,16 @@ defmodule AeMdw.Db.StatsMutation do
         end
       end)
 
-    all_contracts_count = Origin.count_contracts()
+    all_contracts_count = Origin.count_contracts(state)
 
     oracles_expired_count =
-      height
-      |> Oracle.list_expired_at()
+      state
+      |> Oracle.list_expired_at(height)
       |> Enum.uniq()
       |> Enum.count()
 
-    current_block_reward = IntTransfer.read_block_reward(height)
-    current_dev_reward = IntTransfer.read_dev_reward(height)
+    current_block_reward = IntTransfer.read_block_reward(state, height)
+    current_dev_reward = IntTransfer.read_dev_reward(state, height)
 
     Model.delta_stat(
       index: height,
@@ -138,7 +136,7 @@ defmodule AeMdw.Db.StatsMutation do
       active_oracles: prev_active_oracles,
       inactive_oracles: prev_inactive_oracles,
       contracts: prev_contracts
-    ) = fetch_total_stat(height - 1)
+    ) = fetch_total_stat(state, height - 1)
 
     token_supply_delta = AeMdw.Node.token_supply_delta(height - 1)
     auctions_expired = get(state, :auctions_expired, 0)
@@ -159,11 +157,11 @@ defmodule AeMdw.Db.StatsMutation do
 
   defp get(state, stat_sync_key, default), do: State.get_stat(state, stat_sync_key, default)
 
-  defp fetch_total_stat(0) do
+  defp fetch_total_stat(_state, 0) do
     Model.total_stat()
   end
 
-  defp fetch_total_stat(height) do
-    Database.fetch!(Model.TotalStat, height)
+  defp fetch_total_stat(state, height) do
+    State.fetch!(state, Model.TotalStat, height)
   end
 end

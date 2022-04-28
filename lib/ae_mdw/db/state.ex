@@ -13,6 +13,7 @@ defmodule AeMdw.Db.State do
 
   @typep key() :: Database.key()
   @typep record() :: Database.record()
+  @typep direction() :: Database.direction()
   @typep table() :: Database.table()
   @typep stat_name() :: atom()
   @typep stats() :: %{atom() => non_neg_integer()}
@@ -57,6 +58,24 @@ defmodule AeMdw.Db.State do
     Database.dirty_fetch(txn, table, key)
   end
 
+  @spec fetch!(t(), table(), key()) :: record() | :not_found
+  def fetch!(state, table, key) do
+    case get(state, table, key) do
+      {:ok, record} -> record
+      :not_found -> raise "#{inspect(key)} not found"
+    end
+  end
+
+  @spec count_keys(t(), table()) :: non_neg_integer()
+  def count_keys(_state, table) do
+    Database.count_keys(table)
+  end
+
+  @spec exists?(t(), table(), key()) :: boolean()
+  def exists?(_state, table, key) do
+    Database.exists?(table, key)
+  end
+
   @spec delete(t(), table(), key()) :: t()
   def delete(%__MODULE__{txn: txn} = state, tab, key) do
     Database.delete(txn, tab, key)
@@ -66,6 +85,9 @@ defmodule AeMdw.Db.State do
 
   @spec next(t(), table(), key()) :: {:ok, key()} | :none
   def next(%__MODULE__{txn: txn}, table, key), do: Database.dirty_next(txn, table, key)
+
+  @spec next(t(), table(), direction(), key()) :: {:ok, key()} | :none
+  def next(_state, tab, direction, cursor), do: Database.next_key(tab, direction, cursor)
 
   @spec inc_stat(t(), stat_name(), integer()) :: t()
   def inc_stat(state, name, delta \\ 1)

@@ -148,10 +148,15 @@ defmodule AeMdw.Db.Name do
   @doc """
   Returns a stream of Names.plain_name()
   """
-  @spec list_inactivated_at(Blocks.height()) :: Enumerable.t()
-  def list_inactivated_at(height) do
-    Model.InactiveNameExpiration
-    |> Collection.stream(:forward, {{height, <<>>}, {height + 1, <<>>}}, nil)
+  @spec list_inactivated_at(State.t(), Blocks.height()) :: Enumerable.t()
+  def list_inactivated_at(state, height) do
+    state
+    |> Collection.stream(
+      Model.InactiveNameExpiration,
+      :forward,
+      {{height, <<>>}, {height + 1, <<>>}},
+      nil
+    )
     |> Stream.map(fn {_height, plain_name} -> plain_name end)
   end
 
