@@ -121,11 +121,6 @@ defmodule AeMdw.Node do
     123
   end
 
-  @spec stream_mod(module()) :: module()
-  def stream_mod(mod) do
-    mod
-  end
-
   @spec token_supply_delta(non_neg_integer()) :: non_neg_integer()
   def token_supply_delta(_arg) do
     0

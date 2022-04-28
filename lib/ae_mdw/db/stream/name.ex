@@ -3,10 +3,7 @@ defmodule AeMdw.Db.Stream.Name do
   alias AeMdw.Database
   alias AeMdw.Db.Stream.Resource.Util, as: RU
   alias AeMdw.Db.Model
-
-  require Model
-
-  import AeMdw.Db.Util
+  alias AeMdw.Db.Util
 
   ##########
 
@@ -41,7 +38,7 @@ defmodule AeMdw.Db.Stream.Name do
   end
 
   def last_bin_key(tab) do
-    case last(tab) do
+    case Util.last(tab) do
       :"$end_of_table" -> nil
       key -> key <> "Z"
     end
