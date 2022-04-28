@@ -5,9 +5,10 @@ defmodule AeMdw.Migrations.Aex9BalanceWithTxi do
 
   alias AeMdw.Collection
   alias AeMdw.Database
-  alias AeMdw.Db.WriteTxnMutation
+  alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
+  alias AeMdw.Db.State
   alias AeMdw.Log
 
   require Model
@@ -37,14 +38,14 @@ defmodule AeMdw.Migrations.Aex9BalanceWithTxi do
         txi = txi || create_txi
         txi = if txi == -1, do: create_txi, else: txi
 
-        WriteTxnMutation.new(
+        WriteMutation.new(
           Model.Aex9Balance,
           Model.aex9_balance(m_balance, block_index: bi, txi: txi)
         )
       end)
       |> Enum.to_list()
 
-    Database.commit(mutations)
+    State.commit(State.new(), mutations)
 
     indexed_count = length(mutations)
 
