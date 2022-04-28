@@ -86,7 +86,8 @@ defmodule AeMdw.MixProject do
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
         coveralls: :test,
-        "test.integration": :test
+        "test.integration": :test,
+        "test.iteration": :test
       ]
     ]
   end
@@ -144,7 +145,8 @@ defmodule AeMdw.MixProject do
   defp aliases do
     %{
       test: ["test --exclude integration"],
-      "test.integration": ["test --only integration"]
+      "test.integration": ["test --only integration"],
+      "test.iteration": ["test --only iteration"]
     }
   end
 

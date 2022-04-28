@@ -1,10 +1,13 @@
 defmodule Integration.AeMdwWeb.Aex9ControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
+  alias AeMdw.Database
   alias AeMdw.Db.Origin
   alias AeMdw.Db.Model
   alias AeMdw.Db.Util
   alias AeMdw.Validate
+
+  import AeMdwWeb.Helpers.Aex9Helper
 
   require Model
 
@@ -12,11 +15,12 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
   @big_balance_contract_id1 "ct_BwJcRRa7jTAvkpzc2D16tJzHMGCJurtJMUBtyyfGi2QjPuMVv"
   @big_balance_contract_id2 "ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM"
+  @big_balance_contract_id3 "ct_M9yohHgcLjhpp1Z8SaA1UTmRMQzR4FWjJHajGga8KBoZTEPwC"
 
   @default_limit 10
 
   describe "by_contract" do
-    test "gets aex9 tokens sorted by contract", %{conn: conn} do
+    test "gets an aex9 token by contract id", %{conn: conn} do
       contract_id = "ct_1DtebWK23btGPEnfiH3fxppd34S75uUryo5yGmb938Dx9Nyjt"
 
       response =
@@ -48,6 +52,33 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
                  "name" => "AAA",
                  "symbol" => "AAA"
                }
+    end
+
+    @tag :iteration
+    test "gets each of the aex9 tokens by contract id", %{conn: conn} do
+      Model.Aex9ContractPubkey
+      |> Database.all_keys()
+      |> Enum.each(fn aex9_pubkey ->
+        contract_id = enc_ct(aex9_pubkey)
+
+        response =
+          conn
+          |> get("/aex9/by_contract/#{contract_id}")
+          |> json_response(200)
+
+        assert %{
+                 "contract_id" => ^contract_id,
+                 "contract_txi" => contract_txi,
+                 "decimals" => decimals,
+                 "name" => name,
+                 "symbol" => symbol
+               } = response["data"]
+
+        assert contract_txi == Origin.tx_index!({:contract, aex9_pubkey})
+        assert is_integer(decimals) and decimals >= 0
+        assert is_binary(name)
+        assert is_binary(symbol)
+      end)
     end
   end
 
@@ -181,6 +212,53 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
         assert String.starts_with?(hash, "kh_") and match?({:ok, _hash_bin}, Validate.id(hash))
       end)
     end
+
+    @tag :iteration
+    test "gets balances on each contract for a range of generations", %{conn: conn} do
+      first = 500_001
+      last = 500_003
+
+      Model.block(tx_index: range_txi) = Database.fetch!(Model.Block, {first, -1})
+
+      Model.Aex9ContractPubkey
+      |> Database.all_keys()
+      |> Enum.filter(fn contract_pk ->
+        Origin.tx_index!({:contract, contract_pk}) < range_txi and
+          enc_ct(contract_pk) not in [
+            @big_balance_contract_id1,
+            @big_balance_contract_id2,
+            @big_balance_contract_id3
+          ]
+      end)
+      |> Enum.each(fn aex9_pubkey ->
+        contract_id = enc_ct(aex9_pubkey)
+
+        path =
+          Routes.aex9_path(
+            conn,
+            :balances_range,
+            "#{first}-#{last}",
+            contract_id
+          )
+
+        response = conn |> get(path) |> json_response(200)
+        assert response["contract_id"] == contract_id
+        assert is_list(response["range"])
+
+        response["range"]
+        |> Enum.zip(first..last)
+        |> Enum.each(fn {height_map, height} ->
+          assert %{
+                   "amounts" => amounts,
+                   "block_hash" => hash,
+                   "height" => ^height
+                 } = height_map
+
+          assert is_map(amounts)
+          assert String.starts_with?(hash, "kh_") and match?({:ok, _hash_bin}, Validate.id(hash))
+        end)
+      end)
+    end
   end
 
   describe "balance_for_hash" do
@@ -220,6 +298,42 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
              } = json_response(conn, 200)
     end
 
+    @tag :iteration
+    test "gets balances for some hashes and each contract", %{conn: conn} do
+      mb_hashes =
+        [
+          {300_001, 1},
+          {400_002, 2},
+          {500_003, 3}
+        ]
+        |> Enum.map(&Database.fetch!(Model.Block, &1))
+        |> Enum.map(fn Model.block(tx_index: txi, hash: mb_hash) ->
+          {txi, :aeser_api_encoder.encode(:micro_block_hash, mb_hash)}
+        end)
+
+      Model.Aex9ContractPubkey
+      |> Database.all_keys()
+      |> Enum.map(&enc_ct/1)
+      |> Enum.zip(mb_hashes)
+      |> Enum.filter(fn {contract_id, {_mb_hash, mb_txi}} ->
+        ct_pk = Validate.id!(contract_id)
+        Origin.tx_index!({:contract, ct_pk}) > mb_txi
+      end)
+      |> Enum.each(fn {contract_id, {mb_hash, _mb_txi}} ->
+        conn = get(conn, "/aex9/balances/hash/#{mb_hash}/#{contract_id}")
+
+        assert %{
+                 "amounts" => amounts,
+                 "block_hash" => ^mb_hash,
+                 "contract_id" => ^contract_id,
+                 "height" => height
+               } = json_response(conn, 200)
+
+        assert is_map(amounts)
+        assert height in [300_001, 400_002, 500_003]
+      end)
+    end
+
     test "gets balances for hash and account", %{conn: conn} do
       mb_height = 578_684
       mb_hash = "mh_2eSwMRK7KXtPZqkciBWU2o764yZ8QCttWUSxvh2aRWwDE15oVm"
@@ -250,7 +364,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
     end
   end
 
-  describe "balances" do
+  describe "balances/:contract_id" do
     test "gets all accounts balances for a contract", %{conn: conn} do
       contract_id = @big_balance_contract_id1
       conn = get(conn, "/aex9/balances/#{contract_id}")
@@ -278,6 +392,27 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
       assert is_map(amounts) and map_size(amounts) > 0 and map_size(amounts) < 100
     end
 
+    test "gets balances for each contract", %{conn: conn} do
+      aex9_pubkeys = Database.all_keys(Model.Aex9ContractPubkey)
+
+      not_empty_balance_contracts =
+        Enum.filter(aex9_pubkeys, fn contract_pk ->
+          contract_id = enc_ct(contract_pk)
+          conn = get(conn, "/aex9/balances/#{contract_id}")
+
+          assert %{
+                   "amounts" => amounts,
+                   "contract_id" => ^contract_id
+                 } = json_response(conn, 200)
+
+          assert is_map(amounts)
+
+          map_size(amounts) > 0
+        end)
+
+      assert Enum.count(not_empty_balance_contracts) / Enum.count(aex9_pubkeys) > 0.95
+    end
+
     test "returns the empty amounts for aex9 contract without balance", %{conn: conn} do
       contract_id = "ct_U7whpYJo4xXoXjEpw39mWEPKgKM2kgSZk9em5FLK8Xq2FrRWE"
       conn = get(conn, "/aex9/balances/#{contract_id}")
@@ -291,7 +426,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
     end
   end
 
-  describe "balance" do
+  describe "balances/account/:account_id" do
     test "gets an account balances for multiple contracts", %{conn: conn} do
       account_id = "ak_WzcSck8B9ZPgHsy5XeqBbtUV4YbTuGyyJUzhSMvSK2JY1nzqJ"
       conn = get(conn, "/aex9/balances/account/#{account_id}")
@@ -315,6 +450,37 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
         assert token_name == name
         assert token_symbol == symbol
+      end)
+    end
+
+    @tag timeout: 300_000
+    @tag :iteration
+    # @tag :skip
+    test "gets balances for each account with aex9 presence", %{conn: conn} do
+      Model.Aex9AccountPresence
+      |> Database.all_keys()
+      |> Enum.map(fn {account_pk, _txi, _contract_pk} ->
+        :aeser_api_encoder.encode(:account_pubkey, account_pk)
+      end)
+      |> Enum.uniq()
+      |> Enum.each(fn account_id ->
+        conn = get(conn, "/aex9/balances/account/#{account_id}")
+        assert balances_response = json_response(conn, 200)
+
+        Enum.each(balances_response, fn %{
+                                          "contract_id" => contract_id,
+                                          "token_name" => token_name,
+                                          "token_symbol" => token_symbol
+                                        } ->
+          {:contract_pubkey, contract_pk} = :aeser_api_encoder.decode(contract_id)
+          create_txi = Origin.tx_index!({:contract, contract_pk})
+
+          {^create_txi, name, symbol, _decimals} =
+            Util.next(Model.RevAex9Contract, {create_txi, nil, nil, nil})
+
+          assert token_name == name
+          assert token_symbol == symbol
+        end)
       end)
     end
   end
