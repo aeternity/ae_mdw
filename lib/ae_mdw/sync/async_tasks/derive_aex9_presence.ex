@@ -41,10 +41,9 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
           {account_pk, amount}
         end)
 
-      mutation = DeriveAex9PresenceMutation.new(contract_pk, create_txi, balances)
-      state = State.new()
+      mutation = DeriveAex9PresenceMutation.new(contract_pk, {kbi, mbi}, create_txi, balances)
 
-      State.commit(state, [mutation])
+      State.commit(State.new(), [mutation])
     end
 
     :ok
