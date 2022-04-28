@@ -138,10 +138,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         <<45, 195, 148, 17, 5, 88, 182, 202, 65, 160, 150, 218, 33, 163, 136, 171, 149, 101, 165,
           178, 212, 56, 89, 23, 172, 233, 200, 126, 138, 235, 158, 11>>
 
-      caller_pk =
-        <<86, 184, 235, 22, 134, 71, 254, 125, 140, 211, 113, 59, 82, 110, 159, 107, 223, 171,
-          122, 119, 157, 71, 130, 57, 92, 34, 139, 37, 241, 226, 10, 119>>
-
       call_txi = 9_353_623
 
       fun_arg_res = %{
@@ -185,7 +181,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       mutation =
         ContractCallMutation.new(
           contract_pk,
-          caller_pk,
+          {231_734, 54},
           call_txi,
           fun_arg_res,
           call_rec
@@ -242,7 +238,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
     mutation =
       ContractCallMutation.new(
         contract_pk,
-        caller_pk,
+        {240_000, 12},
         call_txi,
         fun_arg_res,
         call_rec
