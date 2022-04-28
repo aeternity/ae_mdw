@@ -215,6 +215,17 @@ defmodule AeMdw.Aex9 do
     end
   end
 
+  @spec fetch_amount_and_keyblock(pubkey(), pubkey()) ::
+          {:ok, {number(), Db.height_hash()}} | {:error, Error.t()}
+  def fetch_amount_and_keyblock(contract_pk, account_pk) do
+    with {:ok, {amount, call_txi}} <- fetch_amount(contract_pk, account_pk) do
+      kbi = DbUtil.txi_to_gen(call_txi)
+      Model.block(hash: kb_hash) = Database.fetch!(Model.Block, {kbi, -1})
+
+      {:ok, {amount, {:key, kbi, kb_hash}}}
+    end
+  end
+
   @spec fetch_account_balances(pubkey(), account_balance_cursor(), pagination()) ::
           {:ok, account_balance_cursor() | nil, [account_balance()],
            account_balance_cursor() | nil}

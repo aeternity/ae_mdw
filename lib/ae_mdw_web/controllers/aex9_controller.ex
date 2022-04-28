@@ -275,7 +275,19 @@ defmodule AeMdwWeb.Aex9Controller do
   end
 
   defp balance_reply(conn, contract_pk, account_pk) do
-    {amount, {type, height, hash}} = DBN.aex9_balance(contract_pk, account_pk, top?(conn))
+    {amount, {type, height, hash}} =
+      if top?(conn) do
+        DBN.aex9_balance(contract_pk, account_pk, top?(conn))
+      else
+        case Aex9.fetch_amount_and_keyblock(contract_pk, account_pk) do
+          {:ok, {amount, kb_height_hash}} ->
+            {amount, kb_height_hash}
+
+          {:error, unavailable_error} ->
+            raise unavailable_error
+        end
+      end
+
     json(conn, balance_to_map({amount, {type, height, hash}}, contract_pk, account_pk))
   end
 
