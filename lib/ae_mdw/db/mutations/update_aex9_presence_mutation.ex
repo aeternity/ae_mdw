@@ -1,6 +1,6 @@
-defmodule AeMdw.Db.DeriveAex9PresenceMutation do
+defmodule AeMdw.Db.UpdateAex9PresenceMutation do
   @moduledoc """
-  Stores the derived aex9 balances for a contract.
+  Stores the new updated aex9 balances for a contract.
   """
 
   alias AeMdw.Aex9
@@ -14,23 +14,23 @@ defmodule AeMdw.Db.DeriveAex9PresenceMutation do
   require Model
 
   @derive AeMdw.Db.Mutation
-  defstruct [:contract_pk, :block_index, :create_txi, :balances]
+  defstruct [:contract_pk, :block_index, :txi, :balances]
 
   @typep aex9_balance() :: {Db.pubkey(), Aex9.amount()}
 
   @opaque t() :: %__MODULE__{
             contract_pk: Db.pubkey(),
             block_index: Blocks.block_index(),
-            create_txi: Txs.txi(),
+            txi: Txs.txi(),
             balances: [aex9_balance()]
           }
 
   @spec new(Db.pubkey(), Blocks.block_index(), Txs.txi(), [aex9_balance()]) :: t()
-  def new(contract_pk, block_index, create_txi, balances) do
+  def new(contract_pk, block_index, call_txi, balances) do
     %__MODULE__{
       contract_pk: contract_pk,
       block_index: block_index,
-      create_txi: create_txi,
+      txi: call_txi,
       balances: balances
     }
   end
@@ -40,7 +40,7 @@ defmodule AeMdw.Db.DeriveAex9PresenceMutation do
         %__MODULE__{
           contract_pk: contract_pk,
           block_index: block_index,
-          create_txi: create_txi,
+          txi: call_txi,
           balances: balances
         },
         state
@@ -50,13 +50,14 @@ defmodule AeMdw.Db.DeriveAex9PresenceMutation do
         Model.aex9_balance(
           index: {contract_pk, account_pk},
           block_index: block_index,
-          txi: create_txi,
+          txi: call_txi,
           amount: amount
         )
 
-      state
-      |> Contract.aex9_write_presence(contract_pk, create_txi, account_pk)
-      |> State.put(Model.Aex9Balance, m_balance)
+      {_exists?, state2} =
+        Contract.aex9_write_new_presence(state, contract_pk, call_txi, account_pk)
+
+      State.put(state2, Model.Aex9Balance, m_balance)
     end)
   end
 end

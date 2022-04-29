@@ -53,7 +53,6 @@ defmodule AeMdw.Db.Aex9CreateContractMutation do
       ) do
     DBContract.aex9_creation_write(txn, aex9_meta_info, contract_pk, create_txi)
     AsyncTasks.Producer.enqueue(:derive_aex9_presence, [contract_pk, kbi, mbi, create_txi])
-    AsyncTasks.Producer.commit_enqueued()
     :ok
   end
 end

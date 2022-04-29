@@ -2,6 +2,7 @@ defmodule AeMdwWeb.Aex9Controller do
   use AeMdwWeb, :controller
   use PhoenixSwagger
 
+  alias AeMdw.Aex9
   alias AeMdw.Validate
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db, as: DBN
@@ -124,7 +125,7 @@ defmodule AeMdwWeb.Aex9Controller do
         conn,
         fn ->
           account_pk = Validate.id!(account_id, [:account_pubkey])
-          account_balances_reply(conn, account_pk, Util.last_txi())
+          account_balances_reply(conn, account_pk)
         end
       )
 
@@ -274,7 +275,19 @@ defmodule AeMdwWeb.Aex9Controller do
   end
 
   defp balance_reply(conn, contract_pk, account_pk) do
-    {amount, {type, height, hash}} = DBN.aex9_balance(contract_pk, account_pk, top?(conn))
+    {amount, {type, height, hash}} =
+      if top?(conn) do
+        DBN.aex9_balance(contract_pk, account_pk, top?(conn))
+      else
+        case Aex9.fetch_amount_and_keyblock(contract_pk, account_pk) do
+          {:ok, {amount, kb_height_hash}} ->
+            {amount, kb_height_hash}
+
+          {:error, unavailable_error} ->
+            raise unavailable_error
+        end
+      end
+
     json(conn, balance_to_map({amount, {type, height, hash}}, contract_pk, account_pk))
   end
 
@@ -299,6 +312,26 @@ defmodule AeMdwWeb.Aex9Controller do
   defp balance_for_hash_reply(conn, contract_pk, account_pk, {type, block_hash, height}) do
     {amount, _} = DBN.aex9_balance(contract_pk, account_pk, {type, height, block_hash})
     json(conn, balance_to_map({amount, {type, height, block_hash}}, contract_pk, account_pk))
+  end
+
+  defp account_balances_reply(conn, account_pk) do
+    balances =
+      account_pk
+      |> Contract.aex9_search_contracts()
+      |> Enum.map(fn contract_pk ->
+        case Aex9.fetch_amount(contract_pk, account_pk) do
+          {:ok, {amount, call_txi}} ->
+            create_txi = Origin.tx_index!({:contract, contract_pk})
+
+            {amount, create_txi, call_txi, contract_pk}
+
+          {:error, unavailable_error} ->
+            raise unavailable_error
+        end
+      end)
+      |> Enum.map(&balance_to_map/1)
+
+    json(conn, balances)
   end
 
   defp account_balances_reply(conn, account_pk, last_txi) do

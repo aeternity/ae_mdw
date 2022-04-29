@@ -314,6 +314,14 @@ defmodule AeMdw.Db.Contract do
     )
   end
 
+  @spec aex9_search_contracts(pubkey()) :: [pubkey()]
+  def aex9_search_contracts(account_pk) do
+    Model.Aex9AccountPresence
+    |> Collection.stream({account_pk, -1, <<>>})
+    |> Stream.take_while(fn {apk, _txi, _ct_pk} -> apk == account_pk end)
+    |> Enum.map(fn {_apk, _txi, contract_pk} -> contract_pk end)
+  end
+
   @spec aex9_search_contract(pubkey(), integer()) :: map()
   def aex9_search_contract(account_pk, last_txi) do
     gen_collect(
