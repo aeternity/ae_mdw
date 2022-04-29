@@ -41,10 +41,10 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9PresenceTest do
       ] do
         DeriveAex9Presence.process([contract_pk, kbi, mbi, create_txi])
 
-        assert Model.aex9_balance(amount: ^amount1) =
+        assert Model.aex9_balance(txi: ^create_txi, amount: ^amount1) =
                  Database.fetch!(Model.Aex9Balance, {contract_pk, account_pk1})
 
-        assert Model.aex9_balance(amount: ^amount2) =
+        assert Model.aex9_balance(txi: ^create_txi, amount: ^amount2) =
                  Database.fetch!(Model.Aex9Balance, {contract_pk, account_pk2})
 
         assert Database.exists?(Model.Aex9AccountPresence, {account_pk1, create_txi, contract_pk})

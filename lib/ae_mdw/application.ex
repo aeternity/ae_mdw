@@ -214,7 +214,8 @@ defmodule AeMdw.Application do
     :ets.new(:tx_sync_cache, [:named_table, :ordered_set, :public])
     :ets.new(:name_sync_cache, [:named_table, :ordered_set, :public])
     :ets.new(:oracle_sync_cache, [:named_table, :ordered_set, :public])
-    :ets.new(:ct_create_sync_cache, [:named_table, :ordered_set, :public])
+    :ets.new(:ct_create_sync_cache, [:named_table, :set, :public])
+    :ets.new(:aex9_sync_cache, [:named_table, :set, :public])
     :ets.new(:stat_sync_cache, [:named_table, :ordered_set, :public])
 
     AeMdw.Sync.AsyncTasks.Stats.init()

@@ -154,7 +154,6 @@ defmodule AeMdw.Db.Sync.Transaction do
          tx_hash: tx_hash
        }) do
     contract_pk = :aect_call_tx.contract_pubkey(tx)
-    <<caller_pk::binary-32>> = :aect_call_tx.caller_pubkey(tx)
 
     {fun_arg_res, call_rec} =
       Contract.call_tx_info(tx, contract_pk, block_hash, &Contract.to_map/1)
@@ -187,7 +186,7 @@ defmodule AeMdw.Db.Sync.Transaction do
       [
         ContractCallMutation.new(
           contract_pk,
-          caller_pk,
+          block_index,
           txi,
           fun_arg_res,
           call_rec

@@ -12,8 +12,8 @@ defmodule AeMdw.Node.Db do
   require Model
 
   @type pubkey() :: <<_::256>>
-  @typep hash_type() :: nil | :key | :key_block | :mic_block
-  @typep height_hash() :: {hash_type(), pos_integer(), binary()}
+  @type hash_type() :: nil | :key | :micro
+  @type height_hash() :: {hash_type(), pos_integer(), binary()}
 
   @spec get_blocks(Blocks.block_hash(), Blocks.block_hash()) :: tuple()
   def get_blocks(kb_hash, next_kb_hash) do
