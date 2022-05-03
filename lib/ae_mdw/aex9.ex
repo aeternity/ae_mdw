@@ -143,8 +143,8 @@ defmodule AeMdw.Aex9 do
 
   @spec fetch_token(pubkey()) :: {:ok, aex9_token()} | {:error, Error.t()}
   def fetch_token(contract_pk) do
-    case Database.fetch(Model.Aex9ContractPubkey, contract_pk) do
-      {:ok, Model.aex9_contract_pubkey(txi: txi)} ->
+    case Database.fetch(Model.AexNContractPubkey, {:aex9, contract_pk}) do
+      {:ok, Model.aexn_contract_pubkey(txi: txi)} ->
         {:ok, {^txi, name, symbol, decimals}} =
           Database.next_key(Model.RevAex9Contract, {txi, <<>>, nil, nil})
 
