@@ -2164,7 +2164,7 @@ There are 4 paginable endpoints for listing names:
 
 They support ordering via parameters `by` (with options `deactivation` and `name`), and `direction` (with options `forward` and `backward`).
 
-Using the `by=deactivation` means for inactive names that they are sorted by the height of deactivation, whether the name had expired or had been revoked. 
+Using the `by=deactivation` means for inactive names that they are sorted by the height of deactivation, whether the name had expired or had been revoked.
 For active names it means they are sorted by expiration height.
 
 Without these parameters, the endpoints return results ordered as if `by=deactivation` and `direction=backward` were provided.
@@ -4302,6 +4302,8 @@ wscat -c wss://mainnet.aeternity.io/mdw/v2/websocket
 connected (press CTRL+C to quit)
 > {"op":"Subscribe", "payload": "KeyBlocks"}
 < ["KeyBlocks"]
+> {"op":"Ping"}
+< {"subscriptions":["KeyBlocks"],"payload":"Pong"}
 > {"op":"Subscribe", "payload": "MicroBlocks"}
 < ["KeyBlocks","MicroBlocks"]
 > {"op":"Unsubscribe", "payload": "MicroBlocks"}
