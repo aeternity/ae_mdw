@@ -164,8 +164,14 @@ defmodule AeWebsocket.Websocket.SocketHandler do
     {:ok, session, state}
   end
 
+  def handle_message(%{"op" => "Ping"}, session, state) do
+    deliver_me(%{"subscriptions" => state.info, "payload" => "Pong"})
+
+    {:ok, session, state}
+  end
+
   def handle_message(msg, session, state) do
-    Util.concat("invalid subscription", msg) |> deliver_me()
+    "invalid subscription" |> Util.concat(msg) |> deliver_me()
     {:ok, session, state}
   end
 
