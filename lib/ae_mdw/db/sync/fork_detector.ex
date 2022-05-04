@@ -1,4 +1,5 @@
 defmodule AeMdw.Db.Sync.ForkDetector do
+  # credo:disable-for-this-file
   @moduledoc "detects only key forks at the moment"
 
   use GenServer
