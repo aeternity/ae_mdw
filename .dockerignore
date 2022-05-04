@@ -30,6 +30,7 @@ npm-debug.log
 log/
 
 /priv/
+!/priv/migrations
 
 # MDW's produced blockchain database should be ignored
 /data/
