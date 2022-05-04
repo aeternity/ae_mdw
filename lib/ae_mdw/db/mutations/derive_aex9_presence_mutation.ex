@@ -7,7 +7,6 @@ defmodule AeMdw.Db.DeriveAex9PresenceMutation do
   alias AeMdw.Blocks
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
-  alias AeMdw.Db.State
   alias AeMdw.Node.Db
   alias AeMdw.Txs
 

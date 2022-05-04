@@ -1,6 +1,7 @@
 defmodule AeMdw.Node.Db do
   @moduledoc false
 
+  alias AeMdw.Blocks
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Log

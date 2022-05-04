@@ -8,6 +8,7 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
   alias AeMdw.Node.Db, as: DBN
 
   alias AeMdw.Database
+  alias AeMdw.Db.DeriveAex9PresenceMutation
   alias AeMdw.Db.Model
   alias AeMdw.Log
 
