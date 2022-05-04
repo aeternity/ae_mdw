@@ -1,5 +1,43 @@
 # Changelog
 
+## [1.9.0](https://www.github.com/aeternity/ae_mdw/compare/v1.8.1...v1.9.0) (2022-05-04)
+
+
+### Features
+
+* add Ping operation to websocket ([#664](https://www.github.com/aeternity/ae_mdw/issues/664)) ([2a02db4](https://www.github.com/aeternity/ae_mdw/commit/2a02db4d808409d8964b5565410d4d096ea2c36d)), closes [#638](https://www.github.com/aeternity/ae_mdw/issues/638)
+* display mdw gens processed per min on the status page ([#650](https://www.github.com/aeternity/ae_mdw/issues/650)) ([8c9e56f](https://www.github.com/aeternity/ae_mdw/commit/8c9e56f353e6643ff353a79ecbd6ea2a139176de))
+
+
+### Bug Fixes
+
+* allow contract call to GA contract ([#645](https://www.github.com/aeternity/ae_mdw/issues/645)) ([0934873](https://www.github.com/aeternity/ae_mdw/commit/0934873dea9499abbb0aed942693b59248848e9d))
+* docker include priv volume for migrations to be found ([#662](https://www.github.com/aeternity/ae_mdw/issues/662)) ([d8c838b](https://www.github.com/aeternity/ae_mdw/commit/d8c838b7930b09a3a7caa0c8279d39b7ade4bfc2))
+* handle requests for blocks that don't exist gracefully ([#646](https://www.github.com/aeternity/ae_mdw/issues/646)) ([eebe129](https://www.github.com/aeternity/ae_mdw/commit/eebe129323b9f8a26a887e71db43272c8537f8bf))
+* handle stating server when syncing from scratch ([#647](https://www.github.com/aeternity/ae_mdw/issues/647)) ([54f9d59](https://www.github.com/aeternity/ae_mdw/commit/54f9d596de8825f6b2f70fa7c116826ab5cf0764))
+* rearrange aex9 transfer pubkeys for pair transfer ([#649](https://www.github.com/aeternity/ae_mdw/issues/649)) ([809e058](https://www.github.com/aeternity/ae_mdw/commit/809e05883369d5a34d0f2b48280f3f795286c25e))
+* write block_index to aex9 balance ([#657](https://www.github.com/aeternity/ae_mdw/issues/657)) ([1ed2811](https://www.github.com/aeternity/ae_mdw/commit/1ed2811e04d0740497b11c6ac5c5b06214c38740))
+
+
+### Testing
+
+* add aex9 tests iterating throughout all contracts ([#655](https://www.github.com/aeternity/ae_mdw/issues/655)) ([f665330](https://www.github.com/aeternity/ae_mdw/commit/f665330723d552b8d542d894ac085b726535fbbc))
+* refactor integration tests to unit tests ([#633](https://www.github.com/aeternity/ae_mdw/issues/633)) ([5947784](https://www.github.com/aeternity/ae_mdw/commit/5947784a4e98bea6143ebcb9ae53dbbe18a15948))
+
+
+### Refactorings
+
+* restructure AuctionBid table for better indexing ([#652](https://www.github.com/aeternity/ae_mdw/issues/652)) ([4688dd4](https://www.github.com/aeternity/ae_mdw/commit/4688dd4c512b16456ae9ecc2e6ded4042ad2b632))
+* use aex9 balance records on account endpoints ([#658](https://www.github.com/aeternity/ae_mdw/issues/658)) ([4854894](https://www.github.com/aeternity/ae_mdw/commit/4854894d0cf2e612e15dbeccb289d12913bd83b2))
+* use declarative state for executing mutations ([#621](https://www.github.com/aeternity/ae_mdw/issues/621)) ([02132ff](https://www.github.com/aeternity/ae_mdw/commit/02132ff03146fd22c194138d293e67f03b28dcd9))
+* use State for building database streams ([#654](https://www.github.com/aeternity/ae_mdw/issues/654)) ([adc2024](https://www.github.com/aeternity/ae_mdw/commit/adc2024257b2a95fdcc419742d9a90c49daa41a3))
+
+
+### Miscellaneous
+
+* include priv dir for db migrations ([392b171](https://www.github.com/aeternity/ae_mdw/commit/392b17103ebc987c7287a7259c21569758924f53))
+* remove unused node and db stream code ([#656](https://www.github.com/aeternity/ae_mdw/issues/656)) ([5dce45b](https://www.github.com/aeternity/ae_mdw/commit/5dce45b0c484156f8794d46e4859f20b2a5fad1b))
+
 ### [1.8.1](https://www.github.com/aeternity/ae_mdw/compare/v1.8.0...v1.8.1) (2022-04-19)
 
 
