@@ -5,6 +5,7 @@ defmodule AeMdw.Db.DeriveAex9PresenceMutation do
 
   alias AeMdw.Aex9
   alias AeMdw.Blocks
+  alias AeMdw.Database
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Node.Db
@@ -34,7 +35,7 @@ defmodule AeMdw.Db.DeriveAex9PresenceMutation do
     }
   end
 
-  @spec execute(t(), State.t()) :: State.t()
+  @spec execute(t(), Database.transaction()) :: :ok
   def execute(
         %__MODULE__{
           contract_pk: contract_pk,
@@ -42,9 +43,9 @@ defmodule AeMdw.Db.DeriveAex9PresenceMutation do
           create_txi: create_txi,
           balances: balances
         },
-        state
+        txn
       ) do
-    Enum.reduce(balances, state, fn {account_pk, amount}, state ->
+    Enum.each(balances, fn {account_pk, amount} ->
       m_balance =
         Model.aex9_balance(
           index: {contract_pk, account_pk},
@@ -53,9 +54,8 @@ defmodule AeMdw.Db.DeriveAex9PresenceMutation do
           amount: amount
         )
 
-      state
-      |> Contract.aex9_write_presence(contract_pk, create_txi, account_pk)
-      |> State.put(Model.Aex9Balance, m_balance)
+      Contract.aex9_write_presence(txn, contract_pk, create_txi, account_pk)
+      Database.write(txn, Model.Aex9Balance, m_balance)
     end)
   end
 end
