@@ -6,6 +6,7 @@ defmodule AeMdw.Db.ContractCallMutation do
   alias AeMdw.Blocks
   alias AeMdw.Contract
   alias AeMdw.Db.Contract, as: DBContract
+  alias AeMdw.Db.Sync
   alias AeMdw.Sync.AsyncTasks
   alias AeMdw.Txs
 
@@ -19,7 +20,6 @@ defmodule AeMdw.Db.ContractCallMutation do
   ]
 
   @typep pubkey() :: AeMdw.Node.Db.pubkey()
-  @typep txi_option() :: Txs.txi() | -1
 
   @opaque t() :: %__MODULE__{
             contract_pk: pubkey(),
@@ -64,7 +64,7 @@ defmodule AeMdw.Db.ContractCallMutation do
       AsyncTasks.Producer.enqueue(:update_aex9_state, [contract_pk])
     end
 
-    create_txi = DBContract.get_txi!(contract_pk)
+    create_txi = Sync.Contract.get_txi!(contract_pk)
 
     DBContract.call_write(txn, create_txi, txi, fun_arg_res)
     DBContract.logs_write(txn, create_txi, txi, call_rec)

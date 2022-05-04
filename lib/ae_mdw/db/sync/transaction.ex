@@ -18,6 +18,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.OracleExtendMutation
   alias AeMdw.Db.OracleRegisterMutation
+  alias AeMdw.Db.Origin, as: DbOrigin
   alias AeMdw.Db.Sync
   alias AeMdw.Db.Sync.Origin
   alias AeMdw.Db.Sync.Stats
@@ -301,6 +302,8 @@ defmodule AeMdw.Db.Sync.Transaction do
       else
         []
       end
+
+    create_txi = DbOrigin.tx_index!({:contract, contract_pk})
 
     events_mutations =
       Sync.Contract.events_mutations(

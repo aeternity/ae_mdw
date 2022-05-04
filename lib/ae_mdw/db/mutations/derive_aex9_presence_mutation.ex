@@ -13,7 +13,7 @@ defmodule AeMdw.Db.DeriveAex9PresenceMutation do
 
   require Model
 
-  @derive AeMdw.Db.Mutation
+  @derive AeMdw.Db.TxnMutation
   defstruct [:contract_pk, :block_index, :create_txi, :balances]
 
   @typep aex9_balance() :: {Db.pubkey(), Aex9.amount()}

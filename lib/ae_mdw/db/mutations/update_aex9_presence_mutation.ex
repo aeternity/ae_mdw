@@ -5,15 +5,15 @@ defmodule AeMdw.Db.UpdateAex9PresenceMutation do
 
   alias AeMdw.Aex9
   alias AeMdw.Blocks
+  alias AeMdw.Database
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
-  alias AeMdw.Db.State
   alias AeMdw.Node.Db
   alias AeMdw.Txs
 
   require Model
 
-  @derive AeMdw.Db.Mutation
+  @derive AeMdw.Db.TxnMutation
   defstruct [:contract_pk, :block_index, :txi, :balances]
 
   @typep aex9_balance() :: {Db.pubkey(), Aex9.amount()}
@@ -35,7 +35,7 @@ defmodule AeMdw.Db.UpdateAex9PresenceMutation do
     }
   end
 
-  @spec execute(t(), State.t()) :: State.t()
+  @spec execute(t(), Database.transaction()) :: :ok
   def execute(
         %__MODULE__{
           contract_pk: contract_pk,
@@ -43,9 +43,13 @@ defmodule AeMdw.Db.UpdateAex9PresenceMutation do
           txi: call_txi,
           balances: balances
         },
-        state
+        txn
       ) do
-    Enum.reduce(balances, state, fn {account_pk, amount}, state ->
+    Enum.each(balances, fn {account_pk, amount} ->
+      if not Contract.aex9_presence_exists?(contract_pk, account_pk, call_txi) do
+        Contract.aex9_write_presence(txn, contract_pk, call_txi, account_pk)
+      end
+
       m_balance =
         Model.aex9_balance(
           index: {contract_pk, account_pk},
@@ -54,10 +58,7 @@ defmodule AeMdw.Db.UpdateAex9PresenceMutation do
           amount: amount
         )
 
-      {_exists?, state2} =
-        Contract.aex9_write_new_presence(state, contract_pk, call_txi, account_pk)
-
-      State.put(state2, Model.Aex9Balance, m_balance)
+      Database.write(txn, Model.Aex9Balance, m_balance)
     end)
   end
 end
