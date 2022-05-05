@@ -277,7 +277,17 @@ defmodule AeMdw.Db.Model do
   # AEX-N contract:
   #     index: {type, pubkey} where type = :aex9, :aex141, ...
   #     txi: txi
-  #     meta_info: {name, symbol, decimals} | {}
+  #     meta_info: {name, symbol, decimals} | {name, symbol, base_url, metadata_type}
+  @type aexn_meta_info ::
+          {String.t(), String.t(), non_neg_integer()}
+          | {String.t(), String.t(), String.t(), atom()}
+  @type aexn_contract ::
+          record(:aexn_contract,
+            index: {:aex9 | :aex141, Db.pubkey()},
+            txi: Txs.txi(),
+            meta_info: aexn_meta_info()
+          )
+
   @aexn_contract_defaults [
     index: nil,
     txi: nil,
