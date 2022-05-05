@@ -1,4 +1,5 @@
 defmodule AeWebsocket.Websocket.SocketHandler do
+  # credo:disable-for-this-file
   use Riverside, otp_app: :ae_mdw
 
   alias AeMdwWeb.Websocket.ChainListener
