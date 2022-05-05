@@ -7,7 +7,6 @@ defmodule AeMdw.Aex9 do
   alias AeMdw.Database
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Origin
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
@@ -128,27 +127,13 @@ defmodule AeMdw.Aex9 do
             |> build_tokens_streamer(order_by, cursor)
             |> Collection.paginate(pagination)
 
-          aex9_tokens = Enum.map(aex9_keys, &render/1)
-
-          {:ok, serialize_aex9_cursor(prev_cursor), aex9_tokens,
-           serialize_aex9_cursor(next_cursor)}
+          {:ok, serialize_aex9_cursor(prev_cursor), aex9_keys, serialize_aex9_cursor(next_cursor)}
 
         {:error, reason} ->
           {:error, reason}
       end
     rescue
       e in ErrInput -> {:error, e}
-    end
-  end
-
-  @spec fetch_token(pubkey()) :: {:ok, aex9_token()} | {:error, Error.t()}
-  def fetch_token(contract_pk) do
-    case Database.fetch(Model.AexnContract, {:aex9, contract_pk}) do
-      {:ok, Model.aexn_contract(txi: txi, meta_info: {name, symbol, decimals})} ->
-        {:ok, render({name, symbol, txi, decimals})}
-
-      :not_found ->
-        {:error, ErrInput.NotFound.exception(value: enc_ct(contract_pk))}
     end
   end
 
@@ -380,19 +365,6 @@ defmodule AeMdw.Aex9 do
     }
 
     &Collection.stream(@aex9_contract_table, &1, scope, cursor)
-  end
-
-  defp render({name, symbol, txi, decimals}) do
-    contract_pk = Origin.pubkey!({:contract, txi})
-    contract_id = :aeser_api_encoder.encode(:contract_pubkey, contract_pk)
-
-    %{
-      name: name,
-      symbol: symbol,
-      decimals: decimals,
-      contract_txi: txi,
-      contract_id: contract_id
-    }
   end
 
   defp render_balance(contract_pk, {:address, account_pk}, amount) do

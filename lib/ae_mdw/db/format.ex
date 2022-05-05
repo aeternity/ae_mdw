@@ -125,9 +125,6 @@ defmodule AeMdw.Db.Format do
   def to_raw_map({symbol, name, txi, decimals}, Model.Aex9ContractSymbol),
     do: to_raw_map({name, symbol, txi, decimals}, Model.Aex9Contract)
 
-  def to_raw_map({txi, name, symbol, decimals}, Model.RevAex9Contract),
-    do: to_raw_map({name, symbol, txi, decimals}, Model.Aex9Contract)
-
   def to_raw_map({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog) do
     m_log = read!(Model.ContractLog, {create_txi, call_txi, event_hash, log_idx})
     ct_id = &:aeser_id.create(:contract, &1)
@@ -461,7 +458,7 @@ defmodule AeMdw.Db.Format do
     do: to_raw_map(m_total_stat, Model.TotalStat)
 
   def to_map({_, _, _, _} = aex9_data, source)
-      when source in [Model.Aex9Contract, Model.Aex9ContractSymbol, Model.RevAex9Contract],
+      when source in [Model.Aex9Contract, Model.Aex9ContractSymbol],
       do: raw_to_json(to_raw_map(aex9_data, source))
 
   def to_map(data, source, false = _expand),

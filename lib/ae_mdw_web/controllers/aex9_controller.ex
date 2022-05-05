@@ -3,6 +3,7 @@ defmodule AeMdwWeb.Aex9Controller do
   use PhoenixSwagger
 
   alias AeMdw.Aex9
+  alias AeMdw.AexnTokens
   alias AeMdw.Validate
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db, as: DBN
@@ -18,7 +19,7 @@ defmodule AeMdwWeb.Aex9Controller do
 
   import AeMdwWeb.Util, only: [handle_input: 2, paginate: 4, presence?: 2]
   import AeMdwWeb.Helpers.AexnHelper
-  import AeMdwWeb.Views.Aex9ControllerView
+  import AeMdwWeb.AexnView
 
   plug(PaginatedPlug)
 
@@ -247,13 +248,10 @@ defmodule AeMdwWeb.Aex9Controller do
   end
 
   defp by_contract_reply(conn, contract_id) do
-    entry =
-      case Contract.aex9_search_contract_by_id(contract_id) do
-        {:ok, rev_aex9_key} -> Format.to_map(rev_aex9_key, Model.RevAex9Contract)
-        :not_found -> %{}
-      end
-
-    json(conn, %{data: entry})
+    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
+         {:ok, token} <- AexnTokens.fetch_token(contract_pk) do
+      json(conn, %{data: token})
+    end
   end
 
   defp by_names_reply(conn, search_mode) do
