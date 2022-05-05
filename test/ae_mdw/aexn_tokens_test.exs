@@ -44,7 +44,7 @@ defmodule AeMdw.AexnTokensTest do
       contract_pk = <<141_123_456::256>>
 
       aex141_meta_info =
-        {name, symbol, base_url, type} = {"AE Boots", "Boot", Faker.Internet.url(), :url}
+        {name, symbol, base_url, type} = {"AE Boots", "Boot", "http://someurl.com", :url}
 
       txi = 2_123_456_789
 
