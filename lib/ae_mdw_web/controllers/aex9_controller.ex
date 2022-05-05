@@ -17,7 +17,7 @@ defmodule AeMdwWeb.Aex9Controller do
   alias Plug.Conn
 
   import AeMdwWeb.Util, only: [handle_input: 2, paginate: 4, presence?: 2]
-  import AeMdwWeb.Helpers.Aex9Helper
+  import AeMdwWeb.Helpers.AexnHelper
   import AeMdwWeb.Views.Aex9ControllerView
 
   plug(PaginatedPlug)
@@ -321,9 +321,7 @@ defmodule AeMdwWeb.Aex9Controller do
       |> Enum.map(fn contract_pk ->
         case Aex9.fetch_amount(contract_pk, account_pk) do
           {:ok, {amount, call_txi}} ->
-            create_txi = Origin.tx_index!({:contract, contract_pk})
-
-            {amount, create_txi, call_txi, contract_pk}
+            {amount, call_txi, contract_pk}
 
           {:error, unavailable_error} ->
             raise unavailable_error

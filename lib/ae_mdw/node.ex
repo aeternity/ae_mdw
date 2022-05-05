@@ -63,6 +63,11 @@ defmodule AeMdw.Node do
     %{}
   end
 
+  @spec aex141_signatures :: %{binary() => term()}
+  def aex141_signatures do
+    %{}
+  end
+
   @spec aex9_transfer_event_hash :: binary()
   def aex9_transfer_event_hash do
     :aec_hash.blake2b_256_hash("Transfer")

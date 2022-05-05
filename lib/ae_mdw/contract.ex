@@ -133,6 +133,26 @@ defmodule AeMdw.Contract do
     }
   end
 
+  @spec aex141_signatures() :: map()
+  def aex141_signatures() do
+    %{
+      "aex141_extensions" => {[], {:list, :string}},
+      "meta_info" =>
+        {[], {:tuple, [:string, :string, {:variant, [tuple: [], tuple: [:string]]}, :atom]}},
+      "metadata" =>
+        {[:integer], {:variant, [tuple: [:string], tuple: [{:map, :string, :string}]]}},
+      "mint" => {[:address, {:variant, [tuple: [], tuple: [:string]]}], :integer},
+      "balance" => {[:address], {:variant, [tuple: [], tuple: [:integer]]}},
+      "owner" => {[:integer], {:variant, [tuple: [], tuple: [:address]]}},
+      "transfer" => {[:address, :address, :integer], {:tuple, []}},
+      "approve" => {[:address, :integer, :boolean], {:tuple, []}},
+      "approve_all" => {[:address, :boolean], {:tuple, []}},
+      "get_approved" => {[:integer], {:variant, [tuple: [], tuple: [:address]]}},
+      "is_approved" => {[:integer, :address], :boolean},
+      "is_approved_for_all" => {[:address, :address], :boolean}
+    }
+  end
+
   @spec extract_successful_function(fun_arg_res_or_error()) ::
           {:ok, method_name(), method_args()} | :not_found
   def extract_successful_function({:error, _reason}), do: :not_found
@@ -186,21 +206,21 @@ defmodule AeMdw.Contract do
     end
   end
 
-  def is_aex9?({:fcode, functions, _hash_names, _}) do
-    Enum.all?(
-      AeMdw.Node.aex9_signatures(),
-      fn {hash, type} ->
-        case Map.get(functions, hash) do
-          {_, ^type, _body} -> true
-          _function -> false
-        end
-      end
-    )
+  def is_aex9?({:fcode, functions, _hash_names, _code}) do
+    AeMdw.Node.aex9_signatures()
+    |> has_all_signatures?(functions)
   end
 
   # AEVM
-  def is_aex9?(_no_fcode),
-    do: false
+  def is_aex9?(_no_fcode), do: false
+
+  def is_aex141?({:fcode, functions, _hash_names, _code}) do
+    AeMdw.Node.aex141_signatures()
+    |> has_all_signatures?(functions)
+  end
+
+  # AEVM
+  def is_aex141?(_no_fcode), do: false
 
   # value of :aec_hash.blake2b_256_hash("Transfer")
   @spec aex9_transfer_event_hash() :: event_hash()
@@ -404,6 +424,12 @@ defmodule AeMdw.Contract do
   #
   # Private functions
   #
+  defp has_all_signatures?(aexn_signatures, functions) do
+    Enum.all?(aexn_signatures, fn {hash, type} ->
+      match?({_code, ^type, _body}, Map.get(functions, hash))
+    end)
+  end
+
   # encoding and decoding vm data
   defp fate_val({:address, x}, f), do: f.({:address, encode(:account_pubkey, x)})
   defp fate_val({:oracle, x}, f), do: f.({:oracle, encode(:oracle_pubkey, x)})

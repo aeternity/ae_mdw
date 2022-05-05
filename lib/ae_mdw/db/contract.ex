@@ -32,13 +32,19 @@ defmodule AeMdw.Db.Contract do
     m_contract = Model.aex9_contract(index: {name, symbol, txi, decimals})
     m_contract_sym = Model.aex9_contract_symbol(index: {symbol, name, txi, decimals})
     m_rev_contract = Model.rev_aex9_contract(index: {txi, name, symbol, decimals})
-    m_contract_pk = Model.aexn_contract_pubkey(index: {:aex9, contract_pk}, txi: txi)
+
+    m_contract_pk =
+      Model.aexn_contract(
+        index: {:aex9, contract_pk},
+        txi: txi,
+        meta_info: {name, symbol, decimals}
+      )
 
     state
     |> State.put(Model.Aex9Contract, m_contract)
     |> State.put(Model.Aex9ContractSymbol, m_contract_sym)
     |> State.put(Model.RevAex9Contract, m_rev_contract)
-    |> State.put(Model.AexNContractPubkey, m_contract_pk)
+    |> State.put(Model.AexnContract, m_contract_pk)
   end
 
   @spec aex9_write_presence(state(), pubkey(), integer(), pubkey()) :: state()
@@ -260,11 +266,9 @@ defmodule AeMdw.Db.Contract do
   @spec aex9_search_contract_by_id(String.t()) :: {:ok, rev_aex9_contract_key()} | :not_found
   def aex9_search_contract_by_id(contract_id) do
     with pubkey <- Validate.id!(contract_id),
-         {:ok, txi} <- AeMdw.Db.Origin.tx_index({:contract, pubkey}) do
-      {:ok, {^txi, _name, _symbol, _decimals} = rev_aex9_key} =
-        Database.next_key(Model.RevAex9Contract, {txi, nil, nil, nil})
-
-      {:ok, rev_aex9_key}
+         {:ok, Model.aexn_contract(txi: txi, meta_info: {name, symbol, decimals})} <-
+           Database.fetch(AexnContract, {:aex9, pubkey}) do
+      {:ok, {txi, name, symbol, decimals}}
     end
   end
 

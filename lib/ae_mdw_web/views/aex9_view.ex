@@ -3,27 +3,28 @@ defmodule AeMdwWeb.Views.Aex9ControllerView do
   Renders data for balance(s) endpoints.
   """
 
+  alias AeMdw.Database
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Util
 
   require Model
 
-  import AeMdwWeb.Helpers.Aex9Helper
+  import AeMdwWeb.Helpers.AexnHelper
 
   @typep pubkey :: AeMdw.Node.Db.pubkey()
   @typep account_transfer_key :: AeMdw.Aex9.account_transfer_key()
   @typep pair_transfer_key :: AeMdw.Aex9.pair_transfer_key()
   @typep transfer_key_type :: :aex9_transfer | :rev_aex9_transfer | :aex9_pair_transfer
 
-  @spec balance_to_map({non_neg_integer(), non_neg_integer(), non_neg_integer(), pubkey()}) ::
+  @spec balance_to_map({non_neg_integer(), non_neg_integer(), pubkey()}) ::
           map()
-  def balance_to_map({amount, create_txi, call_txi, contract_pk}) do
+  def balance_to_map({amount, call_txi, contract_pk}) do
     tx_idx = Util.read_tx!(call_txi)
     info = Format.to_raw_map(tx_idx)
 
-    {^create_txi, name, symbol, _decimals} =
-      Util.next(Model.RevAex9Contract, {create_txi, nil, nil, nil})
+    Model.aexn_contract(meta_info: {name, symbol, _decimals}) =
+      Database.fetch!(Model.AexnContract, {:aex9, contract_pk})
 
     %{
       contract_id: enc_ct(contract_pk),
