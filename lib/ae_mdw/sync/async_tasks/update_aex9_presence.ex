@@ -6,9 +6,7 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
 
   alias AeMdw.Node.Db, as: DBN
 
-  alias AeMdw.Database
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Origin
   alias AeMdw.Db.State
   alias AeMdw.Db.UpdateAex9PresenceMutation
   alias AeMdw.Log
@@ -19,9 +17,8 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
   @microsecs 1_000_000
 
   @spec process(args :: list()) :: :ok
-  def process([contract_pk]) do
-    Log.info("[update_aex9_state] #{inspect(contract_pk)} ...")
-    {{kbi, mbi} = block_index, call_txi} = get_call_bi_and_txi(contract_pk)
+  def process([contract_pk, {kbi, mbi} = block_index, call_txi]) do
+    Log.info("[update_aex9_state] #{inspect(enc_ct(contract_pk))} ...")
 
     {time_delta, {balances, _height_hash}} =
       :timer.tc(fn ->
@@ -32,7 +29,9 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
         DBN.aex9_balances(contract_pk, {type, kbi, next_hash})
       end)
 
-    Log.info("[update_aex9_state] #{inspect(contract_pk)} after #{time_delta / @microsecs}s")
+    Log.info(
+      "[update_aex9_state] #{inspect(enc_ct(contract_pk))} after #{time_delta / @microsecs}s"
+    )
 
     balances = Enum.map(balances, fn {{:address, account_pk}, amount} -> {account_pk, amount} end)
 
@@ -42,15 +41,6 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
     :ok
   end
 
-  defp get_call_bi_and_txi(contract_pk) do
-    case :ets.lookup(:aex9_sync_cache, contract_pk) do
-      [{^contract_pk, block_index, call_txi}] ->
-        {block_index, call_txi}
-
-      [] ->
-        create_txi = Origin.tx_index!({:contract, contract_pk})
-        Model.tx(block_index: block_index) = Database.fetch!(Model.Tx, create_txi)
-        {block_index, create_txi}
-    end
-  end
+  defp enc_ct(<<pk::binary-32>>), do: :aeser_api_encoder.encode(:contract_pubkey, pk)
+  defp enc_ct(invalid_pk), do: invalid_pk
 end

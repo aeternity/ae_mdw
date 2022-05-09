@@ -63,6 +63,9 @@ defmodule AeMdw.Contract do
                               86, 43, 239>>
 
   ################################################################################
+  @spec encode(atom(), binary()) :: String.t()
+  defdelegate encode(type, val), to: :aeser_api_encoder
+
   @spec table() :: atom()
   def table(), do: @tab
 
@@ -478,12 +481,6 @@ defmodule AeMdw.Contract do
       )
 
   defp aevm_val({k, v}, f) when is_atom(k), do: f.({k, v})
-
-  # this can't be imported, because Elixir complains with:
-  # module :aeser_api_encoder is not loaded and could not be found
-  defp encode(type, val),
-    do: :aeser_api_encoder.encode(type, val)
-
   ###
 
   defp get_events(micro_block) when elem(micro_block, 0) == :mic_block do

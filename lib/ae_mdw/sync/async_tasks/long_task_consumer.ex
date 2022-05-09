@@ -31,7 +31,7 @@ defmodule AeMdw.Sync.AsyncTasks.LongTaskConsumer do
     {:ok, %State{queue: :queue.new()}}
   end
 
-  @spec enqueue(Model.async_tasks_record()) :: :ok
+  @spec enqueue(Model.async_task_record()) :: :ok
   def enqueue(m_task) do
     GenServer.cast(__MODULE__, {:enqueue, m_task})
   end

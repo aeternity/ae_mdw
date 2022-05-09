@@ -26,9 +26,9 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
     {:ok, %{enqueue_buffer: [], dequeue_buffer: []}}
   end
 
-  @spec enqueue(atom(), list()) :: :ok
-  def enqueue(task_type, args) when is_atom(task_type) and is_list(args) do
-    GenServer.cast(__MODULE__, {:enqueue, task_type, args})
+  @spec enqueue(atom(), list(), list()) :: :ok
+  def enqueue(task_type, dedup_args, extra_args \\ []) do
+    GenServer.cast(__MODULE__, {:enqueue, task_type, dedup_args, extra_args})
   end
 
   @spec commit_enqueued() :: :ok
@@ -36,7 +36,7 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
     GenServer.cast(__MODULE__, :commit_enqueued)
   end
 
-  @spec dequeue() :: nil | Model.async_tasks_record()
+  @spec dequeue() :: nil | Model.async_task_record()
   def dequeue() do
     GenServer.call(__MODULE__, :dequeue)
   end
@@ -51,7 +51,7 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
     :ok
   end
 
-  @spec notify_timeout(Model.async_tasks_record()) :: :ok
+  @spec notify_timeout(Model.async_task_record()) :: :ok
   def notify_timeout(m_task) do
     Log.warn("Long task enqueued: #{inspect(m_task)}")
     LongTaskConsumer.enqueue(m_task)
@@ -61,8 +61,11 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   end
 
   @impl GenServer
-  def handle_cast({:enqueue, task_type, args}, %{enqueue_buffer: enqueue_buffer} = state) do
-    {:noreply, %{state | enqueue_buffer: [{task_type, args} | enqueue_buffer]}}
+  def handle_cast(
+        {:enqueue, task_type, dedup_args, extra_args},
+        %{enqueue_buffer: enqueue_buffer} = state
+      ) do
+    {:noreply, %{state | enqueue_buffer: [{task_type, dedup_args, extra_args} | enqueue_buffer]}}
   end
 
   @impl GenServer
@@ -74,7 +77,9 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   def handle_cast(:commit_enqueued, %{enqueue_buffer: enqueue_buffer} = state) do
     enqueue_buffer
     |> Enum.reverse()
-    |> Enum.each(fn {task_type, args} -> Store.save_new(task_type, args) end)
+    |> Enum.each(fn {task_type, args, extra_args} ->
+      Store.save_new(task_type, args, extra_args)
+    end)
 
     {:noreply, %{state | enqueue_buffer: []}}
   end
@@ -84,7 +89,7 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
     {m_task, %{dequeue_buffer: new_buffer} = new_state} = next_state(state)
 
     if nil != m_task do
-      Model.async_tasks(index: index) = m_task
+      Model.async_task(index: index) = m_task
       Store.set_processing(index)
     end
 
