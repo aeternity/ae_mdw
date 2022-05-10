@@ -45,12 +45,15 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       )
 
       kb_hash = <<123_451::256>>
-      Database.dirty_write(Model.Block, Model.block(index: {kbi + 1, -1}, hash: kb_hash))
       next_mb_hash = Validate.id!("mh_2JWXTaf6BzWrTpZMMcBZjxUXX9zNDva2GBT71jhFNiV1ic1gsL")
 
       with_mocks [
         {AeMdw.Node.Db, [],
          [
+           get_key_block_hash: fn height ->
+             assert ^height = kbi + 1
+             kb_hash
+           end,
            get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
            aex9_balances: fn ^contract_pk, {:micro, ^kbi, ^next_mb_hash} ->
              balances = %{{:address, account_pk} => 100_000_000_000_000_001}
@@ -133,12 +136,15 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       )
 
       kb_hash = <<123_453::256>>
-      Database.dirty_write(Model.Block, Model.block(index: {kbi + 1, -1}, hash: kb_hash))
       next_mb_hash = Validate.id!("mh_2WR69dhBSJLc9gBt6gnHRJCYfCR7BjKNNQteDRshe5CNErghVR")
 
       with_mocks [
         {AeMdw.Node.Db, [],
          [
+           get_key_block_hash: fn height ->
+             assert ^height = kbi + 1
+             kb_hash
+           end,
            get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
            aex9_balances: fn ^contract_pk, {:micro, ^kbi, ^next_mb_hash} ->
              balances = %{{:address, account_pk} => 100_000_000_000_000_003}
@@ -178,6 +184,10 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       with_mocks [
         {AeMdw.Node.Db, [],
          [
+           get_key_block_hash: fn height ->
+             assert ^height = kbi + 1
+             kb_hash
+           end,
            get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
            aex9_balances: fn ^contract_pk, {:micro, ^kbi, ^next_mb_hash} ->
              balances = %{{:address, account_pk} => 0}
