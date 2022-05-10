@@ -23,7 +23,7 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
 
     {time_delta, {balances, _last_block_tuple}} =
       :timer.tc(fn ->
-        Model.block(hash: next_kb_hash) = Database.fetch!(Model.Block, {kbi + 1, -1})
+        next_kb_hash = DBN.get_key_block_hash(kbi + 1)
         next_hash = DBN.get_next_hash(next_kb_hash, mbi)
 
         DBN.aex9_balances(contract_pk, {nil, kbi, next_hash})

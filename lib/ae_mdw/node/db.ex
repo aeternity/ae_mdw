@@ -50,6 +50,14 @@ defmodule AeMdw.Node.Db do
     end
   end
 
+  @spec get_key_block_hash(Blocks.height()) :: Blocks.block_hash()
+  def get_key_block_hash(height) do
+    {:ok, next_kb_header} = :aec_chain.get_key_header_by_height(height)
+    {:ok, next_kb_hash} = :aec_headers.hash_header(next_kb_header)
+
+    next_kb_hash
+  end
+
   @spec get_next_hash(Blocks.block_hash(), Blocks.mbi()) :: Blocks.block_hash()
   def get_next_hash(next_kb_hash, mbi) do
     next_kb_hash

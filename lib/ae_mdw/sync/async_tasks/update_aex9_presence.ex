@@ -24,7 +24,7 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
 
     {time_delta, {balances, _height_hash}} =
       :timer.tc(fn ->
-        Model.block(hash: next_kb_hash) = Database.fetch!(Model.Block, {kbi + 1, -1})
+        next_kb_hash = DBN.get_key_block_hash(kbi + 1)
         next_hash = DBN.get_next_hash(next_kb_hash, mbi)
         type = if next_hash == next_kb_hash, do: :key, else: :micro
 

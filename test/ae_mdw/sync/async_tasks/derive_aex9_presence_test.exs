@@ -18,7 +18,6 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9PresenceTest do
       amount1 = 323_838_000_000_000_000_000
       amount2 = 198_554_400_000_000_000_000
       kb_hash = Validate.id!("kh_2DQZpzmoTVvUUtRtLsamt2j6cN43YRcMtP6S8YCMehZ8DAbety")
-      Database.dirty_write(Model.Block, Model.block(index: {kbi + 1, -1}, hash: kb_hash))
 
       next_mb_hash = Validate.id!("mh_2ShoazmibMsaaLfY9wnENSxJJATcD2HtyjHQPn9JCnUbsGPY18")
       contract_pk = Validate.id("ct_ypGRSB6gEy8koLg6a4WRdShTfRsh9HfkMkxsE2SMCBk3JdkNP")
@@ -28,6 +27,10 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9PresenceTest do
       with_mocks [
         {AeMdw.Node.Db, [],
          [
+           get_key_block_hash: fn height ->
+             assert ^height = kbi + 1
+             kb_hash
+           end,
            get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
            aex9_balances: fn ^contract_pk, {nil, ^kbi, ^next_mb_hash} = block_tuple ->
              balances = %{
