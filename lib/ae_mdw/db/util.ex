@@ -3,6 +3,7 @@ defmodule AeMdw.Db.Util do
   alias AeMdw.Blocks
   alias AeMdw.Collection
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Database
   alias AeMdw.Db.RocksDbCF
   alias AeMdw.Db.State
@@ -258,6 +259,14 @@ defmodule AeMdw.Db.Util do
     {:ok, hash} = :aec_headers.hash_header(:aec_blocks.to_header(block))
 
     hash
+  end
+
+  @spec synced_height(State.t()) :: Blocks.height() | -1
+  def synced_height(state) do
+    case State.prev(state, Model.DeltaStat, nil) do
+      :none -> -1
+      {:ok, height} -> height
+    end
   end
 
   defp block_type_height(node_block) do

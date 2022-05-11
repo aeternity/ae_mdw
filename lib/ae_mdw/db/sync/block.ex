@@ -37,7 +37,8 @@ defmodule AeMdw.Db.Sync.Block do
   @log_freq 1_000
 
   @typep block() :: term()
-  @typep height_mutations() :: {{Blocks.height(), Blocks.mbi()}, block(), [Mutation.t()]}
+  @typep block_mutations() :: {Blocks.block_index(), block(), [Mutation.t()]}
+  @type height_mutations() :: {Blocks.height(), [block_mutations()]}
 
   ################################################################################
 
@@ -60,8 +61,7 @@ defmodule AeMdw.Db.Sync.Block do
 
     heights_hashes
     |> Enum.zip(Enum.drop(heights_hashes, 1))
-    |> Enum.reduce({[], from_txi}, fn {{height, kb_hash}, {_next_height, next_kb_hash}},
-                                      {blocks_mutations, txi} ->
+    |> Enum.flat_map_reduce(from_txi, fn {{height, kb_hash}, {_next_height, next_kb_hash}}, txi ->
       {key_block, micro_blocks} = AE.Db.get_blocks(kb_hash, next_kb_hash)
       kb_header = :aec_blocks.to_key_header(key_block)
 
@@ -105,12 +105,9 @@ defmodule AeMdw.Db.Sync.Block do
         KeyBlockMutation.new(next_kb_model)
       ]
 
-      blocks_mutations =
-        blocks_mutations ++
-          micro_blocks_gens ++
-          [{{height, -1}, key_block, gen_mutations}]
+      blocks_mutations = micro_blocks_gens ++ [{{height, -1}, key_block, gen_mutations}]
 
-      {blocks_mutations, txi}
+      {[{height, blocks_mutations}], txi}
     end)
   end
 
@@ -134,14 +131,6 @@ defmodule AeMdw.Db.Sync.Block do
       end)
 
     {mutations, txi + length(mb_txs)}
-  end
-
-  @spec synced_height :: Blocks.height() | -1
-  def synced_height do
-    case Database.last_key(Model.DeltaStat) do
-      :none -> -1
-      {:ok, height} -> height
-    end
   end
 
   @spec last_synced_mbi(State.t(), Blocks.height()) :: {:ok, Blocks.mbi()} | :none
