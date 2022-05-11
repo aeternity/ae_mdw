@@ -5,34 +5,43 @@ defmodule AeMdw.Db.State do
   every change in the state returns a new one.
   """
 
+  alias AeMdw.Blocks
   alias AeMdw.Database
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.DbStore
   alias AeMdw.Db.Store
   alias AeMdw.Db.TxnDbStore
+  alias AeMdw.Db.Util, as: DbUtil
 
-  defstruct [:store, :stats, :cache]
+  defstruct [:store, :stats, :cache, :prev_states]
 
   @typep key() :: Database.key()
   @typep record() :: Database.record()
   @typep direction() :: Database.direction()
   @typep table() :: Database.table()
   @typep stat_name() :: atom()
-  @typep stats() :: %{atom() => non_neg_integer()}
   @typep cache_name() :: atom()
+  @typep height() :: Blocks.height()
 
   @opaque t() :: %__MODULE__{
             store: Store.t(),
-            stats: stats(),
-            cache: %{cache_name() => map()}
+            stats: %{stat_name() => non_neg_integer()},
+            cache: %{cache_name() => map()},
+            prev_states: [{Blocks.height(), t()}]
           }
 
-  @spec new() :: t()
-  def new, do: %__MODULE__{store: DbStore.new(), stats: %{}, cache: %{}}
+  @state_pm_key :global_state
+
+  @spec new(Store.t()) :: t()
+  def new(store \\ DbStore.new()),
+    do: %__MODULE__{store: store, stats: %{}, cache: %{}, prev_states: []}
+
+  @spec height(t()) :: height()
+  def height(state), do: DbUtil.synced_height(state)
 
   @spec commit(t(), [Mutation.t()]) :: t()
   def commit(%__MODULE__{store: prev_store} = state, mutations) do
-    state3 =
+    new_state =
       TxnDbStore.transaction(fn store ->
         state2 = %__MODULE__{state | store: store}
 
@@ -42,7 +51,43 @@ defmodule AeMdw.Db.State do
         |> Enum.reduce(state2, &Mutation.execute/2)
       end)
 
-    %__MODULE__{state3 | store: prev_store}
+    %__MODULE__{new_state | store: prev_store}
+  end
+
+  @spec commit_db(t(), [Mutation.t()]) :: t()
+  def commit_db(state, mutations), do: commit(state, mutations)
+
+  @spec commit_mem(t(), [Mutation.t()]) :: t()
+  def commit_mem(state, mutations) do
+    state2 =
+      mutations
+      |> List.flatten()
+      |> Enum.reject(&is_nil/1)
+      |> Enum.reduce(state, &Mutation.execute/2)
+
+    height = DbUtil.synced_height(state2)
+    state3 = add_prev_state(state2, height, state)
+
+    set_global(state3)
+
+    state3
+  end
+
+  @spec set_global(t()) :: :ok
+  def set_global(state), do: :persistent_term.put(@state_pm_key, state)
+
+  defp add_prev_state(%__MODULE__{prev_states: prev_states} = state, height, prev_state),
+    do: %__MODULE__{state | prev_states: [{height - 1, prev_state} | prev_states]}
+
+  @spec invalidate(t(), height()) :: t()
+  @doc """
+  Invalidation simply picks the last valid state from the list of prev_states.
+  """
+  def invalidate(%__MODULE__{prev_states: prev_states}, height) do
+    [new_state | _rest] =
+      Enum.drop_while(prev_states, fn {state_height, _state} -> state_height >= height end)
+
+    new_state
   end
 
   @spec put(t(), table(), record()) :: t()

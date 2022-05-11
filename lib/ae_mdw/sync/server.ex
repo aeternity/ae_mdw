@@ -12,34 +12,23 @@ defmodule AeMdw.Sync.Server do
   * `{:done, height}` - The latest height synced by mdw was updated to.
   """
 
-  alias AeMdw.Blocks
-  alias AeMdw.Db.Model
+  alias AeMdw.Sync.EventHandler
+  alias AeMdw.Db.DbStore
+  alias AeMdw.Db.MemStore
   alias AeMdw.Db.State
-  alias AeMdw.Db.Sync.Block
-  alias AeMdw.Db.Sync.Invalidate
-  alias AeMdw.Log
-  alias AeMdw.Sync.AsyncTasks.Producer
-  alias AeMdwWeb.Websocket.Broadcaster
-
-  require Model
 
   use GenServer
 
-  defstruct [:sync_pid_ref, :fork_height, :current_height, :restarts, :syncing?, :gens_per_min]
+  defstruct [:syncing?, :event_handler, :gens_per_min]
 
-  @unsynced_gens 1
-  @max_restarts 5
   @retry_time 3_600_000
-  @max_blocks_sync 15
   @gens_per_min_weight 0.1
 
+  @type gens_per_min() :: number()
   @opaque t() :: %__MODULE__{
-            sync_pid_ref: nil | {pid(), reference()},
-            fork_height: Blocks.height() | nil,
-            current_height: Blocks.height() | -1,
-            restarts: non_neg_integer(),
             syncing?: boolean(),
-            gens_per_min: number()
+            event_handler: EventHandler.t(),
+            gens_per_min: gens_per_min()
           }
 
   @spec start_link(GenServer.options()) :: GenServer.on_start()
@@ -55,9 +44,25 @@ defmodule AeMdw.Sync.Server do
   @spec syncing?() :: boolean()
   def syncing?, do: GenServer.call(__MODULE__, :syncing?)
 
+  @spec done_db(State.t(), gens_per_min()) :: :ok
+  def done_db(state, gens_per_min),
+    do: GenServer.cast(__MODULE__, {:done_db, state, gens_per_min})
+
+  @spec done_mem(State.t(), gens_per_min()) :: :ok
+  def done_mem(state, gens_per_min),
+    do: GenServer.cast(__MODULE__, {:done_mem, state, gens_per_min})
+
   @impl true
   def init([]) do
-    {:ok, %__MODULE__{restarts: 0, syncing?: false, gens_per_min: 0}}
+    db_store = DbStore.new()
+    mem_store = MemStore.new(db_store)
+
+    db_state = State.new(db_store)
+    mem_state = State.new(mem_store)
+
+    event_handler = EventHandler.init(chain_height(), db_state, mem_state, &spawn_with_monitor/1)
+
+    {:ok, %__MODULE__{syncing?: false, event_handler: event_handler, gens_per_min: 0}}
   end
 
   @impl true
@@ -67,50 +72,56 @@ defmodule AeMdw.Sync.Server do
   end
 
   @impl true
-  def handle_call(:gens_per_min, _from, %__MODULE__{gens_per_min: gens_per_min} = state) do
-    {:reply, gens_per_min, state}
-  end
+  def handle_call(:gens_per_min, _from, %__MODULE__{gens_per_min: gens_per_min} = state),
+    do: {:reply, gens_per_min, state}
 
   @impl true
   @spec handle_cast(:start_sync, t()) :: {:noreply, t()}
-  @spec handle_cast({:done, Blocks.height()}, t()) :: {:noreply, t()}
-  def handle_cast(:start_sync, state) do
+  @spec handle_cast({:done_db, State.t(), gens_per_min()}, t()) :: {:noreply, t()}
+  @spec handle_cast({:done_mem, State.t(), gens_per_min()}, t()) :: {:noreply, t()}
+  def handle_cast(:start_sync, %__MODULE__{event_handler: event_handler} = state) do
     :aec_events.subscribe(:chain)
     :aec_events.subscribe(:top_changed)
 
-    current_height = Block.synced_height()
+    event_handler = EventHandler.process_event!({:new_height, chain_height()}, event_handler)
 
-    {:noreply,
-     process_state(%__MODULE__{
-       state
-       | current_height: current_height,
-         syncing?: true,
-         restarts: 0,
-         gens_per_min: 0
-     })}
+    {:noreply, %__MODULE__{state | event_handler: event_handler, syncing?: true}}
   end
 
   @impl true
   def handle_cast(
-        {:done, height, gens_per_min},
-        %__MODULE__{gens_per_min: prev_gens_per_min} = state
+        {:done_db, db_state, new_gens_per_min},
+        %__MODULE__{event_handler: event_handler, gens_per_min: gens_per_min} = state
       ) do
-    new_state =
-      process_state(%__MODULE__{
-        state
-        | current_height: height,
-          sync_pid_ref: nil,
-          gens_per_min: calculate_gens_per_min(prev_gens_per_min, gens_per_min)
-      })
+    gens_per_min = calculate_gens_per_min(gens_per_min, new_gens_per_min)
 
-    {:noreply, new_state}
+    {:noreply,
+     %__MODULE__{
+       state
+       | gens_per_min: gens_per_min,
+         event_handler: EventHandler.process_event!({:db_done, db_state}, event_handler)
+     }}
+  end
+
+  def handle_cast(
+        {:done_mem, mem_state, new_gens_per_min},
+        %__MODULE__{event_handler: event_handler, gens_per_min: gens_per_min} = state
+      ) do
+    gens_per_min = calculate_gens_per_min(gens_per_min, new_gens_per_min)
+
+    {:noreply,
+     %__MODULE__{
+       state
+       | gens_per_min: gens_per_min,
+         event_handler: EventHandler.process_event!({:mem_done, mem_state}, event_handler)
+     }}
   end
 
   @impl true
   @spec handle_info(term(), t()) :: {:noreply, t()}
   def handle_info(
         {:gproc_ps_event, :top_changed, %{info: %{block_type: :key, height: height}}},
-        %__MODULE__{fork_height: old_fork_height} = s
+        %__MODULE__{event_handler: event_handler} = s
       ) do
     header_candidates =
       height
@@ -128,144 +139,53 @@ defmodule AeMdw.Sync.Server do
             :aec_chain_state.hash_is_in_main_chain(header_hash) && header
           end)
 
-        new_fork_height = :aec_headers.height(main_header)
+        fork_height = :aec_headers.height(main_header)
 
-        fork_height =
-          (old_fork_height && min(old_fork_height, new_fork_height)) || new_fork_height
-
-        %__MODULE__{s | fork_height: fork_height}
+        %__MODULE__{
+          s
+          | event_handler: EventHandler.process_event!({:fork, fork_height}, event_handler)
+        }
       else
         s
       end
 
-    {:noreply, process_state(new_state)}
+    {:noreply, new_state}
   end
 
   def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :micro}}}, s),
     do: {:noreply, s}
 
   def handle_info(
-        {:DOWN, ref, :process, pid, reason},
-        %__MODULE__{sync_pid_ref: {pid, ref}, restarts: restarts} = s
-      )
-      when restarts < @max_restarts do
-    Log.info("Sync.Server error: #{inspect(reason)}")
+        {:DOWN, _ref, :process, pid, reason},
+        %__MODULE__{event_handler: event_handler} = state
+      ) do
+    case EventHandler.process_event({:pid_down, pid, reason}, event_handler) do
+      {:ok, next_event_handler} ->
+        {:noreply, %__MODULE__{state | event_handler: next_event_handler}}
 
-    current_height = Block.synced_height()
+      :stop ->
+        :aec_events.unsubscribe(:chain)
+        :aec_events.unsubscribe(:top_changed)
 
-    {:noreply,
-     process_state(%__MODULE__{
-       s
-       | restarts: restarts + 1,
-         sync_pid_ref: nil,
-         current_height: current_height
-     })}
-  end
+        :timer.apply_after(@retry_time, __MODULE__, :start_sync, [])
 
-  def handle_info({:DOWN, ref, :process, pid, reason}, %__MODULE__{sync_pid_ref: {pid, ref}} = s) do
-    Log.info("Sync.Server error: #{inspect(reason)}. Stopping..")
-
-    :aec_events.unsubscribe(:chain)
-    :aec_events.unsubscribe(:top_changed)
-
-    :timer.apply_after(@retry_time, __MODULE__, :start_sync, [])
-
-    {:noreply, process_state(%__MODULE__{s | syncing?: false, sync_pid_ref: nil})}
+        {:noreply, %__MODULE__{state | syncing?: false}}
+    end
   end
 
   def handle_info(_msg, state), do: {:noreply, state}
 
-  @spec process_state(t()) :: t()
-  defp process_state(
-         %__MODULE__{
-           current_height: current_height,
-           sync_pid_ref: nil,
-           fork_height: fork_height,
-           syncing?: true
-         } = s
-       ) do
-    top_height = height() - @unsynced_gens
+  defp chain_height, do: :aec_headers.height(:aec_chain.top_header())
 
-    sync_pid =
-      cond do
-        not is_nil(fork_height) and fork_height <= current_height ->
-          spawn_invalidate(fork_height)
+  defp spawn_with_monitor(fun) do
+    pid = spawn(fun)
 
-        current_height < top_height ->
-          spawn_sync(
-            current_height + 1,
-            min(current_height + @max_blocks_sync, top_height)
-          )
+    Process.monitor(pid)
 
-        true ->
-          nil
-      end
-
-    sync_pid_ref = if sync_pid, do: {sync_pid, Process.monitor(sync_pid)}, else: nil
-
-    %__MODULE__{s | sync_pid_ref: sync_pid_ref, fork_height: nil}
+    pid
   end
 
-  defp process_state(s), do: s
-
-  defp spawn_sync(from_height, to_height) do
-    state = State.new()
-    from_txi = Block.next_txi(state)
-
-    from_mbi =
-      case Block.last_synced_mbi(state, from_height) do
-        {:ok, mbi} -> mbi + 1
-        :none -> -1
-      end
-
-    spawn(fn ->
-      {mutations_time, {blocks_mutations, _next_txi}} =
-        :timer.tc(fn ->
-          Block.blocks_mutations(from_height, from_mbi, from_txi, to_height)
-        end)
-
-      {exec_time, _new_state} = :timer.tc(fn -> exec_mutations(blocks_mutations, state) end)
-
-      gens_per_min = (to_height + 1 - from_height) * 60_000_000 / (mutations_time + exec_time)
-
-      GenServer.cast(__MODULE__, {:done, to_height, gens_per_min})
-    end)
-  end
-
-  defp spawn_invalidate(height) do
-    spawn(fn ->
-      Log.info("invalidation #{height}")
-      Invalidate.invalidate(height)
-
-      GenServer.cast(__MODULE__, {:done, height - 1, 0})
-    end)
-  end
-
-  defp height, do: :aec_headers.height(:aec_chain.top_header())
-
-  defp commit_mutations(state, {_height, mbi}, block, mutations) do
-    new_state = State.commit(state, mutations)
-
-    Producer.commit_enqueued()
-
-    if mbi == -1 do
-      Broadcaster.broadcast_key_block(block, :mdw)
-    else
-      Broadcaster.broadcast_micro_block(block, :mdw)
-      Broadcaster.broadcast_txs(block, :mdw)
-    end
-
-    new_state
-  end
-
-  defp calculate_gens_per_min(prev_gens_per_min, gens_per_min) do
+  defp calculate_gens_per_min(prev_gens_per_min, gens_per_min),
     # exponential moving average
-    (1 - @gens_per_min_weight) * prev_gens_per_min + @gens_per_min_weight * gens_per_min
-  end
-
-  defp exec_mutations(blocks_mutations, state) do
-    Enum.reduce(blocks_mutations, state, fn {block_index, block, mutations}, state ->
-      commit_mutations(state, block_index, block, mutations)
-    end)
-  end
+    do: (1 - @gens_per_min_weight) * prev_gens_per_min + @gens_per_min_weight * gens_per_min
 end
