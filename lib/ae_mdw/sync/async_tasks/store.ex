@@ -9,9 +9,6 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
   require Ex2ms
   require Model
 
-  @type task_index() :: {pos_integer(), atom()}
-  @type task_args() :: list()
-
   @processing_tab :async_tasks_processing
   @args_tab :async_tasks_args
 
@@ -39,7 +36,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
     end)
   end
 
-  @spec save_new(atom(), list(), list()) :: :ok
+  @spec save_new(Model.async_task_type(), Model.async_task_args(), Model.async_task_args()) :: :ok
   def save_new(task_type, args, extra_args \\ []) do
     if not is_enqueued?(task_type, args) do
       index = {System.system_time(), task_type}
@@ -52,13 +49,13 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
     :ok
   end
 
-  @spec set_processing(task_index()) :: :ok
+  @spec set_processing(Model.async_task_index()) :: :ok
   def set_processing(task_index) do
     :ets.insert(@processing_tab, {task_index})
     :ok
   end
 
-  @spec set_done(task_index(), task_args()) :: :ok
+  @spec set_done(Model.async_task_index(), Model.async_task_args()) :: :ok
   def set_done({_ts, task_type} = task_index, args) do
     Database.dirty_delete(Model.AsyncTask, task_index)
 

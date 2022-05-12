@@ -23,8 +23,17 @@ defmodule AeMdw.Db.Model do
   ################################################################################
 
   # index is timestamp (daylight saving order should be handle case by case)
+  @typep timestamp :: pos_integer()
+  @type async_task_type :: :update_aex9_state | :derive_aex9_presence
+  @type async_task_index :: {timestamp(), async_task_type()}
+  @type async_task_args :: list()
+
   @type async_task_record ::
-          record(:async_task, index: {integer(), atom()}, args: list(), extra_args: list())
+          record(:async_task,
+            index: async_task_index(),
+            args: async_task_args(),
+            extra_args: async_task_args()
+          )
   @async_task_defaults [index: {-1, nil}, args: nil, extra_args: nil]
   defrecord :async_task, @async_task_defaults
 
