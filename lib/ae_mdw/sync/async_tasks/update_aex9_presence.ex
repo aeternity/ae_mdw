@@ -7,9 +7,9 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
   alias AeMdw.Node.Db, as: DBN
 
   alias AeMdw.Database
+  alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
-  alias AeMdw.Db.UpdateAex9PresenceMutation
   alias AeMdw.Log
 
   require Model
@@ -33,10 +33,20 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
 
     Log.info("[update_aex9_state] #{inspect(contract_pk)} after #{time_delta / @microsecs}s")
 
-    balances = Enum.map(balances, fn {{:address, account_pk}, amount} -> {account_pk, amount} end)
+    create_txi = Origin.tx_index!({:contract, contract_pk})
+    Enum.each(balances, fn {{:address, account_pk}, amount} ->
+      Contract.aex9_write_new_presence(contract_pk, create_txi, account_pk)
 
-    mutation = UpdateAex9PresenceMutation.new(contract_pk, block_index, call_txi, balances)
-    Database.commit([mutation])
+      m_balance =
+        Model.aex9_balance(
+          index: {contract_pk, account_pk},
+          block_index: block_index,
+          txi: call_txi,
+          amount: amount
+        )
+
+      Database.dirty_write(Model.Aex9Balance, m_balance)
+    end)
 
     :ok
   end
