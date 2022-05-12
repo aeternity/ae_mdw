@@ -75,7 +75,7 @@ defmodule AeMdw.Aex9 do
         amounts when map_size(amounts) == 0 ->
           raise ErrInput.Aex9BalanceNotAvailable, value: "contract #{enc_ct(contract_pk)}"
 
-        %{{:address, <<>>} => nil} ->
+        %{{:address, <<>>} => nil} = amounts when map_size(amounts) == 1 ->
           %{}
 
         amounts ->
