@@ -53,7 +53,7 @@ defmodule AeMdw.Db.Contract do
 
   @spec aex9_write_new_presence(state(), pubkey(), integer(), pubkey()) :: {boolean(), state()}
   def aex9_write_new_presence(state, contract_pk, txi, account_pk) do
-    if aex9_presence_exists?(contract_pk, account_pk, txi) do
+    if aex9_presence_exists?(state, contract_pk, account_pk, txi) do
       {false, state}
     else
       {true, aex9_write_presence(state, contract_pk, txi, account_pk)}
@@ -112,11 +112,12 @@ defmodule AeMdw.Db.Contract do
     end)
   end
 
-  @spec aex9_presence_exists?(pubkey(), pubkey(), integer()) :: boolean()
-  def aex9_presence_exists?(contract_pk, account_pk, txi) do
+  @spec aex9_presence_exists?(State.t(), pubkey(), pubkey(), integer()) :: boolean()
+  def aex9_presence_exists?(state, contract_pk, account_pk, txi) do
     txi_search_prev = txi + 1
 
-    case Database.prev_key(
+    case State.prev(
+           state,
            Model.Aex9AccountPresence,
            {account_pk, txi_search_prev, contract_pk}
          ) do

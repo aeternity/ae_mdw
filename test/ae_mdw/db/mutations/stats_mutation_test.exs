@@ -230,11 +230,11 @@ defmodule AeMdw.Db.StatsMutationTest do
       with_mocks [
         {Database, [],
          [
-           dirty_fetch: fn
-             _txn, Model.TotalStat, ^height -> {:ok, Model.total_stat(active_auctions: 1)}
-             _txn, Model.InactiveName, _plain_name -> {:ok, Model.name()}
+           get: fn
+             Model.TotalStat, ^height -> {:ok, Model.total_stat(active_auctions: 1)}
+             Model.InactiveName, _plain_name -> {:ok, Model.name()}
            end,
-           count_keys: fn
+           count: fn
              Model.ActiveName -> 3
              Model.ActiveOracle -> 4
              Model.AuctionExpiration -> 5
@@ -305,7 +305,7 @@ defmodule AeMdw.Db.StatsMutationTest do
       with_mocks [
         {Database, [],
          [
-           dirty_fetch: fn _txn, Model.TotalStat, ^height ->
+           get: fn Model.TotalStat, ^height ->
              {:ok, Model.total_stat(active_auctions: 1)}
            end
          ]},

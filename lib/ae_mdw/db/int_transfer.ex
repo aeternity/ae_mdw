@@ -7,7 +7,6 @@ defmodule AeMdw.Db.IntTransfer do
   alias AeMdw.Txs
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
-  alias AeMdw.Database
   alias AeMdw.Collection
 
   require Ex2ms
@@ -114,7 +113,7 @@ defmodule AeMdw.Db.IntTransfer do
       _other_height_kind -> false
     end)
     |> Enum.map(fn key ->
-      Model.int_transfer_tx(amount: amount) = Database.fetch!(Model.IntTransferTx, key)
+      Model.int_transfer_tx(amount: amount) = State.fetch!(state, Model.IntTransferTx, key)
       amount
     end)
     |> Enum.sum()

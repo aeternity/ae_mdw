@@ -24,9 +24,14 @@ defmodule AeMdw.Database do
   @type limit() :: pos_integer()
   @type transaction() :: RocksDb.transaction()
 
-  @spec count_keys(table()) :: non_neg_integer()
-  def count_keys(table) do
+  @spec count(table()) :: non_neg_integer()
+  def count(table) do
     RocksDbCF.count(table)
+  end
+
+  @spec dirty_count(transaction(), table()) :: non_neg_integer()
+  def dirty_count(txn, table) do
+    RocksDbCF.dirty_count(txn, table)
   end
 
   @spec all_keys(table()) :: [key()]
@@ -105,12 +110,13 @@ defmodule AeMdw.Database do
     end
   end
 
-  @spec next_key(table(), direction(), key()) :: {:ok, key()} | :none
-  def next_key(tab, :forward, nil), do: first_key(tab)
-  def next_key(tab, :forward, cursor), do: next_key(tab, cursor)
-
-  def next_key(tab, :backward, nil), do: last_key(tab)
-  def next_key(tab, :backward, cursor), do: prev_key(tab, cursor)
+  @spec dirty_prev(transaction(), table(), key()) :: {:ok, key()} | :none
+  def dirty_prev(txn, tab, key) do
+    case RocksDbCF.dirty_prev(txn, tab, key) do
+      {:ok, prev_key} -> {:ok, prev_key}
+      :not_found -> :none
+    end
+  end
 
   @spec fetch(table(), key()) :: {:ok, record()} | :not_found
   def fetch(tab, key) do
@@ -137,6 +143,11 @@ defmodule AeMdw.Database do
     end
   end
 
+  @spec get(table(), key()) :: {:ok, record()} | :not_found
+  def get(tab, key) do
+    RocksDbCF.fetch(tab, key)
+  end
+
   @spec write(transaction(), table(), record()) :: :ok
   def write(txn, tab, record) do
     RocksDbCF.put(txn, tab, record)
@@ -154,9 +165,17 @@ defmodule AeMdw.Database do
   """
   @spec commit([Mutation.t()]) :: :ok
   def commit(mutations) do
-    State.new()
-    |> State.commit(mutations)
+    State.commit(State.new(), mutations)
 
     :ok
   end
+
+  @spec transaction_new() :: transaction()
+  def transaction_new do
+    {:ok, txn} = RocksDb.transaction_new()
+    txn
+  end
+
+  @spec transaction_commit(transaction()) :: :ok
+  def transaction_commit(txn), do: RocksDb.transaction_commit(txn)
 end

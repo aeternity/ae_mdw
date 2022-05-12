@@ -209,14 +209,14 @@ defmodule AeMdw.Sync.Server do
   defp process_state(s), do: s
 
   defp spawn_sync(from_height, to_height) do
+    state = State.new()
+    from_txi = Block.next_txi(state)
+
     from_mbi =
-      case Block.last_synced_mbi(from_height) do
+      case Block.last_synced_mbi(state, from_height) do
         {:ok, mbi} -> mbi + 1
         :none -> -1
       end
-
-    db_state = State.new()
-    from_txi = Block.next_txi()
 
     spawn(fn ->
       {mutations_time, {blocks_mutations, _next_txi}} =
@@ -224,7 +224,7 @@ defmodule AeMdw.Sync.Server do
           Block.blocks_mutations(from_height, from_mbi, from_txi, to_height)
         end)
 
-      {exec_time, _new_state} = :timer.tc(fn -> exec_mutations(blocks_mutations, db_state) end)
+      {exec_time, _new_state} = :timer.tc(fn -> exec_mutations(blocks_mutations, state) end)
 
       gens_per_min = (to_height + 1 - from_height) * 60_000_000 / (mutations_time + exec_time)
 
@@ -263,8 +263,8 @@ defmodule AeMdw.Sync.Server do
     (1 - @gens_per_min_weight) * prev_gens_per_min + @gens_per_min_weight * gens_per_min
   end
 
-  defp exec_mutations(blocks_mutations, db_state) do
-    Enum.reduce(blocks_mutations, db_state, fn {block_index, block, mutations}, state ->
+  defp exec_mutations(blocks_mutations, state) do
+    Enum.reduce(blocks_mutations, state, fn {block_index, block, mutations}, state ->
       commit_mutations(state, block_index, block, mutations)
     end)
   end

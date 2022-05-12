@@ -5,7 +5,6 @@ defmodule AeMdw.Db.NamesExpirationMutation do
 
   alias AeMdw.Blocks
   alias AeMdw.Collection
-  alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Db.State
@@ -35,7 +34,7 @@ defmodule AeMdw.Db.NamesExpirationMutation do
     state
     |> Collection.stream(Model.AuctionExpiration, {height, <<>>})
     |> Stream.take_while(&match?({^height, _plain_name}, &1))
-    |> Enum.map(&Database.fetch!(Model.AuctionExpiration, &1))
+    |> Enum.map(&State.fetch!(state, Model.AuctionExpiration, &1))
     |> Enum.reduce(new_state, fn Model.expiration(
                                    index: {_height, plain_name},
                                    value: auction_timeout
