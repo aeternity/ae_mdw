@@ -41,7 +41,7 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
     GenServer.call(__MODULE__, :dequeue)
   end
 
-  @spec notify_consumed(Store.task_index(), Store.task_args(), boolean()) :: :ok
+  @spec notify_consumed(Model.async_task_index(), Model.async_task_args(), boolean()) :: :ok
   def notify_consumed(task_index, task_args, is_long?) do
     Store.set_done(task_index, task_args)
     Stats.update_consumed(is_long?)
