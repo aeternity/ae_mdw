@@ -99,6 +99,10 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       with_mocks [
         {AeMdw.Node.Db, [],
          [
+           get_key_block_hash: fn height ->
+             assert ^height = kbi + 1
+             kb_hash
+           end,
            get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
            aex9_balances: fn ^contract_pk, {:micro, ^kbi, ^next_mb_hash} ->
              balances = %{{:address, account_pk} => 100_000_000_000_000_002}
