@@ -41,22 +41,22 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.Aex9ContractPubkey, m_contract_pk)
   end
 
-  @spec aex9_write_presence(state(), pubkey(), integer(), pubkey()) :: state()
-  def aex9_write_presence(state, contract_pk, txi, pubkey) do
+  @spec aex9_write_presence(pubkey(), integer(), pubkey()) :: :ok
+  def aex9_write_presence(contract_pk, txi, pubkey) do
     m_acc_presence = Model.aex9_account_presence(index: {pubkey, txi, contract_pk})
     m_idx_presence = Model.idx_aex9_account_presence(index: {txi, pubkey, contract_pk})
 
-    state
-    |> State.put(Model.Aex9AccountPresence, m_acc_presence)
-    |> State.put(Model.IdxAex9AccountPresence, m_idx_presence)
+    Database.dirty_write(Model.Aex9AccountPresence, m_acc_presence)
+    Database.dirty_write(Model.IdxAex9AccountPresence, m_idx_presence)
   end
 
-  @spec aex9_write_new_presence(state(), pubkey(), integer(), pubkey()) :: {boolean(), state()}
-  def aex9_write_new_presence(state, contract_pk, txi, account_pk) do
+  @spec aex9_write_new_presence(pubkey(), integer(), pubkey()) :: boolean()
+  def aex9_write_new_presence(contract_pk, txi, account_pk) do
     if aex9_presence_exists?(contract_pk, account_pk, txi) do
-      {false, state}
+      false
     else
-      {true, aex9_write_presence(state, contract_pk, txi, account_pk)}
+      aex9_write_presence(contract_pk, txi, account_pk)
+      true
     end
   end
 
@@ -371,12 +371,13 @@ defmodule AeMdw.Db.Contract do
     m_idx_transfer = Model.idx_aex9_transfer(index: {txi, i, from_pk, to_pk, amount})
     m_pair_transfer = Model.aex9_pair_transfer(index: {from_pk, to_pk, txi, amount, i})
 
+    aex9_write_presence(contract_pk, txi, to_pk)
+
     state
     |> State.put(Model.Aex9Transfer, m_transfer)
     |> State.put(Model.RevAex9Transfer, m_rev_transfer)
     |> State.put(Model.IdxAex9Transfer, m_idx_transfer)
     |> State.put(Model.Aex9PairTransfer, m_pair_transfer)
-    |> aex9_write_presence(contract_pk, txi, to_pk)
   end
 
   defp fetch_aex9_balance_or_new(state, contract_pk, account_pk) do
