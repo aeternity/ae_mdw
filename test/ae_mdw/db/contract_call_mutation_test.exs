@@ -31,6 +31,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
   describe "aex9 presence" do
     test "add aex9 presence after a mint" do
       call_txi = 10_552_888
+      create_txi = call_txi - 1
       block_index = {kbi, mbi} = {246_949, 83}
 
       assert {account_pk, mutation} =
@@ -41,7 +42,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       Database.dirty_write(
         Model.Field,
-        Model.field(index: {:contract_create_tx, nil, @mint_ct_pk, 121})
+        Model.field(index: {:contract_create_tx, nil, @mint_ct_pk, create_txi})
       )
 
       kb_hash = <<123_451::256>>
@@ -62,17 +63,17 @@ defmodule AeMdw.Db.ContractCallMutationTest do
            end
          ]}
       ] do
-        :ets.insert(:aex9_sync_cache, {contract_pk, {kbi, mbi}, call_txi})
         Database.commit([mutation])
         process_async_task()
 
-        assert {:ok, {^account_pk, ^call_txi, ^contract_pk}} =
-                 Database.next_key(Model.Aex9AccountPresence, {account_pk, call_txi, nil})
+        assert {:ok, {^account_pk, ^create_txi, ^contract_pk}} =
+                 Database.next_key(Model.Aex9AccountPresence, {account_pk, create_txi, nil})
       end
     end
 
     test "add aex9 presence after a transfer" do
       call_txi = 10_587_359
+      create_txi = call_txi - 1
       block_index = {kbi, mbi} = {247_411, 5}
 
       assert {account_pk, mutation} =
@@ -88,7 +89,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       Database.dirty_write(
         Model.Field,
-        Model.field(index: {:contract_create_tx, nil, @transfer_ct_pk, 122})
+        Model.field(index: {:contract_create_tx, nil, @transfer_ct_pk, create_txi})
       )
 
       kb_hash = <<123_452::256>>
@@ -106,17 +107,17 @@ defmodule AeMdw.Db.ContractCallMutationTest do
            end
          ]}
       ] do
-        :ets.insert(:aex9_sync_cache, {contract_pk, block_index, call_txi})
         Database.commit([mutation])
         process_async_task()
 
-        assert {:ok, {^account_pk, ^call_txi, ^contract_pk}} =
-                 Database.next_key(Model.Aex9AccountPresence, {account_pk, call_txi, nil})
+        assert {:ok, {^account_pk, ^create_txi, ^contract_pk}} =
+                 Database.next_key(Model.Aex9AccountPresence, {account_pk, create_txi, nil})
       end
     end
 
     test "add aex9 presence after a transfer allowance" do
       call_txi = 11_440_639
+      create_txi = call_txi - 1
       block_index = {kbi, mbi} = {258_867, 73}
 
       assert {account_pk, mutation} =
@@ -132,7 +133,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       Database.dirty_write(
         Model.Field,
-        Model.field(index: {:contract_create_tx, nil, @transfer_allow_ct_pk, 123})
+        Model.field(index: {:contract_create_tx, nil, @transfer_allow_ct_pk, create_txi})
       )
 
       kb_hash = <<123_453::256>>
@@ -153,17 +154,17 @@ defmodule AeMdw.Db.ContractCallMutationTest do
            end
          ]}
       ] do
-        :ets.insert(:aex9_sync_cache, {contract_pk, block_index, call_txi})
         Database.commit([mutation])
         process_async_task()
 
-        assert {:ok, {^account_pk, ^call_txi, ^contract_pk}} =
-                 Database.next_key(Model.Aex9AccountPresence, {account_pk, call_txi, nil})
+        assert {:ok, {^account_pk, ^create_txi, ^contract_pk}} =
+                 Database.next_key(Model.Aex9AccountPresence, {account_pk, create_txi, nil})
       end
     end
 
     test "add aex9 presence after a burn (balance is 0)" do
       call_txi = 11_213_118
+      create_txi = call_txi - 1
       block_index = {kbi, mbi} = {255_795, 74}
 
       assert {account_pk, mutation} =
@@ -174,7 +175,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       Database.dirty_write(
         Model.Field,
-        Model.field(index: {:contract_create_tx, nil, @burn_ct_pk, 124})
+        Model.field(index: {:contract_create_tx, nil, @burn_ct_pk, create_txi})
       )
 
       kb_hash = <<123_454::256>>
@@ -196,12 +197,11 @@ defmodule AeMdw.Db.ContractCallMutationTest do
            end
          ]}
       ] do
-        :ets.insert(:aex9_sync_cache, {contract_pk, block_index, call_txi})
         Database.commit([mutation])
         process_async_task()
 
-        assert {:ok, {^account_pk, ^call_txi, ^contract_pk}} =
-                 Database.next_key(Model.Aex9AccountPresence, {account_pk, call_txi, nil})
+        assert {:ok, {^account_pk, ^create_txi, ^contract_pk}} =
+                 Database.next_key(Model.Aex9AccountPresence, {account_pk, create_txi, nil})
       end
     end
   end
@@ -324,7 +324,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
   defp process_async_task do
     AsyncTasks.Producer.commit_enqueued()
-    Process.sleep(200)
+    Process.sleep(500)
 
     AsyncTasks.Supervisor
     |> Supervisor.which_children()

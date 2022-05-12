@@ -16,6 +16,7 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
       mbi = 147
       block_index = {kbi, mbi}
       call_txi = 16_063_747
+      create_txi = call_txi - 1
       amount1 = 323_838_000_000_000_000_000
       amount2 = 103_680_000_000_000_000_000
       kb_hash = Validate.id!("kh_2DQZpzmoTVvUUtRtLsamt2j6cN43YRcMtP6S8YCMehZ8DAbety")
@@ -43,6 +44,11 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
            end
          ]}
       ] do
+        Database.dirty_write(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, create_txi})
+        )
+
         :ets.insert(:aex9_sync_cache, {contract_pk, block_index, call_txi})
         UpdateAex9State.process([contract_pk])
 
@@ -52,8 +58,8 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
         assert Model.aex9_balance(block_index: ^block_index, txi: ^call_txi, amount: ^amount2) =
                  Database.fetch!(Model.Aex9Balance, {contract_pk, account_pk2})
 
-        assert Database.exists?(Model.Aex9AccountPresence, {account_pk1, call_txi, contract_pk})
-        assert Database.exists?(Model.Aex9AccountPresence, {account_pk2, call_txi, contract_pk})
+        assert Database.exists?(Model.Aex9AccountPresence, {account_pk1, create_txi, contract_pk})
+        assert Database.exists?(Model.Aex9AccountPresence, {account_pk2, create_txi, contract_pk})
       end
     end
   end
