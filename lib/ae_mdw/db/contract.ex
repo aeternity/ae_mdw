@@ -32,13 +32,13 @@ defmodule AeMdw.Db.Contract do
     m_contract = Model.aex9_contract(index: {name, symbol, txi, decimals})
     m_contract_sym = Model.aex9_contract_symbol(index: {symbol, name, txi, decimals})
     m_rev_contract = Model.rev_aex9_contract(index: {txi, name, symbol, decimals})
-    m_contract_pk = Model.aex9_contract_pubkey(index: contract_pk, txi: txi)
+    m_contract_pk = Model.aexn_contract_pubkey(index: {:aex9, contract_pk}, txi: txi)
 
     state
     |> State.put(Model.Aex9Contract, m_contract)
     |> State.put(Model.Aex9ContractSymbol, m_contract_sym)
     |> State.put(Model.RevAex9Contract, m_rev_contract)
-    |> State.put(Model.Aex9ContractPubkey, m_contract_pk)
+    |> State.put(Model.AexNContractPubkey, m_contract_pk)
   end
 
   @spec aex9_write_presence(state(), pubkey(), integer(), pubkey()) :: state()
@@ -209,7 +209,7 @@ defmodule AeMdw.Db.Contract do
           state2
         end
 
-      aex9_contract_pk = which_aex9_contract_pubkey(contract_pk, addr)
+      aex9_contract_pk = which_aexn_contract_pubkey(contract_pk, addr)
 
       if is_aex9_transfer?(evt_hash, aex9_contract_pk) do
         write_aex9_records(state3, aex9_contract_pk, txi, i, args)
@@ -226,8 +226,8 @@ defmodule AeMdw.Db.Contract do
     evt_hash == aex9_transfer_evt and aex9_contract_pk != nil
   end
 
-  @spec which_aex9_contract_pubkey(pubkey(), pubkey()) :: pubkey() | nil
-  def which_aex9_contract_pubkey(contract_pk, addr) do
+  @spec which_aexn_contract_pubkey(pubkey(), pubkey()) :: pubkey() | nil
+  def which_aexn_contract_pubkey(contract_pk, addr) do
     if Contract.is_aex9?(contract_pk) do
       contract_pk
     else

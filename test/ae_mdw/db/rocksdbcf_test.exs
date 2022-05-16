@@ -123,7 +123,7 @@ defmodule AeMdw.Db.RocksDbCFTest do
     end
 
     test "returns false when is not commited", %{txn: txn} do
-      txi = new_txi()
+      txi = System.unique_integer() |> abs()
       m_tx = Model.tx(index: txi)
       assert :ok = RocksDbCF.put(txn, Model.Tx, m_tx)
       refute RocksDbCF.exists?(Model.Tx, txi)
