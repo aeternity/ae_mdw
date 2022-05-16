@@ -9,12 +9,12 @@ defmodule AeMdwWeb.Aex9TokenControllerTest do
   require Model
 
   @default_limit 10
-  @aex9_token_id enc_ct(<<1::256>>)
+  @aex9_token_id enc_ct(<<200::256>>)
 
   setup_all _context do
-    Enum.each(1..25, fn i ->
+    Enum.each(200..225, fn i ->
       meta_info = {name, symbol, _decimals} = {"some-AEX9-#{i}", "SAEX9#{i}", i}
-      txi = 1_000 - i
+      txi = 2_000 - i
       m_aex9 = Model.aexn_contract(index: {:aex9, <<i::256>>}, txi: txi, meta_info: meta_info)
       m_aexn_name = Model.aexn_contract_name(index: {:aex9, name, <<i::256>>})
       m_aexn_symbol = Model.aexn_contract_symbol(index: {:aex9, symbol, <<i::256>>})

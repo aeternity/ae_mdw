@@ -24,7 +24,7 @@ defmodule AeMdw.Db.Aex9CreateContractMutationTest do
 
       assert {:ok, ^m_contract_pk} = Database.fetch(Model.AexnContract, {:aex9, contract_pk})
       assert Database.exists?(Model.AexnContractName, {:aex9, name, contract_pk})
-      assert Database.exists?(Model.AexnContractSymbol, {:aex9, name, contract_pk})
+      assert Database.exists?(Model.AexnContractSymbol, {:aex9, symbol, contract_pk})
     end
   end
 end

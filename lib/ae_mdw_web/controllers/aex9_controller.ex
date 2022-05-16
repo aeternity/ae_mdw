@@ -8,8 +8,6 @@ defmodule AeMdwWeb.Aex9Controller do
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db, as: DBN
   alias AeMdw.Db.Contract
-  alias AeMdw.Db.Format
-  alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
   alias AeMdw.Db.Util
   alias AeMdw.Aex9
@@ -254,21 +252,22 @@ defmodule AeMdwWeb.Aex9Controller do
     end
   end
 
-  defp by_names_reply(conn, query_params) do
+  defp by_names_reply(conn, params) do
     pagination = {:forward, false, 32_000, false}
 
-    with {:ok, _prev_cursor, aex9_tokens, _next_cursor} <- AexnTokens.fetch_tokens(pagination, :aex9, query_params, :name, nil) do
+    with {:ok, _prev_cursor, aex9_tokens, _next_cursor} <-
+           AexnTokens.fetch_tokens(pagination, :aex9, params, :name, nil) do
       json(conn, render_tokens(aex9_tokens))
     end
   end
 
-  defp by_symbols_reply(conn, search_mode) do
-    entries =
-      search_mode
-      |> Contract.aex9_search_symbol()
-      |> Enum.map(&Format.to_map(&1, Model.Aex9ContractSymbol))
+  defp by_symbols_reply(conn, params) do
+    pagination = {:forward, false, 32_000, false}
 
-    json(conn, entries)
+    with {:ok, _prev_cursor, aex9_tokens, _next_cursor} <-
+           AexnTokens.fetch_tokens(pagination, :aex9, params, :symbol, nil) do
+      json(conn, render_tokens(aex9_tokens))
+    end
   end
 
   defp balance_reply(conn, contract_pk, account_pk) do

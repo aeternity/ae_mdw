@@ -85,11 +85,15 @@ defmodule AeMdw.AexnTokens do
     end
   end
 
-  defp validate_params(%{"prefix" => _, "exact" => _}), do: raise(ErrInput.Query, value: "can't use both `prefix` and `exact` parameters")
+  defp validate_params(%{"prefix" => _, "exact" => _}),
+    do: raise(ErrInput.Query, value: "can't use both `prefix` and `exact` parameters")
+
   defp validate_params(params), do: params
 
   defp convert_param({"prefix", prefix}) when is_binary(prefix), do: {:prefix, prefix}
-  defp convert_param({"exact", field_value}) when is_binary(field_value), do: {:exact, field_value}
+
+  defp convert_param({"exact", field_value}) when is_binary(field_value),
+    do: {:exact, field_value}
 
   defp convert_param(other_param),
     do: raise(ErrInput.Query, value: other_param)

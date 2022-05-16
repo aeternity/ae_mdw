@@ -8,6 +8,7 @@ defmodule AeMdw.AexnTokensTest do
   alias AeMdw.Validate
 
   import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1]
+  import AeMdwWeb.AexnView
 
   require Model
 
@@ -30,14 +31,14 @@ defmodule AeMdw.AexnTokensTest do
 
       contract_id = enc_ct(contract_pk)
 
-      assert {:ok,
-              %{
+      assert {:ok, m_aex9} = AexnTokens.fetch_token({:aex9, contract_pk})
+      assert %{
                 name: ^name,
                 symbol: ^symbol,
                 decimals: ^decimals,
                 contract_txi: ^txi,
                 contract_id: ^contract_id
-              }} = AexnTokens.fetch_token({:aex9, contract_pk})
+              } = render_token(m_aex9)
     end
 
     test "returns a AEX-141 contract meta info" do
@@ -59,15 +60,15 @@ defmodule AeMdw.AexnTokensTest do
 
       contract_id = enc_ct(contract_pk)
 
-      assert {:ok,
-              %{
+      assert {:ok, m_aex141} = AexnTokens.fetch_token({:aex141, contract_pk})
+      assert %{
                 name: ^name,
                 symbol: ^symbol,
                 base_url: ^base_url,
                 contract_txi: ^txi,
                 contract_id: ^contract_id,
                 metadata_type: ^type
-              }} = AexnTokens.fetch_token({:aex141, contract_pk})
+                } = render_token(m_aex141)
     end
 
     test "returns input error on AEX9 not found" do
