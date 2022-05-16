@@ -1,4 +1,4 @@
-defmodule AeMdw.Migrations.MoveAexNContracts do
+defmodule AeMdw.Migrations.MoveAexnContracts do
   @moduledoc """
   Move AEXN contracts.
   """
@@ -21,11 +21,20 @@ defmodule AeMdw.Migrations.MoveAexNContracts do
     aexn_mutations =
       aex9_pubkeys
       |> Enum.map(fn contract_pk ->
-        Model.aex9_contract_pubkey(txi: txi) =
-          Database.fetch!(Model.Aex9ContractPubkey, contract_pk)
+        {:ok, Model.aex9_contract_pubkey(txi: txi)} =
+          Database.fetch(Model.Aex9ContractPubkey, contract_pk)
 
-        m_aexn = Model.aexn_contract_pubkey(index: {:aex9, contract_pk}, txi: txi)
-        WriteMutation.new(Model.AexNContractPubkey, m_aexn)
+        {:ok, Model.rev_aex9_contract(index: {txi, name, symbol, decimals})} =
+          Database.next_key(Model.RevAex9Contract, {txi, "", "", -1})
+
+        m_aexn =
+          Model.aexn_contract(
+            index: {:aex9, contract_pk},
+            txi: txi,
+            meta_info: {name, symbol, decimals}
+          )
+
+        WriteMutation.new(Model.AexnContract, m_aexn)
       end)
 
     mutations = [

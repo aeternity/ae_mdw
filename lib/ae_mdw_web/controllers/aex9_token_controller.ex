@@ -1,5 +1,8 @@
 defmodule AeMdwWeb.Aex9TokenController do
+  @moduledoc false
+
   alias AeMdw.Aex9
+  alias AeMdw.AexnTokens
   alias AeMdw.Validate
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
@@ -34,7 +37,7 @@ defmodule AeMdwWeb.Aex9TokenController do
   @spec aex9_token(Conn.t(), map()) :: Conn.t()
   def aex9_token(conn, %{"contract_id" => contract_id}) do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
-         {:ok, token} <- Aex9.fetch_token(contract_pk) do
+         {:ok, token} <- AexnTokens.fetch_token(contract_pk) do
       json(conn, token)
     end
   end

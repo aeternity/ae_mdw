@@ -21,7 +21,9 @@ defmodule AeMdw.Db.Aex9CreateContractMutationTest do
       m_contract = Model.aex9_contract(index: {name, symbol, txi, decimals})
       m_contract_sym = Model.aex9_contract_symbol(index: {symbol, name, txi, decimals})
       m_rev_contract = Model.rev_aex9_contract(index: {txi, name, symbol, decimals})
-      m_contract_pk = Model.aexn_contract_pubkey(index: {:aex9, contract_pk}, txi: txi)
+
+      m_contract_pk =
+        Model.aexn_contract(index: {:aex9, contract_pk}, txi: txi, meta_info: aex9_meta_info)
 
       assert {:ok, ^m_contract} =
                Database.fetch(Model.Aex9Contract, {name, symbol, txi, decimals})
@@ -32,8 +34,7 @@ defmodule AeMdw.Db.Aex9CreateContractMutationTest do
       assert {:ok, ^m_rev_contract} =
                Database.fetch(Model.RevAex9Contract, {txi, name, symbol, decimals})
 
-      assert {:ok, ^m_contract_pk} =
-               Database.fetch(Model.AexNContractPubkey, {:aex9, contract_pk})
+      assert {:ok, ^m_contract_pk} = Database.fetch(Model.AexnContract, {:aex9, contract_pk})
     end
   end
 end

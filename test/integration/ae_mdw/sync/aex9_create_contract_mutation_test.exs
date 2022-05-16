@@ -61,14 +61,20 @@ defmodule Integration.AeMdw.Db.Aex9CreateContractMutationTest do
     Database.dirty_delete(Model.Aex9ContractSymbol, {symbol, name, txi, decimals})
     Database.dirty_delete(Model.RevAex9Contract, {txi, name, symbol, decimals})
     Database.dirty_delete(Model.Aex9ContractPubkey, child_contract_pk)
-    Database.dirty_delete(Model.AexNContractPubkey, {:aex9, child_contract_pk})
+    Database.dirty_delete(Model.AexnContract, {:aex9, child_contract_pk})
 
     Database.commit(child_mutations)
 
     m_contract = Model.aex9_contract(index: {name, symbol, txi, decimals})
     m_contract_sym = Model.aex9_contract_symbol(index: {symbol, name, txi, decimals})
     m_rev_contract = Model.rev_aex9_contract(index: {txi, name, symbol, decimals})
-    m_contract_pk = Model.aexn_contract_pubkey(index: {:aex9, child_contract_pk}, txi: txi)
+
+    m_contract_pk =
+      Model.aexn_contract(
+        index: {:aex9, child_contract_pk},
+        txi: txi,
+        meta_info: {name, symbol, decimals}
+      )
 
     assert [^m_contract] = Database.read(Model.Aex9Contract, {name, symbol, txi, decimals})
 
@@ -77,6 +83,6 @@ defmodule Integration.AeMdw.Db.Aex9CreateContractMutationTest do
 
     assert [^m_rev_contract] = Database.read(Model.RevAex9Contract, {txi, name, symbol, decimals})
 
-    assert [^m_contract_pk] = Database.read(Model.AexNContractPubkey, {:aex9, child_contract_pk})
+    assert [^m_contract_pk] = Database.read(Model.AexnContract, {:aex9, child_contract_pk})
   end
 end

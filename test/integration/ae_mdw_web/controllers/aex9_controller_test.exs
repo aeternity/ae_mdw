@@ -7,7 +7,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
   alias AeMdw.Db.Util
   alias AeMdw.Validate
 
-  import AeMdwWeb.Helpers.Aex9Helper
+  import AeMdwWeb.Helpers.AexnHelper
 
   require Model
 
@@ -56,7 +56,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
     @tag :iteration
     test "gets each of the aex9 tokens by contract id", %{conn: conn} do
-      Model.AexNContractPubkey
+      Model.AexnContract
       |> Database.all_keys()
       |> Enum.each(fn aex9_pubkey ->
         contract_id = enc_ct(aex9_pubkey)
@@ -220,7 +220,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
       Model.block(tx_index: range_txi) = Database.fetch!(Model.Block, {first, -1})
 
-      Model.AexNContractPubkey
+      Model.AexnContract
       |> Database.all_keys()
       |> Enum.filter(fn contract_pk ->
         Origin.tx_index!({:contract, contract_pk}) < range_txi and
@@ -311,7 +311,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
           {txi, :aeser_api_encoder.encode(:micro_block_hash, mb_hash)}
         end)
 
-      Model.AexNContractPubkey
+      Model.AexnContract
       |> Database.all_keys()
       |> Enum.map(&enc_ct/1)
       |> Enum.zip(mb_hashes)
@@ -393,7 +393,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
     end
 
     test "gets balances for each contract", %{conn: conn} do
-      aex9_pubkeys = Database.all_keys(Model.AexNContractPubkey)
+      aex9_pubkeys = Database.all_keys(Model.AexnContract)
 
       not_empty_balance_contracts =
         Enum.filter(aex9_pubkeys, fn contract_pk ->

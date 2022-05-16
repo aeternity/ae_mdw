@@ -157,6 +157,11 @@ defmodule AeMdw.Application do
       |> Enum.map(fn {k, v} -> {Contract.function_hash(k), v} end)
       |> Enum.into(%{})
 
+    aex141_sigs =
+      Contract.aex141_signatures()
+      |> Enum.map(fn {k, v} -> {Contract.function_hash(k), v} end)
+      |> Enum.into(%{})
+
     max_int = Util.max_256bit_int()
     max_blob = :binary.list_to_bin(:lists.duplicate(1024, <<max_int::256>>))
 
@@ -194,6 +199,7 @@ defmodule AeMdw.Application do
         lima_height: [{[], lima_height}],
         aex9_signatures: [{[], aex9_sigs}],
         aex9_transfer_event_hash: [{[], :aec_hash.blake2b_256_hash("Transfer")}],
+        aex141_signatures: [{[], aex141_sigs}],
         max_blob: [{[], max_blob}],
         height_proto: [{[], height_proto}],
         min_block_reward_height: [{[], min_block_reward_height}],

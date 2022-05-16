@@ -1,4 +1,4 @@
-defmodule AeMdwWeb.Helpers.Aex9Helper do
+defmodule AeMdwWeb.Helpers.AexnHelper do
   @moduledoc """
   Used to format aex9 related info
   """
@@ -24,5 +24,5 @@ defmodule AeMdwWeb.Helpers.Aex9Helper do
   def enc_id(pk), do: :aeser_api_encoder.encode(:account_pubkey, pk)
 
   @spec enc(atom(), pubkey()) :: String.t()
-  def enc(type, pk), do: :aeser_api_encoder.encode(type, pk)
+  defdelegate enc(type, pk), to: :aeser_api_encoder, as: :encode
 end
