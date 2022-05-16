@@ -443,10 +443,9 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
                                         "token_symbol" => token_symbol
                                       } ->
         {:contract_pubkey, contract_pk} = :aeser_api_encoder.decode(contract_id)
-        create_txi = Origin.tx_index!({:contract, contract_pk})
 
-        {^create_txi, name, symbol, _decimals} =
-          Util.next(Model.RevAex9Contract, {create_txi, nil, nil, nil})
+        Model.aexn_contract(meta_info: {name, symbol, _decimals}) =
+          Database.fetch!(Model.AexnContract, {:aex9, contract_pk})
 
         assert token_name == name
         assert token_symbol == symbol

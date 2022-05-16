@@ -31,11 +31,11 @@ defmodule AeMdwWeb.Aex9Controller do
 
   @spec by_names(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def by_names(conn, params),
-    do: handle_input(conn, fn -> by_names_reply(conn, search_mode!(params)) end)
+    do: handle_input(conn, fn -> by_names_reply(conn, params) end)
 
   @spec by_symbols(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def by_symbols(conn, params),
-    do: handle_input(conn, fn -> by_symbols_reply(conn, search_mode!(params)) end)
+    do: handle_input(conn, fn -> by_symbols_reply(conn, params) end)
 
   @spec balance(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def balance(conn, %{"contract_id" => contract_id, "account_id" => account_id}),
@@ -249,18 +249,17 @@ defmodule AeMdwWeb.Aex9Controller do
 
   defp by_contract_reply(conn, contract_id) do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
-         {:ok, token} <- AexnTokens.fetch_token(contract_pk) do
-      json(conn, %{data: token})
+         {:ok, m_aex9} <- AexnTokens.fetch_token({:aex9, contract_pk}) do
+      json(conn, %{data: render_token(m_aex9)})
     end
   end
 
-  defp by_names_reply(conn, search_mode) do
-    entries =
-      search_mode
-      |> Contract.aex9_search_name()
-      |> Enum.map(&Format.to_map(&1, Model.Aex9Contract))
+  defp by_names_reply(conn, query_params) do
+    pagination = {:forward, false, 32_000, false}
 
-    json(conn, entries)
+    with {:ok, _prev_cursor, aex9_tokens, _next_cursor} <- AexnTokens.fetch_tokens(pagination, :aex9, query_params, :name, nil) do
+      json(conn, render_tokens(aex9_tokens))
+    end
   end
 
   defp by_symbols_reply(conn, search_mode) do
@@ -379,15 +378,6 @@ defmodule AeMdwWeb.Aex9Controller do
     {amounts, _} = DBN.aex9_balances!(contract_pk, {block_type, height, block_hash})
     json(conn, balances_to_map({amounts, {block_type, height, block_hash}}, contract_pk))
   end
-
-  defp search_mode!(%{"prefix" => _, "exact" => _}),
-    do: raise(ErrInput.Query, value: "can't use both `prefix` and `exact` parameters")
-
-  defp search_mode!(%{"exact" => exact}),
-    do: {:exact, URI.decode(exact)}
-
-  defp search_mode!(%{} = params),
-    do: {:prefix, URI.decode(Map.get(params, "prefix", ""))}
 
   defp parse_range!(range) do
     case DSPlug.parse_range(range) do

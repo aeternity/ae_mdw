@@ -65,35 +65,17 @@ defmodule AeMdwWeb.AexnView do
   @spec render_token(Model.aexn_contract()) :: aexn_token()
   def render_token(
         Model.aexn_contract(
-          index: {:aex9, contract_pk},
+          index: {_type, contract_pk},
           txi: txi,
-          meta_info: {name, symbol, decimals}
+          meta_info: meta_info
         )
       ) do
-    %{
-      name: name,
-      symbol: symbol,
-      decimals: decimals,
-      contract_txi: txi,
-      contract_id: enc_ct(contract_pk)
-    }
+    do_render_token(contract_pk, txi, meta_info)
   end
 
-  def render_token(
-        Model.aexn_contract(
-          index: {:aex141, contract_pk},
-          txi: txi,
-          meta_info: {name, symbol, base_url, type}
-        )
-      ) do
-    %{
-      name: name,
-      symbol: symbol,
-      base_url: base_url,
-      contract_txi: txi,
-      contract_id: enc_ct(contract_pk),
-      metadata_type: type
-    }
+  @spec render_tokens([Model.aexn_contract()]) :: [aexn_token()]
+  def render_tokens(aexn_tokens) do
+    Enum.map(aexn_tokens, &render_token/1)
   end
 
   @spec sender_transfer_to_map(account_transfer_key()) :: map()
@@ -121,6 +103,27 @@ defmodule AeMdwWeb.AexnView do
   #
   # Private functions
   #
+  defp do_render_token(contract_pk, txi, {name, symbol, decimals}) do
+    %{
+      name: name,
+      symbol: symbol,
+      decimals: decimals,
+      contract_txi: txi,
+      contract_id: enc_ct(contract_pk)
+    }
+  end
+
+  defp do_render_token(contract_pk, txi, {name, symbol, base_url, metadata_type}) do
+    %{
+      name: name,
+      symbol: symbol,
+      base_url: base_url,
+      contract_txi: txi,
+      contract_id: enc_ct(contract_pk),
+      metadata_type: metadata_type
+    }
+  end
+
   defp do_transfer_to_map({sender_pk, call_txi, recipient_pk, amount, log_idx}) do
     Model.tx(id: hash, block_index: {kbi, mbi}, time: micro_time) = Util.read_tx!(call_txi)
     {_block_hash, type, _signed_tx, tx_rec} = AeMdw.Node.Db.get_tx_data(hash)

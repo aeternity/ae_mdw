@@ -9,6 +9,8 @@ defmodule AeMdwWeb.Aex9TokenController do
   alias AeMdwWeb.Util
   alias Plug.Conn
 
+  import AeMdwWeb.AexnView
+
   use AeMdwWeb, :controller
 
   plug PaginatedPlug,
@@ -25,9 +27,9 @@ defmodule AeMdwWeb.Aex9TokenController do
       order_by: order_by
     } = assigns
 
-    case Aex9.fetch_tokens(pagination, query_params, order_by, cursor) do
+    case AexnTokens.fetch_tokens(pagination, :aex9, query_params, order_by, cursor) do
       {:ok, prev_cursor, aex9_tokens, next_cursor} ->
-        Util.paginate(conn, prev_cursor, aex9_tokens, next_cursor)
+        Util.paginate(conn, prev_cursor, render_tokens(aex9_tokens), next_cursor)
 
       {:error, reason} ->
         {:error, reason}
@@ -37,8 +39,8 @@ defmodule AeMdwWeb.Aex9TokenController do
   @spec aex9_token(Conn.t(), map()) :: Conn.t()
   def aex9_token(conn, %{"contract_id" => contract_id}) do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
-         {:ok, token} <- AexnTokens.fetch_token(contract_pk) do
-      json(conn, token)
+         {:ok, m_aex9} <- AexnTokens.fetch_token({:aex9, contract_pk}) do
+      json(conn, render_token(m_aex9))
     end
   end
 

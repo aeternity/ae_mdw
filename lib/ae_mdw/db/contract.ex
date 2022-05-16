@@ -29,9 +29,8 @@ defmodule AeMdw.Db.Contract do
 
   @spec aex9_creation_write(state(), tuple(), pubkey(), integer()) :: state()
   def aex9_creation_write(state, {name, symbol, decimals}, contract_pk, txi) do
-    m_contract = Model.aex9_contract(index: {name, symbol, txi, decimals})
-    m_contract_sym = Model.aex9_contract_symbol(index: {symbol, name, txi, decimals})
-    m_rev_contract = Model.rev_aex9_contract(index: {txi, name, symbol, decimals})
+    m_contract_name = Model.aexn_contract_name(index: {:aex9, name, contract_pk})
+    m_contract_sym = Model.aexn_contract_symbol(index: {:aex9, symbol, contract_pk})
 
     m_contract_pk =
       Model.aexn_contract(
@@ -41,9 +40,8 @@ defmodule AeMdw.Db.Contract do
       )
 
     state
-    |> State.put(Model.Aex9Contract, m_contract)
-    |> State.put(Model.Aex9ContractSymbol, m_contract_sym)
-    |> State.put(Model.RevAex9Contract, m_rev_contract)
+    |> State.put(Model.AexnContractName, m_contract_name)
+    |> State.put(Model.AexnContractSymbol, m_contract_sym)
     |> State.put(Model.AexnContract, m_contract_pk)
   end
 
