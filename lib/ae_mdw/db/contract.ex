@@ -216,7 +216,7 @@ defmodule AeMdw.Db.Contract do
       aex9_contract_pk = which_aexn_contract_pubkey(contract_pk, addr)
 
       if is_aex9_transfer?(evt_hash, aex9_contract_pk) do
-        write_aex9_records(state3, aex9_contract_pk, txi, i, args)
+        write_aex9_records(state3, txi, i, args)
       else
         state3
       end
@@ -368,7 +368,7 @@ defmodule AeMdw.Db.Contract do
     &(byte_size(&1) >= len && :binary.part(&1, 0, len) == prefix)
   end
 
-  defp write_aex9_records(state, contract_pk, txi, i, [from_pk, to_pk, <<amount::256>>]) do
+  defp write_aex9_records(state, txi, i, [from_pk, to_pk, <<amount::256>>]) do
     m_transfer = Model.aex9_transfer(index: {from_pk, txi, to_pk, amount, i})
     m_rev_transfer = Model.rev_aex9_transfer(index: {to_pk, txi, from_pk, amount, i})
     m_idx_transfer = Model.idx_aex9_transfer(index: {txi, i, from_pk, to_pk, amount})
@@ -379,7 +379,6 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.RevAex9Transfer, m_rev_transfer)
     |> State.put(Model.IdxAex9Transfer, m_idx_transfer)
     |> State.put(Model.Aex9PairTransfer, m_pair_transfer)
-    |> aex9_write_presence(contract_pk, txi, to_pk)
   end
 
   defp fetch_aex9_balance_or_new(state, contract_pk, account_pk) do

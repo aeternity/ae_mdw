@@ -8,7 +8,6 @@ defmodule AeMdwWeb.Aex9Controller do
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db, as: DBN
   alias AeMdw.Db.Contract
-  alias AeMdw.Db.Origin
   alias AeMdw.Db.Util
   alias AeMdw.Aex9
   alias AeMdwWeb.DataStreamPlug, as: DSPlug
@@ -341,9 +340,8 @@ defmodule AeMdwWeb.Aex9Controller do
       contracts
       |> Enum.map(fn {contract_pk, txi_list} ->
         {amount, _} = DBN.aex9_balance(contract_pk, account_pk, height_hash)
-        create_txi = Origin.tx_index!({:contract, contract_pk})
         call_txi = List.last(txi_list)
-        {amount, create_txi, call_txi, contract_pk}
+        {amount, call_txi, contract_pk}
       end)
       |> Enum.map(&balance_to_map/1)
 
