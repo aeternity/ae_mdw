@@ -58,7 +58,8 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
     test "gets each of the aex9 tokens by contract id", %{conn: conn} do
       Model.AexnContract
       |> Database.all_keys()
-      |> Enum.each(fn aex9_pubkey ->
+      |> Enum.filter(fn {type, _pubkey} -> type == :aex9 end)
+      |> Enum.each(fn {:aex9, aex9_pubkey} ->
         contract_id = enc_ct(aex9_pubkey)
 
         response =
@@ -222,7 +223,8 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
       Model.AexnContract
       |> Database.all_keys()
-      |> Enum.filter(fn contract_pk ->
+      |> Enum.filter(fn {type, _pubkey} -> type == :aex9 end)
+      |> Enum.filter(fn {:aex9, contract_pk} ->
         Origin.tx_index!({:contract, contract_pk}) < range_txi and
           enc_ct(contract_pk) not in [
             @big_balance_contract_id1,
@@ -230,7 +232,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
             @big_balance_contract_id3
           ]
       end)
-      |> Enum.each(fn aex9_pubkey ->
+      |> Enum.each(fn {:aex9, aex9_pubkey} ->
         contract_id = enc_ct(aex9_pubkey)
 
         path =
@@ -313,7 +315,8 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
       Model.AexnContract
       |> Database.all_keys()
-      |> Enum.map(&enc_ct/1)
+      |> Enum.filter(fn {type, _pubkey} -> type == :aex9 end)
+      |> Enum.map(fn {:aex9, ct_pk} -> enc_ct(ct_pk) end)
       |> Enum.zip(mb_hashes)
       |> Enum.filter(fn {contract_id, {_mb_hash, mb_txi}} ->
         ct_pk = Validate.id!(contract_id)
@@ -393,10 +396,13 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
     end
 
     test "gets balances for each contract", %{conn: conn} do
-      aex9_pubkeys = Database.all_keys(Model.AexnContract)
+      aex9_pubkeys =
+        Model.AexnContract
+        |> Database.all_keys()
+        |> Enum.filter(fn {type, _pubkey} -> type == :aex9 end)
 
       not_empty_balance_contracts =
-        Enum.filter(aex9_pubkeys, fn contract_pk ->
+        Enum.filter(aex9_pubkeys, fn {:aex9, contract_pk} ->
           contract_id = enc_ct(contract_pk)
           conn = get(conn, "/aex9/balances/#{contract_id}")
 
