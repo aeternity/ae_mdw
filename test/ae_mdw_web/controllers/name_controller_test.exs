@@ -27,14 +27,9 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Database, [],
          [
+           last_key: fn ActiveNameExpiration -> {:ok, TS.name_expiration_key(0)} end,
            next_key: fn ActiveNameExpiration, _exp_key -> :none end,
-           prev_key: fn
-             ActiveNameExpiration, nil ->
-               {:ok, TS.name_expiration_key(0)}
-
-             ActiveNameExpiration, _exp_key ->
-               {:ok, TS.name_expiration_key(1)}
-           end,
+           prev_key: fn ActiveNameExpiration, _exp_key -> {:ok, TS.name_expiration_key(1)} end,
            get: fn
              Tx, _key ->
                {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
@@ -108,6 +103,7 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Database, [],
          [
+           first_key: fn ActiveName -> {:ok, TS.plain_name(0)} end,
            next_key: fn ActiveName, _exp_key -> {:ok, TS.plain_name(1)} end,
            prev_key: fn ActiveName, nil -> :none end,
            fetch!: fn ActiveName, _plain_name ->
@@ -173,13 +169,9 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Database, [],
          [
-           next_key: fn
-             ActiveNameExpiration, _key -> :none
-           end,
-           prev_key: fn
-             ActiveNameExpiration, nil -> {:ok, key1}
-             ActiveNameExpiration, ^key1 -> :none
-           end,
+           next_key: fn ActiveNameExpiration, _key -> :none end,
+           last_key: fn ActiveNameExpiration -> {:ok, key1} end,
+           prev_key: fn ActiveNameExpiration, ^key1 -> :none end,
            fetch!: fn ActiveName, _plain_name ->
              Model.name(
                active: true,
@@ -227,14 +219,9 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Database, [],
          [
+           last_key: fn InactiveNameExpiration -> {:ok, TS.name_expiration_key(0)} end,
            next_key: fn InactiveNameExpiration, _exp_key -> {:ok, TS.name_expiration_key(1)} end,
-           prev_key: fn
-             InactiveNameExpiration, nil ->
-               {:ok, TS.name_expiration_key(0)}
-
-             InactiveNameExpiration, _exp_key ->
-               {:ok, TS.name_expiration_key(1)}
-           end,
+           prev_key: fn InactiveNameExpiration, _exp_key -> {:ok, TS.name_expiration_key(1)} end,
            fetch: fn
              Tx, _key ->
                {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
@@ -289,6 +276,7 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Database, [],
          [
+           last_key: fn InactiveNameExpiration -> {:ok, TS.name_expiration_key(0)} end,
            next_key: fn InactiveNameExpiration, _exp_key -> :none end,
            prev_key: fn InactiveNameExpiration, _exp_key -> {:ok, TS.name_expiration_key(0)} end,
            fetch!: fn InactiveName, _plain_name ->
@@ -342,13 +330,9 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Database, [],
          [
-           next_key: fn
-             InactiveName, nil -> {:ok, TS.plain_name(0)}
-             InactiveName, plain_name -> {:ok, "a#{plain_name}"}
-           end,
-           prev_key: fn
-             InactiveName, _plain_name -> {:ok, "b"}
-           end,
+           first_key: fn InactiveName -> {:ok, TS.plain_name(0)} end,
+           next_key: fn InactiveName, plain_name -> {:ok, "a#{plain_name}"} end,
+           prev_key: fn InactiveName, _plain_name -> {:ok, "b"} end,
            fetch!: fn InactiveName, _plain_name ->
              Model.name(
                active: true,
@@ -413,6 +397,8 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Database, [],
          [
+           first_key: fn InactiveName -> :none end,
+           last_key: fn AuctionExpiration -> {:ok, expiration_key} end,
            get: fn
              InactiveName, ^plain_name ->
                :not_found
@@ -486,6 +472,7 @@ defmodule AeMdwWeb.NameControllerTest do
                   bids: [{{2, 3}, 4}]
                 )}
            end,
+           last_key: fn AuctionExpiration -> {:ok, expiration_key} end,
            next_key: fn
              AuctionBid, _key ->
                {:ok, {plain_name, {0, 1}, 0, :owner_pk, [{{2, 3}, 4}]}}
@@ -543,9 +530,8 @@ defmodule AeMdwWeb.NameControllerTest do
                   bids: [{{2, 3}, 4}]
                 )}
            end,
-           next_key: fn AuctionExpiration, _key ->
-             {:ok, expiration_key}
-           end
+           first_key: fn AuctionExpiration -> {:ok, expiration_key} end,
+           next_key: fn AuctionExpiration, _key -> {:ok, expiration_key} end
          ]},
         {Txs, [],
          [
@@ -592,16 +578,12 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Database, [],
          [
-           next_key: fn _tab, nil -> :none end,
-           prev_key: fn
-             ActiveNameExpiration, nil ->
-               {:ok, TS.name_expiration_key(0)}
-
-             ActiveNameExpiration, {exp, plain_name} ->
-               {:ok, {exp - 1, "a#{plain_name}"}}
-
-             InactiveNameExpiration, nil ->
-               :none
+           last_key: fn
+             ActiveNameExpiration -> {:ok, TS.name_expiration_key(0)}
+             InactiveNameExpiration -> :none
+           end,
+           prev_key: fn ActiveNameExpiration, {exp, plain_name} ->
+             {:ok, {exp - 1, "a#{plain_name}"}}
            end,
            fetch!: fn _tab, _plain_name ->
              Model.name(
@@ -641,16 +623,13 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Database, [],
          [
-           next_key: fn _tab, nil -> :none end,
+           last_key: fn
+             ActiveNameExpiration -> {:ok, TS.name_expiration_key(0)}
+             InactiveNameExpiration -> :none
+           end,
            prev_key: fn
-             ActiveNameExpiration, nil ->
-               {:ok, TS.name_expiration_key(0)}
-
              ActiveNameExpiration, {exp, plain_name} ->
                {:ok, {exp - 1, "a#{plain_name}"}}
-
-             InactiveNameExpiration, nil ->
-               :none
            end,
            fetch!: fn ActiveName, _plain_name ->
              Model.name(
@@ -695,11 +674,11 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Database, [],
          [
-           next_key: fn
-             ActiveName, nil -> {:ok, first_key}
-             ActiveName, key -> {:ok, "a#{key}"}
-             _tab, _key -> :none
+           first_key: fn
+             InactiveName -> :none
+             ActiveName -> {:ok, first_key}
            end,
+           next_key: fn ActiveName, key -> {:ok, "a#{key}"} end,
            fetch!: fn ActiveName, _plain_name ->
              Model.name(
                active: true,
