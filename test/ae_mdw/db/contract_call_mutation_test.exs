@@ -92,12 +92,15 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       )
 
       kb_hash = <<123_452::256>>
-      Database.dirty_write(Model.Block, Model.block(index: {kbi + 1, -1}, hash: kb_hash))
       next_mb_hash = Validate.id!("mh_2Kf3h4eYi77yvMg9HtLMLX9zJtThm6xBCbefCbKQpSi8Rxrcgy")
 
       with_mocks [
         {AeMdw.Node.Db, [],
          [
+           get_key_block_hash: fn height ->
+             assert ^height = kbi + 1
+             kb_hash
+           end,
            get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
            aex9_balances: fn ^contract_pk, {:micro, ^kbi, ^next_mb_hash} ->
              balances = %{{:address, account_pk} => 100_000_000_000_000_002}
@@ -178,7 +181,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       )
 
       kb_hash = <<123_454::256>>
-      Database.dirty_write(Model.Block, Model.block(index: {kbi + 1, -1}, hash: kb_hash))
       next_mb_hash = Validate.id!("mh_9943pc2nXD7BaJjZMwaAYd5Jk4DbPY3THDoh8Sfgy7nTyrZ41")
 
       with_mocks [
