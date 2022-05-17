@@ -188,6 +188,9 @@ defmodule AeMdw.Util do
   @spec max_256bit_bin() :: binary()
   def max_256bit_bin(), do: <<max_256bit_int()::256>>
 
+  @spec max_name_bin() :: binary
+  def max_name_bin(), do: String.duplicate("z", 128)
+
   @spec min_int() :: integer()
   def min_int(), do: -100
 

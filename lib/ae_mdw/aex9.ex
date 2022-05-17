@@ -40,19 +40,13 @@ defmodule AeMdw.Aex9 do
 
   @typep pagination :: Collection.direction_limit()
   @typep pubkey :: AeMdw.Node.Db.pubkey()
-  @typep order_by() :: :name | :symbol
-  @typep query :: %{binary() => binary()}
+
   @typep balances_cursor() :: binary()
   @typep account_balance_cursor() :: binary()
   @typep history_cursor() :: binary()
   @typep range() :: {:gen, Range.t()}
 
   @type amounts :: map()
-
-  @pagination_params ~w(limit cursor rev direction by scope)
-
-  @aex9_contract_table Model.Aex9Contract
-  @aex9_contract_symbol_table Model.Aex9ContractSymbol
 
   @spec fetch_balances(pubkey(), boolean()) :: amounts()
   def fetch_balances(contract_pk, top?) do
@@ -111,30 +105,6 @@ defmodule AeMdw.Aex9 do
       cursor_key,
       {sender_pk, recipient_pk}
     )
-  end
-
-  @spec fetch_tokens(pagination(), query(), order_by(), cursor() | nil) ::
-          {:ok, cursor() | nil, [aex9_token()], cursor() | nil} | {:error, Error.t()}
-  def fetch_tokens(pagination, query, order_by, cursor) do
-    try do
-      case deserialize_aex9_cursor(cursor) do
-        {:ok, cursor} ->
-          {prev_cursor, aex9_keys, next_cursor} =
-            query
-            |> Map.drop(@pagination_params)
-            |> Enum.map(&convert_param/1)
-            |> Map.new()
-            |> build_tokens_streamer(order_by, cursor)
-            |> Collection.paginate(pagination)
-
-          {:ok, serialize_aex9_cursor(prev_cursor), aex9_keys, serialize_aex9_cursor(next_cursor)}
-
-        {:error, reason} ->
-          {:error, reason}
-      end
-    rescue
-      e in ErrInput -> {:error, e}
-    end
   end
 
   @spec fetch_balances(pubkey(), pagination(), balances_cursor() | nil) ::
@@ -341,32 +311,6 @@ defmodule AeMdw.Aex9 do
     end
   end
 
-  defp build_tokens_streamer(query, :symbol, cursor) do
-    prefix = Map.get(query, :prefix, "")
-
-    scope = {
-      {prefix <> Util.min_bin(), nil, nil, nil},
-      {prefix <> Util.max_256bit_bin(), nil, nil, nil}
-    }
-
-    fn direction ->
-      @aex9_contract_symbol_table
-      |> Collection.stream(direction, scope, cursor)
-      |> Stream.map(fn {symbol, name, txi, decimals} -> {name, symbol, txi, decimals} end)
-    end
-  end
-
-  defp build_tokens_streamer(query, :name, cursor) do
-    prefix = Map.get(query, :prefix, "")
-
-    scope = {
-      {prefix <> Util.min_bin(), nil, nil, nil},
-      {prefix <> Util.max_256bit_bin(), nil, nil, nil}
-    }
-
-    &Collection.stream(@aex9_contract_table, &1, scope, cursor)
-  end
-
   defp render_balance(contract_pk, {:address, account_pk}, amount) do
     %{
       contract: :aeser_api_encoder.encode(:contract_pubkey, contract_pk),
@@ -409,11 +353,6 @@ defmodule AeMdw.Aex9 do
     end
   end
 
-  defp convert_param({"prefix", prefix}) when is_binary(prefix), do: {:prefix, prefix}
-
-  defp convert_param(other_param),
-    do: raise(ErrInput.Query, value: other_param)
-
   defp serialize_cursor(nil), do: nil
 
   defp serialize_cursor({cursor, is_reversed?}),
@@ -432,27 +371,6 @@ defmodule AeMdw.Aex9 do
       _invalid ->
         raise ErrInput.Cursor, value: cursor_bin64
     end
-  end
-
-  defp serialize_aex9_cursor(nil), do: nil
-
-  defp serialize_aex9_cursor({cursor, is_reversed?}),
-    do: {cursor |> :erlang.term_to_binary() |> Base.encode64(), is_reversed?}
-
-  defp deserialize_aex9_cursor(nil), do: {:ok, nil}
-
-  defp deserialize_aex9_cursor(cursor_bin64) do
-    with {:ok, cursor_bin} <- Base.decode64(cursor_bin64),
-         {symbol, name, txi, decimals} = cursor_term
-         when is_binary(symbol) and is_binary(name) and is_integer(txi) and is_integer(decimals) <-
-           :erlang.binary_to_term(cursor_bin) do
-      {:ok, cursor_term}
-    else
-      _invalid ->
-        {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
-    end
-  rescue
-    ArgumentError -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
   end
 
   defp key_boundary({sender_pk, recipient_pk}) do

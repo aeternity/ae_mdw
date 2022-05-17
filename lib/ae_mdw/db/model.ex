@@ -287,13 +287,30 @@ defmodule AeMdw.Db.Model do
             txi: Txs.txi(),
             meta_info: aexn_meta_info()
           )
-
   @aexn_contract_defaults [
     index: nil,
-    txi: nil,
+    txi: -1,
     meta_info: nil
   ]
   defrecord :aexn_contract, @aexn_contract_defaults
+
+  # AEX-N meta info sorted by name:
+  #     index: {type, name, pubkey}
+  #     unused: nil
+  @aexn_contract_name_defaults [
+    index: {nil, nil, nil},
+    unused: nil
+  ]
+  defrecord :aexn_contract_name, @aexn_contract_name_defaults
+
+  # AEX-N meta info sorted by symbol:
+  #     index: {type, symbol, pubkey}
+  #     unused: nil
+  @aexn_contract_symbol_defaults [
+    index: {nil, nil, nil},
+    unused: nil
+  ]
+  defrecord :aexn_contract_symbol, @aexn_contract_symbol_defaults
 
   # contract call:
   #     index: {create txi, call txi}
@@ -591,6 +608,8 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.RevAex9Contract,
       AeMdw.Db.Model.Aex9ContractPubkey,
       AeMdw.Db.Model.AexnContract,
+      AeMdw.Db.Model.AexnContractName,
+      AeMdw.Db.Model.AexnContractSymbol,
       AeMdw.Db.Model.Aex9Transfer,
       AeMdw.Db.Model.RevAex9Transfer,
       AeMdw.Db.Model.Aex9PairTransfer,
@@ -669,6 +688,8 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.RevAex9Contract), do: :rev_aex9_contract
   def record(AeMdw.Db.Model.Aex9ContractPubkey), do: :aex9_contract_pubkey
   def record(AeMdw.Db.Model.AexnContract), do: :aexn_contract
+  def record(AeMdw.Db.Model.AexnContractName), do: :aexn_contract_name
+  def record(AeMdw.Db.Model.AexnContractSymbol), do: :aexn_contract_symbol
   def record(AeMdw.Db.Model.Aex9Transfer), do: :aex9_transfer
   def record(AeMdw.Db.Model.RevAex9Transfer), do: :rev_aex9_transfer
   def record(AeMdw.Db.Model.Aex9PairTransfer), do: :aex9_pair_transfer
