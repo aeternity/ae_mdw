@@ -129,14 +129,14 @@ defmodule AeMdw.Db.RocksDbCF do
   def dirty_prev(txn, table, seek_index) do
     {:ok, it} = RocksDb.dirty_iterator(txn, table)
 
-    iterator_prev_key(it, table, seek_index)
+    iterator_prev_key(it, seek_index)
   end
 
   @spec prev_key(table(), key()) :: {:ok, key()} | :not_found
   def prev_key(table, seek_index) do
     {:ok, it} = RocksDb.iterator(table)
 
-    iterator_prev_key(it, table, seek_index)
+    iterator_prev_key(it, seek_index)
   end
 
   @spec dirty_put(table(), record()) :: :ok | {:error, any}
@@ -227,7 +227,7 @@ defmodule AeMdw.Db.RocksDbCF do
     key_res
   end
 
-  defp iterator_prev_key(it, table, seek_index) do
+  defp iterator_prev_key(it, seek_index) do
     seek_key = :sext.encode(seek_index)
 
     key_res =
@@ -240,7 +240,7 @@ defmodule AeMdw.Db.RocksDbCF do
           end
 
         :not_found ->
-          last_key(table)
+          :not_found
       end
 
     RocksDb.iterator_close(it)
