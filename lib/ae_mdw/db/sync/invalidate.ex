@@ -21,10 +21,14 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
   ##########
 
+  @aexn_types [:aex9, :aex141]
+  @aexn_types_len length(@aexn_types)
+
   @spec invalidate(Blocks.height()) :: :ok
   def invalidate(fork_height) when is_integer(fork_height) do
     prev_kbi = fork_height - 1
     from_txi = Model.block(read_block!({prev_kbi, -1}), :tx_index)
+    {:ok, to_txi} = Database.last_key(Model.Tx)
 
     Log.info("invalidating from tx #{from_txi} at generation #{prev_kbi}")
     bi_keys = block_keys_range({prev_kbi, 0})
@@ -35,7 +39,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
     contract_log_key_dels = contract_log_key_dels(from_txi)
     contract_call_key_dels = contract_call_key_dels(from_txi)
 
-    aex9_key_dels = aex9_key_dels(from_txi)
+    aexn_key_dels = aexn_key_dels(from_txi..to_txi)
     aex9_transfer_key_dels = aex9_transfer_key_dels(from_txi)
     aex9_account_presence_key_dels = aex9_account_presence_key_dels(from_txi)
     aex9_balance_key_dels = aex9_balance_key_dels(fork_height)
@@ -52,7 +56,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
       DeleteKeysMutation.new(stat_key_dels),
       NameInvalidationMutation.new(fork_height - 1),
       OracleInvalidationMutation.new(fork_height - 1),
-      DeleteKeysMutation.new(aex9_key_dels),
+      DeleteKeysMutation.new(aexn_key_dels),
       DeleteKeysMutation.new(aex9_transfer_key_dels),
       DeleteKeysMutation.new(aex9_account_presence_key_dels),
       DeleteKeysMutation.new(aex9_balance_key_dels),
@@ -210,32 +214,34 @@ defmodule AeMdw.Db.Sync.Invalidate do
     end
   end
 
-  def aex9_key_dels(from_txi) do
-    {aex9_keys, aex9_sym_keys, aex9_rev_keys} =
-      case Database.next_key(Model.RevAex9Contract, {from_txi, nil, nil, nil}) do
-        :none ->
-          {[], [], []}
+  def aexn_key_dels(txi_range) do
+    {aexn_keys, aexn_name_keys, aexn_sym_keys} =
+      txi_range
+      |> Enum.reduce({[], [], []}, fn txi, {aexn_keys, aexn_name_keys, aexn_sym_keys} ->
+        with {:ok, {_txi, _tx_type, pubkey}} <-
+               Database.next_key(Model.RevOrigin, {txi, 0, <<>>}),
+             false <- already_prepended_aexn?(aexn_keys, pubkey) do
+          Model.aexn_contract(index: {type, _pubkey} = aexn_key, meta_info: meta_info) =
+            fetch_aexn_contract(pubkey)
 
-        {:ok, start_key} ->
-          push_key = fn {txi, name, symbol, decimals}, {contracts, symbols, rev_contracts} ->
-            {[{name, symbol, txi, decimals} | contracts],
-             [{symbol, name, txi, decimals} | symbols],
-             [{txi, name, symbol, decimals} | rev_contracts]}
-          end
+          name = elem(meta_info, 0)
+          symbol = elem(meta_info, 1)
 
-          collect_keys(
-            Model.RevAex9Contract,
-            push_key.(start_key, {[], [], []}),
-            start_key,
-            &next/2,
-            fn key, acc -> {:cont, push_key.(key, acc)} end
-          )
-      end
+          {
+            [aexn_key | aexn_keys],
+            [{type, name, pubkey} | aexn_name_keys],
+            [{type, symbol, pubkey} | aexn_sym_keys]
+          }
+        else
+          _none_or_prepended ->
+            {aexn_keys, aexn_name_keys, aexn_sym_keys}
+        end
+      end)
 
     %{
-      Model.Aex9Contract => aex9_keys,
-      Model.Aex9ContractSymbol => aex9_sym_keys,
-      Model.RevAex9Contract => aex9_rev_keys
+      Model.AexnContract => aexn_keys,
+      Model.AexnContractName => aexn_name_keys,
+      Model.AexnContractSymbol => aexn_sym_keys
     }
   end
 
@@ -471,6 +477,23 @@ defmodule AeMdw.Db.Sync.Invalidate do
   defp pk({:id, _, _} = id) do
     {_, pk} = :aeser_id.specialize(id)
     pk
+  end
+
+  defp fetch_aexn_contract(pubkey) do
+    Enum.find_value([:aex9, :aex141], fn aexn_type ->
+      case Database.fetch(Model.AexnContract, {aexn_type, pubkey}) do
+        {:ok, m_aexn} -> m_aexn
+        :not_found -> nil
+      end
+    end)
+  end
+
+  defp already_prepended_aexn?([], _pubkey), do: false
+
+  defp already_prepended_aexn?([aexn_key | _aexn_keys], pubkey) do
+    @aexn_types
+    |> Enum.zip(List.duplicate(pubkey, @aexn_types_len))
+    |> Enum.any?(fn key -> key == aexn_key end)
   end
 
   # defp log_del_keys(tab_keys) do
