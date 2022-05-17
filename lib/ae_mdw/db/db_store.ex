@@ -35,10 +35,14 @@ defmodule AeMdw.Db.DbStore do
   end
 
   @spec next(t(), table(), key() | nil) :: {:ok, key()} | :none
-  def next(_store, table, key), do: Database.next_key(table, key)
+  def next(_store, table, nil), do: Database.first_key(table)
+
+  def next(_store, table, key_boundary), do: Database.next_key(table, key_boundary)
 
   @spec prev(t(), table(), key() | nil) :: {:ok, key()} | :none
-  def prev(_store, table, key), do: Database.prev_key(table, key)
+  def prev(_store, table, nil), do: Database.last_key(table)
+
+  def prev(_store, table, key_boundary), do: Database.prev_key(table, key_boundary)
 
   @spec count_keys(t(), table()) :: non_neg_integer()
   def count_keys(_store, table), do: Database.count(table)
