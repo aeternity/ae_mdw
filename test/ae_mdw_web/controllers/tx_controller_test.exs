@@ -18,4 +18,12 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
   end
+
+  describe "tx" do
+    test "when tx not found, it returns 404", %{conn: conn} do
+      tx_hash = "th_2TbTPmKFU31WNQKfBGe5b5JDF9sFdAY7qot1smnxjbsEiu7LNr"
+
+      assert %{"error" => _error_msg} = conn |> get("/tx/#{tx_hash}") |> json_response(404)
+    end
+  end
 end

@@ -339,23 +339,22 @@ defmodule AeMdw.Txs do
   def fetch(tx_hash, add_spendtx_details? \\ true)
 
   def fetch(tx_hash, add_spendtx_details?) when is_binary(tx_hash) do
-    mb_hash = :aec_db.find_tx_location(tx_hash)
-
-    case :aec_chain.get_header(mb_hash) do
-      {:ok, mb_header} ->
-        mb_header
-        |> :aec_headers.height()
-        |> Blocks.fetch_txis_from_gen()
-        |> Stream.map(&Database.fetch!(@table, &1))
-        |> Enum.find_value(
-          {:error, ErrInput.NotFound.exception(value: tx_hash)},
-          fn
-            Model.tx(id: ^tx_hash) = tx -> {:ok, render(tx, add_spendtx_details?)}
-            _tx -> nil
-          end
-        )
-
+    with mb_hash when mb_hash != :not_found <- :aec_db.find_tx_location(tx_hash),
+         {:ok, mb_header} <- :aec_chain.get_header(mb_hash) do
+      mb_header
+      |> :aec_headers.height()
+      |> Blocks.fetch_txis_from_gen()
+      |> Stream.map(&Database.fetch!(@table, &1))
+      |> Enum.find_value(
+        {:error, ErrInput.NotFound.exception(value: tx_hash)},
+        fn
+          Model.tx(id: ^tx_hash) = tx -> {:ok, render(tx, add_spendtx_details?)}
+          _tx -> nil
+        end
+      )
+    else
       :not_found ->
+        tx_hash = :aeser_api_encoder.encode(:tx_hash, tx_hash)
         {:error, ErrInput.NotFound.exception(value: tx_hash)}
     end
   end
