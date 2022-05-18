@@ -1,5 +1,32 @@
 # Changelog
 
+### [1.9.1](https://www.github.com/aeternity/ae_mdw/compare/v1.9.0...v1.9.1) (2022-05-18)
+
+
+### Bug Fixes
+
+* fetch key hash using aec_chain on update_aex9_presence ([#671](https://www.github.com/aeternity/ae_mdw/issues/671)) ([8f52477](https://www.github.com/aeternity/ae_mdw/commit/8f52477d512d2ae1cfb0562dc6307f21892296a8))
+* handle /tx/:hash endpoint when tx doesn't exist ([#686](https://www.github.com/aeternity/ae_mdw/issues/686)) ([040c120](https://www.github.com/aeternity/ae_mdw/commit/040c1202409438cd7b8d4b6bdb26f724ff70e363))
+* handle aex9_controller errors with FallbackController ([#685](https://www.github.com/aeternity/ae_mdw/issues/685)) ([f944f04](https://www.github.com/aeternity/ae_mdw/commit/f944f043c15052171e9113ffaae65e26b094cbcf))
+* handle prev/next when key_boundary is nil ([#679](https://www.github.com/aeternity/ae_mdw/issues/679)) ([a8fe572](https://www.github.com/aeternity/ae_mdw/commit/a8fe57221309f6e665316b8f058c485bbce43911))
+* ignore aex9 balances only when there's a single <<>> balance ([#677](https://www.github.com/aeternity/ae_mdw/issues/677)) ([f55742d](https://www.github.com/aeternity/ae_mdw/commit/f55742d757f893671f932a33486146f4807ccbe9))
+* remove aex9 presence for remote calls ([#683](https://www.github.com/aeternity/ae_mdw/issues/683)) ([7d11889](https://www.github.com/aeternity/ae_mdw/commit/7d1188954bfa132b3830fe723b6b43a444016727))
+* revert change on prev key iteration ([#681](https://www.github.com/aeternity/ae_mdw/issues/681)) ([5117fad](https://www.github.com/aeternity/ae_mdw/commit/5117fad7cc1207a8d86d109ea17c821a885f6540))
+
+
+### Refactorings
+
+* dirty reads + add Store abstraction ([#659](https://www.github.com/aeternity/ae_mdw/issues/659)) ([996b686](https://www.github.com/aeternity/ae_mdw/commit/996b686e9fc665d07fbc6491d4ae710ea83406c5))
+* generalize aex9 meta info with aexn contract ([#667](https://www.github.com/aeternity/ae_mdw/issues/667)) ([71dc396](https://www.github.com/aeternity/ae_mdw/commit/71dc396862097fe0cf092773bee45529343c8926))
+* generalize fetch aexn tokens ([#680](https://www.github.com/aeternity/ae_mdw/issues/680)) ([e7cf6e8](https://www.github.com/aeternity/ae_mdw/commit/e7cf6e8a468b5d9f117449b6d400016859414008))
+* move aex9 contract pubkeys to aexn records ([#660](https://www.github.com/aeternity/ae_mdw/issues/660)) ([d392510](https://www.github.com/aeternity/ae_mdw/commit/d3925107994eafdfb23ffa289cf9106b4554c05c))
+
+
+### Miscellaneous
+
+* add fallback for mismatched presence to balance ([#687](https://www.github.com/aeternity/ae_mdw/issues/687)) ([6b78a88](https://www.github.com/aeternity/ae_mdw/commit/6b78a88316bde45d14df6ea2a49e0a1deac96217))
+* replace aex9 migrations by one that creates all aex9 contracts ([#668](https://www.github.com/aeternity/ae_mdw/issues/668)) ([a496d72](https://www.github.com/aeternity/ae_mdw/commit/a496d7211a718d551afedb5152652d1aed82edd8))
+
 ## [1.9.0](https://www.github.com/aeternity/ae_mdw/compare/v1.8.1...v1.9.0) (2022-05-04)
 
 
