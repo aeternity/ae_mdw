@@ -11,6 +11,7 @@ defmodule AeMdwWeb.Aex9Controller do
   alias AeMdw.Db.Util
   alias AeMdw.Aex9
   alias AeMdwWeb.DataStreamPlug, as: DSPlug
+  alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
   alias Plug.Conn
 
@@ -19,6 +20,7 @@ defmodule AeMdwWeb.Aex9Controller do
   import AeMdwWeb.AexnView
 
   plug(PaginatedPlug)
+  action_fallback(FallbackController)
 
   @max_range_length 10
 
