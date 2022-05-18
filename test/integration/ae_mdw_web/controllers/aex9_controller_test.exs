@@ -1,6 +1,7 @@
 defmodule Integration.AeMdwWeb.Aex9ControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
+  alias AeMdw.Collection
   alias AeMdw.Database
   alias AeMdw.Db.Origin
   alias AeMdw.Db.Model
@@ -458,7 +459,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
       end)
     end
 
-    @tag timeout: 300_000
+    @tag timeout: 600_000
     @tag :iteration
     # @tag :skip
     test "gets balances for each account with aex9 presence", %{conn: conn} do
@@ -486,6 +487,37 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
           assert token_name == name
           assert token_symbol == symbol
         end)
+      end)
+    end
+
+    test "gets balances for an account with mismatching aex9 presence", %{conn: conn} do
+      prev_key =
+        Model.Aex9AccountPresence
+        |> Collection.stream({nil, -1, nil})
+        |> Stream.take_while(fn {account_pk, _txi, contract_pk} ->
+          :not_found != Database.fetch(Model.Aex9Balance, {contract_pk, account_pk})
+        end)
+        |> Enum.to_list()
+        |> List.last()
+
+      {:ok, {account_pk, _txi, contract_pk}} =
+        Database.next_key(Model.Aex9AccountPresence, prev_key)
+
+      assert :not_found = Database.fetch(Model.Aex9Balance, {contract_pk, account_pk})
+
+      conn = get(conn, "/aex9/balances/account/#{enc_id(account_pk)}")
+      assert balances_response = json_response(conn, 200)
+      assert length(balances_response) > 0
+
+      Enum.each(balances_response, fn %{
+                                        "contract_id" => contract_id,
+                                        "token_name" => token_name,
+                                        "token_symbol" => token_symbol
+                                      } ->
+        {:contract_pubkey, contract_pk} = :aeser_api_encoder.decode(contract_id)
+
+        assert Model.aexn_contract(meta_info: {^token_name, ^token_symbol, _decimals}) =
+                 Database.fetch!(Model.AexnContract, {:aex9, contract_pk})
       end)
     end
   end

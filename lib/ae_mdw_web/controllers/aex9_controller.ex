@@ -315,13 +315,14 @@ defmodule AeMdwWeb.Aex9Controller do
     balances =
       account_pk
       |> Contract.aex9_search_contracts()
-      |> Enum.map(fn contract_pk ->
+      |> Enum.flat_map(fn contract_pk ->
         case Aex9.fetch_amount(contract_pk, account_pk) do
           {:ok, {amount, call_txi}} ->
-            {amount, call_txi, contract_pk}
+            [{amount, call_txi, contract_pk}]
 
-          {:error, unavailable_error} ->
-            raise unavailable_error
+          {:error, _balance_unavailable} ->
+            # temporary fallback until remote call txs are completly indexed
+            []
         end
       end)
       |> Enum.map(&balance_to_map/1)
