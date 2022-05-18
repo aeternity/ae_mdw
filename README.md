@@ -3792,7 +3792,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/aex9/by_name" | jq '.'
 Or, listing tokens with prefix = "ae", along with all contract create transaction ids:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/aex9/by_name?prefix=ae&all" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/aex9/by_name?prefix=ae" | jq '.'
 [
   {
     "decimals": 18,

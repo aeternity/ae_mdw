@@ -55,6 +55,11 @@ defmodule AeMdwWeb.Aex9ControllerTest do
       assert length(aex9_tokens) > 0
       assert Enum.all?(aex9_tokens, fn %{"name" => name} -> String.starts_with?(name, prefix) end)
     end
+
+    test "when invalid filters, it returns an error", %{conn: conn} do
+      assert %{"error" => _error_msg} =
+               conn |> get("/aex9/by_name", all: "") |> json_response(400)
+    end
   end
 
   describe "by_symbol" do
