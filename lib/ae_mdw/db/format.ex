@@ -51,11 +51,8 @@ defmodule AeMdw.Db.Format do
     custom_raw_data(type, raw, tx_rec, signed_tx, block_hash)
   end
 
-  def to_raw_map({:auction_bid, key, _}, Model.AuctionBid),
-    do: to_raw_map(key, Model.AuctionBid)
-
-  def to_raw_map({_plain, {{_, _}, _}, _, _, [{_, _} | _]} = bid, Model.AuctionBid),
-    do: auction_bid(bid, & &1, &to_raw_map/1, & &1)
+  def to_raw_map(auction_bid, Model.AuctionBid),
+    do: auction_bid(auction_bid, & &1, &to_raw_map/1, & &1)
 
   def to_raw_map(m_name, source) when elem(m_name, 0) == :name do
     plain_name = Model.name(m_name, :index)
@@ -364,11 +361,8 @@ defmodule AeMdw.Db.Format do
     custom_encode(type, enc_tx, tx_rec, signed_tx, block_hash)
   end
 
-  def to_map({:auction_bid, key, _}, Model.AuctionBid),
-    do: to_map(key, Model.AuctionBid)
-
-  def to_map({_plain, {{_, _}, _}, _, _, [{_, _} | _]} = bid, Model.AuctionBid),
-    do: auction_bid(bid, &to_string/1, &to_map/1, &raw_to_json/1)
+  def to_map(auction_bid, Model.AuctionBid),
+    do: auction_bid(auction_bid, &to_string/1, &to_map/1, &raw_to_json/1)
 
   def to_map(m_name, source) when source in [Model.ActiveName, Model.InactiveName] do
     {raw_auction, raw_map} = Map.pop(to_raw_map(m_name, source), :auction)
@@ -603,7 +597,12 @@ defmodule AeMdw.Db.Format do
          ownership: Name.ownership(n)
        }
 
-  defp auction_bid({plain, {_, _}, auction_end, _, [{_, txi} | _] = bids}, key, tx_fmt, info_fmt) do
+  defp auction_bid(
+         Model.auction_bid(index: plain, expire_height: auction_end, bids: [{_, txi} | _] = bids),
+         key,
+         tx_fmt,
+         info_fmt
+       ) do
     last_bid = tx_fmt.(read_tx!(txi))
     name_ttl = Name.expire_after(auction_end)
     keys = if Map.has_key?(last_bid, "tx"), do: ["tx", "ttl"], else: [:tx, :ttl]

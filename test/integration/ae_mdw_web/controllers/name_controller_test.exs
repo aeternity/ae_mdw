@@ -1063,6 +1063,21 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
              end)
     end
 
+    test "it renders last bid for names that are in auction", %{conn: conn} do
+      %{"data" => auctions} = conn |> get("/names/auctions") |> json_response(200)
+
+      case auctions do
+        [] ->
+          :ok
+
+        [%{"info" => %{"last_bid" => %{"tx" => %{"account_id" => owner_pk}}}} | _rest] ->
+          assert %{"top_bid" => bid_names} =
+                   conn |> get("/names/owned_by/#{owner_pk}", limit: 100) |> json_response(200)
+
+          assert length(bid_names) >= 1
+      end
+    end
+
     test "get inactive names that were owned by an account", %{conn: conn} do
       id = "ak_fCCw1JEkvXdztZxk8FRGNAkvmArhVeow89e64yX4AxbCPrVh5"
       conn = get(conn, Routes.name_path(conn, :owned_by, id, active: false))
