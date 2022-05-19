@@ -636,6 +636,22 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       assert ^plain_names = Enum.sort(plain_names)
     end
 
+    test "when filtering by owned_by, it returns names owned by that owner", %{conn: conn} do
+      # first, retrieve any name to get the owner
+      assert %{"data" => [%{"info" => %{"ownership" => %{"current" => owner_pk}}} | _rest]} =
+               conn |> get("/v2/names", state: "active", limit: 1) |> json_response(200)
+
+      assert %{"data" => names} =
+               conn
+               |> get("/v2/names", state: "active", by: "name", owned_by: owner_pk, limit: 3)
+               |> json_response(200)
+
+      assert Enum.all?(
+               names,
+               &match?(%{"info" => %{"ownership" => %{"current" => ^owner_pk}}}, &1)
+             )
+    end
+
     test "renders error when parameter by is invalid", %{conn: conn} do
       by = "invalid_by"
       error_msg = "invalid query: by=#{by}"

@@ -101,21 +101,23 @@ defmodule AeMdw.Names do
 
   defp build_name_streamer(%{owned_by: owner_pk, state: "active"}, cursor) do
     cursor = if cursor, do: {owner_pk, cursor}
+    scope = {{owner_pk, Util.min_bin()}, {owner_pk, Util.max_256bit_bin()}}
 
     fn direction ->
       @table_active_owner
-      |> Collection.stream(direction, nil, cursor)
-      |> Stream.map(fn key -> {key, :active} end)
+      |> Collection.stream(direction, scope, cursor)
+      |> Stream.map(fn {_owner_pk, plain_name} -> {plain_name, :active} end)
     end
   end
 
   defp build_name_streamer(%{owned_by: owner_pk, state: "inactive"}, cursor) do
     cursor = if cursor, do: {owner_pk, cursor}
+    scope = {{owner_pk, Util.min_bin()}, {owner_pk, Util.max_256bit_bin()}}
 
     fn direction ->
       @table_inactive_owner
-      |> Collection.stream(direction, nil, cursor)
-      |> Stream.map(fn key -> {key, :inactive} end)
+      |> Collection.stream(direction, scope, cursor)
+      |> Stream.map(fn {_owner_pk, plain_name} -> {plain_name, :inactive} end)
     end
   end
 
