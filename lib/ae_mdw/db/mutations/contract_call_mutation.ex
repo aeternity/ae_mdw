@@ -71,6 +71,6 @@ defmodule AeMdw.Db.ContractCallMutation do
 
     state
     |> DBContract.call_write(create_txi, txi, fun_arg_res)
-    |> DBContract.logs_write(create_txi, txi, call_rec)
+    |> DBContract.logs_write(block_index, create_txi, txi, call_rec)
   end
 end

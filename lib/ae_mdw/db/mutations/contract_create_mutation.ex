@@ -40,6 +40,6 @@ defmodule AeMdw.Db.ContractCreateMutation do
     state
     |> State.inc_stat(:contracts_created)
     |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
-    |> DBContract.logs_write(txi, txi, call_rec)
+    |> DBContract.logs_write(nil, txi, txi, call_rec)
   end
 end
