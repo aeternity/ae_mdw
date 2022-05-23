@@ -1,5 +1,18 @@
 # Changelog
 
+### [1.9.2](https://www.github.com/aeternity/ae_mdw/compare/v1.9.1...v1.9.2) (2022-05-23)
+
+
+### Bug Fixes
+
+* update v1 auction bids structure in Format module ([#690](https://www.github.com/aeternity/ae_mdw/issues/690)) ([8b4304f](https://www.github.com/aeternity/ae_mdw/commit/8b4304f7aec9e0bab3b981a80366290e3222aaf2))
+* use correct key format for listing name owner tables ([#688](https://www.github.com/aeternity/ae_mdw/issues/688)) ([5d480bf](https://www.github.com/aeternity/ae_mdw/commit/5d480bf929be91eda35d4eb86082f91f018ab8da))
+
+
+### Miscellaneous
+
+* revert swagger name operation names ([#691](https://www.github.com/aeternity/ae_mdw/issues/691)) ([803ab00](https://www.github.com/aeternity/ae_mdw/commit/803ab00e89bd5a16be888baa7fdb4603552e9c61)), closes [#179](https://www.github.com/aeternity/ae_mdw/issues/179)
+
 ### [1.9.1](https://www.github.com/aeternity/ae_mdw/compare/v1.9.0...v1.9.1) (2022-05-18)
 
 
