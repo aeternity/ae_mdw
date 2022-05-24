@@ -43,8 +43,7 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
            end
          ]}
       ] do
-        :ets.insert(:aex9_sync_cache, {contract_pk, block_index, call_txi})
-        UpdateAex9State.process([contract_pk])
+        UpdateAex9State.process([contract_pk, block_index, call_txi])
 
         assert Model.aex9_balance(block_index: ^block_index, txi: ^call_txi, amount: ^amount1) =
                  Database.fetch!(Model.Aex9Balance, {contract_pk, account_pk1})

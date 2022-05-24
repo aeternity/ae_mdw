@@ -1,18 +1,33 @@
 defmodule AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
   use ExUnit.Case
 
+  alias AeMdw.Database
+  alias AeMdw.Db.Model
   alias AeMdw.Sync.AsyncTasks.Producer
   alias AeMdw.Sync.AsyncTasks
   alias AeMdw.Validate
 
-  @task_type :update_aex9_presence
+  require Model
+
+  @task_type :update_aex9_state
   @contract_pk Validate.id!("ct_2bwK4mxEe3y9SazQRPXE8NdXikSTqF2T9FhNrawRzFA21yacTo")
 
   test "enqueue and dequeue" do
     args = [@contract_pk]
+    extra_args = [{543_210, 10}, Enum.random(1_000_000..99_000_000)]
     AsyncTasks.Supervisor.start_link([])
-    Producer.enqueue(@task_type, args)
+    Producer.enqueue(@task_type, args, extra_args)
     Producer.commit_enqueued()
+
+    Process.sleep(200)
+
+    assert Model.AsyncTask
+           |> Database.all_keys()
+           |> Enum.map(&Database.fetch!(Model.AsyncTask, &1))
+           |> Enum.any?(fn
+             Model.async_task(args: ^args, extra_args: ^extra_args) -> true
+             _other_task -> false
+           end)
 
     AsyncTasks.Supervisor
     |> Supervisor.which_children()

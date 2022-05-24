@@ -29,13 +29,13 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
           fn ct_id ->
             ct_pk = AeMdw.Validate.id!(ct_id)
             index = {System.system_time(), :update_aex9_state}
-            Model.async_tasks(index: index, args: [ct_pk])
+            Model.async_task(index: index, args: [ct_pk])
           end
         )
 
       on_exit(fn ->
-        Enum.each(m_tasks, fn Model.async_tasks(index: key) ->
-          Database.dirty_delete(Model.AsyncTasks, key)
+        Enum.each(m_tasks, fn Model.async_task(index: key) ->
+          Database.dirty_delete(Model.AsyncTask, key)
         end)
       end)
 
@@ -43,7 +43,7 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
 
       # setup new to expected pending
       Enum.each(m_tasks, fn m_task ->
-        Database.dirty_write(Model.AsyncTasks, m_task)
+        Database.dirty_write(Model.AsyncTask, m_task)
       end)
 
       assert %{producer_buffer: 0, total_pending: 0} = Stats.counters()

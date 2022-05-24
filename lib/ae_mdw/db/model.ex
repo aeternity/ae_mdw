@@ -23,7 +23,22 @@ defmodule AeMdw.Db.Model do
   ################################################################################
 
   # index is timestamp (daylight saving order should be handle case by case)
-  @type async_tasks_record :: record(:async_tasks, index: {integer(), atom()}, args: list())
+  @typep timestamp :: pos_integer()
+  @type async_task_type :: :update_aex9_state | :derive_aex9_presence
+  @type async_task_index :: {timestamp(), async_task_type()}
+  @type async_task_args :: list()
+
+  @type async_task_record ::
+          record(:async_task,
+            index: async_task_index(),
+            args: async_task_args(),
+            extra_args: async_task_args()
+          )
+  @async_task_defaults [index: {-1, nil}, args: nil, extra_args: nil]
+  defrecord :async_task, @async_task_defaults
+
+  @type async_tasks_record ::
+          record(:async_tasks, index: {integer(), atom()}, args: list())
   @async_tasks_defaults [index: {-1, nil}, args: nil]
   defrecord :async_tasks, @async_tasks_defaults
 
@@ -676,12 +691,14 @@ defmodule AeMdw.Db.Model do
 
   defp tasks_tables() do
     [
+      AeMdw.Db.Model.AsyncTask,
       AeMdw.Db.Model.AsyncTasks,
       AeMdw.Db.Model.Migrations
     ]
   end
 
   @spec record(atom()) :: atom()
+  def record(AeMdw.Db.Model.AsyncTask), do: :async_task
   def record(AeMdw.Db.Model.AsyncTasks), do: :async_tasks
   def record(AeMdw.Db.Model.Migrations), do: :migrations
   def record(AeMdw.Db.Model.Tx), do: :tx

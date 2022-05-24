@@ -60,9 +60,7 @@ defmodule AeMdw.Db.ContractCallMutation do
       ) do
     # update balance on any aex9 call
     if Contract.is_aex9?(contract_pk) do
-      :ets.insert(:aex9_sync_cache, {contract_pk, block_index, txi})
-
-      AsyncTasks.Producer.enqueue(:update_aex9_state, [contract_pk])
+      AsyncTasks.Producer.enqueue(:update_aex9_state, [contract_pk], [block_index, txi])
     end
 
     create_txi =

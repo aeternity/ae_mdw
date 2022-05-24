@@ -102,7 +102,7 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   #
   # Used by consumers only
   #
-  @spec run_supervised(Model.async_tasks_record(), boolean()) ::
+  @spec run_supervised(Model.async_task_record(), boolean()) ::
           {Task.t(), :timer.tref() | nil}
   def run_supervised(m_task, is_long? \\ false) do
     task =
@@ -142,15 +142,15 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
     end
   end
 
-  @spec process(Model.async_tasks_record()) :: :ok
-  defp process(Model.async_tasks(index: {_ts, type}, args: args)) do
+  @spec process(Model.async_task_record()) :: :ok
+  defp process(Model.async_task(index: {_ts, type}, args: args, extra_args: extra_args)) do
     mod = @type_mod[type]
-    apply(mod, :process, [args])
+    apply(mod, :process, [args ++ extra_args])
     :ok
   end
 
-  @spec set_done(Model.async_tasks_record(), boolean()) :: :ok
-  defp set_done(Model.async_tasks(index: index, args: args), is_long?) do
+  @spec set_done(Model.async_task_record(), boolean()) :: :ok
+  defp set_done(Model.async_task(index: index, args: args), is_long?) do
     Producer.notify_consumed(index, args, is_long?)
   end
 
