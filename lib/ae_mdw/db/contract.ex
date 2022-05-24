@@ -344,10 +344,8 @@ defmodule AeMdw.Db.Contract do
     )
   end
 
-  #
-  # Private functions
-  #
-  defp update_aex9_state(state, contract_pk, {kbi, mbi} = block_index, txi) do
+  @spec update_aex9_state(State.t(), pubkey(), block_index(), txi()) :: State.t()
+  def update_aex9_state(state, contract_pk, {kbi, mbi} = block_index, txi) do
     if Contract.is_aex9?(contract_pk) do
       with false <- State.exists?(state, Model.AexnContract, {:aex9, contract_pk}),
            {:ok, aex9_meta_info} <- Contract.aex9_meta_info(contract_pk) do
@@ -366,6 +364,9 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
+  #
+  # Private functions
+  #
   defp aex9_search_transfers(table, init_key, key_tester) do
     table
     |> Collection.stream(init_key)
