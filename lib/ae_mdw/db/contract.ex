@@ -12,7 +12,7 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Node.Db
-  alias AeMdw.Txs
+  alias AeMdw.Sync.AsyncTasks
   alias AeMdw.Validate
 
   require Ex2ms
@@ -25,9 +25,11 @@ defmodule AeMdw.Db.Contract do
 
   @type rev_aex9_contract_key :: {pos_integer(), String.t(), String.t(), pos_integer()}
   @typep pubkey :: Db.pubkey()
-  @typep state() :: State.t()
+  @typep state :: State.t()
+  @typep block_index :: AeMdw.Blocks.block_index()
+  @typep txi :: AeMdw.Txs.txi()
 
-  @spec aex9_creation_write(state(), tuple(), pubkey(), integer()) :: state()
+  @spec aex9_creation_write(state(), Contract.aex9_meta_info(), pubkey(), integer()) :: state()
   def aex9_creation_write(state, {name, symbol, decimals}, contract_pk, txi) do
     m_contract_name = Model.aexn_contract_name(index: {:aex9, name, contract_pk})
     m_contract_sym = Model.aexn_contract_symbol(index: {:aex9, symbol, contract_pk})
@@ -151,7 +153,7 @@ defmodule AeMdw.Db.Contract do
   def call_write(state, create_txi, txi, {:error, detail}),
     do: call_write(state, create_txi, txi, "<unknown>", nil, :invalid, inspect(detail))
 
-  @spec call_write(state(), Txs.txi(), Txs.txi(), String.t(), list() | nil, any(), any()) ::
+  @spec call_write(state(), txi(), txi(), String.t(), list() | nil, any(), any()) ::
           state()
   def call_write(state, create_txi, txi, fname, args, result, return) do
     m_call =
@@ -166,8 +168,8 @@ defmodule AeMdw.Db.Contract do
     State.put(state, Model.ContractCall, m_call)
   end
 
-  @spec logs_write(state(), Txs.txi(), Txs.txi(), tuple()) :: state()
-  def logs_write(state, create_txi, txi, call_rec) do
+  @spec logs_write(state(), block_index() | nil, txi(), txi(), Contract.call()) :: state()
+  def logs_write(state, block_index, create_txi, txi, call_rec) do
     contract_pk = :aect_call.contract_pubkey(call_rec)
     raw_logs = :aect_call.log(call_rec)
 
@@ -208,7 +210,9 @@ defmodule AeMdw.Db.Contract do
               data: data
             )
 
-          State.put(state3, Model.ContractLog, m_log_remote)
+          state3
+          |> State.put(Model.ContractLog, m_log_remote)
+          |> update_aex9_state(addr, block_index, txi)
         else
           state2
         end
@@ -338,6 +342,26 @@ defmodule AeMdw.Db.Contract do
       end,
       & &1
     )
+  end
+
+  @spec update_aex9_state(State.t(), pubkey(), block_index(), txi()) :: State.t()
+  def update_aex9_state(state, contract_pk, {kbi, mbi} = block_index, txi) do
+    if Contract.is_aex9?(contract_pk) do
+      with false <- State.exists?(state, Model.AexnContract, {:aex9, contract_pk}),
+           {:ok, aex9_meta_info} <- Contract.aex9_meta_info(contract_pk) do
+        AsyncTasks.Producer.enqueue(:derive_aex9_presence, [contract_pk, kbi, mbi, txi])
+        aex9_creation_write(state, aex9_meta_info, contract_pk, txi)
+      else
+        true ->
+          AsyncTasks.Producer.enqueue(:update_aex9_state, [contract_pk], [block_index, txi])
+          state
+
+        :not_found ->
+          state
+      end
+    else
+      state
+    end
   end
 
   #
