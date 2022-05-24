@@ -73,8 +73,12 @@ defmodule AeMdw.Db.State do
     state3
   end
 
-  @spec set_global(t()) :: :ok
-  def set_global(state), do: :persistent_term.put(@state_pm_key, state)
+  @spec set_global(t()) :: t()
+  def set_global(state) do
+    :persistent_term.put(@state_pm_key, state)
+
+    state
+  end
 
   defp add_prev_state(%__MODULE__{prev_states: prev_states} = state, height, prev_state),
     do: %__MODULE__{state | prev_states: [{height - 1, prev_state} | prev_states]}

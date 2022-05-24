@@ -1,64 +1,75 @@
 defmodule AeMdw.Sync.Watcher do
-  # credo:disable-for-this-file
+  @moduledoc """
+  Subscribes to chain events for dealing with new blocks and block
+  invalidations, and sends them to the syncing server.
+
+  There's two valid messages that arrive from core that we send to the
+  syncing server, plus 1 message that we handle internally:
+  * If there's a new key block added, we send the new height.
+  * If there's a new fork, we send `fork_height` to be the (height - 1)
+    that we need to revert to.
+  """
+
+  alias AeMdw.Sync.Server
+
   use GenServer
 
-  import AeMdw.Util
+  defstruct []
 
-  defstruct [:operators, :sync_mon_ref]
+  @typep t() :: %__MODULE__{}
 
-  ################################################################################
-
-  def start_link(_),
+  @spec start_link(GenServer.options()) :: GenServer.on_start()
+  def start_link(_opts),
     do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
 
-  def init([]) do
-    operators = Application.fetch_env!(:ae_mdw, :operators)
-    ref? = map_some(Process.whereis(AeMdw.Db.Sync), &Process.monitor/1)
-    {:ok, %__MODULE__{operators: operators, sync_mon_ref: ref?}}
+  @spec start_sync() :: :ok
+  def start_sync, do: GenServer.cast(__MODULE__, :start_sync)
+
+  @impl true
+  def init([]), do: {:ok, %__MODULE__{}}
+
+  @impl true
+  @spec handle_cast(:start_sync, t()) :: {:noreply, t()}
+  def handle_cast(:start_sync, state) do
+    :aec_events.subscribe(:chain)
+    :aec_events.subscribe(:top_changed)
+
+    Server.new_height(chain_height())
+
+    {:noreply, state}
   end
 
-  def handle_cast({:sync_process, pid}, %__MODULE__{} = s),
-    do: {:noreply, %{s | sync_mon_ref: Process.monitor(pid)}}
+  @impl true
+  @spec handle_info(term(), t()) :: {:noreply, t()}
+  def handle_info(
+        {:gproc_ps_event, :top_changed, %{info: %{block_type: :key, height: height}}},
+        state
+      ) do
+    header_candidates =
+      height
+      |> :aec_db.find_headers_at_height()
+      |> Enum.filter(&(:aec_headers.type(&1) == :key))
 
-  def handle_info({:DOWN, ref, :process, _, :normal}, %__MODULE__{sync_mon_ref: ref} = s),
-    do: %{s | sync_mon_ref: nil}
+    if length(header_candidates) > 1 do
+      # FORK!
+      main_header =
+        Enum.find_value(header_candidates, fn header ->
+          {:ok, header_hash} = :aec_headers.hash_header(header)
 
-  def handle_info({:DOWN, ref, :process, _, reason}, %__MODULE__{sync_mon_ref: ref} = s) do
-    notify_operators(s.operators, reason)
-    {:noreply, %{s | sync_mon_ref: nil}}
-  end
+          # COSTLY!
+          :aec_chain_state.hash_is_in_main_chain(header_hash) && header
+        end)
 
-  def notify_operators(emails, reason) do
-    attachment = Temp.path!()
-
-    try do
-      File.write!(attachment, "#{inspect(reason, pretty: true, limit: :infinity)}")
-      subject = "syncing crashed on #{host_ip_address()}"
-      send_mail(emails, subject, attachment)
-    after
-      File.rm(attachment)
+      Server.fork(:aec_headers.height(main_header))
     end
+
+    {:noreply, state}
   end
 
-  def send_mail(emails, subject, attachment) do
-    emails = Enum.join(emails, " ")
-    cmd = "mail -s \"#{subject}\" -A #{attachment} #{emails}"
+  def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :micro}}}, s),
+    do: {:noreply, s}
 
-    try do
-      System.cmd(cmd, [])
-    rescue
-      # in case `mail` command is not present
-      _ -> nil
-    end
-  end
+  def handle_info(_msg, state), do: {:noreply, state}
 
-  def host_ip_address() do
-    [{ip_addr, _, _} | _] =
-      Enum.reject(ok!(:inet.getif()), fn
-        {{127, _, _, _}, _, _} -> true
-        _ -> false
-      end)
-
-    "#{:inet.ntoa(ip_addr)}"
-  end
+  defp chain_height, do: :aec_headers.height(:aec_chain.top_header())
 end
