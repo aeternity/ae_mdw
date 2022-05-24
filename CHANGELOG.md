@@ -1,5 +1,13 @@
 # Changelog
 
+### [1.9.3](https://www.github.com/aeternity/ae_mdw/compare/v1.9.2...v1.9.3) (2022-05-24)
+
+
+### Refactorings
+
+* invalidate aexn contract ([#678](https://www.github.com/aeternity/ae_mdw/issues/678)) ([8651dd5](https://www.github.com/aeternity/ae_mdw/commit/8651dd5ba2322f51756b045a62189cb7beaed8c0))
+* replace aex9 sync cache with non deduped params ([#670](https://www.github.com/aeternity/ae_mdw/issues/670)) ([e678a02](https://www.github.com/aeternity/ae_mdw/commit/e678a02ac44856da5bc6b325726635c4c852c4e1))
+
 ### [1.9.2](https://www.github.com/aeternity/ae_mdw/compare/v1.9.1...v1.9.2) (2022-05-23)
 
 

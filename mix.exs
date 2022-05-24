@@ -4,7 +4,7 @@ defmodule AeMdw.MixProject do
   def project() do
     [
       app: :ae_mdw,
-      version: "1.9.2",
+      version: "1.9.3",
       elixir: "~> 1.5",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
