@@ -11,6 +11,7 @@ defmodule AeMdw.Application do
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Sync.Server
+  alias AeMdw.Sync.Watcher
   alias AeMdw.EtsCache
   alias AeMdw.Extract
   alias AeMdw.NodeHelper
@@ -40,10 +41,10 @@ defmodule AeMdw.Application do
     :ok = AeMdw.Db.RocksDb.open()
 
     children = [
-      AeMdw.Sync.Watcher,
       AeMdwWeb.Supervisor,
       AeMdwWeb.Websocket.Supervisor,
-      Server
+      Server,
+      Watcher
     ]
 
     children =
@@ -245,7 +246,7 @@ defmodule AeMdw.Application do
 
   def start_phase(:start_sync, _start_type, []) do
     if Application.fetch_env!(:ae_mdw, :sync) do
-      Server.start_sync()
+      Watcher.start_sync()
     end
 
     :ok
