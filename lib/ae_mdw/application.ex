@@ -10,11 +10,11 @@ defmodule AeMdw.Application do
   """
   alias AeMdw.Contract
   alias AeMdw.Db.Model
-  alias AeMdw.Sync.Server
-  alias AeMdw.Sync.Watcher
+  alias AeMdw.Sync.Supervisor, as: SyncSupervisor
   alias AeMdw.EtsCache
   alias AeMdw.Extract
   alias AeMdw.NodeHelper
+  alias AeMdw.Sync.Watcher
   alias AeMdw.Util
 
   require Model
@@ -43,8 +43,7 @@ defmodule AeMdw.Application do
     children = [
       AeMdwWeb.Supervisor,
       AeMdwWeb.Websocket.Supervisor,
-      Server,
-      Watcher
+      SyncSupervisor
     ]
 
     children =

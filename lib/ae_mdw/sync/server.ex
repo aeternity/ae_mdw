@@ -47,7 +47,12 @@ defmodule AeMdw.Sync.Server do
 
   @type gens_per_min() :: number()
   @typep height() :: Blocks.height()
-  @typep state() :: :initialized | :idle | :stopped | {:syncing_db, pid()} | {:syncing_mem, pid()}
+  @typep state() ::
+           :initialized
+           | :idle
+           | :stopped
+           | {:syncing_db, reference()}
+           | {:syncing_mem, reference()}
   @typep state_data() :: %__MODULE__{
            fork_height: height(),
            db_state: State.t(),
@@ -55,26 +60,26 @@ defmodule AeMdw.Sync.Server do
            restarts: non_neg_integer(),
            gens_per_min: non_neg_integer()
          }
-  @typep cast_event() ::
-           {:new_height, height()}
-           | {:db_done, gens_per_min()}
-           | {:mem_done, gens_per_min()}
-           | {:fork, height()}
-           | :restart_sync
+  @typep cast_event() :: {:new_height, height()} | {:fork, height()} | :restart_sync
   @typep internal_event() :: :check_sync
   @typep call_event() :: :gens_per_min | :syncing?
   @typep reason() :: term()
-  @typep info_event() :: {:DOWN, reference(), :process, pid(), reason()}
+  @typep info_event() ::
+           {reference(), {State.t(), gens_per_min()}}
+           | {:DOWN, reference(), :process, pid(), reason()}
 
   @max_restarts 5
   @retry_time 3_600_000
   @gens_per_min_weight 0.1
   @mem_gens 1
   @max_sync_gens 6
+  @task_supervisor __MODULE__.TaskSupervsor
 
-  @spec start_link(GenStateMachine.options()) :: GenStateMachine.on_start()
-  def start_link(_opts), do:
-    GenStateMachine.start_link(__MODULE__, [], name: __MODULE__)
+  @spec task_supervisor() :: atom()
+  def task_supervisor, do: @task_supervisor
+
+  @spec start_link(GenServer.options()) :: :gen_statem.start_ret()
+  def start_link(_opts), do: GenStateMachine.start_link(__MODULE__, [], name: __MODULE__)
 
   @spec new_height(height()) :: :ok
   def new_height(height), do: GenStateMachine.cast(__MODULE__, {:new_height, height})
@@ -149,8 +154,12 @@ defmodule AeMdw.Sync.Server do
         :internal,
         :check_sync,
         :idle,
-        %__MODULE__{chain_height: chain_height, db_state: db_state, mem_state: mem_state, fork_height: fork_height} =
-          state_data
+        %__MODULE__{
+          chain_height: chain_height,
+          db_state: db_state,
+          mem_state: mem_state,
+          fork_height: fork_height
+        } = state_data
       ) do
     max_db_height = chain_height - @mem_gens
     db_height = State.height(db_state)
@@ -160,33 +169,16 @@ defmodule AeMdw.Sync.Server do
       db_height < max_db_height ->
         from_height = db_height + 1
         to_height = min(from_height + @max_sync_gens - 1, max_db_height)
-        from_txi = Block.next_txi(db_state)
+        ref = spawn_db_sync(db_state, from_height, to_height)
 
-        from_mbi =
-          case Block.last_synced_mbi(db_state, from_height) do
-            {:ok, mbi} -> mbi + 1
-            :none -> -1
-          end
-
-        pid = spawn_db_sync(db_state, from_height, from_mbi, from_txi, to_height)
-
-        {:next_state, {:syncing_db, pid}, state_data}
+        {:next_state, {:syncing_db, ref}, state_data}
 
       db_height == max_db_height and mem_height < chain_height ->
         from_height = mem_height + 1
         to_height = min(from_height + @max_sync_gens - 1, chain_height - 1)
-        from_txi = Block.next_txi(mem_state)
+        ref = spawn_mem_sync(mem_state, from_height, to_height, fork_height)
 
-        from_mbi =
-          case Block.last_synced_mbi(mem_state, from_height) do
-            {:ok, mbi} -> mbi + 1
-            :none -> -1
-          end
-
-        pid = spawn_mem_sync(mem_state, from_height, from_mbi, from_txi, to_height)
-        mem_state = if fork_height, do: State.invalidate(mem_state, fork_height), else: mem_state
-
-        {:next_state, {:syncing_mem, pid}, state_data}
+        {:next_state, {:syncing_mem, ref}, state_data}
 
       true ->
         {:keep_state, state_data}
@@ -196,9 +188,9 @@ defmodule AeMdw.Sync.Server do
   def handle_event(:cast, :check_sync, _state, _data), do: :keep_state_and_data
 
   def handle_event(
-        :cast,
-        {:db_done, new_db_state, gens_per_min},
-        {:syncing_db, _pid},
+        :info,
+        {ref, {new_db_state, gens_per_min}},
+        {:syncing_db, ref},
         %__MODULE__{gens_per_min: prev_gens_per_min} = state_data
       ) do
     actions = [{:next_event, :internal, :check_sync}]
@@ -210,13 +202,15 @@ defmodule AeMdw.Sync.Server do
         gens_per_min: new_gens_per_min
     }
 
+    Process.demonitor(ref, [:flush])
+
     {:next_state, :idle, new_state_data, actions}
   end
 
   def handle_event(
-        :cast,
-        {:mem_done, new_mem_state, gens_per_min},
-        {:syncing_mem, _pid},
+        :info,
+        {ref, {new_mem_state, gens_per_min}},
+        {:syncing_mem, ref},
         %__MODULE__{gens_per_min: prev_gens_per_min} = state_data
       ) do
     actions = [{:next_event, :internal, :check_sync}]
@@ -244,7 +238,7 @@ defmodule AeMdw.Sync.Server do
     {:keep_state_and_data, actions}
   end
 
-  def handle_event(:info, :restart_sync, :stopped, state_data) do
+  def handle_event(:cast, :restart_sync, :stopped, state_data) do
     actions = [{:next_event, :internal, :check_sync}]
 
     {:next_state, :idle, %__MODULE__{state_data | restarts: 0}, actions}
@@ -252,8 +246,8 @@ defmodule AeMdw.Sync.Server do
 
   def handle_event(
         :info,
-        {:DOWN, _ref, :process, pid, reason},
-        {:syncing_db, pid},
+        {:DOWN, ref, :process, _pid, reason},
+        {:syncing_db, ref},
         %__MODULE__{restarts: restarts} = state_data
       )
       when restarts < @max_restarts do
@@ -266,8 +260,8 @@ defmodule AeMdw.Sync.Server do
 
   def handle_event(
         :info,
-        {:DOWN, _ref, :process, pid, reason},
-        {:syncing_mem, pid},
+        {:DOWN, ref, :process, _pid, reason},
+        {:syncing_mem, ref},
         %__MODULE__{restarts: restarts} = state_data
       )
       when restarts < @max_restarts do
@@ -277,9 +271,6 @@ defmodule AeMdw.Sync.Server do
 
     {:next_state, :idle, %__MODULE__{state_data | restarts: restarts + 1}, actions}
   end
-
-  def handle_event(:info, {:DOWN, _ref, :process, _pid, :normal}, _state, _state_data),
-    do: :keep_state_and_data
 
   def handle_event(:info, {:DOWN, _ref, :process, _pid, reason}, _state, state_data) do
     Log.info("Sync.Server error: #{inspect(reason)}. Stopping...")
@@ -293,8 +284,16 @@ defmodule AeMdw.Sync.Server do
     super(event_type, event_content, state, data)
   end
 
-  defp spawn_db_sync(db_state, from_height, from_mbi, from_txi, to_height) do
-    spawn_with_monitor(fn ->
+  defp spawn_db_sync(db_state, from_height, to_height) do
+    from_txi = Block.next_txi(db_state)
+
+    from_mbi =
+      case Block.last_synced_mbi(db_state, from_height) do
+        {:ok, mbi} -> mbi + 1
+        :none -> -1
+      end
+
+    spawn_task(fn ->
       {mutations_time, {gens_mutations, _next_txi}} =
         :timer.tc(fn ->
           Block.blocks_mutations(from_height, from_mbi, from_txi, to_height)
@@ -304,12 +303,22 @@ defmodule AeMdw.Sync.Server do
 
       gens_per_min = (to_height + 1 - from_height) * 60_000_000 / (mutations_time + exec_time)
 
-      GenStateMachine.cast(__MODULE__, {:db_done, new_state, gens_per_min})
+      {new_state, gens_per_min}
     end)
   end
 
-  defp spawn_mem_sync(mem_state, from_height, from_mbi, from_txi, to_height) do
-    spawn_with_monitor(fn ->
+  defp spawn_mem_sync(mem_state, from_height, to_height, fork_height) do
+    from_txi = Block.next_txi(mem_state)
+
+    from_mbi =
+      case Block.last_synced_mbi(mem_state, from_height) do
+        {:ok, mbi} -> mbi + 1
+        :none -> -1
+      end
+
+    mem_state = if fork_height, do: State.invalidate(mem_state, fork_height), else: mem_state
+
+    spawn_task(fn ->
       {mutations_time, {gens_mutations, _next_txi}} =
         :timer.tc(fn ->
           Block.blocks_mutations(from_height, from_mbi, from_txi, to_height)
@@ -319,19 +328,27 @@ defmodule AeMdw.Sync.Server do
 
       gens_per_min = (to_height + 1 - from_height) * 60_000_000 / (mutations_time + exec_time)
 
-      GenStateMachine.cast(__MODULE__, {:mem_done, new_state, gens_per_min})
+      {new_state, gens_per_min}
     end)
   end
 
   defp exec_db_mutations(gens_mutations, state) do
     gens_mutations
     |> Enum.flat_map(fn {_height, blocks_mutations} -> blocks_mutations end)
-    |> Enum.reduce(state, fn {{_height, mbi}, block, block_mutations}, state ->
-      new_state = State.commit_db(state, block_mutations)
+    |> Enum.chunk_every(2)
+    |> Enum.reduce(state, fn blocks_mutations_chunk, state ->
+      chunk_mutations =
+        blocks_mutations_chunk
+        |> Enum.flat_map(fn {_block_index, _block, block_mutations} -> block_mutations end)
+
+      new_state = State.commit_db(state, chunk_mutations)
 
       Producer.commit_enqueued()
 
-      broadcast_block(block, mbi == -1)
+      Enum.each(blocks_mutations_chunk, fn {{_height, mbi} = _block_index, block,
+                                            _block_mutations} ->
+        broadcast_block(block, mbi == -1)
+      end)
 
       new_state
     end)
@@ -349,12 +366,10 @@ defmodule AeMdw.Sync.Server do
     end)
   end
 
-  defp spawn_with_monitor(fun) do
-    pid = spawn(fun)
+  defp spawn_task(fun) do
+    %Task{ref: ref} = Task.Supervisor.async_nolink(@task_supervisor, fun)
 
-    Process.monitor(pid)
-
-    pid
+    ref
   end
 
   defp calculate_gens_per_min(0, gens_per_min), do: gens_per_min
