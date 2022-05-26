@@ -149,10 +149,9 @@ defmodule AeMdw.Sync.Server do
         :internal,
         :check_sync,
         :idle,
-        %__MODULE__{chain_height: chain_height, db_state: db_state, mem_state: mem_state} =
+        %__MODULE__{chain_height: chain_height, db_state: db_state, mem_state: mem_state, fork_height: fork_height} =
           state_data
       ) do
-    # CHECK FORK
     max_db_height = chain_height - @mem_gens
     db_height = State.height(db_state)
     mem_height = State.height(mem_state)
@@ -185,6 +184,7 @@ defmodule AeMdw.Sync.Server do
           end
 
         pid = spawn_mem_sync(mem_state, from_height, from_mbi, from_txi, to_height)
+        mem_state = if fork_height, do: State.invalidate(mem_state, fork_height), else: mem_state
 
         {:next_state, {:syncing_mem, pid}, state_data}
 
