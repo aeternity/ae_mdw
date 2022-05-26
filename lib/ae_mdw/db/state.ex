@@ -68,16 +68,9 @@ defmodule AeMdw.Db.State do
     height = DbUtil.synced_height(state2)
     state3 = add_prev_state(state2, height, state)
 
-    set_global(state3)
-
-    state3
-  end
-
-  @spec set_global(t()) :: t()
-  def set_global(state) do
     :persistent_term.put(@state_pm_key, state)
 
-    state
+    state3
   end
 
   defp add_prev_state(%__MODULE__{prev_states: prev_states} = state, height, prev_state),
