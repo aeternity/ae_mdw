@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.10.0](https://www.github.com/aeternity/ae_mdw/compare/v1.9.2...v1.10.0) (2022-05-27)
+
+
+### Features
+
+* update aex9 state with logs ([#692](https://www.github.com/aeternity/ae_mdw/issues/692)) ([9c1253e](https://www.github.com/aeternity/ae_mdw/commit/9c1253ec9dfe416f15f8e0244dbb56cafbd407db))
+
+
+### Bug Fixes
+
+* include ga_attach_tx when trying to find call origins ([#696](https://www.github.com/aeternity/ae_mdw/issues/696)) ([ea57b49](https://www.github.com/aeternity/ae_mdw/commit/ea57b492a1c8ee3f1e8270123f71fee021516d06)), closes [#693](https://www.github.com/aeternity/ae_mdw/issues/693)
+
+
+### Refactorings
+
+* invalidate aexn contract ([#678](https://www.github.com/aeternity/ae_mdw/issues/678)) ([8651dd5](https://www.github.com/aeternity/ae_mdw/commit/8651dd5ba2322f51756b045a62189cb7beaed8c0))
+* replace aex9 sync cache with non deduped params ([#670](https://www.github.com/aeternity/ae_mdw/issues/670)) ([e678a02](https://www.github.com/aeternity/ae_mdw/commit/e678a02ac44856da5bc6b325726635c4c852c4e1))
+
 ### [1.9.2](https://www.github.com/aeternity/ae_mdw/compare/v1.9.1...v1.9.2) (2022-05-23)
 
 
