@@ -15,6 +15,8 @@ defmodule AeMdw.Db.Origin do
   import AeMdw.Db.Util, only: [read_tx!: 1]
   import AeMdw.Util
 
+  @contract_creation_types ~w(contract_create_tx contract_call_tx ga_attach_tx)a
+
   @typep contract_locator() :: {:contract, Txs.txi()} | {:contract_call, Txs.txi()}
   @typep creation_txi_locator() :: {:contract, Db.pubkey()}
 
@@ -102,7 +104,7 @@ defmodule AeMdw.Db.Origin do
 
   def pubkey({:contract, txi}) do
     case Database.next_key(Model.RevOrigin, {txi, -1, <<>>}) do
-      {:ok, {^txi, type, pubkey}} when type in [:contract_create_tx, :contract_call_tx] -> pubkey
+      {:ok, {^txi, type, pubkey}} when type in @contract_creation_types -> pubkey
       _key_mismatch -> nil
     end
   end
