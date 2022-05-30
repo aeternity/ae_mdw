@@ -29,16 +29,25 @@ defmodule AeMdw.Db.Contract do
   @typep block_index :: AeMdw.Blocks.block_index()
   @typep txi :: AeMdw.Txs.txi()
 
-  @spec aex9_creation_write(state(), Contract.aex9_meta_info(), pubkey(), integer()) :: state()
-  def aex9_creation_write(state, {name, symbol, decimals}, contract_pk, txi) do
-    m_contract_name = Model.aexn_contract_name(index: {:aex9, name, contract_pk})
-    m_contract_sym = Model.aexn_contract_symbol(index: {:aex9, symbol, contract_pk})
+  @spec aexn_creation_write(
+          state(),
+          Model.aexn_type(),
+          Model.aexn_meta_info(),
+          pubkey(),
+          integer()
+        ) :: state()
+  def aexn_creation_write(state, aexn_type, aexn_meta_info, contract_pk, txi) do
+    name = elem(aexn_meta_info, 0)
+    symbol = elem(aexn_meta_info, 1)
+
+    m_contract_name = Model.aexn_contract_name(index: {aexn_type, name, contract_pk})
+    m_contract_sym = Model.aexn_contract_symbol(index: {aexn_type, symbol, contract_pk})
 
     m_contract_pk =
       Model.aexn_contract(
-        index: {:aex9, contract_pk},
+        index: {aexn_type, contract_pk},
         txi: txi,
-        meta_info: {name, symbol, decimals}
+        meta_info: aexn_meta_info
       )
 
     state
@@ -346,11 +355,11 @@ defmodule AeMdw.Db.Contract do
 
   @spec update_aex9_state(State.t(), pubkey(), block_index(), txi()) :: State.t()
   def update_aex9_state(state, contract_pk, {kbi, mbi} = block_index, txi) do
-    if Contract.is_aex9?(contract_pk) do
+    if AexnContract.is_aex9?(contract_pk) do
       with false <- State.exists?(state, Model.AexnContract, {:aex9, contract_pk}),
-           {:ok, aex9_meta_info} <- Contract.aex9_meta_info(contract_pk) do
+           {:ok, aex9_meta_info} <- AexnContract.call_meta_info(contract_pk) do
         AsyncTasks.Producer.enqueue(:derive_aex9_presence, [contract_pk, kbi, mbi, txi])
-        aex9_creation_write(state, aex9_meta_info, contract_pk, txi)
+        aexn_creation_write(state, :aex9, aex9_meta_info, contract_pk, txi)
       else
         true ->
           AsyncTasks.Producer.enqueue(:update_aex9_state, [contract_pk], [block_index, txi])

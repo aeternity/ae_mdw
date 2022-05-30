@@ -126,17 +126,17 @@ defmodule AeMdw.Db.Sync.Transaction do
           contract_pk
         )
 
-      aex9_create_contract_mutation =
+      aexn_create_contract_mutation =
         if :ok == :aect_call.return_type(call_rec) do
-          SyncContract.aex9_create_contract_mutation(contract_pk, block_index, txi)
+          SyncContract.aexn_create_contract_mutation(contract_pk, block_index, txi)
         end
 
       Enum.concat([
         mutations,
         events_mutations,
         [
-          aex9_create_contract_mutation,
-          ContractCreateMutation.new(block_index, txi, call_rec)
+          aexn_create_contract_mutation,
+          ContractCreateMutation.new(txi, call_rec)
         ]
       ])
     else

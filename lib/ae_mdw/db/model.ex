@@ -302,12 +302,15 @@ defmodule AeMdw.Db.Model do
   #     index: {type, pubkey} where type = :aex9, :aex141, ...
   #     txi: txi
   #     meta_info: {name, symbol, decimals} | {name, symbol, base_url, metadata_type}
+  @type aexn_type :: :aex9 | :aex141
+
   @type aexn_meta_info ::
           {String.t(), String.t(), non_neg_integer()}
           | {String.t(), String.t(), String.t(), atom()}
+
   @type aexn_contract ::
           record(:aexn_contract,
-            index: {:aex9 | :aex141, Db.pubkey()},
+            index: {aexn_type(), Db.pubkey()},
             txi: Txs.txi(),
             meta_info: aexn_meta_info()
           )

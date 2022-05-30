@@ -89,7 +89,7 @@ defmodule AeMdw.Db.ContractTest do
         [],
         [
           is_aex9?: fn ct_pk -> ct_pk not in [not_aex9_contract_pk, non_aex9_log_pk] end,
-          aex9_meta_info: fn ct_pk ->
+          aexn_meta_info: fn ct_pk ->
             case ct_pk do
               ^log_aex9_pk1 -> {:ok, meta_info1}
               ^log_aex9_pk2 -> {:ok, meta_info2}

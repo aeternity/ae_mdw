@@ -4,6 +4,7 @@ defmodule AeMdw.Db.Sync.Contract do
   """
   alias AeMdw.Blocks
   alias AeMdw.Contract
+  alias AeMdw.Contracts.AexnContract
   alias AeMdw.Db.IntCallsMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
@@ -11,7 +12,7 @@ defmodule AeMdw.Db.Sync.Contract do
   alias AeMdw.Db.NameTransferMutation
   alias AeMdw.Db.NameRevokeMutation
   alias AeMdw.Db.Oracle
-  alias AeMdw.Db.Aex9CreateContractMutation
+  alias AeMdw.Db.AexnCreateContractMutation
   alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.ContractCreateCacheMutation
   alias AeMdw.Db.Origin
@@ -38,7 +39,7 @@ defmodule AeMdw.Db.Sync.Contract do
     with %{type: :contract, value: contract_id} <- fun_result,
          {:ok, contract_pk} <- Validate.id(contract_id) do
       [
-        aex9_create_contract_mutation(contract_pk, block_index, txi)
+        aexn_create_contract_mutation(contract_pk, block_index, txi)
         | SyncOrigin.origin_mutations(:contract_call_tx, nil, contract_pk, txi, tx_hash)
       ]
     else
@@ -80,7 +81,7 @@ defmodule AeMdw.Db.Sync.Contract do
           {:account, contract_pk} = :aeser_id.specialize(recipient_id)
 
           [
-            aex9_create_contract_mutation(contract_pk, block_index, call_txi),
+            aexn_create_contract_mutation(contract_pk, block_index, call_txi),
             ContractCreateCacheMutation.new(contract_pk, call_txi)
             | SyncOrigin.origin_mutations(
                 :contract_call_tx,
@@ -106,18 +107,27 @@ defmodule AeMdw.Db.Sync.Contract do
       oracle_and_name_mutations(events, block_index, block_hash, call_txi) ++ [int_calls_mutation]
   end
 
-  @spec aex9_create_contract_mutation(Db.pubkey(), Blocks.block_index(), Txs.txi()) ::
-          nil | Aex9CreateContractMutation.t()
-  def aex9_create_contract_mutation(contract_pk, block_index, txi) do
-    case Contract.is_aex9?(contract_pk) && Contract.aex9_meta_info(contract_pk) do
-      {:ok, aex9_meta_info} ->
-        Aex9CreateContractMutation.new(
-          contract_pk,
-          aex9_meta_info,
-          block_index,
-          txi
-        )
+  @spec aexn_create_contract_mutation(Db.pubkey(), Blocks.block_index(), Txs.txi()) ::
+          nil | AexnCreateContractMutation.t()
+  def aexn_create_contract_mutation(contract_pk, block_index, txi) do
+    aexn_type =
+      cond do
+        AexnContract.is_aex9?(contract_pk) -> :aex9
+        AexnContract.is_aex141?(contract_pk) -> :aex141
+        true -> nil
+      end
 
+    with true <- aexn_type != nil,
+         {:ok, aexn_meta_info} <-
+           AexnContract.call_meta_info(contract_pk) do
+      AexnCreateContractMutation.new(
+        aexn_type,
+        contract_pk,
+        aexn_meta_info,
+        block_index,
+        txi
+      )
+    else
       _false_or_notfound ->
         nil
     end

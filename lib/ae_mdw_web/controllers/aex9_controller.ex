@@ -1,18 +1,24 @@
 defmodule AeMdwWeb.Aex9Controller do
+  @moduledoc """
+  Controller for AEX9 v1 endpoints.
+  """
+
   use AeMdwWeb, :controller
   use PhoenixSwagger
 
   alias AeMdw.Aex9
   alias AeMdw.AexnTokens
-  alias AeMdw.Validate
-  alias AeMdw.Error.Input, as: ErrInput
-  alias AeMdw.Node.Db, as: DBN
+  alias AeMdw.Contracts.AexnContract
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Util
-  alias AeMdw.Aex9
+  alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Node.Db, as: DBN
+  alias AeMdw.Validate
+
   alias AeMdwWeb.DataStreamPlug, as: DSPlug
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
+
   alias Plug.Conn
 
   import AeMdwWeb.Util, only: [handle_input: 2, paginate: 4, presence?: 2]
@@ -399,7 +405,7 @@ defmodule AeMdwWeb.Aex9Controller do
 
   defp ensure_aex9_contract_pk!(ct_ident) do
     pk = Validate.id!(ct_ident, [:contract_pubkey])
-    AeMdw.Contract.is_aex9?(pk) || raise ErrInput.NotAex9, value: ct_ident
+    AexnContract.is_aex9?(pk) || raise ErrInput.NotAex9, value: ct_ident
     pk
   end
 
