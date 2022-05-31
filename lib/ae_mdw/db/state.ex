@@ -9,11 +9,12 @@ defmodule AeMdw.Db.State do
   alias AeMdw.Database
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.DbStore
+  alias AeMdw.Db.MemStore
   alias AeMdw.Db.Store
   alias AeMdw.Db.TxnDbStore
   alias AeMdw.Db.Util, as: DbUtil
 
-  defstruct [:store, :stats, :cache, :prev_states]
+  defstruct [:store, :stats, :cache]
 
   @typep key() :: Database.key()
   @typep record() :: Database.record()
@@ -26,15 +27,14 @@ defmodule AeMdw.Db.State do
   @opaque t() :: %__MODULE__{
             store: Store.t(),
             stats: %{stat_name() => non_neg_integer()},
-            cache: %{cache_name() => map()},
-            prev_states: [{Blocks.height(), t()}]
+            cache: %{cache_name() => map()}
           }
 
   @state_pm_key :global_state
 
   @spec new(Store.t()) :: t()
   def new(store \\ DbStore.new()),
-    do: %__MODULE__{store: store, stats: %{}, cache: %{}, prev_states: []}
+    do: %__MODULE__{store: store, stats: %{}, cache: %{}}
 
   @spec height(t()) :: height()
   def height(state), do: DbUtil.synced_height(state)
@@ -51,6 +51,8 @@ defmodule AeMdw.Db.State do
         |> Enum.reduce(state2, &Mutation.execute/2)
       end)
 
+    :persistent_term.erase(@state_pm_key)
+
     %__MODULE__{new_state | store: prev_store}
   end
 
@@ -65,26 +67,17 @@ defmodule AeMdw.Db.State do
       |> Enum.reject(&is_nil/1)
       |> Enum.reduce(state, &Mutation.execute/2)
 
-    height = DbUtil.synced_height(state2)
-    state3 = add_prev_state(state2, height, state)
+    :persistent_term.put(@state_pm_key, state2)
 
-    :persistent_term.put(@state_pm_key, state)
-
-    state3
+    state2
   end
 
-  defp add_prev_state(%__MODULE__{prev_states: prev_states} = state, height, prev_state),
-    do: %__MODULE__{state | prev_states: [{height - 1, prev_state} | prev_states]}
-
-  @spec invalidate(t(), height()) :: t()
-  @doc """
-  Invalidation simply picks the last valid state from the list of prev_states.
-  """
-  def invalidate(%__MODULE__{prev_states: prev_states}, height) do
-    [new_state | _rest] =
-      Enum.drop_while(prev_states, fn {state_height, _state} -> state_height >= height end)
-
-    new_state
+  @spec mem_state() :: t()
+  def mem_state do
+    case :persistent_term.get(@state_pm_key, :none) do
+      :none -> new(MemStore.new(DbStore.new()))
+      state -> state
+    end
   end
 
   @spec put(t(), table(), record()) :: t()
