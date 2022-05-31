@@ -10,12 +10,6 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
   alias AeMdw.Db.Sync.Origin
   alias AeMdw.Sync.AsyncTasks
 
-  setup_all _context do
-    AsyncTasks.Supervisor.start_link([])
-
-    :ok
-  end
-
   describe "execute" do
     test "creates contract with init aex9 log" do
       remote_pk = :crypto.strong_rand_bytes(32)
@@ -31,6 +25,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
           ]
         }
       ] do
+        AsyncTasks.Supervisor.start_link([])
         block_index = {492_393, 0}
         create_txi1 = 21_608_343
         call_rec1 = call_rec("no_log", remote_pk, create_txi1)
