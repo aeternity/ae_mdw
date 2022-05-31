@@ -41,33 +41,14 @@ defmodule AeMdw.Sync.Watcher do
 
   @impl true
   @spec handle_info(term(), t()) :: {:noreply, t()}
-  def handle_info(
-        {:gproc_ps_event, :top_changed, %{info: %{block_type: :key, height: height}}},
-        state
-      ) do
-    header_candidates =
-      height
-      |> :aec_db.find_headers_at_height()
-      |> Enum.filter(&(:aec_headers.type(&1) == :key))
-
-    if length(header_candidates) > 1 do
-      # FORK!
-      main_header =
-        Enum.find_value(header_candidates, fn header ->
-          {:ok, header_hash} = :aec_headers.hash_header(header)
-
-          # COSTLY!
-          :aec_chain_state.hash_is_in_main_chain(header_hash) && header
-        end)
-
-      Server.fork(:aec_headers.height(main_header))
-    end
+  def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :key}}}, state) do
+    Server.new_height(chain_height())
 
     {:noreply, state}
   end
 
-  def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :micro}}}, s),
-    do: {:noreply, s}
+  def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :micro}}}, state),
+    do: {:noreply, state}
 
   def handle_info(_msg, state), do: {:noreply, state}
 
