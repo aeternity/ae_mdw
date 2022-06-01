@@ -65,10 +65,10 @@ defmodule AeMdw.Db.Name do
   def plain_name!(name_hash),
     do: Model.plain_name(read!(Model.PlainName, name_hash), :value)
 
-  @spec ptr_resolve!(Blocks.block_index(), binary(), String.t()) :: binary()
-  def ptr_resolve!(block_index, name_hash, key) do
+  @spec ptr_resolve!(State.t(), Blocks.block_index(), binary(), String.t()) :: binary()
+  def ptr_resolve!(state, block_index, name_hash, key) do
     key
-    |> :aens.resolve_hash(name_hash, ns_tree!(block_index))
+    |> :aens.resolve_hash(name_hash, ns_tree!(state, block_index))
     |> map_ok!(&Validate.id!/1)
   end
 
@@ -446,9 +446,9 @@ defmodule AeMdw.Db.Name do
     end)
   end
 
-  defp ns_tree!({_, _} = block_index) do
-    block_index
-    |> read_block!
+  defp ns_tree!(state, block_index) do
+    state
+    |> State.fetch!(Model.Block, block_index)
     |> Model.block(:hash)
     |> :aec_db.get_block_state()
     |> :aec_trees.ns()

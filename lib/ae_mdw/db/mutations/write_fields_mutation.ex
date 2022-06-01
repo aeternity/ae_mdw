@@ -7,6 +7,7 @@ defmodule AeMdw.Db.WriteFieldsMutation do
   alias AeMdw.Db.State
   alias AeMdw.Node
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Name
   alias AeMdw.Db.Sync.IdCounter
   alias AeMdw.Txs
 
@@ -17,7 +18,7 @@ defmodule AeMdw.Db.WriteFieldsMutation do
 
   @opaque t() :: %__MODULE__{
             type: Node.tx_type(),
-            tx: Model.tx(),
+            tx: Node.tx(),
             block_index: Blocks.block_index(),
             txi: Txs.txi()
           }
@@ -37,7 +38,7 @@ defmodule AeMdw.Db.WriteFieldsMutation do
     tx_type
     |> Node.tx_ids()
     |> Enum.reduce(state, fn {field, pos}, state ->
-      <<_::256>> = pk = resolve_pubkey(elem(tx, pos), tx_type, field, block_index)
+      <<_::256>> = pk = resolve_pubkey(state, elem(tx, pos), tx_type, field, block_index)
       write_field(state, tx_type, pos, pk, txi)
     end)
   end
@@ -50,17 +51,17 @@ defmodule AeMdw.Db.WriteFieldsMutation do
     |> IdCounter.incr_count({tx_type, pos, pubkey})
   end
 
-  defp resolve_pubkey(id, :spend_tx, :recipient_id, block_index) do
+  defp resolve_pubkey(state, id, :spend_tx, :recipient_id, block_index) do
     case :aeser_id.specialize(id) do
       {:name, name_hash} ->
-        AeMdw.Db.Name.ptr_resolve!(block_index, name_hash, "account_pubkey")
+        Name.ptr_resolve!(state, block_index, name_hash, "account_pubkey")
 
       {_tag, pk} ->
         pk
     end
   end
 
-  defp resolve_pubkey(id, _type, _field, _block_index) do
+  defp resolve_pubkey(_state, id, _type, _field, _block_index) do
     {_tag, pk} = :aeser_id.specialize(id)
     pk
   end
