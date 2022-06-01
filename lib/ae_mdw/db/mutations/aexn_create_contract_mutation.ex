@@ -4,7 +4,6 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
   """
 
   alias AeMdw.Blocks
-  alias AeMdw.Contract
   alias AeMdw.Db.Contract, as: DBContract
   alias AeMdw.Db.State
   alias AeMdw.Sync.AsyncTasks
@@ -20,12 +19,13 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
   ]
 
   @typep aexn_type :: AeMdw.Db.Model.aexn_type()
+  @typep aexn_meta_info :: AeMdw.Db.Model.aexn_meta_info()
   @typep pubkey :: AeMdw.Node.Db.pubkey()
 
   @opaque t() :: %__MODULE__{
             aexn_type: aexn_type(),
             contract_pk: pubkey(),
-            aexn_meta_info: Contract.call_meta_info(),
+            aexn_meta_info: aexn_meta_info(),
             block_index: Blocks.block_index(),
             create_txi: Txs.txi()
           }
@@ -33,7 +33,7 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
   @spec new(
           aexn_type(),
           pubkey(),
-          Contract.call_meta_info(),
+          aexn_meta_info(),
           Blocks.block_index(),
           Txs.txi()
         ) :: t()

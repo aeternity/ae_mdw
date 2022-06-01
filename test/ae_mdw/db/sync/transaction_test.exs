@@ -3,6 +3,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
 
   alias AeMdw.Node, as: AE
 
+  alias AeMdw.Contracts.AexnContract
   alias AeMdw.Database
   alias AeMdw.Contract
   alias AeMdw.Db.Sync.Transaction
@@ -104,20 +105,22 @@ defmodule AeMdw.Db.Sync.TransactionTest do
       # setup contract
       contract_pk = setup_contract_on_call(signed_tx, txi)
       aex9_meta_info = {"TestAEX9-B vs TestAEX9-A", "TAEX9-B/TAEX9-A", 18}
+      child_contract_pk = Validate.id!(fun_args_res("create_pair")[:result][:value])
 
       with_mocks [
         {Contract, [],
          [
-           get_info: fn pk ->
-             {info, _tm} = EtsCache.get(Contract, pk)
-             {:ok, info}
-           end,
            call_tx_info: fn _tx, ^contract_pk, _block_hash, _to_map ->
              {
                fun_args_res("create_pair"),
                call_rec("create_pair")
              }
            end
+         ]},
+        {AexnContract, [],
+         [
+           is_aex9?: fn pk -> pk == child_contract_pk end,
+           call_meta_info: fn pk -> pk == child_contract_pk && {:ok, aex9_meta_info} end
          ]}
       ] do
         mutations =
@@ -127,8 +130,6 @@ defmodule AeMdw.Db.Sync.TransactionTest do
             {block_index, block_hash, mb_time, mb_events}
           )
           |> List.flatten()
-
-        child_contract_pk = Validate.id!(fun_args_res("create_pair")[:result][:value])
 
         assert Enum.any?(mutations, fn
                  %AexnCreateContractMutation{
@@ -157,7 +158,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
       # setup contract
       contract_pk = setup_contract_on_create(signed_tx, txi)
       number = abs(System.unique_integer())
-      aexn_meta_info = {"test-nft#{number}", "test-nft#{number}", "http://some-fake-url", :url}
+      aex141_meta_info = {"test-nft#{number}", "test-nft#{number}", "http://some-fake-url", :url}
 
       with_mocks [
         {Contract, [],
@@ -167,11 +168,13 @@ defmodule AeMdw.Db.Sync.TransactionTest do
              {:call, <<1::256>>, {:id, :account, <<2::256>>}, 1, 123_456,
               {:id, :contract, contract_pk}, 1_000_000_000, 1_234, "?", :ok, []}
            end,
-           get_info: fn pk ->
-             {info, _tm} = EtsCache.get(Contract, pk)
-             {:ok, info}
-           end,
            call_contract: fn _pk, _hash, "extensions", [] -> {:ok, ["mintable"]} end
+         ]},
+        {AexnContract, [],
+         [
+           is_aex9?: fn _pk -> false end,
+           is_aex141?: fn pk -> pk == contract_pk end,
+           call_meta_info: fn pk -> pk == contract_pk && {:ok, aex141_meta_info} end
          ]}
       ] do
         mutations =
@@ -185,7 +188,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         assert Enum.any?(mutations, fn
                  %AexnCreateContractMutation{
                    aexn_type: :aex141,
-                   aexn_meta_info: ^aexn_meta_info,
+                   aexn_meta_info: ^aex141_meta_info,
                    block_index: ^block_index,
                    contract_pk: ^contract_pk,
                    create_txi: ^txi
@@ -214,7 +217,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
       |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
 
     type_info = {:fcode, functions, nil, nil}
-    AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+    EtsCache.put(Contract, contract_pk, {type_info, nil, nil})
 
     contract_pk
   end
@@ -229,7 +232,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
       |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
 
     type_info = {:fcode, functions, nil, nil}
-    AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+    EtsCache.put(Contract, contract_pk, {type_info, nil, nil})
 
     contract_pk
   end

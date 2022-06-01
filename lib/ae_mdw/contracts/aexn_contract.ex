@@ -43,12 +43,11 @@ defmodule AeMdw.Contracts.AexnContract do
 
   def is_aex141?(_no_fcode), do: false
 
-  @spec aexn_meta_info(pubkey()) :: {:ok, aexn_meta_info()} | :not_found
-  def aexn_meta_info(contract_pk),
-    do: aexn_meta_info(contract_pk, NodeDb.top_height_hash(false))
+  @spec call_meta_info(pubkey()) :: {:ok, aexn_meta_info()} | :not_found
+  def call_meta_info(contract_pk) do
+    top_hash = NodeDb.top_height_hash(false)
 
-  def aexn_meta_info(contract_pk, {type, height, hash}) do
-    case Contract.call_contract(contract_pk, {type, height, hash}, "meta_info", []) do
+    case Contract.call_contract(contract_pk, top_hash, "meta_info", []) do
       {:ok, {:tuple, meta_info_tuple}} ->
         {:ok, meta_info_tuple}
 
@@ -110,7 +109,7 @@ defmodule AeMdw.Contracts.AexnContract do
     end
   end
 
-  def has_valid_aex141_extensions?(extensions, {:fcode, functions, _hash_names, _code}) do
+  defp has_valid_aex141_extensions?(extensions, {:fcode, functions, _hash_names, _code}) do
     Enum.all?(extensions, &valid_aex141_extension?(&1, functions))
   end
 

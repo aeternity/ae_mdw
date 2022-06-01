@@ -4,6 +4,7 @@ defmodule AeMdw.Db.ContractCallMutation do
   """
 
   alias AeMdw.Blocks
+  alias AeMdw.Contract
   alias AeMdw.Contracts.AexnContract
   alias AeMdw.Db.Contract, as: DBContract
   alias AeMdw.Db.Origin

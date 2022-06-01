@@ -4,6 +4,7 @@ defmodule AeMdw.Db.Contract do
   """
   alias AeMdw.Collection
   alias AeMdw.Contract
+  alias AeMdw.Contracts.AexnContract
   alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
@@ -245,11 +246,11 @@ defmodule AeMdw.Db.Contract do
 
   @spec which_aexn_contract_pubkey(pubkey(), pubkey()) :: pubkey() | nil
   def which_aexn_contract_pubkey(contract_pk, addr) do
-    if Contract.is_aex9?(contract_pk) do
+    if AexnContract.is_aex9?(contract_pk) do
       contract_pk
     else
       # remotely called contract is aex9?
-      if addr != contract_pk and Contract.is_aex9?(addr), do: addr
+      if addr != contract_pk and AexnContract.is_aex9?(addr), do: addr
     end
   end
 

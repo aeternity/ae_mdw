@@ -2,7 +2,7 @@ defmodule AeMdw.Db.Sync.InvalidateTest do
   use ExUnit.Case, async: false
 
   alias AeMdw.Database
-  alias AeMdw.Db.Aex9CreateContractMutation
+  alias AeMdw.Db.AexnCreateContractMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync.Invalidate
   alias AeMdw.Db.WriteMutation
@@ -43,9 +43,9 @@ defmodule AeMdw.Db.Sync.InvalidateTest do
         WriteMutation.new(Model.RevOrigin, Model.rev_origin(index: rev_origin1)),
         WriteMutation.new(Model.RevOrigin, Model.rev_origin(index: rev_origin2)),
         WriteMutation.new(Model.RevOrigin, Model.rev_origin(index: rev_origin3)),
-        Aex9CreateContractMutation.new(pk1, meta_info1, {10, 0}, create_txi1),
-        Aex9CreateContractMutation.new(pk2, meta_info2, {11, 0}, create_txi2),
-        Aex9CreateContractMutation.new(pk3, meta_info3, {12, 0}, create_txi3)
+        AexnCreateContractMutation.new(:aex9, pk1, meta_info1, {10, 0}, create_txi1),
+        AexnCreateContractMutation.new(:aex9, pk2, meta_info2, {11, 0}, create_txi2),
+        AexnCreateContractMutation.new(:aex9, pk3, meta_info3, {12, 0}, create_txi3)
       ])
 
       assert %{
