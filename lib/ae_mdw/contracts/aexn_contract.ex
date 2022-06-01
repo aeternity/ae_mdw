@@ -6,13 +6,9 @@ defmodule AeMdw.Contracts.AexnContract do
   import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1]
 
   alias AeMdw.Contract
+  alias AeMdw.Db.Model
   alias AeMdw.Node.Db, as: NodeDb
   alias AeMdw.Log
-
-  @type aexn_type :: :aex9 | :aex141
-  @type aex9_meta_info :: {String.t(), String.t(), integer()}
-  @type aex141_meta_info :: {String.t(), String.t(), String.t(), atom()}
-  @type aexn_meta_info :: aex9_meta_info() | aex141_meta_info()
 
   @typep pubkey :: NodeDb.pubkey()
 
@@ -45,7 +41,7 @@ defmodule AeMdw.Contracts.AexnContract do
 
   def is_aex141?(_no_fcode), do: false
 
-  @spec call_meta_info(pubkey()) :: {:ok, aexn_meta_info()} | :not_found
+  @spec call_meta_info(pubkey()) :: {:ok, Model.aexn_meta_info()} | :not_found
   def call_meta_info(contract_pk) do
     with {:ok, {:tuple, meta_info_tuple}} <- call_contract(contract_pk, "meta_info", []) do
       {:ok, meta_info_tuple}
