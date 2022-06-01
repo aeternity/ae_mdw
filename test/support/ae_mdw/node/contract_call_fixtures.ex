@@ -1,9 +1,10 @@
 defmodule AeMdw.Node.ContractCallFixtures do
   @moduledoc false
 
-  @type fname() :: String.t()
-  @type fun_arg_res() :: map()
-  @type call_record() :: tuple()
+  @typep pubkey :: AeMdw.Node.Db.pubkey()
+  @type fname :: String.t()
+  @type fun_arg_res :: map()
+  @type call_record :: tuple()
 
   @spec fun_args_res(fname()) :: %{arguments: list(), function: fname(), result: map()}
   def fun_args_res("mint") do
@@ -339,6 +340,35 @@ defmodule AeMdw.Node.ContractCallFixtures do
           <<65, 110, 123, 208, 148, 244, 99, 197, 242, 18, 123, 8, 185, 211, 87, 178, 24, 148,
             241, 255, 75, 209, 104, 190, 48, 36, 223, 251, 112, 185, 157, 10>>
         ], "16"}
+     ]}
+  end
+
+  @spec call_rec(fname(), pubkey(), AeMdw.Txs.txi()) :: call_record()
+  def call_rec("no_log", contract_pk, txi) do
+    {:call,
+     <<7, 3, 220, 129, 25, 69, 185, 205, 148, 53, 54, 115, 161, 72, 225, 149, 238, 18, 80, 50,
+       185, 167, 125, 140, 71, 128, 149, 100, 229, 81, 223, 196>>, {:id, :account, <<1::256>>},
+     41, txi, {:id, :contract, contract_pk}, 1_000_000_000, 22_929,
+     <<159, 2, 160, 111, 0, 117, 208, 6, 235, 44, 43, 240, 108, 173, 15, 111, 153, 4, 169, 116,
+       46, 60, 160, 41, 181, 143, 70, 46, 129, 67, 189, 118, 173, 96, 204>>, :ok, []}
+  end
+
+  @spec call_rec(fname(), pubkey(), pubkey(), AeMdw.Txs.txi()) :: call_record()
+  def call_rec("remote_log", contract_pk, remote_pk, txi) do
+    {:call,
+     <<7, 3, 220, 129, 25, 69, 185, 205, 148, 53, 54, 115, 161, 72, 225, 149, 238, 18, 80, 50,
+       185, 167, 125, 140, 71, 128, 149, 100, 229, 81, 223, 196>>, {:id, :account, <<1::256>>},
+     41, txi, {:id, :contract, contract_pk}, 1_000_000_000, 22_929,
+     <<159, 2, 160, 111, 0, 117, 208, 6, 235, 44, 43, 240, 108, 173, 15, 111, 153, 4, 169, 116,
+       46, 60, 160, 41, 181, 143, 70, 46, 129, 67, 189, 118, 173, 96, 204>>, :ok,
+     [
+       {remote_pk,
+        [
+          <<165, 104, 218, 83, 242, 206, 42, 48, 134, 199, 10, 251, 46, 174, 228, 68, 181, 162,
+            20, 101, 150, 189, 240, 53, 189, 254, 113, 142, 221, 171, 31, 107>>,
+          <<83, 107, 86, 97, 199, 199, 69, 232, 131, 106, 241, 190, 181, 55, 62, 215, 254, 27,
+            189, 54, 54, 3, 152, 10, 245, 52, 84, 143, 225, 73, 60, 7>>
+        ], "1"}
      ]}
   end
 end

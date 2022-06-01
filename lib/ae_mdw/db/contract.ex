@@ -168,7 +168,7 @@ defmodule AeMdw.Db.Contract do
     State.put(state, Model.ContractCall, m_call)
   end
 
-  @spec logs_write(state(), block_index() | nil, txi(), txi(), Contract.call()) :: state()
+  @spec logs_write(state(), block_index(), txi(), txi(), Contract.call()) :: state()
   def logs_write(state, block_index, create_txi, txi, call_rec) do
     contract_pk = :aect_call.contract_pubkey(call_rec)
     raw_logs = :aect_call.log(call_rec)
