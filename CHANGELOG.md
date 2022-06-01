@@ -1,5 +1,18 @@
 # Changelog
 
+### [1.10.1](https://www.github.com/aeternity/ae_mdw/compare/v1.10.0...v1.10.1) (2022-06-01)
+
+
+### Bug Fixes
+
+* handle update aex9 state on contract create logs ([#698](https://www.github.com/aeternity/ae_mdw/issues/698)) ([c120449](https://www.github.com/aeternity/ae_mdw/commit/c120449a0c86ba77820224c3bdd14eb4ecb6a460))
+* retrieve block hash for name ptr_resolve from state ([#700](https://www.github.com/aeternity/ae_mdw/issues/700)) ([9fec9bf](https://www.github.com/aeternity/ae_mdw/commit/9fec9bf5a929480e9fe66a53898f8fc083ccde6e))
+
+
+### Miscellaneous
+
+* add independent static swagger v1 and v2 files ([#697](https://www.github.com/aeternity/ae_mdw/issues/697)) ([739b80b](https://www.github.com/aeternity/ae_mdw/commit/739b80bbedf8b77910df79b2736d4836b52367b1))
+
 ## [1.10.0](https://www.github.com/aeternity/ae_mdw/compare/v1.9.2...v1.10.0) (2022-05-27)
 
 
