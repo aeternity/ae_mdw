@@ -1,7 +1,9 @@
 defmodule AeMdw.Contracts.AexnContract do
   @moduledoc """
-  Functions to
+  AEX-N detection and common calls to interact with the contract.
   """
+
+  import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1]
 
   alias AeMdw.Contract
   alias AeMdw.Node.Db, as: NodeDb
@@ -33,7 +35,7 @@ defmodule AeMdw.Contracts.AexnContract do
   def is_aex141?(pubkey) when is_binary(pubkey) do
     with {:ok, {type_info, _compiler_vsn, _source_hash}} <- Contract.get_info(pubkey),
          true <- has_all_aex141_signatures?(type_info),
-         {:ok, extensions} <- call_extensions(pubkey) do
+         {:ok, extensions} <- call_contract(pubkey, "extensions") do
       has_valid_aex141_extensions?(extensions, type_info)
     else
       _error_or_false ->
@@ -45,33 +47,25 @@ defmodule AeMdw.Contracts.AexnContract do
 
   @spec call_meta_info(pubkey()) :: {:ok, aexn_meta_info()} | :not_found
   def call_meta_info(contract_pk) do
-    top_hash = NodeDb.top_height_hash(false)
-
-    case Contract.call_contract(contract_pk, top_hash, "meta_info", []) do
-      {:ok, {:tuple, meta_info_tuple}} ->
-        {:ok, meta_info_tuple}
-
-      {:error, _call_error} ->
-        Log.warn(
-          "aexn_meta_info not available for #{
-            :aeser_api_encoder.encode(:contract_pubkey, contract_pk)
-          }"
-        )
-
-        :not_found
+    with {:ok, {:tuple, meta_info_tuple}} <- call_contract(contract_pk, "meta_info", []) do
+      {:ok, meta_info_tuple}
     end
   end
 
   #
   # Private functions
   #
-  defp call_extensions(contract_pk) do
-    Contract.call_contract(
-      contract_pk,
-      NodeDb.top_height_hash(false),
-      "extensions",
-      []
-    )
+  defp call_contract(contract_pk, method, args \\ []) do
+    top_hash = NodeDb.top_height_hash(false)
+
+    case Contract.call_contract(contract_pk, top_hash, method, args) do
+      {:ok, return} ->
+        {:ok, return}
+
+      {:error, _call_error} ->
+        Log.warn("#{method} call error for #{enc_ct(contract_pk)}")
+        :not_found
+    end
   end
 
   defp has_all_signatures?(aexn_signatures, functions) do
