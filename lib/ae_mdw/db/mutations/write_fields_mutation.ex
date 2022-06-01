@@ -18,7 +18,7 @@ defmodule AeMdw.Db.WriteFieldsMutation do
 
   @opaque t() :: %__MODULE__{
             type: Node.tx_type(),
-            tx: Model.tx(),
+            tx: Node.tx(),
             block_index: Blocks.block_index(),
             txi: Txs.txi()
           }
