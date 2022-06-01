@@ -26,7 +26,7 @@ defmodule AeMdwWeb.Router do
   scope "/swagger" do
     forward "/", PhoenixSwagger.Plug.SwaggerUI,
       otp_app: :ae_mdw,
-      swagger_file: "swagger.json",
+      swagger_file: "swagger_v1.yaml",
       disable_validator: true
   end
 
@@ -71,6 +71,13 @@ defmodule AeMdwWeb.Router do
       get "/oracles", OracleController, :oracles
 
       get "/deltastats", StatsController, :delta_stats
+
+      scope "/swagger" do
+        forward "/", SwaggerForwardV2,
+          otp_app: :ae_mdw,
+          swagger_file: "swagger_v2.yaml",
+          disable_validator: true
+      end
     end
 
     Enum.each(@shared_routes, fn {path, controller, fun} ->
@@ -148,20 +155,5 @@ defmodule AeMdwWeb.Router do
     get "/totalstats/:scope_type/:range", StatsController, :total_stats
 
     match :*, "/*path", UtilController, :no_route
-  end
-
-  @spec swagger_info() :: term()
-  def swagger_info do
-    %{
-      basePath: "/",
-      schemes: ["http"],
-      consumes: ["application/json"],
-      produces: ["application/json"],
-      info: %{
-        version: "1.0",
-        title: "Aeternity Middleware",
-        description: "API for [Aeternity Middleware](https://github.com/aeternity/ae_mdw)"
-      }
-    }
   end
 end

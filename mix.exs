@@ -11,7 +11,7 @@ defmodule AeMdw.MixProject do
         warnings_as_errors: true
       ],
       aliases: aliases(),
-      compilers: [:phoenix, :gettext] ++ Mix.compilers() ++ [:phoenix_swagger],
+      compilers: [:phoenix, :gettext] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       xref: [

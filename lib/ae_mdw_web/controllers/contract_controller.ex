@@ -1,6 +1,5 @@
 defmodule AeMdwWeb.ContractController do
   use AeMdwWeb, :controller
-  use PhoenixSwagger
 
   alias AeMdw.Contracts
   alias AeMdwWeb.Plugs.PaginatedPlug

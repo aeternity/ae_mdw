@@ -1,6 +1,5 @@
 defmodule AeMdwWeb.Plugs.PaginatedPlug do
-  @moduledoc """
-  """
+  @moduledoc false
 
   import Plug.Conn
 

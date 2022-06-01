@@ -1,6 +1,5 @@
 defmodule AeMdwWeb.TransferController do
   use AeMdwWeb, :controller
-  use PhoenixSwagger
 
   alias AeMdw.Transfers
   alias AeMdwWeb.Plugs.PaginatedPlug

@@ -65,13 +65,6 @@ config :ae_mdw, AeWebsocket.Websocket.SocketHandler,
     duration: 2000
   ]
 
-config :ae_mdw, :phoenix_swagger,
-  swagger_files: %{
-    "priv/static/swagger.json" => [
-      router: AeMdwWeb.Router
-    ]
-  }
-
 config :phoenix_swagger, json_library: Jason
 
 # Configures Elixir's Logger
