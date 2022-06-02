@@ -276,12 +276,12 @@ defmodule AeMdwWeb.Aex9Controller do
     end
   end
 
-  defp balance_reply(conn, contract_pk, account_pk) do
+  defp balance_reply(%Conn{assigns: %{state: state}} = conn, contract_pk, account_pk) do
     {amount, {type, height, hash}} =
       if top?(conn) do
         DBN.aex9_balance(contract_pk, account_pk, top?(conn))
       else
-        case Aex9.fetch_amount_and_keyblock(contract_pk, account_pk) do
+        case Aex9.fetch_amount_and_keyblock(state, contract_pk, account_pk) do
           {:ok, {amount, kb_height_hash}} ->
             {amount, kb_height_hash}
 

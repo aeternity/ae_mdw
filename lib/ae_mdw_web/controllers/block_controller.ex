@@ -18,14 +18,14 @@ defmodule AeMdwWeb.BlockController do
   Endpoint for block info by hash or kbi.
   """
   @spec block(Conn.t(), map()) :: Conn.t()
-  def block(conn, %{"hash_or_kbi" => hash_or_kbi} = params) do
+  def block(%Conn{assigns: %{state: state}} = conn, %{"hash_or_kbi" => hash_or_kbi} = params) do
     case Util.parse_int(hash_or_kbi) do
       {:ok, _kbi} ->
         blocki(conn, Map.put(params, "kbi", hash_or_kbi))
 
       :error ->
         with {:ok, block_hash} <- Validate.id(hash_or_kbi),
-             {:ok, block} <- Blocks.fetch(block_hash) do
+             {:ok, block} <- Blocks.fetch(state, block_hash) do
           json(conn, block)
         end
     end
@@ -35,11 +35,11 @@ defmodule AeMdwWeb.BlockController do
   Endpoint for block info by kbi.
   """
   @spec blocki(Conn.t(), map()) :: Conn.t()
-  def blocki(conn, %{"kbi" => kbi} = params) do
+  def blocki(%Conn{assigns: %{state: state}} = conn, %{"kbi" => kbi} = params) do
     mbi = Map.get(params, "mbi", "-1")
 
     with {:ok, block_index} <- Validate.block_index(kbi <> "/" <> mbi),
-         {:ok, block} <- Blocks.fetch(block_index) do
+         {:ok, block} <- Blocks.fetch(state, block_index) do
       json(conn, block)
     end
   end
@@ -49,11 +49,15 @@ defmodule AeMdwWeb.BlockController do
   """
   @spec blocks_v1(Conn.t(), map()) :: Conn.t()
   def blocks_v1(%Conn{assigns: assigns} = conn, _params) do
-    %{pagination: {direction, _is_reversed?, limit, _has_cursor?}, cursor: cursor, scope: scope} =
-      assigns
+    %{
+      state: state,
+      pagination: {direction, _is_reversed?, limit, _has_cursor?},
+      cursor: cursor,
+      scope: scope
+    } = assigns
 
     {prev_cursor, blocks, next_cursor} =
-      Blocks.fetch_blocks(direction, scope, cursor, limit, false)
+      Blocks.fetch_blocks(state, direction, scope, cursor, limit, false)
 
     WebUtil.paginate(conn, prev_cursor, blocks, next_cursor)
   end
@@ -63,11 +67,15 @@ defmodule AeMdwWeb.BlockController do
   """
   @spec blocks(Conn.t(), map()) :: Conn.t()
   def blocks(%Conn{assigns: assigns} = conn, _params) do
-    %{pagination: {direction, _is_reversed?, limit, _has_cursor?}, cursor: cursor, scope: scope} =
-      assigns
+    %{
+      state: state,
+      pagination: {direction, _is_reversed?, limit, _has_cursor?},
+      cursor: cursor,
+      scope: scope
+    } = assigns
 
     {prev_cursor, blocks, next_cursor} =
-      Blocks.fetch_blocks(direction, scope, cursor, limit, true)
+      Blocks.fetch_blocks(state, direction, scope, cursor, limit, true)
 
     WebUtil.paginate(conn, prev_cursor, blocks, next_cursor)
   end

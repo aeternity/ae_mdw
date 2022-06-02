@@ -6,6 +6,7 @@ defmodule AeMdw.AuctionBids do
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
+  alias AeMdw.Db.State
   alias AeMdw.Database
   alias AeMdw.Collection
   alias AeMdw.Names
@@ -27,49 +28,55 @@ defmodule AeMdw.AuctionBids do
   @table Model.AuctionBid
   @table_expiration Model.AuctionExpiration
 
-  @spec fetch!(plain_name(), boolean()) :: auction_bid()
-  def fetch!(plain_name, expand?) do
-    {:ok, auction_bid} = fetch(plain_name, expand?)
+  @spec fetch!(State.t(), plain_name(), boolean()) :: auction_bid()
+  def fetch!(state, plain_name, expand?) do
+    {:ok, auction_bid} = fetch(state, plain_name, expand?)
 
     auction_bid
   end
 
-  @spec fetch(plain_name(), boolean()) :: {:ok, auction_bid()} | :not_found
-  def fetch(plain_name, expand?) do
-    case Database.fetch(@table, plain_name) do
-      {:ok, auction_bid} -> {:ok, render(auction_bid, expand?)}
+  @spec fetch(State.t(), plain_name(), boolean()) :: {:ok, auction_bid()} | :not_found
+  def fetch(state, plain_name, expand?) do
+    case State.get(state, @table, plain_name) do
+      {:ok, auction_bid} -> {:ok, render(state, auction_bid, expand?)}
       :not_found -> :not_found
     end
   end
 
-  @spec fetch_auctions(pagination(), order_by(), cursor() | nil, boolean()) ::
+  @spec fetch_auctions(State.t(), pagination(), order_by(), cursor() | nil, boolean()) ::
           {cursor() | nil, [auction_bid()], cursor() | nil}
-  def fetch_auctions(pagination, :name, cursor, expand?) do
+  def fetch_auctions(state, pagination, :name, cursor, expand?) do
     {prev_cursor, auction_bids, next_cursor} =
-      Collection.paginate(&Collection.stream(@table, &1, nil, cursor), pagination)
+      Collection.paginate(&Collection.stream(state, @table, &1, nil, cursor), pagination)
 
-    {prev_cursor, Enum.map(auction_bids, &fetch!(&1, expand?)), next_cursor}
+    {prev_cursor, Enum.map(auction_bids, &fetch!(state, &1, expand?)), next_cursor}
   end
 
-  def fetch_auctions(pagination, :expiration, cursor, expand?) do
+  def fetch_auctions(state, pagination, :expiration, cursor, expand?) do
     cursor = deserialize_exp_cursor(cursor)
 
     {prev_cursor, exp_keys, next_cursor} =
-      Collection.paginate(&Collection.stream(@table_expiration, &1, nil, cursor), pagination)
+      Collection.paginate(
+        &Collection.stream(state, @table_expiration, &1, nil, cursor),
+        pagination
+      )
 
-    auction_bids = Enum.map(exp_keys, fn {_exp, plain_name} -> fetch!(plain_name, expand?) end)
+    auction_bids =
+      Enum.map(exp_keys, fn {_exp, plain_name} -> fetch!(state, plain_name, expand?) end)
 
     {serialize_exp_cursor(prev_cursor), auction_bids, serialize_exp_cursor(next_cursor)}
   end
 
-  @spec auctions_stream(prefix(), direction(), names_scope(), cursor()) :: Enumerable.t()
-  def auctions_stream(prefix, direction, scope, cursor) do
-    @table
-    |> Collection.stream(direction, scope, cursor)
+  @spec auctions_stream(State.t(), prefix(), direction(), names_scope(), cursor()) ::
+          Enumerable.t()
+  def auctions_stream(state, prefix, direction, scope, cursor) do
+    state
+    |> Collection.stream(@table, direction, scope, cursor)
     |> Stream.take_while(&String.starts_with?(&1, prefix))
   end
 
   defp render(
+         state,
          Model.auction_bid(
            index: plain_name,
            expire_height: expire_height,
@@ -77,7 +84,7 @@ defmodule AeMdw.AuctionBids do
          ),
          _expand?
        ) do
-    last_bid = Txs.fetch!(bi_txi_txi(last_bid))
+    last_bid = Txs.fetch!(state, bi_txi_txi(last_bid))
     name_ttl = Name.expire_after(expire_height)
 
     %{
@@ -89,7 +96,7 @@ defmodule AeMdw.AuctionBids do
         last_bid: put_in(last_bid, ["tx", "ttl"], name_ttl),
         bids: Enum.map(bids, &bi_txi_txi/1)
       },
-      previous: Names.fetch_previous_list(plain_name)
+      previous: Names.fetch_previous_list(state, plain_name)
     }
   end
 

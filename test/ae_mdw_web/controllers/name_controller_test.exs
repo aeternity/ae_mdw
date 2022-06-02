@@ -34,13 +34,9 @@ defmodule AeMdwWeb.NameControllerTest do
              Tx, _key ->
                {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
 
-             AuctionBid, _key ->
-               :not_found
-
              ActiveNameExpiration, _key ->
                :not_found
-           end,
-           fetch: fn
+
              AuctionBid, _plain_name ->
                :not_found
 
@@ -55,28 +51,16 @@ defmodule AeMdwWeb.NameControllerTest do
                   revoke: {{0, 0}, 0},
                   auction_timeout: 1
                 )}
-           end,
-           fetch!: fn
-             ActiveName, _plain_name ->
-               Model.name(
-                 active: true,
-                 expire: 1,
-                 claims: [{{0, 0}, 0}],
-                 updates: [],
-                 transfers: [],
-                 revoke: {{0, 0}, 0},
-                 auction_timeout: 1
-               )
            end
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {Name, [],
          [
-           pointers: fn _mnme -> %{} end,
-           ownership: fn _mname -> %{current: nil, original: nil} end
+           pointers: fn _state, _mname -> %{} end,
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end
          ]}
       ] do
         assert %{"data" => names, "next" => next} =
@@ -106,18 +90,19 @@ defmodule AeMdwWeb.NameControllerTest do
            first_key: fn ActiveName -> {:ok, TS.plain_name(0)} end,
            next_key: fn ActiveName, _exp_key -> {:ok, TS.plain_name(1)} end,
            prev_key: fn ActiveName, nil -> :none end,
-           fetch!: fn ActiveName, _plain_name ->
-             Model.name(
-               active: true,
-               expire: 1,
-               claims: [{{0, 0}, 0}],
-               updates: [],
-               transfers: [],
-               revoke: {{0, 0}, 0},
-               auction_timeout: 1
-             )
-           end,
-           fetch: fn
+           get: fn
+             ActiveName, _plain_name ->
+               {:ok,
+                Model.name(
+                  active: true,
+                  expire: 1,
+                  claims: [{{0, 0}, 0}],
+                  updates: [],
+                  transfers: [],
+                  revoke: {{0, 0}, 0},
+                  auction_timeout: 1
+                )}
+
              Tx, _key ->
                {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
 
@@ -127,12 +112,12 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {Name, [],
          [
-           pointers: fn _mnme -> %{} end,
-           ownership: fn _mname -> %{current: nil, original: nil} end
+           pointers: fn _state, _mname -> %{} end,
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end
          ]}
       ] do
         assert %{"data" => names} =
@@ -172,18 +157,19 @@ defmodule AeMdwWeb.NameControllerTest do
            next_key: fn ActiveNameExpiration, _key -> :none end,
            last_key: fn ActiveNameExpiration -> {:ok, key1} end,
            prev_key: fn ActiveNameExpiration, ^key1 -> :none end,
-           fetch!: fn ActiveName, _plain_name ->
-             Model.name(
-               active: true,
-               expire: 1,
-               claims: [{{0, 0}, 0}],
-               updates: [{{1, 2}, 3}],
-               transfers: [],
-               revoke: {{0, 0}, 0},
-               auction_timeout: 1
-             )
-           end,
-           fetch: fn
+           get: fn
+             ActiveName, _plain_name ->
+               {:ok,
+                Model.name(
+                  active: true,
+                  expire: 1,
+                  claims: [{{0, 0}, 0}],
+                  updates: [{{1, 2}, 3}],
+                  transfers: [],
+                  revoke: {{0, 0}, 0},
+                  auction_timeout: 1
+                )}
+
              Tx, _key ->
                {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
 
@@ -193,14 +179,14 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash ->
+           fetch!: fn _state, _hash ->
              %{"tx" => %{"tx" => %{"tx" => %{"pointers" => [], "account_id" => <<>>}}}}
            end
          ]},
         {Name, [],
          [
-           pointers: fn _mnme -> %{} end,
-           ownership: fn _mname -> %{current: nil, original: nil} end
+           pointers: fn _state, _mname -> %{} end,
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end
          ]}
       ] do
         assert %{"data" => names} =
@@ -222,36 +208,37 @@ defmodule AeMdwWeb.NameControllerTest do
            last_key: fn InactiveNameExpiration -> {:ok, TS.name_expiration_key(0)} end,
            next_key: fn InactiveNameExpiration, _exp_key -> {:ok, TS.name_expiration_key(1)} end,
            prev_key: fn InactiveNameExpiration, _exp_key -> {:ok, TS.name_expiration_key(1)} end,
-           fetch: fn
+           get: fn
              Tx, _key ->
                {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
 
              AuctionBid, _key ->
                :not_found
-           end,
-           fetch!: fn InactiveName, _plain_name ->
-             Model.name(
-               active: true,
-               expire: 1,
-               claims: [{{0, 0}, 0}],
-               updates: [],
-               transfers: [],
-               revoke: {{0, 0}, 0},
-               auction_timeout: 1
-             )
-           end,
-           get: fn
-             InactiveNameExpiration, _key -> :ok
+
+             InactiveName, _plain_name ->
+               {:ok,
+                Model.name(
+                  active: true,
+                  expire: 1,
+                  claims: [{{0, 0}, 0}],
+                  updates: [],
+                  transfers: [],
+                  revoke: {{0, 0}, 0},
+                  auction_timeout: 1
+                )}
+
+             InactiveNameExpiration, _key ->
+               :ok
            end
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {Name, [],
          [
-           pointers: fn _mnme -> %{} end,
-           ownership: fn _mname -> %{current: nil, original: nil} end
+           pointers: fn _state, _mname -> %{} end,
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end
          ]}
       ] do
         assert %{"data" => names, "next" => next} =
@@ -279,18 +266,19 @@ defmodule AeMdwWeb.NameControllerTest do
            last_key: fn InactiveNameExpiration -> {:ok, TS.name_expiration_key(0)} end,
            next_key: fn InactiveNameExpiration, _exp_key -> :none end,
            prev_key: fn InactiveNameExpiration, _exp_key -> {:ok, TS.name_expiration_key(0)} end,
-           fetch!: fn InactiveName, _plain_name ->
-             Model.name(
-               active: true,
-               expire: 1,
-               claims: [{{0, 0}, 0}],
-               updates: [],
-               transfers: [],
-               revoke: {{0, 0}, 0},
-               auction_timeout: 1
-             )
-           end,
-           fetch: fn
+           get: fn
+             InactiveName, _plain_name ->
+               {:ok,
+                Model.name(
+                  active: true,
+                  expire: 1,
+                  claims: [{{0, 0}, 0}],
+                  updates: [],
+                  transfers: [],
+                  revoke: {{0, 0}, 0},
+                  auction_timeout: 1
+                )}
+
              Tx, _key ->
                {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
 
@@ -300,14 +288,14 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {
           Name,
           [],
           [
-            pointers: fn _mnme -> %{} end,
-            ownership: fn _mname -> %{current: nil, original: nil} end
+            pointers: fn _state, _mnme -> %{} end,
+            ownership: fn _state, _mname -> %{current: nil, original: nil} end
           ]
         }
       ] do
@@ -333,18 +321,19 @@ defmodule AeMdwWeb.NameControllerTest do
            first_key: fn InactiveName -> {:ok, TS.plain_name(0)} end,
            next_key: fn InactiveName, plain_name -> {:ok, "a#{plain_name}"} end,
            prev_key: fn InactiveName, _plain_name -> {:ok, "b"} end,
-           fetch!: fn InactiveName, _plain_name ->
-             Model.name(
-               active: true,
-               expire: 1,
-               claims: [{{0, 0}, 0}],
-               updates: [],
-               transfers: [],
-               revoke: {{0, 0}, 0},
-               auction_timeout: 1
-             )
-           end,
-           fetch: fn
+           get: fn
+             InactiveName, _plain_name ->
+               {:ok,
+                Model.name(
+                  active: true,
+                  expire: 1,
+                  claims: [{{0, 0}, 0}],
+                  updates: [],
+                  transfers: [],
+                  revoke: {{0, 0}, 0},
+                  auction_timeout: 1
+                )}
+
              Tx, _key ->
                {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
 
@@ -354,12 +343,12 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {Name, [],
          [
-           pointers: fn _mnme -> %{} end,
-           ownership: fn _mname -> %{current: nil, original: nil} end
+           pointers: fn _state, _mnme -> %{} end,
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end
          ]}
       ] do
         assert %{"data" => names} =
@@ -405,8 +394,7 @@ defmodule AeMdwWeb.NameControllerTest do
 
              AuctionExpiration, {_height, ^plain_name} = key ->
                {:ok, Model.expiration(index: key)}
-           end,
-           fetch: fn
+
              AuctionBid, ^plain_name ->
                {:ok,
                 Model.auction_bid(
@@ -415,9 +403,6 @@ defmodule AeMdwWeb.NameControllerTest do
                   expire_height: 0,
                   bids: [{{2, 3}, 4}]
                 )}
-
-             InactiveName, ^plain_name ->
-               :not_found
            end,
            next_key: fn
              AuctionExpiration, _key -> {:ok, expiration_key}
@@ -429,7 +414,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {DbUtil, [],
          [
@@ -459,7 +444,7 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Database, [],
          [
-           fetch: fn
+           get: fn
              InactiveName, ^plain_name ->
                :not_found
 
@@ -490,7 +475,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {DbUtil, [],
          [
@@ -517,7 +502,7 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Database, [],
          [
-           fetch: fn
+           get: fn
              InactiveName, ^plain_name ->
                :not_found
 
@@ -535,7 +520,7 @@ defmodule AeMdwWeb.NameControllerTest do
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {DbUtil, [],
          [
@@ -585,27 +570,31 @@ defmodule AeMdwWeb.NameControllerTest do
            prev_key: fn ActiveNameExpiration, {exp, plain_name} ->
              {:ok, {exp - 1, "a#{plain_name}"}}
            end,
-           fetch!: fn _tab, _plain_name ->
-             Model.name(
-               active: true,
-               expire: 1,
-               claims: [{{0, 0}, 0}],
-               updates: [],
-               transfers: [],
-               revoke: {{0, 0}, 0},
-               auction_timeout: 1
-             )
-           end,
-           fetch: fn AuctionBid, _key -> :not_found end
+           get: fn
+             ActiveName, _plain_name ->
+               {:ok,
+                Model.name(
+                  active: true,
+                  expire: 1,
+                  claims: [{{0, 0}, 0}],
+                  updates: [],
+                  transfers: [],
+                  revoke: {{0, 0}, 0},
+                  auction_timeout: 1
+                )}
+
+             AuctionBid, _key ->
+               :not_found
+           end
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {Name, [],
          [
-           pointers: fn _mnme -> %{} end,
-           ownership: fn _mname -> %{current: nil, original: nil} end
+           pointers: fn _state, _mnme -> %{} end,
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end
          ]}
       ] do
         assert %{"data" => names, "next" => _next} =
@@ -631,28 +620,32 @@ defmodule AeMdwWeb.NameControllerTest do
              ActiveNameExpiration, {exp, plain_name} ->
                {:ok, {exp - 1, "a#{plain_name}"}}
            end,
-           fetch!: fn ActiveName, _plain_name ->
-             Model.name(
-               active: true,
-               expire: 1,
-               claims: [{{0, 0}, 0}],
-               updates: [],
-               transfers: [],
-               revoke: {{0, 0}, 0},
-               auction_timeout: 1
-             )
+           get: fn
+             AuctionBid, _key ->
+               :not_found
+
+             ActiveName, _plain_name ->
+               {:ok,
+                Model.name(
+                  active: true,
+                  expire: 1,
+                  claims: [{{0, 0}, 0}],
+                  updates: [],
+                  transfers: [],
+                  revoke: {{0, 0}, 0},
+                  auction_timeout: 1
+                )}
            end,
-           fetch: fn AuctionBid, _key -> :not_found end,
            last_key: fn InactiveNameExpiration, nil -> nil end
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {Name, [],
          [
-           pointers: fn _mnme -> %{} end,
-           ownership: fn _mname -> %{current: nil, original: nil} end
+           pointers: fn _state, _mname -> %{} end,
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end
          ]}
       ] do
         assert %{"data" => names} =
@@ -679,27 +672,31 @@ defmodule AeMdwWeb.NameControllerTest do
              ActiveName -> {:ok, first_key}
            end,
            next_key: fn ActiveName, key -> {:ok, "a#{key}"} end,
-           fetch!: fn ActiveName, _plain_name ->
-             Model.name(
-               active: true,
-               expire: 1,
-               claims: [{{0, 0}, 0}],
-               updates: [],
-               transfers: [],
-               revoke: {{0, 0}, 0},
-               auction_timeout: 1
-             )
-           end,
-           fetch: fn AuctionBid, _key -> :not_found end
+           get: fn
+             ActiveName, _plain_name ->
+               {:ok,
+                Model.name(
+                  active: true,
+                  expire: 1,
+                  claims: [{{0, 0}, 0}],
+                  updates: [],
+                  transfers: [],
+                  revoke: {{0, 0}, 0},
+                  auction_timeout: 1
+                )}
+
+             AuctionBid, _key ->
+               :not_found
+           end
          ]},
         {Txs, [],
          [
-           fetch!: fn _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {Name, [],
          [
-           pointers: fn _mnme -> %{} end,
-           ownership: fn _mname -> %{current: nil, original: nil} end
+           pointers: fn _state, _mnme -> %{} end,
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end
          ]}
       ] do
         assert %{"data" => names, "next" => _next} =
@@ -737,12 +734,14 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Name, [],
          [
-           locate: fn ^name ->
+           locate: fn _state, ^name ->
              {Model.name(index: name, active: true, expire: 0), Model.ActiveName}
            end,
-           locate_bid: fn ^name -> nil end,
-           pointers: fn _name_model -> %{} end,
-           ownership: fn _name_model -> %{original: own_original, current: own_current} end
+           locate_bid: fn _state, ^name -> nil end,
+           pointers: fn _state, _name_model -> %{} end,
+           ownership: fn _state, _name_model ->
+             %{original: own_original, current: own_current}
+           end
          ]}
       ] do
         assert %{
@@ -764,12 +763,12 @@ defmodule AeMdwWeb.NameControllerTest do
         {Name, [],
          [
            plain_name: fn ^hash_id -> {:ok, name} end,
-           locate: fn ^name ->
+           locate: fn _state, ^name ->
              {Model.name(index: name, active: true, expire: 0), Model.ActiveName}
            end,
-           locate_bid: fn ^name -> nil end,
-           pointers: fn _name_model -> %{} end,
-           ownership: fn _name -> %{original: <<>>, current: <<>>} end
+           locate_bid: fn _state, ^name -> nil end,
+           pointers: fn _state, _name_model -> %{} end,
+           ownership: fn _state, _name -> %{original: <<>>, current: <<>>} end
          ]}
       ] do
         assert %{"active" => true, "name" => ^name} =
@@ -781,7 +780,7 @@ defmodule AeMdwWeb.NameControllerTest do
       name = "no--such--name--in--the--chain.chain"
       error = "not found: #{name}"
 
-      with_mocks [{Name, [], [locate: fn ^name -> nil end]}] do
+      with_mocks [{Name, [], [locate: fn _state, ^name -> nil end]}] do
         assert %{"error" => ^error} = conn |> get("/v2/names/#{name}") |> json_response(404)
       end
     end
@@ -795,10 +794,10 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Name, [],
          [
-           locate: fn ^id ->
+           locate: fn _state, ^id ->
              {Model.name(index: id, active: true, expire: 0), Model.ActiveName}
            end,
-           pointers: fn _name_model -> some_reply end
+           pointers: fn _state, _name_model -> some_reply end
          ]}
       ] do
         assert ^some_reply = conn |> get("/v2/names/#{id}/pointers") |> json_response(200)
@@ -809,7 +808,7 @@ defmodule AeMdwWeb.NameControllerTest do
       id = "no--such--name--in--the--chain.chain"
       error = "not found: #{id}"
 
-      with_mocks [{Name, [], [locate: fn ^id -> nil end]}] do
+      with_mocks [{Name, [], [locate: fn _state, ^id -> nil end]}] do
         assert %{"error" => ^error} =
                  conn |> get("/v2/names/#{id}/pointers") |> json_response(404)
       end
@@ -824,7 +823,7 @@ defmodule AeMdwWeb.NameControllerTest do
       inactive_pointees = [%{"foo" => "inactive"}]
 
       with_mocks [
-        {Name, [], [pointees: fn ^name_id -> {active_pointees, inactive_pointees} end]}
+        {Name, [], [pointees: fn _state, ^name_id -> {active_pointees, inactive_pointees} end]}
       ] do
         assert %{"active" => ^active_pointees, "inactive" => ^inactive_pointees} =
                  conn
@@ -847,7 +846,7 @@ defmodule AeMdwWeb.NameControllerTest do
       owner_id = Validate.id!(id)
 
       with_mocks [
-        {Name, [], [owned_by: fn ^owner_id, true -> %{names: [], top_bids: []} end]}
+        {Name, [], [owned_by: fn _state, ^owner_id, true -> %{names: [], top_bids: []} end]}
       ] do
         assert %{"active" => [], "top_bid" => []} =
                  conn |> get("/names/owned_by/#{id}") |> json_response(200)
@@ -859,7 +858,7 @@ defmodule AeMdwWeb.NameControllerTest do
       owner_id = Validate.id!(id)
 
       with_mocks [
-        {Name, [], [owned_by: fn ^owner_id, false -> %{names: []} end]}
+        {Name, [], [owned_by: fn _state, ^owner_id, false -> %{names: []} end]}
       ] do
         assert %{"inactive" => []} =
                  conn |> get("/names/owned_by/#{id}?active=false") |> json_response(200)

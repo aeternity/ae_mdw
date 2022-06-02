@@ -5,6 +5,7 @@ defmodule AeMdw.Db.Util do
   alias AeMdw.Db.Model
   alias AeMdw.Database
   alias AeMdw.Db.RocksDbCF
+  alias AeMdw.Db.State
   alias AeMdw.Txs
 
   require Logger
@@ -30,6 +31,8 @@ defmodule AeMdw.Db.Util do
 
   def read_tx!(txi),
     do: read_tx(txi) |> one!
+
+  def read_tx!(state, txi), do: State.fetch!(state, Model.Tx, txi)
 
   def read_block({_, _} = bi) do
     case RocksDbCF.read_block(bi) do
@@ -64,6 +67,13 @@ defmodule AeMdw.Db.Util do
 
   def last_gen(),
     do: ensure_key!(Model.Block, :last) |> (fn {h, _mbi} -> h end).()
+
+  def last_gen(state) do
+    case State.prev(state, Model.Block, nil) do
+      {:ok, {height, _mbi}} -> height
+      :none -> raise RuntimeError, message: "can't get last key for table Model.Block"
+    end
+  end
 
   def prev(tab, key) do
     case Database.prev_key(tab, key) do
@@ -211,28 +221,28 @@ defmodule AeMdw.Db.Util do
     end
   end
 
-  @spec gen_to_txi(Blocks.height()) :: Txs.txi()
-  def gen_to_txi(gen) do
-    case read_block({gen, -1}) do
-      [Model.block(tx_index: txi)] ->
+  @spec gen_to_txi(State.t(), Blocks.height()) :: Txs.txi()
+  def gen_to_txi(state, gen) do
+    case State.get(state, Model.Block, {gen, -1}) do
+      {:ok, Model.block(tx_index: txi)} ->
         txi
 
-      [] ->
-        case Database.last_key(Model.Tx) do
+      :not_found ->
+        case State.prev(state, Model.Tx, nil) do
           {:ok, last_txi} -> last_txi + 1
           :none -> 0
         end
     end
   end
 
-  @spec txi_to_gen(Txs.txi()) :: Blocks.height()
-  def txi_to_gen(txi) do
-    case read_tx(txi) do
-      [Model.tx(block_index: {kbi, _mbi})] ->
+  @spec txi_to_gen(State.t(), Txs.txi()) :: Blocks.height()
+  def txi_to_gen(state, txi) do
+    case State.get(state, Model.Tx, txi) do
+      {:ok, Model.tx(block_index: {kbi, _mbi})} ->
         kbi
 
-      [] ->
-        case Database.last_key(Model.Block) do
+      :not_found ->
+        case State.prev(state, Model.Block, nil) do
           {:ok, {last_kbi, _mbi}} -> last_kbi + 1
           :none -> 0
         end

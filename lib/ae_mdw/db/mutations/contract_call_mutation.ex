@@ -67,7 +67,7 @@ defmodule AeMdw.Db.ContractCallMutation do
     create_txi =
       case State.cache_get(state, :ct_create_sync_cache, contract_pk) do
         {:ok, txi} -> txi
-        :not_found -> Origin.tx_index!({:contract, contract_pk})
+        :not_found -> Origin.tx_index!(state, {:contract, contract_pk})
       end
 
     state

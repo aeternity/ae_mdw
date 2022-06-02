@@ -8,6 +8,7 @@ defmodule AeMdw.Aex9 do
   alias AeMdw.Database
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
@@ -165,12 +166,12 @@ defmodule AeMdw.Aex9 do
     end
   end
 
-  @spec fetch_amount_and_keyblock(pubkey(), pubkey()) ::
+  @spec fetch_amount_and_keyblock(State.t(), pubkey(), pubkey()) ::
           {:ok, {number(), Db.height_hash()}} | {:error, Error.t()}
-  def fetch_amount_and_keyblock(contract_pk, account_pk) do
+  def fetch_amount_and_keyblock(state, contract_pk, account_pk) do
     with {:ok, {amount, call_txi}} <- fetch_amount(contract_pk, account_pk) do
-      kbi = DbUtil.txi_to_gen(call_txi)
-      Model.block(hash: kb_hash) = Database.fetch!(Model.Block, {kbi, -1})
+      kbi = DbUtil.txi_to_gen(state, call_txi)
+      Model.block(hash: kb_hash) = State.fetch!(state, Model.Block, {kbi, -1})
 
       {:ok, {amount, {:key, kbi, kb_hash}}}
     end

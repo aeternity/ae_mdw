@@ -5,6 +5,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
   alias AeMdw.Validate
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
+  alias AeMdw.Db.State
   alias AeMdw.Db.Util
   alias AeMdw.MainnetClient
   alias AeMdwWeb.TxController
@@ -978,6 +979,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       # "recipient":{"account":"ak_2ZyuUxyfbkNbKZnGStgkCQuRwCPQWducVipxE4Ci7RU8UuTiry","name":"katie.chain"}
       # "recipient_id":"nm_2mcA6LRcH3bjJvs4qTDRGkN9hCyMj9da83gU5WKy9u1EmrExar"
       # "tx_index":7090883
+      state = State.new()
       account_id = "ak_2ZyuUxyfbkNbKZnGStgkCQuRwCPQWducVipxE4Ci7RU8UuTiry"
       limit = 5
 
@@ -998,14 +1000,14 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert Enum.any?(blocks_with_nm, fn %{"tx" => tx, "tx_index" => tx_index} ->
                assert {:ok, plain_name} = Validate.plain_name(tx["recipient_id"])
-               assert Model.name(updates: name_updates) = elem(Name.locate(plain_name), 0)
+               assert Model.name(updates: name_updates) = elem(Name.locate(state, plain_name), 0)
 
                if [] != name_updates do
                  assert recipient = tx["recipient"]
                  assert recipient["name"] == plain_name
 
                  assert {:ok, recipient_account_pk} =
-                          Name.account_pointer_at(plain_name, tx_index)
+                          Name.account_pointer_at(state, plain_name, tx_index)
 
                  assert recipient["account"] == Enc.encode(:account_pubkey, recipient_account_pk)
                  true
@@ -1782,6 +1784,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       |> Enum.any?(fn field -> tx[field] == id end)
 
   defp assert_recipient_for_spend_tx_with_name(txs, account_id) do
+    state = State.new()
+
     Enum.each(txs, fn %{"tx" => tx} ->
       if nil == tx["recipient"] do
         assert id_exists?(tx, account_id, :with_prefix)
@@ -1796,13 +1800,15 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
     assert Enum.any?(blocks_with_nm, fn %{"tx" => tx, "tx_index" => tx_index} ->
              assert {:ok, plain_name} = Validate.plain_name(tx["recipient_id"])
-             assert Model.name(updates: name_updates) = elem(Name.locate(plain_name), 0)
+             assert Model.name(updates: name_updates) = elem(Name.locate(state, plain_name), 0)
 
              if [] != name_updates do
                assert recipient = tx["recipient"]
                assert recipient["name"] == plain_name
 
-               assert {:ok, recipient_account_pk} = Name.account_pointer_at(plain_name, tx_index)
+               assert {:ok, recipient_account_pk} =
+                        Name.account_pointer_at(state, plain_name, tx_index)
+
                assert recipient["account"] == Enc.encode(:account_pubkey, recipient_account_pk)
                true
              else

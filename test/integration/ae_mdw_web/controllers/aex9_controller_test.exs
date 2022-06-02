@@ -5,6 +5,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
   alias AeMdw.Database
   alias AeMdw.Db.Origin
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.Util
   alias AeMdw.Validate
 
@@ -57,6 +58,8 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
     @tag :iteration
     test "gets each of the aex9 tokens by contract id", %{conn: conn} do
+      state = State.new()
+
       Model.AexnContract
       |> Database.all_keys()
       |> Enum.filter(fn {type, _pubkey} -> type == :aex9 end)
@@ -76,7 +79,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
                  "symbol" => symbol
                } = response["data"]
 
-        assert contract_txi == Origin.tx_index!({:contract, aex9_pubkey})
+        assert contract_txi == Origin.tx_index!(state, {:contract, aex9_pubkey})
         assert is_integer(decimals) and decimals >= 0
         assert is_binary(name)
         assert is_binary(symbol)
@@ -219,6 +222,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
     test "gets balances on each contract for a range of generations", %{conn: conn} do
       first = 500_001
       last = 500_003
+      state = State.new()
 
       Model.block(tx_index: range_txi) = Database.fetch!(Model.Block, {first, -1})
 
@@ -226,7 +230,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
       |> Database.all_keys()
       |> Enum.filter(fn {type, _pubkey} -> type == :aex9 end)
       |> Enum.filter(fn {:aex9, contract_pk} ->
-        Origin.tx_index!({:contract, contract_pk}) < range_txi and
+        Origin.tx_index!(state, {:contract, contract_pk}) < range_txi and
           enc_ct(contract_pk) not in [
             @big_balance_contract_id1,
             @big_balance_contract_id2,
@@ -314,6 +318,8 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
           {txi, :aeser_api_encoder.encode(:micro_block_hash, mb_hash)}
         end)
 
+      state = State.new()
+
       Model.AexnContract
       |> Database.all_keys()
       |> Enum.filter(fn {type, _pubkey} -> type == :aex9 end)
@@ -321,7 +327,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
       |> Enum.zip(mb_hashes)
       |> Enum.filter(fn {contract_id, {_mb_hash, mb_txi}} ->
         ct_pk = Validate.id!(contract_id)
-        Origin.tx_index!({:contract, ct_pk}) > mb_txi
+        Origin.tx_index!(state, {:contract, ct_pk}) > mb_txi
       end)
       |> Enum.each(fn {contract_id, {mb_hash, _mb_txi}} ->
         conn = get(conn, "/aex9/balances/hash/#{mb_hash}/#{contract_id}")
@@ -463,6 +469,8 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
     @tag :iteration
     # @tag :skip
     test "gets balances for each account with aex9 presence", %{conn: conn} do
+      state = State.new()
+
       Model.Aex9AccountPresence
       |> Database.all_keys()
       |> Enum.map(fn {account_pk, _txi, _contract_pk} ->
@@ -479,7 +487,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
                                           "token_symbol" => token_symbol
                                         } ->
           {:contract_pubkey, contract_pk} = :aeser_api_encoder.decode(contract_id)
-          create_txi = Origin.tx_index!({:contract, contract_pk})
+          create_txi = Origin.tx_index!(state, {:contract, contract_pk})
 
           {^create_txi, name, symbol, _decimals} =
             Util.next(Model.RevAex9Contract, {create_txi, nil, nil, nil})

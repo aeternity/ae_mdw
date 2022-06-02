@@ -1,6 +1,8 @@
 defmodule AeMdwWeb.Router do
   use AeMdwWeb, :router
 
+  alias AeMdwWeb.Plugs.StatePlug
+
   @shared_routes [
     {"/txs/count", AeMdwWeb.TxController, :count},
     {"/txs/count/:id", AeMdwWeb.TxController, :count_id},
@@ -13,6 +15,7 @@ defmodule AeMdwWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug StatePlug
   end
 
   pipeline :browser do

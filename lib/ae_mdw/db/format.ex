@@ -8,6 +8,7 @@ defmodule AeMdw.Db.Format do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Db.Origin
+  alias AeMdw.Db.State
   alias AeMdw.Txs
 
   require Model
@@ -66,7 +67,7 @@ defmodule AeMdw.Db.Format do
       end
 
     {status, auction} =
-      case Name.locate_bid(plain_name) do
+      case Name.locate_bid(State.new(), plain_name) do
         nil -> {:name, nil}
         key -> {:auction, to_raw_map(key, Model.AuctionBid)}
       end
@@ -90,7 +91,7 @@ defmodule AeMdw.Db.Format do
     expire_height = Model.oracle(m_oracle, :expire)
 
     kbi = min(expire_height - 1, last_gen())
-    block_hash = Blocks.block_hash(kbi)
+    block_hash = Blocks.block_hash(State.new(), kbi)
     oracle_tree = AeMdw.Db.Oracle.oracle_tree!(block_hash)
     oracle_rec = :aeo_state_tree.get_oracle(pk, oracle_tree)
 
@@ -115,7 +116,7 @@ defmodule AeMdw.Db.Format do
       symbol: symbol,
       decimals: decimals,
       contract_txi: txi,
-      contract_id: :aeser_id.create(:contract, Origin.pubkey!({:contract, txi}))
+      contract_id: :aeser_id.create(:contract, Origin.pubkey!(State.new(), {:contract, txi}))
     }
   end
 
@@ -123,14 +124,15 @@ defmodule AeMdw.Db.Format do
     do: to_raw_map({name, symbol, txi, decimals}, Model.Aex9Contract)
 
   def to_raw_map({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog) do
+    state = State.new()
     m_log = read!(Model.ContractLog, {create_txi, call_txi, event_hash, log_idx})
     ct_id = &:aeser_id.create(:contract, &1)
 
     ct_pk =
       if create_txi == -1 do
-        Origin.pubkey({:contract_call, call_txi})
+        Origin.pubkey(state, {:contract_call, call_txi})
       else
-        Origin.pubkey({:contract, create_txi})
+        Origin.pubkey(state, {:contract, create_txi})
       end
 
     ext_ct_pk = Model.contract_log(m_log, :ext_contract)
@@ -143,7 +145,7 @@ defmodule AeMdw.Db.Format do
 
     # clear ext_ct_pk after saving parent_contract_pk in its own field
     ext_ct_pk = if not is_tuple(ext_ct_pk), do: ext_ct_pk
-    ext_ct_txi = if ext_ct_pk, do: Origin.tx_index!({:contract, ext_ct_pk}), else: -1
+    ext_ct_txi = if ext_ct_pk, do: Origin.tx_index!(state, {:contract, ext_ct_pk}), else: -1
     m_tx = read!(Model.Tx, call_txi)
 
     {height, micro_index} = Model.tx(m_tx, :block_index)
@@ -171,9 +173,10 @@ defmodule AeMdw.Db.Format do
     m_call = read!(Model.IntContractCall, {call_txi, local_idx})
     create_txi = Model.int_contract_call(m_call, :create_txi)
     fname = Model.int_contract_call(m_call, :fname)
+    state = State.new()
 
     ct_pk =
-      case Origin.pubkey({:contract, create_txi}) do
+      case Origin.pubkey(state, {:contract, create_txi}) do
         nil -> nil
         pk -> :aeser_id.create(:contract, pk)
       end
@@ -584,18 +587,21 @@ defmodule AeMdw.Db.Format do
 
   defp name_info_to_raw_map(
          {:name, _, active_h, expire_h, cs, us, ts, revoke, auction_tm, _owner, _prev} = n
-       ),
-       do: %{
-         active_from: active_h,
-         expire_height: expire_h,
-         claims: Enum.map(cs, &bi_txi_txi/1),
-         updates: Enum.map(us, &bi_txi_txi/1),
-         transfers: Enum.map(ts, &bi_txi_txi/1),
-         revoke: (revoke && bi_txi_txi(revoke)) || nil,
-         auction_timeout: auction_tm,
-         pointers: Name.pointers(n),
-         ownership: Name.ownership(n)
-       }
+       ) do
+    state = State.new()
+
+    %{
+      active_from: active_h,
+      expire_height: expire_h,
+      claims: Enum.map(cs, &bi_txi_txi/1),
+      updates: Enum.map(us, &bi_txi_txi/1),
+      transfers: Enum.map(ts, &bi_txi_txi/1),
+      revoke: (revoke && bi_txi_txi(revoke)) || nil,
+      auction_timeout: auction_tm,
+      pointers: Name.pointers(state, n),
+      ownership: Name.ownership(state, n)
+    }
+  end
 
   defp auction_bid(
          Model.auction_bid(index: plain, expire_height: auction_end, bids: [{_, txi} | _] = bids),
@@ -603,6 +609,7 @@ defmodule AeMdw.Db.Format do
          tx_fmt,
          info_fmt
        ) do
+    state = State.new()
     last_bid = tx_fmt.(read_tx!(txi))
     name_ttl = Name.expire_after(auction_end)
     keys = if Map.has_key?(last_bid, "tx"), do: ["tx", "ttl"], else: [:tx, :ttl]
@@ -618,7 +625,7 @@ defmodule AeMdw.Db.Format do
         key.(:bids) => Enum.map(bids, &bi_txi_txi/1)
       },
       key.(:previous) =>
-        case Name.locate(plain) do
+        case Name.locate(state, plain) do
           {m_name, Model.InactiveName} ->
             succ = &Model.name(&1, :previous)
             Enum.map(chase(m_name, succ), &info_fmt.(name_info_to_raw_map(&1)))
@@ -632,7 +639,9 @@ defmodule AeMdw.Db.Format do
   defp expand_name_auction(nil), do: nil
 
   defp expand_name_auction(%{"bids" => bids_txis} = auction) do
-    Map.put(auction, "bids", Enum.map(bids_txis, &Txs.fetch!/1))
+    state = State.new()
+
+    Map.put(auction, "bids", Enum.map(bids_txis, &Txs.fetch!(state, &1)))
   end
 
   defp expand_name_info(json) do

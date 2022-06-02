@@ -20,13 +20,13 @@ defmodule AeMdw.Db.Name do
   alias AeMdw.Db.Format
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.State
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Names
   alias AeMdw.Validate
 
   require Ex2ms
   require Model
 
-  import AeMdw.Db.Util
   import AeMdw.Util
 
   @typep pubkey :: Db.pubkey()
@@ -59,31 +59,31 @@ defmodule AeMdw.Db.Name do
 
   @spec plain_name(binary()) :: {:ok, String.t()} | nil
   def plain_name(name_hash),
-    do: map_one_nil(read(Model.PlainName, name_hash), &{:ok, Model.plain_name(&1, :value)})
+    do: map_one_nil(DbUtil.read(Model.PlainName, name_hash), &{:ok, Model.plain_name(&1, :value)})
 
   @spec plain_name!(binary()) :: String.t()
   def plain_name!(name_hash),
-    do: Model.plain_name(read!(Model.PlainName, name_hash), :value)
+    do: Model.plain_name(DbUtil.read!(Model.PlainName, name_hash), :value)
 
-  @spec ptr_resolve!(State.t(), Blocks.block_index(), binary(), String.t()) :: binary()
+  @spec ptr_resolve!(state(), Blocks.block_index(), binary(), String.t()) :: binary()
   def ptr_resolve!(state, block_index, name_hash, key) do
     key
     |> :aens.resolve_hash(name_hash, ns_tree!(state, block_index))
     |> map_ok!(&Validate.id!/1)
   end
 
-  @spec owned_by(owner_pk :: pubkey(), active? :: boolean()) :: %{
+  @spec owned_by(state(), owner_pk :: pubkey(), active? :: boolean()) :: %{
           :names => list(),
           optional(:top_bids) => list()
         }
-  def owned_by(owner_pk, true) do
+  def owned_by(_state, owner_pk, true) do
     %{
       names: collect_vals(Model.ActiveNameOwner, owner_pk),
       top_bids: collect_vals(Model.AuctionOwner, owner_pk)
     }
   end
 
-  def owned_by(owner_pk, false) do
+  def owned_by(_state, owner_pk, false) do
     %{
       names: collect_vals(Model.InactiveNameOwner, owner_pk)
     }
@@ -91,7 +91,7 @@ defmodule AeMdw.Db.Name do
 
   @spec expire_after(Blocks.height()) :: Blocks.height()
   def expire_after(auction_end) do
-    auction_end + :aec_governance.name_claim_max_expiration(proto_vsn(auction_end))
+    auction_end + :aec_governance.name_claim_max_expiration(DbUtil.proto_vsn(auction_end))
   end
 
   @spec expire_name(state(), Blocks.height(), Names.plain_name()) :: state()
@@ -112,9 +112,9 @@ defmodule AeMdw.Db.Name do
         ) :: state()
   def expire_auction(state, height, plain_name, timeout) do
     Model.auction_bid(block_index_txi: {_block_index, txi}, owner: owner, bids: bids) =
-      ok!(cache_through_read(Model.AuctionBid, plain_name))
+      ok!(cache_through_read(state, Model.AuctionBid, plain_name))
 
-    previous = ok_nil(cache_through_read(Model.InactiveName, plain_name))
+    previous = ok_nil(cache_through_read(state, Model.InactiveName, plain_name))
     expire = expire_after(height)
 
     m_name =
@@ -130,7 +130,7 @@ defmodule AeMdw.Db.Name do
 
     m_name_exp = Model.expiration(index: {expire, plain_name})
     m_owner = Model.owner(index: {owner, plain_name})
-    %{tx: winning_tx} = read_raw_tx!(txi)
+    %{tx: winning_tx} = read_raw_tx!(state, txi)
 
     state
     |> cache_through_write(Model.ActiveName, m_name)
@@ -148,7 +148,7 @@ defmodule AeMdw.Db.Name do
   @doc """
   Returns a stream of Names.plain_name()
   """
-  @spec list_inactivated_at(State.t(), Blocks.height()) :: Enumerable.t()
+  @spec list_inactivated_at(state(), Blocks.height()) :: Enumerable.t()
   def list_inactivated_at(state, height) do
     state
     |> Collection.stream(
@@ -170,24 +170,31 @@ defmodule AeMdw.Db.Name do
   def source(Model.InactiveName, :name), do: Model.InactiveName
   def source(Model.InactiveName, :expiration), do: Model.InactiveNameExpiration
 
-  @spec locate_bid(Names.plain_name()) :: {:ok, Model.auction_bid()} | nil
-  def locate_bid(plain_name), do: ok_nil(cache_through_read(Model.AuctionBid, plain_name))
+  @spec locate_bid(state(), Names.plain_name()) :: {:ok, Model.auction_bid()} | nil
+  def locate_bid(state, plain_name),
+    do: ok_nil(cache_through_read(state, Model.AuctionBid, plain_name))
 
-  @spec locate(String.t()) ::
+  @spec locate(state(), Names.plain_name()) ::
           {Model.name(), Model.ActiveName | Model.InactiveName}
           | {Model.auction_bid(), Model.AuctionBid}
           | nil
-  def locate(plain_name) do
-    map_ok_nil(cache_through_read(Model.ActiveName, plain_name), &{&1, Model.ActiveName}) ||
-      map_ok_nil(cache_through_read(Model.InactiveName, plain_name), &{&1, Model.InactiveName}) ||
-      map_some(locate_bid(plain_name), &{&1, Model.AuctionBid})
+  def locate(state, plain_name) do
+    map_ok_nil(cache_through_read(state, Model.ActiveName, plain_name), &{&1, Model.ActiveName}) ||
+      map_ok_nil(
+        cache_through_read(state, Model.InactiveName, plain_name),
+        &{&1, Model.InactiveName}
+      ) ||
+      map_some(locate_bid(state, plain_name), &{&1, Model.AuctionBid})
   end
 
-  @spec pointers(Model.name()) :: map()
-  def pointers(Model.name(updates: [])), do: %{}
+  @spec pointers(state(), Model.name()) :: map()
+  def pointers(_state, Model.name(updates: [])), do: %{}
 
-  def pointers(Model.name(index: plain_name, updates: [{_block_index, txi} | _rest_updates])) do
-    Model.tx(id: tx_hash) = read_tx!(txi)
+  def pointers(
+        state,
+        Model.name(index: plain_name, updates: [{_block_index, txi} | _rest_updates])
+      ) do
+    Model.tx(id: tx_hash) = DbUtil.read_tx!(state, txi)
     {:ok, name_hash} = :aens.get_name_hash(plain_name)
 
     pointers =
@@ -196,8 +203,8 @@ defmodule AeMdw.Db.Name do
           :aens_update_tx.pointers(tx_rec)
 
         {_block_hash, :contract_call_tx, _signed_tx, _tx_rec} ->
-          txi
-          |> Contracts.fetch_int_contract_calls("AENS.update")
+          state
+          |> Contracts.fetch_int_contract_calls(txi, "AENS.update")
           |> Stream.map(fn Model.int_contract_call(tx: aetx) ->
             {:name_update_tx, tx} = :aetx.specialize_type(aetx)
 
@@ -214,21 +221,25 @@ defmodule AeMdw.Db.Name do
     |> Enum.into(%{})
   end
 
-  @spec ownership(Model.name()) :: %{current: Format.aeser_id(), original: Format.aeser_id()}
-  def ownership(Model.name(transfers: [], owner: owner)) do
+  @spec ownership(state(), Model.name()) :: %{
+          current: Format.aeser_id(),
+          original: Format.aeser_id()
+        }
+  def ownership(_state, Model.name(transfers: [], owner: owner)) do
     pubkey = :aeser_id.create(:account, owner)
 
     %{original: pubkey, current: pubkey}
   end
 
   def ownership(
+        state,
         Model.name(
           index: plain_name,
           claims: [{_block_index, last_claim_txi} | _rest_claims],
           owner: owner
         )
       ) do
-    Model.tx(id: tx_hash) = read_tx!(last_claim_txi)
+    Model.tx(id: tx_hash) = DbUtil.read_tx!(state, last_claim_txi)
     {:ok, name_hash} = :aens.get_name_hash(plain_name)
 
     orig_owner =
@@ -237,8 +248,8 @@ defmodule AeMdw.Db.Name do
           :aens_claim_tx.account_id(tx_rec)
 
         {_block_hash, :contract_call_tx, _signed_tx, _tx_rec} ->
-          last_claim_txi
-          |> Contracts.fetch_int_contract_calls("AENS.claim")
+          state
+          |> Contracts.fetch_int_contract_calls(last_claim_txi, "AENS.claim")
           |> Stream.map(fn Model.int_contract_call(tx: aetx) ->
             {:name_claim_tx, tx} = :aetx.specialize_type(aetx)
 
@@ -253,15 +264,15 @@ defmodule AeMdw.Db.Name do
     %{original: orig_owner, current: :aeser_id.create(:account, owner)}
   end
 
-  @spec account_pointer_at(String.t(), AeMdw.Txs.txi()) ::
+  @spec account_pointer_at(state(), Names.plain_name(), AeMdw.Txs.txi()) ::
           {:error, :name_not_found | {:pointee_not_found, any, any}} | {:ok, any}
-  def account_pointer_at(plain_name, time_reference_txi) do
-    case locate(plain_name) do
+  def account_pointer_at(state, plain_name, time_reference_txi) do
+    case locate(state, plain_name) do
       nil ->
         {:error, :name_not_found}
 
       {m_name, _module} ->
-        pointee_at(m_name, time_reference_txi)
+        pointee_at(state, m_name, time_reference_txi)
     end
   end
 
@@ -276,8 +287,8 @@ defmodule AeMdw.Db.Name do
     |> Enum.map(fn {^pk, {bi, txi}, pointee} -> {bi, txi, pointee} end)
   end
 
-  @spec pointees(pubkey()) :: {map(), map()}
-  def pointees(pk) do
+  @spec pointees(state(), pubkey()) :: {map(), map()}
+  def pointees(state, pk) do
     push = fn place, m_name, {update_bi, update_txi, ptr_k} ->
       pointee = %{
         name: Model.name(m_name, :index),
@@ -291,9 +302,9 @@ defmodule AeMdw.Db.Name do
 
     for {_bi, txi, _ptr_k} = p_keys <- pointee_keys(pk), reduce: {%{}, %{}} do
       {active, inactive} ->
-        %{tx: %{name: plain}} = Format.to_raw_map(read_tx!(txi))
+        %{tx: %{name: plain}} = Format.to_raw_map(DbUtil.read_tx!(state, txi))
 
-        case locate(plain) do
+        case locate(state, plain) do
           {_bid_key, Model.AuctionBid} ->
             {active, inactive}
 
@@ -387,7 +398,7 @@ defmodule AeMdw.Db.Name do
     |> State.delete(table, key)
   end
 
-  @spec cache_through_delete_inactive(State.t(), nil | Model.name()) :: State.t()
+  @spec cache_through_delete_inactive(state(), nil | Model.name()) :: state()
   def cache_through_delete_inactive(state, nil), do: state
 
   def cache_through_delete_inactive(
@@ -402,7 +413,7 @@ defmodule AeMdw.Db.Name do
     |> cache_through_delete(Model.InactiveNameExpiration, {expire, plain_name})
   end
 
-  @spec deactivate_name(State.t(), Blocks.height(), Blocks.height(), Model.name()) :: State.t()
+  @spec deactivate_name(state(), Blocks.height(), Blocks.height(), Model.name()) :: state()
   def deactivate_name(
         state,
         deactivate_height,
@@ -440,7 +451,7 @@ defmodule AeMdw.Db.Name do
     do: {:aens_pointer.key(ptr), :aens_pointer.id(ptr)}
 
   defp collect_vals(tab, key) do
-    collect_keys(tab, [], {key, ""}, &next/2, fn
+    DbUtil.collect_keys(tab, [], {key, ""}, &DbUtil.next/2, fn
       {^key, val}, acc -> {:cont, [val | acc]}
       {_, _}, acc -> {:halt, acc}
     end)
@@ -454,7 +465,7 @@ defmodule AeMdw.Db.Name do
     |> :aec_trees.ns()
   end
 
-  defp pointee_at(Model.name(index: name, updates: updates), ref_txi) do
+  defp pointee_at(state, Model.name(index: name, updates: updates), ref_txi) do
     updates
     |> find_update_txi_before(ref_txi)
     |> case do
@@ -463,8 +474,8 @@ defmodule AeMdw.Db.Name do
 
       update_txi ->
         {:id, :account, pointee_pk} =
-          update_txi
-          |> read_tx!()
+          state
+          |> DbUtil.read_tx!(update_txi)
           |> Format.to_raw_map()
           |> get_in([:tx, :pointers])
           |> Enum.into(%{}, &pointer_kv_raw/1)
@@ -480,6 +491,6 @@ defmodule AeMdw.Db.Name do
     end)
   end
 
-  defp read_raw_tx!(txi),
-    do: Format.to_raw_map(read_tx!(txi))
+  defp read_raw_tx!(state, txi),
+    do: Format.to_raw_map(DbUtil.read_tx!(state, txi))
 end

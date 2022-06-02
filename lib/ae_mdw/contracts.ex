@@ -7,10 +7,10 @@ defmodule AeMdw.Contracts do
   alias AeMdw.Contract
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.Stream.Query.Parser
   alias AeMdw.Db.Util, as: DBUtil
   alias AeMdw.Error.Input, as: ErrInput
-  alias AeMdw.Database
   alias AeMdw.Db.Origin
   alias AeMdw.Txs
   alias AeMdw.Util
@@ -51,22 +51,22 @@ defmodule AeMdw.Contracts do
   @min_int Util.min_int()
   @min_bin Util.min_bin()
 
-  @spec fetch_logs(pagination(), range(), query(), cursor()) ::
+  @spec fetch_logs(State.t(), pagination(), range(), query(), cursor()) ::
           {:ok, cursor(), [log()], cursor()} | {:error, reason()}
-  def fetch_logs(pagination, range, query, cursor) do
+  def fetch_logs(state, pagination, range, query, cursor) do
     cursor = deserialize_logs_cursor(cursor)
-    scope = deserialize_logs_scope(range)
+    scope = deserialize_logs_scope(state, range)
 
     try do
       {prev_cursor, logs, next_cursor} =
         query
         |> Map.drop(@pagination_params)
-        |> Enum.map(&convert_param/1)
+        |> Enum.map(&convert_param(state, &1))
         |> Map.new()
-        |> build_logs_pagination(scope, cursor)
+        |> build_logs_pagination(state, scope, cursor)
         |> Collection.paginate(pagination)
 
-      {:ok, serialize_logs_cursor(prev_cursor), Enum.map(logs, &render_log/1),
+      {:ok, serialize_logs_cursor(prev_cursor), Enum.map(logs, &render_log(state, &1)),
        serialize_logs_cursor(next_cursor)}
     rescue
       e in ErrInput ->
@@ -74,22 +74,22 @@ defmodule AeMdw.Contracts do
     end
   end
 
-  @spec fetch_calls(pagination(), range(), query(), cursor()) ::
+  @spec fetch_calls(State.t(), pagination(), range(), query(), cursor()) ::
           {:ok, cursor(), [call()], cursor()} | {:error, reason()}
-  def fetch_calls(pagination, range, query, cursor) do
+  def fetch_calls(state, pagination, range, query, cursor) do
     cursor = deserialize_calls_cursor(cursor)
-    scope = deserialize_calls_scope(range)
+    scope = deserialize_calls_scope(state, range)
 
     try do
       {prev_cursor, calls, next_cursor} =
         query
         |> Map.drop(@pagination_params)
-        |> Enum.map(&convert_param/1)
+        |> Enum.map(&convert_param(state, &1))
         |> Enum.sort()
-        |> build_calls_pagination(scope, cursor)
+        |> build_calls_pagination(state, scope, cursor)
         |> Collection.paginate(pagination)
 
-      {:ok, serialize_calls_cursor(prev_cursor), Enum.map(calls, &render_call/1),
+      {:ok, serialize_calls_cursor(prev_cursor), Enum.map(calls, &render_call(state, &1)),
        serialize_calls_cursor(next_cursor)}
     rescue
       e in ErrInput ->
@@ -97,16 +97,16 @@ defmodule AeMdw.Contracts do
     end
   end
 
-  @spec fetch_int_contract_calls(Txs.txi(), Contract.fname()) :: Enumerable.t()
-  def fetch_int_contract_calls(txi, fname) do
-    @int_contract_call_table
-    |> Collection.stream({txi, @min_int})
+  @spec fetch_int_contract_calls(State.t(), Txs.txi(), Contract.fname()) :: Enumerable.t()
+  def fetch_int_contract_calls(state, txi, fname) do
+    state
+    |> Collection.stream(@int_contract_call_table, {txi, @min_int})
     |> Stream.take_while(fn {call_txi, _local_txi} -> call_txi == txi end)
-    |> Stream.map(&Database.fetch!(@int_contract_call_table, &1))
+    |> Stream.map(&State.fetch!(state, @int_contract_call_table, &1))
     |> Stream.filter(&match?(Model.int_contract_call(fname: ^fname), &1))
   end
 
-  defp build_logs_pagination(%{data_prefix: data_prefix}, scope, cursor) do
+  defp build_logs_pagination(%{data_prefix: data_prefix}, state, scope, cursor) do
     {{first_create_txi, first_call_txi, _first_event_hash, _first_log_idx, first_data},
      {last_create_txi, last_call_txi, _last_event_hash, _last_log_idx, last_data}} = scope
 
@@ -124,15 +124,15 @@ defmodule AeMdw.Contracts do
       end
 
     fn direction ->
-      @data_contract_log_table
-      |> Collection.stream(direction, scope, cursor)
+      state
+      |> Collection.stream(@data_contract_log_table, direction, scope, cursor)
       |> Stream.map(fn {data, call_txi, create_txi, event_hash, log_idx} ->
         {create_txi, call_txi, event_hash, log_idx, data}
       end)
     end
   end
 
-  defp build_logs_pagination(%{create_txi: create_txi}, scope, cursor) do
+  defp build_logs_pagination(%{create_txi: create_txi}, state, scope, cursor) do
     {{_first_create_txi, first_call_txi, first_event_hash, _first_log_idx, _first_data},
      {_last_create_txi, last_call_txi, last_event_hash, _last_log_idx, _last_data}} = scope
 
@@ -150,15 +150,15 @@ defmodule AeMdw.Contracts do
       end
 
     fn direction ->
-      @contract_log_table
-      |> Collection.stream(direction, scope, cursor)
+      state
+      |> Collection.stream(@contract_log_table, direction, scope, cursor)
       |> Stream.map(fn {create_txi, call_txi, even_hash, log_idx} ->
         {create_txi, call_txi, even_hash, log_idx, @min_bin}
       end)
     end
   end
 
-  defp build_logs_pagination(%{event_hash: event_hash}, scope, cursor) do
+  defp build_logs_pagination(%{event_hash: event_hash}, state, scope, cursor) do
     {{first_create_txi, first_call_txi, _first_event_hash, _first_log_idx, _first_data},
      {last_create_txi, last_call_txi, _last_event_hash, _last_log_idx, _last_data}} = scope
 
@@ -176,15 +176,15 @@ defmodule AeMdw.Contracts do
       end
 
     fn direction ->
-      @evt_contract_log_table
-      |> Collection.stream(direction, scope, cursor)
+      state
+      |> Collection.stream(@evt_contract_log_table, direction, scope, cursor)
       |> Stream.map(fn {event_hash, call_txi, create_txi, log_idx} ->
         {create_txi, call_txi, event_hash, log_idx, @min_bin}
       end)
     end
   end
 
-  defp build_logs_pagination(_query, scope, cursor) do
+  defp build_logs_pagination(_query, state, scope, cursor) do
     {{first_create_txi, first_call_txi, first_event_hash, first_log_idx, _first_data},
      {last_create_txi, last_call_txi, last_event_hash, last_log_idx, _last_data}} = scope
 
@@ -202,15 +202,15 @@ defmodule AeMdw.Contracts do
       end
 
     fn direction ->
-      @idx_contract_log_table
-      |> Collection.stream(direction, scope, cursor)
+      state
+      |> Collection.stream(@idx_contract_log_table, direction, scope, cursor)
       |> Stream.map(fn {call_txi, create_txi, event_hash, log_idx} ->
         {create_txi, call_txi, event_hash, log_idx, @min_bin}
       end)
     end
   end
 
-  defp build_calls_pagination([fname: fname_prefix], scope, cursor) do
+  defp build_calls_pagination([fname: fname_prefix], state, scope, cursor) do
     {{first_call_txi, _first_local_idx, _first_create_txi, _first_pk, first_fname, _first_pos},
      {last_call_txi, _last_local_idx, _last_create_txi, _last_pk, last_fname, _last_pos}} = scope
 
@@ -225,15 +225,15 @@ defmodule AeMdw.Contracts do
       end
 
     fn direction ->
-      @fname_int_contract_call_table
-      |> Collection.stream(direction, scope, cursor)
+      state
+      |> Collection.stream(@fname_int_contract_call_table, direction, scope, cursor)
       |> Stream.map(fn {fname, call_txi, local_idx} ->
         {call_txi, local_idx, @min_int, @min_bin, fname, @min_int}
       end)
     end
   end
 
-  defp build_calls_pagination([create_txi: create_txi], scope, cursor) do
+  defp build_calls_pagination([create_txi: create_txi], state, scope, cursor) do
     {{first_call_txi, first_local_idx, _first_create_txi, _first_pk, _first_fname, _first_pos},
      {last_call_txi, last_local_idx, _last_create_txi, _last_pk, _last_fname, _last_pos}} = scope
 
@@ -247,15 +247,15 @@ defmodule AeMdw.Contracts do
       end
 
     fn direction ->
-      @grp_int_contract_call_table
-      |> Collection.stream(direction, scope, cursor)
+      state
+      |> Collection.stream(@grp_int_contract_call_table, direction, scope, cursor)
       |> Stream.map(fn {create_txi, call_txi, local_idx} ->
         {call_txi, local_idx, create_txi, @min_bin, @min_bin, @min_int}
       end)
     end
   end
 
-  defp build_calls_pagination([], scope, cursor) do
+  defp build_calls_pagination([], state, scope, cursor) do
     {{first_call_txi, first_local_idx, _first_create_txi, _first_pk, _first_fname, _first_pos},
      {last_call_txi, last_local_idx, _last_create_txi, _last_pk, _last_fname, _last_pos}} = scope
 
@@ -268,15 +268,20 @@ defmodule AeMdw.Contracts do
       end
 
     fn direction ->
-      @int_contract_call_table
-      |> Collection.stream(direction, scope, cursor)
+      state
+      |> Collection.stream(@int_contract_call_table, direction, scope, cursor)
       |> Stream.map(fn {call_txi, local_idx} ->
         {call_txi, local_idx, @min_int, @min_bin, @min_bin, @min_int}
       end)
     end
   end
 
-  defp build_calls_pagination([create_txi: create_txi, type_pos: {pos_types, pk}], scope, cursor) do
+  defp build_calls_pagination(
+         [create_txi: create_txi, type_pos: {pos_types, pk}],
+         state,
+         scope,
+         cursor
+       ) do
     {{first_call_txi, first_local_idx, _first_create_txi, _first_pk, _first_fname, _first_pos},
      {last_call_txi, last_local_idx, _last_create_txi, _last_pk, _last_fname, _last_pos}} = scope
 
@@ -301,7 +306,7 @@ defmodule AeMdw.Contracts do
     fn direction ->
       collections
       |> Enum.map(fn {scope, cursor, tx_types} ->
-        build_grp_id_calls_stream(direction, scope, cursor, tx_types)
+        build_grp_id_calls_stream(state, direction, scope, cursor, tx_types)
       end)
       |> Collection.merge(direction)
       |> Stream.map(fn {create_txi, pk, call_txi, local_idx, pos} ->
@@ -310,7 +315,7 @@ defmodule AeMdw.Contracts do
     end
   end
 
-  defp build_calls_pagination([type_pos: {pos_types, pk}], scope, cursor) do
+  defp build_calls_pagination([type_pos: {pos_types, pk}], state, scope, cursor) do
     {{first_call_txi, first_local_idx, _first_create_txi, _first_pk, _first_fname, _first_pos},
      {last_call_txi, last_local_idx, _last_create_txi, _last_pk, _last_fname, _last_pos}} = scope
 
@@ -335,7 +340,7 @@ defmodule AeMdw.Contracts do
     fn direction ->
       collections
       |> Enum.map(fn {scope, cursor, tx_types} ->
-        build_id_int_call_stream(direction, scope, cursor, tx_types)
+        build_id_int_call_stream(state, direction, scope, cursor, tx_types)
       end)
       |> Collection.merge(direction)
       |> Stream.map(fn {pk, call_txi, local_idx, pos} ->
@@ -344,27 +349,27 @@ defmodule AeMdw.Contracts do
     end
   end
 
-  defp build_calls_pagination(_query, _scope, _cursor),
+  defp build_calls_pagination(_query, _scope, _state, _cursor),
     do: raise(ErrInput.Query, value: %{})
 
-  defp build_grp_id_calls_stream(direction, scope, cursor, tx_types) do
-    @grp_id_int_contract_call_table
-    |> Collection.stream(direction, scope, cursor)
+  defp build_grp_id_calls_stream(state, direction, scope, cursor, tx_types) do
+    state
+    |> Collection.stream(@grp_id_int_contract_call_table, direction, scope, cursor)
     |> Stream.filter(fn {_create_txi, _pk, _pos, call_txi, local_idx} ->
-      Enum.member?(tx_types, fetch_tx_type(call_txi, local_idx))
+      Enum.member?(tx_types, fetch_tx_type(state, call_txi, local_idx))
     end)
     |> Stream.map(fn {create_txi, pk, pos, call_txi, local_idx} ->
       {create_txi, pk, call_txi, local_idx, pos}
     end)
   end
 
-  defp build_id_int_call_stream(direction, scope, cursor, tx_types) do
-    @id_int_contract_call_table
-    |> Collection.stream(direction, scope, cursor)
+  defp build_id_int_call_stream(state, direction, scope, cursor, tx_types) do
+    state
+    |> Collection.stream(@id_int_contract_call_table, direction, scope, cursor)
     |> Stream.filter(fn {_pk, _pos, call_txi, local_idx} ->
       {tx_type, _tx} =
-        Model.IntContractCall
-        |> Database.fetch!({call_txi, local_idx})
+        state
+        |> State.fetch!(Model.IntContractCall, {call_txi, local_idx})
         |> Model.int_contract_call(:tx)
         |> :aetx.specialize_type()
 
@@ -375,15 +380,17 @@ defmodule AeMdw.Contracts do
     end)
   end
 
-  defp convert_param({"contract_id", contract_id}), do: {:create_txi, create_txi!(contract_id)}
-  defp convert_param({"data", data}), do: {:data_prefix, URI.decode(data)}
+  defp convert_param(state, {"contract_id", contract_id}),
+    do: {:create_txi, create_txi!(state, contract_id)}
 
-  defp convert_param({"event", ctor_name}),
+  defp convert_param(_state, {"data", data}), do: {:data_prefix, URI.decode(data)}
+
+  defp convert_param(_state, {"event", ctor_name}),
     do: {:event_hash, :aec_hash.blake2b_256_hash(ctor_name)}
 
-  defp convert_param({"function", fun_name}), do: {:fname, fun_name}
+  defp convert_param(_state, {"function", fun_name}), do: {:fname, fun_name}
 
-  defp convert_param({id_key, id_val}) do
+  defp convert_param(_state, {id_key, id_val}) do
     pos_types =
       id_key
       |> Parser.parse_field()
@@ -393,75 +400,77 @@ defmodule AeMdw.Contracts do
     {:type_pos, {pos_types, Validate.id!(id_val)}}
   end
 
-  defp convert_param(other), do: raise(ErrInput.Query, value: other)
+  defp convert_param(_state, other), do: raise(ErrInput.Query, value: other)
 
-  defp deserialize_logs_scope(nil) do
+  defp deserialize_logs_scope(_state, nil) do
     {{@min_int, @min_int, @min_bin, @min_int, @min_bin},
      {@max_256bit_int, @max_256bit_int, max_blob(), @max_256bit_int, max_blob()}}
   end
 
-  defp deserialize_logs_scope({:gen, %Range{first: first_gen, last: last_gen}}) do
+  defp deserialize_logs_scope(state, {:gen, %Range{first: first_gen, last: last_gen}}) do
     deserialize_logs_scope(
+      state,
       {:txi,
        %Range{
-         first: DBUtil.gen_to_txi(first_gen),
-         last: DBUtil.gen_to_txi(last_gen + 1) - 1
+         first: DBUtil.gen_to_txi(state, first_gen),
+         last: DBUtil.gen_to_txi(state, last_gen + 1) - 1
        }}
     )
   end
 
-  defp deserialize_logs_scope({:txi, %Range{first: first_txi, last: last_txi}}) do
+  defp deserialize_logs_scope(_state, {:txi, %Range{first: first_txi, last: last_txi}}) do
     {{first_txi, @min_int, @min_bin, @min_int, @min_bin},
      {last_txi, @max_256bit_int, max_blob(), @max_256bit_int, max_blob()}}
   end
 
-  defp deserialize_calls_scope(nil) do
+  defp deserialize_calls_scope(_state, nil) do
     {{@min_int, @min_int, @min_int, @min_bin, @min_bin, @min_int},
      {@max_256bit_int, @max_256bit_int, @max_256bit_int, @max_256bit_bin, max_blob(),
       @max_256bit_int}}
   end
 
-  defp deserialize_calls_scope({:gen, %Range{first: first_gen, last: last_gen}}) do
+  defp deserialize_calls_scope(state, {:gen, %Range{first: first_gen, last: last_gen}}) do
     deserialize_calls_scope(
+      state,
       {:txi,
        %Range{
-         first: DBUtil.gen_to_txi(first_gen),
-         last: DBUtil.gen_to_txi(last_gen + 1) - 1
+         first: DBUtil.gen_to_txi(state, first_gen),
+         last: DBUtil.gen_to_txi(state, last_gen + 1) - 1
        }}
     )
   end
 
-  defp deserialize_calls_scope({:txi, %Range{first: first_txi, last: last_txi}}) do
+  defp deserialize_calls_scope(_state, {:txi, %Range{first: first_txi, last: last_txi}}) do
     {{first_txi, @min_int, @min_int, @min_bin, @min_bin, @min_int},
      {last_txi, @max_256bit_int, @max_256bit_int, @max_256bit_bin, max_blob(), @max_256bit_int}}
   end
 
-  defp create_txi!(contract_id) do
+  defp create_txi!(state, contract_id) do
     pk = Validate.id!(contract_id)
 
-    case Origin.tx_index({:contract, pk}) do
+    case Origin.tx_index(state, {:contract, pk}) do
       {:ok, txi} -> txi
       :not_found -> raise ErrInput.Id, value: contract_id
     end
   end
 
-  defp fetch_tx_type(call_txi, local_idx) do
+  defp fetch_tx_type(state, call_txi, local_idx) do
     {tx_type, _tx} =
-      Model.IntContractCall
-      |> Database.fetch!({call_txi, local_idx})
+      state
+      |> State.fetch!(Model.IntContractCall, {call_txi, local_idx})
       |> Model.int_contract_call(:tx)
       |> :aetx.specialize_type()
 
     tx_type
   end
 
-  defp render_log({create_txi, call_txi, event_hash, log_idx, _data}) do
+  defp render_log(_state, {create_txi, call_txi, event_hash, log_idx, _data}) do
     log_key = {create_txi, call_txi, event_hash, log_idx}
 
     Format.to_map(log_key, @contract_log_table)
   end
 
-  defp render_call({call_txi, local_idx, _create_txi, _pk, _fname, _pos}) do
+  defp render_call(_state, {call_txi, local_idx, _create_txi, _pk, _fname, _pos}) do
     call_key = {call_txi, local_idx}
     Format.to_map(call_key, @int_contract_call_table)
   end

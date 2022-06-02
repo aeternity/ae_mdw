@@ -10,9 +10,9 @@ defmodule AeMdwWeb.ContractController do
 
   @spec logs(Conn.t(), map()) :: Conn.t()
   def logs(%Conn{assigns: assigns, query_params: query_params} = conn, _params) do
-    %{pagination: pagination, cursor: cursor, scope: scope} = assigns
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
 
-    case Contracts.fetch_logs(pagination, scope, query_params, cursor) do
+    case Contracts.fetch_logs(state, pagination, scope, query_params, cursor) do
       {:ok, prev_cursor, logs, next_cursor} ->
         Util.paginate(conn, prev_cursor, logs, next_cursor)
 
@@ -23,9 +23,9 @@ defmodule AeMdwWeb.ContractController do
 
   @spec calls(Conn.t(), map()) :: Conn.t()
   def calls(%Conn{assigns: assigns, query_params: query_params} = conn, _params) do
-    %{pagination: pagination, cursor: cursor, scope: scope} = assigns
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
 
-    case Contracts.fetch_calls(pagination, scope, query_params, cursor) do
+    case Contracts.fetch_calls(state, pagination, scope, query_params, cursor) do
       {:ok, prev_cursor, calls, next_cursor} ->
         Util.paginate(conn, prev_cursor, calls, next_cursor)
 

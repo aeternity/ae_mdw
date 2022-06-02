@@ -19,17 +19,6 @@ defmodule AeMdw.Db.Sync.Name do
   require Model
   require Ex2ms
 
-  import AeMdw.Db.Name,
-    only: [
-      cache_through_read!: 3,
-      cache_through_read: 2,
-      cache_through_read: 3,
-      cache_through_write: 3,
-      cache_through_delete: 3,
-      deactivate_name: 4,
-      revoke_or_expire_height: 1
-    ]
-
   import AeMdw.Db.Util
   import AeMdw.Util
 
@@ -71,7 +60,7 @@ defmodule AeMdw.Db.Sync.Name do
         ) :: State.t()
   def update(state, name_hash, delta_ttl, pointers, txi, {height, _mbi} = bi, internal?) do
     plain_name = plain_name!(state, name_hash)
-    m_name = cache_through_read!(state, Model.ActiveName, plain_name)
+    m_name = Name.cache_through_read!(state, Model.ActiveName, plain_name)
     old_expire = Model.name(m_name, :expire)
     new_expire = height + delta_ttl
     updates = [{bi, txi} | Model.name(m_name, :updates)]
@@ -82,7 +71,7 @@ defmodule AeMdw.Db.Sync.Name do
       Enum.reduce(pointers, state, fn ptr, state ->
         m_pointee = Model.pointee(index: pointee_key(ptr, {bi, txi}))
 
-        cache_through_write(state, Model.Pointee, m_pointee)
+        Name.cache_through_write(state, Model.Pointee, m_pointee)
       end)
 
     cond do
@@ -90,15 +79,15 @@ defmodule AeMdw.Db.Sync.Name do
         log_name_change(height, plain_name, "extend")
 
         state2
-        |> cache_through_delete(Model.ActiveNameExpiration, {old_expire, plain_name})
-        |> cache_through_write(Model.ActiveNameExpiration, new_m_name_exp)
-        |> cache_through_write(Model.ActiveName, new_m_name)
+        |> Name.cache_through_delete(Model.ActiveNameExpiration, {old_expire, plain_name})
+        |> Name.cache_through_write(Model.ActiveNameExpiration, new_m_name_exp)
+        |> Name.cache_through_write(Model.ActiveName, new_m_name)
 
       delta_ttl == 0 and not internal? ->
         log_name_change(height, plain_name, "expire")
 
         state2
-        |> deactivate_name(height, old_expire, new_m_name)
+        |> Name.deactivate_name(height, old_expire, new_m_name)
         |> State.inc_stat(:names_expired)
 
       true ->
@@ -106,7 +95,7 @@ defmodule AeMdw.Db.Sync.Name do
 
         if internal? do
           m_name = Model.name(m_name, updates: updates)
-          cache_through_write(state2, Model.ActiveName, m_name)
+          Name.cache_through_write(state2, Model.ActiveName, m_name)
         else
           state2
         end
@@ -118,7 +107,7 @@ defmodule AeMdw.Db.Sync.Name do
   def transfer(state, name_hash, new_owner, txi, {height, _mbi} = bi) do
     plain_name = plain_name!(state, name_hash)
 
-    m_name = cache_through_read!(state, Model.ActiveName, plain_name)
+    m_name = Name.cache_through_read!(state, Model.ActiveName, plain_name)
     old_owner = Model.name(m_name, :owner)
 
     transfers = [{bi, txi} | Model.name(m_name, :transfers)]
@@ -128,9 +117,9 @@ defmodule AeMdw.Db.Sync.Name do
     log_name_change(height, plain_name, "transfer")
 
     state
-    |> cache_through_delete(Model.ActiveNameOwner, {old_owner, plain_name})
-    |> cache_through_write(Model.ActiveNameOwner, m_owner)
-    |> cache_through_write(Model.ActiveName, m_name)
+    |> Name.cache_through_delete(Model.ActiveNameOwner, {old_owner, plain_name})
+    |> Name.cache_through_write(Model.ActiveNameOwner, m_owner)
+    |> Name.cache_through_write(Model.ActiveName, m_name)
   end
 
   @spec revoke(State.t(), Names.name_hash(), Txs.txi(), Blocks.block_index()) :: State.t()
@@ -138,27 +127,27 @@ defmodule AeMdw.Db.Sync.Name do
     plain_name = plain_name!(state, name_hash)
 
     Model.name(expire: expiration) =
-      m_name = cache_through_read!(state, Model.ActiveName, plain_name)
+      m_name = Name.cache_through_read!(state, Model.ActiveName, plain_name)
 
     m_name = Model.name(m_name, revoke: {bi, txi})
 
     log_name_change(height, plain_name, "revoke")
 
     state
-    |> deactivate_name(height, expiration, m_name)
+    |> Name.deactivate_name(height, expiration, m_name)
     |> State.inc_stat(:names_revoked)
   end
 
   ##########
 
   def plain_name!(name_hash) do
-    {:ok, m_plain_name} = cache_through_read(Model.PlainName, name_hash)
+    {:ok, m_plain_name} = Name.cache_through_read(Model.PlainName, name_hash)
 
     Model.plain_name(m_plain_name, :value)
   end
 
   defp plain_name!(state, name_hash) do
-    {:ok, m_plain_name} = cache_through_read(state, Model.PlainName, name_hash)
+    {:ok, m_plain_name} = Name.cache_through_read(state, Model.PlainName, name_hash)
 
     Model.plain_name(m_plain_name, :value)
   end
@@ -175,14 +164,15 @@ defmodule AeMdw.Db.Sync.Name do
     inactives = expirations(Model.InactiveNameExpiration, new_height)
     actives = expirations(Model.ActiveNameExpiration, new_height)
     auctions = expirations(Model.AuctionExpiration, new_height)
+    state = State.new()
 
     plain_names = Enum.reduce([actives, auctions], inactives, &MapSet.union/2)
 
     {all_dels_nested, all_writes_nested} =
       Enum.reduce(plain_names, {%{}, %{}}, fn plain_name, {all_dels, all_writes} ->
-        inactive = ok_nil(cache_through_read(Model.InactiveName, plain_name))
-        active = ok_nil(cache_through_read(Model.ActiveName, plain_name))
-        auction = Name.locate_bid(plain_name)
+        inactive = ok_nil(Name.cache_through_read(Model.InactiveName, plain_name))
+        active = ok_nil(Name.cache_through_read(Model.ActiveName, plain_name))
+        auction = Name.locate_bid(state, plain_name)
 
         {dels, writes} = invalidate(plain_name, inactive, active, auction, new_height)
 
@@ -297,7 +287,7 @@ defmodule AeMdw.Db.Sync.Name do
 
       new_height <= first_claim ->
         map_ok_nil(
-          cache_through_read(Model.InactiveName, plain_name),
+          Name.cache_through_read(Model.InactiveName, plain_name),
           &name_for_epoch(&1, new_height)
         )
     end
@@ -312,7 +302,7 @@ defmodule AeMdw.Db.Sync.Name do
 
     cond do
       new_height >= active ->
-        expire = revoke_or_expire_height(m_name)
+        expire = Name.revoke_or_expire_height(m_name)
         lfcycle = (new_height < expire && :active) || :inactive
         updates = drop_bi_txi(Model.name(m_name, :updates), new_height)
         transfers = drop_bi_txi(Model.name(m_name, :transfers), new_height)
@@ -368,7 +358,7 @@ defmodule AeMdw.Db.Sync.Name do
   def owner({_, _, _, owner, _}), do: owner
 
   def activity_end(m_name) when Record.is_record(m_name, :name),
-    do: revoke_or_expire_height(m_name)
+    do: Name.revoke_or_expire_height(m_name)
 
   def activity_end({_, _, auction_end, _, _}),
     do: auction_end
