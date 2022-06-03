@@ -4,6 +4,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
   import AeMdw.Node.ContractCallFixtures
   import Mock
 
+  alias AeMdw.Contracts.AexnContract
   alias AeMdw.Db.ContractCreateMutation
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Contract, as: SyncContract
@@ -17,11 +18,11 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
 
       with_mocks [
         {
-          AeMdw.Contract,
+          AexnContract,
           [],
           [
             is_aex9?: fn ct_pk -> ct_pk == remote_pk end,
-            aex9_meta_info: fn ct_pk -> ct_pk == remote_pk && {:ok, remote_meta_info} end
+            call_meta_info: fn ct_pk -> ct_pk == remote_pk && {:ok, remote_meta_info} end
           ]
         }
       ] do
@@ -33,7 +34,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
         state1 =
           State.commit(State.new(), [
             ContractCreateMutation.new(block_index, create_txi1, call_rec1),
-            SyncContract.aex9_create_contract_mutation(remote_pk, block_index, create_txi1),
+            SyncContract.aexn_create_contract_mutation(remote_pk, block_index, create_txi1),
             Origin.origin_mutations(
               :contract_create_tx,
               nil,

@@ -3,6 +3,7 @@ defmodule AeMdw.Migrations.UpdateAex9WithLogs do
   Update aex9 balance and presence for contracts in event logs other than those called at :contract_call_tx.
   """
 
+  alias AeMdw.Contracts.AexnContract
   alias AeMdw.Database
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
@@ -23,7 +24,7 @@ defmodule AeMdw.Migrations.UpdateAex9WithLogs do
         Model.contract_log(index: {_create_txi, txi, _evt_hash, _i}, ext_contract: addr) =
           Database.fetch!(Model.ContractLog, key)
 
-        if addr != nil and AeMdw.Contract.is_aex9?(addr) do
+        if addr != nil and AexnContract.is_aex9?(addr) do
           [{addr, txi}]
         else
           []

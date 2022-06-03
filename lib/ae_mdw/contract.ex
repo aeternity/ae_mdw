@@ -8,8 +8,6 @@ defmodule AeMdw.Contract do
   alias AeMdw.Node
   alias AeMdw.Node.Db, as: DBN
   alias AeMdw.DryRun
-  alias AeMdw.Log
-  alias AeMdw.Validate
 
   import :erlang, only: [tuple_to_list: 1]
 
@@ -35,7 +33,6 @@ defmodule AeMdw.Contract do
 
   @type call :: tuple()
 
-  @type aex9_meta_info() :: {String.t(), String.t(), integer()}
   # for balances or balance
   @type call_result :: map() | tuple()
   @type serialized_call :: map()
@@ -57,10 +54,6 @@ defmodule AeMdw.Contract do
   @type local_idx() :: non_neg_integer()
   @typep tx :: Node.tx()
   @typep block_hash :: <<_::256>>
-
-  @aex9_transfer_event_hash <<34, 60, 57, 226, 157, 255, 100, 103, 254, 221, 160, 151, 88, 217,
-                              23, 129, 197, 55, 46, 9, 31, 248, 107, 58, 249, 227, 16, 227, 134,
-                              86, 43, 239>>
 
   ################################################################################
   @spec encode(atom(), binary()) :: String.t()
@@ -136,18 +129,19 @@ defmodule AeMdw.Contract do
     }
   end
 
+  @metadata_type {:variant, [tuple: [], tuple: [], tuple: [], tuple: []]}
+  @option_string {:variant, [tuple: [], tuple: [:string]]}
+
   @spec aex141_signatures() :: map()
   def aex141_signatures() do
     %{
       "aex141_extensions" => {[], {:list, :string}},
       "meta_info" =>
-        {[], {:tuple, [:string, :string, {:variant, [tuple: [], tuple: [:string]]}, :atom]}},
-      "metadata" =>
-        {[:integer], {:variant, [tuple: [:string], tuple: [{:map, :string, :string}]]}},
-      "mint" => {[:address, {:variant, [tuple: [], tuple: [:string]]}], :integer},
+        {[],
+         {:tuple, [:string, :string, {:variant, [tuple: [], tuple: [:string]]}, @metadata_type]}},
       "balance" => {[:address], {:variant, [tuple: [], tuple: [:integer]]}},
       "owner" => {[:integer], {:variant, [tuple: [], tuple: [:address]]}},
-      "transfer" => {[:address, :address, :integer], {:tuple, []}},
+      "transfer" => {[:address, :address, :integer, @option_string], {:tuple, []}},
       "approve" => {[:address, :integer, :boolean], {:tuple, []}},
       "approve_all" => {[:address, :boolean], {:tuple, []}},
       "get_approved" => {[:integer], {:variant, [tuple: [], tuple: [:address]]}},
@@ -171,83 +165,6 @@ defmodule AeMdw.Contract do
   def is_success_ct_call?(%{result: %{error: _error}}), do: false
   def is_success_ct_call?(%{result: %{abort: _error}}), do: false
   def is_success_ct_call?(_result_ok), do: true
-
-  @spec is_non_stateful_aex9_function?(method_name()) :: boolean()
-  def is_non_stateful_aex9_function?(<<method_name::binary>>) do
-    method_name in [
-      "aex9_extensions",
-      "meta_info",
-      "total_supply",
-      "owner",
-      "balance",
-      "balances"
-    ]
-  end
-
-  @spec get_aex9_transfer(DBN.pubkey(), String.t(), term()) ::
-          {DBN.pubkey(), DBN.pubkey(), non_neg_integer()} | nil
-  def get_aex9_transfer(from_pk, "transfer", [
-        %{type: :address, value: to_account_id},
-        %{type: :int, value: value}
-      ]),
-      do: {from_pk, Validate.id!(to_account_id), value}
-
-  def get_aex9_transfer(_caller_pk, "transfer_allowance", [
-        %{type: :address, value: from_account_id},
-        %{type: :address, value: to_account_id},
-        %{type: :int, value: value}
-      ]),
-      do: {Validate.id!(from_account_id), Validate.id!(to_account_id), value}
-
-  def get_aex9_transfer(_caller_pk, _other_function, _other_args), do: nil
-
-  @spec is_aex9?(DBN.pubkey() | type_info()) :: boolean()
-  def is_aex9?(pubkey) when is_binary(pubkey) do
-    case get_info(pubkey) do
-      {:ok, {type_info, _compiler_vsn, _source_hash}} -> is_aex9?(type_info)
-      {:error, _reason} -> false
-    end
-  end
-
-  def is_aex9?({:fcode, functions, _hash_names, _code}) do
-    AeMdw.Node.aex9_signatures()
-    |> has_all_signatures?(functions)
-  end
-
-  # AEVM
-  def is_aex9?(_no_fcode), do: false
-
-  def is_aex141?({:fcode, functions, _hash_names, _code}) do
-    AeMdw.Node.aex141_signatures()
-    |> has_all_signatures?(functions)
-  end
-
-  # AEVM
-  def is_aex141?(_no_fcode), do: false
-
-  # value of :aec_hash.blake2b_256_hash("Transfer")
-  @spec aex9_transfer_event_hash() :: event_hash()
-  def aex9_transfer_event_hash(), do: @aex9_transfer_event_hash
-
-  @spec aex9_meta_info(DBN.pubkey()) :: {:ok, aex9_meta_info()} | :not_found
-  def aex9_meta_info(contract_pk),
-    do: aex9_meta_info(contract_pk, DBN.top_height_hash(false))
-
-  def aex9_meta_info(contract_pk, {type, height, hash}) do
-    case call_contract(contract_pk, {type, height, hash}, "meta_info", []) do
-      {:ok, {:tuple, {name, symbol, decimals}}} ->
-        {:ok, {name, symbol, decimals}}
-
-      {:error, _call_error} ->
-        Log.info(
-          "aex9_meta_info not available for #{
-            :aeser_api_encoder.encode(:contract_pubkey, contract_pk)
-          }"
-        )
-
-        :not_found
-    end
-  end
 
   @spec call_contract(DBN.pubkey(), String.t(), list()) ::
           {:ok, call_result()} | {:error, any()} | :revert
@@ -427,12 +344,6 @@ defmodule AeMdw.Contract do
   #
   # Private functions
   #
-  defp has_all_signatures?(aexn_signatures, functions) do
-    Enum.all?(aexn_signatures, fn {hash, type} ->
-      match?({_code, ^type, _body}, Map.get(functions, hash))
-    end)
-  end
-
   # encoding and decoding vm data
   defp fate_val({:address, x}, f), do: f.({:address, encode(:account_pubkey, x)})
   defp fate_val({:oracle, x}, f), do: f.({:oracle, encode(:oracle_pubkey, x)})

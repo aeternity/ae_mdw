@@ -3,15 +3,18 @@ defmodule AeMdw.Db.Sync.TransactionTest do
 
   alias AeMdw.Node, as: AE
 
+  alias AeMdw.Contracts.AexnContract
   alias AeMdw.Database
   alias AeMdw.Contract
   alias AeMdw.Db.Sync.Transaction
   alias AeMdw.Db.Model
+  alias AeMdw.EtsCache
   alias AeMdw.Validate
-  alias AeMdw.Db.Aex9CreateContractMutation
+  alias AeMdw.Db.AexnCreateContractMutation
 
   import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, spend_tx: 3]
   import AeMdw.Node.ContractCallFixtures
+  import AeMdw.Node.AeTxFixtures
   import Mock
 
   require Model
@@ -20,6 +23,9 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   @recipient_id_pos AE.tx_ids(:spend_tx).recipient_id
   @very_high_txi 100_000_000_000
   @create_pair_hash <<38, 76, 208, 75>>
+  @aex141_mint_signature %{
+    <<207, 221, 154, 162>> => {[:address, {:variant, [tuple: [], tuple: [:string]]}], :integer}
+  }
 
   describe "sync_transaction spend_tx" do
     test "when receiver and sender ids are different" do
@@ -88,58 +94,33 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   end
 
   describe "transaction_mutations/4" do
-    test "aex9 contract creation by a contract call" do
-      signed_tx =
-        {:signed_tx,
-         {:aetx, :contract_call_tx, :aect_call_tx, 194,
-          {:contract_call_tx,
-           {:id, :account,
-            <<87, 95, 129, 255, 176, 162, 151, 183, 114, 93, 198, 113, 218, 11, 23, 105, 177, 252,
-              92, 190, 69, 56, 92, 123, 90, 209, 252, 46, 175, 29, 96, 157>>}, 41,
-           {:id, :contract,
-            <<10, 126, 159, 135, 82, 51, 128, 194, 144, 132, 41, 25, 103, 230, 4, 179, 77, 54, 3,
-              118, 14, 88, 180, 200, 222, 12, 124, 138, 3, 39, 137, 110>>}, 3,
-           183_880_000_000_000, 0, 0, 25_000, 1_000_000_000,
-           <<43, 17, 173, 201, 32, 179, 75, 159, 2, 160, 83, 107, 86, 97, 199, 199, 69, 232, 131,
-             106, 241, 190, 181, 55, 62, 215, 254, 27, 189, 54, 54, 3, 152, 10, 245, 52, 84, 143,
-             225, 73, 60, 7, 159, 2, 160, 165, 183, 23, 114, 145, 239, 159, 199, 241, 17, 145, 38,
-             165, 16, 97, 176, 78, 150, 205, 43, 175, 9, 38, 160, 18, 49, 212, 116, 169, 115, 144,
-             97, 175, 130, 0, 1, 1, 27, 111, 130, 3, 168, 175, 130, 0, 1, 1, 27, 111, 134, 1, 124,
-             235, 169, 148, 223>>, [],
-           <<87, 95, 129, 255, 176, 162, 151, 183, 114, 93, 198, 113, 218, 11, 23, 105, 177, 252,
-             92, 190, 69, 56, 92, 123, 90, 209, 252, 46, 175, 29, 96, 157>>}},
-         [
-           <<241, 150, 148, 131, 67, 46, 246, 13, 168, 16, 229, 204, 67, 231, 236, 95, 54, 170,
-             101, 153, 197, 29, 208, 162, 209, 157, 206, 128, 150, 32, 89, 254, 40, 198, 80, 136,
-             48, 195, 190, 146, 235, 50, 195, 54, 72, 37, 63, 86, 82, 78, 182, 119, 240, 223, 137,
-             176, 53, 71, 171, 222, 74, 17, 102, 11>>
-         ]}
-
+    test "creates aex9 contract on :contract_call_tx" do
+      signed_tx = signed_tx(:contract_call_tx, :aex9_create)
       txi = 31_215_242
       block_index = {577_695, 6}
-
-      block_hash =
-        <<64, 198, 150, 216, 251, 176, 118, 72, 222, 152, 196, 47, 169, 57, 5, 18, 210, 58, 168,
-          236, 180, 164, 35, 88, 244, 72, 40, 164, 117, 172, 212, 175>>
-
+      block_hash = :crypto.strong_rand_bytes(32)
       mb_time = 1_648_465_667_388
       mb_events = %{}
 
       # setup contract
-      contract_pk = setup_contract(signed_tx)
+      contract_pk = setup_contract_on_call(signed_tx, txi)
       aex9_meta_info = {"TestAEX9-B vs TestAEX9-A", "TAEX9-B/TAEX9-A", 18}
+      child_contract_pk = Validate.id!(fun_args_res("create_pair")[:result][:value])
 
       with_mocks [
         {Contract, [],
          [
-           is_aex9?: fn ct_pk -> ct_pk != contract_pk end,
-           aex9_meta_info: fn ct_pk -> if ct_pk != contract_pk, do: {:ok, aex9_meta_info} end,
            call_tx_info: fn _tx, ^contract_pk, _block_hash, _to_map ->
              {
                fun_args_res("create_pair"),
                call_rec("create_pair")
              }
            end
+         ]},
+        {AexnContract, [],
+         [
+           is_aex9?: fn pk -> pk == child_contract_pk end,
+           call_meta_info: fn pk -> pk == child_contract_pk && {:ok, aex9_meta_info} end
          ]}
       ] do
         mutations =
@@ -150,13 +131,66 @@ defmodule AeMdw.Db.Sync.TransactionTest do
           )
           |> List.flatten()
 
-        child_contract_pk = Validate.id!(fun_args_res("create_pair")[:result][:value])
-
         assert Enum.any?(mutations, fn
-                 %Aex9CreateContractMutation{
-                   aex9_meta_info: ^aex9_meta_info,
+                 %AexnCreateContractMutation{
+                   aexn_type: :aex9,
+                   aexn_meta_info: ^aex9_meta_info,
                    block_index: ^block_index,
                    contract_pk: ^child_contract_pk,
+                   create_txi: ^txi
+                 } ->
+                   true
+
+                 %{} ->
+                   false
+               end)
+      end
+    end
+
+    test "creates mintable aex141 contract on :contract_create_tx" do
+      signed_tx = signed_tx(:contract_create_tx, :aex141)
+      txi = 28_522_602
+      block_index = {610_470, 77}
+      block_hash = :crypto.strong_rand_bytes(32)
+      mb_time = 1_653_918_598_237
+      mb_events = %{}
+
+      # setup contract
+      contract_pk = setup_contract_on_create(signed_tx, txi)
+      number = abs(System.unique_integer())
+      aex141_meta_info = {"test-nft#{number}", "test-nft#{number}", "http://some-fake-url", :url}
+
+      with_mocks [
+        {Contract, [],
+         [
+           is_contract?: fn ct_pk -> ct_pk == contract_pk end,
+           get_init_call_rec: fn _tx, _hash ->
+             {:call, <<1::256>>, {:id, :account, <<2::256>>}, 1, 123_456,
+              {:id, :contract, contract_pk}, 1_000_000_000, 1_234, "?", :ok, []}
+           end,
+           call_contract: fn _pk, _hash, "extensions", [] -> {:ok, ["mintable"]} end
+         ]},
+        {AexnContract, [],
+         [
+           is_aex9?: fn _pk -> false end,
+           is_aex141?: fn pk -> pk == contract_pk end,
+           call_meta_info: fn pk -> pk == contract_pk && {:ok, aex141_meta_info} end
+         ]}
+      ] do
+        mutations =
+          signed_tx
+          |> Transaction.transaction_mutations(
+            txi,
+            {block_index, block_hash, mb_time, mb_events}
+          )
+          |> List.flatten()
+
+        assert Enum.any?(mutations, fn
+                 %AexnCreateContractMutation{
+                   aexn_type: :aex141,
+                   aexn_meta_info: ^aex141_meta_info,
+                   block_index: ^block_index,
+                   contract_pk: ^contract_pk,
                    create_txi: ^txi
                  } ->
                    true
@@ -171,10 +205,10 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   #
   # Helper functions
   #
-  defp setup_contract(signed_tx) do
+  defp setup_contract_on_call(signed_tx, txi) do
     {_mod, tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
     contract_pk = :aect_call_tx.contract_pubkey(tx)
-    :ets.insert(:ct_create_sync_cache, {contract_pk, 31_215_229})
+    :ets.insert(:ct_create_sync_cache, {contract_pk, txi - 1})
 
     functions =
       %{
@@ -183,7 +217,22 @@ defmodule AeMdw.Db.Sync.TransactionTest do
       |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
 
     type_info = {:fcode, functions, nil, nil}
-    AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+    EtsCache.put(Contract, contract_pk, {type_info, nil, nil})
+
+    contract_pk
+  end
+
+  defp setup_contract_on_create(signed_tx, create_txi) do
+    {_mod, tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
+    contract_pk = :aect_create_tx.contract_pubkey(tx)
+    :ets.insert(:ct_create_sync_cache, {contract_pk, create_txi})
+
+    functions =
+      @aex141_mint_signature
+      |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+    type_info = {:fcode, functions, nil, nil}
+    EtsCache.put(Contract, contract_pk, {type_info, nil, nil})
 
     contract_pk
   end

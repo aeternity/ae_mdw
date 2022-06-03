@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.ContractTest do
   use ExUnit.Case, async: false
 
+  alias AeMdw.Contracts.AexnContract
   alias AeMdw.Db.Contract
   alias AeMdw.Db.RocksDb
   alias AeMdw.Db.State
@@ -85,11 +86,11 @@ defmodule AeMdw.Db.ContractTest do
 
     with_mocks [
       {
-        AeMdw.Contract,
+        AexnContract,
         [],
         [
           is_aex9?: fn ct_pk -> ct_pk not in [not_aex9_contract_pk, non_aex9_log_pk] end,
-          aex9_meta_info: fn ct_pk ->
+          call_meta_info: fn ct_pk ->
             case ct_pk do
               ^log_aex9_pk1 -> {:ok, meta_info1}
               ^log_aex9_pk2 -> {:ok, meta_info2}
