@@ -62,11 +62,11 @@ defmodule AeMdwWeb.AexnTokenController do
 
   @spec aex9_account_balances(Conn.t(), map()) :: Conn.t()
   def aex9_account_balances(%Conn{assigns: assigns} = conn, %{"account_id" => account_id}) do
-    %{pagination: pagination, cursor: cursor} = assigns
+    %{state: state, pagination: pagination, cursor: cursor} = assigns
 
     with {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
          {:ok, prev_cursor, account_balances, next_cursor} <-
-           Aex9.fetch_account_balances(account_pk, cursor, pagination) do
+           Aex9.fetch_account_balances(state, account_pk, cursor, pagination) do
       Util.paginate(conn, prev_cursor, account_balances, next_cursor)
     end
   end

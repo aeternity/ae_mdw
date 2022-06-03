@@ -349,10 +349,10 @@ defmodule AeMdw.Names do
     %{
       active_from: active,
       expire_height: expire,
-      claims: Enum.map(claims, &expand_txi(Format.bi_txi_txi(&1), expand?)),
-      updates: Enum.map(updates, &expand_txi(Format.bi_txi_txi(&1), expand?)),
-      transfers: Enum.map(transfers, &expand_txi(Format.bi_txi_txi(&1), expand?)),
-      revoke: (revoke && expand_txi(Format.bi_txi_txi(revoke), expand?)) || nil,
+      claims: Enum.map(claims, &expand_txi(state, Format.bi_txi_txi(&1), expand?)),
+      updates: Enum.map(updates, &expand_txi(state, Format.bi_txi_txi(&1), expand?)),
+      transfers: Enum.map(transfers, &expand_txi(state, Format.bi_txi_txi(&1), expand?)),
+      revoke: (revoke && expand_txi(state, Format.bi_txi_txi(revoke), expand?)) || nil,
       auction_timeout: auction_timeout,
       pointers: render_pointers(state, name),
       ownership: render_ownership(state, name)
@@ -414,8 +414,8 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp expand_txi(bi_txi, false), do: bi_txi
-  defp expand_txi(bi_txi, true), do: Format.to_map(DBUtil.read_tx!(bi_txi))
+  defp expand_txi(_state, bi_txi, false), do: bi_txi
+  defp expand_txi(state, bi_txi, true), do: Format.to_map(state, DBUtil.read_tx!(state, bi_txi))
 
   defp render_previous(state, name, expand?) do
     name

@@ -294,7 +294,7 @@ defmodule AeMdw.Db.Name do
         name: Model.name(m_name, :index),
         active_from: Model.name(m_name, :active),
         expire_height: revoke_or_expire_height(m_name),
-        update: Format.to_raw_map({update_bi, update_txi})
+        update: Format.to_raw_map(state, {update_bi, update_txi})
       }
 
       Map.update(place, ptr_k, [pointee], fn pointees -> [pointee | pointees] end)
@@ -302,7 +302,7 @@ defmodule AeMdw.Db.Name do
 
     for {_bi, txi, _ptr_k} = p_keys <- pointee_keys(pk), reduce: {%{}, %{}} do
       {active, inactive} ->
-        %{tx: %{name: plain}} = Format.to_raw_map(DbUtil.read_tx!(state, txi))
+        %{tx: %{name: plain}} = Format.to_raw_map(state, DbUtil.read_tx!(state, txi))
 
         case locate(state, plain) do
           {_bid_key, Model.AuctionBid} ->
@@ -475,8 +475,7 @@ defmodule AeMdw.Db.Name do
       update_txi ->
         {:id, :account, pointee_pk} =
           state
-          |> DbUtil.read_tx!(update_txi)
-          |> Format.to_raw_map()
+          |> Format.to_raw_map(DbUtil.read_tx!(state, update_txi))
           |> get_in([:tx, :pointers])
           |> Enum.into(%{}, &pointer_kv_raw/1)
           |> Map.get("account_pubkey")
@@ -492,5 +491,5 @@ defmodule AeMdw.Db.Name do
   end
 
   defp read_raw_tx!(state, txi),
-    do: Format.to_raw_map(DbUtil.read_tx!(state, txi))
+    do: Format.to_raw_map(state, DbUtil.read_tx!(state, txi))
 end

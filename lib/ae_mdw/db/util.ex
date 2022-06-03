@@ -44,6 +44,9 @@ defmodule AeMdw.Db.Util do
   def read_block(kbi) when is_integer(kbi),
     do: read_block({kbi, -1})
 
+  @spec read_block!(State.t(), Blocks.block_index()) :: Model.block()
+  def read_block!(state, block_index), do: State.fetch!(state, Model.Block, block_index)
+
   @spec read_block!(non_neg_integer | {non_neg_integer, integer}) :: Model.block()
   def read_block!(bi),
     do: read_block(bi) |> one!

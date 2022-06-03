@@ -134,9 +134,9 @@ defmodule AeMdw.Stats do
 
   defp render_total_stats(state, gens), do: Enum.map(gens, &fetch_total_stat!(state, &1))
 
-  defp render_delta_stat(_state, stat), do: Format.to_map(stat, Model.DeltaStat)
+  defp render_delta_stat(state, stat), do: Format.to_map(state, stat, Model.DeltaStat)
 
-  defp render_total_stat(_state, total_stat), do: Format.to_map(total_stat, Model.TotalStat)
+  defp render_total_stat(state, total_stat), do: Format.to_map(state, total_stat, Model.TotalStat)
 
   defp serialize_cursor(nil), do: nil
 

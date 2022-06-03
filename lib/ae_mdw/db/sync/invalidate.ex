@@ -9,6 +9,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
   alias AeMdw.Db.DeleteKeysMutation
   alias AeMdw.Db.NameInvalidationMutation
   alias AeMdw.Db.OracleInvalidationMutation
+  alias AeMdw.Db.State
   alias AeMdw.Log
   alias AeMdw.Node, as: AE
   alias AeMdw.Sync.AsyncTasks
@@ -118,8 +119,10 @@ defmodule AeMdw.Db.Sync.Invalidate do
   end
 
   def type_fields_keys(txis) do
+    state = State.new()
+
     Enum.reduce(txis, {[], [], %{}}, fn txi, {type_keys, field_keys, field_counts} ->
-      %{tx: %{type: tx_type} = tx, hash: tx_hash} = Format.to_raw_map(read_tx!(txi))
+      %{tx: %{type: tx_type} = tx, hash: tx_hash} = Format.to_raw_map(state, read_tx!(txi))
 
       {fields, f_counts} =
         for {id_key, pos} <- AE.tx_ids(tx_type), reduce: {[], field_counts} do

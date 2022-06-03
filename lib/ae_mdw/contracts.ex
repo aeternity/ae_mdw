@@ -464,15 +464,15 @@ defmodule AeMdw.Contracts do
     tx_type
   end
 
-  defp render_log(_state, {create_txi, call_txi, event_hash, log_idx, _data}) do
+  defp render_log(state, {create_txi, call_txi, event_hash, log_idx, _data}) do
     log_key = {create_txi, call_txi, event_hash, log_idx}
 
-    Format.to_map(log_key, @contract_log_table)
+    Format.to_map(state, log_key, @contract_log_table)
   end
 
-  defp render_call(_state, {call_txi, local_idx, _create_txi, _pk, _fname, _pos}) do
+  defp render_call(state, {call_txi, local_idx, _create_txi, _pk, _fname, _pos}) do
     call_key = {call_txi, local_idx}
-    Format.to_map(call_key, @int_contract_call_table)
+    Format.to_map(state, call_key, @int_contract_call_table)
   end
 
   defp serialize_logs_cursor(nil), do: nil

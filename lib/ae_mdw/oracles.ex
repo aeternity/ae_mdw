@@ -205,7 +205,7 @@ defmodule AeMdw.Oracles do
   end
 
   defp expand_txi(_state, bi_txi, false), do: bi_txi
-  defp expand_txi(state, bi_txi, true), do: Format.to_map(DBUtil.read_tx!(state, bi_txi))
+  defp expand_txi(state, bi_txi, true), do: Format.to_map(state, DBUtil.read_tx!(state, bi_txi))
 
   defp deserialize_scope(nil), do: nil
 

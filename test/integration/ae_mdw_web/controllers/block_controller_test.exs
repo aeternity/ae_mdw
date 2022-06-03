@@ -6,6 +6,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
   alias AeMdw.Validate
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdwWeb.TestUtil
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.EtsCache
@@ -284,10 +285,11 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
 
   defp get_block(enc_block_hash) when is_binary(enc_block_hash) do
     block_hash = Validate.id!(enc_block_hash)
+    state = State.new()
 
     case :aec_chain.get_block(block_hash) do
       {:ok, _} ->
-        Format.to_map({:block, {nil, nil}, nil, block_hash})
+        Format.to_map(state, {:block, {nil, nil}, nil, block_hash})
 
       :error ->
         raise ErrInput.NotFound, value: enc_block_hash

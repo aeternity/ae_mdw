@@ -9,13 +9,13 @@ defmodule AeMdw.Db.Format do
   alias AeMdw.Db.Name
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Txs
 
   require Model
 
   import AeMdw.Db.Name, only: [plain_name!: 1]
   import AeMdw.Util
-  import AeMdw.Db.Util
 
   @type aeser_id() :: {:id, atom(), binary()}
 
@@ -23,20 +23,21 @@ defmodule AeMdw.Db.Format do
 
   def bi_txi_txi({{_height, _mbi}, txi}), do: txi
 
-  def to_raw_map({{height, mbi}, txi}),
+  def to_raw_map(_state, {{height, mbi}, txi}),
     do: %{block_height: height, micro_index: mbi, tx_index: txi}
 
-  def to_raw_map({:block, {_kbi, mbi}, _txi, hash}),
+  def to_raw_map(_state, {:block, {_kbi, mbi}, _txi, hash}),
     do: record_to_map(:aec_db.get_header(hash), AE.hdr_fields((mbi == -1 && :key) || :micro))
 
-  def to_raw_map({:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} = mdw_tx),
-    do: to_raw_map(mdw_tx, AE.Db.get_tx_data(hash))
+  def to_raw_map(state, {:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} = mdw_tx),
+    do: to_raw_map(state, mdw_tx, AE.Db.get_tx_data(hash))
 
   def to_raw_map(
+        state,
         {:tx, index, hash, {kb_index, mb_index}, mb_time},
         {block_hash, type, signed_tx, tx_rec}
       ) do
-    tx_map = to_raw_map(tx_rec, type) |> put_in([:type], type)
+    tx_map = to_raw_map(state, tx_rec, type) |> put_in([:type], type)
 
     raw = %{
       block_hash: block_hash,
@@ -52,10 +53,10 @@ defmodule AeMdw.Db.Format do
     custom_raw_data(type, raw, tx_rec, signed_tx, block_hash)
   end
 
-  def to_raw_map(auction_bid, Model.AuctionBid),
-    do: auction_bid(auction_bid, & &1, &to_raw_map/1, & &1)
+  def to_raw_map(state, auction_bid, Model.AuctionBid),
+    do: auction_bid(state, auction_bid, & &1, &to_raw_map(state, &1), & &1)
 
-  def to_raw_map(m_name, source) when elem(m_name, 0) == :name do
+  def to_raw_map(state, m_name, source) when elem(m_name, 0) == :name do
     plain_name = Model.name(m_name, :index)
     succ = &Model.name(&1, :previous)
     prev = chase(succ.(m_name), succ)
@@ -67,9 +68,9 @@ defmodule AeMdw.Db.Format do
       end
 
     {status, auction} =
-      case Name.locate_bid(State.new(), plain_name) do
+      case Name.locate_bid(state, plain_name) do
         nil -> {:name, nil}
-        key -> {:auction, to_raw_map(key, Model.AuctionBid)}
+        key -> {:auction, to_raw_map(state, key, Model.AuctionBid)}
       end
 
     %{
@@ -78,19 +79,17 @@ defmodule AeMdw.Db.Format do
       auction: auction,
       status: status,
       active: source == Model.ActiveName,
-      info: name_info_to_raw_map(m_name),
-      previous: Enum.map(prev, &name_info_to_raw_map/1)
+      info: name_info_to_raw_map(state, m_name),
+      previous: Enum.map(prev, &name_info_to_raw_map(state, &1))
     }
   end
 
-  def to_raw_map(m_oracle, source) when elem(m_oracle, 0) == :oracle do
-    alias AeMdw.Node, as: AE
-
+  def to_raw_map(state, m_oracle, source) when elem(m_oracle, 0) == :oracle do
     pk = Model.oracle(m_oracle, :index)
     {{register_height, _}, register_txi} = Model.oracle(m_oracle, :register)
     expire_height = Model.oracle(m_oracle, :expire)
 
-    kbi = min(expire_height - 1, last_gen())
+    kbi = min(expire_height - 1, DbUtil.last_gen(state))
     block_hash = Blocks.block_hash(State.new(), kbi)
     oracle_tree = AeMdw.Db.Oracle.oracle_tree!(block_hash)
     oracle_rec = :aeo_state_tree.get_oracle(pk, oracle_tree)
@@ -110,22 +109,21 @@ defmodule AeMdw.Db.Format do
     }
   end
 
-  def to_raw_map({name, symbol, txi, decimals}, Model.Aex9Contract) do
+  def to_raw_map(state, {name, symbol, txi, decimals}, Model.Aex9Contract) do
     %{
       name: name,
       symbol: symbol,
       decimals: decimals,
       contract_txi: txi,
-      contract_id: :aeser_id.create(:contract, Origin.pubkey!(State.new(), {:contract, txi}))
+      contract_id: :aeser_id.create(:contract, Origin.pubkey!(state, {:contract, txi}))
     }
   end
 
-  def to_raw_map({symbol, name, txi, decimals}, Model.Aex9ContractSymbol),
-    do: to_raw_map({name, symbol, txi, decimals}, Model.Aex9Contract)
+  def to_raw_map(state, {symbol, name, txi, decimals}, Model.Aex9ContractSymbol),
+    do: to_raw_map(state, {name, symbol, txi, decimals}, Model.Aex9Contract)
 
-  def to_raw_map({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog) do
-    state = State.new()
-    m_log = read!(Model.ContractLog, {create_txi, call_txi, event_hash, log_idx})
+  def to_raw_map(state, {create_txi, call_txi, event_hash, log_idx}, Model.ContractLog) do
+    m_log = State.fetch!(state, Model.ContractLog, {create_txi, call_txi, event_hash, log_idx})
     ct_id = &:aeser_id.create(:contract, &1)
 
     ct_pk =
@@ -146,10 +144,10 @@ defmodule AeMdw.Db.Format do
     # clear ext_ct_pk after saving parent_contract_pk in its own field
     ext_ct_pk = if not is_tuple(ext_ct_pk), do: ext_ct_pk
     ext_ct_txi = if ext_ct_pk, do: Origin.tx_index!(state, {:contract, ext_ct_pk}), else: -1
-    m_tx = read!(Model.Tx, call_txi)
+    m_tx = State.fetch!(state, Model.Tx, call_txi)
 
     {height, micro_index} = Model.tx(m_tx, :block_index)
-    block_hash = Model.block(read_block!({height, micro_index}), :hash)
+    block_hash = Model.block(DbUtil.read_block!(state, {height, micro_index}), :hash)
 
     %{
       contract_txi: (create_txi != -1 && create_txi) || -1,
@@ -169,11 +167,10 @@ defmodule AeMdw.Db.Format do
     }
   end
 
-  def to_raw_map({call_txi, local_idx}, Model.IntContractCall) do
-    m_call = read!(Model.IntContractCall, {call_txi, local_idx})
+  def to_raw_map(state, {call_txi, local_idx}, Model.IntContractCall) do
+    m_call = State.fetch!(state, Model.IntContractCall, {call_txi, local_idx})
     create_txi = Model.int_contract_call(m_call, :create_txi)
     fname = Model.int_contract_call(m_call, :fname)
-    state = State.new()
 
     ct_pk =
       case Origin.pubkey(state, {:contract, create_txi}) do
@@ -181,9 +178,9 @@ defmodule AeMdw.Db.Format do
         pk -> :aeser_id.create(:contract, pk)
       end
 
-    m_tx = read!(Model.Tx, call_txi)
+    m_tx = State.fetch!(state, Model.Tx, call_txi)
     {height, micro_index} = Model.tx(m_tx, :block_index)
-    block_hash = Model.block(read_block!({height, micro_index}), :hash)
+    block_hash = Model.block(DbUtil.read_block!(state, {height, micro_index}), :hash)
 
     %{
       contract_txi: (create_txi != -1 && create_txi) || nil,
@@ -199,8 +196,8 @@ defmodule AeMdw.Db.Format do
     }
   end
 
-  def to_raw_map({{height, _txi}, kind, target_pk, ref_txi} = key, Model.IntTransferTx) do
-    m_transfer = read!(Model.IntTransferTx, key)
+  def to_raw_map(state, {{height, _txi}, kind, target_pk, ref_txi} = key, Model.IntTransferTx) do
+    m_transfer = State.fetch!(state, Model.IntTransferTx, key)
     amount = Model.int_transfer_tx(m_transfer, :amount)
 
     %{
@@ -213,6 +210,7 @@ defmodule AeMdw.Db.Format do
   end
 
   def to_raw_map(
+        _state,
         Model.delta_stat(
           index: height,
           auctions_started: auctions_started,
@@ -242,6 +240,7 @@ defmodule AeMdw.Db.Format do
   end
 
   def to_raw_map(
+        _state,
         Model.total_stat(
           index: height,
           active_auctions: active_auctions,
@@ -270,7 +269,7 @@ defmodule AeMdw.Db.Format do
     }
   end
 
-  def to_raw_map(ae_tx, tx_type) do
+  def to_raw_map(_state, ae_tx, tx_type) do
     AeMdw.Node.tx_fields(tx_type)
     |> Stream.with_index(1)
     |> Enum.reduce(
@@ -338,18 +337,19 @@ defmodule AeMdw.Db.Format do
 
   ##########
 
-  def to_map({{_height, _mbi}, _txi} = bi_txi),
-    do: raw_to_json(to_raw_map(bi_txi))
+  def to_map(state, {{_height, _mbi}, _txi} = bi_txi),
+    do: raw_to_json(to_raw_map(state, bi_txi))
 
-  def to_map({:block, {_kbi, _mbi}, _txi, hash}) do
+  def to_map(_state, {:block, {_kbi, _mbi}, _txi, hash}) do
     header = :aec_db.get_header(hash)
-    :aec_headers.serialize_for_client(header, prev_block_type(header))
+    :aec_headers.serialize_for_client(header, DbUtil.prev_block_type(header))
   end
 
-  def to_map({:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} = rec),
-    do: to_map(rec, AE.Db.get_tx_data(hash))
+  def to_map(state, {:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} = rec),
+    do: to_map(state, rec, AE.Db.get_tx_data(hash))
 
   def to_map(
+        _state,
         {:tx, index, _hash, {_kb_index, mb_index}, mb_time},
         {block_hash, type, signed_tx, tx_rec}
       ) do
@@ -364,11 +364,11 @@ defmodule AeMdw.Db.Format do
     custom_encode(type, enc_tx, tx_rec, signed_tx, block_hash)
   end
 
-  def to_map(auction_bid, Model.AuctionBid),
-    do: auction_bid(auction_bid, &to_string/1, &to_map/1, &raw_to_json/1)
+  def to_map(state, auction_bid, Model.AuctionBid),
+    do: auction_bid(state, auction_bid, &to_string/1, &to_map(state, &1), &raw_to_json/1)
 
-  def to_map(m_name, source) when source in [Model.ActiveName, Model.InactiveName] do
-    {raw_auction, raw_map} = Map.pop(to_raw_map(m_name, source), :auction)
+  def to_map(state, m_name, source) when source in [Model.ActiveName, Model.InactiveName] do
+    {raw_auction, raw_map} = Map.pop(to_raw_map(state, m_name, source), :auction)
 
     auction =
       map_some(
@@ -391,16 +391,16 @@ defmodule AeMdw.Db.Format do
     |> update_in(["status"], &to_string/1)
   end
 
-  def to_map(m_oracle, source) when source in [Model.ActiveOracle, Model.InactiveOracle],
+  def to_map(state, m_oracle, source) when source in [Model.ActiveOracle, Model.InactiveOracle],
     do:
-      map_raw_values(to_raw_map(m_oracle, source), fn
+      map_raw_values(to_raw_map(state, m_oracle, source), fn
         {:id, :oracle, pk} -> Enc.encode(:oracle_pubkey, pk)
         x -> to_json(x)
       end)
 
-  def to_map({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog),
+  def to_map(state, {create_txi, call_txi, event_hash, log_idx}, Model.ContractLog),
     do:
-      to_raw_map({create_txi, call_txi, event_hash, log_idx}, Model.ContractLog)
+      to_raw_map(state, {create_txi, call_txi, event_hash, log_idx}, Model.ContractLog)
       |> update_in([:contract_id], &enc_id/1)
       |> update_in([:ext_caller_contract_id], &enc_id/1)
       |> update_in([:parent_contract_id], &enc_id/1)
@@ -411,8 +411,8 @@ defmodule AeMdw.Db.Format do
         Enum.map(args, fn <<topic::256>> -> to_string(topic) end)
       end)
 
-  def to_map({call_txi, local_idx}, Model.IntContractCall) do
-    raw_map = to_raw_map({call_txi, local_idx}, Model.IntContractCall)
+  def to_map(state, {call_txi, local_idx}, Model.IntContractCall) do
+    raw_map = to_raw_map(state, {call_txi, local_idx}, Model.IntContractCall)
 
     int_tx = fn tx ->
       {tx_type, tx_rec} = :aetx.specialize_type(tx)
@@ -441,45 +441,45 @@ defmodule AeMdw.Db.Format do
     |> update_in([:internal_tx], int_tx)
   end
 
-  def to_map({{_height, _txi}, _kind, _target_pk, _ref_txi} = key, Model.IntTransferTx) do
-    raw_map = to_raw_map(key, Model.IntTransferTx)
+  def to_map(state, {{_height, _txi}, _kind, _target_pk, _ref_txi} = key, Model.IntTransferTx) do
+    raw_map = to_raw_map(state, key, Model.IntTransferTx)
 
     raw_map
     |> update_in([:account_id], &Enc.encode(:account_pubkey, &1))
   end
 
-  def to_map(m_delta_stat, Model.DeltaStat),
-    do: to_raw_map(m_delta_stat, Model.DeltaStat)
+  def to_map(state, m_delta_stat, Model.DeltaStat),
+    do: to_raw_map(state, m_delta_stat, Model.DeltaStat)
 
-  def to_map(m_total_stat, Model.TotalStat),
-    do: to_raw_map(m_total_stat, Model.TotalStat)
+  def to_map(state, m_total_stat, Model.TotalStat),
+    do: to_raw_map(state, m_total_stat, Model.TotalStat)
 
-  def to_map({_, _, _, _} = aex9_data, source)
+  def to_map(state, {_, _, _, _} = aex9_data, source)
       when source in [Model.Aex9Contract, Model.Aex9ContractSymbol],
-      do: raw_to_json(to_raw_map(aex9_data, source))
+      do: raw_to_json(to_raw_map(state, aex9_data, source))
 
-  def to_map(data, source, false = _expand),
-    do: to_map(data, source)
+  def to_map(state, data, source, false = _expand),
+    do: to_map(state, data, source)
 
-  def to_map(name, source, true = _expand)
+  def to_map(state, name, source, true = _expand)
       when source in [Model.ActiveName, Model.InactiveName] do
-    to_map(name, source)
-    |> update_in(["auction"], &expand_name_auction/1)
-    |> update_in(["info"], &expand_name_info/1)
-    |> update_in(["previous"], fn prevs -> Enum.map(prevs, &expand_name_info/1) end)
+    to_map(state, name, source)
+    |> update_in(["auction"], &expand_name_auction(state, &1))
+    |> update_in(["info"], &expand_name_info(state, &1))
+    |> update_in(["previous"], fn prevs -> Enum.map(prevs, &expand_name_info(state, &1)) end)
   end
 
-  def to_map(bid, Model.AuctionBid, true = _expand) do
-    to_map(bid, Model.AuctionBid)
-    |> update_in(["info", "bids"], fn claims -> Enum.map(claims, &expand/1) end)
-    |> update_in(["previous"], fn prevs -> Enum.map(prevs, &expand_name_info/1) end)
+  def to_map(state, bid, Model.AuctionBid, true = _expand) do
+    to_map(state, bid, Model.AuctionBid)
+    |> update_in(["info", "bids"], fn claims -> Enum.map(claims, &expand(state, &1)) end)
+    |> update_in(["previous"], fn prevs -> Enum.map(prevs, &expand_name_info(state, &1)) end)
   end
 
-  def to_map(oracle, source, true = _expand)
+  def to_map(state, oracle, source, true = _expand)
       when source in [Model.ActiveOracle, Model.InactiveOracle] do
-    to_map(oracle, source)
-    |> update_in(["extends"], fn exts -> Enum.map(exts, &expand/1) end)
-    |> update_in(["register"], &expand/1)
+    to_map(state, oracle, source)
+    |> update_in(["extends"], fn exts -> Enum.map(exts, &expand(state, &1)) end)
+    |> update_in(["register"], &expand(state, &1))
   end
 
   defp custom_encode(:oracle_response_tx, tx, _tx_rec, _signed_tx, _block_hash),
@@ -586,10 +586,9 @@ defmodule AeMdw.Db.Format do
     do: f.(x)
 
   defp name_info_to_raw_map(
+         state,
          {:name, _, active_h, expire_h, cs, us, ts, revoke, auction_tm, _owner, _prev} = n
        ) do
-    state = State.new()
-
     %{
       active_from: active_h,
       expire_height: expire_h,
@@ -604,13 +603,13 @@ defmodule AeMdw.Db.Format do
   end
 
   defp auction_bid(
+         state,
          Model.auction_bid(index: plain, expire_height: auction_end, bids: [{_, txi} | _] = bids),
          key,
          tx_fmt,
          info_fmt
        ) do
-    state = State.new()
-    last_bid = tx_fmt.(read_tx!(txi))
+    last_bid = tx_fmt.(DbUtil.read_tx!(state, txi))
     name_ttl = Name.expire_after(auction_end)
     keys = if Map.has_key?(last_bid, "tx"), do: ["tx", "ttl"], else: [:tx, :ttl]
     last_bid = put_in(last_bid, keys, name_ttl)
@@ -628,7 +627,7 @@ defmodule AeMdw.Db.Format do
         case Name.locate(state, plain) do
           {m_name, Model.InactiveName} ->
             succ = &Model.name(&1, :previous)
-            Enum.map(chase(m_name, succ), &info_fmt.(name_info_to_raw_map(&1)))
+            Enum.map(chase(m_name, succ), &info_fmt.(name_info_to_raw_map(state, &1)))
 
           _ ->
             []
@@ -636,28 +635,26 @@ defmodule AeMdw.Db.Format do
     }
   end
 
-  defp expand_name_auction(nil), do: nil
+  defp expand_name_auction(_state, nil), do: nil
 
-  defp expand_name_auction(%{"bids" => bids_txis} = auction) do
-    state = State.new()
-
+  defp expand_name_auction(state, %{"bids" => bids_txis} = auction) do
     Map.put(auction, "bids", Enum.map(bids_txis, &Txs.fetch!(state, &1)))
   end
 
-  defp expand_name_info(json) do
+  defp expand_name_info(state, json) do
     json
-    |> update_in(["claims"], &expand/1)
-    |> update_in(["updates"], &expand/1)
-    |> update_in(["transfers"], &expand/1)
-    |> update_in(["revoke"], &expand/1)
+    |> update_in(["claims"], &expand(state, &1))
+    |> update_in(["updates"], &expand(state, &1))
+    |> update_in(["transfers"], &expand(state, &1))
+    |> update_in(["revoke"], &expand(state, &1))
   end
 
-  defp expand(txis) when is_list(txis),
-    do: Enum.map(txis, &to_map(read_tx!(&1)))
+  defp expand(state, txis) when is_list(txis),
+    do: Enum.map(txis, &to_map(state, DbUtil.read_tx!(state, &1)))
 
-  defp expand(txi) when is_integer(txi),
-    do: to_map(read_tx!(txi))
+  defp expand(state, txi) when is_integer(txi),
+    do: to_map(state, DbUtil.read_tx!(state, txi))
 
-  defp expand(nil),
+  defp expand(_state, nil),
     do: nil
 end

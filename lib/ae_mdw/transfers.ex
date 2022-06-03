@@ -43,7 +43,7 @@ defmodule AeMdw.Transfers do
         |> build_streamer(state, scope, cursor)
         |> Collection.paginate(pagination)
 
-      {:ok, serialize_cursor(prev_cursor), Enum.map(transfers, &render/1),
+      {:ok, serialize_cursor(prev_cursor), Enum.map(transfers, &render(state, &1)),
        serialize_cursor(next_cursor)}
     rescue
       e in ErrInput ->
@@ -205,8 +205,8 @@ defmodule AeMdw.Transfers do
   defp convert_param(other_param),
     do: raise(ErrInput.Query, value: other_param)
 
-  defp render(transfer_key) do
-    Format.to_map(transfer_key, @int_transfer_table)
+  defp render(state, transfer_key) do
+    Format.to_map(state, transfer_key, @int_transfer_table)
   end
 
   defp serialize_cursor(nil), do: nil

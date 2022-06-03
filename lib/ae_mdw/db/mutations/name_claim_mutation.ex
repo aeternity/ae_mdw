@@ -144,7 +144,7 @@ defmodule AeMdw.Db.NameClaimMutation do
                owner: prev_owner,
                bids: prev_bids
              )} ->
-              %{tx: prev_tx} = read_cached_raw_tx!(prev_txi)
+              %{tx: prev_tx} = read_cached_raw_tx!(state, prev_txi)
 
               state4 =
                 state3
@@ -170,13 +170,13 @@ defmodule AeMdw.Db.NameClaimMutation do
     end
   end
 
-  defp read_raw_tx!(txi),
-    do: Format.to_raw_map(DbUtil.read_tx!(txi))
+  defp read_raw_tx!(state, txi),
+    do: Format.to_raw_map(state, DbUtil.read_tx!(txi))
 
-  defp read_cached_raw_tx!(txi) do
+  defp read_cached_raw_tx!(state, txi) do
     case :ets.lookup(:tx_sync_cache, txi) do
-      [{^txi, m_tx}] -> Format.to_raw_map(m_tx)
-      [] -> read_raw_tx!(txi)
+      [{^txi, m_tx}] -> Format.to_raw_map(state, m_tx)
+      [] -> read_raw_tx!(state, txi)
     end
   end
 end

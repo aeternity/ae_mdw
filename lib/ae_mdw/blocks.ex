@@ -76,11 +76,11 @@ defmodule AeMdw.Blocks do
   end
 
   @spec fetch(State.t(), block_index() | block_hash()) :: {:ok, block()} | {:error, Error.t()}
-  def fetch(_state, block_hash) when is_binary(block_hash) do
+  def fetch(state, block_hash) when is_binary(block_hash) do
     case :aec_chain.get_block(block_hash) do
       {:ok, _block} ->
         # note: the `nil` here - for json formatting, we reuse AE node code
-        {:ok, Format.to_map({:block, {nil, nil}, nil, block_hash})}
+        {:ok, Format.to_map(state, {:block, {nil, nil}, nil, block_hash})}
 
       :error ->
         {:error, Error.Input.NotFound.exception(value: block_hash)}
@@ -142,7 +142,7 @@ defmodule AeMdw.Blocks do
     |> Stream.take_while(&match?({^gen, _mb_index}, &1))
     |> Enum.map(fn key -> State.fetch!(state, @table, key) end)
     |> Enum.reverse()
-    |> Enum.map(fn block -> Format.to_map(block) end)
+    |> Enum.map(fn block -> Format.to_map(state, block) end)
   end
 
   defp fetch_gen_from_cache(gen, key_block, micro_blocks, sort_mbs?) do

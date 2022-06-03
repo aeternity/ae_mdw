@@ -3,9 +3,9 @@ defmodule AeMdwWeb.AexnView do
   Renders data for balance(s) endpoints.
   """
 
-  alias AeMdw.Database
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.Util
 
   require Model
@@ -19,14 +19,14 @@ defmodule AeMdwWeb.AexnView do
   @typep pair_transfer_key :: AeMdw.Aex9.pair_transfer_key()
   @typep transfer_key_type :: :aex9_transfer | :rev_aex9_transfer | :aex9_pair_transfer
 
-  @spec balance_to_map({non_neg_integer(), non_neg_integer(), pubkey()}) ::
+  @spec balance_to_map(State.t(), {non_neg_integer(), non_neg_integer(), pubkey()}) ::
           map()
-  def balance_to_map({amount, call_txi, contract_pk}) do
-    tx_idx = Util.read_tx!(call_txi)
-    info = Format.to_raw_map(tx_idx)
+  def balance_to_map(state, {amount, call_txi, contract_pk}) do
+    tx_idx = Util.read_tx!(state, call_txi)
+    info = Format.to_raw_map(state, tx_idx)
 
     Model.aexn_contract(meta_info: {name, symbol, _decimals}) =
-      Database.fetch!(Model.AexnContract, {:aex9, contract_pk})
+      State.fetch!(state, Model.AexnContract, {:aex9, contract_pk})
 
     %{
       contract_id: enc_ct(contract_pk),

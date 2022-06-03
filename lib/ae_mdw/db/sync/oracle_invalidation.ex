@@ -4,6 +4,7 @@ defmodule AeMdw.Db.Sync.OracleInvalidation do
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Oracle
+  alias AeMdw.Db.State
 
   require Model
   require Record
@@ -149,5 +150,5 @@ defmodule AeMdw.Db.Sync.OracleInvalidation do
     do: Enum.drop_while(bi_txis, fn {{kbi, _mbi}, _txi} -> kbi >= new_height end)
 
   def read_raw_tx!(txi),
-    do: Format.to_raw_map(read_tx!(txi))
+    do: Format.to_raw_map(State.new(), read_tx!(txi))
 end

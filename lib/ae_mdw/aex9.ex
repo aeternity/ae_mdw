@@ -177,11 +177,11 @@ defmodule AeMdw.Aex9 do
     end
   end
 
-  @spec fetch_account_balances(pubkey(), account_balance_cursor(), pagination()) ::
+  @spec fetch_account_balances(State.t(), pubkey(), account_balance_cursor(), pagination()) ::
           {:ok, account_balance_cursor() | nil, [account_balance()],
            account_balance_cursor() | nil}
           | {:error, Error.t()}
-  def fetch_account_balances(account_pk, cursor, pagination) do
+  def fetch_account_balances(state, account_pk, cursor, pagination) do
     last_gen = DbUtil.last_gen()
     type_height_hash = {:key, last_gen, DbUtil.height_hash(last_gen)}
 
@@ -190,7 +190,7 @@ defmodule AeMdw.Aex9 do
         scope = {{account_pk, Util.min_int(), nil}, {account_pk, Util.max_256bit_int(), nil}}
 
         {prev_cursor, account_presence_keys, next_cursor} =
-          (&Collection.stream(Model.Aex9AccountPresence, &1, scope, cursor))
+          (&Collection.stream(state, Model.Aex9AccountPresence, &1, scope, cursor))
           |> Collection.paginate(pagination)
 
         account_presences =
@@ -198,10 +198,10 @@ defmodule AeMdw.Aex9 do
             {amount, _height_hash} = Db.aex9_balance(contract_pk, account_pk, type_height_hash)
 
             Model.aexn_contract(meta_info: {name, symbol, _dec}) =
-              Database.fetch!(Model.AexnContract, {:aex9, contract_pk})
+              State.fetch!(state, Model.AexnContract, {:aex9, contract_pk})
 
             tx_idx = DbUtil.read_tx!(call_txi)
-            info = Format.to_raw_map(tx_idx)
+            info = Format.to_raw_map(state, tx_idx)
 
             %{
               contract_id: :aeser_api_encoder.encode(:contract_pubkey, contract_pk),

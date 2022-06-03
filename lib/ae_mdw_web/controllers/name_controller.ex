@@ -163,7 +163,7 @@ defmodule AeMdwWeb.NameController do
 
   defp name_reply(%Conn{assigns: %{state: state}} = conn, plain_name, expand?) do
     case Name.locate(state, plain_name) do
-      {info, source} -> json(conn, Format.to_map(info, source, expand?))
+      {info, source} -> json(conn, Format.to_map(state, info, source, expand?))
       nil -> raise ErrInput.NotFound, value: plain_name
     end
   end
@@ -193,7 +193,7 @@ defmodule AeMdwWeb.NameController do
   defp auction_reply(%Conn{assigns: %{state: state}} = conn, plain_name, expand?) do
     map_some(
       Name.locate_bid(state, plain_name),
-      &json(conn, Format.to_map(&1, Model.AuctionBid, expand?))
+      &json(conn, Format.to_map(state, &1, Model.AuctionBid, expand?))
     ) ||
       raise ErrInput.NotFound, value: plain_name
   end
@@ -205,7 +205,7 @@ defmodule AeMdwWeb.NameController do
       for plain <- plains, reduce: [] do
         acc ->
           case locator.(plain) do
-            {info, ^source} -> [Format.to_map(info, source, expand?) | acc]
+            {info, ^source} -> [Format.to_map(state, info, source, expand?) | acc]
             _not_found? -> acc
           end
       end
@@ -268,7 +268,7 @@ defmodule AeMdwWeb.NameController do
         state,
         prefix,
         :forward,
-        &Format.to_map(&1, Model.AuctionBid, expand?)
+        &Format.to_map(state, &1, Model.AuctionBid, expand?)
       )
 
   defp prefix_stream(state, :active, prefix, expand?),
@@ -278,7 +278,7 @@ defmodule AeMdwWeb.NameController do
         Model.ActiveName,
         prefix,
         :forward,
-        &Format.to_map(&1, Model.ActiveName, expand?)
+        &Format.to_map(state, &1, Model.ActiveName, expand?)
       )
 
   defp prefix_stream(state, :inactive, prefix, expand?),
@@ -288,6 +288,6 @@ defmodule AeMdwWeb.NameController do
         Model.InactiveName,
         prefix,
         :forward,
-        &Format.to_map(&1, Model.InactiveName, expand?)
+        &Format.to_map(state, &1, Model.InactiveName, expand?)
       )
 end

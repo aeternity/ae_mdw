@@ -382,7 +382,7 @@ defmodule AeMdw.Txs do
   defp render(state, Model.tx(id: tx_hash) = tx, add_spendtx_details?) do
     {block_hash, type, signed_tx, tx_rec} = Db.get_tx_data(tx_hash)
 
-    rendered_tx = Format.to_map(tx, {block_hash, type, signed_tx, tx_rec})
+    rendered_tx = Format.to_map(state, tx, {block_hash, type, signed_tx, tx_rec})
 
     if add_spendtx_details? do
       maybe_add_spendtx_details(state, rendered_tx)
