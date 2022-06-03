@@ -1,4 +1,4 @@
-defmodule Integration.AeMdwWeb.Aex9TokenControllerTest do
+defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
   alias AeMdw.Db.Model

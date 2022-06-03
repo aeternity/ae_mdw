@@ -31,7 +31,7 @@ defmodule AeMdw.Contracts.AexnContract do
   def is_aex141?(pubkey) when is_binary(pubkey) do
     with {:ok, {type_info, _compiler_vsn, _source_hash}} <- Contract.get_info(pubkey),
          true <- has_all_aex141_signatures?(type_info),
-         {:ok, extensions} <- call_contract(pubkey, "extensions") do
+         {:ok, extensions} <- call_contract(pubkey, "aex141_extensions") do
       has_valid_aex141_extensions?(extensions, type_info)
     else
       _error_or_false ->
@@ -44,7 +44,7 @@ defmodule AeMdw.Contracts.AexnContract do
   @spec call_meta_info(pubkey()) :: {:ok, Model.aexn_meta_info()} | :not_found
   def call_meta_info(contract_pk) do
     with {:ok, {:tuple, meta_info_tuple}} <- call_contract(contract_pk, "meta_info", []) do
-      {:ok, meta_info_tuple}
+      {:ok, decode_meta_info(meta_info_tuple)}
     end
   end
 
@@ -62,6 +62,26 @@ defmodule AeMdw.Contracts.AexnContract do
         Log.warn("#{method} call error for #{enc_ct(contract_pk)}")
         :not_found
     end
+  end
+
+  defp decode_meta_info({_name, _symbol, _decimals} = meta_info), do: meta_info
+
+  defp decode_meta_info({name, symbol, variant_url, variant_type}) do
+    url =
+      case variant_url do
+        {:variant, [0, 1], 1, url} -> url
+        _other -> nil
+      end
+
+    metadata_type =
+      case variant_type do
+        {:variant, [0, 0, 0, 0], 0, {}} -> :url
+        {:variant, [0, 0, 0, 0], 1, {}} -> :ipfs
+        {:variant, [0, 0, 0, 0], 2, {}} -> :object_id
+        {:variant, [0, 0, 0, 0], 3, {}} -> :map
+      end
+
+    {name, symbol, url, metadata_type}
   end
 
   defp has_all_signatures?(aexn_signatures, functions) do
@@ -109,8 +129,8 @@ defmodule AeMdw.Contracts.AexnContract do
         false
 
       {_code, type, _body} ->
-        type == {[:address, @option_string], :integer} or
-          type == {[:address, @option_metadata_map], :integer}
+        type == {[:address, @option_string, @option_string], :integer} or
+          type == {[:address, @option_metadata_map, @option_string], :integer}
     end
   end
 
