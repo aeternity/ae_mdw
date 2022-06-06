@@ -4297,7 +4297,7 @@ In order to differentiate, please check the "source" field on [Publishing Messag
 The websocket interface accepts JSON - encoded commands to subscribe and unsubscribe, and answers these with the list of subscriptions. A session will look like this:
 
 ```
-wscat -c wss://mainnet.aeternity.io/mdw/v2/websocket
+wscat -c wss://mainnet.aeternity.io/mdw/websocket
 
 connected (press CTRL+C to quit)
 > {"op":"Subscribe", "payload": "KeyBlocks"}
