@@ -1192,7 +1192,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
     case Name.locate(state, name) do
       {info, source} ->
-        Format.to_map(info, source)
+        Format.to_map(state, info, source)
 
       nil ->
         raise ErrInput.NotFound, value: name
