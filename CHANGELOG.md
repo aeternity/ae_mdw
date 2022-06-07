@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.10.2](https://www.github.com/aeternity/ae_mdw/compare/v1.10.1...v1.10.2) (2022-06-07)
+
+
+### Refactorings
+
+* generalize aexn create contract mutation ([#699](https://www.github.com/aeternity/ae_mdw/issues/699)) ([57c0070](https://www.github.com/aeternity/ae_mdw/commit/57c00704f5371503e9bd2f31b91575fca492f7df))
+
 ### [1.10.1](https://www.github.com/aeternity/ae_mdw/compare/v1.10.0...v1.10.1) (2022-06-01)
 
 
