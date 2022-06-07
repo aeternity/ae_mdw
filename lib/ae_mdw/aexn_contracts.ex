@@ -1,4 +1,4 @@
-defmodule AeMdw.Contracts.AexnContract do
+defmodule AeMdw.AexnContracts do
   @moduledoc """
   AEX-N detection and common calls to interact with the contract.
   """
@@ -30,7 +30,7 @@ defmodule AeMdw.Contracts.AexnContract do
   @spec is_aex141?(pubkey()) :: boolean()
   def is_aex141?(pubkey) when is_binary(pubkey) do
     with {:ok, {type_info, _compiler_vsn, _source_hash}} <- Contract.get_info(pubkey),
-         true <- has_all_aex141_signatures?(type_info),
+         true <- valid_aex141_signatures?(type_info),
          {:ok, extensions} <- call_contract(pubkey, "aex141_extensions") do
       has_valid_aex141_extensions?(extensions, type_info)
     else
@@ -39,12 +39,49 @@ defmodule AeMdw.Contracts.AexnContract do
     end
   end
 
-  def is_aex141?(_no_fcode), do: false
+  @spec has_aex141_signatures?(pubkey()) :: boolean()
+  def has_aex141_signatures?(pubkey) do
+    case Contract.get_info(pubkey) do
+      {:ok, {type_info, _compiler_vsn, _source_hash}} ->
+        valid_aex141_signatures?(type_info)
 
-  @spec call_meta_info(pubkey()) :: {:ok, Model.aexn_meta_info()} | :not_found
+      {:error, _reason} ->
+        false
+    end
+  end
+
+  @spec has_valid_aex141_extensions?(Model.aexn_extensions(), pubkey() | Contract.type_info()) ::
+          boolean()
+  def has_valid_aex141_extensions?(extensions, pubkey) when is_binary(pubkey) do
+    case Contract.get_info(pubkey) do
+      {:ok, {type_info, _compiler_vsn, _source_hash}} ->
+        has_valid_aex141_extensions?(extensions, type_info)
+
+      {:error, _reason} ->
+        false
+    end
+  end
+
+  def has_valid_aex141_extensions?(extensions, {:fcode, functions, _hash_names, _code}) do
+    Enum.all?(extensions, &valid_aex141_extension?(&1, functions))
+  end
+
+  def has_valid_aex141_extensions?(_extensions, _no_fcode) do
+    true
+  end
+
+  @spec call_meta_info(pubkey()) :: {:ok, Model.aexn_meta_info()} | :error
   def call_meta_info(contract_pk) do
     with {:ok, {:tuple, meta_info_tuple}} <- call_contract(contract_pk, "meta_info", []) do
       {:ok, decode_meta_info(meta_info_tuple)}
+    end
+  end
+
+  @spec call_extensions(Model.aexn_type(), pubkey()) :: {:ok, Model.aexn_extensions()} | :error
+  def call_extensions(aexn_type, pubkey) do
+    case aexn_type do
+      :aex9 -> call_contract(pubkey, "aex9_extensions")
+      :aex141 -> call_contract(pubkey, "aex141_extensions")
     end
   end
 
@@ -58,9 +95,9 @@ defmodule AeMdw.Contracts.AexnContract do
       {:ok, return} ->
         {:ok, return}
 
-      {:error, _call_error} ->
-        Log.warn("#{method} call error for #{enc_ct(contract_pk)}")
-        :not_found
+      {:error, call_error} ->
+        Log.warn("#{method} call error for #{enc_ct(contract_pk)}: #{inspect(call_error)}")
+        :error
     end
   end
 
@@ -90,7 +127,7 @@ defmodule AeMdw.Contracts.AexnContract do
     end)
   end
 
-  defp has_all_aex141_signatures?({:fcode, functions, _hash_names, _code}) do
+  defp valid_aex141_signatures?({:fcode, functions, _hash_names, _code}) do
     valid_base_signatures? =
       AeMdw.Node.aex141_signatures()
       |> has_all_signatures?(functions)
@@ -98,7 +135,7 @@ defmodule AeMdw.Contracts.AexnContract do
     valid_base_signatures? and valid_aex141_metadata?(functions)
   end
 
-  defp has_all_aex141_signatures?(_no_fcode), do: false
+  defp valid_aex141_signatures?(_no_fcode), do: false
 
   @option_string {:variant, [tuple: [], tuple: [:string]]}
   @option_metadata_map {:variant, [tuple: [], tuple: [{:map, :string, :string}]]}
@@ -117,10 +154,6 @@ defmodule AeMdw.Contracts.AexnContract do
       {_code, type, _body} ->
         type == {[:integer], @option_string} or type == {[:integer], @option_metadata_map}
     end
-  end
-
-  defp has_valid_aex141_extensions?(extensions, {:fcode, functions, _hash_names, _code}) do
-    Enum.all?(extensions, &valid_aex141_extension?(&1, functions))
   end
 
   defp valid_aex141_extension?("mintable", functions) do

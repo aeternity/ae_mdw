@@ -4,7 +4,7 @@ defmodule AeMdw.Aex9 do
   """
 
   alias AeMdw.Collection
-  alias AeMdw.Contracts.AexnContract
+  alias AeMdw.AexnContracts
   alias AeMdw.Database
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
@@ -112,7 +112,7 @@ defmodule AeMdw.Aex9 do
           {:ok, balances_cursor() | nil, [aex9_balance()], balances_cursor() | nil}
           | {:error, Error.t()}
   def fetch_balances(contract_pk, pagination, cursor) do
-    if AexnContract.is_aex9?(contract_pk) do
+    if AexnContracts.is_aex9?(contract_pk) do
       {amounts, _height_hash} = Db.aex9_balances!(contract_pk)
       accounts_pks = amounts |> Map.keys() |> Enum.sort()
       cursor = deserialize_balances_cursor(cursor)
@@ -389,7 +389,7 @@ defmodule AeMdw.Aex9 do
   end
 
   defp validate_aex9(contract_pk) do
-    if AexnContract.is_aex9?(contract_pk) do
+    if AexnContracts.is_aex9?(contract_pk) do
       :ok
     else
       {:error,

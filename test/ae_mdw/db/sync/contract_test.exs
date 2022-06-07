@@ -3,7 +3,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
 
   alias AeMdw.Db.Model
 
-  alias AeMdw.Contracts.AexnContract
+  alias AeMdw.AexnContracts
   alias AeMdw.Db.AexnCreateContractMutation
   alias AeMdw.Db.IntCallsMutation
   alias AeMdw.Db.Sync.Contract, as: SyncContract
@@ -120,13 +120,14 @@ defmodule AeMdw.Db.Sync.ContractTest do
       ]
 
       with_mocks [
-        {AexnContract, [],
+        {AexnContracts, [],
          [
            is_aex9?: fn ct_pk -> ct_pk == aex9_contract_pk end,
            call_meta_info: fn ct_pk ->
              if ct_pk == aex9_contract_pk,
                do: {:ok, {"TestAEX9-A vs Wrapped Aeternity", "TAEX9-A/WAE", 18}}
-           end
+           end,
+           call_extensions: fn _type, _pk -> {:ok, []} end
          ]}
       ] do
         mutations =

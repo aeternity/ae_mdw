@@ -5,6 +5,7 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
 
   alias AeMdw.Blocks
   alias AeMdw.Db.Contract, as: DBContract
+  alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Sync.AsyncTasks
   alias AeMdw.Txs
@@ -15,7 +16,8 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
     :contract_pk,
     :aexn_meta_info,
     :block_index,
-    :create_txi
+    :create_txi,
+    :extensions
   ]
 
   @typep aexn_type :: AeMdw.Db.Model.aexn_type()
@@ -27,7 +29,8 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
             contract_pk: pubkey(),
             aexn_meta_info: aexn_meta_info(),
             block_index: Blocks.block_index(),
-            create_txi: Txs.txi()
+            create_txi: Txs.txi(),
+            extensions: Model.aexn_extensions()
           }
 
   @spec new(
@@ -35,15 +38,17 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
           pubkey(),
           aexn_meta_info(),
           Blocks.block_index(),
-          Txs.txi()
+          Txs.txi(),
+          Model.aexn_extensions()
         ) :: t()
-  def new(aexn_type, contract_pk, aexn_meta_info, block_index, create_txi) do
+  def new(aexn_type, contract_pk, aexn_meta_info, block_index, create_txi, extensions) do
     %__MODULE__{
       aexn_type: aexn_type,
       contract_pk: contract_pk,
       aexn_meta_info: aexn_meta_info,
       block_index: block_index,
-      create_txi: create_txi
+      create_txi: create_txi,
+      extensions: extensions
     }
   end
 
@@ -54,12 +59,20 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
           contract_pk: contract_pk,
           aexn_meta_info: aexn_meta_info,
           block_index: {kbi, mbi},
-          create_txi: create_txi
+          create_txi: create_txi,
+          extensions: extensions
         },
         state
       ) do
     state =
-      DBContract.aexn_creation_write(state, aexn_type, aexn_meta_info, contract_pk, create_txi)
+      DBContract.aexn_creation_write(
+        state,
+        aexn_type,
+        aexn_meta_info,
+        contract_pk,
+        create_txi,
+        extensions
+      )
 
     if aexn_type == :aex9 do
       AsyncTasks.Producer.enqueue(:derive_aex9_presence, [contract_pk, kbi, mbi, create_txi])

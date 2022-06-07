@@ -7,7 +7,7 @@ defmodule AeMdwWeb.Aex9Controller do
 
   alias AeMdw.Aex9
   alias AeMdw.AexnTokens
-  alias AeMdw.Contracts.AexnContract
+  alias AeMdw.AexnContracts
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Util
   alias AeMdw.Error.Input, as: ErrInput
@@ -404,7 +404,7 @@ defmodule AeMdwWeb.Aex9Controller do
 
   defp ensure_aex9_contract_pk!(ct_ident) do
     pk = Validate.id!(ct_ident, [:contract_pubkey])
-    AexnContract.is_aex9?(pk) || raise ErrInput.NotAex9, value: ct_ident
+    AexnContracts.is_aex9?(pk) || raise ErrInput.NotAex9, value: ct_ident
     pk
   end
 

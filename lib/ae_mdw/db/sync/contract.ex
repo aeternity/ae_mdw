@@ -4,7 +4,7 @@ defmodule AeMdw.Db.Sync.Contract do
   """
   alias AeMdw.Blocks
   alias AeMdw.Contract
-  alias AeMdw.Contracts.AexnContract
+  alias AeMdw.AexnContracts
   alias AeMdw.Db.IntCallsMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
@@ -112,21 +112,26 @@ defmodule AeMdw.Db.Sync.Contract do
   def aexn_create_contract_mutation(contract_pk, block_index, txi) do
     aexn_type =
       cond do
-        AexnContract.is_aex9?(contract_pk) -> :aex9
-        AexnContract.is_aex141?(contract_pk) -> :aex141
+        AexnContracts.is_aex9?(contract_pk) -> :aex9
+        AexnContracts.has_aex141_signatures?(contract_pk) -> :aex141
         true -> nil
       end
 
     with true <- aexn_type != nil,
-         {:ok, aexn_meta_info} <-
-           AexnContract.call_meta_info(contract_pk) do
-      AexnCreateContractMutation.new(
-        aexn_type,
-        contract_pk,
-        aexn_meta_info,
-        block_index,
-        txi
-      )
+         {:ok, aexn_extensions} <- AexnContracts.call_extensions(aexn_type, contract_pk),
+         {:ok, aexn_meta_info} <- AexnContracts.call_meta_info(contract_pk) do
+      if aexn_type == :aex9 or
+           (aexn_type == :aex141 and
+              AexnContracts.has_valid_aex141_extensions?(aexn_extensions, contract_pk)) do
+        AexnCreateContractMutation.new(
+          aexn_type,
+          contract_pk,
+          aexn_meta_info,
+          block_index,
+          txi,
+          aexn_extensions
+        )
+      end
     else
       _false_or_notfound ->
         nil

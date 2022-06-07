@@ -15,16 +15,16 @@ defmodule AeMdw.AexnTokensTest do
   describe "fetch_token/1" do
     test "returns an AEX-9 contract meta info" do
       contract_pk = <<9_123_456::256>>
-
       aex9_meta_info = {name, symbol, decimals} = {"Token1", "TK1", 18}
-
       txi = 1_123_456_789
+      extensions = ["ext1", "ext2"]
 
       m_aexn =
         Model.aexn_contract(
           index: {:aex9, contract_pk},
           txi: txi,
-          meta_info: aex9_meta_info
+          meta_info: aex9_meta_info,
+          extensions: extensions
         )
 
       Database.dirty_write(Model.AexnContract, m_aexn)
@@ -38,7 +38,8 @@ defmodule AeMdw.AexnTokensTest do
                symbol: ^symbol,
                decimals: ^decimals,
                contract_txi: ^txi,
-               contract_id: ^contract_id
+               contract_id: ^contract_id,
+               extensions: ^extensions
              } = render_token(m_aex9)
     end
 
@@ -49,12 +50,14 @@ defmodule AeMdw.AexnTokensTest do
         {name, symbol, base_url, type} = {"AE Boots", "Boot", "http://someurl.com", :url}
 
       txi = 2_123_456_789
+      extensions = ["some-extension", "other-extension", "yet-another-extension"]
 
       m_aexn =
         Model.aexn_contract(
           index: {:aex141, contract_pk},
           txi: txi,
-          meta_info: aex141_meta_info
+          meta_info: aex141_meta_info,
+          extensions: extensions
         )
 
       Database.dirty_write(Model.AexnContract, m_aexn)
@@ -69,7 +72,8 @@ defmodule AeMdw.AexnTokensTest do
                base_url: ^base_url,
                contract_txi: ^txi,
                contract_id: ^contract_id,
-               metadata_type: ^type
+               metadata_type: ^type,
+               extensions: ^extensions
              } = render_token(m_aex141)
     end
 

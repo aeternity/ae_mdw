@@ -14,6 +14,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       aex9_meta_info = {name, symbol, _decimals} = {"911058", "SPH", 18}
       block_index = {271_305, 99}
       create_txi = txi = 12_361_891
+      extensions = ["ext1"]
 
       Database.commit([
         AexnCreateContractMutation.new(
@@ -21,12 +22,18 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
           contract_pk,
           aex9_meta_info,
           block_index,
-          create_txi
+          create_txi,
+          extensions
         )
       ])
 
       m_contract_pk =
-        Model.aexn_contract(index: {:aex9, contract_pk}, txi: txi, meta_info: aex9_meta_info)
+        Model.aexn_contract(
+          index: {:aex9, contract_pk},
+          txi: txi,
+          meta_info: aex9_meta_info,
+          extensions: extensions
+        )
 
       assert {:ok, ^m_contract_pk} = Database.fetch(Model.AexnContract, {:aex9, contract_pk})
       assert Database.exists?(Model.AexnContractName, {:aex9, name, contract_pk})
@@ -39,6 +46,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       aex141_meta_info =
         {name, symbol, _base_url, _type} = {"prenft2", "PNFT2", "some-fake-url", :url}
 
+      extensions = ["ext1", "ext2"]
       block_index = {610_470, 77}
       create_txi = txi = 28_522_602
 
@@ -48,12 +56,18 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
           contract_pk,
           aex141_meta_info,
           block_index,
-          create_txi
+          create_txi,
+          extensions
         )
       ])
 
       m_contract_pk =
-        Model.aexn_contract(index: {:aex141, contract_pk}, txi: txi, meta_info: aex141_meta_info)
+        Model.aexn_contract(
+          index: {:aex141, contract_pk},
+          txi: txi,
+          meta_info: aex141_meta_info,
+          extensions: extensions
+        )
 
       assert {:ok, ^m_contract_pk} = Database.fetch(Model.AexnContract, {:aex141, contract_pk})
       assert Database.exists?(Model.AexnContractName, {:aex141, name, contract_pk})

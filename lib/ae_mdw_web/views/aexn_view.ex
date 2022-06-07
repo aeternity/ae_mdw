@@ -67,10 +67,11 @@ defmodule AeMdwWeb.AexnView do
         Model.aexn_contract(
           index: {_type, contract_pk},
           txi: txi,
-          meta_info: meta_info
+          meta_info: meta_info,
+          extensions: extensions
         )
       ) do
-    do_render_token(contract_pk, txi, meta_info)
+    do_render_token(contract_pk, txi, meta_info, extensions)
   end
 
   @spec render_tokens([Model.aexn_contract()]) :: [aexn_token()]
@@ -103,24 +104,26 @@ defmodule AeMdwWeb.AexnView do
   #
   # Private functions
   #
-  defp do_render_token(contract_pk, txi, {name, symbol, decimals}) do
+  defp do_render_token(contract_pk, txi, {name, symbol, decimals}, extensions) do
     %{
       name: name,
       symbol: symbol,
       decimals: decimals,
       contract_txi: txi,
-      contract_id: enc_ct(contract_pk)
+      contract_id: enc_ct(contract_pk),
+      extensions: extensions
     }
   end
 
-  defp do_render_token(contract_pk, txi, {name, symbol, base_url, metadata_type}) do
+  defp do_render_token(contract_pk, txi, {name, symbol, base_url, metadata_type}, extensions) do
     %{
       name: name,
       symbol: symbol,
       base_url: base_url,
       contract_txi: txi,
       contract_id: enc_ct(contract_pk),
-      metadata_type: metadata_type
+      metadata_type: metadata_type,
+      extensions: extensions
     }
   end
 

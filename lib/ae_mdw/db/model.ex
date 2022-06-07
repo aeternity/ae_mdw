@@ -308,17 +308,20 @@ defmodule AeMdw.Db.Model do
   @type aex9_meta_info :: {aexn_name(), aexn_symbol(), non_neg_integer()}
   @type aex141_meta_info :: {aexn_name(), aexn_symbol(), String.t(), atom()}
   @type aexn_meta_info :: aex9_meta_info() | aex141_meta_info()
+  @type aexn_extensions :: [String.t()]
 
   @type aexn_contract ::
           record(:aexn_contract,
             index: {aexn_type(), Db.pubkey()},
             txi: Txs.txi(),
-            meta_info: aexn_meta_info()
+            meta_info: aexn_meta_info(),
+            extensions: aexn_extensions()
           )
   @aexn_contract_defaults [
     index: nil,
     txi: -1,
-    meta_info: nil
+    meta_info: nil,
+    extensions: []
   ]
   defrecord :aexn_contract, @aexn_contract_defaults
 
