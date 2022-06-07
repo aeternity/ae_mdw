@@ -267,7 +267,7 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
   describe "total_stats" do
     test "when no subpath it gets stats in backwards direction", %{conn: conn} do
       limit = 100
-      last_gen = Util.last_gen()
+      last_gen = Util.last_gen() - 1
 
       conn = get(conn, "/v2/totalstats", limit: limit)
       response = json_response(conn, 200)
