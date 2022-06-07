@@ -1,4 +1,4 @@
-defmodule AeMdwWeb.Aex9TokenController do
+defmodule AeMdwWeb.AexnTokenController do
   @moduledoc false
 
   alias AeMdw.Aex9
@@ -13,35 +13,28 @@ defmodule AeMdwWeb.Aex9TokenController do
 
   use AeMdwWeb, :controller
 
-  plug PaginatedPlug,
-       [order_by: ~w(name symbol)a]
-       when action in ~w(aex9_tokens aex9_token_balances aex9_token_balance_history aex9_account_balances)a
+  plug PaginatedPlug, order_by: ~w(name symbol)a
 
   action_fallback(FallbackController)
 
   @spec aex9_tokens(Conn.t(), map()) :: Conn.t()
   def aex9_tokens(%Conn{assigns: assigns, query_params: query_params} = conn, _params) do
-    %{
-      pagination: pagination,
-      cursor: cursor,
-      order_by: order_by
-    } = assigns
+    aexn_tokens(conn, assigns, query_params, :aex9)
+  end
 
-    case AexnTokens.fetch_tokens(pagination, :aex9, query_params, order_by, cursor) do
-      {:ok, prev_cursor, aex9_tokens, next_cursor} ->
-        Util.paginate(conn, prev_cursor, render_tokens(aex9_tokens), next_cursor)
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+  @spec aex141_tokens(Conn.t(), map()) :: Conn.t()
+  def aex141_tokens(%Conn{assigns: assigns, query_params: query_params} = conn, _params) do
+    aexn_tokens(conn, assigns, query_params, :aex141)
   end
 
   @spec aex9_token(Conn.t(), map()) :: Conn.t()
   def aex9_token(conn, %{"contract_id" => contract_id}) do
-    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
-         {:ok, m_aex9} <- AexnTokens.fetch_token({:aex9, contract_pk}) do
-      json(conn, render_token(m_aex9))
-    end
+    aexn_token(conn, contract_id, :aex9)
+  end
+
+  @spec aex141_token(Conn.t(), map()) :: Conn.t()
+  def aex141_token(conn, %{"contract_id" => contract_id}) do
+    aexn_token(conn, contract_id, :aex141)
   end
 
   @spec aex9_token_balances(Conn.t(), map()) :: Conn.t()
@@ -90,6 +83,32 @@ defmodule AeMdwWeb.Aex9TokenController do
          {:ok, prev_cursor, balance_history_items, next_cursor} <-
            Aex9.fetch_balance_history(contract_pk, account_pk, scope, cursor, pagination) do
       Util.paginate(conn, prev_cursor, balance_history_items, next_cursor)
+    end
+  end
+
+  defp aexn_tokens(
+         conn,
+         %{
+           pagination: pagination,
+           cursor: cursor,
+           order_by: order_by
+         },
+         query_params,
+         aexn_type
+       ) do
+    case AexnTokens.fetch_tokens(pagination, aexn_type, query_params, order_by, cursor) do
+      {:ok, prev_cursor, aexn_tokens, next_cursor} ->
+        Util.paginate(conn, prev_cursor, render_tokens(aexn_tokens), next_cursor)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp aexn_token(conn, contract_id, aexn_type) do
+    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
+         {:ok, m_aexn} <- AexnTokens.fetch_token({aexn_type, contract_pk}) do
+      json(conn, render_token(m_aexn))
     end
   end
 end

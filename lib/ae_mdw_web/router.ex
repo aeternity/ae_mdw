@@ -54,17 +54,19 @@ defmodule AeMdwWeb.Router do
       get "/names", NameController, :names
       get "/names/:id", NameController, :name
 
-      get "/aex9", Aex9TokenController, :aex9_tokens
-      get "/aex9/:contract_id", Aex9TokenController, :aex9_token
-      get "/aex9/:contract_id/balances", Aex9TokenController, :aex9_token_balances
-      get "/aex9/:contract_id/balances/:account_id", Aex9TokenController, :aex9_token_balance
-      get "/aex9/account-balances/:account_id", Aex9TokenController, :aex9_account_balances
+      get "/aex9", AexnTokenController, :aex9_tokens
+      get "/aex141", AexnTokenController, :aex141_tokens
+      get "/aex9/:contract_id", AexnTokenController, :aex9_token
+      get "/aex141/:contract_id", AexnTokenController, :aex141_token
+      get "/aex9/:contract_id/balances", AexnTokenController, :aex9_token_balances
+      get "/aex9/:contract_id/balances/:account_id", AexnTokenController, :aex9_token_balance
+      get "/aex9/account-balances/:account_id", AexnTokenController, :aex9_account_balances
       get "/aex9/transfers/from/:sender", Aex9Controller, :transfers_from
       get "/aex9/transfers/to/:recipient", Aex9Controller, :transfers_to
       get "/aex9/transfers/from-to/:sender/:recipient", Aex9Controller, :transfers_from_to
 
       get "/aex9/:contract_id/balances/:account_id/history",
-          Aex9TokenController,
+          AexnTokenController,
           :aex9_token_balance_history
 
       get "/oracles/:id", OracleController, :oracle
