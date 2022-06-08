@@ -13,6 +13,8 @@ defmodule AeMdw.DryRun.Runner do
                172, 14, 114, 22, 38, 51, 153, 136, 58, 149, 27, 56, 30, 105>>
 
   @amount trunc(:math.pow(10, 35))
+  @extension_gas_limit 100_000
+  @extension_methods ["aex9_extensions", "aex141_extensions"]
 
   @doc """
   Executes a transaction on a certain state of the chain.
@@ -28,6 +30,18 @@ defmodule AeMdw.DryRun.Runner do
   Creates a contract call transaction record (without running it).
   """
   @spec new_contract_call_tx(pubkey(), block_hash(), String.t(), list()) :: tuple()
+  def new_contract_call_tx(contract_pk, block_hash, function_name, args)
+      when function_name in @extension_methods do
+    Contract.new_call_tx(
+      @runner_pk,
+      contract_pk,
+      block_hash,
+      function_name,
+      args,
+      @extension_gas_limit
+    )
+  end
+
   def new_contract_call_tx(contract_pk, block_hash, function_name, args) do
     Contract.new_call_tx(@runner_pk, contract_pk, block_hash, function_name, args)
   end
