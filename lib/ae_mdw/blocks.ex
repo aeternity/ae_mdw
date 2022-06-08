@@ -77,13 +77,13 @@ defmodule AeMdw.Blocks do
 
   @spec fetch(State.t(), block_index() | block_hash()) :: {:ok, block()} | {:error, Error.t()}
   def fetch(state, block_hash) when is_binary(block_hash) do
-    case :aec_chain.get_block(block_hash) do
-      {:ok, _block} ->
-        # note: the `nil` here - for json formatting, we reuse AE node code
-        {:ok, Format.to_map(state, {:block, {nil, nil}, nil, block_hash})}
-
-      :error ->
-        {:error, Error.Input.NotFound.exception(value: block_hash)}
+    with {:ok, encoded_hash} <- Validate.id(block_hash),
+         {:ok, _block} <- :aec_chain.get_block(encoded_hash) do
+      # note: the `nil` here - for json formatting, we reuse AE node code
+      {:ok, Format.to_map(state, {:block, {nil, nil}, nil, encoded_hash})}
+    else
+      :error -> {:error, Error.Input.NotFound.exception(value: block_hash)}
+      {:error, reason} -> {:error, reason}
     end
   end
 

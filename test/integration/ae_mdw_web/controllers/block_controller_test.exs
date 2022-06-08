@@ -279,6 +279,13 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
       assert json_response(conn, 400) ==
                %{"error" => "invalid range: #{range}"}
     end
+
+    test "when block is not found, it returns a 404 error message", %{conn: conn} do
+      hash = "kh_2bXDk3CW3qfFSriMtaFnQUKvNr4wNFZn3tPpRLmKCse4jHmt5U"
+      error_msg = "not found: #{hash}"
+
+      assert %{"error" => ^error_msg} = conn |> get("/v2/blocks/#{hash}") |> json_response(404)
+    end
   end
 
   ################

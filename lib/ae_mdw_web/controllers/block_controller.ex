@@ -24,9 +24,9 @@ defmodule AeMdwWeb.BlockController do
         blocki(conn, Map.put(params, "kbi", hash_or_kbi))
 
       :error ->
-        with {:ok, block_hash} <- Validate.id(hash_or_kbi),
-             {:ok, block} <- Blocks.fetch(state, block_hash) do
-          json(conn, block)
+        case Blocks.fetch(state, hash_or_kbi) do
+          {:ok, block} -> json(conn, block)
+          {:error, reason} -> {:error, reason}
         end
     end
   end
