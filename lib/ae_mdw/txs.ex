@@ -5,7 +5,6 @@ defmodule AeMdw.Txs do
 
   alias AeMdw.Blocks
   alias AeMdw.Collection
-  alias AeMdw.Database
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Model.Field
@@ -13,6 +12,7 @@ defmodule AeMdw.Txs do
   alias AeMdw.Db.Model.Tx
   alias AeMdw.Db.Model.Type
   alias AeMdw.Db.Name
+  alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
@@ -47,9 +47,16 @@ defmodule AeMdw.Txs do
 
   @type_spend_tx "SpendTx"
 
-  @spec fetch_txs(pagination(), range(), query(), cursor() | nil, add_spendtx_details?()) ::
+  @spec fetch_txs(
+          State.t(),
+          pagination(),
+          range(),
+          query(),
+          cursor() | nil,
+          add_spendtx_details?()
+        ) ::
           {:ok, cursor() | nil, [tx()], cursor() | nil} | {:error, reason()}
-  def fetch_txs(pagination, range, query, cursor, add_spendtx_details?) do
+  def fetch_txs(state, pagination, range, query, cursor, add_spendtx_details?) do
     ids = query |> Map.get(:ids, MapSet.new()) |> MapSet.to_list()
     types = query |> Map.get(:types, MapSet.new()) |> MapSet.to_list()
     cursor = deserialize_cursor(cursor)
@@ -60,7 +67,8 @@ defmodule AeMdw.Txs do
           scope =
             case range do
               {:gen, %Range{first: first_gen, last: last_gen}} ->
-                {first_gen_to_txi(first_gen, direction), last_gen_to_txi(last_gen, direction)}
+                {first_gen_to_txi(state, first_gen, direction),
+                 last_gen_to_txi(state, last_gen, direction)}
 
               {:txi, %Range{first: first_txi, last: last_txi}} ->
                 {first_txi, last_txi}
@@ -69,13 +77,13 @@ defmodule AeMdw.Txs do
                 nil
             end
 
-          ids
-          |> build_streams(types, scope, cursor, direction)
+          state
+          |> build_streams(ids, types, scope, cursor, direction)
           |> Collection.merge(direction)
         end
         |> Collection.paginate(pagination)
 
-      txs = Enum.map(txis, &fetch!(&1, add_spendtx_details?))
+      txs = Enum.map(txis, &fetch!(state, &1, add_spendtx_details?))
 
       {:ok, serialize_cursor(prev_cursor), txs, serialize_cursor(next_cursor)}
     rescue
@@ -84,10 +92,13 @@ defmodule AeMdw.Txs do
     end
   end
 
-  defp first_gen_to_txi(first_gen, :forward), do: DbUtil.gen_to_txi(first_gen)
-  defp first_gen_to_txi(first_gen, :backward), do: DbUtil.gen_to_txi(first_gen + 1) - 1
-  defp last_gen_to_txi(last_gen, :forward), do: DbUtil.gen_to_txi(last_gen + 1) - 1
-  defp last_gen_to_txi(last_gen, :backward), do: DbUtil.gen_to_txi(last_gen)
+  defp first_gen_to_txi(state, first_gen, :forward), do: DbUtil.gen_to_txi(state, first_gen)
+
+  defp first_gen_to_txi(state, first_gen, :backward),
+    do: DbUtil.gen_to_txi(state, first_gen + 1) - 1
+
+  defp last_gen_to_txi(state, last_gen, :forward), do: DbUtil.gen_to_txi(state, last_gen + 1) - 1
+  defp last_gen_to_txi(state, last_gen, :backward), do: DbUtil.gen_to_txi(state, last_gen)
 
   # The purpose of this function is to generate the streams that will be then used as input for
   # Collection.merge/2 function. The function is divided into three clauses. There's an explanation
@@ -95,9 +106,9 @@ defmodule AeMdw.Txs do
   #
   # When no filters are provided, all transactions are displayed, which means that we only need to
   # use the Txs table, without any filters.
-  defp build_streams([], [], scope, cursor, direction) do
+  defp build_streams(state, [], [], scope, cursor, direction) do
     [
-      Collection.stream(@table, direction, scope, cursor)
+      Collection.stream(state, @table, direction, scope, cursor)
     ]
   end
 
@@ -114,7 +125,7 @@ defmodule AeMdw.Txs do
   #      type is found
   #    - A stream on the Type table that will go from {:spend_tx, 0} forward, until a different type
   #      is found.
-  defp build_streams([], types, scope, cursor, direction) do
+  defp build_streams(state, [], types, scope, cursor, direction) do
     Enum.map(types, fn tx_type ->
       initial_key = if direction == :forward, do: {tx_type, cursor || 0}, else: {tx_type, cursor}
 
@@ -124,8 +135,8 @@ defmodule AeMdw.Txs do
           {first, last} -> {{tx_type, first}, {tx_type, last}}
         end
 
-      @type_table
-      |> Collection.stream(direction, scope, initial_key)
+      state
+      |> Collection.stream(@type_table, direction, scope, initial_key)
       |> Stream.take_while(&match?({^tx_type, _txi}, &1))
       |> Stream.map(fn {_tx_type, tx_index} -> tx_index end)
     end)
@@ -202,7 +213,7 @@ defmodule AeMdw.Txs do
   #      the keys {:spend_tx, 1, B, X} and {:spend_tx, 2, B, X}, {:oracle_query_tx, 1, B, X} and
   #      {:oracle_query_tx, 3, B, X} for any value of X, filtering out all those transactions that
   #      do not include A in them.
-  defp build_streams(ids, types, scope, cursor, direction) do
+  defp build_streams(state, ids, types, scope, cursor, direction) do
     extract_txi = fn {_tx_type, _field_pos, _id, tx_index} -> tx_index end
     initial_cursor = if direction == :backward, do: cursor, else: cursor || 0
 
@@ -233,7 +244,7 @@ defmodule AeMdw.Txs do
     Enum.flat_map(intersection_of_tx_types, fn tx_type ->
       {min_account_id, min_fields} =
         Enum.min_by(ids_fields, fn {id, fields} ->
-          count_txs_for_account(id, fields, tx_type)
+          count_txs_for_account(state, id, fields, tx_type)
         end)
 
       rest_accounts = Enum.reject(ids_fields, &match?({^min_account_id, ^min_fields}, &1))
@@ -244,11 +255,11 @@ defmodule AeMdw.Txs do
         field_scope = scope && field_scope(scope, tx_type, field_pos, min_account_id)
         initial_key = {tx_type, field_pos, min_account_id, initial_cursor}
 
-        @field_table
-        |> Collection.stream(direction, field_scope, initial_key)
+        state
+        |> Collection.stream(@field_table, direction, field_scope, initial_key)
         |> Stream.take_while(&match?({^tx_type, ^field_pos, ^min_account_id, _tx_index}, &1))
         |> Stream.map(extract_txi)
-        |> Stream.filter(&all_accounts_have_tx?(tx_type, &1, rest_accounts))
+        |> Stream.filter(&all_accounts_have_tx?(state, tx_type, &1, rest_accounts))
       end)
     end)
   end
@@ -257,10 +268,10 @@ defmodule AeMdw.Txs do
     {{tx_type, field_pos, account_id, first}, {tx_type, field_pos, account_id, last}}
   end
 
-  defp all_accounts_have_tx?(tx_type, tx_index, rest_accounts) do
+  defp all_accounts_have_tx?(state, tx_type, tx_index, rest_accounts) do
     Enum.all?(rest_accounts, fn {id, fields} ->
       Enum.any?(fields, fn
-        {^tx_type, pos} -> Database.exists?(@field_table, {tx_type, pos, id, tx_index})
+        {^tx_type, pos} -> State.exists?(state, @field_table, {tx_type, pos, id, tx_index})
         {_tx_type, _pos} -> false
       end)
     end)
@@ -328,27 +339,29 @@ defmodule AeMdw.Txs do
     raise ErrInput.TxField, value: ":#{Enum.join(invalid_field, ".")}"
   end
 
-  @spec fetch!(txi(), add_spendtx_details?()) :: tx()
-  def fetch!(txi, add_spendtx_details? \\ false) do
-    {:ok, tx} = fetch(txi, add_spendtx_details?)
+  @spec fetch!(State.t(), txi(), add_spendtx_details?()) :: tx()
+  def fetch!(state, txi, add_spendtx_details? \\ false) do
+    {:ok, tx} = fetch(state, txi, add_spendtx_details?)
 
     tx
   end
 
-  @spec fetch(txi() | tx_hash(), add_spendtx_details?()) :: {:ok, tx()} | {:error, Error.t()}
-  def fetch(tx_hash, add_spendtx_details? \\ true)
+  @spec fetch(State.t(), txi() | tx_hash(), add_spendtx_details?()) ::
+          {:ok, tx()} | {:error, Error.t()}
+  def fetch(state, tx_hash, add_spendtx_details? \\ true)
 
-  def fetch(tx_hash, add_spendtx_details?) when is_binary(tx_hash) do
+  def fetch(state, tx_hash, add_spendtx_details?) when is_binary(tx_hash) do
     with mb_hash when mb_hash != :not_found <- :aec_db.find_tx_location(tx_hash),
          {:ok, mb_header} <- :aec_chain.get_header(mb_hash) do
-      mb_header
-      |> :aec_headers.height()
-      |> Blocks.fetch_txis_from_gen()
-      |> Stream.map(&Database.fetch!(@table, &1))
+      mb_height = :aec_headers.height(mb_header)
+
+      state
+      |> Blocks.fetch_txis_from_gen(mb_height)
+      |> Stream.map(&State.fetch!(state, @table, &1))
       |> Enum.find_value(
         {:error, ErrInput.NotFound.exception(value: tx_hash)},
         fn
-          Model.tx(id: ^tx_hash) = tx -> {:ok, render(tx, add_spendtx_details?)}
+          Model.tx(id: ^tx_hash) = tx -> {:ok, render(state, tx, add_spendtx_details?)}
           _tx -> nil
         end
       )
@@ -359,40 +372,40 @@ defmodule AeMdw.Txs do
     end
   end
 
-  def fetch(txi, add_spendtx_details?) do
-    case Database.fetch(@table, txi) do
-      {:ok, tx} -> {:ok, render(tx, add_spendtx_details?)}
+  def fetch(state, txi, add_spendtx_details?) do
+    case State.get(state, @table, txi) do
+      {:ok, tx} -> {:ok, render(state, tx, add_spendtx_details?)}
       :not_found -> {:error, ErrInput.NotFound.exception(value: txi)}
     end
   end
 
-  defp render(Model.tx(id: tx_hash) = tx, add_spendtx_details?) do
+  defp render(state, Model.tx(id: tx_hash) = tx, add_spendtx_details?) do
     {block_hash, type, signed_tx, tx_rec} = Db.get_tx_data(tx_hash)
 
-    rendered_tx = Format.to_map(tx, {block_hash, type, signed_tx, tx_rec})
+    rendered_tx = Format.to_map(state, tx, {block_hash, type, signed_tx, tx_rec})
 
     if add_spendtx_details? do
-      maybe_add_spendtx_details(rendered_tx)
+      maybe_add_spendtx_details(state, rendered_tx)
     else
       rendered_tx
     end
   end
 
-  defp maybe_add_spendtx_details(%{"tx" => block_tx, "tx_index" => tx_index} = block) do
+  defp maybe_add_spendtx_details(state, %{"tx" => block_tx, "tx_index" => tx_index} = block) do
     recipient_id = block_tx["recipient_id"] || ""
 
     if block_tx["type"] == @type_spend_tx and String.starts_with?(recipient_id, "nm_") do
       update_in(block, ["tx"], fn block_tx ->
-        Map.merge(block_tx, get_recipient(recipient_id, tx_index))
+        Map.merge(block_tx, get_recipient(state, recipient_id, tx_index))
       end)
     else
       block
     end
   end
 
-  defp get_recipient(spend_tx_recipient_nm, spend_txi) do
+  defp get_recipient(state, spend_tx_recipient_nm, spend_txi) do
     with {:ok, plain_name} <- Validate.plain_name(spend_tx_recipient_nm),
-         {:ok, pointee_pk} <- Name.account_pointer_at(plain_name, spend_txi) do
+         {:ok, pointee_pk} <- Name.account_pointer_at(state, plain_name, spend_txi) do
       recipient_account = :aeser_api_encoder.encode(:account_pubkey, pointee_pk)
       %{"recipient" => %{"name" => plain_name, "account" => recipient_account}}
     else
@@ -416,10 +429,10 @@ defmodule AeMdw.Txs do
     end
   end
 
-  defp count_txs_for_account(id, fields, tx_type) do
+  defp count_txs_for_account(state, id, fields, tx_type) do
     Enum.reduce(fields, 0, fn
       {^tx_type, pos}, acc ->
-        case Database.fetch(@id_count_table, {tx_type, pos, id}) do
+        case State.get(state, @id_count_table, {tx_type, pos, id}) do
           {:ok, Model.id_count(count: count)} -> acc + count
           :not_found -> acc
         end

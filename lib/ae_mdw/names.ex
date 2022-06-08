@@ -9,10 +9,10 @@ defmodule AeMdw.Names do
 
   alias AeMdw.AuctionBids
   alias AeMdw.Collection
-  alias AeMdw.Database
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
+  alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DBUtil
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Util
@@ -48,9 +48,17 @@ defmodule AeMdw.Names do
   @states ~w(active inactive)
   @all_lifecycles ~w(active inactive auction)a
 
-  @spec fetch_names(pagination(), range(), order_by(), query(), cursor() | nil, boolean()) ::
+  @spec fetch_names(
+          State.t(),
+          pagination(),
+          range(),
+          order_by(),
+          query(),
+          cursor() | nil,
+          boolean()
+        ) ::
           {:ok, cursor() | nil, [name()], cursor() | nil} | {:error, reason()}
-  def fetch_names(pagination, range, order_by, query, cursor, expand?)
+  def fetch_names(state, pagination, range, order_by, query, cursor, expand?)
       when order_by in [:expiration, :deactivation] do
     cursor = deserialize_expiration_cursor(cursor)
     scope = deserialize_scope(range)
@@ -60,18 +68,18 @@ defmodule AeMdw.Names do
         query
         |> Map.drop(@pagination_params)
         |> Enum.into(%{}, &convert_param/1)
-        |> build_expiration_streamer(scope, cursor)
+        |> build_expiration_streamer(state, scope, cursor)
         |> Collection.paginate(pagination)
 
-      {:ok, serialize_expiration_cursor(prev_cursor), render_exp_list(expiration_keys, expand?),
-       serialize_expiration_cursor(next_cursor)}
+      {:ok, serialize_expiration_cursor(prev_cursor),
+       render_exp_list(state, expiration_keys, expand?), serialize_expiration_cursor(next_cursor)}
     rescue
       e in ErrInput ->
         {:error, e.message}
     end
   end
 
-  def fetch_names(pagination, nil, :name, query, cursor, expand?) do
+  def fetch_names(state, pagination, nil, :name, query, cursor, expand?) do
     cursor = deserialize_name_cursor(cursor)
 
     try do
@@ -79,10 +87,10 @@ defmodule AeMdw.Names do
         query
         |> Map.drop(@pagination_params)
         |> Enum.into(%{}, &convert_param/1)
-        |> build_name_streamer(cursor)
+        |> build_name_streamer(state, cursor)
         |> Collection.paginate(pagination)
 
-      {:ok, serialize_name_cursor(prev_cursor), render_names_list(name_keys, expand?),
+      {:ok, serialize_name_cursor(prev_cursor), render_names_list(state, name_keys, expand?),
        serialize_name_cursor(next_cursor)}
     rescue
       e in ErrInput ->
@@ -90,7 +98,7 @@ defmodule AeMdw.Names do
     end
   end
 
-  def fetch_names(_pagination, _range, :name, _query, _cursor, _expand?) do
+  def fetch_names(_state, _pagination, _range, :name, _query, _cursor, _expand?) do
     try do
       raise(ErrInput.Query, value: "can't scope names sorted by name")
     rescue
@@ -99,90 +107,90 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp build_name_streamer(%{owned_by: owner_pk, state: "active"}, cursor) do
+  defp build_name_streamer(%{owned_by: owner_pk, state: "active"}, state, cursor) do
     cursor = if cursor, do: {owner_pk, cursor}
     scope = {{owner_pk, Util.min_bin()}, {owner_pk, Util.max_256bit_bin()}}
 
     fn direction ->
-      @table_active_owner
-      |> Collection.stream(direction, scope, cursor)
+      state
+      |> Collection.stream(@table_active_owner, direction, scope, cursor)
       |> Stream.map(fn {_owner_pk, plain_name} -> {plain_name, :active} end)
     end
   end
 
-  defp build_name_streamer(%{owned_by: owner_pk, state: "inactive"}, cursor) do
+  defp build_name_streamer(%{owned_by: owner_pk, state: "inactive"}, state, cursor) do
     cursor = if cursor, do: {owner_pk, cursor}
     scope = {{owner_pk, Util.min_bin()}, {owner_pk, Util.max_256bit_bin()}}
 
     fn direction ->
-      @table_inactive_owner
-      |> Collection.stream(direction, scope, cursor)
+      state
+      |> Collection.stream(@table_inactive_owner, direction, scope, cursor)
       |> Stream.map(fn {_owner_pk, plain_name} -> {plain_name, :inactive} end)
     end
   end
 
-  defp build_name_streamer(%{state: "inactive"}, cursor) do
+  defp build_name_streamer(%{state: "inactive"}, state, cursor) do
     fn direction ->
-      @table_inactive
-      |> Collection.stream(direction, nil, cursor)
+      state
+      |> Collection.stream(@table_inactive, direction, nil, cursor)
       |> Stream.map(fn key -> {key, :inactive} end)
     end
   end
 
-  defp build_name_streamer(%{state: "active"}, cursor) do
+  defp build_name_streamer(%{state: "active"}, state, cursor) do
     fn direction ->
-      @table_active
-      |> Collection.stream(direction, nil, cursor)
+      state
+      |> Collection.stream(@table_active, direction, nil, cursor)
       |> Stream.map(fn key -> {key, :active} end)
     end
   end
 
-  defp build_name_streamer(_query, cursor) do
+  defp build_name_streamer(_query, state, cursor) do
     fn direction ->
       active_stream =
-        @table_active
-        |> Collection.stream(direction, nil, cursor)
+        state
+        |> Collection.stream(@table_active, direction, nil, cursor)
         |> Stream.map(fn key -> {key, :active} end)
 
       inactive_stream =
-        @table_inactive
-        |> Collection.stream(direction, nil, cursor)
+        state
+        |> Collection.stream(@table_inactive, direction, nil, cursor)
         |> Stream.map(fn key -> {key, :inactive} end)
 
       Collection.merge([active_stream, inactive_stream], direction)
     end
   end
 
-  defp build_expiration_streamer(%{owned_by: _owner_pk}, _scope, _cursor) do
+  defp build_expiration_streamer(%{owned_by: _owner_pk}, _state, _scope, _cursor) do
     raise(ErrInput.Query, value: "can't order by expiration when filtering by owner")
   end
 
-  defp build_expiration_streamer(%{state: "active"}, scope, cursor) do
+  defp build_expiration_streamer(%{state: "active"}, state, scope, cursor) do
     fn direction ->
-      @table_active_expiration
-      |> Collection.stream(direction, scope, cursor)
+      state
+      |> Collection.stream(@table_active_expiration, direction, scope, cursor)
       |> Stream.map(&{&1, :active})
     end
   end
 
-  defp build_expiration_streamer(%{state: "inactive"}, scope, cursor) do
+  defp build_expiration_streamer(%{state: "inactive"}, state, scope, cursor) do
     fn direction ->
-      @table_inactive_expiration
-      |> Collection.stream(direction, scope, cursor)
+      state
+      |> Collection.stream(@table_inactive_expiration, direction, scope, cursor)
       |> Stream.map(&{&1, :inactive})
     end
   end
 
-  defp build_expiration_streamer(_query, scope, cursor) do
+  defp build_expiration_streamer(_query, state, scope, cursor) do
     fn direction ->
       active_stream =
-        @table_active_expiration
-        |> Collection.stream(direction, scope, cursor)
+        state
+        |> Collection.stream(@table_active_expiration, direction, scope, cursor)
         |> Stream.map(fn key -> {key, :active} end)
 
       inactive_stream =
-        @table_inactive_expiration
-        |> Collection.stream(direction, scope, cursor)
+        state
+        |> Collection.stream(@table_inactive_expiration, direction, scope, cursor)
         |> Stream.map(fn key -> {key, :inactive} end)
 
       case direction do
@@ -192,23 +200,37 @@ defmodule AeMdw.Names do
     end
   end
 
-  @spec fetch_active_names(pagination(), range(), order_by(), cursor() | nil, boolean()) ::
+  @spec fetch_active_names(
+          State.t(),
+          pagination(),
+          range(),
+          order_by(),
+          cursor() | nil,
+          boolean()
+        ) ::
           {:ok, cursor() | nil, [name()], cursor() | nil} | {:error, reason()}
-  def fetch_active_names(pagination, range, order_by, cursor, expand?),
-    do: fetch_names(pagination, range, order_by, %{"state" => "active"}, cursor, expand?)
+  def fetch_active_names(state, pagination, range, order_by, cursor, expand?),
+    do: fetch_names(state, pagination, range, order_by, %{"state" => "active"}, cursor, expand?)
 
-  @spec fetch_inactive_names(pagination(), range(), order_by(), cursor() | nil, boolean()) ::
+  @spec fetch_inactive_names(
+          State.t(),
+          pagination(),
+          range(),
+          order_by(),
+          cursor() | nil,
+          boolean()
+        ) ::
           {:ok, cursor() | nil, [name()], cursor() | nil} | {:error, reason()}
-  def fetch_inactive_names(pagination, range, order_by, cursor, expand?),
-    do: fetch_names(pagination, range, order_by, %{"state" => "inactive"}, cursor, expand?)
+  def fetch_inactive_names(state, pagination, range, order_by, cursor, expand?),
+    do: fetch_names(state, pagination, range, order_by, %{"state" => "inactive"}, cursor, expand?)
 
-  @spec search_names([lifecycle()], prefix(), pagination(), cursor() | nil, boolean()) ::
+  @spec search_names(State.t(), [lifecycle()], prefix(), pagination(), cursor() | nil, boolean()) ::
           {cursor() | nil, [name()], cursor() | nil}
 
-  def search_names([], prefix, pagination, cursor, expand?),
-    do: search_names(@all_lifecycles, prefix, pagination, cursor, expand?)
+  def search_names(state, [], prefix, pagination, cursor, expand?),
+    do: search_names(state, @all_lifecycles, prefix, pagination, cursor, expand?)
 
-  def search_names(lifecycles, prefix, pagination, cursor, expand?) do
+  def search_names(state, lifecycles, prefix, pagination, cursor, expand?) do
     cursor = deserialize_name_cursor(cursor)
     scope = {prefix, prefix <> Util.max_256bit_bin()}
 
@@ -217,36 +239,39 @@ defmodule AeMdw.Names do
         lifecycles
         |> Enum.map(fn
           :active ->
-            @table_active
-            |> Collection.stream(direction, scope, cursor)
+            state
+            |> Collection.stream(@table_active, direction, scope, cursor)
             |> Stream.map(&{&1, :active})
 
           :inactive ->
-            @table_inactive
-            |> Collection.stream(direction, scope, cursor)
+            state
+            |> Collection.stream(@table_inactive, direction, scope, cursor)
             |> Stream.map(&{&1, :inactive})
 
           :auction ->
-            prefix
-            |> AuctionBids.auctions_stream(direction, scope, cursor)
+            state
+            |> AuctionBids.auctions_stream(prefix, direction, scope, cursor)
             |> Stream.map(&{&1, :auction})
         end)
         |> Collection.merge(direction)
       end
       |> Collection.paginate(pagination)
 
-    {serialize_name_cursor(prev_cursor), render_search_list(name_keys, expand?),
+    {serialize_name_cursor(prev_cursor), render_search_list(state, name_keys, expand?),
      serialize_name_cursor(next_cursor)}
   end
 
-  @spec fetch_previous_list(plain_name()) :: [name()]
-  def fetch_previous_list(plain_name) do
-    case Database.fetch(@table_inactive, plain_name) do
+  @spec fetch_previous_list(State.t(), plain_name()) :: [name()]
+  def fetch_previous_list(state, plain_name) do
+    case State.get(state, @table_inactive, plain_name) do
       {:ok, name} ->
         name
         |> Stream.unfold(fn
-          nil -> nil
-          Model.name(previous: previous) = name -> {render_name_info(name, false), previous}
+          nil ->
+            nil
+
+          Model.name(previous: previous) = name ->
+            {render_name_info(state, name, false), previous}
         end)
         |> Enum.to_list()
 
@@ -255,30 +280,31 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp render_exp_list(names_tables_keys, expand?) do
+  defp render_exp_list(state, names_tables_keys, expand?) do
     Enum.map(names_tables_keys, fn {{_exp, plain_name}, source} ->
-      render(plain_name, source == :active, expand?)
+      render(state, plain_name, source == :active, expand?)
     end)
   end
 
-  defp render_names_list(names_tables_keys, expand?) do
+  defp render_names_list(state, names_tables_keys, expand?) do
     Enum.map(names_tables_keys, fn {plain_name, source} ->
-      render(plain_name, source == :active, expand?)
+      render(state, plain_name, source == :active, expand?)
     end)
   end
 
-  defp render_search_list(names_tables_keys, expand?) do
+  defp render_search_list(state, names_tables_keys, expand?) do
     Enum.map(names_tables_keys, fn
       {plain_name, :auction} ->
-        %{"type" => "auction", "payload" => AuctionBids.fetch!(plain_name, expand?)}
+        %{"type" => "auction", "payload" => AuctionBids.fetch!(state, plain_name, expand?)}
 
       {plain_name, source} ->
-        %{"type" => "name", "payload" => render(plain_name, source == :active, expand?)}
+        %{"type" => "name", "payload" => render(state, plain_name, source == :active, expand?)}
     end)
   end
 
-  defp render(plain_name, is_active?, expand?) do
-    name = Database.fetch!(if(is_active?, do: @table_active, else: @table_inactive), plain_name)
+  defp render(state, plain_name, is_active?, expand?) do
+    name =
+      State.fetch!(state, if(is_active?, do: @table_active, else: @table_inactive), plain_name)
 
     name_hash =
       case :aens.get_name_hash(plain_name) do
@@ -287,7 +313,7 @@ defmodule AeMdw.Names do
       end
 
     {status, auction_bid} =
-      case AuctionBids.fetch(plain_name, expand?) do
+      case AuctionBids.fetch(state, plain_name, expand?) do
         {:ok, auction_bid} ->
           {_version, auction_bid} = pop_in(auction_bid, [:info, :last_bid, "tx", "version"])
           {:auction, auction_bid}
@@ -302,12 +328,13 @@ defmodule AeMdw.Names do
       auction: auction_bid && auction_bid.info,
       status: to_string(status),
       active: is_active?,
-      info: render_name_info(name, expand?),
-      previous: render_previous(name, expand?)
+      info: render_name_info(state, name, expand?),
+      previous: render_previous(state, name, expand?)
     }
   end
 
   defp render_name_info(
+         state,
          Model.name(
            active: active,
            expire: expire,
@@ -322,21 +349,21 @@ defmodule AeMdw.Names do
     %{
       active_from: active,
       expire_height: expire,
-      claims: Enum.map(claims, &expand_txi(Format.bi_txi_txi(&1), expand?)),
-      updates: Enum.map(updates, &expand_txi(Format.bi_txi_txi(&1), expand?)),
-      transfers: Enum.map(transfers, &expand_txi(Format.bi_txi_txi(&1), expand?)),
-      revoke: (revoke && expand_txi(Format.bi_txi_txi(revoke), expand?)) || nil,
+      claims: Enum.map(claims, &expand_txi(state, Format.bi_txi_txi(&1), expand?)),
+      updates: Enum.map(updates, &expand_txi(state, Format.bi_txi_txi(&1), expand?)),
+      transfers: Enum.map(transfers, &expand_txi(state, Format.bi_txi_txi(&1), expand?)),
+      revoke: (revoke && expand_txi(state, Format.bi_txi_txi(revoke), expand?)) || nil,
       auction_timeout: auction_timeout,
-      pointers: render_pointers(name),
-      ownership: render_ownership(name)
+      pointers: render_pointers(state, name),
+      ownership: render_ownership(state, name)
     }
   end
 
   # For some reason we're only grabbing the last pointer to build a hash that
   # contains "account_pubkey" as the only key.
-  defp render_pointers(name) do
-    name
-    |> Name.pointers()
+  defp render_pointers(state, name) do
+    state
+    |> Name.pointers(name)
     |> Enum.to_list()
     |> List.last()
     |> case do
@@ -345,8 +372,8 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp render_ownership(name) do
-    %{current: current_owner, original: original_owner} = Name.ownership(name)
+  defp render_ownership(state, name) do
+    %{current: current_owner, original: original_owner} = Name.ownership(state, name)
 
     %{
       current: Format.enc_id(current_owner),
@@ -387,16 +414,16 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp expand_txi(bi_txi, false), do: bi_txi
-  defp expand_txi(bi_txi, true), do: Format.to_map(DBUtil.read_tx!(bi_txi))
+  defp expand_txi(_state, bi_txi, false), do: bi_txi
+  defp expand_txi(state, bi_txi, true), do: Format.to_map(state, DBUtil.read_tx!(state, bi_txi))
 
-  defp render_previous(name, expand?) do
+  defp render_previous(state, name, expand?) do
     name
     |> Stream.unfold(fn
       Model.name(previous: nil) -> nil
       Model.name(previous: previous) -> {previous, previous}
     end)
-    |> Enum.map(&render_name_info(&1, expand?))
+    |> Enum.map(&render_name_info(state, &1, expand?))
   end
 
   defp deserialize_scope({:gen, %Range{first: first_gen, last: last_gen}}) do

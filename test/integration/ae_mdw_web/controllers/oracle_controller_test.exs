@@ -4,6 +4,7 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Validate
   alias AeMdw.Db.{Oracle, Format}
+  alias AeMdw.Db.State
   alias AeMdwWeb.TestUtil
   alias AeMdw.Error.Input, as: ErrInput
 
@@ -561,8 +562,10 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
   end
 
   defp get_oracle(pubkey, expand?) do
-    case Oracle.locate(pubkey) do
-      {m_oracle, source} -> Format.to_map(m_oracle, source, expand?)
+    state = State.new()
+
+    case Oracle.locate(state, pubkey) do
+      {m_oracle, source} -> Format.to_map(state, m_oracle, source, expand?)
       nil -> raise ErrInput.NotFound, value: Enc.encode(:oracle_pubkey, pubkey)
     end
   end

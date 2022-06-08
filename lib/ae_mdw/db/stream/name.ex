@@ -1,8 +1,8 @@
 defmodule AeMdw.Db.Stream.Name do
   # credo:disable-for-this-file
-  alias AeMdw.Database
   alias AeMdw.Db.Stream.Resource.Util, as: RU
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.Util
 
   ##########
@@ -12,24 +12,24 @@ defmodule AeMdw.Db.Stream.Name do
     RU.simple_resource({init_k, advance}, tab, mapper)
   end
 
-  def prefix_resource(tab, prefix, direction, mapper)
+  def prefix_resource(state, tab, prefix, direction, mapper)
       when direction in [:forward, :backward] do
     {init_k, advance} =
       case direction do
-        :forward -> {prefix, &Database.next_key/2}
-        :backward -> {prefix <> AeMdw.Node.max_blob(), &Database.prev_key/2}
+        :forward -> {prefix, &State.next(state, &1, &2)}
+        :backward -> {prefix <> AeMdw.Node.max_blob(), &State.prev(state, &1, &2)}
       end
 
     advance = RU.advance_fn(advance, AeMdwWeb.Util.prefix_checker(prefix))
     RU.simple_resource({init_k, advance}, tab, mapper)
   end
 
-  def auction_prefix_resource(prefix, direction, mapper)
+  def auction_prefix_resource(state, prefix, direction, mapper)
       when direction in [:forward, :backward] do
     {init_k, advance} =
       case direction do
-        :forward -> {prefix, &Database.next_key/2}
-        :backward -> {prefix <> AeMdw.Node.max_blob(), &Database.prev_key/2}
+        :forward -> {prefix, &State.next(state, &1, &2)}
+        :backward -> {prefix <> AeMdw.Node.max_blob(), &State.prev(state, &1, &2)}
       end
 
     advance = RU.advance_fn(advance, AeMdwWeb.Util.prefix_checker(prefix))

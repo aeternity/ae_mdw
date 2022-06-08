@@ -276,12 +276,12 @@ defmodule AeMdwWeb.Aex9Controller do
     end
   end
 
-  defp balance_reply(conn, contract_pk, account_pk) do
+  defp balance_reply(%Conn{assigns: %{state: state}} = conn, contract_pk, account_pk) do
     {amount, {type, height, hash}} =
       if top?(conn) do
         DBN.aex9_balance(contract_pk, account_pk, top?(conn))
       else
-        case Aex9.fetch_amount_and_keyblock(contract_pk, account_pk) do
+        case Aex9.fetch_amount_and_keyblock(state, contract_pk, account_pk) do
           {:ok, {amount, kb_height_hash}} ->
             {amount, kb_height_hash}
 
@@ -316,7 +316,7 @@ defmodule AeMdwWeb.Aex9Controller do
     json(conn, balance_to_map({amount, {type, height, block_hash}}, contract_pk, account_pk))
   end
 
-  defp account_balances_reply(conn, account_pk) do
+  defp account_balances_reply(%Conn{assigns: %{state: state}} = conn, account_pk) do
     balances =
       account_pk
       |> Contract.aex9_search_contracts()
@@ -330,12 +330,12 @@ defmodule AeMdwWeb.Aex9Controller do
             []
         end
       end)
-      |> Enum.map(&balance_to_map/1)
+      |> Enum.map(&balance_to_map(state, &1))
 
     json(conn, balances)
   end
 
-  defp account_balances_reply(conn, account_pk, last_txi) do
+  defp account_balances_reply(%Conn{assigns: %{state: state}} = conn, account_pk, last_txi) do
     contracts =
       account_pk
       |> Contract.aex9_search_contract(last_txi)
@@ -351,7 +351,7 @@ defmodule AeMdwWeb.Aex9Controller do
         call_txi = List.last(txi_list)
         {amount, call_txi, contract_pk}
       end)
-      |> Enum.map(&balance_to_map/1)
+      |> Enum.map(&balance_to_map(state, &1))
 
     json(conn, balances)
   end

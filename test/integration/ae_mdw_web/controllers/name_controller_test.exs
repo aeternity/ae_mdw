@@ -6,6 +6,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
+  alias AeMdw.Db.State
   alias AeMdw.Db.Util
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Validate
@@ -203,6 +204,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
     test "get inactive names forward with limit=6", %{conn: conn} do
       limit = 4
+      state = State.new()
 
       assert %{"data" => names, "next" => next} =
                conn
@@ -211,7 +213,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
       expirations =
         Enum.map(names, fn %{"info" => %{"expire_height" => expire_height, "revoke" => revoke}} ->
-          revoke_height = if revoke, do: Util.txi_to_gen(revoke)
+          revoke_height = if revoke, do: Util.txi_to_gen(state, revoke)
           min(revoke_height, expire_height)
         end)
 
@@ -228,7 +230,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
                                     "revoke" => revoke
                                   }
                                 } ->
-          revoke_height = if revoke, do: Util.txi_to_gen(revoke)
+          revoke_height = if revoke, do: Util.txi_to_gen(state, revoke)
           min(revoke_height, expire_height)
         end)
 
@@ -745,6 +747,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
     test "get inactive names forward with limit=6", %{conn: conn} do
       limit = 4
+      state = State.new()
 
       assert %{"data" => names, "next" => next} =
                conn
@@ -753,7 +756,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
       expirations =
         Enum.map(names, fn %{"info" => %{"expire_height" => expire_height, "revoke" => revoke}} ->
-          revoke_height = if revoke, do: Util.txi_to_gen(revoke)
+          revoke_height = if revoke, do: Util.txi_to_gen(state, revoke)
           min(revoke_height, expire_height)
         end)
 
@@ -770,7 +773,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
                                     "revoke" => revoke
                                   }
                                 } ->
-          revoke_height = if revoke, do: Util.txi_to_gen(revoke)
+          revoke_height = if revoke, do: Util.txi_to_gen(state, revoke)
           min(revoke_height, expire_height)
         end)
 
@@ -1183,9 +1186,11 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   ##########
 
   defp get_name(name) do
-    case Name.locate(name) do
+    state = State.new()
+
+    case Name.locate(state, name) do
       {info, source} ->
-        Format.to_map(info, source)
+        Format.to_map(state, info, source)
 
       nil ->
         raise ErrInput.NotFound, value: name
@@ -1193,9 +1198,11 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   end
 
   defp get_pointers(name) do
-    case Name.locate(name) do
+    state = State.new()
+
+    case Name.locate(state, name) do
       {m_name, Model.ActiveName} ->
-        Format.map_raw_values(Name.pointers(m_name), &Format.to_json/1)
+        Format.map_raw_values(Name.pointers(state, m_name), &Format.to_json/1)
 
       {_info, Model.InactiveName} ->
         raise ErrInput.Expired, value: name
@@ -1206,7 +1213,9 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   end
 
   defp get_pointees(pubkey) do
-    {active, inactive} = Name.pointees(pubkey)
+    state = State.new()
+
+    {active, inactive} = Name.pointees(state, pubkey)
 
     %{
       "active" => Format.map_raw_values(active, &Format.to_json/1),

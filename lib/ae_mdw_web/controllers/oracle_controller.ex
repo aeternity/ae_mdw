@@ -14,38 +14,39 @@ defmodule AeMdwWeb.OracleController do
   ##########
 
   @spec oracle(Conn.t(), map()) :: Conn.t()
-  def oracle(conn, %{"id" => id} = params) do
+  def oracle(%Conn{assigns: %{state: state}} = conn, %{"id" => id} = params) do
     with {:ok, oracle_pk} <- Validate.id(id, [:oracle_pubkey]),
-         {:ok, oracle} <- Oracles.fetch(oracle_pk, Util.expand?(params)) do
+         {:ok, oracle} <- Oracles.fetch(state, oracle_pk, Util.expand?(params)) do
       json(conn, oracle)
     end
   end
 
   @spec inactive_oracles(Conn.t(), map()) :: Conn.t()
   def inactive_oracles(%Conn{assigns: assigns} = conn, _params) do
-    %{pagination: pagination, cursor: cursor, expand?: expand?} = assigns
+    %{state: state, pagination: pagination, cursor: cursor, expand?: expand?} = assigns
 
     {prev_cursor, oracles, next_cursor} =
-      Oracles.fetch_inactive_oracles(pagination, cursor, expand?)
+      Oracles.fetch_inactive_oracles(state, pagination, cursor, expand?)
 
     Util.paginate(conn, prev_cursor, oracles, next_cursor)
   end
 
   @spec active_oracles(Conn.t(), map()) :: Conn.t()
   def active_oracles(%Conn{assigns: assigns} = conn, _params) do
-    %{pagination: pagination, cursor: cursor, expand?: expand?} = assigns
+    %{state: state, pagination: pagination, cursor: cursor, expand?: expand?} = assigns
 
     {prev_cursor, oracles, next_cursor} =
-      Oracles.fetch_active_oracles(pagination, cursor, expand?)
+      Oracles.fetch_active_oracles(state, pagination, cursor, expand?)
 
     Util.paginate(conn, prev_cursor, oracles, next_cursor)
   end
 
   @spec oracles(Conn.t(), map()) :: Conn.t()
   def oracles(%Conn{assigns: assigns, query_params: query_params} = conn, _params) do
-    %{pagination: pagination, cursor: cursor, expand?: expand?, scope: scope} = assigns
+    %{state: state, pagination: pagination, cursor: cursor, expand?: expand?, scope: scope} =
+      assigns
 
-    case Oracles.fetch_oracles(pagination, scope, query_params, cursor, expand?) do
+    case Oracles.fetch_oracles(state, pagination, scope, query_params, cursor, expand?) do
       {:ok, prev_cursor, oracles, next_cursor} ->
         Util.paginate(conn, prev_cursor, oracles, next_cursor)
 

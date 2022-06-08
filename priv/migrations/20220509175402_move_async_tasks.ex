@@ -18,11 +18,12 @@ defmodule AeMdw.Migrations.MoveAsyncTasks do
   def run(_from_start?) do
     begin = DateTime.utc_now()
     keys = Database.all_keys(Model.AsyncTasks)
+    state = State.new()
 
     write_mutations =
       Enum.map(keys, fn key ->
         Model.async_tasks(index: {ts, type}, args: args) = Database.fetch!(Model.AsyncTasks, key)
-        extra_args = get_extra_args(type, args)
+        extra_args = get_extra_args(state, type, args)
         m_task = Model.async_task(index: {ts, type}, args: args, extra_args: extra_args)
 
         WriteMutation.new(Model.AsyncTask, m_task)
@@ -39,13 +40,13 @@ defmodule AeMdw.Migrations.MoveAsyncTasks do
     {:ok, {indexed_count, duration}}
   end
 
-  defp get_extra_args(:update_aex9_state, [contract_pk]) do
-    create_txi = Origin.tx_index!({:contract, contract_pk})
+  defp get_extra_args(state, :update_aex9_state, [contract_pk]) do
+    create_txi = Origin.tx_index!(state, {:contract, contract_pk})
     {:ok, {^create_txi, call_txi}} = Database.prev_key(Model.ContractCall, {create_txi, nil})
     Model.tx(block_index: block_index) = Database.fetch!(Model.Tx, call_txi)
 
     [block_index, call_txi]
   end
 
-  defp get_extra_args(_other_type, _args), do: []
+  defp get_extra_args(_state, _other_type, _args), do: []
 end

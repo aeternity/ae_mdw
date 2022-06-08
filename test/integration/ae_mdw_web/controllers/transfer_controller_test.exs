@@ -2,6 +2,7 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.Util
 
   require Model
@@ -71,10 +72,11 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
       first = 200_000
       last = 300_000
       limit = 3
+      state = State.new()
       conn = get(conn, "/transfers", scope: "txi:#{first}-#{last}", limit: limit)
       response = json_response(conn, 200)
-      first_gen = Util.txi_to_gen(first)
-      last_gen = Util.txi_to_gen(last)
+      first_gen = Util.txi_to_gen(state, first)
+      last_gen = Util.txi_to_gen(state, last)
 
       assert ^limit = Enum.count(response["data"])
 
@@ -103,10 +105,11 @@ defmodule Integration.AeMdwWeb.TransferControllerTest do
       first = 300_000
       last = 200_000
       limit = 3
+      state = State.new()
       conn = get(conn, "/transfers", scope: "txi:#{first}-#{last}", limit: limit)
       response = json_response(conn, 200)
-      first_gen = Util.txi_to_gen(first)
-      last_gen = Util.txi_to_gen(last)
+      first_gen = Util.txi_to_gen(state, first)
+      last_gen = Util.txi_to_gen(state, last)
 
       assert ^limit = Enum.count(response["data"])
 

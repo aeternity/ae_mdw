@@ -10,8 +10,8 @@ defmodule AeMdw.Oracles do
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Oracle
+  alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DBUtil
-  alias AeMdw.Database
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node
@@ -35,9 +35,9 @@ defmodule AeMdw.Oracles do
   @pagination_params ~w(limit cursor rev direction scope expand)
   @states ~w(active inactive)
 
-  @spec fetch_oracles(pagination(), range(), query(), cursor() | nil, boolean()) ::
+  @spec fetch_oracles(State.t(), pagination(), range(), query(), cursor() | nil, boolean()) ::
           {:ok, cursor() | nil, [oracle()], cursor() | nil} | {:error, Error.t()}
-  def fetch_oracles(pagination, range, query, cursor, expand?) do
+  def fetch_oracles(state, pagination, range, query, cursor, expand?) do
     cursor = deserialize_cursor(cursor)
     scope = deserialize_scope(range)
 
@@ -47,10 +47,10 @@ defmodule AeMdw.Oracles do
         |> Map.drop(@pagination_params)
         |> Enum.map(&convert_param/1)
         |> Map.new()
-        |> build_streamer(scope, cursor)
+        |> build_streamer(state, scope, cursor)
         |> Collection.paginate(pagination)
 
-      oracles = render_list(expiration_keys, expand?)
+      oracles = render_list(state, expiration_keys, expand?)
 
       {:ok, serialize_cursor(prev_cursor), oracles, serialize_cursor(next_cursor)}
     rescue
@@ -63,16 +63,16 @@ defmodule AeMdw.Oracles do
   defp convert_param(other_param),
     do: raise(ErrInput.Query, value: other_param)
 
-  defp build_streamer(%{}, scope, cursor) do
+  defp build_streamer(%{}, state, scope, cursor) do
     fn direction ->
       active_stream =
-        @table_active_expiration
-        |> Collection.stream(direction, scope, cursor)
+        state
+        |> Collection.stream(@table_active_expiration, direction, scope, cursor)
         |> Stream.map(fn key -> {key, @table_active_expiration} end)
 
       inactive_stream =
-        @table_inactive_expiration
-        |> Collection.stream(direction, scope, cursor)
+        state
+        |> Collection.stream(@table_inactive_expiration, direction, scope, cursor)
         |> Stream.map(fn key -> {key, @table_inactive_expiration} end)
 
       case direction do
@@ -82,45 +82,45 @@ defmodule AeMdw.Oracles do
     end
   end
 
-  @spec fetch_active_oracles(pagination(), cursor() | nil, boolean()) ::
+  @spec fetch_active_oracles(State.t(), pagination(), cursor() | nil, boolean()) ::
           {cursor() | nil, [oracle()], cursor() | nil}
-  def fetch_active_oracles(pagination, cursor, expand?) do
+  def fetch_active_oracles(state, pagination, cursor, expand?) do
     cursor = deserialize_cursor(cursor)
 
     {prev_cursor, exp_keys, next_cursor} =
       Collection.paginate(
-        &Collection.stream(@table_active_expiration, &1, nil, cursor),
+        &Collection.stream(state, @table_active_expiration, &1, nil, cursor),
         pagination
       )
 
-    oracles = render_list(exp_keys, true, expand?)
+    oracles = render_list(state, exp_keys, true, expand?)
 
     {serialize_cursor(prev_cursor), oracles, serialize_cursor(next_cursor)}
   end
 
-  @spec fetch_inactive_oracles(pagination(), cursor() | nil, boolean()) ::
+  @spec fetch_inactive_oracles(State.t(), pagination(), cursor() | nil, boolean()) ::
           {cursor() | nil, [oracle()], cursor() | nil}
-  def fetch_inactive_oracles(pagination, cursor, expand?) do
+  def fetch_inactive_oracles(state, pagination, cursor, expand?) do
     cursor = deserialize_cursor(cursor)
 
     {prev_cursor, exp_keys, next_cursor} =
       Collection.paginate(
-        &Collection.stream(@table_inactive_expiration, &1, nil, cursor),
+        &Collection.stream(state, @table_inactive_expiration, &1, nil, cursor),
         pagination
       )
 
-    oracles = render_list(exp_keys, false, expand?)
+    oracles = render_list(state, exp_keys, false, expand?)
 
     {serialize_cursor(prev_cursor), oracles, serialize_cursor(next_cursor)}
   end
 
-  @spec fetch(pubkey(), expand?()) :: {:ok, oracle()} | {:error, Error.t()}
-  def fetch(oracle_pk, expand?) do
-    last_gen = DBUtil.last_gen()
+  @spec fetch(State.t(), pubkey(), expand?()) :: {:ok, oracle()} | {:error, Error.t()}
+  def fetch(state, oracle_pk, expand?) do
+    last_gen = DBUtil.last_gen(state)
 
-    case Oracle.locate(oracle_pk) do
+    case Oracle.locate(state, oracle_pk) do
       {m_oracle, source} ->
-        {:ok, render(m_oracle, last_gen, source == Model.ActiveOracle, expand?)}
+        {:ok, render(state, m_oracle, last_gen, source == Model.ActiveOracle, expand?)}
 
       nil ->
         {:error,
@@ -128,30 +128,31 @@ defmodule AeMdw.Oracles do
     end
   end
 
-  defp render_list(oracles_exp_source_keys, expand?) do
-    last_gen = DBUtil.last_gen()
+  defp render_list(state, oracles_exp_source_keys, expand?) do
+    last_gen = DBUtil.last_gen(state)
 
     Enum.map(oracles_exp_source_keys, fn {{_exp, oracle_pk}, source} ->
       is_active? = source == @table_active_expiration
 
       oracle =
-        Database.fetch!(if(is_active?, do: @table_active, else: @table_inactive), oracle_pk)
+        State.fetch!(state, if(is_active?, do: @table_active, else: @table_inactive), oracle_pk)
 
-      render(oracle, last_gen, is_active?, expand?)
+      render(state, oracle, last_gen, is_active?, expand?)
     end)
   end
 
-  defp render_list(oracles_exp_keys, is_active?, expand?) do
+  defp render_list(state, oracles_exp_keys, is_active?, expand?) do
     last_gen = DBUtil.last_gen()
 
     oracles_exp_keys
     |> Enum.map(fn {_exp, oracle_pk} ->
-      Database.fetch!(if(is_active?, do: @table_active, else: @table_inactive), oracle_pk)
+      State.fetch!(state, if(is_active?, do: @table_active, else: @table_inactive), oracle_pk)
     end)
-    |> Enum.map(&render(&1, last_gen, is_active?, expand?))
+    |> Enum.map(&render(state, &1, last_gen, is_active?, expand?))
   end
 
   defp render(
+         state,
          Model.oracle(
            index: pk,
            expire: expire_height,
@@ -165,7 +166,7 @@ defmodule AeMdw.Oracles do
        ) do
     kbi = min(expire_height - 1, last_gen)
 
-    block_hash = Blocks.block_hash(kbi)
+    block_hash = Blocks.block_hash(state, kbi)
     oracle_tree = AeMdw.Db.Oracle.oracle_tree!(block_hash)
     oracle_rec = :aeo_state_tree.get_oracle(pk, oracle_tree)
 
@@ -174,8 +175,8 @@ defmodule AeMdw.Oracles do
       active: is_active?,
       active_from: register_height,
       expire_height: expire_height,
-      register: expand_txi(register_txi, expand?),
-      extends: Enum.map(extends, &expand_txi(Format.bi_txi_txi(&1), expand?)),
+      register: expand_txi(state, register_txi, expand?),
+      extends: Enum.map(extends, &expand_txi(state, Format.bi_txi_txi(&1), expand?)),
       query_fee: Node.Oracle.get!(oracle_rec, :query_fee),
       format: %{
         query: Node.Oracle.get!(oracle_rec, :query_format),
@@ -203,8 +204,8 @@ defmodule AeMdw.Oracles do
     end
   end
 
-  defp expand_txi(bi_txi, false), do: bi_txi
-  defp expand_txi(bi_txi, true), do: Format.to_map(DBUtil.read_tx!(bi_txi))
+  defp expand_txi(_state, bi_txi, false), do: bi_txi
+  defp expand_txi(state, bi_txi, true), do: Format.to_map(state, DBUtil.read_tx!(state, bi_txi))
 
   defp deserialize_scope(nil), do: nil
 

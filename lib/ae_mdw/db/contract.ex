@@ -256,7 +256,7 @@ defmodule AeMdw.Db.Contract do
 
   @spec call_fun_arg_res(pubkey(), integer()) :: Contract.fun_arg_res()
   def call_fun_arg_res(contract_pk, call_txi) do
-    create_txi = Origin.tx_index!({:contract, contract_pk})
+    create_txi = Origin.tx_index!(State.new(), {:contract, contract_pk})
     m_call = read!(Model.ContractCall, {create_txi, call_txi})
 
     %{

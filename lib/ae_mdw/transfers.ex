@@ -5,6 +5,7 @@ defmodule AeMdw.Transfers do
 
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DBUtil
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Collection
@@ -27,11 +28,11 @@ defmodule AeMdw.Transfers do
   @target_kind_int_transfer_tx_table Model.TargetKindIntTransferTx
   @kind_int_transfer_tx_table Model.KindIntTransferTx
 
-  @spec fetch_transfers(pagination(), range(), query(), cursor() | nil) ::
+  @spec fetch_transfers(State.t(), pagination(), range(), query(), cursor() | nil) ::
           {:ok, cursor() | nil, [transfer()], cursor() | nil} | {:error, reason()}
-  def fetch_transfers(pagination, range, query, cursor) do
+  def fetch_transfers(state, pagination, range, query, cursor) do
     cursor = deserialize_cursor(cursor)
-    scope = deserialize_scope(range)
+    scope = deserialize_scope(state, range)
 
     try do
       {prev_cursor, transfers, next_cursor} =
@@ -39,10 +40,10 @@ defmodule AeMdw.Transfers do
         |> Map.drop(@pagination_params)
         |> Enum.map(&convert_param/1)
         |> Map.new()
-        |> build_streamer(scope, cursor)
+        |> build_streamer(state, scope, cursor)
         |> Collection.paginate(pagination)
 
-      {:ok, serialize_cursor(prev_cursor), Enum.map(transfers, &render/1),
+      {:ok, serialize_cursor(prev_cursor), Enum.map(transfers, &render(state, &1)),
        serialize_cursor(next_cursor)}
     rescue
       e in ErrInput ->
@@ -51,7 +52,7 @@ defmodule AeMdw.Transfers do
   end
 
   # Retrieves transfers within the {account, kind_prefix_*, gen_txi, X} range.
-  defp build_streamer(%{account_pk: account_pk, kind_prefix: kind_prefix}, scope, cursor) do
+  defp build_streamer(%{account_pk: account_pk, kind_prefix: kind_prefix}, state, scope, cursor) do
     {{first_gen_txi, _first_kind, _first_account_pk, _first_ref_txi},
      {last_gen_txi, _last_kind, _last_account_pk, _last_ref_txi}} = scope
 
@@ -73,19 +74,19 @@ defmodule AeMdw.Transfers do
     fn direction ->
       tables_spec
       |> Enum.map(fn {scope, cursor} ->
-        build_target_kind_int_transfer_stream(direction, scope, cursor)
+        build_target_kind_int_transfer_stream(state, direction, scope, cursor)
       end)
       |> Collection.merge(direction)
     end
   end
 
   # Retrieves transfers within the {account, gen_txi, X, Y} range.
-  defp build_streamer(%{account_pk: account_pk}, scope, cursor) do
-    build_streamer(%{account_pk: account_pk, kind_prefix: ""}, scope, cursor)
+  defp build_streamer(%{account_pk: account_pk}, state, scope, cursor) do
+    build_streamer(%{account_pk: account_pk, kind_prefix: ""}, state, scope, cursor)
   end
 
   # Retrieves transfers within the {kind_prefix_*, gen_txi, account, X} range.
-  defp build_streamer(%{kind_prefix: kind_prefix}, scope, cursor) do
+  defp build_streamer(%{kind_prefix: kind_prefix}, state, scope, cursor) do
     {{first_gen_txi, _first_kind, first_account_pk, _first_ref_txi},
      {last_gen_txi, _last_kind, last_account_pk, _last_ref_txi}} = scope
 
@@ -109,46 +110,51 @@ defmodule AeMdw.Transfers do
     fn direction ->
       tables_spec
       |> Enum.map(fn {scope, cursor} ->
-        build_kind_int_transfer_stream(direction, scope, cursor)
+        build_kind_int_transfer_stream(state, direction, scope, cursor)
       end)
       |> Collection.merge(direction)
     end
   end
 
-  defp build_streamer(_query, scope, cursor),
-    do: &Collection.stream(@int_transfer_table, &1, scope, cursor)
+  defp build_streamer(_query, state, scope, cursor),
+    do: &Collection.stream(state, @int_transfer_table, &1, scope, cursor)
 
-  defp build_target_kind_int_transfer_stream(direction, scope, cursor) do
-    @target_kind_int_transfer_tx_table
-    |> Collection.stream(direction, scope, cursor)
+  defp build_target_kind_int_transfer_stream(state, direction, scope, cursor) do
+    state
+    |> Collection.stream(@target_kind_int_transfer_tx_table, direction, scope, cursor)
     |> Stream.map(fn {account_pk, kind, gen_txi, ref_txi} ->
       {gen_txi, kind, account_pk, ref_txi}
     end)
   end
 
-  defp build_kind_int_transfer_stream(direction, scope, cursor) do
-    @kind_int_transfer_tx_table
-    |> Collection.stream(direction, scope, cursor)
+  defp build_kind_int_transfer_stream(state, direction, scope, cursor) do
+    state
+    |> Collection.stream(@kind_int_transfer_tx_table, direction, scope, cursor)
     |> Stream.map(fn {kind, gen_txi, account_pk, ref_txi} ->
       {gen_txi, kind, account_pk, ref_txi}
     end)
   end
 
-  defp deserialize_scope(nil) do
+  defp deserialize_scope(_state, nil) do
     {{{Util.min_int(), Util.min_int()}, Util.min_bin(), Util.min_bin(), Util.min_int()},
      {{Util.max_256bit_int(), Util.max_256bit_int()}, Util.max_256bit_bin(),
       Util.max_256bit_bin(), Util.max_256bit_int()}}
   end
 
-  defp deserialize_scope({:gen, %Range{first: first_gen, last: last_gen}}) do
+  defp deserialize_scope(_state, {:gen, %Range{first: first_gen, last: last_gen}}) do
     {{{first_gen, Util.min_int()}, Util.min_bin(), Util.min_bin(), Util.min_int()},
      {{last_gen, Util.max_256bit_int()}, Util.max_256bit_bin(), Util.max_256bit_bin(),
       Util.max_256bit_int()}}
   end
 
-  defp deserialize_scope({:txi, %Range{first: first_txi, last: last_txi}}) do
+  defp deserialize_scope(state, {:txi, %Range{first: first_txi, last: last_txi}}) do
     deserialize_scope(
-      {:gen, %Range{first: DBUtil.txi_to_gen(first_txi), last: DBUtil.txi_to_gen(last_txi)}}
+      state,
+      {:gen,
+       %Range{
+         first: DBUtil.txi_to_gen(state, first_txi),
+         last: DBUtil.txi_to_gen(state, last_txi)
+       }}
     )
   end
 
@@ -199,8 +205,8 @@ defmodule AeMdw.Transfers do
   defp convert_param(other_param),
     do: raise(ErrInput.Query, value: other_param)
 
-  defp render(transfer_key) do
-    Format.to_map(transfer_key, @int_transfer_table)
+  defp render(state, transfer_key) do
+    Format.to_map(state, transfer_key, @int_transfer_table)
   end
 
   defp serialize_cursor(nil), do: nil

@@ -25,35 +25,35 @@ defmodule AeMdwWeb.TxController do
   ##########
 
   @spec tx(Conn.t(), map()) :: Conn.t()
-  def tx(conn, %{"hash_or_index" => hash_or_index} = params) do
+  def tx(%Conn{assigns: %{state: state}} = conn, %{"hash_or_index" => hash_or_index} = params) do
     case Util.parse_int(hash_or_index) do
       {:ok, _txi} ->
         txi(conn, Map.put(params, "index", hash_or_index))
 
       :error ->
         with {:ok, tx_hash} <- Validate.id(hash_or_index),
-             {:ok, tx} <- Txs.fetch(tx_hash) do
+             {:ok, tx} <- Txs.fetch(state, tx_hash) do
           json(conn, tx)
         end
     end
   end
 
   @spec txi(Conn.t(), map()) :: Conn.t()
-  def txi(conn, %{"index" => index}) do
+  def txi(%Conn{assigns: %{state: state}} = conn, %{"index" => index}) do
     with {:ok, txi} <- Validate.nonneg_int(index),
-         {:ok, tx} <- Txs.fetch(txi) do
+         {:ok, tx} <- Txs.fetch(state, txi) do
       json(conn, tx)
     end
   end
 
   @spec txs(Conn.t(), map()) :: Conn.t()
   def txs(%Conn{assigns: assigns, query_params: query_params} = conn, params) do
-    %{pagination: pagination, cursor: cursor, scope: scope} = assigns
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
     add_spendtx_details? = Map.has_key?(params, "account")
 
     with {:ok, query} <- extract_query(query_params),
          {:ok, prev_cursor, txs, next_cursor} <-
-           Txs.fetch_txs(pagination, scope, query, cursor, add_spendtx_details?) do
+           Txs.fetch_txs(state, pagination, scope, query, cursor, add_spendtx_details?) do
       paginate(conn, prev_cursor, txs, next_cursor)
     else
       {:error, reason} ->

@@ -31,11 +31,11 @@ defmodule AeMdwWeb.OracleControllerTest do
              ActiveOracleExpiration -> {:ok, TS.oracle_expiration_key(1)}
              InactiveOracleExpiration -> :none
            end,
-           fetch!: fn _tab, _pk -> oracle end
+           get: fn _tab, _pk -> {:ok, oracle} end
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
-        {Blocks, [], [block_hash: fn _height -> "asd" end]}
+        {Blocks, [], [block_hash: fn _state, _height -> "asd" end]}
       ] do
         assert %{"data" => [oracle1 | _rest] = oracles, "next" => next_uri} =
                  conn
@@ -71,11 +71,11 @@ defmodule AeMdwWeb.OracleControllerTest do
              ActiveOracleExpiration -> {:ok, {1, "a"}}
              InactiveOracleExpiration -> {:ok, {1, "b"}}
            end,
-           fetch!: fn _tab, _oracle_pk -> oracle end
+           get: fn _tab, _oracle_pk -> {:ok, oracle} end
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
-        {Blocks, [], [block_hash: fn _height -> "asd" end]}
+        {Blocks, [], [block_hash: fn _state, _height -> "asd" end]}
       ] do
         assert %{"data" => [oracle1, _oracle2, _oracle3, _oracle4], "next" => nil} =
                  conn
@@ -101,7 +101,7 @@ defmodule AeMdwWeb.OracleControllerTest do
              Block -> {:ok, TS.last_gen()}
              ActiveOracleExpiration -> {:ok, key1}
            end,
-           fetch!: fn _tab, _oracle_pk -> oracle end,
+           get: fn _tab, _oracle_pk -> {:ok, oracle} end,
            next_key: fn _tab, _key -> :none end,
            prev_key: fn
              _tab, ^key1 -> {:ok, key2}
@@ -110,7 +110,7 @@ defmodule AeMdwWeb.OracleControllerTest do
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
-        {Blocks, [], [block_hash: fn _height -> "asd" end]}
+        {Blocks, [], [block_hash: fn _state, _height -> "asd" end]}
       ] do
         assert %{"data" => [oracle1, _oracle2], "next" => nil} =
                  conn
@@ -137,11 +137,11 @@ defmodule AeMdwWeb.OracleControllerTest do
            end,
            next_key: fn ActiveOracleExpiration, _key -> {:ok, expiration_key} end,
            prev_key: fn ActiveOracleExpiration, _key -> {:ok, expiration_key} end,
-           fetch!: fn _tab, _oracle_pk -> TS.oracle() end
+           get: fn _tab, _oracle_pk -> {:ok, TS.oracle()} end
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
-        {Blocks, [], [block_hash: fn _height -> "asd" end]}
+        {Blocks, [], [block_hash: fn _state, _height -> "asd" end]}
       ] do
         assert %{"next" => next_uri} = conn |> get("/oracles/active") |> json_response(200)
 

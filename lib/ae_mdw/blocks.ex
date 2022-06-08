@@ -7,6 +7,7 @@ defmodule AeMdw.Blocks do
   alias AeMdw.Error
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.EtsCache
   alias AeMdw.Database
@@ -45,10 +46,10 @@ defmodule AeMdw.Blocks do
     EtsCache.new(@cache_table, generations_cache_exp, :ordered_set)
   end
 
-  @spec fetch_blocks(direction(), range(), cursor() | nil, limit(), boolean()) ::
+  @spec fetch_blocks(State.t(), direction(), range(), cursor() | nil, limit(), boolean()) ::
           {cursor() | nil, [block()], cursor() | nil}
-  def fetch_blocks(direction, range, cursor, limit, sort_mbs?) do
-    last_gen = DbUtil.last_gen()
+  def fetch_blocks(state, direction, range, cursor, limit, sort_mbs?) do
+    last_gen = DbUtil.last_gen(state)
     cursor = deserialize_cursor(cursor)
 
     range =
@@ -59,7 +60,7 @@ defmodule AeMdw.Blocks do
 
     case Util.build_gen_pagination(cursor, direction, range, limit, last_gen) do
       {:ok, prev_cursor, range, next_cursor} ->
-        {serialize_cursor(prev_cursor), render_blocks(range, last_gen, sort_mbs?),
+        {serialize_cursor(prev_cursor), render_blocks(state, range, last_gen, sort_mbs?),
          serialize_cursor(next_cursor)}
 
       :error ->
@@ -67,62 +68,62 @@ defmodule AeMdw.Blocks do
     end
   end
 
-  @spec block_hash(height()) :: block_hash()
-  def block_hash(height) do
-    Model.block(hash: hash) = Database.fetch!(@table, {height, -1})
+  @spec block_hash(State.t(), height()) :: block_hash()
+  def block_hash(state, height) do
+    Model.block(hash: hash) = State.fetch!(state, @table, {height, -1})
 
     hash
   end
 
-  @spec fetch(block_index() | block_hash()) :: {:ok, block()} | {:error, Error.t()}
-  def fetch(block_hash) when is_binary(block_hash) do
+  @spec fetch(State.t(), block_index() | block_hash()) :: {:ok, block()} | {:error, Error.t()}
+  def fetch(state, block_hash) when is_binary(block_hash) do
     case :aec_chain.get_block(block_hash) do
       {:ok, _block} ->
         # note: the `nil` here - for json formatting, we reuse AE node code
-        {:ok, Format.to_map({:block, {nil, nil}, nil, block_hash})}
+        {:ok, Format.to_map(state, {:block, {nil, nil}, nil, block_hash})}
 
       :error ->
         {:error, Error.Input.NotFound.exception(value: block_hash)}
     end
   end
 
-  def fetch(block_index) do
-    case DbUtil.read_block(block_index) do
-      [Model.block(hash: block_hash)] -> fetch(block_hash)
-      [] -> {:error, Error.Input.NotFound.exception(value: block_index)}
+  def fetch(state, block_index) do
+    case State.get(state, @table, block_index) do
+      {:ok, Model.block(hash: block_hash)} -> fetch(state, block_hash)
+      :not_found -> {:error, Error.Input.NotFound.exception(value: block_index)}
     end
   end
 
-  @spec fetch_txis_from_gen(height()) :: Enumerable.t()
-  def fetch_txis_from_gen(height) do
+  @spec fetch_txis_from_gen(State.t(), height()) :: Enumerable.t()
+  def fetch_txis_from_gen(state, height) do
     with {:ok, Model.block(tx_index: tx_index_start)}
          when is_integer(tx_index_start) and tx_index_start >= 0 <-
-           Database.fetch(@table, {height, -1}),
+           State.get(state, @table, {height, -1}),
          {:ok, Model.block(tx_index: tx_index_end)}
          when is_integer(tx_index_end) and tx_index_end >= 0 <-
-           Database.fetch(@table, {height + 1, -1}) do
+           State.get(state, @table, {height + 1, -1}) do
       tx_index_start..tx_index_end
     else
       _full_block_not_found -> []
     end
   end
 
-  defp render_blocks(range, last_gen, sort_mbs?),
-    do: Enum.map(range, &render(&1, last_gen, sort_mbs?))
+  defp render_blocks(state, range, last_gen, sort_mbs?),
+    do: Enum.map(range, &render(state, &1, last_gen, sort_mbs?))
 
-  defp render(gen, last_gen, sort_mbs?) when gen > last_gen - @blocks_cache_threshold do
-    [key_block | micro_blocks] = fetch_gen_blocks(gen, last_gen)
+  defp render(state, gen, last_gen, sort_mbs?) when gen > last_gen - @blocks_cache_threshold do
+    [key_block | micro_blocks] = fetch_gen_blocks(state, gen, last_gen)
 
     put_mbs_from_db(key_block, micro_blocks, sort_mbs?)
   end
 
-  defp render(gen, last_gen, sort_mbs?) do
-    [key_block | micro_blocks] = fetch_gen_blocks(gen, last_gen)
+  defp render(state, gen, last_gen, sort_mbs?) do
+    [key_block | micro_blocks] = fetch_gen_blocks(state, gen, last_gen)
 
     fetch_gen_from_cache(gen, key_block, micro_blocks, sort_mbs?)
   end
 
-  defp fetch_gen_blocks(last_gen, last_gen) do
+  defp fetch_gen_blocks(_state, last_gen, last_gen) do
     # gets by height once the chain current generation might happen to be higher than last_gen in DB
     {:ok, %{key_block: kb, micro_blocks: mbs}} =
       :aec_chain.get_generation_by_height(last_gen, :forward)
@@ -135,13 +136,13 @@ defmodule AeMdw.Blocks do
     end
   end
 
-  defp fetch_gen_blocks(gen, _last_gen) do
+  defp fetch_gen_blocks(state, gen, _last_gen) do
     @table
     |> Collection.stream(:backward, nil, {gen, <<>>})
     |> Stream.take_while(&match?({^gen, _mb_index}, &1))
-    |> Enum.map(fn key -> Database.fetch!(@table, key) end)
+    |> Enum.map(fn key -> State.fetch!(state, @table, key) end)
     |> Enum.reverse()
-    |> Enum.map(fn block -> Format.to_map(block) end)
+    |> Enum.map(fn block -> Format.to_map(state, block) end)
   end
 
   defp fetch_gen_from_cache(gen, key_block, micro_blocks, sort_mbs?) do
