@@ -866,8 +866,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
     end
 
     test "get name in auction with expand=true", %{conn: conn} do
-      bid_key = Util.first(Model.AuctionBid)
-      name = elem(bid_key, 0)
+      name = Util.first(Model.AuctionBid)
       conn = get(conn, "/name/#{name}?expand=true")
 
       response = json_response(conn, 200)
@@ -919,8 +918,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
     end
 
     test "get name in auction with expand=true", %{conn: conn} do
-      bid_key = Util.first(Model.AuctionBid)
-      name = elem(bid_key, 0)
+      name = Util.first(Model.AuctionBid)
       conn = get(conn, "/v2/names/#{name}?expand=true")
 
       response = json_response(conn, 200)
