@@ -66,9 +66,7 @@ defmodule AeMdw.AexnContracts do
     Enum.all?(extensions, &valid_aex141_extension?(&1, functions))
   end
 
-  def has_valid_aex141_extensions?(_extensions, _no_fcode) do
-    true
-  end
+  def has_valid_aex141_extensions?(_extensions, _no_fcode), do: false
 
   @spec call_meta_info(pubkey()) :: {:ok, Model.aexn_meta_info()} | :error
   def call_meta_info(contract_pk) do
