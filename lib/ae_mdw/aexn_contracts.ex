@@ -104,6 +104,7 @@ defmodule AeMdw.AexnContracts do
   defp decode_meta_info({name, symbol, variant_url, variant_type}) do
     url =
       case variant_url do
+        {:variant, [0, 1], 1, {url}} -> url
         {:variant, [0, 1], 1, url} -> url
         _other -> nil
       end
@@ -174,4 +175,6 @@ defmodule AeMdw.AexnContracts do
       match?({_code, {[:address], :integer}, _body}, functions[@check_swap_hash]) and
       match?({_code, {[], {:map, :address, :string}}, _body}, functions[@swapped_hash])
   end
+
+  defp valid_aex141_extension?(_any, _functions), do: false
 end
