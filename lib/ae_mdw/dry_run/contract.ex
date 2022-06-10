@@ -11,8 +11,15 @@ defmodule AeMdw.DryRun.Contract do
   @abi_fate_sophia_1 3
   @gas 10_000_000_000_000_000_000
 
-  @spec new_call_tx(pubkey(), pubkey(), block_hash(), String.t(), list()) :: tuple()
-  def new_call_tx(caller_pk, contract_pk, block_hash, function_name, args) do
+  @spec new_call_tx(
+          pubkey(),
+          pubkey(),
+          block_hash(),
+          AeMdw.Contract.method_name(),
+          AeMdw.Contract.method_args(),
+          pos_integer()
+        ) :: tuple()
+  def new_call_tx(caller_pk, contract_pk, block_hash, function_name, args, gas \\ @gas) do
     {_tx_env, trees} = :aetx_env.tx_env_and_trees_from_hash(:aetx_contract, block_hash)
     contracts = :aec_trees.contracts(trees)
 
@@ -33,7 +40,7 @@ defmodule AeMdw.DryRun.Contract do
       contract_id: contract_id,
       abi_version: abi_version(),
       amount: 0,
-      gas: @gas,
+      gas: gas,
       gas_price: div(min_gas_price(), 1000),
       call_data: call_data,
       fee: 200 * min_gas_price()

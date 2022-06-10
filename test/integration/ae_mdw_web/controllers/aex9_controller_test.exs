@@ -36,7 +36,8 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
                  "contract_txi" => 22_313_168,
                  "decimals" => 18,
                  "name" => "9GAG",
-                 "symbol" => "9GAG"
+                 "symbol" => "9GAG",
+                 "extensions" => ["allowances", "mintable", "burnable", "swappable"]
                }
 
       contract_id = "ct_AdhAL6YZ2wZKKTcR8Gf8CYSGsWC1siWNyv8JRvRpB3RbeAwer"
@@ -52,7 +53,8 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
                  "contract_txi" => 9_393_007,
                  "decimals" => 18,
                  "name" => "AAA",
-                 "symbol" => "AAA"
+                 "symbol" => "AAA",
+                 "extensions" => []
                }
     end
 
@@ -100,7 +102,8 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
                  "contract_txi" => 22_313_168,
                  "decimals" => 18,
                  "name" => "9GAG",
-                 "symbol" => "9GAG"
+                 "symbol" => "9GAG",
+                 "extensions" => ["allowances", "mintable", "burnable", "swappable"]
                }
              end)
 
@@ -111,7 +114,8 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
                    "contract_txi" => 9_393_007,
                    "decimals" => 18,
                    "name" => "AAA",
-                   "symbol" => "AAA"
+                   "symbol" => "AAA",
+                   "extensions" => []
                  }
              end)
     end
@@ -131,7 +135,8 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
                    "contract_txi" => 12_361_891,
                    "decimals" => 18,
                    "name" => "911058",
-                   "symbol" => "SPH"
+                   "symbol" => "SPH",
+                   "extensions" => ["allowances", "mintable", "burnable", "swappable"]
                  }
              end)
 
@@ -141,7 +146,8 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
                  "contract_txi" => 22_313_168,
                  "decimals" => 18,
                  "name" => "9GAG",
-                 "symbol" => "9GAG"
+                 "symbol" => "9GAG",
+                 "extensions" => ["allowances", "mintable", "burnable", "swappable"]
                }
              end)
     end
@@ -467,7 +473,6 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
     @tag timeout: 600_000
     @tag :iteration
-    # @tag :skip
     test "gets balances for each account with aex9 presence", %{conn: conn} do
       state = State.new()
 

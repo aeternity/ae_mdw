@@ -4,7 +4,7 @@ defmodule AeMdw.Db.Contract do
   """
   alias AeMdw.Collection
   alias AeMdw.Contract
-  alias AeMdw.Contracts.AexnContract
+  alias AeMdw.AexnContracts
   alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
@@ -35,9 +35,10 @@ defmodule AeMdw.Db.Contract do
           Model.aexn_type(),
           Model.aexn_meta_info(),
           pubkey(),
-          integer()
+          integer(),
+          Model.aexn_extensions()
         ) :: state()
-  def aexn_creation_write(state, aexn_type, aexn_meta_info, contract_pk, txi) do
+  def aexn_creation_write(state, aexn_type, aexn_meta_info, contract_pk, txi, extensions) do
     name = elem(aexn_meta_info, 0)
     symbol = elem(aexn_meta_info, 1)
 
@@ -48,7 +49,8 @@ defmodule AeMdw.Db.Contract do
       Model.aexn_contract(
         index: {aexn_type, contract_pk},
         txi: txi,
-        meta_info: aexn_meta_info
+        meta_info: aexn_meta_info,
+        extensions: extensions
       )
 
     state
@@ -246,11 +248,11 @@ defmodule AeMdw.Db.Contract do
 
   @spec which_aexn_contract_pubkey(pubkey(), pubkey()) :: pubkey() | nil
   def which_aexn_contract_pubkey(contract_pk, addr) do
-    if AexnContract.is_aex9?(contract_pk) do
+    if AexnContracts.is_aex9?(contract_pk) do
       contract_pk
     else
       # remotely called contract is aex9?
-      if addr != contract_pk and AexnContract.is_aex9?(addr), do: addr
+      if addr != contract_pk and AexnContracts.is_aex9?(addr), do: addr
     end
   end
 
@@ -356,17 +358,18 @@ defmodule AeMdw.Db.Contract do
 
   @spec update_aex9_state(State.t(), pubkey(), block_index(), txi()) :: State.t()
   def update_aex9_state(state, contract_pk, {kbi, mbi} = block_index, txi) do
-    if AexnContract.is_aex9?(contract_pk) do
+    if AexnContracts.is_aex9?(contract_pk) do
       with false <- State.exists?(state, Model.AexnContract, {:aex9, contract_pk}),
-           {:ok, aex9_meta_info} <- AexnContract.call_meta_info(contract_pk) do
+           {:ok, extensions} <- AexnContracts.call_extensions(:aex9, contract_pk),
+           {:ok, aex9_meta_info} <- AexnContracts.call_meta_info(contract_pk) do
         AsyncTasks.Producer.enqueue(:derive_aex9_presence, [contract_pk, kbi, mbi, txi])
-        aexn_creation_write(state, :aex9, aex9_meta_info, contract_pk, txi)
+        aexn_creation_write(state, :aex9, aex9_meta_info, contract_pk, txi, extensions)
       else
         true ->
           AsyncTasks.Producer.enqueue(:update_aex9_state, [contract_pk], [block_index, txi])
           state
 
-        :not_found ->
+        :error ->
           state
       end
     else

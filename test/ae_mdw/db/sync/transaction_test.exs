@@ -3,7 +3,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
 
   alias AeMdw.Node, as: AE
 
-  alias AeMdw.Contracts.AexnContract
+  alias AeMdw.AexnContracts
   alias AeMdw.Database
   alias AeMdw.Contract
   alias AeMdw.Db.Sync.Transaction
@@ -117,10 +117,11 @@ defmodule AeMdw.Db.Sync.TransactionTest do
              }
            end
          ]},
-        {AexnContract, [],
+        {AexnContracts, [],
          [
            is_aex9?: fn pk -> pk == child_contract_pk end,
-           call_meta_info: fn pk -> pk == child_contract_pk && {:ok, aex9_meta_info} end
+           call_meta_info: fn pk -> pk == child_contract_pk && {:ok, aex9_meta_info} end,
+           call_extensions: fn _type, _pk -> {:ok, []} end
          ]}
       ] do
         mutations =
@@ -137,7 +138,8 @@ defmodule AeMdw.Db.Sync.TransactionTest do
                    aexn_meta_info: ^aex9_meta_info,
                    block_index: ^block_index,
                    contract_pk: ^child_contract_pk,
-                   create_txi: ^txi
+                   create_txi: ^txi,
+                   extensions: []
                  } ->
                    true
 
@@ -170,11 +172,13 @@ defmodule AeMdw.Db.Sync.TransactionTest do
            end,
            call_contract: fn _pk, _hash, "extensions", [] -> {:ok, ["mintable"]} end
          ]},
-        {AexnContract, [],
+        {AexnContracts, [],
          [
            is_aex9?: fn _pk -> false end,
-           is_aex141?: fn pk -> pk == contract_pk end,
-           call_meta_info: fn pk -> pk == contract_pk && {:ok, aex141_meta_info} end
+           call_meta_info: fn pk -> pk == contract_pk && {:ok, aex141_meta_info} end,
+           has_aex141_signatures?: fn pk -> pk == contract_pk end,
+           call_extensions: fn :aex141, _pk -> {:ok, ["mintable"]} end,
+           has_valid_aex141_extensions?: fn _extensions, _pk -> true end
          ]}
       ] do
         mutations =
@@ -191,7 +195,8 @@ defmodule AeMdw.Db.Sync.TransactionTest do
                    aexn_meta_info: ^aex141_meta_info,
                    block_index: ^block_index,
                    contract_pk: ^contract_pk,
-                   create_txi: ^txi
+                   create_txi: ^txi,
+                   extensions: ["mintable"]
                  } ->
                    true
 
