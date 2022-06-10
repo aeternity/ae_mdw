@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.11.0](https://www.github.com/aeternity/ae_mdw/compare/v1.10.1...v1.11.0) (2022-06-10)
+
+
+### Features
+
+* add endpoints to list aex141/nft contracts ([#704](https://www.github.com/aeternity/ae_mdw/issues/704)) ([6d597dc](https://www.github.com/aeternity/ae_mdw/commit/6d597dcaf874ffcdc93d8174665a8ae06d3e26df))
+* save and display aexn extensions ([#710](https://www.github.com/aeternity/ae_mdw/issues/710)) ([bb2ff95](https://www.github.com/aeternity/ae_mdw/commit/bb2ff9546dc51c130b26abea5df0067e360cb521))
+* set low gas limit according to Node base gas ([#715](https://www.github.com/aeternity/ae_mdw/issues/715)) ([81beaf0](https://www.github.com/aeternity/ae_mdw/commit/81beaf093a771a0c08635ec60492a6b0ecf141cf))
+
+
+### Bug Fixes
+
+* display unencoded block hash when not found ([#712](https://www.github.com/aeternity/ae_mdw/issues/712)) ([d718c0a](https://www.github.com/aeternity/ae_mdw/commit/d718c0a71e9287e014cf3e44370920df5366c698))
+
+
+### Testing
+
+* fix name/stats integration tests ([#711](https://www.github.com/aeternity/ae_mdw/issues/711)) ([9b416e7](https://www.github.com/aeternity/ae_mdw/commit/9b416e76936404db95925b92beb65204d2c71b03))
+
+
+### Refactorings
+
+* add StatePlug to deal with endpoint responses ([#702](https://www.github.com/aeternity/ae_mdw/issues/702)) ([969d84c](https://www.github.com/aeternity/ae_mdw/commit/969d84c562ce18d054bdbe9bce6d056ff614d0c2))
+* generalize aexn create contract mutation ([#699](https://www.github.com/aeternity/ae_mdw/issues/699)) ([57c0070](https://www.github.com/aeternity/ae_mdw/commit/57c00704f5371503e9bd2f31b91575fca492f7df))
+
 ### [1.10.1](https://www.github.com/aeternity/ae_mdw/compare/v1.10.0...v1.10.1) (2022-06-01)
 
 
