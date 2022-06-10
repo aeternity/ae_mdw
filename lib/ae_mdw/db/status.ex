@@ -3,18 +3,19 @@ defmodule AeMdw.Db.Status do
   Database sync status from Mdw and local Node.
   """
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.Util
   alias AeMdw.Sync.AsyncTasks.Stats
   alias AeMdw.Sync.Server
 
   require Model
 
-  @spec node_and_mdw_status() :: map()
-  def node_and_mdw_status do
+  @spec node_and_mdw_status(State.t()) :: map()
+  def node_and_mdw_status(state) do
     {:ok, top_kb} = :aec_chain.top_key_block()
     {node_syncing?, node_progress} = :aec_sync.sync_progress()
     node_height = :aec_blocks.height(top_kb)
-    {mdw_tx_index, mdw_height} = safe_mdw_tx_index_and_height()
+    {mdw_tx_index, mdw_height} = safe_mdw_tx_index_and_height(state)
     mdw_syncing? = Server.syncing?()
     {:ok, version} = :application.get_key(:ae_mdw, :vsn)
     async_tasks_counters = Stats.counters()
@@ -38,13 +39,13 @@ defmodule AeMdw.Db.Status do
     }
   end
 
-  defp safe_mdw_tx_index_and_height do
-    try do
-      mdw_tx_index = Util.last_txi()
-      {mdw_height, _mbi} = mdw_tx_index |> Util.read_tx!() |> Model.tx(:block_index)
-      {mdw_tx_index, mdw_height}
-    rescue
-      _any_error ->
+  defp safe_mdw_tx_index_and_height(state) do
+    case Util.last_txi(state) do
+      {:ok, last_txi} ->
+        {mdw_height, _mbi} = state |> Util.read_tx!(last_txi) |> Model.tx(:block_index)
+        {last_txi, mdw_height}
+
+      :none ->
         {0, 0}
     end
   end

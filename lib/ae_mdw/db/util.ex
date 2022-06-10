@@ -14,6 +14,8 @@ defmodule AeMdw.Db.Util do
 
   import AeMdw.Util
 
+  @typep state() :: State.t()
+
   @eot :"$end_of_table"
 
   def read(tab, key) do
@@ -65,6 +67,9 @@ defmodule AeMdw.Db.Util do
 
   def last_txi(),
     do: ensure_key!(Model.Tx, :last)
+
+  @spec last_txi(state()) :: {:ok, Txs.txi()} | :none
+  def last_txi(state), do: State.prev(state, Model.Tx, nil)
 
   def first_gen(),
     do: ensure_key!(Model.Block, :first) |> (fn {h, -1} -> h end).()
