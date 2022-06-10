@@ -143,7 +143,9 @@ defmodule AeMdwWeb.NameController do
   end
 
   @spec search(Conn.t(), map()) :: Conn.t()
-  def search(%Conn{assigns: assigns, query_string: query_string} = conn, %{"prefix" => prefix}) do
+  def search(%Conn{assigns: assigns, query_string: query_string} = conn, params) do
+    prefix = Map.get(params, "prefix", "")
+
     lifecycles =
       query_string
       |> URI.query_decoder()
