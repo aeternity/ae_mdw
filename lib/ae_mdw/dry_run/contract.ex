@@ -18,7 +18,7 @@ defmodule AeMdw.DryRun.Contract do
           AeMdw.Contract.method_name(),
           AeMdw.Contract.method_args(),
           pos_integer()
-        ) :: tuple()
+        ) :: AeMdw.Node.aetx()
   def new_call_tx(caller_pk, contract_pk, block_hash, function_name, args, gas \\ @gas) do
     {_tx_env, trees} = :aetx_env.tx_env_and_trees_from_hash(:aetx_contract, block_hash)
     contracts = :aec_trees.contracts(trees)

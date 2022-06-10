@@ -7,6 +7,7 @@ defmodule AeMdw.AexnContracts do
 
   alias AeMdw.Contract
   alias AeMdw.Db.Model
+  alias AeMdw.DryRun.Runner
   alias AeMdw.Node.Db, as: NodeDb
   alias AeMdw.Log
 
@@ -89,7 +90,7 @@ defmodule AeMdw.AexnContracts do
   defp call_contract(contract_pk, method, args \\ []) do
     top_hash = NodeDb.top_height_hash(false)
 
-    case Contract.call_contract(contract_pk, top_hash, method, args) do
+    case Runner.call_contract(contract_pk, top_hash, method, args) do
       {:ok, return} ->
         {:ok, return}
 

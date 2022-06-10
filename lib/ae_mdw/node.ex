@@ -40,6 +40,7 @@ defmodule AeMdw.Node do
   @opaque signed_tx() :: tuple()
   @opaque aetx() :: tuple()
   @opaque tx() :: tuple()
+  @opaque aect_call :: tuple()
 
   defmodule Oracle do
     @moduledoc false

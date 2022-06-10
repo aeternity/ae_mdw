@@ -1,13 +1,11 @@
 defmodule AeMdw.Contract do
-  # credo:disable-for-this-file
   @moduledoc """
-  AE Smart Contracts info and calls.
+  AE smart contracts type (signatures) and previous calls information based on direct chain info.
   """
 
   alias AeMdw.EtsCache
   alias AeMdw.Node
   alias AeMdw.Node.Db, as: DBN
-  alias AeMdw.DryRun
 
   import :erlang, only: [tuple_to_list: 1]
 
@@ -34,7 +32,6 @@ defmodule AeMdw.Contract do
   @type call :: tuple()
 
   # for balances or balance
-  @type call_result :: map() | tuple()
   @type serialized_call :: map()
   # fcode or aevm info
   @type type_info :: {:fcode, map(), list(), any()} | list()
@@ -166,34 +163,6 @@ defmodule AeMdw.Contract do
   def is_success_ct_call?(%{result: %{abort: _error}}), do: false
   def is_success_ct_call?(_result_ok), do: true
 
-  @spec call_contract(DBN.pubkey(), String.t(), list()) ::
-          {:ok, call_result()} | {:error, any()} | :revert
-  def call_contract(contract_pk, function_name, args),
-    do: call_contract(contract_pk, DBN.top_height_hash(false), function_name, args)
-
-  def call_contract(contract_pk, {_type, height, block_hash}, function_name, args) do
-    contract_pk
-    |> DryRun.Runner.new_contract_call_tx(height, block_hash, function_name, args)
-    |> DryRun.Runner.dry_run(block_hash)
-    |> case do
-      {:ok, {[contract_call_tx: {:ok, call_res}], _events}} ->
-        case :aect_call.return_type(call_res) do
-          :ok ->
-            res_binary = :aect_call.return_value(call_res)
-            {:ok, :aeb_fate_encoding.deserialize(res_binary)}
-
-          :error ->
-            {:error, :aect_call.return_value(call_res)}
-
-          :revert ->
-            :revert
-        end
-
-      _error ->
-        {:error, :dry_run_error}
-    end
-  end
-
   @spec function_hash(String.t()) :: function_hash()
   def function_hash(name),
     do: :binary.part(:aec_hash.blake2b_256_hash(name), 0, 4)
@@ -259,13 +228,6 @@ defmodule AeMdw.Contract do
     aevm_val({res_type, vm_res}, mapper)
   end
 
-  def to_map({type, value}), do: %{type: type, value: value}
-  def to_map(%{} = map), do: map
-
-  def to_json({type, value}), do: %{"type" => to_string(type), "value" => value}
-  def to_json(%{abort: [reason]}), do: %{"abort" => [reason]}
-  def to_json(%{error: [reason]}), do: %{"error" => [reason]}
-
   @spec call_rec(tx(), DBN.pubkey(), block_hash()) :: call()
   def call_rec(tx_rec, contract_pk, block_hash) do
     tx_rec
@@ -273,20 +235,20 @@ defmodule AeMdw.Contract do
     |> call_rec_from_id(contract_pk, block_hash)
   end
 
-  @spec call_tx_info(tx(), DBN.pubkey(), block_hash(), fun()) :: {fun_arg_res_or_error(), call()}
-  def call_tx_info(tx_rec, contract_pk, block_hash, format_fn) do
+  @spec call_tx_info(tx(), DBN.pubkey(), block_hash()) :: {fun_arg_res_or_error(), call()}
+  def call_tx_info(tx_rec, contract_pk, block_hash) do
     {:ok, {type_info, _compiler_vsn, _source_hash}} = get_info(contract_pk)
     call_id = :aect_call_tx.call_id(tx_rec)
     call_data = :aect_call_tx.call_data(tx_rec)
-    call = :aec_chain.get_contract_call(contract_pk, call_id, block_hash) |> ok!
+    {:ok, call} = :aec_chain.get_contract_call(contract_pk, call_id, block_hash)
 
     try do
-      {fun, args} = decode_call_data(type_info, call_data, format_fn)
+      {fun, args} = decode_call_data(type_info, call_data, &to_map/1)
       fun = to_string(fun)
 
       res_type = :aect_call.return_type(call)
       res_val = :aect_call.return_value(call)
-      result = decode_call_result(type_info, fun, res_type, res_val, format_fn)
+      result = decode_call_result(type_info, fun, res_type, res_val, &to_map/1)
 
       fun_arg_res = %{
         function: fun,
@@ -296,7 +258,7 @@ defmodule AeMdw.Contract do
 
       {fun_arg_res, call}
     catch
-      _, {:badmatch, match_err} ->
+      _exception, {:badmatch, match_err} ->
         {{:error, match_err}, call}
     end
   end
@@ -344,6 +306,9 @@ defmodule AeMdw.Contract do
   #
   # Private functions
   #
+  defp to_map({type, value}), do: %{type: type, value: value}
+  defp to_map(%{} = map), do: map
+
   # encoding and decoding vm data
   defp fate_val({:address, x}, f), do: f.({:address, encode(:account_pubkey, x)})
   defp fate_val({:oracle, x}, f), do: f.({:oracle, encode(:oracle_pubkey, x)})
@@ -369,8 +334,14 @@ defmodule AeMdw.Contract do
   defp aevm_val({{:option, _t}, :none}, f), do: f.({:option, :none})
   defp aevm_val({{:option, t}, {:some, x}}, f), do: f.({:option, aevm_val({t, x}, f)})
 
-  defp aevm_val({{:tuple, t}, x}, f),
-    do: f.({:tuple, Enum.zip(t, tuple_to_list(x)) |> Enum.map(&aevm_val(&1, f))})
+  defp aevm_val({{:tuple, type}, vm_args_res}, f) do
+    aevm_value =
+      type
+      |> Enum.zip(tuple_to_list(vm_args_res))
+      |> Enum.map(&aevm_val(&1, f))
+
+    f.({:tuple, aevm_value})
+  end
 
   defp aevm_val({{:list, t}, x}, f),
     do: f.({:list, Enum.map(x, &aevm_val({t, &1}, f))})
@@ -440,7 +411,7 @@ defmodule AeMdw.Contract do
   end
 
   defp call_rec_from_id(call_id, contract_pk, block_hash) do
-    :aec_chain.get_contract_call(contract_pk, call_id, block_hash) |> ok!
+    ok!(:aec_chain.get_contract_call(contract_pk, call_id, block_hash))
   end
 
   defp compilation_info(contract_pk) do
