@@ -49,7 +49,7 @@ defmodule AeMdwWeb.Router do
       get "/txs", TxController, :txs
       get "/txs/:hash_or_index", TxController, :tx
 
-      get "/names/:id/auctions", NameController, :auction
+      get "/names/:id/auction", NameController, :auction
       get "/names/:id/pointers", NameController, :pointers
       get "/names/:id/pointees", NameController, :pointees
       get "/names/auctions", NameController, :auctions
