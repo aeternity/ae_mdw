@@ -2,7 +2,7 @@ defmodule AeMdw.Node.Db do
   @moduledoc false
 
   alias AeMdw.Blocks
-  alias AeMdw.Contract
+  alias AeMdw.DryRun.Runner
   alias AeMdw.Db.Model
   alias AeMdw.Log
 
@@ -107,7 +107,7 @@ defmodule AeMdw.Node.Db do
   @spec aex9_balance(pubkey(), pubkey(), height_hash()) ::
           {integer() | nil, height_hash()}
   def aex9_balance(contract_pk, account_pk, {type, height, hash}) do
-    case Contract.call_contract(contract_pk, {type, height, hash}, "balance", [
+    case Runner.call_contract(contract_pk, {type, height, hash}, "balance", [
            {:address, account_pk}
          ]) do
       {:ok, {:variant, [0, 1], 1, {amt}}} -> {amt, {type, height, hash}}
@@ -126,7 +126,7 @@ defmodule AeMdw.Node.Db do
   @spec aex9_balances!(pubkey(), height_hash()) :: {map(), height_hash()}
   def aex9_balances!(contract_pk, {type, height, hash}) do
     {:ok, addr_map} =
-      Contract.call_contract(
+      Runner.call_contract(
         contract_pk,
         {type, height, hash},
         "balances",
@@ -142,7 +142,7 @@ defmodule AeMdw.Node.Db do
 
   @spec aex9_balances(pubkey(), height_hash()) :: {map(), height_hash()}
   def aex9_balances(contract_pk, {_type, _height, _hash} = height_hash) do
-    case Contract.call_contract(
+    case Runner.call_contract(
            contract_pk,
            height_hash,
            "balances",

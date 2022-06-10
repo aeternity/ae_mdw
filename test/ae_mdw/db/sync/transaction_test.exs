@@ -6,11 +6,12 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   alias AeMdw.AexnContracts
   alias AeMdw.Database
   alias AeMdw.Contract
+  alias AeMdw.DryRun.Runner
+  alias AeMdw.Db.AexnCreateContractMutation
   alias AeMdw.Db.Sync.Transaction
   alias AeMdw.Db.Model
   alias AeMdw.EtsCache
   alias AeMdw.Validate
-  alias AeMdw.Db.AexnCreateContractMutation
 
   import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, spend_tx: 3]
   import AeMdw.Node.ContractCallFixtures
@@ -110,7 +111,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
       with_mocks [
         {Contract, [],
          [
-           call_tx_info: fn _tx, ^contract_pk, _block_hash, _to_map ->
+           call_tx_info: fn _tx, ^contract_pk, _block_hash ->
              {
                fun_args_res("create_pair"),
                call_rec("create_pair")
@@ -169,8 +170,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
            get_init_call_rec: fn _tx, _hash ->
              {:call, <<1::256>>, {:id, :account, <<2::256>>}, 1, 123_456,
               {:id, :contract, contract_pk}, 1_000_000_000, 1_234, "?", :ok, []}
-           end,
-           call_contract: fn _pk, _hash, "extensions", [] -> {:ok, ["mintable"]} end
+           end
          ]},
         {AexnContracts, [],
          [
@@ -179,6 +179,10 @@ defmodule AeMdw.Db.Sync.TransactionTest do
            has_aex141_signatures?: fn pk -> pk == contract_pk end,
            call_extensions: fn :aex141, _pk -> {:ok, ["mintable"]} end,
            has_valid_aex141_extensions?: fn _extensions, _pk -> true end
+         ]},
+        {Runner, [],
+         [
+           call_contract: fn _pk, _hash, "extensions", [] -> {:ok, ["mintable"]} end
          ]}
       ] do
         mutations =

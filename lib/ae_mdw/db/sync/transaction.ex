@@ -155,8 +155,7 @@ defmodule AeMdw.Db.Sync.Transaction do
        }) do
     contract_pk = :aect_call_tx.contract_pubkey(tx)
 
-    {fun_arg_res, call_rec} =
-      Contract.call_tx_info(tx, contract_pk, block_hash, &Contract.to_map/1)
+    {fun_arg_res, call_rec} = Contract.call_tx_info(tx, contract_pk, block_hash)
 
     child_mutations =
       if :aect_call.return_type(call_rec) == :ok do
