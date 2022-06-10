@@ -5,10 +5,11 @@ defmodule AeMdwWeb.UtilController do
   use AeMdwWeb, :controller
 
   alias AeMdw.Db.Status
+  alias Plug.Conn
 
   @spec status(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def status(conn, _params),
-    do: json(conn, Status.node_and_mdw_status())
+  def status(%Conn{assigns: %{state: state}} = conn, _params),
+    do: json(conn, Status.node_and_mdw_status(state))
 
   @spec no_route(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def no_route(conn, _params),
