@@ -9,7 +9,7 @@ defmodule AeMdw.DryRun.Contract do
   @typep block_hash() :: <<_::256>>
 
   @abi_fate_sophia_1 3
-  @gas 10_000_000_000_000_000_000
+  @gas 10_000_000_000_000_000_000_000
 
   @spec new_call_tx(
           pubkey(),
@@ -41,12 +41,18 @@ defmodule AeMdw.DryRun.Contract do
       abi_version: abi_version(),
       amount: 0,
       gas: gas,
-      gas_price: div(min_gas_price(), 1000),
+      gas_price: min_gas_price(),
       call_data: call_data,
       fee: 200 * min_gas_price()
     }
     |> :aect_call_tx.new()
     |> Util.ok!()
+  end
+
+  @spec call_tx_base_gas(AeMdw.Blocks.height()) :: pos_integer()
+  def call_tx_base_gas(height) do
+    protocol = :aec_hard_forks.protocol_effective_at_height(height)
+    :aec_governance.tx_base_gas(:contract_call_tx, protocol, abi_version())
   end
 
   defp min_gas_price do

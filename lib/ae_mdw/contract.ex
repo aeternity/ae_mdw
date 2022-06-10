@@ -171,9 +171,9 @@ defmodule AeMdw.Contract do
   def call_contract(contract_pk, function_name, args),
     do: call_contract(contract_pk, DBN.top_height_hash(false), function_name, args)
 
-  def call_contract(contract_pk, {_type, _height, block_hash}, function_name, args) do
+  def call_contract(contract_pk, {_type, height, block_hash}, function_name, args) do
     contract_pk
-    |> DryRun.Runner.new_contract_call_tx(block_hash, function_name, args)
+    |> DryRun.Runner.new_contract_call_tx(height, block_hash, function_name, args)
     |> DryRun.Runner.dry_run(block_hash)
     |> case do
       {:ok, {[contract_call_tx: {:ok, call_res}], _events}} ->
