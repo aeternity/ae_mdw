@@ -149,15 +149,12 @@ defmodule AeMdw.Sync.Server do
 
         {:next_state, {:syncing_db, ref}, state_data}
 
-      db_height == max_db_height and mem_height < chain_height - 1 ->
-        from_height = mem_height + 1
+      db_height >= max_db_height and mem_height != chain_height - 1 ->
+        from_height = db_height
         to_height = chain_height - 1
         ref = spawn_mem_sync(from_height, to_height)
 
         {:next_state, {:syncing_mem, ref}, state_data}
-
-      db_height == max_db_height and mem_height < db_height ->
-        {:keep_state, %__MODULE__{mem_height: db_height}}
 
       true ->
         :keep_state_and_data
@@ -292,7 +289,7 @@ defmodule AeMdw.Sync.Server do
 
   defp spawn_mem_sync(from_height, to_height) do
     spawn_task(fn ->
-      mem_state = State.mem_state()
+      mem_state = State.new_mem_state()
       from_txi = Block.next_txi(mem_state)
 
       from_mbi =

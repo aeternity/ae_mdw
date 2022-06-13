@@ -75,10 +75,13 @@ defmodule AeMdw.Db.State do
   @spec mem_state() :: t()
   def mem_state do
     case :persistent_term.get(@state_pm_key, :none) do
-      :none -> new(MemStore.new(DbStore.new()))
+      :none -> new_mem_state()
       state -> state
     end
   end
+
+  @spec new_mem_state() :: t()
+  def new_mem_state, do: new(MemStore.new(DbStore.new()))
 
   @spec put(t(), table(), record()) :: t()
   def put(%__MODULE__{store: store} = state, tab, record),
