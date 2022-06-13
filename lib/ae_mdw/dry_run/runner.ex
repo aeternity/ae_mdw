@@ -23,7 +23,6 @@ defmodule AeMdw.DryRun.Runner do
                172, 14, 114, 22, 38, 51, 153, 136, 58, 149, 27, 56, 30, 105>>
 
   @amount trunc(:math.pow(10, 35))
-  @low_gas_limit_factor 1.5
   @extension_methods ["aex9_extensions", "aex141_extensions"]
 
   @spec call_contract(DBN.pubkey(), method_name(), method_args()) ::
@@ -77,7 +76,7 @@ defmodule AeMdw.DryRun.Runner do
       block_hash,
       function_name,
       args,
-      trunc(base_gas * @low_gas_limit_factor)
+      base_gas
     )
   end
 
