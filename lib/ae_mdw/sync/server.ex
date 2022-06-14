@@ -34,6 +34,7 @@ defmodule AeMdw.Sync.Server do
 
   alias AeMdw.Blocks
   alias AeMdw.Db.State
+  alias AeMdw.Db.Status
   alias AeMdw.Db.Sync.Block
   alias AeMdw.Log
   alias AeMdw.Sync.AsyncTasks.Producer
@@ -43,7 +44,6 @@ defmodule AeMdw.Sync.Server do
 
   defstruct [:chain_height, :mem_height, :db_state, :restarts, :gens_per_min]
 
-  @type gens_per_min() :: number()
   @typep height() :: Blocks.height()
   @typep state() ::
            :initialized
@@ -54,21 +54,19 @@ defmodule AeMdw.Sync.Server do
   @typep state_data() :: %__MODULE__{
            db_state: State.t(),
            mem_height: height(),
-           restarts: non_neg_integer(),
-           gens_per_min: non_neg_integer()
+           restarts: non_neg_integer()
          }
   @typep cast_event() :: {:new_height, height()} | :restart_sync
   @typep internal_event() :: :check_sync
-  @typep call_event() :: :gens_per_min | :syncing?
+  @typep call_event() :: :syncing?
   @typep reason() :: term()
   @typep info_event() ::
-           {reference(), {State.t(), gens_per_min()}}
-           | {reference(), {height(), gens_per_min()}}
+           {reference(), State.t()}
+           | {reference(), height()}
            | {:DOWN, reference(), :process, pid(), reason()}
 
   @max_restarts 5
   @retry_time 3_600_000
-  @gens_per_min_weight 0.1
   @mem_gens 10
   @max_sync_gens 6
   @task_supervisor __MODULE__.TaskSupervsor
@@ -81,9 +79,6 @@ defmodule AeMdw.Sync.Server do
 
   @spec new_height(height()) :: :ok
   def new_height(height), do: GenStateMachine.cast(__MODULE__, {:new_height, height})
-
-  @spec gens_per_min() :: gens_per_min()
-  def gens_per_min, do: GenStateMachine.call(__MODULE__, :gens_per_min)
 
   @spec syncing?() :: boolean()
   def syncing?, do: GenStateMachine.call(__MODULE__, :syncing?)
@@ -163,20 +158,13 @@ defmodule AeMdw.Sync.Server do
 
   def handle_event(:internal, :check_sync, _state, _data), do: :keep_state_and_data
 
-  def handle_event(
-        :info,
-        {ref, {new_db_state, gens_per_min}},
-        {:syncing_db, ref},
-        %__MODULE__{gens_per_min: prev_gens_per_min} = state_data
-      ) do
+  def handle_event(:info, {ref, new_db_state}, {:syncing_db, ref}, state_data) do
     actions = [{:next_event, :internal, :check_sync}]
-    new_gens_per_min = calculate_gens_per_min(prev_gens_per_min, gens_per_min)
 
     new_state_data = %__MODULE__{
       state_data
       | mem_height: State.height(new_db_state),
-        db_state: new_db_state,
-        gens_per_min: new_gens_per_min
+        db_state: new_db_state
     }
 
     Process.demonitor(ref, [:flush])
@@ -184,28 +172,12 @@ defmodule AeMdw.Sync.Server do
     {:next_state, :idle, new_state_data, actions}
   end
 
-  def handle_event(
-        :info,
-        {ref, {mem_height, gens_per_min}},
-        {:syncing_mem, ref},
-        %__MODULE__{gens_per_min: prev_gens_per_min} = state_data
-      ) do
+  def handle_event(:info, {ref, mem_height}, {:syncing_mem, ref}, state_data) do
     actions = [{:next_event, :internal, :check_sync}]
-    new_gens_per_min = calculate_gens_per_min(prev_gens_per_min, gens_per_min)
 
-    new_state_data = %__MODULE__{
-      state_data
-      | mem_height: mem_height,
-        gens_per_min: new_gens_per_min
-    }
+    new_state_data = %__MODULE__{state_data | mem_height: mem_height}
 
     {:next_state, :idle, new_state_data, actions}
-  end
-
-  def handle_event({:call, from}, :gens_per_min, _state, %__MODULE__{gens_per_min: gens_per_min}) do
-    actions = [{:reply, from, gens_per_min}]
-
-    {:keep_state_and_data, actions}
   end
 
   def handle_event({:call, from}, :syncing?, state, _data) do
@@ -282,8 +254,9 @@ defmodule AeMdw.Sync.Server do
       {exec_time, new_state} = :timer.tc(fn -> exec_db_mutations(gens_mutations, db_state) end)
 
       gens_per_min = (to_height + 1 - from_height) * 60_000_000 / (mutations_time + exec_time)
+      Status.set_gens_per_min(gens_per_min)
 
-      {new_state, gens_per_min}
+      new_state
     end)
   end
 
@@ -306,8 +279,9 @@ defmodule AeMdw.Sync.Server do
       {exec_time, _new_state} = :timer.tc(fn -> exec_mem_mutations(gens_mutations, mem_state) end)
 
       gens_per_min = (to_height + 1 - from_height) * 60_000_000 / (mutations_time + exec_time)
+      Status.set_gens_per_min(gens_per_min)
 
-      {to_height, gens_per_min}
+      to_height
     end)
   end
 
@@ -350,12 +324,6 @@ defmodule AeMdw.Sync.Server do
 
     ref
   end
-
-  defp calculate_gens_per_min(0, gens_per_min), do: gens_per_min
-
-  defp calculate_gens_per_min(prev_gens_per_min, gens_per_min),
-    # exponential moving average
-    do: (1 - @gens_per_min_weight) * prev_gens_per_min + @gens_per_min_weight * gens_per_min
 
   defp broadcast_block(block, is_key?) do
     if is_key? do
