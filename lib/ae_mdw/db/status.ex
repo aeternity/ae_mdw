@@ -74,5 +74,4 @@ defmodule AeMdw.Db.Status do
   defp calculate_gens_per_min(prev_gens_per_min, gens_per_min),
     # exponential moving average
     do: (1 - @gens_per_min_weight) * prev_gens_per_min + @gens_per_min_weight * gens_per_min
-
 end
