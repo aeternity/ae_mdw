@@ -1,5 +1,19 @@
 # Changelog
 
+### [1.11.1](https://www.github.com/aeternity/ae_mdw/compare/v1.11.0...v1.11.1) (2022-06-14)
+
+
+### Bug Fixes
+
+* handle names search endpoint when no prefix ([#720](https://www.github.com/aeternity/ae_mdw/issues/720)) ([d8c131e](https://www.github.com/aeternity/ae_mdw/commit/d8c131e558f6bbf9c7d2382c0b608af202fbb474)), closes [#714](https://www.github.com/aeternity/ae_mdw/issues/714)
+* use valid name auction route as specified in docs ([#717](https://www.github.com/aeternity/ae_mdw/issues/717)) ([89138c6](https://www.github.com/aeternity/ae_mdw/commit/89138c63ced3d0d1b2783bb3217ece51222b89b9))
+
+
+### Miscellaneous
+
+* enable credo and remove unused code ([#716](https://www.github.com/aeternity/ae_mdw/issues/716)) ([f2041ae](https://www.github.com/aeternity/ae_mdw/commit/f2041aefede2b64e4aa5bcea5298fe65f4e571ee))
+* reduce gas limit to Node base gas ([#722](https://www.github.com/aeternity/ae_mdw/issues/722)) ([d47b1a5](https://www.github.com/aeternity/ae_mdw/commit/d47b1a566efe27ef93fbe249a40dfbbcd97717af))
+
 ## [1.11.0](https://www.github.com/aeternity/ae_mdw/compare/v1.10.1...v1.11.0) (2022-06-10)
 
 
