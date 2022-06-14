@@ -3,11 +3,9 @@ defmodule AeMdw.Sync.Watcher do
   Subscribes to chain events for dealing with new blocks and block
   invalidations, and sends them to the syncing server.
 
-  There's two valid messages that arrive from core that we send to the
-  syncing server, plus 1 message that we handle internally:
-  * If there's a new key block added, we send the new height.
-  * If there's a new fork, we send `fork_height` to be the (height - 1)
-    that we need to revert to.
+  There's one valid message that arrives from core that we send to the
+  syncing server is if there's a new key block added or if the head of the
+  chain was changed, where we simply send the new height.
   """
 
   alias AeMdw.Sync.Server
