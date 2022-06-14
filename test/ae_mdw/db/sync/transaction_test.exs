@@ -121,7 +121,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         {AexnContracts, [],
          [
            is_aex9?: fn pk -> pk == child_contract_pk end,
-           call_meta_info: fn pk -> pk == child_contract_pk && {:ok, aex9_meta_info} end,
+           call_meta_info: fn _type, pk -> pk == child_contract_pk && {:ok, aex9_meta_info} end,
            call_extensions: fn _type, _pk -> {:ok, []} end
          ]}
       ] do
@@ -175,7 +175,66 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         {AexnContracts, [],
          [
            is_aex9?: fn _pk -> false end,
-           call_meta_info: fn pk -> pk == contract_pk && {:ok, aex141_meta_info} end,
+           call_meta_info: fn _type, pk -> pk == contract_pk && {:ok, aex141_meta_info} end,
+           has_aex141_signatures?: fn pk -> pk == contract_pk end,
+           call_extensions: fn :aex141, _pk -> {:ok, ["mintable"]} end,
+           has_valid_aex141_extensions?: fn _extensions, _pk -> true end
+         ]},
+        {Runner, [],
+         [
+           call_contract: fn _pk, _hash, "extensions", [] -> {:ok, ["mintable"]} end
+         ]}
+      ] do
+        mutations =
+          signed_tx
+          |> Transaction.transaction_mutations(
+            txi,
+            {block_index, block_hash, mb_time, mb_events}
+          )
+          |> List.flatten()
+
+        assert Enum.any?(mutations, fn
+                 %AexnCreateContractMutation{
+                   aexn_type: :aex141,
+                   aexn_meta_info: ^aex141_meta_info,
+                   block_index: ^block_index,
+                   contract_pk: ^contract_pk,
+                   create_txi: ^txi,
+                   extensions: ["mintable"]
+                 } ->
+                   true
+
+                 %{} ->
+                   false
+               end)
+      end
+    end
+
+    test "creates aex141 contract without error meta_info on :contract_create_tx" do
+      signed_tx = signed_tx(:contract_create_tx, :aex141)
+      txi = 28_522_603
+      block_index = {610_470, 78}
+      block_hash = :crypto.strong_rand_bytes(32)
+      mb_time = 1_653_918_598_237
+      mb_events = %{}
+
+      # setup contract
+      contract_pk = setup_contract_on_create(signed_tx, txi)
+      aex141_meta_info = {:error, :error, nil, nil}
+
+      with_mocks [
+        {Contract, [],
+         [
+           is_contract?: fn ct_pk -> ct_pk == contract_pk end,
+           get_init_call_rec: fn _tx, _hash ->
+             {:call, <<1::256>>, {:id, :account, <<2::256>>}, 1, 123_456,
+              {:id, :contract, contract_pk}, 1_000_000_000, 1_234, "?", :ok, []}
+           end
+         ]},
+        {AexnContracts, [],
+         [
+           is_aex9?: fn _pk -> false end,
+           call_meta_info: fn _type, _pk -> {:ok, aex141_meta_info} end,
            has_aex141_signatures?: fn pk -> pk == contract_pk end,
            call_extensions: fn :aex141, _pk -> {:ok, ["mintable"]} end,
            has_valid_aex141_extensions?: fn _extensions, _pk -> true end

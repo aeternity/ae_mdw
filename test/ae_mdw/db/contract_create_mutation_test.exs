@@ -22,7 +22,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
           [],
           [
             is_aex9?: fn ct_pk -> ct_pk == remote_pk end,
-            call_meta_info: fn ct_pk -> ct_pk == remote_pk && {:ok, remote_meta_info} end,
+            call_meta_info: fn _type, ct_pk -> ct_pk == remote_pk && {:ok, remote_meta_info} end,
             call_extensions: fn _type, _pk -> {:ok, []} end
           ]
         }
