@@ -14,7 +14,7 @@ defmodule AeMdw.Sync.Server do
                          │                ┌───────────┐ │done_db(new_state)
                          ▼             ┌►│syncing_db ├─┤
    -new_height(h)┌──► ┌──┴─┐check_sync()│ └───────────┘ │
-   -fork(h)      │    │idle├────────────┤               │
+                 │    │idle├────────────┤               │
                  └─── └────┘            │ ┌───────────┐ │done_mem(new_state)
                         ▲               └►│syncing_mem├─┘
                         │ restart_sync()  └────────┬──┘
@@ -26,8 +26,8 @@ defmodule AeMdw.Sync.Server do
   Notes:
   * The DOWN message will only trigger a state change to stopped once
     max_restarts is exceeeded.
-  * check_sync will be triggered internally for any new_height, fork, done_db,
-    done_mem or fork event.
+  * check_sync will be triggered internally for any new_height, done_db,
+    or done_mem event.
   """
 
   use GenStateMachine
