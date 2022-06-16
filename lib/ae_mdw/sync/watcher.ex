@@ -32,7 +32,7 @@ defmodule AeMdw.Sync.Watcher do
     :aec_events.subscribe(:chain)
     :aec_events.subscribe(:top_changed)
 
-    Server.new_height(chain_height())
+    Server.new_height(chain_height(), chain_hash())
 
     {:noreply, state}
   end
@@ -40,15 +40,25 @@ defmodule AeMdw.Sync.Watcher do
   @impl true
   @spec handle_info(term(), t()) :: {:noreply, t()}
   def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :key}}}, state) do
-    Server.new_height(chain_height())
+    Server.new_height(chain_height(), chain_hash())
 
     {:noreply, state}
   end
 
-  def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :micro}}}, state),
-    do: {:noreply, state}
+  def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :micro}}}, state) do
+    Server.new_height(chain_height(), chain_hash())
+
+    {:noreply, state}
+  end
 
   def handle_info(_msg, state), do: {:noreply, state}
 
   defp chain_height, do: :aec_headers.height(:aec_chain.top_header())
+
+  defp chain_hash do
+    {:ok, block_hash} =
+      :aec_chain.top_block() |> :aec_blocks.to_header() |> :aec_headers.hash_header()
+
+    block_hash
+  end
 end
