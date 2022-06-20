@@ -147,7 +147,8 @@ defmodule AeMdwWeb.AexnView do
       block_height: kbi,
       micro_index: mbi,
       micro_time: micro_time,
-      contract_id: enc_ct(contract_pk)
+      contract_id: enc_ct(contract_pk),
+      tx_hash: :aeser_api_encoder.encode(:tx_hash, hash)
     }
   end
 end
