@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.0](https://www.github.com/aeternity/ae_mdw/compare/v1.11.1...v1.12.0) (2022-06-20)
+
+
+### Features
+
+* include tx_hash when listing AEx9 transfers ([#727](https://www.github.com/aeternity/ae_mdw/issues/727)) ([b1695bb](https://www.github.com/aeternity/ae_mdw/commit/b1695bbed6bbac217203b81fe819dde34a6e6102))
+
 ### [1.11.1](https://www.github.com/aeternity/ae_mdw/compare/v1.11.0...v1.11.1) (2022-06-14)
 
 
