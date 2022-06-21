@@ -37,7 +37,6 @@ defmodule AeMdw.Sync.Server do
   alias AeMdw.Db.Status
   alias AeMdw.Db.Sync.Block
   alias AeMdw.Log
-  alias AeMdw.Sync.AsyncTasks.Producer
   alias AeMdwWeb.Websocket.Broadcaster
 
   require Logger
@@ -295,8 +294,6 @@ defmodule AeMdw.Sync.Server do
         |> Enum.flat_map(fn {_block_index, _block, block_mutations} -> block_mutations end)
 
       new_state = State.commit_db(state, chunk_mutations)
-
-      Producer.commit_enqueued()
 
       Enum.each(blocks_mutations_chunk, fn {{_height, mbi} = _block_index, block,
                                             _block_mutations} ->

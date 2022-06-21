@@ -58,11 +58,9 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
         assert 2 == State.get_stat(state2, :contracts_created, 0)
         assert {:ok, create_txi2} == State.cache_get(state2, :ct_create_sync_cache, contract_pk)
 
-        assert %{enqueue_buffer: enqueue_buffer} = :sys.get_state(AsyncTasks.Producer)
-
         assert Enum.any?(
-                 enqueue_buffer,
-                 &(&1 == {:update_aex9_state, [remote_pk], [block_index, create_txi2]})
+                 state2.jobs,
+                 &(&1 == {{:update_aex9_state, [remote_pk]}, [block_index, create_txi2]})
                )
       end
     end

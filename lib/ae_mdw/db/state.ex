@@ -13,8 +13,10 @@ defmodule AeMdw.Db.State do
   alias AeMdw.Db.Store
   alias AeMdw.Db.TxnDbStore
   alias AeMdw.Db.Util, as: DbUtil
+  alias AeMdw.Sync.AsyncTasks.Consumer
+  alias AeMdw.Sync.AsyncTasks.Producer
 
-  defstruct [:store, :stats, :cache]
+  defstruct [:store, :stats, :cache, :jobs]
 
   @typep key() :: Database.key()
   @typep record() :: Database.record()
@@ -23,18 +25,20 @@ defmodule AeMdw.Db.State do
   @typep stat_name() :: atom()
   @typep cache_name() :: atom()
   @typep height() :: Blocks.height()
+  @typep job_type() :: Consumer.job_type()
 
   @opaque t() :: %__MODULE__{
             store: Store.t(),
             stats: %{stat_name() => non_neg_integer()},
-            cache: %{cache_name() => map()}
+            cache: %{cache_name() => map()},
+            jobs: %{{job_type(), list()} => list()}
           }
 
   @state_pm_key :global_state
 
   @spec new(Store.t()) :: t()
   def new(store \\ DbStore.new()),
-    do: %__MODULE__{store: store, stats: %{}, cache: %{}}
+    do: %__MODULE__{store: store, stats: %{}, cache: %{}, jobs: %{}}
 
   @spec height(t()) :: height()
   def height(state), do: DbUtil.synced_height(state)
@@ -42,6 +46,7 @@ defmodule AeMdw.Db.State do
   @spec commit(t(), [Mutation.t()]) :: t()
   def commit(%__MODULE__{store: prev_store} = state, mutations) do
     new_state =
+      %__MODULE__{jobs: jobs} =
       TxnDbStore.transaction(fn store ->
         state2 = %__MODULE__{state | store: store}
 
@@ -50,6 +55,8 @@ defmodule AeMdw.Db.State do
         |> Enum.reject(&is_nil/1)
         |> Enum.reduce(state2, &Mutation.execute/2)
       end)
+
+    queue_jobs(jobs)
 
     :persistent_term.erase(@state_pm_key)
 
@@ -62,14 +69,17 @@ defmodule AeMdw.Db.State do
   @spec commit_mem(t(), [Mutation.t()]) :: t()
   def commit_mem(state, mutations) do
     state2 =
+      %__MODULE__{jobs: jobs} =
       mutations
       |> List.flatten()
       |> Enum.reject(&is_nil/1)
       |> Enum.reduce(state, &Mutation.execute/2)
 
-    :persistent_term.put(@state_pm_key, state2)
+    state3 = exec_jobs(state2, jobs)
 
-    state2
+    :persistent_term.put(@state_pm_key, state3)
+
+    state3
   end
 
   @spec mem_state() :: t()
@@ -158,5 +168,31 @@ defmodule AeMdw.Db.State do
     else
       :error -> :not_found
     end
+  end
+
+  @spec enqueue(t(), job_type(), list(), list()) :: t()
+  def enqueue(%__MODULE__{jobs: jobs} = state, job_type, dedup_args, extra_args \\ []),
+    do: %__MODULE__{state | jobs: Map.put(jobs, {job_type, dedup_args}, extra_args)}
+
+  defp exec_jobs(state, jobs) do
+    jobs
+    |> Task.async_stream(
+      fn {{job_type, dedup_args}, extra_args} ->
+        Consumer.mutations(job_type, dedup_args ++ extra_args)
+      end,
+      ordered: false
+    )
+    |> Enum.flat_map(fn {:ok, mutations} -> mutations end)
+    |> List.flatten()
+    |> Enum.reject(&is_nil/1)
+    |> Enum.reduce(state, &Mutation.execute/2)
+  end
+
+  defp queue_jobs(jobs) do
+    Enum.each(jobs, fn {{job_type, dedup_args}, extra_args} ->
+      Producer.enqueue(job_type, dedup_args, extra_args)
+    end)
+
+    Producer.commit_enqueued()
   end
 end

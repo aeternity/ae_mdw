@@ -10,6 +10,8 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
   alias AeMdw.Database
   alias AeMdw.Db.DeriveAex9PresenceMutation
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Mutation
+  alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.State
   alias AeMdw.Log
 
@@ -47,5 +49,30 @@ defmodule AeMdw.Sync.AsyncTasks.DeriveAex9Presence do
     end
 
     :ok
+  end
+
+  @spec mutations(args :: list()) :: [Mutation.t()]
+  def mutations([contract_pk, kbi, mbi, create_txi]) do
+    next_kb_hash = DBN.get_key_block_hash(kbi + 1)
+    next_hash = DBN.get_next_hash(next_kb_hash, mbi)
+
+    {balances, _last_block_tuple} = DBN.aex9_balances(contract_pk, {nil, kbi, next_hash})
+
+    if map_size(balances) == 0 do
+      m_empty_balance = Model.aex9_balance(index: {contract_pk, <<>>})
+
+      [
+        WriteMutation.new(Model.Aex9Balance, m_empty_balance)
+      ]
+    else
+      balances =
+        Enum.map(balances, fn {{:address, account_pk}, amount} ->
+          {account_pk, amount}
+        end)
+
+      [
+        DeriveAex9PresenceMutation.new(contract_pk, {kbi, mbi}, create_txi, balances)
+      ]
+    end
   end
 end

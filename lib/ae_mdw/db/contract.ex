@@ -13,7 +13,6 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Node.Db
-  alias AeMdw.Sync.AsyncTasks
   alias AeMdw.Validate
 
   require Ex2ms
@@ -362,12 +361,12 @@ defmodule AeMdw.Db.Contract do
       with false <- State.exists?(state, Model.AexnContract, {:aex9, contract_pk}),
            {:ok, extensions} <- AexnContracts.call_extensions(:aex9, contract_pk),
            {:ok, aex9_meta_info} <- AexnContracts.call_meta_info(contract_pk) do
-        AsyncTasks.Producer.enqueue(:derive_aex9_presence, [contract_pk, kbi, mbi, txi])
-        aexn_creation_write(state, :aex9, aex9_meta_info, contract_pk, txi, extensions)
+        state
+        |> State.enqueue(:derive_aex9_presence, [contract_pk, kbi, mbi, txi])
+        |> aexn_creation_write(:aex9, aex9_meta_info, contract_pk, txi, extensions)
       else
         true ->
-          AsyncTasks.Producer.enqueue(:update_aex9_state, [contract_pk], [block_index, txi])
-          state
+          State.enqueue(state, :update_aex9_state, [contract_pk], [block_index, txi])
 
         :error ->
           state
