@@ -108,27 +108,26 @@ defmodule AeMdw.Db.ContractTest do
         {27_821_847, non_aex9_log_pk}
       ]
 
-      log_contracts
-      |> Enum.reduce(State.new(), fn {create_txi, ct_pk}, state ->
-        State.cache_put(state, :ct_create_sync_cache, ct_pk, create_txi)
-      end)
-      |> State.cache_put(:ct_create_sync_cache, not_aex9_contract_pk, create_txi)
-      |> Contract.logs_write(block_index, create_txi, txi, call_rec("add_liquidity_ae"))
-
-      assert %{enqueue_buffer: enqueue_buffer} = :sys.get_state(Producer)
+      state =
+        log_contracts
+        |> Enum.reduce(State.new(), fn {create_txi, ct_pk}, state ->
+          State.cache_put(state, :ct_create_sync_cache, ct_pk, create_txi)
+        end)
+        |> State.cache_put(:ct_create_sync_cache, not_aex9_contract_pk, create_txi)
+        |> Contract.logs_write(block_index, create_txi, txi, call_rec("add_liquidity_ae"))
 
       aex9_logs_update_pubkeys =
         log_contracts
         |> Enum.reverse()
         |> Kernel.--([{28_040_406, log_aex9_pk1}, {27_821_847, non_aex9_log_pk}])
         |> Enum.map(fn {_create_txi, contract_pk} ->
-          {:update_aex9_state, [contract_pk], [block_index, txi]}
+          {{:update_aex9_state, [contract_pk]}, [block_index, txi]}
         end)
 
-      assert aex9_logs_update_pubkeys -- enqueue_buffer == []
+      assert Enum.all?(aex9_logs_update_pubkeys, &(&1 in state.jobs))
 
-      assert Enum.any?(enqueue_buffer, fn async_task ->
-               async_task == {:derive_aex9_presence, [log_aex9_pk1, kbi, mbi, txi], []}
+      assert Enum.any?(state.jobs, fn async_task ->
+               async_task == {{:derive_aex9_presence, [log_aex9_pk1, kbi, mbi, txi]}, []}
              end)
     end
   end

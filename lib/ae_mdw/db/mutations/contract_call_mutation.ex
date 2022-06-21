@@ -9,7 +9,6 @@ defmodule AeMdw.Db.ContractCallMutation do
   alias AeMdw.Db.Contract, as: DBContract
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
-  alias AeMdw.Sync.AsyncTasks
   alias AeMdw.Txs
 
   @derive AeMdw.Db.Mutation
@@ -60,9 +59,12 @@ defmodule AeMdw.Db.ContractCallMutation do
         state
       ) do
     # update balance on any aex9 call
-    if AexnContracts.is_aex9?(contract_pk) do
-      AsyncTasks.Producer.enqueue(:update_aex9_state, [contract_pk], [block_index, txi])
-    end
+    state =
+      if AexnContracts.is_aex9?(contract_pk) do
+        State.enqueue(state, :update_aex9_state, [contract_pk], [block_index, txi])
+      else
+        state
+      end
 
     create_txi =
       case State.cache_get(state, :ct_create_sync_cache, contract_pk) do
