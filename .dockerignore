@@ -31,6 +31,7 @@ log/
 
 /priv/
 !/priv/migrations
+!/priv/static
 
 # MDW's produced blockchain database should be ignored
 /data/
