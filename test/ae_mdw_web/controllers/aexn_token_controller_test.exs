@@ -2,7 +2,9 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
   use AeMdwWeb.ConnCase
 
   alias AeMdw.Database
+  alias AeMdw.Db.AexnCreateContractMutation
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
 
   import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1]
 
@@ -342,6 +344,31 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       assert %{"error" => ^error_msg} =
                conn |> get("/v2/aex9/#{invalid_id}") |> json_response(400)
     end
+
+    test "displays tokens with meta info error", %{conn: conn} do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      aexn_meta_info = {:out_of_gas_error, :out_of_gas_error, nil}
+
+      State.commit(State.new(), [
+        AexnCreateContractMutation.new(
+          :aex9,
+          contract_pk,
+          aexn_meta_info,
+          {123, 0},
+          123_456,
+          ["ext1", "ext2"]
+        )
+      ])
+
+      contract_id = enc_ct(contract_pk)
+
+      assert %{
+               "contract_id" => contract_id,
+               "name" => "out_of_gas_error",
+               "symbol" => "out_of_gas_error",
+               "decimals" => nil
+             } = conn |> get("/v2/aex9/#{contract_id}") |> json_response(200)
+    end
   end
 
   describe "aex141_token" do
@@ -364,6 +391,32 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn |> get("/v2/aex141/#{invalid_id}") |> json_response(400)
+    end
+
+    test "displays token with meta info error", %{conn: conn} do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      aexn_meta_info = {:out_of_gas_error, :out_of_gas_error, :out_of_gas_error, nil}
+
+      State.commit(State.new(), [
+        AexnCreateContractMutation.new(
+          :aex141,
+          contract_pk,
+          aexn_meta_info,
+          {123, 1},
+          123_456,
+          ["ext1", "ext2"]
+        )
+      ])
+
+      contract_id = enc_ct(contract_pk)
+
+      assert %{
+               "contract_id" => contract_id,
+               "name" => "out_of_gas_error",
+               "symbol" => "out_of_gas_error",
+               "base_url" => "out_of_gas_error",
+               "metadata_type" => nil
+             } = conn |> get("/v2/aex141/#{contract_id}") |> json_response(200)
     end
   end
 end

@@ -125,9 +125,10 @@ defmodule AeMdw.AexnContracts do
     {name, symbol, url, metadata_type}
   end
 
-  defp error_meta_info(:aex9), do: {:error, :error, nil}
-  defp error_meta_info(:aex141), do: {:error, :error, nil, nil}
-  defp error_meta_info(_aexn_type), do: {:error, :error}
+  defp error_meta_info(:aex9), do: {:out_of_gas_error, :out_of_gas_error, nil}
+
+  defp error_meta_info(:aex141),
+    do: {:out_of_gas_error, :out_of_gas_error, :out_of_gas_error, nil}
 
   defp has_all_signatures?(aexn_signatures, functions) do
     Enum.all?(aexn_signatures, fn {hash, type} ->
