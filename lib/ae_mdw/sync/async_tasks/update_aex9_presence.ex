@@ -18,26 +18,16 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
   @microsecs 1_000_000
 
   @spec process(args :: list()) :: :ok
-  def process([contract_pk, {kbi, mbi} = block_index, call_txi]) do
+  def process([contract_pk, _block_index, _call_txi] = args) do
     Log.info("[update_aex9_state] #{inspect(enc_ct(contract_pk))} ...")
 
-    {time_delta, {balances, _height_hash}} =
-      :timer.tc(fn ->
-        next_kb_hash = DBN.get_key_block_hash(kbi + 1)
-        next_hash = DBN.get_next_hash(next_kb_hash, mbi)
-        type = if next_hash == next_kb_hash, do: :key, else: :micro
-
-        DBN.aex9_balances(contract_pk, {type, kbi, next_hash})
-      end)
+    {time_delta, mutations} = :timer.tc(fn -> mutations(args) end)
 
     Log.info(
       "[update_aex9_state] #{inspect(enc_ct(contract_pk))} after #{time_delta / @microsecs}s"
     )
 
-    balances = Enum.map(balances, fn {{:address, account_pk}, amount} -> {account_pk, amount} end)
-
-    mutation = UpdateAex9PresenceMutation.new(contract_pk, block_index, call_txi, balances)
-    State.commit(State.new(), [mutation])
+    State.commit(State.new(), mutations)
 
     :ok
   end
