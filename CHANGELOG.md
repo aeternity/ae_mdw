@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.12.1](https://www.github.com/aeternity/ae_mdw/compare/v1.12.0...v1.12.1) (2022-06-22)
+
+
+### Bug Fixes
+
+* add swagger files in docker image build ([8b806d8](https://www.github.com/aeternity/ae_mdw/commit/8b806d8ecf80fbebd0c263b2ac27d6236ba955b0))
+
 ## [1.12.0](https://www.github.com/aeternity/ae_mdw/compare/v1.11.1...v1.12.0) (2022-06-20)
 
 
