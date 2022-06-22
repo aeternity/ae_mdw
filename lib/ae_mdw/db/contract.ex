@@ -24,6 +24,8 @@ defmodule AeMdw.Db.Contract do
   import AeMdw.Util, only: [compose: 2, min_bin: 0, max_256bit_bin: 0, max_256bit_int: 0]
   import AeMdw.Db.Util
 
+  @max_sort_field_length 100
+
   @type rev_aex9_contract_key :: {pos_integer(), String.t(), String.t(), pos_integer()}
   @typep pubkey :: Db.pubkey()
   @typep state :: State.t()
@@ -39,12 +41,6 @@ defmodule AeMdw.Db.Contract do
           Model.aexn_extensions()
         ) :: state()
   def aexn_creation_write(state, aexn_type, aexn_meta_info, contract_pk, txi, extensions) do
-    name = elem(aexn_meta_info, 0)
-    symbol = elem(aexn_meta_info, 1)
-
-    m_contract_name = Model.aexn_contract_name(index: {aexn_type, name, contract_pk})
-    m_contract_sym = Model.aexn_contract_symbol(index: {aexn_type, symbol, contract_pk})
-
     m_contract_pk =
       Model.aexn_contract(
         index: {aexn_type, contract_pk},
@@ -53,10 +49,24 @@ defmodule AeMdw.Db.Contract do
         extensions: extensions
       )
 
-    state
-    |> State.put(Model.AexnContractName, m_contract_name)
-    |> State.put(Model.AexnContractSymbol, m_contract_sym)
-    |> State.put(Model.AexnContract, m_contract_pk)
+    state2 = State.put(state, Model.AexnContract, m_contract_pk)
+
+    name = elem(aexn_meta_info, 0)
+    symbol = elem(aexn_meta_info, 1)
+
+    if name == :out_of_gas_error do
+      state2
+    else
+      m_contract_name =
+        Model.aexn_contract_name(index: {aexn_type, sort_field_truncate(name), contract_pk})
+
+      m_contract_sym =
+        Model.aexn_contract_symbol(index: {aexn_type, sort_field_truncate(symbol), contract_pk})
+
+      state2
+      |> State.put(Model.AexnContractName, m_contract_name)
+      |> State.put(Model.AexnContractSymbol, m_contract_sym)
+    end
   end
 
   @spec aex9_write_presence(state(), pubkey(), integer(), pubkey()) :: state()
@@ -361,7 +371,7 @@ defmodule AeMdw.Db.Contract do
     if AexnContracts.is_aex9?(contract_pk) do
       with false <- State.exists?(state, Model.AexnContract, {:aex9, contract_pk}),
            {:ok, extensions} <- AexnContracts.call_extensions(:aex9, contract_pk),
-           {:ok, aex9_meta_info} <- AexnContracts.call_meta_info(contract_pk) do
+           {:ok, aex9_meta_info} <- AexnContracts.call_meta_info(:aex9, contract_pk) do
         AsyncTasks.Producer.enqueue(:derive_aex9_presence, [contract_pk, kbi, mbi, txi])
         aexn_creation_write(state, :aex9, aex9_meta_info, contract_pk, txi, extensions)
       else
@@ -422,6 +432,14 @@ defmodule AeMdw.Db.Contract do
     case State.get(state, Model.Aex9Balance, {contract_pk, account_pk}) do
       {:ok, m_balance} -> m_balance
       :not_found -> Model.aex9_balance(index: {contract_pk, account_pk}, amount: 0)
+    end
+  end
+
+  defp sort_field_truncate(field_value) do
+    if String.length(field_value) <= @max_sort_field_length do
+      field_value
+    else
+      String.slice(field_value, 0, @max_sort_field_length) <> "..."
     end
   end
 end

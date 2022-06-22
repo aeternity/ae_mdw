@@ -119,7 +119,7 @@ defmodule AeMdw.Db.Sync.Contract do
 
     with true <- aexn_type != nil,
          {:ok, aexn_extensions} <- AexnContracts.call_extensions(aexn_type, contract_pk),
-         {:ok, aexn_meta_info} <- AexnContracts.call_meta_info(contract_pk) do
+         {:ok, aexn_meta_info} <- AexnContracts.call_meta_info(aexn_type, contract_pk) do
       if aexn_type == :aex9 or
            (aexn_type == :aex141 and
               AexnContracts.has_valid_aex141_extensions?(aexn_extensions, contract_pk)) do

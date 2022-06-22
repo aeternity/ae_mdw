@@ -69,10 +69,14 @@ defmodule AeMdw.AexnContracts do
 
   def has_valid_aex141_extensions?(_extensions, _no_fcode), do: false
 
-  @spec call_meta_info(pubkey()) :: {:ok, Model.aexn_meta_info()} | :error
-  def call_meta_info(contract_pk) do
-    with {:ok, {:tuple, meta_info_tuple}} <- call_contract(contract_pk, "meta_info", []) do
-      {:ok, decode_meta_info(meta_info_tuple)}
+  @spec call_meta_info(Model.aexn_type(), pubkey()) :: {:ok, Model.aexn_meta_info()}
+  def call_meta_info(aexn_type, contract_pk) do
+    case call_contract(contract_pk, "meta_info", []) do
+      {:ok, {:tuple, meta_info_tuple}} ->
+        {:ok, decode_meta_info(meta_info_tuple)}
+
+      :error ->
+        {:ok, error_meta_info(aexn_type)}
     end
   end
 
@@ -120,6 +124,11 @@ defmodule AeMdw.AexnContracts do
 
     {name, symbol, url, metadata_type}
   end
+
+  defp error_meta_info(:aex9), do: {:out_of_gas_error, :out_of_gas_error, nil}
+
+  defp error_meta_info(:aex141),
+    do: {:out_of_gas_error, :out_of_gas_error, :out_of_gas_error, nil}
 
   defp has_all_signatures?(aexn_signatures, functions) do
     Enum.all?(aexn_signatures, fn {hash, type} ->
@@ -177,5 +186,5 @@ defmodule AeMdw.AexnContracts do
       match?({_code, {[], {:map, :address, :string}}, _body}, functions[@swapped_hash])
   end
 
-  defp valid_aex141_extension?(_any, _functions), do: false
+  defp valid_aex141_extension?(_any, _functions), do: true
 end

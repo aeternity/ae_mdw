@@ -123,7 +123,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
         {AexnContracts, [],
          [
            is_aex9?: fn ct_pk -> ct_pk == aex9_contract_pk end,
-           call_meta_info: fn ct_pk ->
+           call_meta_info: fn _type, ct_pk ->
              if ct_pk == aex9_contract_pk,
                do: {:ok, {"TestAEX9-A vs Wrapped Aeternity", "TAEX9-A/WAE", 18}}
            end,

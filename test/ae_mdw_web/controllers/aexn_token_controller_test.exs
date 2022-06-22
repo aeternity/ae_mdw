@@ -2,7 +2,9 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
   use AeMdwWeb.ConnCase
 
   alias AeMdw.Database
+  alias AeMdw.Db.AexnCreateContractMutation
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
 
   import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1]
 
@@ -13,8 +15,15 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
   @aex141_token_id enc_ct(<<311::256>>)
 
   setup_all _context do
-    Enum.each(200..225, fn i ->
-      meta_info = {name, symbol, _decimals} = {"some-AEX9-#{i}", "SAEX9#{i}", i}
+    Enum.each(200..230, fn i ->
+      meta_info =
+        if i < 225 do
+          {"some-AEX9-#{i}", "SAEX9#{i}", i}
+        else
+          {"some-AEX9-#{i}", "big#{i}#{String.duplicate("12", 100)}", i}
+        end
+
+      {name, symbol, _decimals} = meta_info
       txi = 2_000 - i
       m_aex9 = Model.aexn_contract(index: {:aex9, <<i::256>>}, txi: txi, meta_info: meta_info)
       m_aexn_name = Model.aexn_contract_name(index: {:aex9, name, <<i::256>>})
@@ -24,8 +33,15 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       Database.dirty_write(Model.AexnContractSymbol, m_aexn_symbol)
     end)
 
-    Enum.each(300..325, fn i ->
-      meta_info = {name, symbol, _url, _type} = {"some-nft-#{i}", "NFT#{i}", "some-url", :url}
+    Enum.each(300..330, fn i ->
+      meta_info =
+        if i < 325 do
+          {"some-nft-#{i}", "NFT#{i}", "some-url", :url}
+        else
+          {"big#{i}#{String.duplicate("12", 100)}", "NFT#{i}", "some-url", :url}
+        end
+
+      {name, symbol, _url, _type} = meta_info
       txi = 3_000 - i
       m_aexn = Model.aexn_contract(index: {:aex141, <<i::256>>}, txi: txi, meta_info: meta_info)
       m_aexn_name = Model.aexn_contract_name(index: {:aex141, name, <<i::256>>})
@@ -149,6 +165,19 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
              end)
     end
 
+    test "it gets aex9 tokens with big symbol filtered by symbol prefix", %{conn: conn} do
+      symbol_prefix = "big"
+
+      assert %{"data" => aex9_tokens} =
+               conn |> get("/v2/aex9", by: "symbol", prefix: symbol_prefix) |> json_response(200)
+
+      assert length(aex9_tokens) > 0
+
+      assert Enum.all?(aex9_tokens, fn %{"symbol" => symbol} ->
+               String.starts_with?(symbol, symbol_prefix) and String.length(symbol) > 200
+             end)
+    end
+
     test "it returns an error when invalid cursor", %{conn: conn} do
       cursor = "blah"
       error_msg = "invalid cursor: #{cursor}"
@@ -212,6 +241,19 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
       assert Enum.all?(aex141_tokens, fn %{"name" => name} ->
                String.starts_with?(name, prefix)
+             end)
+    end
+
+    test "it gets aex141 tokens with big name filtered by name prefix", %{conn: conn} do
+      name_prefix = "big"
+
+      assert %{"data" => aex141_tokens} =
+               conn |> get("/v2/aex141", prefix: name_prefix) |> json_response(200)
+
+      assert length(aex141_tokens) > 0
+
+      assert Enum.all?(aex141_tokens, fn %{"name" => name} ->
+               String.starts_with?(name, name_prefix) and String.length(name) > 200
              end)
     end
 
@@ -302,6 +344,31 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       assert %{"error" => ^error_msg} =
                conn |> get("/v2/aex9/#{invalid_id}") |> json_response(400)
     end
+
+    test "displays tokens with meta info error", %{conn: conn} do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      aexn_meta_info = {:out_of_gas_error, :out_of_gas_error, nil}
+
+      State.commit(State.new(), [
+        AexnCreateContractMutation.new(
+          :aex9,
+          contract_pk,
+          aexn_meta_info,
+          {123, 0},
+          123_456,
+          ["ext1", "ext2"]
+        )
+      ])
+
+      contract_id = enc_ct(contract_pk)
+
+      assert %{
+               "contract_id" => contract_id,
+               "name" => "out_of_gas_error",
+               "symbol" => "out_of_gas_error",
+               "decimals" => nil
+             } = conn |> get("/v2/aex9/#{contract_id}") |> json_response(200)
+    end
   end
 
   describe "aex141_token" do
@@ -324,6 +391,32 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn |> get("/v2/aex141/#{invalid_id}") |> json_response(400)
+    end
+
+    test "displays token with meta info error", %{conn: conn} do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      aexn_meta_info = {:out_of_gas_error, :out_of_gas_error, :out_of_gas_error, nil}
+
+      State.commit(State.new(), [
+        AexnCreateContractMutation.new(
+          :aex141,
+          contract_pk,
+          aexn_meta_info,
+          {123, 1},
+          123_456,
+          ["ext1", "ext2"]
+        )
+      ])
+
+      contract_id = enc_ct(contract_pk)
+
+      assert %{
+               "contract_id" => contract_id,
+               "name" => "out_of_gas_error",
+               "symbol" => "out_of_gas_error",
+               "base_url" => "out_of_gas_error",
+               "metadata_type" => nil
+             } = conn |> get("/v2/aex141/#{contract_id}") |> json_response(200)
     end
   end
 end

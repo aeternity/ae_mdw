@@ -24,6 +24,7 @@ defmodule AeMdw.AexnTokens do
   @typep query :: %{binary() => binary()}
 
   @pagination_params ~w(limit cursor rev direction by scope)
+  @max_sort_field_length 100
 
   @aexn_table Model.AexnContract
   @aexn_name_table Model.AexnContractName
@@ -69,7 +70,7 @@ defmodule AeMdw.AexnTokens do
   end
 
   defp build_tokens_streamer(query, type, table, cursor) do
-    prefix = Map.get(query, :prefix, "")
+    prefix = query |> Map.get(:prefix, "") |> String.slice(0, @max_sort_field_length)
 
     scope = {
       {type, prefix, <<>>},

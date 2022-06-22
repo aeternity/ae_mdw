@@ -40,6 +40,40 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       assert Database.exists?(Model.AexnContractSymbol, {:aex9, symbol, contract_pk})
     end
 
+    test "indexes with full meta_info and truncates aex9 name sort field" do
+      contract_pk = Validate.id!("ct_2i9DXGKP1VPBJis1YaXihXPtma2tVhsrvZ1jrnFtGNtLh6CYqD")
+      bigger_name = String.duplicate("123", 34)
+      truncated_name = String.slice(bigger_name, 0, 100) <> "..."
+      symbol = "SPH2"
+      aex9_meta_info = {bigger_name, symbol, 18}
+      block_index = {271_305, 99}
+      create_txi = txi = 12_361_891
+      extensions = ["ext1"]
+
+      Database.commit([
+        AexnCreateContractMutation.new(
+          :aex9,
+          contract_pk,
+          aex9_meta_info,
+          block_index,
+          create_txi,
+          extensions
+        )
+      ])
+
+      m_contract_pk =
+        Model.aexn_contract(
+          index: {:aex9, contract_pk},
+          txi: txi,
+          meta_info: aex9_meta_info,
+          extensions: extensions
+        )
+
+      assert {:ok, ^m_contract_pk} = Database.fetch(Model.AexnContract, {:aex9, contract_pk})
+      assert Database.exists?(Model.AexnContractName, {:aex9, truncated_name, contract_pk})
+      assert Database.exists?(Model.AexnContractSymbol, {:aex9, symbol, contract_pk})
+    end
+
     test "successful for aex141 contract" do
       contract_pk = Validate.id!("ct_2ZpMr6PfL1XzgWosguyUtgr9b2kKeqqGQpwSeXzT28j7f8LJH5")
 
@@ -72,6 +106,73 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       assert {:ok, ^m_contract_pk} = Database.fetch(Model.AexnContract, {:aex141, contract_pk})
       assert Database.exists?(Model.AexnContractName, {:aex141, name, contract_pk})
       assert Database.exists?(Model.AexnContractSymbol, {:aex141, symbol, contract_pk})
+    end
+
+    test "indexes with full meta_info and truncates aex141 symbol sort field" do
+      contract_pk = Validate.id!("ct_2ZpMr6PfL1XzgWosguyUtgr9b2kKeqqGQpwSeXzT28j7f8LJH5")
+      bigger_symbol = "PNFT" <> String.duplicate("123", 33)
+      truncated_symbol = String.slice(bigger_symbol, 0, 100) <> "..."
+      name = "prenft2"
+      aex141_meta_info = {name, bigger_symbol, "http://some-fake-url.com", :url}
+
+      extensions = ["ext1", "ext2"]
+      block_index = {610_470, 77}
+      create_txi = txi = 28_522_602
+
+      Database.commit([
+        AexnCreateContractMutation.new(
+          :aex141,
+          contract_pk,
+          aex141_meta_info,
+          block_index,
+          create_txi,
+          extensions
+        )
+      ])
+
+      m_contract_pk =
+        Model.aexn_contract(
+          index: {:aex141, contract_pk},
+          txi: txi,
+          meta_info: aex141_meta_info,
+          extensions: extensions
+        )
+
+      assert {:ok, ^m_contract_pk} = Database.fetch(Model.AexnContract, {:aex141, contract_pk})
+      assert Database.exists?(Model.AexnContractName, {:aex141, name, contract_pk})
+      assert Database.exists?(Model.AexnContractSymbol, {:aex141, truncated_symbol, contract_pk})
+    end
+
+    test "indexes aex141 with error meta_info without sorting records" do
+      contract_pk = Validate.id!("ct_ukZe6BBpuSWxT8hxd87z11vdgRnwKnedEWqJ7SyQucbX1C1pc")
+      aex141_meta_info = {:out_of_gas_error, :out_of_gas_error, :out_of_gas_error, nil}
+
+      extensions = ["ext1", "ext2"]
+      block_index = {610_470, 77}
+      create_txi = txi = 28_522_602
+
+      Database.commit([
+        AexnCreateContractMutation.new(
+          :aex141,
+          contract_pk,
+          aex141_meta_info,
+          block_index,
+          create_txi,
+          extensions
+        )
+      ])
+
+      m_contract_pk =
+        Model.aexn_contract(
+          index: {:aex141, contract_pk},
+          txi: txi,
+          meta_info: aex141_meta_info,
+          extensions: extensions
+        )
+
+      assert {:ok, ^m_contract_pk} = Database.fetch(Model.AexnContract, {:aex141, contract_pk})
+      refute Database.exists?(Model.AexnContractName, {:aex141, :out_of_gas_error, contract_pk})
+      refute Database.exists?(Model.AexnContractSymbol, {:aex141, :out_of_gas_error, contract_pk})
     end
   end
 end
