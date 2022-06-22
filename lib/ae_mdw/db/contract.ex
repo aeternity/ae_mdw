@@ -22,9 +22,9 @@ defmodule AeMdw.Db.Contract do
   require Record
 
   import AeMdw.Util, only: [compose: 2, min_bin: 0, max_256bit_bin: 0, max_256bit_int: 0]
-  import AeMdw.Db.Util
+  import AeMdwWeb.Helpers.AexnHelper, only: [sort_field_truncate: 1]
 
-  @max_sort_field_length 100
+  import AeMdw.Db.Util
 
   @type rev_aex9_contract_key :: {pos_integer(), String.t(), String.t(), pos_integer()}
   @typep pubkey :: Db.pubkey()
@@ -432,14 +432,6 @@ defmodule AeMdw.Db.Contract do
     case State.get(state, Model.Aex9Balance, {contract_pk, account_pk}) do
       {:ok, m_balance} -> m_balance
       :not_found -> Model.aex9_balance(index: {contract_pk, account_pk}, amount: 0)
-    end
-  end
-
-  defp sort_field_truncate(field_value) do
-    if String.length(field_value) <= @max_sort_field_length do
-      field_value
-    else
-      String.slice(field_value, 0, @max_sort_field_length) <> "..."
     end
   end
 end
