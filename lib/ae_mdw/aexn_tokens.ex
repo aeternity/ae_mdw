@@ -11,7 +11,7 @@ defmodule AeMdw.AexnTokens do
   alias AeMdw.Node.Db
   alias AeMdw.Util
 
-  import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1]
+  import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1, sort_field_truncate: 1]
 
   require Model
 
@@ -105,9 +105,8 @@ defmodule AeMdw.AexnTokens do
          order_by,
          {Model.aexn_contract(index: {type, pubkey}, meta_info: meta_info), is_reversed?}
        ) do
-    {name, symbol} = {elem(meta_info, 0), elem(meta_info, 1)}
-    cursor = if order_by == :name, do: {type, name, pubkey}, else: {type, symbol, pubkey}
-
+    sort_field_value = if order_by == :name, do: elem(meta_info, 0), else: elem(meta_info, 1)
+    cursor = {type, sort_field_truncate(sort_field_value), pubkey}
     {cursor |> :erlang.term_to_binary() |> Base.encode64(), is_reversed?}
   end
 
