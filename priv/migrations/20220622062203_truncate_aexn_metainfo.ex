@@ -52,7 +52,6 @@ defmodule AeMdw.Migrations.TruncateAexnMetainfo do
   end
 
   defp truncate?(field_value) do
-    is_binary(field_value) and not String.ends_with?(field_value, "...") and
-      String.length(field_value) > @max_sort_field_len
+    is_binary(field_value) and String.length(field_value) > @max_sort_field_len
   end
 end
