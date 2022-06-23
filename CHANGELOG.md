@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.13.0](https://www.github.com/aeternity/ae_mdw/compare/v1.12.0...v1.13.0) (2022-06-23)
+
+
+### Features
+
+* truncate aexn name and symbol sorting fields ([#724](https://www.github.com/aeternity/ae_mdw/issues/724)) ([5e701bf](https://www.github.com/aeternity/ae_mdw/commit/5e701bf8e30d078ca24236c0613a55d229037b22))
+
+
+### Bug Fixes
+
+* add swagger files in docker image build ([8b806d8](https://www.github.com/aeternity/ae_mdw/commit/8b806d8ecf80fbebd0c263b2ac27d6236ba955b0))
+* truncate aexn cursor ([8a116e8](https://www.github.com/aeternity/ae_mdw/commit/8a116e809ddaf8e4c62524dff90d46ecfeb2cf09))
+
+
+### Miscellaneous
+
+* add truncate metainfo migration ([#733](https://www.github.com/aeternity/ae_mdw/issues/733)) ([6d233bb](https://www.github.com/aeternity/ae_mdw/commit/6d233bbd8eaf43d6b52bdcc557f5dd03671c0224))
+
 ## [1.12.0](https://www.github.com/aeternity/ae_mdw/compare/v1.11.1...v1.12.0) (2022-06-20)
 
 
