@@ -988,7 +988,7 @@ paths:
           description: Bad request
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-  /aex9/{:contract_id}/balances/{:account_id}:
+  /aex9/{contract_id}/balances/{account_id}:
     get:
       deprecated: false
       description: Get AEX9 balance for an account on a contract.
@@ -1017,7 +1017,7 @@ paths:
           description: Bad request
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-  /aex9/account-balances/{:account_id}:
+  /aex9/account-balances/{account_id}:
     get:
       deprecated: false
       description: Get all AEX9 balances for an account on the last block.
@@ -1144,7 +1144,7 @@ paths:
           description: Bad request
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-  /aex9/{:contract_id}/balances/{:account_id}/history:
+  /aex9/{contract_id}/balances/{account_id}/history:
     get:
       deprecated: false
       description: Get AEX9 account balance on a contract throughout all heights when changed.
