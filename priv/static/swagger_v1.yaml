@@ -1493,7 +1493,7 @@ paths:
           type: string
           x-example: kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6
       produces:
-        - - application/json
+        - application/json
       responses:
         '200':
           description: Returns block information by given key/micro block hash
@@ -1519,7 +1519,7 @@ paths:
           type: integer
           x-example: 305000
       produces:
-        - - application/json
+        - application/json
       responses:
         '200':
           description: Returns key block information by given key block index(height)
@@ -1551,7 +1551,7 @@ paths:
           type: integer
           x-example: 4
       produces:
-        - - application/json
+        - application/json
       responses:
         '200':
           description: Returns micro block information by given key block index(height) and micro block index
@@ -1577,7 +1577,7 @@ paths:
           type: string
           x-example: wwwbeaconoidcom.chain
       produces:
-        - - application/json
+        - application/json
       responses:
         '200':
           description: Returns information for given name
@@ -1633,7 +1633,7 @@ paths:
           type: integer
           x-example: 10
       produces:
-        - - application/json
+        - application/json
       responses:
         '200':
           description: Returns information for active and inactive names
@@ -1689,7 +1689,7 @@ paths:
           type: integer
           x-example: 10
       produces:
-        - - application/json
+        - application/json
       responses:
         '200':
           description: Returns information for active names
@@ -1745,7 +1745,7 @@ paths:
           type: integer
           x-example: 10
       produces:
-        - - application/json
+        - application/json
       responses:
         '200':
           description: Returns information for all auctions
@@ -1771,7 +1771,7 @@ paths:
           type: string
           x-example: ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah
       produces:
-        - - application/json
+        - application/json
       responses:
         '200':
           description: Returns names for a given owner
@@ -1797,7 +1797,7 @@ paths:
           type: string
           x-example: ak_2HNsyfhFYgByVq8rzn7q4hRbijsa8LP1VN192zZwGm1JRYnB5C
       produces:
-        - - application/json
+        - application/json
       responses:
         '200':
           description: Returns names pointing to a particular pubkey, partitioned into active and inactive sets
@@ -1823,7 +1823,7 @@ paths:
           type: string
           x-example: wwwbeaconoidcom.chain
       produces:
-        - - application/json
+        - application/json
       responses:
         '200':
           description: Returns just pointers for given name
@@ -1854,7 +1854,7 @@ paths:
           required: false
           type: boolean
       produces:
-        - - application/json
+        - application/json
       responses:
         '200':
           description: Returns oracle information for given oracle id. If the expand is set to true, the mdw will return the data with full transaction info, otherwise it will return only transaction indexes
@@ -1906,7 +1906,7 @@ paths:
           required: false
           type: boolean
       produces:
-        - - application/json
+        - application/json
       responses:
         '200':
           description: Returns information for all oracles. If the expand is set to true, the mdw will return the data with full transaction info, otherwise it will return only transaction indexes
@@ -1958,7 +1958,7 @@ paths:
           required: false
           type: boolean
       produces:
-        - - application/json
+        - application/json
       responses:
         '200':
           description: Returns information for all active oracles. If the expand is set to true, the mdw will return the data with full transaction info, otherwise it will return only transaction indexes
@@ -2010,7 +2010,7 @@ paths:
           required: false
           type: boolean
       produces:
-        - - application/json
+        - application/json
       responses:
         '200':
           description: Returns information for all inactive oracles. If the expand is set to true, the mdw will return the data with full transaction info, otherwise it will return only transaction indexes
@@ -2030,7 +2030,7 @@ paths:
       operationId: get_status
       parameters: []
       produces:
-        - - application/json
+        - application/json
       responses:
         '200':
           description: Returns the status of the MDW
@@ -2052,7 +2052,7 @@ paths:
           type: string
           x-example: th_zATv7B4RHS45GamShnWgjkvcrQfZUWQkZ8gk1RD4m2uWLJKnq
       produces:
-        - - application/json
+        - application/json
       responses:
         '200':
           description: Returns the transaction
@@ -2078,7 +2078,7 @@ paths:
           type: integer
           x-example: 10000000
       produces:
-        - - application/json
+        - application/json
       responses:
         '200':
           description: Returns the transaction
@@ -2216,7 +2216,7 @@ paths:
           required: false
           type: string
       produces:
-        - - application/json
+        - application/json
       responses:
         '200':
           description: Returns result regarding the according criteria
@@ -2236,7 +2236,7 @@ paths:
       operationId: get_current_tx_count
       parameters: []
       produces:
-        - - application/json
+        - application/json
       responses:
         '200':
           description: Returns count of all transactions at the current height
@@ -2258,7 +2258,7 @@ paths:
           type: string
           x-example: ak_g5vQK6beY3vsTJHH7KBusesyzq9WMdEYorF8VyvZURXTjLnxT
       produces:
-        - - application/json
+        - application/json
       responses:
         '200':
           description: Returns transactions count and its type for given aeternity ID
@@ -2302,7 +2302,7 @@ paths:
           type: string
           x-example: 300000-300100
       produces:
-        - - application/json
+        - application/json
       responses:
         '200':
           description: Returns multiple generations
