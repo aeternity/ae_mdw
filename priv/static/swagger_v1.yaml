@@ -255,11 +255,10 @@ definitions:
         description: The contract id of given token
         type: integer
       range:
-        description: The balance amount for each height
+        description: The amounts for each height
         type: array
     required:
       - contract_id
-      - account_id
       - range
     title: Response for AEX-9 account balance accross a range of heights
     type: object    
