@@ -920,8 +920,8 @@ paths:
       description: Get AEX9 tokens sorted by name or symbol.
       operationId: get_sorted_aex9_tokens
       parameters:
-        - description: page number of entries
-          $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
         - description: meta info field used on sorting
           in: query
           name: order_by
@@ -962,6 +962,8 @@ paths:
       description: Get AEX9 balances on a contract.
       operationId: get_aex9_contract_balances
       parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
         - description: Contract id
           in: path
           name: contract_id
@@ -1048,6 +1050,8 @@ paths:
       description: Get AEX9 transfers filtered by sender.
       operationId: get_aex9_sender_transfers
       parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
         - description: Sender account id
           in: path
           name: id
@@ -1080,6 +1084,8 @@ paths:
       description: Get AEX9 transfers filtered by recipient.
       operationId: get_aex9_recipient_transfers
       parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
         - description: Recipient account id
           in: path
           name: id
@@ -1112,6 +1118,8 @@ paths:
       description: Get AEX9 transfers filtered by sender and recipient.
       operationId: get_aex9_pair_transfers
       parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
         - description: Sender account id
           in: path
           name: recipient
@@ -1150,6 +1158,9 @@ paths:
       description: Get AEX9 account balance on a contract throughout all heights when changed.
       operationId: get_aex9_contract_account_balance_history
       parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/ScopeParam'        
+        - $ref: '#/components/parameters/DirectionParam'
         - description: Contract id
           in: path
           name: contract_id
