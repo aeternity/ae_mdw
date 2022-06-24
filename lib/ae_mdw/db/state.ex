@@ -35,6 +35,7 @@ defmodule AeMdw.Db.State do
           }
 
   @state_pm_key :global_state
+  @async_task_mem_timeout 1_000
 
   @spec new(Store.t()) :: t()
   def new(store \\ DbStore.new()),
@@ -180,9 +181,15 @@ defmodule AeMdw.Db.State do
       fn {{job_type, dedup_args}, extra_args} ->
         Consumer.mutations(job_type, dedup_args ++ extra_args)
       end,
-      ordered: false
+      ordered: false,
+      timeout: @async_task_mem_timeout,
+      on_timeout: :kill_task
     )
-    |> Enum.flat_map(fn {:ok, mutations} -> mutations end)
+    |> Enum.flat_map(fn
+      {:ok, mutations} -> mutations
+      # Ignoring long tasks for in-memory computations
+      {:exit, :timeout} -> []
+    end)
     |> List.flatten()
     |> Enum.reject(&is_nil/1)
     |> Enum.reduce(state, &Mutation.execute/2)
