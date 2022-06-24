@@ -1626,7 +1626,7 @@ paths:
           description: The numbers of items to return
           format: int32
           in: query
-          maximum: 1000
+          maximum: 100
           minimum: 1
           name: limit
           required: false
@@ -1682,7 +1682,7 @@ paths:
           description: The numbers of items to return
           format: int32
           in: query
-          maximum: 1000
+          maximum: 100
           minimum: 1
           name: limit
           required: false
@@ -1738,7 +1738,7 @@ paths:
           description: The numbers of items to return
           format: int32
           in: query
-          maximum: 1000
+          maximum: 100
           minimum: 1
           name: limit
           required: false
@@ -1894,7 +1894,7 @@ paths:
           description: The numbers of items to return
           format: int32
           in: query
-          maximum: 1000
+          maximum: 100
           minimum: 1
           name: limit
           required: false
@@ -1946,7 +1946,7 @@ paths:
           description: The numbers of items to return
           format: int32
           in: query
-          maximum: 1000
+          maximum: 100
           minimum: 1
           name: limit
           required: false
@@ -1998,7 +1998,7 @@ paths:
           description: The numbers of items to return
           format: int32
           in: query
-          maximum: 1000
+          maximum: 100
           minimum: 1
           name: limit
           required: false
@@ -2189,7 +2189,7 @@ paths:
           description: The numbers of items to return
           format: int32
           in: query
-          maximum: 1000
+          maximum: 100
           minimum: 1
           name: limit
           required: false
@@ -2289,7 +2289,7 @@ paths:
           description: The numbers of items to return
           format: int32
           in: query
-          maximum: 1000
+          maximum: 100
           minimum: 1
           name: limit
           required: false
