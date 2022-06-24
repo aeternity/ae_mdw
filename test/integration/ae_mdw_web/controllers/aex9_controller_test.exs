@@ -6,7 +6,6 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
   alias AeMdw.Db.Origin
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
-  alias AeMdw.Db.Util
   alias AeMdw.Validate
 
   import AeMdwWeb.Helpers.AexnHelper
@@ -471,18 +470,19 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
       end)
     end
 
-    @tag timeout: 600_000
+    @tag timeout: 60_000
     @tag :iteration
-    test "gets balances for each account with aex9 presence", %{conn: conn} do
-      state = State.new()
+    test "gets balances for some accounts with aex9 presence", %{conn: conn} do
+      account_ids =
+        Model.Aex9AccountPresence
+        |> Collection.stream({nil, -1, nil})
+        |> Enum.take(2_000)
+        |> Enum.map(fn {account_pk, _txi, _contract_pk} ->
+          :aeser_api_encoder.encode(:account_pubkey, account_pk)
+        end)
+        |> Enum.uniq()
 
-      Model.Aex9AccountPresence
-      |> Database.all_keys()
-      |> Enum.map(fn {account_pk, _txi, _contract_pk} ->
-        :aeser_api_encoder.encode(:account_pubkey, account_pk)
-      end)
-      |> Enum.uniq()
-      |> Enum.each(fn account_id ->
+      Enum.each(account_ids, fn account_id ->
         conn = get(conn, "/aex9/balances/account/#{account_id}")
         assert balances_response = json_response(conn, 200)
 
@@ -492,14 +492,12 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
                                           "token_symbol" => token_symbol
                                         } ->
           {:contract_pubkey, contract_pk} = :aeser_api_encoder.decode(contract_id)
-          create_txi = Origin.tx_index!(state, {:contract, contract_pk})
 
-          {^create_txi, name, symbol, _decimals} =
-            Util.next(Model.RevAex9Contract, {create_txi, nil, nil, nil})
-
-          assert token_name == name
-          assert token_symbol == symbol
+          assert Model.aexn_contract(meta_info: {^token_name, ^token_symbol, _decimals}) =
+                   Database.fetch!(Model.AexnContract, {:aex9, contract_pk})
         end)
+
+        assert balances_response == Enum.dedup(balances_response)
       end)
     end
 

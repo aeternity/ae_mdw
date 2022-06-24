@@ -347,6 +347,7 @@ defmodule AeMdw.Db.Contract do
     |> Collection.stream({account_pk, -1, <<>>})
     |> Stream.take_while(fn {apk, _txi, _ct_pk} -> apk == account_pk end)
     |> Enum.map(fn {_apk, _txi, contract_pk} -> contract_pk end)
+    |> Enum.dedup()
   end
 
   @spec aex9_search_contract(pubkey(), integer()) :: map()
