@@ -61,6 +61,212 @@ components:
         - error
       title: Not found response
       type: object
+    Aex9Response:
+      description: Response Schema for AEX9 contract
+      example:
+        decimals: 18
+        name: testnetAE
+        symbol: TTAE
+        txi: 11145713
+      properties:
+        decimals:
+          description: The number of decimals for AEX9 token
+          type: integer
+        name:
+          description: The name of AEX9 token
+          type: string
+        symbol:
+          description: The symbol of AEX9 token
+          type: string
+        txi:
+          description: The transaction index of contract create transction
+          type: integer
+      required:
+        - decimals
+        - symbol
+        - name
+        - txi
+      title: Aex9Response
+      type: object
+    Aex9TransferResponse:
+      description: Response Schema for AEX9 transfer responses
+      example:
+        amount: 2
+        block_height: 234208
+        call_txi: 9564978
+        contract_id: ct_pqfbS94uUpE8reSwgtaAy5odGi7cPRMAxbjMyEzpTGqwTWyn5
+        log_idx: 0
+        micro_time: 1585667337719
+        recipient: ak_29GUBTrWTMb3tRUUgbVX1Bgwi2hyVhB8Q1befNsjLnP46Ub1V8
+        sender: ak_2CMNYSgoEjb1GSVJfWXjZ9NFWwnJ9jySBd6YY7uyr5DxvwctZU
+      properties:
+        amount:
+          description: Transfer amount of AEX9 token
+          type: integer
+        block_height:
+          description: The block height
+          type: integer
+        call_txi:
+          description: AEX9 token transfer index
+          type: integer
+        contract_id:
+          description: Contract identifier
+          type: string
+        log_idx:
+          description: Log index
+          type: integer
+        micro_time:
+          description: The unix timestamp
+          type: integer
+        recipient:
+          description: Recipient of AEX9 transfer
+          type: string
+        sender:
+          description: Sender of AEX9 transfer
+          type: string
+      required:
+        - contract_id
+        - micro_time
+        - block_height
+        - sender
+        - recipient
+        - log_idx
+        - call_txi
+        - amount
+      title: Response for AEX9 transfers
+      type: object
+    Aex9BalanceResponse:
+      description: Response Schema for AEX9 balance responses
+      example:
+        account_id: ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48
+        amount: 4.999999999990685e+25
+        block_hash: kh_2QevaXY7ULF5kTLsddwMzzZmBYWPgfaQbg2Y8maZDLKJaPhwDJ
+        contract_id: ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA
+        height: 351666
+      properties:
+        account_id:
+          description: The account present on a AEX9
+          type: string
+        amount:
+          description: The amount of AEX9 token
+          type: integer
+        block_hash:
+          description: The block hash, indicating a state of a balance for that block
+          type: integer
+        contract_id:
+          description: The contract id of given token
+          type: integer
+        height:
+          description: The block height, indicating a state of a balance for that block height
+          type: integer
+      required:
+        - account_id
+        - contract_id
+        - block_hash
+      title: Response for AEX-9 account balance
+      type: object
+    Aex9BalanceRangeResponse:
+      description: Response Schema for AEX9 balance responses on a height range
+      example:
+        account_id: ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4
+        contract_id: ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA
+        range: [
+          {
+            "amount": 81000000000000,
+            "block_hash": "kh_hKWfy4UdKH8hoMyFj9rQ6ayXvgtu77Uug26pbmnBqtQJPh7rR",
+            "height": 618120
+          },
+          {
+            "amount": 81000000000000,
+            "block_hash": "kh_2q9T7NZAM6sawyJfDpX3Zih1m7XzzZo82bfznXFDvokfmbvoS9",
+            "height": 618121
+          }
+        ]
+      properties:
+        account_id:
+          description: The name of AEX9 token
+          type: string
+        contract_id:
+          description: The contract id of given token
+          type: integer
+        range:
+          description: The balance amount for each height
+          type: array
+      required:
+        - contract_id
+        - account_id
+        - range
+      title: Response for AEX-9 account balance accross a range of heights
+      type: object
+    Aex9BalancesRangeResponse:
+      description: Response Schema for AEX9 balances response(s) on a height range
+      example:
+        contract_id: ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA
+        range: [
+          {
+            "amounts": {
+              "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6": 4050000000000,
+              "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK": 8100000000000,
+              "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4": 81000000000000,
+              "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48": 4.999999999990685e+25
+            },
+            "block_hash": "kh_hKWfy4UdKH8hoMyFj9rQ6ayXvgtu77Uug26pbmnBqtQJPh7rR",
+            "height": 618120
+          },
+          {
+            "amounts": {
+              "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6": 4050000000000,
+              "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK": 8100000000000,
+              "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4": 81000000000000,
+              "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48": 4.999999999990685e+25
+            },
+            "block_hash": "kh_2q9T7NZAM6sawyJfDpX3Zih1m7XzzZo82bfznXFDvokfmbvoS9",
+            "height": 618121
+          }
+        ]
+      properties:
+        contract_id:
+          description: The contract id of given token
+          type: integer
+        range:
+          description: The amounts for each height
+          type: array
+      required:
+        - contract_id
+        - range
+      title: Response for AEX-9 account balance accross a range of heights
+      type: object    
+    Aex9ContractBalancesResponse:
+      description: Response Schema for AEX9 contract balances responses
+      example:
+        amounts:
+          ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6: 4050000000000
+          ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK: 8100000000000
+          ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4: 81000000000000
+          ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48: 4.999999999990685e+25
+        contract_id: ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA
+        block_hash: kh_bkyFuxj3W9yY8Tmuiq3KSCVHaTP3vMzHt4pZ6y1QcQEzyAf5i
+        height: 618127
+      properties:
+        amounts:
+          description: The balance mapped to accounts
+          type: object
+        block_hash:
+          description: The block hash, indicating a state of a balance for that block
+          type: integer
+        contract_id:
+          description: The contract id of given token
+          type: integer
+        height:
+          description: The block height, indicating a state of a balance for that block height
+          type: integer
+      required:
+        - amounts
+        - block_hash
+        - contract_id
+        - height
+      title: Response for AEX-9 contract balances
+      type: object    
     Block:
       example:
         beneficiary: ak_2MR38Zf355m6JtP13T3WEcUcSLVLCxjGvjk6zG95S2mfKohcSS
@@ -685,6 +891,307 @@ components:
           nullable: true
           example: null
 paths:
+  /aex9/{id}:
+    get:
+      deprecated: false
+      description: Get AEX9 creation and meta_info information by contract id.
+      operationId: get_aex9_by_contract
+      parameters:
+        - description: The contract id
+          in: path
+          name: id
+          required: true
+          type: string
+          x-example: ct_okiZvxvjrQvBuYcbB1EHkLi3bCtKthFHQVPk3GmKvei7fVrHo
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Returns AEX-9 information by contract id
+          schema:
+            $ref: '#/components/schemas/Aex9Response'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  /aex9:
+    get:
+      deprecated: false
+      description: Get AEX9 tokens sorted by name or symbol.
+      operationId: get_sorted_aex9_tokens
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
+        - description: meta info field used on sorting
+          in: query
+          name: order_by
+          required: false
+          type: string
+          x-example: name | symbol
+        - description: Name or symbol prefix depending on order_by
+          in: query
+          name: prefix
+          required: false
+          type: string
+          x-example: AA
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Returns paginated AEX-9 tokens
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: 
+                          $ref: '#/components/schemas/Aex9Response'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json: 
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /aex9/{:contract_id}/balances:
+    get:
+      deprecated: false
+      description: Get AEX9 balances on a contract.
+      operationId: get_aex9_contract_balances
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
+        - description: Contract id
+          in: path
+          name: contract_id
+          required: true
+          type: string
+          x-example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Returns paginated contract balances
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: 
+                          $ref: '#/components/schemas/Aex9ContractBalancesResponse'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  /aex9/{contract_id}/balances/{account_id}:
+    get:
+      deprecated: false
+      description: Get AEX9 balance for an account on a contract.
+      operationId: get_aex9_contract_account_balance
+      parameters:
+        - description: Contract id
+          in: path
+          name: contract_id
+          required: true
+          type: string
+          x-example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
+        - description: Account id
+          in: path
+          name: account_id
+          required: true
+          type: string
+          x-example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Returns a the balance of an account on a contract 
+          schema: 
+            $ref: "#/components/schemas/Aex9BalanceResponse"
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  /aex9/account-balances/{account_id}:
+    get:
+      deprecated: false
+      description: Get all AEX9 balances for an account on the last block.
+      operationId: get_aex9_account_balances
+      parameters: 
+        - description: Account id
+          in: path
+          name: account_id
+          required: true
+          type: string
+          x-example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Returns all the balances of an account
+          schema: 
+            type: array
+            items: 
+              $ref: "#/components/schemas/Aex9BalanceResponse"
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  /aex9/transfers/from/{id}:
+    get:
+      deprecated: false
+      description: Get AEX9 transfers filtered by sender.
+      operationId: get_aex9_sender_transfers
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
+        - description: Sender account id
+          in: path
+          name: id
+          required: true
+          type: string
+          x-example: ak_1ADSaLCnFnWpbq6t8wJhUJn6ombZwgewPxe7MCaJTfGLKDkbw
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Returns paginated AEX-9 transfers of a sender
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: 
+                          $ref: '#/components/schemas/Aex9TransferResponse'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  /aex9/transfers/to/{id}:
+    get:
+      deprecated: false
+      description: Get AEX9 transfers filtered by recipient.
+      operationId: get_aex9_recipient_transfers
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
+        - description: Recipient account id
+          in: path
+          name: id
+          required: true
+          type: string
+          x-example: ak_2meHkLcAoZPrQj7P5WjFyJJRLJqRtv43z1QEbpcS1gHs9W8Q3g
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Returns paginated AEX-9 transfers of a recipient
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: 
+                          $ref: '#/components/schemas/Aex9TransferResponse'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  /aex9/transfers/from-to/{sender}/{recipient}:
+    get:
+      deprecated: false
+      description: Get AEX9 transfers filtered by sender and recipient.
+      operationId: get_aex9_pair_transfers
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
+        - description: Sender account id
+          in: path
+          name: recipient
+          required: true
+          type: string
+          x-example: ak_17qFR9Zp6CbX9ZZrEYd5155KHGAsfbY1YZ2UsRpjH6WJc8Pk1
+        - description: Recipient account id
+          in: path
+          name: recipient
+          required: true
+          type: string
+          x-example: ak_psy8tRXPzGxh6975H7K6XQcMFVsdrxJMt7YkzMY8oUTevutzw
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Returns paginated AEX-9 transfers between two accounts
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: 
+                          $ref: '#/components/schemas/Aex9TransferResponse'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  /aex9/{contract_id}/balances/{account_id}/history:
+    get:
+      deprecated: false
+      description: Get AEX9 account balance on a contract throughout all heights when changed.
+      operationId: get_aex9_contract_account_balance_history
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/ScopeParam'        
+        - $ref: '#/components/parameters/DirectionParam'
+        - description: Contract id
+          in: path
+          name: contract_id
+          required: true
+          type: string
+          x-example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
+        - description: Account id
+          in: path
+          name: account_id
+          required: true
+          type: string
+          x-example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2
+      produces:
+        - application/json
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: 
+                          $ref: '#/components/schemas/Aex9BalanceResponse'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'          
   /blocks:
     get:
       deprecated: false
