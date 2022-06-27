@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.13.1](https://www.github.com/aeternity/ae_mdw/compare/v1.13.0...v1.13.1) (2022-06-27)
+
+
+### Bug Fixes
+
+* dedup aex9 presence ([#737](https://www.github.com/aeternity/ae_mdw/issues/737)) ([25b0e20](https://www.github.com/aeternity/ae_mdw/commit/25b0e20f04ba8d4ab36ff04cc03060ed9af646f6))
+
 ## [1.13.0](https://www.github.com/aeternity/ae_mdw/compare/v1.12.0...v1.13.0) (2022-06-23)
 
 
