@@ -84,19 +84,19 @@ defmodule AeMdwWeb.Aex141ControllerTest do
     end
   end
 
-  describe "owned_nfts" do
+  describe "owned-nfts" do
     test "returns an empty list when account owns none", %{conn: conn} do
       account_id = enc_id(:crypto.strong_rand_bytes(32))
 
       assert %{"data" => [], "next" => nil, "prev" => nil} =
-               conn |> get("/aex141/owned_nfts/#{account_id}") |> json_response(200)
+               conn |> get("/aex141/owned-nfts/#{account_id}") |> json_response(200)
     end
 
     test "returns a backward list of nfts owned by an account", %{conn: conn} do
       account_id = enc_id(@owner_pk)
 
       assert %{"data" => nfts, "next" => next} =
-               conn |> get("/aex141/owned_nfts/#{account_id}") |> json_response(200)
+               conn |> get("/aex141/owned-nfts/#{account_id}") |> json_response(200)
 
       assert @default_limit = length(nfts)
       assert ^nfts = Enum.sort(nfts, :desc)
@@ -114,7 +114,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       assert %{"data" => nfts, "next" => next} =
                conn
-               |> get("/aex141/owned_nfts/#{account_id}", direction: :forward)
+               |> get("/aex141/owned-nfts/#{account_id}", direction: :forward)
                |> json_response(200)
 
       assert @default_limit = length(nfts)

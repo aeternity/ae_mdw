@@ -14,7 +14,7 @@ defmodule AeMdwWeb.Router do
     {"/aex141", AeMdwWeb.AexnTokenController, :aex141_tokens},
     {"/aex141/:contract_id", AeMdwWeb.AexnTokenController, :aex141_token},
     {"/aex141/:contract_id/owner/:token_id", AeMdwWeb.Aex141Controller, :nft_owner},
-    {"/aex141/owned_nfts/:account_id", AeMdwWeb.Aex141Controller, :owned_nfts}
+    {"/aex141/owned-nfts/:account_id", AeMdwWeb.Aex141Controller, :owned_nfts}
   ]
 
   pipeline :api do
