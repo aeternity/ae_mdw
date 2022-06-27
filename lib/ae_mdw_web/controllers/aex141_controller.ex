@@ -25,6 +25,12 @@ defmodule AeMdwWeb.Aex141Controller do
          {token_id, ""} <- Integer.parse(token_id),
          {:ok, account_pk} <- Aex141.fetch_nft_owner(contract_pk, token_id) do
       json(conn, %{data: enc_id(account_pk)})
+    else
+      :error ->
+        {:error, ErrInput.NotFound.exception(value: token_id)}
+
+      error ->
+        error
     end
   end
 
