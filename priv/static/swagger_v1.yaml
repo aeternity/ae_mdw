@@ -1748,7 +1748,7 @@ paths:
       summary: ''
       tags:
         - Middleware
-  /aex9/balance/{:contract_id}/{:account_id}:
+  /aex9/balance/{contract_id}/{account_id}:
     get:
       deprecated: false
       description: Get AEX9 balance for an account on a contract.
@@ -1780,7 +1780,7 @@ paths:
       summary: ''
       tags:
         - Middleware
-  /aex9/balance/gen/{:range}/{:contract_id}/{:account_id}:
+  /aex9/balance/gen/{range}/{contract_id}/{account_id}:
     get:
       deprecated: false
       description: Get all AEX9 balances for an account at certain block.
@@ -1820,7 +1820,7 @@ paths:
       summary: ''
       tags:
         - Middleware      
-  /aex9/balance/hash/{:blockhash}/{:contract_id}/{:account_id}:
+  /aex9/balance/hash/{blockhash}/{contract_id}/{account_id}:
     get:
       deprecated: false
       description: Get AEX9 account balance on a contract at certain block.
@@ -1858,7 +1858,7 @@ paths:
       summary: ''
       tags:
         - Middleware
-  /aex9/balances/account/{:account_id}:
+  /aex9/balances/account/{account_id}:
     get:
       deprecated: false
       description: Get all AEX9 balances for an account on the last block.
@@ -1886,7 +1886,7 @@ paths:
       summary: ''
       tags:
         - Middleware
-  /aex9/balances/height/{:height}/account/{:account_id}:
+  /aex9/balances/height/{height}/account/{account_id}:
     get:
       deprecated: false
       description: Get all AEX9 balances for an account at certain block.
@@ -1920,7 +1920,7 @@ paths:
       summary: ''
       tags:
         - Middleware
-  /aex9/balances/hash/{:blockhash}/account/{:account_id}:
+  /aex9/balances/hash/{blockhash}/account/{account_id}:
     get:
       deprecated: false
       description: Get all AEX9 balances for an account at certain block.
@@ -1954,7 +1954,7 @@ paths:
       summary: ''
       tags:
         - Middleware     
-  /aex9/balances/hash/{:blockhash}/{:contract_id}:
+  /aex9/balances/hash/{blockhash}/{contract_id}:
     get:
       deprecated: false
       description: Get AEX9 balances on a contract at certain block.
@@ -1986,7 +1986,7 @@ paths:
       summary: ''
       tags:
         - Middleware
-  /aex9/balances/{:contract_id}:
+  /aex9/balances/{contract_id}:
     get:
       deprecated: false
       description: Get AEX9 balances on a contract.
@@ -2012,7 +2012,7 @@ paths:
       summary: ''
       tags:
         - Middleware
-  /aex9/balances/gen/{:range}/{:contract_id}:
+  /aex9/balances/gen/{range}/{contract_id}:
     get:
       deprecated: false
       description: Get AEX9 balances on a contract for range of heights.
