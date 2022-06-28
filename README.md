@@ -1669,129 +1669,6 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/names?state=active&by=name&limit=
 }
 ```
 
-Auctions
-
-Without ordering parameters, the first auction in reply set expires the latest.
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names?state=auction&limit=2" | jq '.'
-{
-  "data": [
-    {
-      "active": false,
-      "hash": "nm_2gck1wvusmLUH1pRJ6dUgHxuVBM5Nf75q64wZHB2TwadpHH6Xv",
-      "info": {
-        "auction_end": 320279,
-        "bids": [
-          13863543
-        ],
-        "last_bid": {
-          "block_hash": "mh_2hXMY6BJ49LAMKNFcADx4dPesYbcnJj7ac881ojrktUecHPiYf",
-          "block_height": 290519,
-          "hash": "th_2KNZfYmAFKyW3xhvfdWAjMc6R5FRy2nUjLtYUuQsQyxGJ84kGJ",
-          "micro_index": 0,
-          "micro_time": 1595846818606,
-          "signatures": [
-            "sg_XtQb143doXyS2tE8DNb2563Ukxy18aBbL9dd8iDxYNjUmZq2xywLp1qyiLancXjauRmYaQQz54aXKjevw21pGmZwv4gLA"
-          ],
-          "tx": {
-            "account_id": "ak_pMwUuWtqDoPxVtyAmWT45JvbCF2pGTmbCMB4U5yQHi37XF9is",
-            "fee": 16540000000000,
-            "name": "ant.chain",
-            "name_fee": 217830900000000000000,
-            "name_id": "nm_2gck1wvusmLUH1pRJ6dUgHxuVBM5Nf75q64wZHB2TwadpHH6Xv",
-            "name_salt": 8831319772225873,
-            "nonce": 524,
-            "type": "NameClaimTx",
-            "version": 2
-          },
-          "tx_index": 13863543
-        }
-      },
-      "name": "ant.chain",
-      "previous": [],
-      "status": "auction"
-    },
-    {
-      "active": false,
-      "hash": "nm_2G8VVfnRqJjxcpNu8vbHJyaYhCoR9Gys42AvaEK3hMN8tfXCr6",
-      "info": {
-        "auction_end": 316465,
-        "bids": [
-          13581110,
-          12162548,
-          10084274,
-          10059350,
-          7808796,
-          7455148,
-          5564748
-        ],
-        "last_bid": {
-          "block_hash": "mh_CVYWyhvtQiqbYwRQYV7NPxknWqVTxoefyXz2X9R2kKGrx8vM2",
-          "block_height": 286705,
-          "hash": "th_2Us1TMbypBpnNZagh3hexbvL4KuQF89JV8sFf92RRChPiwTQBC",
-          "micro_index": 102,
-          "micro_time": 1595155581605,
-          "signatures": [
-            "sg_7pGmtgSMXLCa7YchSDFSeLVis9JYrAWKDgd4SPCnsNQQVFZhJKR4HyEentwZkKHT5GJN6L5VikwEsdkPNKDXD5xur6LiM"
-          ],
-          "tx": {
-            "account_id": "ak_w9dCnphJRYxpjrPZSXUm8RPXAhFFdxyhqFGq1yPt23B4M8A1n",
-            "fee": 16320000000000,
-            "name": "5.chain",
-            "name_fee": 8e+20,
-            "name_id": "nm_2G8VVfnRqJjxcpNu8vbHJyaYhCoR9Gys42AvaEK3hMN8tfXCr6",
-            "name_salt": 0,
-            "nonce": 24,
-            "type": "NameClaimTx",
-            "version": 2
-          },
-          "tx_index": 13581110
-        }
-      },
-      "name": "5.chain",
-      "previous": [],
-      "status": "auction"
-    }
-  ],
-  "next": "/v2/names?state=auctions&cursor=548763-svs.chain&direction=backward&expand=false&limit=2",
-  "prev": null
-}
-```
-
-To show auctions starting with the one expiring the earliest:
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names?state=auction&by=expiration&direction=forward&limit=2" | jq '.data [] .info.auction_end'
-300490
-300636
-```
-
-Or, ordered by name, from the begining:
-
-```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names?state=auction&by=name&direction=forward&limit=100" | jq '.data [] .name'
-"0.chain"
-"5.chain"
-"6.chain"
-"8.chain"
-"AEStudio.chain"
-"BTC.chain"
-"Facebook.chain"
-"Song.chain"
-"ant.chain"
-"b.chain"
-"d.chain"
-"help.chain"
-"k.chain"
-"l.chain"
-"m.chain"
-"meet.chain"
-"o.chain"
-"s.chain"
-"y.chain"
-```
-
 Additionally, this endpoint allows you to filter by name owner using the query param `owned_by`:
 
 ```
@@ -2131,6 +2008,129 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/names/search?prefix=asdf&expand" 
     },
 ...
 ]
+```
+
+### `/v2/names/auctions`
+
+Without ordering parameters, the first auction in reply set expires the latest.
+
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/auctions?limit=2" | jq '.'
+{
+  "data": [
+    {
+      "active": false,
+      "hash": "nm_2gck1wvusmLUH1pRJ6dUgHxuVBM5Nf75q64wZHB2TwadpHH6Xv",
+      "info": {
+        "auction_end": 320279,
+        "bids": [
+          13863543
+        ],
+        "last_bid": {
+          "block_hash": "mh_2hXMY6BJ49LAMKNFcADx4dPesYbcnJj7ac881ojrktUecHPiYf",
+          "block_height": 290519,
+          "hash": "th_2KNZfYmAFKyW3xhvfdWAjMc6R5FRy2nUjLtYUuQsQyxGJ84kGJ",
+          "micro_index": 0,
+          "micro_time": 1595846818606,
+          "signatures": [
+            "sg_XtQb143doXyS2tE8DNb2563Ukxy18aBbL9dd8iDxYNjUmZq2xywLp1qyiLancXjauRmYaQQz54aXKjevw21pGmZwv4gLA"
+          ],
+          "tx": {
+            "account_id": "ak_pMwUuWtqDoPxVtyAmWT45JvbCF2pGTmbCMB4U5yQHi37XF9is",
+            "fee": 16540000000000,
+            "name": "ant.chain",
+            "name_fee": 217830900000000000000,
+            "name_id": "nm_2gck1wvusmLUH1pRJ6dUgHxuVBM5Nf75q64wZHB2TwadpHH6Xv",
+            "name_salt": 8831319772225873,
+            "nonce": 524,
+            "type": "NameClaimTx",
+            "version": 2
+          },
+          "tx_index": 13863543
+        }
+      },
+      "name": "ant.chain",
+      "previous": [],
+      "status": "auction"
+    },
+    {
+      "active": false,
+      "hash": "nm_2G8VVfnRqJjxcpNu8vbHJyaYhCoR9Gys42AvaEK3hMN8tfXCr6",
+      "info": {
+        "auction_end": 316465,
+        "bids": [
+          13581110,
+          12162548,
+          10084274,
+          10059350,
+          7808796,
+          7455148,
+          5564748
+        ],
+        "last_bid": {
+          "block_hash": "mh_CVYWyhvtQiqbYwRQYV7NPxknWqVTxoefyXz2X9R2kKGrx8vM2",
+          "block_height": 286705,
+          "hash": "th_2Us1TMbypBpnNZagh3hexbvL4KuQF89JV8sFf92RRChPiwTQBC",
+          "micro_index": 102,
+          "micro_time": 1595155581605,
+          "signatures": [
+            "sg_7pGmtgSMXLCa7YchSDFSeLVis9JYrAWKDgd4SPCnsNQQVFZhJKR4HyEentwZkKHT5GJN6L5VikwEsdkPNKDXD5xur6LiM"
+          ],
+          "tx": {
+            "account_id": "ak_w9dCnphJRYxpjrPZSXUm8RPXAhFFdxyhqFGq1yPt23B4M8A1n",
+            "fee": 16320000000000,
+            "name": "5.chain",
+            "name_fee": 8e+20,
+            "name_id": "nm_2G8VVfnRqJjxcpNu8vbHJyaYhCoR9Gys42AvaEK3hMN8tfXCr6",
+            "name_salt": 0,
+            "nonce": 24,
+            "type": "NameClaimTx",
+            "version": 2
+          },
+          "tx_index": 13581110
+        }
+      },
+      "name": "5.chain",
+      "previous": [],
+      "status": "auction"
+    }
+  ],
+  "next": "/v2/names?state=auctions&cursor=548763-svs.chain&direction=backward&expand=false&limit=2",
+  "prev": null
+}
+```
+
+To show auctions starting with the one expiring the earliest:
+
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/auctions?by=expiration&direction=forward&limit=2" | jq '.data [] .info.auction_end'
+300490
+300636
+```
+
+Or, ordered by name, from the begining:
+
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/auctions?by=name&direction=forward&limit=100" | jq '.data [] .name'
+"0.chain"
+"5.chain"
+"6.chain"
+"8.chain"
+"AEStudio.chain"
+"BTC.chain"
+"Facebook.chain"
+"Song.chain"
+"ant.chain"
+"b.chain"
+"d.chain"
+"help.chain"
+"k.chain"
+"l.chain"
+"m.chain"
+"meet.chain"
+"o.chain"
+"s.chain"
+"y.chain"
 ```
 
 ### `/v2/names/:name_or_hash`
@@ -3785,7 +3785,7 @@ This is a list of the exceptions together with the changes that need to be done:
 * `/blocks/:range_or_dir` - Can now be accessed via `/v2/blocks?scope=gen:100-200` or `/v2/blocks?direction=forward`. In addition, each block now has a list of micro_blocks sorted by time, instead of it being a map.
 * `/blocki/:id` - Was renamed to `/v2/blocks/:id`.
 * `/blocki/:kbi/:mbi` - Was renamed to `/v2/blocks/:kbi/:mbi`.
-* `/name/auction/:id` - Was renamed to `/v2/names/:id/auctions`.
+* `/name/auction/:id` - Was renamed to `/v2/names/:id/auction`.
 * `/name/pointers/:id` - Was renamed to `/v2/names/:id/pointers`.
 * `/name/pointees/:id` - Was renamed to `/v2/names/:id/pointees`.
 * `/name/:id` - Was renamed to `/v2/names/:id`.
@@ -3906,6 +3906,15 @@ On push:
 - Credo
 - Dialyzer
 - Unit tests
+- ExCoveralls
 
 On merge to master:
 - Release with notes based on git history
+
+#### Git hooks
+
+In order to anticipate some of these checks one might run `mix git_hooks.install`.
+This installs pre_commit and pre_push checks as defined by `config :git_hooks` in `dev.tools.exs`.
+
+If sure about the change, if it was for example in a integration test case and it was already tested and formatted,
+one can use `git push --no-verify` to bypass the hook.
