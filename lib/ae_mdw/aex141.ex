@@ -43,7 +43,7 @@ defmodule AeMdw.Aex141 do
   def fetch_owned_nfts(state, account_pk, cursor, pagination) do
     case deserialize_cursor(cursor) do
       {:ok, cursor_key} ->
-        {prev_cursor_key, nfts, next_cursor_key_tuple} =
+        {prev_cursor_key, nfts, next_cursor_key} =
           state
           |> build_streamer(@ownership_table, cursor_key, account_pk)
           |> Collection.paginate(pagination)
@@ -52,7 +52,7 @@ defmodule AeMdw.Aex141 do
          {
            serialize_cursor(prev_cursor_key),
            render_owned_nfs(nfts),
-           serialize_cursor(next_cursor_key_tuple)
+           serialize_cursor(next_cursor_key)
          }}
 
       {:error, exception} ->

@@ -295,7 +295,7 @@ defmodule AeMdw.Aex9 do
        ) do
     key_boundary = key_boundary(params)
 
-    {prev_cursor_key, transfer_keys, next_cursor_key_tuple} =
+    {prev_cursor_key, transfer_keys, next_cursor_key} =
       table
       |> build_streamer(cursor_key, key_boundary)
       |> Collection.paginate(pagination)
@@ -303,7 +303,7 @@ defmodule AeMdw.Aex9 do
     {
       serialize_cursor(prev_cursor_key),
       transfer_keys,
-      serialize_cursor(next_cursor_key_tuple)
+      serialize_cursor(next_cursor_key)
     }
   end
 
