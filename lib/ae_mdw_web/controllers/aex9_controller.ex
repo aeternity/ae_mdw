@@ -9,6 +9,8 @@ defmodule AeMdwWeb.Aex9Controller do
   alias AeMdw.AexnTokens
   alias AeMdw.AexnContracts
   alias AeMdw.Db.Contract
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.Util
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db, as: DBN
@@ -23,6 +25,8 @@ defmodule AeMdwWeb.Aex9Controller do
   import AeMdwWeb.Util, only: [handle_input: 2, paginate: 4, presence?: 2]
   import AeMdwWeb.Helpers.AexnHelper
   import AeMdwWeb.AexnView
+
+  require Model
 
   plug(PaginatedPlug)
   action_fallback(FallbackController)
@@ -94,35 +98,37 @@ defmodule AeMdwWeb.Aex9Controller do
         )
 
   @spec balances(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def balances(conn, %{"height" => height, "account_id" => account_id}),
-    do:
-      handle_input(
-        conn,
-        fn ->
-          account_pk = Validate.id!(account_id, [:account_pubkey])
+  def balances(conn, %{"height" => height, "account_id" => account_id}) do
+    handle_input(
+      conn,
+      fn ->
+        height = Validate.nonneg_int!(height)
 
-          txi =
-            Util.block_txi(Validate.nonneg_int!(height)) ||
-              raise ErrInput.BlockIndex, value: height
-
-          account_balances_reply(conn, account_pk, txi)
+        if nil == Util.block_txi(height) do
+          raise ErrInput.BlockIndex, value: height
         end
-      )
 
-  def balances(conn, %{"blockhash" => hash, "account_id" => account_id}),
-    do:
-      handle_input(
-        conn,
-        fn ->
-          account_pk = Validate.id!(account_id, [:account_pubkey])
+        account_pk = Validate.id!(account_id, [:account_pubkey])
 
-          bi =
-            Util.block_hash_to_bi(Validate.id!(hash)) ||
-              raise ErrInput.Id, value: hash
+        account_balances_reply(conn, account_pk, {height, -1})
+      end
+    )
+  end
 
-          account_balances_reply(conn, account_pk, Util.block_txi(bi))
-        end
-      )
+  def balances(conn, %{"blockhash" => hash, "account_id" => account_id}) do
+    handle_input(
+      conn,
+      fn ->
+        account_pk = Validate.id!(account_id, [:account_pubkey])
+
+        block_index =
+          Util.block_hash_to_bi(Validate.id!(hash)) ||
+            raise ErrInput.Id, value: hash
+
+        account_balances_reply(conn, account_pk, block_index)
+      end
+    )
+  end
 
   def balances(conn, %{"account_id" => account_id}),
     do:
@@ -335,19 +341,26 @@ defmodule AeMdwWeb.Aex9Controller do
     json(conn, balances)
   end
 
-  defp account_balances_reply(%Conn{assigns: %{state: state}} = conn, account_pk, last_txi) do
+  defp account_balances_reply(
+         %Conn{assigns: %{state: state}} = conn,
+         account_pk,
+         {kbi, mbi} = block_index
+       ) do
+    {:ok, Model.block(tx_index: last_txi, hash: block_hash)} =
+      State.get(state, Model.Block, block_index)
+
     contracts =
       account_pk
       |> Contract.aex9_search_contract(last_txi)
       |> Map.to_list()
       |> Enum.sort_by(fn {_ct_pk, txi_list} -> _call_txi = List.last(txi_list) end)
 
-    height_hash = DBN.top_height_hash(top?(conn))
+    type = if mbi == -1, do: :key, else: :micro
 
     balances =
       contracts
       |> Enum.map(fn {contract_pk, txi_list} ->
-        {amount, _} = DBN.aex9_balance(contract_pk, account_pk, height_hash)
+        {amount, _} = DBN.aex9_balance(contract_pk, account_pk, {type, kbi, block_hash})
         call_txi = List.last(txi_list)
         {amount, call_txi, contract_pk}
       end)
