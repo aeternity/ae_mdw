@@ -239,25 +239,28 @@ defmodule AeMdw.Db.Contract do
           state2
         end
 
-      aex9_contract_pk = which_aexn_contract_pubkey(contract_pk, addr)
+      aex9_contract_pk = which_aex9_contract_pubkey(contract_pk, addr)
 
-      if is_aex9_transfer?(evt_hash, aex9_contract_pk) do
-        write_aex9_records(state3, txi, i, args)
-      else
-        state3
+      cond do
+        is_aexn_transfer?(evt_hash) and aex9_contract_pk != nil ->
+          write_aex9_records(state3, txi, i, args)
+
+        is_aexn_transfer?(evt_hash) and State.exists?(state3, Model.AexnContract, {:aex141, addr}) ->
+          write_aex141_records(state3, addr, args)
+
+        true ->
+          state3
       end
     end)
   end
 
-  @spec is_aex9_transfer?(binary(), pubkey()) :: boolean()
-  def is_aex9_transfer?(evt_hash, aex9_contract_pk) do
-    aex9_transfer_evt = Node.aex9_transfer_event_hash()
-
-    evt_hash == aex9_transfer_evt and aex9_contract_pk != nil
+  @spec is_aexn_transfer?(binary()) :: boolean()
+  def is_aexn_transfer?(evt_hash) do
+    evt_hash == Node.aexn_transfer_event_hash()
   end
 
-  @spec which_aexn_contract_pubkey(pubkey(), pubkey()) :: pubkey() | nil
-  def which_aexn_contract_pubkey(contract_pk, addr) do
+  @spec which_aex9_contract_pubkey(pubkey(), pubkey()) :: pubkey() | nil
+  def which_aex9_contract_pubkey(contract_pk, addr) do
     if AexnContracts.is_aex9?(contract_pk) do
       contract_pk
     else
@@ -428,6 +431,22 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.IdxAex9Transfer, m_idx_transfer)
     |> State.put(Model.Aex9PairTransfer, m_pair_transfer)
   end
+
+  defp write_aex9_records(state, _txi, _i, _args), do: state
+
+  defp write_aex141_records(state, contract_pk, [from_pk, to_pk, token_id]) do
+    m_ownership = Model.nft_ownership(index: {to_pk, contract_pk, token_id})
+
+    state2 = State.put(state, Model.NftOwnership, m_ownership)
+
+    if State.exists?(state2, Model.NftOwnership, {from_pk, contract_pk, token_id}) do
+      State.delete(state2, Model.NftOwnership, {from_pk, contract_pk, token_id})
+    else
+      state2
+    end
+  end
+
+  defp write_aex141_records(state, _pk, _args), do: state
 
   defp fetch_aex9_balance_or_new(state, contract_pk, account_pk) do
     case State.get(state, Model.Aex9Balance, {contract_pk, account_pk}) do

@@ -343,6 +343,17 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :aexn_contract_symbol, @aexn_contract_symbol_defaults
 
+  # AEX-141 token owner
+  #     index = {owner pubkey, contract pubkey, token_id},
+  @nft_ownership_defaults [index: nil, unused: nil]
+  defrecord :nft_ownership, @nft_ownership_defaults
+
+  @type nft_ownership() ::
+          record(:nft_ownership,
+            index: {Db.pubkey(), Db.pubkey(), AeMdw.Aex141.token_id()},
+            unused: nil
+          )
+
   # contract call:
   #     index: {create txi, call txi}
   #     fun: ""
@@ -660,7 +671,8 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.IdIntContractCall,
       AeMdw.Db.Model.GrpIdIntContractCall,
       AeMdw.Db.Model.IdFnameIntContractCall,
-      AeMdw.Db.Model.GrpIdFnameIntContractCall
+      AeMdw.Db.Model.GrpIdFnameIntContractCall,
+      AeMdw.Db.Model.NftOwnership
     ]
   end
 
@@ -744,6 +756,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.GrpIdIntContractCall), do: :grp_id_int_contract_call
   def record(AeMdw.Db.Model.IdFnameIntContractCall), do: :id_fname_int_contract_call
   def record(AeMdw.Db.Model.GrpIdFnameIntContractCall), do: :grp_id_fname_int_contract_call
+  def record(AeMdw.Db.Model.NftOwnership), do: :nft_ownership
   def record(AeMdw.Db.Model.PlainName), do: :plain_name
   def record(AeMdw.Db.Model.AuctionBid), do: :auction_bid
   def record(AeMdw.Db.Model.Pointee), do: :pointee

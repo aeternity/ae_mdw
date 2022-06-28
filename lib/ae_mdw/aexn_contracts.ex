@@ -88,10 +88,9 @@ defmodule AeMdw.AexnContracts do
     end
   end
 
-  #
-  # Private functions
-  #
-  defp call_contract(contract_pk, method, args \\ []) do
+  @spec call_contract(pubkey(), Contract.method_name(), Contract.method_args()) ::
+          {:ok, any()} | :error
+  def call_contract(contract_pk, method, args \\ []) do
     top_hash = NodeDb.top_height_hash(false)
 
     case Runner.call_contract(contract_pk, top_hash, method, args) do
@@ -104,6 +103,9 @@ defmodule AeMdw.AexnContracts do
     end
   end
 
+  #
+  # Private functions
+  #
   defp decode_meta_info({_name, _symbol, _decimals} = meta_info), do: meta_info
 
   defp decode_meta_info({name, symbol, variant_url, variant_type}) do

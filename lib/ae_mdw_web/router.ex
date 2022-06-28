@@ -10,7 +10,11 @@ defmodule AeMdwWeb.Router do
     {"/contracts/logs", AeMdwWeb.ContractController, :logs},
     {"/contracts/calls", AeMdwWeb.ContractController, :calls},
     {"/totalstats/", AeMdwWeb.StatsController, :total_stats},
-    {"/status", AeMdwWeb.UtilController, :status}
+    {"/status", AeMdwWeb.UtilController, :status},
+    {"/aex141", AeMdwWeb.AexnTokenController, :aex141_tokens},
+    {"/aex141/:contract_id", AeMdwWeb.AexnTokenController, :aex141_token},
+    {"/aex141/:contract_id/owner/:token_id", AeMdwWeb.Aex141Controller, :nft_owner},
+    {"/aex141/owned-nfts/:account_id", AeMdwWeb.Aex141Controller, :owned_nfts}
   ]
 
   pipeline :api do
@@ -58,9 +62,7 @@ defmodule AeMdwWeb.Router do
       get "/names/:id", NameController, :name
 
       get "/aex9", AexnTokenController, :aex9_tokens
-      get "/aex141", AexnTokenController, :aex141_tokens
       get "/aex9/:contract_id", AexnTokenController, :aex9_token
-      get "/aex141/:contract_id", AexnTokenController, :aex141_token
       get "/aex9/:contract_id/balances", AexnTokenController, :aex9_token_balances
       get "/aex9/:contract_id/balances/:account_id", AexnTokenController, :aex9_token_balance
       get "/aex9/account-balances/:account_id", AexnTokenController, :aex9_account_balances
