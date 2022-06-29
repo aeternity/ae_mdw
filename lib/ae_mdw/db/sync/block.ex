@@ -29,6 +29,7 @@ defmodule AeMdw.Db.Sync.Block do
   alias AeMdw.Db.Mutation
   alias AeMdw.Log
   alias AeMdw.Node, as: AE
+  alias AeMdw.Node.Db
   alias AeMdw.Txs
 
   require Model
@@ -42,28 +43,20 @@ defmodule AeMdw.Db.Sync.Block do
 
   ################################################################################
 
-  @spec blocks_mutations(Blocks.height(), Blocks.mbi(), Txs.txi(), Blocks.height()) ::
+  @spec blocks_mutations(
+          Blocks.height(),
+          Blocks.mbi(),
+          Txs.txi(),
+          Blocks.height() | Blocks.block_hash()
+        ) ::
           {[height_mutations()], Txs.txi()}
-  def blocks_mutations(from_height, from_mbi, from_txi, to_height) do
-    {:ok, header} = :aec_chain.get_key_header_by_height(to_height + 1)
-    {:ok, initial_hash} = :aec_headers.hash_header(header)
-
-    {heights_hashes, _prev_hash} =
-      Enum.map_reduce((to_height + 1)..from_height, initial_hash, fn height, hash ->
-        {:ok, kh} = :aec_chain.get_header(hash)
-        ^height = :aec_headers.height(kh)
-        :key = :aec_headers.type(kh)
-
-        {{height, hash}, :aec_headers.prev_key_hash(kh)}
-      end)
-
-    heights_hashes = Enum.reverse(heights_hashes)
-
-    heights_hashes
-    |> Enum.zip(Enum.drop(heights_hashes, 1))
-    |> Enum.flat_map_reduce(from_txi, fn {{height, kb_hash}, {_next_height, next_kb_hash}}, txi ->
-      {key_block, micro_blocks} = AE.Db.get_blocks(kb_hash, next_kb_hash)
+  def blocks_mutations(from_height, from_mbi, from_txi, to_height_or_hash) do
+    from_height
+    |> Db.get_blocks_per_height(to_height_or_hash)
+    |> Enum.flat_map_reduce(from_txi, fn {key_block, micro_blocks, next_kb_hash}, txi ->
+      height = :aec_blocks.height(key_block)
       kb_header = :aec_blocks.to_key_header(key_block)
+      {:ok, kb_hash} = :aec_headers.hash_header(kb_header)
 
       if rem(height, @log_freq) == 0, do: Log.info("creating mutations for block at #{height}")
 
@@ -83,7 +76,12 @@ defmodule AeMdw.Db.Sync.Block do
           {{{height, mbi}, micro_block, mutations}, txi}
         end)
 
-      next_kb_model = Model.block(index: {height + 1, -1}, hash: next_kb_hash, tx_index: txi)
+      next_kb_mutation =
+        if next_kb_hash do
+          key_block = Model.block(index: {height + 1, -1}, hash: next_kb_hash, tx_index: txi)
+
+          KeyBlockMutation.new(key_block)
+        end
 
       kb0_mutation =
         if height == 0 do
@@ -102,7 +100,7 @@ defmodule AeMdw.Db.Sync.Block do
         NamesExpirationMutation.new(height),
         OraclesExpirationMutation.new(height),
         StatsMutation.new(height, from_height != height or from_mbi != 0),
-        KeyBlockMutation.new(next_kb_model)
+        next_kb_mutation
       ]
 
       blocks_mutations = micro_blocks_gens ++ [{{height, -1}, key_block, gen_mutations}]

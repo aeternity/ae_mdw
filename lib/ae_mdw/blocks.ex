@@ -137,8 +137,8 @@ defmodule AeMdw.Blocks do
   end
 
   defp fetch_gen_blocks(state, gen, _last_gen) do
-    @table
-    |> Collection.stream(:backward, nil, {gen, <<>>})
+    state
+    |> Collection.stream(@table, :backward, nil, {gen, <<>>})
     |> Stream.take_while(&match?({^gen, _mb_index}, &1))
     |> Enum.map(fn key -> State.fetch!(state, @table, key) end)
     |> Enum.reverse()

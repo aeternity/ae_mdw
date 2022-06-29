@@ -42,9 +42,10 @@ defmodule AeMdw.Sync.Server do
 
   require Logger
 
-  defstruct [:chain_height, :mem_height, :db_state, :restarts, :gens_per_min]
+  defstruct [:chain_height, :chain_hash, :mem_hash, :db_state, :restarts, :gens_per_min]
 
   @typep height() :: Blocks.height()
+  @typep hash() :: Blocks.block_hash()
   @typep state() ::
            :initialized
            | :idle
@@ -53,16 +54,17 @@ defmodule AeMdw.Sync.Server do
            | {:syncing_mem, reference()}
   @typep state_data() :: %__MODULE__{
            db_state: State.t(),
-           mem_height: height(),
+           chain_hash: hash(),
+           mem_hash: height(),
            restarts: non_neg_integer()
          }
-  @typep cast_event() :: {:new_height, height()} | :restart_sync
+  @typep cast_event() :: {:new_height, height(), hash()} | :restart_sync
   @typep internal_event() :: :check_sync
   @typep call_event() :: :syncing?
   @typep reason() :: term()
   @typep info_event() ::
            {reference(), State.t()}
-           | {reference(), height()}
+           | {reference(), height(), hash()}
            | {:DOWN, reference(), :process, pid(), reason()}
 
   @max_restarts 5
@@ -77,8 +79,8 @@ defmodule AeMdw.Sync.Server do
   @spec start_link(GenServer.options()) :: :gen_statem.start_ret()
   def start_link(_opts), do: GenStateMachine.start_link(__MODULE__, [], name: __MODULE__)
 
-  @spec new_height(height()) :: :ok
-  def new_height(height), do: GenStateMachine.cast(__MODULE__, {:new_height, height})
+  @spec new_height(height(), hash()) :: :ok
+  def new_height(height, hash), do: GenStateMachine.cast(__MODULE__, {:new_height, height, hash})
 
   @spec syncing?() :: boolean()
   def syncing?, do: GenStateMachine.call(__MODULE__, :syncing?)
@@ -94,7 +96,7 @@ defmodule AeMdw.Sync.Server do
     state_data = %__MODULE__{
       chain_height: nil,
       db_state: db_state,
-      mem_height: State.height(db_state),
+      mem_hash: nil,
       restarts: 0,
       gens_per_min: 0
     }
@@ -111,16 +113,18 @@ defmodule AeMdw.Sync.Server do
           :gen_statem.event_handler_result(state())
   @spec handle_event(:internal, internal_event(), state(), state_data()) ::
           :gen_statem.event_handler_result(state())
-  def handle_event(:cast, {:new_height, chain_height}, :initialized, state_data) do
+  def handle_event(:cast, {:new_height, chain_height, chain_hash}, :initialized, state_data) do
     actions = [{:next_event, :internal, :check_sync}]
 
-    {:next_state, :idle, %__MODULE__{state_data | chain_height: chain_height}, actions}
+    {:next_state, :idle,
+     %__MODULE__{state_data | chain_height: chain_height, chain_hash: chain_hash}, actions}
   end
 
-  def handle_event(:cast, {:new_height, chain_height}, _state, state_data) do
+  def handle_event(:cast, {:new_height, chain_height, chain_hash}, _state, state_data) do
     actions = [{:next_event, :internal, :check_sync}]
 
-    {:keep_state, %__MODULE__{state_data | chain_height: chain_height}, actions}
+    {:keep_state, %__MODULE__{state_data | chain_height: chain_height, chain_hash: chain_hash},
+     actions}
   end
 
   def handle_event(
@@ -129,8 +133,9 @@ defmodule AeMdw.Sync.Server do
         :idle,
         %__MODULE__{
           chain_height: chain_height,
+          chain_hash: chain_hash,
           db_state: db_state,
-          mem_height: mem_height
+          mem_hash: mem_hash
         } = state_data
       ) do
     max_db_height = chain_height - @mem_gens
@@ -144,10 +149,8 @@ defmodule AeMdw.Sync.Server do
 
         {:next_state, {:syncing_db, ref}, state_data}
 
-      db_height >= max_db_height and mem_height != chain_height - 1 ->
-        from_height = db_height
-        to_height = chain_height - 1
-        ref = spawn_mem_sync(from_height, to_height)
+      db_height >= max_db_height and mem_hash != chain_hash ->
+        ref = spawn_mem_sync(db_height, chain_hash)
 
         {:next_state, {:syncing_mem, ref}, state_data}
 
@@ -163,7 +166,7 @@ defmodule AeMdw.Sync.Server do
 
     new_state_data = %__MODULE__{
       state_data
-      | mem_height: State.height(new_db_state),
+      | mem_hash: State.height(new_db_state),
         db_state: new_db_state
     }
 
@@ -172,10 +175,10 @@ defmodule AeMdw.Sync.Server do
     {:next_state, :idle, new_state_data, actions}
   end
 
-  def handle_event(:info, {ref, mem_height}, {:syncing_mem, ref}, state_data) do
+  def handle_event(:info, {ref, mem_hash}, {:syncing_mem, ref}, state_data) do
     actions = [{:next_event, :internal, :check_sync}]
 
-    new_state_data = %__MODULE__{state_data | mem_height: mem_height}
+    new_state_data = %__MODULE__{state_data | mem_hash: mem_hash}
 
     {:next_state, :idle, new_state_data, actions}
   end
@@ -260,7 +263,7 @@ defmodule AeMdw.Sync.Server do
     end)
   end
 
-  defp spawn_mem_sync(from_height, to_height) do
+  defp spawn_mem_sync(from_height, last_hash) do
     spawn_task(fn ->
       mem_state = State.new_mem_state()
       from_txi = Block.next_txi(mem_state)
@@ -273,15 +276,15 @@ defmodule AeMdw.Sync.Server do
 
       {mutations_time, {gens_mutations, _next_txi}} =
         :timer.tc(fn ->
-          Block.blocks_mutations(from_height, from_mbi, from_txi, to_height)
+          Block.blocks_mutations(from_height, from_mbi, from_txi, last_hash)
         end)
 
       {exec_time, _new_state} = :timer.tc(fn -> exec_mem_mutations(gens_mutations, mem_state) end)
 
-      gens_per_min = (to_height + 1 - from_height) * 60_000_000 / (mutations_time + exec_time)
+      gens_per_min = length(gens_mutations) * 60_000_000 / (mutations_time + exec_time)
       Status.set_gens_per_min(gens_per_min)
 
-      to_height
+      last_hash
     end)
   end
 

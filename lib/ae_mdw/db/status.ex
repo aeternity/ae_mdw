@@ -37,8 +37,7 @@ defmodule AeMdw.Db.Status do
       mdw_height: mdw_height,
       mdw_tx_index: mdw_tx_index,
       mdw_async_tasks: async_tasks_counters,
-      # MDW is always 1 generation behind
-      mdw_synced: node_height == mdw_height + 1,
+      mdw_synced: node_height == mdw_height,
       mdw_syncing: mdw_syncing?,
       mdw_gens_per_minute: round(gens_per_minute * 100) / 100
     }

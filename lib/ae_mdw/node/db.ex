@@ -14,10 +14,59 @@ defmodule AeMdw.Node.Db do
   @type pubkey() :: <<_::256>>
   @type hash_type() :: nil | :key | :micro
   @type height_hash() :: {hash_type(), pos_integer(), binary()}
+  @opaque key_block() :: tuple()
+  @opaque micro_block() :: tuple()
 
   @spec get_blocks(Blocks.block_hash(), Blocks.block_hash()) :: tuple()
   def get_blocks(kb_hash, next_kb_hash) do
     {:aec_db.get_block(kb_hash), get_micro_blocks(next_kb_hash)}
+  end
+
+  @spec get_blocks_per_height(Blocks.height(), Blocks.block_hash() | Blocks.height()) :: [
+          {Blocks.height(), [micro_block()], Blocks.block_hash()}
+        ]
+  def get_blocks_per_height(from_height, block_hash) when is_binary(block_hash),
+    do: get_blocks_per_height(from_height, block_hash, nil)
+
+  def get_blocks_per_height(from_height, to_height) when is_integer(to_height) do
+    {:ok, header} = :aec_chain.get_key_header_by_height(to_height + 1)
+
+    last_mb_hash = :aec_headers.prev_hash(header)
+    {:ok, last_kb_hash} = :aec_headers.hash_header(header)
+
+    get_blocks_per_height(from_height, last_mb_hash, last_kb_hash)
+  end
+
+  defp get_blocks_per_height(from_height, last_mb_hash, last_kb_hash) do
+    {last_mb_hash, last_kb_hash}
+    |> Stream.unfold(fn {last_mb_hash, last_kb_hash} ->
+      {key_block, micro_blocks} = get_kb_mbs(last_mb_hash)
+
+      prev_hash = :aec_blocks.prev_hash(key_block)
+      key_header = :aec_blocks.to_header(key_block)
+      {:ok, key_hash} = :aec_headers.hash_header(key_header)
+
+      {{key_block, micro_blocks, last_kb_hash}, {prev_hash, key_hash}}
+    end)
+    |> Enum.take_while(fn {key_block, _micro_blocks, _last_kb_hash} ->
+      :aec_blocks.height(key_block) >= from_height
+    end)
+    |> Enum.reverse()
+  end
+
+  defp get_kb_mbs(last_mb_hash) do
+    last_mb_hash
+    |> Stream.unfold(fn block_hash ->
+      block = :aec_db.get_block(block_hash)
+
+      {block, :aec_blocks.prev_hash(block)}
+    end)
+    |> Enum.reduce_while([], fn block, micro_blocks ->
+      case :aec_blocks.type(block) do
+        :micro -> {:cont, [block | micro_blocks]}
+        :key -> {:halt, {block, micro_blocks}}
+      end
+    end)
   end
 
   @spec get_micro_blocks(Blocks.block_hash()) :: list()
