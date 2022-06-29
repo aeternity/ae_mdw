@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.14.0](https://www.github.com/aeternity/ae_mdw/compare/v1.13.1...v1.14.0) (2022-06-29)
+
+
+### Features
+
+* add nft holder endpoints ([#743](https://www.github.com/aeternity/ae_mdw/issues/743)) ([483b9d5](https://www.github.com/aeternity/ae_mdw/commit/483b9d5bb929de0fb97a9183ec89a7ac6c46aaa6))
+
+
+### Bug Fixes
+
+* use block/hash param on account balances ([#745](https://www.github.com/aeternity/ae_mdw/issues/745)) ([f62033c](https://www.github.com/aeternity/ae_mdw/commit/f62033c12b3feec1183841be7b12661cabb34501))
+* verify if task was concurrently deleted ([#750](https://www.github.com/aeternity/ae_mdw/issues/750)) ([17e7be7](https://www.github.com/aeternity/ae_mdw/commit/17e7be76382c90084a00a8fb004fcf1b3c4476a7))
+
 ### [1.13.1](https://www.github.com/aeternity/ae_mdw/compare/v1.13.0...v1.13.1) (2022-06-27)
 
 
