@@ -70,7 +70,12 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
   defp fetch_all() do
     Model.AsyncTask
     |> Database.all_keys()
-    |> Enum.map(&Database.fetch!(Model.AsyncTask, &1))
+    |> Enum.flat_map(fn key ->
+      case Database.fetch(Model.AsyncTask, key) do
+        {:ok, m_task} -> [m_task]
+        :not_found -> []
+      end
+    end)
   end
 
   defp cache_tasks_by_args() do
