@@ -3,22 +3,28 @@ defmodule AeMdw.Db.Status do
   Database sync status from Mdw and local Node.
   """
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.Util
   alias AeMdw.Sync.AsyncTasks.Stats
   alias AeMdw.Sync.Server
 
   require Model
 
-  @spec node_and_mdw_status() :: map()
-  def node_and_mdw_status do
+  @type gens_per_min() :: number()
+
+  @gens_per_min_weight 0.1
+  @gens_per_min_key :gens_per_min
+
+  @spec node_and_mdw_status(State.t()) :: map()
+  def node_and_mdw_status(state) do
     {:ok, top_kb} = :aec_chain.top_key_block()
     {node_syncing?, node_progress} = :aec_sync.sync_progress()
     node_height = :aec_blocks.height(top_kb)
-    {mdw_tx_index, mdw_height} = safe_mdw_tx_index_and_height()
+    {mdw_tx_index, mdw_height} = safe_mdw_tx_index_and_height(state)
     mdw_syncing? = Server.syncing?()
     {:ok, version} = :application.get_key(:ae_mdw, :vsn)
     async_tasks_counters = Stats.counters()
-    gens_per_minute = Server.gens_per_min()
+    gens_per_minute = get_gens_per_min()
 
     %{
       node_version: :aeu_info.get_version(),
@@ -38,14 +44,34 @@ defmodule AeMdw.Db.Status do
     }
   end
 
-  defp safe_mdw_tx_index_and_height do
-    try do
-      mdw_tx_index = Util.last_txi()
-      {mdw_height, _mbi} = mdw_tx_index |> Util.read_tx!() |> Model.tx(:block_index)
-      {mdw_tx_index, mdw_height}
-    rescue
-      _any_error ->
+  @spec set_gens_per_min(gens_per_min()) :: :ok
+  def set_gens_per_min(gens_per_min) do
+    new_gens_per_min = calculate_gens_per_min(get_gens_per_min(), gens_per_min)
+
+    :persistent_term.put(@gens_per_min_key, new_gens_per_min)
+  end
+
+  defp get_gens_per_min do
+    case :persistent_term.get(@gens_per_min_key, :none) do
+      :none -> 0
+      gens_per_min -> gens_per_min
+    end
+  end
+
+  defp safe_mdw_tx_index_and_height(state) do
+    case Util.last_txi(state) do
+      {:ok, last_txi} ->
+        {mdw_height, _mbi} = state |> Util.read_tx!(last_txi) |> Model.tx(:block_index)
+        {last_txi, mdw_height}
+
+      :none ->
         {0, 0}
     end
   end
+
+  defp calculate_gens_per_min(0, gens_per_min), do: gens_per_min
+
+  defp calculate_gens_per_min(prev_gens_per_min, gens_per_min),
+    # exponential moving average
+    do: (1 - @gens_per_min_weight) * prev_gens_per_min + @gens_per_min_weight * gens_per_min
 end

@@ -5,11 +5,14 @@ defmodule AeMdw.Db.State do
   every change in the state returns a new one.
   """
 
+  alias AeMdw.Blocks
   alias AeMdw.Database
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.DbStore
+  alias AeMdw.Db.MemStore
   alias AeMdw.Db.Store
   alias AeMdw.Db.TxnDbStore
+  alias AeMdw.Db.Util, as: DbUtil
 
   defstruct [:store, :stats, :cache]
 
@@ -18,21 +21,27 @@ defmodule AeMdw.Db.State do
   @typep direction() :: Database.direction()
   @typep table() :: Database.table()
   @typep stat_name() :: atom()
-  @typep stats() :: %{atom() => non_neg_integer()}
   @typep cache_name() :: atom()
+  @typep height() :: Blocks.height()
 
   @opaque t() :: %__MODULE__{
             store: Store.t(),
-            stats: stats(),
+            stats: %{stat_name() => non_neg_integer()},
             cache: %{cache_name() => map()}
           }
 
-  @spec new() :: t()
-  def new, do: %__MODULE__{store: DbStore.new(), stats: %{}, cache: %{}}
+  @state_pm_key :global_state
+
+  @spec new(Store.t()) :: t()
+  def new(store \\ DbStore.new()),
+    do: %__MODULE__{store: store, stats: %{}, cache: %{}}
+
+  @spec height(t()) :: height()
+  def height(state), do: DbUtil.synced_height(state)
 
   @spec commit(t(), [Mutation.t()]) :: t()
   def commit(%__MODULE__{store: prev_store} = state, mutations) do
-    state3 =
+    new_state =
       TxnDbStore.transaction(fn store ->
         state2 = %__MODULE__{state | store: store}
 
@@ -42,8 +51,37 @@ defmodule AeMdw.Db.State do
         |> Enum.reduce(state2, &Mutation.execute/2)
       end)
 
-    %__MODULE__{state3 | store: prev_store}
+    :persistent_term.erase(@state_pm_key)
+
+    %__MODULE__{new_state | store: prev_store}
   end
+
+  @spec commit_db(t(), [Mutation.t()]) :: t()
+  def commit_db(state, mutations), do: commit(state, mutations)
+
+  @spec commit_mem(t(), [Mutation.t()]) :: t()
+  def commit_mem(state, mutations) do
+    state2 =
+      mutations
+      |> List.flatten()
+      |> Enum.reject(&is_nil/1)
+      |> Enum.reduce(state, &Mutation.execute/2)
+
+    :persistent_term.put(@state_pm_key, state2)
+
+    state2
+  end
+
+  @spec mem_state() :: t()
+  def mem_state do
+    case :persistent_term.get(@state_pm_key, :none) do
+      :none -> new_mem_state()
+      state -> state
+    end
+  end
+
+  @spec new_mem_state() :: t()
+  def new_mem_state, do: new(MemStore.new(DbStore.new()))
 
   @spec put(t(), table(), record()) :: t()
   def put(%__MODULE__{store: store} = state, tab, record),

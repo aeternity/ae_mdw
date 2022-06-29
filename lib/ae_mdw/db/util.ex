@@ -3,6 +3,7 @@ defmodule AeMdw.Db.Util do
   alias AeMdw.Blocks
   alias AeMdw.Collection
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Database
   alias AeMdw.Db.RocksDbCF
   alias AeMdw.Db.State
@@ -12,6 +13,8 @@ defmodule AeMdw.Db.Util do
   require Model
 
   import AeMdw.Util
+
+  @typep state() :: State.t()
 
   @eot :"$end_of_table"
 
@@ -64,6 +67,9 @@ defmodule AeMdw.Db.Util do
 
   def last_txi(),
     do: ensure_key!(Model.Tx, :last)
+
+  @spec last_txi(state()) :: {:ok, Txs.txi()} | :none
+  def last_txi(state), do: State.prev(state, Model.Tx, nil)
 
   def first_gen(),
     do: ensure_key!(Model.Block, :first) |> (fn {h, -1} -> h end).()
@@ -258,6 +264,14 @@ defmodule AeMdw.Db.Util do
     {:ok, hash} = :aec_headers.hash_header(:aec_blocks.to_header(block))
 
     hash
+  end
+
+  @spec synced_height(State.t()) :: Blocks.height() | -1
+  def synced_height(state) do
+    case State.prev(state, Model.DeltaStat, nil) do
+      :none -> -1
+      {:ok, height} -> height
+    end
   end
 
   defp block_type_height(node_block) do

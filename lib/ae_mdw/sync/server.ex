@@ -1,271 +1,336 @@
 defmodule AeMdw.Sync.Server do
   @moduledoc """
-  Subscribes to chain events for dealing with new blocks and block
-  invalidations.
+  Deals with all chain events sent by Watcher and syncing events built
+  internally.
 
-  Internally keeps track of the generations that have been synced.
+  State machine diagram:
 
-  There's 1 valid messages that arrive from core that we handle, plus 1
-  message that we handle internally:
-  * `:top_changed` (new key block added) - If there's a fork, we mark
-    `fork_height` to be the (height - 1) that we need to revert to.
-  * `{:done, height}` - The latest height synced by mdw was updated to.
+                   ┌───────────┐
+                   │initialized│
+                   └─────┬─────┘
+                         │new_height(h)
+                         ├──────────────────────────────┐
+                         │                              │
+                         │                ┌───────────┐ │done_db(new_state)
+                         ▼             ┌►│syncing_db ├─┤
+   -new_height(h)┌──► ┌──┴─┐check_sync()│ └───────────┘ │
+                 │    │idle├────────────┤               │
+                 └─── └────┘            │ ┌───────────┐ │done_mem(new_state)
+                        ▲               └►│syncing_mem├─┘
+                        │ restart_sync()  └────────┬──┘
+                        │                          │
+                    ┌───┴────┐              DOWN   │
+                    │stopped │ ◄───────────────────┘
+                    └────────┘
+
+  Notes:
+  * The DOWN message will only trigger a state change to stopped once
+    max_restarts is exceeeded.
+  * check_sync will be triggered internally for any new_height, done_db,
+    or done_mem event.
   """
 
+  use GenStateMachine
+
   alias AeMdw.Blocks
-  alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.Status
   alias AeMdw.Db.Sync.Block
-  alias AeMdw.Db.Sync.Invalidate
   alias AeMdw.Log
   alias AeMdw.Sync.AsyncTasks.Producer
   alias AeMdwWeb.Websocket.Broadcaster
 
-  require Model
+  require Logger
 
-  use GenServer
+  defstruct [:chain_height, :mem_height, :db_state, :restarts, :gens_per_min]
 
-  defstruct [:sync_pid_ref, :fork_height, :current_height, :restarts, :syncing?, :gens_per_min]
+  @typep height() :: Blocks.height()
+  @typep state() ::
+           :initialized
+           | :idle
+           | :stopped
+           | {:syncing_db, reference()}
+           | {:syncing_mem, reference()}
+  @typep state_data() :: %__MODULE__{
+           db_state: State.t(),
+           mem_height: height(),
+           restarts: non_neg_integer()
+         }
+  @typep cast_event() :: {:new_height, height()} | :restart_sync
+  @typep internal_event() :: :check_sync
+  @typep call_event() :: :syncing?
+  @typep reason() :: term()
+  @typep info_event() ::
+           {reference(), State.t()}
+           | {reference(), height()}
+           | {:DOWN, reference(), :process, pid(), reason()}
 
-  @unsynced_gens 1
   @max_restarts 5
   @retry_time 3_600_000
-  @max_blocks_sync 15
-  @gens_per_min_weight 0.1
+  @mem_gens 10
+  @max_sync_gens 6
+  @task_supervisor __MODULE__.TaskSupervsor
 
-  @opaque t() :: %__MODULE__{
-            sync_pid_ref: nil | {pid(), reference()},
-            fork_height: Blocks.height() | nil,
-            current_height: Blocks.height() | -1,
-            restarts: non_neg_integer(),
-            syncing?: boolean(),
-            gens_per_min: number()
-          }
+  @spec task_supervisor() :: atom()
+  def task_supervisor, do: @task_supervisor
 
-  @spec start_link(GenServer.options()) :: GenServer.on_start()
-  def start_link(_opts),
-    do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
+  @spec start_link(GenServer.options()) :: :gen_statem.start_ret()
+  def start_link(_opts), do: GenStateMachine.start_link(__MODULE__, [], name: __MODULE__)
 
-  @spec start_sync() :: :ok
-  def start_sync, do: GenServer.cast(__MODULE__, :start_sync)
-
-  @spec gens_per_min() :: number()
-  def gens_per_min, do: GenServer.call(__MODULE__, :gens_per_min)
+  @spec new_height(height()) :: :ok
+  def new_height(height), do: GenStateMachine.cast(__MODULE__, {:new_height, height})
 
   @spec syncing?() :: boolean()
-  def syncing?, do: GenServer.call(__MODULE__, :syncing?)
+  def syncing?, do: GenStateMachine.call(__MODULE__, :syncing?)
+
+  @spec restart_sync() :: :ok
+  def restart_sync, do: GenStateMachine.cast(__MODULE__, :restart_sync)
 
   @impl true
+  @spec init([]) :: :gen_statem.init_result(state())
   def init([]) do
-    {:ok, %__MODULE__{restarts: 0, syncing?: false, gens_per_min: 0}}
+    db_state = State.new()
+
+    state_data = %__MODULE__{
+      chain_height: nil,
+      db_state: db_state,
+      mem_height: State.height(db_state),
+      restarts: 0,
+      gens_per_min: 0
+    }
+
+    {:ok, :initialized, state_data}
   end
 
   @impl true
-  @spec handle_call(:syncing?, GenServer.from(), t()) :: {:reply, boolean(), t()}
-  def handle_call(:syncing?, _from, %__MODULE__{syncing?: syncing?} = state) do
-    {:reply, syncing?, state}
+  @spec handle_event(:cast, cast_event(), state(), state_data()) ::
+          :gen_statem.event_handler_result(state())
+  @spec handle_event(:call, call_event(), state(), state_data()) ::
+          :gen_statem.event_handler_result(state())
+  @spec handle_event(:info, info_event(), state(), state_data()) ::
+          :gen_statem.event_handler_result(state())
+  @spec handle_event(:internal, internal_event(), state(), state_data()) ::
+          :gen_statem.event_handler_result(state())
+  def handle_event(:cast, {:new_height, chain_height}, :initialized, state_data) do
+    actions = [{:next_event, :internal, :check_sync}]
+
+    {:next_state, :idle, %__MODULE__{state_data | chain_height: chain_height}, actions}
   end
 
-  @impl true
-  def handle_call(:gens_per_min, _from, %__MODULE__{gens_per_min: gens_per_min} = state) do
-    {:reply, gens_per_min, state}
+  def handle_event(:cast, {:new_height, chain_height}, _state, state_data) do
+    actions = [{:next_event, :internal, :check_sync}]
+
+    {:keep_state, %__MODULE__{state_data | chain_height: chain_height}, actions}
   end
 
-  @impl true
-  @spec handle_cast(:start_sync, t()) :: {:noreply, t()}
-  @spec handle_cast({:done, Blocks.height()}, t()) :: {:noreply, t()}
-  def handle_cast(:start_sync, state) do
-    :aec_events.subscribe(:chain)
-    :aec_events.subscribe(:top_changed)
-
-    current_height = Block.synced_height()
-
-    {:noreply,
-     process_state(%__MODULE__{
-       state
-       | current_height: current_height,
-         syncing?: true,
-         restarts: 0,
-         gens_per_min: 0
-     })}
-  end
-
-  @impl true
-  def handle_cast(
-        {:done, height, gens_per_min},
-        %__MODULE__{gens_per_min: prev_gens_per_min} = state
+  def handle_event(
+        :internal,
+        :check_sync,
+        :idle,
+        %__MODULE__{
+          chain_height: chain_height,
+          db_state: db_state,
+          mem_height: mem_height
+        } = state_data
       ) do
-    new_state =
-      process_state(%__MODULE__{
-        state
-        | current_height: height,
-          sync_pid_ref: nil,
-          gens_per_min: calculate_gens_per_min(prev_gens_per_min, gens_per_min)
-      })
+    max_db_height = chain_height - @mem_gens
+    db_height = State.height(db_state)
 
-    {:noreply, new_state}
+    cond do
+      db_height < max_db_height ->
+        from_height = db_height + 1
+        to_height = min(from_height + @max_sync_gens - 1, max_db_height)
+        ref = spawn_db_sync(db_state, from_height, to_height)
+
+        {:next_state, {:syncing_db, ref}, state_data}
+
+      db_height >= max_db_height and mem_height != chain_height - 1 ->
+        from_height = db_height
+        to_height = chain_height - 1
+        ref = spawn_mem_sync(from_height, to_height)
+
+        {:next_state, {:syncing_mem, ref}, state_data}
+
+      true ->
+        :keep_state_and_data
+    end
   end
 
-  @impl true
-  @spec handle_info(term(), t()) :: {:noreply, t()}
-  def handle_info(
-        {:gproc_ps_event, :top_changed, %{info: %{block_type: :key, height: height}}},
-        %__MODULE__{fork_height: old_fork_height} = s
-      ) do
-    header_candidates =
-      height
-      |> :aec_db.find_headers_at_height()
-      |> Enum.filter(&(:aec_headers.type(&1) == :key))
+  def handle_event(:internal, :check_sync, _state, _data), do: :keep_state_and_data
 
-    new_state =
-      if length(header_candidates) > 1 do
-        # FORK!
-        main_header =
-          Enum.find_value(header_candidates, fn header ->
-            {:ok, header_hash} = :aec_headers.hash_header(header)
+  def handle_event(:info, {ref, new_db_state}, {:syncing_db, ref}, state_data) do
+    actions = [{:next_event, :internal, :check_sync}]
 
-            # COSTLY!
-            :aec_chain_state.hash_is_in_main_chain(header_hash) && header
-          end)
+    new_state_data = %__MODULE__{
+      state_data
+      | mem_height: State.height(new_db_state),
+        db_state: new_db_state
+    }
 
-        new_fork_height = :aec_headers.height(main_header)
+    Process.demonitor(ref, [:flush])
 
-        fork_height =
-          (old_fork_height && min(old_fork_height, new_fork_height)) || new_fork_height
-
-        %__MODULE__{s | fork_height: fork_height}
-      else
-        s
-      end
-
-    {:noreply, process_state(new_state)}
+    {:next_state, :idle, new_state_data, actions}
   end
 
-  def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :micro}}}, s),
-    do: {:noreply, s}
+  def handle_event(:info, {ref, mem_height}, {:syncing_mem, ref}, state_data) do
+    actions = [{:next_event, :internal, :check_sync}]
 
-  def handle_info(
-        {:DOWN, ref, :process, pid, reason},
-        %__MODULE__{sync_pid_ref: {pid, ref}, restarts: restarts} = s
+    new_state_data = %__MODULE__{state_data | mem_height: mem_height}
+
+    {:next_state, :idle, new_state_data, actions}
+  end
+
+  def handle_event({:call, from}, :syncing?, state, _data) do
+    syncing? = state != :initialized and state != :stopped
+    actions = [{:reply, from, syncing?}]
+
+    {:keep_state_and_data, actions}
+  end
+
+  def handle_event(:cast, :restart_sync, :stopped, state_data) do
+    actions = [{:next_event, :internal, :check_sync}]
+
+    {:next_state, :idle, %__MODULE__{state_data | restarts: 0}, actions}
+  end
+
+  def handle_event(:info, {:DOWN, _ref, :process, _pid, :normal}, _state, _state_data),
+    do: :keep_state_and_data
+
+  def handle_event(
+        :info,
+        {:DOWN, ref, :process, _pid, reason},
+        {:syncing_db, ref},
+        %__MODULE__{restarts: restarts} = state_data
       )
       when restarts < @max_restarts do
-    Log.info("Sync.Server error: #{inspect(reason)}")
+    Log.info("DB Sync.Server error: #{inspect(reason)}")
 
-    current_height = Block.synced_height()
+    actions = [{:next_event, :internal, :check_sync}]
 
-    {:noreply,
-     process_state(%__MODULE__{
-       s
-       | restarts: restarts + 1,
-         sync_pid_ref: nil,
-         current_height: current_height
-     })}
+    {:next_state, :idle, %__MODULE__{state_data | restarts: restarts + 1}, actions}
   end
 
-  def handle_info({:DOWN, ref, :process, pid, reason}, %__MODULE__{sync_pid_ref: {pid, ref}} = s) do
-    Log.info("Sync.Server error: #{inspect(reason)}. Stopping..")
+  def handle_event(
+        :info,
+        {:DOWN, ref, :process, _pid, reason},
+        {:syncing_mem, ref},
+        %__MODULE__{restarts: restarts} = state_data
+      )
+      when restarts < @max_restarts do
+    Log.info("Mem Sync.Server error: #{inspect(reason)}")
 
-    :aec_events.unsubscribe(:chain)
-    :aec_events.unsubscribe(:top_changed)
+    actions = [{:next_event, :internal, :check_sync}]
 
-    :timer.apply_after(@retry_time, __MODULE__, :start_sync, [])
-
-    {:noreply, process_state(%__MODULE__{s | syncing?: false, sync_pid_ref: nil})}
+    {:next_state, :idle, %__MODULE__{state_data | restarts: restarts + 1}, actions}
   end
 
-  def handle_info(_msg, state), do: {:noreply, state}
+  def handle_event(:info, {:DOWN, _ref, :process, _pid, reason}, _state, state_data) do
+    Log.info("Sync.Server error: #{inspect(reason)}. Stopping...")
 
-  @spec process_state(t()) :: t()
-  defp process_state(
-         %__MODULE__{
-           current_height: current_height,
-           sync_pid_ref: nil,
-           fork_height: fork_height,
-           syncing?: true
-         } = s
-       ) do
-    top_height = height() - @unsynced_gens
+    :timer.apply_after(@retry_time, __MODULE__, :restart_sync, [])
 
-    sync_pid =
-      cond do
-        not is_nil(fork_height) and fork_height <= current_height ->
-          spawn_invalidate(fork_height)
-
-        current_height < top_height ->
-          spawn_sync(
-            current_height + 1,
-            min(current_height + @max_blocks_sync, top_height)
-          )
-
-        true ->
-          nil
-      end
-
-    sync_pid_ref = if sync_pid, do: {sync_pid, Process.monitor(sync_pid)}, else: nil
-
-    %__MODULE__{s | sync_pid_ref: sync_pid_ref, fork_height: nil}
+    {:next_state, :stopped, state_data}
   end
 
-  defp process_state(s), do: s
+  def handle_event(event_type, event_content, state, data) do
+    super(event_type, event_content, state, data)
+  end
 
-  defp spawn_sync(from_height, to_height) do
-    state = State.new()
-    from_txi = Block.next_txi(state)
+  defp spawn_db_sync(db_state, from_height, to_height) do
+    from_txi = Block.next_txi(db_state)
 
     from_mbi =
-      case Block.last_synced_mbi(state, from_height) do
+      case Block.last_synced_mbi(db_state, from_height) do
         {:ok, mbi} -> mbi + 1
         :none -> -1
       end
 
-    spawn(fn ->
-      {mutations_time, {blocks_mutations, _next_txi}} =
+    spawn_task(fn ->
+      {mutations_time, {gens_mutations, _next_txi}} =
         :timer.tc(fn ->
           Block.blocks_mutations(from_height, from_mbi, from_txi, to_height)
         end)
 
-      {exec_time, _new_state} = :timer.tc(fn -> exec_mutations(blocks_mutations, state) end)
+      {exec_time, new_state} = :timer.tc(fn -> exec_db_mutations(gens_mutations, db_state) end)
 
       gens_per_min = (to_height + 1 - from_height) * 60_000_000 / (mutations_time + exec_time)
+      Status.set_gens_per_min(gens_per_min)
 
-      GenServer.cast(__MODULE__, {:done, to_height, gens_per_min})
+      new_state
     end)
   end
 
-  defp spawn_invalidate(height) do
-    spawn(fn ->
-      Log.info("invalidation #{height}")
-      Invalidate.invalidate(height)
+  defp spawn_mem_sync(from_height, to_height) do
+    spawn_task(fn ->
+      mem_state = State.new_mem_state()
+      from_txi = Block.next_txi(mem_state)
 
-      GenServer.cast(__MODULE__, {:done, height - 1, 0})
+      from_mbi =
+        case Block.last_synced_mbi(mem_state, from_height) do
+          {:ok, mbi} -> mbi + 1
+          :none -> -1
+        end
+
+      {mutations_time, {gens_mutations, _next_txi}} =
+        :timer.tc(fn ->
+          Block.blocks_mutations(from_height, from_mbi, from_txi, to_height)
+        end)
+
+      {exec_time, _new_state} = :timer.tc(fn -> exec_mem_mutations(gens_mutations, mem_state) end)
+
+      gens_per_min = (to_height + 1 - from_height) * 60_000_000 / (mutations_time + exec_time)
+      Status.set_gens_per_min(gens_per_min)
+
+      to_height
     end)
   end
 
-  defp height, do: :aec_headers.height(:aec_chain.top_header())
+  defp exec_db_mutations(gens_mutations, state) do
+    gens_mutations
+    |> Enum.flat_map(fn {_height, blocks_mutations} -> blocks_mutations end)
+    |> Enum.chunk_every(2)
+    |> Enum.reduce(state, fn blocks_mutations_chunk, state ->
+      chunk_mutations =
+        blocks_mutations_chunk
+        |> Enum.flat_map(fn {_block_index, _block, block_mutations} -> block_mutations end)
 
-  defp commit_mutations(state, {_height, mbi}, block, mutations) do
-    new_state = State.commit(state, mutations)
+      new_state = State.commit_db(state, chunk_mutations)
 
-    Producer.commit_enqueued()
+      Producer.commit_enqueued()
 
-    if mbi == -1 do
+      Enum.each(blocks_mutations_chunk, fn {{_height, mbi} = _block_index, block,
+                                            _block_mutations} ->
+        broadcast_block(block, mbi == -1)
+      end)
+
+      new_state
+    end)
+  end
+
+  defp exec_mem_mutations(gens_mutations, state) do
+    gens_mutations
+    |> Enum.flat_map(fn {_height, blocks_mutations} -> blocks_mutations end)
+    |> Enum.reduce(state, fn {{_height, mbi}, block, block_mutations}, state ->
+      new_state = State.commit_mem(state, block_mutations)
+
+      broadcast_block(block, mbi == -1)
+
+      new_state
+    end)
+  end
+
+  defp spawn_task(fun) do
+    %Task{ref: ref} = Task.Supervisor.async_nolink(@task_supervisor, fun)
+
+    ref
+  end
+
+  defp broadcast_block(block, is_key?) do
+    if is_key? do
       Broadcaster.broadcast_key_block(block, :mdw)
     else
       Broadcaster.broadcast_micro_block(block, :mdw)
       Broadcaster.broadcast_txs(block, :mdw)
     end
-
-    new_state
-  end
-
-  defp calculate_gens_per_min(prev_gens_per_min, gens_per_min) do
-    # exponential moving average
-    (1 - @gens_per_min_weight) * prev_gens_per_min + @gens_per_min_weight * gens_per_min
-  end
-
-  defp exec_mutations(blocks_mutations, state) do
-    Enum.reduce(blocks_mutations, state, fn {block_index, block, mutations}, state ->
-      commit_mutations(state, block_index, block, mutations)
-    end)
   end
 end

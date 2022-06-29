@@ -138,7 +138,8 @@ defmodule AeMdw.MixProject do
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
       {:benchee, "~> 1.0.0", only: [:dev]},
       {:ex_json_schema, "~> 0.7.1"},
-      {:excoveralls, "~> 0.10", only: :test}
+      {:excoveralls, "~> 0.10", only: :test},
+      {:gen_state_machine, "~> 2.0"}
     ]
   end
 

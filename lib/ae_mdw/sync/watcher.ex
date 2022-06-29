@@ -1,64 +1,54 @@
 defmodule AeMdw.Sync.Watcher do
-  # credo:disable-for-this-file
+  @moduledoc """
+  Subscribes to chain events for dealing with new blocks and block
+  invalidations, and sends them to the syncing server.
+
+  There's one valid message that arrives from core that we send to the
+  syncing server is if there's a new key block added or if the head of the
+  chain was changed, where we simply send the new height.
+  """
+
+  alias AeMdw.Sync.Server
+
   use GenServer
 
-  import AeMdw.Util
+  defstruct []
 
-  defstruct [:operators, :sync_mon_ref]
+  @typep t() :: %__MODULE__{}
 
-  ################################################################################
-
-  def start_link(_),
+  @spec start_link(GenServer.options()) :: GenServer.on_start()
+  def start_link(_opts),
     do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
 
-  def init([]) do
-    operators = Application.fetch_env!(:ae_mdw, :operators)
-    ref? = map_some(Process.whereis(AeMdw.Db.Sync), &Process.monitor/1)
-    {:ok, %__MODULE__{operators: operators, sync_mon_ref: ref?}}
+  @spec start_sync() :: :ok
+  def start_sync, do: GenServer.cast(__MODULE__, :start_sync)
+
+  @impl true
+  def init([]), do: {:ok, %__MODULE__{}}
+
+  @impl true
+  @spec handle_cast(:start_sync, t()) :: {:noreply, t()}
+  def handle_cast(:start_sync, state) do
+    :aec_events.subscribe(:chain)
+    :aec_events.subscribe(:top_changed)
+
+    Server.new_height(chain_height())
+
+    {:noreply, state}
   end
 
-  def handle_cast({:sync_process, pid}, %__MODULE__{} = s),
-    do: {:noreply, %{s | sync_mon_ref: Process.monitor(pid)}}
+  @impl true
+  @spec handle_info(term(), t()) :: {:noreply, t()}
+  def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :key}}}, state) do
+    Server.new_height(chain_height())
 
-  def handle_info({:DOWN, ref, :process, _, :normal}, %__MODULE__{sync_mon_ref: ref} = s),
-    do: %{s | sync_mon_ref: nil}
-
-  def handle_info({:DOWN, ref, :process, _, reason}, %__MODULE__{sync_mon_ref: ref} = s) do
-    notify_operators(s.operators, reason)
-    {:noreply, %{s | sync_mon_ref: nil}}
+    {:noreply, state}
   end
 
-  def notify_operators(emails, reason) do
-    attachment = Temp.path!()
+  def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :micro}}}, state),
+    do: {:noreply, state}
 
-    try do
-      File.write!(attachment, "#{inspect(reason, pretty: true, limit: :infinity)}")
-      subject = "syncing crashed on #{host_ip_address()}"
-      send_mail(emails, subject, attachment)
-    after
-      File.rm(attachment)
-    end
-  end
+  def handle_info(_msg, state), do: {:noreply, state}
 
-  def send_mail(emails, subject, attachment) do
-    emails = Enum.join(emails, " ")
-    cmd = "mail -s \"#{subject}\" -A #{attachment} #{emails}"
-
-    try do
-      System.cmd(cmd, [])
-    rescue
-      # in case `mail` command is not present
-      _ -> nil
-    end
-  end
-
-  def host_ip_address() do
-    [{ip_addr, _, _} | _] =
-      Enum.reject(ok!(:inet.getif()), fn
-        {{127, _, _, _}, _, _} -> true
-        _ -> false
-      end)
-
-    "#{:inet.ntoa(ip_addr)}"
-  end
+  defp chain_height, do: :aec_headers.height(:aec_chain.top_header())
 end
