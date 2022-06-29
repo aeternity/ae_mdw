@@ -348,34 +348,74 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
         assert height in [300_001, 400_002, 500_003]
       end)
     end
+  end
 
-    test "gets balances for hash and account", %{conn: conn} do
-      mb_height = 578_684
-      mb_hash = "mh_2eSwMRK7KXtPZqkciBWU2o764yZ8QCttWUSxvh2aRWwDE15oVm"
-      account_id = "ak_QyFYYpgJ1vUGk1Lnk8d79WJEVcAtcfuNHqquuP2ADfxsL6yKx"
+  describe "block account balances" do
+    test "gets account balances up to a block", %{conn: conn} do
+      mb_height = 434_825
+      mb_hash = "mh_iDZvfWrZ8QEFaBW9nGzrTv1KBPMh2dVW4z2Bn7NBALLqwFRB9"
+      account_id = "ak_3n5eTrEzg2VDQK7Y2XJdShVeaDsdpZggA8JvpukGpwEKkiorv"
       conn = get(conn, "/aex9/balances/hash/#{mb_hash}/account/#{account_id}")
 
       response_list = json_response(conn, 200)
 
       assert Enum.any?(response_list, fn balance ->
                balance == %{
-                 "amount" => 100_000_000_000_000_000_000_000_000,
-                 "block_hash" => "mh_26Rfn9fBcaKc2YcpDKD11Aai8jMSdbuqt22DFdqisqLdS8sg6n",
-                 "contract_id" => "ct_wi5be3qiXGWe1DbMTGVyBqkQiNz1K7kch7go9zJDeiHbbAMZ1",
-                 "height" => 466_128,
-                 "token_name" => "AVT",
-                 "token_symbol" => "ae vegas token",
-                 "tx_hash" => "th_2F529Nr3LQBjSwiiWSs2XHW2cNrKi4f9KedH34CBSBPSzbEcNP",
-                 "tx_index" => 24_439_019,
-                 "tx_type" => "contract_call_tx"
+                 "amount" => 1_000_000_000_000_000_000_000_000_000_000_000_000,
+                 "block_hash" => "mh_2am5eS1a8Y2Mo8Lj8a1Bn1UNDNpEeaACbGrGcs2pEBg8hLHaZA",
+                 "contract_id" => "ct_27ZrSPGoNH2waapYtu4upxDnk2g39dbSzmmZiYP7SGJ4XPb6jM",
+                 "height" => 434_825,
+                 "token_name" => "Aeternity",
+                 "token_symbol" => "Aeternity",
+                 "tx_hash" => "th_ZoRHbdJbx6NM2nu3QBDFmPm2e1uX1RpdrhLVrwj67BYxMbTwe",
+                 "tx_index" => 22_699_236,
+                 "tx_type" => "contract_create_tx"
                }
              end)
 
-      assert Enum.all?(response_list, fn %{"height" => height, "tx_type" => "contract_call_tx"} ->
-               height < mb_height
+      assert Enum.all?(response_list, fn %{"height" => height} -> height <= mb_height end)
+
+      assert length(response_list) == 10
+    end
+
+    test "gets account balances up to a height", %{conn: conn} do
+      kb_height = 434_825
+      account_id = "ak_3n5eTrEzg2VDQK7Y2XJdShVeaDsdpZggA8JvpukGpwEKkiorv"
+      conn = get(conn, "/aex9/balances/gen/#{kb_height}/account/#{account_id}")
+
+      response_list = json_response(conn, 200)
+
+      refute Enum.any?(response_list, fn balance ->
+               balance == %{
+                 "amount" => 1_000_000_000_000_000_000_000_000_000_000_000_000,
+                 "block_hash" => "mh_2am5eS1a8Y2Mo8Lj8a1Bn1UNDNpEeaACbGrGcs2pEBg8hLHaZA",
+                 "contract_id" => "ct_27ZrSPGoNH2waapYtu4upxDnk2g39dbSzmmZiYP7SGJ4XPb6jM",
+                 "height" => 434_825,
+                 "token_name" => "Aeternity",
+                 "token_symbol" => "Aeternity",
+                 "tx_hash" => "th_ZoRHbdJbx6NM2nu3QBDFmPm2e1uX1RpdrhLVrwj67BYxMbTwe",
+                 "tx_index" => 22_699_236,
+                 "tx_type" => "contract_create_tx"
+               }
              end)
 
-      assert length(response_list) == 31
+      assert Enum.any?(response_list, fn balance ->
+               balance == %{
+                 "amount" => 1_000_000_000_000_000_000_000_000_000_000_000_000_000,
+                 "block_hash" => "mh_DqYipPQJzmffuG9FJjvmSEdydozWs4XuDKqayUSUXzeHrFx6Z",
+                 "contract_id" => "ct_UU9BxMBjxLijyjCa6Cxeopd2xuB2G2pJfHAbvn8Ky6DSMPSXo",
+                 "height" => 417_168,
+                 "token_name" => "Air",
+                 "token_symbol" => "Air",
+                 "tx_hash" => "th_2g1n8V2o5K5gw1aVX7PRz5nJbnrMQefLmE1WVVYsiFwwwU2fF5",
+                 "tx_index" => 21_297_040,
+                 "tx_type" => "contract_create_tx"
+               }
+             end)
+
+      assert Enum.all?(response_list, fn %{"height" => height} -> height < kb_height end)
+
+      assert length(response_list) == 6
     end
   end
 
