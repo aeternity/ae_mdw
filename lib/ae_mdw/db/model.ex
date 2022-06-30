@@ -135,6 +135,14 @@ defmodule AeMdw.Db.Model do
             bids: [Blocks.block_index_txi()]
           )
 
+  # activation:
+  #     index = {height, plain_name}, value: any
+  @activation_defaults [index: {nil, nil}, value: nil]
+  defrecord :activation, @activation_defaults
+
+  @type activation ::
+          record(:activation, index: {Blocks.height(), String.t()}, value: nil)
+
   # in 3 tables: auction_expiration, name_expiration, inactive_name_expiration
   #
   # expiration:
@@ -143,7 +151,7 @@ defmodule AeMdw.Db.Model do
   defrecord :expiration, @expiration_defaults
 
   @type expiration ::
-          record(:expiration, index: {pos_integer(), String.t() | pubkey()}, value: nil)
+          record(:expiration, index: {Blocks.height(), String.t() | pubkey()}, value: nil)
 
   # in 2 tables: active_name, inactive_name
   #
@@ -682,6 +690,7 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.AuctionBid,
       AeMdw.Db.Model.Pointee,
       AeMdw.Db.Model.AuctionExpiration,
+      AeMdw.Db.Model.ActiveNameActivation,
       AeMdw.Db.Model.ActiveNameExpiration,
       AeMdw.Db.Model.InactiveNameExpiration,
       AeMdw.Db.Model.ActiveName,
@@ -761,6 +770,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.AuctionBid), do: :auction_bid
   def record(AeMdw.Db.Model.Pointee), do: :pointee
   def record(AeMdw.Db.Model.AuctionExpiration), do: :expiration
+  def record(AeMdw.Db.Model.ActiveNameActivation), do: :activation
   def record(AeMdw.Db.Model.ActiveNameExpiration), do: :expiration
   def record(AeMdw.Db.Model.InactiveNameExpiration), do: :expiration
   def record(AeMdw.Db.Model.ActiveName), do: :name

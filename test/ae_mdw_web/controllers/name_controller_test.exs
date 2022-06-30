@@ -3,6 +3,7 @@ defmodule AeMdwWeb.NameControllerTest do
 
   alias AeMdw.Db.Model
   alias AeMdw.Db.Model.ActiveName
+  alias AeMdw.Db.Model.ActiveNameActivation
   alias AeMdw.Db.Model.ActiveNameExpiration
   alias AeMdw.Db.Model.AuctionBid
   alias AeMdw.Db.Model.AuctionExpiration
@@ -676,7 +677,7 @@ defmodule AeMdwWeb.NameControllerTest do
              ActiveName, _plain_name ->
                {:ok,
                 Model.name(
-                  active: true,
+                  active: Enum.random(1000..9999),
                   expire: 1,
                   claims: [{{0, 0}, 0}],
                   updates: [],
@@ -704,6 +705,66 @@ defmodule AeMdwWeb.NameControllerTest do
                  |> get("/names?by=#{by}&direction=#{direction}&limit=#{limit}")
                  |> json_response(200)
 
+        plain_names = Enum.map(names, & &1["name"])
+        assert plain_names == Enum.sort(plain_names)
+        assert ^limit = length(names)
+      end
+    end
+
+    test "get active names with parameters by=activation, direction=forward and limit=9",
+         %{conn: conn} do
+      limit = 9
+      by = "activation"
+      direction = "forward"
+      height_names = for i <- 101..109, into: %{}, do: {i, "name#{Enum.random(1..100)}"}
+
+      with_mocks [
+        {Database, [],
+         [
+           first_key: fn ActiveNameActivation -> {:ok, {101, height_names[101]}} end,
+           next_key: fn
+             ActiveNameActivation, {height, _name} ->
+               {:ok, {height + 1, height_names[height + 1]}}
+           end,
+           get: fn
+             ActiveName, plain_name ->
+               active_from =
+                 Enum.find_value(height_names, fn {height, name} ->
+                   if name == plain_name, do: height
+                 end)
+
+               {:ok,
+                Model.name(
+                  active: active_from,
+                  expire: 1,
+                  claims: [{{0, 0}, 0}],
+                  updates: [],
+                  transfers: [],
+                  revoke: {{0, 0}, 0},
+                  auction_timeout: 1
+                )}
+
+             AuctionBid, _key ->
+               :not_found
+           end
+         ]},
+        {Txs, [],
+         [
+           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {Name, [],
+         [
+           pointers: fn _state, _mnme -> %{} end,
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end
+         ]}
+      ] do
+        assert %{"data" => names, "next" => _next} =
+                 conn
+                 |> get("/names", state: "active", by: by, direction: direction, limit: limit)
+                 |> json_response(200)
+
+        heights = Enum.map(names, & &1["info"]["active_from"])
+        assert heights == Enum.sort(heights)
         assert ^limit = length(names)
       end
     end

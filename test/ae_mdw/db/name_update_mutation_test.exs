@@ -3,6 +3,7 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
 
   alias AeMdw.Database
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.NameUpdateMutation
 
   require Model
@@ -15,15 +16,16 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
       plain_name = "update-tll-0.test"
       tx = new_aens_update_tx(owner_pk, plain_name, 0)
 
+      active_from = 9
       update_height = 10
       expire = update_height + 100
 
       active_name =
         Model.name(
           index: plain_name,
-          active: 1,
+          active: active_from,
           expire: expire,
-          claims: [{{1, 0}, 123}],
+          claims: [{{active_from, 0}, 123}],
           updates: [],
           transfers: [],
           revoke: nil,
@@ -47,7 +49,7 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
 
       block_index = {update_height, 0}
       txi = 124
-      Database.commit([NameUpdateMutation.new(tx, txi, block_index)])
+      state2 = State.commit_mem(State.new(), [NameUpdateMutation.new(tx, txi, block_index)])
 
       assert {:ok,
               Model.name(
@@ -56,10 +58,14 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
                 owner: ^owner_pk,
                 updates: [{^block_index, ^txi}],
                 revoke: nil
-              )} = Database.fetch(Model.InactiveName, plain_name)
+              )} = State.get(state2, Model.InactiveName, plain_name)
 
-      assert Database.exists?(Model.InactiveNameExpiration, {update_height, plain_name})
-      assert Database.exists?(Model.InactiveNameOwner, {owner_pk, plain_name})
+      refute State.exists?(state2, Model.ActiveName, plain_name)
+      refute State.exists?(state2, Model.ActiveNameOwner, {owner_pk, plain_name})
+      refute State.exists?(state2, Model.ActiveNameActivation, {active_from, plain_name})
+      refute State.exists?(state2, Model.ActiveNameExpiration, {expire, plain_name})
+      assert State.exists?(state2, Model.InactiveNameExpiration, {update_height, plain_name})
+      assert State.exists?(state2, Model.InactiveNameOwner, {owner_pk, plain_name})
     end
   end
 end
