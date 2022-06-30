@@ -115,14 +115,17 @@ defmodule AeMdwWeb.Aex9Controller do
     )
   end
 
-  def balances(conn, %{"blockhash" => hash, "account_id" => account_id}) do
+  def balances(%Conn{assigns: %{state: state}} = conn, %{
+        "blockhash" => hash,
+        "account_id" => account_id
+      }) do
     handle_input(
       conn,
       fn ->
         account_pk = Validate.id!(account_id, [:account_pubkey])
 
         block_index =
-          Util.block_hash_to_bi(Validate.id!(hash)) ||
+          Util.block_hash_to_bi(state, Validate.id!(hash)) ||
             raise ErrInput.Id, value: hash
 
         account_balances_reply(conn, account_pk, block_index)
@@ -200,12 +203,12 @@ defmodule AeMdwWeb.Aex9Controller do
 
   @spec transfers_from(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def transfers_from(%Conn{assigns: assigns} = conn, %{"sender" => sender_id}) do
-    %{pagination: pagination, cursor: cursor} = assigns
+    %{pagination: pagination, cursor: cursor, state: state} = assigns
+
+    sender_id = Validate.id!(sender_id)
 
     {prev_cursor, transfers_keys, next_cursor} =
-      sender_id
-      |> Validate.id!()
-      |> Aex9.fetch_sender_transfers(pagination, cursor)
+      Aex9.fetch_sender_transfers(state, sender_id, pagination, cursor)
 
     data = Enum.map(transfers_keys, &sender_transfer_to_map/1)
 
@@ -214,12 +217,12 @@ defmodule AeMdwWeb.Aex9Controller do
 
   @spec transfers_to(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def transfers_to(%Conn{assigns: assigns} = conn, %{"recipient" => recipient_id}) do
-    %{pagination: pagination, cursor: cursor} = assigns
+    %{pagination: pagination, cursor: cursor, state: state} = assigns
+
+    recipient_id = Validate.id!(recipient_id)
 
     {prev_cursor, transfers_keys, next_cursor} =
-      recipient_id
-      |> Validate.id!()
-      |> Aex9.fetch_recipient_transfers(pagination, cursor)
+      Aex9.fetch_recipient_transfers(state, recipient_id, pagination, cursor)
 
     data = Enum.map(transfers_keys, &recipient_transfer_to_map/1)
 
@@ -231,13 +234,13 @@ defmodule AeMdwWeb.Aex9Controller do
         "sender" => sender_id,
         "recipient" => recipient_id
       }) do
-    %{pagination: pagination, cursor: cursor} = assigns
+    %{pagination: pagination, cursor: cursor, state: state} = assigns
 
     sender_pk = Validate.id!(sender_id)
     recipient_pk = Validate.id!(recipient_id)
 
     {prev_cursor, transfers_keys, next_cursor} =
-      Aex9.fetch_pair_transfers(sender_pk, recipient_pk, pagination, cursor)
+      Aex9.fetch_pair_transfers(state, sender_pk, recipient_pk, pagination, cursor)
 
     data = Enum.map(transfers_keys, &pair_transfer_to_map/1)
 
@@ -247,10 +250,10 @@ defmodule AeMdwWeb.Aex9Controller do
   #
   # Private functions
   #
-  defp transfers_reply(conn, query, key_tag) do
+  defp transfers_reply(%Conn{assigns: %{state: state}} = conn, query, key_tag) do
     transfers =
-      query
-      |> Contract.aex9_search_transfers()
+      state
+      |> Contract.aex9_search_transfers(query)
       |> Stream.map(&transfer_to_map(&1, key_tag))
       |> Enum.sort_by(fn %{call_txi: call_txi} -> call_txi end)
 
@@ -264,20 +267,20 @@ defmodule AeMdwWeb.Aex9Controller do
     end
   end
 
-  defp by_names_reply(conn, params) do
+  defp by_names_reply(%Conn{assigns: %{state: state}} = conn, params) do
     pagination = {:forward, false, 32_000, false}
 
     with {:ok, _prev_cursor, aex9_tokens, _next_cursor} <-
-           AexnTokens.fetch_tokens(pagination, :aex9, params, :name, nil) do
+           AexnTokens.fetch_tokens(state, pagination, :aex9, params, :name, nil) do
       json(conn, render_tokens(aex9_tokens))
     end
   end
 
-  defp by_symbols_reply(conn, params) do
+  defp by_symbols_reply(%Conn{assigns: %{state: state}} = conn, params) do
     pagination = {:forward, false, 32_000, false}
 
     with {:ok, _prev_cursor, aex9_tokens, _next_cursor} <-
-           AexnTokens.fetch_tokens(pagination, :aex9, params, :symbol, nil) do
+           AexnTokens.fetch_tokens(state, pagination, :aex9, params, :symbol, nil) do
       json(conn, render_tokens(aex9_tokens))
     end
   end
@@ -324,10 +327,10 @@ defmodule AeMdwWeb.Aex9Controller do
 
   defp account_balances_reply(%Conn{assigns: %{state: state}} = conn, account_pk) do
     balances =
-      account_pk
-      |> Contract.aex9_search_contracts()
+      state
+      |> Contract.aex9_search_contracts(account_pk)
       |> Enum.flat_map(fn contract_pk ->
-        case Aex9.fetch_amount(contract_pk, account_pk) do
+        case Aex9.fetch_amount(state, contract_pk, account_pk) do
           {:ok, {amount, call_txi}} ->
             [{amount, call_txi, contract_pk}]
 
@@ -369,8 +372,8 @@ defmodule AeMdwWeb.Aex9Controller do
     json(conn, balances)
   end
 
-  defp balances_reply(conn, contract_pk) do
-    amounts = Aex9.fetch_balances(contract_pk, top?(conn))
+  defp balances_reply(%Conn{assigns: %{state: state}} = conn, contract_pk) do
+    amounts = Aex9.fetch_balances(state, contract_pk, top?(conn))
     hash_tuple = DBN.top_height_hash(top?(conn))
     json(conn, balances_to_map({amounts, hash_tuple}, contract_pk))
   end

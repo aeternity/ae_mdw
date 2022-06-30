@@ -319,34 +319,36 @@ defmodule AeMdw.Db.Contract do
   end
 
   @spec aex9_search_transfers(
+          State.t(),
           {:from, pubkey()}
           | {:to, pubkey()}
           | {:from_to, pubkey(), pubkey()}
         ) :: Enumerable.t()
-  def aex9_search_transfers({:from, sender_pk}) do
-    aex9_search_transfers(Model.Aex9Transfer, {sender_pk, -1, nil, -1, -1}, fn key ->
+  def aex9_search_transfers(state, {:from, sender_pk}) do
+    aex9_search_transfers(state, Model.Aex9Transfer, {sender_pk, -1, nil, -1, -1}, fn key ->
       elem(key, 0) == sender_pk
     end)
   end
 
-  def aex9_search_transfers({:to, recipient_pk}) do
-    aex9_search_transfers(Model.RevAex9Transfer, {recipient_pk, -1, nil, -1, -1}, fn key ->
+  def aex9_search_transfers(state, {:to, recipient_pk}) do
+    aex9_search_transfers(state, Model.RevAex9Transfer, {recipient_pk, -1, nil, -1, -1}, fn key ->
       elem(key, 0) == recipient_pk
     end)
   end
 
-  def aex9_search_transfers({:from_to, sender_pk, recipient_pk}) do
+  def aex9_search_transfers(state, {:from_to, sender_pk, recipient_pk}) do
     aex9_search_transfers(
+      state,
       Model.Aex9PairTransfer,
       {sender_pk, recipient_pk, -1, -1, -1},
       fn key -> elem(key, 0) == sender_pk && elem(key, 1) == recipient_pk end
     )
   end
 
-  @spec aex9_search_contracts(pubkey()) :: [pubkey()]
-  def aex9_search_contracts(account_pk) do
-    Model.Aex9AccountPresence
-    |> Collection.stream({account_pk, -1, <<>>})
+  @spec aex9_search_contracts(State.t(), pubkey()) :: [pubkey()]
+  def aex9_search_contracts(state, account_pk) do
+    state
+    |> Collection.stream(Model.Aex9AccountPresence, {account_pk, -1, <<>>})
     |> Stream.take_while(fn {apk, _txi, _ct_pk} -> apk == account_pk end)
     |> Enum.map(fn {_apk, _txi, contract_pk} -> contract_pk end)
     |> Enum.dedup()
@@ -393,9 +395,9 @@ defmodule AeMdw.Db.Contract do
   #
   # Private functions
   #
-  defp aex9_search_transfers(table, init_key, key_tester) do
-    table
-    |> Collection.stream(init_key)
+  defp aex9_search_transfers(state, table, init_key, key_tester) do
+    state
+    |> Collection.stream(table, init_key)
     |> Stream.take_while(key_tester)
   end
 

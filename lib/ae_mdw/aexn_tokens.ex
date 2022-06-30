@@ -6,6 +6,7 @@ defmodule AeMdw.AexnTokens do
   alias AeMdw.Collection
   alias AeMdw.Database
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db
@@ -42,9 +43,9 @@ defmodule AeMdw.AexnTokens do
     end
   end
 
-  @spec fetch_tokens(pagination(), aexn_type(), query(), order_by(), cursor() | nil) ::
+  @spec fetch_tokens(State.t(), pagination(), aexn_type(), query(), order_by(), cursor() | nil) ::
           {:ok, cursor() | nil, [Model.aexn_contract()], cursor() | nil} | {:error, Error.t()}
-  def fetch_tokens(pagination, aexn_type, query, order_by, cursor) do
+  def fetch_tokens(state, pagination, aexn_type, query, order_by, cursor) do
     try do
       sorted_table = if order_by == :name, do: @aexn_name_table, else: @aexn_symbol_table
 
@@ -55,7 +56,7 @@ defmodule AeMdw.AexnTokens do
             |> Map.drop(@pagination_params)
             |> validate_params()
             |> Enum.into(%{}, &convert_param/1)
-            |> build_tokens_streamer(aexn_type, sorted_table, cursor)
+            |> build_tokens_streamer(state, aexn_type, sorted_table, cursor)
             |> Collection.paginate(pagination)
 
           {:ok, serialize_aexn_cursor(order_by, prev_record), aexn_tokens,
@@ -69,7 +70,7 @@ defmodule AeMdw.AexnTokens do
     end
   end
 
-  defp build_tokens_streamer(query, type, table, cursor) do
+  defp build_tokens_streamer(query, state, type, table, cursor) do
     prefix = query |> Map.get(:prefix, "") |> String.slice(0, @max_sort_field_length)
 
     scope = {
@@ -78,8 +79,8 @@ defmodule AeMdw.AexnTokens do
     }
 
     fn direction ->
-      table
-      |> Collection.stream(direction, scope, cursor)
+      state
+      |> Collection.stream(table, direction, scope, cursor)
       |> Stream.map(fn {type, _order_by_field, pubkey} ->
         Database.fetch!(@aexn_table, {type, pubkey})
       end)

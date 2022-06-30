@@ -27,6 +27,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
 
   @spec invalidate(Blocks.height()) :: :ok
   def invalidate(fork_height) when is_integer(fork_height) do
+    state = State.new()
     prev_kbi = fork_height - 1
     from_txi = Model.block(read_block!({prev_kbi, -1}), :tx_index)
     {:ok, to_txi} = Database.last_key(Model.Tx)
@@ -43,7 +44,7 @@ defmodule AeMdw.Db.Sync.Invalidate do
     aexn_key_dels = aexn_key_dels(from_txi..to_txi)
     aex9_transfer_key_dels = aex9_transfer_key_dels(from_txi)
     aex9_account_presence_key_dels = aex9_account_presence_key_dels(from_txi)
-    aex9_balance_key_dels = aex9_balance_key_dels(fork_height)
+    aex9_balance_key_dels = aex9_balance_key_dels(state, fork_height)
 
     int_contract_call_key_dels = int_contract_call_key_dels(from_txi)
     int_transfer_tx_key_dels = int_transfer_tx_key_dels(prev_kbi)
@@ -311,10 +312,10 @@ defmodule AeMdw.Db.Sync.Invalidate do
     }
   end
 
-  defp aex9_balance_key_dels(height) do
+  defp aex9_balance_key_dels(state, height) do
     aex9_balance_keys =
-      Model.Aex9Balance
-      |> Collection.stream({<<>>, <<>>})
+      state
+      |> Collection.stream(Model.Aex9Balance, {<<>>, <<>>})
       |> Stream.filter(fn key ->
         Model.aex9_balance(block_index: {kbi, _mbi}) = Database.fetch!(Model.Aex9Balance, key)
         kbi >= height
