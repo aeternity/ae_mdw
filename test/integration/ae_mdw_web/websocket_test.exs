@@ -3,12 +3,12 @@ defmodule Integration.AeMdwWeb.WebsocketTest do
   use ExUnit.Case, async: false
 
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Util
   alias AeMdwWeb.Websocket.Broadcaster
   alias AeMdwWeb.Websocket.ChainListener
   alias Support.WsClient
-
-  import AeMdw.Db.Util, only: [read_block!: 1]
 
   require Model
 
@@ -412,6 +412,7 @@ defmodule Integration.AeMdwWeb.WebsocketTest do
     test "for keyblocks, microblocks, transactions and object", %{clients: clients} do
       [client1, client2, client3, client4] = Enum.drop(clients, 4)
       recipient_id = "ak_2QkttUgEyPixKzqXkJ4LX7ugbRjwCDWPBT4p4M2r8brjxUxUYd"
+      state = State.new()
 
       assert :ok == WsClient.subscribe(client1, :key_blocks)
       assert :ok == WsClient.subscribe(client2, :micro_blocks)
@@ -430,7 +431,7 @@ defmodule Integration.AeMdwWeb.WebsocketTest do
       assert_receive ["MicroBlocks"], 200
       assert_receive [^recipient_id], 200
 
-      {key_block, micro_blocks} = get_blocks(311_860)
+      {key_block, micro_blocks} = get_blocks(state, 311_860)
       Broadcaster.broadcast_key_block(key_block, :mdw)
       Process.send_after(client1, {:kb, self()}, 100)
 
@@ -456,9 +457,9 @@ defmodule Integration.AeMdwWeb.WebsocketTest do
     end
   end
 
-  defp get_blocks(height) do
-    Model.block(hash: kb_hash) = read_block!({height, -1})
-    Model.block(hash: next_kb_hash) = read_block!({height + 1, -1})
+  defp get_blocks(state, height) do
+    Model.block(hash: kb_hash) = DbUtil.read_block!(state, {height, -1})
+    Model.block(hash: next_kb_hash) = DbUtil.read_block!(state, {height + 1, -1})
 
     AeMdw.Node.Db.get_blocks(kb_hash, next_kb_hash)
   end
