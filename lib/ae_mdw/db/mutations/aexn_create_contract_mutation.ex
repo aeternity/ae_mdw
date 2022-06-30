@@ -7,7 +7,6 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
   alias AeMdw.Db.Contract, as: DBContract
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
-  alias AeMdw.Sync.AsyncTasks
   alias AeMdw.Txs
 
   @derive AeMdw.Db.Mutation
@@ -75,9 +74,9 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
       )
 
     if aexn_type == :aex9 do
-      AsyncTasks.Producer.enqueue(:derive_aex9_presence, [contract_pk, kbi, mbi, create_txi])
+      State.enqueue(state, :derive_aex9_presence, [contract_pk, kbi, mbi, create_txi])
+    else
+      state
     end
-
-    state
   end
 end
