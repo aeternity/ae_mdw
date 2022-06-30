@@ -53,16 +53,6 @@ defmodule AeMdw.Collection do
   end
 
   @doc """
-  Builds a stream from records from a table starting from the initial_key given.
-
-  It will use a new database State to retrieve the data for the stream, which
-  will obtain non-dirty data (e.g. without a rocksdb transaction).
-  """
-  @spec stream(table(), direction(), key_boundary(), cursor()) :: Enumerable.t()
-  def stream(tab, direction, key_boundary, cursor),
-    do: stream(State.new(), tab, direction, key_boundary, cursor)
-
-  @doc """
   Builds a stream from records from a table starting from the initial_key given using
   a State.
   """
@@ -80,15 +70,6 @@ defmodule AeMdw.Collection do
       :none -> []
     end
   end
-
-  @doc """
-  Streams forward a table seeking the iterator to a boundary start key.
-
-  It will use a new database State to retrieve the data for the stream, which
-  will obtain non-dirty data (e.g. without a rocksdb transaction).
-  """
-  @spec stream(table(), key()) :: Enumerable.t()
-  def stream(table, boundary_start_key), do: stream(State.new(), table, boundary_start_key)
 
   @doc """
   Same as stream/3 but using the State instead.

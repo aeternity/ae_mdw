@@ -276,10 +276,10 @@ defmodule AeMdw.Db.Name do
     end
   end
 
-  @spec pointee_keys(any) :: list
-  def pointee_keys(pk) do
-    Model.Pointee
-    |> Collection.stream({pk, nil, nil})
+  @spec pointee_keys(State.t(), pubkey()) :: list
+  defp pointee_keys(state, pk) do
+    state
+    |> Collection.stream(Model.Pointee, {pk, nil, nil})
     |> Stream.take_while(fn
       {^pk, _bi_txi, _pointee} -> true
       _other_key -> false
@@ -300,7 +300,7 @@ defmodule AeMdw.Db.Name do
       Map.update(place, ptr_k, [pointee], fn pointees -> [pointee | pointees] end)
     end
 
-    for {_bi, txi, _ptr_k} = p_keys <- pointee_keys(pk), reduce: {%{}, %{}} do
+    for {_bi, txi, _ptr_k} = p_keys <- pointee_keys(state, pk), reduce: {%{}, %{}} do
       {active, inactive} ->
         %{tx: %{name: plain}} = Format.to_raw_map(state, DbUtil.read_tx!(state, txi))
 

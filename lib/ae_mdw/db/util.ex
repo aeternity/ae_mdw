@@ -210,13 +210,13 @@ defmodule AeMdw.Db.Util do
 
   def block_txi(bi), do: map_one_nil(read_block(bi), &Model.block(&1, :tx_index))
 
-  @spec block_hash_to_bi(Blocks.block_hash()) :: Blocks.block_index() | nil
-  def block_hash_to_bi(block_hash) do
+  @spec block_hash_to_bi(State.t(), Blocks.block_hash()) :: Blocks.block_index() | nil
+  def block_hash_to_bi(state, block_hash) do
     with {:ok, node_block} <- :aec_chain.get_block(block_hash),
          last_gen <- last_gen(),
          {:micro, height} when height < last_gen <- block_type_height(node_block) do
-      Model.Block
-      |> Collection.stream(:forward, {{height, 0}, {height, nil}}, nil)
+      state
+      |> Collection.stream(Model.Block, :forward, {{height, 0}, {height, nil}}, nil)
       |> Enum.find(fn bi ->
         case read_block!(bi) do
           Model.block(hash: ^block_hash) -> bi

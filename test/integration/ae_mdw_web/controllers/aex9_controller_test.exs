@@ -513,9 +513,11 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
     @tag timeout: 60_000
     @tag :iteration
     test "gets balances for some accounts with aex9 presence", %{conn: conn} do
+      state = State.new()
+
       account_ids =
-        Model.Aex9AccountPresence
-        |> Collection.stream({nil, -1, nil})
+        state
+        |> Collection.stream(Model.Aex9AccountPresence, {nil, -1, nil})
         |> Enum.take(2_000)
         |> Enum.map(fn {account_pk, _txi, _contract_pk} ->
           :aeser_api_encoder.encode(:account_pubkey, account_pk)
@@ -542,9 +544,11 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
     end
 
     test "gets balances for an account with mismatching aex9 presence", %{conn: conn} do
+      state = State.new()
+
       prev_key =
-        Model.Aex9AccountPresence
-        |> Collection.stream({nil, -1, nil})
+        state
+        |> Collection.stream(Model.Aex9AccountPresence, {nil, -1, nil})
         |> Stream.take_while(fn {account_pk, _txi, contract_pk} ->
           :not_found != Database.fetch(Model.Aex9Balance, {contract_pk, account_pk})
         end)

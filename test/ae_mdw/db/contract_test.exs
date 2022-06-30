@@ -25,8 +25,8 @@ defmodule AeMdw.Db.ContractTest do
     Contract.aex9_write_presence(state, @existing_cpk, fake_txi, @existing_apk)
     RocksDb.transaction_commit(txn)
 
-    assert @existing_cpk
-           |> ContractTestUtil.aex9_presence_txi_list(@existing_apk)
+    assert state
+           |> ContractTestUtil.aex9_presence_txi_list(@existing_cpk, @existing_apk)
            |> Enum.find(&(&1 == fake_txi))
 
     {:ok, txn} = RocksDb.transaction_new()
@@ -34,8 +34,8 @@ defmodule AeMdw.Db.ContractTest do
     Contract.aex9_write_new_presence(state, @existing_cpk, fake_txi + 1, @existing_apk)
     RocksDb.transaction_commit(txn)
 
-    refute @existing_cpk
-           |> ContractTestUtil.aex9_presence_txi_list(@existing_apk)
+    refute state
+           |> ContractTestUtil.aex9_presence_txi_list(@existing_cpk, @existing_apk)
            |> Enum.find(&(&1 == fake_txi + 1))
   end
 
@@ -43,14 +43,14 @@ defmodule AeMdw.Db.ContractTest do
     {:ok, txn} = RocksDb.transaction_new()
     state = State.new() |> Map.put(:txn, txn)
 
-    assert [] == ContractTestUtil.aex9_presence_txi_list(@new_cpk, @existing_apk)
+    assert [] == ContractTestUtil.aex9_presence_txi_list(state, @new_cpk, @existing_apk)
 
     Contract.aex9_write_new_presence(state, @new_cpk, -1, @existing_apk)
     RocksDb.transaction_commit(txn)
-    assert [-1] == ContractTestUtil.aex9_presence_txi_list(@new_cpk, @existing_apk)
+    assert [-1] == ContractTestUtil.aex9_presence_txi_list(state, @new_cpk, @existing_apk)
 
-    ContractTestUtil.aex9_delete_presence(@new_cpk, @existing_apk)
-    assert [] == ContractTestUtil.aex9_presence_txi_list(@new_cpk, @existing_apk)
+    ContractTestUtil.aex9_delete_presence(state, @new_cpk, @existing_apk)
+    assert [] == ContractTestUtil.aex9_presence_txi_list(state, @new_cpk, @existing_apk)
   end
 
   test "update AEX9 state on non AEX9 contract call with logs having AEX9 contracts" do

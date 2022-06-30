@@ -5,7 +5,6 @@ defmodule AeMdw.Aex9 do
 
   alias AeMdw.Collection
   alias AeMdw.AexnContracts
-  alias AeMdw.Database
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
@@ -50,19 +49,16 @@ defmodule AeMdw.Aex9 do
 
   @type amounts :: map()
 
-  @spec fetch_balances(pubkey(), boolean()) :: amounts()
-  def fetch_balances(contract_pk, top?) do
+  @spec fetch_balances(State.t(), pubkey(), boolean()) :: amounts()
+  def fetch_balances(state, contract_pk, top?) do
     if top? do
       {amounts, _height} = Db.aex9_balances!(contract_pk, true)
       amounts
     else
-      Model.Aex9Balance
-      |> Collection.stream(
-        :forward,
-        {{contract_pk, <<>>}, {contract_pk, Util.max_256bit_bin()}},
-        nil
-      )
-      |> Stream.map(&Database.fetch!(Model.Aex9Balance, &1))
+      state
+      |> Collection.stream(Model.Aex9Balance, {contract_pk, <<>>})
+      |> Stream.take_while(&match?({^contract_pk, _address}, &1))
+      |> Stream.map(&State.fetch!(state, Model.Aex9Balance, &1))
       |> Enum.into(%{}, fn Model.aex9_balance(index: {_ct_pk, account_pk}, amount: amount) ->
         {{:address, account_pk}, amount}
       end)
@@ -79,21 +75,22 @@ defmodule AeMdw.Aex9 do
     end
   end
 
-  @spec fetch_sender_transfers(pubkey(), pagination(), cursor() | nil) ::
+  @spec fetch_sender_transfers(State.t(), pubkey(), pagination(), cursor() | nil) ::
           account_paginated_transfers()
-  def fetch_sender_transfers(sender_pk, pagination, cursor) do
-    paginate_account_transfers(pagination, Model.Aex9Transfer, cursor, sender_pk)
+  def fetch_sender_transfers(state, sender_pk, pagination, cursor) do
+    paginate_account_transfers(state, pagination, Model.Aex9Transfer, cursor, sender_pk)
   end
 
-  @spec fetch_recipient_transfers(pubkey(), pagination(), cursor() | nil) ::
+  @spec fetch_recipient_transfers(State.t(), pubkey(), pagination(), cursor() | nil) ::
           account_paginated_transfers()
-  def fetch_recipient_transfers(recipient_pk, pagination, cursor) do
-    paginate_account_transfers(pagination, Model.RevAex9Transfer, cursor, recipient_pk)
+  def fetch_recipient_transfers(state, recipient_pk, pagination, cursor) do
+    paginate_account_transfers(state, pagination, Model.RevAex9Transfer, cursor, recipient_pk)
   end
 
-  @spec fetch_pair_transfers(pubkey(), pubkey(), pagination(), cursor() | nil) ::
+  @spec fetch_pair_transfers(State.t(), pubkey(), pubkey(), pagination(), cursor() | nil) ::
           pair_paginated_transfers()
   def fetch_pair_transfers(
+        state,
         sender_pk,
         recipient_pk,
         pagination,
@@ -102,6 +99,7 @@ defmodule AeMdw.Aex9 do
     cursor_key = deserialize_cursor(cursor)
 
     paginate_transfers(
+      state,
       pagination,
       Model.Aex9PairTransfer,
       cursor_key,
@@ -109,10 +107,10 @@ defmodule AeMdw.Aex9 do
     )
   end
 
-  @spec fetch_balances(pubkey(), pagination(), balances_cursor() | nil) ::
+  @spec fetch_chain_balances(pubkey(), pagination(), balances_cursor() | nil) ::
           {:ok, balances_cursor() | nil, [aex9_balance()], balances_cursor() | nil}
           | {:error, Error.t()}
-  def fetch_balances(contract_pk, pagination, cursor) do
+  def fetch_chain_balances(contract_pk, pagination, cursor) do
     if AexnContracts.is_aex9?(contract_pk) do
       {amounts, _height_hash} = Db.aex9_balances!(contract_pk)
       accounts_pks = amounts |> Map.keys() |> Enum.sort()
@@ -141,10 +139,11 @@ defmodule AeMdw.Aex9 do
     end
   end
 
-  @spec fetch_balance(pubkey(), pubkey()) :: {:ok, aex9_balance()} | {:error, Error.t()}
-  def fetch_balance(contract_pk, account_pk) do
+  @spec fetch_balance(State.t(), pubkey(), pubkey()) ::
+          {:ok, aex9_balance()} | {:error, Error.t()}
+  def fetch_balance(state, contract_pk, account_pk) do
     with :ok <- validate_aex9(contract_pk),
-         {:ok, {amount, _txi}} <- fetch_amount(contract_pk, account_pk) do
+         {:ok, {amount, _txi}} <- fetch_amount(state, contract_pk, account_pk) do
       {:ok, render_balance(contract_pk, {:address, account_pk}, amount)}
     else
       {:error, reason} ->
@@ -152,9 +151,10 @@ defmodule AeMdw.Aex9 do
     end
   end
 
-  @spec fetch_amount(pubkey(), pubkey()) :: {:ok, {number(), txi()}} | {:error, Error.t()}
-  def fetch_amount(contract_pk, account_pk) do
-    case Database.fetch(Model.Aex9Balance, {contract_pk, account_pk}) do
+  @spec fetch_amount(State.t(), pubkey(), pubkey()) ::
+          {:ok, {number(), txi()}} | {:error, Error.t()}
+  def fetch_amount(state, contract_pk, account_pk) do
+    case State.get(state, Model.Aex9Balance, {contract_pk, account_pk}) do
       {:ok, Model.aex9_balance(amount: amount, txi: call_txi)} ->
         {:ok, {amount, call_txi}}
 
@@ -169,7 +169,7 @@ defmodule AeMdw.Aex9 do
   @spec fetch_amount_and_keyblock(State.t(), pubkey(), pubkey()) ::
           {:ok, {number(), Db.height_hash()}} | {:error, Error.t()}
   def fetch_amount_and_keyblock(state, contract_pk, account_pk) do
-    with {:ok, {amount, call_txi}} <- fetch_amount(contract_pk, account_pk) do
+    with {:ok, {amount, call_txi}} <- fetch_amount(state, contract_pk, account_pk) do
       kbi = DbUtil.txi_to_gen(state, call_txi)
       Model.block(hash: kb_hash) = State.fetch!(state, Model.Block, {kbi, -1})
 
@@ -272,6 +272,7 @@ defmodule AeMdw.Aex9 do
   # Private functions
   #
   defp paginate_account_transfers(
+         state,
          pagination,
          table,
          cursor,
@@ -280,6 +281,7 @@ defmodule AeMdw.Aex9 do
     cursor_key = deserialize_cursor(cursor)
 
     paginate_transfers(
+      state,
       pagination,
       table,
       cursor_key,
@@ -288,6 +290,7 @@ defmodule AeMdw.Aex9 do
   end
 
   defp paginate_transfers(
+         state,
          pagination,
          table,
          cursor_key,
@@ -296,8 +299,8 @@ defmodule AeMdw.Aex9 do
     key_boundary = key_boundary(params)
 
     {prev_cursor_key, transfer_keys, next_cursor_key} =
-      table
-      |> build_streamer(cursor_key, key_boundary)
+      state
+      |> build_streamer(table, cursor_key, key_boundary)
       |> Collection.paginate(pagination)
 
     {
@@ -307,9 +310,9 @@ defmodule AeMdw.Aex9 do
     }
   end
 
-  defp build_streamer(table, cursor_key, key_boundary) do
+  defp build_streamer(state, table, cursor_key, key_boundary) do
     fn direction ->
-      Collection.stream(table, direction, key_boundary, cursor_key)
+      Collection.stream(state, table, direction, key_boundary, cursor_key)
     end
   end
 
