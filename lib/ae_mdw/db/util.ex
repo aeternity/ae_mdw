@@ -50,10 +50,6 @@ defmodule AeMdw.Db.Util do
   @spec read_block!(State.t(), Blocks.block_index()) :: Model.block()
   def read_block!(state, block_index), do: State.fetch!(state, Model.Block, block_index)
 
-  @spec read_block!(non_neg_integer | {non_neg_integer, integer}) :: Model.block()
-  def read_block!(bi),
-    do: read_block(bi) |> one!
-
   def next_bi!({_kbi, _mbi} = bi) do
     {:ok, next_bi} = Database.next_key(Model.Block, bi)
     next_bi
@@ -218,7 +214,7 @@ defmodule AeMdw.Db.Util do
       state
       |> Collection.stream(Model.Block, :forward, {{height, 0}, {height, nil}}, nil)
       |> Enum.find(fn bi ->
-        case read_block!(bi) do
+        case read_block!(state, bi) do
           Model.block(hash: ^block_hash) -> bi
           _other_block -> nil
         end

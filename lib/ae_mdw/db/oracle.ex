@@ -30,17 +30,6 @@ defmodule AeMdw.Db.Oracle do
   def source(Model.ActiveName, :expiration), do: Model.ActiveOracleExpiration
   def source(Model.InactiveName, :expiration), do: Model.InactiveOracleExpiration
 
-  @spec locate(pubkey()) :: {Model.oracle(), Model.ActiveOracle | Model.InactiveOracle} | nil
-  def locate(pubkey) do
-    with {:active, :not_found} <- {:active, Database.fetch(Model.ActiveOracle, pubkey)},
-         {:inactive, :not_found} <- {:inactive, Database.fetch(Model.InactiveOracle, pubkey)} do
-      nil
-    else
-      {:active, {:ok, oracle}} -> {oracle, Model.ActiveOracle}
-      {:inactive, {:ok, oracle}} -> {oracle, Model.InactiveOracle}
-    end
-  end
-
   @spec locate(state(), pubkey()) ::
           {Model.oracle(), Model.ActiveOracle | Model.InactiveOracle} | nil
   def locate(state, pubkey) do
