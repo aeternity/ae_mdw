@@ -260,9 +260,9 @@ defmodule AeMdwWeb.Aex9Controller do
     json(conn, transfers)
   end
 
-  defp by_contract_reply(conn, contract_id) do
+  defp by_contract_reply(%Conn{assigns: %{state: state}} = conn, contract_id) do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
-         {:ok, m_aex9} <- AexnTokens.fetch_token({:aex9, contract_pk}) do
+         {:ok, m_aex9} <- AexnTokens.fetch_token(state, {:aex9, contract_pk}) do
       json(conn, %{data: render_token(m_aex9)})
     end
   end

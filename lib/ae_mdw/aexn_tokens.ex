@@ -4,7 +4,6 @@ defmodule AeMdw.AexnTokens do
   """
 
   alias AeMdw.Collection
-  alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Error
@@ -31,10 +30,10 @@ defmodule AeMdw.AexnTokens do
   @aexn_name_table Model.AexnContractName
   @aexn_symbol_table Model.AexnContractSymbol
 
-  @spec fetch_token({aexn_type(), Db.pubkey()}) ::
+  @spec fetch_token(State.t(), {aexn_type(), Db.pubkey()}) ::
           {:ok, Model.aexn_contract()} | {:error, Error.t()}
-  def fetch_token({aexn_type, contract_pk}) do
-    case Database.fetch(Model.AexnContract, {aexn_type, contract_pk}) do
+  def fetch_token(state, {aexn_type, contract_pk}) do
+    case State.get(state, Model.AexnContract, {aexn_type, contract_pk}) do
       {:ok, m_aexn} ->
         {:ok, m_aexn}
 
@@ -82,7 +81,7 @@ defmodule AeMdw.AexnTokens do
       state
       |> Collection.stream(table, direction, scope, cursor)
       |> Stream.map(fn {type, _order_by_field, pubkey} ->
-        Database.fetch!(@aexn_table, {type, pubkey})
+        State.fetch!(state, @aexn_table, {type, pubkey})
       end)
     end
   end
