@@ -1,6 +1,9 @@
 defmodule Integration.AeMdwWeb.UtilControllerTest do
   use AeMdwWeb.ConnCase
 
+  alias AeMdw.Db.State
+  alias AeMdw.Db.Util
+
   @moduletag :integration
 
   describe "status" do
@@ -11,7 +14,7 @@ defmodule Integration.AeMdwWeb.UtilControllerTest do
       {_, _, node_vsn} = Application.started_applications() |> List.keyfind(:aecore, 0)
       node_height = :aec_blocks.height(top_kb)
       mdw_tx_index = last_txi()
-      {:tx, _, _, {mdw_height, _}, _} = read_tx!(mdw_tx_index)
+      mdw_height = State.mem_state() |> Util.synced_height()
 
       conn = get(conn, "/status")
 
