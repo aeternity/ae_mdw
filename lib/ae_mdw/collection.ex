@@ -5,12 +5,11 @@ defmodule AeMdw.Collection do
 
   alias AeMdw.Database
   alias AeMdw.Db.State
-  alias AeMdw.Util
 
+  @type direction() :: Database.direction()
+  @type limit() :: Database.limit()
   @typep table() :: Database.table()
-  @typep direction() :: Database.direction()
   @typep cursor() :: Database.cursor()
-  @typep limit() :: Database.limit()
   @typep key() :: Database.key()
   @typep key_boundary() :: {key(), key()} | nil
 
@@ -29,7 +28,7 @@ defmodule AeMdw.Collection do
   def paginate(stream_fn, {direction, false, limit, has_cursor?}) do
     prev_cursor =
       if has_cursor? do
-        case Enum.at(stream_fn.(Util.opposite_dir(direction)), 1) do
+        case Enum.at(stream_fn.(opposite_dir(direction)), 1) do
           nil -> nil
           cursor -> {cursor, true}
         end
@@ -47,7 +46,7 @@ defmodule AeMdw.Collection do
 
   def paginate(stream_fn, {direction, true, limit, has_cursor?}) do
     {prev_cursor, records, next_cursor} =
-      paginate(stream_fn, {Util.opposite_dir(direction), false, limit, has_cursor?})
+      paginate(stream_fn, {opposite_dir(direction), false, limit, has_cursor?})
 
     {reverse_cursor(next_cursor), Enum.reverse(records), reverse_cursor(prev_cursor)}
   end
@@ -179,4 +178,7 @@ defmodule AeMdw.Collection do
 
   defp reverse_cursor(nil), do: nil
   defp reverse_cursor({cursor, is_reversed?}), do: {cursor, not is_reversed?}
+
+  defp opposite_dir(:backward), do: :forward
+  defp opposite_dir(:forward), do: :backward
 end

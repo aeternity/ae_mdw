@@ -5,7 +5,6 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Collection
   alias AeMdw.Contract
   alias AeMdw.AexnContracts
-  alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
   alias AeMdw.Db.Sync
@@ -13,14 +12,13 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Node.Db
-  alias AeMdw.Validate
 
   require Ex2ms
   require Log
   require Model
   require Record
 
-  import AeMdw.Util, only: [compose: 2, min_bin: 0, max_256bit_bin: 0, max_256bit_int: 0]
+  import AeMdw.Util, only: [min_bin: 0, max_256bit_bin: 0, max_256bit_int: 0]
   import AeMdwWeb.Helpers.AexnHelper, only: [sort_field_truncate: 1]
 
   import AeMdw.Db.Util
@@ -268,10 +266,10 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  @spec call_fun_arg_res(pubkey(), integer()) :: Contract.fun_arg_res()
-  def call_fun_arg_res(contract_pk, call_txi) do
-    create_txi = Origin.tx_index!(State.new(), {:contract, contract_pk})
-    m_call = read!(Model.ContractCall, {create_txi, call_txi})
+  @spec call_fun_arg_res(State.t(), pubkey(), integer()) :: Contract.fun_arg_res()
+  def call_fun_arg_res(state, contract_pk, call_txi) do
+    create_txi = Origin.tx_index!(state, {:contract, contract_pk})
+    m_call = State.fetch!(state, Model.ContractCall, {create_txi, call_txi})
 
     %{
       function: Model.contract_call(m_call, :fun),
@@ -279,43 +277,6 @@ defmodule AeMdw.Db.Contract do
       result: Model.contract_call(m_call, :result),
       return: Model.contract_call(m_call, :return)
     }
-  end
-
-  @spec aex9_search_name(tuple()) :: map()
-  def aex9_search_name({_, _} = mode),
-    do: aex9_search_tokens(Model.Aex9Contract, mode)
-
-  @spec aex9_search_symbol(tuple()) :: map()
-  def aex9_search_symbol({_, _} = mode),
-    do: aex9_search_tokens(Model.Aex9ContractSymbol, mode)
-
-  @spec aex9_search_contract_by_id(String.t()) :: {:ok, rev_aex9_contract_key()} | :not_found
-  def aex9_search_contract_by_id(contract_id) do
-    with pubkey <- Validate.id!(contract_id),
-         {:ok, Model.aexn_contract(txi: txi, meta_info: {name, symbol, decimals})} <-
-           Database.fetch(AexnContract, {:aex9, pubkey}) do
-      {:ok, {txi, name, symbol, decimals}}
-    end
-  end
-
-  @spec aex9_search_tokens(atom(), tuple()) :: map()
-  def aex9_search_tokens(table, {:prefix, prefix}),
-    do: aex9_search_tokens(table, prefix, prefix_tester(prefix))
-
-  def aex9_search_tokens(table, {:exact, exact}),
-    do: aex9_search_tokens(table, exact, &(&1 == exact))
-
-  @spec aex9_search_tokens(atom(), any(), any()) :: map()
-  def aex9_search_tokens(table, value, key_tester) do
-    gen_collect(
-      table,
-      {value, "", 0, 0},
-      compose(key_tester, &elem(&1, 0)),
-      &next/2,
-      fn -> [] end,
-      fn v, l -> [v | l] end,
-      &Enum.reverse/1
-    )
   end
 
   @spec aex9_search_transfers(
@@ -354,13 +315,13 @@ defmodule AeMdw.Db.Contract do
     |> Enum.dedup()
   end
 
-  @spec aex9_search_contract(pubkey(), integer()) :: map()
-  def aex9_search_contract(account_pk, last_txi) do
+  @spec aex9_search_contract(State.t(), pubkey(), integer()) :: map()
+  def aex9_search_contract(state, account_pk, last_txi) do
     gen_collect(
       Model.Aex9AccountPresence,
       {account_pk, last_txi, <<max_256bit_int()::256>>},
       fn {acc_pk, _, _} -> acc_pk == account_pk end,
-      &prev/2,
+      &State.prev(state, &1, &2),
       fn -> %{} end,
       fn {_, txi, ct_pk}, accum ->
         Map.update(accum, ct_pk, [txi], fn txi_list ->
@@ -410,14 +371,6 @@ defmodule AeMdw.Db.Contract do
       :not_found ->
         state
     end
-  end
-
-  defp prefix_tester(""),
-    do: fn _any -> true end
-
-  defp prefix_tester(prefix) do
-    len = byte_size(prefix)
-    &(byte_size(&1) >= len && :binary.part(&1, 0, len) == prefix)
   end
 
   defp write_aex9_records(state, txi, i, [from_pk, to_pk, <<amount::256>>]) do

@@ -30,25 +30,25 @@ defmodule AeMdwWeb.NameController do
   @lifecycles Map.keys(@lifecycles_map)
 
   @spec auction(Conn.t(), map()) :: Conn.t()
-  def auction(conn, %{"id" => ident} = params),
+  def auction(%Conn{assigns: %{state: state}} = conn, %{"id" => ident} = params),
     do:
       handle_input(conn, fn ->
-        auction_reply(conn, Validate.plain_name!(ident), expand?(params))
+        auction_reply(conn, Validate.plain_name!(state, ident), expand?(params))
       end)
 
   @spec pointers(Conn.t(), map()) :: Conn.t()
-  def pointers(conn, %{"id" => ident}),
-    do: handle_input(conn, fn -> pointers_reply(conn, Validate.plain_name!(ident)) end)
+  def pointers(%Conn{assigns: %{state: state}} = conn, %{"id" => ident}),
+    do: handle_input(conn, fn -> pointers_reply(conn, Validate.plain_name!(state, ident)) end)
 
   @spec pointees(Conn.t(), map()) :: Conn.t()
   def pointees(conn, %{"id" => ident}),
     do: handle_input(conn, fn -> pointees_reply(conn, Validate.name_id!(ident)) end)
 
   @spec name(Conn.t(), map()) :: Conn.t()
-  def name(conn, %{"id" => ident} = params),
+  def name(%Conn{assigns: %{state: state}} = conn, %{"id" => ident} = params),
     do:
       handle_input(conn, fn ->
-        name_reply(conn, Validate.plain_name!(ident), expand?(params))
+        name_reply(conn, Validate.plain_name!(state, ident), expand?(params))
       end)
 
   @spec owned_by(Conn.t(), map()) :: Conn.t()

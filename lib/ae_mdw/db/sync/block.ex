@@ -17,7 +17,6 @@ defmodule AeMdw.Db.Sync.Block do
 
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
-  alias AeMdw.Database
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.KeyBlockMutation
   alias AeMdw.Db.NamesExpirationMutation
@@ -146,10 +145,5 @@ defmodule AeMdw.Db.Sync.Block do
       :none -> 0
       {:ok, txi} -> txi + 1
     end
-  end
-
-  @spec fetch_micro_block(Blocks.block_index()) :: Model.block()
-  def fetch_micro_block(block_index) do
-    Database.fetch!(Model.Block, block_index)
   end
 end

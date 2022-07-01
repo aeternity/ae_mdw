@@ -13,7 +13,6 @@ defmodule AeMdw.Db.Name do
   alias AeMdw.Blocks
   alias AeMdw.Collection
   alias AeMdw.Contracts
-  alias AeMdw.Database
   alias AeMdw.Node, as: AE
   alias AeMdw.Node.Db
   alias AeMdw.Db.Model
@@ -59,13 +58,17 @@ defmodule AeMdw.Db.Name do
            | Model.pointee()
            | Model.auction_bid()
 
-  @spec plain_name(binary()) :: {:ok, String.t()} | nil
-  def plain_name(name_hash),
-    do: map_one_nil(DbUtil.read(Model.PlainName, name_hash), &{:ok, Model.plain_name(&1, :value)})
+  @spec plain_name(State.t(), binary()) :: {:ok, String.t()} | nil
+  def plain_name(state, name_hash) do
+    case State.get(state, Model.PlainName, name_hash) do
+      {:ok, Model.plain_name(value: value)} -> {:ok, value}
+      :not_found -> nil
+    end
+  end
 
-  @spec plain_name!(binary()) :: String.t()
-  def plain_name!(name_hash),
-    do: Model.plain_name(DbUtil.read!(Model.PlainName, name_hash), :value)
+  @spec plain_name!(State.t(), binary()) :: String.t()
+  def plain_name!(state, name_hash),
+    do: Model.plain_name(State.fetch!(state, Model.PlainName, name_hash), :value)
 
   @spec ptr_resolve!(state(), Blocks.block_index(), binary(), String.t()) :: binary()
   def ptr_resolve!(state, block_index, name_hash, key) do
@@ -76,18 +79,18 @@ defmodule AeMdw.Db.Name do
 
   @spec owned_by(state(), owner_pk :: pubkey(), active? :: boolean()) :: %{
           :names => list(),
-          optional(:top_bids) => list()
+          :top_bids => list()
         }
-  def owned_by(_state, owner_pk, true) do
+  def owned_by(state, owner_pk, true) do
     %{
-      names: collect_vals(Model.ActiveNameOwner, owner_pk),
-      top_bids: collect_vals(Model.AuctionOwner, owner_pk)
+      names: collect_vals(state, Model.ActiveNameOwner, owner_pk),
+      top_bids: collect_vals(state, Model.AuctionOwner, owner_pk)
     }
   end
 
-  def owned_by(_state, owner_pk, false) do
+  def owned_by(state, owner_pk, false) do
     %{
-      names: collect_vals(Model.InactiveNameOwner, owner_pk)
+      names: collect_vals(state, Model.InactiveNameOwner, owner_pk)
     }
   end
 
@@ -326,20 +329,6 @@ defmodule AeMdw.Db.Name do
     revoke_or_expire_height(Model.name(m_name, :revoke), Model.name(m_name, :expire))
   end
 
-  @spec cache_through_read(table(), cache_key()) :: {:ok, name_record()} | nil
-  def cache_through_read(table, key) do
-    case :ets.lookup(:name_sync_cache, {table, key}) do
-      [{_, record}] ->
-        {:ok, record}
-
-      [] ->
-        case Database.fetch(table, key) do
-          {:ok, record} -> {:ok, record}
-          :not_found -> nil
-        end
-    end
-  end
-
   @spec cache_through_read(state(), table(), cache_key()) :: {:ok, name_record()} | nil
   def cache_through_read(state, table, key) do
     case State.cache_get(state, :name_sync_cache, {table, key}) do
@@ -358,34 +347,6 @@ defmodule AeMdw.Db.Name do
   def cache_through_read!(state, table, key) do
     ok_nil(cache_through_read(state, table, key)) ||
       raise("#{inspect(key)} not found in #{table}")
-  end
-
-  @spec cache_through_prev(table(), cache_key()) :: {:ok, cache_key()} | :not_found
-  def cache_through_prev(table, key),
-    do: cache_through_prev(table, key, &(elem(key, 0) == elem(&1, 0)))
-
-  defp cache_through_prev(table, key, key_checker) do
-    lookup = fn k, unwrap, eot, chk_fail ->
-      case k do
-        :"$end_of_table" ->
-          eot.()
-
-        prev_key ->
-          prev_key = unwrap.(prev_key)
-          (key_checker.(prev_key) && {:ok, prev_key}) || chk_fail.()
-      end
-    end
-
-    nf = fn -> :not_found end
-
-    mns_lookup = fn ->
-      case Database.prev_key(table, key) do
-        {:ok, prev_key} -> lookup.(prev_key, & &1, nf, nf)
-        :none -> :not_found
-      end
-    end
-
-    lookup.(:ets.prev(:name_sync_cache, {table, key}), &elem(&1, 1), mns_lookup, mns_lookup)
   end
 
   @spec cache_through_write(state(), table(), name_record()) :: state()
@@ -455,11 +416,12 @@ defmodule AeMdw.Db.Name do
   defp pointer_kv_raw(ptr),
     do: {:aens_pointer.key(ptr), :aens_pointer.id(ptr)}
 
-  defp collect_vals(tab, key) do
-    DbUtil.collect_keys(tab, [], {key, ""}, &DbUtil.next/2, fn
-      {^key, val}, acc -> {:cont, [val | acc]}
-      {_, _}, acc -> {:halt, acc}
-    end)
+  defp collect_vals(state, tab, key) do
+    state
+    |> Collection.stream(tab, {key, ""})
+    |> Stream.take_while(&match?({^key, _val}, &1))
+    |> Stream.map(fn {_key, val} -> val end)
+    |> Enum.to_list()
   end
 
   defp ns_tree!(state, block_index) do

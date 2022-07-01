@@ -8,8 +8,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
   alias AeMdw.Db.State
   alias AeMdw.Db.Util
   alias AeMdw.MainnetClient
-  alias AeMdwWeb.TxController
   alias :aeser_api_encoder, as: Enc
+  alias Plug.Conn
 
   require Model
 
@@ -165,22 +165,13 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
   describe "count" do
     test "get count of transactions at the current height", %{conn: conn} do
-      conn = get(conn, "/v2/txs/count")
+      %Conn{assigns: %{state: state}} = conn = get(conn, "/v2/txs/count")
 
-      assert json_response(conn, 200) == Util.last_txi()
+      assert json_response(conn, 200) == Util.last_txi(state)
     end
   end
 
   describe "count_id" do
-    # The test will work only for mainnet, because the account id is hardcoded and valid only for mainnet network
-    test "get transactions count and its type for given aeternity ID", %{conn: conn} do
-      id = "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
-      conn = get(conn, "/v2/txs/count/#{id}")
-
-      assert json_response(conn, 200) ==
-               id |> Validate.id!() |> TxController.id_counts() |> keys_to_string()
-    end
-
     test "renders errors when data is invalid", %{conn: conn} do
       invalid_id = "some_invalid_id"
       error_msg = "invalid id: #{invalid_id}"
@@ -210,7 +201,8 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
     test "get transactions when direction=backward", %{conn: conn} do
       limit = 24
-      last_txi = Util.last_txi()
+      state = State.new()
+      last_txi = Util.last_txi(state)
 
       assert %{"data" => txs, "next" => next} =
                conn |> get("/v2/txs", direction: "backward", limit: limit) |> json_response(200)
@@ -999,7 +991,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
         end)
 
       assert Enum.any?(blocks_with_nm, fn %{"tx" => tx, "tx_index" => tx_index} ->
-               assert {:ok, plain_name} = Validate.plain_name(tx["recipient_id"])
+               assert {:ok, plain_name} = Validate.plain_name(state, tx["recipient_id"])
                assert Model.name(updates: name_updates) = elem(Name.locate(state, plain_name), 0)
 
                if [] != name_updates do
@@ -1764,12 +1756,6 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     |> Enum.map(&AeMdw.Node.tx_name/1)
   end
 
-  defp keys_to_string(map) when is_map(map) do
-    for {key, val} <- map, into: %{}, do: {to_string(key), keys_to_string(val)}
-  end
-
-  defp keys_to_string(value), do: value
-
   defp remove_prefix(<<_prefix::3-binary, rest::binary>>), do: rest
   defp remove_prefix(_no_prefix), do: false
 
@@ -1799,7 +1785,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       end)
 
     assert Enum.any?(blocks_with_nm, fn %{"tx" => tx, "tx_index" => tx_index} ->
-             assert {:ok, plain_name} = Validate.plain_name(tx["recipient_id"])
+             assert {:ok, plain_name} = Validate.plain_name(state, tx["recipient_id"])
              assert Model.name(updates: name_updates) = elem(Name.locate(state, plain_name), 0)
 
              if [] != name_updates do

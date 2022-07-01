@@ -98,13 +98,16 @@ defmodule AeMdwWeb.Aex9Controller do
         )
 
   @spec balances(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def balances(conn, %{"height" => height, "account_id" => account_id}) do
+  def balances(%Conn{assigns: %{state: state}} = conn, %{
+        "height" => height,
+        "account_id" => account_id
+      }) do
     handle_input(
       conn,
       fn ->
         height = Validate.nonneg_int!(height)
 
-        if nil == Util.block_txi(height) do
+        if nil == Util.block_txi(state, height) do
           raise ErrInput.BlockIndex, value: height
         end
 
@@ -210,7 +213,7 @@ defmodule AeMdwWeb.Aex9Controller do
     {prev_cursor, transfers_keys, next_cursor} =
       Aex9.fetch_sender_transfers(state, sender_id, pagination, cursor)
 
-    data = Enum.map(transfers_keys, &sender_transfer_to_map/1)
+    data = Enum.map(transfers_keys, &sender_transfer_to_map(state, &1))
 
     paginate(conn, prev_cursor, data, next_cursor)
   end
@@ -224,7 +227,7 @@ defmodule AeMdwWeb.Aex9Controller do
     {prev_cursor, transfers_keys, next_cursor} =
       Aex9.fetch_recipient_transfers(state, recipient_id, pagination, cursor)
 
-    data = Enum.map(transfers_keys, &recipient_transfer_to_map/1)
+    data = Enum.map(transfers_keys, &recipient_transfer_to_map(state, &1))
 
     paginate(conn, prev_cursor, data, next_cursor)
   end
@@ -242,7 +245,7 @@ defmodule AeMdwWeb.Aex9Controller do
     {prev_cursor, transfers_keys, next_cursor} =
       Aex9.fetch_pair_transfers(state, sender_pk, recipient_pk, pagination, cursor)
 
-    data = Enum.map(transfers_keys, &pair_transfer_to_map/1)
+    data = Enum.map(transfers_keys, &pair_transfer_to_map(state, &1))
 
     paginate(conn, prev_cursor, data, next_cursor)
   end
@@ -254,7 +257,7 @@ defmodule AeMdwWeb.Aex9Controller do
     transfers =
       state
       |> Contract.aex9_search_transfers(query)
-      |> Stream.map(&transfer_to_map(&1, key_tag))
+      |> Stream.map(&transfer_to_map(state, &1, key_tag))
       |> Enum.sort_by(fn %{call_txi: call_txi} -> call_txi end)
 
     json(conn, transfers)
@@ -353,8 +356,8 @@ defmodule AeMdwWeb.Aex9Controller do
       State.get(state, Model.Block, block_index)
 
     contracts =
-      account_pk
-      |> Contract.aex9_search_contract(last_txi)
+      state
+      |> Contract.aex9_search_contract(account_pk, last_txi)
       |> Map.to_list()
       |> Enum.sort_by(fn {_ct_pk, txi_list} -> _call_txi = List.last(txi_list) end)
 

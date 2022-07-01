@@ -10,8 +10,7 @@ defmodule AeMdwWeb.TxControllerTest do
       with_mocks [
         {Util, [],
          [
-           first_gen: fn -> 0 end,
-           last_gen: fn -> 1_000 end
+           last_gen: fn _state -> 1_000 end
          ]}
       ] do
         assert %{"error" => "no such route"} = conn |> get("/txs") |> json_response(400)

@@ -173,7 +173,7 @@ defmodule AeMdw.Db.NameClaimMutation do
   end
 
   defp read_raw_tx!(state, txi),
-    do: Format.to_raw_map(state, DbUtil.read_tx!(txi))
+    do: Format.to_raw_map(state, DbUtil.read_tx!(state, txi))
 
   defp read_cached_raw_tx!(state, txi) do
     case :ets.lookup(:tx_sync_cache, txi) do

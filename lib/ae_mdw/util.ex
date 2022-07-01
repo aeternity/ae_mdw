@@ -3,7 +3,8 @@ defmodule AeMdw.Util do
   @moduledoc false
 
   alias AeMdw.Blocks
-  alias AeMdw.Database
+  alias AeMdw.Collection
+  alias AeMdw.Db.State
 
   def id(x), do: x
 
@@ -212,10 +213,6 @@ defmodule AeMdw.Util do
     )
   end
 
-  @spec opposite_dir(Database.direction()) :: Database.direction()
-  def opposite_dir(:backward), do: :forward
-  def opposite_dir(:forward), do: :backward
-
   @spec parse_int(binary()) :: {:ok, integer()} | :error
   def parse_int(int_bin) do
     case Integer.parse(int_bin) do
@@ -230,9 +227,9 @@ defmodule AeMdw.Util do
   """
   @spec build_gen_pagination(
           Blocks.height() | nil,
-          Database.direction(),
+          State.direction(),
           {Blocks.height(), Blocks.height()},
-          Database.limit(),
+          Collection.limit(),
           Blocks.height()
         ) ::
           {:ok, Blocks.height() | nil, Range.t(), Blocks.height() | nil} | :error

@@ -854,26 +854,29 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   describe "name_v1" do
     test "get info by plain name", %{conn: conn} do
       name = "wwwbeaconoidcom.chain"
+      state = State.new()
       conn = get(conn, "/name/#{name}")
 
       assert json_response(conn, 200) ==
-               TestUtil.handle_input(fn -> get_name(Validate.plain_name!(name)) end)
+               TestUtil.handle_input(fn -> get_name(Validate.plain_name!(state, name)) end)
     end
 
     test "get by plain name a name with transfer by internal call", %{conn: conn} do
       name = "888888888888.chain"
+      state = State.new()
       conn = get(conn, "/name/#{name}")
 
       assert json_response(conn, 200) ==
-               TestUtil.handle_input(fn -> get_name(Validate.plain_name!(name)) end)
+               TestUtil.handle_input(fn -> get_name(Validate.plain_name!(state, name)) end)
     end
 
     test "get name in auction with expand=true", %{conn: conn} do
-      name = Util.first(Model.AuctionBid)
+      state = State.new()
+      name = State.prev(state, Model.AuctionBid, nil)
       conn = get(conn, "/name/#{name}?expand=true")
 
       response = json_response(conn, 200)
-      name_map = TestUtil.handle_input(fn -> get_name(Validate.plain_name!(name)) end)
+      name_map = TestUtil.handle_input(fn -> get_name(Validate.plain_name!(state, name)) end)
       name_map = update_in(name_map, ["status"], &to_string/1)
 
       assert name_map ==
@@ -887,18 +890,21 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
     test "get name info by encoded hash ", %{conn: conn} do
       hash = "nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj"
+      state = State.new()
       conn = get(conn, "/name/#{hash}")
 
       assert json_response(conn, 200) ==
-               TestUtil.handle_input(fn -> get_name(Validate.plain_name!(hash)) end)
+               TestUtil.handle_input(fn -> get_name(Validate.plain_name!(state, hash)) end)
     end
 
     test "renders error when no such name is present", %{conn: conn} do
       name = "no--such--name--in--the--chain.chain"
+      state = State.new()
       conn = get(conn, "/name/#{name}")
 
       assert json_response(conn, 404) == %{
-               "error" => TestUtil.handle_input(fn -> get_name(Validate.plain_name!(name)) end)
+               "error" =>
+                 TestUtil.handle_input(fn -> get_name(Validate.plain_name!(state, name)) end)
              }
     end
   end
@@ -906,26 +912,29 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   describe "name" do
     test "get info by plain name", %{conn: conn} do
       name = "wwwbeaconoidcom.chain"
+      state = State.new()
       conn = get(conn, "/v2/names/#{name}")
 
       assert json_response(conn, 200) ==
-               TestUtil.handle_input(fn -> get_name(Validate.plain_name!(name)) end)
+               TestUtil.handle_input(fn -> get_name(Validate.plain_name!(state, name)) end)
     end
 
     test "get by plain name a name with transfer by internal call", %{conn: conn} do
       name = "888888888888.chain"
+      state = State.new()
       conn = get(conn, "/v2/names/#{name}")
 
       assert json_response(conn, 200) ==
-               TestUtil.handle_input(fn -> get_name(Validate.plain_name!(name)) end)
+               TestUtil.handle_input(fn -> get_name(Validate.plain_name!(state, name)) end)
     end
 
     test "get name in auction with expand=true", %{conn: conn} do
-      name = Util.first(Model.AuctionBid)
+      state = State.new()
+      name = State.next(state, Model.AuctionBid, nil)
       conn = get(conn, "/v2/names/#{name}?expand=true")
 
       response = json_response(conn, 200)
-      name_map = TestUtil.handle_input(fn -> get_name(Validate.plain_name!(name)) end)
+      name_map = TestUtil.handle_input(fn -> get_name(Validate.plain_name!(state, name)) end)
       name_map = update_in(name_map, ["status"], &to_string/1)
 
       assert name_map ==
@@ -939,18 +948,21 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
     test "get name info by encoded hash ", %{conn: conn} do
       hash = "nm_MwcgT7ybkVYnKFV6bPqhwYq2mquekhZ2iDNTunJS2Rpz3Njuj"
+      state = State.new()
       conn = get(conn, "/v2/names/#{hash}")
 
       assert json_response(conn, 200) ==
-               TestUtil.handle_input(fn -> get_name(Validate.plain_name!(hash)) end)
+               TestUtil.handle_input(fn -> get_name(Validate.plain_name!(state, hash)) end)
     end
 
     test "renders error when no such name is present", %{conn: conn} do
       name = "no--such--name--in--the--chain.chain"
+      state = State.new()
       conn = get(conn, "/v2/names/#{name}")
 
       assert json_response(conn, 404) == %{
-               "error" => TestUtil.handle_input(fn -> get_name(Validate.plain_name!(name)) end)
+               "error" =>
+                 TestUtil.handle_input(fn -> get_name(Validate.plain_name!(state, name)) end)
              }
     end
   end
@@ -958,18 +970,21 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   describe "pointers_v1" do
     test "get pointers for valid given name", %{conn: conn} do
       id = "cryptodao21ae.chain"
+      state = State.new()
       conn = get(conn, "/name/pointers/#{id}")
 
       assert json_response(conn, 200) ==
-               TestUtil.handle_input(fn -> get_pointers(Validate.plain_name!(id)) end)
+               TestUtil.handle_input(fn -> get_pointers(Validate.plain_name!(state, id)) end)
     end
 
     test "renders error when the name is missing", %{conn: conn} do
       id = "no--such--name--in--the--chain.chain"
+      state = State.new()
       conn = get(conn, "/name/pointers/#{id}")
 
       assert json_response(conn, 404) == %{
-               "error" => TestUtil.handle_input(fn -> get_pointers(Validate.plain_name!(id)) end)
+               "error" =>
+                 TestUtil.handle_input(fn -> get_pointers(Validate.plain_name!(state, id)) end)
              }
     end
   end
@@ -977,18 +992,21 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   describe "pointers" do
     test "get pointers for valid given name", %{conn: conn} do
       id = "cryptodao21ae.chain"
+      state = State.new()
       conn = get(conn, "/v2/names/#{id}/pointers")
 
       assert json_response(conn, 200) ==
-               TestUtil.handle_input(fn -> get_pointers(Validate.plain_name!(id)) end)
+               TestUtil.handle_input(fn -> get_pointers(Validate.plain_name!(state, id)) end)
     end
 
     test "renders error when the name is missing", %{conn: conn} do
       id = "no--such--name--in--the--chain.chain"
+      state = State.new()
       conn = get(conn, "/v2/names/#{id}/pointers")
 
       assert json_response(conn, 404) == %{
-               "error" => TestUtil.handle_input(fn -> get_pointers(Validate.plain_name!(id)) end)
+               "error" =>
+                 TestUtil.handle_input(fn -> get_pointers(Validate.plain_name!(state, id)) end)
              }
     end
   end

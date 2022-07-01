@@ -4,6 +4,8 @@ defmodule AeMdwWeb.TxController do
   alias AeMdw.Node
   alias AeMdw.Validate
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Txs
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
@@ -14,7 +16,6 @@ defmodule AeMdwWeb.TxController do
   require Model
 
   import AeMdwWeb.Util
-  import AeMdw.Db.Util
 
   @type_query_params ~w(type type_group)
   @pagination_param_keys ~w(limit page cursor expand direction scope_type range by rev scope)
@@ -62,28 +63,25 @@ defmodule AeMdwWeb.TxController do
   end
 
   @spec count(Conn.t(), map()) :: Conn.t()
-  def count(conn, _req),
-    do: conn |> json(last_txi())
+  def count(%Conn{assigns: %{state: state}} = conn, _req),
+    do: conn |> json(DbUtil.last_txi(state))
 
   @spec count_id(Conn.t(), map()) :: Conn.t()
-  def count_id(conn, %{"id" => id}),
-    do: handle_input(conn, fn -> conn |> json(id_counts(Validate.id!(id))) end)
+  def count_id(%Conn{assigns: %{state: state}} = conn, %{"id" => id}),
+    do: handle_input(conn, fn -> conn |> json(id_counts(state, Validate.id!(id))) end)
 
   ##########
 
-  @spec id_counts(binary()) :: map()
-  def id_counts(<<_::256>> = pk) do
+  @spec id_counts(State.t(), binary()) :: map()
+  defp id_counts(state, <<_::256>> = pk) do
     for tx_type <- Node.tx_types(), reduce: %{} do
       counts ->
         tx_counts =
           for {field, pos} <- Node.tx_ids(tx_type), reduce: %{} do
             tx_counts ->
-              case read(Model.IdCount, {tx_type, pos, pk}) do
-                [] ->
-                  tx_counts
-
-                [rec] ->
-                  Map.put(tx_counts, field, Model.id_count(rec, :count))
+              case State.get(state, Model.IdCount, {tx_type, pos, pk}) do
+                :not_found -> tx_counts
+                {:ok, Model.id_count(count: count)} -> Map.put(tx_counts, field, count)
               end
           end
 

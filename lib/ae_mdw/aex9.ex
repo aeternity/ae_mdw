@@ -182,7 +182,7 @@ defmodule AeMdw.Aex9 do
            account_balance_cursor() | nil}
           | {:error, Error.t()}
   def fetch_account_balances(state, account_pk, cursor, pagination) do
-    last_gen = DbUtil.last_gen()
+    last_gen = DbUtil.last_gen(state)
     type_height_hash = {:key, last_gen, DbUtil.height_hash(last_gen)}
 
     case deserialize_account_balance_cursor(cursor) do
@@ -200,7 +200,7 @@ defmodule AeMdw.Aex9 do
             Model.aexn_contract(meta_info: {name, symbol, _dec}) =
               State.fetch!(state, Model.AexnContract, {:aex9, contract_pk})
 
-            tx_idx = DbUtil.read_tx!(call_txi)
+            tx_idx = DbUtil.read_tx!(state, call_txi)
             info = Format.to_raw_map(state, tx_idx)
 
             %{
@@ -224,16 +224,23 @@ defmodule AeMdw.Aex9 do
     end
   end
 
-  @spec fetch_balance_history(pubkey(), pubkey(), range(), history_cursor(), pagination()) ::
+  @spec fetch_balance_history(
+          State.t(),
+          pubkey(),
+          pubkey(),
+          range(),
+          history_cursor(),
+          pagination()
+        ) ::
           {:ok, history_cursor() | nil, [aex9_balance_history_item()], history_cursor() | nil}
           | {:error, Error.t()}
-  def fetch_balance_history(contract_pk, account_pk, range, cursor, pagination) do
+  def fetch_balance_history(state, contract_pk, account_pk, range, cursor, pagination) do
     with :ok <- validate_aex9(contract_pk),
          {:ok, cursor} <- deserialize_history_cursor(cursor) do
       {first_gen, last_gen} =
         case range do
           {:gen, %Range{first: first, last: last}} -> {first, last}
-          nil -> {0, DbUtil.last_gen()}
+          nil -> {0, DbUtil.last_gen(state)}
         end
 
       streamer = fn

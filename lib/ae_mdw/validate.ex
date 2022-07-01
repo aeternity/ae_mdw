@@ -70,10 +70,10 @@ defmodule AeMdw.Validate do
 
   def name_id!(name_ident), do: unwrap!(&name_id/1, name_ident)
 
-  def plain_name(name_ident) do
+  def plain_name(state, name_ident) do
     case id(name_ident) do
       {:ok, name_hash} ->
-        case AeMdw.Db.Name.plain_name(name_hash) do
+        case AeMdw.Db.Name.plain_name(state, name_hash) do
           {:ok, plain_name} -> {:ok, plain_name}
           nil -> {:error, {ErrInput.NotFound, name_ident}}
         end
@@ -91,7 +91,7 @@ defmodule AeMdw.Validate do
     end
   end
 
-  def plain_name!(name_ident), do: unwrap!(&plain_name/1, name_ident)
+  def plain_name!(state, name_ident), do: unwrap!(&plain_name(state, &1), name_ident)
 
   # returns transaction type (atom)
   def tx_type(type) when is_atom(type),

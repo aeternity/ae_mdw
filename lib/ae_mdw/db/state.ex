@@ -18,10 +18,10 @@ defmodule AeMdw.Db.State do
 
   defstruct [:store, :stats, :cache, :jobs]
 
-  @typep key() :: Database.key()
-  @typep record() :: Database.record()
-  @typep direction() :: Database.direction()
-  @typep table() :: Database.table()
+  @type key() :: Database.key()
+  @type record() :: Database.record()
+  @type direction() :: Database.direction()
+  @type table() :: Database.table()
   @typep stat_name() :: atom()
   @typep cache_name() :: atom()
   @typep height() :: Blocks.height()
