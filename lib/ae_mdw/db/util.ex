@@ -21,6 +21,13 @@ defmodule AeMdw.Db.Util do
   @spec last_txi(state()) :: {:ok, Txs.txi()} | :none
   def last_txi(state), do: State.prev(state, Model.Tx, nil)
 
+  @spec last_txi!(state()) :: Txs.txi()
+  def last_txi!(state) do
+    {:ok, txi} = last_txi(state)
+
+    txi
+  end
+
   def last_gen(state) do
     case State.prev(state, Model.Block, nil) do
       {:ok, {height, _mbi}} -> height

@@ -167,7 +167,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     test "get count of transactions at the current height", %{conn: conn} do
       %Conn{assigns: %{state: state}} = conn = get(conn, "/v2/txs/count")
 
-      assert json_response(conn, 200) == Util.last_txi(state)
+      assert json_response(conn, 200) == Util.last_txi!(state)
     end
   end
 
@@ -202,7 +202,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     test "get transactions when direction=backward", %{conn: conn} do
       limit = 24
       state = State.new()
-      last_txi = Util.last_txi(state)
+      last_txi = Util.last_txi!(state)
 
       assert %{"data" => txs, "next" => next} =
                conn |> get("/v2/txs", direction: "backward", limit: limit) |> json_response(200)

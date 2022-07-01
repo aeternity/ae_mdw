@@ -872,7 +872,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
     test "get name in auction with expand=true", %{conn: conn} do
       state = State.new()
-      name = State.prev(state, Model.AuctionBid, nil)
+      {:ok, name} = State.prev(state, Model.AuctionBid, nil)
       conn = get(conn, "/name/#{name}?expand=true")
 
       response = json_response(conn, 200)
@@ -930,7 +930,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
     test "get name in auction with expand=true", %{conn: conn} do
       state = State.new()
-      name = State.next(state, Model.AuctionBid, nil)
+      {:ok, name} = State.next(state, Model.AuctionBid, nil)
       conn = get(conn, "/v2/names/#{name}?expand=true")
 
       response = json_response(conn, 200)

@@ -64,7 +64,7 @@ defmodule AeMdwWeb.TxController do
 
   @spec count(Conn.t(), map()) :: Conn.t()
   def count(%Conn{assigns: %{state: state}} = conn, _req),
-    do: conn |> json(DbUtil.last_txi(state))
+    do: conn |> json(DbUtil.last_txi!(state))
 
   @spec count_id(Conn.t(), map()) :: Conn.t()
   def count_id(%Conn{assigns: %{state: state}} = conn, %{"id" => id}),
