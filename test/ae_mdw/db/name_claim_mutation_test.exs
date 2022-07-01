@@ -3,6 +3,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
 
   alias AeMdw.Database
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.Sync
 
   import Mock
@@ -62,6 +63,8 @@ defmodule AeMdw.Db.NameClaimMutationTest do
       |> Database.commit()
     end
 
+    state = State.new()
+
     assert {:ok,
             Model.name(
               index: ^plain_name,
@@ -70,9 +73,10 @@ defmodule AeMdw.Db.NameClaimMutationTest do
               expire: expire,
               owner: ^new_owner_pk,
               updates: []
-            )} = Database.fetch(Model.ActiveName, plain_name)
+            )} = State.get(state, Model.ActiveName, plain_name)
 
-    assert Database.exists?(Model.ActiveNameExpiration, {expire, plain_name})
-    assert Database.exists?(Model.ActiveNameOwner, {new_owner_pk, plain_name})
+    assert State.exists?(state, Model.ActiveNameActivation, {claim_height, plain_name})
+    assert State.exists?(state, Model.ActiveNameExpiration, {expire, plain_name})
+    assert State.exists?(state, Model.ActiveNameOwner, {new_owner_pk, plain_name})
   end
 end

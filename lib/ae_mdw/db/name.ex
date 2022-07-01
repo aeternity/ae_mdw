@@ -40,6 +40,7 @@ defmodule AeMdw.Db.Name do
   @typep table ::
            Model.ActiveName
            | Model.InactiveName
+           | Model.ActiveNameActivation
            | Model.ActiveNameExpiration
            | Model.InactiveNameExpiration
            | Model.AuctionExpiration
@@ -51,6 +52,7 @@ defmodule AeMdw.Db.Name do
            | Model.Pointee
   @typep name_record() ::
            Model.name()
+           | Model.activation()
            | Model.expiration()
            | Model.plain_name()
            | Model.owner()
@@ -128,6 +130,7 @@ defmodule AeMdw.Db.Name do
         previous: previous
       )
 
+    m_name_activation = Model.activation(index: {height, plain_name})
     m_name_exp = Model.expiration(index: {expire, plain_name})
     m_owner = Model.owner(index: {owner, plain_name})
     %{tx: winning_tx} = read_raw_tx!(state, txi)
@@ -135,6 +138,7 @@ defmodule AeMdw.Db.Name do
     state
     |> cache_through_write(Model.ActiveName, m_name)
     |> cache_through_write(Model.ActiveNameOwner, m_owner)
+    |> cache_through_write(Model.ActiveNameActivation, m_name_activation)
     |> cache_through_write(Model.ActiveNameExpiration, m_name_exp)
     |> cache_through_delete(Model.AuctionExpiration, {height, plain_name})
     |> cache_through_delete(Model.AuctionOwner, {owner, plain_name})
@@ -439,11 +443,12 @@ defmodule AeMdw.Db.Name do
   defp cache_through_delete_active(
          state,
          expiration,
-         Model.name(index: plain_name, owner: owner_pk)
+         Model.name(index: plain_name, active: active_from, owner: owner_pk)
        ) do
     state
     |> cache_through_delete(Model.ActiveName, plain_name)
     |> cache_through_delete(Model.ActiveNameOwner, {owner_pk, plain_name})
+    |> cache_through_delete(Model.ActiveNameActivation, {active_from, plain_name})
     |> cache_through_delete(Model.ActiveNameExpiration, {expiration, plain_name})
   end
 

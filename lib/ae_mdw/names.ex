@@ -38,13 +38,14 @@ defmodule AeMdw.Names do
   @typep prefix() :: plain_name()
 
   @table_active Model.ActiveName
+  @table_activation Model.ActiveNameActivation
   @table_active_expiration Model.ActiveNameExpiration
   @table_active_owner Model.ActiveNameOwner
   @table_inactive Model.InactiveName
   @table_inactive_expiration Model.InactiveNameExpiration
   @table_inactive_owner Model.InactiveNameowner
 
-  @pagination_params ~w(limit cursor rev direction by scope)
+  @pagination_params ~w(limit cursor rev direction scope)
   @states ~w(active inactive)
   @all_lifecycles ~w(active inactive auction)a
 
@@ -59,20 +60,20 @@ defmodule AeMdw.Names do
         ) ::
           {:ok, cursor() | nil, [name()], cursor() | nil} | {:error, reason()}
   def fetch_names(state, pagination, range, order_by, query, cursor, expand?)
-      when order_by in [:expiration, :deactivation] do
-    cursor = deserialize_expiration_cursor(cursor)
+      when order_by in [:activation, :expiration, :deactivation] do
+    cursor = deserialize_height_cursor(cursor)
     scope = deserialize_scope(range)
 
     try do
-      {prev_cursor, expiration_keys, next_cursor} =
+      {prev_cursor, height_keys, next_cursor} =
         query
         |> Map.drop(@pagination_params)
         |> Enum.into(%{}, &convert_param/1)
-        |> build_expiration_streamer(state, scope, cursor)
+        |> build_height_streamer(state, scope, cursor)
         |> Collection.paginate(pagination)
 
-      {:ok, serialize_expiration_cursor(prev_cursor),
-       render_exp_list(state, expiration_keys, expand?), serialize_expiration_cursor(next_cursor)}
+      {:ok, serialize_height_cursor(prev_cursor), render_height_list(state, height_keys, expand?),
+       serialize_height_cursor(next_cursor)}
     rescue
       e in ErrInput ->
         {:error, e.message}
@@ -161,11 +162,19 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp build_expiration_streamer(%{owned_by: _owner_pk}, _state, _scope, _cursor) do
+  defp build_height_streamer(%{owned_by: _owner_pk}, _state, _scope, _cursor) do
     raise(ErrInput.Query, value: "can't order by expiration when filtering by owner")
   end
 
-  defp build_expiration_streamer(%{state: "active"}, state, scope, cursor) do
+  defp build_height_streamer(%{state: "active", by: "activation"}, state, scope, cursor) do
+    fn direction ->
+      state
+      |> Collection.stream(@table_activation, direction, scope, cursor)
+      |> Stream.map(&{&1, :active})
+    end
+  end
+
+  defp build_height_streamer(%{state: "active"}, state, scope, cursor) do
     fn direction ->
       state
       |> Collection.stream(@table_active_expiration, direction, scope, cursor)
@@ -173,7 +182,7 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp build_expiration_streamer(%{state: "inactive"}, state, scope, cursor) do
+  defp build_height_streamer(%{state: "inactive"}, state, scope, cursor) do
     fn direction ->
       state
       |> Collection.stream(@table_inactive_expiration, direction, scope, cursor)
@@ -181,7 +190,11 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp build_expiration_streamer(_query, state, scope, cursor) do
+  defp build_height_streamer(%{by: "activation"}, _state, _scope, _cursor) do
+    raise(ErrInput.Query, value: "can only order by activation when filtering active names")
+  end
+
+  defp build_height_streamer(_query, state, scope, cursor) do
     fn direction ->
       active_stream =
         state
@@ -280,7 +293,7 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp render_exp_list(state, names_tables_keys, expand?) do
+  defp render_height_list(state, names_tables_keys, expand?) do
     Enum.map(names_tables_keys, fn {{_exp, plain_name}, source} ->
       render(state, plain_name, source == :active, expand?)
     end)
@@ -397,17 +410,17 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp serialize_expiration_cursor(nil), do: nil
+  defp serialize_height_cursor(nil), do: nil
 
-  defp serialize_expiration_cursor({{{exp_height, name}, _tab}, is_reversed?}),
-    do: serialize_expiration_cursor({{exp_height, name}, is_reversed?})
+  defp serialize_height_cursor({{{height, name}, _tab}, is_reversed?}),
+    do: serialize_height_cursor({{height, name}, is_reversed?})
 
-  defp serialize_expiration_cursor({{exp_height, name}, is_reversed?}),
-    do: {"#{exp_height}-#{name}", is_reversed?}
+  defp serialize_height_cursor({{height, name}, is_reversed?}),
+    do: {"#{height}-#{name}", is_reversed?}
 
-  defp deserialize_expiration_cursor(nil), do: nil
+  defp deserialize_height_cursor(nil), do: nil
 
-  defp deserialize_expiration_cursor(cursor_bin) do
+  defp deserialize_height_cursor(cursor_bin) do
     case Regex.run(~r/\A(\d+)-([\w\.]+)\z/, cursor_bin) do
       [_match0, exp_height, name] -> {String.to_integer(exp_height), name}
       nil -> nil
@@ -436,6 +449,8 @@ defmodule AeMdw.Names do
     do: {:owned_by, Validate.id!(account_id, [:account_pubkey])}
 
   defp convert_param({"state", state}) when state in @states, do: {:state, state}
+
+  defp convert_param({"by", by}), do: {:by, by}
 
   defp convert_param(other_param),
     do: raise(ErrInput.Query, value: other_param)

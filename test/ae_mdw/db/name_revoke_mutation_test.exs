@@ -3,6 +3,7 @@ defmodule AeMdw.Db.NameRevokeMutationTest do
 
   alias AeMdw.Database
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.NameRevokeMutation
 
   require Model
@@ -20,15 +21,16 @@ defmodule AeMdw.Db.NameRevokeMutationTest do
     revoke_block_index = {revoke_height, 0}
     revoke_txi = 124
 
+    active_from = 11
     expire = 100
     owner_pk = <<538_053::256>>
 
     active_name =
       Model.name(
         index: plain_name,
-        active: 1,
+        active: active_from,
         expire: expire,
-        claims: [{{1, 0}, 123}],
+        claims: [{{active_from, 0}, 123}],
         updates: [],
         transfers: [],
         revoke: nil,
@@ -40,13 +42,26 @@ defmodule AeMdw.Db.NameRevokeMutationTest do
     Database.dirty_write(Model.ActiveName, active_name)
 
     Database.dirty_write(
+      Model.ActiveNameActivation,
+      Model.activation(index: {active_from, plain_name})
+    )
+
+    Database.dirty_write(
       Model.ActiveNameExpiration,
       Model.expiration(index: {expire, plain_name})
     )
 
     Database.dirty_write(Model.ActiveNameOwner, Model.owner(index: {owner_pk, plain_name}))
 
-    Database.commit([NameRevokeMutation.new(name_hash, revoke_txi, revoke_block_index)])
+    state2 =
+      State.commit_mem(State.new(), [
+        NameRevokeMutation.new(name_hash, revoke_txi, revoke_block_index)
+      ])
+
+    refute State.exists?(state2, Model.ActiveName, plain_name)
+    refute State.exists?(state2, Model.ActiveNameOwner, {owner_pk, plain_name})
+    refute State.exists?(state2, Model.ActiveNameActivation, {active_from, plain_name})
+    refute State.exists?(state2, Model.ActiveNameExpiration, {expire, plain_name})
 
     assert {:ok,
             Model.name(
@@ -54,9 +69,9 @@ defmodule AeMdw.Db.NameRevokeMutationTest do
               expire: ^expire,
               owner: ^owner_pk,
               revoke: {^revoke_block_index, ^revoke_txi}
-            )} = Database.fetch(Model.InactiveName, plain_name)
+            )} = State.get(state2, Model.InactiveName, plain_name)
 
-    assert Database.exists?(Model.InactiveNameExpiration, {revoke_height, plain_name})
-    assert Database.exists?(Model.InactiveNameOwner, {owner_pk, plain_name})
+    assert State.exists?(state2, Model.InactiveNameExpiration, {revoke_height, plain_name})
+    assert State.exists?(state2, Model.InactiveNameOwner, {owner_pk, plain_name})
   end
 end
