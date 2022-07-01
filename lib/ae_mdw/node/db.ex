@@ -38,15 +38,24 @@ defmodule AeMdw.Node.Db do
   end
 
   defp get_blocks_per_height(from_height, last_mb_hash, last_kb_hash) do
+    {:ok, root_hash} =
+      :aec_chain.genesis_block()
+      |> :aec_blocks.to_header()
+      |> :aec_headers.hash_header()
+
     {last_mb_hash, last_kb_hash}
-    |> Stream.unfold(fn {last_mb_hash, last_kb_hash} ->
-      {key_block, micro_blocks} = get_kb_mbs(last_mb_hash)
+    |> Stream.unfold(fn
+      {_last_mb_hash, ^root_hash} ->
+        nil
 
-      prev_hash = :aec_blocks.prev_hash(key_block)
-      key_header = :aec_blocks.to_header(key_block)
-      {:ok, key_hash} = :aec_headers.hash_header(key_header)
+      {last_mb_hash, last_kb_hash} ->
+        {key_block, micro_blocks} = get_kb_mbs(last_mb_hash)
 
-      {{key_block, micro_blocks, last_kb_hash}, {prev_hash, key_hash}}
+        prev_hash = :aec_blocks.prev_hash(key_block)
+        key_header = :aec_blocks.to_header(key_block)
+        {:ok, key_hash} = :aec_headers.hash_header(key_header)
+
+        {{key_block, micro_blocks, last_kb_hash}, {prev_hash, key_hash}}
     end)
     |> Enum.take_while(fn {key_block, _micro_blocks, _last_kb_hash} ->
       :aec_blocks.height(key_block) >= from_height
