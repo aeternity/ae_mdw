@@ -12,16 +12,15 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Node.Db
+  alias AeMdw.Util
 
   require Ex2ms
   require Log
   require Model
   require Record
 
-  import AeMdw.Util, only: [min_bin: 0, max_256bit_bin: 0, max_256bit_int: 0]
+  import AeMdw.Util, only: [min_bin: 0, max_256bit_bin: 0]
   import AeMdwWeb.Helpers.AexnHelper, only: [sort_field_truncate: 1]
-
-  import AeMdw.Db.Util
 
   @type rev_aex9_contract_key :: {pos_integer(), String.t(), String.t(), pos_integer()}
   @typep pubkey :: Db.pubkey()
@@ -317,19 +316,10 @@ defmodule AeMdw.Db.Contract do
 
   @spec aex9_search_contract(State.t(), pubkey(), integer()) :: map()
   def aex9_search_contract(state, account_pk, last_txi) do
-    gen_collect(
-      Model.Aex9AccountPresence,
-      {account_pk, last_txi, <<max_256bit_int()::256>>},
-      fn {acc_pk, _, _} -> acc_pk == account_pk end,
-      &State.prev(state, &1, &2),
-      fn -> %{} end,
-      fn {_, txi, ct_pk}, accum ->
-        Map.update(accum, ct_pk, [txi], fn txi_list ->
-          [txi | txi_list]
-        end)
-      end,
-      & &1
-    )
+    state
+    |> Collection.stream(Model.Aex9AccountPresence, {account_pk, last_txi, Util.min_int()})
+    |> Stream.take_while(&match?({^account_pk, _txi, _contract_pk}, &1))
+    |> Enum.group_by(fn {_account_pk, _txi, contract_pk} -> contract_pk end)
   end
 
   @spec update_aex9_state(State.t(), pubkey(), block_index(), txi()) :: State.t()
