@@ -60,7 +60,8 @@ defmodule AeMdw.Db.Status do
   defp safe_mdw_tx_index_and_height(state) do
     case Util.last_txi(state) do
       {:ok, last_txi} ->
-        {mdw_height, _mbi} = state |> Util.read_tx!(last_txi) |> Model.tx(:block_index)
+        mdw_height = Util.synced_height(state)
+
         {last_txi, mdw_height}
 
       :none ->
