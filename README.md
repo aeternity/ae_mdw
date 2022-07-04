@@ -1672,59 +1672,34 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/names?state=active&by=name&limit=
 Additionally, this endpoint allows you to filter by name owner using the query param `owned_by`:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/names?owned_by=ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/names?owned_by=ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN&by=name" | jq '.'
 {
   "active": [
     {
       "active": true,
-      "hash": "nm_8oH11atX3dnEsqnhhuFzRkxVdZfkkKSKxtKZQcYFudmgqcVmT",
+      "auction": null,
+      "hash": "nm_ekASCb5VvGYg8tcdA93A4dsMRNCsBVrv8b5kozYNjr2ofBbga",
       "info": {
-        "active_from": 162213,
+        "active_from": 440894,
         "auction_timeout": 0,
         "claims": [
-          4748820
+          23101974
         ],
-        "expire_height": 365074,
+        "expire_height": 630903,
         "ownership": {
-          "current": "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN",
-          "original": "ak_2tACpi3fVoP5kGo7aXw4riDNwifU2UR3AxxKzTs7FiCPi4iBa8"
+          "current": "ak_VxVK5wdL2MbRZBFi8DHfTcnz19BMKAR51iTeqY8nNRJ3b3RSq",
+          "original": "ak_VxVK5wdL2MbRZBFi8DHfTcnz19BMKAR51iTeqY8nNRJ3b3RSq"
         },
         "pointers": {
-          "account_pubkey": "ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN"
+          "account_pubkey": "ak_VxVK5wdL2MbRZBFi8DHfTcnz19BMKAR51iTeqY8nNRJ3b3RSq"
         },
         "revoke": null,
-        "transfers": [
-          15227905,
-          15227448
-        ],
+        "transfers": [],
         "updates": [
-          15736349,
-          15698826,
-          15662790,
-          15626051,
-          15590987,
-          15555002,
-          15518890,
-          15481239,
-          15446118,
-          15410282,
-          15374086,
-          15338216,
-          15301733,
-          15300975,
-          15265489,
-          15227850,
-          11490573,
-          8946568,
-          5770445,
-          5561653,
-          5561576,
-          4776331,
-          4771609,
-          4748827
+          23579316
         ]
       },
-      "name": "0000000000000.chain",
+      "name": "zzzzzzzzzzzzz.chain",
       "previous": [],
       "status": "name"
     },
@@ -1776,52 +1751,36 @@ Prefix searching of names is possible via `/v2/names/search` endpoint.
 By default, the prefix search will find names in any of the lifecycle states - `auction`, `active`, `inactive`.
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/names/search?prefix=xxxxxx" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/search?prefix=xxxxxx" | jq '.'
 [
-  {
-    "active": false,
-    "auction": null,
-    "info": {
-      "active_from": 80806,
-      "auction_timeout": 0,
-      "claims": [
-        1793852
-      ],
-      "expire_height": 130806,
-      "ownership": {
-        "current": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf",
-        "original": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf"
+  [
+    {
+      "payload": {
+        "active": true,
+        "auction": null,
+        "hash": "nm_n6mE2D37D5vEbLVSwvLr7haCbKt1Rtk8vczCywMRXFss3cPLs",
+        "info": {
+          "active_from": 513559,
+          "auction_timeout": 0,
+          "claims": [
+            27875299
+          ],
+          "expire_height": 693559,
+          "ownership": {
+            "current": "ak_2fxRQ2STRnBdhu7XR1Q7amotX7FSaC1z73bwAuJX7nf8JDQ4PS",
+            "original": "ak_2fxRQ2STRnBdhu7XR1Q7amotX7FSaC1z73bwAuJX7nf8JDQ4PS"
+          },
+          "pointers": {},
+          "revoke": null,
+          "transfers": [],
+          "updates": []
+        },
+        "name": "xxxxxxxxxxxxx.chain",
+        "previous": [],
+        "status": "name"
       },
-      "pointers": {},
-      "revoke": null,
-      "transfers": [],
-      "updates": []
+      "type": "name"
     },
-    "name": "xxxxxx.test",
-    "previous": [
-      {
-        "active_from": 23181,
-        "auction_timeout": 0,
-        "claims": [
-          390494
-        ],
-        "expire_height": 73247,
-        "ownership": {
-          "current": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf",
-          "original": "ak_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf"
-        },
-        "pointers": {
-          "account_pubkey": "ak_2A8SNUmHvB7LKAN9MjTi6ebvxqo68uztCwRuJ4jM3tcVJFzs8r"
-        },
-        "revoke": null,
-        "transfers": [],
-        "updates": [
-          392606
-        ]
-      }
-    ],
-    "status": "name"
-  },
   ...
 ]
 ```
