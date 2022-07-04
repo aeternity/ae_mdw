@@ -319,7 +319,9 @@ defmodule AeMdw.Db.Contract do
     state
     |> Collection.stream(Model.Aex9AccountPresence, {account_pk, last_txi, Util.min_int()})
     |> Stream.take_while(&match?({^account_pk, _txi, _contract_pk}, &1))
-    |> Enum.group_by(fn {_account_pk, _txi, contract_pk} -> contract_pk end)
+    |> Enum.reduce(%{}, fn {_account_pk, txi, contract_pk}, acc ->
+      Map.update(acc, contract_pk, [txi], &[txi | &1])
+    end)
   end
 
   @spec update_aex9_state(State.t(), pubkey(), block_index(), txi()) :: State.t()
