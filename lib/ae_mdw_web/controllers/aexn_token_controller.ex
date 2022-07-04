@@ -79,12 +79,12 @@ defmodule AeMdwWeb.AexnTokenController do
         "contract_id" => contract_id,
         "account_id" => account_id
       }) do
-    %{pagination: pagination, cursor: cursor, scope: scope} = assigns
+    %{pagination: pagination, cursor: cursor, scope: scope, state: state} = assigns
 
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
          {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
          {:ok, prev_cursor, balance_history_items, next_cursor} <-
-           Aex9.fetch_balance_history(contract_pk, account_pk, scope, cursor, pagination) do
+           Aex9.fetch_balance_history(state, contract_pk, account_pk, scope, cursor, pagination) do
       Util.paginate(conn, prev_cursor, balance_history_items, next_cursor)
     end
   end

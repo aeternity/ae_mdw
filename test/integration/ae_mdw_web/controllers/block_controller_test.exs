@@ -7,12 +7,12 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdwWeb.TestUtil
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.EtsCache
-  require Model
 
-  import AeMdw.Db.Util
+  require Model
 
   @moduletag :integration
 
@@ -114,9 +114,10 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
     end
 
     test "when direction=backward it gets generations backwards", %{conn: conn} do
+      state = State.new()
       direction = "backward"
       limit = 3
-      last_gen = last_gen()
+      last_gen = DbUtil.last_gen(state)
 
       assert %{"data" => blocks, "next" => next_url} =
                conn |> get("/blocks/#{direction}?limit=#{limit}") |> json_response(200)
@@ -189,8 +190,9 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
     end
 
     test "it gets uncached generations with range", %{conn: conn} do
-      range_begin = last_gen() - @blocks_cache_threshold + 1
-      range_end = last_gen()
+      state = State.new()
+      range_begin = DbUtil.last_gen(state) - @blocks_cache_threshold + 1
+      range_end = DbUtil.last_gen(state)
       range = "#{range_begin}-#{range_end}"
       limit = @blocks_cache_threshold
       conn = get(conn, "/blocks/#{range}?limit=#{limit}")
@@ -208,9 +210,10 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
     end
 
     test "get a mix of uncached and cached generations with range", %{conn: conn} do
+      state = State.new()
       remaining = 3
-      range_begin = last_gen() - @blocks_cache_threshold + 1 - remaining
-      range_end = last_gen()
+      range_begin = DbUtil.last_gen(state) - @blocks_cache_threshold + 1 - remaining
+      range_end = DbUtil.last_gen(state)
       range = "#{range_begin}-#{range_end}"
       limit = @blocks_cache_threshold
 
@@ -304,13 +307,15 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
   end
 
   defp get_block({_, mbi} = block_index) do
-    case read_block(block_index) do
-      [block] ->
+    state = State.new()
+
+    case State.get(state, Model.Block, block_index) do
+      {:ok, block} ->
         type = (mbi == -1 && :key_block_hash) || :micro_block_hash
         hash = Model.block(block, :hash)
         get_block(Enc.encode(type, hash))
 
-      [] ->
+      :not_found ->
         raise ErrInput.NotFound, value: block_index
     end
   end

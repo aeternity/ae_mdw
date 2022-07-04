@@ -5,7 +5,6 @@ defmodule AeMdw.Db.Oracle do
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
   alias AeMdw.Collection
-  alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.OracleResponseMutation
@@ -52,35 +51,6 @@ defmodule AeMdw.Db.Oracle do
           :not_found -> nil
         end
     end
-  end
-
-  @spec cache_through_prev(atom(), cache_key()) :: term()
-  def cache_through_prev(table, key),
-    do: cache_through_prev(table, key, &(elem(key, 0) == elem(&1, 0)))
-
-  @spec cache_through_prev(atom(), cache_key(), fun()) :: term()
-  def cache_through_prev(table, key, key_checker) do
-    lookup = fn k, unwrap, eot, chk_fail ->
-      case k do
-        :"$end_of_table" ->
-          eot.()
-
-        prev_key ->
-          prev_key = unwrap.(prev_key)
-          (key_checker.(prev_key) && {:ok, prev_key}) || chk_fail.()
-      end
-    end
-
-    nf = fn -> :not_found end
-
-    mns_lookup = fn ->
-      case Database.prev_key(table, key) do
-        {:ok, prev_key} -> lookup.(prev_key, & &1, nf, nf)
-        :none -> :not_found
-      end
-    end
-
-    lookup.(:ets.prev(:oracle_sync_cache, {table, key}), &elem(&1, 1), mns_lookup, mns_lookup)
   end
 
   @spec cache_through_write(state(), atom(), tuple()) :: state()

@@ -202,12 +202,12 @@ defmodule AeMdw.Txs do
   #            initial_key = {:spend_tx, 1, B, 0}
   #            Only take txis while it matches the {:spend_tx, 1, B, _tx_index} tuple
   #            Only take txis where A has a spend_tx transaction (as a sender) too:
-  #              Database.exists?(Field, {:spend_tx, 1, A, txi})
+  #              State.exists?(Field, {:spend_tx, 1, A, txi})
   #        - For {:spend_tx, 2}:
   #            initial_key = {:spend_tx, 2, B, 0}
   #            Only take txis while it matches the {:spend_tx, 2, B, _tx_index} tuple
   #            Only take txis where A has a spend_tx transaction  (as a sender) too:
-  #              Database.exists?(Field, {:spend_tx, 1, A, txi})
+  #              State.exists?(Field, {:spend_tx, 1, A, txi})
   #        - Same thing for oracle_query_tx fields
   #   4. All of the streams are returned for Collection.merge/2 to take, which will merge
   #      the keys {:spend_tx, 1, B, X} and {:spend_tx, 2, B, X}, {:oracle_query_tx, 1, B, X} and
@@ -404,7 +404,7 @@ defmodule AeMdw.Txs do
   end
 
   defp get_recipient(state, spend_tx_recipient_nm, spend_txi) do
-    with {:ok, plain_name} <- Validate.plain_name(spend_tx_recipient_nm),
+    with {:ok, plain_name} <- Validate.plain_name(state, spend_tx_recipient_nm),
          {:ok, pointee_pk} <- Name.account_pointer_at(state, plain_name, spend_txi) do
       recipient_account = :aeser_api_encoder.encode(:account_pubkey, pointee_pk)
       %{"recipient" => %{"name" => plain_name, "account" => recipient_account}}

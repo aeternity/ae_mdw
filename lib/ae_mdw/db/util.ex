@@ -4,9 +4,6 @@ defmodule AeMdw.Db.Util do
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
-  alias AeMdw.Database
-  alias AeMdw.Db.RocksDbCF
-  alias AeMdw.Db.State
   alias AeMdw.Txs
 
   require Logger
@@ -16,95 +13,25 @@ defmodule AeMdw.Db.Util do
 
   @typep state() :: State.t()
 
-  @eot :"$end_of_table"
-
-  def read(tab, key) do
-    Database.read(tab, key)
-  end
-
-  def read!(tab, key),
-    do: read(tab, key) |> one!
-
-  def read_tx(txi) do
-    case RocksDbCF.read_tx(txi) do
-      {:ok, m_tx} -> [m_tx]
-      :not_found -> []
-    end
-  end
-
-  def read_tx!(txi),
-    do: read_tx(txi) |> one!
-
   def read_tx!(state, txi), do: State.fetch!(state, Model.Tx, txi)
 
-  def read_block({_, _} = bi) do
-    case RocksDbCF.read_block(bi) do
-      {:ok, m_block} -> [m_block]
-      :not_found -> []
-    end
-  end
-
-  def read_block(kbi) when is_integer(kbi),
-    do: read_block({kbi, -1})
-
-  @spec read_block!(State.t(), Blocks.block_index()) :: Model.block()
+  @spec read_block!(state(), Blocks.block_index()) :: Model.block()
   def read_block!(state, block_index), do: State.fetch!(state, Model.Block, block_index)
-
-  def next_bi!({_kbi, _mbi} = bi) do
-    {:ok, next_bi} = Database.next_key(Model.Block, bi)
-    next_bi
-  end
-
-  def next_bi!(kbi) when is_integer(kbi),
-    do: next_bi!({kbi, -1})
-
-  def first_txi(),
-    do: ensure_key!(Model.Tx, :first)
-
-  def last_txi(),
-    do: ensure_key!(Model.Tx, :last)
 
   @spec last_txi(state()) :: {:ok, Txs.txi()} | :none
   def last_txi(state), do: State.prev(state, Model.Tx, nil)
 
-  def first_gen(),
-    do: ensure_key!(Model.Block, :first) |> (fn {h, -1} -> h end).()
+  @spec last_txi!(state()) :: Txs.txi()
+  def last_txi!(state) do
+    {:ok, txi} = last_txi(state)
 
-  def last_gen(),
-    do: ensure_key!(Model.Block, :last) |> (fn {h, _mbi} -> h end).()
+    txi
+  end
 
   def last_gen(state) do
     case State.prev(state, Model.Block, nil) do
       {:ok, {height, _mbi}} -> height
       :none -> raise RuntimeError, message: "can't get last key for table Model.Block"
-    end
-  end
-
-  def prev(tab, key) do
-    case Database.prev_key(tab, key) do
-      {:ok, prev_key} -> prev_key
-      :none -> @eot
-    end
-  end
-
-  def next(tab, key) do
-    case Database.next_key(tab, key) do
-      {:ok, next_key} -> next_key
-      :none -> @eot
-    end
-  end
-
-  def first(tab) do
-    case Database.first_key(tab) do
-      {:ok, key} -> key
-      :none -> @eot
-    end
-  end
-
-  def last(tab) do
-    case Database.last_key(tab) do
-      {:ok, key} -> key
-      :none -> @eot
     end
   end
 
@@ -204,12 +131,18 @@ defmodule AeMdw.Db.Util do
     vsn
   end
 
-  def block_txi(bi), do: map_one_nil(read_block(bi), &Model.block(&1, :tx_index))
+  @spec block_txi(state(), Blocks.block_index()) :: Txs.txi() | nil
+  def block_txi(state, bi) do
+    case State.get(state, Model.Block, bi) do
+      {:ok, Model.block(tx_index: txi)} -> txi
+      :not_found -> nil
+    end
+  end
 
-  @spec block_hash_to_bi(State.t(), Blocks.block_hash()) :: Blocks.block_index() | nil
+  @spec block_hash_to_bi(state(), Blocks.block_hash()) :: Blocks.block_index() | nil
   def block_hash_to_bi(state, block_hash) do
     with {:ok, node_block} <- :aec_chain.get_block(block_hash),
-         last_gen <- last_gen(),
+         last_gen <- last_gen(state),
          {:micro, height} when height < last_gen <- block_type_height(node_block) do
       state
       |> Collection.stream(Model.Block, :forward, {{height, 0}, {height, nil}}, nil)
@@ -226,7 +159,7 @@ defmodule AeMdw.Db.Util do
     end
   end
 
-  @spec gen_to_txi(State.t(), Blocks.height()) :: Txs.txi()
+  @spec gen_to_txi(state(), Blocks.height()) :: Txs.txi()
   def gen_to_txi(state, gen) do
     case State.get(state, Model.Block, {gen, -1}) do
       {:ok, Model.block(tx_index: txi)} ->
@@ -240,7 +173,7 @@ defmodule AeMdw.Db.Util do
     end
   end
 
-  @spec txi_to_gen(State.t(), Txs.txi()) :: Blocks.height()
+  @spec txi_to_gen(state(), Txs.txi()) :: Blocks.height()
   def txi_to_gen(state, txi) do
     case State.get(state, Model.Tx, txi) do
       {:ok, Model.tx(block_index: {kbi, _mbi})} ->
@@ -262,7 +195,7 @@ defmodule AeMdw.Db.Util do
     hash
   end
 
-  @spec synced_height(State.t()) :: Blocks.height() | -1
+  @spec synced_height(state()) :: Blocks.height() | -1
   def synced_height(state) do
     case State.prev(state, Model.DeltaStat, nil) do
       :none -> -1

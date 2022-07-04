@@ -4,18 +4,17 @@ defmodule AeMdw.Db.WriteMutation do
   table.
   """
 
-  alias AeMdw.Database
   alias AeMdw.Db.State
 
   @derive AeMdw.Db.Mutation
   defstruct [:table, :record]
 
   @opaque t() :: %__MODULE__{
-            table: Database.table(),
-            record: Database.record()
+            table: State.table(),
+            record: State.record()
           }
 
-  @spec new(Database.table(), Database.record()) :: t()
+  @spec new(State.table(), State.record()) :: t()
   def new(table, record) do
     %__MODULE__{table: table, record: record}
   end

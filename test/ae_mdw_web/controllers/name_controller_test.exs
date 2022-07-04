@@ -823,7 +823,7 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Name, [],
          [
-           plain_name: fn ^hash_id -> {:ok, name} end,
+           plain_name: fn _state, ^hash_id -> {:ok, name} end,
            locate: fn _state, ^name ->
              {Model.name(index: name, active: true, expire: 0), Model.ActiveName}
            end,

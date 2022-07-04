@@ -142,7 +142,7 @@ defmodule AeMdw.Oracles do
   end
 
   defp render_list(state, oracles_exp_keys, is_active?, expand?) do
-    last_gen = DBUtil.last_gen()
+    last_gen = DBUtil.last_gen(state)
 
     oracles_exp_keys
     |> Enum.map(fn {_exp, oracle_pk} ->

@@ -50,8 +50,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       with_mocks [
         {AeMdw.Node.Db, [],
          [
-           get_key_block_hash: fn height ->
-             assert ^height = kbi + 1
+           get_key_block_hash: fn _height ->
              kb_hash
            end,
            get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,

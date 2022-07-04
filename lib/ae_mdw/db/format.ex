@@ -14,7 +14,6 @@ defmodule AeMdw.Db.Format do
 
   require Model
 
-  import AeMdw.Db.Name, only: [plain_name!: 1]
   import AeMdw.Util
 
   @type aeser_id() :: {:id, atom(), binary()}
@@ -50,7 +49,7 @@ defmodule AeMdw.Db.Format do
       tx: tx_map
     }
 
-    custom_raw_data(type, raw, tx_rec, signed_tx, block_hash)
+    custom_raw_data(state, type, raw, tx_rec, signed_tx, block_hash)
   end
 
   def to_raw_map(state, auction_bid, Model.AuctionBid),
@@ -280,16 +279,16 @@ defmodule AeMdw.Db.Format do
     )
   end
 
-  defp custom_raw_data(:contract_create_tx, tx, tx_rec, _signed_tx, block_hash) do
+  defp custom_raw_data(_state, :contract_create_tx, tx, tx_rec, _signed_tx, block_hash) do
     init_call_details = Contract.get_init_call_details(tx_rec, block_hash)
 
     update_in(tx, [:tx], fn tx_details -> Map.merge(tx_details, init_call_details) end)
   end
 
-  defp custom_raw_data(:contract_call_tx, tx, tx_rec, _signed_tx, block_hash) do
+  defp custom_raw_data(state, :contract_call_tx, tx, tx_rec, _signed_tx, block_hash) do
     contract_pk = :aect_call_tx.contract_pubkey(tx_rec)
     call_rec = Contract.call_rec(tx_rec, contract_pk, block_hash)
-    fun_arg_res = AeMdw.Db.Contract.call_fun_arg_res(contract_pk, tx.tx_index)
+    fun_arg_res = AeMdw.Db.Contract.call_fun_arg_res(state, contract_pk, tx.tx_index)
 
     logs = fn logs ->
       Enum.map(logs, fn {addr, topics, data} ->
@@ -308,31 +307,31 @@ defmodule AeMdw.Db.Format do
     update_in(tx, [:tx], &Map.merge(&1, m))
   end
 
-  defp custom_raw_data(:channel_create_tx, tx, _tx_rec, signed_tx, _block_hash) do
+  defp custom_raw_data(_state, :channel_create_tx, tx, _tx_rec, signed_tx, _block_hash) do
     channel_pk = :aesc_utils.channel_pubkey(signed_tx) |> ok!
     put_in(tx, [:tx, :channel_id], :aeser_id.create(:channel, channel_pk))
   end
 
-  defp custom_raw_data(:oracle_register_tx, tx, tx_rec, _signed_tx, _block_hash) do
+  defp custom_raw_data(_state, :oracle_register_tx, tx, tx_rec, _signed_tx, _block_hash) do
     oracle_pk = :aeo_register_tx.account_pubkey(tx_rec)
     put_in(tx, [:tx, :oracle_id], :aeser_id.create(:oracle, oracle_pk))
   end
 
-  defp custom_raw_data(:name_claim_tx, tx, tx_rec, _signed_tx, _block_hash) do
+  defp custom_raw_data(_state, :name_claim_tx, tx, tx_rec, _signed_tx, _block_hash) do
     {:ok, name_id} = :aens.get_name_hash(:aens_claim_tx.name(tx_rec))
     put_in(tx, [:tx, :name_id], :aeser_id.create(:name, name_id))
   end
 
-  defp custom_raw_data(:name_update_tx, tx, tx_rec, _signed_tx, _block_hash),
-    do: put_in(tx, [:tx, :name], plain_name!(:aens_update_tx.name_hash(tx_rec)))
+  defp custom_raw_data(state, :name_update_tx, tx, tx_rec, _signed_tx, _block_hash),
+    do: put_in(tx, [:tx, :name], Name.plain_name!(state, :aens_update_tx.name_hash(tx_rec)))
 
-  defp custom_raw_data(:name_transfer_tx, tx, tx_rec, _signed_tx, _block_hash),
-    do: put_in(tx, [:tx, :name], plain_name!(:aens_transfer_tx.name_hash(tx_rec)))
+  defp custom_raw_data(state, :name_transfer_tx, tx, tx_rec, _signed_tx, _block_hash),
+    do: put_in(tx, [:tx, :name], Name.plain_name!(state, :aens_transfer_tx.name_hash(tx_rec)))
 
-  defp custom_raw_data(:name_revoke_tx, tx, tx_rec, _signed_tx, _block_hash),
-    do: put_in(tx, [:tx, :name], plain_name!(:aens_revoke_tx.name_hash(tx_rec)))
+  defp custom_raw_data(state, :name_revoke_tx, tx, tx_rec, _signed_tx, _block_hash),
+    do: put_in(tx, [:tx, :name], Name.plain_name!(state, :aens_revoke_tx.name_hash(tx_rec)))
 
-  defp custom_raw_data(_, tx, _, _, _),
+  defp custom_raw_data(_state, _tx_type, tx, _tx_rec, _signed_tx, _block_hash),
     do: tx
 
   ##########
@@ -349,7 +348,7 @@ defmodule AeMdw.Db.Format do
     do: to_map(state, rec, AE.Db.get_tx_data(hash))
 
   def to_map(
-        _state,
+        state,
         {:tx, index, _hash, {_kb_index, mb_index}, mb_time},
         {block_hash, type, signed_tx, tx_rec}
       ) do
@@ -361,7 +360,7 @@ defmodule AeMdw.Db.Format do
       |> put_in(["micro_index"], mb_index)
       |> put_in(["micro_time"], mb_time)
 
-    custom_encode(type, enc_tx, tx_rec, signed_tx, block_hash)
+    custom_encode(state, type, enc_tx, tx_rec, signed_tx, block_hash)
   end
 
   def to_map(state, auction_bid, Model.AuctionBid),
@@ -427,7 +426,7 @@ defmodule AeMdw.Db.Format do
           signed_tx = :aetx_sign.new(tx, [])
 
           %{"tx" => enc_tx} =
-            custom_encode(tx_type, wrapped_tx, tx_rec, signed_tx, raw_map.block_hash)
+            custom_encode(state, tx_type, wrapped_tx, tx_rec, signed_tx, raw_map.block_hash)
 
           enc_tx
       end
@@ -482,10 +481,10 @@ defmodule AeMdw.Db.Format do
     |> update_in(["register"], &expand(state, &1))
   end
 
-  defp custom_encode(:oracle_response_tx, tx, _tx_rec, _signed_tx, _block_hash),
+  defp custom_encode(_state, :oracle_response_tx, tx, _tx_rec, _signed_tx, _block_hash),
     do: update_in(tx, ["tx", "response"], &maybe_base64/1)
 
-  defp custom_encode(:oracle_query_tx, tx, tx_rec, _signed_tx, _block_hash) do
+  defp custom_encode(_state, :oracle_query_tx, tx, tx_rec, _signed_tx, _block_hash) do
     query_id = :aeo_query_tx.query_id(tx_rec)
     query_id = Enc.encode(:oracle_query_id, query_id)
 
@@ -494,24 +493,24 @@ defmodule AeMdw.Db.Format do
     |> put_in(["tx", "query_id"], query_id)
   end
 
-  defp custom_encode(:ga_attach_tx, tx, tx_rec, _signed_tx, _block_hash) do
+  defp custom_encode(_state, :ga_attach_tx, tx, tx_rec, _signed_tx, _block_hash) do
     contract_pk = :aega_attach_tx.contract_pubkey(tx_rec)
     put_in(tx, ["tx", "contract_id"], Enc.encode(:contract_pubkey, contract_pk))
   end
 
-  defp custom_encode(:contract_create_tx, tx, tx_rec, _, block_hash) do
+  defp custom_encode(_state, :contract_create_tx, tx, tx_rec, _, block_hash) do
     init_call_details = Contract.get_init_call_details(tx_rec, block_hash)
 
     update_in(tx, ["tx"], fn tx_details -> Map.merge(tx_details, init_call_details) end)
   end
 
-  defp custom_encode(:contract_call_tx, tx, tx_rec, _signed_tx, block_hash) do
+  defp custom_encode(state, :contract_call_tx, tx, tx_rec, _signed_tx, block_hash) do
     contract_pk = :aect_call_tx.contract_pubkey(tx_rec)
     call_rec = Contract.call_rec(tx_rec, contract_pk, block_hash)
 
     fun_arg_res =
-      contract_pk
-      |> AeMdw.Db.Contract.call_fun_arg_res(tx["tx_index"])
+      state
+      |> AeMdw.Db.Contract.call_fun_arg_res(contract_pk, tx["tx_index"])
       |> map_raw_values(fn
         x when is_number(x) -> x
         x -> to_string(x)
@@ -525,31 +524,31 @@ defmodule AeMdw.Db.Format do
     update_in(tx, ["tx"], &Map.merge(&1, Map.merge(fun_arg_res, call_ser)))
   end
 
-  defp custom_encode(:channel_create_tx, tx, _tx_rec, signed_tx, _block_hash) do
+  defp custom_encode(_state, :channel_create_tx, tx, _tx_rec, signed_tx, _block_hash) do
     channel_pk = :aesc_utils.channel_pubkey(signed_tx) |> ok!
     put_in(tx, ["tx", "channel_id"], Enc.encode(:channel, channel_pk))
   end
 
-  defp custom_encode(:oracle_register_tx, tx, tx_rec, _signed_tx, _block_hash) do
+  defp custom_encode(_state, :oracle_register_tx, tx, tx_rec, _signed_tx, _block_hash) do
     oracle_pk = :aeo_register_tx.account_pubkey(tx_rec)
     put_in(tx, ["tx", "oracle_id"], Enc.encode(:oracle_pubkey, oracle_pk))
   end
 
-  defp custom_encode(:name_claim_tx, tx, tx_rec, _signed_tx, _block_hash) do
+  defp custom_encode(_state, :name_claim_tx, tx, tx_rec, _signed_tx, _block_hash) do
     {:ok, name_id} = :aens.get_name_hash(:aens_claim_tx.name(tx_rec))
     put_in(tx, ["tx", "name_id"], Enc.encode(:name, name_id))
   end
 
-  defp custom_encode(:name_update_tx, tx, tx_rec, _signed_tx, _block_hash),
-    do: put_in(tx, ["tx", "name"], plain_name!(:aens_update_tx.name_hash(tx_rec)))
+  defp custom_encode(state, :name_update_tx, tx, tx_rec, _signed_tx, _block_hash),
+    do: put_in(tx, ["tx", "name"], Name.plain_name!(state, :aens_update_tx.name_hash(tx_rec)))
 
-  defp custom_encode(:name_transfer_tx, tx, tx_rec, _signed_tx, _block_hash),
-    do: put_in(tx, ["tx", "name"], plain_name!(:aens_transfer_tx.name_hash(tx_rec)))
+  defp custom_encode(state, :name_transfer_tx, tx, tx_rec, _signed_tx, _block_hash),
+    do: put_in(tx, ["tx", "name"], Name.plain_name!(state, :aens_transfer_tx.name_hash(tx_rec)))
 
-  defp custom_encode(:name_revoke_tx, tx, tx_rec, _signed_tx, _block_hash),
-    do: put_in(tx, ["tx", "name"], plain_name!(:aens_revoke_tx.name_hash(tx_rec)))
+  defp custom_encode(state, :name_revoke_tx, tx, tx_rec, _signed_tx, _block_hash),
+    do: put_in(tx, ["tx", "name"], Name.plain_name!(state, :aens_revoke_tx.name_hash(tx_rec)))
 
-  defp custom_encode(_, tx, _, _, _),
+  defp custom_encode(_state, _tx_type, tx, _tx_rec, _signed_tx, _block_hash),
     do: tx
 
   defp maybe_base64(bin) do

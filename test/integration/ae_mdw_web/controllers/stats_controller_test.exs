@@ -1,8 +1,8 @@
 defmodule Integration.AeMdwWeb.StatsControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
-  alias AeMdw.Database
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.Util
 
   @moduletag :integration
@@ -12,7 +12,8 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
   describe "stats (v1)" do
     test "gets stats backwards as default direction", %{conn: conn} do
       limit = 3
-      last_gen = Util.last_gen()
+      state = State.new()
+      last_gen = Util.last_gen(state)
 
       conn = get(conn, "/stats", limit: limit)
       response = json_response(conn, 200)
@@ -134,7 +135,8 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
   describe "delta stats" do
     test "when no subpath it gets stats in backwards direction", %{conn: conn} do
       limit = 3
-      {:ok, last_gen} = Database.last_key(Model.DeltaStat)
+      state = State.new()
+      {:ok, last_gen} = State.prev(state, Model.DeltaStat, nil)
 
       conn = get(conn, "/v2/deltastats", limit: limit)
       response = json_response(conn, 200)
@@ -267,7 +269,8 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
   describe "total_stats" do
     test "when no subpath it gets stats in backwards direction", %{conn: conn} do
       limit = 100
-      last_gen = Util.last_gen() - 1
+      state = State.new()
+      last_gen = Util.last_gen(state) - 1
 
       conn = get(conn, "/v2/totalstats", limit: limit)
       response = json_response(conn, 200)
