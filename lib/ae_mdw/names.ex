@@ -43,7 +43,7 @@ defmodule AeMdw.Names do
   @table_active_owner Model.ActiveNameOwner
   @table_inactive Model.InactiveName
   @table_inactive_expiration Model.InactiveNameExpiration
-  @table_inactive_owner Model.InactiveNameowner
+  @table_inactive_owner Model.InactiveNameOwner
 
   @pagination_params ~w(limit cursor rev direction scope)
   @states ~w(active inactive)
