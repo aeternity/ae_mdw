@@ -264,48 +264,6 @@ defmodule AeMdw.Db.Model do
   @aex9_balance_defaults [index: {<<>>, <<>>}, block_index: {-1, -1}, txi: nil, amount: nil]
   defrecord :aex9_balance, @aex9_balance_defaults
 
-  # AEX9 contract:
-  #     index: {name, symbol, txi, decimals}
-  @aex9_contract_defaults [
-    index: {nil, nil, nil, nil},
-    unused: nil
-  ]
-  defrecord :aex9_contract, @aex9_contract_defaults
-
-  # AEX9 contract symbol:
-  #     index: {symbol, name, txi, decimals}
-  @aex9_contract_symbol_defaults [
-    index: {nil, nil, nil, nil},
-    unused: nil
-  ]
-  defrecord :aex9_contract_symbol, @aex9_contract_symbol_defaults
-
-  # rev AEX9 contract:
-  #     index: {txi, name, symbol, decimals}
-  @rev_aex9_contract_defaults [
-    index: {nil, nil, nil, nil},
-    unused: nil
-  ]
-  defrecord :rev_aex9_contract, @rev_aex9_contract_defaults
-
-  # AEX9 contract pubkey:
-  #     index: pubkey
-  #     txi: txi
-  @aex9_contract_pubkey_defaults [
-    index: nil,
-    txi: nil
-  ]
-  defrecord :aex9_contract_pubkey, @aex9_contract_pubkey_defaults
-
-  # AEX-N contract pubkey:
-  #     index: {type, pubkey} where type = :aex9, :aex141, ...
-  #     txi: txi
-  @aexn_contract_pubkey_defaults [
-    index: nil,
-    txi: nil
-  ]
-  defrecord :aexn_contract_pubkey, @aexn_contract_pubkey_defaults
-
   # AEX-N contract:
   #     index: {type, pubkey} where type = :aex9, :aex141, ...
   #     txi: txi
@@ -653,11 +611,6 @@ defmodule AeMdw.Db.Model do
   defp contract_tables() do
     [
       AeMdw.Db.Model.Aex9Balance,
-      AeMdw.Db.Model.Aex9Contract,
-      AeMdw.Db.Model.Aex9ContractSymbol,
-      AeMdw.Db.Model.RevAex9Contract,
-      AeMdw.Db.Model.Aex9ContractPubkey,
-      AeMdw.Db.Model.AexNContractPubkey,
       AeMdw.Db.Model.AexnContract,
       AeMdw.Db.Model.AexnContractName,
       AeMdw.Db.Model.AexnContractSymbol,
@@ -738,11 +691,6 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Origin), do: :origin
   def record(AeMdw.Db.Model.RevOrigin), do: :rev_origin
   def record(AeMdw.Db.Model.Aex9Balance), do: :aex9_balance
-  def record(AeMdw.Db.Model.Aex9Contract), do: :aex9_contract
-  def record(AeMdw.Db.Model.Aex9ContractSymbol), do: :aex9_contract_symbol
-  def record(AeMdw.Db.Model.RevAex9Contract), do: :rev_aex9_contract
-  def record(AeMdw.Db.Model.Aex9ContractPubkey), do: :aex9_contract_pubkey
-  def record(AeMdw.Db.Model.AexNContractPubkey), do: :aexn_contract_pubkey
   def record(AeMdw.Db.Model.AexnContract), do: :aexn_contract
   def record(AeMdw.Db.Model.AexnContractName), do: :aexn_contract_name
   def record(AeMdw.Db.Model.AexnContractSymbol), do: :aexn_contract_symbol
