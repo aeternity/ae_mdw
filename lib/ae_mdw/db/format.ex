@@ -25,9 +25,6 @@ defmodule AeMdw.Db.Format do
   def to_raw_map(_state, {{height, mbi}, txi}),
     do: %{block_height: height, micro_index: mbi, tx_index: txi}
 
-  def to_raw_map(_state, {:block, {_kbi, mbi}, _txi, hash}),
-    do: record_to_map(:aec_db.get_header(hash), AE.hdr_fields((mbi == -1 && :key) || :micro))
-
   def to_raw_map(state, {:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} = mdw_tx),
     do: to_raw_map(state, mdw_tx, AE.Db.get_tx_data(hash))
 
@@ -338,11 +335,6 @@ defmodule AeMdw.Db.Format do
 
   def to_map(state, {{_height, _mbi}, _txi} = bi_txi),
     do: raw_to_json(to_raw_map(state, bi_txi))
-
-  def to_map(_state, {:block, {_kbi, _mbi}, _txi, hash}) do
-    header = :aec_db.get_header(hash)
-    :aec_headers.serialize_for_client(header, DbUtil.prev_block_type(header))
-  end
 
   def to_map(state, {:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} = rec),
     do: to_map(state, rec, AE.Db.get_tx_data(hash))
