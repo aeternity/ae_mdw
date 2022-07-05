@@ -476,27 +476,20 @@ defmodule AeMdw.Contracts do
         Origin.pubkey(state, {:contract, create_txi})
       end
 
-    ext_ct_pk = Model.contract_log(m_log, :ext_contract)
-
-    parent_contract_pk =
-      case ext_ct_pk do
-        {:parent_contract_pk, pct_pk} -> pct_pk
-        _ext_ct_pk -> nil
+    {parent_contract_pk, ext_ct_pk, ext_ct_txi} =
+      case Model.contract_log(m_log, :ext_contract) do
+        {:parent_contract_pk, pct_pk} -> {pct_pk, nil, -1}
+        ext_ct_pk -> {nil, ext_ct_pk, Origin.tx_index!(state, {:contract, ext_ct_pk})}
       end
 
-    # clear ext_ct_pk after saving parent_contract_pk in its own field
-    ext_ct_pk = if not is_tuple(ext_ct_pk), do: ext_ct_pk
-    ext_ct_txi = if ext_ct_pk, do: Origin.tx_index!(state, {:contract, ext_ct_pk}), else: -1
-    m_tx = State.fetch!(state, Model.Tx, call_txi)
-
-    {height, micro_index} = Model.tx(m_tx, :block_index)
+    Model.tx(block_index: {height, micro_index}) = m_tx = State.fetch!(state, Model.Tx, call_txi)
     block_hash = Model.block(DBUtil.read_block!(state, {height, micro_index}), :hash)
 
     %{
-      contract_txi: (create_txi != -1 && create_txi) || -1,
+      contract_txi: create_txi,
       contract_id: Format.enc_id(ct_id.(ct_pk)),
-      ext_caller_contract_txi: Format.enc_id(ext_ct_txi),
-      ext_caller_contract_id: (ext_ct_pk != nil && ct_id.(ext_ct_pk)) || nil,
+      ext_caller_contract_txi: ext_ct_txi,
+      ext_caller_contract_id: Format.enc_id((ext_ct_pk != nil && ct_id.(ext_ct_pk)) || nil),
       parent_contract_id:
         Format.enc_id((parent_contract_pk && ct_id.(parent_contract_pk)) || nil),
       call_txi: call_txi,
