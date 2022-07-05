@@ -3,6 +3,7 @@ defmodule AeMdw.Contracts do
   Context module for dealing with Contracts.
   """
 
+  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Collection
   alias AeMdw.Contract
   alias AeMdw.Db.Format

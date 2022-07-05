@@ -160,66 +160,6 @@ defmodule AeMdw.Db.Format do
     }
   end
 
-  def to_raw_map(
-        _state,
-        Model.delta_stat(
-          index: height,
-          auctions_started: auctions_started,
-          names_activated: names_activated,
-          names_expired: names_expired,
-          names_revoked: names_revoked,
-          oracles_registered: oracles_registered,
-          oracles_expired: oracles_expired,
-          contracts_created: contracts_created,
-          block_reward: block_reward,
-          dev_reward: dev_reward
-        ),
-        Model.DeltaStat
-      ) do
-    %{
-      height: height,
-      auctions_started: auctions_started,
-      names_activated: names_activated,
-      names_expired: names_expired,
-      names_revoked: names_revoked,
-      oracles_registered: oracles_registered,
-      oracles_expired: oracles_expired,
-      contracts_created: contracts_created,
-      block_reward: block_reward,
-      dev_reward: dev_reward
-    }
-  end
-
-  def to_raw_map(
-        _state,
-        Model.total_stat(
-          index: height,
-          active_auctions: active_auctions,
-          active_names: active_names,
-          active_oracles: active_oracles,
-          contracts: contracts,
-          inactive_names: inactive_names,
-          inactive_oracles: inactive_oracles,
-          block_reward: block_reward,
-          dev_reward: dev_reward,
-          total_supply: total_supply
-        ),
-        Model.TotalStat
-      ) do
-    %{
-      height: height,
-      active_auctions: active_auctions,
-      active_names: active_names,
-      active_oracles: active_oracles,
-      contracts: contracts,
-      inactive_names: inactive_names,
-      inactive_oracles: inactive_oracles,
-      sum_block_reward: block_reward,
-      sum_dev_reward: dev_reward,
-      total_token_supply: total_supply
-    }
-  end
-
   def to_raw_map(_state, ae_tx, tx_type) do
     AeMdw.Node.tx_fields(tx_type)
     |> Stream.with_index(1)
