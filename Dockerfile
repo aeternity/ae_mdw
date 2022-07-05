@@ -34,8 +34,7 @@ RUN ${NODEDIR}/bin/aeternity check_config /home/aeternity/aeternity.yaml
 # Copy all files, needed to build the project
 COPY config ./ae_mdw/config
 COPY lib ./ae_mdw/lib
-COPY priv/migrations ./ae_mdw/priv/migrations
-COPY priv/static ./ae_mdw/priv/static
+COPY priv ./ae_mdw/priv
 COPY mix.exs ae_mdw
 COPY mix.lock ae_mdw
 COPY Makefile ae_mdw
