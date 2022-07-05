@@ -80,31 +80,6 @@ defmodule AeMdw.Db.Format do
     }
   end
 
-  def to_raw_map(state, m_oracle, source) when elem(m_oracle, 0) == :oracle do
-    pk = Model.oracle(m_oracle, :index)
-    {{register_height, _}, register_txi} = Model.oracle(m_oracle, :register)
-    expire_height = Model.oracle(m_oracle, :expire)
-
-    kbi = min(expire_height - 1, DbUtil.last_gen(state))
-    block_hash = Blocks.block_hash(State.new(), kbi)
-    oracle_tree = AeMdw.Db.Oracle.oracle_tree!(block_hash)
-    oracle_rec = :aeo_state_tree.get_oracle(pk, oracle_tree)
-
-    %{
-      oracle: :aeser_id.create(:oracle, pk),
-      active: source == Model.ActiveOracle,
-      active_from: register_height,
-      expire_height: expire_height,
-      register: register_txi,
-      extends: Enum.map(Model.oracle(m_oracle, :extends), &bi_txi_txi/1),
-      query_fee: AE.Oracle.get!(oracle_rec, :query_fee),
-      format: %{
-        query: AE.Oracle.get!(oracle_rec, :query_format),
-        response: AE.Oracle.get!(oracle_rec, :response_format)
-      }
-    }
-  end
-
   def to_raw_map(state, {name, symbol, txi, decimals}, Model.Aex9Contract) do
     %{
       name: name,
@@ -333,13 +308,6 @@ defmodule AeMdw.Db.Format do
     to_map(state, bid, Model.AuctionBid)
     |> update_in(["info", "bids"], fn claims -> Enum.map(claims, &expand(state, &1)) end)
     |> update_in(["previous"], fn prevs -> Enum.map(prevs, &expand_name_info(state, &1)) end)
-  end
-
-  def to_map(state, oracle, source, true = _expand)
-      when source in [Model.ActiveOracle, Model.InactiveOracle] do
-    to_map(state, oracle, source)
-    |> update_in(["extends"], fn exts -> Enum.map(exts, &expand(state, &1)) end)
-    |> update_in(["register"], &expand(state, &1))
   end
 
   defp custom_encode(_state, :oracle_response_tx, tx, _tx_rec, _signed_tx, _block_hash),
