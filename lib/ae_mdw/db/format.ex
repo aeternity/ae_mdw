@@ -118,51 +118,6 @@ defmodule AeMdw.Db.Format do
   def to_raw_map(state, {symbol, name, txi, decimals}, Model.Aex9ContractSymbol),
     do: to_raw_map(state, {name, symbol, txi, decimals}, Model.Aex9Contract)
 
-  def to_raw_map(state, {create_txi, call_txi, event_hash, log_idx}, Model.ContractLog) do
-    m_log = State.fetch!(state, Model.ContractLog, {create_txi, call_txi, event_hash, log_idx})
-    ct_id = &:aeser_id.create(:contract, &1)
-
-    ct_pk =
-      if create_txi == -1 do
-        Origin.pubkey(state, {:contract_call, call_txi})
-      else
-        Origin.pubkey(state, {:contract, create_txi})
-      end
-
-    ext_ct_pk = Model.contract_log(m_log, :ext_contract)
-
-    parent_contract_pk =
-      case ext_ct_pk do
-        {:parent_contract_pk, pct_pk} -> pct_pk
-        _ -> nil
-      end
-
-    # clear ext_ct_pk after saving parent_contract_pk in its own field
-    ext_ct_pk = if not is_tuple(ext_ct_pk), do: ext_ct_pk
-    ext_ct_txi = if ext_ct_pk, do: Origin.tx_index!(state, {:contract, ext_ct_pk}), else: -1
-    m_tx = State.fetch!(state, Model.Tx, call_txi)
-
-    {height, micro_index} = Model.tx(m_tx, :block_index)
-    block_hash = Model.block(DbUtil.read_block!(state, {height, micro_index}), :hash)
-
-    %{
-      contract_txi: (create_txi != -1 && create_txi) || -1,
-      contract_id: ct_id.(ct_pk),
-      ext_caller_contract_txi: ext_ct_txi,
-      ext_caller_contract_id: (ext_ct_pk != nil && ct_id.(ext_ct_pk)) || nil,
-      parent_contract_id: (parent_contract_pk && ct_id.(parent_contract_pk)) || nil,
-      call_txi: call_txi,
-      call_tx_hash: Model.tx(m_tx, :id),
-      args: Model.contract_log(m_log, :args),
-      data: Model.contract_log(m_log, :data),
-      event_hash: event_hash,
-      height: height,
-      micro_index: micro_index,
-      block_hash: block_hash,
-      log_idx: log_idx
-    }
-  end
-
   def to_raw_map(state, {call_txi, local_idx}, Model.IntContractCall) do
     m_call = State.fetch!(state, Model.IntContractCall, {call_txi, local_idx})
     create_txi = Model.int_contract_call(m_call, :create_txi)
@@ -387,19 +342,6 @@ defmodule AeMdw.Db.Format do
       map_raw_values(to_raw_map(state, m_oracle, source), fn
         {:id, :oracle, pk} -> Enc.encode(:oracle_pubkey, pk)
         x -> to_json(x)
-      end)
-
-  def to_map(state, {create_txi, call_txi, event_hash, log_idx}, Model.ContractLog),
-    do:
-      to_raw_map(state, {create_txi, call_txi, event_hash, log_idx}, Model.ContractLog)
-      |> update_in([:contract_id], &enc_id/1)
-      |> update_in([:ext_caller_contract_id], &enc_id/1)
-      |> update_in([:parent_contract_id], &enc_id/1)
-      |> update_in([:call_tx_hash], &Enc.encode(:tx_hash, &1))
-      |> update_in([:block_hash], &Enc.encode(:micro_block_hash, &1))
-      |> update_in([:event_hash], &Base.hex_encode32/1)
-      |> update_in([:args], fn args ->
-        Enum.map(args, fn <<topic::256>> -> to_string(topic) end)
       end)
 
   def to_map(state, {call_txi, local_idx}, Model.IntContractCall) do
