@@ -3,7 +3,6 @@ defmodule AeMdw.Db.Format do
   alias AeMdw.Node, as: AE
   alias :aeser_api_encoder, as: Enc
 
-  alias AeMdw.Blocks
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
@@ -79,19 +78,6 @@ defmodule AeMdw.Db.Format do
       previous: Enum.map(prev, &name_info_to_raw_map(state, &1))
     }
   end
-
-  def to_raw_map(state, {name, symbol, txi, decimals}, Model.Aex9Contract) do
-    %{
-      name: name,
-      symbol: symbol,
-      decimals: decimals,
-      contract_txi: txi,
-      contract_id: :aeser_id.create(:contract, Origin.pubkey!(state, {:contract, txi}))
-    }
-  end
-
-  def to_raw_map(state, {symbol, name, txi, decimals}, Model.Aex9ContractSymbol),
-    do: to_raw_map(state, {name, symbol, txi, decimals}, Model.Aex9Contract)
 
   def to_raw_map(state, {call_txi, local_idx}, Model.IntContractCall) do
     m_call = State.fetch!(state, Model.IntContractCall, {call_txi, local_idx})
@@ -288,10 +274,6 @@ defmodule AeMdw.Db.Format do
 
   def to_map(state, m_total_stat, Model.TotalStat),
     do: to_raw_map(state, m_total_stat, Model.TotalStat)
-
-  def to_map(state, {_, _, _, _} = aex9_data, source)
-      when source in [Model.Aex9Contract, Model.Aex9ContractSymbol],
-      do: raw_to_json(to_raw_map(state, aex9_data, source))
 
   def to_map(state, data, source, false = _expand),
     do: to_map(state, data, source)
