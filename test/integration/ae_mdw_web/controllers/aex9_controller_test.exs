@@ -81,9 +81,14 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
                } = response["data"]
 
         assert contract_txi == Origin.tx_index!(state, {:contract, aex9_pubkey})
-        assert is_integer(decimals) and decimals >= 0
         assert is_binary(name)
         assert is_binary(symbol)
+
+        if name == "out_of_gas_error" do
+          assert is_nil(decimals)
+        else
+          assert is_integer(decimals) and decimals >= 0
+        end
       end)
     end
   end
