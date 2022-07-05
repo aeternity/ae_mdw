@@ -24,7 +24,7 @@ defmodule AeMdw.Db.Model do
 
   # index is timestamp (daylight saving order should be handle case by case)
   @typep timestamp :: pos_integer()
-  @type async_task_type :: :update_aex9_state | :derive_aex9_presence
+  @type async_task_type :: :update_aex9_state
   @type async_task_index :: {timestamp(), async_task_type()}
   @type async_task_args :: list()
 
@@ -447,10 +447,11 @@ defmodule AeMdw.Db.Model do
   defrecord :idx_aex9_transfer, @idx_aex9_transfer_defaults
 
   # aex9 account presence:
-  #    index: {account pk, create or call txi, contract pk}
+  #    index: {account pk, contract pk}
+  #    txi: create or call txi
   @aex9_account_presence_defaults [
-    index: {nil, -1, nil},
-    unused: nil
+    index: {nil, nil},
+    txi: -1
   ]
   defrecord :aex9_account_presence, @aex9_account_presence_defaults
 

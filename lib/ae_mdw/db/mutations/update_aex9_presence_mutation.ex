@@ -1,4 +1,4 @@
-defmodule AeMdw.Db.UpdateAex9PresenceMutation do
+defmodule AeMdw.Db.UpdateAex9StateMutation do
   @moduledoc """
   Stores the new updated aex9 balances for a contract.
   """
@@ -40,7 +40,7 @@ defmodule AeMdw.Db.UpdateAex9PresenceMutation do
         %__MODULE__{
           contract_pk: contract_pk,
           block_index: block_index,
-          txi: call_txi,
+          txi: txi,
           balances: balances
         },
         state
@@ -50,14 +50,13 @@ defmodule AeMdw.Db.UpdateAex9PresenceMutation do
         Model.aex9_balance(
           index: {contract_pk, account_pk},
           block_index: block_index,
-          txi: call_txi,
+          txi: txi,
           amount: amount
         )
 
-      {_exists?, state2} =
-        Contract.aex9_write_new_presence(state, contract_pk, call_txi, account_pk)
-
-      State.put(state2, Model.Aex9Balance, m_balance)
+      state
+      |> Contract.aex9_write_presence(contract_pk, txi, account_pk)
+      |> State.put(Model.Aex9Balance, m_balance)
     end)
   end
 end

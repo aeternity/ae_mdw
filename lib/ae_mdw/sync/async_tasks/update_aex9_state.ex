@@ -9,7 +9,8 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.State
-  alias AeMdw.Db.UpdateAex9PresenceMutation
+  alias AeMdw.Db.WriteMutation
+  alias AeMdw.Db.UpdateAex9StateMutation
   alias AeMdw.Log
 
   require Model
@@ -40,11 +41,20 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
 
     {balances, _height_hash} = DBN.aex9_balances(contract_pk, {type, kbi, next_hash})
 
-    balances = Enum.map(balances, fn {{:address, account_pk}, amount} -> {account_pk, amount} end)
+    if map_size(balances) == 0 do
+      m_empty_balance = Model.aex9_balance(index: {contract_pk, <<>>})
 
-    [
-      UpdateAex9PresenceMutation.new(contract_pk, block_index, call_txi, balances)
-    ]
+      [
+        WriteMutation.new(Model.Aex9Balance, m_empty_balance)
+      ]
+    else
+      balances =
+        Enum.map(balances, fn {{:address, account_pk}, amount} -> {account_pk, amount} end)
+
+      [
+        UpdateAex9StateMutation.new(contract_pk, block_index, call_txi, balances)
+      ]
+    end
   end
 
   defp enc_ct(<<pk::binary-32>>), do: :aeser_api_encoder.encode(:contract_pubkey, pk)

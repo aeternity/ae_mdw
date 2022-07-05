@@ -553,8 +553,8 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
       prev_key =
         state
-        |> Collection.stream(Model.Aex9AccountPresence, {nil, -1, nil})
-        |> Stream.take_while(fn {account_pk, _txi, contract_pk} ->
+        |> Collection.stream(Model.Aex9AccountPresence, {nil, nil})
+        |> Stream.take_while(fn {account_pk, contract_pk} ->
           :not_found != Database.fetch(Model.Aex9Balance, {contract_pk, account_pk})
         end)
         |> Enum.to_list()

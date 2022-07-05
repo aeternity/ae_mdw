@@ -352,23 +352,17 @@ defmodule AeMdwWeb.Aex9Controller do
          account_pk,
          {kbi, mbi} = block_index
        ) do
-    {:ok, Model.block(tx_index: last_txi, hash: block_hash)} =
+    {:ok, Model.block(tx_index: block_txi, hash: block_hash)} =
       State.get(state, Model.Block, block_index)
-
-    contracts =
-      state
-      |> Contract.aex9_search_contract(account_pk, last_txi)
-      |> Map.to_list()
-      |> Enum.sort_by(fn {_ct_pk, txi_list} -> _call_txi = List.last(txi_list) end)
 
     type = if mbi == -1, do: :key, else: :micro
 
     balances =
-      contracts
-      |> Enum.map(fn {contract_pk, txi_list} ->
+      state
+      |> Contract.aex9_search_contract(account_pk, block_txi)
+      |> Enum.map(fn {contract_pk, last_txi} ->
         {amount, _} = DBN.aex9_balance(contract_pk, account_pk, {type, kbi, block_hash})
-        call_txi = List.last(txi_list)
-        {amount, call_txi, contract_pk}
+        {amount, last_txi, contract_pk}
       end)
       |> Enum.map(&balance_to_map(state, &1))
 

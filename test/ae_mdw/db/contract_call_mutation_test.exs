@@ -65,8 +65,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         Database.commit([mutation])
         process_async_task()
 
-        assert {:ok, {^account_pk, ^call_txi, ^contract_pk}} =
-                 Database.next_key(Model.Aex9AccountPresence, {account_pk, call_txi, nil})
+        assert Database.exists?(Model.Aex9AccountPresence, {account_pk, contract_pk})
       end
     end
 
@@ -112,8 +111,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         Database.commit([mutation])
         process_async_task()
 
-        assert {:ok, {^account_pk, ^call_txi, ^contract_pk}} =
-                 Database.next_key(Model.Aex9AccountPresence, {account_pk, call_txi, nil})
+        assert Database.exists?(Model.Aex9AccountPresence, {account_pk, contract_pk})
       end
     end
 
@@ -159,8 +157,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         Database.commit([mutation])
         process_async_task()
 
-        assert {:ok, {^account_pk, ^call_txi, ^contract_pk}} =
-                 Database.next_key(Model.Aex9AccountPresence, {account_pk, call_txi, nil})
+        assert Database.exists?(Model.Aex9AccountPresence, {account_pk, contract_pk})
       end
     end
 
@@ -201,8 +198,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         Database.commit([mutation])
         process_async_task()
 
-        assert {:ok, {^account_pk, ^call_txi, ^contract_pk}} =
-                 Database.next_key(Model.Aex9AccountPresence, {account_pk, call_txi, nil})
+        assert Database.exists?(Model.Aex9AccountPresence, {account_pk, contract_pk})
       end
     end
   end
