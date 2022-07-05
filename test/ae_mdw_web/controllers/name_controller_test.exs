@@ -8,6 +8,7 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdw.Db.Model.AuctionBid
   alias AeMdw.Db.Model.AuctionExpiration
   alias AeMdw.Db.Model.InactiveName
+  alias AeMdw.Db.Model.InactiveNameOwner
   alias AeMdw.Db.Model.InactiveNameExpiration
   alias AeMdw.Db.Model.Tx
   alias AeMdw.Db.Name
@@ -766,6 +767,72 @@ defmodule AeMdwWeb.NameControllerTest do
         heights = Enum.map(names, & &1["info"]["active_from"])
         assert heights == Enum.sort(heights)
         assert ^limit = length(names)
+      end
+    end
+
+    test "get inactive names for given account/owner", %{conn: conn} do
+      owner_id = "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
+      owner_pk = Validate.id!(owner_id)
+      other_pk = :crypto.strong_rand_bytes(32)
+      limit = 2
+      first_name = TS.plain_name(4)
+      not_owned_name = "o2#{first_name}"
+      second_name = "o1#{first_name}"
+
+      m_name =
+        Model.name(
+          index: first_name,
+          active: false,
+          expire: 3,
+          claims: [{{2, 0}, 0}],
+          updates: [],
+          transfers: [],
+          revoke: nil,
+          owner: owner_pk,
+          auction_timeout: 1
+        )
+
+      Database.dirty_write(InactiveName, m_name)
+      Database.dirty_write(InactiveName, Model.name(m_name, index: second_name))
+
+      Database.dirty_write(
+        InactiveName,
+        Model.name(m_name, index: not_owned_name, owner: other_pk)
+      )
+
+      Database.dirty_write(InactiveNameOwner, Model.owner(index: {owner_pk, first_name}))
+      Database.dirty_write(InactiveNameOwner, Model.owner(index: {owner_pk, second_name}))
+      Database.dirty_write(InactiveNameOwner, Model.owner(index: {other_pk, not_owned_name}))
+
+      with_mocks [
+        {Txs, [],
+         [
+           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {Name, [],
+         [
+           pointers: fn _state, _mnme -> %{} end,
+           ownership: fn _state, _mname ->
+             orig = {:id, :account, owner_pk}
+             %{current: orig, original: orig}
+           end
+         ]}
+      ] do
+        assert %{"data" => owned_names} =
+                 conn
+                 |> get("/names",
+                   owned_by: owner_id,
+                   by: "name",
+                   state: "inactive",
+                   limit: limit
+                 )
+                 |> json_response(200)
+
+        assert length(owned_names) == limit
+
+        assert Enum.all?(owned_names, fn %{"name" => plain_name} ->
+                 plain_name in [first_name, second_name]
+               end)
       end
     end
 
