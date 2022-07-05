@@ -717,12 +717,12 @@ defmodule AeMdwWeb.NameControllerTest do
       limit = 9
       by = "activation"
       direction = "forward"
-      height_names = for i <- 101..109, into: %{}, do: {i, "name#{Enum.random(1..100)}"}
+      height_names = for i <- 301..309, into: %{}, do: {i, "name#{Enum.random(1..100)}"}
 
       with_mocks [
         {Database, [],
          [
-           first_key: fn ActiveNameActivation -> {:ok, {101, height_names[101]}} end,
+           first_key: fn ActiveNameActivation -> {:ok, {301, height_names[301]}} end,
            next_key: fn
              ActiveNameActivation, {height, _name} ->
                {:ok, {height + 1, height_names[height + 1]}}
@@ -737,12 +737,8 @@ defmodule AeMdwWeb.NameControllerTest do
                {:ok,
                 Model.name(
                   active: active_from,
-                  expire: 1,
-                  claims: [{{0, 0}, 0}],
-                  updates: [],
-                  transfers: [],
-                  revoke: {{0, 0}, 0},
-                  auction_timeout: 1
+                  expire: active_from + 10,
+                  claims: [{{active_from, 0}, 0}]
                 )}
 
              AuctionBid, _key ->
