@@ -176,9 +176,6 @@ defmodule AeMdw.Db.Format do
 
   ##########
 
-  def to_map(state, {{_height, _mbi}, _txi} = bi_txi),
-    do: raw_to_json(to_raw_map(state, bi_txi))
-
   def to_map(state, {:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} = rec),
     do: to_map(state, rec, AE.Db.get_tx_data(hash))
 
@@ -225,13 +222,6 @@ defmodule AeMdw.Db.Format do
     |> update_in(["status"], &to_string/1)
   end
 
-  def to_map(state, m_oracle, source) when source in [Model.ActiveOracle, Model.InactiveOracle],
-    do:
-      map_raw_values(to_raw_map(state, m_oracle, source), fn
-        {:id, :oracle, pk} -> Enc.encode(:oracle_pubkey, pk)
-        x -> to_json(x)
-      end)
-
   def to_map(state, {call_txi, local_idx}, Model.IntContractCall) do
     raw_map = to_raw_map(state, {call_txi, local_idx}, Model.IntContractCall)
 
@@ -261,19 +251,6 @@ defmodule AeMdw.Db.Format do
     # &:aetx.serialize_for_client/1)
     |> update_in([:internal_tx], int_tx)
   end
-
-  def to_map(state, {{_height, _txi}, _kind, _target_pk, _ref_txi} = key, Model.IntTransferTx) do
-    raw_map = to_raw_map(state, key, Model.IntTransferTx)
-
-    raw_map
-    |> update_in([:account_id], &Enc.encode(:account_pubkey, &1))
-  end
-
-  def to_map(state, m_delta_stat, Model.DeltaStat),
-    do: to_raw_map(state, m_delta_stat, Model.DeltaStat)
-
-  def to_map(state, m_total_stat, Model.TotalStat),
-    do: to_raw_map(state, m_total_stat, Model.TotalStat)
 
   def to_map(state, data, source, false = _expand),
     do: to_map(state, data, source)
