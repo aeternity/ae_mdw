@@ -3,7 +3,7 @@ defmodule AeMdw.Transfers do
   Context module for dealing with Transfers.
   """
 
-  alias AeMdw.Db.Format
+  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DBUtil
@@ -11,6 +11,8 @@ defmodule AeMdw.Transfers do
   alias AeMdw.Collection
   alias AeMdw.Util
   alias AeMdw.Validate
+
+  require Model
 
   @type cursor :: {binary(), Collection.is_reversed?()}
   @type transfer :: term()
@@ -205,8 +207,17 @@ defmodule AeMdw.Transfers do
   defp convert_param(other_param),
     do: raise(ErrInput.Query, value: other_param)
 
-  defp render(state, transfer_key) do
-    Format.to_map(state, transfer_key, @int_transfer_table)
+  defp render(state, {{height, _txi}, kind, target_pk, ref_txi} = transfer_key) do
+    m_transfer = State.fetch!(state, Model.IntTransferTx, transfer_key)
+    amount = Model.int_transfer_tx(m_transfer, :amount)
+
+    %{
+      height: height,
+      account_id: Enc.encode(:account_pubkey, target_pk),
+      amount: amount,
+      kind: kind,
+      ref_txi: (ref_txi >= 0 && ref_txi) || nil
+    }
   end
 
   defp serialize_cursor(nil), do: nil

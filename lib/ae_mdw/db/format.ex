@@ -147,19 +147,6 @@ defmodule AeMdw.Db.Format do
     }
   end
 
-  def to_raw_map(state, {{height, _txi}, kind, target_pk, ref_txi} = key, Model.IntTransferTx) do
-    m_transfer = State.fetch!(state, Model.IntTransferTx, key)
-    amount = Model.int_transfer_tx(m_transfer, :amount)
-
-    %{
-      height: height,
-      account_id: target_pk,
-      amount: amount,
-      kind: kind,
-      ref_txi: (ref_txi >= 0 && ref_txi) || nil
-    }
-  end
-
   def to_raw_map(_state, ae_tx, tx_type) do
     AeMdw.Node.tx_fields(tx_type)
     |> Stream.with_index(1)
