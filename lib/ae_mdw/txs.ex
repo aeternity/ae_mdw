@@ -18,7 +18,6 @@ defmodule AeMdw.Txs do
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Log
   alias AeMdw.Node
-  alias AeMdw.Node.Db
   alias AeMdw.Validate
 
   require Logger
@@ -379,10 +378,8 @@ defmodule AeMdw.Txs do
     end
   end
 
-  defp render(state, Model.tx(id: tx_hash) = tx, add_spendtx_details?) do
-    {block_hash, type, signed_tx, tx_rec} = Db.get_tx_data(tx_hash)
-
-    rendered_tx = Format.to_map(state, tx, {block_hash, type, signed_tx, tx_rec})
+  defp render(state, tx, add_spendtx_details?) do
+    rendered_tx = Format.to_map(state, tx)
 
     if add_spendtx_details? do
       maybe_add_spendtx_details(state, rendered_tx)
