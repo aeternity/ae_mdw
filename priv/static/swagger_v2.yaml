@@ -1708,8 +1708,28 @@ paths:
       description: Get multiple names.
       operationId: get_names
       parameters:
+        - name: by
+          in: query
+          description: Sorting by deactivation, activation or name
+          required: false
+          schema:
+            type: string
+            example: activation
+        - name: owned_by
+          in: query
+          description: Account that owns the name
+          required: false
+          schema:
+            type: string
+            example: ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN
+        - name: state
+          in: query
+          description: Activation state of the name (active or inactive)
+          required: false
+          schema:
+            type: string
+            example: inactive    
         - $ref: '#/components/parameters/LimitParam'
-        - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'
       responses:
         '200':
