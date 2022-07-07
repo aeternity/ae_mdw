@@ -11,14 +11,14 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
       conn = get(conn, "/v2/oracles/#{id}")
 
       assert %{
-        "format" => %{
-          "query" => "string",
-          "response" => "string"
-        },
-        "extends" => [extends_txi | _rest],
-        "oracle" => ^id,
-        "register" => register_txi
-      } = json_response(conn, 200)
+               "format" => %{
+                 "query" => "string",
+                 "response" => "string"
+               },
+               "extends" => [extends_txi | _rest],
+               "oracle" => ^id,
+               "register" => register_txi
+             } = json_response(conn, 200)
 
       assert ^extends_txi = register_txi
     end
@@ -27,7 +27,8 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
       id = "ok_2TASQ4QZv584D2ZP7cZxT6sk1L1UyqbWumnWM4g1azGi1qqcR5"
       conn = get(conn, "/v2/oracles/#{id}?expand")
 
-      assert %{"extends" => [extends_tx | _rest], "register" => register_tx} = conn |> json_response(200)
+      assert %{"extends" => [extends_tx | _rest], "register" => register_tx} =
+               conn |> json_response(200)
 
       assert %{"tx" => _tx} = extends_tx
       assert %{"tx" => _tx} = register_tx

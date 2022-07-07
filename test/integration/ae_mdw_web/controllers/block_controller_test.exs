@@ -294,7 +294,6 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
 
   defp get_block(enc_block_hash) when is_binary(enc_block_hash) do
     block_hash = Validate.id!(enc_block_hash)
-    state = State.new()
 
     case :aec_chain.get_block(block_hash) do
       {:ok, _block} ->
