@@ -4,7 +4,6 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
   alias AeMdw.Validate
-  alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
@@ -298,8 +297,10 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
     state = State.new()
 
     case :aec_chain.get_block(block_hash) do
-      {:ok, _} ->
-        Format.to_map(state, {:block, {nil, nil}, nil, block_hash})
+      {:ok, _block} ->
+        header = :aec_db.get_header(block_hash)
+
+        :aec_headers.serialize_for_client(header, DbUtil.prev_block_type(header))
 
       :error ->
         raise ErrInput.NotFound, value: enc_block_hash

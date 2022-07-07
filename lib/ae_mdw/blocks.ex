@@ -10,7 +10,6 @@ defmodule AeMdw.Blocks do
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.EtsCache
   alias AeMdw.Database
-  alias AeMdw.Node, as: AE
   alias AeMdw.Util
   alias AeMdw.Validate
   alias AeMdw.Txs
@@ -143,8 +142,10 @@ defmodule AeMdw.Blocks do
     |> Stream.take_while(&match?({^gen, _mb_index}, &1))
     |> Enum.map(fn key -> State.fetch!(state, @table, key) end)
     |> Enum.reverse()
-    |> Enum.map(fn Model.block(index: {_height, mbi}, hash: hash) ->
-      Util.record_to_map(:aec_db.get_header(hash), AE.hdr_fields((mbi == -1 && :key) || :micro))
+    |> Enum.map(fn Model.block(index: {_height, _mbi}, hash: hash) ->
+      header = :aec_db.get_header(hash)
+
+      :aec_headers.serialize_for_client(header, DbUtil.prev_block_type(header))
     end)
   end
 
