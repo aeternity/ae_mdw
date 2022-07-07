@@ -187,18 +187,21 @@ defmodule AeMdw.Aex9 do
 
     case deserialize_account_balance_cursor(cursor) do
       {:ok, cursor} ->
-        scope = {{account_pk, Util.min_int(), nil}, {account_pk, Util.max_256bit_int(), nil}}
+        scope = {{account_pk, <<>>}, {account_pk, Util.max_256bit_bin()}}
 
         {prev_cursor, account_presence_keys, next_cursor} =
           (&Collection.stream(state, Model.Aex9AccountPresence, &1, scope, cursor))
           |> Collection.paginate(pagination)
 
         account_presences =
-          Enum.map(account_presence_keys, fn {^account_pk, call_txi, contract_pk} ->
+          Enum.map(account_presence_keys, fn {^account_pk, contract_pk} ->
             {amount, _height_hash} = Db.aex9_balance(contract_pk, account_pk, type_height_hash)
 
             Model.aexn_contract(meta_info: {name, symbol, _dec}) =
               State.fetch!(state, Model.AexnContract, {:aex9, contract_pk})
+
+            Model.aex9_account_presence(txi: call_txi) =
+              State.fetch!(state, Model.Aex9AccountPresence, {account_pk, contract_pk})
 
             tx_idx = DbUtil.read_tx!(state, call_txi)
             info = Format.to_raw_map(state, tx_idx)

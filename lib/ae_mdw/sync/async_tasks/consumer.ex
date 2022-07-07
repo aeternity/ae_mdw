@@ -10,7 +10,6 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
 
   alias AeMdw.Sync.AsyncTasks.Producer
   alias AeMdw.Sync.AsyncTasks.TaskSupervisor
-  alias AeMdw.Sync.AsyncTasks.DeriveAex9Presence
   alias AeMdw.Sync.AsyncTasks.UpdateAex9State
 
   require Model
@@ -23,7 +22,6 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   @task_timeout_msecs 40_000
 
   @type_mod %{
-    derive_aex9_presence: DeriveAex9Presence,
     update_aex9_state: UpdateAex9State
   }
 

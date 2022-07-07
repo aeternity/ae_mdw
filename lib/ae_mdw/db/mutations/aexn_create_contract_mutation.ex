@@ -57,7 +57,7 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
           aexn_type: aexn_type,
           contract_pk: contract_pk,
           aexn_meta_info: aexn_meta_info,
-          block_index: {kbi, mbi},
+          block_index: block_index,
           create_txi: create_txi,
           extensions: extensions
         },
@@ -74,7 +74,7 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
       )
 
     if aexn_type == :aex9 do
-      State.enqueue(state, :derive_aex9_presence, [contract_pk, kbi, mbi, create_txi])
+      State.enqueue(state, :update_aex9_state, [contract_pk], [block_index, create_txi])
     else
       state
     end

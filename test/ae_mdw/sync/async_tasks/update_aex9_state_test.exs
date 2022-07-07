@@ -51,8 +51,38 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
         assert Model.aex9_balance(block_index: ^block_index, txi: ^call_txi, amount: ^amount2) =
                  Database.fetch!(Model.Aex9Balance, {contract_pk, account_pk2})
 
-        assert Database.exists?(Model.Aex9AccountPresence, {account_pk1, call_txi, contract_pk})
-        assert Database.exists?(Model.Aex9AccountPresence, {account_pk2, call_txi, contract_pk})
+        assert Model.aex9_account_presence(txi: ^call_txi) =
+                 Database.fetch!(Model.Aex9AccountPresence, {account_pk1, contract_pk})
+
+        assert Model.aex9_account_presence(txi: ^call_txi) =
+                 Database.fetch!(Model.Aex9AccountPresence, {account_pk2, contract_pk})
+      end
+    end
+
+    test "creates empty balance when contract has no balance" do
+      kbi = 319_507
+      mbi = 147
+      block_index = {kbi, mbi}
+      call_txi = 16_063_748
+      kb_hash = :crypto.strong_rand_bytes(32)
+      next_mb_hash = :crypto.strong_rand_bytes(32)
+      contract_pk = :crypto.strong_rand_bytes(32)
+
+      with_mocks [
+        {AeMdw.Node.Db, [],
+         [
+           get_key_block_hash: fn height ->
+             assert ^height = kbi + 1
+             kb_hash
+           end,
+           get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
+           aex9_balances: fn ^contract_pk, {:micro, ^kbi, ^next_mb_hash} = block_tuple ->
+             {%{}, block_tuple}
+           end
+         ]}
+      ] do
+        UpdateAex9State.process([contract_pk, block_index, call_txi])
+        assert Database.exists?(Model.Aex9Balance, {contract_pk, <<>>})
       end
     end
   end

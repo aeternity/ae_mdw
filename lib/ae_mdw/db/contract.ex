@@ -12,14 +12,12 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Node.Db
-  alias AeMdw.Util
 
   require Ex2ms
   require Log
   require Model
   require Record
 
-  import AeMdw.Util, only: [min_bin: 0, max_256bit_bin: 0]
   import AeMdwWeb.Helpers.AexnHelper, only: [sort_field_truncate: 1]
 
   @type rev_aex9_contract_key :: {pos_integer(), String.t(), String.t(), pos_integer()}
@@ -66,37 +64,13 @@ defmodule AeMdw.Db.Contract do
   end
 
   @spec aex9_write_presence(state(), pubkey(), integer(), pubkey()) :: state()
-  def aex9_write_presence(state, contract_pk, txi, pubkey) do
-    m_acc_presence = Model.aex9_account_presence(index: {pubkey, txi, contract_pk})
-    m_idx_presence = Model.idx_aex9_account_presence(index: {txi, pubkey, contract_pk})
+  def aex9_write_presence(state, contract_pk, txi, account_pk) do
+    m_acc_presence = Model.aex9_account_presence(index: {account_pk, contract_pk}, txi: txi)
+    m_idx_presence = Model.idx_aex9_account_presence(index: {txi, account_pk, contract_pk})
 
     state
     |> State.put(Model.Aex9AccountPresence, m_acc_presence)
     |> State.put(Model.IdxAex9AccountPresence, m_idx_presence)
-  end
-
-  @spec aex9_write_new_presence(state(), pubkey(), integer(), pubkey()) :: {boolean(), state()}
-  def aex9_write_new_presence(state, contract_pk, txi, account_pk) do
-    if aex9_presence_exists?(state, contract_pk, account_pk, txi) do
-      {false, state}
-    else
-      {true, aex9_write_presence(state, contract_pk, txi, account_pk)}
-    end
-  end
-
-  @spec aex9_burn_balance(state(), pubkey(), pubkey(), non_neg_integer()) :: state()
-  def aex9_burn_balance(state, contract_pk, account_pk, burned_value) do
-    aex9_update_balance(state, contract_pk, account_pk, fn amount -> amount - burned_value end)
-  end
-
-  @spec aex9_swap_balance(state(), pubkey(), pubkey()) :: state()
-  def aex9_swap_balance(state, contract_pk, caller_pk) do
-    aex9_update_balance(state, contract_pk, caller_pk, fn _any -> 0 end)
-  end
-
-  @spec aex9_mint_balance(state(), pubkey(), pubkey(), non_neg_integer()) :: state()
-  def aex9_mint_balance(state, contract_pk, to_pk, minted_value) do
-    aex9_update_balance(state, contract_pk, to_pk, fn amount -> amount + minted_value end)
   end
 
   @spec aex9_transfer_balance(state(), pubkey(), pubkey(), pubkey(), non_neg_integer()) :: state()
@@ -119,34 +93,6 @@ defmodule AeMdw.Db.Contract do
 
       :not_found ->
         state
-    end
-  end
-
-  @spec aex9_delete_balances(state(), pubkey()) :: state()
-  def aex9_delete_balances(state, contract_pk) do
-    state
-    |> Collection.stream(
-      Model.Aex9Balance,
-      :forward,
-      {{contract_pk, min_bin()}, {contract_pk, max_256bit_bin()}},
-      nil
-    )
-    |> Enum.reduce(state, fn {contract_pk, account_pk}, state ->
-      State.delete(state, Model.Aex9Balance, {contract_pk, account_pk})
-    end)
-  end
-
-  @spec aex9_presence_exists?(State.t(), pubkey(), pubkey(), integer()) :: boolean()
-  def aex9_presence_exists?(state, contract_pk, account_pk, txi) do
-    txi_search_prev = txi + 1
-
-    case State.prev(
-           state,
-           Model.Aex9AccountPresence,
-           {account_pk, txi_search_prev, contract_pk}
-         ) do
-      {:ok, {^account_pk, _txi, ^contract_pk}} -> true
-      _none_or_other_key -> false
     end
   end
 
@@ -308,30 +254,30 @@ defmodule AeMdw.Db.Contract do
   @spec aex9_search_contracts(State.t(), pubkey()) :: [pubkey()]
   def aex9_search_contracts(state, account_pk) do
     state
-    |> Collection.stream(Model.Aex9AccountPresence, {account_pk, -1, <<>>})
-    |> Stream.take_while(fn {apk, _txi, _ct_pk} -> apk == account_pk end)
-    |> Enum.map(fn {_apk, _txi, contract_pk} -> contract_pk end)
-    |> Enum.dedup()
+    |> Collection.stream(Model.Aex9AccountPresence, {account_pk, <<>>})
+    |> Stream.take_while(fn {apk, _ct_pk} -> apk == account_pk end)
+    |> Enum.map(fn {_apk, contract_pk} -> contract_pk end)
   end
 
   @spec aex9_search_contract(State.t(), pubkey(), integer()) :: map()
-  def aex9_search_contract(state, account_pk, last_txi) do
+  def aex9_search_contract(state, account_pk, max_txi) do
     state
-    |> Collection.stream(Model.Aex9AccountPresence, {account_pk, last_txi, Util.min_int()})
-    |> Stream.take_while(&match?({^account_pk, _txi, _contract_pk}, &1))
-    |> Enum.reduce(%{}, fn {_account_pk, txi, contract_pk}, acc ->
-      Map.update(acc, contract_pk, [txi], &[txi | &1])
+    |> Collection.stream(Model.Aex9AccountPresence, {account_pk, <<>>})
+    |> Stream.take_while(fn {apk, _ct_pk} -> apk == account_pk end)
+    |> Enum.reduce(%{}, fn {_apk, contract_pk} = key, acc ->
+      Model.aex9_account_presence(txi: txi) = State.fetch!(state, Model.Aex9AccountPresence, key)
+      if txi <= max_txi, do: Map.put(acc, contract_pk, txi), else: acc
     end)
   end
 
   @spec update_aex9_state(State.t(), pubkey(), block_index(), txi()) :: State.t()
-  def update_aex9_state(state, contract_pk, {kbi, mbi} = block_index, txi) do
+  def update_aex9_state(state, contract_pk, block_index, txi) do
     if AexnContracts.is_aex9?(contract_pk) do
       with false <- State.exists?(state, Model.AexnContract, {:aex9, contract_pk}),
            {:ok, extensions} <- AexnContracts.call_extensions(:aex9, contract_pk),
            {:ok, aex9_meta_info} <- AexnContracts.call_meta_info(:aex9, contract_pk) do
         state
-        |> State.enqueue(:derive_aex9_presence, [contract_pk, kbi, mbi, txi])
+        |> State.enqueue(:update_aex9_state, [contract_pk], [block_index, txi])
         |> aexn_creation_write(:aex9, aex9_meta_info, contract_pk, txi, extensions)
       else
         true ->
@@ -352,17 +298,6 @@ defmodule AeMdw.Db.Contract do
     state
     |> Collection.stream(table, init_key)
     |> Stream.take_while(key_tester)
-  end
-
-  defp aex9_update_balance(state, contract_pk, account_pk, new_amount_fn) do
-    case State.get(state, Model.Aex9Balance, {contract_pk, account_pk}) do
-      {:ok, Model.aex9_balance(amount: old_amount) = m_aex9_balance} ->
-        m_aex9_balance = Model.aex9_balance(m_aex9_balance, amount: new_amount_fn.(old_amount))
-        State.put(state, Model.Aex9Balance, m_aex9_balance)
-
-      :not_found ->
-        state
-    end
   end
 
   defp write_aex9_records(state, txi, i, [from_pk, to_pk, <<amount::256>>]) do
