@@ -2,6 +2,7 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
   use ExUnit.Case
 
   alias AeMdw.Database
+  alias AeMdw.Db.Aex9BalancesCache
   alias AeMdw.Db.Model
   alias AeMdw.Sync.AsyncTasks.UpdateAex9State
   alias AeMdw.Validate
@@ -83,6 +84,48 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
       ] do
         UpdateAex9State.process([contract_pk, block_index, call_txi])
         assert Database.exists?(Model.Aex9Balance, {contract_pk, <<>>})
+      end
+    end
+
+    test "uses cached aex9 balances when already dry-runned" do
+      kbi = 123
+      mbi = 1
+      block_index = {kbi, mbi}
+      call_txi = 123_456
+      kb_hash = :crypto.strong_rand_bytes(32)
+      next_mb_hash = :crypto.strong_rand_bytes(32)
+      contract_pk = :crypto.strong_rand_bytes(32)
+      account_pk1 = :crypto.strong_rand_bytes(32)
+      account_pk2 = :crypto.strong_rand_bytes(32)
+      amount1 = Enum.random(1_000_000..9_999_999)
+      amount2 = Enum.random(1_000_000..9_999_999)
+
+      Aex9BalancesCache.put(contract_pk, block_index, next_mb_hash, %{
+        {:address, account_pk1} => amount1,
+        {:address, account_pk2} => amount2
+      })
+
+      with_mocks [
+        {AeMdw.Node.Db, [],
+         [
+           get_key_block_hash: fn height ->
+             assert ^height = kbi + 1
+             kb_hash
+           end,
+           get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
+           aex9_balances: fn ^contract_pk, {:micro, ^kbi, ^next_mb_hash} = block_tuple ->
+             {%{}, block_tuple}
+           end
+         ]}
+      ] do
+        UpdateAex9State.process([contract_pk, block_index, call_txi])
+        refute Database.exists?(Model.Aex9Balance, {contract_pk, <<>>})
+
+        assert Model.aex9_balance(block_index: ^block_index, txi: ^call_txi, amount: ^amount1) =
+                 Database.fetch!(Model.Aex9Balance, {contract_pk, account_pk1})
+
+        assert Model.aex9_balance(block_index: ^block_index, txi: ^call_txi, amount: ^amount2) =
+                 Database.fetch!(Model.Aex9Balance, {contract_pk, account_pk2})
       end
     end
   end

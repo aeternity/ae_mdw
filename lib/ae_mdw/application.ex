@@ -244,6 +244,8 @@ defmodule AeMdw.Application do
   end
 
   def start_phase(:start_sync, _start_type, []) do
+    AeMdw.Db.Aex9BalancesCache.init()
+
     if Application.fetch_env!(:ae_mdw, :sync) do
       Watcher.start_sync()
     end

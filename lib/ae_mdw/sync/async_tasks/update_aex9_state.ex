@@ -6,6 +6,7 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
 
   alias AeMdw.Node.Db, as: DBN
 
+  alias AeMdw.Db.Aex9BalancesCache
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.State
@@ -34,12 +35,8 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
   end
 
   @spec mutations(args :: list()) :: [Mutation.t()]
-  def mutations([contract_pk, {kbi, mbi} = block_index, call_txi]) do
-    next_kb_hash = DBN.get_key_block_hash(kbi + 1)
-    next_hash = DBN.get_next_hash(next_kb_hash, mbi)
-    type = if next_hash == next_kb_hash, do: :key, else: :micro
-
-    {balances, _height_hash} = DBN.aex9_balances(contract_pk, {type, kbi, next_hash})
+  def mutations([contract_pk, block_index, call_txi]) do
+    balances = aex9_balances(contract_pk, block_index)
 
     if map_size(balances) == 0 do
       m_empty_balance = Model.aex9_balance(index: {contract_pk, <<>>})
@@ -48,12 +45,30 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
         WriteMutation.new(Model.Aex9Balance, m_empty_balance)
       ]
     else
-      balances =
+      balances_list =
         Enum.map(balances, fn {{:address, account_pk}, amount} -> {account_pk, amount} end)
 
       [
-        UpdateAex9StateMutation.new(contract_pk, block_index, call_txi, balances)
+        UpdateAex9StateMutation.new(contract_pk, block_index, call_txi, balances_list)
       ]
+    end
+  end
+
+  defp aex9_balances(contract_pk, {kbi, mbi} = block_index) do
+    next_kb_hash = DBN.get_key_block_hash(kbi + 1)
+    next_hash = DBN.get_next_hash(next_kb_hash, mbi)
+    type = if next_hash == next_kb_hash, do: :key, else: :micro
+
+    case Aex9BalancesCache.get(contract_pk, block_index, next_hash) do
+      {:ok, balances} ->
+        balances
+
+      :not_found ->
+        Aex9BalancesCache.purge(contract_pk, block_index)
+        {balances, _height_hash} = DBN.aex9_balances(contract_pk, {type, kbi, next_hash})
+        Aex9BalancesCache.put(contract_pk, block_index, next_hash, balances)
+
+        balances
     end
   end
 
