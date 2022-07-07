@@ -1,15 +1,6 @@
 defmodule Integration.AeMdwWeb.OracleControllerTest do
   use AeMdwWeb.ConnCase
 
-  alias :aeser_api_encoder, as: Enc
-  alias AeMdw.Validate
-  alias AeMdw.Db.{Oracle, Format}
-  alias AeMdw.Db.State
-  alias AeMdwWeb.TestUtil
-  alias AeMdw.Error.Input, as: ErrInput
-
-  import AeMdwWeb.Util
-
   @moduletag :integration
 
   @default_limit 10
@@ -19,25 +10,27 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
       id = "ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM"
       conn = get(conn, "/v2/oracles/#{id}")
 
-      assert json_response(conn, 200) ==
-               TestUtil.handle_input(fn ->
-                 id
-                 |> Validate.id!([:oracle_pubkey])
-                 |> get_oracle(expand?(conn.params))
-               end)
+      assert %{
+        "format" => %{
+          "query" => "string",
+          "response" => "string"
+        },
+        "extends" => [extends_txi | _rest],
+        "oracle" => ^id,
+        "register" => register_txi
+      } = json_response(conn, 200)
+
+      assert ^extends_txi = register_txi
     end
 
     test "get oracle information for given oracle id with expand parameter", %{conn: conn} do
       id = "ok_2TASQ4QZv584D2ZP7cZxT6sk1L1UyqbWumnWM4g1azGi1qqcR5"
       conn = get(conn, "/v2/oracles/#{id}?expand")
 
-      assert conn |> json_response(200) |> Jason.encode!() ==
-               TestUtil.handle_input(fn ->
-                 id
-                 |> Validate.id!([:oracle_pubkey])
-                 |> get_oracle(expand?(conn.params))
-                 |> Jason.encode!()
-               end)
+      assert %{"extends" => [extends_tx | _rest], "register" => register_tx} = conn |> json_response(200)
+
+      assert %{"tx" => _tx} = extends_tx
+      assert %{"tx" => _tx} = register_tx
     end
 
     test "renders error when oracle id is invalid", %{conn: conn} do
@@ -558,15 +551,6 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
       conn = get(conn, "/oracles/active?limit=#{limit}")
 
       assert json_response(conn, 400) == %{"error" => "limit too large: #{limit}"}
-    end
-  end
-
-  defp get_oracle(pubkey, expand?) do
-    state = State.new()
-
-    case Oracle.locate(state, pubkey) do
-      {m_oracle, source} -> Format.to_map(state, m_oracle, source, expand?)
-      nil -> raise ErrInput.NotFound, value: Enc.encode(:oracle_pubkey, pubkey)
     end
   end
 end
