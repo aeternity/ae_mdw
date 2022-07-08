@@ -293,6 +293,16 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
                "height" => 350_622
              } = json_response(conn, 200)
     end
+
+    test "returns 404 if contract had not been created up to the block", %{conn: conn} do
+      hash = "kh_NM2cxdzg6mf4KMFMXw1kAzBJGwFoqiGHQtaKx3DvaAGM5CAkn"
+      contract_id = "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA"
+      account_id = "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48"
+      conn = get(conn, "/aex9/balance/hash/#{hash}/#{contract_id}/#{account_id}")
+
+      assert %{"error" => error} = json_response(conn, 404)
+      assert error == "not found: #{contract_id}"
+    end
   end
 
   describe "balances_for_hash" do
@@ -313,6 +323,15 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
                "contract_id" => ^contract_id,
                "height" => 350_622
              } = json_response(conn, 200)
+    end
+
+    test "returns 404 when contract had not been created up to the block", %{conn: conn} do
+      hash = "kh_NM2cxdzg6mf4KMFMXw1kAzBJGwFoqiGHQtaKx3DvaAGM5CAkn"
+      contract_id = "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA"
+      conn = get(conn, "/aex9/balances/hash/#{hash}/#{contract_id}")
+
+      assert %{"error" => error} = json_response(conn, 404)
+      assert error == "not found: #{contract_id}"
     end
 
     @tag :iteration
