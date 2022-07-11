@@ -177,5 +177,17 @@ defmodule AeMdw.Database do
   end
 
   @spec transaction_commit(transaction()) :: :ok
-  def transaction_commit(txn), do: RocksDb.transaction_commit(txn)
+  def transaction_commit(txn) do
+    case RocksDb.transaction_commit(txn) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        raise """
+        Error when committing transaction (reason: #{inspect(reason)}), likely due to
+          1. reading data outside of the transaction or
+          2. deleting already deleted keys
+        """
+    end
+  end
 end
