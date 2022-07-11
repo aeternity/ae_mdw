@@ -4,7 +4,6 @@ defmodule AeMdw.Stats do
   """
 
   alias AeMdw.Blocks
-  alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Database
@@ -94,11 +93,11 @@ defmodule AeMdw.Stats do
 
   @spec fetch_delta_stat!(State.t(), height()) :: delta_stat()
   def fetch_delta_stat!(state, height),
-    do: render_delta_stat(state, State.fetch!(state, Model.DeltaStat, height))
+    do: render_delta_stat(State.fetch!(state, Model.DeltaStat, height))
 
   @spec fetch_total_stat!(State.t(), height()) :: total_stat()
   def fetch_total_stat!(state, height),
-    do: render_total_stat(state, State.fetch!(state, Model.TotalStat, height))
+    do: render_total_stat(State.fetch!(state, Model.TotalStat, height))
 
   defp render_stats(state, %Range{first: first, last: last}) do
     Enum.map(first..last, fn height ->
@@ -134,9 +133,61 @@ defmodule AeMdw.Stats do
 
   defp render_total_stats(state, gens), do: Enum.map(gens, &fetch_total_stat!(state, &1))
 
-  defp render_delta_stat(state, stat), do: Format.to_map(state, stat, Model.DeltaStat)
+  defp render_delta_stat(
+         Model.delta_stat(
+           index: height,
+           auctions_started: auctions_started,
+           names_activated: names_activated,
+           names_expired: names_expired,
+           names_revoked: names_revoked,
+           oracles_registered: oracles_registered,
+           oracles_expired: oracles_expired,
+           contracts_created: contracts_created,
+           block_reward: block_reward,
+           dev_reward: dev_reward
+         )
+       ) do
+    %{
+      height: height,
+      auctions_started: auctions_started,
+      names_activated: names_activated,
+      names_expired: names_expired,
+      names_revoked: names_revoked,
+      oracles_registered: oracles_registered,
+      oracles_expired: oracles_expired,
+      contracts_created: contracts_created,
+      block_reward: block_reward,
+      dev_reward: dev_reward
+    }
+  end
 
-  defp render_total_stat(state, total_stat), do: Format.to_map(state, total_stat, Model.TotalStat)
+  defp render_total_stat(
+         Model.total_stat(
+           index: height,
+           active_auctions: active_auctions,
+           active_names: active_names,
+           active_oracles: active_oracles,
+           contracts: contracts,
+           inactive_names: inactive_names,
+           inactive_oracles: inactive_oracles,
+           block_reward: block_reward,
+           dev_reward: dev_reward,
+           total_supply: total_supply
+         )
+       ) do
+    %{
+      height: height,
+      active_auctions: active_auctions,
+      active_names: active_names,
+      active_oracles: active_oracles,
+      contracts: contracts,
+      inactive_names: inactive_names,
+      inactive_oracles: inactive_oracles,
+      sum_block_reward: block_reward,
+      sum_dev_reward: dev_reward,
+      total_token_supply: total_supply
+    }
+  end
 
   defp serialize_cursor(nil), do: nil
 

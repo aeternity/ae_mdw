@@ -5,7 +5,6 @@ defmodule AeMdw.Blocks do
 
   alias AeMdw.Collection
   alias AeMdw.Error
-  alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
@@ -76,11 +75,12 @@ defmodule AeMdw.Blocks do
   end
 
   @spec fetch(State.t(), block_index() | block_hash()) :: {:ok, block()} | {:error, Error.t()}
-  def fetch(state, block_hash) when is_binary(block_hash) do
+  def fetch(_state, block_hash) when is_binary(block_hash) do
     with {:ok, encoded_hash} <- Validate.id(block_hash),
          {:ok, _block} <- :aec_chain.get_block(encoded_hash) do
-      # note: the `nil` here - for json formatting, we reuse AE node code
-      {:ok, Format.to_map(state, {:block, {nil, nil}, nil, encoded_hash})}
+      header = :aec_db.get_header(encoded_hash)
+
+      {:ok, :aec_headers.serialize_for_client(header, DbUtil.prev_block_type(header))}
     else
       :error -> {:error, Error.Input.NotFound.exception(value: block_hash)}
       {:error, reason} -> {:error, reason}
@@ -142,7 +142,11 @@ defmodule AeMdw.Blocks do
     |> Stream.take_while(&match?({^gen, _mb_index}, &1))
     |> Enum.map(fn key -> State.fetch!(state, @table, key) end)
     |> Enum.reverse()
-    |> Enum.map(fn block -> Format.to_map(state, block) end)
+    |> Enum.map(fn Model.block(index: {_height, _mbi}, hash: hash) ->
+      header = :aec_db.get_header(hash)
+
+      :aec_headers.serialize_for_client(header, DbUtil.prev_block_type(header))
+    end)
   end
 
   defp fetch_gen_from_cache(gen, key_block, micro_blocks, sort_mbs?) do

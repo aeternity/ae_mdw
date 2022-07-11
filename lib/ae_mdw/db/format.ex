@@ -3,7 +3,6 @@ defmodule AeMdw.Db.Format do
   alias AeMdw.Node, as: AE
   alias :aeser_api_encoder, as: Enc
 
-  alias AeMdw.Blocks
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
@@ -24,9 +23,6 @@ defmodule AeMdw.Db.Format do
 
   def to_raw_map(_state, {{height, mbi}, txi}),
     do: %{block_height: height, micro_index: mbi, tx_index: txi}
-
-  def to_raw_map(_state, {:block, {_kbi, mbi}, _txi, hash}),
-    do: record_to_map(:aec_db.get_header(hash), AE.hdr_fields((mbi == -1 && :key) || :micro))
 
   def to_raw_map(state, {:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} = mdw_tx),
     do: to_raw_map(state, mdw_tx, AE.Db.get_tx_data(hash))
@@ -83,89 +79,6 @@ defmodule AeMdw.Db.Format do
     }
   end
 
-  def to_raw_map(state, m_oracle, source) when elem(m_oracle, 0) == :oracle do
-    pk = Model.oracle(m_oracle, :index)
-    {{register_height, _}, register_txi} = Model.oracle(m_oracle, :register)
-    expire_height = Model.oracle(m_oracle, :expire)
-
-    kbi = min(expire_height - 1, DbUtil.last_gen(state))
-    block_hash = Blocks.block_hash(State.new(), kbi)
-    oracle_tree = AeMdw.Db.Oracle.oracle_tree!(block_hash)
-    oracle_rec = :aeo_state_tree.get_oracle(pk, oracle_tree)
-
-    %{
-      oracle: :aeser_id.create(:oracle, pk),
-      active: source == Model.ActiveOracle,
-      active_from: register_height,
-      expire_height: expire_height,
-      register: register_txi,
-      extends: Enum.map(Model.oracle(m_oracle, :extends), &bi_txi_txi/1),
-      query_fee: AE.Oracle.get!(oracle_rec, :query_fee),
-      format: %{
-        query: AE.Oracle.get!(oracle_rec, :query_format),
-        response: AE.Oracle.get!(oracle_rec, :response_format)
-      }
-    }
-  end
-
-  def to_raw_map(state, {name, symbol, txi, decimals}, Model.Aex9Contract) do
-    %{
-      name: name,
-      symbol: symbol,
-      decimals: decimals,
-      contract_txi: txi,
-      contract_id: :aeser_id.create(:contract, Origin.pubkey!(state, {:contract, txi}))
-    }
-  end
-
-  def to_raw_map(state, {symbol, name, txi, decimals}, Model.Aex9ContractSymbol),
-    do: to_raw_map(state, {name, symbol, txi, decimals}, Model.Aex9Contract)
-
-  def to_raw_map(state, {create_txi, call_txi, event_hash, log_idx}, Model.ContractLog) do
-    m_log = State.fetch!(state, Model.ContractLog, {create_txi, call_txi, event_hash, log_idx})
-    ct_id = &:aeser_id.create(:contract, &1)
-
-    ct_pk =
-      if create_txi == -1 do
-        Origin.pubkey(state, {:contract_call, call_txi})
-      else
-        Origin.pubkey(state, {:contract, create_txi})
-      end
-
-    ext_ct_pk = Model.contract_log(m_log, :ext_contract)
-
-    parent_contract_pk =
-      case ext_ct_pk do
-        {:parent_contract_pk, pct_pk} -> pct_pk
-        _ -> nil
-      end
-
-    # clear ext_ct_pk after saving parent_contract_pk in its own field
-    ext_ct_pk = if not is_tuple(ext_ct_pk), do: ext_ct_pk
-    ext_ct_txi = if ext_ct_pk, do: Origin.tx_index!(state, {:contract, ext_ct_pk}), else: -1
-    m_tx = State.fetch!(state, Model.Tx, call_txi)
-
-    {height, micro_index} = Model.tx(m_tx, :block_index)
-    block_hash = Model.block(DbUtil.read_block!(state, {height, micro_index}), :hash)
-
-    %{
-      contract_txi: (create_txi != -1 && create_txi) || -1,
-      contract_id: ct_id.(ct_pk),
-      ext_caller_contract_txi: ext_ct_txi,
-      ext_caller_contract_id: (ext_ct_pk != nil && ct_id.(ext_ct_pk)) || nil,
-      parent_contract_id: (parent_contract_pk && ct_id.(parent_contract_pk)) || nil,
-      call_txi: call_txi,
-      call_tx_hash: Model.tx(m_tx, :id),
-      args: Model.contract_log(m_log, :args),
-      data: Model.contract_log(m_log, :data),
-      event_hash: event_hash,
-      height: height,
-      micro_index: micro_index,
-      block_hash: block_hash,
-      log_idx: log_idx
-    }
-  end
-
   def to_raw_map(state, {call_txi, local_idx}, Model.IntContractCall) do
     m_call = State.fetch!(state, Model.IntContractCall, {call_txi, local_idx})
     create_txi = Model.int_contract_call(m_call, :create_txi)
@@ -192,79 +105,6 @@ defmodule AeMdw.Db.Format do
       micro_index: micro_index,
       block_hash: block_hash,
       local_idx: local_idx
-    }
-  end
-
-  def to_raw_map(state, {{height, _txi}, kind, target_pk, ref_txi} = key, Model.IntTransferTx) do
-    m_transfer = State.fetch!(state, Model.IntTransferTx, key)
-    amount = Model.int_transfer_tx(m_transfer, :amount)
-
-    %{
-      height: height,
-      account_id: target_pk,
-      amount: amount,
-      kind: kind,
-      ref_txi: (ref_txi >= 0 && ref_txi) || nil
-    }
-  end
-
-  def to_raw_map(
-        _state,
-        Model.delta_stat(
-          index: height,
-          auctions_started: auctions_started,
-          names_activated: names_activated,
-          names_expired: names_expired,
-          names_revoked: names_revoked,
-          oracles_registered: oracles_registered,
-          oracles_expired: oracles_expired,
-          contracts_created: contracts_created,
-          block_reward: block_reward,
-          dev_reward: dev_reward
-        ),
-        Model.DeltaStat
-      ) do
-    %{
-      height: height,
-      auctions_started: auctions_started,
-      names_activated: names_activated,
-      names_expired: names_expired,
-      names_revoked: names_revoked,
-      oracles_registered: oracles_registered,
-      oracles_expired: oracles_expired,
-      contracts_created: contracts_created,
-      block_reward: block_reward,
-      dev_reward: dev_reward
-    }
-  end
-
-  def to_raw_map(
-        _state,
-        Model.total_stat(
-          index: height,
-          active_auctions: active_auctions,
-          active_names: active_names,
-          active_oracles: active_oracles,
-          contracts: contracts,
-          inactive_names: inactive_names,
-          inactive_oracles: inactive_oracles,
-          block_reward: block_reward,
-          dev_reward: dev_reward,
-          total_supply: total_supply
-        ),
-        Model.TotalStat
-      ) do
-    %{
-      height: height,
-      active_auctions: active_auctions,
-      active_names: active_names,
-      active_oracles: active_oracles,
-      contracts: contracts,
-      inactive_names: inactive_names,
-      inactive_oracles: inactive_oracles,
-      sum_block_reward: block_reward,
-      sum_dev_reward: dev_reward,
-      total_token_supply: total_supply
     }
   end
 
@@ -336,14 +176,6 @@ defmodule AeMdw.Db.Format do
 
   ##########
 
-  def to_map(state, {{_height, _mbi}, _txi} = bi_txi),
-    do: raw_to_json(to_raw_map(state, bi_txi))
-
-  def to_map(_state, {:block, {_kbi, _mbi}, _txi, hash}) do
-    header = :aec_db.get_header(hash)
-    :aec_headers.serialize_for_client(header, DbUtil.prev_block_type(header))
-  end
-
   def to_map(state, {:tx, _index, hash, {_kb_index, _mb_index}, _mb_time} = rec),
     do: to_map(state, rec, AE.Db.get_tx_data(hash))
 
@@ -390,26 +222,6 @@ defmodule AeMdw.Db.Format do
     |> update_in(["status"], &to_string/1)
   end
 
-  def to_map(state, m_oracle, source) when source in [Model.ActiveOracle, Model.InactiveOracle],
-    do:
-      map_raw_values(to_raw_map(state, m_oracle, source), fn
-        {:id, :oracle, pk} -> Enc.encode(:oracle_pubkey, pk)
-        x -> to_json(x)
-      end)
-
-  def to_map(state, {create_txi, call_txi, event_hash, log_idx}, Model.ContractLog),
-    do:
-      to_raw_map(state, {create_txi, call_txi, event_hash, log_idx}, Model.ContractLog)
-      |> update_in([:contract_id], &enc_id/1)
-      |> update_in([:ext_caller_contract_id], &enc_id/1)
-      |> update_in([:parent_contract_id], &enc_id/1)
-      |> update_in([:call_tx_hash], &Enc.encode(:tx_hash, &1))
-      |> update_in([:block_hash], &Enc.encode(:micro_block_hash, &1))
-      |> update_in([:event_hash], &Base.hex_encode32/1)
-      |> update_in([:args], fn args ->
-        Enum.map(args, fn <<topic::256>> -> to_string(topic) end)
-      end)
-
   def to_map(state, {call_txi, local_idx}, Model.IntContractCall) do
     raw_map = to_raw_map(state, {call_txi, local_idx}, Model.IntContractCall)
 
@@ -440,23 +252,6 @@ defmodule AeMdw.Db.Format do
     |> update_in([:internal_tx], int_tx)
   end
 
-  def to_map(state, {{_height, _txi}, _kind, _target_pk, _ref_txi} = key, Model.IntTransferTx) do
-    raw_map = to_raw_map(state, key, Model.IntTransferTx)
-
-    raw_map
-    |> update_in([:account_id], &Enc.encode(:account_pubkey, &1))
-  end
-
-  def to_map(state, m_delta_stat, Model.DeltaStat),
-    do: to_raw_map(state, m_delta_stat, Model.DeltaStat)
-
-  def to_map(state, m_total_stat, Model.TotalStat),
-    do: to_raw_map(state, m_total_stat, Model.TotalStat)
-
-  def to_map(state, {_, _, _, _} = aex9_data, source)
-      when source in [Model.Aex9Contract, Model.Aex9ContractSymbol],
-      do: raw_to_json(to_raw_map(state, aex9_data, source))
-
   def to_map(state, data, source, false = _expand),
     do: to_map(state, data, source)
 
@@ -472,13 +267,6 @@ defmodule AeMdw.Db.Format do
     to_map(state, bid, Model.AuctionBid)
     |> update_in(["info", "bids"], fn claims -> Enum.map(claims, &expand(state, &1)) end)
     |> update_in(["previous"], fn prevs -> Enum.map(prevs, &expand_name_info(state, &1)) end)
-  end
-
-  def to_map(state, oracle, source, true = _expand)
-      when source in [Model.ActiveOracle, Model.InactiveOracle] do
-    to_map(state, oracle, source)
-    |> update_in(["extends"], fn exts -> Enum.map(exts, &expand(state, &1)) end)
-    |> update_in(["register"], &expand(state, &1))
   end
 
   defp custom_encode(_state, :oracle_response_tx, tx, _tx_rec, _signed_tx, _block_hash),

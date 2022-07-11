@@ -16,6 +16,7 @@ defmodule AeMdw.Oracles do
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node
   alias AeMdw.Node.Db
+  alias AeMdw.Txs
   alias AeMdw.Util
 
   @type cursor :: binary()
@@ -205,7 +206,7 @@ defmodule AeMdw.Oracles do
   end
 
   defp expand_txi(_state, bi_txi, false), do: bi_txi
-  defp expand_txi(state, bi_txi, true), do: Format.to_map(state, DBUtil.read_tx!(state, bi_txi))
+  defp expand_txi(state, bi_txi, true), do: Txs.fetch!(state, Format.bi_txi_txi(bi_txi))
 
   defp deserialize_scope(nil), do: nil
 

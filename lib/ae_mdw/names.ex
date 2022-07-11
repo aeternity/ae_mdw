@@ -13,8 +13,8 @@ defmodule AeMdw.Names do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Db.State
-  alias AeMdw.Db.Util, as: DBUtil
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Txs
   alias AeMdw.Util
   alias AeMdw.Validate
 
@@ -428,7 +428,7 @@ defmodule AeMdw.Names do
   end
 
   defp expand_txi(_state, bi_txi, false), do: bi_txi
-  defp expand_txi(state, bi_txi, true), do: Format.to_map(state, DBUtil.read_tx!(state, bi_txi))
+  defp expand_txi(state, bi_txi, true), do: Txs.fetch!(state, Format.bi_txi_txi(bi_txi))
 
   defp render_previous(state, name, expand?) do
     name
