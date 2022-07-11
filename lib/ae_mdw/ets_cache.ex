@@ -1,4 +1,7 @@
 defmodule AeMdw.EtsCache do
+  # credo:disable-for-this-file
+  @moduledoc false
+
   require Ex2ms
 
   @cache_types [:set, :ordered_set, :bag, :duplicate_bag]
@@ -35,6 +38,20 @@ defmodule AeMdw.EtsCache do
 
   def del(table, key),
     do: :ets.delete(table, key)
+
+  def next(table, key) do
+    case :ets.next(table, key) do
+      :"$end_of_table" -> nil
+      next_key -> next_key
+    end
+  end
+
+  def prev(table, key) do
+    case :ets.prev(table, key) do
+      :"$end_of_table" -> nil
+      prev_key -> prev_key
+    end
+  end
 
   def purge(table, max_age_msecs) do
     boundary = time() - max_age_msecs
