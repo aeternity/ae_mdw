@@ -85,14 +85,15 @@ defmodule AeMdwWeb.Aex9Controller do
         "account_id" => account_id
       }) do
     with {:ok, {type, height, hash}} <- ensure_block_hash(block_hash_enc),
-         {:ok, contract_pk} <- ensure_aex9_contract_at_block(state, contract_id, hash) do
+         {:ok, contract_pk} <- ensure_aex9_contract_at_block(state, contract_id, hash),
+         {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]) do
       handle_input(
         conn,
         fn ->
           balance_for_hash_reply(
             conn,
             contract_pk,
-            Validate.id!(account_id, [:account_pubkey]),
+            account_pk,
             {type, height, hash}
           )
         end
