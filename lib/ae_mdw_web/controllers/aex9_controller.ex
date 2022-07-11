@@ -79,23 +79,27 @@ defmodule AeMdwWeb.Aex9Controller do
         )
 
   @spec balance_for_hash(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def balance_for_hash(conn, %{
+  def balance_for_hash(%Conn{assigns: %{state: state}} = conn, %{
         "blockhash" => block_hash_enc,
         "contract_id" => contract_id,
         "account_id" => account_id
-      }),
-      do:
-        handle_input(
-          conn,
-          fn ->
-            balance_for_hash_reply(
-              conn,
-              ensure_aex9_contract_pk!(contract_id),
-              Validate.id!(account_id, [:account_pubkey]),
-              ensure_block_hash_and_height!(block_hash_enc)
-            )
-          end
-        )
+      }) do
+    with {:ok, {type, height, hash}} <- ensure_block_hash(block_hash_enc),
+         {:ok, contract_pk} <- ensure_aex9_contract_at_block(state, contract_id, hash),
+         {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]) do
+      handle_input(
+        conn,
+        fn ->
+          balance_for_hash_reply(
+            conn,
+            contract_pk,
+            account_pk,
+            {type, height, hash}
+          )
+        end
+      )
+    end
+  end
 
   @spec balances(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def balances(%Conn{assigns: %{state: state}} = conn, %{
@@ -164,18 +168,20 @@ defmodule AeMdwWeb.Aex9Controller do
       )
 
   @spec balances_for_hash(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def balances_for_hash(conn, %{"blockhash" => block_hash_enc, "contract_id" => contract_id}),
-    do:
+  def balances_for_hash(%Conn{assigns: %{state: state}} = conn, %{
+        "blockhash" => block_hash_enc,
+        "contract_id" => contract_id
+      }) do
+    with {:ok, {type, height, hash}} <- ensure_block_hash(block_hash_enc),
+         {:ok, contract_pk} <- ensure_aex9_contract_at_block(state, contract_id, hash) do
       handle_input(
         conn,
         fn ->
-          balances_for_hash_reply(
-            conn,
-            ensure_aex9_contract_pk!(contract_id),
-            ensure_block_hash_and_height!(block_hash_enc)
-          )
+          balances_for_hash_reply(conn, contract_pk, {type, height, hash})
         end
       )
+    end
+  end
 
   @spec transfers_from_v1(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def transfers_from_v1(conn, %{"sender" => sender_id}),
@@ -323,9 +329,14 @@ defmodule AeMdwWeb.Aex9Controller do
     )
   end
 
-  defp balance_for_hash_reply(conn, contract_pk, account_pk, {type, block_hash, height}) do
-    {amount, _} = DBN.aex9_balance(contract_pk, account_pk, {type, height, block_hash})
-    json(conn, balance_to_map({amount, {type, height, block_hash}}, contract_pk, account_pk))
+  defp balance_for_hash_reply(
+         conn,
+         contract_pk,
+         account_pk,
+         {_type, _height, _hash} = height_hash
+       ) do
+    {amount, _} = DBN.aex9_balance(contract_pk, account_pk, height_hash)
+    json(conn, balance_to_map({amount, height_hash}, contract_pk, account_pk))
   end
 
   defp account_balances_reply(%Conn{assigns: %{state: state}} = conn, account_pk) do
@@ -392,9 +403,9 @@ defmodule AeMdwWeb.Aex9Controller do
     )
   end
 
-  defp balances_for_hash_reply(conn, contract_pk, {block_type, block_hash, height}) do
-    {amounts, _} = DBN.aex9_balances!(contract_pk, {block_type, height, block_hash})
-    json(conn, balances_to_map({amounts, {block_type, height, block_hash}}, contract_pk))
+  defp balances_for_hash_reply(conn, contract_pk, {_type, _height, _hash} = height_hash) do
+    {amounts, _} = DBN.aex9_balances!(contract_pk, height_hash)
+    json(conn, balances_to_map({amounts, height_hash}, contract_pk))
   end
 
   defp parse_range!(range) do
@@ -421,19 +432,44 @@ defmodule AeMdwWeb.Aex9Controller do
     pk
   end
 
-  defp ensure_block_hash_and_height!(block_ident) do
+  defp ensure_aex9_contract_at_block(state, ct_id, block_hash) do
+    ct_pk = Validate.id!(ct_id, [:contract_pubkey])
+
+    with bi when bi != nil <- Util.block_hash_to_bi(state, block_hash),
+         {:ok, Model.aexn_contract(txi: txi)} <-
+           State.get(state, Model.AexnContract, {:aex9, ct_pk}) do
+      if txi < Util.block_txi(state, bi) do
+        {:ok, ct_pk}
+      else
+        {:error, ErrInput.NotFound.exception(value: ct_id)}
+      end
+    else
+      nil ->
+        {:error, ErrInput.NotFound.exception(value: block_hash)}
+
+      :not_found ->
+        # if not yet synced by Mdw but present on Node
+        if AexnContracts.is_aex9?(ct_pk) do
+          {:ok, ct_pk}
+        else
+          {:error, ErrInput.NotAex9.exception(value: ct_id)}
+        end
+    end
+  end
+
+  defp ensure_block_hash(block_ident) do
     case :aeser_api_encoder.safe_decode(:block_hash, block_ident) do
       {:ok, block_hash} ->
         case :aec_chain.get_block(block_hash) do
           {:ok, block} ->
-            {:aec_blocks.type(block), block_hash, :aec_blocks.height(block)}
+            {:ok, {:aec_blocks.type(block), :aec_blocks.height(block), block_hash}}
 
           :error ->
-            raise ErrInput.NotFound, value: block_ident
+            {:error, ErrInput.NotFound.exception(value: block_ident)}
         end
 
       _any_error ->
-        raise ErrInput.Query, value: block_ident
+        {:error, ErrInput.Query.exception(value: block_ident)}
     end
   end
 
