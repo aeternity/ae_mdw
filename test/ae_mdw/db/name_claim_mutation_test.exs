@@ -2,6 +2,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
   use ExUnit.Case
 
   alias AeMdw.Database
+  alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync
@@ -78,5 +79,45 @@ defmodule AeMdw.Db.NameClaimMutationTest do
     assert State.exists?(state, Model.ActiveNameActivation, {claim_height, plain_name})
     assert State.exists?(state, Model.ActiveNameExpiration, {expire, plain_name})
     assert State.exists?(state, Model.ActiveNameOwner, {new_owner_pk, plain_name})
+  end
+
+  test "claim new name with timeout > 0" do
+    plain_name = "claim_new.test"
+    name_hash = :crypto.strong_rand_bytes(32)
+    owner_pk = :crypto.strong_rand_bytes(32)
+    name_fee = 1_000_000_000_000
+    claim_height = 23
+    block_index = {claim_height, 0}
+    timeout = 54
+    txi = 1234
+
+    Database.commit([
+      NameClaimMutation.new(
+        plain_name,
+        name_hash,
+        owner_pk,
+        name_fee,
+        false,
+        txi,
+        block_index,
+        timeout
+      )
+    ])
+
+    state = State.new()
+
+    refute State.exists?(state, Model.ActiveName, plain_name)
+    refute State.exists?(state, Model.ActiveNameActivation, {claim_height, plain_name})
+    refute State.exists?(state, Model.ActiveNameOwner, {owner_pk, plain_name})
+
+    assert {:ok,
+            Model.auction_bid(
+              index: ^plain_name,
+              owner: ^owner_pk,
+              bids: [{^block_index, ^txi}]
+            )} = State.get(state, Model.AuctionBid, plain_name)
+
+    assert State.exists?(state, Model.AuctionOwner, {owner_pk, plain_name})
+    assert State.exists?(state, Model.AuctionExpiration, {claim_height + timeout, plain_name})
   end
 end
