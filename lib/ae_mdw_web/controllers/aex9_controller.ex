@@ -16,13 +16,19 @@ defmodule AeMdwWeb.Aex9Controller do
   alias AeMdw.Node.Db, as: DBN
   alias AeMdw.Validate
 
-  alias AeMdwWeb.DataStreamPlug, as: DSPlug
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
 
   alias Plug.Conn
 
-  import AeMdwWeb.Util, only: [handle_input: 2, paginate: 4, presence?: 2]
+  import AeMdwWeb.Util,
+    only: [
+      handle_input: 2,
+      paginate: 4,
+      parse_range: 1,
+      presence?: 2
+    ]
+
   import AeMdwWeb.Helpers.AexnHelper
   import AeMdwWeb.AexnView
 
@@ -60,23 +66,28 @@ defmodule AeMdwWeb.Aex9Controller do
       )
 
   @spec balance_range(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def balance_range(conn, %{
+  def balance_range(%Conn{assigns: %{state: state}} = conn, %{
         "range" => range,
         "contract_id" => contract_id,
         "account_id" => account_id
-      }),
-      do:
-        handle_input(
-          conn,
-          fn ->
-            balance_range_reply(
-              conn,
-              ensure_aex9_contract_pk!(contract_id),
-              Validate.id!(account_id, [:account_pubkey]),
-              parse_range!(range)
-            )
-          end
-        )
+      }) do
+    with {:ok, first..last} <- validate_range(range),
+         {:ok, contract_pk} <-
+           ensure_aex9_contract_at_block(state, contract_id, {min(first, last), -1}),
+         {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]) do
+      handle_input(
+        conn,
+        fn ->
+          balance_range_reply(
+            conn,
+            contract_pk,
+            account_pk,
+            first..last
+          )
+        end
+      )
+    end
+  end
 
   @spec balance_for_hash(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def balance_for_hash(%Conn{assigns: %{state: state}} = conn, %{
@@ -154,18 +165,21 @@ defmodule AeMdwWeb.Aex9Controller do
     do: handle_input(conn, fn -> balances_reply(conn, ensure_aex9_contract_pk!(contract_id)) end)
 
   @spec balances_range(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def balances_range(conn, %{"range" => range, "contract_id" => contract_id}),
-    do:
+  def balances_range(%Conn{assigns: %{state: state}} = conn, %{
+        "range" => range,
+        "contract_id" => contract_id
+      }) do
+    with {:ok, first..last} <- validate_range(range),
+         {:ok, contract_pk} <-
+           ensure_aex9_contract_at_block(state, contract_id, {min(first, last), -1}) do
       handle_input(
         conn,
         fn ->
-          balances_range_reply(
-            conn,
-            ensure_aex9_contract_pk!(contract_id),
-            parse_range!(range)
-          )
+          balances_range_reply(conn, contract_pk, first..last)
         end
       )
+    end
+  end
 
   @spec balances_for_hash(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def balances_for_hash(%Conn{assigns: %{state: state}} = conn, %{
@@ -408,21 +422,22 @@ defmodule AeMdwWeb.Aex9Controller do
     json(conn, balances_to_map({amounts, height_hash}, contract_pk))
   end
 
-  defp parse_range!(range) do
-    case DSPlug.parse_range(range) do
+  defp validate_range(range) do
+    case parse_range(range) do
       {:ok, %Range{first: f, last: l}} ->
         {:ok, top_kb} = :aec_chain.top_key_block()
         first = max(0, f)
         last = min(l, :aec_blocks.height(top_kb))
 
         if last - first + 1 > @max_range_length do
-          raise ErrInput.RangeTooBig, value: "max range length is #{@max_range_length}"
+          {:error,
+           ErrInput.RangeTooBig.exception(value: "max range length is #{@max_range_length}")}
         end
 
-        first..last
+        {:ok, first..last}
 
       {:error, _detail} ->
-        raise ErrInput.NotAex9, value: range
+        {:error, ErrInput.NotAex9.exception(value: range)}
     end
   end
 
@@ -432,23 +447,33 @@ defmodule AeMdwWeb.Aex9Controller do
     pk
   end
 
-  defp ensure_aex9_contract_at_block(state, ct_id, block_hash) do
-    ct_pk = Validate.id!(ct_id, [:contract_pubkey])
+  defp ensure_aex9_contract_at_block(state, ct_id, block_hash) when is_binary(block_hash) do
+    case Util.block_hash_to_bi(state, block_hash) do
+      nil ->
+        {:error, ErrInput.NotFound.exception(value: block_hash)}
 
-    with bi when bi != nil <- Util.block_hash_to_bi(state, block_hash),
+      block_index ->
+        ensure_aex9_contract_at_block(state, ct_id, block_index)
+    end
+  end
+
+  defp ensure_aex9_contract_at_block(state, ct_id, block_index) do
+    with {:ok, ct_pk} <- Validate.id(ct_id, [:contract_pubkey]),
          {:ok, Model.aexn_contract(txi: txi)} <-
            State.get(state, Model.AexnContract, {:aex9, ct_pk}) do
-      if txi < Util.block_txi(state, bi) do
+      if txi < Util.block_txi(state, block_index) do
         {:ok, ct_pk}
       else
         {:error, ErrInput.NotFound.exception(value: ct_id)}
       end
     else
-      nil ->
-        {:error, ErrInput.NotFound.exception(value: block_hash)}
+      {:error, {ErrInput.Id, id}} ->
+        {:error, ErrInput.Id.exception(value: id)}
 
       :not_found ->
         # if not yet synced by Mdw but present on Node
+        ct_pk = Validate.id!(ct_id)
+
         if AexnContracts.is_aex9?(ct_pk) do
           {:ok, ct_pk}
         else

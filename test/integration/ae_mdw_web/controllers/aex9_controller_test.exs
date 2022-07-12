@@ -191,6 +191,25 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
         assert String.starts_with?(hash, "kh_") and match?({:ok, _hash_bin}, Validate.id(hash))
       end)
     end
+
+    test "returns 404 if contract had not been created up to the block", %{conn: conn} do
+      contract_id = "ct_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
+      account_id = "ak_psy8tRXPzGxh6975H7K6XQcMFVsdrxJMt7YkzMY8oUTevutzw"
+      first = 487_100
+      last = 487_101
+
+      path =
+        Routes.aex9_path(
+          conn,
+          :balance_range,
+          "#{first}-#{last}",
+          contract_id,
+          account_id
+        )
+
+      assert %{"error" => error} = conn |> get(path) |> json_response(404)
+      assert error == "not found: #{contract_id}"
+    end
   end
 
   describe "balances_range" do
@@ -226,6 +245,23 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
         assert String.starts_with?(hash, "kh_") and match?({:ok, _hash_bin}, Validate.id(hash))
       end)
+    end
+
+    test "returns 404 if contract had not been created up to the block", %{conn: conn} do
+      contract_id = "ct_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
+      first = 487_100
+      last = 487_101
+
+      path =
+        Routes.aex9_path(
+          conn,
+          :balances_range,
+          "#{first}-#{last}",
+          contract_id
+        )
+
+      assert %{"error" => error} = conn |> get(path) |> json_response(404)
+      assert error == "not found: #{contract_id}"
     end
 
     @tag :iteration
@@ -325,7 +361,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
              } = json_response(conn, 200)
     end
 
-    test "returns 404 when contract had not been created up to the block", %{conn: conn} do
+    test "returns 404 if contract had not been created up to the block", %{conn: conn} do
       hash = "kh_NM2cxdzg6mf4KMFMXw1kAzBJGwFoqiGHQtaKx3DvaAGM5CAkn"
       contract_id = "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA"
       conn = get(conn, "/aex9/balances/hash/#{hash}/#{contract_id}")
