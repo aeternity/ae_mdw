@@ -34,9 +34,7 @@ config :ae_mdw,
   sync: true,
   # email address where to send sync crash notification
   operators: [],
-  contract_cache_expiration_minutes: 1440,
-  # 5 days default generations cache expiration
-  generations_cache_expiration_minutes: 7200
+  contract_cache_expiration_minutes: 1440
 
 # Configures the endpoint
 config :ae_mdw, AeMdwWeb.Endpoint,
