@@ -2,22 +2,18 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
   alias :aeser_api_encoder, as: Enc
-  alias AeMdw.Blocks
   alias AeMdw.Validate
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdwWeb.TestUtil
   alias AeMdw.Error.Input, as: ErrInput
-  alias AeMdw.EtsCache
 
   require Model
 
   @moduletag :integration
 
-  @blocks_table Blocks
   @default_limit 10
-  @blocks_cache_threshold 6
 
   describe "block" do
     test "get key block by hash", %{conn: conn} do
@@ -186,59 +182,6 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
              |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
 
       assert %{"data" => ^blocks} = conn |> get(prev_url) |> json_response(200)
-    end
-
-    test "it gets uncached generations with range", %{conn: conn} do
-      state = State.new()
-      range_begin = DbUtil.last_gen(state) - @blocks_cache_threshold + 1
-      range_end = DbUtil.last_gen(state)
-      range = "#{range_begin}-#{range_end}"
-      limit = @blocks_cache_threshold
-      conn = get(conn, "/blocks/#{range}?limit=#{limit}")
-      response = json_response(conn, 200)
-
-      assert Enum.count(response["data"]) == limit
-
-      assert response["data"]
-             |> Enum.zip(range_begin..range_end)
-             |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
-
-      assert is_nil(EtsCache.get(@blocks_table, range_begin))
-      assert is_nil(EtsCache.get(@blocks_table, range_end))
-      assert is_nil(response["next"])
-    end
-
-    test "get a mix of uncached and cached generations with range", %{conn: conn} do
-      state = State.new()
-      remaining = 3
-      range_begin = DbUtil.last_gen(state) - @blocks_cache_threshold + 1 - remaining
-      range_end = DbUtil.last_gen(state)
-      range = "#{range_begin}-#{range_end}"
-      limit = @blocks_cache_threshold
-
-      conn = get(conn, "/blocks/#{range}?limit=#{limit}")
-      response = json_response(conn, 200)
-
-      assert Enum.count(response["data"]) == limit
-
-      assert response["data"]
-             |> Enum.zip(range_begin..range_end)
-             |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
-
-      assert {%{"height" => ^range_begin}, _insert_time} =
-               EtsCache.get(@blocks_table, range_begin)
-
-      assert is_nil(EtsCache.get(@blocks_table, range_end))
-      assert is_nil(EtsCache.get(@blocks_table, range_end - @blocks_cache_threshold + 1))
-
-      conn_next = get(conn, response["next"])
-      response_next = json_response(conn_next, 200)
-
-      assert Enum.count(response_next["data"]) == remaining
-
-      assert response_next["data"]
-             |> Enum.zip((range_begin + limit)..(range_begin + limit * 2 - 1))
-             |> Enum.all?(fn {%{"height" => height}, index} -> height == index end)
     end
 
     test "get blocks and sorted microblocks in a single generation", %{conn: conn} do
