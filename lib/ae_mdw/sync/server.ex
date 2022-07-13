@@ -290,18 +290,10 @@ defmodule AeMdw.Sync.Server do
   defp exec_db_mutations(gens_mutations, state) do
     gens_mutations
     |> Enum.flat_map(fn {_height, blocks_mutations} -> blocks_mutations end)
-    |> Enum.chunk_every(2)
-    |> Enum.reduce(state, fn blocks_mutations_chunk, state ->
-      chunk_mutations =
-        blocks_mutations_chunk
-        |> Enum.flat_map(fn {_block_index, _block, block_mutations} -> block_mutations end)
+    |> Enum.reduce(state, fn {{_height, mbi}, block, block_mutations}, state ->
+      new_state = State.commit_db(state, block_mutations)
 
-      new_state = State.commit_db(state, chunk_mutations)
-
-      Enum.each(blocks_mutations_chunk, fn {{_height, mbi} = _block_index, block,
-                                            _block_mutations} ->
-        broadcast_block(block, mbi == -1)
-      end)
+      broadcast_block(block, mbi == -1)
 
       new_state
     end)

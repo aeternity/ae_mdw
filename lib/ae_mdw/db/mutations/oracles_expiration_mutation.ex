@@ -27,6 +27,7 @@ defmodule AeMdw.Db.OraclesExpirationMutation do
     state
     |> Collection.stream(Model.ActiveOracleExpiration, {height, <<>>})
     |> Stream.take_while(&match?({^height, _pk}, &1))
+    |> Enum.to_list()
     |> Enum.reduce(state, fn {^height, pubkey}, state ->
       Oracle.expire_oracle(state, height, pubkey)
     end)
