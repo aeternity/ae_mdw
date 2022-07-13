@@ -8,7 +8,6 @@ defmodule AeMdw.Blocks do
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
-  alias AeMdw.EtsCache
   alias AeMdw.Database
   alias AeMdw.Util
   alias AeMdw.Validate
@@ -35,16 +34,6 @@ defmodule AeMdw.Blocks do
 
   @table Model.Block
 
-  @cache_table __MODULE__
-  @blocks_cache_threshold 6
-
-  @spec create_cache_table() :: :ok
-  def create_cache_table do
-    generations_cache_exp = Application.fetch_env!(:ae_mdw, :generations_cache_expiration_minutes)
-
-    EtsCache.new(@cache_table, generations_cache_exp, :ordered_set)
-  end
-
   @spec fetch_blocks(State.t(), direction(), range(), cursor() | nil, limit(), boolean()) ::
           {cursor() | nil, [block()], cursor() | nil}
   def fetch_blocks(state, direction, range, cursor, limit, sort_mbs?) do
@@ -59,7 +48,7 @@ defmodule AeMdw.Blocks do
 
     case Util.build_gen_pagination(cursor, direction, range, limit, last_gen) do
       {:ok, prev_cursor, range, next_cursor} ->
-        {serialize_cursor(prev_cursor), render_blocks(state, range, last_gen, sort_mbs?),
+        {serialize_cursor(prev_cursor), render_blocks(state, range, sort_mbs?),
          serialize_cursor(next_cursor)}
 
       :error ->
@@ -108,57 +97,22 @@ defmodule AeMdw.Blocks do
     end
   end
 
-  defp render_blocks(state, range, last_gen, sort_mbs?),
-    do: Enum.map(range, &render(state, &1, last_gen, sort_mbs?))
+  defp render_blocks(state, range, sort_mbs?) do
+    Enum.map(range, fn gen ->
+      [key_block | micro_blocks] =
+        state
+        |> Collection.stream(@table, :backward, nil, {gen, <<>>})
+        |> Stream.take_while(&match?({^gen, _mb_index}, &1))
+        |> Enum.map(fn key -> State.fetch!(state, @table, key) end)
+        |> Enum.reverse()
+        |> Enum.map(fn Model.block(index: {_height, _mbi}, hash: hash) ->
+          header = :aec_db.get_header(hash)
 
-  defp render(state, gen, last_gen, sort_mbs?) when gen > last_gen - @blocks_cache_threshold do
-    [key_block | micro_blocks] = fetch_gen_blocks(state, gen, last_gen)
+          :aec_headers.serialize_for_client(header, DbUtil.prev_block_type(header))
+        end)
 
-    put_mbs_from_db(key_block, micro_blocks, sort_mbs?)
-  end
-
-  defp render(state, gen, last_gen, sort_mbs?) do
-    [key_block | micro_blocks] = fetch_gen_blocks(state, gen, last_gen)
-
-    fetch_gen_from_cache(gen, key_block, micro_blocks, sort_mbs?)
-  end
-
-  defp fetch_gen_blocks(_state, last_gen, last_gen) do
-    # gets by height once the chain current generation might happen to be higher than last_gen in DB
-    {:ok, %{key_block: kb, micro_blocks: mbs}} =
-      :aec_chain.get_generation_by_height(last_gen, :forward)
-
-    ^last_gen = :aec_blocks.height(kb)
-
-    for block <- [kb | mbs] do
-      header = :aec_blocks.to_header(block)
-      :aec_headers.serialize_for_client(header, DbUtil.prev_block_type(header))
-    end
-  end
-
-  defp fetch_gen_blocks(state, gen, _last_gen) do
-    state
-    |> Collection.stream(@table, :backward, nil, {gen, <<>>})
-    |> Stream.take_while(&match?({^gen, _mb_index}, &1))
-    |> Enum.map(fn key -> State.fetch!(state, @table, key) end)
-    |> Enum.reverse()
-    |> Enum.map(fn Model.block(index: {_height, _mbi}, hash: hash) ->
-      header = :aec_db.get_header(hash)
-
-      :aec_headers.serialize_for_client(header, DbUtil.prev_block_type(header))
+      put_mbs_from_db(key_block, micro_blocks, sort_mbs?)
     end)
-  end
-
-  defp fetch_gen_from_cache(gen, key_block, micro_blocks, sort_mbs?) do
-    case EtsCache.get(@cache_table, gen) do
-      {key_block, _indx} ->
-        key_block
-
-      nil ->
-        key_block = put_mbs_from_db(key_block, micro_blocks, sort_mbs?)
-        EtsCache.put(@cache_table, gen, key_block)
-        key_block
-    end
   end
 
   defp put_mbs_from_db(key_block, micro_blocks, false) do
