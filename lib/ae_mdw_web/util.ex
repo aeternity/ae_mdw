@@ -9,21 +9,6 @@ defmodule AeMdwWeb.Util do
   alias Phoenix.Controller
   alias Plug.Conn
 
-  # credo:disable-for-next-line
-  def expand?(query_params), do: presence?(query_params, "expand")
-
-  # credo:disable-for-next-line
-  def presence?(%Plug.Conn{query_params: query_params}, name),
-    do: presence?(query_params, name)
-
-  # credo:disable-for-next-line
-  def presence?(%{} = query_params, name) do
-    case Map.get(query_params, name, :not_found) do
-      x when x in [nil, "true", [nil], ["true"], "", [""]] -> true
-      _val -> false
-    end
-  end
-
   @spec parse_range(binary()) :: {:ok, Range.t()} | {:error, binary}
   def parse_range(range) do
     case String.split(range, "-") do

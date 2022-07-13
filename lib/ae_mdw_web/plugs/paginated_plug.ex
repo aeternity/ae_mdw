@@ -34,7 +34,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
       conn
       |> assign(:pagination, {direction, is_reversed?, limit, !is_nil(cursor)})
       |> assign(:cursor, cursor)
-      |> assign(:expand?, Map.get(params, "expand", "false") != "false")
+      |> assign(:opts, extract_opts(params))
       |> assign(:order_by, order_by)
       |> assign(:scope, scope)
       |> assign(:offset, {limit, page})
@@ -166,4 +166,11 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
   defp extract_page(_params), do: {:ok, 1}
 
   defp extract_is_reversed(params), do: {:ok, match?(%{"rev" => "1"}, params)}
+
+  defp extract_opts(params) do
+    [
+      expand?: Map.get(params, "expand", "false") != "false",
+      top: Map.get(params, "top", "false") != "false"
+    ]
+  end
 end

@@ -25,8 +25,7 @@ defmodule AeMdwWeb.Aex9Controller do
     only: [
       handle_input: 2,
       paginate: 4,
-      parse_range: 1,
-      presence?: 2
+      parse_range: 1
     ]
 
   import AeMdwWeb.Helpers.AexnHelper
@@ -308,10 +307,10 @@ defmodule AeMdwWeb.Aex9Controller do
     end
   end
 
-  defp balance_reply(%Conn{assigns: %{state: state}} = conn, contract_pk, account_pk) do
+  defp balance_reply(%Conn{assigns: %{state: state, opts: opts}} = conn, contract_pk, account_pk) do
     {amount, {type, height, hash}} =
-      if top?(conn) do
-        DBN.aex9_balance(contract_pk, account_pk, top?(conn))
+      if top?(opts) do
+        DBN.aex9_balance(contract_pk, account_pk, top?(opts))
       else
         case Aex9.fetch_amount_and_keyblock(state, contract_pk, account_pk) do
           {:ok, {amount, kb_height_hash}} ->
@@ -394,9 +393,9 @@ defmodule AeMdwWeb.Aex9Controller do
     json(conn, balances)
   end
 
-  defp balances_reply(%Conn{assigns: %{state: state}} = conn, contract_pk) do
-    amounts = Aex9.fetch_balances(state, contract_pk, top?(conn))
-    hash_tuple = DBN.top_height_hash(top?(conn))
+  defp balances_reply(%Conn{assigns: %{state: state, opts: opts}} = conn, contract_pk) do
+    amounts = Aex9.fetch_balances(state, contract_pk, top?(opts))
+    hash_tuple = DBN.top_height_hash(top?(opts))
     json(conn, balances_to_map({amounts, hash_tuple}, contract_pk))
   end
 
@@ -498,7 +497,7 @@ defmodule AeMdwWeb.Aex9Controller do
     end
   end
 
-  defp top?(conn), do: presence?(conn, "top")
+  defp top?(opts), do: Keyword.get(opts, :top?, false)
 
   defp map_balances_range(range, get_balance_func) do
     range
