@@ -24,17 +24,26 @@ defmodule AeMdwWeb.NameControllerTest do
 
   @default_limit 10
 
+  setup _ do
+    height_name =
+      for i <- 100..121, into: %{}, do: {i, "name#{Enum.random(1_000_000..9_999_999)}.chain"}
+
+    {:ok, height_name: height_name}
+  end
+
   describe "active_names" do
-    test "get active names with default limit", %{conn: conn} do
+    test "get active names with default limit", %{conn: conn, height_name: height_name} do
       with_mocks [
         {Database, [],
          [
-           last_key: fn ActiveNameExpiration -> {:ok, TS.name_expiration_key(0)} end,
+           last_key: fn ActiveNameExpiration -> {:ok, {121, height_name[121]}} end,
            next_key: fn ActiveNameExpiration, _exp_key -> :none end,
-           prev_key: fn ActiveNameExpiration, _exp_key -> {:ok, TS.name_expiration_key(1)} end,
+           prev_key: fn ActiveNameExpiration, {height, _name} ->
+             {:ok, {height - 1, height_name[height - 1]}}
+           end,
            get: fn
-             Tx, _key ->
-               {:ok, Model.tx(index: 0, id: 0, block_index: {0, 0}, time: 0)}
+             Tx, key ->
+               {:ok, Model.tx(index: key, id: 0, block_index: {0, 0}, time: 0)}
 
              ActiveNameExpiration, _key ->
                :not_found
@@ -42,15 +51,21 @@ defmodule AeMdwWeb.NameControllerTest do
              AuctionBid, _plain_name ->
                :not_found
 
-             ActiveName, _plain_name ->
+             ActiveName, plain_name ->
+               expire =
+                 Enum.find_value(height_name, fn {height, name} ->
+                   if name == plain_name, do: height
+                 end)
+
                {:ok,
                 Model.name(
-                  active: true,
-                  expire: 1,
-                  claims: [{{0, 0}, 0}],
+                  index: plain_name,
+                  active: expire - 10,
+                  expire: expire,
+                  claims: [{{expire - 10, 0}, 0}],
                   updates: [],
                   transfers: [],
-                  revoke: {{0, 0}, 0},
+                  revoke: nil,
                   auction_timeout: 1
                 )}
            end
@@ -72,12 +87,26 @@ defmodule AeMdwWeb.NameControllerTest do
 
         assert @default_limit = length(names)
 
+        assert names ==
+                 Enum.sort_by(
+                   names,
+                   fn %{"info" => %{"expire_height" => expire}} -> expire end,
+                   :desc
+                 )
+
         assert %{"data" => names_next, "next" => _next} =
                  conn
                  |> get(next)
                  |> json_response(200)
 
         assert @default_limit = length(names_next)
+
+        assert names_next ==
+                 Enum.sort_by(
+                   names_next,
+                   fn %{"info" => %{"expire_height" => expire}} -> expire end,
+                   :desc
+                 )
       end
     end
 
@@ -713,24 +742,23 @@ defmodule AeMdwWeb.NameControllerTest do
     end
 
     test "get active names with parameters by=activation, direction=forward and limit=9",
-         %{conn: conn} do
+         %{conn: conn, height_name: height_name} do
       limit = 9
       by = "activation"
       direction = "forward"
-      height_names = for i <- 301..309, into: %{}, do: {i, "name#{Enum.random(1..100)}"}
 
       with_mocks [
         {Database, [],
          [
-           first_key: fn ActiveNameActivation -> {:ok, {301, height_names[301]}} end,
+           first_key: fn ActiveNameActivation -> {:ok, {100, height_name[100]}} end,
            next_key: fn
              ActiveNameActivation, {height, _name} ->
-               {:ok, {height + 1, height_names[height + 1]}}
+               {:ok, {height + 1, height_name[height + 1]}}
            end,
            get: fn
              ActiveName, plain_name ->
                active_from =
-                 Enum.find_value(height_names, fn {height, name} ->
+                 Enum.find_value(height_name, fn {height, name} ->
                    if name == plain_name, do: height
                  end)
 
