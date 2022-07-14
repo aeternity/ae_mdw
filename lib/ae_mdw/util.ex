@@ -6,6 +6,12 @@ defmodule AeMdw.Util do
   alias AeMdw.Collection
   alias AeMdw.Db.State
 
+  @type opt() :: {:expand?, boolean()} | {:top?, boolean()}
+  @type opts() :: [opt()]
+
+  @spec expand?(opts()) :: boolean()
+  def expand?(opts), do: Keyword.get(opts, :expand?, false)
+
   def id(x), do: x
 
   def one!([x]), do: x

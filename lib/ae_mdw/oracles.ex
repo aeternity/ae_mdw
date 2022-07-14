@@ -23,9 +23,11 @@ defmodule AeMdw.Oracles do
   # This needs to be an actual type like AeMdw.Db.Oracle.t()
   @type oracle :: term()
   @type pagination :: Collection.direction_limit()
+  @type opts() :: Util.opts()
+
+  @typep state() :: State.t()
   @typep range :: {:gen, Range.t()} | nil
   @typep query() :: %{binary() => binary()}
-  @typep expand?() :: boolean()
   @typep pubkey() :: Db.pubkey()
 
   @table_active AeMdw.Db.Model.ActiveOracle
@@ -33,12 +35,12 @@ defmodule AeMdw.Oracles do
   @table_inactive AeMdw.Db.Model.InactiveOracle
   @table_inactive_expiration Model.InactiveOracleExpiration
 
-  @pagination_params ~w(limit cursor rev direction scope expand)
+  @pagination_params ~w(limit cursor rev direction scope expand tx_hashes)
   @states ~w(active inactive)
 
-  @spec fetch_oracles(State.t(), pagination(), range(), query(), cursor() | nil, boolean()) ::
+  @spec fetch_oracles(state(), pagination(), range(), query(), cursor() | nil, opts()) ::
           {:ok, cursor() | nil, [oracle()], cursor() | nil} | {:error, Error.t()}
-  def fetch_oracles(state, pagination, range, query, cursor, expand?) do
+  def fetch_oracles(state, pagination, range, query, cursor, opts) do
     cursor = deserialize_cursor(cursor)
     scope = deserialize_scope(range)
 
@@ -51,7 +53,7 @@ defmodule AeMdw.Oracles do
         |> build_streamer(state, scope, cursor)
         |> Collection.paginate(pagination)
 
-      oracles = render_list(state, expiration_keys, expand?)
+      oracles = render_list(state, expiration_keys, opts)
 
       {:ok, serialize_cursor(prev_cursor), oracles, serialize_cursor(next_cursor)}
     rescue
@@ -83,9 +85,9 @@ defmodule AeMdw.Oracles do
     end
   end
 
-  @spec fetch_active_oracles(State.t(), pagination(), cursor() | nil, boolean()) ::
+  @spec fetch_active_oracles(state(), pagination(), cursor() | nil, opts()) ::
           {cursor() | nil, [oracle()], cursor() | nil}
-  def fetch_active_oracles(state, pagination, cursor, expand?) do
+  def fetch_active_oracles(state, pagination, cursor, opts) do
     cursor = deserialize_cursor(cursor)
 
     {prev_cursor, exp_keys, next_cursor} =
@@ -94,14 +96,14 @@ defmodule AeMdw.Oracles do
         pagination
       )
 
-    oracles = render_list(state, exp_keys, true, expand?)
+    oracles = render_list(state, exp_keys, true, opts)
 
     {serialize_cursor(prev_cursor), oracles, serialize_cursor(next_cursor)}
   end
 
-  @spec fetch_inactive_oracles(State.t(), pagination(), cursor() | nil, boolean()) ::
+  @spec fetch_inactive_oracles(state(), pagination(), cursor() | nil, opts()) ::
           {cursor() | nil, [oracle()], cursor() | nil}
-  def fetch_inactive_oracles(state, pagination, cursor, expand?) do
+  def fetch_inactive_oracles(state, pagination, cursor, opts) do
     cursor = deserialize_cursor(cursor)
 
     {prev_cursor, exp_keys, next_cursor} =
@@ -110,18 +112,18 @@ defmodule AeMdw.Oracles do
         pagination
       )
 
-    oracles = render_list(state, exp_keys, false, expand?)
+    oracles = render_list(state, exp_keys, false, opts)
 
     {serialize_cursor(prev_cursor), oracles, serialize_cursor(next_cursor)}
   end
 
-  @spec fetch(State.t(), pubkey(), expand?()) :: {:ok, oracle()} | {:error, Error.t()}
-  def fetch(state, oracle_pk, expand?) do
+  @spec fetch(state(), pubkey(), opts()) :: {:ok, oracle()} | {:error, Error.t()}
+  def fetch(state, oracle_pk, opts) do
     last_gen = DBUtil.last_gen(state)
 
     case Oracle.locate(state, oracle_pk) do
       {m_oracle, source} ->
-        {:ok, render(state, m_oracle, last_gen, source == Model.ActiveOracle, expand?)}
+        {:ok, render(state, m_oracle, last_gen, source == Model.ActiveOracle, opts)}
 
       nil ->
         {:error,
@@ -129,7 +131,7 @@ defmodule AeMdw.Oracles do
     end
   end
 
-  defp render_list(state, oracles_exp_source_keys, expand?) do
+  defp render_list(state, oracles_exp_source_keys, opts) do
     last_gen = DBUtil.last_gen(state)
 
     Enum.map(oracles_exp_source_keys, fn {{_exp, oracle_pk}, source} ->
@@ -138,18 +140,18 @@ defmodule AeMdw.Oracles do
       oracle =
         State.fetch!(state, if(is_active?, do: @table_active, else: @table_inactive), oracle_pk)
 
-      render(state, oracle, last_gen, is_active?, expand?)
+      render(state, oracle, last_gen, is_active?, opts)
     end)
   end
 
-  defp render_list(state, oracles_exp_keys, is_active?, expand?) do
+  defp render_list(state, oracles_exp_keys, is_active?, opts) do
     last_gen = DBUtil.last_gen(state)
 
     oracles_exp_keys
     |> Enum.map(fn {_exp, oracle_pk} ->
       State.fetch!(state, if(is_active?, do: @table_active, else: @table_inactive), oracle_pk)
     end)
-    |> Enum.map(&render(state, &1, last_gen, is_active?, expand?))
+    |> Enum.map(&render(state, &1, last_gen, is_active?, opts))
   end
 
   defp render(
@@ -157,13 +159,13 @@ defmodule AeMdw.Oracles do
          Model.oracle(
            index: pk,
            expire: expire_height,
-           register: {{register_height, _mbi}, register_txi},
+           register: {{register_height, _mbi}, _register_txi} = register_bi_txi,
            extends: extends,
            previous: _previous
          ),
          last_gen,
          is_active?,
-         expand?
+         opts
        ) do
     kbi = min(expire_height - 1, last_gen)
 
@@ -176,8 +178,8 @@ defmodule AeMdw.Oracles do
       active: is_active?,
       active_from: register_height,
       expire_height: expire_height,
-      register: expand_txi(state, register_txi, expand?),
-      extends: Enum.map(extends, &expand_txi(state, Format.bi_txi_txi(&1), expand?)),
+      register: expand_txi(state, register_bi_txi, opts),
+      extends: Enum.map(extends, &expand_txi(state, &1, opts)),
       query_fee: Node.Oracle.get!(oracle_rec, :query_fee),
       format: %{
         query: Node.Oracle.get!(oracle_rec, :query_format),
@@ -205,8 +207,15 @@ defmodule AeMdw.Oracles do
     end
   end
 
-  defp expand_txi(_state, bi_txi, false), do: bi_txi
-  defp expand_txi(state, bi_txi, true), do: Txs.fetch!(state, Format.bi_txi_txi(bi_txi))
+  defp expand_txi(state, bi_txi, opts) do
+    txi = Format.bi_txi_txi(bi_txi)
+
+    if Keyword.get(opts, :expand?, false) do
+      Txs.fetch!(state, txi)
+    else
+      txi
+    end
+  end
 
   defp deserialize_scope(nil), do: nil
 

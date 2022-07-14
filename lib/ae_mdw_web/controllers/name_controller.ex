@@ -18,9 +18,7 @@ defmodule AeMdwWeb.NameController do
   import AeMdwWeb.Util
   import AeMdw.Util
 
-  plug PaginatedPlug,
-       [order_by: ~w(expiration activation deactivation name)a]
-       when action in ~w(active_names inactive_names names auctions search search_v1)a
+  plug PaginatedPlug, order_by: ~w(expiration activation deactivation name)a
 
   @lifecycles_map %{
     "active" => :active,
@@ -30,10 +28,10 @@ defmodule AeMdwWeb.NameController do
   @lifecycles Map.keys(@lifecycles_map)
 
   @spec auction(Conn.t(), map()) :: Conn.t()
-  def auction(%Conn{assigns: %{state: state}} = conn, %{"id" => ident} = params),
+  def auction(%Conn{assigns: %{state: state, opts: opts}} = conn, %{"id" => ident}),
     do:
       handle_input(conn, fn ->
-        auction_reply(conn, Validate.plain_name!(state, ident), expand?(params))
+        auction_reply(conn, Validate.plain_name!(state, ident), opts)
       end)
 
   @spec pointers(Conn.t(), map()) :: Conn.t()
@@ -45,27 +43,27 @@ defmodule AeMdwWeb.NameController do
     do: handle_input(conn, fn -> pointees_reply(conn, Validate.name_id!(ident)) end)
 
   @spec name(Conn.t(), map()) :: Conn.t()
-  def name(%Conn{assigns: %{state: state}} = conn, %{"id" => ident} = params),
+  def name(%Conn{assigns: %{state: state, opts: opts}} = conn, %{"id" => ident}),
     do:
       handle_input(conn, fn ->
-        name_reply(conn, Validate.plain_name!(state, ident), expand?(params))
+        name_reply(conn, Validate.plain_name!(state, ident), opts)
       end)
 
   @spec owned_by(Conn.t(), map()) :: Conn.t()
-  def owned_by(conn, %{"id" => owner} = params),
+  def owned_by(%Conn{assigns: %{opts: opts}} = conn, %{"id" => owner} = params),
     do:
       handle_input(conn, fn ->
         active? = Map.get(params, "active", "true") == "true"
-        owned_by_reply(conn, Validate.id!(owner, [:account_pubkey]), expand?(params), active?)
+        owned_by_reply(conn, Validate.id!(owner, [:account_pubkey]), opts, active?)
       end)
 
   @spec auctions(Conn.t(), map()) :: Conn.t()
   def auctions(%Conn{assigns: assigns} = conn, _params) do
-    %{state: state, pagination: pagination, cursor: cursor, expand?: expand?, order_by: order_by} =
+    %{state: state, pagination: pagination, cursor: cursor, opts: opts, order_by: order_by} =
       assigns
 
     {prev_cursor, auction_bids, next_cursor} =
-      AuctionBids.fetch_auctions(state, pagination, order_by, cursor, expand?)
+      AuctionBids.fetch_auctions(state, pagination, order_by, cursor, opts)
 
     Util.paginate(conn, prev_cursor, auction_bids, next_cursor)
   end
@@ -76,12 +74,12 @@ defmodule AeMdwWeb.NameController do
       state: state,
       pagination: pagination,
       cursor: cursor,
-      expand?: expand?,
+      opts: opts,
       order_by: order_by,
       scope: scope
     } = assigns
 
-    case Names.fetch_inactive_names(state, pagination, scope, order_by, cursor, expand?) do
+    case Names.fetch_inactive_names(state, pagination, scope, order_by, cursor, opts) do
       {:ok, prev_cursor, names, next_cursor} ->
         Util.paginate(conn, prev_cursor, names, next_cursor)
 
@@ -96,12 +94,12 @@ defmodule AeMdwWeb.NameController do
       state: state,
       pagination: pagination,
       cursor: cursor,
-      expand?: expand?,
+      opts: opts,
       order_by: order_by,
       scope: scope
     } = assigns
 
-    case Names.fetch_active_names(state, pagination, scope, order_by, cursor, expand?) do
+    case Names.fetch_active_names(state, pagination, scope, order_by, cursor, opts) do
       {:ok, prev_cursor, names, next_cursor} ->
         Util.paginate(conn, prev_cursor, names, next_cursor)
 
@@ -116,12 +114,12 @@ defmodule AeMdwWeb.NameController do
       state: state,
       pagination: pagination,
       cursor: cursor,
-      expand?: expand?,
+      opts: opts,
       order_by: order_by,
       scope: scope
     } = assigns
 
-    case Names.fetch_names(state, pagination, scope, order_by, query, cursor, expand?) do
+    case Names.fetch_names(state, pagination, scope, order_by, query, cursor, opts) do
       {:ok, prev_cursor, names, next_cursor} ->
         Util.paginate(conn, prev_cursor, names, next_cursor)
 
@@ -131,13 +129,13 @@ defmodule AeMdwWeb.NameController do
   end
 
   @spec search_v1(Conn.t(), map()) :: Conn.t()
-  def search_v1(%Conn{assigns: %{state: state}} = conn, %{"prefix" => prefix}) do
+  def search_v1(%Conn{assigns: %{state: state, opts: opts}} = conn, %{"prefix" => prefix}) do
     handle_input(conn, fn ->
       params = Map.put(query_groups(conn.query_string), "prefix", [prefix])
 
       json(
         conn,
-        Enum.to_list(do_prefix_stream(state, validate_search_params!(params), expand?(params)))
+        Enum.to_list(do_prefix_stream(state, validate_search_params!(params), opts))
       )
     end)
   end
@@ -153,19 +151,19 @@ defmodule AeMdwWeb.NameController do
       |> Enum.map(fn {"only", lifecycle} -> Map.fetch!(@lifecycles_map, lifecycle) end)
       |> Enum.uniq()
 
-    %{state: state, pagination: pagination, cursor: cursor, expand?: expand?} = assigns
+    %{state: state, pagination: pagination, cursor: cursor, opts: opts} = assigns
 
     {prev_cursor, names, next_cursor} =
-      Names.search_names(state, lifecycles, prefix, pagination, cursor, expand?)
+      Names.search_names(state, lifecycles, prefix, pagination, cursor, opts)
 
     Util.paginate(conn, prev_cursor, names, next_cursor)
   end
 
   ##########
 
-  defp name_reply(%Conn{assigns: %{state: state}} = conn, plain_name, expand?) do
+  defp name_reply(%Conn{assigns: %{state: state}} = conn, plain_name, opts) do
     case Name.locate(state, plain_name) do
-      {info, source} -> json(conn, Format.to_map(state, info, source, expand?))
+      {info, source} -> json(conn, Format.to_map(state, info, source, expand?(opts)))
       nil -> raise ErrInput.NotFound, value: plain_name
     end
   end
@@ -192,22 +190,22 @@ defmodule AeMdwWeb.NameController do
     })
   end
 
-  defp auction_reply(%Conn{assigns: %{state: state}} = conn, plain_name, expand?) do
+  defp auction_reply(%Conn{assigns: %{state: state}} = conn, plain_name, opts) do
     map_some(
       Name.locate_bid(state, plain_name),
-      &json(conn, Format.to_map(state, &1, Model.AuctionBid, expand?))
+      &json(conn, Format.to_map(state, &1, Model.AuctionBid, expand?(opts)))
     ) ||
       raise ErrInput.NotFound, value: plain_name
   end
 
-  defp owned_by_reply(%Conn{assigns: %{state: state}} = conn, owner_pk, expand?, active?) do
+  defp owned_by_reply(%Conn{assigns: %{state: state}} = conn, owner_pk, opts, active?) do
     query_res = Name.owned_by(state, owner_pk, active?)
 
     jsons = fn plains, source, locator ->
       for plain <- plains, reduce: [] do
         acc ->
           case locator.(plain) do
-            {info, ^source} -> [Format.to_map(state, info, source, expand?) | acc]
+            {info, ^source} -> [Format.to_map(state, info, source, opts) | acc]
             _not_found? -> acc
           end
       end
@@ -233,8 +231,8 @@ defmodule AeMdwWeb.NameController do
 
   ##########
 
-  defp do_prefix_stream(state, {prefix, lifecycles}, expand?) do
-    streams = Enum.map(lifecycles, &prefix_stream(state, &1, prefix, expand?))
+  defp do_prefix_stream(state, {prefix, lifecycles}, opts) do
+    streams = Enum.map(lifecycles, &prefix_stream(state, &1, prefix, opts))
 
     case streams do
       [single] -> single
@@ -264,32 +262,32 @@ defmodule AeMdwWeb.NameController do
 
   ##########
 
-  defp prefix_stream(state, :auction, prefix, expand?),
+  defp prefix_stream(state, :auction, prefix, opts),
     do:
       DBS.Name.auction_prefix_resource(
         state,
         prefix,
         :forward,
-        &Format.to_map(state, &1, Model.AuctionBid, expand?)
+        &Format.to_map(state, &1, Model.AuctionBid, expand?(opts))
       )
 
-  defp prefix_stream(state, :active, prefix, expand?),
+  defp prefix_stream(state, :active, prefix, opts),
     do:
       DBS.Name.prefix_resource(
         state,
         Model.ActiveName,
         prefix,
         :forward,
-        &Format.to_map(state, &1, Model.ActiveName, expand?)
+        &Format.to_map(state, &1, Model.ActiveName, expand?(opts))
       )
 
-  defp prefix_stream(state, :inactive, prefix, expand?),
+  defp prefix_stream(state, :inactive, prefix, opts),
     do:
       DBS.Name.prefix_resource(
         state,
         Model.InactiveName,
         prefix,
         :forward,
-        &Format.to_map(state, &1, Model.InactiveName, expand?)
+        &Format.to_map(state, &1, Model.InactiveName, expand?(opts))
       )
 end
