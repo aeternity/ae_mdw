@@ -171,6 +171,9 @@ defmodule AeMdw.Db.State do
     end
   end
 
+  @spec clear_cache(t()) :: t()
+  def clear_cache(state), do: %__MODULE__{state | cache: %{}}
+
   @spec enqueue(t(), job_type(), list(), list()) :: t()
   def enqueue(%__MODULE__{jobs: jobs} = state, job_type, dedup_args, extra_args \\ []),
     do: %__MODULE__{state | jobs: Map.put(jobs, {job_type, dedup_args}, extra_args)}
