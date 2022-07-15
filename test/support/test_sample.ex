@@ -61,4 +61,12 @@ defmodule AeMdw.TestSamples do
         165, 15, 161, 139, 112, 108, 233, 167, 103, 44, 158, 24>>}, "querySpace", "responseSpec",
      2_000_000_000_000_000, 288_692, 0}
   end
+
+  @spec tx_hash() :: Txs.tx_hash()
+  def tx_hash do
+    {:tx_hash, hash} =
+      :aeser_api_encoder.decode("th_5aUc7Xqk3TkG38XVjCzZPAWc1geGFfjGcgEytcZAFe3FJyn4g")
+
+    hash
+  end
 end

@@ -159,7 +159,7 @@ defmodule AeMdw.Oracles do
          Model.oracle(
            index: pk,
            expire: expire_height,
-           register: {{register_height, _mbi}, _register_txi} = register_bi_txi,
+           register: {{register_height, _mbi}, register_txi} = register_bi_txi,
            extends: extends,
            previous: _previous
          ),
@@ -179,6 +179,7 @@ defmodule AeMdw.Oracles do
       active_from: register_height,
       expire_height: expire_height,
       register: expand_txi(state, register_bi_txi, opts),
+      register_tx_hash: :aeser_api_encoder.encode(:tx_hash, Txs.txi_to_hash(state, register_txi)),
       extends: Enum.map(extends, &expand_txi(state, &1, opts)),
       query_fee: Node.Oracle.get!(oracle_rec, :query_fee),
       format: %{
@@ -210,10 +211,15 @@ defmodule AeMdw.Oracles do
   defp expand_txi(state, bi_txi, opts) do
     txi = Format.bi_txi_txi(bi_txi)
 
-    if Keyword.get(opts, :expand?, false) do
-      Txs.fetch!(state, txi)
-    else
-      txi
+    cond do
+      Keyword.get(opts, :expand?, false) ->
+        Txs.fetch!(state, txi)
+
+      Keyword.get(opts, :tx_hash?, false) ->
+        :aeser_api_encoder.encode(:tx_hash, Txs.txi_to_hash(state, txi))
+
+      true ->
+        txi
     end
   end
 

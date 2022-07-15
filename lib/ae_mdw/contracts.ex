@@ -469,31 +469,40 @@ defmodule AeMdw.Contracts do
     m_log = State.fetch!(state, @contract_log_table, {create_txi, call_txi, event_hash, log_idx})
     ct_id = &:aeser_id.create(:contract, &1)
 
-    ct_pk =
+    {contract_tx_hash, ct_pk} =
       if create_txi == -1 do
-        Origin.pubkey(state, {:contract_call, call_txi})
+        {nil, Origin.pubkey(state, {:contract_call, call_txi})}
       else
-        Origin.pubkey(state, {:contract, create_txi})
+        {Txs.txi_to_hash(state, create_txi), Origin.pubkey(state, {:contract, create_txi})}
       end
 
-    {parent_contract_pk, ext_ct_pk, ext_ct_txi} =
+    {parent_contract_pk, ext_ct_pk, ext_ct_txi, ext_ct_tx_hash} =
       case Model.contract_log(m_log, :ext_contract) do
-        {:parent_contract_pk, pct_pk} -> {pct_pk, nil, -1}
-        ext_ct_pk -> {nil, ext_ct_pk, Origin.tx_index!(state, {:contract, ext_ct_pk})}
+        {:parent_contract_pk, pct_pk} ->
+          {pct_pk, nil, -1, nil}
+
+        ext_ct_pk ->
+          ext_ct_txi = Origin.tx_index!(state, {:contract, ext_ct_pk})
+
+          {nil, ext_ct_pk, ext_ct_txi, Txs.txi_to_hash(state, ext_ct_txi)}
       end
 
-    Model.tx(block_index: {height, micro_index}) = m_tx = State.fetch!(state, Model.Tx, call_txi)
+    Model.tx(id: call_tx_hash, block_index: {height, micro_index}) =
+      State.fetch!(state, Model.Tx, call_txi)
+
     block_hash = Model.block(DBUtil.read_block!(state, {height, micro_index}), :hash)
 
     %{
       contract_txi: create_txi,
+      contract_tx_hash: Enc.encode(:tx_hash, contract_tx_hash),
       contract_id: Format.enc_id(ct_id.(ct_pk)),
       ext_caller_contract_txi: ext_ct_txi,
+      ext_caller_contract_tx_hash: Enc.encode(:tx_hash, ext_ct_tx_hash),
       ext_caller_contract_id: Format.enc_id((ext_ct_pk != nil && ct_id.(ext_ct_pk)) || nil),
       parent_contract_id:
         Format.enc_id((parent_contract_pk && ct_id.(parent_contract_pk)) || nil),
       call_txi: call_txi,
-      call_tx_hash: Enc.encode(:tx_hash, Model.tx(m_tx, :id)),
+      call_tx_hash: Enc.encode(:tx_hash, call_tx_hash),
       args: Enum.map(Model.contract_log(m_log, :args), fn <<topic::256>> -> to_string(topic) end),
       data: Model.contract_log(m_log, :data),
       event_hash: Base.hex_encode32(event_hash),

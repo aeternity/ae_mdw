@@ -205,8 +205,11 @@ defmodule AeMdwWeb.NameController do
       for plain <- plains, reduce: [] do
         acc ->
           case locator.(plain) do
-            {info, ^source} -> [Format.to_map(state, info, source, opts) | acc]
-            _not_found? -> acc
+            {info, ^source} ->
+              [Format.to_map(state, info, source, Keyword.get(opts, :expand?, false)) | acc]
+
+            _not_found? ->
+              acc
           end
       end
     end

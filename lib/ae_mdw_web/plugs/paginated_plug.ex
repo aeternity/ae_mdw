@@ -170,7 +170,8 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
   defp extract_opts(params) do
     [
       expand?: Map.get(params, "expand", "false") != "false",
-      top: Map.get(params, "top", "false") != "false"
+      top: Map.get(params, "top", "false") != "false",
+      tx_hash?: Map.get(params, "tx_hash", "false") != "false"
     ]
   end
 end

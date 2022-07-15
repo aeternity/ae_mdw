@@ -31,7 +31,10 @@ defmodule AeMdwWeb.OracleControllerTest do
              ActiveOracleExpiration -> {:ok, TS.oracle_expiration_key(1)}
              InactiveOracleExpiration -> :none
            end,
-           get: fn _tab, _pk -> {:ok, oracle} end
+           get: fn
+             Model.ActiveOracle, _pk -> {:ok, oracle}
+             Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash())}
+           end
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
@@ -71,7 +74,11 @@ defmodule AeMdwWeb.OracleControllerTest do
              ActiveOracleExpiration -> {:ok, {1, "a"}}
              InactiveOracleExpiration -> {:ok, {1, "b"}}
            end,
-           get: fn _tab, _oracle_pk -> {:ok, oracle} end
+           get: fn
+             Model.InactiveOracle, _oracle_pk -> {:ok, oracle}
+             Model.ActiveOracle, _oracle_pk -> {:ok, oracle}
+             Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash())}
+           end
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
@@ -101,7 +108,10 @@ defmodule AeMdwWeb.OracleControllerTest do
              Block -> {:ok, TS.last_gen()}
              ActiveOracleExpiration -> {:ok, key1}
            end,
-           get: fn _tab, _oracle_pk -> {:ok, oracle} end,
+           get: fn
+             Model.ActiveOracle, _oracle_pk -> {:ok, oracle}
+             Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash())}
+           end,
            next_key: fn _tab, _key -> :none end,
            prev_key: fn
              _tab, ^key1 -> {:ok, key2}
@@ -137,7 +147,10 @@ defmodule AeMdwWeb.OracleControllerTest do
            end,
            next_key: fn ActiveOracleExpiration, _key -> {:ok, expiration_key} end,
            prev_key: fn ActiveOracleExpiration, _key -> {:ok, expiration_key} end,
-           get: fn _tab, _oracle_pk -> {:ok, TS.oracle()} end
+           get: fn
+             Model.ActiveOracle, _oracle_pk -> {:ok, TS.oracle()}
+             Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash())}
+           end
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
