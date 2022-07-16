@@ -23,5 +23,6 @@ defmodule AeMdw.Db.KeyBlockMutation do
     state
     |> State.put(Model.Block, key_block)
     |> State.clear_stats()
+    |> State.clear_cache()
   end
 end
