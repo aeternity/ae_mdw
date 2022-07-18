@@ -89,6 +89,16 @@ defmodule AeMdw.Db.RocksDbCF do
     end
   end
 
+  @spec exists?(transaction(), table(), key()) :: boolean()
+  def exists?(txn, table, index) do
+    key = :sext.encode(index)
+
+    case RocksDb.dirty_get(txn, table, key) do
+      {:ok, _value} -> true
+      :not_found -> false
+    end
+  end
+
   @spec first_key(table()) :: {:ok, key()} | :not_found
   def first_key(table) do
     {:ok, it} = RocksDb.iterator(table)

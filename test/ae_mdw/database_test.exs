@@ -91,4 +91,18 @@ defmodule AeMdw.DatabaseTest do
       end)
     end
   end
+
+  describe "delete/3" do
+    test "raises error when key doesn't exist" do
+      txn = Database.transaction_new()
+      Database.write(txn, Model.Block, Model.block(index: {123, 0}))
+
+      refute :not_found == Database.dirty_fetch(txn, Model.Block, {123, 0})
+      assert :ok = Database.delete(txn, Model.Block, {123, 0})
+
+      assert_raise RuntimeError, "Txn delete on missing key: #{Model.Block}, {123, 0}", fn ->
+        Database.delete(txn, Model.Block, {123, 0})
+      end
+    end
+  end
 end
