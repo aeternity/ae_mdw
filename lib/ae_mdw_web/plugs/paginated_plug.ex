@@ -28,13 +28,14 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
          {:ok, limit} <- extract_limit(params),
          {:ok, is_reversed?} <- extract_is_reversed(params),
          {:ok, order_by} <- extract_order_by(params, opts),
-         {:ok, page} <- extract_page(params) do
+         {:ok, page} <- extract_page(params),
+         {:ok, opts} <- extract_opts(params) do
       cursor = Map.get(params, "cursor")
 
       conn
       |> assign(:pagination, {direction, is_reversed?, limit, !is_nil(cursor)})
       |> assign(:cursor, cursor)
-      |> assign(:opts, extract_opts(params))
+      |> assign(:opts, opts)
       |> assign(:order_by, order_by)
       |> assign(:scope, scope)
       |> assign(:offset, {limit, page})
@@ -168,10 +169,18 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
   defp extract_is_reversed(params), do: {:ok, match?(%{"rev" => "1"}, params)}
 
   defp extract_opts(params) do
-    [
-      expand?: Map.get(params, "expand", "false") != "false",
-      top: Map.get(params, "top", "false") != "false",
-      tx_hash?: Map.get(params, "tx_hash", "false") != "false"
-    ]
+    expand? = Map.get(params, "expand", "false") != "false"
+    tx_hash? = Map.get(params, "tx_hash", "false") != "false"
+
+    if expand? and tx_hash? do
+      {:error, "either `tx_hash` or `expand` parameters should be used, but not both."}
+    else
+      {:ok,
+       [
+         expand?: expand?,
+         top: Map.get(params, "top", "false") != "false",
+         tx_hash?: tx_hash?
+       ]}
+    end
   end
 end

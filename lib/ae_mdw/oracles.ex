@@ -35,7 +35,7 @@ defmodule AeMdw.Oracles do
   @table_inactive AeMdw.Db.Model.InactiveOracle
   @table_inactive_expiration Model.InactiveOracleExpiration
 
-  @pagination_params ~w(limit cursor rev direction scope expand tx_hashes)
+  @pagination_params ~w(limit cursor rev direction scope expand tx_hash)
   @states ~w(active inactive)
 
   @spec fetch_oracles(state(), pagination(), range(), query(), cursor() | nil, opts()) ::
