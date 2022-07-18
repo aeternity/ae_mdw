@@ -57,7 +57,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
     )
 
     with_mocks [
-      {AeMdw.Db.Util, [], [proto_vsn: fn _height -> 3 end]}
+      {AeMdw.Node.Db, [], [proto_vsn: fn _height -> 3 end]}
     ] do
       tx
       |> Sync.Name.name_claim_mutations(tx_hash, block_index, txi)

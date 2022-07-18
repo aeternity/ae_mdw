@@ -5,7 +5,6 @@ defmodule AeMdw.Db.Sync.Name do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Name
-  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Names
   alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.State
@@ -26,7 +25,7 @@ defmodule AeMdw.Db.Sync.Name do
     {:ok, name_hash} = :aens.get_name_hash(plain_name)
     owner_pk = Validate.id!(:aens_claim_tx.account_id(tx))
     name_fee = :aens_claim_tx.name_fee(tx)
-    proto_vsn = DbUtil.proto_vsn(height)
+    proto_vsn = Db.proto_vsn(height)
     is_lima? = proto_vsn >= Node.lima_vsn()
     timeout = :aec_governance.name_claim_bid_timeout(plain_name, proto_vsn)
 

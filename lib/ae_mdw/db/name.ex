@@ -96,7 +96,7 @@ defmodule AeMdw.Db.Name do
 
   @spec expire_after(Blocks.height()) :: Blocks.height()
   def expire_after(auction_end) do
-    auction_end + :aec_governance.name_claim_max_expiration(DbUtil.proto_vsn(auction_end))
+    auction_end + :aec_governance.name_claim_max_expiration(Db.proto_vsn(auction_end))
   end
 
   @spec expire_name(state(), Blocks.height(), Names.plain_name()) :: state()

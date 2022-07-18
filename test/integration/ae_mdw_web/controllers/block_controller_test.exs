@@ -6,6 +6,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
+  alias AeMdw.Node.Db
   alias AeMdwWeb.TestUtil
   alias AeMdw.Error.Input, as: ErrInput
 
@@ -242,7 +243,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
       {:ok, _block} ->
         header = :aec_db.get_header(block_hash)
 
-        :aec_headers.serialize_for_client(header, DbUtil.prev_block_type(header))
+        :aec_headers.serialize_for_client(header, Db.prev_block_type(header))
 
       :error ->
         raise ErrInput.NotFound, value: enc_block_hash
