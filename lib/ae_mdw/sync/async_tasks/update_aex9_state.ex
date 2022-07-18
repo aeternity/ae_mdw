@@ -54,10 +54,8 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
     end
   end
 
-  defp aex9_balances(contract_pk, {kbi, mbi} = block_index) do
-    next_kb_hash = DBN.get_key_block_hash(kbi + 1)
-    next_hash = DBN.get_next_hash(next_kb_hash, mbi)
-    type = if next_hash == next_kb_hash, do: :key, else: :micro
+  defp aex9_balances(contract_pk, block_index) do
+    {type, height, next_hash} = type_height_hash(block_index)
 
     case Aex9BalancesCache.get(contract_pk, block_index, next_hash) do
       {:ok, balances} ->
@@ -65,10 +63,23 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
 
       :not_found ->
         Aex9BalancesCache.purge(contract_pk, block_index)
-        {balances, _height_hash} = DBN.aex9_balances(contract_pk, {type, kbi, next_hash})
+        {balances, _height_hash} = DBN.aex9_balances(contract_pk, {type, height, next_hash})
         Aex9BalancesCache.put(contract_pk, block_index, next_hash, balances)
 
         balances
+    end
+  end
+
+  defp type_height_hash({kbi, mbi}) do
+    case DBN.get_key_block_hash(kbi + 1) do
+      nil ->
+        DBN.top_height_hash(true)
+
+      next_kb_hash ->
+        next_hash = DBN.get_next_hash(next_kb_hash, mbi)
+        {type, height} = if next_hash == next_kb_hash, do: {:key, kbi + 1}, else: {:micro, kbi}
+
+        {type, height, next_hash}
     end
   end
 

@@ -8,6 +8,7 @@ defmodule AeMdw.Db.State do
   alias AeMdw.Blocks
   alias AeMdw.Database
   alias AeMdw.Db.Mutation
+  alias AeMdw.Db.AsyncStore
   alias AeMdw.Db.DbStore
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.Store
@@ -76,11 +77,11 @@ defmodule AeMdw.Db.State do
       |> Enum.reject(&is_nil/1)
       |> Enum.reduce(state, &Mutation.execute/2)
 
-    state3 = exec_jobs(state2, jobs)
+    exec_jobs(jobs)
 
-    :persistent_term.put(@state_pm_key, state3)
+    :persistent_term.put(@state_pm_key, state2)
 
-    state3
+    state2
   end
 
   @spec mem_state() :: t()
@@ -175,10 +176,13 @@ defmodule AeMdw.Db.State do
   def clear_cache(state), do: %__MODULE__{state | cache: %{}}
 
   @spec enqueue(t(), job_type(), list(), list()) :: t()
-  def enqueue(%__MODULE__{jobs: jobs} = state, job_type, dedup_args, extra_args \\ []),
-    do: %__MODULE__{state | jobs: Map.put(jobs, {job_type, dedup_args}, extra_args)}
+  def enqueue(%__MODULE__{jobs: jobs} = state, job_type, dedup_args, extra_args \\ []) do
+    %__MODULE__{state | jobs: Map.put(jobs, {job_type, dedup_args}, extra_args)}
+  end
 
-  defp exec_jobs(state, jobs) do
+  defp exec_jobs(jobs) do
+    state = new(AsyncStore.instance())
+
     jobs
     |> Task.async_stream(
       fn {{job_type, dedup_args}, extra_args} ->

@@ -87,12 +87,14 @@ defmodule AeMdw.Node.Db do
     |> Enum.reverse()
   end
 
-  @spec get_key_block_hash(Blocks.height()) :: Blocks.block_hash()
+  @spec get_key_block_hash(Blocks.height()) :: Blocks.block_hash() | nil
   def get_key_block_hash(height) do
-    {:ok, next_kb_header} = :aec_chain.get_key_header_by_height(height)
-    {:ok, next_kb_hash} = :aec_headers.hash_header(next_kb_header)
-
-    next_kb_hash
+    with {:ok, next_kb_header} <- :aec_chain.get_key_header_by_height(height),
+         {:ok, next_kb_hash} <- :aec_headers.hash_header(next_kb_header) do
+      next_kb_hash
+    else
+      {:error, :chain_too_short} -> nil
+    end
   end
 
   @spec get_next_hash(Blocks.block_hash(), Blocks.mbi()) :: Blocks.block_hash()
