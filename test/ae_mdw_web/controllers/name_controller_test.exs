@@ -12,8 +12,8 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdw.Db.Model.InactiveNameExpiration
   alias AeMdw.Db.Model.Tx
   alias AeMdw.Db.Name
-  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Database
+  alias AeMdw.Node.Db
   alias AeMdw.Validate
   alias AeMdw.TestSamples, as: TS
   alias AeMdw.Txs
@@ -447,7 +447,7 @@ defmodule AeMdwWeb.NameControllerTest do
          [
            fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
-        {DbUtil, [],
+        {Db, [],
          [
            proto_vsn: fn _height -> 1 end
          ]}
@@ -508,7 +508,7 @@ defmodule AeMdwWeb.NameControllerTest do
          [
            fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
-        {DbUtil, [],
+        {Db, [],
          [
            proto_vsn: fn _height -> 1 end
          ]}
@@ -553,7 +553,7 @@ defmodule AeMdwWeb.NameControllerTest do
          [
            fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
-        {DbUtil, [],
+        {Db, [],
          [
            proto_vsn: fn _height -> 1 end
          ]}

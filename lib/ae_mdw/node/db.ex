@@ -216,6 +216,25 @@ defmodule AeMdw.Node.Db do
     end
   end
 
+  @spec prev_block_type(tuple()) :: :key | :micro
+  def prev_block_type(header) do
+    prev_hash = :aec_headers.prev_hash(header)
+    prev_key_hash = :aec_headers.prev_key_hash(header)
+
+    cond do
+      :aec_headers.height(header) == 0 -> :key
+      prev_hash == prev_key_hash -> :key
+      true -> :micro
+    end
+  end
+
+  @spec proto_vsn(Blocks.height()) :: non_neg_integer()
+  def proto_vsn(height) do
+    hps = AeMdw.Node.height_proto()
+    [{vsn, _height} | _rest] = Enum.drop_while(hps, fn {_vsn, min_h} -> height < min_h end)
+    vsn
+  end
+
   defp micro_block_walker(hash) do
     with block <- :aec_db.get_block(hash),
          :micro <- :aec_blocks.type(block) do
@@ -224,13 +243,4 @@ defmodule AeMdw.Node.Db do
       :key -> nil
     end
   end
-
-  # NOTE: only needed for manual patching of the DB in case of missing blocks
-  #
-  # def devfix_write_block({:mic_block, header, txs, fraud}) do
-  #   {:ok, hash} = :aec_headers.hash_header(header)
-  #   tx_hashes = txs |> Enum.map(&:aetx_sign.hash/1)
-  #   block = {:aec_blocks, hash, tx_hashes, fraud}
-  #   :mnesia.transaction(fn -> :mnesia.write(block) end)
-  # end
 end

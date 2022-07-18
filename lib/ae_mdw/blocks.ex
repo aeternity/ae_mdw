@@ -9,6 +9,7 @@ defmodule AeMdw.Blocks do
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Database
+  alias AeMdw.Node.Db
   alias AeMdw.Util
   alias AeMdw.Validate
   alias AeMdw.Txs
@@ -69,7 +70,7 @@ defmodule AeMdw.Blocks do
          {:ok, _block} <- :aec_chain.get_block(encoded_hash) do
       header = :aec_db.get_header(encoded_hash)
 
-      {:ok, :aec_headers.serialize_for_client(header, DbUtil.prev_block_type(header))}
+      {:ok, :aec_headers.serialize_for_client(header, Db.prev_block_type(header))}
     else
       :error -> {:error, Error.Input.NotFound.exception(value: block_hash)}
       {:error, reason} -> {:error, reason}
@@ -108,7 +109,7 @@ defmodule AeMdw.Blocks do
         |> Enum.map(fn Model.block(index: {_height, _mbi}, hash: hash) ->
           header = :aec_db.get_header(hash)
 
-          :aec_headers.serialize_for_client(header, DbUtil.prev_block_type(header))
+          :aec_headers.serialize_for_client(header, Db.prev_block_type(header))
         end)
 
       put_mbs_from_db(key_block, micro_blocks, sort_mbs?)
