@@ -18,7 +18,7 @@ defmodule AeMdwWeb.TxController do
   import AeMdwWeb.Util
 
   @type_query_params ~w(type type_group)
-  @pagination_param_keys ~w(limit page cursor expand direction scope_type range by rev scope)
+  @pagination_param_keys ~w(limit page cursor expand direction scope_type range by rev scope tx_hash)
 
   plug(PaginatedPlug)
   action_fallback(FallbackController)
