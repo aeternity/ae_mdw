@@ -31,7 +31,10 @@ defmodule AeMdwWeb.OracleControllerTest do
              ActiveOracleExpiration -> {:ok, TS.oracle_expiration_key(1)}
              InactiveOracleExpiration -> :none
            end,
-           get: fn _tab, _pk -> {:ok, oracle} end
+           get: fn
+             Model.ActiveOracle, _pk -> {:ok, oracle}
+             Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash())}
+           end
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
@@ -71,7 +74,11 @@ defmodule AeMdwWeb.OracleControllerTest do
              ActiveOracleExpiration -> {:ok, {1, "a"}}
              InactiveOracleExpiration -> {:ok, {1, "b"}}
            end,
-           get: fn _tab, _oracle_pk -> {:ok, oracle} end
+           get: fn
+             Model.InactiveOracle, _oracle_pk -> {:ok, oracle}
+             Model.ActiveOracle, _oracle_pk -> {:ok, oracle}
+             Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash())}
+           end
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
@@ -84,6 +91,58 @@ defmodule AeMdwWeb.OracleControllerTest do
 
         assert %{"oracle" => ^encoded_pk} = oracle1
       end
+    end
+
+    test "it displays tx hashes when tx_hash=true", %{conn: conn} do
+      Model.oracle(extends: [{_extends_bi, extends_txi}]) = oracle = TS.oracle()
+      tx_hash = TS.tx_hash()
+
+      with_mocks [
+        {Database, [],
+         [
+           next_key: fn _tab, _key -> :none end,
+           prev_key: fn
+             ActiveOracleExpiration, {0, _plain_name} -> :none
+             ActiveOracleExpiration, {exp, "a"} -> {:ok, {exp - 1, "a"}}
+             _tab, _key -> :none
+           end,
+           last_key: fn
+             Block -> {:ok, TS.last_gen()}
+             ActiveOracleExpiration -> {:ok, {1, "a"}}
+             InactiveOracleExpiration -> :none
+           end,
+           get: fn
+             Model.ActiveOracle, _oracle_pk -> {:ok, oracle}
+             Model.Tx, _txi -> {:ok, Model.tx(id: tx_hash)}
+           end
+         ]},
+        {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
+        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
+        {Blocks, [], [block_hash: fn _state, _height -> "asd" end]}
+      ] do
+        assert %{"data" => oracles, "next" => nil} =
+                 conn
+                 |> get("/oracles", tx_hash: "true")
+                 |> json_response(200)
+
+        assert Enum.all?(oracles, fn %{"extends" => extends} ->
+                 Enum.all?(extends, fn extends_tx_hash ->
+                   match?(
+                     {:ok, ^tx_hash},
+                     :aeser_api_encoder.safe_decode(:tx_hash, extends_tx_hash)
+                   )
+                 end)
+               end)
+
+        assert_called(Database.get(Model.Tx, extends_txi))
+      end
+    end
+
+    test "when both tx_hash and expand is sent, it displays error", %{conn: conn} do
+      assert %{"error" => "either `tx_hash` or `expand` parameters should be used, but not both."} =
+               conn
+               |> get("/oracles", tx_hash: "true", expand: "true")
+               |> json_response(400)
     end
   end
 
@@ -101,7 +160,10 @@ defmodule AeMdwWeb.OracleControllerTest do
              Block -> {:ok, TS.last_gen()}
              ActiveOracleExpiration -> {:ok, key1}
            end,
-           get: fn _tab, _oracle_pk -> {:ok, oracle} end,
+           get: fn
+             Model.ActiveOracle, _oracle_pk -> {:ok, oracle}
+             Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash())}
+           end,
            next_key: fn _tab, _key -> :none end,
            prev_key: fn
              _tab, ^key1 -> {:ok, key2}
@@ -137,7 +199,10 @@ defmodule AeMdwWeb.OracleControllerTest do
            end,
            next_key: fn ActiveOracleExpiration, _key -> {:ok, expiration_key} end,
            prev_key: fn ActiveOracleExpiration, _key -> {:ok, expiration_key} end,
-           get: fn _tab, _oracle_pk -> {:ok, TS.oracle()} end
+           get: fn
+             Model.ActiveOracle, _oracle_pk -> {:ok, TS.oracle()}
+             Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash())}
+           end
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},

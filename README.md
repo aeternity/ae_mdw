@@ -16,6 +16,7 @@
 - [HTTP v2 (latest) endpoints](#http-v2-latest-endpoints)
 - [HTTP v1 (deprecated) endpoints](#http-v1-endpoints-deprecated)
 - [Pagination](#pagination)
+- [Additional endpoint options](#additional-endpoint-options)
 - [Transactions](#transactions)
 - [Blocks](#blocks)
 - [Naming System](#naming-system)
@@ -320,6 +321,28 @@ Not all paginated endpoints support all scopes.
 All paginated endpoints support a `direction` parameter that specifies the order in which results are expected to be returned.
 
 It can be either `forward` or `backward` (default).
+
+## Additional endpoint options
+
+In many of the endpoints there's some additional query parameters that can be sent to change the endpoint behavior.
+
+### `expand`
+
+When `expand=true` is sent on the URL, it displays additional information.
+
+Most oracle and name endpoints allow this option.
+
+### `top`
+
+When `top=true`, it displays the latest state of the changes by querying the node directly. This is allowed on some of the `AEx9` endpoints to obtain the latest balances state for a given contract.
+
+### `tx_hash`
+
+Currently, in the endpoints created from the beginning, transactions were identified by a "transaction index". Since recently, we've decided this shouldn't really be the case: transactions are to be identified exclusively via the transaction hash. This is because forks caused different transactions to have the same (consecutive and sequentially calculated) transaction indexes.
+
+For the new endpoints, though, we **highly recommend not to use transaction indexes**, instead, use `tx_hash=true` for all endpoints and use exclusively the transaction hashes.
+
+In the newer versions of the API, the transaction index will stop being exposed, regardless of the `tx_hash`query parameter.
 
 ----
 

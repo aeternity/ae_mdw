@@ -33,6 +33,7 @@ defmodule AeMdw.Txs do
         }
   @type add_spendtx_details?() :: boolean()
 
+  @typep state() :: State.t()
   @typep reason :: binary()
   @typep pagination :: Collection.direction_limit()
   @typep range :: {:gen, Range.t()} | {:txi, Range.t()} | nil
@@ -89,6 +90,13 @@ defmodule AeMdw.Txs do
       e in ErrInput ->
         {:error, e.message}
     end
+  end
+
+  @spec txi_to_hash(state(), txi()) :: tx_hash()
+  def txi_to_hash(state, txi) do
+    Model.tx(id: tx_hash) = State.fetch!(state, @table, txi)
+
+    tx_hash
   end
 
   defp first_gen_to_txi(state, first_gen, :forward), do: DbUtil.gen_to_txi(state, first_gen)

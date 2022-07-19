@@ -849,6 +849,27 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
       assert Enum.sort(kbis) == kbis
     end
+
+    test "when retrieving names with tx_hash=true, it displays the extends/claims tx hashes", %{
+      conn: conn
+    } do
+      assert %{"data" => names} = conn |> get("/v2/names", tx_hash: "true") |> json_response(200)
+
+      assert Enum.all?(names, fn %{
+                                   "info" => %{
+                                     "claims" => claims,
+                                     "updates" => updates,
+                                     "transfers" => transfers
+                                   }
+                                 } ->
+               Enum.all?(claims ++ updates ++ transfers, fn tx_hash ->
+                 match?(
+                   {:ok, _encoded_tx_hash},
+                   :aeser_api_encoder.safe_decode(:tx_hash, tx_hash)
+                 )
+               end)
+             end)
+    end
   end
 
   describe "name_v1" do

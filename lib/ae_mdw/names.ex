@@ -47,7 +47,7 @@ defmodule AeMdw.Names do
   @table_inactive_expiration Model.InactiveNameExpiration
   @table_inactive_owner Model.InactiveNameOwner
 
-  @pagination_params ~w(limit cursor rev direction scope)
+  @pagination_params ~w(limit cursor rev direction scope tx_hash expand)
   @states ~w(active inactive)
   @all_lifecycles ~w(active inactive auction)a
 
@@ -342,10 +342,10 @@ defmodule AeMdw.Names do
     %{
       active_from: active,
       expire_height: expire,
-      claims: Enum.map(claims, &expand_txi(state, Format.bi_txi_txi(&1), opts)),
-      updates: Enum.map(updates, &expand_txi(state, Format.bi_txi_txi(&1), opts)),
-      transfers: Enum.map(transfers, &expand_txi(state, Format.bi_txi_txi(&1), opts)),
-      revoke: (revoke && expand_txi(state, Format.bi_txi_txi(revoke), opts)) || nil,
+      claims: Enum.map(claims, &expand_txi(state, &1, opts)),
+      updates: Enum.map(updates, &expand_txi(state, &1, opts)),
+      transfers: Enum.map(transfers, &expand_txi(state, &1, opts)),
+      revoke: (revoke && expand_txi(state, revoke, opts)) || nil,
       auction_timeout: auction_timeout,
       pointers: render_pointers(state, name),
       ownership: render_ownership(state, name)
@@ -408,10 +408,17 @@ defmodule AeMdw.Names do
   end
 
   defp expand_txi(state, bi_txi, opts) do
-    if Keyword.get(opts, :expand?, false) do
-      Txs.fetch!(state, Format.bi_txi_txi(bi_txi))
-    else
-      bi_txi
+    txi = Format.bi_txi_txi(bi_txi)
+
+    cond do
+      Keyword.get(opts, :expand?, false) ->
+        Txs.fetch!(state, txi)
+
+      Keyword.get(opts, :tx_hash?, false) ->
+        Enc.encode(:tx_hash, Txs.txi_to_hash(state, txi))
+
+      true ->
+        txi
     end
   end
 

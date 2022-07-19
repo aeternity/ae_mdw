@@ -79,35 +79,6 @@ defmodule AeMdw.Db.Format do
     }
   end
 
-  def to_raw_map(state, {call_txi, local_idx}, Model.IntContractCall) do
-    m_call = State.fetch!(state, Model.IntContractCall, {call_txi, local_idx})
-    create_txi = Model.int_contract_call(m_call, :create_txi)
-    fname = Model.int_contract_call(m_call, :fname)
-
-    ct_pk =
-      case Origin.pubkey(state, {:contract, create_txi}) do
-        nil -> nil
-        pk -> :aeser_id.create(:contract, pk)
-      end
-
-    m_tx = State.fetch!(state, Model.Tx, call_txi)
-    {height, micro_index} = Model.tx(m_tx, :block_index)
-    block_hash = Model.block(DbUtil.read_block!(state, {height, micro_index}), :hash)
-
-    %{
-      contract_txi: (create_txi != -1 && create_txi) || nil,
-      contract_id: ct_pk,
-      call_txi: call_txi,
-      call_tx_hash: Model.tx(m_tx, :id),
-      function: fname,
-      internal_tx: Model.int_contract_call(m_call, :tx),
-      height: height,
-      micro_index: micro_index,
-      block_hash: block_hash,
-      local_idx: local_idx
-    }
-  end
-
   def to_raw_map(_state, ae_tx, tx_type) do
     AeMdw.Node.tx_fields(tx_type)
     |> Stream.with_index(1)
@@ -192,7 +163,7 @@ defmodule AeMdw.Db.Format do
       |> put_in(["micro_index"], mb_index)
       |> put_in(["micro_time"], mb_time)
 
-    custom_encode(state, type, enc_tx, tx_rec, signed_tx, block_hash)
+    custom_encode(state, type, enc_tx, tx_rec, signed_tx, index, block_hash)
   end
 
   def to_map(state, auction_bid, Model.AuctionBid),
@@ -223,33 +194,55 @@ defmodule AeMdw.Db.Format do
   end
 
   def to_map(state, {call_txi, local_idx}, Model.IntContractCall) do
-    raw_map = to_raw_map(state, {call_txi, local_idx}, Model.IntContractCall)
+    m_call = State.fetch!(state, Model.IntContractCall, {call_txi, local_idx})
+    create_txi = Model.int_contract_call(m_call, :create_txi)
+    fname = Model.int_contract_call(m_call, :fname)
 
-    int_tx = fn tx ->
-      {tx_type, tx_rec} = :aetx.specialize_type(tx)
-      serialized_tx = :aetx.serialize_for_client(tx)
+    ct_pk =
+      case Origin.pubkey(state, {:contract, create_txi}) do
+        nil -> nil
+        pk -> :aeser_id.create(:contract, pk)
+      end
 
+    Model.tx(id: call_tx_hash, block_index: {height, micro_index}) =
+      State.fetch!(state, Model.Tx, call_txi)
+
+    block_hash = Model.block(DbUtil.read_block!(state, {height, micro_index}), :hash)
+
+    {contract_txi, contract_tx_hash} =
+      if create_txi == -1 do
+        {nil, nil}
+      else
+        {create_txi, Enc.encode(:tx_hash, Txs.txi_to_hash(state, create_txi))}
+      end
+
+    tx = Model.int_contract_call(m_call, :tx)
+    {tx_type, tx_rec} = :aetx.specialize_type(tx)
+    serialized_tx = :aetx.serialize_for_client(tx)
+
+    encoded_tx =
       case tx_type do
         :contact_call_tx ->
           serialized_tx
 
-        _ ->
-          wrapped_tx = %{"tx" => serialized_tx}
+        _tx_type ->
           signed_tx = :aetx_sign.new(tx, [])
-
-          %{"tx" => enc_tx} =
-            custom_encode(state, tx_type, wrapped_tx, tx_rec, signed_tx, raw_map.block_hash)
-
-          enc_tx
+          custom_encode(state, tx_type, serialized_tx, tx_rec, signed_tx, call_txi, block_hash)
       end
-    end
 
-    raw_map
-    |> update_in([:contract_id], &enc_id/1)
-    |> update_in([:call_tx_hash], &Enc.encode(:tx_hash, &1))
-    |> update_in([:block_hash], &Enc.encode(:micro_block_hash, &1))
-    # &:aetx.serialize_for_client/1)
-    |> update_in([:internal_tx], int_tx)
+    %{
+      contract_txi: contract_txi,
+      contract_tx_hash: contract_tx_hash,
+      contract_id: enc_id(ct_pk),
+      call_txi: call_txi,
+      call_tx_hash: Enc.encode(:tx_hash, call_tx_hash),
+      function: fname,
+      internal_tx: encoded_tx,
+      height: height,
+      micro_index: micro_index,
+      block_hash: Enc.encode(:micro_block_hash, block_hash),
+      local_idx: local_idx
+    }
   end
 
   def to_map(state, data, source, false = _expand),
@@ -269,36 +262,36 @@ defmodule AeMdw.Db.Format do
     |> update_in(["previous"], fn prevs -> Enum.map(prevs, &expand_name_info(state, &1)) end)
   end
 
-  defp custom_encode(_state, :oracle_response_tx, tx, _tx_rec, _signed_tx, _block_hash),
-    do: update_in(tx, ["tx", "response"], &maybe_base64/1)
+  defp custom_encode(_state, :oracle_response_tx, tx, _tx_rec, _signed_tx, _txi, _block_hash),
+    do: update_in(tx, ["response"], &maybe_base64/1)
 
-  defp custom_encode(_state, :oracle_query_tx, tx, tx_rec, _signed_tx, _block_hash) do
+  defp custom_encode(_state, :oracle_query_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
     query_id = :aeo_query_tx.query_id(tx_rec)
     query_id = Enc.encode(:oracle_query_id, query_id)
 
     tx
-    |> update_in(["tx", "query"], &Base.encode64/1)
-    |> put_in(["tx", "query_id"], query_id)
+    |> update_in(["query"], &Base.encode64/1)
+    |> put_in(["query_id"], query_id)
   end
 
-  defp custom_encode(_state, :ga_attach_tx, tx, tx_rec, _signed_tx, _block_hash) do
+  defp custom_encode(_state, :ga_attach_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
     contract_pk = :aega_attach_tx.contract_pubkey(tx_rec)
-    put_in(tx, ["tx", "contract_id"], Enc.encode(:contract_pubkey, contract_pk))
+    put_in(tx, ["contract_id"], Enc.encode(:contract_pubkey, contract_pk))
   end
 
-  defp custom_encode(_state, :contract_create_tx, tx, tx_rec, _, block_hash) do
+  defp custom_encode(_state, :contract_create_tx, tx, tx_rec, _signed_tx, _txi, block_hash) do
     init_call_details = Contract.get_init_call_details(tx_rec, block_hash)
 
-    update_in(tx, ["tx"], fn tx_details -> Map.merge(tx_details, init_call_details) end)
+    Map.merge(tx, init_call_details)
   end
 
-  defp custom_encode(state, :contract_call_tx, tx, tx_rec, _signed_tx, block_hash) do
+  defp custom_encode(state, :contract_call_tx, tx, tx_rec, _signed_tx, txi, block_hash) do
     contract_pk = :aect_call_tx.contract_pubkey(tx_rec)
     call_rec = Contract.call_rec(tx_rec, contract_pk, block_hash)
 
     fun_arg_res =
       state
-      |> AeMdw.Db.Contract.call_fun_arg_res(contract_pk, tx["tx_index"])
+      |> AeMdw.Db.Contract.call_fun_arg_res(contract_pk, txi)
       |> map_raw_values(fn
         x when is_number(x) -> x
         x -> to_string(x)
@@ -309,34 +302,34 @@ defmodule AeMdw.Db.Format do
       |> Map.drop(["return_value", "gas_price", "height", "contract_id", "caller_nonce"])
       |> Map.update("log", [], &Contract.stringfy_log_topics/1)
 
-    update_in(tx, ["tx"], &Map.merge(&1, Map.merge(fun_arg_res, call_ser)))
+    Map.merge(tx, Map.merge(fun_arg_res, call_ser))
   end
 
-  defp custom_encode(_state, :channel_create_tx, tx, _tx_rec, signed_tx, _block_hash) do
-    channel_pk = :aesc_utils.channel_pubkey(signed_tx) |> ok!
-    put_in(tx, ["tx", "channel_id"], Enc.encode(:channel, channel_pk))
+  defp custom_encode(_state, :channel_create_tx, tx, _tx_rec, signed_tx, _txi, _block_hash) do
+    {:ok, channel_pk} = :aesc_utils.channel_pubkey(signed_tx)
+    put_in(tx, ["channel_id"], Enc.encode(:channel, channel_pk))
   end
 
-  defp custom_encode(_state, :oracle_register_tx, tx, tx_rec, _signed_tx, _block_hash) do
+  defp custom_encode(_state, :oracle_register_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
     oracle_pk = :aeo_register_tx.account_pubkey(tx_rec)
-    put_in(tx, ["tx", "oracle_id"], Enc.encode(:oracle_pubkey, oracle_pk))
+    put_in(tx, ["oracle_id"], Enc.encode(:oracle_pubkey, oracle_pk))
   end
 
-  defp custom_encode(_state, :name_claim_tx, tx, tx_rec, _signed_tx, _block_hash) do
+  defp custom_encode(_state, :name_claim_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
     {:ok, name_id} = :aens.get_name_hash(:aens_claim_tx.name(tx_rec))
-    put_in(tx, ["tx", "name_id"], Enc.encode(:name, name_id))
+    put_in(tx, ["name_id"], Enc.encode(:name, name_id))
   end
 
-  defp custom_encode(state, :name_update_tx, tx, tx_rec, _signed_tx, _block_hash),
-    do: put_in(tx, ["tx", "name"], Name.plain_name!(state, :aens_update_tx.name_hash(tx_rec)))
+  defp custom_encode(state, :name_update_tx, tx, tx_rec, _signed_tx, _txi, _block_hash),
+    do: put_in(tx, ["name"], Name.plain_name!(state, :aens_update_tx.name_hash(tx_rec)))
 
-  defp custom_encode(state, :name_transfer_tx, tx, tx_rec, _signed_tx, _block_hash),
-    do: put_in(tx, ["tx", "name"], Name.plain_name!(state, :aens_transfer_tx.name_hash(tx_rec)))
+  defp custom_encode(state, :name_transfer_tx, tx, tx_rec, _signed_tx, _txi, _block_hash),
+    do: put_in(tx, ["name"], Name.plain_name!(state, :aens_transfer_tx.name_hash(tx_rec)))
 
-  defp custom_encode(state, :name_revoke_tx, tx, tx_rec, _signed_tx, _block_hash),
-    do: put_in(tx, ["tx", "name"], Name.plain_name!(state, :aens_revoke_tx.name_hash(tx_rec)))
+  defp custom_encode(state, :name_revoke_tx, tx, tx_rec, _signed_tx, _txi, _block_hash),
+    do: put_in(tx, ["name"], Name.plain_name!(state, :aens_revoke_tx.name_hash(tx_rec)))
 
-  defp custom_encode(_state, _tx_type, tx, _tx_rec, _signed_tx, _block_hash),
+  defp custom_encode(_state, _tx_type, tx, _tx_rec, _signed_tx, _txi, _block_hash),
     do: tx
 
   defp maybe_base64(bin) do
