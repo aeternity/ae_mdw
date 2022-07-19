@@ -53,6 +53,8 @@ defmodule AeMdw.EtsCache do
     end
   end
 
+  def clear(table), do: :ets.delete_all_objects(table)
+
   def purge(table, max_age_msecs) do
     boundary = time() - max_age_msecs
 

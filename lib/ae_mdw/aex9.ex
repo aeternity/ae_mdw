@@ -5,6 +5,7 @@ defmodule AeMdw.Aex9 do
 
   alias AeMdw.Collection
   alias AeMdw.AexnContracts
+  alias AeMdw.Db.AsyncStore
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
@@ -55,6 +56,8 @@ defmodule AeMdw.Aex9 do
       {amounts, _height} = Db.aex9_balances!(contract_pk, true)
       amounts
     else
+      state = get_store_state(state, contract_pk)
+
       state
       |> Collection.stream(Model.Aex9Balance, {contract_pk, <<>>})
       |> Stream.take_while(&match?({^contract_pk, _address}, &1))
@@ -143,6 +146,7 @@ defmodule AeMdw.Aex9 do
           {:ok, aex9_balance()} | {:error, Error.t()}
   def fetch_balance(state, contract_pk, account_pk) do
     with :ok <- validate_aex9(contract_pk),
+         state <- get_store_state(state, contract_pk, account_pk),
          {:ok, {amount, _txi}} <- fetch_amount(state, contract_pk, account_pk) do
       {:ok, render_balance(contract_pk, {:address, account_pk}, amount)}
     else
@@ -281,6 +285,25 @@ defmodule AeMdw.Aex9 do
   #
   # Private functions
   #
+  defp get_store_state(state, contract_pk) do
+    async_state = State.new(AsyncStore.instance())
+
+    case State.next(async_state, Model.Aex9Balance, {contract_pk, <<>>}) do
+      {:ok, {^contract_pk, _account_pk}} -> async_state
+      _other -> state
+    end
+  end
+
+  defp get_store_state(state, contract_pk, account_pk) do
+    async_state = State.new(AsyncStore.instance())
+
+    if State.exists?(async_state, Model.Aex9Balance, {contract_pk, account_pk}) do
+      async_state
+    else
+      state
+    end
+  end
+
   defp paginate_account_transfers(
          state,
          pagination,
