@@ -47,6 +47,22 @@ defmodule AeMdw.Txs do
 
   @type_spend_tx "SpendTx"
 
+  @spec count(state(), range(), map()) :: {:ok, non_neg_integer()} | {:error, Error.t()}
+  def count(_state, nil, %{"type" => _tx_type}),
+    do: {:error, ErrInput.Query.exception(value: "counting by type not yet supported")}
+
+  def count(state, nil, params) when map_size(params) == 0,
+    do: {:ok, DbUtil.last_txi!(state)}
+
+  def count(_state, {:txi, first_txi..last_txi}, params) when map_size(params) == 0,
+    do: {:ok, last_txi - first_txi + 1}
+
+  def count(state, {:gen, first_gen..last_gen}, params) when map_size(params) == 0,
+    do: {:ok, DbUtil.gen_to_txi(state, last_gen + 1) - DbUtil.gen_to_txi(state, first_gen)}
+
+  def count(_state, _range, _params),
+    do: {:error, ErrInput.Query.exception(value: "can't query by multiple values")}
+
   @spec fetch_txs(
           State.t(),
           pagination(),

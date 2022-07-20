@@ -5,7 +5,6 @@ defmodule AeMdwWeb.TxController do
   alias AeMdw.Validate
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
-  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Txs
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
@@ -63,8 +62,12 @@ defmodule AeMdwWeb.TxController do
   end
 
   @spec count(Conn.t(), map()) :: Conn.t()
-  def count(%Conn{assigns: %{state: state}} = conn, _req),
-    do: conn |> json(DbUtil.last_txi!(state))
+  def count(%Conn{assigns: %{state: state, scope: scope, query: query}} = conn, _params) do
+    case Txs.count(state, scope, query) do
+      {:ok, count} -> json(conn, count)
+      {:error, reason} -> {:error, reason}
+    end
+  end
 
   @spec count_id(Conn.t(), map()) :: Conn.t()
   def count_id(%Conn{assigns: %{state: state}} = conn, %{"id" => id}),
