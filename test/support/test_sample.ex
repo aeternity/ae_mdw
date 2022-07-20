@@ -6,7 +6,7 @@ defmodule AeMdw.TestSamples do
   @spec oracle_expiration_key(non_neg_integer()) :: binary()
   def oracle_expiration_key(n) do
     ~w(
-      ok_2TASQ4QZv584D2ZP7cZxT6sk1L1UyqbWumnWM4g1azGi1qqcR5
+      ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR
       ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM
       ok_g5vQK6beY3vsTJHH7KBusesyzq9WMdEYorF8VyvZURXTjLnxT
       ok_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf
@@ -62,11 +62,41 @@ defmodule AeMdw.TestSamples do
      2_000_000_000_000_000, 288_692, 0}
   end
 
-  @spec tx_hash() :: Txs.tx_hash()
-  def tx_hash do
-    {:tx_hash, hash} =
-      :aeser_api_encoder.decode("th_5aUc7Xqk3TkG38XVjCzZPAWc1geGFfjGcgEytcZAFe3FJyn4g")
+  @spec tx_hash(non_neg_integer()) :: Txs.tx_hash()
+  def tx_hash(n) do
+    ~w(
+      th_2MMJRvBUj69PHoZhQtrrXHAg5iXCVwPcunXrKaPcVB6yhAuUHo
+      th_uJ5os7Gg8P68SHTq1kYecNzjNPFp3exxhXvqWmpFfsS7mbKSG
+      th_2CdVYuqtpcjoshDw2otjbLEyj8SpxjMP9MCgpn1oU9zGaqvUn4
+      th_2oBM2J4CtvXyg3ZNKdwbhskjQXTGn6AHA8iZqiYB2YEZjbjPP1
+      th_2gyafjpuMFK16ZcJjp4ss5GtENJYZjBtgMxc5E6xguaT2TqHpy
+    )
+    |> Enum.map(fn tx_hash ->
+      {:ok, hash} = :aeser_api_encoder.safe_decode(:tx_hash, tx_hash)
 
-    hash
+      hash
+    end)
+    |> Enum.at(n)
+  end
+
+  @spec tx(non_neg_integer()) :: Model.tx()
+  def tx(n) do
+    Model.tx(index: n * 200, id: tx_hash(n))
+  end
+
+  @spec key_block_hash(non_neg_integer()) :: Blocks.block_hash()
+  def key_block_hash(n) do
+    ~w(
+      kh_2f4aqtJjJpNdgYMsvXJ8E8XECNSJPfkj3B482yfZ5wAXN6aJAT
+      kh_2gfAhphwc1nqdqmpmzewqKDNkwfgBDrF2zJ7PBzt2nujjBevHg
+      kh_EQvXNAZLUtA98FeSUKjwuusuoMvHBPUMAJ4rDBuRBs5mWbvxs
+      kh_p5Ah5sKuGd3B4Z6Md4wwXvv1C4DBuNEWovraEVefbyCTtYUfU
+    )
+    |> Enum.map(fn hash ->
+      {:ok, decoded_hash} = :aeser_api_encoder.safe_decode(:key_block_hash, hash)
+
+      decoded_hash
+    end)
+    |> Enum.at(n)
   end
 end

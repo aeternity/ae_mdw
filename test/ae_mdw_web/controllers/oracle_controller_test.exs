@@ -5,12 +5,14 @@ defmodule AeMdwWeb.OracleControllerTest do
 
   require AeMdw.Db.Model
 
+  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Db.Model.ActiveOracleExpiration
   alias AeMdw.Db.Model.InactiveOracleExpiration
   alias AeMdw.Db.Model.Block
   alias AeMdw.Db.Oracle
+  alias AeMdw.Db.Store
   alias AeMdw.Database
   alias AeMdw.TestSamples, as: TS
 
@@ -33,7 +35,7 @@ defmodule AeMdwWeb.OracleControllerTest do
            end,
            get: fn
              Model.ActiveOracle, _pk -> {:ok, oracle}
-             Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash())}
+             Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash(0))}
            end
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
@@ -77,7 +79,7 @@ defmodule AeMdwWeb.OracleControllerTest do
            get: fn
              Model.InactiveOracle, _oracle_pk -> {:ok, oracle}
              Model.ActiveOracle, _oracle_pk -> {:ok, oracle}
-             Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash())}
+             Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash(0))}
            end
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
@@ -93,48 +95,61 @@ defmodule AeMdwWeb.OracleControllerTest do
       end
     end
 
-    test "it displays tx hashes when tx_hash=true", %{conn: conn} do
-      Model.oracle(extends: [{_extends_bi, extends_txi}]) = oracle = TS.oracle()
-      tx_hash = TS.tx_hash()
+    test "it displays tx hashes when tx_hash=true", %{conn: conn, store: store} do
+      register_tx1 = Model.tx(index: register_txi1, id: register_tx_hash1) = TS.tx(0)
+      register_tx2 = Model.tx(index: register_txi2, id: register_tx_hash2) = TS.tx(1)
+      extends_tx = Model.tx(index: extends_txi, id: extends_tx_hash) = TS.tx(2)
+      oracle_exp1 = {exp_height1, oracle_pk1} = TS.oracle_expiration_key(0)
+      oracle_exp2 = {exp_height2, oracle_pk2} = TS.oracle_expiration_key(1)
+
+      oracle1 =
+        Model.oracle(TS.oracle(),
+          index: oracle_pk1,
+          register: {{0, -1}, register_txi1},
+          expire: exp_height1,
+          extends: [{{0, -1}, extends_txi}]
+        )
+
+      oracle2 =
+        Model.oracle(TS.oracle(),
+          index: oracle_pk2,
+          register: {{0, -1}, register_txi2},
+          expire: exp_height2,
+          extends: []
+        )
+
+      block_hash = TS.key_block_hash(0)
+
+      store =
+        store
+        |> Store.put(Model.Tx, register_tx1)
+        |> Store.put(Model.Tx, register_tx2)
+        |> Store.put(Model.Tx, extends_tx)
+        |> Store.put(Model.ActiveOracleExpiration, Model.expiration(index: oracle_exp1))
+        |> Store.put(Model.ActiveOracleExpiration, Model.expiration(index: oracle_exp2))
+        |> Store.put(Model.ActiveOracle, oracle1)
+        |> Store.put(Model.ActiveOracle, oracle2)
+        |> Store.put(Model.Block, Model.block(index: {exp_height1, -1}, hash: block_hash))
+        |> Store.put(Model.Block, Model.block(index: {exp_height2, -1}, hash: block_hash))
+        |> Store.put(Model.Block, Model.block(index: {exp_height1 - 1, -1}, hash: block_hash))
+        |> Store.put(Model.Block, Model.block(index: {exp_height2 - 1, -1}, hash: block_hash))
 
       with_mocks [
-        {Database, [],
-         [
-           next_key: fn _tab, _key -> :none end,
-           prev_key: fn
-             ActiveOracleExpiration, {0, _plain_name} -> :none
-             ActiveOracleExpiration, {exp, "a"} -> {:ok, {exp - 1, "a"}}
-             _tab, _key -> :none
-           end,
-           last_key: fn
-             Block -> {:ok, TS.last_gen()}
-             ActiveOracleExpiration -> {:ok, {1, "a"}}
-             InactiveOracleExpiration -> :none
-           end,
-           get: fn
-             Model.ActiveOracle, _oracle_pk -> {:ok, oracle}
-             Model.Tx, _txi -> {:ok, Model.tx(id: tx_hash)}
-           end
-         ]},
-        {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
-        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
-        {Blocks, [], [block_hash: fn _state, _height -> "asd" end]}
+        {Oracle, [], [oracle_tree!: fn ^block_hash -> :aeo_state_tree.empty() end]},
+        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]}
       ] do
-        assert %{"data" => oracles, "next" => nil} =
+        assert %{"data" => [oracle2, oracle1], "next" => nil} =
                  conn
-                 |> get("/oracles", tx_hash: "true")
+                 |> with_store(store)
+                 |> get("/oracles", tx_hash: "true", limit: 2)
                  |> json_response(200)
 
-        assert Enum.all?(oracles, fn %{"extends" => extends} ->
-                 Enum.all?(extends, fn extends_tx_hash ->
-                   match?(
-                     {:ok, ^tx_hash},
-                     :aeser_api_encoder.safe_decode(:tx_hash, extends_tx_hash)
-                   )
-                 end)
-               end)
+        assert %{"register_tx_hash" => register_hash, "extends" => [extends_hash]} = oracle1
+        assert {:ok, ^register_tx_hash1} = Enc.safe_decode(:tx_hash, register_hash)
+        assert {:ok, ^extends_tx_hash} = Enc.safe_decode(:tx_hash, extends_hash)
 
-        assert_called(Database.get(Model.Tx, extends_txi))
+        assert %{"register_tx_hash" => register_hash, "extends" => []} = oracle2
+        assert {:ok, ^register_tx_hash2} = Enc.safe_decode(:tx_hash, register_hash)
       end
     end
 
@@ -162,7 +177,7 @@ defmodule AeMdwWeb.OracleControllerTest do
            end,
            get: fn
              Model.ActiveOracle, _oracle_pk -> {:ok, oracle}
-             Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash())}
+             Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash(0))}
            end,
            next_key: fn _tab, _key -> :none end,
            prev_key: fn
@@ -201,7 +216,7 @@ defmodule AeMdwWeb.OracleControllerTest do
            prev_key: fn ActiveOracleExpiration, _key -> {:ok, expiration_key} end,
            get: fn
              Model.ActiveOracle, _oracle_pk -> {:ok, TS.oracle()}
-             Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash())}
+             Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash(0))}
            end
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},

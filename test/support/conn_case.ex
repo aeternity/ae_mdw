@@ -17,11 +17,14 @@ defmodule AeMdwWeb.ConnCase do
 
   use ExUnit.CaseTemplate
 
+  alias Phoenix.ConnTest
+
   using do
     quote do
       # Import conveniences for testing with connections
       import Plug.Conn
       import Phoenix.ConnTest
+      import AeMdwWeb.TestUtil
       alias AeMdwWeb.Router.Helpers, as: Routes
 
       # The default endpoint for testing
@@ -30,6 +33,9 @@ defmodule AeMdwWeb.ConnCase do
   end
 
   setup _tags do
-    {:ok, conn: Phoenix.ConnTest.build_conn()}
+    alias AeMdw.Db.MemStore
+    alias AeMdw.Db.NullStore
+
+    {:ok, conn: ConnTest.build_conn(), store: MemStore.new(NullStore.new())}
   end
 end
