@@ -61,7 +61,9 @@ defmodule AeMdw.Txs do
     do: {:ok, DbUtil.gen_to_txi(state, last_gen + 1) - DbUtil.gen_to_txi(state, first_gen)}
 
   def count(_state, _range, _params),
-    do: {:error, ErrInput.Query.exception(value: "can't query by multiple values")}
+    do:
+      {:error,
+       ErrInput.Query.exception(value: "can't query by multiple filters and/or invalid filters")}
 
   @spec fetch_txs(
           State.t(),
