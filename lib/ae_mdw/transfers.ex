@@ -22,7 +22,7 @@ defmodule AeMdw.Transfers do
   @typep range :: {:gen, Range.t()} | {:txi, Range.t()} | nil
   @typep reason :: binary()
 
-  @pagination_params ~w(limit cursor rev direction scope)
+  @pagination_params ~w(limit cursor rev direction scope tx_hash)
 
   @kinds ~w(fee_lock_name fee_refund_name fee_spend_name reward_block reward_dev reward_oracle)
 
