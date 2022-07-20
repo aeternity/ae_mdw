@@ -155,6 +155,10 @@ defmodule AeMdw.Database do
 
   @spec delete(transaction(), table(), key()) :: :ok
   def delete(txn, table, key) do
+    if not RocksDbCF.exists?(txn, table, key) do
+      raise "Txn delete on missing key: #{table}, #{inspect(key)}"
+    end
+
     :ok = RocksDbCF.delete(txn, table, key)
   end
 

@@ -128,6 +128,13 @@ defmodule AeMdw.Db.RocksDbCFTest do
       assert :ok = RocksDbCF.put(txn, Model.Tx, m_tx)
       refute RocksDbCF.exists?(Model.Tx, txi)
     end
+
+    test "returns true when key exists in transaction", %{txn: txn} do
+      txi = System.unique_integer() |> abs()
+      m_tx = Model.tx(index: txi)
+      assert :ok = RocksDbCF.put(txn, Model.Tx, m_tx)
+      assert RocksDbCF.exists?(txn, Model.Tx, txi)
+    end
   end
 
   describe "first_key/1" do
