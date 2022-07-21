@@ -48,8 +48,18 @@ defmodule AeMdw.Txs do
   @type_spend_tx "SpendTx"
 
   @spec count(state(), range(), map()) :: {:ok, non_neg_integer()} | {:error, Error.t()}
-  def count(_state, nil, %{"type" => _tx_type}),
-    do: {:error, ErrInput.Query.exception(value: "counting by type not yet supported")}
+  def count(state, nil, %{"type" => tx_type}) do
+    case Validate.tx_type(tx_type) do
+      {:ok, tx_type} ->
+        case State.get(state, Model.TypeCount, tx_type) do
+          {:ok, Model.type_count(count: count)} -> {:ok, count}
+          :not_found -> {:ok, 0}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
 
   def count(state, nil, params) when map_size(params) == 0,
     do: {:ok, DbUtil.last_txi!(state)}

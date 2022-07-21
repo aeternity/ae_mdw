@@ -56,6 +56,27 @@ defmodule AeMdw.Db.RocksDbCF do
     iterator_count(it)
   end
 
+  @spec count_range(table(), key(), key()) :: non_neg_integer()
+  def count_range(table, min_key, max_key) do
+    {:ok, it} = RocksDb.iterator(table)
+
+    seek_key = :sext.encode(min_key)
+
+    count =
+      it
+      |> do_iterator_move({:seek, seek_key})
+      |> Stream.unfold(fn
+        {:ok, key} when key <= max_key -> {key, do_iterator_move(it, :next)}
+        {:ok, _key} -> nil
+        :not_found -> nil
+      end)
+      |> Enum.count()
+
+    RocksDb.iterator_close(it)
+
+    count
+  end
+
   @spec dirty_count(transaction(), table()) :: non_neg_integer()
   def dirty_count(txn, table) do
     {:ok, it} = RocksDb.dirty_iterator(txn, table)
