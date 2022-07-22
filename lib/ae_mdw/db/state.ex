@@ -60,13 +60,17 @@ defmodule AeMdw.Db.State do
 
     queue_jobs(jobs)
 
-    :persistent_term.erase(@state_pm_key)
-
     %__MODULE__{new_state | store: prev_store}
   end
 
   @spec commit_db(t(), [Mutation.t()]) :: t()
-  def commit_db(state, mutations), do: commit(state, mutations)
+  def commit_db(state, mutations) do
+    new_state = commit(state, mutations)
+
+    :persistent_term.erase(@state_pm_key)
+
+    new_state
+  end
 
   @spec commit_mem(t(), [Mutation.t()]) :: t()
   def commit_mem(state, mutations) do
