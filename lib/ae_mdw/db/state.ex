@@ -45,8 +45,8 @@ defmodule AeMdw.Db.State do
   @spec height(t()) :: height()
   def height(state), do: DbUtil.synced_height(state)
 
-  @spec commit(t(), [Mutation.t()]) :: t()
-  def commit(%__MODULE__{store: prev_store} = state, mutations) do
+  @spec commit(t(), [Mutation.t()], boolean()) :: t()
+  def commit(%__MODULE__{store: prev_store} = state, mutations, clear_mem? \\ false) do
     new_state =
       %__MODULE__{jobs: jobs} =
       TxnDbStore.transaction(fn store ->
@@ -58,19 +58,17 @@ defmodule AeMdw.Db.State do
         |> Enum.reduce(state2, &Mutation.execute/2)
       end)
 
+    if clear_mem? do
+      :persistent_term.erase(@state_pm_key)
+    end
+
     queue_jobs(jobs)
 
     %__MODULE__{new_state | store: prev_store}
   end
 
-  @spec commit_db(t(), [Mutation.t()]) :: t()
-  def commit_db(state, mutations) do
-    new_state = commit(state, mutations)
-
-    :persistent_term.erase(@state_pm_key)
-
-    new_state
-  end
+  @spec commit_db(t(), [Mutation.t()], boolean()) :: t()
+  def commit_db(state, mutations, clear_mem? \\ true), do: commit(state, mutations, clear_mem?)
 
   @spec commit_mem(t(), [Mutation.t()]) :: t()
   def commit_mem(state, mutations) do

@@ -144,7 +144,9 @@ defmodule AeMdw.Sync.Server do
       db_height < max_db_height ->
         from_height = db_height + 1
         to_height = min(from_height + @max_sync_gens - 1, max_db_height)
-        ref = spawn_db_sync(db_state, from_height, to_height)
+        clear_mem? = to_height != max_db_height
+
+        ref = spawn_db_sync(db_state, from_height, to_height, clear_mem?)
 
         {:next_state, {:syncing_db, ref}, state_data}
 
@@ -238,7 +240,7 @@ defmodule AeMdw.Sync.Server do
     super(event_type, event_content, state, data)
   end
 
-  defp spawn_db_sync(db_state, from_height, to_height) do
+  defp spawn_db_sync(db_state, from_height, to_height, clear_mem?) do
     from_txi = Block.next_txi(db_state)
 
     from_mbi =
@@ -253,7 +255,8 @@ defmodule AeMdw.Sync.Server do
           Block.blocks_mutations(from_height, from_mbi, from_txi, to_height)
         end)
 
-      {exec_time, new_state} = :timer.tc(fn -> exec_db_mutations(gens_mutations, db_state) end)
+      {exec_time, new_state} =
+        :timer.tc(fn -> exec_db_mutations(gens_mutations, db_state, clear_mem?) end)
 
       gens_per_min = (to_height + 1 - from_height) * 60_000_000 / (mutations_time + exec_time)
       Status.set_gens_per_min(gens_per_min)
@@ -287,11 +290,11 @@ defmodule AeMdw.Sync.Server do
     end)
   end
 
-  defp exec_db_mutations(gens_mutations, state) do
+  defp exec_db_mutations(gens_mutations, state, clear_mem?) do
     gens_mutations
     |> Enum.flat_map(fn {_height, blocks_mutations} -> blocks_mutations end)
     |> Enum.reduce(state, fn {{_height, mbi}, block, block_mutations}, state ->
-      new_state = State.commit_db(state, block_mutations)
+      new_state = State.commit_db(state, block_mutations, clear_mem?)
 
       broadcast_block(block, mbi == -1)
 
@@ -300,15 +303,12 @@ defmodule AeMdw.Sync.Server do
   end
 
   defp exec_mem_mutations(gens_mutations, state) do
-    gens_mutations
-    |> Enum.flat_map(fn {_height, blocks_mutations} -> blocks_mutations end)
-    |> Enum.reduce(state, fn {{_height, mbi}, block, block_mutations}, state ->
-      new_state = State.commit_mem(state, block_mutations)
+    mutations =
+      gens_mutations
+      |> Enum.flat_map(fn {_height, blocks_mutations} -> blocks_mutations end)
+      |> Enum.flat_map(fn {_block_height, _block, block_mutations} -> block_mutations end)
 
-      broadcast_block(block, mbi == -1)
-
-      new_state
-    end)
+    State.commit_mem(state, mutations)
   end
 
   defp spawn_task(fun) do
