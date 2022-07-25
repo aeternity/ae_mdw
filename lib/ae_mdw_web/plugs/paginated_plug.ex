@@ -19,11 +19,13 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
   @default_scope nil
 
+  @pagination_params ~w(limit cursor rev direction scope tx_hash expand)
+
   @spec init(opts()) :: opts()
   def init(opts), do: opts
 
   @spec call(Conn.t(), opts()) :: Conn.t()
-  def call(%Conn{params: params} = conn, opts) do
+  def call(%Conn{params: params, query_params: query_params} = conn, opts) do
     with {:ok, direction, scope} <- extract_direction_and_scope(params),
          {:ok, limit} <- extract_limit(params),
          {:ok, is_reversed?} <- extract_is_reversed(params),
@@ -39,6 +41,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
       |> assign(:order_by, order_by)
       |> assign(:scope, scope)
       |> assign(:offset, {limit, page})
+      |> assign(:query, Map.drop(query_params, @pagination_params))
     else
       {:error, error_msg} ->
         conn
