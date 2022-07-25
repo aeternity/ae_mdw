@@ -4,14 +4,11 @@ defmodule AeMdw.Db.ContractTest do
   alias AeMdw.AexnContracts
   alias AeMdw.Db.Contract
   alias AeMdw.Db.State
-  alias AeMdw.Sync.AsyncTasks.Producer
 
   import AeMdw.Node.ContractCallFixtures, only: [call_rec: 1]
   import Mock
 
   test "update AEX9 state on non AEX9 contract call with logs having AEX9 contracts" do
-    assert {:ok, _pid} = Producer.start_link([])
-
     not_aex9_contract_pk =
       <<46, 45, 66, 42, 171, 23, 186, 153, 167, 41, 204, 175, 3, 32, 136, 142, 172, 72, 29, 171,
         231, 25, 168, 179, 135, 26, 13, 47, 67, 25, 57, 155>>
