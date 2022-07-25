@@ -99,4 +99,21 @@ defmodule AeMdw.TestSamples do
     end)
     |> Enum.at(n)
   end
+
+  @spec address(non_neg_integer()) :: Db.pubkey()
+  def address(n) do
+    ~w(
+      ak_KHfXhF2J6VBt3sUgFygdbpEkWi6AKBkr9jNKUCHbpwwagzHUs
+      ak_2ZJdpRWp6AdbjbuDtYjzAB7BXM4N7kz1novbK4qKH4XW6W3GrZ
+      ak_VS3fcBcwyo3dMEFXUJk91J4fhaDUE7bU5NDaDVDghjB7wVN1t
+      ak_6sssiKcg7AywyJkfSdHz52RbDUq5cZe4V4hcvghXnrPz4H4Qg
+      ak_2jxip8MNK2gHJFUD1ozLyEp4ieC3hL1VYsCcsnVPxnek9AuQc8
+    )
+    |> Enum.map(fn hash ->
+      {:ok, decoded_hash} = :aeser_api_encoder.safe_decode(:account_pubkey, hash)
+
+      decoded_hash
+    end)
+    |> Enum.at(n)
+  end
 end

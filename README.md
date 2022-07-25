@@ -958,6 +958,26 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/txs/count" | jq '.'
 11921825
 ```
 
+It can also be scoped by generations:
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs/count?scope=gen:123-456" | jq '.'
+23
+```
+
+Or by address:
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs/count?id=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR" | jq '.'
+19323
+```
+
+Or by type:
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs/count?type=oracle_register" | jq '.'
+286
+```
+
+**NOTE**: It cannot be filtered by more than one of these filters.
+
 ### `/txs/count/:address`
 
 ```
