@@ -104,7 +104,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
       mb_events = %{}
 
       # setup contract
-      contract_pk = setup_contract_on_call(signed_tx, txi)
+      contract_pk = setup_contract_on_call(signed_tx)
       aex9_meta_info = {"TestAEX9-B vs TestAEX9-A", "TAEX9-B/TAEX9-A", 18}
       child_contract_pk = Validate.id!(fun_args_res("create_pair")[:result][:value])
 
@@ -159,7 +159,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
       mb_events = %{}
 
       # setup contract
-      contract_pk = setup_contract_on_create(signed_tx, txi)
+      contract_pk = setup_contract_on_create(signed_tx)
       number = abs(System.unique_integer())
       aex141_meta_info = {"test-nft#{number}", "test-nft#{number}", "http://some-fake-url", :url}
 
@@ -219,7 +219,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
       mb_events = %{}
 
       # setup contract
-      contract_pk = setup_contract_on_create(signed_tx, txi)
+      contract_pk = setup_contract_on_create(signed_tx)
       aex141_meta_info = {:error, :error, nil, nil}
 
       with_mocks [
@@ -273,10 +273,9 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   #
   # Helper functions
   #
-  defp setup_contract_on_call(signed_tx, txi) do
+  defp setup_contract_on_call(signed_tx) do
     {_mod, tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
     contract_pk = :aect_call_tx.contract_pubkey(tx)
-    :ets.insert(:ct_create_sync_cache, {contract_pk, txi - 1})
 
     functions =
       %{
@@ -290,10 +289,9 @@ defmodule AeMdw.Db.Sync.TransactionTest do
     contract_pk
   end
 
-  defp setup_contract_on_create(signed_tx, create_txi) do
+  defp setup_contract_on_create(signed_tx) do
     {_mod, tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
     contract_pk = :aect_create_tx.contract_pubkey(tx)
-    :ets.insert(:ct_create_sync_cache, {contract_pk, create_txi})
 
     functions =
       @aex141_mint_signature
