@@ -3,7 +3,9 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
 
   alias AeMdw.Database
   alias AeMdw.Db.Aex9BalancesCache
+  alias AeMdw.Db.AsyncStore
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Sync.AsyncTasks.UpdateAex9State
   alias AeMdw.Validate
 
@@ -44,7 +46,7 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
            end
          ]}
       ] do
-        UpdateAex9State.process([contract_pk, block_index, call_txi])
+        UpdateAex9State.process([contract_pk, block_index, call_txi, false])
 
         assert Model.aex9_balance(block_index: ^block_index, txi: ^call_txi, amount: ^amount1) =
                  Database.fetch!(Model.Aex9Balance, {contract_pk, account_pk1})
@@ -82,7 +84,7 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
            end
          ]}
       ] do
-        UpdateAex9State.process([contract_pk, block_index, call_txi])
+        UpdateAex9State.process([contract_pk, block_index, call_txi, false])
         assert Database.exists?(Model.Aex9Balance, {contract_pk, <<>>})
       end
     end
@@ -118,7 +120,7 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
            end
          ]}
       ] do
-        UpdateAex9State.process([contract_pk, block_index, call_txi])
+        UpdateAex9State.process([contract_pk, block_index, call_txi, false])
         refute Database.exists?(Model.Aex9Balance, {contract_pk, <<>>})
 
         assert Model.aex9_balance(block_index: ^block_index, txi: ^call_txi, amount: ^amount1) =
@@ -126,6 +128,51 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
 
         assert Model.aex9_balance(block_index: ^block_index, txi: ^call_txi, amount: ^amount2) =
                  Database.fetch!(Model.Aex9Balance, {contract_pk, account_pk2})
+      end
+    end
+
+    test "when async_store? = true, it saves aex9 state into ets store" do
+      ct_pk = :crypto.strong_rand_bytes(32)
+      {kbi, mbi} = block_index = {123_456, 2}
+      next_kbi = kbi + 1
+      call_txi = 12_345_678
+
+      next_kb_hash = :crypto.strong_rand_bytes(32)
+      next_mb_hash = :crypto.strong_rand_bytes(32)
+      account_pk = :crypto.strong_rand_bytes(32)
+      amount = Enum.random(1_000_000_000..9_999_999_999)
+
+      with_mocks [
+        {AeMdw.Node.Db, [],
+         [
+           get_key_block_hash: fn
+             ^next_kbi ->
+               next_kb_hash
+           end,
+           get_next_hash: fn ^next_kb_hash, ^mbi -> next_mb_hash end,
+           aex9_balances: fn ^ct_pk, {:micro, ^kbi, ^next_mb_hash} ->
+             balances = %{{:address, account_pk} => amount}
+
+             {balances, nil}
+           end
+         ]}
+      ] do
+        UpdateAex9State.process([ct_pk, block_index, call_txi, true])
+
+        ets_state = State.new(AsyncStore.instance())
+        presence_key = {account_pk, ct_pk}
+        balance_key = {ct_pk, account_pk}
+
+        assert {:ok, Model.aex9_account_presence(index: ^presence_key, txi: ^call_txi)} =
+                 State.get(ets_state, Model.Aex9AccountPresence, presence_key)
+
+        assert {:ok,
+                Model.aex9_balance(
+                  index: ^balance_key,
+                  block_index: ^block_index,
+                  txi: ^call_txi,
+                  amount: ^amount
+                )} = State.get(ets_state, Model.Aex9Balance, balance_key)
       end
     end
   end

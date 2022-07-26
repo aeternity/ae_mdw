@@ -3,12 +3,11 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.Model
+  alias AeMdw.Db.AsyncStore
   alias AeMdw.Db.MemStore
-  alias AeMdw.Db.Mutation
-  alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
   alias AeMdw.Db.Store
-  alias AeMdw.Sync.AsyncTasks.Consumer
+  alias AeMdw.Sync.AsyncTasks.UpdateAex9State
   alias AeMdw.Validate
 
   import AeMdw.Node.ContractCallFixtures
@@ -32,7 +31,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       block_index = {kbi, mbi} = {246_949, 83}
 
       state =
-        NullStore.new()
+        AsyncStore.instance()
         |> MemStore.new()
         |> Store.put(
           Model.Field,
@@ -63,10 +62,9 @@ defmodule AeMdw.Db.ContractCallMutationTest do
            end
          ]}
       ] do
-        state =
-          state
-          |> State.commit_mem([mutation])
-          |> process_async_tasks()
+        state = State.commit_mem(state, [mutation])
+
+        process_async_tasks(state)
 
         assert State.exists?(state, Model.Aex9AccountPresence, {account_pk, contract_pk})
       end
@@ -77,7 +75,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       block_index = {kbi, mbi} = {247_411, 5}
 
       state =
-        NullStore.new()
+        AsyncStore.instance()
         |> MemStore.new()
         |> Store.put(
           Model.Field,
@@ -113,10 +111,9 @@ defmodule AeMdw.Db.ContractCallMutationTest do
            end
          ]}
       ] do
-        state =
-          state
-          |> State.commit_mem([mutation])
-          |> process_async_tasks()
+        state = State.commit_mem(state, [mutation])
+
+        process_async_tasks(state)
 
         assert State.exists?(state, Model.Aex9AccountPresence, {account_pk, contract_pk})
       end
@@ -127,7 +124,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       block_index = {kbi, mbi} = {258_867, 73}
 
       state =
-        NullStore.new()
+        AsyncStore.instance()
         |> MemStore.new()
         |> Store.put(
           Model.Field,
@@ -164,10 +161,9 @@ defmodule AeMdw.Db.ContractCallMutationTest do
            end
          ]}
       ] do
-        state =
-          state
-          |> State.commit_mem([mutation])
-          |> process_async_tasks()
+        state = State.commit_mem(state, [mutation])
+
+        process_async_tasks(state)
 
         assert State.exists?(state, Model.Aex9AccountPresence, {account_pk, contract_pk})
       end
@@ -178,7 +174,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       block_index = {kbi, mbi} = {255_795, 74}
 
       state =
-        NullStore.new()
+        AsyncStore.instance()
         |> MemStore.new()
         |> Store.put(
           Model.Field,
@@ -209,10 +205,9 @@ defmodule AeMdw.Db.ContractCallMutationTest do
            end
          ]}
       ] do
-        state =
-          state
-          |> State.commit_mem([mutation])
-          |> process_async_tasks()
+        state = State.commit_mem(state, [mutation])
+
+        process_async_tasks(state)
 
         assert State.exists?(state, Model.Aex9AccountPresence, {account_pk, contract_pk})
       end
@@ -231,7 +226,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       call_txi = 9_353_623
 
       state =
-        NullStore.new()
+        AsyncStore.instance()
         |> MemStore.new()
         |> Store.put(
           Model.Field,
@@ -301,10 +296,9 @@ defmodule AeMdw.Db.ContractCallMutationTest do
            aex9_balances: fn ^contract_pk, _next -> {%{}, nil} end
          ]}
       ] do
-        state =
-          state
-          |> State.commit_mem([mutation])
-          |> process_async_tasks()
+        state = State.commit_mem(state, [mutation])
+
+        process_async_tasks(state)
 
         [{^contract_pk, [_transfer_evt_hash | [from_pk, to_pk, <<amount::256>>]], _data}] =
           :aect_call.log(call_rec)
@@ -354,12 +348,10 @@ defmodule AeMdw.Db.ContractCallMutationTest do
   end
 
   defp process_async_tasks(state) do
-    state.jobs
-    |> Enum.flat_map(fn {{job_type, dedup_args}, extra_args} ->
-      Consumer.mutations(job_type, dedup_args ++ extra_args)
+    async_store? = true
+
+    Enum.each(state.jobs, fn {{:update_aex9_state, dedup_args}, extra_args} ->
+      UpdateAex9State.process(dedup_args ++ extra_args ++ [async_store?])
     end)
-    |> List.flatten()
-    |> Enum.reject(&is_nil/1)
-    |> Enum.reduce(state, &Mutation.execute/2)
   end
 end

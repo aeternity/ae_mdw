@@ -3,6 +3,7 @@ defmodule AeMdw.Aex9Test do
 
   alias AeMdw.Aex9
   alias AeMdw.Db.State
+  alias AeMdw.Sync.AsyncTasks.UpdateAex9State
 
   import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1, enc_id: 1]
   import Mock
@@ -38,9 +39,11 @@ defmodule AeMdw.Aex9Test do
          ]}
       ] do
         state = State.enqueue(State.new(), :update_aex9_state, [ct_pk], [block_index, call_txi])
-        assert %State{} = State.commit_mem(state, [])
+        state = State.commit_mem(state, [])
 
-        assert balances == Aex9.fetch_balances(nil, ct_pk, false)
+        process_async_tasks(state)
+
+        assert balances == Aex9.fetch_balances(state, ct_pk, false)
       end
     end
   end
@@ -87,15 +90,23 @@ defmodule AeMdw.Aex9Test do
          ]}
       ] do
         state = State.enqueue(State.new(), :update_aex9_state, [ct_pk], [block_index, call_txi])
-        assert %State{} = State.commit_mem(state, [])
+        state = State.commit_mem(state, [])
+
+        process_async_tasks(state)
 
         assert {:ok,
                 %{
                   contract: enc_ct(ct_pk),
                   account: enc_id(account_pk),
                   amount: amount
-                }} == Aex9.fetch_balance(nil, ct_pk, account_pk)
+                }} == Aex9.fetch_balance(state, ct_pk, account_pk)
       end
     end
+  end
+
+  defp process_async_tasks(state) do
+    Enum.each(state.jobs, fn {{:update_aex9_state, dedup_args}, extra_args} ->
+      UpdateAex9State.process(dedup_args ++ extra_args ++ [false])
+    end)
   end
 end

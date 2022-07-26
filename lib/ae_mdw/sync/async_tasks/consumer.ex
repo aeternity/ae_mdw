@@ -5,7 +5,6 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   use GenServer
 
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Mutation
   alias AeMdw.Log
 
   alias AeMdw.Sync.AsyncTasks.Producer
@@ -120,12 +119,6 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
     timer_ref = if not is_long?, do: ok!(:timer.send_after(@task_timeout_msecs, :timeout))
 
     {task, timer_ref}
-  end
-
-  @spec mutations(Model.async_task_type(), Model.async_task_args()) :: [Mutation.t()]
-  def mutations(task_type, args) do
-    mod = @type_mod[task_type]
-    apply(mod, :mutations, [args])
   end
 
   #
