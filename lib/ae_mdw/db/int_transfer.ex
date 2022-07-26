@@ -12,7 +12,7 @@ defmodule AeMdw.Db.IntTransfer do
   require Ex2ms
   require Model
 
-  alias AeMdw.Db.BlockRewardsMutation
+  alias AeMdw.Db.IntTransfersMutation
   alias AeMdw.Node.Db
 
   # @type kind() :: "fee_lock_name" | "fee_refund_name" | "fee_spend_name" |
@@ -30,7 +30,7 @@ defmodule AeMdw.Db.IntTransfer do
   @reward_dev_kind "reward_dev"
 
   @spec block_rewards_mutation(Blocks.height(), Blocks.key_header(), Blocks.block_hash()) ::
-          BlockRewardsMutation.t()
+          IntTransfersMutation.t()
   def block_rewards_mutation(height, key_header, key_hash) do
     delay = :aec_governance.beneficiary_reward_delay()
     dev_benefs = Enum.map(:aec_dev_reward.beneficiaries(), &elem(&1, 0))
@@ -48,7 +48,7 @@ defmodule AeMdw.Db.IntTransfer do
         {kind, target_pk, amount}
       end)
 
-    BlockRewardsMutation.new(height, block_rewards)
+    IntTransfersMutation.new(height, block_rewards)
   end
 
   @spec fee(
