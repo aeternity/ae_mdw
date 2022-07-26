@@ -53,12 +53,29 @@ defmodule AeMdwWeb.TxControllerTest do
                |> json_response(200)
     end
 
-    test "it returns error when filtering by type", %{conn: conn} do
-      error_msg = "invalid query: counting by type not yet supported"
+    test "when filtering by type, it displays type_count number", %{conn: conn, store: store} do
+      count = 102
+
+      store =
+        Store.put(
+          store,
+          Model.TypeCount,
+          Model.type_count(index: :oracle_register_tx, count: count)
+        )
+
+      assert ^count =
+               conn
+               |> with_store(store)
+               |> get("/txs/count", type: "oracle_register")
+               |> json_response(200)
+    end
+
+    test "when filtering by invalid type, it displays an error", %{conn: conn} do
+      error_msg = "invalid transaction type: oracle_foo"
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/txs/count", type: "spend")
+               |> get("/txs/count", type: "oracle_foo")
                |> json_response(400)
     end
   end

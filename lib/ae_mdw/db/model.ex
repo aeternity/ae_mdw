@@ -19,6 +19,7 @@ defmodule AeMdw.Db.Model do
   @opaque key :: tuple() | integer() | pubkey()
 
   @typep pubkey :: Db.pubkey()
+  @typep tx_type() :: Node.tx_type()
 
   ################################################################################
 
@@ -81,6 +82,13 @@ defmodule AeMdw.Db.Model do
   #     index = {tx_type, tx_index}
   @type_defaults [index: {nil, -1}, unused: nil]
   defrecord :type, @type_defaults
+
+  # txs type count index  :
+  #     index = {tx_type, tx_index}
+  @type_count_defaults [index: nil, count: 0]
+  defrecord :type_count, @type_count_defaults
+
+  @type type_count() :: record(:type_count, index: tx_type(), count: non_neg_integer())
 
   # txs fields      :
   #     index = {tx_type, tx_field_pos, object_pubkey, tx_index},
@@ -599,6 +607,7 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.Block,
       AeMdw.Db.Model.Time,
       AeMdw.Db.Model.Type,
+      AeMdw.Db.Model.TypeCount,
       AeMdw.Db.Model.Field,
       AeMdw.Db.Model.IdCount,
       AeMdw.Db.Model.Origin,
@@ -687,6 +696,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Block), do: :block
   def record(AeMdw.Db.Model.Time), do: :time
   def record(AeMdw.Db.Model.Type), do: :type
+  def record(AeMdw.Db.Model.TypeCount), do: :type_count
   def record(AeMdw.Db.Model.Field), do: :field
   def record(AeMdw.Db.Model.IdCount), do: :id_count
   def record(AeMdw.Db.Model.Origin), do: :origin
