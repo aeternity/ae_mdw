@@ -1,6 +1,6 @@
 defmodule AeMdw.Db.IntTransfersMutation do
   @moduledoc """
-  Saves internal transfers generated or migrated into the blockchain including block and dev rewards.
+  Saves internal transfers rewarded or migrated into the blockchain including block and dev rewards.
   """
 
   alias AeMdw.Blocks
