@@ -1,5 +1,64 @@
 # Changelog
 
+## [1.15.0](https://www.github.com/aeternity/ae_mdw/compare/v1.14.0...v1.15.0) (2022-07-27)
+
+
+### Features
+
+* add new store kind to serve async tasks ([#793](https://www.github.com/aeternity/ae_mdw/issues/793)) ([dde85c0](https://www.github.com/aeternity/ae_mdw/commit/dde85c060719fb02a7d76a8a4c9e4c5d235b0153))
+* add new type count index for /txs/count?type=x ([#800](https://www.github.com/aeternity/ae_mdw/issues/800)) ([9388279](https://www.github.com/aeternity/ae_mdw/commit/93882796b52f9e24c6bccba03e6cc8566d15f8f3))
+* allow filtering transactions count by scope ([#798](https://www.github.com/aeternity/ae_mdw/issues/798)) ([cae1dc3](https://www.github.com/aeternity/ae_mdw/commit/cae1dc31cc30a462464f2e376811394bb642349d))
+* display tx hash instead of txi when tx_hash=true ([#789](https://www.github.com/aeternity/ae_mdw/issues/789)) ([295da57](https://www.github.com/aeternity/ae_mdw/commit/295da5791195f86a18a873c80dabbd64e41c6765))
+* runs dry-run only once per contract and block ([#778](https://www.github.com/aeternity/ae_mdw/issues/778)) ([5690902](https://www.github.com/aeternity/ae_mdw/commit/5690902e21c711f309d662baed60cb821eae75f7))
+* sort active names by activation height ([#760](https://www.github.com/aeternity/ae_mdw/issues/760)) ([a57cf3c](https://www.github.com/aeternity/ae_mdw/commit/a57cf3cc5795f87defe8795662b3e8cb8fff5437))
+* sync latest gens in-memory for instant invalidation ([#676](https://www.github.com/aeternity/ae_mdw/issues/676)) ([af95379](https://www.github.com/aeternity/ae_mdw/commit/af9537973e9ed34919d19b750734984004b6bf4c))
+* sync up to latest micro-block ([#726](https://www.github.com/aeternity/ae_mdw/issues/726)) ([bff7d0f](https://www.github.com/aeternity/ae_mdw/commit/bff7d0f2a7491cd95300ad1648f6ce468173b24c))
+
+
+### Bug Fixes
+
+* adjust inactive name owner table ([#767](https://www.github.com/aeternity/ae_mdw/issues/767)) ([f9825d6](https://www.github.com/aeternity/ae_mdw/commit/f9825d6b5c641318cc5fc3e1e38df7b76b031bfc))
+* avoid dirty reads when using iterator ([#781](https://www.github.com/aeternity/ae_mdw/issues/781)) ([f7b0da0](https://www.github.com/aeternity/ae_mdw/commit/f7b0da075b1556cbbccd30e12ae54680737938e9))
+* avoid erasing mem state when State.commit/2 ([#801](https://www.github.com/aeternity/ae_mdw/issues/801)) ([f059238](https://www.github.com/aeternity/ae_mdw/commit/f059238e70a65cfa08ad3a00e39e3341e31d84d3))
+* avoid returning results from other tables on AsyncStore.next/prev ([#806](https://www.github.com/aeternity/ae_mdw/issues/806)) ([048757e](https://www.github.com/aeternity/ae_mdw/commit/048757e6732e641361b5228f0190c3ae8c386f20))
+* consider empty generations on mdw height ([#766](https://www.github.com/aeternity/ae_mdw/issues/766)) ([a3d8621](https://www.github.com/aeternity/ae_mdw/commit/a3d8621209b5934265397b87bf5b1a5faef027ca))
+* ignore tx_hash when iterating through queries ([#795](https://www.github.com/aeternity/ae_mdw/issues/795)) ([6be2041](https://www.github.com/aeternity/ae_mdw/commit/6be2041d79333cb9926da820dfda11fde4d358fa))
+* remove blocks cache displayed on /v2/blocks ([#787](https://www.github.com/aeternity/ae_mdw/issues/787)) ([f1672c4](https://www.github.com/aeternity/ae_mdw/commit/f1672c46b7782df9201156e6538cb708254b831c))
+* use single-block transactions to avoid duplicated deletions ([#786](https://www.github.com/aeternity/ae_mdw/issues/786)) ([49cf42f](https://www.github.com/aeternity/ae_mdw/commit/49cf42f023be06eaf5408e9e04781fe2ce5f53a4))
+
+
+### Refactorings
+
+* extract expand/top params into the PaginationPlug ([#788](https://www.github.com/aeternity/ae_mdw/issues/788)) ([98e1804](https://www.github.com/aeternity/ae_mdw/commit/98e180459cbfcbd2a69a1b9fc17367e9f4f350af))
+* move formatting to main render functions ([#775](https://www.github.com/aeternity/ae_mdw/issues/775)) ([2406543](https://www.github.com/aeternity/ae_mdw/commit/24065439972011acd274c4237eafe38f99afb7f1))
+* save only the used txi on aex9 presence ([#777](https://www.github.com/aeternity/ae_mdw/issues/777)) ([1c678b5](https://www.github.com/aeternity/ae_mdw/commit/1c678b5d2a6dfd8772f23808b54f61fd6c5dd2a5))
+
+
+### Testing
+
+* add helper with_state/2 function for declarative tests ([#796](https://www.github.com/aeternity/ae_mdw/issues/796)) ([c57056a](https://www.github.com/aeternity/ae_mdw/commit/c57056a946ce3c40768bdc2c11447a49cabe204e))
+* add name sync tests for more scenarios ([#785](https://www.github.com/aeternity/ae_mdw/issues/785)) ([e2f728a](https://www.github.com/aeternity/ae_mdw/commit/e2f728a962ce05910bef74890357953fabd1ffec))
+* assert decimal is nil on out_of_gas_error ([#769](https://www.github.com/aeternity/ae_mdw/issues/769)) ([af41a5c](https://www.github.com/aeternity/ae_mdw/commit/af41a5cfdb63981ad3643549375fd18c40835edd))
+* fix random non-deterministic test failures ([#802](https://www.github.com/aeternity/ae_mdw/issues/802)) ([d5c52b3](https://www.github.com/aeternity/ae_mdw/commit/d5c52b35305a56a92563eef0016662de213977ea))
+
+
+### Miscellaneous
+
+* add aex9 validation to v1 hash endpoints ([#779](https://www.github.com/aeternity/ae_mdw/issues/779)) ([62e7c75](https://www.github.com/aeternity/ae_mdw/commit/62e7c7589ecc1b07ca2424ddc4cf9289a09aeb87))
+* add aex9 validation to v1 range endpoints ([#784](https://www.github.com/aeternity/ae_mdw/issues/784)) ([c56e9c4](https://www.github.com/aeternity/ae_mdw/commit/c56e9c4c1f8947813878de551a5192d2799c3b75))
+* add mistakenly removed async in-mem tasks ([#757](https://www.github.com/aeternity/ae_mdw/issues/757)) ([b607abb](https://www.github.com/aeternity/ae_mdw/commit/b607abbe52fae9ff6ca524e23bf250a672db06ce))
+* clear state hash for every key block ([#790](https://www.github.com/aeternity/ae_mdw/issues/790)) ([2a4c3d9](https://www.github.com/aeternity/ae_mdw/commit/2a4c3d9bd0c109135188757d810d303fbf860e86))
+* encapsulate all Database calls through State ([#762](https://www.github.com/aeternity/ae_mdw/issues/762)) ([922f7d8](https://www.github.com/aeternity/ae_mdw/commit/922f7d850e66ecd91a82dae09d2cdec4689de18a))
+* present aexn tokens using state from the StatePlug ([#759](https://www.github.com/aeternity/ae_mdw/issues/759)) ([68f04f5](https://www.github.com/aeternity/ae_mdw/commit/68f04f57aca41f44cfdf0443aed0e186e0ca95f9))
+* raise detailed message when deleting txn missing key ([#792](https://www.github.com/aeternity/ae_mdw/issues/792)) ([e6f0366](https://www.github.com/aeternity/ae_mdw/commit/e6f0366a2326a93be76a99cf408f8d134f1805b7))
+* raise exception when transaction commit fails ([#783](https://www.github.com/aeternity/ae_mdw/issues/783)) ([84a5110](https://www.github.com/aeternity/ae_mdw/commit/84a5110320afc26f5990c97f8a545dbc184cf5b0))
+* remove migrations and old aex9 tables ([#773](https://www.github.com/aeternity/ae_mdw/issues/773)) ([19114fa](https://www.github.com/aeternity/ae_mdw/commit/19114fa99eaa124ca5af19aadbf2474db8841726))
+* remove unused Db.Util functions ([#791](https://www.github.com/aeternity/ae_mdw/issues/791)) ([1b172ae](https://www.github.com/aeternity/ae_mdw/commit/1b172aec9b4014a6fffb93b67677e523fbb1f5fa))
+* remove unused ets tables ([#804](https://www.github.com/aeternity/ae_mdw/issues/804)) ([d909dd7](https://www.github.com/aeternity/ae_mdw/commit/d909dd7ae8955d07bfd5035d3a5bb29537e370fd))
+* remove unused Invalidate.invalidate/1 function ([#761](https://www.github.com/aeternity/ae_mdw/issues/761)) ([e172833](https://www.github.com/aeternity/ae_mdw/commit/e1728339098f4044fe3f73e7e705a72eb43f7d61))
+* rename file to match module name ([#799](https://www.github.com/aeternity/ae_mdw/issues/799)) ([1476e85](https://www.github.com/aeternity/ae_mdw/commit/1476e852a35ad8f57547fb36c5ac78083130cb8c))
+* use latest State on NamesExpirationMutation ([#782](https://www.github.com/aeternity/ae_mdw/issues/782)) ([321308c](https://www.github.com/aeternity/ae_mdw/commit/321308cd34c7e802d59ad6e55f198f90533c9781))
+
 ## [1.14.0](https://www.github.com/aeternity/ae_mdw/compare/v1.13.1...v1.14.0) (2022-06-29)
 
 
