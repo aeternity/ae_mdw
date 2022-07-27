@@ -56,16 +56,16 @@ defmodule AeMdw.Db.AsyncStore do
   @spec next(t(), table(), key() | nil) :: {:ok, key()} | :none
   def next(%__MODULE__{tid: tid}, table, key) do
     case EtsCache.next(tid, {table, key}) do
-      nil -> :none
-      {_table, next_key} -> {:ok, next_key}
+      {^table, next_key} -> {:ok, next_key}
+      _not_found_or_mismatch -> :none
     end
   end
 
   @spec prev(t(), table(), key() | nil) :: {:ok, key()} | :none
   def prev(%__MODULE__{tid: tid}, table, key) do
     case EtsCache.prev(tid, {table, key}) do
-      nil -> :none
-      {_table, prev_key} -> {:ok, prev_key}
+      {^table, prev_key} -> {:ok, prev_key}
+      _not_found_or_mismatch -> :none
     end
   end
 
