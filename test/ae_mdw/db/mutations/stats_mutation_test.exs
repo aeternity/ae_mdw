@@ -19,7 +19,6 @@ defmodule AeMdw.Db.StatsMutationTest do
       height = 300
 
       on_exit(fn ->
-        AeMdw.Ets.clear(:stat_sync_cache)
         Database.dirty_delete(Model.DeltaStat, height)
         Database.dirty_delete(Model.TotalStat, height)
       end)
@@ -72,7 +71,6 @@ defmodule AeMdw.Db.StatsMutationTest do
       height = 300
 
       on_exit(fn ->
-        AeMdw.Ets.clear(:stat_sync_cache)
         Database.dirty_delete(Model.DeltaStat, height)
         Database.dirty_delete(Model.TotalStat, height)
       end)
@@ -124,10 +122,6 @@ defmodule AeMdw.Db.StatsMutationTest do
     end
 
     test "when there's names activated on the cache, it grabs it to store the stats" do
-      on_exit(fn ->
-        AeMdw.Ets.clear(:stat_sync_cache)
-      end)
-
       height = 300
       dev_amount = 50
       block_amount = 120
@@ -194,8 +188,6 @@ defmodule AeMdw.Db.StatsMutationTest do
 
   describe "execute/2" do
     test "with all_cached? = false, on 1st block reward it stores the stat using database counts" do
-      AeMdw.Ets.clear(:stat_sync_cache)
-
       height = 21
       mutation = StatsMutation.new(height, false)
 
