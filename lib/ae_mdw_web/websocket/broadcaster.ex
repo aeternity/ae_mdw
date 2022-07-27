@@ -4,11 +4,13 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   """
   use GenServer
 
+  defstruct [:dispatched_hashes]
+
   require Ex2ms
 
   @dialyzer {:no_return, broadcast: 2}
 
-  @no_state %{}
+  @max_hashes_size 10_000
   @subs_target_channels :subs_target_channels
 
   @spec start_link(any()) :: GenServer.on_start()
@@ -16,7 +18,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
 
   @impl GenServer
   def init(:ok) do
-    {:ok, @no_state}
+    {:ok, %__MODULE__{dispatched_hashes: :queue.new()}}
   end
 
   @spec broadcast_key_block(tuple(), :node | :mdw) :: :ok
@@ -35,25 +37,40 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   end
 
   @impl GenServer
-  def handle_cast({:broadcast_key_block, block, source}, _state) do
-    do_broadcast_key_block(block, source)
-    {:noreply, @no_state}
+  def handle_cast({:broadcast_key_block, block, source}, state) do
+    {:ok, hash} = block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
+
+    if not already_processed?(state, {:key, hash}) do
+      do_broadcast_key_block(block, source)
+    end
+
+    {:noreply, push_hash(state, {:key, hash})}
   end
 
   @impl GenServer
-  def handle_cast({:broadcast_micro_block, block, source}, _state) do
-    do_broadcast_micro_block(block, source)
-    {:noreply, @no_state}
+  def handle_cast({:broadcast_micro_block, block, source}, state) do
+    {:ok, hash} = block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
+
+    if not already_processed?(state, {:micro, hash}) do
+      do_broadcast_micro_block(block, source)
+    end
+
+    {:noreply, push_hash(state, {:micro, hash})}
   end
 
   @impl GenServer
-  def handle_cast({:broadcast_txs, block, source}, _state) do
-    do_broadcast_txs(block, source)
-    {:noreply, @no_state}
+  def handle_cast({:broadcast_txs, block, source}, state) do
+    {:ok, hash} = block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
+
+    if not already_processed?(state, {:txs, hash}) do
+      do_broadcast_txs(block, source)
+    end
+
+    {:noreply, push_hash(state, {:txs, hash})}
   end
 
   @impl GenServer
-  def handle_info({:broadcast_objects, header, tx, source}, _state) do
+  def handle_info({:broadcast_objects, header, tx, source}, state) do
     ser_tx = :aetx_sign.serialize_for_client(header, tx)
 
     tx
@@ -70,7 +87,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
       end
     end)
 
-    {:noreply, @no_state}
+    {:noreply, state}
   end
 
   #
@@ -231,5 +248,19 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     |> Enum.map(&elem(naked_tx, &1))
     |> Enum.map(&AeMdw.Validate.id!/1)
     |> Enum.uniq()
+  end
+
+  defp already_processed?(%__MODULE__{dispatched_hashes: dispatched_hashes}, type_hash) do
+    :queue.member(type_hash, dispatched_hashes)
+  end
+
+  defp push_hash(%__MODULE__{dispatched_hashes: dispatched_hashes}, type_hash) do
+    queue = :queue.in(type_hash, dispatched_hashes)
+
+    if length(:queue.to_list(queue)) > @max_hashes_size do
+      %__MODULE__{dispatched_hashes: :queue.drop(queue)}
+    else
+      %__MODULE__{dispatched_hashes: queue}
+    end
   end
 end

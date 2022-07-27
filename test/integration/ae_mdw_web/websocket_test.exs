@@ -455,6 +455,50 @@ defmodule Integration.AeMdwWeb.WebsocketTest do
       obj_payload = @object_mdw
       assert_receive ^obj_payload, 500
     end
+
+    test "when requesting multiple already processed key blocks, it only sends it once", %{
+      clients: [client | _rest]
+    } do
+      state = State.new()
+      recipient_id = "ak_2QkttUgEyPixKzqXkJ4LX7ugbRjwCDWPBT4p4M2r8brjxUxUYd"
+
+      assert :ok = WsClient.subscribe(client, :key_blocks)
+      assert :ok = WsClient.subscribe(client, :micro_blocks)
+      assert :ok = WsClient.subscribe(client, :transactions)
+      assert :ok = WsClient.subscribe(client, recipient_id)
+
+      # send request to ws client
+      Process.send_after(client, {:subs, self()}, 100)
+
+      # assert subscriptions
+      assert_receive ["KeyBlocks", "MicroBlocks", "Transactions", recipient_id], 200
+
+      {key_block, micro_blocks} = get_blocks(state, 311_860)
+      Broadcaster.broadcast_key_block(key_block, :mdw)
+      Broadcaster.broadcast_key_block(key_block, :mdw)
+      Broadcaster.broadcast_key_block(key_block, :mdw)
+      Process.send_after(client, {:kb, self()}, 100)
+
+      kb_payload = @key_block_mdw
+      assert_receive ^kb_payload, 300
+
+      [mb1 | _rest] = micro_blocks
+      Broadcaster.broadcast_micro_block(mb1, :mdw)
+      Process.send_after(client, {:mb, self()}, 100)
+
+      mb1_payload = @micro_block_mdw
+      assert_receive ^mb1_payload, 300
+
+      Broadcaster.broadcast_txs(mb1, :mdw)
+      Process.send_after(client, {:tx, self()}, 200)
+      Process.send_after(client, {:obj, self()}, 200)
+
+      tx_payload = @transaction_mdw
+      assert_receive ^tx_payload, 500
+
+      obj_payload = @object_mdw
+      assert_receive ^obj_payload, 500
+    end
   end
 
   defp get_blocks(state, height) do

@@ -303,12 +303,21 @@ defmodule AeMdw.Sync.Server do
   end
 
   defp exec_mem_mutations(gens_mutations, state) do
-    mutations =
-      gens_mutations
-      |> Enum.flat_map(fn {_height, blocks_mutations} -> blocks_mutations end)
-      |> Enum.flat_map(fn {_block_height, _block, block_mutations} -> block_mutations end)
+    blocks_mutations =
+      Enum.flat_map(gens_mutations, fn {_height, blocks_mutations} -> blocks_mutations end)
 
-    State.commit_mem(state, mutations)
+    all_mutations =
+      Enum.flat_map(blocks_mutations, fn {_block_index, _block, block_mutations} ->
+        block_mutations
+      end)
+
+    new_state = State.commit_mem(state, all_mutations)
+
+    Enum.each(blocks_mutations, fn {{_height, mbi}, block, _block_mutations} ->
+      broadcast_block(block, mbi == -1)
+    end)
+
+    new_state
   end
 
   defp spawn_task(fun) do
