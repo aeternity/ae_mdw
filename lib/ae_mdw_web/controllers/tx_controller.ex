@@ -62,6 +62,9 @@ defmodule AeMdwWeb.TxController do
   end
 
   @spec count(Conn.t(), map()) :: Conn.t()
+  @doc """
+  Counts all transactions for a given scope, type or address.
+  """
   def count(%Conn{assigns: %{state: state, scope: scope, query: query}} = conn, _params) do
     case Txs.count(state, scope, query) do
       {:ok, count} -> json(conn, count)
@@ -70,6 +73,9 @@ defmodule AeMdwWeb.TxController do
   end
 
   @spec count_id(Conn.t(), map()) :: Conn.t()
+  @doc """
+  Counts each field for all transaction types where this address is present.
+  """
   def count_id(%Conn{assigns: %{state: state}} = conn, %{"id" => id}),
     do: handle_input(conn, fn -> conn |> json(id_counts(state, Validate.id!(id))) end)
 

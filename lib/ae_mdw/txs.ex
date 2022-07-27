@@ -61,6 +61,23 @@ defmodule AeMdw.Txs do
     end
   end
 
+  def count(state, nil, %{"id" => id}) do
+    case Validate.id(id) do
+      {:ok, address} ->
+        total_count =
+          Node.tx_types()
+          |> Enum.map(fn tx_type ->
+            field_count(state, tx_type, address)
+          end)
+          |> Enum.sum()
+
+        {:ok, total_count}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   def count(state, nil, params) when map_size(params) == 0,
     do: {:ok, DbUtil.last_txi!(state)}
 
@@ -496,5 +513,17 @@ defmodule AeMdw.Txs do
       _other_field ->
         base_types
     end
+  end
+
+  defp field_count(state, tx_type, address) do
+    tx_type
+    |> Node.tx_ids()
+    |> Enum.map(fn {_field, pos} ->
+      case State.get(state, Model.IdCount, {tx_type, pos, address}) do
+        {:ok, Model.id_count(count: count)} -> count
+        :not_found -> 0
+      end
+    end)
+    |> Enum.sum()
   end
 end

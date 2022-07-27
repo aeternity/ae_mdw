@@ -70,6 +70,29 @@ defmodule AeMdwWeb.TxControllerTest do
                |> json_response(200)
     end
 
+    test "when filtering by id, it displays the total count for that address", %{
+      conn: conn,
+      store: store
+    } do
+      address = TS.address(0)
+      enc_address = :aeser_api_encoder.encode(:account_pubkey, address)
+
+      store =
+        store
+        |> Store.put(Model.IdCount, Model.id_count(index: {:spend_tx, 1, address}, count: 3))
+        |> Store.put(Model.IdCount, Model.id_count(index: {:spend_tx, 2, address}, count: 2))
+        |> Store.put(
+          Model.IdCount,
+          Model.id_count(index: {:oracle_extend_tx, 1, address}, count: 10)
+        )
+
+      assert 15 =
+               conn
+               |> with_store(store)
+               |> get("/txs/count", id: enc_address)
+               |> json_response(200)
+    end
+
     test "when filtering by invalid type, it displays an error", %{conn: conn} do
       error_msg = "invalid transaction type: oracle_foo"
 
