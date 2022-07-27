@@ -7,8 +7,14 @@ defmodule AeMdw.Db.HardforkPresetsTest do
   alias AeMdw.Db.State
 
   describe "import_account_presets" do
-    test "saves minerva, fortuna and lima migrated accounts" do
+    test "saves genesis, minerva, fortuna and lima migrated accounts" do
       HardforkPresets.import_account_presets()
+
+      assert 716 ==
+               State.new()
+               |> Collection.stream(Model.KindIntTransferTx, {"accounts_genesis", nil, nil, nil})
+               |> Stream.take_while(&match?({"accounts_genesis", _bi, _target, _txi}, &1))
+               |> Enum.count()
 
       assert 325 ==
                State.new()

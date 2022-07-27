@@ -13,15 +13,14 @@ defmodule AeMdwWeb.TransferControllerTest do
       conn: conn
     } do
       kind_prefix = "accounts"
-      kinds = ~w(accounts_minerva accounts_fortuna accounts_lima)
 
       conn = get(conn, "/v2/transfers", direction: "forward", kind: kind_prefix, limit: 100)
       response = json_response(conn, 200)
 
       assert Enum.count(response["data"]) == 100
 
-      assert Enum.all?(response["data"], fn %{"kind" => kind} ->
-               String.starts_with?(kind, kind_prefix) and kind in kinds
+      assert Enum.all?(response["data"], fn %{"kind" => kind, "height" => height} ->
+               kind == "accounts_genesis" and height == 0
              end)
 
       conn_next = get(conn, response["next"])
@@ -29,8 +28,8 @@ defmodule AeMdwWeb.TransferControllerTest do
 
       assert Enum.count(response_next["data"]) == 100
 
-      assert Enum.all?(response_next["data"], fn %{"kind" => kind} ->
-               String.starts_with?(kind, kind_prefix) and kind in kinds
+      assert Enum.all?(response_next["data"], fn %{"kind" => kind, "height" => height} ->
+               kind == "accounts_genesis" and height == 0
              end)
     end
 

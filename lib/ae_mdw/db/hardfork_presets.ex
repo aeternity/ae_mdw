@@ -22,14 +22,20 @@ defmodule AeMdw.Db.HardforkPresets do
   end
 
   defp do_import_account_presets() do
-    minerva_mutations = hardfork_mutations(:minerva, &:aec_fork_block_settings.minerva_accounts/0)
-    fortuna_mutations = hardfork_mutations(:fortuna, &:aec_fork_block_settings.fortuna_accounts/0)
-    lima_mutations = hardfork_mutations(:lima, &:aec_fork_block_settings.lima_accounts/0)
+    genesis_mutation = hardfork_mutation(:genesis, &:aec_fork_block_settings.genesis_accounts/0)
+    minerva_mutation = hardfork_mutation(:minerva, &:aec_fork_block_settings.minerva_accounts/0)
+    fortuna_mutation = hardfork_mutation(:fortuna, &:aec_fork_block_settings.fortuna_accounts/0)
+    lima_mutation = hardfork_mutation(:lima, &:aec_fork_block_settings.lima_accounts/0)
 
-    State.commit(State.new(), [minerva_mutations, fortuna_mutations, lima_mutations])
+    State.commit(State.new(), [
+      genesis_mutation,
+      minerva_mutation,
+      fortuna_mutation,
+      lima_mutation
+    ])
   end
 
-  defp hardfork_mutations(hardfork, fork_settings_accounts_fn) do
+  defp hardfork_mutation(hardfork, fork_settings_accounts_fn) do
     transfers = hardfork_transfers("accounts_#{hardfork}", fork_settings_accounts_fn)
 
     hardfork
@@ -43,6 +49,8 @@ defmodule AeMdw.Db.HardforkPresets do
       {kind, account_pk, amount}
     end)
   end
+
+  defp hardfork_height(:genesis), do: 0
 
   defp hardfork_height(hardfork) do
     hf_vsn = :aec_hard_forks.protocol_vsn(hardfork)
