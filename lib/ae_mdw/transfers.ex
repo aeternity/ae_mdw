@@ -24,7 +24,9 @@ defmodule AeMdw.Transfers do
 
   @pagination_params ~w(limit cursor rev direction scope tx_hash)
 
-  @kinds ~w(fee_lock_name fee_refund_name fee_spend_name reward_block reward_dev reward_oracle)
+  @hardforks_accounts ~w(accounts_genesis accounts_minerva accounts_fortuna accounts_lima)
+  @kinds ~w(fee_lock_name fee_refund_name fee_spend_name reward_block reward_dev reward_oracle) ++
+           @hardforks_accounts
 
   @int_transfer_table Model.IntTransferTx
   @target_kind_int_transfer_tx_table Model.TargetKindIntTransferTx

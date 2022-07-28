@@ -238,6 +238,11 @@ defmodule AeMdw.Application do
     :ok
   end
 
+  def start_phase(:hardforks_presets, _start_type, []) do
+    AeMdw.Db.HardforkPresets.import_account_presets()
+    :ok
+  end
+
   def start_phase(:start_sync, _start_type, []) do
     AeMdw.Db.AsyncStore.init()
     AeMdw.Db.Aex9BalancesCache.init()

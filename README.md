@@ -2933,10 +2933,12 @@ Besides specifying of scope and direction as with other streaming endpoints (via
 	- `reward_oracle` (reward for the operator of the oracle (on transaction basis))
   - `reward_block` (reward for the miner (on block basis))
   - `reward_dev` (reward for funding of the development (on block basis))
+  - `accounts_minerva`, `accounts_fortuna` and `accounts_lima` (added on hardforks including migrated ERC20 amounts)
 
-	It it possible to provide just a prefix of the kind in interest, e.g.: "reward" will return all rewards, "fee" will return all fees.
+	It it possible to provide just a prefix of the kind in interest, e.g.: "reward" will return all rewards, "fee" will return all fees,
+  "accounts" will return credits after hardforks.
 
-- `account` - account which received rewards or was charged fees
+- `account` - account which received rewards or that was charged fees or that received tokens after a hardfork migration.
 
 Listing internal transfers in range
 
