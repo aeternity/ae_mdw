@@ -4,13 +4,14 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   """
   use GenServer
 
-  defstruct [:dispatched_hashes]
+  alias AeMdw.EtsCache
 
   require Ex2ms
 
   @dialyzer {:no_return, broadcast: 2}
 
-  @max_hashes_size 10_000
+  @hashes_table :broadcast_hashes
+  @expiration_minutes 120
   @subs_target_channels :subs_target_channels
 
   @spec start_link(any()) :: GenServer.on_start()
@@ -18,7 +19,8 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
 
   @impl GenServer
   def init(:ok) do
-    {:ok, %__MODULE__{dispatched_hashes: :queue.new()}}
+    EtsCache.new(@hashes_table, @expiration_minutes)
+    {:ok, :no_state}
   end
 
   @spec broadcast_key_block(tuple(), :node | :mdw) :: :ok
@@ -40,33 +42,39 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   def handle_cast({:broadcast_key_block, block, source}, state) do
     {:ok, hash} = block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
 
-    if not already_processed?(state, {:key, hash}) do
+    if not already_processed?({:key, hash}) do
       do_broadcast_key_block(block, source)
     end
 
-    {:noreply, push_hash(state, {:key, hash})}
+    push_hash({:key, hash})
+
+    {:noreply, state}
   end
 
   @impl GenServer
   def handle_cast({:broadcast_micro_block, block, source}, state) do
     {:ok, hash} = block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
 
-    if not already_processed?(state, {:micro, hash}) do
+    if not already_processed?({:micro, hash}) do
       do_broadcast_micro_block(block, source)
     end
 
-    {:noreply, push_hash(state, {:micro, hash})}
+    push_hash({:micro, hash})
+
+    {:noreply, state}
   end
 
   @impl GenServer
   def handle_cast({:broadcast_txs, block, source}, state) do
     {:ok, hash} = block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
 
-    if not already_processed?(state, {:txs, hash}) do
+    if not already_processed?({:txs, hash}) do
       do_broadcast_txs(block, source)
     end
 
-    {:noreply, push_hash(state, {:txs, hash})}
+    push_hash({:txs, hash})
+
+    {:noreply, state}
   end
 
   @impl GenServer
@@ -250,17 +258,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     |> Enum.uniq()
   end
 
-  defp already_processed?(%__MODULE__{dispatched_hashes: dispatched_hashes}, type_hash) do
-    :queue.member(type_hash, dispatched_hashes)
-  end
+  defp already_processed?(type_hash), do: EtsCache.get(@hashes_table, type_hash) != nil
 
-  defp push_hash(%__MODULE__{dispatched_hashes: dispatched_hashes}, type_hash) do
-    queue = :queue.in(type_hash, dispatched_hashes)
-
-    if length(:queue.to_list(queue)) > @max_hashes_size do
-      %__MODULE__{dispatched_hashes: :queue.drop(queue)}
-    else
-      %__MODULE__{dispatched_hashes: queue}
-    end
-  end
+  defp push_hash(type_hash), do: EtsCache.put(@hashes_table, type_hash, :ok)
 end
