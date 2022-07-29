@@ -3,10 +3,16 @@ defmodule AeMdw.Db.ContractTest do
 
   alias AeMdw.AexnContracts
   alias AeMdw.Db.Contract
+  alias AeMdw.Db.MemStore
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
+  alias AeMdw.Sync.AsyncTasks
 
   import AeMdw.Node.ContractCallFixtures, only: [call_rec: 1]
   import Mock
+
+  require Model
 
   test "update AEX9 state on non AEX9 contract call with logs having AEX9 contracts" do
     not_aex9_contract_pk =
@@ -37,6 +43,9 @@ defmodule AeMdw.Db.ContractTest do
     meta_info2 = {"some-AEX9-39, 26, 34", "AEX9-39, 26, 34", 18}
     meta_info3 = {"some-AEX9-159, 45, 233", "AEX9-159, 45, 233", 18}
 
+    kb_hash = :crypto.strong_rand_bytes(32)
+    next_mb_hash = :crypto.strong_rand_bytes(32)
+
     with_mocks [
       {
         AexnContracts,
@@ -52,7 +61,18 @@ defmodule AeMdw.Db.ContractTest do
           end,
           call_extensions: fn _type, _pk -> {:ok, []} end
         ]
-      }
+      },
+      {AeMdw.Node.Db, [],
+       [
+         get_key_block_hash: fn height ->
+           assert ^height = kbi + 1
+           kb_hash
+         end,
+         get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
+         aex9_balances: fn _ct_pk, {:micro, ^kbi, ^next_mb_hash} = block_tuple ->
+           {%{{:address, :crypto.strong_rand_bytes(32)} => <<>>}, block_tuple}
+         end
+       ]}
     ] do
       log_contracts = [
         {28_040_406, log_aex9_pk1},
@@ -61,27 +81,31 @@ defmodule AeMdw.Db.ContractTest do
         {27_821_847, non_aex9_log_pk}
       ]
 
-      state =
-        log_contracts
-        |> Enum.reduce(State.new(), fn {create_txi, ct_pk}, state ->
-          State.cache_put(state, :ct_create_sync_cache, ct_pk, create_txi)
+      mem_state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+
+      log_contracts
+      |> Enum.reduce(mem_state, fn {create_txi, ct_pk}, state ->
+        State.cache_put(state, :ct_create_sync_cache, ct_pk, create_txi)
+      end)
+      |> State.cache_put(:ct_create_sync_cache, not_aex9_contract_pk, create_txi)
+      |> Contract.logs_write(block_index, create_txi, txi, call_rec("add_liquidity_ae"))
+      |> State.commit_mem([])
+
+      tasks =
+        AsyncTasks.Store.fetch_unprocessed()
+        |> Enum.map(fn Model.async_task(index: {_ts, type}, args: args, extra_args: extra_args) ->
+          {type, args, extra_args}
         end)
-        |> State.cache_put(:ct_create_sync_cache, not_aex9_contract_pk, create_txi)
-        |> Contract.logs_write(block_index, create_txi, txi, call_rec("add_liquidity_ae"))
 
-      aex9_logs_update_pubkeys =
-        log_contracts
-        |> Enum.reverse()
-        |> Kernel.--([{28_040_406, log_aex9_pk1}, {27_821_847, non_aex9_log_pk}])
-        |> Enum.map(fn {_create_txi, contract_pk} ->
-          {{:update_aex9_state, [contract_pk]}, [block_index, txi]}
+      aex9_logs_task_args =
+        Enum.map(log_contracts -- [{27_821_847, non_aex9_log_pk}], fn {_create_txi, contract_pk} ->
+          {:update_aex9_state, [contract_pk], [block_index, txi]}
         end)
 
-      assert Enum.all?(aex9_logs_update_pubkeys, &(&1 in state.jobs))
-
-      assert Enum.any?(state.jobs, fn {{:update_aex9_state, [pk]}, args} ->
-               pk == log_aex9_pk1 and args == [{kbi, mbi}, txi]
-             end)
+      assert aex9_logs_task_args -- tasks == []
     end
   end
 end

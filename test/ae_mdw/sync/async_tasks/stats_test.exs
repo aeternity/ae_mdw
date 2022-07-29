@@ -39,12 +39,12 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
         end)
       end)
 
-      pending_count = length(m_tasks)
-
       # setup new to expected pending
       Enum.each(m_tasks, fn m_task ->
         Database.dirty_write(Model.AsyncTask, m_task)
       end)
+
+      pending_count = Database.count(Model.AsyncTask)
 
       assert %{producer_buffer: 0, total_pending: 0} = Stats.counters()
       assert :ok = Stats.update_buffer_len(5, 100)

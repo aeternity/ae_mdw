@@ -3,6 +3,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
   alias AeMdw.Database
   alias AeMdw.Db.AexnCreateContractMutation
+  alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
 
@@ -349,15 +350,10 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       contract_pk = :crypto.strong_rand_bytes(32)
       aexn_meta_info = {:out_of_gas_error, :out_of_gas_error, nil}
 
-      State.commit(State.new(), [
-        AexnCreateContractMutation.new(
-          :aex9,
-          contract_pk,
-          aexn_meta_info,
-          {123, 0},
-          123_456,
-          ["ext1", "ext2"]
-        )
+      State.new()
+      |> Contract.aexn_creation_write(:aex9, aexn_meta_info, contract_pk, 12_345_678, [
+        "ext1",
+        "ext2"
       ])
 
       contract_id = enc_ct(contract_pk)
@@ -403,7 +399,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
           contract_pk,
           aexn_meta_info,
           {123, 1},
-          123_456,
+          12_345_679,
           ["ext1", "ext2"]
         )
       ])

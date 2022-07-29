@@ -3,6 +3,9 @@ defmodule AeMdw.Aex9Test do
 
   alias AeMdw.Aex9
   alias AeMdw.Db.State
+  alias AeMdw.Db.AsyncStore
+  alias AeMdw.Db.Mutation
+  alias AeMdw.Db.UpdateAex9StateMutation
 
   import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1, enc_id: 1]
   import Mock
@@ -10,12 +13,8 @@ defmodule AeMdw.Aex9Test do
   describe "fetch_balances" do
     test "gets contract balances from async store" do
       ct_pk = :crypto.strong_rand_bytes(32)
-      {kbi, mbi} = block_index = {123_456, 3}
-      next_kbi = kbi + 1
+      block_index = {123_456, 3}
       call_txi = 12_345_678
-
-      next_kb_hash = :crypto.strong_rand_bytes(32)
-      next_mb_hash = :crypto.strong_rand_bytes(32)
 
       balances =
         for _i <- 1..10, into: %{} do
@@ -24,36 +23,25 @@ defmodule AeMdw.Aex9Test do
           {{:address, account_pk}, amount}
         end
 
-      with_mocks [
-        {AeMdw.Node.Db, [],
-         [
-           get_key_block_hash: fn
-             ^next_kbi ->
-               next_kb_hash
-           end,
-           get_next_hash: fn ^next_kb_hash, ^mbi -> next_mb_hash end,
-           aex9_balances: fn ^ct_pk, {:micro, ^kbi, ^next_mb_hash} ->
-             {balances, nil}
-           end
-         ]}
-      ] do
-        state = State.enqueue(State.new(), :update_aex9_state, [ct_pk], [block_index, call_txi])
-        assert %State{} = State.commit_mem(state, [])
+      balances_list =
+        Enum.map(balances, fn {{:address, account_pk}, amount} -> {account_pk, amount} end)
 
-        assert balances == Aex9.fetch_balances(nil, ct_pk, false)
-      end
+      async_state = State.new(AsyncStore.instance())
+
+      Mutation.execute(
+        UpdateAex9StateMutation.new(ct_pk, block_index, call_txi, balances_list),
+        async_state
+      )
+
+      assert balances == Aex9.fetch_balances(nil, ct_pk, false)
     end
   end
 
   describe "fetch_balance" do
     test "gets account balance from async store" do
       ct_pk = :crypto.strong_rand_bytes(32)
-      {kbi, mbi} = block_index = {123_456, 3}
-      next_kbi = kbi + 1
+      block_index = {123_456, 3}
       call_txi = 12_345_678
-
-      next_kb_hash = :crypto.strong_rand_bytes(32)
-      next_mb_hash = :crypto.strong_rand_bytes(32)
 
       account_pk = :crypto.strong_rand_bytes(32)
       amount = Enum.random(1_000_000_000..9_999_999_999)
@@ -66,6 +54,16 @@ defmodule AeMdw.Aex9Test do
         end
         |> Map.put({:address, account_pk}, amount)
 
+      balances_list =
+        Enum.map(balances, fn {{:address, account_pk}, amount} -> {account_pk, amount} end)
+
+      async_state = State.new(AsyncStore.instance())
+
+      Mutation.execute(
+        UpdateAex9StateMutation.new(ct_pk, block_index, call_txi, balances_list),
+        async_state
+      )
+
       with_mocks [
         {
           AeMdw.AexnContracts,
@@ -73,22 +71,8 @@ defmodule AeMdw.Aex9Test do
           [
             is_aex9?: fn pk -> pk == ct_pk end
           ]
-        },
-        {AeMdw.Node.Db, [],
-         [
-           get_key_block_hash: fn
-             ^next_kbi ->
-               next_kb_hash
-           end,
-           get_next_hash: fn ^next_kb_hash, ^mbi -> next_mb_hash end,
-           aex9_balances: fn ^ct_pk, {:micro, ^kbi, ^next_mb_hash} ->
-             {balances, nil}
-           end
-         ]}
+        }
       ] do
-        state = State.enqueue(State.new(), :update_aex9_state, [ct_pk], [block_index, call_txi])
-        assert %State{} = State.commit_mem(state, [])
-
         assert {:ok,
                 %{
                   contract: enc_ct(ct_pk),

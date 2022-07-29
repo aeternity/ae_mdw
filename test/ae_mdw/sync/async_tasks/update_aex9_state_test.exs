@@ -1,132 +1,134 @@
 defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
 
-  alias AeMdw.Database
+  alias AeMdw.Db.AsyncStore
   alias AeMdw.Db.Aex9BalancesCache
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Sync.AsyncTasks.UpdateAex9State
-  alias AeMdw.Validate
 
   import Mock
 
   require Model
 
+  @account_pk1 <<100_000_000_001_001::256>>
+  @account_pk2 <<100_000_000_001_002::256>>
+
+  @amount1 Enum.random(1_000_000_000..9_999_999_999)
+  @amount2 Enum.random(1_000_000_000..9_999_999_999)
+
+  @balances1 %{
+    {:address, @account_pk1} => @amount1,
+    {:address, @account_pk2} => @amount2
+  }
+
+  @contract_pk1 <<100_000_000_001_003::256>>
+  @contract_pk2 <<100_000_000_001_004::256>>
+  @contract_pk3 <<100_000_000_001_005::256>>
+
+  @kbi 100_001
+  @mbi 11
+  @kb_hash :crypto.strong_rand_bytes(32)
+  @next_hash :crypto.strong_rand_bytes(32)
+
+  setup_with_mocks([
+    {AeMdw.Node.Db, [],
+     [
+       get_key_block_hash: fn height ->
+         assert ^height = @kbi + 1
+         @kb_hash
+       end,
+       get_next_hash: fn kb_hash, mbi ->
+         assert kb_hash == @kb_hash and mbi == @mbi
+         @next_hash
+       end,
+       aex9_balances: fn contract_pk, next_hash = block_tuple ->
+         assert next_hash == {:micro, @kbi, @next_hash}
+
+         cond do
+           contract_pk == @contract_pk1 ->
+             {@balances1, block_tuple}
+
+           contract_pk == @contract_pk2 ->
+             {%{}, block_tuple}
+         end
+       end
+     ]}
+  ]) do
+    :ok
+  end
+
   describe "process/1" do
     test "updates aex9 presence and balance" do
-      kbi = 319_506
-      mbi = 147
-      block_index = {kbi, mbi}
-      call_txi = 16_063_747
-      amount1 = 323_838_000_000_000_000_000
-      amount2 = 103_680_000_000_000_000_000
-      kb_hash = Validate.id!("kh_2DQZpzmoTVvUUtRtLsamt2j6cN43YRcMtP6S8YCMehZ8DAbety")
+      block_index = {@kbi, @mbi}
+      call_txi = 12_345_679
+      amount1 = @amount1
+      amount2 = @amount2
 
-      next_mb_hash = Validate.id!("mh_23nKM7w1YmDceMohUF7kgxfCgWbGM4kfjZsJtg1FoeYcqrzdMw")
-      contract_pk = Validate.id("ct_ypGRSB6gEy8koLg6a4WRdShTfRsh9HfkMkxsE2SMCBk3JdkNP")
-      account_pk1 = Validate.id!("ak_2g2yq6RniwW1cjKRu4HdVVQXa5GQZkBaXiaVogQXnRxUKpmhS")
-      account_pk2 = Validate.id!("ak_24h4GD5wdWmQ5sLFADdZYKjEREMujbTAup5THvthcnPikYozq3")
+      UpdateAex9State.process([@contract_pk1, block_index, call_txi])
 
-      with_mocks [
-        {AeMdw.Node.Db, [],
-         [
-           get_key_block_hash: fn height ->
-             assert ^height = kbi + 1
-             kb_hash
-           end,
-           get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
-           aex9_balances: fn ^contract_pk, {:micro, ^kbi, ^next_mb_hash} = block_tuple ->
-             balances = %{
-               {:address, account_pk1} => amount1,
-               {:address, account_pk2} => amount2
-             }
+      state = State.new(AsyncStore.instance())
 
-             {balances, block_tuple}
-           end
-         ]}
-      ] do
-        UpdateAex9State.process([contract_pk, block_index, call_txi])
+      Enum.any?(1..10, fn _i ->
+        Process.sleep(100)
 
         assert Model.aex9_balance(block_index: ^block_index, txi: ^call_txi, amount: ^amount1) =
-                 Database.fetch!(Model.Aex9Balance, {contract_pk, account_pk1})
+                 State.fetch!(state, Model.Aex9Balance, {@contract_pk1, @account_pk1})
+      end)
 
-        assert Model.aex9_balance(block_index: ^block_index, txi: ^call_txi, amount: ^amount2) =
-                 Database.fetch!(Model.Aex9Balance, {contract_pk, account_pk2})
+      assert Model.aex9_balance(block_index: ^block_index, txi: ^call_txi, amount: ^amount2) =
+               State.fetch!(state, Model.Aex9Balance, {@contract_pk1, @account_pk2})
 
-        assert Model.aex9_account_presence(txi: ^call_txi) =
-                 Database.fetch!(Model.Aex9AccountPresence, {account_pk1, contract_pk})
+      assert Model.aex9_account_presence(txi: ^call_txi) =
+               State.fetch!(state, Model.Aex9AccountPresence, {@account_pk1, @contract_pk1})
 
-        assert Model.aex9_account_presence(txi: ^call_txi) =
-                 Database.fetch!(Model.Aex9AccountPresence, {account_pk2, contract_pk})
-      end
+      assert Model.aex9_account_presence(txi: ^call_txi) =
+               State.fetch!(state, Model.Aex9AccountPresence, {@account_pk2, @contract_pk1})
     end
 
     test "creates empty balance when contract has no balance" do
-      kbi = 319_507
-      mbi = 147
-      block_index = {kbi, mbi}
-      call_txi = 16_063_748
-      kb_hash = :crypto.strong_rand_bytes(32)
-      next_mb_hash = :crypto.strong_rand_bytes(32)
-      contract_pk = :crypto.strong_rand_bytes(32)
+      block_index = {@kbi, @mbi}
+      call_txi = 12_345_680
 
-      with_mocks [
-        {AeMdw.Node.Db, [],
-         [
-           get_key_block_hash: fn height ->
-             assert ^height = kbi + 1
-             kb_hash
-           end,
-           get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
-           aex9_balances: fn ^contract_pk, {:micro, ^kbi, ^next_mb_hash} = block_tuple ->
-             {%{}, block_tuple}
-           end
-         ]}
-      ] do
-        UpdateAex9State.process([contract_pk, block_index, call_txi])
-        assert Database.exists?(Model.Aex9Balance, {contract_pk, <<>>})
-      end
+      UpdateAex9State.process([@contract_pk2, block_index, call_txi])
+
+      state = State.new(AsyncStore.instance())
+
+      assert Enum.any?(1..10, fn _i ->
+               Process.sleep(100)
+               State.exists?(state, Model.Aex9Balance, {@contract_pk2, <<>>})
+             end)
     end
 
     test "uses cached aex9 balances when already dry-runned" do
-      kbi = 123
-      mbi = 1
-      block_index = {kbi, mbi}
-      call_txi = 123_456
-      kb_hash = :crypto.strong_rand_bytes(32)
-      next_mb_hash = :crypto.strong_rand_bytes(32)
-      contract_pk = :crypto.strong_rand_bytes(32)
+      block_index = {@kbi, @mbi}
+      call_txi = 12_345_681
+
       account_pk1 = :crypto.strong_rand_bytes(32)
       account_pk2 = :crypto.strong_rand_bytes(32)
-      amount1 = Enum.random(1_000_000..9_999_999)
-      amount2 = Enum.random(1_000_000..9_999_999)
 
-      Aex9BalancesCache.put(contract_pk, block_index, next_mb_hash, %{
+      amount1 = Enum.random(1_000_000_000..9_999_999_999)
+      amount2 = Enum.random(1_000_000_000..9_999_999_999)
+
+      Aex9BalancesCache.put(@contract_pk3, block_index, @next_hash, %{
         {:address, account_pk1} => amount1,
         {:address, account_pk2} => amount2
       })
 
-      with_mocks [
-        {AeMdw.Node.Db, [],
-         [
-           get_key_block_hash: fn height ->
-             assert ^height = kbi + 1
-             kb_hash
-           end,
-           get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
-           aex9_balances: fn ^contract_pk, {:micro, ^kbi, ^next_mb_hash} = block_tuple ->
-             {%{}, block_tuple}
-           end
-         ]}
-      ] do
-        UpdateAex9State.process([contract_pk, block_index, call_txi])
-        refute Database.exists?(Model.Aex9Balance, {contract_pk, <<>>})
+      UpdateAex9State.process([@contract_pk3, {@kbi, @mbi}, call_txi])
+      state = State.new(AsyncStore.instance())
+
+      Enum.any?(1..10, fn _i ->
+        Process.sleep(100)
 
         assert Model.aex9_balance(block_index: ^block_index, txi: ^call_txi, amount: ^amount1) =
-                 Database.fetch!(Model.Aex9Balance, {contract_pk, account_pk1})
+                 State.fetch!(state, Model.Aex9Balance, {@contract_pk3, account_pk1})
+      end)
 
-        assert Model.aex9_balance(block_index: ^block_index, txi: ^call_txi, amount: ^amount2) =
-                 Database.fetch!(Model.Aex9Balance, {contract_pk, account_pk2})
-      end
+      assert Model.aex9_balance(block_index: ^block_index, txi: ^call_txi, amount: ^amount2) =
+               State.fetch!(state, Model.Aex9Balance, {@contract_pk3, account_pk2})
+
+      refute State.exists?(state, Model.Aex9Balance, {@contract_pk3, <<>>})
     end
   end
 end

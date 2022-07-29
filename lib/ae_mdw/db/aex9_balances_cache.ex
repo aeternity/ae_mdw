@@ -27,18 +27,20 @@ defmodule AeMdw.Db.Aex9BalancesCache do
   end
 
   @spec put(NodeDb.pubkey(), Blocks.block_index(), Blocks.block_hash(), balances()) :: :ok
-  def put(contract_pk, height, block_hash, balances) do
-    EtsCache.put(@table, {contract_pk, height, block_hash}, balances)
+  def put(contract_pk, block_index, block_hash, balances) do
+    EtsCache.put(@table, {contract_pk, block_index, block_hash}, balances)
     :ok
   end
 
-  @spec purge(NodeDb.pubkey(), Blocks.block_index()) :: :ok
+  @spec purge(NodeDb.pubkey(), Blocks.block_index()) :: balances()
   def purge(contract_pk, block_index) do
     with {^contract_pk, ^block_index, hash} <-
-           EtsCache.next(@table, {contract_pk, block_index, <<>>}) do
+           EtsCache.next(@table, {contract_pk, block_index, <<>>}),
+         {balances, _time} <- EtsCache.get(@table, {contract_pk, block_index, hash}) do
       EtsCache.del(@table, {contract_pk, block_index, hash})
+      balances
+    else
+      _other_or_nil -> %{}
     end
-
-    :ok
   end
 end

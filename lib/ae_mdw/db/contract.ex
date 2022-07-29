@@ -66,11 +66,17 @@ defmodule AeMdw.Db.Contract do
   @spec aex9_write_presence(state(), pubkey(), integer(), pubkey()) :: state()
   def aex9_write_presence(state, contract_pk, txi, account_pk) do
     m_acc_presence = Model.aex9_account_presence(index: {account_pk, contract_pk}, txi: txi)
-    m_idx_presence = Model.idx_aex9_account_presence(index: {txi, account_pk, contract_pk})
 
-    state
-    |> State.put(Model.Aex9AccountPresence, m_acc_presence)
-    |> State.put(Model.IdxAex9AccountPresence, m_idx_presence)
+    State.put(state, Model.Aex9AccountPresence, m_acc_presence)
+  end
+
+  @spec aex9_delete_presence(state(), pubkey(), pubkey()) :: state()
+  def aex9_delete_presence(state, account_pk, contract_pk) do
+    if State.exists?(state, Model.Aex9AccountPresence, {account_pk, contract_pk}) do
+      State.delete(state, Model.Aex9AccountPresence, {account_pk, contract_pk})
+    else
+      state
+    end
   end
 
   @spec aex9_transfer_balance(state(), pubkey(), pubkey(), pubkey(), non_neg_integer()) :: state()

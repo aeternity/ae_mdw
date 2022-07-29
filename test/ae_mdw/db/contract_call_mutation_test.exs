@@ -4,11 +4,9 @@ defmodule AeMdw.Db.ContractCallMutationTest do
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.MemStore
-  alias AeMdw.Db.Mutation
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
-  alias AeMdw.Db.Store
-  alias AeMdw.Sync.AsyncTasks.Consumer
+  alias AeMdw.Sync.AsyncTasks
   alias AeMdw.Validate
 
   import AeMdw.Node.ContractCallFixtures
@@ -16,206 +14,106 @@ defmodule AeMdw.Db.ContractCallMutationTest do
   import Mock
   require Model
 
-  @mint_ct_pk Validate.id!("ct_pqfbS94uUpE8reSwgtaAy5odGi7cPRMAxbjMyEzpTGqwTWyn5")
-
-  @transfer_ct_pk Validate.id!("ct_pqfbS94uUpE8reSwgtaAy5odGi7cPRMAxbjMyEzpTGqwTWyn5")
-
-  @transfer_allow_ct_pk Validate.id!("ct_2Jm3s7uHMvM7tRSCvFWurCh8LjZoTHa7LshKZSTZigCv1WnvmJ")
-
-  @burn_ct_pk Validate.id!("ct_kraQeEEaoKKUq3qPHxyrsN1rvD9jPr58QFat5Ha641LtgLwEA")
   @burn_caller_pk <<234, 90, 164, 101, 3, 211, 169, 40, 246, 51, 6, 203, 132, 12, 34, 114, 203,
                     201, 104, 124, 76, 144, 134, 158, 55, 106, 213, 160, 170, 64, 59, 72>>
 
   describe "aex9 presence" do
     test "add aex9 presence after a mint" do
       call_txi = 10_552_888
-      block_index = {kbi, mbi} = {246_949, 83}
-
-      state =
-        NullStore.new()
-        |> MemStore.new()
-        |> Store.put(
-          Model.Field,
-          Model.field(index: {:contract_create_tx, nil, @mint_ct_pk, 121})
-        )
-        |> State.new()
+      block_index = {246_949, 83}
+      contract_pk = :crypto.strong_rand_bytes(32)
 
       assert {account_pk, mutation} =
-               contract_call_mutation("mint", block_index, call_txi, @mint_ct_pk)
+               contract_call_mutation("mint", block_index, call_txi, contract_pk)
 
-      contract_pk = @mint_ct_pk
       assert %ContractCallMutation{txi: ^call_txi, contract_pk: ^contract_pk} = mutation
 
-      kb_hash = <<123_451::256>>
-      next_mb_hash = Validate.id!("mh_2JWXTaf6BzWrTpZMMcBZjxUXX9zNDva2GBT71jhFNiV1ic1gsL")
+      NullStore.new()
+      |> MemStore.new()
+      |> State.new()
+      |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+      |> State.commit_mem([mutation])
 
-      with_mocks [
-        {AeMdw.Node.Db, [],
-         [
-           get_key_block_hash: fn _height ->
-             kb_hash
-           end,
-           get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
-           aex9_balances: fn ^contract_pk, {:micro, ^kbi, ^next_mb_hash} ->
-             balances = %{{:address, account_pk} => 100_000_000_000_000_001}
-
-             {balances, nil}
-           end
-         ]}
-      ] do
-        state =
-          state
-          |> State.commit_mem([mutation])
-          |> process_async_tasks()
-
-        assert State.exists?(state, Model.Aex9AccountPresence, {account_pk, contract_pk})
-      end
+      assert AsyncTasks.Store.fetch_unprocessed()
+             |> Enum.find(fn Model.async_task(args: args, extra_args: extra_args) ->
+               args == [contract_pk] and extra_args == [block_index, call_txi]
+             end)
     end
 
     test "add aex9 presence after a transfer" do
       call_txi = 10_587_359
-      block_index = {kbi, mbi} = {247_411, 5}
-
-      state =
-        NullStore.new()
-        |> MemStore.new()
-        |> Store.put(
-          Model.Field,
-          Model.field(index: {:contract_create_tx, nil, @transfer_ct_pk, 122})
-        )
-        |> State.new()
+      block_index = {247_411, 5}
+      contract_pk = :crypto.strong_rand_bytes(32)
 
       assert {account_pk, mutation} =
                contract_call_mutation(
                  "transfer",
                  block_index,
                  call_txi,
-                 @transfer_ct_pk
+                 contract_pk
                )
 
-      contract_pk = @transfer_ct_pk
       assert %ContractCallMutation{txi: ^call_txi, contract_pk: ^contract_pk} = mutation
-      kb_hash = <<123_452::256>>
-      next_mb_hash = Validate.id!("mh_2Kf3h4eYi77yvMg9HtLMLX9zJtThm6xBCbefCbKQpSi8Rxrcgy")
 
-      with_mocks [
-        {AeMdw.Node.Db, [],
-         [
-           get_key_block_hash: fn height ->
-             assert ^height = kbi + 1
-             kb_hash
-           end,
-           get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
-           aex9_balances: fn ^contract_pk, {:micro, ^kbi, ^next_mb_hash} ->
-             balances = %{{:address, account_pk} => 100_000_000_000_000_002}
+      NullStore.new()
+      |> MemStore.new()
+      |> State.new()
+      |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+      |> State.commit_mem([mutation])
 
-             {balances, nil}
-           end
-         ]}
-      ] do
-        state =
-          state
-          |> State.commit_mem([mutation])
-          |> process_async_tasks()
-
-        assert State.exists?(state, Model.Aex9AccountPresence, {account_pk, contract_pk})
-      end
+      assert AsyncTasks.Store.fetch_unprocessed()
+             |> Enum.find(fn Model.async_task(args: args, extra_args: extra_args) ->
+               args == [contract_pk] and extra_args == [block_index, call_txi]
+             end)
     end
 
     test "add aex9 presence after a transfer allowance" do
       call_txi = 11_440_639
-      block_index = {kbi, mbi} = {258_867, 73}
+      block_index = {258_867, 73}
+      contract_pk = :crypto.strong_rand_bytes(32)
 
-      state =
-        NullStore.new()
-        |> MemStore.new()
-        |> Store.put(
-          Model.Field,
-          Model.field(index: {:contract_create_tx, nil, @transfer_allow_ct_pk, 123})
-        )
-        |> State.new()
-
-      assert {account_pk, mutation} =
+      assert {_account_pk, mutation} =
                contract_call_mutation(
                  "transfer_allowance",
                  block_index,
                  call_txi,
-                 @transfer_allow_ct_pk
+                 contract_pk
                )
 
-      contract_pk = @transfer_allow_ct_pk
       assert %ContractCallMutation{txi: ^call_txi, contract_pk: ^contract_pk} = mutation
 
-      kb_hash = <<123_453::256>>
-      next_mb_hash = Validate.id!("mh_2WR69dhBSJLc9gBt6gnHRJCYfCR7BjKNNQteDRshe5CNErghVR")
+      NullStore.new()
+      |> MemStore.new()
+      |> State.new()
+      |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+      |> State.commit_mem([mutation])
 
-      with_mocks [
-        {AeMdw.Node.Db, [],
-         [
-           get_key_block_hash: fn height ->
-             assert ^height = kbi + 1
-             kb_hash
-           end,
-           get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
-           aex9_balances: fn ^contract_pk, {:micro, ^kbi, ^next_mb_hash} ->
-             balances = %{{:address, account_pk} => 100_000_000_000_000_003}
-
-             {balances, nil}
-           end
-         ]}
-      ] do
-        state =
-          state
-          |> State.commit_mem([mutation])
-          |> process_async_tasks()
-
-        assert State.exists?(state, Model.Aex9AccountPresence, {account_pk, contract_pk})
-      end
+      assert AsyncTasks.Store.fetch_unprocessed()
+             |> Enum.find(fn Model.async_task(args: args, extra_args: extra_args) ->
+               args == [contract_pk] and extra_args == [block_index, call_txi]
+             end)
     end
 
     test "add aex9 presence after a burn (balance is 0)" do
       call_txi = 11_213_118
-      block_index = {kbi, mbi} = {255_795, 74}
-
-      state =
-        NullStore.new()
-        |> MemStore.new()
-        |> Store.put(
-          Model.Field,
-          Model.field(index: {:contract_create_tx, nil, @burn_ct_pk, 124})
-        )
-        |> State.new()
+      block_index = {255_795, 74}
+      contract_pk = :crypto.strong_rand_bytes(32)
 
       assert {account_pk, mutation} =
-               contract_call_mutation("burn", block_index, call_txi, @burn_ct_pk)
+               contract_call_mutation("burn", block_index, call_txi, contract_pk)
 
-      contract_pk = @burn_ct_pk
       assert %ContractCallMutation{txi: ^call_txi, contract_pk: ^contract_pk} = mutation
-      kb_hash = <<123_454::256>>
-      next_mb_hash = Validate.id!("mh_9943pc2nXD7BaJjZMwaAYd5Jk4DbPY3THDoh8Sfgy7nTyrZ41")
 
-      with_mocks [
-        {AeMdw.Node.Db, [],
-         [
-           get_key_block_hash: fn height ->
-             assert ^height = kbi + 1
-             kb_hash
-           end,
-           get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
-           aex9_balances: fn ^contract_pk, {:micro, ^kbi, ^next_mb_hash} ->
-             balances = %{{:address, account_pk} => 0}
+      NullStore.new()
+      |> MemStore.new()
+      |> State.new()
+      |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+      |> State.commit_mem([mutation])
 
-             {balances, nil}
-           end
-         ]}
-      ] do
-        state =
-          state
-          |> State.commit_mem([mutation])
-          |> process_async_tasks()
-
-        assert State.exists?(state, Model.Aex9AccountPresence, {account_pk, contract_pk})
-      end
+      assert AsyncTasks.Store.fetch_unprocessed()
+             |> Enum.find(fn Model.async_task(args: args, extra_args: extra_args) ->
+               args == [contract_pk] and extra_args == [block_index, call_txi]
+             end)
     end
   end
 
@@ -229,15 +127,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           178, 212, 56, 89, 23, 172, 233, 200, 126, 138, 235, 158, 11>>
 
       call_txi = 9_353_623
-
-      state =
-        NullStore.new()
-        |> MemStore.new()
-        |> Store.put(
-          Model.Field,
-          Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
-        )
-        |> State.new()
 
       fun_arg_res = %{
         arguments: [
@@ -302,9 +191,11 @@ defmodule AeMdw.Db.ContractCallMutationTest do
          ]}
       ] do
         state =
-          state
+          NullStore.new()
+          |> MemStore.new()
+          |> State.new()
+          |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
           |> State.commit_mem([mutation])
-          |> process_async_tasks()
 
         [{^contract_pk, [_transfer_evt_hash | [from_pk, to_pk, <<amount::256>>]], _data}] =
           :aect_call.log(call_rec)
@@ -351,15 +242,5 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       )
 
     {account_pk, mutation}
-  end
-
-  defp process_async_tasks(state) do
-    state.jobs
-    |> Enum.flat_map(fn {{job_type, dedup_args}, extra_args} ->
-      Consumer.mutations(job_type, dedup_args ++ extra_args)
-    end)
-    |> List.flatten()
-    |> Enum.reject(&is_nil/1)
-    |> Enum.reduce(state, &Mutation.execute/2)
   end
 end

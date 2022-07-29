@@ -1,44 +1,50 @@
 defmodule AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
   use ExUnit.Case
 
-  alias AeMdw.Database
-  alias AeMdw.Db.Model
-  alias AeMdw.Sync.AsyncTasks.Producer
+  alias AeMdw.AsyncTaskTestUtil
+  alias AeMdw.Db.Aex9BalancesCache
   alias AeMdw.Sync.AsyncTasks
-  alias AeMdw.Validate
 
-  require Model
-
-  @task_type :update_aex9_state
-  @contract_pk Validate.id!("ct_2bwK4mxEe3y9SazQRPXE8NdXikSTqF2T9FhNrawRzFA21yacTo")
+  import Mock
 
   test "enqueue and dequeue" do
-    args = [@contract_pk]
-    extra_args = [{543_210, 10}, Enum.random(1_000_000..99_000_000)]
-    AsyncTasks.Supervisor.start_link([])
-    Producer.enqueue(@task_type, args, extra_args)
-    Producer.commit_enqueued()
+    contract_pk = :crypto.strong_rand_bytes(32)
+    {kbi, mbi} = block_index = {543_210, 10}
+    kb_hash = :crypto.strong_rand_bytes(32)
+    next_mb_hash = :crypto.strong_rand_bytes(32)
 
-    Process.sleep(200)
+    Aex9BalancesCache.put(contract_pk, block_index, next_mb_hash, %{
+      {:address, :crypto.strong_rand_bytes(32)} => <<>>
+    })
 
-    assert Model.AsyncTask
-           |> Database.all_keys()
-           |> Enum.map(&Database.fetch!(Model.AsyncTask, &1))
-           |> Enum.any?(fn
-             Model.async_task(args: ^args, extra_args: ^extra_args) -> true
-             _other_task -> false
-           end)
+    with_mocks [
+      {AeMdw.Node.Db, [],
+       [
+         get_key_block_hash: fn height ->
+           assert height == kbi + 1
+           kb_hash
+         end,
+         get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end
+       ]}
+    ] do
+      AsyncTasks.Supervisor.start_link([])
 
-    AsyncTasks.Supervisor
-    |> Supervisor.which_children()
-    |> Enum.filter(fn {id, _pid, _type, _mod} ->
-      is_binary(id) and String.starts_with?(id, "Elixir.AeMdw.Sync.AsyncTasks.Consumer")
-    end)
-    |> Enum.each(fn {_id, consumer_pid, _type, _mod} ->
-      Process.send(consumer_pid, :demand, [:noconnect])
-    end)
+      AsyncTasks.Producer.enqueue(
+        :update_aex9_state,
+        [contract_pk],
+        [
+          block_index,
+          Enum.random(1_000_000..99_000_000)
+        ],
+        only_new: true
+      )
 
-    Process.sleep(500)
-    assert %{dequeue_buffer: []} = :sys.get_state(Producer)
+      AsyncTaskTestUtil.wakeup_consumers()
+
+      assert Enum.any?(1..20, fn _i ->
+               Process.sleep(50)
+               %{dequeue_buffer: []} == :sys.get_state(AsyncTasks.Producer)
+             end)
+    end
   end
 end

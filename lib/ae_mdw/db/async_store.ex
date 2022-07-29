@@ -7,6 +7,7 @@ defmodule AeMdw.Db.AsyncStore do
   """
 
   alias AeMdw.Database
+  alias AeMdw.Db.Mutation
   alias AeMdw.EtsCache
 
   @derive AeMdw.Db.Store
@@ -29,6 +30,15 @@ defmodule AeMdw.Db.AsyncStore do
   @spec instance() :: t()
   def instance do
     %__MODULE__{tid: @table_id}
+  end
+
+  @spec mutations(t()) :: [Mutation.t()]
+  def mutations(%__MODULE__{tid: tid}) do
+    tid
+    |> EtsCache.all()
+    |> Enum.map(fn {{table, _key}, record, _time} ->
+      AeMdw.Db.WriteMutation.new(table, record)
+    end)
   end
 
   @spec put(t(), table(), record()) :: t()
@@ -81,8 +91,8 @@ defmodule AeMdw.Db.AsyncStore do
     end
   end
 
-  @spec clear_tables(t()) :: :ok
-  def clear_tables(%__MODULE__{tid: tid}) do
+  @spec clear(t()) :: :ok
+  def clear(%__MODULE__{tid: tid}) do
     EtsCache.clear(tid)
     :ok
   end

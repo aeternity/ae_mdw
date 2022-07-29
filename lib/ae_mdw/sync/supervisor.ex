@@ -7,6 +7,7 @@ defmodule AeMdw.Sync.Supervisor do
 
   alias AeMdw.Sync.Server
   alias AeMdw.Sync.Watcher
+  alias AeMdw.Sync.AsyncStoreServer
 
   @spec start_link(term()) :: Supervisor.on_start()
   def start_link(init_arg) do
@@ -18,6 +19,7 @@ defmodule AeMdw.Sync.Supervisor do
     children = [
       Server,
       Watcher,
+      AsyncStoreServer,
       {Task.Supervisor, name: Server.task_supervisor()}
     ]
 
