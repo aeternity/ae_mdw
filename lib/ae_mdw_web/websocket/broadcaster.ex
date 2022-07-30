@@ -18,10 +18,10 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   def start_link(_arg), do: GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
 
   @impl GenServer
-  def init(:ok) do
-    EtsCache.new(@hashes_table, @expiration_minutes)
-    {:ok, :no_state}
-  end
+  def init(:ok), do: {:ok, :no_state}
+
+  @spec ets_config() :: {EtsCache.table(), EtsCache.expiration()}
+  def ets_config(), do: {@hashes_table, @expiration_minutes}
 
   @spec broadcast_key_block(tuple(), :node | :mdw) :: :ok
   def broadcast_key_block(block, source) do
