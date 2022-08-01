@@ -16,6 +16,7 @@ defmodule AeMdw.Application do
   alias AeMdw.NodeHelper
   alias AeMdw.Sync.Watcher
   alias AeMdw.Util
+  alias AeMdwWeb.Websocket.Broadcaster
 
   require Model
 
@@ -218,6 +219,9 @@ defmodule AeMdw.Application do
 
   defp init(:tables) do
     :ets.new(:tx_sync_cache, [:named_table, :ordered_set, :public])
+
+    {ets_table, ets_expiration} = Broadcaster.ets_config()
+    EtsCache.new(ets_table, ets_expiration)
 
     AeMdw.Sync.AsyncTasks.Stats.init()
     AeMdw.Sync.AsyncTasks.Store.init()

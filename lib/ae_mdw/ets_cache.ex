@@ -7,6 +7,9 @@ defmodule AeMdw.EtsCache do
   @cache_types [:set, :ordered_set, :bag, :duplicate_bag]
   @cache_access [:public, :private, :protected]
 
+  @type table() :: atom()
+  @type expiration() :: non_neg_integer()
+
   ################################################################################
 
   def new(name, expiration_minutes, type \\ :set, access \\ :public, concurrency \\ true)
