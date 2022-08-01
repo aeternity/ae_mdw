@@ -76,6 +76,7 @@ defmodule Integration.AeMdwWeb.WebsocketTest do
     "source" => "mdw",
     "subscription" => "KeyBlocks"
   }
+  @key_block_node Map.put(@key_block_mdw, "source", "node")
 
   @micro_block_mdw %{
     "payload" => %{
@@ -477,10 +478,14 @@ defmodule Integration.AeMdwWeb.WebsocketTest do
       Broadcaster.broadcast_key_block(key_block, :mdw)
       Broadcaster.broadcast_key_block(key_block, :mdw)
       Broadcaster.broadcast_key_block(key_block, :mdw)
+      Broadcaster.broadcast_key_block(key_block, :node)
+      Broadcaster.broadcast_key_block(key_block, :node)
       Process.send_after(client, {:kb, self()}, 100)
 
       kb_payload = @key_block_mdw
+      kb_payload_node = @key_block_node
       assert_receive ^kb_payload, 300
+      assert_receive ^kb_payload_node, 300
 
       [mb1 | _rest] = micro_blocks
       Broadcaster.broadcast_micro_block(mb1, :mdw)
