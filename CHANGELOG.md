@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.16.0](https://www.github.com/aeternity/ae_mdw/compare/v1.15.0...v1.16.0) (2022-08-01)
+
+
+### Features
+
+* imports hardforks preset accounts ([#805](https://www.github.com/aeternity/ae_mdw/issues/805)) ([2806136](https://www.github.com/aeternity/ae_mdw/commit/2806136835427359f7c99f7b9b70f0de7df8ca77))
+
+
+### Bug Fixes
+
+* broadcast in-memory blocks ([#809](https://www.github.com/aeternity/ae_mdw/issues/809)) ([22bfcf6](https://www.github.com/aeternity/ae_mdw/commit/22bfcf6c29802f7202d7cefebdd782bd8f7a71c3))
+
+
+### Miscellaneous
+
+* remove unused supervisor ([#811](https://www.github.com/aeternity/ae_mdw/issues/811)) ([bfa532a](https://www.github.com/aeternity/ae_mdw/commit/bfa532ab7e9d2d89377c8402785b5016cbb8b7fc))
+* remove unusued Sync.Server gens_per_min field ([#812](https://www.github.com/aeternity/ae_mdw/issues/812)) ([3078c36](https://www.github.com/aeternity/ae_mdw/commit/3078c367dbd43c228ca41da172470e0a26175c2d))
+
 ## [1.15.0](https://www.github.com/aeternity/ae_mdw/compare/v1.14.0...v1.15.0) (2022-07-27)
 
 
