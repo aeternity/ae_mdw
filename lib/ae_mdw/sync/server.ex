@@ -246,7 +246,7 @@ defmodule AeMdw.Sync.Server do
     from_mbi =
       case Block.last_synced_mbi(db_state, from_height) do
         {:ok, mbi} -> mbi + 1
-        :none -> -1
+        :none -> 0
       end
 
     spawn_task(fn ->
