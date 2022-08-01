@@ -41,7 +41,7 @@ defmodule AeMdw.Sync.Server do
 
   require Logger
 
-  defstruct [:chain_height, :chain_hash, :mem_hash, :db_state, :restarts, :gens_per_min]
+  defstruct [:chain_height, :chain_hash, :db_state, :mem_hash, :restarts]
 
   @typep height() :: Blocks.height()
   @typep hash() :: Blocks.block_hash()
@@ -52,8 +52,9 @@ defmodule AeMdw.Sync.Server do
            | {:syncing_db, reference()}
            | {:syncing_mem, reference()}
   @typep state_data() :: %__MODULE__{
-           db_state: State.t(),
+           chain_height: height(),
            chain_hash: hash(),
+           db_state: State.t(),
            mem_hash: height(),
            restarts: non_neg_integer()
          }
@@ -96,8 +97,7 @@ defmodule AeMdw.Sync.Server do
       chain_height: nil,
       db_state: db_state,
       mem_hash: nil,
-      restarts: 0,
-      gens_per_min: 0
+      restarts: 0
     }
 
     {:ok, :initialized, state_data}
