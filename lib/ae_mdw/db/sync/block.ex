@@ -56,16 +56,17 @@ defmodule AeMdw.Db.Sync.Block do
       height = :aec_blocks.height(key_block)
       kb_header = :aec_blocks.to_key_header(key_block)
       {:ok, kb_hash} = :aec_headers.hash_header(kb_header)
+      starting_from_mb0? = from_height != height or from_mbi == 0
 
       if rem(height, @log_freq) == 0, do: Log.info("creating mutations for block at #{height}")
 
       pending_micro_blocks =
-        if from_height == height and from_mbi != 0 do
+        if starting_from_mb0? do
+          Enum.with_index(micro_blocks)
+        else
           micro_blocks
           |> Enum.drop(from_mbi)
           |> Enum.with_index(from_mbi)
-        else
-          Enum.with_index(micro_blocks)
         end
 
       {micro_blocks_gens, txi} =
@@ -98,7 +99,7 @@ defmodule AeMdw.Db.Sync.Block do
         block_rewards_mutation,
         NamesExpirationMutation.new(height),
         OraclesExpirationMutation.new(height),
-        StatsMutation.new(height, from_height != height or from_mbi != 0),
+        StatsMutation.new(height, starting_from_mb0?),
         next_kb_mutation
       ]
 
