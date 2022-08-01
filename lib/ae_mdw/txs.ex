@@ -372,7 +372,6 @@ defmodule AeMdw.Txs do
         tx_type = String.to_existing_atom("#{type_prefix}_tx")
         tx_field = String.to_existing_atom(field)
 
-        # credo:disable-for-next-line
         if MapSet.member?(field_types(tx_field), tx_type) do
           [{tx_type, Node.tx_ids(tx_type)[tx_field]}]
         else

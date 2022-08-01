@@ -1,34 +1,33 @@
 defmodule AeMdw.EtsCache do
-  # credo:disable-for-this-file
   @moduledoc false
 
   require Ex2ms
 
-  @cache_types [:set, :ordered_set, :bag, :duplicate_bag]
-  @cache_access [:public, :private, :protected]
-
   @type table() :: atom()
   @type expiration() :: non_neg_integer()
+  @type type() :: :set | :ordered_set | :bag | :duplicate_bag
+  @type access() :: :public | :private | :protected
+  @type concurrency?() :: boolean()
+  @type key() :: term()
+  @type val() :: term()
 
-  ################################################################################
-
-  def new(name, expiration_minutes, type \\ :set, access \\ :public, concurrency \\ true)
-      when is_atom(name) and
-             type in @cache_types and
-             access in @cache_access and
-             is_boolean(concurrency) do
+  @spec new(table(), expiration(), type(), access(), concurrency?()) :: :ok
+  def new(name, expiration_minutes, type \\ :set, access \\ :public, concurrency? \\ true) do
     params =
       ((name && [:named_table]) || []) ++
-        [{:read_concurrency, concurrency}, {:write_concurrency, concurrency}, access, type]
+        [{:read_concurrency, concurrency?}, {:write_concurrency, concurrency?}, access, type]
 
     table = :ets.new(name, params)
     init_gc(table, expiration_minutes)
-    table
+
+    :ok
   end
 
+  @spec put(table(), key(), val()) :: true
   def put(table, key, val),
     do: :ets.insert(table, {key, val, time()})
 
+  @spec get(table(), key()) :: val() | nil
   def get(table, key) do
     case :ets.lookup(table, key) do
       [{_, val, insert_time}] ->
@@ -39,9 +38,11 @@ defmodule AeMdw.EtsCache do
     end
   end
 
+  @spec del(table(), key()) :: true
   def del(table, key),
     do: :ets.delete(table, key)
 
+  @spec next(table(), key()) :: key() | nil
   def next(table, key) do
     case :ets.next(table, key) do
       :"$end_of_table" -> nil
@@ -49,6 +50,7 @@ defmodule AeMdw.EtsCache do
     end
   end
 
+  @spec prev(table(), key()) :: key() | nil
   def prev(table, key) do
     case :ets.prev(table, key) do
       :"$end_of_table" -> nil
@@ -56,14 +58,16 @@ defmodule AeMdw.EtsCache do
     end
   end
 
+  @spec clear(table()) :: true
   def clear(table), do: :ets.delete_all_objects(table)
 
+  @spec purge(table(), expiration()) :: non_neg_integer()
   def purge(table, max_age_msecs) do
     boundary = time() - max_age_msecs
 
     del_spec =
       Ex2ms.fun do
-        {_, _, time} -> time < ^boundary
+        {_key, _val, time} -> time < ^boundary
       end
 
     :ets.select_delete(table, del_spec)
@@ -76,6 +80,6 @@ defmodule AeMdw.EtsCache do
 
   defp init_gc(table, exp) when is_integer(exp) and exp > 0 do
     gc_period = :timer.minutes(exp)
-    {:ok, _} = :timer.apply_interval(gc_period, __MODULE__, :purge, [table, gc_period])
+    {:ok, _ref} = :timer.apply_interval(gc_period, __MODULE__, :purge, [table, gc_period])
   end
 end
