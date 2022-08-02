@@ -42,11 +42,11 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   def handle_cast({:broadcast_key_block, block, source}, state) do
     {:ok, hash} = block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
 
-    if not already_processed?({:key, hash}) do
+    if not already_processed?({:key, hash, source}) do
       do_broadcast_key_block(block, source)
     end
 
-    push_hash({:key, hash})
+    push_hash({:key, hash, source})
 
     {:noreply, state}
   end
@@ -55,11 +55,11 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   def handle_cast({:broadcast_micro_block, block, source}, state) do
     {:ok, hash} = block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
 
-    if not already_processed?({:micro, hash}) do
+    if not already_processed?({:micro, hash, source}) do
       do_broadcast_micro_block(block, source)
     end
 
-    push_hash({:micro, hash})
+    push_hash({:micro, hash, source})
 
     {:noreply, state}
   end
@@ -68,11 +68,11 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   def handle_cast({:broadcast_txs, block, source}, state) do
     {:ok, hash} = block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
 
-    if not already_processed?({:txs, hash}) do
+    if not already_processed?({:txs, hash, source}) do
       do_broadcast_txs(block, source)
     end
 
-    push_hash({:txs, hash})
+    push_hash({:txs, hash, source})
 
     {:noreply, state}
   end
