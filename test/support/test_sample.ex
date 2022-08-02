@@ -116,4 +116,21 @@ defmodule AeMdw.TestSamples do
     end)
     |> Enum.at(n)
   end
+
+  @spec contract_pk(non_neg_integer()) :: Db.pubkey()
+  def contract_pk(n) do
+    ~w(
+      ct_y7gojSY8rXW6tztE9Ftqe3kmNrqEXsREiPwGCeG3MJL38jkFo
+      ct_azbNZ1XrPjXfqBqbAh1ffLNTQ1sbnuUDFvJrXjYz7JQA1saQ3
+      ct_eJhrbPPS4V97VLKEVbSCJFpdA4uyXiZujQyLqMFoYV88TzDe6
+      ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z
+      ct_jmRkfpzmn7KZbXbkEL9wueJkb1vaFzMnVFJMFjAnJgj1CTtQe
+    )
+    |> Enum.map(fn hash ->
+      {:ok, decoded_hash} = :aeser_api_encoder.safe_decode(:contract_pubkey, hash)
+
+      decoded_hash
+    end)
+    |> Enum.at(n)
+  end
 end
