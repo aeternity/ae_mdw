@@ -107,7 +107,8 @@ defmodule AeMdw.Db.Origin do
 
   @spec count_contracts(State.t()) :: non_neg_integer()
   def count_contracts(state) do
-    count_by_tx_type(state, :contract_create_tx) + count_by_tx_type(state, :contract_call_tx)
+    count_by_tx_type(state, :contract_create_tx) + count_by_tx_type(state, :contract_call_tx) +
+      count_by_tx_type(state, :ga_attach_tx)
   end
 
   #
