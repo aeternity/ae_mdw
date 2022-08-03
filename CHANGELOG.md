@@ -1,5 +1,20 @@
 # Changelog
 
+### [1.16.1](https://www.github.com/aeternity/ae_mdw/compare/v1.16.0...v1.16.1) (2022-08-03)
+
+
+### Bug Fixes
+
+* include ga_attach_tx when counting contracts ([#819](https://www.github.com/aeternity/ae_mdw/issues/819)) ([e0650b5](https://www.github.com/aeternity/ae_mdw/commit/e0650b50245d84dc493a4ea488f09767bdd585c5))
+* include tx-type-specific data inside "tx" attribute ([#820](https://www.github.com/aeternity/ae_mdw/issues/820)) ([af64624](https://www.github.com/aeternity/ae_mdw/commit/af64624dbd1c33107417b7a0f5b032b989255505))
+* send duplicated tx websocekt message if sources differ ([#813](https://www.github.com/aeternity/ae_mdw/issues/813)) ([d99bd16](https://www.github.com/aeternity/ae_mdw/commit/d99bd1654c9d06bd06974432ae93f399113cf18e))
+* update stats caching condition to only do it once per kb ([#814](https://www.github.com/aeternity/ae_mdw/issues/814)) ([e7626d7](https://www.github.com/aeternity/ae_mdw/commit/e7626d7bc6957f9421272fd0cfab3a9c8234560f))
+
+
+### Miscellaneous
+
+* add typing and credo fixes to ets module ([#815](https://www.github.com/aeternity/ae_mdw/issues/815)) ([c397067](https://www.github.com/aeternity/ae_mdw/commit/c3970678ecdc0a45b1e4fcc78961a022f33cec22))
+
 ## [1.16.0](https://www.github.com/aeternity/ae_mdw/compare/v1.15.0...v1.16.0) (2022-08-01)
 
 
