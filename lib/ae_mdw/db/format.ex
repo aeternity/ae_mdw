@@ -157,13 +157,13 @@ defmodule AeMdw.Db.Format do
       ) do
     header = :aec_db.get_header(block_hash)
 
-    enc_tx =
-      :aetx_sign.serialize_for_client(header, signed_tx)
-      |> put_in(["tx_index"], index)
-      |> put_in(["micro_index"], mb_index)
-      |> put_in(["micro_time"], mb_time)
-
-    custom_encode(state, type, enc_tx, tx_rec, signed_tx, index, block_hash)
+    :aetx_sign.serialize_for_client(header, signed_tx)
+    |> put_in(["tx_index"], index)
+    |> put_in(["micro_index"], mb_index)
+    |> put_in(["micro_time"], mb_time)
+    |> update_in(["tx"], fn tx ->
+      custom_encode(state, type, tx, tx_rec, signed_tx, index, block_hash)
+    end)
   end
 
   def to_map(state, auction_bid, Model.AuctionBid),
