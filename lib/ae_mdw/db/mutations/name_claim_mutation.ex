@@ -118,6 +118,7 @@ defmodule AeMdw.Db.NameClaimMutation do
         |> cache_through_delete_inactive(previous)
         |> IntTransfer.fee({height, txi}, :lock_name, owner_pk, txi, lock_amount)
         |> State.inc_stat(:names_activated)
+        |> State.inc_stat(:burned_in_auctions, lock_amount)
 
       timeout ->
         auction_end = height + timeout
@@ -146,7 +147,7 @@ defmodule AeMdw.Db.NameClaimMutation do
                owner: prev_owner,
                bids: prev_bids
              )} ->
-              %{tx: prev_tx} = read_cached_raw_tx!(state, prev_txi)
+              %{tx: %{name_fee: prev_name_fee}} = read_cached_raw_tx!(state, prev_txi)
 
               state4 =
                 state3
@@ -158,8 +159,9 @@ defmodule AeMdw.Db.NameClaimMutation do
                   :refund_name,
                   prev_owner,
                   prev_txi,
-                  prev_tx.name_fee
+                  prev_name_fee
                 )
+                |> State.inc_stat(:locked_in_auctions, name_fee - prev_name_fee)
 
               {make_m_bid.([{block_index, txi} | prev_bids]), state4}
           end

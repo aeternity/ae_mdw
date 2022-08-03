@@ -538,7 +538,9 @@ defmodule AeMdw.Db.Model do
     oracles_expired: 0,
     contracts_created: 0,
     block_reward: 0,
-    dev_reward: 0
+    dev_reward: 0,
+    locked_in_auctions: 0,
+    burned_in_auctions: 0
   ]
   defrecord :delta_stat, @delta_stat_defaults
 
@@ -553,7 +555,9 @@ defmodule AeMdw.Db.Model do
             oracles_expired: integer(),
             contracts_created: integer(),
             block_reward: integer(),
-            dev_reward: integer()
+            dev_reward: integer(),
+            locked_in_auctions: integer(),
+            burned_in_auctions: integer()
           )
 
   # summarized statistics
@@ -568,7 +572,9 @@ defmodule AeMdw.Db.Model do
     inactive_names: 0,
     active_oracles: 0,
     inactive_oracles: 0,
-    contracts: 0
+    contracts: 0,
+    locked_in_auctions: 0,
+    burned_in_auctions: 0
   ]
   defrecord :total_stat, @total_stat_defaults
 
@@ -583,7 +589,9 @@ defmodule AeMdw.Db.Model do
             inactive_names: integer(),
             active_oracles: integer(),
             inactive_oracles: integer(),
-            contracts: integer()
+            contracts: integer(),
+            locked_in_auctions: non_neg_integer(),
+            burned_in_auctions: non_neg_integer()
           )
 
   ################################################################################

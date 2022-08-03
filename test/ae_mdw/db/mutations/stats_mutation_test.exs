@@ -246,6 +246,7 @@ defmodule AeMdw.Db.StatsMutationTest do
            stream: fn
              _state, Model.Origin, _start_key -> [1, 2, 3]
              _state, Model.IntTransferTx, _start_key -> []
+             _state, Model.KindIntTransferTx, _start_key -> []
            end
          ]}
       ] do

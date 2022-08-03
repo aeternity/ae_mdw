@@ -136,7 +136,7 @@ defmodule AeMdw.Db.Name do
     m_name_activation = Model.activation(index: {height, plain_name})
     m_name_exp = Model.expiration(index: {expire, plain_name})
     m_owner = Model.owner(index: {owner, plain_name})
-    %{tx: winning_tx} = read_raw_tx!(state, txi)
+    %{tx: %{name_fee: name_fee}} = read_raw_tx!(state, txi)
 
     state
     |> cache_through_write(Model.ActiveName, m_name)
@@ -147,9 +147,11 @@ defmodule AeMdw.Db.Name do
     |> cache_through_delete(Model.AuctionOwner, {owner, plain_name})
     |> cache_through_delete(Model.AuctionBid, plain_name)
     |> cache_through_delete_inactive(previous)
-    |> IntTransfer.fee({height, -1}, :lock_name, owner, txi, winning_tx.name_fee)
+    |> IntTransfer.fee({height, -1}, :lock_name, owner, txi, name_fee)
     |> State.inc_stat(:names_activated)
     |> State.inc_stat(:auctions_expired)
+    |> State.inc_stat(:burned_in_auctions, name_fee)
+    |> State.inc_stat(:locked_in_auctions, -name_fee)
   end
 
   @doc """

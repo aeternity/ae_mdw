@@ -3,6 +3,7 @@ defmodule AeMdw.Db.StatsMutation do
   Inserts statistics about this generation into Model.DeltaStat table.
   """
 
+  alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Blocks
   alias AeMdw.Db.IntTransfer
@@ -11,6 +12,7 @@ defmodule AeMdw.Db.StatsMutation do
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
+  alias AeMdw.Util
 
   require Model
 
@@ -56,7 +58,9 @@ defmodule AeMdw.Db.StatsMutation do
       oracles_expired: get(state, :oracles_expired, 0),
       contracts_created: get(state, :contracts_created, 0),
       block_reward: get(state, :block_reward, 0),
-      dev_reward: get(state, :dev_reward, 0)
+      dev_reward: get(state, :dev_reward, 0),
+      locked_in_auctions: get(state, :locked_in_auctions, 0),
+      burned_in_auctions: get(state, :burned_in_auctions, 0)
     )
   end
 
@@ -96,6 +100,11 @@ defmodule AeMdw.Db.StatsMutation do
     current_block_reward = IntTransfer.read_block_reward(state, height)
     current_dev_reward = IntTransfer.read_dev_reward(state, height)
 
+    burned_in_auctions = height_int_amount(state, height, :lock_name)
+    spent_in_auctions = height_int_amount(state, height, :spend_name)
+    refund_in_auctions = height_int_amount(state, height, :refund_name)
+    locked_in_auctions = spent_in_auctions - refund_in_auctions
+
     Model.delta_stat(
       index: height,
       auctions_started: max(0, current_active_auctions - prev_active_auctions),
@@ -106,7 +115,9 @@ defmodule AeMdw.Db.StatsMutation do
       oracles_expired: oracles_expired_count,
       contracts_created: max(0, all_contracts_count - prev_contracts),
       block_reward: current_block_reward,
-      dev_reward: current_dev_reward
+      dev_reward: current_dev_reward,
+      locked_in_auctions: locked_in_auctions,
+      burned_in_auctions: burned_in_auctions
     )
   end
 
@@ -123,7 +134,9 @@ defmodule AeMdw.Db.StatsMutation do
            oracles_expired: oracles_expired,
            contracts_created: contracts_created,
            block_reward: inc_block_reward,
-           dev_reward: inc_dev_reward
+           dev_reward: inc_dev_reward,
+           locked_in_auctions: locked_in_auctions,
+           burned_in_auctions: burned_in_auctions
          )
        ) do
     Model.total_stat(
@@ -135,7 +148,9 @@ defmodule AeMdw.Db.StatsMutation do
       inactive_names: prev_inactive_names,
       active_oracles: prev_active_oracles,
       inactive_oracles: prev_inactive_oracles,
-      contracts: prev_contracts
+      contracts: prev_contracts,
+      locked_in_auctions: prev_locked_in_auctions,
+      burned_in_auctions: prev_burned_in_acutions
     ) = fetch_total_stat(state, height - 1)
 
     token_supply_delta = AeMdw.Node.token_supply_delta(height - 1)
@@ -151,7 +166,9 @@ defmodule AeMdw.Db.StatsMutation do
       inactive_names: prev_inactive_names + names_expired + names_revoked,
       active_oracles: max(0, prev_active_oracles + oracles_registered - oracles_expired),
       inactive_oracles: prev_inactive_oracles + oracles_expired,
-      contracts: prev_contracts + contracts_created
+      contracts: prev_contracts + contracts_created,
+      locked_in_auctions: prev_locked_in_auctions + locked_in_auctions,
+      burned_in_auctions: prev_burned_in_acutions + burned_in_auctions
     )
   end
 
@@ -163,5 +180,20 @@ defmodule AeMdw.Db.StatsMutation do
 
   defp fetch_total_stat(state, height) do
     State.fetch!(state, Model.TotalStat, height)
+  end
+
+  defp height_int_amount(state, height, kind) do
+    kind_str = "fee_#{kind}"
+
+    state
+    |> Collection.stream(Model.KindIntTransferTx, {kind_str, {height, -1}, Util.min_bin(), nil})
+    |> Stream.take_while(&match?({^kind_str, {^height, _mbi}, _address, _ref_txi}, &1))
+    |> Stream.map(fn {kind_str, block_index, address, ref_txi} ->
+      {block_index, kind_str, address, ref_txi}
+    end)
+    |> Stream.map(&State.fetch!(state, Model.IntTransferTx, &1))
+    |> Enum.reduce(0, fn Model.int_transfer_tx(amount: amount), amount_acc ->
+      amount_acc + amount
+    end)
   end
 end

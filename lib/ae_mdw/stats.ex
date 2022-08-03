@@ -144,7 +144,9 @@ defmodule AeMdw.Stats do
            oracles_expired: oracles_expired,
            contracts_created: contracts_created,
            block_reward: block_reward,
-           dev_reward: dev_reward
+           dev_reward: dev_reward,
+           locked_in_auctions: locked_in_auctions,
+           burned_in_auctions: burned_in_auctions
          )
        ) do
     %{
@@ -157,7 +159,9 @@ defmodule AeMdw.Stats do
       oracles_expired: oracles_expired,
       contracts_created: contracts_created,
       block_reward: block_reward,
-      dev_reward: dev_reward
+      dev_reward: dev_reward,
+      locked_in_auctions: locked_in_auctions,
+      burned_in_auctions: burned_in_auctions
     }
   end
 
@@ -172,7 +176,9 @@ defmodule AeMdw.Stats do
            inactive_oracles: inactive_oracles,
            block_reward: block_reward,
            dev_reward: dev_reward,
-           total_supply: total_supply
+           total_supply: total_supply,
+           locked_in_auctions: locked_in_auctions,
+           burned_in_auctions: burned_in_auctions
          )
        ) do
     %{
@@ -185,7 +191,9 @@ defmodule AeMdw.Stats do
       inactive_oracles: inactive_oracles,
       sum_block_reward: block_reward,
       sum_dev_reward: dev_reward,
-      total_token_supply: total_supply
+      total_token_supply: total_supply,
+      locked_in_auctions: locked_in_auctions,
+      burned_in_auctions: burned_in_auctions
     }
   end
 
