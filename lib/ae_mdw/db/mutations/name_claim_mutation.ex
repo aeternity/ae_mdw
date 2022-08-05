@@ -137,7 +137,8 @@ defmodule AeMdw.Db.NameClaimMutation do
         {m_bid, state4} =
           case cache_through_read(state, Model.AuctionBid, plain_name) do
             nil ->
-              {make_m_bid.([{block_index, txi}]), state3}
+              state4 = State.inc_stat(state3, :auctions_started)
+              {make_m_bid.([{block_index, txi}]), state4}
 
             {:ok,
              Model.auction_bid(
@@ -168,7 +169,6 @@ defmodule AeMdw.Db.NameClaimMutation do
         |> cache_through_write(Model.AuctionBid, m_bid)
         |> cache_through_write(Model.AuctionOwner, m_owner)
         |> cache_through_write(Model.AuctionExpiration, m_auction_exp)
-        |> State.inc_stat(:auctions_started)
     end
   end
 
