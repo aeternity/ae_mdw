@@ -44,8 +44,6 @@ defmodule AeMdw.Sync.AsyncStoreServer do
         _from,
         %{last_db_kbi: last_db_kbi} = state
       ) do
-    # IO.inspect {kbi, Database.exists?(Model.Block, block_index)}, label: :write_mutations
-    # IO.inspect {kbi, last_db_kbi}
     if Database.exists?(Model.Block, block_index) || kbi <= last_db_kbi do
       TxnDbStore.transaction(fn store ->
         txn_state = State.new(store)
