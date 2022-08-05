@@ -264,7 +264,7 @@ defmodule AeMdw.Names do
             nil
 
           Model.name(previous: previous) = name ->
-            {render_name_info(state, name, false), previous}
+            {render_name_info(state, name, []), previous}
         end)
         |> Enum.to_list()
 
