@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.16.2](https://www.github.com/aeternity/ae_mdw/compare/v1.16.1...v1.16.2) (2022-08-05)
+
+
+### Bug Fixes
+
+* update opts usage on Names.fetch_previous_list/2 ([#825](https://www.github.com/aeternity/ae_mdw/issues/825)) ([c5e7f40](https://www.github.com/aeternity/ae_mdw/commit/c5e7f4044bd72dcbc2a42a35b3d7da0e45718a4c))
+
 ### [1.16.1](https://www.github.com/aeternity/ae_mdw/compare/v1.16.0...v1.16.1) (2022-08-03)
 
 
