@@ -6,10 +6,15 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
 
   alias AeMdw.AexnContracts
   alias AeMdw.Db.ContractCreateMutation
+  alias AeMdw.Db.MemStore
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Contract, as: SyncContract
   alias AeMdw.Db.Sync.Origin
   alias AeMdw.Sync.AsyncTasks
+
+  require Model
 
   describe "execute" do
     test "creates contract with init aex9 log" do
@@ -27,13 +32,15 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
           ]
         }
       ] do
-        AsyncTasks.Supervisor.start_link([])
         block_index = {492_393, 0}
         create_txi1 = 21_608_343
         call_rec1 = call_rec("no_log", remote_pk, create_txi1)
 
         state1 =
-          State.commit(State.new(), [
+          NullStore.new()
+          |> MemStore.new()
+          |> State.new()
+          |> State.commit_mem([
             ContractCreateMutation.new(block_index, create_txi1, call_rec1),
             SyncContract.aexn_create_contract_mutation(remote_pk, block_index, create_txi1),
             Origin.origin_mutations(
@@ -45,6 +52,11 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
             )
           ])
 
+        assert AsyncTasks.Store.fetch_unprocessed()
+               |> Enum.find(fn Model.async_task(args: args, extra_args: extra_args) ->
+                 args == [remote_pk] and extra_args == [block_index, create_txi1]
+               end)
+
         assert 1 == State.get_stat(state1, :contracts_created, 0)
         assert {:ok, create_txi1} == State.cache_get(state1, :ct_create_sync_cache, remote_pk)
 
@@ -53,15 +65,12 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
         call_rec2 = call_rec("remote_log", contract_pk, remote_pk, create_txi2)
 
         state2 =
-          State.commit(state1, [ContractCreateMutation.new(block_index, create_txi2, call_rec2)])
+          State.commit_mem(state1, [
+            ContractCreateMutation.new(block_index, create_txi2, call_rec2)
+          ])
 
         assert 2 == State.get_stat(state2, :contracts_created, 0)
         assert {:ok, create_txi2} == State.cache_get(state2, :ct_create_sync_cache, contract_pk)
-
-        assert Enum.any?(
-                 state2.jobs,
-                 &(&1 == {{:update_aex9_state, [remote_pk]}, [block_index, create_txi2]})
-               )
       end
     end
   end

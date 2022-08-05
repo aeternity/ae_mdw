@@ -8,36 +8,52 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
 
   require Model
 
+  import Mock
+
   describe "execute" do
     test "successful for aex9 contract" do
       contract_pk = Validate.id!("ct_2TZsPKT5wyahqFrzp8YX7DfXQapQ4Qk65yn3sHbifU9Db9hoav")
       aex9_meta_info = {name, symbol, _decimals} = {"911058", "SPH", 18}
-      block_index = {271_305, 99}
+      {kbi, mbi} = block_index = {271_305, 99}
       create_txi = txi = 12_361_891
       extensions = ["ext1"]
 
-      Database.commit([
-        AexnCreateContractMutation.new(
-          :aex9,
-          contract_pk,
-          aex9_meta_info,
-          block_index,
-          create_txi,
-          extensions
-        )
-      ])
+      kb_hash = :crypto.strong_rand_bytes(32)
+      next_hash = :crypto.strong_rand_bytes(32)
 
-      m_contract_pk =
-        Model.aexn_contract(
-          index: {:aex9, contract_pk},
-          txi: txi,
-          meta_info: aex9_meta_info,
-          extensions: extensions
-        )
+      with_mocks [
+        {AeMdw.Node.Db, [],
+         [
+           get_key_block_hash: fn height ->
+             assert height == kbi + 1
+             kb_hash
+           end,
+           get_next_hash: fn ^kb_hash, ^mbi -> next_hash end
+         ]}
+      ] do
+        Database.commit([
+          AexnCreateContractMutation.new(
+            :aex9,
+            contract_pk,
+            aex9_meta_info,
+            block_index,
+            create_txi,
+            extensions
+          )
+        ])
 
-      assert {:ok, ^m_contract_pk} = Database.fetch(Model.AexnContract, {:aex9, contract_pk})
-      assert Database.exists?(Model.AexnContractName, {:aex9, name, contract_pk})
-      assert Database.exists?(Model.AexnContractSymbol, {:aex9, symbol, contract_pk})
+        m_contract_pk =
+          Model.aexn_contract(
+            index: {:aex9, contract_pk},
+            txi: txi,
+            meta_info: aex9_meta_info,
+            extensions: extensions
+          )
+
+        assert {:ok, ^m_contract_pk} = Database.fetch(Model.AexnContract, {:aex9, contract_pk})
+        assert Database.exists?(Model.AexnContractName, {:aex9, name, contract_pk})
+        assert Database.exists?(Model.AexnContractSymbol, {:aex9, symbol, contract_pk})
+      end
     end
 
     test "indexes with full meta_info and truncates aex9 name sort field" do
@@ -46,32 +62,46 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       truncated_name = String.slice(bigger_name, 0, 100) <> "..."
       symbol = "SPH2"
       aex9_meta_info = {bigger_name, symbol, 18}
-      block_index = {271_305, 99}
+      {kbi, mbi} = block_index = {271_305, 99}
       create_txi = txi = 12_361_891
       extensions = ["ext1"]
 
-      Database.commit([
-        AexnCreateContractMutation.new(
-          :aex9,
-          contract_pk,
-          aex9_meta_info,
-          block_index,
-          create_txi,
-          extensions
-        )
-      ])
+      kb_hash = :crypto.strong_rand_bytes(32)
+      next_hash = :crypto.strong_rand_bytes(32)
 
-      m_contract_pk =
-        Model.aexn_contract(
-          index: {:aex9, contract_pk},
-          txi: txi,
-          meta_info: aex9_meta_info,
-          extensions: extensions
-        )
+      with_mocks [
+        {AeMdw.Node.Db, [],
+         [
+           get_key_block_hash: fn height ->
+             assert height == kbi + 1
+             kb_hash
+           end,
+           get_next_hash: fn ^kb_hash, ^mbi -> next_hash end
+         ]}
+      ] do
+        Database.commit([
+          AexnCreateContractMutation.new(
+            :aex9,
+            contract_pk,
+            aex9_meta_info,
+            block_index,
+            create_txi,
+            extensions
+          )
+        ])
 
-      assert {:ok, ^m_contract_pk} = Database.fetch(Model.AexnContract, {:aex9, contract_pk})
-      assert Database.exists?(Model.AexnContractName, {:aex9, truncated_name, contract_pk})
-      assert Database.exists?(Model.AexnContractSymbol, {:aex9, symbol, contract_pk})
+        m_contract_pk =
+          Model.aexn_contract(
+            index: {:aex9, contract_pk},
+            txi: txi,
+            meta_info: aex9_meta_info,
+            extensions: extensions
+          )
+
+        assert {:ok, ^m_contract_pk} = Database.fetch(Model.AexnContract, {:aex9, contract_pk})
+        assert Database.exists?(Model.AexnContractName, {:aex9, truncated_name, contract_pk})
+        assert Database.exists?(Model.AexnContractSymbol, {:aex9, symbol, contract_pk})
+      end
     end
 
     test "successful for aex141 contract" do

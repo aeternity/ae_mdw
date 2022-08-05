@@ -9,8 +9,6 @@ defmodule AeMdw.Sync.AsyncTasks.Supervisor do
   alias AeMdw.Sync.AsyncTasks.Producer
   alias AeMdw.Sync.AsyncTasks.TaskSupervisor
 
-  @num_consumers 3
-
   @spec start_link(any()) :: Supervisor.on_start()
   def start_link(_args) do
     Supervisor.start_link(__MODULE__, :ok, name: __MODULE__)
@@ -28,7 +26,7 @@ defmodule AeMdw.Sync.AsyncTasks.Supervisor do
   end
 
   defp consumers() do
-    for id <- 1..@num_consumers do
+    for id <- 1..System.schedulers_online() do
       %{
         id: "#{Consumer}#{id}",
         start: {Consumer, :start_link, [[]]}

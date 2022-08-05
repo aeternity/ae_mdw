@@ -5,46 +5,67 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
 
   alias AeMdw.Db.Model
   alias AeMdw.Database
+  alias AeMdw.EtsCache
 
   require Ex2ms
   require Model
 
+  @added_tab :async_tasks_added
+  @pending_tab :async_tasks_pending
   @processing_tab :async_tasks_processing
-  @args_tab :async_tasks_args
+
+  @minutes_expire 60
 
   @spec init() :: :ok
   def init do
+    EtsCache.new(@added_tab, @minutes_expire)
+    :ets.new(@pending_tab, [:named_table, :set, :public])
     :ets.new(@processing_tab, [:named_table, :set, :public])
-    :ets.new(@args_tab, [:named_table, :set, :public])
     :ok
   end
 
   @spec reset() :: :ok
   def reset do
     :ets.delete_all_objects(@processing_tab)
-    :ets.delete_all_objects(@args_tab)
     cache_tasks_by_args()
     :ok
   end
 
-  @spec fetch_unprocessed(pos_integer()) :: [Model.async_task_record()]
-  def fetch_unprocessed(max_amount) do
+  @spec fetch_unprocessed() :: [Model.async_task_record()]
+  def fetch_unprocessed do
     fetch_all()
-    |> Enum.take(max_amount)
     |> Enum.filter(fn Model.async_task(index: index) ->
       not :ets.member(@processing_tab, index)
     end)
   end
 
-  @spec save_new(Model.async_task_type(), Model.async_task_args(), Model.async_task_args()) :: :ok
-  def save_new(task_type, args, extra_args \\ []) do
-    if not is_enqueued?(task_type, args) do
-      index = {System.system_time(), task_type}
-      m_task = Model.async_task(index: index, args: args, extra_args: extra_args)
-      Database.dirty_write(Model.AsyncTask, m_task)
+  @spec add(Model.async_task_record(), only_new: boolean()) :: :ok
+  def add(Model.async_task(index: task_index) = m_task, only_new: only_new) do
+    key1 = pending_key(m_task)
+    key2 = added_key(m_task)
 
-      :ets.insert(@args_tab, {{task_type, args}})
+    insert? =
+      if only_new do
+        not is_enqueued?(key1) and not is_added?(key2)
+      else
+        not is_enqueued?(key1)
+      end
+
+    if insert? do
+      :ets.insert(@pending_tab, {key1, m_task})
+      EtsCache.put(@added_tab, key2, task_index)
     end
+
+    :ok
+  end
+
+  @spec save() :: :ok
+  def save do
+    list_pending_tasks()
+    |> Enum.each(fn m_task ->
+      :ets.delete(@pending_tab, pending_key(m_task))
+      Database.dirty_write(Model.AsyncTask, m_task)
+    end)
 
     :ok
   end
@@ -58,16 +79,23 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
   @spec set_done(Model.async_task_index(), Model.async_task_args()) :: :ok
   def set_done({_ts, task_type} = task_index, args) do
     Database.dirty_delete(Model.AsyncTask, task_index)
-
     :ets.delete_object(@processing_tab, task_index)
-    :ets.delete(@args_tab, {task_type, args})
+    :ets.delete(@pending_tab, {task_type, args})
+
     :ok
   end
 
   #
   # Private functions
   #
-  defp fetch_all() do
+  defp list_pending_tasks() do
+    @pending_tab
+    |> :ets.tab2list()
+    |> Enum.map(fn {_key, m_task} -> m_task end)
+    |> Enum.sort_by(fn Model.async_task(index: index) -> index end)
+  end
+
+  defp fetch_persisted_tasks() do
     Model.AsyncTask
     |> Database.all_keys()
     |> Enum.flat_map(fn key ->
@@ -78,17 +106,30 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
     end)
   end
 
-  defp cache_tasks_by_args() do
-    indexed_args_records =
-      fetch_all()
-      |> Enum.map(fn Model.async_task(index: {_ts, task_type}, args: args) ->
-        {{task_type, args}}
-      end)
-
-    :ets.insert(@args_tab, indexed_args_records)
+  defp fetch_all() do
+    list_pending_tasks() ++ fetch_persisted_tasks()
   end
 
-  defp is_enqueued?(task_type, args) do
-    :ets.member(@args_tab, {task_type, args})
+  defp cache_tasks_by_args() do
+    indexed_args_records =
+      fetch_persisted_tasks()
+      |> Enum.map(fn m_task ->
+        {pending_key(m_task), m_task}
+      end)
+
+    :ets.insert(@pending_tab, indexed_args_records)
+  end
+
+  defp pending_key(Model.async_task(index: {_ts, task_type}, args: args)), do: {task_type, args}
+
+  defp added_key(Model.async_task(index: {_ts, task_type}, args: args, extra_args: extra_args)),
+    do: {task_type, args, extra_args}
+
+  defp is_enqueued?({_task_type, _args} = key) do
+    :ets.member(@pending_tab, key)
+  end
+
+  defp is_added?({_task_type, _args, _extra_args} = key) do
+    EtsCache.member(@added_tab, key)
   end
 end

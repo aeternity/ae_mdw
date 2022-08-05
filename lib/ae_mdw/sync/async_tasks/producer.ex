@@ -23,17 +23,20 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   @impl GenServer
   def init(:ok) do
     Store.reset()
-    {:ok, %{enqueue_buffer: [], dequeue_buffer: []}}
+    {:ok, %{dequeue_buffer: []}}
   end
 
-  @spec enqueue(atom(), list(), list()) :: :ok
-  def enqueue(task_type, dedup_args, extra_args \\ []) do
-    GenServer.cast(__MODULE__, {:enqueue, task_type, dedup_args, extra_args})
+  @spec enqueue(atom(), list(), list(), only_new: boolean()) :: :ok
+  def enqueue(task_type, dedup_args, extra_args, only_new: only_new) do
+    task_index = {System.system_time(), task_type}
+    m_task = Model.async_task(index: task_index, args: dedup_args, extra_args: extra_args)
+
+    :ok = Store.add(m_task, only_new: only_new)
   end
 
-  @spec commit_enqueued() :: :ok
-  def commit_enqueued() do
-    GenServer.cast(__MODULE__, :commit_enqueued)
+  @spec save_enqueued() :: :ok
+  def save_enqueued() do
+    Store.save()
   end
 
   @spec dequeue() :: nil | Model.async_task_record()
@@ -61,30 +64,6 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   end
 
   @impl GenServer
-  def handle_cast(
-        {:enqueue, task_type, dedup_args, extra_args},
-        %{enqueue_buffer: enqueue_buffer} = state
-      ) do
-    {:noreply, %{state | enqueue_buffer: [{task_type, dedup_args, extra_args} | enqueue_buffer]}}
-  end
-
-  @impl GenServer
-  def handle_cast(:commit_enqueued, %{enqueue_buffer: []} = state) do
-    {:noreply, state}
-  end
-
-  @impl GenServer
-  def handle_cast(:commit_enqueued, %{enqueue_buffer: enqueue_buffer} = state) do
-    enqueue_buffer
-    |> Enum.reverse()
-    |> Enum.each(fn {task_type, args, extra_args} ->
-      Store.save_new(task_type, args, extra_args)
-    end)
-
-    {:noreply, %{state | enqueue_buffer: []}}
-  end
-
-  @impl GenServer
   def handle_call(:dequeue, _from, state) do
     {m_task, %{dequeue_buffer: new_buffer} = new_state} = next_state(state)
 
@@ -103,14 +82,14 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   #
   # Private functions
   #
-  defp next_state(%{dequeue_buffer: []} = state) do
-    case Store.fetch_unprocessed(@max_buffer_size) do
-      [] -> {nil, state}
-      [m_task | buffer_tasks] -> {m_task, %{state | dequeue_buffer: buffer_tasks}}
+  defp next_state(%{dequeue_buffer: []}) do
+    case Store.fetch_unprocessed() do
+      [] -> {nil, %{dequeue_buffer: []}}
+      [m_task | buffer_tasks] -> {m_task, %{dequeue_buffer: buffer_tasks}}
     end
   end
 
-  defp next_state(%{dequeue_buffer: [m_task | buffer_tasks]} = state) do
-    {m_task, %{state | dequeue_buffer: buffer_tasks}}
+  defp next_state(%{dequeue_buffer: [m_task | buffer_tasks]}) do
+    {m_task, %{dequeue_buffer: buffer_tasks}}
   end
 end

@@ -24,8 +24,10 @@ defmodule AeMdw.EtsCache do
   end
 
   @spec put(table(), key(), val()) :: true
-  def put(table, key, val),
-    do: :ets.insert(table, {key, val, time()})
+  def put(table, key, val), do: :ets.insert(table, {key, val, time()})
+
+  @spec all(table()) :: [tuple()]
+  def all(table), do: :ets.tab2list(table)
 
   @spec get(table(), key()) :: val() | nil
   def get(table, key) do
@@ -41,6 +43,10 @@ defmodule AeMdw.EtsCache do
   @spec del(table(), key()) :: true
   def del(table, key),
     do: :ets.delete(table, key)
+
+  @spec member(table(), key()) :: boolean()
+  def member(table, key),
+    do: :ets.member(table, key)
 
   @spec next(table(), key()) :: key() | nil
   def next(table, key) do
