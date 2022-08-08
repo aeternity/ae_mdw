@@ -149,7 +149,13 @@ defmodule AeMdw.AexnContracts do
   defp valid_aex141_signatures?(_no_fcode), do: false
 
   @option_string {:variant, [tuple: [], tuple: [:string]]}
-  @option_metadata_map {:variant, [tuple: [], tuple: [{:map, :string, :string}]]}
+  @option_metadata_spec {:variant,
+                         [
+                           tuple: [],
+                           tuple: [variant: [tuple: [:string], tuple: [:string, :string]]]
+                         ]}
+  @option_metadata_str {:variant, [tuple: [], tuple: [variant: [tuple: [:string]]]]}
+  @option_metadata_map {:variant, [tuple: [], tuple: [variant: [tuple: [:string, :string]]]]}
   @metadata_hash <<99, 148, 233, 122>>
   @mint_hash <<207, 221, 154, 162>>
   @burn_hash <<177, 239, 193, 123>>
@@ -158,23 +164,22 @@ defmodule AeMdw.AexnContracts do
   @swapped_hash <<29, 236, 102, 255>>
 
   defp valid_aex141_metadata?(functions) do
-    case Map.get(functions, @metadata_hash) do
-      nil ->
+    with {_code, type, _body} <- Map.get(functions, @metadata_hash),
+         {[:integer], metadata} <- type do
+      valid_metadata?(metadata)
+    else
+      _nil_or_type_mismatch ->
         false
-
-      {_code, type, _body} ->
-        type == {[:integer], @option_string} or type == {[:integer], @option_metadata_map}
     end
   end
 
   defp valid_aex141_extension?("mintable", functions) do
-    case Map.get(functions, @mint_hash) do
-      nil ->
+    with {_code, type, _body} <- Map.get(functions, @mint_hash),
+         {[:address, metadata, data], :integer} <- type do
+      valid_metadata?(metadata) and data == @option_string
+    else
+      _nil_or_type_mismatch ->
         false
-
-      {_code, type, _body} ->
-        type == {[:address, @option_string, @option_string], :integer} or
-          type == {[:address, @option_metadata_map, @option_string], :integer}
     end
   end
 
@@ -189,4 +194,7 @@ defmodule AeMdw.AexnContracts do
   end
 
   defp valid_aex141_extension?(_any, _functions), do: true
+
+  defp valid_metadata?(metadata),
+    do: metadata in [@option_metadata_spec, @option_metadata_str, @option_metadata_map]
 end
