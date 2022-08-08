@@ -7,6 +7,9 @@ defmodule AeMdw.AsyncTaskTestUtil do
 
   @spec wakeup_consumers() :: :ok
   def wakeup_consumers do
+    AsyncTasks.Supervisor.start_link([])
+    Process.sleep(100)
+
     AsyncTasks.Supervisor
     |> Supervisor.which_children()
     |> Enum.filter(fn {id, _pid, _type, _mod} ->

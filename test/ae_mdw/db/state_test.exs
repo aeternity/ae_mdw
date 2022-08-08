@@ -11,7 +11,6 @@ defmodule AeMdw.Db.StateTest do
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
   alias AeMdw.Db.WriteMutation
-  alias AeMdw.Sync.AsyncTasks
   alias AeMdw.Sync.AsyncTasks.Store
 
   require Model
@@ -20,12 +19,6 @@ defmodule AeMdw.Db.StateTest do
 
   @kb_hash :crypto.strong_rand_bytes(32)
   @next_hash :crypto.strong_rand_bytes(32)
-
-  setup_all _ do
-    AsyncTasks.Supervisor.start_link([])
-    Process.sleep(200)
-    :ok
-  end
 
   setup_with_mocks([
     {AeMdw.Node.Db, [],
