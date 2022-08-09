@@ -1409,9 +1409,11 @@ Names can be filtered by state, which can containe the following values:
 
 - `inactive` - for listing `inactive` names (expired or revoked)
 - `active` - for listing `active` names
-- `auctions` - for listing `auctions`
+- `auction` - for listing `auctions`
 
-They support ordering via parameters `by` (with options `deactivation` and `name`), and `direction` (with options `forward` and `backward`).
+They support ordering via parameters `by` (with value `activation`, `deactivation` or `name`), and `direction` (with value `forward` or `backward`).
+
+Using the `by=activation` requires `state=active` and includes only sucessfully claimed names (those in auction won't appear yet).
 
 Using the `by=deactivation` means for inactive names that they are sorted by the height of deactivation, whether the name had expired or had been revoked.
 For active names it means they are sorted by expiration height.
@@ -1785,6 +1787,87 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/names?owned_by=ak_25BWMx4An9mmQJN
       "status": "auction"
     }
   ]
+}
+```
+
+An example of `by` usage:
+
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/names?state=active&by=activation&direction=forward&limit=2" | jq '.'
+{
+  "data": [
+    {
+      "active": true,
+      "auction": null,
+      "hash": "nm_2FvtAFr3gPAQtNutEnjcPDQSqbhxDHBg9j8LE5WESPCJjzFmuU",
+      "info": {
+        "active_from": 161313,
+        "auction_timeout": 0,
+        "claims": [
+          4681666
+        ],
+        "expire_height": 653635,
+        "ownership": {
+          "current": "ak_5z1fmzTKR1GA1P7qiLDCC1s3V7AK2RRpNbXqUhfHQbUeg7mmV",
+          "original": "ak_5z1fmzTKR1GA1P7qiLDCC1s3V7AK2RRpNbXqUhfHQbUeg7mmV"
+        },
+        "pointers": {
+          "account_pubkey": "ak_2QGAAqDXK7g8zCbck7zm25TGAW1hRuVCET2SRCCFCMSMjrVCrF"
+        },
+        "revoke": null,
+        "transfers": [],
+        "updates": [
+          24868257,
+          22196443,
+          19655223,
+          17065630,
+          13654097,
+          9992832,
+          9992371,
+          6685502
+        ]
+      },
+      "name": "batchpayments.chain",
+      "previous": [],
+      "status": "name"
+    },
+    {
+      "active": true,
+      "auction": null,
+      "hash": "nm_E5JeB8xLS9UR5qN65kDuAhRCHDno5B9pLwoXCm5DEKVpmWrUN",
+      "info": {
+        "active_from": 161349,
+        "auction_timeout": 0,
+        "claims": [
+          4684245
+        ],
+        "expire_height": 653635,
+        "ownership": {
+          "current": "ak_5z1fmzTKR1GA1P7qiLDCC1s3V7AK2RRpNbXqUhfHQbUeg7mmV",
+          "original": "ak_5z1fmzTKR1GA1P7qiLDCC1s3V7AK2RRpNbXqUhfHQbUeg7mmV"
+        },
+        "pointers": {
+          "account_pubkey": "ak_2QGAAqDXK7g8zCbck7zm25TGAW1hRuVCET2SRCCFCMSMjrVCrF"
+        },
+        "revoke": null,
+        "transfers": [],
+        "updates": [
+          24868289,
+          22196724,
+          19655216,
+          17065615,
+          13654148,
+          9992939,
+          6685785
+        ]
+      },
+      "name": "internetofmoney.chain",
+      "previous": [],
+      "status": "name"
+    }
+  ],
+  "next": "/v2/names?by=activation&cursor=161350-internetofvalue.chain&direction=forward&limit=2&state=active",
+  "prev": null
 }
 ```
 
