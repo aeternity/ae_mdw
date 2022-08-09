@@ -28,9 +28,9 @@ defmodule AeMdw.Sync.AsyncStoreServer do
     {:ok, %{last_db_kbi: 0}}
   end
 
-  @spec write_mutations(AeMdw.Blocks.block_index(), [Mutation.t()]) :: :ok
-  def write_mutations(block_index, async_mutations) do
-    GenServer.call(__MODULE__, {:write_mutations, block_index, async_mutations})
+  @spec write_mutations(AeMdw.Blocks.block_index(), [Mutation.t()], fun()) :: :ok
+  def write_mutations(block_index, async_mutations, done_fn) do
+    GenServer.cast(__MODULE__, {:write_mutations, block_index, async_mutations, done_fn})
   end
 
   @spec write_async_store(State.t()) :: State.t()
@@ -39,9 +39,8 @@ defmodule AeMdw.Sync.AsyncStoreServer do
   end
 
   @impl GenServer
-  def handle_call(
-        {:write_mutations, {kbi, _mbi} = block_index, mutations},
-        _from,
+  def handle_cast(
+        {:write_mutations, {kbi, _mbi} = block_index, mutations, done_fn},
         %{last_db_kbi: last_db_kbi} = state
       ) do
     if Database.exists?(Model.Block, block_index) || kbi <= last_db_kbi do
@@ -60,7 +59,9 @@ defmodule AeMdw.Sync.AsyncStoreServer do
       |> Enum.each(&Mutation.execute(&1, async_state))
     end
 
-    {:reply, :ok, state}
+    done_fn.()
+
+    {:noreply, state}
   end
 
   @impl GenServer

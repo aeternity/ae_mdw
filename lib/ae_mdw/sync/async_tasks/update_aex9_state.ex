@@ -19,16 +19,20 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
 
   @microsecs 1_000_000
 
-  @spec process(args :: list()) :: :ok
-  def process([contract_pk, block_index, _call_txi] = args) do
+  @spec process(args :: list(), done_fn :: fun()) :: :ok
+  def process([contract_pk, block_index, _call_txi] = args, done_fn) do
     {time_delta, {write_mutation, delete_mutation}} = :timer.tc(fn -> mutations(args) end)
 
     Log.info("[update_aex9_state] #{enc_ct(contract_pk)} after #{time_delta / @microsecs}s")
 
-    AsyncStoreServer.write_mutations(block_index, [
-      delete_mutation,
-      write_mutation
-    ])
+    AsyncStoreServer.write_mutations(
+      block_index,
+      [
+        delete_mutation,
+        write_mutation
+      ],
+      done_fn
+    )
 
     :ok
   end
