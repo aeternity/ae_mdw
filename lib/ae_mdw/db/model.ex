@@ -594,6 +594,11 @@ defmodule AeMdw.Db.Model do
             burned_in_auctions: non_neg_integer()
           )
 
+  @stat_defaults [:index, :payload]
+  defrecord :stat, @stat_defaults
+
+  @type stat() :: record(:stat, index: atom(), payload: term())
+
   ################################################################################
 
   # starts with only chain_tables and add them progressively by groups
@@ -684,7 +689,8 @@ defmodule AeMdw.Db.Model do
   defp stat_tables() do
     [
       AeMdw.Db.Model.DeltaStat,
-      AeMdw.Db.Model.TotalStat
+      AeMdw.Db.Model.TotalStat,
+      AeMdw.Db.Model.Stat
     ]
   end
 
@@ -754,4 +760,5 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.TargetKindIntTransferTx), do: :target_kind_int_transfer_tx
   def record(AeMdw.Db.Model.DeltaStat), do: :delta_stat
   def record(AeMdw.Db.Model.TotalStat), do: :total_stat
+  def record(AeMdw.Db.Model.Stat), do: :stat
 end

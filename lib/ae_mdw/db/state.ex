@@ -138,6 +138,14 @@ defmodule AeMdw.Db.State do
 
   def next(state, table, :forward, cursor), do: next(state, table, cursor)
 
+  @spec update(t(), table(), key(), (record() -> record()), term() | nil) :: t()
+  def update(state, table, key, update_fn, default \\ nil) do
+    case get(state, table, key) do
+      {:ok, record} -> put(state, table, update_fn.(record))
+      :not_found -> put(state, table, update_fn.(default))
+    end
+  end
+
   @spec inc_stat(t(), stat_name(), integer()) :: t()
   def inc_stat(state, name, delta \\ 1)
 
