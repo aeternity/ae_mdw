@@ -25,6 +25,7 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
   @contract_pk1 <<100_000_000_001_003::256>>
   @contract_pk2 <<100_000_000_001_004::256>>
   @contract_pk3 <<100_000_000_001_005::256>>
+  @inexisting_pk :crypto.strong_rand_bytes(32)
 
   @kbi 100_001
   @mbi 11
@@ -42,15 +43,18 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
          assert kb_hash == @kb_hash and mbi == @mbi
          @next_hash
        end,
-       aex9_balances: fn contract_pk, next_hash = block_tuple ->
-         assert next_hash == {:micro, @kbi, @next_hash}
+       aex9_balances: fn contract_pk, next_hash_tuple ->
+         assert next_hash_tuple == {:micro, @kbi, @next_hash}
 
          cond do
            contract_pk == @contract_pk1 ->
-             {@balances1, block_tuple}
+             {:ok, @balances1}
 
            contract_pk == @contract_pk2 ->
-             {%{}, block_tuple}
+             {:ok, %{}}
+
+           contract_pk == @inexisting_pk ->
+             {:error, :contract_does_not_exist}
          end
        end
      ]}
@@ -129,6 +133,14 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
                State.fetch!(state, Model.Aex9Balance, {@contract_pk3, account_pk2})
 
       refute State.exists?(state, Model.Aex9Balance, {@contract_pk3, <<>>})
+    end
+
+    test "discards a task for not present contract" do
+      unique_msg = System.unique_integer()
+      done_fn = fn -> send(self(), unique_msg) end
+      UpdateAex9State.process([@inexisting_pk, {@kbi, @mbi}, -1], done_fn)
+
+      assert_receive unique_msg
     end
   end
 end

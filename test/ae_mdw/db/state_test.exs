@@ -77,6 +77,13 @@ defmodule AeMdw.Db.StateTest do
                  Database.fetch(Model.Aex9AccountPresence, {account_pk, ct_pk})
                )
              end)
+
+      task_index =
+        Enum.find_value(tasks, fn Model.async_task(index: index, args: args) ->
+          if args == [ct_pk], do: index
+        end)
+
+      refute Database.exists?(Model.AsyncTask, task_index)
     end
 
     test "doesn't enqueue aex9 task again after enqueued by on-memory sync" do

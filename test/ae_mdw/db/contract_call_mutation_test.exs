@@ -187,7 +187,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
          [
            get_key_block_hash: fn 231_735 -> kb_hash end,
            get_next_hash: fn ^kb_hash, 54 -> next_mb_hash end,
-           aex9_balances: fn ^contract_pk, _next -> {%{}, nil} end
+           aex9_balances: fn ^contract_pk, _next -> {:ok, %{}} end
          ]}
       ] do
         state =

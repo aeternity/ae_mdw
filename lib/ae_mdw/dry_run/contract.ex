@@ -6,7 +6,6 @@ defmodule AeMdw.DryRun.Contract do
   alias AeMdw.Util
 
   @typep pubkey() :: <<_::256>>
-  @typep block_hash() :: <<_::256>>
 
   @abi_fate_sophia_1 3
   @gas 10_000_000_000_000_000_000_000
@@ -14,19 +13,12 @@ defmodule AeMdw.DryRun.Contract do
   @spec new_call_tx(
           pubkey(),
           pubkey(),
-          block_hash(),
           AeMdw.Contract.method_name(),
           AeMdw.Contract.method_args(),
           pos_integer()
         ) :: AeMdw.Node.aetx()
-  def new_call_tx(caller_pk, contract_pk, block_hash, function_name, args, gas \\ @gas) do
-    {_tx_env, trees} = :aetx_env.tx_env_and_trees_from_hash(:aetx_contract, block_hash)
-    contracts = :aec_trees.contracts(trees)
-
-    contract_id =
-      contract_pk
-      |> :aect_state_tree.get_contract(contracts)
-      |> :aect_contracts.id()
+  def new_call_tx(caller_pk, contract_pk, function_name, args, gas \\ @gas) do
+    contract_id = :aeser_id.create(:contract, contract_pk)
 
     call_data =
       function_name
