@@ -69,7 +69,7 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
       amount1 = @amount1
       amount2 = @amount2
 
-      UpdateAex9State.process([@contract_pk1, block_index, call_txi], fn -> :ok end)
+      assert :ok = UpdateAex9State.process([@contract_pk1, block_index, call_txi], fn -> :ok end)
 
       state = State.new(AsyncStore.instance())
 
@@ -94,7 +94,7 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
       block_index = {@kbi, @mbi}
       call_txi = 12_345_680
 
-      UpdateAex9State.process([@contract_pk2, block_index, call_txi], fn -> :ok end)
+      assert :ok = UpdateAex9State.process([@contract_pk2, block_index, call_txi], fn -> :ok end)
 
       state = State.new(AsyncStore.instance())
 
@@ -119,7 +119,7 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
         {:address, account_pk2} => amount2
       })
 
-      UpdateAex9State.process([@contract_pk3, {@kbi, @mbi}, call_txi], fn -> :ok end)
+      assert :ok = UpdateAex9State.process([@contract_pk3, {@kbi, @mbi}, call_txi], fn -> :ok end)
       state = State.new(AsyncStore.instance())
 
       Enum.any?(1..10, fn _i ->
