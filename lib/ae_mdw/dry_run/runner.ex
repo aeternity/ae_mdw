@@ -17,6 +17,7 @@ defmodule AeMdw.DryRun.Runner do
   @type node_event :: tuple()
   @type node_run_result :: {[run_tx_res()], [node_event()]}
   @type call_return :: any()
+  @type call_error :: binary() | :contract_does_not_exist | :dry_run_error
 
   # arbitrary new pk to run the calls
   @runner_pk <<13, 24, 60, 171, 170, 28, 99, 114, 174, 14, 112, 19, 49, 53, 233, 194, 46, 149,
@@ -26,15 +27,15 @@ defmodule AeMdw.DryRun.Runner do
   @extension_methods ["aex9_extensions", "aex141_extensions"]
 
   @spec call_contract(DBN.pubkey(), method_name(), method_args()) ::
-          {:ok, call_return()} | {:error, binary() | :dry_run_error} | :revert
+          {:ok, call_return()} | {:error, call_error()} | :revert
   def call_contract(contract_pk, function_name, args),
     do: call_contract(contract_pk, DBN.top_height_hash(false), function_name, args)
 
   @spec call_contract(DBN.pubkey(), DBN.height_hash(), method_name(), method_args()) ::
-          {:ok, call_return()} | {:error, binary() | :dry_run_error} | :revert
+          {:ok, call_return()} | {:error, call_error()} | :revert
   def call_contract(contract_pk, {_type, height, block_hash}, function_name, args) do
     contract_pk
-    |> new_contract_call_tx(height, block_hash, function_name, args)
+    |> new_contract_call_tx(height, function_name, args)
     |> dry_run(block_hash)
     |> case do
       {:ok, {[contract_call_tx: {:ok, call_res}], _events}} ->
@@ -49,6 +50,9 @@ defmodule AeMdw.DryRun.Runner do
           :revert ->
             :revert
         end
+
+      {:ok, {[contract_call_tx: {:error, :contract_does_not_exist}], []}} ->
+        {:error, :contract_does_not_exist}
 
       {:error, _internal_error_msg} ->
         {:error, :dry_run_error}
@@ -66,21 +70,20 @@ defmodule AeMdw.DryRun.Runner do
     :aec_dry_run.dry_run(block_hash, accounts, txs, tx_events: false)
   end
 
-  defp new_contract_call_tx(contract_pk, height, block_hash, function_name, args)
+  defp new_contract_call_tx(contract_pk, height, function_name, args)
        when function_name == "meta_info" or function_name in @extension_methods do
     base_gas = Contract.call_tx_base_gas(height)
 
     Contract.new_call_tx(
       @runner_pk,
       contract_pk,
-      block_hash,
       function_name,
       args,
       base_gas
     )
   end
 
-  defp new_contract_call_tx(contract_pk, _height, block_hash, function_name, args) do
-    Contract.new_call_tx(@runner_pk, contract_pk, block_hash, function_name, args)
+  defp new_contract_call_tx(contract_pk, _height, function_name, args) do
+    Contract.new_call_tx(@runner_pk, contract_pk, function_name, args)
   end
 end

@@ -69,8 +69,8 @@ defmodule AeMdw.Db.ContractTest do
            kb_hash
          end,
          get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
-         aex9_balances: fn _ct_pk, {:micro, ^kbi, ^next_mb_hash} = block_tuple ->
-           {%{{:address, :crypto.strong_rand_bytes(32)} => <<>>}, block_tuple}
+         aex9_balances: fn _ct_pk, {:micro, ^kbi, ^next_mb_hash} ->
+           {:ok, %{{:address, :crypto.strong_rand_bytes(32)} => <<>>}}
          end
        ]}
     ] do

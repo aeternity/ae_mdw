@@ -14,6 +14,7 @@ defmodule AeMdw.Node.Db do
   @type pubkey() :: <<_::256>>
   @type hash_type() :: nil | :key | :micro
   @type height_hash() :: {hash_type(), pos_integer(), binary()}
+  @type balances_map() :: %{{:address, pubkey()} => integer()}
   @opaque key_block() :: tuple()
   @opaque micro_block() :: tuple()
 
@@ -175,15 +176,15 @@ defmodule AeMdw.Node.Db do
     end
   end
 
-  @spec aex9_balances!(pubkey()) :: {map(), height_hash()}
+  @spec aex9_balances!(pubkey()) :: {balances_map(), height_hash()}
   def aex9_balances!(contract_pk),
     do: aex9_balances!(contract_pk, false)
 
-  @spec aex9_balances!(pubkey(), boolean()) :: {map(), height_hash()}
+  @spec aex9_balances!(pubkey(), boolean()) :: {balances_map(), height_hash()}
   def aex9_balances!(contract_pk, the_very_top?) when is_boolean(the_very_top?),
     do: aex9_balances!(contract_pk, top_height_hash(the_very_top?))
 
-  @spec aex9_balances!(pubkey(), height_hash()) :: {map(), height_hash()}
+  @spec aex9_balances!(pubkey(), height_hash()) :: {balances_map(), height_hash()}
   def aex9_balances!(contract_pk, {type, height, hash}) do
     {:ok, addr_map} =
       Runner.call_contract(
@@ -196,11 +197,8 @@ defmodule AeMdw.Node.Db do
     {addr_map, {type, height, hash}}
   end
 
-  @spec aex9_balances(pubkey()) :: {map(), height_hash()}
-  def aex9_balances(contract_pk),
-    do: aex9_balances(contract_pk, top_height_hash(false))
-
-  @spec aex9_balances(pubkey(), height_hash()) :: {map(), height_hash()}
+  @spec aex9_balances(pubkey(), height_hash()) ::
+          {:ok, balances_map()} | {:error, Runner.call_error()}
   def aex9_balances(contract_pk, {_type, _height, _hash} = height_hash) do
     case Runner.call_contract(
            contract_pk,
@@ -209,12 +207,12 @@ defmodule AeMdw.Node.Db do
            []
          ) do
       {:ok, addr_map} ->
-        {addr_map, height_hash}
+        {:ok, addr_map}
 
       {:error, reason} ->
         contract_id = :aeser_api_encoder.encode(:contract_pubkey, contract_pk)
         Log.warn("balances() failed! ct_id=#{contract_id}, reason=#{inspect(reason)}")
-        {%{}, nil}
+        {:error, reason}
     end
   end
 

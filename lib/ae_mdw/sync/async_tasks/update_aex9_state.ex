@@ -21,25 +21,34 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
 
   @spec process(args :: list(), done_fn :: fun()) :: :ok
   def process([contract_pk, block_index, _call_txi] = args, done_fn) do
-    {time_delta, {write_mutation, delete_mutation}} = :timer.tc(fn -> mutations(args) end)
+    {time_delta, :ok} =
+      :timer.tc(fn ->
+        case aex9_balances(contract_pk, block_index) do
+          {:ok, balances, purged_balances} ->
+            {write_mutation, delete_mutation} = mutations(args, balances, purged_balances)
+
+            AsyncStoreServer.write_mutations(
+              block_index,
+              [
+                delete_mutation,
+                write_mutation
+              ],
+              done_fn
+            )
+
+          {:error, _reason} ->
+            done_fn.()
+        end
+
+        :ok
+      end)
 
     Log.info("[update_aex9_state] #{enc_ct(contract_pk)} after #{time_delta / @microsecs}s")
-
-    AsyncStoreServer.write_mutations(
-      block_index,
-      [
-        delete_mutation,
-        write_mutation
-      ],
-      done_fn
-    )
 
     :ok
   end
 
-  defp mutations([contract_pk, block_index, call_txi]) do
-    {balances, purged_balances} = aex9_balances(contract_pk, block_index)
-
+  defp mutations([contract_pk, block_index, call_txi], balances, purged_balances) do
     if map_size(balances) == 0 do
       m_empty_balance = Model.aex9_balance(index: {contract_pk, <<>>})
 
@@ -72,14 +81,16 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
 
     case Aex9BalancesCache.get(contract_pk, block_index, next_hash) do
       {:ok, balances} ->
-        {balances, %{}}
+        {:ok, balances, %{}}
 
       :not_found ->
         purged_balances = Aex9BalancesCache.purge(contract_pk, block_index)
-        {balances, _height_hash} = DBN.aex9_balances(contract_pk, {type, height, next_hash})
-        Aex9BalancesCache.put(contract_pk, block_index, next_hash, balances)
 
-        {balances, purged_balances}
+        with {:ok, balances} <- DBN.aex9_balances(contract_pk, {type, height, next_hash}) do
+          Aex9BalancesCache.put(contract_pk, block_index, next_hash, balances)
+
+          {:ok, balances, purged_balances}
+        end
     end
   end
 
