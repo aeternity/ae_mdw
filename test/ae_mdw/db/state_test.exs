@@ -127,8 +127,7 @@ defmodule AeMdw.Db.StateTest do
   end
 
   describe "commit_mem" do
-    test "saves aex9 state into ets store" do
-      ct_pk = :crypto.strong_rand_bytes(32)
+    test "saves multiple aex9 task results into ets store" do
       block_index = {567_891, 2}
       call_txi = 12_345_680
 
@@ -136,50 +135,73 @@ defmodule AeMdw.Db.StateTest do
       amount = Enum.random(1_000_000_000..9_999_999_999)
       balances = %{{:address, account_pk} => amount}
 
-      Aex9BalancesCache.put(ct_pk, block_index, @next_hash, balances)
+      ct_pks =
+        Enum.map(1..100, fn _i ->
+          ct_pk = :crypto.strong_rand_bytes(32)
+          Aex9BalancesCache.put(ct_pk, block_index, @next_hash, balances)
+          ct_pk
+        end)
+
+      mutations =
+        Enum.map(ct_pks, fn ct_pk ->
+          AexnCreateContractMutation.new(
+            :aex9,
+            ct_pk,
+            {"mem_aex9", "mem_aex9", 18},
+            block_index,
+            call_txi,
+            []
+          )
+        end)
 
       NullStore.new()
       |> MemStore.new()
       |> State.new()
-      |> State.commit_mem([
-        AexnCreateContractMutation.new(
-          :aex9,
-          ct_pk,
-          {"mem_aex9", "mem_aex9", 18},
-          block_index,
-          call_txi,
-          []
-        )
-      ])
+      |> State.commit_mem(mutations)
 
-      assert AeMdw.EtsCache.member(
-               :async_tasks_added,
-               {:update_aex9_state, [ct_pk], [block_index, call_txi]}
-             )
-
-      AsyncTaskTestUtil.wakeup_consumers()
-
-      state = State.new(AsyncStore.instance())
-      presence_key = {account_pk, ct_pk}
-
-      assert Enum.any?(1..10, fn _i ->
-               Process.sleep(100)
-
-               match?(
-                 {:ok, Model.aex9_account_presence(index: ^presence_key, txi: ^call_txi)},
-                 State.get(state, Model.Aex9AccountPresence, presence_key)
+      assert Enum.all?(ct_pks, fn ct_pk ->
+               AeMdw.EtsCache.member(
+                 :async_tasks_added,
+                 {:update_aex9_state, [ct_pk], [block_index, call_txi]}
                )
              end)
 
-      balance_key = {ct_pk, account_pk}
+      AsyncTaskTestUtil.wakeup_consumers()
 
-      assert {:ok,
-              Model.aex9_balance(
-                index: ^balance_key,
-                block_index: ^block_index,
-                txi: ^call_txi,
-                amount: ^amount
-              )} = State.get(state, Model.Aex9Balance, balance_key)
+      async_state = State.new(AsyncStore.instance())
+
+      all_presence_keys = Enum.map(ct_pks, fn ct_pk -> {account_pk, ct_pk} end)
+
+      assert [] ==
+               Enum.reduce_while(1..100, all_presence_keys, fn _i, presences_keys ->
+                 Process.sleep(100)
+
+                 found =
+                   Enum.filter(
+                     presences_keys,
+                     &State.exists?(async_state, Model.Aex9AccountPresence, &1)
+                   )
+
+                 case presences_keys -- found do
+                   [] -> {:halt, []}
+                   remaining -> {:cont, remaining}
+                 end
+               end)
+
+      assert Enum.all?(ct_pks, fn ct_pk ->
+               balance_key = {ct_pk, account_pk}
+
+               match?(
+                 {:ok,
+                  Model.aex9_balance(
+                    index: ^balance_key,
+                    block_index: ^block_index,
+                    txi: ^call_txi,
+                    amount: ^amount
+                  )},
+                 State.get(async_state, Model.Aex9Balance, balance_key)
+               )
+             end)
     end
   end
 end

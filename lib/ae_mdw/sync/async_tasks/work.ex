@@ -3,5 +3,5 @@ defmodule AeMdw.Sync.AsyncTasks.Work do
   The interface for actual processing modules.
   """
 
-  @callback process(args :: list()) :: :ok
+  @callback process(args :: list(), done_fn :: fun()) :: :ok
 end

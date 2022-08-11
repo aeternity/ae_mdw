@@ -16,7 +16,7 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
 
   import AeMdw.Util, only: [ok!: 1]
 
-  @base_sleep_msecs 3_000
+  @base_sleep_msecs 100
   @yield_timeout_msecs 100
   @task_timeout_msecs 40_000
 
@@ -109,8 +109,7 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
       Task.Supervisor.async_nolink(
         TaskSupervisor,
         fn ->
-          :ok = process(m_task)
-          set_done(m_task, is_long?)
+          :ok = process(m_task, is_long?)
         end
       )
 
@@ -142,22 +141,20 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
     end
   end
 
-  @spec process(Model.async_task_record()) :: :ok
-  defp process(Model.async_task(index: {_ts, type}, args: args, extra_args: extra_args)) do
+  @spec process(Model.async_task_record(), boolean()) :: :ok
+  defp process(
+         Model.async_task(index: {_ts, type} = index, args: args, extra_args: extra_args),
+         is_long?
+       ) do
     mod = @type_mod[type]
-    apply(mod, :process, [args ++ extra_args])
+    done_fn = fn -> Producer.notify_consumed(index, args, is_long?) end
+    apply(mod, :process, [args ++ extra_args, done_fn])
     :ok
-  end
-
-  @spec set_done(Model.async_task_record(), boolean()) :: :ok
-  defp set_done(Model.async_task(index: index, args: args), is_long?) do
-    Producer.notify_consumed(index, args, is_long?)
   end
 
   @spec schedule_demand() :: :ok
   defp schedule_demand() do
-    sleep_msecs = @base_sleep_msecs + Enum.random(-200..200)
-    Process.send_after(self(), :demand, sleep_msecs)
+    Process.send_after(self(), :demand, @base_sleep_msecs)
     :ok
   end
 end
