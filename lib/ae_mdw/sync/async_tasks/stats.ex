@@ -23,15 +23,11 @@ defmodule AeMdw.Sync.AsyncTasks.Stats do
     :ok
   end
 
-  @spec update_buffer_len(pos_integer(), pos_integer()) :: :ok
-  def update_buffer_len(producer_buffer_len, max_len) do
+  @spec update_buffer_len(pos_integer()) :: :ok
+  def update_buffer_len(producer_buffer_len) do
     :ets.update_element(@tab, @stats_key, {@buffer_len_pos, producer_buffer_len})
 
-    cond do
-      producer_buffer_len == 0 -> reset_db_count()
-      rem(max_len, @max_db_count_times) == 0 -> update_db_count()
-      true -> :noop
-    end
+    if rem(producer_buffer_len, @max_db_count_times) == 0, do: update_db_count()
 
     :ok
   end
@@ -76,9 +72,5 @@ defmodule AeMdw.Sync.AsyncTasks.Stats do
   defp update_db_count() do
     db_pending_count = Database.count(Model.AsyncTask)
     :ets.update_element(@tab, @stats_key, {@db_count_pos, db_pending_count})
-  end
-
-  defp reset_db_count() do
-    :ets.update_element(@tab, @stats_key, {@db_count_pos, 0})
   end
 end

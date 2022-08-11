@@ -13,7 +13,7 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   require Model
   require Logger
 
-  @max_buffer_size 100
+  @long_timeout_ms 10_000
 
   @spec start_link(any()) :: GenServer.on_start()
   def start_link(_args) do
@@ -41,7 +41,7 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
 
   @spec dequeue() :: nil | Model.async_task_record()
   def dequeue() do
-    GenServer.call(__MODULE__, :dequeue)
+    GenServer.call(__MODULE__, :dequeue, @long_timeout_ms)
   end
 
   @spec notify_consumed(Model.async_task_index(), Model.async_task_args(), boolean()) :: :ok
@@ -74,7 +74,7 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
 
     new_buffer
     |> length()
-    |> Stats.update_buffer_len(@max_buffer_size)
+    |> Stats.update_buffer_len()
 
     {:reply, m_task, new_state}
   end
