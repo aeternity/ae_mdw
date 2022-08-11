@@ -5,8 +5,6 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   use GenServer
 
   alias AeMdw.Db.Model
-  alias AeMdw.Log
-  alias AeMdw.Sync.AsyncTasks.LongTaskConsumer
   alias AeMdw.Sync.AsyncTasks.Store
   alias AeMdw.Sync.AsyncTasks.Stats
 
@@ -44,21 +42,10 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
     GenServer.call(__MODULE__, :dequeue, @long_timeout_ms)
   end
 
-  @spec notify_consumed(Model.async_task_index(), Model.async_task_args(), boolean()) :: :ok
-  def notify_consumed(task_index, task_args, is_long?) do
+  @spec notify_consumed(Model.async_task_index(), Model.async_task_args()) :: :ok
+  def notify_consumed(task_index, task_args) do
     Store.set_done(task_index, task_args)
-    Stats.update_consumed(is_long?)
-
-    if is_long?, do: Log.info("Long task finished: #{inspect(task_index)}")
-
-    :ok
-  end
-
-  @spec notify_timeout(Model.async_task_record()) :: :ok
-  def notify_timeout(m_task) do
-    Log.warn("Long task enqueued: #{inspect(m_task)}")
-    LongTaskConsumer.enqueue(m_task)
-    Stats.inc_long_tasks_count()
+    Stats.update_consumed(false)
 
     :ok
   end

@@ -143,7 +143,7 @@ defmodule AeMdw.Db.StateTest do
       balances = %{{:address, account_pk} => amount}
 
       ct_pks =
-        Enum.map(1..100, fn _i ->
+        Enum.map(1..150, fn _i ->
           ct_pk = :crypto.strong_rand_bytes(32)
           Aex9BalancesCache.put(ct_pk, block_index, @next_hash, balances)
           ct_pk

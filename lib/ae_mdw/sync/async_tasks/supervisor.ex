@@ -5,7 +5,6 @@ defmodule AeMdw.Sync.AsyncTasks.Supervisor do
   use Supervisor
 
   alias AeMdw.Sync.AsyncTasks.Consumer
-  alias AeMdw.Sync.AsyncTasks.LongTaskConsumer
   alias AeMdw.Sync.AsyncTasks.Producer
   alias AeMdw.Sync.AsyncTasks.TaskSupervisor
 
@@ -16,11 +15,11 @@ defmodule AeMdw.Sync.AsyncTasks.Supervisor do
 
   @impl Supervisor
   def init(:ok) do
-    children = [
-      {Task.Supervisor, name: TaskSupervisor},
-      Producer,
-      LongTaskConsumer | consumers()
-    ]
+    children =
+      [
+        {Task.Supervisor, name: TaskSupervisor},
+        Producer
+      ] ++ consumers()
 
     Supervisor.init(children, strategy: :one_for_all)
   end

@@ -14,11 +14,7 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   require Model
   require Logger
 
-  import AeMdw.Util, only: [ok!: 1]
-
-  @base_sleep_msecs 100
-  @yield_timeout_msecs 100
-  @task_timeout_msecs 40_000
+  @wait_msecs 1_000
 
   @type_mod %{
     update_aex9_state: UpdateAex9State
@@ -26,16 +22,13 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
 
   @type task_type() :: Model.async_task_type()
 
-  # @max_retries 2
-  # @backoff_msecs 10_000
-
   defmodule State do
     @moduledoc """
     GenServer state
     """
     @type t :: %__MODULE__{}
 
-    defstruct task: nil, m_task: nil, timer_ref: nil
+    defstruct task: nil, m_task: nil
   end
 
   @spec start_link(any()) :: GenServer.on_start()
@@ -45,7 +38,7 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
 
   @impl GenServer
   def init(:ok) do
-    schedule_demand()
+    schedule_demand(@wait_msecs)
     {:ok, %State{}}
   end
 
@@ -58,34 +51,10 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   end
 
   @doc """
-  Handle async task timeout.
-  """
-  def handle_info(:timeout, %State{task: task, m_task: m_task}) do
-    case Task.yield(task, @yield_timeout_msecs) do
-      nil ->
-        Task.shutdown(task, :brutal_kill)
-        Producer.notify_timeout(m_task)
-
-      _not_running ->
-        :noop
-    end
-
-    schedule_demand()
-
-    {:noreply, %State{}}
-  end
-
-  @doc """
   When the task finishes, demonitor and demands next task.
   """
-  def handle_info({ref, ok_res}, %State{task: current_task, timer_ref: timer_ref}) do
+  def handle_info({ref, _ok_res}, _state) do
     Process.demonitor(ref, [:flush])
-
-    if ok_res != :ok do
-      Log.warn("Async task returned #{ok_res}, task=#{inspect(current_task)}")
-    end
-
-    if nil != timer_ref, do: :timer.cancel(timer_ref)
 
     schedule_demand()
 
@@ -96,28 +65,27 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   Just acknowledge (ignore) the DOWN event.
   """
   def handle_info({:DOWN, _ref, :process, _pid, _reason}, %State{} = state) do
+    schedule_demand()
+
     {:noreply, state}
   end
 
   #
   # Used by consumers only
   #
-  @spec run_supervised(Model.async_task_record(), boolean()) ::
-          {Task.t(), :timer.tref() | nil}
-  def run_supervised(m_task, is_long? \\ false) do
+  @spec run_supervised(Model.async_task_record()) :: Task.t()
+  def run_supervised(m_task) do
     task =
       Task.Supervisor.async_nolink(
         TaskSupervisor,
         fn ->
-          :ok = process(m_task, is_long?)
+          :ok = process(m_task)
         end
       )
 
     Log.info("[#{inspect(task.ref)}] #{inspect(m_task)}")
 
-    timer_ref = if not is_long?, do: ok!(:timer.send_after(@task_timeout_msecs, :timeout))
-
-    {task, timer_ref}
+    task
   end
 
   #
@@ -128,33 +96,29 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
     m_task = Producer.dequeue()
 
     if nil != m_task do
-      {task, timer_ref} = run_supervised(m_task)
+      task = run_supervised(m_task)
 
       %State{
         task: task,
-        m_task: m_task,
-        timer_ref: timer_ref
+        m_task: m_task
       }
     else
-      schedule_demand()
+      schedule_demand(@wait_msecs)
       %State{}
     end
   end
 
-  @spec process(Model.async_task_record(), boolean()) :: :ok
-  defp process(
-         Model.async_task(index: {_ts, type} = index, args: args, extra_args: extra_args),
-         is_long?
-       ) do
+  @spec process(Model.async_task_record()) :: :ok
+  defp process(Model.async_task(index: {_ts, type} = index, args: args, extra_args: extra_args)) do
     mod = @type_mod[type]
-    done_fn = fn -> Producer.notify_consumed(index, args, is_long?) end
+    done_fn = fn -> Producer.notify_consumed(index, args) end
     apply(mod, :process, [args ++ extra_args, done_fn])
     :ok
   end
 
-  @spec schedule_demand() :: :ok
-  defp schedule_demand() do
-    Process.send_after(self(), :demand, @base_sleep_msecs)
+  @spec schedule_demand(non_neg_integer()) :: :ok
+  defp schedule_demand(sleep \\ 0) do
+    Process.send_after(self(), :demand, sleep)
     :ok
   end
 end
