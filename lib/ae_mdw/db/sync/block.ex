@@ -22,13 +22,13 @@ defmodule AeMdw.Db.Sync.Block do
   alias AeMdw.Db.NamesExpirationMutation
   alias AeMdw.Db.OraclesExpirationMutation
   alias AeMdw.Db.State
-  alias AeMdw.Db.StatsMutation
   alias AeMdw.Db.Sync.Transaction
   alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.Mutation
   alias AeMdw.Log
   alias AeMdw.Node, as: AE
   alias AeMdw.Node.Db
+  alias AeMdw.Stats
   alias AeMdw.Txs
 
   require Model
@@ -99,7 +99,7 @@ defmodule AeMdw.Db.Sync.Block do
         block_rewards_mutation,
         NamesExpirationMutation.new(height),
         OraclesExpirationMutation.new(height),
-        StatsMutation.new(height, starting_from_mb0?),
+        Stats.mutation(height, key_block, micro_blocks, starting_from_mb0?),
         next_kb_mutation
       ]
 

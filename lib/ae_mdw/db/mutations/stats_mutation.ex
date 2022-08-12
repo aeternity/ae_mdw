@@ -12,28 +12,36 @@ defmodule AeMdw.Db.StatsMutation do
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
+  alias AeMdw.Stats
   alias AeMdw.Util
 
   require Model
 
   @derive AeMdw.Db.Mutation
-  defstruct [:height, :all_cached?]
+  defstruct [:height, :key_hash, :tps, :all_cached?]
 
   @type t() :: %__MODULE__{
           height: Blocks.height(),
+          key_hash: Blocks.block_hash(),
+          tps: Stats.tps(),
           all_cached?: boolean()
         }
 
-  @spec new(Blocks.height(), boolean()) :: t()
-  def new(height, all_cached?) do
+  @spec new(Blocks.height(), Blocks.block_hash(), Stats.tps(), boolean()) :: t()
+  def new(height, key_hash, tps, all_cached?) do
     %__MODULE__{
       height: height,
+      key_hash: key_hash,
+      tps: tps,
       all_cached?: all_cached?
     }
   end
 
   @spec execute(t(), State.t()) :: State.t()
-  def execute(%__MODULE__{height: height, all_cached?: all_cached?}, state) do
+  def execute(
+        %__MODULE__{height: height, key_hash: key_hash, tps: tps, all_cached?: all_cached?},
+        state
+      ) do
     m_delta_stat = make_delta_stat(state, height, all_cached?)
     # delta/transitions are only reflected on total stats at height + 1
     m_total_stat = make_total_stat(state, height + 1, m_delta_stat)
@@ -41,6 +49,17 @@ defmodule AeMdw.Db.StatsMutation do
     state
     |> State.put(Model.DeltaStat, m_delta_stat)
     |> State.put(Model.TotalStat, m_total_stat)
+    |> State.update(Model.Stat, Stats.max_tps_key(), fn
+      Model.stat(payload: {max_tps, _tps_block_hash}) = stat ->
+        if tps >= max_tps do
+          Model.stat(stat, payload: {tps, key_hash})
+        else
+          stat
+        end
+
+      nil ->
+        Model.stat(index: Stats.max_tps_key(), payload: {tps, key_hash})
+    end)
   end
 
   #

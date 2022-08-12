@@ -35,7 +35,7 @@ defmodule AeMdw.Db.StatsMutationTest do
       Database.dirty_write(Model.DeltaStat, prev_delta_stat)
       Database.dirty_write(Model.TotalStat, prev_total_stat)
 
-      mutation = StatsMutation.new(height, false)
+      mutation = StatsMutation.new(height, nil, nil, false)
 
       State.commit(State.new(), [mutation])
 
@@ -91,7 +91,7 @@ defmodule AeMdw.Db.StatsMutationTest do
         State.new()
         |> State.inc_stat(:block_reward, @first_block_reward)
 
-      mutation = StatsMutation.new(height, true)
+      mutation = StatsMutation.new(height, nil, nil, true)
 
       State.commit(state, [mutation])
 
@@ -156,7 +156,7 @@ defmodule AeMdw.Db.StatsMutationTest do
         |> State.inc_stat(:dev_reward, increased_dev_reward)
         |> State.inc_stat(:names_activated, 1)
 
-      mutation = StatsMutation.new(height, true)
+      mutation = StatsMutation.new(height, nil, nil, true)
 
       State.commit(state, [mutation])
 
@@ -189,7 +189,7 @@ defmodule AeMdw.Db.StatsMutationTest do
   describe "execute/2" do
     test "with all_cached? = false, on 1st block reward it stores the stat using database counts" do
       height = 21
-      mutation = StatsMutation.new(height, false)
+      mutation = StatsMutation.new(height, nil, nil, false)
 
       expected_delta =
         Model.delta_stat(
@@ -225,13 +225,15 @@ defmodule AeMdw.Db.StatsMutationTest do
            get: fn
              Model.TotalStat, ^height -> {:ok, Model.total_stat(active_auctions: 1)}
              Model.InactiveName, _plain_name -> {:ok, Model.name()}
+             Model.Stat, _key -> :not_found
            end,
            count: fn
              Model.ActiveName -> 3
              Model.ActiveOracle -> 4
              Model.AuctionExpiration -> 5
            end,
-           next_key: fn _tab, _init_key -> :none end
+           next_key: fn _tab, _init_key -> :none end,
+           dirty_write: fn _txs, _record -> :ok end
          ]},
         {State, [:passthrough], put: fn state, _tab, _record -> state end},
         {Collection, [],
@@ -265,7 +267,7 @@ defmodule AeMdw.Db.StatsMutationTest do
         State.new()
         |> State.inc_stat(:block_reward, 5)
 
-      mutation = StatsMutation.new(height, true)
+      mutation = StatsMutation.new(height, nil, nil, true)
 
       expected_delta =
         Model.delta_stat(
@@ -298,9 +300,14 @@ defmodule AeMdw.Db.StatsMutationTest do
       with_mocks [
         {Database, [],
          [
-           get: fn Model.TotalStat, ^height ->
-             {:ok, Model.total_stat(active_auctions: 1)}
-           end
+           get: fn
+             Model.TotalStat, ^height ->
+               {:ok, Model.total_stat(active_auctions: 1)}
+
+             Model.Stat, _key ->
+               :not_found
+           end,
+           dirty_write: fn _txs, _record -> :ok end
          ]},
         {State, [:passthrough], put: fn state, _tab, _record -> state end}
       ] do

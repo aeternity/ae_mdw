@@ -3,10 +3,15 @@ defmodule AeMdw.Stats do
   Context module for dealing with Stats.
   """
 
+  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.StatsMutation
   alias AeMdw.Database
+  alias AeMdw.Error
+  alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Node.Db
   alias AeMdw.Util
 
   require Model
@@ -15,11 +20,37 @@ defmodule AeMdw.Stats do
   @type delta_stat() :: map()
   @type total_stat() :: map()
   @type cursor() :: binary() | nil
+  @type tps() :: non_neg_integer()
 
   @typep height() :: Blocks.height()
   @typep direction() :: Database.direction()
   @typep limit() :: Database.limit()
   @typep range() :: {:gen, Range.t()} | nil
+
+  @tps_stat_key :max_tps
+
+  @spec mutation(height(), Db.key_block(), [Db.micro_block()], boolean()) :: StatsMutation.t()
+  def mutation(height, key_block, micro_blocks, starting_from_mb0?) do
+    header = :aec_blocks.to_header(key_block)
+    time = :aec_headers.time_in_msecs(header)
+    {:ok, key_hash} = :aec_headers.hash_header(header)
+
+    {_last_time, total_time, total_txs} =
+      Enum.reduce(micro_blocks, {time, 0, 0}, fn micro_block, {last_time, time_acc, count_acc} ->
+        header = :aec_blocks.to_header(micro_block)
+        time = :aec_headers.time_in_msecs(header)
+        count = length(:aec_blocks.txs(micro_block))
+
+        {time, time_acc + time - last_time, count_acc + count}
+      end)
+
+    tps = if total_time > 0, do: round(total_txs * 100_000 / total_time) / 100, else: 0
+
+    StatsMutation.new(height, key_hash, tps, starting_from_mb0?)
+  end
+
+  @spec max_tps_key() :: atom()
+  def max_tps_key, do: @tps_stat_key
 
   # Legacy v1 is a blending between /totalstats and /deltastats.
   # The active and inactive object counters are totals while the rewards are delta.
@@ -88,6 +119,21 @@ defmodule AeMdw.Stats do
 
       :error ->
         {nil, [], nil}
+    end
+  end
+
+  @spec fetch_stats(State.t()) :: {:ok, map()} | {:error, Error.t()}
+  def fetch_stats(state) do
+    case State.get(state, Model.Stat, @tps_stat_key) do
+      {:ok, Model.stat(payload: {tps, tps_block_hash})} ->
+        {:ok,
+         %{
+           max_transactions_per_second: tps,
+           max_transactions_per_second_block_hash: Enc.encode(:key_block_hash, tps_block_hash)
+         }}
+
+      :not_found ->
+        {:error, ErrInput.NotFound.exception(value: "no stats")}
     end
   end
 
