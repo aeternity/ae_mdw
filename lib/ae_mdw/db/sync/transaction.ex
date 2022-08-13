@@ -4,6 +4,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   "
 
   alias AeMdw.Blocks
+  alias AeMdw.Channels
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.ContractCallMutation
@@ -29,6 +30,8 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias __MODULE__.TxContext
 
   require Model
+
+  @channel_closing_types ~w(channel_close_solo_tx channel_close_mutual_tx channel_settle_tx)a
 
   defmodule TxContext do
     @moduledoc """
@@ -200,12 +203,25 @@ defmodule AeMdw.Db.Sync.Transaction do
          type: :channel_create_tx,
          signed_tx: signed_tx,
          txi: txi,
+         tx: tx,
          tx_hash: tx_hash
        }) do
     {:ok, channel_pk} = :aesc_utils.channel_pubkey(signed_tx)
 
-    Origin.origin_mutations(:channel_create_tx, nil, channel_pk, txi, tx_hash)
+    [
+      Channels.open_mutation(tx),
+      Origin.origin_mutations(:channel_create_tx, nil, channel_pk, txi, tx_hash)
+    ]
   end
+
+  defp tx_mutations(%TxContext{type: tx_type, tx: tx}) when tx_type in @channel_closing_types,
+    do: Channels.close_mutation(tx_type, tx)
+
+  defp tx_mutations(%TxContext{type: :channel_deposit_tx, tx: tx}),
+    do: Channels.deposit_mutation(tx)
+
+  defp tx_mutations(%TxContext{type: :channel_withdraw_tx, tx: tx}),
+    do: Channels.withdraw_mutation(tx)
 
   defp tx_mutations(%TxContext{type: :ga_attach_tx, tx: tx, txi: txi, tx_hash: tx_hash}) do
     contract_pk = :aega_attach_tx.contract_pubkey(tx)

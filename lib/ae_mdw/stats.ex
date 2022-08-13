@@ -22,6 +22,7 @@ defmodule AeMdw.Stats do
   @type cursor() :: binary() | nil
   @type tps() :: non_neg_integer()
 
+  @typep txi() :: Blocks.height()
   @typep height() :: Blocks.height()
   @typep direction() :: Database.direction()
   @typep limit() :: Database.limit()
@@ -29,8 +30,9 @@ defmodule AeMdw.Stats do
 
   @tps_stat_key :max_tps
 
-  @spec mutation(height(), Db.key_block(), [Db.micro_block()], boolean()) :: StatsMutation.t()
-  def mutation(height, key_block, micro_blocks, starting_from_mb0?) do
+  @spec mutation(height(), Db.key_block(), [Db.micro_block()], txi(), txi(), boolean()) ::
+          StatsMutation.t()
+  def mutation(height, key_block, micro_blocks, from_txi, next_txi, starting_from_mb0?) do
     header = :aec_blocks.to_header(key_block)
     time = :aec_headers.time_in_msecs(header)
     {:ok, key_hash} = :aec_headers.hash_header(header)
@@ -46,7 +48,7 @@ defmodule AeMdw.Stats do
 
     tps = if total_time > 0, do: round(total_txs * 100_000 / total_time) / 100, else: 0
 
-    StatsMutation.new(height, key_hash, tps, starting_from_mb0?)
+    StatsMutation.new(height, key_hash, from_txi, next_txi, tps, starting_from_mb0?)
   end
 
   @spec max_tps_key() :: atom()
@@ -192,7 +194,10 @@ defmodule AeMdw.Stats do
            block_reward: block_reward,
            dev_reward: dev_reward,
            locked_in_auctions: locked_in_auctions,
-           burned_in_auctions: burned_in_auctions
+           burned_in_auctions: burned_in_auctions,
+           channels_opened: channels_opened,
+           channels_closed: channels_closed,
+           locked_in_channels: locked_in_channels
          )
        ) do
     %{
@@ -207,7 +212,10 @@ defmodule AeMdw.Stats do
       block_reward: block_reward,
       dev_reward: dev_reward,
       locked_in_auctions: locked_in_auctions,
-      burned_in_auctions: burned_in_auctions
+      burned_in_auctions: burned_in_auctions,
+      channels_opened: channels_opened,
+      channels_closed: channels_closed,
+      locked_in_channels: locked_in_channels
     }
   end
 
@@ -224,7 +232,9 @@ defmodule AeMdw.Stats do
            dev_reward: dev_reward,
            total_supply: total_supply,
            locked_in_auctions: locked_in_auctions,
-           burned_in_auctions: burned_in_auctions
+           burned_in_auctions: burned_in_auctions,
+           open_channels: open_channels,
+           locked_in_channels: locked_in_channels
          )
        ) do
     %{
@@ -239,7 +249,9 @@ defmodule AeMdw.Stats do
       sum_dev_reward: dev_reward,
       total_token_supply: total_supply,
       locked_in_auctions: locked_in_auctions,
-      burned_in_auctions: burned_in_auctions
+      burned_in_auctions: burned_in_auctions,
+      open_channels: open_channels,
+      locked_in_channels: locked_in_channels
     }
   end
 
