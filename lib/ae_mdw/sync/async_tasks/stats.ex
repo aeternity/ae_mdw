@@ -14,7 +14,6 @@ defmodule AeMdw.Sync.AsyncTasks.Stats do
 
   @buffer_len_pos 2
   @db_count_pos 3
-  @long_count_pos 4
 
   @spec init() :: :ok
   def init do
@@ -25,24 +24,18 @@ defmodule AeMdw.Sync.AsyncTasks.Stats do
 
   @spec update_buffer_len(pos_integer()) :: :ok
   def update_buffer_len(producer_buffer_len) do
-    :ets.update_element(@tab, @stats_key, {@buffer_len_pos, producer_buffer_len})
+    len = max(0, producer_buffer_len)
+    :ets.update_element(@tab, @stats_key, {@buffer_len_pos, len})
 
-    if rem(producer_buffer_len, @max_db_count_times) == 0, do: update_db_count()
+    if rem(len, @max_db_count_times) == 0, do: update_db_count()
 
     :ok
   end
 
-  @spec update_consumed(boolean()) :: :ok
-  def update_consumed(is_long?) do
+  @spec update_consumed() :: :ok
+  def update_consumed do
     dec_db_count()
-    if is_long?, do: dec_long_tasks_count()
 
-    :ok
-  end
-
-  @spec inc_long_tasks_count() :: :ok
-  def inc_long_tasks_count() do
-    :ets.update_counter(@tab, @stats_key, {@long_count_pos, 1})
     :ok
   end
 
@@ -63,10 +56,6 @@ defmodule AeMdw.Sync.AsyncTasks.Stats do
   #
   defp dec_db_count() do
     :ets.update_counter(@tab, @stats_key, {@db_count_pos, -1, 0, 0})
-  end
-
-  defp dec_long_tasks_count() do
-    :ets.update_counter(@tab, @stats_key, {@long_count_pos, -1, 0, 0})
   end
 
   defp update_db_count() do

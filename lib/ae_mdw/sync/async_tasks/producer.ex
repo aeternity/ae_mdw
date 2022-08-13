@@ -11,8 +11,6 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   require Model
   require Logger
 
-  @long_timeout_ms 10_000
-
   @spec start_link(any()) :: GenServer.on_start()
   def start_link(_args) do
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
@@ -39,44 +37,21 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
 
   @spec dequeue() :: nil | Model.async_task_record()
   def dequeue() do
-    GenServer.call(__MODULE__, :dequeue, @long_timeout_ms)
+    m_task = Store.next_unprocessed()
+
+    if m_task do
+      Store.count_unprocessed()
+      |> Stats.update_buffer_len()
+    end
+
+    m_task
   end
 
   @spec notify_consumed(Model.async_task_index(), Model.async_task_args()) :: :ok
   def notify_consumed(task_index, task_args) do
     Store.set_done(task_index, task_args)
-    Stats.update_consumed(false)
+    Stats.update_consumed()
 
     :ok
-  end
-
-  @impl GenServer
-  def handle_call(:dequeue, _from, state) do
-    {m_task, %{dequeue_buffer: new_buffer} = new_state} = next_state(state)
-
-    if nil != m_task do
-      Model.async_task(index: index) = m_task
-      Store.set_processing(index)
-    end
-
-    new_buffer
-    |> length()
-    |> Stats.update_buffer_len()
-
-    {:reply, m_task, new_state}
-  end
-
-  #
-  # Private functions
-  #
-  defp next_state(%{dequeue_buffer: []}) do
-    case Store.fetch_unprocessed() do
-      [] -> {nil, %{dequeue_buffer: []}}
-      [m_task | buffer_tasks] -> {m_task, %{dequeue_buffer: buffer_tasks}}
-    end
-  end
-
-  defp next_state(%{dequeue_buffer: [m_task | buffer_tasks]}) do
-    {m_task, %{dequeue_buffer: buffer_tasks}}
   end
 end

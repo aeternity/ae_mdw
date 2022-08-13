@@ -2,12 +2,12 @@ defmodule AeMdw.Db.ContractTest do
   use ExUnit.Case, async: false
 
   alias AeMdw.AexnContracts
+  alias AeMdw.AsyncTaskTestUtil
   alias AeMdw.Db.Contract
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
-  alias AeMdw.Sync.AsyncTasks
 
   import AeMdw.Node.ContractCallFixtures, only: [call_rec: 1]
   import Mock
@@ -95,7 +95,7 @@ defmodule AeMdw.Db.ContractTest do
       |> State.commit_mem([])
 
       tasks =
-        AsyncTasks.Store.fetch_unprocessed()
+        AsyncTaskTestUtil.list_pending()
         |> Enum.map(fn Model.async_task(index: {_ts, type}, args: args, extra_args: extra_args) ->
           {type, args, extra_args}
         end)

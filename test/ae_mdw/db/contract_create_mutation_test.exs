@@ -4,6 +4,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
   import AeMdw.Node.ContractCallFixtures
   import Mock
 
+  alias AeMdw.AsyncTaskTestUtil
   alias AeMdw.AexnContracts
   alias AeMdw.Db.ContractCreateMutation
   alias AeMdw.Db.MemStore
@@ -12,7 +13,6 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Contract, as: SyncContract
   alias AeMdw.Db.Sync.Origin
-  alias AeMdw.Sync.AsyncTasks
 
   require Model
 
@@ -52,7 +52,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
             )
           ])
 
-        assert AsyncTasks.Store.fetch_unprocessed()
+        assert AsyncTaskTestUtil.list_pending()
                |> Enum.find(fn Model.async_task(args: args, extra_args: extra_args) ->
                  args == [remote_pk] and extra_args == [block_index, create_txi1]
                end)

@@ -10,6 +10,8 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
   require Ex2ms
   require Model
 
+  @type pending_key :: {Model.async_task_type(), Model.async_task_args()}
+
   @added_tab :async_tasks_added
   @pending_tab :async_tasks_pending
   @processing_tab :async_tasks_processing
@@ -19,7 +21,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
   @spec init() :: :ok
   def init do
     EtsCache.new(@added_tab, @minutes_expire)
-    :ets.new(@pending_tab, [:named_table, :set, :public])
+    :ets.new(@pending_tab, [:named_table, :ordered_set, :public])
     :ets.new(@processing_tab, [:named_table, :set, :public])
     :ok
   end
@@ -29,14 +31,6 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
     :ets.delete_all_objects(@processing_tab)
     cache_tasks_by_args()
     :ok
-  end
-
-  @spec fetch_unprocessed() :: [Model.async_task_record()]
-  def fetch_unprocessed do
-    fetch_all()
-    |> Enum.filter(fn Model.async_task(index: index) ->
-      not :ets.member(@processing_tab, index)
-    end)
   end
 
   @spec add(Model.async_task_record(), only_new: boolean()) :: :ok
@@ -59,21 +53,50 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
     :ok
   end
 
+  @spec next_unprocessed(pending_key() | {nil, nil}) :: Model.async_task_record() | nil
+  def next_unprocessed(next_key \\ {nil, nil}) do
+    case :ets.next(@pending_tab, next_key) do
+      :"$end_of_table" ->
+        nil
+
+      key ->
+        case set_processing(key) do
+          {:ok, m_task} -> m_task
+          :error -> next_unprocessed(key)
+        end
+    end
+  end
+
+  @spec count_unprocessed :: non_neg_integer()
+  def count_unprocessed do
+    :ets.info(@pending_tab, :size) - :ets.info(@processing_tab, :size)
+  end
+
   @spec save() :: :ok
   def save do
     list_pending_tasks()
-    |> Enum.each(fn m_task ->
-      :ets.delete(@pending_tab, pending_key(m_task))
-      Database.dirty_write(Model.AsyncTask, m_task)
+    |> Enum.each(fn Model.async_task(index: key) = m_task ->
+      if not Database.exists?(Model.AsyncTask, key) do
+        Database.dirty_write(Model.AsyncTask, m_task)
+      end
     end)
 
     :ok
   end
 
-  @spec set_processing(Model.async_task_index()) :: :ok
-  def set_processing(task_index) do
-    :ets.insert(@processing_tab, {task_index})
-    :ok
+  @spec set_processing(pending_key() | {nil, nil}) :: {:ok, Model.async_task_record()} | :error
+  def set_processing(pending_key) do
+    case :ets.lookup(@pending_tab, pending_key) do
+      [{_key, Model.async_task(index: task_index) = m_task}] ->
+        if 1 == :ets.update_counter(@processing_tab, task_index, {2, 1}, {task_index, 0}) do
+          {:ok, m_task}
+        else
+          :error
+        end
+
+      [] ->
+        :error
+    end
   end
 
   @spec set_done(Model.async_task_index(), Model.async_task_args()) :: :ok
@@ -104,10 +127,6 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
         :not_found -> []
       end
     end)
-  end
-
-  defp fetch_all() do
-    list_pending_tasks() ++ fetch_persisted_tasks()
   end
 
   defp cache_tasks_by_args() do
