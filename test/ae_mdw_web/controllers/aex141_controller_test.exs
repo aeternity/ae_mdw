@@ -4,6 +4,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
   alias AeMdw.AexnContracts
   alias AeMdw.Database
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Store
   alias AeMdw.Validate
 
   import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1, enc_id: 1]
@@ -38,6 +39,134 @@ defmodule AeMdwWeb.Aex141ControllerTest do
     end)
 
     :ok
+  end
+
+  describe "aex141_contract" do
+    test "returns a contract by pubkey", %{conn: conn, store: store} do
+      ct_pk = :crypto.strong_rand_bytes(32)
+      contract_id = enc_ct(ct_pk)
+      txi = Enum.random(1_000_000..9_999_999)
+
+      meta_info =
+        {name, symbol, base_url, _type} =
+        {"single-nft", "SAEX141-single", "http://some-url.com/#{txi}", :url}
+
+      m_aex141 = Model.aexn_contract(index: {:aex141, ct_pk}, txi: txi, meta_info: meta_info)
+
+      store = Store.put(store, Model.AexnContract, m_aex141)
+
+      assert %{
+               "name" => ^name,
+               "symbol" => ^symbol,
+               "base_url" => ^base_url,
+               "metadata_type" => "url",
+               "contract_txi" => ^txi,
+               "contract_id" => ^contract_id,
+               "extensions" => []
+             } = conn |> with_store(store) |> get("/aex141/#{contract_id}") |> json_response(200)
+    end
+  end
+
+  describe "aex141_contracts" do
+    setup %{store: initial_store} do
+      store =
+        Enum.reduce(1_410_001..1_410_025, initial_store, fn i, store ->
+          meta_info =
+            {name, symbol, _url, _type} =
+            {"some-nft-#{i}", "SAEX#{i}", "http://some-url.com", :url}
+
+          txi = 1_000 + i
+
+          m_aex141 =
+            Model.aexn_contract(index: {:aex141, <<i::256>>}, txi: txi, meta_info: meta_info)
+
+          m_aexn_name = Model.aexn_contract_name(index: {:aex141, name, <<i::256>>})
+          m_aexn_symbol = Model.aexn_contract_symbol(index: {:aex141, symbol, <<i::256>>})
+
+          store
+          |> Store.put(Model.AexnContract, m_aex141)
+          |> Store.put(Model.AexnContractName, m_aexn_name)
+          |> Store.put(Model.AexnContractSymbol, m_aexn_symbol)
+        end)
+
+      {:ok, store: store}
+    end
+
+    test "sorts contracts by name", %{conn: conn, store: store} do
+      assert %{"data" => contracts} =
+               conn |> with_store(store) |> get("/aex141", by: "name") |> json_response(200)
+
+      assert length(contracts) > 0
+
+      names = contracts |> Enum.map(fn %{"name" => name} -> name end)
+      assert ^names = Enum.sort(names, :desc)
+
+      assert Enum.all?(contracts, fn %{
+                                       "name" => name,
+                                       "symbol" => symbol,
+                                       "contract_txi" => txi,
+                                       "contract_id" => contract_id
+                                     } ->
+               assert is_binary(name) and is_binary(symbol) and is_integer(txi)
+
+               assert match?({:ok, <<_pk::256>>}, Validate.id(contract_id))
+             end)
+    end
+
+    test "sorts contracts by symbol", %{conn: conn, store: store} do
+      assert %{"data" => contracts} =
+               conn |> with_store(store) |> get("/aex141", by: "symbol") |> json_response(200)
+
+      assert length(contracts) > 0
+
+      symbols = contracts |> Enum.map(fn %{"symbol" => symbol} -> symbol end)
+      assert ^symbols = Enum.sort(symbols, :desc)
+
+      assert Enum.all?(contracts, fn %{
+                                       "name" => name,
+                                       "symbol" => symbol,
+                                       "contract_txi" => txi,
+                                       "contract_id" => contract_id
+                                     } ->
+               assert is_binary(name) and is_binary(symbol) and is_integer(txi)
+
+               assert match?({:ok, <<_pk::256>>}, Validate.id(contract_id))
+             end)
+    end
+
+    test "filters contracts by name prefix", %{conn: conn, store: store} do
+      prefix = "some-nft-1410"
+
+      assert %{"data" => contracts} =
+               conn
+               |> with_store(store)
+               |> get("/aex141", by: "name", prefix: prefix)
+               |> json_response(200)
+
+      assert length(contracts) > 0
+      assert Enum.all?(contracts, fn %{"name" => name} -> String.starts_with?(name, prefix) end)
+    end
+
+    test "filters contracts by symbol prefix", %{conn: conn, store: store} do
+      prefix = "SAEX1410"
+
+      assert %{"data" => contracts} =
+               conn
+               |> with_store(store)
+               |> get("/aex141", by: "symbol", prefix: prefix)
+               |> json_response(200)
+
+      assert length(contracts) > 0
+
+      assert Enum.all?(contracts, fn %{"symbol" => symbol} ->
+               String.starts_with?(symbol, prefix)
+             end)
+    end
+
+    test "when invalid filters, it returns an error", %{conn: conn} do
+      assert %{"error" => _error_msg} =
+               conn |> get("/aex141", by: "unknown") |> json_response(400)
+    end
   end
 
   describe "nft_owner" do
