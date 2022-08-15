@@ -1,6 +1,7 @@
 defmodule AeMdw.Sync.AsyncTasks.StoreTest do
   use ExUnit.Case, async: false
 
+  alias AeMdw.AsyncTaskTestUtil
   alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Sync.AsyncTasks.Store
@@ -104,37 +105,12 @@ defmodule AeMdw.Sync.AsyncTasks.StoreTest do
     end
   end
 
-  describe "fetch_unprocessed/0" do
-    test "returns tasks when unprocessed" do
-      args1 = [:crypto.strong_rand_bytes(32)]
-      args2 = [:crypto.strong_rand_bytes(32)]
+  describe "next_unprocessed/1" do
+    test "only returns task not being processed" do
+      pk_int = System.unique_integer()
+      args = [<<pk_int::256>>]
+      prev_args = [<<pk_int - 1::256>>]
       task_index = {System.unique_integer(), @task_type}
-
-      on_exit(fn ->
-        :ets.delete(:async_tasks_pending, {@task_type, args1})
-        :ets.delete(:async_tasks_pending, {@task_type, args2})
-        Database.dirty_delete(Model.AsyncTask, task_index)
-      end)
-
-      extra_args = [{543_211, 11}, 12_345_678]
-
-      m_task1 = Model.async_task(index: task_index, args: args1, extra_args: extra_args)
-      m_task2 = Model.async_task(index: task_index, args: args2, extra_args: extra_args)
-
-      Store.add(m_task1, only_new: false)
-      Store.add(m_task2, only_new: false)
-      tasks = Store.fetch_unprocessed()
-
-      assert 1 == Enum.count(tasks, fn m_task -> m_task == m_task1 end)
-      assert 1 == Enum.count(tasks, fn m_task -> m_task == m_task2 end)
-    end
-
-    test "does not return a task being processed" do
-      args = [:crypto.strong_rand_bytes(32)]
-      extra_args = [{543_212, 12}, 12_345_679]
-
-      task_index = {System.unique_integer(), @task_type}
-      m_task = Model.async_task(index: task_index, args: args, extra_args: extra_args)
 
       on_exit(fn ->
         :ets.delete(:async_tasks_pending, {@task_type, args})
@@ -142,15 +118,12 @@ defmodule AeMdw.Sync.AsyncTasks.StoreTest do
         Database.dirty_delete(Model.AsyncTask, task_index)
       end)
 
+      m_task =
+        Model.async_task(index: task_index, args: args, extra_args: [{543_211, 11}, 12_345_678])
+
       Store.add(m_task, only_new: false)
-      tasks_before = Store.fetch_unprocessed()
-
-      assert 1 == Enum.count(tasks_before, &(&1 == m_task))
-
-      Store.set_processing(task_index)
-      tasks_after = Store.fetch_unprocessed()
-
-      refute Enum.find(tasks_after, &(&1 == m_task))
+      assert m_task == Store.next_unprocessed({@task_type, prev_args})
+      refute m_task == Store.next_unprocessed({@task_type, prev_args})
     end
   end
 
@@ -175,13 +148,41 @@ defmodule AeMdw.Sync.AsyncTasks.StoreTest do
 
       Store.add(m_task1, only_new: false)
       Store.add(m_task2, only_new: false)
-      Store.set_processing(task_index2)
+      assert {:ok, _mtask} = Store.set_processing({:update_aex9_state, args2})
       Store.save()
 
-      tasks = Store.fetch_unprocessed()
+      tasks = AsyncTaskTestUtil.list_pending()
 
-      assert 1 == Enum.count(tasks, fn m_task -> m_task == m_task1 end)
-      refute Enum.find(tasks, fn m_task -> m_task == m_task2 end)
+      assert Enum.find(tasks, &(&1 == m_task1))
+      assert Enum.find(tasks, &(&1 == m_task2))
+    end
+
+    test "succeeds not saving processed tasks" do
+      args1 = [:crypto.strong_rand_bytes(32)]
+      args2 = [:crypto.strong_rand_bytes(32)]
+      extra_args = [{543_212, 13}, 12_345_680]
+
+      task_index1 = {System.unique_integer(), @task_type}
+      task_index2 = {System.unique_integer(), @task_type}
+      m_task1 = Model.async_task(index: task_index1, args: args1, extra_args: extra_args)
+      m_task2 = Model.async_task(index: task_index2, args: args2, extra_args: extra_args)
+
+      on_exit(fn ->
+        :ets.delete(:async_tasks_pending, {@task_type, args1})
+        :ets.delete(:async_tasks_pending, {@task_type, args2})
+        Database.dirty_delete(Model.AsyncTask, task_index2)
+      end)
+
+      Store.add(m_task1, only_new: false)
+      Store.add(m_task2, only_new: false)
+      Store.set_done(task_index1, args1)
+      Store.save()
+
+      tasks = AsyncTaskTestUtil.list_pending()
+
+      refute Enum.find(tasks, &(&1 == m_task1))
+      refute Database.exists?(Model.AsyncTask, task_index1)
+      assert Enum.find(tasks, &(&1 == m_task2))
     end
   end
 end

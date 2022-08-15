@@ -4,6 +4,9 @@ defmodule AeMdw.AsyncTaskTestUtil do
   """
 
   alias AeMdw.Sync.AsyncTasks
+  alias AeMdw.Db.Model
+
+  require Model
 
   @spec wakeup_consumers() :: :ok
   def wakeup_consumers do
@@ -18,5 +21,13 @@ defmodule AeMdw.AsyncTaskTestUtil do
     |> Enum.each(fn {_id, consumer_pid, _type, _mod} ->
       Process.send(consumer_pid, :demand, [:noconnect])
     end)
+  end
+
+  @spec list_pending() :: [Model.async_task_record()]
+  def list_pending do
+    :async_tasks_pending
+    |> :ets.tab2list()
+    |> Enum.map(fn {_key, m_task} -> m_task end)
+    |> Enum.sort_by(fn Model.async_task(index: index) -> index end)
   end
 end

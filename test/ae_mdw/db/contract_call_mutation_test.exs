@@ -1,12 +1,12 @@
 defmodule AeMdw.Db.ContractCallMutationTest do
   use ExUnit.Case, async: false
 
+  alias AeMdw.AsyncTaskTestUtil
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
-  alias AeMdw.Sync.AsyncTasks
   alias AeMdw.Validate
 
   import AeMdw.Node.ContractCallFixtures
@@ -34,7 +34,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
       |> State.commit_mem([mutation])
 
-      assert AsyncTasks.Store.fetch_unprocessed()
+      assert AsyncTaskTestUtil.list_pending()
              |> Enum.find(fn Model.async_task(args: args, extra_args: extra_args) ->
                args == [contract_pk] and extra_args == [block_index, call_txi]
              end)
@@ -61,7 +61,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
       |> State.commit_mem([mutation])
 
-      assert AsyncTasks.Store.fetch_unprocessed()
+      assert AsyncTaskTestUtil.list_pending()
              |> Enum.find(fn Model.async_task(args: args, extra_args: extra_args) ->
                args == [contract_pk] and extra_args == [block_index, call_txi]
              end)
@@ -88,7 +88,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
       |> State.commit_mem([mutation])
 
-      assert AsyncTasks.Store.fetch_unprocessed()
+      assert AsyncTaskTestUtil.list_pending()
              |> Enum.find(fn Model.async_task(args: args, extra_args: extra_args) ->
                args == [contract_pk] and extra_args == [block_index, call_txi]
              end)
@@ -110,7 +110,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
       |> State.commit_mem([mutation])
 
-      assert AsyncTasks.Store.fetch_unprocessed()
+      assert AsyncTaskTestUtil.list_pending()
              |> Enum.find(fn Model.async_task(args: args, extra_args: extra_args) ->
                args == [contract_pk] and extra_args == [block_index, call_txi]
              end)

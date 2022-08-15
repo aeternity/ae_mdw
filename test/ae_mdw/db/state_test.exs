@@ -11,7 +11,6 @@ defmodule AeMdw.Db.StateTest do
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
   alias AeMdw.Db.WriteMutation
-  alias AeMdw.Sync.AsyncTasks.Store
 
   require Model
 
@@ -116,7 +115,8 @@ defmodule AeMdw.Db.StateTest do
                Process.sleep(100)
 
                nil ==
-                 Enum.find(Store.fetch_unprocessed(), fn Model.async_task(args: args) ->
+                 AsyncTaskTestUtil.list_pending()
+                 |> Enum.find(fn Model.async_task(args: args) ->
                    args == dedup_args
                  end)
              end)
