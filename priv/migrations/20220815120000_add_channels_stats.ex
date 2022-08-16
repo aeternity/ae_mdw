@@ -18,7 +18,7 @@ defmodule AeMdw.Migrations.AddChannelsStats do
     state = State.new()
 
     total_gens =
-      case Collection.stream(state, Model.DeltaStat, :backward, nil, nil) |> Enum.take(1) do
+      case state |> Collection.stream(Model.DeltaStat, :backward, nil, nil) |> Enum.take(1) do
         [total_gens] -> total_gens
         [] -> 0
       end
@@ -110,49 +110,48 @@ defmodule AeMdw.Migrations.AddChannelsStats do
         }
       end)
 
-    IO.inspect([delta_opened_stats, delta_closed_stats, delta_locked_stats], limit: :infinity)
+    _channels_acc =
+      state
+      |> Collection.stream(Model.DeltaStat, nil)
+      |> Enum.reduce({0, 0}, fn height, {channels_opened, channels_locked_amount} ->
+        delta_opened = Map.get(delta_opened_stats, height, 0)
+        delta_closed = Map.get(delta_closed_stats, height, 0)
+        delta_locked = Map.get(delta_locked_stats, height, 0)
 
-    state
-    |> Collection.stream(Model.DeltaStat, nil)
-    |> Enum.reduce({0, 0}, fn height, {channels_opened, channels_locked_amount} ->
-      delta_opened = Map.get(delta_opened_stats, height, 0)
-      delta_closed = Map.get(delta_closed_stats, height, 0)
-      delta_locked = Map.get(delta_locked_stats, height, 0)
+        new_open = channels_opened + delta_opened - delta_closed
+        new_locked = channels_locked_amount + delta_locked
 
-      new_open = channels_opened + delta_opened - delta_closed
-      new_locked = channels_locked_amount + delta_locked
+        new_delta_stat =
+          state
+          |> State.fetch!(Model.DeltaStat, height)
+          |> transform_delta_stat()
+          |> Model.delta_stat(
+            channels_opened: delta_opened,
+            channels_closed: delta_closed,
+            locked_in_channels: delta_locked
+          )
 
-      new_delta_stat =
-        state
-        |> State.fetch!(Model.DeltaStat, height)
-        |> transform_delta_stat()
-        |> Model.delta_stat(
-          channels_opened: delta_opened,
-          channels_closed: delta_closed,
-          locked_in_channels: delta_locked
+        new_total_stat =
+          state
+          |> State.fetch!(Model.TotalStat, height + 1)
+          |> transform_total_stat()
+          |> Model.total_stat(
+            open_channels: new_open,
+            locked_in_channels: new_locked
+          )
+
+        State.commit(
+          state,
+          [
+            WriteMutation.new(Model.DeltaStat, new_delta_stat),
+            WriteMutation.new(Model.TotalStat, new_total_stat)
+          ]
         )
 
-      new_total_stat =
-        state
-        |> State.fetch!(Model.TotalStat, height + 1)
-        |> transform_total_stat()
-        |> Model.total_stat(
-          open_channels: new_open,
-          locked_in_channels: new_locked
-        )
+        if rem(height, @log_freq) == 0, do: IO.puts("Processed #{height} of #{total_gens}")
 
-      State.commit(
-        state,
-        [
-          WriteMutation.new(Model.DeltaStat, new_delta_stat),
-          WriteMutation.new(Model.TotalStat, new_total_stat)
-        ]
-      )
-
-      if rem(height, @log_freq) == 0, do: IO.puts("Processed #{height} of #{total_gens}")
-
-      {new_open, new_locked}
-    end)
+        {new_open, new_locked}
+      end)
 
     duration = DateTime.diff(DateTime.utc_now(), begin)
 
