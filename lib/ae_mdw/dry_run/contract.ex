@@ -8,7 +8,8 @@ defmodule AeMdw.DryRun.Contract do
   @typep pubkey() :: <<_::256>>
 
   @abi_fate_sophia_1 3
-  @gas 10_000_000_000_000_000_000_000
+  # allows 10 times the gas used for a contract with balance for aprox 50k accounts.
+  @gas 910_000_000 * 10
 
   @spec new_call_tx(
           pubkey(),
