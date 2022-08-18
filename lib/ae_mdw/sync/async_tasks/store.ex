@@ -99,10 +99,16 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
     end
   end
 
+  @spec set_unprocessed(Model.async_task_index()) :: :ok
+  def set_unprocessed(task_index) do
+    :ets.delete(@processing_tab, task_index)
+    :ok
+  end
+
   @spec set_done(Model.async_task_index(), Model.async_task_args()) :: :ok
   def set_done({_ts, task_type} = task_index, args) do
     Database.dirty_delete(Model.AsyncTask, task_index)
-    :ets.delete_object(@processing_tab, task_index)
+    :ets.delete(@processing_tab, task_index)
     :ets.delete(@pending_tab, {task_type, args})
 
     :ok

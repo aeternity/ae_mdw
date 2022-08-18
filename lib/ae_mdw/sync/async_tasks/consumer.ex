@@ -62,12 +62,21 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   end
 
   @doc """
-  Just acknowledge (ignore) the DOWN event.
+  Rerun failed task or put it back to queue.
   """
-  def handle_info({:DOWN, _ref, :process, _pid, _reason}, %State{} = state) do
+  def handle_info(
+        {:DOWN, ref, :process, _pid, _reason},
+        %State{task: task, m_task: m_task} = state
+      ) do
     schedule_demand()
 
-    {:noreply, state}
+    if ref == task.ref do
+      new_task = run_supervised(m_task)
+      {:noreply, %State{task: new_task, m_task: m_task}}
+    else
+      Producer.notify_error(m_task)
+      {:noreply, state}
+    end
   end
 
   #
