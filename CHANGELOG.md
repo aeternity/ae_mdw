@@ -1,5 +1,36 @@
 # Changelog
 
+## [1.17.0](https://www.github.com/aeternity/ae_mdw/compare/v1.16.1...v1.17.0) (2022-08-18)
+
+
+### Features
+
+* add txs per second stat on /stats ([#834](https://www.github.com/aeternity/ae_mdw/issues/834)) ([1e010de](https://www.github.com/aeternity/ae_mdw/commit/1e010deb79fb27e999d16f84dc7babe0755d6a66))
+* complement to migrated tokens ([#838](https://www.github.com/aeternity/ae_mdw/issues/838)) ([7d6de8b](https://www.github.com/aeternity/ae_mdw/commit/7d6de8b8a968187f1198895dec27af8189be0de2))
+* expose names locked/burned fees on stats ([#822](https://www.github.com/aeternity/ae_mdw/issues/822)) ([d75d45f](https://www.github.com/aeternity/ae_mdw/commit/d75d45f78ad6c2428a69cccf3dff7bfaf4acbfd8))
+* synchronize async tasks write ([#818](https://www.github.com/aeternity/ae_mdw/issues/818)) ([407576e](https://www.github.com/aeternity/ae_mdw/commit/407576ea93fa9c19666a49710ac75799dc0f4d36))
+
+
+### Bug Fixes
+
+* decrease async task producer dequeue time ([#832](https://www.github.com/aeternity/ae_mdw/issues/832)) ([8b7a655](https://www.github.com/aeternity/ae_mdw/commit/8b7a655a86d344bd4d065ad2a8720820bc8e561a))
+* dequeue async tasks non-preemptively ([#841](https://www.github.com/aeternity/ae_mdw/issues/841)) ([5868472](https://www.github.com/aeternity/ae_mdw/commit/586847287a530c8a06e35e461644796a9d929a9e))
+* handle dry-run error when contract is not present ([#835](https://www.github.com/aeternity/ae_mdw/issues/835)) ([26b4bd4](https://www.github.com/aeternity/ae_mdw/commit/26b4bd4f5472517b79eda9d00730dd1cccc14617))
+* increase auctions started stat only once ([#826](https://www.github.com/aeternity/ae_mdw/issues/826)) ([278e5ee](https://www.github.com/aeternity/ae_mdw/commit/278e5ee4d882d2ab718cd66ec8f3272c7f57513f))
+* increase long tasks throughput ([f93d72b](https://www.github.com/aeternity/ae_mdw/commit/f93d72b3d3d90566240df0ce3b420e4faddd1d0b))
+* rerun failed task and fix processing state ([#848](https://www.github.com/aeternity/ae_mdw/issues/848)) ([8afcb9f](https://www.github.com/aeternity/ae_mdw/commit/8afcb9f5711c3a7856655b017afbb4e69f66251c))
+* update opts usage on Names.fetch_previous_list/2 ([#825](https://www.github.com/aeternity/ae_mdw/issues/825)) ([c5e7f40](https://www.github.com/aeternity/ae_mdw/commit/c5e7f4044bd72dcbc2a42a35b3d7da0e45718a4c))
+
+
+### Miscellaneous
+
+* adapt to AEX-141 standard change ([#829](https://www.github.com/aeternity/ae_mdw/issues/829)) ([45f184f](https://www.github.com/aeternity/ae_mdw/commit/45f184f21a6d528449bae761c38af7935033d987))
+
+
+### Refactorings
+
+* decrease consumer async server wait and sleep ([#833](https://www.github.com/aeternity/ae_mdw/issues/833)) ([a34ff73](https://www.github.com/aeternity/ae_mdw/commit/a34ff73e4fcc6725e40c12ccecd430f6ed0b5b8c))
+
 ### [1.16.1](https://www.github.com/aeternity/ae_mdw/compare/v1.16.0...v1.16.1) (2022-08-03)
 
 
