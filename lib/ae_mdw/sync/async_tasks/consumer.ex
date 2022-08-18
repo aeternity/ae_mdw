@@ -68,12 +68,11 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
         {:DOWN, ref, :process, _pid, _reason},
         %State{task: task, m_task: m_task} = state
       ) do
-    schedule_demand()
-
-    if ref == task.ref do
+    if task != nil and task.ref == ref do
       new_task = run_supervised(m_task)
       {:noreply, %State{task: new_task, m_task: m_task}}
     else
+      schedule_demand()
       Producer.notify_error(m_task)
       {:noreply, state}
     end
