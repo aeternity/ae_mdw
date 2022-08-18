@@ -1,4 +1,4 @@
-defmodule AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
+defmodule AeMdw.Sync.AsyncTasks.ConsumerTest do
   use ExUnit.Case
 
   alias AeMdw.AsyncTaskTestUtil
@@ -10,7 +10,7 @@ defmodule AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
 
   require Model
 
-  test "enqueue and dequeue" do
+  test "enqueue and dequeue with failed task" do
     contract_pk = :crypto.strong_rand_bytes(32)
     {kbi, mbi} = block_index = {543_210, 10}
     kb_hash = :crypto.strong_rand_bytes(32)
@@ -25,6 +25,7 @@ defmodule AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
        [
          get_key_block_hash: fn height ->
            assert height == kbi + 1
+           Process.sleep(1_000)
            kb_hash
          end,
          get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end
@@ -32,28 +33,35 @@ defmodule AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
     ] do
       AsyncTasks.Supervisor.start_link([])
 
-      call_txi = Enum.random(1_000_000..99_000_000)
-
       AsyncTasks.Producer.enqueue(
         :update_aex9_state,
         [contract_pk],
         [
           block_index,
-          call_txi
+          Enum.random(1_000_000..99_000_000)
         ],
         only_new: true
       )
 
-      AsyncTaskTestUtil.wakeup_consumers()
+      consumer_pid = AsyncTaskTestUtil.wakeup_consumer()
 
-      assert Enum.any?(1..20, fn _i ->
-               Process.sleep(50)
+      task_pid1 =
+        Enum.reduce_while(1..100, nil, fn _i, _acc ->
+          Process.sleep(10)
 
-               nil ==
-                 AsyncTaskTestUtil.list_pending()
-                 |> Enum.find(fn Model.async_task(args: args, extra_args: extra_args) ->
-                   args == [contract_pk] and extra_args == [block_index, call_txi]
-                 end)
+          case :sys.get_state(consumer_pid) do
+            %{task: %Task{pid: task_pid}} -> {:halt, task_pid}
+            _no_task -> {:cont, nil}
+          end
+        end)
+
+      Process.exit(task_pid1, :kill)
+
+      assert Enum.any?(1..100, fn _i ->
+               case :sys.get_state(consumer_pid) do
+                 %{task: %Task{pid: task_pid2}} -> task_pid2 != task_pid1
+                 _no_task -> false
+               end
              end)
     end
   end

@@ -182,6 +182,7 @@ defmodule AeMdw.Sync.AsyncTasks.StoreTest do
 
       refute Enum.find(tasks, &(&1 == m_task1))
       refute Database.exists?(Model.AsyncTask, task_index1)
+      refute :ets.member(:async_tasks_processing, task_index1)
       assert Enum.find(tasks, &(&1 == m_task2))
     end
   end

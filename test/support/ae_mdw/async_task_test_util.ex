@@ -23,6 +23,23 @@ defmodule AeMdw.AsyncTaskTestUtil do
     end)
   end
 
+  @spec wakeup_consumer() :: pid()
+  def wakeup_consumer do
+    AsyncTasks.Supervisor.start_link([])
+    Process.sleep(100)
+
+    {_id, consumer_pid, _type, _mod} =
+      AsyncTasks.Supervisor
+      |> Supervisor.which_children()
+      |> Enum.find(fn {id, _pid, _type, _mod} ->
+        is_binary(id) and String.starts_with?(id, "Elixir.AeMdw.Sync.AsyncTasks.Consumer")
+      end)
+
+    Process.send(consumer_pid, :demand, [:noconnect])
+
+    consumer_pid
+  end
+
   @spec list_pending() :: [Model.async_task_record()]
   def list_pending do
     :async_tasks_pending

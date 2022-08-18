@@ -19,7 +19,7 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   @impl GenServer
   def init(:ok) do
     Store.reset()
-    {:ok, %{dequeue_buffer: []}}
+    {:ok, :no_state}
   end
 
   @spec enqueue(atom(), list(), list(), only_new: boolean()) :: :ok
@@ -51,6 +51,16 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   def notify_consumed(task_index, task_args) do
     Store.set_done(task_index, task_args)
     Stats.update_consumed()
+
+    :ok
+  end
+
+  @spec notify_error(Model.async_task_index()) :: :ok
+  def notify_error(task_index) do
+    Store.set_unprocessed(task_index)
+
+    Store.count_unprocessed()
+    |> Stats.update_buffer_len()
 
     :ok
   end
