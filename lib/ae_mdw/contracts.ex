@@ -473,7 +473,8 @@ defmodule AeMdw.Contracts do
       if create_txi == -1 do
         {nil, Origin.pubkey(state, {:contract_call, call_txi})}
       else
-        {Txs.txi_to_hash(state, create_txi), Origin.pubkey(state, {:contract, create_txi})}
+        {Enc.encode(:tx_hash, Txs.txi_to_hash(state, create_txi)),
+         Origin.pubkey(state, {:contract, create_txi})}
       end
 
     {parent_contract_pk, ext_ct_pk, ext_ct_txi, ext_ct_tx_hash} =
@@ -484,7 +485,14 @@ defmodule AeMdw.Contracts do
         ext_ct_pk ->
           ext_ct_txi = Origin.tx_index!(state, {:contract, ext_ct_pk})
 
-          {nil, ext_ct_pk, ext_ct_txi, Txs.txi_to_hash(state, ext_ct_txi)}
+          ext_ct_tx_hash =
+            if ext_ct_txi < 0 do
+              nil
+            else
+              Enc.encode(:tx_hash, Txs.txi_to_hash(state, ext_ct_txi))
+            end
+
+          {nil, ext_ct_pk, ext_ct_txi, ext_ct_tx_hash}
       end
 
     Model.tx(id: call_tx_hash, block_index: {height, micro_index}) =
@@ -494,10 +502,10 @@ defmodule AeMdw.Contracts do
 
     %{
       contract_txi: create_txi,
-      contract_tx_hash: Enc.encode(:tx_hash, contract_tx_hash),
+      contract_tx_hash: contract_tx_hash,
       contract_id: Format.enc_id(ct_id.(ct_pk)),
       ext_caller_contract_txi: ext_ct_txi,
-      ext_caller_contract_tx_hash: Enc.encode(:tx_hash, ext_ct_tx_hash),
+      ext_caller_contract_tx_hash: ext_ct_tx_hash,
       ext_caller_contract_id: Format.enc_id((ext_ct_pk != nil && ct_id.(ext_ct_pk)) || nil),
       parent_contract_id:
         Format.enc_id((parent_contract_pk && ct_id.(parent_contract_pk)) || nil),
