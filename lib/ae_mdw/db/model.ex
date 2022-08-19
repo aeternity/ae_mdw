@@ -609,6 +609,11 @@ defmodule AeMdw.Db.Model do
 
   @type stat() :: record(:stat, index: atom(), payload: term())
 
+  @miner_defaults [:index, :total_reward]
+  defrecord :miner, @miner_defaults
+
+  @type miner() :: record(:miner, index: Db.pubkey(), total_reward: non_neg_integer())
+
   ################################################################################
 
   # starts with only chain_tables and add them progressively by groups
@@ -637,7 +642,8 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.RevOrigin,
       AeMdw.Db.Model.IntTransferTx,
       AeMdw.Db.Model.KindIntTransferTx,
-      AeMdw.Db.Model.TargetKindIntTransferTx
+      AeMdw.Db.Model.TargetKindIntTransferTx,
+      AeMdw.Db.Model.Miner
     ]
   end
 
@@ -771,4 +777,5 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.DeltaStat), do: :delta_stat
   def record(AeMdw.Db.Model.TotalStat), do: :total_stat
   def record(AeMdw.Db.Model.Stat), do: :stat
+  def record(AeMdw.Db.Model.Miner), do: :miner
 end

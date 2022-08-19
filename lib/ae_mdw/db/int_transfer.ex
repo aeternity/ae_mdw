@@ -6,6 +6,8 @@ defmodule AeMdw.Db.IntTransfer do
   alias AeMdw.Blocks
   alias AeMdw.Txs
   alias AeMdw.Db.Model
+  alias AeMdw.Db.MinerRewardsMutation
+  alias AeMdw.Db.Mutation
   alias AeMdw.Db.State
   alias AeMdw.Collection
 
@@ -21,6 +23,7 @@ defmodule AeMdw.Db.IntTransfer do
   @type target() :: Db.pubkey()
   @type ref_txi() :: Txs.txi() | -1
   @type amount() :: pos_integer()
+  @type rewards() :: [{target(), amount()}]
 
   @typep kind_suffix() :: :lock_name | :spend_name | :refund_name | :earn_oracle
 
@@ -29,13 +32,16 @@ defmodule AeMdw.Db.IntTransfer do
   @reward_block_kind "reward_block"
   @reward_dev_kind "reward_dev"
 
-  @spec block_rewards_mutation(Blocks.height(), Blocks.key_header(), Blocks.block_hash()) ::
-          IntTransfersMutation.t()
-  def block_rewards_mutation(height, key_header, key_hash) do
+  @spec block_rewards_mutations(Blocks.height(), Blocks.key_header(), Blocks.block_hash()) :: [
+          Mutation.t()
+        ]
+  def block_rewards_mutations(height, key_header, key_hash) do
     delay = :aec_governance.beneficiary_reward_delay()
     dev_benefs = Enum.map(:aec_dev_reward.beneficiaries(), &elem(&1, 0))
+    current_miner = :aec_headers.miner(key_header)
+    current_beneficiary = :aec_headers.beneficiary(key_header)
 
-    block_rewards =
+    {devs_rewards, miners_rewards} =
       {:node, key_header, key_hash, :key}
       |> :aec_chain_state.grant_fees(:aec_trees.new(), delay, false, nil)
       |> :aec_trees.accounts()
@@ -43,12 +49,24 @@ defmodule AeMdw.Db.IntTransfer do
       |> Enum.map(fn {target_pk, ser_account} ->
         amount = :aec_accounts.balance(:aec_accounts.deserialize(target_pk, ser_account))
 
-        kind = (target_pk in dev_benefs && @reward_dev_kind) || @reward_block_kind
+        {target_pk, amount}
+      end)
+      |> Enum.split_with(fn {target_pk, _amount} -> target_pk in dev_benefs end)
 
-        {kind, target_pk, amount}
+    miners_transfers =
+      Enum.map(miners_rewards, fn {target_pk, amount} ->
+        {@reward_block_kind, target_pk, amount}
       end)
 
-    IntTransfersMutation.new(height, block_rewards)
+    devs_transfers =
+      Enum.map(devs_rewards, fn {target_pk, amount} ->
+        {@reward_dev_kind, target_pk, amount}
+      end)
+
+    [
+      IntTransfersMutation.new(height, miners_transfers ++ devs_transfers),
+      MinerRewardsMutation.new(height, miners_rewards, current_miner, current_beneficiary, delay)
+    ]
   end
 
   @spec fee(

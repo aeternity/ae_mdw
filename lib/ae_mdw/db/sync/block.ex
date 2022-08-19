@@ -91,7 +91,7 @@ defmodule AeMdw.Db.Sync.Block do
 
       block_rewards_mutation =
         if height >= AE.min_block_reward_height() do
-          IntTransfer.block_rewards_mutation(height, kb_header, kb_hash)
+          IntTransfer.block_rewards_mutations(height, kb_header, kb_hash)
         end
 
       gen_mutations = [

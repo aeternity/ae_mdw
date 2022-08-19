@@ -29,6 +29,7 @@ defmodule AeMdw.Stats do
   @typep range() :: {:gen, Range.t()} | nil
 
   @tps_stat_key :max_tps
+  @miners_count_stat_key :miners_count
 
   @spec mutation(height(), Db.key_block(), [Db.micro_block()], txi(), txi(), boolean()) ::
           StatsMutation.t()
@@ -53,6 +54,9 @@ defmodule AeMdw.Stats do
 
   @spec max_tps_key() :: atom()
   def max_tps_key, do: @tps_stat_key
+
+  @spec miners_count_key() :: atom()
+  def miners_count_key, do: @miners_count_stat_key
 
   # Legacy v1 is a blending between /totalstats and /deltastats.
   # The active and inactive object counters are totals while the rewards are delta.
