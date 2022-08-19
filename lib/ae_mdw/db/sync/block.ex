@@ -99,7 +99,7 @@ defmodule AeMdw.Db.Sync.Block do
         block_rewards_mutation,
         NamesExpirationMutation.new(height),
         OraclesExpirationMutation.new(height),
-        Stats.mutation(height, key_block, micro_blocks, starting_from_mb0?),
+        Stats.mutation(height, key_block, micro_blocks, from_txi, txi, starting_from_mb0?),
         next_kb_mutation
       ]
 

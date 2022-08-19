@@ -6,6 +6,7 @@ defmodule AeMdw.Db.StatsMutation do
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Blocks
+  alias AeMdw.Channels
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
@@ -13,25 +14,32 @@ defmodule AeMdw.Db.StatsMutation do
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
   alias AeMdw.Stats
+  alias AeMdw.Txs
   alias AeMdw.Util
 
   require Model
 
   @derive AeMdw.Db.Mutation
-  defstruct [:height, :key_hash, :tps, :all_cached?]
+  defstruct [:height, :key_hash, :from_txi, :next_txi, :tps, :all_cached?]
+
+  @typep txi() :: Txs.txi()
 
   @type t() :: %__MODULE__{
           height: Blocks.height(),
           key_hash: Blocks.block_hash(),
+          from_txi: txi(),
+          next_txi: txi(),
           tps: Stats.tps(),
           all_cached?: boolean()
         }
 
-  @spec new(Blocks.height(), Blocks.block_hash(), Stats.tps(), boolean()) :: t()
-  def new(height, key_hash, tps, all_cached?) do
+  @spec new(Blocks.height(), Blocks.block_hash(), txi(), txi(), Stats.tps(), boolean()) :: t()
+  def new(height, key_hash, from_txi, next_txi, tps, all_cached?) do
     %__MODULE__{
       height: height,
       key_hash: key_hash,
+      from_txi: from_txi,
+      next_txi: next_txi,
       tps: tps,
       all_cached?: all_cached?
     }
@@ -39,10 +47,17 @@ defmodule AeMdw.Db.StatsMutation do
 
   @spec execute(t(), State.t()) :: State.t()
   def execute(
-        %__MODULE__{height: height, key_hash: key_hash, tps: tps, all_cached?: all_cached?},
+        %__MODULE__{
+          height: height,
+          key_hash: key_hash,
+          from_txi: from_txi,
+          next_txi: next_txi,
+          tps: tps,
+          all_cached?: all_cached?
+        },
         state
       ) do
-    m_delta_stat = make_delta_stat(state, height, all_cached?)
+    m_delta_stat = make_delta_stat(state, height, from_txi, next_txi, all_cached?)
     # delta/transitions are only reflected on total stats at height + 1
     m_total_stat = make_total_stat(state, height + 1, m_delta_stat)
 
@@ -65,8 +80,8 @@ defmodule AeMdw.Db.StatsMutation do
   #
   # Private functions
   #
-  @spec make_delta_stat(State.t(), Blocks.height(), boolean()) :: Model.delta_stat()
-  defp make_delta_stat(state, height, true = _all_cached?) do
+  @spec make_delta_stat(State.t(), Blocks.height(), txi(), txi(), boolean()) :: Model.delta_stat()
+  defp make_delta_stat(state, height, _from_txi, _next_txi, true = _all_cached?) do
     Model.delta_stat(
       index: height,
       auctions_started: get(state, :auctions_started, 0),
@@ -79,11 +94,14 @@ defmodule AeMdw.Db.StatsMutation do
       block_reward: get(state, :block_reward, 0),
       dev_reward: get(state, :dev_reward, 0),
       locked_in_auctions: get(state, :locked_in_auctions, 0),
-      burned_in_auctions: get(state, :burned_in_auctions, 0)
+      burned_in_auctions: get(state, :burned_in_auctions, 0),
+      channels_opened: get(state, :channels_opened, 0),
+      channels_closed: get(state, :channels_closed, 0),
+      locked_in_channels: get(state, :locked_in_channels, 0)
     )
   end
 
-  defp make_delta_stat(state, height, false = _all_cached?) do
+  defp make_delta_stat(state, height, from_txi, next_txi, false = _all_cached?) do
     Model.total_stat(
       active_auctions: prev_active_auctions,
       active_names: prev_active_names,
@@ -94,6 +112,8 @@ defmodule AeMdw.Db.StatsMutation do
     current_active_names = State.count_keys(state, Model.ActiveName)
     current_active_auctions = State.count_keys(state, Model.AuctionExpiration)
     current_active_oracles = State.count_keys(state, Model.ActiveOracle)
+    channels_opened = Channels.channels_opened_count(state, from_txi, next_txi)
+    channels_closed = Channels.channels_closed_count(state, from_txi, next_txi)
 
     {height_revoked_names, height_expired_names} =
       state
@@ -123,6 +143,7 @@ defmodule AeMdw.Db.StatsMutation do
     spent_in_auctions = height_int_amount(state, height, :spend_name)
     refund_in_auctions = height_int_amount(state, height, :refund_name)
     locked_in_auctions = spent_in_auctions - refund_in_auctions
+    locked_in_channels = height_int_amount(state, height, :lock_channel)
 
     Model.delta_stat(
       index: height,
@@ -136,7 +157,10 @@ defmodule AeMdw.Db.StatsMutation do
       block_reward: current_block_reward,
       dev_reward: current_dev_reward,
       locked_in_auctions: locked_in_auctions,
-      burned_in_auctions: burned_in_auctions
+      burned_in_auctions: burned_in_auctions,
+      channels_opened: channels_opened,
+      channels_closed: channels_closed,
+      locked_in_channels: locked_in_channels
     )
   end
 
@@ -155,7 +179,10 @@ defmodule AeMdw.Db.StatsMutation do
            block_reward: inc_block_reward,
            dev_reward: inc_dev_reward,
            locked_in_auctions: locked_in_auctions,
-           burned_in_auctions: burned_in_auctions
+           burned_in_auctions: burned_in_auctions,
+           channels_opened: channels_opened,
+           channels_closed: channels_closed,
+           locked_in_channels: locked_in_channels
          )
        ) do
     Model.total_stat(
@@ -169,7 +196,9 @@ defmodule AeMdw.Db.StatsMutation do
       inactive_oracles: prev_inactive_oracles,
       contracts: prev_contracts,
       locked_in_auctions: prev_locked_in_auctions,
-      burned_in_auctions: prev_burned_in_acutions
+      burned_in_auctions: prev_burned_in_acutions,
+      open_channels: prev_open_channels,
+      locked_in_channels: prev_locked_in_channels
     ) = fetch_total_stat(state, height - 1)
 
     token_supply_delta = AeMdw.Node.token_supply_delta(height - 1)
@@ -187,7 +216,9 @@ defmodule AeMdw.Db.StatsMutation do
       inactive_oracles: prev_inactive_oracles + oracles_expired,
       contracts: prev_contracts + contracts_created,
       locked_in_auctions: prev_locked_in_auctions + locked_in_auctions,
-      burned_in_auctions: prev_burned_in_acutions + burned_in_auctions
+      burned_in_auctions: prev_burned_in_acutions + burned_in_auctions,
+      open_channels: prev_open_channels + channels_opened - channels_closed,
+      locked_in_channels: prev_locked_in_channels + locked_in_channels
     )
   end
 

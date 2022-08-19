@@ -1,9 +1,11 @@
 defmodule AeMdw.Db.StatsMutationTest do
   use ExUnit.Case, async: false
 
-  alias AeMdw.Collection
   alias AeMdw.Database
+  alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
+  alias AeMdw.Db.NullStore
+  alias AeMdw.Db.Store
   alias AeMdw.Db.State
   alias AeMdw.Db.StatsMutation
 
@@ -35,7 +37,7 @@ defmodule AeMdw.Db.StatsMutationTest do
       Database.dirty_write(Model.DeltaStat, prev_delta_stat)
       Database.dirty_write(Model.TotalStat, prev_total_stat)
 
-      mutation = StatsMutation.new(height, nil, nil, false)
+      mutation = StatsMutation.new(height, "", 0, 0, 0, false)
 
       State.commit(State.new(), [mutation])
 
@@ -91,7 +93,7 @@ defmodule AeMdw.Db.StatsMutationTest do
         State.new()
         |> State.inc_stat(:block_reward, @first_block_reward)
 
-      mutation = StatsMutation.new(height, nil, nil, true)
+      mutation = StatsMutation.new(height, "", 0, 0, 0, true)
 
       State.commit(state, [mutation])
 
@@ -156,7 +158,7 @@ defmodule AeMdw.Db.StatsMutationTest do
         |> State.inc_stat(:dev_reward, increased_dev_reward)
         |> State.inc_stat(:names_activated, 1)
 
-      mutation = StatsMutation.new(height, nil, nil, true)
+      mutation = StatsMutation.new(height, "", 0, 0, 0, true)
 
       State.commit(state, [mutation])
 
@@ -189,7 +191,7 @@ defmodule AeMdw.Db.StatsMutationTest do
   describe "execute/2" do
     test "with all_cached? = false, on 1st block reward it stores the stat using database counts" do
       height = 21
-      mutation = StatsMutation.new(height, nil, nil, false)
+      mutation = StatsMutation.new(height, "", 0, 0, 0, false)
 
       expected_delta =
         Model.delta_stat(
@@ -219,45 +221,38 @@ defmodule AeMdw.Db.StatsMutationTest do
           contracts: 0
         )
 
-      with_mocks [
-        {Database, [],
-         [
-           get: fn
-             Model.TotalStat, ^height -> {:ok, Model.total_stat(active_auctions: 1)}
-             Model.InactiveName, _plain_name -> {:ok, Model.name()}
-             Model.Stat, _key -> :not_found
-           end,
-           count: fn
-             Model.ActiveName -> 3
-             Model.ActiveOracle -> 4
-             Model.AuctionExpiration -> 5
-           end,
-           next_key: fn _tab, _init_key -> :none end,
-           dirty_write: fn _txs, _record -> :ok end
-         ]},
-        {State, [:passthrough], put: fn state, _tab, _record -> state end},
-        {Collection, [],
-         [
-           stream: fn
-             _state, Model.InactiveNameExpiration, _dir, _scope, _cursor ->
-               [{1, "a.chain"}, {2, "b.chain"}]
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> Store.put(Model.TotalStat, Model.total_stat(index: height, active_auctions: 1))
+        |> Store.put(Model.InactiveName, Model.name())
+        |> Store.put(Model.ActiveName, Model.name(index: "name1.chain"))
+        |> Store.put(Model.ActiveName, Model.name(index: "name2.chain"))
+        |> Store.put(Model.ActiveName, Model.name(index: "name3.chain"))
+        |> Store.put(
+          Model.InactiveNameExpiration,
+          Model.expiration(index: {height, "name1-inactive.chain"})
+        )
+        |> Store.put(
+          Model.InactiveNameExpiration,
+          Model.expiration(index: {height, "name2-inactive.chain"})
+        )
+        |> Store.put(Model.InactiveName, Model.name(index: "name1-inactive.chain"))
+        |> Store.put(Model.InactiveName, Model.name(index: "name2-inactive.chain"))
+        |> Store.put(Model.AuctionExpiration, Model.expiration(index: {22, "name1.chain"}))
+        |> Store.put(Model.AuctionExpiration, Model.expiration(index: {22, "name2.chain"}))
+        |> Store.put(Model.AuctionExpiration, Model.expiration(index: {22, "name3.chain"}))
+        |> Store.put(Model.AuctionExpiration, Model.expiration(index: {22, "name4.chain"}))
+        |> Store.put(Model.AuctionExpiration, Model.expiration(index: {22, "name5.chain"}))
+        |> Store.put(Model.ActiveOracle, Model.oracle(index: "oracle-pk1"))
+        |> Store.put(Model.ActiveOracle, Model.oracle(index: "oracle-pk2"))
+        |> Store.put(Model.ActiveOracle, Model.oracle(index: "oracle-pk3"))
+        |> Store.put(Model.ActiveOracle, Model.oracle(index: "oracle-pk4"))
+        |> State.new()
 
-             _state, Model.InactiveOracleExpiration, _dir, _scope, _cursor ->
-               []
-           end,
-           stream: fn
-             _state, Model.Origin, _start_key -> [1, 2, 3]
-             _state, Model.IntTransferTx, _start_key -> []
-             _state, Model.KindIntTransferTx, _start_key -> []
-           end
-         ]}
-      ] do
-        state = State.new()
-        assert StatsMutation.execute(mutation, state)
-
-        assert_called(State.put(state, Model.DeltaStat, expected_delta))
-        assert_called(State.put(state, Model.TotalStat, expected_total))
-      end
+      state = StatsMutation.execute(mutation, state)
+      assert ^expected_delta = State.fetch!(state, Model.DeltaStat, height)
+      assert ^expected_total = State.fetch!(state, Model.TotalStat, height + 1)
     end
 
     test "with all_cached? = true, on 1st block reward, it stores stats using ets cache" do
@@ -267,7 +262,7 @@ defmodule AeMdw.Db.StatsMutationTest do
         State.new()
         |> State.inc_stat(:block_reward, 5)
 
-      mutation = StatsMutation.new(height, nil, nil, true)
+      mutation = StatsMutation.new(height, "", 0, 0, 0, true)
 
       expected_delta =
         Model.delta_stat(
