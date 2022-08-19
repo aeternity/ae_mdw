@@ -13,7 +13,7 @@ defmodule AeMdw.AexnTokensTest do
 
   require Model
 
-  describe "fetch_token/1" do
+  describe "fetch_contract/1" do
     test "returns an AEX-9 contract meta info" do
       contract_pk = <<9_123_456::256>>
       aex9_meta_info = {name, symbol, decimals} = {"Token1", "TK1", 18}
@@ -33,7 +33,7 @@ defmodule AeMdw.AexnTokensTest do
 
       contract_id = enc_ct(contract_pk)
 
-      assert {:ok, m_aex9} = AexnTokens.fetch_token(state, {:aex9, contract_pk})
+      assert {:ok, m_aex9} = AexnTokens.fetch_contract(state, {:aex9, contract_pk})
 
       assert %{
                name: ^name,
@@ -67,7 +67,7 @@ defmodule AeMdw.AexnTokensTest do
 
       contract_id = enc_ct(contract_pk)
 
-      assert {:ok, m_aex141} = AexnTokens.fetch_token(state, {:aex141, contract_pk})
+      assert {:ok, m_aex141} = AexnTokens.fetch_contract(state, {:aex141, contract_pk})
 
       assert %{
                name: ^name,
@@ -85,7 +85,7 @@ defmodule AeMdw.AexnTokensTest do
       contract_pk = Validate.id!(contract_id)
 
       assert {:error, %ErrInput{reason: ErrInput.NotFound}} =
-               AexnTokens.fetch_token(State.new(), {:aex9, contract_pk})
+               AexnTokens.fetch_contract(State.new(), {:aex9, contract_pk})
     end
 
     test "returns input error AEX141 not found" do
@@ -93,7 +93,7 @@ defmodule AeMdw.AexnTokensTest do
       contract_pk = Validate.id!(contract_id)
 
       assert {:error, %ErrInput{reason: ErrInput.NotFound}} =
-               AexnTokens.fetch_token(State.new(), {:aex141, contract_pk})
+               AexnTokens.fetch_contract(State.new(), {:aex141, contract_pk})
     end
   end
 end

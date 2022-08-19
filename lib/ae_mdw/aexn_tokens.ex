@@ -30,9 +30,9 @@ defmodule AeMdw.AexnTokens do
   @aexn_name_table Model.AexnContractName
   @aexn_symbol_table Model.AexnContractSymbol
 
-  @spec fetch_token(State.t(), {aexn_type(), Db.pubkey()}) ::
+  @spec fetch_contract(State.t(), {aexn_type(), Db.pubkey()}) ::
           {:ok, Model.aexn_contract()} | {:error, Error.t()}
-  def fetch_token(state, {aexn_type, contract_pk}) do
+  def fetch_contract(state, {aexn_type, contract_pk}) do
     case State.get(state, Model.AexnContract, {aexn_type, contract_pk}) do
       {:ok, m_aexn} ->
         {:ok, m_aexn}
@@ -42,9 +42,9 @@ defmodule AeMdw.AexnTokens do
     end
   end
 
-  @spec fetch_tokens(State.t(), pagination(), aexn_type(), query(), order_by(), cursor() | nil) ::
+  @spec fetch_contracts(State.t(), pagination(), aexn_type(), query(), order_by(), cursor() | nil) ::
           {:ok, cursor() | nil, [Model.aexn_contract()], cursor() | nil} | {:error, Error.t()}
-  def fetch_tokens(state, pagination, aexn_type, query, order_by, cursor) do
+  def fetch_contracts(state, pagination, aexn_type, query, order_by, cursor) do
     try do
       sorted_table = if order_by == :name, do: @aexn_name_table, else: @aexn_symbol_table
 
