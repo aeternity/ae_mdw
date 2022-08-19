@@ -1,5 +1,17 @@
 # Changelog
 
+### [1.17.1](https://www.github.com/aeternity/ae_mdw/compare/v1.17.0...v1.17.1) (2022-08-19)
+
+
+### Miscellaneous
+
+* set dry run gas upper limit ([#845](https://www.github.com/aeternity/ae_mdw/issues/845)) ([540f6d7](https://www.github.com/aeternity/ae_mdw/commit/540f6d7c1495b4f1fa88c53a1d64d6a4d3c34e62))
+
+
+### Testing
+
+* complement to missing unit tests for AEX-141 ([#843](https://www.github.com/aeternity/ae_mdw/issues/843)) ([900636d](https://www.github.com/aeternity/ae_mdw/commit/900636d183925a7c67e4bdf6045ec00a22a7f967))
+
 ## [1.17.0](https://www.github.com/aeternity/ae_mdw/compare/v1.16.1...v1.17.0) (2022-08-18)
 
 
