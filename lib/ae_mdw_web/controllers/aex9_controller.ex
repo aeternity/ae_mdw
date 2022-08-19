@@ -121,8 +121,8 @@ defmodule AeMdwWeb.Aex9Controller do
       fn ->
         height = Validate.nonneg_int!(height)
 
-        if nil == Util.block_txi(state, height) do
-          raise ErrInput.BlockIndex, value: height
+        if nil == Util.block_txi(state, {height, -1}) do
+          raise ErrInput.BlockIndex, value: {height, -1}
         end
 
         account_pk = Validate.id!(account_id, [:account_pubkey])
