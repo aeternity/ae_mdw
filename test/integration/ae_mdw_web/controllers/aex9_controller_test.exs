@@ -615,25 +615,25 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
         |> Enum.to_list()
         |> List.last()
 
-      {:ok, {account_pk, _txi, contract_pk}} =
-        Database.next_key(Model.Aex9AccountPresence, prev_key)
+      with {:ok, {account_pk, _txi, contract_pk}} <-
+             Database.next_key(Model.Aex9AccountPresence, prev_key) do
+        assert :not_found = Database.fetch(Model.Aex9Balance, {contract_pk, account_pk})
 
-      assert :not_found = Database.fetch(Model.Aex9Balance, {contract_pk, account_pk})
+        conn = get(conn, "/aex9/balances/account/#{enc_id(account_pk)}")
+        assert balances_response = json_response(conn, 200)
+        assert length(balances_response) > 0
 
-      conn = get(conn, "/aex9/balances/account/#{enc_id(account_pk)}")
-      assert balances_response = json_response(conn, 200)
-      assert length(balances_response) > 0
+        Enum.each(balances_response, fn %{
+                                          "contract_id" => contract_id,
+                                          "token_name" => token_name,
+                                          "token_symbol" => token_symbol
+                                        } ->
+          {:contract_pubkey, contract_pk} = :aeser_api_encoder.decode(contract_id)
 
-      Enum.each(balances_response, fn %{
-                                        "contract_id" => contract_id,
-                                        "token_name" => token_name,
-                                        "token_symbol" => token_symbol
-                                      } ->
-        {:contract_pubkey, contract_pk} = :aeser_api_encoder.decode(contract_id)
-
-        assert Model.aexn_contract(meta_info: {^token_name, ^token_symbol, _decimals}) =
-                 Database.fetch!(Model.AexnContract, {:aex9, contract_pk})
-      end)
+          assert Model.aexn_contract(meta_info: {^token_name, ^token_symbol, _decimals}) =
+                   Database.fetch!(Model.AexnContract, {:aex9, contract_pk})
+        end)
+      end
     end
   end
 
