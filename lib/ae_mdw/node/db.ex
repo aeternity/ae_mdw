@@ -15,6 +15,7 @@ defmodule AeMdw.Node.Db do
   @type hash_type() :: nil | :key | :micro
   @type height_hash() :: {hash_type(), pos_integer(), binary()}
   @type balances_map() :: %{{:address, pubkey()} => integer()}
+  @type account_balance() :: {integer() | nil, height_hash()}
   @opaque key_block() :: tuple()
   @opaque micro_block() :: tuple()
 
@@ -157,22 +158,25 @@ defmodule AeMdw.Node.Db do
     {type, :aec_headers.height(header), ok!(:aec_headers.hash_header(header))}
   end
 
-  @spec aex9_balance(pubkey(), pubkey()) :: {integer() | nil, height_hash()}
+  @spec aex9_balance(pubkey(), pubkey()) ::
+          {:ok, account_balance()} | {:error, Runner.call_error()}
   def aex9_balance(contract_pk, account_pk),
     do: aex9_balance(contract_pk, account_pk, false)
 
-  @spec aex9_balance(pubkey(), pubkey(), boolean()) :: {integer() | nil, height_hash()}
+  @spec aex9_balance(pubkey(), pubkey(), boolean()) ::
+          {:ok, account_balance()} | {:error, Runner.call_error()}
   def aex9_balance(contract_pk, account_pk, the_very_top?) when is_boolean(the_very_top?),
     do: aex9_balance(contract_pk, account_pk, top_height_hash(the_very_top?))
 
   @spec aex9_balance(pubkey(), pubkey(), height_hash()) ::
-          {integer() | nil, height_hash()}
+          {:ok, account_balance()} | {:error, Runner.call_error()}
   def aex9_balance(contract_pk, account_pk, {type, height, hash}) do
     case Runner.call_contract(contract_pk, {type, height, hash}, "balance", [
            {:address, account_pk}
          ]) do
-      {:ok, {:variant, [0, 1], 1, {amt}}} -> {amt, {type, height, hash}}
-      {:ok, {:variant, [0, 1], 0, {}}} -> {nil, {type, height, hash}}
+      {:ok, {:variant, [0, 1], 1, {amt}}} -> {:ok, {amt, {type, height, hash}}}
+      {:ok, {:variant, [0, 1], 0, {}}} -> {:ok, {nil, {type, height, hash}}}
+      {:error, reason} -> {:error, reason}
     end
   end
 

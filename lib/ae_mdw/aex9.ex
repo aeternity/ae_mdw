@@ -199,7 +199,8 @@ defmodule AeMdw.Aex9 do
 
         account_presences =
           Enum.map(account_presence_keys, fn {^account_pk, contract_pk} ->
-            {amount, _height_hash} = Db.aex9_balance(contract_pk, account_pk, type_height_hash)
+            {:ok, {amount, _height_hash}} =
+              Db.aex9_balance(contract_pk, account_pk, type_height_hash)
 
             Model.aexn_contract(meta_info: {name, symbol, _dec}) =
               State.fetch!(state, Model.AexnContract, {:aex9, contract_pk})
@@ -360,7 +361,8 @@ defmodule AeMdw.Aex9 do
   defp render_balance_history_item(contract_pk, account_pk, gen) do
     type_height_hash = {:key, gen, DbUtil.height_hash(gen)}
 
-    {amount_or_nil, _height_hash} = Db.aex9_balance(contract_pk, account_pk, type_height_hash)
+    {:ok, {amount_or_nil, _height_hash}} =
+      Db.aex9_balance(contract_pk, account_pk, type_height_hash)
 
     balance = render_balance(contract_pk, {:address, account_pk}, amount_or_nil)
 

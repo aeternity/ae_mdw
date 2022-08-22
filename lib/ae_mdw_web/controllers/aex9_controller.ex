@@ -10,6 +10,7 @@ defmodule AeMdwWeb.Aex9Controller do
   alias AeMdw.AexnContracts
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Origin
   alias AeMdw.Db.State
   alias AeMdw.Db.Util
   alias AeMdw.Error.Input, as: ErrInput
@@ -310,7 +311,13 @@ defmodule AeMdwWeb.Aex9Controller do
   defp balance_reply(%Conn{assigns: %{state: state, opts: opts}} = conn, contract_pk, account_pk) do
     {amount, {type, height, hash}} =
       if top?(opts) do
-        DBN.aex9_balance(contract_pk, account_pk, top?(opts))
+        case DBN.aex9_balance(contract_pk, account_pk, top?(opts)) do
+          {:ok, account_balance} ->
+            account_balance
+
+          {:error, unavailable_error} ->
+            raise unavailable_error
+        end
       else
         case Aex9.fetch_amount_and_keyblock(state, contract_pk, account_pk) do
           {:ok, {amount, kb_height_hash}} ->
@@ -334,7 +341,7 @@ defmodule AeMdwWeb.Aex9Controller do
           map_balances_range(
             range,
             fn type_height_hash ->
-              {amount, _} = DBN.aex9_balance(contract_pk, account_pk, type_height_hash)
+              {:ok, {amount, _}} = DBN.aex9_balance(contract_pk, account_pk, type_height_hash)
               {:amount, amount}
             end
           )
@@ -348,7 +355,7 @@ defmodule AeMdwWeb.Aex9Controller do
          account_pk,
          {_type, _height, _hash} = height_hash
        ) do
-    {amount, _} = DBN.aex9_balance(contract_pk, account_pk, height_hash)
+    {:ok, {amount, _}} = DBN.aex9_balance(contract_pk, account_pk, height_hash)
     json(conn, balance_to_map({amount, height_hash}, contract_pk, account_pk))
   end
 
@@ -377,17 +384,20 @@ defmodule AeMdwWeb.Aex9Controller do
          account_pk,
          {kbi, mbi} = block_index
        ) do
-    {:ok, Model.block(tx_index: block_txi, hash: block_hash)} =
-      State.get(state, Model.Block, block_index)
+    {:ok, Model.block(hash: block_hash)} = State.get(state, Model.Block, block_index)
 
     type = if mbi == -1, do: :key, else: :micro
 
     balances =
       state
-      |> Contract.aex9_search_contract(account_pk, block_txi)
-      |> Enum.map(fn {contract_pk, last_txi} ->
-        {amount, _} = DBN.aex9_balance(contract_pk, account_pk, {type, kbi, block_hash})
-        {amount, last_txi, contract_pk}
+      |> Contract.aex9_search_contracts(account_pk)
+      |> Enum.flat_map(fn contract_pk ->
+        create_txi = Origin.tx_index!(state, {:contract, contract_pk})
+
+        case DBN.aex9_balance(contract_pk, account_pk, {type, kbi, block_hash}) do
+          {:ok, {amount, _}} when amount != nil -> [{amount, create_txi, contract_pk}]
+          _missing -> []
+        end
       end)
       |> Enum.map(&balance_to_map(state, &1))
 
