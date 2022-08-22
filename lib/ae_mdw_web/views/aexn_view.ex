@@ -3,10 +3,11 @@ defmodule AeMdwWeb.AexnView do
   Renders data for balance(s) endpoints.
   """
 
-  alias AeMdw.Db.Format
+  alias AeMdw.Db.Model
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util
+  alias AeMdw.Node.Db, as: NodeDb
 
   require Model
 
@@ -22,19 +23,20 @@ defmodule AeMdwWeb.AexnView do
   @spec balance_to_map(State.t(), {non_neg_integer(), non_neg_integer(), pubkey()}) ::
           map()
   def balance_to_map(state, {amount, call_txi, contract_pk}) do
-    tx_idx = Util.read_tx!(state, call_txi)
-    info = Format.to_raw_map(state, tx_idx)
+    Model.tx(id: tx_hash, block_index: {height, _mbi}) = Util.read_tx!(state, call_txi)
+
+    {block_hash, tx_type, _signed_tx, _tx_rec} = NodeDb.get_tx_data(tx_hash)
 
     Model.aexn_contract(meta_info: {name, symbol, _decimals}) =
       State.fetch!(state, Model.AexnContract, {:aex9, contract_pk})
 
     %{
       contract_id: enc_ct(contract_pk),
-      block_hash: enc_block(:micro, info.block_hash),
-      tx_hash: enc(:tx_hash, info.hash),
+      block_hash: enc_block(:micro, block_hash),
+      tx_hash: enc(:tx_hash, tx_hash),
       tx_index: call_txi,
-      tx_type: info.tx.type,
-      height: info.block_height,
+      tx_type: tx_type,
+      height: height,
       amount: amount,
       token_symbol: symbol,
       token_name: name

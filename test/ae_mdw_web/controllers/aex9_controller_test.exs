@@ -3,9 +3,11 @@ defmodule AeMdwWeb.Aex9ControllerTest do
 
   alias AeMdw.Database
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Store
   alias AeMdw.Validate
 
-  import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1]
+  import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1, enc_id: 1, enc_block: 2]
+  import Mock
 
   require Model
 
@@ -27,7 +29,7 @@ defmodule AeMdwWeb.Aex9ControllerTest do
   end
 
   describe "by_name" do
-    test "it gets aex9 tokens by name", %{conn: conn} do
+    test "gets aex9 tokens by name", %{conn: conn} do
       assert aex9_tokens = conn |> get("/aex9/by_name") |> json_response(200)
       assert length(aex9_tokens) > 0
 
@@ -48,7 +50,7 @@ defmodule AeMdwWeb.Aex9ControllerTest do
              end)
     end
 
-    test "it gets aex9 tokens filtered by name prefix", %{conn: conn} do
+    test "gets aex9 tokens filtered by name prefix", %{conn: conn} do
       prefix = "some-AEX"
 
       assert aex9_tokens = conn |> get("/aex9/by_name", prefix: prefix) |> json_response(200)
@@ -63,7 +65,7 @@ defmodule AeMdwWeb.Aex9ControllerTest do
   end
 
   describe "by_symbol" do
-    test "it gets aex9 tokens by symbol", %{conn: conn} do
+    test "gets aex9 tokens by symbol", %{conn: conn} do
       assert aex9_tokens = conn |> get("/aex9/by_symbol") |> json_response(200)
 
       aex9_symbols = aex9_tokens |> Enum.map(fn %{"symbol" => symbol} -> symbol end)
@@ -83,7 +85,7 @@ defmodule AeMdwWeb.Aex9ControllerTest do
              end)
     end
 
-    test "it gets aex9 tokens filtered by symbol prefix", %{conn: conn} do
+    test "gets aex9 tokens filtered by symbol prefix", %{conn: conn} do
       prefix = "SAEX9"
 
       assert aex9_tokens = conn |> get("/aex9/by_symbol", prefix: prefix) |> json_response(200)
@@ -96,9 +98,95 @@ defmodule AeMdwWeb.Aex9ControllerTest do
   end
 
   describe "by_contract" do
-    test "it returns an aex9 token", %{conn: conn} do
+    test "returns an aex9 token", %{conn: conn} do
       assert %{"data" => %{"contract_id" => @aex9_token_id}} =
                conn |> get("/aex9/by_contract/#{@aex9_token_id}") |> json_response(200)
+    end
+  end
+
+  describe "balances" do
+    test "returns all account balances", %{conn: conn, store: store} do
+      account_pk = :crypto.strong_rand_bytes(32)
+
+      expected_balances =
+        for i <- 1..10 do
+          txi = Enum.random(1_000_000..10_000_000)
+
+          %{
+            "block_hash" => enc_block(:micro, :crypto.strong_rand_bytes(32)),
+            "amount" => Enum.random(100_000_000..999_000_000),
+            "contract_id" => enc_ct(:crypto.strong_rand_bytes(32)),
+            "height" => div(txi, 1_000),
+            "token_name" => "name#{i}",
+            "token_symbol" => "symbol#{i}",
+            "tx_hash" => :aeser_api_encoder.encode(:tx_hash, :crypto.strong_rand_bytes(32)),
+            "tx_index" => txi,
+            "tx_type" => "contract_call_tx"
+          }
+        end
+
+      store =
+        Enum.reduce(expected_balances, store, fn %{
+                                                   "amount" => amount,
+                                                   "contract_id" => contract_id,
+                                                   "height" => height,
+                                                   "token_name" => token_name,
+                                                   "token_symbol" => token_symbol,
+                                                   "tx_hash" => tx_hash,
+                                                   "tx_index" => txi
+                                                 },
+                                                 store_acc ->
+          contract_pk = Validate.id!(contract_id)
+          tx_hash = Validate.id!(tx_hash)
+
+          m_contract =
+            Model.aexn_contract(
+              index: {:aex9, contract_pk},
+              meta_info: {token_name, token_symbol, 18}
+            )
+
+          m_balance =
+            Model.aex9_balance(
+              index: {contract_pk, account_pk},
+              block_index: {height, 0},
+              txi: txi,
+              amount: amount
+            )
+
+          m_presence = Model.aex9_account_presence(index: {account_pk, contract_pk}, txi: txi)
+
+          store_acc
+          |> Store.put(Model.Tx, Model.tx(index: txi, id: tx_hash, block_index: {height, 0}))
+          |> Store.put(Model.AexnContract, m_contract)
+          |> Store.put(Model.Aex9Balance, m_balance)
+          |> Store.put(Model.Aex9AccountPresence, m_presence)
+        end)
+
+      with_mocks [
+        {
+          AeMdw.Node.Db,
+          [],
+          [
+            get_tx_data: fn tx_hash_bin ->
+              %{"block_hash" => block_hash} =
+                Enum.find(expected_balances, fn %{"tx_hash" => tx_hash} ->
+                  tx_hash_bin == Validate.id!(tx_hash)
+                end)
+
+              {Validate.id!(block_hash), :contract_call_tx, nil, nil}
+            end
+          ]
+        }
+      ] do
+        assert balances_data =
+                 conn
+                 |> with_store(store)
+                 |> get("/aex9/balances/account/#{enc_id(account_pk)}")
+                 |> json_response(200)
+
+        assert ^balances_data = Enum.sort_by(balances_data, & &1["tx_index"], :desc)
+        assert MapSet.new(balances_data) == MapSet.new(expected_balances)
+      end
     end
   end
 end

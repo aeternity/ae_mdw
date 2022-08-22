@@ -366,6 +366,7 @@ defmodule AeMdwWeb.Aex9Controller do
             []
         end
       end)
+      |> Enum.sort_by(fn {_amount, call_txi, _contract_pk} -> call_txi end, :desc)
       |> Enum.map(&balance_to_map(state, &1))
 
     json(conn, balances)
