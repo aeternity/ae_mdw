@@ -32,10 +32,14 @@ defmodule AeMdwWeb.ConnCase do
     end
   end
 
-  setup _tags do
+  setup tags do
     alias AeMdw.Db.MemStore
     alias AeMdw.Db.NullStore
 
-    {:ok, conn: ConnTest.build_conn(), store: MemStore.new(NullStore.new())}
+    if Map.get(tags, :integration, false) do
+      {:ok, conn: ConnTest.build_conn()}
+    else
+      {:ok, conn: ConnTest.build_conn(), store: MemStore.new(NullStore.new())}
+    end
   end
 end
