@@ -160,32 +160,19 @@ defmodule AeMdw.Db.RocksDb do
   @spec dirty_get(transaction(), table(), binary()) ::
           {:ok, binary()} | :not_found | {:error, {:corruption, charlist()}} | {:error, any()}
   def dirty_get(t_ref, table, key) do
-    {db_ref, cf_ref} = cf_refs(table)
+    {_db_ref, cf_ref} = cf_refs(table)
 
-    case :rocksdb.transaction_get(t_ref, cf_ref, key, []) do
-      {:ok, value} -> {:ok, value}
-      :not_found -> :rocksdb.get(db_ref, cf_ref, key, [])
-      error -> error
-    end
+    :rocksdb.transaction_get(t_ref, cf_ref, key, [])
   end
 
   @doc """
   Delete a key-value from a column family.
   """
-  @spec delete(transaction(), table(), binary()) :: :ok | {:error, any()}
+  @spec delete(transaction(), table(), binary()) :: :ok
   def delete(t_ref, table, key) do
-    {db_ref, cf_ref} = cf_refs(table)
+    {_db_ref, cf_ref} = cf_refs(table)
 
-    case :rocksdb.transaction_get(t_ref, cf_ref, key, []) do
-      {:ok, _value} ->
-        :ok = :rocksdb.transaction_delete(t_ref, cf_ref, key)
-
-      :not_found ->
-        :rocksdb.delete(db_ref, cf_ref, key, [])
-
-      error ->
-        error
-    end
+    :ok = :rocksdb.transaction_delete(t_ref, cf_ref, key)
   end
 
   @doc """
