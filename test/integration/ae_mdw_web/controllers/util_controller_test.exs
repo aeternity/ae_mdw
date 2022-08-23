@@ -12,7 +12,7 @@ defmodule Integration.AeMdwWeb.UtilControllerTest do
       {:ok, top_kb} = :aec_chain.top_key_block()
       {_, _, node_vsn} = Application.started_applications() |> List.keyfind(:aecore, 0)
       node_height = :aec_blocks.height(top_kb)
-      mdw_tx_index = DbUtil.last_txi(state)
+      {:ok, mdw_tx_index} = DbUtil.last_txi(state)
       mdw_height = State.mem_state() |> DbUtil.synced_height()
 
       conn = get(conn, "/status")

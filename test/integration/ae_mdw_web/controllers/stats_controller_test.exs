@@ -114,11 +114,11 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
       assert %{
                "data" => [
                  %{
-                   "active_auctions" => 1138,
+                   "active_auctions" => 130,
                    "active_names" => 2634,
                    "active_oracles" => 33,
                    "block_reward" => 94_447_969_004_862_000_000,
-                   "contracts" => 1681,
+                   "contracts" => 1664,
                    "dev_reward" => 11_554_240_877_138_000_000,
                    "height" => ^height,
                    "inactive_names" => 557_159,
@@ -380,11 +380,11 @@ defmodule Integration.AeMdwWeb.StatsControllerTest do
       assert %{
                "data" => [
                  %{
-                   "active_auctions" => 1138,
-                   "active_names" => 2634,
+                   "active_auctions" => 130,
+                   "active_names" => 2_634,
                    "active_oracles" => 33,
                    "sum_block_reward" => 106_403_172_824_736_927_928_811_744,
-                   "contracts" => 1681,
+                   "contracts" => 1_664,
                    "sum_dev_reward" => 8_453_404_352_599_072_614_268_863,
                    "height" => ^height,
                    "inactive_names" => 557_159,
