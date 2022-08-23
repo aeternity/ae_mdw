@@ -315,8 +315,8 @@ defmodule AeMdwWeb.Aex9Controller do
           {:ok, account_balance} ->
             account_balance
 
-          {:error, unavailable_error} ->
-            raise unavailable_error
+          {:error, reason} ->
+            {:error, ErrInput.Aex9BalanceNotAvailable.exception(value: reason)}
         end
       else
         case Aex9.fetch_amount_and_keyblock(state, contract_pk, account_pk) do
@@ -384,7 +384,7 @@ defmodule AeMdwWeb.Aex9Controller do
          account_pk,
          {kbi, mbi} = block_index
        ) do
-    {:ok, Model.block(hash: block_hash)} = State.get(state, Model.Block, block_index)
+    Model.block(hash: block_hash) = State.fetch!(state, Model.Block, block_index)
 
     type = if mbi == -1, do: :key, else: :micro
 
