@@ -130,14 +130,17 @@ defmodule AeMdw.Stats do
 
   @spec fetch_stats(State.t()) :: {:ok, map()} | {:error, Error.t()}
   def fetch_stats(state) do
-    case State.get(state, Model.Stat, @tps_stat_key) do
-      {:ok, Model.stat(payload: {tps, tps_block_hash})} ->
-        {:ok,
-         %{
-           max_transactions_per_second: tps,
-           max_transactions_per_second_block_hash: Enc.encode(:key_block_hash, tps_block_hash)
-         }}
-
+    with {:ok, Model.stat(payload: {tps, tps_block_hash})} <-
+           State.get(state, Model.Stat, @tps_stat_key),
+         {:ok, Model.stat(payload: miners_count)} <-
+           State.get(state, Model.Stat, @miners_count_stat_key) do
+      {:ok,
+       %{
+         max_transactions_per_second: tps,
+         max_transactions_per_second_block_hash: Enc.encode(:key_block_hash, tps_block_hash),
+         miners_count: miners_count
+       }}
+    else
       :not_found ->
         {:error, ErrInput.NotFound.exception(value: "no stats")}
     end

@@ -38,8 +38,6 @@ defmodule AeMdw.Db.IntTransfer do
   def block_rewards_mutations(height, key_header, key_hash) do
     delay = :aec_governance.beneficiary_reward_delay()
     dev_benefs = Enum.map(:aec_dev_reward.beneficiaries(), &elem(&1, 0))
-    current_miner = :aec_headers.miner(key_header)
-    current_beneficiary = :aec_headers.beneficiary(key_header)
 
     {devs_rewards, miners_rewards} =
       {:node, key_header, key_hash, :key}
@@ -65,7 +63,7 @@ defmodule AeMdw.Db.IntTransfer do
 
     [
       IntTransfersMutation.new(height, miners_transfers ++ devs_transfers),
-      MinerRewardsMutation.new(height, miners_rewards, current_miner, current_beneficiary, delay)
+      MinerRewardsMutation.new(miners_rewards)
     ]
   end
 
