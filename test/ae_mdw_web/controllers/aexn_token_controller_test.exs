@@ -56,7 +56,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
   end
 
   describe "aex9_tokens" do
-    test "it gets aex9 tokens backwards by name", %{conn: conn} do
+    test "gets aex9 tokens backwards by name", %{conn: conn} do
       assert %{"data" => aex9_tokens, "next" => next} =
                conn |> get("/v2/aex9") |> json_response(200)
 
@@ -78,7 +78,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       assert %{"data" => ^aex9_tokens} = conn |> get(prev_aex9_tokens) |> json_response(200)
     end
 
-    test "it gets aex9 tokens forwards by name", %{conn: conn} do
+    test "gets aex9 tokens forwards by name", %{conn: conn} do
       assert %{"data" => aex9_tokens, "next" => next} =
                conn |> get("/v2/aex9", direction: "forward") |> json_response(200)
 
@@ -99,7 +99,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       assert %{"data" => ^aex9_tokens} = conn |> get(prev_aex9_tokens) |> json_response(200)
     end
 
-    test "it gets aex9 tokens filtered by name prefix", %{conn: conn} do
+    test "gets aex9 tokens filtered by name prefix", %{conn: conn} do
       prefix = "some-AEX"
 
       assert %{"data" => aex9_tokens} =
@@ -109,7 +109,14 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       assert Enum.all?(aex9_tokens, fn %{"name" => name} -> String.starts_with?(name, prefix) end)
     end
 
-    test "it gets aex9 tokens backwards by symbol", %{conn: conn} do
+    test "gets aex9 tokens having a specific name", %{conn: conn} do
+      name = "some-AEX9-223"
+
+      assert %{"data" => [%{"name" => ^name}]} =
+               conn |> get("/v2/aex9", by: "name", exact: name) |> json_response(200)
+    end
+
+    test "gets aex9 tokens backwards by symbol", %{conn: conn} do
       assert %{"data" => aex9_tokens, "next" => next} =
                conn |> get("/v2/aex9", by: "symbol") |> json_response(200)
 
@@ -132,7 +139,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       assert %{"data" => ^aex9_tokens} = conn |> get(prev_aex9_tokens) |> json_response(200)
     end
 
-    test "it gets aex9 tokens forwards by symbol", %{conn: conn} do
+    test "gets aex9 tokens forwards by symbol", %{conn: conn} do
       assert %{"data" => aex9_tokens, "next" => next} =
                conn |> get("/v2/aex9", direction: "forward", by: "symbol") |> json_response(200)
 
@@ -153,7 +160,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       assert %{"data" => ^aex9_tokens} = conn |> get(prev_aex9_tokens) |> json_response(200)
     end
 
-    test "it gets aex9 tokens filtered by symbol prefix", %{conn: conn} do
+    test "gets aex9 tokens filtered by symbol prefix", %{conn: conn} do
       prefix = "SAEX9"
 
       assert %{"data" => aex9_tokens} =
@@ -166,7 +173,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
              end)
     end
 
-    test "it gets aex9 tokens with big symbol filtered by symbol prefix", %{conn: conn} do
+    test "gets aex9 tokens with big symbol filtered by symbol prefix", %{conn: conn} do
       symbol_prefix = "big"
 
       assert %{"data" => aex9_tokens} =
@@ -179,7 +186,14 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
              end)
     end
 
-    test "it returns an error when invalid cursor", %{conn: conn} do
+    test "gets aex9 tokens having a specific symbol", %{conn: conn} do
+      symbol = "SAEX9212"
+
+      assert %{"data" => [%{"symbol" => ^symbol}]} =
+               conn |> get("/v2/aex9", by: "symbol", exact: symbol) |> json_response(200)
+    end
+
+    test "returns an error when invalid cursor", %{conn: conn} do
       cursor = "blah"
       error_msg = "invalid cursor: #{cursor}"
 
@@ -189,7 +203,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
   end
 
   describe "aex141_tokens" do
-    test "it gets aex141 tokens backwards by name", %{conn: conn} do
+    test "gets aex141 tokens backwards by name", %{conn: conn} do
       assert %{"data" => aex141_tokens, "next" => next} =
                conn |> get("/v2/aex141") |> json_response(200)
 
@@ -211,7 +225,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       assert %{"data" => ^aex141_tokens} = conn |> get(prev_aex141_tokens) |> json_response(200)
     end
 
-    test "it gets aex141 tokens forwards by name", %{conn: conn} do
+    test "gets aex141 tokens forwards by name", %{conn: conn} do
       assert %{"data" => aex141_tokens, "next" => next} =
                conn |> get("/v2/aex141", direction: "forward") |> json_response(200)
 
@@ -232,7 +246,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       assert %{"data" => ^aex141_tokens} = conn |> get(prev_aex141_tokens) |> json_response(200)
     end
 
-    test "it gets aex141 tokens filtered by name prefix", %{conn: conn} do
+    test "gets aex141 tokens filtered by name prefix", %{conn: conn} do
       prefix = "some-nft"
 
       assert %{"data" => aex141_tokens} =
@@ -245,7 +259,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
              end)
     end
 
-    test "it gets aex141 tokens with big name filtered by name prefix", %{conn: conn} do
+    test "gets aex141 tokens with big name filtered by name prefix", %{conn: conn} do
       name_prefix = "big"
 
       assert %{"data" => aex141_tokens} =
@@ -258,7 +272,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
              end)
     end
 
-    test "it gets aex141 tokens backwards by symbol", %{conn: conn} do
+    test "gets aex141 tokens backwards by symbol", %{conn: conn} do
       assert %{"data" => aex141_tokens, "next" => next} =
                conn |> get("/v2/aex141", by: "symbol") |> json_response(200)
 
@@ -281,7 +295,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       assert %{"data" => ^aex141_tokens} = conn |> get(prev_aex141_tokens) |> json_response(200)
     end
 
-    test "it gets aex141 tokens forwards by symbol", %{conn: conn} do
+    test "gets aex141 tokens forwards by symbol", %{conn: conn} do
       assert %{"data" => aex141_tokens, "next" => next} =
                conn |> get("/v2/aex141", direction: "forward", by: "symbol") |> json_response(200)
 
@@ -302,7 +316,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       assert %{"data" => ^aex141_tokens} = conn |> get(prev_aex141_tokens) |> json_response(200)
     end
 
-    test "it gets aex141 tokens filtered by symbol prefix", %{conn: conn} do
+    test "gets aex141 tokens filtered by symbol prefix", %{conn: conn} do
       prefix = "NFT"
 
       assert %{"data" => aex141_tokens} =
@@ -315,7 +329,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
              end)
     end
 
-    test "it returns an error when invalid cursor", %{conn: conn} do
+    test "returns an error when invalid cursor", %{conn: conn} do
       cursor = "blah"
       error_msg = "invalid cursor: #{cursor}"
 
@@ -325,7 +339,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
   end
 
   describe "aex9_token" do
-    test "it returns an aex9 token", %{conn: conn} do
+    test "returns an aex9 token", %{conn: conn} do
       assert %{"contract_id" => @aex9_token_id} =
                conn |> get("/v2/aex9/#{@aex9_token_id}") |> json_response(200)
     end
@@ -368,7 +382,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
   end
 
   describe "aex141_token" do
-    test "it returns an aex141 token", %{conn: conn} do
+    test "returns an aex141 token", %{conn: conn} do
       assert %{"contract_id" => @aex141_token_id} =
                conn |> get("/v2/aex141/#{@aex141_token_id}") |> json_response(200)
     end

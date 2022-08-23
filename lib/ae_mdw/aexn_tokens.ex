@@ -54,7 +54,7 @@ defmodule AeMdw.AexnTokens do
             query
             |> Map.drop(@pagination_params)
             |> validate_params()
-            |> Enum.into(%{}, &convert_param/1)
+            |> Enum.into(%{prefix: ""}, &convert_param/1)
             |> build_tokens_streamer(state, aexn_type, sorted_table, cursor)
             |> Collection.paginate(pagination)
 
@@ -69,14 +69,27 @@ defmodule AeMdw.AexnTokens do
     end
   end
 
-  defp build_tokens_streamer(query, state, type, table, cursor) do
-    prefix = query |> Map.get(:prefix, "") |> String.slice(0, @max_sort_field_length)
+  defp build_tokens_streamer(%{exact: exact}, state, type, table, cursor) do
+    scope = {
+      {type, exact, <<>>},
+      {type, exact, Util.max_256bit_bin()}
+    }
+
+    do_build_tokens_streamer(state, table, cursor, scope)
+  end
+
+  defp build_tokens_streamer(%{prefix: prefix}, state, type, table, cursor) do
+    prefix = String.slice(prefix, 0, @max_sort_field_length)
 
     scope = {
       {type, prefix, <<>>},
       {type, prefix <> Util.max_name_bin(), <<>>}
     }
 
+    do_build_tokens_streamer(state, table, cursor, scope)
+  end
+
+  defp do_build_tokens_streamer(state, table, cursor, scope) do
     fn direction ->
       state
       |> Collection.stream(table, direction, scope, cursor)
