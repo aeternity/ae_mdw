@@ -104,6 +104,19 @@ defmodule AeMdwWeb.Aex9ControllerTest do
     end
   end
 
+  describe "balance" do
+    test "returns 400 when contract is unknown", %{conn: conn, store: store} do
+      contract_id = enc_ct(:crypto.strong_rand_bytes(32))
+      account_id = enc_id(:crypto.strong_rand_bytes(32))
+
+      assert %{"error" => <<"not AEX9 contract: ", ^contract_id::binary>>} =
+               conn
+               |> with_store(store)
+               |> get("/aex9/balance/#{contract_id}/#{account_id}")
+               |> json_response(400)
+    end
+  end
+
   describe "balances" do
     test "returns all account balances", %{conn: conn, store: store} do
       account_pk = :crypto.strong_rand_bytes(32)

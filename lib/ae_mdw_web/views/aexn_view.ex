@@ -23,7 +23,7 @@ defmodule AeMdwWeb.AexnView do
   @spec balance_to_map(State.t(), {non_neg_integer(), non_neg_integer(), pubkey()}) ::
           map()
   def balance_to_map(state, {amount, call_txi, contract_pk}) do
-    Model.tx(id: tx_hash, block_index: {height, _mbi}) = Util.read_tx!(state, call_txi)
+    Model.tx(id: tx_hash, block_index: {height, _mbi}) = State.fetch!(state, Model.Tx, call_txi)
 
     {block_hash, tx_type, _signed_tx, _tx_rec} = NodeDb.get_tx_data(tx_hash)
 
