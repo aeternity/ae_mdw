@@ -11,10 +11,18 @@ defmodule AeMdw.Migrations.AddNameFeesToStats do
 
   require Model
 
+  @log_freq 1_000
+
   @spec run(boolean()) :: {:ok, {non_neg_integer(), non_neg_integer()}}
   def run(_from_start?) do
     begin = DateTime.utc_now()
     state = State.new()
+
+    total_gens =
+      case state |> Collection.stream(Model.DeltaStat, :backward, nil, nil) |> Enum.take(1) do
+        [total_gens] -> total_gens
+        [] -> 0
+      end
 
     {mutations, _last_burned_locked} =
       state
@@ -46,6 +54,8 @@ defmodule AeMdw.Migrations.AddNameFeesToStats do
             burned_in_auctions: new_total_burned,
             locked_in_auctions: new_total_locked
           )
+
+        if rem(height, @log_freq) == 0, do: IO.puts("Processed #{height} of #{total_gens}")
 
         {
           [
