@@ -3483,7 +3483,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/aex9/by_name?prefix=ae" | jq '.'
 Note, that for both endpoints - `by_name` and `by_symbol` - if the querying part (`prefix` or `exact`) contains unicode or a space character, it needs to be URL encoded:
 
 ```
-$ curl -s "http://18.157.58.152/mdw/aex9/by_name?exact=%F0%9D%9D%BA%20Token" | jq '.'
+$ curl -s "https://testnet.aeternity.io/mdw/aex9/by_name?exact=%F0%9D%9D%BA%20Token" | jq '.'
 [
   {
     "contract_id": "ct_eW2aiba4vXEwmyGEu7vxvDt6396Zvr6jQYUcoyfe9W9V7KGqr",
