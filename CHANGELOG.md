@@ -1,5 +1,35 @@
 # Changelog
 
+## [1.18.0](https://www.github.com/aeternity/ae_mdw/compare/v1.17.0...v1.18.0) (2022-08-23)
+
+
+### Features
+
+* log open/closed channels together with their locked AE ([#840](https://www.github.com/aeternity/ae_mdw/issues/840)) ([d965275](https://www.github.com/aeternity/ae_mdw/commit/d965275c5173e8406ceb6f546bb054a38f30df2d))
+
+
+### Bug Fixes
+
+* check for nil before encoding contract pks ([#855](https://www.github.com/aeternity/ae_mdw/issues/855)) ([dcd4c68](https://www.github.com/aeternity/ae_mdw/commit/dcd4c68342e10d0c0e964f4c679df5031c3d62a8))
+* filter contracts after account balance dry-run on blockhash ([#861](https://www.github.com/aeternity/ae_mdw/issues/861)) ([40da750](https://www.github.com/aeternity/ae_mdw/commit/40da750a3a3a0d2d1b6355d2066926aee251ed02))
+* query aexn by exact name or symbol on v1 and v2 ([#862](https://www.github.com/aeternity/ae_mdw/issues/862)) ([d97058f](https://www.github.com/aeternity/ae_mdw/commit/d97058fd34e686617a0a097d619a18f67d946847))
+* use block_index on v1 aex9 height balances ([#852](https://www.github.com/aeternity/ae_mdw/issues/852)) ([77bb961](https://www.github.com/aeternity/ae_mdw/commit/77bb961426b6313759f663bb0200ddcf5db3ffb4))
+
+
+### Miscellaneous
+
+* add progress indicator on name fees migration ([#856](https://www.github.com/aeternity/ae_mdw/issues/856)) ([53f7bfc](https://www.github.com/aeternity/ae_mdw/commit/53f7bfcd94b394259dd4131555a6a27d3b6b87f3))
+* set dry run gas upper limit ([#845](https://www.github.com/aeternity/ae_mdw/issues/845)) ([540f6d7](https://www.github.com/aeternity/ae_mdw/commit/540f6d7c1495b4f1fa88c53a1d64d6a4d3c34e62))
+* sorts aex9 account balances from last to first ([#858](https://www.github.com/aeternity/ae_mdw/issues/858)) ([0e81e25](https://www.github.com/aeternity/ae_mdw/commit/0e81e2545a56749230d489f0363f6f7c1f7ed715))
+
+
+### Testing
+
+* complement to missing unit tests for AEX-141 ([#843](https://www.github.com/aeternity/ae_mdw/issues/843)) ([900636d](https://www.github.com/aeternity/ae_mdw/commit/900636d183925a7c67e4bdf6045ec00a22a7f967))
+* skip creating a store on integration tests ([#857](https://www.github.com/aeternity/ae_mdw/issues/857)) ([654228e](https://www.github.com/aeternity/ae_mdw/commit/654228ecb3a13b69ce602c75247ce6c715d6c932))
+* update hardfork accounts integration case ([#859](https://www.github.com/aeternity/ae_mdw/issues/859)) ([8450d0a](https://www.github.com/aeternity/ae_mdw/commit/8450d0a005aae3a701145c3ededd36cffedc3cc8))
+* update integration test regardin aex9 missing presence ([#853](https://www.github.com/aeternity/ae_mdw/issues/853)) ([5c904f6](https://www.github.com/aeternity/ae_mdw/commit/5c904f6caa37882acb9d3e453b391e36f2fa987d))
+
 ## [1.17.0](https://www.github.com/aeternity/ae_mdw/compare/v1.16.1...v1.17.0) (2022-08-18)
 
 
