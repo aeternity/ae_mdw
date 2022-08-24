@@ -4,6 +4,7 @@ defmodule AeMdw.Migrations.AddMiners do
   """
 
   alias AeMdw.Collection
+  alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.WriteMutation
@@ -15,11 +16,9 @@ defmodule AeMdw.Migrations.AddMiners do
 
   @spec run(boolean()) :: {:ok, {non_neg_integer(), non_neg_integer()}}
   def run(_from_start?) do
-    state = State.new()
-
-    case state |> Collection.stream(Model.DeltaStat, :backward, nil, nil) |> Enum.take(1) do
-      [total_gens] -> run_with_gens(state, total_gens)
-      [] -> {:ok, {0, 0}}
+    case Database.last_key(Model.DeltaStat) do
+      {:ok, total_gens} -> run_with_gens(State.new(), total_gens)
+      :none -> {:ok, {0, 0}}
     end
   end
 
