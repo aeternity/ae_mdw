@@ -154,6 +154,7 @@ GET /v2/aex9/:contract_id/balances/:account_id/history - returns aex9 contract a
 
 GET /v2/deltastats                       - returns statistics for generations from tip of the chain
 GET /v2/totalstats                       - returns aggregated statistics for generations from tip of the chain
+GET /v2/minerstats                       - returns total rewards for each miner
 
 GET /v2/status                           - returns middleware status
 ```
@@ -3862,6 +3863,24 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/totalstats?gen:421454-0&limit=1" 
 ```
 
 These endpoints allows pagination, with typical `forward/backward` direction or scope denoted by `gen/from-to`.
+
+### `/v2/minerstats`
+
+Total reward given to each chain miner.
+
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/minerstats?limit=1" | jq '.'
+{
+  "data": [
+    {
+      "miner": "ak_2wkBCLxwjfcT3DHoisV7tGVQK8uni8XQwWZ6RUKD9DDwYSz8XN",
+      "total_reward": 76626041292504000000
+    }
+  ],
+  "next": "/v2/totalminers?cursor=ak_2wk52gAYRWAMi7gWP7A1oMvHEP9kpmp471VJFpvVzWMHnRc47a",
+  "prev": null
+}
+```
 
 ## Migrating to v2
 

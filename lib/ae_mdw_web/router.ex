@@ -79,6 +79,7 @@ defmodule AeMdwWeb.Router do
 
       get "/deltastats", StatsController, :delta_stats
       get "/stats", StatsController, :stats
+      get "/minerstats", StatsController, :miners
 
       scope "/swagger" do
         forward "/", SwaggerForwardV2,

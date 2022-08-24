@@ -1,6 +1,7 @@
 defmodule AeMdwWeb.StatsController do
   use AeMdwWeb, :controller
 
+  alias AeMdw.Miners
   alias AeMdw.Stats
   alias AeMdwWeb.Plugs.PaginatedPlug
   alias AeMdwWeb.FallbackController
@@ -61,5 +62,14 @@ defmodule AeMdwWeb.StatsController do
       {:ok, stats} -> json(conn, stats)
       {:error, reason} -> {:error, reason}
     end
+  end
+
+  @spec miners(Conn.t(), map()) :: Conn.t()
+  def miners(%Conn{assigns: assigns} = conn, _params) do
+    %{state: state, pagination: pagination, cursor: cursor} = assigns
+
+    {prev_cursor, miners, next_cursor} = Miners.fetch_miners(state, pagination, cursor)
+
+    Util.paginate(conn, prev_cursor, miners, next_cursor)
   end
 end

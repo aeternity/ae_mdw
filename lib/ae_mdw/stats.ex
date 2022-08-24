@@ -29,6 +29,7 @@ defmodule AeMdw.Stats do
   @typep range() :: {:gen, Range.t()} | nil
 
   @tps_stat_key :max_tps
+  @miners_count_stat_key :miners_count
 
   @spec mutation(height(), Db.key_block(), [Db.micro_block()], txi(), txi(), boolean()) ::
           StatsMutation.t()
@@ -53,6 +54,9 @@ defmodule AeMdw.Stats do
 
   @spec max_tps_key() :: atom()
   def max_tps_key, do: @tps_stat_key
+
+  @spec miners_count_key() :: atom()
+  def miners_count_key, do: @miners_count_stat_key
 
   # Legacy v1 is a blending between /totalstats and /deltastats.
   # The active and inactive object counters are totals while the rewards are delta.
@@ -126,14 +130,17 @@ defmodule AeMdw.Stats do
 
   @spec fetch_stats(State.t()) :: {:ok, map()} | {:error, Error.t()}
   def fetch_stats(state) do
-    case State.get(state, Model.Stat, @tps_stat_key) do
-      {:ok, Model.stat(payload: {tps, tps_block_hash})} ->
-        {:ok,
-         %{
-           max_transactions_per_second: tps,
-           max_transactions_per_second_block_hash: Enc.encode(:key_block_hash, tps_block_hash)
-         }}
-
+    with {:ok, Model.stat(payload: {tps, tps_block_hash})} <-
+           State.get(state, Model.Stat, @tps_stat_key),
+         {:ok, Model.stat(payload: miners_count)} <-
+           State.get(state, Model.Stat, @miners_count_stat_key) do
+      {:ok,
+       %{
+         max_transactions_per_second: tps,
+         max_transactions_per_second_block_hash: Enc.encode(:key_block_hash, tps_block_hash),
+         miners_count: miners_count
+       }}
+    else
       :not_found ->
         {:error, ErrInput.NotFound.exception(value: "no stats")}
     end
