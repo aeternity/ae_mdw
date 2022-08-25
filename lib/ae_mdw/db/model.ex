@@ -20,6 +20,8 @@ defmodule AeMdw.Db.Model do
 
   @typep pubkey :: Db.pubkey()
   @typep tx_type() :: Node.tx_type()
+  @typep txi() :: Txs.txi()
+  @typep tx_hash() :: Txs.tx_hash()
 
   ################################################################################
 
@@ -56,7 +58,7 @@ defmodule AeMdw.Db.Model do
   @type block ::
           record(:block,
             index: Blocks.block_index(),
-            tx_index: Txs.txi(),
+            tx_index: txi(),
             hash: Blocks.block_hash()
           )
 
@@ -67,7 +69,7 @@ defmodule AeMdw.Db.Model do
 
   @type tx ::
           record(:tx,
-            index: Txs.txi(),
+            index: txi(),
             id: Txs.tx_hash(),
             block_index: Blocks.block_index(),
             time: Blocks.time()
@@ -83,8 +85,10 @@ defmodule AeMdw.Db.Model do
   @type_defaults [index: {nil, -1}, unused: nil]
   defrecord :type, @type_defaults
 
+  @type type() :: record(:type, index: {tx_type(), txi()})
+
   # txs type count index  :
-  #     index = {tx_type, tx_index}
+  #     index = tx_type
   @type_count_defaults [index: nil, count: 0]
   defrecord :type_count, @type_count_defaults
 
@@ -94,6 +98,8 @@ defmodule AeMdw.Db.Model do
   #     index = {tx_type, tx_field_pos, object_pubkey, tx_index},
   @field_defaults [index: {nil, -1, nil, -1}, unused: nil]
   defrecord :field, @field_defaults
+
+  @type field() :: record(:field, index: {tx_type(), non_neg_integer() | -1, pubkey(), txi()})
 
   # id counts       :
   #     index = {tx_type, tx_field_pos, object_pubkey}
@@ -108,12 +114,16 @@ defmodule AeMdw.Db.Model do
   @origin_defaults [index: {nil, nil, nil}, tx_id: nil]
   defrecord :origin, @origin_defaults
 
+  @type origin() :: record(:origin, index: {tx_type(), pubkey(), txi()}, tx_id: tx_hash())
+
   # we need this one to quickly locate origin keys to delete for invalidating a fork
   #
   # rev object origin :
   #     index = {tx_index, tx_type, pubkey}
   @rev_origin_defaults [index: {nil, nil, nil}, unused: nil]
   defrecord :rev_origin, @rev_origin_defaults
+
+  @type rev_origin() :: record(:rev_origin, index: {txi(), tx_type(), pubkey()})
 
   # plain name:
   #     index = name_hash, plain = plain name
@@ -198,7 +208,7 @@ defmodule AeMdw.Db.Model do
             claims: list(),
             updates: list(),
             transfers: list(),
-            revoke: {Blocks.block_index(), Txs.txi()} | nil,
+            revoke: {Blocks.block_index(), txi()} | nil,
             auction_timeout: non_neg_integer(),
             owner: pubkey(),
             previous: record(:name) | nil
@@ -211,7 +221,7 @@ defmodule AeMdw.Db.Model do
 
   @type owner() ::
           record(:owner,
-            index: {Db.pubkey(), Names.plain_name()},
+            index: {pubkey(), Names.plain_name()},
             unused: nil
           )
 
@@ -222,7 +232,7 @@ defmodule AeMdw.Db.Model do
 
   @type pointee() ::
           record(:pointee,
-            index: {Db.pubkey(), {Blocks.block_index(), Txs.txi()}, Db.pubkey()},
+            index: {pubkey(), {Blocks.block_index(), txi()}, pubkey()},
             unused: nil
           )
 
@@ -249,11 +259,11 @@ defmodule AeMdw.Db.Model do
 
   @type oracle() ::
           record(:oracle,
-            index: Db.pubkey(),
+            index: pubkey(),
             active: Blocks.height(),
             expire: Blocks.height(),
-            register: {Blocks.block_index(), Txs.txi()},
-            extends: [{Blocks.block_index(), Txs.txi()}],
+            register: {Blocks.block_index(), txi()},
+            extends: [{Blocks.block_index(), txi()}],
             previous: oracle() | nil
           )
 
@@ -264,9 +274,9 @@ defmodule AeMdw.Db.Model do
   #     amount: float
   @type aex9_balance ::
           record(:aex9_balance,
-            index: {Db.pubkey(), Db.pubkey()},
+            index: {pubkey(), pubkey()},
             block_index: {Blocks.height(), Blocks.mbi()},
-            txi: Txs.txi(),
+            txi: txi(),
             amount: float()
           )
   @aex9_balance_defaults [index: {<<>>, <<>>}, block_index: {-1, -1}, txi: nil, amount: nil]
@@ -286,8 +296,8 @@ defmodule AeMdw.Db.Model do
 
   @type aexn_contract ::
           record(:aexn_contract,
-            index: {aexn_type(), Db.pubkey()},
-            txi: Txs.txi(),
+            index: {aexn_type(), pubkey()},
+            txi: txi(),
             meta_info: aexn_meta_info(),
             extensions: aexn_extensions()
           )
@@ -324,7 +334,7 @@ defmodule AeMdw.Db.Model do
 
   @type nft_ownership() ::
           record(:nft_ownership,
-            index: {Db.pubkey(), Db.pubkey(), AeMdw.Aex141.token_id()},
+            index: {pubkey(), pubkey(), AeMdw.Aex141.token_id()},
             unused: nil
           )
 
