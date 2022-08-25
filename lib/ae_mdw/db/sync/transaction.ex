@@ -14,7 +14,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Model
   alias AeMdw.Db.NameRevokeMutation
   alias AeMdw.Db.NameTransferMutation
-  alias AeMdw.Db.NameUpdateMutation
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.OracleExtendMutation
   alias AeMdw.Db.OracleRegisterMutation
@@ -291,9 +290,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          txi: txi,
          block_index: block_index
        }) do
-    [
-      NameUpdateMutation.new(tx, txi, block_index)
-    ]
+    SyncName.update_mutations(tx, txi, block_index)
   end
 
   defp tx_mutations(%TxContext{
