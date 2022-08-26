@@ -3,6 +3,7 @@ alias AeMdw.Db.Name
 alias AeMdw.Db.Util
 alias AeMdw.Db.State
 
+alias AeMdw.Collection
 alias AeMdw.Contract
 alias AeMdw.Database
 alias AeMdw.Validate

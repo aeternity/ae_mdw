@@ -152,10 +152,12 @@ defmodule AeMdw.AexnContracts do
   @option_metadata_spec {:variant,
                          [
                            tuple: [],
-                           tuple: [variant: [tuple: [:string], tuple: [:string, :string]]]
+                           tuple: [variant: [tuple: [:string], tuple: [{:map, :string, :string}]]]
                          ]}
   @option_metadata_str {:variant, [tuple: [], tuple: [variant: [tuple: [:string]]]]}
-  @option_metadata_map {:variant, [tuple: [], tuple: [variant: [tuple: [:string, :string]]]]}
+  @option_metadata_map {:variant,
+                        [tuple: [], tuple: [variant: [tuple: [{:map, :string, :string}]]]]}
+
   @metadata_hash <<99, 148, 233, 122>>
   @mint_hash <<207, 221, 154, 162>>
   @burn_hash <<177, 239, 193, 123>>

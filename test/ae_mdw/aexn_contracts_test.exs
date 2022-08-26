@@ -105,6 +105,21 @@ defmodule AeMdw.AexnContractsTest do
               :RETURN
             ]
           }},
+       <<32, 4, 164, 216>> =>
+         {[:private], {[list: :string], :string},
+          %{
+            0 => [
+              {:IS_NIL, {:stack, 0}, {:arg, 0}},
+              {:JUMPIF, {:stack, 0}, {:immediate, 2}}
+            ],
+            1 => [
+              {:TL, {:stack, 0}, {:arg, 0}},
+              {:HD, {:stack, 0}, {:arg, 0}},
+              {:PUSH, {:immediate, {:tuple, {<<93, 142, 50, 216>>, {:tuple, {}}}}}},
+              {:CALL_T, {:immediate, <<94, 119, 225, 37>>}}
+            ],
+            2 => [RETURNR: {:immediate, ""}]
+          }},
        <<39, 89, 45, 234>> =>
          {[], {[:integer], {:variant, [tuple: [], tuple: [:address]]}},
           %{
@@ -125,8 +140,8 @@ defmodule AeMdw.AexnContractsTest do
           {[
              :string,
              :string,
-             {:variant, [tuple: [], tuple: [], tuple: [], tuple: []]},
-             {:variant, [tuple: [], tuple: [:string]]}
+             {:variant, [tuple: [], tuple: [:string]]},
+             {:variant, [tuple: [], tuple: [], tuple: [], tuple: []]}
            ], {:tuple, []}},
           %{
             0 => [
@@ -158,8 +173,8 @@ defmodule AeMdw.AexnContractsTest do
               {:STORE, {:var, -10}, {:immediate, %{}}},
               {:STORE, {:var, -2}, {:arg, 0}},
               {:STORE, {:var, -3}, {:arg, 1}},
-              {:STORE, {:var, -4}, {:arg, 3}},
-              {:STORE, {:var, -5}, {:arg, 2}},
+              {:STORE, {:var, -4}, {:arg, 2}},
+              {:STORE, {:var, -5}, {:arg, 3}},
               {:STORE, {:var, -11}, {:immediate, false}},
               {:RETURNR, {:immediate, {:tuple, {}}}}
             ]
@@ -206,9 +221,36 @@ defmodule AeMdw.AexnContractsTest do
               :RETURN
             ]
           }},
+       <<93, 142, 50, 216>> =>
+         {[:private], {[:any, :any, :any], :any},
+          %{0 => [{:STR_JOIN, {:stack, 0}, {:arg, 1}, {:arg, 2}}, :RETURN]}},
+       <<94, 119, 225, 37>> =>
+         {[:private], {[tuple: [:string, :any], tvar: 0, list: {:tvar, 1}], {:tvar, 0}},
+          %{
+            0 => [
+              {:IS_NIL, {:stack, 0}, {:arg, 2}},
+              {:JUMPIF, {:stack, 0}, {:immediate, 3}}
+            ],
+            1 => [
+              {:HD, {:stack, 0}, {:arg, 2}},
+              {:PUSH, {:arg, 1}},
+              {:ELEMENT, {:stack, 0}, {:immediate, 1}, {:arg, 0}},
+              {:ELEMENT, {:stack, 0}, {:immediate, 0}, {:arg, 0}},
+              {:CALL, {:stack, 0}}
+            ],
+            2 => [
+              {:POP, {:arg, 1}},
+              {:TL, {:arg, 2}, {:arg, 2}},
+              {:JUMP, {:immediate, 0}}
+            ],
+            3 => [RETURNR: {:arg, 1}]
+          }},
        <<99, 80, 161, 92>> =>
          {[],
-          {[:address, {:variant, [tuple: [:string], tuple: [:string, :string]]}], {:tuple, []}},
+          {[
+             :address,
+             {:variant, [tuple: [:string], tuple: [{:map, :string, :string}]]}
+           ], {:tuple, []}},
           %{
             0 => [
               {:EQ, {:stack, 0}, {:var, -11}, {:immediate, false}},
@@ -253,15 +295,60 @@ defmodule AeMdw.AexnContractsTest do
            {:variant,
             [
               tuple: [],
-              tuple: [variant: [tuple: [:string], tuple: [:string, :string]]]
+              tuple: [variant: [tuple: [:string], tuple: [{:map, :string, :string}]]]
             ]}},
           %{
             0 => [
-              {:INT_TO_STR, {:stack, 0}, {:arg, 0}},
-              {:PUSH, {:immediate, "some-url"}},
-              {:VARIANT, {:stack, 0}, {:immediate, [1, 2]}, {:immediate, 1}, {:immediate, 2}},
+              {:STORE, {:var, 0}, {:var, -10}},
+              {:MAP_MEMBER, {:stack, 0}, {:var, -10}, {:arg, 0}},
+              {:JUMPIF, {:stack, 0}, {:immediate, 11}}
+            ],
+            1 => [
+              {:PUSH, {:immediate, {:variant, [0, 1], 0, {}}}},
+              {:POP, {:var, 2}},
+              {:SWITCH_V2, {:var, 2}, {:immediate, 2}, {:immediate, 3}}
+            ],
+            2 => [RETURNR: {:immediate, {:variant, [0, 1], 0, {}}}],
+            3 => [
+              {:VARIANT_ELEMENT, {:var, 3}, {:var, 2}, {:immediate, 0}},
+              {:EQ, {:stack, 0}, {:var, -5}, {:immediate, {:variant, [0, 0, 0, 0], 0, {}}}},
+              {:JUMPIF, {:stack, 0}, {:immediate, 5}}
+            ],
+            4 => [
+              {:PUSH, {:var, 3}},
               {:VARIANT, {:stack, 0}, {:immediate, [0, 1]}, {:immediate, 1}, {:immediate, 1}},
               :RETURN
+            ],
+            5 => [
+              {:STORE, {:var, 6}, {:var, -4}},
+              {:SWITCH_V2, {:var, -4}, {:immediate, 6}, {:immediate, 7}}
+            ],
+            6 => [
+              {:PUSH, {:var, 3}},
+              {:VARIANT, {:stack, 0}, {:immediate, [0, 1]}, {:immediate, 1}, {:immediate, 1}},
+              :RETURN
+            ],
+            7 => [
+              {:VARIANT_ELEMENT, {:var, 7}, {:var, 6}, {:immediate, 0}},
+              {:SWITCH_V2, {:var, 3}, {:immediate, 9}, {:immediate, 8}}
+            ],
+            8 => [ABORT: {:immediate, "Incomplete patterns"}],
+            9 => [
+              {:VARIANT_ELEMENT, {:var, 8}, {:var, 3}, {:immediate, 0}},
+              {:CONS, {:stack, 0}, {:var, 8}, {:immediate, []}},
+              {:CONS, {:stack, 0}, {:var, 7}, {:stack, 0}},
+              {:CALL, {:immediate, <<32, 4, 164, 216>>}}
+            ],
+            10 => [
+              {:VARIANT, {:stack, 0}, {:immediate, [1, 1]}, {:immediate, 0}, {:immediate, 1}},
+              {:VARIANT, {:stack, 0}, {:immediate, [0, 1]}, {:immediate, 1}, {:immediate, 1}},
+              :RETURN
+            ],
+            11 => [
+              {:MAP_LOOKUP, {:stack, 0}, {:var, 0}, {:arg, 0}},
+              {:VARIANT, {:stack, 0}, {:immediate, [0, 1]}, {:immediate, 1}, {:immediate, 1}},
+              {:POP, {:var, 2}},
+              {:SWITCH_V2, {:var, 2}, {:immediate, 2}, {:immediate, 3}}
             ]
           }},
        <<101, 165, 224, 15>> =>
@@ -533,9 +620,7 @@ defmodule AeMdw.AexnContractsTest do
             ],
             6 => [JUMP: {:immediate, 7}],
             7 => [{:JUMPIF, {:stack, 0}, {:immediate, 10}}],
-            8 => [
-              ABORT: {:immediate, "ONLY_OWNER_APPROVED_OR_OPERATOR_CALL_ALLOWED"}
-            ],
+            8 => [ABORT: {:immediate, "ONLY_OWNER_APPROVED_OR_OPERATOR_CALL_ALLOWED"}],
             9 => [PUSH: {:immediate, true}, JUMP: {:immediate, 7}],
             10 => [RETURNR: {:immediate, {:tuple, {}}}],
             11 => [PUSH: {:immediate, true}, JUMP: {:immediate, 7}],
@@ -562,9 +647,12 @@ defmodule AeMdw.AexnContractsTest do
        <<15, 27, 134, 79>> => ".BaseNFT.require_contract_owner",
        <<15, 89, 34, 233>> => "is_approved_for_all",
        <<20, 55, 180, 56>> => "meta_info",
+       <<32, 4, 164, 216>> => ".String.concats",
        <<39, 89, 45, 234>> => "get_approved",
        <<68, 214, 68, 31>> => "init",
        <<80, 90, 158, 181>> => ".BaseNFT.invoke_nft_receiver",
+       <<93, 142, 50, 216>> => ".^1697",
+       <<94, 119, 225, 37>> => ".List.foldl",
        <<99, 80, 161, 92>> => "define_token",
        <<99, 148, 233, 122>> => "metadata",
        <<101, 165, 224, 15>> => "Chain.event",
