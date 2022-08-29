@@ -5,6 +5,8 @@ defmodule AeMdwWeb.Util do
 
   alias AeMdw.Collection
   alias AeMdw.Validate
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Error.Input, as: ErrInput
   alias Phoenix.Controller
   alias Plug.Conn
@@ -27,6 +29,18 @@ defmodule AeMdwWeb.Util do
 
       _invalid_range ->
         {:error, range}
+    end
+  end
+
+  @spec parse_gen(State.t(), String.t()) ::
+          {:ok, non_neg_integer()} | {:error, :invalid | :unknown}
+  def parse_gen(state, gen_str) do
+    with {:ok, gen} <- Validate.nonneg_int(gen_str),
+         true <- State.exists?(state, Model.Block, {gen, -1}) do
+      {:ok, gen}
+    else
+      {:error, _reason} -> {:error, :invalid}
+      false -> {:error, :unknown}
     end
   end
 

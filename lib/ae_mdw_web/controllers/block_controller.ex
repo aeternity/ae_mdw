@@ -4,6 +4,7 @@ defmodule AeMdwWeb.BlockController do
   alias AeMdw.Blocks
   alias AeMdw.Validate
   alias AeMdw.Util
+  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
   alias AeMdwWeb.Util, as: WebUtil
@@ -18,7 +19,27 @@ defmodule AeMdwWeb.BlockController do
   Endpoint for block info by hash or kbi.
   """
   @spec block(Conn.t(), map()) :: Conn.t()
-  def block(%Conn{assigns: %{state: state}} = conn, %{"hash_or_kbi" => hash_or_kbi} = params) do
+  def block(%Conn{assigns: %{state: state}} = conn, %{"hash_or_kbi" => hash_or_kbi}) do
+    with {:ok, kbi} <- WebUtil.parse_gen(state, hash_or_kbi),
+         {_prev_cursor, [block | _], _next_cursor} <-
+           Blocks.fetch_blocks(state, :forward, {:gen, kbi..kbi}, nil, 1, true) do
+      json(conn, block)
+    else
+      {:error, :invalid} ->
+        with {:ok, block} <- Blocks.fetch(state, hash_or_kbi) do
+          json(conn, block)
+        end
+
+      error when error == {:error, :unknown} or error == {nil, [], nil} ->
+        {:error, ErrInput.NotFound.exception(value: hash_or_kbi)}
+    end
+  end
+
+  @doc """
+  Endpoint for block info by hash or kbi.
+  """
+  @spec block_v1(Conn.t(), map()) :: Conn.t()
+  def block_v1(%Conn{assigns: %{state: state}} = conn, %{"hash_or_kbi" => hash_or_kbi} = params) do
     case Util.parse_int(hash_or_kbi) do
       {:ok, _kbi} ->
         blocki(conn, Map.put(params, "kbi", hash_or_kbi))

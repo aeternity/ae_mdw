@@ -34,9 +34,8 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         mb1: [
           t1: spend_tx(:alice, :bob, 5_000)
         ] do
-        %{height: height, block: mb, time: mb_time, txs: [tx_rec]} = blocks[:mb1]
+        %{height: height, block: mb, time: mb_time, txs: [signed_tx]} = blocks[:mb1]
 
-        signed_tx = :aetx_sign.new(tx_rec, [])
         txi = @very_high_txi + 1
         block_index = {height, 0}
 
@@ -66,9 +65,8 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         mb1: [
           t1: spend_tx(:alice, :alice, 5_000)
         ] do
-        %{height: height, block: mb, time: mb_time, txs: [tx_rec]} = blocks[:mb1]
+        %{height: height, block: mb, time: mb_time, txs: [signed_tx]} = blocks[:mb1]
 
-        signed_tx = :aetx_sign.new(tx_rec, [])
         txi = @very_high_txi + 1
         block_index = {height, 0}
 
