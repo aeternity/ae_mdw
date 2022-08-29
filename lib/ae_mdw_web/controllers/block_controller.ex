@@ -20,18 +20,20 @@ defmodule AeMdwWeb.BlockController do
   """
   @spec block(Conn.t(), map()) :: Conn.t()
   def block(%Conn{assigns: %{state: state}} = conn, %{"hash_or_kbi" => hash_or_kbi}) do
-    with {:ok, kbi} <- WebUtil.parse_gen(state, hash_or_kbi),
-         {_prev_cursor, [block | _], _next_cursor} <-
-           Blocks.fetch_blocks(state, :forward, {:gen, kbi..kbi}, nil, 1, true) do
-      json(conn, block)
-    else
-      {:error, :invalid} ->
+    case Validate.nonneg_int(hash_or_kbi) do
+      {:ok, kbi} ->
+        case Blocks.fetch_blocks(state, :forward, {:gen, kbi..kbi}, nil, 1, true) do
+          {_prev_cursor, [block], _next_cursor} ->
+            json(conn, block)
+
+          {nil, [], nil} ->
+            {:error, ErrInput.NotFound.exception(value: hash_or_kbi)}
+        end
+
+      {:error, _reason} ->
         with {:ok, block} <- Blocks.fetch(state, hash_or_kbi) do
           json(conn, block)
         end
-
-      error when error == {:error, :unknown} or error == {nil, [], nil} ->
-        {:error, ErrInput.NotFound.exception(value: hash_or_kbi)}
     end
   end
 

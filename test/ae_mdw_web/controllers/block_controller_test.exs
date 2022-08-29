@@ -110,12 +110,22 @@ defmodule AeMdwWeb.BlockControllerTest do
                conn |> get("/v2/blocks/#{unknown_kb_hash}") |> json_response(404)
     end
 
-    test "renders not found when height is unknown", %{conn: conn} do
+    test "renders not found when height is unknown", %{conn: conn, store: store} do
       unknown_height = Enum.random(100_000..999_999)
       error_msg = "not found: #{unknown_height}"
 
+      store =
+        Store.put(
+          store,
+          Model.Block,
+          Model.block(index: {0, 0}, hash: :crypto.strong_rand_bytes(32))
+        )
+
       assert %{"error" => ^error_msg} =
-               conn |> get("/v2/blocks/#{unknown_height}") |> json_response(404)
+               conn
+               |> with_store(store)
+               |> get("/v2/blocks/#{unknown_height}")
+               |> json_response(404)
     end
   end
 
