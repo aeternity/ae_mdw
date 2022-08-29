@@ -321,9 +321,27 @@ defmodule AeMdw.Db.Contract do
 
   defp write_aex9_records(state, _txi, _i, _args), do: state
 
-  defp write_aex141_records(state, contract_pk, [from_pk, to_pk, token_id]) do
-    m_ownership = Model.nft_ownership(index: {to_pk, contract_pk, token_id})
+  defp write_aex141_records(state, contract_pk, [
+         <<_pk1::256>> = from_pk,
+         <<_pk2::256>> = to_pk,
+         <<token_id::256>>
+       ]) do
+    do_write_aex141_records(state, contract_pk, from_pk, to_pk, token_id)
+  end
 
+  defp write_aex141_records(state, contract_pk, [
+         <<_pk1::256>> = from_pk,
+         <<_pk2::256>> = to_pk,
+         token_id
+       ])
+       when is_integer(token_id) do
+    do_write_aex141_records(state, contract_pk, from_pk, to_pk, token_id)
+  end
+
+  defp write_aex141_records(state, _pk, _args), do: state
+
+  defp do_write_aex141_records(state, contract_pk, from_pk, to_pk, token_id) do
+    m_ownership = Model.nft_ownership(index: {to_pk, contract_pk, token_id})
     state2 = State.put(state, Model.NftOwnership, m_ownership)
 
     if State.exists?(state2, Model.NftOwnership, {from_pk, contract_pk, token_id}) do
@@ -332,8 +350,6 @@ defmodule AeMdw.Db.Contract do
       state2
     end
   end
-
-  defp write_aex141_records(state, _pk, _args), do: state
 
   defp fetch_aex9_balance_or_new(state, contract_pk, account_pk) do
     case State.get(state, Model.Aex9Balance, {contract_pk, account_pk}) do
