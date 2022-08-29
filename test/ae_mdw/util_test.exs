@@ -27,5 +27,10 @@ defmodule AeMdw.UtilTest do
       assert {:ok, 380, range, nil} = Util.build_gen_pagination(400, :forward, {0, 500}, 20, 410)
       assert ^range = Range.new(400, 410)
     end
+
+    test "when backward and previous is outside range, it returns nil prev" do
+      assert {:ok, nil, range, 480} = Util.build_gen_pagination(nil, :backward, {0, 500}, 20, 500)
+      assert ^range = Range.new(500, 481)
+    end
   end
 end
