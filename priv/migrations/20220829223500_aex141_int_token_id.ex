@@ -17,13 +17,12 @@ defmodule AeMdw.Migrations.Aex141IntTokenId do
       |> Database.all_keys()
       |> Enum.map(fn
         {owner_pk, contract_pk, <<token_id::256>>} = key ->
-          Database.dirty_delete(Model.NftOwnership, key)
-
           Database.dirty_write(
             Model.NftOwnership,
             Model.nft_ownership(index: {owner_pk, contract_pk, token_id})
           )
 
+          Database.dirty_delete(Model.NftOwnership, key)
           1
 
         _other_key ->
