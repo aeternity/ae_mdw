@@ -266,7 +266,7 @@ defmodule AeMdw.Util do
   defp build_gen_pagination(cursor, :backward, {range_first, range_last}, limit)
        when range_first <= cursor and cursor <= range_last do
     next_cursor = if cursor - limit >= range_first, do: cursor - limit
-    prev_cursor = if cursor + limit >= range_last, do: cursor + limit
+    prev_cursor = if cursor + limit <= range_last, do: cursor + limit
 
     {:ok, prev_cursor, cursor..max(cursor - limit + 1, range_first), next_cursor}
   end
