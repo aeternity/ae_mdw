@@ -178,7 +178,9 @@ defmodule AeMdwWeb.Aex141ControllerTest do
         {AexnContracts, [],
          [
            is_aex141?: fn pk -> pk == <<1_411::256>> end,
-           call_contract: fn _pk, "owner", [_token_id] -> {:ok, {:address, account_pk}} end
+           call_contract: fn _pk, "owner", [_token_id] ->
+             {:ok, {:variant, [0, 1], 1, {{:address, account_pk}}}}
+           end
          ]}
       ] do
         assert %{"data" => account_id} =
