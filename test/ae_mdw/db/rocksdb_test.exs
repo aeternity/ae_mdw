@@ -34,6 +34,26 @@ defmodule AeMdw.Db.RocksDbTest do
       assert :ok = RocksDb.delete(txn, Model.Block, key)
       assert :not_found = RocksDb.dirty_get(txn, Model.Block, key)
     end
+
+    test "it deletes a key-value not from the transaction" do
+      key = :erlang.term_to_binary({new_kbi(), -1})
+      value = new_block() |> :erlang.term_to_binary()
+
+      assert :ok = RocksDb.dirty_put(Model.Block, key, value)
+
+      {:ok, txn} = RocksDb.transaction_new()
+      assert :ok = RocksDb.delete(txn, Model.Block, key)
+      assert :not_found = RocksDb.dirty_get(txn, Model.Block, key)
+      :ok = RocksDb.transaction_commit(txn)
+    end
+
+    test "it doesn't fail when deleting a non-existent key" do
+      key = "non-existent-key"
+
+      {:ok, txn} = RocksDb.transaction_new()
+      assert :ok = RocksDb.delete(txn, Model.Block, key)
+      :ok = RocksDb.transaction_commit(txn)
+    end
   end
 
   describe "commit/4 and get/2" do
