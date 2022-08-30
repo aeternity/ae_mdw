@@ -26,7 +26,7 @@ defmodule AeMdw.Aex141 do
   @spec fetch_nft_owner(pubkey(), token_id()) :: {:ok, pubkey()} | {:error, Error.t()}
   def fetch_nft_owner(contract_pk, token_id) do
     with :ok <- validate_aex141(contract_pk),
-         {:ok, {:address, account_pk}} <-
+         {:ok, {:variant, [0, 1], 1, {{:address, account_pk}}}} <-
            AexnContracts.call_contract(contract_pk, "owner", [token_id]) do
       {:ok, account_pk}
     else
