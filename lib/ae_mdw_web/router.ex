@@ -96,7 +96,7 @@ defmodule AeMdwWeb.Router do
     # v1-only routes
     get "/blocks/gen/:range", BlockController, :blocks_v1
     get "/blocks/:range_or_dir", BlockController, :blocks_v1
-    get "/block/:hash_or_kbi", BlockController, :block
+    get "/block/:hash_or_kbi", BlockController, :block_v1
     get "/blocki/:kbi", BlockController, :blocki
     get "/blocki/:kbi/:mbi", BlockController, :blocki
 
