@@ -16,9 +16,8 @@ defmodule AeMdwWeb.AexnView do
   @type aexn_token() :: map()
 
   @typep pubkey :: AeMdw.Node.Db.pubkey()
-  @typep account_transfer_key :: AeMdw.Aex9.account_transfer_key()
-  @typep pair_transfer_key :: AeMdw.Aex9.pair_transfer_key()
-  @typep transfer_key_type :: :aex9_transfer | :rev_aex9_transfer | :aex9_pair_transfer
+  @typep account_transfer_key :: AeMdw.AexnTransfers.transfer_key()
+  @typep pair_transfer_key :: AeMdw.AexnTransfers.pair_transfer_key()
 
   @spec balance_to_map(State.t(), {non_neg_integer(), non_neg_integer(), pubkey()}) ::
           map()
@@ -82,42 +81,19 @@ defmodule AeMdwWeb.AexnView do
   end
 
   @spec sender_transfer_to_map(State.t(), account_transfer_key()) :: map()
-  def sender_transfer_to_map(state, key), do: do_transfer_to_map(state, key)
+  def sender_transfer_to_map(state, key),
+    do: do_transfer_to_map(state, key)
 
   @spec recipient_transfer_to_map(State.t(), account_transfer_key()) :: map()
-  def recipient_transfer_to_map(state, {pk1, call_txi, pk2, amount, log_idx}),
-    do: do_transfer_to_map(state, {pk2, call_txi, pk1, amount, log_idx})
+  def recipient_transfer_to_map(
+        state,
+        {type, recipient_pk, call_txi, sender_pk, amount, log_idx}
+      ),
+      do: do_transfer_to_map(state, {type, sender_pk, call_txi, recipient_pk, amount, log_idx})
 
   @spec pair_transfer_to_map(State.t(), pair_transfer_key()) :: map()
-  def pair_transfer_to_map(state, {pk1, pk2, call_txi, amount, log_idx}),
-    do: do_transfer_to_map(state, {pk1, call_txi, pk2, amount, log_idx})
-
-  @spec transfer_to_map(
-          State.t(),
-          account_transfer_key() | pair_transfer_key(),
-          transfer_key_type()
-        ) ::
-          map()
-  def transfer_to_map(
-        state,
-        {sender_pk, call_txi, recipient_pk, amount, log_idx},
-        :aex9_transfer
-      ),
-      do: do_transfer_to_map(state, {sender_pk, call_txi, recipient_pk, amount, log_idx})
-
-  def transfer_to_map(
-        state,
-        {recipient_pk, call_txi, sender_pk, amount, log_idx},
-        :rev_aex9_transfer
-      ),
-      do: do_transfer_to_map(state, {sender_pk, call_txi, recipient_pk, amount, log_idx})
-
-  def transfer_to_map(
-        state,
-        {sender_pk, recipient_pk, call_txi, amount, log_idx},
-        :aex9_pair_transfer
-      ),
-      do: do_transfer_to_map(state, {sender_pk, call_txi, recipient_pk, amount, log_idx})
+  def pair_transfer_to_map(state, {type, sender_pk, recipient_pk, call_txi, amount, log_idx}),
+    do: do_transfer_to_map(state, {type, sender_pk, call_txi, recipient_pk, amount, log_idx})
 
   #
   # Private functions
@@ -145,28 +121,30 @@ defmodule AeMdwWeb.AexnView do
     }
   end
 
-  defp do_transfer_to_map(state, {sender_pk, call_txi, recipient_pk, amount, log_idx}) do
+  defp do_transfer_to_map(
+         state,
+         {aexn_type, sender_pk, call_txi, recipient_pk, aexn_value, log_idx} = transfer_key
+       ) do
+    Model.aexn_transfer(contract_pk: contract_pk) =
+      State.fetch!(state, Model.AexnTransfer, transfer_key)
+
     Model.tx(id: hash, block_index: {kbi, mbi}, time: micro_time) = Util.read_tx!(state, call_txi)
-    {_block_hash, type, _signed_tx, tx_rec} = AeMdw.Node.Db.get_tx_data(hash)
+    aexn_key = if aexn_type == :aex9, do: :amount, else: :token_id
 
-    contract_pk =
-      if type == :contract_call_tx do
-        :aect_call_tx.contract_pubkey(tx_rec)
-      else
-        :aect_create_tx.contract_pubkey(tx_rec)
-      end
-
-    %{
-      sender: enc_id(sender_pk),
-      recipient: enc_id(recipient_pk),
-      amount: amount,
-      call_txi: call_txi,
-      log_idx: log_idx,
-      block_height: kbi,
-      micro_index: mbi,
-      micro_time: micro_time,
-      contract_id: enc_ct(contract_pk),
-      tx_hash: :aeser_api_encoder.encode(:tx_hash, hash)
-    }
+    Map.put(
+      %{
+        sender: enc_id(sender_pk),
+        recipient: enc_id(recipient_pk),
+        call_txi: call_txi,
+        log_idx: log_idx,
+        block_height: kbi,
+        micro_index: mbi,
+        micro_time: micro_time,
+        contract_id: enc_ct(contract_pk),
+        tx_hash: :aeser_api_encoder.encode(:tx_hash, hash)
+      },
+      aexn_key,
+      aexn_value
+    )
   end
 end

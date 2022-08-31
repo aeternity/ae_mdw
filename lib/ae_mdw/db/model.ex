@@ -422,6 +422,30 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :idx_aex9_transfer, @idx_aex9_transfer_defaults
 
+  # aexn transfer:
+  #    index: {:aex9 | :aex141, from pk, call txi, to pk, amount | token_id, log idx}
+  @aexn_transfer_defaults [
+    index: {nil, <<>>, -1, <<>>, -1, -1},
+    contract_pk: <<>>
+  ]
+  defrecord :aexn_transfer, @aexn_transfer_defaults
+
+  # rev aexn transfer:
+  #    index: {:aex9 | :aex141, to pk, call txi, from pk, amount | token_id, log idx}
+  @rev_aexn_transfer_defaults [
+    index: {nil, <<>>, -1, <<>>, -1, -1},
+    unused: nil
+  ]
+  defrecord :rev_aexn_transfer, @rev_aexn_transfer_defaults
+
+  # aexn pair transfer:
+  #    index: {:aex9 | :aex141, from pk, to pk, call txi, amount | token_id, log idx}
+  @aexn_pair_transfer_defaults [
+    index: {nil, <<>>, <<>>, -1, -1, -1},
+    unused: nil
+  ]
+  defrecord :aexn_pair_transfer, @aexn_pair_transfer_defaults
+
   # aex9 account presence:
   #    index: {account pk, contract pk}
   #    txi: create or call txi
@@ -663,6 +687,9 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.AexnContract,
       AeMdw.Db.Model.AexnContractName,
       AeMdw.Db.Model.AexnContractSymbol,
+      AeMdw.Db.Model.AexnTransfer,
+      AeMdw.Db.Model.RevAexnTransfer,
+      AeMdw.Db.Model.AexnPairTransfer,
       AeMdw.Db.Model.Aex9Transfer,
       AeMdw.Db.Model.RevAex9Transfer,
       AeMdw.Db.Model.Aex9PairTransfer,
@@ -745,6 +772,9 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.AexnContract), do: :aexn_contract
   def record(AeMdw.Db.Model.AexnContractName), do: :aexn_contract_name
   def record(AeMdw.Db.Model.AexnContractSymbol), do: :aexn_contract_symbol
+  def record(AeMdw.Db.Model.AexnTransfer), do: :aexn_transfer
+  def record(AeMdw.Db.Model.RevAexnTransfer), do: :rev_aexn_transfer
+  def record(AeMdw.Db.Model.AexnPairTransfer), do: :aexn_pair_transfer
   def record(AeMdw.Db.Model.Aex9Transfer), do: :aex9_transfer
   def record(AeMdw.Db.Model.RevAex9Transfer), do: :rev_aex9_transfer
   def record(AeMdw.Db.Model.Aex9PairTransfer), do: :aex9_pair_transfer

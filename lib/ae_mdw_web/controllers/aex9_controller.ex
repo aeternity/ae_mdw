@@ -6,8 +6,8 @@ defmodule AeMdwWeb.Aex9Controller do
   use AeMdwWeb, :controller
 
   alias AeMdw.Aex9
-  alias AeMdw.AexnTokens
   alias AeMdw.AexnContracts
+  alias AeMdw.AexnTokens
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
@@ -25,7 +25,6 @@ defmodule AeMdwWeb.Aex9Controller do
   import AeMdwWeb.Util,
     only: [
       handle_input: 2,
-      paginate: 4,
       parse_range: 1
     ]
 
@@ -197,92 +196,9 @@ defmodule AeMdwWeb.Aex9Controller do
     end
   end
 
-  @spec transfers_from_v1(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def transfers_from_v1(conn, %{"sender" => sender_id}),
-    do:
-      handle_input(
-        conn,
-        fn -> transfers_reply(conn, {:from, Validate.id!(sender_id)}, :aex9_transfer) end
-      )
-
-  @spec transfers_to_v1(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def transfers_to_v1(conn, %{"recipient" => recipient_id}),
-    do:
-      handle_input(
-        conn,
-        fn -> transfers_reply(conn, {:to, Validate.id!(recipient_id)}, :rev_aex9_transfer) end
-      )
-
-  @spec transfers_from_to_v1(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def transfers_from_to_v1(conn, %{"sender" => sender_id, "recipient" => recipient_id}),
-    do:
-      handle_input(
-        conn,
-        fn ->
-          query = {:from_to, Validate.id!(sender_id), Validate.id!(recipient_id)}
-          transfers_reply(conn, query, :aex9_pair_transfer)
-        end
-      )
-
-  @spec transfers_from(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def transfers_from(%Conn{assigns: assigns} = conn, %{"sender" => sender_id}) do
-    %{pagination: pagination, cursor: cursor, state: state} = assigns
-
-    sender_id = Validate.id!(sender_id)
-
-    {prev_cursor, transfers_keys, next_cursor} =
-      Aex9.fetch_sender_transfers(state, sender_id, pagination, cursor)
-
-    data = Enum.map(transfers_keys, &sender_transfer_to_map(state, &1))
-
-    paginate(conn, prev_cursor, data, next_cursor)
-  end
-
-  @spec transfers_to(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def transfers_to(%Conn{assigns: assigns} = conn, %{"recipient" => recipient_id}) do
-    %{pagination: pagination, cursor: cursor, state: state} = assigns
-
-    recipient_id = Validate.id!(recipient_id)
-
-    {prev_cursor, transfers_keys, next_cursor} =
-      Aex9.fetch_recipient_transfers(state, recipient_id, pagination, cursor)
-
-    data = Enum.map(transfers_keys, &recipient_transfer_to_map(state, &1))
-
-    paginate(conn, prev_cursor, data, next_cursor)
-  end
-
-  @spec transfers_from_to(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def transfers_from_to(%Conn{assigns: assigns} = conn, %{
-        "sender" => sender_id,
-        "recipient" => recipient_id
-      }) do
-    %{pagination: pagination, cursor: cursor, state: state} = assigns
-
-    sender_pk = Validate.id!(sender_id)
-    recipient_pk = Validate.id!(recipient_id)
-
-    {prev_cursor, transfers_keys, next_cursor} =
-      Aex9.fetch_pair_transfers(state, sender_pk, recipient_pk, pagination, cursor)
-
-    data = Enum.map(transfers_keys, &pair_transfer_to_map(state, &1))
-
-    paginate(conn, prev_cursor, data, next_cursor)
-  end
-
   #
   # Private functions
   #
-  defp transfers_reply(%Conn{assigns: %{state: state}} = conn, query, key_tag) do
-    transfers =
-      state
-      |> Contract.aex9_search_transfers(query)
-      |> Stream.map(&transfer_to_map(state, &1, key_tag))
-      |> Enum.sort_by(fn %{call_txi: call_txi} -> call_txi end)
-
-    json(conn, transfers)
-  end
-
   defp by_contract_reply(%Conn{assigns: %{state: state}} = conn, contract_id) do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
          {:ok, m_aex9} <- AexnTokens.fetch_contract(state, {:aex9, contract_pk}) do

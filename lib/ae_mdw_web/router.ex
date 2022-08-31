@@ -66,9 +66,20 @@ defmodule AeMdwWeb.Router do
       get "/aex9/:contract_id/balances", AexnTokenController, :aex9_token_balances
       get "/aex9/:contract_id/balances/:account_id", AexnTokenController, :aex9_token_balance
       get "/aex9/account-balances/:account_id", AexnTokenController, :aex9_account_balances
-      get "/aex9/transfers/from/:sender", Aex9Controller, :transfers_from
-      get "/aex9/transfers/to/:recipient", Aex9Controller, :transfers_to
-      get "/aex9/transfers/from-to/:sender/:recipient", Aex9Controller, :transfers_from_to
+
+      get "/aex9/transfers/from/:sender", AexnTransferController, :aex9_transfers_from
+      get "/aex9/transfers/to/:recipient", AexnTransferController, :aex9_transfers_to
+
+      get "/aex9/transfers/from-to/:sender/:recipient",
+          AexnTransferController,
+          :aex9_transfers_from_to
+
+      get "/aex141/transfers/from/:sender", AexnTransferController, :aex141_transfers_from
+      get "/aex141/transfers/to/:recipient", AexnTransferController, :aex141_transfers_to
+
+      get "/aex141/transfers/from-to/:sender/:recipient",
+          AexnTransferController,
+          :aex141_transfers_from_to
 
       get "/aex9/:contract_id/balances/:account_id/history",
           AexnTokenController,
@@ -120,9 +131,12 @@ defmodule AeMdwWeb.Router do
     get "/names", NameController, :names
     get "/names/:scope_type/:range", NameController, :names
 
-    get "/aex9/transfers/from/:sender", Aex9Controller, :transfers_from_v1
-    get "/aex9/transfers/to/:recipient", Aex9Controller, :transfers_to_v1
-    get "/aex9/transfers/from-to/:sender/:recipient", Aex9Controller, :transfers_from_to_v1
+    get "/aex9/transfers/from/:sender", AexnTransferController, :transfers_from_v1
+    get "/aex9/transfers/to/:recipient", AexnTransferController, :transfers_to_v1
+
+    get "/aex9/transfers/from-to/:sender/:recipient",
+        AexnTransferController,
+        :transfers_from_to_v1
 
     get "/contracts/logs/:direction", ContractController, :logs
     get "/contracts/logs/:scope_type/:range", ContractController, :logs
