@@ -18,6 +18,7 @@ defmodule AeMdwWeb.AexnView do
   @typep pubkey :: AeMdw.Node.Db.pubkey()
   @typep account_transfer_key :: AeMdw.AexnTransfers.transfer_key()
   @typep pair_transfer_key :: AeMdw.AexnTransfers.pair_transfer_key()
+  @typep contract_transfer_key :: AeMdw.AexnTransfers.contract_transfer_key()
 
   @spec balance_to_map(State.t(), {non_neg_integer(), non_neg_integer(), pubkey()}) ::
           map()
@@ -94,6 +95,14 @@ defmodule AeMdwWeb.AexnView do
   @spec pair_transfer_to_map(State.t(), pair_transfer_key()) :: map()
   def pair_transfer_to_map(state, {type, sender_pk, recipient_pk, call_txi, amount, log_idx}),
     do: do_transfer_to_map(state, {type, sender_pk, call_txi, recipient_pk, amount, log_idx})
+
+  @spec contract_transfer_to_map(State.t(), contract_transfer_key()) :: map()
+  def contract_transfer_to_map(
+        state,
+        {_create_txi, sender_pk, call_txi, recipient_pk, token_id, log_idx}
+      ) do
+    do_transfer_to_map(state, {:aex141, sender_pk, call_txi, recipient_pk, token_id, log_idx})
+  end
 
   #
   # Private functions

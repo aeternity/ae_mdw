@@ -15,8 +15,6 @@ defmodule AeMdw.Db.Sync.Contract do
   alias AeMdw.Db.AexnCreateContractMutation
   alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.ContractCreateCacheMutation
-  alias AeMdw.Db.Origin
-  alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Origin, as: SyncOrigin
   alias AeMdw.Db.Sync.Name
   alias AeMdw.Node.Db
@@ -136,13 +134,6 @@ defmodule AeMdw.Db.Sync.Contract do
       _false_or_notfound ->
         nil
     end
-  end
-
-  @spec get_txi!(State.t(), Db.pubkey()) :: {Txs.txi(), State.t()}
-  def get_txi!(state, contract_pk) do
-    txi = Origin.tx_index!(state, {:contract, contract_pk})
-
-    {txi, State.cache_put(state, :ct_create_sync_cache, contract_pk, txi)}
   end
 
   defp oracle_and_name_mutations(events, {height, _mbi} = block_index, block_hash, call_txi) do

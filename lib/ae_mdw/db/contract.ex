@@ -8,7 +8,6 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
-  alias AeMdw.Db.Sync
   alias AeMdw.Db.State
   alias AeMdw.Log
   alias AeMdw.Node
@@ -146,7 +145,7 @@ defmodule AeMdw.Db.Contract do
 
     raw_logs
     |> Enum.with_index()
-    |> Enum.reduce(state, fn {{addr, [evt_hash | args], data}, i}, state ->
+    |> Enum.reduce(state, fn {{addr, [evt_hash | args], data}, i} = log, state ->
       m_log =
         Model.contract_log(
           index: {create_txi, txi, evt_hash, i},
@@ -165,40 +164,19 @@ defmodule AeMdw.Db.Contract do
         |> State.put(Model.DataContractLog, m_data_log)
         |> State.put(Model.EvtContractLog, m_evt_log)
         |> State.put(Model.IdxContractLog, m_idx_log)
-
-      # if remote call then indexes also with the called contract
-      state3 =
-        if addr != contract_pk do
-          {remote_called_contract_txi, state3} = Sync.Contract.get_txi!(state2, addr)
-
-          # on caller log: ext_contract = called contract_pk
-          # on called log: ext_contract = {:parent_contract_pk, caller contract_pk}
-          m_log_remote =
-            Model.contract_log(
-              index: {remote_called_contract_txi, txi, evt_hash, i},
-              ext_contract: {:parent_contract_pk, contract_pk},
-              args: args,
-              data: data
-            )
-
-          state3
-          |> State.put(Model.ContractLog, m_log_remote)
-          |> update_aex9_state(addr, block_index, txi)
-        else
-          state2
-        end
+        |> maybe_index_remote_log(contract_pk, block_index, txi, log)
 
       aex9_contract_pk = which_aex9_contract_pubkey(contract_pk, addr)
 
       cond do
         is_aexn_transfer?(evt_hash) and aex9_contract_pk != nil ->
-          write_aexn_transfer(state3, :aex9, aex9_contract_pk, txi, i, args)
+          write_aexn_transfer(state2, :aex9, aex9_contract_pk, txi, i, args)
 
-        is_aexn_transfer?(evt_hash) and State.exists?(state3, Model.AexnContract, {:aex141, addr}) ->
-          write_aex141_records(state3, addr, txi, i, args)
+        is_aexn_transfer?(evt_hash) and State.exists?(state2, Model.AexnContract, {:aex141, addr}) ->
+          write_aex141_records(state2, addr, txi, i, args)
 
         true ->
-          state3
+          state2
       end
     end)
   end
@@ -319,6 +297,46 @@ defmodule AeMdw.Db.Contract do
     |> Stream.take_while(key_tester)
   end
 
+  defp maybe_index_remote_log(
+         state,
+         contract_pk,
+         block_index,
+         txi,
+         {{log_pk, _event, _data}, _i} = log
+       ) do
+    # if remote call then indexes also with the called contract
+    if log_pk != contract_pk do
+      do_index_remote_log(state, contract_pk, block_index, txi, log)
+    else
+      state
+    end
+  end
+
+  defp do_index_remote_log(
+         state,
+         contract_pk,
+         block_index,
+         txi,
+         {{log_pk, [evt_hash | args], data}, i}
+       ) do
+    remote_contract_txi = Origin.tx_index!(state, {:contract, contract_pk})
+
+    # on caller log: ext_contract = called contract_pk
+    # on called log: ext_contract = {:parent_contract_pk, caller contract_pk}
+    m_log_remote =
+      Model.contract_log(
+        index: {remote_contract_txi, txi, evt_hash, i},
+        ext_contract: {:parent_contract_pk, contract_pk},
+        args: args,
+        data: data
+      )
+
+    state
+    |> State.put(Model.ContractLog, m_log_remote)
+    |> State.cache_put(:ct_create_sync_cache, contract_pk, remote_contract_txi)
+    |> update_aex9_state(log_pk, block_index, txi)
+  end
+
   defp write_aex141_records(
          state,
          contract_pk,
@@ -342,11 +360,18 @@ defmodule AeMdw.Db.Contract do
 
   defp write_aex141_records(state, _pk, _txi, _i, _args), do: state
 
-  defp write_aexn_transfer(state, aexn_type, contract_pk, txi, i, [
-         <<_pk1::256>> = from_pk,
-         <<_pk2::256>> = to_pk,
-         <<value::256>>
-       ]) do
+  defp write_aexn_transfer(
+         state,
+         aexn_type,
+         contract_pk,
+         txi,
+         i,
+         [
+           <<_pk1::256>> = from_pk,
+           <<_pk2::256>> = to_pk,
+           <<value::256>>
+         ] = transfer
+       ) do
     m_transfer =
       Model.aexn_transfer(
         index: {aexn_type, from_pk, txi, to_pk, value, i},
@@ -360,9 +385,30 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.AexnTransfer, m_transfer)
     |> State.put(Model.RevAexnTransfer, m_rev_transfer)
     |> State.put(Model.AexnPairTransfer, m_pair_transfer)
+    |> maybe_index_contract_transfer(aexn_type, contract_pk, txi, i, transfer)
   end
 
-  defp write_aexn_transfer(state, _contract_pk, _type, _txi, _i, _args), do: state
+  defp write_aexn_transfer(state, _type, _pk, _txi, _i, _args), do: state
+
+  defp maybe_index_contract_transfer(state, :aex9, _pk, _txi, _i, _transfer), do: state
+
+  defp maybe_index_contract_transfer(state, :aex141, contract_pk, txi, i, [
+         from_pk,
+         to_pk,
+         <<token_id::256>>
+       ]) do
+    create_txi = Origin.tx_index!(state, {:contract, contract_pk})
+
+    m_ct_from =
+      Model.aexn_contract_from_transfer(index: {create_txi, from_pk, txi, to_pk, token_id, i})
+
+    m_ct_to =
+      Model.aexn_contract_to_transfer(index: {create_txi, to_pk, txi, from_pk, token_id, i})
+
+    state
+    |> State.put(Model.AexnContractFromTransfer, m_ct_from)
+    |> State.put(Model.AexnContractToTransfer, m_ct_to)
+  end
 
   defp fetch_aex9_balance_or_new(state, contract_pk, account_pk) do
     case State.get(state, Model.Aex9Balance, {contract_pk, account_pk}) do
