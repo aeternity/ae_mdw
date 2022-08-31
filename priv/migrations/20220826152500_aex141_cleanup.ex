@@ -31,15 +31,19 @@ defmodule AeMdw.Migrations.Aex141Cleanup do
         else
           Database.dirty_delete(Model.AexnContract, {:aex141, ct_pk})
 
-          Database.dirty_delete(
-            Model.AexnContractName,
-            {:aex141, sort_field_truncate(name), ct_pk}
-          )
+          if not is_atom(name) do
+            Database.dirty_delete(
+              Model.AexnContractName,
+              {:aex141, sort_field_truncate(name), ct_pk}
+            )
+          end
 
-          Database.dirty_delete(
-            Model.AexnContractSymbol,
-            {:aex141, sort_field_truncate(symbol), ct_pk}
-          )
+          if not is_atom(symbol) do
+            Database.dirty_delete(
+              Model.AexnContractSymbol,
+              {:aex141, sort_field_truncate(symbol), ct_pk}
+            )
+          end
 
           1
         end

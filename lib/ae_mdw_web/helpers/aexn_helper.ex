@@ -25,7 +25,9 @@ defmodule AeMdwWeb.Helpers.AexnHelper do
   @spec enc_id(pubkey()) :: String.t()
   def enc_id(pk), do: :aeser_api_encoder.encode(:account_pubkey, pk)
 
-  @spec sort_field_truncate(String.t()) :: String.t()
+  @spec sort_field_truncate(String.t() | :atom) :: String.t()
+  def sort_field_truncate(field_value) when is_atom(field_value), do: field_value
+
   def sort_field_truncate(field_value) do
     if String.length(field_value) <= @max_sort_field_length do
       field_value
