@@ -15,6 +15,8 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
       owner_pk = <<123_456::256>>
       plain_name = "update-tll-0.test"
       tx = new_aens_update_tx(owner_pk, plain_name, 0)
+      name_hash = :aens_update_tx.name_hash(tx)
+      pointers = :aens_update_tx.pointers(tx)
 
       active_from = 9
       update_height = 10
@@ -35,7 +37,7 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
 
       Database.dirty_write(
         Model.PlainName,
-        Model.plain_name(index: :aens_update_tx.name_hash(tx), value: plain_name)
+        Model.plain_name(index: name_hash, value: plain_name)
       )
 
       Database.dirty_write(Model.ActiveName, active_name)
@@ -54,7 +56,11 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
 
       block_index = {update_height, 0}
       txi = 124
-      state2 = State.commit_mem(State.new(), [NameUpdateMutation.new(tx, txi, block_index)])
+
+      state2 =
+        State.commit_mem(State.new(), [
+          NameUpdateMutation.new(name_hash, :expire, pointers, txi, block_index)
+        ])
 
       assert {:ok,
               Model.name(
@@ -78,6 +84,8 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
       delta_ttl = 121
       plain_name = "update-tll#{delta_ttl}.test"
       tx = new_aens_update_tx(owner_pk, plain_name, delta_ttl)
+      name_hash = :aens_update_tx.name_hash(tx)
+      pointers = :aens_update_tx.pointers(tx)
 
       active_from = 19
       update_height = 20
@@ -115,11 +123,20 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
 
       Database.dirty_write(Model.ActiveNameOwner, Model.owner(index: {owner_pk, plain_name}))
 
+      new_expire = update_height + delta_ttl
       block_index = {update_height, 0}
       txi = 2234
-      state2 = State.commit_mem(State.new(), [NameUpdateMutation.new(tx, txi, block_index)])
 
-      new_expire = update_height + delta_ttl
+      state2 =
+        State.commit_mem(State.new(), [
+          NameUpdateMutation.new(
+            name_hash,
+            {:update_expiration, new_expire},
+            pointers,
+            txi,
+            block_index
+          )
+        ])
 
       assert {:ok,
               Model.name(

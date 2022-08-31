@@ -7,6 +7,7 @@ defmodule AeMdw.Db.Sync.Name do
   alias AeMdw.Db.Name
   alias AeMdw.Names
   alias AeMdw.Db.NameClaimMutation
+  alias AeMdw.Db.NameUpdateMutation
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Origin
   alias AeMdw.Node
@@ -16,6 +17,10 @@ defmodule AeMdw.Db.Sync.Name do
   alias AeMdw.Validate
 
   require Model
+
+  @type update_type() :: {:update_expiration, Blocks.height()} | :expire | :update
+
+  @typep state() :: State.t()
 
   @spec name_claim_mutations(Node.tx(), Txs.tx_hash(), Blocks.block_index(), Txs.txi()) :: [
           Mutation.t()
@@ -44,23 +49,47 @@ defmodule AeMdw.Db.Sync.Name do
     ]
   end
 
+  @spec update_mutations(Node.tx(), Txs.txi(), Blocks.block_index(), boolean()) :: [Mutation.t()]
+  def update_mutations(tx, txi, {height, _mbi} = block_index, internal? \\ false) do
+    name_hash = :aens_update_tx.name_hash(tx)
+    pointers = :aens_update_tx.pointers(tx)
+    name_ttl = :aens_update_tx.name_ttl(tx)
+
+    update_type =
+      cond do
+        # name_ttl from the name transaction depends on whether it is a name_update transaction or
+        # a AENS.update call (internal?)
+        name_ttl > 0 and internal? ->
+          {:update_expiration, name_ttl}
+
+        name_ttl > 0 and not internal? ->
+          {:update_expiration, height + name_ttl}
+
+        name_ttl == 0 and internal? ->
+          :update
+
+        name_ttl == 0 and not internal? ->
+          :expire
+      end
+
+    [
+      NameUpdateMutation.new(name_hash, update_type, pointers, txi, block_index)
+    ]
+  end
+
   @spec update(
-          State.t(),
+          state(),
           Names.name_hash(),
-          Names.ttl(),
+          update_type(),
           Names.pointers(),
           Txs.txi(),
-          Blocks.block_index(),
-          boolean()
+          Blocks.block_index()
         ) :: State.t()
-  def update(state, name_hash, delta_ttl, pointers, txi, {height, _mbi} = bi, internal?) do
+  def update(state, name_hash, update_type, pointers, txi, {height, _mbi} = bi) do
     plain_name = plain_name!(state, name_hash)
     m_name = Name.cache_through_read!(state, Model.ActiveName, plain_name)
     old_expire = Model.name(m_name, :expire)
-    new_expire = height + delta_ttl
     updates = [{bi, txi} | Model.name(m_name, :updates)]
-    new_m_name_exp = Model.expiration(index: {new_expire, plain_name})
-    new_m_name = Model.name(m_name, expire: new_expire, updates: updates)
 
     state2 =
       Enum.reduce(pointers, state, fn ptr, state ->
@@ -69,31 +98,31 @@ defmodule AeMdw.Db.Sync.Name do
         Name.cache_through_write(state, Model.Pointee, m_pointee)
       end)
 
-    cond do
-      delta_ttl > 0 ->
+    case update_type do
+      {:update_expiration, new_expire} ->
         log_name_change(height, plain_name, "extend")
+        new_m_name = Model.name(m_name, expire: new_expire, updates: updates)
+        new_m_name_exp = Model.expiration(index: {new_expire, plain_name})
 
         state2
         |> Name.cache_through_delete(Model.ActiveNameExpiration, {old_expire, plain_name})
         |> Name.cache_through_write(Model.ActiveNameExpiration, new_m_name_exp)
         |> Name.cache_through_write(Model.ActiveName, new_m_name)
 
-      delta_ttl == 0 and not internal? ->
+      :expire ->
         log_name_change(height, plain_name, "expire")
+        new_m_name = Model.name(m_name, expire: height, updates: updates)
 
         state2
         |> Name.deactivate_name(height, old_expire, new_m_name)
         |> State.inc_stat(:names_expired)
 
-      true ->
-        log_name_change(height, plain_name, "delta_ttl #{delta_ttl} NA")
+      :update ->
+        log_name_change(height, plain_name, "update w/o extend")
 
-        if internal? do
-          m_name = Model.name(m_name, updates: updates)
-          Name.cache_through_write(state2, Model.ActiveName, m_name)
-        else
-          state2
-        end
+        m_name = Model.name(m_name, updates: updates)
+
+        Name.cache_through_write(state2, Model.ActiveName, m_name)
     end
   end
 
