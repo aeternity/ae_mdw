@@ -29,7 +29,6 @@ defmodule AeMdw.Aex9 do
 
   @typep txi :: AeMdw.Txs.txi()
 
-  @type cursor :: binary()
   @typep pagination :: Collection.direction_limit()
   @typep pubkey :: AeMdw.Node.Db.pubkey()
 

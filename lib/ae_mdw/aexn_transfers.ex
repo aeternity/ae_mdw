@@ -26,12 +26,13 @@ defmodule AeMdw.AexnTransfers do
           {pubkey(), pubkey(), txi(), pubkey(), pos_integer(), non_neg_integer()}
 
   @type cursor :: binary()
+  @typep page_cursor :: Collection.pagination_cursor()
   @type account_paginated_transfers ::
-          {cursor() | nil, [transfer_key()], {cursor() | nil, boolean()}}
+          {page_cursor(), [transfer_key()], page_cursor()}
   @type pair_paginated_transfers ::
-          {cursor() | nil, [pair_transfer_key()], {cursor() | nil, boolean()}}
+          {page_cursor(), [pair_transfer_key()], page_cursor()}
   @type contract_paginated_transfers ::
-          {cursor() | nil, [contract_transfer_key()], {cursor() | nil, boolean()}}
+          {page_cursor(), [contract_transfer_key()], page_cursor()}
   @typep pagination :: Collection.direction_limit()
   @typep pubkey :: AeMdw.Node.Db.pubkey()
 
