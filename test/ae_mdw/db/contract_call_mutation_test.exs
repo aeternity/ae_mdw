@@ -279,11 +279,10 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       assert State.exists?(state, Model.NftOwnership, {to_pk, contract_pk, token_id})
       refute State.exists?(state, Model.NftOwnership, {from_pk, contract_pk, token_id})
 
-      assert State.exists?(
-               state,
-               Model.AexnTransfer,
-               {:aex141, from_pk, call_txi, to_pk, token_id, 0}
-             )
+      key = {:aex141, from_pk, call_txi, to_pk, token_id, 0}
+
+      assert Model.aexn_transfer(index: ^key, contract_pk: contract_pk) =
+               State.fetch!(state, Model.AexnTransfer, key)
 
       assert State.exists?(
                state,

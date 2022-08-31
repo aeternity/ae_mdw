@@ -192,7 +192,7 @@ defmodule AeMdw.Db.Contract do
 
       cond do
         is_aexn_transfer?(evt_hash) and aex9_contract_pk != nil ->
-          write_aexn_transfer(state3, :aex9, txi, i, args)
+          write_aexn_transfer(state3, :aex9, aex9_contract_pk, txi, i, args)
 
         is_aexn_transfer?(evt_hash) and State.exists?(state3, Model.AexnContract, {:aex141, addr}) ->
           write_aex141_records(state3, addr, txi, i, args)
@@ -331,7 +331,7 @@ defmodule AeMdw.Db.Contract do
     state2 =
       state
       |> State.put(Model.NftOwnership, m_ownership)
-      |> write_aexn_transfer(:aex141, txi, i, args)
+      |> write_aexn_transfer(:aex141, contract_pk, txi, i, args)
 
     if State.exists?(state2, Model.NftOwnership, {from_pk, contract_pk, token_id}) do
       State.delete(state2, Model.NftOwnership, {from_pk, contract_pk, token_id})
@@ -342,12 +342,17 @@ defmodule AeMdw.Db.Contract do
 
   defp write_aex141_records(state, _pk, _txi, _i, _args), do: state
 
-  defp write_aexn_transfer(state, aexn_type, txi, i, [
+  defp write_aexn_transfer(state, aexn_type, contract_pk, txi, i, [
          <<_pk1::256>> = from_pk,
          <<_pk2::256>> = to_pk,
          <<value::256>>
        ]) do
-    m_transfer = Model.aexn_transfer(index: {aexn_type, from_pk, txi, to_pk, value, i})
+    m_transfer =
+      Model.aexn_transfer(
+        index: {aexn_type, from_pk, txi, to_pk, value, i},
+        contract_pk: contract_pk
+      )
+
     m_rev_transfer = Model.rev_aexn_transfer(index: {aexn_type, to_pk, txi, from_pk, value, i})
     m_pair_transfer = Model.aexn_pair_transfer(index: {aexn_type, from_pk, to_pk, txi, value, i})
 
@@ -357,7 +362,7 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.AexnPairTransfer, m_pair_transfer)
   end
 
-  defp write_aexn_transfer(state, _type, _txi, _i, _args), do: state
+  defp write_aexn_transfer(state, _contract_pk, _type, _txi, _i, _args), do: state
 
   defp fetch_aex9_balance_or_new(state, contract_pk, account_pk) do
     case State.get(state, Model.Aex9Balance, {contract_pk, account_pk}) do
