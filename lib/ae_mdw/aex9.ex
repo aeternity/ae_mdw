@@ -78,38 +78,6 @@ defmodule AeMdw.Aex9 do
     end
   end
 
-  @spec fetch_sender_transfers(State.t(), pubkey(), pagination(), cursor() | nil) ::
-          account_paginated_transfers()
-  def fetch_sender_transfers(state, sender_pk, pagination, cursor) do
-    paginate_account_transfers(state, pagination, Model.Aex9Transfer, cursor, sender_pk)
-  end
-
-  @spec fetch_recipient_transfers(State.t(), pubkey(), pagination(), cursor() | nil) ::
-          account_paginated_transfers()
-  def fetch_recipient_transfers(state, recipient_pk, pagination, cursor) do
-    paginate_account_transfers(state, pagination, Model.RevAex9Transfer, cursor, recipient_pk)
-  end
-
-  @spec fetch_pair_transfers(State.t(), pubkey(), pubkey(), pagination(), cursor() | nil) ::
-          pair_paginated_transfers()
-  def fetch_pair_transfers(
-        state,
-        sender_pk,
-        recipient_pk,
-        pagination,
-        cursor
-      ) do
-    cursor_key = deserialize_cursor(cursor)
-
-    paginate_transfers(
-      state,
-      pagination,
-      Model.Aex9PairTransfer,
-      cursor_key,
-      {sender_pk, recipient_pk}
-    )
-  end
-
   @spec fetch_chain_balances(pubkey(), pagination(), balances_cursor() | nil) ::
           {:ok, balances_cursor() | nil, [aex9_balance()], balances_cursor() | nil}
           | {:error, Error.t()}
@@ -305,51 +273,6 @@ defmodule AeMdw.Aex9 do
     end
   end
 
-  defp paginate_account_transfers(
-         state,
-         pagination,
-         table,
-         cursor,
-         account_pk
-       ) do
-    cursor_key = deserialize_cursor(cursor)
-
-    paginate_transfers(
-      state,
-      pagination,
-      table,
-      cursor_key,
-      account_pk
-    )
-  end
-
-  defp paginate_transfers(
-         state,
-         pagination,
-         table,
-         cursor_key,
-         params
-       ) do
-    key_boundary = key_boundary(params)
-
-    {prev_cursor_key, transfer_keys, next_cursor_key} =
-      state
-      |> build_streamer(table, cursor_key, key_boundary)
-      |> Collection.paginate(pagination)
-
-    {
-      serialize_cursor(prev_cursor_key),
-      transfer_keys,
-      serialize_cursor(next_cursor_key)
-    }
-  end
-
-  defp build_streamer(state, table, cursor_key, key_boundary) do
-    fn direction ->
-      Collection.stream(state, table, direction, key_boundary, cursor_key)
-    end
-  end
-
   defp render_balance(contract_pk, {:address, account_pk}, amount) do
     %{
       contract: :aeser_api_encoder.encode(:contract_pubkey, contract_pk),
@@ -391,40 +314,6 @@ defmodule AeMdw.Aex9 do
       {:ok, account_pk} -> {:address, account_pk}
       {:error, _reason} -> nil
     end
-  end
-
-  defp serialize_cursor(nil), do: nil
-
-  defp serialize_cursor({cursor, is_reversed?}),
-    do: {cursor |> :erlang.term_to_binary() |> Base.encode64(), is_reversed?}
-
-  defp deserialize_cursor(nil), do: nil
-
-  defp deserialize_cursor(<<cursor_bin64::binary>>) do
-    with {:ok, cursor_bin} <- Base.decode64(cursor_bin64),
-         cursor_term <- :erlang.binary_to_term(cursor_bin),
-         true <-
-           match?({<<_pk1::256>>, _txi, <<_pk2::256>>, _amount, _idx}, cursor_term) or
-             match?({<<_pk1::256>>, <<_pk2::256>>, _txi, _amount, _idx}, cursor_term) do
-      cursor_term
-    else
-      _invalid ->
-        raise ErrInput.Cursor, value: cursor_bin64
-    end
-  end
-
-  defp key_boundary({sender_pk, recipient_pk}) do
-    {
-      {sender_pk, recipient_pk, 0, 0, 0},
-      {sender_pk, recipient_pk, nil, 0, 0}
-    }
-  end
-
-  defp key_boundary(account_pk) do
-    {
-      {account_pk, 0, nil, 0, 0},
-      {account_pk, nil, nil, 0, 0}
-    }
   end
 
   defp validate_aex9(contract_pk) do

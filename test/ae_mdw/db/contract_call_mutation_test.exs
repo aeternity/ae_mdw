@@ -201,10 +201,23 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         [{^contract_pk, [_transfer_evt_hash | [from_pk, to_pk, <<amount::256>>]], _data}] =
           :aect_call.log(call_rec)
 
-        assert State.exists?(state, Model.Aex9Transfer, {from_pk, call_txi, to_pk, amount, 0})
-        assert State.exists?(state, Model.RevAex9Transfer, {to_pk, call_txi, from_pk, amount, 0})
-        assert State.exists?(state, Model.IdxAex9Transfer, {call_txi, 0, from_pk, to_pk, amount})
-        assert State.exists?(state, Model.Aex9PairTransfer, {from_pk, to_pk, call_txi, amount, 0})
+        assert State.exists?(
+                 state,
+                 Model.AexnTransfer,
+                 {:aex9, from_pk, call_txi, to_pk, amount, 0}
+               )
+
+        assert State.exists?(
+                 state,
+                 Model.RevAexnTransfer,
+                 {:aex9, to_pk, call_txi, from_pk, amount, 0}
+               )
+
+        assert State.exists?(
+                 state,
+                 Model.AexnPairTransfer,
+                 {:aex9, from_pk, to_pk, call_txi, amount, 0}
+               )
       end
     end
   end
@@ -257,7 +270,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         |> State.new()
         |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, contract_pk}))
         |> State.put(
-          Model.AexnContract,
+          Model.NftOwnership,
           Model.nft_ownership(index: {from_pk, contract_pk, token_id})
         )
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
@@ -265,6 +278,24 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       assert State.exists?(state, Model.NftOwnership, {to_pk, contract_pk, token_id})
       refute State.exists?(state, Model.NftOwnership, {from_pk, contract_pk, token_id})
+
+      assert State.exists?(
+               state,
+               Model.AexnTransfer,
+               {:aex141, from_pk, call_txi, to_pk, token_id, 0}
+             )
+
+      assert State.exists?(
+               state,
+               Model.RevAexnTransfer,
+               {:aex141, to_pk, call_txi, from_pk, token_id, 0}
+             )
+
+      assert State.exists?(
+               state,
+               Model.AexnPairTransfer,
+               {:aex141, from_pk, to_pk, call_txi, token_id, 0}
+             )
     end
   end
 

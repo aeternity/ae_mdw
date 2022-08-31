@@ -2,9 +2,10 @@ defmodule AeMdw.Db.Contract do
   @moduledoc """
   Data access to read and write Contract related models.
   """
+
+  alias AeMdw.AexnContracts
   alias AeMdw.Collection
   alias AeMdw.Contract
-  alias AeMdw.AexnContracts
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
   alias AeMdw.Db.Sync
@@ -191,10 +192,10 @@ defmodule AeMdw.Db.Contract do
 
       cond do
         is_aexn_transfer?(evt_hash) and aex9_contract_pk != nil ->
-          write_aex9_records(state3, txi, i, args)
+          write_aexn_transfer(state3, :aex9, txi, i, args)
 
         is_aexn_transfer?(evt_hash) and State.exists?(state3, Model.AexnContract, {:aex141, addr}) ->
-          write_aex141_records(state3, addr, args)
+          write_aex141_records(state3, addr, txi, i, args)
 
         true ->
           state3
@@ -237,23 +238,35 @@ defmodule AeMdw.Db.Contract do
           | {:from_to, pubkey(), pubkey()}
         ) :: Enumerable.t()
   def aex9_search_transfers(state, {:from, sender_pk}) do
-    aex9_search_transfers(state, Model.Aex9Transfer, {sender_pk, -1, nil, -1, -1}, fn key ->
-      elem(key, 0) == sender_pk
-    end)
+    aex9_search_transfers(
+      state,
+      Model.AexnTransfer,
+      {:aex9, sender_pk, -1, nil, -1, -1},
+      fn key ->
+        elem(key, 0) == :aex9 and elem(key, 1) == sender_pk
+      end
+    )
   end
 
   def aex9_search_transfers(state, {:to, recipient_pk}) do
-    aex9_search_transfers(state, Model.RevAex9Transfer, {recipient_pk, -1, nil, -1, -1}, fn key ->
-      elem(key, 0) == recipient_pk
-    end)
+    aex9_search_transfers(
+      state,
+      Model.RevAexnTransfer,
+      {:aex9, recipient_pk, -1, nil, -1, -1},
+      fn key ->
+        elem(key, 0) == :aex9 and elem(key, 1) == recipient_pk
+      end
+    )
   end
 
   def aex9_search_transfers(state, {:from_to, sender_pk, recipient_pk}) do
     aex9_search_transfers(
       state,
-      Model.Aex9PairTransfer,
-      {sender_pk, recipient_pk, -1, -1, -1},
-      fn key -> elem(key, 0) == sender_pk && elem(key, 1) == recipient_pk end
+      Model.AexnPairTransfer,
+      {:aex9, sender_pk, recipient_pk, -1, -1, -1},
+      fn key ->
+        elem(key, 0) == :aex9 and elem(key, 1) == sender_pk && elem(key, 2) == recipient_pk
+      end
     )
   end
 
@@ -306,43 +319,19 @@ defmodule AeMdw.Db.Contract do
     |> Stream.take_while(key_tester)
   end
 
-  defp write_aex9_records(state, txi, i, [from_pk, to_pk, <<amount::256>>]) do
-    m_transfer = Model.aex9_transfer(index: {from_pk, txi, to_pk, amount, i})
-    m_rev_transfer = Model.rev_aex9_transfer(index: {to_pk, txi, from_pk, amount, i})
-    m_idx_transfer = Model.idx_aex9_transfer(index: {txi, i, from_pk, to_pk, amount})
-    m_pair_transfer = Model.aex9_pair_transfer(index: {from_pk, to_pk, txi, amount, i})
-
-    state
-    |> State.put(Model.Aex9Transfer, m_transfer)
-    |> State.put(Model.RevAex9Transfer, m_rev_transfer)
-    |> State.put(Model.IdxAex9Transfer, m_idx_transfer)
-    |> State.put(Model.Aex9PairTransfer, m_pair_transfer)
-  end
-
-  defp write_aex9_records(state, _txi, _i, _args), do: state
-
-  defp write_aex141_records(state, contract_pk, [
-         <<_pk1::256>> = from_pk,
-         <<_pk2::256>> = to_pk,
-         <<token_id::256>>
-       ]) do
-    do_write_aex141_records(state, contract_pk, from_pk, to_pk, token_id)
-  end
-
-  defp write_aex141_records(state, contract_pk, [
-         <<_pk1::256>> = from_pk,
-         <<_pk2::256>> = to_pk,
-         token_id
-       ])
-       when is_integer(token_id) do
-    do_write_aex141_records(state, contract_pk, from_pk, to_pk, token_id)
-  end
-
-  defp write_aex141_records(state, _pk, _args), do: state
-
-  defp do_write_aex141_records(state, contract_pk, from_pk, to_pk, token_id) do
+  defp write_aex141_records(
+         state,
+         contract_pk,
+         txi,
+         i,
+         [from_pk, to_pk, <<token_id::256>>] = args
+       ) do
     m_ownership = Model.nft_ownership(index: {to_pk, contract_pk, token_id})
-    state2 = State.put(state, Model.NftOwnership, m_ownership)
+
+    state2 =
+      state
+      |> State.put(Model.NftOwnership, m_ownership)
+      |> write_aexn_transfer(:aex141, txi, i, args)
 
     if State.exists?(state2, Model.NftOwnership, {from_pk, contract_pk, token_id}) do
       State.delete(state2, Model.NftOwnership, {from_pk, contract_pk, token_id})
@@ -350,6 +339,25 @@ defmodule AeMdw.Db.Contract do
       state2
     end
   end
+
+  defp write_aex141_records(state, _pk, _txi, _i, _args), do: state
+
+  defp write_aexn_transfer(state, aexn_type, txi, i, [
+         <<_pk1::256>> = from_pk,
+         <<_pk2::256>> = to_pk,
+         <<value::256>>
+       ]) do
+    m_transfer = Model.aexn_transfer(index: {aexn_type, from_pk, txi, to_pk, value, i})
+    m_rev_transfer = Model.rev_aexn_transfer(index: {aexn_type, to_pk, txi, from_pk, value, i})
+    m_pair_transfer = Model.aexn_pair_transfer(index: {aexn_type, from_pk, to_pk, txi, value, i})
+
+    state
+    |> State.put(Model.AexnTransfer, m_transfer)
+    |> State.put(Model.RevAexnTransfer, m_rev_transfer)
+    |> State.put(Model.AexnPairTransfer, m_pair_transfer)
+  end
+
+  defp write_aexn_transfer(state, _type, _txi, _i, _args), do: state
 
   defp fetch_aex9_balance_or_new(state, contract_pk, account_pk) do
     case State.get(state, Model.Aex9Balance, {contract_pk, account_pk}) do
