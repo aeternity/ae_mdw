@@ -21,9 +21,7 @@ WORKDIR /home/aeternity/node
 # Download, and unzip latest aeternity release archive
 ENV NODEDIR=/home/aeternity/node/local/rel/aeternity
 RUN mkdir -p ./local/rel/aeternity/data/mnesia
-RUN curl -s https://api.github.com/repos/aeternity/aeternity/releases/latest | \
-    jq '.assets[] | .browser_download_url | select(contains("ubuntu-x86_64.tar.gz")) | select(contains("aeternity-v"))' | \
-    xargs curl -L --output aeternity.tar.gz  && tar -C ./local/rel/aeternity -xf aeternity.tar.gz
+RUN curl -L --output aeternity.tar.gz https://github.com/aeternity/aeternity/releases/download/v6.5.2/aeternity-v6.5.2-ubuntu-x86_64.tar.gz && tar -C ./local/rel/aeternity -xf aeternity.tar.gz
 
 RUN chmod +x ${NODEDIR}/bin/aeternity
 RUN cp -r ./local/rel/aeternity/lib local/
