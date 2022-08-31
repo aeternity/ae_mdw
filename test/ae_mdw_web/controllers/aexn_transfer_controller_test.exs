@@ -23,7 +23,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
   @recipients [enc_id(@to_pk1), enc_id(@to_pk2)]
 
   @default_limit 10
-  @aexn_type_sample 10_000
+  @aexn_type_sample 1_000
   @log_index_range 0..(2 * @aexn_type_sample)
   @aex9_amount_range 1_000_000_000..9_999_999_999
   @aex141_token_range 1_000..9_999
