@@ -15,12 +15,10 @@ defmodule Integration.AeMdwWeb.OracleControllerTest do
                  "query" => "string",
                  "response" => "string"
                },
-               "extends" => [extends_txi | _rest],
+               "extends" => [11_025 | _rest],
                "oracle" => ^id,
-               "register" => register_txi
+               "register" => 11_023
              } = json_response(conn, 200)
-
-      assert ^extends_txi = register_txi
     end
 
     test "get oracle information for given oracle id with expand parameter", %{conn: conn} do

@@ -220,13 +220,14 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
                |> json_response(400)
     end
 
-    test "when account not found, it returns nil as amount", %{conn: conn} do
+    test "returns 400 when account is not present on contract", %{conn: conn} do
       non_existent_account_id = "ak_9MsbDuBTtKegKpj5uSxfPwmJ4YiN6bBdtXici682DgPk8ycpM"
+      error_msg = "balance is not available: {#{@aex9_token_id}, #{non_existent_account_id}}"
 
-      assert %{"amount" => nil} =
+      assert %{"error" => ^error_msg} =
                conn
                |> get("/v2/aex9/#{@aex9_token_id}/balances/#{non_existent_account_id}")
-               |> json_response(200)
+               |> json_response(400)
     end
 
     test "when id is not valid, it returns 400", %{conn: conn} do
