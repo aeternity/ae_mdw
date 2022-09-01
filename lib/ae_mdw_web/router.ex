@@ -74,6 +74,7 @@ defmodule AeMdwWeb.Router do
           AexnTransferController,
           :aex9_transfers_from_to
 
+      get "/aex141/transfers/:contract_id", AexnTransferController, :aex141_transfers
       get "/aex141/transfers/from/:sender", AexnTransferController, :aex141_transfers_from
       get "/aex141/transfers/to/:recipient", AexnTransferController, :aex141_transfers_to
 

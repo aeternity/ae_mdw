@@ -8,6 +8,8 @@ defmodule AeMdwWeb.AexnTransferController do
   alias AeMdw.AexnTransfers
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Origin
+  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Validate
 
   alias AeMdwWeb.FallbackController
@@ -74,12 +76,29 @@ defmodule AeMdwWeb.AexnTransferController do
     transfers_pair_reply(conn, :aex9, sender_id, recipient_id)
   end
 
+  @spec aex141_transfers(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def aex141_transfers(conn, %{"contract_id" => contract_id}) do
+    contract_transfers_reply(conn, contract_id, {:from, nil})
+  end
+
   @spec aex141_transfers_from(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def aex141_transfers_from(conn, %{"contract_id" => contract_id, "sender" => sender_id}) do
+    with {:ok, sender_pk} <- Validate.id(sender_id, [:account_pubkey]) do
+      contract_transfers_reply(conn, contract_id, {:from, sender_pk})
+    end
+  end
+
   def aex141_transfers_from(conn, %{"sender" => sender_id}) do
     transfers_from_reply(conn, :aex141, sender_id)
   end
 
   @spec aex141_transfers_to(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def aex141_transfers_to(conn, %{"contract_id" => contract_id, "recipient" => recipient_id}) do
+    with {:ok, recipient_pk} <- Validate.id(recipient_id, [:account_pubkey]) do
+      contract_transfers_reply(conn, contract_id, {:to, recipient_pk})
+    end
+  end
+
   def aex141_transfers_to(conn, %{"recipient" => recipient_id}) do
     transfers_to_reply(conn, :aex141, recipient_id)
   end
@@ -99,6 +118,29 @@ defmodule AeMdwWeb.AexnTransferController do
       |> Enum.map(&transfer_to_map_fn.(state, &1))
 
     json(conn, transfers)
+  end
+
+  defp contract_transfers_reply(%Conn{assigns: assigns} = conn, contract_id, tagged_account_pk) do
+    %{pagination: pagination, cursor: cursor, state: state} = assigns
+
+    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
+         {:ok, create_txi} <- Origin.tx_index(state, {:contract, contract_pk}) do
+      {prev_cursor, transfers_keys, next_cursor} =
+        AexnTransfers.fetch_contract_transfers(
+          state,
+          create_txi,
+          tagged_account_pk,
+          pagination,
+          cursor
+        )
+
+      data = Enum.map(transfers_keys, &contract_transfer_to_map(state, &1))
+
+      paginate(conn, prev_cursor, data, next_cursor)
+    else
+      :not_found -> {:error, ErrInput.NotFound.exception(value: contract_id)}
+      error -> error
+    end
   end
 
   defp transfers_from_reply(%Conn{assigns: assigns} = conn, aexn_type, sender_id) do

@@ -29,17 +29,6 @@ defmodule AeMdw.Aex9 do
 
   @typep txi :: AeMdw.Txs.txi()
 
-  @type account_transfer_key ::
-          {pubkey(), txi(), pubkey(), pos_integer(), non_neg_integer()}
-  @type pair_transfer_key ::
-          {pubkey(), pubkey(), txi(), pos_integer(), non_neg_integer()}
-
-  @type cursor :: binary()
-  @type account_paginated_transfers ::
-          {cursor() | nil, [account_transfer_key()], {cursor() | nil, boolean()}}
-  @type pair_paginated_transfers ::
-          {cursor() | nil, [pair_transfer_key()], {cursor() | nil, boolean()}}
-
   @typep pagination :: Collection.direction_limit()
   @typep pubkey :: AeMdw.Node.Db.pubkey()
 
