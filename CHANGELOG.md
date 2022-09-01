@@ -1,5 +1,42 @@
 # Changelog
 
+## [1.19.0](https://www.github.com/aeternity/ae_mdw/compare/v1.18.0...v1.19.0) (2022-09-01)
+
+
+### Features
+
+* generalize transfer history for aex141 ([#882](https://www.github.com/aeternity/ae_mdw/issues/882)) ([c6cb13c](https://www.github.com/aeternity/ae_mdw/commit/c6cb13caec51b0240280d96bc0265225f032d831))
+* index miners count and total rewards from fees ([#854](https://www.github.com/aeternity/ae_mdw/issues/854)) ([725beb7](https://www.github.com/aeternity/ae_mdw/commit/725beb7ef3329e0283cf772c4e714d8c1afe713c))
+* index nft transfers by collection ([#887](https://www.github.com/aeternity/ae_mdw/issues/887)) ([322dac0](https://www.github.com/aeternity/ae_mdw/commit/322dac06a5a42a0e8006c31fb5aca2249c37e9c4))
+
+
+### Bug Fixes
+
+* calculate prev on build_gen_pagination correctly ([#877](https://www.github.com/aeternity/ae_mdw/issues/877)) ([9a3011b](https://www.github.com/aeternity/ae_mdw/commit/9a3011b84e88827559792150db0aa3962616f5c2))
+* convert transfer event token_id to integer ([#878](https://www.github.com/aeternity/ae_mdw/issues/878)) ([8e2be75](https://www.github.com/aeternity/ae_mdw/commit/8e2be75e5c7d922ff5aaf3460162b86670f14b87))
+* handle out_of_gas_error on aex141 cleanup ([#883](https://www.github.com/aeternity/ae_mdw/issues/883)) ([c1d556d](https://www.github.com/aeternity/ae_mdw/commit/c1d556d54443ee61fdb475e9068977f04f37c39c))
+* handle variant owner return ([#879](https://www.github.com/aeternity/ae_mdw/issues/879)) ([86c0383](https://www.github.com/aeternity/ae_mdw/commit/86c0383e47b9b36cd58d1abfc39135fe84e803c0))
+* remove rocksdb wrapping code that created DB inconsistencies ([#865](https://www.github.com/aeternity/ae_mdw/issues/865)) ([530add4](https://www.github.com/aeternity/ae_mdw/commit/530add4ebe4899e401d232639cc55a7038962ccc))
+* temporarily hardcode node version in docker build ([a6da18c](https://www.github.com/aeternity/ae_mdw/commit/a6da18ce84937b181df6cb90453ecfbc9f3f8a35))
+* treat AENS.update calls name_ttl as an absolute height ([#872](https://www.github.com/aeternity/ae_mdw/issues/872)) ([89bf5d2](https://www.github.com/aeternity/ae_mdw/commit/89bf5d237dffca4c007168131c2570c275ef2c6e))
+
+
+### Refactorings
+
+* add type definitions to Model records ([#868](https://www.github.com/aeternity/ae_mdw/issues/868)) ([f3a9475](https://www.github.com/aeternity/ae_mdw/commit/f3a9475143b72051410ce5a523a3ca056e6c07f7))
+
+
+### Miscellaneous
+
+* add micro_blocks to /v2/blocks/{height} ([#876](https://www.github.com/aeternity/ae_mdw/issues/876)) ([01aba8a](https://www.github.com/aeternity/ae_mdw/commit/01aba8a062535c1ab6dcb641adfdf9a07124fdaf))
+* update aex141 metadata signature ([#874](https://www.github.com/aeternity/ae_mdw/issues/874)) ([22066aa](https://www.github.com/aeternity/ae_mdw/commit/22066aa1d99bef31553465356e683b68bd366ec5))
+
+
+### Testing
+
+* add cases for rocksdb multiple dirty delete calls ([#867](https://www.github.com/aeternity/ae_mdw/issues/867)) ([27071f4](https://www.github.com/aeternity/ae_mdw/commit/27071f45fc7cc706e949154ac7b389cb4bfc84db))
+* update oracle and aex9 integration tests ([#871](https://www.github.com/aeternity/ae_mdw/issues/871)) ([78467bd](https://www.github.com/aeternity/ae_mdw/commit/78467bd33e1e49a78029ab7c1be943ba733640f1))
+
 ## [1.18.0](https://www.github.com/aeternity/ae_mdw/compare/v1.17.0...v1.18.0) (2022-08-23)
 
 
