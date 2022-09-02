@@ -146,6 +146,10 @@ defmodule AeMdw.Db.State do
     end
   end
 
+  @spec update!(t(), table(), key(), (record() -> record())) :: t()
+  def update!(state, table, key, update_fn),
+    do: put(state, table, update_fn.(fetch!(state, table, key)))
+
   @spec inc_stat(t(), stat_name(), integer()) :: t()
   def inc_stat(state, name, delta \\ 1)
 

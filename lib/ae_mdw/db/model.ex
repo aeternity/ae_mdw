@@ -18,10 +18,12 @@ defmodule AeMdw.Db.Model do
   @type m_record :: tuple()
   @opaque key :: tuple() | integer() | pubkey()
 
+  @typep height() :: Blocks.height()
   @typep pubkey :: Db.pubkey()
   @typep tx_type() :: Node.tx_type()
   @typep txi() :: Txs.txi()
   @typep tx_hash() :: Txs.tx_hash()
+  @typep bi_txi() :: Blocks.block_index_txi()
 
   ################################################################################
 
@@ -147,10 +149,10 @@ defmodule AeMdw.Db.Model do
   @type auction_bid ::
           record(:auction_bid,
             index: Names.plain_name(),
-            block_index_txi: Blocks.block_index_txi(),
+            block_index_txi: bi_txi(),
             expire_height: Blocks.height(),
             owner: pubkey(),
-            bids: [Blocks.block_index_txi()]
+            bids: [bi_txi()]
           )
 
   # activation:
@@ -208,7 +210,7 @@ defmodule AeMdw.Db.Model do
             claims: list(),
             updates: list(),
             transfers: list(),
-            revoke: {Blocks.block_index(), txi()} | nil,
+            revoke: bi_txi() | nil,
             auction_timeout: non_neg_integer(),
             owner: pubkey(),
             previous: record(:name) | nil
@@ -232,7 +234,7 @@ defmodule AeMdw.Db.Model do
 
   @type pointee() ::
           record(:pointee,
-            index: {pubkey(), {Blocks.block_index(), txi()}, pubkey()},
+            index: {pubkey(), bi_txi(), pubkey()},
             unused: nil
           )
 
@@ -262,9 +264,31 @@ defmodule AeMdw.Db.Model do
             index: pubkey(),
             active: Blocks.height(),
             expire: Blocks.height(),
-            register: {Blocks.block_index(), txi()},
-            extends: [{Blocks.block_index(), txi()}],
+            register: bi_txi(),
+            extends: [bi_txi()],
             previous: oracle() | nil
+          )
+
+  @channel_defaults [
+    index: nil,
+    active: nil,
+    initiator: nil,
+    responder: nil,
+    state_hash: nil,
+    amount: nil,
+    updates: nil
+  ]
+  defrecord :channel, @channel_defaults
+
+  @type channel() ::
+          record(:channel,
+            index: pubkey(),
+            active: height(),
+            initiator: pubkey(),
+            responder: pubkey(),
+            state_hash: binary(),
+            amount: non_neg_integer(),
+            updates: [bi_txi()]
           )
 
   # AEX9 balance:
@@ -672,6 +696,7 @@ defmodule AeMdw.Db.Model do
     Enum.concat([
       chain_tables(),
       contract_tables(),
+      channel_tables(),
       name_tables(),
       oracle_tables(),
       stat_tables(),
@@ -694,6 +719,14 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.KindIntTransferTx,
       AeMdw.Db.Model.TargetKindIntTransferTx,
       AeMdw.Db.Model.Miner
+    ]
+  end
+
+  defp channel_tables() do
+    [
+      AeMdw.Db.Model.ActiveChannel,
+      AeMdw.Db.Model.ActiveChannelActivation,
+      AeMdw.Db.Model.InactiveChannel
     ]
   end
 
@@ -831,6 +864,9 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.InactiveOracleExpiration), do: :expiration
   def record(AeMdw.Db.Model.ActiveOracle), do: :oracle
   def record(AeMdw.Db.Model.InactiveOracle), do: :oracle
+  def record(AeMdw.Db.Model.ActiveChannel), do: :channel
+  def record(AeMdw.Db.Model.ActiveChannelActivation), do: :activation
+  def record(AeMdw.Db.Model.InactiveChannel), do: :channel
   def record(AeMdw.Db.Model.IntTransferTx), do: :int_transfer_tx
   def record(AeMdw.Db.Model.KindIntTransferTx), do: :kind_int_transfer_tx
   def record(AeMdw.Db.Model.TargetKindIntTransferTx), do: :target_kind_int_transfer_tx
