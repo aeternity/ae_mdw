@@ -120,7 +120,11 @@ defmodule AeMdwWeb.AexnTransferController do
     json(conn, transfers)
   end
 
-  defp contract_transfers_reply(%Conn{assigns: assigns} = conn, contract_id, tagged_account_pk) do
+  defp contract_transfers_reply(
+         %Conn{assigns: assigns} = conn,
+         contract_id,
+         {filter_by, _pk} = tagged_account_pk
+       ) do
     %{pagination: pagination, cursor: cursor, state: state} = assigns
 
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
@@ -134,7 +138,7 @@ defmodule AeMdwWeb.AexnTransferController do
           cursor
         )
 
-      data = Enum.map(transfers_keys, &contract_transfer_to_map(state, &1))
+      data = Enum.map(transfers_keys, &contract_transfer_to_map(state, filter_by, &1))
 
       paginate(conn, prev_cursor, data, next_cursor)
     else
