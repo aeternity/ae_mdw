@@ -4,9 +4,9 @@ defmodule AeMdw.Db.Sync.Transaction do
   "
 
   alias AeMdw.Blocks
-  alias AeMdw.Channels
   alias AeMdw.Contract
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Channels
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.ContractCreateMutation
   alias AeMdw.Db.ContractCreateCacheMutation
