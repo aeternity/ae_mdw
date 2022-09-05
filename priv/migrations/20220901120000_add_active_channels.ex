@@ -47,7 +47,7 @@ defmodule AeMdw.Migrations.AddActiveChannels do
               index: channel_pk,
               active: height,
               initiator: :aesc_create_tx.initiator_pubkey(tx),
-              responder: :aesc_create_tx.initiator_pubkey(tx),
+              responder: :aesc_create_tx.responder_pubkey(tx),
               state_hash: :aesc_create_tx.state_hash(tx),
               amount: amount,
               updates: [bi_txi]
