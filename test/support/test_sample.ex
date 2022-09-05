@@ -100,6 +100,21 @@ defmodule AeMdw.TestSamples do
     |> Enum.at(n)
   end
 
+  @spec micro_block_hash(non_neg_integer()) :: Blocks.block_hash()
+  def micro_block_hash(n) do
+    ~w(
+      mh_g9g4iz96sofJD55MAiyQJcUfgRh69euZ22iNCas79ZF3N8tEZ
+      mh_2Zg4FUabugLuvKa9dSaWMzmCsQojsckE9tSmLbnjobH52XUQ1r
+      mh_uzKFFWu1jNmsarwWTk79uLENB6Wac8fZg6eWzm68GzN4LaocW
+    )
+    |> Enum.map(fn hash ->
+      {:ok, decoded_hash} = :aeser_api_encoder.safe_decode(:micro_block_hash, hash)
+
+      decoded_hash
+    end)
+    |> Enum.at(n)
+  end
+
   @spec address(non_neg_integer()) :: Db.pubkey()
   def address(n) do
     ~w(

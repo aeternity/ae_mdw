@@ -35,6 +35,28 @@ defmodule AeMdw.Blocks do
 
   @table Model.Block
 
+  @spec fetch_key_blocks(State.t(), direction(), range(), cursor() | nil, limit()) ::
+          {cursor() | nil, [block()], cursor() | nil}
+  def fetch_key_blocks(state, direction, range, cursor, limit) do
+    last_gen = DbUtil.last_gen(state)
+    cursor = deserialize_cursor(cursor)
+
+    range =
+      case range do
+        nil -> {0, last_gen}
+        {:gen, %Range{first: first, last: last}} -> {first, last}
+      end
+
+    case Util.build_gen_pagination(cursor, direction, range, limit, last_gen) do
+      {:ok, prev_cursor, range, next_cursor} ->
+        {serialize_cursor(prev_cursor), render_key_blocks(state, range),
+         serialize_cursor(next_cursor)}
+
+      :error ->
+        {nil, [], nil}
+    end
+  end
+
   @spec fetch_blocks(State.t(), direction(), range(), cursor() | nil, limit(), boolean()) ::
           {cursor() | nil, [block()], cursor() | nil}
   def fetch_blocks(state, direction, range, cursor, limit, sort_mbs?) do
@@ -98,15 +120,44 @@ defmodule AeMdw.Blocks do
     end
   end
 
+  defp render_key_blocks(state, range) do
+    Enum.map(range, fn gen ->
+      last_mbi =
+        case State.prev(state, @table, {gen + 1, -1}) do
+          {:ok, {^gen, mbi}} -> mbi + 1
+          {:ok, _block_index} -> 0
+          :none -> 0
+        end
+
+      txs_count =
+        case State.next(state, @table, {gen, last_mbi}) do
+          {:ok, block_index} ->
+            Model.block(tx_index: tx_index) = State.fetch!(state, @table, block_index)
+            tx_index
+
+          :none ->
+            0
+        end
+
+      Model.block(hash: hash) = State.fetch!(state, @table, {gen, -1})
+      header = :aec_db.get_header(hash)
+
+      header
+      |> :aec_headers.serialize_for_client(Db.prev_block_type(header))
+      |> Map.put(:micro_blocks_count, last_mbi)
+      |> Map.put(:transactions_count, txs_count)
+    end)
+  end
+
   defp render_blocks(state, range, sort_mbs?) do
     Enum.map(range, fn gen ->
       [key_block | micro_blocks] =
         state
-        |> Collection.stream(@table, :backward, nil, {gen, <<>>})
+        |> Collection.stream(@table, :backward, nil, {gen, Util.max_256bit_int()})
         |> Stream.take_while(&match?({^gen, _mb_index}, &1))
         |> Enum.map(fn key -> State.fetch!(state, @table, key) end)
         |> Enum.reverse()
-        |> Enum.map(fn Model.block(index: {_height, _mbi}, hash: hash) ->
+        |> Enum.map(fn Model.block(hash: hash) ->
           header = :aec_db.get_header(hash)
 
           :aec_headers.serialize_for_client(header, Db.prev_block_type(header))

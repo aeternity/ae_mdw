@@ -3,6 +3,7 @@ defmodule AeMdwWeb.BlockControllerTest do
 
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
+  alias AeMdw.TestSamples, as: TS
   alias AeMdw.Validate
   alias AeMdwWeb.BlockchainSim
 
@@ -11,6 +12,79 @@ defmodule AeMdwWeb.BlockControllerTest do
   import AeMdwWeb.Helpers.AexnHelper, only: [enc_block: 2]
 
   require Model
+
+  describe "key-blocks" do
+    test "it gets all key blocks with the appropriate micro_blocks_count", %{
+      conn: conn,
+      store: store
+    } do
+      kbi = 1
+      hash = TS.key_block_hash(1)
+
+      store =
+        store
+        |> Store.put(Model.Block, Model.block(index: {kbi - 1, -1}, hash: TS.key_block_hash(0)))
+        |> Store.put(Model.Block, Model.block(index: {kbi, -1}, hash: hash))
+        |> Store.put(Model.Block, Model.block(index: {kbi, 0}, hash: TS.micro_block_hash(0)))
+        |> Store.put(Model.Block, Model.block(index: {kbi, 1}, hash: TS.micro_block_hash(1)))
+        |> Store.put(Model.Block, Model.block(index: {kbi, 2}, hash: TS.micro_block_hash(2)))
+
+      with_mocks [
+        {:aec_db, [], [get_header: fn ^hash -> :header end]},
+        {AeMdw.Node.Db, [], [prev_block_type: fn :header -> :micro end]},
+        {:aec_headers, [], [serialize_for_client: fn :header, :micro -> %{height: kbi} end]}
+      ] do
+        assert %{"data" => [block]} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/key-blocks", limit: 1)
+                 |> json_response(200)
+
+        assert %{
+                 "height" => ^kbi,
+                 "micro_blocks_count" => 3
+               } = block
+      end
+    end
+
+    test "it gets all key blocks with the appropriate transactions_count", %{
+      conn: conn,
+      store: store
+    } do
+      kbi = 1
+      hash = TS.key_block_hash(1)
+
+      store =
+        store
+        |> Store.put(Model.Block, Model.block(index: {kbi - 1, -1}, hash: TS.key_block_hash(0)))
+        |> Store.put(Model.Block, Model.block(index: {kbi, -1}, hash: hash, tx_index: 0))
+        |> Store.put(
+          Model.Block,
+          Model.block(index: {kbi, 0}, hash: TS.micro_block_hash(0), tx_index: 0)
+        )
+        |> Store.put(
+          Model.Block,
+          Model.block(index: {kbi + 1, -1}, hash: TS.key_block_hash(2), tx_index: 10)
+        )
+
+      with_mocks [
+        {:aec_db, [], [get_header: fn ^hash -> :header end]},
+        {AeMdw.Node.Db, [], [prev_block_type: fn :header -> :micro end]},
+        {:aec_headers, [], [serialize_for_client: fn :header, :micro -> %{height: kbi} end]}
+      ] do
+        assert %{"data" => [block]} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/key-blocks", limit: 1, scope: "gen:#{kbi}")
+                 |> json_response(200)
+
+        assert %{
+                 "height" => ^kbi,
+                 "transactions_count" => 10
+               } = block
+      end
+    end
+  end
 
   describe "blocks" do
     test "get key block by hash", %{conn: conn, store: store} do

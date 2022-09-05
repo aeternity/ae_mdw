@@ -67,6 +67,21 @@ defmodule AeMdwWeb.BlockController do
     end
   end
 
+  @spec key_blocks(Conn.t(), map()) :: Conn.t()
+  def key_blocks(%Conn{assigns: assigns} = conn, _params) do
+    %{
+      state: state,
+      pagination: {direction, _is_reversed?, limit, _has_cursor?},
+      cursor: cursor,
+      scope: scope
+    } = assigns
+
+    {prev_cursor, blocks, next_cursor} =
+      Blocks.fetch_key_blocks(state, direction, scope, cursor, limit)
+
+    WebUtil.paginate(conn, prev_cursor, blocks, next_cursor)
+  end
+
   @doc """
   Endpoint for blocks info based on pagination.
   """
