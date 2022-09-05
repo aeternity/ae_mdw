@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.19.1](https://www.github.com/aeternity/ae_mdw/compare/v1.19.0...v1.19.1) (2022-09-05)
+
+
+### Bug Fixes
+
+* map recipient record when filtering by nft collection ([#890](https://www.github.com/aeternity/ae_mdw/issues/890)) ([251c5a8](https://www.github.com/aeternity/ae_mdw/commit/251c5a8eb80c94bdf1f1f156425831047ab51a13))
+
 ## [1.19.0](https://www.github.com/aeternity/ae_mdw/compare/v1.18.0...v1.19.0) (2022-09-01)
 
 
