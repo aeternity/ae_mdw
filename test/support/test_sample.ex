@@ -133,4 +133,19 @@ defmodule AeMdw.TestSamples do
     end)
     |> Enum.at(n)
   end
+
+  @spec channel_pk(non_neg_integer()) :: Db.pubkey()
+  def channel_pk(n) do
+    ~w(
+      ch_22SfHdnhUQBAHpC5euxHG9qjRWGfHsj47sZqSmXk4cTfJp4aUd
+      ch_vpYXyMJZDF8Rdc3EZFvLdKYrWZKsbs1hKXHXMAczeV8MmDPkK
+      ch_hhqtLjXn9h31Sa6WTNxTANC1zG3WxUzCss1HnJSjovP4pnVUK
+    )
+    |> Enum.map(fn hash ->
+      {:ok, decoded_hash} = :aeser_api_encoder.safe_decode(:channel, hash)
+
+      decoded_hash
+    end)
+    |> Enum.at(n)
+  end
 end

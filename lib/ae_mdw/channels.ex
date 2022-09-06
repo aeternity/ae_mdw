@@ -93,7 +93,7 @@ defmodule AeMdw.Channels do
     }
   end
 
-  defp deserialize_cursor(nil), do: nil
+  defp deserialize_cursor(nil), do: {:ok, nil}
 
   defp deserialize_cursor(cursor_bin) do
     with [exp_height, channel_pk] <-
