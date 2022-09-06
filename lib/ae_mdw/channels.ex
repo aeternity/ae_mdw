@@ -7,6 +7,7 @@ defmodule AeMdw.Channels do
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Txs
   alias AeMdw.Util
@@ -25,7 +26,7 @@ defmodule AeMdw.Channels do
   @table_activation Model.ActiveChannelActivation
 
   @spec fetch_active_channels(state(), pagination(), range(), cursor()) ::
-          {:ok, cursor(), [channel()], cursor()}
+          {:ok, cursor(), [channel()], cursor()} | {:error, Error.t()}
   def fetch_active_channels(state, pagination, range, cursor) do
     with {:ok, cursor} <- deserialize_cursor(cursor) do
       scope = deserialize_scope(range)
@@ -100,7 +101,7 @@ defmodule AeMdw.Channels do
          {:ok, channel_pk} <- Validate.id(channel_pk, [:channel]) do
       {:ok, {String.to_integer(exp_height), channel_pk}}
     else
-      _invalid -> ErrInput.Cursor.exception(value: cursor_bin)
+      _invalid -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
     end
   end
 
