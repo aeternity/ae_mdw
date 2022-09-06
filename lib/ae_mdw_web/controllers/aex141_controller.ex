@@ -19,6 +19,21 @@ defmodule AeMdwWeb.Aex141Controller do
   plug(PaginatedPlug)
   action_fallback(FallbackController)
 
+  @spec collection_owners(Conn.t(), map()) :: Conn.t()
+  def collection_owners(%Conn{assigns: assigns} = conn, %{"contract_id" => contract_id}) do
+    %{
+      state: state,
+      pagination: pagination,
+      cursor: cursor
+    } = assigns
+
+    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
+         {:ok, {prev_cursor, nft_owners, next_cursor}} <-
+           Aex141.fetch_collection_owners(state, contract_pk, cursor, pagination) do
+      WebUtil.paginate(conn, prev_cursor, nft_owners, next_cursor)
+    end
+  end
+
   @spec nft_owner(Conn.t(), map()) :: Conn.t()
   def nft_owner(conn, %{"contract_id" => contract_id, "token_id" => token_id}) do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),

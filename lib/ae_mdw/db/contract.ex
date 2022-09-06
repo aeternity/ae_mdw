@@ -25,6 +25,7 @@ defmodule AeMdw.Db.Contract do
   @typep state :: State.t()
   @typep block_index :: AeMdw.Blocks.block_index()
   @typep txi :: AeMdw.Txs.txi()
+  @typep log_idx :: AeMdw.Contracts.log_idx()
 
   @spec aexn_creation_write(
           state(),
@@ -288,6 +289,39 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
+  @spec write_aex141_records(State.t(), pubkey(), txi(), log_idx(), list(binary())) :: State.t()
+  def write_aex141_records(
+        state,
+        contract_pk,
+        txi,
+        i,
+        [_from_pk, to_pk, <<token_id::256>>] = args
+      ) do
+    m_ownership = Model.nft_ownership(index: {to_pk, contract_pk, token_id})
+    m_owner_token = Model.nft_owner_token(index: {contract_pk, to_pk, token_id})
+    m_token_owner = Model.nft_token_owner(index: {contract_pk, token_id}, owner: to_pk)
+
+    state2 =
+      state
+      |> State.put(Model.NftOwnership, m_ownership)
+      |> State.put(Model.NftOwnerToken, m_owner_token)
+      |> write_aexn_transfer(:aex141, contract_pk, txi, i, args)
+
+    with {:ok, Model.nft_token_owner(index: {contract_pk, _token_id}, owner: old_owner_pk)} <-
+           State.get(state2, Model.NftTokenOwner, {contract_pk, token_id}),
+         true <- old_owner_pk != to_pk do
+      state2
+      |> State.put(Model.NftTokenOwner, m_token_owner)
+      |> State.delete(Model.NftOwnership, {old_owner_pk, contract_pk, token_id})
+      |> State.delete(Model.NftOwnerToken, {contract_pk, old_owner_pk, token_id})
+    else
+      error when error in [:not_found, false] ->
+        State.put(state2, Model.NftTokenOwner, m_token_owner)
+    end
+  end
+
+  def write_aex141_records(state, _pk, _txi, _i, _args), do: state
+
   #
   # Private functions
   #
@@ -336,29 +370,6 @@ defmodule AeMdw.Db.Contract do
     |> State.cache_put(:ct_create_sync_cache, contract_pk, remote_contract_txi)
     |> update_aex9_state(log_pk, block_index, txi)
   end
-
-  defp write_aex141_records(
-         state,
-         contract_pk,
-         txi,
-         i,
-         [from_pk, to_pk, <<token_id::256>>] = args
-       ) do
-    m_ownership = Model.nft_ownership(index: {to_pk, contract_pk, token_id})
-
-    state2 =
-      state
-      |> State.put(Model.NftOwnership, m_ownership)
-      |> write_aexn_transfer(:aex141, contract_pk, txi, i, args)
-
-    if State.exists?(state2, Model.NftOwnership, {from_pk, contract_pk, token_id}) do
-      State.delete(state2, Model.NftOwnership, {from_pk, contract_pk, token_id})
-    else
-      state2
-    end
-  end
-
-  defp write_aex141_records(state, _pk, _txi, _i, _args), do: state
 
   defp write_aexn_transfer(
          state,
