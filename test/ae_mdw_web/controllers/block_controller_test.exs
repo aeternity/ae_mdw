@@ -23,11 +23,23 @@ defmodule AeMdwWeb.BlockControllerTest do
 
       store =
         store
-        |> Store.put(Model.Block, Model.block(index: {kbi - 1, -1}, hash: TS.key_block_hash(0)))
-        |> Store.put(Model.Block, Model.block(index: {kbi, -1}, hash: hash))
-        |> Store.put(Model.Block, Model.block(index: {kbi, 0}, hash: TS.micro_block_hash(0)))
-        |> Store.put(Model.Block, Model.block(index: {kbi, 1}, hash: TS.micro_block_hash(1)))
-        |> Store.put(Model.Block, Model.block(index: {kbi, 2}, hash: TS.micro_block_hash(2)))
+        |> Store.put(
+          Model.Block,
+          Model.block(index: {kbi - 1, -1}, tx_index: 0, hash: TS.key_block_hash(0))
+        )
+        |> Store.put(Model.Block, Model.block(index: {kbi, -1}, tx_index: 0, hash: hash))
+        |> Store.put(
+          Model.Block,
+          Model.block(index: {kbi, 0}, tx_index: 0, hash: TS.micro_block_hash(0))
+        )
+        |> Store.put(
+          Model.Block,
+          Model.block(index: {kbi, 1}, tx_index: 0, hash: TS.micro_block_hash(1))
+        )
+        |> Store.put(
+          Model.Block,
+          Model.block(index: {kbi, 2}, tx_index: 0, hash: TS.micro_block_hash(2))
+        )
 
       with_mocks [
         {:aec_db, [], [get_header: fn ^hash -> :header end]},
@@ -57,7 +69,7 @@ defmodule AeMdwWeb.BlockControllerTest do
       store =
         store
         |> Store.put(Model.Block, Model.block(index: {kbi - 1, -1}, hash: TS.key_block_hash(0)))
-        |> Store.put(Model.Block, Model.block(index: {kbi, -1}, hash: hash, tx_index: 0))
+        |> Store.put(Model.Block, Model.block(index: {kbi, -1}, hash: hash, tx_index: 4))
         |> Store.put(
           Model.Block,
           Model.block(index: {kbi, 0}, hash: TS.micro_block_hash(0), tx_index: 0)
@@ -80,7 +92,7 @@ defmodule AeMdwWeb.BlockControllerTest do
 
         assert %{
                  "height" => ^kbi,
-                 "transactions_count" => 10
+                 "transactions_count" => 6
                } = block
       end
     end

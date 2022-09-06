@@ -130,10 +130,11 @@ defmodule AeMdw.Blocks do
         end
 
       txs_count =
-        case State.next(state, @table, {gen, last_mbi}) do
+        case State.prev(state, @table, {gen + 1, 0}) do
           {:ok, block_index} ->
-            Model.block(tx_index: tx_index) = State.fetch!(state, @table, block_index)
-            tx_index
+            Model.block(tx_index: next_tx_index) = State.fetch!(state, @table, block_index)
+            Model.block(tx_index: first_tx_index) = State.fetch!(state, @table, {gen, -1})
+            next_tx_index - first_tx_index
 
           :none ->
             0
