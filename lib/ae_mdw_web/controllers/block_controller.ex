@@ -82,6 +82,13 @@ defmodule AeMdwWeb.BlockController do
     WebUtil.paginate(conn, prev_cursor, blocks, next_cursor)
   end
 
+  @spec key_block(Conn.t(), map()) :: Conn.t()
+  def key_block(%Conn{assigns: %{state: state}} = conn, %{"hash_or_kbi" => hash_or_kbi}) do
+    with {:ok, block} <- Blocks.fetch_key_block(state, hash_or_kbi) do
+      json(conn, block)
+    end
+  end
+
   @doc """
   Endpoint for blocks info based on pagination.
   """
