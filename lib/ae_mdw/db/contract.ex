@@ -301,23 +301,12 @@ defmodule AeMdw.Db.Contract do
     m_owner_token = Model.nft_owner_token(index: {contract_pk, to_pk, token_id})
     m_token_owner = Model.nft_token_owner(index: {contract_pk, token_id}, owner: to_pk)
 
-    state2 =
-      state
-      |> State.put(Model.NftOwnership, m_ownership)
-      |> State.put(Model.NftOwnerToken, m_owner_token)
-      |> write_aexn_transfer(:aex141, contract_pk, txi, i, args)
-
-    with {:ok, Model.nft_token_owner(index: {contract_pk, _token_id}, owner: old_owner_pk)} <-
-           State.get(state2, Model.NftTokenOwner, {contract_pk, token_id}),
-         true <- old_owner_pk != to_pk do
-      state2
-      |> State.put(Model.NftTokenOwner, m_token_owner)
-      |> State.delete(Model.NftOwnership, {old_owner_pk, contract_pk, token_id})
-      |> State.delete(Model.NftOwnerToken, {contract_pk, old_owner_pk, token_id})
-    else
-      error when error in [:not_found, false] ->
-        State.put(state2, Model.NftTokenOwner, m_token_owner)
-    end
+    state
+    |> State.put(Model.NftOwnership, m_ownership)
+    |> State.put(Model.NftOwnerToken, m_owner_token)
+    |> write_aexn_transfer(:aex141, contract_pk, txi, i, args)
+    |> delete_previous_ownership(contract_pk, token_id, to_pk)
+    |> State.put(Model.NftTokenOwner, m_token_owner)
   end
 
   def write_aex141_records(state, _pk, _txi, _i, _args), do: state
@@ -325,6 +314,18 @@ defmodule AeMdw.Db.Contract do
   #
   # Private functions
   #
+  defp delete_previous_ownership(state, contract_pk, token_id, to_pk) do
+    with {:ok, Model.nft_token_owner(index: {contract_pk, _token_id}, owner: old_owner_pk)} <-
+           State.get(state, Model.NftTokenOwner, {contract_pk, token_id}),
+         true <- old_owner_pk != to_pk do
+      state
+      |> State.delete(Model.NftOwnership, {old_owner_pk, contract_pk, token_id})
+      |> State.delete(Model.NftOwnerToken, {contract_pk, old_owner_pk, token_id})
+    else
+      error when error in [:not_found, false] -> state
+    end
+  end
+
   defp aex9_search_transfers(state, table, init_key, key_tester) do
     state
     |> Collection.stream(table, init_key)
