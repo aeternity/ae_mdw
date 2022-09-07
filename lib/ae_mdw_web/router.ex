@@ -89,6 +89,8 @@ defmodule AeMdwWeb.Router do
       get "/oracles/:id", OracleController, :oracle
       get "/oracles", OracleController, :oracles
 
+      get "/channels", ChannelController, :channels
+
       get "/deltastats", StatsController, :delta_stats
       get "/stats", StatsController, :stats
       get "/minerstats", StatsController, :miners

@@ -23,6 +23,7 @@ defmodule AeMdw.Blocks do
   @type txi_pos() :: non_neg_integer() | -1
   @type block_index_txi_pos() :: {height(), txi_pos()}
   @type block_index_txi() :: {block_index(), Txs.txi()}
+  @type bi_txi() :: block_index_txi()
   @type key_header() :: term()
   @type block_hash() :: <<_::256>>
 

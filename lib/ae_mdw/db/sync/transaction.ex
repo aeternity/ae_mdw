@@ -4,9 +4,9 @@ defmodule AeMdw.Db.Sync.Transaction do
   "
 
   alias AeMdw.Blocks
-  alias AeMdw.Channels
   alias AeMdw.Contract
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Channels
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.ContractCreateMutation
   alias AeMdw.Db.ContractCreateCacheMutation
@@ -29,8 +29,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias __MODULE__.TxContext
 
   require Model
-
-  @channel_closing_types ~w(channel_close_solo_tx channel_close_mutual_tx channel_settle_tx)a
 
   defmodule TxContext do
     @moduledoc """
@@ -201,6 +199,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   defp tx_mutations(%TxContext{
          type: :channel_create_tx,
          signed_tx: signed_tx,
+         block_index: block_index,
          txi: txi,
          tx: tx,
          tx_hash: tx_hash
@@ -208,19 +207,77 @@ defmodule AeMdw.Db.Sync.Transaction do
     {:ok, channel_pk} = :aesc_utils.channel_pubkey(signed_tx)
 
     [
-      Channels.open_mutation(tx),
+      Channels.open_mutations({block_index, txi}, tx),
       Origin.origin_mutations(:channel_create_tx, nil, channel_pk, txi, tx_hash)
     ]
   end
 
-  defp tx_mutations(%TxContext{type: tx_type, tx: tx}) when tx_type in @channel_closing_types,
-    do: Channels.close_mutation(tx_type, tx)
+  defp tx_mutations(%TxContext{
+         type: :asec_close_solo_tx,
+         block_index: block_index,
+         txi: txi,
+         tx: tx
+       }),
+       do: Channels.close_solo_mutations({block_index, txi}, tx)
 
-  defp tx_mutations(%TxContext{type: :channel_deposit_tx, tx: tx}),
-    do: Channels.deposit_mutation(tx)
+  defp tx_mutations(%TxContext{
+         type: :asec_close_mutual_tx,
+         block_index: block_index,
+         txi: txi,
+         tx: tx
+       }),
+       do: Channels.close_mutual_mutations({block_index, txi}, tx)
 
-  defp tx_mutations(%TxContext{type: :channel_withdraw_tx, tx: tx}),
-    do: Channels.withdraw_mutation(tx)
+  defp tx_mutations(%TxContext{type: :asec_settle_tx, block_index: block_index, txi: txi, tx: tx}),
+    do: Channels.settle_mutations({block_index, txi}, tx)
+
+  defp tx_mutations(%TxContext{
+         type: :channel_deposit_tx,
+         block_index: block_index,
+         txi: txi,
+         tx: tx
+       }),
+       do: Channels.deposit_mutations({block_index, txi}, tx)
+
+  defp tx_mutations(%TxContext{
+         type: :channel_withdraw_tx,
+         block_index: block_index,
+         txi: txi,
+         tx: tx
+       }),
+       do: Channels.withdraw_mutations({block_index, txi}, tx)
+
+  defp tx_mutations(%TxContext{
+         type: :channel_set_delegates_tx,
+         block_index: block_index,
+         txi: txi,
+         tx: tx
+       }),
+       do: Channels.set_delegates_mutations({block_index, txi}, tx)
+
+  defp tx_mutations(%TxContext{
+         type: :channel_offchain_tx,
+         block_index: block_index,
+         txi: txi,
+         tx: tx
+       }),
+       do: Channels.offchain_mutations({block_index, txi}, tx)
+
+  defp tx_mutations(%TxContext{
+         type: :channel_force_progress_tx,
+         block_index: block_index,
+         txi: txi,
+         tx: tx
+       }),
+       do: Channels.force_progress_mutations({block_index, txi}, tx)
+
+  defp tx_mutations(%TxContext{
+         type: :channel_slash_tx,
+         block_index: block_index,
+         txi: txi,
+         tx: tx
+       }),
+       do: Channels.slash_mutations({block_index, txi}, tx)
 
   defp tx_mutations(%TxContext{type: :ga_attach_tx, tx: tx, txi: txi, tx_hash: tx_hash}) do
     contract_pk = :aega_attach_tx.contract_pubkey(tx)

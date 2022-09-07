@@ -3,38 +3,40 @@ defmodule AeMdw.Db.ChannelCloseMutation do
   Increases channels_closed stat and refund locked AE.
   """
 
-  alias AeMdw.Channels
+  alias AeMdw.Blocks
+  alias AeMdw.Db.Model
   alias AeMdw.Db.State
-  alias AeMdw.Node
+  alias AeMdw.Node.Db
+
+  require Model
 
   @derive AeMdw.Db.Mutation
-  defstruct [:tx_type, :tx]
+  defstruct [:channel_pk, :bi_txi, :released_amount]
 
-  @typep tx_type() :: Channels.closing_type()
+  @opaque t() :: %__MODULE__{
+            channel_pk: Db.pubkey(),
+            bi_txi: Blocks.bi_txi(),
+            released_amount: non_neg_integer()
+          }
 
-  @opaque t() :: %__MODULE__{tx_type: tx_type(), tx: Node.aetx()}
-
-  @spec new(tx_type(), Node.aetx()) :: t()
-  def new(tx_type, tx), do: %__MODULE__{tx_type: tx_type, tx: tx}
+  @spec new(Db.pubkey(), Blocks.bi_txi(), non_neg_integer()) :: t()
+  def new(channel_pk, bi_txi, released_amount),
+    do: %__MODULE__{channel_pk: channel_pk, bi_txi: bi_txi, released_amount: released_amount}
 
   @spec execute(t(), State.t()) :: State.t()
-  def execute(%__MODULE__{tx_type: tx_type, tx: tx}, state) do
+  def execute(%__MODULE__{channel_pk: channel_pk, released_amount: released_amount}, state) do
+    channel =
+      Model.channel(active: active_height, amount: old_amount) =
+      State.fetch!(state, Model.ActiveChannel, channel_pk)
+
     state
     |> State.inc_stat(:channels_closed)
-    |> State.inc_stat(:locked_in_channels, -released_amount(tx_type, tx))
-  end
-
-  defp released_amount(:channel_close_solo_tx, _tx), do: 0
-
-  defp released_amount(:channel_close_mutual_tx, tx) do
-    :aesc_close_mutual_tx.initiator_amount_final(tx) +
-      :aesc_close_mutual_tx.responder_amount_final(tx)
-  end
-
-  defp released_amount(:channel_settle_tx, tx) do
-    %{"initiator_amount_final" => initiator_amount, "responder_amount_final" => responder_amount} =
-      :aesc_settle_tx.for_client(tx)
-
-    initiator_amount + responder_amount
+    |> State.inc_stat(:locked_in_channels, -released_amount)
+    |> State.delete(Model.ActiveChannel, channel_pk)
+    |> State.delete(Model.ActiveChannelActivation, {active_height, channel_pk})
+    |> State.put(
+      Model.InactiveChannel,
+      Model.channel(channel, amount: old_amount - released_amount)
+    )
   end
 end
