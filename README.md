@@ -1032,7 +1032,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/txs/count/ak_24jcHLTZQfsou7NvomRJ
 
 ## Blocks
 
-### `/v2/blocks`
+### `/v2/blocks` [DEPRECATED use /v2/key-blocks instead]
 
 There are several endpoints for querying block(s) or generation(s). A generation can be understood as key block and micro blocks containing transactions.
 
@@ -1384,6 +1384,47 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks/300000/0" | jq '.'
   "time": 1597568157025,
   "txs_hash": "bx_2pJG7zzAELatCHr8QjNtc3QFx6vdf4p9gvgMwPzSjXeL1DHDkK",
   "version": 4
+}
+```
+
+### `/v2/key-blocks`
+
+New endpoint that returns a paginated list of key-blocks together with the amount of micro blocks and transactions each key-block generation has.
+
+This endpoint should be used in place of `/v2/blocks`
+
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/key-blocks?limit=1" | jq '.'
+{
+  "data": [
+    {
+      "micro_blocks_count": 180,
+      "transactions_count": 244,
+      "beneficiary": "ak_wM8yFU8eSETXU7VSN48HMDmevGoCMiuveQZgkPuRn1nTiRqyv",
+      "hash": "kh_2w8M2XGQaEhrf5AQwKyibgskKshCeFNsmGCxjHUDbUMm8BdzaV",
+      "height": 652730,
+      "info": "cb_AAACjBq0Xcc=",
+      "miner": "ak_2fh4U3GaZGV2PFy7x7UDPNZN9F4gi1sryKCP4VtJawjJbQVsGR",
+      "nonce": 28361498886552,
+      "pow": [
+        8004426,
+        25304189,
+        41033042,
+        48739301,
+        55650278,
+        69208239,
+        78837065
+      ],
+      "prev_hash": "mh_2f4TgYysCB6x1N9KtUNbQDUjcDJkq4hNrCkMcLxutBb6ydsfa1",
+      "prev_key_hash": "kh_Bfip7MNDMJGEe1PqCsPggUkuSQCAQFKAmWAM42jezSmUB3Zfm",
+      "state_hash": "bs_kyyX1ujxAJm6orwxPghVJK8ZqxKMXuVUp5hUfnpjaJWnRgx3T",
+      "target": 520137938,
+      "time": 1662549337009,
+      "version": 5
+    }
+  ],
+  "next": "/v2/key-blocks?cursor=652729&limit=1",
+  "prev": null
 }
 ```
 
