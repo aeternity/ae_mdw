@@ -273,11 +273,25 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           Model.NftOwnership,
           Model.nft_ownership(index: {from_pk, contract_pk, token_id})
         )
+        |> State.put(
+          Model.NftOwnerToken,
+          Model.nft_owner_token(index: {contract_pk, from_pk, token_id})
+        )
+        |> State.put(
+          Model.NftTokenOwner,
+          Model.nft_token_owner(index: {contract_pk, token_id}, owner: from_pk)
+        )
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
         |> State.commit_mem([mutation])
 
       assert State.exists?(state, Model.NftOwnership, {to_pk, contract_pk, token_id})
+
+      assert {:ok, Model.nft_token_owner(owner: ^to_pk)} =
+               State.get(state, Model.NftTokenOwner, {contract_pk, token_id})
+
+      assert State.exists?(state, Model.NftOwnerToken, {contract_pk, to_pk, token_id})
       refute State.exists?(state, Model.NftOwnership, {from_pk, contract_pk, token_id})
+      refute State.exists?(state, Model.NftOwnerToken, {contract_pk, from_pk, token_id})
 
       key = {:aex141, from_pk, call_txi, to_pk, token_id, 0}
 

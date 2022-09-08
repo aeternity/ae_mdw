@@ -351,8 +351,8 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :aexn_contract_symbol, @aexn_contract_symbol_defaults
 
-  # AEX-141 token owner
-  #     index = {owner pubkey, contract pubkey, token_id},
+  # AEX-141 owner tokens
+  #     index = {owner pubkey, contract pubkey, token_id}
   @nft_ownership_defaults [index: nil, unused: nil]
   defrecord :nft_ownership, @nft_ownership_defaults
 
@@ -360,6 +360,28 @@ defmodule AeMdw.Db.Model do
           record(:nft_ownership,
             index: {pubkey(), pubkey(), AeMdw.Aex141.token_id()},
             unused: nil
+          )
+
+  # AEX-141 collection owners
+  #     index = {contract pubkey, owner pubkey, token_id}
+  @nft_owner_token_defaults [index: nil, unused: nil]
+  defrecord :nft_owner_token, @nft_owner_token_defaults
+
+  @type nft_owner_token() ::
+          record(:nft_owner_token,
+            index: {pubkey(), pubkey(), AeMdw.Aex141.token_id()},
+            unused: nil
+          )
+
+  # AEX-141 token owner
+  #     index = {contract pubkey, token_id}, owner = pubkey
+  @nft_token_owner_defaults [index: {<<>>, -1}, owner: <<>>]
+  defrecord :nft_token_owner, @nft_token_owner_defaults
+
+  @type nft_token_owner() ::
+          record(:nft_token_owner,
+            index: {pubkey(), AeMdw.Aex141.token_id()},
+            owner: pubkey()
           )
 
   # contract call:
@@ -760,7 +782,9 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.GrpIdIntContractCall,
       AeMdw.Db.Model.IdFnameIntContractCall,
       AeMdw.Db.Model.GrpIdFnameIntContractCall,
-      AeMdw.Db.Model.NftOwnership
+      AeMdw.Db.Model.NftOwnership,
+      AeMdw.Db.Model.NftOwnerToken,
+      AeMdw.Db.Model.NftTokenOwner
     ]
   end
 
@@ -848,6 +872,8 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.IdFnameIntContractCall), do: :id_fname_int_contract_call
   def record(AeMdw.Db.Model.GrpIdFnameIntContractCall), do: :grp_id_fname_int_contract_call
   def record(AeMdw.Db.Model.NftOwnership), do: :nft_ownership
+  def record(AeMdw.Db.Model.NftOwnerToken), do: :nft_owner_token
+  def record(AeMdw.Db.Model.NftTokenOwner), do: :nft_token_owner
   def record(AeMdw.Db.Model.PlainName), do: :plain_name
   def record(AeMdw.Db.Model.AuctionBid), do: :auction_bid
   def record(AeMdw.Db.Model.Pointee), do: :pointee
