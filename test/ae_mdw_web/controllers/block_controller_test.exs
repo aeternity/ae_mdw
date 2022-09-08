@@ -107,6 +107,10 @@ defmodule AeMdwWeb.BlockControllerTest do
         store
         |> Store.put(Model.Block, Model.block(index: {kbi - 1, -1}, hash: TS.key_block_hash(0)))
         |> Store.put(Model.Block, Model.block(index: {kbi, -1}, hash: decoded_hash, tx_index: 4))
+        |> Store.put(
+          Model.Block,
+          Model.block(index: {kbi, 0}, hash: TS.micro_block_hash(0), tx_index: 4)
+        )
 
       with_mocks [
         {:aec_db, [], [get_header: fn ^decoded_hash -> :header end]},
@@ -115,7 +119,7 @@ defmodule AeMdwWeb.BlockControllerTest do
       ] do
         assert %{
                  "height" => ^kbi,
-                 "micro_blocks_count" => 0,
+                 "micro_blocks_count" => 1,
                  "transactions_count" => 0
                } =
                  conn
@@ -171,15 +175,14 @@ defmodule AeMdwWeb.BlockControllerTest do
       encoded_hash = :aeser_api_encoder.encode(:key_block_hash, decoded_hash)
       error_msg = "not found: #{encoded_hash}"
 
-      with_mocks [
-        {:aec_chain, [], [get_block: fn ^decoded_hash -> :error end]}
-      ] do
-        assert %{"error" => ^error_msg} =
-                 conn
-                 |> with_store(store)
-                 |> get("/v2/key-blocks/#{encoded_hash}")
-                 |> json_response(404)
-      end
+      store =
+        Store.put(store, Model.Block, Model.block(index: {0, -1}, hash: TS.key_block_hash(0)))
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> with_store(store)
+               |> get("/v2/key-blocks/#{encoded_hash}")
+               |> json_response(404)
     end
   end
 
