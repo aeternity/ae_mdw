@@ -88,7 +88,6 @@ defmodule AeMdw.Blocks do
             {{height, 0}, {height, Util.max_256bit_int()}},
             cursor
           )
-          |> Stream.take_while(&match?({^height, _mbi}, &1))
           |> Stream.map(fn {_height, mbi} -> mbi end)
         end
         |> Collection.paginate(pagination)
