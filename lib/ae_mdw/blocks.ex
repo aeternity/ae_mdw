@@ -155,7 +155,7 @@ defmodule AeMdw.Blocks do
   defp render_key_blocks(state, range), do: Enum.map(range, &render_key_block(state, &1))
 
   defp render_key_block(state, gen) do
-    last_mbi =
+    mbi_count =
       case State.prev(state, @table, {gen + 1, -1}) do
         {:ok, {^gen, mbi}} -> mbi + 1
         {:ok, _block_index} -> 0
@@ -178,7 +178,7 @@ defmodule AeMdw.Blocks do
 
     header
     |> :aec_headers.serialize_for_client(Db.prev_block_type(header))
-    |> Map.put(:micro_blocks_count, last_mbi)
+    |> Map.put(:micro_blocks_count, mbi_count)
     |> Map.put(:transactions_count, txs_count)
   end
 
