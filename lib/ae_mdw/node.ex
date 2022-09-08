@@ -69,7 +69,12 @@ defmodule AeMdw.Node do
     %{}
   end
 
-  @spec aexn_transfer_event_hash :: binary()
+  @spec aexn_mint_event_hash() :: binary()
+  def aexn_mint_event_hash do
+    :aec_hash.blake2b_256_hash("Mint")
+  end
+
+  @spec aexn_transfer_event_hash() :: binary()
   def aexn_transfer_event_hash do
     :aec_hash.blake2b_256_hash("Transfer")
   end
