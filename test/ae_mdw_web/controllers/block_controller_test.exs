@@ -265,6 +265,70 @@ defmodule AeMdwWeb.BlockControllerTest do
     end
   end
 
+  describe "micro-block" do
+    test "it returns a micro block with txs counts", %{conn: conn, store: store} do
+      kbi = 1
+      decoded_hash = TS.micro_block_hash(0)
+      encoded_hash = :aeser_api_encoder.encode(:micro_block_hash, decoded_hash)
+
+      store =
+        store
+        |> Store.put(
+          Model.Block,
+          Model.block(index: {kbi, -1}, hash: TS.key_block_hash(0), tx_index: 4)
+        )
+        |> Store.put(
+          Model.Block,
+          Model.block(index: {kbi, 0}, hash: decoded_hash, tx_index: 4)
+        )
+        |> Store.put(
+          Model.Block,
+          Model.block(index: {kbi, 1}, hash: TS.micro_block_hash(1), tx_index: 10)
+        )
+
+      with_mocks [
+        {:aec_chain, [], [get_block: fn ^decoded_hash -> {:ok, :block} end]},
+        {:aec_db, [], [get_header: fn ^decoded_hash -> :header end]},
+        {:aec_blocks, [], [to_header: fn :block -> :header end]},
+        {:aec_headers, [],
+         [
+           height: fn :header -> kbi end,
+           serialize_for_client: fn :header, :key -> %{height: kbi} end,
+           type: fn :header -> :micro end
+         ]},
+        {AeMdw.Node.Db, [],
+         [
+           prev_block_type: fn :header -> :key end,
+           get_micro_blocks: fn ^decoded_hash -> [] end
+         ]}
+      ] do
+        assert %{
+                 "height" => ^kbi,
+                 "transactions_count" => 6
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/micro-blocks/#{encoded_hash}")
+                 |> json_response(200)
+      end
+    end
+
+    test "it returns 404 when not found", %{conn: conn, store: store} do
+      decoded_hash = TS.micro_block_hash(0)
+      encoded_hash = :aeser_api_encoder.encode(:micro_block_hash, decoded_hash)
+      error_msg = "not found: #{encoded_hash}"
+
+      store =
+        Store.put(store, Model.Block, Model.block(index: {0, -1}, hash: TS.key_block_hash(0)))
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> with_store(store)
+               |> get("/v2/micro-blocks/#{encoded_hash}")
+               |> json_response(404)
+    end
+  end
+
   describe "blocks" do
     test "get key block by hash", %{conn: conn, store: store} do
       with_blockchain %{}, kb1: [] do

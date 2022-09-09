@@ -67,6 +67,22 @@ defmodule AeMdw.Blocks do
     end
   end
 
+  @spec fetch_micro_block(State.t(), binary()) :: {:ok, block()} | {:error, Error.t()}
+  def fetch_micro_block(state, hash) do
+    with {:ok, hash, height} <- extract_height(state, :micro, hash) do
+      mbi =
+        hash
+        |> Db.get_micro_blocks()
+        |> Enum.count()
+
+      if State.exists?(state, Model.Block, {height, mbi}) do
+        {:ok, render_micro_block(state, height, mbi)}
+      else
+        {:error, ErrInput.NotFound.exception(value: hash)}
+      end
+    end
+  end
+
   @spec fetch_key_block_micro_blocks(
           State.t(),
           binary(),
@@ -286,17 +302,23 @@ defmodule AeMdw.Blocks do
         {:error, ErrInput.NotFound.exception(value: hash_or_kbi)}
 
       :error ->
-        with {:ok, encoded_hash} <- Validate.id(hash_or_kbi),
-             {:ok, block} <- :aec_chain.get_block(encoded_hash),
-             header <- :aec_blocks.to_header(block),
-             :key <- :aec_headers.type(header),
-             last_gen <- DbUtil.last_gen(state),
-             height when height <= last_gen <- :aec_headers.height(header) do
+        with {:ok, _hash, height} <- extract_height(state, :key, hash_or_kbi) do
           {:ok, height}
-        else
-          {:error, reason} -> {:error, reason}
-          _error_or_invalid_height -> {:error, ErrInput.NotFound.exception(value: hash_or_kbi)}
         end
+    end
+  end
+
+  defp extract_height(state, type, hash) do
+    with {:ok, encoded_hash} <- Validate.id(hash),
+         {:ok, block} <- :aec_chain.get_block(encoded_hash),
+         header <- :aec_blocks.to_header(block),
+         ^type <- :aec_headers.type(header),
+         last_gen <- DbUtil.last_gen(state),
+         height when height <= last_gen <- :aec_headers.height(header) do
+      {:ok, encoded_hash, height}
+    else
+      {:error, reason} -> {:error, reason}
+      _error_or_invalid_height -> {:error, ErrInput.NotFound.exception(value: hash)}
     end
   end
 

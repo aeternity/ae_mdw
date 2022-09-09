@@ -103,6 +103,13 @@ defmodule AeMdwWeb.BlockController do
     end
   end
 
+  @spec micro_block(Conn.t(), map()) :: Conn.t()
+  def micro_block(%Conn{assigns: %{state: state}} = conn, %{"hash" => hash}) do
+    with {:ok, block} <- Blocks.fetch_micro_block(state, hash) do
+      json(conn, block)
+    end
+  end
+
   @doc """
   Endpoint for blocks info based on pagination.
   """

@@ -81,8 +81,8 @@ defmodule AeMdw.Node.Db do
   end
 
   @spec get_micro_blocks(Blocks.block_hash()) :: list()
-  def get_micro_blocks(next_kb_hash) do
-    next_kb_hash
+  def get_micro_blocks(next_block_hash) do
+    next_block_hash
     |> :aec_db.get_header()
     |> :aec_headers.prev_hash()
     |> Stream.unfold(&micro_block_walker/1)
