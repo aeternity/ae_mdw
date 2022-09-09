@@ -307,6 +307,7 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
+  @spec write_aex141_ownership(State.t(), pubkey(), list(binary())) :: State.t()
   def write_aex141_ownership(
         state,
         contract_pk,
