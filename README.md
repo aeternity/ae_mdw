@@ -1509,7 +1509,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/key-blocks?limit=1" | jq '.'
 ### `/v2/key-blocks/:hash/micro-blocks`
 
 ```
-$ curl https://mainnet.aeternity.io/key-blocks/kh_2HvzkfTvRjfwbim8YZ2q2ETKLhuYK125JGpisr1Cc9m2VSa5iC/micro-blocks
+$ curl https://mainnet.aeternity.io/key-blocks/kh_2HvzkfTvRjfwbim8YZ2q2ETKLhuYK125JGpisr1Cc9m2VSa5iC/micro-blocks?limit=1
 {
   "data": [
     {
@@ -1552,6 +1552,38 @@ $ curl https://mainnet.aeternity.io/mdw/v2/micro-blocks/mh_HqJKqWdJ1vaPcr82zYNue
 }
 ```
 
+### `/v2/micro-blocks/:hash/txs`
+
+```
+$ curl https://mainnet.aeternity.io/mdw/v2/micro-blocks/mh_3TzzPsMhgnJBYAtSJ6c4SdbQppZi64mxP61b1u1E8g3stDQwk/txs?limit=1
+{
+  "data": [
+    {
+      "block_hash": "mh_3TzzPsMhgnJBYAtSJ6c4SdbQppZi64mxP61b1u1E8g3stDQwk",
+      "block_height": 14085,
+      "hash": "th_2Eo84A8gYkaNnRXkkEe9gPg5jcbKGdPVkZvK9XUSEQhDD6kmqm",
+      "micro_index": 59,
+      "micro_time": 1545877257605,
+      "signatures": [
+        "sg_E6tbrssPGL4a1mXyN5EW9d3UwRfYN9pSsBDtDEQVyQqTQjhQVBPKNJV6qyc43M5zY2tLE8VQa8Jb3q1XGYKJYaHM5Q3T4"
+      ],
+      "tx": {
+        "amount": 43734300000000000000,
+        "fee": 21000,
+        "nonce": 19631,
+        "payload": "ba_SGVsbG8sIE1pbmVyISAvWW91cnMgQmVlcG9vbC4vKXcQag==",
+        "recipient_id": "ak_2gD9eHc6AaLSgUKne5vVLrsnG4acTCDE7KPetE4PqA8MYvz8gN",
+        "sender_id": "ak_nv5B93FPzRHrGNmMdTDfGdd5xGZvep3MVSpJqzcQmMp59bBCv",
+        "type": "SpendTx",
+        "version": 1
+      },
+      "tx_index": 92999
+    }
+  ],
+  "next": null,
+  "prev": null
+}
+```
 ---
 
 ## Naming System

@@ -27,16 +27,18 @@ defmodule AeMdw.Txs do
   @type txi :: non_neg_integer()
   @type tx_hash() :: binary()
   @type cursor :: binary()
-  @type query :: %{
-          types: term(),
-          ids: term()
-        }
+  @type query ::
+          %{
+            types: term(),
+            ids: term()
+          }
+          | %{}
   @type add_spendtx_details?() :: boolean()
 
   @typep state() :: State.t()
-  @typep reason :: binary()
   @typep pagination :: Collection.direction_limit()
   @typep range :: {:gen, Range.t()} | {:txi, Range.t()} | nil
+  @typep page_cursor() :: Collection.pagination_cursor()
 
   @table Tx
   @type_table Type
@@ -99,8 +101,7 @@ defmodule AeMdw.Txs do
           query(),
           cursor() | nil,
           add_spendtx_details?()
-        ) ::
-          {:ok, cursor() | nil, [tx()], cursor() | nil} | {:error, reason()}
+        ) :: {:ok, page_cursor(), [tx()], page_cursor()} | {:error, Error.t()}
   def fetch_txs(state, pagination, range, query, cursor, add_spendtx_details?) do
     ids = query |> Map.get(:ids, MapSet.new()) |> MapSet.to_list()
     types = query |> Map.get(:types, MapSet.new()) |> MapSet.to_list()
@@ -133,7 +134,30 @@ defmodule AeMdw.Txs do
       {:ok, serialize_cursor(prev_cursor), txs, serialize_cursor(next_cursor)}
     rescue
       e in ErrInput ->
-        {:error, e.message}
+        {:error, e}
+    end
+  end
+
+  @spec fetch_micro_block_txs(state(), binary(), pagination(), cursor() | nil) ::
+          {:ok, page_cursor(), [tx()], page_cursor()} | {:error, Error.t()}
+  def fetch_micro_block_txs(state, hash, pagination, cursor) do
+    with {:ok, height, mbi} <- DbUtil.micro_block_height_index(state, hash) do
+      Model.block(tx_index: first_txi) = State.fetch!(state, Model.Block, {height, mbi})
+
+      case State.next(state, Model.Block, {height, mbi}) do
+        {:ok, next_key} ->
+          Model.block(tx_index: next_txi) = State.fetch!(state, Model.Block, next_key)
+
+          if first_txi < next_txi do
+            range = first_txi..(next_txi - 1)
+            fetch_txs(state, pagination, {:txi, range}, %{}, cursor, false)
+          else
+            {:ok, nil, [], nil}
+          end
+
+        :none ->
+          {:ok, nil, [], nil}
+      end
     end
   end
 

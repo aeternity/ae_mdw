@@ -31,6 +31,7 @@ defmodule AeMdw.Blocks do
   @type block :: map()
   @type cursor :: binary()
 
+  @typep state() :: State.t()
   @typep direction :: Database.direction()
   @typep limit :: Database.limit()
   @typep range :: {:gen, Range.t()} | nil
@@ -60,21 +61,16 @@ defmodule AeMdw.Blocks do
     end
   end
 
-  @spec fetch_key_block(State.t(), binary()) :: {:ok, block()} | {:error, Error.t()}
+  @spec fetch_key_block(state(), binary()) :: {:ok, block()} | {:error, Error.t()}
   def fetch_key_block(state, hash_or_kbi) do
-    with {:ok, height} <- extract_height(state, hash_or_kbi) do
+    with {:ok, height} <- DbUtil.key_block_height(state, hash_or_kbi) do
       {:ok, render_key_block(state, height)}
     end
   end
 
   @spec fetch_micro_block(State.t(), binary()) :: {:ok, block()} | {:error, Error.t()}
   def fetch_micro_block(state, hash) do
-    with {:ok, hash, height} <- extract_height(state, :micro, hash) do
-      mbi =
-        hash
-        |> Db.get_reverse_micro_blocks()
-        |> Enum.count()
-
+    with {:ok, height, mbi} <- DbUtil.micro_block_height_index(state, hash) do
       if State.exists?(state, Model.Block, {height, mbi}) do
         {:ok, render_micro_block(state, height, mbi)}
       else
@@ -92,7 +88,7 @@ defmodule AeMdw.Blocks do
           {:ok, page_cursor(), [block()], page_cursor()} | {:error, Error.t()}
   def fetch_key_block_micro_blocks(state, hash_or_kbi, pagination, cursor) do
     with {:ok, cursor} <- deserialize_cursor_err(cursor),
-         {:ok, height} <- extract_height(state, hash_or_kbi) do
+         {:ok, height} <- DbUtil.key_block_height(state, hash_or_kbi) do
       cursor = if cursor, do: {height, cursor}
 
       {prev_cursor, mbis, next_cursor} =
@@ -285,41 +281,6 @@ defmodule AeMdw.Blocks do
 
       {mb_hash, micro_block}
     end)
-  end
-
-  defp extract_height(state, hash_or_kbi) do
-    case Util.parse_int(hash_or_kbi) do
-      {:ok, kbi} when kbi >= 0 ->
-        last_gen = DbUtil.last_gen(state)
-
-        if kbi <= last_gen do
-          {:ok, kbi}
-        else
-          {:error, ErrInput.NotFound.exception(value: hash_or_kbi)}
-        end
-
-      {:ok, _kbi} ->
-        {:error, ErrInput.NotFound.exception(value: hash_or_kbi)}
-
-      :error ->
-        with {:ok, _hash, height} <- extract_height(state, :key, hash_or_kbi) do
-          {:ok, height}
-        end
-    end
-  end
-
-  defp extract_height(state, type, hash) do
-    with {:ok, encoded_hash} <- Validate.id(hash),
-         {:ok, block} <- :aec_chain.get_block(encoded_hash),
-         header <- :aec_blocks.to_header(block),
-         ^type <- :aec_headers.type(header),
-         last_gen <- DbUtil.last_gen(state),
-         height when height <= last_gen <- :aec_headers.height(header) do
-      {:ok, encoded_hash, height}
-    else
-      {:error, reason} -> {:error, reason}
-      _error_or_invalid_height -> {:error, ErrInput.NotFound.exception(value: hash)}
-    end
   end
 
   defp serialize_cursor(nil), do: nil

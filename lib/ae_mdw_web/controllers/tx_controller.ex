@@ -1,6 +1,7 @@
 defmodule AeMdwWeb.TxController do
   use AeMdwWeb, :controller
 
+  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node
   alias AeMdw.Validate
   alias AeMdw.Db.Model
@@ -56,8 +57,8 @@ defmodule AeMdwWeb.TxController do
            Txs.fetch_txs(state, pagination, scope, query, cursor, add_spendtx_details?) do
       paginate(conn, prev_cursor, txs, next_cursor)
     else
-      {:error, reason} ->
-        send_error(conn, :bad_request, reason)
+      {:error, reason} when is_binary(reason) -> {:error, ErrInput.Query.exception(value: reason)}
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -97,6 +98,16 @@ defmodule AeMdwWeb.TxController do
         (map_size(tx_counts) == 0 &&
            counts) ||
           Map.put(counts, tx_type, tx_counts)
+    end
+  end
+
+  @spec micro_block_txs(Conn.t(), map()) :: Conn.t()
+  def micro_block_txs(%Conn{assigns: assigns} = conn, %{"hash" => hash}) do
+    %{state: state, pagination: pagination, cursor: cursor} = assigns
+
+    with {:ok, prev_cursor, txs, next_cursor} <-
+           Txs.fetch_micro_block_txs(state, hash, pagination, cursor) do
+      paginate(conn, prev_cursor, txs, next_cursor)
     end
   end
 
