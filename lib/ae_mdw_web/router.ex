@@ -52,6 +52,7 @@ defmodule AeMdwWeb.Router do
       get "/blocks/:kbi/:mbi", BlockController, :blocki
       get "/key-blocks", BlockController, :key_blocks
       get "/key-blocks/:hash_or_kbi", BlockController, :key_block
+      get "/key-blocks/:hash_or_kbi/micro-blocks", BlockController, :key_block_micro_blocks
 
       get "/txs", TxController, :txs
       get "/txs/:hash_or_index", TxController, :tx

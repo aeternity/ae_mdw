@@ -1,6 +1,7 @@
 defmodule AeMdwWeb.BlockControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
+  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
   alias AeMdw.TestSamples, as: TS
@@ -94,6 +95,84 @@ defmodule AeMdwWeb.BlockControllerTest do
                  "height" => ^kbi,
                  "transactions_count" => 6
                } = block
+      end
+    end
+  end
+
+  describe "key_block_micro_blocks" do
+    test "it gets all micro blocks with the appropriate transactions_count", %{
+      conn: conn,
+      store: store
+    } do
+      kbi = 1
+      hash = TS.key_block_hash(1)
+      encoded_hash = Enc.encode(:key_block_hash, hash)
+
+      store =
+        store
+        |> Store.put(Model.Block, Model.block(index: {kbi, -1}, tx_index: 0, hash: hash))
+        |> Store.put(
+          Model.Block,
+          Model.block(index: {kbi, 0}, tx_index: 0, hash: TS.micro_block_hash(0))
+        )
+        |> Store.put(
+          Model.Block,
+          Model.block(index: {kbi, 1}, tx_index: 10, hash: TS.micro_block_hash(1))
+        )
+        |> Store.put(
+          Model.Block,
+          Model.block(index: {kbi, 2}, tx_index: 15, hash: TS.micro_block_hash(2))
+        )
+        |> Store.put(Model.Block, Model.block(index: {kbi + 1, -1}, tx_index: 17, hash: hash))
+
+      with_mocks [
+        {:aec_db, [], [get_header: fn _mb_hash -> :header end]},
+        {:aec_chain, [], [get_block: fn ^hash -> {:ok, :block} end]},
+        {:aec_blocks, [], [to_header: fn :block -> :header end]},
+        {AeMdw.Node.Db, [], [prev_block_type: fn :header -> :micro end]},
+        {:aec_headers, [],
+         [
+           type: fn :header -> :key end,
+           height: fn :header -> kbi end,
+           serialize_for_client: fn :header, :micro -> %{height: kbi} end
+         ]}
+      ] do
+        assert %{"data" => [block3, block2, block1]} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/key-blocks/#{encoded_hash}/micro-blocks")
+                 |> json_response(200)
+
+        assert %{
+                 "height" => ^kbi,
+                 "transactions_count" => 10
+               } = block1
+
+        assert %{
+                 "height" => ^kbi,
+                 "transactions_count" => 5
+               } = block2
+
+        assert %{
+                 "height" => ^kbi,
+                 "transactions_count" => 2
+               } = block3
+      end
+    end
+
+    test "when key block doesn't exist, it returns 404", %{conn: conn, store: store} do
+      decoded_hash = TS.key_block_hash(1)
+      encoded_hash = Enc.encode(:key_block_hash, decoded_hash)
+      error_msg = "not found: #{encoded_hash}"
+
+      with_mocks [
+        {:aec_chain, [], [get_block: fn ^decoded_hash -> :error end]}
+      ] do
+        assert %{"error" => ^error_msg} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/key-blocks/#{encoded_hash}/micro-blocks")
+                 |> json_response(404)
       end
     end
   end
