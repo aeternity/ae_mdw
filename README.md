@@ -1506,6 +1506,32 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/key-blocks?limit=1" | jq '.'
 }
 ```
 
+### `/v2/key-blocks/:hash/micro-blocks`
+
+```
+$ curl https://mainnet.aeternity.io/key-blocks/kh_2HvzkfTvRjfwbim8YZ2q2ETKLhuYK125JGpisr1Cc9m2VSa5iC/micro-blocks
+{
+  "data": [
+    {
+      "micro_block_index": 39,
+      "transactions_count": 0,
+      "hash": "mh_HqJKqWdJ1vaPcr82zYNue99GXcKfjpYbmrEcZ7kmUHAzQoeZv",
+      "height": 654915,
+      "pof_hash": "no_fraud",
+      "prev_hash": "mh_G2gtKvDAkoi3HZDe5TmWYzGX2pD2AL2DrFXACTch57QEWi1Bo",
+      "prev_key_hash": "kh_2HvzkfTvRjfwbim8YZ2q2ETKLhuYK125JGpisr1Cc9m2VSa5iC",
+      "signature": "sg_Eyv2nWKwMbxga4XDHH2oCtnSCWhtD87qUjvFLqKvzt9kq2yVPMkcHSv51kr9fmHQk6TGxBHjRjm74pVZtNuHpZkvybsXX",
+      "state_hash": "bs_2WNN8aZ15a7pd68wWDZkTqpGUTPezUV6KTN2ra5m3v1x5vVJGC",
+      "time": 1662950429203,
+      "txs_hash": "bx_AK5hwnJdG3KAEHEvzs4gwjkRDZP5sw5sbtqgHsgJT2fp1PJka",
+      "version": 5
+    }
+  ],
+  "next": "/v2/key-blocks/kh_2HvzkfTvRjfwbim8YZ2q2ETKLhuYK125JGpisr1Cc9m2VSa5iC/micro-blocks?cursor=38&limit=1",
+  "prev": null
+}
+```
+
 ---
 
 ## Naming System
