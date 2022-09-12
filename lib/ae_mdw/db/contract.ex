@@ -12,6 +12,7 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Node.Db
+  alias AeMdw.Db.Sync.Stats, as: SyncStats
 
   require Ex2ms
   require Log
@@ -331,25 +332,36 @@ defmodule AeMdw.Db.Contract do
     m_owner_token = Model.nft_owner_token(index: {contract_pk, to_pk, token_id})
     m_token_owner = Model.nft_token_owner(index: {contract_pk, token_id}, owner: to_pk)
 
+    prev_owner_pk = previous_owner(state, contract_pk, token_id)
+
     state
+    |> delete_previous_ownership(contract_pk, token_id, prev_owner_pk, to_pk)
+    |> SyncStats.update_nft_stats(contract_pk, prev_owner_pk, to_pk)
     |> State.put(Model.NftOwnership, m_ownership)
     |> State.put(Model.NftOwnerToken, m_owner_token)
-    |> delete_previous_ownership(contract_pk, token_id, to_pk)
     |> State.put(Model.NftTokenOwner, m_token_owner)
   end
 
   #
   # Private functions
   #
-  defp delete_previous_ownership(state, contract_pk, token_id, to_pk) do
-    with {:ok, Model.nft_token_owner(index: {contract_pk, _token_id}, owner: old_owner_pk)} <-
-           State.get(state, Model.NftTokenOwner, {contract_pk, token_id}),
-         true <- old_owner_pk != to_pk do
+  defp previous_owner(state, contract_pk, token_id) do
+    case State.get(state, Model.NftTokenOwner, {contract_pk, token_id}) do
+      {:ok, Model.nft_token_owner(owner: prev_owner_pk)} ->
+        prev_owner_pk
+
+      :not_found ->
+        nil
+    end
+  end
+
+  defp delete_previous_ownership(state, contract_pk, token_id, prev_owner_pk, to_pk) do
+    if prev_owner_pk != to_pk do
       state
-      |> State.delete(Model.NftOwnership, {old_owner_pk, contract_pk, token_id})
-      |> State.delete(Model.NftOwnerToken, {contract_pk, old_owner_pk, token_id})
+      |> State.delete(Model.NftOwnership, {prev_owner_pk, contract_pk, token_id})
+      |> State.delete(Model.NftOwnerToken, {contract_pk, prev_owner_pk, token_id})
     else
-      error when error in [:not_found, false] -> state
+      state
     end
   end
 

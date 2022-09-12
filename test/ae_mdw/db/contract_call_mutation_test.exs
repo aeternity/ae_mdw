@@ -7,6 +7,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
+  alias AeMdw.Stats
   alias AeMdw.Validate
 
   import AeMdw.Node.ContractCallFixtures
@@ -334,6 +335,14 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           Model.NftTokenOwner,
           Model.nft_token_owner(index: {contract_pk, token_id}, owner: from_pk)
         )
+        |> State.put(
+          Model.Stat,
+          Model.stat(index: Stats.nfts_count_key(contract_pk), payload: 1)
+        )
+        |> State.put(
+          Model.Stat,
+          Model.stat(index: Stats.nft_owners_count_key(contract_pk), payload: 1)
+        )
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
         |> State.commit_mem([mutation])
 
@@ -341,6 +350,12 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       assert {:ok, Model.nft_token_owner(owner: ^to_pk)} =
                State.get(state, Model.NftTokenOwner, {contract_pk, token_id})
+
+      assert {:ok, Model.stat(payload: 1)} =
+               State.get(state, Model.Stat, Stats.nfts_count_key(contract_pk))
+
+      assert {:ok, Model.stat(payload: 1)} =
+               State.get(state, Model.Stat, Stats.nft_owners_count_key(contract_pk))
 
       assert State.exists?(state, Model.NftOwnerToken, {contract_pk, to_pk, token_id})
       refute State.exists?(state, Model.NftOwnership, {from_pk, contract_pk, token_id})

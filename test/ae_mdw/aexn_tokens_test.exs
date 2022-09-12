@@ -42,7 +42,7 @@ defmodule AeMdw.AexnTokensTest do
                contract_txi: ^txi,
                contract_id: ^contract_id,
                extensions: ^extensions
-             } = render_token(m_aex9)
+             } = render_contract(state, m_aex9)
     end
 
     test "returns a AEX-141 contract meta info" do
@@ -77,7 +77,7 @@ defmodule AeMdw.AexnTokensTest do
                contract_id: ^contract_id,
                metadata_type: ^type,
                extensions: ^extensions
-             } = render_token(m_aex141)
+             } = render_contract(state, m_aex141)
     end
 
     test "returns input error on AEX9 not found" do

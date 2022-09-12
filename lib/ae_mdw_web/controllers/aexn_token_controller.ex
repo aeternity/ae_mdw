@@ -100,8 +100,8 @@ defmodule AeMdwWeb.AexnTokenController do
          aexn_type
        ) do
     case AexnTokens.fetch_contracts(state, pagination, aexn_type, query_params, order_by, cursor) do
-      {:ok, prev_cursor, aexn_tokens, next_cursor} ->
-        Util.paginate(conn, prev_cursor, render_tokens(aexn_tokens), next_cursor)
+      {:ok, prev_cursor, aexn_contracts, next_cursor} ->
+        Util.paginate(conn, prev_cursor, render_contracts(state, aexn_contracts), next_cursor)
 
       {:error, reason} ->
         {:error, reason}
@@ -111,7 +111,7 @@ defmodule AeMdwWeb.AexnTokenController do
   defp aexn_contract(%Conn{assigns: %{state: state}} = conn, contract_id, aexn_type) do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
          {:ok, m_aexn} <- AexnTokens.fetch_contract(state, {aexn_type, contract_pk}) do
-      json(conn, render_token(m_aexn))
+      json(conn, render_contract(state, m_aexn))
     end
   end
 end

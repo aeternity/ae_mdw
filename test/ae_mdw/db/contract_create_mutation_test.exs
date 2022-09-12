@@ -15,6 +15,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
   alias AeMdw.Db.Sync.Contract, as: SyncContract
   alias AeMdw.Db.Sync.Origin
   alias AeMdw.DryRun.Runner
+  alias AeMdw.Stats
 
   require Model
 
@@ -136,6 +137,12 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
         assert State.exists?(state, Model.NftOwnership, {to_pk1, contract_pk, token_id1})
         assert State.exists?(state, Model.NftOwnership, {to_pk2, contract_pk, token_id2})
         assert State.exists?(state, Model.NftOwnership, {to_pk2, contract_pk, token_id3})
+
+        assert {:ok, Model.stat(payload: 3)} =
+                 State.get(state, Model.Stat, Stats.nfts_count_key(contract_pk))
+
+        assert {:ok, Model.stat(payload: 2)} =
+                 State.get(state, Model.Stat, Stats.nft_owners_count_key(contract_pk))
 
         assert {:ok, Model.nft_token_owner(owner: ^to_pk1)} =
                  State.get(state, Model.NftTokenOwner, {contract_pk, token_id1})

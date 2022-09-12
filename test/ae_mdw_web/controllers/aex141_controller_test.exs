@@ -7,6 +7,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.Store
+  alias AeMdw.Stats
   alias AeMdw.Validate
 
   import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1, enc_id: 1]
@@ -94,18 +95,35 @@ defmodule AeMdwWeb.Aex141ControllerTest do
         {name, symbol, base_url, _type} =
         {"single-nft", "SAEX141-single", "http://some-url.com/#{txi}", :url}
 
-      m_aex141 = Model.aexn_contract(index: {:aex141, ct_pk}, txi: txi, meta_info: meta_info)
+      extensions = ["extension1", "extension2"]
 
-      store = Store.put(store, Model.AexnContract, m_aex141)
+      m_aex141 =
+        Model.aexn_contract(
+          index: {:aex141, ct_pk},
+          txi: txi,
+          meta_info: meta_info,
+          extensions: extensions
+        )
+
+      m_nft_count = Model.stat(index: Stats.nfts_count_key(ct_pk), payload: 6)
+      m_owners_count = Model.stat(index: Stats.nft_owners_count_key(ct_pk), payload: 4)
+
+      store =
+        store
+        |> Store.put(Model.AexnContract, m_aex141)
+        |> Store.put(Model.Stat, m_nft_count)
+        |> Store.put(Model.Stat, m_owners_count)
 
       assert %{
                "name" => ^name,
                "symbol" => ^symbol,
                "base_url" => ^base_url,
                "metadata_type" => "url",
+               "nfts_amount" => 6,
+               "nft_owners" => 4,
                "contract_txi" => ^txi,
                "contract_id" => ^contract_id,
-               "extensions" => []
+               "extensions" => ^extensions
              } = conn |> with_store(store) |> get("/aex141/#{contract_id}") |> json_response(200)
     end
   end

@@ -23,13 +23,17 @@ defmodule AeMdw.Stats do
   @type tps() :: non_neg_integer()
 
   @typep txi() :: Blocks.height()
+  @typep pubkey() :: Db.pubkey()
   @typep height() :: Blocks.height()
   @typep direction() :: Database.direction()
   @typep limit() :: Database.limit()
   @typep range() :: {:gen, Range.t()} | nil
 
+  @type nft_stats :: %{nfts_amount: non_neg_integer(), nft_owners: non_neg_integer()}
   @tps_stat_key :max_tps
   @miners_count_stat_key :miners_count
+  @nfts_count_stat :nfts_count
+  @nft_owners_count_stat :nft_owners_count
 
   @spec mutation(height(), Db.key_block(), [Db.micro_block()], txi(), txi(), boolean()) ::
           StatsMutation.t()
@@ -57,6 +61,12 @@ defmodule AeMdw.Stats do
 
   @spec miners_count_key() :: atom()
   def miners_count_key, do: @miners_count_stat_key
+
+  @spec nfts_count_key(pubkey()) :: {atom(), pubkey()}
+  def nfts_count_key(contract_pk), do: {@nfts_count_stat, contract_pk}
+
+  @spec nft_owners_count_key(pubkey()) :: {atom(), pubkey()}
+  def nft_owners_count_key(contract_pk), do: {@nft_owners_count_stat, contract_pk}
 
   # Legacy v1 is a blending between /totalstats and /deltastats.
   # The active and inactive object counters are totals while the rewards are delta.
@@ -153,6 +163,25 @@ defmodule AeMdw.Stats do
   @spec fetch_total_stat!(State.t(), height()) :: total_stat()
   def fetch_total_stat!(state, height),
     do: render_total_stat(State.fetch!(state, Model.TotalStat, height))
+
+  @spec fetch_nft_stats(State.t(), pubkey()) :: nft_stats()
+  def fetch_nft_stats(state, contract_pk) do
+    with {:ok, Model.stat(payload: nfts_count)} <-
+           State.get(state, Model.Stat, {@nfts_count_stat, contract_pk}),
+         {:ok, Model.stat(payload: nft_owners)} <-
+           State.get(state, Model.Stat, {@nft_owners_count_stat, contract_pk}) do
+      %{
+        nfts_amount: nfts_count,
+        nft_owners: nft_owners
+      }
+    else
+      :not_found ->
+        %{
+          nfts_amount: 0,
+          nft_owners: 0
+        }
+    end
+  end
 
   defp render_stats(state, %Range{first: first, last: last}) do
     Enum.map(first..last, fn height ->
