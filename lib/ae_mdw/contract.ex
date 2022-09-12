@@ -34,7 +34,7 @@ defmodule AeMdw.Contract do
   # for balances or balance
   @type serialized_call :: map()
   # fcode or aevm info
-  @type type_info :: {:fcode, map(), list(), any()} | list()
+  @type type_info :: {:fcode, map(), map(), map()} | list()
   @type compiler_vsn :: String.t()
   @type source_hash :: <<_::256>>
   @type ct_info :: {type_info(), compiler_vsn(), source_hash()}

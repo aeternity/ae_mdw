@@ -199,6 +199,7 @@ defmodule AeMdw.Application do
         lima_vsn: [{[], lima_vsn}],
         lima_height: [{[], lima_height}],
         aex9_signatures: [{[], aex9_sigs}],
+        aexn_mint_event_hash: [{[], :aec_hash.blake2b_256_hash("Mint")}],
         aexn_transfer_event_hash: [{[], :aec_hash.blake2b_256_hash("Transfer")}],
         aex141_signatures: [{[], aex141_sigs}],
         max_blob: [{[], max_blob}],

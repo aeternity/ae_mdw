@@ -21,6 +21,7 @@ defmodule AeMdw.Db.Contract do
   import AeMdwWeb.Helpers.AexnHelper, only: [sort_field_truncate: 1]
 
   @type rev_aex9_contract_key :: {pos_integer(), String.t(), String.t(), pos_integer()}
+  @typep hash :: <<_::256>>
   @typep pubkey :: Db.pubkey()
   @typep state :: State.t()
   @typep block_index :: AeMdw.Blocks.block_index()
@@ -173,8 +174,8 @@ defmodule AeMdw.Db.Contract do
         is_aexn_transfer?(evt_hash) and aex9_contract_pk != nil ->
           write_aexn_transfer(state2, :aex9, aex9_contract_pk, txi, i, args)
 
-        is_aexn_transfer?(evt_hash) and State.exists?(state2, Model.AexnContract, {:aex141, addr}) ->
-          write_aex141_records(state2, addr, txi, i, args)
+        State.exists?(state2, Model.AexnContract, {:aex141, addr}) ->
+          write_aex141_records(state2, evt_hash, addr, txi, i, args)
 
         true ->
           state2
@@ -289,14 +290,43 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  @spec write_aex141_records(State.t(), pubkey(), txi(), log_idx(), list(binary())) :: State.t()
-  def write_aex141_records(
+  @spec write_aex141_records(State.t(), hash(), pubkey(), txi(), log_idx(), list(binary())) ::
+          State.t()
+  def write_aex141_records(state, hash, contract_pk, txi, i, args) do
+    cond do
+      hash == AeMdw.Node.aexn_mint_event_hash() ->
+        write_aex141_ownership(state, contract_pk, args)
+
+      hash == AeMdw.Node.aexn_transfer_event_hash() ->
+        state
+        |> write_aex141_ownership(contract_pk, args)
+        |> write_aexn_transfer(:aex141, contract_pk, txi, i, args)
+
+      true ->
+        state
+    end
+  end
+
+  @spec write_aex141_ownership(State.t(), pubkey(), list(binary())) :: State.t()
+  def write_aex141_ownership(
         state,
         contract_pk,
-        txi,
-        i,
-        [_from_pk, to_pk, <<token_id::256>>] = args
+        [<<_to_pk::256>>, <<_token_id::256>>] = args
       ) do
+    do_write_aex141_ownership(state, contract_pk, args)
+  end
+
+  def write_aex141_ownership(
+        state,
+        contract_pk,
+        [<<_from::256>>, <<_pk2::256>> = to_pk, <<_id::256>> = token_id]
+      ) do
+    do_write_aex141_ownership(state, contract_pk, [to_pk, token_id])
+  end
+
+  def write_aex141_ownership(state, _contract_pk, _args), do: state
+
+  defp do_write_aex141_ownership(state, contract_pk, [to_pk, <<token_id::256>>]) do
     m_ownership = Model.nft_ownership(index: {to_pk, contract_pk, token_id})
     m_owner_token = Model.nft_owner_token(index: {contract_pk, to_pk, token_id})
     m_token_owner = Model.nft_token_owner(index: {contract_pk, token_id}, owner: to_pk)
@@ -304,12 +334,9 @@ defmodule AeMdw.Db.Contract do
     state
     |> State.put(Model.NftOwnership, m_ownership)
     |> State.put(Model.NftOwnerToken, m_owner_token)
-    |> write_aexn_transfer(:aex141, contract_pk, txi, i, args)
     |> delete_previous_ownership(contract_pk, token_id, to_pk)
     |> State.put(Model.NftTokenOwner, m_token_owner)
   end
-
-  def write_aex141_records(state, _pk, _txi, _i, _args), do: state
 
   #
   # Private functions

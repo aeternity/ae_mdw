@@ -222,6 +222,59 @@ defmodule AeMdw.Db.ContractCallMutationTest do
     end
   end
 
+  describe "aex141 mint" do
+    test "add nft ownership after a call with mint logs" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      to_pk = :crypto.strong_rand_bytes(32)
+      height = Enum.random(100_000..999_999)
+      call_txi = Enum.random(10_000_000..99_999_999)
+      token_id = Enum.random(1..100_000)
+
+      fun_arg_res = %{
+        arguments: [
+          %{
+            type: :address,
+            value: enc_id(to_pk)
+          },
+          %{type: :int, value: token_id}
+        ],
+        function: "mint",
+        result: %{type: :unit, value: ""}
+      }
+
+      call_rec =
+        {:call, :crypto.strong_rand_bytes(32), {:id, :account, :crypto.strong_rand_bytes(32)}, 1,
+         height, {:id, :contract, contract_pk}, 1_000_000_000, 5_250, "?", :ok,
+         [
+           {contract_pk, [AeMdw.Node.aexn_mint_event_hash(), to_pk, <<token_id::256>>], ""}
+         ]}
+
+      mutation =
+        ContractCallMutation.new(
+          contract_pk,
+          {height, 0},
+          call_txi,
+          fun_arg_res,
+          call_rec
+        )
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, contract_pk}))
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+        |> State.commit_mem([mutation])
+
+      assert State.exists?(state, Model.NftOwnership, {to_pk, contract_pk, token_id})
+
+      assert {:ok, Model.nft_token_owner(owner: ^to_pk)} =
+               State.get(state, Model.NftTokenOwner, {contract_pk, token_id})
+
+      assert State.exists?(state, Model.NftOwnerToken, {contract_pk, to_pk, token_id})
+    end
+  end
+
   describe "aex141 transfer" do
     test "add aex141 transfers after a call with transfer logs" do
       contract_pk = :crypto.strong_rand_bytes(32)

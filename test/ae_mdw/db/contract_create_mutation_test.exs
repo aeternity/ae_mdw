@@ -6,6 +6,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
 
   alias AeMdw.AsyncTaskTestUtil
   alias AeMdw.AexnContracts
+  alias AeMdw.Contract
   alias AeMdw.Db.ContractCreateMutation
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
@@ -13,6 +14,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Contract, as: SyncContract
   alias AeMdw.Db.Sync.Origin
+  alias AeMdw.DryRun.Runner
 
   require Model
 
@@ -71,6 +73,82 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
 
         assert 2 == State.get_stat(state2, :contracts_created, 0)
         assert {:ok, create_txi2} == State.cache_get(state2, :ct_create_sync_cache, contract_pk)
+      end
+    end
+
+    test "add nfts ownerships after mint logs" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      to_pk1 = :crypto.strong_rand_bytes(32)
+      to_pk2 = :crypto.strong_rand_bytes(32)
+      height = Enum.random(100_000..999_999)
+      block_index = {height, 1}
+      create_txi = Enum.random(10_000_000..99_999_999)
+      token_id1 = Enum.random(1_000..10_000)
+      token_id2 = Enum.random(10_001..20_000)
+      token_id3 = Enum.random(20_001..30_000)
+
+      call_rec =
+        {:call, <<1::256>>, {:id, :account, <<2::256>>}, 1, height, {:id, :contract, contract_pk},
+         1_000_000_000, 10_500, "?", :ok,
+         [
+           {contract_pk, [AeMdw.Node.aexn_mint_event_hash(), to_pk1, <<token_id1::256>>], ""},
+           {contract_pk, [AeMdw.Node.aexn_mint_event_hash(), to_pk2, <<token_id2::256>>], ""},
+           {contract_pk, [AeMdw.Node.aexn_mint_event_hash(), to_pk2, <<token_id3::256>>], ""}
+         ]}
+
+      with_mocks [
+        {Contract, [],
+         [
+           is_contract?: fn ct_pk -> ct_pk == contract_pk end,
+           get_init_call_rec: fn _tx, _hash -> call_rec end
+         ]},
+        {AexnContracts, [],
+         [
+           is_aex9?: fn _pk -> false end,
+           call_meta_info: fn _type, ^contract_pk ->
+             {:ok, {"test1", "TEST1", "http://some-fake-url", :url}}
+           end,
+           has_aex141_signatures?: fn pk -> pk == contract_pk end,
+           call_extensions: fn :aex141, _pk -> {:ok, ["mintable"]} end,
+           has_valid_aex141_extensions?: fn _extensions, ^contract_pk -> true end
+         ]},
+        {Runner, [],
+         [
+           call_contract: fn ^contract_pk, _hash, "extensions", [] -> {:ok, ["mintable"]} end
+         ]}
+      ] do
+        state =
+          NullStore.new()
+          |> MemStore.new()
+          |> State.new()
+          |> State.commit_mem([
+            SyncContract.aexn_create_contract_mutation(contract_pk, block_index, create_txi),
+            Origin.origin_mutations(
+              :contract_create_tx,
+              nil,
+              contract_pk,
+              create_txi,
+              :crypto.strong_rand_bytes(32)
+            ),
+            ContractCreateMutation.new(block_index, create_txi, call_rec)
+          ])
+
+        assert State.exists?(state, Model.NftOwnership, {to_pk1, contract_pk, token_id1})
+        assert State.exists?(state, Model.NftOwnership, {to_pk2, contract_pk, token_id2})
+        assert State.exists?(state, Model.NftOwnership, {to_pk2, contract_pk, token_id3})
+
+        assert {:ok, Model.nft_token_owner(owner: ^to_pk1)} =
+                 State.get(state, Model.NftTokenOwner, {contract_pk, token_id1})
+
+        assert {:ok, Model.nft_token_owner(owner: ^to_pk2)} =
+                 State.get(state, Model.NftTokenOwner, {contract_pk, token_id2})
+
+        assert {:ok, Model.nft_token_owner(owner: ^to_pk2)} =
+                 State.get(state, Model.NftTokenOwner, {contract_pk, token_id3})
+
+        assert State.exists?(state, Model.NftOwnerToken, {contract_pk, to_pk1, token_id1})
+        assert State.exists?(state, Model.NftOwnerToken, {contract_pk, to_pk2, token_id2})
+        assert State.exists?(state, Model.NftOwnerToken, {contract_pk, to_pk2, token_id3})
       end
     end
   end
