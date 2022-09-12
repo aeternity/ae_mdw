@@ -304,6 +304,7 @@ defmodule AeMdwWeb.BlockControllerTest do
       ] do
         assert %{
                  "height" => ^kbi,
+                 "micro_block_index" => 0,
                  "transactions_count" => 6
                } =
                  conn
