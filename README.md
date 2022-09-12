@@ -1311,9 +1311,11 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks?scope=gen:100000-100100&li
 }
 ```
 
-### `/v2/blocks/:hash_or_kbi`
+### `/v2/blocks/:hash_or_kbi` [DEPRECATED]
 
 A single block can be obtained by either the identifying `hash` or key-block index.
+
+Since it's **deprecated**, the new [`/v2/key-blocks/:hash_or_kbi` endpoint](### `/v2/key-blocks/:hash_or_kbi) should be used instead.
 
 ```
 $ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks/kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6" | jq '.'
@@ -1369,9 +1371,83 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks/1234" | jq '.'
 }
 ```
 
-### `/v2/blocks/:kbi/:mbi`
+### `/v2/key-blocks/:hash_or_kbi`
+
+Retrieves a single key block including the `micro_blocks_count` and `transactions_count` counters.
+
+```
+$ curl -s https://mainnet.aeternity.io/mdw/v2/key-blocks/kh_2oKCXoTcm7rSxxAHaEcoUe6JV7Xs9Nmk3TNXHSEQcs9NwE8o6W
+{
+  "micro_blocks_count": 204,
+  "transactions_count": 273,
+  "beneficiary": "ak_wM8yFU8eSETXU7VSN48HMDmevGoCMiuveQZgkPuRn1nTiRqyv",
+  "hash": "kh_2oKCXoTcm7rSxxAHaEcoUe6JV7Xs9Nmk3TNXHSEQcs9NwE8o6W",
+  "height": 653413,
+  "info": "cb_AAACjBq0Xcc=",
+  "miner": "ak_2XTwJ1uqopnb6swmNCA35AuzgZJ8cqJqT1jtGi1j3pKzrsnXGL",
+  "nonce": 11146303448381,
+  "pow": [
+    470518102,
+    470786769,
+    472378123,
+    477583630,
+    477907327,
+    488321757,
+    491143869,
+    493744235,
+    505396477,
+    518355451,
+    531366816
+  ],
+  "prev_hash": "mh_StyRqEViVt5z4pvFu6LeJXjy3eh9He7w83UUPsp2gfxnHMrqb",
+  "prev_key_hash": "kh_2mkrqWnKFBhEdX5B27pmvd1LN6FqQfHm2XzXo2uc5ZGAqkrwRf",
+  "state_hash": "bs_2pgQNoRYU32wCv3ESvHg6RYpSgsXX9NjkKJ2TuaZnxW6qqVtsN",
+  "target": 520136850,
+  "time": 1662676277823,
+  "version": 5
+}
+```
+
+Or alternatively, by `kbi`:
+
+```
+$ curl -s https://mainnet.aeternity.io/mdw/v2/key-blocks/123
+{
+  "micro_blocks_count": 0,
+  "transactions_count": 0,
+  "beneficiary": "ak_TFm6MPeRXz4oiy5rQ9QRsFpaQb27GCc5ZEXCDhCFPYvYWxV5v",
+  "hash": "kh_c1F1ZfcqhLMqPNoTzgNKAp3n18kPMCrWvuH9j2Dc2kdiUteRZ",
+  "height": 123,
+  "info": "cb_Xfbg4g==",
+  "miner": "ak_2W4cmcpJQZ4JeBF1kPoe5UsEZCS4gzbCWtoDsVDr7EzF65bmkf",
+  "nonce": 2384355247607917600,
+  "pow": [
+    28236516,
+    37891637,
+    39568937,
+    41751636,
+    53905843,
+    77440491,
+    77746610,
+    80023552,
+    85642112,
+    89247851,
+    105135109
+  ],
+  "prev_hash": "kh_MD6dBz1sk6n4P4HZUjzwfiLHSMxzmFk5ZVjcG5cF7PqBCgT9b",
+  "prev_key_hash": "kh_MD6dBz1sk6n4P4HZUjzwfiLHSMxzmFk5ZVjcG5cF7PqBCgT9b",
+  "state_hash": "bs_2pAUexcNWE9HFruXUugY28yfUifWDh449JK1dDgdeMix5uk8Q",
+  "target": 521613269,
+  "time": 1543395219643,
+  "version": 1
+}
+```
+
+### `/v2/blocks/:kbi/:mbi` [DEPRECATED]
 
 Micro block are identified by height and sequence id (order) withing the generation, starting from 0.
+
+Since this endpoint is **deprecated**, it is adviced to use `/v2/key-blocks/:kbi/micro-blocks` instead.
 
 ```
 $ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks/300000/0" | jq '.'

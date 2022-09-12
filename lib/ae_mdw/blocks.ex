@@ -5,6 +5,7 @@ defmodule AeMdw.Blocks do
 
   alias AeMdw.Collection
   alias AeMdw.Error
+  alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
@@ -55,6 +56,36 @@ defmodule AeMdw.Blocks do
 
       :error ->
         {nil, [], nil}
+    end
+  end
+
+  @spec fetch_key_block(State.t(), binary()) :: {:ok, block()} | {:error, Error.t()}
+  def fetch_key_block(state, hash_or_kbi) do
+    case Util.parse_int(hash_or_kbi) do
+      {:ok, kbi} when kbi >= 0 ->
+        last_gen = DbUtil.last_gen(state)
+
+        if kbi <= last_gen do
+          {:ok, render_key_block(state, kbi)}
+        else
+          {:error, ErrInput.NotFound.exception(value: hash_or_kbi)}
+        end
+
+      {:ok, _kbi} ->
+        {:error, ErrInput.NotFound.exception(value: hash_or_kbi)}
+
+      :error ->
+        with {:ok, encoded_hash} <- Validate.id(hash_or_kbi),
+             {:ok, block} <- :aec_chain.get_block(encoded_hash),
+             header <- :aec_blocks.to_header(block),
+             :key <- :aec_headers.type(header),
+             last_gen <- DbUtil.last_gen(state),
+             height when height <= last_gen <- :aec_headers.height(header) do
+          {:ok, render_key_block(state, height)}
+        else
+          {:error, reason} -> {:error, reason}
+          _error_or_invalid_height -> {:error, ErrInput.NotFound.exception(value: hash_or_kbi)}
+        end
     end
   end
 
@@ -121,34 +152,34 @@ defmodule AeMdw.Blocks do
     end
   end
 
-  defp render_key_blocks(state, range) do
-    Enum.map(range, fn gen ->
-      last_mbi =
-        case State.prev(state, @table, {gen + 1, -1}) do
-          {:ok, {^gen, mbi}} -> mbi + 1
-          {:ok, _block_index} -> 0
-          :none -> 0
-        end
+  defp render_key_blocks(state, range), do: Enum.map(range, &render_key_block(state, &1))
 
-      txs_count =
-        case State.prev(state, @table, {gen + 1, 0}) do
-          {:ok, block_index} ->
-            Model.block(tx_index: next_tx_index) = State.fetch!(state, @table, block_index)
-            Model.block(tx_index: first_tx_index) = State.fetch!(state, @table, {gen, -1})
-            next_tx_index - first_tx_index
+  defp render_key_block(state, gen) do
+    mbi_count =
+      case State.prev(state, @table, {gen + 1, -1}) do
+        {:ok, {^gen, mbi}} -> mbi + 1
+        {:ok, _block_index} -> 0
+        :none -> 0
+      end
 
-          :none ->
-            0
-        end
+    txs_count =
+      case State.prev(state, @table, {gen + 1, 0}) do
+        {:ok, block_index} ->
+          Model.block(tx_index: next_tx_index) = State.fetch!(state, @table, block_index)
+          Model.block(tx_index: first_tx_index) = State.fetch!(state, @table, {gen, -1})
+          next_tx_index - first_tx_index
 
-      Model.block(hash: hash) = State.fetch!(state, @table, {gen, -1})
-      header = :aec_db.get_header(hash)
+        :none ->
+          0
+      end
 
-      header
-      |> :aec_headers.serialize_for_client(Db.prev_block_type(header))
-      |> Map.put(:micro_blocks_count, last_mbi)
-      |> Map.put(:transactions_count, txs_count)
-    end)
+    Model.block(hash: hash) = State.fetch!(state, @table, {gen, -1})
+    header = :aec_db.get_header(hash)
+
+    header
+    |> :aec_headers.serialize_for_client(Db.prev_block_type(header))
+    |> Map.put(:micro_blocks_count, mbi_count)
+    |> Map.put(:transactions_count, txs_count)
   end
 
   defp render_blocks(state, range, sort_mbs?) do
