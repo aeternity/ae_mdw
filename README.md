@@ -3147,6 +3147,299 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/transfers?account=ak_7myFYvagcqh8
 
 ---
 
+## NFTs (AEX-141 contracts and tokens)
+
+AEX-141 NFT contracts might organize the access and storage of NFTs metadata in flexible ways. This behaviour is declared during contract creation with the metadata_type field. This and other meta_info fields like name and symbol can be accessed by `/aex141` endpoint that displays information about NFT contracts. 
+
+With other endpoints it's possible to know more about AEX-141 NFTs including:
+
+- who is the owner of an NFT
+- who are the nft owners on a collection
+- which NFTs a wallet owns
+- NFT transfers filtered by contract and/or wallet
+- and more to come ... 
+
+### `/v2/aex141`
+
+Returns creation and stats information in default paginated way for all NFT collection. The same general paginated parameters might be used:
+
+- `direction` with `forward` value ascendinly sorts the response contracts by creation transaction index while `backward` works for desc sorting
+- `limit` defines the page size
+
+```
+$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141?direction=forward&limit=1' | jq '.'
+{
+  "data": [
+    {
+      "base_url": null,
+      "contract_id": "ct_2KsfvrPHwdZb9CkwvgCkzg4o4k7cH7oyfQq4CNPNCHEZ4RTCf",
+      "contract_txi": 30958504,
+      "extensions": [
+        "mintable"
+      ],
+      "metadata_type": "map",
+      "name": "Apes stepping into the Metaverse",
+      "nft_owners": 1,
+      "nfts_amount": 8,
+      "symbol": "ASITM"
+    }
+  ],
+  "next": "/aex141?cursor=g2gDZAAGYWV4MTQxbQAAACBBcGVzIHN0ZXBwaW5nIGludG8gdGhlIE1ldGF2ZXJzZW0AAAAgD29qcQzT%2FM%2BHEg1uw31I%2BYRUpktYP%2FZ09Dapkl2szkA%3D&direction=forward&limit=1",
+  "prev": null
+}
+```
+
+## `/v2/aex141/:contract_id`
+
+Returns creation and stats information for a specific NFT collection.
+
+```
+$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8' | jq .
+{
+  "base_url": null,
+  "contract_id": "ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
+  "contract_txi": 30958726,
+  "extensions": [
+    "mintable"
+  ],
+  "metadata_type": "map",
+  "name": "Apes stepping into the Metaverse",
+  "nft_owners": 1,
+  "nfts_amount": 8,
+  "symbol": "ASITM"
+}
+```
+
+## `/v2/aex141/:contract_id/owner/:token_id`
+
+Returns the owner wallet address of a NFT.
+
+```
+$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8/owner/2' | jq .
+
+{
+  "data": "ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW"
+}
+```
+
+## `/v2/aex141/:contract_id/owners`
+
+Returns the owner address for each NFT of a collection in paginated way.
+
+`direction` and `limit` pagination params might be used to sort tokens by id and to define page size.
+
+```
+$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8/owners?direction=forward&limit=2' | jq .
+{
+  "data": [
+    {
+      "contract_id": "ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
+      "owner_id": "ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW",
+      "token_id": 1
+    },
+    {
+      "contract_id": "ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
+      "owner_id": "ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW",
+      "token_id": 2
+    }
+  ],
+  "next": "/aex141/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8/owners?cursor=g2gCbQAAACD5nNNdNGQ3YrwVYeXgdeB%2FFd1jOgwZs1p74F2dVz6zC2ED&direction=forward&limit=2",
+  "prev": null
+}
+```
+
+## `/v2/aex141/owners-nfts/:account_id`
+
+Returns each NFT owned by a wallet in paginated way.
+
+`direction` and `limit` pagination params might be used to sort tokens (by contract address and token id) and to define page size.
+
+```
+$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/owned-nfts/ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW?direction=forward&limit=2' | jq .
+{
+  "data": [
+    {
+      "contract_id": "ct_2KsfvrPHwdZb9CkwvgCkzg4o4k7cH7oyfQq4CNPNCHEZ4RTCf",
+      "owner_id": "ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW",
+      "token_id": 1
+    },
+    {
+      "contract_id": "ct_2KsfvrPHwdZb9CkwvgCkzg4o4k7cH7oyfQq4CNPNCHEZ4RTCf",
+      "owner_id": "ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW",
+      "token_id": 2
+    }
+  ],
+  "next": "/aex141/owned-nfts/ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW?cursor=g2gDbQAAACA1VnHPFWKr80aBDnG3tjrWGYMqQpxUJK6dhDlBrJXgEG0AAAAgAwJumVbCVqhk2XF8UnTR8fiNve0Gh9zLEEoZoC55qRdhAw%3D%3D&direction=forward&limit=2",
+  "prev": null
+}
+```
+
+## `/v2/aex141/transfers/:contract_id`
+
+Returns all NFT transfers involving a NFT collection in paginated way.
+
+`direction` and `limit` pagination params might be used to sort transfers by txi and to define page size.
+
+```
+$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/transfers/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8?direction=forward&limit=2' | jq .
+{
+  "data": [
+    {
+      "block_height": 651434,
+      "call_txi": 30958727,
+      "contract_id": "ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
+      "log_idx": 0,
+      "micro_index": 5,
+      "micro_time": 1661491608237,
+      "recipient": "ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW",
+      "sender": "ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
+      "token_id": 1,
+      "tx_hash": "th_2d5iaRa2DkgJb6ABSt5ea6TcM1FVB2EW6dx7FRU9XMWi1J4n9e"
+    },
+    {
+      "block_height": 651434,
+      "call_txi": 30958729,
+      "contract_id": "ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
+      "log_idx": 0,
+      "micro_index": 6,
+      "micro_time": 1661491611260,
+      "recipient": "ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW",
+      "sender": "ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
+      "token_id": 2,
+      "tx_hash": "th_BPiUgq2aqm7rTmhb68DW2vEhReWda3mioxeFBjPfxGtLnkAtg"
+    }
+  ],
+  "next": "/v2/aex141/transfers/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8?cursor=g2gGYgHYZIZtAAAAIPmc0100ZDdivBVh5eB14H8V3WM6DBmzWnvgXZ1XPrMLYgHYZIttAAAAIDVWcc8VYqvzRoEOcbe2OtYZgypCnFQkrp2EOUGsleAQYQNhAA%3D%3D&direction=forward&limit=2",
+  "prev": null
+}
+```
+
+## `/v2/aex141/transfers/from/:account_id`
+
+Returns paginated NFT transfers having a certain sender account (seller's wallet or marketplace contract address).
+
+It accepts the params:
+- `contract` or `contract_id` to filter by collection address.
+- `direction` and `limit` pagination params might be used to sort transfers by txi and to define page size.
+
+```
+$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/transfers/from/ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8?contract_id=ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8&direction=forward&limit=2' | jq .
+{
+  "data": [
+    {
+      "block_height": 651434,
+      "call_txi": 30958727,
+      "contract_id": "ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
+      "log_idx": 0,
+      "micro_index": 5,
+      "micro_time": 1661491608237,
+      "recipient": "ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW",
+      "sender": "ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
+      "token_id": 1,
+      "tx_hash": "th_2d5iaRa2DkgJb6ABSt5ea6TcM1FVB2EW6dx7FRU9XMWi1J4n9e"
+    },
+    {
+      "block_height": 651434,
+      "call_txi": 30958729,
+      "contract_id": "ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
+      "log_idx": 0,
+      "micro_index": 6,
+      "micro_time": 1661491611260,
+      "recipient": "ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW",
+      "sender": "ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
+      "token_id": 2,
+      "tx_hash": "th_BPiUgq2aqm7rTmhb68DW2vEhReWda3mioxeFBjPfxGtLnkAtg"
+    }
+  ],
+  "next": "/v2/aex141/transfers/from/ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8?contract_id=ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8&cursor=g2gGYgHYZIZtAAAAIPmc0100ZDdivBVh5eB14H8V3WM6DBmzWnvgXZ1XPrMLYgHYZIttAAAAIDVWcc8VYqvzRoEOcbe2OtYZgypCnFQkrp2EOUGsleAQYQNhAA%3D%3D&direction=forward&limit=2",
+  "prev": null
+}
+```
+
+## `/v2/aex141/transfers/to/:account_id`
+
+Returns paginated NFT transfers having a certain recipient account_id (most likely a buyer).
+
+It accepts the params:
+- `contract` or `contract_id` to filter by collection address.
+- `direction` and `limit` pagination params might be used to sort transfers by txi and to define page size.
+
+```
+$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/transfers/to/ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW?contract_id=ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8&direction=forward&limit=2' | jq .
+{
+  "data": [
+    {
+      "block_height": 651434,
+      "call_txi": 30958727,
+      "contract_id": "ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
+      "log_idx": 0,
+      "micro_index": 5,
+      "micro_time": 1661491608237,
+      "recipient": "ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW",
+      "sender": "ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
+      "token_id": 1,
+      "tx_hash": "th_2d5iaRa2DkgJb6ABSt5ea6TcM1FVB2EW6dx7FRU9XMWi1J4n9e"
+    },
+    {
+      "block_height": 651434,
+      "call_txi": 30958729,
+      "contract_id": "ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
+      "log_idx": 0,
+      "micro_index": 6,
+      "micro_time": 1661491611260,
+      "recipient": "ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW",
+      "sender": "ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
+      "token_id": 2,
+      "tx_hash": "th_BPiUgq2aqm7rTmhb68DW2vEhReWda3mioxeFBjPfxGtLnkAtg"
+    }
+  ],
+  "next": "/v2/aex141/transfers/to/ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW?contract_id=ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8&cursor=g2gGYgHYZIZtAAAAIDVWcc8VYqvzRoEOcbe2OtYZgypCnFQkrp2EOUGsleAQYgHYZIttAAAAIPmc0100ZDdivBVh5eB14H8V3WM6DBmzWnvgXZ1XPrMLYQNhAA%3D%3D&direction=forward&limit=2",
+  "prev": null
+}
+```
+
+## `/v2/aex141/transfers/from-to/:sender_id/:recipient_id`
+
+Returns paginated NFT transfers that happened between to accounts (likely involving a seller and buyer or marketplace address and a buyer).
+
+It accepts the `direction` and `limit` pagination params to sort transfers by txi and to define page size.
+
+```
+$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/transfers/from-to/ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8/ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW?direction=forward&limit=2' | jq .
+{
+  "data": [
+    {
+      "block_height": 651434,
+      "call_txi": 30958727,
+      "contract_id": "ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
+      "log_idx": 0,
+      "micro_index": 5,
+      "micro_time": 1661491608237,
+      "recipient": "ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW",
+      "sender": "ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
+      "token_id": 1,
+      "tx_hash": "th_2d5iaRa2DkgJb6ABSt5ea6TcM1FVB2EW6dx7FRU9XMWi1J4n9e"
+    },
+    {
+      "block_height": 651434,
+      "call_txi": 30958729,
+      "contract_id": "ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
+      "log_idx": 0,
+      "micro_index": 6,
+      "micro_time": 1661491611260,
+      "recipient": "ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW",
+      "sender": "ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8",
+      "token_id": 2,
+      "tx_hash": "th_BPiUgq2aqm7rTmhb68DW2vEhReWda3mioxeFBjPfxGtLnkAtg"
+    }
+  ],
+  "next": "/v2/aex141/transfers/from-to/ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8/ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW?cursor=g2gGZAAGYWV4MTQxbQAAACD5nNNdNGQ3YrwVYeXgdeB%2FFd1jOgwZs1p74F2dVz6zC20AAAAgNVZxzxViq%2FNGgQ5xt7Y61hmDKkKcVCSunYQ5QayV4BBiAdhki2EDYQA%3D&direction=forward&limit=2",
+  "prev": null
+}
+```
+
+---
+
 ## Oracles
 
 There are several endpoints for fetching information about the oracles.
