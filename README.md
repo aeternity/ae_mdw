@@ -3161,10 +3161,7 @@ With other endpoints it's possible to know more about AEX-141 NFTs including:
 
 ### `/v2/aex141`
 
-Returns creation and stats information in default paginated way for all NFT collection. The same general paginated parameters might be used:
-
-- `direction` with `forward` value ascendinly sorts the response contracts by creation transaction index while `backward` works for desc sorting
-- `limit` defines the page size
+Returns creation and stats information in default paginated way for all NFT collection.
 
 ```
 $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141?direction=forward&limit=1' | jq '.'
@@ -3252,8 +3249,6 @@ $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/ct_2tw26RwgNADrpuCnrQWKPBH
 
 Returns each NFT owned by a wallet in paginated way.
 
-`direction` and `limit` pagination params might be used to sort tokens (by contract address and token id) and to define page size.
-
 ```
 $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/owned-nfts/ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW?direction=forward&limit=2' | jq .
 {
@@ -3277,8 +3272,6 @@ $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/owned-nfts/ak_QVSUoGrJ31CV
 ## `/v2/aex141/transfers/:contract_id`
 
 Returns all NFT transfers involving a NFT collection in paginated way.
-
-`direction` and `limit` pagination params might be used to sort transfers by txi and to define page size.
 
 ```
 $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/transfers/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8?direction=forward&limit=2' | jq .
@@ -3318,9 +3311,7 @@ $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/transfers/ct_2tw26RwgNADrp
 
 Returns paginated NFT transfers having a certain sender account (seller's wallet or marketplace contract address).
 
-It accepts the params:
-- `contract` or `contract_id` to filter by collection address.
-- `direction` and `limit` pagination params might be used to sort transfers by txi and to define page size.
+It accepts the param `contract` or `contract_id` to filter by collection address.
 
 ```
 $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/transfers/from/ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8?contract_id=ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8&direction=forward&limit=2' | jq .
@@ -3360,9 +3351,7 @@ $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/transfers/from/ak_2tw26Rwg
 
 Returns paginated NFT transfers having a certain recipient account_id (most likely a buyer).
 
-It accepts the params:
-- `contract` or `contract_id` to filter by collection address.
-- `direction` and `limit` pagination params might be used to sort transfers by txi and to define page size.
+It accepts the param `contract` or `contract_id` to filter by collection address.
 
 ```
 $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/transfers/to/ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW?contract_id=ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8&direction=forward&limit=2' | jq .
@@ -3401,8 +3390,6 @@ $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/transfers/to/ak_QVSUoGrJ31
 ## `/v2/aex141/transfers/from-to/:sender_id/:recipient_id`
 
 Returns paginated NFT transfers that happened between to accounts (likely involving a seller and buyer or marketplace address and a buyer).
-
-It accepts the `direction` and `limit` pagination params to sort transfers by txi and to define page size.
 
 ```
 $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/transfers/from-to/ak_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8/ak_QVSUoGrJ31CVxWpvgvwQ7PUPFgnvWQouUgsDBVoGjuT7hjQYW?direction=forward&limit=2' | jq .
