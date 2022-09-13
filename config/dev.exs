@@ -3,7 +3,7 @@ use Mix.Config
 config :ae_mdw, AeMdwWeb.Endpoint,
   http: [port: 4000],
   debug_errors: true,
-  code_reloader: true,
+  code_reloader: false,
   watchers: [],
   check_origin: false
 
