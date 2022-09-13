@@ -72,7 +72,7 @@ defmodule AeMdw.Blocks do
     with {:ok, hash, height} <- extract_height(state, :micro, hash) do
       mbi =
         hash
-        |> Db.get_micro_blocks()
+        |> Db.get_reverse_micro_blocks()
         |> Enum.count()
 
       if State.exists?(state, Model.Block, {height, mbi}) do
