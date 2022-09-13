@@ -16,7 +16,7 @@ defmodule AeMdw.AexnTokens do
   require Model
 
   @type aexn_type() :: :aex9 | :aex141
-  @type aexn_token() :: AeMdwWeb.AexnView.aexn_token()
+  @type aexn_token() :: AeMdwWeb.AexnView.aexn_contract()
   @type cursor :: binary()
 
   @typep pagination :: Collection.direction_limit()
@@ -50,7 +50,7 @@ defmodule AeMdw.AexnTokens do
 
       case deserialize_aexn_cursor(cursor) do
         {:ok, cursor} ->
-          {prev_record, aexn_tokens, next_record} =
+          {prev_record, aexn_contracts, next_record} =
             query
             |> Map.drop(@pagination_params)
             |> validate_params()
@@ -58,7 +58,7 @@ defmodule AeMdw.AexnTokens do
             |> build_tokens_streamer(state, aexn_type, sorted_table, cursor)
             |> Collection.paginate(pagination)
 
-          {:ok, serialize_aexn_cursor(order_by, prev_record), aexn_tokens,
+          {:ok, serialize_aexn_cursor(order_by, prev_record), aexn_contracts,
            serialize_aexn_cursor(order_by, next_record)}
 
         {:error, reason} ->

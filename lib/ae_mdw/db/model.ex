@@ -314,7 +314,8 @@ defmodule AeMdw.Db.Model do
   @type aexn_name :: String.t()
   @type aexn_symbol :: String.t()
   @type aex9_meta_info :: {aexn_name(), aexn_symbol(), non_neg_integer()}
-  @type aex141_meta_info :: {aexn_name(), aexn_symbol(), String.t(), atom()}
+  @type aex141_metadata_type :: :url | :ipfs | :object_id | :map
+  @type aex141_meta_info :: {aexn_name(), aexn_symbol(), String.t(), aex141_metadata_type()}
   @type aexn_meta_info :: aex9_meta_info() | aex141_meta_info()
   @type aexn_extensions :: [String.t()]
 
@@ -703,12 +704,12 @@ defmodule AeMdw.Db.Model do
   @stat_defaults [:index, :payload]
   defrecord :stat, @stat_defaults
 
-  @type stat() :: record(:stat, index: atom(), payload: term())
+  @type stat() :: record(:stat, index: atom() | {atom(), pubkey()}, payload: term())
 
   @miner_defaults [:index, :total_reward]
   defrecord :miner, @miner_defaults
 
-  @type miner() :: record(:miner, index: Db.pubkey(), total_reward: non_neg_integer())
+  @type miner() :: record(:miner, index: pubkey(), total_reward: non_neg_integer())
 
   ################################################################################
 

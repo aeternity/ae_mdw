@@ -4,18 +4,38 @@ defmodule AeMdwWeb.AexnView do
   """
 
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util
   alias AeMdw.Node.Db, as: NodeDb
+  alias AeMdw.Stats
+  alias AeMdw.Txs
 
   require Model
 
   import AeMdwWeb.Helpers.AexnHelper
 
-  @type aexn_token() :: map()
-
   @typep pubkey :: AeMdw.Node.Db.pubkey()
+  @typep aex9_contract() :: %{
+           name: String.t(),
+           symbol: String.t(),
+           decimals: integer(),
+           contract_txi: Txs.txi(),
+           contract_id: pubkey(),
+           extensions: [String.t()]
+         }
+
+  @typep aex141_contract() :: %{
+           name: String.t(),
+           symbol: String.t(),
+           base_url: String.t() | nil,
+           contract_txi: Txs.txi(),
+           contract_id: pubkey(),
+           metadata_type: Model.aex141_metadata_type(),
+           extensions: [String.t()]
+         }
+
+  @type aexn_contract() :: aex9_contract() | aex141_contract()
+
   @typep account_transfer_key :: AeMdw.AexnTransfers.transfer_key()
   @typep pair_transfer_key :: AeMdw.AexnTransfers.pair_transfer_key()
   @typep contract_transfer_key :: AeMdw.AexnTransfers.contract_transfer_key()
@@ -64,8 +84,9 @@ defmodule AeMdwWeb.AexnView do
     }
   end
 
-  @spec render_token(Model.aexn_contract()) :: aexn_token()
-  def render_token(
+  @spec render_contract(State.t(), Model.aexn_contract()) :: aexn_contract()
+  def render_contract(
+        state,
         Model.aexn_contract(
           index: {_type, contract_pk},
           txi: txi,
@@ -73,12 +94,12 @@ defmodule AeMdwWeb.AexnView do
           extensions: extensions
         )
       ) do
-    do_render_token(contract_pk, txi, meta_info, extensions)
+    do_render_contract(state, contract_pk, txi, meta_info, extensions)
   end
 
-  @spec render_tokens([Model.aexn_contract()]) :: [aexn_token()]
-  def render_tokens(aexn_tokens) do
-    Enum.map(aexn_tokens, &render_token/1)
+  @spec render_contracts(State.t(), [Model.aexn_contract()]) :: [aexn_contract()]
+  def render_contracts(state, aexn_contracts) do
+    Enum.map(aexn_contracts, &render_contract(state, &1))
   end
 
   @spec sender_transfer_to_map(State.t(), account_transfer_key()) :: map()
@@ -116,7 +137,7 @@ defmodule AeMdwWeb.AexnView do
   #
   # Private functions
   #
-  defp do_render_token(contract_pk, txi, {name, symbol, decimals}, extensions) do
+  defp do_render_contract(_state, contract_pk, txi, {name, symbol, decimals}, extensions) do
     %{
       name: name,
       symbol: symbol,
@@ -127,8 +148,16 @@ defmodule AeMdwWeb.AexnView do
     }
   end
 
-  defp do_render_token(contract_pk, txi, {name, symbol, base_url, metadata_type}, extensions) do
-    %{
+  defp do_render_contract(
+         state,
+         contract_pk,
+         txi,
+         {name, symbol, base_url, metadata_type},
+         extensions
+       ) do
+    state
+    |> Stats.fetch_nft_stats(contract_pk)
+    |> Map.merge(%{
       name: name,
       symbol: symbol,
       base_url: base_url,
@@ -136,7 +165,7 @@ defmodule AeMdwWeb.AexnView do
       contract_id: enc_ct(contract_pk),
       metadata_type: metadata_type,
       extensions: extensions
-    }
+    })
   end
 
   defp do_transfer_to_map(
