@@ -88,6 +88,10 @@ defmodule AeMdwWeb.AexnTransferController do
     end
   end
 
+  def aex141_transfers_from(conn, %{"contract" => contract_id} = params) do
+    aex141_transfers_from(conn, Map.put(params, "contract_id", contract_id))
+  end
+
   def aex141_transfers_from(conn, %{"sender" => sender_id}) do
     transfers_from_reply(conn, :aex141, sender_id)
   end
@@ -97,6 +101,10 @@ defmodule AeMdwWeb.AexnTransferController do
     with {:ok, recipient_pk} <- Validate.id(recipient_id, [:account_pubkey]) do
       contract_transfers_reply(conn, contract_id, {:to, recipient_pk})
     end
+  end
+
+  def aex141_transfers_to(conn, %{"contract" => contract_id} = params) do
+    aex141_transfers_to(conn, Map.put(params, "contract_id", contract_id))
   end
 
   def aex141_transfers_to(conn, %{"recipient" => recipient_id}) do
