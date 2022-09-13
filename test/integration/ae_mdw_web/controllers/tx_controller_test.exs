@@ -1747,6 +1747,20 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     end
   end
 
+  describe "micro_blocks_txs" do
+    test "it gets paginated txs from a given micro-block", %{conn: conn} do
+      mb_hash = "mh_2jegeDKb3JyRdgoEyXmJSbwcsZVgKzfFUMtsuPmv1TT3Mbnv71"
+
+      assert %{"data" => [tx1, tx2]} =
+               conn
+               |> get("/v2/micro-blocks/#{mb_hash}/txs")
+               |> json_response(200)
+
+      assert %{"block_hash" => ^mb_hash, "tx_index" => 9_351_444} = tx1
+      assert %{"block_hash" => ^mb_hash, "tx_index" => 9_351_443} = tx2
+    end
+  end
+
   defp transform_tx_type(type), do: type |> Validate.tx_type!() |> AeMdw.Node.tx_name()
 
   defp get_txs_types_by_tx_group(tx_group) do

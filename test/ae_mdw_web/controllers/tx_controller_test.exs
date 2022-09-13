@@ -130,7 +130,7 @@ defmodule AeMdwWeb.TxControllerTest do
            type: fn :header -> :micro end,
            height: fn :header -> height end
          ]},
-        {Db, [], [get_micro_blocks: fn ^mb_hash -> [] end]},
+        {Db, [], [get_reverse_micro_blocks: fn ^mb_hash -> [] end]},
         {Format, [],
          [
            to_map: fn
