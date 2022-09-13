@@ -60,25 +60,6 @@ defmodule AeMdw.AexnTransfers do
     )
   end
 
-  @spec fetch_contract_recipient_transfers(
-          State.t(),
-          AeMdw.Txs.txi(),
-          pubkey() | nil,
-          pagination(),
-          cursor() | nil
-        ) ::
-          contract_paginated_transfers()
-  def fetch_contract_recipient_transfers(state, contract_txi, recipient_pk, pagination, cursor) do
-    paginate_transfers(
-      state,
-      contract_txi,
-      pagination,
-      Model.AexnContractToTransfer,
-      cursor,
-      recipient_pk
-    )
-  end
-
   @spec fetch_sender_transfers(State.t(), aexn_type(), pubkey(), pagination(), cursor() | nil) ::
           account_paginated_transfers()
   def fetch_sender_transfers(state, aexn_type, sender_pk, pagination, cursor) do
@@ -137,7 +118,7 @@ defmodule AeMdw.AexnTransfers do
   #
   defp paginate_transfers(
          state,
-         aexn_type,
+         aexn_type_or_txi,
          pagination,
          table,
          cursor,
@@ -145,25 +126,7 @@ defmodule AeMdw.AexnTransfers do
        ) do
     cursor_key = deserialize_cursor(cursor)
 
-    do_paginate_transfers(
-      state,
-      aexn_type,
-      pagination,
-      table,
-      cursor_key,
-      account_pk_or_pair_pks
-    )
-  end
-
-  defp do_paginate_transfers(
-         state,
-         aexn_type_or_txi,
-         pagination,
-         table,
-         cursor_key,
-         params
-       ) do
-    key_boundary = key_boundary(aexn_type_or_txi, params)
+    key_boundary = key_boundary(aexn_type_or_txi, account_pk_or_pair_pks)
 
     {prev_cursor_key, transfer_keys, next_cursor_key} =
       state
@@ -219,15 +182,15 @@ defmodule AeMdw.AexnTransfers do
 
   defp key_boundary(type_or_txi, nil) do
     {
-      {type_or_txi, nil, 0, nil, 0, 0},
-      {type_or_txi, Util.max_256bit_bin(), nil, nil, 0, 0}
+      {type_or_txi, <<>>, 0, <<>>, 0, 0},
+      {type_or_txi, Util.max_256bit_bin(), nil, <<>>, 0, 0}
     }
   end
 
   defp key_boundary(type_or_txi, account_pk) do
     {
-      {type_or_txi, account_pk, 0, nil, 0, 0},
-      {type_or_txi, account_pk, nil, nil, 0, 0}
+      {type_or_txi, account_pk, 0, <<>>, 0, 0},
+      {type_or_txi, account_pk, nil, <<>>, 0, 0}
     }
   end
 end
