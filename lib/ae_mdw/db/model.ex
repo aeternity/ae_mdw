@@ -704,12 +704,12 @@ defmodule AeMdw.Db.Model do
   @stat_defaults [:index, :payload]
   defrecord :stat, @stat_defaults
 
-  @type stat() :: record(:stat, index: atom(), payload: term())
+  @type stat() :: record(:stat, index: atom() | {atom(), pubkey()}, payload: term())
 
   @miner_defaults [:index, :total_reward]
   defrecord :miner, @miner_defaults
 
-  @type miner() :: record(:miner, index: Db.pubkey(), total_reward: non_neg_integer())
+  @type miner() :: record(:miner, index: pubkey(), total_reward: non_neg_integer())
 
   ################################################################################
 

@@ -384,6 +384,9 @@ defmodule AeMdw.Contracts do
   defp convert_param(state, {"contract_id", contract_id}),
     do: {:create_txi, create_txi!(state, contract_id)}
 
+  defp convert_param(state, {"contract", contract_id}),
+    do: {:create_txi, create_txi!(state, contract_id)}
+
   defp convert_param(_state, {"data", data}), do: {:data_prefix, URI.decode(data)}
 
   defp convert_param(_state, {"event", ctor_name}),

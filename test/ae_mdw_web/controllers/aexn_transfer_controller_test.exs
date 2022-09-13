@@ -386,6 +386,50 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
                conn |> with_store(store) |> get(prev_aex141_transfers) |> json_response(200)
     end
 
+    test "gets some aex141 transfers sorted by asc txi filtered by contract", %{
+      conn: conn,
+      store: store
+    } do
+      sender_id = enc_id(@from_pk2)
+      contract_id = enc_ct(@contract_pk1)
+      limit = 3
+
+      assert %{"data" => aex141_transfers, "next" => next} =
+               conn
+               |> with_store(store)
+               |> get("/v2/aex141/transfers/from/#{sender_id}",
+                 contract_id: contract_id,
+                 direction: "forward",
+                 limit: limit
+               )
+               |> json_response(200)
+
+      assert length(aex141_transfers) == 3
+      assert ^aex141_transfers = Enum.sort_by(aex141_transfers, & &1["call_txi"])
+
+      assert Enum.all?(
+               aex141_transfers,
+               &aex141_valid_sender_transfer?(sender_id, &1, [contract_id])
+             )
+
+      assert %{"data" => next_aex141_transfers, "prev" => prev_aex141_transfers} =
+               conn |> with_store(store) |> get(next) |> json_response(200)
+
+      assert length(next_aex141_transfers) == 3
+      assert ^next_aex141_transfers = Enum.sort_by(next_aex141_transfers, & &1["call_txi"])
+
+      assert List.first(next_aex141_transfers)["call_txi"] >=
+               List.last(aex141_transfers)["call_txi"]
+
+      assert Enum.all?(
+               next_aex141_transfers,
+               &aex141_valid_sender_transfer?(sender_id, &1, [contract_id])
+             )
+
+      assert %{"data" => ^aex141_transfers} =
+               conn |> with_store(store) |> get(prev_aex141_transfers) |> json_response(200)
+    end
+
     test "returns empty list when no transfer exists", %{conn: conn} do
       account_id_without_transfer = enc_id(:crypto.strong_rand_bytes(32))
 
@@ -456,6 +500,50 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
                List.last(aex141_transfers)["call_txi"]
 
       assert Enum.all?(next_aex141_transfers, &aex141_valid_recipient_transfer?(recipient_id, &1))
+
+      assert %{"data" => ^aex141_transfers} =
+               conn |> with_store(store) |> get(prev_aex141_transfers) |> json_response(200)
+    end
+
+    test "gets some aex141 transfers sorted by asc txi filtered by contract", %{
+      conn: conn,
+      store: store
+    } do
+      recipient_id = enc_id(@to_pk2)
+      contract_id = enc_ct(@contract_pk2)
+      limit = 3
+
+      assert %{"data" => aex141_transfers, "next" => next} =
+               conn
+               |> with_store(store)
+               |> get("/v2/aex141/transfers/to/#{recipient_id}",
+                 contract: contract_id,
+                 direction: "forward",
+                 limit: limit
+               )
+               |> json_response(200)
+
+      assert length(aex141_transfers) == limit
+      assert ^aex141_transfers = Enum.sort_by(aex141_transfers, & &1["call_txi"])
+
+      assert Enum.all?(
+               aex141_transfers,
+               &aex141_valid_recipient_transfer?(recipient_id, &1, [contract_id])
+             )
+
+      assert %{"data" => next_aex141_transfers, "prev" => prev_aex141_transfers} =
+               conn |> with_store(store) |> get(next) |> json_response(200)
+
+      assert length(next_aex141_transfers) == 3
+      assert ^next_aex141_transfers = Enum.sort_by(next_aex141_transfers, & &1["call_txi"])
+
+      assert List.first(next_aex141_transfers)["call_txi"] >=
+               List.last(aex141_transfers)["call_txi"]
+
+      assert Enum.all?(
+               next_aex141_transfers,
+               &aex141_valid_recipient_transfer?(recipient_id, &1, [contract_id])
+             )
 
       assert %{"data" => ^aex141_transfers} =
                conn |> with_store(store) |> get(prev_aex141_transfers) |> json_response(200)
@@ -699,30 +787,38 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       contract_id == ct_id
   end
 
-  defp aex141_valid_sender_transfer?(sender_id, %{
-         "sender" => sender,
-         "recipient" => recipient,
-         "call_txi" => call_txi,
-         "log_idx" => log_idx,
-         "token_id" => token_id,
-         "contract_id" => contract_id
-       }) do
+  defp aex141_valid_sender_transfer?(
+         sender_id,
+         %{
+           "sender" => sender,
+           "recipient" => recipient,
+           "call_txi" => call_txi,
+           "log_idx" => log_idx,
+           "token_id" => token_id,
+           "contract_id" => contract_id
+         },
+         contracts \\ @contracts
+       ) do
     sender == sender_id and recipient in @recipients and call_txi in @txi_range and
       log_idx in @log_index_range and token_id in @aex141_token_range and
-      contract_id in @contracts
+      contract_id in contracts
   end
 
-  defp aex141_valid_recipient_transfer?(recipient_id, %{
-         "sender" => sender,
-         "recipient" => recipient,
-         "call_txi" => call_txi,
-         "log_idx" => log_idx,
-         "token_id" => token_id,
-         "contract_id" => contract_id
-       }) do
+  defp aex141_valid_recipient_transfer?(
+         recipient_id,
+         %{
+           "sender" => sender,
+           "recipient" => recipient,
+           "call_txi" => call_txi,
+           "log_idx" => log_idx,
+           "token_id" => token_id,
+           "contract_id" => contract_id
+         },
+         contracts \\ @contracts
+       ) do
     sender in @senders and recipient == recipient_id and call_txi in @txi_range and
       log_idx in @log_index_range and token_id in @aex141_token_range and
-      contract_id in @contracts
+      contract_id in contracts
   end
 
   defp aex141_valid_pair_transfer?(sender_id, recipient_id, %{
