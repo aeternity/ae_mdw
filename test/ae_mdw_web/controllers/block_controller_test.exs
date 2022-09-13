@@ -299,7 +299,7 @@ defmodule AeMdwWeb.BlockControllerTest do
         {AeMdw.Node.Db, [],
          [
            prev_block_type: fn :header -> :key end,
-           get_micro_blocks: fn ^decoded_hash -> [] end
+           get_reverse_micro_blocks: fn ^decoded_hash -> [] end
          ]}
       ] do
         assert %{
