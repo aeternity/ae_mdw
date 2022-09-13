@@ -356,7 +356,7 @@ defmodule AeMdw.Db.Contract do
   end
 
   defp delete_previous_ownership(state, contract_pk, token_id, prev_owner_pk, to_pk) do
-    if prev_owner_pk != to_pk do
+    if prev_owner_pk != to_pk and prev_owner_pk != nil do
       state
       |> State.delete(Model.NftOwnership, {prev_owner_pk, contract_pk, token_id})
       |> State.delete(Model.NftOwnerToken, {contract_pk, prev_owner_pk, token_id})
