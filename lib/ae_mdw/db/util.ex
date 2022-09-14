@@ -5,7 +5,12 @@ defmodule AeMdw.Db.Util do
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Error
+  alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Node.Db
   alias AeMdw.Txs
+  alias AeMdw.Util
+  alias AeMdw.Validate
 
   require Model
 
@@ -104,6 +109,55 @@ defmodule AeMdw.Db.Util do
     case State.prev(state, Model.DeltaStat, nil) do
       :none -> -1
       {:ok, height} -> height
+    end
+  end
+
+  @spec key_block_height(state(), binary()) :: {:ok, Blocks.height()} | {:error, Error.t()}
+  def key_block_height(state, hash_or_kbi) do
+    case Util.parse_int(hash_or_kbi) do
+      {:ok, kbi} when kbi >= 0 ->
+        last_gen = last_gen(state)
+
+        if kbi <= last_gen do
+          {:ok, kbi}
+        else
+          {:error, ErrInput.NotFound.exception(value: hash_or_kbi)}
+        end
+
+      {:ok, _kbi} ->
+        {:error, ErrInput.NotFound.exception(value: hash_or_kbi)}
+
+      :error ->
+        with {:ok, height, _hash} <- extract_height_hash(state, :key, hash_or_kbi) do
+          {:ok, height}
+        end
+    end
+  end
+
+  @spec micro_block_height_index(state(), binary()) ::
+          {:ok, Blocks.height(), Blocks.mbi()} | {:error, Error.t()}
+  def micro_block_height_index(state, mb_hash) do
+    with {:ok, height, decoded_hash} <- extract_height_hash(state, :micro, mb_hash) do
+      mbi =
+        decoded_hash
+        |> Db.get_reverse_micro_blocks()
+        |> Enum.count()
+
+      {:ok, height, mbi}
+    end
+  end
+
+  defp extract_height_hash(state, type, hash) do
+    with {:ok, encoded_hash} <- Validate.id(hash),
+         {:ok, block} <- :aec_chain.get_block(encoded_hash),
+         header <- :aec_blocks.to_header(block),
+         ^type <- :aec_headers.type(header),
+         last_gen <- last_gen(state),
+         height when height <= last_gen <- :aec_headers.height(header) do
+      {:ok, height, encoded_hash}
+    else
+      {:error, reason} -> {:error, reason}
+      _error_or_invalid_height -> {:error, ErrInput.NotFound.exception(value: hash)}
     end
   end
 
