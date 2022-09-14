@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.20.0](https://www.github.com/aeternity/ae_mdw/compare/v1.19.1...v1.20.0) (2022-09-14)
+
+
+### Features
+
+* add /key-blocks endpoints with txs/mbs count ([#892](https://www.github.com/aeternity/ae_mdw/issues/892)) ([1b5f016](https://www.github.com/aeternity/ae_mdw/commit/1b5f016dd88d1032774d86fc9868d0d8ea44e7d1))
+* add /key-blocks/:hash_or_kbi endpoint with mbs/txs count ([#895](https://www.github.com/aeternity/ae_mdw/issues/895)) ([b8a2e09](https://www.github.com/aeternity/ae_mdw/commit/b8a2e094eace0a0569ee2fb5eddd853eabb4328e))
+* add /key-blocks/:hash_or_kbi/micro-blocks endpoint ([#896](https://www.github.com/aeternity/ae_mdw/issues/896)) ([0540074](https://www.github.com/aeternity/ae_mdw/commit/054007411c87bbaea9deee93db4c88cccbb6aea5))
+* add /v2/micro-blocks/:hash endpoint ([#898](https://www.github.com/aeternity/ae_mdw/issues/898)) ([2c16e47](https://www.github.com/aeternity/ae_mdw/commit/2c16e477ac9feb981998735a7107903c1a04a003))
+* add /v2/micro-blocks/:hash/txs endpoint ([#900](https://www.github.com/aeternity/ae_mdw/issues/900)) ([2312a8a](https://www.github.com/aeternity/ae_mdw/commit/2312a8a924ea4e79ec8640fc37ae33f75badfebd))
+* add nft collection stats ([#899](https://www.github.com/aeternity/ae_mdw/issues/899)) ([5f5583a](https://www.github.com/aeternity/ae_mdw/commit/5f5583a206c45895f27af75db3b8438bcdfb5481))
+* create nft ownership based on Mint event ([#897](https://www.github.com/aeternity/ae_mdw/issues/897)) ([929e7c5](https://www.github.com/aeternity/ae_mdw/commit/929e7c5369a2741f6ce0275f72a473c4a940eb4c))
+* index and fetch nft owners on a collection ([#894](https://www.github.com/aeternity/ae_mdw/issues/894)) ([1d06bbf](https://www.github.com/aeternity/ae_mdw/commit/1d06bbfb7132680b0dd11cbd64794268bcae0d81))
+* index channels and add active channels endpoint ([#889](https://www.github.com/aeternity/ae_mdw/issues/889)) ([d86b1cc](https://www.github.com/aeternity/ae_mdw/commit/d86b1cc96d1668a7e0ec37b9b8c463e51c5265c1))
+
+
+### Miscellaneous
+
+* accept contract param besides contract_id ([#903](https://www.github.com/aeternity/ae_mdw/issues/903)) ([af3471f](https://www.github.com/aeternity/ae_mdw/commit/af3471f0e9a0224fc402205f6e135c21290fdcd2))
+* disable phoenix code_reloader by default ([#904](https://www.github.com/aeternity/ae_mdw/issues/904)) ([1b21738](https://www.github.com/aeternity/ae_mdw/commit/1b2173862b923608a208340b91292dadd0224380))
+
 ### [1.19.1](https://www.github.com/aeternity/ae_mdw/compare/v1.19.0...v1.19.1) (2022-09-05)
 
 
