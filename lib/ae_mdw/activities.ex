@@ -91,7 +91,7 @@ defmodule AeMdw.Activities do
       |> Fields.account_fields_stream(account_pk, direction, range, txi_cursor)
       |> Stream.transform({-1, -1, -1}, fn
         {txi, tx_type, tx_field_pos}, {txi, height, local_idx} ->
-          {[{height, txi, local_idx + 1, {:field, tx_type, tx_field_pos}}],
+          {[{{height, txi, local_idx + 1}, {:field, tx_type, tx_field_pos}}],
            {txi, height, local_idx + 1}}
 
         {txi, tx_type, tx_field_pos}, _acc ->
