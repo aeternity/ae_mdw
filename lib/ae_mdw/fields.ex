@@ -18,7 +18,7 @@ defmodule AeMdw.Fields do
   @typep range() :: {:gen, Range.t()} | nil
   @typep cursor() :: Txs.tx() | nil
 
-  @create_tx_types ~w(contract_create_tx channel_create_tx oracle_register_tx name_claim_tx ga_attach_tx)a
+  @create_tx_types ~w(contract_create_tx channel_create_tx oracle_register_tx ga_attach_tx)a
 
   @spec account_fields_stream(state(), pubkey(), direction(), range(), cursor()) :: Enumerable.t()
   def account_fields_stream(state, account_pk, direction, range, cursor) do
