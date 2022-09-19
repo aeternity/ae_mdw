@@ -115,10 +115,11 @@ We currently provide hosted infrastructure at https://mainnet.aeternity.io/mdw/ 
 ## HTTP v2 (latest) endpoints
 
 ```
-GET /v2/blocks                         - returns generation blocks
-GET /v2/blocks/:hash                   - returns block by hash
-GET /v2/blocks/:kbi                    - returns key block by integer index
-GET /v2/blocks/:kbi/:mbi               - returns micro block by integer indices
+GET /v2/key-blocks                           - returns key blocks with micro blocks and transaction counts
+GET /v2/key-blocks/:hash_or_kbi              - returns key block by hash or height
+GET /v2/key-blocks/:hash_or_kbi/micro-blocks - returns micro block belonging to key block
+GET /v2/micro-blocks/:hash                   - returns micro block with transaction count
+GET /v2/micro-blocks/:hash/txs               - returns micro block transactions
 
 GET /v2/txs                            - returns transactions in any direction
 GET /v2/txs/:hash_or_index             - returns transaction by hash or index
@@ -1514,7 +1515,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/key-blocks?limit=1" | jq '.'
 }
 ```
 
-### `/v2/key-blocks/:hash/micro-blocks`
+### `/v2/key-blocks/:hash_or_kbi/micro-blocks`
 
 ```
 $ curl https://mainnet.aeternity.io/key-blocks/kh_2HvzkfTvRjfwbim8YZ2q2ETKLhuYK125JGpisr1Cc9m2VSa5iC/micro-blocks?limit=1
@@ -4398,9 +4399,9 @@ Most routes will remain the same, and can be updated by only appending the `/v2`
 
 This is a list of the exceptions together with the changes that need to be done:
 
-* `/blocks/:range_or_dir` - Can now be accessed via `/v2/blocks?scope=gen:100-200` or `/v2/blocks?direction=forward`. In addition, each block now has a list of micro_blocks sorted by time, instead of it being a map.
-* `/blocki/:id` - Was renamed to `/v2/blocks/:id`.
-* `/blocki/:kbi/:mbi` - Was renamed to `/v2/blocks/:kbi/:mbi`.
+* `/blocks/:range_or_dir` - Can now be accessed via `/v2/key-blocks?scope=gen:100-200` or `/v2/key-blocks?direction=forward`.
+* `/blocki/:id` - Was renamed to `/v2/key-blocks/:hash_or_kbi`.
+* `/blocki/:kbi/:mbi` - Was renamed to `/v2/micro-blocks/:hash`.
 * `/name/auction/:id` - Was renamed to `/v2/names/:id/auction`.
 * `/name/pointers/:id` - Was renamed to `/v2/names/:id/pointers`.
 * `/name/pointees/:id` - Was renamed to `/v2/names/:id/pointees`.
