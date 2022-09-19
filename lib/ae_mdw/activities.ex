@@ -122,10 +122,8 @@ defmodule AeMdw.Activities do
 
     %{
       height: height,
-      activity_type: "#{Node.tx_name(tx_type)}Event",
-      activity_payload: %{
-        tx: tx
-      }
+      type: "#{Node.tx_name(tx_type)}Event",
+      payload: tx
     }
   end
 

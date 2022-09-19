@@ -31,7 +31,7 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
       from_height = 18_061
       to_height = 1_000_000
 
-      assert %{"data" => events, "next" => next_url} =
+      assert %{"data" => [first_event | _rest] = events, "next" => next_url} =
                conn
                |> get("/v2/accounts/#{account}/activities",
                  direction: "forward",
@@ -46,6 +46,9 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
                  &1
                )
              )
+
+      assert %{"type" => "SpendTxEvent", "payload" => %{"tx" => tx}} = first_event
+      assert %{"recipient_id" => ^account} = tx
 
       assert %{"prev" => prev_url, "data" => next_events} =
                conn
