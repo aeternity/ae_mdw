@@ -993,12 +993,6 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
     extra_mutation = IntCallsMutation.new(extra_ct_pk, not_spend_txi, not_spend_int_calls)
 
-    %{store: store2} =
-      State.commit_mem(
-        State.new(store),
-        mixed_ct_mutations ++ contract_mutations ++ [extra_mutation]
-      )
-
-    store2
+    change_store(store, mixed_ct_mutations ++ contract_mutations ++ [extra_mutation])
   end
 end

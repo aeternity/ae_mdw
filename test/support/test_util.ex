@@ -4,6 +4,7 @@ defmodule AeMdwWeb.TestUtil do
   """
 
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Db.Mutation
   alias AeMdw.Db.State
   alias Plug.Conn
 
@@ -20,5 +21,15 @@ defmodule AeMdwWeb.TestUtil do
   @spec with_store(Conn.t(), Store.t()) :: Conn.t()
   def with_store(conn, store) do
     Conn.assign(conn, :state, State.new(store))
+  end
+
+  @spec change_store(Store.t(), [Mutation.t()]) :: Store.t()
+  def change_store(store, mutations) do
+    %{store: store2} =
+      Enum.reduce(mutations, State.new(store), fn mutation, state ->
+        Mutation.execute(mutation, state)
+      end)
+
+    store2
   end
 end
