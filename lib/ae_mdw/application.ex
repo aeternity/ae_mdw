@@ -163,9 +163,6 @@ defmodule AeMdw.Application do
       |> Enum.map(fn {k, v} -> {Contract.function_hash(k), v} end)
       |> Enum.into(%{})
 
-    max_int = Util.max_256bit_int()
-    max_blob = :binary.list_to_bin(:lists.duplicate(1024, <<max_int::256>>))
-
     height_proto = :aec_hard_forks.protocols() |> Enum.into([]) |> Enum.sort(&>=/2)
 
     min_block_reward_height =
@@ -202,7 +199,6 @@ defmodule AeMdw.Application do
         aexn_mint_event_hash: [{[], :aec_hash.blake2b_256_hash("Mint")}],
         aexn_transfer_event_hash: [{[], :aec_hash.blake2b_256_hash("Transfer")}],
         aex141_signatures: [{[], aex141_sigs}],
-        max_blob: [{[], max_blob}],
         height_proto: [{[], height_proto}],
         min_block_reward_height: [{[], min_block_reward_height}],
         token_supply_delta:

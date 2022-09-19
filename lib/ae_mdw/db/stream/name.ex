@@ -3,6 +3,7 @@ defmodule AeMdw.Db.Stream.Name do
   alias AeMdw.Db.Stream.Resource.Util, as: RU
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Util
 
   ##########
 
@@ -11,7 +12,7 @@ defmodule AeMdw.Db.Stream.Name do
     {init_k, advance} =
       case direction do
         :forward -> {prefix, &State.next(state, &1, &2)}
-        :backward -> {prefix <> AeMdw.Node.max_blob(), &State.prev(state, &1, &2)}
+        :backward -> {prefix <> Util.max_name_bin(), &State.prev(state, &1, &2)}
       end
 
     advance = RU.advance_fn(advance, AeMdwWeb.Util.prefix_checker(prefix))
@@ -23,7 +24,7 @@ defmodule AeMdw.Db.Stream.Name do
     {init_k, advance} =
       case direction do
         :forward -> {prefix, &State.next(state, &1, &2)}
-        :backward -> {prefix <> AeMdw.Node.max_blob(), &State.prev(state, &1, &2)}
+        :backward -> {prefix <> Util.max_name_bin(), &State.prev(state, &1, &2)}
       end
 
     advance = RU.advance_fn(advance, AeMdwWeb.Util.prefix_checker(prefix))

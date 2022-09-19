@@ -23,7 +23,7 @@ defmodule AeMdw.Migrations.AddTypeCountTable do
       |> Database.first_key()
       |> Stream.unfold(fn
         {:ok, {tx_type, _txi}} ->
-          {tx_type, Database.next_key(Model.Type, {tx_type, Util.max_256bit_int()})}
+          {tx_type, Database.next_key(Model.Type, {tx_type, Util.max_int()})}
 
         :none ->
           nil
@@ -33,7 +33,7 @@ defmodule AeMdw.Migrations.AddTypeCountTable do
           RocksDbCF.count_range(
             Model.Type,
             {tx_type, Util.min_int()},
-            {tx_type, Util.max_256bit_int()}
+            {tx_type, Util.max_int()}
           )
 
         {tx_type, count}

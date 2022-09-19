@@ -3,6 +3,19 @@ defmodule AeMdw.UtilTest do
 
   alias AeMdw.Util
 
+  describe "terms comparision" do
+    test "result in integer asc order" do
+      # min_int is a shorthand for min_nonbigint_integer
+      assert Util.min_256bit_int() < Util.min_int()
+      assert Util.min_int() < 576_460_752_303_423_488 and 576_460_752_303_423_488 < Util.max_int()
+    end
+
+    test "result in binary asc order" do
+      assert Util.min_bin() < Util.max_name_bin()
+      assert Util.max_name_bin() < Util.max_256bit_bin()
+    end
+  end
+
   describe "build_gen_pagination/5" do
     test "when forward and range_first exceeds last_gen, it returns error" do
       assert :error = Util.build_gen_pagination(nil, :forward, {400, 500}, 10, 300)
