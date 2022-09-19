@@ -31,7 +31,7 @@ defmodule AeMdw.Db.Sync.Stats do
     case State.next(
            state,
            Model.NftOwnerToken,
-           {contract_pk, prev_owner_pk, -Util.max_256bit_int()}
+           {contract_pk, prev_owner_pk, Util.min_256bit_int()}
          ) do
       {:ok, {^contract_pk, ^prev_owner_pk, _token}} ->
         state
@@ -44,7 +44,7 @@ defmodule AeMdw.Db.Sync.Stats do
   end
 
   defp increment_collection_owners(state, contract_pk, to_pk) do
-    case State.next(state, Model.NftOwnerToken, {contract_pk, to_pk, -Util.max_256bit_int()}) do
+    case State.next(state, Model.NftOwnerToken, {contract_pk, to_pk, Util.min_256bit_int()}) do
       {:ok, {^contract_pk, ^to_pk, _token}} -> state
       _new_owner -> update_stat_counter(state, Stats.nft_owners_count_key(contract_pk))
     end

@@ -141,14 +141,13 @@ defmodule AeMdw.Transfers do
 
   defp deserialize_scope(_state, nil) do
     {{{Util.min_int(), Util.min_int()}, Util.min_bin(), Util.min_bin(), Util.min_int()},
-     {{Util.max_256bit_int(), Util.max_256bit_int()}, Util.max_256bit_bin(),
-      Util.max_256bit_bin(), Util.max_256bit_int()}}
+     {{Util.max_int(), Util.max_int()}, Util.max_256bit_bin(), Util.max_256bit_bin(),
+      Util.max_int()}}
   end
 
   defp deserialize_scope(_state, {:gen, %Range{first: first_gen, last: last_gen}}) do
     {{{first_gen, Util.min_int()}, Util.min_bin(), Util.min_bin(), Util.min_int()},
-     {{last_gen, Util.max_256bit_int()}, Util.max_256bit_bin(), Util.max_256bit_bin(),
-      Util.max_256bit_int()}}
+     {{last_gen, Util.max_int()}, Util.max_256bit_bin(), Util.max_256bit_bin(), Util.max_int()}}
   end
 
   defp deserialize_scope(state, {:txi, %Range{first: first_txi, last: last_txi}}) do

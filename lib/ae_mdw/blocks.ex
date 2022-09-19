@@ -97,7 +97,7 @@ defmodule AeMdw.Blocks do
           |> Collection.stream(
             Model.Block,
             direction,
-            {{height, 0}, {height, Util.max_256bit_int()}},
+            {{height, 0}, {height, Util.max_int()}},
             cursor
           )
           |> Stream.map(fn {_height, mbi} -> mbi end)
@@ -231,7 +231,7 @@ defmodule AeMdw.Blocks do
     Enum.map(range, fn gen ->
       [key_block | micro_blocks] =
         state
-        |> Collection.stream(@table, :backward, nil, {gen, Util.max_256bit_int()})
+        |> Collection.stream(@table, :backward, nil, {gen, Util.max_int()})
         |> Stream.take_while(&match?({^gen, _mb_index}, &1))
         |> Enum.map(fn key -> State.fetch!(state, @table, key) end)
         |> Enum.reverse()

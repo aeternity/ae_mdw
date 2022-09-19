@@ -97,11 +97,11 @@ defmodule AeMdw.Aex141 do
         Model.NftOwnership ->
           {
             {pubkey, <<>>, nil},
-            {pubkey, Util.max_256bit_bin(), Util.max_256bit_int()}
+            {pubkey, Util.max_256bit_bin(), Util.max_int()}
           }
 
         Model.NftTokenOwner ->
-          {{pubkey, -Util.max_256bit_int()}, {pubkey, nil}}
+          {{pubkey, Util.min_256bit_int()}, {pubkey, nil}}
       end
 
     fn direction ->

@@ -6,6 +6,8 @@ defmodule AeMdw.Util do
   alias AeMdw.Collection
   alias AeMdw.Db.State
 
+  @max_name_bin String.duplicate("z", 128)
+
   @type opt() :: {:expand?, boolean()} | {:top?, boolean()}
   @type opts() :: [opt()]
 
@@ -188,21 +190,25 @@ defmodule AeMdw.Util do
     )
   end
 
-  @spec max_256bit_int() :: integer()
-  def max_256bit_int(),
-    do: 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+  @spec max_int() :: nil
+  def max_int(), do: nil
 
   @spec max_256bit_bin() :: binary()
-  def max_256bit_bin(), do: <<max_256bit_int()::256>>
+  def max_256bit_bin(),
+    do: <<0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF::256>>
 
-  @spec max_name_bin() :: binary
-  def max_name_bin(), do: String.duplicate("z", 128)
-
-  @spec min_int() :: integer()
-  def min_int(), do: -100
+  @spec max_name_bin() :: binary()
+  def max_name_bin(), do: @max_name_bin
 
   @spec min_bin() :: binary()
   def min_bin(), do: <<>>
+
+  # minimum small integer from https://www.erlang.org/doc/efficiency_guide/advanced.html
+  @spec min_int() :: integer()
+  def min_int(), do: -576_460_752_303_423_488
+
+  @spec min_256bit_int() :: integer()
+  def min_256bit_int(), do: -0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 
   @spec contains_unicode?(binary()) :: boolean()
   def contains_unicode?(string) do

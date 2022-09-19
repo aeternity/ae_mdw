@@ -207,7 +207,7 @@ defmodule AeMdw.Db.Format do
     Model.tx(id: call_tx_hash, block_index: {height, micro_index}) =
       State.fetch!(state, Model.Tx, call_txi)
 
-    block_hash = Model.block(DbUtil.read_block!(state, {height, micro_index}), :hash)
+    Model.block(hash: block_hash) = DbUtil.read_block!(state, {height, micro_index})
 
     {contract_txi, contract_tx_hash} =
       if create_txi == -1 do
