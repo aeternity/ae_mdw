@@ -61,6 +61,9 @@ defmodule AeMdw.Fields do
 
       state
       |> Collection.stream(Model.Field, direction, scope, cursor)
+      |> Stream.filter(fn {^tx_type, ^tx_field_pos, ^account_pk, txi} ->
+        tx_type != :contract_create_tx or State.exists?(state, Model.Type, {tx_type, txi})
+      end)
       |> Stream.map(fn {^tx_type, ^tx_field_pos, ^account_pk, txi} ->
         {txi, tx_type, tx_field_pos}
       end)
