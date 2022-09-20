@@ -4398,6 +4398,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/minerstats?limit=1" | jq '.'
 
 Inteded for being able to display all events in which a specific account is related to in any way.
 
+An activity event occurs when there's any change in the blockchain related to a specific account. It is not the same as the log events which occur when executing a contract.
+
 ### `/v2/accounts/:id/activities`
 
 Paginated list of events related to the `:id` account.
