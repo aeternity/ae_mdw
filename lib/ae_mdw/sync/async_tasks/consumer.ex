@@ -43,16 +43,15 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   end
 
   @doc """
-  Pull tasks from Producer.
+  Pull tasks from Producer and when the task finishes, demonitor and demands next task.
+
+  If fails, rerun task or put it back to queue.
   """
   @impl GenServer
   def handle_info(:demand, _state) do
     {:noreply, demand()}
   end
 
-  @doc """
-  When the task finishes, demonitor and demands next task.
-  """
   def handle_info({ref, _ok_res}, _state) do
     Process.demonitor(ref, [:flush])
 
@@ -61,9 +60,6 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
     {:noreply, %State{}}
   end
 
-  @doc """
-  Rerun failed task or put it back to queue.
-  """
   def handle_info(
         {:DOWN, ref, :process, _pid, _reason},
         %State{task: task, m_task: m_task} = state

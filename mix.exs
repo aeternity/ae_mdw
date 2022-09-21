@@ -16,6 +16,7 @@ defmodule AeMdw.MixProject do
       deps: deps(),
       xref: [
         exclude: [
+          :aecore,
           :lager,
           :mnesia,
           :aeb_aevm_abi,
@@ -136,10 +137,12 @@ defmodule AeMdw.MixProject do
       {:cors_plug, "~> 2.0"},
       {:gettext, "~> 0.11"},
       {:jason, "~> 1.0"},
+      {:poison, "~> 5.0"},
       {:plug_cowboy, "~> 2.0"},
-      {:riverside, "~> 1.2.6"},
+      {:phoenix_swagger,
+       git: "https://github.com/jyeshe/phoenix_swagger.git", branch: "bump-poison"},
+      {:riverside, "~> 2.2.1"},
       {:websockex, "~> 0.4.2"},
-      {:phoenix_swagger, "~> 0.8"},
       {:temp, "~> 0.4"},
       {:tesla, "~> 1.3.0"},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
