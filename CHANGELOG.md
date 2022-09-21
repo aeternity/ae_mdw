@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.20.1](https://www.github.com/aeternity/ae_mdw/compare/v1.20.0...v1.20.1) (2022-09-21)
+
+
+### Refactorings
+
+* allocate smaller tuples for query streams ([#905](https://www.github.com/aeternity/ae_mdw/issues/905)) ([bd7229b](https://www.github.com/aeternity/ae_mdw/commit/bd7229b2ed5a48a31764bcf11d1e62c09891d397))
+
 ## [1.20.0](https://www.github.com/aeternity/ae_mdw/compare/v1.19.1...v1.20.0) (2022-09-14)
 
 
