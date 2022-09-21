@@ -113,8 +113,8 @@ defmodule AeMdw.Txs do
           scope =
             case range do
               {:gen, %Range{first: first_gen, last: last_gen}} ->
-                {first_gen_to_txi(state, first_gen, direction),
-                 last_gen_to_txi(state, last_gen, direction)}
+                {DbUtil.first_gen_to_txi(state, first_gen, direction),
+                 DbUtil.last_gen_to_txi(state, last_gen, direction)}
 
               {:txi, %Range{first: first_txi, last: last_txi}} ->
                 {first_txi, last_txi}
@@ -167,14 +167,6 @@ defmodule AeMdw.Txs do
 
     tx_hash
   end
-
-  defp first_gen_to_txi(state, first_gen, :forward), do: DbUtil.gen_to_txi(state, first_gen)
-
-  defp first_gen_to_txi(state, first_gen, :backward),
-    do: DbUtil.gen_to_txi(state, first_gen + 1) - 1
-
-  defp last_gen_to_txi(state, last_gen, :forward), do: DbUtil.gen_to_txi(state, last_gen + 1) - 1
-  defp last_gen_to_txi(state, last_gen, :backward), do: DbUtil.gen_to_txi(state, last_gen)
 
   # The purpose of this function is to generate the streams that will be then used as input for
   # Collection.merge/2 function. The function is divided into three clauses. There's an explanation

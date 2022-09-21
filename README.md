@@ -27,6 +27,7 @@
 - [AEX9 contract balances](#aex9-contract-balances)
 - [NFTs](#aex141)
 - [Statistics](#statistics)
+- [Activities](#activities)
 - [Migrating to v2](#migrating-to-v2)
 - [Websocket interface](#websocket-interface)
 - [Tests](#tests)
@@ -4392,6 +4393,92 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/minerstats?limit=1" | jq '.'
   "prev": null
 }
 ```
+---
+
+## Activities
+
+Inteded for being able to display all events in which a specific account is related to in any way.
+
+An activity event occurs when there's any change in the blockchain related to a specific account. It is not the same as the log events which occur when executing a contract.
+
+### `/v2/accounts/:id/activities`
+
+Paginated list of events related to the `:id` account.
+
+Each activity contains 3 values:
+- `height` - The height in which the event ocurred
+- `type` - The type of event.
+- `payload` - An object whose structure depends on the type of event.
+
+For transaction events the activity type will be `<TxType>Event`, and the payload will contain a single transaction object as displayed in the `/v2/txs` endpoint.
+
+```
+$ curl https://mainnet.aeternity.io/mdw/v2/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx/activities
+{
+  "data": [
+    {
+      "height": 85694,
+      "type": "NameUpdateTxEvent",
+      "payload": {
+        "block_hash": "mh_2tL4tRRnH6WLzzYca7T7vQUbdUCRZEeq58S5giwAtnbkjjb3Vj",
+        "block_height": 85694,
+        "hash": "th_2pvhiLSonrEsmJiUf9Q3E3Lkt9ki5MpHGJ9qQsCVt8ACNWpVVc",
+        "micro_index": 30,
+        "micro_time": 1558804725247,
+        "signatures": [
+          "sg_P7UFr4iySfJpidyitDqVTF86uhnuYjQVJ46c96jC4nYZys5mBDQVbsV4CLxYpCqKU55SySmkcSg3Xg4dcYk4aFJGm3VjF"
+        ],
+        "tx": {
+          "account_id": "ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx",
+          "client_ttl": 84600,
+          "fee": 30000000000000,
+          "name": "umpz.test",
+          "name_id": "nm_t13Kcjan1mRu2sFjdMgeeASSSL8QoxmVhTrFCmji1j1DZ4jhb",
+          "name_ttl": 50000,
+          "nonce": 151,
+          "pointers": [
+            {
+              "id": "ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx",
+              "key": "account_pubkey"
+            }
+          ],
+          "type": "NameUpdateTx",
+          "version": 1
+        }
+      }
+    },
+    {
+      "payload": {
+        "block_hash": "mh_2iWGwtQYYueZ8wLGTBjQ79jYfLnQKNgVcHc1GWuPqMG46UPnHY",
+        "block_height": 502033,
+        "hash": "th_29qxc2oEajHPVoGNS6LBe2TbKk2kyECXXR4KtbGHMhfpwdoNzD",
+        "micro_index": 0,
+        "micro_time": 1634367215608,
+        "signatures": [
+          "sg_DXk5jcdoCgGVHJUqjL2Mnu3tPxFD2mGrPga5TgVH97DZC1oq7aDZKEHgrpBqf24A4v2oBFX3zHQzXC1wj9X4ZqdzsqJqj"
+        ],
+        "tx": {
+          "amount": 20000,
+          "fee": 19320000000000,
+          "nonce": 5967045,
+          "payload": "ba_NTAyMDMxOmtoXzJraWtpTms0cnJnV2lNZlBLSmszU2FCdnM5TVVqdHZtNEpLeTdoVnA3Z2k5eW1uaXF1Om1oX01TZ2dxenJINlpXOW9xbmM3eXZDR1dBdGlGRGpaWGFrQWZSVndmeWtteGdWdEd3aVY6MTYzNDM2NzIxMCoV6Eo=",
+          "recipient_id": "ak_2QkttUgEyPixKzqXkJ4LX7ugbRjwCDWPBT4p4M2r8brjxUxUYd",
+          "sender_id": "ak_2QkttUgEyPixKzqXkJ4LX7ugbRjwCDWPBT4p4M2r8brjxUxUYd",
+          "ttl": 502041,
+          "type": "SpendTx",
+          "version": 1
+        }
+      },
+      "type": "SpendTxEvent",
+      "height": 502033
+    }
+  ],
+  "next": "/v2/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx/activities?cursor=84328-2002003-0",
+  "prev": null
+}
+```
+
+
 
 ## Migrating to v2
 
