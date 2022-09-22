@@ -4412,6 +4412,8 @@ Each activity contains 3 values:
 
 For transaction events the activity type will be `<TxType>Event`, and the payload will contain a single transaction object as displayed in the `/v2/txs` endpoint.
 
+Transaction events can also be `IntContractCallEvents` which represent transactions that happen internally during a contract call.
+
 ```
 $ curl https://mainnet.aeternity.io/mdw/v2/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx/activities
 {
@@ -4471,6 +4473,41 @@ $ curl https://mainnet.aeternity.io/mdw/v2/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm
       },
       "type": "SpendTxEvent",
       "height": 502033
+    },
+    {
+      "height": 659373,
+      "payload": {
+        "block_hash": "mh_MXVb7wmE1tqeA2xSPhTTksLy7DE5PvR8nsu5haC2fTGpgxxhR",
+        "call_tx_hash": "th_Ugtejdn7SkJHXkC3VSdCm2SnXGgPxHgUphBneMqgR3gniZzDN",
+        "call_txi": 34224137,
+        "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+        "contract_tx_hash": "th_6memqAr5S3UQp1pc4FWXT8xUotfdrdUFgBd8VPmjM2ZRuojTF",
+        "contract_txi": 8392766,
+        "function": "Oracle.query",
+        "height": 659373,
+        "internal_tx": {
+          "fee": 0,
+          "nonce": 0,
+          "oracle_id": "ok_AFbLSrppnBFgbKPo4GykK5XEwdq15oXgosgcdL7ud6Vo2YPsH",
+          "query": "YWtfcjNxRWNzWWd5Z2JjYVoxZlhQRFB0YThnZU5FUkV0OHZZaVVKNWtxQnNRNDhXVmp4NztodHRwczovL20ud2VpYm8uY24vNzc1NDY0Njg4Ny80ODE2MjEwNDI2ODYxMjg5",
+          "query_fee": 20000000000000,
+          "query_id": "oq_pcJy4ufijeP56LwCaJ47GcRNvJvW5nEUedR4BNeMzSobXXqMx",
+          "query_ttl": {
+            "type": "delta",
+            "value": 20
+          },
+          "response_ttl": {
+            "type": "delta",
+            "value": 20
+          },
+          "sender_id": "ak_7wqP18AHzyoqymwGaqQp8G2UpzBCggYiq7CZdJiB71VUsLpR4",
+          "type": "OracleQueryTx",
+          "version": 1
+        },
+        "local_idx": 3,
+        "micro_index": 0
+      },
+      "type": "IntContractCallEvent"
     }
   ],
   "next": "/v2/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx/activities?cursor=84328-2002003-0",
