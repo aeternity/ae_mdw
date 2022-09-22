@@ -1,8 +1,5 @@
 name: 'Mdw setup'
-
-inputs:
-  deploy-key:
-    required: true
+description: 'Setup elixir and get Mdw deps'
 
 runs:
   using: "composite"

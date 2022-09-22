@@ -1,8 +1,5 @@
 name: 'Node setup'
-
-inputs:
-  deploy-key:
-    required: true
+description: 'Setup Aeternity Node'
 
 runs:
   using: "composite"
