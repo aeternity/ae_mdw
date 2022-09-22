@@ -44,7 +44,7 @@ defmodule AeMdw.Fields do
 
           nil ->
             {{tx_type, tx_field_pos, account_pk, Util.min_int()},
-             {tx_type, tx_field_pos, account_pk, -Util.min_int()}}
+             {tx_type, tx_field_pos, account_pk, Util.max_int()}}
         end
 
       cursor = if cursor, do: {tx_type, tx_field_pos, account_pk, cursor}

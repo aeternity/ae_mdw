@@ -31,12 +31,11 @@ defmodule AeMdw.Activities do
   @typep activity_value() ::
            {:field, Node.tx_type(), non_neg_integer() | nil}
            | :int_contract_call
-           | {:int_contract_external_call, non_neg_integer()}
   @typep activity_pair() :: {activity_key(), activity_value()}
 
   @max_pos 4
   @min_int Util.min_int()
-  @max_int -@min_int
+  @max_int Util.max_int()
 
   @doc """
   Activities related to an account are those that affect the account in any way.
@@ -76,7 +75,7 @@ defmodule AeMdw.Activities do
         fn direction ->
           {txi_scope, gen_scope} =
             case range do
-              {:gen, %Range{first: first_gen, last: last_gen}} ->
+              {:gen, first_gen..last_gen} ->
                 {
                   {first_gen, last_gen},
                   {DbUtil.first_gen_to_txi(state, first_gen, direction),
@@ -164,7 +163,7 @@ defmodule AeMdw.Activities do
       |> Stream.map(fn {^account_pk, ^pos, txi, local_idx} ->
         Model.tx(block_index: {height, _mbi}) = State.fetch!(state, Model.Tx, txi)
 
-        {{height, txi, local_idx}, {:int_contract_external_call, pos}}
+        {{height, txi, local_idx}, :int_contract_call}
       end)
     end)
     |> Collection.merge(direction)
@@ -228,14 +227,6 @@ defmodule AeMdw.Activities do
   end
 
   defp render(state, {{height, call_txi, local_idx}, :int_contract_call}) do
-    %{
-      height: height,
-      type: "IntContractCallEvent",
-      payload: Format.to_map(state, {call_txi, local_idx}, Model.IntContractCall)
-    }
-  end
-
-  defp render(state, {{height, call_txi, local_idx}, {:int_contract_external_call, _pos}}) do
     %{
       height: height,
       type: "IntContractCallEvent",
