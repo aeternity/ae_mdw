@@ -1,4 +1,4 @@
-use Mix.Config
+import Config
 
 # customizable per developer
 config :git_hooks,

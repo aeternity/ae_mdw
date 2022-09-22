@@ -5,7 +5,7 @@ defmodule AeMdw.MixProject do
     [
       app: :ae_mdw,
       version: "1.20.0",
-      elixir: "~> 1.5",
+      elixir: "~> 1.9",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
         warnings_as_errors: true

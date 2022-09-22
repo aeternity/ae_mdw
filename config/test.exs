@@ -1,4 +1,4 @@
-use Mix.Config
+import Config
 
 # Sync
 config :ae_mdw, sync: false
