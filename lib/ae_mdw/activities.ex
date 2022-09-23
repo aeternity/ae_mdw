@@ -229,7 +229,7 @@ defmodule AeMdw.Activities do
   defp render(state, {{height, call_txi, local_idx}, :int_contract_call}) do
     %{
       height: height,
-      type: "IntContractCallEvent",
+      type: "InternalContractCallEvent",
       payload: Format.to_map(state, {call_txi, local_idx}, Model.IntContractCall)
     }
   end

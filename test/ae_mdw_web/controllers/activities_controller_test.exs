@@ -226,12 +226,12 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
         assert %{
                  "height" => ^height,
-                 "type" => "IntContractCallEvent"
+                 "type" => "InternalContractCallEvent"
                } = tx1
 
         assert %{
                  "height" => ^height,
-                 "type" => "IntContractCallEvent"
+                 "type" => "InternalContractCallEvent"
                } = tx2
 
         assert %URI{query: query} = URI.parse(next_url)
@@ -309,12 +309,12 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
         assert %{
                  "height" => ^height,
-                 "type" => "IntContractCallEvent"
+                 "type" => "InternalContractCallEvent"
                } = tx1
 
         assert %{
                  "height" => ^height,
-                 "type" => "IntContractCallEvent"
+                 "type" => "InternalContractCallEvent"
                } = tx2
 
         assert %URI{query: query} = URI.parse(next_url)
