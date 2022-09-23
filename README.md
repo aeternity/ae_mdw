@@ -15,6 +15,7 @@
 - [Hosted infrastructure](#hosted-infrastructure)
 - [HTTP v2 (latest) endpoints](#http-v2-latest-endpoints)
 - [HTTP v1 (deprecated) endpoints](#http-v1-endpoints-deprecated)
+- [OpenAPI specs](#open-api-specs)
 - [Pagination](#pagination)
 - [Additional endpoint options](#additional-endpoint-options)
 - [Transactions](#transactions)
@@ -219,6 +220,16 @@ GET /contracts/calls/:scope_type/:range  - returns function calls inside of the 
 
 GET /status                              - returns middleware status
 ```
+
+## OpenAPI specs
+
+Under the `/swagger` path there are two files providing a swagger specificiation of the endpoints for both api versions:
+
+- swagger_v1.yaml
+- swagger_v2.yaml
+
+This npm package can be used for a self-hosted app to visualize these specs:
+https://www.npmjs.com/package/swagger-ui
 
 ## Pagination
 
