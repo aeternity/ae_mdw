@@ -31,10 +31,6 @@ defmodule AeMdwWeb.Router do
     plug :put_secure_browser_headers
   end
 
-  scope "/swagger", AeMdwWeb do
-    get "/", SwaggerForward, :index_v1
-  end
-
   scope "/", AeMdwWeb do
     pipe_through :api
 
@@ -97,10 +93,6 @@ defmodule AeMdwWeb.Router do
       get "/deltastats", StatsController, :delta_stats
       get "/stats", StatsController, :stats
       get "/minerstats", StatsController, :miners
-
-      scope "/swagger" do
-        get "/", SwaggerForward, :index_v2
-      end
     end
 
     Enum.each(@shared_routes, fn {path, controller, fun} ->

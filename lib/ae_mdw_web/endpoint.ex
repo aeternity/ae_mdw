@@ -17,7 +17,7 @@ defmodule AeMdwWeb.Endpoint do
     at: "/swagger",
     from: {:ae_mdw, "priv/static/swagger"},
     gzip: false,
-    only: ~w(swagger ui_files index.html swagger_v1.yaml swagger_v2.yaml),
+    only: ~w(swagger swagger_v1.yaml swagger_v2.yaml),
     headers: %{"access-control-allow-origin" => "*"}
 
   # Code reloading can be explicitly enabled under the
