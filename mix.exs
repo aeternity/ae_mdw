@@ -139,8 +139,6 @@ defmodule AeMdw.MixProject do
       {:jason, "~> 1.0"},
       {:poison, "~> 5.0"},
       {:plug_cowboy, "~> 2.0"},
-      {:phoenix_swagger,
-       git: "https://github.com/jyeshe/phoenix_swagger.git", branch: "bump-poison"},
       {:riverside, "~> 2.2.1"},
       {:websockex, "~> 0.4.2"},
       {:temp, "~> 0.4"},

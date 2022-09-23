@@ -63,8 +63,6 @@ config :ae_mdw, AeWebsocket.Websocket.SocketHandler,
     duration: 2000
   ]
 
-config :phoenix_swagger, json_library: Jason
-
 # Configures Elixir's Logger
 config :logger,
   backends: [{LoggerFileBackend, :info}, {LoggerFileBackend, :sync}]
