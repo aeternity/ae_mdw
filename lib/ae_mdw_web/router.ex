@@ -31,13 +31,6 @@ defmodule AeMdwWeb.Router do
     plug :put_secure_browser_headers
   end
 
-  scope "/swagger" do
-    forward "/", PhoenixSwagger.Plug.SwaggerUI,
-      otp_app: :ae_mdw,
-      swagger_file: "swagger_v1.yaml",
-      disable_validator: true
-  end
-
   scope "/", AeMdwWeb do
     pipe_through :api
 
@@ -102,13 +95,6 @@ defmodule AeMdwWeb.Router do
       get "/deltastats", StatsController, :delta_stats
       get "/stats", StatsController, :stats
       get "/minerstats", StatsController, :miners
-
-      scope "/swagger" do
-        forward "/", SwaggerForwardV2,
-          otp_app: :ae_mdw,
-          swagger_file: "swagger_v2.yaml",
-          disable_validator: true
-      end
     end
 
     Enum.each(@shared_routes, fn {path, controller, fun} ->
