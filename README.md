@@ -4412,7 +4412,7 @@ Each activity contains 3 values:
 
 For transaction events the activity type will be `<TxType>Event`, and the payload will contain a single transaction object as displayed in the `/v2/txs` endpoint.
 
-Transaction events can also be `IntContractCallEvents` which represent transactions that happen internally during a contract call.
+Transaction events can also be `InternalContractCallEvent` which represent transactions that happen internally during a contract call.
 
 ```
 $ curl https://mainnet.aeternity.io/mdw/v2/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx/activities
@@ -4507,7 +4507,7 @@ $ curl https://mainnet.aeternity.io/mdw/v2/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm
         "local_idx": 3,
         "micro_index": 0
       },
-      "type": "IntContractCallEvent"
+      "type": "InternalContractCallEvent"
     }
   ],
   "next": "/v2/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx/activities?cursor=84328-2002003-0",
