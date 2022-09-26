@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.21.0](https://www.github.com/aeternity/ae_mdw/compare/v1.20.0...v1.21.0) (2022-09-26)
+
+
+### Features
+
+* add /accounts/:id/activities endpoint ([#906](https://www.github.com/aeternity/ae_mdw/issues/906)) ([950f738](https://www.github.com/aeternity/ae_mdw/commit/950f738833dd8152c41f103c87995649ee33b11e))
+* include internal transactions as activities ([#911](https://www.github.com/aeternity/ae_mdw/issues/911)) ([5ab2cb2](https://www.github.com/aeternity/ae_mdw/commit/5ab2cb2d36b1590716545d59a1f209b4be419e96))
+
+
+### Refactorings
+
+* allocate smaller tuples for query streams ([#905](https://www.github.com/aeternity/ae_mdw/issues/905)) ([bd7229b](https://www.github.com/aeternity/ae_mdw/commit/bd7229b2ed5a48a31764bcf11d1e62c09891d397))
+
+
+### Miscellaneous
+
+* remove phoenix_swagger ([#912](https://www.github.com/aeternity/ae_mdw/issues/912)) ([05ece6c](https://www.github.com/aeternity/ae_mdw/commit/05ece6cbcfc68537627319258f09f081a606dda2))
+
 ## [1.20.0](https://www.github.com/aeternity/ae_mdw/compare/v1.19.1...v1.20.0) (2022-09-14)
 
 
