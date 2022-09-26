@@ -1,16 +1,13 @@
 name: 'Mdw setup'
-
-inputs:
-  deploy-key:
-    required: true
+description: 'Setup elixir and get Mdw deps'
 
 runs:
   using: "composite"
   steps:
     - uses: erlef/setup-beam@v1
       with:
-        otp-version: 22.3.4.24
-        elixir-version: 1.10.4
+        otp-version: 23.3.4.5
+        elixir-version: 1.11.4
 
     - name: Get Mdw dependencies
       shell: bash

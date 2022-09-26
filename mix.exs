@@ -5,7 +5,7 @@ defmodule AeMdw.MixProject do
     [
       app: :ae_mdw,
       version: "1.21.0",
-      elixir: "~> 1.5",
+      elixir: "~> 1.10",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
         warnings_as_errors: true
@@ -16,6 +16,7 @@ defmodule AeMdw.MixProject do
       deps: deps(),
       xref: [
         exclude: [
+          :aecore,
           :lager,
           :mnesia,
           :aeb_aevm_abi,
@@ -136,8 +137,9 @@ defmodule AeMdw.MixProject do
       {:cors_plug, "~> 2.0"},
       {:gettext, "~> 0.11"},
       {:jason, "~> 1.0"},
+      {:poison, "~> 5.0"},
       {:plug_cowboy, "~> 2.0"},
-      {:riverside, "~> 1.2.6"},
+      {:riverside, "~> 2.2.1"},
       {:websockex, "~> 0.4.2"},
       {:temp, "~> 0.4"},
       {:tesla, "~> 1.3.0"},

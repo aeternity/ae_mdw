@@ -5,7 +5,7 @@
 # is restricted to this project.
 
 # General application configuration
-use Mix.Config
+import Config
 
 mdw_revision =
   case File.read("AEMDW_REVISION") do

@@ -1,4 +1,4 @@
-FROM elixir:1.10.4
+FROM elixir:1.11.4
 # Add required files to download and compile only the dependencies
 
 # Install other required dependencies

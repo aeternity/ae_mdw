@@ -1,4 +1,4 @@
-use Mix.Config
+import Config
 
 config :ae_mdw, AeMdwWeb.Endpoint,
   http: [port: 4000],
