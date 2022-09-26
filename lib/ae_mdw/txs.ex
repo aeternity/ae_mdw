@@ -113,8 +113,8 @@ defmodule AeMdw.Txs do
           scope =
             case range do
               {:gen, %Range{first: first_gen, last: last_gen}} ->
-                {first_gen_to_txi(state, first_gen, direction),
-                 last_gen_to_txi(state, last_gen, direction)}
+                {DbUtil.first_gen_to_txi(state, first_gen, direction),
+                 DbUtil.last_gen_to_txi(state, last_gen, direction)}
 
               {:txi, %Range{first: first_txi, last: last_txi}} ->
                 {first_txi, last_txi}
@@ -167,14 +167,6 @@ defmodule AeMdw.Txs do
 
     tx_hash
   end
-
-  defp first_gen_to_txi(state, first_gen, :forward), do: DbUtil.gen_to_txi(state, first_gen)
-
-  defp first_gen_to_txi(state, first_gen, :backward),
-    do: DbUtil.gen_to_txi(state, first_gen + 1) - 1
-
-  defp last_gen_to_txi(state, last_gen, :forward), do: DbUtil.gen_to_txi(state, last_gen + 1) - 1
-  defp last_gen_to_txi(state, last_gen, :backward), do: DbUtil.gen_to_txi(state, last_gen)
 
   # The purpose of this function is to generate the streams that will be then used as input for
   # Collection.merge/2 function. The function is divided into three clauses. There's an explanation
@@ -303,21 +295,15 @@ defmodule AeMdw.Txs do
     initial_tx_types =
       initial_fields |> Enum.map(fn {tx_type, _pos} -> tx_type end) |> MapSet.new()
 
-    intersection_of_tx_types =
-      Enum.reduce(ids_fields_rest, initial_tx_types, fn {_id, fields}, acc ->
-        fields
-        |> Enum.map(fn {tx_type, _pos} -> tx_type end)
-        |> MapSet.new()
-        |> MapSet.intersection(acc)
-      end)
-
-    intersection_of_tx_types =
-      case types do
-        [] -> intersection_of_tx_types
-        _types -> MapSet.intersection(intersection_of_tx_types, MapSet.new(types))
-      end
-
-    Enum.flat_map(intersection_of_tx_types, fn tx_type ->
+    ids_fields_rest
+    |> Enum.map(fn {_id, fields} ->
+      fields
+      |> Enum.map(fn {tx_type, _pos} -> tx_type end)
+      |> MapSet.new()
+    end)
+    |> Enum.reduce(initial_tx_types, &MapSet.intersection/2)
+    |> MapSet.intersection(MapSet.new(types))
+    |> Enum.flat_map(fn tx_type ->
       {min_account_id, min_fields} =
         Enum.min_by(ids_fields, fn {id, fields} ->
           count_txs_for_account(state, id, fields, tx_type)

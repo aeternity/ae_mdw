@@ -15,9 +15,9 @@ defmodule AeMdwWeb.Endpoint do
 
   plug Plug.Static,
     at: "/swagger",
-    from: {:ae_mdw, "priv/static"},
+    from: {:ae_mdw, "priv/static/swagger"},
     gzip: false,
-    only: ~w(swagger.json),
+    only: ~w(swagger swagger_v1.yaml swagger_v2.yaml),
     headers: %{"access-control-allow-origin" => "*"}
 
   # Code reloading can be explicitly enabled under the

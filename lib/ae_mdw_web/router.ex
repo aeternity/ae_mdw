@@ -90,6 +90,8 @@ defmodule AeMdwWeb.Router do
 
       get "/channels", ChannelController, :channels
 
+      get "/accounts/:id/activities", ActivityController, :account_activities
+
       get "/deltastats", StatsController, :delta_stats
       get "/stats", StatsController, :stats
       get "/minerstats", StatsController, :miners

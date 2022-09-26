@@ -15,6 +15,7 @@
 - [Hosted infrastructure](#hosted-infrastructure)
 - [HTTP v2 (latest) endpoints](#http-v2-latest-endpoints)
 - [HTTP v1 (deprecated) endpoints](#http-v1-endpoints-deprecated)
+- [OpenAPI specs](#open-api-specs)
 - [Pagination](#pagination)
 - [Additional endpoint options](#additional-endpoint-options)
 - [Transactions](#transactions)
@@ -27,6 +28,7 @@
 - [AEX9 contract balances](#aex9-contract-balances)
 - [NFTs](#aex141)
 - [Statistics](#statistics)
+- [Activities](#activities)
 - [Migrating to v2](#migrating-to-v2)
 - [Websocket interface](#websocket-interface)
 - [Tests](#tests)
@@ -115,10 +117,11 @@ We currently provide hosted infrastructure at https://mainnet.aeternity.io/mdw/ 
 ## HTTP v2 (latest) endpoints
 
 ```
-GET /v2/blocks                         - returns generation blocks
-GET /v2/blocks/:hash                   - returns block by hash
-GET /v2/blocks/:kbi                    - returns key block by integer index
-GET /v2/blocks/:kbi/:mbi               - returns micro block by integer indices
+GET /v2/key-blocks                           - returns key blocks with micro blocks and transaction counts
+GET /v2/key-blocks/:hash_or_kbi              - returns key block by hash or height
+GET /v2/key-blocks/:hash_or_kbi/micro-blocks - returns micro block belonging to key block
+GET /v2/micro-blocks/:hash                   - returns micro block with transaction count
+GET /v2/micro-blocks/:hash/txs               - returns micro block transactions
 
 GET /v2/txs                            - returns transactions in any direction
 GET /v2/txs/:hash_or_index             - returns transaction by hash or index
@@ -219,6 +222,16 @@ GET /contracts/calls/:scope_type/:range  - returns function calls inside of the 
 
 GET /status                              - returns middleware status
 ```
+
+## OpenAPI specs
+
+Under the `/swagger` path there are two files providing a swagger specificiation of the endpoints for both api versions:
+
+- swagger_v1.yaml
+- swagger_v2.yaml
+
+This npm package can be used for a self-hosted app to visualize these specs:
+https://www.npmjs.com/package/swagger-ui
 
 ## Pagination
 
@@ -1514,7 +1527,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/key-blocks?limit=1" | jq '.'
 }
 ```
 
-### `/v2/key-blocks/:hash/micro-blocks`
+### `/v2/key-blocks/:hash_or_kbi/micro-blocks`
 
 ```
 $ curl https://mainnet.aeternity.io/key-blocks/kh_2HvzkfTvRjfwbim8YZ2q2ETKLhuYK125JGpisr1Cc9m2VSa5iC/micro-blocks?limit=1
@@ -4391,6 +4404,129 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/minerstats?limit=1" | jq '.'
   "prev": null
 }
 ```
+---
+
+## Activities
+
+Inteded for being able to display all events in which a specific account is related to in any way.
+
+An activity event occurs when there's any change in the blockchain related to a specific account. It is not the same as the log events which occur when executing a contract.
+
+### `/v2/accounts/:id/activities`
+
+Paginated list of events related to the `:id` account.
+
+Each activity contains 3 values:
+- `height` - The height in which the event ocurred
+- `type` - The type of event.
+- `payload` - An object whose structure depends on the type of event.
+
+For transaction events the activity type will be `<TxType>Event`, and the payload will contain a single transaction object as displayed in the `/v2/txs` endpoint.
+
+Transaction events can also be `InternalContractCallEvent` which represent transactions that happen internally during a contract call.
+
+```
+$ curl https://mainnet.aeternity.io/mdw/v2/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx/activities
+{
+  "data": [
+    {
+      "height": 85694,
+      "type": "NameUpdateTxEvent",
+      "payload": {
+        "block_hash": "mh_2tL4tRRnH6WLzzYca7T7vQUbdUCRZEeq58S5giwAtnbkjjb3Vj",
+        "block_height": 85694,
+        "hash": "th_2pvhiLSonrEsmJiUf9Q3E3Lkt9ki5MpHGJ9qQsCVt8ACNWpVVc",
+        "micro_index": 30,
+        "micro_time": 1558804725247,
+        "signatures": [
+          "sg_P7UFr4iySfJpidyitDqVTF86uhnuYjQVJ46c96jC4nYZys5mBDQVbsV4CLxYpCqKU55SySmkcSg3Xg4dcYk4aFJGm3VjF"
+        ],
+        "tx": {
+          "account_id": "ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx",
+          "client_ttl": 84600,
+          "fee": 30000000000000,
+          "name": "umpz.test",
+          "name_id": "nm_t13Kcjan1mRu2sFjdMgeeASSSL8QoxmVhTrFCmji1j1DZ4jhb",
+          "name_ttl": 50000,
+          "nonce": 151,
+          "pointers": [
+            {
+              "id": "ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx",
+              "key": "account_pubkey"
+            }
+          ],
+          "type": "NameUpdateTx",
+          "version": 1
+        }
+      }
+    },
+    {
+      "payload": {
+        "block_hash": "mh_2iWGwtQYYueZ8wLGTBjQ79jYfLnQKNgVcHc1GWuPqMG46UPnHY",
+        "block_height": 502033,
+        "hash": "th_29qxc2oEajHPVoGNS6LBe2TbKk2kyECXXR4KtbGHMhfpwdoNzD",
+        "micro_index": 0,
+        "micro_time": 1634367215608,
+        "signatures": [
+          "sg_DXk5jcdoCgGVHJUqjL2Mnu3tPxFD2mGrPga5TgVH97DZC1oq7aDZKEHgrpBqf24A4v2oBFX3zHQzXC1wj9X4ZqdzsqJqj"
+        ],
+        "tx": {
+          "amount": 20000,
+          "fee": 19320000000000,
+          "nonce": 5967045,
+          "payload": "ba_NTAyMDMxOmtoXzJraWtpTms0cnJnV2lNZlBLSmszU2FCdnM5TVVqdHZtNEpLeTdoVnA3Z2k5eW1uaXF1Om1oX01TZ2dxenJINlpXOW9xbmM3eXZDR1dBdGlGRGpaWGFrQWZSVndmeWtteGdWdEd3aVY6MTYzNDM2NzIxMCoV6Eo=",
+          "recipient_id": "ak_2QkttUgEyPixKzqXkJ4LX7ugbRjwCDWPBT4p4M2r8brjxUxUYd",
+          "sender_id": "ak_2QkttUgEyPixKzqXkJ4LX7ugbRjwCDWPBT4p4M2r8brjxUxUYd",
+          "ttl": 502041,
+          "type": "SpendTx",
+          "version": 1
+        }
+      },
+      "type": "SpendTxEvent",
+      "height": 502033
+    },
+    {
+      "height": 659373,
+      "payload": {
+        "block_hash": "mh_MXVb7wmE1tqeA2xSPhTTksLy7DE5PvR8nsu5haC2fTGpgxxhR",
+        "call_tx_hash": "th_Ugtejdn7SkJHXkC3VSdCm2SnXGgPxHgUphBneMqgR3gniZzDN",
+        "call_txi": 34224137,
+        "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+        "contract_tx_hash": "th_6memqAr5S3UQp1pc4FWXT8xUotfdrdUFgBd8VPmjM2ZRuojTF",
+        "contract_txi": 8392766,
+        "function": "Oracle.query",
+        "height": 659373,
+        "internal_tx": {
+          "fee": 0,
+          "nonce": 0,
+          "oracle_id": "ok_AFbLSrppnBFgbKPo4GykK5XEwdq15oXgosgcdL7ud6Vo2YPsH",
+          "query": "YWtfcjNxRWNzWWd5Z2JjYVoxZlhQRFB0YThnZU5FUkV0OHZZaVVKNWtxQnNRNDhXVmp4NztodHRwczovL20ud2VpYm8uY24vNzc1NDY0Njg4Ny80ODE2MjEwNDI2ODYxMjg5",
+          "query_fee": 20000000000000,
+          "query_id": "oq_pcJy4ufijeP56LwCaJ47GcRNvJvW5nEUedR4BNeMzSobXXqMx",
+          "query_ttl": {
+            "type": "delta",
+            "value": 20
+          },
+          "response_ttl": {
+            "type": "delta",
+            "value": 20
+          },
+          "sender_id": "ak_7wqP18AHzyoqymwGaqQp8G2UpzBCggYiq7CZdJiB71VUsLpR4",
+          "type": "OracleQueryTx",
+          "version": 1
+        },
+        "local_idx": 3,
+        "micro_index": 0
+      },
+      "type": "InternalContractCallEvent"
+    }
+  ],
+  "next": "/v2/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx/activities?cursor=84328-2002003-0",
+  "prev": null
+}
+```
+
+
 
 ## Migrating to v2
 
@@ -4398,9 +4534,9 @@ Most routes will remain the same, and can be updated by only appending the `/v2`
 
 This is a list of the exceptions together with the changes that need to be done:
 
-* `/blocks/:range_or_dir` - Can now be accessed via `/v2/blocks?scope=gen:100-200` or `/v2/blocks?direction=forward`. In addition, each block now has a list of micro_blocks sorted by time, instead of it being a map.
-* `/blocki/:id` - Was renamed to `/v2/blocks/:id`.
-* `/blocki/:kbi/:mbi` - Was renamed to `/v2/blocks/:kbi/:mbi`.
+* `/blocks/:range_or_dir` - Can now be accessed via `/v2/key-blocks?scope=gen:100-200` or `/v2/key-blocks?direction=forward`.
+* `/blocki/:id` - Was renamed to `/v2/key-blocks/:hash_or_kbi`.
+* `/blocki/:kbi/:mbi` - Was renamed to `/v2/micro-blocks/:hash`.
 * `/name/auction/:id` - Was renamed to `/v2/names/:id/auction`.
 * `/name/pointers/:id` - Was renamed to `/v2/names/:id/pointers`.
 * `/name/pointees/:id` - Was renamed to `/v2/names/:id/pointees`.
