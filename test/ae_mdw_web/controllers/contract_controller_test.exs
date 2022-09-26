@@ -59,7 +59,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       store: store,
       contract_pk: contract_pk
     } do
-      assert %{"data" => logs, "next" => next} =
+      assert %{"data" => logs, "next" => nil} =
                conn
                |> with_store(store)
                |> get("/v2/contracts/logs", limit: 100)
@@ -358,7 +358,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       conn: conn,
       store: store
     } do
-      assert %{"data" => logs, "next" => next} =
+      assert %{"data" => logs} =
                conn
                |> with_store(store)
                |> get("/v2/contracts/logs", event: @evt2_ctor_name, direction: :forward)
@@ -389,7 +389,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       store: store,
       contract_pk: contract_pk
     } do
-      assert %{"data" => calls, "next" => next} =
+      assert %{"data" => calls, "next" => nil} =
                conn
                |> with_store(store)
                |> get("/v2/contracts/calls", limit: 100)

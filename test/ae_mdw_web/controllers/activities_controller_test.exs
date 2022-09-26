@@ -59,7 +59,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         {:aec_db, [], [get_header: fn _block_hash -> :header end]},
         {:aetx_sign, [], [serialize_for_client: fn :header, ^aetx -> %{} end]}
       ] do
-        assert %{"prev" => nil, "data" => [tx3, tx2, tx1], "next" => next_url} =
+        assert %{"prev" => nil, "data" => [tx3, tx2, tx1], "next" => _next_url} =
                  conn
                  |> with_store(store)
                  |> get("/v2/accounts/#{account}/activities")

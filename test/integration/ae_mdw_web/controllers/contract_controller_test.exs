@@ -105,7 +105,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
       contract_id = @contract2
       ext_contract_id = @contract1
 
-      assert %{"data" => caller_logs, "next" => next} =
+      assert %{"data" => caller_logs} =
                conn
                |> get("/v2/contracts/logs", direction: "forward", contract_id: contract_id)
                |> json_response(200)
@@ -229,7 +229,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
     test "it returns calls filtered by data prefix", %{conn: conn} do
       data_prefix = "aeternity.com"
 
-      assert %{"data" => logs, "next" => next} =
+      assert %{"data" => logs} =
                conn
                |> get("/v2/contracts/logs", data: URI.encode(data_prefix))
                |> json_response(200)

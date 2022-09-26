@@ -273,7 +273,7 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
   end
 
   describe "aex9_token_balance_history" do
-    test "it returns the paginated balances of an aex9 contract for a given account", %{
+    test "returns the balance history of an aex9 contract for a given account", %{
       conn: conn
     } do
       limit = 3
@@ -305,13 +305,13 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
       end
     end
 
-    test "it returns the paginated balances of an aex9 contract for a given account and a given scope",
+    test "returns the balance history of an aex9 contract for a given account and a given scope",
          %{conn: conn} do
       limit = 3
       first = 500_000
       last = 600_000
 
-      assert %{"data" => balances, "next" => next} =
+      assert %{"data" => balances} =
                conn
                |> get("/v2/aex9/#{@aex9_token_id}/balances/#{@aex9_token_account_id}/history",
                  scope: "gen:#{first}-#{last}",

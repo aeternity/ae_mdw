@@ -158,7 +158,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       first = 4_000_000
       last = 100_000
 
-      assert %{"data" => data, "next" => next} =
+      assert %{"data" => data} =
                conn
                |> get("/names/active/gen/#{first}-#{last}")
                |> json_response(200)
@@ -307,7 +307,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       first = 500_000
       last = 100_000
 
-      assert %{"data" => data, "next" => next} =
+      assert %{"data" => data} =
                conn
                |> get("/names/inactive/gen/#{first}-#{last}")
                |> json_response(200)
@@ -514,7 +514,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       first = 500_000
       last = 100_000
 
-      assert %{"data" => data, "next" => next} =
+      assert %{"data" => data} =
                conn
                |> get("/names/gen/#{first}-#{last}")
                |> json_response(200)
@@ -703,7 +703,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       first = 4_000_000
       last = 100_000
 
-      assert %{"data" => data, "next" => next} =
+      assert %{"data" => data} =
                conn
                |> get("/v2/names", state: "active", scope: "gen:#{first}-#{last}")
                |> json_response(200)
@@ -833,7 +833,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
       first = 500_000
       last = 100_000
 
-      assert %{"data" => data, "next" => next} =
+      assert %{"data" => data} =
                conn
                |> get("/v2/names", state: "inactive", scope: "gen:#{first}-#{last}")
                |> json_response(200)
