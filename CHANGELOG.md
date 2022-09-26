@@ -1,5 +1,13 @@
 # Changelog
 
+### [1.21.1](https://www.github.com/aeternity/ae_mdw/compare/v1.21.0...v1.21.1) (2022-09-26)
+
+
+### Miscellaneous
+
+* bump erlang to OTP 23 and elixir to 1.11 ([#909](https://www.github.com/aeternity/ae_mdw/issues/909)) ([fba6cfc](https://www.github.com/aeternity/ae_mdw/commit/fba6cfcd1d1c3ec58ac6df583afbc6c19174a026))
+* cleanup tests warnings ([#914](https://www.github.com/aeternity/ae_mdw/issues/914)) ([d34ffb2](https://www.github.com/aeternity/ae_mdw/commit/d34ffb243db72e9e209bb4774250232790dd857d))
+
 ## [1.21.0](https://www.github.com/aeternity/ae_mdw/compare/v1.20.0...v1.21.0) (2022-09-26)
 
 
