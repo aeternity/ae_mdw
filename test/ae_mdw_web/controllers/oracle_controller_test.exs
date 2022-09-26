@@ -52,7 +52,7 @@ defmodule AeMdwWeb.OracleControllerTest do
 
         assert %URI{
                  path: "/oracles",
-                 query: query
+                 query: _query
                } = URI.parse(next_uri)
       end
     end

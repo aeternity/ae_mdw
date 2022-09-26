@@ -373,7 +373,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       contract_id = enc_ct(contract_pk)
 
       assert %{
-               "contract_id" => contract_id,
+               "contract_id" => ^contract_id,
                "name" => "out_of_gas_error",
                "symbol" => "out_of_gas_error",
                "decimals" => nil
@@ -421,7 +421,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       contract_id = enc_ct(contract_pk)
 
       assert %{
-               "contract_id" => contract_id,
+               "contract_id" => ^contract_id,
                "name" => "out_of_gas_error",
                "symbol" => "out_of_gas_error",
                "base_url" => "out_of_gas_error",

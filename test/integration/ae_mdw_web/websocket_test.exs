@@ -472,7 +472,7 @@ defmodule Integration.AeMdwWeb.WebsocketTest do
       Process.send_after(client, {:subs, self()}, 100)
 
       # assert subscriptions
-      assert_receive ["KeyBlocks", "MicroBlocks", "Transactions", recipient_id], 200
+      assert_receive ["KeyBlocks", "MicroBlocks", "Transactions", ^recipient_id], 200
 
       {key_block, micro_blocks} = get_blocks(state, 311_860)
       Broadcaster.broadcast_key_block(key_block, :mdw)

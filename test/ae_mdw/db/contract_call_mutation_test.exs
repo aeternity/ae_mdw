@@ -25,7 +25,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       block_index = {246_949, 83}
       contract_pk = :crypto.strong_rand_bytes(32)
 
-      assert {account_pk, mutation} =
+      assert {_account_pk, mutation} =
                contract_call_mutation("mint", block_index, call_txi, contract_pk)
 
       assert %ContractCallMutation{txi: ^call_txi, contract_pk: ^contract_pk} = mutation
@@ -47,7 +47,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       block_index = {247_411, 5}
       contract_pk = :crypto.strong_rand_bytes(32)
 
-      assert {account_pk, mutation} =
+      assert {_account_pk, mutation} =
                contract_call_mutation(
                  "transfer",
                  block_index,
@@ -101,7 +101,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       block_index = {255_795, 74}
       contract_pk = :crypto.strong_rand_bytes(32)
 
-      assert {account_pk, mutation} =
+      assert {_account_pk, mutation} =
                contract_call_mutation("burn", block_index, call_txi, contract_pk)
 
       assert %ContractCallMutation{txi: ^call_txi, contract_pk: ^contract_pk} = mutation
@@ -363,7 +363,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       key = {:aex141, from_pk, call_txi, to_pk, token_id, 0}
 
-      assert Model.aexn_transfer(index: ^key, contract_pk: contract_pk) =
+      assert Model.aexn_transfer(index: ^key, contract_pk: ^contract_pk) =
                State.fetch!(state, Model.AexnTransfer, key)
 
       assert State.exists?(

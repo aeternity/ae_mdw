@@ -70,7 +70,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
             Model.name(
               index: ^plain_name,
               active: ^claim_height,
-              claims: [{block_index, txi} | old_claims],
+              claims: [{^block_index, ^txi} | _old_claims],
               expire: expire,
               owner: ^new_owner_pk,
               updates: []

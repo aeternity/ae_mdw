@@ -259,7 +259,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       limit = 15
       type = "spend"
 
-      assert %{"data" => txs, "next" => next} =
+      assert %{"data" => txs} =
                conn
                |> get("/v2/txs", direction: "forward", type: type, limit: limit)
                |> json_response(200)
@@ -275,7 +275,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       limit = 19
       type = "name_claim"
 
-      assert %{"data" => txs, "next" => next} =
+      assert %{"data" => txs} =
                conn
                |> get("/v2/txs", direction: "forward", type: type, limit: limit)
                |> json_response(200)
@@ -291,7 +291,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
          %{conn: conn} do
       type = "name_preclaim"
 
-      assert %{"data" => txs, "next" => next} =
+      assert %{"data" => txs} =
                conn |> get("/v2/txs", direction: "forward", type: type) |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
@@ -308,7 +308,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
          } do
       type = "spend"
 
-      assert %{"data" => txs, "next" => next} =
+      assert %{"data" => txs} =
                conn |> get("/v2/txs", direction: "backward", type: type) |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
@@ -324,7 +324,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       limit = 99
       type = "contract_create"
 
-      assert %{"data" => txs, "next" => next} =
+      assert %{"data" => txs} =
                conn
                |> get("/v2/txs", direction: "forward", type: type, limit: limit)
                |> json_response(200)
@@ -344,7 +344,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       limit = 19
       type = "contract_create"
 
-      assert %{"data" => txs, "next" => next} =
+      assert %{"data" => txs} =
                conn
                |> get("/v2/txs", direction: "backward", type: type, limit: limit)
                |> json_response(200)
@@ -604,7 +604,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       type_group = "ga"
       txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
 
-      assert %{"data" => txs, "next" => next} =
+      assert %{"data" => txs} =
                conn
                |> get("/v2/txs", direction: "backward", type_group: type_group, limit: limit)
                |> json_response(200)
@@ -1021,7 +1021,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       limit = 63
       account_id = "ak_u2gFpRN5nABqfqb5Q3BkuHCf8c7ytcmqovZ6VyKwxmVNE5jqa"
 
-      assert %{"data" => txs, "next" => next} =
+      assert %{"data" => txs} =
                conn
                |> get("/v2/txs", direction: "forward", account: account_id, limit: limit)
                |> json_response(200)
@@ -1063,7 +1063,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       limit = 1
       contract_id = "ct_Be5LcGEN2SgZh2kSvf3LqZuawN94kn77iNy5off5UfgzbiNv4"
 
-      assert %{"data" => txs, "next" => next} =
+      assert %{"data" => txs} =
                conn
                |> get("/v2/txs", direction: "forward", contract: contract_id, limit: limit)
                |> json_response(200)
@@ -1136,7 +1136,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       account_id = "ak_2ZyuUxyfbkNbKZnGStgkCQuRwCPQWducVipxE4Ci7RU8UuTiry"
       limit = 4
 
-      assert %{"data" => txs, "next" => next} =
+      assert %{"data" => txs} =
                conn
                |> get("/v2/txs", direction: "backward", account: account_id, limit: limit)
                |> json_response(200)
@@ -1285,8 +1285,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       account_id = "ak_2RUVa9bvHUD8wYSrvixRjy9LonA9L29wRvwDfQ4y37ysMKjgdQ"
       params = [{"#{tx_type}.#{field}", account_id}, {:limit, limit}, {:direction, "forward"}]
 
-      assert %{"data" => txs, "next" => next} =
-               conn |> get("/v2/txs", params) |> json_response(200)
+      assert %{"data" => txs} = conn |> get("/v2/txs", params) |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 
@@ -1393,8 +1392,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       channel_id = "ch_2KKS3ypddUfYovJSeg4ues2wFdUoGH8ZtunDhrxvGkYNhzP5TC"
       params = [{"#{tx_type}.#{field}", channel_id}, {:limit, limit}, {:direction, "backward"}]
 
-      assert %{"data" => txs, "next" => next} =
-               conn |> get("/v2/txs", params) |> json_response(200)
+      assert %{"data" => txs} = conn |> get("/v2/txs", params) |> json_response(200)
 
       assert ^limit = length(txs)
       assert Enum.all?(txs, fn %{"tx" => tx} -> tx[field] == channel_id end)
@@ -1455,7 +1453,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     test "on forward and field=recipient_id ", %{conn: conn} do
       account_id = "ak_2RUVa9bvHUD8wYSrvixRjy9LonA9L29wRvwDfQ4y37ysMKjgdQ"
 
-      assert %{"data" => txs, "next" => next} =
+      assert %{"data" => txs} =
                conn
                |> get("/v2/txs", direction: "forward", recipient_id: account_id)
                |> json_response(200)
@@ -1620,7 +1618,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       account_id = "ak_g5vQK6beY3vsTJHH7KBusesyzq9WMdEYorF8VyvZURXTjLnxT"
       transform_tx_type = transform_tx_type(type)
 
-      assert %{"data" => txs, "next" => next} =
+      assert %{"data" => txs} =
                conn
                |> get("/v2/txs",
                  direction: "backward",

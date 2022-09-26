@@ -140,7 +140,7 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
       done_fn = fn -> send(self(), unique_msg) end
       UpdateAex9State.process([@inexisting_pk, {@kbi, @mbi}, -1], done_fn)
 
-      assert_receive unique_msg
+      assert_receive ^unique_msg
     end
   end
 end
