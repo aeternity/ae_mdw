@@ -4519,6 +4519,17 @@ $ curl https://mainnet.aeternity.io/mdw/v2/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm
         "micro_index": 0
       },
       "type": "InternalContractCallEvent"
+    },
+    {
+      "height": 653289,
+      "payload": {
+        "from": "ak_11111111111111111111111111111111273Yts",
+        "index": 0,
+        "to": "ak_uTWegpfN6UjA4yz8X4ZVRi9xKEYeXHJDRZcRryTsRHAFoBpLa",
+        "tx_hash": "th_2FciwUNyT7WRGee35KnNMhuoLFSCyiquVLFP3kATjwrFJh4Cfh",
+        "value": 1
+      },
+      "type": "Aex141TransferEvent"
     }
   ],
   "next": "/v2/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx/activities?cursor=84328-2002003-0",
