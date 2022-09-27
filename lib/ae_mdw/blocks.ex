@@ -216,7 +216,13 @@ defmodule AeMdw.Blocks do
           next_tx_index - first_tx_index
 
         :none ->
-          0
+          # last micro-block, fetch last transaction instead because no next block
+          with {:ok, txi} <- State.prev(state, Model.Tx, nil),
+               Model.tx(block_index: {^height, ^mbi}) <- State.fetch!(state, Model.Tx, txi) do
+            txi + 1 - first_tx_index
+          else
+            _none_or_no_txs -> 0
+          end
       end
 
     header = :aec_db.get_header(mb_hash)
