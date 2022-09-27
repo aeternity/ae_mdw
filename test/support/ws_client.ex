@@ -9,6 +9,9 @@ defmodule Support.WsClient do
 
   def start_link(url), do: WebSockex.start(url, __MODULE__, %{})
 
+  def delete_objects(client), do: Process.send(client, {:delete_list, :objs}, [:noconnect])
+  def delete_transactions(client), do: Process.send(client, {:delete_list, :txs}, [:noconnect])
+
   def subscribe(client, payload) when is_atom(payload) do
     request = %{payload: to_subs(payload), op: "Subscribe"}
     WebSockex.send_frame(client, {:text, Poison.encode!(request)})
@@ -66,8 +69,8 @@ defmodule Support.WsClient do
         %{"subscription" => "Transactions", "payload" => %{"hash" => @mock_hash_tx_mdw}} = msg ->
           Map.put(state, :tx, msg)
 
-        %{"subscription" => "Transactions"} ->
-          state
+        %{"subscription" => "Transactions"} = msg ->
+          Map.update(state, :txs, [msg], fn list -> list ++ [msg] end)
 
         %{"subscription" => "Object", "payload" => %{"hash" => @mock_hash}} = msg ->
           Map.put(state, :obj, msg)
@@ -75,8 +78,8 @@ defmodule Support.WsClient do
         %{"subscription" => "Object", "payload" => %{"hash" => @mock_hash_obj_mdw}} = msg ->
           Map.put(state, :obj, msg)
 
-        %{"subscription" => "Object"} ->
-          state
+        %{"subscription" => "Object"} = msg ->
+          Map.update(state, :objs, [msg], fn list -> list ++ [msg] end)
 
         subs when is_list(subs) ->
           Map.put(state, :subs, subs)
@@ -86,6 +89,10 @@ defmodule Support.WsClient do
       end
 
     {:ok, new_state}
+  end
+
+  def handle_info({:delete_list, list_key}, state) do
+    {:ok, Map.put(state, list_key, [])}
   end
 
   def handle_info({request, from}, state) do

@@ -1,12 +1,18 @@
 defmodule AeMdwWeb.BlockchainSim do
   @moduledoc """
+  Creates local generations allowing declarative test case setup by naming blocks and accounts.
   """
+
+  alias AeMdw.Validate
 
   require Mock
 
+  @genesis_prev_hash AeMdw.Util.max_256bit_bin()
+  @initial_height 0
+  @initial_target 553_713_663
   @passthrough_functions ~w(module_info)a
 
-  @type account_id() :: :aeser_id.id()
+  @type account_name() :: atom()
 
   defmacro with_blockchain(initial_balances, blocks, do: body) do
     aec_db =
@@ -53,9 +59,9 @@ defmodule AeMdwWeb.BlockchainSim do
     end
   end
 
-  @spec spend_tx(account_id(), account_id(), non_neg_integer()) :: :aetx.t()
-  def spend_tx(sender_id, recipient_id, amount) do
-    {:spend_tx, sender_id, recipient_id, amount}
+  @spec spend_tx(account_name(), account_name(), non_neg_integer()) :: :aetx.t()
+  def spend_tx(sender_name, recipient_name, amount) do
+    {:spend_tx, sender_name, recipient_name, amount}
   end
 
   @spec generate_blockchain(Keyword.t(), Keyword.t()) :: {Keyword.t(), map(), map(), map()}
@@ -67,34 +73,27 @@ defmodule AeMdwWeb.BlockchainSim do
         {account_name, :aeser_id.create(:account, account_pkey)}
       end)
 
-    {mock_blocks, mock_transactions, _max_height} =
+    {_prev_hash, mock_blocks, mock_txs, _max_height} =
       blocks
-      |> Enum.reduce({%{}, %{}, 1}, fn
-        {kb_name, []}, {mock_blocks, mock_transactions, height} ->
-          {
-            Map.put(mock_blocks, kb_name, mock_key_block(height)),
-            mock_transactions,
-            height + 1
-          }
-
-        {kb_name, [{_mb1, [{_name, tx1} | _txs]} | _mbs] = microblocks},
-        {mock_blocks, mock_txs, height}
+      |> Enum.reduce({@genesis_prev_hash, %{}, %{}, @initial_height}, fn
+        {mb_name, [{_name, tx1} | _txs] = named_txs}, {prev_hash, mock_blocks, mock_txs, height}
         when is_transaction(tx1) ->
-          {_prev_hash, new_mock_blocks, new_mock_txs} =
-            create_generation(kb_name, height, microblocks, mock_accounts)
+          {last_hash, new_mock_blocks, new_mock_txs} =
+            create_generation(prev_hash, height, height, [{mb_name, named_txs}], mock_accounts)
 
           {
+            last_hash,
             Map.merge(mock_blocks, new_mock_blocks),
             Map.merge(mock_txs, new_mock_txs),
             height + 1
           }
 
-        {mb_name, [{_name, tx1} | _txs] = transactions}, {mock_blocks, mock_txs, height}
-        when is_transaction(tx1) ->
-          {_prev_hash, new_mock_blocks, new_mock_txs} =
-            create_generation(height, height, [{mb_name, transactions}], mock_accounts)
+        {kb_name, named_mbs}, {prev_hash, mock_blocks, mock_txs, height} ->
+          {last_hash, new_mock_blocks, new_mock_txs} =
+            create_generation(prev_hash, kb_name, height, named_mbs, mock_accounts)
 
           {
+            last_hash,
             Map.merge(mock_blocks, new_mock_blocks),
             Map.merge(mock_txs, new_mock_txs),
             height + 1
@@ -114,10 +113,13 @@ defmodule AeMdwWeb.BlockchainSim do
         {:value, block} = find_block(hash, mock_blocks)
 
         :aec_blocks.to_header(block)
+      end,
+      get_genesis_hash: fn ->
+        Validate.id!("kh_wUCideEB8aDtUaiHCtKcfywU6oHZW6gnyci8Mw6S1RSTCnCRu")
       end
     ]
 
-    blocks_pkeys =
+    named_blocks_txs =
       Enum.into(mock_blocks, %{}, fn {block_name, block} ->
         header = :aec_blocks.to_header(block)
         {:ok, block_hash} = :aec_headers.hash_header(header)
@@ -143,11 +145,11 @@ defmodule AeMdwWeb.BlockchainSim do
         {block_name, block_info}
       end)
 
-    {aec_db_mock, blocks_pkeys, mock_transactions, mock_accounts}
+    {aec_db_mock, named_blocks_txs, mock_txs, mock_accounts}
   end
 
-  defp create_generation(kb_name, height, microblocks, mock_accounts) do
-    key_block = mock_key_block(height)
+  defp create_generation(prev_hash, kb_name, height, microblocks, mock_accounts) do
+    key_block = mock_key_block(height, prev_hash)
 
     {:ok, kb_hash} =
       key_block
@@ -182,16 +184,49 @@ defmodule AeMdwWeb.BlockchainSim do
 
   defp put_micro_block_txs(block_info, _other_hash, _block), do: block_info
 
-  defp mock_key_block(height, prev_hash \\ nil) do
-    miner_pk = :crypto.strong_rand_bytes(32)
-    prev_hash = prev_hash || :crypto.strong_rand_bytes(32)
+  defp mock_key_block(0, prev_hash) do
+    initializer_pk = Validate.id!("ak_11111111111111111111111111111111273Yts")
 
-    :aec_blocks.new_key(height, prev_hash, <<>>, <<>>, 0, 0, 0, :default, 0, miner_pk, miner_pk)
+    :aec_blocks.new_key(
+      0,
+      prev_hash,
+      prev_hash,
+      Validate.id!("bs_2aBz1QS23piMnSmZGwQk8iNCHLBdHSycPBbA5SHuScuYfHATit"),
+      @initial_target,
+      0,
+      0,
+      :default,
+      1,
+      initializer_pk,
+      initializer_pk
+    )
+  end
+
+  defp mock_key_block(height, prev_hash) do
+    default_target = :aec_consensus_bitcoin_ng.default_target()
+    time = System.system_time(:millisecond)
+    protocol = :aec_hard_forks.protocol_effective_at_height(height)
+    miner_pk = :crypto.strong_rand_bytes(32)
+    benefeciary_pk = :crypto.strong_rand_bytes(32)
+
+    :aec_blocks.new_key(
+      height,
+      prev_hash,
+      prev_hash,
+      <<>>,
+      default_target,
+      0,
+      time,
+      :default,
+      protocol,
+      miner_pk,
+      benefeciary_pk
+    )
   end
 
   defp mock_micro_block(transactions, accounts, height, prev_hash, kb_hash) do
     mock_txs =
-      Enum.into(transactions, %{}, fn {tx_name, tx} ->
+      Enum.into(transactions, %{}, fn {tx_name, tx} when is_transaction(tx) ->
         {:ok, aetx} = serialize_tx(tx, accounts)
         signed_tx = :aetx_sign.new(aetx, [])
         {tx_name, signed_tx}
@@ -224,13 +259,13 @@ defmodule AeMdwWeb.BlockchainSim do
     end
   end
 
-  defp serialize_tx({:spend_tx, sender_id, recipient_id, amount}, accounts) do
+  defp serialize_tx({:spend_tx, sender_name, recipient_name, amount}, accounts) do
     :aec_spend_tx.new(%{
-      sender_id: Map.fetch!(accounts, sender_id),
-      recipient_id: Map.fetch!(accounts, recipient_id),
+      sender_id: Map.fetch!(accounts, sender_name),
+      recipient_id: Map.fetch!(accounts, recipient_name),
       amount: amount,
       fee: 0,
-      nonce: 0,
+      nonce: 1,
       payload: <<>>
     })
   end
