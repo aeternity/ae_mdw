@@ -225,10 +225,11 @@ GET /status                              - returns middleware status
 
 ## OpenAPI specs
 
-Under the `/swagger` path there are two files providing a swagger specificiation of the endpoints for both api versions:
+There are two files providing a swagger specificiation of the endpoints for respective api versions:
 
-- swagger_v1.yaml
-- swagger_v2.yaml
+- https://mainnet.aeternity.io/mdw/swagger/swagger_v1.yaml
+- https://mainnet.aeternity.io/mdw/swagger/swagger_v2.yaml
+
 
 This npm package can be used for a self-hosted app to visualize these specs:
 https://www.npmjs.com/package/swagger-ui
