@@ -1,5 +1,22 @@
 # Changelog
 
+### [1.21.2](https://www.github.com/aeternity/ae_mdw/compare/v1.21.1...v1.21.2) (2022-09-28)
+
+
+### Bug Fixes
+
+* consider last txs when calculating mb tx count ([#917](https://www.github.com/aeternity/ae_mdw/issues/917)) ([9298edd](https://www.github.com/aeternity/ae_mdw/commit/9298edd00839872bf8fa5be65cd2f84fd53d24bf))
+
+
+### Testing
+
+* add cases websocket broadcasting ([#916](https://www.github.com/aeternity/ae_mdw/issues/916)) ([ca820ac](https://www.github.com/aeternity/ae_mdw/commit/ca820ac8ce0a632fca360c121ece01245f490b02))
+
+
+### Miscellaneous
+
+* upgrade phoenix and other deps ([#918](https://www.github.com/aeternity/ae_mdw/issues/918)) ([f5b4270](https://www.github.com/aeternity/ae_mdw/commit/f5b42702c01cd5922a672c2b2e8c8e84783674bd))
+
 ### [1.21.1](https://www.github.com/aeternity/ae_mdw/compare/v1.21.0...v1.21.1) (2022-09-26)
 
 
