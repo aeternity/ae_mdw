@@ -225,6 +225,6 @@ defmodule AeMdw.Oracles do
 
   defp deserialize_scope(nil), do: nil
 
-  defp deserialize_scope({:gen, %Range{first: first_gen, last: last_gen}}),
+  defp deserialize_scope({:gen, first_gen..last_gen}),
     do: {{first_gen, Util.min_bin()}, {last_gen, Util.max_256bit_bin()}}
 end

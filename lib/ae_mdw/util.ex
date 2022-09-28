@@ -210,21 +210,6 @@ defmodule AeMdw.Util do
   @spec min_256bit_int() :: integer()
   def min_256bit_int(), do: -0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 
-  @spec contains_unicode?(binary()) :: boolean()
-  def contains_unicode?(string) do
-    string
-    |> String.codepoints()
-    |> Enum.reduce_while(
-      false,
-      fn cp, false ->
-        case String.next_grapheme_size(cp) do
-          {1, ""} -> {:cont, false}
-          {_, ""} -> {:halt, true}
-        end
-      end
-    )
-  end
-
   @spec parse_int(binary()) :: {:ok, integer()} | :error
   def parse_int(int_bin) do
     case Integer.parse(int_bin) do

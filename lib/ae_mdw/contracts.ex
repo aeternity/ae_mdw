@@ -415,18 +415,13 @@ defmodule AeMdw.Contracts do
 
   defp deserialize_scope(_state, nil), do: {@min_txi, @max_txi}
 
-  defp deserialize_scope(state, {:gen, %Range{first: first_gen, last: last_gen}}) do
-    deserialize_scope(
-      state,
-      {:txi,
-       %Range{
-         first: DBUtil.gen_to_txi(state, first_gen),
-         last: DBUtil.gen_to_txi(state, last_gen + 1) - 1
-       }}
-    )
+  defp deserialize_scope(state, {:gen, first_gen..last_gen}) do
+    first = DBUtil.gen_to_txi(state, first_gen)
+    last = DBUtil.gen_to_txi(state, last_gen + 1) - 1
+    deserialize_scope(state, {:txi, first..last})
   end
 
-  defp deserialize_scope(_state, {:txi, %Range{first: first_txi, last: last_txi}}) do
+  defp deserialize_scope(_state, {:txi, first_txi..last_txi}) do
     {first_txi, last_txi}
   end
 

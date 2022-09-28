@@ -350,10 +350,10 @@ defmodule AeMdwWeb.Aex9Controller do
 
   defp validate_range(range) do
     case parse_range(range) do
-      {:ok, %Range{first: f, last: l}} ->
+      {:ok, first..last} ->
         {:ok, top_kb} = :aec_chain.top_key_block()
-        first = max(0, f)
-        last = min(l, :aec_blocks.height(top_kb))
+        first = max(0, first)
+        last = min(last, :aec_blocks.height(top_kb))
 
         if last - first + 1 > @max_range_length do
           {:error,

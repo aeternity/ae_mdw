@@ -78,7 +78,7 @@ defmodule AeMdw.Stats do
     range =
       case range do
         nil -> {1, last_gen}
-        {:gen, %Range{first: first, last: last}} -> {max(first, 1), last}
+        {:gen, first..last} -> {max(first, 1), last}
       end
 
     cursor = deserialize_cursor(cursor)
@@ -100,7 +100,7 @@ defmodule AeMdw.Stats do
     range =
       case range do
         nil -> {1, last_gen}
-        {:gen, %Range{first: first, last: last}} -> {max(first, 1), last}
+        {:gen, first..last} -> {max(first, 1), last}
       end
 
     cursor = deserialize_cursor(cursor)
@@ -123,7 +123,7 @@ defmodule AeMdw.Stats do
     range =
       case range do
         nil -> {1, last_gen}
-        {:gen, %Range{first: first, last: last}} -> {max(first, 1), last}
+        {:gen, first..last} -> {max(first, 1), last}
       end
 
     cursor = deserialize_cursor(cursor)
@@ -183,7 +183,7 @@ defmodule AeMdw.Stats do
     end
   end
 
-  defp render_stats(state, %Range{first: first, last: last}) do
+  defp render_stats(state, first..last) do
     Enum.map(first..last, fn height ->
       %{
         block_reward: block_reward,
