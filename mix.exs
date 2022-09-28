@@ -32,6 +32,7 @@ defmodule AeMdw.MixProject do
           :aec_block_insertion,
           :aec_chain,
           :aec_chain_state,
+          :aec_consensus_bitcoin_ng,
           :aec_dev_reward,
           :aec_dry_run,
           :aec_events,
