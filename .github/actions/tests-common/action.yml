@@ -1,8 +1,5 @@
 name: 'Common Test setup'
-
-inputs:
-  deploy-key:
-    required: true
+description: 'Setup docker compose'
 
 runs:
   using: "composite"
