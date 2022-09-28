@@ -87,5 +87,6 @@ defmodule AeMdw.EtsCache do
   defp init_gc(table, exp) when is_integer(exp) and exp > 0 do
     gc_period = :timer.minutes(exp)
     {:ok, _ref} = :timer.apply_interval(gc_period, __MODULE__, :purge, [table, gc_period])
+    :ok
   end
 end

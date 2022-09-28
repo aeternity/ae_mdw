@@ -69,7 +69,7 @@ defmodule AeMdw.Migrations.ReprocessAENSUpdateCalls do
       DeleteKeysMutation.new(%{Model.ActiveNameExpiration => expire_deletion_keys}) | mutations
     ]
 
-    State.commit(state, mutations)
+    _state = State.commit(state, mutations)
 
     duration = DateTime.diff(DateTime.utc_now(), begin)
 

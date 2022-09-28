@@ -27,8 +27,8 @@ defmodule Mix.Tasks.MigrateDb do
     from_startup? = (List.first(args) || "false") |> String.to_existing_atom()
 
     if not from_startup? do
-      :net_kernel.start([:aeternity@localhost, :shortnames])
-      :ae_plugin_utils.start_aecore()
+      {:ok, _pid} = :net_kernel.start([:aeternity@localhost, :shortnames])
+      {:ok, _started_apps} = :ae_plugin_utils.start_aecore()
       :lager.set_loglevel(:epoch_sync_lager_event, :lager_console_backend, :undefined, :error)
       :lager.set_loglevel(:lager_console_backend, :error)
     end

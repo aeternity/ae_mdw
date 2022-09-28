@@ -158,7 +158,7 @@ defmodule AeMdw.Migrations.AddActiveChannels do
 
     mutations = active_mutations ++ inactive_mutations
 
-    State.commit(state, mutations)
+    _state = State.commit(state, mutations)
 
     {:ok, {div(length(active_mutations), 2) + length(inactive_mutations), duration}}
   end

@@ -79,6 +79,8 @@ defmodule AeMdw.Db.Sync.OracleTest do
 
   describe "extend" do
     test "fails when oracle is not active" do
+      state = State.new()
+
       mutation =
         OracleExtendMutation.new(
           {@sync_height, 0},
@@ -87,7 +89,7 @@ defmodule AeMdw.Db.Sync.OracleTest do
           123
         )
 
-      Database.commit([mutation])
+      State.commit(state, [mutation])
 
       assert :not_found = Database.fetch(Model.ActiveOracle, @pubkey1)
 
@@ -95,16 +97,17 @@ defmodule AeMdw.Db.Sync.OracleTest do
       expire = @expire1
 
       assert Model.oracle(index: ^pubkey, expire: ^expire) =
-               Database.fetch!(Model.InactiveOracle, @pubkey1)
+               State.fetch!(state, Model.InactiveOracle, @pubkey1)
 
       assert Model.expiration(index: {^expire, ^pubkey}) =
-               Database.fetch!(Model.InactiveOracleExpiration, {expire, pubkey})
+               State.fetch!(state, Model.InactiveOracleExpiration, {expire, pubkey})
     end
 
     test "succeeds when oracle is active" do
       ttl = 123
       pubkey = @pubkey3
       new_expiration = @expire3 + ttl
+      state = State.new()
 
       mutation =
         OracleExtendMutation.new(
@@ -114,15 +117,15 @@ defmodule AeMdw.Db.Sync.OracleTest do
           ttl
         )
 
-      Database.commit([mutation])
+      State.commit(state, [mutation])
 
       assert Model.oracle(index: ^pubkey, expire: ^new_expiration) =
-               Database.fetch!(Model.ActiveOracle, pubkey)
+               State.fetch!(state, Model.ActiveOracle, pubkey)
 
       assert Model.expiration(index: {^new_expiration, ^pubkey}) =
-               Database.fetch!(Model.ActiveOracleExpiration, {new_expiration, pubkey})
+               State.fetch!(state, Model.ActiveOracleExpiration, {new_expiration, pubkey})
 
-      assert :not_found = Database.fetch(Model.ActiveOracleExpiration, {@expire3, pubkey})
+      assert :not_found = State.get(state, Model.ActiveOracleExpiration, {@expire3, pubkey})
     end
   end
 
@@ -131,6 +134,7 @@ defmodule AeMdw.Db.Sync.OracleTest do
       assert @expire2 == @sync_height
       m_exp = Model.expiration(index: {@expire2, @pubkey2})
       Database.dirty_write(Model.ActiveOracleExpiration, m_exp)
+      state = State.new()
 
       m_oracle =
         Model.oracle(
@@ -146,12 +150,12 @@ defmodule AeMdw.Db.Sync.OracleTest do
       pubkey = @pubkey2
       sync_height = @sync_height
       mutation = OraclesExpirationMutation.new(sync_height)
-      Database.commit([mutation])
+      State.commit(state, [mutation])
 
-      assert :not_found = Database.fetch(Model.ActiveOracleExpiration, {sync_height, pubkey})
+      assert :not_found = State.get(state, Model.ActiveOracleExpiration, {sync_height, pubkey})
 
       assert Model.expiration(index: {^sync_height, ^pubkey}) =
-               Database.fetch!(Model.InactiveOracleExpiration, {sync_height, pubkey})
+               State.fetch!(state, Model.InactiveOracleExpiration, {sync_height, pubkey})
     end
 
     test "does nothing when oracle has multiple expirations and last one is greater than height" do
@@ -160,10 +164,10 @@ defmodule AeMdw.Db.Sync.OracleTest do
       m_oracle = State.fetch!(state, Model.ActiveOracle, pubkey)
 
       mutation = OraclesExpirationMutation.new(@sync_height)
-      Database.commit([mutation])
+      State.commit(state, [mutation])
 
       assert Model.expiration(index: {@expire4, pubkey}) ==
-               Database.fetch!(Model.ActiveOracleExpiration, {@expire4, pubkey})
+               State.fetch!(state, Model.ActiveOracleExpiration, {@expire4, pubkey})
 
       assert m_oracle == State.fetch!(state, Model.ActiveOracle, pubkey)
     end
@@ -179,7 +183,7 @@ defmodule AeMdw.Db.Sync.OracleTest do
       assert expire > @sync_height
 
       mutation = OraclesExpirationMutation.new(@sync_height)
-      Database.commit([mutation])
+      State.commit(state, [mutation])
 
       assert Model.expiration(index: {@expire5, pubkey}) ==
                State.fetch!(state, Model.ActiveOracleExpiration, {@expire5, pubkey})
@@ -194,7 +198,7 @@ defmodule AeMdw.Db.Sync.OracleTest do
       assert m_oracle = State.fetch!(state, Model.InactiveOracle, pubkey)
 
       mutation = OraclesExpirationMutation.new(@sync_height)
-      Database.commit([mutation])
+      State.commit(state, [mutation])
 
       assert Model.expiration(index: {@expire1, pubkey}) ==
                State.fetch!(state, Model.InactiveOracleExpiration, {@expire1, pubkey})

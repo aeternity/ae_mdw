@@ -22,8 +22,9 @@ defmodule AeMdw.Db.RocksDbCF do
 
   @spec init_tables() :: :ok
   def init_tables() do
-    :ets.new(@block_tab, [:named_table, :public, :ordered_set])
-    :ets.new(@tx_tab, [:named_table, :public, :ordered_set])
+    @block_tab = :ets.new(@block_tab, [:named_table, :public, :ordered_set])
+    @tx_tab = :ets.new(@tx_tab, [:named_table, :public, :ordered_set])
+    :ok
   end
 
   @spec read_block(Blocks.block_index_txi_pos()) :: {:ok, Model.block()} | :not_found

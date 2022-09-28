@@ -43,7 +43,7 @@ defmodule AeMdw.Migrations.AddTypeCountTable do
          acc + count}
       end)
 
-    State.commit(state, mutations)
+    _state = State.commit(state, mutations)
 
     duration = DateTime.diff(DateTime.utc_now(), begin)
 

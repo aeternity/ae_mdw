@@ -66,7 +66,7 @@ defmodule AeMdw.Migrations.AddNameFeesToStats do
         }
       end)
 
-    State.commit(state, mutations)
+    _state = State.commit(state, mutations)
 
     duration = DateTime.diff(DateTime.utc_now(), begin)
 

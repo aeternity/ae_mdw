@@ -17,7 +17,7 @@ defmodule AeMdw.Sync.AsyncTasks.Stats do
 
   @spec init() :: :ok
   def init do
-    :ets.new(@tab, [:named_table, :set, :public])
+    @tab = :ets.new(@tab, [:named_table, :set, :public])
     :ets.insert(@tab, {@stats_key, 0, 0, 0})
     :ok
   end

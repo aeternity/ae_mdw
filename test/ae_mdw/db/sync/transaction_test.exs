@@ -10,6 +10,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   alias AeMdw.Db.AexnCreateContractMutation
   alias AeMdw.Db.Sync.Transaction
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.EtsCache
   alias AeMdw.Validate
 
@@ -30,6 +31,8 @@ defmodule AeMdw.Db.Sync.TransactionTest do
 
   describe "sync_transaction spend_tx" do
     test "when receiver and sender ids are different" do
+      state = State.new()
+
       with_blockchain %{alice: 10_000, bob: 20_000},
         mb1: [
           t1: spend_tx(:alice, :bob, 5_000)
@@ -47,7 +50,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
             false
           )
 
-        Database.commit(txn_mutations)
+        State.commit(state, txn_mutations)
 
         {sender_pk, recipient_pk} = pubkeys_from_tx(signed_tx)
         assert sender_pk != recipient_pk
@@ -61,6 +64,8 @@ defmodule AeMdw.Db.Sync.TransactionTest do
     end
 
     test "when receiver and sender ids are the same" do
+      state = State.new()
+
       with_blockchain %{alice: 10_000},
         mb1: [
           t1: spend_tx(:alice, :alice, 5_000)
@@ -78,7 +83,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
             false
           )
 
-        Database.commit(txn_mutations)
+        State.commit(state, txn_mutations)
 
         {sender_pk, recipient_pk} = pubkeys_from_tx(signed_tx)
         assert sender_pk == recipient_pk
