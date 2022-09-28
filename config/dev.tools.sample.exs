@@ -7,7 +7,7 @@ config :git_hooks,
     pre_commit: [
       verbose: true,
       tasks: [
-        "mix format --check-formatted --dry-run --check-equivalent"
+        "mix format --check-formatted --dry-run"
       ]
     ],
     pre_push: [

@@ -11,7 +11,7 @@ defmodule AeMdw.MixProject do
         warnings_as_errors: true
       ],
       aliases: aliases(),
-      compilers: [:phoenix, :gettext] ++ Mix.compilers(),
+      compilers: [:phoenix] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       xref: [
@@ -91,7 +91,8 @@ defmodule AeMdw.MixProject do
           :app_ctrl_server,
           :enacl,
           :sext,
-          :rocksdb
+          :rocksdb,
+          :telemetry
         ]
       ],
       dialyzer: dialyzer(),
@@ -132,25 +133,26 @@ defmodule AeMdw.MixProject do
       {:smart_global, github: "ks/smart_global"},
       {:smart_record, github: "ks/smart_record"},
       {:dbg, github: "fishcakez/dbg"},
-      {:phoenix, "~> 1.5.8"},
-      {:plug, "~> 1.11"},
+      {:phoenix, "~> 1.6.12"},
+      {:phoenix_html, "~> 3.0"},
+      {:esbuild, "~> 0.3", runtime: Mix.env() == :dev},
+      {:plug, "~> 1.13"},
       {:cors_plug, "~> 2.0"},
-      {:gettext, "~> 0.11"},
-      {:jason, "~> 1.0"},
+      {:gettext, "~> 0.20"},
+      {:jason, "~> 1.4"},
       {:poison, "~> 5.0"},
-      {:plug_cowboy, "~> 2.0"},
+      {:plug_cowboy, "~> 2.5"},
       {:riverside, "~> 2.2.1"},
-      {:websockex, "~> 0.4.2"},
+      {:websockex, "~> 0.4.3"},
       {:temp, "~> 0.4"},
       {:tesla, "~> 1.3.0"},
-      {:dialyxir, "~> 1.0", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.2", only: :dev, runtime: false},
       {:git_hooks, "~> 0.5.0", only: :dev, runtime: false},
       {:mock, "~> 0.3.0", only: :test},
-      {:phoenix_html, "~> 2.11"},
-      {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:benchee, "~> 1.0.0", only: [:dev]},
       {:ex_json_schema, "~> 0.7.1"},
-      {:excoveralls, "~> 0.10", only: :test},
+      {:excoveralls, "~> 0.14", only: :test},
       {:gen_state_machine, "~> 2.0"}
     ]
   end

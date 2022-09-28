@@ -1,8 +1,8 @@
-FROM elixir:1.11.4
+FROM hexpm/elixir:1.13.4-erlang-23.3.4.17-debian-buster-20220801
 # Add required files to download and compile only the dependencies
 
 # Install other required dependencies
-RUN apt-get -qq update && apt-get -qq -y install curl libncurses5 libsodium-dev jq build-essential gcc g++ make libgmp10 \
+RUN apt-get -qq update && apt-get -qq -y install git curl libncurses5 libsodium-dev jq build-essential gcc g++ make libgmp10 \
     && ldconfig \
     && rm -rf /var/lib/apt/lists/*
 

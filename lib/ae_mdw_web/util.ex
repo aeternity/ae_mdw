@@ -51,7 +51,7 @@ defmodule AeMdwWeb.Util do
     |> Enum.join("&")
   end
 
-  defp url_encode_scope({scope, %Range{first: a, last: b}}),
+  defp url_encode_scope({scope, a..b}),
     do: "#{scope}/#{a}-#{b}"
 
   defp path_no_scope([_ | _] = path_info),

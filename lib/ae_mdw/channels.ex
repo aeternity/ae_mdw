@@ -110,7 +110,7 @@ defmodule AeMdw.Channels do
   defp serialize_cursor({{height, channel_pk}, is_reversed?}),
     do: {"#{height}-#{Enc.encode(:channel, channel_pk)}", is_reversed?}
 
-  defp deserialize_scope({:gen, %Range{first: first_gen, last: last_gen}}) do
+  defp deserialize_scope({:gen, first_gen..last_gen}) do
     {{first_gen, Util.min_bin()}, {last_gen, Util.max_256bit_bin()}}
   end
 

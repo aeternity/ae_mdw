@@ -431,7 +431,7 @@ defmodule AeMdw.Names do
     |> Enum.map(&render_name_info(state, &1, opts))
   end
 
-  defp deserialize_scope({:gen, %Range{first: first_gen, last: last_gen}}) do
+  defp deserialize_scope({:gen, first_gen..last_gen}) do
     {{first_gen, Util.min_bin()}, {last_gen, Util.max_256bit_bin()}}
   end
 
