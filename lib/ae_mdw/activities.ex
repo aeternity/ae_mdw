@@ -40,6 +40,8 @@ defmodule AeMdw.Activities do
   @max_pos 4
   @min_int Util.min_int()
   @max_int Util.max_int()
+  @min_bin Util.min_bin()
+  @max_bin Util.max_256bit_bin()
   @aexn_types ~w(aex9 aex141)a
 
   @doc """
@@ -256,14 +258,14 @@ defmodule AeMdw.Activities do
         case txi_scope do
           nil ->
             {
-              {aexn_type, account_pk, @min_int, @min_int, @min_int, @min_int},
-              {aexn_type, account_pk, @max_int, @max_int, @max_int, @max_int}
+              {aexn_type, account_pk, @min_int, @min_bin, @min_int, @min_int},
+              {aexn_type, account_pk, @max_int, @max_bin, @max_int, @max_int}
             }
 
           {first_txi, last_txi} ->
             {
-              {aexn_type, account_pk, first_txi, @min_int, @min_int, @min_int},
-              {aexn_type, account_pk, last_txi, @max_int, @max_int, @max_int}
+              {aexn_type, account_pk, first_txi, @min_bin, @min_int, @min_int},
+              {aexn_type, account_pk, last_txi, @max_bin, @max_int, @max_int}
             }
         end
 
@@ -273,10 +275,10 @@ defmodule AeMdw.Activities do
             nil
 
           txi when direction == :forward ->
-            {aexn_type, account_pk, txi, @min_int, @min_int, @min_int}
+            {aexn_type, account_pk, txi, @min_bin, @min_int, @min_int}
 
           txi when direction == :backward ->
-            {aexn_type, account_pk, txi, @max_int, @max_int, @max_int}
+            {aexn_type, account_pk, txi, @max_bin, @max_int, @max_int}
         end
 
       Collection.stream(state, table, direction, key_boundary, cursor)
@@ -314,10 +316,15 @@ defmodule AeMdw.Activities do
   end
 
   defp render(state, height, call_txi, {:int_contract_call, local_idx}) do
+    payload =
+      state
+      |> Format.to_map({call_txi, local_idx}, Model.IntContractCall)
+      |> Map.drop([:call_txi, :create_txi])
+
     %{
       height: height,
       type: "InternalContractCallEvent",
-      payload: Format.to_map(state, {call_txi, local_idx}, Model.IntContractCall)
+      payload: payload
     }
   end
 
@@ -342,7 +349,7 @@ defmodule AeMdw.Activities do
       from: Enc.encode(:account_pubkey, from_pk),
       to: Enc.encode(:account_pubkey, to_pk),
       value: value,
-      index: index,
+      log_index: index,
       tx_hash: Enc.encode(:tx_hash, Txs.txi_to_hash(state, txi))
     }
   end

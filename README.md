@@ -4490,10 +4490,8 @@ $ curl https://mainnet.aeternity.io/mdw/v2/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm
       "payload": {
         "block_hash": "mh_MXVb7wmE1tqeA2xSPhTTksLy7DE5PvR8nsu5haC2fTGpgxxhR",
         "call_tx_hash": "th_Ugtejdn7SkJHXkC3VSdCm2SnXGgPxHgUphBneMqgR3gniZzDN",
-        "call_txi": 34224137,
         "contract_id": "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
         "contract_tx_hash": "th_6memqAr5S3UQp1pc4FWXT8xUotfdrdUFgBd8VPmjM2ZRuojTF",
-        "contract_txi": 8392766,
         "function": "Oracle.query",
         "height": 659373,
         "internal_tx": {
@@ -4524,7 +4522,7 @@ $ curl https://mainnet.aeternity.io/mdw/v2/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm
       "height": 653289,
       "payload": {
         "from": "ak_11111111111111111111111111111111273Yts",
-        "index": 0,
+        "log_index": 0,
         "to": "ak_uTWegpfN6UjA4yz8X4ZVRi9xKEYeXHJDRZcRryTsRHAFoBpLa",
         "tx_hash": "th_2FciwUNyT7WRGee35KnNMhuoLFSCyiquVLFP3kATjwrFJh4Cfh",
         "value": 1
