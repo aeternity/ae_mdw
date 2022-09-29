@@ -59,9 +59,9 @@ defmodule AeMdw.Application do
 
   defp init(:aecore_services) do
     # need to be started after app_ctrl_server
-    Application.ensure_all_started(:aehttp)
-    Application.ensure_all_started(:aestratum)
-    Application.ensure_all_started(:aemon)
+    {:ok, _apps1} = Application.ensure_all_started(:aehttp)
+    {:ok, _apps2} = Application.ensure_all_started(:aestratum)
+    {:ok, _apps3} = Application.ensure_all_started(:aemon)
   end
 
   # def init(:aesophia) do
@@ -77,8 +77,12 @@ defmodule AeMdw.Application do
     oracle_fields = NodeHelper.record_keys(aeo_oracles_code, :oracle)
     query_fields = NodeHelper.record_keys(aeo_query_code, :query)
 
-    SmartRecord.new(AeMdw.Node, :oracle, Enum.zip(oracle_fields, Stream.cycle([nil])))
-    SmartRecord.new(AeMdw.Node, :oracle_query, Enum.zip(query_fields, Stream.cycle([nil])))
+    {:ok, _oracle_mod} =
+      SmartRecord.new(AeMdw.Node, :oracle, Enum.zip(oracle_fields, Stream.cycle([nil])))
+
+    {:ok, _oracle_query_mod} =
+      SmartRecord.new(AeMdw.Node, :oracle_query, Enum.zip(query_fields, Stream.cycle([nil])))
+
     :ok
   end
 
@@ -215,7 +219,7 @@ defmodule AeMdw.Application do
   defp init(:aesync), do: Application.ensure_all_started(:aesync)
 
   defp init(:tables) do
-    :ets.new(:tx_sync_cache, [:named_table, :ordered_set, :public])
+    :tx_sync_cache = :ets.new(:tx_sync_cache, [:named_table, :ordered_set, :public])
 
     {ets_table, ets_expiration} = Broadcaster.ets_config()
     EtsCache.new(ets_table, ets_expiration)
@@ -238,7 +242,7 @@ defmodule AeMdw.Application do
 
   @impl Application
   def start_phase(:migrate_db, _start_type, []) do
-    Mix.Tasks.MigrateDb.run(true)
+    {:ok, _applied_count} = Mix.Tasks.MigrateDb.run(true)
     :ok
   end
 

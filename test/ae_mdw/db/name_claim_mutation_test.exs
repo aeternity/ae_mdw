@@ -56,15 +56,15 @@ defmodule AeMdw.Db.NameClaimMutationTest do
       Model.owner(index: {owner_pk, plain_name})
     )
 
+    state = State.new()
+
     with_mocks [
       {AeMdw.Node.Db, [], [proto_vsn: fn _height -> 3 end]}
     ] do
-      tx
-      |> Sync.Name.name_claim_mutations(tx_hash, block_index, txi)
-      |> Database.commit()
-    end
+      mutations = Sync.Name.name_claim_mutations(tx, tx_hash, block_index, txi)
 
-    state = State.new()
+      State.commit(state, mutations)
+    end
 
     assert {:ok,
             Model.name(
@@ -90,8 +90,9 @@ defmodule AeMdw.Db.NameClaimMutationTest do
     block_index = {claim_height, 0}
     timeout = 54
     txi = 1234
+    state = State.new()
 
-    Database.commit([
+    State.commit(state, [
       NameClaimMutation.new(
         plain_name,
         name_hash,
@@ -103,8 +104,6 @@ defmodule AeMdw.Db.NameClaimMutationTest do
         timeout
       )
     ])
-
-    state = State.new()
 
     refute State.exists?(state, Model.ActiveName, plain_name)
     refute State.exists?(state, Model.ActiveNameActivation, {claim_height, plain_name})

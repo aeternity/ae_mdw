@@ -17,7 +17,9 @@ defmodule AeMdw.Db.HardforkPresets do
         :ok
 
       _missing ->
-        do_import_account_presets()
+        _state = do_import_account_presets()
+
+        :ok
     end
   end
 

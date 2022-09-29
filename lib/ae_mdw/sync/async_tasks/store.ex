@@ -21,8 +21,8 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
   @spec init() :: :ok
   def init do
     EtsCache.new(@added_tab, @minutes_expire)
-    :ets.new(@pending_tab, [:named_table, :ordered_set, :public])
-    :ets.new(@processing_tab, [:named_table, :set, :public])
+    @pending_tab = :ets.new(@pending_tab, [:named_table, :ordered_set, :public])
+    @processing_tab = :ets.new(@processing_tab, [:named_table, :set, :public])
     :ok
   end
 

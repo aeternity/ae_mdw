@@ -140,13 +140,14 @@ defmodule AeMdw.Migrations.AddChannelsStats do
             locked_in_channels: new_locked
           )
 
-        State.commit(
-          state,
-          [
-            WriteMutation.new(Model.DeltaStat, new_delta_stat),
-            WriteMutation.new(Model.TotalStat, new_total_stat)
-          ]
-        )
+        _state =
+          State.commit(
+            state,
+            [
+              WriteMutation.new(Model.DeltaStat, new_delta_stat),
+              WriteMutation.new(Model.TotalStat, new_total_stat)
+            ]
+          )
 
         if rem(height, @log_freq) == 0, do: IO.puts("Processed #{height} of #{total_gens}")
 

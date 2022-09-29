@@ -1,9 +1,9 @@
 defmodule AeMdw.Db.AexnCreateContractMutationTest do
   use ExUnit.Case
 
-  alias AeMdw.Database
   alias AeMdw.Db.AexnCreateContractMutation
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Validate
 
   require Model
@@ -17,6 +17,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       {kbi, mbi} = block_index = {271_305, 99}
       create_txi = txi = 12_361_891
       extensions = ["ext1"]
+      state = State.new()
 
       kb_hash = :crypto.strong_rand_bytes(32)
       next_hash = :crypto.strong_rand_bytes(32)
@@ -31,7 +32,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
            get_next_hash: fn ^kb_hash, ^mbi -> next_hash end
          ]}
       ] do
-        Database.commit([
+        State.commit(state, [
           AexnCreateContractMutation.new(
             :aex9,
             contract_pk,
@@ -50,9 +51,9 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
             extensions: extensions
           )
 
-        assert {:ok, ^m_contract_pk} = Database.fetch(Model.AexnContract, {:aex9, contract_pk})
-        assert Database.exists?(Model.AexnContractName, {:aex9, name, contract_pk})
-        assert Database.exists?(Model.AexnContractSymbol, {:aex9, symbol, contract_pk})
+        assert {:ok, ^m_contract_pk} = State.get(state, Model.AexnContract, {:aex9, contract_pk})
+        assert State.exists?(state, Model.AexnContractName, {:aex9, name, contract_pk})
+        assert State.exists?(state, Model.AexnContractSymbol, {:aex9, symbol, contract_pk})
       end
     end
 
@@ -65,6 +66,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       {kbi, mbi} = block_index = {271_305, 99}
       create_txi = txi = 12_361_891
       extensions = ["ext1"]
+      state = State.new()
 
       kb_hash = :crypto.strong_rand_bytes(32)
       next_hash = :crypto.strong_rand_bytes(32)
@@ -79,7 +81,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
            get_next_hash: fn ^kb_hash, ^mbi -> next_hash end
          ]}
       ] do
-        Database.commit([
+        State.commit(state, [
           AexnCreateContractMutation.new(
             :aex9,
             contract_pk,
@@ -98,13 +100,14 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
             extensions: extensions
           )
 
-        assert {:ok, ^m_contract_pk} = Database.fetch(Model.AexnContract, {:aex9, contract_pk})
-        assert Database.exists?(Model.AexnContractName, {:aex9, truncated_name, contract_pk})
-        assert Database.exists?(Model.AexnContractSymbol, {:aex9, symbol, contract_pk})
+        assert {:ok, ^m_contract_pk} = State.get(state, Model.AexnContract, {:aex9, contract_pk})
+        assert State.exists?(state, Model.AexnContractName, {:aex9, truncated_name, contract_pk})
+        assert State.exists?(state, Model.AexnContractSymbol, {:aex9, symbol, contract_pk})
       end
     end
 
     test "successful for aex141 contract" do
+      state = State.new()
       contract_pk = Validate.id!("ct_2ZpMr6PfL1XzgWosguyUtgr9b2kKeqqGQpwSeXzT28j7f8LJH5")
 
       aex141_meta_info =
@@ -114,7 +117,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       block_index = {610_470, 77}
       create_txi = txi = 28_522_602
 
-      Database.commit([
+      State.commit(state, [
         AexnCreateContractMutation.new(
           :aex141,
           contract_pk,
@@ -133,9 +136,9 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
           extensions: extensions
         )
 
-      assert {:ok, ^m_contract_pk} = Database.fetch(Model.AexnContract, {:aex141, contract_pk})
-      assert Database.exists?(Model.AexnContractName, {:aex141, name, contract_pk})
-      assert Database.exists?(Model.AexnContractSymbol, {:aex141, symbol, contract_pk})
+      assert {:ok, ^m_contract_pk} = State.get(state, Model.AexnContract, {:aex141, contract_pk})
+      assert State.exists?(state, Model.AexnContractName, {:aex141, name, contract_pk})
+      assert State.exists?(state, Model.AexnContractSymbol, {:aex141, symbol, contract_pk})
     end
 
     test "indexes with full meta_info and truncates aex141 symbol sort field" do
@@ -144,12 +147,13 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       truncated_symbol = String.slice(bigger_symbol, 0, 100) <> "..."
       name = "prenft2"
       aex141_meta_info = {name, bigger_symbol, "http://some-fake-url.com", :url}
+      state = State.new()
 
       extensions = ["ext1", "ext2"]
       block_index = {610_470, 77}
       create_txi = txi = 28_522_602
 
-      Database.commit([
+      State.commit(state, [
         AexnCreateContractMutation.new(
           :aex141,
           contract_pk,
@@ -168,20 +172,26 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
           extensions: extensions
         )
 
-      assert {:ok, ^m_contract_pk} = Database.fetch(Model.AexnContract, {:aex141, contract_pk})
-      assert Database.exists?(Model.AexnContractName, {:aex141, name, contract_pk})
-      assert Database.exists?(Model.AexnContractSymbol, {:aex141, truncated_symbol, contract_pk})
+      assert {:ok, ^m_contract_pk} = State.get(state, Model.AexnContract, {:aex141, contract_pk})
+      assert State.exists?(state, Model.AexnContractName, {:aex141, name, contract_pk})
+
+      assert State.exists?(
+               state,
+               Model.AexnContractSymbol,
+               {:aex141, truncated_symbol, contract_pk}
+             )
     end
 
     test "indexes aex141 with error meta_info without sorting records" do
       contract_pk = Validate.id!("ct_ukZe6BBpuSWxT8hxd87z11vdgRnwKnedEWqJ7SyQucbX1C1pc")
       aex141_meta_info = {:out_of_gas_error, :out_of_gas_error, :out_of_gas_error, nil}
+      state = State.new()
 
       extensions = ["ext1", "ext2"]
       block_index = {610_470, 77}
       create_txi = txi = 28_522_602
 
-      Database.commit([
+      State.commit(state, [
         AexnCreateContractMutation.new(
           :aex141,
           contract_pk,
@@ -200,9 +210,19 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
           extensions: extensions
         )
 
-      assert {:ok, ^m_contract_pk} = Database.fetch(Model.AexnContract, {:aex141, contract_pk})
-      refute Database.exists?(Model.AexnContractName, {:aex141, :out_of_gas_error, contract_pk})
-      refute Database.exists?(Model.AexnContractSymbol, {:aex141, :out_of_gas_error, contract_pk})
+      assert {:ok, ^m_contract_pk} = State.get(state, Model.AexnContract, {:aex141, contract_pk})
+
+      refute State.exists?(
+               state,
+               Model.AexnContractName,
+               {:aex141, :out_of_gas_error, contract_pk}
+             )
+
+      refute State.exists?(
+               state,
+               Model.AexnContractSymbol,
+               {:aex141, :out_of_gas_error, contract_pk}
+             )
     end
   end
 end

@@ -60,7 +60,7 @@ defmodule AeMdw.Migrations.AddMiners do
         Model.stat(index: Stats.miners_count_key(), payload: length(mutations))
       )
 
-    State.commit(state, [stat_mutation | mutations])
+    _state = State.commit(state, [stat_mutation | mutations])
 
     IO.puts("DONE")
 
