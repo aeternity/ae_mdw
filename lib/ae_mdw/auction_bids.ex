@@ -5,7 +5,6 @@ defmodule AeMdw.AuctionBids do
 
   alias AeMdw.Collection
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Name
   alias AeMdw.Db.State
   alias AeMdw.Database
   alias AeMdw.Collection
@@ -88,7 +87,7 @@ defmodule AeMdw.AuctionBids do
          _opts
        ) do
     last_bid = Txs.fetch!(state, bi_txi_txi(last_bid))
-    name_ttl = Name.expire_after(expire_height)
+    name_ttl = Names.expire_after(expire_height)
 
     %{
       name: plain_name,

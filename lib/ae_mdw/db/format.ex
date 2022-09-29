@@ -9,6 +9,7 @@ defmodule AeMdw.Db.Format do
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
+  alias AeMdw.Names
   alias AeMdw.Txs
 
   require Model
@@ -390,7 +391,7 @@ defmodule AeMdw.Db.Format do
          info_fmt
        ) do
     last_bid = tx_fmt.(DbUtil.read_tx!(state, txi))
-    name_ttl = Name.expire_after(auction_end)
+    name_ttl = Names.expire_after(auction_end)
     keys = if Map.has_key?(last_bid, "tx"), do: ["tx", "ttl"], else: [:tx, :ttl]
     last_bid = put_in(last_bid, keys, name_ttl)
 

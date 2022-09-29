@@ -6,7 +6,7 @@ defmodule AeMdw.Db.NamesExpirationMutation do
   alias AeMdw.Blocks
   alias AeMdw.Collection
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Name
+  alias AeMdw.Db.Sync.Name
   alias AeMdw.Db.State
 
   require Model

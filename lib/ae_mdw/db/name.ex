@@ -17,46 +17,17 @@ defmodule AeMdw.Db.Name do
   alias AeMdw.Node.Db
   alias AeMdw.Db.Model
   alias AeMdw.Db.Format
-  alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Names
   alias AeMdw.Validate
 
-  require Ex2ms
   require Model
 
   import AeMdw.Util
 
   @typep pubkey :: Db.pubkey()
-  @typep cache_key ::
-           String.t()
-           | {Blocks.height(), pubkey()}
-           | {pubkey(), String.t()}
-           | pubkey()
-           | {String.t(), <<>>, <<>>, <<>>, <<>>}
   @typep state() :: State.t()
-  @typep table ::
-           Model.ActiveName
-           | Model.InactiveName
-           | Model.ActiveNameActivation
-           | Model.ActiveNameExpiration
-           | Model.InactiveNameExpiration
-           | Model.AuctionExpiration
-           | Model.AuctionBid
-           | Model.AuctionOwner
-           | Model.PlainName
-           | Model.ActiveNameOwner
-           | Model.InactiveNameOwner
-           | Model.Pointee
-  @typep name_record() ::
-           Model.name()
-           | Model.activation()
-           | Model.expiration()
-           | Model.plain_name()
-           | Model.owner()
-           | Model.pointee()
-           | Model.auction_bid()
 
   @spec plain_name(State.t(), binary()) :: {:ok, String.t()} | nil
   def plain_name(state, name_hash) do
@@ -94,66 +65,6 @@ defmodule AeMdw.Db.Name do
     }
   end
 
-  @spec expire_after(Blocks.height()) :: Blocks.height()
-  def expire_after(auction_end) do
-    auction_end + :aec_governance.name_claim_max_expiration(Db.proto_vsn(auction_end))
-  end
-
-  @spec expire_name(state(), Blocks.height(), Names.plain_name()) :: state()
-  def expire_name(state, height, plain_name) do
-    Model.name(expire: expiration) =
-      m_name = cache_through_read!(state, Model.ActiveName, plain_name)
-
-    state
-    |> deactivate_name(height, expiration, m_name)
-    |> State.inc_stat(:names_expired)
-  end
-
-  @spec expire_auction(
-          state(),
-          Blocks.height(),
-          Names.plain_name(),
-          Names.auction_timeout()
-        ) :: state()
-  def expire_auction(state, height, plain_name, timeout) do
-    Model.auction_bid(block_index_txi: {_block_index, txi}, owner: owner, bids: bids) =
-      ok!(cache_through_read(state, Model.AuctionBid, plain_name))
-
-    previous = ok_nil(cache_through_read(state, Model.InactiveName, plain_name))
-    expire = expire_after(height)
-
-    m_name =
-      Model.name(
-        index: plain_name,
-        active: height,
-        expire: expire,
-        claims: bids,
-        auction_timeout: timeout,
-        owner: owner,
-        previous: previous
-      )
-
-    m_name_activation = Model.activation(index: {height, plain_name})
-    m_name_exp = Model.expiration(index: {expire, plain_name})
-    m_owner = Model.owner(index: {owner, plain_name})
-    %{tx: %{name_fee: name_fee}} = read_raw_tx!(state, txi)
-
-    state
-    |> cache_through_write(Model.ActiveName, m_name)
-    |> cache_through_write(Model.ActiveNameOwner, m_owner)
-    |> cache_through_write(Model.ActiveNameActivation, m_name_activation)
-    |> cache_through_write(Model.ActiveNameExpiration, m_name_exp)
-    |> cache_through_delete(Model.AuctionExpiration, {height, plain_name})
-    |> cache_through_delete(Model.AuctionOwner, {owner, plain_name})
-    |> cache_through_delete(Model.AuctionBid, plain_name)
-    |> cache_through_delete_inactive(previous)
-    |> IntTransfer.fee({height, -1}, :lock_name, owner, txi, name_fee)
-    |> State.inc_stat(:names_activated)
-    |> State.inc_stat(:auctions_expired)
-    |> State.inc_stat(:burned_in_auctions, name_fee)
-    |> State.inc_stat(:locked_in_auctions, -name_fee)
-  end
-
   @doc """
   Returns a stream of Names.plain_name()
   """
@@ -180,20 +91,27 @@ defmodule AeMdw.Db.Name do
   def source(Model.InactiveName, :expiration), do: Model.InactiveNameExpiration
 
   @spec locate_bid(state(), Names.plain_name()) :: {:ok, Model.auction_bid()} | nil
-  def locate_bid(state, plain_name),
-    do: ok_nil(cache_through_read(state, Model.AuctionBid, plain_name))
+  def locate_bid(state, plain_name) do
+    case State.get(state, Model.AuctionBid, plain_name) do
+      {:ok, auction_bid} -> {:ok, auction_bid}
+      :not_found -> nil
+    end
+  end
 
   @spec locate(state(), Names.plain_name()) ::
           {Model.name(), Model.ActiveName | Model.InactiveName}
           | {Model.auction_bid(), Model.AuctionBid}
           | nil
   def locate(state, plain_name) do
-    map_ok_nil(cache_through_read(state, Model.ActiveName, plain_name), &{&1, Model.ActiveName}) ||
-      map_ok_nil(
-        cache_through_read(state, Model.InactiveName, plain_name),
-        &{&1, Model.InactiveName}
-      ) ||
-      map_some(locate_bid(state, plain_name), &{&1, Model.AuctionBid})
+    with {:active, :not_found} <- {:active, State.get(state, Model.ActiveName, plain_name)},
+         {:inactive, :not_found} <- {:inactive, State.get(state, Model.InactiveName, plain_name)},
+         {:auction_bid, nil} <- {:auction_bid, locate_bid(state, plain_name)} do
+      nil
+    else
+      {:active, {:ok, active_name}} -> {active_name, Model.ActiveName}
+      {:inactive, {:ok, inactive_name}} -> {inactive_name, Model.InactiveName}
+      {:auction_bid, {:ok, auction}} -> {auction, Model.AuctionBid}
+    end
   end
 
   @spec pointers(state(), Model.name()) :: map()
@@ -302,7 +220,7 @@ defmodule AeMdw.Db.Name do
       pointee = %{
         name: Model.name(m_name, :index),
         active_from: Model.name(m_name, :active),
-        expire_height: revoke_or_expire_height(m_name),
+        expire_height: Names.revoke_or_expire_height(m_name),
         update: Format.to_raw_map(state, {update_bi, update_txi})
       }
 
@@ -324,95 +242,6 @@ defmodule AeMdw.Db.Name do
             {active, push.(inactive, m_name, p_keys)}
         end
     end
-  end
-
-  @spec revoke_or_expire_height(Model.name()) :: Blocks.height()
-  def revoke_or_expire_height(m_name) do
-    revoke_or_expire_height(Model.name(m_name, :revoke), Model.name(m_name, :expire))
-  end
-
-  @spec cache_through_read(state(), table(), cache_key()) :: {:ok, name_record()} | nil
-  def cache_through_read(state, table, key) do
-    case State.cache_get(state, :name_sync_cache, {table, key}) do
-      {:ok, record} ->
-        {:ok, record}
-
-      :not_found ->
-        case State.get(state, table, key) do
-          {:ok, record} -> {:ok, record}
-          :not_found -> nil
-        end
-    end
-  end
-
-  @spec cache_through_read!(state(), table(), cache_key()) :: name_record() | nil
-  def cache_through_read!(state, table, key) do
-    ok_nil(cache_through_read(state, table, key)) ||
-      raise("#{inspect(key)} not found in #{table}")
-  end
-
-  @spec cache_through_write(state(), table(), name_record()) :: state()
-  def cache_through_write(state, table, record) do
-    state
-    |> State.cache_put(:name_sync_cache, {table, elem(record, 1)}, record)
-    |> State.put(table, record)
-  end
-
-  @spec cache_through_delete(state(), table(), cache_key()) :: state()
-  def cache_through_delete(state, table, key) do
-    state
-    |> State.cache_delete(:name_sync_cache, {table, key})
-    |> State.delete(table, key)
-  end
-
-  @spec cache_through_delete_inactive(state(), nil | Model.name()) :: state()
-  def cache_through_delete_inactive(state, nil), do: state
-
-  def cache_through_delete_inactive(
-        state,
-        Model.name(index: plain_name, owner: owner_pk) = m_name
-      ) do
-    expire = revoke_or_expire_height(m_name)
-
-    state
-    |> cache_through_delete(Model.InactiveName, plain_name)
-    |> cache_through_delete(Model.InactiveNameOwner, {owner_pk, plain_name})
-    |> cache_through_delete(Model.InactiveNameExpiration, {expire, plain_name})
-  end
-
-  @spec deactivate_name(state(), Blocks.height(), Blocks.height(), Model.name()) :: state()
-  def deactivate_name(
-        state,
-        deactivate_height,
-        expiration,
-        Model.name(index: plain_name, owner: owner_pk) = m_name
-      ) do
-    m_exp = Model.expiration(index: {deactivate_height, plain_name})
-    m_owner = Model.owner(index: {owner_pk, plain_name})
-
-    state
-    |> cache_through_delete_active(expiration, m_name)
-    |> cache_through_write(Model.InactiveName, m_name)
-    |> cache_through_write(Model.InactiveNameExpiration, m_exp)
-    |> cache_through_write(Model.InactiveNameOwner, m_owner)
-  end
-
-  #
-  # Private functions
-  #
-  defp revoke_or_expire_height(nil = _revoke, expire), do: expire
-  defp revoke_or_expire_height({{revoke_height, _}, _}, _expire), do: revoke_height
-
-  defp cache_through_delete_active(
-         state,
-         expiration,
-         Model.name(index: plain_name, active: active_from, owner: owner_pk)
-       ) do
-    state
-    |> cache_through_delete(Model.ActiveName, plain_name)
-    |> cache_through_delete(Model.ActiveNameOwner, {owner_pk, plain_name})
-    |> cache_through_delete(Model.ActiveNameActivation, {active_from, plain_name})
-    |> cache_through_delete(Model.ActiveNameExpiration, {expiration, plain_name})
   end
 
   defp pointer_kv_raw(ptr),
@@ -458,7 +287,4 @@ defmodule AeMdw.Db.Name do
       if update_txi <= ref_txi, do: update_txi
     end)
   end
-
-  defp read_raw_tx!(state, txi),
-    do: Format.to_raw_map(state, DbUtil.read_tx!(state, txi))
 end
