@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.22.0](https://www.github.com/aeternity/ae_mdw/compare/v1.21.1...v1.22.0) (2022-09-29)
+
+
+### Features
+
+* add aexn transfer activities ([#915](https://www.github.com/aeternity/ae_mdw/issues/915)) ([6cad834](https://www.github.com/aeternity/ae_mdw/commit/6cad8346d0c1e194af5e353083c951f3d4c7eb0b))
+
+
+### Bug Fixes
+
+* consider last txs when calculating mb tx count ([#917](https://www.github.com/aeternity/ae_mdw/issues/917)) ([9298edd](https://www.github.com/aeternity/ae_mdw/commit/9298edd00839872bf8fa5be65cd2f84fd53d24bf))
+
+
+### Testing
+
+* add cases websocket broadcasting ([#916](https://www.github.com/aeternity/ae_mdw/issues/916)) ([ca820ac](https://www.github.com/aeternity/ae_mdw/commit/ca820ac8ce0a632fca360c121ece01245f490b02))
+
+
+### Miscellaneous
+
+* improve dialyzer warnings to catch unmatched results ([#923](https://www.github.com/aeternity/ae_mdw/issues/923)) ([49388a8](https://www.github.com/aeternity/ae_mdw/commit/49388a831c5a477be9f774b3293056d450c488ff))
+* upgrade phoenix and other deps ([#918](https://www.github.com/aeternity/ae_mdw/issues/918)) ([f5b4270](https://www.github.com/aeternity/ae_mdw/commit/f5b42702c01cd5922a672c2b2e8c8e84783674bd))
+
 ### [1.21.1](https://www.github.com/aeternity/ae_mdw/compare/v1.21.0...v1.21.1) (2022-09-26)
 
 
