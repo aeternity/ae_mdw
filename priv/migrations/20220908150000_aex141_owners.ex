@@ -35,7 +35,7 @@ defmodule AeMdw.Migrations.Aex141Owners do
           State.fetch!(state, Model.ContractLog, {create_txi, txi, evt_hash, i})
 
         contract_pk = Origin.pubkey(state, {:contract, create_txi})
-        Contract.write_aex141_ownership(state, contract_pk, args)
+        _state = Contract.write_aex141_ownership(state, contract_pk, args)
         :ok
       end)
       |> Enum.count()
@@ -50,7 +50,7 @@ defmodule AeMdw.Migrations.Aex141Owners do
                          contract_pk: contract_pk
                        ) ->
         args = [from_pk, to_pk, <<token_id::256>>]
-        Contract.write_aex141_ownership(state, contract_pk, args)
+        _state = Contract.write_aex141_ownership(state, contract_pk, args)
         :ok
       end)
       |> Enum.count()

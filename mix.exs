@@ -4,7 +4,7 @@ defmodule AeMdw.MixProject do
   def project() do
     [
       app: :ae_mdw,
-      version: "1.21.1",
+      version: "1.22.0",
       elixir: "~> 1.10",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -172,7 +172,11 @@ defmodule AeMdw.MixProject do
       ignore_warnings: ".dialyzer_ignore.exs",
       plt_add_apps: [:mix],
       plt_core_path: "priv/plts",
-      plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
+      plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
+      flags: [
+        :unmatched_returns,
+        :race_conditions
+      ]
     ]
   end
 end

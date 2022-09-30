@@ -358,9 +358,9 @@ defmodule AeMdwWeb.Aex9Controller do
         if last - first + 1 > @max_range_length do
           {:error,
            ErrInput.RangeTooBig.exception(value: "max range length is #{@max_range_length}")}
+        else
+          {:ok, first..last}
         end
-
-        {:ok, first..last}
 
       {:error, _detail} ->
         {:error, ErrInput.NotAex9.exception(value: range)}

@@ -11,10 +11,8 @@ defmodule AeMdw.Database do
   returned instead.
   """
 
-  alias AeMdw.Db.Mutation
   alias AeMdw.Db.RocksDb
   alias AeMdw.Db.RocksDbCF
-  alias AeMdw.Db.State
 
   @type table() :: atom()
   @type record() :: tuple()
@@ -160,18 +158,6 @@ defmodule AeMdw.Database do
     end
 
     :ok = RocksDbCF.delete(txn, table, key)
-  end
-
-  @doc """
-  Creates a transaction and commits the changes of a mutation list.
-
-  Left for backwards compat to deal with invalidations.
-  """
-  @spec commit([Mutation.t()]) :: :ok
-  def commit(mutations) do
-    State.commit(State.new(), mutations)
-
-    :ok
   end
 
   @spec transaction_new() :: transaction()

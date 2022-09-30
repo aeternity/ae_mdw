@@ -39,7 +39,7 @@ defmodule AeMdw.Migrations.Aex141Stats do
       end)
 
     mutations = token_count_mutations ++ owners_count_mutations
-    State.commit_db(State.new(), mutations)
+    _state = State.commit(state, mutations)
     duration = DateTime.diff(DateTime.utc_now(), begin)
 
     {:ok, {length(mutations), duration}}

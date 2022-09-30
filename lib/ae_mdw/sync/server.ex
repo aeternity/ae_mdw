@@ -231,7 +231,7 @@ defmodule AeMdw.Sync.Server do
   def handle_event(:info, {:DOWN, _ref, :process, _pid, reason}, _state, state_data) do
     Log.info("Sync.Server error: #{inspect(reason)}. Stopping...")
 
-    :timer.apply_after(@retry_time, __MODULE__, :restart_sync, [])
+    {:ok, _ref} = :timer.apply_after(@retry_time, __MODULE__, :restart_sync, [])
 
     {:next_state, :stopped, state_data}
   end

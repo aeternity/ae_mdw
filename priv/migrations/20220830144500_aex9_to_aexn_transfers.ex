@@ -42,7 +42,7 @@ defmodule AeMdw.Migrations.Aex9toAexnTransfer do
       end)
       |> Enum.to_list()
 
-    State.commit_db(state, write_mutations, false)
+    _state = State.commit(state, write_mutations)
     duration = DateTime.diff(DateTime.utc_now(), begin)
 
     {:ok, {div(length(write_mutations), 3), duration}}

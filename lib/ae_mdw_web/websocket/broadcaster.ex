@@ -127,7 +127,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
           :ok
 
         :error ->
-          {:error, :block_not_found}
+          :ok
       end
     end
   end
@@ -149,7 +149,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
         :ok
 
       :error ->
-        {:error, :block_not_found}
+        :ok
     end
   end
 

@@ -33,9 +33,6 @@ defmodule AeMdw.Db.Sync.OracleTest do
       assert {:ok, Model.expiration(index: {^expire, ^pubkey})} =
                Store.get(store, Model.ActiveOracleExpiration, {expire, pubkey})
 
-      assert {:ok, Model.origin(index: {:oracle_register_tx, ^pubkey, ^txi}, tx_id: ^tx_hash)} =
-               Store.get(store, Model.Origin, {:oracle_register_tx, pubkey, txi})
-
       assert {:ok, Model.rev_origin(index: {^txi, :oracle_register_tx, ^pubkey})} =
                Store.get(store, Model.RevOrigin, {txi, :oracle_register_tx, pubkey})
 

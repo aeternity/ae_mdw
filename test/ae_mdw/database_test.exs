@@ -3,20 +3,20 @@ defmodule AeMdw.DatabaseTest do
 
   alias AeMdw.Database
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Db.WriteMutation
 
   import AeMdw.Db.ModelFixtures, only: [new_block: 0]
 
   require Model
 
-  describe "commit/1" do
+  describe "transaction_commit/1" do
     test "persists a single mutation within a transaction" do
       Model.block(index: key) = m_block = new_block()
 
-      assert :ok =
-               Database.commit([
-                 WriteMutation.new(Model.Block, m_block)
-               ])
+      commit([
+        WriteMutation.new(Model.Block, m_block)
+      ])
 
       assert {:ok, ^m_block} = Database.fetch(Model.Block, key)
     end
@@ -33,7 +33,7 @@ defmodule AeMdw.DatabaseTest do
           }
         end)
 
-      assert :ok = Database.commit(txn_mutations)
+      commit(txn_mutations)
 
       Enum.each(records, fn Model.block(index: key) = m_block ->
         assert {:ok, ^m_block} = Database.fetch(Model.Block, key)
@@ -54,11 +54,10 @@ defmodule AeMdw.DatabaseTest do
 
       {txn_mutations1, txn_mutations2} = Enum.split(txn_mutations, 5)
 
-      assert :ok =
-               Database.commit([
-                 txn_mutations1,
-                 txn_mutations2
-               ])
+      commit([
+        txn_mutations1,
+        txn_mutations2
+      ])
 
       Enum.each(records, fn Model.block(index: key) = m_block ->
         assert {:ok, ^m_block} = Database.fetch(Model.Block, key)
@@ -79,12 +78,11 @@ defmodule AeMdw.DatabaseTest do
 
       {txn_mutations1, txn_mutations2} = Enum.split(txn_mutations, 5)
 
-      assert :ok =
-               Database.commit([
-                 txn_mutations1,
-                 [nil],
-                 txn_mutations2
-               ])
+      commit([
+        txn_mutations1,
+        [nil],
+        txn_mutations2
+      ])
 
       Enum.each(records, fn Model.block(index: key) = m_block ->
         assert {:ok, ^m_block} = Database.fetch(Model.Block, key)
@@ -105,4 +103,6 @@ defmodule AeMdw.DatabaseTest do
       end
     end
   end
+
+  defp commit(mutations), do: State.commit(State.new(), mutations)
 end
