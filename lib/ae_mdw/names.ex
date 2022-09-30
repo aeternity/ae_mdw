@@ -8,12 +8,14 @@ defmodule AeMdw.Names do
   alias :aeser_api_encoder, as: Enc
 
   alias AeMdw.AuctionBids
+  alias AeMdw.Blocks
   alias AeMdw.Collection
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Db.State
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Node.Db
   alias AeMdw.Txs
   alias AeMdw.Util
   alias AeMdw.Validate
@@ -100,6 +102,11 @@ defmodule AeMdw.Names do
       e in ErrInput ->
         {:error, e.message}
     end
+  end
+
+  @spec expire_after(Blocks.height()) :: Blocks.height()
+  def expire_after(auction_end) do
+    auction_end + :aec_governance.name_claim_max_expiration(Db.proto_vsn(auction_end))
   end
 
   defp build_name_streamer(%{owned_by: owner_pk, state: "active"}, state, cursor) do
@@ -270,6 +277,14 @@ defmodule AeMdw.Names do
 
       :not_found ->
         []
+    end
+  end
+
+  @spec revoke_or_expire_height(Model.name()) :: Blocks.height()
+  def revoke_or_expire_height(m_name) do
+    case {Model.name(m_name, :revoke), Model.name(m_name, :expire)} do
+      {nil, expire} -> expire
+      {{{revoke_height, _revoke_mbi}, _revoke_txi}, _expire} -> revoke_height
     end
   end
 
