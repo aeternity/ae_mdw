@@ -5,13 +5,12 @@ defmodule AeMdw.Migrations.Aex141IntTokenId do
 
   alias AeMdw.Database
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
 
   require Model
 
-  @spec run(boolean()) :: {:ok, {non_neg_integer(), non_neg_integer()}}
-  def run(_from_start?) do
-    begin = DateTime.utc_now()
-
+  @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
+  def run(_state, _from_start?) do
     updated_count =
       Model.NftOwnership
       |> Database.all_keys()
@@ -30,8 +29,6 @@ defmodule AeMdw.Migrations.Aex141IntTokenId do
       end)
       |> Enum.sum()
 
-    duration = DateTime.diff(DateTime.utc_now(), begin)
-
-    {:ok, {updated_count, duration}}
+    {:ok, updated_count}
   end
 end

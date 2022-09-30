@@ -4,8 +4,9 @@ defmodule Mix.Tasks.MigrateDb do
   """
   use Mix.Task
 
-  alias AeMdw.Db.Model
   alias AeMdw.Database
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Log
 
   require Model
@@ -76,13 +77,20 @@ defmodule Mix.Tasks.MigrateDb do
 
   @spec apply_migration!({integer(), String.t()}, boolean()) :: :ok
   defp apply_migration!({version, path}, from_startup?) do
-    {module, _} =
+    {module, _bytecode} =
       path
       |> Code.compile_file()
       |> List.last()
 
+    state = State.new()
+
     Log.info("applying version #{version} with #{module}...")
-    {:ok, _} = apply(module, :run, [from_startup?])
+    begin = DateTime.utc_now()
+
+    {:ok, total_count} = apply(module, :run, [state, from_startup?])
+
+    duration = DateTime.diff(DateTime.utc_now(), begin)
+    Log.info("total #{total_count} in #{duration} seconds")
 
     Database.dirty_write(
       @table,

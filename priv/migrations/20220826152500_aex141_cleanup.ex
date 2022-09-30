@@ -13,12 +13,10 @@ defmodule AeMdw.Migrations.Aex141Cleanup do
 
   require Model
 
-  @spec run(boolean()) :: {:ok, {non_neg_integer(), non_neg_integer()}}
-  def run(_from_start?) do
-    begin = DateTime.utc_now()
-
+  @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
+  def run(state, _from_start?) do
     deleted_count =
-      State.new()
+      state
       |> Collection.stream(Model.AexnContract, {:aex141, <<>>})
       |> Stream.take_while(&match?({:aex141, _pk}, &1))
       |> Stream.map(&Database.fetch!(Model.AexnContract, &1))
@@ -50,8 +48,6 @@ defmodule AeMdw.Migrations.Aex141Cleanup do
       end)
       |> Enum.sum()
 
-    duration = DateTime.diff(DateTime.utc_now(), begin)
-
-    {:ok, {deleted_count, duration}}
+    {:ok, deleted_count}
   end
 end

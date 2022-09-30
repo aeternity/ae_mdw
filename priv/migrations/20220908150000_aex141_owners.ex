@@ -11,11 +11,8 @@ defmodule AeMdw.Migrations.Aex141Owners do
 
   require Model
 
-  @spec run(boolean()) :: {:ok, {non_neg_integer(), non_neg_integer()}}
-  def run(_from_start?) do
-    state = State.new()
-    begin = DateTime.utc_now()
-
+  @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
+  def run(state, _from_start?) do
     mint_hash = AeMdw.Node.aexn_mint_event_hash()
 
     mint_count =
@@ -55,8 +52,6 @@ defmodule AeMdw.Migrations.Aex141Owners do
       end)
       |> Enum.count()
 
-    duration = DateTime.diff(DateTime.utc_now(), begin)
-
-    {:ok, {mint_count + transfer_count, duration}}
+    {:ok, mint_count + transfer_count}
   end
 end
