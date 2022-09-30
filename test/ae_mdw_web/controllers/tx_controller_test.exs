@@ -1,15 +1,15 @@
 defmodule AeMdwWeb.TxControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
-  import Mock
-
-  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
   alias AeMdw.Db.Util
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
+
+  import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, oracle_register_tx: 2]
+  import Mock
 
   require Model
 
@@ -31,6 +31,85 @@ defmodule AeMdwWeb.TxControllerTest do
       tx_hash = "th_2TbTPmKFU31WNQKfBGe5b5JDF9sFdAY7qot1smnxjbsEiu7LNr"
 
       assert %{"error" => _error_msg} = conn |> get("/tx/#{tx_hash}") |> json_response(404)
+    end
+
+    test "returns an oracle_register_tx with non-string format fields", %{
+      conn: conn,
+      store: store
+    } do
+      with_blockchain %{alice: 10_000},
+        mb: [
+          tx: oracle_register_tx(:alice, %{query_format: <<0, 160>>, response_format: <<225>>})
+        ] do
+        %{txs: [tx]} = blocks[:mb]
+
+        {:id, :account, alice_pk} = accounts[:alice]
+        alice_id = encode(:account_pubkey, alice_pk)
+        oracle_id = encode(:oracle_pubkey, alice_pk)
+
+        store =
+          store
+          |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {0, 0}, id: :aetx_sign.hash(tx)))
+          |> Store.put(Model.Block, Model.block(index: {0, -1}, tx_index: 1))
+          |> Store.put(Model.Block, Model.block(index: {0, 0}, tx_index: 1))
+          |> Store.put(Model.Block, Model.block(index: {1, -1}, tx_index: 2))
+
+        tx_hash = encode(:tx_hash, :aetx_sign.hash(tx))
+
+        assert %{
+                 "hash" => ^tx_hash,
+                 "tx" => %{
+                   "account_id" => ^alice_id,
+                   "oracle_id" => ^oracle_id,
+                   "query_format" => [0, 160],
+                   "response_format" => [225]
+                 }
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs/#{tx_hash}")
+                 |> json_response(200)
+      end
+    end
+
+    test "returns an oracle_register_tx with utf8 format fields", %{conn: conn, store: store} do
+      with_blockchain %{alice: 10_000},
+        mb: [
+          tx:
+            oracle_register_tx(:alice, %{
+              query_format: <<195, 161>>,
+              response_format: <<195, 159>>
+            })
+        ] do
+        %{txs: [tx]} = blocks[:mb]
+
+        {:id, :account, alice_pk} = accounts[:alice]
+        alice_id = encode(:account_pubkey, alice_pk)
+        oracle_id = encode(:oracle_pubkey, alice_pk)
+
+        store =
+          store
+          |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {0, 0}, id: :aetx_sign.hash(tx)))
+          |> Store.put(Model.Block, Model.block(index: {0, -1}, tx_index: 1))
+          |> Store.put(Model.Block, Model.block(index: {0, 0}, tx_index: 1))
+          |> Store.put(Model.Block, Model.block(index: {1, -1}, tx_index: 2))
+
+        tx_hash = encode(:tx_hash, :aetx_sign.hash(tx))
+
+        assert %{
+                 "hash" => ^tx_hash,
+                 "tx" => %{
+                   "account_id" => ^alice_id,
+                   "oracle_id" => ^oracle_id,
+                   "query_format" => "á",
+                   "response_format" => "ß"
+                 }
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs/#{tx_hash}")
+                 |> json_response(200)
+      end
     end
   end
 
@@ -111,7 +190,7 @@ defmodule AeMdwWeb.TxControllerTest do
       mb_hash = TS.micro_block_hash(0)
       tx1_hash = TS.tx_hash(0)
       tx2_hash = TS.tx_hash(1)
-      encoded_mb_hash = Enc.encode(:micro_block_hash, mb_hash)
+      encoded_mb_hash = encode(:micro_block_hash, mb_hash)
       height = 4
 
       store =
@@ -152,7 +231,7 @@ defmodule AeMdwWeb.TxControllerTest do
 
     test "if no txs, it returns an empty result", %{conn: conn, store: store} do
       mb_hash = TS.micro_block_hash(0)
-      encoded_mb_hash = Enc.encode(:micro_block_hash, mb_hash)
+      encoded_mb_hash = encode(:micro_block_hash, mb_hash)
       error_msg = "not found: #{encoded_mb_hash}"
 
       store = Store.put(store, Model.Block, Model.block(index: {3, 0}, tx_index: 10))
@@ -168,4 +247,6 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
   end
+
+  defp encode(type, bin), do: :aeser_api_encoder.encode(type, bin)
 end

@@ -262,6 +262,15 @@ defmodule AeMdw.Db.Format do
     |> update_in(["previous"], fn prevs -> Enum.map(prevs, &expand_name_info(state, &1)) end)
   end
 
+  defp custom_encode(_state, :oracle_register_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
+    oracle_pk = :aeo_register_tx.account_pubkey(tx_rec)
+
+    tx
+    |> Map.put("oracle_id", Enc.encode(:oracle_pubkey, oracle_pk))
+    |> Map.update("query_format", nil, &maybe_to_list/1)
+    |> Map.update("response_format", nil, &maybe_to_list/1)
+  end
+
   defp custom_encode(_state, :oracle_response_tx, tx, _tx_rec, _signed_tx, _txi, _block_hash),
     do: update_in(tx, ["response"], &maybe_base64/1)
 
@@ -310,11 +319,6 @@ defmodule AeMdw.Db.Format do
     put_in(tx, ["channel_id"], Enc.encode(:channel, channel_pk))
   end
 
-  defp custom_encode(_state, :oracle_register_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
-    oracle_pk = :aeo_register_tx.account_pubkey(tx_rec)
-    put_in(tx, ["oracle_id"], Enc.encode(:oracle_pubkey, oracle_pk))
-  end
-
   defp custom_encode(_state, :name_claim_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
     {:ok, name_id} = :aens.get_name_hash(:aens_claim_tx.name(tx_rec))
     put_in(tx, ["name_id"], Enc.encode(:name, name_id))
@@ -338,6 +342,14 @@ defmodule AeMdw.Db.Format do
       (String.valid?(dec) && dec) || bin
     rescue
       _ -> :erlang.binary_to_list(bin)
+    end
+  end
+
+  defp maybe_to_list(bin) do
+    if String.valid?(bin) do
+      bin
+    else
+      :erlang.binary_to_list(bin)
     end
   end
 
