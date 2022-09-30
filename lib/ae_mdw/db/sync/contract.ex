@@ -10,9 +10,8 @@ defmodule AeMdw.Db.Sync.Contract do
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.NameTransferMutation
   alias AeMdw.Db.NameRevokeMutation
-  alias AeMdw.Db.Oracle
+  alias AeMdw.Db.Sync.Oracle
   alias AeMdw.Db.AexnCreateContractMutation
-  alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.ContractCreateCacheMutation
   alias AeMdw.Db.Sync.Origin, as: SyncOrigin
   alias AeMdw.Db.Sync.Name
@@ -135,7 +134,7 @@ defmodule AeMdw.Db.Sync.Contract do
     end
   end
 
-  defp oracle_and_name_mutations(events, {height, _mbi} = block_index, block_hash, call_txi) do
+  defp oracle_and_name_mutations(events, block_index, block_hash, call_txi) do
     events
     |> Enum.filter(fn
       {{:internal_call_tx, "Oracle.register"}, _info} -> true
@@ -147,13 +146,9 @@ defmodule AeMdw.Db.Sync.Contract do
       _int_call -> false
     end)
     |> Enum.map(fn
-      {{:internal_call_tx, "Oracle.register"}, %{info: aetx}} ->
+      {{:internal_call_tx, "Oracle.register"}, %{info: aetx, tx_hash: tx_hash}} ->
         {:oracle_register_tx, tx} = :aetx.specialize_type(aetx)
-        oracle_pk = :aeo_register_tx.account_pubkey(tx)
-        delta_ttl = :aeo_utils.ttl_delta(height, :aeo_register_tx.oracle_ttl(tx))
-        expire = height + delta_ttl
-
-        OracleRegisterMutation.new(oracle_pk, block_index, expire, call_txi)
+        Oracle.register_mutations(tx, tx_hash, block_index, call_txi)
 
       {{:internal_call_tx, "Oracle.respond"}, %{info: aetx}} ->
         {:oracle_response_tx, tx} = :aetx.specialize_type(aetx)

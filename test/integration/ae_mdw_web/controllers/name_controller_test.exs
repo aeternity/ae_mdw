@@ -10,7 +10,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
   alias AeMdw.Db.Util
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Validate
-  alias AeMdwWeb.TestUtil
+  alias AeMdw.TestUtil
 
   require Model
 

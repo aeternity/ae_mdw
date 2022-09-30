@@ -14,12 +14,11 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Model
   alias AeMdw.Db.NameRevokeMutation
   alias AeMdw.Db.NameTransferMutation
-  alias AeMdw.Db.Oracle
   alias AeMdw.Db.OracleExtendMutation
-  alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.Sync.Contract, as: SyncContract
   alias AeMdw.Db.Sync.InnerTx
   alias AeMdw.Db.Sync.Name, as: SyncName
+  alias AeMdw.Db.Sync.Oracle
   alias AeMdw.Db.Sync.Origin
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.WriteMutation
@@ -293,16 +292,9 @@ defmodule AeMdw.Db.Sync.Transaction do
          tx: tx,
          txi: txi,
          tx_hash: tx_hash,
-         block_index: {height, _mbi} = block_index
+         block_index: block_index
        }) do
-    oracle_pk = :aeo_register_tx.account_pubkey(tx)
-    delta_ttl = :aeo_utils.ttl_delta(height, :aeo_register_tx.oracle_ttl(tx))
-    expire = height + delta_ttl
-
-    [
-      Origin.origin_mutations(:oracle_register_tx, nil, oracle_pk, txi, tx_hash),
-      OracleRegisterMutation.new(oracle_pk, block_index, expire, txi)
-    ]
+    Oracle.register_mutations(tx, tx_hash, block_index, txi)
   end
 
   defp tx_mutations(%TxContext{

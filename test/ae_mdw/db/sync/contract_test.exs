@@ -9,6 +9,8 @@ defmodule AeMdw.Db.Sync.ContractTest do
   alias AeMdw.Db.Sync.Contract, as: SyncContract
   alias AeMdw.Db.NameTransferMutation
   alias AeMdw.Db.NameUpdateMutation
+  alias AeMdw.Db.OracleRegisterMutation
+  alias AeMdw.Db.WriteMutation
   alias AeMdw.Node
   alias AeMdw.Validate
 
@@ -191,6 +193,46 @@ defmodule AeMdw.Db.Sync.ContractTest do
                %{} ->
                  false
              end)
+    end
+
+    test "register an oracle after Oracle.register putting its origin" do
+      pubkey =
+        <<128, 221, 110, 109, 56, 18, 16, 154, 47, 55, 243, 228, 66, 241, 214, 130, 244, 248, 135,
+          231, 216, 113, 13, 248, 226, 63, 89, 50, 7, 22, 99, 187>>
+
+      sync_height = 50_000
+      ttl = 500
+      expire = sync_height + ttl
+      call_txi = sync_height * 1_000
+
+      block_hash = Validate.id!("mh_FmanZfXX2WWwv6BXMNSDdTgX1TGAknp3Td4aV99SbgRVmEyZo")
+      tx_hash = Validate.id!("th_2tBJBwA7Z866e5DKA3vckc7iojEXHvTNCenZWo4iaKagfRP4g9")
+      call_tx_hash = <<1::256>>
+      contract_pk = <<2::256>>
+
+      aetx =
+        {:aetx, :oracle_register_tx, :aeo_register_tx, 63,
+         {:oracle_register_tx, {:id, :account, pubkey}, 1, "\"foo\"", "\"bar\"", 30_000,
+          {:delta, ttl}, 20_000, 0, 0}}
+
+      mutations =
+        [{{:internal_call_tx, "Oracle.register"}, %{info: aetx, tx_hash: tx_hash}}]
+        |> SyncContract.events_mutations(
+          {sync_height, 0},
+          block_hash,
+          call_txi,
+          call_tx_hash,
+          contract_pk
+        )
+        |> List.flatten()
+
+      assert Enum.find(
+               mutations,
+               &match?(%OracleRegisterMutation{oracle_pk: ^pubkey, expire: ^expire}, &1)
+             )
+
+      assert Enum.find(mutations, &match?(%WriteMutation{table: Model.Origin}, &1))
+      assert Enum.find(mutations, &match?(%WriteMutation{table: Model.RevOrigin}, &1))
     end
   end
 end

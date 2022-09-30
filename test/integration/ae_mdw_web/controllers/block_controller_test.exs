@@ -7,7 +7,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Node.Db
-  alias AeMdwWeb.TestUtil
+  alias AeMdw.TestUtil
   alias AeMdw.Error.Input, as: ErrInput
 
   require Model

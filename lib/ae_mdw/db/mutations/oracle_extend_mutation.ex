@@ -6,14 +6,20 @@ defmodule AeMdw.Db.OracleExtendMutation do
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Oracle
   alias AeMdw.Db.State
   alias AeMdw.Log
   alias AeMdw.Node.Db
   alias AeMdw.Txs
 
+  import AeMdw.Db.Oracle, only: [cache_through_read: 3]
+
+  import AeMdw.Db.Sync.Oracle,
+    only: [
+      cache_through_delete: 3,
+      cache_through_write: 3
+    ]
+
   require Model
-  require Logger
 
   @derive AeMdw.Db.Mutation
   defstruct [:block_index, :txi, :oracle_pk, :delta_ttl]
@@ -45,7 +51,7 @@ defmodule AeMdw.Db.OracleExtendMutation do
         },
         state
       ) do
-    case Oracle.cache_through_read(state, Model.ActiveOracle, oracle_pk) do
+    case cache_through_read(state, Model.ActiveOracle, oracle_pk) do
       {:ok, Model.oracle(expire: old_expire, extends: extends) = m_oracle} ->
         new_expire = old_expire + delta_ttl
         extends = [{block_index, txi} | extends]
@@ -53,9 +59,9 @@ defmodule AeMdw.Db.OracleExtendMutation do
         m_oracle = Model.oracle(m_oracle, expire: new_expire, extends: extends)
 
         state
-        |> Oracle.cache_through_delete(Model.ActiveOracleExpiration, {old_expire, oracle_pk})
-        |> Oracle.cache_through_write(Model.ActiveOracleExpiration, m_exp)
-        |> Oracle.cache_through_write(Model.ActiveOracle, m_oracle)
+        |> cache_through_delete(Model.ActiveOracleExpiration, {old_expire, oracle_pk})
+        |> cache_through_write(Model.ActiveOracleExpiration, m_exp)
+        |> cache_through_write(Model.ActiveOracle, m_oracle)
 
       nil ->
         Log.warn("[#{height}] invalid extend for oracle #{Enc.encode(:oracle_pubkey, oracle_pk)}")
