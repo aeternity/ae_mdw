@@ -14,7 +14,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.Model
   alias AeMdw.Db.NameRevokeMutation
   alias AeMdw.Db.NameTransferMutation
-  alias AeMdw.Db.OracleExtendMutation
   alias AeMdw.Db.Sync.Contract, as: SyncContract
   alias AeMdw.Db.Sync.InnerTx
   alias AeMdw.Db.Sync.Name, as: SyncName
@@ -313,11 +312,8 @@ defmodule AeMdw.Db.Sync.Transaction do
          txi: txi,
          block_index: block_index
        }) do
-    oracle_pk = :aeo_extend_tx.oracle_pubkey(tx)
-    {:delta, delta_ttl} = :aeo_extend_tx.oracle_ttl(tx)
-
     [
-      OracleExtendMutation.new(block_index, txi, oracle_pk, delta_ttl)
+      Oracle.extend_mutation(tx, block_index, txi)
     ]
   end
 

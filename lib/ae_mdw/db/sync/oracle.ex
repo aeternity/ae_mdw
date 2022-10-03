@@ -7,6 +7,7 @@ defmodule AeMdw.Db.Sync.Oracle do
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
+  alias AeMdw.Db.OracleExtendMutation
   alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.OracleResponseMutation
   alias AeMdw.Db.State
@@ -58,6 +59,14 @@ defmodule AeMdw.Db.Sync.Oracle do
         Log.error(error)
         nil
     end
+  end
+
+  @spec extend_mutation(Node.tx(), Blocks.block_index(), Txs.txi()) :: OracleExtendMutation.t()
+  def extend_mutation(tx, block_index, txi) do
+    oracle_pk = :aeo_extend_tx.oracle_pubkey(tx)
+    {:delta, delta_ttl} = :aeo_extend_tx.oracle_ttl(tx)
+
+    OracleExtendMutation.new(block_index, txi, oracle_pk, delta_ttl)
   end
 
   @spec cache_through_write(state(), atom(), tuple()) :: state()
