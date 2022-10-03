@@ -41,12 +41,7 @@ defmodule AeMdwWeb.BlockchainSim do
       aec_db_mock = Keyword.merge(unquote(aec_db), aec_db_mock)
 
       Mock.with_mocks [
-        {:aec_db, [:passthrough], aec_db_mock},
-        {:aec_chain, [],
-         get_header: fn :mb_hash ->
-           mblock0 = mock_blocks[:mb][:block]
-           {:ok, :aec_blocks.to_header(mblock0)}
-         end}
+        {:aec_db, [:passthrough], aec_db_mock}
       ] do
         var!(blocks) = mock_blocks
         var!(transactions) = mock_transactions
@@ -116,7 +111,14 @@ defmodule AeMdwWeb.BlockchainSim do
       find_block: fn hash ->
         find_block(hash, mock_blocks)
       end,
-      find_tx_location: fn _tx_hash -> :mb_hash end,
+      find_header: fn _hash ->
+        {:value, mock_blocks[:mb] |> :aec_blocks.to_header()}
+      end,
+      find_tx_location: fn _tx_hash ->
+        header = mock_blocks[:mb] |> :aec_blocks.to_header()
+        {:ok, mb0_hash} = :aec_headers.hash_header(header)
+        mb0_hash
+      end,
       find_tx_with_location: fn _tx_hash ->
         mblock0 = mock_blocks[:mb]
         header = :aec_blocks.to_header(mblock0)
