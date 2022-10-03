@@ -7,13 +7,13 @@ defmodule AeMdw.Db.OracleExtendMutation do
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Db.Oracle
+  alias AeMdw.Db.Sync.Oracle, as: SyncOracle
   alias AeMdw.Db.State
   alias AeMdw.Log
   alias AeMdw.Node.Db
   alias AeMdw.Txs
 
   require Model
-  require Logger
 
   @derive AeMdw.Db.Mutation
   defstruct [:block_index, :txi, :oracle_pk, :delta_ttl]
@@ -53,9 +53,9 @@ defmodule AeMdw.Db.OracleExtendMutation do
         m_oracle = Model.oracle(m_oracle, expire: new_expire, extends: extends)
 
         state
-        |> Oracle.cache_through_delete(Model.ActiveOracleExpiration, {old_expire, oracle_pk})
-        |> Oracle.cache_through_write(Model.ActiveOracleExpiration, m_exp)
-        |> Oracle.cache_through_write(Model.ActiveOracle, m_oracle)
+        |> SyncOracle.cache_through_delete(Model.ActiveOracleExpiration, {old_expire, oracle_pk})
+        |> SyncOracle.cache_through_write(Model.ActiveOracleExpiration, m_exp)
+        |> SyncOracle.cache_through_write(Model.ActiveOracle, m_oracle)
 
       nil ->
         Log.warn("[#{height}] invalid extend for oracle #{Enc.encode(:oracle_pubkey, oracle_pk)}")

@@ -24,7 +24,7 @@ defmodule AeMdwWeb.ConnCase do
       # Import conveniences for testing with connections
       import Plug.Conn
       import Phoenix.ConnTest
-      import AeMdwWeb.TestUtil
+      import AeMdw.TestUtil
       alias AeMdwWeb.Router.Helpers, as: Routes
 
       # The default endpoint for testing

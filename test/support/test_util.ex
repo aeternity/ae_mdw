@@ -1,6 +1,6 @@
-defmodule AeMdwWeb.TestUtil do
+defmodule AeMdw.TestUtil do
   @moduledoc """
-  Test helper funcitons imported by default on all tests.
+  Test helper functions imported by default on all tests.
   """
 
   alias AeMdw.Error.Input, as: ErrInput
@@ -26,7 +26,9 @@ defmodule AeMdwWeb.TestUtil do
   @spec change_store(Store.t(), [Mutation.t()]) :: Store.t()
   def change_store(store, mutations) do
     %{store: store2} =
-      Enum.reduce(mutations, State.new(store), fn mutation, state ->
+      mutations
+      |> List.flatten()
+      |> Enum.reduce(State.new(store), fn mutation, state ->
         Mutation.execute(mutation, state)
       end)
 

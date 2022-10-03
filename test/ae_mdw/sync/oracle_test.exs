@@ -1,209 +1,43 @@
 defmodule AeMdw.Db.Sync.OracleTest do
-  use ExUnit.Case, async: false
+  use AeMdw.Db.MutationCase
 
   alias AeMdw.Db.Model
-  alias AeMdw.Db.OracleExtendMutation
-  alias AeMdw.Db.OraclesExpirationMutation
-  alias AeMdw.Db.State
-  alias AeMdw.Database
+  alias AeMdw.Db.Store
+  alias AeMdw.Db.Sync.Oracle
+  alias AeMdw.Validate
 
   require Model
 
-  @pubkey1 <<123_451::256>>
-  @pubkey2 <<123_452::256>>
-  @pubkey3 <<123_453::256>>
-  @pubkey4 <<123_454::256>>
-  @pubkey5 <<123_455::256>>
+  describe "register_mutations/4" do
+    test "registers an oracle on :oracle_register_tx putting its origin", %{store: store} do
+      pubkey =
+        <<11, 180, 237, 121, 39, 249, 123, 81, 225, 188, 181, 225, 52, 13, 18, 51, 91, 42, 43, 18,
+          200, 188, 82, 33, 214, 60, 75, 203, 57, 212, 30, 97>>
 
-  @sync_height 1000
-  @expire1 999
-  @expire2 1000
-  @expire3 1001
-  @expire4 1001
-  @expire5 1001
+      sync_height = 50_000
+      ttl = 10_000
+      expire = sync_height + ttl
+      txi = sync_height * 1000
 
-  setup_all %{} do
-    last_txi = 1234
+      tx_hash = Validate.id!("th_WQ9yMkEFe45drDzGEnhnYanH5Rov2ewAkjzbwcPzX32krZRyG")
 
-    [
-      Model.oracle(
-        index: @pubkey1,
-        expire: @expire1,
-        register: {{898, 0}, last_txi},
-        extends: nil,
-        previous: nil
-      )
-    ]
-    |> Enum.each(&Database.dirty_write(Model.InactiveOracle, &1))
+      tx =
+        {:oracle_register_tx, {:id, :account, pubkey}, 8904, "{\"bla\": str}", "{\"bla\": str}",
+         ttl, {:delta, ttl}, 2_000_000_000_000_000_000, 0, 0}
 
-    [
-      Model.expiration(index: {@expire1, @pubkey1})
-    ]
-    |> Enum.each(&Database.dirty_write(Model.InactiveOracleExpiration, &1))
+      store = change_store(store, Oracle.register_mutations(tx, tx_hash, {sync_height, 0}, txi))
 
-    [
-      Model.oracle(
-        index: @pubkey3,
-        expire: @expire3,
-        register: {{900, 0}, last_txi + 2},
-        extends: nil,
-        previous: nil
-      ),
-      Model.oracle(
-        index: @pubkey4,
-        expire: @expire4,
-        register: {{900, 0}, last_txi + 3},
-        extends: nil,
-        previous: nil
-      ),
-      Model.oracle(
-        index: @pubkey5,
-        expire: @expire5,
-        register: {{999, 0}, last_txi + 4},
-        extends: nil,
-        previous: nil
-      )
-    ]
-    |> Enum.each(&Database.dirty_write(Model.ActiveOracle, &1))
+      assert {:ok, Model.oracle(index: ^pubkey, expire: ^expire)} =
+               Store.get(store, Model.ActiveOracle, pubkey)
 
-    [
-      Model.expiration(index: {@expire3, @pubkey3}),
-      Model.expiration(index: {@expire4, @pubkey4}),
-      Model.expiration(index: {@sync_height - 1, @pubkey4}),
-      Model.expiration(index: {@expire5, @pubkey5})
-    ]
-    |> Enum.each(&Database.dirty_write(Model.ActiveOracleExpiration, &1))
+      assert {:ok, Model.expiration(index: {^expire, ^pubkey})} =
+               Store.get(store, Model.ActiveOracleExpiration, {expire, pubkey})
 
-    :ok
-  end
+      assert {:ok, Model.rev_origin(index: {^txi, :oracle_register_tx, ^pubkey})} =
+               Store.get(store, Model.RevOrigin, {txi, :oracle_register_tx, pubkey})
 
-  describe "extend" do
-    test "fails when oracle is not active" do
-      state = State.new()
-
-      mutation =
-        OracleExtendMutation.new(
-          {@sync_height, 0},
-          1234,
-          @pubkey1,
-          123
-        )
-
-      State.commit(state, [mutation])
-
-      assert :not_found = Database.fetch(Model.ActiveOracle, @pubkey1)
-
-      pubkey = @pubkey1
-      expire = @expire1
-
-      assert Model.oracle(index: ^pubkey, expire: ^expire) =
-               State.fetch!(state, Model.InactiveOracle, @pubkey1)
-
-      assert Model.expiration(index: {^expire, ^pubkey}) =
-               State.fetch!(state, Model.InactiveOracleExpiration, {expire, pubkey})
-    end
-
-    test "succeeds when oracle is active" do
-      ttl = 123
-      pubkey = @pubkey3
-      new_expiration = @expire3 + ttl
-      state = State.new()
-
-      mutation =
-        OracleExtendMutation.new(
-          {@sync_height, 0},
-          1234,
-          pubkey,
-          ttl
-        )
-
-      State.commit(state, [mutation])
-
-      assert Model.oracle(index: ^pubkey, expire: ^new_expiration) =
-               State.fetch!(state, Model.ActiveOracle, pubkey)
-
-      assert Model.expiration(index: {^new_expiration, ^pubkey}) =
-               State.fetch!(state, Model.ActiveOracleExpiration, {new_expiration, pubkey})
-
-      assert :not_found = State.get(state, Model.ActiveOracleExpiration, {@expire3, pubkey})
-    end
-  end
-
-  describe "expire/1" do
-    test "inactivates an oracle that has just expired" do
-      assert @expire2 == @sync_height
-      m_exp = Model.expiration(index: {@expire2, @pubkey2})
-      Database.dirty_write(Model.ActiveOracleExpiration, m_exp)
-      state = State.new()
-
-      m_oracle =
-        Model.oracle(
-          index: @pubkey2,
-          expire: @expire2,
-          register: {{899, 0}, 1234},
-          extends: nil,
-          previous: nil
-        )
-
-      Database.dirty_write(Model.ActiveOracle, m_oracle)
-
-      pubkey = @pubkey2
-      sync_height = @sync_height
-      mutation = OraclesExpirationMutation.new(sync_height)
-      State.commit(state, [mutation])
-
-      assert :not_found = State.get(state, Model.ActiveOracleExpiration, {sync_height, pubkey})
-
-      assert Model.expiration(index: {^sync_height, ^pubkey}) =
-               State.fetch!(state, Model.InactiveOracleExpiration, {sync_height, pubkey})
-    end
-
-    test "does nothing when oracle has multiple expirations and last one is greater than height" do
-      pubkey = @pubkey4
-      state = State.new()
-      m_oracle = State.fetch!(state, Model.ActiveOracle, pubkey)
-
-      mutation = OraclesExpirationMutation.new(@sync_height)
-      State.commit(state, [mutation])
-
-      assert Model.expiration(index: {@expire4, pubkey}) ==
-               State.fetch!(state, Model.ActiveOracleExpiration, {@expire4, pubkey})
-
-      assert m_oracle == State.fetch!(state, Model.ActiveOracle, pubkey)
-    end
-
-    test "does nothing when oracle has not yet expired" do
-      pubkey = @pubkey5
-      state = State.new()
-
-      assert Model.oracle(expire: expire) =
-               m_oracle = State.fetch!(state, Model.ActiveOracle, pubkey)
-
-      assert expire == @expire5
-      assert expire > @sync_height
-
-      mutation = OraclesExpirationMutation.new(@sync_height)
-      State.commit(state, [mutation])
-
-      assert Model.expiration(index: {@expire5, pubkey}) ==
-               State.fetch!(state, Model.ActiveOracleExpiration, {@expire5, pubkey})
-
-      assert m_oracle == State.fetch!(state, Model.ActiveOracle, pubkey)
-    end
-
-    test "does nothing when oracle is already inactive" do
-      pubkey = @pubkey1
-      state = State.new()
-      assert :not_found = Database.fetch(Model.ActiveOracle, @pubkey1)
-      assert m_oracle = State.fetch!(state, Model.InactiveOracle, pubkey)
-
-      mutation = OraclesExpirationMutation.new(@sync_height)
-      State.commit(state, [mutation])
-
-      assert Model.expiration(index: {@expire1, pubkey}) ==
-               State.fetch!(state, Model.InactiveOracleExpiration, {@expire1, pubkey})
-
-      assert m_oracle == State.fetch!(state, Model.InactiveOracle, pubkey)
+      assert :not_found = Store.get(store, Model.InactiveOracle, pubkey)
+      assert :not_found = Store.get(store, Model.InactiveOracleExpiration, {expire, pubkey})
     end
   end
 end

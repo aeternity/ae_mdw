@@ -10,9 +10,9 @@ defmodule AeMdw.Db.StatsMutation do
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
-  alias AeMdw.Db.Oracle
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.Oracle
   alias AeMdw.Stats
   alias AeMdw.Txs
   alias AeMdw.Util
@@ -133,7 +133,6 @@ defmodule AeMdw.Db.StatsMutation do
     oracles_expired_count =
       state
       |> Oracle.list_expired_at(height)
-      |> Enum.uniq()
       |> Enum.count()
 
     current_block_reward = IntTransfer.read_block_reward(state, height)
