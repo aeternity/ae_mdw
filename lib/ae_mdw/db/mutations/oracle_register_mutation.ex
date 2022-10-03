@@ -5,18 +5,11 @@ defmodule AeMdw.Db.OracleRegisterMutation do
 
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Oracle
+  alias AeMdw.Db.Sync.Oracle, as: SyncOracle
   alias AeMdw.Db.State
   alias AeMdw.Node.Db
   alias AeMdw.Txs
-
-  import AeMdw.Db.Oracle, only: [locate: 2]
-
-  import AeMdw.Db.Sync.Oracle,
-    only: [
-      cache_through_delete: 3,
-      cache_through_delete_inactive: 2,
-      cache_through_write: 3
-    ]
 
   require Model
 
@@ -53,18 +46,25 @@ defmodule AeMdw.Db.OracleRegisterMutation do
         state
       ) do
     {previous, state2} =
-      case locate(state, oracle_pk) do
+      case Oracle.locate(state, oracle_pk) do
         nil ->
           {nil, state}
 
         {previous, Model.InactiveOracle} ->
-          {previous, cache_through_delete_inactive(state, previous)}
+          state2 = SyncOracle.cache_through_delete_inactive(state, previous)
+          {previous, state2}
 
         {previous, Model.ActiveOracle} ->
           Model.oracle(index: pubkey, expire: old_expire) = previous
 
-          {previous,
-           cache_through_delete(state, Model.ActiveOracleExpiration, {old_expire, pubkey})}
+          state2 =
+            SyncOracle.cache_through_delete(
+              state,
+              Model.ActiveOracleExpiration,
+              {old_expire, pubkey}
+            )
+
+          {previous, state2}
       end
 
     m_oracle =
@@ -79,8 +79,8 @@ defmodule AeMdw.Db.OracleRegisterMutation do
     m_exp_new = Model.expiration(index: {expire, oracle_pk})
 
     state2
-    |> cache_through_write(Model.ActiveOracle, m_oracle)
-    |> cache_through_write(Model.ActiveOracleExpiration, m_exp_new)
+    |> SyncOracle.cache_through_write(Model.ActiveOracle, m_oracle)
+    |> SyncOracle.cache_through_write(Model.ActiveOracleExpiration, m_exp_new)
     |> State.inc_stat(:oracles_registered)
   end
 end

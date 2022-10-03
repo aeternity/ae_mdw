@@ -10,16 +10,10 @@ defmodule AeMdw.Db.OraclesExpirationMutation do
   alias AeMdw.Blocks
   alias AeMdw.Collection
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Oracle
+  alias AeMdw.Db.Sync.Oracle, as: SyncOracle
   alias AeMdw.Db.State
   alias AeMdw.Log
-
-  import AeMdw.Db.Oracle, only: [cache_through_read: 3]
-
-  import AeMdw.Db.Sync.Oracle,
-    only: [
-      cache_through_delete: 3,
-      cache_through_write: 3
-    ]
 
   require Model
 
@@ -46,9 +40,11 @@ defmodule AeMdw.Db.OraclesExpirationMutation do
 
   defp expire_oracle(state, height, pubkey) do
     oracle_id = Enc.encode(:oracle_pubkey, pubkey)
-    state2 = cache_through_delete(state, Model.ActiveOracleExpiration, {height, pubkey})
 
-    case cache_through_read(state2, Model.ActiveOracle, pubkey) do
+    state2 =
+      SyncOracle.cache_through_delete(state, Model.ActiveOracleExpiration, {height, pubkey})
+
+    case Oracle.cache_through_read(state2, Model.ActiveOracle, pubkey) do
       {:ok, m_oracle} ->
         if height == Model.oracle(m_oracle, :expire) do
           m_exp = Model.expiration(index: {height, pubkey})
@@ -56,9 +52,9 @@ defmodule AeMdw.Db.OraclesExpirationMutation do
           Log.info("[#{height}] inactivated oracle #{oracle_id}")
 
           state2
-          |> cache_through_write(Model.InactiveOracle, m_oracle)
-          |> cache_through_write(Model.InactiveOracleExpiration, m_exp)
-          |> cache_through_delete(Model.ActiveOracle, pubkey)
+          |> SyncOracle.cache_through_write(Model.InactiveOracle, m_oracle)
+          |> SyncOracle.cache_through_write(Model.InactiveOracleExpiration, m_exp)
+          |> SyncOracle.cache_through_delete(Model.ActiveOracle, pubkey)
           |> State.inc_stat(:oracles_expired)
         else
           Log.warn("[#{height}] ignored old oracle expiration for #{oracle_id}")

@@ -25,13 +25,6 @@ defmodule AeMdw.Db.Oracle do
       )
   end
 
-  @spec oracle_tree!(Blocks.block_hash()) :: tuple()
-  def oracle_tree!(block_hash) do
-    block_hash
-    |> :aec_db.get_block_state()
-    |> :aec_trees.oracles()
-  end
-
   @spec cache_through_read(state(), atom(), cache_key()) :: {:ok, Model.oracle()} | nil
   def cache_through_read(state, table, key) do
     case State.cache_get(state, table, key) do
@@ -44,5 +37,12 @@ defmodule AeMdw.Db.Oracle do
           :not_found -> nil
         end
     end
+  end
+
+  @spec oracle_tree!(Blocks.block_hash()) :: tuple()
+  def oracle_tree!(block_hash) do
+    block_hash
+    |> :aec_db.get_block_state()
+    |> :aec_trees.oracles()
   end
 end
