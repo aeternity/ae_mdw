@@ -40,7 +40,9 @@ defmodule AeMdwWeb.BlockchainSim do
 
       aec_db_mock = Keyword.merge(unquote(aec_db), aec_db_mock)
 
-      Mock.with_mocks [{:aec_db, [:passthrough], aec_db_mock}] do
+      Mock.with_mocks [
+        {:aec_db, [:passthrough], aec_db_mock}
+      ] do
         var!(blocks) = mock_blocks
         var!(transactions) = mock_transactions
         var!(accounts) = mock_accounts
@@ -55,13 +57,18 @@ defmodule AeMdwWeb.BlockchainSim do
 
   defmacrop is_transaction(mocked_tx) do
     quote do
-      elem(unquote(mocked_tx), 0) in [:spend_tx]
+      elem(unquote(mocked_tx), 0) in [:spend_tx, :oracle_register_tx]
     end
   end
 
   @spec spend_tx(account_name(), account_name(), non_neg_integer()) :: :aetx.t()
   def spend_tx(sender_name, recipient_name, amount) do
     {:spend_tx, sender_name, recipient_name, amount}
+  end
+
+  @spec oracle_register_tx(account_name(), map()) :: :aetx.t()
+  def oracle_register_tx(account_name, args \\ %{}) when is_map(args) do
+    {:oracle_register_tx, account_name, args}
   end
 
   @spec generate_blockchain(Keyword.t(), Keyword.t()) :: {Keyword.t(), map(), map(), map()}
@@ -103,6 +110,21 @@ defmodule AeMdwWeb.BlockchainSim do
     aec_db_mock = [
       find_block: fn hash ->
         find_block(hash, mock_blocks)
+      end,
+      find_header: fn _hash ->
+        {:value, mock_blocks[:mb] |> :aec_blocks.to_header()}
+      end,
+      find_tx_location: fn _tx_hash ->
+        header = mock_blocks[:mb] |> :aec_blocks.to_header()
+        {:ok, mb0_hash} = :aec_headers.hash_header(header)
+        mb0_hash
+      end,
+      find_tx_with_location: fn _tx_hash ->
+        mblock0 = mock_blocks[:mb]
+        header = :aec_blocks.to_header(mblock0)
+        {:ok, block_hash} = :aec_headers.hash_header(header)
+
+        {block_hash, hd(:aec_blocks.txs(mblock0))}
       end,
       get_block: fn hash ->
         {:value, block} = find_block(hash, mock_blocks)
@@ -268,5 +290,20 @@ defmodule AeMdwWeb.BlockchainSim do
       nonce: 1,
       payload: <<>>
     })
+  end
+
+  defp serialize_tx({:oracle_register_tx, register_name, args}, accounts) do
+    %{
+      account_id: Map.fetch!(accounts, register_name),
+      nonce: 1,
+      query_format: "foo",
+      abi_version: 1,
+      response_format: "bar",
+      query_fee: 10,
+      oracle_ttl: {:delta, 1_000},
+      fee: 10_000
+    }
+    |> Map.merge(args)
+    |> :aeo_register_tx.new()
   end
 end
