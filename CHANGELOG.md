@@ -1,5 +1,19 @@
 # Changelog
 
+### [1.22.1](https://www.github.com/aeternity/ae_mdw/compare/v1.22.0...v1.22.1) (2022-10-04)
+
+
+### Bug Fixes
+
+* add missing origin to oracle created by internal call ([#927](https://www.github.com/aeternity/ae_mdw/issues/927)) ([ba99629](https://www.github.com/aeternity/ae_mdw/commit/ba99629ffbeacccd76708db22216f2da2e4e5e65))
+* return proper error when aex141 token is a partial int ([#926](https://www.github.com/aeternity/ae_mdw/issues/926)) ([95cd809](https://www.github.com/aeternity/ae_mdw/commit/95cd8092fb9779965bbd5bd48b0a24f460d4dbd1))
+* transform non encodable binary oracle fields into list ([#929](https://www.github.com/aeternity/ae_mdw/issues/929)) ([3de2cbb](https://www.github.com/aeternity/ae_mdw/commit/3de2cbbeeb8244c1fa5e3c533eaf0387cec3daf8))
+
+
+### Refactorings
+
+* move Db.Name syncing code to Sync.Name ([#925](https://www.github.com/aeternity/ae_mdw/issues/925)) ([f47703a](https://www.github.com/aeternity/ae_mdw/commit/f47703ad1f94f1765d8db928a0b68537d89307ba))
+
 ## [1.22.0](https://www.github.com/aeternity/ae_mdw/compare/v1.21.1...v1.22.0) (2022-09-29)
 
 
