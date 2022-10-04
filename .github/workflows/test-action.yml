@@ -89,11 +89,11 @@ jobs:
           path: _build
           key: build-${{ hashFiles('mix.lock') }}
 
-      - uses: actions/cache@v1
-        id: plt-cache
-        with:
-          path: priv/plts
-          key: plts-v11-${{ hashFiles('mix.lock') }}
+      # - uses: actions/cache@v1
+      #   id: plt-cache
+      #   with:
+      #     path: priv/plts
+      #     key: plts-v11-${{ hashFiles('mix.lock') }}
 
       - name: Mdw Setup
         uses: ./.github/actions/mdw-setup
