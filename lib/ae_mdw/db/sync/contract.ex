@@ -15,6 +15,7 @@ defmodule AeMdw.Db.Sync.Contract do
   alias AeMdw.Db.ContractCreateCacheMutation
   alias AeMdw.Db.Sync.Origin, as: SyncOrigin
   alias AeMdw.Db.Sync.Name
+  alias AeMdw.Db.Sync.Oracle
   alias AeMdw.Node.Db
   alias AeMdw.Validate
   alias AeMdw.Txs
@@ -137,6 +138,7 @@ defmodule AeMdw.Db.Sync.Contract do
   defp oracle_and_name_mutations(events, block_index, block_hash, call_txi) do
     events
     |> Enum.filter(fn
+      {{:internal_call_tx, "Oracle.extend"}, _info} -> true
       {{:internal_call_tx, "Oracle.register"}, _info} -> true
       {{:internal_call_tx, "Oracle.respond"}, _info} -> true
       {{:internal_call_tx, "AENS.claim"}, _info} -> true
@@ -146,6 +148,10 @@ defmodule AeMdw.Db.Sync.Contract do
       _int_call -> false
     end)
     |> Enum.map(fn
+      {{:internal_call_tx, "Oracle.extend"}, %{info: aetx}} ->
+        {:oracle_extend_tx, tx} = :aetx.specialize_type(aetx)
+        Oracle.extend_mutation(tx, block_index, call_txi)
+
       {{:internal_call_tx, "Oracle.register"}, %{info: aetx, tx_hash: tx_hash}} ->
         {:oracle_register_tx, tx} = :aetx.specialize_type(aetx)
         Oracle.register_mutations(tx, tx_hash, block_index, call_txi)

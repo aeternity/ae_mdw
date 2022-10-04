@@ -7,8 +7,10 @@ defmodule AeMdw.Db.Sync.ContractTest do
   alias AeMdw.Db.AexnCreateContractMutation
   alias AeMdw.Db.IntCallsMutation
   alias AeMdw.Db.Sync.Contract, as: SyncContract
+  alias AeMdw.Db.IntCallsMutation
   alias AeMdw.Db.NameTransferMutation
   alias AeMdw.Db.NameUpdateMutation
+  alias AeMdw.Db.OracleExtendMutation
   alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.WriteMutation
   alias AeMdw.Node
@@ -200,20 +202,28 @@ defmodule AeMdw.Db.Sync.ContractTest do
         <<128, 221, 110, 109, 56, 18, 16, 154, 47, 55, 243, 228, 66, 241, 214, 130, 244, 248, 135,
           231, 216, 113, 13, 248, 226, 63, 89, 50, 7, 22, 99, 187>>
 
+      delta_ttl = 500
+
+      {:ok, aetx} =
+        :aeo_register_tx.new(%{
+          account_id: :aeser_id.create(:account, pubkey),
+          nonce: 1,
+          abi_version: 1,
+          query_format: "\"foo\"",
+          response_format: "\"bar\"",
+          query_fee: 100,
+          oracle_ttl: {:delta, delta_ttl},
+          fee: 10_000
+        })
+
       sync_height = 50_000
-      ttl = 500
-      expire = sync_height + ttl
+      expire = sync_height + delta_ttl
       call_txi = sync_height * 1_000
 
       block_hash = Validate.id!("mh_FmanZfXX2WWwv6BXMNSDdTgX1TGAknp3Td4aV99SbgRVmEyZo")
       tx_hash = Validate.id!("th_2tBJBwA7Z866e5DKA3vckc7iojEXHvTNCenZWo4iaKagfRP4g9")
       call_tx_hash = <<1::256>>
       contract_pk = <<2::256>>
-
-      aetx =
-        {:aetx, :oracle_register_tx, :aeo_register_tx, 63,
-         {:oracle_register_tx, {:id, :account, pubkey}, 1, "\"foo\"", "\"bar\"", 30_000,
-          {:delta, ttl}, 20_000, 0, 0}}
 
       mutations =
         [{{:internal_call_tx, "Oracle.register"}, %{info: aetx, tx_hash: tx_hash}}]
@@ -226,13 +236,83 @@ defmodule AeMdw.Db.Sync.ContractTest do
         )
         |> List.flatten()
 
-      assert Enum.find(
-               mutations,
-               &match?(%OracleRegisterMutation{oracle_pk: ^pubkey, expire: ^expire}, &1)
-             )
+      {_mod, tx} = :aetx.specialize_callback(aetx)
+      tx_type = :oracle_register_tx
 
-      assert Enum.find(mutations, &match?(%WriteMutation{table: Model.Origin}, &1))
-      assert Enum.find(mutations, &match?(%WriteMutation{table: Model.RevOrigin}, &1))
+      assert [
+               %WriteMutation{
+                 table: Model.Origin,
+                 record: Model.origin(index: {^tx_type, ^pubkey, ^call_txi})
+               },
+               %WriteMutation{
+                 table: Model.RevOrigin,
+                 record: Model.rev_origin(index: {^call_txi, ^tx_type, ^pubkey})
+               },
+               %AeMdw.Db.WriteFieldMutation{
+                 pos: nil,
+                 pubkey: ^pubkey,
+                 tx_type: ^tx_type,
+                 txi: ^call_txi
+               },
+               %OracleRegisterMutation{oracle_pk: ^pubkey, expire: ^expire},
+               %IntCallsMutation{
+                 call_txi: ^call_txi,
+                 contract_pk: ^contract_pk,
+                 int_calls: [{"Oracle.register", ^tx_type, ^aetx, ^tx}]
+               }
+             ] = mutations
+    end
+
+    test "extend an oracle after Oracle.extend" do
+      pubkey =
+        <<129, 221, 110, 109, 56, 18, 16, 154, 47, 55, 243, 228, 66, 241, 214, 130, 244, 248, 135,
+          231, 216, 113, 13, 248, 226, 63, 89, 50, 7, 22, 99, 187>>
+
+      delta_ttl = 500
+
+      {:ok, aetx} =
+        :aeo_extend_tx.new(%{
+          oracle_id: :aeser_id.create(:oracle, pubkey),
+          nonce: 2,
+          oracle_ttl: {:delta, delta_ttl},
+          fee: 5_000
+        })
+
+      sync_height = 50_000
+      block_index = {sync_height, 0}
+      block_hash = <<1::256>>
+      call_txi = sync_height * 1_000
+      call_tx_hash = <<2::256>>
+      contract_pk = <<3::256>>
+
+      mutations =
+        [{{:internal_call_tx, "Oracle.extend"}, %{info: aetx}}]
+        |> SyncContract.events_mutations(
+          block_index,
+          block_hash,
+          call_txi,
+          call_tx_hash,
+          contract_pk
+        )
+        |> List.flatten()
+
+      {_mod, tx} = :aetx.specialize_callback(aetx)
+
+      assert(
+        [
+          %OracleExtendMutation{
+            oracle_pk: ^pubkey,
+            block_index: ^block_index,
+            txi: ^call_txi,
+            delta_ttl: ^delta_ttl
+          },
+          %IntCallsMutation{
+            call_txi: ^call_txi,
+            contract_pk: ^contract_pk,
+            int_calls: [{"Oracle.extend", :oracle_extend_tx, ^aetx, ^tx}]
+          }
+        ] = mutations
+      )
     end
   end
 end
