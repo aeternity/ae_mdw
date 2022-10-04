@@ -274,6 +274,15 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                  conn |> get("/aex141/#{contract_id}/owner/#{234}") |> json_response(400)
       end
     end
+
+    test "when token is invalid, it returns an error", %{conn: conn} do
+      contract_id = "ct_y7gojSY8rXW6tztE9Ftqe3kmNrqEXsREiPwGCeG3MJL38jkFo"
+      token_id = "123abc"
+      error_msg = "not found: #{token_id}"
+
+      assert %{"error" => ^error_msg} =
+               conn |> get("/aex141/#{contract_id}/owner/#{token_id}") |> json_response(404)
+    end
   end
 
   describe "owned-nfts" do

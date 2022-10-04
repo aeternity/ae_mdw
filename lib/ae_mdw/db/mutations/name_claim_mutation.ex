@@ -8,6 +8,7 @@ defmodule AeMdw.Db.NameClaimMutation do
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.Name
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Names
   alias AeMdw.Node.Db
@@ -16,15 +17,6 @@ defmodule AeMdw.Db.NameClaimMutation do
 
   require Logger
   require Model
-
-  import AeMdw.Db.Name,
-    only: [
-      cache_through_read: 3,
-      cache_through_write: 3,
-      cache_through_delete: 3,
-      cache_through_delete_inactive: 2,
-      expire_after: 1
-    ]
 
   @derive AeMdw.Db.Mutation
   defstruct [
@@ -89,12 +81,12 @@ defmodule AeMdw.Db.NameClaimMutation do
     m_owner = Model.owner(index: {owner_pk, plain_name})
     m_plain_name = Model.plain_name(index: name_hash, value: plain_name)
 
-    state2 = cache_through_write(state, Model.PlainName, m_plain_name)
+    state2 = Name.cache_through_write(state, Model.PlainName, m_plain_name)
 
     case timeout do
       0 ->
-        previous = Util.ok_nil(cache_through_read(state, Model.InactiveName, plain_name))
-        expire = expire_after(height)
+        previous = Util.ok_nil(Name.cache_through_read(state, Model.InactiveName, plain_name))
+        expire = Names.expire_after(height)
 
         m_name =
           Model.name(
@@ -111,11 +103,11 @@ defmodule AeMdw.Db.NameClaimMutation do
         lock_amount = (is_lima? && name_fee) || :aec_governance.name_claim_locked_fee()
 
         state2
-        |> cache_through_write(Model.ActiveName, m_name)
-        |> cache_through_write(Model.ActiveNameOwner, m_owner)
-        |> cache_through_write(Model.ActiveNameActivation, m_name_activation)
-        |> cache_through_write(Model.ActiveNameExpiration, m_name_exp)
-        |> cache_through_delete_inactive(previous)
+        |> Name.cache_through_write(Model.ActiveName, m_name)
+        |> Name.cache_through_write(Model.ActiveNameOwner, m_owner)
+        |> Name.cache_through_write(Model.ActiveNameActivation, m_name_activation)
+        |> Name.cache_through_write(Model.ActiveNameExpiration, m_name_exp)
+        |> Name.cache_through_delete_inactive(previous)
         |> IntTransfer.fee({height, txi}, :lock_name, owner_pk, txi, lock_amount)
         |> State.inc_stat(:names_activated)
         |> State.inc_stat(:burned_in_auctions, lock_amount)
@@ -136,7 +128,7 @@ defmodule AeMdw.Db.NameClaimMutation do
         state3 = IntTransfer.fee(state2, {height, txi}, :spend_name, owner_pk, txi, name_fee)
 
         {m_bid, state4} =
-          case cache_through_read(state, Model.AuctionBid, plain_name) do
+          case Name.cache_through_read(state, Model.AuctionBid, plain_name) do
             nil ->
               state4 = State.inc_stat(state3, :auctions_started)
               {make_m_bid.([{block_index, txi}]), state4}
@@ -152,9 +144,12 @@ defmodule AeMdw.Db.NameClaimMutation do
 
               state4 =
                 state3
-                |> cache_through_delete(Model.AuctionBid, plain_name)
-                |> cache_through_delete(Model.AuctionOwner, {prev_owner, plain_name})
-                |> cache_through_delete(Model.AuctionExpiration, {prev_auction_end, plain_name})
+                |> Name.cache_through_delete(Model.AuctionBid, plain_name)
+                |> Name.cache_through_delete(Model.AuctionOwner, {prev_owner, plain_name})
+                |> Name.cache_through_delete(
+                  Model.AuctionExpiration,
+                  {prev_auction_end, plain_name}
+                )
                 |> IntTransfer.fee(
                   {height, txi},
                   :refund_name,
@@ -168,9 +163,9 @@ defmodule AeMdw.Db.NameClaimMutation do
           end
 
         state4
-        |> cache_through_write(Model.AuctionBid, m_bid)
-        |> cache_through_write(Model.AuctionOwner, m_owner)
-        |> cache_through_write(Model.AuctionExpiration, m_auction_exp)
+        |> Name.cache_through_write(Model.AuctionBid, m_bid)
+        |> Name.cache_through_write(Model.AuctionOwner, m_owner)
+        |> Name.cache_through_write(Model.AuctionExpiration, m_auction_exp)
     end
   end
 
