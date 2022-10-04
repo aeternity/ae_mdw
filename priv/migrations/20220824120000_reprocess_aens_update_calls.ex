@@ -13,19 +13,15 @@ defmodule AeMdw.Migrations.ReprocessAENSUpdateCalls do
 
   require Model
 
-  @spec run(boolean()) :: {:ok, {non_neg_integer(), non_neg_integer()}}
-  def run(_from_start?) do
-    state = State.new()
-
+  @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
+  def run(state, _from_start?) do
     case State.prev(state, Model.DeltaStat, nil) do
       {:ok, total_gens} -> run_with_gens(state, total_gens)
-      :none -> {:ok, {0, 0}}
+      :none -> {:ok, 0}
     end
   end
 
   defp run_with_gens(state, total_gens) do
-    begin = DateTime.utc_now()
-
     {mutations, expire_deletion_keys} =
       state
       |> Collection.stream(
@@ -71,8 +67,6 @@ defmodule AeMdw.Migrations.ReprocessAENSUpdateCalls do
 
     _state = State.commit(state, mutations)
 
-    duration = DateTime.diff(DateTime.utc_now(), begin)
-
-    {:ok, {div(length(mutations), 2), duration}}
+    {:ok, div(length(mutations), 2)}
   end
 end

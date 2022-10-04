@@ -12,11 +12,8 @@ defmodule AeMdw.Migrations.Aex9toAexnTransfer do
 
   require Model
 
-  @spec run(boolean()) :: {:ok, {non_neg_integer(), non_neg_integer()}}
-  def run(_from_start?) do
-    state = State.new()
-    begin = DateTime.utc_now()
-
+  @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
+  def run(state, _from_start?) do
     write_mutations =
       state
       |> Collection.stream(Model.Aex9Transfer, nil)
@@ -43,9 +40,8 @@ defmodule AeMdw.Migrations.Aex9toAexnTransfer do
       |> Enum.to_list()
 
     _state = State.commit(state, write_mutations)
-    duration = DateTime.diff(DateTime.utc_now(), begin)
 
-    {:ok, {div(length(write_mutations), 3), duration}}
+    {:ok, div(length(write_mutations), 3)}
   end
 
   defp get_contract_pk(type, tx) do

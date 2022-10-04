@@ -11,11 +11,8 @@ defmodule AeMdw.Migrations.Aex141Stats do
 
   require Model
 
-  @spec run(boolean()) :: {:ok, {non_neg_integer(), non_neg_integer()}}
-  def run(_from_start?) do
-    state = State.new()
-    begin = DateTime.utc_now()
-
+  @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
+  def run(state, _from_start?) do
     token_count_mutations =
       state
       |> Collection.stream(Model.NftTokenOwner, nil)
@@ -40,8 +37,7 @@ defmodule AeMdw.Migrations.Aex141Stats do
 
     mutations = token_count_mutations ++ owners_count_mutations
     _state = State.commit(state, mutations)
-    duration = DateTime.diff(DateTime.utc_now(), begin)
 
-    {:ok, {length(mutations), duration}}
+    {:ok, length(mutations)}
   end
 end

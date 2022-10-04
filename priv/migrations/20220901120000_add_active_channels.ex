@@ -10,11 +10,8 @@ defmodule AeMdw.Migrations.AddActiveChannels do
 
   require Model
 
-  @spec run(boolean()) :: {:ok, {non_neg_integer(), non_neg_integer()}}
-  def run(_from_start?) do
-    begin = DateTime.utc_now()
-    state = State.new()
-
+  @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
+  def run(state, _from_start?) do
     {active_channels, inactive_channels} =
       [
         type_txs(state, :channel_create_tx),
@@ -138,8 +135,6 @@ defmodule AeMdw.Migrations.AddActiveChannels do
            Map.put(inactive_channels, channel_pk, new_channel)}
       end)
 
-    duration = DateTime.diff(DateTime.utc_now(), begin)
-
     active_mutations =
       Enum.flat_map(active_channels, fn {channel_pk, channel} ->
         Model.channel(active: active_height) = channel
@@ -160,7 +155,7 @@ defmodule AeMdw.Migrations.AddActiveChannels do
 
     _state = State.commit(state, mutations)
 
-    {:ok, {div(length(active_mutations), 2) + length(inactive_mutations), duration}}
+    {:ok, div(length(active_mutations), 2)}
   end
 
   defp type_txs(state, type) do

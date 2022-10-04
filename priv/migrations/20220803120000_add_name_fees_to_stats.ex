@@ -13,11 +13,8 @@ defmodule AeMdw.Migrations.AddNameFeesToStats do
 
   @log_freq 1_000
 
-  @spec run(boolean()) :: {:ok, {non_neg_integer(), non_neg_integer()}}
-  def run(_from_start?) do
-    begin = DateTime.utc_now()
-    state = State.new()
-
+  @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
+  def run(state, _from_start?) do
     total_gens =
       case state |> Collection.stream(Model.DeltaStat, :backward, nil, nil) |> Enum.take(1) do
         [total_gens] -> total_gens
@@ -68,9 +65,7 @@ defmodule AeMdw.Migrations.AddNameFeesToStats do
 
     _state = State.commit(state, mutations)
 
-    duration = DateTime.diff(DateTime.utc_now(), begin)
-
-    {:ok, {div(length(mutations), 2), duration}}
+    {:ok, div(length(mutations), 2)}
   end
 
   defp transform_delta_stat(

@@ -14,17 +14,15 @@ defmodule AeMdw.Migrations.AddMiners do
 
   @log_freq 1_000
 
-  @spec run(boolean()) :: {:ok, {non_neg_integer(), non_neg_integer()}}
-  def run(_from_start?) do
+  @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
+  def run(state, _from_start?) do
     case Database.last_key(Model.DeltaStat) do
-      {:ok, total_gens} -> run_with_gens(State.new(), total_gens)
-      :none -> {:ok, {0, 0}}
+      {:ok, total_gens} -> run_with_gens(state, total_gens)
+      :none -> {:ok, 0}
     end
   end
 
   defp run_with_gens(state, total_gens) do
-    begin = DateTime.utc_now()
-
     mutations =
       0..total_gens
       |> Enum.reduce(%{}, fn height, miners_acc ->
@@ -64,8 +62,6 @@ defmodule AeMdw.Migrations.AddMiners do
 
     IO.puts("DONE")
 
-    duration = DateTime.diff(DateTime.utc_now(), begin)
-
-    {:ok, {total_gens, duration}}
+    {:ok, total_gens}
   end
 end

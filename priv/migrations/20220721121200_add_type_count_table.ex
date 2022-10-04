@@ -3,7 +3,6 @@ defmodule AeMdw.Migrations.AddTypeCountTable do
   Add type count table to contain the count for each tx type.
   """
 
-  # alias AeMdw.Collection
   alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.RocksDbCF
@@ -13,11 +12,8 @@ defmodule AeMdw.Migrations.AddTypeCountTable do
 
   require Model
 
-  @spec run(boolean()) :: {:ok, {non_neg_integer(), non_neg_integer()}}
-  def run(_from_start?) do
-    begin = DateTime.utc_now()
-    state = State.new()
-
+  @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
+  def run(state, _from_start?) do
     {mutations, indexed_count} =
       Model.Type
       |> Database.first_key()
@@ -45,8 +41,6 @@ defmodule AeMdw.Migrations.AddTypeCountTable do
 
     _state = State.commit(state, mutations)
 
-    duration = DateTime.diff(DateTime.utc_now(), begin)
-
-    {:ok, {indexed_count, duration}}
+    {:ok, indexed_count}
   end
 end
