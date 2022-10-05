@@ -202,15 +202,14 @@ defmodule AeMdw.Db.Sync.Name do
     |> State.inc_stat(:names_expired)
   end
 
-  @spec expire_auction(
-          state(),
-          Blocks.height(),
-          Names.plain_name(),
-          Names.auction_timeout()
-        ) :: state()
-  def expire_auction(state, height, plain_name, timeout) do
-    {:ok, Model.auction_bid(block_index_txi: {_block_index, txi}, owner: owner, bids: bids)} =
-      cache_through_read(state, Model.AuctionBid, plain_name)
+  @spec expire_auction(state(), Blocks.height(), Names.plain_name()) :: state()
+  def expire_auction(state, height, plain_name) do
+    {:ok,
+     Model.auction_bid(
+       block_index_txi: {{last_bid_height, _mbi} = _block_index, txi},
+       owner: owner,
+       bids: bids
+     )} = cache_through_read(state, Model.AuctionBid, plain_name)
 
     previous =
       case cache_through_read(state, Model.InactiveName, plain_name) do
@@ -226,7 +225,7 @@ defmodule AeMdw.Db.Sync.Name do
         active: height,
         expire: expire,
         claims: bids,
-        auction_timeout: timeout,
+        auction_timeout: height - last_bid_height,
         owner: owner,
         previous: previous
       )

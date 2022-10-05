@@ -95,7 +95,8 @@ defmodule AeMdw.Db.NameClaimMutation do
             expire: expire,
             claims: [{block_index, txi}],
             owner: owner_pk,
-            previous: previous
+            previous: previous,
+            auction_timeout: 0
           )
 
         m_name_activation = Model.activation(index: {height, plain_name})

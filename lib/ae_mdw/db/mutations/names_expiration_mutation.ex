@@ -35,12 +35,8 @@ defmodule AeMdw.Db.NamesExpirationMutation do
     |> Collection.stream(Model.AuctionExpiration, {height, <<>>})
     |> Stream.take_while(&match?({^height, _plain_name}, &1))
     |> Enum.map(&State.fetch!(new_state, Model.AuctionExpiration, &1))
-    |> Enum.reduce(new_state, fn Model.expiration(
-                                   index: {_height, plain_name},
-                                   value: auction_timeout
-                                 ),
-                                 state ->
-      Name.expire_auction(state, height, plain_name, auction_timeout)
+    |> Enum.reduce(new_state, fn Model.expiration(index: {^height, plain_name}), state ->
+      Name.expire_auction(state, height, plain_name)
     end)
   end
 end
