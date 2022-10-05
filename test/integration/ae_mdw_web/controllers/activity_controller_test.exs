@@ -75,5 +75,51 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
                |> get("/v2/accounts/#{invalid_account}/activities")
                |> json_response(400)
     end
+
+    test "it displays int transfers", %{conn: conn} do
+      account = "ak_dArxCkAsk1mZB1L9CX3cdz1GDN4hN84L3Q8dMLHN4v8cU85TF"
+      height = 665_679
+
+      assert %{"data" => [first_event]} =
+               conn
+               |> get("/v2/accounts/#{account}/activities",
+                 limit: 1,
+                 scope: "gen:#{height}-#{height}"
+               )
+               |> json_response(200)
+
+      assert %{
+               "height" => ^height,
+               "type" => "InternalTransferEvent",
+               "payload" => %{"kind" => "reward_block", "ref_tx_hash" => nil}
+             } = first_event
+    end
+
+    test "when txi-level and gen-level activities are present, it combines them properly", %{
+      conn: conn
+    } do
+      account = "ak_dArxCkAsk1mZB1L9CX3cdz1GDN4hN84L3Q8dMLHN4v8cU85TF"
+      height = 665_679
+
+      assert %{"data" => events, "next" => next_url} =
+               conn
+               |> get("/v2/accounts/#{account}/activities",
+                 limit: 10,
+                 scope: "gen:#{height}-#{height}"
+               )
+               |> json_response(200)
+
+      assert 10 = length(events)
+      assert Enum.all?(events, &match?(%{"height" => ^height}, &1))
+
+      assert %{"prev" => prev_url, "data" => next_events, "next" => next_next_url} =
+               conn
+               |> get(next_url)
+               |> json_response(200)
+
+      assert Enum.all?(next_events, &match?(%{"height" => ^height}, &1))
+
+      assert %{"data" => ^events} = conn |> get(prev_url) |> json_response(200)
+    end
   end
 end

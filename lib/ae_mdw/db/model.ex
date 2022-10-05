@@ -601,15 +601,16 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :grp_id_fname_int_contract_call, @grp_id_fname_int_contract_call_defaults
 
-  # int_transfer_tx
+  # int_transfer_tx:
+  #   index: {{height, -1 (generation related transfer OR >=0 txi (tx related transfer)}, kind, target, ref txi}
   @int_transfer_tx_defaults [
-    # {{height, -1 (generation related transfer OR >=0 txi (tx related transfer)}, kind, target, ref txi}
     index: {{-1, -1}, nil, <<>>, -1},
     amount: 0
   ]
   defrecord :int_transfer_tx, @int_transfer_tx_defaults
 
-  # kind_int_transfer_tx
+  # kind_int_transfer_tx:
+  #  index: {kind, block_index, target, ref txi}
   @kind_int_transfer_tx_defaults [
     index: {nil, {-1, -1}, <<>>, -1},
     unused: nil
@@ -617,6 +618,7 @@ defmodule AeMdw.Db.Model do
   defrecord :kind_int_transfer_tx, @kind_int_transfer_tx_defaults
 
   # target_kind_int_transfer_tx
+  #  index: {target, kind, block_index, ref txi}
   @target_kind_int_transfer_tx_defaults [
     index: {<<>>, <<>>, {-1, -1}, -1},
     unused: nil
