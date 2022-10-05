@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.23.0](https://www.github.com/aeternity/ae_mdw/compare/v1.22.0...v1.23.0) (2022-10-05)
+
+
+### Features
+
+* index oracle extend internal calls ([#933](https://www.github.com/aeternity/ae_mdw/issues/933)) ([d051180](https://www.github.com/aeternity/ae_mdw/commit/d051180d5940bb8068cc06a2ceb715eb482f7498))
+
+
+### Bug Fixes
+
+* add missing origin to oracle created by internal call ([#927](https://www.github.com/aeternity/ae_mdw/issues/927)) ([ba99629](https://www.github.com/aeternity/ae_mdw/commit/ba99629ffbeacccd76708db22216f2da2e4e5e65))
+* return proper error when aex141 token is a partial int ([#926](https://www.github.com/aeternity/ae_mdw/issues/926)) ([95cd809](https://www.github.com/aeternity/ae_mdw/commit/95cd8092fb9779965bbd5bd48b0a24f460d4dbd1))
+* set proper auction_timeout on names ([#932](https://www.github.com/aeternity/ae_mdw/issues/932)) ([d19be47](https://www.github.com/aeternity/ae_mdw/commit/d19be475d5c5598f387d2f9c2d81ac5c284bbf88))
+* transform non encodable binary oracle fields into list ([#929](https://www.github.com/aeternity/ae_mdw/issues/929)) ([3de2cbb](https://www.github.com/aeternity/ae_mdw/commit/3de2cbbeeb8244c1fa5e3c533eaf0387cec3daf8))
+
+
+### Refactorings
+
+* move Db.Name syncing code to Sync.Name ([#925](https://www.github.com/aeternity/ae_mdw/issues/925)) ([f47703a](https://www.github.com/aeternity/ae_mdw/commit/f47703ad1f94f1765d8db928a0b68537d89307ba))
+* print migrations total/duration using returned values ([#931](https://www.github.com/aeternity/ae_mdw/issues/931)) ([82d5e28](https://www.github.com/aeternity/ae_mdw/commit/82d5e28c3ead6360942fe6e2b95deee7c5bdd302))
+
 ## [1.22.0](https://www.github.com/aeternity/ae_mdw/compare/v1.21.1...v1.22.0) (2022-09-29)
 
 
