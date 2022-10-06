@@ -27,10 +27,29 @@ defmodule AeMdwWeb.TxControllerTest do
   end
 
   describe "tx" do
-    test "when tx not found, it returns 404", %{conn: conn} do
-      tx_hash = "th_2TbTPmKFU31WNQKfBGe5b5JDF9sFdAY7qot1smnxjbsEiu7LNr"
+    test "returns 404 when tx location is not a block hash", %{conn: conn} do
+      tx_hash1 = :crypto.strong_rand_bytes(32)
+      tx_hash2 = :crypto.strong_rand_bytes(32)
+      tx_hash3 = :crypto.strong_rand_bytes(32)
 
-      assert %{"error" => _error_msg} = conn |> get("/tx/#{tx_hash}") |> json_response(404)
+      with_mocks [
+        {:aec_db, [:passthrough],
+         [
+           find_tx_location: fn
+             ^tx_hash1 -> :none
+             ^tx_hash2 -> :not_found
+             ^tx_hash3 -> :mempool
+           end
+         ]}
+      ] do
+        tx_hash1 = encode(:tx_hash, tx_hash1)
+        tx_hash2 = encode(:tx_hash, tx_hash2)
+        tx_hash3 = encode(:tx_hash, tx_hash3)
+
+        assert %{"error" => _error_msg} = conn |> get("/tx/#{tx_hash1}") |> json_response(404)
+        assert %{"error" => _error_msg} = conn |> get("/tx/#{tx_hash2}") |> json_response(404)
+        assert %{"error" => _error_msg} = conn |> get("/tx/#{tx_hash3}") |> json_response(404)
+      end
     end
 
     test "returns an oracle_register_tx with non-string format fields", %{
