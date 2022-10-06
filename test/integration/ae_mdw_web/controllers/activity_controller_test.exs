@@ -12,7 +12,7 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
                |> get("/v2/accounts/#{account}/activities")
                |> json_response(200)
 
-      heights = events |> Enum.map(&Map.fetch(&1, "height")) |> Enum.reverse()
+      heights = events |> Enum.map(&Map.fetch!(&1, "height")) |> Enum.reverse()
 
       assert ^heights = Enum.sort(heights)
 
@@ -21,7 +21,7 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
                |> get(next_url)
                |> json_response(200)
 
-      next_heights = next_events |> Enum.map(&Map.fetch(&1, "height")) |> Enum.reverse()
+      next_heights = next_events |> Enum.map(&Map.fetch!(&1, "height")) |> Enum.reverse()
 
       assert List.last(heights) >= Enum.at(next_heights, 0)
     end
@@ -110,7 +110,18 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
                |> json_response(200)
 
       assert 10 = length(events)
-      assert Enum.all?(events, &match?(%{"height" => ^height}, &1))
+
+      assert Enum.all?(
+               events,
+               &match?(
+                 %{
+                   "height" => ^height,
+                   "type" => "SpendTxEvent",
+                   "payload" => %{"tx" => %{"sender_id" => ^account}}
+                 },
+                 &1
+               )
+             )
 
       assert %{"prev" => prev_url, "data" => next_events, "next" => next_next_url} =
                conn
@@ -118,8 +129,57 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
                |> json_response(200)
 
       assert Enum.all?(next_events, &match?(%{"height" => ^height}, &1))
+      assert 10 = length(next_events)
+
+      assert Enum.all?(
+               events,
+               &match?(
+                 %{
+                   "height" => ^height,
+                   "type" => "SpendTxEvent",
+                   "payload" => %{"tx" => %{"sender_id" => ^account}}
+                 },
+                 &1
+               )
+             )
 
       assert %{"data" => ^events} = conn |> get(prev_url) |> json_response(200)
+
+      assert %{"data" => next_next_events, "next" => nil} =
+               conn
+               |> get(next_next_url)
+               |> json_response(200)
+
+      assert 1 = length(next_next_events)
+
+      assert [
+               %{
+                 "height" => ^height,
+                 "type" => "InternalTransferEvent",
+                 "payload" => %{"kind" => "reward_block", "ref_tx_hash" => nil}
+               }
+             ] = next_next_events
+    end
+
+    test "it gets hardfork tranfer events", %{conn: conn} do
+      account = "ak_1K5vpH1WEGSQnrSLdk1Y1fBBc48zA6xiijuaQQbUKgLhcHZ5J"
+
+      assert %{"data" => events} =
+               conn
+               |> get("/v2/accounts/#{account}/activities", direction: "forward")
+               |> json_response(200)
+
+      heights = Enum.map(events, &Map.fetch!(&1, "height"))
+
+      assert ^heights = Enum.sort(heights)
+
+      assert [
+               %{
+                 "type" => "InternalTransferEvent",
+                 "payload" => %{"kind" => "accounts_genesis", "amount" => _amount}
+               }
+               | _rest
+             ] = events
     end
   end
 end

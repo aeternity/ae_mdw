@@ -107,7 +107,7 @@ defmodule AeMdw.Activities do
           gens_stream =
             state
             |> build_int_transfers_stream(direction, account_pk, gen_scope, gen_cursor)
-            |> Stream.chunk_by(&elem(&1, 0))
+            |> Stream.chunk_by(fn {gen, _data} -> gen end)
             |> build_gens_stream(direction)
 
           txi_stream =
@@ -130,7 +130,7 @@ defmodule AeMdw.Activities do
               build_aexn_transfers_stream(state, direction, account_pk, txi_scope, txi_cursor)
             ]
             |> Collection.merge(direction)
-            |> Stream.chunk_by(&elem(&1, 0))
+            |> Stream.chunk_by(fn {txi, _data} -> txi end)
             |> build_txi_stream(state, direction)
 
           stream = Collection.merge([gens_stream, txi_stream], direction)
