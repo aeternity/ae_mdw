@@ -59,40 +59,49 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
   defp extract_direction_and_scope(%{"range_or_dir" => "backward"}),
     do: {:ok, :backward, @default_scope}
 
-  defp extract_direction_and_scope(%{"range_or_dir" => range}) do
-    case extract_range(range) do
-      {:ok, first, last} when first <= last -> {:ok, :forward, {:gen, first..last}}
-      {:ok, first, last} -> {:ok, :backward, {:gen, last..first}}
-      {:error, reason} -> {:error, reason}
-    end
+  defp extract_direction_and_scope(%{"range_or_dir" => range} = params) do
+    params
+    |> Map.delete("range_or_dir")
+    |> Map.put("range", range)
+    |> extract_direction_and_scope()
   end
 
-  defp extract_direction_and_scope(%{"scope_type" => scope_type, "range" => range})
+  defp extract_direction_and_scope(%{"scope_type" => scope_type, "range" => range} = params)
        when scope_type in @scope_types_keys do
     scope_type = Map.fetch!(@scope_types, scope_type)
 
     case extract_range(range) do
-      {:ok, first, last} when first <= last -> {:ok, :forward, {scope_type, first..last}}
-      {:ok, first, last} -> {:ok, :backward, {scope_type, last..first}}
-      {:error, reason} -> {:error, reason}
+      {:ok, first, last} when first < last ->
+        {:ok, :forward, {scope_type, first..last}}
+
+      {:ok, first, last} when first > last ->
+        {:ok, :backward, {scope_type, last..first}}
+
+      {:ok, first, last} ->
+        if Map.get(params, "direction", "backward") == "forward" do
+          {:ok, :forward, {scope_type, first..last}}
+        else
+          {:ok, :backward, {scope_type, last..first}}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
   defp extract_direction_and_scope(%{"scope_type" => scope_type}),
     do: {:error, "invalid scope: #{scope_type}"}
 
-  defp extract_direction_and_scope(%{"range" => range}) do
-    case extract_range(range) do
-      {:ok, first, last} when first <= last -> {:ok, :forward, {:gen, first..last}}
-      {:ok, first, last} -> {:ok, :backward, {:gen, last..first}}
-      {:error, reason} -> {:error, reason}
-    end
-  end
+  defp extract_direction_and_scope(%{"range" => _range} = params),
+    do: extract_direction_and_scope(Map.put(params, "scope_type", "gen"))
 
-  defp extract_direction_and_scope(%{"scope" => scope}) do
+  defp extract_direction_and_scope(%{"scope" => scope} = params) do
     case String.split(scope, ":") do
       [scope_type, range] ->
-        extract_direction_and_scope(%{"scope_type" => scope_type, "range" => range})
+        params
+        |> Map.delete("scope")
+        |> Map.merge(%{"scope_type" => scope_type, "range" => range})
+        |> extract_direction_and_scope()
 
       _invalid_scope ->
         {:error, "invalid scope: #{scope}"}
@@ -136,7 +145,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
     case Integer.parse(limit_bin) do
       {limit, ""} when limit <= @max_limit and limit > 0 -> {:ok, limit}
-      {limit, ""} -> {:error, "limit too large: #{limit}"}
+      {limit, ""} when limit > @max_limit -> {:error, "limit too large: #{limit}"}
       {_limit, _rest} -> {:error, "invalid limit: #{limit_bin}"}
       :error -> {:error, "invalid limit: #{limit_bin}"}
     end
