@@ -412,7 +412,7 @@ defmodule AeMdw.Txs do
   def fetch(state, tx_hash, add_spendtx_details? \\ true)
 
   def fetch(state, tx_hash, add_spendtx_details?) when is_binary(tx_hash) do
-    with mb_hash when mb_hash != :not_found <- :aec_db.find_tx_location(tx_hash),
+    with mb_hash when is_binary(mb_hash) <- :aec_db.find_tx_location(tx_hash),
          {:ok, mb_header} <- :aec_chain.get_header(mb_hash) do
       mb_height = :aec_headers.height(mb_header)
 
@@ -427,7 +427,7 @@ defmodule AeMdw.Txs do
         end
       )
     else
-      :not_found ->
+      _no_block_or_header ->
         tx_hash = :aeser_api_encoder.encode(:tx_hash, tx_hash)
         {:error, ErrInput.NotFound.exception(value: tx_hash)}
     end
