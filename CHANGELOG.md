@@ -1,5 +1,14 @@
 # Changelog
 
+### [1.23.1](https://www.github.com/aeternity/ae_mdw/compare/v1.23.0...v1.23.1) (2022-10-07)
+
+
+### Bug Fixes
+
+* allow sorting backward when gen first-last is the same ([f99b2c5](https://www.github.com/aeternity/ae_mdw/commit/f99b2c5032f0a1b88b55c824de8d9abbc39b4d21))
+* handle other node tx locations ([#936](https://www.github.com/aeternity/ae_mdw/issues/936)) ([aec8bea](https://www.github.com/aeternity/ae_mdw/commit/aec8bea1cd832d9abd3e9af7438e7fb9eafd02f1))
+* return {auction_bid, source} tuple on names owned_by_reply ([#940](https://www.github.com/aeternity/ae_mdw/issues/940)) ([70adf3f](https://www.github.com/aeternity/ae_mdw/commit/70adf3f187d5431738671d6a7445c5183a9ea26e))
+
 ## [1.23.0](https://www.github.com/aeternity/ae_mdw/compare/v1.22.0...v1.23.0) (2022-10-05)
 
 
