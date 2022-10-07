@@ -217,12 +217,14 @@ defmodule AeMdwWeb.NameController do
     if active? do
       names = jsons.(query_res.names, Model.ActiveName, &Name.locate(state, &1))
 
-      top_bids =
-        jsons.(
-          query_res.top_bids,
-          Model.AuctionBid,
-          &map_some(Name.locate_bid(state, &1), fn x -> {x, Model.AuctionBid} end)
-        )
+      locator = fn plain_name ->
+        case Name.locate_bid(state, plain_name) do
+          {:ok, auction_bid} -> {auction_bid, Model.AuctionBid}
+          nil -> :not_found
+        end
+      end
+
+      top_bids = jsons.(query_res.top_bids, Model.AuctionBid, locator)
 
       json(conn, %{"active" => names, "top_bid" => top_bids})
     else
