@@ -12,6 +12,7 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdw.Db.Model.InactiveNameExpiration
   alias AeMdw.Db.Model.Tx
   alias AeMdw.Db.Name
+  alias AeMdw.Db.Store
   alias AeMdw.Database
   alias AeMdw.Node.Db
   alias AeMdw.Validate
@@ -857,6 +858,73 @@ defmodule AeMdwWeb.NameControllerTest do
         assert Enum.all?(owned_names, fn %{"name" => plain_name} ->
                  plain_name in [first_name, second_name]
                end)
+      end
+    end
+
+    test "get both active and inactive names for given account/owner", %{conn: conn, store: store} do
+      owner_id = "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
+      owner_pk = Validate.id!(owner_id)
+      other_pk = :crypto.strong_rand_bytes(32)
+      first_name = TS.plain_name(4)
+      not_owned_name = "o2#{first_name}"
+      second_name = "o1#{first_name}"
+      third_name = "o3#{first_name}"
+
+      inactive_name =
+        Model.name(
+          index: first_name,
+          active: false,
+          expire: 3,
+          claims: [{{2, 0}, 0}],
+          updates: [],
+          transfers: [],
+          revoke: nil,
+          owner: owner_pk,
+          auction_timeout: 1
+        )
+
+      active_name = Model.name(inactive_name, index: third_name)
+
+      store =
+        store
+        |> Store.put(Model.InactiveName, inactive_name)
+        |> Store.put(Model.InactiveName, Model.name(inactive_name, index: second_name))
+        |> Store.put(
+          Model.InactiveName,
+          Model.name(inactive_name, index: not_owned_name, owner: other_pk)
+        )
+        |> Store.put(Model.InactiveNameOwner, Model.owner(index: {owner_pk, first_name}))
+        |> Store.put(Model.InactiveNameOwner, Model.owner(index: {owner_pk, second_name}))
+        |> Store.put(Model.InactiveNameOwner, Model.owner(index: {other_pk, not_owned_name}))
+        |> Store.put(Model.ActiveName, active_name)
+        |> Store.put(Model.ActiveNameOwner, Model.owner(index: {owner_pk, third_name}))
+
+      with_mocks [
+        {Txs, [],
+         [
+           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {Name, [],
+         [
+           pointers: fn _state, _mnme -> %{} end,
+           ownership: fn _state, _mname ->
+             orig = {:id, :account, owner_pk}
+             %{current: orig, original: orig}
+           end
+         ]}
+      ] do
+        assert %{"data" => owned_names} =
+                 conn
+                 |> with_store(store)
+                 |> get("/names",
+                   owned_by: owner_id,
+                   by: "name",
+                   limit: 3
+                 )
+                 |> json_response(200)
+
+        assert [^third_name, ^second_name, ^first_name] =
+                 Enum.map(owned_names, fn %{"name" => name} -> name end)
       end
     end
 
