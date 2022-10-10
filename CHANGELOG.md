@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.23.2](https://www.github.com/aeternity/ae_mdw/compare/v1.23.1...v1.23.2) (2022-10-10)
+
+
+### Miscellaneous
+
+* allow rendering static swagger.json (temporary fix) ([#945](https://www.github.com/aeternity/ae_mdw/issues/945)) ([fe0e3be](https://www.github.com/aeternity/ae_mdw/commit/fe0e3bec4c7f24da6f2e9fdceabdbb46ea7b0d8e))
+
 ### [1.23.1](https://www.github.com/aeternity/ae_mdw/compare/v1.23.0...v1.23.1) (2022-10-07)
 
 
