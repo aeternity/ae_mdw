@@ -430,9 +430,9 @@ defmodule AeMdw.Db.Model do
   defrecord :evt_contract_log, @evt_contract_log_defaults
 
   # idx contract log:
-  #     index: {call txi, create txi, event hash, log idx}
+  #     index: {call txi, log idx, create_txi, event hash}
   @idx_contract_log_defaults [
-    index: {-1, -1, nil, -1},
+    index: {-1, -1, -1, <<>>},
     unused: nil
   ]
   defrecord :idx_contract_log, @idx_contract_log_defaults

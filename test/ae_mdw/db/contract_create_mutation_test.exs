@@ -35,7 +35,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
           ]
         }
       ] do
-        block_index = {492_393, 0}
+        {height, _mbi} = block_index = {492_393, 0}
         create_txi1 = 21_608_343
         call_rec1 = call_rec("no_log", remote_pk, create_txi1)
 
@@ -65,7 +65,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
 
         create_txi2 = create_txi1 + 1
         contract_pk = :crypto.strong_rand_bytes(32)
-        call_rec2 = call_rec("remote_log", contract_pk, remote_pk, create_txi2)
+        call_rec2 = call_rec("remote_log", contract_pk, height, remote_pk)
 
         state2 =
           State.commit_mem(state1, [

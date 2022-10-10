@@ -25,7 +25,7 @@ defmodule AeMdw.Txs do
 
   @type tx :: map()
   @type txi :: non_neg_integer()
-  @type tx_hash() :: binary()
+  @type tx_hash() :: <<_::256>>
   @type cursor :: binary()
   @type query ::
           %{

@@ -5,6 +5,7 @@ defmodule AeMdw.Node.ContractCallFixtures do
   @type fname :: String.t()
   @type fun_arg_res :: map()
   @type call_record :: tuple()
+  @type event_log :: {pubkey(), [binary()], binary()}
 
   @spec fun_args_res(fname()) :: %{arguments: list(), function: fname(), result: map()}
   def fun_args_res("mint") do
@@ -343,22 +344,35 @@ defmodule AeMdw.Node.ContractCallFixtures do
      ]}
   end
 
-  @spec call_rec(fname(), pubkey(), AeMdw.Txs.txi()) :: call_record()
-  def call_rec("no_log", contract_pk, txi) do
+  @spec call_rec(fname(), pubkey(), AeMdw.Blocks.height()) :: call_record()
+  def call_rec("no_log", contract_pk, height) do
     {:call,
      <<7, 3, 220, 129, 25, 69, 185, 205, 148, 53, 54, 115, 161, 72, 225, 149, 238, 18, 80, 50,
        185, 167, 125, 140, 71, 128, 149, 100, 229, 81, 223, 196>>, {:id, :account, <<1::256>>},
-     41, txi, {:id, :contract, contract_pk}, 1_000_000_000, 22_929,
+     41, height, {:id, :contract, contract_pk}, 1_000_000_000, 22_929,
      <<159, 2, 160, 111, 0, 117, 208, 6, 235, 44, 43, 240, 108, 173, 15, 111, 153, 4, 169, 116,
        46, 60, 160, 41, 181, 143, 70, 46, 129, 67, 189, 118, 173, 96, 204>>, :ok, []}
   end
 
-  @spec call_rec(fname(), pubkey(), pubkey(), AeMdw.Txs.txi()) :: call_record()
-  def call_rec("remote_log", contract_pk, remote_pk, txi) do
+  @spec call_rec(fname(), pubkey(), AeMdw.Blocks.height(), pubkey(), [event_log()]) ::
+          call_record()
+  def call_rec(fname, contract_pk, height, event_pk, extra_logs \\ [])
+
+  def call_rec("aex141_transfer", contract_pk, height, event_pk, extra_logs) do
+    {:call, :aect_call.id(<<1::256>>, 2, contract_pk), {:id, :account, <<1::256>>}, 2, height,
+     {:id, :contract, contract_pk}, 1_000_000_000, 22_929, "", :ok,
+     [
+       {event_pk, [AeMdw.Node.aexn_transfer_event_hash(), <<1::256>>, <<2::256>>, <<1::256>>],
+        <<>>}
+     ] ++
+       extra_logs}
+  end
+
+  def call_rec("remote_log", contract_pk, height, remote_pk, extra_logs) do
     {:call,
      <<7, 3, 220, 129, 25, 69, 185, 205, 148, 53, 54, 115, 161, 72, 225, 149, 238, 18, 80, 50,
        185, 167, 125, 140, 71, 128, 149, 100, 229, 81, 223, 196>>, {:id, :account, <<1::256>>},
-     41, txi, {:id, :contract, contract_pk}, 1_000_000_000, 22_929,
+     41, height, {:id, :contract, contract_pk}, 1_000_000_000, 22_929,
      <<159, 2, 160, 111, 0, 117, 208, 6, 235, 44, 43, 240, 108, 173, 15, 111, 153, 4, 169, 116,
        46, 60, 160, 41, 181, 143, 70, 46, 129, 67, 189, 118, 173, 96, 204>>, :ok,
      [
@@ -369,6 +383,7 @@ defmodule AeMdw.Node.ContractCallFixtures do
           <<83, 107, 86, 97, 199, 199, 69, 232, 131, 106, 241, 190, 181, 55, 62, 215, 254, 27,
             189, 54, 54, 3, 152, 10, 245, 52, 84, 143, 225, 73, 60, 7>>
         ], "1"}
-     ]}
+     ] ++
+       extra_logs}
   end
 end

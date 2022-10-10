@@ -17,6 +17,8 @@ defmodule AeMdw.Contracts do
   alias AeMdw.Util
   alias AeMdw.Validate
 
+  import AeMdwWeb.Helpers.ViewHelper
+
   require Model
 
   @type log() :: map()
@@ -208,13 +210,13 @@ defmodule AeMdw.Contracts do
           nil
 
         {create_txi, call_txi, event_hash, log_idx, _data} ->
-          {call_txi, create_txi, event_hash, log_idx}
+          {call_txi, log_idx, create_txi, event_hash}
       end
 
     fn direction ->
       state
       |> Collection.stream(@idx_contract_log_table, direction, key_boundary, cursor)
-      |> Stream.map(fn {call_txi, create_txi, event_hash, log_idx} ->
+      |> Stream.map(fn {call_txi, log_idx, create_txi, event_hash} ->
         {create_txi, call_txi, event_hash, log_idx, @min_data}
       end)
     end
@@ -446,14 +448,12 @@ defmodule AeMdw.Contracts do
 
   defp render_log(state, {create_txi, call_txi, event_hash, log_idx, _data}) do
     m_log = State.fetch!(state, @contract_log_table, {create_txi, call_txi, event_hash, log_idx})
-    ct_id = &:aeser_id.create(:contract, &1)
 
     {contract_tx_hash, ct_pk} =
       if create_txi == -1 do
         {nil, Origin.pubkey(state, {:contract_call, call_txi})}
       else
-        {Enc.encode(:tx_hash, Txs.txi_to_hash(state, create_txi)),
-         Origin.pubkey(state, {:contract, create_txi})}
+        {encode_to_hash(state, create_txi), Origin.pubkey(state, {:contract, create_txi})}
       end
 
     {parent_contract_pk, ext_ct_pk, ext_ct_txi, ext_ct_tx_hash} =
@@ -463,13 +463,7 @@ defmodule AeMdw.Contracts do
 
         ext_ct_pk ->
           ext_ct_txi = Origin.tx_index!(state, {:contract, ext_ct_pk})
-
-          ext_ct_tx_hash =
-            if ext_ct_txi < 0 do
-              nil
-            else
-              Enc.encode(:tx_hash, Txs.txi_to_hash(state, ext_ct_txi))
-            end
+          ext_ct_tx_hash = encode_to_hash(state, ext_ct_txi)
 
           {nil, ext_ct_pk, ext_ct_txi, ext_ct_tx_hash}
       end
@@ -482,12 +476,11 @@ defmodule AeMdw.Contracts do
     %{
       contract_txi: create_txi,
       contract_tx_hash: contract_tx_hash,
-      contract_id: Format.enc_id(ct_id.(ct_pk)),
+      contract_id: encode_ct(ct_pk),
       ext_caller_contract_txi: ext_ct_txi,
       ext_caller_contract_tx_hash: ext_ct_tx_hash,
-      ext_caller_contract_id: Format.enc_id((ext_ct_pk != nil && ct_id.(ext_ct_pk)) || nil),
-      parent_contract_id:
-        Format.enc_id((parent_contract_pk && ct_id.(parent_contract_pk)) || nil),
+      ext_caller_contract_id: encode_ct(ext_ct_pk),
+      parent_contract_id: encode_ct(parent_contract_pk),
       call_txi: call_txi,
       call_tx_hash: Enc.encode(:tx_hash, call_tx_hash),
       args: Enum.map(Model.contract_log(m_log, :args), fn <<topic::256>> -> to_string(topic) end),
