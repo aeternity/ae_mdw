@@ -20,7 +20,7 @@ defmodule AeMdw.ContractsTest do
       <<evt_hash_bigger_int::256>> = evt_hash0 = AeMdw.Node.aexn_transfer_event_hash()
       evt_hash1 = <<evt_hash_bigger_int - 1::256>>
       extra_logs = [{contract_pk, [evt_hash1, <<3::256>>, <<4::256>>, <<1::256>>], <<>>}]
-      call_rec = call_rec("aex141_transfer", contract_pk, height, contract_pk, extra_logs)
+      call_rec = call_rec("transfer", contract_pk, height, contract_pk, extra_logs)
 
       call_txi = height * 1_000
       create_txi = call_txi - 2

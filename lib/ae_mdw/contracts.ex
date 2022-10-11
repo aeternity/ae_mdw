@@ -446,8 +446,6 @@ defmodule AeMdw.Contracts do
   end
 
   defp render_log(state, {create_txi, call_txi, event_hash, log_idx, _data}) do
-    m_log = State.fetch!(state, @contract_log_table, {create_txi, call_txi, event_hash, log_idx})
-
     {contract_tx_hash, ct_pk} =
       if create_txi == -1 do
         {nil, Origin.pubkey(state, {:contract_call, call_txi})}
@@ -455,46 +453,65 @@ defmodule AeMdw.Contracts do
         {encode_to_hash(state, create_txi), Origin.pubkey(state, {:contract, create_txi})}
       end
 
-    {parent_contract_pk, ext_ct_pk, ext_ct_txi, ext_ct_tx_hash} =
-      case Model.contract_log(m_log, :ext_contract) do
-        {:parent_contract_pk, pct_pk} ->
-          {pct_pk, nil, -1, nil}
-
-        ext_ct_pk ->
-          ext_ct_txi = Origin.tx_index!(state, {:contract, ext_ct_pk})
-          ext_ct_tx_hash = encode_to_hash(state, ext_ct_txi)
-
-          {nil, ext_ct_pk, ext_ct_txi, ext_ct_tx_hash}
-      end
-
     Model.tx(id: call_tx_hash, block_index: {height, micro_index}) =
       State.fetch!(state, Model.Tx, call_txi)
 
     Model.block(hash: block_hash) = DBUtil.read_block!(state, {height, micro_index})
 
-    %{
+    Model.contract_log(args: args, data: data, ext_contract: ext_contract) =
+      State.fetch!(state, @contract_log_table, {create_txi, call_txi, event_hash, log_idx})
+
+    state
+    |> render_remote_log_fields(ext_contract)
+    |> Map.merge(%{
       contract_txi: create_txi,
       contract_tx_hash: contract_tx_hash,
       contract_id: encode_ct(ct_pk),
-      ext_caller_contract_txi: ext_ct_txi,
-      ext_caller_contract_tx_hash: ext_ct_tx_hash,
-      ext_caller_contract_id: encode_ct(ext_ct_pk),
-      parent_contract_id: encode_ct(parent_contract_pk),
       call_txi: call_txi,
       call_tx_hash: encode(:tx_hash, call_tx_hash),
-      args: Enum.map(Model.contract_log(m_log, :args), fn <<topic::256>> -> to_string(topic) end),
-      data: Model.contract_log(m_log, :data),
+      args: Enum.map(args, fn <<topic::256>> -> to_string(topic) end),
+      data: data,
       event_hash: Base.hex_encode32(event_hash),
       height: height,
       micro_index: micro_index,
       block_hash: encode(:micro_block_hash, block_hash),
       log_idx: log_idx
-    }
+    })
   end
 
   defp render_call(state, {call_txi, local_idx, _create_txi, _pk, _fname, _pos}) do
     call_key = {call_txi, local_idx}
     Format.to_map(state, call_key, @int_contract_call_table)
+  end
+
+  defp render_remote_log_fields(_state, nil) do
+    %{
+      ext_caller_contract_txi: -1,
+      ext_caller_contract_tx_hash: nil,
+      ext_caller_contract_id: nil,
+      parent_contract_id: nil
+    }
+  end
+
+  defp render_remote_log_fields(_state, {:parent_contract_pk, parent_pk}) do
+    %{
+      ext_caller_contract_txi: -1,
+      ext_caller_contract_tx_hash: nil,
+      ext_caller_contract_id: nil,
+      parent_contract_id: encode_ct(parent_pk)
+    }
+  end
+
+  defp render_remote_log_fields(state, ext_ct_pk) do
+    ext_ct_txi = Origin.tx_index!(state, {:contract, ext_ct_pk})
+    ext_ct_tx_hash = encode_to_hash(state, ext_ct_txi)
+
+    %{
+      ext_caller_contract_txi: ext_ct_txi,
+      ext_caller_contract_tx_hash: ext_ct_tx_hash,
+      ext_caller_contract_id: encode_ct(ext_ct_pk),
+      parent_contract_id: nil
+    }
   end
 
   defp serialize_logs_cursor(nil), do: nil
