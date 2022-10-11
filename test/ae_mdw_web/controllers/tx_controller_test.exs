@@ -248,6 +248,51 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
+    test "when it's the last micro block, it returns the list of txs from it till the end", %{
+      conn: conn,
+      store: store
+    } do
+      mb_hash = TS.micro_block_hash(0)
+      tx1_hash = TS.tx_hash(0)
+      tx2_hash = TS.tx_hash(1)
+      encoded_mb_hash = encode(:micro_block_hash, mb_hash)
+      height = 4
+
+      store =
+        store
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, tx_index: 10))
+        |> Store.put(Model.Block, Model.block(index: {height, 0}, tx_index: 10))
+        |> Store.put(Model.Tx, Model.tx(index: 10, id: tx1_hash))
+        |> Store.put(Model.Tx, Model.tx(index: 11, id: tx2_hash))
+
+      with_mocks [
+        {:aec_chain, [], [get_block: fn ^mb_hash -> {:ok, :block} end]},
+        {:aec_blocks, [], [to_header: fn :block -> :header end]},
+        {:aec_headers, [],
+         [
+           type: fn :header -> :micro end,
+           height: fn :header -> height end
+         ]},
+        {Db, [], [get_reverse_micro_blocks: fn ^mb_hash -> [] end]},
+        {Format, [],
+         [
+           to_map: fn
+             _state, Model.tx(id: ^tx1_hash) -> %{a: 1}
+             _state, Model.tx(id: ^tx2_hash) -> %{b: 2}
+           end
+         ]}
+      ] do
+        assert %{"data" => [tx2, tx1]} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/micro-blocks/#{encoded_mb_hash}/txs")
+                 |> json_response(200)
+
+        assert %{"a" => 1} = tx1
+        assert %{"b" => 2} = tx2
+      end
+    end
+
     test "if no txs, it returns an empty result", %{conn: conn, store: store} do
       mb_hash = TS.micro_block_hash(0)
       encoded_mb_hash = encode(:micro_block_hash, mb_hash)
