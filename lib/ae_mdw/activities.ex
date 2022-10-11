@@ -171,7 +171,6 @@ defmodule AeMdw.Activities do
     Stream.flat_map(gen_activities, fn [{height, _data} | _rest] = chunk ->
       gen_events =
         chunk
-        |> Enum.sort()
         |> Enum.with_index()
         |> Enum.map(fn {{^height, data}, local_idx} -> {{height, -1, local_idx}, data} end)
 
