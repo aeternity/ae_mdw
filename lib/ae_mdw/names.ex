@@ -116,7 +116,7 @@ defmodule AeMdw.Names do
     fn direction ->
       state
       |> Collection.stream(@table_active_owner, direction, scope, cursor)
-      |> Stream.map(fn {_owner_pk, plain_name} -> {plain_name, :active} end)
+      |> Stream.map(fn {^owner_pk, plain_name} -> {plain_name, :active} end)
     end
   end
 
@@ -144,6 +144,18 @@ defmodule AeMdw.Names do
       state
       |> Collection.stream(@table_active, direction, nil, cursor)
       |> Stream.map(fn key -> {key, :active} end)
+    end
+  end
+
+  defp build_name_streamer(%{owned_by: owner_pk}, state, cursor) do
+    fn direction ->
+      Collection.merge(
+        [
+          build_name_streamer(%{owned_by: owner_pk, state: "active"}, state, cursor).(direction),
+          build_name_streamer(%{owned_by: owner_pk, state: "inactive"}, state, cursor).(direction)
+        ],
+        direction
+      )
     end
   end
 
