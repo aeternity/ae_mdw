@@ -3,7 +3,6 @@ defmodule AeMdw.Contracts do
   Context module for dealing with Contracts.
   """
 
-  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Collection
   alias AeMdw.Contract
   alias AeMdw.Db.Format
@@ -17,7 +16,7 @@ defmodule AeMdw.Contracts do
   alias AeMdw.Util
   alias AeMdw.Validate
 
-  import AeMdwWeb.Helpers.ViewHelper
+  import AeMdw.Util.Encoding
 
   require Model
 
@@ -482,13 +481,13 @@ defmodule AeMdw.Contracts do
       ext_caller_contract_id: encode_ct(ext_ct_pk),
       parent_contract_id: encode_ct(parent_contract_pk),
       call_txi: call_txi,
-      call_tx_hash: Enc.encode(:tx_hash, call_tx_hash),
+      call_tx_hash: encode(:tx_hash, call_tx_hash),
       args: Enum.map(Model.contract_log(m_log, :args), fn <<topic::256>> -> to_string(topic) end),
       data: Model.contract_log(m_log, :data),
       event_hash: Base.hex_encode32(event_hash),
       height: height,
       micro_index: micro_index,
-      block_hash: Enc.encode(:micro_block_hash, block_hash),
+      block_hash: encode(:micro_block_hash, block_hash),
       log_idx: log_idx
     }
   end

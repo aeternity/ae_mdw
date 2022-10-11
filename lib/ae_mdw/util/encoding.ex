@@ -1,6 +1,6 @@
-defmodule AeMdwWeb.Helpers.ViewHelper do
+defmodule AeMdw.Util.Encoding do
   @moduledoc """
-  Formats accounts, contracts, hashes to json responses.
+  Encodes and decodes accounts, contracts, hashes and other ids.
   """
 
   alias AeMdw.Db.State

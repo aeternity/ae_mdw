@@ -9,7 +9,7 @@ defmodule AeMdw.ContractsTest do
   alias AeMdw.Db.State
 
   import AeMdw.Node.ContractCallFixtures, only: [call_rec: 5]
-  import AeMdwWeb.Helpers.ViewHelper
+  import AeMdw.Util.Encoding
 
   require Model
 
