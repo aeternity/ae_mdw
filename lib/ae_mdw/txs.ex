@@ -144,19 +144,21 @@ defmodule AeMdw.Txs do
     with {:ok, height, mbi} <- DbUtil.micro_block_height_index(state, hash) do
       Model.block(tx_index: first_txi) = State.fetch!(state, Model.Block, {height, mbi})
 
-      case State.next(state, Model.Block, {height, mbi}) do
-        {:ok, next_key} ->
-          Model.block(tx_index: next_txi) = State.fetch!(state, Model.Block, next_key)
+      last_txi =
+        case State.next(state, Model.Block, {height, mbi}) do
+          {:ok, next_key} ->
+            Model.block(tx_index: next_txi) = State.fetch!(state, Model.Block, next_key)
+            next_txi - 1
 
-          if first_txi < next_txi do
-            range = first_txi..(next_txi - 1)
-            fetch_txs(state, pagination, {:txi, range}, %{}, cursor, false)
-          else
-            {:ok, nil, [], nil}
-          end
+          :none ->
+            {:ok, last_txi} = State.prev(state, Model.Tx, nil)
+            last_txi
+        end
 
-        :none ->
-          {:ok, nil, [], nil}
+      if first_txi <= last_txi do
+        fetch_txs(state, pagination, {:txi, first_txi..last_txi}, %{}, cursor, false)
+      else
+        {:ok, nil, [], nil}
       end
     end
   end
