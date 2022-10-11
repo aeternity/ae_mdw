@@ -37,7 +37,7 @@ defmodule AeMdw.Activities do
            | {:int_contract_call, non_neg_integer()}
            | {:aexn, AexnTokens.aexn_type(), Db.pubkey(), Db.pubkey(), non_neg_integer(),
               non_neg_integer()}
-           | {:int_transfer, Db.pubkey(), IntTransfer.kind(), Txs.txi()}
+           | {:int_transfer, IntTransfer.kind(), Txs.txi()}
 
   @max_pos 4
   @min_int Util.min_int()
@@ -160,7 +160,7 @@ defmodule AeMdw.Activities do
 
       events =
         Enum.map(activities_locators_data, fn {{height, txi, _local_idx}, data} ->
-          render(state, height, txi, data)
+          render(state, account_pk, height, txi, data)
         end)
 
       {:ok, serialize_cursor(prev_cursor), events, serialize_cursor(next_cursor)}
@@ -204,8 +204,7 @@ defmodule AeMdw.Activities do
       cursor =
         case gen_cursor do
           nil -> nil
-          gen when direction == :forward -> {account_pk, kind, {gen, -1}, @min_int}
-          gen when direction == :backward -> {account_pk, kind, {gen, -1}, @max_int}
+          gen -> {account_pk, kind, {gen, -1}, -1}
         end
 
       state
@@ -366,8 +365,8 @@ defmodule AeMdw.Activities do
     end)
   end
 
-  @spec render(state(), height(), txi(), activity_value()) :: map()
-  defp render(state, height, txi, {:field, tx_type, _tx_pos}) do
+  @spec render(state(), Db.pubkey(), height(), txi(), activity_value()) :: map()
+  defp render(state, _account_pk, height, txi, {:field, tx_type, _tx_pos}) do
     tx = state |> Txs.fetch!(txi) |> Map.delete("tx_index")
 
     %{
@@ -377,7 +376,7 @@ defmodule AeMdw.Activities do
     }
   end
 
-  defp render(state, height, call_txi, {:int_contract_call, local_idx}) do
+  defp render(state, _account_pk, height, call_txi, {:int_contract_call, local_idx}) do
     payload =
       state
       |> Format.to_map({call_txi, local_idx}, Model.IntContractCall)
@@ -390,7 +389,7 @@ defmodule AeMdw.Activities do
     }
   end
 
-  defp render(state, height, txi, {:aexn, :aex9, from_pk, to_pk, value, index}) do
+  defp render(state, _account_pk, height, txi, {:aexn, :aex9, from_pk, to_pk, value, index}) do
     %{
       height: height,
       type: "Aex9TransferEvent",
@@ -398,7 +397,7 @@ defmodule AeMdw.Activities do
     }
   end
 
-  defp render(state, height, txi, {:int_transfer, account_pk, kind, ref_txi}) do
+  defp render(state, account_pk, height, txi, {:int_transfer, kind, ref_txi}) do
     transfer_key = {{height, txi}, kind, account_pk, ref_txi}
     m_transfer = State.fetch!(state, Model.IntTransferTx, transfer_key)
     amount = Model.int_transfer_tx(m_transfer, :amount)
@@ -415,7 +414,7 @@ defmodule AeMdw.Activities do
     }
   end
 
-  defp render(state, height, txi, {:aexn, :aex141, from_pk, to_pk, value, index}) do
+  defp render(state, _account_pk, height, txi, {:aexn, :aex141, from_pk, to_pk, value, index}) do
     %{
       height: height,
       type: "Aex141TransferEvent",
