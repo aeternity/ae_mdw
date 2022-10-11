@@ -148,18 +148,18 @@ defmodule AeMdw.Db.Contract do
 
     raw_logs
     |> Enum.with_index()
-    |> Enum.reduce(state, fn {{addr, [evt_hash | args], data}, i} = log, state ->
+    |> Enum.reduce(state, fn {{addr, [evt_hash | args], data}, log_idx} = log, state ->
       m_log =
         Model.contract_log(
-          index: {create_txi, txi, evt_hash, i},
+          index: {create_txi, txi, evt_hash, log_idx},
           ext_contract: (addr == contract_pk && nil) || addr,
           args: args,
           data: data
         )
 
-      m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, i})
-      m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, i})
-      m_idx_log = Model.idx_contract_log(index: {txi, create_txi, evt_hash, i})
+      m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, log_idx})
+      m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, log_idx})
+      m_idx_log = Model.idx_contract_log(index: {txi, log_idx, create_txi, evt_hash})
 
       state2 =
         state
@@ -173,10 +173,10 @@ defmodule AeMdw.Db.Contract do
 
       cond do
         is_aexn_transfer?(evt_hash) and aex9_contract_pk != nil ->
-          write_aexn_transfer(state2, :aex9, aex9_contract_pk, txi, i, args)
+          write_aexn_transfer(state2, :aex9, aex9_contract_pk, txi, log_idx, args)
 
         State.exists?(state2, Model.AexnContract, {:aex141, addr}) ->
-          write_aex141_records(state2, evt_hash, addr, txi, i, args)
+          write_aex141_records(state2, evt_hash, addr, txi, log_idx, args)
 
         true ->
           state2

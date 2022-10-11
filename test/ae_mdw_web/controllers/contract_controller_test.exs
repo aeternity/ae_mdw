@@ -806,7 +806,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
         m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, idx})
         m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, idx})
-        m_idx_log = Model.idx_contract_log(index: {txi, create_txi, evt_hash, idx})
+        m_idx_log = Model.idx_contract_log(index: {txi, idx, create_txi, evt_hash})
 
         store
         |> Store.put(
@@ -847,7 +847,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
         m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, idx})
         m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, idx})
-        m_idx_log = Model.idx_contract_log(index: {txi, create_txi, evt_hash, idx})
+        m_idx_log = Model.idx_contract_log(index: {txi, idx, create_txi, evt_hash})
 
         store
         |> Store.put(
