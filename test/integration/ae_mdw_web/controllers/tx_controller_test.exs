@@ -1641,7 +1641,9 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       height = 273_000
 
       assert %{"data" => txs, "next" => next} =
-               conn |> get("/v2/txs", scope: "gen:#{height}-#{height}") |> json_response(200)
+               conn
+               |> get("/v2/txs", scope: "gen:#{height}-#{height}", direction: "forward")
+               |> json_response(200)
 
       txis = Enum.map(txs, fn %{"tx_index" => tx_index} -> tx_index end)
 

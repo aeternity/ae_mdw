@@ -84,6 +84,7 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
                conn
                |> get("/v2/accounts/#{account}/activities",
                  limit: 1,
+                 direction: "forward",
                  scope: "gen:#{height}-#{height}"
                )
                |> json_response(200)
