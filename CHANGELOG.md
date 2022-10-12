@@ -1,5 +1,14 @@
 # Changelog
 
+### [1.23.3](https://www.github.com/aeternity/ae_mdw/compare/v1.23.2...v1.23.3) (2022-10-12)
+
+
+### Bug Fixes
+
+* always return txs from last microblock ([37b5764](https://www.github.com/aeternity/ae_mdw/commit/37b576489120c5d480d1118a847673835acd8453))
+* sort event logs by index ([#944](https://www.github.com/aeternity/ae_mdw/issues/944)) ([be3ec7f](https://www.github.com/aeternity/ae_mdw/commit/be3ec7f87fcc34db365c53f982a98cfa1d468e49))
+* support listing active/inactive names when filterng by owner ([#947](https://www.github.com/aeternity/ae_mdw/issues/947)) ([8a1c8cb](https://www.github.com/aeternity/ae_mdw/commit/8a1c8cbd7a047a00fef4a8d34bccf7acb92924d7))
+
 ### [1.23.2](https://www.github.com/aeternity/ae_mdw/compare/v1.23.1...v1.23.2) (2022-10-10)
 
 
