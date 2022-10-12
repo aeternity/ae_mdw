@@ -126,7 +126,7 @@ defmodule AeMdw.Contract do
     }
   end
 
-  @metadata_type {:variant, [tuple: [], tuple: [], tuple: [], tuple: []]}
+  @metadata_type {:variant, [tuple: [], tuple: [], tuple: []]}
   @option_string {:variant, [tuple: [], tuple: [:string]]}
 
   @spec aex141_signatures() :: map()
@@ -137,8 +137,9 @@ defmodule AeMdw.Contract do
         {[],
          {:tuple, [:string, :string, {:variant, [tuple: [], tuple: [:string]]}, @metadata_type]}},
       "balance" => {[:address], {:variant, [tuple: [], tuple: [:integer]]}},
+      "total_supply" => {[], :integer},
       "owner" => {[:integer], {:variant, [tuple: [], tuple: [:address]]}},
-      "transfer" => {[:address, :address, :integer, @option_string], {:tuple, []}},
+      "transfer" => {[:address, :integer, @option_string], {:tuple, []}},
       "approve" => {[:address, :integer, :boolean], {:tuple, []}},
       "approve_all" => {[:address, :boolean], {:tuple, []}},
       "get_approved" => {[:integer], {:variant, [tuple: [], tuple: [:address]]}},

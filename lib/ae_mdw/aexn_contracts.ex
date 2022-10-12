@@ -119,9 +119,8 @@ defmodule AeMdw.AexnContracts do
     metadata_type =
       case variant_type do
         {:variant, [0, 0, 0, 0], 0, {}} -> :url
-        {:variant, [0, 0, 0, 0], 1, {}} -> :ipfs
-        {:variant, [0, 0, 0, 0], 2, {}} -> :object_id
-        {:variant, [0, 0, 0, 0], 3, {}} -> :map
+        {:variant, [0, 0, 0, 0], 1, {}} -> :object_id
+        {:variant, [0, 0, 0, 0], 2, {}} -> :map
       end
 
     {name, symbol, url, metadata_type}
@@ -161,9 +160,6 @@ defmodule AeMdw.AexnContracts do
   @metadata_hash <<99, 148, 233, 122>>
   @mint_hash <<207, 221, 154, 162>>
   @burn_hash <<177, 239, 193, 123>>
-  @swap_hash <<17, 0, 79, 166>>
-  @check_swap_hash <<214, 57, 13, 126>>
-  @swapped_hash <<29, 236, 102, 255>>
 
   defp valid_aex141_metadata?(functions) do
     with {_code, type, _body} <- Map.get(functions, @metadata_hash),
@@ -187,12 +183,6 @@ defmodule AeMdw.AexnContracts do
 
   defp valid_aex141_extension?("burnable", functions) do
     match?({_code, {[:integer], {:tuple, []}}, _body}, functions[@burn_hash])
-  end
-
-  defp valid_aex141_extension?("swappable", functions) do
-    match?({_code, {[], {:tuple, []}}, _body}, functions[@swap_hash]) and
-      match?({_code, {[:address], :integer}, _body}, functions[@check_swap_hash]) and
-      match?({_code, {[], {:map, :address, :string}}, _body}, functions[@swapped_hash])
   end
 
   defp valid_aex141_extension?(_any, _functions), do: true
