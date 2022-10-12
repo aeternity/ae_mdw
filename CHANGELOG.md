@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.24.0](https://www.github.com/aeternity/ae_mdw/compare/v1.23.2...v1.24.0) (2022-10-12)
+
+
+### Features
+
+* add generation-only internal transfers to activities ([#935](https://www.github.com/aeternity/ae_mdw/issues/935)) ([0e8afb8](https://www.github.com/aeternity/ae_mdw/commit/0e8afb877765ac3dd137fdc9da96af99a5581982))
+
+
+### Bug Fixes
+
+* always return txs from last microblock ([37b5764](https://www.github.com/aeternity/ae_mdw/commit/37b576489120c5d480d1118a847673835acd8453))
+* index remote log also with called contract ([#941](https://www.github.com/aeternity/ae_mdw/issues/941)) ([3d9a137](https://www.github.com/aeternity/ae_mdw/commit/3d9a137d4f01e01aa6abf7b255f3cdffac2b7cef))
+* order gen-scoped txs and activities properly ([#954](https://www.github.com/aeternity/ae_mdw/issues/954)) ([6d7260e](https://www.github.com/aeternity/ae_mdw/commit/6d7260ebb46974b3cad84784ef768e933ed67ddf))
+* return original error messages on txs invalid requests ([#953](https://www.github.com/aeternity/ae_mdw/issues/953)) ([f1036da](https://www.github.com/aeternity/ae_mdw/commit/f1036da6c403e96a8a02be249d0ca3b45ddf4bce))
+* sort event logs by index ([#944](https://www.github.com/aeternity/ae_mdw/issues/944)) ([be3ec7f](https://www.github.com/aeternity/ae_mdw/commit/be3ec7f87fcc34db365c53f982a98cfa1d468e49))
+* support listing active/inactive names when filterng by owner ([#947](https://www.github.com/aeternity/ae_mdw/issues/947)) ([8a1c8cb](https://www.github.com/aeternity/ae_mdw/commit/8a1c8cbd7a047a00fef4a8d34bccf7acb92924d7))
+
+
+### Testing
+
+* use always valid contract for invalid range test ([#955](https://www.github.com/aeternity/ae_mdw/issues/955)) ([2414b8b](https://www.github.com/aeternity/ae_mdw/commit/2414b8bfb48c3d62fc71975c2967376bf8b0f22b))
+
+
+### Miscellaneous
+
+* update aex141 signatures ([#952](https://www.github.com/aeternity/ae_mdw/issues/952)) ([0bd99a9](https://www.github.com/aeternity/ae_mdw/commit/0bd99a9d7f4f643bfea68566c448f070d144f3c7))
+
 ### [1.23.2](https://www.github.com/aeternity/ae_mdw/compare/v1.23.1...v1.23.2) (2022-10-10)
 
 
