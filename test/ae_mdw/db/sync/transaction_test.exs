@@ -179,7 +179,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
          [
            is_aex9?: fn _pk -> false end,
            call_meta_info: fn _type, pk -> pk == contract_pk && {:ok, aex141_meta_info} end,
-           has_aex141_signatures?: fn pk -> pk == contract_pk end,
+           has_aex141_signatures?: fn _height, pk -> pk == contract_pk end,
            call_extensions: fn :aex141, _pk -> {:ok, ["mintable"]} end,
            has_valid_aex141_extensions?: fn _extensions, _pk -> true end
          ]},
@@ -238,7 +238,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
          [
            is_aex9?: fn _pk -> false end,
            call_meta_info: fn _type, _pk -> {:ok, aex141_meta_info} end,
-           has_aex141_signatures?: fn pk -> pk == contract_pk end,
+           has_aex141_signatures?: fn _height, pk -> pk == contract_pk end,
            call_extensions: fn :aex141, _pk -> {:ok, ["mintable"]} end,
            has_valid_aex141_extensions?: fn _extensions, _pk -> true end
          ]},

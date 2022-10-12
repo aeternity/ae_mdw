@@ -97,7 +97,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
            call_meta_info: fn _type, ^contract_pk ->
              {:ok, {"test1", "TEST1", "http://some-fake-url", :url}}
            end,
-           has_aex141_signatures?: fn pk -> pk == contract_pk end,
+           has_aex141_signatures?: fn _height, pk -> pk == contract_pk end,
            call_extensions: fn :aex141, _pk -> {:ok, ["mintable"]} end,
            has_valid_aex141_extensions?: fn _extensions, ^contract_pk -> true end
          ]},

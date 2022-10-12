@@ -106,11 +106,11 @@ defmodule AeMdw.Db.Sync.Contract do
 
   @spec aexn_create_contract_mutation(Db.pubkey(), Blocks.block_index(), Txs.txi()) ::
           nil | AexnCreateContractMutation.t()
-  def aexn_create_contract_mutation(contract_pk, block_index, txi) do
+  def aexn_create_contract_mutation(contract_pk, {height, _mbi} = block_index, txi) do
     aexn_type =
       cond do
         AexnContracts.is_aex9?(contract_pk) -> :aex9
-        AexnContracts.has_aex141_signatures?(contract_pk) -> :aex141
+        AexnContracts.has_aex141_signatures?(height, contract_pk) -> :aex141
         true -> nil
       end
 

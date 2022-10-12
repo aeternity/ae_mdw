@@ -5,86 +5,263 @@ defmodule AeMdw.AexnContractsTest do
 
   import Mock
 
+  @wrong_burn {[], {[:integer], :boolean}, %{}}
+  @wrong_mint {[], {[:address, :string, {:variant, [tuple: [], tuple: [:string]]}], :integer},
+               %{}}
+
   describe "is_aex141?/1" do
-    test "returns true for a BaseNFT" do
+    test "returns true for a mintable" do
       contract_pk = :crypto.strong_rand_bytes(32)
-      type_info = base_nft_fcode()
+      type_info = unique_nfts_contract_fcode(without_burn: true)
       AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
       with_mocks [
-        {AeMdw.DryRun.Runner, [],
+        {AeMdw.DryRun.Runner, [:passthrough],
          [
-           call_contract: fn _pk, _hash, "aex141_extensions", [] -> {:ok, []} end
+           call_contract: fn ^contract_pk, _hash, "aex141_extensions", [] ->
+             {:ok, ["mintable"]}
+           end
          ]}
       ] do
         assert AexnContracts.is_aex141?(contract_pk)
       end
     end
+
+    test "returns true for a mintable and burnable" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      type_info = unique_nfts_contract_fcode()
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _hash, "aex141_extensions", [] ->
+             {:ok, ["mintable", "burnable"]}
+           end
+         ]}
+      ] do
+        assert AexnContracts.is_aex141?(contract_pk)
+      end
+    end
+
+    test "returns false for different mintable" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      type_info = unique_nfts_contract_fcode(wrong_mint: true)
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _hash, "aex141_extensions", [] ->
+             {:ok, ["mintable", "burnable"]}
+           end
+         ]}
+      ] do
+        refute AexnContracts.is_aex141?(contract_pk)
+      end
+    end
+
+    test "returns false for different burnable" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      type_info = unique_nfts_contract_fcode(wrong_burn: true)
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _hash, "aex141_extensions", [] ->
+             {:ok, ["mintable", "burnable"]}
+           end
+         ]}
+      ] do
+        refute AexnContracts.is_aex141?(contract_pk)
+      end
+    end
+  end
+
+  describe "has_aex141_signatures?/2" do
+    test "returns true for new nft contracts" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      type_info = unique_nfts_contract_fcode()
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      assert AeMdw.Util.max_int() |> AexnContracts.has_aex141_signatures?(contract_pk)
+    end
+
+    test "returns true for previous base nft at previous spec" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      type_info = base_nft_fcode()
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      assert AexnContracts.has_aex141_signatures?(600_000, contract_pk)
+    end
+
+    test "returns false for incomplete previous base nft at previous spec" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      type_info = incomplete_base_nft_fcode()
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      refute AexnContracts.has_aex141_signatures?(600_000, contract_pk)
+    end
+
+    test "returns false for previous base nft" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      type_info = base_nft_fcode()
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      refute AeMdw.Util.max_int() |> AexnContracts.has_aex141_signatures?(contract_pk)
+    end
+  end
+
+  defp unique_nfts_contract_fcode(opts \\ []) do
+    remove_burn = Keyword.get(opts, :without_burn, false)
+    remove_mint = Keyword.get(opts, :without_mint, false)
+    wrong_burn = Keyword.get(opts, :wrong_burn, false)
+    wrong_mint = Keyword.get(opts, :wrong_mint, false)
+
+    functions = %{
+      <<4, 167, 206, 191>> => {[:private], {[:boolean], :string}, %{}},
+      <<15, 89, 34, 233>> => {[], {[:address, :address], :boolean}, %{}},
+      <<20, 55, 180, 56>> =>
+        {[],
+         {[],
+          {:tuple,
+           [
+             :string,
+             :string,
+             {:variant, [tuple: [], tuple: [:string]]},
+             {:variant, [tuple: [], tuple: [], tuple: []]}
+           ]}}, %{}},
+      <<39, 89, 45, 234>> => {[], {[:integer], {:variant, [tuple: [], tuple: [:address]]}}, %{}},
+      <<54, 189, 143, 3>> => {[:private], {[], {:map, {:tvar, 0}, {:tuple, []}}}, %{}},
+      <<66, 213, 125, 105>> => {[:private], {[], {:tuple, []}}, %{}},
+      <<68, 214, 68, 31>> => {[], {[:string, :string], {:tuple, []}}, %{}},
+      <<72, 150, 48, 41>> => {[:private], {[:integer], :address}, %{}},
+      <<99, 148, 233, 122>> =>
+        {[],
+         {[:integer],
+          {:variant,
+           [
+             tuple: [],
+             tuple: [variant: [tuple: [:string], tuple: [{:map, :string, :string}]]]
+           ]}}, %{}},
+      <<101, 165, 224, 15>> =>
+        {[:private],
+         {[
+            variant: [
+              tuple: [:address, :integer],
+              tuple: [:address, :address, :integer],
+              tuple: [:address, :address, :integer, :string],
+              tuple: [:address, :address, :string],
+              tuple: [:address, :integer]
+            ]
+          ], {:tuple, []}}, %{}},
+      <<102, 66, 227, 51>> => {[], {[:integer, :address], :boolean}, %{}},
+      <<104, 18, 102, 160>> => {[], {[:address, :integer, :boolean], {:tuple, []}}, %{}},
+      <<116, 218, 90, 49>> =>
+        {[:private],
+         {[{:tvar, 0}, {:map, {:tvar, 0}, {:tuple, []}}], {:map, {:tvar, 0}, {:tuple, []}}}, %{}},
+      <<132, 161, 93, 161>> =>
+        {[], {[:address, :integer, {:variant, [tuple: [], tuple: [:string]]}], {:tuple, []}}, %{}},
+      <<146, 113, 210, 58>> => {[:private], {[:integer], {:tuple, []}}, %{}},
+      <<160, 2, 139, 120>> =>
+        {[:private], {[tuple: [:string, :any], list: {:tvar, 0}], {:list, {:tvar, 1}}}, %{}},
+      <<160, 55, 105, 6>> =>
+        {[:private], {[{:map, {:tvar, 0}, {:tuple, []}}], {:list, {:tvar, 0}}}, %{}},
+      <<162, 103, 192, 75>> => {[], {[:address, :boolean], {:tuple, []}}, %{}},
+      <<170, 192, 194, 134>> => {[:private], {[:string], :integer}, %{}},
+      <<177, 239, 193, 123>> => {[], {[:integer], {:tuple, []}}, %{}},
+      <<180, 140, 22, 132>> =>
+        {[], {[:address], {:variant, [tuple: [], tuple: [:integer]]}}, %{}},
+      <<184, 120, 21, 14>> =>
+        {[:private],
+         {[:address, :integer, {:variant, [tuple: [], tuple: [:string]]}],
+          {:tuple, [:boolean, :boolean]}}, %{}},
+      <<207, 221, 154, 162>> =>
+        {[],
+         {[
+            :address,
+            {:variant,
+             [
+               tuple: [],
+               tuple: [variant: [tuple: [:string], tuple: [{:map, :string, :string}]]]
+             ]},
+            {:variant, [tuple: [], tuple: [:string]]}
+          ], :integer}, %{}},
+      <<208, 195, 108, 184>> =>
+        {[:private],
+         {[{:tvar, 0}, {:map, {:tvar, 0}, {:tuple, []}}], {:map, {:tvar, 0}, {:tuple, []}}}, %{}},
+      <<219, 99, 117, 168>> => {[], {[], :integer}, %{}},
+      <<222, 10, 63, 194>> => {[], {[], {:list, :string}}, %{}},
+      <<227, 243, 60, 8>> => {[:private], {[tuple: [tvar: 0, tvar: 1]], {:tvar, 0}}, %{}},
+      <<234, 175, 198, 221>> => {[], {[:address], {:list, :integer}}, %{}},
+      <<254, 174, 164, 250>> =>
+        {[], {[:integer], {:variant, [tuple: [], tuple: [:address]]}}, %{}},
+      <<255, 232, 237, 108>> => {[:private], {[:any, :any], :any}, %{}}
+    }
+
+    hash_names = %{
+      <<4, 167, 206, 191>> => ".Utils.bool_to_string",
+      <<15, 89, 34, 233>> => "is_approved_for_all",
+      <<20, 55, 180, 56>> => "meta_info",
+      <<39, 89, 45, 234>> => "get_approved",
+      <<54, 189, 143, 3>> => ".Set.new",
+      <<66, 213, 125, 105>> => ".CollectionUniqueNFTs.require_contract_owner",
+      <<68, 214, 68, 31>> => "init",
+      <<72, 150, 48, 41>> => ".CollectionUniqueNFTs.require_authorized",
+      <<99, 148, 233, 122>> => "metadata",
+      <<101, 165, 224, 15>> => "Chain.event",
+      <<102, 66, 227, 51>> => "is_approved",
+      <<104, 18, 102, 160>> => "approve",
+      <<116, 218, 90, 49>> => ".Set.delete",
+      <<132, 161, 93, 161>> => "transfer",
+      <<146, 113, 210, 58>> => ".CollectionUniqueNFTs.remove_approval",
+      <<160, 2, 139, 120>> => ".List.map",
+      <<160, 55, 105, 6>> => ".Set.to_list",
+      <<162, 103, 192, 75>> => "approve_all",
+      <<170, 192, 194, 134>> => ".String.length",
+      <<177, 239, 193, 123>> => "burn",
+      <<180, 140, 22, 132>> => "balance",
+      <<184, 120, 21, 14>> => ".CollectionUniqueNFTs.invoke_nft_receiver",
+      <<207, 221, 154, 162>> => "mint",
+      <<208, 195, 108, 184>> => ".Set.insert",
+      <<219, 99, 117, 168>> => "total_supply",
+      <<222, 10, 63, 194>> => "aex141_extensions",
+      <<227, 243, 60, 8>> => ".Pair.fst",
+      <<234, 175, 198, 221>> => "get_owned_tokens",
+      <<254, 174, 164, 250>> => "owner",
+      <<255, 232, 237, 108>> => ".^2793"
+    }
+
+    functions =
+      cond do
+        remove_burn -> Map.delete(functions, <<177, 239, 193, 123>>)
+        wrong_burn -> Map.put(functions, <<177, 239, 193, 123>>, @wrong_burn)
+        true -> functions
+      end
+
+    functions =
+      cond do
+        remove_mint -> Map.delete(functions, <<207, 221, 154, 162>>)
+        wrong_mint -> Map.put(functions, <<207, 221, 154, 162>>, @wrong_mint)
+        true -> functions
+      end
+
+    {:fcode, functions, hash_names, %{}}
+  end
+
+  defp incomplete_base_nft_fcode do
+    {:fcode, functions, hash_names, %{}} = base_nft_fcode()
+
+    {:fcode, Map.delete(functions, <<20, 55, 180, 56>>), hash_names, %{}}
   end
 
   defp base_nft_fcode do
     {:fcode,
      %{
-       <<4, 167, 206, 191>> =>
-         {[:private], {[:boolean], :string},
-          %{
-            0 => [{:JUMPIF, {:arg, 0}, {:immediate, 2}}],
-            1 => [RETURNR: {:immediate, "false"}],
-            2 => [RETURNR: {:immediate, "true"}]
-          }},
-       <<15, 27, 134, 79>> =>
-         {[:private], {[], {:tuple, []}},
-          %{
-            0 => [
-              {:CALLER, {:stack, 0}},
-              {:EQ, {:stack, 0}, {:stack, 0}, {:var, -1}},
-              {:JUMPIF, {:stack, 0}, {:immediate, 2}}
-            ],
-            1 => [ABORT: {:immediate, "ONLY_CONTRACT_OWNER_CALL_ALLOWED"}],
-            2 => [RETURNR: {:immediate, {:tuple, {}}}]
-          }},
-       <<15, 89, 34, 233>> =>
-         {[], {[:address, :address], :boolean},
-          %{
-            0 => [
-              {:STORE, {:var, 0}, {:var, -9}},
-              {:MAP_MEMBER, {:stack, 0}, {:var, -9}, {:arg, 0}},
-              {:JUMPIF, {:stack, 0}, {:immediate, 8}}
-            ],
-            1 => [
-              {:PUSH, {:immediate, {:variant, [0, 1], 0, {}}}},
-              {:POP, {:var, 2}},
-              {:SWITCH_V2, {:var, 2}, {:immediate, 2}, {:immediate, 3}}
-            ],
-            2 => [RETURNR: {:immediate, false}],
-            3 => [
-              {:VARIANT_ELEMENT, {:var, 3}, {:var, 2}, {:immediate, 0}},
-              {:MAP_MEMBER, {:stack, 0}, {:var, 3}, {:arg, 1}},
-              {:JUMPIF, {:stack, 0}, {:immediate, 7}}
-            ],
-            4 => [
-              {:PUSH, {:immediate, {:variant, [0, 1], 0, {}}}},
-              {:POP, {:var, 5}},
-              {:SWITCH_V2, {:var, 5}, {:immediate, 5}, {:immediate, 6}}
-            ],
-            5 => [RETURNR: {:immediate, false}],
-            6 => [
-              {:VARIANT_ELEMENT, {:stack, 0}, {:var, 5}, {:immediate, 0}},
-              :RETURN
-            ],
-            7 => [
-              {:MAP_LOOKUP, {:stack, 0}, {:var, 3}, {:arg, 1}},
-              {:VARIANT, {:stack, 0}, {:immediate, [0, 1]}, {:immediate, 1}, {:immediate, 1}},
-              {:POP, {:var, 5}},
-              {:SWITCH_V2, {:var, 5}, {:immediate, 5}, {:immediate, 6}}
-            ],
-            8 => [
-              {:MAP_LOOKUP, {:stack, 0}, {:var, 0}, {:arg, 0}},
-              {:VARIANT, {:stack, 0}, {:immediate, [0, 1]}, {:immediate, 1}, {:immediate, 1}},
-              {:POP, {:var, 2}},
-              {:SWITCH_V2, {:var, 2}, {:immediate, 2}, {:immediate, 3}}
-            ]
-          }},
+       <<4, 167, 206, 191>> => {[:private], {[:boolean], :string}, %{}},
+       <<15, 27, 134, 79>> => {[:private], {[], {:tuple, []}}, %{}},
+       <<15, 89, 34, 233>> => {[], {[:address, :address], :boolean}, %{}},
        <<20, 55, 180, 56>> =>
          {[],
           {[],
@@ -94,47 +271,9 @@ defmodule AeMdw.AexnContractsTest do
               :string,
               {:variant, [tuple: [], tuple: [:string]]},
               {:variant, [tuple: [], tuple: [], tuple: [], tuple: []]}
-            ]}},
-          %{
-            0 => [
-              {:PUSH, {:var, -2}},
-              {:PUSH, {:var, -3}},
-              {:PUSH, {:var, -4}},
-              {:PUSH, {:var, -5}},
-              {:TUPLE, {:stack, 0}, {:immediate, 4}},
-              :RETURN
-            ]
-          }},
-       <<32, 4, 164, 216>> =>
-         {[:private], {[list: :string], :string},
-          %{
-            0 => [
-              {:IS_NIL, {:stack, 0}, {:arg, 0}},
-              {:JUMPIF, {:stack, 0}, {:immediate, 2}}
-            ],
-            1 => [
-              {:TL, {:stack, 0}, {:arg, 0}},
-              {:HD, {:stack, 0}, {:arg, 0}},
-              {:PUSH, {:immediate, {:tuple, {<<93, 142, 50, 216>>, {:tuple, {}}}}}},
-              {:CALL_T, {:immediate, <<94, 119, 225, 37>>}}
-            ],
-            2 => [RETURNR: {:immediate, ""}]
-          }},
-       <<39, 89, 45, 234>> =>
-         {[], {[:integer], {:variant, [tuple: [], tuple: [:address]]}},
-          %{
-            0 => [
-              {:STORE, {:var, 0}, {:var, -8}},
-              {:MAP_MEMBER, {:stack, 0}, {:var, -8}, {:arg, 0}},
-              {:JUMPIF, {:stack, 0}, {:immediate, 2}}
-            ],
-            1 => [RETURNR: {:immediate, {:variant, [0, 1], 0, {}}}],
-            2 => [
-              {:MAP_LOOKUP, {:stack, 0}, {:var, 0}, {:arg, 0}},
-              {:VARIANT, {:stack, 0}, {:immediate, [0, 1]}, {:immediate, 1}, {:immediate, 1}},
-              :RETURN
-            ]
-          }},
+            ]}}, %{}},
+       <<32, 4, 164, 216>> => {[:private], {[list: :string], :string}, %{}},
+       <<39, 89, 45, 234>> => {[], {[:integer], {:variant, [tuple: [], tuple: [:address]]}}, %{}},
        <<68, 214, 68, 31>> =>
          {[],
           {[
@@ -142,153 +281,20 @@ defmodule AeMdw.AexnContractsTest do
              :string,
              {:variant, [tuple: [], tuple: [:string]]},
              {:variant, [tuple: [], tuple: [], tuple: [], tuple: []]}
-           ], {:tuple, []}},
-          %{
-            0 => [
-              PUSH: {:immediate, 1},
-              PUSH: {:arg, 0},
-              CALL: {:immediate, <<170, 192, 194, 134>>}
-            ],
-            1 => [
-              {:EGT, {:stack, 0}, {:stack, 0}, {:stack, 0}},
-              {:JUMPIF, {:stack, 0}, {:immediate, 3}}
-            ],
-            2 => [ABORT: {:immediate, "STRING_TOO_SHORT_NAME"}],
-            3 => [
-              PUSH: {:immediate, 1},
-              PUSH: {:arg, 1},
-              CALL: {:immediate, <<170, 192, 194, 134>>}
-            ],
-            4 => [
-              {:EGT, {:stack, 0}, {:stack, 0}, {:stack, 0}},
-              {:JUMPIF, {:stack, 0}, {:immediate, 6}}
-            ],
-            5 => [ABORT: {:immediate, "STRING_TOO_SHORT_SYMBOL"}],
-            6 => [
-              {:CALLER, {:var, -1}},
-              {:STORE, {:var, -6}, {:immediate, %{}}},
-              {:STORE, {:var, -7}, {:immediate, %{}}},
-              {:STORE, {:var, -8}, {:immediate, %{}}},
-              {:STORE, {:var, -9}, {:immediate, %{}}},
-              {:STORE, {:var, -10}, {:immediate, %{}}},
-              {:STORE, {:var, -2}, {:arg, 0}},
-              {:STORE, {:var, -3}, {:arg, 1}},
-              {:STORE, {:var, -4}, {:arg, 2}},
-              {:STORE, {:var, -5}, {:arg, 3}},
-              {:STORE, {:var, -11}, {:immediate, false}},
-              {:RETURNR, {:immediate, {:tuple, {}}}}
-            ]
-          }},
+           ], {:tuple, []}}, %{}},
        <<80, 90, 158, 181>> =>
          {[:private],
           {[:address, :address, :integer, {:variant, [tuple: [], tuple: [:string]]}],
-           {:tuple, [:boolean, :boolean]}},
-          %{
-            0 => [
-              {:IS_CONTRACT, {:stack, 0}, {:arg, 1}},
-              {:JUMPIF, {:stack, 0}, {:immediate, 2}}
-            ],
-            1 => [RETURNR: {:immediate, {:tuple, {false, false}}}],
-            2 => [
-              {:PUSH, {:arg, 3}},
-              {:PUSH, {:arg, 2}},
-              {:PUSH, {:arg, 1}},
-              {:PUSH, {:arg, 0}},
-              {:GAS, {:stack, 0}},
-              {:PUSH, {:immediate, 0}},
-              {:ADDRESS_TO_CONTRACT, {:stack, 0}, {:arg, 1}},
-              {:CALL_PGR, {:stack, 0}, {:immediate, <<145, 178, 164, 152>>},
-               {:immediate,
-                {:typerep,
-                 {:tuple,
-                  [
-                    :address,
-                    :address,
-                    :integer,
-                    {:variant, [tuple: [], tuple: [:string]]}
-                  ]}}}, {:immediate, {:typerep, :boolean}}, {:stack, 0}, {:stack, 0},
-               {:immediate, true}}
-            ],
-            3 => [
-              {:POP, {:var, 2}},
-              {:SWITCH_V2, {:var, 2}, {:immediate, 4}, {:immediate, 5}}
-            ],
-            4 => [RETURNR: {:immediate, {:tuple, {true, false}}}],
-            5 => [
-              {:PUSH, {:immediate, true}},
-              {:VARIANT_ELEMENT, {:stack, 0}, {:var, 2}, {:immediate, 0}},
-              {:TUPLE, {:stack, 0}, {:immediate, 2}},
-              :RETURN
-            ]
-          }},
-       <<93, 142, 50, 216>> =>
-         {[:private], {[:any, :any, :any], :any},
-          %{0 => [{:STR_JOIN, {:stack, 0}, {:arg, 1}, {:arg, 2}}, :RETURN]}},
+           {:tuple, [:boolean, :boolean]}}, %{}},
+       <<93, 142, 50, 216>> => {[:private], {[:any, :any, :any], :any}, %{}},
        <<94, 119, 225, 37>> =>
-         {[:private], {[tuple: [:string, :any], tvar: 0, list: {:tvar, 1}], {:tvar, 0}},
-          %{
-            0 => [
-              {:IS_NIL, {:stack, 0}, {:arg, 2}},
-              {:JUMPIF, {:stack, 0}, {:immediate, 3}}
-            ],
-            1 => [
-              {:HD, {:stack, 0}, {:arg, 2}},
-              {:PUSH, {:arg, 1}},
-              {:ELEMENT, {:stack, 0}, {:immediate, 1}, {:arg, 0}},
-              {:ELEMENT, {:stack, 0}, {:immediate, 0}, {:arg, 0}},
-              {:CALL, {:stack, 0}}
-            ],
-            2 => [
-              {:POP, {:arg, 1}},
-              {:TL, {:arg, 2}, {:arg, 2}},
-              {:JUMP, {:immediate, 0}}
-            ],
-            3 => [RETURNR: {:arg, 1}]
-          }},
+         {[:private], {[tuple: [:string, :any], tvar: 0, list: {:tvar, 1}], {:tvar, 0}}, %{}},
        <<99, 80, 161, 92>> =>
          {[],
           {[
              :address,
              {:variant, [tuple: [:string], tuple: [{:map, :string, :string}]]}
-           ], {:tuple, []}},
-          %{
-            0 => [
-              {:EQ, {:stack, 0}, {:var, -11}, {:immediate, false}},
-              {:JUMPIF, {:stack, 0}, {:immediate, 2}}
-            ],
-            1 => [ABORT: {:immediate, "TOKEN_ALREADY_DEFINED"}],
-            2 => [CALL: {:immediate, <<15, 27, 134, 79>>}],
-            3 => [
-              {:POP, {:var, 9999}},
-              {:MAP_LOOKUPD, {:var, 15}, {:var, -7}, {:arg, 0}, {:immediate, 0}},
-              {:ADD, {:stack, 0}, {:var, 15}, {:immediate, 1}},
-              {:MAP_UPDATE, {:var, -7}, {:var, -7}, {:arg, 0}, {:stack, 0}},
-              {:MAP_UPDATE, {:var, -6}, {:var, -6}, {:immediate, 0}, {:arg, 0}},
-              {:MAP_UPDATE, {:var, -10}, {:var, -10}, {:immediate, 0}, {:arg, 1}},
-              {:STORE, {:var, -11}, {:immediate, true}},
-              {:PUSH, {:immediate, {:variant, [0, 1], 0, {}}}},
-              {:PUSH, {:immediate, 0}},
-              {:PUSH, {:arg, 0}},
-              {:ADDRESS, {:stack, 0}},
-              {:CALL, {:immediate, <<80, 90, 158, 181>>}}
-            ],
-            4 => [
-              {:POP, {:var, 29}},
-              {:ELEMENT, {:var, 30}, {:immediate, 0}, {:var, 29}},
-              {:ELEMENT, {:var, 31}, {:immediate, 1}, {:var, 29}},
-              {:JUMPIF, {:var, 30}, {:immediate, 7}}
-            ],
-            5 => [JUMP: {:immediate, 6}],
-            6 => [
-              {:ADDRESS, {:stack, 0}},
-              {:PUSH, {:arg, 0}},
-              {:PUSH, {:immediate, 0}},
-              {:VARIANT, {:stack, 0}, {:immediate, [3, 4, 3]}, {:immediate, 0}, {:immediate, 3}},
-              {:CALL_T, {:immediate, <<101, 165, 224, 15>>}}
-            ],
-            7 => [{:JUMPIF, {:var, 31}, {:immediate, 6}}],
-            8 => [ABORT: {:immediate, "SAFE_MINT_FAILED"}]
-          }},
+           ], {:tuple, []}}, %{}},
        <<99, 148, 233, 122>> =>
          {[],
           {[:integer],
@@ -296,61 +302,7 @@ defmodule AeMdw.AexnContractsTest do
             [
               tuple: [],
               tuple: [variant: [tuple: [:string], tuple: [{:map, :string, :string}]]]
-            ]}},
-          %{
-            0 => [
-              {:STORE, {:var, 0}, {:var, -10}},
-              {:MAP_MEMBER, {:stack, 0}, {:var, -10}, {:arg, 0}},
-              {:JUMPIF, {:stack, 0}, {:immediate, 11}}
-            ],
-            1 => [
-              {:PUSH, {:immediate, {:variant, [0, 1], 0, {}}}},
-              {:POP, {:var, 2}},
-              {:SWITCH_V2, {:var, 2}, {:immediate, 2}, {:immediate, 3}}
-            ],
-            2 => [RETURNR: {:immediate, {:variant, [0, 1], 0, {}}}],
-            3 => [
-              {:VARIANT_ELEMENT, {:var, 3}, {:var, 2}, {:immediate, 0}},
-              {:EQ, {:stack, 0}, {:var, -5}, {:immediate, {:variant, [0, 0, 0, 0], 0, {}}}},
-              {:JUMPIF, {:stack, 0}, {:immediate, 5}}
-            ],
-            4 => [
-              {:PUSH, {:var, 3}},
-              {:VARIANT, {:stack, 0}, {:immediate, [0, 1]}, {:immediate, 1}, {:immediate, 1}},
-              :RETURN
-            ],
-            5 => [
-              {:STORE, {:var, 6}, {:var, -4}},
-              {:SWITCH_V2, {:var, -4}, {:immediate, 6}, {:immediate, 7}}
-            ],
-            6 => [
-              {:PUSH, {:var, 3}},
-              {:VARIANT, {:stack, 0}, {:immediate, [0, 1]}, {:immediate, 1}, {:immediate, 1}},
-              :RETURN
-            ],
-            7 => [
-              {:VARIANT_ELEMENT, {:var, 7}, {:var, 6}, {:immediate, 0}},
-              {:SWITCH_V2, {:var, 3}, {:immediate, 9}, {:immediate, 8}}
-            ],
-            8 => [ABORT: {:immediate, "Incomplete patterns"}],
-            9 => [
-              {:VARIANT_ELEMENT, {:var, 8}, {:var, 3}, {:immediate, 0}},
-              {:CONS, {:stack, 0}, {:var, 8}, {:immediate, []}},
-              {:CONS, {:stack, 0}, {:var, 7}, {:stack, 0}},
-              {:CALL, {:immediate, <<32, 4, 164, 216>>}}
-            ],
-            10 => [
-              {:VARIANT, {:stack, 0}, {:immediate, [1, 1]}, {:immediate, 0}, {:immediate, 1}},
-              {:VARIANT, {:stack, 0}, {:immediate, [0, 1]}, {:immediate, 1}, {:immediate, 1}},
-              :RETURN
-            ],
-            11 => [
-              {:MAP_LOOKUP, {:stack, 0}, {:var, 0}, {:arg, 0}},
-              {:VARIANT, {:stack, 0}, {:immediate, [0, 1]}, {:immediate, 1}, {:immediate, 1}},
-              {:POP, {:var, 2}},
-              {:SWITCH_V2, {:var, 2}, {:immediate, 2}, {:immediate, 3}}
-            ]
-          }},
+            ]}}, %{}},
        <<101, 165, 224, 15>> =>
          {[:private],
           {[
@@ -359,288 +311,24 @@ defmodule AeMdw.AexnContractsTest do
                tuple: [:address, :address, :integer, :string],
                tuple: [:address, :address, :string]
              ]
-           ], {:tuple, []}},
-          %{
-            0 => [
-              {:SWITCH_V3, {:arg, 0}, {:immediate, 1}, {:immediate, 2}, {:immediate, 3}}
-            ],
-            1 => [
-              {:VARIANT_ELEMENT, {:var, 0}, {:arg, 0}, {:immediate, 0}},
-              {:VARIANT_ELEMENT, {:var, 1}, {:arg, 0}, {:immediate, 1}},
-              {:VARIANT_ELEMENT, {:var, 2}, {:arg, 0}, {:immediate, 2}},
-              {:LOG4, {:immediate, ""},
-               {:immediate,
-                {:bytes,
-                 <<34, 60, 57, 226, 157, 255, 100, 103, 254, 221, 160, 151, 88, 217, 23, 129, 197,
-                   55, 46, 9, 31, 248, 107, 58, 249, 227, 16, 227, 134, 86, 43, 239>>}},
-               {:var, 0}, {:var, 1}, {:var, 2}},
-              {:RETURNR, {:immediate, {:tuple, {}}}}
-            ],
-            2 => [
-              {:VARIANT_ELEMENT, {:var, 0}, {:arg, 0}, {:immediate, 0}},
-              {:VARIANT_ELEMENT, {:var, 1}, {:arg, 0}, {:immediate, 1}},
-              {:VARIANT_ELEMENT, {:var, 2}, {:arg, 0}, {:immediate, 2}},
-              {:VARIANT_ELEMENT, {:var, 3}, {:arg, 0}, {:immediate, 3}},
-              {:LOG4, {:var, 3},
-               {:immediate,
-                {:bytes,
-                 <<217, 134, 199, 174, 182, 35, 122, 0, 47, 198, 63, 243, 175, 240, 113, 48, 118,
-                   12, 83, 92, 166, 189, 207, 252, 14, 15, 209, 191, 45, 34, 92, 218>>}},
-               {:var, 0}, {:var, 1}, {:var, 2}},
-              {:RETURNR, {:immediate, {:tuple, {}}}}
-            ],
-            3 => [
-              {:VARIANT_ELEMENT, {:var, 0}, {:arg, 0}, {:immediate, 0}},
-              {:VARIANT_ELEMENT, {:var, 1}, {:arg, 0}, {:immediate, 1}},
-              {:VARIANT_ELEMENT, {:var, 2}, {:arg, 0}, {:immediate, 2}},
-              {:LOG3, {:var, 2},
-               {:immediate,
-                {:bytes,
-                 <<108, 111, 71, 26, 61, 180, 206, 14, 183, 131, 70, 177, 193, 62, 152, 222, 97,
-                   20, 182, 70, 187, 17, 93, 182, 53, 129, 148, 151, 124, 100, 218, 139>>}},
-               {:var, 0}, {:var, 1}},
-              {:RETURNR, {:immediate, {:tuple, {}}}}
-            ]
-          }},
-       <<102, 66, 227, 51>> =>
-         {[], {[:integer, :address], :boolean},
-          %{
-            0 => [
-              {:STORE, {:var, 0}, {:var, -8}},
-              {:MAP_MEMBER, {:stack, 0}, {:var, -8}, {:arg, 0}},
-              {:JUMPIF, {:stack, 0}, {:immediate, 4}}
-            ],
-            1 => [
-              {:PUSH, {:immediate, {:variant, [0, 1], 0, {}}}},
-              {:POP, {:var, 2}},
-              {:SWITCH_V2, {:var, 2}, {:immediate, 2}, {:immediate, 3}}
-            ],
-            2 => [RETURNR: {:immediate, false}],
-            3 => [
-              {:VARIANT_ELEMENT, {:var, 3}, {:var, 2}, {:immediate, 0}},
-              {:EQ, {:stack, 0}, {:var, 3}, {:arg, 1}},
-              :RETURN
-            ],
-            4 => [
-              {:MAP_LOOKUP, {:stack, 0}, {:var, 0}, {:arg, 0}},
-              {:VARIANT, {:stack, 0}, {:immediate, [0, 1]}, {:immediate, 1}, {:immediate, 1}},
-              {:POP, {:var, 2}},
-              {:SWITCH_V2, {:var, 2}, {:immediate, 2}, {:immediate, 3}}
-            ]
-          }},
-       <<104, 18, 102, 160>> =>
-         {[], {[:address, :integer, :boolean], {:tuple, []}},
-          %{
-            0 => [PUSH: {:arg, 1}, CALL: {:immediate, <<252, 217, 167, 216>>}],
-            1 => [{:POP, {:var, 9999}}, {:JUMPIF, {:arg, 2}, {:immediate, 6}}],
-            2 => [PUSH: {:arg, 1}, CALL: {:immediate, <<189, 73, 253, 99>>}],
-            3 => [JUMP: {:immediate, 4}],
-            4 => [
-              {:POP, {:var, 9999}},
-              {:STORE, {:var, 2}, {:var, -6}},
-              {:MAP_LOOKUP, {:stack, 0}, {:var, 2}, {:arg, 1}},
-              {:PUSH, {:arg, 0}},
-              {:PUSH, {:arg, 1}},
-              {:PUSH, {:arg, 2}},
-              {:CALL, {:immediate, <<4, 167, 206, 191>>}}
-            ],
-            5 => [
-              {:VARIANT, {:stack, 0}, {:immediate, [3, 4, 3]}, {:immediate, 1}, {:immediate, 4}},
-              {:CALL_T, {:immediate, <<101, 165, 224, 15>>}}
-            ],
-            6 => [
-              {:MAP_UPDATE, {:var, -8}, {:var, -8}, {:arg, 1}, {:arg, 0}},
-              {:PUSH, {:immediate, {:tuple, {}}}},
-              {:JUMP, {:immediate, 4}}
-            ]
-          }},
-       <<112, 189, 49, 130>> =>
-         {[:private], {[:integer, :address], {:tuple, []}},
-          %{
-            0 => [
-              PUSH: {:arg, 1},
-              PUSH: {:arg, 0},
-              CALL: {:immediate, <<180, 143, 200, 18>>}
-            ],
-            1 => [{:JUMPIF, {:stack, 0}, {:immediate, 3}}],
-            2 => [ABORT: {:immediate, "ONLY_OWNER_CALL_ALLOWED"}],
-            3 => [RETURNR: {:immediate, {:tuple, {}}}]
-          }},
+           ], {:tuple, []}}, %{}},
+       <<102, 66, 227, 51>> => {[], {[:integer, :address], :boolean}, %{}},
+       <<104, 18, 102, 160>> => {[], {[:address, :integer, :boolean], {:tuple, []}}, %{}},
+       <<112, 189, 49, 130>> => {[:private], {[:integer, :address], {:tuple, []}}, %{}},
        <<132, 161, 93, 161>> =>
          {[],
           {[:address, :address, :integer, {:variant, [tuple: [], tuple: [:string]]}],
-           {:tuple, []}},
-          %{
-            0 => [PUSH: {:arg, 2}, CALL: {:immediate, <<252, 217, 167, 216>>}],
-            1 => [
-              POP: {:var, 9999},
-              PUSH: {:arg, 0},
-              PUSH: {:arg, 2},
-              CALL: {:immediate, <<112, 189, 49, 130>>}
-            ],
-            2 => [
-              POP: {:var, 9999},
-              PUSH: {:arg, 2},
-              CALL: {:immediate, <<189, 73, 253, 99>>}
-            ],
-            3 => [
-              {:POP, {:var, 9999}},
-              {:STORE, {:var, 9}, {:var, -7}},
-              {:MAP_LOOKUP, {:var, 14}, {:var, 9}, {:arg, 0}},
-              {:MAP_LOOKUPD, {:var, 15}, {:var, 9}, {:arg, 1}, {:immediate, 0}},
-              {:SUB, {:stack, 0}, {:var, 14}, {:immediate, 1}},
-              {:ADD, {:stack, 0}, {:var, 15}, {:immediate, 1}},
-              {:MAP_UPDATE, {:stack, 0}, {:var, 9}, {:arg, 1}, {:stack, 0}},
-              {:MAP_UPDATE, {:var, -7}, {:stack, 0}, {:arg, 0}, {:stack, 0}},
-              {:MAP_UPDATE, {:var, -6}, {:var, -6}, {:arg, 2}, {:arg, 1}},
-              {:PUSH, {:arg, 3}},
-              {:PUSH, {:arg, 2}},
-              {:PUSH, {:arg, 1}},
-              {:PUSH, {:arg, 0}},
-              {:CALL, {:immediate, <<80, 90, 158, 181>>}}
-            ],
-            4 => [
-              {:POP, {:var, 29}},
-              {:ELEMENT, {:var, 30}, {:immediate, 0}, {:var, 29}},
-              {:ELEMENT, {:var, 31}, {:immediate, 1}, {:var, 29}},
-              {:JUMPIF, {:var, 30}, {:immediate, 7}}
-            ],
-            5 => [JUMP: {:immediate, 6}],
-            6 => [
-              {:PUSH, {:arg, 0}},
-              {:PUSH, {:arg, 1}},
-              {:PUSH, {:arg, 2}},
-              {:VARIANT, {:stack, 0}, {:immediate, [3, 4, 3]}, {:immediate, 0}, {:immediate, 3}},
-              {:CALL_T, {:immediate, <<101, 165, 224, 15>>}}
-            ],
-            7 => [{:JUMPIF, {:var, 31}, {:immediate, 6}}],
-            8 => [ABORT: {:immediate, "SAFE_TRANSFER_FAILED"}]
-          }},
-       <<162, 103, 192, 75>> =>
-         {[], {[:address, :boolean], {:tuple, []}},
-          %{
-            0 => [
-              {:STORE, {:var, 10}, {:immediate, %{}}},
-              {:STORE, {:var, 11}, {:immediate, %{}}},
-              {:MAP_UPDATE, {:stack, 0}, {:var, 11}, {:arg, 0}, {:arg, 1}},
-              {:CALLER, {:stack, 0}},
-              {:MAP_UPDATE, {:var, -9}, {:var, 10}, {:stack, 0}, {:stack, 0}},
-              {:CALLER, {:stack, 0}},
-              {:PUSH, {:arg, 0}},
-              {:PUSH, {:arg, 1}},
-              {:CALL, {:immediate, <<4, 167, 206, 191>>}}
-            ],
-            1 => [
-              {:VARIANT, {:stack, 0}, {:immediate, [3, 4, 3]}, {:immediate, 2}, {:immediate, 3}},
-              {:CALL_T, {:immediate, <<101, 165, 224, 15>>}}
-            ]
-          }},
-       <<170, 192, 194, 134>> =>
-         {[:private], {[:string], :integer},
-          %{0 => [{:STR_LENGTH, {:stack, 0}, {:arg, 0}}, :RETURN]}},
+           {:tuple, []}}, %{}},
+       <<162, 103, 192, 75>> => {[], {[:address, :boolean], {:tuple, []}}, %{}},
+       <<170, 192, 194, 134>> => {[:private], {[:string], :integer}, %{}},
        <<180, 140, 22, 132>> =>
-         {[], {[:address], {:variant, [tuple: [], tuple: [:integer]]}},
-          %{
-            0 => [
-              {:STORE, {:var, 0}, {:var, -7}},
-              {:MAP_MEMBER, {:stack, 0}, {:var, -7}, {:arg, 0}},
-              {:JUMPIF, {:stack, 0}, {:immediate, 2}}
-            ],
-            1 => [RETURNR: {:immediate, {:variant, [0, 1], 0, {}}}],
-            2 => [
-              {:MAP_LOOKUP, {:stack, 0}, {:var, 0}, {:arg, 0}},
-              {:VARIANT, {:stack, 0}, {:immediate, [0, 1]}, {:immediate, 1}, {:immediate, 1}},
-              :RETURN
-            ]
-          }},
-       <<180, 143, 200, 18>> =>
-         {[:private], {[:integer, :address], :boolean},
-          %{
-            0 => [
-              {:STORE, {:var, 0}, {:var, -6}},
-              {:MAP_MEMBER, {:stack, 0}, {:var, -6}, {:arg, 0}},
-              {:JUMPIF, {:stack, 0}, {:immediate, 4}}
-            ],
-            1 => [
-              {:PUSH, {:immediate, {:variant, [0, 1], 0, {}}}},
-              {:POP, {:var, 2}},
-              {:SWITCH_V2, {:var, 2}, {:immediate, 2}, {:immediate, 3}}
-            ],
-            2 => [RETURNR: {:immediate, false}],
-            3 => [
-              {:VARIANT_ELEMENT, {:var, 3}, {:var, 2}, {:immediate, 0}},
-              {:EQ, {:stack, 0}, {:var, 3}, {:arg, 1}},
-              :RETURN
-            ],
-            4 => [
-              {:MAP_LOOKUP, {:stack, 0}, {:var, 0}, {:arg, 0}},
-              {:VARIANT, {:stack, 0}, {:immediate, [0, 1]}, {:immediate, 1}, {:immediate, 1}},
-              {:POP, {:var, 2}},
-              {:SWITCH_V2, {:var, 2}, {:immediate, 2}, {:immediate, 3}}
-            ]
-          }},
-       <<189, 73, 253, 99>> =>
-         {[:private], {[:integer], {:tuple, []}},
-          %{
-            0 => [
-              {:MAP_MEMBER, {:stack, 0}, {:var, -8}, {:arg, 0}},
-              {:JUMPIF, {:stack, 0}, {:immediate, 2}}
-            ],
-            1 => [RETURNR: {:immediate, {:tuple, {}}}],
-            2 => [
-              {:MAP_DELETE, {:var, -8}, {:var, -8}, {:arg, 0}},
-              {:RETURNR, {:immediate, {:tuple, {}}}}
-            ]
-          }},
+         {[], {[:address], {:variant, [tuple: [], tuple: [:integer]]}}, %{}},
+       <<180, 143, 200, 18>> => {[:private], {[:integer, :address], :boolean}, %{}},
+       <<189, 73, 253, 99>> => {[:private], {[:integer], {:tuple, []}}, %{}},
        <<222, 10, 63, 194>> => {[], {[], {:list, :string}}, %{0 => [RETURNR: {:immediate, []}]}},
-       <<252, 217, 167, 216>> =>
-         {[:private], {[:integer], {:tuple, []}},
-          %{
-            0 => [PUSH: {:arg, 0}, CALL: {:immediate, <<254, 174, 164, 250>>}],
-            1 => [
-              {:POP, {:var, 0}},
-              {:SWITCH_V2, {:var, 0}, {:immediate, 12}, {:immediate, 2}}
-            ],
-            2 => [
-              {:VARIANT_ELEMENT, {:var, 1}, {:var, 0}, {:immediate, 0}},
-              {:CALLER, {:stack, 0}},
-              {:EQ, {:stack, 0}, {:stack, 0}, {:var, 1}},
-              {:JUMPIF, {:stack, 0}, {:immediate, 11}}
-            ],
-            3 => [
-              CALLER: {:stack, 0},
-              PUSH: {:arg, 0},
-              CALL: {:immediate, <<102, 66, 227, 51>>}
-            ],
-            4 => [{:JUMPIF, {:stack, 0}, {:immediate, 9}}],
-            5 => [
-              CALLER: {:stack, 0},
-              PUSH: {:var, 1},
-              CALL: {:immediate, <<15, 89, 34, 233>>}
-            ],
-            6 => [JUMP: {:immediate, 7}],
-            7 => [{:JUMPIF, {:stack, 0}, {:immediate, 10}}],
-            8 => [ABORT: {:immediate, "ONLY_OWNER_APPROVED_OR_OPERATOR_CALL_ALLOWED"}],
-            9 => [PUSH: {:immediate, true}, JUMP: {:immediate, 7}],
-            10 => [RETURNR: {:immediate, {:tuple, {}}}],
-            11 => [PUSH: {:immediate, true}, JUMP: {:immediate, 7}],
-            12 => [ABORT: {:immediate, "INVALID_TOKEN_ID"}]
-          }},
+       <<252, 217, 167, 216>> => {[:private], {[:integer], {:tuple, []}}, %{}},
        <<254, 174, 164, 250>> =>
-         {[], {[:integer], {:variant, [tuple: [], tuple: [:address]]}},
-          %{
-            0 => [
-              {:STORE, {:var, 0}, {:var, -6}},
-              {:MAP_MEMBER, {:stack, 0}, {:var, -6}, {:arg, 0}},
-              {:JUMPIF, {:stack, 0}, {:immediate, 2}}
-            ],
-            1 => [RETURNR: {:immediate, {:variant, [0, 1], 0, {}}}],
-            2 => [
-              {:MAP_LOOKUP, {:stack, 0}, {:var, 0}, {:arg, 0}},
-              {:VARIANT, {:stack, 0}, {:immediate, [0, 1]}, {:immediate, 1}, {:immediate, 1}},
-              :RETURN
-            ]
-          }}
+         {[], {[:integer], {:variant, [tuple: [], tuple: [:address]]}}, %{}}
      },
      %{
        <<4, 167, 206, 191>> => ".Utils.bool_to_string",
