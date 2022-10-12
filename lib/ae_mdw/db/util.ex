@@ -16,7 +16,6 @@ defmodule AeMdw.Db.Util do
 
   @typep state() :: State.t()
   @typep height() :: Blocks.height()
-  @typep direction() :: Collection.direction()
 
   @spec read_tx!(state(), Txs.txi()) :: Model.tx()
   def read_tx!(state, txi), do: State.fetch!(state, Model.Tx, txi)
@@ -84,13 +83,11 @@ defmodule AeMdw.Db.Util do
     end
   end
 
-  @spec first_gen_to_txi(state(), height(), direction()) :: height()
-  def first_gen_to_txi(state, first_gen, :forward), do: gen_to_txi(state, first_gen)
-  def first_gen_to_txi(state, first_gen, :backward), do: gen_to_txi(state, first_gen + 1) - 1
+  @spec first_gen_to_txi(state(), height()) :: height()
+  def first_gen_to_txi(state, first_gen), do: gen_to_txi(state, first_gen)
 
-  @spec last_gen_to_txi(state(), height(), direction()) :: height()
-  def last_gen_to_txi(state, last_gen, :forward), do: gen_to_txi(state, last_gen + 1) - 1
-  def last_gen_to_txi(state, last_gen, :backward), do: gen_to_txi(state, last_gen)
+  @spec last_gen_to_txi(state(), height()) :: height()
+  def last_gen_to_txi(state, last_gen), do: gen_to_txi(state, last_gen + 1) - 1
 
   @spec txi_to_gen(state(), Txs.txi()) :: Blocks.height()
   def txi_to_gen(state, txi) do

@@ -107,22 +107,21 @@ defmodule AeMdw.Txs do
     types = query |> Map.get(:types, MapSet.new()) |> MapSet.to_list()
     cursor = deserialize_cursor(cursor)
 
+    scope =
+      case range do
+        {:gen, first_gen..last_gen} ->
+          {DbUtil.first_gen_to_txi(state, first_gen), DbUtil.last_gen_to_txi(state, last_gen)}
+
+        {:txi, first_txi..last_txi} ->
+          {first_txi, last_txi}
+
+        nil ->
+          nil
+      end
+
     try do
       {prev_cursor, txis, next_cursor} =
         fn direction ->
-          scope =
-            case range do
-              {:gen, %Range{first: first_gen, last: last_gen}} ->
-                {DbUtil.first_gen_to_txi(state, first_gen, direction),
-                 DbUtil.last_gen_to_txi(state, last_gen, direction)}
-
-              {:txi, %Range{first: first_txi, last: last_txi}} ->
-                {first_txi, last_txi}
-
-              nil ->
-                nil
-            end
-
           state
           |> build_streams(ids, types, scope, cursor, direction)
           |> Collection.merge(direction)

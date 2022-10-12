@@ -90,8 +90,8 @@ defmodule AeMdw.Activities do
               {:gen, first_gen..last_gen} ->
                 {
                   {first_gen, last_gen},
-                  {DbUtil.first_gen_to_txi(state, first_gen, direction),
-                   DbUtil.last_gen_to_txi(state, last_gen, direction)}
+                  {DbUtil.first_gen_to_txi(state, first_gen),
+                   DbUtil.last_gen_to_txi(state, last_gen)}
                 }
 
               nil ->
@@ -210,7 +210,7 @@ defmodule AeMdw.Activities do
       |> Collection.stream(Model.TargetKindIntTransferTx, direction, key_boundary, cursor)
       |> Stream.filter(&match?({^account_pk, ^kind, {_height, -1}, _ref_txi}, &1))
       |> Stream.map(fn {^account_pk, ^kind, {height, -1}, ref_txi} ->
-        {height, {:int_transfer, account_pk, kind, ref_txi}}
+        {height, {:int_transfer, kind, ref_txi}}
       end)
     end)
     |> Collection.merge(direction)
