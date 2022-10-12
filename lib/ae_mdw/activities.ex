@@ -7,6 +7,7 @@ defmodule AeMdw.Activities do
   alias AeMdw.Blocks
   alias AeMdw.Collection
   alias AeMdw.Db.Format
+  alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
@@ -36,13 +37,16 @@ defmodule AeMdw.Activities do
            | {:int_contract_call, non_neg_integer()}
            | {:aexn, AexnTokens.aexn_type(), Db.pubkey(), Db.pubkey(), non_neg_integer(),
               non_neg_integer()}
+           | {:int_transfer, IntTransfer.kind(), Txs.txi()}
 
   @max_pos 4
   @min_int Util.min_int()
   @max_int Util.max_int()
   @min_bin Util.min_bin()
   @max_bin Util.max_256bit_bin()
+
   @aexn_types ~w(aex9 aex141)a
+  @kinds ~w(accounts_extra_lima accounts_fortuna accounts_genesis accounts_lima accounts_minerva contracts_lima reward_dev reward_block)
 
   @doc """
   Activities related to an account are those that affect the account in any way.
@@ -68,10 +72,11 @@ defmodule AeMdw.Activities do
 
   These are a few examples of different activities that the build_*_stream functions would return:
 
-  * `{{10, -1, 0}, :block_mined}` - The first activity belonging to the key block 10.
-  * `{{10, 40, 0}, {:field, :spend_tx, 1}}` - The first activity belonging to the transaction with txi 40 (from height 10),
+  * `{{5, 40, 0}, {:field, :spend_tx, 1}}` - The first activity belonging to the transaction with txi 40 (from height 10),
      where the first field of the spend transaction is the account's being queried.
-
+  * `{{10, 20, 20}, {:int_contract_call, pos}}` - Where `pos` is the field position for the address of the internal contract call.
+  * `{{20, 14, 30}, {:aexn, type, <<address-1>>, <<address-2>>, value, index}}` - Where a aexn token of type `type` was send from address-1 to address-2 with the given `value` and `index`.
+  * `{{30, -1, 2}, {:int_transfer, address, kind, ref_txi}}` - Where an internal transfer of kind `kind` ocurred to the given `address`.
   """
   @spec fetch_account_activities(state(), binary(), pagination(), range(), query(), cursor()) ::
           {:ok, activity() | nil, [activity()], activity() | nil} | {:error, Error.t()}
@@ -80,7 +85,7 @@ defmodule AeMdw.Activities do
          {:ok, cursor} <- deserialize_cursor(cursor) do
       {prev_cursor, activities_locators_data, next_cursor} =
         fn direction ->
-          {txi_scope, gen_scope} =
+          {gen_scope, txi_scope} =
             case range do
               {:gen, first_gen..last_gen} ->
                 {
@@ -93,13 +98,17 @@ defmodule AeMdw.Activities do
                 {nil, nil}
             end
 
-          {txi_cursor, local_idx_cursor} =
+          {gen_cursor, txi_cursor, local_idx_cursor} =
             case cursor do
-              {_height, txi, local_idx} -> {txi, local_idx}
-              nil -> {nil, nil}
+              {height, txi, local_idx} -> {height, txi, local_idx}
+              nil -> {nil, nil, nil}
             end
 
-          gens_stream = build_gens_stream(state, direction, account_pk, gen_scope, cursor)
+          gens_stream =
+            state
+            |> build_int_transfers_stream(direction, account_pk, gen_scope, gen_cursor)
+            |> Stream.chunk_by(fn {gen, _data} -> gen end)
+            |> build_gens_stream(direction)
 
           txi_stream =
             [
@@ -121,17 +130,23 @@ defmodule AeMdw.Activities do
               build_aexn_transfers_stream(state, direction, account_pk, txi_scope, txi_cursor)
             ]
             |> Collection.merge(direction)
-            |> Stream.chunk_by(&elem(&1, 0))
+            |> Stream.chunk_by(fn {txi, _data} -> txi end)
             |> build_txi_stream(state, direction)
 
           stream = Collection.merge([gens_stream, txi_stream], direction)
 
           if local_idx_cursor do
             Stream.drop_while(stream, fn
-              {{_height, ^txi_cursor, local_idx}, _data} when direction == :forward ->
+              {{^gen_cursor, txi, _local_idx}, _data} when direction == :forward ->
+                txi < txi_cursor
+
+              {{^gen_cursor, ^txi_cursor, local_idx}, _data} when direction == :forward ->
                 local_idx < local_idx_cursor
 
-              {{_height, ^txi_cursor, local_idx}, _data} when direction == :backward ->
+              {{^gen_cursor, txi, _local_idx}, _data} when direction == :backward ->
+                txi > txi_cursor
+
+              {{^gen_cursor, ^txi_cursor, local_idx}, _data} when direction == :backward ->
                 local_idx > local_idx_cursor
 
               _activity_pair ->
@@ -145,15 +160,60 @@ defmodule AeMdw.Activities do
 
       events =
         Enum.map(activities_locators_data, fn {{height, txi, _local_idx}, data} ->
-          render(state, height, txi, data)
+          render(state, account_pk, height, txi, data)
         end)
 
       {:ok, serialize_cursor(prev_cursor), events, serialize_cursor(next_cursor)}
     end
   end
 
-  defp build_gens_stream(_state, _direction, _account_pk, _gen_scope, _cursor) do
-    []
+  defp build_gens_stream(gen_activities, direction) do
+    Stream.flat_map(gen_activities, fn [{height, _data} | _rest] = chunk ->
+      gen_events =
+        chunk
+        |> Enum.with_index()
+        |> Enum.map(fn {{^height, data}, local_idx} -> {{height, -1, local_idx}, data} end)
+
+      if direction == :forward do
+        gen_events
+      else
+        Enum.reverse(gen_events)
+      end
+    end)
+  end
+
+  defp build_int_transfers_stream(state, direction, account_pk, gen_scope, gen_cursor) do
+    @kinds
+    |> Enum.map(fn kind ->
+      key_boundary =
+        case gen_scope do
+          {first_gen, last_gen} ->
+            {
+              {account_pk, kind, {first_gen, -1}, @min_int},
+              {account_pk, kind, {last_gen, -1}, @max_int}
+            }
+
+          nil ->
+            {
+              {account_pk, kind, {@min_int, -1}, @min_int},
+              {account_pk, kind, {@max_int, -1}, @max_int}
+            }
+        end
+
+      cursor =
+        case gen_cursor do
+          nil -> nil
+          gen -> {account_pk, kind, {gen, -1}, -1}
+        end
+
+      state
+      |> Collection.stream(Model.TargetKindIntTransferTx, direction, key_boundary, cursor)
+      |> Stream.filter(&match?({^account_pk, ^kind, {_height, -1}, _ref_txi}, &1))
+      |> Stream.map(fn {^account_pk, ^kind, {height, -1}, ref_txi} ->
+        {height, {:int_transfer, account_pk, kind, ref_txi}}
+      end)
+    end)
+    |> Collection.merge(direction)
   end
 
   defp build_ext_contract_calls_stream(state, direction, account_pk, txi_scope, txi_cursor) do
@@ -304,8 +364,8 @@ defmodule AeMdw.Activities do
     end)
   end
 
-  @spec render(state(), height(), txi(), activity_value()) :: map()
-  defp render(state, height, txi, {:field, tx_type, _tx_pos}) do
+  @spec render(state(), Db.pubkey(), height(), txi(), activity_value()) :: map()
+  defp render(state, _account_pk, height, txi, {:field, tx_type, _tx_pos}) do
     tx = state |> Txs.fetch!(txi) |> Map.delete("tx_index")
 
     %{
@@ -315,7 +375,7 @@ defmodule AeMdw.Activities do
     }
   end
 
-  defp render(state, height, call_txi, {:int_contract_call, local_idx}) do
+  defp render(state, _account_pk, height, call_txi, {:int_contract_call, local_idx}) do
     payload =
       state
       |> Format.to_map({call_txi, local_idx}, Model.IntContractCall)
@@ -328,7 +388,7 @@ defmodule AeMdw.Activities do
     }
   end
 
-  defp render(state, height, txi, {:aexn, :aex9, from_pk, to_pk, value, index}) do
+  defp render(state, _account_pk, height, txi, {:aexn, :aex9, from_pk, to_pk, value, index}) do
     %{
       height: height,
       type: "Aex9TransferEvent",
@@ -336,7 +396,24 @@ defmodule AeMdw.Activities do
     }
   end
 
-  defp render(state, height, txi, {:aexn, :aex141, from_pk, to_pk, value, index}) do
+  defp render(state, account_pk, height, txi, {:int_transfer, kind, ref_txi}) do
+    transfer_key = {{height, txi}, kind, account_pk, ref_txi}
+    m_transfer = State.fetch!(state, Model.IntTransferTx, transfer_key)
+    amount = Model.int_transfer_tx(m_transfer, :amount)
+    ref_tx_hash = if ref_txi >= 0, do: Enc.encode(:tx_hash, Txs.txi_to_hash(state, ref_txi))
+
+    %{
+      height: height,
+      type: "InternalTransferEvent",
+      payload: %{
+        amount: amount,
+        kind: kind,
+        ref_tx_hash: ref_tx_hash
+      }
+    }
+  end
+
+  defp render(state, _account_pk, height, txi, {:aexn, :aex141, from_pk, to_pk, value, index}) do
     %{
       height: height,
       type: "Aex141TransferEvent",

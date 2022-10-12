@@ -18,7 +18,7 @@ defmodule AeMdw.Db.IntTransfer do
   alias AeMdw.Node.Db
 
   # @type kind() :: "fee_lock_name" | "fee_refund_name" | "fee_spend_name" |
-  #                 "reward_block" | "reward_dev" | "reward_oracle
+  #                 "reward_block" | "reward_dev" | "reward_oracle"
   @type kind() :: binary()
   @type target() :: Db.pubkey()
   @type ref_txi() :: Txs.txi() | -1
