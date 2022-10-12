@@ -128,7 +128,7 @@ defmodule AeMdwWeb.TxController do
   defp extract_group("type", val, group) do
     case Validate.tx_type(val) do
       {:ok, type} -> {:ok, MapSet.put(group, type)}
-      {:error, {err_kind, offender}} -> {:error, AeMdw.Error.to_string(err_kind, offender)}
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -137,8 +137,8 @@ defmodule AeMdwWeb.TxController do
       {:ok, new_group} ->
         {:ok, new_group |> Node.tx_group() |> MapSet.new() |> MapSet.union(group)}
 
-      {:error, {err_kind, offender}} ->
-        {:error, AeMdw.Error.to_string(err_kind, offender)}
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -149,7 +149,7 @@ defmodule AeMdwWeb.TxController do
       {:ok, MapSet.put(group, {key, validator.(val)})}
     rescue
       err in [AeMdw.Error.Input] ->
-        {:error, err.message}
+        {:error, err}
     end
   end
 end
