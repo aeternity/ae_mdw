@@ -79,6 +79,38 @@ defmodule AeMdw.AexnContractsTest do
     end
   end
 
+  describe "has_aex141_signatures?/2" do
+    test "returns true for previous base nft" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      type_info = base_nft_fcode()
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [],
+         [
+           call_contract: fn _pk, _hash, "aex141_extensions", [] -> {:ok, []} end
+         ]}
+      ] do
+        assert AexnContracts.has_aex141_signatures?(600_000, contract_pk)
+      end
+    end
+
+    test "returns false for incomplete previous base nft" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      type_info = incomplete_base_nft_fcode()
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [],
+         [
+           call_contract: fn _pk, _hash, "aex141_extensions", [] -> {:ok, []} end
+         ]}
+      ] do
+        refute AexnContracts.has_aex141_signatures?(600_000, contract_pk)
+      end
+    end
+  end
+
   defp unique_nfts_contract_fcode(opts \\ []) do
     remove_burn = Keyword.get(opts, :without_burn, false)
     remove_mint = Keyword.get(opts, :without_mint, false)
@@ -214,5 +246,114 @@ defmodule AeMdw.AexnContractsTest do
       end
 
     {:fcode, functions, hash_names, %{}}
+  end
+
+  defp incomplete_base_nft_fcode do
+    {:fcode, functions, hash_names, %{}} = base_nft_fcode()
+
+    {:fcode, Map.delete(functions, <<20, 55, 180, 56>>), hash_names, %{}}
+  end
+
+  defp base_nft_fcode do
+    {:fcode,
+     %{
+       <<4, 167, 206, 191>> => {[:private], {[:boolean], :string}, %{}},
+       <<15, 27, 134, 79>> => {[:private], {[], {:tuple, []}}, %{}},
+       <<15, 89, 34, 233>> => {[], {[:address, :address], :boolean}, %{}},
+       <<20, 55, 180, 56>> =>
+         {[],
+          {[],
+           {:tuple,
+            [
+              :string,
+              :string,
+              {:variant, [tuple: [], tuple: [:string]]},
+              {:variant, [tuple: [], tuple: [], tuple: [], tuple: []]}
+            ]}}, %{}},
+       <<32, 4, 164, 216>> => {[:private], {[list: :string], :string}, %{}},
+       <<39, 89, 45, 234>> => {[], {[:integer], {:variant, [tuple: [], tuple: [:address]]}}, %{}},
+       <<68, 214, 68, 31>> =>
+         {[],
+          {[
+             :string,
+             :string,
+             {:variant, [tuple: [], tuple: [:string]]},
+             {:variant, [tuple: [], tuple: [], tuple: [], tuple: []]}
+           ], {:tuple, []}}, %{}},
+       <<80, 90, 158, 181>> =>
+         {[:private],
+          {[:address, :address, :integer, {:variant, [tuple: [], tuple: [:string]]}],
+           {:tuple, [:boolean, :boolean]}}, %{}},
+       <<93, 142, 50, 216>> => {[:private], {[:any, :any, :any], :any}, %{}},
+       <<94, 119, 225, 37>> =>
+         {[:private], {[tuple: [:string, :any], tvar: 0, list: {:tvar, 1}], {:tvar, 0}}, %{}},
+       <<99, 80, 161, 92>> =>
+         {[],
+          {[
+             :address,
+             {:variant, [tuple: [:string], tuple: [{:map, :string, :string}]]}
+           ], {:tuple, []}}, %{}},
+       <<99, 148, 233, 122>> =>
+         {[],
+          {[:integer],
+           {:variant,
+            [
+              tuple: [],
+              tuple: [variant: [tuple: [:string], tuple: [{:map, :string, :string}]]]
+            ]}}, %{}},
+       <<101, 165, 224, 15>> =>
+         {[:private],
+          {[
+             variant: [
+               tuple: [:address, :address, :integer],
+               tuple: [:address, :address, :integer, :string],
+               tuple: [:address, :address, :string]
+             ]
+           ], {:tuple, []}}, %{}},
+       <<102, 66, 227, 51>> => {[], {[:integer, :address], :boolean}, %{}},
+       <<104, 18, 102, 160>> => {[], {[:address, :integer, :boolean], {:tuple, []}}, %{}},
+       <<112, 189, 49, 130>> => {[:private], {[:integer, :address], {:tuple, []}}, %{}},
+       <<132, 161, 93, 161>> =>
+         {[],
+          {[:address, :address, :integer, {:variant, [tuple: [], tuple: [:string]]}],
+           {:tuple, []}}, %{}},
+       <<162, 103, 192, 75>> => {[], {[:address, :boolean], {:tuple, []}}, %{}},
+       <<170, 192, 194, 134>> => {[:private], {[:string], :integer}, %{}},
+       <<180, 140, 22, 132>> =>
+         {[], {[:address], {:variant, [tuple: [], tuple: [:integer]]}}, %{}},
+       <<180, 143, 200, 18>> => {[:private], {[:integer, :address], :boolean}, %{}},
+       <<189, 73, 253, 99>> => {[:private], {[:integer], {:tuple, []}}, %{}},
+       <<222, 10, 63, 194>> => {[], {[], {:list, :string}}, %{0 => [RETURNR: {:immediate, []}]}},
+       <<252, 217, 167, 216>> => {[:private], {[:integer], {:tuple, []}}, %{}},
+       <<254, 174, 164, 250>> =>
+         {[], {[:integer], {:variant, [tuple: [], tuple: [:address]]}}, %{}}
+     },
+     %{
+       <<4, 167, 206, 191>> => ".Utils.bool_to_string",
+       <<15, 27, 134, 79>> => ".BaseNFT.require_contract_owner",
+       <<15, 89, 34, 233>> => "is_approved_for_all",
+       <<20, 55, 180, 56>> => "meta_info",
+       <<32, 4, 164, 216>> => ".String.concats",
+       <<39, 89, 45, 234>> => "get_approved",
+       <<68, 214, 68, 31>> => "init",
+       <<80, 90, 158, 181>> => ".BaseNFT.invoke_nft_receiver",
+       <<93, 142, 50, 216>> => ".^1697",
+       <<94, 119, 225, 37>> => ".List.foldl",
+       <<99, 80, 161, 92>> => "define_token",
+       <<99, 148, 233, 122>> => "metadata",
+       <<101, 165, 224, 15>> => "Chain.event",
+       <<102, 66, 227, 51>> => "is_approved",
+       <<104, 18, 102, 160>> => "approve",
+       <<112, 189, 49, 130>> => ".BaseNFT.require_token_owner",
+       <<132, 161, 93, 161>> => "transfer",
+       <<162, 103, 192, 75>> => "approve_all",
+       <<170, 192, 194, 134>> => ".String.length",
+       <<180, 140, 22, 132>> => "balance",
+       <<180, 143, 200, 18>> => ".BaseNFT.is_token_owner",
+       <<189, 73, 253, 99>> => ".BaseNFT.remove_approval",
+       <<222, 10, 63, 194>> => "aex141_extensions",
+       <<252, 217, 167, 216>> => ".BaseNFT.require_authorized",
+       <<254, 174, 164, 250>> => "owner"
+     }, %{}}
   end
 end

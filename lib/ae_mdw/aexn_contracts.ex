@@ -12,6 +12,9 @@ defmodule AeMdw.AexnContracts do
   alias AeMdw.Log
 
   @typep pubkey :: NodeDb.pubkey()
+  @typep height :: AeMdw.Blocks.height()
+
+  @max_height AeMdw.Util.max_int()
 
   @spec is_aex9?(pubkey() | Contract.type_info()) :: boolean()
   def is_aex9?(pubkey) when is_binary(pubkey) do
@@ -31,7 +34,7 @@ defmodule AeMdw.AexnContracts do
   @spec is_aex141?(pubkey()) :: boolean()
   def is_aex141?(pubkey) when is_binary(pubkey) do
     with {:ok, {type_info, _compiler_vsn, _source_hash}} <- Contract.get_info(pubkey),
-         true <- valid_aex141_signatures?(type_info),
+         true <- valid_aex141_signatures?(@max_height, type_info),
          {:ok, extensions} <- call_contract(pubkey, "aex141_extensions") do
       has_valid_aex141_extensions?(extensions, type_info)
     else
@@ -40,11 +43,11 @@ defmodule AeMdw.AexnContracts do
     end
   end
 
-  @spec has_aex141_signatures?(pubkey()) :: boolean()
-  def has_aex141_signatures?(pubkey) do
+  @spec has_aex141_signatures?(height(), pubkey()) :: boolean()
+  def has_aex141_signatures?(height, pubkey) do
     case Contract.get_info(pubkey) do
       {:ok, {type_info, _compiler_vsn, _source_hash}} ->
-        valid_aex141_signatures?(type_info)
+        valid_aex141_signatures?(height, type_info)
 
       {:error, _reason} ->
         false
@@ -137,15 +140,24 @@ defmodule AeMdw.AexnContracts do
     end)
   end
 
-  defp valid_aex141_signatures?({:fcode, functions, _hash_names, _code}) do
-    valid_base_signatures? =
-      AeMdw.Node.aex141_signatures()
-      |> has_all_signatures?(functions)
+  defp valid_aex141_signatures?(height, {:fcode, functions, _hash_names, _code}) do
+    signatures = :aecore |> Application.fetch_env!(:network_id) |> get_aex141_signatures(height)
 
-    valid_base_signatures? and valid_aex141_metadata?(functions)
+    has_all_signatures?(signatures, functions) and valid_aex141_metadata?(functions)
   end
 
-  defp valid_aex141_signatures?(_no_fcode), do: false
+  defp valid_aex141_signatures?(_height, _no_fcode), do: false
+
+  # checked height aproximate to aex141 spec update
+  defp get_aex141_signatures("ae_uat", height) when height < 673_800 do
+    AeMdw.Node.previous_aex141_signatures()
+  end
+
+  defp get_aex141_signatures("ae_mainnet", height) when height < 669_300 do
+    AeMdw.Node.previous_aex141_signatures()
+  end
+
+  defp get_aex141_signatures(_network, _height), do: AeMdw.Node.aex141_signatures()
 
   @option_string {:variant, [tuple: [], tuple: [:string]]}
   @option_metadata_spec {:variant,

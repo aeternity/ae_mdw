@@ -41,6 +41,7 @@ defmodule AeMdw.Contract do
   @type function_hash :: <<_::32>>
   @type method_name :: binary()
   @type method_args :: list()
+  @type method_signature :: {method_args(), any()}
   @type fun_arg_res :: %{
           function: method_name(),
           arguments: method_args(),
@@ -103,17 +104,7 @@ defmodule AeMdw.Contract do
     end
   end
 
-  ##########
-
-  # entrypoint aex9_extensions : ()             => list(string)
-  # entrypoint meta_info       : ()             => meta_info
-  # entrypoint total_supply    : ()             => int
-  # entrypoint owner           : ()             => address
-  # entrypoint balances        : ()             => map(address, int)
-  # entrypoint balance         : (address)      => option(int)
-  # entrypoint transfer        : (address, int) => unit
-
-  @spec aex9_signatures() :: map()
+  @spec aex9_signatures() :: %{method_name() => method_signature()}
   def aex9_signatures() do
     %{
       "aex9_extensions" => {[], {:list, :string}},
@@ -126,16 +117,17 @@ defmodule AeMdw.Contract do
     }
   end
 
-  @metadata_type {:variant, [tuple: [], tuple: [], tuple: []]}
   @option_string {:variant, [tuple: [], tuple: [:string]]}
 
-  @spec aex141_signatures() :: map()
+  @spec aex141_signatures() :: %{method_name() => method_signature()}
   def aex141_signatures() do
+    metadata_type = {:variant, [tuple: [], tuple: [], tuple: []]}
+
     %{
       "aex141_extensions" => {[], {:list, :string}},
       "meta_info" =>
         {[],
-         {:tuple, [:string, :string, {:variant, [tuple: [], tuple: [:string]]}, @metadata_type]}},
+         {:tuple, [:string, :string, {:variant, [tuple: [], tuple: [:string]]}, metadata_type]}},
       "balance" => {[:address], {:variant, [tuple: [], tuple: [:integer]]}},
       "total_supply" => {[], :integer},
       "owner" => {[:integer], {:variant, [tuple: [], tuple: [:address]]}},
@@ -146,6 +138,19 @@ defmodule AeMdw.Contract do
       "is_approved" => {[:integer, :address], :boolean},
       "is_approved_for_all" => {[:address, :address], :boolean}
     }
+  end
+
+  @spec previous_aex141_signatures() :: %{method_name() => method_signature()}
+  def previous_aex141_signatures() do
+    metadata_type = {:variant, [tuple: [], tuple: [], tuple: [], tuple: []]}
+
+    aex141_signatures()
+    |> Map.delete("total_supply")
+    |> Map.put("transfer", {[:address, :address, :integer, @option_string], {:tuple, []}})
+    |> Map.put(
+      "meta_info",
+      {[], {:tuple, [:string, :string, {:variant, [tuple: [], tuple: [:string]]}, metadata_type]}}
+    )
   end
 
   @spec extract_successful_function(fun_arg_res_or_error()) ::

@@ -42,6 +42,9 @@ defmodule AeMdw.Node do
   @opaque tx() :: tuple()
   @opaque aect_call :: tuple()
 
+  @typep method_hash :: binary()
+  @typep method_signature :: {list(), any()}
+
   defmodule Oracle do
     @moduledoc false
 
@@ -59,13 +62,18 @@ defmodule AeMdw.Node do
     0
   end
 
-  @spec aex9_signatures :: %{binary() => term()}
+  @spec aex9_signatures :: %{method_hash() => method_signature()}
   def aex9_signatures do
     %{}
   end
 
-  @spec aex141_signatures :: %{binary() => term()}
+  @spec aex141_signatures :: %{method_hash() => method_signature()}
   def aex141_signatures do
+    %{}
+  end
+
+  @spec previous_aex141_signatures :: %{method_hash() => method_signature()}
+  def previous_aex141_signatures do
     %{}
   end
 

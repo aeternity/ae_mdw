@@ -159,13 +159,15 @@ defmodule AeMdw.Application do
 
     aex9_sigs =
       Contract.aex9_signatures()
-      |> Enum.map(fn {k, v} -> {Contract.function_hash(k), v} end)
-      |> Enum.into(%{})
+      |> Enum.into(%{}, fn {k, v} -> {Contract.function_hash(k), v} end)
 
     aex141_sigs =
       Contract.aex141_signatures()
-      |> Enum.map(fn {k, v} -> {Contract.function_hash(k), v} end)
-      |> Enum.into(%{})
+      |> Enum.into(%{}, fn {k, v} -> {Contract.function_hash(k), v} end)
+
+    prev_aex141_sigs =
+      Contract.previous_aex141_signatures()
+      |> Enum.into(%{}, fn {k, v} -> {Contract.function_hash(k), v} end)
 
     height_proto = :aec_hard_forks.protocols() |> Enum.into([]) |> Enum.sort(&>=/2)
 
@@ -203,6 +205,7 @@ defmodule AeMdw.Application do
         aexn_mint_event_hash: [{[], :aec_hash.blake2b_256_hash("Mint")}],
         aexn_transfer_event_hash: [{[], :aec_hash.blake2b_256_hash("Transfer")}],
         aex141_signatures: [{[], aex141_sigs}],
+        previous_aex141_signatures: [{[], prev_aex141_sigs}],
         height_proto: [{[], height_proto}],
         min_block_reward_height: [{[], min_block_reward_height}],
         token_supply_delta:
