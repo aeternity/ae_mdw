@@ -106,14 +106,13 @@ defmodule AeMdwWeb.Aex9ControllerTest do
 
   describe "balance_range" do
     test "it validates the range", %{conn: conn} do
-      contract_id = enc_ct(:crypto.strong_rand_bytes(32))
       account_id = enc_id(:crypto.strong_rand_bytes(32))
       last_range = 1_000_000
       error_msg = "invalid range: max range length is 10"
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/aex9/balance/gen/1-#{last_range}/#{contract_id}/#{account_id}")
+               |> get("/aex9/balance/gen/1-#{last_range}/#{@aex9_token_id}/#{account_id}")
                |> json_response(400)
     end
   end
