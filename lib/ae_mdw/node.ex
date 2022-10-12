@@ -8,6 +8,8 @@ defmodule AeMdw.Node do
   all of these functions more explicit.
   """
 
+  alias AeMdw.Contract
+
   @type tx_type ::
           :spend_tx
           | :oracle_register_tx
@@ -64,17 +66,20 @@ defmodule AeMdw.Node do
 
   @spec aex9_signatures :: %{method_hash() => method_signature()}
   def aex9_signatures do
-    %{}
+    Contract.aex9_signatures()
+    |> Enum.into(%{}, fn {k, v} -> {Contract.function_hash(k), v} end)
   end
 
   @spec aex141_signatures :: %{method_hash() => method_signature()}
   def aex141_signatures do
-    %{}
+    Contract.aex141_signatures()
+    |> Enum.into(%{}, fn {k, v} -> {Contract.function_hash(k), v} end)
   end
 
   @spec previous_aex141_signatures :: %{method_hash() => method_signature()}
   def previous_aex141_signatures do
-    %{}
+    Contract.previous_aex141_signatures()
+    |> Enum.into(%{}, fn {k, v} -> {Contract.function_hash(k), v} end)
   end
 
   @spec aexn_mint_event_hash() :: binary()

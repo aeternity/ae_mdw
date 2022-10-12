@@ -80,34 +80,36 @@ defmodule AeMdw.AexnContractsTest do
   end
 
   describe "has_aex141_signatures?/2" do
-    test "returns true for previous base nft" do
+    test "returns true for new nft contracts" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      type_info = unique_nfts_contract_fcode()
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      assert AeMdw.Util.max_int() |> AexnContracts.has_aex141_signatures?(contract_pk)
+    end
+
+    test "returns true for previous base nft at previous spec" do
       contract_pk = :crypto.strong_rand_bytes(32)
       type_info = base_nft_fcode()
       AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
-      with_mocks [
-        {AeMdw.DryRun.Runner, [],
-         [
-           call_contract: fn _pk, _hash, "aex141_extensions", [] -> {:ok, []} end
-         ]}
-      ] do
-        assert AexnContracts.has_aex141_signatures?(600_000, contract_pk)
-      end
+      assert AexnContracts.has_aex141_signatures?(600_000, contract_pk)
     end
 
-    test "returns false for incomplete previous base nft" do
+    test "returns false for incomplete previous base nft at previous spec" do
       contract_pk = :crypto.strong_rand_bytes(32)
       type_info = incomplete_base_nft_fcode()
       AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
-      with_mocks [
-        {AeMdw.DryRun.Runner, [],
-         [
-           call_contract: fn _pk, _hash, "aex141_extensions", [] -> {:ok, []} end
-         ]}
-      ] do
-        refute AexnContracts.has_aex141_signatures?(600_000, contract_pk)
-      end
+      refute AexnContracts.has_aex141_signatures?(600_000, contract_pk)
+    end
+
+    test "returns false for previous base nft" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      type_info = base_nft_fcode()
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      refute AeMdw.Util.max_int() |> AexnContracts.has_aex141_signatures?(contract_pk)
     end
   end
 
