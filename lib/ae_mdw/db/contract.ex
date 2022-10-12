@@ -152,7 +152,7 @@ defmodule AeMdw.Db.Contract do
       m_log =
         Model.contract_log(
           index: {create_txi, txi, evt_hash, log_idx},
-          ext_contract: (addr == contract_pk && nil) || addr,
+          ext_contract: (addr != contract_pk && addr) || nil,
           args: args,
           data: data
         )
@@ -374,26 +374,20 @@ defmodule AeMdw.Db.Contract do
   defp maybe_index_remote_log(
          state,
          contract_pk,
-         block_index,
-         txi,
-         {{log_pk, _event, _data}, _i} = log
-       ) do
-    # if remote call then indexes also with the called contract
-    if log_pk != contract_pk do
-      do_index_remote_log(state, contract_pk, block_index, txi, log)
-    else
-      state
-    end
-  end
+         _block_index,
+         _txi,
+         {{contract_pk, _event, _data}, _i}
+       ),
+       do: state
 
-  defp do_index_remote_log(
+  defp maybe_index_remote_log(
          state,
          contract_pk,
          block_index,
          txi,
          {{log_pk, [evt_hash | args], data}, i}
        ) do
-    remote_contract_txi = Origin.tx_index!(state, {:contract, contract_pk})
+    remote_contract_txi = Origin.tx_index!(state, {:contract, log_pk})
 
     # on caller log: ext_contract = called contract_pk
     # on called log: ext_contract = {:parent_contract_pk, caller contract_pk}
@@ -407,7 +401,6 @@ defmodule AeMdw.Db.Contract do
 
     state
     |> State.put(Model.ContractLog, m_log_remote)
-    |> State.cache_put(:ct_create_sync_cache, contract_pk, remote_contract_txi)
     |> update_aex9_state(log_pk, block_index, txi)
   end
 

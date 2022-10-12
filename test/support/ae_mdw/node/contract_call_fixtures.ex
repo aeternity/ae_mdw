@@ -344,28 +344,23 @@ defmodule AeMdw.Node.ContractCallFixtures do
      ]}
   end
 
-  @spec call_rec(fname(), pubkey(), AeMdw.Blocks.height()) :: call_record()
-  def call_rec("no_log", contract_pk, height) do
-    {:call,
-     <<7, 3, 220, 129, 25, 69, 185, 205, 148, 53, 54, 115, 161, 72, 225, 149, 238, 18, 80, 50,
-       185, 167, 125, 140, 71, 128, 149, 100, 229, 81, 223, 196>>, {:id, :account, <<1::256>>},
-     41, height, {:id, :contract, contract_pk}, 1_000_000_000, 22_929,
-     <<159, 2, 160, 111, 0, 117, 208, 6, 235, 44, 43, 240, 108, 173, 15, 111, 153, 4, 169, 116,
-       46, 60, 160, 41, 181, 143, 70, 46, 129, 67, 189, 118, 173, 96, 204>>, :ok, []}
-  end
-
   @spec call_rec(fname(), pubkey(), AeMdw.Blocks.height(), pubkey(), [event_log()]) ::
           call_record()
   def call_rec(fname, contract_pk, height, event_pk, extra_logs \\ [])
 
-  def call_rec("aex141_transfer", contract_pk, height, event_pk, extra_logs) do
+  def call_rec("transfer", contract_pk, height, event_pk, extra_logs) do
     {:call, :aect_call.id(<<1::256>>, 2, contract_pk), {:id, :account, <<1::256>>}, 2, height,
      {:id, :contract, contract_pk}, 1_000_000_000, 22_929, "", :ok,
      [
-       {event_pk, [AeMdw.Node.aexn_transfer_event_hash(), <<1::256>>, <<2::256>>, <<1::256>>],
-        <<>>}
+       {event_pk,
+        [AeMdw.Node.aexn_transfer_event_hash(), <<1::256>>, <<2::256>>, <<10_000::256>>], <<>>}
      ] ++
        extra_logs}
+  end
+
+  def call_rec("logs", contract_pk, height, nil, logs) do
+    {:call, <<1::256>>, {:id, :account, <<2::256>>}, 2, height, {:id, :contract, contract_pk},
+     1_000_000_000, 22_000, "", :ok, logs}
   end
 
   def call_rec("remote_log", contract_pk, height, remote_pk, extra_logs) do
