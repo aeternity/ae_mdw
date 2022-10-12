@@ -95,14 +95,14 @@ defmodule AeMdw.Validate do
 
   # returns transaction type (atom)
   def tx_type(type) when is_atom(type),
-    do: (type in AE.tx_types() && {:ok, type}) || {:error, {ErrInput.TxType, type}}
+    do: (type in AE.tx_types() && {:ok, type}) || {:error, ErrInput.TxType.exception(value: type)}
 
   def tx_type(type) when is_binary(type) do
     try do
       tx_type(String.to_existing_atom(type <> "_tx"))
     rescue
       ArgumentError ->
-        {:error, {ErrInput.TxType, type}}
+        {:error, ErrInput.TxType.exception(value: type)}
     end
   end
 
@@ -117,7 +117,7 @@ defmodule AeMdw.Validate do
       tx_group(String.to_existing_atom(group))
     rescue
       ArgumentError ->
-        {:error, {ErrInput.TxGroup, group}}
+        {:error, ErrInput.TxGroup.exception(value: group)}
     end
   end
 
@@ -128,13 +128,13 @@ defmodule AeMdw.Validate do
     do:
       (field in AE.id_fields() &&
          {:ok, String.to_existing_atom(field)}) ||
-        {:error, {ErrInput.TxField, field}}
+        {:error, ErrInput.TxField.exception(value: field)}
 
   def tx_field(field) when is_atom(field),
     do: tx_field(Atom.to_string(field))
 
   def tx_field(field),
-    do: {:error, {ErrInput.TxField, field}}
+    do: {:error, ErrInput.TxField.exception(value: field)}
 
   def tx_field!(field),
     do: unwrap!(&tx_field/1, field)
