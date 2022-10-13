@@ -324,6 +324,87 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       end
     end
 
+    test "when it has int transfers from oracle rewards or name fees", %{conn: conn} do
+      account_pk = TS.address(0)
+      account = Enc.encode(:account_pubkey, account_pk)
+      height = 398
+      [txi1, txi2, txi3] = [123, 456, 789]
+
+      store =
+        empty_store()
+        |> Store.put(
+          Model.TargetKindIntTransferTx,
+          Model.target_kind_int_transfer_tx(
+            index: {account_pk, "reward_oracle", {height, txi1}, txi1}
+          )
+        )
+        |> Store.put(
+          Model.IntTransferTx,
+          Model.int_transfer_tx(
+            index: {{height, txi1}, "reward_oracle", account_pk, txi1},
+            amount: 10
+          )
+        )
+        |> Store.put(Model.Tx, Model.tx(index: txi1, block_index: {height, 0}, id: "hash1"))
+        |> Store.put(
+          Model.TargetKindIntTransferTx,
+          Model.target_kind_int_transfer_tx(
+            index: {account_pk, "fee_lock_name", {height, txi2}, txi2}
+          )
+        )
+        |> Store.put(
+          Model.IntTransferTx,
+          Model.int_transfer_tx(
+            index: {{height, txi2}, "fee_lock_name", account_pk, txi2},
+            amount: 20
+          )
+        )
+        |> Store.put(Model.Tx, Model.tx(index: txi2, block_index: {height, 1}, id: "hash2"))
+        |> Store.put(
+          Model.TargetKindIntTransferTx,
+          Model.target_kind_int_transfer_tx(
+            index: {account_pk, "fee_lock_name", {height, txi3}, txi3}
+          )
+        )
+        |> Store.put(
+          Model.IntTransferTx,
+          Model.int_transfer_tx(
+            index: {{height, txi3}, "fee_lock_name", account_pk, txi3},
+            amount: 30
+          )
+        )
+        |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height, 1}, id: "hash3"))
+
+      assert %{"prev" => nil, "data" => [activity1, activity2], "next" => next_url} =
+               conn
+               |> with_store(store)
+               |> get("/v2/accounts/#{account}/activities", direction: "forward", limit: 2)
+               |> json_response(200)
+
+      assert %{
+               "height" => ^height,
+               "type" => "InternalTransferEvent",
+               "payload" => %{
+                 "kind" => "reward_oracle",
+                 "amount" => 10
+               }
+             } = activity1
+
+      assert %{
+               "height" => ^height,
+               "type" => "InternalTransferEvent",
+               "payload" => %{
+                 "kind" => "fee_lock_name",
+                 "amount" => 20
+               }
+             } = activity2
+
+      assert %URI{query: query} = URI.parse(next_url)
+
+      assert %{"cursor" => _cursor, "direction" => "forward", "limit" => "2"} =
+               URI.decode_query(query)
+    end
+
     test "when activities contain aexn tokens, it returns them as AexnEvent", %{conn: conn} do
       account_pk = TS.address(0)
       account = Enc.encode(:account_pubkey, account_pk)

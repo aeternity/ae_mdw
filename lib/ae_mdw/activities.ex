@@ -46,7 +46,8 @@ defmodule AeMdw.Activities do
   @max_bin Util.max_256bit_bin()
 
   @aexn_types ~w(aex9 aex141)a
-  @kinds ~w(accounts_extra_lima accounts_fortuna accounts_genesis accounts_lima accounts_minerva contracts_lima reward_dev reward_block)
+  @gen_int_transfer_kinds ~w(accounts_extra_lima accounts_fortuna accounts_genesis accounts_lima accounts_minerva contracts_lima reward_dev reward_block)
+  @txs_int_transfer_kinds ~w(fee_lock_name fee_refund_name fee_spend_name reward_oracle)
 
   @doc """
   Activities related to an account are those that affect the account in any way.
@@ -106,7 +107,7 @@ defmodule AeMdw.Activities do
 
           gens_stream =
             state
-            |> build_int_transfers_stream(direction, account_pk, gen_scope, gen_cursor)
+            |> build_gens_int_transfers_stream(direction, account_pk, gen_scope, gen_cursor)
             |> Stream.chunk_by(fn {gen, _data} -> gen end)
             |> build_gens_stream(direction)
 
@@ -127,7 +128,8 @@ defmodule AeMdw.Activities do
                 txi_scope,
                 txi_cursor
               ),
-              build_aexn_transfers_stream(state, direction, account_pk, txi_scope, txi_cursor)
+              build_aexn_transfers_stream(state, direction, account_pk, txi_scope, txi_cursor),
+              build_txs_int_transfers_stream(state, direction, account_pk, gen_scope, gen_cursor)
             ]
             |> Collection.merge(direction)
             |> Stream.chunk_by(fn {txi, _data} -> txi end)
@@ -182,8 +184,8 @@ defmodule AeMdw.Activities do
     end)
   end
 
-  defp build_int_transfers_stream(state, direction, account_pk, gen_scope, gen_cursor) do
-    @kinds
+  defp build_gens_int_transfers_stream(state, direction, account_pk, gen_scope, gen_cursor) do
+    @gen_int_transfer_kinds
     |> Enum.map(fn kind ->
       key_boundary =
         case gen_scope do
@@ -208,9 +210,42 @@ defmodule AeMdw.Activities do
 
       state
       |> Collection.stream(Model.TargetKindIntTransferTx, direction, key_boundary, cursor)
-      |> Stream.filter(&match?({^account_pk, ^kind, {_height, -1}, _ref_txi}, &1))
       |> Stream.map(fn {^account_pk, ^kind, {height, -1}, ref_txi} ->
         {height, {:int_transfer, kind, ref_txi}}
+      end)
+    end)
+    |> Collection.merge(direction)
+  end
+
+  defp build_txs_int_transfers_stream(state, direction, account_pk, gen_scope, gen_cursor) do
+    @txs_int_transfer_kinds
+    |> Enum.map(fn kind ->
+      key_boundary =
+        case gen_scope do
+          {first_gen, last_gen} ->
+            {
+              {account_pk, kind, {first_gen, 0}, @min_int},
+              {account_pk, kind, {last_gen, @max_int}, @max_int}
+            }
+
+          nil ->
+            {
+              {account_pk, kind, {@min_int, @min_int}, @min_int},
+              {account_pk, kind, {@max_int, @max_int}, @max_int}
+            }
+        end
+
+      cursor =
+        case gen_cursor do
+          nil -> nil
+          gen when direction == :forward -> {account_pk, kind, {gen, @min_int}, @min_int}
+          gen when direction == :backward -> {account_pk, kind, {gen, @max_int}, @max_int}
+        end
+
+      state
+      |> Collection.stream(Model.TargetKindIntTransferTx, direction, key_boundary, cursor)
+      |> Stream.map(fn {^account_pk, ^kind, {_height, txi}, ref_txi} ->
+        {txi, {:int_transfer, kind, ref_txi}}
       end)
     end)
     |> Collection.merge(direction)
