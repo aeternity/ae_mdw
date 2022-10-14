@@ -288,6 +288,19 @@ defmodule AeMdw.Db.Format do
     put_in(tx, ["contract_id"], Enc.encode(:contract_pubkey, contract_pk))
   end
 
+  defp custom_encode(_state, :ga_meta_tx, tx, tx_rec, _signed_tx, _txi, block_hash) do
+    owner_pk = :aega_meta_tx.origin(tx_rec)
+    auth_id = :aega_meta_tx.auth_id(tx_rec)
+
+    case :aec_chain.get_ga_call(owner_pk, auth_id, block_hash) do
+      {:ok, ga_object} ->
+        Map.put(tx, "return_type", :aega_call.return_type(ga_object))
+
+      _error_revert ->
+        Map.put(tx, "return_type", :unknown)
+    end
+  end
+
   defp custom_encode(_state, :contract_create_tx, tx, tx_rec, _signed_tx, _txi, block_hash) do
     init_call_details = Contract.get_init_call_details(tx_rec, block_hash)
 

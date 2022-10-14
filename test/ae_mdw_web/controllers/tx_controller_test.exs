@@ -8,7 +8,7 @@ defmodule AeMdwWeb.TxControllerTest do
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
 
-  import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, oracle_register_tx: 2]
+  import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, oracle_register_tx: 2, ga_meta_tx: 2]
   import Mock
 
   require Model
@@ -49,6 +49,51 @@ defmodule AeMdwWeb.TxControllerTest do
         assert %{"error" => _error_msg} = conn |> get("/tx/#{tx_hash1}") |> json_response(404)
         assert %{"error" => _error_msg} = conn |> get("/tx/#{tx_hash2}") |> json_response(404)
         assert %{"error" => _error_msg} = conn |> get("/tx/#{tx_hash3}") |> json_response(404)
+      end
+    end
+
+    test "returns an ga_meta_tx with return_type", %{
+      conn: conn,
+      store: store
+    } do
+      amount = Enum.random(100_000..999_999)
+
+      with_blockchain %{ga: 10_000},
+        mb: [
+          ga_tx: ga_meta_tx(:ga, %{amount: amount})
+        ] do
+        %{txs: [tx]} = blocks[:mb]
+        {:id, :account, account_pk} = accounts[:ga]
+        account_id = encode(:account_pubkey, account_pk)
+        mb_hash = :crypto.strong_rand_bytes(32)
+
+        store =
+          store
+          |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {0, 0}, id: :aetx_sign.hash(tx)))
+          |> Store.put(Model.Block, Model.block(index: {0, -1}, tx_index: 1))
+          |> Store.put(Model.Block, Model.block(index: {0, 0}, hash: mb_hash, tx_index: 1))
+          |> Store.put(Model.Block, Model.block(index: {1, -1}, tx_index: 2))
+
+        tx_hash = encode(:tx_hash, :aetx_sign.hash(tx))
+
+        assert %{
+                 "hash" => ^tx_hash,
+                 "tx" => %{
+                   "ga_id" => ^account_id,
+                   "return_type" => "some_return_type",
+                   "tx" => %{
+                     "tx" => %{
+                       "sender_id" => ^account_id,
+                       "amount" => ^amount
+                     }
+                   },
+                   "type" => "GAMetaTx"
+                 }
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs/#{tx_hash}")
+                 |> json_response(200)
       end
     end
 
