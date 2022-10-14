@@ -182,27 +182,27 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
                | _rest
              ] = events
     end
-  end
 
-  test "it gets tx-based internal transfer events", %{conn: conn} do
-    account = "ak_4HGhEdjeRtpsWzfSEJZnBKNmjgHALAifcBUey8EvRAdDfRsqc"
-    height = 248_897
-    limit = 100
+    test "it gets tx-based internal transfer events", %{conn: conn} do
+      account = "ak_4HGhEdjeRtpsWzfSEJZnBKNmjgHALAifcBUey8EvRAdDfRsqc"
+      height = 248_897
+      limit = 100
 
-    assert %{"data" => events} =
-             conn
-             |> get("/v2/accounts/#{account}/activities",
-               direction: "forward",
-               scope: "gen:#{height}-#{height}",
-               limit: limit
-             )
-             |> json_response(200)
+      assert %{"data" => events} =
+               conn
+               |> get("/v2/accounts/#{account}/activities",
+                 direction: "forward",
+                 scope: "gen:#{height}-#{height}",
+                 limit: limit
+               )
+               |> json_response(200)
 
-    assert [
-             %{
-               "type" => "InternalTransferEvent",
-               "payload" => %{"kind" => "reward_oracle", "amount" => _amount}
-             }
-           ] = Enum.filter(events, &match?(%{"type" => "InternalTransferEvent"}, &1))
+      assert [
+               %{
+                 "type" => "InternalTransferEvent",
+                 "payload" => %{"kind" => "reward_oracle", "amount" => _amount}
+               }
+             ] = Enum.filter(events, &match?(%{"type" => "InternalTransferEvent"}, &1))
+    end
   end
 end

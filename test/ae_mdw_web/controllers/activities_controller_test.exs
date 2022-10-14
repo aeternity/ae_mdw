@@ -375,7 +375,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         )
         |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height, 1}, id: "hash3"))
 
-      assert %{"prev" => nil, "data" => [activity1, activity2], "next" => next_url} =
+      assert %{"prev" => nil, "data" => [activity1, activity2] = data, "next" => next_url} =
                conn
                |> with_store(store)
                |> get("/v2/accounts/#{account}/activities", direction: "forward", limit: 2)
@@ -399,10 +399,16 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                }
              } = activity2
 
-      assert %URI{query: query} = URI.parse(next_url)
+      assert %{"prev" => prev_url, "data" => [activity3], "next" => nil} =
+               conn
+               |> with_store(store)
+               |> get(next_url)
+               |> json_response(200)
 
-      assert %{"cursor" => _cursor, "direction" => "forward", "limit" => "2"} =
-               URI.decode_query(query)
+      assert %{"height" => 398, "type" => "InternalTransferEvent", "payload" => %{"amount" => 30}} =
+               activity3
+
+      assert %{"data" => ^data} = conn |> with_store(store) |> get(prev_url) |> json_response(200)
     end
 
     test "when activities contain aexn tokens, it returns them as AexnEvent", %{conn: conn} do
