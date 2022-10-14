@@ -31,9 +31,16 @@ defmodule AeMdw.Db.Format do
   def to_raw_map(
         state,
         {:tx, index, hash, {kb_index, mb_index}, mb_time},
-        {block_hash, type, signed_tx, tx_rec}
+        {block_hash, tx_type, signed_tx, tx_rec}
       ) do
-    tx_map = to_raw_map(state, tx_rec, type) |> put_in([:type], type)
+    tx_map =
+      tx_type
+      |> AeMdw.Node.tx_fields()
+      |> Enum.with_index(1)
+      |> Enum.into(%{}, fn {field, pos} ->
+        {field, elem(tx_rec, pos)}
+      end)
+      |> Map.put(:type, tx_type)
 
     raw = %{
       block_hash: block_hash,
@@ -46,7 +53,7 @@ defmodule AeMdw.Db.Format do
       tx: tx_map
     }
 
-    custom_raw_data(state, type, raw, tx_rec, signed_tx, block_hash)
+    custom_raw_data(state, tx_type, raw, tx_rec, signed_tx, block_hash)
   end
 
   def to_raw_map(state, auction_bid, Model.AuctionBid),
@@ -65,8 +72,11 @@ defmodule AeMdw.Db.Format do
 
     {status, auction} =
       case Name.locate_bid(state, plain_name) do
-        nil -> {:name, nil}
-        key -> {:auction, to_raw_map(state, key, Model.AuctionBid)}
+        nil ->
+          {:name, nil}
+
+        m_auction_bid ->
+          {:auction, to_raw_map(state, m_auction_bid, Model.AuctionBid)}
       end
 
     %{
@@ -78,17 +88,6 @@ defmodule AeMdw.Db.Format do
       info: name_info_to_raw_map(state, m_name),
       previous: Enum.map(prev, &name_info_to_raw_map(state, &1))
     }
-  end
-
-  def to_raw_map(_state, ae_tx, tx_type) do
-    AeMdw.Node.tx_fields(tx_type)
-    |> Stream.with_index(1)
-    |> Enum.reduce(
-      %{},
-      fn {field, pos}, acc ->
-        put_in(acc[field], elem(ae_tx, pos))
-      end
-    )
   end
 
   defp custom_raw_data(_state, :contract_create_tx, tx, tx_rec, _signed_tx, block_hash) do

@@ -311,6 +311,4 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
   end
-
-  defp encode(type, bin), do: :aeser_api_encoder.encode(type, bin)
 end

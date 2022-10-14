@@ -155,7 +155,7 @@ defmodule AeMdw.Node do
     MapSet.new()
   end
 
-  @spec tx_fields(atom()) :: [atom()]
+  @spec tx_fields(tx_type()) :: [atom()]
   def tx_fields(_arg) do
     []
   end

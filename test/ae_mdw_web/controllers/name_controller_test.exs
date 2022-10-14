@@ -19,6 +19,8 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdw.TestSamples, as: TS
   alias AeMdw.Txs
 
+  import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, name_claim_tx: 2]
+
   import Mock
 
   require Model
@@ -946,31 +948,125 @@ defmodule AeMdwWeb.NameControllerTest do
   end
 
   describe "name" do
-    test "get name info by name", %{conn: conn} do
-      name = "wwwbeaconoidcom.chain"
-      own_original = <<>>
-      own_current = <<>>
+    test "get active name info", %{conn: conn, store: store} do
+      name = "bigname123456.chain"
 
-      with_mocks [
-        {Name, [],
-         [
-           locate: fn _state, ^name ->
-             {Model.name(index: name, active: true, expire: 0), Model.ActiveName}
-           end,
-           locate_bid: fn _state, ^name -> nil end,
-           pointers: fn _state, _name_model -> %{} end,
-           ownership: fn _state, _name_model ->
-             %{original: own_original, current: own_current}
-           end
-         ]}
-      ] do
+      with_blockchain %{alice: 1_000},
+        mb: [
+          tx: name_claim_tx(:alice, name)
+        ] do
+        %{txs: [tx]} = blocks[:mb]
+        {:id, :account, alice_pk} = accounts[:alice]
+        owner_id = encode(:account_pubkey, alice_pk)
+        active_from = 10
+        claim_txi = 100
+        expire = 10_000
+
+        store =
+          store
+          |> Store.put(
+            Model.ActiveName,
+            Model.name(
+              index: name,
+              owner: alice_pk,
+              active: active_from,
+              claims: [{{10, 1}, claim_txi}],
+              expire: expire
+            )
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 1, id: :aetx_sign.hash(tx), block_index: {1, 1})
+          )
+
         assert %{
                  "name" => ^name,
                  "active" => true,
+                 "auction" => nil,
                  "info" => %{
-                   "ownership" => %{"current" => ^own_current, "original" => ^own_original}
-                 }
-               } = conn |> get("/v2/names/#{name}") |> json_response(200)
+                   "active_from" => ^active_from,
+                   "auction_timeout" => 0,
+                   "ownership" => %{"current" => ^owner_id, "original" => ^owner_id},
+                   "pointers" => %{},
+                   "revoke" => nil,
+                   "transfers" => [],
+                   "updates" => [],
+                   "claims" => [^claim_txi],
+                   "expire_height" => ^expire
+                 },
+                 "previous" => [],
+                 "status" => "name"
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/names/#{name}")
+                 |> json_response(200)
+      end
+    end
+
+    test "get inactive name in auction", %{conn: conn, store: store} do
+      name = "alice.chain"
+
+      with_blockchain %{alice: 1_000},
+        mb: [
+          tx: name_claim_tx(:alice, name)
+        ] do
+        %{txs: [tx]} = blocks[:mb]
+        {:id, :account, alice_pk} = accounts[:alice]
+        owner_id = encode(:account_pubkey, alice_pk)
+        active_from = 10
+        claim_txi = 100
+        expire = 10_000
+        bid_txi = Enum.random(100..1_000)
+
+        bid_expire =
+          :aec_governance.name_claim_bid_timeout(name, :aec_hard_forks.protocol_vsn(:lima) + 1)
+
+        store =
+          store
+          |> Store.put(
+            Model.InactiveName,
+            Model.name(
+              index: name,
+              owner: alice_pk,
+              active: active_from,
+              claims: [{{10, 1}, claim_txi}],
+              expire: expire
+            )
+          )
+          |> Store.put(
+            Model.AuctionBid,
+            Model.auction_bid(index: name, expire_height: bid_expire, bids: [{{1, 1}, bid_txi}])
+          )
+          |> Store.put(Model.AuctionOwner, Model.owner(index: {alice_pk, name}))
+          |> Store.put(Model.AuctionExpiration, Model.expiration(index: {bid_expire, name}))
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: bid_txi, id: :aetx_sign.hash(tx), block_index: {1, 1})
+          )
+
+        assert %{
+                 "name" => ^name,
+                 "active" => false,
+                 "auction" => %{"auction_end" => ^bid_expire, "bids" => [^bid_txi]},
+                 "info" => %{
+                   "active_from" => ^active_from,
+                   "auction_timeout" => 0,
+                   "ownership" => %{"current" => ^owner_id, "original" => ^owner_id},
+                   "pointers" => %{},
+                   "revoke" => nil,
+                   "transfers" => [],
+                   "updates" => [],
+                   "claims" => [^claim_txi],
+                   "expire_height" => ^expire
+                 },
+                 "previous" => [],
+                 "status" => "auction"
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/names/#{name}")
+                 |> json_response(200)
       end
     end
 

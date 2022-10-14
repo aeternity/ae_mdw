@@ -769,7 +769,6 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
   defp enc_ct(pk), do: :aeser_api_encoder.encode(:contract_pubkey, pk)
   defp enc_id(pk), do: :aeser_api_encoder.encode(:account_pubkey, pk)
-  defp encode(type, pk), do: :aeser_api_encoder.encode(type, pk)
 
   defp logs_setup(store, contract_pk) do
     block_index1 = {100, 1}

@@ -27,6 +27,8 @@ defmodule AeMdwWeb.ConnCase do
       import AeMdw.TestUtil
       alias AeMdwWeb.Router.Helpers, as: Routes
 
+      import AeMdw.Util.Encoding
+
       # The default endpoint for testing
       @endpoint AeMdwWeb.Endpoint
     end
