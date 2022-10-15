@@ -219,8 +219,8 @@ defmodule AeMdwWeb.NameController do
 
       locator = fn plain_name ->
         case Name.locate_bid(state, plain_name) do
-          {:ok, auction_bid} -> {auction_bid, Model.AuctionBid}
           nil -> :not_found
+          auction_bid -> {auction_bid, Model.AuctionBid}
         end
       end
 

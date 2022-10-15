@@ -57,7 +57,7 @@ defmodule AeMdwWeb.BlockchainSim do
 
   defmacrop is_transaction(mocked_tx) do
     quote do
-      elem(unquote(mocked_tx), 0) in [:spend_tx, :oracle_register_tx]
+      elem(unquote(mocked_tx), 0) in [:spend_tx, :oracle_register_tx, :name_claim_tx]
     end
   end
 
@@ -69,6 +69,11 @@ defmodule AeMdwWeb.BlockchainSim do
   @spec oracle_register_tx(account_name(), map()) :: :aetx.t()
   def oracle_register_tx(account_name, args \\ %{}) when is_map(args) do
     {:oracle_register_tx, account_name, args}
+  end
+
+  @spec name_claim_tx(account_name(), binary(), map()) :: :aetx.t()
+  def name_claim_tx(account_name, plain_name, args \\ %{}) when is_map(args) do
+    {:name_claim_tx, account_name, plain_name, args}
   end
 
   @spec generate_blockchain(Keyword.t(), Keyword.t()) :: {Keyword.t(), map(), map(), map()}
@@ -249,7 +254,7 @@ defmodule AeMdwWeb.BlockchainSim do
   defp mock_micro_block(transactions, accounts, height, prev_hash, kb_hash) do
     mock_txs =
       Enum.into(transactions, %{}, fn {tx_name, tx} when is_transaction(tx) ->
-        {:ok, aetx} = serialize_tx(tx, accounts)
+        {:ok, aetx} = create_aetx(tx, accounts)
         signed_tx = :aetx_sign.new(aetx, [])
         {tx_name, signed_tx}
       end)
@@ -281,7 +286,7 @@ defmodule AeMdwWeb.BlockchainSim do
     end
   end
 
-  defp serialize_tx({:spend_tx, sender_name, recipient_name, amount}, accounts) do
+  defp create_aetx({:spend_tx, sender_name, recipient_name, amount}, accounts) do
     :aec_spend_tx.new(%{
       sender_id: Map.fetch!(accounts, sender_name),
       recipient_id: Map.fetch!(accounts, recipient_name),
@@ -292,7 +297,7 @@ defmodule AeMdwWeb.BlockchainSim do
     })
   end
 
-  defp serialize_tx({:oracle_register_tx, register_name, args}, accounts) do
+  defp create_aetx({:oracle_register_tx, register_name, args}, accounts) do
     %{
       account_id: Map.fetch!(accounts, register_name),
       nonce: 1,
@@ -305,5 +310,17 @@ defmodule AeMdwWeb.BlockchainSim do
     }
     |> Map.merge(args)
     |> :aeo_register_tx.new()
+  end
+
+  defp create_aetx({:name_claim_tx, account_name, plain_name, args}, accounts) do
+    %{
+      account_id: Map.fetch!(accounts, account_name),
+      nonce: 1,
+      name: plain_name,
+      name_salt: 123_456,
+      fee: 5_000
+    }
+    |> Map.merge(args)
+    |> :aens_claim_tx.new()
   end
 end

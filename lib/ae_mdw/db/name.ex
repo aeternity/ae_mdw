@@ -90,10 +90,10 @@ defmodule AeMdw.Db.Name do
   def source(Model.InactiveName, :name), do: Model.InactiveName
   def source(Model.InactiveName, :expiration), do: Model.InactiveNameExpiration
 
-  @spec locate_bid(state(), Names.plain_name()) :: {:ok, Model.auction_bid()} | nil
+  @spec locate_bid(state(), Names.plain_name()) :: Model.auction_bid() | nil
   def locate_bid(state, plain_name) do
     case State.get(state, Model.AuctionBid, plain_name) do
-      {:ok, auction_bid} -> {:ok, auction_bid}
+      {:ok, auction_bid} -> auction_bid
       :not_found -> nil
     end
   end
@@ -110,7 +110,7 @@ defmodule AeMdw.Db.Name do
     else
       {:active, {:ok, active_name}} -> {active_name, Model.ActiveName}
       {:inactive, {:ok, inactive_name}} -> {inactive_name, Model.InactiveName}
-      {:auction_bid, {:ok, auction}} -> {auction, Model.AuctionBid}
+      {:auction_bid, auction} -> {auction, Model.AuctionBid}
     end
   end
 
