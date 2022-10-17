@@ -40,9 +40,28 @@ defmodule AeMdwWeb.BlockchainSim do
 
       aec_db_mock = Keyword.merge(unquote(aec_db), aec_db_mock)
 
-      Mock.with_mocks [
-        {:aec_db, [:passthrough], aec_db_mock}
-      ] do
+      ga_mocks =
+        case mock_accounts[:ga] do
+          {:id, :account, ga_pk} ->
+            ga_meta_tx = mock_transactions[:ga_tx]
+            ga_meta_tx_hash = if ga_meta_tx, do: :aetx_sign.hash(ga_meta_tx)
+
+            if ga_meta_tx_hash do
+              [
+                {:aec_chain, [:passthrough],
+                 get_ga_call: fn ^ga_pk, _auth_id, _block_hash -> {:ok, ga_meta_tx_hash} end},
+                {:aega_call, [:passthrough],
+                 return_type: fn ^ga_meta_tx_hash -> :some_return_type end}
+              ]
+            else
+              []
+            end
+
+          nil ->
+            []
+        end
+
+      Mock.with_mocks [{:aec_db, [:passthrough], aec_db_mock} | ga_mocks] do
         var!(blocks) = mock_blocks
         var!(transactions) = mock_transactions
         var!(accounts) = mock_accounts
@@ -57,23 +76,28 @@ defmodule AeMdwWeb.BlockchainSim do
 
   defmacrop is_transaction(mocked_tx) do
     quote do
-      elem(unquote(mocked_tx), 0) in [:spend_tx, :oracle_register_tx, :name_claim_tx]
+      elem(unquote(mocked_tx), 0) in [:spend_tx, :oracle_register_tx, :name_claim_tx, :ga_meta_tx]
     end
   end
 
-  @spec spend_tx(account_name(), account_name(), non_neg_integer()) :: :aetx.t()
+  @spec spend_tx(account_name(), account_name(), non_neg_integer()) :: tuple()
   def spend_tx(sender_name, recipient_name, amount) do
     {:spend_tx, sender_name, recipient_name, amount}
   end
 
-  @spec oracle_register_tx(account_name(), map()) :: :aetx.t()
+  @spec oracle_register_tx(account_name(), map()) :: tuple()
   def oracle_register_tx(account_name, args \\ %{}) when is_map(args) do
     {:oracle_register_tx, account_name, args}
   end
 
-  @spec name_claim_tx(account_name(), binary(), map()) :: :aetx.t()
+  @spec name_claim_tx(account_name(), binary(), map()) :: tuple()
   def name_claim_tx(account_name, plain_name, args \\ %{}) when is_map(args) do
     {:name_claim_tx, account_name, plain_name, args}
+  end
+
+  @spec ga_meta_tx(account_name(), map()) :: tuple()
+  def ga_meta_tx(account_name, args \\ %{}) when is_map(args) do
+    {:ga_meta_tx, account_name, args}
   end
 
   @spec generate_blockchain(Keyword.t(), Keyword.t()) :: {Keyword.t(), map(), map(), map()}
@@ -322,5 +346,31 @@ defmodule AeMdwWeb.BlockchainSim do
     }
     |> Map.merge(args)
     |> :aens_claim_tx.new()
+  end
+
+  defp create_aetx({:ga_meta_tx, account_name, args}, accounts) do
+    {:ok, inner_tx} =
+      %{
+        sender_id: Map.fetch!(accounts, account_name),
+        recipient_id: :aeser_id.create(:account, <<2::256>>),
+        amount: 123,
+        fee: 456,
+        nonce: 1,
+        payload: <<>>
+      }
+      |> Map.merge(args)
+      |> :aec_spend_tx.new()
+
+    %{
+      ga_id: Map.fetch!(accounts, account_name),
+      auth_data: <<1::256>>,
+      abi_version: 1,
+      gas: 20_000,
+      gas_price: 1_000,
+      fee: 100,
+      tx: :aetx_sign.new(inner_tx, [])
+    }
+    |> Map.merge(args)
+    |> :aega_meta_tx.new()
   end
 end
