@@ -76,10 +76,10 @@ defmodule AeMdw.AexnContracts do
   def call_meta_info(aexn_type, contract_pk) do
     case call_contract(contract_pk, "meta_info", []) do
       {:ok, {:tuple, meta_info_tuple}} ->
-        {:ok, decode_meta_info(meta_info_tuple)}
+        {:ok, decode_meta_info(aexn_type, meta_info_tuple)}
 
       :error ->
-        {:ok, error_meta_info(aexn_type)}
+        {:ok, call_error_meta_info(aexn_type)}
     end
   end
 
@@ -109,9 +109,9 @@ defmodule AeMdw.AexnContracts do
   #
   # Private functions
   #
-  defp decode_meta_info({_name, _symbol, _decimals} = meta_info), do: meta_info
+  defp decode_meta_info(:aex9, {_name, _symbol, _decimals} = meta_info), do: meta_info
 
-  defp decode_meta_info({name, symbol, variant_url, variant_type}) do
+  defp decode_meta_info(:aex141, {name, symbol, variant_url, variant_type}) do
     url =
       case variant_url do
         {:variant, [0, 1], 1, {url}} -> url
@@ -119,20 +119,35 @@ defmodule AeMdw.AexnContracts do
         _other -> nil
       end
 
-    metadata_type =
-      case variant_type do
-        {:variant, [0, 0, 0, 0], 0, {}} -> :url
-        {:variant, [0, 0, 0, 0], 1, {}} -> :object_id
-        {:variant, [0, 0, 0, 0], 2, {}} -> :map
-      end
+    metadata_type = decode_metadata_type(variant_type)
 
     {name, symbol, url, metadata_type}
   end
 
-  defp error_meta_info(:aex9), do: {:out_of_gas_error, :out_of_gas_error, nil}
+  defp decode_meta_info(aexn_type, _unknown), do: format_error_meta_info(aexn_type)
 
-  defp error_meta_info(:aex141),
+  defp decode_metadata_type(variant_type) do
+    case variant_type do
+      {:variant, [0, 0, 0, 0], 0, {}} -> :url
+      {:variant, [0, 0, 0, 0], 1, {}} -> :ipfs
+      {:variant, [0, 0, 0, 0], 2, {}} -> :object_id
+      {:variant, [0, 0, 0, 0], 3, {}} -> :map
+      {:variant, [0, 0, 0], 0, {}} -> :url
+      {:variant, [0, 0, 0], 1, {}} -> :object_id
+      {:variant, [0, 0, 0], 2, {}} -> :map
+      _other -> :unknown
+    end
+  end
+
+  defp call_error_meta_info(:aex9), do: {:out_of_gas_error, :out_of_gas_error, nil}
+
+  defp call_error_meta_info(:aex141),
     do: {:out_of_gas_error, :out_of_gas_error, :out_of_gas_error, nil}
+
+  defp format_error_meta_info(:aex9), do: {:format_error, :format_error, nil}
+
+  defp format_error_meta_info(:aex141),
+    do: {:format_error, :format_error, :format_error, nil}
 
   defp has_all_signatures?(aexn_signatures, functions) do
     Enum.all?(aexn_signatures, fn {hash, type} ->

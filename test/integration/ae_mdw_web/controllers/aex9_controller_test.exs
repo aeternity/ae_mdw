@@ -84,7 +84,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
         assert is_binary(name)
         assert is_binary(symbol)
 
-        if name == "out_of_gas_error" do
+        if name in ["format_error", "out_of_gas_error"] do
           assert is_nil(decimals)
         else
           assert is_integer(decimals) and decimals >= 0

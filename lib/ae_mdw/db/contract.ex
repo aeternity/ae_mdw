@@ -51,7 +51,7 @@ defmodule AeMdw.Db.Contract do
     name = elem(aexn_meta_info, 0)
     symbol = elem(aexn_meta_info, 1)
 
-    if name == :out_of_gas_error do
+    if name in [:format_error, :out_of_gas_error] do
       state2
     else
       m_contract_name =
