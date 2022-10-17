@@ -34,7 +34,7 @@ defmodule AeMdw.AexnContractsTest do
         {AeMdw.DryRun.Runner, [:passthrough],
          [
            call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
-             variant_url = {:variant, [0, 1], 1, "https://some-base-url.com"}
+             variant_url = {:variant, [0, 1], 1, base_url}
              variant_type = {:variant, [0, 0, 0, 0], 0, {}}
              meta_info_tuple = {"name", "SYMBOL", variant_url, variant_type}
              {:ok, {:tuple, meta_info_tuple}}
@@ -48,20 +48,19 @@ defmodule AeMdw.AexnContractsTest do
 
     test "succeeds with nft standard meta info" do
       contract_pk = :crypto.strong_rand_bytes(32)
-      base_url = "https://some-base-url.com"
 
       with_mocks [
         {AeMdw.DryRun.Runner, [:passthrough],
          [
            call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
-             variant_url = {:variant, [0, 1], 1, "https://some-base-url.com"}
-             variant_type = {:variant, [0, 0, 0, 0], 0, {}}
+             variant_url = {:variant, [0, 1], 0, ""}
+             variant_type = {:variant, [0, 0, 0], 2, {}}
              meta_info_tuple = {"name", "SYMBOL", variant_url, variant_type}
              {:ok, {:tuple, meta_info_tuple}}
            end
          ]}
       ] do
-        assert {:ok, {"name", "SYMBOL", ^base_url, :url}} =
+        assert {:ok, {"name", "SYMBOL", nil, :map}} =
                  AexnContracts.call_meta_info(:aex141, contract_pk)
       end
     end
