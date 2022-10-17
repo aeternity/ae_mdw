@@ -1,5 +1,17 @@
 # Changelog
 
+### [1.24.1](https://www.github.com/aeternity/ae_mdw/compare/v1.24.0...v1.24.1) (2022-10-17)
+
+
+### Bug Fixes
+
+* render bid for names in auction ([#958](https://www.github.com/aeternity/ae_mdw/issues/958)) ([bb52e42](https://www.github.com/aeternity/ae_mdw/commit/bb52e42b58b2358ebe33474a3ac67e98f5696473))
+
+
+### Miscellaneous
+
+* add return type for ga_meta_tx ([#959](https://www.github.com/aeternity/ae_mdw/issues/959)) ([ba40c78](https://www.github.com/aeternity/ae_mdw/commit/ba40c7829a6412b89243a5314e65b443dded730b))
+
 ## [1.24.0](https://www.github.com/aeternity/ae_mdw/compare/v1.23.2...v1.24.0) (2022-10-12)
 
 
