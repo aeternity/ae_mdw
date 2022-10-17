@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.25.1](https://www.github.com/aeternity/ae_mdw/compare/v1.25.0...v1.25.1) (2022-10-17)
+
+
+### Bug Fixes
+
+* handle any meta info value ([#962](https://www.github.com/aeternity/ae_mdw/issues/962)) ([b9e111a](https://www.github.com/aeternity/ae_mdw/commit/b9e111a1b6cdf0188532e1e9db72f048b9945213))
+
 ## [1.25.0](https://www.github.com/aeternity/ae_mdw/compare/v1.24.0...v1.25.0) (2022-10-17)
 
 
