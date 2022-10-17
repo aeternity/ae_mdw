@@ -324,6 +324,209 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       end
     end
 
+    test "when it has int transfers from oracle rewards or name fees", %{conn: conn} do
+      account_pk = TS.address(0)
+      account = Enc.encode(:account_pubkey, account_pk)
+      height = 398
+      [txi1, txi2, txi3] = [123, 456, 789]
+
+      store =
+        empty_store()
+        |> Store.put(
+          Model.TargetKindIntTransferTx,
+          Model.target_kind_int_transfer_tx(
+            index: {account_pk, "reward_oracle", {height, txi1}, txi1}
+          )
+        )
+        |> Store.put(
+          Model.IntTransferTx,
+          Model.int_transfer_tx(
+            index: {{height, txi1}, "reward_oracle", account_pk, txi1},
+            amount: 10
+          )
+        )
+        |> Store.put(Model.Tx, Model.tx(index: txi1, block_index: {height, 0}, id: "hash1"))
+        |> Store.put(
+          Model.TargetKindIntTransferTx,
+          Model.target_kind_int_transfer_tx(
+            index: {account_pk, "fee_lock_name", {height, txi2}, txi2}
+          )
+        )
+        |> Store.put(
+          Model.IntTransferTx,
+          Model.int_transfer_tx(
+            index: {{height, txi2}, "fee_lock_name", account_pk, txi2},
+            amount: 20
+          )
+        )
+        |> Store.put(Model.Tx, Model.tx(index: txi2, block_index: {height, 1}, id: "hash2"))
+        |> Store.put(
+          Model.TargetKindIntTransferTx,
+          Model.target_kind_int_transfer_tx(
+            index: {account_pk, "fee_lock_name", {height, txi3}, txi3}
+          )
+        )
+        |> Store.put(
+          Model.IntTransferTx,
+          Model.int_transfer_tx(
+            index: {{height, txi3}, "fee_lock_name", account_pk, txi3},
+            amount: 30
+          )
+        )
+        |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height, 1}, id: "hash3"))
+
+      assert %{"prev" => nil, "data" => [activity1, activity2] = data, "next" => next_url} =
+               conn
+               |> with_store(store)
+               |> get("/v2/accounts/#{account}/activities", direction: "forward", limit: 2)
+               |> json_response(200)
+
+      assert %{
+               "height" => ^height,
+               "type" => "InternalTransferEvent",
+               "payload" => %{
+                 "kind" => "reward_oracle",
+                 "amount" => 10
+               }
+             } = activity1
+
+      assert %{
+               "height" => ^height,
+               "type" => "InternalTransferEvent",
+               "payload" => %{
+                 "kind" => "fee_lock_name",
+                 "amount" => 20
+               }
+             } = activity2
+
+      assert %{"prev" => prev_url, "data" => [activity3], "next" => nil} =
+               conn
+               |> with_store(store)
+               |> get(next_url)
+               |> json_response(200)
+
+      assert %{"height" => 398, "type" => "InternalTransferEvent", "payload" => %{"amount" => 30}} =
+               activity3
+
+      assert %{"data" => ^data} = conn |> with_store(store) |> get(prev_url) |> json_response(200)
+    end
+
+    test "when it has both gen-based and tx-based int transfers", %{conn: conn} do
+      account_pk = TS.address(0)
+      account = Enc.encode(:account_pubkey, account_pk)
+      height = 398
+      [txi1, txi2, txi3] = [123, 456, 789]
+
+      store =
+        empty_store()
+        |> Store.put(
+          Model.TargetKindIntTransferTx,
+          Model.target_kind_int_transfer_tx(
+            index: {account_pk, "reward_oracle", {height, txi1}, txi1}
+          )
+        )
+        |> Store.put(
+          Model.IntTransferTx,
+          Model.int_transfer_tx(
+            index: {{height, txi1}, "reward_oracle", account_pk, txi1},
+            amount: 10
+          )
+        )
+        |> Store.put(Model.Tx, Model.tx(index: txi1, block_index: {height, 0}, id: "hash1"))
+        |> Store.put(
+          Model.TargetKindIntTransferTx,
+          Model.target_kind_int_transfer_tx(
+            index: {account_pk, "fee_lock_name", {height, txi2}, txi2}
+          )
+        )
+        |> Store.put(
+          Model.IntTransferTx,
+          Model.int_transfer_tx(
+            index: {{height, txi2}, "fee_lock_name", account_pk, txi2},
+            amount: 20
+          )
+        )
+        |> Store.put(Model.Tx, Model.tx(index: txi2, block_index: {height, 1}, id: "hash2"))
+        |> Store.put(
+          Model.TargetKindIntTransferTx,
+          Model.target_kind_int_transfer_tx(
+            index: {account_pk, "reward_dev", {height + 1, -1}, -1}
+          )
+        )
+        |> Store.put(
+          Model.IntTransferTx,
+          Model.int_transfer_tx(
+            index: {{height + 1, -1}, "reward_dev", account_pk, -1},
+            amount: 30
+          )
+        )
+        |> Store.put(
+          Model.TargetKindIntTransferTx,
+          Model.target_kind_int_transfer_tx(
+            index: {account_pk, "fee_lock_name", {height + 2, txi3}, txi3}
+          )
+        )
+        |> Store.put(
+          Model.IntTransferTx,
+          Model.int_transfer_tx(
+            index: {{height + 2, txi3}, "fee_lock_name", account_pk, txi3},
+            amount: 40
+          )
+        )
+        |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height + 2, 0}, id: "hash3"))
+
+      assert %{
+               "prev" => nil,
+               "data" => [activity1, activity2, activity3] = data,
+               "next" => next_url
+             } =
+               conn
+               |> with_store(store)
+               |> get("/v2/accounts/#{account}/activities", direction: "forward", limit: 3)
+               |> json_response(200)
+
+      assert %{
+               "height" => ^height,
+               "type" => "InternalTransferEvent",
+               "payload" => %{
+                 "kind" => "reward_oracle",
+                 "amount" => 10
+               }
+             } = activity1
+
+      assert %{
+               "height" => ^height,
+               "type" => "InternalTransferEvent",
+               "payload" => %{
+                 "kind" => "fee_lock_name",
+                 "amount" => 20
+               }
+             } = activity2
+
+      assert %{
+               "height" => 399,
+               "type" => "InternalTransferEvent",
+               "payload" => %{
+                 "kind" => "reward_dev",
+                 "amount" => 30
+               }
+             } = activity3
+
+      assert %{"prev" => prev_url, "data" => [activity4], "next" => nil} =
+               conn
+               |> with_store(store)
+               |> get(next_url)
+               |> json_response(200)
+
+      assert %{
+               "height" => 400,
+               "type" => "InternalTransferEvent",
+               "payload" => %{"kind" => "fee_lock_name", "amount" => 40}
+             } = activity4
+
+      assert %{"data" => ^data} = conn |> with_store(store) |> get(prev_url) |> json_response(200)
+    end
+
     test "when activities contain aexn tokens, it returns them as AexnEvent", %{conn: conn} do
       account_pk = TS.address(0)
       account = Enc.encode(:account_pubkey, account_pk)
