@@ -184,7 +184,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
 
     test "indexes aex141 with error meta_info without sorting records" do
       contract_pk = Validate.id!("ct_ukZe6BBpuSWxT8hxd87z11vdgRnwKnedEWqJ7SyQucbX1C1pc")
-      aex141_meta_info = {:out_of_gas_error, :out_of_gas_error, :out_of_gas_error, nil}
+      aex141_meta_info = {:format_error, :format_error, :format_error, nil}
       state = State.new()
 
       extensions = ["ext1", "ext2"]
@@ -215,13 +215,13 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       refute State.exists?(
                state,
                Model.AexnContractName,
-               {:aex141, :out_of_gas_error, contract_pk}
+               {:aex141, :format_error, contract_pk}
              )
 
       refute State.exists?(
                state,
                Model.AexnContractSymbol,
-               {:aex141, :out_of_gas_error, contract_pk}
+               {:aex141, :format_error, contract_pk}
              )
     end
   end

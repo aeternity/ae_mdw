@@ -9,6 +9,114 @@ defmodule AeMdw.AexnContractsTest do
   @wrong_mint {[], {[:address, :string, {:variant, [tuple: [], tuple: [:string]]}], :integer},
                %{}}
 
+  describe "call_meta_info/2" do
+    test "succeeds with aex9 meta_info" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+             meta_info_tuple = {"name", "SYMBOL", 18}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        assert {:ok, {"name", "SYMBOL", 18}} = AexnContracts.call_meta_info(:aex9, contract_pk)
+      end
+    end
+
+    test "succeeds with meta info from previous nft draft (hackaton)" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      base_url = "https://some-base-url.com"
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+             variant_url = {:variant, [0, 1], 1, base_url}
+             variant_type = {:variant, [0, 0, 0, 0], 0, {}}
+             meta_info_tuple = {"name", "SYMBOL", variant_url, variant_type}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        assert {:ok, {"name", "SYMBOL", ^base_url, :url}} =
+                 AexnContracts.call_meta_info(:aex141, contract_pk)
+      end
+    end
+
+    test "succeeds with nft standard meta info" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+             variant_url = {:variant, [0, 1], 0, ""}
+             variant_type = {:variant, [0, 0, 0], 2, {}}
+             meta_info_tuple = {"name", "SYMBOL", variant_url, variant_type}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        assert {:ok, {"name", "SYMBOL", nil, :map}} =
+                 AexnContracts.call_meta_info(:aex141, contract_pk)
+      end
+    end
+
+    test "returns :unknown metadata type when does not comply to nft standard" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+             variant_url = {:variant, [0, 1], 0, ""}
+             variant_type = {:variant, [0, 0], 0, {}}
+             meta_info_tuple = {"name", "SYMBOL", variant_url, variant_type}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        assert {:ok, {"name", "SYMBOL", nil, :unknown}} =
+                 AexnContracts.call_meta_info(:aex141, contract_pk)
+      end
+    end
+
+    test "returns format error values when tuple format is unexpected" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+             {:ok, {:tuple, {"name", "symbol"}}}
+           end
+         ]}
+      ] do
+        assert {:ok, {:format_error, :format_error, nil}} =
+                 AexnContracts.call_meta_info(:aex9, contract_pk)
+      end
+    end
+
+    test "returns out of gas error when call_contract fails" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+             {:error, :dry_run_error}
+           end
+         ]}
+      ] do
+        assert {:ok, {:out_of_gas_error, :out_of_gas_error, :out_of_gas_error, nil}} =
+                 AexnContracts.call_meta_info(:aex141, contract_pk)
+      end
+    end
+  end
+
   describe "is_aex141?/1" do
     test "returns true for a mintable" do
       contract_pk = :crypto.strong_rand_bytes(32)
