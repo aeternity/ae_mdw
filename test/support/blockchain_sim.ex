@@ -5,6 +5,8 @@ defmodule AeMdwWeb.BlockchainSim do
 
   alias AeMdw.Validate
 
+  import AeMdw.Node.ContractCallFixtures, only: [call_rec: 2]
+
   require Mock
 
   @genesis_prev_hash AeMdw.Util.max_256bit_bin()
@@ -13,6 +15,7 @@ defmodule AeMdwWeb.BlockchainSim do
   @passthrough_functions ~w(module_info)a
 
   @type account_name() :: atom()
+  @type tx_type() :: AeMdw.Node.tx_type()
 
   defmacro with_blockchain(initial_balances, blocks, do: body) do
     aec_db =
@@ -43,15 +46,19 @@ defmodule AeMdwWeb.BlockchainSim do
       ga_mocks =
         case mock_accounts[:ga] do
           {:id, :account, ga_pk} ->
-            ga_meta_tx = mock_transactions[:ga_tx]
-            ga_meta_tx_hash = if ga_meta_tx, do: :aetx_sign.hash(ga_meta_tx)
+            %{hash: block_hash} = mock_blocks[:mb]
+            block_hash = Validate.id!(block_hash)
+            ga_tx = mock_transactions[:ga_tx]
+            ga_tx_hash = if ga_tx, do: :aetx_sign.hash(ga_tx)
 
-            if ga_meta_tx_hash do
+            if ga_tx_hash do
               [
                 {:aec_chain, [:passthrough],
-                 get_ga_call: fn ^ga_pk, _auth_id, _block_hash -> {:ok, ga_meta_tx_hash} end},
-                {:aega_call, [:passthrough],
-                 return_type: fn ^ga_meta_tx_hash -> :some_return_type end}
+                 get_ga_call: fn ^ga_pk, _auth_id, _block_hash -> {:ok, ga_tx_hash} end,
+                 get_contract_call: fn _pk, _call_id, ^block_hash ->
+                   {:ok, call_rec("attach", ga_pk)}
+                 end},
+                {:aega_call, [:passthrough], return_type: fn ^ga_tx_hash -> :some_return_type end}
               ]
             else
               []
@@ -76,7 +83,13 @@ defmodule AeMdwWeb.BlockchainSim do
 
   defmacrop is_transaction(mocked_tx) do
     quote do
-      elem(unquote(mocked_tx), 0) in [:spend_tx, :oracle_register_tx, :name_claim_tx, :ga_meta_tx]
+      elem(unquote(mocked_tx), 0) in [
+        :spend_tx,
+        :oracle_register_tx,
+        :name_claim_tx,
+        :ga_attach_tx,
+        :ga_meta_tx
+      ]
     end
   end
 
@@ -85,19 +98,14 @@ defmodule AeMdwWeb.BlockchainSim do
     {:spend_tx, sender_name, recipient_name, amount}
   end
 
-  @spec oracle_register_tx(account_name(), map()) :: tuple()
-  def oracle_register_tx(account_name, args \\ %{}) when is_map(args) do
-    {:oracle_register_tx, account_name, args}
+  @spec tx(tx_type(), account_name(), map()) :: tuple()
+  def tx(tx_type, account_name, args \\ %{}) when is_map(args) do
+    {tx_type, account_name, args}
   end
 
   @spec name_claim_tx(account_name(), binary(), map()) :: tuple()
   def name_claim_tx(account_name, plain_name, args \\ %{}) when is_map(args) do
     {:name_claim_tx, account_name, plain_name, args}
-  end
-
-  @spec ga_meta_tx(account_name(), map()) :: tuple()
-  def ga_meta_tx(account_name, args \\ %{}) when is_map(args) do
-    {:ga_meta_tx, account_name, args}
   end
 
   @spec generate_blockchain(Keyword.t(), Keyword.t()) :: {Keyword.t(), map(), map(), map()}
@@ -346,6 +354,23 @@ defmodule AeMdwWeb.BlockchainSim do
     }
     |> Map.merge(args)
     |> :aens_claim_tx.new()
+  end
+
+  defp create_aetx({:ga_attach_tx, account_name, args}, accounts) do
+    %{
+      owner_id: Map.fetch!(accounts, account_name),
+      nonce: 1,
+      code: :erlang.list_to_binary(['o', 'k']),
+      auth_fun: <<1::256>>,
+      vm_version: 7,
+      abi_version: 3,
+      gas: 25_000,
+      gas_price: 1_000_000_000,
+      call_data: :erlang.list_to_binary(['o', 'k']),
+      fee: 100
+    }
+    |> Map.merge(args)
+    |> :aega_attach_tx.new()
   end
 
   defp create_aetx({:ga_meta_tx, account_name, args}, accounts) do
