@@ -30,6 +30,8 @@ defmodule AeMdw.Db.Sync.Name do
            | Model.ActiveNameActivation
            | Model.ActiveNameExpiration
            | Model.InactiveNameExpiration
+           | Model.ActiveNameOwnerExpiration
+           | Model.InactiveNameOwnerExpiration
            | Model.AuctionExpiration
            | Model.AuctionBid
            | Model.AuctionOwner
@@ -45,12 +47,14 @@ defmodule AeMdw.Db.Sync.Name do
            | Model.owner()
            | Model.pointee()
            | Model.auction_bid()
+           | Model.owner_expiration()
   @typep cache_key ::
            String.t()
            | {Blocks.height(), pubkey()}
            | {pubkey(), String.t()}
            | pubkey()
            | {String.t(), <<>>, <<>>, <<>>, <<>>}
+           | {pubkey(), Blocks.height(), binary()}
 
   @spec name_claim_mutations(Node.tx(), Txs.tx_hash(), Blocks.block_index(), Txs.txi()) :: [
           Mutation.t()
@@ -233,6 +237,7 @@ defmodule AeMdw.Db.Sync.Name do
     m_name_activation = Model.activation(index: {height, plain_name})
     m_name_exp = Model.expiration(index: {expire, plain_name})
     m_owner = Model.owner(index: {owner, plain_name})
+    m_name_owner_exp = Model.owner_expiration(index: {owner, expire, plain_name})
     %{tx: %{name_fee: name_fee}} = read_raw_tx!(state, txi)
 
     state
@@ -240,6 +245,7 @@ defmodule AeMdw.Db.Sync.Name do
     |> cache_through_write(Model.ActiveNameOwner, m_owner)
     |> cache_through_write(Model.ActiveNameActivation, m_name_activation)
     |> cache_through_write(Model.ActiveNameExpiration, m_name_exp)
+    |> cache_through_write(Model.ActiveNameOwnerExpiration, m_name_owner_exp)
     |> cache_through_delete(Model.AuctionExpiration, {height, plain_name})
     |> cache_through_delete(Model.AuctionOwner, {owner, plain_name})
     |> cache_through_delete(Model.AuctionBid, plain_name)
@@ -275,6 +281,7 @@ defmodule AeMdw.Db.Sync.Name do
     |> cache_through_delete(Model.ActiveNameOwner, {owner_pk, plain_name})
     |> cache_through_delete(Model.ActiveNameActivation, {active_from, plain_name})
     |> cache_through_delete(Model.ActiveNameExpiration, {expiration, plain_name})
+    |> cache_through_delete(Model.ActiveNameOwnerExpiration, {owner_pk, expiration, plain_name})
   end
 
   @spec cache_through_read(state(), table(), cache_key()) :: {:ok, name_record()} | nil
@@ -308,12 +315,14 @@ defmodule AeMdw.Db.Sync.Name do
       ) do
     m_exp = Model.expiration(index: {deactivate_height, plain_name})
     m_owner = Model.owner(index: {owner_pk, plain_name})
+    m_owner_expiration = Model.owner_expiration(index: {owner_pk, deactivate_height, plain_name})
 
     state
     |> cache_through_delete_active(expiration, m_name)
     |> cache_through_write(Model.InactiveName, m_name)
     |> cache_through_write(Model.InactiveNameExpiration, m_exp)
     |> cache_through_write(Model.InactiveNameOwner, m_owner)
+    |> cache_through_write(Model.InactiveNameOwnerExpiration, m_owner_expiration)
   end
 
   @spec cache_through_delete_inactive(state(), nil | Model.name()) :: state()

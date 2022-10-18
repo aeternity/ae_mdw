@@ -45,6 +45,8 @@ defmodule AeMdw.Names do
   @table_activation Model.ActiveNameActivation
   @table_active_expiration Model.ActiveNameExpiration
   @table_active_owner Model.ActiveNameOwner
+  @table_active_owner_expiration Model.ActiveNameOwnerExpiration
+  @table_inactive_owner_expiration Model.InactiveNameOwnerExpiration
   @table_inactive Model.InactiveName
   @table_inactive_expiration Model.InactiveNameExpiration
   @table_inactive_owner Model.InactiveNameOwner
@@ -52,6 +54,11 @@ defmodule AeMdw.Names do
   @pagination_params ~w(limit cursor rev direction scope tx_hash expand)
   @states ~w(active inactive)
   @all_lifecycles ~w(active inactive auction)a
+
+  @min_int Util.min_int()
+  @max_int Util.max_int()
+  @min_bin Util.min_bin()
+  @max_bin Util.max_256bit_bin()
 
   @spec fetch_names(state(), pagination(), range(), order_by(), query(), cursor() | nil, opts()) ::
           {:ok, cursor() | nil, [name()], cursor() | nil} | {:error, reason()}
@@ -175,8 +182,58 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp build_height_streamer(%{owned_by: _owner_pk}, _state, _scope, _cursor) do
-    raise(ErrInput.Query, value: "can't order by expiration when filtering by owner")
+  defp build_height_streamer(%{owned_by: owner_pk, state: "active"}, state, scope, cursor) do
+    scope = serialize_owner_expiration_scope(owner_pk, scope)
+    cursor = serialize_owner_expiration_cursor(owner_pk, cursor)
+
+    fn direction ->
+      state
+      |> Collection.stream(@table_active_owner_expiration, direction, scope, cursor)
+      |> Stream.map(fn {^owner_pk, expiration_height, plain_name} ->
+        {{expiration_height, plain_name}, :active}
+      end)
+    end
+  end
+
+  defp build_height_streamer(%{owned_by: owner_pk, state: "inactive"}, state, scope, cursor) do
+    scope = serialize_owner_expiration_scope(owner_pk, scope)
+    cursor = serialize_owner_expiration_cursor(owner_pk, cursor)
+
+    fn direction ->
+      state
+      |> Collection.stream(@table_inactive_owner_expiration, direction, scope, cursor)
+      |> Stream.map(fn {^owner_pk, expiration_height, plain_name} ->
+        {{expiration_height, plain_name}, :inactive}
+      end)
+    end
+  end
+
+  defp build_height_streamer(%{owned_by: owner_pk}, state, scope, cursor) do
+    scope = serialize_owner_expiration_scope(owner_pk, scope)
+    cursor = serialize_owner_expiration_cursor(owner_pk, cursor)
+
+    fn direction ->
+      active_stream =
+        state
+        |> Collection.stream(@table_active_owner_expiration, direction, scope, cursor)
+        |> Stream.map(fn {^owner_pk, expiration_height, plain_name} ->
+          {expiration_height, plain_name, :active}
+        end)
+
+      inactive_stream =
+        state
+        |> Collection.stream(@table_inactive_owner_expiration, direction, scope, cursor)
+        |> Stream.map(fn {^owner_pk, expiration_height, plain_name} ->
+          {expiration_height, plain_name, :inactive}
+        end)
+
+      [
+        active_stream,
+        inactive_stream
+      ]
+      |> Collection.merge(direction)
+      |> Stream.map(fn {exp_height, plain_name, source} -> {{exp_height, plain_name}, source} end)
+    end
   end
 
   defp build_height_streamer(%{state: "active", by: "activation"}, state, scope, cursor) do
@@ -457,6 +514,22 @@ defmodule AeMdw.Names do
     end)
     |> Enum.map(&render_name_info(state, &1, opts))
   end
+
+  defp serialize_owner_expiration_scope(owner_pk, nil),
+    do: {{owner_pk, @min_int, @min_bin}, {owner_pk, @max_int, @max_bin}}
+
+  defp serialize_owner_expiration_scope(
+         owner_pk,
+         {{first_gen, first_plain_name}, {last_gen, last_plain_name}}
+       ),
+       do: {
+         {owner_pk, first_gen, first_plain_name},
+         {owner_pk, last_gen, last_plain_name}
+       }
+
+  defp serialize_owner_expiration_cursor(_owner_pk, nil), do: nil
+
+  defp serialize_owner_expiration_cursor(owner_pk, {gen, name}), do: {owner_pk, gen, name}
 
   defp deserialize_scope({:gen, first_gen..last_gen}) do
     {{first_gen, Util.min_bin()}, {last_gen, Util.max_256bit_bin()}}
