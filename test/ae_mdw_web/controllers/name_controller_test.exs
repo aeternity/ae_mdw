@@ -723,27 +723,27 @@ defmodule AeMdwWeb.NameControllerTest do
         store
         |> Store.put(Model.InactiveName, inactive_name)
         |> Store.put(
-          Model.InactiveNameOwnerExpiration,
-          Model.owner_expiration(index: {owner_pk, exp_height, first_name})
+          Model.InactiveNameOwnerDeactivation,
+          Model.owner_deactivation(index: {owner_pk, exp_height, first_name})
         )
         |> Store.put(Model.InactiveName, Model.name(inactive_name, index: second_name))
         |> Store.put(
-          Model.InactiveNameOwnerExpiration,
-          Model.owner_expiration(index: {owner_pk, exp_height + 1, second_name})
+          Model.InactiveNameOwnerDeactivation,
+          Model.owner_deactivation(index: {owner_pk, exp_height + 1, second_name})
         )
         |> Store.put(
           Model.InactiveName,
           Model.name(inactive_name, index: not_owned_name, owner: other_pk)
         )
         |> Store.put(
-          Model.InactiveNameOwnerExpiration,
-          Model.owner_expiration(index: {other_pk, exp_height + 2, not_owned_name})
+          Model.InactiveNameOwnerDeactivation,
+          Model.owner_deactivation(index: {other_pk, exp_height + 2, not_owned_name})
         )
         |> Store.put(Model.ActiveName, active_name)
         |> Store.put(Model.ActiveNameOwner, Model.owner(index: {owner_pk, third_name}))
         |> Store.put(
-          Model.ActiveNameOwnerExpiration,
-          Model.owner_expiration(index: {owner_pk, exp_height + 3, third_name})
+          Model.ActiveNameOwnerDeactivation,
+          Model.owner_deactivation(index: {owner_pk, exp_height + 3, third_name})
         )
 
       with_mocks [

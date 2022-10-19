@@ -82,7 +82,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
 
     assert State.exists?(
              state,
-             Model.ActiveNameOwnerExpiration,
+             Model.ActiveNameOwnerDeactivation,
              {new_owner_pk, expire, plain_name}
            )
   end
@@ -117,7 +117,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
 
     refute State.exists?(
              state,
-             Model.ActiveNameOwnerExpiration,
+             Model.ActiveNameOwnerDeactivation,
              {owner_pk, claim_height + timeout, plain_name}
            )
 

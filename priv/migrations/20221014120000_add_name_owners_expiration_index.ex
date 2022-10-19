@@ -1,6 +1,6 @@
-defmodule AeMdw.Migrations.AddNameOwnersExpirationIndex do
+defmodule AeMdw.Migrations.AddNameOwnersDeactivationIndex do
   @moduledoc """
-  Indexes owner names by expirations.
+  Indexes owner names by deactivations.
   """
 
   alias AeMdw.Collection
@@ -15,13 +15,13 @@ defmodule AeMdw.Migrations.AddNameOwnersExpirationIndex do
     active_mutations =
       state
       |> Collection.stream(Model.ActiveNameExpiration, nil)
-      |> Enum.map(fn {expiration_height, plain_name} ->
+      |> Enum.map(fn {deactivation_height, plain_name} ->
         Model.name(owner: owner_pk) = State.fetch!(state, Model.ActiveName, plain_name)
 
-        owner_expiration =
-          Model.owner_expiration(index: {owner_pk, expiration_height, plain_name})
+        owner_deactivation =
+          Model.owner_deactivation(index: {owner_pk, deactivation_height, plain_name})
 
-        WriteMutation.new(Model.ActiveNameOwnerExpiration, owner_expiration)
+        WriteMutation.new(Model.ActiveNameOwnerDeactivation, owner_deactivation)
       end)
 
     inactive_mutations =
@@ -30,10 +30,10 @@ defmodule AeMdw.Migrations.AddNameOwnersExpirationIndex do
       |> Enum.map(fn {deactivation_height, plain_name} ->
         Model.name(owner: owner_pk) = State.fetch!(state, Model.InactiveName, plain_name)
 
-        owner_expiration =
-          Model.owner_expiration(index: {owner_pk, deactivation_height, plain_name})
+        owner_deactivation =
+          Model.owner_deactivation(index: {owner_pk, deactivation_height, plain_name})
 
-        WriteMutation.new(Model.InactiveNameOwnerExpiration, owner_expiration)
+        WriteMutation.new(Model.InactiveNameOwnerDeactivation, owner_deactivation)
       end)
 
     mutations = active_mutations ++ inactive_mutations

@@ -227,13 +227,13 @@ defmodule AeMdw.Db.Model do
             unused: nil
           )
 
-  # owner_expiration:
-  #     index = {owner_pk, expire_height, plain_name},
-  @owner_expiration_defaults [index: nil, unused: nil]
-  defrecord :owner_expiration, @owner_expiration_defaults
+  # owner_deactivation:
+  #     index = {owner_pk, deactivate_height, plain_name},
+  @owner_deactivation_defaults [index: nil, unused: nil]
+  defrecord :owner_deactivation, @owner_deactivation_defaults
 
-  @type owner_expiration() ::
-          record(:owner_expiration,
+  @type owner_deactivation() ::
+          record(:owner_deactivation,
             index: {pubkey(), height(), Names.plain_name()},
             unused: nil
           )
@@ -815,8 +815,8 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.InactiveName,
       AeMdw.Db.Model.AuctionOwner,
       AeMdw.Db.Model.ActiveNameOwner,
-      AeMdw.Db.Model.ActiveNameOwnerExpiration,
-      AeMdw.Db.Model.InactiveNameOwnerExpiration,
+      AeMdw.Db.Model.ActiveNameOwnerDeactivation,
+      AeMdw.Db.Model.InactiveNameOwnerDeactivation,
       AeMdw.Db.Model.InactiveNameOwner
     ]
   end
@@ -902,8 +902,8 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.AuctionOwner), do: :owner
   def record(AeMdw.Db.Model.ActiveNameOwner), do: :owner
   def record(AeMdw.Db.Model.InactiveNameOwner), do: :owner
-  def record(AeMdw.Db.Model.ActiveNameOwnerExpiration), do: :owner_expiration
-  def record(AeMdw.Db.Model.InactiveNameOwnerExpiration), do: :owner_expiration
+  def record(AeMdw.Db.Model.ActiveNameOwnerDeactivation), do: :owner_deactivation
+  def record(AeMdw.Db.Model.InactiveNameOwnerDeactivation), do: :owner_deactivation
   def record(AeMdw.Db.Model.ActiveOracleExpiration), do: :expiration
   def record(AeMdw.Db.Model.InactiveOracleExpiration), do: :expiration
   def record(AeMdw.Db.Model.ActiveOracle), do: :oracle

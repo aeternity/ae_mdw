@@ -102,14 +102,16 @@ defmodule AeMdw.Db.NameClaimMutation do
         m_name_activation = Model.activation(index: {height, plain_name})
         m_name_exp = Model.expiration(index: {expire, plain_name})
         lock_amount = (is_lima? && name_fee) || :aec_governance.name_claim_locked_fee()
-        m_name_owner_exp = Model.owner_expiration(index: {owner_pk, expire, plain_name})
+
+        m_name_owner_deactivation =
+          Model.owner_deactivation(index: {owner_pk, expire, plain_name})
 
         state2
         |> Name.cache_through_write(Model.ActiveName, m_name)
         |> Name.cache_through_write(Model.ActiveNameOwner, m_owner)
         |> Name.cache_through_write(Model.ActiveNameActivation, m_name_activation)
         |> Name.cache_through_write(Model.ActiveNameExpiration, m_name_exp)
-        |> State.put(Model.ActiveNameOwnerExpiration, m_name_owner_exp)
+        |> State.put(Model.ActiveNameOwnerDeactivation, m_name_owner_deactivation)
         |> Name.cache_through_delete_inactive(previous)
         |> IntTransfer.fee({height, txi}, :lock_name, owner_pk, txi, lock_amount)
         |> State.inc_stat(:names_activated)

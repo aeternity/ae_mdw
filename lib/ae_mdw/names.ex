@@ -45,8 +45,8 @@ defmodule AeMdw.Names do
   @table_activation Model.ActiveNameActivation
   @table_active_expiration Model.ActiveNameExpiration
   @table_active_owner Model.ActiveNameOwner
-  @table_active_owner_expiration Model.ActiveNameOwnerExpiration
-  @table_inactive_owner_expiration Model.InactiveNameOwnerExpiration
+  @table_active_owner_deactivation Model.ActiveNameOwnerDeactivation
+  @table_inactive_owner_deactivation Model.InactiveNameOwnerDeactivation
   @table_inactive Model.InactiveName
   @table_inactive_expiration Model.InactiveNameExpiration
   @table_inactive_owner Model.InactiveNameOwner
@@ -183,48 +183,48 @@ defmodule AeMdw.Names do
   end
 
   defp build_height_streamer(%{owned_by: owner_pk, state: "active"}, state, scope, cursor) do
-    key_boundary = serialize_owner_expiration_key_boundary(owner_pk, scope)
-    cursor = serialize_owner_expiration_cursor(owner_pk, cursor)
+    key_boundary = serialize_owner_deactivation_key_boundary(owner_pk, scope)
+    cursor = serialize_owner_deactivation_cursor(owner_pk, cursor)
 
     fn direction ->
       state
-      |> Collection.stream(@table_active_owner_expiration, direction, key_boundary, cursor)
-      |> Stream.map(fn {^owner_pk, expiration_height, plain_name} ->
-        {{expiration_height, plain_name}, :active}
+      |> Collection.stream(@table_active_owner_deactivation, direction, key_boundary, cursor)
+      |> Stream.map(fn {^owner_pk, deactivation_height, plain_name} ->
+        {{deactivation_height, plain_name}, :active}
       end)
     end
   end
 
   defp build_height_streamer(%{owned_by: owner_pk, state: "inactive"}, state, scope, cursor) do
-    key_boundary = serialize_owner_expiration_key_boundary(owner_pk, scope)
-    cursor = serialize_owner_expiration_cursor(owner_pk, cursor)
+    key_boundary = serialize_owner_deactivation_key_boundary(owner_pk, scope)
+    cursor = serialize_owner_deactivation_cursor(owner_pk, cursor)
 
     fn direction ->
       state
-      |> Collection.stream(@table_inactive_owner_expiration, direction, key_boundary, cursor)
-      |> Stream.map(fn {^owner_pk, expiration_height, plain_name} ->
-        {{expiration_height, plain_name}, :inactive}
+      |> Collection.stream(@table_inactive_owner_deactivation, direction, key_boundary, cursor)
+      |> Stream.map(fn {^owner_pk, deactivation_height, plain_name} ->
+        {{deactivation_height, plain_name}, :inactive}
       end)
     end
   end
 
   defp build_height_streamer(%{owned_by: owner_pk}, state, scope, cursor) do
-    key_boundary = serialize_owner_expiration_key_boundary(owner_pk, scope)
-    cursor = serialize_owner_expiration_cursor(owner_pk, cursor)
+    key_boundary = serialize_owner_deactivation_key_boundary(owner_pk, scope)
+    cursor = serialize_owner_deactivation_cursor(owner_pk, cursor)
 
     fn direction ->
       active_stream =
         state
-        |> Collection.stream(@table_active_owner_expiration, direction, key_boundary, cursor)
-        |> Stream.map(fn {^owner_pk, expiration_height, plain_name} ->
-          {expiration_height, plain_name, :active}
+        |> Collection.stream(@table_active_owner_deactivation, direction, key_boundary, cursor)
+        |> Stream.map(fn {^owner_pk, deactivation_height, plain_name} ->
+          {deactivation_height, plain_name, :active}
         end)
 
       inactive_stream =
         state
-        |> Collection.stream(@table_inactive_owner_expiration, direction, key_boundary, cursor)
-        |> Stream.map(fn {^owner_pk, expiration_height, plain_name} ->
-          {expiration_height, plain_name, :inactive}
+        |> Collection.stream(@table_inactive_owner_deactivation, direction, key_boundary, cursor)
+        |> Stream.map(fn {^owner_pk, deactivation_height, plain_name} ->
+          {deactivation_height, plain_name, :inactive}
         end)
 
       [
@@ -232,7 +232,9 @@ defmodule AeMdw.Names do
         inactive_stream
       ]
       |> Collection.merge(direction)
-      |> Stream.map(fn {exp_height, plain_name, source} -> {{exp_height, plain_name}, source} end)
+      |> Stream.map(fn {deactivation_height, plain_name, source} ->
+        {{deactivation_height, plain_name}, source}
+      end)
     end
   end
 
@@ -515,10 +517,10 @@ defmodule AeMdw.Names do
     |> Enum.map(&render_name_info(state, &1, opts))
   end
 
-  defp serialize_owner_expiration_key_boundary(owner_pk, nil),
+  defp serialize_owner_deactivation_key_boundary(owner_pk, nil),
     do: {{owner_pk, @min_int, @min_bin}, {owner_pk, @max_int, @max_bin}}
 
-  defp serialize_owner_expiration_key_boundary(
+  defp serialize_owner_deactivation_key_boundary(
          owner_pk,
          {{first_gen, first_plain_name}, {last_gen, last_plain_name}}
        ),
@@ -527,9 +529,9 @@ defmodule AeMdw.Names do
          {owner_pk, last_gen, last_plain_name}
        }
 
-  defp serialize_owner_expiration_cursor(_owner_pk, nil), do: nil
+  defp serialize_owner_deactivation_cursor(_owner_pk, nil), do: nil
 
-  defp serialize_owner_expiration_cursor(owner_pk, {gen, name}), do: {owner_pk, gen, name}
+  defp serialize_owner_deactivation_cursor(owner_pk, {gen, name}), do: {owner_pk, gen, name}
 
   defp deserialize_scope({:gen, first_gen..last_gen}) do
     {{first_gen, Util.min_bin()}, {last_gen, Util.max_256bit_bin()}}
