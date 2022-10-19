@@ -7,7 +7,7 @@ defmodule AeMdwWeb.ActivityController do
   alias AeMdwWeb.Util
   alias Plug.Conn
 
-  plug(PaginatedPlug)
+  plug(PaginatedPlug, txi_scope?: false)
   action_fallback(FallbackController)
 
   @spec account_activities(Conn.t(), map()) :: Conn.t()

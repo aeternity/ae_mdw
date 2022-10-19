@@ -668,7 +668,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       refute is_nil(prev_url)
     end
 
-    test "when the account is invalid", %{conn: conn} do
+    test "when the account is invalid, it returns an error", %{conn: conn} do
       invalid_account = "ak_foo"
       error_msg = "invalid id: #{invalid_account}"
 
@@ -678,7 +678,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                |> json_response(400)
     end
 
-    test "when cursor is invalid", %{conn: conn} do
+    test "when cursor is invalid, it returns an error", %{conn: conn} do
       account_pk = TS.address(0)
       account = Enc.encode(:account_pubkey, account_pk)
       invalid_cursor = "1290318-aa-bb"
@@ -687,6 +687,17 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       assert %{"error" => ^error_msg} =
                conn
                |> get("/v2/accounts/#{account}/activities", cursor: invalid_cursor)
+               |> json_response(400)
+    end
+
+    test "when scoping by txi, it returns an error", %{conn: conn} do
+      account_pk = TS.address(0)
+      account = Enc.encode(:account_pubkey, account_pk)
+      error_msg = "invalid scope: txi"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> get("/v2/accounts/#{account}/activities", scope: "txi:1-2")
                |> json_response(400)
     end
   end

@@ -6,7 +6,10 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
   alias Phoenix.Controller
   alias Plug.Conn
 
-  @type opts() :: [order_by: [atom()] | Plug.opts()]
+  @typep opt() ::
+           {:order_by, [atom()]}
+           | {:txi_scope?, boolean()}
+  @type opts() :: [opt()]
 
   @scope_types %{
     "gen" => :gen,
@@ -26,7 +29,9 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
   @spec call(Conn.t(), opts()) :: Conn.t()
   def call(%Conn{params: params, query_params: query_params} = conn, opts) do
-    with {:ok, direction, scope} <- extract_direction_and_scope(params),
+    txi_scope? = Keyword.get(opts, :txi_scope?, true)
+
+    with {:ok, direction, scope} <- extract_direction_and_scope(params, txi_scope?),
          {:ok, limit} <- extract_limit(params),
          {:ok, is_reversed?} <- extract_is_reversed(params),
          {:ok, order_by} <- extract_order_by(params, opts),
@@ -53,20 +58,23 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
   def call(conn, _opts), do: conn
 
-  defp extract_direction_and_scope(%{"range_or_dir" => "forward"}),
+  defp extract_direction_and_scope(%{"range_or_dir" => "forward"}, _txi_scope?),
     do: {:ok, :forward, @default_scope}
 
-  defp extract_direction_and_scope(%{"range_or_dir" => "backward"}),
+  defp extract_direction_and_scope(%{"range_or_dir" => "backward"}, _txi_scope?),
     do: {:ok, :backward, @default_scope}
 
-  defp extract_direction_and_scope(%{"range_or_dir" => range} = params) do
+  defp extract_direction_and_scope(%{"range_or_dir" => range} = params, txi_scope?) do
     params
     |> Map.delete("range_or_dir")
     |> Map.put("range", range)
-    |> extract_direction_and_scope()
+    |> extract_direction_and_scope(txi_scope?)
   end
 
-  defp extract_direction_and_scope(%{"scope_type" => scope_type, "range" => range} = params)
+  defp extract_direction_and_scope(
+         %{"scope_type" => scope_type, "range" => range} = params,
+         true = _txi_scope?
+       )
        when scope_type in @scope_types_keys do
     scope_type = Map.fetch!(@scope_types, scope_type)
 
@@ -89,35 +97,38 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
     end
   end
 
-  defp extract_direction_and_scope(%{"scope_type" => scope_type}),
+  defp extract_direction_and_scope(%{"scope_type" => "gen"} = params, false = _txi_scope?),
+    do: extract_direction_and_scope(params, true)
+
+  defp extract_direction_and_scope(%{"scope_type" => scope_type}, _txi_scope?),
     do: {:error, "invalid scope: #{scope_type}"}
 
-  defp extract_direction_and_scope(%{"range" => _range} = params),
-    do: extract_direction_and_scope(Map.put(params, "scope_type", "gen"))
+  defp extract_direction_and_scope(%{"range" => _range} = params, txi_scope?),
+    do: extract_direction_and_scope(Map.put(params, "scope_type", "gen"), txi_scope?)
 
-  defp extract_direction_and_scope(%{"scope" => scope} = params) do
+  defp extract_direction_and_scope(%{"scope" => scope} = params, txi_scope?) do
     case String.split(scope, ":") do
       [scope_type, range] ->
         params
         |> Map.delete("scope")
         |> Map.merge(%{"scope_type" => scope_type, "range" => range})
-        |> extract_direction_and_scope()
+        |> extract_direction_and_scope(txi_scope?)
 
       _invalid_scope ->
         {:error, "invalid scope: #{scope}"}
     end
   end
 
-  defp extract_direction_and_scope(%{"direction" => "forward"}),
+  defp extract_direction_and_scope(%{"direction" => "forward"}, _txi_scope?),
     do: {:ok, :forward, @default_scope}
 
-  defp extract_direction_and_scope(%{"direction" => "backward"}),
+  defp extract_direction_and_scope(%{"direction" => "backward"}, _txi_scope?),
     do: {:ok, :backward, @default_scope}
 
-  defp extract_direction_and_scope(%{"direction" => direction}),
+  defp extract_direction_and_scope(%{"direction" => direction}, _txi_scope?),
     do: {:error, "invalid direction: #{direction}"}
 
-  defp extract_direction_and_scope(_params), do: {:ok, :backward, @default_scope}
+  defp extract_direction_and_scope(_params, _txi_scope?), do: {:ok, :backward, @default_scope}
 
   defp extract_range(range) when is_binary(range) do
     case String.split(range, "-") do
