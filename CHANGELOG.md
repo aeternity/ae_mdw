@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.25.2](https://www.github.com/aeternity/ae_mdw/compare/v1.25.1...v1.25.2) (2022-10-19)
+
+
+### Miscellaneous
+
+* add return_type for ga_attach_tx ([#964](https://www.github.com/aeternity/ae_mdw/issues/964)) ([f6f69e3](https://www.github.com/aeternity/ae_mdw/commit/f6f69e3bdf90aa2547746d6e85aed0d3724cb49b))
+
 ### [1.25.1](https://www.github.com/aeternity/ae_mdw/compare/v1.25.0...v1.25.1) (2022-10-17)
 
 
