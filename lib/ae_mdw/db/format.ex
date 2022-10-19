@@ -96,9 +96,9 @@ defmodule AeMdw.Db.Format do
     update_in(tx, [:tx], fn tx_details -> Map.merge(tx_details, init_call_details) end)
   end
 
-  defp custom_raw_data(state, :contract_call_tx, tx, tx_rec, _signed_tx, block_hash) do
+  defp custom_raw_data(state, :contract_call_tx, tx, tx_rec, signed_tx, block_hash) do
     contract_pk = :aect_call_tx.contract_pubkey(tx_rec)
-    call_rec = Contract.call_rec(tx_rec, contract_pk, block_hash)
+    call_rec = Contract.call_rec(signed_tx, contract_pk, block_hash)
     fun_arg_res = AeMdw.Db.Contract.call_fun_arg_res(state, contract_pk, tx.tx_index)
 
     logs = fn logs ->
@@ -283,9 +283,13 @@ defmodule AeMdw.Db.Format do
     |> put_in(["query_id"], query_id)
   end
 
-  defp custom_encode(_state, :ga_attach_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
+  defp custom_encode(_state, :ga_attach_tx, tx, tx_rec, signed_tx, _txi, block_hash) do
     contract_pk = :aega_attach_tx.contract_pubkey(tx_rec)
-    put_in(tx, ["contract_id"], Enc.encode(:contract_pubkey, contract_pk))
+    call_rec = Contract.call_rec(signed_tx, contract_pk, block_hash)
+
+    tx
+    |> Map.put("contract_id", Enc.encode(:contract_pubkey, contract_pk))
+    |> Map.put("return_type", :aect_call.return_type(call_rec))
   end
 
   defp custom_encode(_state, :ga_meta_tx, tx, tx_rec, _signed_tx, _txi, block_hash) do
@@ -307,9 +311,9 @@ defmodule AeMdw.Db.Format do
     Map.merge(tx, init_call_details)
   end
 
-  defp custom_encode(state, :contract_call_tx, tx, tx_rec, _signed_tx, txi, block_hash) do
+  defp custom_encode(state, :contract_call_tx, tx, tx_rec, signed_tx, txi, block_hash) do
     contract_pk = :aect_call_tx.contract_pubkey(tx_rec)
-    call_rec = Contract.call_rec(tx_rec, contract_pk, block_hash)
+    call_rec = Contract.call_rec(signed_tx, contract_pk, block_hash)
 
     fun_arg_res =
       state

@@ -51,6 +51,7 @@ defmodule AeMdw.Contract do
   @type fun_arg_res_or_error :: fun_arg_res() | {:error, any()}
   @type local_idx() :: non_neg_integer()
   @typep tx :: Node.tx()
+  @typep signed_tx :: Node.signed_tx()
   @typep block_hash :: <<_::256>>
 
   ################################################################################
@@ -234,10 +235,12 @@ defmodule AeMdw.Contract do
     aevm_val({res_type, vm_res}, mapper)
   end
 
-  @spec call_rec(tx(), DBN.pubkey(), block_hash()) :: call()
-  def call_rec(tx_rec, contract_pk, block_hash) do
+  @spec call_rec(signed_tx(), DBN.pubkey(), block_hash()) :: call()
+  def call_rec(signed_tx, contract_pk, block_hash) do
+    {mod, tx_rec} = signed_tx |> :aetx_sign.tx() |> :aetx.specialize_callback()
+
     tx_rec
-    |> :aect_call_tx.call_id()
+    |> mod.call_id()
     |> call_rec_from_id(contract_pk, block_hash)
   end
 
