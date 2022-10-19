@@ -691,6 +691,94 @@ defmodule AeMdwWeb.NameControllerTest do
       end
     end
 
+    test "gets names filtered by owner id and state ordered by deactivation", %{
+      conn: conn,
+      store: store
+    } do
+      owner_id = "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
+      owner_pk = Validate.id!(owner_id)
+      other_pk = :crypto.strong_rand_bytes(32)
+      first_name = TS.plain_name(4)
+      not_owned_name = "o2#{first_name}"
+      second_name = "o1#{first_name}"
+      third_name = "o3#{first_name}"
+      exp_height = 123
+
+      inactive_name =
+        Model.name(
+          index: first_name,
+          active: false,
+          expire: 3,
+          claims: [{{2, 0}, 0}],
+          updates: [],
+          transfers: [],
+          revoke: nil,
+          owner: owner_pk,
+          auction_timeout: 1
+        )
+
+      active_name = Model.name(inactive_name, index: third_name)
+
+      store =
+        store
+        |> Store.put(Model.InactiveName, inactive_name)
+        |> Store.put(
+          Model.InactiveNameOwnerDeactivation,
+          Model.owner_deactivation(index: {owner_pk, exp_height, first_name})
+        )
+        |> Store.put(Model.InactiveName, Model.name(inactive_name, index: second_name))
+        |> Store.put(
+          Model.InactiveNameOwnerDeactivation,
+          Model.owner_deactivation(index: {owner_pk, exp_height + 1, second_name})
+        )
+        |> Store.put(
+          Model.InactiveName,
+          Model.name(inactive_name, index: not_owned_name, owner: other_pk)
+        )
+        |> Store.put(
+          Model.InactiveNameOwnerDeactivation,
+          Model.owner_deactivation(index: {other_pk, exp_height + 2, not_owned_name})
+        )
+        |> Store.put(Model.ActiveName, active_name)
+        |> Store.put(Model.ActiveNameOwner, Model.owner(index: {owner_pk, third_name}))
+        |> Store.put(
+          Model.ActiveNameOwnerDeactivation,
+          Model.owner_deactivation(index: {owner_pk, exp_height + 3, third_name})
+        )
+
+      with_mocks [
+        {Name, [],
+         [
+           pointers: fn _state, _mnme -> %{} end,
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end
+         ]}
+      ] do
+        assert %{"data" => [name1, name2, name3], "next" => _next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/names", direction: "forward", owned_by: owner_id)
+                 |> json_response(200)
+
+        assert %{"name" => ^first_name} = name1
+        assert %{"name" => ^second_name} = name2
+        assert %{"name" => ^third_name} = name3
+
+        assert %{"data" => [name1, name2], "next" => _next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/names",
+                   direction: "forward",
+                   limit: 3,
+                   owned_by: owner_id,
+                   state: "inactive"
+                 )
+                 |> json_response(200)
+
+        assert %{"name" => ^first_name} = name1
+        assert %{"name" => ^second_name} = name2
+      end
+    end
+
     test "get active and inactive names, except those in auction, with parameters by=name, direction=forward and limit=4",
          %{conn: conn} do
       limit = 4

@@ -79,6 +79,12 @@ defmodule AeMdw.Db.NameClaimMutationTest do
     assert State.exists?(state, Model.ActiveNameActivation, {claim_height, plain_name})
     assert State.exists?(state, Model.ActiveNameExpiration, {expire, plain_name})
     assert State.exists?(state, Model.ActiveNameOwner, {new_owner_pk, plain_name})
+
+    assert State.exists?(
+             state,
+             Model.ActiveNameOwnerDeactivation,
+             {new_owner_pk, expire, plain_name}
+           )
   end
 
   test "claim new name with timeout > 0" do
@@ -108,6 +114,12 @@ defmodule AeMdw.Db.NameClaimMutationTest do
     refute State.exists?(state, Model.ActiveName, plain_name)
     refute State.exists?(state, Model.ActiveNameActivation, {claim_height, plain_name})
     refute State.exists?(state, Model.ActiveNameOwner, {owner_pk, plain_name})
+
+    refute State.exists?(
+             state,
+             Model.ActiveNameOwnerDeactivation,
+             {owner_pk, claim_height + timeout, plain_name}
+           )
 
     assert {:ok,
             Model.auction_bid(
