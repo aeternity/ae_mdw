@@ -62,6 +62,7 @@ defmodule AeMdw.Db.NameRevokeMutationTest do
     refute State.exists?(state2, Model.ActiveNameOwner, {owner_pk, plain_name})
     refute State.exists?(state2, Model.ActiveNameActivation, {active_from, plain_name})
     refute State.exists?(state2, Model.ActiveNameExpiration, {expire, plain_name})
+    refute State.exists?(state2, Model.ActiveNameOwnerExpiration, {owner_pk, expire, plain_name})
 
     assert {:ok,
             Model.name(
@@ -73,5 +74,11 @@ defmodule AeMdw.Db.NameRevokeMutationTest do
 
     assert State.exists?(state2, Model.InactiveNameExpiration, {revoke_height, plain_name})
     assert State.exists?(state2, Model.InactiveNameOwner, {owner_pk, plain_name})
+
+    assert State.exists?(
+             state2,
+             Model.InactiveNameOwnerExpiration,
+             {owner_pk, revoke_height, plain_name}
+           )
   end
 end
