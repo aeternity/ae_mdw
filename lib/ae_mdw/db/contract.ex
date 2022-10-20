@@ -295,6 +295,9 @@ defmodule AeMdw.Db.Contract do
           State.t()
   def write_aex141_records(state, hash, contract_pk, txi, i, args) do
     cond do
+      hash == AeMdw.Node.aexn_burn_event_hash() ->
+        delete_aex141_ownership(state, contract_pk, args)
+
       hash == AeMdw.Node.aexn_mint_event_hash() ->
         write_aex141_ownership(state, contract_pk, args)
 
@@ -327,6 +330,16 @@ defmodule AeMdw.Db.Contract do
 
   def write_aex141_ownership(state, _contract_pk, _args), do: state
 
+  defp delete_aex141_ownership(state, contract_pk, [<<token_id::256>>]) do
+    prev_owner_pk = previous_owner(state, contract_pk, token_id)
+
+    state
+    |> delete_previous_ownership(contract_pk, token_id, prev_owner_pk)
+    |> SyncStats.update_nft_stats(contract_pk, prev_owner_pk, nil)
+  end
+
+  defp delete_aex141_ownership(state, _contract_pk, _args), do: state
+
   defp do_write_aex141_ownership(state, contract_pk, [to_pk, <<token_id::256>>]) do
     m_ownership = Model.nft_ownership(index: {to_pk, contract_pk, token_id})
     m_owner_token = Model.nft_owner_token(index: {contract_pk, to_pk, token_id})
@@ -335,7 +348,7 @@ defmodule AeMdw.Db.Contract do
     prev_owner_pk = previous_owner(state, contract_pk, token_id)
 
     state
-    |> delete_previous_ownership(contract_pk, token_id, prev_owner_pk, to_pk)
+    |> delete_previous_ownership(contract_pk, token_id, prev_owner_pk)
     |> SyncStats.update_nft_stats(contract_pk, prev_owner_pk, to_pk)
     |> State.put(Model.NftOwnership, m_ownership)
     |> State.put(Model.NftOwnerToken, m_owner_token)
@@ -355,11 +368,12 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  defp delete_previous_ownership(state, contract_pk, token_id, prev_owner_pk, to_pk) do
-    if prev_owner_pk != to_pk and prev_owner_pk != nil do
+  defp delete_previous_ownership(state, contract_pk, token_id, prev_owner_pk) do
+    if prev_owner_pk != nil do
       state
       |> State.delete(Model.NftOwnership, {prev_owner_pk, contract_pk, token_id})
       |> State.delete(Model.NftOwnerToken, {contract_pk, prev_owner_pk, token_id})
+      |> State.delete(Model.NftTokenOwner, {contract_pk, token_id})
     else
       state
     end
