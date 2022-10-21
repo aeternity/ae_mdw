@@ -277,12 +277,24 @@ defmodule AeMdw.Db.Sync.Transaction do
        }),
        do: Channels.slash_mutations({block_index, txi}, tx)
 
-  defp tx_mutations(%TxContext{type: :ga_attach_tx, tx: tx, txi: txi, tx_hash: tx_hash}) do
+  defp tx_mutations(%TxContext{
+         type: :ga_attach_tx,
+         block_hash: block_hash,
+         signed_tx: signed_tx,
+         tx: tx,
+         txi: txi,
+         tx_hash: tx_hash
+       }) do
     contract_pk = :aega_attach_tx.contract_pubkey(tx)
+    call_rec = Contract.call_rec(signed_tx, contract_pk, block_hash)
+
+    stat_mutation =
+      if :ok == :aect_call.return_type(call_rec),
+        do: ContractCreateCacheMutation.new(contract_pk, txi)
 
     [
       Origin.origin_mutations(:ga_attach_tx, nil, contract_pk, txi, tx_hash),
-      ContractCreateCacheMutation.new(contract_pk, txi)
+      stat_mutation
     ]
   end
 
