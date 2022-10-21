@@ -12,7 +12,7 @@ defmodule AeMdw.Db.Sync.Stats do
 
   @typep pubkey :: AeMdw.Node.Db.pubkey()
 
-  @spec update_nft_stats(State.t(), pubkey(), nil | pubkey(), pubkey()) :: State.t()
+  @spec update_nft_stats(State.t(), pubkey(), nil | pubkey(), nil | pubkey()) :: State.t()
   def update_nft_stats(state, contract_pk, prev_owner_pk, to_pk) do
     state
     |> increment_collection_nfts(contract_pk, prev_owner_pk)
@@ -42,6 +42,8 @@ defmodule AeMdw.Db.Sync.Stats do
         end)
     end
   end
+
+  defp increment_collection_owners(state, _contract_pk, nil), do: state
 
   defp increment_collection_owners(state, contract_pk, to_pk) do
     case State.next(state, Model.NftOwnerToken, {contract_pk, to_pk, Util.min_256bit_int()}) do

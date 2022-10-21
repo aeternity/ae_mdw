@@ -44,6 +44,7 @@ defmodule AeMdw.Node do
   @opaque tx() :: tuple()
   @opaque aect_call :: tuple()
 
+  @type event_hash :: <<_::256>>
   @typep method_hash :: binary()
   @typep method_signature :: {list(), any()}
 
@@ -82,12 +83,17 @@ defmodule AeMdw.Node do
     |> Enum.into(%{}, fn {k, v} -> {Contract.function_hash(k), v} end)
   end
 
-  @spec aexn_mint_event_hash() :: binary()
+  @spec aexn_burn_event_hash() :: event_hash()
+  def aexn_burn_event_hash do
+    :aec_hash.blake2b_256_hash("Burn")
+  end
+
+  @spec aexn_mint_event_hash() :: event_hash()
   def aexn_mint_event_hash do
     :aec_hash.blake2b_256_hash("Mint")
   end
 
-  @spec aexn_transfer_event_hash() :: binary()
+  @spec aexn_transfer_event_hash() :: event_hash()
   def aexn_transfer_event_hash do
     :aec_hash.blake2b_256_hash("Transfer")
   end

@@ -323,27 +323,9 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         |> MemStore.new()
         |> State.new()
         |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, contract_pk}))
-        |> State.put(
-          Model.NftOwnership,
-          Model.nft_ownership(index: {from_pk, contract_pk, token_id})
-        )
-        |> State.put(
-          Model.NftOwnerToken,
-          Model.nft_owner_token(index: {contract_pk, from_pk, token_id})
-        )
-        |> State.put(
-          Model.NftTokenOwner,
-          Model.nft_token_owner(index: {contract_pk, token_id}, owner: from_pk)
-        )
-        |> State.put(
-          Model.Stat,
-          Model.stat(index: Stats.nfts_count_key(contract_pk), payload: 1)
-        )
-        |> State.put(
-          Model.Stat,
-          Model.stat(index: Stats.nft_owners_count_key(contract_pk), payload: 1)
-        )
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+        |> put_existing_nft(contract_pk, from_pk, token_id)
+        |> put_stats(contract_pk, 1, 1)
         |> State.commit_mem([mutation])
 
       assert State.exists?(state, Model.NftOwnership, {to_pk, contract_pk, token_id})
@@ -377,6 +359,61 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                Model.AexnPairTransfer,
                {:aex141, from_pk, to_pk, call_txi, token_id, 0}
              )
+    end
+  end
+
+  describe "aex141 burn" do
+    test "remove nft ownership after a call with burn log" do
+      contract_pk = <<11::256>>
+      owner_pk = <<12::256>>
+      height = Enum.random(100_000..999_999)
+      call_txi = Enum.random(10_000_000..99_999_999)
+      token_id1 = Enum.random(1..100_000)
+      token_id2 = Enum.random(1..100_000)
+
+      fun_arg_res = %{
+        arguments: [
+          %{type: :int, value: token_id1}
+        ],
+        function: "burn",
+        result: %{type: :unit, value: ""}
+      }
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {contract_pk, [AeMdw.Node.aexn_burn_event_hash(), <<token_id1::256>>], ""}
+        ])
+
+      mutation =
+        ContractCallMutation.new(
+          contract_pk,
+          {height, 0},
+          call_txi,
+          fun_arg_res,
+          call_rec
+        )
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, contract_pk}))
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+        |> put_existing_nft(contract_pk, owner_pk, token_id1)
+        |> put_existing_nft(contract_pk, owner_pk, token_id2)
+        |> put_stats(contract_pk, 2, 1)
+        |> State.commit_mem([mutation])
+
+      refute State.exists?(state, Model.NftOwnership, {owner_pk, contract_pk, token_id1})
+      assert State.exists?(state, Model.NftOwnership, {owner_pk, contract_pk, token_id2})
+
+      refute State.exists?(state, Model.NftTokenOwner, {contract_pk, token_id1})
+
+      assert {:ok, Model.nft_token_owner(owner: ^owner_pk)} =
+               State.get(state, Model.NftTokenOwner, {contract_pk, token_id2})
+
+      refute State.exists?(state, Model.NftOwnerToken, {contract_pk, owner_pk, token_id1})
+      assert State.exists?(state, Model.NftOwnerToken, {contract_pk, owner_pk, token_id2})
     end
   end
 
@@ -414,5 +451,30 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       )
 
     {account_pk, mutation}
+  end
+
+  defp put_existing_nft(state, contract_pk, owner_pk, token_id) do
+    state
+    |> State.put(
+      Model.NftOwnership,
+      Model.nft_ownership(index: {owner_pk, contract_pk, token_id})
+    )
+    |> State.put(
+      Model.NftOwnerToken,
+      Model.nft_owner_token(index: {contract_pk, owner_pk, token_id})
+    )
+    |> State.put(
+      Model.NftTokenOwner,
+      Model.nft_token_owner(index: {contract_pk, token_id}, owner: owner_pk)
+    )
+  end
+
+  defp put_stats(state, contract_pk, nfts_count, owners_count) do
+    nfts_count_key = Stats.nfts_count_key(contract_pk)
+    nft_owners_count_key = Stats.nft_owners_count_key(contract_pk)
+
+    state
+    |> State.put(Model.Stat, Model.stat(index: nfts_count_key, payload: nfts_count))
+    |> State.put(Model.Stat, Model.stat(index: nft_owners_count_key, payload: owners_count))
   end
 end
