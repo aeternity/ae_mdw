@@ -285,11 +285,11 @@ defmodule AeMdw.Db.Format do
 
   defp custom_encode(_state, :ga_attach_tx, tx, tx_rec, signed_tx, _txi, block_hash) do
     contract_pk = :aega_attach_tx.contract_pubkey(tx_rec)
-    call_rec = Contract.call_rec(signed_tx, contract_pk, block_hash)
+    call_details = Contract.get_ga_attach_call_details(signed_tx, contract_pk, block_hash)
 
     tx
     |> Map.put("contract_id", Enc.encode(:contract_pubkey, contract_pk))
-    |> Map.put("return_type", :aect_call.return_type(call_rec))
+    |> Map.merge(call_details)
   end
 
   defp custom_encode(_state, :ga_meta_tx, tx, tx_rec, _signed_tx, _txi, block_hash) do
@@ -298,10 +298,14 @@ defmodule AeMdw.Db.Format do
 
     case :aec_chain.get_ga_call(owner_pk, auth_id, block_hash) do
       {:ok, ga_object} ->
-        Map.put(tx, "return_type", :aega_call.return_type(ga_object))
+        tx
+        |> Map.put("return_type", :aega_call.return_type(ga_object))
+        |> Map.put("gas_used", :aega_call.gas_used(ga_object))
 
       _error_revert ->
-        Map.put(tx, "return_type", :unknown)
+        tx
+        |> Map.put("return_type", :unknown)
+        |> Map.put("gas_used", nil)
     end
   end
 

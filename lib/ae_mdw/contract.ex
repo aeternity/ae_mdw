@@ -49,7 +49,8 @@ defmodule AeMdw.Contract do
           return: any()
         }
   @type fun_arg_res_or_error :: fun_arg_res() | {:error, any()}
-  @type local_idx() :: non_neg_integer()
+  @type local_idx :: non_neg_integer()
+  @typep pubkey :: DBN.pubkey()
   @typep tx :: Node.tx()
   @typep signed_tx :: Node.signed_tx()
   @typep block_hash :: <<_::256>>
@@ -298,6 +299,18 @@ defmodule AeMdw.Contract do
     |> Map.put("source_hash", source_hash && Base.encode64(source_hash))
   end
 
+  @spec get_ga_attach_call_details(signed_tx(), pubkey(), block_hash()) :: serialized_call()
+  def get_ga_attach_call_details(signed_tx, contract_pk, block_hash) do
+    call_rec = call_rec(signed_tx, contract_pk, block_hash)
+    {mod, tx_rec} = signed_tx |> :aetx_sign.tx() |> :aetx.specialize_callback()
+
+    %{
+      "args" => contract_init_args(contract_pk, tx_rec, mod),
+      "gas_used" => :aect_call.gas_used(call_rec),
+      "return_type" => :aect_call.return_type(call_rec)
+    }
+  end
+
   @spec stringfy_log_topics([map()]) :: [map()]
   def stringfy_log_topics(logs) do
     Enum.map(logs, fn log ->
@@ -430,9 +443,9 @@ defmodule AeMdw.Contract do
     end
   end
 
-  defp contract_init_args(contract_pk, tx_rec) do
+  defp contract_init_args(contract_pk, tx_rec, mod \\ :aect_create_tx) do
     with {:ok, {type_info, _compiler_vsn, _source_hash}} <- get_info(contract_pk),
-         call_data <- :aect_create_tx.call_data(tx_rec),
+         call_data <- mod.call_data(tx_rec),
          {"init", args} <- decode_call_data(type_info, call_data) do
       args_type_value(args)
     else
