@@ -153,7 +153,8 @@ defmodule AeMdwWeb.TxControllerTest do
                  "hash" => ^tx_hash,
                  "tx" => %{
                    "ga_id" => ^account_id,
-                   "return_type" => "some_return_type",
+                   "gas_used" => 2_000,
+                   "return_type" => "ok",
                    "tx" => %{
                      "tx" => %{
                        "sender_id" => ^account_id,

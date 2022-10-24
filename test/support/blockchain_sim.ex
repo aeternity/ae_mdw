@@ -54,11 +54,12 @@ defmodule AeMdwWeb.BlockchainSim do
             if ga_tx_hash do
               [
                 {:aec_chain, [:passthrough],
-                 get_ga_call: fn ^ga_pk, _auth_id, _block_hash -> {:ok, ga_tx_hash} end,
-                 get_contract_call: fn _pk, _call_id, ^block_hash ->
+                 get_ga_call: fn ^ga_pk, _auth_id, _block_hash ->
+                   {:ok, :aega_call.new({:id, :account, ga_pk}, ga_pk, 1, 10_000, 2_000, :ok, "")}
+                 end,
+                 get_contract_call: fn _ga_pk, _call_id, ^block_hash ->
                    {:ok, call_rec("attach", ga_pk)}
-                 end},
-                {:aega_call, [:passthrough], return_type: fn ^ga_tx_hash -> :some_return_type end}
+                 end}
               ]
             else
               []

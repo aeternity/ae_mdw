@@ -298,10 +298,14 @@ defmodule AeMdw.Db.Format do
 
     case :aec_chain.get_ga_call(owner_pk, auth_id, block_hash) do
       {:ok, ga_object} ->
-        Map.put(tx, "return_type", :aega_call.return_type(ga_object))
+        tx
+        |> Map.put("return_type", :aega_call.return_type(ga_object))
+        |> Map.put("gas_used", :aega_call.gas_used(ga_object))
 
       _error_revert ->
-        Map.put(tx, "return_type", :unknown)
+        tx
+        |> Map.put("return_type", :unknown)
+        |> Map.put("gas_used", nil)
     end
   end
 
