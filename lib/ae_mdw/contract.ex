@@ -445,7 +445,7 @@ defmodule AeMdw.Contract do
 
   defp contract_init_args(contract_pk, tx_rec, mod \\ :aect_create_tx) do
     with {:ok, {type_info, _compiler_vsn, _source_hash}} <- get_info(contract_pk),
-         call_data <- apply(mod, :call_data, [tx_rec]),
+         call_data <- mod.call_data(tx_rec),
          {"init", args} <- decode_call_data(type_info, call_data) do
       args_type_value(args)
     else
