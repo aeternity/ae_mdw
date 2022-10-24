@@ -9,6 +9,7 @@ defmodule AeMdwWeb.TxControllerTest do
   alias AeMdw.TestSamples, as: TS
 
   import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, tx: 3]
+  import AeMdw.Util.Encoding
   import Mock
 
   require Model
@@ -52,35 +53,67 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
-    test "returns an ga_attach_tx with return_type", %{
+    test "returns an ga_attach_tx with call details", %{
       conn: conn,
       store: store
     } do
       nonce = 3
 
+      call_data =
+        <<43, 17, 68, 214, 68, 31, 27, 159, 1, 81, 36, 174, 134, 247, 199, 24, 36, 209, 93, 111,
+          71, 91, 175, 20, 235, 201, 171, 175, 148, 138>>
+
       with_blockchain %{ga: 10_000},
         mb: [
-          ga_tx: tx(:ga_attach_tx, :ga, %{nonce: nonce})
+          ga_tx: tx(:ga_attach_tx, :ga, %{nonce: nonce, call_data: call_data})
         ] do
-        %{txs: [tx]} = blocks[:mb]
+        %{txs: [signed_tx]} = blocks[:mb]
         {:id, :account, account_pk} = accounts[:ga]
         account_id = encode(:account_pubkey, account_pk)
         mb_hash = :crypto.strong_rand_bytes(32)
 
         store =
           store
-          |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {0, 0}, id: :aetx_sign.hash(tx)))
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 1, block_index: {0, 0}, id: :aetx_sign.hash(signed_tx))
+          )
           |> Store.put(Model.Block, Model.block(index: {0, -1}, tx_index: 1))
           |> Store.put(Model.Block, Model.block(index: {0, 0}, hash: mb_hash, tx_index: 1))
           |> Store.put(Model.Block, Model.block(index: {1, -1}, tx_index: 2))
 
-        tx_hash = encode(:tx_hash, :aetx_sign.hash(tx))
+        functions = %{
+          <<68, 214, 68, 31>> =>
+            {[], {[bytes: 20], {:tuple, []}},
+             %{
+               0 => [
+                 {:STORE, {:var, -1}, {:immediate, 1}},
+                 {:STORE, {:var, -2}, {:arg, 0}},
+                 {:RETURNR, {:immediate, {:tuple, {}}}}
+               ]
+             }}
+        }
+
+        type_info = {:fcode, functions, %{<<68, 214, 68, 31>> => "init"}, nil}
+        {_mod, tx} = signed_tx |> :aetx_sign.tx() |> :aetx.specialize_callback()
+        contract_pk = :aega_attach_tx.contract_pubkey(tx)
+
+        AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+        tx_hash = encode(:tx_hash, :aetx_sign.hash(signed_tx))
+
+        {:tuple, {_fun_hash, {:tuple, {{:bytes, arg_bytes}}}}} =
+          :aeb_fate_encoding.deserialize(call_data)
+
+        bytes_arg = encode(:bytearray, arg_bytes)
 
         assert %{
                  "hash" => ^tx_hash,
                  "tx" => %{
                    "nonce" => ^nonce,
                    "owner_id" => ^account_id,
+                   "args" => [%{"type" => "bytes", "value" => ^bytes_arg}],
+                   "gas_used" => 1_000,
                    "return_type" => "ok",
                    "type" => "GAAttachTx"
                  }
