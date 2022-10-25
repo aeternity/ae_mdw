@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.26.0](https://www.github.com/aeternity/ae_mdw/compare/v1.25.1...v1.26.0) (2022-10-24)
+
+
+### Features
+
+* allow filtering names by owner/state ordered by deactivation ([#965](https://www.github.com/aeternity/ae_mdw/issues/965)) ([4c23fbe](https://www.github.com/aeternity/ae_mdw/commit/4c23fbe1003a6b55dbf22de49dffe63ffd4648ed))
+* handle burn nft ([#970](https://www.github.com/aeternity/ae_mdw/issues/970)) ([6f3a5e5](https://www.github.com/aeternity/ae_mdw/commit/6f3a5e58def5d736c07da2e9ddf1aa2d705de498))
+* render call details for ga_attach and ga_meta ([#972](https://www.github.com/aeternity/ae_mdw/issues/972)) ([8383c71](https://www.github.com/aeternity/ae_mdw/commit/8383c71e3d7f1919ff6dbea142ba42824d7849ce))
+
+
+### Bug Fixes
+
+* increment ga contract stat only on success ([#971](https://www.github.com/aeternity/ae_mdw/issues/971)) ([8694384](https://www.github.com/aeternity/ae_mdw/commit/8694384a927534bc3a980132169e4e0a04ce110c))
+
+
+### Miscellaneous
+
+* add return_type for ga_attach_tx ([#964](https://www.github.com/aeternity/ae_mdw/issues/964)) ([f6f69e3](https://www.github.com/aeternity/ae_mdw/commit/f6f69e3bdf90aa2547746d6e85aed0d3724cb49b))
+* remove txi scoping support for new endpoints ([#968](https://www.github.com/aeternity/ae_mdw/issues/968)) ([3e83163](https://www.github.com/aeternity/ae_mdw/commit/3e83163b815f5b67b9f9e23bfe79b52d93d1437c))
+
 ### [1.25.1](https://www.github.com/aeternity/ae_mdw/compare/v1.25.0...v1.25.1) (2022-10-17)
 
 
