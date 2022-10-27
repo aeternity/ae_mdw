@@ -65,7 +65,7 @@ defmodule AeMdw.Db.Sync.Name do
     owner_pk = Validate.id!(:aens_claim_tx.account_id(tx))
     name_fee = :aens_claim_tx.name_fee(tx)
     proto_vsn = Db.proto_vsn(height)
-    is_lima? = proto_vsn >= Node.lima_vsn()
+    lima_or_higher? = height >= Node.lima_height()
     timeout = :aec_governance.name_claim_bid_timeout(plain_name, proto_vsn)
 
     [
@@ -74,7 +74,7 @@ defmodule AeMdw.Db.Sync.Name do
         name_hash,
         owner_pk,
         name_fee,
-        is_lima?,
+        lima_or_higher?,
         txi,
         block_index,
         timeout

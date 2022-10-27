@@ -237,8 +237,10 @@ defmodule AeMdw.Node.Db do
 
   @spec proto_vsn(Blocks.height()) :: non_neg_integer()
   def proto_vsn(height) do
-    hps = AeMdw.Node.height_proto()
-    [{vsn, _height} | _rest] = Enum.drop_while(hps, fn {_vsn, min_h} -> height < min_h end)
+    {vsn, _height} =
+      AeMdw.Node.height_proto()
+      |> Enum.find(fn {_vsn, vsn_height} -> height >= vsn_height end)
+
     vsn
   end
 
