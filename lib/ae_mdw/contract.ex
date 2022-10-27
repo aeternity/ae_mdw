@@ -473,6 +473,14 @@ defmodule AeMdw.Contract do
     }
   end
 
+  defp element_value({type, [head | _tail] = keyword_list})
+       when is_atom(type) and is_tuple(head) and tuple_size(head) == 2 do
+    %{
+      "type" => to_string(type),
+      "value" => Enum.into(keyword_list, %{})
+    }
+  end
+
   defp element_value({_type, value}), do: value
 
   defp element_value(%{key: {_key_type, key_value}, val: {_val_type, val_value}}),
