@@ -28,7 +28,9 @@ defmodule AeMdw.Migrations.ReverseInternalTxCalls do
       Model.IdIntContractCall => [],
       Model.GrpIdIntContractCall => [],
       Model.IdFnameIntContractCall => [],
-      Model.GrpIdFnameIntContractCall => []
+      Model.GrpIdFnameIntContractCall => [],
+      Model.FnameIntContractCall => [],
+      Model.FnameGrpIntContractCall => []
     }
 
     {mutations, {_next_percentage, deletion_keys}} =
@@ -65,6 +67,11 @@ defmodule AeMdw.Migrations.ReverseInternalTxCalls do
 
             new_fname_grp_call =
               Model.fname_grp_int_contract_call(index: {fname, create_txi, call_txi, new_idx})
+
+            deletion_keys =
+              deletion_keys
+              |> add_key(Model.FnameIntContractCall, {fname, call_txi, local_idx})
+              |> add_key(Model.FnameGrpIntContractCall, {fname, create_txi, call_txi, local_idx})
 
             {tx_type, raw_tx} = :aetx.specialize_type(tx)
 
@@ -122,18 +129,12 @@ defmodule AeMdw.Migrations.ReverseInternalTxCalls do
 
       deletion_keys =
         deletion_keys
-        |> Map.update!(Model.IdIntContractCall, &[{pk, pos, call_txi, local_idx} | &1])
-        |> Map.update!(
-          Model.GrpIdIntContractCall,
-          &[{create_txi, pk, pos, call_txi, local_idx} | &1]
-        )
-        |> Map.update!(
-          Model.IdFnameIntContractCall,
-          &[{pk, fname, pos, call_txi, local_idx} | &1]
-        )
-        |> Map.update!(
+        |> add_key(Model.IdIntContractCall, {pk, pos, call_txi, local_idx})
+        |> add_key(Model.GrpIdIntContractCall, {create_txi, pk, pos, call_txi, local_idx})
+        |> add_key(Model.IdFnameIntContractCall, {pk, fname, pos, call_txi, local_idx})
+        |> add_key(
           Model.GrpIdFnameIntContractCall,
-          &[{create_txi, pk, fname, pos, call_txi, local_idx} | &1]
+          {create_txi, pk, fname, pos, call_txi, local_idx}
         )
 
       {
@@ -147,4 +148,6 @@ defmodule AeMdw.Migrations.ReverseInternalTxCalls do
       }
     end)
   end
+
+  defp add_key(deletion_keys, table, key), do: Map.update!(deletion_keys, table, &[key | &1])
 end
