@@ -157,18 +157,6 @@ defmodule AeMdw.Application do
       |> Enum.into(%{})
     end
 
-    aex9_sigs =
-      Contract.aex9_signatures()
-      |> Enum.into(%{}, fn {k, v} -> {Contract.function_hash(k), v} end)
-
-    aex141_sigs =
-      Contract.aex141_signatures()
-      |> Enum.into(%{}, fn {k, v} -> {Contract.function_hash(k), v} end)
-
-    prev_aex141_sigs =
-      Contract.previous_aex141_signatures()
-      |> Enum.into(%{}, fn {k, v} -> {Contract.function_hash(k), v} end)
-
     height_proto = :aec_hard_forks.protocols() |> Enum.into([]) |> Enum.sort(&>=/2)
 
     min_block_reward_height =
@@ -201,12 +189,13 @@ defmodule AeMdw.Application do
         aeo_tree_pos: field_pos_map.(aeo_state_tree_code, :oracle_tree),
         lima_vsn: [{[], lima_vsn}],
         lima_height: [{[], lima_height}],
-        aex9_signatures: [{[], aex9_sigs}],
+        aex9_signatures: [{[], AeMdw.Node.aex9_signatures()}],
         aexn_burn_event_hash: [{[], :aec_hash.blake2b_256_hash("Burn")}],
         aexn_mint_event_hash: [{[], :aec_hash.blake2b_256_hash("Mint")}],
+        aexn_swap_event_hash: [{[], :aec_hash.blake2b_256_hash("Swap")}],
         aexn_transfer_event_hash: [{[], :aec_hash.blake2b_256_hash("Transfer")}],
-        aex141_signatures: [{[], aex141_sigs}],
-        previous_aex141_signatures: [{[], prev_aex141_sigs}],
+        aex141_signatures: [{[], AeMdw.Node.aex141_signatures()}],
+        previous_aex141_signatures: [{[], AeMdw.Node.previous_aex141_signatures()}],
         height_proto: [{[], height_proto}],
         min_block_reward_height: [{[], min_block_reward_height}],
         token_supply_delta:
@@ -232,7 +221,7 @@ defmodule AeMdw.Application do
     AeMdw.Sync.AsyncTasks.Store.init()
 
     AeMdw.Db.AsyncStore.init()
-    AeMdw.Db.Aex9BalancesCache.init()
+    AeMdw.Sync.Aex9BalancesCache.init()
 
     AeMdw.Db.RocksDbCF.init_tables()
   end

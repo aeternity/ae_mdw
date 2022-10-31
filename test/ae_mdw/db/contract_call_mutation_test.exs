@@ -119,59 +119,46 @@ defmodule AeMdw.Db.ContractCallMutationTest do
     end
   end
 
-  describe "aex9 transfer" do
-    test "add aex9 transfers after a call with transfer logs" do
-      kb_hash = <<123_453::256>>
-      next_mb_hash = Validate.id!("mh_9943pc2nXD7BaJjZMwaAYd5Jk4DbPY3THDoh8Sfgy7nTyrZ41")
-
-      contract_pk =
-        <<45, 195, 148, 17, 5, 88, 182, 202, 65, 160, 150, 218, 33, 163, 136, 171, 149, 101, 165,
-          178, 212, 56, 89, 23, 172, 233, 200, 126, 138, 235, 158, 11>>
-
-      call_txi = 9_353_623
+  describe "aex9 mint" do
+    test "increment aex9 balance after a call with mint log" do
+      kb_hash = :crypto.strong_rand_bytes(32)
+      next_mb_hash = :crypto.strong_rand_bytes(32)
+      contract_pk = :crypto.strong_rand_bytes(32)
+      account_pk = :crypto.strong_rand_bytes(32)
+      amount = Enum.random(100_000_000..999_999_999)
+      height = Enum.random(100_000..999_999)
+      mbi = 1
+      block_hash_height = height + 1
+      call_txi = Enum.random(100_000_000..999_999_999)
 
       fun_arg_res = %{
         arguments: [
           %{
             type: :address,
-            value: "ak_2UqKYBBgVWfBeFYdn5sBS75B1cfLMPFSCy95xQoRo9SKNvvLgb"
+            value: enc_id(account_pk)
           },
-          %{type: :int, value: 1000}
+          %{
+            type: :int,
+            value: amount
+          }
         ],
-        function: "transfer",
+        function: "other_mint",
         result: %{type: :unit, value: ""}
       }
 
       call_rec =
-        {:call,
-         <<61, 34, 73, 220, 196, 10, 139, 58, 161, 170, 48, 233, 27, 228, 57, 151, 209, 214, 234,
-           100, 208, 116, 7, 9, 47, 146, 57, 178, 38, 46, 228, 66>>,
-         {:id, :account,
-          <<86, 184, 235, 22, 134, 71, 254, 125, 140, 211, 113, 59, 82, 110, 159, 107, 223, 171,
-            122, 119, 157, 71, 130, 57, 92, 34, 139, 37, 241, 226, 10, 119>>}, 2726, 231_734,
-         {:id, :contract,
-          <<45, 195, 148, 17, 5, 88, 182, 202, 65, 160, 150, 218, 33, 163, 136, 171, 149, 101,
-            165, 178, 212, 56, 89, 23, 172, 233, 200, 126, 138, 235, 158, 11>>}, 1_000_000_000,
-         3576, "?", :ok,
-         [
-           {<<45, 195, 148, 17, 5, 88, 182, 202, 65, 160, 150, 218, 33, 163, 136, 171, 149, 101,
-              165, 178, 212, 56, 89, 23, 172, 233, 200, 126, 138, 235, 158, 11>>,
-            [
-              <<34, 60, 57, 226, 157, 255, 100, 103, 254, 221, 160, 151, 88, 217, 23, 129, 197,
-                55, 46, 9, 31, 248, 107, 58, 249, 227, 16, 227, 134, 86, 43, 239>>,
-              <<86, 184, 235, 22, 134, 71, 254, 125, 140, 211, 113, 59, 82, 110, 159, 107, 223,
-                171, 122, 119, 157, 71, 130, 57, 92, 34, 139, 37, 241, 226, 10, 119>>,
-              <<194, 229, 0, 254, 146, 22, 182, 30, 138, 228, 107, 198, 46, 64, 230, 179, 99, 174,
-                235, 166, 26, 232, 91, 34, 203, 153, 74, 213, 27, 190, 6, 88>>,
-              <<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 3, 232>>
-            ], ""}
-         ]}
+        call_rec("logs", contract_pk, height, nil, [
+          {
+            contract_pk,
+            [AeMdw.Node.aexn_mint_event_hash(), account_pk, <<amount::256>>],
+            ""
+          }
+        ])
 
       mutation =
         ContractCallMutation.new(
           contract_pk,
-          {231_734, 54},
+          {height, mbi},
           call_txi,
           fun_arg_res,
           call_rec
@@ -185,10 +172,281 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
       with_mocks [
-        {AeMdw.Node.Db, [],
+        {AeMdw.Node.Db, [:passthrough],
          [
-           get_key_block_hash: fn 231_735 -> kb_hash end,
-           get_next_hash: fn ^kb_hash, 54 -> next_mb_hash end,
+           get_key_block_hash: fn ^block_hash_height -> kb_hash end,
+           get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
+           aex9_balances: fn ^contract_pk, _next -> {:ok, %{}} end
+         ]}
+      ] do
+        previous_balance = 100_000
+
+        m_balance =
+          Model.aex9_event_balance(
+            index: {contract_pk, account_pk},
+            txi: call_txi - 1,
+            log_idx: -1,
+            amount: previous_balance
+          )
+
+        state =
+          NullStore.new()
+          |> MemStore.new()
+          |> State.new()
+          |> State.put(Model.Aex9EventBalance, m_balance)
+          |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+          |> State.commit_mem([mutation])
+
+        m_new_balance =
+          Model.aex9_event_balance(m_balance,
+            txi: call_txi,
+            log_idx: 0,
+            amount: previous_balance + amount
+          )
+
+        assert {:ok, ^m_new_balance} =
+                 State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk})
+      end
+    end
+  end
+
+  describe "aex9 burn" do
+    test "decrement aex9 balance after a call with burn log" do
+      kb_hash = :crypto.strong_rand_bytes(32)
+      next_mb_hash = :crypto.strong_rand_bytes(32)
+      contract_pk = :crypto.strong_rand_bytes(32)
+      account_pk = :crypto.strong_rand_bytes(32)
+      amount = Enum.random(100_000_000..999_999_999)
+      height = Enum.random(100_000..999_999)
+      mbi = 1
+      block_hash_height = height + 1
+      call_txi = Enum.random(100_000_000..999_999_999)
+
+      fun_arg_res = %{
+        arguments: [
+          %{
+            type: :address,
+            value: enc_id(account_pk)
+          },
+          %{
+            type: :int,
+            value: amount
+          }
+        ],
+        function: "other_burn",
+        result: %{type: :unit, value: ""}
+      }
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {
+            contract_pk,
+            [AeMdw.Node.aexn_burn_event_hash(), account_pk, <<amount::256>>],
+            ""
+          }
+        ])
+
+      mutation =
+        ContractCallMutation.new(
+          contract_pk,
+          {height, mbi},
+          call_txi,
+          fun_arg_res,
+          call_rec
+        )
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           get_key_block_hash: fn ^block_hash_height -> kb_hash end,
+           get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
+           aex9_balances: fn ^contract_pk, _next -> {:ok, %{}} end
+         ]}
+      ] do
+        m_balance =
+          Model.aex9_event_balance(
+            index: {contract_pk, account_pk},
+            txi: call_txi - 1,
+            log_idx: -1,
+            amount: amount + 100_000
+          )
+
+        state =
+          NullStore.new()
+          |> MemStore.new()
+          |> State.new()
+          |> State.put(Model.Aex9EventBalance, m_balance)
+          |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+          |> State.commit_mem([mutation])
+
+        m_new_balance =
+          Model.aex9_event_balance(m_balance,
+            txi: call_txi,
+            log_idx: 0,
+            amount: 100_000
+          )
+
+        assert {:ok, ^m_new_balance} =
+                 State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk})
+      end
+    end
+  end
+
+  describe "aex9 swap" do
+    test "decrement aex9 balance after a call with burn log" do
+      kb_hash = :crypto.strong_rand_bytes(32)
+      next_mb_hash = :crypto.strong_rand_bytes(32)
+      contract_pk = :crypto.strong_rand_bytes(32)
+      account_pk = :crypto.strong_rand_bytes(32)
+      amount = Enum.random(100_000_000..999_999_999)
+      height = Enum.random(100_000..999_999)
+      mbi = 1
+      block_hash_height = height + 1
+      call_txi = Enum.random(100_000_000..999_999_999)
+
+      fun_arg_res = %{
+        arguments: [
+          %{
+            type: :address,
+            value: enc_id(account_pk)
+          },
+          %{
+            type: :int,
+            value: amount
+          }
+        ],
+        function: "other_swap",
+        result: %{type: :unit, value: ""}
+      }
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {
+            contract_pk,
+            [AeMdw.Node.aexn_swap_event_hash(), account_pk, <<amount::256>>],
+            ""
+          }
+        ])
+
+      mutation =
+        ContractCallMutation.new(
+          contract_pk,
+          {height, mbi},
+          call_txi,
+          fun_arg_res,
+          call_rec
+        )
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           get_key_block_hash: fn ^block_hash_height -> kb_hash end,
+           get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
+           aex9_balances: fn ^contract_pk, _next -> {:ok, %{}} end
+         ]}
+      ] do
+        m_balance =
+          Model.aex9_event_balance(
+            index: {contract_pk, account_pk},
+            txi: call_txi - 1,
+            log_idx: -1,
+            amount: amount + 100_000
+          )
+
+        state =
+          NullStore.new()
+          |> MemStore.new()
+          |> State.new()
+          |> State.put(Model.Aex9EventBalance, m_balance)
+          |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+          |> State.commit_mem([mutation])
+
+        m_new_balance =
+          Model.aex9_event_balance(m_balance,
+            txi: call_txi,
+            log_idx: 0,
+            amount: 100_000
+          )
+
+        assert {:ok, ^m_new_balance} =
+                 State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk})
+      end
+    end
+  end
+
+  describe "aex9 transfer" do
+    test "add aex9 transfers after a call with transfer logs" do
+      kb_hash = :crypto.strong_rand_bytes(32)
+      next_mb_hash = :crypto.strong_rand_bytes(32)
+      contract_pk = :crypto.strong_rand_bytes(32)
+      height = Enum.random(100_000..999_999)
+      mbi = 1
+      block_hash_height = height + 1
+      call_txi = Enum.random(100_000_000..999_999_999)
+
+      from_pk = :crypto.strong_rand_bytes(32)
+      to_pk = :crypto.strong_rand_bytes(32)
+      amount = Enum.random(100_000_000..999_999_999)
+
+      fun_arg_res = %{
+        arguments: [
+          %{
+            type: :address,
+            value: enc_id(to_pk)
+          },
+          %{
+            type: :int,
+            value: 0
+          }
+        ],
+        function: "transfer",
+        result: %{type: :unit, value: ""}
+      }
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {
+            contract_pk,
+            [AeMdw.Node.aexn_transfer_event_hash(), from_pk, to_pk, <<amount::256>>],
+            ""
+          }
+        ])
+
+      mutation =
+        ContractCallMutation.new(
+          contract_pk,
+          {height, mbi},
+          call_txi,
+          fun_arg_res,
+          call_rec
+        )
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           get_key_block_hash: fn ^block_hash_height -> kb_hash end,
+           get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
            aex9_balances: fn ^contract_pk, _next -> {:ok, %{}} end
          ]}
       ] do
@@ -198,9 +456,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           |> State.new()
           |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
           |> State.commit_mem([mutation])
-
-        [{^contract_pk, [_transfer_evt_hash | [from_pk, to_pk, <<amount::256>>]], _data}] =
-          :aect_call.log(call_rec)
 
         assert State.exists?(
                  state,
@@ -212,12 +467,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                  state,
                  Model.RevAexnTransfer,
                  {:aex9, to_pk, call_txi, from_pk, amount, 0}
-               )
-
-        assert State.exists?(
-                 state,
-                 Model.AexnPairTransfer,
-                 {:aex9, from_pk, to_pk, call_txi, amount, 0}
                )
       end
     end

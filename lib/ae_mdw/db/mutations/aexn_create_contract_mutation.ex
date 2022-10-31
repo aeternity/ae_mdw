@@ -4,9 +4,10 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
   """
 
   alias AeMdw.Blocks
-  alias AeMdw.Db.Contract, as: DBContract
+  alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Sync.Aex9Balances
   alias AeMdw.Txs
 
   @derive AeMdw.Db.Mutation
@@ -18,6 +19,8 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
     :create_txi,
     :extensions
   ]
+
+  @dry_run_timeout 250
 
   @typep aexn_type :: AeMdw.Db.Model.aexn_type()
   @typep aexn_meta_info :: AeMdw.Db.Model.aexn_meta_info()
@@ -63,20 +66,31 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
         },
         state
       ) do
-    state =
-      DBContract.aexn_creation_write(
-        state,
-        aexn_type,
-        aexn_meta_info,
-        contract_pk,
-        create_txi,
-        extensions
-      )
+    state
+    |> write_balances(aexn_type, contract_pk, block_index, create_txi)
+    |> Contract.aexn_creation_write(
+      aexn_type,
+      aexn_meta_info,
+      contract_pk,
+      create_txi,
+      extensions
+    )
+  end
 
-    if aexn_type == :aex9 do
-      State.enqueue(state, :update_aex9_state, [contract_pk], [block_index, create_txi])
-    else
-      state
+  defp write_balances(state, :aex9, contract_pk, block_index, create_txi) do
+    Aex9Balances
+    |> Task.async(:get_balances, [contract_pk, block_index])
+    |> Task.yield(@dry_run_timeout)
+    |> case do
+      {:ok, {:ok, balances, _no_purge}} ->
+        state
+        |> Contract.aex9_write_balances(contract_pk, balances, block_index, create_txi)
+        |> Contract.aex9_init_event_balances(contract_pk, balances, create_txi)
+
+      _timeout_or_error ->
+        state
     end
   end
+
+  defp write_balances(state, _aexn, _contract_pk, _block_index, _txi), do: state
 end

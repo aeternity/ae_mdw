@@ -21,13 +21,37 @@ defmodule AeMdw.Db.Contract do
 
   import AeMdwWeb.Helpers.AexnHelper, only: [sort_field_truncate: 1]
 
-  @type rev_aex9_contract_key :: {pos_integer(), String.t(), String.t(), pos_integer()}
-  @typep hash :: <<_::256>>
   @typep pubkey :: Db.pubkey()
   @typep state :: State.t()
   @typep block_index :: AeMdw.Blocks.block_index()
   @typep txi :: AeMdw.Txs.txi()
-  @typep log_idx :: AeMdw.Contracts.log_idx()
+
+  @type rev_aex9_contract_key :: {pos_integer(), String.t(), String.t(), pos_integer()}
+  @type account_balance :: {pubkey(), integer()}
+
+  defmacrop is_aexn_burn?(evt_hash) do
+    quote do
+      unquote(evt_hash) == Node.aexn_burn_event_hash()
+    end
+  end
+
+  defmacrop is_aexn_mint?(evt_hash) do
+    quote do
+      unquote(evt_hash) == Node.aexn_mint_event_hash()
+    end
+  end
+
+  defmacrop is_aexn_swap?(evt_hash) do
+    quote do
+      unquote(evt_hash) == Node.aexn_swap_event_hash()
+    end
+  end
+
+  defmacrop is_aexn_transfer?(evt_hash) do
+    quote do
+      unquote(evt_hash) == Node.aexn_transfer_event_hash()
+    end
+  end
 
   @spec aexn_creation_write(
           state(),
@@ -82,27 +106,39 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  @spec aex9_transfer_balance(state(), pubkey(), pubkey(), pubkey(), non_neg_integer()) :: state()
-  def aex9_transfer_balance(state, contract_pk, from_pk, to_pk, transfered_value) do
-    case State.get(state, Model.Aex9Balance, {contract_pk, from_pk}) do
-      {:ok, m_aex9_balance_from} ->
-        m_aex9_balance_to = fetch_aex9_balance_or_new(state, contract_pk, to_pk)
-        from_amount = Model.aex9_balance(m_aex9_balance_from, :amount)
-        to_amount = Model.aex9_balance(m_aex9_balance_to, :amount)
+  @spec aex9_write_balances(state(), pubkey(), [account_balance()], block_index(), txi()) ::
+          state()
+  def aex9_write_balances(state, contract_pk, balances, block_index, txi) do
+    Enum.reduce(balances, state, fn {account_pk, amount}, state ->
+      m_balance =
+        Model.aex9_balance(
+          index: {contract_pk, account_pk},
+          block_index: block_index,
+          txi: txi,
+          amount: amount
+        )
 
-        m_aex9_balance_from =
-          Model.aex9_balance(m_aex9_balance_from, amount: from_amount - transfered_value)
+      state
+      |> aex9_write_presence(contract_pk, txi, account_pk)
+      |> State.put(Model.Aex9Balance, m_balance)
+    end)
+  end
 
-        m_aex9_balance_to =
-          Model.aex9_balance(m_aex9_balance_to, amount: to_amount + transfered_value)
+  @spec aex9_init_event_balances(state(), pubkey(), [account_balance()], txi()) :: state()
+  def aex9_init_event_balances(state, contract_pk, balances, txi) do
+    Enum.reduce(balances, state, fn {account_pk, amount}, state ->
+      m_balance =
+        Model.aex9_event_balance(
+          index: {contract_pk, account_pk},
+          txi: txi,
+          log_idx: -1,
+          amount: amount
+        )
 
-        state
-        |> State.put(Model.Aex9Balance, m_aex9_balance_from)
-        |> State.put(Model.Aex9Balance, m_aex9_balance_to)
-
-      :not_found ->
-        state
-    end
+      state
+      |> aex9_write_presence(contract_pk, txi, account_pk)
+      |> State.put(Model.Aex9EventBalance, m_balance)
+    end)
   end
 
   @spec call_write(state(), integer(), integer(), Contract.fun_arg_res_or_error()) :: state()
@@ -172,8 +208,8 @@ defmodule AeMdw.Db.Contract do
       aex9_contract_pk = which_aex9_contract_pubkey(contract_pk, addr)
 
       cond do
-        is_aexn_transfer?(evt_hash) and aex9_contract_pk != nil ->
-          write_aexn_transfer(state2, :aex9, aex9_contract_pk, txi, log_idx, args)
+        aex9_contract_pk != nil ->
+          write_aex9_records(state2, evt_hash, addr, txi, log_idx, args)
 
         State.exists?(state2, Model.AexnContract, {:aex141, addr}) ->
           write_aex141_records(state2, evt_hash, addr, txi, log_idx, args)
@@ -182,11 +218,6 @@ defmodule AeMdw.Db.Contract do
           state2
       end
     end)
-  end
-
-  @spec is_aexn_transfer?(binary()) :: boolean()
-  def is_aexn_transfer?(evt_hash) do
-    evt_hash == Node.aexn_transfer_event_hash()
   end
 
   @spec which_aex9_contract_pubkey(pubkey(), pubkey()) :: pubkey() | nil
@@ -291,26 +322,6 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  @spec write_aex141_records(State.t(), hash(), pubkey(), txi(), log_idx(), list(binary())) ::
-          State.t()
-  def write_aex141_records(state, hash, contract_pk, txi, i, args) do
-    cond do
-      hash == AeMdw.Node.aexn_burn_event_hash() ->
-        delete_aex141_ownership(state, contract_pk, args)
-
-      hash == AeMdw.Node.aexn_mint_event_hash() ->
-        write_aex141_ownership(state, contract_pk, args)
-
-      hash == AeMdw.Node.aexn_transfer_event_hash() ->
-        state
-        |> write_aex141_ownership(contract_pk, args)
-        |> write_aexn_transfer(:aex141, contract_pk, txi, i, args)
-
-      true ->
-        state
-    end
-  end
-
   @spec write_aex141_ownership(State.t(), pubkey(), list(binary())) :: State.t()
   def write_aex141_ownership(
         state,
@@ -330,6 +341,9 @@ defmodule AeMdw.Db.Contract do
 
   def write_aex141_ownership(state, _contract_pk, _args), do: state
 
+  #
+  # Private functions
+  #
   defp delete_aex141_ownership(state, contract_pk, [<<token_id::256>>]) do
     prev_owner_pk = previous_owner(state, contract_pk, token_id)
 
@@ -355,9 +369,43 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.NftTokenOwner, m_token_owner)
   end
 
-  #
-  # Private functions
-  #
+  defp write_aex9_records(state, evt_hash, contract_pk, txi, log_idx, args) do
+    cond do
+      is_aexn_burn?(evt_hash) ->
+        burn_aex9_balance(state, contract_pk, txi, log_idx, args)
+
+      is_aexn_mint?(evt_hash) ->
+        mint_aex9_balance(state, contract_pk, txi, log_idx, args)
+
+      is_aexn_swap?(evt_hash) ->
+        burn_aex9_balance(state, contract_pk, txi, log_idx, args)
+
+      is_aexn_transfer?(evt_hash) ->
+        write_aexn_transfer(state, :aex9, contract_pk, txi, log_idx, args)
+
+      true ->
+        state
+    end
+  end
+
+  defp write_aex141_records(state, evt_hash, contract_pk, txi, log_idx, args) do
+    cond do
+      is_aexn_burn?(evt_hash) ->
+        delete_aex141_ownership(state, contract_pk, args)
+
+      is_aexn_mint?(evt_hash) ->
+        write_aex141_ownership(state, contract_pk, args)
+
+      is_aexn_transfer?(evt_hash) ->
+        state
+        |> write_aex141_ownership(contract_pk, args)
+        |> write_aexn_transfer(:aex141, contract_pk, txi, log_idx, args)
+
+      true ->
+        state
+    end
+  end
+
   defp previous_owner(state, contract_pk, token_id) do
     case State.get(state, Model.NftTokenOwner, {contract_pk, token_id}) do
       {:ok, Model.nft_token_owner(owner: prev_owner_pk)} ->
@@ -423,7 +471,7 @@ defmodule AeMdw.Db.Contract do
          aexn_type,
          contract_pk,
          txi,
-         i,
+         log_idx,
          [
            <<_pk1::256>> = from_pk,
            <<_pk2::256>> = to_pk,
@@ -432,25 +480,29 @@ defmodule AeMdw.Db.Contract do
        ) do
     m_transfer =
       Model.aexn_transfer(
-        index: {aexn_type, from_pk, txi, to_pk, value, i},
+        index: {aexn_type, from_pk, txi, to_pk, value, log_idx},
         contract_pk: contract_pk
       )
 
-    m_rev_transfer = Model.rev_aexn_transfer(index: {aexn_type, to_pk, txi, from_pk, value, i})
-    m_pair_transfer = Model.aexn_pair_transfer(index: {aexn_type, from_pk, to_pk, txi, value, i})
+    m_rev_transfer =
+      Model.rev_aexn_transfer(index: {aexn_type, to_pk, txi, from_pk, value, log_idx})
+
+    m_pair_transfer =
+      Model.aexn_pair_transfer(index: {aexn_type, from_pk, to_pk, txi, value, log_idx})
 
     state
     |> State.put(Model.AexnTransfer, m_transfer)
     |> State.put(Model.RevAexnTransfer, m_rev_transfer)
     |> State.put(Model.AexnPairTransfer, m_pair_transfer)
-    |> maybe_index_contract_transfer(aexn_type, contract_pk, txi, i, transfer)
+    |> index_contract_transfer(aexn_type, contract_pk, txi, log_idx, transfer)
+    |> update_transfer_balance(aexn_type, contract_pk, txi, log_idx, transfer)
   end
 
-  defp write_aexn_transfer(state, _type, _pk, _txi, _i, _args), do: state
+  defp write_aexn_transfer(state, _type, _pk, _txi, _log_idx, _args), do: state
 
-  defp maybe_index_contract_transfer(state, :aex9, _pk, _txi, _i, _transfer), do: state
+  defp index_contract_transfer(state, :aex9, _pk, _txi, _i, _transfer), do: state
 
-  defp maybe_index_contract_transfer(state, :aex141, contract_pk, txi, i, [
+  defp index_contract_transfer(state, :aex141, contract_pk, txi, i, [
          from_pk,
          to_pk,
          <<token_id::256>>
@@ -468,10 +520,76 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.AexnContractToTransfer, m_ct_to)
   end
 
-  defp fetch_aex9_balance_or_new(state, contract_pk, account_pk) do
-    case State.get(state, Model.Aex9Balance, {contract_pk, account_pk}) do
+  defp burn_aex9_balance(state, contract_pk, txi, log_idx, [from_pk, <<burn_value::256>>]) do
+    Model.aex9_event_balance(amount: from_amount) =
+      m_from = get_aex9_event_balance(state, contract_pk, from_pk)
+
+    m_from =
+      Model.aex9_event_balance(m_from,
+        txi: txi,
+        log_idx: log_idx,
+        amount: from_amount - burn_value
+      )
+
+    State.put(state, Model.Aex9EventBalance, m_from)
+  end
+
+  defp burn_aex9_balance(state, _pk, _txi, _idx, _args), do: state
+
+  defp mint_aex9_balance(state, contract_pk, txi, log_idx, [to_pk, <<mint_value::256>>]) do
+    Model.aex9_event_balance(amount: to_amount) =
+      m_to = get_aex9_event_balance(state, contract_pk, to_pk)
+
+    m_to =
+      Model.aex9_event_balance(m_to,
+        txi: txi,
+        log_idx: log_idx,
+        amount: to_amount + mint_value
+      )
+
+    State.put(state, Model.Aex9EventBalance, m_to)
+  end
+
+  defp mint_aex9_balance(state, _pk, _txi, _idx, _args), do: state
+
+  defp update_transfer_balance(state, :aex141, _pk, _txi, _i, _transfer), do: state
+
+  defp update_transfer_balance(state, :aex9, contract_pk, txi, log_idx, [
+         from_pk,
+         to_pk,
+         <<transfered_value::256>>
+       ]) do
+    Model.aex9_event_balance(amount: from_amount) =
+      m_from = get_aex9_event_balance(state, contract_pk, from_pk)
+
+    Model.aex9_event_balance(amount: to_amount) =
+      m_to = get_aex9_event_balance(state, contract_pk, to_pk)
+
+    m_to =
+      Model.aex9_event_balance(m_to,
+        txi: txi,
+        log_idx: log_idx,
+        amount: to_amount + transfered_value
+      )
+
+    m_from =
+      Model.aex9_event_balance(m_from,
+        txi: txi,
+        log_idx: log_idx,
+        amount: from_amount - transfered_value
+      )
+
+    state
+    |> State.put(Model.Aex9EventBalance, m_from)
+    |> State.put(Model.Aex9EventBalance, m_to)
+  end
+
+  defp update_transfer_balance(state, _type, _pk, _txi, _idx, _args), do: state
+
+  defp get_aex9_event_balance(state, contract_pk, account_pk) do
+    case State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk}) do
       {:ok, m_balance} -> m_balance
-      :not_found -> Model.aex9_balance(index: {contract_pk, account_pk}, amount: 0)
+      :not_found -> Model.aex9_event_balance(index: {contract_pk, account_pk}, amount: 0)
     end
   end
 end

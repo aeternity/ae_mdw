@@ -4,7 +4,6 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
   import AeMdw.Node.ContractCallFixtures
   import Mock
 
-  alias AeMdw.AsyncTaskTestUtil
   alias AeMdw.AexnContracts
   alias AeMdw.Contract
   alias AeMdw.Db.ContractCreateMutation
@@ -54,11 +53,6 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
               :crypto.strong_rand_bytes(32)
             )
           ])
-
-        assert AsyncTaskTestUtil.list_pending()
-               |> Enum.find(fn Model.async_task(args: args, extra_args: extra_args) ->
-                 args == [contract_pk] and extra_args == [block_index, create_txi1]
-               end)
 
         assert 1 == State.get_stat(state1, :contracts_created, 0)
         assert {:ok, create_txi1} == State.cache_get(state1, :ct_create_sync_cache, contract_pk)
