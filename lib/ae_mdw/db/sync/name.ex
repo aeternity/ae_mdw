@@ -121,9 +121,11 @@ defmodule AeMdw.Db.Sync.Name do
         ) :: State.t()
   def update(state, name_hash, update_type, pointers, txi, {height, _mbi} = bi) do
     plain_name = plain_name!(state, name_hash)
-    m_name = cache_through_read!(state, Model.ActiveName, plain_name)
-    old_expire = Model.name(m_name, :expire)
-    updates = [{bi, txi} | Model.name(m_name, :updates)]
+
+    Model.name(expire: old_expire, owner: owner_pk, updates: updates) =
+      m_name = cache_through_read!(state, Model.ActiveName, plain_name)
+
+    updates = [{bi, txi} | updates]
 
     state2 =
       Enum.reduce(pointers, state, fn ptr, state ->
@@ -138,9 +140,17 @@ defmodule AeMdw.Db.Sync.Name do
         new_m_name = Model.name(m_name, expire: new_expire, updates: updates)
         new_m_name_exp = Model.expiration(index: {new_expire, plain_name})
 
+        m_name_owner_deactivation =
+          Model.owner_deactivation(index: {owner_pk, new_expire, plain_name})
+
         state2
         |> cache_through_delete(Model.ActiveNameExpiration, {old_expire, plain_name})
+        |> cache_through_delete(
+          Model.ActiveNameOwnerDeactivation,
+          {owner_pk, old_expire, plain_name}
+        )
         |> cache_through_write(Model.ActiveNameExpiration, new_m_name_exp)
+        |> cache_through_write(Model.ActiveNameOwnerDeactivation, m_name_owner_deactivation)
         |> cache_through_write(Model.ActiveName, new_m_name)
 
       :expire ->
@@ -166,18 +176,21 @@ defmodule AeMdw.Db.Sync.Name do
     plain_name = plain_name!(state, name_hash)
 
     m_name = cache_through_read!(state, Model.ActiveName, plain_name)
-    old_owner = Model.name(m_name, :owner)
+    Model.name(owner: old_owner, expire: expire) = m_name
 
     transfers = [{bi, txi} | Model.name(m_name, :transfers)]
     m_name = Model.name(m_name, transfers: transfers, owner: new_owner)
     m_owner = Model.owner(index: {new_owner, plain_name})
+    m_name_owner_deactivation = Model.owner_deactivation(index: {new_owner, expire, plain_name})
 
     log_name_change(height, plain_name, "transfer")
 
     state
     |> cache_through_delete(Model.ActiveNameOwner, {old_owner, plain_name})
+    |> cache_through_delete(Model.ActiveNameOwnerDeactivation, {old_owner, expire, plain_name})
     |> cache_through_write(Model.ActiveNameOwner, m_owner)
     |> cache_through_write(Model.ActiveName, m_name)
+    |> cache_through_write(Model.ActiveNameOwnerDeactivation, m_name_owner_deactivation)
   end
 
   @spec revoke(State.t(), Names.name_hash(), Txs.txi(), Blocks.block_index()) :: State.t()

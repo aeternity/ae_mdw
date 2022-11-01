@@ -2,10 +2,13 @@ defmodule AeMdw.Db.Sync.NameTest do
   use ExUnit.Case
 
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
+  alias AeMdw.Db.Store
   alias AeMdw.Db.Sync.Origin
   alias AeMdw.Db.Sync.Name
   alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.NameUpdateMutation
+  alias AeMdw.TestSamples, as: TS
 
   import Mock
 
@@ -251,6 +254,80 @@ defmodule AeMdw.Db.Sync.NameTest do
 
         assert [^mutation] = Name.update_mutations(tx_rec, txi, block_index, false)
       end
+    end
+  end
+
+  describe "transfer/5" do
+    test "it creates a ActiveNameOwnerDeactivation and removes the previous one", %{store: store} do
+      plain_name = TS.plain_name(0)
+      name_hash = "some-hash"
+      block_index = {123, 456}
+      txi = 789
+      old_owner = TS.address(0)
+      new_owner = TS.address(1)
+      expire = 987_654
+
+      name = Model.name(index: plain_name, expire: expire, owner: old_owner)
+      owner_deactivation = Model.owner_deactivation(index: {old_owner, expire, plain_name})
+
+      state =
+        store
+        |> Store.put(Model.ActiveName, name)
+        |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: plain_name))
+        |> Store.put(Model.ActiveNameOwnerDeactivation, owner_deactivation)
+        |> State.new()
+
+      state = Name.transfer(state, name_hash, new_owner, txi, block_index)
+
+      refute State.exists?(
+               state,
+               Model.ActiveNameOwnerDeactivation,
+               {old_owner, expire, plain_name}
+             )
+
+      assert State.exists?(
+               state,
+               Model.ActiveNameOwnerDeactivation,
+               {new_owner, expire, plain_name}
+             )
+    end
+  end
+
+  describe "update/6" do
+    test "it creates a ActiveNameOwnerDeactivation and removes the previous one", %{store: store} do
+      plain_name = TS.plain_name(0)
+      name_hash = "some-hash"
+      block_index = {123, 456}
+      txi = 789
+      owner = TS.address(0)
+      old_expire = 987_654
+      new_expire = 321_098
+      pointers = []
+      update_type = {:update_expiration, new_expire}
+
+      name = Model.name(index: plain_name, expire: old_expire, owner: owner)
+      owner_deactivation = Model.owner_deactivation(index: {owner, old_expire, plain_name})
+
+      state =
+        store
+        |> Store.put(Model.ActiveName, name)
+        |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: plain_name))
+        |> Store.put(Model.ActiveNameOwnerDeactivation, owner_deactivation)
+        |> State.new()
+
+      state = Name.update(state, name_hash, update_type, pointers, txi, block_index)
+
+      refute State.exists?(
+               state,
+               Model.ActiveNameOwnerDeactivation,
+               {owner, old_expire, plain_name}
+             )
+
+      assert State.exists?(
+               state,
+               Model.ActiveNameOwnerDeactivation,
+               {owner, new_expire, plain_name}
+             )
     end
   end
 end
