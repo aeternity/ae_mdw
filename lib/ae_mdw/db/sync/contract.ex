@@ -55,24 +55,24 @@ defmodule AeMdw.Db.Sync.Contract do
           Mutation.t()
         ]
   def events_mutations(events, block_index, block_hash, call_txi, call_tx_hash, contract_pk) do
-    shifted_events = events |> Enum.drop(1) |> Enum.concat([nil])
+    shifted_events = [nil | events]
 
     # This function relies on a property that every Chain.clone and Chain.create
-    # always have a subsequent Call.amount transaction which tranfers tokens
+    # always have a previous Call.amount transaction which tranfers tokens
     # from the original contract to the newly created contract.
     {chain_events, non_chain_events} =
-      events
-      |> Enum.zip(shifted_events)
+      shifted_events
+      |> Enum.zip(events)
       |> Enum.split_with(fn
-        {{{:internal_call_tx, "Chain.create"}, _info}, _next_event} -> true
-        {{{:internal_call_tx, "Chain.clone"}, _info}, _next_event} -> true
-        {{{:internal_call_tx, _fname}, _info}, _next_event} -> false
+        {_prev_event, {{:internal_call_tx, "Chain.create"}, _info}} -> true
+        {_prev_event, {{:internal_call_tx, "Chain.clone"}, _info}} -> true
+        {_prev_event, {{:internal_call_tx, _fname}, _info}} -> false
       end)
 
     chain_mutations =
       Enum.flat_map(chain_events, fn
-        {{{:internal_call_tx, _fname}, _info}, next_event} ->
-          {{:internal_call_tx, "Call.amount"}, %{info: aetx}} = next_event
+        {prev_event, {{:internal_call_tx, _fname}, _info}} ->
+          {{:internal_call_tx, "Call.amount"}, %{info: aetx}} = prev_event
           {:spend_tx, tx} = :aetx.specialize_type(aetx)
           recipient_id = :aec_spend_tx.recipient_id(tx)
           {:account, contract_pk} = :aeser_id.specialize(recipient_id)
@@ -92,7 +92,7 @@ defmodule AeMdw.Db.Sync.Contract do
 
     # Chain.* events don't contain the transaction in the event info, can't be indexed as an internal call
     int_calls =
-      Enum.map(non_chain_events, fn {{{:internal_call_tx, fname}, %{info: tx}}, _next_event} ->
+      Enum.map(non_chain_events, fn {_prev_event, {{:internal_call_tx, fname}, %{info: tx}}} ->
         {tx_type, raw_tx} = :aetx.specialize_type(tx)
 
         {fname, tx_type, tx, raw_tx}
