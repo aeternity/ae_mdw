@@ -110,7 +110,7 @@ defmodule AeMdw.Node do
 
   @spec height_proto :: [{non_neg_integer(), non_neg_integer()}]
   def height_proto do
-    []
+    :aec_hard_forks.protocols() |> Enum.into([]) |> Enum.sort(:desc)
   end
 
   @spec id_field_type(atom()) :: %{atom() => non_neg_integer()} | nil
@@ -138,12 +138,11 @@ defmodule AeMdw.Node do
 
   @spec lima_height :: non_neg_integer()
   def lima_height do
-    0
-  end
-
-  @spec lima_vsn :: non_neg_integer()
-  def lima_vsn do
-    0
+    :aec_governance.get_network_id()
+    |> :aec_hard_forks.protocols_from_network_id()
+    |> Enum.find_value(fn {vsn, height} ->
+      if vsn == :aec_hard_forks.protocol_vsn(:lima), do: height
+    end)
   end
 
   @spec max_blob :: binary()

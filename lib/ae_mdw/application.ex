@@ -96,21 +96,6 @@ defmodule AeMdw.Application do
     {:ok, aens_state_tree_code} = Extract.AbsCode.module(:aens_state_tree)
     {:ok, aeo_state_tree_code} = Extract.AbsCode.module(:aeo_state_tree)
 
-    network_id = :aec_governance.get_network_id()
-
-    hard_fork_heights =
-      network_id
-      |> :aec_hard_forks.protocols_from_network_id()
-      |> Enum.sort_by(&elem(&1, 0))
-
-    lima_vsn = :aec_hard_forks.protocol_vsn(:lima)
-
-    lima_height =
-      Enum.find_value(hard_fork_heights, fn
-        {^lima_vsn, h} -> h
-        _non_lima_val -> nil
-      end)
-
     type_mod_map = Extract.tx_mod_map(aetx_code)
     type_name_map = Extract.tx_name_map(aetx_code)
     id_prefix_type_map = Extract.id_prefix_type_map(aeser_code)
@@ -157,8 +142,6 @@ defmodule AeMdw.Application do
       |> Enum.into(%{})
     end
 
-    height_proto = :aec_hard_forks.protocols() |> Enum.into([]) |> Enum.sort(&>=/2)
-
     min_block_reward_height =
       :aec_block_genesis.height() + :aec_governance.beneficiary_reward_delay() + 1
 
@@ -187,8 +170,6 @@ defmodule AeMdw.Application do
         },
         aens_tree_pos: field_pos_map.(aens_state_tree_code, :ns_tree),
         aeo_tree_pos: field_pos_map.(aeo_state_tree_code, :oracle_tree),
-        lima_vsn: [{[], lima_vsn}],
-        lima_height: [{[], lima_height}],
         aex9_signatures: [{[], AeMdw.Node.aex9_signatures()}],
         aexn_burn_event_hash: [{[], :aec_hash.blake2b_256_hash("Burn")}],
         aexn_mint_event_hash: [{[], :aec_hash.blake2b_256_hash("Mint")}],
@@ -196,7 +177,8 @@ defmodule AeMdw.Application do
         aexn_transfer_event_hash: [{[], :aec_hash.blake2b_256_hash("Transfer")}],
         aex141_signatures: [{[], AeMdw.Node.aex141_signatures()}],
         previous_aex141_signatures: [{[], AeMdw.Node.previous_aex141_signatures()}],
-        height_proto: [{[], height_proto}],
+        height_proto: [{[], AeMdw.Node.height_proto()}],
+        lima_height: [{[], AeMdw.Node.lima_height()}],
         min_block_reward_height: [{[], min_block_reward_height}],
         token_supply_delta:
           Enum.map(NodeHelper.token_supply_delta(), fn {h, xs} -> {[h], xs} end) ++ [{[:_], 0}]
