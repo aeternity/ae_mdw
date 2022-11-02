@@ -2,7 +2,7 @@ defmodule AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
   use ExUnit.Case
 
   alias AeMdw.AsyncTaskTestUtil
-  alias AeMdw.Db.Aex9BalancesCache
+  alias AeMdw.Sync.Aex9BalancesCache
   alias AeMdw.Db.Model
   alias AeMdw.Sync.AsyncTasks
 

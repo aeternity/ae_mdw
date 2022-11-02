@@ -12,9 +12,10 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
 
   describe "execute" do
     test "successful for aex9 contract" do
-      contract_pk = Validate.id!("ct_2TZsPKT5wyahqFrzp8YX7DfXQapQ4Qk65yn3sHbifU9Db9hoav")
+      contract_pk = :crypto.strong_rand_bytes(32)
       aex9_meta_info = {name, symbol, _decimals} = {"911058", "SPH", 18}
-      {kbi, mbi} = block_index = {271_305, 99}
+      {kbi, mbi} = block_index = {Enum.random(1..999_999), 99}
+      next_height = kbi + 1
       create_txi = txi = 12_361_891
       extensions = ["ext1"]
       state = State.new()
@@ -23,13 +24,11 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       next_hash = :crypto.strong_rand_bytes(32)
 
       with_mocks [
-        {AeMdw.Node.Db, [],
+        {AeMdw.Node.Db, [:passthrough],
          [
-           get_key_block_hash: fn height ->
-             assert height == kbi + 1
-             kb_hash
-           end,
-           get_next_hash: fn ^kb_hash, ^mbi -> next_hash end
+           get_key_block_hash: fn ^next_height -> kb_hash end,
+           get_next_hash: fn ^kb_hash, ^mbi -> next_hash end,
+           aex9_balance: fn ^contract_pk, {:micro, ^kbi, ^next_hash} -> {:ok, %{}} end
          ]}
       ] do
         State.commit(state, [
@@ -64,6 +63,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       symbol = "SPH2"
       aex9_meta_info = {bigger_name, symbol, 18}
       {kbi, mbi} = block_index = {271_305, 99}
+      next_height = kbi + 1
       create_txi = txi = 12_361_891
       extensions = ["ext1"]
       state = State.new()
@@ -72,13 +72,11 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       next_hash = :crypto.strong_rand_bytes(32)
 
       with_mocks [
-        {AeMdw.Node.Db, [],
+        {AeMdw.Node.Db, [:passthrough],
          [
-           get_key_block_hash: fn height ->
-             assert height == kbi + 1
-             kb_hash
-           end,
-           get_next_hash: fn ^kb_hash, ^mbi -> next_hash end
+           get_key_block_hash: fn ^next_height -> kb_hash end,
+           get_next_hash: fn ^kb_hash, ^mbi -> next_hash end,
+           aex9_balance: fn ^contract_pk, {:micro, ^kbi, ^next_hash} -> {:ok, %{}} end
          ]}
       ] do
         State.commit(state, [

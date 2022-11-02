@@ -37,6 +37,23 @@ defmodule AeMdwWeb.AexnTokenController do
     aexn_contract(conn, contract_id, :aex141)
   end
 
+  @spec aex9_event_balances(Conn.t(), map()) :: Conn.t()
+  def aex9_event_balances(%Conn{assigns: assigns} = conn, %{"contract_id" => contract_id}) do
+    %{
+      state: state,
+      cursor: cursor,
+      pagination: pagination
+    } = assigns
+
+    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
+         {:ok, prev_cursor, balance_keys, next_cursor} <-
+           Aex9.fetch_event_balances(state, contract_pk, pagination, cursor) do
+      balances = Enum.map(balance_keys, &render_event_balance(state, &1))
+
+      Util.paginate(conn, prev_cursor, balances, next_cursor)
+    end
+  end
+
   @spec aex9_token_balances(Conn.t(), map()) :: Conn.t()
   def aex9_token_balances(%Conn{assigns: assigns} = conn, %{"contract_id" => contract_id}) do
     %{

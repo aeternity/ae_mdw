@@ -34,6 +34,15 @@ defmodule AeMdwWeb.AexnView do
            extensions: [String.t()]
          }
 
+  @typep aex9_event_balance() :: %{
+           contract_id: String.t(),
+           account_id: String.t(),
+           block_hash: AeMdw.Blocks.block_hash(),
+           height: AeMdw.Blocks.height(),
+           last_tx_hash: Txs.tx_hash(),
+           last_log_idx: AeMdw.Contracts.log_idx(),
+           amount: integer()
+         }
   @type aexn_contract() :: aex9_contract() | aex141_contract()
 
   @typep account_transfer_key :: AeMdw.AexnTransfers.transfer_key()
@@ -81,6 +90,27 @@ defmodule AeMdwWeb.AexnView do
       block_hash: enc_block(block_type, block_hash),
       height: height,
       amounts: normalize_balances(amounts)
+    }
+  end
+
+  @spec render_event_balance(State.t(), {pubkey(), pubkey()}) :: aex9_event_balance()
+  def render_event_balance(state, {contract_pk, account_pk}) do
+    Model.aex9_event_balance(txi: txi, log_idx: log_idx, amount: amount) =
+      State.fetch!(state, Model.Aex9EventBalance, {contract_pk, account_pk})
+
+    Model.tx(id: tx_hash, block_index: block_index) = State.fetch!(state, Model.Tx, txi)
+
+    Model.block(index: {height, _mbi}, hash: block_hash) =
+      State.fetch!(state, Model.Block, block_index)
+
+    %{
+      contract_id: enc_ct(contract_pk),
+      account_id: enc_id(account_pk),
+      block_hash: enc_block(:micro, block_hash),
+      height: height,
+      last_tx_hash: enc(:tx_hash, tx_hash),
+      last_log_idx: log_idx,
+      amount: amount
     }
   end
 

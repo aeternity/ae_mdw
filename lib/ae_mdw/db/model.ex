@@ -22,6 +22,7 @@ defmodule AeMdw.Db.Model do
   @typep pubkey :: Db.pubkey()
   @typep tx_type() :: Node.tx_type()
   @typep txi() :: Txs.txi()
+  @typep log_idx() :: AeMdw.Contracts.log_idx()
   @typep tx_hash() :: Txs.tx_hash()
   @typep bi_txi() :: Blocks.block_index_txi()
 
@@ -301,6 +302,26 @@ defmodule AeMdw.Db.Model do
             amount: non_neg_integer(),
             updates: [bi_txi()]
           )
+
+  # AEX9 event balance:
+  #     index: {contract_pk, account_pk}
+  #     txi: call txi,
+  #     log_idx: event log index,
+  #     amount: float
+  @type aex9_event_balance ::
+          record(:aex9_event_balance,
+            index: {pubkey(), pubkey()},
+            txi: txi(),
+            log_idx: log_idx(),
+            amount: float()
+          )
+  @aex9_event_balance_defaults [
+    index: {<<>>, <<>>},
+    txi: nil,
+    log_idx: -1,
+    amount: nil
+  ]
+  defrecord :aex9_event_balance, @aex9_event_balance_defaults
 
   # AEX9 balance:
   #     index: {contract_pk, account_pk}
@@ -769,6 +790,7 @@ defmodule AeMdw.Db.Model do
   defp contract_tables() do
     [
       AeMdw.Db.Model.Aex9Balance,
+      AeMdw.Db.Model.Aex9EventBalance,
       AeMdw.Db.Model.AexnContract,
       AeMdw.Db.Model.AexnContractName,
       AeMdw.Db.Model.AexnContractSymbol,
@@ -860,6 +882,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Origin), do: :origin
   def record(AeMdw.Db.Model.RevOrigin), do: :rev_origin
   def record(AeMdw.Db.Model.Aex9Balance), do: :aex9_balance
+  def record(AeMdw.Db.Model.Aex9EventBalance), do: :aex9_event_balance
   def record(AeMdw.Db.Model.AexnContract), do: :aexn_contract
   def record(AeMdw.Db.Model.AexnContractName), do: :aexn_contract_name
   def record(AeMdw.Db.Model.AexnContractSymbol), do: :aexn_contract_symbol

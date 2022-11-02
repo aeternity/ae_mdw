@@ -45,18 +45,6 @@ defmodule AeMdw.Db.UpdateAex9StateMutation do
         },
         state
       ) do
-    Enum.reduce(balances, state, fn {account_pk, amount}, state ->
-      m_balance =
-        Model.aex9_balance(
-          index: {contract_pk, account_pk},
-          block_index: block_index,
-          txi: txi,
-          amount: amount
-        )
-
-      state
-      |> Contract.aex9_write_presence(contract_pk, txi, account_pk)
-      |> State.put(Model.Aex9Balance, m_balance)
-    end)
+    Contract.aex9_write_balances(state, contract_pk, balances, block_index, txi)
   end
 end

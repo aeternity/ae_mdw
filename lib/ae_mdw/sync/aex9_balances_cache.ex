@@ -1,4 +1,4 @@
-defmodule AeMdw.Db.Aex9BalancesCache do
+defmodule AeMdw.Sync.Aex9BalancesCache do
   @moduledoc """
   Cache of aex9 balances in order to call the contract a single time for the same block.
   """
@@ -7,7 +7,7 @@ defmodule AeMdw.Db.Aex9BalancesCache do
   alias AeMdw.Blocks
   alias AeMdw.EtsCache
 
-  @typep balances :: %{{:address, NodeDb.pubkey()} => integer()}
+  @typep balances :: NodeDb.balances_map()
   @table :aex9_balances
   @expire_minutes 24 * 60
 
