@@ -140,9 +140,8 @@ defmodule AeMdw.Txs do
   @spec fetch_micro_block_txs(state(), binary(), pagination(), cursor() | nil) ::
           {:ok, page_cursor(), [tx()], page_cursor()} | {:error, Error.t()}
   def fetch_micro_block_txs(state, hash, pagination, cursor) do
-    with {:ok, height, mbi} <- DbUtil.micro_block_height_index(state, hash) do
-      Model.block(tx_index: first_txi) = State.fetch!(state, Model.Block, {height, mbi})
-
+    with {:ok, height, mbi} <- DbUtil.micro_block_height_index(state, hash),
+         {:ok, Model.block(tx_index: first_txi)} <- State.get(state, Model.Block, {height, mbi}) do
       last_txi =
         case State.next(state, Model.Block, {height, mbi}) do
           {:ok, next_key} ->
@@ -159,6 +158,9 @@ defmodule AeMdw.Txs do
       else
         {:ok, nil, [], nil}
       end
+    else
+      {:error, reason} -> {:error, reason}
+      :not_found -> {:error, ErrInput.NotFound.exception(value: hash)}
     end
   end
 

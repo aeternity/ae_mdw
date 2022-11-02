@@ -430,5 +430,33 @@ defmodule AeMdwWeb.TxControllerTest do
                  |> json_response(404)
       end
     end
+
+    test "if mb exists on node but doesn't exist on mdw, it returns 404", %{
+      conn: conn,
+      store: store
+    } do
+      mb_hash = TS.micro_block_hash(0)
+      encoded_mb_hash = encode(:micro_block_hash, mb_hash)
+      error_msg = "not found: #{encoded_mb_hash}"
+
+      store = Store.put(store, Model.Block, Model.block(index: {3, 0}, tx_index: 10))
+
+      with_mocks [
+        {:aec_chain, [], [get_block: fn ^mb_hash -> {:ok, :block} end]},
+        {:aec_blocks, [], [to_header: fn :block -> :header end]},
+        {:aec_headers, [],
+         [
+           type: fn :header -> :micro end,
+           height: fn :header -> 1 end
+         ]},
+        {Db, [], [get_reverse_micro_blocks: fn ^mb_hash -> [] end]}
+      ] do
+        assert %{"error" => ^error_msg} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/micro-blocks/#{encoded_mb_hash}/txs")
+                 |> json_response(404)
+      end
+    end
   end
 end
