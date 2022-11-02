@@ -244,6 +244,27 @@ defmodule AeMdw.Node.Db do
     vsn
   end
 
+  @spec nonce_at_block(Blocks.block_hash(), pubkey()) :: non_neg_integer()
+  def nonce_at_block(mb_hash, account_pk) do
+    {:value, micro_block} = :aec_db.find_block(mb_hash)
+    header = :aec_blocks.to_header(micro_block)
+    {:ok, hash} = :aec_headers.hash_header(header)
+    consensus = :aec_headers.consensus_module(header)
+    node = {:node, header, hash, :micro}
+    prev_hash = :aec_block_insertion.node_prev_hash(node)
+
+    {:value, trees_in, _tree, _difficulty, _fees, _fraud} =
+      :aec_db.find_block_state_and_data(prev_hash, true)
+
+    trees_in = apply(consensus, :state_pre_transform_micro_node, [node, trees_in])
+    accounts = :aec_trees.accounts(trees_in)
+
+    case :aec_accounts_trees.lookup(account_pk, accounts) do
+      {:value, account} -> :aec_accounts.nonce(account) + 1
+      :none -> 1
+    end
+  end
+
   defp micro_block_walker(hash) do
     with block <- :aec_db.get_block(hash),
          :micro <- :aec_blocks.type(block) do
