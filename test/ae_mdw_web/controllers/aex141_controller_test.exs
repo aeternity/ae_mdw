@@ -54,11 +54,25 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
     store =
       Enum.reduce(1_413_001..1_413_040, store, fn j, store ->
-        token_id = j
+        token_id = j - 1_413_000
+        template_id = j - 1_413_000
+        txi = j
         owner_pk = if rem(j, 2) == 0, do: @owner_pk1, else: @owner_pk2
         m_ownership = Model.nft_ownership(index: {owner_pk, contract_pk, token_id})
         m_owner_token = Model.nft_owner_token(index: {contract_pk, owner_pk, token_id})
         m_token_owner = Model.nft_token_owner(index: {contract_pk, token_id}, owner: owner_pk)
+
+        m_template =
+          Model.nft_template(
+            index: {contract_pk, template_id},
+            txi: txi,
+            log_idx: rem(template_id, 2)
+          )
+
+        store =
+          store
+          |> Store.put(Model.NftTemplate, m_template)
+          |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>))
 
         if token_id != 1_413_010 do
           store
@@ -391,7 +405,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                                   "token_id" => token_id
                                 } ->
                ct_id == contract_id and
-                 assert owner_id in owner_ids and assert(token_id in 1_413_001..1_413_010)
+                 assert owner_id in owner_ids and token_id in 1..10
              end)
 
       assert %{"data" => next_nfts, "prev" => prev_nfts} =
@@ -405,7 +419,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                                        "owner_id" => owner_id,
                                        "token_id" => token_id
                                      } ->
-               ct_id == contract_id and owner_id in owner_ids and token_id in 1_413_011..1_413_020
+               ct_id == contract_id and owner_id in owner_ids and token_id in 11..20
              end)
 
       assert %{"data" => ^nfts} =
@@ -434,6 +448,91 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       assert %{"data" => ^nfts} =
                conn |> with_store(store) |> get(prev_nfts) |> json_response(200)
+    end
+  end
+
+  describe "collection_templates" do
+    test "returns an empty list when collection has no nft", %{conn: conn, store: store} do
+      contract_id = enc_ct(<<1_411::256>>)
+
+      assert %{"data" => [], "next" => nil, "prev" => nil} =
+               conn
+               |> with_store(store)
+               |> get("/aex141/#{contract_id}/templates")
+               |> json_response(200)
+    end
+
+    test "returns collection templates sorted by ascending ids", %{
+      conn: conn,
+      store: store
+    } do
+      contract_id = enc_ct(<<1_413::256>>)
+
+      assert %{"data" => templates, "next" => next} =
+               conn
+               |> with_store(store)
+               |> get("/aex141/#{contract_id}/templates", direction: :forward)
+               |> json_response(200)
+
+      assert @default_limit = length(templates)
+      assert ^templates = Enum.sort_by(templates, & &1["template_id"])
+
+      assert Enum.all?(templates, fn %{
+                                       "contract_id" => ct_id,
+                                       "template_id" => template_id,
+                                       "tx_hash" => tx_hash,
+                                       "log_idx" => log_idx
+                                     } ->
+               tx_hash = Validate.id!(tx_hash)
+
+               ct_id == contract_id and template_id in 1..10 and
+                 tx_hash == <<template_id + 1_413_000::256>> and log_idx == rem(template_id, 2)
+             end)
+
+      assert %{"data" => next_templates, "prev" => prev_templates} =
+               conn |> with_store(store) |> get(next) |> json_response(200)
+
+      assert @default_limit = length(next_templates)
+      assert ^next_templates = Enum.sort_by(next_templates, & &1["template_id"])
+
+      assert Enum.all?(next_templates, fn %{
+                                            "contract_id" => ct_id,
+                                            "template_id" => template_id,
+                                            "tx_hash" => tx_hash,
+                                            "log_idx" => log_idx
+                                          } ->
+               tx_hash = Validate.id!(tx_hash)
+
+               ct_id == contract_id and template_id in 11..20 and
+                 tx_hash == <<template_id + 1_413_000::256>> and log_idx == rem(template_id, 2)
+             end)
+
+      assert %{"data" => ^templates} =
+               conn |> with_store(store) |> get(prev_templates) |> json_response(200)
+    end
+
+    test "returns collection templates sorted by descending ids", %{conn: conn, store: store} do
+      contract_id = enc_ct(<<1_413::256>>)
+
+      assert %{"data" => templates, "next" => next} =
+               conn
+               |> with_store(store)
+               |> get("/aex141/#{contract_id}/templates")
+               |> json_response(200)
+
+      assert @default_limit = length(templates)
+      assert ^templates = Enum.sort_by(templates, & &1["template_id"], :desc)
+      assert Enum.all?(templates, &(&1["contract_id"] == contract_id))
+
+      assert %{"data" => next_templates, "prev" => prev_templates} =
+               conn |> with_store(store) |> get(next) |> json_response(200)
+
+      assert @default_limit = length(next_templates)
+      assert ^next_templates = Enum.sort_by(next_templates, & &1["template_id"], :desc)
+      assert Enum.all?(next_templates, &(&1["contract_id"] == contract_id))
+
+      assert %{"data" => ^templates} =
+               conn |> with_store(store) |> get(prev_templates) |> json_response(200)
     end
   end
 end

@@ -41,6 +41,24 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
+  defmacrop is_aexn_template_mint?(evt_hash) do
+    quote do
+      unquote(evt_hash) == Node.aexn_template_mint_event_hash()
+    end
+  end
+
+  defmacrop is_aexn_template_creation?(evt_hash) do
+    quote do
+      unquote(evt_hash) == Node.aexn_template_creation_event_hash()
+    end
+  end
+
+  defmacrop is_aexn_template_deletion?(evt_hash) do
+    quote do
+      unquote(evt_hash) == Node.aexn_template_deletion_event_hash()
+    end
+  end
+
   defmacrop is_aexn_swap?(evt_hash) do
     quote do
       unquote(evt_hash) == Node.aexn_swap_event_hash()
@@ -326,17 +344,17 @@ defmodule AeMdw.Db.Contract do
   def write_aex141_ownership(
         state,
         contract_pk,
-        [<<_to_pk::256>>, <<_token_id::256>>] = args
+        [<<_pk::256>> = to_pk, <<token_id::256>>]
       ) do
-    do_write_aex141_ownership(state, contract_pk, args)
+    do_write_aex141_ownership(state, contract_pk, to_pk, token_id)
   end
 
   def write_aex141_ownership(
         state,
         contract_pk,
-        [<<_from::256>>, <<_pk2::256>> = to_pk, <<_id::256>> = token_id]
+        [<<_pk::256>> = to_pk, <<template_id::256>>, <<token_id::256>>]
       ) do
-    do_write_aex141_ownership(state, contract_pk, [to_pk, token_id])
+    do_write_aex141_ownership(state, contract_pk, to_pk, token_id, template_id)
   end
 
   def write_aex141_ownership(state, _contract_pk, _args), do: state
@@ -344,6 +362,63 @@ defmodule AeMdw.Db.Contract do
   #
   # Private functions
   #
+  defp transfer_aex141_ownership(
+         state,
+         contract_pk,
+         [<<_from::256>>, <<_pk::256>> = to_pk, <<token_id::256>>]
+       ) do
+    do_write_aex141_ownership(state, contract_pk, to_pk, token_id)
+  end
+
+  defp transfer_aex141_ownership(state, _contract_pk, _args), do: state
+
+  defp write_aex141_template(
+         state,
+         contract_pk,
+         [<<template_id::256>>],
+         txi,
+         log_idx
+       ) do
+    do_write_aex141_template(state, contract_pk, template_id, txi, log_idx)
+  end
+
+  defp write_aex141_template(
+         state,
+         contract_pk,
+         [<<_pk::256>>, <<template_id::256>>, <<_id::256>>],
+         txi,
+         log_idx
+       ) do
+    do_write_aex141_template(state, contract_pk, template_id, txi, log_idx)
+  end
+
+  defp write_aex141_template(state, _pk, _args, _txi, _idx), do: state
+
+  defp do_write_aex141_template(state, contract_pk, template_id, txi, log_idx) do
+    if State.exists?(state, Model.NftTemplate, {contract_pk, template_id}) do
+      state
+    else
+      m_template =
+        Model.nft_template(index: {contract_pk, template_id}, txi: txi, log_idx: log_idx)
+
+      State.put(state, Model.NftTemplate, m_template)
+    end
+  end
+
+  defp delete_aex141_template(
+         state,
+         contract_pk,
+         [<<template_id::256>>]
+       ) do
+    if State.exists?(state, Model.NftTemplate, {contract_pk, template_id}) do
+      State.delete(state, Model.NftTemplate, {contract_pk, template_id})
+    else
+      state
+    end
+  end
+
+  defp delete_aex141_template(state, _pk, _args), do: state
+
   defp delete_aex141_ownership(state, contract_pk, [<<token_id::256>>]) do
     prev_owner_pk = previous_owner(state, contract_pk, token_id)
 
@@ -354,8 +429,10 @@ defmodule AeMdw.Db.Contract do
 
   defp delete_aex141_ownership(state, _contract_pk, _args), do: state
 
-  defp do_write_aex141_ownership(state, contract_pk, [to_pk, <<token_id::256>>]) do
-    m_ownership = Model.nft_ownership(index: {to_pk, contract_pk, token_id})
+  defp do_write_aex141_ownership(state, contract_pk, to_pk, token_id, template_id \\ nil) do
+    m_ownership =
+      Model.nft_ownership(index: {to_pk, contract_pk, token_id}, template_id: template_id)
+
     m_owner_token = Model.nft_owner_token(index: {contract_pk, to_pk, token_id})
     m_token_owner = Model.nft_token_owner(index: {contract_pk, token_id}, owner: to_pk)
 
@@ -393,12 +470,20 @@ defmodule AeMdw.Db.Contract do
       is_aexn_burn?(evt_hash) ->
         delete_aex141_ownership(state, contract_pk, args)
 
-      is_aexn_mint?(evt_hash) ->
-        write_aex141_ownership(state, contract_pk, args)
+      is_aexn_mint?(evt_hash) or is_aexn_template_mint?(evt_hash) ->
+        state
+        |> write_aex141_ownership(contract_pk, args)
+        |> write_aex141_template(contract_pk, args, txi, log_idx)
+
+      is_aexn_template_creation?(evt_hash) ->
+        write_aex141_template(state, contract_pk, args, txi, log_idx)
+
+      is_aexn_template_deletion?(evt_hash) ->
+        delete_aex141_template(state, contract_pk, args)
 
       is_aexn_transfer?(evt_hash) ->
         state
-        |> write_aex141_ownership(contract_pk, args)
+        |> transfer_aex141_ownership(contract_pk, args)
         |> write_aexn_transfer(:aex141, contract_pk, txi, log_idx, args)
 
       true ->

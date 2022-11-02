@@ -10,8 +10,9 @@ defmodule AeMdw.Aex141 do
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Util
+  alias AeMdw.Txs
 
-  import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1, enc_id: 1]
+  import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1, enc_id: 1, enc: 2]
 
   require Model
 
@@ -28,6 +29,7 @@ defmodule AeMdw.Aex141 do
         }
 
   @ownership_table Model.NftOwnership
+  @templates_table Model.NftTemplate
   @owners_table Model.NftTokenOwner
 
   @spec fetch_nft_owner(pubkey(), token_id()) :: {:ok, pubkey()} | {:error, Error.t()}
@@ -58,6 +60,24 @@ defmodule AeMdw.Aex141 do
        {
          serialize_cursor(prev_cursor_key),
          render_owned_nfs(nfts),
+         serialize_cursor(next_cursor_key)
+       }}
+    end
+  end
+
+  @spec fetch_templates(State.t(), pubkey(), cursor(), pagination()) ::
+          {:ok, {page_cursor(), [nft()], page_cursor()}} | {:error, Error.t()}
+  def fetch_templates(state, account_pk, cursor, pagination) do
+    with {:ok, cursor_key} <- deserialize_cursor(@templates_table, cursor) do
+      {prev_cursor_key, keys, next_cursor_key} =
+        state
+        |> build_streamer(@templates_table, cursor_key, account_pk)
+        |> Collection.paginate(pagination)
+
+      {:ok,
+       {
+         serialize_cursor(prev_cursor_key),
+         render_templates(state, keys),
          serialize_cursor(next_cursor_key)
        }}
     end
@@ -100,6 +120,9 @@ defmodule AeMdw.Aex141 do
             {pubkey, Util.max_256bit_bin(), Util.max_int()}
           }
 
+        Model.NftTemplate ->
+          {{pubkey, Util.min_256bit_int()}, {pubkey, nil}}
+
         Model.NftTokenOwner ->
           {{pubkey, Util.min_256bit_int()}, {pubkey, nil}}
       end
@@ -126,6 +149,16 @@ defmodule AeMdw.Aex141 do
     end
   end
 
+  defp deserialize_cursor(Model.NftTemplate, cursor_bin64) do
+    with {:ok, cursor_bin} <- Base.decode64(cursor_bin64),
+         {<<_pk::256>>, template_id} = cursor when is_integer(template_id) <-
+           :erlang.binary_to_term(cursor_bin) do
+      {:ok, cursor}
+    else
+      _invalid -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
+    end
+  end
+
   defp deserialize_cursor(Model.NftTokenOwner, cursor_bin64) do
     with {:ok, cursor_bin} <- Base.decode64(cursor_bin64),
          {<<_pk::256>>, token_id} = cursor when is_integer(token_id) <-
@@ -142,6 +175,22 @@ defmodule AeMdw.Aex141 do
         contract_id: enc_ct(contract_pk),
         owner_id: enc_id(owner_pk),
         token_id: token_id
+      }
+    end)
+  end
+
+  defp render_templates(state, keys) do
+    Enum.map(keys, fn {contract_pk, template_id} ->
+      Model.nft_template(txi: txi, log_idx: log_idx) =
+        State.fetch!(state, @templates_table, {contract_pk, template_id})
+
+      tx_hash = Txs.txi_to_hash(state, txi)
+
+      %{
+        contract_id: enc_ct(contract_pk),
+        template_id: template_id,
+        tx_hash: enc(:tx_hash, tx_hash),
+        log_idx: log_idx
       }
     end)
   end
