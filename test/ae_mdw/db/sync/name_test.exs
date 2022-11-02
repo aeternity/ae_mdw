@@ -4,6 +4,8 @@ defmodule AeMdw.Db.Sync.NameTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Store
+  alias AeMdw.Db.NullStore
+  alias AeMdw.Db.MemStore
   alias AeMdw.Db.Sync.Origin
   alias AeMdw.Db.Sync.Name
   alias AeMdw.Db.NameClaimMutation
@@ -258,7 +260,7 @@ defmodule AeMdw.Db.Sync.NameTest do
   end
 
   describe "transfer/5" do
-    test "it creates a ActiveNameOwnerDeactivation and removes the previous one", %{store: store} do
+    test "it creates a ActiveNameOwnerDeactivation and removes the previous one" do
       plain_name = TS.plain_name(0)
       name_hash = "some-hash"
       block_index = {123, 456}
@@ -271,7 +273,7 @@ defmodule AeMdw.Db.Sync.NameTest do
       owner_deactivation = Model.owner_deactivation(index: {old_owner, expire, plain_name})
 
       state =
-        store
+        empty_store()
         |> Store.put(Model.ActiveName, name)
         |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: plain_name))
         |> Store.put(Model.ActiveNameOwnerDeactivation, owner_deactivation)
@@ -294,7 +296,7 @@ defmodule AeMdw.Db.Sync.NameTest do
   end
 
   describe "update/6" do
-    test "it creates a ActiveNameOwnerDeactivation and removes the previous one", %{store: store} do
+    test "it creates a ActiveNameOwnerDeactivation and removes the previous one" do
       plain_name = TS.plain_name(0)
       name_hash = "some-hash"
       block_index = {123, 456}
@@ -309,7 +311,7 @@ defmodule AeMdw.Db.Sync.NameTest do
       owner_deactivation = Model.owner_deactivation(index: {owner, old_expire, plain_name})
 
       state =
-        store
+        empty_store()
         |> Store.put(Model.ActiveName, name)
         |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: plain_name))
         |> Store.put(Model.ActiveNameOwnerDeactivation, owner_deactivation)
@@ -330,4 +332,6 @@ defmodule AeMdw.Db.Sync.NameTest do
              )
     end
   end
+
+  defp empty_store, do: MemStore.new(NullStore.new())
 end
