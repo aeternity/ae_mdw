@@ -86,10 +86,7 @@ defmodule AeMdwWeb.TransferControllerTest do
       conn = get(conn, "/v2/transfers", direction: "forward", account: account_id)
       response = json_response(conn, 200)
 
-      lima_height =
-        :aec_governance.get_network_id()
-        |> :aec_hard_forks.protocols_from_network_id()
-        |> Map.get(4)
+      lima_height = AeMdw.Node.lima_height()
 
       assert Enum.count(response["data"]) == 1
 

@@ -24,7 +24,7 @@ defmodule AeMdw.Db.NameClaimMutation do
     :name_hash,
     :owner_pk,
     :name_fee,
-    :is_lima?,
+    :lima_or_higher?,
     :txi,
     :block_index,
     :timeout
@@ -35,7 +35,7 @@ defmodule AeMdw.Db.NameClaimMutation do
             name_hash: Names.name_hash(),
             owner_pk: Db.pubkey(),
             name_fee: Names.name_fee(),
-            is_lima?: boolean(),
+            lima_or_higher?: boolean(),
             txi: Txs.txi(),
             block_index: Blocks.block_index(),
             timeout: Names.auction_timeout()
@@ -51,13 +51,13 @@ defmodule AeMdw.Db.NameClaimMutation do
           Blocks.block_index(),
           Names.auction_timeout()
         ) :: t()
-  def new(plain_name, name_hash, owner_pk, name_fee, is_lima?, txi, block_index, timeout) do
+  def new(plain_name, name_hash, owner_pk, name_fee, lima_or_higher?, txi, block_index, timeout) do
     %__MODULE__{
       plain_name: plain_name,
       name_hash: name_hash,
       owner_pk: owner_pk,
       name_fee: name_fee,
-      is_lima?: is_lima?,
+      lima_or_higher?: lima_or_higher?,
       txi: txi,
       block_index: block_index,
       timeout: timeout
@@ -71,7 +71,7 @@ defmodule AeMdw.Db.NameClaimMutation do
           name_hash: name_hash,
           owner_pk: owner_pk,
           name_fee: name_fee,
-          is_lima?: is_lima?,
+          lima_or_higher?: lima_or_higher?,
           txi: txi,
           block_index: {height, _mbi} = block_index,
           timeout: timeout
@@ -101,7 +101,7 @@ defmodule AeMdw.Db.NameClaimMutation do
 
         m_name_activation = Model.activation(index: {height, plain_name})
         m_name_exp = Model.expiration(index: {expire, plain_name})
-        lock_amount = (is_lima? && name_fee) || :aec_governance.name_claim_locked_fee()
+        lock_amount = (lima_or_higher? && name_fee) || :aec_governance.name_claim_locked_fee()
 
         m_name_owner_deactivation =
           Model.owner_deactivation(index: {owner_pk, expire, plain_name})
