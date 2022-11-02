@@ -1,5 +1,18 @@
 # Changelog
 
+### [1.26.1](https://www.github.com/aeternity/ae_mdw/compare/v1.26.0...v1.26.1) (2022-11-02)
+
+
+### Bug Fixes
+
+* render list of keyword lists args ([#976](https://www.github.com/aeternity/ae_mdw/issues/976)) ([aaf244a](https://www.github.com/aeternity/ae_mdw/commit/aaf244ac9fff1c56ae5f3a8baf05d85f50a281dc))
+
+
+### Testing
+
+* complement coverage for name syncing ([#978](https://www.github.com/aeternity/ae_mdw/issues/978)) ([ed81098](https://www.github.com/aeternity/ae_mdw/commit/ed81098f8cc077f2658c1f86dfbe497b285dc725))
+* complement coverage for oracle syncing ([#977](https://www.github.com/aeternity/ae_mdw/issues/977)) ([c19e09b](https://www.github.com/aeternity/ae_mdw/commit/c19e09b18e2cba71adde92c4963da25ea2e6b81f))
+
 ## [1.26.0](https://www.github.com/aeternity/ae_mdw/compare/v1.25.1...v1.26.0) (2022-10-24)
 
 
