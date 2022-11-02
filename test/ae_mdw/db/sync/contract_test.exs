@@ -70,10 +70,10 @@ defmodule AeMdw.Db.Sync.ContractTest do
       tx_2 = {:tx2, contract_pk}
 
       events = [
-        {{:internal_call_tx, "Chain.create"}, %{info: :error}},
         {{:internal_call_tx, "Call.amount"}, %{info: tx_1}},
-        {{:internal_call_tx, "Chain.clone"}, %{info: :error}},
-        {{:internal_call_tx, "Call.amount"}, %{info: tx_2}}
+        {{:internal_call_tx, "Chain.create"}, %{info: :error}},
+        {{:internal_call_tx, "Call.amount"}, %{info: tx_2}},
+        {{:internal_call_tx, "Chain.clone"}, %{info: :error}}
       ]
 
       int_calls = [
@@ -99,14 +99,6 @@ defmodule AeMdw.Db.Sync.ContractTest do
       aex9_contract_pk = Validate.id!("ct_2n7xLuQPWWw8Yj8yXPyrhZz3nucu2Cpjg7FxnoTmuVTgGAsUbJ")
 
       tx_events = [
-        {{:internal_call_tx, "Chain.clone"},
-         %{
-           info: :error,
-           tx_hash:
-             <<50, 175, 183, 105, 50, 158, 138, 149, 125, 12, 47, 89, 117, 207, 2, 97, 50, 90,
-               155, 225, 217, 103, 11, 202, 211, 247, 57, 189, 103, 224, 171, 230>>,
-           type: :contract_call_tx
-         }},
         {{:internal_call_tx, "Call.amount"},
          %{
            info:
@@ -116,6 +108,14 @@ defmodule AeMdw.Db.Sync.ContractTest do
                 <<119, 188, 109, 120, 250, 56, 247, 180, 131, 241, 75, 129, 38, 118, 119, 224,
                   142, 113, 227, 78, 233, 147, 100, 188, 163, 26, 145, 253, 121, 183, 62, 80>>},
                {:id, :account, aex9_contract_pk}, 0, 0, 0, 0, "Call.amount"}},
+           tx_hash:
+             <<50, 175, 183, 105, 50, 158, 138, 149, 125, 12, 47, 89, 117, 207, 2, 97, 50, 90,
+               155, 225, 217, 103, 11, 202, 211, 247, 57, 189, 103, 224, 171, 230>>,
+           type: :contract_call_tx
+         }},
+        {{:internal_call_tx, "Chain.clone"},
+         %{
+           info: :error,
            tx_hash:
              <<50, 175, 183, 105, 50, 158, 138, 149, 125, 12, 47, 89, 117, 207, 2, 97, 50, 90,
                155, 225, 217, 103, 11, 202, 211, 247, 57, 189, 103, 224, 171, 230>>,
