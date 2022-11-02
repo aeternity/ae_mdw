@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.27.0](https://www.github.com/aeternity/ae_mdw/compare/v1.26.0...v1.27.0) (2022-11-02)
+
+
+### Features
+
+* update aex9 balance based on events ([#983](https://www.github.com/aeternity/ae_mdw/issues/983)) ([22c554d](https://www.github.com/aeternity/ae_mdw/commit/22c554d07d39a432f09a39e2244cacf48539ab89))
+
+
+### Bug Fixes
+
+* consider name updates and transfers for NameOwnerDeactivations ([#987](https://www.github.com/aeternity/ae_mdw/issues/987)) ([758acf9](https://www.github.com/aeternity/ae_mdw/commit/758acf96935972111ec9f43fefa4607cae85d49a))
+* events from the node are obtained in reverse order ([#981](https://www.github.com/aeternity/ae_mdw/issues/981)) ([3340b7c](https://www.github.com/aeternity/ae_mdw/commit/3340b7cd09b31be57cd91e20d7493a22f039791f))
+* render list of keyword lists args ([#976](https://www.github.com/aeternity/ae_mdw/issues/976)) ([aaf244a](https://www.github.com/aeternity/ae_mdw/commit/aaf244ac9fff1c56ae5f3a8baf05d85f50a281dc))
+
+
+### Testing
+
+* complement coverage for name syncing ([#978](https://www.github.com/aeternity/ae_mdw/issues/978)) ([ed81098](https://www.github.com/aeternity/ae_mdw/commit/ed81098f8cc077f2658c1f86dfbe497b285dc725))
+* complement coverage for oracle syncing ([#977](https://www.github.com/aeternity/ae_mdw/issues/977)) ([c19e09b](https://www.github.com/aeternity/ae_mdw/commit/c19e09b18e2cba71adde92c4963da25ea2e6b81f))
+
 ## [1.26.0](https://www.github.com/aeternity/ae_mdw/compare/v1.25.1...v1.26.0) (2022-10-24)
 
 
