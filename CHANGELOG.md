@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.27.1](https://www.github.com/aeternity/ae_mdw/compare/v1.27.0...v1.27.1) (2022-11-03)
+
+
+### Bug Fixes
+
+* handle non-existing mbs txs endpoint response ([#992](https://www.github.com/aeternity/ae_mdw/issues/992)) ([3c62446](https://www.github.com/aeternity/ae_mdw/commit/3c6244610e7c0421b4be8989e372537f850abdb4))
+
 ## [1.27.0](https://www.github.com/aeternity/ae_mdw/compare/v1.26.0...v1.27.0) (2022-11-02)
 
 
