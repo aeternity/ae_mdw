@@ -261,7 +261,7 @@ definitions:
       - contract_id
       - range
     title: Response for AEX-9 account balance accross a range of heights
-    type: object    
+    type: object
   Aex9ContractBalancesResponse:
     description: Response Schema for AEX9 contract balances responses
     example:
@@ -1619,9 +1619,9 @@ paths:
       responses:
         '200':
           description: Returns a list of AEX-9 sorted by name
-          schema: 
+          schema:
             type: array
-            items: 
+            items:
               $ref: "#/definitions/Aex9Response"
         '400':
           description: Bad request
@@ -1647,9 +1647,9 @@ paths:
       responses:
         '200':
           description: Returns a list of AEX-9 sorted by symbol
-          schema: 
+          schema:
             type: array
-            items: 
+            items:
               $ref: "#/definitions/Aex9Response"
         '400':
           description: Bad request
@@ -1675,9 +1675,9 @@ paths:
       responses:
         '200':
           description: Returns a list of AEX-9 transfers by sender
-          schema: 
+          schema:
             type: array
-            items: 
+            items:
               $ref: "#/definitions/Aex9TransferResponse"
         '400':
           description: Bad request
@@ -1703,9 +1703,9 @@ paths:
       responses:
         '200':
           description: Returns a list of AEX-9 transfers by recipient
-          schema: 
+          schema:
             type: array
-            items: 
+            items:
               $ref: "#/definitions/Aex9TransferResponse"
         '400':
           description: Bad request
@@ -1737,9 +1737,9 @@ paths:
       responses:
         '200':
           description: Returns a list of AEX-9 transfers by recipient
-          schema: 
+          schema:
             type: array
-            items: 
+            items:
               $ref: "#/definitions/Aex9TransferResponse"
         '400':
           description: Bad request
@@ -1770,8 +1770,8 @@ paths:
         - application/json
       responses:
         '200':
-          description: Returns a the balance of an account on a contract 
-          schema: 
+          description: Returns a the balance of an account on a contract
+          schema:
             $ref: "#/definitions/Aex9BalanceResponse"
         '400':
           description: Bad request
@@ -1791,7 +1791,7 @@ paths:
           name: range
           required: true
           type: string
-          x-example: "618120-618121"      
+          x-example: "618120-618121"
         - description: Contract id
           in: path
           name: contract_id
@@ -1808,10 +1808,10 @@ paths:
         - application/json
       responses:
         '200':
-          description: Returns account balance on a contract across a range of heights 
-          schema: 
+          description: Returns account balance on a contract across a range of heights
+          schema:
             type: array
-            items: 
+            items:
               $ref: "#/definitions/Aex9BalanceRangeResponse"
         '400':
           description: Bad request
@@ -1819,7 +1819,7 @@ paths:
             $ref: '#/definitions/ErrorResponse'
       summary: ''
       tags:
-        - Middleware      
+        - Middleware
   /aex9/balance/hash/{blockhash}/{contract_id}/{account_id}:
     get:
       deprecated: false
@@ -1831,7 +1831,7 @@ paths:
           name: blockhash
           required: true
           type: string
-          x-example: mh_U1Hm7NTSwo37Lpf2ZmTZjS1j67ptqXqzWYBjQJPdFQjA939cm      
+          x-example: mh_U1Hm7NTSwo37Lpf2ZmTZjS1j67ptqXqzWYBjQJPdFQjA939cm
         - description: Contract id
           in: path
           name: contract_id
@@ -1848,8 +1848,8 @@ paths:
         - application/json
       responses:
         '200':
-          description: Returns a the balance of an account on a contract 
-          schema: 
+          description: Returns a the balance of an account on a contract
+          schema:
             $ref: "#/definitions/Aex9BalanceResponse"
         '400':
           description: Bad request
@@ -1863,7 +1863,7 @@ paths:
       deprecated: false
       description: Get all AEX9 balances for an account on the last block.
       operationId: get_aex9_account_balances
-      parameters: 
+      parameters:
         - description: Account id
           in: path
           name: account_id
@@ -1875,9 +1875,9 @@ paths:
       responses:
         '200':
           description: Returns all the balances of an account
-          schema: 
+          schema:
             type: array
-            items: 
+            items:
               $ref: "#/definitions/Aex9BalanceResponse"
         '400':
           description: Bad request
@@ -1897,7 +1897,7 @@ paths:
           name: height
           required: true
           type: integer
-          x-example: 453320      
+          x-example: 453320
         - description: Account id
           in: path
           name: account_id
@@ -1908,10 +1908,10 @@ paths:
         - application/json
       responses:
         '200':
-          description: Returns all the balances of an account up to a height 
-          schema: 
+          description: Returns all the balances of an account up to a height
+          schema:
             type: array
-            items: 
+            items:
               $ref: "#/definitions/Aex9BalanceResponse"
         '400':
           description: Bad request
@@ -1931,7 +1931,7 @@ paths:
           name: blockhash
           required: true
           type: string
-          x-example: mh_U1Hm7NTSwo37Lpf2ZmTZjS1j67ptqXqzWYBjQJPdFQjA939cm      
+          x-example: mh_U1Hm7NTSwo37Lpf2ZmTZjS1j67ptqXqzWYBjQJPdFQjA939cm
         - description: Account id
           in: path
           name: account_id
@@ -1942,10 +1942,10 @@ paths:
         - application/json
       responses:
         '200':
-          description: Returns all the balances of an account on key or micro block 
-          schema: 
+          description: Returns all the balances of an account on key or micro block
+          schema:
             type: array
-            items: 
+            items:
               $ref: "#/definitions/Aex9BalanceResponse"
         '400':
           description: Bad request
@@ -1953,7 +1953,7 @@ paths:
             $ref: '#/definitions/ErrorResponse'
       summary: ''
       tags:
-        - Middleware     
+        - Middleware
   /aex9/balances/hash/{blockhash}/{contract_id}:
     get:
       deprecated: false
@@ -1965,7 +1965,7 @@ paths:
           name: blockhash
           required: true
           type: string
-          x-example: mh_U1Hm7NTSwo37Lpf2ZmTZjS1j67ptqXqzWYBjQJPdFQjA939cm      
+          x-example: mh_U1Hm7NTSwo37Lpf2ZmTZjS1j67ptqXqzWYBjQJPdFQjA939cm
         - description: Contract id
           in: path
           name: contract_id
@@ -1977,7 +1977,7 @@ paths:
       responses:
         '200':
           description: Returns balances on a contract at certain block
-          schema: 
+          schema:
             $ref: "#/definitions/Aex9ContractBalancesResponse"
         '400':
           description: Bad request
@@ -2003,7 +2003,7 @@ paths:
       responses:
         '200':
           description: Returns balances on a contract
-          schema: 
+          schema:
             $ref: "#/definitions/Aex9ContractBalancesResponse"
         '400':
           description: Bad request
@@ -2034,10 +2034,10 @@ paths:
         - application/json
       responses:
         '200':
-          description: Returns balances on a contract across a range of heights 
-          schema: 
+          description: Returns balances on a contract across a range of heights
+          schema:
             type: array
-            items: 
+            items:
               $ref: "#/definitions/Aex9BalancesRangeResponse"
         '400':
           description: Bad request
@@ -2045,7 +2045,7 @@ paths:
             $ref: '#/definitions/ErrorResponse'
       summary: ''
       tags:
-        - Middleware            
+        - Middleware
   /block/{hash}:
     get:
       deprecated: false
