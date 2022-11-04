@@ -16,6 +16,7 @@ defmodule AeMdw.Channels do
   require Model
 
   @typep state() :: State.t()
+  @typep pubkey() :: AeMdw.Node.Db.pubkey()
   @typep pagination() :: Collection.direction_limit()
   @typep range() :: {:gen, Range.t()} | nil
   @typep cursor() :: Collection.pagination_cursor()
@@ -39,6 +40,13 @@ defmodule AeMdw.Channels do
       channels = render_list(state, expiration_keys)
 
       {:ok, serialize_cursor(prev_cursor), channels, serialize_cursor(next_cursor)}
+    end
+  end
+
+  @spec fetch_channel(state(), pubkey()) :: {:ok, Model.channel()} | :not_found
+  def fetch_channel(state, pubkey) do
+    with :not_found <- State.get(state, Model.ActiveChannel, pubkey) do
+      State.get(state, Model.InactiveChannel, pubkey)
     end
   end
 

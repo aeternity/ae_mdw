@@ -4,6 +4,7 @@ defmodule AeMdw.Db.Format do
   alias :aeser_api_encoder, as: Enc
 
   alias AeMdw.Contract
+  alias AeMdw.Channels
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Db.Origin
@@ -260,6 +261,13 @@ defmodule AeMdw.Db.Format do
     to_map(state, bid, Model.AuctionBid)
     |> update_in(["info", "bids"], fn claims -> Enum.map(claims, &expand(state, &1)) end)
     |> update_in(["previous"], fn prevs -> Enum.map(prevs, &expand_name_info(state, &1)) end)
+  end
+
+  defp custom_encode(state, :channel_settle_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
+    pubkey = tx_rec |> :aesc_settle_tx.channel_id() |> :aeser_id.specialize(:channel)
+    {:ok, Model.channel(responder: responder)} = Channels.fetch_channel(state, pubkey)
+    responder_id = :aeser_id.create(:account, responder)
+    Map.put(tx, "responder_id", enc_id(responder_id))
   end
 
   defp custom_encode(_state, :oracle_register_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
