@@ -438,17 +438,11 @@ defmodule AeMdw.Names do
     }
   end
 
-  # For some reason we're only grabbing the last pointer to build a hash that
-  # contains "account_pubkey" as the only key.
   defp render_pointers(state, name) do
     state
     |> Name.pointers(name)
-    |> Enum.to_list()
-    |> List.last()
-    |> case do
-      {_k, id} -> %{"account_pubkey" => Format.enc_id(id)}
-      nil -> %{}
-    end
+    |> Enum.map(fn {key, id} -> {key, Format.enc_id(id)} end)
+    |> Enum.into(%{})
   end
 
   defp render_ownership(state, name) do

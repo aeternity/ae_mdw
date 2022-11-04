@@ -19,7 +19,7 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdw.TestSamples, as: TS
   alias AeMdw.Txs
 
-  import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, name_claim_tx: 2]
+  import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, name_tx: 3]
 
   import Mock
 
@@ -35,6 +35,136 @@ defmodule AeMdwWeb.NameControllerTest do
   end
 
   describe "active_names" do
+    test "renders active names with detailed info", %{conn: conn, store: store} do
+      alice_name = "aliceinchains.chain"
+      bob_name = "bobandmarley.chain"
+
+      with_blockchain %{alice: 1_000, bob: 1_000},
+        mb0: [
+          tx1: name_tx(:name_claim_tx, :alice, alice_name),
+          tx2: name_tx(:name_update_tx, :alice, alice_name)
+        ],
+        mb1: [
+          tx3: name_tx(:name_claim_tx, :bob, bob_name)
+        ],
+        mb2: [
+          tx4: name_tx(:name_update_tx, :bob, bob_name)
+        ] do
+        %{tx1: tx1, tx2: tx2, tx3: tx3, tx4: tx4} = transactions
+        {:id, :account, alice_pk} = accounts[:alice]
+        {:id, :account, bob_pk} = accounts[:bob]
+        alice_id = encode(:account_pubkey, alice_pk)
+        bob_id = encode(:account_pubkey, bob_pk)
+        alice_oracle_id = encode(:oracle_pubkey, alice_pk)
+        bob_oracle_id = encode(:oracle_pubkey, bob_pk)
+        active_from = 10
+        expire1 = 10_000
+        expire2 = 10_001
+
+        store =
+          store
+          |> Store.put(
+            Model.ActiveName,
+            Model.name(
+              index: alice_name,
+              owner: alice_pk,
+              active: active_from,
+              claims: [{{10, 0}, 1}],
+              transfers: [{{10, 0}, 12}],
+              updates: [{{10, 0}, 2}],
+              expire: expire1
+            )
+          )
+          |> Store.put(
+            Model.ActiveName,
+            Model.name(
+              index: bob_name,
+              owner: bob_pk,
+              active: active_from,
+              claims: [{{10, 1}, 3}],
+              transfers: [{{10, 0}, 14}],
+              updates: [{{10, 2}, 4}],
+              expire: expire2
+            )
+          )
+          |> Store.put(
+            Model.ActiveNameExpiration,
+            Model.expiration(index: {expire1, alice_name})
+          )
+          |> Store.put(
+            Model.ActiveNameExpiration,
+            Model.expiration(index: {expire2, bob_name})
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 1, id: :aetx_sign.hash(tx1), block_index: {1, 0})
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 2, id: :aetx_sign.hash(tx2), block_index: {1, 0})
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 3, id: :aetx_sign.hash(tx3), block_index: {1, 1})
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 4, id: :aetx_sign.hash(tx4), block_index: {1, 2})
+          )
+
+        assert %{"data" => names} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/names", state: "active")
+                 |> json_response(200)
+
+        assert [
+                 %{
+                   "name" => ^bob_name,
+                   "active" => true,
+                   "auction" => nil,
+                   "info" => %{
+                     "active_from" => ^active_from,
+                     "auction_timeout" => 0,
+                     "ownership" => %{"current" => ^bob_id, "original" => ^bob_id},
+                     "pointers" => %{
+                       "account_pubkey" => ^bob_id,
+                       "oracle_pubkey" => ^bob_oracle_id
+                     },
+                     "revoke" => nil,
+                     "transfers" => [14],
+                     "updates" => [4],
+                     "claims" => [3],
+                     "expire_height" => ^expire2
+                   },
+                   "previous" => [],
+                   "status" => "name"
+                 },
+                 %{
+                   "name" => ^alice_name,
+                   "active" => true,
+                   "auction" => nil,
+                   "info" => %{
+                     "active_from" => ^active_from,
+                     "auction_timeout" => 0,
+                     "ownership" => %{"current" => ^alice_id, "original" => ^alice_id},
+                     "pointers" => %{
+                       "account_pubkey" => ^alice_id,
+                       "oracle_pubkey" => ^alice_oracle_id
+                     },
+                     "revoke" => nil,
+                     "transfers" => [12],
+                     "updates" => [2],
+                     "claims" => [1],
+                     "expire_height" => ^expire1
+                   },
+                   "previous" => [],
+                   "status" => "name"
+                 }
+               ] = names
+      end
+    end
+
     test "get active names with default limit", %{conn: conn, height_name: height_name} do
       with_mocks [
         {Database, [],
@@ -235,6 +365,139 @@ defmodule AeMdwWeb.NameControllerTest do
   end
 
   describe "inactive_names" do
+    test "renders inactive names with detailed info", %{conn: conn, store: store} do
+      alice_name = "aliceinchains.chain"
+      bob_name = "bobandmarley.chain"
+
+      with_blockchain %{alice: 1_000, bob: 1_000},
+        mb0: [
+          tx1: name_tx(:name_claim_tx, :alice, alice_name),
+          tx2: name_tx(:name_revoke_tx, :alice, alice_name)
+        ],
+        mb1: [
+          tx3: name_tx(:name_claim_tx, :bob, bob_name)
+        ],
+        mb2: [
+          tx4: name_tx(:name_update_tx, :bob, bob_name),
+          tx5: name_tx(:name_revoke_tx, :bob, bob_name)
+        ] do
+        %{tx1: tx1, tx2: tx2, tx3: tx3, tx4: tx4, tx5: tx5} = transactions
+        {:id, :account, alice_pk} = accounts[:alice]
+        {:id, :account, bob_pk} = accounts[:bob]
+        alice_id = encode(:account_pubkey, alice_pk)
+        bob_id = encode(:account_pubkey, bob_pk)
+        bob_oracle_id = encode(:oracle_pubkey, bob_pk)
+        active_from = 10
+        expire1 = 10_000
+        expire2 = 10_001
+
+        store =
+          store
+          |> Store.put(
+            Model.InactiveName,
+            Model.name(
+              index: alice_name,
+              owner: alice_pk,
+              active: active_from,
+              claims: [{{10, 0}, 1}],
+              revoke: {{10, 0}, 2},
+              transfers: [],
+              updates: [],
+              expire: expire1
+            )
+          )
+          |> Store.put(
+            Model.InactiveName,
+            Model.name(
+              index: bob_name,
+              owner: bob_pk,
+              active: active_from,
+              claims: [{{10, 1}, 3}],
+              revoke: {{10, 2}, 5},
+              transfers: [],
+              updates: [{{10, 2}, 4}],
+              expire: expire2
+            )
+          )
+          |> Store.put(
+            Model.InactiveNameExpiration,
+            Model.expiration(index: {2, alice_name})
+          )
+          |> Store.put(
+            Model.InactiveNameExpiration,
+            Model.expiration(index: {5, bob_name})
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 1, id: :aetx_sign.hash(tx1), block_index: {1, 0})
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 2, id: :aetx_sign.hash(tx2), block_index: {1, 0})
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 3, id: :aetx_sign.hash(tx3), block_index: {1, 1})
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 4, id: :aetx_sign.hash(tx4), block_index: {1, 2})
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 5, id: :aetx_sign.hash(tx5), block_index: {1, 2})
+          )
+
+        assert %{"data" => names} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/names", state: "inactive")
+                 |> json_response(200)
+
+        assert [
+                 %{
+                   "name" => ^bob_name,
+                   "active" => false,
+                   "auction" => nil,
+                   "info" => %{
+                     "active_from" => ^active_from,
+                     "auction_timeout" => 0,
+                     "ownership" => %{"current" => ^bob_id, "original" => ^bob_id},
+                     "pointers" => %{
+                       "account_pubkey" => ^bob_id,
+                       "oracle_pubkey" => ^bob_oracle_id
+                     },
+                     "revoke" => 5,
+                     "transfers" => [],
+                     "updates" => [4],
+                     "claims" => [3],
+                     "expire_height" => ^expire2
+                   },
+                   "previous" => [],
+                   "status" => "name"
+                 },
+                 %{
+                   "name" => ^alice_name,
+                   "active" => false,
+                   "auction" => nil,
+                   "info" => %{
+                     "active_from" => ^active_from,
+                     "auction_timeout" => 0,
+                     "ownership" => %{"current" => ^alice_id, "original" => ^alice_id},
+                     "pointers" => %{},
+                     "revoke" => 2,
+                     "transfers" => [],
+                     "updates" => [],
+                     "claims" => [1],
+                     "expire_height" => ^expire1
+                   },
+                   "previous" => [],
+                   "status" => "name"
+                 }
+               ] = names
+      end
+    end
+
     test "get inactive names with default limit", %{conn: conn} do
       with_mocks [
         {Database, [],
@@ -1036,18 +1299,19 @@ defmodule AeMdwWeb.NameControllerTest do
   end
 
   describe "name" do
-    test "get active name info", %{conn: conn, store: store} do
+    test "get active name info with pointers", %{conn: conn, store: store} do
       name = "bigname123456.chain"
 
       with_blockchain %{alice: 1_000},
         mb: [
-          tx: name_claim_tx(:alice, name)
+          tx1: name_tx(:name_claim_tx, :alice, name),
+          tx2: name_tx(:name_update_tx, :alice, name)
         ] do
-        %{txs: [tx]} = blocks[:mb]
+        %{txs: [tx1, tx2]} = blocks[:mb]
         {:id, :account, alice_pk} = accounts[:alice]
-        owner_id = encode(:account_pubkey, alice_pk)
+        alice_id = encode(:account_pubkey, alice_pk)
+        oracle_id = encode(:oracle_pubkey, alice_pk)
         active_from = 10
-        claim_txi = 100
         expire = 10_000
 
         store =
@@ -1058,13 +1322,18 @@ defmodule AeMdwWeb.NameControllerTest do
               index: name,
               owner: alice_pk,
               active: active_from,
-              claims: [{{10, 1}, claim_txi}],
+              claims: [{{1, 1}, 1}],
+              updates: [{{1, 1}, 2}],
               expire: expire
             )
           )
           |> Store.put(
             Model.Tx,
-            Model.tx(index: 1, id: :aetx_sign.hash(tx), block_index: {1, 1})
+            Model.tx(index: 1, id: :aetx_sign.hash(tx1), block_index: {1, 1})
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 2, id: :aetx_sign.hash(tx2), block_index: {1, 1})
           )
 
         assert %{
@@ -1074,12 +1343,15 @@ defmodule AeMdwWeb.NameControllerTest do
                  "info" => %{
                    "active_from" => ^active_from,
                    "auction_timeout" => 0,
-                   "ownership" => %{"current" => ^owner_id, "original" => ^owner_id},
-                   "pointers" => %{},
+                   "ownership" => %{"current" => ^alice_id, "original" => ^alice_id},
+                   "pointers" => %{
+                     "account_pubkey" => ^alice_id,
+                     "oracle_pubkey" => ^oracle_id
+                   },
                    "revoke" => nil,
                    "transfers" => [],
-                   "updates" => [],
-                   "claims" => [^claim_txi],
+                   "updates" => [2],
+                   "claims" => [1],
                    "expire_height" => ^expire
                  },
                  "previous" => [],
@@ -1097,7 +1369,7 @@ defmodule AeMdwWeb.NameControllerTest do
 
       with_blockchain %{alice: 1_000},
         mb: [
-          tx: name_claim_tx(:alice, name)
+          tx: name_tx(:name_claim_tx, :alice, name)
         ] do
         %{txs: [tx]} = blocks[:mb]
         {:id, :account, alice_pk} = accounts[:alice]
@@ -1191,20 +1463,39 @@ defmodule AeMdwWeb.NameControllerTest do
   end
 
   describe "pointers" do
-    test "get pointers for valid given name", %{conn: conn} do
-      id = "wwwbeaconoidcom.chain"
-      some_reply = %{"foo" => "bar"}
+    test "get pointers for valid given name", %{conn: conn, store: store} do
+      name = "wwwbeaconoidcom.chain"
+      {:ok, name_hash} = :aens.get_name_hash(name)
 
-      with_mocks [
-        {Name, [],
-         [
-           locate: fn _state, ^id ->
-             {Model.name(index: id, active: true, expire: 0), Model.ActiveName}
-           end,
-           pointers: fn _state, _name_model -> some_reply end
-         ]}
-      ] do
-        assert ^some_reply = conn |> get("/v2/names/#{id}/pointers") |> json_response(200)
+      with_blockchain %{alice: 1_000},
+        mb: [
+          tx1: name_tx(:name_claim_tx, :alice, name),
+          tx2: name_tx(:name_update_tx, :alice, name)
+        ] do
+        tx2 = transactions[:tx2]
+
+        store =
+          store
+          |> Store.put(Model.Block, Model.block(index: {0, 0}, tx_index: 2))
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 2, block_index: {0, 0}, id: :aetx_sign.hash(tx2))
+          )
+          |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: name))
+          |> Store.put(Model.ActiveName, Model.name(index: name, updates: [{{0, 0}, 2}]))
+
+        {:id, :account, alice_pk} = accounts[:alice]
+        alice_id = encode(:account_pubkey, alice_pk)
+        oracle_id = encode(:oracle_pubkey, alice_pk)
+
+        assert %{
+                 "account_pubkey" => ^alice_id,
+                 "oracle_pubkey" => ^oracle_id
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/names/#{name}/pointers")
+                 |> json_response(200)
       end
     end
 
