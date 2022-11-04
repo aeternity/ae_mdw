@@ -25,6 +25,7 @@ defmodule AeMdw.MixProject do
           :aeb_fate_encoding,
           :aeb_heap,
           :aec_accounts,
+          :aec_accounts_trees,
           :aec_block_genesis,
           :aec_block_micro_candidate,
           :aec_db,

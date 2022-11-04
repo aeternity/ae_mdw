@@ -91,8 +91,12 @@ defmodule AeMdw.Db.Sync.Contract do
       end)
 
     # Chain.* events don't contain the transaction in the event info, can't be indexed as an internal call
+    # Oracle.query events don't have the right nonce (it's hard-coded to 0), which generates an invalid query_id
     int_calls =
-      Enum.map(non_chain_events, fn {_prev_event, {{:internal_call_tx, fname}, %{info: tx}}} ->
+      non_chain_events
+      |> Enum.map(fn {_prev_event, {{:internal_call_tx, fname}, %{info: tx}}} -> {fname, tx} end)
+      |> fix_oracle_queries(block_hash)
+      |> Enum.map(fn {fname, tx} ->
         {tx_type, raw_tx} = :aetx.specialize_type(tx)
 
         {fname, tx_type, tx, raw_tx}
@@ -179,5 +183,32 @@ defmodule AeMdw.Db.Sync.Contract do
         |> :aens_revoke_tx.name_hash()
         |> NameRevokeMutation.new(call_txi, block_index)
     end)
+  end
+
+  # Temporary HACK to fix oracle query nonces.
+  defp fix_oracle_queries(events, block_hash) do
+    {fixed_events, _acc} =
+      Enum.map_reduce(events, %{}, fn
+        {"Oracle.query", aetx}, accounts_nonces ->
+          {:oracle_query_tx, tx} = :aetx.specialize_type(aetx)
+          sender_pk = :aeo_query_tx.sender_pubkey(tx)
+
+          nonce =
+            case Map.fetch(accounts_nonces, sender_pk) do
+              {:ok, nonce} -> nonce
+              :error -> Db.nonce_at_block(block_hash, sender_pk)
+            end
+
+          accounts_nonces = Map.put(accounts_nonces, sender_pk, nonce + 1)
+          fixed_tx = put_elem(tx, 2, nonce)
+          fixed_aetx = :aetx.update_tx(aetx, fixed_tx)
+
+          {{"Oracle.query", fixed_aetx}, accounts_nonces}
+
+        {fname, aetx}, accounts_nonces ->
+          {{fname, aetx}, accounts_nonces}
+      end)
+
+    fixed_events
   end
 end
