@@ -525,6 +525,196 @@ defmodule AeMdw.Db.ContractCallMutationTest do
     end
   end
 
+  describe "aex141 template mint" do
+    test "add nft ownership after a call with the event" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      to_pk = :crypto.strong_rand_bytes(32)
+      height = Enum.random(100_000..999_999)
+      call_txi = Enum.random(10_000_000..99_999_999)
+      template_id = Enum.random(1..100)
+      token_id = Enum.random(1..100_000)
+
+      fun_arg_res = %{
+        arguments: [
+          %{
+            type: :address,
+            value: enc_id(to_pk)
+          },
+          %{type: :int, value: template_id},
+          %{type: :int, value: token_id}
+        ],
+        function: "some_template_mint",
+        result: %{type: :unit, value: ""}
+      }
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {
+            contract_pk,
+            [
+              AeMdw.Node.aexn_template_mint_event_hash(),
+              to_pk,
+              <<template_id::256>>,
+              <<token_id::256>>
+            ],
+            ""
+          }
+        ])
+
+      mutation =
+        ContractCallMutation.new(
+          contract_pk,
+          {height, 0},
+          call_txi,
+          fun_arg_res,
+          call_rec
+        )
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, contract_pk}))
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+        |> State.commit_mem([mutation])
+
+      assert {:ok, Model.nft_ownership(template_id: ^template_id)} =
+               State.get(state, Model.NftOwnership, {to_pk, contract_pk, token_id})
+
+      assert {:ok, Model.nft_token_owner(owner: ^to_pk)} =
+               State.get(state, Model.NftTokenOwner, {contract_pk, token_id})
+
+      assert State.exists?(state, Model.NftOwnerToken, {contract_pk, to_pk, token_id})
+    end
+  end
+
+  describe "aex141 template creation" do
+    test "writes nft template after a call with the event" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      to_pk = :crypto.strong_rand_bytes(32)
+      height = Enum.random(100_000..999_999)
+      call_txi = Enum.random(10_000_000..99_999_999)
+      template_id = Enum.random(1..100)
+
+      fun_arg_res = %{
+        arguments: [
+          %{
+            type: :address,
+            value: enc_id(to_pk)
+          },
+          %{type: :string, value: "ipfs://some-hash"}
+        ],
+        function: "some_template_create",
+        result: %{type: :unit, value: ""}
+      }
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {
+            contract_pk,
+            [
+              <<12_345::256>>,
+              <<template_id::256>>
+            ],
+            ""
+          },
+          {
+            contract_pk,
+            [
+              AeMdw.Node.aexn_template_creation_event_hash(),
+              <<template_id::256>>
+            ],
+            ""
+          }
+        ])
+
+      mutation =
+        ContractCallMutation.new(
+          contract_pk,
+          {height, 0},
+          call_txi,
+          fun_arg_res,
+          call_rec
+        )
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, contract_pk}))
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+        |> State.commit_mem([mutation])
+
+      assert {:ok, Model.nft_template(txi: ^call_txi, log_idx: 1)} =
+               State.get(state, Model.NftTemplate, {contract_pk, template_id})
+    end
+  end
+
+  describe "aex141 template deletion" do
+    test "deletes nft template after a call with the event" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      to_pk = :crypto.strong_rand_bytes(32)
+      height = Enum.random(100_000..999_999)
+      call_txi = Enum.random(10_000_000..99_999_999)
+      template_id = Enum.random(1..100)
+
+      fun_arg_res = %{
+        arguments: [
+          %{
+            type: :address,
+            value: enc_id(to_pk)
+          },
+          %{type: :string, value: "ipfs://some-hash"}
+        ],
+        function: "some_template_create",
+        result: %{type: :unit, value: ""}
+      }
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {
+            contract_pk,
+            [
+              <<12_345::256>>,
+              <<template_id::256>>
+            ],
+            ""
+          },
+          {
+            contract_pk,
+            [
+              AeMdw.Node.aexn_template_deletion_event_hash(),
+              <<template_id::256>>
+            ],
+            ""
+          }
+        ])
+
+      mutation =
+        ContractCallMutation.new(
+          contract_pk,
+          {height, 0},
+          call_txi,
+          fun_arg_res,
+          call_rec
+        )
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, contract_pk}))
+        |> State.put(
+          Model.NftTemplate,
+          Model.nft_template(index: {contract_pk, template_id}, txi: call_txi, log_idx: 0)
+        )
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+        |> State.commit_mem([mutation])
+
+      assert :not_found = State.get(state, Model.NftTemplate, {contract_pk, template_id})
+    end
+  end
+
   describe "aex141 transfer" do
     test "add aex141 transfers after a call with transfer logs" do
       contract_pk = :crypto.strong_rand_bytes(32)
@@ -551,12 +741,13 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       }
 
       call_rec =
-        {:call, :crypto.strong_rand_bytes(32), {:id, :account, :crypto.strong_rand_bytes(32)}, 1,
-         height, {:id, :contract, contract_pk}, 1_000_000_000, 42_000, "?", :ok,
-         [
-           {contract_pk,
-            [AeMdw.Node.aexn_transfer_event_hash(), from_pk, to_pk, <<token_id::256>>], ""}
-         ]}
+        call_rec("logs", contract_pk, height, nil, [
+          {
+            contract_pk,
+            [AeMdw.Node.aexn_transfer_event_hash(), from_pk, to_pk, <<token_id::256>>],
+            ""
+          }
+        ])
 
       mutation =
         ContractCallMutation.new(

@@ -385,14 +385,26 @@ defmodule AeMdw.Db.Model do
   defrecord :aexn_contract_symbol, @aexn_contract_symbol_defaults
 
   # AEX-141 owner tokens
-  #     index = {owner pubkey, contract pubkey, token_id}
-  @nft_ownership_defaults [index: nil, unused: nil]
+  #     index = {owner pubkey, contract pubkey, token_id}, template_id = integer()
+  @nft_ownership_defaults [index: nil, template_id: nil]
   defrecord :nft_ownership, @nft_ownership_defaults
 
   @type nft_ownership() ::
           record(:nft_ownership,
             index: {pubkey(), pubkey(), AeMdw.Aex141.token_id()},
-            unused: nil
+            template_id: integer()
+          )
+
+  # AEX-141 templates
+  #     index = {contract pubkey, template_id}
+  @nft_template_defaults [index: {<<>>, -1}, txi: nil, log_idx: nil]
+  defrecord :nft_template, @nft_template_defaults
+
+  @type nft_template() ::
+          record(:nft_template,
+            index: {pubkey(), integer()},
+            txi: nil,
+            log_idx: nil
           )
 
   # AEX-141 collection owners

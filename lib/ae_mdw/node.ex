@@ -93,6 +93,21 @@ defmodule AeMdw.Node do
     :aec_hash.blake2b_256_hash("Mint")
   end
 
+  @spec aexn_template_mint_event_hash() :: event_hash()
+  def aexn_template_mint_event_hash do
+    :aec_hash.blake2b_256_hash("TemplateMint")
+  end
+
+  @spec aexn_template_creation_event_hash() :: event_hash()
+  def aexn_template_creation_event_hash do
+    :aec_hash.blake2b_256_hash("TemplateCreation")
+  end
+
+  @spec aexn_template_deletion_event_hash() :: event_hash()
+  def aexn_template_deletion_event_hash do
+    :aec_hash.blake2b_256_hash("TemplateDeletion")
+  end
+
   @spec aexn_swap_event_hash() :: event_hash()
   def aexn_swap_event_hash do
     :aec_hash.blake2b_256_hash("Swap")
