@@ -88,6 +88,8 @@ defmodule AeMdwWeb.BlockchainSim do
         :spend_tx,
         :oracle_register_tx,
         :name_claim_tx,
+        :name_update_tx,
+        :name_revoke_tx,
         :ga_attach_tx,
         :ga_meta_tx
       ]
@@ -104,9 +106,9 @@ defmodule AeMdwWeb.BlockchainSim do
     {tx_type, account_name, args}
   end
 
-  @spec name_claim_tx(account_name(), binary(), map()) :: tuple()
-  def name_claim_tx(account_name, plain_name, args \\ %{}) when is_map(args) do
-    {:name_claim_tx, account_name, plain_name, args}
+  @spec name_tx(tx_type(), account_name(), binary(), map()) :: tuple()
+  def name_tx(type, account_name, plain_name, args \\ %{}) when is_map(args) do
+    {type, account_name, plain_name, args}
   end
 
   @spec generate_blockchain(Keyword.t(), Keyword.t()) :: {Keyword.t(), map(), map(), map()}
@@ -157,12 +159,20 @@ defmodule AeMdwWeb.BlockchainSim do
         {:ok, mb0_hash} = :aec_headers.hash_header(header)
         mb0_hash
       end,
-      find_tx_with_location: fn _tx_hash ->
-        mblock0 = mock_blocks[:mb]
-        header = :aec_blocks.to_header(mblock0)
-        {:ok, block_hash} = :aec_headers.hash_header(header)
+      find_tx_with_location: fn tx_hash ->
+        mock_blocks
+        |> Map.values()
+        |> Enum.filter(&(elem(&1, 0) == :mic_block))
+        |> Enum.map(fn mblock ->
+          header = :aec_blocks.to_header(mblock)
+          {:ok, block_hash} = :aec_headers.hash_header(header)
 
-        {block_hash, hd(:aec_blocks.txs(mblock0))}
+          {block_hash, :aec_blocks.txs(mblock)}
+        end)
+        |> Enum.find_value(fn {block_hash, txs} ->
+          tx = Enum.find(txs, &(:aetx_sign.hash(&1) == tx_hash))
+          if tx, do: {block_hash, tx}
+        end)
       end,
       get_block: fn hash ->
         {:value, block} = find_block(hash, mock_blocks)
@@ -355,6 +365,41 @@ defmodule AeMdwWeb.BlockchainSim do
     }
     |> Map.merge(args)
     |> :aens_claim_tx.new()
+  end
+
+  defp create_aetx({:name_update_tx, account_name, plain_name, args}, accounts) do
+    {:id, :account, pubkey} = account_id = Map.fetch!(accounts, account_name)
+    {:ok, name_hash} = :aens.get_name_hash(plain_name)
+
+    pointers = [
+      {:pointer, "account_pubkey", account_id},
+      {:pointer, "oracle_pubkey", :aeser_id.create(:oracle, pubkey)}
+    ]
+
+    %{
+      account_id: account_id,
+      nonce: 1,
+      name_id: :aeser_id.create(:name, name_hash),
+      name_ttl: 1_000,
+      pointers: pointers,
+      client_ttl: 1_000,
+      fee: 5_000
+    }
+    |> Map.merge(args)
+    |> :aens_update_tx.new()
+  end
+
+  defp create_aetx({:name_revoke_tx, account_name, plain_name, args}, accounts) do
+    {:ok, name_hash} = :aens.get_name_hash(plain_name)
+
+    %{
+      account_id: Map.fetch!(accounts, account_name),
+      nonce: 1,
+      name_id: :aeser_id.create(:name, name_hash),
+      fee: 5_000
+    }
+    |> Map.merge(args)
+    |> :aens_revoke_tx.new()
   end
 
   defp create_aetx({:ga_attach_tx, account_name, args}, accounts) do

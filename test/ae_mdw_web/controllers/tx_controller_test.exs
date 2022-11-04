@@ -8,7 +8,7 @@ defmodule AeMdwWeb.TxControllerTest do
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
 
-  import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, tx: 3]
+  import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, tx: 3, name_tx: 3]
   import AeMdw.Util.Encoding
   import Mock
 
@@ -242,6 +242,55 @@ defmodule AeMdwWeb.TxControllerTest do
                    "oracle_id" => ^oracle_id,
                    "query_format" => "á",
                    "response_format" => "ß"
+                 }
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs/#{tx_hash}")
+                 |> json_response(200)
+      end
+    end
+
+    test "returns a name_update_tx with multiple pointers", %{conn: conn, store: store} do
+      plain_name = "aliceinchains.chain"
+      {:ok, name_hash} = :aens.get_name_hash(plain_name)
+
+      with_blockchain %{alice: 10_000},
+        mb: [
+          tx: name_tx(:name_update_tx, :alice, plain_name)
+        ] do
+        %{txs: [tx]} = blocks[:mb]
+
+        {:id, :account, alice_pk} = accounts[:alice]
+        alice_id = encode(:account_pubkey, alice_pk)
+        oracle_id = encode(:oracle_pubkey, alice_pk)
+
+        store =
+          store
+          |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {0, 0}, id: :aetx_sign.hash(tx)))
+          |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: plain_name))
+          |> Store.put(Model.ActiveName, Model.name(index: plain_name))
+          |> Store.put(Model.Block, Model.block(index: {0, -1}, tx_index: 1))
+          |> Store.put(Model.Block, Model.block(index: {0, 0}, tx_index: 1))
+          |> Store.put(Model.Block, Model.block(index: {1, -1}, tx_index: 2))
+
+        tx_hash = encode(:tx_hash, :aetx_sign.hash(tx))
+
+        assert %{
+                 "hash" => ^tx_hash,
+                 "tx" => %{
+                   "account_id" => ^alice_id,
+                   "name" => ^plain_name,
+                   "pointers" => [
+                     %{
+                       "id" => ^alice_id,
+                       "key" => "account_pubkey"
+                     },
+                     %{
+                       "id" => ^oracle_id,
+                       "key" => "oracle_pubkey"
+                     }
+                   ]
                  }
                } =
                  conn
