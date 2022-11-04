@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.28.0](https://www.github.com/aeternity/ae_mdw/compare/v1.27.0...v1.28.0) (2022-11-04)
+
+
+### Features
+
+* add response_id to channel settle rendering ([#994](https://www.github.com/aeternity/ae_mdw/issues/994)) ([0f46c5c](https://www.github.com/aeternity/ae_mdw/commit/0f46c5ce528a8386e33c3065b5182b0880ef8275))
+* index nft templates ([#991](https://www.github.com/aeternity/ae_mdw/issues/991)) ([c279099](https://www.github.com/aeternity/ae_mdw/commit/c27909915827bcf5935def7418c6b0fab8334b69))
+
+
+### Bug Fixes
+
+* handle non-existing mbs txs endpoint response ([#992](https://www.github.com/aeternity/ae_mdw/issues/992)) ([3c62446](https://www.github.com/aeternity/ae_mdw/commit/3c6244610e7c0421b4be8989e372537f850abdb4))
+* recalculate internal oracle query tx nonces ([#982](https://www.github.com/aeternity/ae_mdw/issues/982)) ([b87b3d7](https://www.github.com/aeternity/ae_mdw/commit/b87b3d79941e4a3fac2fb62617220b603ae26b80))
+* render all pointers on names endpoint ([#995](https://www.github.com/aeternity/ae_mdw/issues/995)) ([ef0922e](https://www.github.com/aeternity/ae_mdw/commit/ef0922e14cf7c4ce71fb15dde6d2172cc341abae))
+
 ## [1.27.0](https://www.github.com/aeternity/ae_mdw/compare/v1.26.0...v1.27.0) (2022-11-02)
 
 
