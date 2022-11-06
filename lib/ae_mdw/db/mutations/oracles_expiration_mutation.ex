@@ -2,6 +2,8 @@ defmodule AeMdw.Db.OraclesExpirationMutation do
   @moduledoc """
   Deactivate all Oracles that have expired on a block height.
 
+  It also expires all oracle queries that have expired and creates the fee refund.
+
   The expiration height of an Oracle is always a result of the last `register`
    or `extend` operation.
   """
@@ -9,6 +11,7 @@ defmodule AeMdw.Db.OraclesExpirationMutation do
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
   alias AeMdw.Collection
+  alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.Sync.Oracle, as: SyncOracle
@@ -29,13 +32,30 @@ defmodule AeMdw.Db.OraclesExpirationMutation do
 
   @spec execute(t(), State.t()) :: State.t()
   def execute(%__MODULE__{height: height}, state) do
-    state
-    |> Collection.stream(Model.ActiveOracleExpiration, {height, <<>>})
-    |> Stream.take_while(&match?({^height, _pk}, &1))
-    |> Enum.to_list()
-    |> Enum.reduce(state, fn {^height, pubkey}, state ->
-      expire_oracle(state, height, pubkey)
+    state2 =
+      state
+      |> Collection.stream(Model.ActiveOracleExpiration, {height, <<>>})
+      |> Stream.take_while(&match?({^height, _pk}, &1))
+      |> Enum.reduce(state, fn {^height, pubkey}, state ->
+        expire_oracle(state, height, pubkey)
+      end)
+
+    state2
+    |> Collection.stream(Model.OracleQueryExpiration, {height, <<>>})
+    |> Stream.take_while(&match?({^height, _oracle_pk, _query_id}, &1))
+    |> Enum.reduce(state2, fn {^height, oracle_pk, query_id}, state ->
+      expire_oracle_query(state, height, oracle_pk, query_id)
     end)
+  end
+
+  defp expire_oracle_query(state, height, oracle_pk, query_id) do
+    Model.oracle_query(txi: query_txi, fee: fee, sender_pk: sender_pk) =
+      State.fetch!(state, Model.OracleQuery, {oracle_pk, query_id})
+
+    state
+    |> State.delete(Model.OracleQuery, {oracle_pk, query_id})
+    |> State.delete(Model.OracleQueryExpiration, {height, oracle_pk, query_id})
+    |> IntTransfer.fee({height, -1}, :refund_oracle, sender_pk, query_txi, fee)
   end
 
   defp expire_oracle(state, height, pubkey) do

@@ -1,4 +1,6 @@
 defmodule AeMdw.TestSamples do
+  alias AeMdw.Oracles
+
   require AeMdw.Db.Model
 
   alias AeMdw.Db.Model
@@ -60,6 +62,23 @@ defmodule AeMdw.TestSamples do
       <<44, 102, 253, 22, 212, 89, 216, 54, 106, 220, 2, 78, 65, 149, 128, 184, 42, 187, 24, 251,
         165, 15, 161, 139, 112, 108, 233, 167, 103, 44, 158, 24>>}, "querySpace", "responseSpec",
      2_000_000_000_000_000, 288_692, 0}
+  end
+
+  @spec oracle_pk(non_neg_integer()) :: Db.pubkey()
+  def oracle_pk(n) do
+    ~w(
+      ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR
+      ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM
+      ok_g5vQK6beY3vsTJHH7KBusesyzq9WMdEYorF8VyvZURXTjLnxT
+      ok_pANDBzM259a9UgZFeiCJyWjXSeRhqrBQ6UCBBeXfbCQyP33Tf
+      ok_cnFq6NgPNXzcwtggcAYUuSNKrW6fhRfDgYJa9WoRe6mEXwpah
+    )
+    |> Enum.map(fn tx_hash ->
+      {:ok, hash} = :aeser_api_encoder.safe_decode(:oracle_pubkey, tx_hash)
+
+      hash
+    end)
+    |> Enum.at(n)
   end
 
   @spec tx_hash(non_neg_integer()) :: Txs.tx_hash()
@@ -162,5 +181,13 @@ defmodule AeMdw.TestSamples do
       decoded_hash
     end)
     |> Enum.at(n)
+  end
+
+  @spec oracle_query_id(non_neg_integer()) :: Oracles.query_id()
+  def oracle_query_id(n) do
+    oracle_pk = oracle_pk(0)
+    sender_pk = address(0)
+
+    :aeo_query.id(sender_pk, n, oracle_pk)
   end
 end

@@ -46,8 +46,8 @@ defmodule AeMdw.Activities do
   @max_bin Util.max_256bit_bin()
 
   @aexn_types ~w(aex9 aex141)a
-  @gen_int_transfer_kinds ~w(accounts_extra_lima accounts_fortuna accounts_genesis accounts_lima accounts_minerva contracts_lima reward_dev reward_block)
-  @txs_int_transfer_kinds ~w(fee_lock_name fee_refund_name fee_spend_name reward_oracle)
+  @gen_int_transfer_kinds ~w(accounts_extra_lima accounts_fortuna accounts_genesis accounts_lima accounts_minerva contracts_lima reward_dev reward_block fee_refund_oracle fee_lock_name)
+  @txs_int_transfer_kinds ~w(fee_refund_name fee_spend_name reward_oracle fee_lock_name)
 
   @doc """
   Activities related to an account are those that affect the account in any way.
@@ -210,6 +210,7 @@ defmodule AeMdw.Activities do
 
       state
       |> Collection.stream(Model.TargetKindIntTransferTx, direction, key_boundary, cursor)
+      |> Stream.filter(&match?({^account_pk, ^kind, {_height, -1}, _ref_txi}, &1))
       |> Stream.map(fn {^account_pk, ^kind, {height, -1}, ref_txi} ->
         {height, {:int_transfer, kind, ref_txi}}
       end)

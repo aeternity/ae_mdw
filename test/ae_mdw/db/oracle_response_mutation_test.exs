@@ -4,6 +4,7 @@ defmodule AeMdw.Db.OracleResponseMutationTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
   alias AeMdw.Db.OracleResponseMutation
+  alias AeMdw.TestSamples, as: TS
 
   require Model
 
@@ -12,22 +13,36 @@ defmodule AeMdw.Db.OracleResponseMutationTest do
       height = Enum.random(1_000..500_000)
       block_index = {height, 1}
       txi = 1_000_000
-      pubkey = <<1::256>>
+      oracle_pk = TS.oracle_pk(0)
+      query_id = TS.oracle_query_id(0)
+      sender_pk = TS.address(0)
       fee = Enum.random(100..999)
 
       mutation =
         OracleResponseMutation.new(
           block_index,
           txi,
-          pubkey,
-          fee
+          oracle_pk,
+          query_id
         )
 
-      store = change_store(store, [mutation])
+      oracle_query =
+        Model.oracle_query(
+          index: {oracle_pk, query_id},
+          txi: txi,
+          sender_pk: sender_pk,
+          fee: fee,
+          expire: 15
+        )
 
-      int_key = {{height, txi}, "reward_oracle", pubkey, txi}
-      kind_key = {"reward_oracle", {height, txi}, pubkey, txi}
-      target_key = {pubkey, "reward_oracle", {height, txi}, txi}
+      store =
+        store
+        |> Store.put(Model.OracleQuery, oracle_query)
+        |> change_store([mutation])
+
+      int_key = {{height, txi}, "reward_oracle", oracle_pk, txi}
+      kind_key = {"reward_oracle", {height, txi}, oracle_pk, txi}
+      target_key = {oracle_pk, "reward_oracle", {height, txi}, txi}
 
       assert {:ok, Model.int_transfer_tx(index: ^int_key, amount: ^fee)} =
                Store.get(store, Model.IntTransferTx, int_key)

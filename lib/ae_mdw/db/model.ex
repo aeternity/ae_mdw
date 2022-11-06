@@ -7,6 +7,7 @@ defmodule AeMdw.Db.Model do
   alias AeMdw.Names
   alias AeMdw.Node
   alias AeMdw.Node.Db
+  alias AeMdw.Oracles
   alias AeMdw.Txs
 
   require Record
@@ -25,6 +26,7 @@ defmodule AeMdw.Db.Model do
   @typep log_idx() :: AeMdw.Contracts.log_idx()
   @typep tx_hash() :: Txs.tx_hash()
   @typep bi_txi() :: Blocks.block_index_txi()
+  @typep query_id() :: Oracles.query_id()
 
   ################################################################################
 
@@ -167,12 +169,12 @@ defmodule AeMdw.Db.Model do
   # in 3 tables: auction_expiration, name_expiration, inactive_name_expiration
   #
   # expiration:
-  #     index = {expire_height, plain_name | oracle_pk}, value: any
-  @expiration_defaults [index: {nil, nil}, value: nil]
+  #     index = {expire_height, plain_name | oracle_pk}
+  @expiration_defaults [index: {nil, nil}, unused: nil]
   defrecord :expiration, @expiration_defaults
 
   @type expiration ::
-          record(:expiration, index: {Blocks.height(), String.t() | pubkey()}, value: nil)
+          record(:expiration, index: {Blocks.height(), String.t() | pubkey()})
 
   # in 2 tables: active_name, inactive_name
   #
@@ -280,6 +282,37 @@ defmodule AeMdw.Db.Model do
             extends: [bi_txi()],
             previous: oracle() | nil
           )
+
+  # oracle_query
+  #   index = {oracle_pk, query_id}
+  @oracle_query_defaults [
+    index: nil,
+    txi: nil,
+    sender_pk: nil,
+    fee: nil,
+    expire: nil
+  ]
+  defrecord :oracle_query, @oracle_query_defaults
+
+  @type oracle_query() ::
+          record(:oracle_query,
+            index: {pubkey(), query_id()},
+            txi: txi(),
+            sender_pk: pubkey(),
+            fee: non_neg_integer(),
+            expire: height()
+          )
+
+  # oracle_query_expiration
+  #   index = {expiration_height, oracle_pk, query_id}
+  @oracle_query_expiration_defaults [
+    index: nil,
+    unused: nil
+  ]
+  defrecord :oracle_query_expiration, @oracle_query_expiration_defaults
+
+  @type oracle_query_expiration() ::
+          record(:oracle_query_expiration, index: {height(), pubkey(), query_id()})
 
   @channel_defaults [
     index: nil,
@@ -860,7 +893,9 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.ActiveOracleExpiration,
       AeMdw.Db.Model.InactiveOracleExpiration,
       AeMdw.Db.Model.ActiveOracle,
-      AeMdw.Db.Model.InactiveOracle
+      AeMdw.Db.Model.InactiveOracle,
+      AeMdw.Db.Model.OracleQuery,
+      AeMdw.Db.Model.OracleQueryExpiration
     ]
   end
 
@@ -943,6 +978,8 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.InactiveOracleExpiration), do: :expiration
   def record(AeMdw.Db.Model.ActiveOracle), do: :oracle
   def record(AeMdw.Db.Model.InactiveOracle), do: :oracle
+  def record(AeMdw.Db.Model.OracleQuery), do: :oracle_query
+  def record(AeMdw.Db.Model.OracleQueryExpiration), do: :oracle_query_expiration
   def record(AeMdw.Db.Model.ActiveChannel), do: :channel
   def record(AeMdw.Db.Model.ActiveChannelActivation), do: :activation
   def record(AeMdw.Db.Model.InactiveChannel), do: :channel
