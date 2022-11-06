@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.28.1](https://www.github.com/aeternity/ae_mdw/compare/v1.28.0...v1.28.1) (2022-11-06)
+
+
+### Bug Fixes
+
+* reintroduce nft_template model ([#1000](https://www.github.com/aeternity/ae_mdw/issues/1000)) ([466e29c](https://www.github.com/aeternity/ae_mdw/commit/466e29c5b7cf5553c3227b884d7bd61747ea852c))
+
 ## [1.28.0](https://www.github.com/aeternity/ae_mdw/compare/v1.27.0...v1.28.0) (2022-11-04)
 
 
