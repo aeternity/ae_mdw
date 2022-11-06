@@ -832,7 +832,8 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.GrpIdFnameIntContractCall,
       AeMdw.Db.Model.NftOwnership,
       AeMdw.Db.Model.NftOwnerToken,
-      AeMdw.Db.Model.NftTokenOwner
+      AeMdw.Db.Model.NftTokenOwner,
+      AeMdw.Db.Model.NftTemplate
     ]
   end
 
@@ -925,6 +926,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.NftOwnership), do: :nft_ownership
   def record(AeMdw.Db.Model.NftOwnerToken), do: :nft_owner_token
   def record(AeMdw.Db.Model.NftTokenOwner), do: :nft_token_owner
+  def record(AeMdw.Db.Model.NftTemplate), do: :nft_template
   def record(AeMdw.Db.Model.PlainName), do: :plain_name
   def record(AeMdw.Db.Model.AuctionBid), do: :auction_bid
   def record(AeMdw.Db.Model.Pointee), do: :pointee
