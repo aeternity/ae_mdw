@@ -6,6 +6,7 @@ defmodule AeMdw.Migrations.IndexOracleQueryAndRefunds do
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.InnerTx
   alias AeMdw.Db.WriteMutation
   alias AeMdw.Node.Db
   alias AeMdw.Util
@@ -109,7 +110,18 @@ defmodule AeMdw.Migrations.IndexOracleQueryAndRefunds do
     |> Stream.take_while(&match?({^tx_type, _txi}, &1))
     |> Stream.map(fn {^tx_type, txi} ->
       Model.tx(block_index: {height, _mbi}, id: tx_hash) = State.fetch!(state, Model.Tx, txi)
-      tx = Db.get_tx(tx_hash)
+      aetx = :aetx_sign.tx(Db.get_signed_tx(tx_hash))
+
+      tx =
+        case :aetx.specialize_type(aetx) do
+          {:ga_meta_tx, tx} ->
+            aetx = InnerTx.signed_tx(:ga_meta_tx, tx)
+            {_type, tx} = :aetx.specialize_type(aetx)
+            tx
+
+          {_type, tx} ->
+            tx
+        end
 
       {
         height,
