@@ -264,21 +264,11 @@ defmodule AeMdw.Db.Name do
   end
 
   defp pointee_at(state, Model.name(index: name, updates: updates), ref_txi) do
-    updates
-    |> find_update_txi_before(ref_txi)
-    |> case do
-      nil ->
-        {:error, {:pointee_not_found, name, ref_txi}}
+    update_txi = find_update_txi_before(updates, ref_txi)
 
-      update_txi ->
-        {:id, :account, pointee_pk} =
-          state
-          |> Format.to_raw_map(DbUtil.read_tx!(state, update_txi))
-          |> get_in([:tx, :pointers])
-          |> Enum.into(%{}, &pointer_kv_raw/1)
-          |> Map.get("account_pubkey")
-
-        {:ok, pointee_pk}
+    case name_update_account_pointer(state, update_txi) do
+      :error -> {:error, {:pointee_not_found, name, ref_txi}}
+      ok_result -> ok_result
     end
   end
 
@@ -286,5 +276,24 @@ defmodule AeMdw.Db.Name do
     Enum.find_value(updates, fn {_block_height, update_txi} ->
       if update_txi <= ref_txi, do: update_txi
     end)
+  end
+
+  defp name_update_account_pointer(_state, nil), do: :error
+
+  defp name_update_account_pointer(state, update_txi) do
+    state
+    |> Format.to_raw_map(DbUtil.read_tx!(state, update_txi))
+    |> get_in([:tx, :pointers])
+    |> Enum.into(%{}, &pointer_kv_raw/1)
+    |> Enum.find_value(fn {_key, pointee} ->
+      if match?({:id, :account, _pk}, pointee), do: pointee
+    end)
+    |> case do
+      {:id, _type, pointee_pk} ->
+        {:ok, pointee_pk}
+
+      nil ->
+        :error
+    end
   end
 end

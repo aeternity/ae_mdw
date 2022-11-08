@@ -16,6 +16,7 @@ defmodule AeMdwWeb.BlockchainSim do
 
   @type account_name() :: atom()
   @type tx_type() :: AeMdw.Node.tx_type()
+  @typep name_id() :: {:id, :name, <<_::256>>}
 
   defmacro with_blockchain(initial_balances, blocks, do: body) do
     aec_db =
@@ -96,9 +97,9 @@ defmodule AeMdwWeb.BlockchainSim do
     end
   end
 
-  @spec spend_tx(account_name(), account_name(), non_neg_integer()) :: tuple()
-  def spend_tx(sender_name, recipient_name, amount) do
-    {:spend_tx, sender_name, recipient_name, amount}
+  @spec spend_tx(account_name(), account_name() | name_id(), non_neg_integer()) :: tuple()
+  def spend_tx(sender_name, recipient, amount) do
+    {:spend_tx, sender_name, recipient, amount}
   end
 
   @spec tx(tx_type(), account_name(), map()) :: tuple()
@@ -329,10 +330,12 @@ defmodule AeMdwWeb.BlockchainSim do
     end
   end
 
-  defp create_aetx({:spend_tx, sender_name, recipient_name, amount}, accounts) do
+  defp create_aetx({:spend_tx, sender_name, recipient, amount}, accounts) do
+    recipient_id = if is_atom(recipient), do: Map.fetch!(accounts, recipient), else: recipient
+
     :aec_spend_tx.new(%{
       sender_id: Map.fetch!(accounts, sender_name),
-      recipient_id: Map.fetch!(accounts, recipient_name),
+      recipient_id: recipient_id,
       amount: amount,
       fee: 0,
       nonce: 1,
@@ -371,10 +374,25 @@ defmodule AeMdwWeb.BlockchainSim do
     {:id, :account, pubkey} = account_id = Map.fetch!(accounts, account_name)
     {:ok, name_hash} = :aens.get_name_hash(plain_name)
 
-    pointers = [
-      {:pointer, "account_pubkey", account_id},
-      {:pointer, "oracle_pubkey", :aeser_id.create(:oracle, pubkey)}
-    ]
+    pointers =
+      case args[:pointers] do
+        nil ->
+          [
+            {:pointer, "account_pubkey", account_id},
+            {:pointer, "oracle_pubkey", :aeser_id.create(:oracle, pubkey)}
+          ]
+
+        list ->
+          Enum.map(list, fn
+            {:pointer, key, account_atom} when is_atom(account_atom) ->
+              {:pointer, key, Map.fetch!(accounts, account_atom)}
+
+            another_pointer ->
+              another_pointer
+          end)
+      end
+
+    args = Map.delete(args, :pointers)
 
     %{
       account_id: account_id,

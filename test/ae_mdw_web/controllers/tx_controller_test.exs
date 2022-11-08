@@ -8,7 +8,9 @@ defmodule AeMdwWeb.TxControllerTest do
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
 
-  import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, tx: 3, name_tx: 3]
+  import AeMdwWeb.BlockchainSim,
+    only: [with_blockchain: 3, tx: 3, name_tx: 3, name_tx: 4, spend_tx: 3]
+
   import AeMdw.Util.Encoding
   import Mock
 
@@ -291,6 +293,65 @@ defmodule AeMdwWeb.TxControllerTest do
                        "key" => "oracle_pubkey"
                      }
                    ]
+                 }
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs/#{tx_hash}")
+                 |> json_response(200)
+      end
+    end
+
+    test "returns a spend_tx with recipient account pointer", %{conn: conn, store: store} do
+      plain_name = "aliceinchains.chain"
+      {:ok, name_hash} = :aens.get_name_hash(plain_name)
+      name_id = :aeser_id.create(:name, name_hash)
+      recipient_id = encode(:name, name_hash)
+
+      with_blockchain %{alice: 1_000, bob: 10_000, alice2: 1_000},
+        mb: [
+          tx1:
+            name_tx(:name_update_tx, :alice, plain_name, %{
+              pointers: [
+                {:pointer, "oracle_pubkey", {:id, :oracle, <<1::256>>}},
+                # some account pointers have "0" as key
+                {:pointer, "0", :alice2}
+              ]
+            }),
+          tx2: spend_tx(:bob, name_id, 5_000)
+        ] do
+        %{txs: [tx1, tx2]} = blocks[:mb]
+
+        {:id, :account, bob_pk} = accounts[:bob]
+        {:id, :account, alice_pk} = accounts[:alice2]
+        bob_id = encode(:account_pubkey, bob_pk)
+        alice_id = encode(:account_pubkey, alice_pk)
+
+        store =
+          store
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 1, block_index: {0, 0}, id: :aetx_sign.hash(tx1))
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 2, block_index: {0, 0}, id: :aetx_sign.hash(tx2))
+          )
+          |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: plain_name))
+          |> Store.put(Model.ActiveName, Model.name(index: plain_name, updates: [{{0, 0}, 1}]))
+          |> Store.put(Model.Block, Model.block(index: {0, -1}, tx_index: 1))
+          |> Store.put(Model.Block, Model.block(index: {0, 0}, tx_index: 2))
+          |> Store.put(Model.Block, Model.block(index: {1, -1}, tx_index: 2))
+
+        tx_hash = encode(:tx_hash, :aetx_sign.hash(tx2))
+
+        assert %{
+                 "hash" => ^tx_hash,
+                 "tx" => %{
+                   "amount" => 5_000,
+                   "sender_id" => ^bob_id,
+                   "recipient_id" => ^recipient_id,
+                   "recipient" => %{"account" => ^alice_id, "name" => ^plain_name}
                  }
                } =
                  conn
