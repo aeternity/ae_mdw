@@ -134,8 +134,16 @@ defmodule AeMdw.Db.Format do
     put_in(tx, [:tx, :name_id], :aeser_id.create(:name, name_id))
   end
 
-  defp custom_raw_data(state, :name_update_tx, tx, tx_rec, _signed_tx, _block_hash),
-    do: put_in(tx, [:tx, :name], Name.plain_name!(state, :aens_update_tx.name_hash(tx_rec)))
+  defp custom_raw_data(state, :name_update_tx, tx, tx_rec, _signed_tx, _block_hash) do
+    pointers =
+      tx
+      |> get_in([:tx, :pointers])
+      |> Enum.map(fn %{key: key, id: id} -> %{key: maybe_to_list(key), id: id} end)
+
+    tx
+    |> put_in([:tx, :name], Name.plain_name!(state, :aens_update_tx.name_hash(tx_rec)))
+    |> put_in([:tx, :pointers], pointers)
+  end
 
   defp custom_raw_data(state, :name_transfer_tx, tx, tx_rec, _signed_tx, _block_hash),
     do: put_in(tx, [:tx, :name], Name.plain_name!(state, :aens_transfer_tx.name_hash(tx_rec)))
@@ -353,8 +361,16 @@ defmodule AeMdw.Db.Format do
     put_in(tx, ["name_id"], Enc.encode(:name, name_id))
   end
 
-  defp custom_encode(state, :name_update_tx, tx, tx_rec, _signed_tx, _txi, _block_hash),
-    do: put_in(tx, ["name"], Name.plain_name!(state, :aens_update_tx.name_hash(tx_rec)))
+  defp custom_encode(state, :name_update_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
+    pointers =
+      tx
+      |> Map.get("pointers")
+      |> Enum.map(fn %{"key" => key, "id" => id} -> %{"key" => maybe_to_list(key), "id" => id} end)
+
+    tx
+    |> Map.put("name", Name.plain_name!(state, :aens_update_tx.name_hash(tx_rec)))
+    |> Map.put("pointers", pointers)
+  end
 
   defp custom_encode(state, :name_transfer_tx, tx, tx_rec, _signed_tx, _txi, _block_hash),
     do: put_in(tx, ["name"], Name.plain_name!(state, :aens_transfer_tx.name_hash(tx_rec)))
