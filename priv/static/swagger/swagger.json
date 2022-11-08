@@ -2789,12 +2789,29 @@
         ]
       }
     },
-    "/txs": {
+    "/txs/{scope_type}/{range}": {
       "get": {
         "deprecated": false,
         "description": "Get a transactions from beginning or end of the chain. More [info](https://github.com/aeternity/ae_mdw#transaction-querying)",
         "operationId": "get_txs_by_direction",
         "parameters": [
+          {
+            "description": "The scope type to filter by",
+            "enum": [
+              "gen",
+              "txi"
+            ],
+            "in": "path",
+            "name": "scope_type",
+            "type": "string"
+          },
+          {
+            "description": "The range belonging to the scope type to filter by",
+            "in": "path",
+            "name": "range",
+            "type": "string",
+            "example": "1-100"
+          },
           {
             "collectionFormat": "multi",
             "description": "The transaction type. The query allows providing of multiple type parameters. [More info](https://github.com/aeternity/ae_mdw#types)",

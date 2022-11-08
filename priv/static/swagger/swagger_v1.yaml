@@ -2676,7 +2676,7 @@ paths:
           type: string
         - description: The range belonging to the scope type to filter by
           in: path
-          name: scope_type
+          name: range
           type: string
           example: 1-100
         - collectionFormat: multi
