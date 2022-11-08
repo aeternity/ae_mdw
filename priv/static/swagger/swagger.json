@@ -2089,16 +2089,6 @@
             "type": "string"
           },
           {
-            "default": 1,
-            "description": "The number of page to show",
-            "format": "int32",
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "type": "integer",
-            "x-example": 1
-          },
-          {
             "default": 10,
             "description": "The numbers of items to return",
             "format": "int32",
@@ -2167,16 +2157,6 @@
             "type": "string"
           },
           {
-            "default": 1,
-            "description": "The number of page to show",
-            "format": "int32",
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "type": "integer",
-            "x-example": 1
-          },
-          {
             "default": 10,
             "description": "The numbers of items to return",
             "format": "int32",
@@ -2243,16 +2223,6 @@
             "name": "direction",
             "required": false,
             "type": "string"
-          },
-          {
-            "default": 1,
-            "description": "The number of page to show",
-            "format": "int32",
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "type": "integer",
-            "x-example": 1
           },
           {
             "default": 10,
@@ -2478,16 +2448,6 @@
             "type": "string"
           },
           {
-            "default": 1,
-            "description": "The number of page to show",
-            "format": "int32",
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "type": "integer",
-            "x-example": 1
-          },
-          {
             "default": 10,
             "description": "The numbers of items to return",
             "format": "int32",
@@ -2551,16 +2511,6 @@
             "type": "string"
           },
           {
-            "default": 1,
-            "description": "The number of page to show",
-            "format": "int32",
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "type": "integer",
-            "x-example": 1
-          },
-          {
             "default": 10,
             "description": "The numbers of items to return",
             "format": "int32",
@@ -2622,16 +2572,6 @@
             "name": "direction",
             "required": false,
             "type": "string"
-          },
-          {
-            "default": 1,
-            "description": "The number of page to show",
-            "format": "int32",
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "type": "integer",
-            "x-example": 1
           },
           {
             "default": 10,
@@ -2792,7 +2732,7 @@
     "/txs/{scope_type}/{range}": {
       "get": {
         "deprecated": false,
-        "description": "Get a transactions from beginning or end of the chain. More [info](https://github.com/aeternity/ae_mdw#transaction-querying)",
+        "description": "Get a transactions from beginning or end of the chain. More [info](https://github.com/aeternity/ae_mdw#transactions)",
         "operationId": "get_txs_by_scope",
         "parameters": [
           {
@@ -2905,16 +2845,6 @@
             "x-example": "ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
           },
           {
-            "default": 1,
-            "description": "The number of page to show",
-            "format": "int32",
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "type": "integer",
-            "x-example": 1
-          },
-          {
             "default": 10,
             "description": "The numbers of items to return",
             "format": "int32",
@@ -2932,7 +2862,7 @@
               "forward",
               "backward"
             ],
-            "in": "path",
+            "in": "query",
             "name": "direction",
             "required": true,
             "type": "string"
@@ -2982,7 +2912,7 @@
     "/txs/{direction}": {
       "get": {
         "deprecated": false,
-        "description": "Get a transactions from beginning or end of the chain. More [info](https://github.com/aeternity/ae_mdw#transaction-querying)",
+        "description": "Get a transactions from beginning or end of the chain. More [info](https://github.com/aeternity/ae_mdw#transactions)",
         "operationId": "get_txs_by_direction",
         "parameters": [
           {
@@ -3087,16 +3017,6 @@
             "required": false,
             "type": "string",
             "x-example": "ok_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR"
-          },
-          {
-            "default": 1,
-            "description": "The number of page to show",
-            "format": "int32",
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "type": "integer",
-            "x-example": 1
           },
           {
             "default": 10,
@@ -3234,16 +3154,6 @@
         "description": "Get multiple generations.",
         "operationId": "get_blocks",
         "parameters": [
-          {
-            "default": 1,
-            "description": "The number of page to show",
-            "format": "int32",
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "type": "integer",
-            "x-example": 1
-          },
           {
             "default": 10,
             "description": "The numbers of items to return",
