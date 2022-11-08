@@ -222,14 +222,12 @@ defmodule AeMdw.Contracts do
   end
 
   defp build_calls_pagination(
-         [fname: fname_prefix],
+         [fname: fname],
          state,
          {first_call_txi, last_call_txi},
          cursor
        ) do
-    key_boundary =
-      {{fname_prefix, first_call_txi, @min_idx},
-       {fname_prefix <> Util.max_256bit_bin(), last_call_txi, @max_idx}}
+    key_boundary = {{fname, first_call_txi, @min_idx}, {fname, last_call_txi, @max_idx}}
 
     cursor =
       case cursor do
@@ -358,8 +356,8 @@ defmodule AeMdw.Contracts do
     end
   end
 
-  defp build_calls_pagination(_query, _scope, _state, _cursor),
-    do: raise(ErrInput.Query, value: %{})
+  defp build_calls_pagination(query, _scope, _state, _cursor),
+    do: raise(ErrInput.Query, value: query)
 
   defp build_grp_id_calls_stream(state, direction, scope, cursor, tx_types) do
     state
@@ -422,9 +420,7 @@ defmodule AeMdw.Contracts do
     deserialize_scope(state, {:txi, first..last})
   end
 
-  defp deserialize_scope(_state, {:txi, first_txi..last_txi}) do
-    {first_txi, last_txi}
-  end
+  defp deserialize_scope(_state, {:txi, first_txi..last_txi}), do: {first_txi, last_txi}
 
   defp create_txi!(state, contract_id) do
     pk = Validate.id!(contract_id)
