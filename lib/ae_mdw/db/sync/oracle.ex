@@ -42,8 +42,13 @@ defmodule AeMdw.Db.Sync.Oracle do
   @spec query_mutation(Node.tx(), height()) :: OracleQueryMutation.t()
   def query_mutation(tx, height) do
     oracle_pk = Validate.id!(:aeo_query_tx.oracle_id(tx))
-    ttl = :aeo_query_tx.ttl(tx)
-    expiration_height = height + ttl
+
+    expiration_height =
+      case :aeo_query_tx.query_ttl(tx) do
+        {:delta, ttl} -> height + ttl
+        {:block, height} -> height
+      end
+
     query_id = :aeo_query_tx.query_id(tx)
     fee = :aeo_query_tx.query_fee(tx)
     sender_pk = :aeo_query_tx.sender_pubkey(tx)

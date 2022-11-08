@@ -4,6 +4,7 @@ defmodule AeMdw.Db.OraclesExpirationMutationTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.OraclesExpirationMutation
   alias AeMdw.Db.Store
+  alias AeMdw.TestSamples, as: TS
 
   require Model
 
@@ -97,6 +98,36 @@ defmodule AeMdw.Db.OraclesExpirationMutationTest do
 
       assert {:ok, Model.expiration(index: {^expire, ^pubkey})} =
                Store.get(store, Model.InactiveOracleExpiration, {expire, pubkey})
+    end
+
+    test "it expires oracle queries", %{store: store} do
+      height = 234
+      oracle_pk = TS.oracle_pk(0)
+      query_id = TS.oracle_query_id(0)
+
+      oracle_query =
+        Model.oracle_query(
+          index: {oracle_pk, query_id},
+          txi: 456,
+          sender_pk: TS.address(2),
+          fee: 789,
+          expire: height
+        )
+
+      query_expiration = Model.oracle_query_expiration(index: {height, oracle_pk, query_id})
+
+      store =
+        store
+        |> Store.put(Model.OracleQuery, oracle_query)
+        |> Store.put(Model.OracleQueryExpiration, query_expiration)
+
+      mutation = OraclesExpirationMutation.new(height)
+      store = change_store(store, [mutation])
+
+      assert :not_found =
+               Store.get(store, Model.OracleQueryExpiration, {height, oracle_pk, query_id})
+
+      assert :not_found = Store.get(store, Model.OracleQuery, {oracle_pk, query_id})
     end
   end
 end

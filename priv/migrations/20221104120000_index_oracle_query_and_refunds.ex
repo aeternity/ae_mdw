@@ -38,8 +38,13 @@ defmodule AeMdw.Migrations.IndexOracleQueryAndRefunds do
       |> Enum.reduce(%{}, fn
         {height, txi, _local_idx, :oracle_query_tx, tx}, queries ->
           oracle_pk = Validate.id!(:aeo_query_tx.oracle_id(tx))
-          ttl = :aeo_query_tx.ttl(tx)
-          expiration_height = height + ttl
+
+          expiration_height =
+            case :aeo_query_tx.query_ttl(tx) do
+              {:delta, ttl} -> height + ttl
+              {:block, height} -> height
+            end
+
           sender_pk = :aeo_query_tx.sender_pubkey(tx)
           fee = :aeo_query_tx.query_fee(tx)
           query_id = :aeo_query_tx.query_id(tx)

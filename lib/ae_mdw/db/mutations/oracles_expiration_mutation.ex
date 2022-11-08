@@ -41,7 +41,7 @@ defmodule AeMdw.Db.OraclesExpirationMutation do
       end)
 
     state2
-    |> Collection.stream(Model.OracleQueryExpiration, {height, <<>>})
+    |> Collection.stream(Model.OracleQueryExpiration, {height, <<>>, <<>>})
     |> Stream.take_while(&match?({^height, _oracle_pk, _query_id}, &1))
     |> Enum.reduce(state2, fn {^height, oracle_pk, query_id}, state ->
       expire_oracle_query(state, height, oracle_pk, query_id)
