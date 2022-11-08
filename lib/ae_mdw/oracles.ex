@@ -24,6 +24,7 @@ defmodule AeMdw.Oracles do
   @type oracle :: term()
   @type pagination :: Collection.direction_limit()
   @type opts() :: Util.opts()
+  @type query_id() :: binary()
 
   @typep state() :: State.t()
   @typep range :: {:gen, Range.t()} | nil

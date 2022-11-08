@@ -8,17 +8,19 @@ defmodule AeMdw.Db.Sync.Oracle do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.OracleExtendMutation
+  alias AeMdw.Db.OracleQueryMutation
   alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.OracleResponseMutation
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Origin
-  alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Txs
+  alias AeMdw.Validate
 
   require Model
 
+  @typep height() :: Blocks.height()
   @typep pubkey :: Db.pubkey()
   @typep cache_key :: pubkey() | {pos_integer(), pubkey()}
   @typep state :: State.t()
@@ -37,28 +39,30 @@ defmodule AeMdw.Db.Sync.Oracle do
     ]
   end
 
-  @spec response_mutation(Node.tx(), Blocks.block_index(), Blocks.block_hash(), Txs.txi()) ::
-          OracleResponseMutation.t() | nil
-  def response_mutation(tx, block_index, block_hash, txi) do
+  @spec query_mutation(Node.tx(), height()) :: OracleQueryMutation.t()
+  def query_mutation(tx, height) do
+    oracle_pk = Validate.id!(:aeo_query_tx.oracle_id(tx))
+
+    expiration_height =
+      case :aeo_query_tx.query_ttl(tx) do
+        {:delta, ttl} -> height + ttl
+        {:block, height} -> height
+      end
+
+    query_id = :aeo_query_tx.query_id(tx)
+    fee = :aeo_query_tx.query_fee(tx)
+    sender_pk = :aeo_query_tx.sender_pubkey(tx)
+
+    OracleQueryMutation.new(oracle_pk, query_id, sender_pk, fee, expiration_height)
+  end
+
+  @spec response_mutation(Node.tx(), Blocks.block_index(), Txs.txi()) ::
+          OracleResponseMutation.t()
+  def response_mutation(tx, block_index, txi) do
     oracle_pk = :aeo_response_tx.oracle_pubkey(tx)
     query_id = :aeo_response_tx.query_id(tx)
-    o_tree = oracle_tree!(block_hash)
 
-    try do
-      fee =
-        oracle_pk
-        |> :aeo_state_tree.get_query(query_id, o_tree)
-        |> :aeo_query.fee()
-
-      OracleResponseMutation.new(block_index, txi, oracle_pk, fee)
-    rescue
-      # TreeId = <<OracleId/binary, QId/binary>>,
-      # Serialized = aeu_mtrees:get(TreeId, Tree#oracle_tree.otree)
-      # raises error on unexisting tree_id
-      error ->
-        Log.error(error)
-        nil
-    end
+    OracleResponseMutation.new(block_index, txi, oracle_pk, query_id)
   end
 
   @spec extend_mutation(Node.tx(), Blocks.block_index(), Txs.txi()) :: OracleExtendMutation.t()
@@ -109,11 +113,5 @@ defmodule AeMdw.Db.Sync.Oracle do
     )
     |> Stream.map(fn {_height, pubkey} -> pubkey end)
     |> Stream.uniq()
-  end
-
-  defp oracle_tree!(block_hash) do
-    block_hash
-    |> :aec_db.get_block_state()
-    |> :aec_trees.oracles()
   end
 end

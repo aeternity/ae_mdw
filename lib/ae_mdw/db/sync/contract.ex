@@ -105,7 +105,7 @@ defmodule AeMdw.Db.Sync.Contract do
     int_calls_mutation = IntCallsMutation.new(contract_pk, call_txi, int_calls)
 
     chain_mutations ++
-      oracle_and_name_mutations(events, block_index, block_hash, call_txi) ++ [int_calls_mutation]
+      oracle_and_name_mutations(events, block_index, call_txi) ++ [int_calls_mutation]
   end
 
   @spec aexn_create_contract_mutation(Db.pubkey(), Blocks.block_index(), Txs.txi()) ::
@@ -139,12 +139,13 @@ defmodule AeMdw.Db.Sync.Contract do
     end
   end
 
-  defp oracle_and_name_mutations(events, block_index, block_hash, call_txi) do
+  defp oracle_and_name_mutations(events, {height, _mbi} = block_index, call_txi) do
     events
     |> Enum.filter(fn
       {{:internal_call_tx, "Oracle.extend"}, _info} -> true
       {{:internal_call_tx, "Oracle.register"}, _info} -> true
       {{:internal_call_tx, "Oracle.respond"}, _info} -> true
+      {{:internal_call_tx, "Oracle.query"}, _info} -> true
       {{:internal_call_tx, "AENS.claim"}, _info} -> true
       {{:internal_call_tx, "AENS.update"}, _info} -> true
       {{:internal_call_tx, "AENS.transfer"}, _info} -> true
@@ -162,7 +163,11 @@ defmodule AeMdw.Db.Sync.Contract do
 
       {{:internal_call_tx, "Oracle.respond"}, %{info: aetx}} ->
         {:oracle_response_tx, tx} = :aetx.specialize_type(aetx)
-        Oracle.response_mutation(tx, block_index, block_hash, call_txi)
+        Oracle.response_mutation(tx, block_index, call_txi)
+
+      {{:internal_call_tx, "Oracle.query"}, %{info: aetx}} ->
+        {:oracle_query_tx, tx} = :aetx.specialize_type(aetx)
+        Oracle.query_mutation(tx, height)
 
       {{:internal_call_tx, "AENS.claim"}, %{info: aetx, tx_hash: tx_hash}} ->
         {:name_claim_tx, tx} = :aetx.specialize_type(aetx)

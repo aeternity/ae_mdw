@@ -8,8 +8,6 @@ defmodule AeMdw.Db.Sync.OracleTest do
   alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.OracleResponseMutation
 
-  import Mock
-
   require Model
 
   describe "register_mutations/4" do
@@ -48,31 +46,24 @@ defmodule AeMdw.Db.Sync.OracleTest do
     test "creates mutation for the oracle" do
       pubkey = <<2::256>>
       block_index = {Enum.random(100_000..999_999), 1}
-      block_hash = <<22::256>>
       txi = Enum.random(100_000_000..999_999_999)
       fee = Enum.random(100..999)
+      query_id = <<0::256>>
 
       {:ok, aetx} =
         :aeo_response_tx.new(%{
           oracle_id: :aeser_id.create(:oracle, pubkey),
           nonce: 1,
-          query_id: <<0::256>>,
+          query_id: query_id,
           response: "",
           response_ttl: {:delta, 0},
           fee: fee
         })
 
-      {_mod, tx_rec} = :aetx.specialize_callback(aetx)
+      {:oracle_response_tx, tx_rec} = :aetx.specialize_type(aetx)
 
-      with_mocks [
-        {:aec_db, [:passthrough], get_block_state: fn ^block_hash -> block_hash end},
-        {:aec_trees, [:passthrough], oracles: fn ^block_hash -> :otree end},
-        {:aeo_state_tree, [:passthrough], get_query: fn ^pubkey, _query_id, :otree -> pubkey end},
-        {:aeo_query, [:passthrough], fee: fn ^pubkey -> fee end}
-      ] do
-        mutation = OracleResponseMutation.new(block_index, txi, pubkey, fee)
-        assert ^mutation = Oracle.response_mutation(tx_rec, block_index, block_hash, txi)
-      end
+      mutation = OracleResponseMutation.new(block_index, txi, pubkey, query_id)
+      assert ^mutation = Oracle.response_mutation(tx_rec, block_index, txi)
     end
   end
 

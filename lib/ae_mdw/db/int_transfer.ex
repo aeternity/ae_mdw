@@ -17,7 +17,7 @@ defmodule AeMdw.Db.IntTransfer do
   alias AeMdw.Db.IntTransfersMutation
   alias AeMdw.Node.Db
 
-  # @type kind() :: "fee_lock_name" | "fee_refund_name" | "fee_spend_name" |
+  # @type kind() :: "fee_lock_name" | "fee_refund_name" | "fee_spend_name" | "fee_refund_oracle"
   #                 "reward_block" | "reward_dev" | "reward_oracle"
   @type kind() :: binary()
   @type target() :: Db.pubkey()
@@ -25,9 +25,9 @@ defmodule AeMdw.Db.IntTransfer do
   @type amount() :: pos_integer()
   @type rewards() :: [{target(), amount()}]
 
-  @typep kind_suffix() :: :lock_name | :spend_name | :refund_name | :earn_oracle
+  @typep kind_suffix() :: :lock_name | :spend_name | :refund_name | :earn_oracle | :refund_oracle
 
-  @fee_kinds [:lock_name, :spend_name, :refund_name, :earn_oracle]
+  @fee_kinds [:lock_name, :spend_name, :refund_name, :earn_oracle, :refund_oracle]
 
   @reward_block_kind "reward_block"
   @reward_dev_kind "reward_dev"

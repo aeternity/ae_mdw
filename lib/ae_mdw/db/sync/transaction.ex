@@ -333,11 +333,20 @@ defmodule AeMdw.Db.Sync.Transaction do
          type: :oracle_response_tx,
          tx: tx,
          txi: txi,
-         block_hash: block_hash,
          block_index: block_index
        }) do
     [
-      Oracle.response_mutation(tx, block_index, block_hash, txi)
+      Oracle.response_mutation(tx, block_index, txi)
+    ]
+  end
+
+  defp tx_mutations(%TxContext{
+         type: :oracle_query_tx,
+         tx: tx,
+         block_index: {height, _mbi}
+       }) do
+    [
+      Oracle.query_mutation(tx, height)
     ]
   end
 
