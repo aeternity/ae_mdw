@@ -144,8 +144,8 @@ defmodule AeMdw.Db.Name do
       end
 
     pointers
-    |> Stream.map(&pointer_kv_raw/1)
-    |> Enum.into(%{})
+    |> Enum.map(&pointer_kv_raw/1)
+    |> Format.encode_pointers()
   end
 
   @spec ownership(state(), Model.name()) :: %{

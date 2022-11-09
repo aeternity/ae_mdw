@@ -19,7 +19,7 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdw.TestSamples, as: TS
   alias AeMdw.Txs
 
-  import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, name_tx: 3]
+  import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, name_tx: 3, name_tx: 4]
 
   import Mock
 

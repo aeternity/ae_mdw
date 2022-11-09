@@ -433,16 +433,9 @@ defmodule AeMdw.Names do
       transfers: Enum.map(transfers, &expand_txi(state, &1, opts)),
       revoke: (revoke && expand_txi(state, revoke, opts)) || nil,
       auction_timeout: auction_timeout,
-      pointers: render_pointers(state, name),
+      pointers: Name.pointers(state, name),
       ownership: render_ownership(state, name)
     }
-  end
-
-  defp render_pointers(state, name) do
-    state
-    |> Name.pointers(name)
-    |> Enum.map(fn {key, id} -> {Format.maybe_to_list(key), Format.enc_id(id)} end)
-    |> Enum.into(%{})
   end
 
   defp render_ownership(state, name) do

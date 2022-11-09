@@ -91,13 +91,9 @@ defmodule AeMdw.Db.Format do
     }
   end
 
-  @spec maybe_to_list(binary()) :: iodata()
-  def maybe_to_list(bin) do
-    if String.valid?(bin) do
-      bin
-    else
-      :erlang.binary_to_list(bin)
-    end
+  @spec encode_pointers(list()) :: %{iodata() => String.t()}
+  def encode_pointers(pointers) do
+    Enum.into(pointers, %{}, fn {key, id} -> {maybe_to_list(key), enc_id(id)} end)
   end
 
   @spec enc_id(aeser_id() | nil) :: binary() | nil
@@ -154,7 +150,6 @@ defmodule AeMdw.Db.Format do
       tx
       |> get_in([:tx, :pointers])
       |> Enum.map(fn %{key: key, id: id} -> %{key: maybe_to_list(key), id: id} end)
-      |> IO.inspect()
 
     tx
     |> put_in([:tx, :name], Name.plain_name!(state, :aens_update_tx.name_hash(tx_rec)))
@@ -213,9 +208,9 @@ defmodule AeMdw.Db.Format do
         end
       )
 
-    raw_to_json(raw_map)
-    |> put_in(["auction"], auction)
-    |> update_in(["status"], &to_string/1)
+    raw_map
+    |> put_in([:auction], auction)
+    |> update_in([:info, :ownership], &raw_to_json/1)
   end
 
   def to_map(state, {call_txi, local_idx}, Model.IntContractCall) do
@@ -276,9 +271,9 @@ defmodule AeMdw.Db.Format do
   def to_map(state, name, source, true = _expand)
       when source in [Model.ActiveName, Model.InactiveName] do
     to_map(state, name, source)
-    |> update_in(["auction"], &expand_name_auction(state, &1))
-    |> update_in(["info"], &expand_name_info(state, &1))
-    |> update_in(["previous"], fn prevs -> Enum.map(prevs, &expand_name_info(state, &1)) end)
+    |> update_in([:auction], &expand_name_auction(state, &1))
+    |> update_in([:info], &expand_name_info(state, &1))
+    |> update_in([:previous], fn prevs -> Enum.map(prevs, &expand_name_info(state, &1)) end)
   end
 
   def to_map(state, bid, Model.AuctionBid, true = _expand) do
@@ -382,7 +377,6 @@ defmodule AeMdw.Db.Format do
       tx
       |> Map.get("pointers")
       |> Enum.map(fn %{"key" => key, "id" => id} -> %{"key" => maybe_to_list(key), "id" => id} end)
-      |> IO.inspect()
 
     tx
     |> Map.put("name", Name.plain_name!(state, :aens_update_tx.name_hash(tx_rec)))
@@ -473,6 +467,14 @@ defmodule AeMdw.Db.Format do
             []
         end
     }
+  end
+
+  defp maybe_to_list(bin) do
+    if String.valid?(bin) do
+      bin
+    else
+      :erlang.binary_to_list(bin)
+    end
   end
 
   defp expand_name_auction(_state, nil), do: nil
