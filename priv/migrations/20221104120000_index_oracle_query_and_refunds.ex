@@ -124,7 +124,8 @@ defmodule AeMdw.Migrations.IndexOracleQueryAndRefunds do
       tx =
         case :aetx.specialize_type(aetx) do
           {:ga_meta_tx, tx} ->
-            aetx = InnerTx.signed_tx(:ga_meta_tx, tx)
+            signed_tx = InnerTx.signed_tx(:ga_meta_tx, tx)
+            aetx = :aetx_sign.tx(signed_tx)
             {_type, tx} = :aetx.specialize_type(aetx)
             tx
 
