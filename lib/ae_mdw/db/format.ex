@@ -93,13 +93,13 @@ defmodule AeMdw.Db.Format do
 
   @spec encode_pointers(list() | map()) :: %{iodata() => String.t()}
   def encode_pointers(pointers) when is_map(pointers) do
-    Enum.into(pointers, %{}, fn {key, id} -> {maybe_to_list(key), enc_id(id)} end)
+    Enum.into(pointers, %{}, fn {key, id} -> {maybe_encode_base64(key), enc_id(id)} end)
   end
 
   def encode_pointers(pointers) do
     Enum.map(pointers, fn
-      %{"key" => key, "id" => id} -> %{"key" => maybe_to_list(key), "id" => id}
-      %{key: key, id: id} -> %{key: maybe_to_list(key), id: id}
+      %{"key" => key, "id" => id} -> %{"key" => maybe_encode_base64(key), "id" => id}
+      %{key: key, id: id} -> %{key: maybe_encode_base64(key), id: id}
     end)
   end
 
@@ -388,6 +388,14 @@ defmodule AeMdw.Db.Format do
 
   defp custom_encode(_state, _tx_type, tx, _tx_rec, _signed_tx, _txi, _block_hash),
     do: tx
+
+  defp maybe_encode_base64(bin) do
+    if String.valid?(bin) do
+      bin
+    else
+      Base.encode64(bin)
+    end
+  end
 
   defp maybe_base64(bin) do
     try do

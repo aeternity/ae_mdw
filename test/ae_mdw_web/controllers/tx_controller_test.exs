@@ -308,7 +308,7 @@ defmodule AeMdwWeb.TxControllerTest do
         <<104, 65, 117, 174, 49, 251, 29, 202, 69, 174, 147, 56, 60, 150, 188, 247, 149, 85, 150,
           148, 88, 102, 186, 208, 87, 101, 78, 111, 189, 5, 144, 101>>
 
-      non_string_pointer_key_list = :erlang.binary_to_list(non_string_pointer_key)
+      non_string_pointer_key64 = Base.encode64(non_string_pointer_key)
 
       with_blockchain %{alice1: 1_000, alice2: 1_000},
         mb: [
@@ -342,7 +342,7 @@ defmodule AeMdwWeb.TxControllerTest do
                    "pointers" => [
                      %{
                        "id" => ^alice_id2,
-                       "key" => ^non_string_pointer_key_list
+                       "key" => ^non_string_pointer_key64
                      }
                    ]
                  }

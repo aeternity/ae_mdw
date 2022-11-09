@@ -22,7 +22,7 @@ defmodule AeMdw.Db.NameTest do
         <<104, 65, 117, 174, 49, 251, 29, 202, 69, 174, 147, 56, 60, 150, 188, 247, 149, 85, 150,
           148, 88, 102, 186, 208, 87, 101, 78, 111, 189, 5, 144, 101>>
 
-      non_string_pointer_key_list = :erlang.binary_to_list(non_string_pointer_key)
+      non_string_pointer_key64 = Base.encode64(non_string_pointer_key)
 
       tx_hash = :crypto.strong_rand_bytes(32)
 
@@ -60,7 +60,11 @@ defmodule AeMdw.Db.NameTest do
             Model.tx(index: 2, id: tx_hash, block_index: {1, 1})
           )
 
-        assert pointers =
+        pointers_map = %{
+          non_string_pointer_key64 => Format.enc_id(pointer_id)
+        }
+
+        assert ^pointers_map =
                  Name.pointers(
                    State.new(store),
                    Model.name(
@@ -68,12 +72,6 @@ defmodule AeMdw.Db.NameTest do
                      updates: [{{1, 1}, 2}]
                    )
                  )
-
-        assert pointers == %{
-                 non_string_pointer_key_list => Format.enc_id(pointer_id)
-               }
-
-        assert {:ok, _} = Phoenix.json_library().encode(pointers)
       end
     end
   end
