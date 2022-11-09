@@ -50,6 +50,15 @@ defmodule AeMdw.Txs do
   @type_spend_tx "SpendTx"
 
   @spec count(state(), range(), map()) :: {:ok, non_neg_integer()} | {:error, Error.t()}
+  def count(state, nil, %{"tx_type" => tx_type} = params) do
+    params =
+      params
+      |> Map.delete("tx_type")
+      |> Map.put("type", tx_type)
+
+    count(state, nil, params)
+  end
+
   def count(state, nil, %{"type" => tx_type}) do
     case Validate.tx_type(tx_type) do
       {:ok, tx_type} ->
