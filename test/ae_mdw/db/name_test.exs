@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.NameTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
 
+  alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.Name
@@ -8,15 +9,14 @@ defmodule AeMdw.Db.NameTest do
   alias AeMdw.Db.State
   alias AeMdw.Db.Store
 
-  import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, name_tx: 3, name_tx: 4]
-  import AeMdw.Util.Encoding
   import Mock
 
   require Model
 
   describe "pointers/2" do
-    test "get pointer with non-string pointer key" do
-      name = "binarypointers.chain"
+    test "gets pointer with non-string pointer key" do
+      name = "binarypointer.chain"
+      pointer_id = :aeser_id.create(:account, <<1::256>>)
 
       non_string_pointer_key =
         <<104, 65, 117, 174, 49, 251, 29, 202, 69, 174, 147, 56, 60, 150, 188, 247, 149, 85, 150,
@@ -24,28 +24,40 @@ defmodule AeMdw.Db.NameTest do
 
       non_string_pointer_key_list = :erlang.binary_to_list(non_string_pointer_key)
 
-      with_blockchain %{alice: 1_000, celia: 1_000},
-        mb: [
-          tx1: name_tx(:name_claim_tx, :alice, name),
-          tx2:
-            name_tx(:name_update_tx, :alice, name, %{
-              pointers: [{:pointer, non_string_pointer_key, :celia}]
-            })
-        ] do
-        %{txs: [tx1, tx2]} = blocks[:mb]
-        {:id, :account, celia_pk} = accounts[:celia]
-        celia_id = encode(:account_pubkey, celia_pk)
+      tx_hash = :crypto.strong_rand_bytes(32)
 
+      with_mocks [
+        {AeMdw.Node, [:passthrough],
+         [
+           id_type: fn :account -> :account_pubkey end
+         ]},
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           get_tx_data: fn ^tx_hash ->
+             {:ok, name_hash} = :aens.get_name_hash(name)
+
+             {:ok, aetx} =
+               :aens_update_tx.new(%{
+                 account_id: :aeser_id.create(:account, <<2::256>>),
+                 nonce: 1,
+                 name_id: :aeser_id.create(:name, name_hash),
+                 name_ttl: 1_000,
+                 pointers: [{:pointer, non_string_pointer_key, pointer_id}],
+                 client_ttl: 1_000,
+                 fee: 5_000
+               })
+
+             {_mod, tx_rec} = :aetx.specialize_type(aetx)
+             {nil, :name_update_tx, nil, tx_rec}
+           end
+         ]}
+      ] do
         store =
           NullStore.new()
           |> MemStore.new()
           |> Store.put(
             Model.Tx,
-            Model.tx(index: 1, id: :aetx_sign.hash(tx1), block_index: {1, 1})
-          )
-          |> Store.put(
-            Model.Tx,
-            Model.tx(index: 2, id: :aetx_sign.hash(tx2), block_index: {1, 1})
+            Model.tx(index: 2, id: tx_hash, block_index: {1, 1})
           )
 
         assert pointers =
@@ -58,7 +70,7 @@ defmodule AeMdw.Db.NameTest do
                  )
 
         assert pointers == %{
-                 non_string_pointer_key_list => celia_id
+                 non_string_pointer_key_list => Format.enc_id(pointer_id)
                }
 
         assert {:ok, _} = Phoenix.json_library().encode(pointers)

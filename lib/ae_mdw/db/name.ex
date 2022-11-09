@@ -144,7 +144,7 @@ defmodule AeMdw.Db.Name do
       end
 
     pointers
-    |> Enum.map(&pointer_kv_raw/1)
+    |> Enum.into(%{}, &pointer_kv_raw/1)
     |> Format.encode_pointers()
   end
 

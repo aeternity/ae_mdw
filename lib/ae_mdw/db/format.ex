@@ -91,9 +91,16 @@ defmodule AeMdw.Db.Format do
     }
   end
 
-  @spec encode_pointers(list()) :: %{iodata() => String.t()}
-  def encode_pointers(pointers) do
+  @spec encode_pointers(list() | map()) :: %{iodata() => String.t()}
+  def encode_pointers(pointers) when is_map(pointers) do
     Enum.into(pointers, %{}, fn {key, id} -> {maybe_to_list(key), enc_id(id)} end)
+  end
+
+  def encode_pointers(pointers) do
+    Enum.map(pointers, fn
+      %{"key" => key, "id" => id} -> %{"key" => maybe_to_list(key), "id" => id}
+      %{key: key, id: id} -> %{key: maybe_to_list(key), id: id}
+    end)
   end
 
   @spec enc_id(aeser_id() | nil) :: binary() | nil
@@ -146,14 +153,9 @@ defmodule AeMdw.Db.Format do
   end
 
   defp custom_raw_data(state, :name_update_tx, tx, tx_rec, _signed_tx, _block_hash) do
-    pointers =
-      tx
-      |> get_in([:tx, :pointers])
-      |> Enum.map(fn %{key: key, id: id} -> %{key: maybe_to_list(key), id: id} end)
-
     tx
     |> put_in([:tx, :name], Name.plain_name!(state, :aens_update_tx.name_hash(tx_rec)))
-    |> put_in([:tx, :pointers], pointers)
+    |> update_in([:tx, :pointers], &encode_pointers/1)
   end
 
   defp custom_raw_data(state, :name_transfer_tx, tx, tx_rec, _signed_tx, _block_hash),
@@ -209,8 +211,8 @@ defmodule AeMdw.Db.Format do
       )
 
     raw_map
-    |> put_in([:auction], auction)
-    |> update_in([:info, :ownership], &raw_to_json/1)
+    |> raw_to_json()
+    |> put_in(["auction"], auction)
   end
 
   def to_map(state, {call_txi, local_idx}, Model.IntContractCall) do
@@ -271,9 +273,9 @@ defmodule AeMdw.Db.Format do
   def to_map(state, name, source, true = _expand)
       when source in [Model.ActiveName, Model.InactiveName] do
     to_map(state, name, source)
-    |> update_in([:auction], &expand_name_auction(state, &1))
-    |> update_in([:info], &expand_name_info(state, &1))
-    |> update_in([:previous], fn prevs -> Enum.map(prevs, &expand_name_info(state, &1)) end)
+    |> update_in(["auction"], &expand_name_auction(state, &1))
+    |> update_in(["info"], &expand_name_info(state, &1))
+    |> update_in(["previous"], fn prevs -> Enum.map(prevs, &expand_name_info(state, &1)) end)
   end
 
   def to_map(state, bid, Model.AuctionBid, true = _expand) do
@@ -373,14 +375,9 @@ defmodule AeMdw.Db.Format do
   end
 
   defp custom_encode(state, :name_update_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
-    pointers =
-      tx
-      |> Map.get("pointers")
-      |> Enum.map(fn %{"key" => key, "id" => id} -> %{"key" => maybe_to_list(key), "id" => id} end)
-
     tx
-    |> Map.put("name", Name.plain_name!(state, :aens_update_tx.name_hash(tx_rec)))
-    |> Map.put("pointers", pointers)
+    |> put_in(["name"], Name.plain_name!(state, :aens_update_tx.name_hash(tx_rec)))
+    |> update_in(["pointers"], &encode_pointers/1)
   end
 
   defp custom_encode(state, :name_transfer_tx, tx, tx_rec, _signed_tx, _txi, _block_hash),
@@ -398,6 +395,14 @@ defmodule AeMdw.Db.Format do
       (String.valid?(dec) && dec) || bin
     rescue
       _ -> :erlang.binary_to_list(bin)
+    end
+  end
+
+  defp maybe_to_list(bin) do
+    if String.valid?(bin) do
+      bin
+    else
+      :erlang.binary_to_list(bin)
     end
   end
 
@@ -467,14 +472,6 @@ defmodule AeMdw.Db.Format do
             []
         end
     }
-  end
-
-  defp maybe_to_list(bin) do
-    if String.valid?(bin) do
-      bin
-    else
-      :erlang.binary_to_list(bin)
-    end
   end
 
   defp expand_name_auction(_state, nil), do: nil
