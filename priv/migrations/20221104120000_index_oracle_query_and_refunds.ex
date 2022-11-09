@@ -53,23 +53,32 @@ defmodule AeMdw.Migrations.IndexOracleQueryAndRefunds do
           if Map.has_key?(queries, {oracle_pk, query_id}) do
             encoded_oracle_pk = :aeser_api_encoder.encode(:oracle_pubkey, oracle_pk)
             encoded_query_id = :aeser_api_encoder.encode(:oracle_query_id, query_id)
-            raise "Adding a duplicated query #{encoded_query_id} from oracle #{encoded_oracle_pk}"
+
+            IO.puts(
+              "Adding a duplicated query #{encoded_query_id} from oracle #{encoded_oracle_pk} at txi #{txi}"
+            )
+
+            queries
+          else
+            Map.put(queries, {oracle_pk, query_id}, {txi, sender_pk, expiration_height, fee})
           end
 
-          Map.put(queries, {oracle_pk, query_id}, {txi, sender_pk, expiration_height, fee})
-
-        {_height, _txi, _local_idx, :oracle_response_tx, tx}, queries ->
+        {_height, txi, _local_idx, :oracle_response_tx, tx}, queries ->
           oracle_pk = :aeo_response_tx.oracle_pubkey(tx)
           query_id = :aeo_response_tx.query_id(tx)
 
-          if not Map.has_key?(queries, {oracle_pk, query_id}) do
+          if Map.has_key?(queries, {oracle_pk, query_id}) do
+            Map.delete(queries, {oracle_pk, query_id})
+          else
             encoded_oracle_pk = :aeser_api_encoder.encode(:oracle_pubkey, oracle_pk)
             encoded_query_id = :aeser_api_encoder.encode(:oracle_query_id, query_id)
 
-            raise "Trying to delete a non-existing query #{encoded_query_id} from oracle #{encoded_oracle_pk}"
-          end
+            IO.puts(
+              "Trying to delete a non-existing query #{encoded_query_id} from oracle #{encoded_oracle_pk} at txi #{txi}"
+            )
 
-          Map.delete(queries, {oracle_pk, query_id})
+            queries
+          end
       end)
       |> Enum.flat_map(fn
         {{_oracle_pk, _query_id}, {txi, sender_pk, expiration_height, fee}}
