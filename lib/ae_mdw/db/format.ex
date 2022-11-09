@@ -93,21 +93,19 @@ defmodule AeMdw.Db.Format do
 
   @spec encode_pointers(list() | map()) :: %{iodata() => String.t()}
   def encode_pointers(pointers) when is_map(pointers) do
-    Enum.into(pointers, %{}, fn {key, id} -> {maybe_encode_base64(key), enc_id(id)} end)
+    Enum.into(pointers, %{}, fn {key, id} -> {maybe_base64_pointer_key(key), enc_id(id)} end)
   end
 
   def encode_pointers(pointers) do
     Enum.map(pointers, fn
-      %{"key" => key, "id" => id} -> %{"key" => maybe_encode_base64(key), "id" => id}
-      %{key: key, id: id} -> %{key: maybe_encode_base64(key), id: id}
+      %{"key" => key, "id" => id} -> %{"key" => maybe_base64_pointer_key(key), "id" => id}
+      %{key: key, id: id} -> %{key: maybe_base64_pointer_key(key), id: id}
     end)
   end
 
-  @spec enc_id(aeser_id() | nil) :: binary() | nil
+  @spec enc_id(aeser_id() | nil) :: nil | String.t()
   def enc_id(nil), do: nil
-
-  def enc_id({:id, idtype, payload}),
-    do: Enc.encode(AE.id_type(idtype), payload)
+  def enc_id({:id, _type, _pk} = id), do: Enc.encode(:id_hash, id)
 
   defp custom_raw_data(_state, :contract_create_tx, tx, tx_rec, _signed_tx, block_hash) do
     init_call_details = Contract.get_init_call_details(tx_rec, block_hash)
@@ -389,13 +387,11 @@ defmodule AeMdw.Db.Format do
   defp custom_encode(_state, _tx_type, tx, _tx_rec, _signed_tx, _txi, _block_hash),
     do: tx
 
-  defp maybe_encode_base64(bin) do
-    if String.valid?(bin) do
-      bin
-    else
-      Base.encode64(bin)
-    end
-  end
+  defp maybe_base64_pointer_key(key)
+       when key in ["account_pubkey", "oracle_pubkey", "contract_pubkey", "channel_pubkey"],
+       do: key
+
+  defp maybe_base64_pointer_key(key), do: Base.encode64(key)
 
   defp maybe_base64(bin) do
     try do
