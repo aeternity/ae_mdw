@@ -91,6 +91,21 @@ defmodule AeMdw.Db.Format do
     }
   end
 
+  @spec maybe_to_list(binary()) :: iodata()
+  def maybe_to_list(bin) do
+    if String.valid?(bin) do
+      bin
+    else
+      :erlang.binary_to_list(bin)
+    end
+  end
+
+  @spec enc_id(aeser_id() | nil) :: binary() | nil
+  def enc_id(nil), do: nil
+
+  def enc_id({:id, idtype, payload}),
+    do: Enc.encode(AE.id_type(idtype), payload)
+
   defp custom_raw_data(_state, :contract_create_tx, tx, tx_rec, _signed_tx, block_hash) do
     init_call_details = Contract.get_init_call_details(tx_rec, block_hash)
 
@@ -139,6 +154,7 @@ defmodule AeMdw.Db.Format do
       tx
       |> get_in([:tx, :pointers])
       |> Enum.map(fn %{key: key, id: id} -> %{key: maybe_to_list(key), id: id} end)
+      |> IO.inspect()
 
     tx
     |> put_in([:tx, :name], Name.plain_name!(state, :aens_update_tx.name_hash(tx_rec)))
@@ -366,6 +382,7 @@ defmodule AeMdw.Db.Format do
       tx
       |> Map.get("pointers")
       |> Enum.map(fn %{"key" => key, "id" => id} -> %{"key" => maybe_to_list(key), "id" => id} end)
+      |> IO.inspect()
 
     tx
     |> Map.put("name", Name.plain_name!(state, :aens_update_tx.name_hash(tx_rec)))
@@ -389,20 +406,6 @@ defmodule AeMdw.Db.Format do
       _ -> :erlang.binary_to_list(bin)
     end
   end
-
-  defp maybe_to_list(bin) do
-    if String.valid?(bin) do
-      bin
-    else
-      :erlang.binary_to_list(bin)
-    end
-  end
-
-  @spec enc_id(aeser_id() | nil) :: binary() | nil
-  def enc_id(nil), do: nil
-
-  def enc_id({:id, idtype, payload}),
-    do: Enc.encode(AE.id_type(idtype), payload)
 
   defp raw_to_json(x),
     do: map_raw_values(x, &to_json/1)

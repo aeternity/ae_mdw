@@ -441,7 +441,7 @@ defmodule AeMdw.Names do
   defp render_pointers(state, name) do
     state
     |> Name.pointers(name)
-    |> Enum.map(fn {key, id} -> {key, Format.enc_id(id)} end)
+    |> Enum.map(fn {key, id} -> {Format.maybe_to_list(key), Format.enc_id(id)} end)
     |> Enum.into(%{})
   end
 
