@@ -340,6 +340,23 @@ defmodule AeMdwWeb.TxControllerTest do
                |> json_response(200)
     end
 
+    test "when filtering by tx_type, it displays type_count number", %{conn: conn, store: store} do
+      count = 102
+
+      store =
+        Store.put(
+          store,
+          Model.TypeCount,
+          Model.type_count(index: :oracle_register_tx, count: count)
+        )
+
+      assert ^count =
+               conn
+               |> with_store(store)
+               |> get("/txs/count", tx_type: "oracle_register")
+               |> json_response(200)
+    end
+
     test "when filtering by id, it displays the total count for that address", %{
       conn: conn,
       store: store
