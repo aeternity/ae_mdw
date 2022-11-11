@@ -18,6 +18,7 @@ defmodule AeMdw.Db.Name do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Format
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.InnerTx
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Names
   alias AeMdw.Validate
@@ -186,6 +187,16 @@ defmodule AeMdw.Db.Name do
             name_hash == :aens_transfer_tx.name_hash(tx)
           end)
           |> :aens_transfer_tx.account_id()
+
+        {_block_hash, tx_type, _signed_tx, tx_rec}
+        when tx_type in [:ga_meta_tx, :paying_for_tx] ->
+          {_mod, tx_rec} =
+            tx_type
+            |> InnerTx.signed_tx(tx_rec)
+            |> :aetx_sign.tx()
+            |> :aetx.specialize_callback()
+
+          :aens_claim_tx.account_id(tx_rec)
       end
 
     %{original: orig_owner, current: :aeser_id.create(:account, owner)}

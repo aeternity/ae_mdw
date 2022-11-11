@@ -19,7 +19,7 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdw.TestSamples, as: TS
   alias AeMdw.Txs
 
-  import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, name_tx: 3]
+  import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, name_tx: 3, tx: 3]
 
   import Mock
 
@@ -1360,6 +1360,128 @@ defmodule AeMdwWeb.NameControllerTest do
                  conn
                  |> with_store(store)
                  |> get("/v2/names/#{name}")
+                 |> json_response(200)
+      end
+    end
+
+    test "get name claimed with ga_meta_tx", %{conn: conn, store: store} do
+      buyer_pk = TS.address(0)
+      owner_pk = TS.address(1)
+      buyer_id = encode(:account_pubkey, buyer_pk)
+      owner_id = encode(:account_pubkey, owner_pk)
+      plain_name = "gametaclaimed.chain"
+
+      {:ok, name_claim_tx} =
+        :aens_claim_tx.new(%{
+          account_id: :aeser_id.create(:account, buyer_pk),
+          nonce: 1,
+          name: plain_name,
+          name_salt: 123_456,
+          fee: 5_000
+        })
+
+      with_blockchain %{ga: 1_000},
+        mb: [
+          ga_tx: tx(:ga_meta_tx, :ga, %{tx: :aetx_sign.new(name_claim_tx, [])})
+        ] do
+        %{txs: [tx]} = blocks[:mb]
+
+        store =
+          store
+          |> Store.put(
+            Model.ActiveName,
+            Model.name(
+              index: plain_name,
+              owner: owner_pk,
+              active: 10,
+              claims: [{{1, 1}, 1}],
+              transfers: [{{1, 1}, 2}],
+              expire: 10_000
+            )
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 1, id: :aetx_sign.hash(tx), block_index: {1, 1})
+          )
+
+        assert %{
+                 "name" => ^plain_name,
+                 "active" => true,
+                 "auction" => nil,
+                 "info" => %{
+                   "ownership" => %{"current" => ^owner_id, "original" => ^buyer_id},
+                   "revoke" => nil,
+                   "transfers" => [2],
+                   "updates" => [],
+                   "claims" => [1]
+                 },
+                 "previous" => [],
+                 "status" => "name"
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/names/#{plain_name}")
+                 |> json_response(200)
+      end
+    end
+
+    test "get name claimed with paying_for_tx", %{conn: conn, store: store} do
+      buyer_pk = TS.address(2)
+      owner_pk = TS.address(3)
+      buyer_id = encode(:account_pubkey, buyer_pk)
+      owner_id = encode(:account_pubkey, owner_pk)
+      plain_name = "payinforclaimed.chain"
+
+      {:ok, name_claim_tx} =
+        :aens_claim_tx.new(%{
+          account_id: :aeser_id.create(:account, buyer_pk),
+          nonce: 1,
+          name: plain_name,
+          name_salt: 123_456,
+          fee: 5_000
+        })
+
+      with_blockchain %{pf: 1_000},
+        mb: [
+          pf_tx: tx(:paying_for_tx, :pf, %{tx: :aetx_sign.new(name_claim_tx, [])})
+        ] do
+        %{txs: [tx]} = blocks[:mb]
+
+        store =
+          store
+          |> Store.put(
+            Model.ActiveName,
+            Model.name(
+              index: plain_name,
+              owner: owner_pk,
+              active: 10,
+              claims: [{{1, 1}, 1}],
+              transfers: [{{1, 1}, 2}],
+              expire: 10_000
+            )
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 1, id: :aetx_sign.hash(tx), block_index: {1, 1})
+          )
+
+        assert %{
+                 "name" => ^plain_name,
+                 "active" => true,
+                 "auction" => nil,
+                 "info" => %{
+                   "ownership" => %{"current" => ^owner_id, "original" => ^buyer_id},
+                   "revoke" => nil,
+                   "transfers" => [2],
+                   "updates" => [],
+                   "claims" => [1]
+                 },
+                 "previous" => [],
+                 "status" => "name"
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/names/#{plain_name}")
                  |> json_response(200)
       end
     end
