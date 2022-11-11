@@ -77,7 +77,7 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
          },
          %{channels: channels} = state
        )
-       when prefix_key in @known_prefixes and byte_size(rest) >= 38 and byte_size(rest) <= 60 do
+       when prefix_key in @known_prefixes and byte_size(rest) >= 37 and byte_size(rest) <= 60 do
     if target in channels do
       reply_error("already subscribed to target", target, state)
     else
