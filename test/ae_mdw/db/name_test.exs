@@ -98,7 +98,7 @@ defmodule AeMdw.Db.NameTest do
                  name_id: :aeser_id.create(:name, name_hash),
                  name_ttl: 1_000,
                  pointers: [
-                   {:pointer, "channel_pubkey", channel_id},
+                   {:pointer, "channel", channel_id},
                    {:pointer, custom_string_pointer_key, pointer_id}
                  ],
                  client_ttl: 1_000,
@@ -120,7 +120,7 @@ defmodule AeMdw.Db.NameTest do
 
         pointers_map = %{
           custom_string_pointer_key64 => Format.enc_id(pointer_id),
-          "channel_pubkey" => Format.enc_id(channel_id)
+          "channel" => Format.enc_id(channel_id)
         }
 
         assert ^pointers_map =

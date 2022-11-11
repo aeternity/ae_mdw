@@ -388,7 +388,7 @@ defmodule AeMdw.Db.Format do
     do: tx
 
   defp maybe_base64_pointer_key(key)
-       when key in ["account_pubkey", "oracle_pubkey", "contract_pubkey", "channel_pubkey"],
+       when key in ["account_pubkey", "oracle_pubkey", "contract_pubkey", "channel"],
        do: key
 
   defp maybe_base64_pointer_key(key), do: Base.encode64(key)
