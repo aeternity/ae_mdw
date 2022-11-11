@@ -145,7 +145,6 @@ defmodule AeMdw.MixProject do
       {:jason, "~> 1.4"},
       {:poison, "~> 5.0"},
       {:plug_cowboy, "~> 2.5"},
-      {:riverside, "~> 2.2.1"},
       {:websockex, "~> 0.4.3"},
       {:temp, "~> 0.4"},
       {:tesla, "~> 1.3.0"},

@@ -172,10 +172,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   end
 
   defp broadcast(channel, msg) do
-    Riverside.LocalDelivery.deliver(
-      {:channel, channel},
-      {:text, msg}
-    )
+    AeMdwWeb.Websocket.SocketHandler.channel_broadcast(channel, msg)
   end
 
   defp encode_message(payload, "Transactions", source),
@@ -258,7 +255,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     |> Enum.uniq()
   end
 
-  defp already_processed?(type_hash), do: EtsCache.get(@hashes_table, type_hash) != nil
+  defp already_processed?(type_hash), do: EtsCache.member(@hashes_table, type_hash)
 
   defp push_hash(type_hash), do: EtsCache.put(@hashes_table, type_hash, :ok)
 end

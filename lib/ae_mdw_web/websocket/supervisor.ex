@@ -13,8 +13,7 @@ defmodule AeMdwWeb.Websocket.Supervisor do
 
     children = [
       AeMdwWeb.Websocket.Broadcaster,
-      AeMdwWeb.Websocket.ChainListener,
-      {Riverside, [handler: AeWebsocket.Websocket.SocketHandler]}
+      AeMdwWeb.Websocket.ChainListener
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

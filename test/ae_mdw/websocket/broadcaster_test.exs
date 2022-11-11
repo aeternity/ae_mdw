@@ -4,13 +4,13 @@ defmodule AeMdw.Websocket.BroadcasterTest do
   alias AeMdwWeb.Websocket.Broadcaster
   alias Support.WsClient
 
-  import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, spend_tx: 3]
+  import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, spend_tx: 3, name_tx: 3]
   import Mock
 
   setup_all do
     clients =
       for _i <- 1..12 do
-        {:ok, client} = WsClient.start_link("ws://localhost:4001/websocket")
+        {:ok, client} = WsClient.start_link("ws://localhost:4003/websocket")
         client
       end
 
@@ -68,25 +68,194 @@ defmodule AeMdw.Websocket.BroadcasterTest do
     end
 
     test "broadcasts node and mdw objects only once", %{clients: clients} do
-      with_blockchain %{alice: 10_000, bob: 5_000, charlie: 4_000, nakamoto: 1_000_000},
+      plain_name = "nakamotodesu.chain"
+      {:ok, name_hash} = :aens.get_name_hash(plain_name)
+
+      with_blockchain %{alice: 10_000, bob: 5_000, charlie: 9_000, nakamoto: 1_000_000},
         mb0: [
-          t0: spend_tx(:alice, :bob, 2_000)
+          tx0: spend_tx(:alice, :bob, 100)
         ],
         mb1: [
-          t1: spend_tx(:bob, :charlie, 3_000),
-          t2: spend_tx(:bob, :alice, 1_000),
-          t3: spend_tx(:alice, :charlie, 3_000)
+          tx1: spend_tx(:bob, :alice, 1_000),
+          tx2: spend_tx(:charlie, :bob, 2_000),
+          tx3: spend_tx(:alice, :charlie, 3_000)
         ],
         mb2: [
-          t4: spend_tx(:charlie, :nakamoto, 4_000)
+          tx4: name_tx(:name_claim_tx, :nakamoto, plain_name),
+          tx5: name_tx(:name_update_tx, :nakamoto, plain_name),
+          tx6: spend_tx(:nakamoto, :charlie, 6_000)
+        ],
+        mb3: [
+          tx7: spend_tx(:bob, :nakamoto, 7_000)
+        ],
+        mb4: [
+          tx8: spend_tx(:charlie, {:id, :name, name_hash}, 8_000)
         ] do
         {:id, :account, alice_pk} = accounts[:alice]
         alice_id = encode(:account_pubkey, alice_pk)
+        name_id = encode(:name, name_hash)
 
-        clients
-        |> Enum.drop(9)
-        |> Enum.take(3)
-        |> assert_receive_objects(blocks, alice_id)
+        clients = clients |> Enum.drop(9) |> Enum.take(3)
+
+        Enum.each(clients, fn client ->
+          WsClient.subscribe(client, alice_id)
+          WsClient.subscribe(client, name_id)
+        end)
+
+        assert_websocket_receive(clients, :subs, [name_id, alice_id])
+
+        %{hash: mb_hash, height: 0, block: block0, txs: [tx0]} = blocks[:mb0]
+        tx_hash0 = encode(:tx_hash, :aetx_sign.hash(tx0))
+
+        expected_msg = %{
+          "payload" => %{
+            "tx" => %{
+              "type" => "SpendTx",
+              "amount" => 100,
+              "sender_id" => alice_id
+            },
+            "hash" => tx_hash0,
+            "block_height" => 0,
+            "block_hash" => mb_hash
+          },
+          "subscription" => "Object"
+        }
+
+        Broadcaster.broadcast_txs(block0, :node)
+
+        assert_websocket_receive(clients, :objs, [
+          Map.put(expected_msg, "source", "node")
+        ])
+
+        Broadcaster.broadcast_txs(block0, :mdw)
+
+        assert_websocket_receive(clients, :objs, [
+          Map.put(expected_msg, "source", "mdw")
+        ])
+
+        %{hash: mb_hash, height: 1, block: block1, txs: [tx1, _tx2, tx3]} = blocks[:mb1]
+        tx_hash1 = encode(:tx_hash, :aetx_sign.hash(tx1))
+        tx_hash3 = encode(:tx_hash, :aetx_sign.hash(tx3))
+
+        expected_msg1 = %{
+          "payload" => %{
+            "tx" => %{
+              "type" => "SpendTx",
+              "amount" => 1_000,
+              "recipient_id" => alice_id
+            },
+            "hash" => tx_hash1,
+            "block_height" => 1,
+            "block_hash" => mb_hash
+          },
+          "source" => "node",
+          "subscription" => "Object"
+        }
+
+        expected_msg2 = %{
+          "payload" => %{
+            "tx" => %{
+              "type" => "SpendTx",
+              "amount" => 3_000,
+              "sender_id" => alice_id
+            },
+            "hash" => tx_hash3,
+            "block_height" => 1,
+            "block_hash" => mb_hash
+          },
+          "source" => "node",
+          "subscription" => "Object"
+        }
+
+        Broadcaster.broadcast_txs(block1, :node)
+
+        assert_websocket_receive(clients, :objs, [
+          Map.put(expected_msg1, "source", "node"),
+          Map.put(expected_msg2, "source", "node")
+        ])
+
+        Broadcaster.broadcast_txs(block1, :mdw)
+
+        assert_websocket_receive(clients, :objs, [
+          Map.put(expected_msg1, "source", "mdw"),
+          Map.put(expected_msg2, "source", "mdw")
+        ])
+
+        %{hash: mb_hash, height: 2, block: block2, txs: [_tx4, tx5, _tx6]} = blocks[:mb2]
+        tx_hash5 = encode(:tx_hash, :aetx_sign.hash(tx5))
+
+        expected_msg = %{
+          "payload" => %{
+            "tx" => %{
+              "type" => "NameUpdateTx",
+              "name_id" => name_id
+            },
+            "hash" => tx_hash5,
+            "block_height" => 2,
+            "block_hash" => mb_hash
+          },
+          "subscription" => "Object"
+        }
+
+        Broadcaster.broadcast_txs(block2, :node)
+
+        assert_websocket_receive(clients, :objs, [
+          Map.put(expected_msg, "source", "node")
+        ])
+
+        Broadcaster.broadcast_txs(block2, :mdw)
+
+        assert_websocket_receive(clients, :objs, [
+          Map.put(expected_msg, "source", "mdw")
+        ])
+
+        %{hash: _mb_hash3, height: 3, block: block3, txs: [_tx7]} = blocks[:mb3]
+        Broadcaster.broadcast_txs(block3, :node)
+        assert_websocket_receive(clients, :objs, [])
+
+        %{hash: mb_hash, height: 4, block: block4, txs: [tx8]} = blocks[:mb4]
+        tx_hash8 = encode(:tx_hash, :aetx_sign.hash(tx8))
+
+        expected_msg = %{
+          "payload" => %{
+            "tx" => %{
+              "type" => "SpendTx",
+              "amount" => 8_000,
+              "recipient_id" => name_id
+            },
+            "hash" => tx_hash8,
+            "block_height" => 4,
+            "block_hash" => mb_hash
+          },
+          "subscription" => "Object"
+        }
+
+        Broadcaster.broadcast_txs(block4, :node)
+
+        assert_websocket_receive(clients, :objs, [
+          Map.put(expected_msg, "source", "node")
+        ])
+
+        Broadcaster.broadcast_txs(block4, :mdw)
+
+        assert_websocket_receive(clients, :objs, [
+          Map.put(expected_msg, "source", "mdw")
+        ])
+
+        Broadcaster.broadcast_txs(block0, :node)
+        assert_websocket_receive(clients, :objs, [])
+
+        Broadcaster.broadcast_txs(block1, :mdw)
+        assert_websocket_receive(clients, :objs, [])
+
+        Broadcaster.broadcast_txs(block2, :node)
+        assert_websocket_receive(clients, :objs, [])
+
+        Broadcaster.broadcast_txs(block3, :mdw)
+        assert_websocket_receive(clients, :objs, [])
+
+        Broadcaster.broadcast_txs(block4, :mdw)
+        assert_websocket_receive(clients, :objs, [])
       end
     end
   end
@@ -320,137 +489,6 @@ defmodule AeMdw.Websocket.BroadcasterTest do
     assert_websocket_receive(clients, :txs, [])
   end
 
-  defp assert_receive_objects(clients, blocks, object_id) do
-    Enum.each(clients, &WsClient.subscribe(&1, object_id))
-    assert_websocket_receive(clients, :subs, [object_id])
-
-    %{hash: mb_hash0, height: 0, block: block0, txs: [tx0]} = blocks[:mb0]
-    %{hash: mb_hash1, height: 1, block: block1, txs: [_tx1, tx2, tx3]} = blocks[:mb1]
-    %{hash: _mb_hash2, height: 2, block: block2, txs: [_tx4]} = blocks[:mb2]
-    tx_hash0 = encode(:tx_hash, :aetx_sign.hash(tx0))
-    tx_hash2 = encode(:tx_hash, :aetx_sign.hash(tx2))
-    tx_hash3 = encode(:tx_hash, :aetx_sign.hash(tx3))
-
-    Broadcaster.broadcast_txs(block0, :node)
-
-    assert_websocket_receive(clients, :objs, [
-      %{
-        "payload" => %{
-          "tx" => %{
-            "type" => "SpendTx",
-            "amount" => 2_000,
-            "sender_id" => object_id
-          },
-          "hash" => tx_hash0,
-          "block_height" => 0,
-          "block_hash" => mb_hash0
-        },
-        "source" => "node",
-        "subscription" => "Object"
-      }
-    ])
-
-    Enum.each(clients, &WsClient.delete_objects/1)
-    Broadcaster.broadcast_txs(block1, :node)
-
-    assert_websocket_receive(clients, :objs, [
-      %{
-        "payload" => %{
-          "tx" => %{
-            "type" => "SpendTx",
-            "amount" => 1_000,
-            "recipient_id" => object_id
-          },
-          "hash" => tx_hash2,
-          "block_height" => 1,
-          "block_hash" => mb_hash1
-        },
-        "source" => "node",
-        "subscription" => "Object"
-      },
-      %{
-        "payload" => %{
-          "tx" => %{
-            "type" => "SpendTx",
-            "amount" => 3_000,
-            "sender_id" => object_id
-          },
-          "hash" => tx_hash3,
-          "block_height" => 1,
-          "block_hash" => mb_hash1
-        },
-        "source" => "node",
-        "subscription" => "Object"
-      }
-    ])
-
-    Enum.each(clients, &WsClient.delete_objects/1)
-    Broadcaster.broadcast_txs(block2, :node)
-    assert_websocket_receive(clients, :objs, [])
-
-    Enum.each(clients, &WsClient.delete_objects/1)
-    Broadcaster.broadcast_txs(block0, :mdw)
-
-    assert_websocket_receive(clients, :objs, [
-      %{
-        "payload" => %{
-          "tx" => %{
-            "type" => "SpendTx",
-            "amount" => 2_000,
-            "sender_id" => object_id
-          },
-          "hash" => tx_hash0,
-          "block_height" => 0,
-          "block_hash" => mb_hash0
-        },
-        "source" => "mdw",
-        "subscription" => "Object"
-      }
-    ])
-
-    Enum.each(clients, &WsClient.delete_objects/1)
-    Broadcaster.broadcast_txs(block1, :mdw)
-
-    assert_websocket_receive(clients, :objs, [
-      %{
-        "payload" => %{
-          "tx" => %{
-            "type" => "SpendTx",
-            "amount" => 1_000,
-            "recipient_id" => object_id
-          },
-          "hash" => tx_hash2,
-          "block_height" => 1,
-          "block_hash" => mb_hash1
-        },
-        "source" => "mdw",
-        "subscription" => "Object"
-      },
-      %{
-        "payload" => %{
-          "tx" => %{
-            "type" => "SpendTx",
-            "amount" => 3_000,
-            "sender_id" => object_id
-          },
-          "hash" => tx_hash3,
-          "block_height" => 1,
-          "block_hash" => mb_hash1
-        },
-        "source" => "mdw",
-        "subscription" => "Object"
-      }
-    ])
-
-    Enum.each(clients, &WsClient.delete_objects/1)
-    Broadcaster.broadcast_txs(block0, :node)
-    assert_websocket_receive(clients, :objs, [])
-
-    Enum.each(clients, &WsClient.delete_objects/1)
-    Broadcaster.broadcast_txs(block1, :mdw)
-    assert_websocket_receive(clients, :objs, [])
-  end
-
   defp assert_websocket_receive(clients, key, [
          %{"payload" => %{"tx" => tx1} = payload1} = msg1,
          %{"payload" => %{"tx" => tx2} = payload2} = msg2
@@ -481,6 +519,8 @@ defmodule AeMdw.Websocket.BroadcasterTest do
       end)
     end)
     |> Task.await_many()
+
+    if key == :objs, do: Enum.each(clients, &WsClient.delete_objects/1)
   end
 
   defp assert_websocket_receive(clients, key, %{"payload" => payload} = msg) do
@@ -498,7 +538,8 @@ defmodule AeMdw.Websocket.BroadcasterTest do
     |> Task.await_many()
   end
 
-  defp assert_websocket_receive(clients, key, [%{"payload" => %{"tx" => tx} = payload} = msg]) do
+  defp assert_websocket_receive(clients, key, [%{"payload" => %{"tx" => tx} = payload} = msg])
+       when key in [:txs, :objs] do
     msg_without_payload = Map.delete(msg, "payload")
     payload_without_tx = Map.delete(payload, "tx")
 
@@ -513,6 +554,8 @@ defmodule AeMdw.Websocket.BroadcasterTest do
       end)
     end)
     |> Task.await_many()
+
+    if key == :objs, do: Enum.each(clients, &WsClient.delete_objects/1)
   end
 
   defp assert_websocket_receive(clients, key, list) when is_list(list) do

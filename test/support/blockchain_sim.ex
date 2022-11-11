@@ -329,10 +329,16 @@ defmodule AeMdwWeb.BlockchainSim do
     end
   end
 
-  defp create_aetx({:spend_tx, sender_name, recipient_name, amount}, accounts) do
+  defp create_aetx({:spend_tx, sender_name, recipient, amount}, accounts) do
+    recipient_id =
+      case recipient do
+        {:id, _type, _pk} = id -> id
+        recipient_name -> Map.fetch!(accounts, recipient_name)
+      end
+
     :aec_spend_tx.new(%{
       sender_id: Map.fetch!(accounts, sender_name),
-      recipient_id: Map.fetch!(accounts, recipient_name),
+      recipient_id: recipient_id,
       amount: amount,
       fee: 0,
       nonce: 1,

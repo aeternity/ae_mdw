@@ -13,5 +13,9 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   http: [port: 4002],
   server: false
 
+config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
+  http: [port: 4003],
+  server: true
+
 # Log warnings
 config :logger, level: :warn
