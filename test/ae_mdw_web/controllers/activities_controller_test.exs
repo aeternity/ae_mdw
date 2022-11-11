@@ -668,6 +668,162 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       refute is_nil(prev_url)
     end
 
+    test "when the account is a name hash, it includes all the name claims", %{conn: conn} do
+      plain_name = "asd.chain"
+      name_hash = :aens_hash.name_hash(plain_name)
+      height1 = 398
+      height2 = 399
+      txi1 = 123
+      txi2 = 456
+      txi3 = 789
+      encoded_name_hash = Enc.encode(:name, name_hash)
+      account_pk = TS.address(0)
+      account = Enc.encode(:account_pubkey, account_pk)
+      account_id = :aeser_id.create(:account, account_pk)
+      tx_hash1 = "txhash1"
+      tx_hash2 = "txhash2"
+      tx_hash3 = "txhash3"
+
+      {:ok, aetx1} =
+        :aens_claim_tx.new(%{
+          account_id: account_id,
+          nonce: 111,
+          name: plain_name,
+          name_salt: 111,
+          name_fee: 111,
+          fee: 111,
+          ttl: 111
+        })
+
+      {:name_claim_tx, tx1} = :aetx.specialize_type(aetx1)
+
+      {:ok, aetx2} =
+        :aens_claim_tx.new(%{
+          account_id: account_id,
+          nonce: 222,
+          name: plain_name,
+          name_salt: 222,
+          name_fee: 222,
+          fee: 222,
+          ttl: 222
+        })
+
+      {:name_claim_tx, tx2} = :aetx.specialize_type(aetx2)
+
+      {:ok, aetx3} =
+        :aens_claim_tx.new(%{
+          account_id: account_id,
+          nonce: 333,
+          name: plain_name,
+          name_salt: 333,
+          name_fee: 333,
+          fee: 333,
+          ttl: 333
+        })
+
+      {:name_claim_tx, tx3} = :aetx.specialize_type(aetx3)
+
+      name =
+        Model.name(
+          index: plain_name,
+          claims: [{{height2, 0}, txi3}, {{height2, 0}, txi2}],
+          updates: [],
+          transfers: [],
+          previous: Model.name(claims: [{{height1, 0}, txi1}])
+        )
+
+      store =
+        empty_store()
+        |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: plain_name))
+        |> Store.put(Model.ActiveName, name)
+        |> Store.put(Model.Tx, Model.tx(index: txi1, block_index: {height1, 0}, id: tx_hash1))
+        |> Store.put(Model.Tx, Model.tx(index: txi2, block_index: {height2, 0}, id: tx_hash2))
+        |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height2, 0}, id: tx_hash3))
+        |> Store.put(Model.Block, Model.block(index: {height1, 0}, hash: "bhash1"))
+        |> Store.put(Model.Block, Model.block(index: {height2, 0}, hash: "bhash2"))
+
+      with_mocks [
+        {Db, [],
+         [
+           get_tx_data: fn
+             ^tx_hash1 ->
+               {"", :name_claim_tx, :aetx_sign.new(aetx1, []), tx1}
+
+             ^tx_hash2 ->
+               {"", :name_claim_tx, :aetx_sign.new(aetx2, []), tx2}
+
+             ^tx_hash3 ->
+               {"", :name_claim_tx, :aetx_sign.new(aetx3, []), tx3}
+           end
+         ]}
+      ] do
+        assert %{"prev" => nil, "data" => [activity3, activity2] = data1, "next" => next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/accounts/#{encoded_name_hash}/activities", limit: 2)
+                 |> json_response(200)
+
+        assert %{
+                 "height" => ^height2,
+                 "type" => "NameClaimEvent",
+                 "payload" => %{
+                   "account_id" => ^account,
+                   "fee" => 333,
+                   "name" => ^plain_name,
+                   "name_fee" => 333,
+                   "name_salt" => 333,
+                   "nonce" => 333,
+                   "ttl" => 333,
+                   "type" => "NameClaimTx"
+                 }
+               } = activity3
+
+        assert %{
+                 "height" => ^height2,
+                 "type" => "NameClaimEvent",
+                 "payload" => %{
+                   "account_id" => ^account,
+                   "fee" => 222,
+                   "name" => ^plain_name,
+                   "name_fee" => 222,
+                   "name_salt" => 222,
+                   "nonce" => 222,
+                   "ttl" => 222,
+                   "type" => "NameClaimTx"
+                 }
+               } = activity2
+
+        assert %{"prev" => prev_url, "data" => [activity1], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get(next_url)
+                 |> json_response(200)
+
+        assert %{
+                 "height" => ^height1,
+                 "type" => "NameClaimEvent",
+                 "payload" => %{
+                   "account_id" => ^account,
+                   "fee" => 111,
+                   "name" => ^plain_name,
+                   "name_fee" => 111,
+                   "name_salt" => 111,
+                   "nonce" => 111,
+                   "ttl" => 111,
+                   "type" => "NameClaimTx"
+                 }
+               } = activity1
+
+        refute is_nil(prev_url)
+
+        assert %{"data" => ^data1} =
+                 conn
+                 |> with_store(store)
+                 |> get(prev_url)
+                 |> json_response(200)
+      end
+    end
+
     test "when the account is invalid, it returns an error", %{conn: conn} do
       invalid_account = "ak_foo"
       error_msg = "invalid id: #{invalid_account}"
