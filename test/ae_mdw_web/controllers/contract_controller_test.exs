@@ -767,6 +767,15 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       assert %{"data" => ^calls} =
                conn |> with_store(store) |> get(prev_calls) |> json_response(200)
     end
+
+    test "when filtering by function name and scope, it returns an error", %{conn: conn} do
+      error_msg = "invalid scope: can't scope when filtering by function"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> get("/v2/contracts/calls", function: "asd", scope: "gen:0-1")
+               |> json_response(400)
+    end
   end
 
   defp enc_ct(pk), do: :aeser_api_encoder.encode(:contract_pubkey, pk)
