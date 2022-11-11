@@ -308,15 +308,14 @@ defmodule AeMdw.Db.Contract do
     |> Enum.map(fn {_apk, contract_pk} -> contract_pk end)
   end
 
-  @spec aex9_search_contract(State.t(), pubkey(), integer()) :: map()
-  def aex9_search_contract(state, account_pk, max_txi) do
-    state
-    |> Collection.stream(Model.Aex9AccountPresence, {account_pk, <<>>})
-    |> Stream.take_while(fn {apk, _ct_pk} -> apk == account_pk end)
-    |> Enum.reduce(%{}, fn {_apk, contract_pk} = key, acc ->
-      Model.aex9_account_presence(txi: txi) = State.fetch!(state, Model.Aex9AccountPresence, key)
-      if txi <= max_txi, do: Map.put(acc, contract_pk, txi), else: acc
-    end)
+  @spec aex9_balance_txi(State.t(), pubkey(), txi()) :: txi()
+  def aex9_balance_txi(state, contract_pk, upper_txi) do
+    create_txi = Origin.tx_index!(state, {:contract, contract_pk})
+
+    case State.prev(state, Model.ContractCall, {create_txi, upper_txi}) do
+      {:ok, {^create_txi, call_txi}} -> call_txi
+      _none_or_other -> create_txi
+    end
   end
 
   @spec update_aex9_state(State.t(), pubkey(), block_index(), txi()) :: State.t()

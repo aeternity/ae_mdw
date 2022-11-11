@@ -214,5 +214,120 @@ defmodule AeMdwWeb.Aex9ControllerTest do
         assert MapSet.new(balances_data) == MapSet.new(expected_balances)
       end
     end
+
+    test "returns all account balances at a height", %{conn: conn, store: store} do
+      account_pk = :crypto.strong_rand_bytes(32)
+      path_height = 100_001
+      block_hash = <<3::256>>
+      mb_hash1 = <<1::256>>
+      mb_hash2 = <<2::256>>
+      contract_pk1 = <<3::256>>
+      contract_pk2 = <<4::256>>
+      tx_hash1 = :crypto.strong_rand_bytes(32)
+      tx_hash2 = :crypto.strong_rand_bytes(32)
+
+      store =
+        Store.put(
+          store,
+          Model.Block,
+          Model.block(index: {path_height, -1}, hash: block_hash, tx_index: 12_000_001)
+        )
+
+      balance1 = %{
+        "block_hash" => enc_block(:micro, mb_hash1),
+        "amount" => 1_000_001,
+        "contract_id" => enc_ct(contract_pk1),
+        "height" => path_height - 1,
+        "token_name" => "name#{1}",
+        "token_symbol" => "symbol#{1}",
+        "tx_hash" => encode(:tx_hash, tx_hash1),
+        "tx_index" => 11_000_001,
+        "tx_type" => "contract_call_tx"
+      }
+
+      balance2 = %{
+        "block_hash" => enc_block(:micro, mb_hash2),
+        "amount" => 1_000_002,
+        "contract_id" => enc_ct(contract_pk2),
+        "height" => path_height - 2,
+        "token_name" => "name#{2}",
+        "token_symbol" => "symbol#{2}",
+        "tx_hash" => encode(:tx_hash, tx_hash2),
+        "tx_index" => 10_000_001,
+        "tx_type" => "contract_call_tx"
+      }
+
+      store =
+        Enum.reduce([balance1, balance2], store, fn %{
+                                                      "block_hash" => block_hash,
+                                                      "amount" => amount,
+                                                      "contract_id" => contract_id,
+                                                      "height" => height,
+                                                      "token_name" => token_name,
+                                                      "token_symbol" => token_symbol,
+                                                      "tx_hash" => tx_hash,
+                                                      "tx_index" => txi
+                                                    },
+                                                    store_acc ->
+          block_hash = Validate.id!(block_hash)
+          contract_pk = Validate.id!(contract_id)
+          tx_hash = Validate.id!(tx_hash)
+
+          m_contract =
+            Model.aexn_contract(
+              index: {:aex9, contract_pk},
+              meta_info: {token_name, token_symbol, 18}
+            )
+
+          m_balance =
+            Model.aex9_balance(
+              index: {contract_pk, account_pk},
+              block_index: {height, 0},
+              txi: txi,
+              amount: amount
+            )
+
+          m_presence = Model.aex9_account_presence(index: {account_pk, contract_pk}, txi: txi)
+          create_txi = txi - 100
+
+          store_acc
+          |> Store.put(Model.Tx, Model.tx(index: txi, id: tx_hash, block_index: {height, 0}))
+          |> Store.put(
+            Model.Block,
+            Model.block(index: {height, 0}, hash: block_hash, tx_index: txi - 1)
+          )
+          |> Store.put(
+            Model.Field,
+            Model.field(index: {:contract_create_tx, nil, contract_pk, create_txi})
+          )
+          |> Store.put(Model.ContractCall, Model.contract_call(index: {create_txi, txi}))
+          |> Store.put(Model.AexnContract, m_contract)
+          |> Store.put(Model.Aex9Balance, m_balance)
+          |> Store.put(Model.Aex9AccountPresence, m_presence)
+        end)
+
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           aex9_balance: fn ct_pk, ^account_pk, {:key, ^path_height, ^block_hash} = height_hash ->
+             amount = if ct_pk == contract_pk1, do: 1_000_001, else: 1_000_002
+             {:ok, {amount, height_hash}}
+           end,
+           get_tx_data: fn tx_hash ->
+             mb_hash = if tx_hash == tx_hash1, do: mb_hash1, else: mb_hash2
+             {mb_hash, :contract_call_tx, nil, nil}
+           end
+         ]}
+      ] do
+        assert balances_data =
+                 conn
+                 |> with_store(store)
+                 |> get("/aex9/balances/gen/#{path_height}/account/#{enc_id(account_pk)}")
+                 |> json_response(200)
+
+        assert ^balances_data = Enum.sort_by(balances_data, & &1["tx_index"], :desc)
+        assert MapSet.new(balances_data) == MapSet.new([balance1, balance2])
+      end
+    end
   end
 end

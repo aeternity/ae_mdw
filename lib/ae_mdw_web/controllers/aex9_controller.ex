@@ -10,7 +10,6 @@ defmodule AeMdwWeb.Aex9Controller do
   alias AeMdw.AexnTokens
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Origin
   alias AeMdw.Db.State
   alias AeMdw.Db.Util
   alias AeMdw.Error.Input, as: ErrInput
@@ -300,7 +299,8 @@ defmodule AeMdwWeb.Aex9Controller do
          account_pk,
          {kbi, mbi} = block_index
        ) do
-    Model.block(hash: block_hash) = State.fetch!(state, Model.Block, block_index)
+    Model.block(hash: block_hash, tx_index: upper_txi) =
+      State.fetch!(state, Model.Block, block_index)
 
     type = if mbi == -1, do: :key, else: :micro
 
@@ -308,11 +308,13 @@ defmodule AeMdwWeb.Aex9Controller do
       state
       |> Contract.aex9_search_contracts(account_pk)
       |> Enum.flat_map(fn contract_pk ->
-        create_txi = Origin.tx_index!(state, {:contract, contract_pk})
-
         case DBN.aex9_balance(contract_pk, account_pk, {type, kbi, block_hash}) do
-          {:ok, {amount, _}} when amount != nil -> [{amount, create_txi, contract_pk}]
-          _missing -> []
+          {:ok, {amount, _}} when amount != nil ->
+            balance_txi = Contract.aex9_balance_txi(state, contract_pk, upper_txi)
+            [{amount, balance_txi, contract_pk}]
+
+          _missing ->
+            []
         end
       end)
       |> Enum.map(&balance_to_map(state, &1))
