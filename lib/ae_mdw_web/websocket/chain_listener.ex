@@ -61,32 +61,32 @@ defmodule AeMdwWeb.Websocket.ChainListener do
 
   @impl GenServer
   def handle_info({:DOWN, _ref, _type, pid, _info}, state) do
-    case :ets.member(@subs_main, pid) do
-      true ->
-        # main socket channel dies, all connections are disconnected. Clean all tables.
-        Enum.each(
-          [@subs_main, @subs_channel_targets, @subs_target_channels, @subs_pids],
-          &:ets.delete_all_objects/1
-        )
+    Process.demonitor(pid, [:flush])
 
-      false ->
-        spec =
-          Ex2ms.fun do
-            {{^pid, sub}, _} -> sub
-          end
-
-        for sub <- :ets.select(@subs_channel_targets, spec) do
-          key_to_delete = {sub, pid}
-          :ets.delete(@subs_target_channels, key_to_delete)
+    # last connection down
+    if :ets.info(@subs_pids, :size) <= 1 do
+      Enum.each(
+        [@subs_main, @subs_channel_targets, @subs_target_channels, @subs_pids],
+        &:ets.delete_all_objects/1
+      )
+    else
+      spec =
+        Ex2ms.fun do
+          {{^pid, sub}, _} -> sub
         end
 
-        spec_ =
-          Ex2ms.fun do
-            {{^pid, _}, _} -> true
-          end
+      for sub <- :ets.select(@subs_channel_targets, spec) do
+        key_to_delete = {sub, pid}
+        :ets.delete(@subs_target_channels, key_to_delete)
+      end
 
-        :ets.select_delete(@subs_channel_targets, spec_)
-        :ets.delete(@subs_pids, pid)
+      spec_ =
+        Ex2ms.fun do
+          {{^pid, _}, _} -> true
+        end
+
+      :ets.select_delete(@subs_channel_targets, spec_)
+      :ets.delete(@subs_pids, pid)
     end
 
     {:noreply, state}
