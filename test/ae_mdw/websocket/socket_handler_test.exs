@@ -7,7 +7,7 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
 
   setup_all do
     clients =
-      for _i <- 1..9 do
+      for _i <- 1..10 do
         {:ok, client} = WsClient.start_link("ws://localhost:4003/websocket")
         client
       end
@@ -23,6 +23,14 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
 
       Process.send_after(client, {:subs, self()}, 100)
       assert_receive ["KeyBlocks"], 300
+
+      WsClient.unsubscribe(client, :key_blocks)
+
+      Process.send_after(client, {:subs, self()}, 100)
+      assert_receive [], 300
+
+      Process.send_after(client, {:error, self()}, 100)
+      assert_receive nil, 300
     end
 
     test "returns error message when already subscribed", %{clients: clients} do
@@ -44,6 +52,14 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
 
       Process.send_after(client, {:subs, self()}, 100)
       assert_receive ["MicroBlocks"], 300
+
+      WsClient.unsubscribe(client, :micro_blocks)
+
+      Process.send_after(client, {:subs, self()}, 100)
+      assert_receive [], 300
+
+      Process.send_after(client, {:error, self()}, 100)
+      assert_receive nil, 300
     end
 
     test "returns error message when already subscribed", %{clients: clients} do
@@ -65,6 +81,14 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
 
       Process.send_after(client, {:subs, self()}, 100)
       assert_receive ["Transactions"], 300
+
+      WsClient.unsubscribe(client, :transactions)
+
+      Process.send_after(client, {:subs, self()}, 100)
+      assert_receive [], 300
+
+      Process.send_after(client, {:error, self()}, 100)
+      assert_receive nil, 300
     end
 
     test "returns error message when already subscribed", %{clients: clients} do
@@ -97,6 +121,12 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
       Process.send_after(client, {:subs, self()}, 100)
       assert_receive [^channel_id, ^name_id, ^oracle_id, ^contract_id, ^account_id], 300
 
+      WsClient.unsubscribe(client, account_id)
+      WsClient.unsubscribe(client, channel_id)
+
+      Process.send_after(client, {:subs, self()}, 100)
+      assert_receive [^name_id, ^oracle_id, ^contract_id], 300
+
       Process.send_after(client, {:error, self()}, 100)
       assert_receive nil, 300
     end
@@ -124,6 +154,17 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
       WsClient.subscribe(client, invalid_id)
       Process.send_after(client, {:error, self()}, 100)
       error_msg = "invalid target: #{invalid_id}"
+      assert_receive ^error_msg, 300
+    end
+  end
+
+  describe "unknown subscription" do
+    test "returns the subscriptions list", %{clients: clients} do
+      client = Enum.at(clients, 9)
+
+      WsClient.subscribe(client, :unknown)
+      Process.send_after(client, {:error, self()}, 100)
+      error_msg = "invalid payload: Unknown"
       assert_receive ^error_msg, 300
     end
   end

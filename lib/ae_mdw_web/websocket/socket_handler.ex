@@ -136,11 +136,12 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
          },
          %{channels: channels} = state
        )
-       when prefix_key in @known_prefixes and byte_size(rest) >= 38 and byte_size(rest) <= 60 do
+       when prefix_key in @known_prefixes and byte_size(rest) >= 37 and byte_size(rest) <= 60 do
     if target in channels do
       case AeMdw.Validate.id(target) do
         {:ok, id} ->
           pid = self()
+          :ets.delete(@subs_main, {target, self()})
           :ets.delete(@subs_target_channels, {id, pid})
           :ets.delete(@subs_channel_targets, {pid, id})
 
@@ -151,10 +152,9 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
 
           if :ets.select_count(@subs_channel_targets, spec) == 0, do: :ets.delete(@subs_pids, pid)
 
-          :ets.delete(@subs_main, {"Object", self()})
           new_state = %{state | channels: List.delete(channels, target)}
 
-          reply(new_state.info, new_state)
+          reply(new_state.channels, new_state)
 
         {:error, {_, k}} ->
           reply_error("invalid target", k, state)
@@ -180,7 +180,7 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
       :ets.delete(@subs_main, {channel, self()})
       new_state = %{state | channels: List.delete(channels, channel)}
 
-      reply(new_state.info, new_state)
+      reply(new_state.channels, new_state)
     else
       reply_error("no subscription for payload", channel, state)
     end
@@ -191,7 +191,7 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
   end
 
   defp handle_message(%{"op" => "Ping"}, state) do
-    reply(%{"subscriptions" => state.info, "payload" => "Pong"}, state)
+    reply(%{"subscriptions" => state.channels, "payload" => "Pong"}, state)
   end
 
   defp handle_message(msg, state) do
