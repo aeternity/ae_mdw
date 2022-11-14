@@ -190,11 +190,11 @@ defmodule AeMdw.Db.Name do
 
         {_block_hash, tx_type, _signed_tx, tx_rec}
         when tx_type in [:ga_meta_tx, :paying_for_tx] ->
-          {_mod, tx_rec} =
+          {:name_claim_tx, tx_rec} =
             tx_type
             |> InnerTx.signed_tx(tx_rec)
             |> :aetx_sign.tx()
-            |> :aetx.specialize_callback()
+            |> :aetx.specialize_type()
 
           :aens_claim_tx.account_id(tx_rec)
       end
