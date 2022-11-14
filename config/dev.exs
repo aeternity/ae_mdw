@@ -7,14 +7,12 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   watchers: [],
   check_origin: false
 
-config :ae_mdw, AeMdwWeb.Endpoint,
-  live_reload: [
-    patterns: [
-      ~r"priv/gettext/.*(po)$",
-      ~r"lib/test_web/(live|views)/.*(ex)$",
-      ~r"lib/test_web/templates/.*(eex)$"
-    ]
-  ]
+config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
+  http: [port: 4001],
+  debug_errors: true,
+  code_reloader: false,
+  watchers: [],
+  check_origin: false
 
 # ## SSL Support
 #

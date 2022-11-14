@@ -18,6 +18,13 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   ],
   secret_key_base: secret_key_base
 
+config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
+  http: [
+    port: String.to_integer(System.get_env("WS_PORT") || "4001"),
+    transport_options: [socket_opts: [:inet6]]
+  ],
+  secret_key_base: secret_key_base
+
 # ## Using releases (Elixir v1.9+)
 #
 # If you are doing OTP releases, you need to instruct Phoenix

@@ -7,7 +7,10 @@ defmodule AeMdwWeb.Supervisor do
 
   @impl true
   def init([]) do
-    children = [AeMdwWeb.Endpoint]
+    children = [
+      AeMdwWeb.Endpoint,
+      AeMdwWeb.WebsocketEndpoint
+    ]
 
     Supervisor.init(children, strategy: :one_for_one)
   end
