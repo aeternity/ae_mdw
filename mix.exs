@@ -59,6 +59,7 @@ defmodule AeMdw.MixProject do
           :aehttp_logic,
           :aens,
           :aens_claim_tx,
+          :aens_hash,
           :aens_pointer,
           :aens_revoke_tx,
           :aens_update_tx,

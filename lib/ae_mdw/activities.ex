@@ -6,11 +6,14 @@ defmodule AeMdw.Activities do
   alias AeMdw.AexnTokens
   alias AeMdw.Blocks
   alias AeMdw.Collection
+  alias AeMdw.Contracts
   alias AeMdw.Db.Format
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Name
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.InnerTx
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
@@ -38,6 +41,7 @@ defmodule AeMdw.Activities do
            | {:aexn, AexnTokens.aexn_type(), Db.pubkey(), Db.pubkey(), non_neg_integer(),
               non_neg_integer()}
            | {:int_transfer, IntTransfer.kind(), Txs.txi()}
+           | :claim
 
   @max_pos 4
   @min_int Util.min_int()
@@ -129,7 +133,8 @@ defmodule AeMdw.Activities do
                 txi_cursor
               ),
               build_aexn_transfers_stream(state, direction, account_pk, txi_scope, txi_cursor),
-              build_txs_int_transfers_stream(state, direction, account_pk, gen_scope, gen_cursor)
+              build_txs_int_transfers_stream(state, direction, account_pk, gen_scope, gen_cursor),
+              build_name_claims_stream(state, direction, account_pk, txi_scope, txi_cursor)
             ]
             |> Collection.merge(direction)
             |> Stream.chunk_by(fn {txi, _data} -> txi end)
@@ -166,6 +171,59 @@ defmodule AeMdw.Activities do
         end)
 
       {:ok, serialize_cursor(prev_cursor), events, serialize_cursor(next_cursor)}
+    end
+  end
+
+  defp build_name_claims_stream(state, direction, name_hash, txi_scope, txi_cursor) do
+    with {:ok, Model.plain_name(value: plain_name)} <-
+           State.get(state, Model.PlainName, name_hash),
+         {record, _source} <- Name.locate(state, plain_name) do
+      {current_claims, prev_name} =
+        case record do
+          Model.auction_bid(bids: bids) -> {bids, nil}
+          Model.name(claims: claims, previous: previous) -> {claims, previous}
+        end
+
+      claims =
+        prev_name
+        |> Stream.unfold(fn
+          nil -> nil
+          Model.name(claims: claims, previous: previous) -> {claims, previous}
+        end)
+        |> Enum.to_list()
+        |> List.flatten()
+
+      claims = current_claims |> Enum.concat(claims) |> Enum.reverse()
+
+      claims =
+        case txi_scope do
+          nil ->
+            claims
+
+          {first_txi, last_txi} ->
+            claims
+            |> Enum.drop_while(fn {_block_index, txi} -> txi < first_txi end)
+            |> Enum.take_while(fn {_block_index, txi} -> txi < last_txi end)
+        end
+
+      claims = if direction == :forward, do: claims, else: Enum.reverse(claims)
+
+      claims =
+        case txi_cursor do
+          nil ->
+            claims
+
+          _txi_cursor ->
+            Enum.drop_while(claims, fn
+              {_block_index, txi} when direction == :forward -> txi < txi_cursor
+              {_block_index, txi} when direction == :backward -> txi > txi_cursor
+            end)
+        end
+
+      Stream.map(claims, fn {_block_index, txi} -> {txi, :claim} end)
+    else
+      :not_found -> []
+      nil -> []
     end
   end
 
@@ -408,6 +466,38 @@ defmodule AeMdw.Activities do
       height: height,
       type: "#{Node.tx_name(tx_type)}Event",
       payload: tx
+    }
+  end
+
+  defp render(state, account_pk, height, txi, :claim) do
+    Model.tx(id: tx_hash) = DbUtil.read_tx!(state, txi)
+
+    claim_aetx =
+      case Db.get_tx_data(tx_hash) do
+        {_block_hash, :name_claim_tx, signed_tx, _tx_rec} ->
+          :aetx_sign.tx(signed_tx)
+
+        {_block_hash, :contract_call_tx, _signed_tx, _tx_rec} ->
+          state
+          |> Contracts.fetch_int_contract_calls(txi, "AENS.claim")
+          |> Enum.find_value(fn Model.int_contract_call(tx: aetx) ->
+            {:name_claim_tx, tx} = :aetx.specialize_type(aetx)
+            name_hash = tx |> :aens_claim_tx.name() |> :aens_hash.name_hash()
+
+            name_hash == account_pk && aetx
+          end)
+
+        {_block_hash, tx_type, _signed_tx, tx_rec}
+        when tx_type in ~w(ga_meta_tx paying_for_tx)a ->
+          tx_type
+          |> InnerTx.signed_tx(tx_rec)
+          |> :aetx_sign.tx()
+      end
+
+    %{
+      height: height,
+      type: "NameClaimEvent",
+      payload: :aetx.serialize_for_client(claim_aetx)
     }
   end
 
