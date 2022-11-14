@@ -13,6 +13,7 @@ defmodule AeMdw.Activities do
   alias AeMdw.Db.Name
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.InnerTx
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
@@ -173,9 +174,9 @@ defmodule AeMdw.Activities do
     end
   end
 
-  defp build_name_claims_stream(state, direction, account_pk, txi_scope, txi_cursor) do
+  defp build_name_claims_stream(state, direction, name_hash, txi_scope, txi_cursor) do
     with {:ok, Model.plain_name(value: plain_name)} <-
-           State.get(state, Model.PlainName, account_pk),
+           State.get(state, Model.PlainName, name_hash),
          {record, _source} <- Name.locate(state, plain_name) do
       {current_claims, prev_name} =
         case record do
@@ -481,9 +482,16 @@ defmodule AeMdw.Activities do
           |> Contracts.fetch_int_contract_calls(txi, "AENS.claim")
           |> Enum.find_value(fn Model.int_contract_call(tx: aetx) ->
             {:name_claim_tx, tx} = :aetx.specialize_type(aetx)
+            name_hash = tx |> :aens_claim_tx.name() |> :aens_hash.name_hash()
 
-            account_pk == :aens_transfer_tx.name_hash(tx) && aetx
+            name_hash == account_pk && aetx
           end)
+
+        {_block_hash, tx_type, _signed_tx, tx_rec}
+        when tx_type in ~w(ga_meta_tx paying_for_tx)a ->
+          tx_type
+          |> InnerTx.signed_tx(tx_rec)
+          |> :aetx_sign.tx()
       end
 
     %{
