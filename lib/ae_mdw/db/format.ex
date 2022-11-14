@@ -91,6 +91,22 @@ defmodule AeMdw.Db.Format do
     }
   end
 
+  @spec encode_pointers(list() | map()) :: %{iodata() => String.t()}
+  def encode_pointers(pointers) when is_map(pointers) do
+    Enum.into(pointers, %{}, fn {key, id} -> {maybe_base64_pointer_key(key), enc_id(id)} end)
+  end
+
+  def encode_pointers(pointers) do
+    Enum.map(pointers, fn
+      %{"key" => key, "id" => id} -> %{"key" => maybe_base64_pointer_key(key), "id" => id}
+      %{key: key, id: id} -> %{key: maybe_base64_pointer_key(key), id: id}
+    end)
+  end
+
+  @spec enc_id(aeser_id() | nil) :: nil | String.t()
+  def enc_id(nil), do: nil
+  def enc_id({:id, _type, _pk} = id), do: Enc.encode(:id_hash, id)
+
   defp custom_raw_data(_state, :contract_create_tx, tx, tx_rec, _signed_tx, block_hash) do
     init_call_details = Contract.get_init_call_details(tx_rec, block_hash)
 
@@ -134,8 +150,11 @@ defmodule AeMdw.Db.Format do
     put_in(tx, [:tx, :name_id], :aeser_id.create(:name, name_id))
   end
 
-  defp custom_raw_data(state, :name_update_tx, tx, tx_rec, _signed_tx, _block_hash),
-    do: put_in(tx, [:tx, :name], Name.plain_name!(state, :aens_update_tx.name_hash(tx_rec)))
+  defp custom_raw_data(state, :name_update_tx, tx, tx_rec, _signed_tx, _block_hash) do
+    tx
+    |> put_in([:tx, :name], Name.plain_name!(state, :aens_update_tx.name_hash(tx_rec)))
+    |> update_in([:tx, :pointers], &encode_pointers/1)
+  end
 
   defp custom_raw_data(state, :name_transfer_tx, tx, tx_rec, _signed_tx, _block_hash),
     do: put_in(tx, [:tx, :name], Name.plain_name!(state, :aens_transfer_tx.name_hash(tx_rec)))
@@ -189,9 +208,9 @@ defmodule AeMdw.Db.Format do
         end
       )
 
-    raw_to_json(raw_map)
+    raw_map
+    |> raw_to_json()
     |> put_in(["auction"], auction)
-    |> update_in(["status"], &to_string/1)
   end
 
   def to_map(state, {call_txi, local_idx}, Model.IntContractCall) do
@@ -353,8 +372,11 @@ defmodule AeMdw.Db.Format do
     put_in(tx, ["name_id"], Enc.encode(:name, name_id))
   end
 
-  defp custom_encode(state, :name_update_tx, tx, tx_rec, _signed_tx, _txi, _block_hash),
-    do: put_in(tx, ["name"], Name.plain_name!(state, :aens_update_tx.name_hash(tx_rec)))
+  defp custom_encode(state, :name_update_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
+    tx
+    |> put_in(["name"], Name.plain_name!(state, :aens_update_tx.name_hash(tx_rec)))
+    |> update_in(["pointers"], &encode_pointers/1)
+  end
 
   defp custom_encode(state, :name_transfer_tx, tx, tx_rec, _signed_tx, _txi, _block_hash),
     do: put_in(tx, ["name"], Name.plain_name!(state, :aens_transfer_tx.name_hash(tx_rec)))
@@ -364,6 +386,12 @@ defmodule AeMdw.Db.Format do
 
   defp custom_encode(_state, _tx_type, tx, _tx_rec, _signed_tx, _txi, _block_hash),
     do: tx
+
+  defp maybe_base64_pointer_key(key)
+       when key in ["account_pubkey", "oracle_pubkey", "contract_pubkey", "channel"],
+       do: key
+
+  defp maybe_base64_pointer_key(key), do: Base.encode64(key)
 
   defp maybe_base64(bin) do
     try do
@@ -381,12 +409,6 @@ defmodule AeMdw.Db.Format do
       :erlang.binary_to_list(bin)
     end
   end
-
-  @spec enc_id(aeser_id() | nil) :: binary() | nil
-  def enc_id(nil), do: nil
-
-  def enc_id({:id, idtype, payload}),
-    do: Enc.encode(AE.id_type(idtype), payload)
 
   defp raw_to_json(x),
     do: map_raw_values(x, &to_json/1)

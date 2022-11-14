@@ -371,10 +371,25 @@ defmodule AeMdwWeb.BlockchainSim do
     {:id, :account, pubkey} = account_id = Map.fetch!(accounts, account_name)
     {:ok, name_hash} = :aens.get_name_hash(plain_name)
 
-    pointers = [
-      {:pointer, "account_pubkey", account_id},
-      {:pointer, "oracle_pubkey", :aeser_id.create(:oracle, pubkey)}
-    ]
+    pointers =
+      case args[:pointers] do
+        nil ->
+          [
+            {:pointer, "account_pubkey", account_id},
+            {:pointer, "oracle_pubkey", :aeser_id.create(:oracle, pubkey)}
+          ]
+
+        list ->
+          Enum.map(list, fn
+            {:pointer, key, account_atom} when is_atom(account_atom) ->
+              {:pointer, key, Map.fetch!(accounts, account_atom)}
+
+            another_pointer ->
+              another_pointer
+          end)
+      end
+
+    args = Map.delete(args, :pointers)
 
     %{
       account_id: account_id,

@@ -171,7 +171,7 @@ defmodule AeMdwWeb.NameController do
   defp pointers_reply(%Conn{assigns: %{state: state}} = conn, plain_name) do
     case Name.locate(state, plain_name) do
       {m_name, Model.ActiveName} ->
-        json(conn, Format.map_raw_values(Name.pointers(state, m_name), &Format.to_json/1))
+        json(conn, Name.pointers(state, m_name))
 
       {_m_name, Model.InactiveName} ->
         raise ErrInput.Expired, value: plain_name

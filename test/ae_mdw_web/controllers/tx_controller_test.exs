@@ -8,7 +8,7 @@ defmodule AeMdwWeb.TxControllerTest do
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
 
-  import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, tx: 3, name_tx: 3]
+  import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, tx: 3, name_tx: 3, name_tx: 4]
   import AeMdw.Util.Encoding
   import Mock
 
@@ -289,6 +289,60 @@ defmodule AeMdwWeb.TxControllerTest do
                      %{
                        "id" => ^oracle_id,
                        "key" => "oracle_pubkey"
+                     }
+                   ]
+                 }
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs/#{tx_hash}")
+                 |> json_response(200)
+      end
+    end
+
+    test "returns a name_update_tx with non-string pointers", %{conn: conn, store: store} do
+      plain_name = "aliceinchains.chain"
+      {:ok, name_hash} = :aens.get_name_hash(plain_name)
+
+      non_string_pointer_key =
+        <<104, 65, 117, 174, 49, 251, 29, 202, 69, 174, 147, 56, 60, 150, 188, 247, 149, 85, 150,
+          148, 88, 102, 186, 208, 87, 101, 78, 111, 189, 5, 144, 101>>
+
+      non_string_pointer_key64 = Base.encode64(non_string_pointer_key)
+
+      with_blockchain %{alice1: 1_000, alice2: 1_000},
+        mb: [
+          tx:
+            name_tx(:name_update_tx, :alice1, plain_name, %{
+              pointers: [{:pointer, non_string_pointer_key, :alice2}]
+            })
+        ] do
+        %{txs: [tx]} = blocks[:mb]
+        {:id, :account, alice_pk1} = accounts[:alice1]
+        {:id, :account, alice_pk2} = accounts[:alice2]
+        alice_id1 = encode(:account_pubkey, alice_pk1)
+        alice_id2 = encode(:account_pubkey, alice_pk2)
+
+        store =
+          store
+          |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {0, 0}, id: :aetx_sign.hash(tx)))
+          |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: plain_name))
+          |> Store.put(Model.ActiveName, Model.name(index: plain_name))
+          |> Store.put(Model.Block, Model.block(index: {0, -1}, tx_index: 1))
+          |> Store.put(Model.Block, Model.block(index: {0, 0}, tx_index: 1))
+          |> Store.put(Model.Block, Model.block(index: {1, -1}, tx_index: 2))
+
+        tx_hash = encode(:tx_hash, :aetx_sign.hash(tx))
+
+        assert %{
+                 "hash" => ^tx_hash,
+                 "tx" => %{
+                   "account_id" => ^alice_id1,
+                   "name" => ^plain_name,
+                   "pointers" => [
+                     %{
+                       "id" => ^alice_id2,
+                       "key" => ^non_string_pointer_key64
                      }
                    ]
                  }

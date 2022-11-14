@@ -1241,7 +1241,7 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
 
     case Name.locate(state, name) do
       {m_name, Model.ActiveName} ->
-        Format.map_raw_values(Name.pointers(state, m_name), &Format.to_json/1)
+        Name.pointers(state, m_name)
 
       {_info, Model.InactiveName} ->
         raise ErrInput.Expired, value: name
