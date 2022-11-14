@@ -91,7 +91,8 @@ defmodule AeMdwWeb.BlockchainSim do
         :name_update_tx,
         :name_revoke_tx,
         :ga_attach_tx,
-        :ga_meta_tx
+        :ga_meta_tx,
+        :paying_for_tx
       ]
     end
   end
@@ -464,5 +465,28 @@ defmodule AeMdwWeb.BlockchainSim do
     }
     |> Map.merge(args)
     |> :aega_meta_tx.new()
+  end
+
+  defp create_aetx({:paying_for_tx, account_name, args}, accounts) do
+    {:ok, inner_tx} =
+      %{
+        sender_id: Map.fetch!(accounts, account_name),
+        recipient_id: :aeser_id.create(:account, <<2::256>>),
+        amount: 123,
+        fee: 456,
+        nonce: 1,
+        payload: <<>>
+      }
+      |> Map.merge(args)
+      |> :aec_spend_tx.new()
+
+    %{
+      payer_id: Map.fetch!(accounts, account_name),
+      nonce: 1,
+      fee: 100,
+      tx: :aetx_sign.new(inner_tx, [])
+    }
+    |> Map.merge(args)
+    |> :aec_paying_for_tx.new()
   end
 end
