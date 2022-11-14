@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.29.0](https://www.github.com/aeternity/ae_mdw/compare/v1.28.1...v1.29.0) (2022-11-14)
+
+
+### Features
+
+* add name claims to the activities retrieved by name hash ([#1014](https://www.github.com/aeternity/ae_mdw/issues/1014)) ([33d56f3](https://www.github.com/aeternity/ae_mdw/commit/33d56f3c524a80d6b69dd1efedd1fad89af10468))
+* add oracle query expiration internal refund transfers ([#1001](https://www.github.com/aeternity/ae_mdw/issues/1001)) ([8539d2e](https://www.github.com/aeternity/ae_mdw/commit/8539d2ef6d5e800c3b3b8cdec35245b13a46c97d))
+* display name buyer from inner claim tx ([#1016](https://www.github.com/aeternity/ae_mdw/issues/1016)) ([ca41a7b](https://www.github.com/aeternity/ae_mdw/commit/ca41a7b332e5bde5efd7745a051f0bc319c17b6b))
+
+
+### Bug Fixes
+
+* ignore oracle queries that do not have the right calculated nonce ([#1009](https://www.github.com/aeternity/ae_mdw/issues/1009)) ([31de473](https://www.github.com/aeternity/ae_mdw/commit/31de4738d47f66f336d7d3280e4931e07d3dad26))
+* render binary pointer key on name related endpoints ([#1004](https://www.github.com/aeternity/ae_mdw/issues/1004)) ([a62d03f](https://www.github.com/aeternity/ae_mdw/commit/a62d03f863b440030f75b84f11f0181da2c40b53))
+* scope contract calls filtered by function properly ([#1005](https://www.github.com/aeternity/ae_mdw/issues/1005)) ([6567619](https://www.github.com/aeternity/ae_mdw/commit/65676196b6cbd6496a47be921d0478f021dba7d1))
+* use last call txi for hash account balance ([#1017](https://www.github.com/aeternity/ae_mdw/issues/1017)) ([0be0aed](https://www.github.com/aeternity/ae_mdw/commit/0be0aed243e759bed925913d372fe10d92e56097))
+
+
+### Miscellaneous
+
+* allow /txs/count to be filtered by tx_type ([#1008](https://www.github.com/aeternity/ae_mdw/issues/1008)) ([84ba88f](https://www.github.com/aeternity/ae_mdw/commit/84ba88fe6e2d8825e68ede1553c748adbbc9b304))
+* use built-in phoenix websocket ([#1011](https://www.github.com/aeternity/ae_mdw/issues/1011)) ([5e8582a](https://www.github.com/aeternity/ae_mdw/commit/5e8582a97068b005d816acc5ff0e770b0dd1a1ac))
+
 ### [1.28.1](https://www.github.com/aeternity/ae_mdw/compare/v1.28.0...v1.28.1) (2022-11-06)
 
 
