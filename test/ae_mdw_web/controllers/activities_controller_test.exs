@@ -689,10 +689,10 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           account_id: account_id,
           nonce: 111,
           name: plain_name,
-          name_salt: 111,
-          name_fee: 111,
-          fee: 111,
-          ttl: 111
+          name_salt: 1111,
+          name_fee: 11111,
+          fee: 111_111,
+          ttl: 11_111_111
         })
 
       {:name_claim_tx, tx1} = :aetx.specialize_type(aetx1)
@@ -702,10 +702,10 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           account_id: account_id,
           nonce: 222,
           name: plain_name,
-          name_salt: 222,
-          name_fee: 222,
-          fee: 222,
-          ttl: 222
+          name_salt: 2222,
+          name_fee: 22222,
+          fee: 222_222,
+          ttl: 2_222_222
         })
 
       {:name_claim_tx, tx2} = :aetx.specialize_type(aetx2)
@@ -715,10 +715,10 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           account_id: account_id,
           nonce: 333,
           name: plain_name,
-          name_salt: 333,
-          name_fee: 333,
-          fee: 333,
-          ttl: 333
+          name_salt: 3333,
+          name_fee: 33333,
+          fee: 333_333,
+          ttl: 3_333_333
         })
 
       {:name_claim_tx, tx3} = :aetx.specialize_type(aetx3)
@@ -768,12 +768,12 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "type" => "NameClaimEvent",
                  "payload" => %{
                    "account_id" => ^account,
-                   "fee" => 333,
+                   "fee" => 333_333,
                    "name" => ^plain_name,
-                   "name_fee" => 333,
-                   "name_salt" => 333,
+                   "name_fee" => 33333,
+                   "name_salt" => 3333,
                    "nonce" => 333,
-                   "ttl" => 333,
+                   "ttl" => 3_333_333,
                    "type" => "NameClaimTx"
                  }
                } = activity3
@@ -783,12 +783,12 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "type" => "NameClaimEvent",
                  "payload" => %{
                    "account_id" => ^account,
-                   "fee" => 222,
+                   "fee" => 222_222,
                    "name" => ^plain_name,
-                   "name_fee" => 222,
-                   "name_salt" => 222,
+                   "name_fee" => 22222,
+                   "name_salt" => 2222,
                    "nonce" => 222,
-                   "ttl" => 222,
+                   "ttl" => 2_222_222,
                    "type" => "NameClaimTx"
                  }
                } = activity2
@@ -804,12 +804,12 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "type" => "NameClaimEvent",
                  "payload" => %{
                    "account_id" => ^account,
-                   "fee" => 111,
+                   "fee" => 111_111,
                    "name" => ^plain_name,
-                   "name_fee" => 111,
-                   "name_salt" => 111,
+                   "name_fee" => 11111,
+                   "name_salt" => 1111,
                    "nonce" => 111,
-                   "ttl" => 111,
+                   "ttl" => 11_111_111,
                    "type" => "NameClaimTx"
                  }
                } = activity1
