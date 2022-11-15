@@ -1,0 +1,157 @@
+schemas:
+  ContractCall:
+    description: ContractCall
+    properties:
+      block_hash:
+        type: string
+        example: mh_mZ15v6q3eF8mUBVQ6shmWz6AXGvufMDTfcG9DXYY9uADuenHg
+      call_tx_hash:
+        type: string
+        example: th_hRMgnKsDZonTx9FStnAtdimPJxuZrFdZdZoYagzTfisLZALqG
+      call_txi:
+        type: integer
+        example: 32508544
+      contract_id:
+        type: string
+        example: ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+      contract_txi:
+        type: integer
+        example: 8392766
+      function:
+        type: string
+        example: Oracle.query",
+      height:
+        type: integer
+        example: 608269
+      internal_tx:
+        type: object
+        example:
+          fee: 0
+          nonce: 0
+          oracle_id: ok_4HGhEdjeRtpsWzfSEJZnBKNmjgHALAifcBUey8EvRAdDfRsqc
+          query: 'YWtfdVRXZWdwZk42VWpBNHl6OFg0WlZSaTl4S0VZZVhISkRSWmNScnlUc1JIQUZvQnBMYTtodHRwczovL21haWwuZ29vZ2xlLmNvbS9tYWlsL3UvMC8jaW5ib3g='
+          query_fee: 20000000000000
+          query_id": oq_2T4mYmjcyinbfYyHyDq6FfPXHChf5mYPEXgza9vHAukuq2EEHj
+          query_ttl:
+            type: delta
+            value": 20
+          response_ttl:
+            type: delta
+            value: 20
+          sender_id: ak_7wqP18AHzyoqymwGaqQp8G2UpzBCggYiq7CZdJiB71VUsLpR4
+          type: OracleQueryTx
+          version: 1
+      local_idx:
+        type: integer
+        example: 0
+      micro_index:
+        type: integer
+        example: 2
+  ContractLog:
+    description: ContractLog
+    properties:
+      args:
+        type: array
+        example:
+          - 57632170077998225994387431184384351560267542170559996321319244663568556637966
+          - 70455690283454580784062717387189552611484838031419336802117080415662207780030
+          - 1050376320000000000
+      block_hash:
+        type: string
+        example: mh_27wa1cRsbEGV5N9N6BVKEtX1ycaomL5Q9w1NpL2iRjRt4aZhiV
+      call_tx_hash:
+        type: string
+        example: th_DXhneXz8xk1RW2rSWtjzMFBsqkQ7qwhZzzYbdumq3hiZJHPig
+      call_txi:
+        type: integer
+        example: 32530611
+      contract_id:
+        type: string
+        example: ct_y7gojSY8rXW6tztE9Ftqe3kmNrqEXsREiPwGCeG3MJL38jkFo",
+      contract_txi:
+        type: integer
+        example: 23524907
+      data:
+        type: string
+        example: ""
+      event_hash:
+        type: string
+        example: "48U3JOKTVTI6FVMTK2BLHM8NG72JEBG93VS6MENPSC8E71IM5FNG===="
+      ext_caller_contract_id:
+        type: string
+        example: ct_7UfopTwsRuLGFEcsScbYgQ6YnySXuyMxQWhw6fjycnzS5Nyzq
+      ext_caller_contract_txi:
+        type: integer
+        example: 20366741
+      height:
+        type: integer
+        example: 609854
+      log_idx:
+        type: integer
+        example: 0
+      micro_index:
+        type: integer
+        example: 15
+      parent_contract_id:
+        type: integer
+        nullable: true
+        example: null
+paths:
+  /contracts/logs:
+    get:
+      deprecated: false
+      description: Get contract logs.
+      operationId: get_contracts_logs
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/ScopeParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns paginated contracts logs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ContractLog'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /contracts/calls:
+    get:
+      deprecated: false
+      description: Get contract calls.
+      operationId: get_contracts_calls
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/ScopeParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns paginated contracts logs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ContractCall'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

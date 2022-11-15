@@ -69,6 +69,21 @@ jobs:
 
       - run: mix format --check-formatted && mix credo diff master
 
+  lint-docs:
+    name: Swagger v2 auto-generation + linting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - run: ./scripts/swagger-docs.py >swagger_v2.yaml
+
+      - run: diff swagger_v2.yaml priv/static/swagger/swagger_v2.yaml
+
+      - run: sed -i 's/[[:space:]]*$//' README.md
+
+      - run: git diff --exit-code README.md
 
   dialyzer:
     name: Dialyzer

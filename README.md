@@ -32,6 +32,7 @@
 - [Migrating to v2](#migrating-to-v2)
 - [Websocket interface](#websocket-interface)
 - [Tests](#tests)
+- [Auto-generated Documentation](#auto-generated-documentation)
 
 <!-- markdown-toc end -->
 
@@ -4062,7 +4063,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/aex9/balances/hash/mh_kkKtNk2GAgJKja
 
 ## NFTs (AEX-141 contracts and tokens)
 
-AEX-141 NFT contracts might organize the access and storage of NFTs metadata in flexible ways. This behaviour is declared during contract creation with the metadata_type field. This and other meta_info fields like name and symbol can be accessed by `/aex141` endpoint that displays information about NFT contracts. 
+AEX-141 NFT contracts might organize the access and storage of NFTs metadata in flexible ways. This behaviour is declared during contract creation with the metadata_type field. This and other meta_info fields like name and symbol can be accessed by `/aex141` endpoint that displays information about NFT contracts.
 
 With other endpoints it's possible to know more about AEX-141 NFTs including:
 
@@ -4070,7 +4071,7 @@ With other endpoints it's possible to know more about AEX-141 NFTs including:
 - who are the nft owners on a collection
 - which NFTs a wallet owns
 - NFT transfers filtered by contract and/or wallet
-- and more to come ... 
+- and more to come ...
 
 ### `/v2/aex141`
 
@@ -4648,14 +4649,14 @@ If it's "mdw", it indicates that it's already avaiable through AeMdw Api.
 Running unit tests will not sync the database. To run them:
 ```
 elixir --sname aeternity@localhost -S mix test
-```.
+```
 
 ### Integration tests
 
 The database has to be fully synced. Then, run the tests with:
 ```
 elixir --sname aeternity@localhost -S mix test.integration
-````.
+```
 
 ## CI
 
@@ -4679,3 +4680,12 @@ This installs pre_commit and pre_push checks as defined by `config :git_hooks` i
 
 If sure about the change, if it was for example in a integration test case and it was already tested and formatted,
 one can use `git push --no-verify` to bypass the hook.
+
+## Auto-generated Documentation
+
+Every time an endpoint is changed, the swagger v2 file should be changed as well.
+
+To do so:
+1. Change the corresponding resource in the [docs/swagger_v2/](docs/swagger_v2/) directory.
+2. Regenerate the changes using `./scripts/swagger-docs.py`.
+3. Add all of these changes as part of the commit.
