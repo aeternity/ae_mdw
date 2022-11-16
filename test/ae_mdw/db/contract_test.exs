@@ -187,6 +187,58 @@ defmodule AeMdw.Db.ContractTest do
       assert State.exists?(state, Model.IdxContractLog, {call_txi, 1, create_txi, evt_hash1})
     end
 
+    test "does not update aex9 event balance on contract creation" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      account_pk1 = :crypto.strong_rand_bytes(32)
+      account_pk2 = :crypto.strong_rand_bytes(32)
+      height = Enum.random(100_000..999_999)
+      txi = Enum.random(100_000_000..999_999_999)
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {
+            contract_pk,
+            [AeMdw.Node.aexn_mint_event_hash(), account_pk1, <<1_000_000::256>>],
+            ""
+          },
+          {
+            contract_pk,
+            [AeMdw.Node.aexn_burn_event_hash(), account_pk1, <<10::256>>],
+            ""
+          },
+          {
+            contract_pk,
+            [AeMdw.Node.aexn_swap_event_hash(), account_pk1, <<20::256>>],
+            ""
+          },
+          {
+            contract_pk,
+            [AeMdw.Node.aexn_transfer_event_hash(), account_pk1, account_pk2, <<30::256>>],
+            ""
+          }
+        ])
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
+        |> Contract.logs_write({height, 0}, txi, txi, call_rec)
+
+      assert :not_found == State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk1})
+      assert :not_found == State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk2})
+
+      refute :not_found ==
+               State.get(state, Model.AexnTransfer, {:aex9, account_pk1, txi, account_pk2, 30, 3})
+    end
+
     test "update AEX9 state on non AEX9 contract call with logs having AEX9 contracts" do
       not_aex9_contract_pk =
         <<46, 45, 66, 42, 171, 23, 186, 153, 167, 41, 204, 175, 3, 32, 136, 142, 172, 72, 29, 171,

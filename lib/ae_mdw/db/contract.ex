@@ -446,14 +446,16 @@ defmodule AeMdw.Db.Contract do
   end
 
   defp write_aex9_records(state, evt_hash, contract_pk, txi, log_idx, args) do
+    update_balance? = txi != Origin.tx_index!(state, {:contract, contract_pk})
+
     cond do
-      is_aexn_burn?(evt_hash) ->
+      is_aexn_burn?(evt_hash) and update_balance? ->
         burn_aex9_balance(state, contract_pk, txi, log_idx, args)
 
-      is_aexn_mint?(evt_hash) ->
+      is_aexn_mint?(evt_hash) and update_balance? ->
         mint_aex9_balance(state, contract_pk, txi, log_idx, args)
 
-      is_aexn_swap?(evt_hash) ->
+      is_aexn_swap?(evt_hash) and update_balance? ->
         burn_aex9_balance(state, contract_pk, txi, log_idx, args)
 
       is_aexn_transfer?(evt_hash) ->
@@ -643,29 +645,35 @@ defmodule AeMdw.Db.Contract do
          to_pk,
          <<transfered_value::256>>
        ]) do
-    Model.aex9_event_balance(amount: from_amount) =
-      m_from = get_aex9_event_balance(state, contract_pk, from_pk)
+    update_balance? = txi != Origin.tx_index!(state, {:contract, contract_pk})
 
-    Model.aex9_event_balance(amount: to_amount) =
-      m_to = get_aex9_event_balance(state, contract_pk, to_pk)
+    if update_balance? do
+      Model.aex9_event_balance(amount: from_amount) =
+        m_from = get_aex9_event_balance(state, contract_pk, from_pk)
 
-    m_to =
-      Model.aex9_event_balance(m_to,
-        txi: txi,
-        log_idx: log_idx,
-        amount: to_amount + transfered_value
-      )
+      Model.aex9_event_balance(amount: to_amount) =
+        m_to = get_aex9_event_balance(state, contract_pk, to_pk)
 
-    m_from =
-      Model.aex9_event_balance(m_from,
-        txi: txi,
-        log_idx: log_idx,
-        amount: from_amount - transfered_value
-      )
+      m_to =
+        Model.aex9_event_balance(m_to,
+          txi: txi,
+          log_idx: log_idx,
+          amount: to_amount + transfered_value
+        )
 
-    state
-    |> State.put(Model.Aex9EventBalance, m_from)
-    |> State.put(Model.Aex9EventBalance, m_to)
+      m_from =
+        Model.aex9_event_balance(m_from,
+          txi: txi,
+          log_idx: log_idx,
+          amount: from_amount - transfered_value
+        )
+
+      state
+      |> State.put(Model.Aex9EventBalance, m_from)
+      |> State.put(Model.Aex9EventBalance, m_to)
+    else
+      state
+    end
   end
 
   defp update_transfer_balance(state, _type, _pk, _txi, _idx, _args), do: state
