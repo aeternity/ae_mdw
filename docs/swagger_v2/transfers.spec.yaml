@@ -1,0 +1,51 @@
+schemas:
+  Transfer:
+    type: object
+    properties:
+      account_id:
+        type: string
+        example: ak_2KAcA2Pp1nrR8Wkt3FtCkReGzAi8vJ9Snxa4PcmrthVx8AhPe8
+      amount:
+        type: integer
+        example: 9592000000000000000
+      height:
+        type: integer
+        example: 610158
+      kind:
+        enum:
+          - reward_dev
+          - reward_block
+      ref_txi:
+        type: integer
+        nullable: true
+        example: null
+paths:
+  /transfers:
+    get:
+      deprecated: false
+      description: Get multiple transfers.
+      operationId: get_transfers
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/ScopeParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns paginated names
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Transfer'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

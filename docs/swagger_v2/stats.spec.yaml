@@ -1,0 +1,150 @@
+schemas:
+  DeltaStat:
+    description: DeltaStat
+    properties:
+      height:
+        description: The generation
+        type: integer
+      auctions_started:
+        description: The number of auctions started
+        type: integer
+      block_reward:
+        description: The block reward
+        type: integer
+      contracts_created:
+        description: The number of contracts created
+        type: integer
+      dev_reward:
+        description: The dev reward
+        type: integer
+      names_activated:
+        description: The number of names activated
+        type: integer
+      names_expired:
+        description: The number of names expired
+        type: integer
+      names_revoked:
+        description: The number of names revoked
+        type: integer
+      oracles_expired:
+        description: The number of oracles expired
+        type: integer
+      oracles_registered:
+        description: The number of oracles registered
+        type: integer
+    example:
+      auctions_started: 0
+      block_reward: 269973000000000000000
+      contracts_created: 0
+      dev_reward: 33027000000000000000
+      height: 121804
+      names_activated: 0
+      names_expired: 0
+      names_revoked: 0
+      oracles_expired: 0
+      oracles_registered: 0
+  TotalStat:
+    type: object
+    description: TotalStat
+    properties:
+      height:
+        description: The generation
+        type: integer
+      auctions_started:
+        description: The number of auctions started
+        type: integer
+      block_reward:
+        description: The block reward
+        type: integer
+      contracts_created:
+        description: The number of contracts created
+        type: integer
+      dev_reward:
+        description: The dev reward
+        type: integer
+      names_activated:
+        description: The number of names activated
+        type: integer
+      names_expired:
+        description: The number of names expired
+        type: integer
+      names_revoked:
+        description: The number of names revoked
+        type: integer
+      oracles_expired:
+        description: The number of oracles expired
+        type: integer
+      oracles_registered:
+        description: The number of oracles registered
+        type: integer
+    example:
+      auctions_started: 0
+      block_reward: 269973000000000000000
+      contracts_created: 0
+      dev_reward: 33027000000000000000
+      height: 121804
+      names_activated: 0
+      names_expired: 0
+      names_revoked: 0
+      oracles_expired: 0
+      oracles_registered: 0
+
+paths:
+  /deltastats:
+    get:
+      deprecated: false
+      description: Get delta stats.
+      operationId: get_deltastats
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/ScopeParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns paginated delta stats per generation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DeltaStat'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /totalstats:
+    get:
+      deprecated: false
+      description: Get total accumulated stats.
+      operationId: get_totalstats
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/ScopeParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns paginated total stats per generation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/TotalStat'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

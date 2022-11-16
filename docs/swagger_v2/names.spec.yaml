@@ -1,0 +1,360 @@
+schemas:
+  Name:
+    description: Name
+    properties:
+      active:
+        type: boolean
+        example: true
+      hash:
+        type: string
+        example: nm_2YmgvoUhVua9wEYGpMj9ybctbQXHPbY9Ppu4CoKoUm8jjFfcsc
+      info:
+        type: object
+        properties:
+          active_from:
+            type: integer
+            example: 163282
+          claims:
+            type: array
+            items:
+              type: integer
+            example: [4793600, 4792073, 4780558, 4750560]
+            expire_height:
+            type: integer
+            example: 362026
+          ownership:
+            type: object
+            properties:
+              current:
+                type: string
+                example: ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN
+              original:
+                type: string
+                example: ak_pMwUuWtqDoPxVtyAmWT45JvbCF2pGTmbCMB4U5yQHi37XF9is
+          pointers:
+            type: object
+            properties:
+              account_pubkey:
+                type: string
+                example: ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN
+          transfers:
+            type: array
+            items:
+              type: integer
+            example: [11861568, 11860267]
+          updates:
+            type: array
+            items:
+              type: integer
+            example: [15509041, 15472510, 15436683, 15399850, 15363107, 15327260, 15292125, 15255201, 15218294, 15182623, 15145666, 15106041, 15103138, 15102422, 15034493, 14998378, 14962285, 14926110, 14889735, 14853605, 14816113, 14780302, 14734948, 14697934, 14660004, 14622742, 14585275, 14549202, 14512586, 14475599, 14433402, 14395593, 14359214, 14322121, 14275361, 14237928, 14197055, 14158176, 14118957, 14083790, 14047637, 14007331, 13968434, 13929634, 13888411, 13852034, 13729934, 13692516, 13655299, 13621141, 13585850, 13549286, 13517014, 13478966, 13119079, 13119035, 13119002, 13118969, 13118936, 12758156, 12758112, 12432743, 12432718, 12432693, 12432668, 12432643, 12077832, 10477629, 7255087, 4831909]
+            type: string
+        example: trustwallet.chain
+      previous:
+        type: array
+        items:
+          $ref: '#/components/schemas/Name'
+      status:
+        type: string
+        enum:
+          - name
+          - auction
+        example: name
+  Auction:
+    description: Auction
+    properties:
+      active:
+        type: boolean
+        example: false
+      info:
+        type: object
+        properties:
+          auction_end:
+            type: integer
+            example: 638002
+          bids:
+            type: array
+            items:
+              type: integer
+            example:
+              - 32508400
+          last_bid:
+            type: object
+            properties:
+              block_hash:
+                type: string
+                example: mh_28pH6wARaeMcdvMfe7nMJV2yYQMP9E36mmk6g9r9kkpEgao9MQ
+              block_height:
+                type: integer
+                example: 608242
+              hash:
+                type: string
+                example: th_2FAG7SHx4FkEBwh5dxjd2As3d7xXPZ3AZTQKFxm2sKADYpvDf6
+              micro_index:
+                type: integer
+                example: 2
+              micro_time:
+                type: integer
+                example: 1654251750088
+              signatures:
+                type: array
+                items:
+                  type: string
+                  example: sg_VXb4ipxdLk5PxfoQ6xUv9ma3GGmmMSARsRbXeWdS8cAGZS5SVdkfJgLskSw7rXzZSikGwha23LzsK7LPrDomkohRZTcb8
+              tx:
+                type: object
+                example:
+                  account_id: ak_2JJNMYcnqPaABiSY5omockmv4cCoZefv4XzStAxKe9gM2xYz2r
+                  fee: 16540000000000
+                  name: 1996.chain
+                  name_fee: 134626900000000000000
+                  name_id: nm_aJcPv1zMt3gdvxk6CQocaHq48D5vUyZXTqmwv2yXTTmk8fm2c
+                  name_salt: 7095609104934055
+                  nonce: 225,
+                  ttl: 818002
+                  type: NameClaimTx
+                  version: 2
+          tx_index:
+            type: integer
+            example: 32508400
+          name:
+            type: string
+            example: 1996.chain
+          previous:
+            $ref: '#/components/schemas/Auction'
+          status:
+            enum:
+              - auction
+
+paths:
+  /names:
+    get:
+      deprecated: false
+      description: Get multiple names.
+      operationId: get_names
+      parameters:
+        - name: by
+          in: query
+          description: Sorting by deactivation, activation or name
+          required: false
+          schema:
+            type: string
+            example: activation
+        - name: owned_by
+          in: query
+          description: Account that owns the name
+          required: false
+          schema:
+            type: string
+            example: ak_25BWMx4An9mmQJNPSwJisiENek3bAGadze31Eetj4K4JJC8VQN
+        - name: state
+          in: query
+          description: Activation state of the name (active or inactive)
+          required: false
+          schema:
+            type: string
+            example: inactive
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns paginated names
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Name'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /names/search:
+    get:
+      deprecated: false
+      description: Get multiple names.
+      operationId: search_names
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/ScopeParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns paginated active/inactive names and auctions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/Name'
+                            - type: object
+                              properties:
+                                status:
+                                  enum:
+                                    - auction
+                                    - active
+                                    - inactive
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /names/auctions:
+    get:
+      deprecated: false
+      description: Get multiple names.
+      operationId: get_names_auctions
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/ScopeParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns paginated active/inactive names and auctions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auction'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /names/{id}:
+    get:
+      deprecated: false
+      description: Get a single name.
+      operationId: get_name
+      parameters:
+        - name: id
+          in: path
+          description: The name
+          required: true
+          schema:
+            type: string
+            example: foo.chain
+      responses:
+        '200':
+          description: Returns single name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Name'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundResponse'
+  /names/{id}/auction:
+    get:
+      deprecated: false
+      description: Get name auction
+      operationId: get_name_auction
+      parameters:
+        - name: id
+          in: path
+          description: The name
+          required: true
+          schema:
+            type: string
+            example: foo.chain
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/ScopeParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns the name active auction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auction'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundResponse'
+  /names/{id}/pointers:
+    get:
+      deprecated: false
+      description: Get name pointers
+      operationId: get_name_pointers
+      parameters:
+        - name: id
+          in: path
+          description: The name
+          required: true
+          schema:
+            type: string
+            example: foo.chain
+      responses:
+        '200':
+          description: Returns a mapping of the name pointers
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundResponse'
+  /names/{id}/pointees:
+    get:
+      deprecated: false
+      description: Get name pointees
+      operationId: get_name_pointees
+      parameters:
+        - name: id
+          in: path
+          description: The name
+          required: true
+          schema:
+            type: string
+            example: foo.chain
+      responses:
+        '200':
+          description: Returns the name the active and inactive name pointees
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  active:
+                    type: object
+                  inactive:
+                    type: object
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundResponse'

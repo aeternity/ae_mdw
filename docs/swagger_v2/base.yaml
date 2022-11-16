@@ -1,0 +1,70 @@
+openapi: '3.0.0'
+info:
+  description: API for [Aeternity Middleware](https://github.com/aeternity/ae_mdw)
+  title: Aeternity Middleware
+  version: '2.0'
+
+servers:
+  - url: '/v2'
+    description: 'V2 version path'
+
+components:
+  parameters:
+    LimitParam:
+      in: query
+      name: limit
+      description: 'Limit paginated resources (max 100)'
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+    ScopeParam:
+      in: query
+      name: scope
+      description: 'Scopes results in a txi or generation range'
+      schema:
+        type: string
+        pattern: '(txi|gen):\d+(-\d+)?'
+    DirectionParam:
+      in: query
+      name: direction
+      description: 'Sorts results in forwards or backwards direction'
+      schema:
+        type: string
+        enum:
+          - forward
+          - backward
+  schemas:
+    ErrorResponse:
+      description: Error response from the API
+      example:
+        error: 'invalid id: th_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZF'
+      properties:
+        error:
+          description: The message of the error raised
+          type: string
+      required:
+        - error
+      title: Error response
+      type: object
+    NotFoundResponse:
+      description: Resource not found on the API
+      example:
+        error: 'not found: th_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZF'
+      properties:
+        error:
+          description: The message of the error raised
+          type: string
+      required:
+        - error
+      title: Not found response
+      type: object
+    PaginatedResponse:
+      properties:
+        next:
+          type: string
+          example: '/blocks?cursor=123'
+        prev:
+          type: string
+          example: '/blocks?cursor=234'

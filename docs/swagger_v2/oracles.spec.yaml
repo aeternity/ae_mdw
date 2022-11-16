@@ -1,0 +1,124 @@
+schemas:
+  Oracle:
+    example:
+      active: false
+      active_from: 4660
+      expire_height: 6894
+      extends:
+        - 11025
+      format:
+        query: string
+        response: string
+      oracle: ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM
+      query_fee: 20000
+      register: 11023
+    properties:
+      active:
+        description: The oracle active status
+        type: boolean
+      active_from:
+        description: The block height when the oracle became active
+        type: integer
+      expire_height:
+        description: The block height when the oracle expires
+        type: integer
+      extends:
+        description: The tx indexes when the oracle has been extended
+        type: array
+        items:
+          type: object
+          description: The oracle's query and response formats
+          example:
+            query: string
+            response: string
+          properties:
+            query:
+              description: The query format
+              type: string
+            response:
+              description: The response format
+              type: string
+          required:
+            - response
+            - query
+      oracle:
+        description: The oracle id
+        type: string
+      query_fee:
+        description: The query fee
+        type: integer
+      register:
+        description: The tx index when the oracle is registered
+        type: integer
+    required:
+      - register
+      - query_fee
+      - oracle
+      - format
+      - extends
+      - expire_height
+      - active_from
+      - active
+    type: object
+paths:
+  /oracles:
+    get:
+      deprecated: false
+      description: Get multiple oracles.
+      operationId: get_oracles
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/ScopeParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns paginatinated oracles
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Oracle'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /oracle/{id}:
+    get:
+      deprecated: false
+      description: Get a single oracle.
+      operationId: get_oracle
+      parameters:
+        - name: id
+          in: path
+          description: The oracle
+          required: true
+          schema:
+            type: string
+            example: foo.chain
+      responses:
+        '200':
+          description: Returns single oracle
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Oracle'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundResponse'
