@@ -4687,5 +4687,5 @@ Every time an endpoint is changed, the swagger v2 file should be changed as well
 
 To do so:
 1. Change the corresponding resource in the [docs/swagger_v2/](docs/swagger_v2/) directory.
-2. Regenerate the changes using `./scripts/swagger-docs.py`.
+2. Regenerate the changes using `./scripts/swagger-docs.py >priv/static/swagger/swagger_v2.yaml`.
 3. Add all of these changes as part of the commit.

@@ -1,5 +1,5 @@
 schemas:
-  Block:
+  KeyBlock:
     example:
       beneficiary: ak_2MR38Zf355m6JtP13T3WEcUcSLVLCxjGvjk6zG95S2mfKohcSS
       hash: kh_uoTGwc4HPzEW9qmiQR1zmVVdHmzU6YmnVvdFe6HvybJJRj7V6
@@ -56,12 +56,61 @@ schemas:
       version:
         description: The version
         type: integer
-    title: Block
+    title: Key Block
+    type: object
+  MicroBlock:
+    example:
+      micro_block_index: 64
+      transactions_count: 1
+      hash: "mh_JryFr55GwbEbEJivkvHwBPzqbhu6AvpcZqCiBoXzgZdLmNn2K"
+      height: 685072
+      pof_hash: "no_fraud"
+      prev_hash: "mh_hH3qADCrnGvuup6JwjtNSacHLd9h3NJzAgr173jS9KUqijfTB"
+      prev_key_hash: "kh_2rTj3FTZJ6fnuLFDJwAiDQZat2a23Lkp5uZQooxjwXEFhH4Vtw"
+      signature: "sg_8hhU15cVMbukFj4FbdrFwwYnbzXYPnstu9PDnWZGbfQNpeHcB6tK1F3wvG1MPYySARgDRJYUh3YPJD3HctFwg6Y4rUGSR"
+      state_hash: "bs_2bNSxvfhsPeAwN3LJU1oZLtUJ6GbeRdJYTEnFLAAazWtwPPqpN"
+      time: 1668435898477
+      txs_hash: "bx_2TAosDwRW2CwxbNiucN8hRfUHQcnJn2u3quDLPE9jAmgX26Qya"
+      version: 5
+    properties:
+      micro_block_index:
+        description: The index of the micro-block on the micro-block height, starting from 0
+        type: integer
+      transactions_count:
+        description: The number of transactions
+        type: integer
+      hash:
+        description: The micro block hash
+        type: string
+      height:
+        description: The block height
+        type: integer
+      pof_hash:
+        description: The pow
+        type: array
+        items:
+          type: integer
+      prev_hash:
+        description: The previous block hash
+        type: string
+      prev_key_hash:
+        description: The previous key block hash
+        type: string
+      state_hash:
+        description: The state hash
+        type: string
+      time:
+        description: The time
+        type: integer
+      version:
+        description: The version
+        type: integer
+    title: MicroBlock
     type: object
 paths:
   /blocks:
     get:
-      deprecated: false
+      deprecated: true
       description: Get multiple blocks.
       operationId: get_blocks
       parameters:
@@ -80,7 +129,7 @@ paths:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Block'
+                          $ref: '#/components/schemas/KeyBlock'
                   - $ref: '#/components/schemas/PaginatedResponse'
         '400':
           description: Bad request
@@ -90,7 +139,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
   /blocks/{hash_or_kbi}:
     get:
-      deprecated: false
+      deprecated: true
       description: Get a single block.
       operationId: get_block
       parameters:
@@ -110,7 +159,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Block'
+                $ref: '#/components/schemas/KeyBlock'
         '400':
           description: Bad request
           content:
@@ -125,7 +174,7 @@ paths:
                 $ref: '#/components/schemas/NotFoundResponse'
   /blocks/{kbi}/{mbi}:
     get:
-      deprecated: false
+      deprecated: true
       description: Get a single block.
       operationId: get_block_by_mbi
       parameters:
@@ -149,7 +198,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Block'
+                $ref: '#/components/schemas/KeyBlock'
         '400':
           description: Bad request
           content:
@@ -162,3 +211,171 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotFoundResponse'
+  /key-blocks:
+    get:
+      deprecated: false
+      description: Get multiple key blocks.
+      operationId: get_key_blocks
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/ScopeParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns paginated key blocks
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/KeyBlock'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /key-blocks/{hash_or_kbi}:
+    get:
+      deprecated: false
+      description: Get a single key block.
+      operationId: get_key_block
+      parameters:
+        - name: hash_or_kbi
+          in: path
+          description: The key block encoded hash or key block index
+          required: true
+          schema:
+            oneOf:
+              - type: string
+                example: kh_22BuVBCFvW5FvQu3F8h4v351SfJPokR9ytwAD77Lyuo6mqxeeF
+              - type: integer
+                example: 123
+      responses:
+        '200':
+          description: Returns a single key block
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeyBlock'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundResponse'
+  /key-blocks/{hash_or_kbi}/micro-blocks:
+    get:
+      deprecated: false
+      description: Get the key block micro blocks.
+      operationId: get_key_block_micro_blocks
+      parameters:
+        - name: hash_or_kbi
+          in: path
+          description: The key block encoded hash or key block index
+          required: true
+          schema:
+            oneOf:
+              - type: string
+                example: kh_22BuVBCFvW5FvQu3F8h4v351SfJPokR9ytwAD77Lyuo6mqxeeF
+              - type: integer
+                example: 123
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/ScopeParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns paginated micro blocks
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MicroBlock'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /micro-blocks/{hash}:
+    get:
+      deprecated: false
+      description: Get a micro block
+      operationId: get_micro_block
+      parameters:
+        - name: hash
+          in: path
+          description: The micro block encoded hash
+          required: true
+          schema:
+            type: string
+            example: mh_22BuVBCFvW5FvQu3F8h4v351SfJPokR9ytwAD77Lyuo6mqxeeF
+      responses:
+        '200':
+          description: Returns a single micro block
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MicroBlock'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundResponse'
+  /micro-blocks/{hash}/txs:
+    get:
+      deprecated: false
+      description: Get a micro block transactions
+      operationId: get_micro_block_transactions
+      parameters:
+        - name: hash
+          in: path
+          description: The micro block encoded hash
+          required: true
+          schema:
+            type: string
+            example: mh_22BuVBCFvW5FvQu3F8h4v351SfJPokR9ytwAD77Lyuo6mqxeeF
+      responses:
+        '200':
+          description: Returns paginated micro blocks
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Tx'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
