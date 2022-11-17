@@ -1,5 +1,18 @@
 # Changelog
 
+### [1.29.1](https://www.github.com/aeternity/ae_mdw/compare/v1.29.0...v1.29.1) (2022-11-17)
+
+
+### Bug Fixes
+
+* avoid double aex9 event balance update ([#1020](https://www.github.com/aeternity/ae_mdw/issues/1020)) ([91c6036](https://www.github.com/aeternity/ae_mdw/commit/91c603694c25d23a819fc00274fda4bd61a6d436))
+* handle account_pubkey recipient pointee ([9041da0](https://www.github.com/aeternity/ae_mdw/commit/9041da03e4a30dd4409901c567fe494b496a5dbf))
+
+
+### Miscellaneous
+
+* divide swagger v2 docs into separate resource files ([#1019](https://www.github.com/aeternity/ae_mdw/issues/1019)) ([bddbdff](https://www.github.com/aeternity/ae_mdw/commit/bddbdfffd563b4451eb18af69efdd09c217a5a58))
+
 ## [1.29.0](https://www.github.com/aeternity/ae_mdw/compare/v1.28.1...v1.29.0) (2022-11-14)
 
 
