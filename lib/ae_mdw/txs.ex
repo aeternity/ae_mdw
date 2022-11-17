@@ -482,8 +482,7 @@ defmodule AeMdw.Txs do
 
   defp get_recipient(state, spend_tx_recipient_nm, spend_txi) do
     with {:ok, plain_name} <- Validate.plain_name(state, spend_tx_recipient_nm),
-         {:ok, pointee_pk} <- Name.account_pointer_at(state, plain_name, spend_txi) do
-      recipient_account = :aeser_api_encoder.encode(:account_pubkey, pointee_pk)
+         {:ok, recipient_account} <- Name.account_pointer_at(state, plain_name, spend_txi) do
       %{"recipient" => %{"name" => plain_name, "account" => recipient_account}}
     else
       {:error, reason} ->

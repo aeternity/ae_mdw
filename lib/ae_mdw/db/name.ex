@@ -282,20 +282,22 @@ defmodule AeMdw.Db.Name do
         {:error, {:pointee_not_found, name, ref_txi}}
 
       update_txi ->
-        {:id, :account, pointee_pk} =
-          state
-          |> Format.to_raw_map(DbUtil.read_tx!(state, update_txi))
-          |> get_in([:tx, :pointers])
-          |> Enum.into(%{}, &pointer_kv_raw/1)
-          |> Map.get("account_pubkey")
-
-        {:ok, pointee_pk}
+        {:ok, fetch_account_pointee(state, update_txi)}
     end
   end
 
   defp find_update_txi_before(updates, ref_txi) do
     Enum.find_value(updates, fn {_block_height, update_txi} ->
       if update_txi <= ref_txi, do: update_txi
+    end)
+  end
+
+  defp fetch_account_pointee(state, update_txi) do
+    state
+    |> Format.to_raw_map(DbUtil.read_tx!(state, update_txi))
+    |> get_in([:tx, :pointers])
+    |> Enum.find_value(fn %{key: key, id: pointee_id} ->
+      if key == "account_pubkey", do: pointee_id
     end)
   end
 end

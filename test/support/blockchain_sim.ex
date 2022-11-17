@@ -98,8 +98,8 @@ defmodule AeMdwWeb.BlockchainSim do
   end
 
   @spec spend_tx(account_name(), account_name(), non_neg_integer()) :: tuple()
-  def spend_tx(sender_name, recipient_name, amount) do
-    {:spend_tx, sender_name, recipient_name, amount}
+  def spend_tx(sender_name, recipient, amount) do
+    {:spend_tx, sender_name, recipient, amount}
   end
 
   @spec tx(tx_type(), account_name(), map()) :: tuple()
@@ -333,7 +333,7 @@ defmodule AeMdwWeb.BlockchainSim do
   defp create_aetx({:spend_tx, sender_name, recipient, amount}, accounts) do
     recipient_id =
       case recipient do
-        {:id, _type, _pk} = id -> id
+        {:id, :name, _hash} = id -> id
         recipient_name -> Map.fetch!(accounts, recipient_name)
       end
 

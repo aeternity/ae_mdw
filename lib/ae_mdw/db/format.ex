@@ -100,6 +100,7 @@ defmodule AeMdw.Db.Format do
     Enum.map(pointers, fn
       %{"key" => key, "id" => id} -> %{"key" => maybe_base64_pointer_key(key), "id" => id}
       %{key: key, id: id} -> %{key: maybe_base64_pointer_key(key), id: id}
+      {:pointer, key, id} -> %{key: maybe_base64_pointer_key(key), id: enc_id(id)}
     end)
   end
 
