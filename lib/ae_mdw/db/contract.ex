@@ -144,14 +144,20 @@ defmodule AeMdw.Db.Contract do
 
   @spec aex9_init_event_balances(state(), pubkey(), [account_balance()], txi()) :: state()
   def aex9_init_event_balances(state, contract_pk, balances, txi) do
-    Enum.reduce(balances, state, fn {account_pk, amount}, state ->
+    Enum.reduce(balances, state, fn {account_pk, initial_amount}, state ->
       m_balance =
-        Model.aex9_event_balance(
-          index: {contract_pk, account_pk},
-          txi: txi,
-          log_idx: -1,
-          amount: amount
-        )
+        case State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk}) do
+          :not_found ->
+            Model.aex9_event_balance(
+              index: {contract_pk, account_pk},
+              txi: txi,
+              log_idx: -1,
+              amount: initial_amount
+            )
+
+          {:ok, Model.aex9_event_balance(amount: amount) = m_balance} ->
+            Model.aex9_event_balance(m_balance, amount: initial_amount + amount)
+        end
 
       state
       |> aex9_write_presence(contract_pk, txi, account_pk)
