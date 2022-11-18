@@ -45,6 +45,8 @@ defmodule AeMdw.Db.UpdateAex9StateMutation do
         },
         state
       ) do
-    Contract.aex9_write_balances(state, contract_pk, balances, block_index, txi)
+    state
+    |> Contract.aex9_write_balances(contract_pk, balances, block_index, txi)
+    |> Contract.aex9_init_event_balances(contract_pk, balances, txi)
   end
 end
