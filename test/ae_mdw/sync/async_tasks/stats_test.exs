@@ -52,6 +52,42 @@ defmodule AeMdw.Sync.AsyncTasks.StatsTest do
     end
   end
 
+  describe "update_db_count/0" do
+    test "with pending db records" do
+      m_tasks =
+        [m_task1, m_task2] =
+        Enum.map(
+          1..2,
+          fn _i ->
+            index = {System.system_time(), :update_aex9_state}
+            Model.async_task(index: index, args: [:crypto.strong_rand_bytes(32)])
+          end
+        )
+
+      on_exit(fn ->
+        Model.async_task(index: key) = m_task2
+        Database.dirty_delete(Model.AsyncTask, key)
+      end)
+
+      # setup new to expected pending
+      Enum.each(m_tasks, fn m_task ->
+        Database.dirty_write(Model.AsyncTask, m_task)
+      end)
+
+      pending_count = Database.count(Model.AsyncTask)
+
+      Stats.update_db_count()
+      assert %{total_pending: ^pending_count} = Stats.counters()
+
+      Model.async_task(index: key) = m_task1
+      Database.dirty_delete(Model.AsyncTask, key)
+      pending_count = pending_count - 1
+
+      Stats.update_db_count()
+      assert %{total_pending: ^pending_count} = Stats.counters()
+    end
+  end
+
   describe "update_consumed/2 and counter/0 success" do
     test "without pending db records" do
       assert :ok = Stats.update_buffer_len(15)
