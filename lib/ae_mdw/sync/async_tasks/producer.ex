@@ -33,6 +33,7 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   @spec save_enqueued() :: :ok
   def save_enqueued() do
     Store.save()
+    Stats.update_db_count()
   end
 
   @spec dequeue() :: nil | Model.async_task_record()
