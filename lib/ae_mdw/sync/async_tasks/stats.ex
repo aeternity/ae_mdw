@@ -32,6 +32,14 @@ defmodule AeMdw.Sync.AsyncTasks.Stats do
     :ok
   end
 
+  @spec update_db_count() :: :ok
+  def update_db_count do
+    db_pending_count = Database.count(Model.AsyncTask)
+    :ets.update_element(@tab, @stats_key, {@db_count_pos, db_pending_count})
+
+    :ok
+  end
+
   @spec update_consumed() :: :ok
   def update_consumed do
     dec_db_count()
@@ -56,10 +64,5 @@ defmodule AeMdw.Sync.AsyncTasks.Stats do
   #
   defp dec_db_count() do
     :ets.update_counter(@tab, @stats_key, {@db_count_pos, -1, 0, 0})
-  end
-
-  defp update_db_count() do
-    db_pending_count = Database.count(Model.AsyncTask)
-    :ets.update_element(@tab, @stats_key, {@db_count_pos, db_pending_count})
   end
 end
