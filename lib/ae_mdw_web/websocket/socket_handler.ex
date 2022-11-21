@@ -90,9 +90,6 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
 
       {:error, :invalid_channel} ->
         reply_error("invalid payload", channel, state)
-
-      {:error, :limit_reached} ->
-        reply_error("invalid subscription", channel, state)
     end
   end
 

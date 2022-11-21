@@ -36,17 +36,6 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
       assert {:ok, [^channel]} = Subscriptions.subscribe(pid, channel)
       assert {:error, :already_subscribed} = Subscriptions.subscribe(pid, channel)
     end
-
-    test "returns error on subscriptions limit is reached" do
-      pid = new_pid()
-
-      Enum.each(1001..2000, fn i ->
-        channel = encode(:account_pubkey, <<i::256>>)
-        assert {:ok, _channel_list} = Subscriptions.subscribe(pid, channel)
-      end)
-
-      assert {:error, :limit_reached} = Subscriptions.subscribe(pid, <<2001::256>>)
-    end
   end
 
   describe "unsubscribe/2" do

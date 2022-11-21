@@ -16,7 +16,6 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
   @subs_pids :subs_pids
   @subs_channel_pid :subs_channel_pid
   @subs_pid_channel :subs_pid_channel
-  @limit_per_pid 1_000
   @eot :"$end_of_table"
 
   @known_channels ["KeyBlocks", "MicroBlocks", "Transactions"]
@@ -50,7 +49,7 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
   end
 
   @spec subscribe(pid(), channel()) ::
-          {:ok, [channel()]} | {:error, :invalid_channel | :already_subscribed | :limit_reached}
+          {:ok, [channel()]} | {:error, :invalid_channel | :already_subscribed}
   def subscribe(pid, channel) do
     with {:ok, channel_key} <- validate_subscribe(pid, channel) do
       maybe_monitor(pid)
@@ -140,13 +139,11 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
 
   defp validate_subscribe(pid, channel) do
     with {:ok, channel_key} <- channel_key(channel),
-         {:exists, false} <- {:exists, exists?(pid, channel)},
-         count when count < @limit_per_pid <- count_subscriptions(pid) do
+         {:exists, false} <- {:exists, exists?(pid, channel)} do
       {:ok, channel_key}
     else
       {:error, _reason} -> {:error, :invalid_channel}
       {:exists, true} -> {:error, :already_subscribed}
-      _above_limit -> {:error, :limit_reached}
     end
   end
 
@@ -168,14 +165,5 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
       @eot -> false
       {_match, _cont} -> true
     end
-  end
-
-  defp count_subscriptions(pid) do
-    count_spec =
-      Ex2ms.fun do
-        {^pid, _channel} -> true
-      end
-
-    :ets.select_count(@subs_pid_channel, count_spec)
   end
 end
