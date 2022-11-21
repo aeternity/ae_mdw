@@ -5,6 +5,8 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   use GenServer
 
   alias AeMdw.EtsCache
+  alias AeMdwWeb.Websocket.Subscriptions
+  alias AeMdwWeb.Websocket.SocketHandler
 
   require Ex2ms
 
@@ -12,7 +14,6 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
 
   @hashes_table :broadcast_hashes
   @expiration_minutes 120
-  @subs_target_channels :subs_target_channels
 
   @spec start_link(any()) :: GenServer.on_start()
   def start_link(_arg), do: GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
@@ -44,9 +45,8 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
 
     if not already_processed?({:key, hash, source}) do
       do_broadcast_key_block(block, source)
+      set_processed({:key, hash, source})
     end
-
-    push_hash({:key, hash, source})
 
     {:noreply, state}
   end
@@ -57,9 +57,8 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
 
     if not already_processed?({:micro, hash, source}) do
       do_broadcast_micro_block(block, source)
+      set_processed({:micro, hash, source})
     end
-
-    push_hash({:micro, hash, source})
 
     {:noreply, state}
   end
@@ -70,9 +69,8 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
 
     if not already_processed?({:txs, hash, source}) do
       do_broadcast_txs(block, source)
+      set_processed({:txs, hash, source})
     end
-
-    push_hash({:txs, hash, source})
 
     {:noreply, state}
   end
@@ -83,17 +81,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
 
     tx
     |> get_ids_from_tx()
-    |> Enum.each(fn key ->
-      spec =
-        Ex2ms.fun do
-          {{^key, _}, _} -> true
-        end
-
-      case :ets.select(@subs_target_channels, spec, 1) do
-        :"$end_of_table" -> :ok
-        {[_], _cont} -> broadcast(key, encode_message(ser_tx, "Object", source))
-      end
-    end)
+    |> Enum.each(&broadcast(&1, encode_message(ser_tx, "Object", source)))
 
     {:noreply, state}
   end
@@ -172,7 +160,9 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   end
 
   defp broadcast(channel, msg) do
-    AeMdwWeb.Websocket.SocketHandler.channel_broadcast(channel, msg)
+    channel
+    |> Subscriptions.subscribers()
+    |> Enum.each(&SocketHandler.send(&1, msg))
   end
 
   defp encode_message(payload, "Transactions", source),
@@ -257,5 +247,5 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
 
   defp already_processed?(type_hash), do: EtsCache.member(@hashes_table, type_hash)
 
-  defp push_hash(type_hash), do: EtsCache.put(@hashes_table, type_hash, :ok)
+  defp set_processed(type_hash), do: EtsCache.put(@hashes_table, type_hash, true)
 end

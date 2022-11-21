@@ -36,6 +36,8 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
     test "returns error message when already subscribed", %{clients: clients} do
       client = Enum.at(clients, 1)
 
+      on_exit(fn -> WsClient.unsubscribe(client, :key_blocks) end)
+
       WsClient.subscribe(client, :key_blocks)
       WsClient.subscribe(client, :key_blocks)
 
@@ -64,6 +66,8 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
 
     test "returns error message when already subscribed", %{clients: clients} do
       client = Enum.at(clients, 3)
+
+      on_exit(fn -> WsClient.unsubscribe(client, :micro_blocks) end)
 
       WsClient.subscribe(client, :micro_blocks)
       WsClient.subscribe(client, :micro_blocks)
@@ -94,6 +98,8 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
     test "returns error message when already subscribed", %{clients: clients} do
       client = Enum.at(clients, 5)
 
+      on_exit(fn -> WsClient.unsubscribe(client, :transactions) end)
+
       WsClient.subscribe(client, :transactions)
       WsClient.subscribe(client, :transactions)
 
@@ -119,13 +125,13 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
       WsClient.subscribe(client, channel_id)
 
       Process.send_after(client, {:subs, self()}, 100)
-      assert_receive [^channel_id, ^name_id, ^oracle_id, ^contract_id, ^account_id], 300
+      assert_receive [^account_id, ^contract_id, ^oracle_id, ^name_id, ^channel_id], 300
 
       WsClient.unsubscribe(client, account_id)
       WsClient.unsubscribe(client, channel_id)
 
       Process.send_after(client, {:subs, self()}, 100)
-      assert_receive [^name_id, ^oracle_id, ^contract_id], 300
+      assert_receive [^contract_id, ^oracle_id, ^name_id], 300
 
       Process.send_after(client, {:error, self()}, 100)
       assert_receive nil, 300
