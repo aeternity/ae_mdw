@@ -124,6 +124,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       kb_hash = :crypto.strong_rand_bytes(32)
       next_mb_hash = :crypto.strong_rand_bytes(32)
       contract_pk = :crypto.strong_rand_bytes(32)
+      remote_pk = :crypto.strong_rand_bytes(32)
       account_pk = :crypto.strong_rand_bytes(32)
       amount = Enum.random(100_000_000..999_999_999)
       height = Enum.random(100_000..999_999)
@@ -149,7 +150,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       call_rec =
         call_rec("logs", contract_pk, height, nil, [
           {
-            contract_pk,
+            remote_pk,
             [AeMdw.Node.aexn_mint_event_hash(), account_pk, <<amount::256>>],
             ""
           }
@@ -169,21 +170,21 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
 
       type_info = {:fcode, functions, nil, nil}
-      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+      AeMdw.EtsCache.put(AeMdw.Contract, remote_pk, {type_info, nil, nil})
 
       with_mocks [
         {AeMdw.Node.Db, [:passthrough],
          [
            get_key_block_hash: fn ^block_hash_height -> kb_hash end,
            get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
-           aex9_balances: fn ^contract_pk, _next -> {:ok, %{}} end
+           aex9_balances: fn ^remote_pk, _next -> {:ok, %{}} end
          ]}
       ] do
         previous_balance = 100_000
 
         m_balance =
           Model.aex9_event_balance(
-            index: {contract_pk, account_pk},
+            index: {remote_pk, account_pk},
             txi: call_txi - 1,
             log_idx: -1,
             amount: previous_balance
@@ -195,6 +196,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           |> State.new()
           |> State.put(Model.Aex9EventBalance, m_balance)
           |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+          |> State.cache_put(:ct_create_sync_cache, remote_pk, call_txi - 2)
           |> State.commit_mem([mutation])
 
         m_new_balance =
@@ -205,7 +207,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           )
 
         assert {:ok, ^m_new_balance} =
-                 State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk})
+                 State.get(state, Model.Aex9EventBalance, {remote_pk, account_pk})
       end
     end
   end
@@ -389,7 +391,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
   end
 
   describe "aex9 transfer" do
-    test "add aex9 transfers after a call with transfer logs" do
+    test "puts aex9 transfers after a call with transfer log" do
       kb_hash = :crypto.strong_rand_bytes(32)
       next_mb_hash = :crypto.strong_rand_bytes(32)
       contract_pk = :crypto.strong_rand_bytes(32)
@@ -470,11 +472,121 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                )
       end
     end
+
+    test "puts multiple aex9 transfers after a call with transfer logs" do
+      kb_hash = :crypto.strong_rand_bytes(32)
+      next_mb_hash = :crypto.strong_rand_bytes(32)
+      contract_pk = :crypto.strong_rand_bytes(32)
+      remote_pk1 = :crypto.strong_rand_bytes(32)
+      remote_pk2 = :crypto.strong_rand_bytes(32)
+      height = Enum.random(100_000..999_999)
+      mbi = 1
+      block_hash_height = height + 1
+      call_txi = Enum.random(100_000_000..999_999_999)
+
+      from_pk1 = <<11::256>>
+      to_pk1 = <<12::256>>
+
+      from_pk2 = <<13::256>>
+      to_pk2 = <<14::256>>
+
+      amount1 = Enum.random(100_000_000..999_999_999)
+      amount2 = Enum.random(100_000_000..999_999_999)
+
+      fun_arg_res = %{
+        arguments: [
+          %{
+            type: :string,
+            value: "any"
+          },
+          %{
+            type: :int,
+            value: 0
+          }
+        ],
+        function: "multi_transfer",
+        result: %{type: :unit, value: ""}
+      }
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {
+            remote_pk1,
+            [AeMdw.Node.aexn_transfer_event_hash(), from_pk1, to_pk1, <<amount1::256>>],
+            ""
+          },
+          {
+            remote_pk2,
+            [AeMdw.Node.aexn_transfer_event_hash(), from_pk2, to_pk2, <<amount2::256>>],
+            ""
+          }
+        ])
+
+      mutation =
+        ContractCallMutation.new(
+          contract_pk,
+          {height, mbi},
+          call_txi,
+          fun_arg_res,
+          call_rec
+        )
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, remote_pk1, {type_info, nil, nil})
+      AeMdw.EtsCache.put(AeMdw.Contract, remote_pk2, {type_info, nil, nil})
+
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           get_key_block_hash: fn ^block_hash_height -> kb_hash end,
+           get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
+           aex9_balances: fn pk, _next when pk in [remote_pk1, remote_pk2] -> {:ok, %{}} end
+         ]}
+      ] do
+        state =
+          NullStore.new()
+          |> MemStore.new()
+          |> State.new()
+          |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+          |> State.cache_put(:ct_create_sync_cache, remote_pk1, call_txi - 2)
+          |> State.cache_put(:ct_create_sync_cache, remote_pk2, call_txi - 3)
+          |> State.commit_mem([mutation])
+
+        assert State.exists?(
+                 state,
+                 Model.AexnTransfer,
+                 {:aex9, from_pk1, call_txi, to_pk1, amount1, 0}
+               )
+
+        assert State.exists?(
+                 state,
+                 Model.AexnTransfer,
+                 {:aex9, from_pk2, call_txi, to_pk2, amount2, 1}
+               )
+
+        assert State.exists?(
+                 state,
+                 Model.RevAexnTransfer,
+                 {:aex9, to_pk1, call_txi, from_pk1, amount1, 0}
+               )
+
+        assert State.exists?(
+                 state,
+                 Model.RevAexnTransfer,
+                 {:aex9, to_pk2, call_txi, from_pk2, amount2, 1}
+               )
+      end
+    end
   end
 
   describe "aex141 mint" do
     test "add nft ownership after a call with mint logs" do
       contract_pk = :crypto.strong_rand_bytes(32)
+      remote_pk = :crypto.strong_rand_bytes(32)
       to_pk = :crypto.strong_rand_bytes(32)
       height = Enum.random(100_000..999_999)
       call_txi = Enum.random(10_000_000..99_999_999)
@@ -496,7 +608,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         {:call, :crypto.strong_rand_bytes(32), {:id, :account, :crypto.strong_rand_bytes(32)}, 1,
          height, {:id, :contract, contract_pk}, 1_000_000_000, 5_250, "?", :ok,
          [
-           {contract_pk, [AeMdw.Node.aexn_mint_event_hash(), to_pk, <<token_id::256>>], ""}
+           {remote_pk, [AeMdw.Node.aexn_mint_event_hash(), to_pk, <<token_id::256>>], ""}
          ]}
 
       mutation =
@@ -512,16 +624,17 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         NullStore.new()
         |> MemStore.new()
         |> State.new()
-        |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, contract_pk}))
+        |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, remote_pk}))
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+        |> State.cache_put(:ct_create_sync_cache, remote_pk, call_txi - 2)
         |> State.commit_mem([mutation])
 
-      assert State.exists?(state, Model.NftOwnership, {to_pk, contract_pk, token_id})
+      assert State.exists?(state, Model.NftOwnership, {to_pk, remote_pk, token_id})
 
       assert {:ok, Model.nft_token_owner(owner: ^to_pk)} =
-               State.get(state, Model.NftTokenOwner, {contract_pk, token_id})
+               State.get(state, Model.NftTokenOwner, {remote_pk, token_id})
 
-      assert State.exists?(state, Model.NftOwnerToken, {contract_pk, to_pk, token_id})
+      assert State.exists?(state, Model.NftOwnerToken, {remote_pk, to_pk, token_id})
     end
   end
 
@@ -716,7 +829,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
   end
 
   describe "aex141 transfer" do
-    test "add aex141 transfers after a call with transfer logs" do
+    test "puts aex141 transfers records after a call with transfer log" do
       contract_pk = :crypto.strong_rand_bytes(32)
       from_pk = :crypto.strong_rand_bytes(32)
       to_pk = :crypto.strong_rand_bytes(32)
@@ -798,6 +911,131 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                state,
                Model.AexnPairTransfer,
                {:aex141, from_pk, to_pk, call_txi, token_id, 0}
+             )
+    end
+
+    test "puts multiple aex141 transfers after a call with transfer logs" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      remote_pk1 = :crypto.strong_rand_bytes(32)
+      remote_pk2 = :crypto.strong_rand_bytes(32)
+      from_pk1 = <<11::256>>
+      to_pk1 = <<12::256>>
+      from_pk2 = <<13::256>>
+      to_pk2 = <<14::256>>
+      token_id1 = Enum.random(1..100_000)
+      token_id2 = Enum.random(1..100_000)
+      height = Enum.random(100_000..999_999)
+      call_txi = Enum.random(10_000_000..99_999_999)
+
+      fun_arg_res = %{
+        arguments: [
+          %{
+            type: :string,
+            value: "any1"
+          }
+        ],
+        function: "multi_transfer",
+        result: %{type: :unit, value: ""}
+      }
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {
+            remote_pk1,
+            [AeMdw.Node.aexn_transfer_event_hash(), from_pk1, to_pk1, <<token_id1::256>>],
+            ""
+          },
+          {
+            remote_pk2,
+            [AeMdw.Node.aexn_transfer_event_hash(), from_pk2, to_pk2, <<token_id2::256>>],
+            ""
+          }
+        ])
+
+      mutation =
+        ContractCallMutation.new(
+          contract_pk,
+          {height, 0},
+          call_txi,
+          fun_arg_res,
+          call_rec
+        )
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, remote_pk1}))
+        |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, remote_pk2}))
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+        |> State.cache_put(:ct_create_sync_cache, remote_pk1, call_txi - 2)
+        |> State.cache_put(:ct_create_sync_cache, remote_pk2, call_txi - 3)
+        |> put_existing_nft(remote_pk1, from_pk1, token_id1)
+        |> put_existing_nft(remote_pk2, from_pk2, token_id2)
+        |> put_stats(remote_pk1, 1, 1)
+        |> put_stats(remote_pk2, 1, 1)
+        |> State.commit_mem([mutation])
+
+      assert State.exists?(state, Model.NftOwnership, {to_pk1, remote_pk1, token_id1})
+      assert State.exists?(state, Model.NftOwnership, {to_pk2, remote_pk2, token_id2})
+
+      assert {:ok, Model.nft_token_owner(owner: ^to_pk1)} =
+               State.get(state, Model.NftTokenOwner, {remote_pk1, token_id1})
+
+      assert {:ok, Model.nft_token_owner(owner: ^to_pk2)} =
+               State.get(state, Model.NftTokenOwner, {remote_pk2, token_id2})
+
+      assert {:ok, Model.stat(payload: 1)} =
+               State.get(state, Model.Stat, Stats.nfts_count_key(remote_pk1))
+
+      assert {:ok, Model.stat(payload: 1)} =
+               State.get(state, Model.Stat, Stats.nft_owners_count_key(remote_pk1))
+
+      assert {:ok, Model.stat(payload: 1)} =
+               State.get(state, Model.Stat, Stats.nfts_count_key(remote_pk2))
+
+      assert {:ok, Model.stat(payload: 1)} =
+               State.get(state, Model.Stat, Stats.nft_owners_count_key(remote_pk2))
+
+      assert State.exists?(state, Model.NftOwnerToken, {remote_pk1, to_pk1, token_id1})
+      refute State.exists?(state, Model.NftOwnership, {from_pk1, remote_pk1, token_id1})
+      refute State.exists?(state, Model.NftOwnerToken, {remote_pk1, from_pk1, token_id1})
+
+      assert State.exists?(state, Model.NftOwnerToken, {remote_pk2, to_pk2, token_id2})
+      refute State.exists?(state, Model.NftOwnership, {from_pk2, remote_pk2, token_id2})
+      refute State.exists?(state, Model.NftOwnerToken, {remote_pk2, from_pk2, token_id2})
+
+      key1 = {:aex141, from_pk1, call_txi, to_pk1, token_id1, 0}
+      key2 = {:aex141, from_pk2, call_txi, to_pk2, token_id2, 1}
+
+      assert Model.aexn_transfer(index: ^key1, contract_pk: ^remote_pk1) =
+               State.fetch!(state, Model.AexnTransfer, key1)
+
+      assert Model.aexn_transfer(index: ^key2, contract_pk: ^remote_pk2) =
+               State.fetch!(state, Model.AexnTransfer, key2)
+
+      assert State.exists?(
+               state,
+               Model.RevAexnTransfer,
+               {:aex141, to_pk1, call_txi, from_pk1, token_id1, 0}
+             )
+
+      assert State.exists?(
+               state,
+               Model.RevAexnTransfer,
+               {:aex141, to_pk2, call_txi, from_pk2, token_id2, 1}
+             )
+
+      assert State.exists?(
+               state,
+               Model.AexnPairTransfer,
+               {:aex141, from_pk1, to_pk1, call_txi, token_id1, 0}
+             )
+
+      assert State.exists?(
+               state,
+               Model.AexnPairTransfer,
+               {:aex141, from_pk2, to_pk2, call_txi, token_id2, 1}
              )
     end
   end
