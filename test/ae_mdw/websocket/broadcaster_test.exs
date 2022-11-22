@@ -5,6 +5,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
   alias Support.WsClient
 
   import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, spend_tx: 3, name_tx: 3]
+  import Support.WsUtil, only: [unsubscribe_all: 1]
   import Mock
 
   setup_all do
@@ -20,9 +21,9 @@ defmodule AeMdw.Websocket.BroadcasterTest do
   describe "broadcast_key_block" do
     test "broadcasts node and mdw keyblock only once", %{clients: clients} do
       with_blockchain %{}, kb0: [], kb1: [], kb2: [] do
-        clients
-        |> Enum.take(3)
-        |> assert_receive_key_blocks(blocks)
+        clients = Enum.take(clients, 3)
+        assert_receive_key_blocks(clients, blocks)
+        unsubscribe_all(clients)
       end
     end
   end
@@ -39,10 +40,13 @@ defmodule AeMdw.Websocket.BroadcasterTest do
         mb2: [
           t2: spend_tx(:charlie, :alice, 1_000)
         ] do
-        clients
-        |> Enum.drop(3)
-        |> Enum.take(3)
-        |> assert_receive_micro_blocks(blocks)
+        clients =
+          clients
+          |> Enum.drop(3)
+          |> Enum.take(3)
+
+        assert_receive_micro_blocks(clients, blocks)
+        unsubscribe_all(clients)
       end
     end
   end
@@ -60,10 +64,13 @@ defmodule AeMdw.Websocket.BroadcasterTest do
         mb2: [
           t3: spend_tx(:charlie, :alice, 4_000)
         ] do
-        clients
-        |> Enum.drop(6)
-        |> Enum.take(3)
-        |> assert_receive_transactions(blocks)
+        clients =
+          clients
+          |> Enum.drop(6)
+          |> Enum.take(3)
+
+        assert_receive_transactions(clients, blocks)
+        unsubscribe_all(clients)
       end
     end
 
@@ -102,7 +109,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
           WsClient.subscribe(client, name_id)
         end)
 
-        assert_websocket_receive(clients, :subs, [name_id, alice_id])
+        assert_websocket_receive(clients, :subs, [alice_id, name_id])
 
         %{hash: mb_hash, height: 0, block: block0, txs: [tx0]} = blocks[:mb0]
         tx_hash0 = encode(:tx_hash, :aetx_sign.hash(tx0))

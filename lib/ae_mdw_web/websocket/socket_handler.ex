@@ -4,18 +4,8 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
   """
   @behaviour Phoenix.Socket.Transport
 
-  alias AeMdw.Validate
-  alias AeMdwWeb.Websocket.ChainListener
+  alias AeMdwWeb.Websocket.Subscriptions
   alias AeMdwWeb.Util
-
-  require Ex2ms
-
-  @subs_main :subs_main
-  @subs_pids :subs_pids
-  @subs_channel_targets :subs_channel_targets
-  @subs_target_channels :subs_target_channels
-  @known_prefixes ["ak_", "ct_", "ok_", "nm_", "cm_", "ch_"]
-  @known_channels ["KeyBlocks", "MicroBlocks", "Transactions"]
 
   @impl Phoenix.Socket.Transport
   def child_spec(_opts) do
@@ -30,25 +20,21 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
 
   @impl Phoenix.Socket.Transport
   def init(state) do
-    {:ok, Map.put(state, :channels, [])}
+    {:ok, state}
   end
 
-  @spec channel_broadcast(binary(), binary()) :: :ok
-  def channel_broadcast(channel, msg) do
-    @subs_main
-    |> :ets.match_object({{channel, :"$1"}, nil})
-    |> Enum.each(fn {{^channel, pid}, nil} ->
-      Process.send(pid, {channel, pid, msg}, [:noconnect])
-    end)
+  @spec send(pid(), binary()) :: :ok
+  def send(pid, msg) do
+    Process.send(pid, {:push, msg}, [:noconnect])
   end
 
   @impl Phoenix.Socket.Transport
-  def handle_info({channel, pid, msg}, state) do
-    if :ets.member(@subs_main, {channel, pid}) do
-      {:push, {:text, msg}, state}
-    else
-      {:ok, state}
-    end
+  def handle_info({:push, msg}, state) do
+    {:push, {:text, msg}, state}
+  end
+
+  def handle_info(_ignored_msg, state) do
+    {:ok, state}
   end
 
   @impl Phoenix.Socket.Transport
@@ -73,49 +59,19 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
          %{
            "op" => "Subscribe",
            "payload" => "Object",
-           "target" => <<prefix_key::binary-size(3), rest::binary>> = target
+           "target" => target
          },
-         %{channels: channels} = state
-       )
-       when prefix_key in @known_prefixes and byte_size(rest) >= 37 and byte_size(rest) <= 60 do
-    if target in channels do
-      reply_error("already subscribed to target", target, state)
-    else
-      case Validate.id(target) do
-        {:ok, target_pk} ->
-          ChainListener.register(self())
-          :ets.insert(@subs_pids, {self(), nil})
-          :ets.insert(@subs_main, {{target_pk, self()}, nil})
-          :ets.insert(@subs_target_channels, {{target_pk, self()}, nil})
-          :ets.insert(@subs_channel_targets, {{self(), target_pk}, nil})
-
-          new_state = %{state | channels: [target | channels]}
-          reply([target | channels], new_state)
-
-        {:error, {_, k}} ->
-          reply_error("invalid target", k, state)
-      end
-    end
-  end
-
-  defp handle_message(
-         %{"op" => "Subscribe", "payload" => "Object", "target" => target},
          state
        ) do
-    reply_error("invalid target", target, state)
-  end
+    case Subscriptions.subscribe(self(), target) do
+      {:ok, channels} ->
+        reply(channels, state)
 
-  defp handle_message(%{"op" => "Subscribe", "payload" => channel}, %{channels: channels} = state)
-       when channel in @known_channels do
-    if channel in channels do
-      reply_error("already subscribed to", channel, state)
-    else
-      ChainListener.register(self())
-      :ets.insert(@subs_main, {{channel, self()}, nil})
+      {:error, :already_subscribed} ->
+        reply_error("already subscribed to target", target, state)
 
-      new_state = %{state | channels: [channel | channels]}
-
-      reply([channel | channels], new_state)
+      {:error, :invalid_channel} ->
+        reply_error("invalid target", target, state)
     end
   end
 
@@ -124,74 +80,55 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
     reply_error("missing field", "target", state)
   end
 
-  defp handle_message(%{"op" => "Subscribe", "payload" => payload}, state) do
-    reply_error("invalid payload", payload, state)
+  defp handle_message(%{"op" => "Subscribe", "payload" => channel}, state) do
+    case Subscriptions.subscribe(self(), channel) do
+      {:ok, channels} ->
+        reply(channels, state)
+
+      {:error, :already_subscribed} ->
+        reply_error("already subscribed to", channel, state)
+
+      {:error, :invalid_channel} ->
+        reply_error("invalid payload", channel, state)
+    end
   end
 
   defp handle_message(
          %{
            "op" => "Unsubscribe",
            "payload" => "Object",
-           "target" => <<prefix_key::binary-size(3), rest::binary>> = target
+           "target" => target
          },
-         %{channels: channels} = state
-       )
-       when prefix_key in @known_prefixes and byte_size(rest) >= 37 and byte_size(rest) <= 60 do
-    if target in channels do
-      case AeMdw.Validate.id(target) do
-        {:ok, id} ->
-          pid = self()
-          :ets.delete(@subs_main, {target, self()})
-          :ets.delete(@subs_target_channels, {id, pid})
-          :ets.delete(@subs_channel_targets, {pid, id})
-
-          spec =
-            Ex2ms.fun do
-              {{^pid, _}, _} -> true
-            end
-
-          if :ets.select_count(@subs_channel_targets, spec) == 0, do: :ets.delete(@subs_pids, pid)
-
-          new_state = %{state | channels: List.delete(channels, target)}
-
-          reply(new_state.channels, new_state)
-
-        {:error, {_, k}} ->
-          reply_error("invalid target", k, state)
-      end
-    else
-      reply_error("no subscription for target", target, state)
-    end
-  end
-
-  defp handle_message(
-         %{"op" => "Unsubscribe", "payload" => "Object", "target" => target},
          state
        ) do
-    reply_error("invalid target", target, state)
-  end
+    case Subscriptions.unsubscribe(self(), target) do
+      {:ok, channels} ->
+        reply(channels, state)
 
-  defp handle_message(
-         %{"op" => "Unsubscribe", "payload" => channel},
-         %{channels: channels} = state
-       )
-       when channel in @known_channels do
-    if channel in channels do
-      :ets.delete(@subs_main, {channel, self()})
-      new_state = %{state | channels: List.delete(channels, channel)}
+      {:error, :not_subscribed} ->
+        reply_error("no subscription for target", target, state)
 
-      reply(new_state.channels, new_state)
-    else
-      reply_error("no subscription for payload", channel, state)
+      {:error, :invalid_channel} ->
+        reply_error("invalid target", target, state)
     end
   end
 
-  defp handle_message(%{"op" => "Unsubscribe", "payload" => payload}, state) do
-    reply_error("invalid payload", payload, state)
+  defp handle_message(%{"op" => "Unsubscribe", "payload" => channel}, state) do
+    case Subscriptions.unsubscribe(self(), channel) do
+      {:ok, channels} ->
+        reply(channels, state)
+
+      {:error, :not_subscribed} ->
+        reply_error("no subscription for payload", channel, state)
+
+      {:error, :invalid_channel} ->
+        reply_error("invalid payload", channel, state)
+    end
   end
 
   defp handle_message(%{"op" => "Ping"}, state) do
-    reply(%{"subscriptions" => state.channels, "payload" => "Pong"}, state)
+    channels = Subscriptions.subscribed_channels(self())
+    reply(%{"subscriptions" => channels, "payload" => "Pong"}, state)
   end
 
   defp handle_message(msg, state) do

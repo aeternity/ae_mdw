@@ -6,14 +6,12 @@ defmodule AeMdwWeb.Websocket.Supervisor do
 
   @impl true
   def init([]) do
-    :subs_pids = :ets.new(:subs_pids, [:public, :ordered_set, :named_table])
-    :subs_main = :ets.new(:subs_main, [:public, :ordered_set, :named_table])
-    :subs_channel_targets = :ets.new(:subs_channel_targets, [:public, :ordered_set, :named_table])
-    :subs_target_channels = :ets.new(:subs_target_channels, [:public, :ordered_set, :named_table])
+    AeMdwWeb.Websocket.Subscriptions.init_tables()
 
     children = [
       AeMdwWeb.Websocket.Broadcaster,
-      AeMdwWeb.Websocket.ChainListener
+      AeMdwWeb.Websocket.ChainListener,
+      AeMdwWeb.Websocket.Subscriptions
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

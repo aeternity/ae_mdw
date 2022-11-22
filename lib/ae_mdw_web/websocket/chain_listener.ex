@@ -8,29 +8,16 @@ defmodule AeMdwWeb.Websocket.ChainListener do
 
   alias AeMdwWeb.Websocket.Broadcaster
 
-  require Ex2ms
   require Logger
-
-  @subs_main :subs_main
-  @subs_pids :subs_pids
-  @subs_channel_targets :subs_channel_targets
-  @subs_target_channels :subs_target_channels
 
   @spec start_link(any()) :: GenServer.on_start()
   def start_link(_arg), do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
 
   @impl GenServer
   def init(state) do
-    fn {k, _v}, acc -> [k | acc] end
-    |> :ets.foldl([], @subs_pids)
-    |> Enum.each(&register/1)
-
     :aec_events.subscribe(:top_changed)
     {:ok, state}
   end
-
-  @spec register(pid()) :: :ok
-  def register(pid), do: GenServer.cast(__MODULE__, {:monitor, pid})
 
   @impl GenServer
   def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :micro} = info}}, state) do
@@ -56,45 +43,6 @@ defmodule AeMdwWeb.Websocket.ChainListener do
         Log.warn("gproc_ps_event with block not found: block_hash = #{inspect(info.block_hash)}")
     end
 
-    {:noreply, state}
-  end
-
-  @impl GenServer
-  def handle_info({:DOWN, _ref, _type, pid, _info}, state) do
-    Process.demonitor(pid, [:flush])
-
-    # last connection down
-    if :ets.info(@subs_pids, :size) <= 1 do
-      Enum.each(
-        [@subs_main, @subs_channel_targets, @subs_target_channels, @subs_pids],
-        &:ets.delete_all_objects/1
-      )
-    else
-      spec =
-        Ex2ms.fun do
-          {{^pid, sub}, _} -> sub
-        end
-
-      for sub <- :ets.select(@subs_channel_targets, spec) do
-        key_to_delete = {sub, pid}
-        :ets.delete(@subs_target_channels, key_to_delete)
-      end
-
-      spec_ =
-        Ex2ms.fun do
-          {{^pid, _}, _} -> true
-        end
-
-      :ets.select_delete(@subs_channel_targets, spec_)
-      :ets.delete(@subs_pids, pid)
-    end
-
-    {:noreply, state}
-  end
-
-  @impl GenServer
-  def handle_cast({:monitor, pid}, state) do
-    Process.monitor(pid)
     {:noreply, state}
   end
 end
