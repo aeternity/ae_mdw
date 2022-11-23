@@ -10,10 +10,13 @@ defmodule AeMdw.Names do
   alias AeMdw.AuctionBids
   alias AeMdw.Blocks
   alias AeMdw.Collection
+  alias AeMdw.Contracts
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.InnerTx
+  alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db
   alias AeMdw.Txs
@@ -23,6 +26,7 @@ defmodule AeMdw.Names do
   @type cursor :: binary()
   # This needs to be an actual type like AeMdw.Db.Name.t()
   @type name :: term()
+  @type claim() :: map()
   @type plain_name() :: String.t()
   @type name_hash() :: binary()
   @type name_fee() :: non_neg_integer()
@@ -40,6 +44,7 @@ defmodule AeMdw.Names do
   @typep lifecycle() :: :active | :inactive | :auction
   @typep prefix() :: plain_name()
   @typep opts() :: Util.opts()
+  @type nested_cursor() :: Blocks.bi_txi()
 
   @table_active Model.ActiveName
   @table_activation Model.ActiveNameActivation
@@ -108,6 +113,56 @@ defmodule AeMdw.Names do
     rescue
       e in ErrInput ->
         {:error, e.message}
+    end
+  end
+
+  @spec fetch_name_claims(state(), binary(), pagination(), range(), nested_cursor() | nil) ::
+          {:ok, {nested_cursor() | nil, [claim()], nested_cursor() | nil}} | {:error, Error.t()}
+  def fetch_name_claims(state, plain_name_or_hash, pagination, scope, cursor) do
+    with {:ok, name_or_auction} <- locate_name_or_auction(state, plain_name_or_hash) do
+      {claims, plain_name} =
+        case name_or_auction do
+          Model.name(index: plain_name, claims: claims) -> {claims, plain_name}
+          Model.auction_bid(index: plain_name, bids: bids) -> {bids, plain_name}
+        end
+
+      cursor = deserialize_nested_cursor(cursor)
+
+      claims =
+        case scope do
+          {:gen, first_gen..last_gen} ->
+            claims
+            |> Enum.drop_while(fn {{height, _mbi}, _txi} -> height >= last_gen end)
+            |> Enum.take_while(fn {{height, _mbi}, _txi} -> height <= first_gen end)
+
+          nil ->
+            claims
+        end
+
+      streamer = fn
+        :forward ->
+          claims = Enum.reverse(claims)
+
+          if cursor do
+            Enum.drop_while(claims, &(&1 < cursor))
+          else
+            claims
+          end
+
+        :backward ->
+          if cursor do
+            Enum.drop_while(claims, &(&1 > cursor))
+          else
+            claims
+          end
+      end
+
+      {prev_cursor, claims_keys, next_cursor} = Collection.paginate(streamer, pagination)
+
+      {:ok,
+       {serialize_nested_cursor(prev_cursor),
+        Enum.map(claims_keys, &render_claim(state, plain_name, &1)),
+        serialize_nested_cursor(next_cursor)}}
     end
   end
 
@@ -504,6 +559,39 @@ defmodule AeMdw.Names do
     |> Enum.map(&render_name_info(state, &1, opts))
   end
 
+  defp render_claim(state, plain_name, {{height, _mbi} = block_index, txi}) do
+    tx_hash = Txs.txi_to_hash(state, txi)
+    block_hash = Blocks.block_index_to_hash(state, block_index)
+
+    claim_aetx =
+      case Db.get_tx_data(tx_hash) do
+        {_block_hash, :name_claim_tx, signed_tx, _tx_rec} ->
+          :aetx_sign.tx(signed_tx)
+
+        {_block_hash, :contract_call_tx, _signed_tx, _tx_rec} ->
+          state
+          |> Contracts.fetch_int_contract_calls(txi, "AENS.claim")
+          |> Enum.find_value(fn Model.int_contract_call(tx: aetx) ->
+            {:name_claim_tx, tx} = :aetx.specialize_type(aetx)
+            name = :aens_claim_tx.name(tx)
+
+            plain_name == name
+          end)
+
+        {_block_hash, tx_type, _signed_tx, tx_rec}
+        when tx_type in ~w(ga_meta_tx paying_for_tx)a ->
+          tx_type
+          |> InnerTx.signed_tx(tx_rec)
+          |> :aetx_sign.tx()
+      end
+
+    %{
+      height: height,
+      block_hash: Enc.encode(:micro_block_hash, block_hash),
+      tx: :aetx.serialize_for_client(claim_aetx)
+    }
+  end
+
   defp serialize_owner_deactivation_key_boundary(owner_pk, nil),
     do: {{owner_pk, @min_int, @min_bin}, {owner_pk, @max_int, @max_bin}}
 
@@ -535,4 +623,34 @@ defmodule AeMdw.Names do
 
   defp convert_param(other_param),
     do: raise(ErrInput.Query, value: other_param)
+
+  defp locate_name_or_auction(state, plain_name_or_hash) do
+    plain_name =
+      case State.get(state, Model.PlainName, plain_name_or_hash) do
+        {:ok, Model.plain_name(value: plain_name)} -> plain_name
+        :not_found -> plain_name_or_hash
+      end
+
+    case Name.locate(state, plain_name) do
+      {name_or_auction, _source} -> {:ok, name_or_auction}
+      nil -> {:error, ErrInput.NotFound.exception(value: plain_name_or_hash)}
+    end
+  end
+
+  defp serialize_nested_cursor(nil), do: nil
+
+  defp serialize_nested_cursor({{{height, mbi}, txi}, is_reverse?}),
+    do: {"#{height}-#{mbi}-#{txi}", is_reverse?}
+
+  defp deserialize_nested_cursor(nil), do: nil
+
+  defp deserialize_nested_cursor(cursor_bin) do
+    case Regex.run(~r/\A(\d+)-(\d+)-(\d+)\z/, cursor_bin, capture: :all_but_first) do
+      [height, mbi, txi] ->
+        {{String.to_integer(height), String.to_integer(mbi)}, String.to_integer(txi)}
+
+      _error_or_invalid ->
+        nil
+    end
+  end
 end

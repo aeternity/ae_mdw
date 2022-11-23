@@ -172,6 +172,13 @@ defmodule AeMdw.Blocks do
     end
   end
 
+  @spec block_index_to_hash(State.t(), block_index()) :: block_hash()
+  def block_index_to_hash(state, block_index) do
+    Model.block(hash: hash) = State.fetch!(state, Model.Block, block_index)
+
+    hash
+  end
+
   defp render_key_blocks(state, range), do: Enum.map(range, &render_key_block(state, &1))
 
   defp render_key_block(state, gen) do

@@ -9,6 +9,7 @@ defmodule AeMdwWeb.NameController do
   alias AeMdw.Db.Format
   alias AeMdw.Db.Stream, as: DBS
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
   alias AeMdwWeb.Util
   alias Plug.Conn
@@ -19,6 +20,7 @@ defmodule AeMdwWeb.NameController do
   import AeMdw.Util
 
   plug PaginatedPlug, order_by: ~w(expiration activation deactivation name)a
+  action_fallback(FallbackController)
 
   @lifecycles_map %{
     "active" => :active,
@@ -157,6 +159,24 @@ defmodule AeMdwWeb.NameController do
       Names.search_names(state, lifecycles, prefix, pagination, cursor, opts)
 
     Util.paginate(conn, prev_cursor, names, next_cursor)
+  end
+
+  @spec name_claims(Conn.t(), map()) :: Conn.t()
+  def name_claims(%Conn{assigns: assigns} = conn, %{"id" => name_id}) do
+    %{
+      state: state,
+      pagination: pagination,
+      cursor: cursor,
+      scope: scope
+    } = assigns
+
+    case Names.fetch_name_claims(state, name_id, pagination, scope, cursor) do
+      {:ok, {prev_cursor, names, next_cursor}} ->
+        Util.paginate(conn, prev_cursor, names, next_cursor)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   ##########
