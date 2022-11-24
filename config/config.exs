@@ -9,12 +9,12 @@ import Config
 
 mdw_revision =
   case File.read("AEMDW_REVISION") do
-    {:ok, <<git_commit::binary-7, "\n">>} ->
-      git_commit
+    {:ok, revision} ->
+      String.trim(revision)
 
     {:error, :enoent} ->
-      {<<git_head_commit::binary-7, "\n">>, 0} = System.cmd("git", ["log", "-1", "--format=%h"])
-      git_head_commit
+      {revision, 0} = System.cmd("git", ["log", "-1", "--format=%h"])
+      String.trim(revision)
   end
 
 config :ae_mdw, build_revision: mdw_revision
