@@ -14,7 +14,6 @@ defmodule AeMdw.Oracles do
   alias AeMdw.Db.Util, as: DBUtil
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
-  alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Txs
   alias AeMdw.Util
@@ -173,6 +172,9 @@ defmodule AeMdw.Oracles do
     block_hash = Blocks.block_hash(state, kbi)
     oracle_tree = AeMdw.Db.Oracle.oracle_tree!(block_hash)
     oracle_rec = :aeo_state_tree.get_oracle(pk, oracle_tree)
+    query_format = :aeo_oracles.query_format(oracle_rec)
+    response_format = :aeo_oracles.response_format(oracle_rec)
+    query_fee = :aeo_oracles.query_fee(oracle_rec)
 
     %{
       oracle: :aeser_api_encoder.encode(:oracle_pubkey, pk),
@@ -182,10 +184,10 @@ defmodule AeMdw.Oracles do
       register: expand_txi(state, register_bi_txi, opts),
       register_tx_hash: :aeser_api_encoder.encode(:tx_hash, Txs.txi_to_hash(state, register_txi)),
       extends: Enum.map(extends, &expand_txi(state, &1, opts)),
-      query_fee: Node.Oracle.get!(oracle_rec, :query_fee),
+      query_fee: query_fee,
       format: %{
-        query: Node.Oracle.get!(oracle_rec, :query_format),
-        response: Node.Oracle.get!(oracle_rec, :response_format)
+        query: query_format,
+        response: response_format
       }
     }
   end
