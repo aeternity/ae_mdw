@@ -1863,6 +1863,70 @@ defmodule AeMdwWeb.NameControllerTest do
                |> get("/v2/names/#{non_existent_name}/claims")
                |> json_response(404)
     end
+
+    test "it returns internal AENS.claim calls", %{conn: conn, store: store} do
+      account_pk = TS.address(0)
+      account_id = :aeser_id.create(:account, account_pk)
+      contract_pk = TS.address(1)
+      contract_id = :aeser_id.create(:contract, contract_pk)
+      plain_name = "asd.chain"
+      call_txi = 567
+
+      {:ok, contract_call_aetx} =
+        :aect_call_tx.new(%{
+          caller_id: account_id,
+          nonce: 111,
+          contract_id: contract_id,
+          abi_version: 0,
+          fee: 1_111,
+          amount: 11_111,
+          gas: 111_111,
+          gas_price: 1_111_111,
+          call_data: ""
+        })
+
+      {:contract_call_tx, contract_call_tx} = :aetx.specialize_type(contract_call_aetx)
+
+      {:ok, aetx1} =
+        :aens_claim_tx.new(%{
+          account_id: account_id,
+          nonce: 111,
+          name: plain_name,
+          name_salt: 1_111,
+          name_fee: 11_111,
+          fee: 111_111,
+          ttl: 1_111_111
+        })
+
+      int_contract_call =
+        Model.int_contract_call(index: {call_txi, 1}, fname: "AENS.claim", tx: aetx1)
+
+      store =
+        store
+        |> name_claims_store(plain_name)
+        |> Store.put(Model.IntContractCall, int_contract_call)
+
+      with_mocks [
+        {Db, [],
+         [
+           get_tx_data: fn
+             "tx1-hash" ->
+               {"", :contract_call_tx, :aetx_sign.new(contract_call_aetx, []), contract_call_tx}
+           end
+         ]}
+      ] do
+        assert %{"data" => [claim1]} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/names/#{plain_name}/claims", limit: 1, direction: "forward")
+                 |> json_response(200)
+
+        assert %{
+                 "height" => 123,
+                 "tx" => %{"type" => "NameClaimTx", "fee" => 111_111, "name" => ^plain_name}
+               } = claim1
+      end
+    end
   end
 
   defp name_claims_store(store, plain_name) do

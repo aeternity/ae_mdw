@@ -15,7 +15,6 @@ defmodule AeMdw.Names do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Db.State
-  alias AeMdw.Db.Sync.InnerTx
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db
@@ -560,30 +559,12 @@ defmodule AeMdw.Names do
   end
 
   defp render_claim(state, plain_name, {{height, _mbi} = block_index, txi}) do
-    tx_hash = Txs.txi_to_hash(state, txi)
     block_hash = Blocks.block_index_to_hash(state, block_index)
 
     claim_aetx =
-      case Db.get_tx_data(tx_hash) do
-        {_block_hash, :name_claim_tx, signed_tx, _tx_rec} ->
-          :aetx_sign.tx(signed_tx)
-
-        {_block_hash, :contract_call_tx, _signed_tx, _tx_rec} ->
-          state
-          |> Contracts.fetch_int_contract_calls(txi, "AENS.claim")
-          |> Enum.find_value(fn Model.int_contract_call(tx: aetx) ->
-            {:name_claim_tx, tx} = :aetx.specialize_type(aetx)
-            name = :aens_claim_tx.name(tx)
-
-            plain_name == name
-          end)
-
-        {_block_hash, tx_type, _signed_tx, tx_rec}
-        when tx_type in ~w(ga_meta_tx paying_for_tx)a ->
-          tx_type
-          |> InnerTx.signed_tx(tx_rec)
-          |> :aetx_sign.tx()
-      end
+      Contracts.get_aetx(state, txi, :name_claim_tx, "AENS.claim", fn tx ->
+        :aens_claim_tx.name(tx) == plain_name
+      end)
 
     %{
       height: height,
