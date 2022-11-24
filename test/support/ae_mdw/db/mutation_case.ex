@@ -8,6 +8,8 @@ defmodule AeMdw.Db.MutationCase do
   using do
     quote do
       import AeMdw.TestUtil
+
+      alias AeMdw.Db.Store
     end
   end
 

@@ -8,6 +8,7 @@ defmodule AeMdw.ContractsTest do
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
 
+  import AeMdw.Node.AexnEventFixtures, only: [aexn_event_hash: 1]
   import AeMdw.Node.ContractCallFixtures, only: [call_rec: 5]
   import AeMdw.Util.Encoding
 
@@ -17,7 +18,7 @@ defmodule AeMdw.ContractsTest do
     test "lists logs sorted by call txi and log index" do
       {height, mbi} = block_index = {100_000, 11}
       contract_pk = :crypto.strong_rand_bytes(32)
-      <<evt_hash_bigger_int::256>> = evt_hash0 = AeMdw.Node.aexn_transfer_event_hash()
+      <<evt_hash_bigger_int::256>> = evt_hash0 = aexn_event_hash(:transfer)
       evt_hash1 = <<evt_hash_bigger_int - 1::256>>
       extra_logs = [{contract_pk, [evt_hash1, <<3::256>>, <<4::256>>, <<1::256>>], <<>>}]
       call_rec = call_rec("transfer", contract_pk, height, contract_pk, extra_logs)
@@ -94,7 +95,7 @@ defmodule AeMdw.ContractsTest do
       {height, mbi} = block_index = {100_000, 12}
       contract_pk = :crypto.strong_rand_bytes(32)
       remote_pk = :crypto.strong_rand_bytes(32)
-      evt_hash0 = AeMdw.Node.aexn_transfer_event_hash()
+      evt_hash0 = aexn_event_hash(:transfer)
       evt_hash1 = <<123::256>>
       extra_logs = [{remote_pk, [evt_hash1, <<3::256>>, <<4::256>>, <<1234::256>>], <<>>}]
       call_rec = call_rec("transfer", contract_pk, height, contract_pk, extra_logs)

@@ -29,48 +29,6 @@ defmodule AeMdw.Db.Contract do
   @type rev_aex9_contract_key :: {pos_integer(), String.t(), String.t(), pos_integer()}
   @type account_balance :: {pubkey(), integer()}
 
-  defmacrop is_aexn_burn?(evt_hash) do
-    quote do
-      unquote(evt_hash) == Node.aexn_burn_event_hash()
-    end
-  end
-
-  defmacrop is_aexn_mint?(evt_hash) do
-    quote do
-      unquote(evt_hash) == Node.aexn_mint_event_hash()
-    end
-  end
-
-  defmacrop is_aexn_template_mint?(evt_hash) do
-    quote do
-      unquote(evt_hash) == Node.aexn_template_mint_event_hash()
-    end
-  end
-
-  defmacrop is_aexn_template_creation?(evt_hash) do
-    quote do
-      unquote(evt_hash) == Node.aexn_template_creation_event_hash()
-    end
-  end
-
-  defmacrop is_aexn_template_deletion?(evt_hash) do
-    quote do
-      unquote(evt_hash) == Node.aexn_template_deletion_event_hash()
-    end
-  end
-
-  defmacrop is_aexn_swap?(evt_hash) do
-    quote do
-      unquote(evt_hash) == Node.aexn_swap_event_hash()
-    end
-  end
-
-  defmacrop is_aexn_transfer?(evt_hash) do
-    quote do
-      unquote(evt_hash) == Node.aexn_transfer_event_hash()
-    end
-  end
-
   @spec aexn_creation_write(
           state(),
           Model.aexn_type(),
@@ -231,12 +189,16 @@ defmodule AeMdw.Db.Contract do
 
       aex9_contract_pk = which_aex9_contract_pubkey(contract_pk, addr)
 
+      event_type =
+        Node.aexn_event_hash_types()
+        |> Map.get(evt_hash)
+
       cond do
         aex9_contract_pk != nil ->
-          write_aex9_records(state2, evt_hash, addr, txi, log_idx, args)
+          write_aex9_records(state2, event_type, addr, txi, log_idx, args)
 
         State.exists?(state2, Model.AexnContract, {:aex141, addr}) ->
-          write_aex141_records(state2, evt_hash, addr, txi, log_idx, args)
+          write_aex141_records(state2, event_type, addr, txi, log_idx, args)
 
         true ->
           state2
@@ -410,6 +372,56 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
+  defp write_aex141_limit(state, event_type, contract_pk, args, txi, log_idx) do
+    m_new_nft_limit = Model.nft_contract_limits(index: contract_pk, txi: txi, log_idx: log_idx)
+    limit = get_nft_limit_from_args(event_type, args)
+
+    upsert_aex141_limit(state, event_type, m_new_nft_limit, limit)
+  end
+
+  defp upsert_aex141_limit(state, _event_type, _m_nft_limit, nil), do: state
+
+  defp upsert_aex141_limit(
+         state,
+         event_type,
+         Model.nft_contract_limits(index: contract_pk) = m_nft_limit,
+         limit
+       )
+       when event_type in [:token_limit, :token_limit_decrease] do
+    State.update(
+      state,
+      Model.NftContractLimits,
+      contract_pk,
+      &Model.nft_contract_limits(&1, token_limit: limit),
+      Model.nft_contract_limits(m_nft_limit, token_limit: limit)
+    )
+  end
+
+  defp upsert_aex141_limit(
+         state,
+         _event_type,
+         Model.nft_contract_limits(index: contract_pk) = m_nft_limit,
+         limit
+       ) do
+    State.update(
+      state,
+      Model.NftContractLimits,
+      contract_pk,
+      &Model.nft_contract_limits(&1, template_limit: limit),
+      Model.nft_contract_limits(m_nft_limit, template_limit: limit)
+    )
+  end
+
+  defp get_nft_limit_from_args(event_type, [<<limit::256>>])
+       when event_type in [:token_limit, :template_limit],
+       do: limit
+
+  defp get_nft_limit_from_args(event_type, [<<_::256>>, <<limit::256>>])
+       when event_type in [:token_limit_decrease, :template_limit_decrease],
+       do: limit
+
+  defp get_nft_limit_from_args(_event_type, _args), do: nil
+
   defp delete_aex141_template(
          state,
          contract_pk,
@@ -451,52 +463,63 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.NftTokenOwner, m_token_owner)
   end
 
-  defp write_aex9_records(state, evt_hash, contract_pk, txi, log_idx, args) do
+  defp write_aex9_records(state, event_type, contract_pk, txi, log_idx, args) do
     update_balance? = txi != Origin.tx_index!(state, {:contract, contract_pk})
 
-    cond do
-      is_aexn_burn?(evt_hash) and update_balance? ->
+    case event_type do
+      :burn when update_balance? ->
         burn_aex9_balance(state, contract_pk, txi, log_idx, args)
 
-      is_aexn_mint?(evt_hash) and update_balance? ->
+      :mint when update_balance? ->
         mint_aex9_balance(state, contract_pk, txi, log_idx, args)
 
-      is_aexn_swap?(evt_hash) and update_balance? ->
+      :swap when update_balance? ->
         burn_aex9_balance(state, contract_pk, txi, log_idx, args)
 
-      is_aexn_transfer?(evt_hash) ->
+      :transfer ->
         write_aexn_transfer(state, :aex9, contract_pk, txi, log_idx, args)
 
-      true ->
+      _other ->
         state
     end
   end
 
-  defp write_aex141_records(state, evt_hash, contract_pk, txi, log_idx, args) do
-    cond do
-      is_aexn_burn?(evt_hash) ->
-        delete_aex141_ownership(state, contract_pk, args)
-
-      is_aexn_mint?(evt_hash) or is_aexn_template_mint?(evt_hash) ->
-        state
-        |> write_aex141_ownership(contract_pk, args)
-        |> write_aex141_template(contract_pk, args, txi, log_idx)
-
-      is_aexn_template_creation?(evt_hash) ->
-        write_aex141_template(state, contract_pk, args, txi, log_idx)
-
-      is_aexn_template_deletion?(evt_hash) ->
-        delete_aex141_template(state, contract_pk, args)
-
-      is_aexn_transfer?(evt_hash) ->
-        state
-        |> transfer_aex141_ownership(contract_pk, args)
-        |> write_aexn_transfer(:aex141, contract_pk, txi, log_idx, args)
-
-      true ->
-        state
-    end
+  defp write_aex141_records(state, :burn, contract_pk, _txi, _log_idx, args) do
+    delete_aex141_ownership(state, contract_pk, args)
   end
+
+  defp write_aex141_records(state, event_type, contract_pk, txi, log_idx, args)
+       when event_type in [:mint, :template_mint] do
+    state
+    |> write_aex141_ownership(contract_pk, args)
+    |> write_aex141_template(contract_pk, args, txi, log_idx)
+  end
+
+  defp write_aex141_records(state, event_type, contract_pk, txi, log_idx, args)
+       when event_type in [
+              :token_limit,
+              :token_limit_decrease,
+              :template_limit,
+              :template_limit_decrease
+            ] do
+    write_aex141_limit(state, event_type, contract_pk, args, txi, log_idx)
+  end
+
+  defp write_aex141_records(state, :template_creation, contract_pk, txi, log_idx, args) do
+    write_aex141_template(state, contract_pk, args, txi, log_idx)
+  end
+
+  defp write_aex141_records(state, :template_deletion, contract_pk, _txi, _log_idx, args) do
+    delete_aex141_template(state, contract_pk, args)
+  end
+
+  defp write_aex141_records(state, :transfer, contract_pk, txi, log_idx, args) do
+    state
+    |> transfer_aex141_ownership(contract_pk, args)
+    |> write_aexn_transfer(:aex141, contract_pk, txi, log_idx, args)
+  end
+
+  defp write_aex141_records(state, nil, _contract_pk, _txi, _log_idx, _args), do: state
 
   defp previous_owner(state, contract_pk, token_id) do
     case State.get(state, Model.NftTokenOwner, {contract_pk, token_id}) do

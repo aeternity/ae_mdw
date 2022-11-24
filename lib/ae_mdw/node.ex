@@ -45,6 +45,19 @@ defmodule AeMdw.Node do
   @opaque aect_call :: tuple()
 
   @type event_hash :: <<_::256>>
+  @type aexn_event_type ::
+          :burn
+          | :mint
+          | :swap
+          | :template_creation
+          | :template_deletion
+          | :template_mint
+          | :template_limit
+          | :template_limit_decrease
+          | :token_limit
+          | :token_limit_decrease
+          | :transfer
+
   @typep method_hash :: binary()
   @typep method_signature :: {list(), any()}
 
@@ -83,39 +96,21 @@ defmodule AeMdw.Node do
     |> Enum.into(%{}, fn {k, v} -> {Contract.function_hash(k), v} end)
   end
 
-  @spec aexn_burn_event_hash() :: event_hash()
-  def aexn_burn_event_hash do
-    :aec_hash.blake2b_256_hash("Burn")
-  end
-
-  @spec aexn_mint_event_hash() :: event_hash()
-  def aexn_mint_event_hash do
-    :aec_hash.blake2b_256_hash("Mint")
-  end
-
-  @spec aexn_template_mint_event_hash() :: event_hash()
-  def aexn_template_mint_event_hash do
-    :aec_hash.blake2b_256_hash("TemplateMint")
-  end
-
-  @spec aexn_template_creation_event_hash() :: event_hash()
-  def aexn_template_creation_event_hash do
-    :aec_hash.blake2b_256_hash("TemplateCreation")
-  end
-
-  @spec aexn_template_deletion_event_hash() :: event_hash()
-  def aexn_template_deletion_event_hash do
-    :aec_hash.blake2b_256_hash("TemplateDeletion")
-  end
-
-  @spec aexn_swap_event_hash() :: event_hash()
-  def aexn_swap_event_hash do
-    :aec_hash.blake2b_256_hash("Swap")
-  end
-
-  @spec aexn_transfer_event_hash() :: event_hash()
-  def aexn_transfer_event_hash do
-    :aec_hash.blake2b_256_hash("Transfer")
+  @spec aexn_event_hash_types() :: %{event_hash() => aexn_event_type()}
+  def aexn_event_hash_types() do
+    %{
+      :aec_hash.blake2b_256_hash("Burn") => :burn,
+      :aec_hash.blake2b_256_hash("Mint") => :mint,
+      :aec_hash.blake2b_256_hash("Swap") => :swap,
+      :aec_hash.blake2b_256_hash("TemplateCreation") => :template_creation,
+      :aec_hash.blake2b_256_hash("TemplateDeletion") => :template_deletion,
+      :aec_hash.blake2b_256_hash("TemplateMint") => :template_mint,
+      :aec_hash.blake2b_256_hash("TemplateLimit") => :template_limit,
+      :aec_hash.blake2b_256_hash("TemplateLimitDecrease") => :template_limit_decrease,
+      :aec_hash.blake2b_256_hash("TokenLimit") => :token_limit,
+      :aec_hash.blake2b_256_hash("TokenLimitDecrease") => :token_limit_decrease,
+      :aec_hash.blake2b_256_hash("Transfer") => :transfer
+    }
   end
 
   @spec hdr_fields(:key | :micro) :: [atom()]
