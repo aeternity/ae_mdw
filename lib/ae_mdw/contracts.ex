@@ -492,7 +492,7 @@ defmodule AeMdw.Contracts do
       call_txi: call_txi,
       call_tx_hash: encode(:tx_hash, call_tx_hash),
       args: Enum.map(args, fn <<topic::256>> -> to_string(topic) end),
-      data: data,
+      data: maybe_encode_base64(data),
       event_hash: Base.hex_encode32(event_hash),
       height: height,
       micro_index: micro_index,
@@ -612,5 +612,9 @@ defmodule AeMdw.Contracts do
     rescue
       ArgumentError -> :error
     end
+  end
+
+  defp maybe_encode_base64(data) do
+    if String.valid?(data), do: data, else: Base.encode64(data)
   end
 end
