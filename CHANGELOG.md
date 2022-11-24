@@ -1,5 +1,29 @@
 # Changelog
 
+### [1.29.2](https://www.github.com/aeternity/ae_mdw/compare/v1.29.1...v1.29.2) (2022-11-24)
+
+
+### Bug Fixes
+
+* adjust git revision digits to allow variable length ([#1038](https://www.github.com/aeternity/ae_mdw/issues/1038)) ([5870dc9](https://www.github.com/aeternity/ae_mdw/commit/5870dc94906fb7579c3d869b407b7bb6797d9e37))
+* encode non-string contract log data ([#1036](https://www.github.com/aeternity/ae_mdw/issues/1036)) ([6198316](https://www.github.com/aeternity/ae_mdw/commit/6198316c787b4d3eedfd2fa2f4e5137d73fbae0c))
+* update async tasks db count on save ([#1025](https://www.github.com/aeternity/ae_mdw/issues/1025)) ([5f21192](https://www.github.com/aeternity/ae_mdw/commit/5f2119203da4c5972f72f546018a13e465507978))
+
+
+### Miscellaneous
+
+* handle dry run timeout ([#1026](https://www.github.com/aeternity/ae_mdw/issues/1026)) ([054e87b](https://www.github.com/aeternity/ae_mdw/commit/054e87bec77305fd1c6cf31826fb996ad782b875))
+
+
+### Testing
+
+* validate multiple and remote aexn transfers ([#1034](https://www.github.com/aeternity/ae_mdw/issues/1034)) ([3eafff2](https://www.github.com/aeternity/ae_mdw/commit/3eafff2d1a8f8878f5aa88d539f8d2b051d790a4))
+
+
+### Refactorings
+
+* move ws subscription to specific module ([#1030](https://www.github.com/aeternity/ae_mdw/issues/1030)) ([1abc8f3](https://www.github.com/aeternity/ae_mdw/commit/1abc8f30b22b1fce787d64817c22e31e927aaf00))
+
 ### [1.29.1](https://www.github.com/aeternity/ae_mdw/compare/v1.29.0...v1.29.1) (2022-11-17)
 
 
