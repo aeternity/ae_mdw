@@ -13,7 +13,6 @@ defmodule AeMdw.Activities do
   alias AeMdw.Db.Name
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
-  alias AeMdw.Db.Sync.InnerTx
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
@@ -470,29 +469,12 @@ defmodule AeMdw.Activities do
   end
 
   defp render(state, account_pk, height, txi, :claim) do
-    Model.tx(id: tx_hash) = DbUtil.read_tx!(state, txi)
-
     claim_aetx =
-      case Db.get_tx_data(tx_hash) do
-        {_block_hash, :name_claim_tx, signed_tx, _tx_rec} ->
-          :aetx_sign.tx(signed_tx)
+      Contracts.get_aetx(state, txi, :name_claim_tx, "AENS.claim", fn tx ->
+        name_hash = tx |> :aens_claim_tx.name() |> :aens_hash.name_hash()
 
-        {_block_hash, :contract_call_tx, _signed_tx, _tx_rec} ->
-          state
-          |> Contracts.fetch_int_contract_calls(txi, "AENS.claim")
-          |> Enum.find_value(fn Model.int_contract_call(tx: aetx) ->
-            {:name_claim_tx, tx} = :aetx.specialize_type(aetx)
-            name_hash = tx |> :aens_claim_tx.name() |> :aens_hash.name_hash()
-
-            name_hash == account_pk && aetx
-          end)
-
-        {_block_hash, tx_type, _signed_tx, tx_rec}
-        when tx_type in ~w(ga_meta_tx paying_for_tx)a ->
-          tx_type
-          |> InnerTx.signed_tx(tx_rec)
-          |> :aetx_sign.tx()
-      end
+        name_hash == account_pk
+      end)
 
     %{
       height: height,
