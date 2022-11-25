@@ -179,6 +179,42 @@ defmodule AeMdwWeb.NameController do
     end
   end
 
+  @spec name_transfers(Conn.t(), map()) :: Conn.t()
+  def name_transfers(%Conn{assigns: assigns} = conn, %{"id" => name_id}) do
+    %{
+      state: state,
+      pagination: pagination,
+      cursor: cursor,
+      scope: scope
+    } = assigns
+
+    case Names.fetch_name_transfers(state, name_id, pagination, scope, cursor) do
+      {:ok, {prev_cursor, names, next_cursor}} ->
+        Util.paginate(conn, prev_cursor, names, next_cursor)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @spec name_updates(Conn.t(), map()) :: Conn.t()
+  def name_updates(%Conn{assigns: assigns} = conn, %{"id" => name_id}) do
+    %{
+      state: state,
+      pagination: pagination,
+      cursor: cursor,
+      scope: scope
+    } = assigns
+
+    case Names.fetch_name_updates(state, name_id, pagination, scope, cursor) do
+      {:ok, {prev_cursor, names, next_cursor}} ->
+        Util.paginate(conn, prev_cursor, names, next_cursor)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   ##########
 
   defp name_reply(%Conn{assigns: %{state: state}} = conn, plain_name, opts) do

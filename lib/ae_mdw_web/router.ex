@@ -61,6 +61,8 @@ defmodule AeMdwWeb.Router do
       get "/names", NameController, :names
       get "/names/:id", NameController, :name
       get "/names/:id/claims", NameController, :name_claims
+      get "/names/:id/updates", NameController, :name_updates
+      get "/names/:id/transfers", NameController, :name_transfers
 
       get "/aex9", AexnTokenController, :aex9_contracts
       get "/aex9/:contract_id", AexnTokenController, :aex9_contract

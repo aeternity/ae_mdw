@@ -431,7 +431,15 @@ defmodule AeMdw.Db.Format do
 
   defp name_info_to_raw_map(
          state,
-         {:name, _, active_h, expire_h, cs, us, ts, revoke, auction_tm, _owner, _prev} = n
+         Model.name(
+           active: active_h,
+           expire: expire_h,
+           claims: cs,
+           updates: us,
+           transfers: ts,
+           revoke: revoke,
+           auction_timeout: auction_tm
+         ) = name
        ) do
     %{
       active_from: active_h,
@@ -441,8 +449,8 @@ defmodule AeMdw.Db.Format do
       transfers: Enum.map(ts, &bi_txi_txi/1),
       revoke: (revoke && bi_txi_txi(revoke)) || nil,
       auction_timeout: auction_tm,
-      pointers: Name.pointers(state, n),
-      ownership: Name.ownership(state, n)
+      pointers: Name.pointers(state, name),
+      ownership: Name.ownership(state, name)
     }
   end
 
