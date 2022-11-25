@@ -156,7 +156,7 @@ defmodule AeMdw.AexnContracts do
   end
 
   defp valid_aex141_signatures?(height, {:fcode, functions, _hash_names, _code}) do
-    signatures = :aecore |> Application.fetch_env!(:network_id) |> get_aex141_signatures(height)
+    signatures = :aec_governance.get_network_id() |> get_aex141_signatures(height)
 
     has_all_signatures?(signatures, functions) and valid_aex141_metadata?(functions)
   end
