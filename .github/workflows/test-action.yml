@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -34,7 +34,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -55,7 +55,7 @@ jobs:
       NODEROOT: ./node/local
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -73,7 +73,7 @@ jobs:
     name: Swagger v2 auto-generation + linting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -90,21 +90,21 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - uses: actions/cache@v1
+      - uses: actions/cache@v3
         with:
           path: deps
           key: dependencies-${{ hashFiles('mix.lock') }}
 
-      - uses: actions/cache@v1
+      - uses: actions/cache@v3
         with:
           path: _build
           key: build-${{ hashFiles('mix.lock') }}
 
-      - uses: actions/cache@v1
+      - uses: actions/cache@v3
         id: plt-cache
         with:
           path: priv/plts
