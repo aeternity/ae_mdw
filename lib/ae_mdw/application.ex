@@ -30,7 +30,6 @@ defmodule AeMdw.Application do
     :lager.set_loglevel(:epoch_sync_lager_event, :lager_console_backend, :undefined, :error)
     :lager.set_loglevel(:lager_console_backend, :error)
 
-    init(:node_records)
     init(:meta)
     init_public(:contract_cache)
     # init(:aesophia)
@@ -69,22 +68,6 @@ defmodule AeMdw.Application do
   #   |> Path.wildcard
   #   |> Enum.map(&:code.load_abs(to_charlist(Path.rootname(&1))))
   # end
-
-  defp init(:node_records) do
-    {:ok, aeo_oracles_code} = Extract.AbsCode.module(:aeo_oracles)
-    {:ok, aeo_query_code} = Extract.AbsCode.module(:aeo_query)
-
-    oracle_fields = NodeHelper.record_keys(aeo_oracles_code, :oracle)
-    query_fields = NodeHelper.record_keys(aeo_query_code, :query)
-
-    {:ok, _oracle_mod} =
-      SmartRecord.new(AeMdw.Node, :oracle, Enum.zip(oracle_fields, Stream.cycle([nil])))
-
-    {:ok, _oracle_query_mod} =
-      SmartRecord.new(AeMdw.Node, :oracle_query, Enum.zip(query_fields, Stream.cycle([nil])))
-
-    :ok
-  end
 
   defp init(:meta) do
     {:ok, chain_state_code} = Extract.AbsCode.module(:aec_chain_state)
