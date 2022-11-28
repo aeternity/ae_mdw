@@ -1,5 +1,5 @@
 defmodule AeMdw.Db.ContractCallMutationTest do
-  use ExUnit.Case, async: false
+  use AeMdw.Db.MutationCase, async: false
 
   alias AeMdw.AsyncTaskTestUtil
   alias AeMdw.Db.ContractCallMutation
@@ -121,7 +121,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
   end
 
   describe "aex9 mint" do
-    test "increment aex9 balance after a call with mint log" do
+    test "increment aex9 balance after a call with mint log", %{store: store} do
       kb_hash = :crypto.strong_rand_bytes(32)
       next_mb_hash = :crypto.strong_rand_bytes(32)
       contract_pk = :crypto.strong_rand_bytes(32)
@@ -191,14 +191,18 @@ defmodule AeMdw.Db.ContractCallMutationTest do
             amount: previous_balance
           )
 
-        state =
-          NullStore.new()
-          |> MemStore.new()
-          |> State.new()
-          |> State.put(Model.Aex9EventBalance, m_balance)
-          |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
-          |> State.cache_put(:ct_create_sync_cache, remote_pk, call_txi - 2)
-          |> State.commit_mem([mutation])
+        store =
+          store
+          |> Store.put(Model.Aex9EventBalance, m_balance)
+          |> Store.put(
+            Model.Field,
+            Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
+          )
+          |> Store.put(
+            Model.Field,
+            Model.field(index: {:contract_create_tx, nil, remote_pk, call_txi - 2})
+          )
+          |> change_store([mutation])
 
         m_new_balance =
           Model.aex9_event_balance(m_balance,
@@ -208,13 +212,13 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           )
 
         assert {:ok, ^m_new_balance} =
-                 State.get(state, Model.Aex9EventBalance, {remote_pk, account_pk})
+                 Store.get(store, Model.Aex9EventBalance, {remote_pk, account_pk})
       end
     end
   end
 
   describe "aex9 burn" do
-    test "decrement aex9 balance after a call with burn log" do
+    test "decrement aex9 balance after a call with burn log", %{store: store} do
       kb_hash = :crypto.strong_rand_bytes(32)
       next_mb_hash = :crypto.strong_rand_bytes(32)
       contract_pk = :crypto.strong_rand_bytes(32)
@@ -281,13 +285,14 @@ defmodule AeMdw.Db.ContractCallMutationTest do
             amount: amount + 100_000
           )
 
-        state =
-          NullStore.new()
-          |> MemStore.new()
-          |> State.new()
-          |> State.put(Model.Aex9EventBalance, m_balance)
-          |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
-          |> State.commit_mem([mutation])
+        store =
+          store
+          |> Store.put(Model.Aex9EventBalance, m_balance)
+          |> Store.put(
+            Model.Field,
+            Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
+          )
+          |> change_store([mutation])
 
         m_new_balance =
           Model.aex9_event_balance(m_balance,
@@ -297,7 +302,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           )
 
         assert {:ok, ^m_new_balance} =
-                 State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk})
+                 Store.get(store, Model.Aex9EventBalance, {contract_pk, account_pk})
       end
     end
   end
@@ -830,7 +835,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
   end
 
   describe "aex141 token limit" do
-    test "writes nft token limit after a call with the event" do
+    test "writes nft token limit after a call with the event", %{store: store} do
       contract_pk = :crypto.strong_rand_bytes(32)
       remote_pk1 = :crypto.strong_rand_bytes(32)
       remote_pk2 = :crypto.strong_rand_bytes(32)
@@ -898,27 +903,34 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           call_rec
         )
 
-      state =
-        NullStore.new()
-        |> MemStore.new()
-        |> State.new()
-        |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, remote_pk1}))
-        |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, remote_pk2}))
-        |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
-        |> State.cache_put(:ct_create_sync_cache, remote_pk1, call_txi - 2)
-        |> State.cache_put(:ct_create_sync_cache, remote_pk2, call_txi - 3)
-        |> State.commit_mem([mutation])
+      store =
+        store
+        |> Store.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, remote_pk1}))
+        |> Store.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, remote_pk2}))
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
+        )
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, remote_pk1, call_txi - 2})
+        )
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, remote_pk2, call_txi - 3})
+        )
+        |> change_store([mutation])
 
       assert {:ok, Model.nft_contract_limits(token_limit: ^limit1, txi: ^call_txi, log_idx: 0)} =
-               State.get(state, Model.NftContractLimits, remote_pk1)
+               Store.get(store, Model.NftContractLimits, remote_pk1)
 
       assert {:ok, Model.nft_contract_limits(token_limit: ^limit2, txi: ^call_txi, log_idx: 1)} =
-               State.get(state, Model.NftContractLimits, remote_pk2)
+               Store.get(store, Model.NftContractLimits, remote_pk2)
     end
   end
 
   describe "aex141 template limit" do
-    test "decreases template limit after a call with the event" do
+    test "decreases template limit after a call with the event", %{store: store} do
       contract_pk = :crypto.strong_rand_bytes(32)
       old_limit = Enum.random(1_000..9_999)
       new_limit = old_limit - 1
@@ -955,17 +967,18 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           call_rec
         )
 
-      state =
-        NullStore.new()
-        |> MemStore.new()
-        |> State.new()
-        |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, contract_pk}))
-        |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
-        |> State.commit_mem([mutation])
+      store =
+        store
+        |> Store.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, contract_pk}))
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
+        )
+        |> change_store([mutation])
 
       assert {:ok,
               Model.nft_contract_limits(template_limit: ^new_limit, txi: ^call_txi, log_idx: 0)} =
-               State.get(state, Model.NftContractLimits, contract_pk)
+               Store.get(store, Model.NftContractLimits, contract_pk)
     end
   end
 
