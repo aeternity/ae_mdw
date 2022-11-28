@@ -67,7 +67,12 @@ defmodule AeMdwWeb.TxControllerTest do
 
       with_blockchain %{ga: 10_000},
         mb: [
-          ga_tx: tx(:ga_attach_tx, :ga, %{nonce: nonce, call_data: call_data})
+          ga_tx:
+            tx(:ga_attach_tx, :ga, %{
+              nonce: nonce,
+              call_data: call_data,
+              auth_fun: <<108, 242, 87, 11>> <> <<0::112>>
+            })
         ] do
         %{txs: [signed_tx]} = blocks[:mb]
         {:id, :account, account_pk} = accounts[:ga]
@@ -96,7 +101,10 @@ defmodule AeMdwWeb.TxControllerTest do
              }}
         }
 
-        type_info = {:fcode, functions, %{<<68, 214, 68, 31>> => "init"}, nil}
+        type_info =
+          {:fcode, functions,
+           %{<<68, 214, 68, 31>> => "init", <<108, 242, 87, 11>> => "authorize"}, nil}
+
         {_mod, tx} = signed_tx |> :aetx_sign.tx() |> :aetx.specialize_callback()
         contract_pk = :aega_attach_tx.contract_pubkey(tx)
 
@@ -112,6 +120,7 @@ defmodule AeMdwWeb.TxControllerTest do
         assert %{
                  "hash" => ^tx_hash,
                  "tx" => %{
+                   "auth_fun_name" => "authorize",
                    "nonce" => ^nonce,
                    "owner_id" => ^account_id,
                    "args" => [%{"type" => "bytes", "value" => ^bytes_arg}],
