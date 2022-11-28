@@ -1,5 +1,5 @@
 defmodule AeMdw.Db.ContractCallMutationTest do
-  use ExUnit.Case, async: false
+  use AeMdw.Db.MutationCase, async: false
 
   alias AeMdw.AsyncTaskTestUtil
   alias AeMdw.Db.ContractCallMutation
@@ -11,6 +11,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
   alias AeMdw.Validate
 
   import AeMdw.Node.ContractCallFixtures
+  import AeMdw.Node.AexnEventFixtures, only: [aexn_event_hash: 1]
   import AeMdwWeb.Helpers.AexnHelper, only: [enc_id: 1]
 
   import Mock
@@ -120,7 +121,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
   end
 
   describe "aex9 mint" do
-    test "increment aex9 balance after a call with mint log" do
+    test "increment aex9 balance after a call with mint log", %{store: store} do
       kb_hash = :crypto.strong_rand_bytes(32)
       next_mb_hash = :crypto.strong_rand_bytes(32)
       contract_pk = :crypto.strong_rand_bytes(32)
@@ -151,7 +152,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         call_rec("logs", contract_pk, height, nil, [
           {
             remote_pk,
-            [AeMdw.Node.aexn_mint_event_hash(), account_pk, <<amount::256>>],
+            [aexn_event_hash(:mint), account_pk, <<amount::256>>],
             ""
           }
         ])
@@ -190,14 +191,18 @@ defmodule AeMdw.Db.ContractCallMutationTest do
             amount: previous_balance
           )
 
-        state =
-          NullStore.new()
-          |> MemStore.new()
-          |> State.new()
-          |> State.put(Model.Aex9EventBalance, m_balance)
-          |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
-          |> State.cache_put(:ct_create_sync_cache, remote_pk, call_txi - 2)
-          |> State.commit_mem([mutation])
+        store =
+          store
+          |> Store.put(Model.Aex9EventBalance, m_balance)
+          |> Store.put(
+            Model.Field,
+            Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
+          )
+          |> Store.put(
+            Model.Field,
+            Model.field(index: {:contract_create_tx, nil, remote_pk, call_txi - 2})
+          )
+          |> change_store([mutation])
 
         m_new_balance =
           Model.aex9_event_balance(m_balance,
@@ -207,13 +212,13 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           )
 
         assert {:ok, ^m_new_balance} =
-                 State.get(state, Model.Aex9EventBalance, {remote_pk, account_pk})
+                 Store.get(store, Model.Aex9EventBalance, {remote_pk, account_pk})
       end
     end
   end
 
   describe "aex9 burn" do
-    test "decrement aex9 balance after a call with burn log" do
+    test "decrement aex9 balance after a call with burn log", %{store: store} do
       kb_hash = :crypto.strong_rand_bytes(32)
       next_mb_hash = :crypto.strong_rand_bytes(32)
       contract_pk = :crypto.strong_rand_bytes(32)
@@ -243,7 +248,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         call_rec("logs", contract_pk, height, nil, [
           {
             contract_pk,
-            [AeMdw.Node.aexn_burn_event_hash(), account_pk, <<amount::256>>],
+            [aexn_event_hash(:burn), account_pk, <<amount::256>>],
             ""
           }
         ])
@@ -280,13 +285,14 @@ defmodule AeMdw.Db.ContractCallMutationTest do
             amount: amount + 100_000
           )
 
-        state =
-          NullStore.new()
-          |> MemStore.new()
-          |> State.new()
-          |> State.put(Model.Aex9EventBalance, m_balance)
-          |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
-          |> State.commit_mem([mutation])
+        store =
+          store
+          |> Store.put(Model.Aex9EventBalance, m_balance)
+          |> Store.put(
+            Model.Field,
+            Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
+          )
+          |> change_store([mutation])
 
         m_new_balance =
           Model.aex9_event_balance(m_balance,
@@ -296,7 +302,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           )
 
         assert {:ok, ^m_new_balance} =
-                 State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk})
+                 Store.get(store, Model.Aex9EventBalance, {contract_pk, account_pk})
       end
     end
   end
@@ -332,7 +338,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         call_rec("logs", contract_pk, height, nil, [
           {
             contract_pk,
-            [AeMdw.Node.aexn_swap_event_hash(), account_pk, <<amount::256>>],
+            [aexn_event_hash(:swap), account_pk, <<amount::256>>],
             ""
           }
         ])
@@ -423,7 +429,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         call_rec("logs", contract_pk, height, nil, [
           {
             contract_pk,
-            [AeMdw.Node.aexn_transfer_event_hash(), from_pk, to_pk, <<amount::256>>],
+            [aexn_event_hash(:transfer), from_pk, to_pk, <<amount::256>>],
             ""
           }
         ])
@@ -512,12 +518,12 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         call_rec("logs", contract_pk, height, nil, [
           {
             remote_pk1,
-            [AeMdw.Node.aexn_transfer_event_hash(), from_pk1, to_pk1, <<amount1::256>>],
+            [aexn_event_hash(:transfer), from_pk1, to_pk1, <<amount1::256>>],
             ""
           },
           {
             remote_pk2,
-            [AeMdw.Node.aexn_transfer_event_hash(), from_pk2, to_pk2, <<amount2::256>>],
+            [aexn_event_hash(:transfer), from_pk2, to_pk2, <<amount2::256>>],
             ""
           }
         ])
@@ -608,7 +614,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         {:call, :crypto.strong_rand_bytes(32), {:id, :account, :crypto.strong_rand_bytes(32)}, 1,
          height, {:id, :contract, contract_pk}, 1_000_000_000, 5_250, "?", :ok,
          [
-           {remote_pk, [AeMdw.Node.aexn_mint_event_hash(), to_pk, <<token_id::256>>], ""}
+           {remote_pk, [aexn_event_hash(:mint), to_pk, <<token_id::256>>], ""}
          ]}
 
       mutation =
@@ -665,7 +671,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           {
             contract_pk,
             [
-              AeMdw.Node.aexn_template_mint_event_hash(),
+              aexn_event_hash(:template_mint),
               to_pk,
               <<template_id::256>>,
               <<token_id::256>>
@@ -734,7 +740,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           {
             contract_pk,
             [
-              AeMdw.Node.aexn_template_creation_event_hash(),
+              aexn_event_hash(:template_creation),
               <<template_id::256>>
             ],
             ""
@@ -796,7 +802,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           {
             contract_pk,
             [
-              AeMdw.Node.aexn_template_deletion_event_hash(),
+              aexn_event_hash(:template_deletion),
               <<template_id::256>>
             ],
             ""
@@ -825,6 +831,154 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         |> State.commit_mem([mutation])
 
       assert :not_found = State.get(state, Model.NftTemplate, {contract_pk, template_id})
+    end
+  end
+
+  describe "aex141 token limit" do
+    test "writes nft token limit after a call with the event", %{store: store} do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      remote_pk1 = :crypto.strong_rand_bytes(32)
+      remote_pk2 = :crypto.strong_rand_bytes(32)
+      limit1 = Enum.random(1_000..9_999)
+      limit2 = Enum.random(1_000..9_999)
+      height = Enum.random(100_000..999_999)
+      call_txi = Enum.random(10_000_000..99_999_999)
+
+      fun_arg_res = %{
+        arguments: [
+          %{type: :integer, value: 1}
+        ],
+        function: "some_change_token_limit",
+        result: %{type: :unit, value: ""}
+      }
+
+      valid_events = [
+        {
+          remote_pk1,
+          [
+            aexn_event_hash(:token_limit),
+            <<limit1::256>>
+          ],
+          ""
+        },
+        {
+          remote_pk2,
+          [
+            aexn_event_hash(:token_limit_decrease),
+            <<limit2 + 1::256>>,
+            <<limit2::256>>
+          ],
+          ""
+        }
+      ]
+
+      invalid_events = [
+        {
+          remote_pk1,
+          [
+            aexn_event_hash(:token_limit),
+            <<limit1 + 1::256>>,
+            <<limit1::256>>
+          ],
+          ""
+        },
+        {
+          remote_pk2,
+          [
+            aexn_event_hash(:token_limit_decrease),
+            <<limit2::256>>
+          ],
+          ""
+        }
+      ]
+
+      call_rec = call_rec("logs", contract_pk, height, nil, valid_events ++ invalid_events)
+
+      mutation =
+        ContractCallMutation.new(
+          contract_pk,
+          {height, 0},
+          call_txi,
+          fun_arg_res,
+          call_rec
+        )
+
+      store =
+        store
+        |> Store.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, remote_pk1}))
+        |> Store.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, remote_pk2}))
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
+        )
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, remote_pk1, call_txi - 2})
+        )
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, remote_pk2, call_txi - 3})
+        )
+        |> change_store([mutation])
+
+      assert {:ok, Model.nft_contract_limits(token_limit: ^limit1, txi: ^call_txi, log_idx: 0)} =
+               Store.get(store, Model.NftContractLimits, remote_pk1)
+
+      assert {:ok, Model.nft_contract_limits(token_limit: ^limit2, txi: ^call_txi, log_idx: 1)} =
+               Store.get(store, Model.NftContractLimits, remote_pk2)
+    end
+  end
+
+  describe "aex141 template limit" do
+    test "decreases template limit after a call with the event", %{store: store} do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      old_limit = Enum.random(1_000..9_999)
+      new_limit = old_limit - 1
+      height = Enum.random(100_000..999_999)
+      call_txi = Enum.random(10_000_000..99_999_999)
+
+      fun_arg_res = %{
+        arguments: [
+          %{type: :integer, value: 1}
+        ],
+        function: "some_template_limit_decrease",
+        result: %{type: :unit, value: ""}
+      }
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {
+            contract_pk,
+            [
+              aexn_event_hash(:template_limit_decrease),
+              <<old_limit::256>>,
+              <<new_limit::256>>
+            ],
+            ""
+          }
+        ])
+
+      mutation =
+        ContractCallMutation.new(
+          contract_pk,
+          {height, 0},
+          call_txi,
+          fun_arg_res,
+          call_rec
+        )
+
+      store =
+        store
+        |> Store.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, contract_pk}))
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
+        )
+        |> change_store([mutation])
+
+      assert {:ok,
+              Model.nft_contract_limits(template_limit: ^new_limit, txi: ^call_txi, log_idx: 0)} =
+               Store.get(store, Model.NftContractLimits, contract_pk)
     end
   end
 
@@ -857,7 +1011,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         call_rec("logs", contract_pk, height, nil, [
           {
             contract_pk,
-            [AeMdw.Node.aexn_transfer_event_hash(), from_pk, to_pk, <<token_id::256>>],
+            [aexn_event_hash(:transfer), from_pk, to_pk, <<token_id::256>>],
             ""
           }
         ])
@@ -942,12 +1096,12 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         call_rec("logs", contract_pk, height, nil, [
           {
             remote_pk1,
-            [AeMdw.Node.aexn_transfer_event_hash(), from_pk1, to_pk1, <<token_id1::256>>],
+            [aexn_event_hash(:transfer), from_pk1, to_pk1, <<token_id1::256>>],
             ""
           },
           {
             remote_pk2,
-            [AeMdw.Node.aexn_transfer_event_hash(), from_pk2, to_pk2, <<token_id2::256>>],
+            [aexn_event_hash(:transfer), from_pk2, to_pk2, <<token_id2::256>>],
             ""
           }
         ])
@@ -1059,7 +1213,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       call_rec =
         call_rec("logs", contract_pk, height, nil, [
-          {contract_pk, [AeMdw.Node.aexn_burn_event_hash(), <<token_id1::256>>], ""}
+          {contract_pk, [aexn_event_hash(:burn), <<token_id1::256>>], ""}
         ])
 
       mutation =

@@ -418,7 +418,7 @@ defmodule AeMdw.Db.Model do
   defrecord :aexn_contract_symbol, @aexn_contract_symbol_defaults
 
   # AEX-141 owner tokens
-  #     index = {owner pubkey, contract pubkey, token_id}, template_id = integer()
+  #     index: {owner pubkey, contract pubkey, token_id}, template_id: integer()
   @nft_ownership_defaults [index: nil, template_id: nil]
   defrecord :nft_ownership, @nft_ownership_defaults
 
@@ -429,7 +429,7 @@ defmodule AeMdw.Db.Model do
           )
 
   # AEX-141 templates
-  #     index = {contract pubkey, template_id}
+  #     index: {contract pubkey, template_id}
   @nft_template_defaults [index: {<<>>, -1}, txi: nil, log_idx: nil]
   defrecord :nft_template, @nft_template_defaults
 
@@ -441,7 +441,7 @@ defmodule AeMdw.Db.Model do
           )
 
   # AEX-141 collection owners
-  #     index = {contract pubkey, owner pubkey, token_id}
+  #     index: {contract pubkey, owner pubkey, token_id}
   @nft_owner_token_defaults [index: nil, unused: nil]
   defrecord :nft_owner_token, @nft_owner_token_defaults
 
@@ -452,7 +452,7 @@ defmodule AeMdw.Db.Model do
           )
 
   # AEX-141 token owner
-  #     index = {contract pubkey, token_id}, owner = pubkey
+  #     index: {contract pubkey, token_id}, owner: pubkey
   @nft_token_owner_defaults [index: {<<>>, -1}, owner: <<>>]
   defrecord :nft_token_owner, @nft_token_owner_defaults
 
@@ -460,6 +460,26 @@ defmodule AeMdw.Db.Model do
           record(:nft_token_owner,
             index: {pubkey(), AeMdw.Aex141.token_id()},
             owner: pubkey()
+          )
+
+  # AEX-141 token limit
+  #     index: contract pubkey, token_limit: integer, template_limit: integer, txi: integer, log_idx: integer
+  @nft_contract_limits_defaults [
+    index: <<>>,
+    token_limit: nil,
+    template_limit: nil,
+    txi: nil,
+    log_idx: nil
+  ]
+  defrecord :nft_contract_limits, @nft_contract_limits_defaults
+
+  @type nft_contract_limits() ::
+          record(:nft_contract_limits,
+            index: pubkey(),
+            token_limit: pos_integer() | nil,
+            template_limit: pos_integer() | nil,
+            txi: txi() | nil,
+            log_idx: log_idx() | nil
           )
 
   # contract call:
@@ -866,6 +886,7 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.NftOwnership,
       AeMdw.Db.Model.NftOwnerToken,
       AeMdw.Db.Model.NftTokenOwner,
+      AeMdw.Db.Model.NftContractLimits,
       AeMdw.Db.Model.NftTemplate
     ]
   end
@@ -961,6 +982,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.NftOwnership), do: :nft_ownership
   def record(AeMdw.Db.Model.NftOwnerToken), do: :nft_owner_token
   def record(AeMdw.Db.Model.NftTokenOwner), do: :nft_token_owner
+  def record(AeMdw.Db.Model.NftContractLimits), do: :nft_contract_limits
   def record(AeMdw.Db.Model.NftTemplate), do: :nft_template
   def record(AeMdw.Db.Model.PlainName), do: :plain_name
   def record(AeMdw.Db.Model.AuctionBid), do: :auction_bid

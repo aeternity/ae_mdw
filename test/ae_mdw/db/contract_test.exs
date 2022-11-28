@@ -9,6 +9,7 @@ defmodule AeMdw.Db.ContractTest do
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
 
+  import AeMdw.Node.AexnEventFixtures, only: [aexn_event_hash: 1]
   import AeMdw.Node.ContractCallFixtures, only: [call_rec: 1, call_rec: 5]
   import Mock
 
@@ -19,7 +20,7 @@ defmodule AeMdw.Db.ContractTest do
       {height, _mb} = block_index = {100_000, 0}
       contract_pk = :crypto.strong_rand_bytes(32)
       evt_hash0 = :crypto.strong_rand_bytes(32)
-      evt_hash1 = AeMdw.Node.aexn_transfer_event_hash()
+      evt_hash1 = aexn_event_hash(:transfer)
 
       args0 = [
         <<1::256>>,
@@ -98,7 +99,7 @@ defmodule AeMdw.Db.ContractTest do
       contract_pk = :crypto.strong_rand_bytes(32)
       remote_pk = :crypto.strong_rand_bytes(32)
       evt_hash0 = :crypto.strong_rand_bytes(32)
-      evt_hash1 = AeMdw.Node.aexn_transfer_event_hash()
+      evt_hash1 = aexn_event_hash(:transfer)
 
       args0 = [
         <<1::256>>,
@@ -198,22 +199,22 @@ defmodule AeMdw.Db.ContractTest do
         call_rec("logs", contract_pk, height, nil, [
           {
             contract_pk,
-            [AeMdw.Node.aexn_mint_event_hash(), account_pk1, <<1_000_000::256>>],
+            [aexn_event_hash(:mint), account_pk1, <<1_000_000::256>>],
             ""
           },
           {
             contract_pk,
-            [AeMdw.Node.aexn_burn_event_hash(), account_pk1, <<10::256>>],
+            [aexn_event_hash(:burn), account_pk1, <<10::256>>],
             ""
           },
           {
             contract_pk,
-            [AeMdw.Node.aexn_swap_event_hash(), account_pk1, <<20::256>>],
+            [aexn_event_hash(:swap), account_pk1, <<20::256>>],
             ""
           },
           {
             contract_pk,
-            [AeMdw.Node.aexn_transfer_event_hash(), account_pk1, account_pk2, <<30::256>>],
+            [aexn_event_hash(:transfer), account_pk1, account_pk2, <<30::256>>],
             ""
           }
         ])

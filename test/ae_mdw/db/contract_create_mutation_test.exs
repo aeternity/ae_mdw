@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.ContractCreateMutationTest do
-  use ExUnit.Case, async: false
+  use AeMdw.Db.MutationCase, async: false
 
+  import AeMdw.Node.AexnEventFixtures, only: [aexn_event_hash: 1]
   import AeMdw.Node.ContractCallFixtures
   import Mock
 
@@ -74,9 +75,9 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
         {:call, <<1::256>>, {:id, :account, <<2::256>>}, 1, height, {:id, :contract, contract_pk},
          1_000_000_000, 10_500, "?", :ok,
          [
-           {contract_pk, [AeMdw.Node.aexn_mint_event_hash(), to_pk1, <<token_id1::256>>], ""},
-           {contract_pk, [AeMdw.Node.aexn_mint_event_hash(), to_pk2, <<token_id2::256>>], ""},
-           {contract_pk, [AeMdw.Node.aexn_mint_event_hash(), to_pk2, <<token_id3::256>>], ""}
+           {contract_pk, [aexn_event_hash(:mint), to_pk1, <<token_id1::256>>], ""},
+           {contract_pk, [aexn_event_hash(:mint), to_pk2, <<token_id2::256>>], ""},
+           {contract_pk, [aexn_event_hash(:mint), to_pk2, <<token_id3::256>>], ""}
          ]}
 
       with_mocks [
@@ -138,6 +139,153 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
         assert State.exists?(state, Model.NftOwnerToken, {contract_pk, to_pk1, token_id1})
         assert State.exists?(state, Model.NftOwnerToken, {contract_pk, to_pk2, token_id2})
         assert State.exists?(state, Model.NftOwnerToken, {contract_pk, to_pk2, token_id3})
+      end
+    end
+
+    test "inits token limit", %{store: store} do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      token_limit = Enum.random(1_000..9_999)
+      height = Enum.random(100_000..999_999)
+      create_txi = Enum.random(10_000_000..99_999_999)
+      extensions = ["mintable_limit"]
+
+      valid_event = {
+        contract_pk,
+        [
+          aexn_event_hash(:token_limit),
+          <<token_limit::256>>
+        ],
+        ""
+      }
+
+      invalid_event = {
+        contract_pk,
+        [
+          aexn_event_hash(:token_limit),
+          <<token_limit + 1::256>>,
+          <<token_limit + 2::256>>
+        ],
+        ""
+      }
+
+      call_rec = call_rec("logs", contract_pk, height, nil, [valid_event, invalid_event])
+
+      with_mocks [
+        {Contract, [:passthrough],
+         [
+           is_contract?: fn ^contract_pk -> true end,
+           get_init_call_rec: fn _tx, _hash -> call_rec end
+         ]},
+        {AexnContracts, [:passthrough],
+         [
+           is_aex9?: fn ^contract_pk -> false end,
+           call_meta_info: fn _type, ^contract_pk ->
+             {:ok, {"test1", "TEST1", "http://some-fake-url", :url}}
+           end,
+           has_aex141_signatures?: fn _height, ^contract_pk -> true end,
+           call_extensions: fn :aex141, _pk -> {:ok, extensions} end,
+           has_valid_aex141_extensions?: fn _extensions, ^contract_pk -> true end
+         ]},
+        {Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _hash, "extensions", [] -> {:ok, extensions} end
+         ]}
+      ] do
+        mutations = [
+          SyncContract.aexn_create_contract_mutation(contract_pk, {height, 0}, create_txi),
+          Origin.origin_mutations(
+            :contract_create_tx,
+            nil,
+            contract_pk,
+            create_txi,
+            :crypto.strong_rand_bytes(32)
+          ),
+          ContractCreateMutation.new({height, 0}, create_txi, call_rec)
+        ]
+
+        store = change_store(store, [mutations])
+
+        assert {:ok, Model.aexn_contract(extensions: ^extensions)} =
+                 Store.get(store, Model.AexnContract, {:aex141, contract_pk})
+
+        assert {:ok,
+                Model.nft_contract_limits(token_limit: ^token_limit, txi: ^create_txi, log_idx: 0)} =
+                 Store.get(store, Model.NftContractLimits, contract_pk)
+      end
+    end
+
+    test "inits template limit", %{store: store} do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      template_limit = Enum.random(100..999)
+      height = Enum.random(100_000..999_999)
+      create_txi = Enum.random(10_000_000..99_999_999)
+      extensions = ["mintable_template_limit"]
+
+      valid_event = {
+        contract_pk,
+        [
+          aexn_event_hash(:template_limit),
+          <<template_limit::256>>
+        ],
+        ""
+      }
+
+      invalid_event = {
+        contract_pk,
+        [
+          aexn_event_hash(:template_limit),
+          <<template_limit + 1::256>>,
+          <<template_limit + 2::256>>
+        ],
+        ""
+      }
+
+      call_rec = call_rec("logs", contract_pk, height, nil, [valid_event, invalid_event])
+
+      with_mocks [
+        {Contract, [:passthrough],
+         [
+           is_contract?: fn ^contract_pk -> true end,
+           get_init_call_rec: fn _tx, _hash -> call_rec end
+         ]},
+        {AexnContracts, [:passthrough],
+         [
+           is_aex9?: fn ^contract_pk -> false end,
+           call_meta_info: fn _type, ^contract_pk ->
+             {:ok, {"test1", "TEST1", "http://some-fake-url", :url}}
+           end,
+           has_aex141_signatures?: fn _height, ^contract_pk -> true end,
+           call_extensions: fn :aex141, _pk -> {:ok, extensions} end,
+           has_valid_aex141_extensions?: fn _extensions, ^contract_pk -> true end
+         ]},
+        {Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _hash, "extensions", [] -> {:ok, extensions} end
+         ]}
+      ] do
+        mutations = [
+          SyncContract.aexn_create_contract_mutation(contract_pk, {height, 0}, create_txi),
+          Origin.origin_mutations(
+            :contract_create_tx,
+            nil,
+            contract_pk,
+            create_txi,
+            :crypto.strong_rand_bytes(32)
+          ),
+          ContractCreateMutation.new({height, 0}, create_txi, call_rec)
+        ]
+
+        store = change_store(store, [mutations])
+
+        assert {:ok, Model.aexn_contract(extensions: ^extensions)} =
+                 Store.get(store, Model.AexnContract, {:aex141, contract_pk})
+
+        assert {:ok,
+                Model.nft_contract_limits(
+                  template_limit: ^template_limit,
+                  txi: ^create_txi,
+                  log_idx: 0
+                )} = Store.get(store, Model.NftContractLimits, contract_pk)
       end
     end
   end

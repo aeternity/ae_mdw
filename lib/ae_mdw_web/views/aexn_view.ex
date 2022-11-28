@@ -8,6 +8,7 @@ defmodule AeMdwWeb.AexnView do
   alias AeMdw.Db.Util
   alias AeMdw.Node.Db, as: NodeDb
   alias AeMdw.Stats
+  alias AeMdw.Aex141
   alias AeMdw.Txs
 
   require Model
@@ -185,9 +186,7 @@ defmodule AeMdwWeb.AexnView do
          {name, symbol, base_url, metadata_type},
          extensions
        ) do
-    state
-    |> Stats.fetch_nft_stats(contract_pk)
-    |> Map.merge(%{
+    %{
       name: name,
       symbol: symbol,
       base_url: base_url,
@@ -195,7 +194,9 @@ defmodule AeMdwWeb.AexnView do
       contract_id: enc_ct(contract_pk),
       metadata_type: metadata_type,
       extensions: extensions
-    })
+    }
+    |> Map.merge(Stats.fetch_nft_stats(state, contract_pk))
+    |> Map.merge(Aex141.fetch_limits(state, contract_pk))
   end
 
   defp do_transfer_to_map(

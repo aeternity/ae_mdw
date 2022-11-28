@@ -1,6 +1,8 @@
 defmodule AeMdw.Node.ContractCallFixtures do
   @moduledoc false
 
+  import AeMdw.Node.AexnEventFixtures, only: [aexn_event_hash: 1]
+
   @typep pubkey :: AeMdw.Node.Db.pubkey()
   @type fname :: String.t()
   @type fun_arg_res :: map()
@@ -360,8 +362,7 @@ defmodule AeMdw.Node.ContractCallFixtures do
     {:call, :aect_call.id(<<1::256>>, 2, contract_pk), {:id, :account, <<1::256>>}, 2, height,
      {:id, :contract, contract_pk}, 1_000_000_000, 22_929, "", :ok,
      [
-       {event_pk,
-        [AeMdw.Node.aexn_transfer_event_hash(), <<1::256>>, <<2::256>>, <<10_000::256>>], <<>>}
+       {event_pk, [aexn_event_hash(:transfer), <<1::256>>, <<2::256>>, <<10_000::256>>], <<>>}
      ] ++
        extra_logs}
   end

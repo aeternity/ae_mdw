@@ -187,6 +187,8 @@ defmodule AeMdw.AexnContracts do
   @metadata_hash <<99, 148, 233, 122>>
   @mint_hash <<207, 221, 154, 162>>
   @burn_hash <<177, 239, 193, 123>>
+  @token_limit_hash <<161, 97, 56, 18>>
+  @decrease_token_limit_hash <<97, 25, 71, 99>>
 
   defp valid_aex141_metadata?(functions) do
     with {_code, type, _body} <- Map.get(functions, @metadata_hash),
@@ -204,6 +206,17 @@ defmodule AeMdw.AexnContracts do
       valid_metadata?(metadata) and data == @option_string
     else
       _nil_or_type_mismatch ->
+        false
+    end
+  end
+
+  defp valid_aex141_extension?("mintable_limit", functions) do
+    with {_code, {[], :integer}, _body} <- Map.get(functions, @token_limit_hash),
+         {_code, {[:integer], {:tuple, []}}, _body} <-
+           Map.get(functions, @decrease_token_limit_hash) do
+      true
+    else
+      _nil_or_mismatch ->
         false
     end
   end

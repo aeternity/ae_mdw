@@ -104,6 +104,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       ct_pk = :crypto.strong_rand_bytes(32)
       contract_id = enc_ct(ct_pk)
       txi = Enum.random(1_000_000..9_999_999)
+      limit_txi = txi + 1
 
       meta_info =
         {name, symbol, base_url, _type} =
@@ -119,12 +120,22 @@ defmodule AeMdwWeb.Aex141ControllerTest do
           extensions: extensions
         )
 
+      m_limits =
+        Model.nft_contract_limits(
+          index: ct_pk,
+          token_limit: 200,
+          template_limit: 100,
+          txi: limit_txi,
+          log_idx: 1
+        )
+
       m_nft_count = Model.stat(index: Stats.nfts_count_key(ct_pk), payload: 6)
       m_owners_count = Model.stat(index: Stats.nft_owners_count_key(ct_pk), payload: 4)
 
       store =
         store
         |> Store.put(Model.AexnContract, m_aex141)
+        |> Store.put(Model.NftContractLimits, m_limits)
         |> Store.put(Model.Stat, m_nft_count)
         |> Store.put(Model.Stat, m_owners_count)
 
@@ -137,7 +148,11 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                "nft_owners" => 4,
                "contract_txi" => ^txi,
                "contract_id" => ^contract_id,
-               "extensions" => ^extensions
+               "extensions" => ^extensions,
+               "token_limit" => 200,
+               "template_limit" => 100,
+               "limit_txi" => ^limit_txi,
+               "limit_log_idx" => 1
              } = conn |> with_store(store) |> get("/aex141/#{contract_id}") |> json_response(200)
     end
   end

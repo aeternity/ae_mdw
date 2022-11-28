@@ -11,7 +11,6 @@ defmodule AeMdw.Aex141 do
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Util
   alias AeMdw.Txs
-
   import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1, enc_id: 1, enc: 2]
 
   require Model
@@ -20,6 +19,13 @@ defmodule AeMdw.Aex141 do
   @typep cursor :: binary() | nil
   @typep page_cursor :: Collection.pagination_cursor()
   @typep pubkey :: AeMdw.Node.Db.pubkey()
+  @typep limit :: integer() | nil
+  @type limits :: %{
+          token_limit: limit(),
+          template_limit: limit(),
+          limit_txi: Txs.txi() | nil,
+          limit_log_idx: non_neg_integer() | nil
+        }
 
   @type token_id :: integer()
   @type nft :: %{
@@ -106,6 +112,27 @@ defmodule AeMdw.Aex141 do
       cursor_error ->
         cursor_error
     end
+  end
+
+  @spec fetch_limits(State.t(), pubkey()) :: limits()
+  def fetch_limits(state, contract_pk) do
+    Model.nft_contract_limits(
+      token_limit: token_limit,
+      template_limit: template_limit,
+      txi: txi,
+      log_idx: log_idx
+    ) =
+      case State.get(state, Model.NftContractLimits, contract_pk) do
+        :not_found -> Model.nft_contract_limits()
+        {:ok, m_limits} -> m_limits
+      end
+
+    %{
+      token_limit: token_limit,
+      template_limit: template_limit,
+      limit_txi: txi,
+      limit_log_idx: log_idx
+    }
   end
 
   #
