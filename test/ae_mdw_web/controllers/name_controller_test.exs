@@ -1930,7 +1930,7 @@ defmodule AeMdwWeb.NameControllerTest do
   end
 
   describe "name_transfers" do
-    test "it returns all of the name claims in backward order", %{conn: conn, store: store} do
+    test "it returns all of the name transfers in backward order", %{conn: conn, store: store} do
       account_pk = TS.address(0)
       account_id = :aeser_id.create(:account, account_pk)
       recipient_pk = TS.address(1)
@@ -2025,7 +2025,7 @@ defmodule AeMdwWeb.NameControllerTest do
   end
 
   describe "name_updates" do
-    test "it returns all of the name claims in backward order", %{conn: conn, store: store} do
+    test "it returns all of the name updates in backward order", %{conn: conn, store: store} do
       account_pk = TS.address(0)
       account_id = :aeser_id.create(:account, account_pk)
       plain_name = "asd.chain"
