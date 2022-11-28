@@ -19,8 +19,6 @@ mdw_revision =
 
 config :ae_mdw, build_revision: mdw_revision
 
-config :aecore, network_id: System.get_env("NETWORK_ID", "ae_mainnet")
-
 node_root = System.get_env("NODEROOT", "../aeternity/_build/local/")
 
 config :ae_mdw, AeMdw.Db.RocksDb, data_dir: "#{node_root}/rel/aeternity/data/mdw.db"

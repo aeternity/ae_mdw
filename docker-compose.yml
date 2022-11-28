@@ -3,8 +3,6 @@ services:
   ae_mdw:
     build:
       context: .
-      args:
-        - NETWORK_ID=${NETWORK_ID-ae_mainnet}
       dockerfile: ./Dockerfile
     ports:
       - "4000:4000" #MDW's default port
