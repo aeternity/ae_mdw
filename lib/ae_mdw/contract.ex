@@ -302,13 +302,23 @@ defmodule AeMdw.Contract do
   @spec get_ga_attach_call_details(signed_tx(), pubkey(), block_hash()) :: serialized_call()
   def get_ga_attach_call_details(signed_tx, contract_pk, block_hash) do
     call_rec = call_rec(signed_tx, contract_pk, block_hash)
-    {mod, tx_rec} = signed_tx |> :aetx_sign.tx() |> :aetx.specialize_callback()
+    {:aega_attach_tx, tx_rec} = signed_tx |> :aetx_sign.tx() |> :aetx.specialize_callback()
 
     %{
-      "args" => contract_init_args(contract_pk, tx_rec, mod),
+      "auth_fun_name" => get_ga_attach_auth_func_name(tx_rec, contract_pk),
+      "args" => contract_init_args(contract_pk, tx_rec, :aega_attach_tx),
       "gas_used" => :aect_call.gas_used(call_rec),
       "return_type" => :aect_call.return_type(call_rec)
     }
+  end
+
+  defp get_ga_attach_auth_func_name(tx_rec, contract_pk) do
+    with <<auth_fun_hash_key::binary-4, _rest::binary>> <- :aega_attach_tx.auth_fun(tx_rec),
+         {:ok, {{:fcode, _code, names, _extra}, _version, _hash}} <- get_info(contract_pk) do
+      Map.get(names, auth_fun_hash_key)
+    else
+      _mismatch_or_error -> nil
+    end
   end
 
   @spec stringfy_log_topics([map()]) :: [map()]
