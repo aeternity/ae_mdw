@@ -118,9 +118,25 @@ defmodule AeMdw.AexnContractsTest do
   end
 
   describe "is_aex141?/1" do
-    test "returns true for a mintable" do
+    test "returns true for a immediate mintable" do
       contract_pk = :crypto.strong_rand_bytes(32)
-      type_info = unique_nfts_contract_fcode(without_burn: true)
+      type_info = unique_nfts_contract_fcode(extensions: ["mintable"])
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      assert AexnContracts.is_aex141?(contract_pk)
+    end
+
+    test "returns true for immediate mintable and burnable" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      type_info = unique_nfts_contract_fcode(extensions: ["mintable", "burnable"])
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      assert AexnContracts.is_aex141?(contract_pk)
+    end
+
+    test "returns true for not immediate mintable" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      type_info = unique_nfts_contract_fcode(not_immediate: true)
       AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
       with_mocks [
@@ -135,55 +151,43 @@ defmodule AeMdw.AexnContractsTest do
       end
     end
 
-    test "returns true for a mintable and burnable" do
+    test "returns false for different not immediate mintable" do
       contract_pk = :crypto.strong_rand_bytes(32)
-      type_info = unique_nfts_contract_fcode()
+      type_info = unique_nfts_contract_fcode(wrong_mint: true, not_immediate: true)
       AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
       with_mocks [
         {AeMdw.DryRun.Runner, [:passthrough],
          [
            call_contract: fn ^contract_pk, _hash, "aex141_extensions", [] ->
-             {:ok, ["mintable", "burnable"]}
+             {:ok, ["mintable"]}
            end
          ]}
       ] do
-        assert AexnContracts.is_aex141?(contract_pk)
+        refute AexnContracts.is_aex141?(contract_pk)
       end
     end
 
     test "returns false for different mintable" do
       contract_pk = :crypto.strong_rand_bytes(32)
-      type_info = unique_nfts_contract_fcode(wrong_mint: true)
+
+      type_info =
+        unique_nfts_contract_fcode(wrong_mint: true, extensions: ["mintable", "burnable"])
+
       AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
-      with_mocks [
-        {AeMdw.DryRun.Runner, [:passthrough],
-         [
-           call_contract: fn ^contract_pk, _hash, "aex141_extensions", [] ->
-             {:ok, ["mintable", "burnable"]}
-           end
-         ]}
-      ] do
-        refute AexnContracts.is_aex141?(contract_pk)
-      end
+      refute AexnContracts.is_aex141?(contract_pk)
     end
 
     test "returns false for different burnable" do
       contract_pk = :crypto.strong_rand_bytes(32)
-      type_info = unique_nfts_contract_fcode(wrong_burn: true)
+
+      type_info =
+        unique_nfts_contract_fcode(wrong_burn: true, extensions: ["mintable", "burnable"])
+
       AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
-      with_mocks [
-        {AeMdw.DryRun.Runner, [:passthrough],
-         [
-           call_contract: fn ^contract_pk, _hash, "aex141_extensions", [] ->
-             {:ok, ["mintable", "burnable"]}
-           end
-         ]}
-      ] do
-        refute AexnContracts.is_aex141?(contract_pk)
-      end
+      refute AexnContracts.is_aex141?(contract_pk)
     end
   end
 
@@ -222,10 +226,10 @@ defmodule AeMdw.AexnContractsTest do
   end
 
   defp unique_nfts_contract_fcode(opts \\ []) do
-    remove_burn = Keyword.get(opts, :without_burn, false)
-    remove_mint = Keyword.get(opts, :without_mint, false)
     wrong_burn = Keyword.get(opts, :wrong_burn, false)
     wrong_mint = Keyword.get(opts, :wrong_mint, false)
+    not_immediate = Keyword.get(opts, :not_immediate, false)
+    immediate_extensions = Keyword.get(opts, :extensions, [])
 
     functions = %{
       <<4, 167, 206, 191>> => {[:private], {[:boolean], :string}, %{}},
@@ -342,18 +346,32 @@ defmodule AeMdw.AexnContractsTest do
     }
 
     functions =
-      cond do
-        remove_burn -> Map.delete(functions, <<177, 239, 193, 123>>)
-        wrong_burn -> Map.put(functions, <<177, 239, 193, 123>>, @wrong_burn)
-        true -> functions
+      if wrong_burn do
+        Map.put(functions, <<177, 239, 193, 123>>, @wrong_burn)
+      else
+        functions
       end
 
     functions =
-      cond do
-        remove_mint -> Map.delete(functions, <<207, 221, 154, 162>>)
-        wrong_mint -> Map.put(functions, <<207, 221, 154, 162>>, @wrong_mint)
-        true -> functions
+      if wrong_mint do
+        Map.put(functions, <<207, 221, 154, 162>>, @wrong_mint)
+      else
+        functions
       end
+
+    aex141_extensions_code =
+      if not_immediate do
+        %{0 => [CALL: {:immediate, <<1, 2, 3, 4>>}]}
+      else
+        %{0 => [RETURNR: {:immediate, immediate_extensions}]}
+      end
+
+    functions =
+      Map.put(
+        functions,
+        <<222, 10, 63, 194>>,
+        {[], {[], {:list, :string}}, aex141_extensions_code}
+      )
 
     {:fcode, functions, hash_names, %{}}
   end

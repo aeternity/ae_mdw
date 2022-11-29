@@ -15,6 +15,7 @@ defmodule AeMdw.AexnContracts do
   @typep height :: AeMdw.Blocks.height()
 
   @max_height AeMdw.Util.max_int()
+  @aex141_extensions_hash <<222, 10, 63, 194>>
 
   @spec is_aex9?(pubkey() | Contract.type_info()) :: boolean()
   def is_aex9?(pubkey) when is_binary(pubkey) do
@@ -35,7 +36,7 @@ defmodule AeMdw.AexnContracts do
   def is_aex141?(pubkey) when is_binary(pubkey) do
     with {:ok, {type_info, _compiler_vsn, _source_hash}} <- Contract.get_info(pubkey),
          true <- valid_aex141_signatures?(@max_height, type_info),
-         {:ok, extensions} <- call_contract(pubkey, "aex141_extensions") do
+         {:ok, extensions} <- get_aex141_extensions(type_info, pubkey) do
       has_valid_aex141_extensions?(extensions, type_info)
     else
       _error_or_false ->
@@ -109,6 +110,22 @@ defmodule AeMdw.AexnContracts do
   #
   # Private functions
   #
+  defp get_aex141_extensions(
+         {:fcode, %{@aex141_extensions_hash => function}, _hash_names, %{}},
+         pubkey
+       ) do
+    case function do
+      {[], {[], {:list, :string}}, %{0 => [RETURNR: {:immediate, extensions}]}} ->
+        {:ok, extensions}
+
+      {[], {[], {:list, :string}}, _other_code} ->
+        call_contract(pubkey, "aex141_extensions")
+
+      _mismatch ->
+        :error
+    end
+  end
+
   defp decode_meta_info(:aex9, {_name, _symbol, _decimals} = meta_info), do: meta_info
 
   defp decode_meta_info(:aex141, {name, symbol, variant_url, variant_type}) do
