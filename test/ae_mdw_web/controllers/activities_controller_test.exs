@@ -767,14 +767,16 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "height" => ^height2,
                  "type" => "NameClaimEvent",
                  "payload" => %{
-                   "account_id" => ^account,
-                   "fee" => 333_333,
-                   "name" => ^plain_name,
-                   "name_fee" => 33333,
-                   "name_salt" => 3333,
-                   "nonce" => 333,
-                   "ttl" => 3_333_333,
-                   "type" => "NameClaimTx"
+                   "tx" => %{
+                     "account_id" => ^account,
+                     "fee" => 333_333,
+                     "name" => ^plain_name,
+                     "name_fee" => 33_333,
+                     "name_salt" => 3_333,
+                     "nonce" => 333,
+                     "ttl" => 3_333_333,
+                     "type" => "NameClaimTx"
+                   }
                  }
                } = activity3
 
@@ -782,14 +784,16 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "height" => ^height2,
                  "type" => "NameClaimEvent",
                  "payload" => %{
-                   "account_id" => ^account,
-                   "fee" => 222_222,
-                   "name" => ^plain_name,
-                   "name_fee" => 22222,
-                   "name_salt" => 2222,
-                   "nonce" => 222,
-                   "ttl" => 2_222_222,
-                   "type" => "NameClaimTx"
+                   "tx" => %{
+                     "account_id" => ^account,
+                     "fee" => 222_222,
+                     "name" => ^plain_name,
+                     "name_fee" => 22_222,
+                     "name_salt" => 2_222,
+                     "nonce" => 222,
+                     "ttl" => 2_222_222,
+                     "type" => "NameClaimTx"
+                   }
                  }
                } = activity2
 
@@ -803,14 +807,16 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "height" => ^height1,
                  "type" => "NameClaimEvent",
                  "payload" => %{
-                   "account_id" => ^account,
-                   "fee" => 111_111,
-                   "name" => ^plain_name,
-                   "name_fee" => 11111,
-                   "name_salt" => 1111,
-                   "nonce" => 111,
-                   "ttl" => 11_111_111,
-                   "type" => "NameClaimTx"
+                   "tx" => %{
+                     "account_id" => ^account,
+                     "fee" => 111_111,
+                     "name" => ^plain_name,
+                     "name_fee" => 11_111,
+                     "name_salt" => 1_111,
+                     "nonce" => 111,
+                     "ttl" => 11_111_111,
+                     "type" => "NameClaimTx"
+                   }
                  }
                } = activity1
 

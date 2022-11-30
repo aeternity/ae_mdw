@@ -469,6 +469,8 @@ defmodule AeMdw.Activities do
   end
 
   defp render(state, account_pk, height, txi, :claim) do
+    Model.tx(id: tx_hash) = State.fetch!(state, Model.Tx, txi)
+
     claim_aetx =
       Contracts.get_aetx(state, txi, :name_claim_tx, "AENS.claim", fn tx ->
         name_hash = tx |> :aens_claim_tx.name() |> :aens_hash.name_hash()
@@ -479,7 +481,10 @@ defmodule AeMdw.Activities do
     %{
       height: height,
       type: "NameClaimEvent",
-      payload: :aetx.serialize_for_client(claim_aetx)
+      payload: %{
+        tx_hash: Enc.encode(:tx_hash, tx_hash),
+        tx: :aetx.serialize_for_client(claim_aetx)
+      }
     }
   end
 
