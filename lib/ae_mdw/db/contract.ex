@@ -372,6 +372,16 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
+  defp write_aex141_edition_limit(state, event_type, contract_pk, args) do
+    with {template_id, limit} <- get_edition_limit_from_args(event_type, args),
+         {:ok, m_template} <- State.get(state, Model.NftTemplate, {contract_pk, template_id}) do
+      State.put(state, Model.NftTemplate, Model.nft_template(m_template, limit: limit))
+    else
+      nil -> state
+      :not_found -> state
+    end
+  end
+
   defp write_aex141_limit(state, event_type, contract_pk, args, txi, log_idx) do
     m_new_nft_limit = Model.nft_contract_limits(index: contract_pk, txi: txi, log_idx: log_idx)
     limit = get_nft_limit_from_args(event_type, args)
@@ -421,6 +431,18 @@ defmodule AeMdw.Db.Contract do
        do: limit
 
   defp get_nft_limit_from_args(_event_type, _args), do: nil
+
+  defp get_edition_limit_from_args(:edition_limit, [<<template_id::256>>, <<limit::256>>]),
+    do: {template_id, limit}
+
+  defp get_edition_limit_from_args(:edition_limit_decrease, [
+         <<template_id::256>>,
+         <<_old_limit::256>>,
+         <<limit::256>>
+       ]),
+       do: {template_id, limit}
+
+  defp get_edition_limit_from_args(_event_type, _args), do: nil
 
   defp delete_aex141_template(
          state,
@@ -493,6 +515,11 @@ defmodule AeMdw.Db.Contract do
     state
     |> write_aex141_ownership(contract_pk, args)
     |> write_aex141_template(contract_pk, args, txi, log_idx)
+  end
+
+  defp write_aex141_records(state, event_type, contract_pk, _txi, _log_idx, args)
+       when event_type in [:edition_limit, :edition_limit_decrease] do
+    write_aex141_edition_limit(state, event_type, contract_pk, args)
   end
 
   defp write_aex141_records(state, event_type, contract_pk, txi, log_idx, args)

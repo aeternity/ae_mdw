@@ -49,6 +49,8 @@ defmodule AeMdw.Node do
           :burn
           | :mint
           | :swap
+          | :edition_limit
+          | :edition_limit_decrease
           | :template_creation
           | :template_deletion
           | :template_mint
@@ -102,6 +104,8 @@ defmodule AeMdw.Node do
       :aec_hash.blake2b_256_hash("Burn") => :burn,
       :aec_hash.blake2b_256_hash("Mint") => :mint,
       :aec_hash.blake2b_256_hash("Swap") => :swap,
+      :aec_hash.blake2b_256_hash("EditionLimit") => :edition_limit,
+      :aec_hash.blake2b_256_hash("EditionLimitDecrease") => :edition_limit_decrease,
       :aec_hash.blake2b_256_hash("TemplateCreation") => :template_creation,
       :aec_hash.blake2b_256_hash("TemplateDeletion") => :template_deletion,
       :aec_hash.blake2b_256_hash("TemplateMint") => :template_mint,

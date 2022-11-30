@@ -430,14 +430,15 @@ defmodule AeMdw.Db.Model do
 
   # AEX-141 templates
   #     index: {contract pubkey, template_id}
-  @nft_template_defaults [index: {<<>>, -1}, txi: nil, log_idx: nil]
+  @nft_template_defaults [index: {<<>>, -1}, txi: nil, log_idx: nil, limit: nil]
   defrecord :nft_template, @nft_template_defaults
 
   @type nft_template() ::
           record(:nft_template,
             index: {pubkey(), integer()},
-            txi: nil,
-            log_idx: nil
+            txi: txi() | nil,
+            log_idx: log_idx() | nil,
+            limit: non_neg_integer() | nil
           )
 
   # AEX-141 collection owners
