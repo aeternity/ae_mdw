@@ -2772,6 +2772,97 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/names/ak_2HNsyfhFYgByVq8rzn7q4hRb
 }
 ```
 
+### `/v2/names/:name/claims`
+
+Returns the name claims, paginated.
+
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/vlsl.test/claims" | jq '.'
+{
+  "data": [
+    {
+      "block_hash": "mh_2Nr1oj3Z3D9sYnEDrNk4SXjboT3otCXQafsNukRcRDg25URKrR",
+      "height": 45784,
+      "tx": {
+        "account_id": "ak_2T42t9vpy56kKfZuX74SHuYGsETi1YegJ1KjBbieBwJswt1QVN",
+        "fee": 21000000000000,
+        "name": "vlsl.test",
+        "name_salt": 123,
+        "nonce": 67,
+        "ttl": 45882,
+        "type": "NameClaimTx",
+        "version": 2
+      }
+    }
+  ],
+  "next": null,
+  "prev": null
+}
+```
+
+### `/v2/names/:name/transfers`
+
+Returns the name transfers, paginated.
+
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/test.test/transfers" | jq '.'
+{
+  "data": [
+    {
+      "block_hash": "mh_2wWv1cwnC2purbtZqXiNcZDpX9SAmEUc5YaMKZmSR9p1pEm9rE",
+      "height": 42320,
+      "tx": {
+        "account_id": "ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR",
+        "fee": 30000,
+        "name_id": "nm_en1mSKcVPb9gY8UGxPfABw3JouEGZ4ZvdfcBWetmn6czUuVG1",
+        "nonce": 18550,
+        "recipient_id": "ak_2WZoa13VKHCamt2zL9Wid8ovmyvTEUzqBjDNGDNwuqwUQJZG4t",
+        "ttl": 42420,
+        "type": "NameTransferTx",
+        "version": 1
+      }
+    }
+  ],
+  "next": null,
+  "prev": null
+}
+```
+
+### `/v2/names/:name/updates`
+
+Returns the name updates, paginated.
+
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/names/ssup.test/updates?limit=1" | jq '.'
+{
+  "data": [
+    {
+      "block_hash": "mh_qZM3VVCHynY1AG4Pgwcdobg42oGAxhY7c1LrUzqvgJSFLLbPU",
+      "height": 45706,
+      "tx": {
+        "account_id": "ak_2CXSVZqVaGuZsmcRs3CN6wb2b9GKtf7Arwej7ahbeAQ1S8qkmM",
+        "client_ttl": 36000,
+        "fee": 20000000000000,
+        "name_id": "nm_2tokSd7X5zeYzAr5icomaVLBYC3TGeCypsPjZALcQcxYZb4YdP",
+        "name_ttl": 50000,
+        "nonce": 3544,
+        "pointers": [
+          {
+            "id": "ak_M6MNwGLtMQ4j3m8pzQz9uF38nMfjCCVaiQ8fvTAU6DEsCocD5",
+            "key": "account_pubkey"
+          }
+        ],
+        "ttl": 60000,
+        "type": "NameUpdateTx",
+        "version": 1
+      }
+    }
+  ],
+  "next": "/v2/names/ssup.test/updates?cursor=45706-20-1132300&limit=1",
+  "prev": null
+}
+```
+
 ---
 
 ## Contracts

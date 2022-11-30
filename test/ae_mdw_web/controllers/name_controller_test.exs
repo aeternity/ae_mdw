@@ -1929,6 +1929,197 @@ defmodule AeMdwWeb.NameControllerTest do
     end
   end
 
+  describe "name_transfers" do
+    test "it returns all of the name transfers in backward order", %{conn: conn, store: store} do
+      account_pk = TS.address(0)
+      account_id = :aeser_id.create(:account, account_pk)
+      recipient_pk = TS.address(1)
+      recipient_id = :aeser_id.create(:account, recipient_pk)
+      plain_name = "asd.chain"
+      {:ok, name_hash} = :aens.get_name_hash(plain_name)
+      name_id = :aeser_id.create(:name, name_hash)
+
+      store = name_claims_store(store, plain_name)
+      conn = with_store(conn, store)
+
+      {:ok, aetx1} =
+        :aens_transfer_tx.new(%{
+          account_id: account_id,
+          nonce: 111,
+          name_id: name_id,
+          recipient_id: recipient_id,
+          fee: 1_111,
+          ttl: 11_111
+        })
+
+      {:name_transfer_tx, tx1} = :aetx.specialize_type(aetx1)
+
+      {:ok, aetx2} =
+        :aens_transfer_tx.new(%{
+          account_id: account_id,
+          nonce: 222,
+          name_id: name_id,
+          recipient_id: recipient_id,
+          fee: 222_222,
+          ttl: 2_222_222
+        })
+
+      {:name_transfer_tx, tx2} = :aetx.specialize_type(aetx2)
+
+      {:ok, aetx3} =
+        :aens_transfer_tx.new(%{
+          account_id: account_id,
+          nonce: 333,
+          name_id: name_id,
+          recipient_id: recipient_id,
+          fee: 333_333,
+          ttl: 3_333_333
+        })
+
+      {:name_transfer_tx, tx3} = :aetx.specialize_type(aetx3)
+
+      with_mocks [
+        {Db, [],
+         [
+           get_tx_data: fn
+             "tx1-hash" ->
+               {"", :name_transfer_tx, :aetx_sign.new(aetx1, []), tx1}
+
+             "tx2-hash" ->
+               {"", :name_transfer_tx, :aetx_sign.new(aetx2, []), tx2}
+
+             "tx3-hash" ->
+               {"", :name_transfer_tx, :aetx_sign.new(aetx3, []), tx3}
+           end
+         ]}
+      ] do
+        assert %{"data" => [claim3, claim2] = claims, "next" => next_url} =
+                 conn
+                 |> get("/v2/names/#{plain_name}/transfers", limit: 2)
+                 |> json_response(200)
+
+        refute is_nil(next_url)
+        assert %{"height" => 124, "tx" => %{"fee" => 333_333}} = claim3
+        assert %{"height" => 123, "tx" => %{"fee" => 222_222}} = claim2
+
+        assert %{"data" => [claim1], "prev" => prev_url} =
+                 conn |> get(next_url) |> json_response(200)
+
+        refute is_nil(prev_url)
+        assert %{"height" => 123, "tx" => %{"fee" => 1_111}} = claim1
+
+        assert %{"data" => ^claims} = conn |> get(prev_url) |> json_response(200)
+      end
+    end
+
+    test "it returns 404 when name doesn't exist", %{conn: conn, store: store} do
+      non_existent_name = "asd.chain"
+      error_msg = "not found: #{non_existent_name}"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> with_store(store)
+               |> get("/v2/names/#{non_existent_name}/transfers")
+               |> json_response(404)
+    end
+  end
+
+  describe "name_updates" do
+    test "it returns all of the name updates in backward order", %{conn: conn, store: store} do
+      account_pk = TS.address(0)
+      account_id = :aeser_id.create(:account, account_pk)
+      plain_name = "asd.chain"
+      {:ok, name_hash} = :aens.get_name_hash(plain_name)
+      name_id = :aeser_id.create(:name, name_hash)
+
+      store = name_claims_store(store, plain_name)
+      conn = with_store(conn, store)
+
+      {:ok, aetx1} =
+        :aens_update_tx.new(%{
+          account_id: account_id,
+          nonce: 111,
+          name_id: name_id,
+          name_ttl: 1_111,
+          pointers: [],
+          client_ttl: 11_111,
+          fee: 111_111
+        })
+
+      {:name_update_tx, tx1} = :aetx.specialize_type(aetx1)
+
+      {:ok, aetx2} =
+        :aens_update_tx.new(%{
+          account_id: account_id,
+          nonce: 222,
+          name_id: name_id,
+          name_ttl: 2_222,
+          pointers: [],
+          client_ttl: 22_222,
+          fee: 222_222
+        })
+
+      {:name_update_tx, tx2} = :aetx.specialize_type(aetx2)
+
+      {:ok, aetx3} =
+        :aens_update_tx.new(%{
+          account_id: account_id,
+          nonce: 333,
+          name_id: name_id,
+          name_ttl: 3_333,
+          pointers: [],
+          client_ttl: 33_333,
+          fee: 333_333
+        })
+
+      {:name_update_tx, tx3} = :aetx.specialize_type(aetx3)
+
+      with_mocks [
+        {Db, [],
+         [
+           get_tx_data: fn
+             "tx1-hash" ->
+               {"", :name_update_tx, :aetx_sign.new(aetx1, []), tx1}
+
+             "tx2-hash" ->
+               {"", :name_update_tx, :aetx_sign.new(aetx2, []), tx2}
+
+             "tx3-hash" ->
+               {"", :name_update_tx, :aetx_sign.new(aetx3, []), tx3}
+           end
+         ]}
+      ] do
+        assert %{"data" => [claim3, claim2] = claims, "next" => next_url} =
+                 conn
+                 |> get("/v2/names/#{plain_name}/updates", limit: 2)
+                 |> json_response(200)
+
+        refute is_nil(next_url)
+        assert %{"height" => 124, "tx" => %{"fee" => 333_333}} = claim3
+        assert %{"height" => 123, "tx" => %{"fee" => 222_222}} = claim2
+
+        assert %{"data" => [claim1], "prev" => prev_url} =
+                 conn |> get(next_url) |> json_response(200)
+
+        refute is_nil(prev_url)
+        assert %{"height" => 123, "tx" => %{"fee" => 111_111}} = claim1
+
+        assert %{"data" => ^claims} = conn |> get(prev_url) |> json_response(200)
+      end
+    end
+
+    test "it returns 404 when name doesn't exist", %{conn: conn, store: store} do
+      non_existent_name = "asd.chain"
+      error_msg = "not found: #{non_existent_name}"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> with_store(store)
+               |> get("/v2/names/#{non_existent_name}/updates")
+               |> json_response(404)
+    end
+  end
+
   defp name_claims_store(store, plain_name) do
     claim_bi_txi_1 = {{123, 0}, 567}
     claim_bi_txi_2 = {{123, 0}, 678}
@@ -1940,8 +2131,8 @@ defmodule AeMdwWeb.NameControllerTest do
         active: false,
         expire: 3,
         claims: [claim_bi_txi_3, claim_bi_txi_2, claim_bi_txi_1],
-        updates: [],
-        transfers: [],
+        updates: [claim_bi_txi_3, claim_bi_txi_2, claim_bi_txi_1],
+        transfers: [claim_bi_txi_3, claim_bi_txi_2, claim_bi_txi_1],
         revoke: nil,
         auction_timeout: 1
       )
