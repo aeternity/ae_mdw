@@ -680,9 +680,9 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       account_pk = TS.address(0)
       account = Enc.encode(:account_pubkey, account_pk)
       account_id = :aeser_id.create(:account, account_pk)
-      tx_hash1 = "txhash1"
-      tx_hash2 = "txhash2"
-      tx_hash3 = "txhash3"
+      tx_hash1 = TS.tx_hash(0)
+      tx_hash2 = TS.tx_hash(1)
+      tx_hash3 = TS.tx_hash(2)
 
       {:ok, aetx1} =
         :aens_claim_tx.new(%{
@@ -767,6 +767,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "height" => ^height2,
                  "type" => "NameClaimEvent",
                  "payload" => %{
+                   "tx_hash" => "th_2CdVYuqtpcjoshDw2otjbLEyj8SpxjMP9MCgpn1oU9zGaqvUn4",
                    "tx" => %{
                      "account_id" => ^account,
                      "fee" => 333_333,
@@ -784,6 +785,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "height" => ^height2,
                  "type" => "NameClaimEvent",
                  "payload" => %{
+                   "tx_hash" => "th_uJ5os7Gg8P68SHTq1kYecNzjNPFp3exxhXvqWmpFfsS7mbKSG",
                    "tx" => %{
                      "account_id" => ^account,
                      "fee" => 222_222,
@@ -807,6 +809,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "height" => ^height1,
                  "type" => "NameClaimEvent",
                  "payload" => %{
+                   "tx_hash" => "th_2MMJRvBUj69PHoZhQtrrXHAg5iXCVwPcunXrKaPcVB6yhAuUHo",
                    "tx" => %{
                      "account_id" => ^account,
                      "fee" => 111_111,
