@@ -66,7 +66,8 @@ defmodule AeMdwWeb.Aex141ControllerTest do
           Model.nft_template(
             index: {contract_pk, template_id},
             txi: txi,
-            log_idx: rem(template_id, 2)
+            log_idx: rem(template_id, 2),
+            limit: template_id * 10
           )
 
         store =
@@ -496,12 +497,14 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                                        "contract_id" => ct_id,
                                        "template_id" => template_id,
                                        "tx_hash" => tx_hash,
-                                       "log_idx" => log_idx
+                                       "log_idx" => log_idx,
+                                       "limit" => limit
                                      } ->
                tx_hash = Validate.id!(tx_hash)
 
                ct_id == contract_id and template_id in 1..10 and
-                 tx_hash == <<template_id + 1_413_000::256>> and log_idx == rem(template_id, 2)
+                 tx_hash == <<template_id + 1_413_000::256>> and log_idx == rem(template_id, 2) and
+                 limit == template_id * 10
              end)
 
       assert %{"data" => next_templates, "prev" => prev_templates} =

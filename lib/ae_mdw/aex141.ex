@@ -208,7 +208,7 @@ defmodule AeMdw.Aex141 do
 
   defp render_templates(state, keys) do
     Enum.map(keys, fn {contract_pk, template_id} ->
-      Model.nft_template(txi: txi, log_idx: log_idx) =
+      Model.nft_template(txi: txi, log_idx: log_idx, limit: limit) =
         State.fetch!(state, @templates_table, {contract_pk, template_id})
 
       tx_hash = Txs.txi_to_hash(state, txi)
@@ -217,7 +217,8 @@ defmodule AeMdw.Aex141 do
         contract_id: enc_ct(contract_pk),
         template_id: template_id,
         tx_hash: enc(:tx_hash, tx_hash),
-        log_idx: log_idx
+        log_idx: log_idx,
+        limit: limit
       }
     end)
   end

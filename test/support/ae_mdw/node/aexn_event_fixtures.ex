@@ -6,6 +6,11 @@ defmodule AeMdw.Node.AexnEventFixtures do
 
   @spec aexn_event_hash(aexn_event_type()) :: [event_hash()]
   def aexn_event_hash(:burn), do: :aec_hash.blake2b_256_hash("Burn")
+  def aexn_event_hash(:edition_limit), do: :aec_hash.blake2b_256_hash("EditionLimit")
+
+  def aexn_event_hash(:edition_limit_decrease),
+    do: :aec_hash.blake2b_256_hash("EditionLimitDecrease")
+
   def aexn_event_hash(:mint), do: :aec_hash.blake2b_256_hash("Mint")
   def aexn_event_hash(:swap), do: :aec_hash.blake2b_256_hash("Swap")
   def aexn_event_hash(:transfer), do: :aec_hash.blake2b_256_hash("Transfer")

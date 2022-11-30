@@ -708,7 +708,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
   end
 
   describe "aex141 template creation" do
-    test "writes nft template after a call with the event" do
+    test "writes nft template after a call with the event", %{store: store} do
       contract_pk = :crypto.strong_rand_bytes(32)
       to_pk = :crypto.strong_rand_bytes(32)
       height = Enum.random(100_000..999_999)
@@ -756,16 +756,146 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           call_rec
         )
 
-      state =
-        NullStore.new()
-        |> MemStore.new()
-        |> State.new()
-        |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, contract_pk}))
-        |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
-        |> State.commit_mem([mutation])
+      store =
+        store
+        |> Store.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, contract_pk}))
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
+        )
+        |> change_store([mutation])
 
       assert {:ok, Model.nft_template(txi: ^call_txi, log_idx: 1)} =
-               State.get(state, Model.NftTemplate, {contract_pk, template_id})
+               Store.get(store, Model.NftTemplate, {contract_pk, template_id})
+    end
+
+    test "updates nft template with edition limit", %{store: store} do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      to_pk = :crypto.strong_rand_bytes(32)
+      height = Enum.random(100_000..999_999)
+      call_txi = Enum.random(10_000_000..99_999_999)
+      template_id = Enum.random(1..1_000)
+      limit = Enum.random(1..1_000)
+
+      fun_arg_res = %{
+        arguments: [
+          %{
+            type: :address,
+            value: enc_id(to_pk)
+          },
+          %{type: :string, value: "ipfs://some-hash"}
+        ],
+        function: "some_template_create",
+        result: %{type: :unit, value: ""}
+      }
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {
+            contract_pk,
+            [
+              <<12_345::256>>,
+              <<template_id::256>>
+            ],
+            ""
+          },
+          {
+            contract_pk,
+            [
+              aexn_event_hash(:template_creation),
+              <<template_id::256>>
+            ],
+            ""
+          },
+          {
+            contract_pk,
+            [
+              aexn_event_hash(:edition_limit),
+              <<template_id::256>>,
+              <<limit::256>>
+            ],
+            ""
+          }
+        ])
+
+      mutation =
+        ContractCallMutation.new(
+          contract_pk,
+          {height, 0},
+          call_txi,
+          fun_arg_res,
+          call_rec
+        )
+
+      store =
+        store
+        |> Store.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, contract_pk}))
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
+        )
+        |> change_store([mutation])
+
+      assert {:ok, Model.nft_template(txi: ^call_txi, log_idx: 1, limit: ^limit)} =
+               Store.get(store, Model.NftTemplate, {contract_pk, template_id})
+    end
+
+    test "decreases nft template edition limit", %{store: store} do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      height = Enum.random(100_000..999_999)
+      call_txi = Enum.random(10_000_000..99_999_999)
+      template_id = Enum.random(1..1_000)
+      limit = Enum.random(1..1_000)
+
+      fun_arg_res = %{
+        arguments: [
+          %{type: :integer, value: template_id},
+          %{type: :integer, value: limit}
+        ],
+        function: "edition_decrease",
+        result: %{type: :unit, value: ""}
+      }
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {
+            contract_pk,
+            [
+              aexn_event_hash(:edition_limit_decrease),
+              <<template_id::256>>,
+              <<limit + 1::256>>,
+              <<limit::256>>
+            ],
+            ""
+          }
+        ])
+
+      mutation =
+        ContractCallMutation.new(
+          contract_pk,
+          {height, 0},
+          call_txi,
+          fun_arg_res,
+          call_rec
+        )
+
+      template_txi = call_txi - 1
+
+      store =
+        store
+        |> Store.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, contract_pk}))
+        |> Store.put(
+          Model.NftTemplate,
+          Model.nft_template(index: {contract_pk, template_id}, txi: template_txi, log_idx: 1)
+        )
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 2})
+        )
+        |> change_store([mutation])
+
+      assert {:ok, Model.nft_template(txi: ^template_txi, log_idx: 1, limit: ^limit)} =
+               Store.get(store, Model.NftTemplate, {contract_pk, template_id})
     end
   end
 
