@@ -1,6 +1,5 @@
 defmodule AeMdwWeb.Aex141ControllerTest do
-  use AeMdwWeb.ConnCase
-  @moduletag skip_store: true
+  use ExUnit.Case
 
   alias AeMdw.AexnContracts
   alias AeMdw.Db.MemStore
@@ -11,7 +10,11 @@ defmodule AeMdwWeb.Aex141ControllerTest do
   alias AeMdw.Validate
 
   import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1, enc_id: 1]
+  import AeMdw.TestUtil, only: [with_store: 2]
   import Mock
+
+  import Phoenix.ConnTest
+  @endpoint AeMdwWeb.Endpoint
 
   require Model
 
@@ -97,11 +100,11 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       |> Store.put(Model.NftOwnerToken, m_owner_token)
       |> Store.put(Model.NftTokenOwner, m_token_owner)
 
-    [store: store, random_owner_pk: owner_pk]
+    [conn: with_store(build_conn(), store), random_owner_pk: owner_pk]
   end
 
   describe "aex141_contract" do
-    test "returns a contract by pubkey", %{conn: conn, store: store} do
+    test "returns a contract by pubkey", %{conn: %{assigns: %{state: state}} = conn} do
       ct_pk = :crypto.strong_rand_bytes(32)
       contract_id = enc_ct(ct_pk)
       txi = Enum.random(1_000_000..9_999_999)
@@ -134,7 +137,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       m_owners_count = Model.stat(index: Stats.nft_owners_count_key(ct_pk), payload: 4)
 
       store =
-        store
+        state.store
         |> Store.put(Model.AexnContract, m_aex141)
         |> Store.put(Model.NftContractLimits, m_limits)
         |> Store.put(Model.Stat, m_nft_count)
@@ -159,7 +162,9 @@ defmodule AeMdwWeb.Aex141ControllerTest do
              } = conn |> with_store(store) |> get("/aex141/#{contract_id}") |> json_response(200)
     end
 
-    test "returns a contract without token and template limit", %{conn: conn, store: store} do
+    test "returns a contract without token and template limit", %{
+      conn: %{assigns: %{state: state}} = conn
+    } do
       ct_pk = :crypto.strong_rand_bytes(32)
       contract_id = enc_ct(ct_pk)
       txi = Enum.random(1_000_000..9_999_999)
@@ -192,7 +197,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       m_owners_count = Model.stat(index: Stats.nft_owners_count_key(ct_pk), payload: 4)
 
       store =
-        store
+        state.store
         |> Store.put(Model.AexnContract, m_aex141)
         |> Store.put(Model.NftContractLimits, m_limits)
         |> Store.put(Model.Stat, m_nft_count)
@@ -214,9 +219,9 @@ defmodule AeMdwWeb.Aex141ControllerTest do
   end
 
   describe "aex141_contracts" do
-    setup %{store: initial_store} do
+    setup %{conn: %{assigns: %{state: state}} = conn} do
       store =
-        Enum.reduce(1_410_001..1_410_025, initial_store, fn i, store ->
+        Enum.reduce(1_410_001..1_410_025, state.store, fn i, store ->
           meta_info =
             {name, symbol, _url, _type} =
             {"some-nft-#{i}", "SAEX#{i}", "http://some-url.com", :url}
@@ -235,12 +240,11 @@ defmodule AeMdwWeb.Aex141ControllerTest do
           |> Store.put(Model.AexnContractSymbol, m_aexn_symbol)
         end)
 
-      {:ok, store: store}
+      {:ok, conn: with_store(conn, store)}
     end
 
-    test "sorts contracts by name", %{conn: conn, store: store} do
-      assert %{"data" => contracts} =
-               conn |> with_store(store) |> get("/aex141", by: "name") |> json_response(200)
+    test "sorts contracts by name", %{conn: conn} do
+      assert %{"data" => contracts} = conn |> get("/aex141", by: "name") |> json_response(200)
 
       assert length(contracts) > 0
 
@@ -259,9 +263,8 @@ defmodule AeMdwWeb.Aex141ControllerTest do
              end)
     end
 
-    test "sorts contracts by symbol", %{conn: conn, store: store} do
-      assert %{"data" => contracts} =
-               conn |> with_store(store) |> get("/aex141", by: "symbol") |> json_response(200)
+    test "sorts contracts by symbol", %{conn: conn} do
+      assert %{"data" => contracts} = conn |> get("/aex141", by: "symbol") |> json_response(200)
 
       assert length(contracts) > 0
 
@@ -280,12 +283,11 @@ defmodule AeMdwWeb.Aex141ControllerTest do
              end)
     end
 
-    test "filters contracts by name prefix", %{conn: conn, store: store} do
+    test "filters contracts by name prefix", %{conn: conn} do
       prefix = "some-nft-1410"
 
       assert %{"data" => contracts} =
                conn
-               |> with_store(store)
                |> get("/aex141", by: "name", prefix: prefix)
                |> json_response(200)
 
@@ -293,12 +295,11 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       assert Enum.all?(contracts, fn %{"name" => name} -> String.starts_with?(name, prefix) end)
     end
 
-    test "filters contracts by symbol prefix", %{conn: conn, store: store} do
+    test "filters contracts by symbol prefix", %{conn: conn} do
       prefix = "SAEX1410"
 
       assert %{"data" => contracts} =
                conn
-               |> with_store(store)
                |> get("/aex141", by: "symbol", prefix: prefix)
                |> json_response(200)
 
@@ -378,12 +379,11 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                conn |> get("/aex141/owned-nfts/#{account_id}") |> json_response(200)
     end
 
-    test "returns a backward list of nfts owned by an account", %{conn: conn, store: store} do
+    test "returns a backward list of nfts owned by an account", %{conn: conn} do
       account_id = enc_id(@owner_pk1)
 
       assert %{"data" => nfts, "next" => next} =
                conn
-               |> with_store(store)
                |> get("/aex141/owned-nfts/#{account_id}")
                |> json_response(200)
 
@@ -392,24 +392,21 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       assert Enum.any?(nfts, fn %{"owner_id" => owner_id} -> owner_id == account_id end)
 
-      assert %{"data" => next_nfts, "prev" => prev_nfts} =
-               conn |> with_store(store) |> get(next) |> json_response(200)
+      assert %{"data" => next_nfts, "prev" => prev_nfts} = conn |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_nfts)
       assert ^next_nfts = Enum.sort(next_nfts, :desc)
 
       assert Enum.any?(next_nfts, fn %{"owner_id" => owner_id} -> owner_id == account_id end)
 
-      assert %{"data" => ^nfts} =
-               conn |> with_store(store) |> get(prev_nfts) |> json_response(200)
+      assert %{"data" => ^nfts} = conn |> get(prev_nfts) |> json_response(200)
     end
 
-    test "returns a forward list of nfts owned by an account", %{conn: conn, store: store} do
+    test "returns a forward list of nfts owned by an account", %{conn: conn} do
       account_id = enc_id(@owner_pk1)
 
       assert %{"data" => nfts, "next" => next} =
                conn
-               |> with_store(store)
                |> get("/aex141/owned-nfts/#{account_id}", direction: :forward)
                |> json_response(200)
 
@@ -424,8 +421,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       refute Enum.any?(nfts, fn %{"token_id" => token_id} -> token_id == 1_413_010 end)
 
-      assert %{"data" => next_nfts, "prev" => prev_nfts} =
-               conn |> with_store(store) |> get(next) |> json_response(200)
+      assert %{"data" => next_nfts, "prev" => prev_nfts} = conn |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_nfts)
       assert ^next_nfts = Enum.sort(next_nfts)
@@ -436,32 +432,28 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       refute Enum.any?(nfts, fn %{"token_id" => token_id} -> token_id == 1_413_010 end)
 
-      assert %{"data" => ^nfts} =
-               conn |> with_store(store) |> get(prev_nfts) |> json_response(200)
+      assert %{"data" => ^nfts} = conn |> get(prev_nfts) |> json_response(200)
     end
   end
 
   describe "collection_owners" do
-    test "returns an empty list when collection has no nft", %{conn: conn, store: store} do
+    test "returns an empty list when collection has no nft", %{conn: conn} do
       contract_id = enc_ct(<<1_411::256>>)
 
       assert %{"data" => [], "next" => nil, "prev" => nil} =
                conn
-               |> with_store(store)
                |> get("/aex141/#{contract_id}/owners")
                |> json_response(200)
     end
 
     test "returns collection owners sorted by ascending token_id", %{
       conn: conn,
-      store: store,
       random_owner_pk: random_owner_pk
     } do
       contract_id = enc_ct(<<1_413::256>>)
 
       assert %{"data" => nfts, "next" => next} =
                conn
-               |> with_store(store)
                |> get("/aex141/#{contract_id}/owners", direction: :forward)
                |> json_response(200)
 
@@ -479,8 +471,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                  assert owner_id in owner_ids and token_id in 1..10
              end)
 
-      assert %{"data" => next_nfts, "prev" => prev_nfts} =
-               conn |> with_store(store) |> get(next) |> json_response(200)
+      assert %{"data" => next_nfts, "prev" => prev_nfts} = conn |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_nfts)
       assert ^next_nfts = Enum.sort_by(next_nfts, & &1["token_id"])
@@ -493,16 +484,14 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                ct_id == contract_id and owner_id in owner_ids and token_id in 11..20
              end)
 
-      assert %{"data" => ^nfts} =
-               conn |> with_store(store) |> get(prev_nfts) |> json_response(200)
+      assert %{"data" => ^nfts} = conn |> get(prev_nfts) |> json_response(200)
     end
 
-    test "returns collection owners sorted by descending token id", %{conn: conn, store: store} do
+    test "returns collection owners sorted by descending token id", %{conn: conn} do
       contract_id = enc_ct(<<1_413::256>>)
 
       assert %{"data" => nfts, "next" => next} =
                conn
-               |> with_store(store)
                |> get("/aex141/#{contract_id}/owners")
                |> json_response(200)
 
@@ -510,38 +499,33 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       assert ^nfts = Enum.sort_by(nfts, & &1["token_id"], :desc)
       assert Enum.all?(nfts, &(&1["contract_id"] == contract_id))
 
-      assert %{"data" => next_nfts, "prev" => prev_nfts} =
-               conn |> with_store(store) |> get(next) |> json_response(200)
+      assert %{"data" => next_nfts, "prev" => prev_nfts} = conn |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_nfts)
       assert ^next_nfts = Enum.sort_by(next_nfts, & &1["token_id"], :desc)
       assert Enum.all?(next_nfts, &(&1["contract_id"] == contract_id))
 
-      assert %{"data" => ^nfts} =
-               conn |> with_store(store) |> get(prev_nfts) |> json_response(200)
+      assert %{"data" => ^nfts} = conn |> get(prev_nfts) |> json_response(200)
     end
   end
 
   describe "collection_templates" do
-    test "returns an empty list when collection has no nft", %{conn: conn, store: store} do
+    test "returns an empty list when collection has no nft", %{conn: conn} do
       contract_id = enc_ct(<<1_411::256>>)
 
       assert %{"data" => [], "next" => nil, "prev" => nil} =
                conn
-               |> with_store(store)
                |> get("/aex141/#{contract_id}/templates")
                |> json_response(200)
     end
 
     test "returns collection templates sorted by ascending ids", %{
-      conn: conn,
-      store: store
+      conn: conn
     } do
       contract_id = enc_ct(<<1_413::256>>)
 
       assert %{"data" => templates, "next" => next} =
                conn
-               |> with_store(store)
                |> get("/aex141/#{contract_id}/templates", direction: :forward)
                |> json_response(200)
 
@@ -563,7 +547,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
              end)
 
       assert %{"data" => next_templates, "prev" => prev_templates} =
-               conn |> with_store(store) |> get(next) |> json_response(200)
+               conn |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_templates)
       assert ^next_templates = Enum.sort_by(next_templates, & &1["template_id"])
@@ -580,16 +564,14 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                  tx_hash == <<template_id + 1_413_000::256>> and log_idx == rem(template_id, 2)
              end)
 
-      assert %{"data" => ^templates} =
-               conn |> with_store(store) |> get(prev_templates) |> json_response(200)
+      assert %{"data" => ^templates} = conn |> get(prev_templates) |> json_response(200)
     end
 
-    test "returns collection templates sorted by descending ids", %{conn: conn, store: store} do
+    test "returns collection templates sorted by descending ids", %{conn: conn} do
       contract_id = enc_ct(<<1_413::256>>)
 
       assert %{"data" => templates, "next" => next} =
                conn
-               |> with_store(store)
                |> get("/aex141/#{contract_id}/templates")
                |> json_response(200)
 
@@ -598,14 +580,13 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       assert Enum.all?(templates, &(&1["contract_id"] == contract_id))
 
       assert %{"data" => next_templates, "prev" => prev_templates} =
-               conn |> with_store(store) |> get(next) |> json_response(200)
+               conn |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_templates)
       assert ^next_templates = Enum.sort_by(next_templates, & &1["template_id"], :desc)
       assert Enum.all?(next_templates, &(&1["contract_id"] == contract_id))
 
-      assert %{"data" => ^templates} =
-               conn |> with_store(store) |> get(prev_templates) |> json_response(200)
+      assert %{"data" => ^templates} = conn |> get(prev_templates) |> json_response(200)
     end
   end
 end

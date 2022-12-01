@@ -1,32 +1,41 @@
 defmodule AeMdwWeb.Aex9ControllerTest do
-  use AeMdwWeb.ConnCase, async: false
+  use ExUnit.Case
 
-  alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
+  alias AeMdw.Db.MemStore
+  alias AeMdw.Db.NullStore
   alias AeMdw.Validate
 
   import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1, enc_id: 1, enc_block: 2]
   import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3]
+  import AeMdw.TestUtil, only: [with_store: 2]
+  import AeMdw.Util.Encoding
   import Mock
+
+  import Phoenix.ConnTest
+  @endpoint AeMdwWeb.Endpoint
 
   require Model
 
   @aex9_token_id enc_ct(<<100::256>>)
 
-  setup_all _context do
-    Enum.each(100..125, fn i ->
-      meta_info = {name, symbol, _decimals} = {"some-AEX9-#{i}", "SAEX9#{i}", i}
-      txi = 1_000 - i
-      m_aex9 = Model.aexn_contract(index: {:aex9, <<i::256>>}, txi: txi, meta_info: meta_info)
-      m_aexn_name = Model.aexn_contract_name(index: {:aex9, name, <<i::256>>})
-      m_aexn_symbol = Model.aexn_contract_symbol(index: {:aex9, symbol, <<i::256>>})
-      Database.dirty_write(Model.AexnContract, m_aex9)
-      Database.dirty_write(Model.AexnContractName, m_aexn_name)
-      Database.dirty_write(Model.AexnContractSymbol, m_aexn_symbol)
-    end)
+  setup_all do
+    store =
+      Enum.reduce(100..125, MemStore.new(NullStore.new()), fn i, store ->
+        meta_info = {name, symbol, _decimals} = {"some-AEX9-#{i}", "SAEX9#{i}", i}
+        txi = 1_000 - i
+        m_aex9 = Model.aexn_contract(index: {:aex9, <<i::256>>}, txi: txi, meta_info: meta_info)
+        m_aexn_name = Model.aexn_contract_name(index: {:aex9, name, <<i::256>>})
+        m_aexn_symbol = Model.aexn_contract_symbol(index: {:aex9, symbol, <<i::256>>})
 
-    :ok
+        store
+        |> Store.put(Model.AexnContract, m_aex9)
+        |> Store.put(Model.AexnContractName, m_aexn_name)
+        |> Store.put(Model.AexnContractSymbol, m_aexn_symbol)
+      end)
+
+    {:ok, conn: with_store(build_conn(), store)}
   end
 
   describe "by_name" do
@@ -125,20 +134,19 @@ defmodule AeMdwWeb.Aex9ControllerTest do
   end
 
   describe "balance" do
-    test "returns 400 when contract is unknown", %{conn: conn, store: store} do
+    test "returns 400 when contract is unknown", %{conn: conn} do
       contract_id = enc_ct(:crypto.strong_rand_bytes(32))
       account_id = enc_id(:crypto.strong_rand_bytes(32))
 
       assert %{"error" => <<"not AEX9 contract: ", ^contract_id::binary>>} =
                conn
-               |> with_store(store)
                |> get("/aex9/balance/#{contract_id}/#{account_id}")
                |> json_response(400)
     end
   end
 
   describe "balances" do
-    test "returns all account balances", %{conn: conn, store: store} do
+    test "returns all account balances", %{conn: conn} do
       account_pk = :crypto.strong_rand_bytes(32)
 
       expected_balances =
@@ -159,16 +167,18 @@ defmodule AeMdwWeb.Aex9ControllerTest do
         end
 
       store =
-        Enum.reduce(expected_balances, store, fn %{
-                                                   "amount" => amount,
-                                                   "contract_id" => contract_id,
-                                                   "height" => height,
-                                                   "token_name" => token_name,
-                                                   "token_symbol" => token_symbol,
-                                                   "tx_hash" => tx_hash,
-                                                   "tx_index" => txi
-                                                 },
-                                                 store_acc ->
+        Enum.reduce(expected_balances, conn.assigns.state.store, fn %{
+                                                                      "amount" => amount,
+                                                                      "contract_id" =>
+                                                                        contract_id,
+                                                                      "height" => height,
+                                                                      "token_name" => token_name,
+                                                                      "token_symbol" =>
+                                                                        token_symbol,
+                                                                      "tx_hash" => tx_hash,
+                                                                      "tx_index" => txi
+                                                                    },
+                                                                    store_acc ->
           contract_pk = Validate.id!(contract_id)
           tx_hash = Validate.id!(tx_hash)
 
@@ -222,7 +232,7 @@ defmodule AeMdwWeb.Aex9ControllerTest do
       end
     end
 
-    test "returns all account balances at a height", %{conn: conn, store: store} do
+    test "returns all account balances at a height", %{conn: conn} do
       account_pk = :crypto.strong_rand_bytes(32)
       path_height = 100_001
       block_hash = <<3::256>>
@@ -235,7 +245,7 @@ defmodule AeMdwWeb.Aex9ControllerTest do
 
       store =
         Store.put(
-          store,
+          conn.assigns.state.store,
           Model.Block,
           Model.block(index: {path_height, -1}, hash: block_hash, tx_index: 12_000_001)
         )
