@@ -673,7 +673,9 @@ defmodule AeMdw.Db.Contract do
         amount: from_amount - burn_value
       )
 
-    State.put(state, Model.Aex9EventBalance, m_from)
+    state
+    |> State.put(Model.Aex9EventBalance, m_from)
+    |> aex9_write_presence(contract_pk, txi, from_pk)
   end
 
   defp burn_aex9_balance(state, _pk, _txi, _idx, _args), do: state
@@ -689,7 +691,9 @@ defmodule AeMdw.Db.Contract do
         amount: to_amount + mint_value
       )
 
-    State.put(state, Model.Aex9EventBalance, m_to)
+    state
+    |> State.put(Model.Aex9EventBalance, m_to)
+    |> aex9_write_presence(contract_pk, txi, to_pk)
   end
 
   defp mint_aex9_balance(state, _pk, _txi, _idx, _args), do: state
@@ -727,6 +731,7 @@ defmodule AeMdw.Db.Contract do
       state
       |> State.put(Model.Aex9EventBalance, m_from)
       |> State.put(Model.Aex9EventBalance, m_to)
+      |> aex9_write_presence(contract_pk, txi, to_pk)
     else
       state
     end

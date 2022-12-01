@@ -1,7 +1,6 @@
 defmodule AeMdw.Db.ContractCallMutationTest do
   use AeMdw.Db.MutationCase, async: false
 
-  alias AeMdw.AsyncTaskTestUtil
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.MemStore
@@ -21,34 +20,41 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                     201, 104, 124, 76, 144, 134, 158, 55, 106, 213, 160, 170, 64, 59, 72>>
 
   describe "aex9 presence" do
-    test "add aex9 presence after a mint" do
-      call_txi = 10_552_888
-      block_index = {246_949, 83}
-      contract_pk = :crypto.strong_rand_bytes(32)
+    test "add aex9 presence after a mint", %{store: store} do
+      contract_pk =
+        <<108, 159, 218, 252, 142, 182, 31, 215, 107, 90, 189, 201, 108, 136, 21, 96, 45, 160,
+          108, 218, 130, 229, 90, 80, 44, 238, 94, 180, 157, 190, 40, 100>>
 
-      assert {_account_pk, mutation} =
+      block_index = {Enum.random(100_000..900_000), 0}
+      call_txi = 1_000_001
+
+      assert {account_pk, mutation} =
                contract_call_mutation("mint", block_index, call_txi, contract_pk)
 
       assert %ContractCallMutation{txi: ^call_txi, contract_pk: ^contract_pk} = mutation
 
-      NullStore.new()
-      |> MemStore.new()
-      |> State.new()
-      |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
-      |> State.commit_mem([mutation])
+      store =
+        store
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
+        )
+        |> change_store([mutation])
 
-      assert AsyncTaskTestUtil.list_pending()
-             |> Enum.find(fn Model.async_task(args: args, extra_args: extra_args) ->
-               args == [contract_pk] and extra_args == [block_index, call_txi]
-             end)
+      assert {:ok,
+              Model.aex9_account_presence(index: {^account_pk, ^contract_pk}, txi: ^call_txi)} =
+               Store.get(store, Model.Aex9AccountPresence, {account_pk, contract_pk})
     end
 
-    test "add aex9 presence after a transfer" do
-      call_txi = 10_587_359
-      block_index = {247_411, 5}
-      contract_pk = :crypto.strong_rand_bytes(32)
+    test "add aex9 presence after a transfer", %{store: store} do
+      contract_pk =
+        <<108, 159, 218, 252, 142, 182, 31, 215, 107, 90, 189, 201, 108, 136, 21, 96, 45, 160,
+          108, 218, 130, 229, 90, 80, 44, 238, 94, 180, 157, 190, 40, 100>>
 
-      assert {_account_pk, mutation} =
+      block_index = {Enum.random(100_000..900_000), 0}
+      call_txi = 1_000_002
+
+      assert {account_pk, mutation} =
                contract_call_mutation(
                  "transfer",
                  block_index,
@@ -58,65 +64,43 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       assert %ContractCallMutation{txi: ^call_txi, contract_pk: ^contract_pk} = mutation
 
-      NullStore.new()
-      |> MemStore.new()
-      |> State.new()
-      |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
-      |> State.commit_mem([mutation])
+      store =
+        store
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
+        )
+        |> change_store([mutation])
 
-      assert AsyncTaskTestUtil.list_pending()
-             |> Enum.find(fn Model.async_task(args: args, extra_args: extra_args) ->
-               args == [contract_pk] and extra_args == [block_index, call_txi]
-             end)
+      assert {:ok,
+              Model.aex9_account_presence(index: {^account_pk, ^contract_pk}, txi: ^call_txi)} =
+               Store.get(store, Model.Aex9AccountPresence, {account_pk, contract_pk})
     end
 
-    test "add aex9 presence after a transfer allowance" do
-      call_txi = 11_440_639
-      block_index = {258_867, 73}
-      contract_pk = :crypto.strong_rand_bytes(32)
+    test "add aex9 presence after a burn (balance is 0)", %{store: store} do
+      contract_pk =
+        <<99, 147, 221, 52, 149, 77, 197, 100, 5, 160, 112, 15, 89, 26, 213, 27, 12, 179, 74, 142,
+          40, 64, 84, 157, 179, 9, 194, 215, 194, 131, 3, 108>>
 
-      assert {_account_pk, mutation} =
-               contract_call_mutation(
-                 "transfer_allowance",
-                 block_index,
-                 call_txi,
-                 contract_pk
-               )
+      block_index = {Enum.random(100_000..900_000), 0}
+      call_txi = 1_000_003
 
-      assert %ContractCallMutation{txi: ^call_txi, contract_pk: ^contract_pk} = mutation
-
-      NullStore.new()
-      |> MemStore.new()
-      |> State.new()
-      |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
-      |> State.commit_mem([mutation])
-
-      assert AsyncTaskTestUtil.list_pending()
-             |> Enum.find(fn Model.async_task(args: args, extra_args: extra_args) ->
-               args == [contract_pk] and extra_args == [block_index, call_txi]
-             end)
-    end
-
-    test "add aex9 presence after a burn (balance is 0)" do
-      call_txi = 11_213_118
-      block_index = {255_795, 74}
-      contract_pk = :crypto.strong_rand_bytes(32)
-
-      assert {_account_pk, mutation} =
+      assert {account_pk, mutation} =
                contract_call_mutation("burn", block_index, call_txi, contract_pk)
 
       assert %ContractCallMutation{txi: ^call_txi, contract_pk: ^contract_pk} = mutation
 
-      NullStore.new()
-      |> MemStore.new()
-      |> State.new()
-      |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
-      |> State.commit_mem([mutation])
+      store =
+        store
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
+        )
+        |> change_store([mutation])
 
-      assert AsyncTaskTestUtil.list_pending()
-             |> Enum.find(fn Model.async_task(args: args, extra_args: extra_args) ->
-               args == [contract_pk] and extra_args == [block_index, call_txi]
-             end)
+      assert {:ok,
+              Model.aex9_account_presence(index: {^account_pk, ^contract_pk}, txi: ^call_txi)} =
+               Store.get(store, Model.Aex9AccountPresence, {account_pk, contract_pk})
     end
   end
 
