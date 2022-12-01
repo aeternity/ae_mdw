@@ -680,9 +680,12 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       account_pk = TS.address(0)
       account = Enc.encode(:account_pubkey, account_pk)
       account_id = :aeser_id.create(:account, account_pk)
-      tx_hash1 = "txhash1"
-      tx_hash2 = "txhash2"
-      tx_hash3 = "txhash3"
+      tx_hash1 = TS.tx_hash(0)
+      tx_hash2 = TS.tx_hash(1)
+      tx_hash3 = TS.tx_hash(2)
+      encoded_tx_hash1 = Enc.encode(:tx_hash, tx_hash1)
+      encoded_tx_hash2 = Enc.encode(:tx_hash, tx_hash2)
+      encoded_tx_hash3 = Enc.encode(:tx_hash, tx_hash3)
 
       {:ok, aetx1} =
         :aens_claim_tx.new(%{
@@ -736,9 +739,18 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         empty_store()
         |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: plain_name))
         |> Store.put(Model.ActiveName, name)
-        |> Store.put(Model.Tx, Model.tx(index: txi1, block_index: {height1, 0}, id: tx_hash1))
-        |> Store.put(Model.Tx, Model.tx(index: txi2, block_index: {height2, 0}, id: tx_hash2))
-        |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height2, 0}, id: tx_hash3))
+        |> Store.put(
+          Model.Tx,
+          Model.tx(index: txi1, block_index: {height1, 0}, id: tx_hash1, time: 10)
+        )
+        |> Store.put(
+          Model.Tx,
+          Model.tx(index: txi2, block_index: {height2, 0}, id: tx_hash2, time: 20)
+        )
+        |> Store.put(
+          Model.Tx,
+          Model.tx(index: txi3, block_index: {height2, 0}, id: tx_hash3, time: 30)
+        )
         |> Store.put(Model.Block, Model.block(index: {height1, 0}, hash: "bhash1"))
         |> Store.put(Model.Block, Model.block(index: {height2, 0}, hash: "bhash2"))
 
@@ -767,14 +779,18 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "height" => ^height2,
                  "type" => "NameClaimEvent",
                  "payload" => %{
-                   "account_id" => ^account,
-                   "fee" => 333_333,
-                   "name" => ^plain_name,
-                   "name_fee" => 33333,
-                   "name_salt" => 3333,
-                   "nonce" => 333,
-                   "ttl" => 3_333_333,
-                   "type" => "NameClaimTx"
+                   "tx_hash" => ^encoded_tx_hash3,
+                   "micro_time" => 30,
+                   "tx" => %{
+                     "account_id" => ^account,
+                     "fee" => 333_333,
+                     "name" => ^plain_name,
+                     "name_fee" => 33_333,
+                     "name_salt" => 3_333,
+                     "nonce" => 333,
+                     "ttl" => 3_333_333,
+                     "type" => "NameClaimTx"
+                   }
                  }
                } = activity3
 
@@ -782,14 +798,18 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "height" => ^height2,
                  "type" => "NameClaimEvent",
                  "payload" => %{
-                   "account_id" => ^account,
-                   "fee" => 222_222,
-                   "name" => ^plain_name,
-                   "name_fee" => 22222,
-                   "name_salt" => 2222,
-                   "nonce" => 222,
-                   "ttl" => 2_222_222,
-                   "type" => "NameClaimTx"
+                   "tx_hash" => ^encoded_tx_hash2,
+                   "micro_time" => 20,
+                   "tx" => %{
+                     "account_id" => ^account,
+                     "fee" => 222_222,
+                     "name" => ^plain_name,
+                     "name_fee" => 22_222,
+                     "name_salt" => 2_222,
+                     "nonce" => 222,
+                     "ttl" => 2_222_222,
+                     "type" => "NameClaimTx"
+                   }
                  }
                } = activity2
 
@@ -803,14 +823,18 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "height" => ^height1,
                  "type" => "NameClaimEvent",
                  "payload" => %{
-                   "account_id" => ^account,
-                   "fee" => 111_111,
-                   "name" => ^plain_name,
-                   "name_fee" => 11111,
-                   "name_salt" => 1111,
-                   "nonce" => 111,
-                   "ttl" => 11_111_111,
-                   "type" => "NameClaimTx"
+                   "tx_hash" => ^encoded_tx_hash1,
+                   "micro_time" => 10,
+                   "tx" => %{
+                     "account_id" => ^account,
+                     "fee" => 111_111,
+                     "name" => ^plain_name,
+                     "name_fee" => 11_111,
+                     "name_salt" => 1_111,
+                     "nonce" => 111,
+                     "ttl" => 11_111_111,
+                     "type" => "NameClaimTx"
+                   }
                  }
                } = activity1
 
