@@ -114,7 +114,7 @@ defmodule AeMdw.Aex141 do
     end
   end
 
-  @spec fetch_limits(State.t(), pubkey()) :: limits()
+  @spec fetch_limits(State.t(), pubkey()) :: limits() | nil
   def fetch_limits(state, contract_pk) do
     Model.nft_contract_limits(
       token_limit: token_limit,
@@ -127,12 +127,14 @@ defmodule AeMdw.Aex141 do
         {:ok, m_limits} -> m_limits
       end
 
-    %{
-      token_limit: token_limit,
-      template_limit: template_limit,
-      limit_txi: txi,
-      limit_log_idx: log_idx
-    }
+    if token_limit != nil or template_limit != nil do
+      %{
+        token_limit: token_limit,
+        template_limit: template_limit,
+        limit_txi: txi,
+        limit_log_idx: log_idx
+      }
+    end
   end
 
   #
