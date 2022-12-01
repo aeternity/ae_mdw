@@ -193,10 +193,10 @@ defmodule AeMdwWeb.AexnView do
       contract_txi: txi,
       contract_id: enc_ct(contract_pk),
       metadata_type: metadata_type,
-      extensions: extensions
+      extensions: extensions,
+      limits: Aex141.fetch_limits(state, contract_pk)
     }
     |> Map.merge(Stats.fetch_nft_stats(state, contract_pk))
-    |> Map.merge(Aex141.fetch_limits(state, contract_pk))
   end
 
   defp do_transfer_to_map(

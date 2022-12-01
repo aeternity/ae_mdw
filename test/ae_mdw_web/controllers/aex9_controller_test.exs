@@ -1,5 +1,5 @@
 defmodule AeMdwWeb.Aex9ControllerTest do
-  use AeMdwWeb.ConnCase
+  use AeMdwWeb.ConnCase, async: false
 
   alias AeMdw.Database
   alias AeMdw.Db.Model
@@ -7,6 +7,7 @@ defmodule AeMdwWeb.Aex9ControllerTest do
   alias AeMdw.Validate
 
   import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1, enc_id: 1, enc_block: 2]
+  import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3]
   import Mock
 
   require Model
@@ -105,15 +106,21 @@ defmodule AeMdwWeb.Aex9ControllerTest do
   end
 
   describe "balance_range" do
-    test "it validates the range", %{conn: conn} do
+    test "validates the range", %{conn: conn} do
       account_id = enc_id(:crypto.strong_rand_bytes(32))
-      last_range = 1_000_000
+      last_kbi = 11
+      range = "1-#{last_kbi}"
       error_msg = "invalid range: max range length is 10"
 
-      assert %{"error" => ^error_msg} =
-               conn
-               |> get("/aex9/balance/gen/1-#{last_range}/#{@aex9_token_id}/#{account_id}")
-               |> json_response(400)
+      # credo:disable-for-next-line
+      empty_key_blocks = for i <- 0..last_kbi, do: {String.to_atom("kb#{i}"), []}
+
+      with_blockchain %{account: 1_000}, empty_key_blocks do
+        assert %{"error" => ^error_msg} =
+                 conn
+                 |> get("/aex9/balance/gen/#{range}/#{@aex9_token_id}/#{account_id}")
+                 |> json_response(400)
+      end
     end
   end
 
