@@ -1,0 +1,149 @@
+schemas:
+  Aex9TransferEvent:
+    description: AEx9 Transfer
+    properties:
+  NameClaimEvent:
+    description: Name claim
+    properties:
+      tx_hash:
+        description: The hash of the transaction (either a name claim or a contract call transaction)
+        type: string
+      tx:
+        description: The claim transaction (internal or not)
+        type: object
+  InternalContractCallEvent:
+    description: Contract call made inside of a contract call or contract create transaction
+    properties:
+      contract_tx_hash:
+        description: The contract creation transaction hash
+        type: string
+      contract_id:
+        description: The contract pubkey
+        type: string
+      call_tx_hash:
+        description: The contract call transaction hash
+        type: string
+      function:
+        description: The name of the function
+        type: string
+      internal_tx:
+        description: The transaction object
+        type: object
+      height:
+        description: The height in which the internal call happened
+        type: integer
+      micro_index:
+        description: The micro block index
+        type: integer
+      block_hash:
+        description: The micro block hash in which the transaction happened
+        type: string
+  InternalTransferEvent:
+    description: Internal transfer
+    properties:
+      amount:
+        description: The amount of AE tokens
+        type: integer
+      kind:
+        description: The kind of internal transfer
+        type: string
+        enum:
+          - accounts_extra_lima
+          - accounts_fortuna
+          - accounts_genesis
+          - accounts_lima
+          - accounts_minerva
+          - contracts_lima
+          - reward_dev
+          - reward_block
+          - fee_refund_oracle
+          - fee_lock_name
+          - fee_refund_name
+          - fee_spend_name
+          - reward_oracle
+          - fee_lock_name
+      ref_tx_hash:
+        description: The transaction hash of a transaction related to the internal transfer
+        type: string
+  Activity:
+    description: Activity related to an account
+    properties:
+      height:
+        description: The block height
+        type: integer
+      type:
+        description: The event type
+        type: string
+        enum:
+          - SpendTxEvent
+          - OracleRegisterTxEvent
+          - OracleExtendTxEvent
+          - OracleQueryTxEvent
+          - OracleResponseTxEvent
+          - NamePreclaimTxEvent
+          - NameClaimTxEvent
+          - NameTransferTxEvent
+          - NameUpdateTxEvent
+          - NameRevokeTxEvent
+          - ContractCreateTxEvent
+          - ContractCallTxEvent
+          - GaAttachTxEvent
+          - GaMetaTxEvent
+          - ChannelCreateTxEvent
+          - ChannelDepositTxEvent
+          - ChannelWithdrawTxEvent
+          - ChannelForceProgressTxEvent
+          - ChannelCloseMutualTxEvent
+          - ChannelCloseSoloTxEvent
+          - ChannelSlashTxEvent
+          - ChannelSettleTxEvent
+          - ChannelSnapshotSoloTxEvent
+          - ChannelSetDelegatesTxEvent
+          - ChannelOffchainTxEvent
+          - ChannelClientReconnectTxEvent
+          - PayingForTxEvent
+      payload:
+        type: object
+        enum:
+          - $ref: '#/components/schemas/Tx'
+          - $ref: '#/components/schemas/Aex9TransferEvent'
+          - $ref: '#/components/schemas/Aex141TransferEvent'
+          - $ref: '#/components/schemas/InternalContractCallEvent'
+          - $ref: '#/components/schemas/InternalTransferEvent'
+paths:
+  /v2/accounts/{id}/activities:
+    get:
+      deprecated: false
+      description: Get an account activities.
+      operationId: get_account_activities
+      parameters:
+        - name: id
+          in: path
+          description: The account address
+          required: true
+          schema:
+            type: string
+            example: ak_M6MNwGLtMQ4j3m8pzQz9uF38nMfjCCVaiQ8fvTAU6DEsCocD5
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/ScopeParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns paginatinated activities
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Activity'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
