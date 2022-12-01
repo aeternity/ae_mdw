@@ -26,7 +26,7 @@ jobs:
 
   test-coverage:
     name: Test coverage
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     env:
       MIX_ENV: test
@@ -49,7 +49,7 @@ jobs:
 
   lint:
     name: Automated linting
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     env:
       NODEROOT: ./node/local
@@ -87,7 +87,7 @@ jobs:
 
   dialyzer:
     name: Dialyzer
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     steps:
       - uses: actions/checkout@v2
@@ -108,7 +108,7 @@ jobs:
         id: plt-cache
         with:
           path: priv/plts
-          key: plts-v12-${{ hashFiles('mix.lock') }}
+          key: plts-v13-${{ hashFiles('mix.lock') }}
 
       - name: Mdw Setup
         uses: ./.github/actions/mdw-setup
