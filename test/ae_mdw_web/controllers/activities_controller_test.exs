@@ -683,6 +683,9 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       tx_hash1 = TS.tx_hash(0)
       tx_hash2 = TS.tx_hash(1)
       tx_hash3 = TS.tx_hash(2)
+      encoded_tx_hash1 = Enc.encode(:tx_hash, tx_hash1)
+      encoded_tx_hash2 = Enc.encode(:tx_hash, tx_hash2)
+      encoded_tx_hash3 = Enc.encode(:tx_hash, tx_hash3)
 
       {:ok, aetx1} =
         :aens_claim_tx.new(%{
@@ -736,9 +739,18 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         empty_store()
         |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: plain_name))
         |> Store.put(Model.ActiveName, name)
-        |> Store.put(Model.Tx, Model.tx(index: txi1, block_index: {height1, 0}, id: tx_hash1))
-        |> Store.put(Model.Tx, Model.tx(index: txi2, block_index: {height2, 0}, id: tx_hash2))
-        |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height2, 0}, id: tx_hash3))
+        |> Store.put(
+          Model.Tx,
+          Model.tx(index: txi1, block_index: {height1, 0}, id: tx_hash1, time: 10)
+        )
+        |> Store.put(
+          Model.Tx,
+          Model.tx(index: txi2, block_index: {height2, 0}, id: tx_hash2, time: 20)
+        )
+        |> Store.put(
+          Model.Tx,
+          Model.tx(index: txi3, block_index: {height2, 0}, id: tx_hash3, time: 30)
+        )
         |> Store.put(Model.Block, Model.block(index: {height1, 0}, hash: "bhash1"))
         |> Store.put(Model.Block, Model.block(index: {height2, 0}, hash: "bhash2"))
 
@@ -767,7 +779,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "height" => ^height2,
                  "type" => "NameClaimEvent",
                  "payload" => %{
-                   "tx_hash" => "th_2CdVYuqtpcjoshDw2otjbLEyj8SpxjMP9MCgpn1oU9zGaqvUn4",
+                   "tx_hash" => ^encoded_tx_hash3,
+                   "micro_time" => 30,
                    "tx" => %{
                      "account_id" => ^account,
                      "fee" => 333_333,
@@ -785,7 +798,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "height" => ^height2,
                  "type" => "NameClaimEvent",
                  "payload" => %{
-                   "tx_hash" => "th_uJ5os7Gg8P68SHTq1kYecNzjNPFp3exxhXvqWmpFfsS7mbKSG",
+                   "tx_hash" => ^encoded_tx_hash2,
+                   "micro_time" => 20,
                    "tx" => %{
                      "account_id" => ^account,
                      "fee" => 222_222,
@@ -809,7 +823,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "height" => ^height1,
                  "type" => "NameClaimEvent",
                  "payload" => %{
-                   "tx_hash" => "th_2MMJRvBUj69PHoZhQtrrXHAg5iXCVwPcunXrKaPcVB6yhAuUHo",
+                   "tx_hash" => ^encoded_tx_hash1,
+                   "micro_time" => 10,
                    "tx" => %{
                      "account_id" => ^account,
                      "fee" => 111_111,
