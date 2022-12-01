@@ -1,5 +1,5 @@
 defmodule AeMdwWeb.Aex9ControllerTest do
-  use AeMdwWeb.ConnCase
+  use AeMdwWeb.ConnCase, async: false
 
   alias AeMdw.Database
   alias AeMdw.Db.Model
