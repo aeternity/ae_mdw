@@ -187,6 +187,12 @@ defmodule AeMdwWeb.BlockchainSim do
       end,
       get_genesis_hash: fn ->
         Validate.id!("kh_wUCideEB8aDtUaiHCtKcfywU6oHZW6gnyci8Mw6S1RSTCnCRu")
+      end,
+      get_top_block_hash: fn ->
+        top_block = mock_blocks[:top_block]
+        header = :aec_blocks.to_header(top_block)
+        {:ok, block_hash} = :aec_headers.hash_header(header)
+        block_hash
       end
     ]
 
@@ -227,7 +233,7 @@ defmodule AeMdwWeb.BlockchainSim do
       |> :aec_blocks.to_key_header()
       |> :aec_headers.hash_header()
 
-    initial_mock_blocks = %{kb_name => key_block}
+    initial_mock_blocks = %{kb_name => key_block, :top_block => key_block}
 
     {_prev_hash, _new_mock_blocks, _new_mock_txs} =
       Enum.reduce(microblocks, {kb_hash, initial_mock_blocks, %{}}, fn {mb_name, transactions},
@@ -243,7 +249,7 @@ defmodule AeMdwWeb.BlockchainSim do
 
         {
           mb_hash,
-          Map.put(mock_blocks, mb_name, micro_block),
+          Map.merge(mock_blocks, %{mb_name => micro_block, :top_block => key_block}),
           Map.merge(mock_txs, new_mock_txs)
         }
       end)
