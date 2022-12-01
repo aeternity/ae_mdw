@@ -66,7 +66,7 @@ schemas:
         description: The transaction hash of a transaction related to the internal transfer
         type: string
   Activity:
-    description: Name Transfer
+    description: Activity related to an account
     properties:
       height:
         description: The block height

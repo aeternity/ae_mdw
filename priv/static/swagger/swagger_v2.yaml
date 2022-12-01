@@ -27,7 +27,7 @@ components:
         type: string
   schemas:
     Activity:
-      description: Name Transfer
+      description: Activity related to an account
       properties:
         height:
           description: The block height
