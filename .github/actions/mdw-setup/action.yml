@@ -8,6 +8,7 @@ runs:
       with:
         otp-version: 23.3.4.17
         elixir-version: 1.13.4
+        version-type: strict
 
     - name: Get Mdw dependencies
       shell: bash
