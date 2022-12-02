@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.31.0](https://www.github.com/aeternity/ae_mdw/compare/v1.30.0...v1.31.0) (2022-12-02)
+
+
+### Features
+
+* add aex9 presence after event ([#1057](https://www.github.com/aeternity/ae_mdw/issues/1057)) ([d348987](https://www.github.com/aeternity/ae_mdw/commit/d3489877f8f3716c4453032e9d9e1d690c465d43))
+* add auth function name to ga_attach ([#1048](https://www.github.com/aeternity/ae_mdw/issues/1048)) ([ea937a5](https://www.github.com/aeternity/ae_mdw/commit/ea937a54985f1f8cf956915a9d5392726f63240b))
+* add name /transfers and /updates paginated endpoints ([#1049](https://www.github.com/aeternity/ae_mdw/issues/1049)) ([af52df2](https://www.github.com/aeternity/ae_mdw/commit/af52df20e48c38bd61c526539c1f7194d0de4d06))
+* handle nft template edition limit ([#1051](https://www.github.com/aeternity/ae_mdw/issues/1051)) ([8872290](https://www.github.com/aeternity/ae_mdw/commit/8872290de780f44299067bb86fef20663c1e4cbf))
+* include tx_hash on NameClaim activity ([#1052](https://www.github.com/aeternity/ae_mdw/issues/1052)) ([40797ab](https://www.github.com/aeternity/ae_mdw/commit/40797ab42af4fea166de7e8b9c3ce53d4e20e75a))
+
+
+### Refactorings
+
+* get immediately returned nft extensions ([#1047](https://www.github.com/aeternity/ae_mdw/issues/1047)) ([3b2b16e](https://www.github.com/aeternity/ae_mdw/commit/3b2b16ee6ad235f81da7bf6ad960dc106fcecc23))
+
+
+### Testing
+
+* use strict version on otp ci ([#1056](https://www.github.com/aeternity/ae_mdw/issues/1056)) ([5f5a499](https://www.github.com/aeternity/ae_mdw/commit/5f5a4990b25b6fb22747328294de953901ab1582))
+* validate kbi range with blockchainsim ([#1055](https://www.github.com/aeternity/ae_mdw/issues/1055)) ([5aff9e0](https://www.github.com/aeternity/ae_mdw/commit/5aff9e09fae93e08cf8255790ad2ac0e5599ac29))
+
+
+### Miscellaneous
+
+* add template limit details to edition ([#1058](https://www.github.com/aeternity/ae_mdw/issues/1058)) ([0b32825](https://www.github.com/aeternity/ae_mdw/commit/0b32825f3a3b5ab593583d9505c02a70923f31fe))
+
 ## [1.30.0](https://www.github.com/aeternity/ae_mdw/compare/v1.29.1...v1.30.0) (2022-11-28)
 
 
