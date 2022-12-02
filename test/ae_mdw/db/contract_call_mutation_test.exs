@@ -820,7 +820,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         )
         |> change_store([mutation])
 
-      assert {:ok, Model.nft_template(txi: ^call_txi, log_idx: 1, limit: ^limit)} =
+      assert {:ok, Model.nft_template(txi: ^call_txi, log_idx: 1, limit: {^limit, ^call_txi, 2})} =
                Store.get(store, Model.NftTemplate, {contract_pk, template_id})
     end
 
@@ -878,7 +878,8 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         )
         |> change_store([mutation])
 
-      assert {:ok, Model.nft_template(txi: ^template_txi, log_idx: 1, limit: ^limit)} =
+      assert {:ok,
+              Model.nft_template(txi: ^template_txi, log_idx: 1, limit: {^limit, ^call_txi, 0})} =
                Store.get(store, Model.NftTemplate, {contract_pk, template_id})
     end
   end
