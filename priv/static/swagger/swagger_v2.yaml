@@ -1373,7 +1373,7 @@ paths:
           description: Bad request
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-  /aex9/{:contract_id}/balances:
+  /aex9/{contract_id}/balances:
     get:
       deprecated: false
       description: Get AEX9 balances on a contract.
