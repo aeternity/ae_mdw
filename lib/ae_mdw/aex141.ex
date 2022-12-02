@@ -220,9 +220,21 @@ defmodule AeMdw.Aex141 do
         template_id: template_id,
         tx_hash: enc(:tx_hash, tx_hash),
         log_idx: log_idx,
-        limit: limit
+        edition: render_template_edition_limit(state, limit)
       }
     end)
+  end
+
+  defp render_template_edition_limit(_state, nil), do: nil
+
+  defp render_template_edition_limit(state, {amount, txi, log_idx}) do
+    tx_hash = Txs.txi_to_hash(state, txi)
+
+    %{
+      limit: amount,
+      limit_log_idx: log_idx,
+      limit_tx_hash: enc(:tx_hash, tx_hash)
+    }
   end
 
   defp render_owners(state, nft_tokens) do

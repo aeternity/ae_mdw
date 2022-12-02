@@ -58,25 +58,28 @@ defmodule AeMdwWeb.Aex141ControllerTest do
     store =
       Enum.reduce(1_413_001..1_413_040, store, fn j, store ->
         token_id = j - 1_413_000
-        template_id = j - 1_413_000
-        txi = j
         owner_pk = if rem(j, 2) == 0, do: @owner_pk1, else: @owner_pk2
         m_ownership = Model.nft_ownership(index: {owner_pk, contract_pk, token_id})
         m_owner_token = Model.nft_owner_token(index: {contract_pk, owner_pk, token_id})
         m_token_owner = Model.nft_token_owner(index: {contract_pk, token_id}, owner: owner_pk)
 
+        template_id = token_id
+        txi = j
+        log_idx = rem(template_id, 2)
+
         m_template =
           Model.nft_template(
             index: {contract_pk, template_id},
             txi: txi,
-            log_idx: rem(template_id, 2),
-            limit: template_id * 10
+            log_idx: log_idx,
+            limit: {template_id * 10, txi + 100, log_idx + 1}
           )
 
         store =
           store
           |> Store.put(Model.NftTemplate, m_template)
           |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>))
+          |> Store.put(Model.Tx, Model.tx(index: txi + 100, id: <<txi + 100::256>>))
 
         if token_id != 1_413_010 do
           store
@@ -537,13 +540,20 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                                        "template_id" => template_id,
                                        "tx_hash" => tx_hash,
                                        "log_idx" => log_idx,
-                                       "limit" => limit
+                                       "edition" => %{
+                                         "limit" => edition_limit,
+                                         "limit_tx_hash" => limit_tx_hash,
+                                         "limit_log_idx" => limit_log_idx
+                                       }
                                      } ->
                tx_hash = Validate.id!(tx_hash)
+               limit_tx_hash = Validate.id!(limit_tx_hash)
 
                ct_id == contract_id and template_id in 1..10 and
                  tx_hash == <<template_id + 1_413_000::256>> and log_idx == rem(template_id, 2) and
-                 limit == template_id * 10
+                 edition_limit == template_id * 10 and
+                 limit_tx_hash == <<template_id + 1_413_100::256>> and
+                 limit_log_idx == rem(template_id, 2) + 1
              end)
 
       assert %{"data" => next_templates, "prev" => prev_templates} =
