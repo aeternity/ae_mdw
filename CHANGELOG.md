@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.31.1](https://www.github.com/aeternity/ae_mdw/compare/v1.31.0...v1.31.1) (2022-12-02)
+
+
+### Miscellaneous
+
+* allow network id for local environment ([#1059](https://www.github.com/aeternity/ae_mdw/issues/1059)) ([4d49efe](https://www.github.com/aeternity/ae_mdw/commit/4d49efecf081802204a998e256e918fae7cf4ada))
+
 ## [1.31.0](https://www.github.com/aeternity/ae_mdw/compare/v1.30.0...v1.31.0) (2022-12-02)
 
 
