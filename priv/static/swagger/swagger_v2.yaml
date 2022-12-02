@@ -1275,7 +1275,7 @@ paths:
       - $ref: '#/components/parameters/DirectionParam'
       - description: Sender account id
         in: path
-        name: recipient
+        name: sender
         required: true
         type: string
         x-example: ak_17qFR9Zp6CbX9ZZrEYd5155KHGAsfbY1YZ2UsRpjH6WJc8Pk1
