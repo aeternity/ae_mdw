@@ -1,5 +1,7 @@
 import Config
 
+config :aecore, network_id: System.get_env("NETWORK_ID", "ae_mainnet")
+
 config :ae_mdw, AeMdwWeb.Endpoint,
   http: [port: 4000],
   debug_errors: true,
