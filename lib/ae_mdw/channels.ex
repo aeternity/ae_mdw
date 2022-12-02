@@ -43,11 +43,11 @@ defmodule AeMdw.Channels do
     end
   end
 
-  @spec fetch_channel(state(), pubkey()) :: {:ok, Model.channel()} | :not_found
-  def fetch_channel(state, pubkey) do
-    with :not_found <- State.get(state, Model.ActiveChannel, pubkey) do
-      State.get(state, Model.InactiveChannel, pubkey)
-    end
+  @spec fetch_channel_responder!(state(), pubkey()) :: pubkey()
+  def fetch_channel_responder!(state, pubkey) do
+    {:ok, Model.channel(responder: responder), _source} = locate(state, pubkey)
+
+    responder
   end
 
   @spec channels_opened_count(state(), Txs.txi(), Txs.txi()) :: non_neg_integer()
@@ -59,6 +59,29 @@ defmodule AeMdw.Channels do
     type_count(state, :channel_close_solo_tx, from_txi, next_txi) +
       type_count(state, :channel_close_mutual_tx, from_txi, next_txi) +
       type_count(state, :channel_settle_tx, from_txi, next_txi)
+  end
+
+  @spec fetch_channel(state(), binary()) :: {:ok, channel()} | {:error, Error.t()}
+  def fetch_channel(state, id) do
+    with {:ok, channel_pk} <- Validate.id(id, [:channel]) do
+      case locate(state, channel_pk) do
+        {:ok, channel, source} ->
+          {:ok, render_channel(state, channel, source == Model.ActiveChannel)}
+
+        :not_found ->
+          {:error, ErrInput.NotFound.exception(value: id)}
+      end
+    end
+  end
+
+  defp locate(state, channel_pk) do
+    [Model.ActiveChannel, Model.InactiveChannel]
+    |> Enum.find_value(:not_found, fn table ->
+      case State.get(state, table, channel_pk) do
+        {:ok, channel} -> {:ok, channel, table}
+        :not_found -> false
+      end
+    end)
   end
 
   defp type_count(state, type, from_txi, next_txi) do
@@ -77,15 +100,21 @@ defmodule AeMdw.Channels do
   defp render_list(state, keys),
     do: Enum.map(keys, fn {_exp, channel_pk} -> render(state, channel_pk) end)
 
-  defp render(state, channel_pk) do
-    Model.channel(
-      initiator: initiator_pk,
-      responder: responder_pk,
-      state_hash: state_hash,
-      amount: amount,
-      updates: [{{last_updated_height, _mbi}, last_updated_txi} | _rest] = updates
-    ) = State.fetch!(state, @table_active, channel_pk)
+  defp render(state, channel_pk),
+    do: render_channel(state, State.fetch!(state, @table_active, channel_pk), true)
 
+  defp render_channel(
+         state,
+         Model.channel(
+           index: channel_pk,
+           initiator: initiator_pk,
+           responder: responder_pk,
+           state_hash: state_hash,
+           amount: amount,
+           updates: [{{last_updated_height, _mbi}, last_updated_txi} | _rest] = updates
+         ),
+         is_active?
+       ) do
     %{"hash" => tx_hash, "tx" => %{"type" => tx_type}} = Txs.fetch!(state, last_updated_txi)
 
     %{
@@ -97,7 +126,8 @@ defmodule AeMdw.Channels do
       last_updated_height: last_updated_height,
       last_updated_tx_hash: tx_hash,
       last_updated_tx_type: tx_type,
-      updates_count: length(updates)
+      updates_count: length(updates),
+      active: is_active?
     }
   end
 

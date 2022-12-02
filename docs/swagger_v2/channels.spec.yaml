@@ -1,0 +1,98 @@
+schemas:
+  Channel:
+    type: object
+    properties:
+      amount:
+        type: integer
+        description: The balance currently left in the channel
+        example: 20000000000001
+      channel:
+        type: string
+        description: The channel pubkey
+        example: ch_22SfHdnhUQBAHpC5euxHG9qjRWGfHsj47sZqSmXk4cTfJp4aUd
+      iniitator:
+        type: string
+        description: The channel initiator pubkey
+        example: ak_2BUfk9dHtn2YKuBe6uY9f4qD94xKETA6w9MGAYyJc5weiUUXhy
+      last_updated_height:
+        type: string
+        description: The last height in which the channel was updated
+        example: 141956
+      last_updated_tx_type:
+        type: string
+        description: The transaction type of the last transaction that updated the channel
+        example: ChannelDepositTx
+      responder:
+        type: string
+        description: The channel responder pubkey
+        example: ak_2dxvgsogiBDWXvZSzTghv5MoXLfkFGiEynDC5Cn8k2M2s325Ki
+      state_hash:
+        type: string
+        description: The hash of the current channel state
+        example: "st_Wwxms0IVM7PPCHpeOXWeeZZm8h5p/SuqZL7IHIbr3CqtlCL+"
+      updates_count:
+        type: string
+        description: The amount of times the channel's been updated by any of the channel transactions
+        example: 2
+paths:
+  /channels:
+    get:
+      deprecated: false
+      description: Get multiple channels.
+      operationId: get_channels
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/ScopeParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns paginated channels
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Channel'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /channels/{id}:
+    get:
+      deprecated: false
+      description: Get a single channel.
+      operationId: get_channel
+      parameters:
+        - name: id
+          in: path
+          description: The channel
+          required: true
+          schema:
+            type: string
+            example: ch_2K9cFjoxWxCku6D8ugXonhj7ZqpPsGFPcbVPx25b2HFaLSoLie
+      responses:
+        '200':
+          description: Returns single channel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundResponse'
