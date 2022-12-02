@@ -285,8 +285,8 @@ defmodule AeMdw.Db.Format do
 
   defp custom_encode(state, :channel_settle_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
     pubkey = tx_rec |> :aesc_settle_tx.channel_id() |> :aeser_id.specialize(:channel)
-    {:ok, Model.channel(responder: responder)} = Channels.fetch_channel(state, pubkey)
-    responder_id = :aeser_id.create(:account, responder)
+    responder_pk = Channels.fetch_channel_responder!(state, pubkey)
+    responder_id = :aeser_id.create(:account, responder_pk)
     Map.put(tx, "responder_id", enc_id(responder_id))
   end
 

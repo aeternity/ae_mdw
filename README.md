@@ -24,6 +24,7 @@
 - [Contracts](#contracts)
 - [Internal transfers](#internal-transfers)
 - [Oracles](#oracles)
+- [Channels](#channels)
 - [AEX9 tokens](#aex9-tokens)
 - [AEX9 contract balances](#aex9-contract-balances)
 - [NFTs](#aex141)
@@ -144,6 +145,7 @@ GET /v2/oracles                         - returns expired oracles ordered by exp
 GET /v2/oracles/:id                     - returns oracle information by hash
 
 GET /v2/channels                        - returns active channels ordered by activation height
+GET /v2/channels/:id                    - returns channel
 
 GET /v2/transfers                        - returns internal transfers from the top of the chain
 
@@ -3671,6 +3673,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/oracles?state=active&limit=1&expa
 
 ### `/v2/channels`
 
+Returns active channels ordered by activation.
+
 ```
 $ curl -s "https://mainnet.aeternity.io/mdw/v2/channels?limit=1" | jq '.'
 {
@@ -3689,6 +3693,25 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/channels?limit=1" | jq '.'
   ],
   "next": "/v2/channels?cursor=141956-ch_hhqtLjXn9h31Sa6WTNxTANC1zG3WxUzCss1HnJSjovP4pnVUK&limit=1",
   "prev": null
+}
+```
+
+### `/v2/channels/:id`
+
+Returns a single active/inactive channel.
+
+```
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/channels/ch_vpYXyMJZDF8Rdc3EZFvLdKYrWZKsbs1hKXHXMAczeV8MmDPkK" | jq '.'
+{
+  "amount": 20000000000001,
+  "channel": "ch_vpYXyMJZDF8Rdc3EZFvLdKYrWZKsbs1hKXHXMAczeV8MmDPkK",
+  "initiator": "ak_2BUfk9dHtn2YKuBe6uY9f4qD94xKETA6w9MGAYyJc5weiUUXhy",
+  "last_updated_height": 141956,
+  "last_updated_tx_hash": "th_tuTDcp7boNK7MzcWS8pForWJt5683qdVcJtETcJPmHsPgCXvd",
+  "last_updated_tx_type": "ChannelCreateTx",
+  "responder": "ak_2BUfk9dHtn2YKuBe6uY9f4qD94xKETA6w9MGAYyJc5weiUUXhy",
+  "state_hash": "st_Wwxms0IVM7PPCHpeOXWeeZZm8h5p/SuqZL7IHIbr3CqtlCL+",
+  "updates_count": 1
 }
 ```
 

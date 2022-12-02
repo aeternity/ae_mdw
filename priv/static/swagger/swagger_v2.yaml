@@ -436,6 +436,43 @@ components:
           type: integer
       title: Key Block
       type: object
+    Channel:
+      properties:
+        amount:
+          description: The balance currently left in the channel
+          example: 20000000000001
+          type: integer
+        channel:
+          description: The channel pubkey
+          example: ch_22SfHdnhUQBAHpC5euxHG9qjRWGfHsj47sZqSmXk4cTfJp4aUd
+          type: string
+        iniitator:
+          description: The channel initiator pubkey
+          example: ak_2BUfk9dHtn2YKuBe6uY9f4qD94xKETA6w9MGAYyJc5weiUUXhy
+          type: string
+        last_updated_height:
+          description: The last height in which the channel was updated
+          example: 141956
+          type: string
+        last_updated_tx_type:
+          description: The transaction type of the last transaction that updated the
+            channel
+          example: ChannelDepositTx
+          type: string
+        responder:
+          description: The channel responder pubkey
+          example: ak_2dxvgsogiBDWXvZSzTghv5MoXLfkFGiEynDC5Cn8k2M2s325Ki
+          type: string
+        state_hash:
+          description: The hash of the current channel state
+          example: st_Wwxms0IVM7PPCHpeOXWeeZZm8h5p/SuqZL7IHIbr3CqtlCL+
+          type: string
+        updates_count:
+          description: The amount of times the channel's been updated by any of the
+            channel transactions
+          example: 2
+          type: string
+      type: object
     ContractCall:
       description: ContractCall
       properties:
@@ -1591,6 +1628,67 @@ paths:
               schema:
                 $ref: '#/components/schemas/Block'
           description: Returns a single block
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad request
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundResponse'
+          description: Not Found
+  /channels:
+    get:
+      deprecated: false
+      description: Get multiple channels.
+      operationId: get_channels
+      parameters:
+      - $ref: '#/components/parameters/LimitParam'
+      - $ref: '#/components/parameters/ScopeParam'
+      - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                allOf:
+                - properties:
+                    data:
+                      items:
+                        $ref: '#/components/schemas/Channel'
+                      type: array
+                  type: object
+                - $ref: '#/components/schemas/PaginatedResponse'
+          description: Returns paginated channels
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad request
+  /channels/{id}:
+    get:
+      deprecated: false
+      description: Get a single channel.
+      operationId: get_channel
+      parameters:
+      - description: The channel
+        in: path
+        name: id
+        required: true
+        schema:
+          example: ch_2K9cFjoxWxCku6D8ugXonhj7ZqpPsGFPcbVPx25b2HFaLSoLie
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+          description: Returns single channel
         '400':
           content:
             application/json:

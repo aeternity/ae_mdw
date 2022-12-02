@@ -19,4 +19,11 @@ defmodule AeMdwWeb.ChannelController do
       Util.paginate(conn, prev_cursor, channels, next_cursor)
     end
   end
+
+  @spec channel(Conn.t(), map()) :: Conn.t()
+  def channel(%Conn{assigns: %{state: state}} = conn, %{"id" => id}) do
+    with {:ok, channel} <- Channels.fetch_channel(state, id) do
+      json(conn, channel)
+    end
+  end
 end
