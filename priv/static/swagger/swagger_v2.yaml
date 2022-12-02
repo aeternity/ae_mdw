@@ -71,6 +71,102 @@ components:
           - ChannelClientReconnectTxEvent
           - PayingForTxEvent
           type: string
+    Aex141OwnedTokenResponse:
+      description: Response Schema for owners of AEX-141 tokens
+      example:
+        contract_id: ct_2oq4kSd4j1VkkbupueXLdHwYEJdY8Ntzvp1FFkMB1gYyXkYPcV
+        owner_id: ak_vTGaRAuGXPLhvNexrbzmHJ2MDv9JS2Ky7u2v469o6weaZ2Cgw
+        token_id: 1
+      properties:
+        account_id:
+          description: Account id
+          type: string
+        contract_id:
+          description: NFT contract id
+          type: string
+        token_id:
+          description: Non-fungible token id
+          type: integer
+      required:
+      - contract_id
+      - account_id
+      - token_id
+      title: Aex141OwnedTokenResponse
+      type: object
+    Aex141Response:
+      description: Response Schema for AEX141 contract
+      example:
+        base_url: null
+        contract_id: ct_2oq4kSd4j1VkkbupueXLdHwYEJdY8Ntzvp1FFkMB1gYyXkYPcV
+        contract_txi: 32746407
+        extensions:
+        - mintable_templates
+        - mintable_templates_limit
+        - mutable_attributes
+        - burnable
+        limits:
+          limit_log_idx: 0
+          limit_txi: 32746408
+          template_limit: 100
+          token_limit: null
+        metadata_type: map
+        name: Apes stepping into the Metaverse - (Template Version)
+        nft_owners: 1
+        nfts_amount: 36
+        symbol: ASITM-T
+      properties:
+        base_url:
+          description: Metadata base url
+          type: string
+        contract_id:
+          description: NFT contract id
+          type: string
+        contract_txi:
+          description: Transaction that created the contract
+          type: string
+        extensions:
+          description: Extensions implemented by the contract
+          type: array
+        limits:
+          description: Limit for amount of tokens or templates
+          type: object
+      required:
+      - base_url
+      - contract_id
+      - contract_txi
+      - extensions
+      - limits
+      - metadata_type
+      - name
+      - nft_owners
+      - nfts_amount
+      - symbol
+      title: Aex141Response
+      type: object
+    Aex141TemplatesResponse:
+      description: Response Schema for templates of a AEX-141 contract
+      example:
+        contract_id: ct_2oq4kSd4j1VkkbupueXLdHwYEJdY8Ntzvp1FFkMB1gYyXkYPcV
+        log_idx: 0
+        template_id: 1
+        tx_hash: th_ojhH9bD7kGRpgZ6rXob2qi5asBKsYTdbSVaKzGdpfP6wiRxz4
+      properties:
+        contract_id:
+          description: NFT contract id
+          type: string
+        log_idx:
+          description: Index of the event that created the template
+          type: integer
+        template_id:
+          description: Template id of AEX-141 tokens
+          type: integer
+      required:
+      - contract_id
+      - log_idx
+      - template_id
+      - tx_hash
+      title: Aex141TemplatesResponse
+      type: object
     Aex9BalanceRangeResponse:
       description: Response Schema for AEX9 balance responses on a height range
       example:
@@ -449,13 +545,13 @@ components:
           example: 32508544
           type: integer
         contract_id:
-          example: ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+          example: ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z
           type: string
         contract_txi:
           example: 8392766
           type: integer
         function:
-          example: Oracle.query",
+          example: Oracle.query
           type: string
         height:
           example: 608269
@@ -467,10 +563,10 @@ components:
             oracle_id: ok_4HGhEdjeRtpsWzfSEJZnBKNmjgHALAifcBUey8EvRAdDfRsqc
             query: YWtfdVRXZWdwZk42VWpBNHl6OFg0WlZSaTl4S0VZZVhISkRSWmNScnlUc1JIQUZvQnBMYTtodHRwczovL21haWwuZ29vZ2xlLmNvbS9tYWlsL3UvMC8jaW5ib3g=
             query_fee: 20000000000000
-            query_id": oq_2T4mYmjcyinbfYyHyDq6FfPXHChf5mYPEXgza9vHAukuq2EEHj
+            query_id: oq_2T4mYmjcyinbfYyHyDq6FfPXHChf5mYPEXgza9vHAukuq2EEHj
             query_ttl:
               type: delta
-              value": 20
+              value: 20
             response_ttl:
               type: delta
               value: 20
@@ -503,7 +599,7 @@ components:
           example: 32530611
           type: integer
         contract_id:
-          example: ct_y7gojSY8rXW6tztE9Ftqe3kmNrqEXsREiPwGCeG3MJL38jkFo",
+          example: ct_y7gojSY8rXW6tztE9Ftqe3kmNrqEXsREiPwGCeG3MJL38jkFo
           type: string
         contract_txi:
           example: 23524907
@@ -1198,6 +1294,211 @@ info:
   version: '2.0'
 openapi: 3.0.0
 paths:
+  /aex141:
+    get:
+      deprecated: false
+      description: Get AEX141 contracts sorted by name or symbol.
+      operationId: get_sorted_aex141_contracts
+      parameters:
+      - $ref: '#/components/parameters/LimitParam'
+      - $ref: '#/components/parameters/DirectionParam'
+      - description: meta info field used on sorting
+        in: query
+        name: order_by
+        required: false
+        type: string
+        x-example: name | symbol
+      - description: Name or symbol prefix depending on order_by
+        in: query
+        name: prefix
+        required: false
+        type: string
+        x-example: mycol
+      produces:
+      - application/json
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                allOf:
+                - properties:
+                    data:
+                      items:
+                        $ref: '#/components/schemas/Aex141Response'
+                      type: array
+                  type: object
+                - $ref: '#/components/schemas/PaginatedResponse'
+          description: Returns paginated AEX-141 contracts
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad request
+  /aex141/owned-nfts/{accountId}:
+    get:
+      deprecated: false
+      description: Get tokens owned by an account.
+      operationId: get_aex141_owned_tokens
+      parameters:
+      - $ref: '#/components/parameters/LimitParam'
+      - $ref: '#/components/parameters/DirectionParam'
+      - description: The account id
+        in: path
+        name: accountId
+        required: true
+        type: string
+        x-example: ak_vTGaRAuGXPLhvNexrbzmHJ2MDv9JS2Ky7u2v469o6weaZ2Cgw
+      produces:
+      - application/json
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                allOf:
+                - properties:
+                    data:
+                      items:
+                        $ref: '#/components/schemas/Aex141OwnedTokenResponse'
+                      type: array
+                  type: object
+                - $ref: '#/components/schemas/PaginatedResponse'
+          description: Returns paginated AEX-141 tokens
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad request
+  /aex141/{contractId}/owner/{tokenId}:
+    get:
+      deprecated: false
+      description: Get owner of a NFT (AEX-141 token).
+      operationId: get_aex141_token_owner
+      parameters:
+      - description: The contract id
+        in: path
+        name: contractId
+        required: true
+        type: string
+        x-example: ct_22NTeTHfqVXLChCMCy3eAAj3hGW2nuNUwHhQ1zRX3k4iZKq8Ru
+      - description: The nft token id
+        in: path
+        name: tokenId
+        required: true
+        type: integer
+        x-example: 2
+      produces:
+      - application/json
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: The owner account ID.
+                type: string
+          description: Owner account of the NFT
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  /aex141/{contractId}/owners:
+    get:
+      deprecated: false
+      description: Get owners of tokens of a AEX-141 contract.
+      operationId: get_aex141_contract_owners
+      parameters:
+      - $ref: '#/components/parameters/LimitParam'
+      - $ref: '#/components/parameters/DirectionParam'
+      - description: The contract id
+        in: path
+        name: contractId
+        required: true
+        type: string
+        x-example: ct_22NTeTHfqVXLChCMCy3eAAj3hGW2nuNUwHhQ1zRX3k4iZKq8Ru
+      produces:
+      - application/json
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                allOf:
+                - properties:
+                    data:
+                      items:
+                        $ref: '#/components/schemas/Aex141OwnedTokenResponse'
+                      type: array
+                  type: object
+                - $ref: '#/components/schemas/PaginatedResponse'
+          description: Returns paginated AEX-141 contracts
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad request
+  /aex141/{contractId}/templates:
+    get:
+      deprecated: false
+      description: Get templates AEX-141 contract tokens.
+      operationId: get_aex141_contract_templates
+      parameters:
+      - $ref: '#/components/parameters/LimitParam'
+      - $ref: '#/components/parameters/DirectionParam'
+      - description: The contract id
+        in: path
+        name: contractId
+        required: true
+        type: string
+        x-example: ct_22NTeTHfqVXLChCMCy3eAAj3hGW2nuNUwHhQ1zRX3k4iZKq8Ru
+      produces:
+      - application/json
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                allOf:
+                - properties:
+                    data:
+                      items:
+                        $ref: '#/components/schemas/Aex141TemplatesResponse'
+                      type: array
+                  type: object
+                - $ref: '#/components/schemas/PaginatedResponse'
+          description: Returns paginated AEX-141 templates
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad request
+  /aex141/{id}:
+    get:
+      deprecated: false
+      description: Get AEX141 contract meta-info, extensions, limits and stats.
+      operationId: get_aex141_by_contract
+      parameters:
+      - description: The contract id
+        in: path
+        name: id
+        required: true
+        type: string
+        x-example: ct_22NTeTHfqVXLChCMCy3eAAj3hGW2nuNUwHhQ1zRX3k4iZKq8Ru
+      produces:
+      - application/json
+      responses:
+        '200':
+          description: Returns AEX-141 information by contract id
+          schema:
+            $ref: '#/components/schemas/Aex141Response'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
   /aex9:
     get:
       deprecated: false

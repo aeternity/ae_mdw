@@ -13,13 +13,13 @@ schemas:
         example: 32508544
       contract_id:
         type: string
-        example: ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z",
+        example: ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z
       contract_txi:
         type: integer
         example: 8392766
       function:
         type: string
-        example: Oracle.query",
+        example: Oracle.query
       height:
         type: integer
         example: 608269
@@ -31,10 +31,10 @@ schemas:
           oracle_id: ok_4HGhEdjeRtpsWzfSEJZnBKNmjgHALAifcBUey8EvRAdDfRsqc
           query: 'YWtfdVRXZWdwZk42VWpBNHl6OFg0WlZSaTl4S0VZZVhISkRSWmNScnlUc1JIQUZvQnBMYTtodHRwczovL21haWwuZ29vZ2xlLmNvbS9tYWlsL3UvMC8jaW5ib3g='
           query_fee: 20000000000000
-          query_id": oq_2T4mYmjcyinbfYyHyDq6FfPXHChf5mYPEXgza9vHAukuq2EEHj
+          query_id: oq_2T4mYmjcyinbfYyHyDq6FfPXHChf5mYPEXgza9vHAukuq2EEHj
           query_ttl:
             type: delta
-            value": 20
+            value: 20
           response_ttl:
             type: delta
             value: 20
@@ -67,7 +67,7 @@ schemas:
         example: 32530611
       contract_id:
         type: string
-        example: ct_y7gojSY8rXW6tztE9Ftqe3kmNrqEXsREiPwGCeG3MJL38jkFo",
+        example: ct_y7gojSY8rXW6tztE9Ftqe3kmNrqEXsREiPwGCeG3MJL38jkFo
       contract_txi:
         type: integer
         example: 23524907
