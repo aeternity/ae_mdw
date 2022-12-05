@@ -63,7 +63,8 @@ config :ae_mdw, AeWebsocket.Websocket.SocketHandler,
 
 # Configures Elixir's Logger
 config :logger,
-  backends: [{LoggerFileBackend, :info}, {LoggerFileBackend, :sync}]
+  backends: [{LoggerFileBackend, :info}, {LoggerFileBackend, :sync}],
+  truncate: 1_048_576
 
 config :logger, :info,
   path: "#{Path.join(File.cwd!(), "log/info.log")}",

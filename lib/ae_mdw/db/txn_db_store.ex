@@ -16,15 +16,15 @@ defmodule AeMdw.Db.TxnDbStore do
             txn: Database.transaction()
           }
 
-  @spec transaction((t() -> term())) :: term()
-  def transaction(fun) do
+  @spec new() :: t()
+  def new() do
     txn = Database.transaction_new()
+    %__MODULE__{txn: txn}
+  end
 
-    result = fun.(%__MODULE__{txn: txn})
-
+  @spec commit(t()) :: :ok | {:error, binary()}
+  def commit(%__MODULE__{txn: txn}) do
     Database.transaction_commit(txn)
-
-    result
   end
 
   @spec put(t(), table(), record()) :: t()

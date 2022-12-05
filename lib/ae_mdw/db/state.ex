@@ -7,6 +7,7 @@ defmodule AeMdw.Db.State do
 
   alias AeMdw.Blocks
   alias AeMdw.Database
+  alias AeMdw.Db.AsyncStore
   alias AeMdw.Db.AsyncStoreMutation
   alias AeMdw.Db.DbStore
   alias AeMdw.Db.MemStore
@@ -14,6 +15,7 @@ defmodule AeMdw.Db.State do
   alias AeMdw.Db.Store
   alias AeMdw.Db.TxnDbStore
   alias AeMdw.Db.Util, as: DbUtil
+  alias AeMdw.Log
   alias AeMdw.Sync.AsyncTasks.Consumer
   alias AeMdw.Sync.AsyncTasks.Producer
 
@@ -46,16 +48,25 @@ defmodule AeMdw.Db.State do
 
   @spec commit(t(), [Mutation.t()], boolean()) :: t()
   def commit(%__MODULE__{store: prev_store} = state, mutations, clear_mem? \\ false) do
+    store = TxnDbStore.new()
+    state = %__MODULE__{state | store: store}
+
     new_state =
       %__MODULE__{jobs: jobs} =
-      TxnDbStore.transaction(fn store ->
-        state2 = %__MODULE__{state | store: store}
+      [mutations, AsyncStoreMutation.new()]
+      |> List.flatten()
+      |> Enum.reject(&is_nil/1)
+      |> Enum.reduce(state, &Mutation.execute/2)
 
-        [mutations, AsyncStoreMutation.new()]
-        |> List.flatten()
-        |> Enum.reject(&is_nil/1)
-        |> Enum.reduce(state2, &Mutation.execute/2)
-      end)
+    with {:error, reason} <- TxnDbStore.commit(store) do
+      {:ok, error_msg} =
+        Log.commit_error(
+          reason,
+          mutations ++ AsyncStore.mutations(AsyncStore.instance())
+        )
+
+      raise error_msg
+    end
 
     enqueue_jobs(jobs, only_new: true)
 

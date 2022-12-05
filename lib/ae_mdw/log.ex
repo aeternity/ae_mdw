@@ -20,4 +20,17 @@ defmodule AeMdw.Log do
 
   def error(msg),
     do: Logger.error(inspect(msg))
+
+  @spec commit_error(term(), list()) :: {:ok, String.t()}
+  def commit_error(reason, mutations) do
+    error = """
+    Transaction commit error:
+      reason=#{inspect(reason)}
+      mutations=#{inspect(mutations, limit: :infinity)}
+    """
+
+    Logger.error(error)
+
+    {:ok, error}
+  end
 end

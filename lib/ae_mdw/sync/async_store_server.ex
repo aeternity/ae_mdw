@@ -11,6 +11,7 @@ defmodule AeMdw.Sync.AsyncStoreServer do
   use GenServer
 
   alias AeMdw.Database
+  alias AeMdw.Log
   alias AeMdw.Db.AsyncStore
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
@@ -44,13 +45,17 @@ defmodule AeMdw.Sync.AsyncStoreServer do
         %{last_db_kbi: last_db_kbi} = state
       ) do
     if Database.exists?(Model.Block, block_index) || kbi <= last_db_kbi do
-      TxnDbStore.transaction(fn store ->
-        txn_state = State.new(store)
+      state = State.new(TxnDbStore.new())
 
+      %{store: store} =
         mutations
         |> Enum.reject(&is_nil/1)
-        |> Enum.each(&Mutation.execute(&1, txn_state))
-      end)
+        |> Enum.reduce(state, &Mutation.execute/2)
+
+      with {:error, reason} <- TxnDbStore.commit(store) do
+        {:ok, error_msg} = Log.commit_error(reason, mutations)
+        raise error_msg
+      end
     else
       async_state = State.new(AsyncStore.instance())
 
