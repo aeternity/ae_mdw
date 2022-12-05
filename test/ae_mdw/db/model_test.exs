@@ -9,7 +9,8 @@ defmodule AeMdw.Db.ModelTest do
     test "have mapped records" do
       Model.column_families()
       |> Enum.each(fn table ->
-        assert atom = Model.record(table) and is_atom(atom)
+        assert atom = Model.record(table)
+        assert is_atom(atom)
       end)
     end
   end
