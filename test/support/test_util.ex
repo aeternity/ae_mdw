@@ -4,8 +4,10 @@ defmodule AeMdw.TestUtil do
   """
 
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Database
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.State
+  alias AeMdw.Db.MemStore
   alias Plug.Conn
 
   @spec handle_input((() -> Conn.t())) :: Conn.t() | String.t()
@@ -23,7 +25,7 @@ defmodule AeMdw.TestUtil do
     Conn.assign(conn, :state, State.new(store))
   end
 
-  @spec change_store(Store.t(), [Mutation.t()]) :: Store.t()
+  @spec change_store(MemStore.t(), [Mutation.t()]) :: Store.t()
   def change_store(store, mutations) do
     %{store: store2} =
       mutations
@@ -31,6 +33,8 @@ defmodule AeMdw.TestUtil do
       |> Enum.reduce(State.new(store), fn mutation, state ->
         Mutation.execute(mutation, state)
       end)
+
+    Enum.each(store2.tables, &Database.exists?(elem(&1, 0), nil))
 
     store2
   end
