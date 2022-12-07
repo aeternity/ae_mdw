@@ -3,13 +3,13 @@ defmodule AeMdw.AexnContracts do
   AEX-N detection and common calls to interact with the contract.
   """
 
-  import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1]
-
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.DryRun.Runner
   alias AeMdw.Node.Db, as: NodeDb
   alias AeMdw.Log
+
+  import AeMdw.Util.Encoding, only: [encode_contract: 1]
 
   @typep pubkey :: NodeDb.pubkey()
   @typep height :: AeMdw.Blocks.height()
@@ -102,7 +102,10 @@ defmodule AeMdw.AexnContracts do
         {:ok, return}
 
       {:error, call_error} ->
-        Log.warn("#{method} call error for #{enc_ct(contract_pk)}: #{inspect(call_error)}")
+        Log.warn(
+          "#{method} call error for #{encode_contract(contract_pk)}: #{inspect(call_error)}"
+        )
+
         :error
     end
   end

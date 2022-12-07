@@ -8,7 +8,7 @@ defmodule AeMdw.AexnTokensTest do
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Validate
 
-  import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1]
+  import AeMdw.Util.Encoding, only: [encode_contract: 1]
   import AeMdwWeb.AexnView
 
   require Model
@@ -31,7 +31,7 @@ defmodule AeMdw.AexnTokensTest do
 
       Database.dirty_write(Model.AexnContract, m_aexn)
 
-      contract_id = enc_ct(contract_pk)
+      contract_id = encode_contract(contract_pk)
 
       assert {:ok, m_aex9} = AexnTokens.fetch_contract(state, {:aex9, contract_pk})
 
@@ -65,7 +65,7 @@ defmodule AeMdw.AexnTokensTest do
 
       Database.dirty_write(Model.AexnContract, m_aexn)
 
-      contract_id = enc_ct(contract_pk)
+      contract_id = encode_contract(contract_pk)
 
       assert {:ok, m_aex141} = AexnTokens.fetch_contract(state, {:aex141, contract_pk})
 

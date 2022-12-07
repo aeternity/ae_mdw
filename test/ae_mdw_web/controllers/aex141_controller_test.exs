@@ -9,7 +9,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
   alias AeMdw.Stats
   alias AeMdw.Validate
 
-  import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1, enc_id: 1]
+  import AeMdw.Util.Encoding, only: [encode_contract: 1, encode_account: 1]
   import AeMdw.TestUtil, only: [with_store: 2]
   import Mock
 
@@ -109,7 +109,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
   describe "aex141_contract" do
     test "returns a contract by pubkey", %{conn: %{assigns: %{state: state}} = conn} do
       ct_pk = :crypto.strong_rand_bytes(32)
-      contract_id = enc_ct(ct_pk)
+      contract_id = encode_contract(ct_pk)
       txi = Enum.random(1_000_000..9_999_999)
       limit_txi = txi + 1
 
@@ -169,7 +169,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       conn: %{assigns: %{state: state}} = conn
     } do
       ct_pk = :crypto.strong_rand_bytes(32)
-      contract_id = enc_ct(ct_pk)
+      contract_id = encode_contract(ct_pk)
       txi = Enum.random(1_000_000..9_999_999)
       limit_txi = txi + 1
 
@@ -321,7 +321,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
   describe "nft_owner" do
     test "returns the account that owns a nft", %{conn: conn} do
-      contract_id = enc_ct(<<1_411::256>>)
+      contract_id = encode_contract(<<1_411::256>>)
       account_pk = :crypto.strong_rand_bytes(32)
 
       with_mocks [
@@ -349,7 +349,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
     end
 
     test "returns an error when token doesn't exist", %{conn: conn} do
-      contract_id = enc_ct(<<1_411::256>>)
+      contract_id = encode_contract(<<1_411::256>>)
       error_msg = "invalid return of contract: #{contract_id}"
 
       with_mocks [
@@ -376,14 +376,14 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
   describe "owned-nfts" do
     test "returns an empty list when account owns none", %{conn: conn} do
-      account_id = enc_id(:crypto.strong_rand_bytes(32))
+      account_id = encode_account(:crypto.strong_rand_bytes(32))
 
       assert %{"data" => [], "next" => nil, "prev" => nil} =
                conn |> get("/aex141/owned-nfts/#{account_id}") |> json_response(200)
     end
 
     test "returns a backward list of nfts owned by an account", %{conn: conn} do
-      account_id = enc_id(@owner_pk1)
+      account_id = encode_account(@owner_pk1)
 
       assert %{"data" => nfts, "next" => next} =
                conn
@@ -406,7 +406,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
     end
 
     test "returns a forward list of nfts owned by an account", %{conn: conn} do
-      account_id = enc_id(@owner_pk1)
+      account_id = encode_account(@owner_pk1)
 
       assert %{"data" => nfts, "next" => next} =
                conn
@@ -416,7 +416,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       assert @default_limit = length(nfts)
       assert ^nfts = Enum.sort(nfts)
 
-      contract_ids = [enc_ct(<<1_412::256>>), enc_ct(<<1_413::256>>)]
+      contract_ids = [encode_contract(<<1_412::256>>), encode_contract(<<1_413::256>>)]
 
       assert Enum.any?(nfts, fn %{"owner_id" => owner_id, "contract_id" => ct_id} ->
                owner_id == account_id and ct_id in contract_ids
@@ -441,7 +441,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
   describe "collection_owners" do
     test "returns an empty list when collection has no nft", %{conn: conn} do
-      contract_id = enc_ct(<<1_411::256>>)
+      contract_id = encode_contract(<<1_411::256>>)
 
       assert %{"data" => [], "next" => nil, "prev" => nil} =
                conn
@@ -453,7 +453,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       conn: conn,
       random_owner_pk: random_owner_pk
     } do
-      contract_id = enc_ct(<<1_413::256>>)
+      contract_id = encode_contract(<<1_413::256>>)
 
       assert %{"data" => nfts, "next" => next} =
                conn
@@ -463,7 +463,11 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       assert @default_limit = length(nfts)
       assert ^nfts = Enum.sort_by(nfts, & &1["token_id"])
 
-      owner_ids = [enc_id(@owner_pk1), enc_id(@owner_pk2), enc_id(random_owner_pk)]
+      owner_ids = [
+        encode_account(@owner_pk1),
+        encode_account(@owner_pk2),
+        encode_account(random_owner_pk)
+      ]
 
       assert Enum.all?(nfts, fn %{
                                   "contract_id" => ct_id,
@@ -491,7 +495,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
     end
 
     test "returns collection owners sorted by descending token id", %{conn: conn} do
-      contract_id = enc_ct(<<1_413::256>>)
+      contract_id = encode_contract(<<1_413::256>>)
 
       assert %{"data" => nfts, "next" => next} =
                conn
@@ -514,7 +518,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
   describe "collection_templates" do
     test "returns an empty list when collection has no nft", %{conn: conn} do
-      contract_id = enc_ct(<<1_411::256>>)
+      contract_id = encode_contract(<<1_411::256>>)
 
       assert %{"data" => [], "next" => nil, "prev" => nil} =
                conn
@@ -525,7 +529,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
     test "returns collection templates sorted by ascending ids", %{
       conn: conn
     } do
-      contract_id = enc_ct(<<1_413::256>>)
+      contract_id = encode_contract(<<1_413::256>>)
 
       assert %{"data" => templates, "next" => next} =
                conn
@@ -578,7 +582,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
     end
 
     test "returns collection templates sorted by descending ids", %{conn: conn} do
-      contract_id = enc_ct(<<1_413::256>>)
+      contract_id = encode_contract(<<1_413::256>>)
 
       assert %{"data" => templates, "next" => next} =
                conn

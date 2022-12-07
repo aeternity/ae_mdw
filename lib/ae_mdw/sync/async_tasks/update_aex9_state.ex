@@ -15,6 +15,8 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
   require Model
   require Logger
 
+  import AeMdw.Util.Encoding, only: [encode_contract: 1]
+
   @microsecs 1_000_000
 
   @spec process(args :: list(), done_fn :: fun()) :: :ok
@@ -42,7 +44,9 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
         :ok
       end)
 
-    Log.info("[update_aex9_state] #{enc_ct(contract_pk)} after #{time_delta / @microsecs}s")
+    Log.info(
+      "[update_aex9_state] #{encode_contract(contract_pk)} after #{time_delta / @microsecs}s"
+    )
 
     :ok
   end
@@ -55,7 +59,4 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
       UpdateAex9StateMutation.new(contract_pk, block_index, call_txi, balances)
     end
   end
-
-  defp enc_ct(<<pk::binary-32>>), do: :aeser_api_encoder.encode(:contract_pubkey, pk)
-  defp enc_ct(invalid_pk), do: invalid_pk
 end

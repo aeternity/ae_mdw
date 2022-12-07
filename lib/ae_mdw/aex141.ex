@@ -11,7 +11,8 @@ defmodule AeMdw.Aex141 do
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Util
   alias AeMdw.Txs
-  import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1, enc_id: 1, enc: 2]
+
+  import AeMdw.Util.Encoding
 
   require Model
 
@@ -49,7 +50,7 @@ defmodule AeMdw.Aex141 do
         {:error, exception}
 
       _invalid_call_return ->
-        {:error, ErrInput.ContractReturn.exception(value: enc_ct(contract_pk))}
+        {:error, ErrInput.ContractReturn.exception(value: encode_contract(contract_pk))}
     end
   end
 
@@ -201,8 +202,8 @@ defmodule AeMdw.Aex141 do
   defp render_owned_nfs(nfts) do
     Enum.map(nfts, fn {owner_pk, contract_pk, token_id} ->
       %{
-        contract_id: enc_ct(contract_pk),
-        owner_id: enc_id(owner_pk),
+        contract_id: encode_contract(contract_pk),
+        owner_id: encode_account(owner_pk),
         token_id: token_id
       }
     end)
@@ -216,9 +217,9 @@ defmodule AeMdw.Aex141 do
       tx_hash = Txs.txi_to_hash(state, txi)
 
       %{
-        contract_id: enc_ct(contract_pk),
+        contract_id: encode_contract(contract_pk),
         template_id: template_id,
-        tx_hash: enc(:tx_hash, tx_hash),
+        tx_hash: encode(:tx_hash, tx_hash),
         log_idx: log_idx,
         edition: render_template_edition_limit(state, limit)
       }
@@ -233,7 +234,7 @@ defmodule AeMdw.Aex141 do
     %{
       limit: amount,
       limit_log_idx: log_idx,
-      limit_tx_hash: enc(:tx_hash, tx_hash)
+      limit_tx_hash: encode(:tx_hash, tx_hash)
     }
   end
 
@@ -242,8 +243,8 @@ defmodule AeMdw.Aex141 do
       Model.nft_token_owner(owner: owner_pk) = State.fetch!(state, @owners_table, key)
 
       %{
-        contract_id: enc_ct(contract_pk),
-        owner_id: enc_id(owner_pk),
+        contract_id: encode_contract(contract_pk),
+        owner_id: encode_account(owner_pk),
         token_id: token_id
       }
     end)
@@ -253,7 +254,7 @@ defmodule AeMdw.Aex141 do
     if AexnContracts.is_aex141?(contract_pk) do
       :ok
     else
-      {:error, ErrInput.NotAex141.exception(value: enc_ct(contract_pk))}
+      {:error, ErrInput.NotAex141.exception(value: encode_contract(contract_pk))}
     end
   end
 end

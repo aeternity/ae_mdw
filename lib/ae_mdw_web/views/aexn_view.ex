@@ -13,6 +13,7 @@ defmodule AeMdwWeb.AexnView do
 
   require Model
 
+  import AeMdw.Util.Encoding
   import AeMdwWeb.Helpers.AexnHelper
 
   @typep pubkey :: AeMdw.Node.Db.pubkey()
@@ -61,9 +62,9 @@ defmodule AeMdwWeb.AexnView do
       State.fetch!(state, Model.AexnContract, {:aex9, contract_pk})
 
     %{
-      contract_id: enc_ct(contract_pk),
-      block_hash: enc_block(:micro, block_hash),
-      tx_hash: enc(:tx_hash, tx_hash),
+      contract_id: encode_contract(contract_pk),
+      block_hash: encode_block(:micro, block_hash),
+      tx_hash: encode(:tx_hash, tx_hash),
       tx_index: call_txi,
       tx_type: tx_type,
       height: height,
@@ -76,10 +77,10 @@ defmodule AeMdwWeb.AexnView do
   @spec balance_to_map(tuple(), pubkey(), pubkey()) :: map()
   def balance_to_map({amount, {block_type, height, block_hash}}, contract_pk, account_pk) do
     %{
-      contract_id: enc_ct(contract_pk),
-      block_hash: enc_block(block_type, block_hash),
+      contract_id: encode_contract(contract_pk),
+      block_hash: encode_block(block_type, block_hash),
       height: height,
-      account_id: enc_id(account_pk),
+      account_id: encode_account(account_pk),
       amount: amount
     }
   end
@@ -87,8 +88,8 @@ defmodule AeMdwWeb.AexnView do
   @spec balances_to_map(tuple(), pubkey()) :: map()
   def balances_to_map({amounts, {block_type, height, block_hash}}, contract_pk) do
     %{
-      contract_id: enc_ct(contract_pk),
-      block_hash: enc_block(block_type, block_hash),
+      contract_id: encode_contract(contract_pk),
+      block_hash: encode_block(block_type, block_hash),
       height: height,
       amounts: normalize_balances(amounts)
     }
@@ -105,11 +106,11 @@ defmodule AeMdwWeb.AexnView do
       State.fetch!(state, Model.Block, block_index)
 
     %{
-      contract_id: enc_ct(contract_pk),
-      account_id: enc_id(account_pk),
-      block_hash: enc_block(:micro, block_hash),
+      contract_id: encode_contract(contract_pk),
+      account_id: encode_account(account_pk),
+      block_hash: encode_block(:micro, block_hash),
       height: height,
-      last_tx_hash: enc(:tx_hash, tx_hash),
+      last_tx_hash: encode(:tx_hash, tx_hash),
       last_log_idx: log_idx,
       amount: amount
     }
@@ -174,7 +175,7 @@ defmodule AeMdwWeb.AexnView do
       symbol: symbol,
       decimals: decimals,
       contract_txi: txi,
-      contract_id: enc_ct(contract_pk),
+      contract_id: encode_contract(contract_pk),
       extensions: extensions
     }
   end
@@ -191,7 +192,7 @@ defmodule AeMdwWeb.AexnView do
       symbol: symbol,
       base_url: base_url,
       contract_txi: txi,
-      contract_id: enc_ct(contract_pk),
+      contract_id: encode_contract(contract_pk),
       metadata_type: metadata_type,
       extensions: extensions,
       limits: Aex141.fetch_limits(state, contract_pk)
@@ -211,14 +212,14 @@ defmodule AeMdwWeb.AexnView do
 
     Map.put(
       %{
-        sender: enc_id(sender_pk),
-        recipient: enc_id(recipient_pk),
+        sender: encode_account(sender_pk),
+        recipient: encode_account(recipient_pk),
         call_txi: call_txi,
         log_idx: log_idx,
         block_height: kbi,
         micro_index: mbi,
         micro_time: micro_time,
-        contract_id: enc_ct(contract_pk),
+        contract_id: encode_contract(contract_pk),
         tx_hash: :aeser_api_encoder.encode(:tx_hash, hash)
       },
       aexn_key,

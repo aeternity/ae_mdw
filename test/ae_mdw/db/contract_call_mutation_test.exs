@@ -11,7 +11,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
   import AeMdw.Node.ContractCallFixtures
   import AeMdw.Node.AexnEventFixtures, only: [aexn_event_hash: 1]
-  import AeMdwWeb.Helpers.AexnHelper, only: [enc_id: 1]
+  import AeMdw.Util.Encoding, only: [encode_account: 1]
 
   import Mock
   require Model
@@ -121,7 +121,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         arguments: [
           %{
             type: :address,
-            value: enc_id(account_pk)
+            value: encode_account(account_pk)
           },
           %{
             type: :int,
@@ -217,7 +217,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         arguments: [
           %{
             type: :address,
-            value: enc_id(account_pk)
+            value: encode_account(account_pk)
           },
           %{
             type: :int,
@@ -307,7 +307,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         arguments: [
           %{
             type: :address,
-            value: enc_id(account_pk)
+            value: encode_account(account_pk)
           },
           %{
             type: :int,
@@ -398,7 +398,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         arguments: [
           %{
             type: :address,
-            value: enc_id(to_pk)
+            value: encode_account(to_pk)
           },
           %{
             type: :int,
@@ -586,7 +586,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         arguments: [
           %{
             type: :address,
-            value: enc_id(to_pk)
+            value: encode_account(to_pk)
           },
           %{type: :int, value: token_id}
         ],
@@ -641,7 +641,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         arguments: [
           %{
             type: :address,
-            value: enc_id(to_pk)
+            value: encode_account(to_pk)
           },
           %{type: :int, value: template_id},
           %{type: :int, value: token_id}
@@ -703,7 +703,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         arguments: [
           %{
             type: :address,
-            value: enc_id(to_pk)
+            value: encode_account(to_pk)
           },
           %{type: :string, value: "ipfs://some-hash"}
         ],
@@ -765,7 +765,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         arguments: [
           %{
             type: :address,
-            value: enc_id(to_pk)
+            value: encode_account(to_pk)
           },
           %{type: :string, value: "ipfs://some-hash"}
         ],
@@ -896,7 +896,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         arguments: [
           %{
             type: :address,
-            value: enc_id(to_pk)
+            value: encode_account(to_pk)
           },
           %{type: :string, value: "ipfs://some-hash"}
         ],
@@ -1110,11 +1110,11 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         arguments: [
           %{
             type: :address,
-            value: enc_id(from_pk)
+            value: encode_account(from_pk)
           },
           %{
             type: :address,
-            value: enc_id(to_pk)
+            value: encode_account(to_pk)
           },
           %{type: :int, value: token_id}
         ],

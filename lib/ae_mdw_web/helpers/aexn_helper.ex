@@ -1,7 +1,14 @@
 defmodule AeMdwWeb.Helpers.AexnHelper do
   @moduledoc """
-  Used to format aex9 related info
+  Helper functions for AEX-9 and AEX-141
   """
+
+  alias AeMdw.AexnContracts
+  alias AeMdw.Error
+  alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Validate
+
+  import AeMdw.Util.Encoding, only: [encode_account: 1]
 
   @max_sort_field_length 100
 
@@ -11,19 +18,9 @@ defmodule AeMdwWeb.Helpers.AexnHelper do
   def normalize_balances(bals) do
     for {{:address, pk}, amt} <- bals, reduce: %{} do
       acc ->
-        Map.put(acc, enc_id(pk), amt)
+        Map.put(acc, encode_account(pk), amt)
     end
   end
-
-  @spec enc_block(atom(), binary()) :: String.t()
-  def enc_block(:key, hash), do: :aeser_api_encoder.encode(:key_block_hash, hash)
-  def enc_block(:micro, hash), do: :aeser_api_encoder.encode(:micro_block_hash, hash)
-
-  @spec enc_ct(pubkey()) :: String.t()
-  def enc_ct(pk), do: :aeser_api_encoder.encode(:contract_pubkey, pk)
-
-  @spec enc_id(pubkey()) :: String.t()
-  def enc_id(pk), do: :aeser_api_encoder.encode(:account_pubkey, pk)
 
   @spec sort_field_truncate(String.t() | atom()) :: String.t()
   def sort_field_truncate(field_value) when is_atom(field_value), do: field_value
@@ -36,6 +33,17 @@ defmodule AeMdwWeb.Helpers.AexnHelper do
     end
   end
 
-  @spec enc(atom(), pubkey()) :: String.t()
-  defdelegate enc(type, pk), to: :aeser_api_encoder, as: :encode
+  @spec validate_aex9(String.t()) :: {:ok, pubkey()} | {:error, Error.t()}
+  def validate_aex9(contract_id) do
+    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
+         true <- AexnContracts.is_aex9?(contract_pk) do
+      {:ok, contract_pk}
+    else
+      {:error, reason} ->
+        {:error, reason}
+
+      false ->
+        {:error, ErrInput.NotAex9.exception(value: contract_id)}
+    end
+  end
 end

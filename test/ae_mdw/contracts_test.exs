@@ -50,7 +50,7 @@ defmodule AeMdw.ContractsTest do
       assert {:ok, _prev, [log1, log2], _next} =
                Contracts.fetch_logs(state, {:forward, false, 100, false}, nil, %{}, nil)
 
-      contract_id = encode_ct(contract_pk)
+      contract_id = encode_contract(contract_pk)
       contract_tx_hash = encode_to_hash(state, create_txi)
       call_tx_hash = encode_to_hash(state, call_txi)
       mb_hash = encode(:micro_block_hash, block_hash)
@@ -143,9 +143,9 @@ defmodule AeMdw.ContractsTest do
       assert {:ok, _prev, [log1, log2], _next} =
                Contracts.fetch_logs(state, {:forward, false, 100, false}, nil, %{}, nil)
 
-      contract_id = encode_ct(contract_pk)
+      contract_id = encode_contract(contract_pk)
       contract_tx_hash = encode_to_hash(state, create_txi)
-      remote_id = encode_ct(remote_pk)
+      remote_id = encode_contract(remote_pk)
       remote_tx_hash = encode_to_hash(state, remote_txi)
 
       call_tx_hash = encode_to_hash(state, call_txi)

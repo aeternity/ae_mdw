@@ -90,7 +90,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                          } ->
         assert create_txi == call_txi - 100 or create_txi == contract_create_txi
         assert contract_tx_hash == encode(:tx_hash, Txs.txi_to_hash(state, create_txi))
-        assert contract_id == enc_ct(Origin.pubkey(state, {:contract, create_txi}))
+        assert contract_id == encode_contract(Origin.pubkey(state, {:contract, create_txi}))
         assert call_tx_hash == encode(:tx_hash, Txs.txi_to_hash(state, call_txi))
         assert args == [to_string(call_txi)]
         assert data == "0x" <> Integer.to_string(call_txi, 16)
@@ -195,7 +195,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       store: store,
       contract_pk: contract_pk
     } do
-      contract_id = enc_ct(contract_pk)
+      contract_id = encode_contract(contract_pk)
 
       assert %{"data" => logs, "next" => next} =
                conn
@@ -300,7 +300,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       store: store,
       contract_pk: contract_pk
     } do
-      contract_id = enc_ct(contract_pk)
+      contract_id = encode_contract(contract_pk)
       # data = "0xF4270"
       first_txi = @first_log_txi + 47
       data_prefix = ("0x" <> Integer.to_string(first_txi, 16)) |> String.slice(0, 6)
@@ -415,7 +415,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                           } ->
         assert contract_txi == call_txi - 100 or contract_txi == contract_create_txi
         assert contract_tx_hash == encode(:tx_hash, <<contract_txi::256>>)
-        assert contract_id == enc_ct(Origin.pubkey(state, {:contract, contract_txi}))
+        assert contract_id == encode_contract(Origin.pubkey(state, {:contract, contract_txi}))
         assert call_tx_hash == encode(:tx_hash, <<call_txi::256>>)
 
         if call_txi == hd(calls)["call_txi"] do
@@ -430,8 +430,8 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                  "amount" => 1_000_000_000_000_000_000,
                  "fee" => 0,
                  "nonce" => 0,
-                 "recipient_id" => enc_id(<<call_txi::256>>),
-                 "sender_id" => enc_id(@sender_pk),
+                 "recipient_id" => encode_account(<<call_txi::256>>),
+                 "sender_id" => encode_account(@sender_pk),
                  "type" => "SpendTx",
                  "version" => 1
                }
@@ -536,7 +536,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       store: store,
       contract_pk: contract_pk
     } do
-      contract_id = enc_ct(contract_pk)
+      contract_id = encode_contract(contract_pk)
 
       assert %{"data" => calls, "next" => next} =
                conn
@@ -575,8 +575,8 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                  "fee" => 0,
                  "nonce" => 0,
                  "payload" => "ba_Q2hhaW4uc3BlbmRFa4Tl",
-                 "recipient_id" => enc_id(<<call_txi::256>>),
-                 "sender_id" => enc_id(@sender_pk),
+                 "recipient_id" => encode_account(<<call_txi::256>>),
+                 "sender_id" => encode_account(@sender_pk),
                  "type" => "SpendTx",
                  "version" => 1
                }
@@ -615,9 +615,9 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       store: store,
       contract_pk: contract_pk
     } do
-      contract_id = enc_ct(contract_pk)
+      contract_id = encode_contract(contract_pk)
       expected_call_txi = @first_call_txi + div(@mixed_calls_amount, 2)
-      recipient_id = enc_id(<<expected_call_txi::256>>)
+      recipient_id = encode_account(<<expected_call_txi::256>>)
 
       assert %{"data" => calls, "next" => nil} =
                conn
@@ -653,8 +653,8 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                  "fee" => 0,
                  "nonce" => 0,
                  "payload" => "ba_Q2hhaW4uc3BlbmRFa4Tl",
-                 "recipient_id" => enc_id(<<call_txi::256>>),
-                 "sender_id" => enc_id(@sender_pk),
+                 "recipient_id" => encode_account(<<call_txi::256>>),
+                 "sender_id" => encode_account(@sender_pk),
                  "type" => "SpendTx",
                  "version" => 1
                }
@@ -671,7 +671,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       store: store
     } do
       expected_call_txi = @first_call_txi + 1
-      recipient_id = enc_id(<<expected_call_txi::256>>)
+      recipient_id = encode_account(<<expected_call_txi::256>>)
 
       assert %{"data" => calls, "next" => nil} =
                conn
@@ -698,7 +698,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                           } ->
         assert contract_txi == contract_create_txi
         assert contract_tx_hash == encode(:tx_hash, <<contract_txi::256>>)
-        assert ct_id == enc_ct(contract_pk)
+        assert ct_id == encode_contract(contract_pk)
         assert call_txi == expected_call_txi
         assert call_tx_hash == encode(:tx_hash, <<call_txi::256>>)
         assert function == @call_function
@@ -708,8 +708,8 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                  "fee" => 0,
                  "nonce" => 0,
                  "payload" => "ba_Q2hhaW4uc3BlbmRFa4Tl",
-                 "recipient_id" => enc_id(<<call_txi::256>>),
-                 "sender_id" => enc_id(@sender_pk),
+                 "recipient_id" => encode_account(<<call_txi::256>>),
+                 "sender_id" => encode_account(@sender_pk),
                  "type" => "SpendTx",
                  "version" => 1
                }
@@ -777,9 +777,6 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                |> json_response(400)
     end
   end
-
-  defp enc_ct(pk), do: :aeser_api_encoder.encode(:contract_pubkey, pk)
-  defp enc_id(pk), do: :aeser_api_encoder.encode(:account_pubkey, pk)
 
   defp logs_setup(store, contract_pk) do
     block_index1 = {100, 1}
