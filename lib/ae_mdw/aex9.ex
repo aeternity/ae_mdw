@@ -15,7 +15,7 @@ defmodule AeMdw.Aex9 do
   alias AeMdw.Util
   alias AeMdw.Validate
 
-  import AeMdw.Util.Encoding, only: [encode_contract: 1, encode_account: 1]
+  import AeMdw.Util.Encoding
 
   require Model
 
@@ -152,9 +152,9 @@ defmodule AeMdw.Aex9 do
           info = Format.to_raw_map(state, tx_idx)
 
           %{
-            contract_id: :aeser_api_encoder.encode(:contract_pubkey, contract_pk),
-            block_hash: :aeser_api_encoder.encode(:micro_block_hash, info.block_hash),
-            tx_hash: :aeser_api_encoder.encode(:tx_hash, info.hash),
+            contract_id: encode_contract(contract_pk),
+            block_hash: encode(:micro_block_hash, info.block_hash),
+            tx_hash: encode(:tx_hash, info.hash),
             tx_index: call_txi,
             tx_type: info.tx.type,
             height: info.block_height,
@@ -243,8 +243,8 @@ defmodule AeMdw.Aex9 do
 
   defp render_balance(contract_pk, {:address, account_pk}, amount) do
     %{
-      contract: :aeser_api_encoder.encode(:contract_pubkey, contract_pk),
-      account: :aeser_api_encoder.encode(:account_pubkey, account_pk),
+      contract: encode_contract(contract_pk),
+      account: encode_account(account_pk),
       amount: amount
     }
   end
