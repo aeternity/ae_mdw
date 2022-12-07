@@ -7,20 +7,20 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.NullStore
 
-  import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1, enc_id: 1]
+  import AeMdw.Util.Encoding, only: [encode_contract: 1, encode_account: 1]
 
   require Model
 
   @contract_pk1 :crypto.strong_rand_bytes(32)
   @contract_pk2 :crypto.strong_rand_bytes(32)
-  @contracts [enc_ct(@contract_pk1), enc_ct(@contract_pk2)]
+  @contracts [encode_contract(@contract_pk1), encode_contract(@contract_pk2)]
 
   @from_pk1 :crypto.strong_rand_bytes(32)
   @from_pk2 :crypto.strong_rand_bytes(32)
   @to_pk1 :crypto.strong_rand_bytes(32)
   @to_pk2 :crypto.strong_rand_bytes(32)
-  @senders [enc_id(@from_pk1), enc_id(@from_pk2)]
-  @recipients [enc_id(@to_pk1), enc_id(@to_pk2)]
+  @senders [encode_account(@from_pk1), encode_account(@from_pk2)]
+  @recipients [encode_account(@to_pk1), encode_account(@to_pk2)]
 
   @default_limit 10
   @aexn_type_sample 1_000
@@ -108,7 +108,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
 
   describe "aex9_transfers_from" do
     test "gets aex9 transfers sorted by desc txi", %{conn: conn, store: store} do
-      sender_id = enc_id(@from_pk1)
+      sender_id = encode_account(@from_pk1)
 
       assert %{"data" => aex9_transfers, "next" => next} =
                conn
@@ -133,7 +133,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
     end
 
     test "gets aex9 transfers sorted by asc txi", %{conn: conn, store: store} do
-      sender_id = enc_id(@from_pk2)
+      sender_id = encode_account(@from_pk2)
 
       assert %{"data" => aex9_transfers, "next" => next} =
                conn
@@ -158,7 +158,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
     end
 
     test "returns empty list when no transfer exists", %{conn: conn} do
-      account_id_without_transfer = enc_id(:crypto.strong_rand_bytes(32))
+      account_id_without_transfer = encode_account(:crypto.strong_rand_bytes(32))
 
       assert %{"prev" => nil, "data" => [], "next" => nil} =
                conn
@@ -177,7 +177,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
 
   describe "aex9_transfers_to" do
     test "gets aex9 transfers sorted by desc txi", %{conn: conn, store: store} do
-      recipient_id = enc_id(@to_pk1)
+      recipient_id = encode_account(@to_pk1)
 
       assert %{"data" => aex9_transfers, "next" => next} =
                conn
@@ -202,7 +202,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
     end
 
     test "gets aex9 transfers sorted by asc txi", %{conn: conn, store: store} do
-      recipient_id = enc_id(@to_pk2)
+      recipient_id = encode_account(@to_pk2)
 
       assert %{"data" => aex9_transfers, "next" => next} =
                conn
@@ -227,7 +227,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
     end
 
     test "returns empty list when no transfer exists", %{conn: conn} do
-      account_id_without_transfer = enc_id(:crypto.strong_rand_bytes(32))
+      account_id_without_transfer = encode_account(:crypto.strong_rand_bytes(32))
 
       assert %{"prev" => nil, "data" => [], "next" => nil} =
                conn
@@ -246,8 +246,8 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
 
   describe "aex9_transfers_from_to" do
     test "gets aex9 transfers sorted by desc txi", %{conn: conn, store: store} do
-      sender_id = enc_id(@from_pk1)
-      recipient_id = enc_id(@to_pk2)
+      sender_id = encode_account(@from_pk1)
+      recipient_id = encode_account(@to_pk2)
 
       assert %{"data" => aex9_transfers, "next" => next} =
                conn
@@ -276,8 +276,8 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
     end
 
     test "gets aex9 transfers sorted by asc txi", %{conn: conn, store: store} do
-      sender_id = enc_id(@from_pk2)
-      recipient_id = enc_id(@to_pk1)
+      sender_id = encode_account(@from_pk2)
+      recipient_id = encode_account(@to_pk1)
 
       assert %{"data" => aex9_transfers, "next" => next} =
                conn
@@ -308,12 +308,12 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
     end
 
     test "returns empty list when no transfer exists", %{conn: conn} do
-      account_id_without_transfer = enc_id(:crypto.strong_rand_bytes(32))
+      account_id_without_transfer = encode_account(:crypto.strong_rand_bytes(32))
 
       assert %{"prev" => nil, "data" => [], "next" => nil} =
                conn
                |> get(
-                 "/v2/aex9/transfers/from-to/#{account_id_without_transfer}/#{enc_id(@to_pk1)}"
+                 "/v2/aex9/transfers/from-to/#{account_id_without_transfer}/#{encode_account(@to_pk1)}"
                )
                |> json_response(200)
     end
@@ -324,14 +324,14 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/aex9/transfers/from-to/#{invalid_id}/#{enc_id(@to_pk1)}")
+               |> get("/v2/aex9/transfers/from-to/#{invalid_id}/#{encode_account(@to_pk1)}")
                |> json_response(400)
     end
   end
 
   describe "aex141_transfers_from" do
     test "gets aex141 transfers sorted by desc txi", %{conn: conn, store: store} do
-      sender_id = enc_id(@from_pk1)
+      sender_id = encode_account(@from_pk1)
 
       assert %{"data" => aex141_transfers, "next" => next} =
                conn
@@ -359,7 +359,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
     end
 
     test "gets aex141 transfers sorted by asc txi", %{conn: conn, store: store} do
-      sender_id = enc_id(@from_pk2)
+      sender_id = encode_account(@from_pk2)
 
       assert %{"data" => aex141_transfers, "next" => next} =
                conn
@@ -390,8 +390,8 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       conn: conn,
       store: store
     } do
-      sender_id = enc_id(@from_pk2)
-      contract_id = enc_ct(@contract_pk1)
+      sender_id = encode_account(@from_pk2)
+      contract_id = encode_contract(@contract_pk1)
       limit = 3
 
       assert %{"data" => aex141_transfers, "next" => next} =
@@ -431,7 +431,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
     end
 
     test "returns empty list when no transfer exists", %{conn: conn} do
-      account_id_without_transfer = enc_id(:crypto.strong_rand_bytes(32))
+      account_id_without_transfer = encode_account(:crypto.strong_rand_bytes(32))
 
       assert %{"prev" => nil, "data" => [], "next" => nil} =
                conn
@@ -450,7 +450,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
 
   describe "aex141_transfers_to" do
     test "gets aex141 transfers sorted by desc txi", %{conn: conn, store: store} do
-      recipient_id = enc_id(@to_pk1)
+      recipient_id = encode_account(@to_pk1)
 
       assert %{"data" => aex141_transfers, "next" => next} =
                conn
@@ -478,7 +478,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
     end
 
     test "gets aex141 transfers sorted by asc txi", %{conn: conn, store: store} do
-      recipient_id = enc_id(@to_pk2)
+      recipient_id = encode_account(@to_pk2)
 
       assert %{"data" => aex141_transfers, "next" => next} =
                conn
@@ -509,8 +509,8 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       conn: conn,
       store: store
     } do
-      recipient_id = enc_id(@to_pk2)
-      contract_id = enc_ct(@contract_pk2)
+      recipient_id = encode_account(@to_pk2)
+      contract_id = encode_contract(@contract_pk2)
       limit = 3
 
       assert %{"data" => aex141_transfers, "next" => next} =
@@ -550,7 +550,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
     end
 
     test "returns empty list when no transfer exists", %{conn: conn} do
-      account_id_without_transfer = enc_id(:crypto.strong_rand_bytes(32))
+      account_id_without_transfer = encode_account(:crypto.strong_rand_bytes(32))
 
       assert %{"prev" => nil, "data" => [], "next" => nil} =
                conn
@@ -569,8 +569,8 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
 
   describe "aex141_transfers_from_to" do
     test "gets aex141 transfers sorted by desc txi", %{conn: conn, store: store} do
-      sender_id = enc_id(@from_pk1)
-      recipient_id = enc_id(@to_pk2)
+      sender_id = encode_account(@from_pk1)
+      recipient_id = encode_account(@to_pk2)
 
       assert %{"data" => aex141_transfers, "next" => next} =
                conn
@@ -605,8 +605,8 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
     end
 
     test "gets aex141 transfers sorted by asc txi", %{conn: conn, store: store} do
-      sender_id = enc_id(@from_pk2)
-      recipient_id = enc_id(@to_pk1)
+      sender_id = encode_account(@from_pk2)
+      recipient_id = encode_account(@to_pk1)
 
       assert %{"data" => aex141_transfers, "next" => next} =
                conn
@@ -643,12 +643,12 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
     end
 
     test "returns empty list when no transfer exists", %{conn: conn} do
-      account_id_without_transfer = enc_id(:crypto.strong_rand_bytes(32))
+      account_id_without_transfer = encode_account(:crypto.strong_rand_bytes(32))
 
       assert %{"prev" => nil, "data" => [], "next" => nil} =
                conn
                |> get(
-                 "/v2/aex141/transfers/from-to/#{account_id_without_transfer}/#{enc_id(@to_pk1)}"
+                 "/v2/aex141/transfers/from-to/#{account_id_without_transfer}/#{encode_account(@to_pk1)}"
                )
                |> json_response(200)
     end
@@ -659,14 +659,14 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/aex141/transfers/from-to/#{invalid_id}/#{enc_id(@to_pk1)}")
+               |> get("/v2/aex141/transfers/from-to/#{invalid_id}/#{encode_account(@to_pk1)}")
                |> json_response(400)
     end
   end
 
   describe "aex141_transfers" do
     test "gets aex141 transfers sorted by desc txi", %{conn: conn, store: store} do
-      contract_id = enc_ct(@contract_pk1)
+      contract_id = encode_contract(@contract_pk1)
 
       assert %{"data" => aex141_transfers, "next" => next} =
                conn
@@ -694,7 +694,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
     end
 
     test "gets aex141 transfers sorted by asc txi", %{conn: conn, store: store} do
-      contract_id = enc_ct(@contract_pk2)
+      contract_id = encode_contract(@contract_pk2)
 
       assert %{"data" => aex141_transfers, "next" => next} =
                conn
@@ -722,7 +722,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
     end
 
     test "returns not found for unknown contract", %{conn: conn} do
-      unknown_id = enc_ct(:crypto.strong_rand_bytes(32))
+      unknown_id = encode_contract(:crypto.strong_rand_bytes(32))
       error_message = "not found: #{unknown_id}"
 
       assert %{"error" => ^error_message} =

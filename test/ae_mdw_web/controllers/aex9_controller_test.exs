@@ -7,7 +7,6 @@ defmodule AeMdwWeb.Aex9ControllerTest do
   alias AeMdw.Db.NullStore
   alias AeMdw.Validate
 
-  import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1, enc_id: 1, enc_block: 2]
   import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3]
   import AeMdw.TestUtil, only: [with_store: 2]
   import AeMdw.Util.Encoding
@@ -18,7 +17,7 @@ defmodule AeMdwWeb.Aex9ControllerTest do
 
   require Model
 
-  @aex9_token_id enc_ct(<<100::256>>)
+  @aex9_token_id encode_contract(<<100::256>>)
 
   setup_all do
     store =
@@ -116,7 +115,7 @@ defmodule AeMdwWeb.Aex9ControllerTest do
 
   describe "balance_range" do
     test "validates the range", %{conn: conn} do
-      account_id = enc_id(:crypto.strong_rand_bytes(32))
+      account_id = encode_account(:crypto.strong_rand_bytes(32))
       last_kbi = 11
       range = "1-#{last_kbi}"
       error_msg = "invalid range: max range length is 10"
@@ -135,8 +134,8 @@ defmodule AeMdwWeb.Aex9ControllerTest do
 
   describe "balance" do
     test "returns 400 when contract is unknown", %{conn: conn} do
-      contract_id = enc_ct(:crypto.strong_rand_bytes(32))
-      account_id = enc_id(:crypto.strong_rand_bytes(32))
+      contract_id = encode_contract(:crypto.strong_rand_bytes(32))
+      account_id = encode_account(:crypto.strong_rand_bytes(32))
 
       assert %{"error" => <<"not AEX9 contract: ", ^contract_id::binary>>} =
                conn
@@ -154,9 +153,9 @@ defmodule AeMdwWeb.Aex9ControllerTest do
           txi = Enum.random(1_000_000..10_000_000)
 
           %{
-            "block_hash" => enc_block(:micro, :crypto.strong_rand_bytes(32)),
+            "block_hash" => encode_block(:micro, :crypto.strong_rand_bytes(32)),
             "amount" => Enum.random(100_000_000..999_000_000),
-            "contract_id" => enc_ct(:crypto.strong_rand_bytes(32)),
+            "contract_id" => encode_contract(:crypto.strong_rand_bytes(32)),
             "height" => div(txi, 1_000),
             "token_name" => "name#{i}",
             "token_symbol" => "symbol#{i}",
@@ -189,9 +188,8 @@ defmodule AeMdwWeb.Aex9ControllerTest do
             )
 
           m_balance =
-            Model.aex9_balance(
+            Model.aex9_event_balance(
               index: {contract_pk, account_pk},
-              block_index: {height, 0},
               txi: txi,
               amount: amount
             )
@@ -201,7 +199,7 @@ defmodule AeMdwWeb.Aex9ControllerTest do
           store_acc
           |> Store.put(Model.Tx, Model.tx(index: txi, id: tx_hash, block_index: {height, 0}))
           |> Store.put(Model.AexnContract, m_contract)
-          |> Store.put(Model.Aex9Balance, m_balance)
+          |> Store.put(Model.Aex9EventBalance, m_balance)
           |> Store.put(Model.Aex9AccountPresence, m_presence)
         end)
 
@@ -224,7 +222,7 @@ defmodule AeMdwWeb.Aex9ControllerTest do
         assert balances_data =
                  conn
                  |> with_store(store)
-                 |> get("/aex9/balances/account/#{enc_id(account_pk)}")
+                 |> get("/aex9/balances/account/#{encode_account(account_pk)}")
                  |> json_response(200)
 
         assert ^balances_data = Enum.sort_by(balances_data, & &1["tx_index"], :desc)
@@ -251,9 +249,9 @@ defmodule AeMdwWeb.Aex9ControllerTest do
         )
 
       balance1 = %{
-        "block_hash" => enc_block(:micro, mb_hash1),
+        "block_hash" => encode_block(:micro, mb_hash1),
         "amount" => 1_000_001,
-        "contract_id" => enc_ct(contract_pk1),
+        "contract_id" => encode_contract(contract_pk1),
         "height" => path_height - 1,
         "token_name" => "name#{1}",
         "token_symbol" => "symbol#{1}",
@@ -263,9 +261,9 @@ defmodule AeMdwWeb.Aex9ControllerTest do
       }
 
       balance2 = %{
-        "block_hash" => enc_block(:micro, mb_hash2),
+        "block_hash" => encode_block(:micro, mb_hash2),
         "amount" => 1_000_002,
-        "contract_id" => enc_ct(contract_pk2),
+        "contract_id" => encode_contract(contract_pk2),
         "height" => path_height - 2,
         "token_name" => "name#{2}",
         "token_symbol" => "symbol#{2}",
@@ -339,7 +337,7 @@ defmodule AeMdwWeb.Aex9ControllerTest do
         assert balances_data =
                  conn
                  |> with_store(store)
-                 |> get("/aex9/balances/gen/#{path_height}/account/#{enc_id(account_pk)}")
+                 |> get("/aex9/balances/gen/#{path_height}/account/#{encode_account(account_pk)}")
                  |> json_response(200)
 
         assert ^balances_data = Enum.sort_by(balances_data, & &1["tx_index"], :desc)

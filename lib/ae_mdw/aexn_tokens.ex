@@ -11,7 +11,8 @@ defmodule AeMdw.AexnTokens do
   alias AeMdw.Node.Db
   alias AeMdw.Util
 
-  import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1, sort_field_truncate: 1]
+  import AeMdw.Util.Encoding, only: [encode_contract: 1]
+  import AeMdwWeb.Helpers.AexnHelper, only: [sort_field_truncate: 1]
 
   require Model
 
@@ -38,7 +39,7 @@ defmodule AeMdw.AexnTokens do
         {:ok, m_aexn}
 
       :not_found ->
-        {:error, ErrInput.NotFound.exception(value: enc_ct(contract_pk))}
+        {:error, ErrInput.NotFound.exception(value: encode_contract(contract_pk))}
     end
   end
 

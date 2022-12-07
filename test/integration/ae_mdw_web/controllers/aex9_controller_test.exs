@@ -8,8 +8,6 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
   alias AeMdw.Db.State
   alias AeMdw.Validate
 
-  import AeMdwWeb.Helpers.AexnHelper
-
   require Model
 
   @moduletag :integration
@@ -65,7 +63,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
       |> Database.all_keys()
       |> Enum.filter(fn {type, _pubkey} -> type == :aex9 end)
       |> Enum.each(fn {:aex9, aex9_pubkey} ->
-        contract_id = enc_ct(aex9_pubkey)
+        contract_id = encode_contract(aex9_pubkey)
 
         response =
           conn
@@ -277,14 +275,14 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
       |> Enum.filter(fn {type, _pubkey} -> type == :aex9 end)
       |> Enum.filter(fn {:aex9, contract_pk} ->
         Origin.tx_index!(state, {:contract, contract_pk}) < range_txi and
-          enc_ct(contract_pk) not in [
+          encode_contract(contract_pk) not in [
             @big_balance_contract_id1,
             @big_balance_contract_id2,
             @big_balance_contract_id3
           ]
       end)
       |> Enum.each(fn {:aex9, aex9_pubkey} ->
-        contract_id = enc_ct(aex9_pubkey)
+        contract_id = encode_contract(aex9_pubkey)
 
         path =
           Routes.aex9_path(
@@ -388,7 +386,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
       Model.AexnContract
       |> Database.all_keys()
       |> Enum.filter(fn {type, _pubkey} -> type == :aex9 end)
-      |> Enum.map(fn {:aex9, ct_pk} -> enc_ct(ct_pk) end)
+      |> Enum.map(fn {:aex9, ct_pk} -> encode_contract(ct_pk) end)
       |> Enum.zip(mb_hashes)
       |> Enum.filter(fn {contract_id, {_mb_hash, mb_txi}} ->
         ct_pk = Validate.id!(contract_id)
@@ -515,7 +513,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
       not_empty_balance_contracts =
         Enum.filter(aex9_pubkeys, fn {:aex9, contract_pk} ->
-          contract_id = enc_ct(contract_pk)
+          contract_id = encode_contract(contract_pk)
           conn = get(conn, "/aex9/balances/#{contract_id}")
 
           assert %{
@@ -619,7 +617,7 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
              Database.next_key(Model.Aex9AccountPresence, prev_key) do
         assert :not_found = Database.fetch(Model.Aex9Balance, {contract_pk, account_pk})
 
-        conn = get(conn, "/aex9/balances/account/#{enc_id(account_pk)}")
+        conn = get(conn, "/aex9/balances/account/#{encode_account(account_pk)}")
         assert balances_response = json_response(conn, 200)
         assert length(balances_response) > 0
 

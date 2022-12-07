@@ -10,7 +10,7 @@ defmodule AeMdwWeb.BlockControllerTest do
 
   import Mock
   import AeMdwWeb.BlockchainSim
-  import AeMdwWeb.Helpers.AexnHelper, only: [enc_block: 2]
+  import AeMdw.Util.Encoding, only: [encode_block: 2]
 
   require Model
 
@@ -472,7 +472,7 @@ defmodule AeMdwWeb.BlockControllerTest do
     end
 
     test "renders not found when hash is unknown", %{conn: conn} do
-      unknown_kb_hash = enc_block(:key, :crypto.strong_rand_bytes(32))
+      unknown_kb_hash = encode_block(:key, :crypto.strong_rand_bytes(32))
       error_msg = "not found: #{unknown_kb_hash}"
 
       assert %{"error" => ^error_msg} =

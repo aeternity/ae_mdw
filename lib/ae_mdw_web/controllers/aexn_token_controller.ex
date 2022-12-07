@@ -10,6 +10,7 @@ defmodule AeMdwWeb.AexnTokenController do
   alias Plug.Conn
 
   import AeMdwWeb.AexnView
+  import AeMdwWeb.Helpers.AexnHelper, only: [validate_aex9: 1]
 
   use AeMdwWeb, :controller
 
@@ -45,7 +46,7 @@ defmodule AeMdwWeb.AexnTokenController do
       pagination: pagination
     } = assigns
 
-    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
+    with {:ok, contract_pk} <- validate_aex9(contract_id),
          {:ok, prev_cursor, balance_keys, next_cursor} <-
            Aex9.fetch_event_balances(state, contract_pk, pagination, cursor) do
       balances = Enum.map(balance_keys, &render_event_balance(state, &1))
@@ -54,28 +55,14 @@ defmodule AeMdwWeb.AexnTokenController do
     end
   end
 
-  @spec aex9_token_balances(Conn.t(), map()) :: Conn.t()
-  def aex9_token_balances(%Conn{assigns: assigns} = conn, %{"contract_id" => contract_id}) do
-    %{
-      cursor: cursor,
-      pagination: pagination
-    } = assigns
-
-    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
-         {:ok, prev_cursor, balances, next_cursor} <-
-           Aex9.fetch_chain_balances(contract_pk, pagination, cursor) do
-      Util.paginate(conn, prev_cursor, balances, next_cursor)
-    end
-  end
-
   @spec aex9_token_balance(Conn.t(), map()) :: Conn.t()
-  def aex9_token_balance(%Conn{assigns: %{state: state}} = conn, %{
+  def aex9_token_balance(conn, %{
         "contract_id" => contract_id,
         "account_id" => account_id
       }) do
-    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
+    with {:ok, contract_pk} <- validate_aex9(contract_id),
          {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
-         {:ok, balance} <- Aex9.fetch_balance(state, contract_pk, account_pk) do
+         {:ok, balance} <- Aex9.fetch_balance(contract_pk, account_pk) do
       json(conn, balance)
     end
   end
@@ -98,7 +85,7 @@ defmodule AeMdwWeb.AexnTokenController do
       }) do
     %{pagination: pagination, cursor: cursor, scope: scope, state: state} = assigns
 
-    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
+    with {:ok, contract_pk} <- validate_aex9(contract_id),
          {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
          {:ok, prev_cursor, balance_history_items, next_cursor} <-
            Aex9.fetch_balance_history(state, contract_pk, account_pk, scope, cursor, pagination) do
@@ -116,12 +103,16 @@ defmodule AeMdwWeb.AexnTokenController do
          query_params,
          aexn_type
        ) do
-    case AexnTokens.fetch_contracts(state, pagination, aexn_type, query_params, order_by, cursor) do
-      {:ok, prev_cursor, aexn_contracts, next_cursor} ->
-        Util.paginate(conn, prev_cursor, render_contracts(state, aexn_contracts), next_cursor)
-
-      {:error, reason} ->
-        {:error, reason}
+    with {:ok, prev_cursor, aexn_contracts, next_cursor} <-
+           AexnTokens.fetch_contracts(
+             state,
+             pagination,
+             aexn_type,
+             query_params,
+             order_by,
+             cursor
+           ) do
+      Util.paginate(conn, prev_cursor, render_contracts(state, aexn_contracts), next_cursor)
     end
   end
 

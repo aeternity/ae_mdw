@@ -8,17 +8,20 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
   alias AeMdw.Db.Store
   alias AeMdw.Validate
 
-  import AeMdwWeb.Helpers.AexnHelper, only: [enc_ct: 1]
+  import AeMdw.Util.Encoding, only: [encode_contract: 1, encode_account: 1]
+
   import AeMdw.TestUtil, only: [with_store: 2]
 
   import Phoenix.ConnTest
   @endpoint AeMdwWeb.Endpoint
 
+  import Mock
+
   require Model
 
   @default_limit 10
-  @aex9_token_id enc_ct(<<210::256>>)
-  @aex141_token_id enc_ct(<<311::256>>)
+  @aex9_token_id encode_contract(<<210::256>>)
+  @aex141_token_id encode_contract(<<311::256>>)
 
   setup_all _context do
     empty_store =
@@ -452,7 +455,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
           ]
         )
 
-      contract_id = enc_ct(contract_pk)
+      contract_id = encode_contract(contract_pk)
 
       assert %{
                "contract_id" => ^contract_id,
@@ -476,7 +479,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
           ["ext1"]
         )
 
-      contract_id = enc_ct(contract_pk)
+      contract_id = encode_contract(contract_pk)
 
       assert %{
                "contract_id" => ^contract_id,
@@ -530,7 +533,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
           ]
         )
 
-      contract_id = enc_ct(contract_pk)
+      contract_id = encode_contract(contract_pk)
 
       assert %{
                "contract_id" => ^contract_id,
@@ -549,11 +552,11 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       conn: conn,
       contract_pk: contract_pk
     } do
-      contract_id = enc_ct(contract_pk)
+      contract_id = encode_contract(contract_pk)
 
       assert %{"data" => balances, "next" => next} =
                conn
-               |> get("/v2/aex9/#{contract_id}/event-balances", direction: :forward)
+               |> get("/v2/aex9/#{contract_id}/balances", direction: :forward)
                |> json_response(200)
 
       assert Enum.all?(Enum.with_index(balances, 1), fn {balance, i} ->
@@ -590,12 +593,12 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       conn: conn,
       contract_pk: contract_pk
     } do
-      contract_id = enc_ct(contract_pk)
+      contract_id = encode_contract(contract_pk)
       limit = 8
 
       assert %{"data" => balances, "next" => next} =
                conn
-               |> get("/v2/aex9/#{contract_id}/event-balances", limit: limit)
+               |> get("/v2/aex9/#{contract_id}/balances", limit: limit)
                |> json_response(200)
 
       assert Enum.all?(balances, fn %{"contract_id" => ct_id} -> ct_id == contract_id end)
@@ -611,6 +614,84 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       assert List.last(balances)["account_id"] > List.first(next_balances)["account_id"]
 
       assert %{"data" => ^balances} = conn |> get(prev_balances) |> json_response(200)
+    end
+  end
+
+  describe "aex9_token_balance" do
+    setup do
+      contract_pk = :crypto.strong_rand_bytes(32)
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      {:ok, contract: contract_pk}
+    end
+
+    test "gets actual account balance on a contract", %{conn: conn, contract: contract_pk} do
+      account_pk = :crypto.strong_rand_bytes(32)
+      amount = Enum.random(1_000_000..9_999_999)
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           aex9_balance: fn ^contract_pk, ^account_pk -> {:ok, {amount, <<1::256>>}} end
+         ]}
+      ] do
+        contract_id = encode_contract(contract_pk)
+        account_id = encode_account(account_pk)
+
+        assert %{"account" => ^account_id, "amount" => ^amount, "contract" => ^contract_id} =
+                 conn
+                 |> get("/v2/aex9/#{contract_id}/balances/#{account_id}")
+                 |> json_response(200)
+      end
+    end
+
+    test "returns error for invalid contract id", %{conn: conn} do
+      contract_id = "ct_invalid_id"
+      account_id = encode_account(:crypto.strong_rand_bytes(32))
+
+      error_msg = "invalid id: #{contract_id}"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> get("/v2/aex9/#{contract_id}/balances/#{account_id}")
+               |> json_response(400)
+    end
+
+    test "returns error for unexisting contract id", %{conn: conn} do
+      contract_id = encode_contract(:crypto.strong_rand_bytes(32))
+      account_id = encode_account(:crypto.strong_rand_bytes(32))
+
+      error_msg = "not AEX9 contract: #{contract_id}"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> get("/v2/aex9/#{contract_id}/balances/#{account_id}")
+               |> json_response(400)
+    end
+
+    test "returns error for invalid account id", %{conn: conn, contract: contract_pk} do
+      contract_id = encode_contract(contract_pk)
+      account_id = "ak_invalid_id"
+
+      error_msg = "invalid id: #{account_id}"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> get("/v2/aex9/#{contract_id}/balances/#{account_id}")
+               |> json_response(400)
     end
   end
 end

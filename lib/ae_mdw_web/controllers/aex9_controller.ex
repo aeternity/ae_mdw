@@ -21,13 +21,15 @@ defmodule AeMdwWeb.Aex9Controller do
 
   alias Plug.Conn
 
+  import AeMdw.Util.Encoding, only: [encode_contract: 1, encode_account: 1, encode_block: 2]
+  import AeMdwWeb.Helpers.AexnHelper, only: [normalize_balances: 1]
+
   import AeMdwWeb.Util,
     only: [
       handle_input: 2,
       parse_range: 1
     ]
 
-  import AeMdwWeb.Helpers.AexnHelper
   import AeMdwWeb.AexnView
 
   require Model
@@ -250,8 +252,8 @@ defmodule AeMdwWeb.Aex9Controller do
     json(
       conn,
       %{
-        contract_id: enc_ct(contract_pk),
-        account_id: enc_id(account_pk),
+        contract_id: encode_contract(contract_pk),
+        account_id: encode_account(account_pk),
         range:
           map_balances_range(
             range,
@@ -332,7 +334,7 @@ defmodule AeMdwWeb.Aex9Controller do
     json(
       conn,
       %{
-        contract_id: enc_ct(contract_pk),
+        contract_id: encode_contract(contract_pk),
         range:
           map_balances_range(
             range,
@@ -433,7 +435,7 @@ defmodule AeMdwWeb.Aex9Controller do
     |> Stream.map(&height_hash/1)
     |> Stream.map(fn {height, hash} ->
       {k, v} = get_balance_func.({:key, height, hash})
-      Map.put(%{height: height, block_hash: enc_block(:key, hash)}, k, v)
+      Map.put(%{height: height, block_hash: encode_block(:key, hash)}, k, v)
     end)
     |> Enum.to_list()
   end

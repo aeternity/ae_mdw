@@ -14,7 +14,7 @@ defmodule AeMdwWeb.Aex141Controller do
 
   alias Plug.Conn
 
-  import AeMdwWeb.Helpers.AexnHelper
+  import AeMdw.Util.Encoding, only: [encode_account: 1]
 
   plug(PaginatedPlug)
   action_fallback(FallbackController)
@@ -54,7 +54,7 @@ defmodule AeMdwWeb.Aex141Controller do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
          {:int, {token_id, ""}} <- {:int, Integer.parse(token_id)},
          {:ok, account_pk} <- Aex141.fetch_nft_owner(contract_pk, token_id) do
-      json(conn, %{data: enc_id(account_pk)})
+      json(conn, %{data: encode_account(account_pk)})
     else
       :error ->
         {:error, ErrInput.NotFound.exception(value: token_id)}

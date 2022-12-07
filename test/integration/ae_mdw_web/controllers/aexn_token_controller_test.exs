@@ -154,53 +154,6 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
     end
   end
 
-  describe "aex9_token_balances" do
-    test "it returns the paginated balances of an aex9 contract", %{conn: conn} do
-      limit = 1
-
-      assert %{"data" => balances, "next" => next} =
-               conn
-               |> get("/v2/aex9/#{@aex9_token_id}/balances", limit: limit)
-               |> json_response(200)
-
-      balances_accounts =
-        balances |> Enum.map(fn %{"account" => account} -> account end) |> Enum.reverse()
-
-      assert ^limit = length(balances)
-      assert ^balances_accounts = Enum.sort(balances_accounts)
-
-      if next do
-        assert %{"data" => next_balances, "prev" => prev} =
-                 conn |> get(next) |> json_response(200)
-
-        next_balances_accounts =
-          next_balances |> Enum.map(fn %{"account" => account} -> account end) |> Enum.reverse()
-
-        assert ^limit = length(next_balances)
-        assert ^next_balances_accounts = Enum.sort(next_balances_accounts)
-
-        assert %{"data" => ^balances} = conn |> get(prev) |> json_response(200)
-      end
-    end
-
-    test "returns the empty amounts for aex9 contract without balance", %{conn: conn} do
-      contract_id = "ct_U7whpYJo4xXoXjEpw39mWEPKgKM2kgSZk9em5FLK8Xq2FrRWE"
-
-      assert %{"data" => [], "next" => nil} =
-               conn
-               |> get("/v2/aex9/#{contract_id}/balances")
-               |> json_response(200)
-    end
-
-    test "when not an aex9 contract, it returns an error", %{conn: conn} do
-      non_existent_id = "ct_y7gojSY8rXW6tztE9Ftqe3kmNrqEXsREiPwGCeG3MJL38jkFo"
-      error_msg = "not AEX9 contract: #{non_existent_id}"
-
-      assert %{"error" => ^error_msg} =
-               conn |> get("/v2/aex9/#{non_existent_id}/balances") |> json_response(400)
-    end
-  end
-
   describe "aex9_token_balance" do
     test "it returns an aex9 token balance", %{conn: conn} do
       assert %{"contract" => @aex9_token_id, "account" => @aex9_token_account_id} =

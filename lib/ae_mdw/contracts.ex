@@ -517,7 +517,7 @@ defmodule AeMdw.Contracts do
     |> Map.merge(%{
       contract_txi: create_txi,
       contract_tx_hash: contract_tx_hash,
-      contract_id: encode_ct(ct_pk),
+      contract_id: encode_contract(ct_pk),
       call_txi: call_txi,
       call_tx_hash: encode(:tx_hash, call_tx_hash),
       args: Enum.map(args, fn <<topic::256>> -> to_string(topic) end),
@@ -549,7 +549,7 @@ defmodule AeMdw.Contracts do
       ext_caller_contract_txi: -1,
       ext_caller_contract_tx_hash: nil,
       ext_caller_contract_id: nil,
-      parent_contract_id: encode_ct(parent_pk)
+      parent_contract_id: encode_contract(parent_pk)
     }
   end
 
@@ -560,7 +560,7 @@ defmodule AeMdw.Contracts do
     %{
       ext_caller_contract_txi: ext_ct_txi,
       ext_caller_contract_tx_hash: ext_ct_tx_hash,
-      ext_caller_contract_id: encode_ct(ext_ct_pk),
+      ext_caller_contract_id: encode_contract(ext_ct_pk),
       parent_contract_id: nil
     }
   end
