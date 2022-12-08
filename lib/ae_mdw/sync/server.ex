@@ -291,15 +291,16 @@ defmodule AeMdw.Sync.Server do
   end
 
   defp exec_db_mutations(gens_mutations, state, clear_mem?) do
-    gens_mutations
-    |> Enum.flat_map(fn {_height, blocks_mutations} -> blocks_mutations end)
-    |> Enum.reduce(state, fn {{_height, mbi}, block, block_mutations}, state ->
-      new_state = State.commit_db(state, block_mutations, clear_mem?)
+    new_state =
+      gens_mutations
+      |> Enum.flat_map(fn {_height, blocks_mutations} -> blocks_mutations end)
+      |> Enum.reduce(state, fn {_block_index, _block, block_mutations}, state ->
+        State.commit_db(state, block_mutations, clear_mem?)
+      end)
 
-      broadcast_block(block, mbi == -1)
+    broadcast_blocks(gens_mutations)
 
-      new_state
-    end)
+    new_state
   end
 
   defp exec_mem_mutations(gens_mutations, state) do
@@ -313,9 +314,7 @@ defmodule AeMdw.Sync.Server do
 
     new_state = State.commit_mem(state, all_mutations)
 
-    Enum.each(blocks_mutations, fn {{_height, mbi}, block, _block_mutations} ->
-      broadcast_block(block, mbi == -1)
-    end)
+    broadcast_blocks(gens_mutations)
 
     new_state
   end
@@ -326,12 +325,25 @@ defmodule AeMdw.Sync.Server do
     ref
   end
 
-  defp broadcast_block(block, is_key?) do
-    if is_key? do
-      Broadcaster.broadcast_key_block(block, :mdw)
-    else
-      Broadcaster.broadcast_micro_block(block, :mdw)
-      Broadcaster.broadcast_txs(block, :mdw)
-    end
+  defp broadcast_blocks(gens_mutations) do
+    Enum.each(gens_mutations, fn {height, blocks_mutations} ->
+      {mbs_mutations, [{{^height, -1}, key_block, _mutations}]} = Enum.split(blocks_mutations, -1)
+
+      # v1
+      Enum.each(mbs_mutations, fn {_block_index, micro_block, _mutations} ->
+        Broadcaster.broadcast_micro_block(micro_block, :v1, :mdw)
+        Broadcaster.broadcast_txs(micro_block, :v1, :mdw)
+      end)
+
+      Broadcaster.broadcast_key_block(key_block, :v1, :mdw)
+
+      # v2
+      Broadcaster.broadcast_key_block(key_block, :v2, :mdw)
+
+      Enum.each(mbs_mutations, fn {_block_index, micro_block, _mutations} ->
+        Broadcaster.broadcast_micro_block(micro_block, :v2, :mdw)
+        Broadcaster.broadcast_txs(micro_block, :v2, :mdw)
+      end)
+    end)
   end
 end

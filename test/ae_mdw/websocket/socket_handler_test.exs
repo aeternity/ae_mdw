@@ -114,7 +114,7 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
 
       account_id = encode(:account_pubkey, <<1::256>>)
       contract_id = encode(:contract_pubkey, <<2::256>>)
-      oracle_id = encode(:oracle_pubkey, <<1::256>>)
+      oracle_id = encode(:oracle_pubkey, <<3::256>>)
       name_id = encode(:name, <<4::256>>)
       channel_id = encode(:channel, <<5::256>>)
 

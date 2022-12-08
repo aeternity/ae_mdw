@@ -128,13 +128,13 @@ defmodule AeMdw.Websocket.BroadcasterTest do
           "subscription" => "Object"
         }
 
-        Broadcaster.broadcast_txs(block0, :node)
+        Broadcaster.broadcast_txs(block0, :v1, :node)
 
         assert_websocket_receive(clients, :objs, [
           Map.put(expected_msg, "source", "node")
         ])
 
-        Broadcaster.broadcast_txs(block0, :mdw)
+        Broadcaster.broadcast_txs(block0, :v1, :mdw)
 
         assert_websocket_receive(clients, :objs, [
           Map.put(expected_msg, "source", "mdw")
@@ -174,14 +174,14 @@ defmodule AeMdw.Websocket.BroadcasterTest do
           "subscription" => "Object"
         }
 
-        Broadcaster.broadcast_txs(block1, :node)
+        Broadcaster.broadcast_txs(block1, :v1, :node)
 
         assert_websocket_receive(clients, :objs, [
           Map.put(expected_msg1, "source", "node"),
           Map.put(expected_msg2, "source", "node")
         ])
 
-        Broadcaster.broadcast_txs(block1, :mdw)
+        Broadcaster.broadcast_txs(block1, :v1, :mdw)
 
         assert_websocket_receive(clients, :objs, [
           Map.put(expected_msg1, "source", "mdw"),
@@ -204,20 +204,20 @@ defmodule AeMdw.Websocket.BroadcasterTest do
           "subscription" => "Object"
         }
 
-        Broadcaster.broadcast_txs(block2, :node)
+        Broadcaster.broadcast_txs(block2, :v1, :node)
 
         assert_websocket_receive(clients, :objs, [
           Map.put(expected_msg, "source", "node")
         ])
 
-        Broadcaster.broadcast_txs(block2, :mdw)
+        Broadcaster.broadcast_txs(block2, :v1, :mdw)
 
         assert_websocket_receive(clients, :objs, [
           Map.put(expected_msg, "source", "mdw")
         ])
 
         %{hash: _mb_hash3, height: 3, block: block3, txs: [_tx7]} = blocks[:mb3]
-        Broadcaster.broadcast_txs(block3, :node)
+        Broadcaster.broadcast_txs(block3, :v1, :node)
         assert_websocket_receive(clients, :objs, [])
 
         %{hash: mb_hash, height: 4, block: block4, txs: [tx8]} = blocks[:mb4]
@@ -237,31 +237,31 @@ defmodule AeMdw.Websocket.BroadcasterTest do
           "subscription" => "Object"
         }
 
-        Broadcaster.broadcast_txs(block4, :node)
+        Broadcaster.broadcast_txs(block4, :v1, :node)
 
         assert_websocket_receive(clients, :objs, [
           Map.put(expected_msg, "source", "node")
         ])
 
-        Broadcaster.broadcast_txs(block4, :mdw)
+        Broadcaster.broadcast_txs(block4, :v1, :mdw)
 
         assert_websocket_receive(clients, :objs, [
           Map.put(expected_msg, "source", "mdw")
         ])
 
-        Broadcaster.broadcast_txs(block0, :node)
+        Broadcaster.broadcast_txs(block0, :v1, :node)
         assert_websocket_receive(clients, :objs, [])
 
-        Broadcaster.broadcast_txs(block1, :mdw)
+        Broadcaster.broadcast_txs(block1, :v1, :mdw)
         assert_websocket_receive(clients, :objs, [])
 
-        Broadcaster.broadcast_txs(block2, :node)
+        Broadcaster.broadcast_txs(block2, :v1, :node)
         assert_websocket_receive(clients, :objs, [])
 
-        Broadcaster.broadcast_txs(block3, :mdw)
+        Broadcaster.broadcast_txs(block3, :v1, :mdw)
         assert_websocket_receive(clients, :objs, [])
 
-        Broadcaster.broadcast_txs(block4, :mdw)
+        Broadcaster.broadcast_txs(block4, :v1, :mdw)
         assert_websocket_receive(clients, :objs, [])
       end
     end
@@ -275,7 +275,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
     %{hash: kb_hash1, height: 1, block: block1} = blocks[:kb1]
     %{hash: kb_hash2, height: 2, block: block2} = blocks[:kb2]
 
-    Broadcaster.broadcast_key_block(block0, :node)
+    Broadcaster.broadcast_key_block(block0, :v1, :node)
 
     assert_websocket_receive(clients, :kb, %{
       "payload" => %{"hash" => kb_hash0, "height" => 0},
@@ -283,7 +283,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
       "subscription" => "KeyBlocks"
     })
 
-    Broadcaster.broadcast_key_block(block1, :node)
+    Broadcaster.broadcast_key_block(block1, :v1, :node)
 
     assert_websocket_receive(clients, :kb, %{
       "payload" => %{"hash" => kb_hash1, "height" => 1},
@@ -291,7 +291,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
       "subscription" => "KeyBlocks"
     })
 
-    Broadcaster.broadcast_key_block(block0, :mdw)
+    Broadcaster.broadcast_key_block(block0, :v1, :mdw)
 
     assert_websocket_receive(clients, :kb, %{
       "payload" => %{"hash" => kb_hash0, "height" => 0},
@@ -299,7 +299,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
       "subscription" => "KeyBlocks"
     })
 
-    Broadcaster.broadcast_key_block(block1, :mdw)
+    Broadcaster.broadcast_key_block(block1, :v1, :mdw)
 
     assert_websocket_receive(clients, :kb, %{
       "payload" => %{"hash" => kb_hash1, "height" => 1},
@@ -307,13 +307,13 @@ defmodule AeMdw.Websocket.BroadcasterTest do
       "subscription" => "KeyBlocks"
     })
 
-    Broadcaster.broadcast_key_block(block2, :node)
+    Broadcaster.broadcast_key_block(block2, :v1, :node)
     assert_websocket_receive(clients, :kb, %{"payload" => %{"hash" => kb_hash2, "height" => 2}})
 
-    Broadcaster.broadcast_key_block(block0, :node)
+    Broadcaster.broadcast_key_block(block0, :v1, :node)
     assert_websocket_receive(clients, :kb, %{"payload" => %{"hash" => kb_hash2, "height" => 2}})
 
-    Broadcaster.broadcast_key_block(block1, :mdw)
+    Broadcaster.broadcast_key_block(block1, :v1, :mdw)
     assert_websocket_receive(clients, :kb, %{"payload" => %{"hash" => kb_hash2, "height" => 2}})
   end
 
@@ -325,7 +325,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
     %{hash: mb_hash1, height: 1, block: block1} = blocks[:mb1]
     %{hash: mb_hash2, height: 2, block: block2} = blocks[:mb2]
 
-    Broadcaster.broadcast_micro_block(block0, :node)
+    Broadcaster.broadcast_micro_block(block0, :v1, :node)
 
     assert_websocket_receive(clients, :mb, %{
       "payload" => %{"hash" => mb_hash0, "height" => 0},
@@ -333,7 +333,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
       "subscription" => "MicroBlocks"
     })
 
-    Broadcaster.broadcast_micro_block(block1, :node)
+    Broadcaster.broadcast_micro_block(block1, :v1, :node)
 
     assert_websocket_receive(clients, :mb, %{
       "payload" => %{"hash" => mb_hash1, "height" => 1},
@@ -341,7 +341,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
       "subscription" => "MicroBlocks"
     })
 
-    Broadcaster.broadcast_micro_block(block0, :mdw)
+    Broadcaster.broadcast_micro_block(block0, :v1, :mdw)
 
     assert_websocket_receive(clients, :mb, %{
       "payload" => %{"hash" => mb_hash0, "height" => 0},
@@ -349,7 +349,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
       "subscription" => "MicroBlocks"
     })
 
-    Broadcaster.broadcast_micro_block(block1, :mdw)
+    Broadcaster.broadcast_micro_block(block1, :v1, :mdw)
 
     assert_websocket_receive(clients, :mb, %{
       "payload" => %{"hash" => mb_hash1, "height" => 1},
@@ -357,19 +357,19 @@ defmodule AeMdw.Websocket.BroadcasterTest do
       "subscription" => "MicroBlocks"
     })
 
-    Broadcaster.broadcast_micro_block(block2, :node)
+    Broadcaster.broadcast_micro_block(block2, :v1, :node)
 
     assert_websocket_receive(clients, :mb, %{
       "payload" => %{"hash" => mb_hash2, "height" => 2}
     })
 
-    Broadcaster.broadcast_micro_block(block0, :node)
+    Broadcaster.broadcast_micro_block(block0, :v1, :node)
 
     assert_websocket_receive(clients, :mb, %{
       "payload" => %{"hash" => mb_hash2, "height" => 2}
     })
 
-    Broadcaster.broadcast_micro_block(block1, :mdw)
+    Broadcaster.broadcast_micro_block(block1, :v1, :mdw)
 
     assert_websocket_receive(clients, :mb, %{
       "payload" => %{"hash" => mb_hash2, "height" => 2}
@@ -388,7 +388,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
     tx_hash2 = encode(:tx_hash, :aetx_sign.hash(tx2))
     tx_hash3 = encode(:tx_hash, :aetx_sign.hash(tx3))
 
-    Broadcaster.broadcast_txs(block0, :node)
+    Broadcaster.broadcast_txs(block0, :v1, :node)
 
     assert_websocket_receive(clients, :txs, [
       %{
@@ -404,7 +404,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
     ])
 
     Enum.each(clients, &WsClient.delete_transactions/1)
-    Broadcaster.broadcast_txs(block1, :node)
+    Broadcaster.broadcast_txs(block1, :v1, :node)
 
     assert_websocket_receive(clients, :txs, [
       %{
@@ -430,7 +430,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
     ])
 
     Enum.each(clients, &WsClient.delete_transactions/1)
-    Broadcaster.broadcast_txs(block0, :mdw)
+    Broadcaster.broadcast_txs(block0, :v1, :mdw)
 
     assert_websocket_receive(clients, :txs, [
       %{
@@ -446,7 +446,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
     ])
 
     Enum.each(clients, &WsClient.delete_transactions/1)
-    Broadcaster.broadcast_txs(block1, :mdw)
+    Broadcaster.broadcast_txs(block1, :v1, :mdw)
 
     assert_websocket_receive(clients, :txs, [
       %{
@@ -472,7 +472,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
     ])
 
     Enum.each(clients, &WsClient.delete_transactions/1)
-    Broadcaster.broadcast_txs(block2, :node)
+    Broadcaster.broadcast_txs(block2, :v1, :node)
 
     assert_websocket_receive(clients, :txs, [
       %{
@@ -488,11 +488,11 @@ defmodule AeMdw.Websocket.BroadcasterTest do
     ])
 
     Enum.each(clients, &WsClient.delete_transactions/1)
-    Broadcaster.broadcast_txs(block0, :node)
+    Broadcaster.broadcast_txs(block0, :v1, :node)
     assert_websocket_receive(clients, :txs, [])
 
     Enum.each(clients, &WsClient.delete_transactions/1)
-    Broadcaster.broadcast_txs(block1, :mdw)
+    Broadcaster.broadcast_txs(block1, :v1, :mdw)
     assert_websocket_receive(clients, :txs, [])
   end
 

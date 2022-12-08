@@ -20,6 +20,8 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
 
   @known_channels ["KeyBlocks", "MicroBlocks", "Transactions"]
 
+  @type version() :: :v1 | :v2
+
   @spec init_tables() :: :ok
   def init_tables() do
     all_tables = :ets.all()
@@ -48,33 +50,35 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
     {:ok, :no_state}
   end
 
-  @spec subscribe(pid(), channel()) ::
+  @spec subscribe(pid(), version(), channel()) ::
           {:ok, [channel()]} | {:error, :invalid_channel | :already_subscribed}
-  def subscribe(pid, channel) do
-    with {:ok, channel_key} <- validate_subscribe(pid, channel) do
+  def subscribe(pid, version, channel) do
+    with {:ok, channel_key} <- validate_subscribe(pid, version, channel) do
       maybe_monitor(pid)
-      :ets.insert(@subs_pid_channel, {pid, channel})
+      :ets.insert(@subs_pid_channel, {pid, {channel_key, channel}})
       :ets.insert(@subs_channel_pid, {channel_key, pid})
 
       {:ok, subscribed_channels(pid)}
     end
   end
 
-  @spec unsubscribe(pid(), channel()) ::
+  @spec unsubscribe(pid(), version(), channel()) ::
           {:ok, [channel()]} | {:error, :invalid_channel | :not_subscribed}
-  def unsubscribe(pid, channel) do
-    with {:ok, channel_key} <- validate_unsubscribe(pid, channel) do
+  def unsubscribe(pid, version, channel) do
+    with {:ok, channel_key, channel} <- validate_unsubscribe(pid, version, channel) do
       :ets.delete_object(@subs_channel_pid, {channel_key, pid})
-      :ets.delete_object(@subs_pid_channel, {pid, channel})
+      :ets.delete_object(@subs_pid_channel, {pid, {channel_key, channel}})
 
       {:ok, subscribed_channels(pid)}
     end
   end
 
-  @spec subscribers(channel()) :: [pid()]
-  def subscribers(channel) do
+  @spec subscribers(version(), channel()) :: [pid()]
+  def subscribers(version, channel) do
+    {:ok, channel_key} = channel_key(version, channel)
+
     @subs_channel_pid
-    |> :ets.match({channel, :"$1"})
+    |> :ets.match({channel_key, :"$1"})
     |> List.flatten()
   end
 
@@ -82,7 +86,7 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
   def subscribed_channels(pid) do
     @subs_pid_channel
     |> :ets.match({pid, :"$1"})
-    |> List.flatten()
+    |> Enum.map(fn [{{_version, _channel_key}, channel}] -> channel end)
   end
 
   @impl GenServer
@@ -130,40 +134,48 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
   defp unsubscribe_all(pid) do
     @subs_pid_channel
     |> :ets.match_object({pid, :"$1"})
-    |> Enum.each(fn {^pid, channel} ->
-      :ets.delete_object(@subs_pid_channel, {pid, channel})
-      {:ok, channel_key} = channel_key(channel)
+    |> Enum.each(fn {^pid, channel_key} ->
+      :ets.delete_object(@subs_pid_channel, {pid, channel_key})
       :ets.delete_object(@subs_channel_pid, {channel_key, pid})
     end)
   end
 
-  defp validate_subscribe(pid, channel) do
-    with {:ok, channel_key} <- channel_key(channel),
-         {:exists, false} <- {:exists, exists?(pid, channel)} do
+  defp validate_subscribe(pid, version, channel) do
+    with {:ok, channel_key} <- channel_key(version, channel),
+         {:match, :none} <- {:match, match(pid, channel_key)} do
       {:ok, channel_key}
     else
       {:error, _reason} -> {:error, :invalid_channel}
-      {:exists, true} -> {:error, :already_subscribed}
+      {:match, {:ok, _channel}} -> {:error, :already_subscribed}
     end
   end
 
-  defp validate_unsubscribe(pid, channel) do
-    with {:ok, channel_key} <- channel_key(channel),
-         true <- exists?(pid, channel) do
-      {:ok, channel_key}
+  defp validate_unsubscribe(pid, version, channel) do
+    with {:ok, channel_key} <- channel_key(version, channel),
+         {:ok, channel} <- match(pid, channel_key) do
+      {:ok, channel_key, channel}
     else
       {:error, _reason} -> {:error, :invalid_channel}
-      false -> {:error, :not_subscribed}
+      :none -> {:error, :not_subscribed}
     end
   end
 
-  defp channel_key(channel) when channel in @known_channels, do: {:ok, channel}
-  defp channel_key(channel), do: Validate.id(channel)
+  # :ets.delete_object(@subs_channel_pid, {channel_key, pid})
+  # :ets.delete_object(@subs_pid_channel, {pid, {channel_key, channel}})
 
-  defp exists?(pid, channel) do
-    case :ets.match_object(@subs_pid_channel, {pid, channel}, 1) do
-      @eot -> false
-      {_match, _cont} -> true
+  defp channel_key(version, channel) when channel in @known_channels,
+    do: {:ok, {version, channel}}
+
+  defp channel_key(version, channel) do
+    with {:ok, pubkey} <- Validate.id(channel) do
+      {:ok, {version, pubkey}}
+    end
+  end
+
+  defp match(pid, channel_key) do
+    case :ets.match_object(@subs_pid_channel, {pid, {channel_key, :"$1"}}, 1) do
+      {[{^pid, {^channel_key, channel}}], _cont} -> {:ok, channel}
+      @eot -> :none
     end
   end
 end
