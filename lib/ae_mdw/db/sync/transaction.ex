@@ -136,7 +136,7 @@ defmodule AeMdw.Db.Sync.Transaction do
         events_mutations,
         [
           aexn_create_contract_mutation,
-          ContractCreateMutation.new(block_index, txi, call_rec)
+          ContractCreateMutation.new(txi, call_rec)
         ]
       ])
     else
@@ -185,7 +185,6 @@ defmodule AeMdw.Db.Sync.Transaction do
       [
         ContractCallMutation.new(
           contract_pk,
-          block_index,
           txi,
           fun_arg_res,
           call_rec

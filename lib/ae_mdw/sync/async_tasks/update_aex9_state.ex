@@ -20,20 +20,16 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
   @microsecs 1_000_000
 
   @spec process(args :: list(), done_fn :: fun()) :: :ok
-  def process([contract_pk, block_index, _call_txi] = args, done_fn) do
+  def process([contract_pk, block_index, call_txi], done_fn) do
     {time_delta, :ok} =
       :timer.tc(fn ->
         case Aex9Balances.get_balances(contract_pk, block_index) do
           {:ok, balances, purge_balances} ->
-            write_mutation = mutation(args, balances)
+            write_mutation = mutation(contract_pk, call_txi, balances)
             delete_mutation = Aex9Balances.purge_mutation(contract_pk, purge_balances)
 
             AsyncStoreServer.write_mutations(
-              block_index,
-              [
-                delete_mutation,
-                write_mutation
-              ],
+              [delete_mutation, write_mutation],
               done_fn
             )
 
@@ -51,12 +47,12 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9State do
     :ok
   end
 
-  defp mutation([contract_pk, block_index, call_txi], balances) do
+  defp mutation(contract_pk, call_txi, balances) do
     if balances == [] do
-      m_empty_balance = Model.aex9_balance(index: {contract_pk, <<>>})
-      WriteMutation.new(Model.Aex9Balance, m_empty_balance)
+      m_empty_balance = Model.aex9_event_balance(index: {contract_pk, <<>>})
+      WriteMutation.new(Model.Aex9EventBalance, m_empty_balance)
     else
-      UpdateAex9StateMutation.new(contract_pk, block_index, call_txi, balances)
+      UpdateAex9StateMutation.new(contract_pk, call_txi, balances)
     end
   end
 end

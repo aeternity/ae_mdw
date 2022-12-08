@@ -295,9 +295,8 @@ defmodule AeMdwWeb.Aex9ControllerTest do
             )
 
           m_balance =
-            Model.aex9_balance(
+            Model.aex9_event_balance(
               index: {contract_pk, account_pk},
-              block_index: {height, 0},
               txi: txi,
               amount: amount
             )
@@ -317,7 +316,7 @@ defmodule AeMdwWeb.Aex9ControllerTest do
           )
           |> Store.put(Model.ContractCall, Model.contract_call(index: {create_txi, txi}))
           |> Store.put(Model.AexnContract, m_contract)
-          |> Store.put(Model.Aex9Balance, m_balance)
+          |> Store.put(Model.Aex9EventBalance, m_balance)
           |> Store.put(Model.Aex9AccountPresence, m_presence)
         end)
 

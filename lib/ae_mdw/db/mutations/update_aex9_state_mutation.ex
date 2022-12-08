@@ -4,7 +4,6 @@ defmodule AeMdw.Db.UpdateAex9StateMutation do
   """
 
   alias AeMdw.Aex9
-  alias AeMdw.Blocks
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
@@ -14,22 +13,20 @@ defmodule AeMdw.Db.UpdateAex9StateMutation do
   require Model
 
   @derive AeMdw.Db.Mutation
-  defstruct [:contract_pk, :block_index, :txi, :balances]
+  defstruct [:contract_pk, :txi, :balances]
 
   @typep aex9_balance() :: {Db.pubkey(), Aex9.amount()}
 
   @opaque t() :: %__MODULE__{
             contract_pk: Db.pubkey(),
-            block_index: Blocks.block_index(),
             txi: Txs.txi(),
             balances: [aex9_balance()]
           }
 
-  @spec new(Db.pubkey(), Blocks.block_index(), Txs.txi(), [aex9_balance()]) :: t()
-  def new(contract_pk, block_index, call_txi, balances) do
+  @spec new(Db.pubkey(), Txs.txi(), [aex9_balance()]) :: t()
+  def new(contract_pk, call_txi, balances) do
     %__MODULE__{
       contract_pk: contract_pk,
-      block_index: block_index,
       txi: call_txi,
       balances: balances
     }
@@ -39,14 +36,11 @@ defmodule AeMdw.Db.UpdateAex9StateMutation do
   def execute(
         %__MODULE__{
           contract_pk: contract_pk,
-          block_index: block_index,
           txi: txi,
           balances: balances
         },
         state
       ) do
-    state
-    |> Contract.aex9_write_balances(contract_pk, balances, block_index, txi)
-    |> Contract.aex9_init_event_balances(contract_pk, balances, txi)
+    Contract.aex9_init_event_balances(state, contract_pk, balances, txi)
   end
 end

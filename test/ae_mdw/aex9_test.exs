@@ -13,8 +13,7 @@ defmodule AeMdw.Aex9Test do
 
   describe "fetch_balances" do
     test "gets contract balances from async store" do
-      ct_pk = :crypto.strong_rand_bytes(32)
-      block_index = {123_456, 3}
+      contract_pk = :crypto.strong_rand_bytes(32)
       call_txi = 12_345_678
 
       balances =
@@ -30,11 +29,11 @@ defmodule AeMdw.Aex9Test do
       async_state = State.new(AsyncStore.instance())
 
       Mutation.execute(
-        UpdateAex9StateMutation.new(ct_pk, block_index, call_txi, balances_list),
+        UpdateAex9StateMutation.new(contract_pk, call_txi, balances_list),
         async_state
       )
 
-      assert balances == Aex9.fetch_balances(nil, ct_pk, false)
+      assert balances == Aex9.fetch_balances(State.new(), contract_pk, false)
     end
   end
 

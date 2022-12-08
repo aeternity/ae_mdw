@@ -82,9 +82,7 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
 
     case Task.yield(task, @dry_run_timeout) || Task.shutdown(task) do
       {:ok, {:ok, balances, _no_purge}} ->
-        state
-        |> Contract.aex9_write_balances(contract_pk, balances, block_index, create_txi)
-        |> Contract.aex9_init_event_balances(contract_pk, balances, create_txi)
+        Contract.aex9_init_event_balances(state, contract_pk, balances, create_txi)
 
       {:ok, _dry_run_error} ->
         state

@@ -30,6 +30,12 @@ defmodule AeMdw.Db.StateTest do
       amount = Enum.random(1_000_000_000..9_999_999_999)
       balances = %{{:address, account_pk} => amount}
 
+      contract_pks =
+        Enum.map(1..10, fn _i ->
+          contract_pk = :crypto.strong_rand_bytes(32)
+          Aex9BalancesCache.put(contract_pk, block_index, @next_hash, balances)
+        end)
+
       Aex9BalancesCache.put(ct_pk, block_index, @next_hash, balances)
 
       with_mocks([
@@ -39,9 +45,19 @@ defmodule AeMdw.Db.StateTest do
            get_next_hash: fn ^kb_hash, ^mbi -> @next_hash end
          ]}
       ]) do
-        State.new()
-        |> State.enqueue(:update_aex9_state, [ct_pk], [block_index, call_txi])
-        |> State.commit_db(
+        state =
+          Enum.reduce(contract_pks ++ [ct_pk], State.new(MemStore.new(NullStore.new())), fn ct_pk,
+                                                                                            state ->
+            State.enqueue(state, :update_aex9_state, [ct_pk], [block_index, call_txi])
+          end)
+
+        State.commit_mem(
+          state,
+          [WriteMutation.new(Model.Block, Model.block(index: block_index))]
+        )
+
+        State.commit_db(
+          State.new(),
           [WriteMutation.new(Model.Block, Model.block(index: block_index))],
           false
         )
@@ -50,6 +66,12 @@ defmodule AeMdw.Db.StateTest do
           Model.AsyncTask
           |> Database.all_keys()
           |> Enum.map(fn key -> Database.fetch!(Model.AsyncTask, key) end)
+
+        on_exit(fn ->
+          Model.AsyncTask
+          |> Database.all_keys()
+          |> Enum.map(fn key -> Database.dirty_delete(Model.AsyncTask, key) end)
+        end)
 
         assert Enum.any?(tasks, fn
                  Model.async_task(
@@ -62,28 +84,6 @@ defmodule AeMdw.Db.StateTest do
                  _other ->
                    false
                end)
-
-        AsyncTaskTestUtil.wakeup_consumers()
-
-        assert Enum.any?(1..10, fn _i ->
-                 Process.sleep(100)
-
-                 match?(
-                   {:ok,
-                    Model.aex9_account_presence(
-                      index: {^account_pk, ^ct_pk},
-                      txi: ^call_txi
-                    )},
-                   Database.fetch(Model.Aex9AccountPresence, {account_pk, ct_pk})
-                 )
-               end)
-
-        task_index =
-          Enum.find_value(tasks, fn Model.async_task(index: index, args: args) ->
-            if args == [ct_pk], do: index
-          end)
-
-        refute Database.exists?(Model.AsyncTask, task_index)
       end
     end
 
@@ -214,13 +214,12 @@ defmodule AeMdw.Db.StateTest do
 
                  match?(
                    {:ok,
-                    Model.aex9_balance(
+                    Model.aex9_event_balance(
                       index: ^balance_key,
-                      block_index: ^block_index,
                       txi: ^call_txi,
                       amount: ^amount
                     )},
-                   State.get(state, Model.Aex9Balance, balance_key)
+                   State.get(state, Model.Aex9EventBalance, balance_key)
                  )
                end)
       end

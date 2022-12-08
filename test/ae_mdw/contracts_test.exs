@@ -45,7 +45,7 @@ defmodule AeMdw.ContractsTest do
           Model.rev_origin(index: {create_txi, :contract_create_tx, contract_pk})
         )
         |> State.cache_put(:ct_create_sync_cache, contract_pk, create_txi)
-        |> Contract.logs_write(block_index, create_txi, call_txi, call_rec)
+        |> Contract.logs_write(create_txi, call_txi, call_rec)
 
       assert {:ok, _prev, [log1, log2], _next} =
                Contracts.fetch_logs(state, {:forward, false, 100, false}, nil, %{}, nil)
@@ -138,7 +138,7 @@ defmodule AeMdw.ContractsTest do
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, remote_pk, remote_txi})
         )
-        |> Contract.logs_write(block_index, create_txi, call_txi, call_rec)
+        |> Contract.logs_write(create_txi, call_txi, call_rec)
 
       assert {:ok, _prev, [log1, log2], _next} =
                Contracts.fetch_logs(state, {:forward, false, 100, false}, nil, %{}, nil)

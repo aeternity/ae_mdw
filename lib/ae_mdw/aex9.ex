@@ -47,10 +47,10 @@ defmodule AeMdw.Aex9 do
       state = get_store_state(state, contract_pk)
 
       state
-      |> Collection.stream(Model.Aex9Balance, {contract_pk, <<>>})
+      |> Collection.stream(Model.Aex9EventBalance, {contract_pk, <<>>})
       |> Stream.take_while(&match?({^contract_pk, _address}, &1))
-      |> Stream.map(&State.fetch!(state, Model.Aex9Balance, &1))
-      |> Enum.into(%{}, fn Model.aex9_balance(index: {_ct_pk, account_pk}, amount: amount) ->
+      |> Stream.map(&State.fetch!(state, Model.Aex9EventBalance, &1))
+      |> Enum.into(%{}, fn Model.aex9_event_balance(index: {_ct_pk, account_pk}, amount: amount) ->
         {{:address, account_pk}, amount}
       end)
       |> case do
@@ -222,22 +222,12 @@ defmodule AeMdw.Aex9 do
   #
   # Private functions
   #
-  defp get_store_state(state, contract_pk) do
+  defp get_store_state(state, contract_pk, account_pk \\ <<>>) do
     async_state = State.new(AsyncStore.instance())
 
-    case State.next(async_state, Model.Aex9Balance, {contract_pk, <<>>}) do
+    case State.next(async_state, Model.Aex9EventBalance, {contract_pk, account_pk}) do
       {:ok, {^contract_pk, _account_pk}} -> async_state
       _other -> state
-    end
-  end
-
-  defp get_store_state(state, contract_pk, account_pk) do
-    async_state = State.new(AsyncStore.instance())
-
-    if State.exists?(async_state, Model.Aex9Balance, {contract_pk, account_pk}) do
-      async_state
-    else
-      state
     end
   end
 

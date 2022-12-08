@@ -58,12 +58,12 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
         Enum.any?(1..10, fn _i ->
           Process.sleep(100)
 
-          assert Model.aex9_balance(block_index: ^block_index, txi: ^call_txi, amount: ^amount1) =
-                   State.fetch!(state, Model.Aex9Balance, {contract_pk, @account_pk1})
+          assert Model.aex9_event_balance(txi: ^call_txi, amount: ^amount1) =
+                   State.fetch!(state, Model.Aex9EventBalance, {contract_pk, @account_pk1})
         end)
 
-        assert Model.aex9_balance(block_index: ^block_index, txi: ^call_txi, amount: ^amount2) =
-                 State.fetch!(state, Model.Aex9Balance, {contract_pk, @account_pk2})
+        assert Model.aex9_event_balance(txi: ^call_txi, amount: ^amount2) =
+                 State.fetch!(state, Model.Aex9EventBalance, {contract_pk, @account_pk2})
 
         assert Model.aex9_account_presence(txi: ^call_txi) =
                  State.fetch!(state, Model.Aex9AccountPresence, {@account_pk1, contract_pk})
@@ -97,7 +97,7 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
 
         assert Enum.any?(1..10, fn _i ->
                  Process.sleep(100)
-                 State.exists?(state, Model.Aex9Balance, {contract_pk, <<>>})
+                 State.exists?(state, Model.Aex9EventBalance, {contract_pk, <<>>})
                end)
       end
     end
@@ -137,14 +137,14 @@ defmodule AeMdw.Sync.AsyncTasks.UpdateAex9StateTest do
         Enum.any?(1..10, fn _i ->
           Process.sleep(100)
 
-          assert Model.aex9_balance(block_index: ^block_index, txi: ^call_txi, amount: ^amount1) =
-                   State.fetch!(state, Model.Aex9Balance, {contract_pk, account_pk1})
+          assert Model.aex9_event_balance(txi: ^call_txi, amount: ^amount1) =
+                   State.fetch!(state, Model.Aex9EventBalance, {contract_pk, account_pk1})
         end)
 
-        assert Model.aex9_balance(block_index: ^block_index, txi: ^call_txi, amount: ^amount2) =
-                 State.fetch!(state, Model.Aex9Balance, {contract_pk, account_pk2})
+        assert Model.aex9_event_balance(txi: ^call_txi, amount: ^amount2) =
+                 State.fetch!(state, Model.Aex9EventBalance, {contract_pk, account_pk2})
 
-        refute State.exists?(state, Model.Aex9Balance, {contract_pk, <<>>})
+        refute State.exists?(state, Model.Aex9EventBalance, {contract_pk, <<>>})
       end
     end
 

@@ -11,7 +11,6 @@ defmodule AeMdwWeb.TxControllerTest do
   import AeMdwWeb.BlockchainSim,
     only: [with_blockchain: 3, tx: 3, spend_tx: 3, name_tx: 3, name_tx: 4]
 
-  import AeMdw.Util.Encoding
   import Mock
 
   require Model
