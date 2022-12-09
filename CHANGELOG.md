@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.32.0](https://www.github.com/aeternity/ae_mdw/compare/v1.31.0...v1.32.0) (2022-12-09)
+
+
+### Features
+
+* add /v2/channels/:id detail page ([#1064](https://www.github.com/aeternity/ae_mdw/issues/1064)) ([7c86a87](https://www.github.com/aeternity/ae_mdw/commit/7c86a875e342661b77ed918702173b3c47cb43f6))
+* use aex9 event-based balance ([#1070](https://www.github.com/aeternity/ae_mdw/issues/1070)) ([7fa832b](https://www.github.com/aeternity/ae_mdw/commit/7fa832bdeb6dcdfa5c69a19b6c8b46b4ac6112d5))
+
+
+### Testing
+
+* ensure proper model declaration ([#1067](https://www.github.com/aeternity/ae_mdw/issues/1067)) ([ffde479](https://www.github.com/aeternity/ae_mdw/commit/ffde47975c8b5e43956160e01a5ed0287fafd0f6))
+
+
+### CI / CD
+
+* automatically publish docker images ([#1043](https://www.github.com/aeternity/ae_mdw/issues/1043)) ([d3013db](https://www.github.com/aeternity/ae_mdw/commit/d3013db1a570bd7bfcb87515d2606271189e45ad))
+
+
+### Miscellaneous
+
+* allow network id for local environment ([#1059](https://www.github.com/aeternity/ae_mdw/issues/1059)) ([4d49efe](https://www.github.com/aeternity/ae_mdw/commit/4d49efecf081802204a998e256e918fae7cf4ada))
+* index only event-based aex9 balances ([#1071](https://www.github.com/aeternity/ae_mdw/issues/1071)) ([71212a8](https://www.github.com/aeternity/ae_mdw/commit/71212a864ef55f7834b23ff260999f45bb532199))
+
 ## [1.31.0](https://www.github.com/aeternity/ae_mdw/compare/v1.30.0...v1.31.0) (2022-12-02)
 
 
