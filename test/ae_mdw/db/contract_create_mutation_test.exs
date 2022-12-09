@@ -44,7 +44,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
           |> MemStore.new()
           |> State.new()
           |> State.commit_mem([
-            ContractCreateMutation.new(block_index, create_txi1, call_rec1),
+            ContractCreateMutation.new(create_txi1, call_rec1),
             SyncContract.aexn_create_contract_mutation(contract_pk, block_index, create_txi1),
             Origin.origin_mutations(
               :contract_create_tx,
@@ -56,7 +56,94 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
           ])
 
         assert 1 == State.get_stat(state1, :contracts_created, 0)
-        assert {:ok, create_txi1} == State.cache_get(state1, :ct_create_sync_cache, contract_pk)
+        assert {:ok, ^create_txi1} = State.cache_get(state1, :ct_create_sync_cache, contract_pk)
+      end
+    end
+
+    test "creates contract having aex9 balances" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      account_pk1 = :crypto.strong_rand_bytes(32)
+      account_pk2 = :crypto.strong_rand_bytes(32)
+      amount1 = Enum.random(1_000_000..9_999_999)
+      amount2 = Enum.random(1_000_000..9_999_999)
+
+      meta_info = {"aex9t", "AEX9t", 18}
+      {height, mbi} = block_index = {492_393, 0}
+      next_height = height + 1
+      kb_hash = :crypto.strong_rand_bytes(32)
+
+      with_mocks [
+        {
+          AexnContracts,
+          [],
+          [
+            is_aex9?: fn ct_pk -> ct_pk == contract_pk end,
+            call_meta_info: fn _type, ct_pk -> ct_pk == contract_pk && {:ok, meta_info} end,
+            call_extensions: fn _type, _pk -> {:ok, []} end
+          ]
+        },
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           get_key_block_hash: fn ^next_height -> kb_hash end,
+           get_next_hash: fn ^kb_hash, ^mbi -> <<1::256>> end,
+           aex9_balances: fn ^contract_pk, {:micro, ^height, <<1::256>>} ->
+             {:ok,
+              %{
+                {:address, account_pk1} => amount1,
+                {:address, account_pk2} => amount2
+              }}
+           end
+         ]}
+      ] do
+        create_txi = 21_608_343
+
+        call_rec =
+          call_rec("logs", contract_pk, height, nil, [
+            {
+              contract_pk,
+              [<<123::256>>, <<456::256>>, <<789::256>>],
+              ""
+            }
+          ])
+
+        state =
+          NullStore.new()
+          |> MemStore.new()
+          |> State.new()
+          |> State.commit_mem([
+            ContractCreateMutation.new(create_txi, call_rec),
+            SyncContract.aexn_create_contract_mutation(contract_pk, block_index, create_txi),
+            Origin.origin_mutations(
+              :contract_create_tx,
+              nil,
+              contract_pk,
+              create_txi,
+              :crypto.strong_rand_bytes(32)
+            )
+          ])
+
+        m_balance1 =
+          Model.aex9_event_balance(
+            index: {contract_pk, account_pk1},
+            amount: amount1,
+            txi: create_txi
+          )
+
+        m_balance2 =
+          Model.aex9_event_balance(
+            index: {contract_pk, account_pk2},
+            amount: amount2,
+            txi: create_txi
+          )
+
+        assert 1 == State.get_stat(state, :contracts_created, 0)
+        assert {:ok, ^create_txi} = State.cache_get(state, :ct_create_sync_cache, contract_pk)
+
+        assert {:ok, ^m_balance1} =
+                 State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk1})
+
+        assert {:ok, ^m_balance2} =
+                 State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk2})
       end
     end
 
@@ -114,7 +201,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
               create_txi,
               :crypto.strong_rand_bytes(32)
             ),
-            ContractCreateMutation.new(block_index, create_txi, call_rec)
+            ContractCreateMutation.new(create_txi, call_rec)
           ])
 
         assert State.exists?(state, Model.NftOwnership, {to_pk1, contract_pk, token_id1})
@@ -200,7 +287,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
             create_txi,
             :crypto.strong_rand_bytes(32)
           ),
-          ContractCreateMutation.new({height, 0}, create_txi, call_rec)
+          ContractCreateMutation.new(create_txi, call_rec)
         ]
 
         store = change_store(store, [mutations])
@@ -272,7 +359,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
             create_txi,
             :crypto.strong_rand_bytes(32)
           ),
-          ContractCreateMutation.new({height, 0}, create_txi, call_rec)
+          ContractCreateMutation.new(create_txi, call_rec)
         ]
 
         store = change_store(store, [mutations])

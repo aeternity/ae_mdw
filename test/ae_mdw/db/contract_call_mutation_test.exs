@@ -13,7 +13,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
   import AeMdw.Node.AexnEventFixtures, only: [aexn_event_hash: 1]
   import AeMdw.Util.Encoding, only: [encode_account: 1]
 
-  import Mock
   require Model
 
   @burn_caller_pk <<234, 90, 164, 101, 3, 211, 169, 40, 246, 51, 6, 203, 132, 12, 34, 114, 203,
@@ -25,11 +24,9 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         <<108, 159, 218, 252, 142, 182, 31, 215, 107, 90, 189, 201, 108, 136, 21, 96, 45, 160,
           108, 218, 130, 229, 90, 80, 44, 238, 94, 180, 157, 190, 40, 100>>
 
-      block_index = {Enum.random(100_000..900_000), 0}
       call_txi = 1_000_001
 
-      assert {account_pk, mutation} =
-               contract_call_mutation("mint", block_index, call_txi, contract_pk)
+      assert {account_pk, mutation} = contract_call_mutation("mint", call_txi, contract_pk)
 
       assert %ContractCallMutation{txi: ^call_txi, contract_pk: ^contract_pk} = mutation
 
@@ -51,16 +48,9 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         <<108, 159, 218, 252, 142, 182, 31, 215, 107, 90, 189, 201, 108, 136, 21, 96, 45, 160,
           108, 218, 130, 229, 90, 80, 44, 238, 94, 180, 157, 190, 40, 100>>
 
-      block_index = {Enum.random(100_000..900_000), 0}
       call_txi = 1_000_002
 
-      assert {account_pk, mutation} =
-               contract_call_mutation(
-                 "transfer",
-                 block_index,
-                 call_txi,
-                 contract_pk
-               )
+      assert {account_pk, mutation} = contract_call_mutation("transfer", call_txi, contract_pk)
 
       assert %ContractCallMutation{txi: ^call_txi, contract_pk: ^contract_pk} = mutation
 
@@ -82,11 +72,9 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         <<99, 147, 221, 52, 149, 77, 197, 100, 5, 160, 112, 15, 89, 26, 213, 27, 12, 179, 74, 142,
           40, 64, 84, 157, 179, 9, 194, 215, 194, 131, 3, 108>>
 
-      block_index = {Enum.random(100_000..900_000), 0}
       call_txi = 1_000_003
 
-      assert {account_pk, mutation} =
-               contract_call_mutation("burn", block_index, call_txi, contract_pk)
+      assert {account_pk, mutation} = contract_call_mutation("burn", call_txi, contract_pk)
 
       assert %ContractCallMutation{txi: ^call_txi, contract_pk: ^contract_pk} = mutation
 
@@ -106,15 +94,11 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
   describe "aex9 mint" do
     test "increment aex9 balance after a call with mint log", %{store: store} do
-      kb_hash = :crypto.strong_rand_bytes(32)
-      next_mb_hash = :crypto.strong_rand_bytes(32)
       contract_pk = :crypto.strong_rand_bytes(32)
       remote_pk = :crypto.strong_rand_bytes(32)
       account_pk = :crypto.strong_rand_bytes(32)
       amount = Enum.random(100_000_000..999_999_999)
       height = Enum.random(100_000..999_999)
-      mbi = 1
-      block_hash_height = height + 1
       call_txi = Enum.random(100_000_000..999_999_999)
 
       fun_arg_res = %{
@@ -144,7 +128,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       mutation =
         ContractCallMutation.new(
           contract_pk,
-          {height, mbi},
           call_txi,
           fun_arg_res,
           call_rec
@@ -157,60 +140,47 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       type_info = {:fcode, functions, nil, nil}
       AeMdw.EtsCache.put(AeMdw.Contract, remote_pk, {type_info, nil, nil})
 
-      with_mocks [
-        {AeMdw.Node.Db, [:passthrough],
-         [
-           get_key_block_hash: fn ^block_hash_height -> kb_hash end,
-           get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
-           aex9_balances: fn ^remote_pk, _next -> {:ok, %{}} end
-         ]}
-      ] do
-        previous_balance = 100_000
+      previous_balance = 100_000
 
-        m_balance =
-          Model.aex9_event_balance(
-            index: {remote_pk, account_pk},
-            txi: call_txi - 1,
-            log_idx: -1,
-            amount: previous_balance
-          )
+      m_balance =
+        Model.aex9_event_balance(
+          index: {remote_pk, account_pk},
+          txi: call_txi - 1,
+          log_idx: -1,
+          amount: previous_balance
+        )
 
-        store =
-          store
-          |> Store.put(Model.Aex9EventBalance, m_balance)
-          |> Store.put(
-            Model.Field,
-            Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
-          )
-          |> Store.put(
-            Model.Field,
-            Model.field(index: {:contract_create_tx, nil, remote_pk, call_txi - 2})
-          )
-          |> change_store([mutation])
+      store =
+        store
+        |> Store.put(Model.Aex9EventBalance, m_balance)
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
+        )
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, remote_pk, call_txi - 2})
+        )
+        |> change_store([mutation])
 
-        m_new_balance =
-          Model.aex9_event_balance(m_balance,
-            txi: call_txi,
-            log_idx: 0,
-            amount: previous_balance + amount
-          )
+      m_new_balance =
+        Model.aex9_event_balance(m_balance,
+          txi: call_txi,
+          log_idx: 0,
+          amount: previous_balance + amount
+        )
 
-        assert {:ok, ^m_new_balance} =
-                 Store.get(store, Model.Aex9EventBalance, {remote_pk, account_pk})
-      end
+      assert {:ok, ^m_new_balance} =
+               Store.get(store, Model.Aex9EventBalance, {remote_pk, account_pk})
     end
   end
 
   describe "aex9 burn" do
     test "decrement aex9 balance after a call with burn log", %{store: store} do
-      kb_hash = :crypto.strong_rand_bytes(32)
-      next_mb_hash = :crypto.strong_rand_bytes(32)
       contract_pk = :crypto.strong_rand_bytes(32)
       account_pk = :crypto.strong_rand_bytes(32)
       amount = Enum.random(100_000_000..999_999_999)
       height = Enum.random(100_000..999_999)
-      mbi = 1
-      block_hash_height = height + 1
       call_txi = Enum.random(100_000_000..999_999_999)
 
       fun_arg_res = %{
@@ -240,7 +210,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       mutation =
         ContractCallMutation.new(
           contract_pk,
-          {height, mbi},
           call_txi,
           fun_arg_res,
           call_rec
@@ -253,54 +222,41 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       type_info = {:fcode, functions, nil, nil}
       AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
-      with_mocks [
-        {AeMdw.Node.Db, [:passthrough],
-         [
-           get_key_block_hash: fn ^block_hash_height -> kb_hash end,
-           get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
-           aex9_balances: fn ^contract_pk, _next -> {:ok, %{}} end
-         ]}
-      ] do
-        m_balance =
-          Model.aex9_event_balance(
-            index: {contract_pk, account_pk},
-            txi: call_txi - 1,
-            log_idx: -1,
-            amount: amount + 100_000
-          )
+      m_balance =
+        Model.aex9_event_balance(
+          index: {contract_pk, account_pk},
+          txi: call_txi - 1,
+          log_idx: -1,
+          amount: amount + 100_000
+        )
 
-        store =
-          store
-          |> Store.put(Model.Aex9EventBalance, m_balance)
-          |> Store.put(
-            Model.Field,
-            Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
-          )
-          |> change_store([mutation])
+      store =
+        store
+        |> Store.put(Model.Aex9EventBalance, m_balance)
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
+        )
+        |> change_store([mutation])
 
-        m_new_balance =
-          Model.aex9_event_balance(m_balance,
-            txi: call_txi,
-            log_idx: 0,
-            amount: 100_000
-          )
+      m_new_balance =
+        Model.aex9_event_balance(m_balance,
+          txi: call_txi,
+          log_idx: 0,
+          amount: 100_000
+        )
 
-        assert {:ok, ^m_new_balance} =
-                 Store.get(store, Model.Aex9EventBalance, {contract_pk, account_pk})
-      end
+      assert {:ok, ^m_new_balance} =
+               Store.get(store, Model.Aex9EventBalance, {contract_pk, account_pk})
     end
   end
 
   describe "aex9 swap" do
     test "decrement aex9 balance after a call with burn log" do
-      kb_hash = :crypto.strong_rand_bytes(32)
-      next_mb_hash = :crypto.strong_rand_bytes(32)
       contract_pk = :crypto.strong_rand_bytes(32)
       account_pk = :crypto.strong_rand_bytes(32)
       amount = Enum.random(100_000_000..999_999_999)
       height = Enum.random(100_000..999_999)
-      mbi = 1
-      block_hash_height = height + 1
       call_txi = Enum.random(100_000_000..999_999_999)
 
       fun_arg_res = %{
@@ -330,7 +286,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       mutation =
         ContractCallMutation.new(
           contract_pk,
-          {height, mbi},
           call_txi,
           fun_arg_res,
           call_rec
@@ -343,51 +298,38 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       type_info = {:fcode, functions, nil, nil}
       AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
-      with_mocks [
-        {AeMdw.Node.Db, [:passthrough],
-         [
-           get_key_block_hash: fn ^block_hash_height -> kb_hash end,
-           get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
-           aex9_balances: fn ^contract_pk, _next -> {:ok, %{}} end
-         ]}
-      ] do
-        m_balance =
-          Model.aex9_event_balance(
-            index: {contract_pk, account_pk},
-            txi: call_txi - 1,
-            log_idx: -1,
-            amount: amount + 100_000
-          )
+      m_balance =
+        Model.aex9_event_balance(
+          index: {contract_pk, account_pk},
+          txi: call_txi - 1,
+          log_idx: -1,
+          amount: amount + 100_000
+        )
 
-        state =
-          NullStore.new()
-          |> MemStore.new()
-          |> State.new()
-          |> State.put(Model.Aex9EventBalance, m_balance)
-          |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
-          |> State.commit_mem([mutation])
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.put(Model.Aex9EventBalance, m_balance)
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+        |> State.commit_mem([mutation])
 
-        m_new_balance =
-          Model.aex9_event_balance(m_balance,
-            txi: call_txi,
-            log_idx: 0,
-            amount: 100_000
-          )
+      m_new_balance =
+        Model.aex9_event_balance(m_balance,
+          txi: call_txi,
+          log_idx: 0,
+          amount: 100_000
+        )
 
-        assert {:ok, ^m_new_balance} =
-                 State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk})
-      end
+      assert {:ok, ^m_new_balance} =
+               State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk})
     end
   end
 
   describe "aex9 transfer" do
     test "puts aex9 transfers after a call with transfer log" do
-      kb_hash = :crypto.strong_rand_bytes(32)
-      next_mb_hash = :crypto.strong_rand_bytes(32)
       contract_pk = :crypto.strong_rand_bytes(32)
       height = Enum.random(100_000..999_999)
-      mbi = 1
-      block_hash_height = height + 1
       call_txi = Enum.random(100_000_000..999_999_999)
 
       from_pk = :crypto.strong_rand_bytes(32)
@@ -421,7 +363,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       mutation =
         ContractCallMutation.new(
           contract_pk,
-          {height, mbi},
           call_txi,
           fun_arg_res,
           call_rec
@@ -434,44 +375,31 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       type_info = {:fcode, functions, nil, nil}
       AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
-      with_mocks [
-        {AeMdw.Node.Db, [:passthrough],
-         [
-           get_key_block_hash: fn ^block_hash_height -> kb_hash end,
-           get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
-           aex9_balances: fn ^contract_pk, _next -> {:ok, %{}} end
-         ]}
-      ] do
-        state =
-          NullStore.new()
-          |> MemStore.new()
-          |> State.new()
-          |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
-          |> State.commit_mem([mutation])
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+        |> State.commit_mem([mutation])
 
-        assert State.exists?(
-                 state,
-                 Model.AexnTransfer,
-                 {:aex9, from_pk, call_txi, to_pk, amount, 0}
-               )
+      assert State.exists?(
+               state,
+               Model.AexnTransfer,
+               {:aex9, from_pk, call_txi, to_pk, amount, 0}
+             )
 
-        assert State.exists?(
-                 state,
-                 Model.RevAexnTransfer,
-                 {:aex9, to_pk, call_txi, from_pk, amount, 0}
-               )
-      end
+      assert State.exists?(
+               state,
+               Model.RevAexnTransfer,
+               {:aex9, to_pk, call_txi, from_pk, amount, 0}
+             )
     end
 
     test "puts multiple aex9 transfers after a call with transfer logs" do
-      kb_hash = :crypto.strong_rand_bytes(32)
-      next_mb_hash = :crypto.strong_rand_bytes(32)
       contract_pk = :crypto.strong_rand_bytes(32)
       remote_pk1 = :crypto.strong_rand_bytes(32)
       remote_pk2 = :crypto.strong_rand_bytes(32)
       height = Enum.random(100_000..999_999)
-      mbi = 1
-      block_hash_height = height + 1
       call_txi = Enum.random(100_000_000..999_999_999)
 
       from_pk1 = <<11::256>>
@@ -515,7 +443,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       mutation =
         ContractCallMutation.new(
           contract_pk,
-          {height, mbi},
           call_txi,
           fun_arg_res,
           call_rec
@@ -529,47 +456,38 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       AeMdw.EtsCache.put(AeMdw.Contract, remote_pk1, {type_info, nil, nil})
       AeMdw.EtsCache.put(AeMdw.Contract, remote_pk2, {type_info, nil, nil})
 
-      with_mocks [
-        {AeMdw.Node.Db, [:passthrough],
-         [
-           get_key_block_hash: fn ^block_hash_height -> kb_hash end,
-           get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end,
-           aex9_balances: fn pk, _next when pk in [remote_pk1, remote_pk2] -> {:ok, %{}} end
-         ]}
-      ] do
-        state =
-          NullStore.new()
-          |> MemStore.new()
-          |> State.new()
-          |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
-          |> State.cache_put(:ct_create_sync_cache, remote_pk1, call_txi - 2)
-          |> State.cache_put(:ct_create_sync_cache, remote_pk2, call_txi - 3)
-          |> State.commit_mem([mutation])
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+        |> State.cache_put(:ct_create_sync_cache, remote_pk1, call_txi - 2)
+        |> State.cache_put(:ct_create_sync_cache, remote_pk2, call_txi - 3)
+        |> State.commit_mem([mutation])
 
-        assert State.exists?(
-                 state,
-                 Model.AexnTransfer,
-                 {:aex9, from_pk1, call_txi, to_pk1, amount1, 0}
-               )
+      assert State.exists?(
+               state,
+               Model.AexnTransfer,
+               {:aex9, from_pk1, call_txi, to_pk1, amount1, 0}
+             )
 
-        assert State.exists?(
-                 state,
-                 Model.AexnTransfer,
-                 {:aex9, from_pk2, call_txi, to_pk2, amount2, 1}
-               )
+      assert State.exists?(
+               state,
+               Model.AexnTransfer,
+               {:aex9, from_pk2, call_txi, to_pk2, amount2, 1}
+             )
 
-        assert State.exists?(
-                 state,
-                 Model.RevAexnTransfer,
-                 {:aex9, to_pk1, call_txi, from_pk1, amount1, 0}
-               )
+      assert State.exists?(
+               state,
+               Model.RevAexnTransfer,
+               {:aex9, to_pk1, call_txi, from_pk1, amount1, 0}
+             )
 
-        assert State.exists?(
-                 state,
-                 Model.RevAexnTransfer,
-                 {:aex9, to_pk2, call_txi, from_pk2, amount2, 1}
-               )
-      end
+      assert State.exists?(
+               state,
+               Model.RevAexnTransfer,
+               {:aex9, to_pk2, call_txi, from_pk2, amount2, 1}
+             )
     end
   end
 
@@ -604,7 +522,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       mutation =
         ContractCallMutation.new(
           contract_pk,
-          {height, 0},
           call_txi,
           fun_arg_res,
           call_rec
@@ -667,7 +584,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       mutation =
         ContractCallMutation.new(
           contract_pk,
-          {height, 0},
           call_txi,
           fun_arg_res,
           call_rec
@@ -734,7 +650,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       mutation =
         ContractCallMutation.new(
           contract_pk,
-          {height, 0},
           call_txi,
           fun_arg_res,
           call_rec
@@ -805,7 +720,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       mutation =
         ContractCallMutation.new(
           contract_pk,
-          {height, 0},
           call_txi,
           fun_arg_res,
           call_rec
@@ -857,7 +771,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       mutation =
         ContractCallMutation.new(
           contract_pk,
-          {height, 0},
           call_txi,
           fun_arg_res,
           call_rec
@@ -927,7 +840,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       mutation =
         ContractCallMutation.new(
           contract_pk,
-          {height, 0},
           call_txi,
           fun_arg_res,
           call_rec
@@ -1012,7 +924,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       mutation =
         ContractCallMutation.new(
           contract_pk,
-          {height, 0},
           call_txi,
           fun_arg_res,
           call_rec
@@ -1076,7 +987,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       mutation =
         ContractCallMutation.new(
           contract_pk,
-          {height, 0},
           call_txi,
           fun_arg_res,
           call_rec
@@ -1134,7 +1044,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       mutation =
         ContractCallMutation.new(
           contract_pk,
-          {height, 0},
           call_txi,
           fun_arg_res,
           call_rec
@@ -1224,7 +1133,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       mutation =
         ContractCallMutation.new(
           contract_pk,
-          {height, 0},
           call_txi,
           fun_arg_res,
           call_rec
@@ -1334,7 +1242,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       mutation =
         ContractCallMutation.new(
           contract_pk,
-          {height, 0},
           call_txi,
           fun_arg_res,
           call_rec
@@ -1364,7 +1271,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
     end
   end
 
-  defp contract_call_mutation(fname, block_index, call_txi, contract_pk) do
+  defp contract_call_mutation(fname, call_txi, contract_pk) do
     %{arguments: args} = fun_arg_res = fun_args_res(fname)
     call_rec = call_rec(fname)
 
@@ -1391,7 +1298,6 @@ defmodule AeMdw.Db.ContractCallMutationTest do
     mutation =
       ContractCallMutation.new(
         contract_pk,
-        block_index,
         call_txi,
         fun_arg_res,
         call_rec

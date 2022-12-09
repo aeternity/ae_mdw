@@ -1,6 +1,6 @@
 defmodule AeMdw.Sync.AsyncTasks.Consumer do
   @moduledoc """
-  Database Sync tasks that run asynchronously consuming Model.AsyncTasks records.
+  Database Sync tasks that run asynchronously consuming Model.AsyncTask records.
   """
   use GenServer
 

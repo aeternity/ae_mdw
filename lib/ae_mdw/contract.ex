@@ -155,22 +155,6 @@ defmodule AeMdw.Contract do
     )
   end
 
-  @spec extract_successful_function(fun_arg_res_or_error()) ::
-          {:ok, method_name(), method_args()} | :not_found
-  def extract_successful_function({:error, _reason}), do: :not_found
-  def extract_successful_function(%{result: %{error: _error}}), do: :not_found
-  def extract_successful_function(%{result: %{abort: _error}}), do: :not_found
-
-  def extract_successful_function(%{function: method_name, arguments: method_args}) do
-    {:ok, method_name, method_args}
-  end
-
-  @spec is_success_ct_call?(fun_arg_res_or_error()) :: boolean
-  def is_success_ct_call?({:error, _reason}), do: false
-  def is_success_ct_call?(%{result: %{error: _error}}), do: false
-  def is_success_ct_call?(%{result: %{abort: _error}}), do: false
-  def is_success_ct_call?(_result_ok), do: true
-
   @spec function_hash(String.t()) :: function_hash()
   def function_hash(name),
     do: :binary.part(:aec_hash.blake2b_256_hash(name), 0, 4)

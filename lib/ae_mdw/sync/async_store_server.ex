@@ -10,12 +10,9 @@ defmodule AeMdw.Sync.AsyncStoreServer do
   """
   use GenServer
 
-  alias AeMdw.Database
   alias AeMdw.Db.AsyncStore
-  alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.State
-  alias AeMdw.Db.TxnDbStore
 
   @spec start_link([]) :: GenServer.on_start()
   def start_link([]) do
@@ -28,9 +25,9 @@ defmodule AeMdw.Sync.AsyncStoreServer do
     {:ok, %{last_db_kbi: 0}}
   end
 
-  @spec write_mutations(AeMdw.Blocks.block_index(), [Mutation.t()], fun()) :: :ok
-  def write_mutations(block_index, async_mutations, done_fn) do
-    GenServer.cast(__MODULE__, {:write_mutations, block_index, async_mutations, done_fn})
+  @spec write_mutations([Mutation.t()], fun()) :: :ok
+  def write_mutations(async_mutations, done_fn) do
+    GenServer.cast(__MODULE__, {:write_mutations, async_mutations, done_fn})
   end
 
   @spec write_async_store(State.t()) :: State.t()
@@ -39,25 +36,12 @@ defmodule AeMdw.Sync.AsyncStoreServer do
   end
 
   @impl GenServer
-  def handle_cast(
-        {:write_mutations, {kbi, _mbi} = block_index, mutations, done_fn},
-        %{last_db_kbi: last_db_kbi} = state
-      ) do
-    if Database.exists?(Model.Block, block_index) || kbi <= last_db_kbi do
-      TxnDbStore.transaction(fn store ->
-        txn_state = State.new(store)
+  def handle_cast({:write_mutations, mutations, done_fn}, state) do
+    async_state = State.new(AsyncStore.instance())
 
-        mutations
-        |> Enum.reject(&is_nil/1)
-        |> Enum.each(&Mutation.execute(&1, txn_state))
-      end)
-    else
-      async_state = State.new(AsyncStore.instance())
-
-      mutations
-      |> Enum.reject(&is_nil/1)
-      |> Enum.each(&Mutation.execute(&1, async_state))
-    end
+    mutations
+    |> Enum.reject(&is_nil/1)
+    |> Enum.each(&Mutation.execute(&1, async_state))
 
     done_fn.()
 
@@ -65,29 +49,14 @@ defmodule AeMdw.Sync.AsyncStoreServer do
   end
 
   @impl GenServer
-  def handle_call({:write_store, db_state}, _from, _state) do
-    new_state =
+  def handle_call({:write_store, db_state1}, _from, state) do
+    db_state2 =
       AsyncStore.instance()
       |> AsyncStore.mutations()
-      |> Enum.reduce(db_state, &Mutation.execute/2)
+      |> Enum.reduce(db_state1, &Mutation.execute/2)
 
     AsyncStore.clear(AsyncStore.instance())
 
-    {:reply, new_state, %{last_db_kbi: last_db_kbi(db_state)}}
-  end
-
-  defp last_db_kbi(db_state) do
-    case State.prev(db_state, Model.Block, {nil, nil}) do
-      {:ok, {kbi, mbi}} ->
-        if mbi == -1 do
-          {:ok, {kbi, _mbi}} = State.prev(db_state, Model.Block, {kbi, mbi})
-          kbi
-        else
-          kbi
-        end
-
-      :none ->
-        0
-    end
+    {:reply, db_state2, state}
   end
 end

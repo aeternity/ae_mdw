@@ -23,7 +23,6 @@ defmodule AeMdw.Db.Contract do
 
   @typep pubkey :: Db.pubkey()
   @typep state :: State.t()
-  @typep block_index :: AeMdw.Blocks.block_index()
   @typep txi :: AeMdw.Txs.txi()
 
   @type rev_aex9_contract_key :: {pos_integer(), String.t(), String.t(), pos_integer()}
@@ -80,24 +79,6 @@ defmodule AeMdw.Db.Contract do
     else
       state
     end
-  end
-
-  @spec aex9_write_balances(state(), pubkey(), [account_balance()], block_index(), txi()) ::
-          state()
-  def aex9_write_balances(state, contract_pk, balances, block_index, txi) do
-    Enum.reduce(balances, state, fn {account_pk, amount}, state ->
-      m_balance =
-        Model.aex9_balance(
-          index: {contract_pk, account_pk},
-          block_index: block_index,
-          txi: txi,
-          amount: amount
-        )
-
-      state
-      |> aex9_write_presence(contract_pk, txi, account_pk)
-      |> State.put(Model.Aex9Balance, m_balance)
-    end)
   end
 
   @spec aex9_init_event_balances(state(), pubkey(), [account_balance()], txi()) :: state()
@@ -159,8 +140,8 @@ defmodule AeMdw.Db.Contract do
     State.put(state, Model.ContractCall, m_call)
   end
 
-  @spec logs_write(state(), block_index(), txi(), txi(), Contract.call()) :: state()
-  def logs_write(state, block_index, create_txi, txi, call_rec) do
+  @spec logs_write(state(), txi(), txi(), Contract.call()) :: state()
+  def logs_write(state, create_txi, txi, call_rec) do
     contract_pk = :aect_call.contract_pubkey(call_rec)
     raw_logs = :aect_call.log(call_rec)
 
@@ -185,7 +166,7 @@ defmodule AeMdw.Db.Contract do
         |> State.put(Model.DataContractLog, m_data_log)
         |> State.put(Model.EvtContractLog, m_evt_log)
         |> State.put(Model.IdxContractLog, m_idx_log)
-        |> maybe_index_remote_log(contract_pk, block_index, txi, log)
+        |> maybe_index_remote_log(contract_pk, txi, log)
 
       aex9_contract_pk = which_aex9_contract_pubkey(contract_pk, addr)
 
@@ -283,27 +264,6 @@ defmodule AeMdw.Db.Contract do
     case State.prev(state, Model.ContractCall, {create_txi, upper_txi}) do
       {:ok, {^create_txi, call_txi}} -> call_txi
       _none_or_other -> create_txi
-    end
-  end
-
-  @spec update_aex9_state(State.t(), pubkey(), block_index(), txi()) :: State.t()
-  def update_aex9_state(state, contract_pk, block_index, txi) do
-    if AexnContracts.is_aex9?(contract_pk) do
-      with false <- State.exists?(state, Model.AexnContract, {:aex9, contract_pk}),
-           {:ok, extensions} <- AexnContracts.call_extensions(:aex9, contract_pk),
-           {:ok, aex9_meta_info} <- AexnContracts.call_meta_info(:aex9, contract_pk) do
-        state
-        |> State.enqueue(:update_aex9_state, [contract_pk], [block_index, txi])
-        |> aexn_creation_write(:aex9, aex9_meta_info, contract_pk, txi, extensions)
-      else
-        true ->
-          State.enqueue(state, :update_aex9_state, [contract_pk], [block_index, txi])
-
-        :error ->
-          state
-      end
-    else
-      state
     end
   end
 
@@ -582,7 +542,6 @@ defmodule AeMdw.Db.Contract do
   defp maybe_index_remote_log(
          state,
          contract_pk,
-         _block_index,
          _txi,
          {{contract_pk, _event, _data}, _i}
        ),
@@ -591,7 +550,6 @@ defmodule AeMdw.Db.Contract do
   defp maybe_index_remote_log(
          state,
          contract_pk,
-         block_index,
          txi,
          {{log_pk, [evt_hash | args], data}, i}
        ) do
@@ -607,9 +565,7 @@ defmodule AeMdw.Db.Contract do
         data: data
       )
 
-    state
-    |> State.put(Model.ContractLog, m_log_remote)
-    |> update_aex9_state(log_pk, block_index, txi)
+    State.put(state, Model.ContractLog, m_log_remote)
   end
 
   defp write_aexn_transfer(

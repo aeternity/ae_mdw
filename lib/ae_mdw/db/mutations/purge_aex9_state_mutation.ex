@@ -42,8 +42,8 @@ defmodule AeMdw.Db.PurgeAex9StateMutation do
   end
 
   defp safe_delete_balance(state, contract_pk, account_pk) do
-    if State.exists?(state, Model.Aex9Balance, {contract_pk, account_pk}) do
-      State.delete(state, Model.Aex9Balance, {contract_pk, account_pk})
+    if State.exists?(state, Model.Aex9EventBalance, {contract_pk, account_pk}) do
+      State.delete(state, Model.Aex9EventBalance, {contract_pk, account_pk})
     else
       state
     end
