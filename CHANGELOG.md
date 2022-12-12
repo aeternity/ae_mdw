@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.32.1](https://www.github.com/aeternity/ae_mdw/compare/v1.32.0...v1.32.1) (2022-12-12)
+
+
+### Miscellaneous
+
+* **ci:** simplify workflow triggering ([#1074](https://www.github.com/aeternity/ae_mdw/issues/1074)) ([f4e3cbe](https://www.github.com/aeternity/ae_mdw/commit/f4e3cbe5aaaf234a207ecca2315f90d0d2185b49))
+
 ## [1.32.0](https://www.github.com/aeternity/ae_mdw/compare/v1.31.0...v1.32.0) (2022-12-09)
 
 
