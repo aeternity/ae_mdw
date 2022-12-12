@@ -1,9 +1,11 @@
-name: Dockerhub Dev Pipeline
+name: Dockerhub Pipeline
 
 on:
   push:
     branches:
       - "**"
+    tags:
+      - 'v*'
   pull_request:
     branches:
       - "master"
@@ -13,7 +15,7 @@ env:
 
 jobs:
   dockerhub:
-    name: "Publish dev branches to Dockehub"
+    name: "Publish to Dockehub"
     runs-on: ubuntu-latest
 
     steps:
@@ -21,36 +23,28 @@ jobs:
         with:
           fetch-depth: 100
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-        # Only worked for us with this option on
-        with:
-          install: true
-
-      - name: Login to Dockerhub
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USER }}
-          password: ${{ secrets.DOCKERHUB_PASS }}
-
       - name: Extract metadata for docker
         id: meta
         uses: docker/metadata-action@v4
         with:
           images: aeternity/${{ env.APP }}
           tags: |
-            type=edge
+            type=raw,value=master,enable={{is_default_branch}}
             type=ref,event=pr
-            type=sha,prefix=
+            type=sha,prefix=,enable={{is_default_branch}}
+            type=semver,pattern={{version}},enable={{is_default_branch}}
+  
+      - name: Login to Dockerhub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_PASS }}
 
       - name: Build and push docker image
         uses: docker/build-push-action@v3
+        if: ${{ steps.meta.outputs.tags }}
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
