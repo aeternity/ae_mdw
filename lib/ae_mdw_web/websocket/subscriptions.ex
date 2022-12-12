@@ -160,9 +160,6 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
     end
   end
 
-  # :ets.delete_object(@subs_channel_pid, {channel_key, pid})
-  # :ets.delete_object(@subs_pid_channel, {pid, {channel_key, channel}})
-
   defp channel_key(version, channel) when channel in @known_channels,
     do: {:ok, {version, channel}}
 

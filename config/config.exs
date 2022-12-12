@@ -42,8 +42,7 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   pubsub: [name: AeMdw.PubSub, adapter: Phoenix.PubSub.PG2],
   live_view: [signing_salt: "Oy680JAN"]
 
-config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
-  http: [port: 4001]
+config :ae_mdw, AeMdwWeb.WebsocketEndpoint, http: [port: 4001]
 
 # Configures Elixir's Logger
 config :logger,

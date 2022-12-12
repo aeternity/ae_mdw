@@ -91,7 +91,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   defp do_broadcast_key_block(block, :v2, :mdw) do
     header = :aec_blocks.to_header(block)
     height = :aec_headers.height(header)
-    state = State.new()
+    state = State.mem_state()
 
     case Blocks.fetch_key_block(state, "#{height}") do
       {:ok, block} ->
@@ -136,7 +136,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   defp do_broadcast_micro_block(block, :v2, :mdw) do
     header = :aec_blocks.to_header(block)
     {:ok, hash} = :aec_headers.hash_header(header)
-    state = State.new()
+    state = State.mem_state()
 
     case Blocks.fetch_micro_block(state, hash) do
       {:ok, block} ->
@@ -169,7 +169,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   end
 
   defp do_broadcast_txs(block, :v2, :mdw) do
-    state = State.new()
+    state = State.mem_state()
 
     block
     |> :aec_blocks.txs()
@@ -177,13 +177,13 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
       tx_hash = :aetx_sign.hash(tx)
 
       case Txs.fetch(state, tx_hash, true) do
-        {:ok, tx} ->
-          mdw_msg = encode_message(tx, "Transactions", :mdw)
+        {:ok, mdw_tx} ->
+          mdw_msg = encode_message(mdw_tx, "Transactions", :mdw)
           broadcast("Transactions", :v2, mdw_msg)
 
           tx
           |> get_ids_from_tx()
-          |> Enum.each(&broadcast(&1, :v2, encode_message(tx, "Object", :mdw)))
+          |> Enum.each(&broadcast(&1, :v2, encode_message(mdw_tx, "Object", :mdw)))
 
         {:error, _reason} ->
           :ok
