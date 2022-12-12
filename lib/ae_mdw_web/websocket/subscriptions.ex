@@ -65,9 +65,9 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
   @spec unsubscribe(pid(), version(), channel()) ::
           {:ok, [channel()]} | {:error, :invalid_channel | :not_subscribed}
   def unsubscribe(pid, version, channel) do
-    with {:ok, channel_key, channel} <- validate_unsubscribe(pid, version, channel) do
+    with {:ok, channel_key} <- validate_unsubscribe(pid, version, channel) do
       :ets.delete_object(@subs_channel_pid, {channel_key, pid})
-      :ets.delete_object(@subs_pid_channel, {pid, {channel_key, channel}})
+      :ets.match_delete(@subs_pid_channel, {pid, {channel_key, :_}})
 
       {:ok, subscribed_channels(pid)}
     end
@@ -134,29 +134,29 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
   defp unsubscribe_all(pid) do
     @subs_pid_channel
     |> :ets.match_object({pid, :"$1"})
-    |> Enum.each(fn {^pid, channel_key} ->
-      :ets.delete_object(@subs_pid_channel, {pid, channel_key})
+    |> Enum.each(fn {^pid, {channel_key, channel}} ->
+      :ets.delete_object(@subs_pid_channel, {pid, {channel_key, channel}})
       :ets.delete_object(@subs_channel_pid, {channel_key, pid})
     end)
   end
 
   defp validate_subscribe(pid, version, channel) do
     with {:ok, channel_key} <- channel_key(version, channel),
-         {:match, :none} <- {:match, match(pid, channel_key)} do
+         {:match, false} <- {:match, match(pid, channel_key, channel)} do
       {:ok, channel_key}
     else
       {:error, _reason} -> {:error, :invalid_channel}
-      {:match, {:ok, _channel}} -> {:error, :already_subscribed}
+      {:match, true} -> {:error, :already_subscribed}
     end
   end
 
   defp validate_unsubscribe(pid, version, channel) do
     with {:ok, channel_key} <- channel_key(version, channel),
-         {:ok, channel} <- match(pid, channel_key) do
-      {:ok, channel_key, channel}
+         true <- match(pid, channel_key, channel) do
+      {:ok, channel_key}
     else
       {:error, _reason} -> {:error, :invalid_channel}
-      :none -> {:error, :not_subscribed}
+      false -> {:error, :not_subscribed}
     end
   end
 
@@ -169,10 +169,10 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
     end
   end
 
-  defp match(pid, channel_key) do
+  defp match(pid, channel_key, channel) do
     case :ets.match_object(@subs_pid_channel, {pid, {channel_key, :"$1"}}, 1) do
-      {[{^pid, {^channel_key, channel}}], _cont} -> {:ok, channel}
-      @eot -> :none
+      {[{^pid, {^channel_key, ^channel}}], _cont} -> true
+      @eot -> false
     end
   end
 end
