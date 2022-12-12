@@ -50,13 +50,28 @@ Ensure that you have [Elixir](https://elixir-lang.org/install.html) installed, u
 
 ## Setup
 
-`git clone https://github.com/aeternity/ae_mdw && cd ae_mdw`
-  * This project depends on [æternity](https://github.com/aeternity/aeternity) node. It should be then compiled and the path to the node should be configured in `config.exs`, or you can simply export `NODEROOT`. If the variable is not set, by default the path is `../aeternity/_build/local/`.
+Firstly, clone the middleware repo:
 
-```
-export NODEROOT="path/to/your/node"
-```
-The NODEROOT directory should contain directories: `bin`, `lib`, `plugins`, `rel` of AE node installation.
+`git clone https://github.com/aeternity/ae_mdw && cd ae_mdw`
+
+For syncing on testnet, change ./docker/aeternity.yaml network_id to `ae_uat`.
+
+Following there are two options depending on which block height you want to continue syncing:
+
+### A) Sync from genesis block
+
+1. Simply run the middleware with `docker-compose up`
+
+Next time you run the same command it will continue from the last height synced.
+
+### B) Sync using a Node snapshot
+
+1. Build the docker image with `docker-compose build`
+2. Download the latest Node database snapshot from https://aeternity-database-backups.s3.amazonaws.com/main_backup_v1_light_latest.tar.zst (mainnet) or https://aeternity-database-backups.s3.amazonaws.com/uat_backup_v1_full_latest.tar.zst (testnet)
+3. Create a 'data' directory under the root repo dir and extract the backup to it.
+4. Run the middleware with `docker-compose up`
+
+You can check on `/status` page that `node_height` is higher than 600000.
 
 ### Docker setup for local dev
 
