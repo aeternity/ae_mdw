@@ -72,7 +72,8 @@ defmodule AeMdwWeb.Aex141ControllerTest do
             index: {contract_pk, template_id},
             txi: txi,
             log_idx: log_idx,
-            limit: {template_id * 10, txi + 100, log_idx + 1}
+            limit: {template_id * 10, txi + 100, log_idx + 1},
+            supply: {[1, 2, 3], txi + 200, log_idx + 2}
           )
 
         store =
@@ -80,6 +81,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
           |> Store.put(Model.NftTemplate, m_template)
           |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>))
           |> Store.put(Model.Tx, Model.tx(index: txi + 100, id: <<txi + 100::256>>))
+          |> Store.put(Model.Tx, Model.tx(index: txi + 200, id: <<txi + 200::256>>))
 
         if token_id != 1_413_010 do
           store
@@ -547,17 +549,23 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                                        "edition" => %{
                                          "limit" => edition_limit,
                                          "limit_tx_hash" => limit_tx_hash,
-                                         "limit_log_idx" => limit_log_idx
+                                         "limit_log_idx" => limit_log_idx,
+                                         "supply_tokens" => [1, 2, 3],
+                                         "supply_tx_hash" => supply_tx_hash,
+                                         "supply_log_idx" => supply_log_idx
                                        }
                                      } ->
                tx_hash = Validate.id!(tx_hash)
                limit_tx_hash = Validate.id!(limit_tx_hash)
+               supply_tx_hash = Validate.id!(supply_tx_hash)
 
                ct_id == contract_id and template_id in 1..10 and
                  tx_hash == <<template_id + 1_413_000::256>> and log_idx == rem(template_id, 2) and
                  edition_limit == template_id * 10 and
                  limit_tx_hash == <<template_id + 1_413_100::256>> and
-                 limit_log_idx == rem(template_id, 2) + 1
+                 limit_log_idx == rem(template_id, 2) + 1 and
+                 supply_tx_hash == <<template_id + 1_413_200::256>> and
+                 supply_log_idx == rem(template_id, 2) + 2
              end)
 
       assert %{"data" => next_templates, "prev" => prev_templates} =

@@ -546,7 +546,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
   end
 
   describe "aex141 template mint" do
-    test "add nft ownership after a call with the event" do
+    test "add nft ownership and supply after a call with the event" do
       contract_pk = :crypto.strong_rand_bytes(32)
       to_pk = :crypto.strong_rand_bytes(32)
       height = Enum.random(100_000..999_999)
@@ -589,11 +589,22 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           call_rec
         )
 
+      prev_token_id = Enum.random(1..1_000)
+
+      prev_nft_template =
+        Model.nft_template(
+          index: {contract_pk, template_id},
+          txi: call_txi - 2,
+          log_idx: 1,
+          supply: {[prev_token_id], nil, nil}
+        )
+
       state =
         NullStore.new()
         |> MemStore.new()
         |> State.new()
         |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, contract_pk}))
+        |> State.put(Model.NftTemplate, prev_nft_template)
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
         |> State.commit_mem([mutation])
 
@@ -604,6 +615,15 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                State.get(state, Model.NftTokenOwner, {contract_pk, token_id})
 
       assert State.exists?(state, Model.NftOwnerToken, {contract_pk, to_pk, token_id})
+
+      expected_nft_template =
+        Model.nft_template(prev_nft_template, supply: {[token_id, prev_token_id], call_txi, 0})
+
+      assert {:ok, ^expected_nft_template} =
+               State.get(state, Model.NftTemplate, {contract_pk, template_id})
+
+      assert {:ok, Model.nft_token_template(template: ^template_id)} =
+               State.get(state, Model.NftTokenTemplate, {contract_pk, token_id})
     end
   end
 
@@ -1218,7 +1238,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
   end
 
   describe "aex141 burn" do
-    test "remove nft ownership after a call with burn log" do
+    test "remove nft ownership and supply after a call with burn log" do
       contract_pk = <<11::256>>
       owner_pk = <<12::256>>
       height = Enum.random(100_000..999_999)
@@ -1247,12 +1267,27 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           call_rec
         )
 
+      template_id = 1
+
+      prev_nft_template =
+        Model.nft_template(
+          index: {contract_pk, template_id},
+          txi: call_txi - 2,
+          log_idx: 1,
+          supply: {[token_id1, token_id2], call_txi - 1, log_idx: 3}
+        )
+
       state =
         NullStore.new()
         |> MemStore.new()
         |> State.new()
         |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, contract_pk}))
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
+        |> State.put(
+          Model.NftTokenTemplate,
+          Model.nft_token_template(index: {contract_pk, token_id1}, template: template_id)
+        )
+        |> State.put(Model.NftTemplate, prev_nft_template)
         |> put_existing_nft(contract_pk, owner_pk, token_id1)
         |> put_existing_nft(contract_pk, owner_pk, token_id2)
         |> put_stats(contract_pk, 2, 1)
@@ -1268,6 +1303,14 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       refute State.exists?(state, Model.NftOwnerToken, {contract_pk, owner_pk, token_id1})
       assert State.exists?(state, Model.NftOwnerToken, {contract_pk, owner_pk, token_id2})
+
+      expected_nft_template =
+        Model.nft_template(prev_nft_template, supply: {[token_id2], call_txi, 0})
+
+      assert {:ok, ^expected_nft_template} =
+               State.get(state, Model.NftTemplate, {contract_pk, template_id})
+
+      refute State.exists?(state, Model.NftTokenTemplate, {contract_pk, token_id1})
     end
   end
 

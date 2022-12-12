@@ -211,7 +211,7 @@ defmodule AeMdw.Aex141 do
 
   defp render_templates(state, keys) do
     Enum.map(keys, fn {contract_pk, template_id} ->
-      Model.nft_template(txi: txi, log_idx: log_idx, limit: limit) =
+      Model.nft_template(txi: txi, log_idx: log_idx, limit: limit, supply: supply) =
         State.fetch!(state, @templates_table, {contract_pk, template_id})
 
       tx_hash = Txs.txi_to_hash(state, txi)
@@ -221,12 +221,20 @@ defmodule AeMdw.Aex141 do
         template_id: template_id,
         tx_hash: encode(:tx_hash, tx_hash),
         log_idx: log_idx,
-        edition: render_template_edition_limit(state, limit)
+        edition: render_template_edition(state, limit, supply)
       }
     end)
   end
 
-  defp render_template_edition_limit(_state, nil), do: nil
+  defp render_template_edition(_state, nil, nil), do: nil
+
+  defp render_template_edition(state, limit, supply) do
+    state
+    |> render_template_edition_limit(limit)
+    |> Map.merge(render_template_edition_supply(state, supply))
+  end
+
+  defp render_template_edition_limit(_state, nil), do: %{}
 
   defp render_template_edition_limit(state, {amount, txi, log_idx}) do
     tx_hash = Txs.txi_to_hash(state, txi)
@@ -235,6 +243,18 @@ defmodule AeMdw.Aex141 do
       limit: amount,
       limit_log_idx: log_idx,
       limit_tx_hash: encode(:tx_hash, tx_hash)
+    }
+  end
+
+  defp render_template_edition_supply(_state, nil), do: %{}
+
+  defp render_template_edition_supply(state, {token_ids, txi, log_idx}) do
+    tx_hash = Txs.txi_to_hash(state, txi)
+
+    %{
+      supply_tokens: token_ids,
+      supply_log_idx: log_idx,
+      supply_tx_hash: encode(:tx_hash, tx_hash)
     }
   end
 
