@@ -4,6 +4,8 @@ defmodule AeMdw.Db.Model do
   """
   alias AeMdw.Blocks
   alias AeMdw.Contract
+  alias AeMdw.Contracts
+  alias AeMdw.Db.IntTransfer
   alias AeMdw.Names
   alias AeMdw.Node
   alias AeMdw.Node.Db
@@ -18,6 +20,14 @@ defmodule AeMdw.Db.Model do
   @type table :: atom()
   @type m_record :: tuple()
   @opaque key :: tuple() | integer() | pubkey()
+  @type aexn_type :: :aex9 | :aex141
+  @type aexn_name :: String.t()
+  @type aexn_symbol :: String.t()
+  @type aex9_meta_info :: {aexn_name(), aexn_symbol(), non_neg_integer()}
+  @type aex141_metadata_type :: :url | :ipfs | :object_id | :map
+  @type aex141_meta_info :: {aexn_name(), aexn_symbol(), String.t(), aex141_metadata_type()}
+  @type aexn_meta_info :: aex9_meta_info() | aex141_meta_info()
+  @type aexn_extensions :: [String.t()]
 
   @typep height() :: Blocks.height()
   @typep pubkey :: Db.pubkey()
@@ -27,6 +37,8 @@ defmodule AeMdw.Db.Model do
   @typep tx_hash() :: Txs.tx_hash()
   @typep bi_txi() :: Blocks.block_index_txi()
   @typep query_id() :: Oracles.query_id()
+  @typep amount() :: non_neg_integer()
+  @typep fname() :: Contract.fname()
 
   ################################################################################
 
@@ -45,14 +57,24 @@ defmodule AeMdw.Db.Model do
   @async_task_defaults [index: {-1, nil}, args: nil, extra_args: nil]
   defrecord :async_task, @async_task_defaults
 
-  @type async_tasks_record ::
-          record(:async_tasks, index: {integer(), atom()}, args: list())
+  @type async_task() ::
+          record(:async_task,
+            index: async_task_index(),
+            args: async_task_args(),
+            extra_args: async_task_args()
+          )
+
   @async_tasks_defaults [index: {-1, nil}, args: nil]
   defrecord :async_tasks, @async_tasks_defaults
+
+  @type async_tasks() :: record(:async_task, index: async_task_index(), args: async_task_args())
 
   # index is version like 20210826171900 in 20210826171900_reindex_remote_logs.ex
   @migrations_defaults [index: -1, inserted_at: nil]
   defrecord :migrations, @migrations_defaults
+
+  @type migrations() ::
+          record(:migrations, index: non_neg_integer(), inserted_at: non_neg_integer())
 
   # txs block index :
   #     index = {kb_index (0..), mb_index}, tx_index = tx_index, hash = block (header) hash
@@ -84,6 +106,8 @@ defmodule AeMdw.Db.Model do
   #     index = {mb_time_msecs (0..), tx_index = (0...)},
   @time_defaults [index: {-1, -1}, unused: nil]
   defrecord :time, @time_defaults
+
+  @type time() :: record(:time, index: {non_neg_integer(), txi()})
 
   # txs type index  :
   #     index = {tx_type, tx_index}
@@ -375,15 +399,6 @@ defmodule AeMdw.Db.Model do
   #     index: {type, pubkey} where type = :aex9, :aex141, ...
   #     txi: txi
   #     meta_info: {name, symbol, decimals} | {name, symbol, base_url, metadata_type}
-  @type aexn_type :: :aex9 | :aex141
-  @type aexn_name :: String.t()
-  @type aexn_symbol :: String.t()
-  @type aex9_meta_info :: {aexn_name(), aexn_symbol(), non_neg_integer()}
-  @type aex141_metadata_type :: :url | :ipfs | :object_id | :map
-  @type aex141_meta_info :: {aexn_name(), aexn_symbol(), String.t(), aex141_metadata_type()}
-  @type aexn_meta_info :: aex9_meta_info() | aex141_meta_info()
-  @type aexn_extensions :: [String.t()]
-
   @type aexn_contract ::
           record(:aexn_contract,
             index: {aexn_type(), pubkey()},
@@ -408,6 +423,9 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :aexn_contract_name, @aexn_contract_name_defaults
 
+  @type aexn_contract_name() ::
+          record(:aexn_contract_name, index: {aexn_type(), binary(), pubkey()})
+
   # AEX-N meta info sorted by symbol:
   #     index: {type, symbol, pubkey}
   #     unused: nil
@@ -416,6 +434,9 @@ defmodule AeMdw.Db.Model do
     unused: nil
   ]
   defrecord :aexn_contract_symbol, @aexn_contract_symbol_defaults
+
+  @type aexn_contract_symbol() ::
+          record(:aexn_contract_symbol, index: {aexn_type(), aexn_symbol(), pubkey()})
 
   # AEX-141 owner tokens
   #     index: {owner pubkey, contract pubkey, token_id}, template_id: integer()
@@ -501,6 +522,15 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :contract_call, @contract_call_defaults
 
+  @type contract_call() ::
+          record(:contract_call,
+            index: {txi(), txi()},
+            fun: fname(),
+            args: [term()],
+            result: term(),
+            return: term()
+          )
+
   # contract log:
   #     index: {create txi, call txi, event hash, log idx}
   #     ext_contract: nil || ext_contract_pk
@@ -514,6 +544,14 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :contract_log, @contract_log_defaults
 
+  @type contract_log() ::
+          record(:contract_log,
+            index: {txi(), txi(), Contract.event_hash(), non_neg_integer()},
+            ext_contract: pubkey() | nil,
+            args: [term()],
+            data: Contract.event_data()
+          )
+
   # data contract log:
   #     index: {data, call txi, create txi, event hash, log idx}
   @data_contract_log_defaults [
@@ -521,6 +559,11 @@ defmodule AeMdw.Db.Model do
     unused: nil
   ]
   defrecord :data_contract_log, @data_contract_log_defaults
+
+  @type data_contract_log() ::
+          record(:data_contract_log,
+            index: {Contract.event_data(), txi(), txi(), Contract.event_hash(), non_neg_integer()}
+          )
 
   # evt contract log:
   #     index: {event hash, call txi, create txi, log idx}
@@ -530,6 +573,11 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :evt_contract_log, @evt_contract_log_defaults
 
+  @type evt_contract_log() ::
+          record(:evt_contract_log,
+            index: {Contract.event_hash(), txi(), txi(), non_neg_integer()}
+          )
+
   # idx contract log:
   #     index: {call txi, log idx, create_txi, event hash}
   @idx_contract_log_defaults [
@@ -537,6 +585,11 @@ defmodule AeMdw.Db.Model do
     unused: nil
   ]
   defrecord :idx_contract_log, @idx_contract_log_defaults
+
+  @type idx_contract_log() ::
+          record(:idx_contract_log,
+            index: {txi(), non_neg_integer(), txi(), Contracts.event_hash()}
+          )
 
   # aex9 transfer:
   #    index: {from pk, call txi, to pk, amount, log idx}
@@ -546,6 +599,9 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :aex9_transfer, @aex9_transfer_defaults
 
+  @type aex9_transfer() ::
+          record(:aex9_transfer, index: {pubkey(), txi(), pubkey(), amount(), non_neg_integer()})
+
   # rev aex9 transfer:
   #    index: {to pk, call txi, from pk, amount, log idx}
   @rev_aex9_transfer_defaults [
@@ -553,6 +609,11 @@ defmodule AeMdw.Db.Model do
     unused: nil
   ]
   defrecord :rev_aex9_transfer, @rev_aex9_transfer_defaults
+
+  @type rev_aex9_transfer() ::
+          record(:rev_aex9_transfer,
+            index: {pubkey(), txi(), pubkey(), amount(), non_neg_integer()}
+          )
 
   # aex9 pair transfer:
   #    index: {from pk, to pk, call txi, amount, log idx}
@@ -562,6 +623,11 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :aex9_pair_transfer, @aex9_pair_transfer_defaults
 
+  @type aex9_pair_transfer() ::
+          record(:aex9_pair_transfer,
+            index: {pubkey(), pubkey(), txi(), amount(), non_neg_integer()}
+          )
+
   # idx aex9 transfer:
   #    index: {call txi, log idx, from pk, to pk, amount}
   @idx_aex9_transfer_defaults [
@@ -569,6 +635,11 @@ defmodule AeMdw.Db.Model do
     unused: nil
   ]
   defrecord :idx_aex9_transfer, @idx_aex9_transfer_defaults
+
+  @type idx_aex9_transfer() ::
+          record(:idx_aex9_transfer,
+            index: {txi(), non_neg_integer(), pubkey(), pubkey(), amount()}
+          )
 
   # aexn transfer:
   #    index: {:aex9 | :aex141, from pk, call txi, to pk, amount | token_id, log idx}
@@ -578,6 +649,12 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :aexn_transfer, @aexn_transfer_defaults
 
+  @type aexn_transfer() ::
+          record(:aexn_transfer,
+            index: {aexn_type(), pubkey(), txi(), pubkey(), amount(), non_neg_integer()},
+            contract_pk: pubkey()
+          )
+
   # rev aexn transfer:
   #    index: {:aex9 | :aex141, to pk, call txi, from pk, amount | token_id, log idx}
   @rev_aexn_transfer_defaults [
@@ -585,6 +662,11 @@ defmodule AeMdw.Db.Model do
     unused: nil
   ]
   defrecord :rev_aexn_transfer, @rev_aexn_transfer_defaults
+
+  @type rev_aexn_transfer() ::
+          record(:rev_aexn_transfer,
+            index: {aexn_type(), pubkey(), txi(), pubkey(), amount(), non_neg_integer()}
+          )
 
   # aexn pair transfer:
   #    index: {:aex9 | :aex141, from pk, to pk, call txi, amount | token_id, log idx}
@@ -594,6 +676,11 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :aexn_pair_transfer, @aexn_pair_transfer_defaults
 
+  @type aexn_pair_transfer() ::
+          record(:aexn_pair_transfer,
+            index: {aexn_type(), pubkey(), pubkey(), txi(), amount(), non_neg_integer()}
+          )
+
   # aexn contract from transfer:
   #    index: {create_txi, from pk, call txi, to pk, amount | token_id, log idx}
   @aexn_contract_from_transfer_defaults [
@@ -602,6 +689,11 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :aexn_contract_from_transfer, @aexn_contract_from_transfer_defaults
 
+  @type aexn_contract_from_transfer() ::
+          record(:aexn_contract_from_transfer,
+            index: {txi(), pubkey(), txi(), pubkey(), amount(), non_neg_integer()}
+          )
+
   # aexn contract to transfer:
   #    index: {create_txi, to pk, call txi, from pk, amount | token_id, log idx}
   @aexn_contract_to_transfer_defaults [
@@ -609,6 +701,11 @@ defmodule AeMdw.Db.Model do
     unused: nil
   ]
   defrecord :aexn_contract_to_transfer, @aexn_contract_to_transfer_defaults
+
+  @type aexn_contract_to_transfer() ::
+          record(:aexn_contract_to_transfer,
+            index: {txi(), pubkey(), txi(), pubkey(), amount(), non_neg_integer()}
+          )
 
   # aex9 account presence:
   #    index: {account pk, contract pk}
@@ -619,6 +716,12 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :aex9_account_presence, @aex9_account_presence_defaults
 
+  @type aex9_account_presence() ::
+          record(:aex9_account_presence,
+            index: {pubkey(), pubkey()},
+            txi: txi()
+          )
+
   # idx_aex9_account_presence:
   #    index: {create or call txi, account pk, contract pk}
   @idx_aex9_account_presence_defaults [
@@ -626,6 +729,9 @@ defmodule AeMdw.Db.Model do
     unused: nil
   ]
   defrecord :idx_aex9_account_presence, @idx_aex9_account_presence_defaults
+
+  @type idx_aex9_account_presence() ::
+          record(:idx_aex9_account_presence, index: {txi(), pubkey(), pubkey()})
 
   # int_contract_call:
   #    index: {call txi, local idx}
@@ -653,6 +759,9 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :grp_int_contract_call, @grp_int_contract_call_defaults
 
+  @type grp_int_contract_call() ::
+          record(:grp_int_contract_call, index: {txi(), txi(), non_neg_integer()})
+
   # fname_int_contract_call:
   #    index: {fname, call txi, local idx}
   @fname_int_contract_call_defaults [
@@ -661,6 +770,9 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :fname_int_contract_call, @fname_int_contract_call_defaults
 
+  @type fname_int_contract_call() ::
+          record(:fname_int_contract_call, index: {fname(), txi(), txi()})
+
   # fname_grp_int_contract_call:
   #    index: {fname, create txi, call txi, local idx}
   @fname_grp_int_contract_call_defaults [
@@ -668,6 +780,9 @@ defmodule AeMdw.Db.Model do
     unused: nil
   ]
   defrecord :fname_grp_int_contract_call, @fname_grp_int_contract_call_defaults
+
+  @type fname_grp_int_contract_call() ::
+          record(:fname_grp_int_contract_call, index: {fname(), txi(), txi(), non_neg_integer()})
 
   ##
   # id_int_contract_call:
@@ -678,6 +793,11 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :id_int_contract_call, @id_int_contract_call_defaults
 
+  @type id_int_contract_call() ::
+          record(:id_int_contract_call,
+            index: {pubkey(), non_neg_integer(), txi(), non_neg_integer()}
+          )
+
   # grp_id_int_contract_call:
   #    index: {create txi, id pk, id pos, call txi, local idx}
   @grp_id_int_contract_call_defaults [
@@ -685,6 +805,11 @@ defmodule AeMdw.Db.Model do
     unused: nil
   ]
   defrecord :grp_id_int_contract_call, @grp_id_int_contract_call_defaults
+
+  @type grp_id_int_contract_call() ::
+          record(:grp_id_int_contract_call,
+            index: {txi(), pubkey(), non_neg_integer(), txi(), non_neg_integer()}
+          )
 
   # id_fname_int_contract_call:
   #    index: {id pk, fname, id pos, call txi, local idx}
@@ -694,6 +819,11 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :id_fname_int_contract_call, @id_fname_int_contract_call_defaults
 
+  @type id_fname_int_contract_call() ::
+          record(:id_fname_int_contract_call,
+            index: {pubkey(), fname(), non_neg_integer(), txi(), non_neg_integer()}
+          )
+
   # grp_id_fname_int_contract_call:
   #    index: {create txi, id pk, fname, id pos, call txi, local idx}
   @grp_id_fname_int_contract_call_defaults [
@@ -701,6 +831,11 @@ defmodule AeMdw.Db.Model do
     unused: nil
   ]
   defrecord :grp_id_fname_int_contract_call, @grp_id_fname_int_contract_call_defaults
+
+  @type grp_id_fname_int_contract_call() ::
+          record(:grp_id_fname_int_contract_call,
+            index: {txi(), pubkey(), fname(), non_neg_integer(), txi(), non_neg_integer()}
+          )
 
   # int_transfer_tx:
   #   index: {{height, -1 (generation related transfer OR >=0 txi (tx related transfer)}, kind, target, ref txi}
@@ -710,6 +845,12 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :int_transfer_tx, @int_transfer_tx_defaults
 
+  @type int_transfer_tx() ::
+          record(:int_transfer_tx,
+            index: {bi_txi(), IntTransfer.kind(), pubkey(), txi() | -1},
+            amount: amount()
+          )
+
   # kind_int_transfer_tx:
   #  index: {kind, block_index, target, ref txi}
   @kind_int_transfer_tx_defaults [
@@ -718,6 +859,11 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :kind_int_transfer_tx, @kind_int_transfer_tx_defaults
 
+  @type kind_int_transfer_tx() ::
+          record(:kind_int_transfer_tx,
+            index: {IntTransfer.kind(), bi_txi(), pubkey(), txi() | -1}
+          )
+
   # target_kind_int_transfer_tx
   #  index: {target, kind, block_index, ref txi}
   @target_kind_int_transfer_tx_defaults [
@@ -725,6 +871,11 @@ defmodule AeMdw.Db.Model do
     unused: nil
   ]
   defrecord :target_kind_int_transfer_tx, @target_kind_int_transfer_tx_defaults
+
+  @type target_kind_int_transfer_tx() ::
+          record(:target_kind_int_transfer_tx,
+            index: {pubkey(), IntTransfer.kind(), bi_txi(), txi() | -1}
+          )
 
   # statistics
   @delta_stat_defaults [

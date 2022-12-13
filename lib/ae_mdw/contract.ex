@@ -24,7 +24,7 @@ defmodule AeMdw.Contract do
   @typep event_info :: Node.aetx() | :error
   # :aetx.tx_type()
   @typep event_type :: atom()
-  @typep event_data :: %{tx_hash: tx_hash(), type: event_type(), info: event_info()}
+  @type event_data :: %{tx_hash: tx_hash(), type: event_type(), info: event_info()}
 
   @type event :: {event_name(), event_data()}
   @type event_hash :: <<_::256>>
