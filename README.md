@@ -4717,8 +4717,9 @@ In order to differentiate, please check the "source" field on [Publishing Messag
   * Transactions
   * Object, which takes a further field, `target` - can be any æternity entity. So you may subscribe to any æternity object type, and be sent all transactions which reference the object. For instance, if you have an oracle `ok_JcUaMCu9FzTwonCZkFE5BXsgxueagub9fVzywuQRDiCogTzse` you may subscribe to this object and be notified of any events which relate to it - presumable you would be interested in queries, to which you would respond. Of course you can also subscribe to accounts, contracts, names, whatever you like.
 
+### `/websocket`
 
-The websocket interface accepts JSON - encoded commands to subscribe and unsubscribe, and answers these with the list of subscriptions. A session will look like this:
+The V1 websocket interface accepts JSON - encoded commands to subscribe and unsubscribe, and answers these with the list of subscriptions. A session will look like this:
 
 ```
 wscat -c wss://mainnet.aeternity.io/mdw/websocket
@@ -4755,6 +4756,10 @@ Actual chain data is wrapped in a JSON structure identifying the subscription to
 
 When the `source` is "node" it means that the Node is synching the block or transaction (not yet indexed by AeMdw).
 If it's "mdw", it indicates that it's already avaiable through AeMdw Api.
+
+### `/v2/websocket`
+
+The V2 websocket interface behaves the same way as the V1 interface, but when the published message has source `mdw` it returns the renderered representation of the object as it would be rendered by the middleware (e.g. the returned object for the `Transactions` subscription will be the same object as returned by the `/v2/txs` endpoint).
 
 ## Tests
 

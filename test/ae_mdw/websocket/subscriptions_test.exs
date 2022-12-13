@@ -15,26 +15,39 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
 
       on_exit(fn -> unsubscribe_all([pid1, pid2, pid3]) end)
 
-      assert {:ok, ["KeyBlocks"]} = Subscriptions.subscribe(pid1, "KeyBlocks")
-      assert {:ok, ["MicroBlocks"]} = Subscriptions.subscribe(pid2, "MicroBlocks")
-      assert {:ok, ["KeyBlocks", "Transactions"]} = Subscriptions.subscribe(pid1, "Transactions")
+      assert {:ok, ["KeyBlocks"]} = Subscriptions.subscribe(pid1, :v1, "KeyBlocks")
+      assert {:ok, ["MicroBlocks"]} = Subscriptions.subscribe(pid2, :v1, "MicroBlocks")
+
+      assert {:ok, ["KeyBlocks", "Transactions"]} =
+               Subscriptions.subscribe(pid1, :v1, "Transactions")
 
       channel = encode(:account_pubkey, <<11::256>>)
-      assert {:ok, [^channel]} = Subscriptions.subscribe(pid3, channel)
-      assert {:ok, [^channel, "Transactions"]} = Subscriptions.subscribe(pid3, "Transactions")
+      assert {:ok, [^channel]} = Subscriptions.subscribe(pid3, :v1, channel)
+
+      assert {:ok, [^channel, "Transactions"]} =
+               Subscriptions.subscribe(pid3, :v1, "Transactions")
     end
 
     test "returns invalid channel when unknown and not a valid id" do
       channel = "ak_2iK7D3t5xyN8GHxQktvBnfoC3tpq1eVMzTpABQY72FXRfg3HMZ"
       assert {:error, _reason} = Validate.id(channel)
-      assert {:error, :invalid_channel} = Subscriptions.subscribe(new_pid(), channel)
+      assert {:error, :invalid_channel} = Subscriptions.subscribe(new_pid(), :v1, channel)
     end
 
     test "returns error on duplicate subscriptions" do
       pid = new_pid()
       channel = encode(:account_pubkey, <<12::256>>)
-      assert {:ok, [^channel]} = Subscriptions.subscribe(pid, channel)
-      assert {:error, :already_subscribed} = Subscriptions.subscribe(pid, channel)
+      assert {:ok, [^channel]} = Subscriptions.subscribe(pid, :v1, channel)
+      assert {:error, :already_subscribed} = Subscriptions.subscribe(pid, :v1, channel)
+    end
+
+    test "does not allow duplicate subscription of account and oracle with same pubkey" do
+      pid = new_pid()
+      channel = encode(:account_pubkey, <<13::256>>)
+      assert {:ok, [^channel]} = Subscriptions.subscribe(pid, :v2, channel)
+
+      channel = encode(:oracle_pubkey, <<13::256>>)
+      assert {:error, :already_subscribed} = Subscriptions.subscribe(pid, :v2, channel)
     end
   end
 
@@ -45,22 +58,35 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
 
       on_exit(fn -> unsubscribe_all([pid1, pid2]) end)
 
-      assert {:ok, ["KeyBlocks"]} = Subscriptions.subscribe(pid1, "KeyBlocks")
-      assert {:ok, ["KeyBlocks", "Transactions"]} = Subscriptions.subscribe(pid1, "Transactions")
-      assert {:ok, ["MicroBlocks"]} = Subscriptions.subscribe(pid2, "MicroBlocks")
+      assert {:ok, ["KeyBlocks"]} = Subscriptions.subscribe(pid1, :v1, "KeyBlocks")
 
-      assert {:ok, ["Transactions"]} = Subscriptions.unsubscribe(pid1, "KeyBlocks")
-      assert {:ok, []} = Subscriptions.unsubscribe(pid2, "MicroBlocks")
+      assert {:ok, ["KeyBlocks", "Transactions"]} =
+               Subscriptions.subscribe(pid1, :v1, "Transactions")
+
+      assert {:ok, ["MicroBlocks"]} = Subscriptions.subscribe(pid2, :v1, "MicroBlocks")
+
+      assert {:ok, ["Transactions"]} = Subscriptions.unsubscribe(pid1, :v1, "KeyBlocks")
+      assert {:ok, []} = Subscriptions.unsubscribe(pid2, :v1, "MicroBlocks")
     end
 
     test "returns error when channel is unknown and not a valid id" do
       pk_channel = "ak_2iK7D3t5xyN8GHxQktvBnfoC3tpq1eVMzTpABQY72FXRfg3HMZ"
       assert {:error, _reason} = Validate.id(pk_channel)
-      assert {:error, :invalid_channel} = Subscriptions.unsubscribe(new_pid(), pk_channel)
+      assert {:error, :invalid_channel} = Subscriptions.unsubscribe(new_pid(), :v1, pk_channel)
     end
 
     test "returns error on uknonw unsubscription" do
-      assert {:error, :not_subscribed} = Subscriptions.unsubscribe(new_pid(), "KeyBlocks")
+      assert {:error, :not_subscribed} = Subscriptions.unsubscribe(new_pid(), :v1, "KeyBlocks")
+    end
+
+    test "allowed for account and oracle with same pubkey" do
+      pid = new_pid()
+      channel = encode(:account_pubkey, <<14::256>>)
+      assert {:ok, [^channel]} = Subscriptions.subscribe(pid, :v2, channel)
+
+      channel = encode(:oracle_pubkey, <<14::256>>)
+      assert {:ok, []} = Subscriptions.unsubscribe(pid, :v2, channel)
+      assert {:error, :not_subscribed} = Subscriptions.unsubscribe(pid, :v2, channel)
     end
   end
 
@@ -72,19 +98,19 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
 
       on_exit(fn -> unsubscribe_all([pid1, pid2, pid3]) end)
 
-      assert {:ok, ["KeyBlocks"]} = Subscriptions.subscribe(pid1, "KeyBlocks")
+      assert {:ok, ["KeyBlocks"]} = Subscriptions.subscribe(pid1, :v1, "KeyBlocks")
       channel = encode(:account_pubkey, <<13::256>>)
-      assert {:ok, [^channel]} = Subscriptions.subscribe(pid2, channel)
-      assert {:ok, ["KeyBlocks"]} = Subscriptions.subscribe(pid3, "KeyBlocks")
+      assert {:ok, [^channel]} = Subscriptions.subscribe(pid2, :v1, channel)
+      assert {:ok, ["KeyBlocks"]} = Subscriptions.subscribe(pid3, :v1, "KeyBlocks")
 
-      list = Subscriptions.subscribers("KeyBlocks")
+      list = Subscriptions.subscribers(:v1, "KeyBlocks")
       assert pid1 in list and pid3 in list
-      assert [^pid2] = Subscriptions.subscribers(Validate.id!(channel))
+      assert [^pid2] = Subscriptions.subscribers(:v1, channel)
     end
 
     test "returns empty list when there are none for a channel" do
       channel = encode(:account_pubkey, <<14::256>>)
-      assert [] = Subscriptions.subscribers(channel)
+      assert [] = Subscriptions.subscribers(:v1, channel)
     end
   end
 
@@ -95,9 +121,9 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
 
       on_exit(fn -> unsubscribe_all([pid1, pid2]) end)
 
-      assert {:ok, ["KeyBlocks"]} = Subscriptions.subscribe(pid1, "KeyBlocks")
+      assert {:ok, ["KeyBlocks"]} = Subscriptions.subscribe(pid1, :v1, "KeyBlocks")
       channel = encode(:account_pubkey, <<15::256>>)
-      assert {:ok, [^channel]} = Subscriptions.subscribe(pid2, channel)
+      assert {:ok, [^channel]} = Subscriptions.subscribe(pid2, :v1, channel)
 
       assert ["KeyBlocks"] = Subscriptions.subscribed_channels(pid1)
       assert [^channel] = Subscriptions.subscribed_channels(pid2)
@@ -109,8 +135,8 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
 
       on_exit(fn -> unsubscribe_all([pid1, pid2]) end)
 
-      assert {:ok, ["KeyBlocks"]} = Subscriptions.subscribe(pid1, "KeyBlocks")
-      assert {:ok, ["MicroBlocks"]} = Subscriptions.subscribe(pid2, "MicroBlocks")
+      assert {:ok, ["KeyBlocks"]} = Subscriptions.subscribe(pid1, :v1, "KeyBlocks")
+      assert {:ok, ["MicroBlocks"]} = Subscriptions.subscribe(pid2, :v1, "MicroBlocks")
 
       assert ["KeyBlocks"] = Subscriptions.subscribed_channels(pid1)
       Process.exit(pid1, :kill)

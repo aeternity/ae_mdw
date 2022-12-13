@@ -42,24 +42,7 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   pubsub: [name: AeMdw.PubSub, adapter: Phoenix.PubSub.PG2],
   live_view: [signing_salt: "Oy680JAN"]
 
-config :ae_mdw, AeWebsocket.Websocket.SocketHandler,
-  port: 4001,
-  path: "/websocket",
-  # don't accept connections if server already has this number of connections
-  max_connections: 10000,
-  # force to disconnect a connection if the duration passed. if :infinity is set, do nothing.
-  max_connection_age: :infinity,
-  # disconnect if no event comes on a connection during this duration
-  idle_timeout: :infinity,
-  # TCP SO_REUSEPORT flag
-  reuse_port: false,
-  show_debug_logs: false,
-  transmission_limit: [
-    # if 1000 frames are sent on a connection
-    capacity: 1000,
-    # in 2 seconds, disconnect it.
-    duration: 2000
-  ]
+config :ae_mdw, AeMdwWeb.WebsocketEndpoint, http: [port: 4001]
 
 # Configures Elixir's Logger
 config :logger,

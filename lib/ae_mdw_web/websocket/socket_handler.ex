@@ -7,6 +7,11 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
   alias AeMdwWeb.Websocket.Subscriptions
   alias AeMdwWeb.Util
 
+  @versions %{
+    "1" => :v1,
+    "2" => :v2
+  }
+
   @impl Phoenix.Socket.Transport
   def child_spec(_opts) do
     # Won't spawn any additional process for the handler then returns a dummy task
@@ -14,8 +19,13 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
   end
 
   @impl Phoenix.Socket.Transport
-  def connect(state) do
-    {:ok, state}
+  def connect(%{params: params}) do
+    version_bin = Map.get(params, "version", "1")
+
+    case Map.fetch(@versions, version_bin) do
+      {:ok, version} -> {:ok, %{version: version}}
+      :error -> :error
+    end
   end
 
   @impl Phoenix.Socket.Transport
@@ -61,9 +71,9 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
            "payload" => "Object",
            "target" => target
          },
-         state
+         %{version: version} = state
        ) do
-    case Subscriptions.subscribe(self(), target) do
+    case Subscriptions.subscribe(self(), version, target) do
       {:ok, channels} ->
         reply(channels, state)
 
@@ -80,8 +90,8 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
     reply_error("missing field", "target", state)
   end
 
-  defp handle_message(%{"op" => "Subscribe", "payload" => channel}, state) do
-    case Subscriptions.subscribe(self(), channel) do
+  defp handle_message(%{"op" => "Subscribe", "payload" => channel}, %{version: version} = state) do
+    case Subscriptions.subscribe(self(), version, channel) do
       {:ok, channels} ->
         reply(channels, state)
 
@@ -99,9 +109,9 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
            "payload" => "Object",
            "target" => target
          },
-         state
+         %{version: version} = state
        ) do
-    case Subscriptions.unsubscribe(self(), target) do
+    case Subscriptions.unsubscribe(self(), version, target) do
       {:ok, channels} ->
         reply(channels, state)
 
@@ -113,8 +123,8 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
     end
   end
 
-  defp handle_message(%{"op" => "Unsubscribe", "payload" => channel}, state) do
-    case Subscriptions.unsubscribe(self(), channel) do
+  defp handle_message(%{"op" => "Unsubscribe", "payload" => channel}, %{version: version} = state) do
+    case Subscriptions.unsubscribe(self(), version, channel) do
       {:ok, channels} ->
         reply(channels, state)
 

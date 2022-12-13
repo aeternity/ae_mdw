@@ -433,20 +433,20 @@ defmodule Integration.AeMdwWeb.WebsocketTest do
       assert_receive [^recipient_id], 200
 
       {key_block, micro_blocks} = get_blocks(state, 311_860)
-      Broadcaster.broadcast_key_block(key_block, :mdw)
+      Broadcaster.broadcast_key_block(key_block, :v1, :mdw)
       Process.send_after(client1, {:kb, self()}, 100)
 
       kb_payload = @key_block_mdw
       assert_receive ^kb_payload, 300
 
       [mb1 | _] = micro_blocks
-      Broadcaster.broadcast_micro_block(mb1, :mdw)
+      Broadcaster.broadcast_micro_block(mb1, :v1, :mdw)
       Process.send_after(client2, {:mb, self()}, 100)
 
       mb1_payload = @micro_block_mdw
       assert_receive ^mb1_payload, 300
 
-      Broadcaster.broadcast_txs(mb1, :mdw)
+      Broadcaster.broadcast_txs(mb1, :v1, :mdw)
       Process.send_after(client3, {:tx, self()}, 200)
       Process.send_after(client4, {:obj, self()}, 200)
 
@@ -475,11 +475,11 @@ defmodule Integration.AeMdwWeb.WebsocketTest do
       assert_receive ["KeyBlocks", "MicroBlocks", "Transactions", ^recipient_id], 200
 
       {key_block, micro_blocks} = get_blocks(state, 311_860)
-      Broadcaster.broadcast_key_block(key_block, :mdw)
-      Broadcaster.broadcast_key_block(key_block, :mdw)
-      Broadcaster.broadcast_key_block(key_block, :mdw)
-      Broadcaster.broadcast_key_block(key_block, :node)
-      Broadcaster.broadcast_key_block(key_block, :node)
+      Broadcaster.broadcast_key_block(key_block, :v1, :mdw)
+      Broadcaster.broadcast_key_block(key_block, :v1, :mdw)
+      Broadcaster.broadcast_key_block(key_block, :v1, :mdw)
+      Broadcaster.broadcast_key_block(key_block, :v1, :node)
+      Broadcaster.broadcast_key_block(key_block, :v1, :node)
       Process.send_after(client, {:kb, self()}, 100)
 
       kb_payload = @key_block_mdw
@@ -488,13 +488,13 @@ defmodule Integration.AeMdwWeb.WebsocketTest do
       assert_receive ^kb_payload_node, 300
 
       [mb1 | _rest] = micro_blocks
-      Broadcaster.broadcast_micro_block(mb1, :mdw)
+      Broadcaster.broadcast_micro_block(mb1, :v1, :mdw)
       Process.send_after(client, {:mb, self()}, 100)
 
       mb1_payload = @micro_block_mdw
       assert_receive ^mb1_payload, 300
 
-      Broadcaster.broadcast_txs(mb1, :mdw)
+      Broadcaster.broadcast_txs(mb1, :v1, :mdw)
       Process.send_after(client, {:tx, self()}, 200)
       Process.send_after(client, {:obj, self()}, 200)
 

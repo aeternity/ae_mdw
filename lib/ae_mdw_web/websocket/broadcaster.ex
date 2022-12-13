@@ -4,16 +4,21 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   """
   use GenServer
 
+  alias AeMdw.Blocks
+  alias AeMdw.Db.State
   alias AeMdw.EtsCache
+  alias AeMdw.Node.Db
+  alias AeMdw.Txs
   alias AeMdwWeb.Websocket.Subscriptions
   alias AeMdwWeb.Websocket.SocketHandler
 
   require Ex2ms
 
-  @dialyzer {:no_return, broadcast: 2}
-
   @hashes_table :broadcast_hashes
   @expiration_minutes 120
+
+  @typep source() :: :node | :mdw
+  @typep version() :: Subscriptions.version()
 
   @spec start_link(any()) :: GenServer.on_start()
   def start_link(_arg), do: GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
@@ -24,72 +29,81 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   @spec ets_config() :: {EtsCache.table(), EtsCache.expiration()}
   def ets_config(), do: {@hashes_table, @expiration_minutes}
 
-  @spec broadcast_key_block(tuple(), :node | :mdw) :: :ok
-  def broadcast_key_block(block, source) do
-    GenServer.cast(__MODULE__, {:broadcast_key_block, block, source})
+  @spec broadcast_key_block(Db.key_block(), version(), source()) :: :ok
+  def broadcast_key_block(block, version, source) do
+    GenServer.cast(__MODULE__, {:broadcast_key_block, version, block, source})
   end
 
-  @spec broadcast_micro_block(tuple(), :node | :mdw) :: :ok
-  def broadcast_micro_block(block, source) do
-    GenServer.cast(__MODULE__, {:broadcast_micro_block, block, source})
+  @spec broadcast_micro_block(Db.micro_block(), version(), source()) :: :ok
+  def broadcast_micro_block(block, version, source) do
+    GenServer.cast(__MODULE__, {:broadcast_micro_block, version, block, source})
   end
 
-  @spec broadcast_txs(tuple(), :node | :mdw) :: :ok
-  def broadcast_txs(block, source) do
-    GenServer.cast(__MODULE__, {:broadcast_txs, block, source})
+  @spec broadcast_txs(Db.micro_block(), version(), source()) :: :ok
+  def broadcast_txs(block, version, source) do
+    GenServer.cast(__MODULE__, {:broadcast_txs, version, block, source})
   end
 
   @impl GenServer
-  def handle_cast({:broadcast_key_block, block, source}, state) do
+  def handle_cast({:broadcast_key_block, version, block, source}, state) do
     {:ok, hash} = block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
 
-    if not already_processed?({:key, hash, source}) do
-      do_broadcast_key_block(block, source)
-      set_processed({:key, hash, source})
+    if not already_processed?({:key, version, hash, source}) do
+      do_broadcast_key_block(block, version, source)
+      set_processed({:key, version, hash, source})
     end
 
     {:noreply, state}
   end
 
   @impl GenServer
-  def handle_cast({:broadcast_micro_block, block, source}, state) do
+  def handle_cast({:broadcast_micro_block, version, block, source}, state) do
     {:ok, hash} = block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
 
-    if not already_processed?({:micro, hash, source}) do
-      do_broadcast_micro_block(block, source)
-      set_processed({:micro, hash, source})
+    if not already_processed?({:micro, version, hash, source}) do
+      do_broadcast_micro_block(block, version, source)
+      set_processed({:micro, version, hash, source})
     end
 
     {:noreply, state}
   end
 
   @impl GenServer
-  def handle_cast({:broadcast_txs, block, source}, state) do
+  def handle_cast({:broadcast_txs, version, block, source}, state) do
     {:ok, hash} = block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
 
-    if not already_processed?({:txs, hash, source}) do
-      do_broadcast_txs(block, source)
-      set_processed({:txs, hash, source})
+    if not already_processed?({:txs, version, hash, source}) do
+      do_broadcast_txs(block, version, source)
+      set_processed({:txs, version, hash, source})
     end
 
     {:noreply, state}
   end
 
   @impl GenServer
-  def handle_info({:broadcast_objects, header, tx, source}, state) do
-    ser_tx = :aetx_sign.serialize_for_client(header, tx)
-
-    tx
-    |> get_ids_from_tx()
-    |> Enum.each(&broadcast(&1, encode_message(ser_tx, "Object", source)))
-
+  def handle_info(_msg, state) do
     {:noreply, state}
   end
 
   #
   # Private functions
   #
-  defp do_broadcast_key_block(block, source) do
+  defp do_broadcast_key_block(block, :v2, :mdw) do
+    header = :aec_blocks.to_header(block)
+    height = :aec_headers.height(header)
+    state = State.mem_state()
+
+    case Blocks.fetch_key_block(state, "#{height}") do
+      {:ok, block} ->
+        msg = encode_message(block, "KeyBlocks", block)
+        broadcast("KeyBlocks", :v2, msg)
+
+      {:error, _reason} ->
+        :ok
+    end
+  end
+
+  defp do_broadcast_key_block(block, version, source) do
     header = :aec_blocks.to_header(block)
 
     if :aec_blocks.height(block) == 0 do
@@ -98,7 +112,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
         |> :aec_headers.serialize_for_client(:key)
         |> encode_message("KeyBlocks", source)
 
-      broadcast("KeyBlocks", msg)
+      broadcast("KeyBlocks", version, msg)
     else
       prev_block_hash = :aec_blocks.prev_hash(block)
 
@@ -111,8 +125,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
             |> :aec_headers.serialize_for_client(prev_block_type)
             |> encode_message("KeyBlocks", source)
 
-          broadcast("KeyBlocks", msg)
-          :ok
+          broadcast("KeyBlocks", version, msg)
 
         :error ->
           :ok
@@ -120,7 +133,22 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     end
   end
 
-  defp do_broadcast_micro_block(block, source) do
+  defp do_broadcast_micro_block(block, :v2, :mdw) do
+    header = :aec_blocks.to_header(block)
+    {:ok, hash} = :aec_headers.hash_header(header)
+    state = State.mem_state()
+
+    case Blocks.fetch_micro_block(state, hash) do
+      {:ok, block} ->
+        msg = encode_message(block, "MicroBlocks", block)
+        broadcast("MicroBlocks", :v2, msg)
+
+      {:error, _reason} ->
+        :ok
+    end
+  end
+
+  defp do_broadcast_micro_block(block, version, source) do
     prev_block_hash = :aec_blocks.prev_hash(block)
 
     case :aec_chain.get_block(prev_block_hash) do
@@ -133,35 +161,61 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
           |> :aec_headers.serialize_for_client(prev_block_type)
           |> encode_message("MicroBlocks", source)
 
-        broadcast("MicroBlocks", msg)
-        :ok
+        broadcast("MicroBlocks", version, msg)
 
       :error ->
         :ok
     end
   end
 
-  defp do_broadcast_txs(block, source) do
+  defp do_broadcast_txs(block, :v2, :mdw) do
+    state = State.mem_state()
+
+    block
+    |> :aec_blocks.txs()
+    |> Enum.each(fn tx ->
+      tx_hash = :aetx_sign.hash(tx)
+
+      case Txs.fetch(state, tx_hash, true) do
+        {:ok, mdw_tx} ->
+          mdw_msg = encode_message(mdw_tx, "Transactions", :mdw)
+          broadcast("Transactions", :v2, mdw_msg)
+
+          tx
+          |> get_ids_from_tx()
+          |> Enum.each(&broadcast(&1, :v2, encode_message(mdw_tx, "Object", :mdw)))
+
+        {:error, _reason} ->
+          :ok
+      end
+    end)
+  end
+
+  defp do_broadcast_txs(block, version, source) do
     header = :aec_blocks.to_header(block)
 
     block
     |> :aec_blocks.txs()
     |> Enum.each(fn tx ->
       # sends Objects in separate message as broadcast has not_return
-      Process.send(__MODULE__, {:broadcast_objects, header, tx, source}, [:noconnect])
+      ser_tx = :aetx_sign.serialize_for_client(header, tx)
 
       msg =
         header
         |> :aetx_sign.serialize_for_client(tx)
         |> encode_message("Transactions", source)
 
-      broadcast("Transactions", msg)
+      broadcast("Transactions", version, msg)
+
+      tx
+      |> get_ids_from_tx()
+      |> Enum.each(&broadcast(&1, version, encode_message(ser_tx, "Object", source)))
     end)
   end
 
-  defp broadcast(channel, msg) do
-    channel
-    |> Subscriptions.subscribers()
+  defp broadcast(channel, version, msg) do
+    version
+    |> Subscriptions.subscribers(channel)
     |> Enum.each(&SocketHandler.send(&1, msg))
   end
 
