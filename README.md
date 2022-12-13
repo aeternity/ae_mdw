@@ -67,7 +67,7 @@ Next time you run the same command it will continue from the last height synced.
 ### B) Sync using a Node snapshot
 
 1. Build the docker image with `docker-compose build`
-2. Download the latest Node database snapshot from https://aeternity-database-backups.s3.amazonaws.com/main_backup_v1_light_latest.tar.zst (mainnet) or https://aeternity-database-backups.s3.amazonaws.com/uat_backup_v1_full_latest.tar.zst (testnet)
+2. Download the one of the full backups from https://downloads.aeternity.io
 3. Create a 'data' directory under the root repo dir and extract the backup to it.
 4. Run the middleware with `docker-compose up`
 
