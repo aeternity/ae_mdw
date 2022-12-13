@@ -40,6 +40,15 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
       assert {:ok, [^channel]} = Subscriptions.subscribe(pid, :v1, channel)
       assert {:error, :already_subscribed} = Subscriptions.subscribe(pid, :v1, channel)
     end
+
+    test "does not allow duplicate subscription of account and oracle with same pubkey" do
+      pid = new_pid()
+      channel = encode(:account_pubkey, <<13::256>>)
+      assert {:ok, [^channel]} = Subscriptions.subscribe(pid, :v2, channel)
+
+      channel = encode(:oracle_pubkey, <<13::256>>)
+      assert {:error, :already_subscribed} = Subscriptions.subscribe(pid, :v2, channel)
+    end
   end
 
   describe "unsubscribe/2" do
@@ -68,6 +77,16 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
 
     test "returns error on uknonw unsubscription" do
       assert {:error, :not_subscribed} = Subscriptions.unsubscribe(new_pid(), :v1, "KeyBlocks")
+    end
+
+    test "allowed for account and oracle with same pubkey" do
+      pid = new_pid()
+      channel = encode(:account_pubkey, <<14::256>>)
+      assert {:ok, [^channel]} = Subscriptions.subscribe(pid, :v2, channel)
+
+      channel = encode(:oracle_pubkey, <<14::256>>)
+      assert {:ok, []} = Subscriptions.unsubscribe(pid, :v2, channel)
+      assert {:error, :not_subscribed} = Subscriptions.unsubscribe(pid, :v2, channel)
     end
   end
 
