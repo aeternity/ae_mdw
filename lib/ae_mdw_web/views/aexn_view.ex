@@ -43,7 +43,7 @@ defmodule AeMdwWeb.AexnView do
            height: AeMdw.Blocks.height(),
            last_tx_hash: Txs.tx_hash(),
            last_log_idx: AeMdw.Contracts.log_idx(),
-           amount: integer()
+           amount: float()
          }
   @type aexn_contract() :: aex9_contract() | aex141_contract()
 
