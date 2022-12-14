@@ -402,7 +402,7 @@ defmodule AeMdw.Db.Model do
             index: aex9_balance_index(),
             block_index: {Blocks.height(), Blocks.mbi()},
             txi: txi(),
-            amount: float()
+            amount: integer()
           )
   @aex9_balance_defaults [index: {<<>>, <<>>}, block_index: {-1, -1}, txi: nil, amount: nil]
   defrecord :aex9_balance, @aex9_balance_defaults
