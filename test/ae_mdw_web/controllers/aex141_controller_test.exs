@@ -72,13 +72,24 @@ defmodule AeMdwWeb.Aex141ControllerTest do
             index: {contract_pk, template_id},
             txi: txi,
             log_idx: log_idx,
-            limit: {template_id * 10, txi + 100, log_idx + 1},
-            supply: {[1, 2, 3], txi + 200, log_idx + 2}
+            limit: {template_id * 10, txi + 100, log_idx + 1}
           )
+
+        m_template_token3 =
+          Model.nft_template_token(
+            index: {contract_pk, template_id, token_id + 2},
+            txi: txi + 200,
+            log_idx: log_idx + 2
+          )
+
+        m_stat =
+          Model.stat(index: Stats.nft_template_tokens_key(contract_pk, template_id), payload: 3)
 
         store =
           store
           |> Store.put(Model.NftTemplate, m_template)
+          |> Store.put(Model.NftTemplateToken, m_template_token3)
+          |> Store.put(Model.Stat, m_stat)
           |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>))
           |> Store.put(Model.Tx, Model.tx(index: txi + 100, id: <<txi + 100::256>>))
           |> Store.put(Model.Tx, Model.tx(index: txi + 200, id: <<txi + 200::256>>))
@@ -550,7 +561,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                                          "limit" => edition_limit,
                                          "limit_tx_hash" => limit_tx_hash,
                                          "limit_log_idx" => limit_log_idx,
-                                         "supply_tokens" => [1, 2, 3],
+                                         "supply" => 3,
                                          "supply_tx_hash" => supply_tx_hash,
                                          "supply_log_idx" => supply_log_idx
                                        }

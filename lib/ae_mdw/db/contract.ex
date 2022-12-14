@@ -9,10 +9,10 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.Stats, as: SyncStats
   alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Node.Db
-  alias AeMdw.Db.Sync.Stats, as: SyncStats
 
   require Ex2ms
   require Log
@@ -299,33 +299,6 @@ defmodule AeMdw.Db.Contract do
 
   defp transfer_aex141_ownership(state, _contract_pk, _args), do: state
 
-  defp update_nft_template(
-         state,
-         template_key,
-         txi,
-         log_idx,
-         update_tokens_fn
-       ) do
-    state
-    |> State.update(
-      Model.NftTemplate,
-      template_key,
-      fn
-        Model.nft_template(supply: nil) = m_template ->
-          Model.nft_template(m_template, supply: {update_tokens_fn.([]), txi, log_idx})
-
-        Model.nft_template(supply: {tokens, _txi, _log_idx}) = m_template ->
-          Model.nft_template(m_template, supply: {update_tokens_fn.(tokens), txi, log_idx})
-      end,
-      Model.nft_template(
-        index: template_key,
-        txi: txi,
-        log_idx: log_idx,
-        supply: {update_tokens_fn.([]), txi, log_idx}
-      )
-    )
-  end
-
   defp write_aex141_edition_limit(state, event_type, contract_pk, txi, log_idx, args) do
     with {template_id, limit} <- get_edition_limit_from_args(event_type, args),
          {:ok, m_template} <- State.get(state, Model.NftTemplate, {contract_pk, template_id}) do
@@ -462,16 +435,15 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  defp write_aex141_records(state, :burn, contract_pk, txi, log_idx, [<<token_id::256>>]) do
+  defp write_aex141_records(state, :burn, contract_pk, _txi, _log_idx, [<<token_id::256>>]) do
     state = delete_aex141_ownership(state, contract_pk, token_id)
 
     case State.get(state, Model.NftTokenTemplate, {contract_pk, token_id}) do
       {:ok, Model.nft_token_template(template: template_id)} ->
         state
-        |> update_nft_template({contract_pk, template_id}, txi, log_idx, fn tokens ->
-          tokens -- [token_id]
-        end)
+        |> SyncStats.decrement_nft_template_tokens(contract_pk, template_id)
         |> State.delete(Model.NftTokenTemplate, {contract_pk, token_id})
+        |> State.delete(Model.NftTemplateToken, {contract_pk, template_id, token_id})
 
       :not_found ->
         state
@@ -492,13 +464,19 @@ defmodule AeMdw.Db.Contract do
        ) do
     state
     |> write_aex141_ownership(contract_pk, args)
-    |> update_nft_template({contract_pk, template_id}, txi, log_idx, fn tokens ->
-      [token_id | tokens]
-    end)
     |> State.put(
       Model.NftTokenTemplate,
       Model.nft_token_template(index: {contract_pk, token_id}, template: template_id)
     )
+    |> State.put(
+      Model.NftTemplateToken,
+      Model.nft_template_token(
+        index: {contract_pk, template_id, token_id},
+        txi: txi,
+        log_idx: log_idx
+      )
+    )
+    |> SyncStats.increment_nft_template_tokens(contract_pk, template_id)
   end
 
   defp write_aex141_records(state, event_type, contract_pk, txi, log_idx, args)

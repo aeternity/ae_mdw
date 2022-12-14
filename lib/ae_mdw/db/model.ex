@@ -454,17 +454,29 @@ defmodule AeMdw.Db.Model do
   #     txi: creation txi
   #     log_idx: creation event
   #     limit: {amount, txi, log_idx} | nil
-  #     supply: {tokens, txi, log_idx} | nil
-  @nft_template_defaults [index: {<<>>, -1}, txi: nil, log_idx: nil, limit: nil, supply: nil]
+  @nft_template_defaults [index: {<<>>, -1}, txi: nil, log_idx: nil, limit: nil]
   defrecord :nft_template, @nft_template_defaults
 
   @type nft_template() ::
           record(:nft_template,
             index: {pubkey(), integer()},
-            txi: txi() | nil,
-            log_idx: log_idx() | nil,
-            limit: {pos_integer(), txi(), log_idx()} | nil,
-            supply: {[pos_integer], txi(), log_idx()} | nil
+            txi: txi(),
+            log_idx: log_idx(),
+            limit: {pos_integer(), txi(), log_idx()} | nil
+          )
+
+  # AEX-141 template token
+  #     index: {contract pubkey, template_id, token_id}
+  #     txi: mint txi
+  #     log_idx: mint log_idx
+  @nft_template_token_defaults [index: {<<>>, -1, -1}, txi: nil, log_idx: nil]
+  defrecord :nft_template_token, @nft_template_token_defaults
+
+  @type nft_template_token() ::
+          record(:nft_template_token,
+            index: {pubkey(), AeMdw.Aex141.template_id(), AeMdw.Aex141.token_id()},
+            txi: txi(),
+            log_idx: log_idx()
           )
 
   # AEX-141 token template
@@ -475,7 +487,7 @@ defmodule AeMdw.Db.Model do
   @type nft_token_template() ::
           record(:nft_token_template,
             index: {pubkey(), AeMdw.Aex141.token_id()},
-            template: pos_integer()
+            template: AeMdw.Aex141.template_id()
           )
 
   # AEX-141 collection owners
@@ -1056,7 +1068,8 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.NftTokenOwner,
       AeMdw.Db.Model.NftContractLimits,
       AeMdw.Db.Model.NftTokenTemplate,
-      AeMdw.Db.Model.NftTemplate
+      AeMdw.Db.Model.NftTemplate,
+      AeMdw.Db.Model.NftTemplateToken
     ]
   end
 
@@ -1154,6 +1167,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.NftContractLimits), do: :nft_contract_limits
   def record(AeMdw.Db.Model.NftTokenTemplate), do: :nft_token_template
   def record(AeMdw.Db.Model.NftTemplate), do: :nft_template
+  def record(AeMdw.Db.Model.NftTemplateToken), do: :nft_template_token
   def record(AeMdw.Db.Model.PlainName), do: :plain_name
   def record(AeMdw.Db.Model.AuctionBid), do: :auction_bid
   def record(AeMdw.Db.Model.Pointee), do: :pointee

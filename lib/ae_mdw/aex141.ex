@@ -9,8 +9,9 @@ defmodule AeMdw.Aex141 do
   alias AeMdw.Db.State
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
-  alias AeMdw.Util
+  alias AeMdw.Stats
   alias AeMdw.Txs
+  alias AeMdw.Util
 
   import AeMdw.Util.Encoding
 
@@ -29,6 +30,7 @@ defmodule AeMdw.Aex141 do
         }
 
   @type token_id :: integer()
+  @type template_id :: integer()
   @type nft :: %{
           :contract_id => String.t(),
           :owner => String.t(),
@@ -211,7 +213,7 @@ defmodule AeMdw.Aex141 do
 
   defp render_templates(state, keys) do
     Enum.map(keys, fn {contract_pk, template_id} ->
-      Model.nft_template(txi: txi, log_idx: log_idx, limit: limit, supply: supply) =
+      Model.nft_template(txi: txi, log_idx: log_idx, limit: limit) =
         State.fetch!(state, @templates_table, {contract_pk, template_id})
 
       tx_hash = Txs.txi_to_hash(state, txi)
@@ -221,17 +223,19 @@ defmodule AeMdw.Aex141 do
         template_id: template_id,
         tx_hash: encode(:tx_hash, tx_hash),
         log_idx: log_idx,
-        edition: render_template_edition(state, limit, supply)
+        edition: render_template_edition(state, contract_pk, template_id, limit)
       }
     end)
   end
 
-  defp render_template_edition(_state, nil, nil), do: nil
+  defp render_template_edition(state, contract_pk, template_id, limit) do
+    stats_key = Stats.nft_template_tokens_key(contract_pk, template_id)
 
-  defp render_template_edition(state, limit, supply) do
-    state
-    |> render_template_edition_limit(limit)
-    |> Map.merge(render_template_edition_supply(state, supply))
+    if nil != limit or :not_found != State.get(state, Model.Stat, stats_key) do
+      state
+      |> render_template_edition_limit(limit)
+      |> Map.merge(render_template_edition_supply(state, contract_pk, template_id))
+    end
   end
 
   defp render_template_edition_limit(_state, nil), do: %{}
@@ -246,16 +250,29 @@ defmodule AeMdw.Aex141 do
     }
   end
 
-  defp render_template_edition_supply(_state, nil), do: %{}
+  defp render_template_edition_supply(state, contract_pk, template_id) do
+    {:ok, Model.stat(payload: amount)} =
+      State.get(state, Model.Stat, Stats.nft_template_tokens_key(contract_pk, template_id))
 
-  defp render_template_edition_supply(state, {token_ids, txi, log_idx}) do
-    tx_hash = Txs.txi_to_hash(state, txi)
+    with {:ok, {^contract_pk, ^template_id, _token_id} = prev_key} <-
+           State.prev(state, Model.NftTemplateToken, {contract_pk, template_id, nil}),
+         {:ok, Model.nft_template_token(txi: txi, log_idx: log_idx)} <-
+           State.get(state, Model.NftTemplateToken, prev_key) do
+      tx_hash = Txs.txi_to_hash(state, txi)
 
-    %{
-      supply_tokens: token_ids,
-      supply_log_idx: log_idx,
-      supply_tx_hash: encode(:tx_hash, tx_hash)
-    }
+      %{
+        supply: amount,
+        supply_log_idx: log_idx,
+        supply_tx_hash: encode(:tx_hash, tx_hash)
+      }
+    else
+      _mismatch_or_not_found ->
+        %{
+          supply: 0,
+          supply_log_idx: nil,
+          supply_tx_hash: nil
+        }
+    end
   end
 
   defp render_owners(state, nft_tokens) do
