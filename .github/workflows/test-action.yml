@@ -8,21 +8,26 @@ concurrency:
 jobs:
   unit-tests:
     name: Unit tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
+
+    env:
+      MIX_ENV: test
+      NODEROOT: ./node/local
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Common tests setup
-        uses: ./.github/actions/tests-common
+      - name: Mdw Setup
+        uses: ./.github/actions/mdw-setup
 
-      - name: Setup dependencies
-        run: make docker-deps
+      - name: Node Setup
+        uses: ./.github/actions/node-setup
 
       - name: Execute tests
-        run: make docker-test
+        run: elixir --sname aeternity@localhost -S mix test
 
   test-coverage:
     name: Test coverage
