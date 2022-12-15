@@ -11,6 +11,7 @@ defmodule AeMdw.Db.State do
   alias AeMdw.Db.DbStore
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.Mutation
+  alias AeMdw.Db.Model
   alias AeMdw.Db.Store
   alias AeMdw.Db.TxnDbStore
   alias AeMdw.Db.Util, as: DbUtil
@@ -18,6 +19,8 @@ defmodule AeMdw.Db.State do
   alias AeMdw.Sync.AsyncTasks.Producer
 
   defstruct [:store, :stats, :cache, :jobs]
+
+  require Model
 
   @type key() :: Database.key()
   @type record() :: Database.record()
@@ -27,6 +30,7 @@ defmodule AeMdw.Db.State do
   @typep cache_name() :: atom()
   @typep height() :: Blocks.height()
   @typep job_type() :: Consumer.task_type()
+  @typep get_return(record_t) :: {:ok, record_t} | :not_found
 
   @opaque t() :: %__MODULE__{
             store: Store.t(),
@@ -102,14 +106,25 @@ defmodule AeMdw.Db.State do
   @spec new_mem_state() :: t()
   def new_mem_state, do: new(MemStore.new(DbStore.new()))
 
-  @spec put(t(), table(), record()) :: t()
+  Enum.each(Model.column_families(), fn table_name ->
+    @spec put(t(), unquote(table_name), Model.unquote(Model.record(table_name))()) :: t()
+  end)
+
   def put(%__MODULE__{store: store} = state, tab, record),
     do: %__MODULE__{state | store: Store.put(store, tab, record)}
 
-  @spec get(t(), table(), key()) :: {:ok, record()} | :not_found
+  Enum.each(Model.column_families(), fn table_name ->
+    @spec get(t(), unquote(table_name), Model.unquote(:"#{Model.record(table_name)}_index")()) ::
+            get_return(Model.unquote(Model.record(table_name))())
+  end)
+
   def get(%__MODULE__{store: store}, table, key), do: Store.get(store, table, key)
 
-  @spec fetch!(t(), table(), key()) :: record() | :not_found
+  Enum.each(Model.column_families(), fn table_name ->
+    @spec fetch!(t(), unquote(table_name), Model.unquote(:"#{Model.record(table_name)}_index")()) ::
+            Model.unquote(Model.record(table_name))()
+  end)
+
   def fetch!(state, table, key) do
     case get(state, table, key) do
       {:ok, record} -> record
@@ -120,25 +135,54 @@ defmodule AeMdw.Db.State do
   @spec count_keys(t(), table()) :: Enumerable.t()
   def count_keys(%__MODULE__{store: store}, table), do: Store.count_keys(store, table)
 
-  @spec exists?(t(), table(), key()) :: boolean()
+  Enum.each(Model.column_families(), fn table_name ->
+    @spec exists?(t(), unquote(table_name), Model.unquote(:"#{Model.record(table_name)}_index")()) ::
+            boolean()
+  end)
+
   def exists?(state, table, key), do: match?({:ok, _record}, get(state, table, key))
 
-  @spec delete(t(), table(), key()) :: t()
+  Enum.each(Model.column_families(), fn table_name ->
+    @spec delete(t(), unquote(table_name), Model.unquote(:"#{Model.record(table_name)}_index")()) ::
+            t()
+  end)
+
   def delete(%__MODULE__{store: store} = state, tab, key),
     do: %__MODULE__{state | store: Store.delete(store, tab, key)}
 
-  @spec next(t(), table(), key()) :: {:ok, key()} | :none
+  Enum.each(Model.column_families(), fn table_name ->
+    @spec next(t(), unquote(table_name), key()) ::
+            {:ok, Model.unquote(:"#{Model.record(table_name)}_index")()} | :none
+  end)
+
   def next(%__MODULE__{store: store}, table, key), do: Store.next(store, table, key)
 
-  @spec prev(t(), table(), key()) :: {:ok, key()} | :none
+  Enum.each(Model.column_families(), fn table_name ->
+    @spec prev(t(), unquote(table_name), key()) ::
+            {:ok, Model.unquote(:"#{Model.record(table_name)}_index")()} | :none
+  end)
+
   def prev(%__MODULE__{store: store}, table, key), do: Store.prev(store, table, key)
 
-  @spec next(t(), table(), direction(), key()) :: {:ok, key()} | :none
+  Enum.each(Model.column_families(), fn table_name ->
+    @spec next(t(), unquote(table_name), direction(), key()) ::
+            {:ok, Model.unquote(:"#{Model.record(table_name)}_index")()} | :none
+  end)
+
   def next(state, table, :backward, cursor), do: prev(state, table, cursor)
 
   def next(state, table, :forward, cursor), do: next(state, table, cursor)
 
-  @spec update(t(), table(), key(), (record() -> record()), term() | nil) :: t()
+  Enum.each(Model.column_families(), fn table_name ->
+    @spec update(
+            t(),
+            unquote(table_name),
+            Model.unquote(:"#{Model.record(table_name)}_index")(),
+            (term() -> Model.unquote(Model.record(table_name))()),
+            term()
+          ) :: t()
+  end)
+
   def update(state, table, key, update_fn, default \\ nil) do
     case get(state, table, key) do
       {:ok, record} -> put(state, table, update_fn.(record))
@@ -146,7 +190,16 @@ defmodule AeMdw.Db.State do
     end
   end
 
-  @spec update!(t(), table(), key(), (record() -> record())) :: t()
+  Enum.each(Model.column_families(), fn table_name ->
+    @spec update!(
+            t(),
+            unquote(table_name),
+            Model.unquote(:"#{Model.record(table_name)}_index")(),
+            (Model.unquote(Model.record(table_name))() ->
+               Model.unquote(Model.record(table_name))())
+          ) :: t()
+  end)
+
   def update!(state, table, key, update_fn),
     do: put(state, table, update_fn.(fetch!(state, table, key)))
 

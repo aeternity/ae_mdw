@@ -12,7 +12,7 @@ defmodule AeMdw.Db.UpdateIdsCountsMutation do
   @derive AeMdw.Db.Mutation
   defstruct [:ids_counts]
 
-  @typep update_key :: {Model.id_count_key(), integer()}
+  @typep update_key :: {Model.id_count_index(), integer()}
 
   @opaque t() :: %__MODULE__{
             ids_counts: [update_key()]

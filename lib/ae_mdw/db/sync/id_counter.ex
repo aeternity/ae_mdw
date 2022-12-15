@@ -8,12 +8,12 @@ defmodule AeMdw.Db.Sync.IdCounter do
 
   require Model
 
-  @spec incr_count(State.t(), Model.id_count_key()) :: State.t()
+  @spec incr_count(State.t(), Model.id_count_index()) :: State.t()
   def incr_count(state, {_, _, _} = field_key) do
     update_count(state, field_key, 1)
   end
 
-  @spec update_count(State.t(), Model.id_count_key(), integer()) :: State.t()
+  @spec update_count(State.t(), Model.id_count_index(), integer()) :: State.t()
   def update_count(state, {_, _, _} = field_key, delta) do
     case State.get(state, AeMdw.Db.Model.IdCount, field_key) do
       :not_found ->
