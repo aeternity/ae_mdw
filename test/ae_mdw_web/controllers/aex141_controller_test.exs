@@ -672,7 +672,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       assert %{"data" => [], "next" => nil, "prev" => nil} =
                conn
-               |> get("/aex141/#{contract_id}/templates/1")
+               |> get("/aex141/#{contract_id}/templates/1/tokens")
                |> json_response(200)
     end
 
@@ -686,7 +686,9 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       assert %{"data" => template_tokens, "next" => next} =
                conn
-               |> get("/v2/aex141/#{contract_id}/templates/#{template_id}", direction: :forward)
+               |> get("/v2/aex141/#{contract_id}/templates/#{template_id}/tokens",
+                 direction: :forward
+               )
                |> json_response(200)
 
       assert @default_limit = length(template_tokens)
@@ -726,7 +728,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
       assert %{"data" => template_tokens, "next" => next} =
                conn
-               |> get("/v2/aex141/#{contract_id}/templates/#{template_id}")
+               |> get("/v2/aex141/#{contract_id}/templates/#{template_id}/tokens")
                |> json_response(200)
 
       assert @default_limit = length(template_tokens)
