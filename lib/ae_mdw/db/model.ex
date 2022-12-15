@@ -40,6 +40,8 @@ defmodule AeMdw.Db.Model do
   @typep amount() :: non_neg_integer()
   @typep fname() :: Contract.fname()
 
+  @typep token_id :: AeMdw.Aex141.token_id()
+  @typep template_id :: AeMdw.Aex141.template_id()
   ################################################################################
 
   # index is timestamp (daylight saving order should be handle case by case)
@@ -445,8 +447,8 @@ defmodule AeMdw.Db.Model do
 
   @type nft_ownership() ::
           record(:nft_ownership,
-            index: {pubkey(), pubkey(), AeMdw.Aex141.token_id()},
-            template_id: integer()
+            index: {pubkey(), pubkey(), token_id()},
+            template_id: template_id()
           )
 
   # AEX-141 templates
@@ -474,7 +476,7 @@ defmodule AeMdw.Db.Model do
 
   @type nft_template_token() ::
           record(:nft_template_token,
-            index: {pubkey(), AeMdw.Aex141.template_id(), AeMdw.Aex141.token_id()},
+            index: {pubkey(), template_id(), token_id()},
             txi: txi(),
             log_idx: log_idx()
           )
@@ -486,8 +488,8 @@ defmodule AeMdw.Db.Model do
 
   @type nft_token_template() ::
           record(:nft_token_template,
-            index: {pubkey(), AeMdw.Aex141.token_id()},
-            template: AeMdw.Aex141.template_id()
+            index: {pubkey(), token_id()},
+            template: template_id()
           )
 
   # AEX-141 collection owners

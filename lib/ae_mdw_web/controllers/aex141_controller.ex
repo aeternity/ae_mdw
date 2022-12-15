@@ -49,6 +49,25 @@ defmodule AeMdwWeb.Aex141Controller do
     end
   end
 
+  @spec collection_template_tokens(Conn.t(), map()) :: Conn.t() | {:error, ErrInput.t()}
+  def collection_template_tokens(%Conn{assigns: assigns} = conn, %{
+        "contract_id" => contract_id,
+        "template_id" => template_id
+      }) do
+    %{
+      state: state,
+      pagination: pagination,
+      cursor: cursor
+    } = assigns
+
+    with {:ok, contract_pk} <- Validate.id(contract_id),
+         {template_id, ""} <- Integer.parse(template_id),
+         {:ok, {prev_cursor, template_tokens, next_cursor}} <-
+           Aex141.fetch_template_tokens(state, contract_pk, template_id, cursor, pagination) do
+      WebUtil.paginate(conn, prev_cursor, template_tokens, next_cursor)
+    end
+  end
+
   @spec nft_owner(Conn.t(), map()) :: Conn.t()
   def nft_owner(conn, %{"contract_id" => contract_id, "token_id" => token_id}) do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
