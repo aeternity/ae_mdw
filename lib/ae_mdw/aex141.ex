@@ -294,7 +294,7 @@ defmodule AeMdw.Aex141 do
   defp render_template_edition(state, contract_pk, template_id, limit) do
     stats_key = Stats.nft_template_tokens_key(contract_pk, template_id)
 
-    if nil != limit or :not_found != State.get(state, Model.Stat, stats_key) do
+    if nil != limit or State.exists?(state, Model.Stat, stats_key) do
       state
       |> render_template_edition_limit(limit)
       |> Map.merge(render_template_edition_supply(state, contract_pk, template_id))
