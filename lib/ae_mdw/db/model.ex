@@ -381,7 +381,7 @@ defmodule AeMdw.Db.Model do
             index: aex9_event_balance_index(),
             txi: txi(),
             log_idx: log_idx(),
-            amount: float()
+            amount: integer()
           )
   @aex9_event_balance_defaults [
     index: {<<>>, <<>>},
