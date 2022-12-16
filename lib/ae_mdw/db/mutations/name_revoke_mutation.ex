@@ -10,25 +10,28 @@ defmodule AeMdw.Db.NameRevokeMutation do
   alias AeMdw.Txs
 
   @derive AeMdw.Db.Mutation
-  defstruct [:name_hash, :txi, :block_index]
+  defstruct [:name_hash, :txi_idx, :block_index]
 
   @opaque t() :: %__MODULE__{
             name_hash: Names.name_hash(),
-            txi: Txs.txi(),
+            txi_idx: Txs.txi_idx(),
             block_index: Blocks.block_index()
           }
 
-  @spec new(Names.name_hash(), Txs.txi(), Blocks.block_index()) :: t()
-  def new(name_hash, txi, block_index) do
+  @spec new(Names.name_hash(), Txs.txi_idx(), Blocks.block_index()) :: t()
+  def new(name_hash, txi_idx, block_index) do
     %__MODULE__{
       name_hash: name_hash,
-      txi: txi,
+      txi_idx: txi_idx,
       block_index: block_index
     }
   end
 
   @spec execute(t(), State.t()) :: State.t()
-  def execute(%__MODULE__{name_hash: name_hash, txi: txi, block_index: block_index}, state) do
-    Name.revoke(state, name_hash, txi, block_index)
+  def execute(
+        %__MODULE__{name_hash: name_hash, txi_idx: txi_idx, block_index: block_index},
+        state
+      ) do
+    Name.revoke(state, name_hash, txi_idx, block_index)
   end
 end

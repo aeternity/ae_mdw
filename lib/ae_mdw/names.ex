@@ -10,11 +10,11 @@ defmodule AeMdw.Names do
   alias AeMdw.AuctionBids
   alias AeMdw.Blocks
   alias AeMdw.Collection
-  alias AeMdw.Contracts
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Db.State
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db
@@ -121,16 +121,16 @@ defmodule AeMdw.Names do
           {:ok, {nested_cursor() | nil, [claim()], nested_cursor() | nil}} | {:error, Error.t()}
   def fetch_name_claims(state, plain_name_or_hash, pagination, scope, cursor) do
     with {:ok, name_or_auction} <- locate_name_or_auction(state, plain_name_or_hash) do
-      {claims, plain_name} =
+      claims =
         case name_or_auction do
-          Model.name(index: plain_name, claims: claims) -> {claims, plain_name}
-          Model.auction_bid(index: plain_name, bids: bids) -> {bids, plain_name}
+          Model.name(claims: claims) -> claims
+          Model.auction_bid(bids: bids) -> bids
         end
 
       {prev_cursor, claims, next_cursor} =
         paginate_nested_resource(claims, scope, cursor, pagination)
 
-      {:ok, {prev_cursor, Enum.map(claims, &render_claim(state, plain_name, &1)), next_cursor}}
+      {:ok, {prev_cursor, Enum.map(claims, &render_claim(state, &1)), next_cursor}}
     end
   end
 
@@ -138,16 +138,16 @@ defmodule AeMdw.Names do
           {:ok, {nested_cursor() | nil, [update()], nested_cursor() | nil}} | {:error, Error.t()}
   def fetch_name_updates(state, plain_name_or_hash, pagination, scope, cursor) do
     with {:ok, name_or_auction} <- locate_name_or_auction(state, plain_name_or_hash) do
-      {updates, plain_name} =
+      updates =
         case name_or_auction do
-          Model.name(index: plain_name, updates: updates) -> {updates, plain_name}
-          Model.auction_bid(index: plain_name) -> {[], plain_name}
+          Model.name(updates: updates) -> updates
+          Model.auction_bid() -> []
         end
 
       {prev_cursor, updates, next_cursor} =
         paginate_nested_resource(updates, scope, cursor, pagination)
 
-      {:ok, {prev_cursor, Enum.map(updates, &render_update(state, plain_name, &1)), next_cursor}}
+      {:ok, {prev_cursor, Enum.map(updates, &render_update(state, &1)), next_cursor}}
     end
   end
 
@@ -155,17 +155,16 @@ defmodule AeMdw.Names do
           {:ok, {nested_cursor() | nil, [update()], nested_cursor() | nil}} | {:error, Error.t()}
   def fetch_name_transfers(state, plain_name_or_hash, pagination, scope, cursor) do
     with {:ok, name_or_auction} <- locate_name_or_auction(state, plain_name_or_hash) do
-      {transfers, plain_name} =
+      transfers =
         case name_or_auction do
-          Model.name(index: plain_name, transfers: transfers) -> {transfers, plain_name}
-          Model.auction_bid(index: plain_name) -> {[], plain_name}
+          Model.name(transfers: transfers) -> transfers
+          Model.auction_bid() -> []
         end
 
       {prev_cursor, transfers, next_cursor} =
         paginate_nested_resource(transfers, scope, cursor, pagination)
 
-      {:ok,
-       {prev_cursor, Enum.map(transfers, &render_transfer(state, plain_name, &1)), next_cursor}}
+      {:ok, {prev_cursor, Enum.map(transfers, &render_transfer(state, &1)), next_cursor}}
     end
   end
 
@@ -486,10 +485,10 @@ defmodule AeMdw.Names do
     %{
       active_from: active,
       expire_height: expire,
-      claims: Enum.map(claims, &expand_txi(state, &1, opts)),
-      updates: Enum.map(updates, &expand_txi(state, &1, opts)),
-      transfers: Enum.map(transfers, &expand_txi(state, &1, opts)),
-      revoke: (revoke && expand_txi(state, revoke, opts)) || nil,
+      claims: Enum.map(claims, &expand_txi_idx(state, &1, opts)),
+      updates: Enum.map(updates, &expand_txi_idx(state, &1, opts)),
+      transfers: Enum.map(transfers, &expand_txi_idx(state, &1, opts)),
+      revoke: (revoke && expand_txi_idx(state, revoke, opts)) || nil,
       auction_timeout: auction_timeout,
       pointers: Name.pointers(state, name),
       ownership: render_ownership(state, name)
@@ -538,9 +537,7 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp expand_txi(state, bi_txi, opts) do
-    txi = Format.bi_txi_txi(bi_txi)
-
+  defp expand_txi_idx(state, {_bi, {txi, _idx}}, opts) do
     cond do
       Keyword.get(opts, :expand?, false) ->
         Txs.fetch!(state, txi)
@@ -553,41 +550,41 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp paginate_nested_resource(bi_txis, scope, cursor, pagination) do
+  defp paginate_nested_resource(bi_txi_idxs, scope, cursor, pagination) do
     cursor = deserialize_nested_cursor(cursor)
 
-    bi_txis =
+    bi_txi_idxs =
       case scope do
         {:gen, first_gen..last_gen} ->
-          bi_txis
-          |> Enum.drop_while(fn {{height, _mbi}, _txi} -> height >= last_gen end)
-          |> Enum.take_while(fn {{height, _mbi}, _txi} -> height <= first_gen end)
+          bi_txi_idxs
+          |> Enum.drop_while(fn {{height, _mbi}, _txi_idx} -> height >= last_gen end)
+          |> Enum.take_while(fn {{height, _mbi}, _txi_idx} -> height <= first_gen end)
 
         nil ->
-          bi_txis
+          bi_txi_idxs
       end
 
     streamer = fn
       :forward ->
-        bi_txis = Enum.reverse(bi_txis)
+        bi_txi_idxs = Enum.reverse(bi_txi_idxs)
 
         if cursor do
-          Enum.drop_while(bi_txis, &(&1 < cursor))
+          Enum.drop_while(bi_txi_idxs, &(&1 < cursor))
         else
-          bi_txis
+          bi_txi_idxs
         end
 
       :backward ->
         if cursor do
-          Enum.drop_while(bi_txis, &(&1 > cursor))
+          Enum.drop_while(bi_txi_idxs, &(&1 > cursor))
         else
-          bi_txis
+          bi_txi_idxs
         end
     end
 
-    {prev_cursor, bi_txis, next_cursor} = Collection.paginate(streamer, pagination)
+    {prev_cursor, bi_txi_idxs, next_cursor} = Collection.paginate(streamer, pagination)
 
-    {serialize_nested_cursor(prev_cursor), bi_txis, serialize_nested_cursor(next_cursor)}
+    {serialize_nested_cursor(prev_cursor), bi_txi_idxs, serialize_nested_cursor(next_cursor)}
   end
 
   defp render_previous(state, name, opts) do
@@ -599,48 +596,36 @@ defmodule AeMdw.Names do
     |> Enum.map(&render_name_info(state, &1, opts))
   end
 
-  defp render_claim(state, plain_name, {{height, _mbi} = block_index, txi}) do
+  defp render_claim(state, {{height, _mbi} = block_index, txi_idx}) do
     block_hash = Blocks.block_index_to_hash(state, block_index)
-
-    claim_aetx =
-      Contracts.get_aetx(state, txi, :name_claim_tx, "AENS.claim", fn tx ->
-        :aens_claim_tx.name(tx) == plain_name
-      end)
+    claim_aetx = DbUtil.read_node_tx(state, txi_idx)
 
     %{
       height: height,
       block_hash: Enc.encode(:micro_block_hash, block_hash),
-      tx: :aetx.serialize_for_client(claim_aetx)
+      tx: :aens_claim_tx.for_client(claim_aetx)
     }
   end
 
-  defp render_update(state, plain_name, {{height, _mbi} = block_index, txi}) do
+  defp render_update(state, {{height, _mbi} = block_index, txi_idx}) do
     block_hash = Blocks.block_index_to_hash(state, block_index)
-
-    update_aetx =
-      Contracts.get_aetx(state, txi, :name_update_tx, "AENS.update", fn tx ->
-        :aens_update_tx.name(tx) == plain_name
-      end)
+    update_aetx = DbUtil.read_node_tx(state, txi_idx)
 
     %{
       height: height,
       block_hash: Enc.encode(:micro_block_hash, block_hash),
-      tx: :aetx.serialize_for_client(update_aetx)
+      tx: :aens_update_tx.for_client(update_aetx)
     }
   end
 
-  defp render_transfer(state, plain_name, {{height, _mbi} = block_index, txi}) do
+  defp render_transfer(state, {{height, _mbi} = block_index, txi_idx}) do
     block_hash = Blocks.block_index_to_hash(state, block_index)
-
-    transfer_aetx =
-      Contracts.get_aetx(state, txi, :name_transfer_tx, "AENS.transfer", fn tx ->
-        :aens_transfer_tx.name(tx) == plain_name
-      end)
+    transfer_aetx = DbUtil.read_node_tx(state, txi_idx)
 
     %{
       height: height,
       block_hash: Enc.encode(:micro_block_hash, block_hash),
-      tx: :aetx.serialize_for_client(transfer_aetx)
+      tx: :aens_transfer_tx.for_client(transfer_aetx)
     }
   end
 
@@ -691,15 +676,16 @@ defmodule AeMdw.Names do
 
   defp serialize_nested_cursor(nil), do: nil
 
-  defp serialize_nested_cursor({{{height, mbi}, txi}, is_reverse?}),
-    do: {"#{height}-#{mbi}-#{txi}", is_reverse?}
+  defp serialize_nested_cursor({{{height, mbi}, {txi, idx}}, is_reverse?}),
+    do: {"#{height}-#{mbi}-#{txi}-#{idx + 1}", is_reverse?}
 
   defp deserialize_nested_cursor(nil), do: nil
 
   defp deserialize_nested_cursor(cursor_bin) do
-    case Regex.run(~r/\A(\d+)-(\d+)-(\d+)\z/, cursor_bin, capture: :all_but_first) do
-      [height, mbi, txi] ->
-        {{String.to_integer(height), String.to_integer(mbi)}, String.to_integer(txi)}
+    case Regex.run(~r/\A(\d+)-(\d+)-(\d+)-(\d+)\z/, cursor_bin, capture: :all_but_first) do
+      [height, mbi, txi, idx] ->
+        {{String.to_integer(height), String.to_integer(mbi)},
+         {String.to_integer(txi), String.to_integer(idx) - 1}}
 
       _error_or_invalid ->
         nil

@@ -5,7 +5,6 @@ defmodule AeMdw.Db.Sync.Name do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
   alias AeMdw.Names
-  alias AeMdw.Db.Format
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.NameUpdateMutation
@@ -56,10 +55,10 @@ defmodule AeMdw.Db.Sync.Name do
            | {String.t(), <<>>, <<>>, <<>>, <<>>}
            | {pubkey(), Blocks.height(), binary()}
 
-  @spec name_claim_mutations(Node.tx(), Txs.tx_hash(), Blocks.block_index(), Txs.txi()) :: [
+  @spec name_claim_mutations(Node.tx(), Txs.tx_hash(), Blocks.block_index(), Txs.txi_idx()) :: [
           Mutation.t()
         ]
-  def name_claim_mutations(tx, tx_hash, {height, _mbi} = block_index, txi) do
+  def name_claim_mutations(tx, tx_hash, {height, _mbi} = block_index, {txi, _idx} = txi_idx) do
     plain_name = String.downcase(:aens_claim_tx.name(tx))
     {:ok, name_hash} = :aens.get_name_hash(plain_name)
     owner_pk = Validate.id!(:aens_claim_tx.account_id(tx))
@@ -75,7 +74,7 @@ defmodule AeMdw.Db.Sync.Name do
         owner_pk,
         name_fee,
         lima_or_higher?,
-        txi,
+        txi_idx,
         block_index,
         timeout
       )
@@ -83,8 +82,10 @@ defmodule AeMdw.Db.Sync.Name do
     ]
   end
 
-  @spec update_mutations(Node.tx(), Txs.txi(), Blocks.block_index(), boolean()) :: [Mutation.t()]
-  def update_mutations(tx, txi, {height, _mbi} = block_index, internal? \\ false) do
+  @spec update_mutations(Node.tx(), Txs.txi_idx(), Blocks.block_index(), boolean()) :: [
+          Mutation.t()
+        ]
+  def update_mutations(tx, txi_idx, {height, _mbi} = block_index, internal? \\ false) do
     name_hash = :aens_update_tx.name_hash(tx)
     pointers = :aens_update_tx.pointers(tx)
     name_ttl = :aens_update_tx.name_ttl(tx)
@@ -107,7 +108,7 @@ defmodule AeMdw.Db.Sync.Name do
       end
 
     [
-      NameUpdateMutation.new(name_hash, update_type, pointers, txi, block_index)
+      NameUpdateMutation.new(name_hash, update_type, pointers, txi_idx, block_index)
     ]
   end
 
@@ -116,20 +117,20 @@ defmodule AeMdw.Db.Sync.Name do
           Names.name_hash(),
           update_type(),
           Names.pointers(),
-          Txs.txi(),
+          Txs.txi_idx(),
           Blocks.block_index()
         ) :: State.t()
-  def update(state, name_hash, update_type, pointers, txi, {height, _mbi} = bi) do
+  def update(state, name_hash, update_type, pointers, txi_idx, {height, _mbi} = bi) do
     plain_name = plain_name!(state, name_hash)
 
     Model.name(expire: old_expire, owner: owner_pk, updates: updates) =
       m_name = cache_through_read!(state, Model.ActiveName, plain_name)
 
-    updates = [{bi, txi} | updates]
+    updates = [{bi, txi_idx} | updates]
 
     state2 =
       Enum.reduce(pointers, state, fn ptr, state ->
-        m_pointee = Model.pointee(index: pointee_key(ptr, {bi, txi}))
+        m_pointee = Model.pointee(index: pointee_key(ptr, {bi, txi_idx}))
 
         cache_through_write(state, Model.Pointee, m_pointee)
       end)
@@ -170,15 +171,15 @@ defmodule AeMdw.Db.Sync.Name do
     end
   end
 
-  @spec transfer(State.t(), Names.name_hash(), Db.pubkey(), Txs.txi(), Blocks.block_index()) ::
+  @spec transfer(State.t(), Names.name_hash(), Db.pubkey(), Txs.txi_idx(), Blocks.block_index()) ::
           State.t()
-  def transfer(state, name_hash, new_owner, txi, {height, _mbi} = bi) do
+  def transfer(state, name_hash, new_owner, txi_idx, {height, _mbi} = bi) do
     plain_name = plain_name!(state, name_hash)
 
     m_name = cache_through_read!(state, Model.ActiveName, plain_name)
     Model.name(owner: old_owner, expire: expire) = m_name
 
-    transfers = [{bi, txi} | Model.name(m_name, :transfers)]
+    transfers = [{bi, txi_idx} | Model.name(m_name, :transfers)]
     m_name = Model.name(m_name, transfers: transfers, owner: new_owner)
     m_owner = Model.owner(index: {new_owner, plain_name})
     m_name_owner_deactivation = Model.owner_deactivation(index: {new_owner, expire, plain_name})
@@ -193,14 +194,14 @@ defmodule AeMdw.Db.Sync.Name do
     |> cache_through_write(Model.ActiveNameOwnerDeactivation, m_name_owner_deactivation)
   end
 
-  @spec revoke(State.t(), Names.name_hash(), Txs.txi(), Blocks.block_index()) :: State.t()
-  def revoke(state, name_hash, txi, {height, _mbi} = bi) do
+  @spec revoke(State.t(), Names.name_hash(), Txs.txi_idx(), Blocks.block_index()) :: State.t()
+  def revoke(state, name_hash, txi_idx, {height, _mbi} = bi) do
     plain_name = plain_name!(state, name_hash)
 
     Model.name(expire: expiration) =
       m_name = cache_through_read!(state, Model.ActiveName, plain_name)
 
-    m_name = Model.name(m_name, revoke: {bi, txi})
+    m_name = Model.name(m_name, revoke: {bi, txi_idx})
 
     log_name_change(height, plain_name, "revoke")
 
@@ -223,7 +224,7 @@ defmodule AeMdw.Db.Sync.Name do
   def expire_auction(state, height, plain_name) do
     {:ok,
      Model.auction_bid(
-       block_index_txi: {{last_bid_height, _mbi} = _block_index, txi},
+       block_index_txi_idx: {{last_bid_height, _mbi} = _block_index, {txi, _idx} = txi_idx},
        owner: owner,
        bids: bids
      )} = cache_through_read(state, Model.AuctionBid, plain_name)
@@ -251,7 +252,8 @@ defmodule AeMdw.Db.Sync.Name do
     m_name_exp = Model.expiration(index: {expire, plain_name})
     m_owner = Model.owner(index: {owner, plain_name})
     m_name_owner_deactivation = Model.owner_deactivation(index: {owner, expire, plain_name})
-    %{tx: %{name_fee: name_fee}} = read_raw_tx!(state, txi)
+    name_claim_tx = DbUtil.read_node_tx(state, txi_idx)
+    name_fee = :aens_claim_tx.name_fee(name_claim_tx)
 
     state
     |> cache_through_write(Model.ActiveName, m_name)
@@ -372,7 +374,4 @@ defmodule AeMdw.Db.Sync.Name do
   defp pointer_kv(ptr) do
     {:aens_pointer.key(ptr), Validate.id!(:aens_pointer.id(ptr))}
   end
-
-  defp read_raw_tx!(state, txi),
-    do: Format.to_raw_map(state, DbUtil.read_tx!(state, txi))
 end

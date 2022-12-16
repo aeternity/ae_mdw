@@ -32,6 +32,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
     owner_pk = <<8435::256>>
     block_index = {claim_height, 0}
     txi = 223
+    txi_idx = {txi, -1}
 
     inactive_name =
       Model.name(
@@ -39,7 +40,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
         active: old_claim_height,
         expire: 199,
         claims: old_claims,
-        updates: [{{150, 0}, 173}],
+        updates: [{{150, 0}, {173, -1}}],
         owner: owner_pk,
         previous: nil
       )
@@ -61,7 +62,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
     with_mocks [
       {AeMdw.Node.Db, [], [proto_vsn: fn _height -> 3 end]}
     ] do
-      mutations = Sync.Name.name_claim_mutations(tx, tx_hash, block_index, txi)
+      mutations = Sync.Name.name_claim_mutations(tx, tx_hash, block_index, txi_idx)
 
       State.commit(state, mutations)
     end
@@ -70,7 +71,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
             Model.name(
               index: ^plain_name,
               active: ^claim_height,
-              claims: [{^block_index, ^txi} | _old_claims],
+              claims: [{^block_index, ^txi_idx} | _old_claims],
               expire: expire,
               owner: ^new_owner_pk,
               updates: []
@@ -96,6 +97,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
     block_index = {claim_height, 0}
     timeout = 54
     txi = 1234
+    txi_idx = {txi, -1}
     state = State.new()
 
     State.commit(state, [
@@ -105,7 +107,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
         owner_pk,
         name_fee,
         false,
-        txi,
+        txi_idx,
         block_index,
         timeout
       )
@@ -125,7 +127,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
             Model.auction_bid(
               index: ^plain_name,
               owner: ^owner_pk,
-              bids: [{^block_index, ^txi}]
+              bids: [{^block_index, ^txi_idx}]
             )} = State.get(state, Model.AuctionBid, plain_name)
 
     assert State.exists?(state, Model.AuctionOwner, {owner_pk, plain_name})

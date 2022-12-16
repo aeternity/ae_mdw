@@ -5,6 +5,7 @@ defmodule AeMdw.Txs do
 
   alias AeMdw.Blocks
   alias AeMdw.Collection
+  alias AeMdw.Contract
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Model.Field
@@ -25,6 +26,7 @@ defmodule AeMdw.Txs do
 
   @type tx :: map()
   @type txi :: non_neg_integer()
+  @type txi_idx() :: {txi(), Contract.local_idx() | -1}
   @type tx_hash() :: <<_::256>>
   @type cursor :: binary()
   @type query ::

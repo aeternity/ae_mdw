@@ -4,7 +4,6 @@ defmodule AeMdw.Db.NameClaimMutation do
   """
 
   alias AeMdw.Blocks
-  alias AeMdw.Db.Format
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
@@ -25,7 +24,7 @@ defmodule AeMdw.Db.NameClaimMutation do
     :owner_pk,
     :name_fee,
     :lima_or_higher?,
-    :txi,
+    :txi_idx,
     :block_index,
     :timeout
   ]
@@ -36,7 +35,7 @@ defmodule AeMdw.Db.NameClaimMutation do
             owner_pk: Db.pubkey(),
             name_fee: Names.name_fee(),
             lima_or_higher?: boolean(),
-            txi: Txs.txi(),
+            txi_idx: Txs.txi_idx(),
             block_index: Blocks.block_index(),
             timeout: Names.auction_timeout()
           }
@@ -47,18 +46,27 @@ defmodule AeMdw.Db.NameClaimMutation do
           Db.pubkey(),
           Names.name_fee(),
           boolean(),
-          Txs.txi(),
+          Txs.txi_idx(),
           Blocks.block_index(),
           Names.auction_timeout()
         ) :: t()
-  def new(plain_name, name_hash, owner_pk, name_fee, lima_or_higher?, txi, block_index, timeout) do
+  def new(
+        plain_name,
+        name_hash,
+        owner_pk,
+        name_fee,
+        lima_or_higher?,
+        txi_idx,
+        block_index,
+        timeout
+      ) do
     %__MODULE__{
       plain_name: plain_name,
       name_hash: name_hash,
       owner_pk: owner_pk,
       name_fee: name_fee,
       lima_or_higher?: lima_or_higher?,
-      txi: txi,
+      txi_idx: txi_idx,
       block_index: block_index,
       timeout: timeout
     }
@@ -72,7 +80,7 @@ defmodule AeMdw.Db.NameClaimMutation do
           owner_pk: owner_pk,
           name_fee: name_fee,
           lima_or_higher?: lima_or_higher?,
-          txi: txi,
+          txi_idx: {txi, _idx} = txi_idx,
           block_index: {height, _mbi} = block_index,
           timeout: timeout
         },
@@ -93,7 +101,7 @@ defmodule AeMdw.Db.NameClaimMutation do
             index: plain_name,
             active: height,
             expire: expire,
-            claims: [{block_index, txi}],
+            claims: [{block_index, txi_idx}],
             owner: owner_pk,
             previous: previous,
             auction_timeout: 0
@@ -124,7 +132,7 @@ defmodule AeMdw.Db.NameClaimMutation do
         make_m_bid =
           &Model.auction_bid(
             index: plain_name,
-            block_index_txi: {block_index, txi},
+            block_index_txi_idx: {block_index, txi_idx},
             expire_height: auction_end,
             owner: owner_pk,
             bids: &1
@@ -136,16 +144,17 @@ defmodule AeMdw.Db.NameClaimMutation do
           case Name.cache_through_read(state, Model.AuctionBid, plain_name) do
             nil ->
               state4 = State.inc_stat(state3, :auctions_started)
-              {make_m_bid.([{block_index, txi}]), state4}
+              {make_m_bid.([{block_index, txi_idx}]), state4}
 
             {:ok,
              Model.auction_bid(
-               block_index_txi: {_bi, prev_txi},
+               block_index_txi_idx: {_bi, {prev_txi, _prev_idx} = prev_txi_idx},
                expire_height: prev_auction_end,
                owner: prev_owner,
                bids: prev_bids
              )} ->
-              %{tx: %{name_fee: prev_name_fee}} = read_cached_raw_tx!(state, prev_txi)
+              prev_name_claim_tx = DbUtil.read_node_tx(state, prev_txi_idx)
+              prev_name_fee = :aens_claim_tx.name_fee(prev_name_claim_tx)
 
               state4 =
                 state3
@@ -164,23 +173,13 @@ defmodule AeMdw.Db.NameClaimMutation do
                 )
                 |> State.inc_stat(:locked_in_auctions, name_fee - prev_name_fee)
 
-              {make_m_bid.([{block_index, txi} | prev_bids]), state4}
+              {make_m_bid.([{block_index, txi_idx} | prev_bids]), state4}
           end
 
         state4
         |> Name.cache_through_write(Model.AuctionBid, m_bid)
         |> Name.cache_through_write(Model.AuctionOwner, m_owner)
         |> Name.cache_through_write(Model.AuctionExpiration, m_auction_exp)
-    end
-  end
-
-  defp read_raw_tx!(state, txi),
-    do: Format.to_raw_map(state, DbUtil.read_tx!(state, txi))
-
-  defp read_cached_raw_tx!(state, txi) do
-    case :ets.lookup(:tx_sync_cache, txi) do
-      [{^txi, m_tx}] -> Format.to_raw_map(state, m_tx)
-      [] -> read_raw_tx!(state, txi)
     end
   end
 end

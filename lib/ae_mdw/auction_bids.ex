@@ -86,7 +86,7 @@ defmodule AeMdw.AuctionBids do
          ),
          _opts
        ) do
-    last_bid = Txs.fetch!(state, bi_txi_txi(last_bid))
+    last_bid = Txs.fetch!(state, bi_txi_idx_txi(last_bid))
     name_ttl = Names.expire_after(expire_height)
 
     %{
@@ -96,13 +96,13 @@ defmodule AeMdw.AuctionBids do
       info: %{
         auction_end: expire_height,
         last_bid: put_in(last_bid, ["tx", "ttl"], name_ttl),
-        bids: Enum.map(bids, &bi_txi_txi/1)
+        bids: Enum.map(bids, &bi_txi_idx_txi/1)
       },
       previous: Names.fetch_previous_list(state, plain_name)
     }
   end
 
-  defp bi_txi_txi({{_height, _mbi}, txi}), do: txi
+  defp bi_txi_idx_txi({{_height, _mbi}, {txi, _idx}}), do: txi
 
   defp serialize_exp_cursor(nil), do: nil
 

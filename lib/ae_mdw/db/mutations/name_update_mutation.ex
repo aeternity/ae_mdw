@@ -10,13 +10,13 @@ defmodule AeMdw.Db.NameUpdateMutation do
   alias AeMdw.Txs
 
   @derive AeMdw.Db.Mutation
-  defstruct [:name_hash, :update_type, :pointers, :txi, :block_index, :internal?]
+  defstruct [:name_hash, :update_type, :pointers, :txi_idx, :block_index, :internal?]
 
   @opaque t() :: %__MODULE__{
             name_hash: Names.name_hash(),
             update_type: Name.update_type(),
             pointers: Names.pointers(),
-            txi: Txs.txi(),
+            txi_idx: Txs.txi_idx(),
             block_index: Blocks.block_index()
           }
 
@@ -24,15 +24,15 @@ defmodule AeMdw.Db.NameUpdateMutation do
           Names.name_hash(),
           Name.update_type(),
           Names.pointers(),
-          Txs.txi(),
+          Txs.txi_idx(),
           Blocks.block_index()
         ) :: t()
-  def new(name_hash, update_type, pointers, txi, block_index) do
+  def new(name_hash, update_type, pointers, txi_idx, block_index) do
     %__MODULE__{
       name_hash: name_hash,
       update_type: update_type,
       pointers: pointers,
-      txi: txi,
+      txi_idx: txi_idx,
       block_index: block_index
     }
   end
@@ -43,11 +43,11 @@ defmodule AeMdw.Db.NameUpdateMutation do
           name_hash: name_hash,
           update_type: update_type,
           pointers: pointers,
-          txi: txi,
+          txi_idx: txi_idx,
           block_index: block_index
         },
         state
       ) do
-    Name.update(state, name_hash, update_type, pointers, txi, block_index)
+    Name.update(state, name_hash, update_type, pointers, txi_idx, block_index)
   end
 end

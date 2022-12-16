@@ -69,9 +69,9 @@ defmodule AeMdwWeb.NameControllerTest do
               index: alice_name,
               owner: alice_pk,
               active: active_from,
-              claims: [{{10, 0}, 1}],
-              transfers: [{{10, 0}, 12}],
-              updates: [{{10, 0}, 2}],
+              claims: [{{10, 0}, {1, -1}}],
+              transfers: [{{10, 0}, {12, -1}}],
+              updates: [{{10, 0}, {2, -1}}],
               expire: expire1
             )
           )
@@ -81,9 +81,9 @@ defmodule AeMdwWeb.NameControllerTest do
               index: bob_name,
               owner: bob_pk,
               active: active_from,
-              claims: [{{10, 1}, 3}],
-              transfers: [{{10, 0}, 14}],
-              updates: [{{10, 2}, 4}],
+              claims: [{{10, 1}, {3, -1}}],
+              transfers: [{{10, 0}, {14, -1}}],
+              updates: [{{10, 2}, {4, -1}}],
               expire: expire2
             )
           )
@@ -195,7 +195,7 @@ defmodule AeMdwWeb.NameControllerTest do
                   index: plain_name,
                   active: expire - 10,
                   expire: expire,
-                  claims: [{{expire - 10, 0}, 0}],
+                  claims: [{{expire - 10, 0}, {0, -1}}],
                   updates: [],
                   transfers: [],
                   revoke: nil,
@@ -260,10 +260,10 @@ defmodule AeMdwWeb.NameControllerTest do
                 Model.name(
                   active: true,
                   expire: 1,
-                  claims: [{{0, 0}, 0}],
+                  claims: [{{0, 0}, {0, -1}}],
                   updates: [],
                   transfers: [],
-                  revoke: {{0, 0}, 0},
+                  revoke: {{0, 0}, {0, -1}},
                   auction_timeout: 1
                 )}
 
@@ -327,10 +327,10 @@ defmodule AeMdwWeb.NameControllerTest do
                 Model.name(
                   active: true,
                   expire: 1,
-                  claims: [{{0, 0}, 0}],
-                  updates: [{{1, 2}, 3}],
+                  claims: [{{0, 0}, {0, -1}}],
+                  updates: [{{1, 2}, {3, -1}}],
                   transfers: [],
-                  revoke: {{0, 0}, 0},
+                  revoke: {{0, 0}, {0, -1}},
                   auction_timeout: 1
                 )}
 
@@ -399,8 +399,8 @@ defmodule AeMdwWeb.NameControllerTest do
               index: alice_name,
               owner: alice_pk,
               active: active_from,
-              claims: [{{10, 0}, 1}],
-              revoke: {{10, 0}, 2},
+              claims: [{{10, 0}, {1, -1}}],
+              revoke: {{10, 0}, {2, -1}},
               transfers: [],
               updates: [],
               expire: expire1
@@ -412,10 +412,10 @@ defmodule AeMdwWeb.NameControllerTest do
               index: bob_name,
               owner: bob_pk,
               active: active_from,
-              claims: [{{10, 1}, 3}],
-              revoke: {{10, 2}, 5},
+              claims: [{{10, 1}, {3, -1}}],
+              revoke: {{10, 2}, {5, -1}},
               transfers: [],
-              updates: [{{10, 2}, 4}],
+              updates: [{{10, 2}, {4, -1}}],
               expire: expire2
             )
           )
@@ -517,10 +517,10 @@ defmodule AeMdwWeb.NameControllerTest do
                 Model.name(
                   active: true,
                   expire: 1,
-                  claims: [{{0, 0}, 0}],
+                  claims: [{{0, 0}, {0, -1}}],
                   updates: [],
                   transfers: [],
-                  revoke: {{0, 0}, 0},
+                  revoke: {{0, 0}, {0, -1}},
                   auction_timeout: 1
                 )}
 
@@ -569,10 +569,10 @@ defmodule AeMdwWeb.NameControllerTest do
                 Model.name(
                   active: true,
                   expire: 1,
-                  claims: [{{0, 0}, 0}],
+                  claims: [{{0, 0}, {0, -1}}],
                   updates: [],
                   transfers: [],
-                  revoke: {{0, 0}, 0},
+                  revoke: {{0, 0}, {0, -1}},
                   auction_timeout: 1
                 )}
 
@@ -624,10 +624,10 @@ defmodule AeMdwWeb.NameControllerTest do
                 Model.name(
                   active: true,
                   expire: 1,
-                  claims: [{{0, 0}, 0}],
+                  claims: [{{0, 0}, {0, -1}}],
                   updates: [],
                   transfers: [],
-                  revoke: {{0, 0}, 0},
+                  revoke: {{0, 0}, {0, -1}},
                   auction_timeout: 1
                 )}
 
@@ -696,9 +696,9 @@ defmodule AeMdwWeb.NameControllerTest do
                {:ok,
                 Model.auction_bid(
                   index: plain_name,
-                  block_index_txi: {{0, 1}, 0},
+                  block_index_txi_idx: {{0, 1}, {0, -1}},
                   expire_height: 0,
-                  bids: [{{2, 3}, 4}]
+                  bids: [{{2, 3}, {4, -1}}]
                 )}
            end,
            next_key: fn
@@ -749,9 +749,9 @@ defmodule AeMdwWeb.NameControllerTest do
                {:ok,
                 Model.auction_bid(
                   index: plain_name,
-                  block_index_txi: {{0, 1}, 3},
+                  block_index_txi_idx: {{0, 1}, {3, -1}},
                   expire_height: 0,
-                  bids: [{{2, 3}, 4}]
+                  bids: [{{2, 3}, {4, -1}}]
                 )}
            end,
            last_key: fn AuctionExpiration -> {:ok, expiration_key} end,
@@ -807,9 +807,9 @@ defmodule AeMdwWeb.NameControllerTest do
                {:ok,
                 Model.auction_bid(
                   index: plain_name,
-                  block_index_txi: {{0, 1}, 0},
+                  block_index_txi_idx: {{0, 1}, {0, -1}},
                   expire_height: 30,
-                  bids: [{{2, 3}, 4}]
+                  bids: [{{2, 3}, {4, -1}}]
                 )}
            end,
            first_key: fn AuctionExpiration -> {:ok, expiration_key} end,
@@ -873,10 +873,10 @@ defmodule AeMdwWeb.NameControllerTest do
                 Model.name(
                   active: true,
                   expire: 1,
-                  claims: [{{0, 0}, 0}],
+                  claims: [{{0, 0}, {0, -1}}],
                   updates: [],
                   transfers: [],
-                  revoke: {{0, 0}, 0},
+                  revoke: {{0, 0}, {0, -1}},
                   auction_timeout: 1
                 )}
 
@@ -926,10 +926,10 @@ defmodule AeMdwWeb.NameControllerTest do
                 Model.name(
                   active: true,
                   expire: 1,
-                  claims: [{{0, 0}, 0}],
+                  claims: [{{0, 0}, {0, -1}}],
                   updates: [],
                   transfers: [],
-                  revoke: {{0, 0}, 0},
+                  revoke: {{0, 0}, {0, -1}},
                   auction_timeout: 1
                 )}
            end,
@@ -972,7 +972,7 @@ defmodule AeMdwWeb.NameControllerTest do
           index: first_name,
           active: false,
           expire: 3,
-          claims: [{{2, 0}, 0}],
+          claims: [{{2, 0}, {0, -1}}],
           updates: [],
           transfers: [],
           revoke: nil,
@@ -1063,10 +1063,10 @@ defmodule AeMdwWeb.NameControllerTest do
                 Model.name(
                   active: Enum.random(1000..9999),
                   expire: 1,
-                  claims: [{{0, 0}, 0}],
+                  claims: [{{0, 0}, {0, -1}}],
                   updates: [],
                   transfers: [],
-                  revoke: {{0, 0}, 0},
+                  revoke: {{0, 0}, {0, -1}},
                   auction_timeout: 1
                 )}
 
@@ -1120,7 +1120,7 @@ defmodule AeMdwWeb.NameControllerTest do
                 Model.name(
                   active: active_from,
                   expire: active_from + 10,
-                  claims: [{{active_from, 0}, 0}]
+                  claims: [{{active_from, 0}, {0, -1}}]
                 )}
 
              AuctionBid, _key ->
@@ -1162,7 +1162,7 @@ defmodule AeMdwWeb.NameControllerTest do
           index: first_name,
           active: false,
           expire: 3,
-          claims: [{{2, 0}, 0}],
+          claims: [{{2, 0}, {0, -1}}],
           updates: [],
           transfers: [],
           revoke: nil,
@@ -1228,7 +1228,7 @@ defmodule AeMdwWeb.NameControllerTest do
           index: first_name,
           active: false,
           expire: 3,
-          claims: [{{2, 0}, 0}],
+          claims: [{{2, 0}, {0, -1}}],
           updates: [],
           transfers: [],
           revoke: nil,
@@ -1322,8 +1322,8 @@ defmodule AeMdwWeb.NameControllerTest do
               index: name,
               owner: alice_pk,
               active: active_from,
-              claims: [{{1, 1}, 1}],
-              updates: [{{1, 1}, 2}],
+              claims: [{{1, 1}, {1, -1}}],
+              updates: [{{1, 1}, {2, -1}}],
               expire: expire
             )
           )
@@ -1394,8 +1394,8 @@ defmodule AeMdwWeb.NameControllerTest do
               index: plain_name,
               owner: owner_pk,
               active: 10,
-              claims: [{{1, 1}, 1}],
-              transfers: [{{1, 1}, 2}],
+              claims: [{{1, 1}, {1, -1}}],
+              transfers: [{{1, 1}, {2, -1}}],
               expire: 10_000
             )
           )
@@ -1455,8 +1455,8 @@ defmodule AeMdwWeb.NameControllerTest do
               index: plain_name,
               owner: owner_pk,
               active: 10,
-              claims: [{{1, 1}, 1}],
-              transfers: [{{1, 1}, 2}],
+              claims: [{{1, 1}, {1, -1}}],
+              transfers: [{{1, 1}, {2, -1}}],
               expire: 10_000
             )
           )
@@ -1512,13 +1512,17 @@ defmodule AeMdwWeb.NameControllerTest do
               index: name,
               owner: alice_pk,
               active: active_from,
-              claims: [{{10, 1}, claim_txi}],
+              claims: [{{10, 1}, {claim_txi, -1}}],
               expire: expire
             )
           )
           |> Store.put(
             Model.AuctionBid,
-            Model.auction_bid(index: name, expire_height: bid_expire, bids: [{{1, 1}, bid_txi}])
+            Model.auction_bid(
+              index: name,
+              expire_height: bid_expire,
+              bids: [{{1, 1}, {bid_txi, -1}}]
+            )
           )
           |> Store.put(Model.AuctionOwner, Model.owner(index: {alice_pk, name}))
           |> Store.put(Model.AuctionExpiration, Model.expiration(index: {bid_expire, name}))
@@ -1604,7 +1608,7 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.tx(index: 2, block_index: {0, 0}, id: :aetx_sign.hash(tx2))
           )
           |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: name))
-          |> Store.put(Model.ActiveName, Model.name(index: name, updates: [{{0, 0}, 2}]))
+          |> Store.put(Model.ActiveName, Model.name(index: name, updates: [{{0, 0}, {2, -1}}]))
 
         {:id, :account, alice_pk} = accounts[:alice]
         alice_id = encode(:account_pubkey, alice_pk)
@@ -1906,6 +1910,10 @@ defmodule AeMdwWeb.NameControllerTest do
         |> name_claims_store(plain_name)
         |> Store.put(Model.IntContractCall, int_contract_call)
 
+      {:ok, name} = Store.get(store, Model.ActiveName, plain_name)
+      name = Model.name(name, claims: [{{123, 0}, {call_txi, 1}}])
+      store = Store.put(store, Model.ActiveName, name)
+
       with_mocks [
         {Db, [],
          [
@@ -1923,7 +1931,7 @@ defmodule AeMdwWeb.NameControllerTest do
 
         assert %{
                  "height" => 123,
-                 "tx" => %{"type" => "NameClaimTx", "fee" => 111_111, "name" => ^plain_name}
+                 "tx" => %{"fee" => 111_111, "name" => ^plain_name}
                } = claim1
       end
     end
@@ -2121,9 +2129,9 @@ defmodule AeMdwWeb.NameControllerTest do
   end
 
   defp name_claims_store(store, plain_name) do
-    claim_bi_txi_1 = {{123, 0}, 567}
-    claim_bi_txi_2 = {{123, 0}, 678}
-    claim_bi_txi_3 = {{124, 1}, 788}
+    claim_bi_txi_1 = {{123, 0}, {567, -1}}
+    claim_bi_txi_2 = {{123, 0}, {678, -1}}
+    claim_bi_txi_3 = {{124, 1}, {788, -1}}
 
     name =
       Model.name(

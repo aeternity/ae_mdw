@@ -37,13 +37,13 @@ defmodule AeMdw.Db.Sync.ContractTest do
       tx_2 = {:tx2, account_id}
 
       events = [
-        {{:internal_call_tx, "some_funname_1"}, %{info: tx_1}},
-        {{:internal_call_tx, "some_funname_2"}, %{info: tx_2}}
+        {{:internal_call_tx, "Call.amount"}, %{info: tx_1, tx_hash: "tx1-hash"}},
+        {{:internal_call_tx, "Call.amount"}, %{info: tx_2, tx_hash: "tx2-hash"}}
       ]
 
       int_calls = [
-        {"some_funname_1", :spend_tx, tx_1, tx_1},
-        {"some_funname_2", :spend_tx, tx_2, tx_1}
+        {0, "Call.amount", :spend_tx, tx_1, tx_1, "tx1-hash"},
+        {1, "Call.amount", :spend_tx, tx_2, tx_1, "tx2-hash"}
       ]
 
       mutation = IntCallsMutation.new(contract_pk, call_txi, int_calls)
@@ -70,15 +70,15 @@ defmodule AeMdw.Db.Sync.ContractTest do
       tx_2 = {:tx2, contract_pk}
 
       events = [
-        {{:internal_call_tx, "Call.amount"}, %{info: tx_1}},
+        {{:internal_call_tx, "Call.amount"}, %{info: tx_1, tx_hash: "tx1-hash"}},
         {{:internal_call_tx, "Chain.create"}, %{info: :error}},
-        {{:internal_call_tx, "Call.amount"}, %{info: tx_2}},
+        {{:internal_call_tx, "Call.amount"}, %{info: tx_2, tx_hash: "tx2-hash"}},
         {{:internal_call_tx, "Chain.clone"}, %{info: :error}}
       ]
 
       int_calls = [
-        {"Call.amount", :spend_tx, tx_1, tx_1},
-        {"Call.amount", :spend_tx, tx_2, tx_1}
+        {0, "Call.amount", :spend_tx, tx_1, tx_1, "tx1-hash"},
+        {1, "Call.amount", :spend_tx, tx_2, tx_1, "tx2-hash"}
       ]
 
       mutation = IntCallsMutation.new(contract_pk, call_txi, int_calls)
@@ -165,7 +165,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
 
       assert Enum.any?(event_mutations, fn
                %NameTransferMutation{
-                 txi: ^call_txi,
+                 txi_idx: {^call_txi, 0},
                  block_index: ^block_index
                } ->
                  true
@@ -187,7 +187,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
 
       assert Enum.any?(event_mutations, fn
                %NameUpdateMutation{
-                 txi: ^call_txi,
+                 txi_idx: {^call_txi, 0},
                  block_index: ^block_index
                } ->
                  true
@@ -258,7 +258,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
                %IntCallsMutation{
                  call_txi: ^call_txi,
                  contract_pk: ^contract_pk,
-                 int_calls: [{"Oracle.register", ^tx_type, ^aetx, ^tx}]
+                 int_calls: [{0, "Oracle.register", ^tx_type, ^aetx, ^tx, ^tx_hash}]
                }
              ] = mutations
     end
@@ -286,7 +286,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
       contract_pk = <<3::256>>
 
       mutations =
-        [{{:internal_call_tx, "Oracle.extend"}, %{info: aetx}}]
+        [{{:internal_call_tx, "Oracle.extend"}, %{info: aetx, tx_hash: "tx-hash"}}]
         |> SyncContract.events_mutations(
           block_index,
           block_hash,
@@ -303,13 +303,13 @@ defmodule AeMdw.Db.Sync.ContractTest do
           %OracleExtendMutation{
             oracle_pk: ^pubkey,
             block_index: ^block_index,
-            txi: ^call_txi,
+            txi_idx: {^call_txi, 0},
             delta_ttl: ^delta_ttl
           },
           %IntCallsMutation{
             call_txi: ^call_txi,
             contract_pk: ^contract_pk,
-            int_calls: [{"Oracle.extend", :oracle_extend_tx, ^aetx, ^tx}]
+            int_calls: [{0, "Oracle.extend", :oracle_extend_tx, ^aetx, ^tx, "tx-hash"}]
           }
         ] = mutations
       )

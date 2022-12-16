@@ -147,7 +147,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
                  } ->
                    true
 
-                 %{} ->
+                 _mutation ->
                    false
                end)
       end

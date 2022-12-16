@@ -14,7 +14,7 @@ defmodule AeMdw.Db.OracleRegisterMutation do
   require Model
 
   @derive AeMdw.Db.Mutation
-  defstruct [:oracle_pk, :block_index, :expire, :txi]
+  defstruct [:oracle_pk, :block_index, :expire, :txi_idx]
 
   @typep expiration() :: Blocks.height()
 
@@ -22,16 +22,16 @@ defmodule AeMdw.Db.OracleRegisterMutation do
             oracle_pk: Db.pubkey(),
             block_index: Blocks.block_index(),
             expire: expiration(),
-            txi: Txs.txi()
+            txi_idx: Txs.txi_idx()
           }
 
-  @spec new(Db.pubkey(), Blocks.block_index(), expiration(), Txs.txi()) :: t()
-  def new(oracle_pk, block_index, expire, txi) do
+  @spec new(Db.pubkey(), Blocks.block_index(), expiration(), Txs.txi_idx()) :: t()
+  def new(oracle_pk, block_index, expire, txi_idx) do
     %__MODULE__{
       oracle_pk: oracle_pk,
       block_index: block_index,
       expire: expire,
-      txi: txi
+      txi_idx: txi_idx
     }
   end
 
@@ -41,7 +41,7 @@ defmodule AeMdw.Db.OracleRegisterMutation do
           oracle_pk: oracle_pk,
           block_index: {height, _mbi} = block_index,
           expire: expire,
-          txi: txi
+          txi_idx: txi_idx
         },
         state
       ) do
@@ -72,7 +72,7 @@ defmodule AeMdw.Db.OracleRegisterMutation do
         index: oracle_pk,
         active: height,
         expire: expire,
-        register: {block_index, txi},
+        register: {block_index, txi_idx},
         previous: previous
       )
 

@@ -12,24 +12,24 @@ defmodule AeMdw.Db.NameTransferMutation do
   alias AeMdw.Txs
 
   @derive AeMdw.Db.Mutation
-  defstruct [:name_hash, :new_owner, :txi, :block_index]
+  defstruct [:name_hash, :new_owner, :txi_idx, :block_index]
 
   @opaque t() :: %__MODULE__{
             name_hash: Names.name_hash(),
             new_owner: Db.pubkey(),
-            txi: Txs.txi(),
+            txi_idx: Txs.txi_idx(),
             block_index: Blocks.block_index()
           }
 
-  @spec new(Node.tx(), Txs.txi(), Blocks.block_index()) :: t()
-  def new(tx, txi, block_index) do
+  @spec new(Node.tx(), Txs.txi_idx(), Blocks.block_index()) :: t()
+  def new(tx, txi_idx, block_index) do
     name_hash = :aens_transfer_tx.name_hash(tx)
     new_owner = :aens_transfer_tx.recipient_pubkey(tx)
 
     %__MODULE__{
       name_hash: name_hash,
       new_owner: new_owner,
-      txi: txi,
+      txi_idx: txi_idx,
       block_index: block_index
     }
   end
@@ -39,11 +39,11 @@ defmodule AeMdw.Db.NameTransferMutation do
         %__MODULE__{
           name_hash: name_hash,
           new_owner: new_owner,
-          txi: txi,
+          txi_idx: txi_idx,
           block_index: block_index
         },
         state
       ) do
-    Name.transfer(state, name_hash, new_owner, txi, block_index)
+    Name.transfer(state, name_hash, new_owner, txi_idx, block_index)
   end
 end
