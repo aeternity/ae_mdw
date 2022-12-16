@@ -133,112 +133,120 @@ We currently provide hosted infrastructure at https://mainnet.aeternity.io/mdw/ 
 
 ## HTTP v2 (latest) endpoints
 
+The routes and respective responses are:
+
 ```
-GET /v2/key-blocks                           - returns key blocks with micro blocks and transaction counts
-GET /v2/key-blocks/:hash_or_kbi              - returns key block by hash or height
-GET /v2/key-blocks/:hash_or_kbi/micro-blocks - returns micro block belonging to key block
-GET /v2/micro-blocks/:hash                   - returns micro block with transaction count
-GET /v2/micro-blocks/:hash/txs               - returns micro block transactions
+GET /v2/key-blocks                           - key blocks with micro blocks and transaction counts
+GET /v2/key-blocks/:hash_or_kbi              - key block by hash or height
+GET /v2/key-blocks/:hash_or_kbi/micro-blocks - micro block belonging to key block
+GET /v2/micro-blocks/:hash                   - micro block with transaction count
+GET /v2/micro-blocks/:hash/txs               - micro block transactions
 
-GET /v2/txs                            - returns transactions in any direction
-GET /v2/txs/:hash_or_index             - returns transaction by hash or index
-GET /v2/txs/count                      - returns total number of transactions (last transaction index + 1)
-GET /v2/txs/count/:id                  - returns counts of transactions per transaction field for given id
+GET /v2/txs                            - transactions in any direction
+GET /v2/txs/:hash_or_index             - transaction by hash or index
+GET /v2/txs/count                      - total number of transactions (last transaction index + 1)
+GET /v2/txs/count/:id                  - counts of transactions per transaction field for given id
 
-GET /v2/contracts/logs                    - returns contract logs
-GET /v2/contracts/call                    - returns contract calls
+GET /v2/contracts/logs                    - contract logs
+GET /v2/contracts/call                    - contract calls
 
-GET /v2/names                              - returns names
-GET /v2/names/search                       - returns names and auctions filtered by a query
-GET /v2/names/:id/auction                  - returns name auction
-GET /v2/names/:id/pointers                 - returns name pointer
-GET /v2/names/:id/pointees                 - returns name pointees
-GET /v2/names/auctions                     - returns all name auctions
-GET /v2/names/:id                          - returns name
+GET /v2/names                              - AENS names
+GET /v2/names/search                       - AENS names and auctions filtered by a query
+GET /v2/names/:id/auction                  - AENS name auction
+GET /v2/names/:id/pointers                 - AENS name pointer
+GET /v2/names/:id/pointees                 - AENS name pointees
+GET /v2/names/auctions                     - all AENS name auctions
+GET /v2/names/:id                          - AENS name
 
-GET /v2/oracles                         - returns expired oracles ordered by expiration height, filtered by active/inactive state and scope
-GET /v2/oracles/:id                     - returns oracle information by hash
+GET /v2/oracles                         - expired oracles ordered by expiration height, filtered by active/inactive state and scope
+GET /v2/oracles/:id                     - oracle information by hash
 
-GET /v2/channels                        - returns active channels ordered by activation height
-GET /v2/channels/:id                    - returns channel
+GET /v2/channels                        - active channels ordered by activation height
+GET /v2/channels/:id                    - channel
 
-GET /v2/transfers                        - returns internal transfers from the top of the chain
+GET /v2/transfers                        - internal transfers from the top of the chain
 
-GET /v2/aex9                                           - returns aex9 contracts
-GET /v2/aex9/:contract_id                              - returns aex9 contract tokens
-GET /v2/aex9/:contract_id/balances                     - returns aex9 contract balances
-GET /v2/aex9/:contract_id/balances/:account_id         - returns aex9 contract account balance
-GET /v2/aex9/account-balances/:account_id              - returns aex9 account balances
-GET /v2/aex9/transfers/from/:sender                    - returns aex9 transfers from sender
-GET /v2/aex9/transfers/to/:recipient                   - returns aex9 transfers to recipient
-GET /v2/aex9/transfers/from-to/:sender/:recipient      - returns aex9 transfers from sender to recipient
-GET /v2/aex9/:contract_id/balances/:account_id/history - returns aex9 contract account balanances history
+GET /v2/aex9                                           - aex9 contracts
+GET /v2/aex9/:contract_id                              - aex9 contract tokens
+GET /v2/aex9/:contract_id/balances                     - aex9 contract balances
+GET /v2/aex9/:contract_id/balances/:account_id         - aex9 contract account balance
+GET /v2/aex9/account-balances/:account_id              - aex9 account balances
+GET /v2/aex9/transfers/from/:sender                    - aex9 transfers from sender
+GET /v2/aex9/transfers/to/:recipient                   - aex9 transfers to recipient
+GET /v2/aex9/transfers/from-to/:sender/:recipient      - aex9 transfers from sender to recipient
+GET /v2/aex9/:contract_id/balances/:account_id/history - aex9 contract account balanances history
 
-GET /v2/aex141                                         - returns nft contracts meta info and stats
-GET /v2/aex141/:contract_id                            - returns nft contract meta info and stats
-GET /v2/aex141/owners-nfts/:account_id                 - returns nfts owned by a wallet
-GET /v2/aex141/:contract_id/owner/:token_id            - returns the owner wallet address of a NFT
-GET /v2/aex141/:contract_id/owners                     - returns the owners wallets of NFTs from a collection
-GET /v2/aex141/transfers/from/:sender                  - returns nft transfers from sender
-GET /v2/aex141/transfers/to/:recipient                 - returns nft transfers to recipient
-GET /v2/aex141/transfers/from-to/:sender/:recipient    - returns nft transfers from sender to recipient
+GET /v2/aex141                                         - nft contracts meta info and stats
+GET /v2/aex141/:contract_id                            - nft contract meta info and stats
+GET /v2/aex141/owned-nfts/:account_id                  - nfts owned by a wallet
+GET /v2/aex141/:contract_id/owner/:token_id            - the owner wallet address of a NFT
+GET /v2/aex141/:contract_id/owners                     - the owners wallets of NFTs from a collection
+GET /v2/aex141/:contract_id/templates                  - nft templates
+GET /v2/aex141/:contract_id/templates/:id/tokens       - nft supply from a template
+GET /v2/aex141/transfers/from/:sender                  - nft transfers from sender
+GET /v2/aex141/transfers/to/:recipient                 - nft transfers to recipient
+GET /v2/aex141/transfers/from-to/:sender/:recipient    - nft transfers from sender to recipient
+GET /v2/aex141/transfers/from-to/:sender/:recipient    - nft transfers from sender to recipient
+GET /v2/aex141/transfers/from-to/:sender/:recipient    - nft transfers from sender to recipient
 
-GET /v2/deltastats                       - returns statistics for generations from tip of the chain
-GET /v2/totalstats                       - returns aggregated statistics for generations from tip of the chain
-GET /v2/minerstats                       - returns total rewards for each miner
+GET /v2/deltastats                       - statistics for generations from tip of the chain
+GET /v2/totalstats                       - aggregated statistics for generations from tip of the chain
+GET /v2/minerstats                       - total rewards for each miner
 
-GET /v2/status                           - returns middleware status
+GET /v2/status                           - middleware status
 ```
 
 ## HTTP v1 endpoints (DEPRECATED)
 
 These endpoints are soon to be deprecated and should no longer be used.
 
+The routes and respective responses are:
+
 ```
-GET  /name/:id                          - returns name information by hash or plain name
-GET  /name/auction/:id                  - returns name information for auction, by hash or plain name
-GET  /name/pointers/:id                 - returns pointers of a name specified by hash of plain name
-GET  /name/pointees/:id                 - returns names which point to id specified by hash
-GET  /names/owned_by/:id                - returns names owned by account and auctions with top bid from account
-GET  /names/search/:prefix              - returns names matching the provided prefix
+GET  /name/:id                          - name information by hash or plain name
+GET  /name/auction/:id                  - name information for auction, by hash or plain name
+GET  /name/pointers/:id                 - pointers of a name specified by hash of plain name
+GET  /name/pointees/:id                 - names which point to id specified by hash
+GET  /names/owned_by/:id                - names owned by account and auctions with top bid from account
+GET  /names/search/:prefix              - names matching the provided prefix
 
-GET  /names/auctions                    - returns name auctions ordered by (optional) query parameters
-GET  /names/auctions/:scope_type/:range - returns name auctions for continuation link
-GET  /names/inactive                    - returns expired names ordered by (optional) query parameters
-GET  /names/inactive/:scope_type/:range - returns expired names for continuation link
-GET  /names/active                      - returns active names ordered by (optional) query parameters
-GET  /names/active/:scope_type/:range   - returns active names for continuation link
-GET  /names                             - returns all names (active and expired) ordered by (optional) query parameters
-GET  /names/:scope_type/:range          - returns all names for continuation link
+GET  /names/auctions                    - name auctions ordered by (optional) query parameters
+GET  /names/auctions/:scope_type/:range - name auctions for continuation link
+GET  /names/inactive                    - expired names ordered by (optional) query parameters
+GET  /names/inactive/:scope_type/:range - expired names for continuation link
+GET  /names/active                      - active names ordered by (optional) query parameters
+GET  /names/active/:scope_type/:range   - active names for continuation link
+GET  /names                             - all names (active and expired) ordered by (optional) query parameters
+GET  /names/:scope_type/:range          - all names for continuation link
 
-GET /aex9/by_name                       - returns AEX9 tokens, filtered by token name
-GET /aex9/by_symbol                     - returns AEX9 tokens, filtered by token symbol
+GET /aex9/by_name                       - AEX9 tokens, filtered by token name
+GET /aex9/by_symbol                     - AEX9 tokens, filtered by token symbol
 
-GET /aex9/balance/gen/:range/:contract_id/:account_id      - returns AEX9 token balance in range for given contract and account
-GET /aex9/balance/hash/:blockhash/:contract_id/:account_id - returns AEX9 token balance at block for given contract and account
-GET /aex9/balance/:contract_id/:account_id                 - returns current AEX9 token balance for given contract and account
+GET /aex9/balance/gen/:range/:contract_id/:account_id      - AEX9 token balance in range for given contract and account
+GET /aex9/balance/hash/:blockhash/:contract_id/:account_id - AEX9 token balance at block for given contract and account
+GET /aex9/balance/:contract_id/:account_id                 - current AEX9 token balance for given contract and account
 
-GET /aex9/balances/gen/:height/account/:account_id         - returns AEX9 token balances of all contracts at height for given account
-GET /aex9/balances/hash/:blockhash/account/:account_id     - returns AEX9 token balances of all contracts at blockhash for given account
-GET /aex9/balances/account/:account_id                     - returns current AEX9 token balances of all contracts for given account
+GET /aex9/balances/gen/:height/account/:account_id         - AEX9 token balances of all contracts at height for given account
+GET /aex9/balances/hash/:blockhash/account/:account_id     - AEX9 token balances of all contracts at blockhash for given account
+GET /aex9/balances/account/:account_id                     - current AEX9 token balances of all contracts for given account
 
-GET /aex9/balances/gen/:range/:contract_id       - returns all AEX9 token balances in range for given contract
-GET /aex9/balances/hash/:blockhash/:contract_id  - returns all AEX9 token balances at block for given contract
-GET /aex9/balances/:contract_id                  - returns all current AEX9 token balances for given contract
+GET /aex9/balances/gen/:range/:contract_id       - all AEX9 token balances in range for given contract
+GET /aex9/balances/hash/:blockhash/:contract_id  - all AEX9 token balances at block for given contract
+GET /aex9/balances/:contract_id                  - all current AEX9 token balances for given contract
 
-GET /aex9/transfers/from/:sender                 - returns all transfers of AEX9 tokens from sender
-GET /aex9/transfers/to/:recipient                - returns all transfers of AEX9 tokens to recipient
-GET /aex9/transfers/from-to/:sender/:recipient   - returns all transfers of AEX9 tokens between sender and recipient
+GET /aex9/transfers/from/:sender                 - all transfers of AEX9 tokens from sender
+GET /aex9/transfers/to/:recipient                - all transfers of AEX9 tokens to recipient
+GET /aex9/transfers/from-to/:sender/:recipient   - all transfers of AEX9 tokens between sender and recipient
 
-GET /contracts/logs                      - returns contract logs
-GET /contracts/logs/:direction           - returns contract logs from genesis or from the tip of chain
-GET /contracts/logs/:scope_type/:range   - returns contract logs from in given range
+GET /contracts/logs                      - contract logs
+GET /contracts/logs/:direction           - contract logs from genesis or from the tip of chain
+GET /contracts/logs/:scope_type/:range   - contract logs from in given range
 
-GET /contracts/calls                     - returns function calls inside of the contracts
-GET /contracts/calls/:direction          - returns function calls inside of the contracts from genesis or from the tip of chain
-GET /contracts/calls/:scope_type/:range  - returns function calls inside of the contracts in a given range
+GET /contracts/calls                     - function calls inside of the contracts
+GET /contracts/calls/:direction          - function calls inside of the contracts from genesis or from the tip of chain
+GET /contracts/calls/:scope_type/:range  - function calls inside of the contracts in a given range
 
-GET /status                              - returns middleware status
+GET /status                              - middleware status
 ```
 
 ## OpenAPI specs
@@ -4266,8 +4274,6 @@ $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/ct_2tw26RwgNADrpuCnrQWKPBH
 
 Returns the owner address for each NFT of a collection in paginated way.
 
-`direction` and `limit` pagination params might be used to sort tokens by id and to define page size.
-
 ```
 $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8/owners?direction=forward&limit=2' | jq .
 {
@@ -4284,6 +4290,61 @@ $ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/ct_2tw26RwgNADrpuCnrQWKPBH
     }
   ],
   "next": "/aex141/ct_2tw26RwgNADrpuCnrQWKPBH87bPxuRbLR1KLccS9ZJTUMMj4z8/owners?cursor=g2gCbQAAACD5nNNdNGQ3YrwVYeXgdeB%2FFd1jOgwZs1p74F2dVz6zC2ED&direction=forward&limit=2",
+  "prev": null
+}
+```
+
+### `/v2/aex141/:contract_id/templates`
+
+Returns the NFT templates of a collection in paginated way.
+
+```
+$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/ct_2oq4kSd4j1VkkbupueXLdHwYEJdY8Ntzvp1FFkMB1gYyXkYPcV/templates?direction=forward&limit=2' | jq .
+
+{
+  "data": [
+    {
+      "contract_id": "ct_2oq4kSd4j1VkkbupueXLdHwYEJdY8Ntzvp1FFkMB1gYyXkYPcV",
+      "edition": null,
+      "log_idx": 0,
+      "template_id": 1,
+      "tx_hash": "th_KsfMGhkVf2n5RLY5qh1Bo8HppudiQREq7LMKAYuauLSuYKg4s"
+    },
+    {
+      "contract_id": "ct_2oq4kSd4j1VkkbupueXLdHwYEJdY8Ntzvp1FFkMB1gYyXkYPcV",
+      "edition": null,
+      "log_idx": 0,
+      "template_id": 2,
+      "tx_hash": "th_Vrk8UGyUpgnvVPK3TknudxPx3Jd3mSCUPnfqcuKbjWZSZivjQ"
+    }
+  ],
+  "next": "/v2/aex141/ct_2oq4kSd4j1VkkbupueXLdHwYEJdY8Ntzvp1FFkMB1gYyXkYPcV/templates?cursor=g2gCbQAAACDuBsFrXLJEIAr8CpUxUAJxriYxXg%2BRMhW900GbowEFwWED&direction=forward&limit=2",
+  "prev": null
+}
+```
+
+### `/v2/aex141/:contract_id/templates/:template_id/tokens`
+
+Returns the NFTs from a collection template in paginated way.
+
+```
+$ curl -s 'https://testnet.aeternity.io/mdw/v2/aex141/ct_ouWFCU2Qg6v7dgFpjRc3jAfcaRhb9iByPRBDjXSJoA8fRrQ4j/templates/8/tokens?direction=forward&limit=2' | jq .
+{
+  "data": [
+    {
+      "log_idx": 0,
+      "owner_id": "ak_8Ujt76QfpT1DyYsNZKGPGtMZ2C2MFf7CcnpQvJWNsX6szZkYN",
+      "token_id": 29,
+      "tx_hash": "th_ZzPmumNtkYCfrGpVGtQP6em9hgkWQqstddB5ynagrJJa7ua9c"
+    },
+    {
+      "log_idx": 0,
+      "owner_id": "ak_8Ujt76QfpT1DyYsNZKGPGtMZ2C2MFf7CcnpQvJWNsX6szZkYN",
+      "token_id": 30,
+      "tx_hash": "th_2UAUi3oYgcYsJ8EGvxR4vurygt7qhYq7tVRNx4g2sZ3quVpym7"
+    }
+  ],
+  "next": "/v2/aex141/ct_ouWFCU2Qg6v7dgFpjRc3jAfcaRhb9iByPRBDjXSJoA8fRrQ4j/templates/8/tokens?cursor=g2gDbQAAACBqgQyEWHrcaKnZMsVhZvJdUfhMZjSF4KpvuLx%2FpHpCcmEIYR8%3D&direction=forward&limit=2",
   "prev": null
 }
 ```

@@ -143,10 +143,42 @@ components:
       - symbol
       title: Aex141Response
       type: object
+    Aex141TemplateTokensResponse:
+      description: Response Schema for template tokens of a AEX-141 contract
+      example:
+        log_idx: 0
+        owner_id: ak_8Ujt76QfpT1DyYsNZKGPGtMZ2C2MFf7CcnpQvJWNsX6szZkYN
+        token_id: 29
+        tx_hash: th_ZzPmumNtkYCfrGpVGtQP6em9hgkWQqstddB5ynagrJJa7ua9c
+      properties:
+        log_idx:
+          description: Mint event index
+          type: integer
+        owner_id:
+          description: Owner wallet address
+          type: string
+        token_id:
+          description: NFT id
+          type: integer
+        tx_hash:
+          description: Mint transaction hash
+          type: string
+      required:
+      - log_idx
+      - owner_id
+      - token_id
+      - tx_hash
+      title: Aex141TemplatesResponse
+      type: object
     Aex141TemplatesResponse:
       description: Response Schema for templates of a AEX-141 contract
       example:
         contract_id: ct_2oq4kSd4j1VkkbupueXLdHwYEJdY8Ntzvp1FFkMB1gYyXkYPcV
+        edition:
+          limit: 2
+          limit_log_idx: 0
+          limit_tx_hash: th_erpNZJTuvRfKPafcRvkJ7ddCu9GBSQoY12QVs5pdCTm6eCDwr
+          supply: 1
         log_idx: 0
         template_id: 1
         tx_hash: th_ojhH9bD7kGRpgZ6rXob2qi5asBKsYTdbSVaKzGdpfP6wiRxz4
@@ -154,12 +186,18 @@ components:
         contract_id:
           description: NFT contract id
           type: string
+        edition:
+          description: Template edition details
+          type: object
         log_idx:
-          description: Index of the event that created the template
+          description: Log index of the TemplateCreation
           type: integer
         template_id:
           description: Template id of AEX-141 tokens
           type: integer
+        tx_hash:
+          description: Transaction hash of the TemplateCreation
+          type: string
       required:
       - contract_id
       - log_idx
@@ -1513,6 +1551,48 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Bad request
+  /aex141/{contractId}/templates/{templateId}/tokens:
+    get:
+      deprecated: false
+      description: Get AEX-141 template tokens.
+      operationId: get_aex141_template_tokens
+      parameters:
+      - $ref: '#/components/parameters/LimitParam'
+      - $ref: '#/components/parameters/DirectionParam'
+      - description: Contract id
+        in: path
+        name: contractId
+        required: true
+        type: string
+        x-example: ct_ouWFCU2Qg6v7dgFpjRc3jAfcaRhb9iByPRBDjXSJoA8fRrQ4j
+      - description: Template id
+        in: path
+        name: templateId
+        required: true
+        type: integer
+        x-example: 8
+      produces:
+      - application/json
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                allOf:
+                - properties:
+                    data:
+                      items:
+                        $ref: '#/components/schemas/Aex141TemplateTokensResponse'
+                      type: array
+                  type: object
+                - $ref: '#/components/schemas/PaginatedResponse'
+          description: Returns paginated AEX-141 template tokens
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad request
   /aex141/{id}:
     get:
       deprecated: false
@@ -1711,7 +1791,7 @@ paths:
           description: Bad request
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-  /aex9/{contract_id}/balances:
+  /aex9/{contractId}/balances:
     get:
       deprecated: false
       description: Get AEX9 balances on a contract.
@@ -1721,7 +1801,7 @@ paths:
       - $ref: '#/components/parameters/DirectionParam'
       - description: Contract id
         in: path
-        name: contract_id
+        name: contractId
         required: true
         type: string
         x-example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
