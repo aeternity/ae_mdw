@@ -5,6 +5,7 @@ defmodule AeMdw.Node.Db do
   alias AeMdw.DryRun.Runner
   alias AeMdw.Db.Model
   alias AeMdw.Log
+  alias AeMdw.Node
 
   import AeMdw.Util
 
@@ -19,7 +20,7 @@ defmodule AeMdw.Node.Db do
   @opaque key_block() :: tuple()
   @opaque micro_block() :: tuple()
 
-  @spec get_blocks(Blocks.block_hash(), Blocks.block_hash()) :: tuple()
+  @spec get_blocks(Blocks.block_hash(), Blocks.block_hash()) :: {key_block(), [micro_block()]}
   def get_blocks(kb_hash, next_kb_hash) do
     {:aec_db.get_block(kb_hash), get_micro_blocks(next_kb_hash)}
   end
@@ -80,7 +81,7 @@ defmodule AeMdw.Node.Db do
     end)
   end
 
-  @spec get_micro_blocks(Blocks.block_hash()) :: list()
+  @spec get_micro_blocks(Blocks.block_hash()) :: [micro_block()]
   def get_micro_blocks(next_block_hash),
     do: next_block_hash |> get_reverse_micro_blocks() |> Enum.reverse()
 
@@ -124,14 +125,15 @@ defmodule AeMdw.Node.Db do
     end
   end
 
-  @spec get_tx_data(binary()) :: tuple()
+  @spec get_tx_data(binary()) ::
+          {Blocks.block_hash(), Node.tx_type(), Node.signed_tx(), Node.tx()}
   def get_tx_data(<<_::256>> = tx_hash) do
     {block_hash, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
     {type, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
     {block_hash, type, signed_tx, tx_rec}
   end
 
-  @spec get_tx(binary()) :: tuple()
+  @spec get_tx(binary()) :: Node.tx()
   def get_tx(<<_::256>> = tx_hash) do
     {_, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
     {_, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))

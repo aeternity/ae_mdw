@@ -15,10 +15,10 @@ defmodule AeMdw.Db.ChannelOpenMutation do
 
   @typep bi_txi() :: Blocks.bi_txi()
   @opaque t() :: %__MODULE__{
-            tx: Node.aetx()
+            tx: Node.tx()
           }
 
-  @spec new(bi_txi(), Node.aetx()) :: t()
+  @spec new(bi_txi(), Node.tx()) :: t()
   def new(bi_txi, tx), do: %__MODULE__{bi_txi: bi_txi, tx: tx}
 
   @spec execute(t(), State.t()) :: State.t()
