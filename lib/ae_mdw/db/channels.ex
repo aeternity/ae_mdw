@@ -11,7 +11,7 @@ defmodule AeMdw.Db.Channels do
 
   @typep bi_txi() :: Blocks.bi_txi()
 
-  @spec close_mutual_mutations(bi_txi(), Node.aetx()) :: [Mutation.t()]
+  @spec close_mutual_mutations(bi_txi(), Node.tx()) :: [Mutation.t()]
   def close_mutual_mutations(bi_txi, tx) do
     channel_pk = :aesc_close_mutual_tx.channel_pubkey(tx)
 
@@ -24,7 +24,7 @@ defmodule AeMdw.Db.Channels do
     ]
   end
 
-  @spec close_solo_mutations(bi_txi(), Node.aetx()) :: [Mutation.t()]
+  @spec close_solo_mutations(bi_txi(), Node.tx()) :: [Mutation.t()]
   def close_solo_mutations(bi_txi, tx) do
     channel_pk = :aesc_close_solo_tx.channel_pubkey(tx)
 
@@ -33,7 +33,7 @@ defmodule AeMdw.Db.Channels do
     ]
   end
 
-  @spec set_delegates_mutations(bi_txi(), Node.aetx()) :: [Mutation.t()]
+  @spec set_delegates_mutations(bi_txi(), Node.tx()) :: [Mutation.t()]
   def set_delegates_mutations(bi_txi, tx) do
     channel_pk = :aesc_set_delegates_tx.channel_pubkey(tx)
 
@@ -42,7 +42,7 @@ defmodule AeMdw.Db.Channels do
     ]
   end
 
-  @spec close_slash_mutations(bi_txi(), Node.aetx()) :: [Mutation.t()]
+  @spec close_slash_mutations(bi_txi(), Node.tx()) :: [Mutation.t()]
   def close_slash_mutations(bi_txi, tx) do
     channel_pk = :aesc_slash_tx.channel_pubkey(tx)
 
@@ -51,7 +51,7 @@ defmodule AeMdw.Db.Channels do
     ]
   end
 
-  @spec force_progress_mutations(bi_txi(), Node.aetx()) :: [Mutation.t()]
+  @spec force_progress_mutations(bi_txi(), Node.tx()) :: [Mutation.t()]
   def force_progress_mutations(bi_txi, tx) do
     channel_pk = :aesc_force_progress_tx.channel_pubkey(tx)
 
@@ -60,7 +60,7 @@ defmodule AeMdw.Db.Channels do
     ]
   end
 
-  @spec slash_mutations(bi_txi(), Node.aetx()) :: [Mutation.t()]
+  @spec slash_mutations(bi_txi(), Node.tx()) :: [Mutation.t()]
   def slash_mutations(bi_txi, tx) do
     channel_pk = :aesc_slash_tx.channel_pubkey(tx)
 
@@ -69,7 +69,7 @@ defmodule AeMdw.Db.Channels do
     ]
   end
 
-  @spec offchain_mutations(bi_txi(), Node.aetx()) :: [Mutation.t()]
+  @spec offchain_mutations(bi_txi(), Node.tx()) :: [Mutation.t()]
   def offchain_mutations(bi_txi, tx) do
     channel_pk = :aesc_offchain_tx.channel_pubkey(tx)
 
@@ -78,7 +78,7 @@ defmodule AeMdw.Db.Channels do
     ]
   end
 
-  @spec settle_mutations(bi_txi(), Node.aetx()) :: [Mutation.t()]
+  @spec settle_mutations(bi_txi(), Node.tx()) :: [Mutation.t()]
   def settle_mutations(bi_txi, tx) do
     channel_pk = :aesc_close_settle_tx.channel_pubkey(tx)
 
@@ -90,10 +90,10 @@ defmodule AeMdw.Db.Channels do
     ]
   end
 
-  @spec open_mutations(bi_txi(), Node.aetx()) :: [Mutation.t()]
+  @spec open_mutations(bi_txi(), Node.tx()) :: [Mutation.t()]
   def open_mutations(bi_txi, tx), do: [ChannelOpenMutation.new(bi_txi, tx)]
 
-  @spec deposit_mutations(bi_txi(), Node.aetx()) :: [Mutation.t()]
+  @spec deposit_mutations(bi_txi(), Node.tx()) :: [Mutation.t()]
   def deposit_mutations(bi_txi, tx) do
     channel_pk = :aesc_deposit_tx.channel_pubkey(tx)
 
@@ -102,7 +102,7 @@ defmodule AeMdw.Db.Channels do
     ]
   end
 
-  @spec withdraw_mutations(bi_txi(), Node.aetx()) :: [Mutation.t()]
+  @spec withdraw_mutations(bi_txi(), Node.tx()) :: [Mutation.t()]
   def withdraw_mutations(bi_txi, tx) do
     channel_pk = :aesc_withdraw_tx.channel_pubkey(tx)
 

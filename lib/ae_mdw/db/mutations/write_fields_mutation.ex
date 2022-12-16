@@ -23,7 +23,7 @@ defmodule AeMdw.Db.WriteFieldsMutation do
             txi: Txs.txi()
           }
 
-  @spec new(Node.tx_type(), Model.tx(), Blocks.block_index(), Txs.txi()) :: t()
+  @spec new(Node.tx_type(), Node.tx(), Blocks.block_index(), Txs.txi()) :: t()
   def new(type, tx, block_index, txi) do
     %__MODULE__{
       type: type,

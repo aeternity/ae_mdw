@@ -45,6 +45,29 @@ defmodule AeMdw.Db.Sync.Transaction do
             block_hash: Blocks.block_hash(),
             tx_events: [Contract.event()]
           }
+
+    @spec new(
+            Node.tx_type(),
+            Node.tx(),
+            Node.signed_tx(),
+            Txs.txi(),
+            Txs.tx_hash(),
+            Blocks.block_index(),
+            Blocks.block_hash(),
+            [Contract.event()]
+          ) :: t()
+    def new(type, tx, signed_tx, txi, tx_hash, block_index, block_hash, tx_events) do
+      %TxContext{
+        type: type,
+        tx: tx,
+        signed_tx: signed_tx,
+        txi: txi,
+        tx_hash: tx_hash,
+        block_index: block_index,
+        block_hash: block_hash,
+        tx_events: tx_events
+      }
+    end
   end
 
   @spec transaction_mutations(
@@ -59,20 +82,20 @@ defmodule AeMdw.Db.Sync.Transaction do
         {block_index, block_hash, mb_time, mb_events} = tx_ctx,
         inner_tx? \\ false
       ) do
-    {mod, tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
+    {type, tx} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
     tx_hash = :aetx_sign.hash(signed_tx)
-    type = mod.type()
 
-    tx_context = %TxContext{
-      type: type,
-      tx: tx,
-      signed_tx: signed_tx,
-      txi: txi,
-      tx_hash: tx_hash,
-      block_index: block_index,
-      block_hash: block_hash,
-      tx_events: Map.get(mb_events, tx_hash, [])
-    }
+    tx_context =
+      TxContext.new(
+        type,
+        tx,
+        signed_tx,
+        txi,
+        tx_hash,
+        block_index,
+        block_hash,
+        Map.get(mb_events, tx_hash, [])
+      )
 
     inner_txn_mutations =
       if type == :ga_meta_tx or type == :paying_for_tx do
