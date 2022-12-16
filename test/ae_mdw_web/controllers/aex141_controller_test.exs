@@ -28,7 +28,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       |> MemStore.new()
 
     store =
-      Enum.reduce(1_411..1_413, empty_store, fn i, store ->
+      Enum.reduce(1_411..1_414, empty_store, fn i, store ->
         meta_info = {"some-nft-#{i}", "SAEX#{i}", "http://some-url.com", :url}
         txi = 1_000 + i
 
@@ -75,11 +75,24 @@ defmodule AeMdwWeb.Aex141ControllerTest do
             limit: {template_id * 10, txi + 100, log_idx + 1}
           )
 
+        m_template_token =
+          Model.nft_template_token(
+            index: {contract_pk, template_id, token_id + 2},
+            txi: txi + 200,
+            log_idx: log_idx + 2
+          )
+
+        m_stat =
+          Model.stat(index: Stats.nft_template_tokens_key(contract_pk, template_id), payload: 3)
+
         store =
           store
           |> Store.put(Model.NftTemplate, m_template)
+          |> Store.put(Model.NftTemplateToken, m_template_token)
+          |> Store.put(Model.Stat, m_stat)
           |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>))
           |> Store.put(Model.Tx, Model.tx(index: txi + 100, id: <<txi + 100::256>>))
+          |> Store.put(Model.Tx, Model.tx(index: txi + 200, id: <<txi + 200::256>>))
 
         if token_id != 1_413_010 do
           store
@@ -89,6 +102,49 @@ defmodule AeMdwWeb.Aex141ControllerTest do
         else
           store
         end
+      end)
+
+    contract_pk = <<1_414::256>>
+    template_id = 10
+
+    m_template =
+      Model.nft_template(
+        index: {contract_pk, template_id},
+        txi: 1_414_000,
+        log_idx: 0
+      )
+
+    store =
+      store
+      |> Store.put(Model.Tx, Model.tx(index: 1_414_000, id: <<1_414_000::256>>))
+      |> Store.put(Model.NftTemplate, Model.nft_template(m_template, index: {contract_pk, 1}))
+      |> Store.put(Model.NftTemplate, m_template)
+
+    store =
+      Enum.reduce(1_414_001..1_414_040, store, fn j, store ->
+        token_id = j - 1_414_000
+        owner_pk = if rem(j, 2) == 0, do: @owner_pk1, else: @owner_pk2
+
+        m_ownership = Model.nft_ownership(index: {owner_pk, contract_pk, token_id})
+        m_owner_token = Model.nft_owner_token(index: {contract_pk, owner_pk, token_id})
+        m_token_owner = Model.nft_token_owner(index: {contract_pk, token_id}, owner: owner_pk)
+
+        txi = j
+        log_idx = rem(token_id, 2)
+
+        m_template_token =
+          Model.nft_template_token(
+            index: {contract_pk, template_id, token_id},
+            txi: txi + 200,
+            log_idx: log_idx + 2
+          )
+
+        store
+        |> Store.put(Model.NftOwnership, m_ownership)
+        |> Store.put(Model.NftOwnerToken, m_owner_token)
+        |> Store.put(Model.NftTokenOwner, m_token_owner)
+        |> Store.put(Model.NftTemplateToken, m_template_token)
+        |> Store.put(Model.Tx, Model.tx(index: txi + 200, id: <<txi + 200::256>>))
       end)
 
     owner_pk = :crypto.strong_rand_bytes(32)
@@ -103,7 +159,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       |> Store.put(Model.NftOwnerToken, m_owner_token)
       |> Store.put(Model.NftTokenOwner, m_token_owner)
 
-    [conn: with_store(build_conn(), store), random_owner_pk: owner_pk]
+    [conn: with_store(build_conn(), store), random_owner_pk: owner_pk, store: store]
   end
 
   describe "aex141_contract" do
@@ -547,17 +603,23 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                                        "edition" => %{
                                          "limit" => edition_limit,
                                          "limit_tx_hash" => limit_tx_hash,
-                                         "limit_log_idx" => limit_log_idx
+                                         "limit_log_idx" => limit_log_idx,
+                                         "supply" => 3,
+                                         "supply_tx_hash" => supply_tx_hash,
+                                         "supply_log_idx" => supply_log_idx
                                        }
                                      } ->
                tx_hash = Validate.id!(tx_hash)
                limit_tx_hash = Validate.id!(limit_tx_hash)
+               supply_tx_hash = Validate.id!(supply_tx_hash)
 
                ct_id == contract_id and template_id in 1..10 and
                  tx_hash == <<template_id + 1_413_000::256>> and log_idx == rem(template_id, 2) and
                  edition_limit == template_id * 10 and
                  limit_tx_hash == <<template_id + 1_413_100::256>> and
-                 limit_log_idx == rem(template_id, 2) + 1
+                 limit_log_idx == rem(template_id, 2) + 1 and
+                 supply_tx_hash == <<template_id + 1_413_200::256>> and
+                 supply_log_idx == rem(template_id, 2) + 2
              end)
 
       assert %{"data" => next_templates, "prev" => prev_templates} =
@@ -601,6 +663,85 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       assert Enum.all?(next_templates, &(&1["contract_id"] == contract_id))
 
       assert %{"data" => ^templates} = conn |> get(prev_templates) |> json_response(200)
+    end
+  end
+
+  describe "collection_template_tokens" do
+    test "returns an empty list when collection has no nft from template", %{conn: conn} do
+      contract_id = encode_contract(<<1_414::256>>)
+
+      assert %{"data" => [], "next" => nil, "prev" => nil} =
+               conn
+               |> get("/aex141/#{contract_id}/templates/1/tokens")
+               |> json_response(200)
+    end
+
+    test "returns collection templates sorted by ascending ids", %{
+      conn: conn,
+      store: store
+    } do
+      contract_pk = <<1_414::256>>
+      contract_id = encode_contract(contract_pk)
+      template_id = 10
+
+      assert %{"data" => template_tokens, "next" => next} =
+               conn
+               |> get("/v2/aex141/#{contract_id}/templates/#{template_id}/tokens",
+                 direction: :forward
+               )
+               |> json_response(200)
+
+      assert @default_limit = length(template_tokens)
+      assert ^template_tokens = Enum.sort_by(template_tokens, & &1["token_id"])
+
+      assert template_tokens
+             |> Enum.with_index(1)
+             |> Enum.all?(fn {%{
+                                "token_id" => token_id,
+                                "owner_id" => owner_id,
+                                "tx_hash" => tx_hash,
+                                "log_idx" => log_idx
+                              }, token_id} ->
+               tx_hash = Validate.id!(tx_hash)
+               owner_pk = Validate.id!(owner_id)
+
+               {:ok, Model.nft_token_owner(owner: ^owner_pk)} =
+                 Store.get(store, Model.NftTokenOwner, {contract_pk, token_id})
+
+               tx_hash == <<1_414_000 + token_id + 200::256>> and log_idx == rem(token_id, 2) + 2
+             end)
+
+      assert %{"data" => next_template_tokens, "prev" => prev_template_tokens} =
+               conn |> get(next) |> json_response(200)
+
+      assert @default_limit = length(next_template_tokens)
+      assert ^next_template_tokens = Enum.sort_by(next_template_tokens, & &1["token_id"])
+
+      assert %{"data" => ^template_tokens} =
+               conn |> get(prev_template_tokens) |> json_response(200)
+    end
+
+    test "returns collection templates sorted by descending ids", %{conn: conn} do
+      contract_pk = <<1_414::256>>
+      contract_id = encode_contract(contract_pk)
+      template_id = 10
+
+      assert %{"data" => template_tokens, "next" => next} =
+               conn
+               |> get("/v2/aex141/#{contract_id}/templates/#{template_id}/tokens")
+               |> json_response(200)
+
+      assert @default_limit = length(template_tokens)
+      assert ^template_tokens = Enum.sort_by(template_tokens, & &1["token_id"], :desc)
+
+      assert %{"data" => next_template_tokens, "prev" => prev_template_tokens} =
+               conn |> get(next) |> json_response(200)
+
+      assert @default_limit = length(next_template_tokens)
+      assert ^next_template_tokens = Enum.sort_by(next_template_tokens, & &1["token_id"], :desc)
+
+      assert %{"data" => ^template_tokens} =
+               conn |> get(prev_template_tokens) |> json_response(200)
     end
   end
 end

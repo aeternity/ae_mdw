@@ -9,8 +9,9 @@ defmodule AeMdw.Aex141 do
   alias AeMdw.Db.State
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
-  alias AeMdw.Util
+  alias AeMdw.Stats
   alias AeMdw.Txs
+  alias AeMdw.Util
 
   import AeMdw.Util.Encoding
 
@@ -29,14 +30,22 @@ defmodule AeMdw.Aex141 do
         }
 
   @type token_id :: integer()
+  @type template_id :: integer()
   @type nft :: %{
-          :contract_id => String.t(),
-          :owner => String.t(),
-          :token_id => token_id()
+          contract_id: String.t(),
+          owner_id: String.t(),
+          token_id: token_id()
+        }
+  @type template_nft :: %{
+          token_id: token_id(),
+          owner_id: String.t(),
+          tx_hash: Txs.tx_hash(),
+          log_idx: AeMdw.Contracts.log_idx()
         }
 
   @ownership_table Model.NftOwnership
   @templates_table Model.NftTemplate
+  @template_tokens_table Model.NftTemplateToken
   @owners_table Model.NftTokenOwner
 
   @spec fetch_nft_owner(pubkey(), token_id()) :: {:ok, pubkey()} | {:error, Error.t()}
@@ -85,6 +94,24 @@ defmodule AeMdw.Aex141 do
        {
          serialize_cursor(prev_cursor_key),
          render_templates(state, keys),
+         serialize_cursor(next_cursor_key)
+       }}
+    end
+  end
+
+  @spec fetch_template_tokens(State.t(), pubkey(), template_id(), cursor(), pagination()) ::
+          {:ok, {page_cursor(), [template_nft()], page_cursor()}} | {:error, Error.t()}
+  def fetch_template_tokens(state, contract_pk, template_id, cursor, pagination) do
+    with {:ok, cursor_key} <- deserialize_cursor(@template_tokens_table, cursor) do
+      {prev_cursor_key, keys, next_cursor_key} =
+        state
+        |> build_streamer(@template_tokens_table, cursor_key, {contract_pk, template_id})
+        |> Collection.paginate(pagination)
+
+      {:ok,
+       {
+         serialize_cursor(prev_cursor_key),
+         render_template_tokens(state, keys),
          serialize_cursor(next_cursor_key)
        }}
     end
@@ -141,6 +168,14 @@ defmodule AeMdw.Aex141 do
   #
   # Private function
   #
+  defp build_streamer(state, Model.NftTemplateToken, cursor_key, {contract_pk, template_id}) do
+    key_boundary = {{contract_pk, template_id, -1}, {contract_pk, template_id, nil}}
+
+    fn direction ->
+      Collection.stream(state, Model.NftTemplateToken, direction, key_boundary, cursor_key)
+    end
+  end
+
   defp build_streamer(state, table, cursor_key, pubkey) do
     key_boundary =
       case table do
@@ -189,6 +224,17 @@ defmodule AeMdw.Aex141 do
     end
   end
 
+  defp deserialize_cursor(Model.NftTemplateToken, cursor_bin64) do
+    with {:ok, cursor_bin} <- Base.decode64(cursor_bin64),
+         {<<_pk::256>>, template_id, token_id} = cursor
+         when is_integer(template_id) and is_integer(token_id) <-
+           :erlang.binary_to_term(cursor_bin) do
+      {:ok, cursor}
+    else
+      _invalid -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
+    end
+  end
+
   defp deserialize_cursor(Model.NftTokenOwner, cursor_bin64) do
     with {:ok, cursor_bin} <- Base.decode64(cursor_bin64),
          {<<_pk::256>>, token_id} = cursor when is_integer(token_id) <-
@@ -221,12 +267,41 @@ defmodule AeMdw.Aex141 do
         template_id: template_id,
         tx_hash: encode(:tx_hash, tx_hash),
         log_idx: log_idx,
-        edition: render_template_edition_limit(state, limit)
+        edition: render_template_edition(state, contract_pk, template_id, limit)
       }
     end)
   end
 
-  defp render_template_edition_limit(_state, nil), do: nil
+  defp render_template_tokens(state, keys) do
+    Enum.map(keys, fn {contract_pk, template_id, token_id} ->
+      Model.nft_template_token(txi: txi, log_idx: log_idx) =
+        State.fetch!(state, @template_tokens_table, {contract_pk, template_id, token_id})
+
+      Model.nft_token_owner(owner: owner_pk) =
+        State.fetch!(state, @owners_table, {contract_pk, token_id})
+
+      tx_hash = Txs.txi_to_hash(state, txi)
+
+      %{
+        token_id: token_id,
+        owner_id: encode_account(owner_pk),
+        tx_hash: encode(:tx_hash, tx_hash),
+        log_idx: log_idx
+      }
+    end)
+  end
+
+  defp render_template_edition(state, contract_pk, template_id, limit) do
+    stats_key = Stats.nft_template_tokens_key(contract_pk, template_id)
+
+    if nil != limit or State.exists?(state, Model.Stat, stats_key) do
+      state
+      |> render_template_edition_limit(limit)
+      |> Map.merge(render_template_edition_supply(state, contract_pk, template_id))
+    end
+  end
+
+  defp render_template_edition_limit(_state, nil), do: %{}
 
   defp render_template_edition_limit(state, {amount, txi, log_idx}) do
     tx_hash = Txs.txi_to_hash(state, txi)
@@ -236,6 +311,31 @@ defmodule AeMdw.Aex141 do
       limit_log_idx: log_idx,
       limit_tx_hash: encode(:tx_hash, tx_hash)
     }
+  end
+
+  defp render_template_edition_supply(state, contract_pk, template_id) do
+    {:ok, Model.stat(payload: amount)} =
+      State.get(state, Model.Stat, Stats.nft_template_tokens_key(contract_pk, template_id))
+
+    with {:ok, {^contract_pk, ^template_id, _token_id} = prev_key} <-
+           State.prev(state, Model.NftTemplateToken, {contract_pk, template_id, nil}),
+         {:ok, Model.nft_template_token(txi: txi, log_idx: log_idx)} <-
+           State.get(state, Model.NftTemplateToken, prev_key) do
+      tx_hash = Txs.txi_to_hash(state, txi)
+
+      %{
+        supply: amount,
+        supply_log_idx: log_idx,
+        supply_tx_hash: encode(:tx_hash, tx_hash)
+      }
+    else
+      _mismatch_or_not_found ->
+        %{
+          supply: 0,
+          supply_log_idx: nil,
+          supply_tx_hash: nil
+        }
+    end
   end
 
   defp render_owners(state, nft_tokens) do
