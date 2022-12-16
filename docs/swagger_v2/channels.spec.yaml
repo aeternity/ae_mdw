@@ -4,16 +4,31 @@ schemas:
     properties:
       amount:
         type: integer
-        description: The balance currently left in the channel
+        description: Balance currently left in the channel
         example: 20000000000001
       channel:
         type: string
-        description: The channel pubkey
+        description: Channel pubkey
         example: ch_22SfHdnhUQBAHpC5euxHG9qjRWGfHsj47sZqSmXk4cTfJp4aUd
-      iniitator:
+      channel_reserve:
+        type: integer
+        description: Minimum amount for sufficient funds
+        example: 500000000000000000
+      delegate_ids:
+        type: object
+        description: Pubkeys of delegated accounts
+        example: {
+          "initiator": [],
+          "responder": []
+        }
+      initiator:
         type: string
-        description: The channel initiator pubkey
+        description: Channel initiator pubkey
         example: ak_2BUfk9dHtn2YKuBe6uY9f4qD94xKETA6w9MGAYyJc5weiUUXhy
+      initiator_amount:
+        type: integer
+        description: Amount owned by initiator
+        example: 4500000000000000000
       last_updated_height:
         type: string
         description: The last height in which the channel was updated
@@ -22,10 +37,30 @@ schemas:
         type: string
         description: The transaction type of the last transaction that updated the channel
         example: ChannelDepositTx
+      lock_period:
+        description: Amount of heights locked after a solo closing
+        example: 10
+        type: integer
+      locked_until:
+        description: Non-inclusive height until which the channel is locked
+        example: 712001
+        type: integer
       responder:
         type: string
         description: The channel responder pubkey
         example: ak_2dxvgsogiBDWXvZSzTghv5MoXLfkFGiEynDC5Cn8k2M2s325Ki
+      responder_amount:
+        type: integer
+        description: Amount owned by responder
+        example: 4500000000000000000
+      round: 
+        type: integer
+        description: Round after last transaction
+        example: 1
+      solo_round: 
+        type: integer
+        description: Round of last solo transaction
+        example: 0  
       state_hash:
         type: string
         description: The hash of the current channel state
@@ -34,6 +69,7 @@ schemas:
         type: string
         description: The amount of times the channel's been updated by any of the channel transactions
         example: 2
+  
 paths:
   /channels:
     get:

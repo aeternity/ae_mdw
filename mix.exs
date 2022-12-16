@@ -72,6 +72,7 @@ defmodule AeMdw.MixProject do
           :aeo_response_tx,
           :aeo_state_tree,
           :aeo_utils,
+          :aesc_channels,
           :aesc_close_mutual_tx,
           :aesc_close_settle_tx,
           :aesc_close_solo_tx,

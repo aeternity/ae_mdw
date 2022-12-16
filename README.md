@@ -3724,17 +3724,29 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/channels?limit=1" | jq '.'
 Returns a single active/inactive channel.
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/channels/ch_vpYXyMJZDF8Rdc3EZFvLdKYrWZKsbs1hKXHXMAczeV8MmDPkK" | jq '.'
+$ curl -s "https://testnet.aeternity.io/mdw/v2/channels/ch_2oZz9YFKj5KcaTBa2HWv8UUuFJ3evY8XBym3wyF5Y1JE1VAo8C" | jq '.'
 {
-  "amount": 20000000000001,
-  "channel": "ch_vpYXyMJZDF8Rdc3EZFvLdKYrWZKsbs1hKXHXMAczeV8MmDPkK",
-  "initiator": "ak_2BUfk9dHtn2YKuBe6uY9f4qD94xKETA6w9MGAYyJc5weiUUXhy",
-  "last_updated_height": 141956,
-  "last_updated_tx_hash": "th_tuTDcp7boNK7MzcWS8pForWJt5683qdVcJtETcJPmHsPgCXvd",
+  "active": true,
+  "amount": 9000000000000000000,
+  "channel": "ch_2oZz9YFKj5KcaTBa2HWv8UUuFJ3evY8XBym3wyF5Y1JE1VAo8C",
+  "initiator": "ak_kodik5wfpsc9q4jp74pGSdihRbAZNGpRgdxo2DgSsmtnBasx8",
+  "last_updated_height": 703565,
+  "last_updated_tx_hash": "th_23Y2TgYFjZP5TsVnoWkgfLTK8mdQaAkjmmjnmhhw4DjLt4wvX4",
   "last_updated_tx_type": "ChannelCreateTx",
-  "responder": "ak_2BUfk9dHtn2YKuBe6uY9f4qD94xKETA6w9MGAYyJc5weiUUXhy",
-  "state_hash": "st_Wwxms0IVM7PPCHpeOXWeeZZm8h5p/SuqZL7IHIbr3CqtlCL+",
-  "updates_count": 1
+  "responder": "ak_2sSNLyDkao8jeycCkd2NVAkNMJc1E11sKBw8zzbiUY9QyPPoKz",
+  "state_hash": "st_XU4NzDXb8lkNmPXR23m4XXf56qI/cUw9cyZwYFo2yNr+x8kF",
+  "updates_count": 1,
+  "channel_reserve": 500000000000000000,
+  "delegate_ids": {
+    "initiator": [],
+    "responder": []
+  },
+  "initiator_amount": 4500000000000000000,
+  "lock_period": 0,
+  "locked_until": 0,
+  "responder_amount": 4500000000000000000,
+  "round": 1,
+  "solo_round": 0
 }
 ```
 

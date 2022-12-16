@@ -1,6 +1,7 @@
 defmodule AeMdwWeb.ChannelController do
   use AeMdwWeb, :controller
 
+  alias AeMdw.Validate
   alias AeMdw.Channels
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
@@ -22,7 +23,8 @@ defmodule AeMdwWeb.ChannelController do
 
   @spec channel(Conn.t(), map()) :: Conn.t()
   def channel(%Conn{assigns: %{state: state}} = conn, %{"id" => id}) do
-    with {:ok, channel} <- Channels.fetch_channel(state, id) do
+    with {:ok, channel_pk} <- Validate.id(id, [:channel]),
+         {:ok, channel} <- Channels.fetch_channel(state, channel_pk) do
       json(conn, channel)
     end
   end
