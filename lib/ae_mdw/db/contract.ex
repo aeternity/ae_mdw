@@ -25,6 +25,7 @@ defmodule AeMdw.Db.Contract do
   @typep state :: State.t()
   @typep txi :: AeMdw.Txs.txi()
 
+  @type log_data() :: binary()
   @type rev_aex9_contract_key :: {pos_integer(), String.t(), String.t(), pos_integer()}
   @type account_balance :: {pubkey(), integer()}
 

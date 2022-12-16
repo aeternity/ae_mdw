@@ -45,7 +45,7 @@ defmodule AeMdw.Db.Origin do
     and created through core hard-forks. These contracts will have a negative
     txi where the number is the index of the preloaded contracts.
   """
-  @spec tx_index(State.t(), creation_txi_locator()) :: {:ok, Txs.txi() | -1} | :not_found
+  @spec tx_index(State.t(), creation_txi_locator()) :: {:ok, integer()} | :not_found
   def tx_index(state, {:contract, pk}) do
     with :error <- field_txi(state, :contract_create_tx, nil, pk),
          :error <- field_txi(state, :contract_call_tx, nil, pk),
@@ -57,7 +57,7 @@ defmodule AeMdw.Db.Origin do
     end
   end
 
-  @spec tx_index!(State.t(), creation_txi_locator()) :: Txs.txi()
+  @spec tx_index!(State.t(), creation_txi_locator()) :: integer()
   def tx_index!(state, {:contract, pk} = creation_txi_locator) do
     case State.cache_get(state, :ct_create_sync_cache, pk) do
       {:ok, txi} ->
