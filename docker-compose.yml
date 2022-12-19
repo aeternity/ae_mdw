@@ -9,8 +9,15 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
+    ports:
+      - "4000:4000" #MDW's default port
+      - "4001:4001" #MDW's websocket default port
+      - "3113:3113" #Node's default internal API port
+      - "3013:3013" #Node's default external API port
+      - "3014:3014" #Node's channels default websocket port
     entrypoint: /home/aeternity/node/ae_mdw/entrypoint.sh
     volumes:
+      - ${PWD}/data/mnesia:/home/aeternity/node/local/rel/aeternity/data/mnesia
       - ${PWD}/data/mdw.db:/home/aeternity/node/local/rel/aeternity/data/mdw.db
       - ${PWD}/docker/aeternity.yaml:/home/aeternity/aeternity.yaml
       - ${PWD}/priv:/home/aeternity/node/ae_mdw/priv
