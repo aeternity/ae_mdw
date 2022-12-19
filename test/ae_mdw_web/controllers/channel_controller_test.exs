@@ -1,13 +1,13 @@
 defmodule AeMdwWeb.ChannelControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
-  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
   alias AeMdw.TestSamples, as: TS
   alias AeMdw.Txs
 
   import Mock
+  import AeMdw.Util.Encoding
 
   require Model
 
@@ -34,7 +34,9 @@ defmodule AeMdwWeb.ChannelControllerTest do
 
       with_mocks [
         {Txs, [],
-         [fetch!: fn _state, 1 -> %{"hash" => "", "tx" => %{"type" => "ChannelWithdrawTx"}} end]}
+         fetch!: fn _state, 1 ->
+           %{"block_hash" => "", "hash" => "", "tx" => %{"type" => "ChannelWithdrawTx"}}
+         end}
       ] do
         store =
           store
@@ -67,12 +69,12 @@ defmodule AeMdwWeb.ChannelControllerTest do
     test "it returns an active/inactive channel", %{conn: conn, store: store} do
       active_channel_pk = TS.channel_pk(0)
       inactive_channel_pk = TS.channel_pk(1)
-      active_channel_id = Enc.encode(:channel, active_channel_pk)
-      inactive_channel_id = Enc.encode(:channel, inactive_channel_pk)
+      active_channel_id = encode(:channel, active_channel_pk)
+      inactive_channel_id = encode(:channel, inactive_channel_pk)
       initiator_pk = TS.address(0)
-      initiator = Enc.encode(:account_pubkey, initiator_pk)
+      initiator = encode_account(initiator_pk)
       responder_pk = TS.address(1)
-      responder = Enc.encode(:account_pubkey, responder_pk)
+      responder = encode_account(responder_pk)
 
       {:ok, state_hash} =
         :aeser_api_encoder.safe_decode(
@@ -87,15 +89,36 @@ defmodule AeMdwWeb.ChannelControllerTest do
           initiator: initiator_pk,
           responder: responder_pk,
           state_hash: state_hash,
-          amount: 5,
-          updates: [{{1, 1}, 1}]
+          updates: [{{600_000, 1}, 1}]
         )
 
-      inactive_channel = Model.channel(active_channel, index: inactive_channel_pk, amount: 10)
+      inactive_channel = Model.channel(active_channel, index: inactive_channel_pk)
+      block_hash = <<Enum.random(1_000..9_999)::256>>
 
       with_mocks [
         {Txs, [],
-         [fetch!: fn _state, 1 -> %{"hash" => "", "tx" => %{"type" => "ChannelWithdrawTx"}} end]}
+         fetch!: fn _state, 1 ->
+           %{
+             "block_hash" => encode(:micro_block_hash, block_hash),
+             "hash" => "",
+             "tx" => %{"type" => "ChannelWithdrawTx"}
+           }
+         end},
+        {:aec_chain, [:passthrough],
+         get_channel_at_hash: fn pubkey, ^block_hash ->
+           amount =
+             if pubkey == active_channel_pk,
+               do: 9_000_000,
+               else: 8_000_000
+
+           {:ok,
+            {:channel, {:id, :channel, pubkey}, {:id, :account, initiator_pk},
+             {:id, :account, responder_pk}, %{initiator: [], responder: []}, amount, 4_400_000,
+             4_600_000, 500_000, :basic, :basic,
+             <<13, 54, 141, 196, 223, 107, 172, 150, 198, 45, 62, 102, 159, 21, 123, 151, 241,
+               235, 20, 175, 223, 198, 242, 127, 137, 194, 129, 204, 227, 139, 197, 132>>, 1, 2,
+             3, 600_003, 3}}
+         end}
       ] do
         store =
           store
@@ -106,11 +129,18 @@ defmodule AeMdwWeb.ChannelControllerTest do
         assert %{
                  "channel" => ^active_channel_id,
                  "active" => true,
-                 "amount" => 5,
-                 "last_updated_height" => 1,
+                 "amount" => 9_000_000,
+                 "last_updated_height" => 600_000,
                  "updates_count" => 1,
                  "responder" => ^responder,
-                 "initiator" => ^initiator
+                 "initiator" => ^initiator,
+                 "channel_reserve" => 500_000,
+                 "initiator_amount" => 4_400_000,
+                 "responder_amount" => 4_600_000,
+                 "round" => 1,
+                 "solo_round" => 2,
+                 "lock_period" => 3,
+                 "locked_until" => 600_003
                } =
                  conn
                  |> with_store(store)
@@ -120,11 +150,18 @@ defmodule AeMdwWeb.ChannelControllerTest do
         assert %{
                  "channel" => ^inactive_channel_id,
                  "active" => false,
-                 "amount" => 10,
-                 "last_updated_height" => 1,
+                 "amount" => 8_000_000,
+                 "last_updated_height" => 600_000,
                  "updates_count" => 1,
                  "responder" => ^responder,
-                 "initiator" => ^initiator
+                 "initiator" => ^initiator,
+                 "channel_reserve" => 500_000,
+                 "initiator_amount" => 4_400_000,
+                 "responder_amount" => 4_600_000,
+                 "round" => 1,
+                 "solo_round" => 2,
+                 "lock_period" => 3,
+                 "locked_until" => 600_003
                } =
                  conn
                  |> with_store(store)

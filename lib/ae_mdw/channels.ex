@@ -13,6 +13,8 @@ defmodule AeMdw.Channels do
   alias AeMdw.Util
   alias AeMdw.Validate
 
+  import AeMdw.Util.Encoding
+
   require Model
 
   @typep state() :: State.t()
@@ -37,7 +39,7 @@ defmodule AeMdw.Channels do
         |> build_streamer(scope, cursor)
         |> Collection.paginate(pagination)
 
-      channels = render_list(state, expiration_keys)
+      channels = render_active_channels(state, expiration_keys)
 
       {:ok, serialize_cursor(prev_cursor), channels, serialize_cursor(next_cursor)}
     end
@@ -61,16 +63,18 @@ defmodule AeMdw.Channels do
       type_count(state, :channel_settle_tx, from_txi, next_txi)
   end
 
-  @spec fetch_channel(state(), binary()) :: {:ok, channel()} | {:error, Error.t()}
-  def fetch_channel(state, id) do
-    with {:ok, channel_pk} <- Validate.id(id, [:channel]) do
-      case locate(state, channel_pk) do
-        {:ok, channel, source} ->
-          {:ok, render_channel(state, channel, source == Model.ActiveChannel)}
+  @spec fetch_channel(state(), pubkey()) :: {:ok, channel()} | {:error, Error.t()}
+  def fetch_channel(state, channel_pk) do
+    case locate(state, channel_pk) do
+      {:ok, channel, source} ->
+        {:ok,
+         render_channel(state, channel,
+           is_active?: source == Model.ActiveChannel,
+           node_details?: true
+         )}
 
-        :not_found ->
-          {:error, ErrInput.NotFound.exception(value: id)}
-      end
+      :not_found ->
+        {:error, ErrInput.NotFound.exception(value: encode(:channel, channel_pk))}
     end
   end
 
@@ -97,11 +101,14 @@ defmodule AeMdw.Channels do
     end
   end
 
-  defp render_list(state, keys),
-    do: Enum.map(keys, fn {_exp, channel_pk} -> render(state, channel_pk) end)
-
-  defp render(state, channel_pk),
-    do: render_channel(state, State.fetch!(state, @table_active, channel_pk), true)
+  defp render_active_channels(state, keys) do
+    Enum.map(keys, fn {_exp, channel_pk} ->
+      render_channel(state, State.fetch!(state, @table_active, channel_pk),
+        is_active?: true,
+        node_details?: false
+      )
+    end)
+  end
 
   defp render_channel(
          state,
@@ -113,22 +120,37 @@ defmodule AeMdw.Channels do
            amount: amount,
            updates: [{{last_updated_height, _mbi}, last_updated_txi} | _rest] = updates
          ),
-         is_active?
+         is_active?: is_active?,
+         node_details?: node_details?
        ) do
-    %{"hash" => tx_hash, "tx" => %{"type" => tx_type}} = Txs.fetch!(state, last_updated_txi)
+    %{"block_hash" => block_hash, "hash" => tx_hash, "tx" => %{"type" => tx_type}} =
+      Txs.fetch!(state, last_updated_txi)
 
-    %{
-      channel: Enc.encode(:channel, channel_pk),
-      initiator: Enc.encode(:account_pubkey, initiator_pk),
-      responder: Enc.encode(:account_pubkey, responder_pk),
-      state_hash: :aeser_api_encoder.encode(:state, state_hash),
-      amount: amount,
+    channel = %{
+      channel: encode(:channel, channel_pk),
+      initiator: encode_account(initiator_pk),
+      responder: encode_account(responder_pk),
+      state_hash: encode(:state, state_hash),
       last_updated_height: last_updated_height,
       last_updated_tx_hash: tx_hash,
       last_updated_tx_type: tx_type,
       updates_count: length(updates),
       active: is_active?
     }
+
+    with true <- node_details?,
+         {:ok, node_channel} <-
+           :aec_chain.get_channel_at_hash(channel_pk, Validate.id!(block_hash)) do
+      node_details = :aesc_channels.serialize_for_client(node_channel)
+
+      channel
+      |> Map.merge(node_details)
+      |> Map.drop(~w(id initiator_id responder_id channel_amount))
+      |> Map.put(:amount, node_details["channel_amount"])
+    else
+      _no_details ->
+        Map.put(channel, :amount, amount)
+    end
   end
 
   defp deserialize_cursor(nil), do: {:ok, nil}

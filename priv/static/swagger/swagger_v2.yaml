@@ -573,17 +573,31 @@ components:
     Channel:
       properties:
         amount:
-          description: The balance currently left in the channel
+          description: Balance currently left in the channel
           example: 20000000000001
           type: integer
         channel:
-          description: The channel pubkey
+          description: Channel pubkey
           example: ch_22SfHdnhUQBAHpC5euxHG9qjRWGfHsj47sZqSmXk4cTfJp4aUd
           type: string
-        iniitator:
-          description: The channel initiator pubkey
+        channel_reserve:
+          description: Minimum amount for sufficient funds
+          example: 500000000000000000
+          type: integer
+        delegate_ids:
+          description: Pubkeys of delegated accounts
+          example:
+            initiator: []
+            responder: []
+          type: object
+        initiator:
+          description: Channel initiator pubkey
           example: ak_2BUfk9dHtn2YKuBe6uY9f4qD94xKETA6w9MGAYyJc5weiUUXhy
           type: string
+        initiator_amount:
+          description: Amount owned by initiator
+          example: 4500000000000000000
+          type: integer
         last_updated_height:
           description: The last height in which the channel was updated
           example: 141956
@@ -593,10 +607,30 @@ components:
             channel
           example: ChannelDepositTx
           type: string
+        lock_period:
+          description: Amount of heights locked after a solo closing
+          example: 10
+          type: integer
+        locked_until:
+          description: Non-inclusive height until which the channel is locked
+          example: 712001
+          type: integer
         responder:
           description: The channel responder pubkey
           example: ak_2dxvgsogiBDWXvZSzTghv5MoXLfkFGiEynDC5Cn8k2M2s325Ki
           type: string
+        responder_amount:
+          description: Amount owned by responder
+          example: 4500000000000000000
+          type: integer
+        round:
+          description: Round after last transaction
+          example: 1
+          type: integer
+        solo_round:
+          description: Round of last solo transaction
+          example: 0
+          type: integer
         state_hash:
           description: The hash of the current channel state
           example: st_Wwxms0IVM7PPCHpeOXWeeZZm8h5p/SuqZL7IHIbr3CqtlCL+
