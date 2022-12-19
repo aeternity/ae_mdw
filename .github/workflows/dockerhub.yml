@@ -2,13 +2,8 @@ name: Dockerhub Pipeline
 
 on:
   push:
-    branches:
-      - "**"
     tags:
       - 'v*'
-  pull_request:
-    branches:
-      - "master"
 
 env:
   APP: "ae_mdw"
