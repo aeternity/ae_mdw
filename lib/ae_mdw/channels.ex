@@ -63,7 +63,7 @@ defmodule AeMdw.Channels do
       type_count(state, :channel_settle_tx, from_txi, next_txi)
   end
 
-  @spec fetch_channel(state(), binary()) :: {:ok, channel()} | {:error, Error.t()}
+  @spec fetch_channel(state(), pubkey()) :: {:ok, channel()} | {:error, Error.t()}
   def fetch_channel(state, channel_pk) do
     case locate(state, channel_pk) do
       {:ok, channel, source} ->
