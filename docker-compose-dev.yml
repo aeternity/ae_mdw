@@ -18,5 +18,3 @@ services:
       - ${PWD}/priv:/home/aeternity/node/ae_mdw/priv
       - ${PWD}:/app
     expose: [ 3013, 3014, 3113, 4001, 4000 ]
-    environment:
-      - AETERNITY_CONFIG=/home/aeternity/aeternity.yaml

@@ -19,9 +19,7 @@ services:
     volumes:
       - ${PWD}/data/mnesia:/home/aeternity/node/local/rel/aeternity/data/mnesia
       - ${PWD}/data/mdw.db:/home/aeternity/node/local/rel/aeternity/data/mdw.db
-      - ${PWD}/docker/aeternity.yaml:/home/aeternity/aeternity.yaml
+      - ${HOME}/aeternity.yaml:/home/aeternity/aeternity.yaml
       - ${PWD}/priv:/home/aeternity/node/ae_mdw/priv
       - ${PWD}/log:/home/aeternity/node/ae_mdw/log
     expose: [ 3013, 3014, 3113, 4001, 4000 ]
-    environment:
-      - AETERNITY_CONFIG=/home/aeternity/aeternity.yaml
