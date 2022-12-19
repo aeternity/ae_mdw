@@ -34,10 +34,12 @@ RUN ${NODEDIR}/bin/aeternity check_config /home/aeternity/aeternity.yaml
 COPY config ./ae_mdw/config
 COPY lib ./ae_mdw/lib
 COPY priv ./ae_mdw/priv
+COPY test ./ae_mdw/test
 COPY mix.exs ae_mdw
 COPY mix.lock ae_mdw
 COPY Makefile ae_mdw
 COPY docker/entrypoint.sh ae_mdw/entrypoint.sh
+COPY scripts/test.sh ae_mdw/test.sh
 
 # Start building the mdw
 WORKDIR /home/aeternity/node/ae_mdw
