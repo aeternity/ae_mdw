@@ -6,9 +6,6 @@ services:
       interval: 1m
       timeout: 50s
       retries: 3
-    build:
-      context: .
-      dockerfile: ./Dockerfile
     image: aeternity/ae_mdw:latest
     ports:
       - "4000:4000" #MDW's default port
