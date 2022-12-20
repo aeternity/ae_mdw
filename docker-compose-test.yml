@@ -1,0 +1,12 @@
+version: '3.1'
+services:
+  ae_mdw:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    entrypoint: ""
+    volumes:
+      - ${PWD}/docker/aeternity.yaml:/home/aeternity/aeternity.yaml
+      - ${PWD}/priv:/home/aeternity/node/ae_mdw/priv
+      - ${PWD}/test:/home/aeternity/node/ae_mdw/test
+      - ${PWD}/scripts/test.sh:/home/aeternity/node/ae_mdw/test.sh
