@@ -2,7 +2,7 @@ FROM hexpm/elixir:1.13.4-erlang-23.3.4.17-debian-buster-20220801
 # Add required files to download and compile only the dependencies
 
 # Install other required dependencies
-RUN apt-get -qq update && apt-get -qq -y install git curl libncurses5 libsodium-dev jq build-essential gcc g++ make libgmp10 \
+RUN apt-get -qq update && apt-get -qq -y install git curl libncurses5 libsodium-dev jq libgmp10 \
     && ldconfig \
     && rm -rf /var/lib/apt/lists/*
 
@@ -36,7 +36,6 @@ COPY lib ./ae_mdw/lib
 COPY priv ./ae_mdw/priv
 COPY mix.exs ae_mdw
 COPY mix.lock ae_mdw
-COPY Makefile ae_mdw
 COPY docker/entrypoint.sh ae_mdw/entrypoint.sh
 
 # Start building the mdw
