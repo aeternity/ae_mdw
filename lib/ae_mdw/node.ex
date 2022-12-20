@@ -9,6 +9,7 @@ defmodule AeMdw.Node do
   """
 
   alias AeMdw.Contract
+  alias AeMdw.Contracts
 
   @type tx_type ::
           :spend_tx
@@ -44,7 +45,6 @@ defmodule AeMdw.Node do
   @opaque tx() :: tuple()
   @opaque aect_call :: tuple()
 
-  @type event_hash :: <<_::256>>
   @type aexn_event_type ::
           :burn
           | :mint
@@ -98,7 +98,7 @@ defmodule AeMdw.Node do
     |> Enum.into(%{}, fn {k, v} -> {Contract.function_hash(k), v} end)
   end
 
-  @spec aexn_event_hash_types() :: %{event_hash() => aexn_event_type()}
+  @spec aexn_event_hash_types() :: %{Contracts.event_hash() => aexn_event_type()}
   def aexn_event_hash_types() do
     %{
       :aec_hash.blake2b_256_hash("Burn") => :burn,
@@ -115,6 +115,14 @@ defmodule AeMdw.Node do
       :aec_hash.blake2b_256_hash("TokenLimitDecrease") => :token_limit_decrease,
       :aec_hash.blake2b_256_hash("Transfer") => :transfer
     }
+  end
+
+  @spec aexn_event_names() :: %{Contracts.event_hash() => String.t()}
+  def aexn_event_names() do
+    aexn_event_hash_types()
+    |> Enum.into(%{}, fn {hash, atom} ->
+      {hash, Macro.camelize("#{atom}")}
+    end)
   end
 
   @spec hdr_fields(:key | :micro) :: [atom()]

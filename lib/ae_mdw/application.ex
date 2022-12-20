@@ -155,6 +155,7 @@ defmodule AeMdw.Application do
         aeo_tree_pos: field_pos_map.(aeo_state_tree_code, :oracle_tree),
         aex9_signatures: [{[], AeMdw.Node.aex9_signatures()}],
         aexn_event_hash_types: [{[], AeMdw.Node.aexn_event_hash_types()}],
+        aexn_event_names: [{[], AeMdw.Node.aexn_event_names()}],
         aex141_signatures: [{[], AeMdw.Node.aex141_signatures()}],
         previous_aex141_signatures: [{[], AeMdw.Node.previous_aex141_signatures()}],
         height_proto: [{[], AeMdw.Node.height_proto()}],

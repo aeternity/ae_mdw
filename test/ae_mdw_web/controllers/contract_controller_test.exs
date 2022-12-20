@@ -20,6 +20,20 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
   @evt2_hash :aec_hash.blake2b_256_hash(@evt2_ctor_name)
   @event_hashes [Base.hex_encode32(@evt1_hash), Base.hex_encode32(@evt2_hash)]
 
+  @aex9_events ["Burn", "Mint", "Swap", "Transfer"]
+  @aex141_events [
+    "Burn",
+    "Mint",
+    "TemplateCreation",
+    "TemplateDeletion",
+    "TemplateMint",
+    "TemplateLimit",
+    "TemplateLimitDecrease",
+    "TokenLimit",
+    "TokenLimitDecrease",
+    "Transfer"
+  ]
+
   @log_kbi 101
   @log_mbi 1
   @log_block_hash :crypto.strong_rand_bytes(32)
@@ -27,7 +41,8 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
   @evt1_amount 20
   @mixed_logs_amount 40
   @contract_logs_amount 20
-  @last_log_txi @first_log_txi + @mixed_logs_amount + @contract_logs_amount - 1
+  @last_log_txi @first_log_txi + @mixed_logs_amount + @contract_logs_amount + length(@aex9_events) +
+                  length(@aex141_events)
   @log_txis @first_log_txi..@last_log_txi
 
   @call_kbi 201
@@ -43,21 +58,30 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
   setup_all _context do
     contract_pk = :crypto.strong_rand_bytes(32)
+    aex9_contract_pk = :crypto.strong_rand_bytes(32)
+    aex141_contract_pk = :crypto.strong_rand_bytes(32)
 
     store =
       NullStore.new()
       |> MemStore.new()
-      |> logs_setup(contract_pk)
+      |> logs_setup(contract_pk, aex9_contract_pk, aex141_contract_pk)
       |> calls_setup(contract_pk)
 
-    [store: store, contract_pk: contract_pk]
+    [
+      store: store,
+      contract_pk: contract_pk,
+      aex9_contract_pk: aex9_contract_pk,
+      aex141_contract_pk: aex141_contract_pk
+    ]
   end
 
   describe "fetch_logs/5" do
     test "renders all saved contract logs with limit=100", %{
       conn: conn,
       store: store,
-      contract_pk: contract_pk
+      contract_pk: contract_pk,
+      aex9_contract_pk: aex9_contract_pk,
+      aex141_contract_pk: aex141_contract_pk
     } do
       assert %{"data" => logs, "next" => nil} =
                conn
@@ -65,10 +89,16 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                |> get("/v2/contracts/logs", limit: 100)
                |> json_response(200)
 
-      assert @mixed_logs_amount + @contract_logs_amount == length(logs)
+      assert @mixed_logs_amount + @contract_logs_amount + length(@aex9_events) +
+               length(@aex141_events) + 1 == length(logs)
 
       state = State.new(store)
-      contract_create_txi = Origin.tx_index!(state, {:contract, contract_pk})
+
+      contracts_txi = [
+        Origin.tx_index!(state, {:contract, contract_pk}),
+        Origin.tx_index!(state, {:contract, aex9_contract_pk}),
+        Origin.tx_index!(state, {:contract, aex141_contract_pk})
+      ]
 
       Enum.each(logs, fn %{
                            "contract_txi" => create_txi,
@@ -83,18 +113,22 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                            "args" => args,
                            "data" => data,
                            "event_hash" => event_hash,
+                           "event_name" => event_name,
                            "height" => height,
                            "micro_index" => micro_index,
                            "block_hash" => block_hash,
                            "log_idx" => log_idx
                          } ->
-        assert create_txi == call_txi - 100 or create_txi == contract_create_txi
+        assert create_txi == call_txi - 100 or create_txi in contracts_txi
         assert contract_tx_hash == encode(:tx_hash, Txs.txi_to_hash(state, create_txi))
         assert contract_id == encode_contract(Origin.pubkey(state, {:contract, create_txi}))
         assert call_tx_hash == encode(:tx_hash, Txs.txi_to_hash(state, call_txi))
         assert args == [to_string(call_txi)]
         assert data == "0x" <> Integer.to_string(call_txi, 16)
-        assert event_hash in @event_hashes
+
+        assert event_hash in @event_hashes or event_name in @aex9_events or
+                 event_name in @aex141_events
+
         assert height == @log_kbi
         assert micro_index == @log_mbi
         assert block_hash == encode(:micro_block_hash, @log_block_hash)
@@ -113,16 +147,17 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       assert ^logs = Enum.sort_by(logs, & &1["call_txi"], :desc)
       assert hd(logs)["call_txi"] == @last_log_txi
 
-      assert Enum.all?(logs, fn %{
-                                  "call_txi" => call_txi,
-                                  "height" => height,
-                                  "micro_index" => micro_index,
-                                  "block_hash" => block_hash
-                                } ->
-               call_txi in @log_txis and height == @log_kbi and
-                 micro_index == @log_mbi and
-                 block_hash == encode(:micro_block_hash, @log_block_hash)
-             end)
+      Enum.each(logs, fn %{
+                           "call_txi" => call_txi,
+                           "height" => height,
+                           "micro_index" => micro_index,
+                           "block_hash" => block_hash
+                         } ->
+        assert call_txi in @log_txis
+        assert height == @log_kbi
+        assert micro_index == @log_mbi
+        assert block_hash == encode(:micro_block_hash, @log_block_hash)
+      end)
 
       assert %{"data" => next_logs, "prev" => prev_logs} =
                conn |> with_store(store) |> get(next) |> json_response(200)
@@ -240,6 +275,66 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
       assert %{"data" => ^logs} =
                conn |> with_store(store) |> get(prev_logs) |> json_response(200)
+    end
+
+    test "returns logs with event names for AEX-9 events", %{
+      conn: conn,
+      store: store,
+      aex9_contract_pk: contract_pk
+    } do
+      contract_id = encode_contract(contract_pk)
+
+      assert %{"data" => logs} =
+               conn
+               |> with_store(store)
+               |> get("/v2/contracts/logs", contract: contract_id, direction: :forward)
+               |> json_response(200)
+
+      assert length(logs) == length(@aex9_events)
+
+      assert Enum.all?(logs, fn %{
+                                  "contract_id" => ct_id,
+                                  "height" => height,
+                                  "micro_index" => micro_index,
+                                  "block_hash" => block_hash,
+                                  "event_hash" => event_hash,
+                                  "event_name" => event_name
+                                } ->
+               ct_id == contract_id and height == @log_kbi and micro_index == @log_mbi and
+                 block_hash == encode(:micro_block_hash, @log_block_hash) and
+                 event_hash == Base.hex_encode32(:aec_hash.blake2b_256_hash(event_name)) and
+                 event_name in @aex9_events
+             end)
+    end
+
+    test "returns logs with event names for AEX-141 events", %{
+      conn: conn,
+      store: store,
+      aex141_contract_pk: contract_pk
+    } do
+      contract_id = encode_contract(contract_pk)
+
+      assert %{"data" => logs} =
+               conn
+               |> with_store(store)
+               |> get("/v2/contracts/logs", contract: contract_id, direction: :forward)
+               |> json_response(200)
+
+      assert length(logs) == length(@aex141_events)
+
+      assert Enum.all?(logs, fn %{
+                                  "contract_id" => ct_id,
+                                  "height" => height,
+                                  "micro_index" => micro_index,
+                                  "block_hash" => block_hash,
+                                  "event_hash" => event_hash,
+                                  "event_name" => event_name
+                                } ->
+               ct_id == contract_id and height == @log_kbi and micro_index == @log_mbi and
+                 block_hash == encode(:micro_block_hash, @log_block_hash) and
+                 event_hash == Base.hex_encode32(:aec_hash.blake2b_256_hash(event_name)) and
+                 event_name in @aex141_events
+             end)
     end
 
     test "returns contract logs filtered by data", %{
@@ -370,6 +465,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
       assert Enum.all?(logs, fn %{
                                   "event_hash" => event_hash,
+                                  "event_name" => nil,
                                   "call_txi" => call_txi,
                                   "height" => height,
                                   "micro_index" => micro_index,
@@ -778,7 +874,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
     end
   end
 
-  defp logs_setup(store, contract_pk) do
+  defp logs_setup(store, contract_pk, aex9_contract_pk, aex141_contract_pk) do
     block_index1 = {100, 1}
     block_index2 = {@log_kbi, @log_mbi}
 
@@ -835,11 +931,12 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
         |> Store.put(Model.IdxContractLog, m_idx_log)
       end)
 
-    create_txi = last_log_txi + 1 - 100
+    first_log_txi = last_log_txi + 1
+    create_txi = first_log_txi - 100
+    last_log_txi = first_log_txi + @contract_logs_amount
 
     store =
-      Enum.reduce((last_log_txi + 1)..(last_log_txi + @contract_logs_amount), store, fn txi,
-                                                                                        store ->
+      Enum.reduce(first_log_txi..last_log_txi, store, fn txi, store ->
         evt_hash = @evt1_hash
         data = "0x" <> Integer.to_string(txi, 16)
         idx = rem(txi, 5)
@@ -868,14 +965,112 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
         |> Store.put(Model.IdxContractLog, m_idx_log)
       end)
 
+    store =
+      store
+      |> Store.put(
+        Model.Field,
+        Model.field(index: {:contract_create_tx, nil, contract_pk, create_txi})
+      )
+      |> Store.put(
+        Model.RevOrigin,
+        Model.rev_origin(index: {create_txi, :contract_create_tx, contract_pk})
+      )
+
+    first_log_txi = last_log_txi + 1
+    create_txi = first_log_txi - 100
+
+    store =
+      @aex9_events
+      |> Enum.with_index(first_log_txi)
+      |> Enum.reduce(store, fn {event_name, txi}, store ->
+        evt_hash = :aec_hash.blake2b_256_hash(event_name)
+        data = "0x" <> Integer.to_string(txi, 16)
+        idx = rem(txi, 5)
+        fake_args = [<<txi::256>>]
+
+        m_log =
+          Model.contract_log(
+            index: {create_txi, txi, evt_hash, idx},
+            ext_contract: aex9_contract_pk,
+            args: fake_args,
+            data: data
+          )
+
+        m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, idx})
+        m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, idx})
+        m_idx_log = Model.idx_contract_log(index: {txi, idx, create_txi, evt_hash})
+
+        store
+        |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>, block_index: block_index2))
+        |> Store.put(Model.ContractLog, m_log)
+        |> Store.put(Model.DataContractLog, m_data_log)
+        |> Store.put(Model.EvtContractLog, m_evt_log)
+        |> Store.put(Model.IdxContractLog, m_idx_log)
+      end)
+
+    store =
+      store
+      |> Store.put(
+        Model.Tx,
+        Model.tx(index: create_txi, id: <<create_txi::256>>, block_index: block_index1)
+      )
+      |> Store.put(
+        Model.Field,
+        Model.field(index: {:contract_create_tx, nil, aex9_contract_pk, create_txi})
+      )
+      |> Store.put(
+        Model.RevOrigin,
+        Model.rev_origin(index: {create_txi, :contract_create_tx, aex9_contract_pk})
+      )
+
+    first_log_txi = first_log_txi + length(@aex9_events)
+    create_txi = first_log_txi - 100
+
+    store =
+      @aex141_events
+      |> Enum.with_index(first_log_txi)
+      |> Enum.reduce(store, fn {event_name, txi}, store ->
+        evt_hash = :aec_hash.blake2b_256_hash(event_name)
+        data = "0x" <> Integer.to_string(txi, 16)
+        idx = rem(txi, 5)
+        fake_args = [<<txi::256>>]
+
+        m_log =
+          Model.contract_log(
+            index: {create_txi, txi, evt_hash, idx},
+            ext_contract: aex141_contract_pk,
+            args: fake_args,
+            data: data
+          )
+
+        m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, idx})
+        m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, idx})
+        m_idx_log = Model.idx_contract_log(index: {txi, idx, create_txi, evt_hash})
+
+        store
+        |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>, block_index: block_index2))
+        |> Store.put(Model.ContractLog, m_log)
+        |> Store.put(Model.DataContractLog, m_data_log)
+        |> Store.put(Model.EvtContractLog, m_evt_log)
+        |> Store.put(Model.IdxContractLog, m_idx_log)
+      end)
+
     store
     |> Store.put(
+      Model.Tx,
+      Model.tx(
+        index: create_txi,
+        id: <<create_txi::256>>,
+        block_index: block_index1
+      )
+    )
+    |> Store.put(
       Model.Field,
-      Model.field(index: {:contract_create_tx, nil, contract_pk, create_txi})
+      Model.field(index: {:contract_create_tx, nil, aex141_contract_pk, create_txi})
     )
     |> Store.put(
       Model.RevOrigin,
-      Model.rev_origin(index: {create_txi, :contract_create_tx, contract_pk})
+      Model.rev_origin(index: {create_txi, :contract_create_tx, aex141_contract_pk})
     )
   end
 

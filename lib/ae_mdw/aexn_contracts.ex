@@ -6,6 +6,7 @@ defmodule AeMdw.AexnContracts do
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.DryRun.Runner
+  alias AeMdw.Node
   alias AeMdw.Node.Db, as: NodeDb
   alias AeMdw.Log
 
@@ -108,6 +109,12 @@ defmodule AeMdw.AexnContracts do
 
         :error
     end
+  end
+
+  @spec event_name(AeMdw.Contracts.event_hash()) :: String.t() | nil
+  def event_name(event_hash) do
+    Node.aexn_event_names()
+    |> Map.get(event_hash)
   end
 
   #
