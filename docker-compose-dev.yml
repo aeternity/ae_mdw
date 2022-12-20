@@ -4,6 +4,9 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
+      args:
+        MIX_ENV: dev
+    image: aeternity/ae_mdw_dev:latest
     ports:
       - "4000:4000" #MDW's default port
       - "4001:4001" #MDW's websocket default port
@@ -17,4 +20,5 @@ services:
       - ${PWD}/docker/aeternity.yaml:/home/aeternity/aeternity.yaml
       - ${PWD}/priv:/home/aeternity/node/ae_mdw/priv
       - ${PWD}:/app
-    expose: [ 3013, 3014, 3113, 4001, 4000 ]
+    environment:
+      - AETERNITY_CONFIG=/home/aeternity/aeternity.yaml

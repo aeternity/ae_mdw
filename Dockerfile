@@ -44,10 +44,13 @@ WORKDIR /home/aeternity/node/ae_mdw
 RUN  mix local.hex --force && mix local.rebar --force
 
 # Fetch the application dependencies and build it
+ARG MIX_ENV
+ENV MIX_ENV=${MIX_ENV}
 RUN mix deps.get
 RUN mix deps.compile
 ENV NODEROOT=/home/aeternity/node/local
-RUN make compile
+RUN mix compile
+RUN mix phx.digest
 
 RUN chmod +x entrypoint.sh
 ENTRYPOINT [ "./entrypoint.sh" ]

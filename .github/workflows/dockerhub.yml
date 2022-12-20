@@ -40,6 +40,7 @@ jobs:
         if: ${{ steps.meta.outputs.tags }}
         with:
           context: .
+          build-args: MIX_ENV=prod
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
