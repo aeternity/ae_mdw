@@ -4,17 +4,11 @@ config :aecore, network_id: System.get_env("NETWORK_ID", "ae_mainnet")
 
 config :ae_mdw, AeMdwWeb.Endpoint,
   http: [port: 4000],
-  debug_errors: true,
-  code_reloader: false,
-  watchers: [],
-  check_origin: false
+  debug_errors: true
 
 config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
   http: [port: 4001],
-  debug_errors: true,
-  code_reloader: false,
-  watchers: [],
-  check_origin: false
+  debug_errors: true
 
 # ## SSL Support
 #
