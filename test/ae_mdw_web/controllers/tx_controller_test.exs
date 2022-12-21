@@ -135,19 +135,48 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
-    test "returns an ga_meta_tx with return_type", %{
+    test "returns an ga_meta_tx with return_type and pointers", %{
       conn: conn,
       store: store
     } do
-      amount = Enum.random(100_000..999_999)
+      name = "binarypointer.chain"
+      {:ok, name_hash} = :aens.get_name_hash(name)
+      pointer_id = :aeser_id.create(:account, <<1::256>>)
+      oracle_id = :aeser_id.create(:oracle, <<2::256>>)
+      name_account_id = :aeser_id.create(:account, <<3::256>>)
+
+      non_string_pointer_key =
+        <<96, 70, 239, 88, 30, 239, 116, 157, 73, 35, 96, 177, 84, 44, 123, 233, 151, 181, 221,
+          202, 13, 46, 81, 10, 67, 18, 178, 23, 153, 139, 252, 116>>
+
+      non_string_pointer_key64 = Base.encode64(non_string_pointer_key)
+
+      {:ok, name_update_tx} =
+        :aens_update_tx.new(%{
+          account_id: name_account_id,
+          nonce: 1,
+          name_id: :aeser_id.create(:name, name_hash),
+          name_ttl: 1_000,
+          pointers: [
+            {:pointer, non_string_pointer_key, pointer_id},
+            {:pointer, "oracle_pubkey", oracle_id}
+          ],
+          client_ttl: 1_000,
+          fee: 5_000
+        })
+
+      pointer_id = encode_account(<<1::256>>)
+      oracle_id = encode(:oracle_pubkey, <<2::256>>)
+      name_account_id = encode_account(<<3::256>>)
+      name_id = encode(:name, name_hash)
 
       with_blockchain %{ga: 10_000},
         mb: [
-          ga_tx: tx(:ga_meta_tx, :ga, %{amount: amount})
+          ga_tx: tx(:ga_meta_tx, :ga, %{tx: :aetx_sign.new(name_update_tx, [])})
         ] do
         %{txs: [tx]} = blocks[:mb]
         {:id, :account, account_pk} = accounts[:ga]
-        account_id = encode(:account_pubkey, account_pk)
+        ga_id = encode(:account_pubkey, account_pk)
         mb_hash = :crypto.strong_rand_bytes(32)
 
         store =
@@ -162,13 +191,23 @@ defmodule AeMdwWeb.TxControllerTest do
         assert %{
                  "hash" => ^tx_hash,
                  "tx" => %{
-                   "ga_id" => ^account_id,
+                   "ga_id" => ^ga_id,
                    "gas_used" => 2_000,
                    "return_type" => "ok",
                    "tx" => %{
                      "tx" => %{
-                       "sender_id" => ^account_id,
-                       "amount" => ^amount
+                       "account_id" => ^name_account_id,
+                       "client_ttl" => 1000,
+                       "fee" => 5000,
+                       "name_id" => ^name_id,
+                       "name_ttl" => 1000,
+                       "nonce" => 1,
+                       "pointers" => [
+                         %{"key" => ^non_string_pointer_key64, "id" => ^pointer_id},
+                         %{"key" => "oracle_pubkey", "id" => ^oracle_id}
+                       ],
+                       "type" => "NameUpdateTx",
+                       "version" => 1
                      }
                    },
                    "type" => "GAMetaTx"
