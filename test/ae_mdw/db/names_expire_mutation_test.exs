@@ -17,7 +17,7 @@ defmodule AeMdw.Db.NamesExpirationMutationTest do
           index: plain_name,
           active: sync_height - 10_000,
           expire: sync_height - 1_000,
-          claims: {{sync_height - 10_000, 0}, 1_000_000},
+          claims: [{{sync_height - 10_000, 0}, {1_000_000, -1}}],
           owner: <<1::256>>,
           previous: nil
         )
@@ -29,7 +29,7 @@ defmodule AeMdw.Db.NamesExpirationMutationTest do
           index: plain_name,
           active: active_height,
           expire: sync_height,
-          claims: {{active_height, 0}, 1_500_000},
+          claims: [{{active_height, 0}, {1_500_000, -1}}],
           owner: <<2::256>>,
           previous: m_previous
         )
@@ -64,7 +64,7 @@ defmodule AeMdw.Db.NamesExpirationMutationTest do
           index: plain_name,
           active: active_height,
           expire: sync_height + 1,
-          claims: {{active_height, 0}, 1_500_000},
+          claims: [{{active_height, 0}, {1_500_000, -1}}],
           owner: <<2::256>>,
           previous: nil
         )
@@ -96,7 +96,7 @@ defmodule AeMdw.Db.NamesExpirationMutationTest do
           index: plain_name,
           active: active_height,
           expire: sync_height - 1,
-          claims: {{active_height, 0}, 1_500_000},
+          claims: [{{active_height, 0}, {1_500_000, -1}}],
           owner: <<2::256>>,
           previous: nil
         )

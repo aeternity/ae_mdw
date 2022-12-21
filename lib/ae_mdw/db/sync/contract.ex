@@ -22,8 +22,6 @@ defmodule AeMdw.Db.Sync.Contract do
 
   require Model
 
-  @ignored_tx_calls ~w(Chain.spend Call.amount)
-
   @type call_record() :: tuple()
 
   @spec child_contract_mutations(
@@ -172,11 +170,8 @@ defmodule AeMdw.Db.Sync.Contract do
         |> :aens_revoke_tx.name_hash()
         |> NameRevokeMutation.new({call_txi, local_idx}, block_index)
 
-      {_local_idx, fname, _tx_type, _aetx, _tx, _tx_hash} when fname in @ignored_tx_calls ->
+      {_local_idx, _fname, _tx_type, _aetx, _tx, _tx_hash} ->
         []
-
-      {_local_idx, fname, tx_type, _aetx, _tx, _tx_hash} ->
-        raise "Unhandled event type #{fname} with tx of type #{tx_type}"
     end)
   end
 

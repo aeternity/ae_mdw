@@ -27,7 +27,7 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
           index: plain_name,
           active: active_from,
           expire: expire,
-          claims: [{{active_from, 0}, 123}],
+          claims: [{{active_from, 0}, {123, -1}}],
           updates: [],
           transfers: [],
           revoke: nil,
@@ -59,7 +59,7 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
 
       state2 =
         State.commit_mem(State.new(), [
-          NameUpdateMutation.new(name_hash, :expire, pointers, txi, block_index)
+          NameUpdateMutation.new(name_hash, :expire, pointers, {txi, -1}, block_index)
         ])
 
       assert {:ok,
@@ -67,7 +67,7 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
                 index: ^plain_name,
                 expire: ^update_height,
                 owner: ^owner_pk,
-                updates: [{^block_index, ^txi}],
+                updates: [{^block_index, {^txi, -1}}],
                 revoke: nil
               )} = State.get(state2, Model.InactiveName, plain_name)
 
@@ -96,7 +96,7 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
           index: plain_name,
           active: active_from,
           expire: expire,
-          claims: [{{active_from, 0}, 1234}],
+          claims: [{{active_from, 0}, {1234, -1}}],
           updates: [],
           transfers: [],
           revoke: nil,
@@ -133,7 +133,7 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
             name_hash,
             {:update_expiration, new_expire},
             pointers,
-            txi,
+            {txi, -1},
             block_index
           )
         ])
@@ -143,7 +143,7 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
                 index: ^plain_name,
                 expire: ^new_expire,
                 owner: ^owner_pk,
-                updates: [{^block_index, ^txi}],
+                updates: [{^block_index, {^txi, -1}}],
                 revoke: nil
               )} = State.get(state2, Model.ActiveName, plain_name)
 

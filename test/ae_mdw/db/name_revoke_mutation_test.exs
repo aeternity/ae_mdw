@@ -19,7 +19,7 @@ defmodule AeMdw.Db.NameRevokeMutationTest do
 
     revoke_height = 3
     revoke_block_index = {revoke_height, 0}
-    revoke_txi = 124
+    revoke_txi_idx = {124, -1}
 
     active_from = 11
     expire = 100
@@ -30,7 +30,7 @@ defmodule AeMdw.Db.NameRevokeMutationTest do
         index: plain_name,
         active: active_from,
         expire: expire,
-        claims: [{{active_from, 0}, 123}],
+        claims: [{{active_from, 0}, {123, -1}}],
         updates: [],
         transfers: [],
         revoke: nil,
@@ -55,7 +55,7 @@ defmodule AeMdw.Db.NameRevokeMutationTest do
 
     state2 =
       State.commit_mem(State.new(), [
-        NameRevokeMutation.new(name_hash, revoke_txi, revoke_block_index)
+        NameRevokeMutation.new(name_hash, revoke_txi_idx, revoke_block_index)
       ])
 
     refute State.exists?(state2, Model.ActiveName, plain_name)
@@ -74,7 +74,7 @@ defmodule AeMdw.Db.NameRevokeMutationTest do
               index: ^plain_name,
               expire: ^expire,
               owner: ^owner_pk,
-              revoke: {^revoke_block_index, ^revoke_txi}
+              revoke: {^revoke_block_index, ^revoke_txi_idx}
             )} = State.get(state2, Model.InactiveName, plain_name)
 
     assert State.exists?(state2, Model.InactiveNameExpiration, {revoke_height, plain_name})

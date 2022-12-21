@@ -17,7 +17,7 @@ defmodule AeMdw.Db.OraclesExpirationMutationTest do
         Model.oracle(
           index: pubkey,
           expire: sync_height,
-          register: {{sync_height - 5_000, 0}, 1_234},
+          register: {{sync_height - 5_000, 0}, {1_234, -1}},
           extends: nil,
           previous: nil
         )
@@ -48,7 +48,7 @@ defmodule AeMdw.Db.OraclesExpirationMutationTest do
         Model.oracle(
           index: pubkey,
           expire: expire,
-          register: {{expire - 5_000, 0}, 1_234},
+          register: {{expire - 5_000, 0}, {1_234, -1}},
           extends: nil,
           previous: nil
         )
@@ -79,7 +79,7 @@ defmodule AeMdw.Db.OraclesExpirationMutationTest do
         Model.oracle(
           index: pubkey,
           expire: expire,
-          register: {{expire - 5_000, 0}, 1_234},
+          register: {{expire - 5_000, 0}, {1_234, -1}},
           extends: nil,
           previous: nil
         )
