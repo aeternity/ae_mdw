@@ -174,6 +174,9 @@ defmodule AeMdw.Db.Sync.Contract do
 
       {_local_idx, fname, _tx_type, _aetx, _tx, _tx_hash} when fname in @ignored_tx_calls ->
         []
+
+      {_local_idx, fname, tx_type, _aetx, _tx, _tx_hash} ->
+        raise "Unhandled event type #{fname} with tx of type #{tx_type}"
     end)
   end
 

@@ -1625,6 +1625,47 @@ defmodule AeMdwWeb.NameControllerTest do
       end
     end
 
+    test "when last update tx is internal, it gets pointers for valid given name", %{
+      conn: conn,
+      store: store
+    } do
+      name = "wwwbeaconoidcom.chain"
+      {:ok, name_hash} = :aens.get_name_hash(name)
+
+      with_blockchain %{alice: 1_000},
+        mb: [
+          tx1: name_tx(:name_claim_tx, :alice, name),
+          tx2: name_tx(:name_update_tx, :alice, name)
+        ] do
+        tx2 = transactions[:tx2]
+        aetx2 = :aetx_sign.tx(tx2)
+
+        store =
+          store
+          |> Store.put(Model.Block, Model.block(index: {0, 0}, tx_index: 2))
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 2, block_index: {0, 0}, id: :aetx_sign.hash(tx2))
+          )
+          |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: name))
+          |> Store.put(Model.ActiveName, Model.name(index: name, updates: [{{0, 0}, {2, 0}}]))
+          |> Store.put(Model.IntContractCall, Model.int_contract_call(index: {2, 0}, tx: aetx2))
+
+        {:id, :account, alice_pk} = accounts[:alice]
+        alice_id = encode(:account_pubkey, alice_pk)
+        oracle_id = encode(:oracle_pubkey, alice_pk)
+
+        assert %{
+                 "account_pubkey" => ^alice_id,
+                 "oracle_pubkey" => ^oracle_id
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/names/#{name}/pointers")
+                 |> json_response(200)
+      end
+    end
+
     test "renders error when the name is missing", %{conn: conn} do
       id = "no--such--name--in--the--chain.chain"
       error = "not found: #{id}"

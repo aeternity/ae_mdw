@@ -252,8 +252,11 @@ defmodule AeMdw.Db.Sync.Name do
     m_name_exp = Model.expiration(index: {expire, plain_name})
     m_owner = Model.owner(index: {owner, plain_name})
     m_name_owner_deactivation = Model.owner_deactivation(index: {owner, expire, plain_name})
-    name_claim_tx = DbUtil.read_node_tx(state, txi_idx)
-    name_fee = :aens_claim_tx.name_fee(name_claim_tx)
+
+    name_fee =
+      state
+      |> DbUtil.read_node_tx(txi_idx)
+      |> :aens_claim_tx.name_fee()
 
     state
     |> cache_through_write(Model.ActiveName, m_name)
