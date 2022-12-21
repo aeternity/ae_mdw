@@ -18,7 +18,6 @@ defmodule AeMdw.Contract do
   @type fname :: binary()
 
   @typep tx_hash :: binary()
-  @typep event_name :: {:internal_call_tx, fname()}
   # :aec_blocks.micro_block()
   @typep micro_block :: term()
   @typep event_info :: Node.aetx() | :error
@@ -26,7 +25,7 @@ defmodule AeMdw.Contract do
   @typep event_type :: atom()
   @type event_data :: %{tx_hash: tx_hash(), type: event_type(), info: event_info()}
 
-  @type event :: {event_name(), event_data()}
+  @type event :: {{:internal_call_tx, fname()}, event_data()}
   @type event_hash :: <<_::256>>
 
   @type call :: tuple()

@@ -6,11 +6,13 @@ defmodule AeMdw.AexnContracts do
   alias AeMdw.Contract
   alias AeMdw.Db.Model
   alias AeMdw.DryRun.Runner
+  alias AeMdw.Node
   alias AeMdw.Node.Db, as: NodeDb
   alias AeMdw.Log
 
   import AeMdw.Util.Encoding, only: [encode_contract: 1]
 
+  @type event_name() :: String.t()
   @typep pubkey :: NodeDb.pubkey()
   @typep height :: AeMdw.Blocks.height()
 
@@ -108,6 +110,12 @@ defmodule AeMdw.AexnContracts do
 
         :error
     end
+  end
+
+  @spec event_name(AeMdw.Contracts.event_hash()) :: event_name() | nil
+  def event_name(event_hash) do
+    Node.aexn_event_names()
+    |> Map.get(event_hash)
   end
 
   #

@@ -3,6 +3,7 @@ defmodule AeMdw.Contracts do
   Context module for dealing with Contracts.
   """
 
+  alias AeMdw.AexnContracts
   alias AeMdw.Collection
   alias AeMdw.Contract
   alias AeMdw.Db.Format
@@ -29,7 +30,7 @@ defmodule AeMdw.Contracts do
   @type query() :: %{binary() => binary()}
   @type local_idx() :: non_neg_integer()
   @type log_key() :: {create_txi(), local_idx()}
-  @type event_hash() :: binary()
+  @type event_hash() :: <<_::256>>
   @type log_idx() :: non_neg_integer()
   @type call_key() :: {create_txi(), txi(), event_hash(), log_idx()}
 
@@ -523,6 +524,7 @@ defmodule AeMdw.Contracts do
       args: Enum.map(args, fn <<topic::256>> -> to_string(topic) end),
       data: maybe_encode_base64(data),
       event_hash: Base.hex_encode32(event_hash),
+      event_name: AexnContracts.event_name(event_hash),
       height: height,
       micro_index: micro_index,
       block_hash: encode(:micro_block_hash, block_hash),
