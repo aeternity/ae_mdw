@@ -22,6 +22,7 @@ defmodule AeMdw.Activities do
   alias AeMdw.Txs
   alias AeMdw.Util
   alias AeMdw.Validate
+  alias AeMdwWeb.AexnView
 
   require Model
 
@@ -502,14 +503,6 @@ defmodule AeMdw.Activities do
     }
   end
 
-  defp render(state, _account_pk, height, txi, {:aexn, :aex9, from_pk, to_pk, value, index}) do
-    %{
-      height: height,
-      type: "Aex9TransferEvent",
-      payload: render_aexn_payload(state, txi, from_pk, to_pk, value, index)
-    }
-  end
-
   defp render(state, account_pk, height, txi, {:int_transfer, kind, ref_txi}) do
     transfer_key = {{height, txi}, kind, account_pk, ref_txi}
     m_transfer = State.fetch!(state, Model.IntTransferTx, transfer_key)
@@ -527,21 +520,20 @@ defmodule AeMdw.Activities do
     }
   end
 
+  defp render(state, _account_pk, height, txi, {:aexn, :aex9, from_pk, to_pk, value, index}) do
+    %{
+      height: height,
+      type: "Aex9TransferEvent",
+      payload: AexnView.sender_transfer_to_map(state, {:aex9, from_pk, txi, to_pk, value, index})
+    }
+  end
+
   defp render(state, _account_pk, height, txi, {:aexn, :aex141, from_pk, to_pk, value, index}) do
     %{
       height: height,
       type: "Aex141TransferEvent",
-      payload: render_aexn_payload(state, txi, from_pk, to_pk, value, index)
-    }
-  end
-
-  defp render_aexn_payload(state, txi, from_pk, to_pk, value, index) do
-    %{
-      from: Enc.encode(:account_pubkey, from_pk),
-      to: Enc.encode(:account_pubkey, to_pk),
-      value: value,
-      log_index: index,
-      tx_hash: Enc.encode(:tx_hash, Txs.txi_to_hash(state, txi))
+      payload:
+        AexnView.sender_transfer_to_map(state, {:aex141, from_pk, txi, to_pk, value, index})
     }
   end
 
