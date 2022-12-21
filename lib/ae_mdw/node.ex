@@ -8,6 +8,7 @@ defmodule AeMdw.Node do
   all of these functions more explicit.
   """
 
+  alias AeMdw.AexnContracts
   alias AeMdw.Contract
   alias AeMdw.Contracts
 
@@ -117,7 +118,7 @@ defmodule AeMdw.Node do
     }
   end
 
-  @spec aexn_event_names() :: %{Contracts.event_hash() => String.t()}
+  @spec aexn_event_names() :: %{Contracts.event_hash() => AexnContracts.event_name()}
   def aexn_event_names() do
     aexn_event_hash_types()
     |> Enum.into(%{}, fn {hash, atom} ->
