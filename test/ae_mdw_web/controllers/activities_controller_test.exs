@@ -537,6 +537,11 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       txi1 = 123
       txi2 = 456
       txi3 = 789
+      tx1_hash = TS.tx_hash(0)
+      tx2_hash = TS.tx_hash(1)
+      tx3_hash = TS.tx_hash(2)
+      tx1_encoded = Enc.encode(:tx_hash, tx1_hash)
+      tx2_encoded = Enc.encode(:tx_hash, tx2_hash)
 
       store =
         empty_store()
@@ -544,17 +549,25 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           Model.AexnTransfer,
           Model.aexn_transfer(index: {:aex9, account_pk, txi1, another_account_pk, 1, 1})
         )
-        |> Store.put(Model.Tx, Model.tx(index: txi1, block_index: {height1, 0}, id: "hash1"))
+        |> Store.put(Model.Tx, Model.tx(index: txi1, block_index: {height1, 0}, id: tx1_hash))
         |> Store.put(
           Model.RevAexnTransfer,
           Model.aexn_transfer(index: {:aex141, account_pk, txi2, another_account_pk, 2, 2})
         )
-        |> Store.put(Model.Tx, Model.tx(index: txi2, block_index: {height2, 0}, id: "hash2"))
+        |> Store.put(
+          Model.AexnTransfer,
+          Model.aexn_transfer(index: {:aex141, another_account_pk, txi2, account_pk, 2, 2})
+        )
+        |> Store.put(Model.Tx, Model.tx(index: txi2, block_index: {height2, 0}, id: tx2_hash))
         |> Store.put(
           Model.RevAexnTransfer,
           Model.aexn_transfer(index: {:aex9, account_pk, txi3, another_account_pk, 3, 3})
         )
-        |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height2, 0}, id: "hash3"))
+        |> Store.put(
+          Model.AexnTransfer,
+          Model.aexn_transfer(index: {:aex9, another_account_pk, txi3, account_pk, 3, 3})
+        )
+        |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height2, 0}, id: tx3_hash))
 
       assert %{"prev" => nil, "data" => [activity1, activity2], "next" => next_url} =
                conn
@@ -566,10 +579,11 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                "height" => ^height1,
                "type" => "Aex9TransferEvent",
                "payload" => %{
-                 "from" => ^account,
-                 "to" => ^another_account,
-                 "value" => 1,
-                 "log_index" => 1
+                 "amount" => 1,
+                 "log_idx" => 1,
+                 "sender_id" => ^account,
+                 "recipient_id" => ^another_account,
+                 "tx_hash" => ^tx1_encoded
                }
              } = activity1
 
@@ -577,10 +591,11 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                "height" => ^height2,
                "type" => "Aex141TransferEvent",
                "payload" => %{
-                 "from" => ^another_account,
-                 "to" => ^account,
-                 "value" => 2,
-                 "log_index" => 2
+                 "sender_id" => ^another_account,
+                 "recipient_id" => ^account,
+                 "token_id" => 2,
+                 "log_idx" => 2,
+                 "tx_hash" => ^tx2_encoded
                }
              } = activity2
 
@@ -613,10 +628,18 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           Model.RevAexnTransfer,
           Model.aexn_transfer(index: {:aex141, account_pk, txi2, another_account_pk, 2, 2})
         )
+        |> Store.put(
+          Model.AexnTransfer,
+          Model.aexn_transfer(index: {:aex141, another_account_pk, txi2, account_pk, 2, 2})
+        )
         |> Store.put(Model.Tx, Model.tx(index: txi2, block_index: {height2, 0}, id: "hash2"))
         |> Store.put(
           Model.RevAexnTransfer,
           Model.aexn_transfer(index: {:aex9, account_pk, txi3, another_account_pk, 3, 3})
+        )
+        |> Store.put(
+          Model.AexnTransfer,
+          Model.aexn_transfer(index: {:aex9, another_account_pk, txi3, account_pk, 3, 3})
         )
         |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height2, 0}, id: "hash3"))
 
@@ -630,10 +653,10 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                "height" => ^height2,
                "type" => "Aex9TransferEvent",
                "payload" => %{
-                 "from" => ^another_account,
-                 "to" => ^account,
-                 "value" => 3,
-                 "log_index" => 3
+                 "sender_id" => ^another_account,
+                 "recipient_id" => ^account,
+                 "amount" => 3,
+                 "log_idx" => 3
                }
              } = activity1
 
@@ -641,10 +664,10 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                "height" => ^height2,
                "type" => "Aex141TransferEvent",
                "payload" => %{
-                 "from" => ^another_account,
-                 "to" => ^account,
-                 "value" => 2,
-                 "log_index" => 2
+                 "sender_id" => ^another_account,
+                 "recipient_id" => ^account,
+                 "token_id" => 2,
+                 "log_idx" => 2
                }
              } = activity2
 
@@ -658,10 +681,10 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                "height" => ^height1,
                "type" => "Aex9TransferEvent",
                "payload" => %{
-                 "from" => ^account,
-                 "to" => ^another_account,
-                 "value" => 1,
-                 "log_index" => 1
+                 "sender_id" => ^account,
+                 "recipient_id" => ^another_account,
+                 "amount" => 1,
+                 "log_idx" => 1
                }
              } = activity3
 
