@@ -581,8 +581,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                "payload" => %{
                  "amount" => 1,
                  "log_idx" => 1,
-                 "sender" => ^account,
-                 "recipient" => ^another_account,
+                 "sender_id" => ^account,
+                 "recipient_id" => ^another_account,
                  "tx_hash" => ^tx1_encoded
                }
              } = activity1
@@ -591,8 +591,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                "height" => ^height2,
                "type" => "Aex141TransferEvent",
                "payload" => %{
-                 "sender" => ^another_account,
-                 "recipient" => ^account,
+                 "sender_id" => ^another_account,
+                 "recipient_id" => ^account,
                  "token_id" => 2,
                  "log_idx" => 2,
                  "tx_hash" => ^tx2_encoded
@@ -653,8 +653,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                "height" => ^height2,
                "type" => "Aex9TransferEvent",
                "payload" => %{
-                 "sender" => ^another_account,
-                 "recipient" => ^account,
+                 "sender_id" => ^another_account,
+                 "recipient_id" => ^account,
                  "amount" => 3,
                  "log_idx" => 3
                }
@@ -664,8 +664,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                "height" => ^height2,
                "type" => "Aex141TransferEvent",
                "payload" => %{
-                 "sender" => ^another_account,
-                 "recipient" => ^account,
+                 "sender_id" => ^another_account,
+                 "recipient_id" => ^account,
                  "token_id" => 2,
                  "log_idx" => 2
                }
@@ -681,8 +681,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                "height" => ^height1,
                "type" => "Aex9TransferEvent",
                "payload" => %{
-                 "sender" => ^account,
-                 "recipient" => ^another_account,
+                 "sender_id" => ^account,
+                 "recipient_id" => ^another_account,
                  "amount" => 1,
                  "log_idx" => 1
                }

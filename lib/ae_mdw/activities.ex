@@ -521,19 +521,32 @@ defmodule AeMdw.Activities do
   end
 
   defp render(state, _account_pk, height, txi, {:aexn, :aex9, from_pk, to_pk, value, index}) do
+    payload =
+      state
+      |> AexnView.sender_transfer_to_map({:aex9, from_pk, txi, to_pk, value, index})
+      |> Map.delete(:call_txi)
+      |> Util.map_rename(:sender, :sender_id)
+      |> Util.map_rename(:recipient, :recipient_id)
+
     %{
       height: height,
       type: "Aex9TransferEvent",
-      payload: AexnView.sender_transfer_to_map(state, {:aex9, from_pk, txi, to_pk, value, index})
+      payload: payload
     }
   end
 
   defp render(state, _account_pk, height, txi, {:aexn, :aex141, from_pk, to_pk, value, index}) do
+    payload =
+      state
+      |> AexnView.sender_transfer_to_map({:aex141, from_pk, txi, to_pk, value, index})
+      |> Map.delete(:call_txi)
+      |> Util.map_rename(:sender, :sender_id)
+      |> Util.map_rename(:recipient, :recipient_id)
+
     %{
       height: height,
       type: "Aex141TransferEvent",
-      payload:
-        AexnView.sender_transfer_to_map(state, {:aex141, from_pk, txi, to_pk, value, index})
+      payload: payload
     }
   end
 

@@ -263,4 +263,17 @@ defmodule AeMdw.Util do
   end
 
   defp build_gen_pagination(_cursor, _direction, _range, _limit), do: :error
+
+  @spec map_rename(map(), term(), term()) :: map()
+  def map_rename(map, current_key, new_key) do
+    case Map.fetch(map, current_key) do
+      {:ok, value} ->
+        map
+        |> Map.delete(current_key)
+        |> Map.put(new_key, value)
+
+      :error ->
+        map
+    end
+  end
 end
