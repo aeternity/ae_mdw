@@ -324,6 +324,8 @@ defmodule AeMdw.Db.Format do
     owner_pk = :aega_meta_tx.origin(tx_rec)
     auth_id = :aega_meta_tx.auth_id(tx_rec)
 
+    tx = maybe_encode_inner_tx_pointers(tx)
+
     case :aec_chain.get_ga_call(owner_pk, auth_id, block_hash) do
       {:ok, ga_object} ->
         tx
@@ -335,6 +337,10 @@ defmodule AeMdw.Db.Format do
         |> Map.put("return_type", :unknown)
         |> Map.put("gas_used", nil)
     end
+  end
+
+  defp custom_encode(_state, :paying_for_tx, tx, _tx_rec, _signed_tx, _txi, _block_hash) do
+    maybe_encode_inner_tx_pointers(tx)
   end
 
   defp custom_encode(_state, :contract_create_tx, tx, tx_rec, _signed_tx, _txi, block_hash) do
@@ -509,4 +515,9 @@ defmodule AeMdw.Db.Format do
 
   defp expand(_state, nil),
     do: nil
+
+  defp maybe_encode_inner_tx_pointers(%{"tx" => %{"tx" => %{"type" => "NameUpdateTx"}}} = tx),
+    do: update_in(tx, ["tx", "tx", "pointers"], &encode_pointers/1)
+
+  defp maybe_encode_inner_tx_pointers(tx), do: tx
 end
