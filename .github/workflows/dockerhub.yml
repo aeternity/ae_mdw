@@ -2,8 +2,10 @@ name: Dockerhub Pipeline
 
 on:
   push:
+    branches:
+      - master
     tags:
-      - 'v*'
+      - v*
 
 env:
   APP: "ae_mdw"
