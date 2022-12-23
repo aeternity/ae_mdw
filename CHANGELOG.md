@@ -1,5 +1,43 @@
 # Changelog
 
+## [1.33.0](https://www.github.com/aeternity/ae_mdw/compare/v1.32.0...v1.33.0) (2022-12-23)
+
+
+### Features
+
+* add node details to channel page ([#1083](https://www.github.com/aeternity/ae_mdw/issues/1083)) ([260027c](https://www.github.com/aeternity/ae_mdw/commit/260027cf8bc2c073f5012d18a333eeff845deeff))
+* add v2 websocket implementation ([#1072](https://www.github.com/aeternity/ae_mdw/issues/1072)) ([24bdc75](https://www.github.com/aeternity/ae_mdw/commit/24bdc752434bb42d191c131428503cad469abbd1))
+* format aexn activities same as aexn transfers endpoints ([#1092](https://www.github.com/aeternity/ae_mdw/issues/1092)) ([37a5005](https://www.github.com/aeternity/ae_mdw/commit/37a50056fbfdf15276d2dc257914f1bebbd269ae))
+* return event name when it is aexn ([#1090](https://www.github.com/aeternity/ae_mdw/issues/1090)) ([bc54cd6](https://www.github.com/aeternity/ae_mdw/commit/bc54cd63044bb88906637aeb0445c4ea4e132d5c))
+* track nft template edition supply  ([#1078](https://www.github.com/aeternity/ae_mdw/issues/1078)) ([dfd84fd](https://www.github.com/aeternity/ae_mdw/commit/dfd84fde0b3e9a9adebf7bb490739c00894d65fd))
+
+
+### Bug Fixes
+
+* handle inner name_update pointers ([#1093](https://www.github.com/aeternity/ae_mdw/issues/1093)) ([4ac2316](https://www.github.com/aeternity/ae_mdw/commit/4ac23160b0dc04cf2d1205228cb3fb9e42a851ef))
+* name of sender parameter of get_aex9_pair_transfers ([#1062](https://www.github.com/aeternity/ae_mdw/issues/1062)) ([da7531f](https://www.github.com/aeternity/ae_mdw/commit/da7531f25d0e16de40b6205f2f5b4adbcfc9ddf4))
+* remove dockerization from ci tests run ([#1080](https://www.github.com/aeternity/ae_mdw/issues/1080)) ([295918d](https://www.github.com/aeternity/ae_mdw/commit/295918ded99c928bb9394702c0927c030b540577))
+* remove extra colon before in path parameter name ([#1063](https://www.github.com/aeternity/ae_mdw/issues/1063)) ([08554db](https://www.github.com/aeternity/ae_mdw/commit/08554dbf5ae55312f4965791a9887184a1b7bcd9))
+* update balance when adding liquidity ([#1094](https://www.github.com/aeternity/ae_mdw/issues/1094)) ([dd41834](https://www.github.com/aeternity/ae_mdw/commit/dd41834f2eb2d5b5e3c4bdbd15a75e1872441077))
+
+
+### CI / CD
+
+* enable docker image tests ([#1084](https://www.github.com/aeternity/ae_mdw/issues/1084)) ([7f05621](https://www.github.com/aeternity/ae_mdw/commit/7f05621dd64b9fd2709783e9fde60807b042222b))
+* publish only tagged images (w/o tests) ([#1085](https://www.github.com/aeternity/ae_mdw/issues/1085)) ([b7ca317](https://www.github.com/aeternity/ae_mdw/commit/b7ca317f961ddcc05a774308b1f7e82a2dff966c))
+
+
+### Miscellaneous
+
+* add migration and update docs for nft templates ([#1081](https://www.github.com/aeternity/ae_mdw/issues/1081)) ([8eafec8](https://www.github.com/aeternity/ae_mdw/commit/8eafec8711b880463658dbc3d11c4fb9571c92fd))
+* add proper typing to sync transaction nested function calls ([#1082](https://www.github.com/aeternity/ae_mdw/issues/1082)) ([f403c40](https://www.github.com/aeternity/ae_mdw/commit/f403c40e2a01d247db57b6abf676620b635574d1))
+* add typespecs to all Db.Model records ([#1073](https://www.github.com/aeternity/ae_mdw/issues/1073)) ([73a906a](https://www.github.com/aeternity/ae_mdw/commit/73a906a429d5b4231c276f9a0f30885394a15e35))
+* add union of model-specific State typespecs ([#1079](https://www.github.com/aeternity/ae_mdw/issues/1079)) ([46f7ca3](https://www.github.com/aeternity/ae_mdw/commit/46f7ca3a85a51b67e7d475d287230c841b3cf0bc))
+* **ci:** separate docker compose by env ([#1086](https://www.github.com/aeternity/ae_mdw/issues/1086)) ([1d63f4a](https://www.github.com/aeternity/ae_mdw/commit/1d63f4ae5a7934f17998fd5fd65cff10fb51adb7))
+* **ci:** simplify workflow triggering ([#1074](https://www.github.com/aeternity/ae_mdw/issues/1074)) ([f4e3cbe](https://www.github.com/aeternity/ae_mdw/commit/f4e3cbe5aaaf234a207ecca2315f90d0d2185b49))
+* remove old makefile ([#1091](https://www.github.com/aeternity/ae_mdw/issues/1091)) ([07b02cb](https://www.github.com/aeternity/ae_mdw/commit/07b02cb6a9751f822896723f2226c043729b9634))
+* specialize build envs ([#1089](https://www.github.com/aeternity/ae_mdw/issues/1089)) ([71f5b84](https://www.github.com/aeternity/ae_mdw/commit/71f5b84ab844c8f08c5bf3238e5de38354b48a9c))
+
 ## [1.32.0](https://www.github.com/aeternity/ae_mdw/compare/v1.31.0...v1.32.0) (2022-12-09)
 
 
