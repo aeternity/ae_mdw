@@ -8,7 +8,7 @@ defmodule AeMdw.Db.ContractTest do
   alias AeMdw.Db.State
 
   import AeMdw.Node.AexnEventFixtures, only: [aexn_event_hash: 1]
-  import AeMdw.Node.ContractCallFixtures, only: [call_rec: 5]
+  import AeMdw.Node.ContractCallFixtures, only: [call_rec: 3, call_rec: 5]
 
   require Model
 
@@ -235,6 +235,48 @@ defmodule AeMdw.Db.ContractTest do
 
       refute :not_found ==
                State.get(state, Model.AexnTransfer, {:aex9, account_pk1, txi, account_pk2, 30, 3})
+    end
+
+    test "writes mint and transfer balance when adding liquidity" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      remote_pk1 = :crypto.strong_rand_bytes(32)
+      remote_pk2 = :crypto.strong_rand_bytes(32)
+      account_pk1 = :crypto.strong_rand_bytes(32)
+      account_pk2 = :crypto.strong_rand_bytes(32)
+      mint_amount = 1234
+      transfer_amount = 5678
+
+      call_rec =
+        call_rec(
+          "add_liquidity",
+          {remote_pk1, account_pk1, mint_amount},
+          {remote_pk2, account_pk2, transfer_amount}
+        )
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, remote_pk1, {type_info, nil, nil})
+      AeMdw.EtsCache.put(AeMdw.Contract, remote_pk2, {type_info, nil, nil})
+
+      txi = Enum.random(100_000_000..999_999_999)
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, txi - 1)
+        |> State.cache_put(:ct_create_sync_cache, remote_pk1, txi)
+        |> State.cache_put(:ct_create_sync_cache, remote_pk2, txi)
+        |> Contract.logs_write(txi - 1, txi, call_rec)
+
+      assert {:ok, Model.aex9_event_balance(amount: ^mint_amount)} =
+               State.get(state, Model.Aex9EventBalance, {remote_pk1, account_pk1})
+
+      assert {:ok, Model.aex9_event_balance(amount: ^transfer_amount)} =
+               State.get(state, Model.Aex9EventBalance, {remote_pk2, account_pk2})
     end
   end
 end

@@ -177,7 +177,9 @@ defmodule AeMdw.Db.Contract do
 
       cond do
         aex9_contract_pk != nil ->
-          write_aex9_records(state2, event_type, addr, txi, log_idx, args)
+          # for parent contracts on contract creation the balance is updated via dry-run to get minted tokens without events
+          update_balance? = not (addr == contract_pk and create_txi == txi)
+          write_aex9_records(state2, event_type, {addr, update_balance?}, txi, log_idx, args)
 
         State.exists?(state2, Model.AexnContract, {:aex141, addr}) ->
           write_aex141_records(state2, event_type, addr, txi, log_idx, args)
@@ -415,9 +417,7 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.NftTokenOwner, m_token_owner)
   end
 
-  defp write_aex9_records(state, event_type, contract_pk, txi, log_idx, args) do
-    update_balance? = txi != Origin.tx_index!(state, {:contract, contract_pk})
-
+  defp write_aex9_records(state, event_type, {contract_pk, update_balance?}, txi, log_idx, args) do
     case event_type do
       :burn when update_balance? ->
         burn_aex9_balance(state, contract_pk, txi, log_idx, args)
@@ -429,7 +429,7 @@ defmodule AeMdw.Db.Contract do
         burn_aex9_balance(state, contract_pk, txi, log_idx, args)
 
       :transfer ->
-        write_aexn_transfer(state, :aex9, contract_pk, txi, log_idx, args)
+        write_aexn_transfer(state, :aex9, {contract_pk, update_balance?}, txi, log_idx, args)
 
       _other ->
         state
@@ -518,7 +518,7 @@ defmodule AeMdw.Db.Contract do
   defp write_aex141_records(state, :transfer, contract_pk, txi, log_idx, args) do
     state
     |> transfer_aex141_ownership(contract_pk, args)
-    |> write_aexn_transfer(:aex141, contract_pk, txi, log_idx, args)
+    |> write_aexn_transfer(:aex141, {contract_pk, false}, txi, log_idx, args)
   end
 
   defp write_aex141_records(state, nil, _contract_pk, _txi, _log_idx, _args), do: state
@@ -562,7 +562,7 @@ defmodule AeMdw.Db.Contract do
          state,
          contract_pk,
          txi,
-         {{log_pk, [evt_hash | args], data}, i}
+         {{log_pk, [evt_hash | args], data}, idx}
        ) do
     remote_contract_txi = Origin.tx_index!(state, {:contract, log_pk})
 
@@ -570,19 +570,23 @@ defmodule AeMdw.Db.Contract do
     # on called log: ext_contract = {:parent_contract_pk, caller contract_pk}
     m_log_remote =
       Model.contract_log(
-        index: {remote_contract_txi, txi, evt_hash, i},
+        index: {remote_contract_txi, txi, evt_hash, idx},
         ext_contract: {:parent_contract_pk, contract_pk},
         args: args,
         data: data
       )
 
-    State.put(state, Model.ContractLog, m_log_remote)
+    m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, remote_contract_txi, idx})
+
+    state
+    |> State.put(Model.ContractLog, m_log_remote)
+    |> State.put(Model.EvtContractLog, m_evt_log)
   end
 
   defp write_aexn_transfer(
          state,
          aexn_type,
-         contract_pk,
+         {contract_pk, update_balance?},
          txi,
          log_idx,
          [
@@ -608,7 +612,7 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.RevAexnTransfer, m_rev_transfer)
     |> State.put(Model.AexnPairTransfer, m_pair_transfer)
     |> index_contract_transfer(aexn_type, contract_pk, txi, log_idx, transfer)
-    |> update_transfer_balance(aexn_type, contract_pk, txi, log_idx, transfer)
+    |> update_transfer_balance(aexn_type, {contract_pk, update_balance?}, txi, log_idx, transfer)
   end
 
   defp write_aexn_transfer(state, _type, _pk, _txi, _log_idx, _args), do: state
@@ -671,13 +675,13 @@ defmodule AeMdw.Db.Contract do
 
   defp update_transfer_balance(state, :aex141, _pk, _txi, _i, _transfer), do: state
 
-  defp update_transfer_balance(state, :aex9, contract_pk, txi, log_idx, [
+  defp update_transfer_balance(state, :aex9, _pk, _txi, _i, [same_pk, same_pk, _value]), do: state
+
+  defp update_transfer_balance(state, :aex9, {contract_pk, update_balance?}, txi, log_idx, [
          from_pk,
          to_pk,
          <<transfered_value::256>>
        ]) do
-    update_balance? = txi != Origin.tx_index!(state, {:contract, contract_pk})
-
     if update_balance? do
       Model.aex9_event_balance(amount: from_amount) =
         m_from = get_aex9_event_balance(state, contract_pk, from_pk)
