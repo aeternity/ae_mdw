@@ -7,7 +7,6 @@ defmodule AeMdw.Oracles do
 
   alias AeMdw.Blocks
   alias AeMdw.Collection
-  alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.State
@@ -159,7 +158,8 @@ defmodule AeMdw.Oracles do
          Model.oracle(
            index: pk,
            expire: expire_height,
-           register: {{register_height, _mbi}, register_txi} = register_bi_txi,
+           register:
+             {{register_height, _mbi}, {register_txi, _register_idx}} = register_bi_txi_idx,
            extends: extends,
            previous: _previous
          ),
@@ -181,9 +181,9 @@ defmodule AeMdw.Oracles do
       active: is_active?,
       active_from: register_height,
       expire_height: expire_height,
-      register: expand_txi(state, register_bi_txi, opts),
+      register: expand_bi_txi_idx(state, register_bi_txi_idx, opts),
       register_tx_hash: :aeser_api_encoder.encode(:tx_hash, Txs.txi_to_hash(state, register_txi)),
-      extends: Enum.map(extends, &expand_txi(state, &1, opts)),
+      extends: Enum.map(extends, &expand_bi_txi_idx(state, &1, opts)),
       query_fee: query_fee,
       format: %{
         query: query_format,
@@ -211,9 +211,7 @@ defmodule AeMdw.Oracles do
     end
   end
 
-  defp expand_txi(state, bi_txi, opts) do
-    txi = Format.bi_txi_txi(bi_txi)
-
+  defp expand_bi_txi_idx(state, {_bi, {txi, _idx}}, opts) do
     cond do
       Keyword.get(opts, :expand?, false) ->
         Txs.fetch!(state, txi)

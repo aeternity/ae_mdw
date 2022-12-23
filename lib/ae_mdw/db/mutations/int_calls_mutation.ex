@@ -17,7 +17,8 @@ defmodule AeMdw.Db.IntCallsMutation do
   @derive AeMdw.Db.Mutation
   defstruct [:contract_pk, :call_txi, :int_calls]
 
-  @typep int_call() :: {Contract.fname(), Node.tx_type(), Node.tx(), Node.aetx()}
+  @typep int_call() ::
+           {Contract.local_idx(), Contract.fname(), Node.tx_type(), Node.tx(), Node.aetx()}
   @opaque t() :: %__MODULE__{
             contract_pk: Db.pubkey(),
             call_txi: Txs.txi(),
@@ -41,14 +42,13 @@ defmodule AeMdw.Db.IntCallsMutation do
     create_txi = Origin.tx_index!(state, {:contract, contract_pk})
 
     int_calls
-    |> Enum.with_index()
-    |> Enum.reduce(state, fn {{fname, tx_type, tx, raw_tx}, local_idx}, state ->
+    |> Enum.reduce(state, fn {local_idx, fname, tx_type, aetx, tx, _tx_hash}, state ->
       m_call =
         Model.int_contract_call(
           index: {call_txi, local_idx},
           create_txi: create_txi,
           fname: fname,
-          tx: tx
+          tx: aetx
         )
 
       m_grp_call = Model.grp_int_contract_call(index: {create_txi, call_txi, local_idx})
@@ -67,7 +67,7 @@ defmodule AeMdw.Db.IntCallsMutation do
       tx_type
       |> Node.tx_ids()
       |> Enum.reduce(state2, fn {_field, pos}, state ->
-        pk = Validate.id!(elem(raw_tx, pos))
+        pk = Validate.id!(elem(tx, pos))
         m_id_call = Model.id_int_contract_call(index: {pk, pos, call_txi, local_idx})
 
         m_grp_id_call =

@@ -16,20 +16,20 @@ defmodule AeMdw.Db.OracleExtendMutation do
   require Model
 
   @derive AeMdw.Db.Mutation
-  defstruct [:block_index, :txi, :oracle_pk, :delta_ttl]
+  defstruct [:block_index, :txi_idx, :oracle_pk, :delta_ttl]
 
   @opaque t() :: %__MODULE__{
             block_index: Blocks.block_index(),
-            txi: Txs.txi(),
+            txi_idx: Txs.txi_idx(),
             oracle_pk: Db.pubkey(),
             delta_ttl: Blocks.height()
           }
 
-  @spec new(Blocks.block_index(), Txs.txi(), Db.pubkey(), Blocks.height()) :: t()
-  def new(block_index, txi, oracle_pk, delta_ttl) do
+  @spec new(Blocks.block_index(), Txs.txi_idx(), Db.pubkey(), Blocks.height()) :: t()
+  def new(block_index, txi_idx, oracle_pk, delta_ttl) do
     %__MODULE__{
       block_index: block_index,
-      txi: txi,
+      txi_idx: txi_idx,
       oracle_pk: oracle_pk,
       delta_ttl: delta_ttl
     }
@@ -39,7 +39,7 @@ defmodule AeMdw.Db.OracleExtendMutation do
   def execute(
         %__MODULE__{
           block_index: {height, _mbi} = block_index,
-          txi: txi,
+          txi_idx: txi_idx,
           oracle_pk: oracle_pk,
           delta_ttl: delta_ttl
         },
@@ -48,7 +48,7 @@ defmodule AeMdw.Db.OracleExtendMutation do
     case Oracle.cache_through_read(state, Model.ActiveOracle, oracle_pk) do
       {:ok, Model.oracle(expire: old_expire, extends: extends) = m_oracle} ->
         new_expire = old_expire + delta_ttl
-        extends = [{block_index, txi} | extends]
+        extends = [{block_index, txi_idx} | extends]
         m_exp = Model.expiration(index: {new_expire, oracle_pk})
         m_oracle = Model.oracle(m_oracle, expire: new_expire, extends: extends)
 

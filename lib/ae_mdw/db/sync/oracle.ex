@@ -25,17 +25,17 @@ defmodule AeMdw.Db.Sync.Oracle do
   @typep cache_key :: pubkey() | {pos_integer(), pubkey()}
   @typep state :: State.t()
 
-  @spec register_mutations(Node.tx(), Txs.tx_hash(), Blocks.block_index(), Txs.txi()) :: [
+  @spec register_mutations(Node.tx(), Txs.tx_hash(), Blocks.block_index(), Txs.txi_idx()) :: [
           Mutation.t()
         ]
-  def register_mutations(tx, tx_hash, {height, _mbi} = block_index, txi) do
+  def register_mutations(tx, tx_hash, {height, _mbi} = block_index, {txi, _idx} = txi_idx) do
     oracle_pk = :aeo_register_tx.account_pubkey(tx)
     delta_ttl = :aeo_utils.ttl_delta(height, :aeo_register_tx.oracle_ttl(tx))
     expire = height + delta_ttl
 
     [
       Origin.origin_mutations(:oracle_register_tx, nil, oracle_pk, txi, tx_hash),
-      OracleRegisterMutation.new(oracle_pk, block_index, expire, txi)
+      OracleRegisterMutation.new(oracle_pk, block_index, expire, txi_idx)
     ]
   end
 
@@ -65,12 +65,13 @@ defmodule AeMdw.Db.Sync.Oracle do
     OracleResponseMutation.new(block_index, txi, oracle_pk, query_id)
   end
 
-  @spec extend_mutation(Node.tx(), Blocks.block_index(), Txs.txi()) :: OracleExtendMutation.t()
-  def extend_mutation(tx, block_index, txi) do
+  @spec extend_mutation(Node.tx(), Blocks.block_index(), Txs.txi_idx()) ::
+          OracleExtendMutation.t()
+  def extend_mutation(tx, block_index, txi_idx) do
     oracle_pk = :aeo_extend_tx.oracle_pubkey(tx)
     {:delta, delta_ttl} = :aeo_extend_tx.oracle_ttl(tx)
 
-    OracleExtendMutation.new(block_index, txi, oracle_pk, delta_ttl)
+    OracleExtendMutation.new(block_index, txi_idx, oracle_pk, delta_ttl)
   end
 
   @spec cache_through_write(state(), atom(), tuple()) :: state()

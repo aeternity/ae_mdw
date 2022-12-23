@@ -70,7 +70,7 @@ defmodule AeMdw.Db.NameTest do
                    State.new(store),
                    Model.name(
                      index: name,
-                     updates: [{{1, 1}, 2}]
+                     updates: [{{1, 1}, {2, -1}}]
                    )
                  )
       end
@@ -128,7 +128,7 @@ defmodule AeMdw.Db.NameTest do
                    State.new(store),
                    Model.name(
                      index: name,
-                     updates: [{{1, 1}, 2}]
+                     updates: [{{1, 1}, {2, -1}}]
                    )
                  )
       end

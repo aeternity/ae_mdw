@@ -28,6 +28,7 @@ defmodule AeMdw.Db.Sync.NameTest do
       height = AeMdw.Node.lima_height() + Enum.random(100..999)
       block_index = {height, 1}
       txi = height * 1_000
+      txi_idx = {txi, -1}
       tx_hash = <<txi::256>>
 
       {:ok, aetx} =
@@ -54,14 +55,14 @@ defmodule AeMdw.Db.Sync.NameTest do
             owner_pk,
             name_fee,
             true,
-            txi,
+            txi_idx,
             block_index,
             timeout
           )
           | Origin.origin_mutations(:name_claim_tx, nil, name_hash, txi, tx_hash)
         ]
 
-        assert ^mutations = Name.name_claim_mutations(tx_rec, tx_hash, block_index, txi)
+        assert ^mutations = Name.name_claim_mutations(tx_rec, tx_hash, block_index, txi_idx)
       end
     end
 
@@ -99,14 +100,14 @@ defmodule AeMdw.Db.Sync.NameTest do
             owner_pk,
             name_fee,
             true,
-            txi,
+            {txi, -1},
             block_index,
             0
           )
           | Origin.origin_mutations(:name_claim_tx, nil, name_hash, txi, tx_hash)
         ]
 
-        assert ^mutations = Name.name_claim_mutations(tx_rec, tx_hash, block_index, txi)
+        assert ^mutations = Name.name_claim_mutations(tx_rec, tx_hash, block_index, {txi, -1})
       end
     end
   end

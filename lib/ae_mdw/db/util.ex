@@ -5,8 +5,10 @@ defmodule AeMdw.Db.Util do
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.InnerTx
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Txs
   alias AeMdw.Util
@@ -152,6 +154,33 @@ defmodule AeMdw.Db.Util do
 
       {:ok, height, mbi}
     end
+  end
+
+  @spec read_node_tx(state(), Txs.txi_idx()) :: Node.tx()
+  def read_node_tx(state, {txi, -1}) do
+    Model.tx(id: tx_hash) = State.fetch!(state, Model.Tx, txi)
+
+    case Db.get_tx_data(tx_hash) do
+      {_block_hash, tx_type, _signed_tx, tx_rec} when tx_type in [:ga_meta_tx, :paying_for_tx] ->
+        {_type, tx} =
+          tx_type
+          |> InnerTx.signed_tx(tx_rec)
+          |> :aetx_sign.tx()
+          |> :aetx.specialize_type()
+
+        tx
+
+      {_block_hash, _tx_type, _signed_tx, tx_rec} ->
+        tx_rec
+    end
+  end
+
+  def read_node_tx(state, {txi, local_idx}) do
+    Model.int_contract_call(tx: aetx) =
+      State.fetch!(state, Model.IntContractCall, {txi, local_idx})
+
+    {_type, tx} = :aetx.specialize_type(aetx)
+    tx
   end
 
   defp extract_height_hash(state, type, hash) do

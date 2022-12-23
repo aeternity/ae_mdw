@@ -12,13 +12,10 @@ defmodule AeMdw.Db.Name do
   """
   alias AeMdw.Blocks
   alias AeMdw.Collection
-  alias AeMdw.Contracts
-  alias AeMdw.Node, as: AE
   alias AeMdw.Node.Db
   alias AeMdw.Db.Model
   alias AeMdw.Db.Format
   alias AeMdw.Db.State
-  alias AeMdw.Db.Sync.InnerTx
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Names
   alias AeMdw.Validate
@@ -118,33 +115,10 @@ defmodule AeMdw.Db.Name do
   @spec pointers(state(), Model.name()) :: map()
   def pointers(_state, Model.name(updates: [])), do: %{}
 
-  def pointers(
-        state,
-        Model.name(index: plain_name, updates: [{_block_index, txi} | _rest_updates])
-      ) do
-    Model.tx(id: tx_hash) = DbUtil.read_tx!(state, txi)
-    {:ok, name_hash} = :aens.get_name_hash(plain_name)
-
-    pointers =
-      case AE.Db.get_tx_data(tx_hash) do
-        {_block_hash, :name_update_tx, _signed_tx, tx_rec} ->
-          :aens_update_tx.pointers(tx_rec)
-
-        {_block_hash, :contract_call_tx, _signed_tx, _tx_rec} ->
-          state
-          |> Contracts.fetch_int_contract_calls(txi, "AENS.update")
-          |> Stream.map(fn Model.int_contract_call(tx: aetx) ->
-            {:name_update_tx, tx} = :aetx.specialize_type(aetx)
-
-            tx
-          end)
-          |> Enum.find(fn tx ->
-            name_hash == :aens_update_tx.name_hash(tx)
-          end)
-          |> :aens_update_tx.pointers()
-      end
-
-    pointers
+  def pointers(state, Model.name(updates: [{_block_index, txi_idx} | _rest_updates])) do
+    state
+    |> DbUtil.read_node_tx(txi_idx)
+    |> :aens_update_tx.pointers()
     |> Enum.into(%{}, &pointer_kv_raw/1)
     |> Format.encode_pointers()
   end
@@ -162,42 +136,14 @@ defmodule AeMdw.Db.Name do
   def ownership(
         state,
         Model.name(
-          index: plain_name,
-          claims: [{_block_index, last_claim_txi} | _rest_claims],
+          claims: [{_block_index, last_claim_txi_idx} | _rest_claims],
           owner: owner
         )
       ) do
-    Model.tx(id: tx_hash) = DbUtil.read_tx!(state, last_claim_txi)
-    {:ok, name_hash} = :aens.get_name_hash(plain_name)
-
     orig_owner =
-      case AE.Db.get_tx_data(tx_hash) do
-        {_block_hash, :name_claim_tx, _signed_tx, tx_rec} ->
-          :aens_claim_tx.account_id(tx_rec)
-
-        {_block_hash, :contract_call_tx, _signed_tx, _tx_rec} ->
-          state
-          |> Contracts.fetch_int_contract_calls(last_claim_txi, "AENS.claim")
-          |> Stream.map(fn Model.int_contract_call(tx: aetx) ->
-            {:name_claim_tx, tx} = :aetx.specialize_type(aetx)
-
-            tx
-          end)
-          |> Enum.find(fn tx ->
-            name_hash == :aens_transfer_tx.name_hash(tx)
-          end)
-          |> :aens_transfer_tx.account_id()
-
-        {_block_hash, tx_type, _signed_tx, tx_rec}
-        when tx_type in [:ga_meta_tx, :paying_for_tx] ->
-          {:name_claim_tx, tx_rec} =
-            tx_type
-            |> InnerTx.signed_tx(tx_rec)
-            |> :aetx_sign.tx()
-            |> :aetx.specialize_type()
-
-          :aens_claim_tx.account_id(tx_rec)
-      end
+      state
+      |> DbUtil.read_node_tx(last_claim_txi_idx)
+      |> :aens_claim_tx.account_id()
 
     %{original: orig_owner, current: :aeser_id.create(:account, owner)}
   end

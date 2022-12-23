@@ -21,7 +21,7 @@ defmodule AeMdw.Db.Format do
 
   ##########
 
-  def bi_txi_txi({{_height, _mbi}, txi}), do: txi
+  def bi_txi_idx_txi({{_height, _mbi}, {txi, _idx}}), do: txi
 
   def to_raw_map(_state, {{height, mbi}, txi}),
     do: %{block_height: height, micro_index: mbi, tx_index: txi}
@@ -450,10 +450,10 @@ defmodule AeMdw.Db.Format do
     %{
       active_from: active_h,
       expire_height: expire_h,
-      claims: Enum.map(cs, &bi_txi_txi/1),
-      updates: Enum.map(us, &bi_txi_txi/1),
-      transfers: Enum.map(ts, &bi_txi_txi/1),
-      revoke: (revoke && bi_txi_txi(revoke)) || nil,
+      claims: Enum.map(cs, &bi_txi_idx_txi/1),
+      updates: Enum.map(us, &bi_txi_idx_txi/1),
+      transfers: Enum.map(ts, &bi_txi_idx_txi/1),
+      revoke: (revoke && bi_txi_idx_txi(revoke)) || nil,
       auction_timeout: auction_tm,
       pointers: Name.pointers(state, name),
       ownership: Name.ownership(state, name)
@@ -462,7 +462,11 @@ defmodule AeMdw.Db.Format do
 
   defp auction_bid(
          state,
-         Model.auction_bid(index: plain, expire_height: auction_end, bids: [{_, txi} | _] = bids),
+         Model.auction_bid(
+           index: plain,
+           expire_height: auction_end,
+           bids: [{_bi, {txi, _idx}} | _rest_bids] = bids
+         ),
          key,
          tx_fmt,
          info_fmt
@@ -479,7 +483,7 @@ defmodule AeMdw.Db.Format do
       key.(:info) => %{
         key.(:auction_end) => auction_end,
         key.(:last_bid) => last_bid,
-        key.(:bids) => Enum.map(bids, &bi_txi_txi/1)
+        key.(:bids) => Enum.map(bids, &bi_txi_idx_txi/1)
       },
       key.(:previous) =>
         case Name.locate(state, plain) do

@@ -34,9 +34,11 @@ defmodule AeMdw.Db.Model do
   @typep pubkey :: Db.pubkey()
   @typep tx_type() :: Node.tx_type()
   @typep txi() :: Txs.txi()
+  # @typep txi_idx() :: Txs.txi_idx()
   @typep log_idx() :: AeMdw.Contracts.log_idx()
   @typep tx_hash() :: Txs.tx_hash()
-  @typep bi_txi() :: Blocks.block_index_txi()
+  @typep bi_txi() :: Blocks.bi_txi()
+  @typep bi_txi_idx() :: Blocks.bi_txi_idx()
   @typep query_id() :: Oracles.query_id()
   @typep amount() :: non_neg_integer()
   @typep fname() :: Contract.fname()
@@ -180,7 +182,7 @@ defmodule AeMdw.Db.Model do
   #     index = {plain_name, {block_index, txi}, expire_height = height, owner = pk, prev_bids = []}
   @auction_bid_defaults [
     index: nil,
-    block_index_txi: nil,
+    block_index_txi_idx: nil,
     expire_height: nil,
     owner: nil,
     bids: []
@@ -191,10 +193,10 @@ defmodule AeMdw.Db.Model do
   @type auction_bid ::
           record(:auction_bid,
             index: auction_bid_index(),
-            block_index_txi: bi_txi(),
+            block_index_txi_idx: bi_txi_idx(),
             expire_height: Blocks.height(),
             owner: pubkey(),
-            bids: [bi_txi()]
+            bids: [bi_txi_idx()]
           )
 
   # activation:
@@ -251,10 +253,10 @@ defmodule AeMdw.Db.Model do
             index: name_index(),
             active: Blocks.height(),
             expire: Blocks.height(),
-            claims: [bi_txi()],
-            updates: [bi_txi()],
-            transfers: [bi_txi()],
-            revoke: bi_txi() | nil,
+            claims: [bi_txi_idx()],
+            updates: [bi_txi_idx()],
+            transfers: [bi_txi_idx()],
+            revoke: bi_txi_idx() | nil,
             auction_timeout: non_neg_integer(),
             owner: pubkey(),
             previous: record(:name) | nil
@@ -281,7 +283,7 @@ defmodule AeMdw.Db.Model do
   @pointee_defaults [index: {nil, {{nil, nil}, nil}, nil}, unused: nil]
   defrecord :pointee, @pointee_defaults
 
-  @type pointee_index() :: {pubkey(), bi_txi(), pubkey()}
+  @type pointee_index() :: {pubkey(), bi_txi_idx(), pubkey()}
   @type pointee() :: record(:pointee, index: pointee_index())
 
   # in 2 tables: active_oracle, inactive_oracle
@@ -311,8 +313,8 @@ defmodule AeMdw.Db.Model do
             index: oracle_index(),
             active: Blocks.height(),
             expire: Blocks.height(),
-            register: bi_txi(),
-            extends: [bi_txi()],
+            register: bi_txi_idx(),
+            extends: [bi_txi_idx()],
             previous: oracle() | nil
           )
 

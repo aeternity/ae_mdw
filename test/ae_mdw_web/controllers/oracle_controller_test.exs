@@ -105,15 +105,15 @@ defmodule AeMdwWeb.OracleControllerTest do
       oracle1 =
         Model.oracle(TS.oracle(),
           index: oracle_pk1,
-          register: {{0, -1}, register_txi1},
+          register: {{0, -1}, {register_txi1, -1}},
           expire: exp_height1,
-          extends: [{{0, -1}, extends_txi}]
+          extends: [{{0, -1}, {extends_txi, -1}}]
         )
 
       oracle2 =
         Model.oracle(TS.oracle(),
           index: oracle_pk2,
-          register: {{0, -1}, register_txi2},
+          register: {{0, -1}, {register_txi2, -1}},
           expire: exp_height2,
           extends: []
         )

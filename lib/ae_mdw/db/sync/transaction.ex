@@ -327,7 +327,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          tx_hash: tx_hash,
          block_index: block_index
        }) do
-    Oracle.register_mutations(tx, tx_hash, block_index, txi)
+    Oracle.register_mutations(tx, tx_hash, block_index, {txi, -1})
   end
 
   defp tx_mutations(%TxContext{
@@ -337,7 +337,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          tx_hash: tx_hash,
          block_index: block_index
        }) do
-    SyncName.name_claim_mutations(tx, tx_hash, block_index, txi)
+    SyncName.name_claim_mutations(tx, tx_hash, block_index, {txi, -1})
   end
 
   defp tx_mutations(%TxContext{
@@ -347,7 +347,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          block_index: block_index
        }) do
     [
-      Oracle.extend_mutation(tx, block_index, txi)
+      Oracle.extend_mutation(tx, block_index, {txi, -1})
     ]
   end
 
@@ -378,7 +378,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          txi: txi,
          block_index: block_index
        }) do
-    SyncName.update_mutations(tx, txi, block_index)
+    SyncName.update_mutations(tx, {txi, -1}, block_index)
   end
 
   defp tx_mutations(%TxContext{
@@ -388,7 +388,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          block_index: block_index
        }) do
     [
-      NameTransferMutation.new(tx, txi, block_index)
+      NameTransferMutation.new(tx, {txi, -1}, block_index)
     ]
   end
 
@@ -401,7 +401,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     name_hash = :aens_revoke_tx.name_hash(tx)
 
     [
-      NameRevokeMutation.new(name_hash, txi, block_index)
+      NameRevokeMutation.new(name_hash, {txi, -1}, block_index)
     ]
   end
 
