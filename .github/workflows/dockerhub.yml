@@ -2,11 +2,10 @@ name: Dockerhub Pipeline
 
 on:
   push:
+    branches:
+      - master
     tags:
-      - 'v*'
-
-env:
-  APP: "ae_mdw"
+      - v*
 
 jobs:
   dockerhub:
@@ -22,10 +21,9 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: aeternity/${{ env.APP }}
+          images: aeternity/ae_mdw
           tags: |
             type=raw,value=master,enable={{is_default_branch}}
-            type=ref,event=pr
             type=sha,prefix=,enable={{is_default_branch}}
             type=semver,pattern={{version}},enable={{is_default_branch}}
   
