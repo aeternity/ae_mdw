@@ -215,7 +215,9 @@ defmodule AeMdw.Db.Format do
   end
 
   def to_map(state, {call_txi, local_idx}, Model.IntContractCall) do
-    m_call = State.fetch!(state, Model.IntContractCall, {call_txi, local_idx})
+    Model.int_contract_call(tx_hash: tx_hash) =
+      m_call = State.fetch!(state, Model.IntContractCall, {call_txi, local_idx})
+
     create_txi = Model.int_contract_call(m_call, :create_txi)
     fname = Model.int_contract_call(m_call, :fname)
 
@@ -258,6 +260,7 @@ defmodule AeMdw.Db.Format do
       call_txi: call_txi,
       call_tx_hash: Enc.encode(:tx_hash, call_tx_hash),
       function: fname,
+      tx_hash: Enc.encode(:tx_hash, tx_hash),
       internal_tx: encoded_tx,
       height: height,
       micro_index: micro_index,

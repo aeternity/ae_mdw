@@ -507,12 +507,14 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                             "height" => height,
                             "micro_index" => micro_index,
                             "block_hash" => block_hash,
-                            "local_idx" => local_idx
+                            "local_idx" => local_idx,
+                            "tx_hash" => tx_hash
                           } ->
         assert contract_txi == call_txi - 100 or contract_txi == contract_create_txi
         assert contract_tx_hash == encode(:tx_hash, <<contract_txi::256>>)
         assert contract_id == encode_contract(Origin.pubkey(state, {:contract, contract_txi}))
         assert call_tx_hash == encode(:tx_hash, <<call_txi::256>>)
+        assert ^tx_hash = encode(:tx_hash, <<0::256>>)
 
         if call_txi == hd(calls)["call_txi"] do
           assert function == "Call.amount"
@@ -658,13 +660,15 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                             "height" => height,
                             "micro_index" => micro_index,
                             "block_hash" => block_hash,
-                            "local_idx" => local_idx
+                            "local_idx" => local_idx,
+                            "tx_hash" => tx_hash
                           } ->
         assert contract_txi == contract_create_txi
         assert contract_tx_hash == encode(:tx_hash, <<contract_txi::256>>)
         assert ct_id == contract_id
         assert call_tx_hash == encode(:tx_hash, <<call_txi::256>>)
         assert function == @call_function
+        assert ^tx_hash = encode(:tx_hash, <<0::256>>)
 
         assert internal_tx == %{
                  "amount" => 1_000_000_000_000_000_000,
@@ -735,7 +739,8 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                             "height" => height,
                             "micro_index" => micro_index,
                             "block_hash" => block_hash,
-                            "local_idx" => local_idx
+                            "local_idx" => local_idx,
+                            "tx_hash" => tx_hash
                           } ->
         assert contract_txi == contract_create_txi
         assert contract_tx_hash == encode(:tx_hash, <<contract_txi::256>>)
@@ -743,6 +748,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
         assert call_txi == expected_call_txi
         assert call_tx_hash == encode(:tx_hash, <<call_txi::256>>)
         assert function == @call_function
+        assert ^tx_hash = encode(:tx_hash, <<0::256>>)
 
         assert internal_tx == %{
                  "amount" => 1_000_000_000_000_000_000,
@@ -790,7 +796,8 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                             "height" => height,
                             "micro_index" => micro_index,
                             "block_hash" => block_hash,
-                            "local_idx" => local_idx
+                            "local_idx" => local_idx,
+                            "tx_hash" => tx_hash
                           } ->
         assert contract_txi == contract_create_txi
         assert contract_tx_hash == encode(:tx_hash, <<contract_txi::256>>)
@@ -798,6 +805,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
         assert call_txi == expected_call_txi
         assert call_tx_hash == encode(:tx_hash, <<call_txi::256>>)
         assert function == @call_function
+        assert ^tx_hash = encode(:tx_hash, <<0::256>>)
 
         assert internal_tx == %{
                  "amount" => 1_000_000_000_000_000_000,
@@ -1102,7 +1110,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
             {tx_type, raw_tx} = :aetx.specialize_type(tx)
 
-            {i, @call_function, tx_type, tx, raw_tx, "tx-hash"}
+            {i, @call_function, tx_type, tx, raw_tx, <<0::256>>}
           end)
 
         contract_pk = :crypto.strong_rand_bytes(32)
@@ -1144,7 +1152,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
             {tx_type, raw_tx} = :aetx.specialize_type(tx)
 
-            {i, @call_function, tx_type, tx, raw_tx, "tx-hash"}
+            {i, @call_function, tx_type, tx, raw_tx, <<0::256>>}
           end)
 
         store =
@@ -1168,7 +1176,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
         {tx_type, raw_tx} = :aetx.specialize_type(tx)
 
-        {i, "Call.amount", tx_type, tx, raw_tx, "tx-hash"}
+        {i, "Call.amount", tx_type, tx, raw_tx, <<0::256>>}
       end)
 
     extra_ct_pk = :crypto.strong_rand_bytes(32)
