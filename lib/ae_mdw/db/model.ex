@@ -774,7 +774,6 @@ defmodule AeMdw.Db.Model do
   #    index: {call txi, local idx}
   @int_contract_call_defaults [
     index: {-1, -1},
-    tx_hash: nil,
     create_txi: -1,
     fname: "",
     tx: {}
@@ -785,7 +784,6 @@ defmodule AeMdw.Db.Model do
   @type int_contract_call ::
           record(:int_contract_call,
             index: int_contract_call_index(),
-            tx_hash: Txs.tx_hash(),
             create_txi: txi() | -1,
             fname: Contract.fname(),
             tx: Node.aetx()
