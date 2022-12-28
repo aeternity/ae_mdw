@@ -6,7 +6,7 @@ services:
       dockerfile: ./Dockerfile
       args:
         MIX_ENV: dev
-    image: aeternity/ae_mdw:latest
+    image: aeternity/ae_mdw:master
     ports:
       - "4000:4000" #MDW's default port
       - "4001:4001" #MDW's websocket default port
