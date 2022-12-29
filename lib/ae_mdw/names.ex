@@ -598,33 +598,39 @@ defmodule AeMdw.Names do
 
   defp render_claim(state, {{height, _mbi} = block_index, txi_idx}) do
     block_hash = Blocks.block_index_to_hash(state, block_index)
-    claim_aetx = DbUtil.read_node_tx(state, txi_idx)
+    {claim_aetx, tx_hash, tx_type} = DbUtil.read_node_tx_details(state, txi_idx)
 
     %{
       height: height,
       block_hash: Enc.encode(:micro_block_hash, block_hash),
+      tx_hash: Enc.encode(:tx_hash, tx_hash),
+      tx_type: Format.type_to_swagger_name(tx_type),
       tx: :aens_claim_tx.for_client(claim_aetx)
     }
   end
 
   defp render_update(state, {{height, _mbi} = block_index, txi_idx}) do
     block_hash = Blocks.block_index_to_hash(state, block_index)
-    update_aetx = DbUtil.read_node_tx(state, txi_idx)
+    {update_aetx, tx_hash, tx_type} = DbUtil.read_node_tx_details(state, txi_idx)
 
     %{
       height: height,
       block_hash: Enc.encode(:micro_block_hash, block_hash),
+      tx_hash: Enc.encode(:tx_hash, tx_hash),
+      tx_type: Format.type_to_swagger_name(tx_type),
       tx: :aens_update_tx.for_client(update_aetx)
     }
   end
 
   defp render_transfer(state, {{height, _mbi} = block_index, txi_idx}) do
     block_hash = Blocks.block_index_to_hash(state, block_index)
-    transfer_aetx = DbUtil.read_node_tx(state, txi_idx)
+    {transfer_aetx, tx_hash, tx_type} = DbUtil.read_node_tx_details(state, txi_idx)
 
     %{
       height: height,
       block_hash: Enc.encode(:micro_block_hash, block_hash),
+      tx_hash: Enc.encode(:tx_hash, tx_hash),
+      tx_type: Format.type_to_swagger_name(tx_type),
       tx: :aens_transfer_tx.for_client(transfer_aetx)
     }
   end

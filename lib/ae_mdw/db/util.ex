@@ -157,30 +157,40 @@ defmodule AeMdw.Db.Util do
   end
 
   @spec read_node_tx(state(), Txs.txi_idx()) :: Node.tx()
-  def read_node_tx(state, {txi, -1}) do
+  def read_node_tx(state, txi_idx) do
+    {tx, _tx_hash, _tx_type} = read_node_tx_details(state, txi_idx)
+    tx
+  end
+
+  @spec read_node_tx_details(state(), Txs.txi_idx()) :: {Node.tx(), Txs.tx_hash(), Node.tx_type()}
+  def read_node_tx_details(state, {txi, -1}) do
     Model.tx(id: tx_hash) = State.fetch!(state, Model.Tx, txi)
+    {_block_hash, tx_type, _signed_tx, tx_rec} = Db.get_tx_data(tx_hash)
 
-    case Db.get_tx_data(tx_hash) do
-      {_block_hash, tx_type, _signed_tx, tx_rec} when tx_type in [:ga_meta_tx, :paying_for_tx] ->
-        {_type, tx} =
-          tx_type
-          |> InnerTx.signed_tx(tx_rec)
-          |> :aetx_sign.tx()
-          |> :aetx.specialize_type()
+    if tx_type in [:ga_meta_tx, :paying_for_tx] do
+      {_type, tx} =
+        tx_type
+        |> InnerTx.signed_tx(tx_rec)
+        |> :aetx_sign.tx()
+        |> :aetx.specialize_type()
 
-        tx
-
-      {_block_hash, _tx_type, _signed_tx, tx_rec} ->
-        tx_rec
+      {tx, tx_hash, tx_type}
+    else
+      {tx_rec, tx_hash, tx_type}
     end
   end
 
-  def read_node_tx(state, {txi, local_idx}) do
+  def read_node_tx_details(state, {txi, local_idx}) do
+    Model.tx(id: tx_hash) = State.fetch!(state, Model.Tx, txi)
+
     Model.int_contract_call(tx: aetx) =
       State.fetch!(state, Model.IntContractCall, {txi, local_idx})
 
+    {_block_hash, tx_type, _signed_tx, _tx_rec} = Db.get_tx_data(tx_hash)
+
     {_type, tx} = :aetx.specialize_type(aetx)
-    tx
+
+    {tx, tx_hash, tx_type}
   end
 
   defp extract_height_hash(state, type, hash) do
