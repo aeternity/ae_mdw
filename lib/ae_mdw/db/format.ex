@@ -216,6 +216,7 @@ defmodule AeMdw.Db.Format do
 
   def to_map(state, {call_txi, local_idx}, Model.IntContractCall) do
     m_call = State.fetch!(state, Model.IntContractCall, {call_txi, local_idx})
+
     create_txi = Model.int_contract_call(m_call, :create_txi)
     fname = Model.int_contract_call(m_call, :fname)
 

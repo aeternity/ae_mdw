@@ -1102,7 +1102,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
             {tx_type, raw_tx} = :aetx.specialize_type(tx)
 
-            {i, @call_function, tx_type, tx, raw_tx, "tx-hash"}
+            {i, @call_function, tx_type, tx, raw_tx}
           end)
 
         contract_pk = :crypto.strong_rand_bytes(32)
@@ -1144,7 +1144,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
             {tx_type, raw_tx} = :aetx.specialize_type(tx)
 
-            {i, @call_function, tx_type, tx, raw_tx, "tx-hash"}
+            {i, @call_function, tx_type, tx, raw_tx}
           end)
 
         store =
@@ -1168,7 +1168,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
         {tx_type, raw_tx} = :aetx.specialize_type(tx)
 
-        {i, "Call.amount", tx_type, tx, raw_tx, "tx-hash"}
+        {i, "Call.amount", tx_type, tx, raw_tx}
       end)
 
     extra_ct_pk = :crypto.strong_rand_bytes(32)

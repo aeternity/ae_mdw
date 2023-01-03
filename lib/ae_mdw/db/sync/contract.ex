@@ -94,21 +94,20 @@ defmodule AeMdw.Db.Sync.Contract do
     # Oracle.query events don't have the right nonce (it's hard-coded to 0), which generates an invalid query_id
     int_calls =
       non_chain_events
-      |> Enum.map(fn {_prev_event, {{:internal_call_tx, fname}, %{info: tx, tx_hash: tx_hash}}} ->
-        {fname, tx, tx_hash}
-      end)
+      |> Enum.map(fn {_prev_event, {{:internal_call_tx, fname}, %{info: tx}}} -> {fname, tx} end)
       |> fix_oracle_queries(block_hash)
       |> Enum.with_index()
-      |> Enum.map(fn {{fname, aetx, tx_hash}, local_idx} ->
+      |> Enum.map(fn {{fname, aetx}, local_idx} ->
         {tx_type, tx} = :aetx.specialize_type(aetx)
 
-        {local_idx, fname, tx_type, aetx, tx, tx_hash}
+        {local_idx, fname, tx_type, aetx, tx}
       end)
 
     int_calls_mutation = IntCallsMutation.new(contract_pk, call_txi, int_calls)
 
     chain_mutations ++
-      oracle_and_name_mutations(int_calls, block_index, call_txi) ++ [int_calls_mutation]
+      oracle_and_name_mutations(int_calls, block_index, call_txi, call_tx_hash) ++
+      [int_calls_mutation]
   end
 
   @spec aexn_create_contract_mutation(Db.pubkey(), Blocks.block_index(), Txs.txi()) ::
@@ -142,35 +141,35 @@ defmodule AeMdw.Db.Sync.Contract do
     end
   end
 
-  defp oracle_and_name_mutations(int_calls, {height, _mbi} = block_index, call_txi) do
+  defp oracle_and_name_mutations(int_calls, {height, _mbi} = block_index, call_txi, tx_hash) do
     Enum.map(int_calls, fn
-      {local_idx, "Oracle.extend", :oracle_extend_tx, _aetx, tx, _tx_hash} ->
+      {local_idx, "Oracle.extend", :oracle_extend_tx, _aetx, tx} ->
         Oracle.extend_mutation(tx, block_index, {call_txi, local_idx})
 
-      {local_idx, "Oracle.register", :oracle_register_tx, _aetx, tx, tx_hash} ->
+      {local_idx, "Oracle.register", :oracle_register_tx, _aetx, tx} ->
         Oracle.register_mutations(tx, tx_hash, block_index, {call_txi, local_idx})
 
-      {_local_idx, "Oracle.respond", :oracle_respond_tx, _aetx, tx, _tx_hash} ->
+      {_local_idx, "Oracle.respond", :oracle_respond_tx, _aetx, tx} ->
         Oracle.response_mutation(tx, block_index, call_txi)
 
-      {_local_idx, "Oracle.query", :oracle_query_tx, _aetx, tx, _tx_hash} ->
+      {_local_idx, "Oracle.query", :oracle_query_tx, _aetx, tx} ->
         Oracle.query_mutation(tx, height)
 
-      {local_idx, "AENS.claim", :name_claim_tx, _aetx, tx, tx_hash} ->
+      {local_idx, "AENS.claim", :name_claim_tx, _aetx, tx} ->
         Name.name_claim_mutations(tx, tx_hash, block_index, {call_txi, local_idx})
 
-      {local_idx, "AENS.update", :name_update_tx, _aetx, tx, _tx_hash} ->
+      {local_idx, "AENS.update", :name_update_tx, _aetx, tx} ->
         Name.update_mutations(tx, {call_txi, local_idx}, block_index, true)
 
-      {local_idx, "AENS.transfer", :name_transfer_tx, _aetx, tx, _tx_hash} ->
+      {local_idx, "AENS.transfer", :name_transfer_tx, _aetx, tx} ->
         NameTransferMutation.new(tx, {call_txi, local_idx}, block_index)
 
-      {local_idx, "AENS.revoke", :name_revoke_tx, _aetx, tx, _tx_hash} ->
+      {local_idx, "AENS.revoke", :name_revoke_tx, _aetx, tx} ->
         tx
         |> :aens_revoke_tx.name_hash()
         |> NameRevokeMutation.new({call_txi, local_idx}, block_index)
 
-      {_local_idx, _fname, _tx_type, _aetx, _tx, _tx_hash} ->
+      {_local_idx, _fname, _tx_type, _aetx, _tx} ->
         []
     end)
   end
@@ -179,7 +178,7 @@ defmodule AeMdw.Db.Sync.Contract do
   defp fix_oracle_queries(events, block_hash) do
     {fixed_events, _acc} =
       Enum.map_reduce(events, %{}, fn
-        {"Oracle.query", aetx, tx_hash}, accounts_nonces ->
+        {"Oracle.query", aetx}, accounts_nonces ->
           {:oracle_query_tx, tx} = :aetx.specialize_type(aetx)
           sender_pk = :aeo_query_tx.sender_pubkey(tx)
 
@@ -193,10 +192,10 @@ defmodule AeMdw.Db.Sync.Contract do
           fixed_tx = put_elem(tx, 2, nonce)
           fixed_aetx = :aetx.update_tx(aetx, fixed_tx)
 
-          {{"Oracle.query", fixed_aetx, tx_hash}, accounts_nonces}
+          {{"Oracle.query", fixed_aetx}, accounts_nonces}
 
-        {fname, aetx, tx_hash}, accounts_nonces ->
-          {{fname, aetx, tx_hash}, accounts_nonces}
+        {fname, aetx}, accounts_nonces ->
+          {{fname, aetx}, accounts_nonces}
       end)
 
     fixed_events
