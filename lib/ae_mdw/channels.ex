@@ -7,6 +7,7 @@ defmodule AeMdw.Channels do
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Txs
@@ -19,6 +20,7 @@ defmodule AeMdw.Channels do
 
   @typep state() :: State.t()
   @typep pubkey() :: AeMdw.Node.Db.pubkey()
+  @typep block_hash() :: String.t()
   @typep pagination() :: Collection.direction_limit()
   @typep range() :: {:gen, Range.t()} | nil
   @typep cursor() :: Collection.pagination_cursor()
@@ -63,15 +65,13 @@ defmodule AeMdw.Channels do
       type_count(state, :channel_settle_tx, from_txi, next_txi)
   end
 
-  @spec fetch_channel(state(), pubkey()) :: {:ok, channel()} | {:error, Error.t()}
-  def fetch_channel(state, channel_pk) do
+  @spec fetch_channel(state(), pubkey(), block_hash() | nil) ::
+          {:ok, channel()} | {:error, Error.t()}
+  def fetch_channel(state, channel_pk, block_hash \\ nil) do
     case locate(state, channel_pk) do
-      {:ok, channel, source} ->
-        {:ok,
-         render_channel(state, channel,
-           is_active?: source == Model.ActiveChannel,
-           node_details?: true
-         )}
+      {:ok, m_channel, source} ->
+        is_active? = source == Model.ActiveChannel
+        {:ok, render_channel(state, m_channel, is_active?, block_hash)}
 
       :not_found ->
         {:error, ErrInput.NotFound.exception(value: encode(:channel, channel_pk))}
@@ -103,10 +103,8 @@ defmodule AeMdw.Channels do
 
   defp render_active_channels(state, keys) do
     Enum.map(keys, fn {_exp, channel_pk} ->
-      render_channel(state, State.fetch!(state, @table_active, channel_pk),
-        is_active?: true,
-        node_details?: false
-      )
+      m_channel = State.fetch!(state, @table_active, channel_pk)
+      render_channel(state, m_channel, true)
     end)
   end
 
@@ -118,12 +116,14 @@ defmodule AeMdw.Channels do
            responder: responder_pk,
            state_hash: state_hash,
            amount: amount,
-           updates: [{{last_updated_height, _mbi}, last_updated_txi} | _rest] = updates
+           updates:
+             [{{last_updated_height, _mbi} = update_block_index, last_updated_txi} | _rest] =
+               updates
          ),
-         is_active?: is_active?,
-         node_details?: node_details?
+         is_active?,
+         param_block_hash \\ nil
        ) do
-    %{"block_hash" => block_hash, "hash" => tx_hash, "tx" => %{"type" => tx_type}} =
+    %{"block_hash" => update_block_hash, "hash" => tx_hash, "tx" => %{"type" => tx_type}} =
       Txs.fetch!(state, last_updated_txi)
 
     channel = %{
@@ -138,17 +138,19 @@ defmodule AeMdw.Channels do
       active: is_active?
     }
 
-    with true <- node_details?,
-         {:ok, node_channel} <-
-           :aec_chain.get_channel_at_hash(channel_pk, Validate.id!(block_hash)) do
-      node_details = :aesc_channels.serialize_for_client(node_channel)
+    block_hash =
+      get_oldest_block_hash(state, param_block_hash, update_block_hash, update_block_index)
 
-      channel
-      |> Map.merge(node_details)
-      |> Map.drop(~w(id initiator_id responder_id channel_amount))
-      |> Map.put(:amount, node_details["channel_amount"])
-    else
-      _no_details ->
+    case :aec_chain.get_channel_at_hash(channel_pk, Validate.id!(block_hash)) do
+      {:ok, node_channel} ->
+        node_details = :aesc_channels.serialize_for_client(node_channel)
+
+        channel
+        |> Map.merge(node_details)
+        |> Map.drop(~w(id initiator_id responder_id channel_amount))
+        |> Map.put(:amount, node_details["channel_amount"])
+
+      {:error, _reason} ->
         Map.put(channel, :amount, amount)
     end
   end
@@ -175,4 +177,34 @@ defmodule AeMdw.Channels do
   end
 
   defp deserialize_scope(_nil_or_txis_scope), do: nil
+
+  # Gets from the oldest block state tree since some channels might be absent from newer blocks
+  defp get_oldest_block_hash(_state, nil, update_block_hash, _update_block_index),
+    do: update_block_hash
+
+  defp get_oldest_block_hash(state, param_block_hash, update_block_hash, update_block_index) do
+    case get_block_index(state, param_block_hash) do
+      {:ok, height, mbi} ->
+        if update_block_index < {height, mbi} do
+          update_block_hash
+        else
+          param_block_hash
+        end
+
+      {:error, _reason} ->
+        update_block_hash
+    end
+  end
+
+  defp get_block_index(state, param_block_hash) do
+    block_hash = Validate.id!(param_block_hash)
+
+    if String.starts_with?(param_block_hash, "kh") do
+      with {:ok, height} <- DbUtil.key_block_height(state, block_hash) do
+        {:ok, height, -1}
+      end
+    else
+      DbUtil.micro_block_height_index(state, block_hash)
+    end
+  end
 end
