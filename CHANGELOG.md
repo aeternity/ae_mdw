@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.34.0](https://www.github.com/aeternity/ae_mdw/compare/v1.33.0...v1.34.0) (2023-01-04)
+
+
+### Features
+
+* add block hash to activities ([#1098](https://www.github.com/aeternity/ae_mdw/issues/1098)) ([f743612](https://www.github.com/aeternity/ae_mdw/commit/f7436128770f07529680cb003cbf0c1c182d30b1))
+* include source tx_hash on nested names endpoints ([#1104](https://www.github.com/aeternity/ae_mdw/issues/1104)) ([15bd964](https://www.github.com/aeternity/ae_mdw/commit/15bd96433aafce6e3c4c3aae146852cc06b999bf))
+* introduce {bi, {txi, local_idx}} for precise internal txs refs ([#1088](https://www.github.com/aeternity/ae_mdw/issues/1088)) ([e5df7b5](https://www.github.com/aeternity/ae_mdw/commit/e5df7b565155cb2a2c2a95cc1034979b765bc3e8))
+* query channel reserve at a hash ([#1106](https://www.github.com/aeternity/ae_mdw/issues/1106)) ([e595f0b](https://www.github.com/aeternity/ae_mdw/commit/e595f0b91868a9c3738626a959ecb8c30adcc59d))
+
+
+### Miscellaneous
+
+* **ci:** conditional dockerhub build env ([#1103](https://www.github.com/aeternity/ae_mdw/issues/1103)) ([184b112](https://www.github.com/aeternity/ae_mdw/commit/184b11229cf30f00c8bc191f1f37c46003b800bd))
+* **ci:** make sure workflow is triggered on push ([#1097](https://www.github.com/aeternity/ae_mdw/issues/1097)) ([c8f498d](https://www.github.com/aeternity/ae_mdw/commit/c8f498db00d62fa8fff623d7717730bd6cb3a8db))
+* remove tx hashes handling on int contract calls ([#1099](https://www.github.com/aeternity/ae_mdw/issues/1099)) ([706b785](https://www.github.com/aeternity/ae_mdw/commit/706b7853f93304f7a3c43987d8f61495c8f5e50d))
+* use master instead of latest to pull docker image ([#1100](https://www.github.com/aeternity/ae_mdw/issues/1100)) ([9b06e72](https://www.github.com/aeternity/ae_mdw/commit/9b06e7270c2f4013d8ea6dc3647b68e07f30b300))
+
 ## [1.33.0](https://www.github.com/aeternity/ae_mdw/compare/v1.32.0...v1.33.0) (2022-12-23)
 
 
