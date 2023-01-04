@@ -23,6 +23,9 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       account_id = :aeser_id.create(:account, account_pk)
       height = 398
       mbi = 2
+      kb_hash = TS.key_block_hash(0)
+      mb_hash = TS.micro_block_hash(0)
+      enc_mb_hash = Enc.encode(:micro_block_hash, mb_hash)
 
       {:ok, aetx} =
         :aec_spend_tx.new(%{
@@ -48,6 +51,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, next_account_pk, 4})
         )
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
+        |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
 
       with_mocks [
         {Db, [],
@@ -67,18 +72,21 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
         assert %{
                  "height" => ^height,
+                 "block_hash" => ^enc_mb_hash,
                  "type" => "ContractCallTxEvent",
                  "payload" => %{"micro_index" => ^mbi}
                } = tx1
 
         assert %{
                  "height" => ^height,
+                 "block_hash" => ^enc_mb_hash,
                  "type" => "ContractCallTxEvent",
                  "payload" => %{"micro_index" => ^mbi}
                } = tx2
 
         assert %{
                  "height" => ^height,
+                 "block_hash" => ^enc_mb_hash,
                  "type" => "ContractCallTxEvent",
                  "payload" => %{"micro_index" => ^mbi}
                } = tx3
@@ -92,6 +100,9 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       account_id = :aeser_id.create(:account, account_pk)
       height = 398
       mbi = 2
+      kb_hash = TS.key_block_hash(0)
+      mb_hash = TS.micro_block_hash(0)
+      enc_mb_hash = Enc.encode(:micro_block_hash, mb_hash)
 
       {:ok, aetx} =
         :aec_spend_tx.new(%{
@@ -113,6 +124,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(Model.Tx, Model.tx(index: 2, block_index: {height, mbi}, id: "hash2"))
         |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 3}))
         |> Store.put(Model.Tx, Model.tx(index: 3, block_index: {height, mbi}, id: "hash3"))
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
+        |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
 
       with_mocks [
         {Db, [],
@@ -136,12 +149,14 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
         assert %{
                  "height" => ^height,
+                 "block_hash" => ^enc_mb_hash,
                  "type" => "ContractCallTxEvent",
                  "payload" => %{"micro_index" => ^mbi}
                } = tx1
 
         assert %{
                  "height" => ^height,
+                 "block_hash" => ^enc_mb_hash,
                  "type" => "ContractCallTxEvent",
                  "payload" => %{"micro_index" => ^mbi}
                } = tx2
@@ -161,6 +176,9 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       height = 398
       mbi = 2
       create_txi = 432
+      kb_hash = TS.key_block_hash(0)
+      mb_hash = TS.micro_block_hash(0)
+      enc_mb_hash = Enc.encode(:micro_block_hash, mb_hash)
 
       {:ok, aetx} =
         :aec_spend_tx.new(%{
@@ -202,6 +220,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         )
         |> Store.put(Model.IntContractCall, Model.int_contract_call(index: {2, 1}))
         |> Store.put(Model.Tx, Model.tx(index: 2, block_index: {height, mbi}, id: "hash2"))
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
+        |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
 
       with_mocks [
         {Db, [],
@@ -226,11 +246,13 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
         assert %{
                  "height" => ^height,
+                 "block_hash" => ^enc_mb_hash,
                  "type" => "InternalContractCallEvent"
                } = tx1
 
         assert %{
                  "height" => ^height,
+                 "block_hash" => ^enc_mb_hash,
                  "type" => "InternalContractCallEvent"
                } = tx2
 
@@ -248,6 +270,9 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       account_id = :aeser_id.create(:account, account_pk)
       height = 398
       mbi = 2
+      kb_hash = TS.key_block_hash(0)
+      mb_hash = TS.micro_block_hash(0)
+      enc_mb_hash = Enc.encode(:micro_block_hash, mb_hash)
 
       {:ok, aetx} =
         :aec_spend_tx.new(%{
@@ -285,6 +310,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         )
         |> Store.put(Model.IntContractCall, Model.int_contract_call(index: {2, 1}))
         |> Store.put(Model.Tx, Model.tx(index: 2, block_index: {height, mbi}, id: "hash2"))
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
+        |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
 
       with_mocks [
         {Db, [],
@@ -309,11 +336,13 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
         assert %{
                  "height" => ^height,
+                 "block_hash" => ^enc_mb_hash,
                  "type" => "InternalContractCallEvent"
                } = tx1
 
         assert %{
                  "height" => ^height,
+                 "block_hash" => ^enc_mb_hash,
                  "type" => "InternalContractCallEvent"
                } = tx2
 
@@ -329,6 +358,11 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       account = Enc.encode(:account_pubkey, account_pk)
       height = 398
       [txi1, txi2, txi3] = [123, 456, 789]
+      kb_hash = TS.key_block_hash(0)
+      mb_hash1 = TS.micro_block_hash(0)
+      enc_mb_hash1 = Enc.encode(:micro_block_hash, mb_hash1)
+      mb_hash2 = TS.micro_block_hash(1)
+      enc_mb_hash2 = Enc.encode(:micro_block_hash, mb_hash2)
 
       store =
         empty_store()
@@ -374,6 +408,9 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           )
         )
         |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height, 1}, id: "hash3"))
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
+        |> Store.put(Model.Block, Model.block(index: {height, 0}, hash: mb_hash1))
+        |> Store.put(Model.Block, Model.block(index: {height, 1}, hash: mb_hash2))
 
       assert %{"prev" => nil, "data" => [activity1, activity2] = data, "next" => next_url} =
                conn
@@ -383,6 +420,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
       assert %{
                "height" => ^height,
+               "block_hash" => ^enc_mb_hash1,
                "type" => "InternalTransferEvent",
                "payload" => %{
                  "kind" => "reward_oracle",
@@ -393,6 +431,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       assert %{
                "height" => ^height,
                "type" => "InternalTransferEvent",
+               "block_hash" => ^enc_mb_hash2,
                "payload" => %{
                  "kind" => "fee_lock_name",
                  "amount" => 20
@@ -416,6 +455,16 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       account = Enc.encode(:account_pubkey, account_pk)
       height = 398
       [txi1, txi2, txi3] = [123, 456, 789]
+      kb_hash1 = TS.key_block_hash(0)
+      kb_hash2 = TS.key_block_hash(1)
+      kb_hash3 = TS.key_block_hash(2)
+      enc_kb_hash2 = Enc.encode(:key_block_hash, kb_hash2)
+      mb_hash1 = TS.micro_block_hash(0)
+      enc_mb_hash1 = Enc.encode(:micro_block_hash, mb_hash1)
+      mb_hash2 = TS.micro_block_hash(1)
+      enc_mb_hash2 = Enc.encode(:micro_block_hash, mb_hash2)
+      mb_hash3 = TS.micro_block_hash(2)
+      enc_mb_hash3 = Enc.encode(:micro_block_hash, mb_hash3)
 
       store =
         empty_store()
@@ -474,6 +523,12 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           )
         )
         |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height + 2, 0}, id: "hash3"))
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash1))
+        |> Store.put(Model.Block, Model.block(index: {height + 1, -1}, hash: kb_hash2))
+        |> Store.put(Model.Block, Model.block(index: {height + 2, -1}, hash: kb_hash3))
+        |> Store.put(Model.Block, Model.block(index: {height, 0}, hash: mb_hash1))
+        |> Store.put(Model.Block, Model.block(index: {height, 1}, hash: mb_hash2))
+        |> Store.put(Model.Block, Model.block(index: {height + 2, 0}, hash: mb_hash3))
 
       assert %{
                "prev" => nil,
@@ -488,6 +543,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       assert %{
                "height" => ^height,
                "type" => "InternalTransferEvent",
+               "block_hash" => ^enc_mb_hash1,
                "payload" => %{
                  "kind" => "reward_oracle",
                  "amount" => 10
@@ -497,6 +553,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       assert %{
                "height" => ^height,
                "type" => "InternalTransferEvent",
+               "block_hash" => ^enc_mb_hash2,
                "payload" => %{
                  "kind" => "fee_lock_name",
                  "amount" => 20
@@ -506,6 +563,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       assert %{
                "height" => 399,
                "type" => "InternalTransferEvent",
+               "block_hash" => ^enc_kb_hash2,
                "payload" => %{
                  "kind" => "reward_dev",
                  "amount" => 30
@@ -521,6 +579,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       assert %{
                "height" => 400,
                "type" => "InternalTransferEvent",
+               "block_hash" => ^enc_mb_hash3,
                "payload" => %{"kind" => "fee_lock_name", "amount" => 40}
              } = activity4
 
@@ -542,6 +601,12 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       tx3_hash = TS.tx_hash(2)
       tx1_encoded = Enc.encode(:tx_hash, tx1_hash)
       tx2_encoded = Enc.encode(:tx_hash, tx2_hash)
+      kb_hash1 = TS.key_block_hash(0)
+      kb_hash2 = TS.key_block_hash(1)
+      mb_hash1 = TS.key_block_hash(0)
+      enc_mb_hash1 = Enc.encode(:micro_block_hash, mb_hash1)
+      mb_hash2 = TS.key_block_hash(1)
+      enc_mb_hash2 = Enc.encode(:micro_block_hash, mb_hash2)
 
       store =
         empty_store()
@@ -568,6 +633,10 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           Model.aexn_transfer(index: {:aex9, another_account_pk, txi3, account_pk, 3, 3})
         )
         |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height2, 0}, id: tx3_hash))
+        |> Store.put(Model.Block, Model.block(index: {height1, -1}, hash: kb_hash1))
+        |> Store.put(Model.Block, Model.block(index: {height1, 0}, hash: mb_hash1))
+        |> Store.put(Model.Block, Model.block(index: {height2, -1}, hash: kb_hash2))
+        |> Store.put(Model.Block, Model.block(index: {height2, 0}, hash: mb_hash2))
 
       assert %{"prev" => nil, "data" => [activity1, activity2], "next" => next_url} =
                conn
@@ -578,6 +647,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       assert %{
                "height" => ^height1,
                "type" => "Aex9TransferEvent",
+               "block_hash" => ^enc_mb_hash1,
                "payload" => %{
                  "amount" => 1,
                  "log_idx" => 1,
@@ -590,6 +660,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       assert %{
                "height" => ^height2,
                "type" => "Aex141TransferEvent",
+               "block_hash" => ^enc_mb_hash2,
                "payload" => %{
                  "sender_id" => ^another_account,
                  "recipient_id" => ^account,
@@ -616,6 +687,12 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       txi1 = 123
       txi2 = 456
       txi3 = 789
+      kb_hash1 = TS.key_block_hash(0)
+      kb_hash2 = TS.key_block_hash(1)
+      mb_hash1 = TS.micro_block_hash(0)
+      enc_mb_hash1 = Enc.encode(:micro_block_hash, mb_hash1)
+      mb_hash2 = TS.micro_block_hash(1)
+      enc_mb_hash2 = Enc.encode(:micro_block_hash, mb_hash2)
 
       store =
         empty_store()
@@ -642,6 +719,10 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           Model.aexn_transfer(index: {:aex9, another_account_pk, txi3, account_pk, 3, 3})
         )
         |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height2, 0}, id: "hash3"))
+        |> Store.put(Model.Block, Model.block(index: {height1, -1}, hash: kb_hash1))
+        |> Store.put(Model.Block, Model.block(index: {height1, 0}, hash: mb_hash1))
+        |> Store.put(Model.Block, Model.block(index: {height2, -1}, hash: kb_hash2))
+        |> Store.put(Model.Block, Model.block(index: {height2, 0}, hash: mb_hash2))
 
       assert %{"prev" => nil, "data" => [activity1, activity2], "next" => next_url} =
                conn
@@ -651,6 +732,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
       assert %{
                "height" => ^height2,
+               "block_hash" => ^enc_mb_hash2,
                "type" => "Aex9TransferEvent",
                "payload" => %{
                  "sender_id" => ^another_account,
@@ -662,6 +744,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
       assert %{
                "height" => ^height2,
+               "block_hash" => ^enc_mb_hash2,
                "type" => "Aex141TransferEvent",
                "payload" => %{
                  "sender_id" => ^another_account,
@@ -679,6 +762,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
       assert %{
                "height" => ^height1,
+               "block_hash" => ^enc_mb_hash1,
                "type" => "Aex9TransferEvent",
                "payload" => %{
                  "sender_id" => ^account,
@@ -709,6 +793,12 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       encoded_tx_hash1 = Enc.encode(:tx_hash, tx_hash1)
       encoded_tx_hash2 = Enc.encode(:tx_hash, tx_hash2)
       encoded_tx_hash3 = Enc.encode(:tx_hash, tx_hash3)
+      kb_hash1 = TS.key_block_hash(0)
+      kb_hash2 = TS.key_block_hash(1)
+      mb_hash1 = TS.micro_block_hash(0)
+      mb_hash2 = TS.micro_block_hash(1)
+      enc_mb_hash1 = Enc.encode(:micro_block_hash, mb_hash1)
+      enc_mb_hash2 = Enc.encode(:micro_block_hash, mb_hash2)
 
       {:ok, aetx1} =
         :aens_claim_tx.new(%{
@@ -774,8 +864,10 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           Model.Tx,
           Model.tx(index: txi3, block_index: {height2, 0}, id: tx_hash3, time: 30)
         )
-        |> Store.put(Model.Block, Model.block(index: {height1, 0}, hash: "bhash1"))
-        |> Store.put(Model.Block, Model.block(index: {height2, 0}, hash: "bhash2"))
+        |> Store.put(Model.Block, Model.block(index: {height1, 0}, hash: mb_hash1))
+        |> Store.put(Model.Block, Model.block(index: {height2, 0}, hash: mb_hash2))
+        |> Store.put(Model.Block, Model.block(index: {height1, -1}, hash: kb_hash1))
+        |> Store.put(Model.Block, Model.block(index: {height2, -1}, hash: kb_hash2))
 
       with_mocks [
         {Db, [],
@@ -801,6 +893,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{
                  "height" => ^height2,
                  "type" => "NameClaimEvent",
+                 "block_hash" => ^enc_mb_hash2,
                  "payload" => %{
                    "tx_hash" => ^encoded_tx_hash3,
                    "micro_time" => 30,
@@ -820,6 +913,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{
                  "height" => ^height2,
                  "type" => "NameClaimEvent",
+                 "block_hash" => ^enc_mb_hash2,
                  "payload" => %{
                    "tx_hash" => ^encoded_tx_hash2,
                    "micro_time" => 20,
@@ -845,6 +939,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{
                  "height" => ^height1,
                  "type" => "NameClaimEvent",
+                 "block_hash" => ^enc_mb_hash1,
                  "payload" => %{
                    "tx_hash" => ^encoded_tx_hash1,
                    "micro_time" => 10,
