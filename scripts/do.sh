@@ -10,7 +10,7 @@ case $1 in
     ;;
 
   "docker-shell")
-    docker-compose run --rm --workdir=/app --entrypoint="" --service-ports ae_mdw /bin/bash
+    docker-compose -f docker-compose-dev.yml run --rm --workdir=/app --entrypoint="" --service-ports ae_mdw /bin/bash
     ;;
 
   "test-integration")

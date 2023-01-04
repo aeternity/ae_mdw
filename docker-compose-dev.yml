@@ -20,5 +20,6 @@ services:
       - ${PWD}/docker/aeternity.yaml:/home/aeternity/aeternity.yaml
       - ${PWD}/priv:/home/aeternity/node/ae_mdw/priv
       - ${PWD}:/app
+      - ${PWD}/docker/gitconfig:/root/.gitconfig
     environment:
       - AETERNITY_CONFIG=/home/aeternity/aeternity.yaml
