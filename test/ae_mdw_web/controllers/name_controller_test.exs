@@ -1,6 +1,7 @@
 defmodule AeMdwWeb.NameControllerTest do
   use AeMdwWeb.ConnCase
 
+  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Model
   alias AeMdw.Db.Model.ActiveName
   alias AeMdw.Db.Model.ActiveNameActivation
@@ -1743,6 +1744,9 @@ defmodule AeMdwWeb.NameControllerTest do
 
       store = name_claims_store(store, plain_name)
       conn = with_store(conn, store)
+      tx1_hash_enc = Enc.encode(:tx_hash, <<0::256>>)
+      tx2_hash_enc = Enc.encode(:tx_hash, <<1::256>>)
+      tx3_hash_enc = Enc.encode(:tx_hash, <<2::256>>)
 
       {:ok, aetx1} =
         :aens_claim_tx.new(%{
@@ -1787,13 +1791,13 @@ defmodule AeMdwWeb.NameControllerTest do
         {Db, [],
          [
            get_tx_data: fn
-             "tx1-hash" ->
+             <<0::256>> ->
                {"", :name_claim_tx, :aetx_sign.new(aetx1, []), tx1}
 
-             "tx2-hash" ->
+             <<1::256>> ->
                {"", :name_claim_tx, :aetx_sign.new(aetx2, []), tx2}
 
-             "tx3-hash" ->
+             <<2::256>> ->
                {"", :name_claim_tx, :aetx_sign.new(aetx3, []), tx3}
            end
          ]}
@@ -1804,14 +1808,35 @@ defmodule AeMdwWeb.NameControllerTest do
                  |> json_response(200)
 
         refute is_nil(next_url)
-        assert %{"height" => 124, "tx" => %{"fee" => 333_333}} = claim3
-        assert %{"height" => 123, "tx" => %{"fee" => 222_222}} = claim2
+
+        assert %{
+                 "height" => 124,
+                 "source_tx_type" => "NameClaimTx",
+                 "source_tx_hash" => ^tx3_hash_enc,
+                 "internal_source" => false,
+                 "tx" => %{"fee" => 333_333}
+               } = claim3
+
+        assert %{
+                 "height" => 123,
+                 "source_tx_type" => "NameClaimTx",
+                 "source_tx_hash" => ^tx2_hash_enc,
+                 "internal_source" => false,
+                 "tx" => %{"fee" => 222_222}
+               } = claim2
 
         assert %{"data" => [claim1], "prev" => prev_url} =
                  conn |> get(next_url) |> json_response(200)
 
         refute is_nil(prev_url)
-        assert %{"height" => 123, "tx" => %{"fee" => 111_111}} = claim1
+
+        assert %{
+                 "height" => 123,
+                 "source_tx_type" => "NameClaimTx",
+                 "source_tx_hash" => ^tx1_hash_enc,
+                 "internal_source" => false,
+                 "tx" => %{"fee" => 111_111}
+               } = claim1
 
         assert %{"data" => ^claims} = conn |> get(prev_url) |> json_response(200)
       end
@@ -1868,13 +1893,13 @@ defmodule AeMdwWeb.NameControllerTest do
         {Db, [],
          [
            get_tx_data: fn
-             "tx1-hash" ->
+             <<0::256>> ->
                {"", :name_claim_tx, :aetx_sign.new(aetx1, []), tx1}
 
-             "tx2-hash" ->
+             <<1::256>> ->
                {"", :name_claim_tx, :aetx_sign.new(aetx2, []), tx2}
 
-             "tx3-hash" ->
+             <<2::256>> ->
                {"", :name_claim_tx, :aetx_sign.new(aetx3, []), tx3}
            end
          ]}
@@ -1916,6 +1941,7 @@ defmodule AeMdwWeb.NameControllerTest do
       contract_id = :aeser_id.create(:contract, contract_pk)
       plain_name = "asd.chain"
       call_txi = 567
+      tx1_hash_enc = Enc.encode(:tx_hash, <<0::256>>)
 
       {:ok, contract_call_aetx} =
         :aect_call_tx.new(%{
@@ -1959,7 +1985,7 @@ defmodule AeMdwWeb.NameControllerTest do
         {Db, [],
          [
            get_tx_data: fn
-             "tx1-hash" ->
+             <<0::256>> ->
                {"", :contract_call_tx, :aetx_sign.new(contract_call_aetx, []), contract_call_tx}
            end
          ]}
@@ -1972,6 +1998,9 @@ defmodule AeMdwWeb.NameControllerTest do
 
         assert %{
                  "height" => 123,
+                 "source_tx_hash" => ^tx1_hash_enc,
+                 "source_tx_type" => "ContractCallTx",
+                 "internal_source" => true,
                  "tx" => %{"fee" => 111_111, "name" => ^plain_name}
                } = claim1
       end
@@ -2031,13 +2060,13 @@ defmodule AeMdwWeb.NameControllerTest do
         {Db, [],
          [
            get_tx_data: fn
-             "tx1-hash" ->
+             <<0::256>> ->
                {"", :name_transfer_tx, :aetx_sign.new(aetx1, []), tx1}
 
-             "tx2-hash" ->
+             <<1::256>> ->
                {"", :name_transfer_tx, :aetx_sign.new(aetx2, []), tx2}
 
-             "tx3-hash" ->
+             <<2::256>> ->
                {"", :name_transfer_tx, :aetx_sign.new(aetx3, []), tx3}
            end
          ]}
@@ -2127,13 +2156,13 @@ defmodule AeMdwWeb.NameControllerTest do
         {Db, [],
          [
            get_tx_data: fn
-             "tx1-hash" ->
+             <<0::256>> ->
                {"", :name_update_tx, :aetx_sign.new(aetx1, []), tx1}
 
-             "tx2-hash" ->
+             <<1::256>> ->
                {"", :name_update_tx, :aetx_sign.new(aetx2, []), tx2}
 
-             "tx3-hash" ->
+             <<2::256>> ->
                {"", :name_update_tx, :aetx_sign.new(aetx3, []), tx3}
            end
          ]}
@@ -2188,9 +2217,9 @@ defmodule AeMdwWeb.NameControllerTest do
 
     store
     |> Store.put(Model.ActiveName, name)
-    |> Store.put(Model.Tx, Model.tx(index: 567, id: "tx1-hash"))
-    |> Store.put(Model.Tx, Model.tx(index: 678, id: "tx2-hash"))
-    |> Store.put(Model.Tx, Model.tx(index: 788, id: "tx3-hash"))
+    |> Store.put(Model.Tx, Model.tx(index: 567, id: <<0::256>>))
+    |> Store.put(Model.Tx, Model.tx(index: 678, id: <<1::256>>))
+    |> Store.put(Model.Tx, Model.tx(index: 788, id: <<2::256>>))
     |> Store.put(Model.Block, Model.block(index: {123, 0}, hash: "mb1-hash"))
     |> Store.put(Model.Block, Model.block(index: {124, 1}, hash: "mb2-hash"))
   end
