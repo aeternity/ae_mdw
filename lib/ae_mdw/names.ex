@@ -603,8 +603,9 @@ defmodule AeMdw.Names do
     %{
       height: height,
       block_hash: Enc.encode(:micro_block_hash, block_hash),
-      tx_hash: Enc.encode(:tx_hash, tx_hash),
-      tx_type: Format.type_to_swagger_name(tx_type),
+      source_tx_hash: Enc.encode(:tx_hash, tx_hash),
+      source_tx_type: Format.type_to_swagger_name(tx_type),
+      internal_source: tx_type != :name_claim_tx,
       tx: :aens_claim_tx.for_client(claim_aetx)
     }
   end
@@ -616,8 +617,9 @@ defmodule AeMdw.Names do
     %{
       height: height,
       block_hash: Enc.encode(:micro_block_hash, block_hash),
-      tx_hash: Enc.encode(:tx_hash, tx_hash),
-      tx_type: Format.type_to_swagger_name(tx_type),
+      source_tx_hash: Enc.encode(:tx_hash, tx_hash),
+      source_tx_type: Format.type_to_swagger_name(tx_type),
+      internal_source: tx_type != :name_update_tx,
       tx: :aens_update_tx.for_client(update_aetx)
     }
   end
@@ -629,8 +631,9 @@ defmodule AeMdw.Names do
     %{
       height: height,
       block_hash: Enc.encode(:micro_block_hash, block_hash),
-      tx_hash: Enc.encode(:tx_hash, tx_hash),
-      tx_type: Format.type_to_swagger_name(tx_type),
+      source_tx_hash: Enc.encode(:tx_hash, tx_hash),
+      source_tx_type: Format.type_to_swagger_name(tx_type),
+      internal_source: tx_type != :name_transfer_tx,
       tx: :aens_transfer_tx.for_client(transfer_aetx)
     }
   end

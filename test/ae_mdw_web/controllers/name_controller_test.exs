@@ -1811,15 +1811,17 @@ defmodule AeMdwWeb.NameControllerTest do
 
         assert %{
                  "height" => 124,
-                 "tx_type" => "NameClaimTx",
-                 "tx_hash" => ^tx3_hash_enc,
+                 "source_tx_type" => "NameClaimTx",
+                 "source_tx_hash" => ^tx3_hash_enc,
+                 "internal_source" => false,
                  "tx" => %{"fee" => 333_333}
                } = claim3
 
         assert %{
                  "height" => 123,
-                 "tx_type" => "NameClaimTx",
-                 "tx_hash" => ^tx2_hash_enc,
+                 "source_tx_type" => "NameClaimTx",
+                 "source_tx_hash" => ^tx2_hash_enc,
+                 "internal_source" => false,
                  "tx" => %{"fee" => 222_222}
                } = claim2
 
@@ -1830,8 +1832,9 @@ defmodule AeMdwWeb.NameControllerTest do
 
         assert %{
                  "height" => 123,
-                 "tx_type" => "NameClaimTx",
-                 "tx_hash" => ^tx1_hash_enc,
+                 "source_tx_type" => "NameClaimTx",
+                 "source_tx_hash" => ^tx1_hash_enc,
+                 "internal_source" => false,
                  "tx" => %{"fee" => 111_111}
                } = claim1
 
@@ -1995,8 +1998,9 @@ defmodule AeMdwWeb.NameControllerTest do
 
         assert %{
                  "height" => 123,
-                 "tx_hash" => ^tx1_hash_enc,
-                 "tx_type" => "ContractCallTx",
+                 "source_tx_hash" => ^tx1_hash_enc,
+                 "source_tx_type" => "ContractCallTx",
+                 "internal_source" => true,
                  "tx" => %{"fee" => 111_111, "name" => ^plain_name}
                } = claim1
       end
