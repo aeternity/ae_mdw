@@ -174,23 +174,33 @@ defmodule AeMdw.Activities do
 
   defp render_activities(state, account_pk, activities_locators_data) do
     {activities_locators_data, _acc} =
-      Enum.map_reduce(activities_locators_data, {nil, nil}, fn
-        {{height, _txi, _local_idx}, _data} = locator, {height, enc_kb_hash} = kb_info ->
-          {{enc_kb_hash, locator}, kb_info}
+      Enum.map_reduce(activities_locators_data, nil, fn
+        {{_height, txi, _local_idx}, _data} = locator, {:txi, txi, enc_mb_hash} = block_info ->
+          {{enc_mb_hash, locator}, block_info}
 
-        {{height, _txi, _local_idx}, _data} = locator, _kb_info ->
+        {{height, -1, _local_idx}, _data} = locator, {:gen, height, enc_kb_hash} = block_info ->
+          {{enc_kb_hash, locator}, block_info}
+
+        {{height, -1, _local_idx}, _data} = locator, _block_info ->
           Model.block(hash: kb_hash) = State.fetch!(state, Model.Block, {height, -1})
           enc_kb_hash = Enc.encode(:key_block_hash, kb_hash)
 
-          {{enc_kb_hash, locator}, {height, enc_kb_hash}}
+          {{enc_kb_hash, locator}, {:gen, height, enc_kb_hash}}
+
+        {{_height, txi, _local_idx}, _data} = locator, _block_info ->
+          Model.tx(block_index: block_index) = State.fetch!(state, Model.Tx, txi)
+          Model.block(hash: kb_hash) = State.fetch!(state, Model.Block, block_index)
+          enc_mb_hash = Enc.encode(:micro_block_hash, kb_hash)
+
+          {{enc_mb_hash, locator}, {:txi, txi, enc_mb_hash}}
       end)
 
-    Enum.map(activities_locators_data, fn {key_block_hash, {{height, txi, _local_idx}, data}} ->
+    Enum.map(activities_locators_data, fn {block_hash, {{height, txi, _local_idx}, data}} ->
       {type, payload} = render_payload(state, account_pk, height, txi, data)
 
       %{
         height: height,
-        key_block_hash: key_block_hash,
+        block_hash: block_hash,
         type: type,
         payload: payload
       }
