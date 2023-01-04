@@ -26,18 +26,21 @@ defmodule AeMdwWeb.ChannelController do
     block_hash = params["block_hash"]
 
     with {:ok, channel_pk} <- Validate.id(id, [:channel]),
-         true <- valid_optional_block_hash?(block_hash),
-         {:ok, channel} <- Channels.fetch_channel(state, channel_pk, block_hash) do
+         {:ok, type_block_hash} <- valid_optional_block_hash?(block_hash),
+         {:ok, channel} <- Channels.fetch_channel(state, channel_pk, type_block_hash) do
       json(conn, channel)
     end
   end
 
-  defp valid_optional_block_hash?(nil), do: true
+  defp valid_optional_block_hash?(nil), do: {:ok, nil}
 
   defp valid_optional_block_hash?(block_hash) do
-    case Validate.id(block_hash) do
-      {:ok, _hash} -> true
-      {:error, _reason} -> false
+    with {:ok, hash} <- Validate.id(block_hash) do
+      if String.starts_with?(block_hash, "kh") do
+        {:ok, {:key, hash}}
+      else
+        {:ok, {:micro, hash}}
+      end
     end
   end
 end

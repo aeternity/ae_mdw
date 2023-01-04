@@ -403,5 +403,27 @@ defmodule AeMdwWeb.ChannelControllerTest do
                  |> json_response(200)
       end
     end
+
+    test "returns error when channel does not exist", %{conn: conn, store: store} do
+      channel_id = encode(:channel, :crypto.strong_rand_bytes(32))
+      msg = "not found: #{channel_id}"
+
+      assert %{"error" => ^msg} =
+               conn
+               |> with_store(store)
+               |> get("/v2/channels/#{channel_id}")
+               |> json_response(404)
+    end
+
+    test "returns error when block is invalid", %{conn: conn, store: store} do
+      channel_pk = :crypto.strong_rand_bytes(32)
+      store = Store.put(store, Model.ActiveChannel, Model.channel(index: channel_pk))
+
+      assert %{"error" => "invalid id: kh_123"} =
+               conn
+               |> with_store(store)
+               |> get("/v2/channels/#{encode(:channel, channel_pk)}", block_hash: "kh_123")
+               |> json_response(400)
+    end
   end
 end
