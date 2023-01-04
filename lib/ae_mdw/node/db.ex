@@ -14,6 +14,7 @@ defmodule AeMdw.Node.Db do
 
   @type pubkey() :: <<_::256>>
   @type hash_type() :: nil | :key | :micro
+  @type hash() :: <<_::256>>
   @type height_hash() :: {hash_type(), pos_integer(), binary()}
   @type balances_map() :: %{{:address, pubkey()} => integer()}
   @type account_balance() :: {integer() | nil, height_hash()}

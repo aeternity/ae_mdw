@@ -22,10 +22,25 @@ defmodule AeMdwWeb.ChannelController do
   end
 
   @spec channel(Conn.t(), map()) :: Conn.t()
-  def channel(%Conn{assigns: %{state: state}} = conn, %{"id" => id}) do
+  def channel(%Conn{assigns: %{state: state}} = conn, %{"id" => id} = params) do
+    block_hash = params["block_hash"]
+
     with {:ok, channel_pk} <- Validate.id(id, [:channel]),
-         {:ok, channel} <- Channels.fetch_channel(state, channel_pk) do
+         {:ok, type_block_hash} <- valid_optional_block_hash?(block_hash),
+         {:ok, channel} <- Channels.fetch_channel(state, channel_pk, type_block_hash) do
       json(conn, channel)
+    end
+  end
+
+  defp valid_optional_block_hash?(nil), do: {:ok, nil}
+
+  defp valid_optional_block_hash?(block_hash) do
+    with {:ok, hash} <- Validate.id(block_hash) do
+      if String.starts_with?(block_hash, "kh") do
+        {:ok, {:key, hash}}
+      else
+        {:ok, {:micro, hash}}
+      end
     end
   end
 end
