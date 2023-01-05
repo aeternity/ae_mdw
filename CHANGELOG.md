@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.34.1](https://www.github.com/aeternity/ae_mdw/compare/v1.34.0...v1.34.1) (2023-01-05)
+
+
+### Miscellaneous
+
+* **ci:** use custom token instead of default ([#1107](https://www.github.com/aeternity/ae_mdw/issues/1107)) ([d1f0e6a](https://www.github.com/aeternity/ae_mdw/commit/d1f0e6a8b7c385401ba957af4d8d1ab43f5e7900))
+
 ## [1.34.0](https://www.github.com/aeternity/ae_mdw/compare/v1.33.0...v1.34.0) (2023-01-04)
 
 
