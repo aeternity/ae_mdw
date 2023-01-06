@@ -50,7 +50,7 @@ Firstly, clone the middleware repo:
 
 `git clone https://github.com/aeternity/ae_mdw && cd ae_mdw`
 
-Before running it it's recommeded to use a Node database snapshot for faster syncing.
+Before running it, it's recommended to use a Node database snapshot for faster syncing.
 
 ### Database Snapshot
 
