@@ -1017,7 +1017,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
     {:ok, aetx} =
       :aec_spend_tx.new(%{
         sender_id: account_id,
-        recipient_id: account_id,
+        recipient_id: next_account_id,
         amount: 2,
         fee: 3,
         nonce: 4,

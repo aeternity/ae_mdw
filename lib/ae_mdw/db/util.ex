@@ -220,8 +220,12 @@ defmodule AeMdw.Db.Util do
 
   @spec call_account_pk(state(), txi()) :: Db.pubkey()
   def call_account_pk(state, call_txi) do
-    {tx, _tx_hash, :contract_call_tx} = read_node_tx_details(state, {call_txi, -1})
+    case read_node_tx_details(state, {call_txi, -1}) do
+      {tx, _tx_hash, :contract_call_tx} ->
+        tx |> :aect_call_tx.caller_id() |> :aeser_id.specialize(:account)
 
-    tx |> :aect_call_tx.caller_id() |> :aeser_id.specialize(:account)
+      {tx, _tx_hash, :contract_create_tx} ->
+        tx |> :aect_create_tx.owner_id() |> :aeser_id.specialize(:account)
+    end
   end
 end
