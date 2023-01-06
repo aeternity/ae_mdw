@@ -86,9 +86,10 @@ defmodule AeMdw.Activities do
   """
   @spec fetch_account_activities(state(), binary(), pagination(), range(), query(), cursor()) ::
           {:ok, activity() | nil, [activity()], activity() | nil} | {:error, Error.t()}
-  def fetch_account_activities(state, account, pagination, range, _query, cursor) do
+  def fetch_account_activities(state, account, pagination, range, query, cursor) do
     with {:ok, account_pk} <- Validate.id(account),
-         {:ok, cursor} <- deserialize_cursor(cursor) do
+         {:ok, cursor} <- deserialize_cursor(cursor),
+         {:ok, filters} <- convert_params(query) do
       {prev_cursor, activities_locators_data, next_cursor} =
         fn direction ->
           {gen_scope, txi_scope} =
@@ -110,15 +111,28 @@ defmodule AeMdw.Activities do
               nil -> {nil, nil, nil}
             end
 
+          ownership_only? = Keyword.get(filters, :ownership_only?, false)
+
           gens_stream =
-            state
-            |> build_gens_int_transfers_stream(direction, account_pk, gen_scope, gen_cursor)
-            |> Stream.chunk_by(fn {gen, _data} -> gen end)
-            |> build_gens_stream(direction)
+            if ownership_only? do
+              []
+            else
+              state
+              |> build_gens_int_transfers_stream(direction, account_pk, gen_scope, gen_cursor)
+              |> Stream.chunk_by(fn {gen, _data} -> gen end)
+              |> build_gens_stream(direction)
+            end
 
           txi_stream =
             [
-              build_txs_stream(state, direction, account_pk, txi_scope, txi_cursor),
+              build_txs_stream(
+                state,
+                direction,
+                account_pk,
+                txi_scope,
+                txi_cursor,
+                ownership_only?
+              ),
               build_int_contract_calls_stream(
                 state,
                 direction,
@@ -131,10 +145,25 @@ defmodule AeMdw.Activities do
                 direction,
                 account_pk,
                 txi_scope,
-                txi_cursor
+                txi_cursor,
+                ownership_only?
               ),
-              build_aexn_transfers_stream(state, direction, account_pk, txi_scope, txi_cursor),
-              build_txs_int_transfers_stream(state, direction, account_pk, gen_scope, gen_cursor),
+              build_aexn_transfers_stream(
+                state,
+                direction,
+                account_pk,
+                txi_scope,
+                txi_cursor,
+                ownership_only?
+              ),
+              build_txs_int_transfers_stream(
+                state,
+                direction,
+                account_pk,
+                gen_scope,
+                gen_cursor,
+                ownership_only?
+              ),
               build_name_claims_stream(state, direction, account_pk, txi_scope, txi_cursor)
             ]
             |> Collection.merge(direction)
@@ -309,6 +338,26 @@ defmodule AeMdw.Activities do
     |> Collection.merge(direction)
   end
 
+  defp build_txs_int_transfers_stream(
+         _state,
+         _direction,
+         _account_pk,
+         _gen_scope,
+         _gen_cursor,
+         true = _ownership_only?
+       ),
+       do: []
+
+  defp build_txs_int_transfers_stream(
+         state,
+         direction,
+         account_pk,
+         gen_scope,
+         gen_cursor,
+         false = _ownership_only?
+       ),
+       do: build_txs_int_transfers_stream(state, direction, account_pk, gen_scope, gen_cursor)
+
   defp build_txs_int_transfers_stream(state, direction, account_pk, gen_scope, gen_cursor) do
     @txs_int_transfer_kinds
     |> Enum.map(fn kind ->
@@ -342,6 +391,26 @@ defmodule AeMdw.Activities do
     end)
     |> Collection.merge(direction)
   end
+
+  defp build_ext_contract_calls_stream(
+         _state,
+         _direction,
+         _account_pk,
+         _txi_scope,
+         _txi_cursor,
+         true = _ownership_only?
+       ),
+       do: []
+
+  defp build_ext_contract_calls_stream(
+         state,
+         direction,
+         account_pk,
+         txi_scope,
+         txi_cursor,
+         false = _ownership_only?
+       ),
+       do: build_ext_contract_calls_stream(state, direction, account_pk, txi_scope, txi_cursor)
 
   defp build_ext_contract_calls_stream(state, direction, account_pk, txi_scope, txi_cursor) do
     0..@max_pos
@@ -402,13 +471,20 @@ defmodule AeMdw.Activities do
     end
   end
 
-  defp build_txs_stream(state, direction, account_pk, txi_scope, txi_cursor) do
+  defp build_txs_stream(state, direction, account_pk, txi_scope, txi_cursor, ownership_only?) do
     state
-    |> Fields.account_fields_stream(account_pk, direction, txi_scope, txi_cursor)
+    |> Fields.account_fields_stream(account_pk, direction, txi_scope, txi_cursor, ownership_only?)
     |> Stream.map(fn {txi, tx_type, tx_field_pos} -> {txi, {:field, tx_type, tx_field_pos}} end)
   end
 
-  defp build_aexn_transfers_stream(state, direction, account_pk, txi_scope, txi_cursor) do
+  defp build_aexn_transfers_stream(
+         state,
+         direction,
+         account_pk,
+         txi_scope,
+         txi_cursor,
+         ownership_only?
+       ) do
     transfers_stream =
       state
       |> build_aexn_transfer_stream(
@@ -435,7 +511,16 @@ defmodule AeMdw.Activities do
         {txi, {:aexn, aexn_type, from_pk, account_pk, value, index}}
       end)
 
-    Collection.merge([transfers_stream, rev_transfers_stream], direction)
+    stream = Collection.merge([transfers_stream, rev_transfers_stream], direction)
+
+    if ownership_only? do
+      Stream.filter(stream, fn {txi, _locator} ->
+        # if owned by, only allow transactions in which the account of the contractcalltx = account_pk
+        account_pk == DbUtil.call_account_pk(state, txi)
+      end)
+    else
+      stream
+    end
   end
 
   defp build_aexn_transfer_stream(state, table, direction, account_pk, txi_scope, txi_cursor) do
@@ -593,4 +678,17 @@ defmodule AeMdw.Activities do
         {:error, ErrInput.Cursor.exception(value: cursor)}
     end
   end
+
+  defp convert_params(query) do
+    Enum.reduce_while(query, {:ok, []}, fn param, {:ok, filters} ->
+      case convert_param(param) do
+        {:ok, filter} -> {:cont, {:ok, [filter | filters]}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  defp convert_param({"owned_only", _val}), do: {:ok, {:ownership_only?, true}}
+
+  defp convert_param(other_param), do: {:error, ErrInput.Query.exception(value: other_param)}
 end
