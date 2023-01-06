@@ -2,6 +2,7 @@ NAME="aeternity@localhost"
 
 case $1 in
   "shell")
+    mix deps.get
     iex --sname $NAME -S mix phx.server
     ;;
 
