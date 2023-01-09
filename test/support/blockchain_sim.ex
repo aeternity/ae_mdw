@@ -69,7 +69,30 @@ defmodule AeMdwWeb.BlockchainSim do
             []
         end
 
-      Mock.with_mocks [{:aec_db, [:passthrough], aec_db_mock} | ga_mocks] do
+      pf_mocks =
+        case mock_accounts[:pf] do
+          {:id, :account, pf_pk} ->
+            %{hash: block_hash} = mock_blocks[:mb]
+            block_hash = Validate.id!(block_hash)
+            pf_tx = mock_transactions[:pf_tx]
+            pf_tx_hash = if pf_tx, do: :aetx_sign.hash(pf_tx)
+
+            if pf_tx_hash do
+              [
+                {:aec_chain, [:passthrough],
+                 get_contract_call: fn _pk, _call_id, ^block_hash ->
+                   {:ok, call_rec("paying_for", pf_pk)}
+                 end}
+              ]
+            else
+              []
+            end
+
+          nil ->
+            []
+        end
+
+      Mock.with_mocks [{:aec_db, [:passthrough], aec_db_mock}] ++ ga_mocks ++ pf_mocks do
         var!(blocks) = mock_blocks
         var!(transactions) = mock_transactions
         var!(accounts) = mock_accounts

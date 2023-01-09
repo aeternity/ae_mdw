@@ -292,6 +292,13 @@ defmodule AeMdw.Node.ContractCallFixtures do
      {:id, :contract, contract_pk}, 1_000_000_000, 1_000, "", :ok, []}
   end
 
+  def call_rec("paying_for", account_pk) do
+    contract_pk = <<123::256>>
+
+    {:call, :aect_call.id(account_pk, 2, contract_pk), {:id, :account, account_pk}, 2, 1,
+     {:id, :contract, contract_pk}, 1_000_000_000, 1_000, "", :ok, []}
+  end
+
   @spec call_rec(fname(), pubkey(), AeMdw.Blocks.height(), pubkey(), [event_log()]) ::
           call_record()
   def call_rec(fname, contract_pk, height, event_pk, extra_logs \\ [])

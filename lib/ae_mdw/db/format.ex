@@ -13,6 +13,7 @@ defmodule AeMdw.Db.Format do
   alias AeMdw.Names
   alias AeMdw.Node
   alias AeMdw.Txs
+  alias AeMdw.Db.Sync.InnerTx
 
   require Model
 
@@ -322,11 +323,11 @@ defmodule AeMdw.Db.Format do
     |> Map.merge(call_details)
   end
 
-  defp custom_encode(_state, :ga_meta_tx, tx, tx_rec, _signed_tx, _txi, block_hash) do
+  defp custom_encode(state, :ga_meta_tx, tx, tx_rec, _signed_tx, txi, block_hash) do
     owner_pk = :aega_meta_tx.origin(tx_rec)
     auth_id = :aega_meta_tx.auth_id(tx_rec)
 
-    tx = maybe_encode_inner_tx_pointers(tx)
+    tx = add_inner_tx_details(state, :ga_meta_tx, tx, tx_rec, txi, block_hash)
 
     case :aec_chain.get_ga_call(owner_pk, auth_id, block_hash) do
       {:ok, ga_object} ->
@@ -341,8 +342,8 @@ defmodule AeMdw.Db.Format do
     end
   end
 
-  defp custom_encode(_state, :paying_for_tx, tx, _tx_rec, _signed_tx, _txi, _block_hash) do
-    maybe_encode_inner_tx_pointers(tx)
+  defp custom_encode(state, :paying_for_tx, tx, tx_rec, _signed_tx, txi, block_hash) do
+    add_inner_tx_details(state, :paying_for_tx, tx, tx_rec, txi, block_hash)
   end
 
   defp custom_encode(_state, :contract_create_tx, tx, tx_rec, _signed_tx, _txi, block_hash) do
@@ -522,10 +523,26 @@ defmodule AeMdw.Db.Format do
   defp expand(_state, nil),
     do: nil
 
-  defp maybe_encode_inner_tx_pointers(%{"tx" => %{"tx" => %{"type" => "NameUpdateTx"}}} = tx),
-    do: update_in(tx, ["tx", "tx", "pointers"], &encode_pointers/1)
+  defp add_inner_tx_details(state, tx_type, tx, tx_rec, txi, block_hash) do
+    inner_signed_tx = InnerTx.signed_tx(tx_type, tx_rec)
+    {inner_tx_type, inner_tx_rec} = inner_signed_tx |> :aetx_sign.tx() |> :aetx.specialize_type()
 
-  defp maybe_encode_inner_tx_pointers(tx), do: tx
+    if inner_tx_type != :contract_create_tx do
+      update_in(tx, ["tx", "tx"], fn inner_tx ->
+        custom_encode(
+          state,
+          inner_tx_type,
+          inner_tx,
+          inner_tx_rec,
+          inner_signed_tx,
+          txi,
+          block_hash
+        )
+      end)
+    else
+      tx
+    end
+  end
 
   # Once we move to 6.7+ we can use :aetx.type_to_swagger_name/1
   @spec type_to_swagger_name(Node.tx_type()) :: String.t()

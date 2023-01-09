@@ -5,6 +5,7 @@ defmodule AeMdwWeb.TxControllerTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
   alias AeMdw.Db.Util
+  alias AeMdw.DryRun.Contract
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
 
@@ -139,8 +140,8 @@ defmodule AeMdwWeb.TxControllerTest do
       conn: conn,
       store: store
     } do
-      name = "binarypointer.chain"
-      {:ok, name_hash} = :aens.get_name_hash(name)
+      plain_name = "binarypointer.chain"
+      {:ok, name_hash} = :aens.get_name_hash(plain_name)
       pointer_id = :aeser_id.create(:account, <<1::256>>)
       oracle_id = :aeser_id.create(:oracle, <<2::256>>)
       name_account_id = :aeser_id.create(:account, <<3::256>>)
@@ -185,6 +186,7 @@ defmodule AeMdwWeb.TxControllerTest do
           |> Store.put(Model.Block, Model.block(index: {0, -1}, tx_index: 1))
           |> Store.put(Model.Block, Model.block(index: {0, 0}, hash: mb_hash, tx_index: 1))
           |> Store.put(Model.Block, Model.block(index: {1, -1}, tx_index: 2))
+          |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: plain_name))
 
         tx_hash = encode(:tx_hash, :aetx_sign.hash(tx))
 
@@ -211,6 +213,171 @@ defmodule AeMdwWeb.TxControllerTest do
                      }
                    },
                    "type" => "GAMetaTx"
+                 }
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs/#{tx_hash}")
+                 |> json_response(200)
+      end
+    end
+
+    test "returns a paying_for with name_update_tx having binary pointer", %{
+      conn: conn,
+      store: store
+    } do
+      plain_name = "binarypointer.chain"
+      {:ok, name_hash} = :aens.get_name_hash(plain_name)
+      pointer_id = :aeser_id.create(:account, <<1::256>>)
+      oracle_id = :aeser_id.create(:oracle, <<2::256>>)
+      name_account_id = :aeser_id.create(:account, <<3::256>>)
+
+      non_string_pointer_key =
+        <<96, 70, 239, 88, 30, 239, 116, 157, 73, 35, 96, 177, 84, 44, 123, 233, 151, 181, 221,
+          202, 13, 46, 81, 10, 67, 18, 178, 23, 153, 139, 252, 116>>
+
+      non_string_pointer_key64 = Base.encode64(non_string_pointer_key)
+
+      {:ok, name_update_tx} =
+        :aens_update_tx.new(%{
+          account_id: name_account_id,
+          nonce: 1,
+          name_id: :aeser_id.create(:name, name_hash),
+          name_ttl: 1_000,
+          pointers: [
+            {:pointer, non_string_pointer_key, pointer_id},
+            {:pointer, "oracle_pubkey", oracle_id}
+          ],
+          client_ttl: 1_000,
+          fee: 5_000
+        })
+
+      pointer_id = encode_account(<<1::256>>)
+      oracle_id = encode(:oracle_pubkey, <<2::256>>)
+      name_account_id = encode_account(<<3::256>>)
+      name_id = encode(:name, name_hash)
+
+      with_blockchain %{pf: 10_000},
+        mb: [
+          pf_tx: tx(:paying_for_tx, :pf, %{tx: :aetx_sign.new(name_update_tx, [])})
+        ] do
+        %{txs: [tx]} = blocks[:mb]
+        {:id, :account, account_pk} = accounts[:pf]
+        payer_id = encode(:account_pubkey, account_pk)
+        mb_hash = :crypto.strong_rand_bytes(32)
+
+        store =
+          store
+          |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {0, 0}, id: :aetx_sign.hash(tx)))
+          |> Store.put(Model.Block, Model.block(index: {0, -1}, tx_index: 1))
+          |> Store.put(Model.Block, Model.block(index: {0, 0}, hash: mb_hash, tx_index: 1))
+          |> Store.put(Model.Block, Model.block(index: {1, -1}, tx_index: 2))
+          |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: plain_name))
+
+        tx_hash = encode(:tx_hash, :aetx_sign.hash(tx))
+
+        assert %{
+                 "hash" => ^tx_hash,
+                 "tx" => %{
+                   "payer_id" => ^payer_id,
+                   "tx" => %{
+                     "tx" => %{
+                       "account_id" => ^name_account_id,
+                       "client_ttl" => 1000,
+                       "fee" => 5000,
+                       "name_id" => ^name_id,
+                       "name_ttl" => 1000,
+                       "nonce" => 1,
+                       "pointers" => [
+                         %{"key" => ^non_string_pointer_key64, "id" => ^pointer_id},
+                         %{"key" => "oracle_pubkey", "id" => ^oracle_id}
+                       ],
+                       "type" => "NameUpdateTx",
+                       "version" => 1
+                     }
+                   },
+                   "type" => "PayingForTx"
+                 }
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs/#{tx_hash}")
+                 |> json_response(200)
+      end
+    end
+
+    test "returns a paying_for with contract call details", %{
+      conn: conn,
+      store: store
+    } do
+      contract_pk = <<123::256>>
+      function_name = "set_last_caller"
+      args = [encode_account(<<1::256>>)]
+      aetx = Contract.new_call_tx(:crypto.strong_rand_bytes(32), contract_pk, function_name, args)
+
+      with_blockchain %{pf: 10_000},
+        mb: [
+          pf_tx: tx(:paying_for_tx, :pf, %{tx: :aetx_sign.new(aetx, [])})
+        ] do
+        %{txs: [tx]} = blocks[:mb]
+        {:id, :account, account_pk} = accounts[:pf]
+        payer_id = encode(:account_pubkey, account_pk)
+        mb_hash = :crypto.strong_rand_bytes(32)
+
+        store =
+          store
+          |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {0, 0}, id: :aetx_sign.hash(tx)))
+          |> Store.put(Model.Block, Model.block(index: {0, -1}, tx_index: 1))
+          |> Store.put(Model.Block, Model.block(index: {0, 0}, hash: mb_hash, tx_index: 1))
+          |> Store.put(Model.Block, Model.block(index: {1, -1}, tx_index: 2))
+          |> Store.put(
+            Model.Field,
+            Model.field(index: {:contract_create_tx, nil, contract_pk, 0})
+          )
+          |> Store.put(
+            Model.ContractCall,
+            Model.contract_call(
+              index: {0, 1},
+              fun: function_name,
+              args: args,
+              result: "ok",
+              return: %{type: "unit", value: ""}
+            )
+          )
+
+        {mod, contract_call_tx} = :aetx.specialize_callback(aetx)
+
+        %{"call_data" => call_data, "contract_id" => contract_id} =
+          mod.for_client(contract_call_tx)
+
+        tx_hash = encode(:tx_hash, :aetx_sign.hash(tx))
+
+        assert %{
+                 "hash" => ^tx_hash,
+                 "tx" => %{
+                   "payer_id" => ^payer_id,
+                   "tx" => %{
+                     "tx" => %{
+                       "abi_version" => 3,
+                       "amount" => 0,
+                       "arguments" => ^args,
+                       "call_data" => ^call_data,
+                       "caller_id" => ^payer_id,
+                       "contract_id" => ^contract_id,
+                       "function" => "set_last_caller",
+                       "log" => [],
+                       "nonce" => 1,
+                       "result" => "ok",
+                       "return" => %{
+                         "type" => "unit",
+                         "value" => ""
+                       },
+                       "return_type" => "ok",
+                       "type" => "ContractCallTx",
+                       "version" => 1
+                     }
+                   },
+                   "type" => "PayingForTx"
                  }
                } =
                  conn
