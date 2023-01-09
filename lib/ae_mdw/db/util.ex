@@ -18,6 +18,7 @@ defmodule AeMdw.Db.Util do
 
   @typep state() :: State.t()
   @typep height() :: Blocks.height()
+  @typep txi() :: Txs.txi()
 
   @spec read_tx!(state(), Txs.txi()) :: Model.tx()
   def read_tx!(state, txi), do: State.fetch!(state, Model.Tx, txi)
@@ -215,5 +216,16 @@ defmodule AeMdw.Db.Util do
       end
 
     {type, :aec_headers.height(header)}
+  end
+
+  @spec call_account_pk(state(), txi()) :: Db.pubkey()
+  def call_account_pk(state, call_txi) do
+    case read_node_tx_details(state, {call_txi, -1}) do
+      {tx, _tx_hash, :contract_call_tx} ->
+        tx |> :aect_call_tx.caller_id() |> :aeser_id.specialize(:account)
+
+      {tx, _tx_hash, :contract_create_tx} ->
+        tx |> :aect_create_tx.owner_id() |> :aeser_id.specialize(:account)
+    end
   end
 end
