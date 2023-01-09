@@ -81,6 +81,7 @@ defmodule AeMdw.MixProject do
           :aesc_force_progress_tx,
           :aesc_offchain_tx,
           :aesc_settle_tx,
+          :aesc_snapshot_solo_tx,
           :aesc_set_delegates_tx,
           :aesc_slash_tx,
           :aesc_utils,
