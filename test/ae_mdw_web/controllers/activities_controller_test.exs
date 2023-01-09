@@ -1000,7 +1000,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
     end
   end
 
-  test "when ownership_only param given, it only returns owned by activities", %{conn: conn} do
+  test "when ownership_only param given, it returns owned by activities", %{conn: conn} do
     account_pk = TS.address(0)
     next_account_pk = TS.address(1)
     contract_pk = TS.address(2)
@@ -1062,8 +1062,6 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {height, mbi}, id: "tx-hash1"))
       |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 2}))
       |> Store.put(Model.Tx, Model.tx(index: 2, block_index: {height, mbi}, id: "tx-hash2"))
-      # Skipped
-      |> Store.put(Model.Field, Model.field(index: {:spend_tx, 2, account_pk, 6}))
       |> Store.put(
         Model.Field,
         Model.field(index: {:contract_create_tx, nil, next_account_pk, 4})
@@ -1130,6 +1128,66 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                "type" => "Aex9TransferEvent",
                "payload" => %{"amount" => 1}
              } = tx3
+    end
+  end
+
+  test "when ownership_only param given, it skips non-initiated activities", %{conn: conn} do
+    account_pk = TS.address(0)
+    contract_pk = TS.address(2)
+    account = Enc.encode(:account_pubkey, account_pk)
+    account_id = :aeser_id.create(:account, account_pk)
+    next_account_pk = TS.address(1)
+    next_account_id = :aeser_id.create(:account, next_account_pk)
+    height = 398
+    mbi = 2
+    kb_hash = TS.key_block_hash(0)
+    mb_hash = TS.micro_block_hash(0)
+
+    store =
+      empty_store()
+      |> Store.put(Model.Field, Model.field(index: {:spend_tx, 2, account_pk, 1}))
+      |> Store.put(
+        Model.Field,
+        Model.field(index: {:contract_create_tx, nil, next_account_pk, 2})
+      )
+      |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
+      |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
+      |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {height, mbi}, id: "tx-hash1"))
+
+    assert %{"prev" => nil, "data" => [], "next" => _next_url} =
+             conn
+             |> with_store(store)
+             |> get("/v2/accounts/#{account}/activities", owned_only: 1, direction: "forward")
+             |> json_response(200)
+
+    {:ok, aetx} =
+      :aec_spend_tx.new(%{
+        sender_id: account_id,
+        recipient_id: next_account_id,
+        amount: 2,
+        fee: 3,
+        nonce: 4,
+        payload: ""
+      })
+
+    {:spend_tx, tx} = :aetx.specialize_type(aetx)
+
+    # Checking it returns results without the filter
+    with_mocks [
+      {Db, [],
+       [
+         get_tx_data: fn
+           "tx-hash1" -> {"", :spend_tx, aetx, tx}
+         end
+       ]},
+      {:aec_db, [], [get_header: fn _block_hash -> :header end]},
+      {:aetx_sign, [], [serialize_for_client: fn :header, ^aetx -> %{} end]}
+    ] do
+      assert %{"prev" => nil, "data" => [_activity1], "next" => _next_url} =
+               conn
+               |> with_store(store)
+               |> get("/v2/accounts/#{account}/activities", direction: "forward")
+               |> json_response(200)
     end
   end
 
