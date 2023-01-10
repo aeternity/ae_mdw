@@ -1153,10 +1153,6 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       )
       |> Store.put(
         Model.Field,
-        Model.field(index: {:channel_offchain_tx, 1, account_pk, 4})
-      )
-      |> Store.put(
-        Model.Field,
         Model.field(index: {:name_preclaim_tx, 3, account_pk, 5})
       )
       |> Store.put(

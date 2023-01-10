@@ -42,15 +42,6 @@ defmodule AeMdw.Db.Channels do
     ]
   end
 
-  @spec close_slash_mutations(bi_txi(), Node.tx()) :: [Mutation.t()]
-  def close_slash_mutations(bi_txi, tx) do
-    channel_pk = :aesc_slash_tx.channel_pubkey(tx)
-
-    [
-      ChannelUpdateMutation.new(channel_pk, bi_txi)
-    ]
-  end
-
   @spec force_progress_mutations(bi_txi(), Node.tx()) :: [Mutation.t()]
   def force_progress_mutations(bi_txi, tx) do
     channel_pk = :aesc_force_progress_tx.channel_pubkey(tx)
@@ -63,15 +54,6 @@ defmodule AeMdw.Db.Channels do
   @spec slash_mutations(bi_txi(), Node.tx()) :: [Mutation.t()]
   def slash_mutations(bi_txi, tx) do
     channel_pk = :aesc_slash_tx.channel_pubkey(tx)
-
-    [
-      ChannelUpdateMutation.new(channel_pk, bi_txi)
-    ]
-  end
-
-  @spec offchain_mutations(bi_txi(), Node.tx()) :: [Mutation.t()]
-  def offchain_mutations(bi_txi, tx) do
-    channel_pk = :aesc_offchain_tx.channel_pubkey(tx)
 
     [
       ChannelUpdateMutation.new(channel_pk, bi_txi)

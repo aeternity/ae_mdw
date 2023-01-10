@@ -32,7 +32,6 @@ defmodule AeMdw.Application do
 
     init(:meta)
     init_public(:contract_cache)
-    # init(:aesophia)
     init(:app_ctrl_server)
     init(:aecore_services)
     init(:aesync)
@@ -63,21 +62,12 @@ defmodule AeMdw.Application do
     {:ok, _apps3} = Application.ensure_all_started(:aemon)
   end
 
-  # def init(:aesophia) do
-  #   Path.join(Application.app_dir(:aesophia), "ebin/*.beam")
-  #   |> Path.wildcard
-  #   |> Enum.map(&:code.load_abs(to_charlist(Path.rootname(&1))))
-  # end
-
   defp init(:meta) do
     {:ok, chain_state_code} = Extract.AbsCode.module(:aec_chain_state)
     [:header, :hash, :type] = NodeHelper.record_keys(chain_state_code, :node)
 
     {:ok, aetx_code} = Extract.AbsCode.module(:aetx)
     {:ok, aeser_code} = Extract.AbsCode.module(:aeser_api_encoder)
-    {:ok, headers_code} = Extract.AbsCode.module(:aec_headers)
-    {:ok, aens_state_tree_code} = Extract.AbsCode.module(:aens_state_tree)
-    {:ok, aeo_state_tree_code} = Extract.AbsCode.module(:aeo_state_tree)
 
     type_mod_map = Extract.tx_mod_map(aetx_code)
     type_name_map = Extract.tx_name_map(aetx_code)
@@ -118,13 +108,6 @@ defmodule AeMdw.Application do
       String.slice(str, 0, String.length(str) - 3)
     end
 
-    field_pos_map = fn code, rec ->
-      code
-      |> NodeHelper.record_keys(rec)
-      |> Stream.zip(Stream.iterate(1, &(&1 + 1)))
-      |> Enum.into(%{})
-    end
-
     min_block_reward_height =
       :aec_block_genesis.height() + :aec_governance.beneficiary_reward_delay() + 1
 
@@ -147,12 +130,6 @@ defmodule AeMdw.Application do
         tx_groups: [{[], MapSet.new(Map.keys(tx_group_map))}],
         id_type: id_type_map,
         type_id: Util.inverse(id_type_map),
-        hdr_fields: %{
-          key: NodeHelper.record_keys(headers_code, :key_header),
-          micro: NodeHelper.record_keys(headers_code, :mic_header)
-        },
-        aens_tree_pos: field_pos_map.(aens_state_tree_code, :ns_tree),
-        aeo_tree_pos: field_pos_map.(aeo_state_tree_code, :oracle_tree),
         aex9_signatures: [{[], AeMdw.Node.aex9_signatures()}],
         aexn_event_hash_types: [{[], AeMdw.Node.aexn_event_hash_types()}],
         aexn_event_names: [{[], AeMdw.Node.aexn_event_names()}],
