@@ -7,11 +7,10 @@
 - [Overview](#overview)
 - [Prerequisites](#prerequisites)
 - [Setup](#setup)
-- [Start](#start)
-  - [Start middleware](#start-middleware)
-  - [Build and start with Docker](#build-and-start-with-docker)
+  - [Database snapshot](#database-snapshot)
   - [Docker Configuration](#docker-configuration)
-  - [Docker setup for local dev](#docker-setup-for-local-dev-1)
+  - [Docker setup for local dev](#docker-setup-for-local-dev)
+  - [Tools for local development](#tools-for-local-development)
 - [Hosted infrastructure](#hosted-infrastructure)
 - [HTTP v2 (latest) endpoints](#http-v2-latest-endpoints)
 - [HTTP v1 (deprecated) endpoints](#http-v1-endpoints-deprecated)
@@ -44,9 +43,6 @@ The middleware is a caching and reporting layer which sits in front of the nodes
 
 The architecture of the app is explained [here](docs/architecture.md).
 
-## Prerequisites
-
-Ensure that you have [Elixir](https://elixir-lang.org/install.html) installed, using Erlang 22 or newer.
 
 ## Setup
 
@@ -54,72 +50,47 @@ Firstly, clone the middleware repo:
 
 `git clone https://github.com/aeternity/ae_mdw && cd ae_mdw`
 
-For syncing on testnet, change ./docker/aeternity.yaml network_id to `ae_uat`.
+Before running it, it's recommended to use a Node database snapshot for faster syncing.
 
-Following there are two options depending on which block height you want to continue syncing:
+### Database Snapshot
 
-### A) Sync from genesis block
+1. Download one of the full backups from https://downloads.aeternity.io
+2. Create a 'data' directory under the root repo dir and extract the backup to it (it creates a mnesia directory).
 
-1. Simply run the middleware with `docker-compose up`
+To start a docker container on mainnet, simply run: `docker-compose.yml up`.
 
-Next time you run the same command it will continue from the last height synced.
+You can check on `/status` page that the `node_height` is higher than 600000.
 
-### B) Sync using a Node snapshot
+In case you want to use it on testnet or for development purposes please follow the instructions bellow.
 
-1. Build the docker image with `docker-compose build`
-2. Download the one of the full backups from https://downloads.aeternity.io
-3. Create a 'data' directory under the root repo dir and extract the backup to it.
-4. Run the middleware with `docker-compose up`
+### Docker configuration
 
-You can check on `/status` page that `node_height` is higher than 600000.
+The middleware runs along with an Aeternity Node on the same docker container and BEAM VM instance.
 
-### Docker setup for local dev
+Its configuration file is found at `docker/aeternity.yaml`. Under `fork_management` key, the `network_id` options are: `ae_mainnet` and `ae_uat` (testnet).
 
-Alternatively, you can set up a local docker instance the develop for local development. Simply clone the repo and start a new docker instance:
-
-```
-git clone https://github.com/aeternity/ae_mdw && cd ae_mdw`
-make docker-shell
-```
-
-You should now be able to navigate through the project located in the `/app` directory.
-
-## Start
-
-### Start middleware
-
-  * Install dependencies with `make compile-backend`
-  * Start middleware with `make shell` (if using alternative node directory specify NODEROOT)
-
-The project will compile only backend-related files and start the middleware.
-
-### Build and start with Docker
-
-As the project comes with `Dockerfile` and `docker-compose.yml`, it is possible to build and run it by using Docker:
-
-  * To build docker image, execute in root folder of the project: `docker-compose build`
-  * Then, start middleware container `docker-compose up`
-
-### Docker Configuration
-
-By default, the `aeternity.yaml` config file which is used for `aeternity` node, is located under `docker/` folder. However, it is also possible to use your own defined `aeternity.yaml` file, by simply replacing the existing one. This file will be copied into container and will be used as a node configuration file. More information regarding configration could be found [here](https://docs.aeternity.io/en/stable/configuration/)
-
-**NOTE:** Currently, only `ae_uat` and `ae_mainnet` network ids are supported!
-
-It is also possible that middleware will produce blockchain database (if `aeternity.yaml` is configured to persist the blockchain database), which is located under `mnesia/` folder. This folder could also be replaced with existing database snapshot.
-
-**NOTE:** `db_path` option under `chain` configuration, **should not** be configured and must be left by default.
+You may also redefine other Aeternity node configurations. The `aeternity.yaml` is copied when the container is started and is used as a node configuration file. More information regarding configration can be found [here](https://docs.aeternity.io/en/stable/configuration/)
 
 ### Docker setup for local dev
 
-When inside the docker dev instance (`make docker-shell`), some useful commands
-that you might want to run are:
+The project comes with a two docker compose files:
+
+  * `docker-compose.yml`: to run the middleware as is
+  * `docker-compose-dev.yml`: for development env that includes dev tools
+
+A helper script might be used to get a docker shell on dev env: `./scripts/do.sh docker-shell`
+
+You should now be able to navigate through the project having the `/app` as working directory.
+
+### Tools for local development
+
+When inside the docker container shell, some useful commands that you might want to run are:
 
 ```
 iex --sname aeternity@localhost -S mix                                        # IEx shell
+elixir --sname aeternity@localhost -S mix phx.server                          # Start the server
 elixir --sname aeternity@localhost -S mix test                                # Unit tests
 INTEGRATION_TEST=1 elixir --sname aeternity@localhost -S mix test.integration # Integration tests
-elixir --sname aeternity@localhost -S mix phx.server                          # Start the server
 mix format                                                                    # Run formatting tool
 mix credo                                                                     # Run `credo` tool
 mix dialyzer                                                                  # Run `dialyzer` tool
