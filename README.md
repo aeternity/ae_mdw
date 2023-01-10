@@ -69,7 +69,7 @@ The middleware runs along with an Aeternity Node on the same docker container an
 
 Its configuration file is found at `docker/aeternity.yaml`. Under `fork_management` key, the `network_id` options are: `ae_mainnet` and `ae_uat` (testnet).
 
-You may also redefine other Aeternity node configurations. The `aeternity.yaml` is copied when the container is started and is used as a node configuration file. More information regarding configration can be found [here](https://docs.aeternity.io/en/stable/configuration/)
+You may also redefine other Aeternity node configurations. The `aeternity.yaml` is copied when the container is started and is used as a node configuration file. More information regarding configuration can be found [here](https://docs.aeternity.io/en/stable/configuration/)
 
 ### Docker setup for local dev
 
