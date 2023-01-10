@@ -371,7 +371,7 @@ defmodule AeMdw.Activities do
 
           nil ->
             {
-              {account_pk, kind, {@min_int, @min_int}, @min_int},
+              {account_pk, kind, {@min_int, 0}, @min_int},
               {account_pk, kind, {@max_int, @max_int}, @max_int}
             }
         end
@@ -385,6 +385,7 @@ defmodule AeMdw.Activities do
 
       state
       |> Collection.stream(Model.TargetKindIntTransferTx, direction, key_boundary, cursor)
+      |> Stream.reject(&match?({^account_pk, ^kind, {_height, -1}, _ref_txi}, &1))
       |> Stream.map(fn {^account_pk, ^kind, {_height, txi}, ref_txi} ->
         {txi, {:int_transfer, kind, ref_txi}}
       end)

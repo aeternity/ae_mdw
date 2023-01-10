@@ -357,9 +357,12 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       account_pk = TS.address(0)
       account = Enc.encode(:account_pubkey, account_pk)
       height = 398
-      [txi1, txi2, txi3] = [123, 456, 789]
+      height2 = height + 1
+      [txi1, txi2, txi3, txi4] = [123, 456, 789, 987]
       kb_hash = TS.key_block_hash(0)
+      kb_hash2 = TS.key_block_hash(1)
       mb_hash1 = TS.micro_block_hash(0)
+      enc_kb_hash2 = Enc.encode(:key_block_hash, kb_hash2)
       enc_mb_hash1 = Enc.encode(:micro_block_hash, mb_hash1)
       mb_hash2 = TS.micro_block_hash(1)
       enc_mb_hash2 = Enc.encode(:micro_block_hash, mb_hash2)
@@ -407,10 +410,25 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
             amount: 30
           )
         )
+        |> Store.put(
+          Model.TargetKindIntTransferTx,
+          Model.target_kind_int_transfer_tx(
+            index: {account_pk, "fee_lock_name", {height2, -1}, txi4}
+          )
+        )
+        |> Store.put(
+          Model.IntTransferTx,
+          Model.int_transfer_tx(
+            index: {{height2, -1}, "fee_lock_name", account_pk, txi4},
+            amount: 40
+          )
+        )
         |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height, 1}, id: "hash3"))
+        |> Store.put(Model.Tx, Model.tx(index: txi4, block_index: {height2, 1}, id: "hash4"))
         |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
         |> Store.put(Model.Block, Model.block(index: {height, 0}, hash: mb_hash1))
         |> Store.put(Model.Block, Model.block(index: {height, 1}, hash: mb_hash2))
+        |> Store.put(Model.Block, Model.block(index: {height2, -1}, hash: kb_hash2))
 
       assert %{"prev" => nil, "data" => [activity1, activity2] = data, "next" => next_url} =
                conn
@@ -438,7 +456,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                }
              } = activity2
 
-      assert %{"prev" => prev_url, "data" => [activity3], "next" => nil} =
+      assert %{"prev" => prev_url, "data" => [activity3, activity4], "next" => nil} =
                conn
                |> with_store(store)
                |> get(next_url)
@@ -446,6 +464,13 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
       assert %{"height" => 398, "type" => "InternalTransferEvent", "payload" => %{"amount" => 30}} =
                activity3
+
+      assert %{
+               "height" => 399,
+               "block_hash" => ^enc_kb_hash2,
+               "type" => "InternalTransferEvent",
+               "payload" => %{"kind" => "fee_lock_name", "amount" => 40}
+             } = activity4
 
       assert %{"data" => ^data} = conn |> with_store(store) |> get(prev_url) |> json_response(200)
     end
