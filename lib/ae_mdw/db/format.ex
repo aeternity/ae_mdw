@@ -286,6 +286,26 @@ defmodule AeMdw.Db.Format do
     |> update_in(["previous"], fn prevs -> Enum.map(prevs, &expand_name_info(state, &1)) end)
   end
 
+  @payload_index 3
+
+  defp custom_encode(_state, :channel_close_solo_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
+    tx_rec
+    |> elem(@payload_index)
+    |> put_channel_offchain_round(tx)
+  end
+
+  defp custom_encode(_state, :channel_slash_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
+    tx_rec
+    |> elem(@payload_index)
+    |> put_channel_offchain_round(tx)
+  end
+
+  defp custom_encode(_state, :channel_snapshot_solo_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
+    tx_rec
+    |> :aesc_snapshot_solo_tx.payload()
+    |> put_channel_offchain_round(tx)
+  end
+
   defp custom_encode(state, :channel_settle_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
     pubkey = tx_rec |> :aesc_settle_tx.channel_id() |> :aeser_id.specialize(:channel)
     responder_pk = Channels.fetch_channel_responder!(state, pubkey)
@@ -541,6 +561,16 @@ defmodule AeMdw.Db.Format do
       end)
     else
       tx
+    end
+  end
+
+  defp put_channel_offchain_round(payload, tx) do
+    case :aesc_utils.deserialize_payload(payload) do
+      {:ok, _signed_tx, offchain_tx} ->
+        Map.put(tx, "round", :aesc_offchain_tx.round(offchain_tx))
+
+      {:error, _reason} ->
+        tx
     end
   end
 
