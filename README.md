@@ -57,7 +57,7 @@ Before running it, it's recommended to use a Node database snapshot for faster s
 1. Download one of the full backups from https://downloads.aeternity.io
 2. Create a 'data' directory under the root repo dir and extract the backup to it (it creates a mnesia directory).
 
-To start a docker container on mainnet, simply run: `docker-compose.yml up`.
+To start a docker container on mainnet, simply run: `docker-compose up`.
 
 You can check on `/status` page that the `node_height` is higher than 600000.
 
