@@ -128,17 +128,13 @@ defmodule AeMdw.MixProject do
   defp elixirc_paths(_), do: ["lib", "priv/migrations"]
 
   # Specifies your project dependencies.
-  #
-  # Type `mix help deps` for examples and options.
   defp deps() do
     [
       {:ae_plugin, github: "aeternity/ae_plugin"},
-      # {:aesophia, path: "deps/aesophia", app: false},
       {:stream_split, "~> 0.1.5"},
       {:ex2ms, "~> 1.6.0"},
       {:logger_file_backend, "~> 0.0.11"},
       {:smart_global, github: "ks/smart_global"},
-      {:dbg, github: "fishcakez/dbg"},
       {:phoenix, "~> 1.6.12"},
       {:phoenix_html, "~> 3.0"},
       {:esbuild, "~> 0.3", runtime: Mix.env() == :dev},
@@ -149,14 +145,12 @@ defmodule AeMdw.MixProject do
       {:poison, "~> 5.0"},
       {:plug_cowboy, "~> 2.5"},
       {:websockex, "~> 0.4.3"},
-      {:temp, "~> 0.4"},
       {:tesla, "~> 1.3.0"},
       {:dialyxir, "~> 1.2", only: :dev, runtime: false},
       {:git_hooks, "~> 0.5.0", only: :dev, runtime: false},
       {:mock, "~> 0.3.0", only: :test},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:benchee, "~> 1.0.0", only: [:dev]},
-      {:ex_json_schema, "~> 0.7.1"},
       {:excoveralls, "~> 0.14", only: :test},
       {:gen_state_machine, "~> 2.0"}
     ]
