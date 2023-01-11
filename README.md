@@ -3319,7 +3319,7 @@ Besides specifying of scope and direction as with other streaming endpoints (via
 - `kind`. At the moment, following kinds of transfers can be queried:
 	- `fee_spend_name` (fee for placing bid to the name auction)
   - `fee_refund_name` (returned fee when the new name bid outbids the previous one in the name auction)
-	- `fee_lock_name` (locked fee of the name auction winning
+	- `fee_lock_name` (locked fee of the name auction winning)
 	- `reward_oracle` (reward for the operator of the oracle (on transaction basis))
   - `reward_block` (reward for the miner (on block basis))
   - `reward_dev` (reward for funding of the development (on block basis))
