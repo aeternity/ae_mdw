@@ -20,7 +20,6 @@ defmodule AeMdw.Fields do
   @create_tx_types ~w(contract_create_tx channel_create_tx oracle_register_tx ga_attach_tx)a
   @non_owner_fields [
     {:channel_create_tx, 3},
-    {:channel_offchain_tx, 1},
     {:name_preclaim_tx, 3},
     {:name_transfer_tx, 4},
     {:spend_tx, 2}

@@ -276,14 +276,6 @@ defmodule AeMdw.Db.Sync.Transaction do
        do: Channels.set_delegates_mutations({block_index, txi}, tx)
 
   defp tx_mutations(%TxContext{
-         type: :channel_offchain_tx,
-         block_index: block_index,
-         txi: txi,
-         tx: tx
-       }),
-       do: Channels.offchain_mutations({block_index, txi}, tx)
-
-  defp tx_mutations(%TxContext{
          type: :channel_force_progress_tx,
          block_index: block_index,
          txi: txi,

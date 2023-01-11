@@ -57,7 +57,7 @@ Before running it, it's recommended to use a Node database snapshot for faster s
 1. Download one of the full backups from https://downloads.aeternity.io
 2. Create a 'data' directory under the root repo dir and extract the backup to it (it creates a mnesia directory).
 
-To start a docker container on mainnet, simply run: `docker-compose.yml up`.
+To start a docker container on mainnet, simply run: `docker-compose up`.
 
 You can check on `/status` page that the `node_height` is higher than 600000.
 
@@ -69,7 +69,7 @@ The middleware runs along with an Aeternity Node on the same docker container an
 
 Its configuration file is found at `docker/aeternity.yaml`. Under `fork_management` key, the `network_id` options are: `ae_mainnet` and `ae_uat` (testnet).
 
-You may also redefine other Aeternity node configurations. The `aeternity.yaml` is copied when the container is started and is used as a node configuration file. More information regarding configration can be found [here](https://docs.aeternity.io/en/stable/configuration/)
+You may also redefine other Aeternity node configurations. The `aeternity.yaml` is copied when the container is started and is used as a node configuration file. More information regarding configuration can be found [here](https://docs.aeternity.io/en/stable/configuration/)
 
 ### Docker setup for local dev
 

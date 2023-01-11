@@ -64,23 +64,6 @@ defmodule AeMdw.Node do
   @typep method_hash :: binary()
   @typep method_signature :: {list(), any()}
 
-  defmodule Oracle do
-    @moduledoc false
-
-    @spec get!(term(), term()) :: non_neg_integer()
-    def get!(_a, _b), do: 0
-  end
-
-  @spec aens_tree_pos(:cache | :mtree) :: non_neg_integer()
-  def aens_tree_pos(_tree_type) do
-    0
-  end
-
-  @spec aeo_tree_pos(:cache | :otree) :: non_neg_integer()
-  def aeo_tree_pos(_tree_type) do
-    0
-  end
-
   @spec aex9_signatures :: %{method_hash() => method_signature()}
   def aex9_signatures do
     Contract.aex9_signatures()
