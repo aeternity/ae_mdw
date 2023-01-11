@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.35.0](https://www.github.com/aeternity/ae_mdw/compare/v1.34.0...v1.35.0) (2023-01-11)
+
+
+### Features
+
+* add offchain rounds to channel transactions ([#1114](https://www.github.com/aeternity/ae_mdw/issues/1114)) ([d20f8f4](https://www.github.com/aeternity/ae_mdw/commit/d20f8f4d39e45463e5f04aa7a0b70f2dcad495f6))
+* allow filtering activities by ownership only ([#1111](https://www.github.com/aeternity/ae_mdw/issues/1111)) ([c91206e](https://www.github.com/aeternity/ae_mdw/commit/c91206e8fefa6745b830d0140415c24e3c9492f1))
+* render inner tx details ([#1109](https://www.github.com/aeternity/ae_mdw/issues/1109)) ([37282f2](https://www.github.com/aeternity/ae_mdw/commit/37282f276b69618d8ac4131f36965f3884bffbec))
+
+
+### Miscellaneous
+
+* **ci:** use custom token instead of default ([#1107](https://www.github.com/aeternity/ae_mdw/issues/1107)) ([d1f0e6a](https://www.github.com/aeternity/ae_mdw/commit/d1f0e6a8b7c385401ba957af4d8d1ab43f5e7900))
+* cleanup library dependencies ([#1116](https://www.github.com/aeternity/ae_mdw/issues/1116)) ([54e6cf6](https://www.github.com/aeternity/ae_mdw/commit/54e6cf6196678782332c3bbb862ae6c7a9d5a4bd))
+* remove migrations since scratch sync needed for 1.34 ([#1113](https://www.github.com/aeternity/ae_mdw/issues/1113)) ([0c8ad4b](https://www.github.com/aeternity/ae_mdw/commit/0c8ad4bcb278fe54a729b228be783ac600342792))
+* remove unused code ([#1117](https://www.github.com/aeternity/ae_mdw/issues/1117)) ([ed0c517](https://www.github.com/aeternity/ae_mdw/commit/ed0c51781f0a13ab8abab092a69e9106089105dc))
+
 ## [1.34.0](https://www.github.com/aeternity/ae_mdw/compare/v1.33.0...v1.34.0) (2023-01-04)
 
 
