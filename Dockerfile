@@ -19,7 +19,7 @@ RUN rm -r .git
 WORKDIR /home/aeternity/node
 
 # Download, and unzip latest aeternity release archive
-ARG NODE_VERSION=6.5.2
+ARG NODE_VERSION=6.7.0
 ENV NODEDIR=/home/aeternity/node/local/rel/aeternity
 RUN mkdir -p ./local/rel/aeternity/data/mnesia
 RUN curl -L --output aeternity.tar.gz https://github.com/aeternity/aeternity/releases/download/v${NODE_VERSION}/aeternity-v${NODE_VERSION}-ubuntu-x86_64.tar.gz && tar -C ./local/rel/aeternity -xf aeternity.tar.gz

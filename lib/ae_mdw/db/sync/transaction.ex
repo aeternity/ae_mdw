@@ -176,7 +176,10 @@ defmodule AeMdw.Db.Sync.Transaction do
          tx_events: tx_events,
          tx_hash: tx_hash
        }) do
-    contract_pk = :aect_call_tx.contract_pubkey(tx)
+    {_id_tag, contract_pk} =
+      tx
+      |> :aect_call_tx.contract_id()
+      |> :aeser_id.specialize()
 
     {fun_arg_res, call_rec} = Contract.call_tx_info(tx, contract_pk, block_hash)
 
