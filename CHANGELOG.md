@@ -1,5 +1,22 @@
 # Changelog
 
+### [1.35.1](https://www.github.com/aeternity/ae_mdw/compare/v1.35.0...v1.35.1) (2023-01-12)
+
+
+### Bug Fixes
+
+* ignore gen-based internal transfers for txi indexed activities ([#1115](https://www.github.com/aeternity/ae_mdw/issues/1115)) ([e152455](https://www.github.com/aeternity/ae_mdw/commit/e15245568f4a7bbc71b9f96349c3d14eba4cbb50))
+
+
+### Testing
+
+* improve aex9 dex coverage ([#1118](https://www.github.com/aeternity/ae_mdw/issues/1118)) ([bafefe5](https://www.github.com/aeternity/ae_mdw/commit/bafefe5cdd284e97a3e1b0e123ecca30f71ee4c4))
+
+
+### Miscellaneous
+
+* **ci:** always enable semver tags ([#1123](https://www.github.com/aeternity/ae_mdw/issues/1123)) ([ad1871c](https://www.github.com/aeternity/ae_mdw/commit/ad1871c869d5d9f6b9b639b0f6c7f8b2d980ecb1))
+
 ## [1.35.0](https://www.github.com/aeternity/ae_mdw/compare/v1.34.0...v1.35.0) (2023-01-11)
 
 
