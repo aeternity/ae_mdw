@@ -35,7 +35,7 @@ jobs:
           tags: |
             type=raw,value=master,enable={{is_default_branch}}
             type=sha,prefix=,enable={{is_default_branch}}
-            type=semver,pattern={{version}},enable={{is_default_branch}}
+            type=semver,pattern={{version}},enable=true
 
       - name: Login to Dockerhub
         uses: docker/login-action@v2
