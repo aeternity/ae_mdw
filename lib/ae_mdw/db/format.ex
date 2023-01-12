@@ -12,6 +12,7 @@ defmodule AeMdw.Db.Format do
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Names
   alias AeMdw.Node
+  alias AeMdw.Node.Db
   alias AeMdw.Txs
   alias AeMdw.Db.Sync.InnerTx
 
@@ -117,7 +118,7 @@ defmodule AeMdw.Db.Format do
   end
 
   defp custom_raw_data(state, :contract_call_tx, tx, tx_rec, signed_tx, block_hash) do
-    {_id_tag, contract_pk} = tx_rec |> :aect_call_tx.contract_id() |> :aeser_id.specialize()
+    contract_pk = tx_rec |> :aect_call_tx.contract_id() |> Db.id_pubkey()
     call_rec = Contract.call_rec(signed_tx, contract_pk, block_hash)
     fun_arg_res = AeMdw.Db.Contract.call_fun_arg_res(state, contract_pk, tx.tx_index)
 
@@ -373,7 +374,7 @@ defmodule AeMdw.Db.Format do
   end
 
   defp custom_encode(state, :contract_call_tx, tx, tx_rec, signed_tx, txi, block_hash) do
-    {_id_tag, contract_pk} = tx_rec |> :aect_call_tx.contract_id() |> :aeser_id.specialize()
+    contract_pk = tx_rec |> :aect_call_tx.contract_id() |> Db.id_pubkey()
     call_rec = Contract.call_rec(signed_tx, contract_pk, block_hash)
 
     fun_arg_res =

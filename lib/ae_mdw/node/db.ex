@@ -20,6 +20,7 @@ defmodule AeMdw.Node.Db do
   @type account_balance() :: {integer() | nil, height_hash()}
   @opaque key_block() :: tuple()
   @opaque micro_block() :: tuple()
+  @opaque id() :: tuple()
 
   @spec get_blocks(Blocks.block_hash(), Blocks.block_hash()) :: {key_block(), [micro_block()]}
   def get_blocks(kb_hash, next_kb_hash) do
@@ -278,5 +279,12 @@ defmodule AeMdw.Node.Db do
     else
       :key -> nil
     end
+  end
+
+  @spec id_pubkey(id()) :: pubkey()
+  def id_pubkey(id) do
+    {_id_tag, pubkey} = :aeser_id.specialize(id)
+
+    pubkey
   end
 end

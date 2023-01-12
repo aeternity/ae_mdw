@@ -143,7 +143,7 @@ defmodule AeMdw.Db.Contract do
 
   @spec logs_write(state(), txi(), txi(), Contract.call()) :: state()
   def logs_write(state, create_txi, txi, call_rec) do
-    {_id_tag, contract_pk} = call_rec |> :aect_call.contract_id() |> :aeser_id.specialize()
+    contract_pk = :aect_call.contract_pubkey(call_rec)
     raw_logs = :aect_call.log(call_rec)
 
     raw_logs
