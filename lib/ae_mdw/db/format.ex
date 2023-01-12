@@ -381,6 +381,7 @@ defmodule AeMdw.Db.Format do
       |> AeMdw.Db.Contract.call_fun_arg_res(contract_pk, txi)
       |> map_raw_values(fn
         x when is_number(x) -> x
+        x when is_tuple(x) -> Tuple.to_list(x)
         x -> to_string(x)
       end)
 
