@@ -383,7 +383,12 @@ defmodule AeMdw.Db.Format do
   defp custom_encode(_state, :contract_create_tx, tx, tx_rec, _signed_tx, _txi, block_hash) do
     init_call_details = Contract.get_init_call_details(tx_rec, block_hash)
 
-    Map.merge(tx, init_call_details)
+    encoded_details =
+      init_call_details
+      |> Map.take(["args", "return_type", "return_value"])
+      |> encode_raw_values()
+
+    Map.merge(tx, Map.merge(init_call_details, encoded_details))
   end
 
   defp custom_encode(state, :contract_call_tx, tx, tx_rec, signed_tx, txi, block_hash) do
@@ -393,10 +398,7 @@ defmodule AeMdw.Db.Format do
     fun_arg_res =
       state
       |> AeMdw.Db.Contract.call_fun_arg_res(contract_pk, txi)
-      |> map_raw_values(fn
-        x when is_number(x) -> x
-        x -> to_string(x)
-      end)
+      |> encode_raw_values()
 
     call_ser =
       :aect_call.serialize_for_client(call_rec)
@@ -471,6 +473,41 @@ defmodule AeMdw.Db.Format do
 
   def map_raw_values(x, f),
     do: f.(x)
+
+  def encode_raw_values(x) do
+    map_raw_values(x, &encode_raw_value/1)
+  end
+
+  defp encode_raw_value(value) do
+    case value do
+      {:tuple, list} when is_list(list) ->
+        %{"tuple" => Enum.map(list, &encode_raw_values/1)}
+
+      {:map, key, value} ->
+        %{"map" => %{"key" => encode_raw_values(key), "value" => encode_raw_values(value)}}
+
+      {:list, elements} ->
+        %{"list" => encode_raw_values(elements)}
+
+      {:word, value} ->
+        %{"word" => value}
+
+      t when is_tuple(t) ->
+        t |> Tuple.to_list() |> Enum.map(&encode_raw_values/1)
+
+      l when is_list(l) ->
+        Enum.map(l, &encode_raw_values/1)
+
+      num when is_number(num) ->
+        num
+
+      bin when is_binary(bin) ->
+        if String.valid?(bin), do: bin, else: Base.encode64(bin)
+
+      x ->
+        to_string(x)
+    end
+  end
 
   defp name_info_to_raw_map(
          state,
