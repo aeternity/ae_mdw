@@ -18,6 +18,7 @@ defmodule AeMdw.Db.Format do
   require Model
 
   import AeMdw.Util
+  import AeMdw.Util.Encoding, only: [encode_account: 1]
 
   @type aeser_id() :: {:id, atom(), binary()}
 
@@ -286,31 +287,44 @@ defmodule AeMdw.Db.Format do
     |> update_in(["previous"], fn prevs -> Enum.map(prevs, &expand_name_info(state, &1)) end)
   end
 
+  defp custom_encode(state, :channel_close_mutual_tx, tx, _tx_rec, signed_tx, _txi, _block_hash) do
+    put_channel_participants(tx, state, signed_tx)
+  end
+
   @payload_index 3
 
-  defp custom_encode(_state, :channel_close_solo_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
-    tx_rec
-    |> elem(@payload_index)
-    |> put_channel_offchain_round(tx)
+  defp custom_encode(state, :channel_close_solo_tx, tx, tx_rec, signed_tx, _txi, _block_hash) do
+    tx
+    |> put_channel_offchain_round(elem(tx_rec, @payload_index))
+    |> put_channel_participants(state, signed_tx)
   end
 
-  defp custom_encode(_state, :channel_slash_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
-    tx_rec
-    |> elem(@payload_index)
-    |> put_channel_offchain_round(tx)
+  defp custom_encode(
+         state,
+         :channel_force_progress_tx,
+         tx,
+         _tx_rec,
+         signed_tx,
+         _txi,
+         _block_hash
+       ) do
+    put_channel_participants(tx, state, signed_tx)
   end
 
-  defp custom_encode(_state, :channel_snapshot_solo_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
-    tx_rec
-    |> :aesc_snapshot_solo_tx.payload()
-    |> put_channel_offchain_round(tx)
+  defp custom_encode(state, :channel_slash_tx, tx, tx_rec, signed_tx, _txi, _block_hash) do
+    tx
+    |> put_channel_offchain_round(elem(tx_rec, @payload_index))
+    |> put_channel_participants(state, signed_tx)
   end
 
-  defp custom_encode(state, :channel_settle_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
-    pubkey = tx_rec |> :aesc_settle_tx.channel_id() |> :aeser_id.specialize(:channel)
-    responder_pk = Channels.fetch_channel_responder!(state, pubkey)
-    responder_id = :aeser_id.create(:account, responder_pk)
-    Map.put(tx, "responder_id", enc_id(responder_id))
+  defp custom_encode(state, :channel_snapshot_solo_tx, tx, tx_rec, signed_tx, _txi, _block_hash) do
+    tx
+    |> put_channel_offchain_round(:aesc_snapshot_solo_tx.payload(tx_rec))
+    |> put_channel_participants(state, signed_tx)
+  end
+
+  defp custom_encode(state, :channel_settle_tx, tx, _tx_rec, signed_tx, _txi, _block_hash) do
+    put_channel_participants(tx, state, signed_tx)
   end
 
   defp custom_encode(_state, :oracle_register_tx, tx, tx_rec, _signed_tx, _txi, _block_hash) do
@@ -564,7 +578,7 @@ defmodule AeMdw.Db.Format do
     end
   end
 
-  defp put_channel_offchain_round(payload, tx) do
+  defp put_channel_offchain_round(tx, payload) do
     case :aesc_utils.deserialize_payload(payload) do
       {:ok, _signed_tx, offchain_tx} ->
         Map.put(tx, "round", :aesc_offchain_tx.round(offchain_tx))
@@ -572,6 +586,18 @@ defmodule AeMdw.Db.Format do
       {:error, _reason} ->
         tx
     end
+  end
+
+  defp put_channel_participants(tx, state, signed_tx) do
+    {:ok, channel_pk} = :aesc_utils.channel_pubkey(signed_tx)
+
+    Model.channel(initiator: initiator_pk, responder: responder_pk) =
+      Channels.fetch_record!(state, channel_pk)
+
+    Map.merge(tx, %{
+      "initiator_id" => encode_account(initiator_pk),
+      "responder_id" => encode_account(responder_pk)
+    })
   end
 
   # Once we move to 6.7+ we can use :aetx.type_to_swagger_name/1

@@ -48,13 +48,6 @@ defmodule AeMdw.Channels do
     end
   end
 
-  @spec fetch_channel_responder!(state(), pubkey()) :: pubkey()
-  def fetch_channel_responder!(state, pubkey) do
-    {:ok, Model.channel(responder: responder), _source} = locate(state, pubkey)
-
-    responder
-  end
-
   @spec channels_opened_count(state(), Txs.txi(), Txs.txi()) :: non_neg_integer()
   def channels_opened_count(state, from_txi, next_txi),
     do: type_count(state, :channel_create_tx, from_txi, next_txi)
@@ -77,6 +70,12 @@ defmodule AeMdw.Channels do
       :not_found ->
         {:error, ErrInput.NotFound.exception(value: encode(:channel, channel_pk))}
     end
+  end
+
+  @spec fetch_record!(state(), pubkey()) :: Model.channel()
+  def fetch_record!(state, channel_pk) do
+    {:ok, m_channel, _table} = locate(state, channel_pk)
+    m_channel
   end
 
   defp locate(state, channel_pk) do

@@ -624,7 +624,20 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
-    test "returns channel offchain tx round", %{conn: conn, store: store} do
+    test "returns channel participants and offchain tx round", %{conn: conn, store: store} do
+      {initiator_pk1, responder_pk1} =
+        {:crypto.strong_rand_bytes(32), :crypto.strong_rand_bytes(32)}
+
+      {initiator_pk2, responder_pk2} =
+        {:crypto.strong_rand_bytes(32), :crypto.strong_rand_bytes(32)}
+
+      {initiator_pk3, responder_pk3} =
+        {:crypto.strong_rand_bytes(32), :crypto.strong_rand_bytes(32)}
+
+      from_pk1 = :crypto.strong_rand_bytes(32)
+      from_pk2 = :crypto.strong_rand_bytes(32)
+      from_pk3 = :crypto.strong_rand_bytes(32)
+
       round1 = 10
       round2 = 20
       round3 = 30
@@ -635,23 +648,12 @@ defmodule AeMdwWeb.TxControllerTest do
 
       poi = proof_of_inclusion([{<<3::256>>, 1_000}, {<<4::256>>, 2_000}])
       mb_hash = :crypto.strong_rand_bytes(32)
-
-      mb_header =
-        :aec_headers.new_micro_header(
-          0,
-          <<0::256>>,
-          <<0::256>>,
-          <<0::256>>,
-          1,
-          <<0::256>>,
-          <<0::256>>,
-          1
-        )
+      mb_header = some_mb_header()
 
       {:ok, tx1} =
         :aesc_close_solo_tx.new(%{
           channel_id: :aeser_id.create(:channel, <<1::256>>),
-          from_id: :aeser_id.create(:account, <<2::256>>),
+          from_id: :aeser_id.create(:account, from_pk1),
           payload: channel_payload(round1),
           poi: poi,
           fee: 1,
@@ -660,8 +662,8 @@ defmodule AeMdwWeb.TxControllerTest do
 
       {:ok, tx2} =
         :aesc_slash_tx.new(%{
-          channel_id: :aeser_id.create(:channel, <<1::256>>),
-          from_id: :aeser_id.create(:account, <<2::256>>),
+          channel_id: :aeser_id.create(:channel, <<2::256>>),
+          from_id: :aeser_id.create(:account, from_pk2),
           payload: channel_payload(round2),
           poi: poi,
           ttl: 1,
@@ -671,8 +673,8 @@ defmodule AeMdwWeb.TxControllerTest do
 
       {:ok, tx3} =
         :aesc_snapshot_solo_tx.new(%{
-          channel_id: :aeser_id.create(:channel, <<1::256>>),
-          from_id: :aeser_id.create(:account, <<2::256>>),
+          channel_id: :aeser_id.create(:channel, <<3::256>>),
+          from_id: :aeser_id.create(:account, from_pk3),
           payload: channel_payload(round3),
           ttl: 1,
           fee: 1,
@@ -714,9 +716,36 @@ defmodule AeMdwWeb.TxControllerTest do
           |> Store.put(Model.Block, Model.block(index: {0, -1}, tx_index: 1))
           |> Store.put(Model.Block, Model.block(index: {0, 0}, tx_index: 3, hash: mb_hash))
           |> Store.put(Model.Block, Model.block(index: {1, -1}, tx_index: 4))
+          |> Store.put(
+            Model.ActiveChannel,
+            Model.channel(index: <<1::256>>, initiator: initiator_pk1, responder: responder_pk1)
+          )
+          |> Store.put(
+            Model.ActiveChannel,
+            Model.channel(index: <<2::256>>, initiator: initiator_pk2, responder: responder_pk2)
+          )
+          |> Store.put(
+            Model.ActiveChannel,
+            Model.channel(index: <<3::256>>, initiator: initiator_pk3, responder: responder_pk3)
+          )
+
+        initiator_id1 = encode_account(initiator_pk1)
+        initiator_id2 = encode_account(initiator_pk2)
+        initiator_id3 = encode_account(initiator_pk3)
+
+        responder_id1 = encode_account(responder_pk1)
+        responder_id2 = encode_account(responder_pk2)
+        responder_id3 = encode_account(responder_pk3)
+
+        from_id1 = encode_account(from_pk1)
+        from_id2 = encode_account(from_pk2)
+        from_id3 = encode_account(from_pk3)
 
         assert %{
                  "tx" => %{
+                   "from_id" => ^from_id1,
+                   "initiator_id" => ^initiator_id1,
+                   "responder_id" => ^responder_id1,
                    "round" => ^round1,
                    "type" => "ChannelCloseSoloTx"
                  }
@@ -728,6 +757,9 @@ defmodule AeMdwWeb.TxControllerTest do
 
         assert %{
                  "tx" => %{
+                   "from_id" => ^from_id2,
+                   "initiator_id" => ^initiator_id2,
+                   "responder_id" => ^responder_id2,
                    "round" => ^round2,
                    "type" => "ChannelSlashTx"
                  }
@@ -739,8 +771,168 @@ defmodule AeMdwWeb.TxControllerTest do
 
         assert %{
                  "tx" => %{
+                   "from_id" => ^from_id3,
+                   "initiator_id" => ^initiator_id3,
+                   "responder_id" => ^responder_id3,
                    "round" => ^round3,
                    "type" => "ChannelSnapshotSoloTx"
+                 }
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs/#{encode(:tx_hash, tx_hash3)}")
+                 |> json_response(200)
+      end
+    end
+
+    test "returns channel participants", %{conn: conn, store: store} do
+      {initiator_pk1, responder_pk1} =
+        {:crypto.strong_rand_bytes(32), :crypto.strong_rand_bytes(32)}
+
+      {initiator_pk2, responder_pk2} =
+        {:crypto.strong_rand_bytes(32), :crypto.strong_rand_bytes(32)}
+
+      {initiator_pk3, responder_pk3} =
+        {:crypto.strong_rand_bytes(32), :crypto.strong_rand_bytes(32)}
+
+      from_pk1 = :crypto.strong_rand_bytes(32)
+      from_pk2 = :crypto.strong_rand_bytes(32)
+      from_pk3 = :crypto.strong_rand_bytes(32)
+
+      tx_hash1 = :crypto.strong_rand_bytes(32)
+      tx_hash2 = :crypto.strong_rand_bytes(32)
+      tx_hash3 = :crypto.strong_rand_bytes(32)
+
+      mb_hash = :crypto.strong_rand_bytes(32)
+      mb_header = some_mb_header()
+
+      {:ok, tx1} =
+        :aesc_force_progress_tx.new(%{
+          channel_id: :aeser_id.create(:channel, <<1::256>>),
+          from_id: :aeser_id.create(:account, from_pk1),
+          payload: channel_payload(11),
+          update: :aesc_offchain_update.op_meta(<<123>>),
+          state_hash: <<1::256>>,
+          round: 11,
+          offchain_trees: :aec_trees.new(),
+          fee: 1,
+          nonce: 1
+        })
+
+      {:ok, tx2} =
+        :aesc_settle_tx.new(%{
+          channel_id: :aeser_id.create(:channel, <<2::256>>),
+          from_id: :aeser_id.create(:account, from_pk2),
+          initiator_amount_final: 100,
+          responder_amount_final: 200,
+          ttl: 1,
+          fee: 1,
+          nonce: 2
+        })
+
+      {:ok, tx3} =
+        :aesc_close_mutual_tx.new(%{
+          channel_id: :aeser_id.create(:channel, <<3::256>>),
+          from_id: :aeser_id.create(:account, from_pk3),
+          initiator_amount_final: 100,
+          responder_amount_final: 200,
+          ttl: 1,
+          fee: 1,
+          nonce: 3
+        })
+
+      with_mocks [
+        {Db, [:passthrough],
+         [
+           get_tx_data: fn tx_hash when tx_hash in [tx_hash1, tx_hash2, tx_hash3] ->
+             case tx_hash do
+               ^tx_hash1 ->
+                 {_mod, tx_rec} = :aetx.specialize_type(tx1)
+                 {mb_hash, :channel_force_progress_tx, :aetx_sign.new(tx1, []), tx_rec}
+
+               ^tx_hash2 ->
+                 {_mod, tx_rec} = :aetx.specialize_type(tx2)
+                 {mb_hash, :channel_settle_tx, :aetx_sign.new(tx2, []), tx_rec}
+
+               ^tx_hash3 ->
+                 {_mod, tx_rec} = :aetx.specialize_type(tx3)
+                 {mb_hash, :channel_close_mutual_tx, :aetx_sign.new(tx3, []), tx_rec}
+             end
+           end
+         ]},
+        {:aec_db, [:passthrough],
+         find_tx_location: fn tx_hash when tx_hash in [tx_hash1, tx_hash2, tx_hash3] ->
+           mb_hash
+         end,
+         get_header: fn ^mb_hash -> mb_header end},
+        {:aec_chain, [:passthrough], [get_header: fn ^mb_hash -> {:ok, mb_header} end]},
+        {:aec_headers, [:passthrough], [height: fn ^mb_header -> 0 end]}
+      ] do
+        store =
+          store
+          |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {0, 0}, id: tx_hash1))
+          |> Store.put(Model.Tx, Model.tx(index: 2, block_index: {0, 0}, id: tx_hash2))
+          |> Store.put(Model.Tx, Model.tx(index: 3, block_index: {0, 0}, id: tx_hash3))
+          |> Store.put(Model.Block, Model.block(index: {0, -1}, tx_index: 1))
+          |> Store.put(Model.Block, Model.block(index: {0, 0}, tx_index: 3, hash: mb_hash))
+          |> Store.put(Model.Block, Model.block(index: {1, -1}, tx_index: 4))
+          |> Store.put(
+            Model.ActiveChannel,
+            Model.channel(index: <<1::256>>, initiator: initiator_pk1, responder: responder_pk1)
+          )
+          |> Store.put(
+            Model.ActiveChannel,
+            Model.channel(index: <<2::256>>, initiator: initiator_pk2, responder: responder_pk2)
+          )
+          |> Store.put(
+            Model.ActiveChannel,
+            Model.channel(index: <<3::256>>, initiator: initiator_pk3, responder: responder_pk3)
+          )
+
+        initiator_id1 = encode_account(initiator_pk1)
+        initiator_id2 = encode_account(initiator_pk2)
+        initiator_id3 = encode_account(initiator_pk3)
+
+        responder_id1 = encode_account(responder_pk1)
+        responder_id2 = encode_account(responder_pk2)
+        responder_id3 = encode_account(responder_pk3)
+
+        from_id1 = encode_account(from_pk1)
+        from_id2 = encode_account(from_pk2)
+        from_id3 = encode_account(from_pk3)
+
+        assert %{
+                 "tx" => %{
+                   "from_id" => ^from_id1,
+                   "initiator_id" => ^initiator_id1,
+                   "responder_id" => ^responder_id1,
+                   "type" => "ChannelForceProgressTx"
+                 }
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs/#{encode(:tx_hash, tx_hash1)}")
+                 |> json_response(200)
+
+        assert %{
+                 "tx" => %{
+                   "from_id" => ^from_id2,
+                   "initiator_id" => ^initiator_id2,
+                   "responder_id" => ^responder_id2,
+                   "type" => "ChannelSettleTx"
+                 }
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs/#{encode(:tx_hash, tx_hash2)}")
+                 |> json_response(200)
+
+        assert %{
+                 "tx" => %{
+                   "from_id" => ^from_id3,
+                   "initiator_id" => ^initiator_id3,
+                   "responder_id" => ^responder_id3,
+                   "type" => "ChannelCloseMutualTx"
                  }
                } =
                  conn
@@ -988,6 +1180,19 @@ defmodule AeMdwWeb.TxControllerTest do
       })
 
     :aetx_sign.serialize_to_binary(:aetx_sign.new(offchain_tx, []))
+  end
+
+  defp some_mb_header do
+    :aec_headers.new_micro_header(
+      0,
+      <<0::256>>,
+      <<0::256>>,
+      <<0::256>>,
+      1,
+      <<0::256>>,
+      <<0::256>>,
+      1
+    )
   end
 
   defp proof_of_inclusion(participants) do
