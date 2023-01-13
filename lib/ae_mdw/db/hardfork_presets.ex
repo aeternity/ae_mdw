@@ -24,14 +24,28 @@ defmodule AeMdw.Db.HardforkPresets do
   end
 
   defp do_import_account_presets() do
-    State.commit(State.new(), [
-      hardfork_mutation(:genesis, &:aec_fork_block_settings.genesis_accounts/0),
-      hardfork_mutation(:minerva, &:aec_fork_block_settings.minerva_accounts/0),
-      hardfork_mutation(:fortuna, &:aec_fork_block_settings.fortuna_accounts/0),
-      hardfork_mutation(:lima, &:aec_fork_block_settings.lima_accounts/0),
-      lima_contracts_mutation(),
-      lima_extra_accounts_mutation()
-    ])
+    iris_height =
+      :aeu_env.user_map()
+      |> get_in(["chain", "hard_forks", "#{:aec_hard_forks.protocol_vsn(:iris)}"])
+
+    minerva_accounts =
+      if iris_height != 0 do
+        [hardfork_mutation(:minerva, &:aec_fork_block_settings.minerva_accounts/0)]
+      else
+        []
+      end
+
+    State.commit(
+      State.new(),
+      [hardfork_mutation(:genesis, &:aec_fork_block_settings.genesis_accounts/0)] ++
+        minerva_accounts ++
+        [
+          hardfork_mutation(:fortuna, &:aec_fork_block_settings.fortuna_accounts/0),
+          hardfork_mutation(:lima, &:aec_fork_block_settings.lima_accounts/0),
+          lima_contracts_mutation(),
+          lima_extra_accounts_mutation()
+        ]
+    )
   end
 
   defp hardfork_mutation(hardfork, fork_settings_accounts_fn) do
