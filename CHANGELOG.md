@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.36.0](https://www.github.com/aeternity/ae_mdw/compare/v1.35.1...v1.36.0) (2023-01-13)
+
+
+### Features
+
+* add channel participants to channel txs ([#1120](https://www.github.com/aeternity/ae_mdw/issues/1120)) ([27e3e19](https://www.github.com/aeternity/ae_mdw/commit/27e3e19d6d3021d3ef9f8576ae9891d377264c24))
+
+
+### Bug Fixes
+
+* formats call return composed by tuple value ([#1124](https://www.github.com/aeternity/ae_mdw/issues/1124)) ([a386a7e](https://www.github.com/aeternity/ae_mdw/commit/a386a7ea20184d4d759a328c462f4dd2d9e81e17))
+
 ### [1.35.1](https://www.github.com/aeternity/ae_mdw/compare/v1.35.0...v1.35.1) (2023-01-12)
 
 
