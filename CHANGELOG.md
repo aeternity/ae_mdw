@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.37.0](https://www.github.com/aeternity/ae_mdw/compare/v1.36.0...v1.37.0) (2023-01-16)
+
+
+### Features
+
+* update node to version 6.7.0 ([#1121](https://www.github.com/aeternity/ae_mdw/issues/1121)) ([67e9918](https://www.github.com/aeternity/ae_mdw/commit/67e991889d3b31a8382249f4eadd80f072e34acf))
+
+
+### Bug Fixes
+
+* skip importing hardfork accounts for custom networks ([#1128](https://www.github.com/aeternity/ae_mdw/issues/1128)) ([aa8ba56](https://www.github.com/aeternity/ae_mdw/commit/aa8ba56bbe45073badc24d42db7d93515a5eb28f))
+
 ## [1.36.0](https://www.github.com/aeternity/ae_mdw/compare/v1.35.1...v1.36.0) (2023-01-13)
 
 
