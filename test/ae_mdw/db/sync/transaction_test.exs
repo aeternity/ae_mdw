@@ -171,8 +171,13 @@ defmodule AeMdw.Db.Sync.TransactionTest do
          [
            is_contract?: fn ct_pk -> ct_pk == contract_pk end,
            get_init_call_rec: fn _tx, _hash ->
-             {:call, <<1::256>>, {:id, :account, <<2::256>>}, 1, 123_456,
-              {:id, :contract, contract_pk}, 1_000_000_000, 1_234, "?", :ok, []}
+             :aect_call.new(
+               :aeser_id.create(:account, <<2::256>>),
+               1,
+               :aeser_id.create(:contract, contract_pk),
+               123_456,
+               1_000_000_000
+             )
            end
          ]},
         {AexnContracts, [],
@@ -230,8 +235,13 @@ defmodule AeMdw.Db.Sync.TransactionTest do
          [
            is_contract?: fn ct_pk -> ct_pk == contract_pk end,
            get_init_call_rec: fn _tx, _hash ->
-             {:call, <<1::256>>, {:id, :account, <<2::256>>}, 1, 123_456,
-              {:id, :contract, contract_pk}, 1_000_000_000, 1_234, "?", :ok, []}
+             :aect_call.new(
+               :aeser_id.create(:account, <<2::256>>),
+               1,
+               :aeser_id.create(:contract, contract_pk),
+               123_456,
+               1_000_000_000
+             )
            end
          ]},
         {AexnContracts, [],
@@ -278,7 +288,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   #
   defp setup_contract_on_call(signed_tx) do
     {_mod, tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
-    contract_pk = :aect_call_tx.contract_pubkey(tx)
+    {_id_tag, contract_pk} = tx |> :aect_call_tx.contract_id() |> :aeser_id.specialize()
 
     functions =
       %{
