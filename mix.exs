@@ -92,6 +92,7 @@ defmodule AeMdw.MixProject do
           :aetx,
           :aetx_env,
           :aetx_sign,
+          :aeu_env,
           :aeu_info,
           :aeu_mtrees,
           :app_ctrl,
