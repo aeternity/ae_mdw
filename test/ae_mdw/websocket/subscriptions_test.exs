@@ -108,7 +108,7 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
     end
   end
 
-  describe "has_subscribers/2" do
+  describe "has_subscribers?/2" do
     test "checks if there is any subscriber for a known versioned channel" do
       pid1 = new_pid()
       pid2 = new_pid()
@@ -125,17 +125,17 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
       assert {:ok, ["MicroBlocks"]} = Subscriptions.subscribe(pid2, :v2, "MicroBlocks")
       assert {:ok, ["Transactions"]} = Subscriptions.subscribe(pid3, :v2, "Transactions")
 
-      assert Subscriptions.has_subscribers(:v1, "KeyBlocks")
-      assert Subscriptions.has_subscribers(:v2, "MicroBlocks")
-      assert Subscriptions.has_subscribers(:v2, "Transactions")
+      assert Subscriptions.has_subscribers?(:v1, "KeyBlocks")
+      assert Subscriptions.has_subscribers?(:v2, "MicroBlocks")
+      assert Subscriptions.has_subscribers?(:v2, "Transactions")
 
-      refute Subscriptions.has_subscribers(:v2, "KeyBlocks")
-      refute Subscriptions.has_subscribers(:v1, "MicroBlocks")
-      refute Subscriptions.has_subscribers(:v1, "Transactions")
+      refute Subscriptions.has_subscribers?(:v2, "KeyBlocks")
+      refute Subscriptions.has_subscribers?(:v1, "MicroBlocks")
+      refute Subscriptions.has_subscribers?(:v1, "Transactions")
     end
   end
 
-  describe "has_object_subscribers/1" do
+  describe "has_object_subscribers?/1" do
     test "returns true if there is any object channel subscribed for a version" do
       pid1 = new_pid()
       pid2 = new_pid()
@@ -149,8 +149,8 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
       assert {:ok, [^channel]} = Subscriptions.subscribe(pid2, :v2, channel)
       assert {:ok, _list} = Subscriptions.subscribe(pid3, :v2, "Transactions")
 
-      assert Subscriptions.has_object_subscribers(:v1)
-      assert Subscriptions.has_object_subscribers(:v2)
+      assert Subscriptions.has_object_subscribers?(:v1)
+      assert Subscriptions.has_object_subscribers?(:v2)
     end
 
     test "returns false if there are no object channel subscribed for a version" do
@@ -164,8 +164,8 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
       assert {:ok, [^channel1]} = Subscriptions.subscribe(pid1, :v1, channel1)
       assert {:ok, ["KeyBlocks"]} = Subscriptions.subscribe(pid2, :v2, "KeyBlocks")
 
-      assert Subscriptions.has_object_subscribers(:v1)
-      refute Subscriptions.has_object_subscribers(:v2)
+      assert Subscriptions.has_object_subscribers?(:v1)
+      refute Subscriptions.has_object_subscribers?(:v2)
     end
   end
 

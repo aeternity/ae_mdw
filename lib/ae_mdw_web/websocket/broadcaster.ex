@@ -60,8 +60,8 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     {:ok, hash} = block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
 
     if not already_processed?({:txs, version, hash, source}) &&
-         (Subscriptions.has_subscribers(version, "Transactions") ||
-            Subscriptions.has_object_subscribers(version)) do
+         (Subscriptions.has_subscribers?(version, "Transactions") ||
+            Subscriptions.has_object_subscribers?(version)) do
       GenServer.cast(__MODULE__, {:broadcast_txs, version, block, source})
       set_processed({:txs, version, hash, source})
     end
