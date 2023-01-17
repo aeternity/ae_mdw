@@ -144,7 +144,6 @@ defmodule AeMdw.Db.Sync.Transaction do
         SyncContract.events_mutations(
           tx_events,
           block_index,
-          block_hash,
           txi,
           tx_hash,
           contract_pk
@@ -200,7 +199,6 @@ defmodule AeMdw.Db.Sync.Transaction do
       SyncContract.events_mutations(
         tx_events,
         block_index,
-        block_hash,
         txi,
         tx_hash,
         contract_pk
