@@ -143,6 +143,9 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
 
       on_exit(fn -> unsubscribe_all([pid1, pid2, pid3]) end)
 
+      unsubscribe_all(:v1)
+      unsubscribe_all(:v2)
+
       channel = encode(:oracle_pubkey, :crypto.strong_rand_bytes(32))
       assert {:ok, [^channel]} = Subscriptions.subscribe(pid1, :v1, channel)
       channel = encode(:contract_pubkey, :crypto.strong_rand_bytes(32))
@@ -158,6 +161,9 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
       pid2 = new_pid()
 
       on_exit(fn -> unsubscribe_all([pid1, pid2]) end)
+
+      unsubscribe_all(:v1)
+      unsubscribe_all(:v2)
 
       channel1 = encode(:account_pubkey, :crypto.strong_rand_bytes(32))
 
