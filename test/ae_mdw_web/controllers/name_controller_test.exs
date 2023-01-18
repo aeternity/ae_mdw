@@ -37,8 +37,8 @@ defmodule AeMdwWeb.NameControllerTest do
 
   describe "active_names" do
     test "renders active names with detailed info", %{conn: conn, store: store} do
-      alice_name = "aliceinchains.chain"
-      bob_name = "bobandmarley.chain"
+      alice_name = "alice-in-chains.chain"
+      bob_name = "boband-marley.chain"
 
       with_blockchain %{alice: 1_000, bob: 1_000},
         mb0: [
@@ -113,56 +113,61 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.tx(index: 4, id: :aetx_sign.hash(tx4), block_index: {1, 2})
           )
 
-        assert %{"data" => names} =
+        assert %{"data" => [name1], "next" => next_url} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/names", state: "active")
+                 |> get("/v2/names", state: "active", limit: 1)
                  |> json_response(200)
 
-        assert [
-                 %{
-                   "name" => ^bob_name,
-                   "active" => true,
-                   "auction" => nil,
-                   "info" => %{
-                     "active_from" => ^active_from,
-                     "auction_timeout" => 0,
-                     "ownership" => %{"current" => ^bob_id, "original" => ^bob_id},
-                     "pointers" => %{
-                       "account_pubkey" => ^bob_id,
-                       "oracle_pubkey" => ^bob_oracle_id
-                     },
-                     "revoke" => nil,
-                     "transfers" => [14],
-                     "updates" => [4],
-                     "claims" => [3],
-                     "expire_height" => ^expire2
+        assert %{
+                 "name" => ^bob_name,
+                 "active" => true,
+                 "auction" => nil,
+                 "info" => %{
+                   "active_from" => ^active_from,
+                   "auction_timeout" => 0,
+                   "ownership" => %{"current" => ^bob_id, "original" => ^bob_id},
+                   "pointers" => %{
+                     "account_pubkey" => ^bob_id,
+                     "oracle_pubkey" => ^bob_oracle_id
                    },
-                   "previous" => [],
-                   "status" => "name"
+                   "revoke" => nil,
+                   "transfers" => [14],
+                   "updates" => [4],
+                   "claims" => [3],
+                   "expire_height" => ^expire2
                  },
-                 %{
-                   "name" => ^alice_name,
-                   "active" => true,
-                   "auction" => nil,
-                   "info" => %{
-                     "active_from" => ^active_from,
-                     "auction_timeout" => 0,
-                     "ownership" => %{"current" => ^alice_id, "original" => ^alice_id},
-                     "pointers" => %{
-                       "account_pubkey" => ^alice_id,
-                       "oracle_pubkey" => ^alice_oracle_id
-                     },
-                     "revoke" => nil,
-                     "transfers" => [12],
-                     "updates" => [2],
-                     "claims" => [1],
-                     "expire_height" => ^expire1
-                   },
-                   "previous" => [],
-                   "status" => "name"
-                 }
-               ] = names
+                 "previous" => [],
+                 "status" => "name"
+               } = name1
+
+        assert %{"data" => [name2]} =
+                 conn
+                 |> with_store(store)
+                 |> get(next_url)
+                 |> json_response(200)
+
+        %{
+          "name" => ^alice_name,
+          "active" => true,
+          "auction" => nil,
+          "info" => %{
+            "active_from" => ^active_from,
+            "auction_timeout" => 0,
+            "ownership" => %{"current" => ^alice_id, "original" => ^alice_id},
+            "pointers" => %{
+              "account_pubkey" => ^alice_id,
+              "oracle_pubkey" => ^alice_oracle_id
+            },
+            "revoke" => nil,
+            "transfers" => [12],
+            "updates" => [2],
+            "claims" => [1],
+            "expire_height" => ^expire1
+          },
+          "previous" => [],
+          "status" => "name"
+        } = name2
       end
     end
 

@@ -526,14 +526,17 @@ defmodule AeMdw.Names do
     do: serialize_height_cursor({{height, name}, is_reversed?})
 
   defp serialize_height_cursor({{height, name}, is_reversed?}),
-    do: {"#{height}-#{name}", is_reversed?}
+    do: {Base.encode64(:erlang.term_to_binary({height, name}), padding: false), is_reversed?}
 
   defp deserialize_height_cursor(nil), do: nil
 
   defp deserialize_height_cursor(cursor_bin) do
-    case Regex.run(~r/\A(\d+)-([\w\.]+)\z/, cursor_bin) do
-      [_match0, exp_height, name] -> {String.to_integer(exp_height), name}
-      nil -> nil
+    with {:ok, base64_decoded} <- Base.decode64(cursor_bin, padding: false),
+         {height, name} when is_integer(height) and is_binary(name) <-
+           :erlang.binary_to_term(base64_decoded) do
+      {height, name}
+    else
+      _invalid -> nil
     end
   end
 
