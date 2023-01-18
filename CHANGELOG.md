@@ -1,5 +1,17 @@
 # Changelog
 
+### [1.37.1](https://www.github.com/aeternity/ae_mdw/compare/v1.37.0...v1.37.1) (2023-01-18)
+
+
+### Bug Fixes
+
+* allow cursors with names with dashes on them on pagination ([#1131](https://www.github.com/aeternity/ae_mdw/issues/1131)) ([3c30342](https://www.github.com/aeternity/ae_mdw/commit/3c30342b5db4d274df8e7a6e3d75c079f82a87b8))
+
+
+### Refactorings
+
+* enqueue a block only once to ws broadcasting ([#1132](https://www.github.com/aeternity/ae_mdw/issues/1132)) ([0a5738b](https://www.github.com/aeternity/ae_mdw/commit/0a5738b696a37f3f010006838ed243a71256071d))
+
 ## [1.37.0](https://www.github.com/aeternity/ae_mdw/compare/v1.36.0...v1.37.0) (2023-01-16)
 
 
