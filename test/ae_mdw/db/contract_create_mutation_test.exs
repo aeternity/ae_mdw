@@ -159,23 +159,13 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
       token_id3 = Enum.random(20_001..30_000)
 
       call_rec =
-        :aect_call.new(
-          :aeser_id.create(:account, <<2::256>>),
-          1,
-          :aeser_id.create(:contract, contract_pk),
-          height,
-          1_000_000_000
-        )
-
-      call_rec =
-        :aect_call.set_log(
-          [
-            {contract_pk, [aexn_event_hash(:mint), to_pk1, <<token_id1::256>>], ""},
-            {contract_pk, [aexn_event_hash(:mint), to_pk2, <<token_id2::256>>], ""},
-            {contract_pk, [aexn_event_hash(:mint), to_pk2, <<token_id3::256>>], ""}
-          ],
-          call_rec
-        )
+        {:call, <<1::256>>, {:id, :account, <<2::256>>}, 1, height, {:id, :contract, contract_pk},
+         1_000_000_000, 10_500, "?", :ok,
+         [
+           {contract_pk, [aexn_event_hash(:mint), to_pk1, <<token_id1::256>>], ""},
+           {contract_pk, [aexn_event_hash(:mint), to_pk2, <<token_id2::256>>], ""},
+           {contract_pk, [aexn_event_hash(:mint), to_pk2, <<token_id3::256>>], ""}
+         ]}
 
       with_mocks [
         {Contract, [],

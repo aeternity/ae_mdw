@@ -513,21 +513,11 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       }
 
       call_rec =
-        :aect_call.new(
-          :aeser_id.create(:account, :crypto.strong_rand_bytes(32)),
-          1,
-          :aeser_id.create(:contract, contract_pk),
-          height,
-          1_000_000_000
-        )
-
-      call_rec =
-        :aect_call.set_log(
-          [
-            {remote_pk, [aexn_event_hash(:mint), to_pk, <<token_id::256>>], ""}
-          ],
-          call_rec
-        )
+        {:call, :crypto.strong_rand_bytes(32), {:id, :account, :crypto.strong_rand_bytes(32)}, 1,
+         height, {:id, :contract, contract_pk}, 1_000_000_000, 5_250, "?", :ok,
+         [
+           {remote_pk, [aexn_event_hash(:mint), to_pk, <<token_id::256>>], ""}
+         ]}
 
       mutation =
         ContractCallMutation.new(

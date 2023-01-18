@@ -75,7 +75,7 @@ defmodule AeMdwWeb.TxControllerTest do
             })
         ] do
         %{txs: [signed_tx]} = blocks[:mb]
-        account_pk = :aeser_id.specialize(accounts[:ga], :account)
+        {:id, :account, account_pk} = accounts[:ga]
         account_id = encode(:account_pubkey, account_pk)
         mb_hash = :crypto.strong_rand_bytes(32)
 
@@ -124,7 +124,7 @@ defmodule AeMdwWeb.TxControllerTest do
                    "nonce" => ^nonce,
                    "owner_id" => ^account_id,
                    "args" => [%{"type" => "bytes", "value" => ^bytes_arg}],
-                   "gas_used" => 0,
+                   "gas_used" => 1_000,
                    "return_type" => "ok",
                    "type" => "GAAttachTx"
                  }

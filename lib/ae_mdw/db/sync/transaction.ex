@@ -23,7 +23,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.Mutation
   alias AeMdw.Node
-  alias AeMdw.Node.Db
   alias AeMdw.Txs
   alias __MODULE__.TxContext
 
@@ -177,10 +176,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          tx_events: tx_events,
          tx_hash: tx_hash
        }) do
-    contract_pk =
-      tx
-      |> :aect_call_tx.contract_id()
-      |> Db.id_pubkey()
+    contract_pk = :aect_call_tx.contract_pubkey(tx)
 
     {fun_arg_res, call_rec} = Contract.call_tx_info(tx, contract_pk, block_hash)
 
