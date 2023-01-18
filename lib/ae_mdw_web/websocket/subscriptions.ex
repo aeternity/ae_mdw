@@ -73,6 +73,27 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
     end
   end
 
+  @spec has_subscribers?(version(), channel) :: boolean()
+  def has_subscribers?(version, channel) do
+    {:ok, channel_key} = channel_key(version, channel)
+
+    case :ets.match(@subs_channel_pid, {channel_key, :"$1"}, 1) do
+      {_some, _continuation} -> true
+      @eot -> false
+    end
+  end
+
+  @spec has_object_subscribers?(version()) :: boolean()
+  def has_object_subscribers?(version) do
+    case :ets.match(@subs_channel_pid, {{version, :"$1"}, :_}, 4) do
+      {channels, _continuation} ->
+        channels |> List.flatten() |> Enum.any?(&(&1 not in @known_channels))
+
+      @eot ->
+        false
+    end
+  end
+
   @spec subscribers(version(), channel()) :: [pid()]
   def subscribers(version, channel) do
     {:ok, channel_key} = channel_key(version, channel)

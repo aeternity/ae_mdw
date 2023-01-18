@@ -21,11 +21,27 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
       assert {:ok, ["KeyBlocks", "Transactions"]} =
                Subscriptions.subscribe(pid1, :v1, "Transactions")
 
-      channel = encode(:account_pubkey, <<11::256>>)
+      channel = encode(:account_pubkey, :crypto.strong_rand_bytes(32))
       assert {:ok, [^channel]} = Subscriptions.subscribe(pid3, :v1, channel)
 
-      assert {:ok, [^channel, "Transactions"]} =
-               Subscriptions.subscribe(pid3, :v1, "Transactions")
+      channel = encode(:oracle_pubkey, :crypto.strong_rand_bytes(32))
+      assert {:ok, subs} = Subscriptions.subscribe(pid3, :v1, channel)
+      assert channel in subs
+
+      channel = encode(:contract_pubkey, :crypto.strong_rand_bytes(32))
+      assert {:ok, subs} = Subscriptions.subscribe(pid3, :v1, channel)
+      assert channel in subs
+
+      channel = encode(:channel, :crypto.strong_rand_bytes(32))
+      assert {:ok, subs} = Subscriptions.subscribe(pid3, :v1, channel)
+      assert channel in subs
+
+      channel = encode(:name, :crypto.strong_rand_bytes(32))
+      assert {:ok, subs} = Subscriptions.subscribe(pid3, :v1, channel)
+      assert channel in subs
+
+      assert {:ok, subs} = Subscriptions.subscribe(pid3, :v1, "Transactions")
+      assert channel in subs
     end
 
     test "returns invalid channel when unknown and not a valid id" do
@@ -36,6 +52,7 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
 
     test "returns error on duplicate subscriptions" do
       pid = new_pid()
+      on_exit(fn -> unsubscribe_all([pid]) end)
       channel = encode(:account_pubkey, <<12::256>>)
       assert {:ok, [^channel]} = Subscriptions.subscribe(pid, :v1, channel)
       assert {:error, :already_subscribed} = Subscriptions.subscribe(pid, :v1, channel)
@@ -43,6 +60,7 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
 
     test "does not allow duplicate subscription of account and oracle with same pubkey" do
       pid = new_pid()
+      on_exit(fn -> unsubscribe_all([pid]) end)
       channel = encode(:account_pubkey, <<13::256>>)
       assert {:ok, [^channel]} = Subscriptions.subscribe(pid, :v2, channel)
 
@@ -87,6 +105,73 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
       channel = encode(:oracle_pubkey, <<14::256>>)
       assert {:ok, []} = Subscriptions.unsubscribe(pid, :v2, channel)
       assert {:error, :not_subscribed} = Subscriptions.unsubscribe(pid, :v2, channel)
+    end
+  end
+
+  describe "has_subscribers?/2" do
+    test "checks if there is any subscriber for a known versioned channel" do
+      pid1 = new_pid()
+      pid2 = new_pid()
+      pid3 = new_pid()
+
+      on_exit(fn -> unsubscribe_all([pid1, pid2, pid3]) end)
+
+      unsubscribe_all(:v1)
+      unsubscribe_all(:v2)
+
+      channel = encode(:oracle_pubkey, :crypto.strong_rand_bytes(32))
+      assert {:ok, [^channel]} = Subscriptions.subscribe(pid1, :v2, channel)
+      assert {:ok, [^channel, "KeyBlocks"]} = Subscriptions.subscribe(pid1, :v1, "KeyBlocks")
+      assert {:ok, ["MicroBlocks"]} = Subscriptions.subscribe(pid2, :v2, "MicroBlocks")
+      assert {:ok, ["Transactions"]} = Subscriptions.subscribe(pid3, :v2, "Transactions")
+
+      assert Subscriptions.has_subscribers?(:v1, "KeyBlocks")
+      assert Subscriptions.has_subscribers?(:v2, "MicroBlocks")
+      assert Subscriptions.has_subscribers?(:v2, "Transactions")
+
+      refute Subscriptions.has_subscribers?(:v2, "KeyBlocks")
+      refute Subscriptions.has_subscribers?(:v1, "MicroBlocks")
+      refute Subscriptions.has_subscribers?(:v1, "Transactions")
+    end
+  end
+
+  describe "has_object_subscribers?/1" do
+    test "returns true if there is any object channel subscribed for a version" do
+      pid1 = new_pid()
+      pid2 = new_pid()
+      pid3 = new_pid()
+
+      on_exit(fn -> unsubscribe_all([pid1, pid2, pid3]) end)
+
+      unsubscribe_all(:v1)
+      unsubscribe_all(:v2)
+
+      channel = encode(:oracle_pubkey, :crypto.strong_rand_bytes(32))
+      assert {:ok, [^channel]} = Subscriptions.subscribe(pid1, :v1, channel)
+      channel = encode(:contract_pubkey, :crypto.strong_rand_bytes(32))
+      assert {:ok, [^channel]} = Subscriptions.subscribe(pid2, :v2, channel)
+      assert {:ok, _list} = Subscriptions.subscribe(pid3, :v2, "Transactions")
+
+      assert Subscriptions.has_object_subscribers?(:v1)
+      assert Subscriptions.has_object_subscribers?(:v2)
+    end
+
+    test "returns false if there are no object channel subscribed for a version" do
+      pid1 = new_pid()
+      pid2 = new_pid()
+
+      on_exit(fn -> unsubscribe_all([pid1, pid2]) end)
+
+      unsubscribe_all(:v1)
+      unsubscribe_all(:v2)
+
+      channel1 = encode(:account_pubkey, :crypto.strong_rand_bytes(32))
+
+      assert {:ok, [^channel1]} = Subscriptions.subscribe(pid1, :v1, channel1)
+      assert {:ok, ["KeyBlocks"]} = Subscriptions.subscribe(pid2, :v2, "KeyBlocks")
+
+      assert Subscriptions.has_object_subscribers?(:v1)
+      refute Subscriptions.has_object_subscribers?(:v2)
     end
   end
 
