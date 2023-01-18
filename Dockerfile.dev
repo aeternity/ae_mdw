@@ -22,6 +22,7 @@ WORKDIR /home/aeternity/node
 ARG NODE_VERSION=6.7.0
 ENV NODEDIR=/home/aeternity/node/local/rel/aeternity
 RUN mkdir -p ./local/rel/aeternity/data/mnesia
+RUN mkdir -p ./local/rel/aeternity/data/mdw.db
 RUN curl -L --output aeternity.tar.gz https://github.com/aeternity/aeternity/releases/download/v${NODE_VERSION}/aeternity-v${NODE_VERSION}-ubuntu-x86_64.tar.gz && tar -C ./local/rel/aeternity -xf aeternity.tar.gz
 
 RUN chmod +x ${NODEDIR}/bin/aeternity
@@ -41,15 +42,6 @@ COPY docker/entrypoint.sh ae_mdw/entrypoint.sh
 # Start building the mdw
 WORKDIR /home/aeternity/node/ae_mdw
 RUN mix local.hex --force && mix local.rebar --force
-
-# Fetch the application dependencies and build it
-ARG MIX_ENV
-ENV MIX_ENV=${MIX_ENV}
 RUN mix deps.get
-RUN mix deps.compile
-ENV NODEROOT=/home/aeternity/node/local
-RUN mix compile
-RUN mix phx.digest
 
-RUN chmod +x entrypoint.sh
-ENTRYPOINT [ "./entrypoint.sh" ]
+ENV NODEROOT=/home/aeternity/node/local
