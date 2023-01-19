@@ -3,7 +3,9 @@ services:
   ae_mdw:
     build:
       context: .
-      dockerfile: ./Dockerfile.dev
+      dockerfile: ./Dockerfile
+      args:
+        MIX_ENV: dev
     image: aeternity/ae_mdw_dev:latest
     ports:
       - "4000:4000" #MDW's default port
