@@ -40,7 +40,7 @@ COPY docker/entrypoint.sh ae_mdw/entrypoint.sh
 
 # Start building the mdw
 WORKDIR /home/aeternity/node/ae_mdw
-RUN mix local.hex --force && mix local.rebar --force
+RUN  mix local.hex --force && mix local.rebar --force
 
 # Fetch the application dependencies and build it
 ARG MIX_ENV
