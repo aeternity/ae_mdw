@@ -11,6 +11,11 @@ defmodule Support.WsClient do
   def delete_objects(client), do: Process.send(client, {:delete_list, :objs}, [:noconnect])
   def delete_transactions(client), do: Process.send(client, {:delete_list, :txs}, [:noconnect])
 
+  def subscribe_v2(client, payload) when is_atom(payload) do
+    request = %{payload: to_subs(payload), op: "Subscribe", version: "2"}
+    WebSockex.send_frame(client, {:text, Poison.encode!(request)})
+  end
+
   def subscribe(client, payload) when is_atom(payload) do
     request = %{payload: to_subs(payload), op: "Subscribe"}
     WebSockex.send_frame(client, {:text, Poison.encode!(request)})
@@ -45,10 +50,14 @@ defmodule Support.WsClient do
     new_state =
       case Poison.decode!(msg) do
         %{"subscription" => "MicroBlocks"} = msg ->
-          Map.put(state, :mb, msg)
+          state
+          |> Map.put(:mb, msg)
+          |> Map.update(:msgs, [msg], &(&1 ++ [msg]))
 
         %{"subscription" => "KeyBlocks"} = msg ->
-          Map.put(state, :kb, msg)
+          state
+          |> Map.put(:kb, msg)
+          |> Map.update(:msgs, [msg], &(&1 ++ [msg]))
 
         %{"subscription" => "Transactions", "payload" => %{"hash" => @mock_hash}} = msg ->
           Map.put(state, :tx, msg)

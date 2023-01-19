@@ -159,16 +159,20 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
     test "returns false if there are no object channel subscribed for a version" do
       pid1 = new_pid()
       pid2 = new_pid()
+      pid3 = new_pid()
 
-      on_exit(fn -> unsubscribe_all([pid1, pid2]) end)
+      on_exit(fn -> unsubscribe_all([pid1, pid2, pid3]) end)
 
       unsubscribe_all(:v1)
       unsubscribe_all(:v2)
 
       channel1 = encode(:account_pubkey, :crypto.strong_rand_bytes(32))
 
-      assert {:ok, [^channel1]} = Subscriptions.subscribe(pid1, :v1, channel1)
-      assert {:ok, ["KeyBlocks"]} = Subscriptions.subscribe(pid2, :v2, "KeyBlocks")
+      assert {:ok, _subs} = Subscriptions.subscribe(pid1, :v1, channel1)
+      assert {:ok, _subs} = Subscriptions.subscribe(pid2, :v2, "KeyBlocks")
+      assert {:ok, _subs} = Subscriptions.subscribe(pid2, :v2, "MicroBlocks")
+      assert {:ok, _subs} = Subscriptions.subscribe(pid3, :v2, "MicroBlocks")
+      assert {:ok, _subs} = Subscriptions.subscribe(pid3, :v2, "Transactions")
 
       assert Subscriptions.has_object_subscribers?(:v1)
       refute Subscriptions.has_object_subscribers?(:v2)

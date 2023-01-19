@@ -85,12 +85,16 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
 
   @spec has_object_subscribers?(version()) :: boolean()
   def has_object_subscribers?(version) do
-    case :ets.match(@subs_channel_pid, {{version, :"$1"}, :_}, 4) do
-      {channels, _continuation} ->
-        channels |> List.flatten() |> Enum.any?(&(&1 not in @known_channels))
+    object_id_spec =
+      Ex2ms.fun do
+        {{^version, channel}, pid}
+        when channel != "KeyBlocks" and channel != "MicroBlocks" and channel != "Transactions" ->
+          pid
+      end
 
-      @eot ->
-        false
+    case :ets.select(@subs_channel_pid, object_id_spec, 1) do
+      {_some, _continuation} -> true
+      @eot -> false
     end
   end
 
