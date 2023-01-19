@@ -521,6 +521,108 @@ defmodule AeMdwWeb.TxControllerTest do
       end
     end
 
+    test "returns a spend_tx with name recipient from previous", %{conn: conn, store: store} do
+      plain_name1 = "aliceinchains1.chain"
+      plain_name2 = "aliceinchains2.chain"
+      {:ok, name_hash1} = :aens.get_name_hash(plain_name1)
+      {:ok, name_hash2} = :aens.get_name_hash(plain_name2)
+
+      with_blockchain %{alice: 10_000, bob: 10_000},
+        mb: [
+          tx1: name_tx(:name_update_tx, :alice, plain_name1),
+          tx2: name_tx(:name_update_tx, :alice, plain_name2),
+          tx3: spend_tx(:bob, {:id, :name, name_hash1}, 5_000),
+          tx4: spend_tx(:bob, {:id, :name, name_hash2}, 5_000)
+        ] do
+        %{txs: [tx1, tx2, tx3, tx4]} = blocks[:mb]
+
+        {:id, :account, sender_pk} = accounts[:bob]
+        {:id, :account, alice_pk} = accounts[:alice]
+        sender_id = encode(:account_pubkey, sender_pk)
+        alice_id = encode(:account_pubkey, alice_pk)
+
+        store =
+          store
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 998, block_index: {0, 0}, id: :aetx_sign.hash(tx1))
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 999, block_index: {0, 0}, id: :aetx_sign.hash(tx2))
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 1_000, block_index: {0, 0}, id: :aetx_sign.hash(tx3))
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 1_001, block_index: {0, 0}, id: :aetx_sign.hash(tx4))
+          )
+          |> Store.put(Model.PlainName, Model.plain_name(index: name_hash1, value: plain_name1))
+          |> Store.put(Model.PlainName, Model.plain_name(index: name_hash2, value: plain_name2))
+          |> Store.put(
+            Model.ActiveName,
+            Model.name(
+              index: plain_name1,
+              updates: [],
+              previous: Model.name(index: plain_name1, updates: [{{0, 0}, 998}])
+            )
+          )
+          |> Store.put(
+            Model.ActiveName,
+            Model.name(
+              index: plain_name2,
+              updates: [{{0, 0}, 1002}],
+              previous: Model.name(index: plain_name2, updates: [{{0, 0}, 999}])
+            )
+          )
+          |> Store.put(Model.Block, Model.block(index: {0, -1}, tx_index: 998))
+          |> Store.put(Model.Block, Model.block(index: {0, 0}, tx_index: 998))
+          |> Store.put(Model.Block, Model.block(index: {1, -1}, tx_index: 998 + 4))
+
+        tx_hash = encode(:tx_hash, :aetx_sign.hash(tx3))
+        recipient_id = encode(:name, name_hash1)
+
+        assert %{
+                 "hash" => ^tx_hash,
+                 "tx" => %{
+                   "amount" => 5_000,
+                   "sender_id" => ^sender_id,
+                   "recipient_id" => ^recipient_id,
+                   "recipient" => %{
+                     "name" => ^plain_name1,
+                     "account" => ^alice_id
+                   }
+                 }
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs/#{tx_hash}")
+                 |> json_response(200)
+
+        tx_hash = encode(:tx_hash, :aetx_sign.hash(tx4))
+        recipient_id = encode(:name, name_hash2)
+
+        assert %{
+                 "hash" => ^tx_hash,
+                 "tx" => %{
+                   "amount" => 5_000,
+                   "sender_id" => ^sender_id,
+                   "recipient_id" => ^recipient_id,
+                   "recipient" => %{
+                     "name" => ^plain_name2,
+                     "account" => ^alice_id
+                   }
+                 }
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs/#{tx_hash}")
+                 |> json_response(200)
+      end
+    end
+
     test "returns a name_update_tx with multiple pointers", %{conn: conn, store: store} do
       plain_name = "aliceinchains.chain"
       {:ok, name_hash} = :aens.get_name_hash(plain_name)

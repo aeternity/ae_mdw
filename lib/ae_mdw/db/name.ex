@@ -220,6 +220,17 @@ defmodule AeMdw.Db.Name do
     |> :aec_trees.ns()
   end
 
+  defp pointee_at(state, Model.name(index: name, updates: updates, previous: previous), ref_txi)
+       when previous != nil do
+    case List.last(updates) do
+      {_block, update_txi} when ref_txi >= update_txi ->
+        pointee_at(state, Model.name(index: name, updates: updates, previous: nil), ref_txi)
+
+      _nil_or_older ->
+        pointee_at(state, previous, ref_txi)
+    end
+  end
+
   defp pointee_at(state, Model.name(index: name, updates: updates), ref_txi) do
     updates
     |> find_update_txi_before(ref_txi)
