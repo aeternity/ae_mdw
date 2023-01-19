@@ -6,7 +6,7 @@ defmodule AeMdw.Activities do
   alias AeMdw.AexnTokens
   alias AeMdw.Blocks
   alias AeMdw.Collection
-  alias AeMdw.Contracts
+  alias AeMdw.Contract
   alias AeMdw.Db.Format
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
@@ -41,7 +41,7 @@ defmodule AeMdw.Activities do
            | {:aexn, AexnTokens.aexn_type(), Db.pubkey(), Db.pubkey(), non_neg_integer(),
               non_neg_integer()}
            | {:int_transfer, IntTransfer.kind(), Txs.txi()}
-           | :claim
+           | {:claim, Contract.local_idx()}
   @typep activity_type() :: String.t()
 
   @max_pos 4
@@ -264,8 +264,8 @@ defmodule AeMdw.Activities do
 
           {first_txi, last_txi} ->
             claims
-            |> Enum.drop_while(fn {_block_index, txi} -> txi < first_txi end)
-            |> Enum.take_while(fn {_block_index, txi} -> txi < last_txi end)
+            |> Enum.drop_while(fn {_block_index, {txi, _idx}} -> txi < first_txi end)
+            |> Enum.take_while(fn {_block_index, {txi, _idx}} -> txi < last_txi end)
         end
 
       claims = if direction == :forward, do: claims, else: Enum.reverse(claims)
@@ -277,12 +277,12 @@ defmodule AeMdw.Activities do
 
           _txi_cursor ->
             Enum.drop_while(claims, fn
-              {_block_index, txi} when direction == :forward -> txi < txi_cursor
-              {_block_index, txi} when direction == :backward -> txi > txi_cursor
+              {_block_index, {txi, _idx}} when direction == :forward -> txi < txi_cursor
+              {_block_index, {txi, _idx}} when direction == :backward -> txi > txi_cursor
             end)
         end
 
-      Stream.map(claims, fn {_block_index, txi} -> {txi, :claim} end)
+      Stream.map(claims, fn {_block_index, {txi, idx}} -> {txi, {:claim, idx}} end)
     else
       :not_found -> []
       nil -> []
@@ -585,20 +585,17 @@ defmodule AeMdw.Activities do
     {"#{Node.tx_name(tx_type)}Event", tx}
   end
 
-  defp render_payload(state, account_pk, _height, txi, :claim) do
-    Model.tx(id: tx_hash, time: micro_time) = State.fetch!(state, Model.Tx, txi)
-
-    claim_aetx =
-      Contracts.get_aetx(state, txi, :name_claim_tx, "AENS.claim", fn tx ->
-        name_hash = tx |> :aens_claim_tx.name() |> :aens_hash.name_hash()
-
-        name_hash == account_pk
-      end)
+  defp render_payload(state, _account_pk, _height, txi, {:claim, local_idx}) do
+    Model.tx(time: micro_time) = State.fetch!(state, Model.Tx, txi)
+    {claim_aetx, tx_hash, tx_type} = DbUtil.read_node_tx_details(state, {txi, local_idx})
 
     payload = %{
       micro_time: micro_time,
-      tx_hash: Enc.encode(:tx_hash, tx_hash),
-      tx: :aetx.serialize_for_client(claim_aetx)
+      source_tx_hash: Enc.encode(:tx_hash, tx_hash),
+      source_tx_type: Format.type_to_swagger_name(tx_type),
+      # tx_type left for backwards compat
+      tx_type: Format.type_to_swagger_name(tx_type),
+      tx: :aens_claim_tx.for_client(claim_aetx)
     }
 
     {"NameClaimEvent", payload}

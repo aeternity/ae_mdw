@@ -11,11 +11,8 @@ defmodule AeMdw.Contracts do
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
   alias AeMdw.Db.Stream.Query.Parser
-  alias AeMdw.Db.Sync.InnerTx
   alias AeMdw.Db.Util, as: DBUtil
   alias AeMdw.Error.Input, as: ErrInput
-  alias AeMdw.Node
-  alias AeMdw.Node.Db
   alias AeMdw.Txs
   alias AeMdw.Util
   alias AeMdw.Validate
@@ -34,9 +31,7 @@ defmodule AeMdw.Contracts do
   @type log_idx() :: non_neg_integer()
   @type call_key() :: {create_txi(), txi(), event_hash(), log_idx()}
 
-  @typep state() :: State.t()
   @typep txi() :: Txs.txi()
-  @typep fname() :: Contract.fname()
   @typep create_txi() :: txi() | -1
   @typep reason() :: binary()
   @typep pagination() :: Collection.direction_limit()
@@ -118,30 +113,6 @@ defmodule AeMdw.Contracts do
     |> Stream.take_while(fn {call_txi, _local_txi} -> call_txi == txi end)
     |> Stream.map(&State.fetch!(state, @int_contract_call_table, &1))
     |> Stream.filter(&match?(Model.int_contract_call(fname: ^fname), &1))
-  end
-
-  @spec get_aetx(state(), txi(), Node.tx_type(), fname(), (Node.tx() -> boolean())) :: Node.aetx()
-  def get_aetx(state, txi, tx_type, fname, checker_fn) do
-    tx_hash = Txs.txi_to_hash(state, txi)
-
-    case Db.get_tx_data(tx_hash) do
-      {_block_hash, ^tx_type, signed_tx, _tx_rec} ->
-        :aetx_sign.tx(signed_tx)
-
-      {_block_hash, :contract_call_tx, _signed_tx, _tx_rec} ->
-        state
-        |> fetch_int_contract_calls(txi, fname)
-        |> Enum.find_value(fn Model.int_contract_call(tx: aetx) ->
-          {^tx_type, tx} = :aetx.specialize_type(aetx)
-
-          checker_fn.(tx) && aetx
-        end)
-
-      {_block_hash, tx_type, _signed_tx, tx_rec} when tx_type in ~w(ga_meta_tx paying_for_tx)a ->
-        tx_type
-        |> InnerTx.signed_tx(tx_rec)
-        |> :aetx_sign.tx()
-    end
   end
 
   defp build_logs_pagination(%{data_prefix: data_prefix}, state, scope, cursor) do
