@@ -494,7 +494,10 @@ defmodule AeMdwWeb.TxControllerTest do
             Model.tx(index: 2, block_index: {0, 0}, id: :aetx_sign.hash(tx2))
           )
           |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: plain_name))
-          |> Store.put(Model.InactiveName, Model.name(index: plain_name, updates: [{{0, 0}, 1}]))
+          |> Store.put(
+            Model.InactiveName,
+            Model.name(index: plain_name, updates: [{{0, 0}, {1, 0}}])
+          )
           |> Store.put(Model.Block, Model.block(index: {0, -1}, tx_index: 1))
           |> Store.put(Model.Block, Model.block(index: {0, 0}, tx_index: 2))
           |> Store.put(Model.Block, Model.block(index: {1, -1}, tx_index: 3))
@@ -566,7 +569,7 @@ defmodule AeMdwWeb.TxControllerTest do
             Model.name(
               index: plain_name1,
               updates: [],
-              previous: Model.name(index: plain_name1, updates: [{{0, 0}, 998}])
+              previous: Model.name(index: plain_name1, updates: [{{0, 0}, {998, -1}}])
             )
           )
           |> Store.put(
@@ -574,7 +577,7 @@ defmodule AeMdwWeb.TxControllerTest do
             Model.name(
               index: plain_name2,
               updates: [{{0, 0}, 1002}],
-              previous: Model.name(index: plain_name2, updates: [{{0, 0}, 999}])
+              previous: Model.name(index: plain_name2, updates: [{{0, 0}, {999, -1}}])
             )
           )
           |> Store.put(Model.Block, Model.block(index: {0, -1}, tx_index: 998))

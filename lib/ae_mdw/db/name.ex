@@ -223,7 +223,7 @@ defmodule AeMdw.Db.Name do
   defp pointee_at(state, Model.name(index: name, updates: updates, previous: previous), ref_txi)
        when previous != nil do
     case List.last(updates) do
-      {_block, update_txi} when ref_txi >= update_txi ->
+      {_block, {update_txi, _log_idx}} when ref_txi >= update_txi ->
         pointee_at(state, Model.name(index: name, updates: updates), ref_txi)
 
       _nil_or_older ->
@@ -244,7 +244,7 @@ defmodule AeMdw.Db.Name do
   end
 
   defp find_update_txi_before(updates, ref_txi) do
-    Enum.find_value(updates, fn {_block_height, update_txi} ->
+    Enum.find_value(updates, fn {_block_height, {update_txi, _log_idx}} ->
       if update_txi <= ref_txi, do: update_txi
     end)
   end
