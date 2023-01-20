@@ -593,8 +593,6 @@ defmodule AeMdw.Activities do
       micro_time: micro_time,
       source_tx_hash: Enc.encode(:tx_hash, tx_hash),
       source_tx_type: Format.type_to_swagger_name(tx_type),
-      # tx_type left for backwards compat
-      tx_type: Format.type_to_swagger_name(tx_type),
       tx: :aens_claim_tx.for_client(claim_aetx)
     }
 
