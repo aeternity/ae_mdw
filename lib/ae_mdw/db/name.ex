@@ -224,7 +224,7 @@ defmodule AeMdw.Db.Name do
        when previous != nil do
     case List.last(updates) do
       {_block, update_txi} when ref_txi >= update_txi ->
-        pointee_at(state, Model.name(index: name, updates: updates, previous: nil), ref_txi)
+        pointee_at(state, Model.name(index: name, updates: updates), ref_txi)
 
       _nil_or_older ->
         pointee_at(state, previous, ref_txi)
