@@ -68,8 +68,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     {:ok, hash} = block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
 
     if not already_processed?({:txs, hash, source}) do
-      versions = if broadcast_transaction?(:v1), do: [:v1], else: []
-      versions = if broadcast_transaction?(:v2), do: versions ++ [:v2], else: versions
+      versions = Enum.filter(~w(v1 v2)a, &broadcast_transaction?/1)
 
       if Enum.any?(versions) do
         GenServer.cast(__MODULE__, {:broadcast_txs, block, source, versions})
@@ -291,13 +290,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   end
 
   defp get_subscribed_versions(channel) do
-    Enum.reduce([:v1, :v2], [], fn version, acc ->
-      if Subscriptions.has_subscribers?(version, channel) do
-        [version | acc]
-      else
-        acc
-      end
-    end)
+    Enum.filter([:v1, :v2], &Subscriptions.has_subscribers?(&1, channel))
   end
 
   defp already_processed?(type_hash), do: EtsCache.member(@hashes_table, type_hash)
