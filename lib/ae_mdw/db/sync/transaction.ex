@@ -124,6 +124,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     ]
   end
 
+  @spec tx_mutations(TxContext.t()) :: [Mutation.t()]
   defp tx_mutations(%TxContext{
          type: :contract_create_tx,
          tx: tx,
@@ -237,7 +238,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   end
 
   defp tx_mutations(%TxContext{
-         type: :asec_close_solo_tx,
+         type: :channel_close_solo_tx,
          block_index: block_index,
          txi: txi,
          tx: tx
@@ -245,15 +246,20 @@ defmodule AeMdw.Db.Sync.Transaction do
        do: Channels.close_solo_mutations({block_index, txi}, tx)
 
   defp tx_mutations(%TxContext{
-         type: :asec_close_mutual_tx,
+         type: :channel_close_mutual_tx,
          block_index: block_index,
          txi: txi,
          tx: tx
        }),
        do: Channels.close_mutual_mutations({block_index, txi}, tx)
 
-  defp tx_mutations(%TxContext{type: :asec_settle_tx, block_index: block_index, txi: txi, tx: tx}),
-    do: Channels.settle_mutations({block_index, txi}, tx)
+  defp tx_mutations(%TxContext{
+         type: :channel_settle_tx,
+         block_index: block_index,
+         txi: txi,
+         tx: tx
+       }),
+       do: Channels.settle_mutations({block_index, txi}, tx)
 
   defp tx_mutations(%TxContext{
          type: :channel_deposit_tx,

@@ -74,7 +74,6 @@ defmodule AeMdw.MixProject do
           :aeo_utils,
           :aesc_channels,
           :aesc_close_mutual_tx,
-          :aesc_close_settle_tx,
           :aesc_close_solo_tx,
           :aesc_create_tx,
           :aesc_deposit_tx,
