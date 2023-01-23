@@ -8,11 +8,14 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   alias AeMdw.Contract
   alias AeMdw.DryRun.Runner
   alias AeMdw.Db.AexnCreateContractMutation
+  alias AeMdw.Db.ChannelCloseMutation
+  alias AeMdw.Db.ChannelUpdateMutation
   alias AeMdw.Db.Sync.Transaction
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.EtsCache
   alias AeMdw.Validate
+  alias AeMdw.TestSamples, as: TS
 
   import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, spend_tx: 3]
   import AeMdw.Node.ContractCallFixtures
@@ -280,6 +283,84 @@ defmodule AeMdw.Db.Sync.TransactionTest do
                    false
                end)
       end
+    end
+
+    test "it creates channel updates when processing close_solo, close_mutual and settle transactions" do
+      channel_pk = TS.address(0)
+      channel_id = :aeser_id.create(:channel, channel_pk)
+      account_pk = TS.address(1)
+      account_id = :aeser_id.create(:account, account_pk)
+
+      {:ok, close_solo_aetx} =
+        :aesc_close_solo_tx.new(%{
+          channel_id: channel_id,
+          from_id: account_id,
+          payload: <<>>,
+          poi: :aec_trees.new_poi(:aec_trees.new()),
+          fee: 123,
+          nonce: 456
+        })
+
+      {:ok, close_mutual_aetx} =
+        :aesc_close_mutual_tx.new(%{
+          channel_id: channel_id,
+          from_id: account_id,
+          initiator_amount_final: 1,
+          responder_amount_final: 2,
+          ttl: 0,
+          fee: 123,
+          nonce: 456
+        })
+
+      {:ok, settle_aetx} =
+        :aesc_settle_tx.new(%{
+          channel_id: channel_id,
+          from_id: account_id,
+          initiator_amount_final: 1,
+          responder_amount_final: 2,
+          ttl: 0,
+          fee: 123,
+          nonce: 456
+        })
+
+      block_index = {123, 456}
+      txi = 789
+      block_hash = TS.micro_block_hash(0)
+      mb_time = 1
+      mb_events = %{}
+
+      mutations =
+        close_solo_aetx
+        |> :aetx_sign.new([])
+        |> Transaction.transaction_mutations(
+          txi,
+          {block_index, block_hash, mb_time, mb_events}
+        )
+        |> List.flatten()
+
+      assert ChannelUpdateMutation.new(channel_pk, {block_index, txi}) in mutations
+
+      mutations =
+        close_mutual_aetx
+        |> :aetx_sign.new([])
+        |> Transaction.transaction_mutations(
+          txi,
+          {block_index, block_hash, mb_time, mb_events}
+        )
+        |> List.flatten()
+
+      assert ChannelCloseMutation.new(channel_pk, {block_index, txi}, 3) in mutations
+
+      mutations =
+        settle_aetx
+        |> :aetx_sign.new([])
+        |> Transaction.transaction_mutations(
+          txi,
+          {block_index, block_hash, mb_time, mb_events}
+        )
+        |> List.flatten()
+
+      assert ChannelCloseMutation.new(channel_pk, {block_index, txi}, 3) in mutations
     end
   end
 

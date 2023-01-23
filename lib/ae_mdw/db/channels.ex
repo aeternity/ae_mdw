@@ -62,7 +62,7 @@ defmodule AeMdw.Db.Channels do
 
   @spec settle_mutations(bi_txi(), Node.tx()) :: [Mutation.t()]
   def settle_mutations(bi_txi, tx) do
-    channel_pk = :aesc_close_settle_tx.channel_pubkey(tx)
+    channel_pk = :aesc_settle_tx.channel_pubkey(tx)
 
     %{"initiator_amount_final" => initiator_amount, "responder_amount_final" => responder_amount} =
       :aesc_settle_tx.for_client(tx)

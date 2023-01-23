@@ -5,6 +5,7 @@ defmodule AeMdw.Db.Sync.Contract do
   alias AeMdw.Blocks
   alias AeMdw.Contract
   alias AeMdw.AexnContracts
+  alias AeMdw.Db.Channels
   alias AeMdw.Db.IntCallsMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
@@ -149,7 +150,7 @@ defmodule AeMdw.Db.Sync.Contract do
       {local_idx, "Oracle.register", :oracle_register_tx, _aetx, tx} ->
         Oracle.register_mutations(tx, tx_hash, block_index, {call_txi, local_idx})
 
-      {_local_idx, "Oracle.respond", :oracle_respond_tx, _aetx, tx} ->
+      {_local_idx, "Oracle.respond", :oracle_response_tx, _aetx, tx} ->
         Oracle.response_mutation(tx, block_index, call_txi)
 
       {_local_idx, "Oracle.query", :oracle_query_tx, _aetx, tx} ->
@@ -168,6 +169,12 @@ defmodule AeMdw.Db.Sync.Contract do
         tx
         |> :aens_revoke_tx.name_hash()
         |> NameRevokeMutation.new({call_txi, local_idx}, block_index)
+
+      {_local_idx, "Channel.withdraw", :channel_withdraw_tx, _aetx, tx} ->
+        Channels.withdraw_mutations({block_index, call_txi}, tx)
+
+      {_local_idx, "Channel.settle", :channel_settle_tx, _aetx, tx} ->
+        Channels.settle_mutations({block_index, call_txi}, tx)
 
       {_local_idx, _fname, _tx_type, _aetx, _tx} ->
         []
