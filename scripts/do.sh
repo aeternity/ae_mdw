@@ -19,6 +19,6 @@ case $1 in
     ;;
 
   "test")
-    elixir --sname $NAME -S mix test
+    MIX_ENV=test elixir --sname $NAME -S mix test
     ;;
 esac
