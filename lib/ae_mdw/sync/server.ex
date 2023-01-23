@@ -329,21 +329,14 @@ defmodule AeMdw.Sync.Server do
     Enum.each(gens_mutations, fn {height, blocks_mutations} ->
       {mbs_mutations, [{{^height, -1}, key_block, _mutations}]} = Enum.split(blocks_mutations, -1)
 
-      # v1
-      Enum.each(mbs_mutations, fn {_block_index, micro_block, _mutations} ->
-        Broadcaster.broadcast_micro_block(micro_block, :v1, :mdw)
-        Broadcaster.broadcast_txs(micro_block, :v1, :mdw)
-      end)
-
-      Broadcaster.broadcast_key_block(key_block, :v1, :mdw)
-
-      # v2
       Broadcaster.broadcast_key_block(key_block, :v2, :mdw)
 
       Enum.each(mbs_mutations, fn {_block_index, micro_block, _mutations} ->
-        Broadcaster.broadcast_micro_block(micro_block, :v2, :mdw)
-        Broadcaster.broadcast_txs(micro_block, :v2, :mdw)
+        Broadcaster.broadcast_micro_block(micro_block, :mdw)
+        Broadcaster.broadcast_txs(micro_block, :mdw)
       end)
+
+      Broadcaster.broadcast_key_block(key_block, :v1, :mdw)
     end)
   end
 end

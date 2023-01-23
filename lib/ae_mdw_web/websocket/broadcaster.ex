@@ -35,35 +35,46 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     {:ok, hash} = :aec_headers.hash_header(header)
 
     if not already_processed?({:key, version, hash, source}) do
-      GenServer.cast(__MODULE__, {:broadcast_key_block, version, header, source})
+      if Subscriptions.has_subscribers?(version, "KeyBlocks") do
+        GenServer.cast(__MODULE__, {:broadcast_key_block, version, header, source})
+      end
+
       set_processed({:key, version, hash, source})
     end
 
     :ok
   end
 
-  @spec broadcast_micro_block(Db.micro_block(), version(), source()) :: :ok
-  def broadcast_micro_block(block, version, source) do
+  @spec broadcast_micro_block(Db.micro_block(), source()) :: :ok
+  def broadcast_micro_block(block, source) do
     header = :aec_blocks.to_header(block)
     {:ok, hash} = :aec_headers.hash_header(header)
 
-    if not already_processed?({:micro, version, hash, source}) do
-      GenServer.cast(__MODULE__, {:broadcast_micro_block, version, header, source})
-      set_processed({:micro, version, hash, source})
+    if not already_processed?({:micro, hash, source}) do
+      versions = get_subscribed_versions("MicroBlocks")
+
+      if Enum.any?(versions) do
+        GenServer.cast(__MODULE__, {:broadcast_micro_block, header, source, versions})
+      end
+
+      set_processed({:micro, hash, source})
     end
 
     :ok
   end
 
-  @spec broadcast_txs(Db.micro_block(), version(), source()) :: :ok
-  def broadcast_txs(block, version, source) do
+  @spec broadcast_txs(Db.micro_block(), source()) :: :ok
+  def broadcast_txs(block, source) do
     {:ok, hash} = block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
 
-    if not already_processed?({:txs, version, hash, source}) &&
-         (Subscriptions.has_subscribers?(version, "Transactions") ||
-            Subscriptions.has_object_subscribers?(version)) do
-      GenServer.cast(__MODULE__, {:broadcast_txs, version, block, source})
-      set_processed({:txs, version, hash, source})
+    if not already_processed?({:txs, hash, source}) do
+      versions = Enum.filter(~w(v1 v2)a, &broadcast_transaction?/1)
+
+      if Enum.any?(versions) do
+        GenServer.cast(__MODULE__, {:broadcast_txs, block, source, versions})
+      end
+
+      set_processed({:txs, hash, source})
     end
 
     :ok
@@ -77,15 +88,15 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   end
 
   @impl GenServer
-  def handle_cast({:broadcast_micro_block, version, header, source}, state) do
-    do_broadcast_micro_block(header, version, source)
+  def handle_cast({:broadcast_micro_block, header, source, versions}, state) do
+    Enum.each(versions, &do_broadcast_micro_block(header, &1, source))
 
     {:noreply, state}
   end
 
   @impl GenServer
-  def handle_cast({:broadcast_txs, version, block, source}, state) do
-    do_broadcast_txs(block, version, source)
+  def handle_cast({:broadcast_txs, micro_block, source, versions}, state) do
+    Enum.each(versions, &do_broadcast_txs(micro_block, &1, source))
 
     {:noreply, state}
   end
@@ -278,7 +289,16 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     |> Enum.uniq()
   end
 
+  defp get_subscribed_versions(channel) do
+    Enum.filter([:v1, :v2], &Subscriptions.has_subscribers?(&1, channel))
+  end
+
   defp already_processed?(type_hash), do: EtsCache.member(@hashes_table, type_hash)
 
   defp set_processed(type_hash), do: EtsCache.put(@hashes_table, type_hash, true)
+
+  defp broadcast_transaction?(version) do
+    Subscriptions.has_subscribers?(version, "Transactions") ||
+      Subscriptions.has_object_subscribers?(version)
+  end
 end
