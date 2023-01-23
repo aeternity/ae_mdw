@@ -867,10 +867,10 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       name =
         Model.name(
           index: plain_name,
-          claims: [{{height2, 0}, txi3}, {{height2, 0}, txi2}],
+          claims: [{{height2, 0}, {txi3, -1}}, {{height2, 0}, {txi2, -1}}],
           updates: [],
           transfers: [],
-          previous: Model.name(claims: [{{height1, 0}, txi1}])
+          previous: Model.name(claims: [{{height1, 0}, {txi1, -1}}])
         )
 
       store =
@@ -920,7 +920,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "type" => "NameClaimEvent",
                  "block_hash" => ^enc_mb_hash2,
                  "payload" => %{
-                   "tx_hash" => ^encoded_tx_hash3,
+                   "source_tx_hash" => ^encoded_tx_hash3,
+                   "source_tx_type" => "NameClaimTx",
                    "micro_time" => 30,
                    "tx" => %{
                      "account_id" => ^account,
@@ -929,8 +930,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                      "name_fee" => 33_333,
                      "name_salt" => 3_333,
                      "nonce" => 333,
-                     "ttl" => 3_333_333,
-                     "type" => "NameClaimTx"
+                     "ttl" => 3_333_333
                    }
                  }
                } = activity3
@@ -940,7 +940,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "type" => "NameClaimEvent",
                  "block_hash" => ^enc_mb_hash2,
                  "payload" => %{
-                   "tx_hash" => ^encoded_tx_hash2,
+                   "source_tx_hash" => ^encoded_tx_hash2,
+                   "source_tx_type" => "NameClaimTx",
                    "micro_time" => 20,
                    "tx" => %{
                      "account_id" => ^account,
@@ -949,8 +950,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                      "name_fee" => 22_222,
                      "name_salt" => 2_222,
                      "nonce" => 222,
-                     "ttl" => 2_222_222,
-                     "type" => "NameClaimTx"
+                     "ttl" => 2_222_222
                    }
                  }
                } = activity2
@@ -966,7 +966,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "type" => "NameClaimEvent",
                  "block_hash" => ^enc_mb_hash1,
                  "payload" => %{
-                   "tx_hash" => ^encoded_tx_hash1,
+                   "source_tx_hash" => ^encoded_tx_hash1,
+                   "source_tx_type" => "NameClaimTx",
                    "micro_time" => 10,
                    "tx" => %{
                      "account_id" => ^account,
@@ -975,8 +976,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                      "name_fee" => 11_111,
                      "name_salt" => 1_111,
                      "nonce" => 111,
-                     "ttl" => 11_111_111,
-                     "type" => "NameClaimTx"
+                     "ttl" => 11_111_111
                    }
                  }
                } = activity1
