@@ -133,7 +133,7 @@ GET /v2/oracles                         - expired oracles ordered by expiration 
 GET /v2/oracles/:id                     - oracle information by hash
 
 GET /v2/channels                        - active channels ordered by activation height
-GET /v2/channels/:id                    - channel
+GET /v2/channels/:id                    - active or inactive channel
 
 GET /v2/transfers                        - internal transfers from the top of the chain
 
@@ -156,8 +156,6 @@ GET /v2/aex141/:contract_id/templates                  - nft templates
 GET /v2/aex141/:contract_id/templates/:id/tokens       - nft supply from a template
 GET /v2/aex141/transfers/from/:sender                  - nft transfers from sender
 GET /v2/aex141/transfers/to/:recipient                 - nft transfers to recipient
-GET /v2/aex141/transfers/from-to/:sender/:recipient    - nft transfers from sender to recipient
-GET /v2/aex141/transfers/from-to/:sender/:recipient    - nft transfers from sender to recipient
 GET /v2/aex141/transfers/from-to/:sender/:recipient    - nft transfers from sender to recipient
 
 GET /v2/deltastats                       - statistics for generations from tip of the chain
@@ -3667,56 +3665,71 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/oracles?state=active&limit=1&expa
 
 ### `/v2/channels`
 
-Returns active channels ordered by activation.
+Returns active channels ordered by the txi of the last update.
+
+Besides the participants balances it includes some fields intrinsic to the channel such as:
+- the reserve deposited in the channel for paying fees and assuring refunds;
+- lock parameters, in case of individual actions; and
+- delegates allowed to represent participants
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/channels?limit=1" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/channels?direction=forward&limit=1" | jq '.'
 {
   "data": [
     {
-      "amount": 20000000000001,
-      "channel": "ch_vpYXyMJZDF8Rdc3EZFvLdKYrWZKsbs1hKXHXMAczeV8MmDPkK",
-      "initiator": "ak_2BUfk9dHtn2YKuBe6uY9f4qD94xKETA6w9MGAYyJc5weiUUXhy",
-      "last_updated_height": 141956,
-      "last_updated_tx_hash": "th_tuTDcp7boNK7MzcWS8pForWJt5683qdVcJtETcJPmHsPgCXvd",
-      "last_updated_tx_type": "ChannelCreateTx",
-      "responder": "ak_2BUfk9dHtn2YKuBe6uY9f4qD94xKETA6w9MGAYyJc5weiUUXhy",
-      "state_hash": "st_Wwxms0IVM7PPCHpeOXWeeZZm8h5p/SuqZL7IHIbr3CqtlCL+",
-      "updates_count": 1
+      "active": true,
+      "amount": 100090,
+      "channel": "ch_22usvXSjYaDPdhecyhub7tZnYpHeCEZdscEEyhb2M4rHb58RyD",
+      "initiator": "ak_ozzwBYeatmuN818LjDDDwRSiBSvrqt4WU7WvbGsZGVre72LTS",
+      "last_updated_height": 14258,
+      "last_updated_tx_hash": "th_2Ph5XF3VBUNstN5kkVic56NY55xq8vckM3h2TQ5sRVSLGq1kvE",
+      "last_updated_tx_type": "ChannelDepositTx",
+      "responder": "ak_26xYuZJnxpjuBqkvXQ4EKb4Ludt8w3rGWREvEwm68qdtJLyLwq",
+      "state_hash": "st_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACy1gTH9",
+      "updates_count": 3,
+      "channel_reserve": 10,
+      "delegate_ids": [],
+      "initiator_amount": 50000,
+      "lock_period": 3,
+      "locked_until": 0,
+      "responder_amount": 50000,
+      "round": 6,
+      "solo_round": 0
     }
   ],
-  "next": "/v2/channels?cursor=141956-ch_hhqtLjXn9h31Sa6WTNxTANC1zG3WxUzCss1HnJSjovP4pnVUK&limit=1",
+  "next": "/v2/channels?cursor=9155-ch_2tceSwiqxgBcPirX3VYgW3sXgQdJeHjrNWHhLWyfZL7pT4gZF4&direction=forward&limit=1",
   "prev": null
 }
 ```
 
 ### `/v2/channels/:id`
 
-Returns a single active/inactive channel.
+Returns the state of an active/inactive channel.
+
+Optionally a `block_hash` parameter might be used to query for the state on a specific block.
+
+In this example it retrieves the `ChannelDepositTx` as the last udpate for a block prior to the last update that was a `ChannelCloseMutualTx`.
 
 ```
-$ curl -s "https://testnet.aeternity.io/mdw/v2/channels/ch_2oZz9YFKj5KcaTBa2HWv8UUuFJ3evY8XBym3wyF5Y1JE1VAo8C" | jq '.'
+$ curl -s "https://testnet.aeternity.io/mdw/v2/channels/ch_2ZBf9AJ3wr25YzdZb1sQrDALEQ1ZDKwwUhtVXoZiNKbheuesqs?block_hash=mh_245PQCb1gWrJRxUjAmEAv5qSXLQGnksCgHyw9PTHRNGA6PfeD" | jq '.'
 {
   "active": true,
-  "amount": 9000000000000000000,
-  "channel": "ch_2oZz9YFKj5KcaTBa2HWv8UUuFJ3evY8XBym3wyF5Y1JE1VAo8C",
-  "initiator": "ak_kodik5wfpsc9q4jp74pGSdihRbAZNGpRgdxo2DgSsmtnBasx8",
-  "last_updated_height": 703565,
-  "last_updated_tx_hash": "th_23Y2TgYFjZP5TsVnoWkgfLTK8mdQaAkjmmjnmhhw4DjLt4wvX4",
-  "last_updated_tx_type": "ChannelCreateTx",
-  "responder": "ak_2sSNLyDkao8jeycCkd2NVAkNMJc1E11sKBw8zzbiUY9QyPPoKz",
-  "state_hash": "st_XU4NzDXb8lkNmPXR23m4XXf56qI/cUw9cyZwYFo2yNr+x8kF",
-  "updates_count": 1,
-  "channel_reserve": 500000000000000000,
-  "delegate_ids": {
-    "initiator": [],
-    "responder": []
-  },
-  "initiator_amount": 4500000000000000000,
-  "lock_period": 0,
+  "amount": 1e+19,
+  "channel": "ch_2ZBf9AJ3wr25YzdZb1sQrDALEQ1ZDKwwUhtVXoZiNKbheuesqs",
+  "initiator": "ak_VQbiKWLmFXzamGXeTahL9efE8jMprjM9ZpG2BXyWYmPy3ck9Q",
+  "last_updated_height": 104024,
+  "last_updated_tx_hash": "th_2SQMPNd8jdY5nm8YFpitUti8z9qqBfPuzdodQU9FFzpuMxuLYw",
+  "last_updated_tx_type": "ChannelDepositTx",
+  "responder": "ak_27c4YpfUuW4s9T6RBNpASNuDRiXSWQ93uZ5WxaUXfx1Lqibv33",
+  "state_hash": "st_7oYjZ20LNQTH1ICHzQvgmgAKcYgqFP5hiv8ATvu+5y6a4j9h",
+  "updates_count": 3,
+  "channel_reserve": 1e+18,
+  "delegate_ids": [],
+  "initiator_amount": 2e+18,
+  "lock_period": 10,
   "locked_until": 0,
-  "responder_amount": 4500000000000000000,
-  "round": 1,
+  "responder_amount": 2e+18,
+  "round": 8,
   "solo_round": 0
 }
 ```
