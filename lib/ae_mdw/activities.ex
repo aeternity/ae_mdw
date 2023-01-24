@@ -587,7 +587,9 @@ defmodule AeMdw.Activities do
 
   defp render_payload(state, _account_pk, _height, txi, {:claim, local_idx}) do
     Model.tx(time: micro_time) = State.fetch!(state, Model.Tx, txi)
-    {claim_aetx, tx_hash, tx_type} = DbUtil.read_node_tx_details(state, {txi, local_idx})
+
+    {claim_aetx, tx_hash, tx_type, _block_hash} =
+      DbUtil.read_node_tx_details(state, {txi, local_idx})
 
     payload = %{
       micro_time: micro_time,

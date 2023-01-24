@@ -11,18 +11,19 @@ defmodule AeMdw.Db.ChannelOpenMutation do
   require Model
 
   @derive AeMdw.Db.Mutation
-  defstruct [:bi_txi, :tx]
+  defstruct [:bi_txi_idx, :tx]
 
-  @typep bi_txi() :: Blocks.bi_txi()
+  @typep bi_txi_idx() :: Blocks.bi_txi_idx()
   @opaque t() :: %__MODULE__{
+            bi_txi_idx: bi_txi_idx(),
             tx: Node.tx()
           }
 
-  @spec new(bi_txi(), Node.tx()) :: t()
-  def new(bi_txi, tx), do: %__MODULE__{bi_txi: bi_txi, tx: tx}
+  @spec new(bi_txi_idx(), Node.tx()) :: t()
+  def new(bi_txi_idx, tx), do: %__MODULE__{bi_txi_idx: bi_txi_idx, tx: tx}
 
   @spec execute(t(), State.t()) :: State.t()
-  def execute(%__MODULE__{bi_txi: {{height, _mbi}, _txi} = bi_txi, tx: tx}, state) do
+  def execute(%__MODULE__{bi_txi_idx: {{height, _mbi}, _txi_idx} = bi_txi_idx, tx: tx}, state) do
     initiator_amount = :aesc_create_tx.initiator_amount(tx)
     responder_amount = :aesc_create_tx.responder_amount(tx)
     amount = initiator_amount + responder_amount
@@ -36,7 +37,7 @@ defmodule AeMdw.Db.ChannelOpenMutation do
         responder: :aesc_create_tx.responder_pubkey(tx),
         state_hash: :aesc_create_tx.state_hash(tx),
         amount: amount,
-        updates: [bi_txi]
+        updates: [bi_txi_idx]
       )
 
     activation = Model.activation(index: {height, channel_pk})

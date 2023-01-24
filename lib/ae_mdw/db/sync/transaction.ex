@@ -232,7 +232,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     {:ok, channel_pk} = :aesc_utils.channel_pubkey(signed_tx)
 
     [
-      Channels.open_mutations({block_index, txi}, tx),
+      Channels.open_mutations({block_index, {txi, -1}}, tx),
       Origin.origin_mutations(:channel_create_tx, nil, channel_pk, txi, tx_hash)
     ]
   end
@@ -243,7 +243,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          txi: txi,
          tx: tx
        }),
-       do: Channels.close_solo_mutations({block_index, txi}, tx)
+       do: Channels.close_solo_mutations({block_index, {txi, -1}}, tx)
 
   defp tx_mutations(%TxContext{
          type: :channel_close_mutual_tx,
@@ -251,7 +251,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          txi: txi,
          tx: tx
        }),
-       do: Channels.close_mutual_mutations({block_index, txi}, tx)
+       do: Channels.close_mutual_mutations({block_index, {txi, -1}}, tx)
 
   defp tx_mutations(%TxContext{
          type: :channel_settle_tx,
@@ -259,7 +259,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          txi: txi,
          tx: tx
        }),
-       do: Channels.settle_mutations({block_index, txi}, tx)
+       do: Channels.settle_mutations({block_index, {txi, -1}}, tx)
 
   defp tx_mutations(%TxContext{
          type: :channel_deposit_tx,
@@ -267,7 +267,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          txi: txi,
          tx: tx
        }),
-       do: Channels.deposit_mutations({block_index, txi}, tx)
+       do: Channels.deposit_mutations({block_index, {txi, -1}}, tx)
 
   defp tx_mutations(%TxContext{
          type: :channel_withdraw_tx,
@@ -275,7 +275,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          txi: txi,
          tx: tx
        }),
-       do: Channels.withdraw_mutations({block_index, txi}, tx)
+       do: Channels.withdraw_mutations({block_index, {txi, -1}}, tx)
 
   defp tx_mutations(%TxContext{
          type: :channel_set_delegates_tx,
@@ -283,7 +283,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          txi: txi,
          tx: tx
        }),
-       do: Channels.set_delegates_mutations({block_index, txi}, tx)
+       do: Channels.set_delegates_mutations({block_index, {txi, -1}}, tx)
 
   defp tx_mutations(%TxContext{
          type: :channel_force_progress_tx,
@@ -291,7 +291,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          txi: txi,
          tx: tx
        }),
-       do: Channels.force_progress_mutations({block_index, txi}, tx)
+       do: Channels.force_progress_mutations({block_index, {txi, -1}}, tx)
 
   defp tx_mutations(%TxContext{
          type: :channel_slash_tx,
@@ -299,7 +299,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          txi: txi,
          tx: tx
        }),
-       do: Channels.slash_mutations({block_index, txi}, tx)
+       do: Channels.slash_mutations({block_index, {txi, -1}}, tx)
 
   defp tx_mutations(%TxContext{
          type: :ga_attach_tx,

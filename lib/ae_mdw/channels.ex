@@ -5,6 +5,7 @@ defmodule AeMdw.Channels do
 
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Collection
+  alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
@@ -116,15 +117,15 @@ defmodule AeMdw.Channels do
            responder: responder_pk,
            state_hash: state_hash,
            amount: amount,
-           updates:
-             [{{last_updated_height, _mbi} = update_block_index, last_updated_txi} | _rest] =
-               updates
+           updates: [last_updated_bi_txi_idx | _rest] = updates
          ),
          is_active?,
          type_block_hash \\ nil
        ) do
-    %{"block_hash" => update_block_hash, "hash" => tx_hash, "tx" => %{"type" => tx_type}} =
-      Txs.fetch!(state, last_updated_txi)
+    {{last_updated_height, _mbi} = update_block_index, txi_idx} = last_updated_bi_txi_idx
+
+    {_claim_aetx, tx_hash, tx_type, update_block_hash} =
+      DbUtil.read_node_tx_details(state, txi_idx)
 
     channel = %{
       channel: encode(:channel, channel_pk),
@@ -133,18 +134,13 @@ defmodule AeMdw.Channels do
       state_hash: encode(:state, state_hash),
       last_updated_height: last_updated_height,
       last_updated_tx_hash: tx_hash,
-      last_updated_tx_type: tx_type,
+      last_updated_tx_type: Format.type_to_swagger_name(tx_type),
       updates_count: length(updates),
       active: is_active?
     }
 
     block_hash =
-      get_oldest_block_hash(
-        state,
-        type_block_hash,
-        Validate.id!(update_block_hash),
-        update_block_index
-      )
+      get_oldest_block_hash(state, type_block_hash, update_block_hash, update_block_index)
 
     case :aec_chain.get_channel_at_hash(channel_pk, block_hash) do
       {:ok, node_channel} ->

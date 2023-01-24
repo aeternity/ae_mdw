@@ -11,21 +11,21 @@ defmodule AeMdw.Db.ChannelUpdateMutation do
   require Model
 
   @derive AeMdw.Db.Mutation
-  defstruct [:channel_pk, :bi_txi]
+  defstruct [:channel_pk, :bi_txi_idx]
 
   @opaque t() :: %__MODULE__{
             channel_pk: Db.pubkey(),
-            bi_txi: Blocks.bi_txi()
+            bi_txi_idx: Blocks.bi_txi_idx()
           }
 
-  @spec new(Db.pubkey(), Blocks.bi_txi()) :: t()
-  def new(channel_pk, bi_txi), do: %__MODULE__{channel_pk: channel_pk, bi_txi: bi_txi}
+  @spec new(Db.pubkey(), Blocks.bi_txi_idx()) :: t()
+  def new(channel_pk, bi_txi_idx), do: %__MODULE__{channel_pk: channel_pk, bi_txi_idx: bi_txi_idx}
 
   @spec execute(t(), State.t()) :: State.t()
-  def execute(%__MODULE__{channel_pk: channel_pk, bi_txi: bi_txi}, state) do
+  def execute(%__MODULE__{channel_pk: channel_pk, bi_txi_idx: bi_txi_idx}, state) do
     State.update!(state, Model.ActiveChannel, channel_pk, fn Model.channel(updates: updates) =
                                                                channel ->
-      Model.channel(channel, updates: [bi_txi | updates])
+      Model.channel(channel, updates: [bi_txi_idx | updates])
     end)
   end
 end
