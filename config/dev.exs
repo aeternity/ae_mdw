@@ -5,7 +5,7 @@ config :aecore, network_id: System.get_env("NETWORK_ID", "ae_mainnet")
 #
 # Telemetry
 #
-config :ae_mdw, :livedashboard_enabled?, true
+config :ae_mdw, :enable_livedashboard, true
 
 config :ae_mdw, TelemetryMetricsStatsd,
   host: "localhost",

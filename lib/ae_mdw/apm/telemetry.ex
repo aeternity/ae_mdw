@@ -18,8 +18,7 @@ defmodule AeMdw.APM.Telemetry do
 
     children = [
       AeMdw.APM.TelemetryPoller,
-      {TelemetryMetricsStatsd, metrics: metrics(), host: host, port: port, formatter: formatter},
-      {Telemetry.Metrics.ConsoleReporter, metrics: metrics()}
+      {TelemetryMetricsStatsd, metrics: metrics(), host: host, port: port, formatter: formatter}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
@@ -29,17 +28,16 @@ defmodule AeMdw.APM.Telemetry do
   def metrics do
     [
       # Middleware Metrics
-      last_value("ae_mdw.status.mdw_gens_per_minute"),
+      distribution("ae_mdw.status.mdw_gens_per_minute"),
       last_value("ae_mdw.status.mdw_height"),
       last_value("ae_mdw.status.mdw_syncing"),
       last_value("ae_mdw.status.node_height"),
       last_value("ae_mdw.status.node_progress"),
 
       # Phoenix Metrics
-      summary("phoenix.endpoint.stop.duration",
-        unit: {:native, :millisecond}
-      ),
+      distribution("phoenix.endpoint.stop.duration"),
       summary("phoenix.router_dispatch.stop.duration",
+        tags: [:route],
         unit: {:native, :millisecond}
       ),
 

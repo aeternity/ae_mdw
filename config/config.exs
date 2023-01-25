@@ -7,6 +7,8 @@
 # General application configuration
 import Config
 
+config :ae_mdw, sync: false
+
 mdw_revision =
   case File.read("AEMDW_REVISION") do
     {:ok, revision} ->

@@ -1,9 +1,6 @@
 defmodule AeMdw.APM.TelemetryPoller do
   @moduledoc false
 
-  alias AeMdw.Db.State
-  alias AeMdw.Db.Status
-
   @spec child_spec([]) :: Supervisor.child_spec()
   def child_spec(opts) do
     %{
@@ -26,18 +23,13 @@ defmodule AeMdw.APM.TelemetryPoller do
     )
   end
 
-  @spec dispatch_status() :: :ok
-  def dispatch_status do
-    :telemetry.execute([:ae_mdw, :status], Status.node_and_mdw_status(State.mem_state()))
-  end
-
   defp periodic_measurements do
     [
+      {AeMdw.Apm.CustomMetrics, :dispatch_status, []},
       {:process_info,
        name: :ae_mdw_worker,
        event: [:ae_mdw, :worker],
-       keys: [:memory, :message_queue_len, :system_counts]},
-      {__MODULE__, :dispatch_status, []}
+       keys: [:memory, :message_queue_len, :system_counts]}
     ]
   end
 end
