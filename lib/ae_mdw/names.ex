@@ -22,7 +22,8 @@ defmodule AeMdw.Names do
   alias AeMdw.Util
   alias AeMdw.Validate
 
-  @type cursor :: binary()
+  @type cursor() :: binary() | nil
+  @type page_cursor() :: Collection.pagination_cursor()
   # This needs to be an actual type like AeMdw.Db.Name.t()
   @type name :: term()
   @type claim() :: map()
@@ -67,7 +68,7 @@ defmodule AeMdw.Names do
   @max_bin Util.max_256bit_bin()
 
   @spec fetch_names(state(), pagination(), range(), order_by(), query(), cursor() | nil, opts()) ::
-          {:ok, cursor() | nil, [name()], cursor() | nil} | {:error, reason()}
+          {:ok, page_cursor(), [name()], page_cursor()} | {:error, reason()}
   def fetch_names(state, pagination, range, order_by, query, cursor, opts)
       when order_by in [:activation, :expiration, :deactivation] do
     cursor = deserialize_height_cursor(cursor)
@@ -117,8 +118,8 @@ defmodule AeMdw.Names do
     end
   end
 
-  @spec fetch_name_claims(state(), binary(), pagination(), range(), nested_cursor() | nil) ::
-          {:ok, {nested_cursor() | nil, [claim()], nested_cursor() | nil}} | {:error, Error.t()}
+  @spec fetch_name_claims(state(), binary(), pagination(), range(), cursor() | nil) ::
+          {:ok, {page_cursor(), [claim()], page_cursor()}} | {:error, Error.t()}
   def fetch_name_claims(state, plain_name_or_hash, pagination, scope, cursor) do
     with {:ok, name_or_auction} <- locate_name_or_auction(state, plain_name_or_hash) do
       claims =
@@ -134,8 +135,8 @@ defmodule AeMdw.Names do
     end
   end
 
-  @spec fetch_name_updates(state(), binary(), pagination(), range(), nested_cursor() | nil) ::
-          {:ok, {nested_cursor() | nil, [update()], nested_cursor() | nil}} | {:error, Error.t()}
+  @spec fetch_name_updates(state(), binary(), pagination(), range(), cursor()) ::
+          {:ok, {page_cursor(), [update()], page_cursor()}} | {:error, Error.t()}
   def fetch_name_updates(state, plain_name_or_hash, pagination, scope, cursor) do
     with {:ok, name_or_auction} <- locate_name_or_auction(state, plain_name_or_hash) do
       updates =
@@ -151,8 +152,8 @@ defmodule AeMdw.Names do
     end
   end
 
-  @spec fetch_name_transfers(state(), binary(), pagination(), range(), nested_cursor() | nil) ::
-          {:ok, {nested_cursor() | nil, [update()], nested_cursor() | nil}} | {:error, Error.t()}
+  @spec fetch_name_transfers(state(), binary(), pagination(), range(), cursor() | nil) ::
+          {:ok, {page_cursor(), [update()], page_cursor()}} | {:error, Error.t()}
   def fetch_name_transfers(state, plain_name_or_hash, pagination, scope, cursor) do
     with {:ok, name_or_auction} <- locate_name_or_auction(state, plain_name_or_hash) do
       transfers =
@@ -342,18 +343,18 @@ defmodule AeMdw.Names do
     end
   end
 
-  @spec fetch_active_names(state(), pagination(), range(), order_by(), cursor() | nil, opts()) ::
-          {:ok, cursor() | nil, [name()], cursor() | nil} | {:error, reason()}
+  @spec fetch_active_names(state(), pagination(), range(), order_by(), cursor(), opts()) ::
+          {:ok, page_cursor(), [name()], page_cursor()} | {:error, reason()}
   def fetch_active_names(state, pagination, range, order_by, cursor, opts),
     do: fetch_names(state, pagination, range, order_by, %{"state" => "active"}, cursor, opts)
 
-  @spec fetch_inactive_names(state(), pagination(), range(), order_by(), cursor() | nil, opts()) ::
-          {:ok, cursor() | nil, [name()], cursor() | nil} | {:error, reason()}
+  @spec fetch_inactive_names(state(), pagination(), range(), order_by(), cursor(), opts()) ::
+          {:ok, page_cursor(), [name()], page_cursor()} | {:error, reason()}
   def fetch_inactive_names(state, pagination, range, order_by, cursor, opts),
     do: fetch_names(state, pagination, range, order_by, %{"state" => "inactive"}, cursor, opts)
 
-  @spec search_names(state(), [lifecycle()], prefix(), pagination(), cursor() | nil, opts()) ::
-          {cursor() | nil, [name()], cursor() | nil}
+  @spec search_names(state(), [lifecycle()], prefix(), pagination(), cursor(), opts()) ::
+          {page_cursor(), [name()], page_cursor()}
 
   def search_names(state, [], prefix, pagination, cursor, opts),
     do: search_names(state, @all_lifecycles, prefix, pagination, cursor, opts)
