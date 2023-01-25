@@ -338,7 +338,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         )
         |> List.flatten()
 
-      assert ChannelUpdateMutation.new(channel_pk, {block_index, txi}) in mutations
+      assert ChannelUpdateMutation.new(channel_pk, {block_index, {txi, -1}}) in mutations
 
       mutations =
         close_mutual_aetx
@@ -349,7 +349,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         )
         |> List.flatten()
 
-      assert ChannelCloseMutation.new(channel_pk, {block_index, txi}, 3) in mutations
+      assert ChannelCloseMutation.new(channel_pk, {block_index, {txi, -1}}, 3) in mutations
 
       mutations =
         settle_aetx
@@ -360,7 +360,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         )
         |> List.flatten()
 
-      assert ChannelCloseMutation.new(channel_pk, {block_index, txi}, 3) in mutations
+      assert ChannelCloseMutation.new(channel_pk, {block_index, {txi, -1}}, 3) in mutations
     end
   end
 
