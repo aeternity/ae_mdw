@@ -11,17 +11,21 @@ defmodule AeMdw.Db.ChannelCloseMutation do
   require Model
 
   @derive AeMdw.Db.Mutation
-  defstruct [:channel_pk, :bi_txi, :released_amount]
+  defstruct [:channel_pk, :bi_txi_idx, :released_amount]
 
   @opaque t() :: %__MODULE__{
             channel_pk: Db.pubkey(),
-            bi_txi: Blocks.bi_txi(),
+            bi_txi_idx: Blocks.bi_txi_idx(),
             released_amount: non_neg_integer()
           }
 
-  @spec new(Db.pubkey(), Blocks.bi_txi(), non_neg_integer()) :: t()
-  def new(channel_pk, bi_txi, released_amount),
-    do: %__MODULE__{channel_pk: channel_pk, bi_txi: bi_txi, released_amount: released_amount}
+  @spec new(Db.pubkey(), Blocks.bi_txi_idx(), non_neg_integer()) :: t()
+  def new(channel_pk, bi_txi_idx, released_amount),
+    do: %__MODULE__{
+      channel_pk: channel_pk,
+      bi_txi_idx: bi_txi_idx,
+      released_amount: released_amount
+    }
 
   @spec execute(t(), State.t()) :: State.t()
   def execute(%__MODULE__{channel_pk: channel_pk, released_amount: released_amount}, state) do

@@ -170,11 +170,11 @@ defmodule AeMdw.Db.Sync.Contract do
         |> :aens_revoke_tx.name_hash()
         |> NameRevokeMutation.new({call_txi, local_idx}, block_index)
 
-      {_local_idx, "Channel.withdraw", :channel_withdraw_tx, _aetx, tx} ->
-        Channels.withdraw_mutations({block_index, call_txi}, tx)
+      {local_idx, "Channel.withdraw", :channel_withdraw_tx, _aetx, tx} ->
+        Channels.withdraw_mutations({block_index, {call_txi, local_idx}}, tx)
 
-      {_local_idx, "Channel.settle", :channel_settle_tx, _aetx, tx} ->
-        Channels.settle_mutations({block_index, call_txi}, tx)
+      {local_idx, "Channel.settle", :channel_settle_tx, _aetx, tx} ->
+        Channels.settle_mutations({block_index, {call_txi, local_idx}}, tx)
 
       {_local_idx, _fname, _tx_type, _aetx, _tx} ->
         []

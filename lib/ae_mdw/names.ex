@@ -599,9 +599,8 @@ defmodule AeMdw.Names do
     |> Enum.map(&render_name_info(state, &1, opts))
   end
 
-  defp render_claim(state, {{height, _mbi} = block_index, txi_idx}) do
-    block_hash = Blocks.block_index_to_hash(state, block_index)
-    {claim_aetx, tx_hash, tx_type} = DbUtil.read_node_tx_details(state, txi_idx)
+  defp render_claim(state, {{height, _mbi}, txi_idx}) do
+    {claim_aetx, tx_hash, tx_type, block_hash} = DbUtil.read_node_tx_details(state, txi_idx)
 
     %{
       height: height,
@@ -613,9 +612,8 @@ defmodule AeMdw.Names do
     }
   end
 
-  defp render_update(state, {{height, _mbi} = block_index, txi_idx}) do
-    block_hash = Blocks.block_index_to_hash(state, block_index)
-    {update_aetx, tx_hash, tx_type} = DbUtil.read_node_tx_details(state, txi_idx)
+  defp render_update(state, {{height, _mbi}, txi_idx}) do
+    {update_aetx, tx_hash, tx_type, block_hash} = DbUtil.read_node_tx_details(state, txi_idx)
 
     %{
       height: height,
@@ -627,9 +625,8 @@ defmodule AeMdw.Names do
     }
   end
 
-  defp render_transfer(state, {{height, _mbi} = block_index, txi_idx}) do
-    block_hash = Blocks.block_index_to_hash(state, block_index)
-    {transfer_aetx, tx_hash, tx_type} = DbUtil.read_node_tx_details(state, txi_idx)
+  defp render_transfer(state, {{height, _mbi}, txi_idx}) do
+    {transfer_aetx, tx_hash, tx_type, block_hash} = DbUtil.read_node_tx_details(state, txi_idx)
 
     %{
       height: height,

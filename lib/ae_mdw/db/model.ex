@@ -371,7 +371,7 @@ defmodule AeMdw.Db.Model do
             responder: pubkey(),
             state_hash: binary(),
             amount: non_neg_integer(),
-            updates: [bi_txi()]
+            updates: [bi_txi_idx()]
           )
 
   # AEX9 event balance:

@@ -4,7 +4,6 @@ defmodule AeMdwWeb.ChannelControllerTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
   alias AeMdw.TestSamples, as: TS
-  alias AeMdw.Txs
 
   import Mock
   import AeMdw.Util.Encoding
@@ -17,7 +16,8 @@ defmodule AeMdwWeb.ChannelControllerTest do
       channel_pk2 = TS.channel_pk(1)
       initiator_pk = TS.address(0)
       responder_pk = TS.address(1)
-      tx_hash = encode(:tx_hash, <<Enum.random(1_000..9_999)::256>>)
+      tx_hash = <<Enum.random(1_000..9_999)::256>>
+      enc_tx_hash = encode(:tx_hash, tx_hash)
       tx_type1 = "ChannelWithdrawTx"
       tx_type2 = "ChannelCloseMutualTx"
 
@@ -34,30 +34,26 @@ defmodule AeMdwWeb.ChannelControllerTest do
           initiator: initiator_pk,
           responder: responder_pk,
           state_hash: state_hash,
-          updates: [{{500_000, 1}, 1_000}]
+          updates: [{{500_000, 1}, {1_000, -1}}]
         )
 
       m_channel2 =
-        Model.channel(m_channel1, index: channel_pk2, active: 2, updates: [{{500_000, 1}, 2_000}])
+        Model.channel(m_channel1,
+          index: channel_pk2,
+          active: 2,
+          updates: [{{500_000, 1}, {2_000, -1}}]
+        )
 
       block_hash = <<Enum.random(1_000..9_999)::256>>
 
       with_mocks [
-        {Txs, [:passthrough],
-         fetch!: fn _state, txi when txi in [1_000, 2_000] ->
-           tx =
-             if txi == 1_000 do
-               %{"type" => tx_type1}
-             else
-               %{"type" => tx_type2}
-             end
-
-           %{
-             "block_hash" => encode(:micro_block_hash, block_hash),
-             "hash" => tx_hash,
-             "tx" => tx
-           }
-         end},
+        {AeMdw.Db.Util, [:passthrough],
+         [
+           read_node_tx_details: fn
+             _state, {1_000, -1} -> {:tx, tx_hash, :channel_withdraw_tx, block_hash}
+             _state, {2_000, -1} -> {:tx, tx_hash, :channel_close_mutual_tx, block_hash}
+           end
+         ]},
         {:aec_chain, [:passthrough],
          get_channel_at_hash: fn pubkey, ^block_hash ->
            amount =
@@ -95,7 +91,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
                  "active" => true,
                  "amount" => 8_000_000,
                  "last_updated_height" => 500_000,
-                 "last_updated_tx_hash" => ^tx_hash,
+                 "last_updated_tx_hash" => ^enc_tx_hash,
                  "last_updated_tx_type" => ^tx_type2,
                  "updates_count" => 1,
                  "responder" => ^responder,
@@ -115,7 +111,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
                  "active" => true,
                  "amount" => 9_000_000,
                  "last_updated_height" => 500_000,
-                 "last_updated_tx_hash" => ^tx_hash,
+                 "last_updated_tx_hash" => ^enc_tx_hash,
                  "last_updated_tx_type" => ^tx_type1,
                  "updates_count" => 1,
                  "responder" => ^responder,
@@ -152,7 +148,8 @@ defmodule AeMdwWeb.ChannelControllerTest do
       inactive_channel_pk = TS.channel_pk(1)
       initiator_pk = TS.address(0)
       responder_pk = TS.address(1)
-      tx_hash = encode(:tx_hash, <<Enum.random(1_000..9_999)::256>>)
+      tx_hash = <<Enum.random(1_000..9_999)::256>>
+      enc_tx_hash = encode(:tx_hash, tx_hash)
       tx_type1 = "ChannelWithdrawTx"
       tx_type2 = "ChannelCloseMutualTx"
       state_hash1 = <<1::256>>
@@ -165,34 +162,26 @@ defmodule AeMdwWeb.ChannelControllerTest do
           initiator: initiator_pk,
           responder: responder_pk,
           state_hash: state_hash1,
-          updates: [{{600_000, 1}, 1_000}]
+          updates: [{{600_000, 1}, {1_000, -1}}]
         )
 
       inactive_channel =
         Model.channel(active_channel,
           index: inactive_channel_pk,
           state_hash: state_hash2,
-          updates: [{{600_000, 1}, 2_000}]
+          updates: [{{600_000, 1}, {2_000, -1}}]
         )
 
       block_hash = <<Enum.random(1_000..9_999)::256>>
 
       with_mocks [
-        {Txs, [:passthrough],
-         fetch!: fn _state, txi when txi in [1_000, 2_000] ->
-           tx =
-             if txi == 1_000 do
-               %{"type" => tx_type1}
-             else
-               %{"type" => tx_type2}
-             end
-
-           %{
-             "block_hash" => encode(:micro_block_hash, block_hash),
-             "hash" => tx_hash,
-             "tx" => tx
-           }
-         end},
+        {AeMdw.Db.Util, [:passthrough],
+         [
+           read_node_tx_details: fn
+             _state, {1_000, -1} -> {:tx, tx_hash, :channel_withdraw_tx, block_hash}
+             _state, {2_000, -1} -> {:tx, tx_hash, :channel_close_mutual_tx, block_hash}
+           end
+         ]},
         {:aec_chain, [:passthrough],
          get_channel_at_hash: fn pubkey, ^block_hash ->
            amount =
@@ -225,7 +214,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
                  "active" => true,
                  "amount" => 9_000_000,
                  "last_updated_height" => 600_000,
-                 "last_updated_tx_hash" => ^tx_hash,
+                 "last_updated_tx_hash" => ^enc_tx_hash,
                  "last_updated_tx_type" => ^tx_type1,
                  "updates_count" => 1,
                  "responder" => ^responder,
@@ -251,7 +240,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
                  "active" => false,
                  "amount" => 8_000_000,
                  "last_updated_height" => 600_000,
-                 "last_updated_tx_hash" => ^tx_hash,
+                 "last_updated_tx_hash" => ^enc_tx_hash,
                  "last_updated_tx_type" => ^tx_type2,
                  "updates_count" => 1,
                  "responder" => ^responder,
@@ -277,7 +266,8 @@ defmodule AeMdwWeb.ChannelControllerTest do
       inactive_channel_pk = TS.channel_pk(1)
       initiator_pk = TS.address(0)
       responder_pk = TS.address(1)
-      tx_hash = encode(:tx_hash, <<Enum.random(1_000..9_999)::256>>)
+      tx_hash = <<Enum.random(1_000..9_999)::256>>
+      enc_tx_hash = encode(:tx_hash, tx_hash)
       tx_type1 = "ChannelWithdrawTx"
       tx_type2 = "ChannelCloseMutualTx"
       state_hash1 = <<1::256>>
@@ -290,35 +280,20 @@ defmodule AeMdwWeb.ChannelControllerTest do
           initiator: initiator_pk,
           responder: responder_pk,
           state_hash: state_hash1,
-          updates: [{{600_000, 1}, 1_000}]
+          updates: [{{600_000, 1}, {1_000, -1}}]
         )
 
       inactive_channel =
         Model.channel(active_channel,
           index: inactive_channel_pk,
           state_hash: state_hash2,
-          updates: [{{600_000, 1}, 2_000}]
+          updates: [{{600_000, 1}, {2_000, -1}}]
         )
 
       update_block_hash = :crypto.strong_rand_bytes(32)
       micro_block_hash = :crypto.strong_rand_bytes(32)
 
       with_mocks [
-        {Txs, [:passthrough],
-         fetch!: fn _state, txi when txi in [1_000, 2_000] ->
-           tx =
-             if txi == 1_000 do
-               %{"type" => tx_type1}
-             else
-               %{"type" => tx_type2}
-             end
-
-           %{
-             "block_hash" => encode(:micro_block_hash, update_block_hash),
-             "hash" => tx_hash,
-             "tx" => tx
-           }
-         end},
         {:aec_chain, [:passthrough],
          get_channel_at_hash: fn pubkey, ^micro_block_hash ->
            amount =
@@ -335,7 +310,13 @@ defmodule AeMdwWeb.ChannelControllerTest do
              3, 600_003, 3}}
          end},
         {AeMdw.Db.Util, [:passthrough],
-         micro_block_height_index: fn _state, ^micro_block_hash -> {:ok, 599_999, 1} end}
+         [
+           read_node_tx_details: fn
+             _state, {1_000, -1} -> {:tx, tx_hash, :channel_withdraw_tx, update_block_hash}
+             _state, {2_000, -1} -> {:tx, tx_hash, :channel_close_mutual_tx, update_block_hash}
+           end,
+           micro_block_height_index: fn _state, ^micro_block_hash -> {:ok, 599_999, 1} end
+         ]}
       ] do
         store =
           store
@@ -353,7 +334,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
                  "active" => true,
                  "amount" => 9_000_000,
                  "last_updated_height" => 600_000,
-                 "last_updated_tx_hash" => ^tx_hash,
+                 "last_updated_tx_hash" => ^enc_tx_hash,
                  "last_updated_tx_type" => ^tx_type1,
                  "updates_count" => 1,
                  "responder" => ^responder,
@@ -381,7 +362,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
                  "active" => false,
                  "amount" => 8_000_000,
                  "last_updated_height" => 600_000,
-                 "last_updated_tx_hash" => ^tx_hash,
+                 "last_updated_tx_hash" => ^enc_tx_hash,
                  "last_updated_tx_type" => ^tx_type2,
                  "updates_count" => 1,
                  "responder" => ^responder,
