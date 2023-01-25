@@ -35,7 +35,13 @@ defmodule AeMdw.APM.Telemetry do
       last_value("ae_mdw.status.node_progress"),
 
       # Phoenix Metrics
-      distribution("phoenix.endpoint.stop.duration"),
+      distribution("phoenix.endpoint.stop.duration",
+        tags: [:request_path],
+        unit: {:native, :millisecond}
+      ),
+      counter("phoenix.router_dispatch.stop.duration",
+        tags: [:route]
+      ),
       summary("phoenix.router_dispatch.stop.duration",
         tags: [:route],
         unit: {:native, :millisecond}
