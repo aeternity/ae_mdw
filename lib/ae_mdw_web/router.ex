@@ -24,6 +24,7 @@ defmodule AeMdwWeb.Router do
   pipeline :api do
     plug :accepts, ["json"]
     plug StatePlug
+    plug Plug.RequestId
   end
 
   pipeline :browser do
@@ -180,6 +181,15 @@ defmodule AeMdwWeb.Router do
     get "/stats/:scope_type/:range", StatsController, :stats
     get "/totalstats/:direction", StatsController, :total_stats
     get "/totalstats/:scope_type/:range", StatsController, :total_stats
+
+    if Application.get_env(:ae_mdw, :livedashboard_enabled?, false) do
+      import Phoenix.LiveDashboard.Router
+
+      scope "/" do
+        pipe_through :browser
+        live_dashboard "/dashboard", metrics: AeMdw.APM.Telemetry
+      end
+    end
 
     match :*, "/*path", UtilController, :no_route
   end

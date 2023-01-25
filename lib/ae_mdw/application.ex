@@ -10,7 +10,6 @@ defmodule AeMdw.Application do
   """
   alias AeMdw.Contract
   alias AeMdw.Db.Model
-  alias AeMdw.Sync.Supervisor, as: SyncSupervisor
   alias AeMdw.EtsCache
   alias AeMdw.Extract
   alias AeMdw.NodeHelper
@@ -40,9 +39,10 @@ defmodule AeMdw.Application do
     :ok = AeMdw.Db.RocksDb.open()
 
     children = [
+      AeMdw.APM.Telemetry,
       AeMdwWeb.Supervisor,
       AeMdwWeb.Websocket.Supervisor,
-      SyncSupervisor
+      AeMdw.Sync.Supervisor
     ]
 
     children =

@@ -54,6 +54,7 @@ config :logger,
 
 config :logger, :info,
   path: "#{Path.join(File.cwd!(), "log/info.log")}",
+  metadata: [:request_id],
   format: "$date $time $metadata[$level] $message\n",
   sync_threshold: 100
 

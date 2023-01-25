@@ -3,6 +3,13 @@ import Config
 # Sync
 config :ae_mdw, sync: false
 
+#
+# Telemetry
+#
+config :ae_mdw, TelemetryMetricsStatsd,
+  host: "localhost",
+  port: 8115
+
 if System.get_env("INTEGRATION_TEST") != "1" do
   # Database
   config :ae_mdw, AeMdw.Db.RocksDb, data_dir: "test_data.db"
