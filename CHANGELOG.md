@@ -1,5 +1,25 @@
 # Changelog
 
+### [1.37.2](https://www.github.com/aeternity/ae_mdw/compare/v1.37.1...v1.37.2) (2023-01-25)
+
+
+### Bug Fixes
+
+* adapt claim actvities to use the new txi_idx stored format ([#1138](https://www.github.com/aeternity/ae_mdw/issues/1138)) ([c112077](https://www.github.com/aeternity/ae_mdw/commit/c112077ca4d467a0433c41e4150b11096ef36846))
+* look for pointee also on previous name record ([#1137](https://www.github.com/aeternity/ae_mdw/issues/1137)) ([9c8bd08](https://www.github.com/aeternity/ae_mdw/commit/9c8bd08ccdc8d787ad651d92d13c4b5426a0501b))
+* use proper names for transaction types for events and transactions ([#1142](https://www.github.com/aeternity/ae_mdw/issues/1142)) ([b65830d](https://www.github.com/aeternity/ae_mdw/commit/b65830dd835f42d1e07fd96c7d56fe40f2625036))
+
+
+### Refactorings
+
+* remove duplicated v2 ws enqueuing ([#1139](https://www.github.com/aeternity/ae_mdw/issues/1139)) ([7c8aff9](https://www.github.com/aeternity/ae_mdw/commit/7c8aff955e9e404e807dc0c3de319db40c2696f9))
+
+
+### Miscellaneous
+
+* add MIX_ENV=test for being able to run tests ([#1136](https://www.github.com/aeternity/ae_mdw/issues/1136)) ([e76ceba](https://www.github.com/aeternity/ae_mdw/commit/e76ceba904416af81f96b36326e94f4e353b1b93))
+* add support for channels local index reference ([#1144](https://www.github.com/aeternity/ae_mdw/issues/1144)) ([33d5e28](https://www.github.com/aeternity/ae_mdw/commit/33d5e280d249c4192322637963429acc90fd552c))
+
 ### [1.37.1](https://www.github.com/aeternity/ae_mdw/compare/v1.37.0...v1.37.1) (2023-01-18)
 
 
