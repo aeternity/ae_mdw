@@ -279,8 +279,8 @@ defmodule AeMdw.Db.Model do
   @type owner_deactivation() :: record(:owner_deactivation, index: owner_deactivation_index())
 
   # pointee : (updated when name_update_tx changes pointers)
-  #     index = {pointer_val, {block_index, txi}, pointer_key}
-  @pointee_defaults [index: {nil, {{nil, nil}, nil}, nil}, unused: nil]
+  #     index = {pointer_val, {block_index, txi_idx}, pointer_key}
+  @pointee_defaults [index: nil, unused: nil]
   defrecord :pointee, @pointee_defaults
 
   @type pointee_index() :: {pubkey(), bi_txi_idx(), pubkey()}

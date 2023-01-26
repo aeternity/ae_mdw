@@ -173,7 +173,7 @@ defmodule AeMdw.Db.Name do
 
   @spec pointees(state(), pubkey()) :: {map(), map()}
   def pointees(state, pk) do
-    push = fn place, m_name, {update_bi, update_txi, ptr_k} ->
+    push = fn place, m_name, {update_bi, {update_txi, _idx}, ptr_k} ->
       pointee = %{
         name: Model.name(m_name, :index),
         active_from: Model.name(m_name, :active),
@@ -184,11 +184,15 @@ defmodule AeMdw.Db.Name do
       Map.update(place, ptr_k, [pointee], fn pointees -> [pointee | pointees] end)
     end
 
-    for {_bi, txi, _ptr_k} = p_keys <- pointee_keys(state, pk), reduce: {%{}, %{}} do
+    for {_bi, txi_idx, _ptr_k} = p_keys <- pointee_keys(state, pk), reduce: {%{}, %{}} do
       {active, inactive} ->
-        %{tx: %{name: plain}} = Format.to_raw_map(state, DbUtil.read_tx!(state, txi))
+        {name_update_tx, _tx_hash, _tx_type, _block_hash} =
+          DbUtil.read_node_tx_details(state, txi_idx)
 
-        case locate(state, plain) do
+        name_hash = :aens_update_tx.name_hash(name_update_tx)
+        Model.plain_name(value: plain_name) = State.fetch!(state, Model.PlainName, name_hash)
+
+        case locate(state, plain_name) do
           {_bid_key, Model.AuctionBid} ->
             {active, inactive}
 
