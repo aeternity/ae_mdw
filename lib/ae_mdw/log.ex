@@ -6,7 +6,7 @@ defmodule AeMdw.Log do
 
   @typep exception() :: %{:__exception__ => true, :__struct__ => atom(), atom() => any()}
 
-  @spec info(String.t()) :: :ok
+  @spec info(String.t() | map()) :: :ok
   def info(msg),
     do: Logger.info(msg)
 

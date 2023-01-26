@@ -83,7 +83,7 @@ defmodule AeMdw.Sync.Server do
   def new_height(height, hash), do: GenStateMachine.cast(__MODULE__, {:new_height, height, hash})
 
   @spec syncing?() :: boolean()
-  def syncing?, do: GenStateMachine.call(__MODULE__, :syncing?)
+  def syncing?, do: :persistent_term.get({__MODULE__, :syncing?}, false)
 
   @spec restart_sync() :: :ok
   def restart_sync, do: GenStateMachine.cast(__MODULE__, :restart_sync)
@@ -139,6 +139,8 @@ defmodule AeMdw.Sync.Server do
       ) do
     max_db_height = chain_height - @mem_gens
     db_height = State.height(db_state)
+
+    :persistent_term.put({__MODULE__, :syncing?}, true)
 
     cond do
       db_height < max_db_height ->
@@ -230,6 +232,8 @@ defmodule AeMdw.Sync.Server do
 
   def handle_event(:info, {:DOWN, _ref, :process, _pid, reason}, _state, state_data) do
     Log.info("Sync.Server error: #{inspect(reason)}. Stopping...")
+
+    :persistent_term.put({__MODULE__, :syncing?}, false)
 
     {:ok, _ref} = :timer.apply_after(@retry_time, __MODULE__, :restart_sync, [])
 

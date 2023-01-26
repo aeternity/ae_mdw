@@ -7,6 +7,8 @@
 # General application configuration
 import Config
 
+config :ae_mdw, sync: false
+
 mdw_revision =
   case File.read("AEMDW_REVISION") do
     {:ok, revision} ->
@@ -54,6 +56,7 @@ config :logger,
 
 config :logger, :info,
   path: "#{Path.join(File.cwd!(), "log/info.log")}",
+  metadata: [:request_id],
   format: "$date $time $metadata[$level] $message\n",
   sync_threshold: 100
 

@@ -17,30 +17,8 @@ defmodule AeMdw.Db.Status do
 
   @spec node_and_mdw_status(State.t()) :: map()
   def node_and_mdw_status(state) do
-    {:ok, top_kb} = :aec_chain.top_key_block()
-    {node_syncing?, node_progress} = :aec_sync.sync_progress()
-    node_height = :aec_blocks.height(top_kb)
-    {mdw_tx_index, mdw_height} = safe_mdw_tx_index_and_height(state)
-    mdw_syncing? = Server.syncing?()
-    {:ok, version} = :application.get_key(:ae_mdw, :vsn)
-    async_tasks_counters = Stats.counters()
-    gens_per_minute = get_gens_per_min()
-
-    %{
-      node_version: :aeu_info.get_version(),
-      node_revision: :aeu_info.get_revision(),
-      node_height: node_height,
-      node_syncing: node_syncing?,
-      node_progress: node_progress,
-      mdw_version: to_string(version),
-      mdw_revision: :persistent_term.get({:ae_mdw, :build_revision}),
-      mdw_height: mdw_height,
-      mdw_tx_index: mdw_tx_index,
-      mdw_async_tasks: async_tasks_counters,
-      mdw_synced: node_height == mdw_height,
-      mdw_syncing: mdw_syncing?,
-      mdw_gens_per_minute: round(gens_per_minute * 100) / 100
-    }
+    node_status = node_status()
+    Map.merge(node_status, mdw_status(state, node_status.node_height))
   end
 
   @spec set_gens_per_min(gens_per_min()) :: :ok
@@ -55,6 +33,39 @@ defmodule AeMdw.Db.Status do
       :none -> 0
       gens_per_min -> gens_per_min
     end
+  end
+
+  defp node_status do
+    {node_syncing?, node_progress} = :aec_sync.sync_progress()
+    {:ok, top_kb} = :aec_chain.top_key_block()
+    node_height = :aec_blocks.height(top_kb)
+
+    %{
+      node_version: :aeu_info.get_version(),
+      node_revision: :aeu_info.get_revision(),
+      node_height: node_height,
+      node_syncing: node_syncing?,
+      node_progress: node_progress
+    }
+  end
+
+  defp mdw_status(state, node_height) do
+    {mdw_tx_index, mdw_height} = safe_mdw_tx_index_and_height(state)
+    mdw_syncing? = Server.syncing?()
+    {:ok, version} = :application.get_key(:ae_mdw, :vsn)
+    async_tasks_counters = Stats.counters()
+    gens_per_minute = get_gens_per_min()
+
+    %{
+      mdw_version: to_string(version),
+      mdw_revision: :persistent_term.get({:ae_mdw, :build_revision}),
+      mdw_height: mdw_height,
+      mdw_tx_index: mdw_tx_index,
+      mdw_async_tasks: async_tasks_counters,
+      mdw_synced: node_height == mdw_height,
+      mdw_syncing: mdw_syncing?,
+      mdw_gens_per_minute: round(gens_per_minute * 100) / 100
+    }
   end
 
   defp safe_mdw_tx_index_and_height(state) do
