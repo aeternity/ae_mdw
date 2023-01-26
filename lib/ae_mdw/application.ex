@@ -166,7 +166,7 @@ defmodule AeMdw.Application do
     AeMdw.Db.RocksDbCF.init_tables()
   end
 
-  @spec init_public(atom()) :: :ok
+  @spec init_public(:contract_cache) :: :ok
   def init_public(:contract_cache) do
     cache_exp = Application.fetch_env!(:ae_mdw, :contract_cache_expiration_minutes)
     EtsCache.new(Contract.table(), cache_exp)

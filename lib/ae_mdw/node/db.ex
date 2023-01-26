@@ -13,7 +13,7 @@ defmodule AeMdw.Node.Db do
   require Model
 
   @type pubkey() :: <<_::256>>
-  @type hash_type() :: nil | :key | :micro
+  @type hash_type() :: :key | :micro
   @type hash() :: <<_::256>>
   @type height_hash() :: {hash_type(), pos_integer(), binary()}
   @type balances_map() :: %{{:address, pubkey()} => integer()}

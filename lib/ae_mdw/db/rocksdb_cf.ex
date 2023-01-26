@@ -171,7 +171,7 @@ defmodule AeMdw.Db.RocksDbCF do
     iterator_prev_key(it, seek_index)
   end
 
-  @spec dirty_put(table(), record()) :: :ok | {:error, any}
+  @spec dirty_put(table(), record()) :: :ok
   def dirty_put(table, record) do
     key = encode_record_index(record)
     value = encode_record_value(record)
@@ -179,7 +179,7 @@ defmodule AeMdw.Db.RocksDbCF do
     :ok = RocksDb.dirty_put(table, key, value)
   end
 
-  @spec dirty_delete(table(), key()) :: :ok | {:error, any}
+  @spec dirty_delete(table(), key()) :: :ok
   def dirty_delete(table, index) do
     key = :sext.encode(index)
 
