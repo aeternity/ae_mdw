@@ -8,7 +8,6 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
   alias AeMdw.Db.State
   alias AeMdw.Db.Util
   alias AeMdw.MainnetClient
-  alias :aeser_api_encoder, as: Enc
   alias Plug.Conn
 
   require Model
@@ -602,7 +601,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     test "get transactions when direction=backward and type_group parameter=ga", %{conn: conn} do
       limit = 3
       type_group = "ga"
-      txs_types_by_tx_group = get_txs_types_by_tx_group(type_group)
+      txs_types_by_tx_group = ["PayingForTx" | get_txs_types_by_tx_group(type_group)]
 
       assert %{"data" => txs} =
                conn
@@ -1001,7 +1000,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
                  assert {:ok, recipient_account_pk} =
                           Name.account_pointer_at(state, plain_name, tx_index)
 
-                 assert recipient["account"] == Enc.encode(:account_pubkey, recipient_account_pk)
+                 assert recipient["account"] == recipient_account_pk
                  true
                else
                  false
@@ -1809,7 +1808,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
                assert {:ok, recipient_account_pk} =
                         Name.account_pointer_at(state, plain_name, tx_index)
 
-               assert recipient["account"] == Enc.encode(:account_pubkey, recipient_account_pk)
+               assert recipient["account"] == recipient_account_pk
                true
              else
                false

@@ -670,12 +670,20 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
                conn |> get("/v2/names", by: by, direction: direction) |> json_response(400)
     end
 
-    test "renders error when filtering by owner with expiration order", %{conn: conn} do
+    test "returns names when filtering by owner with expiration order", %{conn: conn} do
       id = "ak_KR3a8dukEYVoZPoWFaszFgjKUpBh7J1Q5iWsz9YCamHn2rTCp"
-      error_msg = "invalid query: can't order by expiration when filtering by owner"
 
-      assert %{"error" => ^error_msg} =
-               conn |> get("/v2/names", owned_by: id) |> json_response(400)
+      assert %{"data" => [name1]} =
+               conn
+               |> get("/v2/names", owned_by: id, direction: "forward", limit: 1)
+               |> json_response(200)
+
+      assert %{
+               "hash" => "nm_U1na6mYmpy2GDxcoMQyZ5tL2KRp1b3a4aPdq5sqY5k38KfhW6",
+               "name" => "2transferlongname.chain",
+               "previous" => [],
+               "status" => "name"
+             } = name1
     end
 
     test "renders error when scoping names sorted by name", %{conn: conn} do
@@ -894,19 +902,25 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
     test "get name in auction with expand=true", %{conn: conn} do
       state = State.new()
       {:ok, name} = State.prev(state, Model.AuctionBid, nil)
-      conn = get(conn, "/name/#{name}?expand=true")
 
-      response = json_response(conn, 200)
-      name_map = TestUtil.handle_input(fn -> get_name(Validate.plain_name!(state, name)) end)
-      name_map = update_in(name_map, ["status"], &to_string/1)
+      assert %{
+               "auction" => %{
+                 "bids" => [%{"tx" => last_bidtx1} | _rest_bids],
+                 "last_bid" => %{"tx" => last_bidtx2}
+               },
+               "name" => ^name,
+               "status" => "auction",
+               "info" => %{"updates" => updates},
+               "previous" => previous
+             } =
+               conn
+               |> get("/name/#{name}", expand: true)
+               |> json_response(200)
 
-      assert name_map ==
-               update_in(response, ["info", "bids"], fn bids ->
-                 Enum.map(bids, & &1["tx_index"])
-               end)
-
-      assert List.first(response["info"]["bids"]) ==
-               response["info"]["last_bid"] |> pop_in(["tx", "ttl"]) |> elem(1)
+      assert Enum.all?(updates, &is_map/1)
+      assert Enum.all?(previous, &is_map/1)
+      last_bidtx2 = Map.delete(last_bidtx2, "ttl")
+      assert ^last_bidtx2 = Map.drop(last_bidtx1, ["version"])
     end
 
     test "get name info by encoded hash ", %{conn: conn} do
@@ -952,19 +966,25 @@ defmodule Integration.AeMdwWeb.NameControllerTest do
     test "get name in auction with expand=true", %{conn: conn} do
       state = State.new()
       {:ok, name} = State.next(state, Model.AuctionBid, nil)
-      conn = get(conn, "/v2/names/#{name}?expand=true")
 
-      response = json_response(conn, 200)
-      name_map = TestUtil.handle_input(fn -> get_name(Validate.plain_name!(state, name)) end)
-      name_map = update_in(name_map, ["status"], &to_string/1)
+      assert %{
+               "auction" => %{
+                 "bids" => [%{"tx" => last_bidtx1} | _rest_bids],
+                 "last_bid" => %{"tx" => last_bidtx2}
+               },
+               "name" => ^name,
+               "status" => "auction",
+               "info" => %{"updates" => updates},
+               "previous" => previous
+             } =
+               conn
+               |> get("/v2/names/#{name}?expand=true")
+               |> json_response(200)
 
-      assert name_map ==
-               update_in(response, ["info", "bids"], fn bids ->
-                 Enum.map(bids, & &1["tx_index"])
-               end)
-
-      assert List.first(response["info"]["bids"]) ==
-               response["info"]["last_bid"] |> pop_in(["tx", "ttl"]) |> elem(1)
+      assert Enum.all?(updates, &is_map/1)
+      assert Enum.all?(previous, &is_map/1)
+      last_bidtx2 = Map.delete(last_bidtx2, "ttl")
+      assert ^last_bidtx2 = Map.drop(last_bidtx1, ["version"])
     end
 
     test "get name info by encoded hash ", %{conn: conn} do
