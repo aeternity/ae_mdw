@@ -9,8 +9,6 @@ defmodule AeMdw.Db.Oracle do
 
   require Model
 
-  import AeMdw.Util
-
   @typep pubkey :: Db.pubkey()
   @typep cache_key :: pubkey() | {pos_integer(), pubkey()}
   @typep state :: State.t()
@@ -18,11 +16,15 @@ defmodule AeMdw.Db.Oracle do
   @spec locate(state(), pubkey()) ::
           {Model.oracle(), Model.ActiveOracle | Model.InactiveOracle} | nil
   def locate(state, pubkey) do
-    map_ok_nil(cache_through_read(state, Model.ActiveOracle, pubkey), &{&1, Model.ActiveOracle}) ||
-      map_ok_nil(
-        cache_through_read(state, Model.InactiveOracle, pubkey),
-        &{&1, Model.InactiveOracle}
-      )
+    case cache_through_read(state, Model.ActiveOracle, pubkey) do
+      {:ok, m_oracle} ->
+        {m_oracle, Model.ActiveOracle}
+
+      nil ->
+        with {:ok, m_oracle} <- cache_through_read(state, Model.InactiveOracle, pubkey) do
+          {m_oracle, Model.InactiveOracle}
+        end
+    end
   end
 
   @spec cache_through_read(state(), atom(), cache_key()) :: {:ok, Model.oracle()} | nil

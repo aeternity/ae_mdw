@@ -88,9 +88,7 @@ defmodule AeMdw.Db.Sync.Oracle do
     |> State.delete(table, key)
   end
 
-  @spec cache_through_delete_inactive(state(), nil | Model.oracle()) :: state()
-  def cache_through_delete_inactive(state, nil), do: state
-
+  @spec cache_through_delete_inactive(state(), Model.oracle()) :: state()
   def cache_through_delete_inactive(state, m_oracle) do
     pubkey = Model.oracle(m_oracle, :index)
     expire = Model.oracle(m_oracle, :expire)
