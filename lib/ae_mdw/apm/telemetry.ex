@@ -33,6 +33,9 @@ defmodule AeMdw.APM.Telemetry do
       last_value("ae_mdw.status.mdw_syncing"),
       last_value("ae_mdw.status.node_height"),
       last_value("ae_mdw.status.node_progress"),
+      counter("ae_mdw.error.status",
+        tags: [:request_path, :query_params, :reason]
+      ),
 
       # Phoenix Metrics
       distribution("phoenix.endpoint.stop.duration",

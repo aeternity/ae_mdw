@@ -1,5 +1,6 @@
 defmodule AeMdwWeb.Router do
   use AeMdwWeb, :router
+  use Plug.ErrorHandler
 
   alias AeMdwWeb.Plugs.StatePlug
 
@@ -192,5 +193,23 @@ defmodule AeMdwWeb.Router do
     end
 
     match :*, "/*path", UtilController, :no_route
+  end
+
+  @impl Plug.ErrorHandler
+  def handle_errors(%{status: 500, query_params: query_params} = conn, %{
+        kind: :error,
+        reason: reason
+      }) do
+    :telemetry.execute([:ae_mdw, :error], %{status: 500}, %{
+      request_path: conn.request_path,
+      query_params: query_params,
+      reason: inspect(reason)
+    })
+
+    send_resp(conn, 500, "Internal Server Error")
+  end
+
+  def handle_errors(conn, _error) do
+    conn
   end
 end
