@@ -369,9 +369,9 @@ defmodule AeMdw.Db.Sync.Name do
   defp log_name_change(height, plain_name, change),
     do: Log.info("[#{height}][name] #{change} #{plain_name}")
 
-  defp pointee_key(ptr, {bi, txi}) do
+  defp pointee_key(ptr, {bi, txi_idx}) do
     {k, v} = pointer_kv(ptr)
-    {v, {bi, txi}, k}
+    {v, {bi, txi_idx}, k}
   end
 
   defp pointer_kv(ptr) do
