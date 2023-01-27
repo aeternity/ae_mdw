@@ -75,11 +75,12 @@ defmodule AeMdw.AexnContracts do
 
   def has_valid_aex141_extensions?(_extensions, _no_fcode), do: false
 
-  @spec call_meta_info(Model.aexn_type(), pubkey()) :: {:ok, Model.aexn_meta_info()}
+  @spec call_meta_info(Model.aexn_type(), pubkey()) ::
+          {:ok, Model.aexn_meta_info()} | {:error, :format_error}
   def call_meta_info(aexn_type, contract_pk) do
     case call_contract(contract_pk, "meta_info", []) do
       {:ok, {:tuple, meta_info_tuple}} ->
-        {:ok, decode_meta_info(aexn_type, meta_info_tuple)}
+        decode_meta_info(aexn_type, meta_info_tuple)
 
       :error ->
         {:ok, call_error_meta_info(aexn_type)}
@@ -137,7 +138,7 @@ defmodule AeMdw.AexnContracts do
     end
   end
 
-  defp decode_meta_info(:aex9, {_name, _symbol, _decimals} = meta_info), do: meta_info
+  defp decode_meta_info(:aex9, {_name, _symbol, _decimals} = meta_info), do: {:ok, meta_info}
 
   defp decode_meta_info(:aex141, {name, symbol, variant_url, variant_type}) do
     url =
@@ -149,10 +150,10 @@ defmodule AeMdw.AexnContracts do
 
     metadata_type = decode_metadata_type(variant_type)
 
-    {name, symbol, url, metadata_type}
+    {:ok, {name, symbol, url, metadata_type}}
   end
 
-  defp decode_meta_info(aexn_type, _unknown), do: format_error_meta_info(aexn_type)
+  defp decode_meta_info(_aexn_type, _unknown), do: {:error, :format_error}
 
   defp decode_metadata_type(variant_type) do
     case variant_type do
@@ -171,11 +172,6 @@ defmodule AeMdw.AexnContracts do
 
   defp call_error_meta_info(:aex141),
     do: {:out_of_gas_error, :out_of_gas_error, :out_of_gas_error, nil}
-
-  defp format_error_meta_info(:aex9), do: {:format_error, :format_error, nil}
-
-  defp format_error_meta_info(:aex141),
-    do: {:format_error, :format_error, :format_error, nil}
 
   defp has_all_signatures?(aexn_signatures, functions) do
     Enum.all?(aexn_signatures, fn {hash, type} ->

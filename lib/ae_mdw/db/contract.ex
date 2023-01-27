@@ -51,20 +51,16 @@ defmodule AeMdw.Db.Contract do
     name = elem(aexn_meta_info, 0)
     symbol = elem(aexn_meta_info, 1)
 
-    # metadata errors other than format are inserted
-    if name == :format_error do
-      state2
-    else
-      m_contract_name =
-        Model.aexn_contract_name(index: {aexn_type, sort_field_truncate(name), contract_pk})
+    # after contrat call error meta info is also inserted
+    m_contract_name =
+      Model.aexn_contract_name(index: {aexn_type, sort_field_truncate(name), contract_pk})
 
-      m_contract_sym =
-        Model.aexn_contract_symbol(index: {aexn_type, sort_field_truncate(symbol), contract_pk})
+    m_contract_sym =
+      Model.aexn_contract_symbol(index: {aexn_type, sort_field_truncate(symbol), contract_pk})
 
-      state2
-      |> State.put(Model.AexnContractName, m_contract_name)
-      |> State.put(Model.AexnContractSymbol, m_contract_sym)
-    end
+    state2
+    |> State.put(Model.AexnContractName, m_contract_name)
+    |> State.put(Model.AexnContractSymbol, m_contract_sym)
   end
 
   @spec aex9_write_presence(state(), pubkey(), integer(), pubkey()) :: state()
