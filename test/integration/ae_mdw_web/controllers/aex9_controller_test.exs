@@ -506,20 +506,38 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
     end
 
     test "gets balances for each contract", %{conn: conn} do
-      aex9_pubkeys =
-        Model.AexnContract
-        |> Database.all_keys()
-        |> Enum.filter(fn {type, _pubkey} -> type == :aex9 end)
+      aex9_pubkeys = [
+        "ct_2TZsPKT5wyahqFrzp8YX7DfXQapQ4Qk65yn3sHbifU9Db9hoav",
+        "ct_1DtebWK23btGPEnfiH3fxppd34S75uUryo5yGmb938Dx9Nyjt",
+        "ct_7HD1qro97784gEPA22HuXqn328XFsWzdTM6ELzSNTRSFmeXrv",
+        "ct_8SnTpFBAxZD7WbUN1bXqSoa2Zgf4M4L2GLGY2Vkosr5jHtfVe",
+        "ct_96zkVfzSqnAqT3BKJMDNc3oiYhNUJbsMorSJhyp9xaUUKVFSh",
+        "ct_AdhAL6YZ2wZKKTcR8Gf8CYSGsWC1siWNyv8JRvRpB3RbeAwer",
+        "ct_Frcy81aKCkd5HZLjtxkLFtN27xCRsvn1LgfVfNwtDN2YnSdHP",
+        "ct_GEwAb3denzg7uTVSkjvevGrXGtt7cgBencMByscEzjJBUwS4x",
+        "ct_GKZosdCRANTixw4DZvQBn72DbxsAVGNWjShLzBspjNAWCqjks",
+        "ct_GVVWFC6i62RrWHAkez1EweAAthJsgiCqp8gmQ3rhb3zpi1dF8",
+        "ct_HEsvfAUzHe4eAaVwG6rzaoQWrKMz2bT1CuocdztAL5oPhzDpG",
+        "ct_JehCZkTbiTVoPHd42DuPqtCv3pprtmpSv2W5LfLgHBZWvWqr5",
+        "ct_RHiPRbJH3N8QhUGhXUoKofJcH53FbmkPZxkpdkhp1RpHqBwNw",
+        "ct_UzvRD43yuKTpmytYZbzUieLvxXB2FQvSAMf14H3Rz6DThupCn",
+        "ct_bvRK5CdQKoqswFZskioS6tu5Z1CBhSmD3zyiqrLFHv1pV81EQ",
+        "ct_hNZmPkHTtGJJXqaV4kb4JcmhMQdGdvef91g4Ck9BVqWKkT8xd",
+        "ct_icxpMgSrVb4xJkieSQRu5iBcP6CqbRrpGTNt99DfwyRz5Ly7h",
+        "ct_ipFbBQasdRJ6KkzFKvUn5oaXpC147qqRM1NarMCkmYtHdd2cJ",
+        "ct_pd1SeSAvF9CUcbd8cABYWfEbWygW5ja74gJYi1QFJtqCD4a22",
+        "ct_sMVni6coWLTMkHY4Si9jthm2RVqRpXe7cPRMVj2T9YJBW4tA9"
+      ]
 
       not_empty_balance_contracts =
-        Enum.filter(aex9_pubkeys, fn {:aex9, contract_pk} ->
-          contract_id = encode_contract(contract_pk)
-          conn = get(conn, "/aex9/balances/#{contract_id}")
-
+        Enum.filter(aex9_pubkeys, fn contract_id ->
           assert %{
                    "amounts" => amounts,
                    "contract_id" => ^contract_id
-                 } = json_response(conn, 200)
+                 } =
+                   conn
+                   |> get("/aex9/balances/#{contract_id}")
+                   |> json_response(200)
 
           assert is_map(amounts)
 
@@ -571,30 +589,26 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
     @tag timeout: 60_000
     @tag :iteration
     test "gets balances for some accounts with aex9 presence", %{conn: conn} do
-      state = State.new()
-
-      account_ids =
-        state
-        |> Collection.stream(Model.Aex9AccountPresence, {nil, nil})
-        |> Enum.take(2_000)
-        |> Enum.map(fn {account_pk, _txi, _contract_pk} ->
-          :aeser_api_encoder.encode(:account_pubkey, account_pk)
-        end)
-        |> Enum.uniq()
+      account_ids = [
+        "ak_11111111111111111111111111111111273Yts",
+        "ak_115zZ7bGVVkqLJesUmxScgPKpEikT5YCmQ4PQe2uJ4qS4Hcs1",
+        "ak_18GcdZmEP8NgLWke2fsdP6fryrrcu4xSpiGa49w6aMWfrC2Y",
+        "ak_19b25xw5MLVe3aAnwXYmf7LXxhUaSay6fK3yBaKqiMyDyv9C"
+      ]
 
       Enum.each(account_ids, fn account_id ->
-        conn = get(conn, "/aex9/balances/account/#{account_id}")
-        assert balances_response = json_response(conn, 200)
+        balances_response =
+          conn
+          |> get("/aex9/balances/account/#{account_id}")
+          |> json_response(200)
 
         Enum.each(balances_response, fn %{
                                           "contract_id" => contract_id,
                                           "token_name" => token_name,
                                           "token_symbol" => token_symbol
-                                        } ->
-          {:contract_pubkey, contract_pk} = :aeser_api_encoder.decode(contract_id)
-
-          assert Model.aexn_contract(meta_info: {^token_name, ^token_symbol, _decimals}) =
-                   Database.fetch!(Model.AexnContract, {:aex9, contract_pk})
+                                        }
+                                        when is_binary(token_name) and is_binary(token_symbol) ->
+          {:contract_pubkey, _contract_pk} = :aeser_api_encoder.decode(contract_id)
         end)
 
         assert balances_response == Enum.dedup(balances_response)

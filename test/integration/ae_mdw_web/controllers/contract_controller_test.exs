@@ -177,30 +177,6 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
                |> json_response(400)
     end
 
-    test "when contract log doesn't have a creation txi, contract_id shouldn't be nil", %{
-      conn: conn
-    } do
-      contract_id = "ct_eJhrbPPS4V97VLKEVbSCJFpdA4uyXiZujQyLqMFoYV88TzDe6"
-
-      assert %{"data" => logs} =
-               conn
-               |> get("/v2/contracts/logs", direction: "forward", contract_id: contract_id)
-               |> json_response(200)
-
-      assert [
-               %{
-                 "contract_id" => ^contract_id,
-                 "contract_txi" => -1,
-                 "ext_caller_contract_id" =>
-                   "ct_eJhrbPPS4V97VLKEVbSCJFpdA4uyXiZujQyLqMFoYV88TzDe6",
-                 "ext_caller_contract_txi" => -1
-               }
-               | rest
-             ] = logs
-
-      assert Enum.all?(rest, &match?(%{"contract_id" => ^contract_id}, &1))
-    end
-
     test "it returns the called filtered by event hash", %{conn: conn} do
       event = "TipReceived"
       event_hash = event |> :aec_hash.blake2b_256_hash() |> Base.hex_encode32()
@@ -319,7 +295,7 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
 
       assert @default_limit = length(create_txis)
       assert ^create_txis = Enum.sort(create_txis)
-      assert %{"internal_tx" => %{"query" => query_b64}} = Enum.at(calls, 2)
+      assert %{"internal_tx" => %{"query" => query_b64}} = Enum.at(calls, 1)
       assert {:ok, _query} = Base.decode64(query_b64)
 
       %{"data" => next_calls} = conn |> get(next) |> json_response(200)

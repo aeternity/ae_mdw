@@ -205,14 +205,13 @@ defmodule AeMdw.Aex9 do
   defp serialize_account_balance_cursor(nil), do: nil
 
   defp serialize_account_balance_cursor({cursor, is_reversed?}),
-    do: {cursor |> :erlang.term_to_binary() |> Base.encode64(), is_reversed?}
+    do: {cursor |> :erlang.term_to_binary() |> Base.encode64(padding: false), is_reversed?}
 
   defp deserialize_account_balance_cursor(nil), do: {:ok, nil}
 
   defp deserialize_account_balance_cursor(cursor_bin64) do
-    with {:ok, cursor_bin} <- Base.decode64(cursor_bin64),
-         {<<_pk1::256>>, txi, <<_pk2::256>>} = cursor when is_integer(txi) <-
-           :erlang.binary_to_term(cursor_bin) do
+    with {:ok, cursor_bin} <- Base.decode64(cursor_bin64, padding: false),
+         {<<_pk1::256>>, <<_pk2::256>>} = cursor <- :erlang.binary_to_term(cursor_bin) do
       {:ok, cursor}
     else
       _invalid -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}

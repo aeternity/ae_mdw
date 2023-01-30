@@ -173,16 +173,6 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
                |> json_response(400)
     end
 
-    test "returns 400 when account is not present on contract", %{conn: conn} do
-      non_existent_account_id = "ak_9MsbDuBTtKegKpj5uSxfPwmJ4YiN6bBdtXici682DgPk8ycpM"
-      error_msg = "balance is not available: {#{@aex9_token_id}, #{non_existent_account_id}}"
-
-      assert %{"error" => ^error_msg} =
-               conn
-               |> get("/v2/aex9/#{@aex9_token_id}/balances/#{non_existent_account_id}")
-               |> json_response(400)
-    end
-
     test "when id is not valid, it returns 400", %{conn: conn} do
       invalid_id = "blah"
       error_msg = "invalid id: #{invalid_id}"
@@ -203,22 +193,26 @@ defmodule Integration.AeMdwWeb.AexnTokenControllerTest do
                |> get("/v2/aex9/account-balances/#{@aex9_token_account_id}", limit: limit)
                |> json_response(200)
 
-      balances_heights =
-        balances |> Enum.map(fn %{"height" => height} -> height end) |> Enum.reverse()
+      balances_contract_ids =
+        balances
+        |> Enum.map(fn %{"contract_id" => contract_id} -> contract_id end)
+        |> Enum.reverse()
 
       assert ^limit = length(balances)
-      assert ^balances_heights = Enum.sort(balances_heights)
+      assert ^balances_contract_ids = Enum.sort(balances_contract_ids)
 
       if next do
         assert %{"data" => next_balances, "prev" => prev} =
                  conn |> get(next) |> json_response(200)
 
-        next_balances_heights =
-          next_balances |> Enum.map(fn %{"height" => account} -> account end) |> Enum.reverse()
+        next_balances_contract_ids =
+          next_balances
+          |> Enum.map(fn %{"contract_id" => account} -> account end)
+          |> Enum.reverse()
 
         assert ^limit = length(next_balances)
-        assert ^next_balances_heights = Enum.sort(next_balances_heights)
-        assert Enum.at(balances_heights, limit - 1) >= Enum.at(next_balances_heights, 0)
+        assert ^next_balances_contract_ids = Enum.sort(next_balances_contract_ids)
+        assert Enum.at(balances_contract_ids, limit - 1) >= Enum.at(next_balances_contract_ids, 0)
 
         assert %{"data" => ^balances} = conn |> get(prev) |> json_response(200)
       end

@@ -88,7 +88,7 @@ defmodule AeMdw.Db.Format do
       name: plain_name,
       hash: name_hash,
       auction: auction,
-      status: status,
+      status: to_string(status),
       active: source == Model.ActiveName,
       info: name_info_to_raw_map(state, m_name),
       previous: Enum.map(prev, &name_info_to_raw_map(state, &1))
