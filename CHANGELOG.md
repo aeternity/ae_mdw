@@ -1,5 +1,35 @@
 # Changelog
 
+## [1.38.0](https://www.github.com/aeternity/ae_mdw/compare/v1.37.1...v1.38.0) (2023-01-30)
+
+
+### Features
+
+* add metrics observability ([#1145](https://www.github.com/aeternity/ae_mdw/issues/1145)) ([d6228c6](https://www.github.com/aeternity/ae_mdw/commit/d6228c6ab582c190f97de8588f18473217b8429f))
+* monitor error 500 ([#1149](https://www.github.com/aeternity/ae_mdw/issues/1149)) ([aa111a8](https://www.github.com/aeternity/ae_mdw/commit/aa111a839680ad5f53187d407a2a6c69fee39b00))
+
+
+### Bug Fixes
+
+* adapt claim actvities to use the new txi_idx stored format ([#1138](https://www.github.com/aeternity/ae_mdw/issues/1138)) ([c112077](https://www.github.com/aeternity/ae_mdw/commit/c112077ca4d467a0433c41e4150b11096ef36846))
+* fix bugs found through integration tests ([#1151](https://www.github.com/aeternity/ae_mdw/issues/1151)) ([c1a797a](https://www.github.com/aeternity/ae_mdw/commit/c1a797a68ce58f6abd11c9ff3dde39be65c5f4ee))
+* look for pointee also on previous name record ([#1137](https://www.github.com/aeternity/ae_mdw/issues/1137)) ([9c8bd08](https://www.github.com/aeternity/ae_mdw/commit/9c8bd08ccdc8d787ad651d92d13c4b5426a0501b))
+* use proper names for transaction types for events and transactions ([#1142](https://www.github.com/aeternity/ae_mdw/issues/1142)) ([b65830d](https://www.github.com/aeternity/ae_mdw/commit/b65830dd835f42d1e07fd96c7d56fe40f2625036))
+* use txi_idx values for displaying pointees ([#1148](https://www.github.com/aeternity/ae_mdw/issues/1148)) ([cf5a09d](https://www.github.com/aeternity/ae_mdw/commit/cf5a09d8c28577e5495a83160f324c90fe83a4e6))
+
+
+### Refactorings
+
+* remove duplicated v2 ws enqueuing ([#1139](https://www.github.com/aeternity/ae_mdw/issues/1139)) ([7c8aff9](https://www.github.com/aeternity/ae_mdw/commit/7c8aff955e9e404e807dc0c3de319db40c2696f9))
+
+
+### Miscellaneous
+
+* add MIX_ENV=test for being able to run tests ([#1136](https://www.github.com/aeternity/ae_mdw/issues/1136)) ([e76ceba](https://www.github.com/aeternity/ae_mdw/commit/e76ceba904416af81f96b36326e94f4e353b1b93))
+* add support for channels local index reference ([#1144](https://www.github.com/aeternity/ae_mdw/issues/1144)) ([33d5e28](https://www.github.com/aeternity/ae_mdw/commit/33d5e280d249c4192322637963429acc90fd552c))
+* cleanup dialyzer warning and util module ([#1150](https://www.github.com/aeternity/ae_mdw/issues/1150)) ([ee066eb](https://www.github.com/aeternity/ae_mdw/commit/ee066eb453b83080f2b48765e04470c4ddf56dc6))
+* fix some of dialyzer overspec errors ([#1146](https://www.github.com/aeternity/ae_mdw/issues/1146)) ([fe1bcdf](https://www.github.com/aeternity/ae_mdw/commit/fe1bcdf23bb26f9744f972ca6ecc1d713d429d19))
+
 ### [1.37.1](https://www.github.com/aeternity/ae_mdw/compare/v1.37.0...v1.37.1) (2023-01-18)
 
 
