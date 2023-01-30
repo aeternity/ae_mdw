@@ -309,11 +309,11 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
     end
 
     test "it gets calls forward filtered by a function name prefix", %{conn: conn} do
-      fname = "Oracle.query"
+      fname_prefix = "Oracle"
 
       assert %{"data" => calls, "next" => next} =
                conn
-               |> get("/v2/contracts/calls", direction: "forward", function: fname)
+               |> get("/v2/contracts/calls", direction: "forward", function: fname_prefix)
                |> json_response(200)
 
       fnames = Enum.map(calls, fn %{"function" => fname} -> fname end)
