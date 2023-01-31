@@ -148,7 +148,6 @@ defmodule AeMdw.MixProject do
       {:cors_plug, "~> 2.0"},
       {:gettext, "~> 0.20"},
       {:jason, "~> 1.4"},
-      {:poison, "~> 5.0"},
       {:plug_cowboy, "~> 2.5"},
       {:websockex, "~> 0.4.3"},
       {:tesla, "~> 1.5"},
