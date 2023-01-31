@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.38.1](https://www.github.com/aeternity/ae_mdw/compare/v1.38.0...v1.38.1) (2023-01-31)
+
+
+### Miscellaneous
+
+* use only Jason library ([#1154](https://www.github.com/aeternity/ae_mdw/issues/1154)) ([e9e537e](https://www.github.com/aeternity/ae_mdw/commit/e9e537e1af14e104b4307becddc860a0cec2feb5))
+
 ## [1.38.0](https://www.github.com/aeternity/ae_mdw/compare/v1.37.1...v1.38.0) (2023-01-30)
 
 
