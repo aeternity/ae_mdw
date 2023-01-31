@@ -211,14 +211,14 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
 
   defp encode_message(payload, "Transactions", source),
     do:
-      Poison.encode!(%{
+      Jason.encode!(%{
         "payload" => encode_payload(payload),
         "subscription" => "Transactions",
         "source" => source
       })
 
   defp encode_message(payload, sub, source),
-    do: Poison.encode!(%{"payload" => payload, "subscription" => sub, "source" => source})
+    do: Jason.encode!(%{"payload" => payload, "subscription" => sub, "source" => source})
 
   defp encode_payload(%{"tx" => %{"type" => "NameUpdateTx"}} = block_tx) do
     encode_name_pointers(block_tx)

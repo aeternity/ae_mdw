@@ -13,42 +13,42 @@ defmodule Support.WsClient do
 
   def subscribe_v2(client, payload) when is_atom(payload) do
     request = %{payload: to_subs(payload), op: "Subscribe", version: "2"}
-    WebSockex.send_frame(client, {:text, Poison.encode!(request)})
+    WebSockex.send_frame(client, {:text, Jason.encode!(request)})
   end
 
   def subscribe(client, payload) when is_atom(payload) do
     request = %{payload: to_subs(payload), op: "Subscribe"}
-    WebSockex.send_frame(client, {:text, Poison.encode!(request)})
+    WebSockex.send_frame(client, {:text, Jason.encode!(request)})
   end
 
   def subscribe(client, key) when is_binary(key) do
     request = %{payload: "Object", op: "Subscribe", target: key}
-    WebSockex.send_frame(client, {:text, Poison.encode!(request)})
+    WebSockex.send_frame(client, {:text, Jason.encode!(request)})
   end
 
   def subscribe(client, payload) do
     request = %{payload: payload, op: "Subscribe"}
-    WebSockex.send_frame(client, {:text, Poison.encode!(request)})
+    WebSockex.send_frame(client, {:text, Jason.encode!(request)})
   end
 
   def unsubscribe(client, payload) when is_atom(payload) do
     request = %{payload: to_subs(payload), op: "Unsubscribe"}
-    WebSockex.send_frame(client, {:text, Poison.encode!(request)})
+    WebSockex.send_frame(client, {:text, Jason.encode!(request)})
   end
 
   def unsubscribe(client, key) when is_binary(key) do
     request = %{payload: "Object", op: "Unsubscribe", target: key}
-    WebSockex.send_frame(client, {:text, Poison.encode!(request)})
+    WebSockex.send_frame(client, {:text, Jason.encode!(request)})
   end
 
   def unsubscribe(client, payload) do
     request = %{payload: payload, op: "Unsubscribe"}
-    WebSockex.send_frame(client, {:text, Poison.encode!(request)})
+    WebSockex.send_frame(client, {:text, Jason.encode!(request)})
   end
 
   def handle_frame({:text, msg}, state) do
     new_state =
-      case Poison.decode!(msg) do
+      case Jason.decode!(msg) do
         %{"subscription" => "MicroBlocks"} = msg ->
           state
           |> Map.put(:mb, msg)
