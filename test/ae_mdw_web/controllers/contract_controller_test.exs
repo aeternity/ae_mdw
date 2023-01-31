@@ -817,16 +817,16 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       end)
     end
 
-    test "returns internal calls filtered by function", %{
+    test "returns internal calls filtered by function prefix", %{
       conn: conn,
       store: store
     } do
-      fname = "Chain.spend"
+      fname_prefix = "Chain.sp"
 
       assert %{"data" => calls, "next" => next} =
                conn
                |> with_store(store)
-               |> get("/v2/contracts/calls", function: fname)
+               |> get("/v2/contracts/calls", function: fname_prefix)
                |> json_response(200)
 
       assert Enum.all?(calls, fn %{
@@ -836,7 +836,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                                    "micro_index" => micro_index,
                                    "block_hash" => block_hash
                                  } ->
-               function == fname and call_txi in @call_txis and
+               String.starts_with?(function, fname_prefix) and call_txi in @call_txis and
                  height == @call_kbi and
                  micro_index == @call_mbi and
                  block_hash == encode(:micro_block_hash, @call_block_hash)
@@ -854,7 +854,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                                         "micro_index" => micro_index,
                                         "block_hash" => block_hash
                                       } ->
-               function == fname and call_txi in @call_txis and
+               String.starts_with?(function, fname_prefix) and call_txi in @call_txis and
                  height == @call_kbi and
                  micro_index == @call_mbi and
                  block_hash == encode(:micro_block_hash, @call_block_hash)
@@ -862,15 +862,6 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
       assert %{"data" => ^calls} =
                conn |> with_store(store) |> get(prev_calls) |> json_response(200)
-    end
-
-    test "when filtering by function name and scope, it returns an error", %{conn: conn} do
-      error_msg = "invalid scope: can't scope when filtering by function"
-
-      assert %{"error" => ^error_msg} =
-               conn
-               |> get("/v2/contracts/calls", function: "asd", scope: "gen:0-1")
-               |> json_response(400)
     end
   end
 
