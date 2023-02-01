@@ -4617,6 +4617,8 @@ For transaction events the activity type will be `<TxType>Event`, and the payloa
 
 Transaction events can also be `InternalContractCallEvent` which represent transactions that happen internally during a contract call.
 
+Optionally the `owned_only=true` parameter might be used to return only activities initiated by the account.
+
 ```
 $ curl https://mainnet.aeternity.io/mdw/v2/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx/activities
 {
@@ -4726,8 +4728,6 @@ $ curl https://mainnet.aeternity.io/mdw/v2/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm
   "prev": null
 }
 ```
-
-
 
 ## Migrating to v2
 

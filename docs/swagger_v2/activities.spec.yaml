@@ -111,7 +111,7 @@ schemas:
           - $ref: '#/components/schemas/InternalContractCallEvent'
           - $ref: '#/components/schemas/InternalTransferEvent'
 paths:
-  /v2/accounts/{id}/activities:
+  /accounts/{id}/activities:
     get:
       deprecated: false
       description: Get an account activities.
@@ -124,6 +124,13 @@ paths:
           schema:
             type: string
             example: ak_M6MNwGLtMQ4j3m8pzQz9uF38nMfjCCVaiQ8fvTAU6DEsCocD5
+        - name: owned_only
+          in: query
+          description: Indicate to filter only activities initiated by the account
+          required: false
+          schema:
+            type: boolean
+            example: true
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'
