@@ -219,7 +219,7 @@ paths:
           x-example: contract_call
       - name: id
         description: The ID of the address/name/oracle/etc
-        in: path
+        in: query
         required: false
         schema:
           type: string

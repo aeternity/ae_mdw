@@ -1403,6 +1403,49 @@ info:
   version: '2.0'
 openapi: 3.0.0
 paths:
+  /accounts/{id}/activities:
+    get:
+      deprecated: false
+      description: Get an account activities.
+      operationId: get_account_activities
+      parameters:
+      - description: The account address
+        in: path
+        name: id
+        required: true
+        schema:
+          example: ak_M6MNwGLtMQ4j3m8pzQz9uF38nMfjCCVaiQ8fvTAU6DEsCocD5
+          type: string
+      - description: Indicate to filter only activities initiated by the account
+        in: query
+        name: owned_only
+        required: false
+        schema:
+          example: true
+          type: boolean
+      - $ref: '#/components/parameters/LimitParam'
+      - $ref: '#/components/parameters/ScopeParam'
+      - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                allOf:
+                - properties:
+                    data:
+                      items:
+                        $ref: '#/components/schemas/Activity'
+                      type: array
+                  type: object
+                - $ref: '#/components/schemas/PaginatedResponse'
+          description: Returns paginatinated activities
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad request
   /aex141:
     get:
       deprecated: false
@@ -2951,7 +2994,7 @@ paths:
           type: string
           x-example: contract_call
       - description: The ID of the address/name/oracle/etc
-        in: path
+        in: query
         name: id
         required: false
         schema:
@@ -3114,42 +3157,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotFoundResponse'
           description: Not Found
-  /v2/accounts/{id}/activities:
-    get:
-      deprecated: false
-      description: Get an account activities.
-      operationId: get_account_activities
-      parameters:
-      - description: The account address
-        in: path
-        name: id
-        required: true
-        schema:
-          example: ak_M6MNwGLtMQ4j3m8pzQz9uF38nMfjCCVaiQ8fvTAU6DEsCocD5
-          type: string
-      - $ref: '#/components/parameters/LimitParam'
-      - $ref: '#/components/parameters/ScopeParam'
-      - $ref: '#/components/parameters/DirectionParam'
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                allOf:
-                - properties:
-                    data:
-                      items:
-                        $ref: '#/components/schemas/Activity'
-                      type: array
-                  type: object
-                - $ref: '#/components/schemas/PaginatedResponse'
-          description: Returns paginatinated activities
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Bad request
 servers:
 - description: V2 version path
   url: /v2
