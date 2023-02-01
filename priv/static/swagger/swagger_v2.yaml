@@ -2942,6 +2942,22 @@ paths:
       deprecated: false
       description: Get count of transactions at the latest height.
       operationId: get_tx_count
+      parameters:
+      - description: Type of a transaction
+        in: path
+        name: tx_type
+        required: false
+        schema:
+          type: string
+          x-example: contract_call
+      - description: The ID of the address/name/oracle/etc
+        in: path
+        name: id
+        required: false
+        schema:
+          type: string
+          x-example: ak_g5vQK6beY3vsTJHH7KBusesyzq9WMdEYorF8VyvZURXTjLnxT
+      - $ref: '#/components/parameters/ScopeParam'
       responses:
         '200':
           content:
