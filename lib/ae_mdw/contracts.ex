@@ -52,6 +52,7 @@ defmodule AeMdw.Contracts do
   @min_data Util.min_bin()
   @min_fname Util.min_bin()
   @min_hash Util.min_bin()
+  @max_256bit_bin Util.max_256bit_bin()
   @max_hash Util.max_256bit_bin()
   @min_idx Util.min_int()
   @max_idx Util.max_int()
@@ -233,29 +234,30 @@ defmodule AeMdw.Contracts do
     end
   end
 
-  defp build_calls_pagination([fname: fname_prefix], state, nil, cursor) do
-    key_boundary = {{fname_prefix, @min_txi, @min_idx}, {fname_prefix, @max_txi, @max_idx}}
-
+  defp build_calls_pagination([fname: fname_prefix], state, scope, cursor) do
     cursor =
       case cursor do
-        nil ->
-          nil
-
-        {call_txi, local_idx, _create_txi, _pk, fname_prefix, _pos} ->
-          {fname_prefix, call_txi, local_idx}
+        nil -> nil
+        {call_txi, local_idx, _create_txi, _pk, fname, _pos} -> {fname, call_txi, local_idx}
       end
 
-    fn direction ->
-      state
-      |> Collection.stream(@fname_int_contract_call_table, direction, key_boundary, cursor)
-      |> Stream.map(fn {fname, call_txi, local_idx} ->
-        {call_txi, local_idx, @min_txi, @min_pubkey, fname, @min_id_pos}
+    fnames =
+      fname_prefix
+      |> Stream.unfold(fn prefix ->
+        case State.next(state, @fname_int_contract_call_table, {prefix, @min_txi, @min_idx}) do
+          {:ok, {next_fname, _txi, _idx}} -> {next_fname, next_fname <> @max_256bit_bin}
+          :none -> nil
+        end
       end)
+      |> Stream.take_while(&String.starts_with?(&1, fname_prefix))
+      |> Enum.to_list()
+
+    fn direction ->
+      fnames
+      |> Enum.map(&build_calls_fname_stream(state, &1, direction, scope, cursor))
+      |> Collection.merge(direction)
     end
   end
-
-  defp build_calls_pagination([fname: _fname], _state, _scope, _cursor),
-    do: raise(ErrInput.Scope.exception(value: "can't scope when filtering by function"))
 
   defp build_calls_pagination([create_txi: create_txi], state, scope, cursor) do
     key_boundary =
@@ -414,6 +416,20 @@ defmodule AeMdw.Contracts do
     end)
   end
 
+  defp build_calls_fname_stream(state, fname, direction, scope, cursor) do
+    key_boundary =
+      case scope do
+        {first_txi, last_txi} -> {{fname, first_txi, @min_idx}, {fname, last_txi, @max_idx}}
+        nil -> {{fname, @min_txi, @min_idx}, {fname, @max_txi, @max_idx}}
+      end
+
+    state
+    |> Collection.stream(@fname_int_contract_call_table, direction, key_boundary, cursor)
+    |> Stream.map(fn {^fname, call_txi, local_idx} ->
+      {call_txi, local_idx, @min_txi, @min_pubkey, fname, @min_id_pos}
+    end)
+  end
+
   defp convert_param(state, {"contract_id", contract_id}),
     do: {:create_txi, create_txi!(state, contract_id)}
 
@@ -425,7 +441,7 @@ defmodule AeMdw.Contracts do
   defp convert_param(_state, {"event", ctor_name}),
     do: {:event_hash, :aec_hash.blake2b_256_hash(ctor_name)}
 
-  defp convert_param(_state, {"function", fun_name}), do: {:fname, fun_name}
+  defp convert_param(_state, {"function", fname}) when byte_size(fname) > 0, do: {:fname, fname}
 
   defp convert_param(_state, {id_key, id_val}) do
     pos_types =

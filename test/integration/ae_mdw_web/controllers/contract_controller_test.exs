@@ -330,6 +330,49 @@ defmodule Integration.AeMdwWeb.ContractControllerTest do
       assert Enum.at(fnames, @default_limit - 1) <= Enum.at(next_fnames, 0)
     end
 
+    test "it gets calls forward filtered by a function name prefix and scoped by generation", %{
+      conn: conn
+    } do
+      fname_prefix = "Oracle"
+      from_height = 219_107
+      to_height = 400_000
+      scope = "gen:#{from_height}-#{to_height}"
+
+      assert %{"data" => calls, "next" => next} =
+               conn
+               |> get("/v2/contracts/calls",
+                 direction: "forward",
+                 function: fname_prefix,
+                 scope: scope
+               )
+               |> json_response(200)
+
+      assert Enum.all?(calls, fn %{"function" => fname} ->
+               String.starts_with?(fname, fname_prefix)
+             end)
+
+      heights = Enum.map(calls, fn %{"height" => height} -> height end)
+
+      assert @default_limit = length(heights)
+      assert ^heights = Enum.sort(heights)
+
+      assert Enum.all?(calls, fn %{"height" => height} ->
+               from_height <= height and height <= to_height
+             end)
+
+      %{"data" => next_calls} = conn |> get(next) |> json_response(200)
+
+      next_heights = Enum.map(next_calls, fn %{"function" => fname} -> fname end)
+
+      assert Enum.all?(next_calls, fn %{"function" => fname} ->
+               String.starts_with?(fname, fname_prefix)
+             end)
+
+      assert @default_limit = length(next_heights)
+      assert ^next_heights = Enum.sort(next_heights)
+      assert Enum.at(heights, @default_limit - 1) <= Enum.at(next_heights, 0)
+    end
+
     test "it gets calls forward filtered by recipient_id", %{conn: conn} do
       recipient_id = "ak_23bfFKQ1vuLeMxyJuCrMHiaGg5wc7bAobKNuDadf8tVZUisKWs"
 
