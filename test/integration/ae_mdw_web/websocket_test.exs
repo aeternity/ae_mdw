@@ -145,7 +145,7 @@ defmodule Integration.AeMdwWeb.WebsocketTest do
   }
 
   setup_all do
-    url = "ws://localhost:4001/websocket"
+    url = "ws://localhost:4003/websocket"
     clients = for _i <- 1..8, do: url |> WsClient.start_link() |> Util.ok!()
 
     mock_kb = %{
@@ -406,7 +406,7 @@ defmodule Integration.AeMdwWeb.WebsocketTest do
     assert_receive "invalid payload: UnsupportedPayload"
     assert_receive "invalid target: invalid target"
     assert_receive "invalid target: ak_1234"
-    assert_receive "requires target"
+    assert_receive "missing field: target"
   end
 
   describe "notifications after mdw sync" do
@@ -440,13 +440,13 @@ defmodule Integration.AeMdwWeb.WebsocketTest do
       assert_receive ^kb_payload, 300
 
       [mb1 | _] = micro_blocks
-      Broadcaster.broadcast_micro_block(mb1, :v1, :mdw)
+      Broadcaster.broadcast_micro_block(mb1, :mdw)
       Process.send_after(client2, {:mb, self()}, 100)
 
       mb1_payload = @micro_block_mdw
       assert_receive ^mb1_payload, 300
 
-      Broadcaster.broadcast_txs(mb1, :v1, :mdw)
+      Broadcaster.broadcast_txs(mb1, :mdw)
       Process.send_after(client3, {:tx, self()}, 200)
       Process.send_after(client4, {:obj, self()}, 200)
 
@@ -478,23 +478,24 @@ defmodule Integration.AeMdwWeb.WebsocketTest do
       Broadcaster.broadcast_key_block(key_block, :v1, :mdw)
       Broadcaster.broadcast_key_block(key_block, :v1, :mdw)
       Broadcaster.broadcast_key_block(key_block, :v1, :mdw)
-      Broadcaster.broadcast_key_block(key_block, :v1, :node)
-      Broadcaster.broadcast_key_block(key_block, :v1, :node)
       Process.send_after(client, {:kb, self()}, 100)
 
       kb_payload = @key_block_mdw
       kb_payload_node = @key_block_node
       assert_receive ^kb_payload, 300
+      Broadcaster.broadcast_key_block(key_block, :v1, :node)
+      Broadcaster.broadcast_key_block(key_block, :v1, :node)
+      Process.send_after(client, {:kb, self()}, 100)
       assert_receive ^kb_payload_node, 300
 
       [mb1 | _rest] = micro_blocks
-      Broadcaster.broadcast_micro_block(mb1, :v1, :mdw)
+      Broadcaster.broadcast_micro_block(mb1, :mdw)
       Process.send_after(client, {:mb, self()}, 100)
 
       mb1_payload = @micro_block_mdw
       assert_receive ^mb1_payload, 300
 
-      Broadcaster.broadcast_txs(mb1, :v1, :mdw)
+      Broadcaster.broadcast_txs(mb1, :mdw)
       Process.send_after(client, {:tx, self()}, 200)
       Process.send_after(client, {:obj, self()}, 200)
 
