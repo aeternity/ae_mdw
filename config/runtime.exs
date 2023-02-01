@@ -7,8 +7,9 @@ period = String.to_integer(System.get_env("TELEMETRY_POLLER_PERIOD") || "10000")
 
 config :ae_mdw, AeMdw.APM.TelemetryPoller, period: period
 
-if config_env() == :prod do
-  host = System.get_env("TELEMETRY_STATSD_HOST") || "datadog_statsd"
+if config_env() in [:test, :prod] do
+  {:ok, hostname} = :inet.gethostname()
+  host = System.get_env("TELEMETRY_STATSD_HOST") || to_string(hostname)
   port = String.to_integer(System.get_env("TELEMETRY_STATSD_PORT") || "8125")
   formatter = System.get_env("TELEMETRY_STATSD_FORMAT") || "datadog"
 
