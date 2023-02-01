@@ -991,7 +991,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/txs/count?id=ak_24jcHLTZQfsou7Nvo
 
 Or by type:
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs/count?type=oracle_register" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/txs/count?tx_type=oracle_register" | jq '.'
 286
 ```
 
