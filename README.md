@@ -118,6 +118,8 @@ GET /v2/txs/:hash_or_index             - transaction by hash or index
 GET /v2/txs/count                      - total number of transactions (last transaction index + 1)
 GET /v2/txs/count/:id                  - counts of transactions per transaction field for given id
 
+GET /v2/accounts/:id/activities        - transactions, internal contract calls, AEX-N and internal transfers involving an account
+
 GET /v2/contracts/logs                    - contract logs
 GET /v2/contracts/call                    - contract calls
 
@@ -127,7 +129,10 @@ GET /v2/names/:id/auction                  - AENS name auction
 GET /v2/names/:id/pointers                 - AENS name pointer
 GET /v2/names/:id/pointees                 - AENS name pointees
 GET /v2/names/auctions                     - all AENS name auctions
-GET /v2/names/:id                          - AENS name
+GET /v2/names/:id                          - AENS name state and transaction history
+GET /v2/names/:id/claims                   - AENS name claims history
+GET /v2/names/:id/updates                  - AENS name update history
+GET /v2/names/:id/transfers                - AENS name transfer history
 
 GET /v2/oracles                         - expired oracles ordered by expiration height, filtered by active/inactive state and scope
 GET /v2/oracles/:id                     - oracle information by hash
