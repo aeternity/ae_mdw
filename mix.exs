@@ -134,6 +134,7 @@ defmodule AeMdw.MixProject do
       {:stream_split, "~> 0.1.5"},
       {:ex2ms, "~> 1.6.0"},
       {:logger_file_backend, "~> 0.0.11"},
+      {:logger_json, "~> 5.0"},
       {:smart_global, github: "ks/smart_global"},
       {:phoenix, "~> 1.6.12"},
       {:phoenix_html, "~> 3.0"},
