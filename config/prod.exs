@@ -20,10 +20,5 @@ config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
 
 # Logging
 config :logger,
-  backends: [LoggerJSON, {LoggerFileBackend, :info}]
-
-config :logger_json, :backend,
-  metadata: [:request_id],
-  json_encoder: Jason,
-  metadata_formatter: LoggerJSON.Plug.MetadataFormatters.DatadogLogger,
-  formatter: LoggerJSON.Formatters.DatadogLogger
+  level: :info,
+  backends: [{LoggerFileBackend, :info}]
