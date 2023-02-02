@@ -161,6 +161,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
 
   defp do_broadcast_txs(block, :v2, :mdw) do
     state = State.mem_state()
+    tx_pids = Subscriptions.subscribers(:v2, "Transactions")
 
     block
     |> :aec_blocks.txs()
@@ -169,12 +170,15 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
 
       case Txs.fetch(state, tx_hash, true) do
         {:ok, mdw_tx} ->
-          mdw_msg = encode_message(mdw_tx, "Transactions", :mdw)
-          broadcast("Transactions", :v2, mdw_msg)
+          mdw_tx
+          |> encode_message("Transactions", :mdw)
+          |> broadcast_tx(tx_pids)
+
+          obj_msg = encode_message(mdw_tx, "Object", :mdw)
 
           tx
           |> get_ids_from_tx()
-          |> Enum.each(&broadcast(&1, :v2, encode_message(mdw_tx, "Object", :mdw)))
+          |> Enum.each(&broadcast(&1, :v2, obj_msg))
 
         {:error, _reason} ->
           :ok
@@ -184,23 +188,27 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
 
   defp do_broadcast_txs(block, version, source) do
     header = :aec_blocks.to_header(block)
+    tx_pids = Subscriptions.subscribers(version, "Transactions")
 
     block
     |> :aec_blocks.txs()
     |> Enum.each(fn tx ->
       ser_tx = :aetx_sign.serialize_for_client(header, tx)
 
-      msg =
-        header
-        |> :aetx_sign.serialize_for_client(tx)
-        |> encode_message("Transactions", source)
+      ser_tx
+      |> encode_message("Transactions", source)
+      |> broadcast_tx(tx_pids)
 
-      broadcast("Transactions", version, msg)
+      obj_msg = encode_message(ser_tx, "Object", source)
 
       tx
       |> get_ids_from_tx()
-      |> Enum.each(&broadcast(&1, version, encode_message(ser_tx, "Object", source)))
+      |> Enum.each(&broadcast(&1, version, obj_msg))
     end)
+  end
+
+  defp broadcast_tx(msg, pids) do
+    Enum.each(pids, &SocketHandler.send(&1, msg))
   end
 
   defp broadcast(channel, version, msg) do
