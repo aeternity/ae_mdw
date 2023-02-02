@@ -3,9 +3,7 @@ import Config
 # Sync
 config :ae_mdw, sync: false
 
-#
 # Telemetry
-#
 config :ae_mdw, TelemetryMetricsStatsd,
   host: "localhost",
   port: 8115
@@ -26,5 +24,14 @@ config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
   http: [port: 4003],
   server: true
 
-# Log warnings
+# Logging
 config :logger, level: :warn
+
+config :logger,
+  backends: [LoggerJSON, {LoggerFileBackend, :info}]
+
+config :logger_json, :backend,
+  metadata: [:request_id],
+  json_encoder: Jason,
+  metadata_formatter: LoggerJSON.Plug.MetadataFormatters.DatadogLogger,
+  formatter: LoggerJSON.Formatters.DatadogLogger

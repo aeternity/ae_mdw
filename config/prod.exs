@@ -1,5 +1,6 @@
 import Config
 
+# Endpoint
 port = String.to_integer(System.get_env("PORT") || "4000")
 
 config :ae_mdw, AeMdwWeb.Endpoint,
@@ -17,5 +18,7 @@ config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
     port: ws_port
   ]
 
-# Do not print debug messages in production
-config :logger, level: :info
+# Logging
+config :logger,
+  level: :info,
+  backends: [{LoggerFileBackend, :info}]

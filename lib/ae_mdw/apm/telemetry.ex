@@ -12,14 +12,21 @@ defmodule AeMdw.APM.Telemetry do
   @impl Supervisor
   def init(:ok) do
     statsd_config = Application.get_env(:ae_mdw, TelemetryMetricsStatsd, [])
-    host = Keyword.fetch!(statsd_config, :host)
-    port = Keyword.fetch!(statsd_config, :port)
-    formatter = Keyword.get(statsd_config, :formatter, :standard)
 
-    children = [
-      AeMdw.APM.TelemetryPoller,
-      {TelemetryMetricsStatsd, metrics: metrics(), host: host, port: port, formatter: formatter}
-    ]
+    children =
+      if statsd_config == [] do
+        [AeMdw.APM.TelemetryPoller]
+      else
+        host = Keyword.fetch!(statsd_config, :host)
+        port = Keyword.fetch!(statsd_config, :port)
+        formatter = Keyword.get(statsd_config, :formatter, :standard)
+
+        [
+          AeMdw.APM.TelemetryPoller,
+          {TelemetryMetricsStatsd,
+           metrics: metrics(), host: host, port: port, formatter: formatter}
+        ]
+      end
 
     Supervisor.init(children, strategy: :one_for_one)
   end
@@ -49,10 +56,6 @@ defmodule AeMdw.APM.Telemetry do
         tags: [:route],
         unit: {:native, :millisecond}
       ),
-
-      # Database Time Metrics
-      # summary("my_app.repo.query.total_time", unit: {:native, :millisecond}),
-      # summary("my_app.repo.query.query_time", unit: {:native, :millisecond}),
 
       # VM Metrics
       summary("vm.memory.total", unit: {:byte, :megabyte}),
