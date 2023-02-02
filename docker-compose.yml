@@ -18,7 +18,6 @@ services:
       - ${PWD}/data/mnesia:/home/aeternity/node/local/rel/aeternity/data/mnesia
       - ${PWD}/data/mdw.db:/home/aeternity/node/local/rel/aeternity/data/mdw.db
       - ${HOME}/aeternity.yaml:/home/aeternity/aeternity.yaml
-      - ${PWD}/priv:/home/aeternity/node/ae_mdw/priv
       - ${PWD}/log:/home/aeternity/node/ae_mdw/log
     environment:
       - AETERNITY_CONFIG=/home/aeternity/aeternity.yaml
