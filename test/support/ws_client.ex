@@ -6,13 +6,13 @@ defmodule Support.WsClient do
   @mock_hash_tx_mdw "th_VyepHVU43zbytTihQprS689bbq9pYcHkW9iw7GZnUGmaf8N5o"
   @mock_hash_obj_mdw "th_2KYycJjNrL4htFhwCVrKnx3nazdzZ3Vu4XPRhoqMpvTB5SGK4Q"
 
-  def start_link(url), do: WebSockex.start(url, __MODULE__, %{})
+  def start_link(url), do: WebSockex.start(url, __MODULE__, %{subs: []})
 
   def delete_objects(client), do: Process.send(client, {:delete_list, :objs}, [:noconnect])
   def delete_transactions(client), do: Process.send(client, {:delete_list, :txs}, [:noconnect])
 
   def subscribe_v2(client, payload) when is_atom(payload) do
-    request = %{payload: to_subs(payload), op: "Subscribe", version: "2"}
+    request = %{payload: to_subs(payload), op: "Subscribe"}
     WebSockex.send_frame(client, {:text, Jason.encode!(request)})
   end
 

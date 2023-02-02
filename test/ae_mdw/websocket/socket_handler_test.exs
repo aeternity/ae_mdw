@@ -5,36 +5,34 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
 
   import AeMdw.Util.Encoding
 
-  setup_all do
-    clients =
-      for _i <- 1..10 do
-        {:ok, client} = WsClient.start_link("ws://localhost:4003/websocket")
-        client
-      end
-
-    [clients: clients]
-  end
-
   describe "subscribe to KeyBlocks" do
-    test "returns the subscriptions list", %{clients: clients} do
-      client = Enum.at(clients, 0)
+    test "returns the subscriptions list" do
+      {:ok, client} = WsClient.start_link("ws://localhost:4003/websocket")
+      {:ok, client_v2} = WsClient.start_link("ws://localhost:4003/v2/websocket")
 
       WsClient.subscribe(client, :key_blocks)
 
       Process.send_after(client, {:subs, self()}, 100)
       assert_receive ["KeyBlocks"], 300
 
+      Process.send_after(client_v2, {:subs, self()}, 100)
+      assert_receive [], 300
+
+      WsClient.subscribe(client_v2, :key_blocks)
       WsClient.unsubscribe(client, :key_blocks)
 
       Process.send_after(client, {:subs, self()}, 100)
       assert_receive [], 300
 
+      Process.send_after(client_v2, {:subs, self()}, 100)
+      assert_receive ["KeyBlocks"], 300
+
       Process.send_after(client, {:error, self()}, 100)
       assert_receive nil, 300
     end
 
-    test "returns error message when already subscribed", %{clients: clients} do
-      client = Enum.at(clients, 1)
+    test "returns error message when already subscribed" do
+      {:ok, client} = WsClient.start_link("ws://localhost:4003/websocket")
 
       on_exit(fn -> WsClient.unsubscribe(client, :key_blocks) end)
 
@@ -47,25 +45,33 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
   end
 
   describe "subscribe to MicroBlocks" do
-    test "returns the subscriptions list", %{clients: clients} do
-      client = Enum.at(clients, 2)
+    test "returns the subscriptions list" do
+      {:ok, client} = WsClient.start_link("ws://localhost:4003/websocket")
+      {:ok, client_v2} = WsClient.start_link("ws://localhost:4003/v2/websocket")
 
       WsClient.subscribe(client, :micro_blocks)
 
       Process.send_after(client, {:subs, self()}, 100)
       assert_receive ["MicroBlocks"], 300
 
+      Process.send_after(client_v2, {:subs, self()}, 100)
+      assert_receive [], 300
+
+      WsClient.subscribe(client_v2, :micro_blocks)
       WsClient.unsubscribe(client, :micro_blocks)
 
       Process.send_after(client, {:subs, self()}, 100)
       assert_receive [], 300
 
+      Process.send_after(client_v2, {:subs, self()}, 100)
+      assert_receive ["MicroBlocks"], 300
+
       Process.send_after(client, {:error, self()}, 100)
       assert_receive nil, 300
     end
 
-    test "returns error message when already subscribed", %{clients: clients} do
-      client = Enum.at(clients, 3)
+    test "returns error message when already subscribed" do
+      {:ok, client} = WsClient.start_link("ws://localhost:4003/websocket")
 
       on_exit(fn -> WsClient.unsubscribe(client, :micro_blocks) end)
 
@@ -78,25 +84,33 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
   end
 
   describe "subscribe to Transactions" do
-    test "returns the subscriptions list", %{clients: clients} do
-      client = Enum.at(clients, 4)
+    test "returns the subscriptions list" do
+      {:ok, client} = WsClient.start_link("ws://localhost:4003/websocket")
+      {:ok, client_v2} = WsClient.start_link("ws://localhost:4003/v2/websocket")
 
       WsClient.subscribe(client, :transactions)
 
       Process.send_after(client, {:subs, self()}, 100)
       assert_receive ["Transactions"], 300
 
+      Process.send_after(client_v2, {:subs, self()}, 100)
+      assert_receive [], 300
+
+      WsClient.subscribe(client_v2, :transactions)
       WsClient.unsubscribe(client, :transactions)
 
       Process.send_after(client, {:subs, self()}, 100)
       assert_receive [], 300
 
+      Process.send_after(client_v2, {:subs, self()}, 100)
+      assert_receive ["Transactions"], 300
+
       Process.send_after(client, {:error, self()}, 100)
       assert_receive nil, 300
     end
 
-    test "returns error message when already subscribed", %{clients: clients} do
-      client = Enum.at(clients, 5)
+    test "returns error message when already subscribed" do
+      {:ok, client} = WsClient.start_link("ws://localhost:4003/websocket")
 
       on_exit(fn -> WsClient.unsubscribe(client, :transactions) end)
 
@@ -109,8 +123,9 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
   end
 
   describe "subscribe to Object" do
-    test "returns the subscriptions list", %{clients: clients} do
-      client = Enum.at(clients, 6)
+    test "returns the subscriptions list" do
+      {:ok, client} = WsClient.start_link("ws://localhost:4003/websocket")
+      {:ok, client_v2} = WsClient.start_link("ws://localhost:4003/v2/websocket")
 
       account_id = encode(:account_pubkey, <<1::256>>)
       contract_id = encode(:contract_pubkey, <<2::256>>)
@@ -127,18 +142,27 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
       Process.send_after(client, {:subs, self()}, 100)
       assert_receive [^account_id, ^contract_id, ^oracle_id, ^name_id, ^channel_id], 300
 
+      Process.send_after(client_v2, {:subs, self()}, 100)
+      assert_receive [], 300
+
+      WsClient.subscribe(client_v2, name_id)
+      WsClient.subscribe(client_v2, channel_id)
+
       WsClient.unsubscribe(client, account_id)
       WsClient.unsubscribe(client, channel_id)
 
       Process.send_after(client, {:subs, self()}, 100)
       assert_receive [^contract_id, ^oracle_id, ^name_id], 300
 
+      Process.send_after(client_v2, {:subs, self()}, 100)
+      assert_receive [^name_id, ^channel_id], 300
+
       Process.send_after(client, {:error, self()}, 100)
       assert_receive nil, 300
     end
 
-    test "returns error message when already subscribed", %{clients: clients} do
-      client = Enum.at(clients, 7)
+    test "returns error message when already subscribed" do
+      {:ok, client} = WsClient.start_link("ws://localhost:4003/websocket")
 
       account_id = encode(:account_pubkey, <<1::256>>)
       WsClient.subscribe(client, account_id)
@@ -151,8 +175,8 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
       assert_receive ^error_msg, 300
     end
 
-    test "returns error message when object is invalid", %{clients: clients} do
-      client = Enum.at(clients, 8)
+    test "returns error message when object is invalid" do
+      {:ok, client} = WsClient.start_link("ws://localhost:4003/websocket")
 
       account_id = encode(:account_pubkey, <<1::256>>)
       invalid_id = String.replace(account_id, "ak", "pk")
@@ -165,8 +189,8 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
   end
 
   describe "unknown subscription" do
-    test "returns the subscriptions list", %{clients: clients} do
-      client = Enum.at(clients, 9)
+    test "returns the subscriptions list" do
+      {:ok, client} = WsClient.start_link("ws://localhost:4003/websocket")
 
       WsClient.subscribe(client, :unknown)
       Process.send_after(client, {:error, self()}, 100)

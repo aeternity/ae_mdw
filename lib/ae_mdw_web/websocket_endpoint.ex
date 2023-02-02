@@ -15,7 +15,7 @@ defmodule AeMdwWeb.WebsocketEndpoint do
 
   socket "/websocket", AeMdwWeb.Websocket.SocketHandler,
     websocket: [
-      connect_info: [session: @session_options],
+      connect_info: [session: @session_options, version: "1"],
       path: "/",
       timeout: 660_000,
       max_frame_size: 128_000
@@ -23,7 +23,7 @@ defmodule AeMdwWeb.WebsocketEndpoint do
 
   socket "/v2/websocket", AeMdwWeb.Websocket.SocketHandler,
     websocket: [
-      connect_info: [session: @session_options],
+      connect_info: [session: @session_options, version: "2"],
       path: "/",
       timeout: 660_000,
       max_frame_size: 128_000

@@ -19,10 +19,8 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
   end
 
   @impl Phoenix.Socket.Transport
-  def connect(%{params: params}) do
-    version_bin = Map.get(params, "version", "1")
-
-    case Map.fetch(@versions, version_bin) do
+  def connect(%{connect_info: %{version: endpoint_version}}) do
+    case Map.fetch(@versions, endpoint_version) do
       {:ok, version} -> {:ok, %{version: version}}
       :error -> :error
     end
