@@ -161,15 +161,22 @@ defmodule AeMdw.Blocks do
 
   @spec fetch_txis_from_gen(State.t(), height()) :: Enumerable.t()
   def fetch_txis_from_gen(state, height) do
-    with {:ok, Model.block(tx_index: tx_index_start)}
-         when is_integer(tx_index_start) and tx_index_start >= 0 <-
-           State.get(state, @table, {height, -1}),
-         {:ok, Model.block(tx_index: tx_index_end)}
-         when is_integer(tx_index_end) and tx_index_end >= 0 <-
-           State.get(state, @table, {height + 1, -1}) do
-      tx_index_start..tx_index_end
-    else
-      _full_block_not_found -> []
+    case State.get(state, @table, {height, -1}) do
+      {:ok, Model.block(tx_index: tx_index_start)} ->
+        tx_index_end =
+          case State.get(state, @table, {height + 1, -1}) do
+            {:ok, Model.block(tx_index: tx_index_end)} -> tx_index_end - 1
+            :not_found -> DbUtil.last_txi!(state)
+          end
+
+        if tx_index_end >= tx_index_start do
+          tx_index_start..tx_index_end
+        else
+          []
+        end
+
+      :not_found ->
+        []
     end
   end
 
