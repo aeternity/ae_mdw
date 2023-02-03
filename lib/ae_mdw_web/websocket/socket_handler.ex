@@ -7,11 +7,6 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
   alias AeMdwWeb.Websocket.Subscriptions
   alias AeMdwWeb.Util
 
-  @versions %{
-    "1" => :v1,
-    "2" => :v2
-  }
-
   @impl Phoenix.Socket.Transport
   def child_spec(_opts) do
     # Won't spawn any additional process for the handler then returns a dummy task
@@ -19,11 +14,8 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
   end
 
   @impl Phoenix.Socket.Transport
-  def connect(%{connect_info: %{version: endpoint_version}}) do
-    case Map.fetch(@versions, endpoint_version) do
-      {:ok, version} -> {:ok, %{version: version}}
-      :error -> :error
-    end
+  def connect(%{connect_info: %{version: version}}) when version in [:v1, :v2] do
+    {:ok, %{version: version}}
   end
 
   @impl Phoenix.Socket.Transport
