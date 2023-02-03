@@ -40,6 +40,18 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
       assert %{"hash" => ^tx_hash} = body = json_response(conn, 200)
       assert %{body: ^body} = MainnetClient.get!(path)
     end
+
+    test "when getting the last tx by hash, it returns 200", %{conn: conn} do
+      assert %{"data" => [%{"hash" => tx_hash} = tx]} =
+               conn
+               |> get("/v2/txs", limit: 1)
+               |> json_response(200)
+
+      assert ^tx =
+               conn
+               |> get("/v2/txs/#{tx_hash}")
+               |> json_response(200)
+    end
   end
 
   describe "txi" do
