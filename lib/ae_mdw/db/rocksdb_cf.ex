@@ -8,7 +8,6 @@ defmodule AeMdw.Db.RocksDbCF do
   """
   alias AeMdw.Db.Model
   alias AeMdw.Db.RocksDb
-  alias AeMdw.Blocks
 
   require Model
 
@@ -16,26 +15,6 @@ defmodule AeMdw.Db.RocksDbCF do
   @type table :: atom()
   @type record :: tuple()
   @typep transaction :: RocksDb.transaction()
-
-  @block_tab :rdbcf_block
-  @tx_tab :rdbcf_tx
-
-  @spec init_tables() :: :ok
-  def init_tables() do
-    @block_tab = :ets.new(@block_tab, [:named_table, :public, :ordered_set])
-    @tx_tab = :ets.new(@tx_tab, [:named_table, :public, :ordered_set])
-    :ok
-  end
-
-  @spec read_block(Blocks.block_index_txi_pos()) :: {:ok, Model.block()} | :not_found
-  def read_block(block_index) do
-    read_through(@block_tab, Model.Block, block_index)
-  end
-
-  @spec read_tx(AeMdw.Txs.txi()) :: {:ok, Model.tx()} | :not_found
-  def read_tx(txi) do
-    read_through(@tx_tab, Model.Tx, txi)
-  end
 
   @spec all_keys(table()) :: [key()]
   def all_keys(table) do
@@ -90,7 +69,6 @@ defmodule AeMdw.Db.RocksDbCF do
     key = encode_record_index(record)
     value = encode_record_value(record)
 
-    cache_insert(record)
     :ok = RocksDb.put(txn, table, key, value)
   end
 
@@ -315,33 +293,6 @@ defmodule AeMdw.Db.RocksDbCF do
         :not_found
     end
   end
-
-  defp read_through(cache_table, table, index) do
-    case :ets.lookup(cache_table, index) do
-      [] ->
-        case fetch(table, index) do
-          {:ok, record} ->
-            cache_insert(record)
-            {:ok, record}
-
-          :not_found ->
-            :not_found
-        end
-
-      [{^index, record}] ->
-        {:ok, record}
-    end
-  end
-
-  defp cache_insert(Model.block(index: block_index) = record) do
-    :ets.insert(@block_tab, {block_index, record})
-  end
-
-  defp cache_insert(Model.tx(index: txi) = record) do
-    :ets.insert(@tx_tab, {txi, record})
-  end
-
-  defp cache_insert(_other_record), do: :ok
 
   defp iterator_count(it) do
     key_res = do_iterator_move(it, :first)

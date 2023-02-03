@@ -162,8 +162,6 @@ defmodule AeMdw.Application do
 
     AeMdw.Db.AsyncStore.init()
     AeMdw.Sync.Aex9BalancesCache.init()
-
-    AeMdw.Db.RocksDbCF.init_tables()
   end
 
   @spec init_public(:contract_cache) :: :ok
