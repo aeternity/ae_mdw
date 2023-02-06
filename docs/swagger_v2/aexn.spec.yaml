@@ -692,7 +692,7 @@ paths:
           description: Bad request
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-  /aex9/{contract_id}/balances/{account_id}:
+  /aex9/{contractId}/balances/{accountId}:
     get:
       deprecated: false
       description: Get AEX9 balance for an account on a contract.
@@ -700,16 +700,22 @@ paths:
       parameters:
         - description: Contract id
           in: path
-          name: contract_id
+          name: contractId
           required: true
           type: string
           x-example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
         - description: Account id
           in: path
-          name: account_id
+          name: accountId
           required: true
           type: string
           x-example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2
+        - description: Block hash
+          in: query
+          name: hash
+          required: true
+          type: string
+          x-example: mh_2EPBrw8PUhZMgVPVMopcG8GYsNS7e9itic8kcWxKBZPkDxVYds
       produces:
         - application/json
       responses:
@@ -854,7 +860,7 @@ paths:
           description: Bad request
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-  /aex9/{contract_id}/balances/{account_id}/history:
+  /aex9/{contractId}/balances/{accountId}/history:
     get:
       deprecated: false
       description: Get AEX9 account balance on a contract throughout all heights when changed.
@@ -865,13 +871,13 @@ paths:
         - $ref: '#/components/parameters/DirectionParam'
         - description: Contract id
           in: path
-          name: contract_id
+          name: contractId
           required: true
           type: string
           x-example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
         - description: Account id
           in: path
-          name: account_id
+          name: accountId
           required: true
           type: string
           x-example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2

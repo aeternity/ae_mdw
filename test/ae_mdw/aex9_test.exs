@@ -38,7 +38,7 @@ defmodule AeMdw.Aex9Test do
   end
 
   describe "fetch_balance" do
-    test "gets account balance from the chain" do
+    test "gets latest account balance from the chain" do
       contract_pk = :crypto.strong_rand_bytes(32)
       account_pk = :crypto.strong_rand_bytes(32)
       amount = Enum.random(1_000_000_000..9_999_999_999)
@@ -46,7 +46,7 @@ defmodule AeMdw.Aex9Test do
       with_mocks [
         {AeMdw.Node.Db, [:passthrough],
          [
-           aex9_balance: fn ^contract_pk, ^account_pk -> {:ok, {amount, <<1::256>>}} end
+           aex9_balance: fn ^contract_pk, ^account_pk, nil -> {:ok, {amount, <<1::256>>}} end
          ]}
       ] do
         assert {:ok,
@@ -54,7 +54,7 @@ defmodule AeMdw.Aex9Test do
                   contract: encode_contract(contract_pk),
                   account: encode_account(account_pk),
                   amount: amount
-                }} == Aex9.fetch_balance(contract_pk, account_pk)
+                }} == Aex9.fetch_balance(contract_pk, account_pk, nil)
       end
     end
   end

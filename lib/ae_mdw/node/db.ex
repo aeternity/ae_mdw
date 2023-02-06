@@ -170,8 +170,10 @@ defmodule AeMdw.Node.Db do
   def aex9_balance(contract_pk, account_pk),
     do: aex9_balance(contract_pk, account_pk, false)
 
-  @spec aex9_balance(pubkey(), pubkey(), boolean()) ::
+  @spec aex9_balance(pubkey(), pubkey(), nil | boolean()) ::
           {:ok, account_balance()} | {:error, Runner.call_error()}
+  def aex9_balance(contract_pk, account_pk, nil), do: aex9_balance(contract_pk, account_pk, false)
+
   def aex9_balance(contract_pk, account_pk, the_very_top?) when is_boolean(the_very_top?),
     do: aex9_balance(contract_pk, account_pk, top_height_hash(the_very_top?))
 
