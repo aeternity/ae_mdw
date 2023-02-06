@@ -8,7 +8,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
   alias AeMdw.Db.Store
   alias AeMdw.Validate
 
-  import AeMdw.Util.Encoding, only: [encode_contract: 1, encode_account: 1]
+  import AeMdw.Util.Encoding, only: [encode_contract: 1, encode_account: 1, encode: 2]
 
   import AeMdw.TestUtil, only: [with_store: 2]
 
@@ -645,7 +645,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       with_mocks [
         {AeMdw.Node.Db, [:passthrough],
          [
-           aex9_balance: fn ^contract_pk, ^account_pk -> {:ok, {amount, <<1::256>>}} end
+           aex9_balance: fn ^contract_pk, ^account_pk, nil -> {:ok, {amount, <<1::256>>}} end
          ]}
       ] do
         contract_id = encode_contract(contract_pk)
@@ -654,6 +654,48 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
         assert %{"account" => ^account_id, "amount" => ^amount, "contract" => ^contract_id} =
                  conn
                  |> get("/v2/aex9/#{contract_id}/balances/#{account_id}")
+                 |> json_response(200)
+      end
+    end
+
+    test "gets account balance on a contract at a certain block", %{
+      conn: conn,
+      contract: contract_pk
+    } do
+      account_pk = :crypto.strong_rand_bytes(32)
+      block_hash = :crypto.strong_rand_bytes(32)
+      height = Enum.random(1..700_000)
+      amount = Enum.random(1_000_000..9_999_999)
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      with_mocks [
+        {:aec_chain, [:passthrough], get_block: &{:ok, &1}},
+        {:aec_blocks, [:passthrough],
+         [
+           type: fn ^block_hash -> :micro end,
+           height: fn ^block_hash -> height end
+         ]},
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           aex9_balance: fn ^contract_pk, ^account_pk, {:micro, ^height, ^block_hash} ->
+             {:ok, {amount, <<1::256>>}}
+           end
+         ]}
+      ] do
+        contract_id = encode_contract(contract_pk)
+        account_id = encode_account(account_pk)
+
+        assert %{"account" => ^account_id, "amount" => ^amount, "contract" => ^contract_id} =
+                 conn
+                 |> get("/v2/aex9/#{contract_id}/balances/#{account_id}",
+                   hash: encode(:micro_block_hash, block_hash)
+                 )
                  |> json_response(200)
       end
     end

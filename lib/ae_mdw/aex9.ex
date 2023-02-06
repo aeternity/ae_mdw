@@ -30,7 +30,7 @@ defmodule AeMdw.Aex9 do
 
   @typep pagination :: Collection.direction_limit()
   @typep pubkey :: AeMdw.Node.Db.pubkey()
-
+  @typep height_hash :: AeMdw.Node.Db.height_hash()
   @typep balances_cursor() :: binary()
   @typep account_balance_cursor() :: binary()
   @typep history_cursor() :: binary()
@@ -82,10 +82,10 @@ defmodule AeMdw.Aex9 do
      serialize_event_balances_cursor(next_cursor)}
   end
 
-  @spec fetch_balance(pubkey(), pubkey()) ::
+  @spec fetch_balance(pubkey(), pubkey(), height_hash() | nil) ::
           {:ok, aex9_balance()} | {:error, Error.t()}
-  def fetch_balance(contract_pk, account_pk) do
-    case Db.aex9_balance(contract_pk, account_pk) do
+  def fetch_balance(contract_pk, account_pk, height_hash) do
+    case Db.aex9_balance(contract_pk, account_pk, height_hash) do
       {:ok, {amount, _height_hash}} ->
         {:ok, render_balance(contract_pk, {:address, account_pk}, amount)}
 
