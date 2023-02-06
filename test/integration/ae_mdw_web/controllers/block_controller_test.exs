@@ -16,7 +16,7 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
 
   @default_limit 10
 
-  describe "block" do
+  describe "block_v1" do
     test "get key block by hash", %{conn: conn} do
       kb_hash = "kh_WLJX9kzQx882vnWg7TuyH4QyMCjdSdz7nXPS9tA9nEwiRnio4"
       conn = get(conn, "/block/#{kb_hash}")
@@ -231,6 +231,17 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
       error_msg = "not found: #{hash}"
 
       assert %{"error" => ^error_msg} = conn |> get("/v2/blocks/#{hash}") |> json_response(404)
+    end
+  end
+
+  describe "block" do
+    test "gets blocks by height and encodes without erroring", %{conn: conn} do
+      height = 444_851
+
+      assert %{"height" => ^height} =
+               conn
+               |> get("/v2/blocks/#{height}")
+               |> json_response(200)
     end
   end
 
