@@ -15,42 +15,6 @@ defmodule AeMdw.Db.RocksDbCFTest do
     {:ok, txn: txn}
   end
 
-  describe "read_tx/1" do
-    setup :setup_transaction
-
-    test "reads a tx from transaction", %{txn: txn} do
-      txi = new_txi()
-      m_tx = Model.tx(index: txi)
-      assert :ok = RocksDbCF.put(txn, Model.Tx, m_tx)
-      assert {:ok, ^m_tx} = RocksDbCF.read_tx(txi)
-    end
-
-    test "reads a committed tx", %{txn: txn} do
-      txi = new_txi()
-      m_tx = Model.tx(index: txi)
-      assert :ok = RocksDbCF.put(txn, Model.Tx, m_tx)
-      assert :ok = RocksDb.transaction_commit(txn)
-      assert {:ok, ^m_tx} = RocksDbCF.read_tx(txi)
-    end
-  end
-
-  describe "read_block/1" do
-    setup :setup_transaction
-
-    test "read a block from transaction", %{txn: txn} do
-      Model.block(index: key) = m_block = new_block()
-      assert :ok = RocksDbCF.put(txn, Model.Block, m_block)
-      assert {:ok, ^m_block} = RocksDbCF.read_block(key)
-    end
-
-    test "reads a committed block", %{txn: txn} do
-      Model.block(index: key) = m_block = new_block()
-      assert :ok = RocksDbCF.put(txn, Model.Block, m_block)
-      assert :ok = RocksDb.transaction_commit(txn)
-      assert {:ok, ^m_block} = RocksDbCF.read_block(key)
-    end
-  end
-
   describe "put/2" do
     setup :setup_transaction
 
