@@ -166,7 +166,7 @@ defmodule AeMdw.Blocks do
         tx_index_end =
           case State.get(state, @table, {height + 1, -1}) do
             {:ok, Model.block(tx_index: tx_index_end)} -> tx_index_end - 1
-            :not_found -> DbUtil.last_txi!(state)
+            :not_found -> last_txi(state, 0)
           end
 
         if tx_index_end >= tx_index_start do
@@ -262,41 +262,46 @@ defmodule AeMdw.Blocks do
           :aec_headers.serialize_for_client(header, Db.prev_block_type(header))
         end)
 
-      put_mbs_from_db(key_block, micro_blocks, sort_mbs?)
+      blocks_txs =
+        state
+        |> fetch_txis_from_gen(gen)
+        |> Enum.map(fn txi ->
+          state
+          |> Txs.fetch!(txi)
+          |> Map.delete("tx_index")
+        end)
+        |> Enum.group_by(fn %{"block_hash" => block_hash} -> block_hash end)
+
+      put_mbs_from_db(key_block, micro_blocks, blocks_txs, sort_mbs?)
     end)
   end
 
-  defp put_mbs_from_db(key_block, micro_blocks, false) do
+  defp put_mbs_from_db(key_block, micro_blocks, blocks_txs, false) do
     micro_blocks =
       micro_blocks
-      |> db_read_mbs()
+      |> db_read_mbs(blocks_txs)
       |> Map.new()
 
     Map.put(key_block, "micro_blocks", micro_blocks)
   end
 
-  defp put_mbs_from_db(key_block, micro_blocks, true) do
+  defp put_mbs_from_db(key_block, micro_blocks, blocks_txs, true) do
     micro_blocks =
       micro_blocks
-      |> db_read_mbs()
+      |> db_read_mbs(blocks_txs)
       |> Enum.map(fn {_mb_hash, micro_block} -> micro_block end)
       |> Enum.sort_by(fn %{"time" => time} -> time end)
 
     Map.put(key_block, "micro_blocks", micro_blocks)
   end
 
-  defp db_read_mbs(micro_blocks) do
-    micro_blocks
-    |> Enum.map(fn %{"hash" => mb_hash} = micro_block ->
-      micro = :aec_db.get_block(Validate.id!(mb_hash))
-      header = :aec_blocks.to_header(micro)
-
+  defp db_read_mbs(micro_blocks, blocks_txs) do
+    Enum.map(micro_blocks, fn %{"hash" => mb_hash} = micro_block ->
       txs =
-        for tx <- :aec_blocks.txs(micro), into: %{} do
-          %{"hash" => tx_hash} = tx = :aetx_sign.serialize_for_client(header, tx)
-
-          {tx_hash, tx}
-        end
+        blocks_txs
+        |> Map.get(mb_hash, [])
+        |> Enum.map(fn %{"hash" => tx_hash} = tx -> {tx_hash, tx} end)
+        |> Map.new()
 
       micro_block = Map.put(micro_block, "transactions", txs)
 
@@ -326,6 +331,13 @@ defmodule AeMdw.Blocks do
     case deserialize_cursor(cursor_bin) do
       nil -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
       cursor -> {:ok, cursor}
+    end
+  end
+
+  defp last_txi(state, default) do
+    case DbUtil.last_txi(state) do
+      {:ok, txi} -> txi
+      :none -> default
     end
   end
 end
