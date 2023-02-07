@@ -220,7 +220,7 @@ defmodule AeMdw.Contract do
     aevm_val({res_type, vm_res}, mapper)
   end
 
-  @spec call_rec(signed_tx(), DBN.pubkey(), block_hash()) :: call()
+  @spec call_rec(signed_tx(), DBN.pubkey(), block_hash()) :: {:ok, call()} | {:error, atom()}
   def call_rec(signed_tx, contract_pk, block_hash) do
     {mod, tx_rec} = signed_tx |> :aetx_sign.tx() |> :aetx.specialize_callback()
 
@@ -259,22 +259,34 @@ defmodule AeMdw.Contract do
 
       {:error, reason} ->
         Log.error(
-          ":aec_chain.get_contract_call error reason=#{inspect(reason)} params=#{inspect([contract_pk, call_id, block_hash])}"
+          "call_tx_info error reason=#{inspect(reason)} params=#{inspect([contract_pk, call_id, block_hash])}"
         )
 
         {{:error, reason}, nil}
     end
   end
 
-  @spec get_init_call_rec(tx(), block_hash()) :: call()
+  @spec get_init_call_rec(tx(), block_hash()) :: call() | nil
   def get_init_call_rec(tx_rec, block_hash) do
     contract_pk = :aect_create_tx.contract_pubkey(tx_rec)
     create_nonce = :aect_create_tx.nonce(tx_rec)
 
-    tx_rec
-    |> :aect_create_tx.owner_pubkey()
-    |> :aect_call.id(create_nonce, contract_pk)
-    |> call_rec_from_id(contract_pk, block_hash)
+    call_id =
+      tx_rec
+      |> :aect_create_tx.owner_pubkey()
+      |> :aect_call.id(create_nonce, contract_pk)
+
+    case call_rec_from_id(call_id, contract_pk, block_hash) do
+      {:ok, call_rec} ->
+        call_rec
+
+      {:error, reason} ->
+        Log.error(
+          "get_init_call_rec error reason=#{inspect(reason)} params=#{inspect([contract_pk, call_id, block_hash])}"
+        )
+
+        nil
+    end
   end
 
   @spec get_init_call_details(tx(), block_hash()) :: serialized_call()
@@ -282,27 +294,49 @@ defmodule AeMdw.Contract do
     contract_pk = :aect_create_tx.contract_pubkey(tx_rec)
     {compiler_vsn, source_hash} = compilation_info(contract_pk)
 
-    tx_rec
-    |> get_init_call_rec(block_hash)
-    |> :aect_call.serialize_for_client()
-    |> Map.drop(["gas_price", "height", "caller_nonce"])
-    |> Map.put("args", contract_init_args(contract_pk, tx_rec))
-    |> Map.update("log", [], &stringfy_log_topics/1)
-    |> Map.put("compiler_version", compiler_vsn)
-    |> Map.put("source_hash", source_hash && Base.encode64(source_hash))
+    call_details = %{
+      "args" => contract_init_args(contract_pk, tx_rec),
+      "compiler_version" => compiler_vsn,
+      "source_hash" => source_hash && Base.encode64(source_hash)
+    }
+
+    call_rec = get_init_call_rec(tx_rec, block_hash)
+
+    if call_rec do
+      call_ser =
+        call_rec
+        |> :aect_call.serialize_for_client()
+        |> Map.drop(["gas_price", "height", "caller_nonce"])
+        |> Map.update("log", [], &stringfy_log_topics/1)
+
+      Map.merge(call_ser, call_details)
+    else
+      call_details
+    end
   end
 
   @spec get_ga_attach_call_details(signed_tx(), pubkey(), block_hash()) :: serialized_call()
   def get_ga_attach_call_details(signed_tx, contract_pk, block_hash) do
-    call_rec = call_rec(signed_tx, contract_pk, block_hash)
     {:aega_attach_tx, tx_rec} = signed_tx |> :aetx_sign.tx() |> :aetx.specialize_callback()
 
-    %{
+    call_details = %{
       "auth_fun_name" => get_ga_attach_auth_func_name(tx_rec, contract_pk),
-      "args" => contract_init_args(contract_pk, tx_rec, :aega_attach_tx),
-      "gas_used" => :aect_call.gas_used(call_rec),
-      "return_type" => :aect_call.return_type(call_rec)
+      "args" => contract_init_args(contract_pk, tx_rec, :aega_attach_tx)
     }
+
+    case call_rec(signed_tx, contract_pk, block_hash) do
+      {:ok, call_rec} ->
+        Map.merge(call_details, %{
+          "gas_used" => :aect_call.gas_used(call_rec),
+          "return_type" => :aect_call.return_type(call_rec)
+        })
+
+      {:error, _reason} ->
+        Map.merge(call_details, %{
+          "gas_used" => nil,
+          "return_type" => nil
+        })
+    end
   end
 
   defp get_ga_attach_auth_func_name(tx_rec, contract_pk) do
@@ -436,7 +470,7 @@ defmodule AeMdw.Contract do
   end
 
   defp call_rec_from_id(call_id, contract_pk, block_hash) do
-    ok!(:aec_chain.get_contract_call(contract_pk, call_id, block_hash))
+    :aec_chain.get_contract_call(contract_pk, call_id, block_hash)
   end
 
   defp compilation_info(contract_pk) do

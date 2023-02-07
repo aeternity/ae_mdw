@@ -152,7 +152,7 @@ defmodule AeMdw.Db.Sync.Transaction do
         )
 
       aexn_create_contract_mutation =
-        if :ok == :aect_call.return_type(call_rec) do
+        if call_rec != nil and :ok == :aect_call.return_type(call_rec) do
           SyncContract.aexn_create_contract_mutation(contract_pk, block_index, txi)
         end
 
@@ -310,7 +310,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          tx_hash: tx_hash
        }) do
     contract_pk = :aega_attach_tx.contract_pubkey(tx)
-    call_rec = Contract.call_rec(signed_tx, contract_pk, block_hash)
+    {:ok, call_rec} = Contract.call_rec(signed_tx, contract_pk, block_hash)
 
     stat_mutation =
       if :ok == :aect_call.return_type(call_rec),

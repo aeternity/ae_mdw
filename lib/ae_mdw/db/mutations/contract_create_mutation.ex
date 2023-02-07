@@ -13,7 +13,7 @@ defmodule AeMdw.Db.ContractCreateMutation do
 
   @opaque t() :: %__MODULE__{
             txi: Txs.txi(),
-            call_rec: Contract.call()
+            call_rec: Contract.call() | nil
           }
 
   @spec new(
@@ -37,9 +37,15 @@ defmodule AeMdw.Db.ContractCreateMutation do
       ) do
     contract_pk = :aect_call.contract_pubkey(call_rec)
 
-    state
-    |> State.inc_stat(:contracts_created)
-    |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
-    |> DBContract.logs_write(txi, txi, call_rec)
+    state =
+      state
+      |> State.inc_stat(:contracts_created)
+      |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
+
+    if call_rec != nil do
+      DBContract.logs_write(state, txi, txi, call_rec)
+    else
+      state
+    end
   end
 end
