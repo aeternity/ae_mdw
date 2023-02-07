@@ -1,5 +1,41 @@
 # Changelog
 
+## [1.39.0](https://www.github.com/aeternity/ae_mdw/compare/v1.38.0...v1.39.0) (2023-02-07)
+
+
+### Features
+
+* add optional json logger ([#1161](https://www.github.com/aeternity/ae_mdw/issues/1161)) ([d0e9965](https://www.github.com/aeternity/ae_mdw/commit/d0e996555fca2823c41bfc1c3363a6cfc71b36e5))
+* allow filtering by prefix and scoping contract calls ([#1153](https://www.github.com/aeternity/ae_mdw/issues/1153)) ([de95c3e](https://www.github.com/aeternity/ae_mdw/commit/de95c3ed834cdd46405129c34a88711d2968bb0e))
+
+
+### Bug Fixes
+
+* allow retrieving the latest txs by hash ([#1167](https://www.github.com/aeternity/ae_mdw/issues/1167)) ([6040929](https://www.github.com/aeternity/ae_mdw/commit/60409295058740aa2001e8fc395b8fb1728dd6b1))
+* encode blocks on the /v2/blocks endpoint using formatter ([#1169](https://www.github.com/aeternity/ae_mdw/issues/1169)) ([63e7afd](https://www.github.com/aeternity/ae_mdw/commit/63e7afd5867d9a91516e18ae5c8cfeb14f5ed70a))
+* handle call not found ([#1171](https://www.github.com/aeternity/ae_mdw/issues/1171)) ([c5ec27f](https://www.github.com/aeternity/ae_mdw/commit/c5ec27f0be282e74bebfef96d1356c44f1631ac5))
+* set hostname as default telemetry host ([#1158](https://www.github.com/aeternity/ae_mdw/issues/1158)) ([61f571c](https://www.github.com/aeternity/ae_mdw/commit/61f571c5b087e5733fd3dcb8a5faeb3bb2b84ac6))
+* use path to decide websocket version ([#1164](https://www.github.com/aeternity/ae_mdw/issues/1164)) ([8941457](https://www.github.com/aeternity/ae_mdw/commit/8941457adc6793a61adb43a0ed36e7bcfac2f6ae))
+
+
+### Testing
+
+* update websocket integration tests ([#1159](https://www.github.com/aeternity/ae_mdw/issues/1159)) ([c373db6](https://www.github.com/aeternity/ae_mdw/commit/c373db6bc4cdd5cb3658d1e043723b880f6a5ba0))
+
+
+### Refactorings
+
+* fetch txs subscribers once ([#1166](https://www.github.com/aeternity/ae_mdw/issues/1166)) ([d80f7b5](https://www.github.com/aeternity/ae_mdw/commit/d80f7b55ad764b4d08f7dd66b6e39fb8ea072aaa))
+* removed unused block cache ([#1168](https://www.github.com/aeternity/ae_mdw/issues/1168)) ([fb4d45f](https://www.github.com/aeternity/ae_mdw/commit/fb4d45f9056eb4bee87f33a66e10bac1bc017f18))
+
+
+### Miscellaneous
+
+* add NODE_URL docker build argument ([#1162](https://www.github.com/aeternity/ae_mdw/issues/1162)) ([f74c6e0](https://www.github.com/aeternity/ae_mdw/commit/f74c6e01361233cfc04f6eb9296efa753228357b))
+* allow aex9 account balance at a block hash ([#1170](https://www.github.com/aeternity/ae_mdw/issues/1170)) ([047ab62](https://www.github.com/aeternity/ae_mdw/commit/047ab627a9ea03527cc7ed226badd618e07a533f))
+* remove priv volume for prod ([#1163](https://www.github.com/aeternity/ae_mdw/issues/1163)) ([3fcde8d](https://www.github.com/aeternity/ae_mdw/commit/3fcde8d5cab6550e0f4f24effb488846fd6aa2c0))
+* use only Jason library ([#1154](https://www.github.com/aeternity/ae_mdw/issues/1154)) ([e9e537e](https://www.github.com/aeternity/ae_mdw/commit/e9e537e1af14e104b4307becddc860a0cec2feb5))
+
 ## [1.38.0](https://www.github.com/aeternity/ae_mdw/compare/v1.37.1...v1.38.0) (2023-01-30)
 
 
