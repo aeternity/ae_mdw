@@ -4,6 +4,7 @@ defmodule AeMdw.Contract do
   """
 
   alias AeMdw.EtsCache
+  alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Node.Db, as: DBN
 
@@ -233,26 +234,35 @@ defmodule AeMdw.Contract do
     {:ok, {type_info, _compiler_vsn, _source_hash}} = get_info(contract_pk)
     call_id = :aect_call_tx.call_id(tx_rec)
     call_data = :aect_call_tx.call_data(tx_rec)
-    {:ok, call} = :aec_chain.get_contract_call(contract_pk, call_id, block_hash)
 
-    try do
-      {fun, args} = decode_call_data(type_info, call_data, &to_map/1)
-      fun = to_string(fun)
+    case :aec_chain.get_contract_call(contract_pk, call_id, block_hash) do
+      {:ok, call} ->
+        try do
+          {fun, args} = decode_call_data(type_info, call_data, &to_map/1)
+          fun = to_string(fun)
 
-      res_type = :aect_call.return_type(call)
-      res_val = :aect_call.return_value(call)
-      result = decode_call_result(type_info, fun, res_type, res_val, &to_map/1)
+          res_type = :aect_call.return_type(call)
+          res_val = :aect_call.return_value(call)
+          result = decode_call_result(type_info, fun, res_type, res_val, &to_map/1)
 
-      fun_arg_res = %{
-        function: fun,
-        arguments: args,
-        result: result
-      }
+          fun_arg_res = %{
+            function: fun,
+            arguments: args,
+            result: result
+          }
 
-      {fun_arg_res, call}
-    catch
-      _exception, {:badmatch, match_err} ->
-        {{:error, match_err}, call}
+          {fun_arg_res, call}
+        catch
+          _exception, {:badmatch, match_err} ->
+            {{:error, match_err}, call}
+        end
+
+      {:error, reason} ->
+        Log.error(
+          ":aec_chain.get_contract_call error reason=#{inspect(reason)} params=#{inspect([contract_pk, call_id, block_hash])}"
+        )
+
+        {{:error, reason}, nil}
     end
   end
 
