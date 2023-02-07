@@ -10,6 +10,7 @@ defmodule AeMdw.Db.Format do
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
+  alias AeMdw.Log
   alias AeMdw.Names
   alias AeMdw.Node
   alias AeMdw.Node.Db
@@ -120,24 +121,11 @@ defmodule AeMdw.Db.Format do
 
   defp custom_raw_data(state, :contract_call_tx, tx, tx_rec, signed_tx, block_hash) do
     contract_pk = tx_rec |> :aect_call_tx.contract_id() |> Db.id_pubkey()
-    call_rec = Contract.call_rec(signed_tx, contract_pk, block_hash)
-    fun_arg_res = AeMdw.Db.Contract.call_fun_arg_res(state, contract_pk, tx.tx_index)
-
-    logs = fn logs ->
-      Enum.map(logs, fn {addr, topics, data} ->
-        %{address: addr, topics: topics, data: data}
-      end)
-    end
-
-    call_info = %{
-      call_id: :aect_call.id(call_rec),
-      return_type: :aect_call.return_type(call_rec),
-      gas_used: :aect_call.gas_used(call_rec),
-      log: logs.(:aect_call.log(call_rec))
-    }
-
-    m = Map.merge(call_info, fun_arg_res)
-    update_in(tx, [:tx], &Map.merge(&1, m))
+    txi = tx.tx_index
+    fun_arg_res = AeMdw.Db.Contract.call_fun_arg_res(state, contract_pk, txi)
+    call_info = format_call_info(signed_tx, contract_pk, block_hash, txi)
+    call_details = Map.merge(call_info, fun_arg_res)
+    update_in(tx, [:tx], &Map.merge(&1, call_details))
   end
 
   defp custom_raw_data(_state, :channel_create_tx, tx, _tx_rec, signed_tx, _block_hash) do
@@ -169,6 +157,26 @@ defmodule AeMdw.Db.Format do
 
   defp custom_raw_data(_state, _tx_type, tx, _tx_rec, _signed_tx, _block_hash),
     do: tx
+
+  defp format_call_info(signed_tx, contract_pk, block_hash, txi) do
+    case Contract.call_rec(signed_tx, contract_pk, block_hash) do
+      {:ok, call_rec} ->
+        call_rec
+        |> :aect_call.serialize_for_client()
+        |> Map.drop(["return_value", "gas_price", "height", "contract_id", "caller_nonce"])
+        |> Map.update("log", [], &Contract.stringfy_log_topics/1)
+
+      {:error, reason} ->
+        Log.error("Contract.call_rec error reason=#{inspect(reason)}, txi=#{txi}")
+
+        %{
+          call_id: nil,
+          return_type: nil,
+          gas_used: nil,
+          log: nil
+        }
+    end
+  end
 
   ##########
 
@@ -394,19 +402,15 @@ defmodule AeMdw.Db.Format do
 
   defp custom_encode(state, :contract_call_tx, tx, tx_rec, signed_tx, txi, block_hash) do
     contract_pk = tx_rec |> :aect_call_tx.contract_id() |> Db.id_pubkey()
-    call_rec = Contract.call_rec(signed_tx, contract_pk, block_hash)
 
     fun_arg_res =
       state
       |> AeMdw.Db.Contract.call_fun_arg_res(contract_pk, txi)
       |> encode_raw_values()
 
-    call_ser =
-      :aect_call.serialize_for_client(call_rec)
-      |> Map.drop(["return_value", "gas_price", "height", "contract_id", "caller_nonce"])
-      |> Map.update("log", [], &Contract.stringfy_log_topics/1)
-
-    Map.merge(tx, Map.merge(fun_arg_res, call_ser))
+    call_info = format_call_info(signed_tx, contract_pk, block_hash, txi)
+    call_details = Map.merge(call_info, fun_arg_res)
+    Map.merge(tx, call_details)
   end
 
   defp custom_encode(_state, :channel_create_tx, tx, _tx_rec, signed_tx, _txi, _block_hash) do
