@@ -23,7 +23,7 @@ defmodule AeMdw.Db.ContractCallMutation do
             contract_pk: pubkey(),
             txi: Txs.txi(),
             fun_arg_res: Contract.fun_arg_res_or_error(),
-            call_rec: Contract.call()
+            call_rec: Contract.call() | nil
           }
 
   @spec new(
@@ -57,8 +57,12 @@ defmodule AeMdw.Db.ContractCallMutation do
         :not_found -> Origin.tx_index!(state, {:contract, contract_pk})
       end
 
-    state
-    |> DBContract.call_write(create_txi, txi, fun_arg_res)
-    |> DBContract.logs_write(create_txi, txi, call_rec)
+    state = DBContract.call_write(state, create_txi, txi, fun_arg_res)
+
+    if call_rec != nil do
+      DBContract.logs_write(state, create_txi, txi, call_rec)
+    else
+      state
+    end
   end
 end
