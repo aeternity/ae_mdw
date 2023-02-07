@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.39.1](https://www.github.com/aeternity/ae_mdw/compare/v1.39.0...v1.39.1) (2023-02-07)
+
+
+### Bug Fixes
+
+* handle other call not found cases ([#1173](https://www.github.com/aeternity/ae_mdw/issues/1173)) ([6cb9d19](https://www.github.com/aeternity/ae_mdw/commit/6cb9d19d5c91d0a397348becad03b24ba43d775d))
+
 ## [1.39.0](https://www.github.com/aeternity/ae_mdw/compare/v1.38.0...v1.39.0) (2023-02-07)
 
 
