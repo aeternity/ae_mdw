@@ -34,6 +34,12 @@ defmodule AeMdwWeb.TxControllerTest do
       tx_hash1 = :crypto.strong_rand_bytes(32)
       tx_hash2 = :crypto.strong_rand_bytes(32)
       tx_hash3 = :crypto.strong_rand_bytes(32)
+      tx_hash4 = :crypto.strong_rand_bytes(32)
+      enc_tx_hash1 = encode(:tx_hash, tx_hash1)
+      enc_tx_hash2 = encode(:tx_hash, tx_hash2)
+      enc_tx_hash3 = encode(:tx_hash, tx_hash3)
+      enc_tx_hash4 = encode(:tx_hash, tx_hash4)
+      mb_hash = :crypto.strong_rand_bytes(32)
 
       with_mocks [
         {:aec_db, [:passthrough],
@@ -42,16 +48,18 @@ defmodule AeMdwWeb.TxControllerTest do
              ^tx_hash1 -> :none
              ^tx_hash2 -> :not_found
              ^tx_hash3 -> :mempool
+             ^tx_hash4 -> mb_hash
            end
-         ]}
+         ]},
+        {:aec_chain, [], [get_header: fn ^mb_hash -> {:ok, :header} end]},
+        {:aec_headers, [], [height: fn :header -> 1 end]}
       ] do
-        tx_hash1 = encode(:tx_hash, tx_hash1)
-        tx_hash2 = encode(:tx_hash, tx_hash2)
-        tx_hash3 = encode(:tx_hash, tx_hash3)
+        assert %{"error" => _error_msg} = conn |> get("/tx/#{enc_tx_hash1}") |> json_response(404)
+        assert %{"error" => _error_msg} = conn |> get("/tx/#{enc_tx_hash2}") |> json_response(404)
+        assert %{"error" => _error_msg} = conn |> get("/tx/#{enc_tx_hash3}") |> json_response(404)
 
-        assert %{"error" => _error_msg} = conn |> get("/tx/#{tx_hash1}") |> json_response(404)
-        assert %{"error" => _error_msg} = conn |> get("/tx/#{tx_hash2}") |> json_response(404)
-        assert %{"error" => _error_msg} = conn |> get("/tx/#{tx_hash3}") |> json_response(404)
+        assert %{"error" => <<"not found: ", ^enc_tx_hash4::binary>>} =
+                 conn |> get("/tx/#{enc_tx_hash4}") |> json_response(404)
       end
     end
 
