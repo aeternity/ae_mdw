@@ -432,6 +432,8 @@ defmodule AeMdw.Txs do
   def fetch(state, tx_hash, add_spendtx_details? \\ true)
 
   def fetch(state, tx_hash, add_spendtx_details?) when is_binary(tx_hash) do
+    encoded_tx_hash = :aeser_api_encoder.encode(:tx_hash, tx_hash)
+
     with mb_hash when is_binary(mb_hash) <- :aec_db.find_tx_location(tx_hash),
          {:ok, mb_header} <- :aec_chain.get_header(mb_hash) do
       mb_height = :aec_headers.height(mb_header)
@@ -440,7 +442,7 @@ defmodule AeMdw.Txs do
       |> Blocks.fetch_txis_from_gen(mb_height)
       |> Stream.map(&State.fetch!(state, @table, &1))
       |> Enum.find_value(
-        {:error, ErrInput.NotFound.exception(value: tx_hash)},
+        {:error, ErrInput.NotFound.exception(value: encoded_tx_hash)},
         fn
           Model.tx(id: ^tx_hash) = tx -> {:ok, render(state, tx, add_spendtx_details?)}
           _tx -> nil
@@ -448,8 +450,7 @@ defmodule AeMdw.Txs do
       )
     else
       _no_block_or_header ->
-        tx_hash = :aeser_api_encoder.encode(:tx_hash, tx_hash)
-        {:error, ErrInput.NotFound.exception(value: tx_hash)}
+        {:error, ErrInput.NotFound.exception(value: encoded_tx_hash)}
     end
   end
 
