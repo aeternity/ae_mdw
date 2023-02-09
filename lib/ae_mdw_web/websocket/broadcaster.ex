@@ -89,7 +89,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
 
   @impl GenServer
   def handle_cast({:broadcast_key_block, header, source, version}, state) do
-    do_broadcast_block(header, source, version)
+    _result = do_broadcast_block(header, source, version)
 
     {:noreply, state}
   end
@@ -162,12 +162,12 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     end)
   end
 
-  def serialize_tx(tx, _block, :mdw, :v2) do
+  defp serialize_tx(tx, _block, :mdw, :v2) do
     tx_hash = :aetx_sign.hash(tx)
     Txs.fetch(State.mem_state(), tx_hash, true)
   end
 
-  def serialize_tx(tx, block, _source, _version) do
+  defp serialize_tx(tx, block, _source, _version) do
     {:ok,
      block
      |> :aec_blocks.to_header()
