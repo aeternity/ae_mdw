@@ -145,10 +145,17 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   defp do_broadcast_txs(block, source, version) do
     tx_pids = Subscriptions.subscribers(source, version, "Transactions")
 
+    context =
+      if {source, version} == {:mdw, :v2} do
+        {:state, State.mem_state()}
+      else
+        {:block, block}
+      end
+
     block
     |> :aec_blocks.txs()
     |> Enum.each(fn tx ->
-      with {:ok, mdw_tx} <- serialize_tx(tx, block, source, version) do
+      with {:ok, mdw_tx} <- serialize_tx(tx, context) do
         mdw_tx
         |> encode_message("Transactions", source)
         |> broadcast_tx(tx_pids)
@@ -162,12 +169,12 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     end)
   end
 
-  defp serialize_tx(tx, _block, :mdw, :v2) do
+  defp serialize_tx(tx, {:state, state}) do
     tx_hash = :aetx_sign.hash(tx)
-    Txs.fetch(State.mem_state(), tx_hash, true)
+    Txs.fetch(state, tx_hash, true)
   end
 
-  defp serialize_tx(tx, block, _source, _version) do
+  defp serialize_tx(tx, {:block, block}) do
     {:ok,
      block
      |> :aec_blocks.to_header()
