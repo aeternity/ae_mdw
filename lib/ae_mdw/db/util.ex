@@ -195,6 +195,8 @@ defmodule AeMdw.Db.Util do
     {tx, tx_hash, tx_type, block_hash}
   end
 
+  def read_node_tx_details(state, txi), do: read_node_tx_details(state, {txi, -1})
+
   defp extract_height_hash(state, type, hash) do
     with {:ok, encoded_hash} <- Validate.id(hash),
          {:ok, block} <- :aec_chain.get_block(encoded_hash),
