@@ -10,6 +10,31 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
       {:ok, client} = WsClient.start_link("ws://localhost:4003/websocket")
       {:ok, client_v2} = WsClient.start_link("ws://localhost:4003/v2/websocket")
 
+      WsClient.subscribe(client, :key_blocks, :mdw)
+
+      Process.send_after(client, {:subs, self()}, 100)
+      assert_receive ["KeyBlocks"], 300
+
+      Process.send_after(client_v2, {:subs, self()}, 100)
+      assert_receive [], 300
+
+      WsClient.subscribe(client_v2, :key_blocks, :mdw)
+      WsClient.unsubscribe(client, :key_blocks, :mdw)
+
+      Process.send_after(client, {:subs, self()}, 100)
+      assert_receive [], 300
+
+      Process.send_after(client_v2, {:subs, self()}, 100)
+      assert_receive ["KeyBlocks"], 300
+
+      Process.send_after(client, {:error, self()}, 100)
+      assert_receive nil, 300
+    end
+
+    test "sets mdw source by default" do
+      {:ok, client} = WsClient.start_link("ws://localhost:4003/websocket")
+      {:ok, client_v2} = WsClient.start_link("ws://localhost:4003/v2/websocket")
+
       WsClient.subscribe(client, :key_blocks)
 
       Process.send_after(client, {:subs, self()}, 100)
@@ -19,7 +44,7 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
       assert_receive [], 300
 
       WsClient.subscribe(client_v2, :key_blocks)
-      WsClient.unsubscribe(client, :key_blocks)
+      WsClient.unsubscribe(client, :key_blocks, :mdw)
 
       Process.send_after(client, {:subs, self()}, 100)
       assert_receive [], 300
@@ -34,10 +59,10 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
     test "returns error message when already subscribed" do
       {:ok, client} = WsClient.start_link("ws://localhost:4003/websocket")
 
-      on_exit(fn -> WsClient.unsubscribe(client, :key_blocks) end)
+      on_exit(fn -> WsClient.unsubscribe(client, :key_blocks, :mdw) end)
 
-      WsClient.subscribe(client, :key_blocks)
-      WsClient.subscribe(client, :key_blocks)
+      WsClient.subscribe(client, :key_blocks, :mdw)
+      WsClient.subscribe(client, :key_blocks, :mdw)
 
       Process.send_after(client, {:error, self()}, 100)
       assert_receive "already subscribed to: KeyBlocks", 300
@@ -165,11 +190,11 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
       {:ok, client} = WsClient.start_link("ws://localhost:4003/websocket")
 
       account_id = encode(:account_pubkey, <<1::256>>)
-      WsClient.subscribe(client, account_id)
+      WsClient.subscribe(client, account_id, :node)
       Process.send_after(client, {:subs, self()}, 100)
       assert_receive [^account_id], 300
 
-      WsClient.subscribe(client, account_id)
+      WsClient.subscribe(client, account_id, :node)
       Process.send_after(client, {:error, self()}, 100)
       error_msg = "already subscribed to target: #{account_id}"
       assert_receive ^error_msg, 300

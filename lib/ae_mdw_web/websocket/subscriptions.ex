@@ -20,7 +20,8 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
 
   @known_channels ["KeyBlocks", "MicroBlocks", "Transactions"]
 
-  @type version() :: :v1 | :v2
+  @type source :: :node | :mdw
+  @type version :: :v1 | :v2
 
   @spec init_tables() :: :ok
   def init_tables() do
@@ -50,10 +51,10 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
     {:ok, :no_state}
   end
 
-  @spec subscribe(pid(), version(), channel()) ::
+  @spec subscribe(pid(), source(), version(), channel()) ::
           {:ok, [channel()]} | {:error, :invalid_channel | :already_subscribed}
-  def subscribe(pid, version, channel) do
-    with {:ok, channel_key} <- validate_subscribe(pid, version, channel) do
+  def subscribe(pid, source, version, channel) do
+    with {:ok, channel_key} <- validate_subscribe(pid, source, version, channel) do
       maybe_monitor(pid)
       :ets.insert(@subs_pid_channel, {pid, channel_key, channel})
       :ets.insert(@subs_channel_pid, {channel_key, pid})
@@ -62,10 +63,10 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
     end
   end
 
-  @spec unsubscribe(pid(), version(), channel()) ::
+  @spec unsubscribe(pid(), source(), version(), channel()) ::
           {:ok, [channel()]} | {:error, :invalid_channel | :not_subscribed}
-  def unsubscribe(pid, version, channel) do
-    with {:ok, channel_key} <- validate_unsubscribe(pid, version, channel) do
+  def unsubscribe(pid, source, version, channel) do
+    with {:ok, channel_key} <- validate_unsubscribe(pid, source, version, channel) do
       :ets.delete_object(@subs_channel_pid, {channel_key, pid})
       :ets.match_delete(@subs_pid_channel, {pid, channel_key, :_})
 
@@ -73,9 +74,9 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
     end
   end
 
-  @spec has_subscribers?(version(), channel) :: boolean()
-  def has_subscribers?(version, channel) do
-    {:ok, channel_key} = channel_key(version, channel)
+  @spec has_subscribers?(source(), version(), channel) :: boolean()
+  def has_subscribers?(source, version, channel) do
+    {:ok, channel_key} = channel_key(source, version, channel)
 
     case :ets.match(@subs_channel_pid, {channel_key, :"$1"}, 1) do
       {_some, _continuation} -> true
@@ -83,11 +84,11 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
     end
   end
 
-  @spec has_object_subscribers?(version()) :: boolean()
-  def has_object_subscribers?(version) do
+  @spec has_object_subscribers?(source(), version()) :: boolean()
+  def has_object_subscribers?(source, version) do
     object_id_spec =
       Ex2ms.fun do
-        {{^version, channel}, pid}
+        {{^source, ^version, channel}, pid}
         when channel != "KeyBlocks" and channel != "MicroBlocks" and channel != "Transactions" ->
           pid
       end
@@ -98,9 +99,9 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
     end
   end
 
-  @spec subscribers(version(), channel()) :: [pid()]
-  def subscribers(version, channel) do
-    {:ok, channel_key} = channel_key(version, channel)
+  @spec subscribers(source(), version(), channel()) :: [pid()]
+  def subscribers(source, version, channel) do
+    {:ok, channel_key} = channel_key(source, version, channel)
 
     @subs_channel_pid
     |> :ets.match({channel_key, :"$1"})
@@ -165,8 +166,8 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
     end)
   end
 
-  defp validate_subscribe(pid, version, channel) do
-    with {:ok, channel_key} <- channel_key(version, channel),
+  defp validate_subscribe(pid, source, version, channel) do
+    with {:ok, channel_key} <- channel_key(source, version, channel),
          false <- exists?(pid, channel_key) do
       {:ok, channel_key}
     else
@@ -175,8 +176,8 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
     end
   end
 
-  defp validate_unsubscribe(pid, version, channel) do
-    with {:ok, channel_key} <- channel_key(version, channel),
+  defp validate_unsubscribe(pid, source, version, channel) do
+    with {:ok, channel_key} <- channel_key(source, version, channel),
          true <- exists?(pid, channel_key) do
       {:ok, channel_key}
     else
@@ -185,12 +186,12 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
     end
   end
 
-  defp channel_key(version, channel) when channel in @known_channels,
-    do: {:ok, {version, channel}}
+  defp channel_key(source, version, channel) when channel in @known_channels,
+    do: {:ok, {source, version, channel}}
 
-  defp channel_key(version, channel) do
+  defp channel_key(source, version, channel) do
     with {:ok, pubkey} <- Validate.id(channel) do
-      {:ok, {version, pubkey}}
+      {:ok, {source, version, pubkey}}
     end
   end
 

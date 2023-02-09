@@ -60,18 +60,21 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
            "op" => "Subscribe",
            "payload" => "Object",
            "target" => target
-         },
+         } = sub,
          %{version: version} = state
        ) do
-    case Subscriptions.subscribe(self(), version, target) do
-      {:ok, channels} ->
-        reply(channels, state)
-
+    with {:ok, source} <- get_source(sub, version),
+         {:ok, channels} <- Subscriptions.subscribe(self(), source, version, target) do
+      reply(channels, state)
+    else
       {:error, :already_subscribed} ->
         reply_error("already subscribed to target", target, state)
 
       {:error, :invalid_channel} ->
         reply_error("invalid target", target, state)
+
+      {:error, :invalid_source, source} ->
+        reply_error("invalid source", source, state)
     end
   end
 
@@ -80,16 +83,22 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
     reply_error("missing field", "target", state)
   end
 
-  defp handle_message(%{"op" => "Subscribe", "payload" => channel}, %{version: version} = state) do
-    case Subscriptions.subscribe(self(), version, channel) do
-      {:ok, channels} ->
-        reply(channels, state)
-
+  defp handle_message(
+         %{"op" => "Subscribe", "payload" => channel} = sub,
+         %{version: version} = state
+       ) do
+    with {:ok, source} <- get_source(sub, version),
+         {:ok, channels} <- Subscriptions.subscribe(self(), source, version, channel) do
+      reply(channels, state)
+    else
       {:error, :already_subscribed} ->
         reply_error("already subscribed to", channel, state)
 
       {:error, :invalid_channel} ->
         reply_error("invalid payload", channel, state)
+
+      {:error, :invalid_source, source} ->
+        reply_error("invalid source", source, state)
     end
   end
 
@@ -98,31 +107,40 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
            "op" => "Unsubscribe",
            "payload" => "Object",
            "target" => target
-         },
+         } = sub,
          %{version: version} = state
        ) do
-    case Subscriptions.unsubscribe(self(), version, target) do
-      {:ok, channels} ->
-        reply(channels, state)
-
+    with {:ok, source} <- get_source(sub, version),
+         {:ok, channels} <- Subscriptions.unsubscribe(self(), source, version, target) do
+      reply(channels, state)
+    else
       {:error, :not_subscribed} ->
         reply_error("no subscription for target", target, state)
 
       {:error, :invalid_channel} ->
         reply_error("invalid target", target, state)
+
+      {:error, :invalid_source, source} ->
+        reply_error("invalid source", source, state)
     end
   end
 
-  defp handle_message(%{"op" => "Unsubscribe", "payload" => channel}, %{version: version} = state) do
-    case Subscriptions.unsubscribe(self(), version, channel) do
-      {:ok, channels} ->
-        reply(channels, state)
-
+  defp handle_message(
+         %{"op" => "Unsubscribe", "payload" => channel} = sub,
+         %{version: version} = state
+       ) do
+    with {:ok, source} <- get_source(sub, version),
+         {:ok, channels} <- Subscriptions.unsubscribe(self(), source, version, channel) do
+      reply(channels, state)
+    else
       {:error, :not_subscribed} ->
         reply_error("no subscription for payload", channel, state)
 
       {:error, :invalid_channel} ->
         reply_error("invalid payload", channel, state)
+
+      {:error, :invalid_source, source} ->
+        reply_error("invalid source", source, state)
     end
   end
 
@@ -143,4 +161,12 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
     text = topic |> Util.concat(payload) |> Jason.encode!()
     {:reply, :ok, {:text, text}, state}
   end
+
+  defp get_source(%{"source" => "mdw"}, :v2), do: {:ok, :mdw}
+
+  defp get_source(%{"source" => source}, _version) when source in ["mdw", "node"],
+    do: {:ok, String.to_existing_atom(source)}
+
+  defp get_source(%{"source" => source}, _version), do: {:error, :invalid_source, source}
+  defp get_source(_sub, _version), do: {:ok, :mdw}
 end

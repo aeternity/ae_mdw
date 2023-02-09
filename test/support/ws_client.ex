@@ -8,11 +8,17 @@ defmodule Support.WsClient do
 
   def start_link(url), do: WebSockex.start(url, __MODULE__, %{subs: []})
 
+  def delete_subscriptions(client), do: Process.send(client, {:delete_list, :subs}, [:noconnect])
   def delete_objects(client), do: Process.send(client, {:delete_list, :objs}, [:noconnect])
   def delete_transactions(client), do: Process.send(client, {:delete_list, :txs}, [:noconnect])
 
-  def subscribe_v2(client, payload) when is_atom(payload) do
-    request = %{payload: to_subs(payload), op: "Subscribe"}
+  def subscribe(client, payload, source) when is_atom(payload) do
+    request = %{payload: to_subs(payload), op: "Subscribe", source: source}
+    WebSockex.send_frame(client, {:text, Jason.encode!(request)})
+  end
+
+  def subscribe(client, key, source) when is_binary(key) do
+    request = %{payload: "Object", op: "Subscribe", target: key, source: source}
     WebSockex.send_frame(client, {:text, Jason.encode!(request)})
   end
 
@@ -26,8 +32,13 @@ defmodule Support.WsClient do
     WebSockex.send_frame(client, {:text, Jason.encode!(request)})
   end
 
-  def subscribe(client, payload) do
-    request = %{payload: payload, op: "Subscribe"}
+  def unsubscribe(client, payload, source) when is_atom(payload) do
+    request = %{payload: to_subs(payload), op: "Unsubscribe", source: source}
+    WebSockex.send_frame(client, {:text, Jason.encode!(request)})
+  end
+
+  def unsubscribe(client, key, source) when is_binary(key) do
+    request = %{payload: "Object", op: "Unsubscribe", target: key, source: source}
     WebSockex.send_frame(client, {:text, Jason.encode!(request)})
   end
 
@@ -38,11 +49,6 @@ defmodule Support.WsClient do
 
   def unsubscribe(client, key) when is_binary(key) do
     request = %{payload: "Object", op: "Unsubscribe", target: key}
-    WebSockex.send_frame(client, {:text, Jason.encode!(request)})
-  end
-
-  def unsubscribe(client, payload) do
-    request = %{payload: payload, op: "Unsubscribe"}
     WebSockex.send_frame(client, {:text, Jason.encode!(request)})
   end
 
