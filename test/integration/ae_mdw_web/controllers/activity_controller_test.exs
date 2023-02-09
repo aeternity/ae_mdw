@@ -204,5 +204,94 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
                }
              ] = Enum.filter(events, &match?(%{"type" => "InternalTransferEvent"}, &1))
     end
+
+    test "it gets aex9 transfers where the account is involved", %{conn: conn} do
+      account = "ak_2qTyjUbtE2LrLxh743JX2aL9jrR2fMpFrdaM45SDJ43USYFpv9"
+      height = 418_912
+
+      assert %{"data" => [_activity1, activity2]} =
+               conn
+               |> get("/v2/accounts/#{account}/activities",
+                 direction: "forward",
+                 scope: "gen:#{height}"
+               )
+               |> json_response(200)
+
+      assert %{
+               "block_hash" => "mh_5d1NZ5tpiZ5Wq61xBxNoUwA4PdFfjSJrCJWjL8upTYiD3WMpg",
+               "height" => height,
+               "payload" => %{
+                 "amount" => 100_000_000_000_000_000_000,
+                 "block_height" => height,
+                 "contract_id" => "ct_taqHFzEWhDmwgddBYBL9ZsJTcSK2wX7MSS2VW3FTAMy2sUT4r",
+                 "log_idx" => 0,
+                 "micro_index" => 7,
+                 "micro_time" => 1_619_241_678_856,
+                 "recipient_id" => "ak_24h4GD5wdWmQ5sLFADdZYKjEREMujbTAup5THvthcnPikYozq3",
+                 "sender_id" => "ak_2qTyjUbtE2LrLxh743JX2aL9jrR2fMpFrdaM45SDJ43USYFpv9",
+                 "tx_hash" => "th_SmBJML6DNsELXw13zvStqpGfnF3ks4C98ZKXK9wdVgsEYmvio"
+               },
+               "type" => "Aex9TransferEvent"
+             } = activity2
+    end
+
+    test "it gets aex141 transfers where the account is involved", %{conn: conn} do
+      account = "ak_uTWegpfN6UjA4yz8X4ZVRi9xKEYeXHJDRZcRryTsRHAFoBpLa"
+      height = 653_289
+
+      assert %{"data" => [_activity1, _activity2, activity3]} =
+               conn
+               |> get("/v2/accounts/#{account}/activities",
+                 direction: "forward",
+                 scope: "gen:#{height}"
+               )
+               |> json_response(200)
+
+      assert %{
+               "block_hash" => "mh_2voSWMaC6hmhyCc8qZ7AxmenrK2CkqKeUg4bkFA8gcRTd4RwVB",
+               "height" => ^height,
+               "payload" => %{
+                 "block_height" => ^height,
+                 "contract_id" => "ct_2MFbjHcaFJXqLH9WrSZcX6EjbWKPhos1fv8nqXfPLoHMV1qVZz",
+                 "log_idx" => 0,
+                 "micro_index" => 125,
+                 "micro_time" => 1_662_654_259_282,
+                 "recipient_id" => "ak_uTWegpfN6UjA4yz8X4ZVRi9xKEYeXHJDRZcRryTsRHAFoBpLa",
+                 "sender_id" => "ak_11111111111111111111111111111111273Yts",
+                 "token_id" => 1,
+                 "tx_hash" => "th_2FciwUNyT7WRGee35KnNMhuoLFSCyiquVLFP3kATjwrFJh4Cfh"
+               },
+               "type" => "Aex141TransferEvent"
+             } = activity3
+    end
+
+    test "it gets name claims transactions when scoping by name", %{conn: conn} do
+      name_hash = "nm_J5KSXjEQe6JMwXbceBAbAEX5kY8cywHhfCRAHpS7szmN7cSGD"
+
+      assert %{"data" => [_activity1, _activity2, activity3 | _rest]} =
+               conn
+               |> get("/v2/accounts/#{name_hash}/activities", direction: "forward")
+               |> json_response(200)
+
+      assert %{
+               "block_hash" => "mh_t22ENuhbAACbBqVdRsJ4ren7NuSSqhZLyG8a64ViQjWf6CdYq",
+               "height" => 187_920,
+               "payload" => %{
+                 "micro_time" => 1_577_286_869_583,
+                 "source_tx_hash" => "th_2pCj4SPpkCeMo99ZK9hGQFcxzT52fy7t1qNDZTrbafexFrFTvP",
+                 "source_tx_type" => "NameClaimTx",
+                 "tx" => %{
+                   "account_id" => "ak_kiePw8Fa92v26aKoZc2Cuk5115RPJrqx2zAjzjXVwWypcYha5",
+                   "fee" => 162_000_000_000_000,
+                   "name" => "cyber.chain",
+                   "name_fee" => 110_000_000_000_000_000_000,
+                   "name_salt" => 0,
+                   "nonce" => 13,
+                   "ttl" => 0
+                 }
+               },
+               "type" => "NameClaimEvent"
+             } = activity3
+    end
   end
 end
