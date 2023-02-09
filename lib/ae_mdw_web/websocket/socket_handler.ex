@@ -63,7 +63,7 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
          } = sub,
          %{version: version} = state
        ) do
-    with {:ok, source} <- get_source(sub, version),
+    with {:ok, source} <- get_source(sub),
          {:ok, channels} <- Subscriptions.subscribe(self(), source, version, target) do
       reply(channels, state)
     else
@@ -87,7 +87,7 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
          %{"op" => "Subscribe", "payload" => channel} = sub,
          %{version: version} = state
        ) do
-    with {:ok, source} <- get_source(sub, version),
+    with {:ok, source} <- get_source(sub),
          {:ok, channels} <- Subscriptions.subscribe(self(), source, version, channel) do
       reply(channels, state)
     else
@@ -110,7 +110,7 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
          } = sub,
          %{version: version} = state
        ) do
-    with {:ok, source} <- get_source(sub, version),
+    with {:ok, source} <- get_source(sub),
          {:ok, channels} <- Subscriptions.unsubscribe(self(), source, version, target) do
       reply(channels, state)
     else
@@ -129,7 +129,7 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
          %{"op" => "Unsubscribe", "payload" => channel} = sub,
          %{version: version} = state
        ) do
-    with {:ok, source} <- get_source(sub, version),
+    with {:ok, source} <- get_source(sub),
          {:ok, channels} <- Subscriptions.unsubscribe(self(), source, version, channel) do
       reply(channels, state)
     else
@@ -162,11 +162,9 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
     {:reply, :ok, {:text, text}, state}
   end
 
-  defp get_source(%{"source" => "mdw"}, :v2), do: {:ok, :mdw}
-
-  defp get_source(%{"source" => source}, _version) when source in ["mdw", "node"],
+  defp get_source(%{"source" => source}) when source in ["mdw", "node"],
     do: {:ok, String.to_existing_atom(source)}
 
-  defp get_source(%{"source" => source}, _version), do: {:error, :invalid_source, source}
-  defp get_source(_sub, _version), do: {:ok, :mdw}
+  defp get_source(%{"source" => source}), do: {:error, :invalid_source, source}
+  defp get_source(_sub), do: {:ok, :mdw}
 end

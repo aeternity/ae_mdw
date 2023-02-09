@@ -27,6 +27,16 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
       Process.send_after(client_v2, {:subs, self()}, 100)
       assert_receive ["KeyBlocks"], 300
 
+      WsClient.unsubscribe(client_v2, :key_blocks, :mdw)
+
+      Process.send_after(client_v2, {:subs, self()}, 100)
+      assert_receive [], 300
+
+      WsClient.subscribe(client_v2, :key_blocks, :node)
+
+      Process.send_after(client_v2, {:subs, self()}, 100)
+      assert_receive ["KeyBlocks"], 300
+
       Process.send_after(client, {:error, self()}, 100)
       assert_receive nil, 300
     end
@@ -87,6 +97,16 @@ defmodule AeMdw.Websocket.SocketHandlerTest do
 
       Process.send_after(client, {:subs, self()}, 100)
       assert_receive [], 300
+
+      Process.send_after(client_v2, {:subs, self()}, 100)
+      assert_receive ["MicroBlocks"], 300
+
+      WsClient.unsubscribe(client_v2, :micro_blocks, :mdw)
+
+      Process.send_after(client_v2, {:subs, self()}, 100)
+      assert_receive [], 300
+
+      WsClient.subscribe(client_v2, :micro_blocks, :node)
 
       Process.send_after(client_v2, {:subs, self()}, 100)
       assert_receive ["MicroBlocks"], 300

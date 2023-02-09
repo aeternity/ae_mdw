@@ -12,6 +12,8 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   alias AeMdwWeb.Websocket.Subscriptions
   alias AeMdwWeb.Websocket.SocketHandler
 
+  import AeMdw.Util.Encoding, only: [encode: 2]
+
   require Ex2ms
 
   @hashes_table :broadcast_hashes
@@ -118,24 +120,24 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     type = :aec_headers.type(header)
     channel = Map.fetch!(@block_subs, type)
 
-    with {:ok, block} <- serialize_block(header, type, version) do
+    with {:ok, block} <- serialize_block(header, type, source, version) do
       block
       |> encode_message(channel, source)
       |> broadcast(channel, source, version)
     end
   end
 
-  defp serialize_block(header, :key, :v2) do
+  defp serialize_block(header, :key, :mdw, :v2) do
     height = header |> :aec_headers.height() |> Integer.to_string()
     Blocks.fetch_key_block(State.mem_state(), height)
   end
 
-  defp serialize_block(header, :micro, :v2) do
+  defp serialize_block(header, :micro, :mdw, :v2) do
     {:ok, hash} = :aec_headers.hash_header(header)
-    Blocks.fetch_micro_block(State.mem_state(), hash)
+    Blocks.fetch_micro_block(State.mem_state(), encode(:micro_block_hash, hash))
   end
 
-  defp serialize_block(header, _type, _version) do
+  defp serialize_block(header, _type, _source, _version) do
     prev_block_type = Db.prev_block_type(header)
     {:ok, :aec_headers.serialize_for_client(header, prev_block_type)}
   end
@@ -146,7 +148,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     block
     |> :aec_blocks.txs()
     |> Enum.each(fn tx ->
-      with {:ok, mdw_tx} <- serialize_tx(tx, block, version) do
+      with {:ok, mdw_tx} <- serialize_tx(tx, block, source, version) do
         mdw_tx
         |> encode_message("Transactions", source)
         |> broadcast_tx(tx_pids)
@@ -160,12 +162,12 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     end)
   end
 
-  def serialize_tx(tx, _block, :v2) do
+  def serialize_tx(tx, _block, :mdw, :v2) do
     tx_hash = :aetx_sign.hash(tx)
     Txs.fetch(State.mem_state(), tx_hash, true)
   end
 
-  def serialize_tx(tx, block, _version) do
+  def serialize_tx(tx, block, _source, _version) do
     {:ok,
      block
      |> :aec_blocks.to_header()

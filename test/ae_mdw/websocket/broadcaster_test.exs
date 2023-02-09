@@ -70,6 +70,38 @@ defmodule AeMdw.Websocket.BroadcasterTest do
         unsubscribe_all(clients)
       end
     end
+
+    test "broadcasts node and mdw microblock for v2 only once", %{clients: clients} do
+      with_blockchain %{alice: 10_000, bob: 5_000, charlie: 2_000},
+        mb0: [
+          t0: spend_tx(:alice, :bob, 1_000)
+        ],
+        mb1: [
+          t1: spend_tx(:bob, :charlie, 1_000)
+        ],
+        mb2: [
+          t2: spend_tx(:charlie, :alice, 1_000)
+        ] do
+        clients =
+          for _i <- 1..3 do
+            {:ok, client} = WsClient.start_link("ws://localhost:4003/v2/websocket")
+            client
+          end
+
+        Enum.each(clients, &WsClient.subscribe(&1, :micro_blocks, :node))
+        assert_websocket_receive(clients, :subs, ["MicroBlocks"])
+        assert_receive_micro_blocks(clients, blocks, :node)
+        unsubscribe_all(clients)
+
+        Enum.each(clients, &WsClient.unsubscribe(&1, :micro_blocks, :node))
+        Enum.each(clients, &WsClient.delete_subscriptions/1)
+
+        Enum.each(clients, &WsClient.subscribe(&1, :micro_blocks, :mdw))
+        assert_websocket_receive(clients, :subs, ["MicroBlocks"])
+        assert_receive_micro_blocks(clients, blocks, :mdw)
+        unsubscribe_all(clients)
+      end
+    end
   end
 
   describe "broadcast_txs" do
