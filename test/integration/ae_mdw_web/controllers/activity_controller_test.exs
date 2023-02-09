@@ -265,6 +265,37 @@ defmodule Integration.AeMdwWeb.ActivityControllerTest do
              } = activity3
     end
 
+    test "when filtering by aexn type, it gets aexn activities only", %{conn: conn} do
+      account = "ak_uTWegpfN6UjA4yz8X4ZVRi9xKEYeXHJDRZcRryTsRHAFoBpLa"
+      height = 653_289
+
+      assert %{"data" => [activity3]} =
+               conn
+               |> get("/v2/accounts/#{account}/activities",
+                 direction: "forward",
+                 scope: "gen:#{height}",
+                 type: "aexn"
+               )
+               |> json_response(200)
+
+      assert %{
+               "block_hash" => "mh_2voSWMaC6hmhyCc8qZ7AxmenrK2CkqKeUg4bkFA8gcRTd4RwVB",
+               "height" => ^height,
+               "payload" => %{
+                 "block_height" => ^height,
+                 "contract_id" => "ct_2MFbjHcaFJXqLH9WrSZcX6EjbWKPhos1fv8nqXfPLoHMV1qVZz",
+                 "log_idx" => 0,
+                 "micro_index" => 125,
+                 "micro_time" => 1_662_654_259_282,
+                 "recipient_id" => "ak_uTWegpfN6UjA4yz8X4ZVRi9xKEYeXHJDRZcRryTsRHAFoBpLa",
+                 "sender_id" => "ak_11111111111111111111111111111111273Yts",
+                 "token_id" => 1,
+                 "tx_hash" => "th_2FciwUNyT7WRGee35KnNMhuoLFSCyiquVLFP3kATjwrFJh4Cfh"
+               },
+               "type" => "Aex141TransferEvent"
+             } = activity3
+    end
+
     test "it gets name claims transactions when scoping by name", %{conn: conn} do
       name_hash = "nm_J5KSXjEQe6JMwXbceBAbAEX5kY8cywHhfCRAHpS7szmN7cSGD"
 

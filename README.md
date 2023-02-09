@@ -4623,6 +4623,16 @@ Transaction events can also be `InternalContractCallEvent` which represent trans
 
 Optionally the `owned_only=true` parameter might be used to return only activities initiated by the account.
 
+Additionally, activities can be filter by any of these types using `?type=<type>` query parameter:
+
+* `transactions` - Transactions containing the account in any of the transaction fields
+* `aexn` - AExN (aex9 and aex141) activities
+* `aex9` - AEx9 activities
+* `aex141` - AEx141 activities
+* `contract` - Internal and external contract calls
+* `transfers` - Internal (both gen-based and tx-based) transfers
+* `claims` - Name claims related to the name hash
+
 ```
 $ curl https://mainnet.aeternity.io/mdw/v2/accounts/ak_2nVdbZTBVTbAet8j2hQhLmfNm1N2WKoAGyL7abTAHF1wGMPjzx/activities
 {

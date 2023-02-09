@@ -1023,179 +1023,264 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                |> get("/v2/accounts/#{account}/activities", scope: "txi:1-2")
                |> json_response(400)
     end
-  end
 
-  test "when ownership_only param given, it returns owned by activities", %{conn: conn} do
-    account_pk = TS.address(0)
-    next_account_pk = TS.address(1)
-    contract_pk = TS.address(2)
-    account = Enc.encode(:account_pubkey, account_pk)
-    account_id = :aeser_id.create(:account, account_pk)
-    next_account_id = :aeser_id.create(:account, next_account_pk)
-    contract_id = :aeser_id.create(:contract, contract_pk)
-    height = 398
-    mbi = 2
-    kb_hash = TS.key_block_hash(0)
-    mb_hash = TS.micro_block_hash(0)
-    enc_mb_hash = Enc.encode(:micro_block_hash, mb_hash)
+    test "when ownership_only param given, it returns owned by activities", %{conn: conn} do
+      account_pk = TS.address(0)
+      next_account_pk = TS.address(1)
+      contract_pk = TS.address(2)
+      account = Enc.encode(:account_pubkey, account_pk)
+      account_id = :aeser_id.create(:account, account_pk)
+      next_account_id = :aeser_id.create(:account, next_account_pk)
+      contract_id = :aeser_id.create(:contract, contract_pk)
+      height = 398
+      mbi = 2
+      kb_hash = TS.key_block_hash(0)
+      mb_hash = TS.micro_block_hash(0)
+      enc_mb_hash = Enc.encode(:micro_block_hash, mb_hash)
 
-    {:ok, aetx} =
-      :aec_spend_tx.new(%{
-        sender_id: account_id,
-        recipient_id: next_account_id,
-        amount: 2,
-        fee: 3,
-        nonce: 4,
-        payload: ""
-      })
+      {:ok, aetx} =
+        :aec_spend_tx.new(%{
+          sender_id: account_id,
+          recipient_id: next_account_id,
+          amount: 2,
+          fee: 3,
+          nonce: 4,
+          payload: ""
+        })
 
-    {:spend_tx, tx} = :aetx.specialize_type(aetx)
+      {:spend_tx, tx} = :aetx.specialize_type(aetx)
 
-    {:ok, contract_call4_aetx} =
-      :aect_call_tx.new(%{
-        caller_id: account_id,
-        nonce: 2,
-        contract_id: contract_id,
-        abi_version: 2,
-        fee: 1,
-        amount: 1,
-        gas: 1,
-        gas_price: 1,
-        call_data: ""
-      })
+      {:ok, contract_call4_aetx} =
+        :aect_call_tx.new(%{
+          caller_id: account_id,
+          nonce: 2,
+          contract_id: contract_id,
+          abi_version: 2,
+          fee: 1,
+          amount: 1,
+          gas: 1,
+          gas_price: 1,
+          call_data: ""
+        })
 
-    {:contract_call_tx, contract_call4_tx} = :aetx.specialize_type(contract_call4_aetx)
+      {:contract_call_tx, contract_call4_tx} = :aetx.specialize_type(contract_call4_aetx)
 
-    {:ok, contract_call5_aetx} =
-      :aect_call_tx.new(%{
-        caller_id: next_account_id,
-        nonce: 2,
-        contract_id: contract_id,
-        abi_version: 2,
-        fee: 1,
-        amount: 1,
-        gas: 1,
-        gas_price: 1,
-        call_data: ""
-      })
+      {:ok, contract_call5_aetx} =
+        :aect_call_tx.new(%{
+          caller_id: next_account_id,
+          nonce: 2,
+          contract_id: contract_id,
+          abi_version: 2,
+          fee: 1,
+          amount: 1,
+          gas: 1,
+          gas_price: 1,
+          call_data: ""
+        })
 
-    {:contract_call_tx, contract_call5_tx} = :aetx.specialize_type(contract_call5_aetx)
+      {:contract_call_tx, contract_call5_tx} = :aetx.specialize_type(contract_call5_aetx)
 
-    store =
-      empty_store()
-      |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 1}))
-      |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {height, mbi}, id: "tx-hash1"))
-      |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 2}))
-      |> Store.put(Model.Tx, Model.tx(index: 2, block_index: {height, mbi}, id: "tx-hash2"))
-      |> Store.put(
-        Model.Field,
-        Model.field(index: {:contract_create_tx, nil, next_account_pk, 4})
-      )
-      |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
-      |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
-      |> Store.put(
-        Model.AexnTransfer,
-        Model.aexn_transfer(index: {:aex9, account_pk, 4, next_account_pk, 1, 1})
-      )
-      |> Store.put(Model.Tx, Model.tx(index: 4, block_index: {height, mbi}, id: "tx-hash4"))
-      |> Store.put(
-        # Skipped
-        Model.RevAexnTransfer,
-        Model.aexn_transfer(index: {:aex141, account_pk, 5, next_account_pk, 2, 2})
-      )
-      |> Store.put(
-        Model.AexnTransfer,
-        Model.aexn_transfer(index: {:aex141, next_account_pk, 5, account_pk, 2, 2})
-      )
-      |> Store.put(Model.Tx, Model.tx(index: 5, block_index: {height, mbi}, id: "tx-hash5"))
-      |> Store.put(
-        # Skipped
-        Model.TargetKindIntTransferTx,
-        Model.target_kind_int_transfer_tx(index: {account_pk, "reward_oracle", {height, 6}, 6})
-      )
+      store =
+        empty_store()
+        |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 1}))
+        |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {height, mbi}, id: "tx-hash1"))
+        |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 2}))
+        |> Store.put(Model.Tx, Model.tx(index: 2, block_index: {height, mbi}, id: "tx-hash2"))
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, next_account_pk, 4})
+        )
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
+        |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
+        |> Store.put(
+          Model.AexnTransfer,
+          Model.aexn_transfer(index: {:aex9, account_pk, 4, next_account_pk, 1, 1})
+        )
+        |> Store.put(Model.Tx, Model.tx(index: 4, block_index: {height, mbi}, id: "tx-hash4"))
+        |> Store.put(
+          # Skipped
+          Model.RevAexnTransfer,
+          Model.aexn_transfer(index: {:aex141, account_pk, 5, next_account_pk, 2, 2})
+        )
+        |> Store.put(
+          Model.AexnTransfer,
+          Model.aexn_transfer(index: {:aex141, next_account_pk, 5, account_pk, 2, 2})
+        )
+        |> Store.put(Model.Tx, Model.tx(index: 5, block_index: {height, mbi}, id: "tx-hash5"))
+        |> Store.put(
+          # Skipped
+          Model.TargetKindIntTransferTx,
+          Model.target_kind_int_transfer_tx(index: {account_pk, "reward_oracle", {height, 6}, 6})
+        )
 
-    with_mocks [
-      {Db, [],
-       [
-         get_tx_data: fn
-           "tx-hash1" -> {"", :spend_tx, aetx, tx}
-           "tx-hash2" -> {"", :spend_tx, aetx, tx}
-           "tx-hash4" -> {"", :contract_call_tx, contract_call4_aetx, contract_call4_tx}
-           "tx-hash5" -> {"", :contract_call_tx, contract_call5_aetx, contract_call5_tx}
-         end
-       ]},
-      {:aec_db, [], [get_header: fn _block_hash -> :header end]},
-      {:aetx_sign, [], [serialize_for_client: fn :header, ^aetx -> %{} end]}
-    ] do
-      assert %{"prev" => nil, "data" => [tx1, tx2, tx3], "next" => _next_url} =
+      with_mocks [
+        {Db, [],
+         [
+           get_tx_data: fn
+             "tx-hash1" -> {"", :spend_tx, aetx, tx}
+             "tx-hash2" -> {"", :spend_tx, aetx, tx}
+             "tx-hash4" -> {"", :contract_call_tx, contract_call4_aetx, contract_call4_tx}
+             "tx-hash5" -> {"", :contract_call_tx, contract_call5_aetx, contract_call5_tx}
+           end
+         ]},
+        {:aec_db, [], [get_header: fn _block_hash -> :header end]},
+        {:aetx_sign, [], [serialize_for_client: fn :header, ^aetx -> %{} end]}
+      ] do
+        assert %{"prev" => nil, "data" => [tx1, tx2, tx3], "next" => _next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/accounts/#{account}/activities", owned_only: 1, direction: "forward")
+                 |> json_response(200)
+
+        assert %{
+                 "height" => ^height,
+                 "block_hash" => ^enc_mb_hash,
+                 "type" => "ContractCallTxEvent",
+                 "payload" => %{"micro_index" => ^mbi}
+               } = tx1
+
+        assert %{
+                 "height" => ^height,
+                 "block_hash" => ^enc_mb_hash,
+                 "type" => "ContractCallTxEvent",
+                 "payload" => %{"micro_index" => ^mbi}
+               } = tx2
+
+        assert %{
+                 "height" => ^height,
+                 "block_hash" => ^enc_mb_hash,
+                 "type" => "Aex9TransferEvent",
+                 "payload" => %{"amount" => 1}
+               } = tx3
+      end
+    end
+
+    test "when ownership_only param given, it skips non-initiated activities", %{conn: conn} do
+      account_pk = TS.address(0)
+      account = Enc.encode(:account_pubkey, account_pk)
+      next_account_pk = TS.address(1)
+      height = 398
+      mbi = 2
+      kb_hash = TS.key_block_hash(0)
+      mb_hash = TS.micro_block_hash(0)
+
+      store =
+        empty_store()
+        |> Store.put(Model.Field, Model.field(index: {:spend_tx, 2, account_pk, 1}))
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, next_account_pk, 2})
+        )
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:channel_create_tx, 3, account_pk, 3})
+        )
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:name_preclaim_tx, 3, account_pk, 5})
+        )
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:name_transfer_tx, 4, account_pk, 6})
+        )
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:spend_tx, 2, account_pk, 7})
+        )
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
+        |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
+
+      assert %{"prev" => nil, "data" => [], "next" => _next_url} =
                conn
                |> with_store(store)
                |> get("/v2/accounts/#{account}/activities", owned_only: 1, direction: "forward")
                |> json_response(200)
-
-      assert %{
-               "height" => ^height,
-               "block_hash" => ^enc_mb_hash,
-               "type" => "ContractCallTxEvent",
-               "payload" => %{"micro_index" => ^mbi}
-             } = tx1
-
-      assert %{
-               "height" => ^height,
-               "block_hash" => ^enc_mb_hash,
-               "type" => "ContractCallTxEvent",
-               "payload" => %{"micro_index" => ^mbi}
-             } = tx2
-
-      assert %{
-               "height" => ^height,
-               "block_hash" => ^enc_mb_hash,
-               "type" => "Aex9TransferEvent",
-               "payload" => %{"amount" => 1}
-             } = tx3
     end
-  end
 
-  test "when ownership_only param given, it skips non-initiated activities", %{conn: conn} do
-    account_pk = TS.address(0)
-    account = Enc.encode(:account_pubkey, account_pk)
-    next_account_pk = TS.address(1)
-    height = 398
-    mbi = 2
-    kb_hash = TS.key_block_hash(0)
-    mb_hash = TS.micro_block_hash(0)
+    test "when filtering by activity type, it returns filtered results", %{conn: conn} do
+      account_pk = TS.address(0)
+      account = Enc.encode(:account_pubkey, account_pk)
+      another_account_pk = TS.address(1)
+      another_account = Enc.encode(:account_pubkey, another_account_pk)
+      height1 = 398
+      height2 = 399
+      txi1 = 123
+      txi2 = 456
+      txi3 = 789
+      tx1_hash = TS.tx_hash(0)
+      tx2_hash = TS.tx_hash(1)
+      tx3_hash = TS.tx_hash(2)
+      tx1_encoded = Enc.encode(:tx_hash, tx1_hash)
+      tx3_encoded = Enc.encode(:tx_hash, tx3_hash)
+      kb_hash1 = TS.key_block_hash(0)
+      kb_hash2 = TS.key_block_hash(1)
+      mb_hash1 = TS.key_block_hash(0)
+      enc_mb_hash1 = Enc.encode(:micro_block_hash, mb_hash1)
+      mb_hash2 = TS.key_block_hash(1)
+      enc_mb_hash2 = Enc.encode(:micro_block_hash, mb_hash2)
 
-    store =
-      empty_store()
-      |> Store.put(Model.Field, Model.field(index: {:spend_tx, 2, account_pk, 1}))
-      |> Store.put(
-        Model.Field,
-        Model.field(index: {:contract_create_tx, nil, next_account_pk, 2})
-      )
-      |> Store.put(
-        Model.Field,
-        Model.field(index: {:channel_create_tx, 3, account_pk, 3})
-      )
-      |> Store.put(
-        Model.Field,
-        Model.field(index: {:name_preclaim_tx, 3, account_pk, 5})
-      )
-      |> Store.put(
-        Model.Field,
-        Model.field(index: {:name_transfer_tx, 4, account_pk, 6})
-      )
-      |> Store.put(
-        Model.Field,
-        Model.field(index: {:spend_tx, 2, account_pk, 7})
-      )
-      |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
-      |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
+      store =
+        empty_store()
+        |> Store.put(
+          Model.AexnTransfer,
+          Model.aexn_transfer(index: {:aex9, account_pk, txi1, another_account_pk, 1, 1})
+        )
+        |> Store.put(Model.Tx, Model.tx(index: txi1, block_index: {height1, 0}, id: tx1_hash))
+        |> Store.put(
+          Model.RevAexnTransfer,
+          Model.aexn_transfer(index: {:aex141, account_pk, txi2, another_account_pk, 2, 2})
+        )
+        |> Store.put(
+          Model.AexnTransfer,
+          Model.aexn_transfer(index: {:aex141, another_account_pk, txi2, account_pk, 2, 2})
+        )
+        |> Store.put(Model.Tx, Model.tx(index: txi2, block_index: {height2, 0}, id: tx2_hash))
+        |> Store.put(
+          Model.RevAexnTransfer,
+          Model.aexn_transfer(index: {:aex9, account_pk, txi3, another_account_pk, 3, 3})
+        )
+        |> Store.put(
+          Model.AexnTransfer,
+          Model.aexn_transfer(index: {:aex9, another_account_pk, txi3, account_pk, 3, 3})
+        )
+        |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height2, 0}, id: tx3_hash))
+        |> Store.put(Model.Block, Model.block(index: {height1, -1}, hash: kb_hash1))
+        |> Store.put(Model.Block, Model.block(index: {height1, 0}, hash: mb_hash1))
+        |> Store.put(Model.Block, Model.block(index: {height2, -1}, hash: kb_hash2))
+        |> Store.put(Model.Block, Model.block(index: {height2, 0}, hash: mb_hash2))
 
-    assert %{"prev" => nil, "data" => [], "next" => _next_url} =
-             conn
-             |> with_store(store)
-             |> get("/v2/accounts/#{account}/activities", owned_only: 1, direction: "forward")
-             |> json_response(200)
+      assert %{"prev" => nil, "data" => [activity1, activity2]} =
+               conn
+               |> with_store(store)
+               |> get("/v2/accounts/#{account}/activities", direction: "forward", type: "aex9")
+               |> json_response(200)
+
+      assert %{
+               "height" => ^height1,
+               "type" => "Aex9TransferEvent",
+               "block_hash" => ^enc_mb_hash1,
+               "payload" => %{
+                 "amount" => 1,
+                 "log_idx" => 1,
+                 "sender_id" => ^account,
+                 "recipient_id" => ^another_account,
+                 "tx_hash" => ^tx1_encoded
+               }
+             } = activity1
+
+      assert %{
+               "height" => ^height2,
+               "type" => "Aex9TransferEvent",
+               "block_hash" => ^enc_mb_hash2,
+               "payload" => %{
+                 "sender_id" => ^another_account,
+                 "recipient_id" => ^account,
+                 "amount" => 3,
+                 "log_idx" => 3,
+                 "tx_hash" => ^tx3_encoded
+               }
+             } = activity2
+    end
   end
 
   defp empty_store, do: NullStore.new() |> MemStore.new()

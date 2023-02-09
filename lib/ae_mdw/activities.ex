@@ -50,9 +50,17 @@ defmodule AeMdw.Activities do
   @min_bin Util.min_bin()
   @max_bin Util.max_256bit_bin()
 
-  @aexn_types ~w(aex9 aex141)a
   @gen_int_transfer_kinds ~w(accounts_extra_lima accounts_fortuna accounts_genesis accounts_lima accounts_minerva contracts_lima reward_dev reward_block fee_refund_oracle fee_lock_name)
   @txs_int_transfer_kinds ~w(fee_refund_name fee_spend_name reward_oracle fee_lock_name)
+  @activity_stream_types %{
+    "transactions" => ~w(transactions)a,
+    "aexn" => ~w(aex9 aex141)a,
+    "aex9" => ~w(aex9)a,
+    "aex141" => ~w(aex141)a,
+    "contract" => ~w(int_calls ext_calls)a,
+    "transfers" => ~w(int_transfers)a,
+    "claims" => ~w(claims)a
+  }
 
   @doc """
   Activities related to an account are those that affect the account in any way.
@@ -112,60 +120,86 @@ defmodule AeMdw.Activities do
             end
 
           ownership_only? = Keyword.get(filters, :ownership_only?, false)
+          stream_types = Keyword.get(filters, :stream_types)
 
           gens_stream =
-            if ownership_only? do
-              []
-            else
-              state
-              |> build_gens_int_transfers_stream(direction, account_pk, gen_scope, gen_cursor)
-              |> Stream.chunk_by(fn {gen, _data} -> gen end)
-              |> build_gens_stream(direction)
-            end
+            %{
+              :int_transfers =>
+                build_gens_int_transfers_stream(
+                  state,
+                  direction,
+                  account_pk,
+                  gen_scope,
+                  gen_cursor,
+                  ownership_only?
+                )
+            }
+            |> filter_by_stream_types(stream_types)
+            |> Collection.merge(direction)
+            |> Stream.chunk_by(fn {gen, _data} -> gen end)
+            |> build_gens_stream(direction)
 
           txi_stream =
-            [
-              build_txs_stream(
-                state,
-                direction,
-                account_pk,
-                txi_scope,
-                txi_cursor,
-                ownership_only?
-              ),
-              build_int_contract_calls_stream(
-                state,
-                direction,
-                account_pk,
-                txi_scope,
-                txi_cursor
-              ),
-              build_ext_contract_calls_stream(
-                state,
-                direction,
-                account_pk,
-                txi_scope,
-                txi_cursor,
-                ownership_only?
-              ),
-              build_aexn_transfers_stream(
-                state,
-                direction,
-                account_pk,
-                txi_scope,
-                txi_cursor,
-                ownership_only?
-              ),
-              build_txs_int_transfers_stream(
-                state,
-                direction,
-                account_pk,
-                gen_scope,
-                gen_cursor,
-                ownership_only?
-              ),
-              build_name_claims_stream(state, direction, account_pk, txi_scope, txi_cursor)
-            ]
+            %{
+              :transactions =>
+                build_txs_stream(
+                  state,
+                  direction,
+                  account_pk,
+                  txi_scope,
+                  txi_cursor,
+                  ownership_only?
+                ),
+              :int_calls =>
+                build_int_contract_calls_stream(
+                  state,
+                  direction,
+                  account_pk,
+                  txi_scope,
+                  txi_cursor
+                ),
+              :ext_calls =>
+                build_ext_contract_calls_stream(
+                  state,
+                  direction,
+                  account_pk,
+                  txi_scope,
+                  txi_cursor,
+                  ownership_only?
+                ),
+              :aex9 =>
+                build_aexn_transfers_stream(
+                  state,
+                  direction,
+                  account_pk,
+                  :aex9,
+                  txi_scope,
+                  txi_cursor,
+                  ownership_only?
+                ),
+              :aex141 =>
+                build_aexn_transfers_stream(
+                  state,
+                  direction,
+                  account_pk,
+                  :aex141,
+                  txi_scope,
+                  txi_cursor,
+                  ownership_only?
+                ),
+              :int_transfers =>
+                build_txs_int_transfers_stream(
+                  state,
+                  direction,
+                  account_pk,
+                  gen_scope,
+                  gen_cursor,
+                  ownership_only?
+                ),
+              :claims =>
+                build_name_claims_stream(state, direction, account_pk, txi_scope, txi_cursor)
+            }
+            |> filter_by_stream_types(stream_types)
             |> Collection.merge(direction)
             |> Stream.chunk_by(fn {txi, _data} -> txi end)
             |> build_txi_stream(state, direction)
@@ -199,6 +233,14 @@ defmodule AeMdw.Activities do
 
       {:ok, serialize_cursor(prev_cursor), events, serialize_cursor(next_cursor)}
     end
+  end
+
+  defp filter_by_stream_types(streams_map, nil), do: Map.values(streams_map)
+
+  defp filter_by_stream_types(streams_map, stream_types) do
+    streams_map
+    |> Enum.filter(fn {stream_type, _stream} -> stream_type in stream_types end)
+    |> Enum.map(fn {_stream_type, stream} -> stream end)
   end
 
   defp render_activities(state, account_pk, activities_locators_data) do
@@ -304,7 +346,24 @@ defmodule AeMdw.Activities do
     end)
   end
 
-  defp build_gens_int_transfers_stream(state, direction, account_pk, gen_scope, gen_cursor) do
+  defp build_gens_int_transfers_stream(
+         _state,
+         _direction,
+         _account_pk,
+         _gen_scope,
+         _gen_cursor,
+         true = _ownership_only?
+       ),
+       do: []
+
+  defp build_gens_int_transfers_stream(
+         state,
+         direction,
+         account_pk,
+         gen_scope,
+         gen_cursor,
+         false = _ownership_only?
+       ) do
     @gen_int_transfer_kinds
     |> Enum.map(fn kind ->
       key_boundary =
@@ -482,6 +541,7 @@ defmodule AeMdw.Activities do
          state,
          direction,
          account_pk,
+         aexn_type,
          txi_scope,
          txi_cursor,
          ownership_only?
@@ -490,6 +550,7 @@ defmodule AeMdw.Activities do
       state
       |> build_aexn_transfer_stream(
         Model.AexnTransfer,
+        aexn_type,
         direction,
         account_pk,
         txi_scope,
@@ -503,6 +564,7 @@ defmodule AeMdw.Activities do
       state
       |> build_aexn_transfer_stream(
         Model.RevAexnTransfer,
+        aexn_type,
         direction,
         account_pk,
         txi_scope,
@@ -524,39 +586,43 @@ defmodule AeMdw.Activities do
     end
   end
 
-  defp build_aexn_transfer_stream(state, table, direction, account_pk, txi_scope, txi_cursor) do
-    @aexn_types
-    |> Enum.map(fn aexn_type ->
-      key_boundary =
-        case txi_scope do
-          nil ->
-            {
-              {aexn_type, account_pk, @min_int, @min_bin, @min_int, @min_int},
-              {aexn_type, account_pk, @max_int, @max_bin, @max_int, @max_int}
-            }
+  defp build_aexn_transfer_stream(
+         state,
+         table,
+         aexn_type,
+         direction,
+         account_pk,
+         txi_scope,
+         txi_cursor
+       ) do
+    key_boundary =
+      case txi_scope do
+        nil ->
+          {
+            {aexn_type, account_pk, @min_int, @min_bin, @min_int, @min_int},
+            {aexn_type, account_pk, @max_int, @max_bin, @max_int, @max_int}
+          }
 
-          {first_txi, last_txi} ->
-            {
-              {aexn_type, account_pk, first_txi, @min_bin, @min_int, @min_int},
-              {aexn_type, account_pk, last_txi, @max_bin, @max_int, @max_int}
-            }
-        end
+        {first_txi, last_txi} ->
+          {
+            {aexn_type, account_pk, first_txi, @min_bin, @min_int, @min_int},
+            {aexn_type, account_pk, last_txi, @max_bin, @max_int, @max_int}
+          }
+      end
 
-      cursor =
-        case txi_cursor do
-          nil ->
-            nil
+    cursor =
+      case txi_cursor do
+        nil ->
+          nil
 
-          txi when direction == :forward ->
-            {aexn_type, account_pk, txi, @min_bin, @min_int, @min_int}
+        txi when direction == :forward ->
+          {aexn_type, account_pk, txi, @min_bin, @min_int, @min_int}
 
-          txi when direction == :backward ->
-            {aexn_type, account_pk, txi, @max_bin, @max_int, @max_int}
-        end
+        txi when direction == :backward ->
+          {aexn_type, account_pk, txi, @max_bin, @max_int, @max_int}
+      end
 
-      Collection.stream(state, table, direction, key_boundary, cursor)
-    end)
-    |> Collection.merge(direction)
+    Collection.stream(state, table, direction, key_boundary, cursor)
   end
 
   defp build_txi_stream(txi_activities, state, direction) do
@@ -687,6 +753,13 @@ defmodule AeMdw.Activities do
   end
 
   defp convert_param({"owned_only", _val}), do: {:ok, {:ownership_only?, true}}
+
+  defp convert_param({"type", val}) do
+    case Map.fetch(@activity_stream_types, val) do
+      {:ok, stream_types} -> {:ok, {:stream_types, stream_types}}
+      :error -> {:error, ErrInput.Query.exception(value: "type=#{val}")}
+    end
+  end
 
   defp convert_param(other_param), do: {:error, ErrInput.Query.exception(value: other_param)}
 end
