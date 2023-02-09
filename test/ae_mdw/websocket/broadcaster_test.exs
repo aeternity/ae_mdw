@@ -1,12 +1,17 @@
 defmodule AeMdw.Websocket.BroadcasterTest do
   use ExUnit.Case, async: false
 
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.State
+  alias AeMdw.Validate
   alias AeMdwWeb.Websocket.Broadcaster
   alias Support.WsClient
 
   import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, spend_tx: 3, name_tx: 3]
   import Support.WsUtil, only: [unsubscribe_all: 1]
   import Mock
+
+  require Model
 
   setup_all do
     clients =
@@ -25,7 +30,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
 
         Enum.each(clients, &WsClient.subscribe(&1, :key_blocks, :node))
         assert_websocket_receive(clients, :subs, ["KeyBlocks"])
-        assert_receive_key_blocks(clients, blocks, :node)
+        assert_receive_key_blocks(clients, blocks, :v1, :node)
         unsubscribe_all(clients)
 
         Enum.each(clients, &WsClient.unsubscribe(&1, :key_blocks, :node))
@@ -33,7 +38,43 @@ defmodule AeMdw.Websocket.BroadcasterTest do
 
         Enum.each(clients, &WsClient.subscribe(&1, :key_blocks, :mdw))
         assert_websocket_receive(clients, :subs, ["KeyBlocks"])
-        assert_receive_key_blocks(clients, blocks, :mdw)
+        assert_receive_key_blocks(clients, blocks, :v1, :mdw)
+        unsubscribe_all(clients)
+      end
+    end
+
+    test "broadcasts node and mdw keyblock for v2" do
+      with_blockchain %{}, kb0: [], kb1: [], kb2: [] do
+        %{hash: kb_hash0, height: 0} = blocks[:kb0]
+        %{hash: kb_hash1, height: 1} = blocks[:kb1]
+        %{hash: kb_hash2, height: 2} = blocks[:kb2]
+
+        state =
+          State.mem_state()
+          |> State.put(
+            Model.Block,
+            Model.block(index: {0, -1}, hash: Validate.id!(kb_hash0), tx_index: 0)
+          )
+          |> State.put(
+            Model.Block,
+            Model.block(index: {1, -1}, hash: Validate.id!(kb_hash1), tx_index: 0)
+          )
+          |> State.put(
+            Model.Block,
+            Model.block(index: {2, -1}, hash: Validate.id!(kb_hash2), tx_index: 0)
+          )
+
+        :persistent_term.put(:global_state, state)
+
+        clients =
+          for _i <- 1..3 do
+            {:ok, client} = WsClient.start_link("ws://localhost:4003/v2/websocket")
+            client
+          end
+
+        Enum.each(clients, &WsClient.subscribe(&1, :key_blocks, :mdw))
+        assert_websocket_receive(clients, :subs, ["KeyBlocks"])
+        assert_receive_key_blocks(clients, blocks, :v2, :mdw)
         unsubscribe_all(clients)
       end
     end
@@ -71,7 +112,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
       end
     end
 
-    test "broadcasts node and mdw microblock for v2 only once", %{clients: clients} do
+    test "broadcasts node and mdw microblock for v2" do
       with_blockchain %{alice: 10_000, bob: 5_000, charlie: 2_000},
         mb0: [
           t0: spend_tx(:alice, :bob, 1_000)
@@ -82,19 +123,32 @@ defmodule AeMdw.Websocket.BroadcasterTest do
         mb2: [
           t2: spend_tx(:charlie, :alice, 1_000)
         ] do
+        %{hash: mb_hash0, height: 0} = blocks[:mb0]
+        %{hash: mb_hash1, height: 1} = blocks[:mb1]
+        %{hash: mb_hash2, height: 2} = blocks[:mb2]
+
+        state =
+          State.mem_state()
+          |> State.put(
+            Model.Block,
+            Model.block(index: {0, 0}, hash: Validate.id!(mb_hash0), tx_index: 0)
+          )
+          |> State.put(
+            Model.Block,
+            Model.block(index: {1, 0}, hash: Validate.id!(mb_hash1), tx_index: 1)
+          )
+          |> State.put(
+            Model.Block,
+            Model.block(index: {2, 0}, hash: Validate.id!(mb_hash2), tx_index: 2)
+          )
+
+        :persistent_term.put(:global_state, state)
+
         clients =
           for _i <- 1..3 do
             {:ok, client} = WsClient.start_link("ws://localhost:4003/v2/websocket")
             client
           end
-
-        Enum.each(clients, &WsClient.subscribe(&1, :micro_blocks, :node))
-        assert_websocket_receive(clients, :subs, ["MicroBlocks"])
-        assert_receive_micro_blocks(clients, blocks, :node)
-        unsubscribe_all(clients)
-
-        Enum.each(clients, &WsClient.unsubscribe(&1, :micro_blocks, :node))
-        Enum.each(clients, &WsClient.delete_subscriptions/1)
 
         Enum.each(clients, &WsClient.subscribe(&1, :micro_blocks, :mdw))
         assert_websocket_receive(clients, :subs, ["MicroBlocks"])
@@ -325,12 +379,12 @@ defmodule AeMdw.Websocket.BroadcasterTest do
     end
   end
 
-  defp assert_receive_key_blocks(clients, blocks, source) do
+  defp assert_receive_key_blocks(clients, blocks, version, source) do
     %{hash: kb_hash0, height: 0, block: block0} = blocks[:kb0]
     %{hash: kb_hash1, height: 1, block: block1} = blocks[:kb1]
     %{hash: kb_hash2, height: 2, block: block2} = blocks[:kb2]
 
-    Broadcaster.broadcast_key_block(block0, :v1, source)
+    Broadcaster.broadcast_key_block(block0, version, source)
 
     assert_websocket_receive(clients, :kb, %{
       "payload" => %{"hash" => kb_hash0, "height" => 0},
@@ -338,7 +392,7 @@ defmodule AeMdw.Websocket.BroadcasterTest do
       "subscription" => "KeyBlocks"
     })
 
-    Broadcaster.broadcast_key_block(block1, :v1, source)
+    Broadcaster.broadcast_key_block(block1, version, source)
 
     assert_websocket_receive(clients, :kb, %{
       "payload" => %{"hash" => kb_hash1, "height" => 1},
@@ -346,13 +400,13 @@ defmodule AeMdw.Websocket.BroadcasterTest do
       "subscription" => "KeyBlocks"
     })
 
-    Broadcaster.broadcast_key_block(block2, :v1, source)
+    Broadcaster.broadcast_key_block(block2, version, source)
     assert_websocket_receive(clients, :kb, %{"payload" => %{"hash" => kb_hash2, "height" => 2}})
 
-    Broadcaster.broadcast_key_block(block0, :v1, source)
+    Broadcaster.broadcast_key_block(block0, version, source)
     assert_websocket_receive(clients, :kb, %{"payload" => %{"hash" => kb_hash2, "height" => 2}})
 
-    Broadcaster.broadcast_key_block(block1, :v1, source)
+    Broadcaster.broadcast_key_block(block1, version, source)
     assert_websocket_receive(clients, :kb, %{"payload" => %{"hash" => kb_hash2, "height" => 2}})
   end
 
