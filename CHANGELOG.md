@@ -1,5 +1,22 @@
 # Changelog
 
+### [1.39.2](https://www.github.com/aeternity/ae_mdw/compare/v1.39.1...v1.39.2) (2023-02-09)
+
+
+### Bug Fixes
+
+* encode txs 404 address properly ([#1172](https://www.github.com/aeternity/ae_mdw/issues/1172)) ([d1f9e42](https://www.github.com/aeternity/ae_mdw/commit/d1f9e42d1abd541962ba6a572cae189794bb9c9a))
+
+
+### Miscellaneous
+
+* let aeternity.yaml be used by default ([#1177](https://www.github.com/aeternity/ae_mdw/issues/1177)) ([2abc1db](https://www.github.com/aeternity/ae_mdw/commit/2abc1db634e9f1c101e9f1ebb5166f5891878d5a))
+
+
+### Testing
+
+* add activities integration tests for the new activity types ([#1175](https://www.github.com/aeternity/ae_mdw/issues/1175)) ([e496e53](https://www.github.com/aeternity/ae_mdw/commit/e496e539e899dc03cbcd201dc5aa8c930afd40fe))
+
 ### [1.39.1](https://www.github.com/aeternity/ae_mdw/compare/v1.39.0...v1.39.1) (2023-02-07)
 
 
