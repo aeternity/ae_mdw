@@ -2,7 +2,7 @@ defmodule Support.WsUtil do
   # credo:disable-for-this-file
 
   def unsubscribe_all(version) when is_atom(version) do
-    :ets.match_delete(:subs_channel_pid, {{version, :_}, :_})
+    :ets.match_delete(:subs_channel_pid, {{:_, version, :_}, :_})
   end
 
   def unsubscribe_all(pids) when is_list(pids) do
