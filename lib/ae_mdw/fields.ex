@@ -22,6 +22,7 @@ defmodule AeMdw.Fields do
     {:channel_create_tx, 3},
     {:name_preclaim_tx, 3},
     {:name_transfer_tx, 4},
+    {:oracle_query_tx, 3},
     {:spend_tx, 2}
   ]
 
