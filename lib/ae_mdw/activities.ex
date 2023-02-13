@@ -752,7 +752,7 @@ defmodule AeMdw.Activities do
     end)
   end
 
-  defp convert_param({"owned_only", _val}), do: {:ok, {:ownership_only?, true}}
+  defp convert_param({"owned_only", val}), do: {:ok, {:ownership_only?, val != "false"}}
 
   defp convert_param({"type", val}) do
     case Map.fetch(@activity_stream_types, val) do
