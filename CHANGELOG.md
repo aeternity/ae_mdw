@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.40.0](https://www.github.com/aeternity/ae_mdw/compare/v1.39.1...v1.40.0) (2023-02-10)
+
+
+### Features
+
+* specialize ws subscription by source ([#1179](https://www.github.com/aeternity/ae_mdw/issues/1179)) ([6631dee](https://www.github.com/aeternity/ae_mdw/commit/6631dee6a7449240e8c3b59f3aabedd68719e26a))
+
+
+### Bug Fixes
+
+* encode txs 404 address properly ([#1172](https://www.github.com/aeternity/ae_mdw/issues/1172)) ([d1f9e42](https://www.github.com/aeternity/ae_mdw/commit/d1f9e42d1abd541962ba6a572cae189794bb9c9a))
+
+
+### Testing
+
+* add activities integration tests for the new activity types ([#1175](https://www.github.com/aeternity/ae_mdw/issues/1175)) ([e496e53](https://www.github.com/aeternity/ae_mdw/commit/e496e539e899dc03cbcd201dc5aa8c930afd40fe))
+
+
+### Miscellaneous
+
+* add handling for previous update format ([#1178](https://www.github.com/aeternity/ae_mdw/issues/1178)) ([2faf521](https://www.github.com/aeternity/ae_mdw/commit/2faf5214b7597e00207b101ddaf2c199d64c152f))
+* let aeternity.yaml be used by default ([#1177](https://www.github.com/aeternity/ae_mdw/issues/1177)) ([2abc1db](https://www.github.com/aeternity/ae_mdw/commit/2abc1db634e9f1c101e9f1ebb5166f5891878d5a))
+
 ### [1.39.1](https://www.github.com/aeternity/ae_mdw/compare/v1.39.0...v1.39.1) (2023-02-07)
 
 
