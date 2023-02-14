@@ -48,14 +48,13 @@ defmodule AeMdw.Db.Sync.Contract do
   @spec events_mutations(
           [Contract.event()],
           Blocks.block_index(),
-          Blocks.block_hash(),
           Txs.txi(),
           Txs.tx_hash(),
           Db.pubkey()
         ) :: [
           Mutation.t()
         ]
-  def events_mutations(events, block_index, block_hash, call_txi, call_tx_hash, contract_pk) do
+  def events_mutations(events, block_index, call_txi, call_tx_hash, contract_pk) do
     shifted_events = [nil | events]
 
     # This function relies on a property that every Chain.clone and Chain.create
@@ -96,7 +95,6 @@ defmodule AeMdw.Db.Sync.Contract do
     int_calls =
       non_chain_events
       |> Enum.map(fn {_prev_event, {{:internal_call_tx, fname}, %{info: tx}}} -> {fname, tx} end)
-      |> fix_oracle_queries(block_hash)
       |> Enum.with_index()
       |> Enum.map(fn {{fname, aetx}, local_idx} ->
         {tx_type, tx} = :aetx.specialize_type(aetx)
@@ -179,32 +177,5 @@ defmodule AeMdw.Db.Sync.Contract do
       {_local_idx, _fname, _tx_type, _aetx, _tx} ->
         []
     end)
-  end
-
-  # Temporary HACK to fix oracle query nonces.
-  defp fix_oracle_queries(events, block_hash) do
-    {fixed_events, _acc} =
-      Enum.map_reduce(events, %{}, fn
-        {"Oracle.query", aetx}, accounts_nonces ->
-          {:oracle_query_tx, tx} = :aetx.specialize_type(aetx)
-          sender_pk = :aeo_query_tx.sender_pubkey(tx)
-
-          nonce =
-            case Map.fetch(accounts_nonces, sender_pk) do
-              {:ok, nonce} -> nonce
-              :error -> Db.nonce_at_block(block_hash, sender_pk)
-            end
-
-          accounts_nonces = Map.put(accounts_nonces, sender_pk, nonce + 1)
-          fixed_tx = put_elem(tx, 2, nonce)
-          fixed_aetx = :aetx.update_tx(aetx, fixed_tx)
-
-          {{"Oracle.query", fixed_aetx}, accounts_nonces}
-
-        {fname, aetx}, accounts_nonces ->
-          {{fname, aetx}, accounts_nonces}
-      end)
-
-    fixed_events
   end
 end

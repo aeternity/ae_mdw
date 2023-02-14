@@ -51,8 +51,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
         {:aetx, [], [specialize_type: fn _tx -> {:spend_tx, tx_1} end]},
         {Node, [], [tx_ids: fn :spend_tx -> [{:sender_id, 1}] end]}
       ] do
-        mutations =
-          SyncContract.events_mutations(events, {0, 0}, <<>>, call_txi, <<>>, contract_pk)
+        mutations = SyncContract.events_mutations(events, {0, 0}, call_txi, <<>>, contract_pk)
 
         assert mutation in List.flatten(mutations)
       end
@@ -87,8 +86,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
         {Node, [], [tx_ids: fn :spend_tx -> [{:sender_id, 1}] end]},
         {:aec_spend_tx, [], [recipient_id: fn _tx -> {:id, :account, contract_pk} end]}
       ] do
-        mutations =
-          SyncContract.events_mutations(events, {0, 0}, <<>>, call_txi, <<>>, contract_pk)
+        mutations = SyncContract.events_mutations(events, {0, 0}, call_txi, <<>>, contract_pk)
 
         assert mutation in List.flatten(mutations)
       end
@@ -137,7 +135,6 @@ defmodule AeMdw.Db.Sync.ContractTest do
           SyncContract.events_mutations(
             tx_events,
             {554_178, 13},
-            <<1::256>>,
             25_866_736,
             <<2::256>>,
             25_866_736
@@ -159,7 +156,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
       event_mutations =
         "AENS.transfer"
         |> contract_events()
-        |> SyncContract.events_mutations(block_index, <<>>, call_txi, <<>>, -1)
+        |> SyncContract.events_mutations(block_index, call_txi, <<>>, -1)
         |> List.flatten()
 
       assert Enum.any?(event_mutations, fn
@@ -181,7 +178,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
       event_mutations =
         "AENS.update"
         |> contract_events()
-        |> SyncContract.events_mutations(block_index, <<>>, call_txi, <<>>, -1)
+        |> SyncContract.events_mutations(block_index, call_txi, <<>>, -1)
         |> List.flatten()
 
       assert Enum.any?(event_mutations, fn
@@ -219,7 +216,6 @@ defmodule AeMdw.Db.Sync.ContractTest do
       expire = sync_height + delta_ttl
       call_txi = sync_height * 1_000
 
-      block_hash = Validate.id!("mh_FmanZfXX2WWwv6BXMNSDdTgX1TGAknp3Td4aV99SbgRVmEyZo")
       call_tx_hash = <<1::256>>
       contract_pk = <<2::256>>
 
@@ -227,7 +223,6 @@ defmodule AeMdw.Db.Sync.ContractTest do
         [{{:internal_call_tx, "Oracle.register"}, %{info: aetx}}]
         |> SyncContract.events_mutations(
           {sync_height, 0},
-          block_hash,
           call_txi,
           call_tx_hash,
           contract_pk
@@ -278,7 +273,6 @@ defmodule AeMdw.Db.Sync.ContractTest do
 
       sync_height = 50_000
       block_index = {sync_height, 0}
-      block_hash = <<1::256>>
       call_txi = sync_height * 1_000
       call_tx_hash = <<2::256>>
       contract_pk = <<3::256>>
@@ -287,7 +281,6 @@ defmodule AeMdw.Db.Sync.ContractTest do
         [{{:internal_call_tx, "Oracle.extend"}, %{info: aetx}}]
         |> SyncContract.events_mutations(
           block_index,
-          block_hash,
           call_txi,
           call_tx_hash,
           contract_pk
