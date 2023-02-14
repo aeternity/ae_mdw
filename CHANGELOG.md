@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.40.1](https://www.github.com/aeternity/ae_mdw/compare/v1.40.0...v1.40.1) (2023-02-14)
+
+
+### Miscellaneous
+
+* remove no longer needed oracle queries nonce fix ([#1133](https://www.github.com/aeternity/ae_mdw/issues/1133)) ([c3a0e30](https://www.github.com/aeternity/ae_mdw/commit/c3a0e30fde8608216259f5ee6a8aeb9812daa74d))
+
 ## [1.40.0](https://www.github.com/aeternity/ae_mdw/compare/v1.39.1...v1.40.0) (2023-02-10)
 
 
