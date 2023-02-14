@@ -10,6 +10,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
   alias AeMdw.Db.Store
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
+  alias AeMdw.Txs
 
   import Mock
 
@@ -1038,7 +1039,22 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       mb_hash = TS.micro_block_hash(0)
       enc_mb_hash = Enc.encode(:micro_block_hash, mb_hash)
 
-      {:ok, aetx} =
+      {:ok, contract_call1_aetx} =
+        :aect_call_tx.new(%{
+          caller_id: account_id,
+          nonce: 2,
+          contract_id: contract_id,
+          abi_version: 2,
+          fee: 1,
+          amount: 1,
+          gas: 1,
+          gas_price: 1,
+          call_data: ""
+        })
+
+      {:contract_call_tx, contract_call1_tx} = :aetx.specialize_type(contract_call1_aetx)
+
+      {:ok, spend1_aetx} =
         :aec_spend_tx.new(%{
           sender_id: next_account_id,
           recipient_id: account_id,
@@ -1048,7 +1064,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           payload: ""
         })
 
-      {:spend_tx, tx} = :aetx.specialize_type(aetx)
+      {:spend_tx, spend1_tx} = :aetx.specialize_type(spend1_aetx)
 
       {:ok, contract_call4_aetx} =
         :aect_call_tx.new(%{
@@ -1084,7 +1100,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         empty_store()
         |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 1}))
         |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {height, mbi}, id: "tx-hash1"))
-        |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 2}))
+        |> Store.put(Model.Field, Model.field(index: {:spend_tx, 1, account_pk, 2}))
         |> Store.put(Model.Tx, Model.tx(index: 2, block_index: {height, mbi}, id: "tx-hash2"))
         |> Store.put(
           Model.Field,
@@ -1114,17 +1130,18 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         )
 
       with_mocks [
-        {Db, [],
+        {Db, [:passthrough],
          [
            get_tx_data: fn
-             "tx-hash1" -> {"", :spend_tx, aetx, tx}
-             "tx-hash2" -> {"", :spend_tx, aetx, tx}
+             "tx-hash1" -> {"", :contract_call_tx, contract_call1_aetx, contract_call1_tx}
+             "tx-hash2" -> {"", :spend_tx, spend1_aetx, spend1_tx}
              "tx-hash4" -> {"", :contract_call_tx, contract_call4_aetx, contract_call4_tx}
              "tx-hash5" -> {"", :contract_call_tx, contract_call5_aetx, contract_call5_tx}
            end
          ]},
+        {Txs, [], fetch!: fn _state, _txi -> %{} end},
         {:aec_db, [], [get_header: fn _block_hash -> :header end]},
-        {:aetx_sign, [], [serialize_for_client: fn :header, ^aetx -> %{} end]}
+        {:aetx_sign, [], [serialize_for_client: fn :header, _aetx -> %{} end]}
       ] do
         assert %{"prev" => nil, "data" => [tx1, tx2, tx3], "next" => _next_url} =
                  conn
@@ -1136,14 +1153,14 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "height" => ^height,
                  "block_hash" => ^enc_mb_hash,
                  "type" => "ContractCallTxEvent",
-                 "payload" => %{"micro_index" => ^mbi}
+                 "payload" => %{}
                } = tx1
 
         assert %{
                  "height" => ^height,
                  "block_hash" => ^enc_mb_hash,
-                 "type" => "ContractCallTxEvent",
-                 "payload" => %{"micro_index" => ^mbi}
+                 "type" => "SpendTxEvent",
+                 "payload" => %{}
                } = tx2
 
         assert %{
