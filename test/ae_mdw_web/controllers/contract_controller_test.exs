@@ -86,7 +86,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       assert %{"data" => logs, "next" => nil} =
                conn
                |> with_store(store)
-               |> get("/v2/contracts/logs", limit: 100)
+               |> get("/v2/contracts/logs?limit=100&encode-args=true")
                |> json_response(200)
 
       assert @mixed_logs_amount + @contract_logs_amount + length(@aex9_events) +
@@ -123,7 +123,14 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
         assert contract_tx_hash == encode(:tx_hash, Txs.txi_to_hash(state, create_txi))
         assert contract_id == encode_contract(Origin.pubkey(state, {:contract, create_txi}))
         assert call_tx_hash == encode(:tx_hash, Txs.txi_to_hash(state, call_txi))
-        assert args == [to_string(call_txi)]
+
+        if event_name == "Burn" do
+          [account, value] = args
+          assert String.starts_with?(account, "ak") and value == call_txi
+        else
+          assert args == [to_string(call_txi)]
+        end
+
         assert data == "0x" <> Integer.to_string(call_txi, 16)
 
         assert event_hash in @event_hashes or event_name in @aex9_events or
@@ -977,7 +984,13 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
         evt_hash = :aec_hash.blake2b_256_hash(event_name)
         data = "0x" <> Integer.to_string(txi, 16)
         idx = rem(txi, 5)
-        fake_args = [<<txi::256>>]
+
+        fake_args =
+          if event_name == "Burn" do
+            [<<1::256>>, <<txi::256>>]
+          else
+            [<<txi::256>>]
+          end
 
         m_log =
           Model.contract_log(
@@ -1024,7 +1037,13 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
         evt_hash = :aec_hash.blake2b_256_hash(event_name)
         data = "0x" <> Integer.to_string(txi, 16)
         idx = rem(txi, 5)
-        fake_args = [<<txi::256>>]
+
+        fake_args =
+          if event_name == "Burn" do
+            [<<1::256>>, <<txi::256>>]
+          else
+            [<<txi::256>>]
+          end
 
         m_log =
           Model.contract_log(

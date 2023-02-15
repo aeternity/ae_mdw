@@ -3,7 +3,6 @@ defmodule AeMdw.Contracts do
   Context module for dealing with Contracts.
   """
 
-  alias AeMdw.AexnContracts
   alias AeMdw.Collection
   alias AeMdw.Contract
   alias AeMdw.Db.Format
@@ -17,22 +16,16 @@ defmodule AeMdw.Contracts do
   alias AeMdw.Util
   alias AeMdw.Validate
 
-  import AeMdw.Util.Encoding
-
   require Model
 
-  @type log() :: map()
+  @type log() :: Model.contract_log_index()
   @type call() :: map()
   @type cursor() :: binary() | nil
   @type query() :: %{binary() => binary()}
   @type local_idx() :: non_neg_integer()
-  @type log_key() :: {create_txi(), local_idx()}
   @type event_hash() :: <<_::256>>
   @type log_idx() :: non_neg_integer()
-  @type call_key() :: {create_txi(), txi(), event_hash(), log_idx()}
 
-  @typep txi() :: Txs.txi()
-  @typep create_txi() :: txi() | -1
   @typep reason() :: binary()
   @typep pagination() :: Collection.direction_limit()
   @typep range() :: {:gen, Range.t()} | {:txi, Range.t()} | nil
@@ -49,7 +42,6 @@ defmodule AeMdw.Contracts do
 
   @pagination_params ~w(limit cursor rev direction scope tx_hash)
 
-  @min_data Util.min_bin()
   @min_fname Util.min_bin()
   @min_hash Util.min_bin()
   @max_256bit_bin Util.max_256bit_bin()
@@ -76,8 +68,7 @@ defmodule AeMdw.Contracts do
         |> build_logs_pagination(state, scope, cursor)
         |> Collection.paginate(pagination)
 
-      {:ok, serialize_logs_cursor(prev_cursor), Enum.map(logs, &render_log(state, &1)),
-       serialize_logs_cursor(next_cursor)}
+      {:ok, serialize_logs_cursor(prev_cursor), logs, serialize_logs_cursor(next_cursor)}
     rescue
       e in ErrInput ->
         {:error, e.message}
@@ -133,15 +124,16 @@ defmodule AeMdw.Contracts do
         nil ->
           nil
 
-        {create_txi, call_txi, event_hash, log_idx, data} ->
+        {create_txi, call_txi, event_hash, log_idx} = index ->
+          Model.contract_log(data: data) = State.fetch!(state, @contract_log_table, index)
           {data, call_txi, create_txi, event_hash, log_idx}
       end
 
     fn direction ->
       state
       |> Collection.stream(@data_contract_log_table, direction, key_boundary, cursor)
-      |> Stream.map(fn {data, call_txi, create_txi, event_hash, log_idx} ->
-        {create_txi, call_txi, event_hash, log_idx, data}
+      |> Stream.map(fn {_data, call_txi, create_txi, event_hash, log_idx} ->
+        {create_txi, call_txi, event_hash, log_idx}
       end)
     end
   end
@@ -163,7 +155,7 @@ defmodule AeMdw.Contracts do
         nil ->
           nil
 
-        {create_txi, call_txi, event_hash, log_idx, _data} ->
+        {create_txi, call_txi, event_hash, log_idx} ->
           {create_txi, call_txi, event_hash, log_idx}
       end
 
@@ -171,7 +163,7 @@ defmodule AeMdw.Contracts do
       state
       |> Collection.stream(@contract_log_table, direction, key_boundary, cursor)
       |> Stream.map(fn {create_txi, call_txi, even_hash, log_idx} ->
-        {create_txi, call_txi, even_hash, log_idx, @min_data}
+        {create_txi, call_txi, even_hash, log_idx}
       end)
     end
   end
@@ -192,7 +184,7 @@ defmodule AeMdw.Contracts do
         nil ->
           nil
 
-        {create_txi, call_txi, event_hash, log_idx, _data} ->
+        {create_txi, call_txi, event_hash, log_idx} ->
           {event_hash, call_txi, create_txi, log_idx}
       end
 
@@ -200,7 +192,7 @@ defmodule AeMdw.Contracts do
       state
       |> Collection.stream(@evt_contract_log_table, direction, key_boundary, cursor)
       |> Stream.map(fn {event_hash, call_txi, create_txi, log_idx} ->
-        {create_txi, call_txi, event_hash, log_idx, @min_data}
+        {create_txi, call_txi, event_hash, log_idx}
       end)
     end
   end
@@ -221,7 +213,7 @@ defmodule AeMdw.Contracts do
         nil ->
           nil
 
-        {create_txi, call_txi, event_hash, log_idx, _data} ->
+        {create_txi, call_txi, event_hash, log_idx} ->
           {call_txi, log_idx, create_txi, event_hash}
       end
 
@@ -229,7 +221,7 @@ defmodule AeMdw.Contracts do
       state
       |> Collection.stream(@idx_contract_log_table, direction, key_boundary, cursor)
       |> Stream.map(fn {call_txi, log_idx, create_txi, event_hash} ->
-        {create_txi, call_txi, event_hash, log_idx, @min_data}
+        {create_txi, call_txi, event_hash, log_idx}
       end)
     end
   end
@@ -442,6 +434,7 @@ defmodule AeMdw.Contracts do
     do: {:event_hash, :aec_hash.blake2b_256_hash(ctor_name)}
 
   defp convert_param(_state, {"function", fname}) when byte_size(fname) > 0, do: {:fname, fname}
+  defp convert_param(_state, {"encode-args", _}), do: {:ignore, nil}
 
   defp convert_param(_state, {id_key, id_val}) do
     pos_types =
@@ -484,83 +477,17 @@ defmodule AeMdw.Contracts do
     tx_type
   end
 
-  defp render_log(state, {create_txi, call_txi, event_hash, log_idx, _data}) do
-    {contract_tx_hash, ct_pk} =
-      if create_txi == -1 do
-        {nil, Origin.pubkey(state, {:contract_call, call_txi})}
-      else
-        {encode_to_hash(state, create_txi), Origin.pubkey(state, {:contract, create_txi})}
-      end
-
-    Model.tx(id: call_tx_hash, block_index: {height, micro_index}) =
-      State.fetch!(state, Model.Tx, call_txi)
-
-    Model.block(hash: block_hash) = DBUtil.read_block!(state, {height, micro_index})
-
-    Model.contract_log(args: args, data: data, ext_contract: ext_contract) =
-      State.fetch!(state, @contract_log_table, {create_txi, call_txi, event_hash, log_idx})
-
-    state
-    |> render_remote_log_fields(ext_contract)
-    |> Map.merge(%{
-      contract_txi: create_txi,
-      contract_tx_hash: contract_tx_hash,
-      contract_id: encode_contract(ct_pk),
-      call_txi: call_txi,
-      call_tx_hash: encode(:tx_hash, call_tx_hash),
-      args: Enum.map(args, fn <<topic::256>> -> to_string(topic) end),
-      data: maybe_encode_base64(data),
-      event_hash: Base.hex_encode32(event_hash),
-      event_name: AexnContracts.event_name(event_hash),
-      height: height,
-      micro_index: micro_index,
-      block_hash: encode(:micro_block_hash, block_hash),
-      log_idx: log_idx
-    })
-  end
-
   defp render_call(state, {call_txi, local_idx, _create_txi, _pk, _fname, _pos}) do
     call_key = {call_txi, local_idx}
     Format.to_map(state, call_key, @int_contract_call_table)
   end
 
-  defp render_remote_log_fields(_state, nil) do
-    %{
-      ext_caller_contract_txi: -1,
-      ext_caller_contract_tx_hash: nil,
-      ext_caller_contract_id: nil,
-      parent_contract_id: nil
-    }
-  end
-
-  defp render_remote_log_fields(_state, {:parent_contract_pk, parent_pk}) do
-    %{
-      ext_caller_contract_txi: -1,
-      ext_caller_contract_tx_hash: nil,
-      ext_caller_contract_id: nil,
-      parent_contract_id: encode_contract(parent_pk)
-    }
-  end
-
-  defp render_remote_log_fields(state, ext_ct_pk) do
-    ext_ct_txi = Origin.tx_index!(state, {:contract, ext_ct_pk})
-    ext_ct_tx_hash = encode_to_hash(state, ext_ct_txi)
-
-    %{
-      ext_caller_contract_txi: ext_ct_txi,
-      ext_caller_contract_tx_hash: ext_ct_tx_hash,
-      ext_caller_contract_id: encode_contract(ext_ct_pk),
-      parent_contract_id: nil
-    }
-  end
-
   defp serialize_logs_cursor(nil), do: nil
 
-  defp serialize_logs_cursor({{create_txi, call_txi, event_hash, log_idx, data}, is_reversed?}) do
+  defp serialize_logs_cursor({{create_txi, call_txi, event_hash, log_idx}, is_reversed?}) do
     event_hash = Base.encode32(event_hash)
-    data = URI.encode(data)
 
-    {Base.hex_encode32("#{create_txi}$#{call_txi}$#{event_hash}$#{log_idx}$#{data}",
+    {Base.hex_encode32("#{create_txi}$#{call_txi}$#{event_hash}$#{log_idx}",
        padding: false
      ), is_reversed?}
   end
@@ -569,14 +496,13 @@ defmodule AeMdw.Contracts do
 
   defp deserialize_logs_cursor(cursor_bin) do
     with {:ok, decoded_cursor} <- Base.hex_decode32(cursor_bin, padding: false),
-         [create_txi_bin, call_txi_bin, event_hash_bin, log_idx_bin, data_bin] <-
+         [create_txi_bin, call_txi_bin, event_hash_bin, log_idx_bin] <-
            String.split(decoded_cursor, "$"),
          {:ok, create_txi} <- deserialize_cursor_int(create_txi_bin),
          {:ok, call_txi} <- deserialize_cursor_int(call_txi_bin),
          {:ok, event_hash} <- deserialize_cursor_string(event_hash_bin),
-         {:ok, log_idx} <- deserialize_cursor_int(log_idx_bin),
-         {:ok, data} <- deserialize_cursor_data(data_bin) do
-      {create_txi, call_txi, event_hash, log_idx, data}
+         {:ok, log_idx} <- deserialize_cursor_int(log_idx_bin) do
+      {create_txi, call_txi, event_hash, log_idx}
     else
       _invalid_cursor -> nil
     end
@@ -623,16 +549,4 @@ defmodule AeMdw.Contracts do
 
   defp deserialize_cursor_string(event_hash_bin),
     do: Base.decode32(event_hash_bin, padding: false)
-
-  defp deserialize_cursor_data(data_bin) do
-    try do
-      {:ok, URI.decode(data_bin)}
-    rescue
-      ArgumentError -> :error
-    end
-  end
-
-  defp maybe_encode_base64(data) do
-    if String.valid?(data), do: data, else: Base.encode64(data)
-  end
 end
