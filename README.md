@@ -2875,7 +2875,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/names/ssup.test/updates?limit=1" 
 A paginable contract log endpoint allows querying of the contract logs using several querying parameters, including:
 
 - `contract_id` - listing only logs emitted by given contract
-- `event` - listing only logs emitted by particular event constructor (hex32 encoded blake2b hash)
+- `event` - listing only logs emitted by particular event constructor (base32hex encoded blake2b hash)
 - `data` - listing only logs which have `data` field matching the provided prefix
 - `function` - The name of the function called
 
@@ -2923,7 +2923,7 @@ The attributes returned on each object are the following:
 
 - `data` - decoded (human readable) data field of event log (if any)
 
-- `event_hash` - hex32 encoded blake2b hash of the name of the event constructor
+- `event_hash` - base32hex encoded blake2b hash of the name of the event constructor
   The source of the contract in question has one of the event log constructors named "TipReceived".
   It's encoded hash can be retrieved as:
   ```
