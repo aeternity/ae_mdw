@@ -2878,7 +2878,7 @@ A paginable contract log endpoint allows querying of the contract logs using sev
 - `event` - listing only logs emitted by particular event constructor (hex32 encoded blake2b hash)
 - `data` - listing only logs which have `data` field matching the provided prefix
 - `function` - the name of the function called
-- `encode-args`- formats the args topics according to the event type
+- `aexn-args`- formats the args topics according to the event type
 
 ```
 $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?direction=forward&contract_id=ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z&limit=1" | jq '.'

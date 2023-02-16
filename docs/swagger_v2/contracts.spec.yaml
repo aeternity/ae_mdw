@@ -131,9 +131,9 @@ paths:
           schema:
             type: string
             example: "AB"
-        - name: encode-args
+        - name: aexn-args
           in: query
-          description: Boolean to format args according to event type
+          description: Indicates to format args when event is AEX-N
           required: false
           schema:
             type: boolean

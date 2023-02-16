@@ -434,7 +434,7 @@ defmodule AeMdw.Contracts do
     do: {:event_hash, :aec_hash.blake2b_256_hash(ctor_name)}
 
   defp convert_param(_state, {"function", fname}) when byte_size(fname) > 0, do: {:fname, fname}
-  defp convert_param(_state, {"encode-args", _}), do: {:ignore, nil}
+  defp convert_param(_state, {"aexn-args", _}), do: {:ignore, nil}
 
   defp convert_param(_state, {id_key, id_val}) do
     pos_types =

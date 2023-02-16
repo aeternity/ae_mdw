@@ -13,7 +13,7 @@ defmodule AeMdwWeb.ContractController do
   @spec logs(Conn.t(), map()) :: Conn.t()
   def logs(%Conn{assigns: assigns, query_params: query_params} = conn, _params) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
-    encode_args? = Map.get(query_params, "encode-args", "false")
+    encode_args? = Map.get(query_params, "aexn-args", "false")
 
     with true <- encode_args? in ["true", "false"],
          {:ok, prev_cursor, logs, next_cursor} <-
@@ -24,7 +24,7 @@ defmodule AeMdwWeb.ContractController do
       Util.paginate(conn, prev_cursor, logs, next_cursor)
     else
       false ->
-        {:error, ErrInput.Query.exception(value: "encode_args should be true or false")}
+        {:error, ErrInput.Query.exception(value: "aexn-args should be true or false")}
 
       {:error, reason} ->
         Util.send_error(conn, :bad_request, reason)

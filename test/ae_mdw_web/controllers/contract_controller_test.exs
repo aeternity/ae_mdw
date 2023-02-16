@@ -86,7 +86,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       assert %{"data" => logs, "next" => nil} =
                conn
                |> with_store(store)
-               |> get("/v2/contracts/logs?limit=100&encode-args=true")
+               |> get("/v2/contracts/logs?limit=100&aexn-args=true")
                |> json_response(200)
 
       assert @mixed_logs_amount + @contract_logs_amount + length(@aex9_events) +

@@ -2228,9 +2228,9 @@ paths:
         schema:
           example: AB
           type: string
-      - description: Boolean to format args according to event type
+      - description: Indicates to format args when event is AEX-N
         in: query
-        name: encode-args
+        name: aexn-args
         required: false
         schema:
           example: true
