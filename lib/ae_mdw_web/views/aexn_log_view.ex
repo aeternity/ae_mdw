@@ -1,0 +1,114 @@
+defmodule AeMdwWeb.AexnLogView do
+  @moduledoc false
+
+  alias AeMdw.AexnContracts
+  alias AeMdw.Db.Origin
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.State
+  alias AeMdw.Db.Util, as: DBUtil
+
+  import AeMdw.Util.Encoding
+
+  require Model
+
+  @spec render_log(State.t(), AeMdw.Contracts.log(), boolean()) :: map()
+  def render_log(state, {create_txi, call_txi, event_hash, log_idx}, encode_args?) do
+    {contract_tx_hash, ct_pk} =
+      if create_txi == -1 do
+        {nil, Origin.pubkey(state, {:contract_call, call_txi})}
+      else
+        {encode_to_hash(state, create_txi), Origin.pubkey(state, {:contract, create_txi})}
+      end
+
+    Model.tx(id: call_tx_hash, block_index: {height, micro_index}) =
+      State.fetch!(state, Model.Tx, call_txi)
+
+    Model.block(hash: block_hash) = DBUtil.read_block!(state, {height, micro_index})
+
+    Model.contract_log(args: args, data: data, ext_contract: ext_contract) =
+      State.fetch!(state, Model.ContractLog, {create_txi, call_txi, event_hash, log_idx})
+
+    event_name = AexnContracts.event_name(event_hash)
+
+    state
+    |> render_remote_log_fields(ext_contract)
+    |> Map.merge(%{
+      contract_txi: create_txi,
+      contract_tx_hash: contract_tx_hash,
+      contract_id: encode_contract(ct_pk),
+      call_txi: call_txi,
+      call_tx_hash: encode(:tx_hash, call_tx_hash),
+      args: format_args(event_name, args, encode_args?),
+      data: maybe_encode_base64(data),
+      event_hash: Base.hex_encode32(event_hash),
+      event_name: event_name,
+      height: height,
+      micro_index: micro_index,
+      block_hash: encode(:micro_block_hash, block_hash),
+      log_idx: log_idx
+    })
+  end
+
+  defp render_remote_log_fields(_state, nil) do
+    %{
+      ext_caller_contract_txi: -1,
+      ext_caller_contract_tx_hash: nil,
+      ext_caller_contract_id: nil,
+      parent_contract_id: nil
+    }
+  end
+
+  defp render_remote_log_fields(_state, {:parent_contract_pk, parent_pk}) do
+    %{
+      ext_caller_contract_txi: -1,
+      ext_caller_contract_tx_hash: nil,
+      ext_caller_contract_id: nil,
+      parent_contract_id: encode_contract(parent_pk)
+    }
+  end
+
+  defp render_remote_log_fields(state, ext_ct_pk) do
+    ext_ct_txi = Origin.tx_index!(state, {:contract, ext_ct_pk})
+    ext_ct_tx_hash = encode_to_hash(state, ext_ct_txi)
+
+    %{
+      ext_caller_contract_txi: ext_ct_txi,
+      ext_caller_contract_tx_hash: ext_ct_tx_hash,
+      ext_caller_contract_id: encode_contract(ext_ct_pk),
+      parent_contract_id: nil
+    }
+  end
+
+  defp maybe_encode_base64(data) do
+    if String.valid?(data), do: data, else: Base.encode64(data)
+  end
+
+  defp format_args(event_name, [account, <<token_id::256>>], true)
+       when event_name in ["Burn", "Mint", "Swap"] do
+    [encode_account(account), token_id]
+  end
+
+  defp format_args("Transfer", [from, to, <<token_id::256>>], true) do
+    [encode_account(from), encode_account(to), token_id]
+  end
+
+  defp format_args(
+         "TemplateMint",
+         [account, <<template_id::256>>, <<token_id::256>>],
+         true
+       ) do
+    [encode_account(account), template_id, token_id]
+  end
+
+  defp format_args(
+         "TemplateMint",
+         [account, <<template_id::256>>, <<token_id::256>>, edition_serial],
+         true
+       ) do
+    [encode_account(account), template_id, token_id, edition_serial]
+  end
+
+  defp format_args(_event_name, args, _bool_val) do
+    Enum.map(args, fn <<topic::256>> -> to_string(topic) end)
+  end
+end

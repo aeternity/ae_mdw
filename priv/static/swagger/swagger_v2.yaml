@@ -2200,6 +2200,41 @@ paths:
       description: Get contract logs.
       operationId: get_contracts_logs
       parameters:
+      - description: Contract that emitted the logs
+        in: query
+        name: contract_id
+        required: false
+        schema:
+          example: ct_M6MNwGLtMQ4j3m8pzQz9uF38nMfjCCVaiQ8fvTAU6DEsCocD5
+          type: string
+      - description: Name of the event
+        in: query
+        name: event
+        required: false
+        schema:
+          example: Transfer
+          type: string
+      - description: Prefix of the contract called function
+        in: query
+        name: function
+        required: false
+        schema:
+          example: mint
+          type: string
+      - description: Data prefix from the contract call
+        in: query
+        name: data
+        required: false
+        schema:
+          example: AB
+          type: string
+      - description: Indicates to format args when event is AEX-N
+        in: query
+        name: aexn-args
+        required: false
+        schema:
+          example: true
+          type: boolean
       - $ref: '#/components/parameters/LimitParam'
       - $ref: '#/components/parameters/ScopeParam'
       - $ref: '#/components/parameters/DirectionParam'
