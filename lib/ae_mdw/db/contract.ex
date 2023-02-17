@@ -282,7 +282,7 @@ defmodule AeMdw.Db.Contract do
   def write_aex141_ownership(
         state,
         contract_pk,
-        [<<_pk::256>> = to_pk, <<template_id::256>>, <<token_id::256>>]
+        [<<_pk::256>> = to_pk, <<template_id::256>>, <<token_id::256>>, _edition]
       ) do
     do_write_aex141_ownership(state, contract_pk, to_pk, token_id, template_id)
   end
@@ -464,7 +464,7 @@ defmodule AeMdw.Db.Contract do
          contract_pk,
          txi,
          log_idx,
-         [<<_pk::256>>, <<template_id::256>>, <<token_id::256>>] = args
+         [<<_pk::256>>, <<template_id::256>>, <<token_id::256>>, edition] = args
        ) do
     state
     |> write_aex141_ownership(contract_pk, args)
@@ -477,7 +477,8 @@ defmodule AeMdw.Db.Contract do
       Model.nft_template_token(
         index: {contract_pk, template_id, token_id},
         txi: txi,
-        log_idx: log_idx
+        log_idx: log_idx,
+        edition: edition
       )
     )
     |> SyncStats.increment_nft_template_tokens(contract_pk, template_id)

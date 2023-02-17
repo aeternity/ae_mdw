@@ -274,7 +274,7 @@ defmodule AeMdw.Aex141 do
 
   defp render_template_tokens(state, keys) do
     Enum.map(keys, fn {contract_pk, template_id, token_id} ->
-      Model.nft_template_token(txi: txi, log_idx: log_idx) =
+      Model.nft_template_token(txi: txi, log_idx: log_idx, edition: edition) =
         State.fetch!(state, @template_tokens_table, {contract_pk, template_id, token_id})
 
       Model.nft_token_owner(owner: owner_pk) =
@@ -283,6 +283,7 @@ defmodule AeMdw.Aex141 do
       tx_hash = Txs.txi_to_hash(state, txi)
 
       %{
+        edition: edition,
         token_id: token_id,
         owner_id: encode_account(owner_pk),
         tx_hash: encode(:tx_hash, tx_hash),

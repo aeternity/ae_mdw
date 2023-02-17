@@ -585,7 +585,8 @@ defmodule AeMdw.Db.ContractCallMutationTest do
               aexn_event_hash(:template_mint),
               to_pk,
               <<template_id::256>>,
-              <<token_id::256>>
+              <<token_id::256>>,
+              "1"
             ],
             ""
           }
@@ -629,7 +630,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       assert {:ok, Model.nft_token_template(template: ^template_id)} =
                State.get(state, Model.NftTokenTemplate, {contract_pk, token_id})
 
-      assert {:ok, Model.nft_template_token(txi: ^call_txi, log_idx: 0)} =
+      assert {:ok, Model.nft_template_token(txi: ^call_txi, log_idx: 0, edition: "1")} =
                State.get(state, Model.NftTemplateToken, {contract_pk, template_id, token_id})
 
       assert {:ok, Model.stat(payload: 1)} =
