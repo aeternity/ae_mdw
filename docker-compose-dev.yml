@@ -3,7 +3,7 @@ services:
   ae_mdw:
     build:
       context: .
-      dockerfile: ./Dockerfile
+      dockerfile: ./Dockerfile.dev
       args:
         MIX_ENV: dev
     image: aeternity/ae_mdw_dev:latest
