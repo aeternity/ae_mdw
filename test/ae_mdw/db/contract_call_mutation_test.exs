@@ -1270,7 +1270,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       call_rec =
         call_rec("logs", contract_pk, height, nil, [
-          {contract_pk, [aexn_event_hash(:burn), <<token_id1::256>>], ""}
+          {contract_pk, [aexn_event_hash(:burn), owner_pk, <<token_id1::256>>], ""}
         ])
 
       mutation =
