@@ -436,7 +436,10 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  defp write_aex141_records(state, :burn, contract_pk, _txi, _log_idx, [<<token_id::256>>]) do
+  defp write_aex141_records(state, :burn, contract_pk, _txi, _log_idx, [
+         _owner_pk,
+         <<token_id::256>>
+       ]) do
     state = delete_aex141_ownership(state, contract_pk, token_id)
 
     case State.get(state, Model.NftTokenTemplate, {contract_pk, token_id}) do
