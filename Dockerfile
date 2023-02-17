@@ -22,11 +22,9 @@ ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
 FROM ${BUILDER_IMAGE} as builder
 
 # install build dependencies
-RUN apt-get update -y && apt-get install -y build-essential git \
-    && apt-get clean && rm -f /var/lib/apt/lists/*_*
-
-RUN apt-get -qq update && apt-get -qq -y install git curl libncurses5 libsodium-dev jq libgmp10 \
+RUN apt-get update -y && apt-get install -y build-essential git curl libncurses5 libsodium-dev jq libgmp10 \
     && ldconfig \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Prepare working folder
