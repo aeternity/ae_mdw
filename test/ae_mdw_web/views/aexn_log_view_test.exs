@@ -63,7 +63,8 @@ defmodule AeMdwWeb.AexnLogViewTest do
       template_mint: [
         account1_pk,
         <<templates["TemplateMint"]::256>>,
-        <<tokens["TemplateMint"]::256>>
+        <<tokens["TemplateMint"]::256>>,
+        "1"
       ],
       template_limit_decrease: [<<templates["TemplateLimitDecrease"]::256>>, <<@limit::256>>],
       edition_limit: [<<templates["EditionLimit"]::256>>, <<@limit::256>>]
@@ -322,7 +323,8 @@ defmodule AeMdwWeb.AexnLogViewTest do
   defp assert_template_args("TemplateMint" = event, account1_pk, templates, tokens, [
          account,
          template_id,
-         token_id
+         token_id,
+         "1"
        ]) do
     assert account == encode_account(account1_pk)
     assert template_id == templates[event]

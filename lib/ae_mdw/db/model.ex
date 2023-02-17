@@ -490,7 +490,8 @@ defmodule AeMdw.Db.Model do
   #     index: {contract pubkey, template_id, token_id}
   #     txi: mint txi
   #     log_idx: mint log_idx
-  @nft_template_token_defaults [index: {<<>>, -1, -1}, txi: nil, log_idx: nil]
+  #     edition: edition serial
+  @nft_template_token_defaults [index: {<<>>, -1, -1}, txi: nil, log_idx: nil, edition: nil]
   defrecord :nft_template_token, @nft_template_token_defaults
 
   @type nft_template_token_index :: {pubkey(), template_id(), token_id()}
@@ -498,7 +499,8 @@ defmodule AeMdw.Db.Model do
           record(:nft_template_token,
             index: nft_template_token_index(),
             txi: txi(),
-            log_idx: log_idx()
+            log_idx: log_idx(),
+            edition: String.t()
           )
 
   # AEX-141 token template
