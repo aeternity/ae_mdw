@@ -1423,6 +1423,25 @@ paths:
         schema:
           example: true
           type: boolean
+      - description: "Activity type:\n * `transactions` - Transactions containing\
+          \ the account in any of the transaction fields\n * `aexn` - AExN (aex9 and\
+          \ aex141) activities\n * `aex9` - AEx9 activities\n * `aex141` - AEx141\
+          \ activities\n * `contract` - Internal and external contract calls\n * `transfers`\
+          \ - Internal (both gen-based and tx-based) transfers\n * `claims` - Name\
+          \ claims related to the name hash\n"
+        in: query
+        name: type
+        required: false
+        schema:
+          enum:
+          - transactions
+          - aexn
+          - aex9
+          - aex141
+          - contract
+          - transfers
+          - claims
+          type: string
       - $ref: '#/components/parameters/LimitParam'
       - $ref: '#/components/parameters/ScopeParam'
       - $ref: '#/components/parameters/DirectionParam'

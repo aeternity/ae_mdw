@@ -131,6 +131,22 @@ paths:
           schema:
             type: boolean
             example: true
+        - name: type
+          description: Filter by activity type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [transactions, aexn, aex9, aex141, contract, transfers, claims]
+          description: >
+            Activity type:
+             * `transactions` - Transactions containing the account in any of the transaction fields
+             * `aexn` - AExN (aex9 and aex141) activities
+             * `aex9` - AEx9 activities
+             * `aex141` - AEx141 activities
+             * `contract` - Internal and external contract calls
+             * `transfers` - Internal (both gen-based and tx-based) transfers
+             * `claims` - Name claims related to the name hash
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'
