@@ -1,5 +1,7 @@
 import Config
 
+env = config_env()
+
 #
 # Telemetry
 #
@@ -7,7 +9,7 @@ period = String.to_integer(System.get_env("TELEMETRY_POLLER_PERIOD") || "10000")
 
 config :ae_mdw, AeMdw.APM.TelemetryPoller, period: period
 
-if config_env() in [:test, :prod] do
+if env in [:test, :prod] do
   if System.get_env("ENABLE_TELEMETRY", "false") in ["true", "1"] do
     {:ok, hostname} = :inet.gethostname()
     host = System.get_env("TELEMETRY_STATSD_HOST") || to_string(hostname)
@@ -36,5 +38,9 @@ if config_env() in [:test, :prod] do
     opts = if formatter == "datadog", do: opts ++ datadog_opts, else: opts
 
     config :logger_json, :backend, opts
+  end
+
+  if env == :prod do
+    config :ae_mdw, AeMdwWeb.Endpoint, server: true
   end
 end
