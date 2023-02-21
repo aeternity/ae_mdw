@@ -22,7 +22,7 @@ config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
 
 # Logging
 config :logger,
-  backends: [:console, {LoggerFileBackend, :info}]
+  backends: [{LoggerFileBackend, :info}]
 
 # Phoenix
 config :phoenix, :stacktrace_depth, 20
