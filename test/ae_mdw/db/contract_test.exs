@@ -376,6 +376,143 @@ defmodule AeMdw.Db.ContractTest do
       assert {:ok, Model.aex9_event_balance(amount: 1_190_000_000_000_000_000)} =
                State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk})
     end
+
+    test "ignores aex9 events without matching args" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      account_pk1 = :crypto.strong_rand_bytes(32)
+      account_pk2 = :crypto.strong_rand_bytes(32)
+      height = Enum.random(100_000..999_999)
+      txi = Enum.random(100_000_000..999_999_999)
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {
+            contract_pk,
+            [aexn_event_hash(:mint), account_pk1, <<1_000_000::256>>, <<1_000_000::256>>],
+            ""
+          },
+          {
+            contract_pk,
+            [aexn_event_hash(:burn), account_pk1, <<10::256>>, <<10::256>>],
+            ""
+          },
+          {
+            contract_pk,
+            [aexn_event_hash(:swap), account_pk1, <<20::256>>, <<20::256>>],
+            ""
+          },
+          {
+            contract_pk,
+            [aexn_event_hash(:transfer), account_pk1, account_pk2, <<30::256>>, <<30::256>>],
+            ""
+          }
+        ])
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
+        |> Contract.logs_write(txi, txi, call_rec)
+
+      assert :not_found == State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk1})
+      assert :not_found == State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk2})
+    end
+
+    test "ignores aex141 events without matching args" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      account_pk1 = :crypto.strong_rand_bytes(32)
+      account_pk2 = :crypto.strong_rand_bytes(32)
+      height = Enum.random(100_000..999_999)
+      txi = Enum.random(100_000_000..999_999_999)
+      template_id = Enum.random(100..999)
+
+      logs =
+        Enum.map(
+          [
+            :edition_limit,
+            :edition_limit_decrease,
+            :template_creation,
+            :template_deletion
+          ],
+          fn event -> {contract_pk, [aexn_event_hash(event), <<1::256>>], ""} end
+        )
+
+      logs =
+        logs ++
+          [
+            {
+              contract_pk,
+              [aexn_event_hash(:token_limit), <<1::256>>, <<2::256>>],
+              ""
+            },
+            {
+              contract_pk,
+              [aexn_event_hash(:template_limit), <<1::256>>, <<2::256>>],
+              ""
+            },
+            {
+              contract_pk,
+              [aexn_event_hash(:token_limit_decrease), <<1::256>>, <<2::256>>, <<3::256>>],
+              ""
+            },
+            {
+              contract_pk,
+              [aexn_event_hash(:template_limit_decrease), <<1::256>>, <<2::256>>, <<3::256>>],
+              ""
+            },
+            {
+              contract_pk,
+              [aexn_event_hash(:mint), account_pk1, <<1::256>>, <<1::256>>],
+              ""
+            },
+            {
+              contract_pk,
+              [aexn_event_hash(:template_mint), account_pk1, template_id, <<1::256>>],
+              ""
+            },
+            {
+              contract_pk,
+              [aexn_event_hash(:burn), account_pk1, <<10::256>>, <<10::256>>],
+              ""
+            },
+            {
+              contract_pk,
+              [aexn_event_hash(:transfer), account_pk1, account_pk2, <<30::256>>, <<30::256>>],
+              ""
+            }
+          ]
+
+      call_rec = call_rec("logs", contract_pk, height, nil, logs)
+
+      functions =
+        AeMdw.Node.aex141_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
+        |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, contract_pk}))
+        |> Contract.logs_write(txi, txi, call_rec)
+
+      assert :not_found == State.get(state, Model.NftContractLimits, contract_pk)
+      assert :none == State.prev(state, Model.NftOwnership, {account_pk1, contract_pk, nil})
+      assert :none == State.prev(state, Model.NftOwnership, {account_pk2, contract_pk, nil})
+      assert :none == State.prev(state, Model.NftTemplate, {contract_pk, nil})
+      assert :none == State.prev(state, Model.NftTemplateToken, {contract_pk, template_id, nil})
+    end
   end
 
   describe "aex9_init_event_balances/4" do
