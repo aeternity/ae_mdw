@@ -525,7 +525,7 @@ defmodule AeMdw.Db.Contract do
     |> write_aexn_transfer(:aex141, {contract_pk, false}, txi, log_idx, args)
   end
 
-  defp write_aex141_records(state, nil, _contract_pk, _txi, _log_idx, _args), do: state
+  defp write_aex141_records(state, _any, _contract_pk, _txi, _log_idx, _args), do: state
 
   defp previous_owner(state, contract_pk, token_id) do
     case State.get(state, Model.NftTokenOwner, {contract_pk, token_id}) do
