@@ -1,18 +1,5 @@
 import Config
 
-# Stat
-mdw_revision =
-  case File.read("AEMDW_REVISION") do
-    {:ok, revision} ->
-      String.trim(revision)
-
-    {:error, :enoent} ->
-      {revision, 0} = System.cmd("git", ["log", "-1", "--format=%h"])
-      String.trim(revision)
-  end
-
-config :ae_mdw, build_revision: mdw_revision
-
 # Database
 node_root = System.get_env("NODEROOT", "../aeternity/_build/local/")
 

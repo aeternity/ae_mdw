@@ -30,6 +30,9 @@ config :logger, level: :warn
 config :logger,
   backends: [LoggerJSON, {LoggerFileBackend, :info}]
 
+# Stat
+config :ae_mdw, build_revision: "abcd1234"
+
 config :logger_json, :backend,
   metadata: [:request_id],
   json_encoder: Jason,

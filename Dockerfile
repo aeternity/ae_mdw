@@ -13,7 +13,7 @@
 #   - Ex: hexpm/elixir:1.13.4-erlang-23.3.4.17-debian-bullseye-20210902-slim
 #
 ARG ELIXIR_VERSION=1.13.4
-ARG OTP_VERSION=23.3.4.17
+ARG OTP_VERSION=23.3.4.18
 ARG DEBIAN_VERSION=bullseye-20220801-slim
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
@@ -61,7 +61,8 @@ RUN mix local.hex --force && \
     mix local.rebar --force
 
 # set build ENV
-ENV MIX_ENV="prod"
+ARG MIX_ENV="prod"
+ENV MIX_ENV=${MIX_ENV}
 
 # install mix dependencies
 COPY mix.exs mix.lock ./
@@ -93,7 +94,7 @@ RUN mix release
 # the compiled release and other runtime necessities
 FROM ${RUNNER_IMAGE}
 
-RUN apt-get update -y && apt-get install -y libstdc++6 openssl libncurses5 locales libncurses5 libsodium-dev libgmp10 \
+RUN apt-get update -y && apt-get install -y git libstdc++6 openssl libncurses5 locales libncurses5 libsodium-dev libgmp10 \
   && ldconfig \
   && apt-get clean && rm -f /var/lib/apt/lists/*_*
 
@@ -109,7 +110,8 @@ ENV NODEDIR=/home/aeternity/node/local/rel/aeternity
 WORKDIR "/home/aeternity/node"
 
 # set runner ENV
-ENV MIX_ENV="prod"
+ARG MIX_ENV="prod"
+ENV MIX_ENV=${MIX_ENV}
 ENV AETERNITY_CONFIG=/home/aeternity/aeternity.yaml
 
 # Only copy the final release from the build stage
@@ -121,6 +123,7 @@ RUN mkdir -p ./local/rel/aeternity/data/mnesia
 
 RUN chown -R nobody /home/aeternity/node
 
-USER nobody
+ARG USER=nobody
+USER ${USER}
 
 CMD ["/home/aeternity/node/bin/server"]
