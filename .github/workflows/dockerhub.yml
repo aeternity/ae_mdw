@@ -2,13 +2,8 @@ name: Dockerhub Pipeline
 
 on:
   push:
-    branches:
-      - master
     tags:
       - v*
-
-env:
-  MIX_ENV: dev
 
 jobs:
   dockerhub:
@@ -21,11 +16,6 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 100
-
-      - name: Sets MIX_ENV to prod for release
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          echo "MIX_ENV=prod" >> $GITHUB_ENV
 
       - name: Extract metadata for docker
         id: meta
@@ -48,7 +38,7 @@ jobs:
         if: ${{ steps.meta.outputs.tags }}
         with:
           context: .
-          build-args: MIX_ENV=${{env.MIX_ENV}}
+          build-args: MIX_ENV=prod
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
