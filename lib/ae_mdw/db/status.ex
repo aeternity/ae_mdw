@@ -36,7 +36,11 @@ defmodule AeMdw.Db.Status do
   end
 
   defp node_status do
-    {node_syncing?, node_progress} = :aec_sync.sync_progress()
+    {node_syncing?, node_progress} =
+      with {node_syncing?, node_progress, _height} <- :aec_sync.sync_progress() do
+        {node_syncing?, node_progress}
+      end
+
     {:ok, top_kb} = :aec_chain.top_key_block()
     node_height = :aec_blocks.height(top_kb)
 
