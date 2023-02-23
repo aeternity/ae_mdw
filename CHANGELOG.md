@@ -1,5 +1,35 @@
 # Changelog
 
+## [1.41.0](https://www.github.com/aeternity/ae_mdw/compare/v1.40.0...v1.41.0) (2023-02-23)
+
+
+### Features
+
+* add template token edition ([#1193](https://www.github.com/aeternity/ae_mdw/issues/1193)) ([6a3743f](https://www.github.com/aeternity/ae_mdw/commit/6a3743f69fc2a167bc7b07c169a5c4427644f247))
+* allow filtering activities by type ([#1180](https://www.github.com/aeternity/ae_mdw/issues/1180)) ([ccb5f9c](https://www.github.com/aeternity/ae_mdw/commit/ccb5f9cf2d40902f48c53fcc5db3aec61fce3adf))
+* encode args using types for AEX-N events ([#1188](https://www.github.com/aeternity/ae_mdw/issues/1188)) ([c0b99b0](https://www.github.com/aeternity/ae_mdw/commit/c0b99b09dbfcfc9891c47f4bd1416dc1e3137929))
+
+
+### Bug Fixes
+
+* add address to Burn event ([#1191](https://www.github.com/aeternity/ae_mdw/issues/1191)) ([02e00c6](https://www.github.com/aeternity/ae_mdw/commit/02e00c64c1840f9d4ddf941afec606ff97322d06))
+* ignore all nft events with args mismatch ([#1196](https://www.github.com/aeternity/ae_mdw/issues/1196)) ([1be940a](https://www.github.com/aeternity/ae_mdw/commit/1be940a8bc50b4dd17f1c5d3ab55da9f4769be60))
+* set proper release node to reopen mnesia ([#1197](https://www.github.com/aeternity/ae_mdw/issues/1197)) ([a133ea4](https://www.github.com/aeternity/ae_mdw/commit/a133ea46a4aa3851f3041a79ff057e193900b1ac))
+
+
+### Miscellaneous
+
+* cleanup field parser module ([#1195](https://www.github.com/aeternity/ae_mdw/issues/1195)) ([2f25139](https://www.github.com/aeternity/ae_mdw/commit/2f25139749dbec40feb36e8e4cab0452932a5608))
+* remove console info log for dev environment ([#1194](https://www.github.com/aeternity/ae_mdw/issues/1194)) ([f37ef38](https://www.github.com/aeternity/ae_mdw/commit/f37ef38c5a211414305d23441d5c7dd8d88c7f9a))
+* remove no longer needed oracle queries nonce fix ([#1133](https://www.github.com/aeternity/ae_mdw/issues/1133)) ([c3a0e30](https://www.github.com/aeternity/ae_mdw/commit/c3a0e30fde8608216259f5ee6a8aeb9812daa74d))
+* skip dev and miners rewards for HC ([#1198](https://www.github.com/aeternity/ae_mdw/issues/1198)) ([32e0836](https://www.github.com/aeternity/ae_mdw/commit/32e083623f82e62420bb45c4d40766c62def436b))
+* use mix releases for prod docker images ([#1190](https://www.github.com/aeternity/ae_mdw/issues/1190)) ([fc7356d](https://www.github.com/aeternity/ae_mdw/commit/fc7356d265ce2c75f715fdf316d102d164702dbd))
+
+
+### CI / CD
+
+* publish images with prod ([#1200](https://www.github.com/aeternity/ae_mdw/issues/1200)) ([44a6b1a](https://www.github.com/aeternity/ae_mdw/commit/44a6b1a4d0edcb6b91dc0671e4bfa61ee11eb242))
+
 ## [1.40.0](https://www.github.com/aeternity/ae_mdw/compare/v1.39.1...v1.40.0) (2023-02-10)
 
 
