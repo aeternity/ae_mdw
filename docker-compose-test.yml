@@ -3,15 +3,15 @@ services:
   ae_mdw:
     build:
       context: .
-      dockerfile: ./Dockerfile.dev
+      dockerfile: ./Dockerfile
       args:
         MIX_ENV: test
-    image: aeternity/ae_mdw_test:latest
-    entrypoint: ""
+        RUNNER_IMAGE: "hexpm/elixir:1.13.4-erlang-23.3.4.18-debian-bullseye-20220801"
+        USER: root
+    image: ae_mdw_test:latest
+    command: ./scripts/test.sh
+    working_dir: /app
     volumes:
-      - ${PWD}/docker/aeternity.yaml:/home/aeternity/aeternity.yaml
-      - ${PWD}/priv:/home/aeternity/node/ae_mdw/priv
-      - ${PWD}/test:/home/aeternity/node/ae_mdw/test
-      - ${PWD}/scripts/test.sh:/home/aeternity/node/ae_mdw/test.sh
+      - ${PWD}:/app
     environment:
       - AETERNITY_CONFIG=/home/aeternity/aeternity.yaml
