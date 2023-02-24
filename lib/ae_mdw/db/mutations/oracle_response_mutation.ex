@@ -3,18 +3,15 @@ defmodule AeMdw.Db.OracleResponseMutation do
   Processes oracle_response_tx.
   """
 
-  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
-  alias AeMdw.Log
   alias AeMdw.Node.Db
   alias AeMdw.Oracles
   alias AeMdw.Txs
 
   require Model
-  require Logger
 
   @derive AeMdw.Db.Mutation
   defstruct [:block_index, :txi, :oracle_pk, :query_id]
@@ -47,21 +44,12 @@ defmodule AeMdw.Db.OracleResponseMutation do
         },
         state
       ) do
-    # Temporary conditional to handle those responses that don't have a query associated to them because
-    # of the invalid nonce being sent on the Oracle.query contract calls.
-    case State.get(state, Model.OracleQuery, {oracle_pk, query_id}) do
-      {:ok, Model.oracle_query(expire: expiration_height, fee: fee)} ->
-        state
-        |> IntTransfer.write({height, txi}, "reward_oracle", oracle_pk, txi, fee)
-        |> State.delete(Model.OracleQuery, {oracle_pk, query_id})
-        |> State.delete(Model.OracleQueryExpiration, {expiration_height, oracle_pk, query_id})
+    Model.oracle_query(expire: expiration_height, fee: fee) =
+      State.fetch!(state, Model.OracleQuery, {oracle_pk, query_id})
 
-      :not_found ->
-        oracle = Enc.encode(:oracle_pubkey, oracle_pk)
-        query_id = Enc.encode(:oracle_query_id, query_id)
-
-        Log.info("[OracleResponseMutation] Oracle query #{oracle} not found for #{query_id}")
-        state
-    end
+    state
+    |> IntTransfer.write({height, txi}, "reward_oracle", oracle_pk, txi, fee)
+    |> State.delete(Model.OracleQuery, {oracle_pk, query_id})
+    |> State.delete(Model.OracleQueryExpiration, {expiration_height, oracle_pk, query_id})
   end
 end
