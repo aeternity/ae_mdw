@@ -9,11 +9,12 @@ defmodule AeMdw.Db.OracleQueryMutation do
   alias AeMdw.Db.State
   alias AeMdw.Node.Db
   alias AeMdw.Oracles
+  alias AeMdw.Txs
 
   require Model
 
   @derive AeMdw.Db.Mutation
-  defstruct [:oracle_pk, :query_id, :sender_pk, :fee, :expiration_height]
+  defstruct [:oracle_pk, :query_id, :txi, :sender_pk, :fee, :expiration_height]
 
   @typep height() :: Blocks.height()
   @typep amount() :: IntTransfer.amount()
@@ -21,16 +22,18 @@ defmodule AeMdw.Db.OracleQueryMutation do
   @opaque t() :: %__MODULE__{
             oracle_pk: Db.pubkey(),
             query_id: query_id(),
+            txi: Txs.txi(),
             sender_pk: Db.pubkey(),
             fee: amount(),
             expiration_height: height()
           }
 
-  @spec new(Db.pubkey(), query_id(), Db.pubkey(), amount(), height()) :: t()
-  def new(oracle_pk, query_id, sender_pk, fee, expiration_height) do
+  @spec new(Db.pubkey(), query_id(), Txs.txi(), Db.pubkey(), amount(), height()) :: t()
+  def new(oracle_pk, query_id, txi, sender_pk, fee, expiration_height) do
     %__MODULE__{
       oracle_pk: oracle_pk,
       query_id: query_id,
+      txi: txi,
       sender_pk: sender_pk,
       fee: fee,
       expiration_height: expiration_height
@@ -42,6 +45,7 @@ defmodule AeMdw.Db.OracleQueryMutation do
         %__MODULE__{
           oracle_pk: oracle_pk,
           query_id: query_id,
+          txi: txi,
           sender_pk: sender_pk,
           fee: fee,
           expiration_height: expiration_height
@@ -51,6 +55,7 @@ defmodule AeMdw.Db.OracleQueryMutation do
     oracle_query =
       Model.oracle_query(
         index: {oracle_pk, query_id},
+        txi: txi,
         fee: fee,
         expire: expiration_height,
         sender_pk: sender_pk
