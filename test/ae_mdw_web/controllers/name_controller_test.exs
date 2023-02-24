@@ -682,6 +682,205 @@ defmodule AeMdwWeb.NameControllerTest do
     end
   end
 
+  describe "auction" do
+    test "get last bid for a name in auction", %{conn: conn, store: store} do
+      {_exp, plain_name} = expiration_key = TS.name_expiration_key(0)
+
+      with_blockchain %{alice: 1_000, bob: 1_000},
+        mb0: [
+          tx1: name_tx(:name_claim_tx, :alice, plain_name)
+        ],
+        mb1: [
+          tx2: name_tx(:name_claim_tx, :bob, plain_name)
+        ] do
+        %{tx1: tx1, tx2: tx2} = transactions
+
+        m_auction =
+          Model.auction_bid(
+            index: plain_name,
+            block_index_txi_idx: {{0, 0}, {1, -1}},
+            expire_height: 0,
+            bids: [{{0, 1}, {2, -1}}, {{0, 0}, {1, -1}}]
+          )
+
+        store =
+          store
+          |> Store.put(Model.AuctionExpiration, Model.expiration(index: expiration_key))
+          |> Store.put(Model.AuctionBid, m_auction)
+          |> Store.put(Model.Tx, Model.tx(index: 1, id: :aetx_sign.hash(tx1)))
+          |> Store.put(Model.Tx, Model.tx(index: 2, id: :aetx_sign.hash(tx2)))
+
+        {:id, :account, bob_pk} = accounts[:bob]
+        bob_id = encode(:account_pubkey, bob_pk)
+        %{hash: mb_hash} = blocks[:mb1]
+        tx_hash = encode(:tx_hash, :aetx_sign.hash(tx2))
+
+        assert %{
+                 "active" => false,
+                 "info" => %{
+                   "auction_end" => 0,
+                   "bids" => [2, 1],
+                   "last_bid" => %{
+                     "block_hash" => ^mb_hash,
+                     "hash" => ^tx_hash,
+                     "signatures" => [],
+                     "tx" => %{
+                       "account_id" => ^bob_id,
+                       "name" => ^plain_name,
+                       "type" => "NameClaimTx",
+                       "version" => 2
+                     },
+                     "tx_index" => 2
+                   }
+                 },
+                 "name" => ^plain_name,
+                 "previous" => [],
+                 "status" => "auction"
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/names/#{plain_name}/auction")
+                 |> json_response(200)
+      end
+    end
+
+    test "get expanded bids for a name in auction", %{conn: conn, store: store} do
+      {_exp, plain_name} = expiration_key = TS.name_expiration_key(0)
+
+      with_blockchain %{alice: 1_000, bob: 1_000},
+        mb0: [
+          tx1: name_tx(:name_claim_tx, :alice, plain_name)
+        ],
+        mb1: [
+          tx2: name_tx(:name_claim_tx, :bob, plain_name)
+        ] do
+        %{tx1: tx1, tx2: tx2} = transactions
+
+        m_auction =
+          Model.auction_bid(
+            index: plain_name,
+            block_index_txi_idx: {{0, 0}, {1, -1}},
+            expire_height: 0,
+            bids: [{{0, 1}, {2, -1}}, {{0, 0}, {1, -1}}]
+          )
+
+        store =
+          store
+          |> Store.put(Model.AuctionExpiration, Model.expiration(index: expiration_key))
+          |> Store.put(Model.AuctionBid, m_auction)
+          |> Store.put(Model.Tx, Model.tx(index: 1, id: :aetx_sign.hash(tx1)))
+          |> Store.put(Model.Tx, Model.tx(index: 2, id: :aetx_sign.hash(tx2)))
+
+        {:id, :account, alice_pk} = accounts[:alice]
+        {:id, :account, bob_pk} = accounts[:bob]
+        alice_id = encode(:account_pubkey, alice_pk)
+        bob_id = encode(:account_pubkey, bob_pk)
+        %{hash: mb_hash0} = blocks[:mb0]
+        %{hash: mb_hash1} = blocks[:mb1]
+        tx_hash1 = encode(:tx_hash, :aetx_sign.hash(tx1))
+        tx_hash2 = encode(:tx_hash, :aetx_sign.hash(tx2))
+
+        assert %{
+                 "active" => false,
+                 "info" => %{
+                   "auction_end" => 0,
+                   "bids" => [
+                     %{
+                       "block_hash" => ^mb_hash1,
+                       "block_height" => 1,
+                       "hash" => ^tx_hash2,
+                       "tx" => %{
+                         "account_id" => ^bob_id,
+                         "name" => ^plain_name,
+                         "type" => "NameClaimTx"
+                       },
+                       "tx_index" => 2
+                     },
+                     %{
+                       "block_hash" => ^mb_hash0,
+                       "block_height" => 0,
+                       "hash" => ^tx_hash1,
+                       "tx" => %{
+                         "account_id" => ^alice_id,
+                         "name" => ^plain_name,
+                         "type" => "NameClaimTx"
+                       },
+                       "tx_index" => 1
+                     }
+                   ],
+                   "last_bid" => %{
+                     "block_hash" => ^mb_hash1,
+                     "hash" => ^tx_hash2,
+                     "signatures" => [],
+                     "tx" => %{
+                       "account_id" => ^bob_id,
+                       "name" => ^plain_name,
+                       "type" => "NameClaimTx",
+                       "version" => 2
+                     },
+                     "tx_index" => 2
+                   }
+                 },
+                 "name" => ^plain_name,
+                 "previous" => [],
+                 "status" => "auction"
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/names/#{plain_name}/auction", expand: true)
+                 |> json_response(200)
+      end
+    end
+
+    test "renders 404 when the name is not in auction", %{conn: conn, store: store} do
+      plain_name = "no-auction.chain"
+      error = "not found: #{plain_name}"
+
+      name_hash =
+        case :aens.get_name_hash(plain_name) do
+          {:ok, name_id_bin} -> :aeser_api_encoder.encode(:name, name_id_bin)
+          _error -> nil
+        end
+
+      active_from = 11
+      expire = 100
+      owner_pk = <<1::256>>
+
+      active_name =
+        Model.name(
+          index: plain_name,
+          active: active_from,
+          expire: expire,
+          claims: [{{active_from, 0}, {123, -1}}],
+          updates: [],
+          transfers: [],
+          revoke: nil,
+          owner: owner_pk,
+          previous: nil
+        )
+
+      store =
+        store
+        |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: plain_name))
+        |> Store.put(Model.ActiveName, active_name)
+        |> Store.put(
+          Model.ActiveNameActivation,
+          Model.activation(index: {active_from, plain_name})
+        )
+        |> Store.put(
+          Model.ActiveNameExpiration,
+          Model.expiration(index: {expire, plain_name})
+        )
+        |> Store.put(Model.ActiveNameOwner, Model.owner(index: {owner_pk, plain_name}))
+
+      assert %{"error" => ^error} =
+               conn
+               |> with_store(store)
+               |> get("/v2/names/#{plain_name}/auction")
+               |> json_response(404)
+    end
+  end
+
   describe "auctions" do
     test "get auctions with default limit", %{conn: conn} do
       {_exp, plain_name} = expiration_key = TS.name_expiration_key(0)
