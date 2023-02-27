@@ -5,7 +5,6 @@ defmodule AeMdw.Aex9 do
 
   alias AeMdw.Collection
   alias AeMdw.Db.AsyncStore
-  alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
@@ -122,15 +121,18 @@ defmodule AeMdw.Aex9 do
     end
   end
 
-  @spec fetch_account_balances(State.t(), pubkey(), account_balance_cursor(), pagination()) ::
+  @spec fetch_account_balances(
+          State.t(),
+          pubkey(),
+          account_balance_cursor(),
+          pagination()
+        ) ::
           {:ok, account_balance_cursor() | nil, [account_balance()],
            account_balance_cursor() | nil}
           | {:error, Error.t()}
   def fetch_account_balances(state, account_pk, cursor, pagination) do
     with {:ok, cursor} <- deserialize_account_balance_cursor(cursor) do
-      last_gen = DbUtil.last_gen(state)
-      type_height_hash = {:key, last_gen, DbUtil.height_hash(last_gen)}
-
+      type_height_hash = Db.top_height_hash(true)
       scope = {{account_pk, <<>>}, {account_pk, Util.max_256bit_bin()}}
 
       {prev_cursor, account_presence_keys, next_cursor} =
@@ -142,22 +144,26 @@ defmodule AeMdw.Aex9 do
           {:ok, {amount, _height_hash}} =
             Db.aex9_balance(contract_pk, account_pk, type_height_hash)
 
-          Model.aexn_contract(meta_info: {name, symbol, _dec}) =
+          Model.aexn_contract(txi: create_txi, meta_info: {name, symbol, _dec}) =
             State.fetch!(state, Model.AexnContract, {:aex9, contract_pk})
 
           Model.aex9_account_presence(txi: call_txi) =
             State.fetch!(state, Model.Aex9AccountPresence, {account_pk, contract_pk})
 
-          tx_idx = DbUtil.read_tx!(state, call_txi)
-          info = Format.to_raw_map(state, tx_idx)
+          Model.tx(id: tx_hash, block_index: {height, _mbi} = block_index) =
+            State.fetch!(state, Model.Tx, call_txi)
+
+          Model.block(hash: block_hash) = State.fetch!(state, Model.Block, block_index)
+
+          tx_type = if create_txi == call_txi, do: :contract_create_tx, else: :contract_call_tx
 
           %{
             contract_id: encode_contract(contract_pk),
-            block_hash: encode(:micro_block_hash, info.block_hash),
-            tx_hash: encode(:tx_hash, info.hash),
+            block_hash: encode(:micro_block_hash, block_hash),
+            tx_hash: encode(:tx_hash, tx_hash),
             tx_index: call_txi,
-            tx_type: info.tx.type,
-            height: info.block_height,
+            tx_type: tx_type,
+            height: height,
             amount: amount,
             token_symbol: symbol,
             token_name: name
