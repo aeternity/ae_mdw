@@ -1,5 +1,17 @@
 # Changelog
 
+### [1.41.1](https://www.github.com/aeternity/ae_mdw/compare/v1.41.0...v1.41.1) (2023-02-27)
+
+
+### Bug Fixes
+
+* use top height hash for aex9 account balances ([#1205](https://www.github.com/aeternity/ae_mdw/issues/1205)) ([159c51a](https://www.github.com/aeternity/ae_mdw/commit/159c51a33f62303fb03d3eab693e1d5600421cdf))
+
+
+### Testing
+
+* add coverage for name auction endpoint ([#1201](https://www.github.com/aeternity/ae_mdw/issues/1201)) ([bc5291f](https://www.github.com/aeternity/ae_mdw/commit/bc5291fa5f0de5214d4217240191639c34b597cf))
+
 ## [1.41.0](https://www.github.com/aeternity/ae_mdw/compare/v1.40.0...v1.41.0) (2023-02-23)
 
 
