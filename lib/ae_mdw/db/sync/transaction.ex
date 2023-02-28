@@ -365,10 +365,11 @@ defmodule AeMdw.Db.Sync.Transaction do
   defp tx_mutations(%TxContext{
          type: :oracle_query_tx,
          tx: tx,
+         txi: txi,
          block_index: {height, _mbi}
        }) do
     [
-      Oracle.query_mutation(tx, height)
+      Oracle.query_mutation(tx, height, txi)
     ]
   end
 

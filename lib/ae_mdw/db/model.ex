@@ -335,7 +335,7 @@ defmodule AeMdw.Db.Model do
             index: oracle_query_index(),
             txi: txi(),
             sender_pk: pubkey(),
-            fee: non_neg_integer(),
+            fee: IntTransfer.amount(),
             expire: height()
           )
 
