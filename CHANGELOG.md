@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.41.2](https://www.github.com/aeternity/ae_mdw/compare/v1.41.1...v1.41.2) (2023-02-28)
+
+
+### Miscellaneous
+
+* add fallback for contracts endpoints ([#1208](https://www.github.com/aeternity/ae_mdw/issues/1208)) ([744b773](https://www.github.com/aeternity/ae_mdw/commit/744b7734645aba4eea25fe55e697b7da16b58054))
+
 ### [1.41.1](https://www.github.com/aeternity/ae_mdw/compare/v1.41.0...v1.41.1) (2023-02-27)
 
 
