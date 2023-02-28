@@ -2,13 +2,15 @@ defmodule AeMdwWeb.ContractController do
   use AeMdwWeb, :controller
 
   alias AeMdw.Contracts
-  alias AeMdwWeb.AexnLogView
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdwWeb.AexnLogView
+  alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
   alias AeMdwWeb.Util
   alias Plug.Conn
 
   plug(PaginatedPlug)
+  action_fallback(FallbackController)
 
   @spec logs(Conn.t(), map()) :: Conn.t()
   def logs(%Conn{assigns: assigns, query_params: query_params} = conn, _params) do

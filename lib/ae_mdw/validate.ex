@@ -214,6 +214,9 @@ defmodule AeMdw.Validate do
 
       {:error, {ex, ^value}} ->
         raise ex, value: value
+
+      {:error, exception} ->
+        raise exception
     end
   end
 
