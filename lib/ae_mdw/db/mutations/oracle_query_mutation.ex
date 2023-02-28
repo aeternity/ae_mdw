@@ -4,7 +4,6 @@ defmodule AeMdw.Db.OracleQueryMutation do
   """
 
   alias AeMdw.Blocks
-  alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Node.Db
@@ -14,28 +13,23 @@ defmodule AeMdw.Db.OracleQueryMutation do
   require Model
 
   @derive AeMdw.Db.Mutation
-  defstruct [:oracle_pk, :query_id, :txi, :sender_pk, :fee, :expiration_height]
+  defstruct [:oracle_pk, :query_id, :txi_idx, :expiration_height]
 
   @typep height() :: Blocks.height()
-  @typep amount() :: IntTransfer.amount()
   @typep query_id() :: Oracles.query_id()
   @opaque t() :: %__MODULE__{
             oracle_pk: Db.pubkey(),
             query_id: query_id(),
-            txi: Txs.txi(),
-            sender_pk: Db.pubkey(),
-            fee: amount(),
+            txi_idx: Txs.txi_idx(),
             expiration_height: height()
           }
 
-  @spec new(Db.pubkey(), query_id(), Txs.txi(), Db.pubkey(), amount(), height()) :: t()
-  def new(oracle_pk, query_id, txi, sender_pk, fee, expiration_height) do
+  @spec new(Db.pubkey(), query_id(), Txs.txi_idx(), height()) :: t()
+  def new(oracle_pk, query_id, txi_idx, expiration_height) do
     %__MODULE__{
       oracle_pk: oracle_pk,
       query_id: query_id,
-      txi: txi,
-      sender_pk: sender_pk,
-      fee: fee,
+      txi_idx: txi_idx,
       expiration_height: expiration_height
     }
   end
@@ -45,9 +39,7 @@ defmodule AeMdw.Db.OracleQueryMutation do
         %__MODULE__{
           oracle_pk: oracle_pk,
           query_id: query_id,
-          txi: txi,
-          sender_pk: sender_pk,
-          fee: fee,
+          txi_idx: txi_idx,
           expiration_height: expiration_height
         },
         state
@@ -55,10 +47,7 @@ defmodule AeMdw.Db.OracleQueryMutation do
     oracle_query =
       Model.oracle_query(
         index: {oracle_pk, query_id},
-        txi: txi,
-        fee: fee,
-        expire: expiration_height,
-        sender_pk: sender_pk
+        txi_idx: txi_idx
       )
 
     expiration = Model.oracle_query_expiration(index: {expiration_height, oracle_pk, query_id})

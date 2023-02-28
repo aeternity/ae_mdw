@@ -16,6 +16,7 @@ defmodule AeMdw.Db.OraclesExpirationMutation do
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.Sync.Oracle, as: SyncOracle
   alias AeMdw.Db.State
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Log
 
   require Model
@@ -49,13 +50,14 @@ defmodule AeMdw.Db.OraclesExpirationMutation do
   end
 
   defp expire_oracle_query(state, height, oracle_pk, query_id) do
-    Model.oracle_query(txi: query_txi, fee: fee, sender_pk: sender_pk) =
+    Model.oracle_query(txi_idx: {query_txi, _idx} = txi_idx) =
       State.fetch!(state, Model.OracleQuery, {oracle_pk, query_id})
 
-    state
-    |> State.delete(Model.OracleQuery, {oracle_pk, query_id})
-    |> State.delete(Model.OracleQueryExpiration, {height, oracle_pk, query_id})
-    |> IntTransfer.fee({height, -1}, :refund_oracle, sender_pk, query_txi, fee)
+    oracle_query_tx = DbUtil.read_node_tx(state, txi_idx)
+    fee = :aeo_query_tx.query_fee(oracle_query_tx)
+    sender_pk = :aeo_query_tx.sender_pubkey(oracle_query_tx)
+
+    IntTransfer.fee(state, {height, -1}, :refund_oracle, sender_pk, query_txi, fee)
   end
 
   defp expire_oracle(state, height, pubkey) do

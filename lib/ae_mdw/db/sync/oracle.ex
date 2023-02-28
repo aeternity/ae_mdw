@@ -21,6 +21,7 @@ defmodule AeMdw.Db.Sync.Oracle do
   require Model
 
   @typep height() :: Blocks.height()
+  @typep txi_idx() :: Txs.txi_idx()
   @typep pubkey :: Db.pubkey()
   @typep cache_key :: pubkey() | {pos_integer(), pubkey()}
   @typep state :: State.t()
@@ -39,9 +40,10 @@ defmodule AeMdw.Db.Sync.Oracle do
     ]
   end
 
-  @spec query_mutation(Node.tx(), height(), Txs.txi()) :: OracleQueryMutation.t()
-  def query_mutation(tx, height, txi) do
+  @spec query_mutation(Node.tx(), height(), txi_idx()) :: OracleQueryMutation.t()
+  def query_mutation(tx, height, txi_idx) do
     oracle_pk = Validate.id!(:aeo_query_tx.oracle_id(tx))
+    query_id = :aeo_query_tx.query_id(tx)
 
     expiration_height =
       case :aeo_query_tx.query_ttl(tx) do
@@ -49,11 +51,7 @@ defmodule AeMdw.Db.Sync.Oracle do
         {:block, height} -> height
       end
 
-    query_id = :aeo_query_tx.query_id(tx)
-    fee = :aeo_query_tx.query_fee(tx)
-    sender_pk = :aeo_query_tx.sender_pubkey(tx)
-
-    OracleQueryMutation.new(oracle_pk, query_id, txi, sender_pk, fee, expiration_height)
+    OracleQueryMutation.new(oracle_pk, query_id, txi_idx, expiration_height)
   end
 
   @spec response_mutation(Node.tx(), Blocks.block_index(), Txs.txi()) ::

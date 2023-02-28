@@ -34,8 +34,8 @@ defmodule AeMdw.Db.Model do
   @typep pubkey :: Db.pubkey()
   @typep tx_type() :: Node.tx_type()
   @typep txi() :: Txs.txi()
-  # @typep txi_idx() :: Txs.txi_idx()
-  @typep log_idx() :: AeMdw.Contracts.log_idx()
+  @typep txi_idx() :: Txs.txi_idx()
+  @typep log_idx() :: Contracts.log_idx()
   @typep tx_hash() :: Txs.tx_hash()
   @typep bi_txi() :: Blocks.bi_txi()
   @typep bi_txi_idx() :: Blocks.bi_txi_idx()
@@ -322,10 +322,7 @@ defmodule AeMdw.Db.Model do
   #   index = {oracle_pk, query_id}
   @oracle_query_defaults [
     index: nil,
-    txi: nil,
-    sender_pk: nil,
-    fee: nil,
-    expire: nil
+    txi_idx: nil
   ]
   defrecord :oracle_query, @oracle_query_defaults
 
@@ -333,10 +330,7 @@ defmodule AeMdw.Db.Model do
   @type oracle_query() ::
           record(:oracle_query,
             index: oracle_query_index(),
-            txi: txi(),
-            sender_pk: pubkey(),
-            fee: IntTransfer.amount(),
-            expire: height()
+            txi_idx: txi_idx()
           )
 
   # oracle_query_expiration

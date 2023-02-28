@@ -369,7 +369,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          block_index: {height, _mbi}
        }) do
     [
-      Oracle.query_mutation(tx, height, txi)
+      Oracle.query_mutation(tx, height, {txi, -1})
     ]
   end
 

@@ -7,6 +7,7 @@ defmodule AeMdw.Db.OracleResponseMutation do
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Node.Db
   alias AeMdw.Oracles
   alias AeMdw.Txs
@@ -44,12 +45,12 @@ defmodule AeMdw.Db.OracleResponseMutation do
         },
         state
       ) do
-    Model.oracle_query(expire: expiration_height, fee: fee) =
+    Model.oracle_query(txi_idx: txi_idx) =
       State.fetch!(state, Model.OracleQuery, {oracle_pk, query_id})
 
-    state
-    |> IntTransfer.write({height, txi}, "reward_oracle", oracle_pk, txi, fee)
-    |> State.delete(Model.OracleQuery, {oracle_pk, query_id})
-    |> State.delete(Model.OracleQueryExpiration, {expiration_height, oracle_pk, query_id})
+    oracle_query_tx = DbUtil.read_node_tx(state, txi_idx)
+    fee = :aeo_query_tx.query_fee(oracle_query_tx)
+
+    IntTransfer.write(state, {height, txi}, "reward_oracle", oracle_pk, txi, fee)
   end
 end

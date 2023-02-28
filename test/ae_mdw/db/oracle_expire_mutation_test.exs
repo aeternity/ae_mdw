@@ -4,9 +4,12 @@ defmodule AeMdw.Db.OraclesExpirationMutationTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.OraclesExpirationMutation
   alias AeMdw.Db.Store
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.TestSamples, as: TS
 
   require Model
+
+  import Mock
 
   describe "execute" do
     test "inactivates an oracle that has just expired", %{store: store} do
@@ -100,34 +103,54 @@ defmodule AeMdw.Db.OraclesExpirationMutationTest do
                Store.get(store, Model.InactiveOracleExpiration, {expire, pubkey})
     end
 
-    test "it expires oracle queries", %{store: store} do
+    test "it expires oracle queries by creating internal transfers", %{store: store} do
       height = 234
+      txi = 456
       oracle_pk = TS.oracle_pk(0)
       query_id = TS.oracle_query_id(0)
+      sender_pk = TS.address(0)
+      tx_hash = <<1::256>>
 
-      oracle_query =
-        Model.oracle_query(
-          index: {oracle_pk, query_id},
-          txi: 456,
-          sender_pk: TS.address(2),
-          fee: 789,
-          expire: height
-        )
-
+      oracle_query = Model.oracle_query(index: {oracle_pk, query_id}, txi_idx: {txi, -1})
       query_expiration = Model.oracle_query_expiration(index: {height, oracle_pk, query_id})
+
+      {:ok, oracle_query_aetx} =
+        :aeo_query_tx.new(%{
+          sender_id: :aeser_id.create(:account, sender_pk),
+          nonce: 1,
+          oracle_id: :aeser_id.create(:oracle, oracle_pk),
+          query: <<>>,
+          query_fee: 2,
+          query_ttl: {:delta, 3},
+          response_ttl: {:delta, 4},
+          fee: 5
+        })
+
+      {:oracle_query_tx, oracle_query_tx} = :aetx.specialize_type(oracle_query_aetx)
 
       store =
         store
         |> Store.put(Model.OracleQuery, oracle_query)
         |> Store.put(Model.OracleQueryExpiration, query_expiration)
+        |> Store.put(Model.Tx, Model.tx(index: txi, id: tx_hash))
 
       mutation = OraclesExpirationMutation.new(height)
-      store = change_store(store, [mutation])
 
-      assert :not_found =
-               Store.get(store, Model.OracleQueryExpiration, {height, oracle_pk, query_id})
+      with_mocks [{DbUtil, [], [read_node_tx: fn _state, {^txi, -1} -> oracle_query_tx end]}] do
+        store = change_store(store, [mutation])
 
-      assert :not_found = Store.get(store, Model.OracleQuery, {oracle_pk, query_id})
+        assert {:ok, _query_expiration} =
+                 Store.get(store, Model.OracleQueryExpiration, {height, oracle_pk, query_id})
+
+        assert {:ok, _query} = Store.get(store, Model.OracleQuery, {oracle_pk, query_id})
+
+        assert {:ok, Model.int_transfer_tx(amount: 2)} =
+                 Store.get(
+                   store,
+                   Model.IntTransferTx,
+                   {{height, -1}, "fee_refund_oracle", sender_pk, txi}
+                 )
+      end
     end
   end
 end
