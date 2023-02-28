@@ -1,5 +1,13 @@
 # Changelog
 
+### [1.41.3](https://www.github.com/aeternity/ae_mdw/compare/v1.41.2...v1.41.3) (2023-02-28)
+
+
+### Miscellaneous
+
+* avoid deleting oracle queries for later use of them ([#1207](https://www.github.com/aeternity/ae_mdw/issues/1207)) ([ddf4fd8](https://www.github.com/aeternity/ae_mdw/commit/ddf4fd84a48833f1d4579c47682550191b826fb7))
+* remove oracle query response check ([#1203](https://www.github.com/aeternity/ae_mdw/issues/1203)) ([5ae60f1](https://www.github.com/aeternity/ae_mdw/commit/5ae60f15c9955d1bf0355996db62fa75ca040c1a))
+
 ### [1.41.2](https://www.github.com/aeternity/ae_mdw/compare/v1.41.1...v1.41.2) (2023-02-28)
 
 
