@@ -24,3 +24,6 @@ config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
 config :logger,
   level: :info,
   backends: [{LoggerFileBackend, :info}]
+
+# phoenix
+config :phoenix, :serve_endpoints, true
