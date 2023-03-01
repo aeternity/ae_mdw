@@ -94,7 +94,7 @@ RUN mix release
 # the compiled release and other runtime necessities
 FROM ${RUNNER_IMAGE}
 
-RUN apt-get update -y && apt-get install -y git libstdc++6 openssl libncurses5 locales libncurses5 libsodium-dev libgmp10 \
+RUN apt-get update -y && apt-get install -y git curl libstdc++6 openssl libncurses5 locales libncurses5 libsodium-dev libgmp10 \
   && ldconfig \
   && apt-get clean && rm -f /var/lib/apt/lists/*_*
 
@@ -118,6 +118,8 @@ ENV AETERNITY_CONFIG=/home/aeternity/aeternity.yaml
 COPY --from=builder --chown=nobody:root /home/aeternity/node/ae_mdw/_build/${MIX_ENV}/rel/ae_mdw ./
 COPY --from=builder --chown=nobody:root /home/aeternity/node/local ./local
 COPY ./docker/aeternity.yaml /home/aeternity/aeternity.yaml
+COPY ./docker/healthcheck.sh /home/aeternity/healthcheck.sh
+RUN chmod +x /home/aeternity/healthcheck.sh
 
 RUN mkdir -p ./local/rel/aeternity/data/mnesia
 

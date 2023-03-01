@@ -2,9 +2,9 @@ version: '3.1'
 services:
   ae_mdw:
     healthcheck:
-      test: ["CMD", "curl", "-f", "localhost:4000/status"]
+      test: ["CMD", "/home/aeternity/healthcheck.sh"]
       interval: 1m
-      timeout: 50s
+      timeout: 30s
       retries: 3
     image: aeternity/ae_mdw:latest
     ports:
