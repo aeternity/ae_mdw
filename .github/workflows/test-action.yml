@@ -74,10 +74,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - run: ./scripts/swagger-docs.py >swagger_v2.yaml
-
-      - run: diff swagger_v2.yaml priv/static/swagger/swagger_v2.yaml
-
       - run: sed -i 's/[[:space:]]*$//' README.md
 
       - run: git diff --exit-code README.md

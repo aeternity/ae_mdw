@@ -22,7 +22,7 @@ ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
 FROM ${BUILDER_IMAGE} as builder
 
 # install build dependencies
-RUN apt-get update -y && apt-get install -y build-essential git curl libncurses5 libsodium-dev jq libgmp10 \
+RUN apt-get update -y && apt-get install -y build-essential git curl libncurses5 libsodium-dev jq libgmp10 python3 python3-yaml \
     && ldconfig \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -78,6 +78,12 @@ RUN mix deps.compile
 COPY priv priv
 
 COPY lib lib
+
+COPY scripts scripts
+COPY docs docs
+
+# Generate swagger V2 file
+RUN scripts/swagger-docs.py >priv/static/swagger/swagger_v2.yaml
 
 # Compile the release
 RUN mix compile

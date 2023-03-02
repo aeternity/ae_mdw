@@ -2,7 +2,7 @@ openapi: '3.0.0'
 info:
   description: API for [Aeternity Middleware](https://github.com/aeternity/ae_mdw)
   title: Aeternity Middleware
-  version: '2.0'
+  version: '0.0'
 
 servers:
   - url: '/v2'
