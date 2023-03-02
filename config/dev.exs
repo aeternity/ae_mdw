@@ -11,13 +11,21 @@ config :ae_mdw, TelemetryMetricsStatsd,
   port: 8125
 
 # Endpoints
+protocol_opts = [max_request_line_length: 1_024, max_skip_body_length: 1_024]
+
 config :ae_mdw, AeMdwWeb.Endpoint,
-  http: [port: 4000],
+  http: [
+    port: 4000,
+    protocol_options: protocol_opts
+  ],
   debug_errors: true,
   live_view: [signing_salt: "btmQfEtjXdzpKeXzQ1kfVAJmc0gPU/pX"]
 
 config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
-  http: [port: 4001],
+  http: [
+    port: 4001,
+    protocol_options: protocol_opts
+  ],
   debug_errors: true
 
 # Logging

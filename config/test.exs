@@ -21,7 +21,10 @@ config :ae_mdw, AeMdwWeb.Endpoint,
   server: false
 
 config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
-  http: [port: 4003],
+  http: [
+    port: 4003,
+    protocol_options: [max_request_line_length: 1_024, max_skip_body_length: 1_024]
+  ],
   server: true
 
 # Logging
