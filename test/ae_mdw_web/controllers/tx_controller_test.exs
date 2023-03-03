@@ -24,7 +24,7 @@ defmodule AeMdwWeb.TxControllerTest do
            last_gen: fn _state -> 1_000 end
          ]}
       ] do
-        assert %{"error" => "no such route"} = conn |> get("/txs") |> json_response(400)
+        assert %{"error" => "no such route"} = conn |> get("/txs") |> json_response(404)
       end
     end
   end

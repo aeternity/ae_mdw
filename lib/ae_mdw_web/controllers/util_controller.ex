@@ -5,6 +5,7 @@ defmodule AeMdwWeb.UtilController do
   use AeMdwWeb, :controller
 
   alias AeMdw.Db.Status
+  alias AeMdw.Error.Input
   alias Plug.Conn
 
   @spec status(Plug.Conn.t(), map()) :: Plug.Conn.t()
@@ -13,5 +14,5 @@ defmodule AeMdwWeb.UtilController do
 
   @spec no_route(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def no_route(conn, _params),
-    do: conn |> AeMdwWeb.Util.send_error(404, "no such route")
+    do: AeMdwWeb.Util.send_error(conn, Input.NotFound, "no such route")
 end
