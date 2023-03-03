@@ -93,7 +93,7 @@ defmodule AeMdwWeb.Util do
     end
   end
 
-  # credo:disable-for-next-line
+  @spec send_error(Plug.Conn.t(), ErrInput.reason(), String.t()) :: Plug.Conn.t()
   def send_error(conn, reason, message) do
     status = error_reason_to_status(reason)
 
