@@ -11,6 +11,16 @@ defmodule AeMdw.BlocksTest do
   require Model
 
   describe "fetch_txis_from_gen/2" do
+    test "returns empty list when there are no transactions" do
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> Store.put(Model.Block, Model.block(index: {0, -1}, tx_index: 0))
+        |> State.new()
+
+      assert [] = Enum.to_list(Blocks.fetch_txis_from_gen(state, 0))
+    end
+
     test "returns the range of txis from any two blocks" do
       state =
         NullStore.new()
