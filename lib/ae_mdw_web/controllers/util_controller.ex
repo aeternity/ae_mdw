@@ -18,7 +18,7 @@ defmodule AeMdwWeb.UtilController do
 
   @spec static_file(Conn.t(), map()) :: Conn.t()
   def static_file(%Conn{assigns: %{filepath: filepath}} = conn, _params) do
-    filepath = Application.app_dir(:ae_mdw, Path.join("priv", filepath))
+    filepath = Path.join(:code.priv_dir(:ae_mdw), filepath)
 
     send_file(conn, 200, filepath)
   end
