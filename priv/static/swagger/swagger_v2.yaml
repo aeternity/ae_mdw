@@ -1,0 +1,10 @@
+basePath: /
+consumes:
+  - application/json
+produces:
+  - application/json
+schemes:
+  - http
+swagger: '2.0'
+description: >
+  THIS FILE WILL BE OVERRIDDEN BY THE RELEASE PROCESS. DO NOT EDIT.
