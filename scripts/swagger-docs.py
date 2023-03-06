@@ -6,7 +6,7 @@ from glob import glob
 from pathlib import Path
 
 SWAGGER_DOCS_DIR = 'docs/swagger_v2/'
-MDW_VERSION_FILE = 'AEMDW_REVISION'
+MDW_VERSION_FILE = 'AEMDW_VERSION'
 
 # Read YAML file
 schemas = {}
