@@ -14,4 +14,6 @@ services:
     volumes:
       - ${PWD}:/app
     environment:
-      - AETERNITY_CONFIG=/home/aeternity/aeternity.yaml
+      AETERNITY_CONFIG: /home/aeternity/aeternity.yaml
+      PORT: 4002
+      WS_PORT: 4003
