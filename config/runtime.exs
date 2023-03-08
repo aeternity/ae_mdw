@@ -13,26 +13,28 @@ period = String.to_integer(System.get_env("TELEMETRY_POLLER_PERIOD") || "10000")
 config :ae_mdw, AeMdw.APM.TelemetryPoller, period: period
 
 # Endpoint
-port = String.to_integer(System.get_env("PORT") || "4000")
-protocol_opts = [max_request_line_length: 1_024, max_skip_body_length: 1_024]
+if env != :test do
+  port = String.to_integer(System.get_env("PORT") || "4000")
+  protocol_opts = [max_request_line_length: 1_024, max_skip_body_length: 1_024]
 
-config :ae_mdw, AeMdwWeb.Endpoint,
-  http: [
-    ip: {0, 0, 0, 0, 0, 0, 0, 0},
-    port: port,
-    protocol_options: protocol_opts
-  ],
-  debug_errors: env == :dev,
-  cache_static_manifest: "priv/static/cache_manifest.json"
+  config :ae_mdw, AeMdwWeb.Endpoint,
+    http: [
+      ip: {0, 0, 0, 0, 0, 0, 0, 0},
+      port: port,
+      protocol_options: protocol_opts
+    ],
+    debug_errors: env == :dev,
+    cache_static_manifest: "priv/static/cache_manifest.json"
 
-ws_port = String.to_integer(System.get_env("WS_PORT") || "4001")
+  ws_port = String.to_integer(System.get_env("WS_PORT") || "4001")
 
-config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
-  http: [
-    ip: {0, 0, 0, 0, 0, 0, 0, 0},
-    port: ws_port,
-    protocol_options: protocol_opts
-  ]
+  config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
+    http: [
+      ip: {0, 0, 0, 0, 0, 0, 0, 0},
+      port: ws_port,
+      protocol_options: protocol_opts
+    ]
+end
 
 if env in [:test, :prod] do
   if System.get_env("ENABLE_TELEMETRY", "false") in ["true", "1"] do
