@@ -1,11 +1,19 @@
 import Config
 
+# Chain
+config :aecore, network_id: System.get_env("NETWORK_ID", "ae_mainnet")
+
 # Telemetry
 config :ae_mdw, :enable_livedashboard, true
 
 config :ae_mdw, TelemetryMetricsStatsd,
   host: "localhost",
   port: 8125
+
+# Endpoints
+config :ae_mdw, AeMdwWeb.Endpoint,
+  debug_errors: true,
+  live_view: [signing_salt: "btmQfEtjXdzpKeXzQ1kfVAJmc0gPU/pX"]
 
 # Logging
 config :logger,

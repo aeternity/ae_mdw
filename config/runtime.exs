@@ -32,8 +32,7 @@ config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
     ip: {0, 0, 0, 0, 0, 0, 0, 0},
     port: ws_port,
     protocol_options: protocol_opts
-  ],
-  debug_errors: env == :dev
+  ]
 
 if env in [:test, :prod] do
   if System.get_env("ENABLE_TELEMETRY", "false") in ["true", "1"] do
