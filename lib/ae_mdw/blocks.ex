@@ -166,7 +166,7 @@ defmodule AeMdw.Blocks do
         tx_index_end =
           case State.get(state, @table, {height + 1, -1}) do
             {:ok, Model.block(tx_index: tx_index_end)} -> tx_index_end - 1
-            :not_found -> last_txi(state, 0)
+            :not_found -> last_txi(state, -1)
           end
 
         if tx_index_end >= tx_index_start do
