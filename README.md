@@ -231,8 +231,8 @@ GET /status                              - middleware status
 
 There are two files providing a swagger specificiation of the endpoints for respective api versions:
 
-- https://petstore.swagger.io/?url=https://mainnet.aeternity.io/mdw/swagger/swagger_v1.yaml
-- https://petstore.swagger.io/?url=https://mainnet.aeternity.io/mdw/swagger/swagger_v2.yaml
+- https://petstore.swagger.io/?url=https://mainnet.aeternity.io/mdw/api
+- https://petstore.swagger.io/?url=https://mainnet.aeternity.io/mdw/v2/api
 
 This npm package can be used for a self-hosted app to visualize these specs:
 https://www.npmjs.com/package/swagger-ui
