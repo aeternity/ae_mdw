@@ -128,7 +128,10 @@ COPY ./docker/aeternity.yaml /home/aeternity/aeternity.yaml
 COPY ./docker/healthcheck.sh /home/aeternity/healthcheck.sh
 RUN chmod +x /home/aeternity/healthcheck.sh
 
-RUN mkdir -p ./local/rel/aeternity/data/mnesia
+# Create data directories in advance so that volumes can be mounted in there
+# see https://github.com/moby/moby/issues/2259 for more about this nasty hack
+RUN mkdir -p ./local/rel/aeternity/data/mnesia \
+    && mkdir -p ./local/rel/aeternity/data/mdw.db
 
 RUN chown -R nobody /home/aeternity/node
 
