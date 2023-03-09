@@ -43,12 +43,11 @@ defmodule AeMdw.APM.Telemetry do
       counter("ae_mdw.error.status",
         tags: [:request_path, :query_params, :reason]
       ),
+      summary("ae_mdw.http.request",
+        tags: [:route, :request_id]
+      ),
 
       # Phoenix Metrics
-      distribution("phoenix.endpoint.stop.duration",
-        tags: [:request_path],
-        unit: {:native, :millisecond}
-      ),
       counter("phoenix.router_dispatch.stop.duration",
         tags: [:route]
       ),

@@ -3,6 +3,7 @@ defmodule AeMdwWeb.Router do
   use Plug.ErrorHandler
 
   alias AeMdwWeb.Plugs.StatePlug
+  alias AeMdwWeb.Plugs.RequestSpan
 
   @shared_routes [
     {"/txs/count", AeMdwWeb.TxController, :count},
@@ -26,6 +27,7 @@ defmodule AeMdwWeb.Router do
     plug :accepts, ["json"]
     plug StatePlug
     plug Plug.RequestId
+    plug RequestSpan
   end
 
   pipeline :browser do
