@@ -6,7 +6,6 @@ defmodule AeMdwWeb.BlockControllerTest do
   alias AeMdw.Db.Store
   alias AeMdw.TestSamples, as: TS
   alias AeMdw.Validate
-  alias AeMdwWeb.BlockchainSim
 
   import Mock
   import AeMdwWeb.BlockchainSim
@@ -404,7 +403,7 @@ defmodule AeMdwWeb.BlockControllerTest do
     test "get microblock by hash", %{conn: conn, store: store} do
       with_blockchain %{alice: 10_000, bob: 20_000},
         mb1: [
-          t1: BlockchainSim.spend_tx(:alice, :bob, 5_000)
+          t1: spend_tx(:alice, :bob, 5_000)
         ] do
         %{hash: mb_hash, height: kbi} = blocks[:mb1]
 
@@ -427,10 +426,10 @@ defmodule AeMdwWeb.BlockControllerTest do
       with_blockchain %{alice: 10_000, bob: 20_000},
         kb1: [
           mb1: [
-            t1: BlockchainSim.spend_tx(:alice, :bob, 5_000)
+            t1: spend_tx(:alice, :bob, 5_000)
           ],
           mb2: [
-            t2: BlockchainSim.spend_tx(:bob, :alice, 3_000)
+            t2: spend_tx(:bob, :alice, 3_000)
           ]
         ] do
         %{hash: kb1_hash, height: kbi} = blocks[:kb1]
@@ -510,7 +509,7 @@ defmodule AeMdwWeb.BlockControllerTest do
     test "get micro block by hash", %{conn: conn} do
       with_blockchain %{alice: 10_000, bob: 20_000},
         mb1: [
-          t1: BlockchainSim.spend_tx(:alice, :bob, 5_000)
+          t1: spend_tx(:alice, :bob, 5_000)
         ] do
         %{hash: mb_hash} = blocks[:mb1]
 
