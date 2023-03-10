@@ -15,7 +15,6 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.NameRevokeMutation
   alias AeMdw.Db.NameTransferMutation
   alias AeMdw.Db.Sync.Contract, as: SyncContract
-  alias AeMdw.Db.Sync.InnerTx
   alias AeMdw.Db.Sync.Name, as: SyncName
   alias AeMdw.Db.Sync.Oracle
   alias AeMdw.Db.Sync.Origin
@@ -58,7 +57,7 @@ defmodule AeMdw.Db.Sync.Transaction do
             [Contract.event()]
           ) :: t()
     def new(type, tx, signed_tx, txi, tx_hash, block_index, block_hash, tx_events) do
-      %TxContext{
+      %__MODULE__{
         type: type,
         tx: tx,
         signed_tx: signed_tx,
@@ -74,17 +73,17 @@ defmodule AeMdw.Db.Sync.Transaction do
   @spec transaction_mutations(
           Node.signed_tx(),
           Txs.txi(),
-          {Blocks.block_index(), Blocks.block_hash(), Blocks.time(), Contract.grouped_events()},
-          boolean()
+          Blocks.block_index(),
+          Blocks.block_hash(),
+          Blocks.time(),
+          Contract.grouped_events()
         ) :: [Mutation.t()]
-  def transaction_mutations(
-        signed_tx,
-        txi,
-        {block_index, block_hash, mb_time, mb_events} = tx_ctx,
-        inner_tx? \\ false
-      ) do
+  def transaction_mutations(signed_tx, txi, block_index, block_hash, mb_time, mb_events) do
     {type, tx} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
     tx_hash = :aetx_sign.hash(signed_tx)
+
+    m_tx = Model.tx(index: txi, id: tx_hash, block_index: block_index, time: mb_time)
+    :ets.insert(:tx_sync_cache, {txi, m_tx})
 
     tx_context =
       TxContext.new(
@@ -98,29 +97,13 @@ defmodule AeMdw.Db.Sync.Transaction do
         Map.get(mb_events, tx_hash, [])
       )
 
-    inner_txn_mutations =
-      if type == :ga_meta_tx or type == :paying_for_tx do
-        inner_signed_tx = InnerTx.signed_tx(type, tx)
-        # indexes the inner with the txi from the wrapper/outer
-        transaction_mutations(inner_signed_tx, txi, tx_ctx, true)
-      end
-
-    m_tx = Model.tx(index: txi, id: tx_hash, block_index: block_index, time: mb_time)
-    :ets.insert(:tx_sync_cache, {txi, m_tx})
-
-    m_tx_mutation =
-      if not inner_tx? do
-        WriteMutation.new(Model.Tx, m_tx)
-      end
-
     [
-      m_tx_mutation,
+      WriteMutation.new(Model.Tx, m_tx),
       WriteMutation.new(Model.Type, Model.type(index: {type, txi})),
       IncreaseTypeCountMutation.new(type),
       WriteMutation.new(Model.Time, Model.time(index: {mb_time, txi})),
-      WriteFieldsMutation.new(type, tx, block_index, txi),
-      tx_mutations(tx_context),
-      inner_txn_mutations
+      WriteFieldsMutation.new(type, tx, block_index, txi)
+      | tx_mutations(tx_context)
     ]
   end
 
@@ -404,6 +387,39 @@ defmodule AeMdw.Db.Sync.Transaction do
     [
       NameRevokeMutation.new(name_hash, {txi, -1}, block_index)
     ]
+  end
+
+  defp tx_mutations(%TxContext{type: :ga_meta_tx, tx: tx, block_hash: block_hash} = tx_ctx) do
+    inner_signed_tx = :aega_meta_tx.tx(tx)
+    owner_pk = :aega_meta_tx.origin(tx)
+    auth_id = :aega_meta_tx.auth_id(tx)
+
+    case :aec_chain.get_ga_call(owner_pk, auth_id, block_hash) do
+      {:ok, _ga_object} ->
+        tx_hash = :aetx_sign.hash(inner_signed_tx)
+        {type, inner_tx} = :aetx.specialize_type(:aetx_sign.tx(inner_signed_tx))
+
+        tx_ctx = %TxContext{
+          tx_ctx
+          | signed_tx: inner_signed_tx,
+            type: type,
+            tx: inner_tx,
+            tx_hash: tx_hash
+        }
+
+        tx_mutations(tx_ctx)
+
+      _error_revert ->
+        []
+    end
+  end
+
+  defp tx_mutations(%TxContext{type: :paying_for_tx, tx: tx} = tx_ctx) do
+    inner_signed_tx = :aec_paying_for_tx.tx(tx)
+    {type, tx} = :aetx.specialize_type(:aetx_sign.tx(inner_signed_tx))
+    tx_hash = :aetx_sign.hash(inner_signed_tx)
+    tx_ctx = %TxContext{tx_ctx | signed_tx: inner_signed_tx, type: type, tx: tx, tx_hash: tx_hash}
+    tx_mutations(tx_ctx)
   end
 
   defp tx_mutations(_tx_context), do: []

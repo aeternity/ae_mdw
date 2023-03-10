@@ -9,6 +9,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   alias AeMdw.DryRun.Runner
   alias AeMdw.Db.AexnCreateContractMutation
   alias AeMdw.Db.ChannelCloseMutation
+  alias AeMdw.Db.ChannelOpenMutation
   alias AeMdw.Db.ChannelUpdateMutation
   alias AeMdw.Db.Sync.Transaction
   alias AeMdw.Db.Model
@@ -49,8 +50,10 @@ defmodule AeMdw.Db.Sync.TransactionTest do
           Transaction.transaction_mutations(
             signed_tx,
             txi,
-            {block_index, mb, mb_time, %{}},
-            false
+            block_index,
+            mb,
+            mb_time,
+            %{}
           )
 
         State.commit(state, txn_mutations)
@@ -82,8 +85,10 @@ defmodule AeMdw.Db.Sync.TransactionTest do
           Transaction.transaction_mutations(
             signed_tx,
             txi,
-            {block_index, mb, mb_time, %{}},
-            false
+            block_index,
+            mb,
+            mb_time,
+            %{}
           )
 
         State.commit(state, txn_mutations)
@@ -100,7 +105,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
     end
   end
 
-  describe "transaction_mutations/4" do
+  describe "transaction_mutations/6" do
     test "creates aex9 contract on :contract_call_tx" do
       signed_tx = signed_tx(:contract_call_tx, :aex9_create)
       txi = 31_215_242
@@ -135,7 +140,10 @@ defmodule AeMdw.Db.Sync.TransactionTest do
           signed_tx
           |> Transaction.transaction_mutations(
             txi,
-            {block_index, block_hash, mb_time, mb_events}
+            block_index,
+            block_hash,
+            mb_time,
+            mb_events
           )
           |> List.flatten()
 
@@ -200,7 +208,10 @@ defmodule AeMdw.Db.Sync.TransactionTest do
           signed_tx
           |> Transaction.transaction_mutations(
             txi,
-            {block_index, block_hash, mb_time, mb_events}
+            block_index,
+            block_hash,
+            mb_time,
+            mb_events
           )
           |> List.flatten()
 
@@ -264,7 +275,10 @@ defmodule AeMdw.Db.Sync.TransactionTest do
           signed_tx
           |> Transaction.transaction_mutations(
             txi,
-            {block_index, block_hash, mb_time, mb_events}
+            block_index,
+            block_hash,
+            mb_time,
+            mb_events
           )
           |> List.flatten()
 
@@ -334,7 +348,10 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         |> :aetx_sign.new([])
         |> Transaction.transaction_mutations(
           txi,
-          {block_index, block_hash, mb_time, mb_events}
+          block_index,
+          block_hash,
+          mb_time,
+          mb_events
         )
         |> List.flatten()
 
@@ -345,7 +362,10 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         |> :aetx_sign.new([])
         |> Transaction.transaction_mutations(
           txi,
-          {block_index, block_hash, mb_time, mb_events}
+          block_index,
+          block_hash,
+          mb_time,
+          mb_events
         )
         |> List.flatten()
 
@@ -356,11 +376,150 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         |> :aetx_sign.new([])
         |> Transaction.transaction_mutations(
           txi,
-          {block_index, block_hash, mb_time, mb_events}
+          block_index,
+          block_hash,
+          mb_time,
+          mb_events
         )
         |> List.flatten()
 
       assert ChannelCloseMutation.new(channel_pk, {block_index, {txi, -1}}, 3) in mutations
+    end
+
+    test "it processes successful ga_meta transactions" do
+      account_pk = TS.address(1)
+      account_id = :aeser_id.create(:account, account_pk)
+      ga_pk = TS.address(2)
+      ga_id = :aeser_id.create(:account, ga_pk)
+      auth_data = "auth-data"
+      auth_id = :aec_hash.hash(:pubkey, <<ga_pk::binary, auth_data::binary>>)
+      txi = 456
+      block_index = {3, 4}
+      block_hash = "block-hash"
+
+      {:ok, state_hash} =
+        :aeser_api_encoder.safe_decode(
+          :state,
+          "st_Wwxms0IVM7PPCHpeOXWeeZZm8h5p/SuqZL7IHIbr3CqtlCL+"
+        )
+
+      {:ok, channel_create_aetx} =
+        :aesc_create_tx.new(%{
+          initiator_id: account_id,
+          initiator_amount: 0,
+          responder_id: account_id,
+          responder_amount: 1,
+          channel_reserve: 2,
+          lock_period: 3,
+          fee: 4,
+          state_hash: state_hash,
+          nonce: 5
+        })
+
+      {:channel_create_tx, channel_create_tx} = :aetx.specialize_type(channel_create_aetx)
+      signed_channel_create_tx = :aetx_sign.new(channel_create_aetx, [])
+
+      {:ok, ga_meta_aetx} =
+        :aega_meta_tx.new(%{
+          ga_id: ga_id,
+          auth_data: auth_data,
+          abi_version: 1,
+          gas: 2,
+          gas_price: 3,
+          fee: 4,
+          tx: signed_channel_create_tx
+        })
+
+      signed_ga_meta_tx = :aetx_sign.new(ga_meta_aetx, [])
+
+      channel_mutation = ChannelOpenMutation.new({block_index, {txi, -1}}, channel_create_tx)
+
+      with_mocks [
+        {:aec_chain, [:passthrough],
+         [
+           get_ga_call: fn ^ga_pk, ^auth_id, ^block_hash -> {:ok, :ga_object} end
+         ]}
+      ] do
+        mutations =
+          Transaction.transaction_mutations(
+            signed_ga_meta_tx,
+            txi,
+            block_index,
+            block_hash,
+            0,
+            %{}
+          )
+
+        assert channel_mutation in List.flatten(mutations)
+      end
+    end
+
+    test "it does not processes unsuccessful ga_meta transactions" do
+      account_pk = TS.address(1)
+      account_id = :aeser_id.create(:account, account_pk)
+      ga_pk = TS.address(2)
+      ga_id = :aeser_id.create(:account, ga_pk)
+      auth_data = "auth-data"
+      auth_id = :aec_hash.hash(:pubkey, <<ga_pk::binary, auth_data::binary>>)
+      txi = 456
+      block_index = {3, 4}
+      block_hash = "block-hash"
+
+      {:ok, state_hash} =
+        :aeser_api_encoder.safe_decode(
+          :state,
+          "st_Wwxms0IVM7PPCHpeOXWeeZZm8h5p/SuqZL7IHIbr3CqtlCL+"
+        )
+
+      {:ok, channel_create_aetx} =
+        :aesc_create_tx.new(%{
+          initiator_id: account_id,
+          initiator_amount: 0,
+          responder_id: account_id,
+          responder_amount: 1,
+          channel_reserve: 2,
+          lock_period: 3,
+          fee: 4,
+          state_hash: state_hash,
+          nonce: 5
+        })
+
+      {:channel_create_tx, channel_create_tx} = :aetx.specialize_type(channel_create_aetx)
+      signed_channel_create_tx = :aetx_sign.new(channel_create_aetx, [])
+
+      {:ok, ga_meta_aetx} =
+        :aega_meta_tx.new(%{
+          ga_id: ga_id,
+          auth_data: auth_data,
+          abi_version: 1,
+          gas: 2,
+          gas_price: 3,
+          fee: 4,
+          tx: signed_channel_create_tx
+        })
+
+      signed_ga_meta_tx = :aetx_sign.new(ga_meta_aetx, [])
+
+      channel_mutation = ChannelOpenMutation.new({block_index, {txi, -1}}, channel_create_tx)
+
+      with_mocks [
+        {:aec_chain, [:passthrough],
+         [
+           get_ga_call: fn ^ga_pk, ^auth_id, ^block_hash -> :error end
+         ]}
+      ] do
+        mutations =
+          Transaction.transaction_mutations(
+            signed_ga_meta_tx,
+            txi,
+            block_index,
+            block_hash,
+            0,
+            %{}
+          )
+
+        assert channel_mutation not in List.flatten(mutations)
+      end
     end
   end
 

@@ -116,7 +116,6 @@ defmodule AeMdw.Db.Sync.Block do
     {:ok, mb_hash} = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock))
     mb_txs = :aec_blocks.txs(mblock)
     events = AeMdw.Contract.get_grouped_events(mblock)
-    tx_ctx = {{height, mbi}, mb_hash, mb_time, events}
     mb_model = Model.block(index: {height, mbi}, tx_index: txi, hash: mb_hash)
     block_mutation = WriteMutation.new(Model.Block, mb_model)
 
@@ -124,7 +123,15 @@ defmodule AeMdw.Db.Sync.Block do
       mb_txs
       |> Enum.with_index(txi)
       |> Enum.reduce([block_mutation], fn {signed_tx, txi}, mutations ->
-        transaction_mutations = Transaction.transaction_mutations(signed_tx, txi, tx_ctx)
+        transaction_mutations =
+          Transaction.transaction_mutations(
+            signed_tx,
+            txi,
+            {height, mbi},
+            mb_hash,
+            mb_time,
+            events
+          )
 
         mutations ++ transaction_mutations
       end)
