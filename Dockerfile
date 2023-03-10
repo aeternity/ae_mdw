@@ -35,7 +35,6 @@ COPY ./docker/aeternity.yaml /home/aeternity/aeternity.yaml
 RUN mkdir /home/aeternity/node/ae_mdw
 COPY .git .git
 RUN BUILD_REV="$(git log -1 --format=%h)" && echo $BUILD_REV > /home/aeternity/node/ae_mdw/AEMDW_REVISION
-RUN rm -r .git
 
 WORKDIR /home/aeternity/node
 
