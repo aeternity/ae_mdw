@@ -1,5 +1,25 @@
 # Changelog
 
+### [1.41.4](https://www.github.com/aeternity/ae_mdw/compare/v1.41.3...v1.41.4) (2023-03-10)
+
+
+### Bug Fixes
+
+* add base case for txs from gen ([#1221](https://www.github.com/aeternity/ae_mdw/issues/1221)) ([84994fb](https://www.github.com/aeternity/ae_mdw/commit/84994fb21d33c426343e1f9b49f1f3ce504143c6))
+* ignore failed ga_meta_tx sync processing ([#1226](https://www.github.com/aeternity/ae_mdw/issues/1226)) ([ff95030](https://www.github.com/aeternity/ae_mdw/commit/ff950301df441f66d66ebe43a2ef9804a452b77d))
+* revert git change to allow dev build ([#1227](https://www.github.com/aeternity/ae_mdw/issues/1227)) ([b7ce3a0](https://www.github.com/aeternity/ae_mdw/commit/b7ce3a059285a7642f81f7e85d03926684fc7779))
+* set config to serve endpoints on prod ([#1211](https://www.github.com/aeternity/ae_mdw/issues/1211)) ([880f0d3](https://www.github.com/aeternity/ae_mdw/commit/880f0d3159d3b701c0d21daa56401ab7bd0958f8))
+* use 404 on missing single path param ([#1217](https://www.github.com/aeternity/ae_mdw/issues/1217)) ([b5b9da3](https://www.github.com/aeternity/ae_mdw/commit/b5b9da39420c1c680f9162dec834d320089946f8))
+
+
+### Miscellaneous
+
+* aggregate request metric per route ([#1225](https://www.github.com/aeternity/ae_mdw/issues/1225)) ([2f55ac3](https://www.github.com/aeternity/ae_mdw/commit/2f55ac3f17c9e4069d6074bc88a76d1671548e8b))
+* allow mounting db dir with docker ([#1224](https://www.github.com/aeternity/ae_mdw/issues/1224)) ([52ef103](https://www.github.com/aeternity/ae_mdw/commit/52ef103b72e01b29201bd2bc77d38e89896aaf16))
+* make web config runtime config ([#1222](https://www.github.com/aeternity/ae_mdw/issues/1222)) ([ff14888](https://www.github.com/aeternity/ae_mdw/commit/ff148888cd4ff676292edbcd280051b17ff40bd4))
+* set docker user to aeternity ([#1229](https://www.github.com/aeternity/ae_mdw/issues/1229)) ([a94b1d2](https://www.github.com/aeternity/ae_mdw/commit/a94b1d2acf0df30a16572d301aaf68eaf4d2a5cc))
+* update endpoints healthcheck ([#1213](https://www.github.com/aeternity/ae_mdw/issues/1213)) ([ddab030](https://www.github.com/aeternity/ae_mdw/commit/ddab030c05f3372367498843699272e3c851ac33))
+
 ### [1.41.3](https://www.github.com/aeternity/ae_mdw/compare/v1.41.2...v1.41.3) (2023-02-28)
 
 
