@@ -13,7 +13,6 @@ defmodule AeMdw.Db.Sync.Name do
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Node
   alias AeMdw.Node.Db
-  alias AeMdw.Log
   alias AeMdw.Txs
   alias AeMdw.Validate
 
@@ -137,7 +136,6 @@ defmodule AeMdw.Db.Sync.Name do
 
     case update_type do
       {:update_expiration, new_expire} ->
-        log_name_change(height, plain_name, "extend")
         new_m_name = Model.name(m_name, expire: new_expire, updates: updates)
         new_m_name_exp = Model.expiration(index: {new_expire, plain_name})
 
@@ -155,7 +153,6 @@ defmodule AeMdw.Db.Sync.Name do
         |> cache_through_write(Model.ActiveName, new_m_name)
 
       :expire ->
-        log_name_change(height, plain_name, "expire")
         new_m_name = Model.name(m_name, expire: height, updates: updates)
 
         state2
@@ -163,8 +160,6 @@ defmodule AeMdw.Db.Sync.Name do
         |> State.inc_stat(:names_expired)
 
       :update ->
-        log_name_change(height, plain_name, "update w/o extend")
-
         m_name = Model.name(m_name, updates: updates)
 
         cache_through_write(state2, Model.ActiveName, m_name)
@@ -173,18 +168,16 @@ defmodule AeMdw.Db.Sync.Name do
 
   @spec transfer(State.t(), Names.name_hash(), Db.pubkey(), Txs.txi_idx(), Blocks.block_index()) ::
           State.t()
-  def transfer(state, name_hash, new_owner, txi_idx, {height, _mbi} = bi) do
+  def transfer(state, name_hash, new_owner, txi_idx, block_index) do
     plain_name = plain_name!(state, name_hash)
 
     m_name = cache_through_read!(state, Model.ActiveName, plain_name)
     Model.name(owner: old_owner, expire: expire) = m_name
 
-    transfers = [{bi, txi_idx} | Model.name(m_name, :transfers)]
+    transfers = [{block_index, txi_idx} | Model.name(m_name, :transfers)]
     m_name = Model.name(m_name, transfers: transfers, owner: new_owner)
     m_owner = Model.owner(index: {new_owner, plain_name})
     m_name_owner_deactivation = Model.owner_deactivation(index: {new_owner, expire, plain_name})
-
-    log_name_change(height, plain_name, "transfer")
 
     state
     |> cache_through_delete(Model.ActiveNameOwner, {old_owner, plain_name})
@@ -202,8 +195,6 @@ defmodule AeMdw.Db.Sync.Name do
       m_name = cache_through_read!(state, Model.ActiveName, plain_name)
 
     m_name = Model.name(m_name, revoke: {bi, txi_idx})
-
-    log_name_change(height, plain_name, "revoke")
 
     state
     |> deactivate_name(height, expiration, m_name)
@@ -365,9 +356,6 @@ defmodule AeMdw.Db.Sync.Name do
 
     Model.plain_name(m_plain_name, :value)
   end
-
-  defp log_name_change(height, plain_name, change),
-    do: Log.info("[#{height}][name] #{change} #{plain_name}")
 
   defp pointee_key(ptr, {bi, txi_idx}) do
     {k, v} = pointer_kv(ptr)
