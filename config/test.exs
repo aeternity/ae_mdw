@@ -31,7 +31,7 @@ config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
 config :logger, level: :warn
 
 config :logger,
-  backends: [LoggerJSON, {LoggerFileBackend, :info}]
+  backends: [{LoggerFileBackend, :info}]
 
 # Stat
 config :ae_mdw, build_revision: "abcd1234"
