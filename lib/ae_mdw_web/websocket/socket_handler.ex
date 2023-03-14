@@ -75,6 +75,9 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
 
       {:error, :invalid_source, source} ->
         reply_error("invalid source", source, state)
+
+      {:error, :limit_reached} ->
+        reply_error("too many subscriptions! discarding", target, state)
     end
   end
 
@@ -99,6 +102,9 @@ defmodule AeMdwWeb.Websocket.SocketHandler do
 
       {:error, :invalid_source, source} ->
         reply_error("invalid source", source, state)
+
+      {:error, :limit_reached} ->
+        reply_error("too many subscriptions! discarding", channel, state)
     end
   end
 

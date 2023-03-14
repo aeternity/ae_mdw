@@ -31,6 +31,8 @@ config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
   watchers: [],
   check_origin: false
 
+config :ae_mdw, AeMdwWeb.Websocket.Subscriptions, max_subs_per_conn: 10_000
+
 # Logging
 config :logger,
   backends: [:console, {LoggerFileBackend, :info}]

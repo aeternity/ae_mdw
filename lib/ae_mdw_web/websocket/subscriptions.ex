@@ -16,7 +16,9 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
   @subs_pids :subs_pids
   @subs_channel_pid :subs_channel_pid
   @subs_pid_channel :subs_pid_channel
+  @limit_per_pid Application.compile_env(:ae_mdw, [__MODULE__, :max_subs_per_conn])
   @eot :"$end_of_table"
+  @counter_pos 3
 
   @known_channels ["KeyBlocks", "MicroBlocks", "Transactions"]
 
@@ -42,17 +44,17 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
   @impl GenServer
   def init(:ok) do
     @subs_pids
-    |> :ets.match({:"$1", :_})
-    |> Enum.each(fn [pid] ->
+    |> :ets.match({:"$1", :_, :"$2"})
+    |> Enum.each(fn [pid, count] ->
       ref = Process.monitor(pid)
-      :ets.insert(@subs_pids, {pid, ref})
+      :ets.insert(@subs_pids, {pid, ref, count})
     end)
 
     {:ok, :no_state}
   end
 
   @spec subscribe(pid(), source(), version(), channel()) ::
-          {:ok, [channel()]} | {:error, :invalid_channel | :already_subscribed}
+          {:ok, [channel()]} | {:error, :invalid_channel | :already_subscribed | :limit_reached}
   def subscribe(pid, source, version, channel) do
     with {:ok, channel_key} <- validate_subscribe(pid, source, version, channel) do
       maybe_monitor(pid)
@@ -67,6 +69,7 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
           {:ok, [channel()]} | {:error, :invalid_channel | :not_subscribed}
   def unsubscribe(pid, source, version, channel) do
     with {:ok, channel_key} <- validate_unsubscribe(pid, source, version, channel) do
+      :ets.update_counter(@subs_pids, pid, {@counter_pos, -1}, {pid, nil, 0})
       :ets.delete_object(@subs_channel_pid, {channel_key, pid})
       :ets.match_delete(@subs_pid_channel, {pid, channel_key, :_})
 
@@ -137,19 +140,22 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
   @impl GenServer
   def handle_cast({:monitor, pid}, state) do
     ref = Process.monitor(pid)
-    :ets.insert(@subs_pids, {pid, ref})
+    :ets.insert(@subs_pids, {pid, ref, 1})
 
     {:noreply, state}
   end
 
   defp maybe_monitor(pid) do
-    if not :ets.member(@subs_pids, pid) do
+    if :ets.member(@subs_pids, pid) do
+      :ets.update_counter(@subs_pids, pid, {@counter_pos, 1})
+      :ok
+    else
       GenServer.cast(__MODULE__, {:monitor, pid})
     end
   end
 
   defp maybe_demonitor(pid) do
-    with [{^pid, ref}] <- :ets.lookup(@subs_pids, pid) do
+    with [{^pid, ref, _count}] <- :ets.lookup(@subs_pids, pid) do
       Process.demonitor(ref, [:flush])
       :ets.delete(@subs_pids, pid)
     end
@@ -168,11 +174,13 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
 
   defp validate_subscribe(pid, source, version, channel) do
     with {:ok, channel_key} <- channel_key(source, version, channel),
-         false <- exists?(pid, channel_key) do
+         false <- exists?(pid, channel_key),
+         count when count < @limit_per_pid <- subscriptions_count(pid) do
       {:ok, channel_key}
     else
       {:error, _reason} -> {:error, :invalid_channel}
       true -> {:error, :already_subscribed}
+      _above_limit -> {:error, :limit_reached}
     end
   end
 
@@ -199,6 +207,13 @@ defmodule AeMdwWeb.Websocket.Subscriptions do
     case :ets.match(@subs_pid_channel, {pid, channel_key, :"$1"}, 1) do
       {[[_channel]], _cont} -> true
       @eot -> false
+    end
+  end
+
+  defp subscriptions_count(pid) do
+    case :ets.lookup(@subs_pids, pid) do
+      [{_pid, _ref, count}] -> count
+      [] -> 0
     end
   end
 end
