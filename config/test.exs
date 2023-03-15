@@ -27,6 +27,8 @@ config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
   ],
   server: true
 
+config :ae_mdw, AeMdwWeb.Websocket.Subscriptions, max_subs_per_conn: 10
+
 # Logging
 config :logger, level: :warn
 

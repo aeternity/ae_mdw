@@ -67,6 +67,27 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
       channel = encode(:oracle_pubkey, <<13::256>>)
       assert {:error, :already_subscribed} = Subscriptions.subscribe(pid, :mdw, :v2, channel)
     end
+
+    test "returns error on subscriptions limit is reached" do
+      max_subs =
+        Application.get_env(:ae_mdw, AeMdwWeb.Websocket.Subscriptions)[:max_subs_per_conn]
+
+      channel = encode(:account_pubkey, <<1::256>>)
+      assert {:ok, _channel_list} = Subscriptions.subscribe(self(), :mdw, :v2, channel)
+      Process.sleep(500)
+
+      Enum.each(2..max_subs, fn i ->
+        channel = encode(:account_pubkey, <<i::256>>)
+        assert {:ok, _channel_list} = Subscriptions.subscribe(self(), :mdw, :v2, channel)
+      end)
+
+      channel = encode(:account_pubkey, <<max_subs + 1::256>>)
+      assert {:error, :limit_reached} = Subscriptions.subscribe(self(), :mdw, :v2, channel)
+
+      assert {:error, :limit_reached} = Subscriptions.subscribe(self(), :mdw, :v2, "Transactions")
+      assert {:error, :limit_reached} = Subscriptions.subscribe(self(), :mdw, :v2, "KeyBlocks")
+      assert {:error, :limit_reached} = Subscriptions.subscribe(self(), :mdw, :v2, "MicroBlocks")
+    end
   end
 
   describe "unsubscribe/2" do
@@ -240,5 +261,5 @@ defmodule AeMdw.Websocket.SubscriptionsTest do
     end
   end
 
-  defp new_pid(), do: spawn(fn -> Process.sleep(1_000) end)
+  defp new_pid(), do: Process.spawn(fn -> Process.sleep(3_000) end, [])
 end
