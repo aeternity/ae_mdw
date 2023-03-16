@@ -359,8 +359,6 @@ defmodule AeMdw.Txs do
     end)
   end
 
-  defp extract_transaction_by([]), do: []
-
   defp extract_transaction_by([type]) when type in ~w(account contract channel oracle name) do
     tx_types =
       case type do
