@@ -10,15 +10,13 @@ defmodule AeMdw.Sync.AsyncTasks.Stats do
 
   @tab :async_tasks_stats
   @stats_key :async_tasks_stats_key
-  @max_db_count_times 10
 
   @buffer_len_pos 2
-  @db_count_pos 3
 
   @spec init() :: :ok
   def init do
     @tab = :ets.new(@tab, [:named_table, :set, :public])
-    :ets.insert(@tab, {@stats_key, 0, 0, 0})
+    :ets.insert(@tab, {@stats_key, 0})
     :ok
   end
 
@@ -27,42 +25,18 @@ defmodule AeMdw.Sync.AsyncTasks.Stats do
     len = max(0, producer_buffer_len)
     :ets.update_element(@tab, @stats_key, {@buffer_len_pos, len})
 
-    if rem(len, @max_db_count_times) == 0, do: update_db_count()
-
-    :ok
-  end
-
-  @spec update_db_count() :: :ok
-  def update_db_count do
-    db_pending_count = Database.count(Model.AsyncTask)
-    :ets.update_element(@tab, @stats_key, {@db_count_pos, db_pending_count})
-
-    :ok
-  end
-
-  @spec update_consumed() :: :ok
-  def update_consumed do
-    dec_db_count()
-
     :ok
   end
 
   @spec counters() :: map()
   def counters do
-    [{@stats_key, producer_buffer_len, db_pending_count, long_count}] =
-      :ets.lookup(@tab, @stats_key)
+    [{@stats_key, producer_buffer_len}] = :ets.lookup(@tab, @stats_key)
+    db_pending_count = Database.count(Model.AsyncTask)
 
     %{
       producer_buffer: producer_buffer_len,
-      long_tasks: long_count,
+      long_tasks: 0,
       total_pending: db_pending_count
     }
-  end
-
-  #
-  # Private functions
-  #
-  defp dec_db_count() do
-    :ets.update_counter(@tab, @stats_key, {@db_count_pos, -1, 0, 0})
   end
 end

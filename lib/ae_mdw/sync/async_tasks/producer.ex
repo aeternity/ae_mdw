@@ -33,7 +33,6 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   @spec save_enqueued() :: :ok
   def save_enqueued() do
     Store.save()
-    Stats.update_db_count()
   end
 
   @spec dequeue() :: nil | Model.async_task_record()
@@ -51,7 +50,6 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   @spec notify_consumed(Model.async_task_index(), Model.async_task_args()) :: :ok
   def notify_consumed(task_index, task_args) do
     Store.set_done(task_index, task_args)
-    Stats.update_consumed()
 
     :ok
   end
