@@ -395,19 +395,23 @@ defmodule AeMdw.Db.Sync.Transaction do
     auth_id = :aega_meta_tx.auth_id(tx)
 
     case :aec_chain.get_ga_call(owner_pk, auth_id, block_hash) do
-      {:ok, _ga_object} ->
-        tx_hash = :aetx_sign.hash(inner_signed_tx)
-        {type, inner_tx} = :aetx.specialize_type(:aetx_sign.tx(inner_signed_tx))
+      {:ok, call} ->
+        if :aega_call.return_type(call) == :ok do
+          tx_hash = :aetx_sign.hash(inner_signed_tx)
+          {type, inner_tx} = :aetx.specialize_type(:aetx_sign.tx(inner_signed_tx))
 
-        tx_ctx = %TxContext{
-          tx_ctx
-          | signed_tx: inner_signed_tx,
-            type: type,
-            tx: inner_tx,
-            tx_hash: tx_hash
-        }
+          tx_ctx = %TxContext{
+            tx_ctx
+            | signed_tx: inner_signed_tx,
+              type: type,
+              tx: inner_tx,
+              tx_hash: tx_hash
+          }
 
-        tx_mutations(tx_ctx)
+          tx_mutations(tx_ctx)
+        else
+          []
+        end
 
       _error_revert ->
         []

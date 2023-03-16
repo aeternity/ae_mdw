@@ -433,11 +433,12 @@ defmodule AeMdw.Db.Sync.TransactionTest do
       signed_ga_meta_tx = :aetx_sign.new(ga_meta_aetx, [])
 
       channel_mutation = ChannelOpenMutation.new({block_index, {txi, -1}}, channel_create_tx)
+      aega_call = :aega_call.new(ga_id, auth_id, 1, 2, 3, :ok, "")
 
       with_mocks [
         {:aec_chain, [:passthrough],
          [
-           get_ga_call: fn ^ga_pk, ^auth_id, ^block_hash -> {:ok, :ga_object} end
+           get_ga_call: fn ^ga_pk, ^auth_id, ^block_hash -> {:ok, aega_call} end
          ]}
       ] do
         mutations =
@@ -506,6 +507,27 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         {:aec_chain, [:passthrough],
          [
            get_ga_call: fn ^ga_pk, ^auth_id, ^block_hash -> :error end
+         ]}
+      ] do
+        mutations =
+          Transaction.transaction_mutations(
+            signed_ga_meta_tx,
+            txi,
+            block_index,
+            block_hash,
+            0,
+            %{}
+          )
+
+        assert channel_mutation not in List.flatten(mutations)
+      end
+
+      failed_call = :aega_call.new(ga_id, auth_id, 1, 2, 3, :error, "")
+
+      with_mocks [
+        {:aec_chain, [:passthrough],
+         [
+           get_ga_call: fn ^ga_pk, ^auth_id, ^block_hash -> {:ok, failed_call} end
          ]}
       ] do
         mutations =
