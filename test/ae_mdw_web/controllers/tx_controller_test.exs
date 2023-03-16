@@ -1,10 +1,10 @@
 defmodule AeMdwWeb.TxControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
+  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
-  alias AeMdw.Db.Util
   alias AeMdw.DryRun.Contract
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
@@ -18,14 +18,454 @@ defmodule AeMdwWeb.TxControllerTest do
 
   describe "txs" do
     test "it returns 400 when no direction specified", %{conn: conn} do
-      with_mocks [
-        {Util, [],
-         [
-           last_gen: fn _state -> 1_000 end
-         ]}
-      ] do
-        assert %{"error" => "no such route"} = conn |> get("/txs") |> json_response(404)
+      assert %{"error" => "no such route"} = conn |> get("/txs") |> json_response(404)
+    end
+  end
+
+  describe "/v2/txs" do
+    test "it filters by type", %{conn: conn, store: store} do
+      with_blockchain %{alice: 10_000, bob: 20_000},
+        mb1: [
+          tx1: tx(:oracle_register_tx, :alice, %{}),
+          tx2: tx(:oracle_register_tx, :bob, %{}),
+          tx3: spend_tx(:alice, :bob, 3_000)
+        ] do
+        %{txs: [signed_tx1, signed_tx2, _signed_tx3]} = blocks[:mb1]
+        tx_hash1 = :aetx_sign.hash(signed_tx1)
+        encoded_tx_hash1 = Enc.encode(:tx_hash, tx_hash1)
+        tx_hash2 = :aetx_sign.hash(signed_tx2)
+        encoded_tx_hash2 = Enc.encode(:tx_hash, tx_hash2)
+
+        store =
+          store
+          |> Store.put(Model.Type, Model.type(index: {:oracle_register_tx, 1}))
+          |> Store.put(Model.Tx, Model.tx(index: 1, id: tx_hash1))
+          |> Store.put(Model.Type, Model.type(index: {:oracle_register_tx, 2}))
+          |> Store.put(Model.Tx, Model.tx(index: 2, id: tx_hash2))
+          |> Store.put(Model.Type, Model.type(index: {:spend_tx, 3}))
+
+        assert %{"data" => [tx1], "next" => next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs", type: "oracle_register", limit: 1, direction: "forward")
+                 |> json_response(200)
+
+        assert %{
+                 "tx" => %{"type" => "OracleRegisterTx"},
+                 "hash" => ^encoded_tx_hash1
+               } = tx1
+
+        assert %{"data" => [tx2], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get(next_url)
+                 |> json_response(200)
+
+        assert %{
+                 "tx" => %{"type" => "OracleRegisterTx"},
+                 "hash" => ^encoded_tx_hash2
+               } = tx2
       end
+    end
+
+    test "it filters by id", %{conn: conn, store: store} do
+      oracle_pk = TS.address(1)
+      oracle_id = :aeser_id.create(:oracle, oracle_pk)
+      encoded_oracle_id = Enc.encode(:oracle_pubkey, oracle_pk)
+      txi1 = 123
+      txi2 = 124
+      txi3 = 125
+
+      with_blockchain %{alice: 10_000},
+        mb1: [
+          tx1: {:oracle_query_tx, :alice, oracle_id, %{}},
+          tx2: {:oracle_query_tx, :alice, oracle_id, %{}},
+          tx3: spend_tx(:alice, :alice, 3_000)
+        ] do
+        %{txs: [signed_tx1, signed_tx2, signed_tx3]} = blocks[:mb1]
+        alice_id = accounts[:alice]
+        {:account, alice_pk} = :aeser_id.specialize(alice_id)
+        alice_encoded_id = Enc.encode(:account_pubkey, alice_pk)
+
+        tx_hash1 = :aetx_sign.hash(signed_tx1)
+        encoded_tx_hash1 = Enc.encode(:tx_hash, tx_hash1)
+        tx_hash2 = :aetx_sign.hash(signed_tx2)
+        encoded_tx_hash2 = Enc.encode(:tx_hash, tx_hash2)
+        tx_hash3 = :aetx_sign.hash(signed_tx3)
+
+        store =
+          store
+          |> Store.put(Model.Tx, Model.tx(index: txi1, id: tx_hash1))
+          |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 1, alice_pk, txi1}))
+          |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 3, oracle_pk, txi1}))
+          |> Store.put(Model.Tx, Model.tx(index: txi2, id: tx_hash2))
+          |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 1, alice_pk, txi2}))
+          |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 3, oracle_pk, txi2}))
+          |> Store.put(Model.Tx, Model.tx(index: txi3, id: tx_hash3))
+          |> Store.put(Model.Field, Model.field(index: {:spend_tx, 1, alice_pk, txi3}))
+
+        assert %{"data" => [tx1], "next" => next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs",
+                   type: "oracle_query",
+                   oracle: encoded_oracle_id,
+                   direction: "forward",
+                   limit: 1
+                 )
+                 |> json_response(200)
+
+        assert %{
+                 "tx" => %{
+                   "type" => "OracleQueryTx",
+                   "oracle_id" => ^encoded_oracle_id,
+                   "sender_id" => ^alice_encoded_id
+                 },
+                 "hash" => ^encoded_tx_hash1
+               } = tx1
+
+        assert %{"data" => [tx2], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get(next_url)
+                 |> json_response(200)
+
+        assert %{
+                 "tx" => %{
+                   "type" => "OracleQueryTx",
+                   "oracle_id" => ^encoded_oracle_id,
+                   "sender_id" => ^alice_encoded_id
+                 },
+                 "hash" => ^encoded_tx_hash2
+               } = tx2
+      end
+    end
+
+    test "it filters by type and scope", %{conn: conn, store: store} do
+      first_gen = 10
+      last_gen = 20
+
+      with_blockchain %{alice: 10_000, bob: 20_000},
+        mb1: [
+          tx1: tx(:oracle_register_tx, :alice, %{}),
+          tx2: tx(:oracle_register_tx, :bob, %{}),
+          tx3: spend_tx(:alice, :bob, 3_000)
+        ] do
+        %{txs: [signed_tx1, _signed_tx2, _signed_tx3]} = blocks[:mb1]
+        tx_hash1 = :aetx_sign.hash(signed_tx1)
+        encoded_tx_hash1 = Enc.encode(:tx_hash, tx_hash1)
+
+        store =
+          store
+          |> Store.put(Model.Type, Model.type(index: {:oracle_register_tx, 1}))
+          |> Store.put(Model.Tx, Model.tx(index: 1, id: tx_hash1))
+          |> Store.put(Model.Block, Model.block(index: {first_gen, -1}, tx_index: 1))
+          |> Store.put(Model.Type, Model.type(index: {:oracle_register_tx, 2}))
+          |> Store.put(Model.Type, Model.type(index: {:spend_tx, 3}))
+          |> Store.put(Model.Block, Model.block(index: {last_gen + 1, -1}, tx_index: 2))
+
+        assert %{"data" => [tx1], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs",
+                   type: "oracle_register",
+                   scope: "gen:#{first_gen}-#{last_gen}",
+                   direction: "forward"
+                 )
+                 |> json_response(200)
+
+        assert %{
+                 "tx" => %{"type" => "OracleRegisterTx"},
+                 "hash" => ^encoded_tx_hash1
+               } = tx1
+      end
+    end
+
+    test "it filters by id and type", %{conn: conn, store: store} do
+      oracle_pk = TS.address(1)
+      oracle_id = :aeser_id.create(:oracle, oracle_pk)
+      encoded_oracle_id = Enc.encode(:oracle_pubkey, oracle_pk)
+      txi1 = 123
+      txi2 = 124
+      txi3 = 125
+
+      with_blockchain %{alice: 10_000},
+        mb1: [
+          tx1: {:oracle_query_tx, :alice, oracle_id, %{}},
+          tx2: {:oracle_query_tx, :alice, oracle_id, %{}},
+          tx3: spend_tx(:alice, :alice, 3_000)
+        ] do
+        %{txs: [signed_tx1, signed_tx2, signed_tx3]} = blocks[:mb1]
+        alice_id = accounts[:alice]
+        {:account, alice_pk} = :aeser_id.specialize(alice_id)
+        alice_encoded_id = Enc.encode(:account_pubkey, alice_pk)
+
+        tx_hash1 = :aetx_sign.hash(signed_tx1)
+        encoded_tx_hash1 = Enc.encode(:tx_hash, tx_hash1)
+        tx_hash2 = :aetx_sign.hash(signed_tx2)
+        encoded_tx_hash2 = Enc.encode(:tx_hash, tx_hash2)
+        tx_hash3 = :aetx_sign.hash(signed_tx3)
+
+        store =
+          store
+          |> Store.put(Model.Tx, Model.tx(index: txi1, id: tx_hash1))
+          |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 1, alice_pk, txi1}))
+          |> Store.put(Model.Tx, Model.tx(index: txi2, id: tx_hash2))
+          |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 1, alice_pk, txi2}))
+          |> Store.put(Model.Tx, Model.tx(index: txi3, id: tx_hash3))
+          |> Store.put(Model.Field, Model.field(index: {:spend_tx, 1, alice_pk, txi3}))
+
+        assert %{"data" => [tx1], "next" => next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs",
+                   type: "oracle_query",
+                   sender_id: alice_encoded_id,
+                   direction: "forward",
+                   limit: 1
+                 )
+                 |> json_response(200)
+
+        assert %{
+                 "tx" => %{
+                   "type" => "OracleQueryTx",
+                   "oracle_id" => ^encoded_oracle_id,
+                   "sender_id" => ^alice_encoded_id
+                 },
+                 "hash" => ^encoded_tx_hash1
+               } = tx1
+
+        assert %{"data" => [tx2], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get(next_url)
+                 |> json_response(200)
+
+        assert %{
+                 "tx" => %{
+                   "type" => "OracleQueryTx",
+                   "oracle_id" => ^encoded_oracle_id,
+                   "sender_id" => ^alice_encoded_id
+                 },
+                 "hash" => ^encoded_tx_hash2
+               } = tx2
+      end
+    end
+
+    test "when filtering by multiple ids, it returns the intersection", %{
+      conn: conn,
+      store: store
+    } do
+      oracle_pk = TS.address(1)
+      oracle_id = :aeser_id.create(:oracle, oracle_pk)
+      txi1 = 123
+      txi2 = 124
+      txi3 = 125
+
+      with_blockchain %{alice: 10_000, bob: 20_000},
+        mb1: [
+          tx1: {:oracle_query_tx, :alice, oracle_id, %{}},
+          tx2: {:oracle_query_tx, :alice, oracle_id, %{}},
+          tx3: spend_tx(:alice, :bob, 3_000)
+        ] do
+        %{txs: [signed_tx1, signed_tx2, signed_tx3]} = blocks[:mb1]
+        alice_id = accounts[:alice]
+        {:account, alice_pk} = :aeser_id.specialize(alice_id)
+        encoded_alice_id = Enc.encode(:account_pubkey, alice_pk)
+        bob_id = accounts[:bob]
+        {:account, bob_pk} = :aeser_id.specialize(bob_id)
+        encoded_bob_id = Enc.encode(:account_pubkey, bob_pk)
+
+        tx_hash1 = :aetx_sign.hash(signed_tx1)
+        tx_hash2 = :aetx_sign.hash(signed_tx2)
+        tx_hash3 = :aetx_sign.hash(signed_tx3)
+        encoded_tx_hash3 = Enc.encode(:tx_hash, tx_hash3)
+
+        store =
+          store
+          |> Store.put(Model.Tx, Model.tx(index: txi1, id: tx_hash1))
+          |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 1, alice_pk, txi1}))
+          |> Store.put(Model.Tx, Model.tx(index: txi2, id: tx_hash2))
+          |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 1, alice_pk, txi2}))
+          |> Store.put(Model.Tx, Model.tx(index: txi3, id: tx_hash3))
+          |> Store.put(Model.Field, Model.field(index: {:spend_tx, 1, alice_pk, txi3}))
+          |> Store.put(Model.Field, Model.field(index: {:spend_tx, 2, bob_pk, txi3}))
+
+        assert %{"data" => [tx1], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs",
+                   sender_id: encoded_alice_id,
+                   recipient_id: encoded_bob_id,
+                   limit: 1
+                 )
+                 |> json_response(200)
+
+        assert %{
+                 "tx" => %{
+                   "type" => "SpendTx",
+                   "sender_id" => ^encoded_alice_id,
+                   "recipient_id" => ^encoded_bob_id
+                 },
+                 "hash" => ^encoded_tx_hash3
+               } = tx1
+      end
+    end
+
+    test "it filters by id, type and scope", %{conn: conn, store: store} do
+      oracle_pk = TS.address(1)
+      oracle_id = :aeser_id.create(:oracle, oracle_pk)
+      encoded_oracle_id = Enc.encode(:oracle_pubkey, oracle_pk)
+      txi1 = 123
+      txi2 = 124
+      txi3 = 125
+      first_gen = 456
+      last_gen = 457
+
+      with_blockchain %{alice: 10_000},
+        mb1: [
+          tx1: {:oracle_query_tx, :alice, oracle_id, %{}},
+          tx2: {:oracle_query_tx, :alice, oracle_id, %{}},
+          tx3: spend_tx(:alice, :alice, 3_000)
+        ] do
+        %{txs: [signed_tx1, signed_tx2, signed_tx3]} = blocks[:mb1]
+        alice_id = accounts[:alice]
+        {:account, alice_pk} = :aeser_id.specialize(alice_id)
+        alice_encoded_id = Enc.encode(:account_pubkey, alice_pk)
+        tx_hash1 = :aetx_sign.hash(signed_tx1)
+        encoded_tx_hash1 = Enc.encode(:tx_hash, tx_hash1)
+        tx_hash2 = :aetx_sign.hash(signed_tx2)
+        tx_hash3 = :aetx_sign.hash(signed_tx3)
+
+        store =
+          store
+          |> Store.put(Model.Tx, Model.tx(index: txi1, id: tx_hash1))
+          |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 1, alice_pk, txi1}))
+          |> Store.put(Model.Tx, Model.tx(index: txi2, id: tx_hash2))
+          |> Store.put(Model.Block, Model.block(index: {first_gen, -1}, tx_index: txi1))
+          |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 1, alice_pk, txi2}))
+          |> Store.put(Model.Tx, Model.tx(index: txi3, id: tx_hash3))
+          |> Store.put(Model.Field, Model.field(index: {:spend_tx, 1, alice_pk, txi3}))
+          |> Store.put(Model.Block, Model.block(index: {last_gen + 1, -1}, tx_index: txi2))
+
+        assert %{"data" => [tx1], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs",
+                   type: "oracle_query",
+                   sender_id: alice_encoded_id,
+                   scope: "gen:#{first_gen}-#{last_gen}",
+                   limit: 1
+                 )
+                 |> json_response(200)
+
+        assert %{
+                 "tx" => %{
+                   "type" => "OracleQueryTx",
+                   "oracle_id" => ^encoded_oracle_id,
+                   "sender_id" => ^alice_encoded_id
+                 },
+                 "hash" => ^encoded_tx_hash1
+               } = tx1
+      end
+    end
+
+    test "it filters by field", %{conn: conn, store: store} do
+      TODO
+      oracle_pk = TS.address(1)
+      oracle_id = :aeser_id.create(:oracle, oracle_pk)
+      txi1 = 123
+      txi2 = 124
+      txi3 = 125
+      first_gen = 456
+      last_gen = 457
+
+      with_blockchain %{alice: 10_000},
+        mb1: [
+          tx1: {:oracle_query_tx, :alice, oracle_id, %{}},
+          tx2: {:oracle_query_tx, :alice, oracle_id, %{}},
+          tx3: spend_tx(:alice, :alice, 3_000)
+        ] do
+        %{txs: [signed_tx1, signed_tx2, signed_tx3]} = blocks[:mb1]
+        alice_id = accounts[:alice]
+        {:account, alice_pk} = :aeser_id.specialize(alice_id)
+        alice_encoded_id = Enc.encode(:account_pubkey, alice_pk)
+        tx_hash1 = :aetx_sign.hash(signed_tx1)
+        tx_hash2 = :aetx_sign.hash(signed_tx2)
+        tx_hash3 = :aetx_sign.hash(signed_tx3)
+        encoded_tx_hash3 = Enc.encode(:tx_hash, tx_hash3)
+
+        store =
+          store
+          |> Store.put(Model.Tx, Model.tx(index: txi1, id: tx_hash1))
+          |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 1, alice_pk, txi1}))
+          |> Store.put(Model.Tx, Model.tx(index: txi2, id: tx_hash2))
+          |> Store.put(Model.Block, Model.block(index: {first_gen, -1}, tx_index: txi1))
+          |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 1, alice_pk, txi2}))
+          |> Store.put(Model.Tx, Model.tx(index: txi3, id: tx_hash3))
+          |> Store.put(Model.Field, Model.field(index: {:spend_tx, 1, alice_pk, txi3}))
+          |> Store.put(Model.Block, Model.block(index: {last_gen + 1, -1}, tx_index: txi2))
+          |> Store.put(Model.IdCount, Model.id_count(index: {:spend_tx, 1, alice_pk}, count: 1))
+
+        assert %{"data" => [tx1], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get(
+                   "/v2/txs",
+                   [{"spend.sender_id", alice_encoded_id}, {:limit, 1}]
+                 )
+                 |> json_response(200)
+
+        assert %{
+                 "tx" => %{"type" => "SpendTx", "sender_id" => ^alice_encoded_id},
+                 "hash" => ^encoded_tx_hash3
+               } = tx1
+      end
+    end
+
+    test "when filtering by an invalid field, it returns an error", %{conn: conn, store: store} do
+      account_pk = TS.address(0)
+      encoded_account = Enc.encode(:account_pubkey, account_pk)
+
+      assert %{"error" => "invalid transaction field: :foo_id"} =
+               conn
+               |> with_store(store)
+               |> get("/v2/txs", foo_id: encoded_account)
+               |> json_response(400)
+
+      assert %{"error" => "invalid transaction type: foo"} =
+               conn
+               |> with_store(store)
+               |> get("/v2/txs", [{"foo.recipient_id", encoded_account}])
+               |> json_response(400)
+
+      assert %{"error" => "invalid transaction field: :spend"} =
+               conn
+               |> with_store(store)
+               |> get("/v2/txs", [{"spend.foo_id", encoded_account}])
+               |> json_response(400)
+
+      assert %{"error" => "invalid transaction field: :oracle_id"} =
+               conn
+               |> with_store(store)
+               |> get("/v2/txs", [{"spend.oracle_id", encoded_account}])
+               |> json_response(400)
+
+      assert %{"error" => "invalid transaction field: :spend.recipient_id.sender_id"} =
+               conn
+               |> with_store(store)
+               |> get("/v2/txs", [{"spend.recipient_id.sender_id", encoded_account}])
+               |> json_response(400)
+    end
+
+    test "when filtering by an invalid id, it returns an error", %{conn: conn, store: store} do
+      error_msg = "invalid id: foo"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> with_store(store)
+               |> get("/v2/txs", recipient_id: "foo")
+               |> json_response(400)
     end
   end
 
@@ -1054,6 +1494,16 @@ defmodule AeMdwWeb.TxControllerTest do
                  |> json_response(200)
       end
     end
+
+    test "when non-existent txi, it returns an error", %{conn: conn, store: store} do
+      error_msg = "not found: 123"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> with_store(store)
+               |> get("/v2/txs/123")
+               |> json_response(404)
+    end
   end
 
   describe "count" do
@@ -1064,7 +1514,7 @@ defmodule AeMdwWeb.TxControllerTest do
       assert ^tx_index =
                conn
                |> with_store(store)
-               |> get("/txs/count")
+               |> get("/v2/txs/count")
                |> json_response(200)
     end
 
@@ -1074,7 +1524,23 @@ defmodule AeMdwWeb.TxControllerTest do
 
       assert 101 =
                conn
-               |> get("/txs/count", scope: "txi:#{first_txi}-#{last_txi}")
+               |> get("/v2/txs/count", scope: "txi:#{first_txi}-#{last_txi}")
+               |> json_response(200)
+    end
+
+    test "it returns the difference between first and last gen", %{conn: conn, store: store} do
+      first_gen = 600
+      last_gen = 500
+
+      store =
+        store
+        |> Store.put(Model.Block, Model.block(index: {last_gen, -1}, tx_index: 700))
+        |> Store.put(Model.Block, Model.block(index: {first_gen + 1, -1}, tx_index: 800))
+
+      assert 100 =
+               conn
+               |> with_store(store)
+               |> get("/v2/txs/count", scope: "gen:#{first_gen}-#{last_gen}")
                |> json_response(200)
     end
 
@@ -1091,7 +1557,19 @@ defmodule AeMdwWeb.TxControllerTest do
       assert ^count =
                conn
                |> with_store(store)
-               |> get("/txs/count", type: "oracle_register")
+               |> get("/v2/txs/count", type: "oracle_register")
+               |> json_response(200)
+
+      assert ^count =
+               conn
+               |> with_store(store)
+               |> get("/v2/txs/count", tx_type: "oracle_register")
+               |> json_response(200)
+
+      assert 0 =
+               conn
+               |> with_store(store)
+               |> get("/v2/txs/count", tx_type: "oracle_response")
                |> json_response(200)
     end
 
@@ -1108,7 +1586,7 @@ defmodule AeMdwWeb.TxControllerTest do
       assert ^count =
                conn
                |> with_store(store)
-               |> get("/txs/count", tx_type: "oracle_register")
+               |> get("/v2/txs/count", tx_type: "oracle_register")
                |> json_response(200)
     end
 
@@ -1131,7 +1609,7 @@ defmodule AeMdwWeb.TxControllerTest do
       assert 15 =
                conn
                |> with_store(store)
-               |> get("/txs/count", id: enc_address)
+               |> get("/v2/txs/count", id: enc_address)
                |> json_response(200)
     end
 
@@ -1140,7 +1618,26 @@ defmodule AeMdwWeb.TxControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/txs/count", type: "oracle_foo")
+               |> get("/v2/txs/count", type: "oracle_foo")
+               |> json_response(400)
+    end
+
+    test "when filtering by invalid id, it displays an error", %{conn: conn} do
+      error_msg = "invalid id: foo"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> get("/v2/txs/count", id: "foo")
+               |> json_response(400)
+    end
+
+    test "when filtering by id and scoping, it displays an error", %{conn: conn} do
+      id = Enc.encode(:account_pubkey, TS.address(0))
+      error_msg = "invalid query: can't query by multiple filters and/or invalid filters"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> get("/v2/txs/count", id: id, scope: "gen:1-2")
                |> json_response(400)
     end
   end
