@@ -55,7 +55,12 @@ defmodule AeMdw.Db.Sync.Contract do
           Mutation.t()
         ]
   def events_mutations(events, block_index, call_txi, call_tx_hash, contract_pk) do
-    events = Enum.filter(events, &match?({{:internal_call_tx, _fname}, _info}, &1))
+    events =
+      Enum.filter(
+        events,
+        &match?({{:internal_call_tx, _fname}, %{info: aetx}} when is_tuple(aetx), &1)
+      )
+
     shifted_events = [nil | events]
 
     # This function relies on a property that every Chain.clone and Chain.create
