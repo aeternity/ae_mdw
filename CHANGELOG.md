@@ -1,5 +1,26 @@
 # Changelog
 
+### [1.41.5](https://www.github.com/aeternity/ae_mdw/compare/v1.41.4...v1.41.5) (2023-03-20)
+
+
+### Bug Fixes
+
+* count total pending async tasks from db ([#1238](https://www.github.com/aeternity/ae_mdw/issues/1238)) ([dfc8998](https://www.github.com/aeternity/ae_mdw/commit/dfc8998ca24554fd0513fb5a283921584ec0cfd3))
+* handle return type for failed GAMeta txs as well ([#1237](https://www.github.com/aeternity/ae_mdw/issues/1237)) ([c8ca3a4](https://www.github.com/aeternity/ae_mdw/commit/c8ca3a401dc2bff3f0a329bbda808fecc11e87f8))
+* remove name logs ([#1230](https://www.github.com/aeternity/ae_mdw/issues/1230)) ([b0165bb](https://www.github.com/aeternity/ae_mdw/commit/b0165bb15dbed767167acb44159a83a80d796499))
+
+
+### Miscellaneous
+
+* limit ws subscriptions ([#1234](https://www.github.com/aeternity/ae_mdw/issues/1234)) ([940958a](https://www.github.com/aeternity/ae_mdw/commit/940958a3cac614065563b260ba404d24e360af0b))
+* remove LoggerJSON backend from test env ([#1228](https://www.github.com/aeternity/ae_mdw/issues/1228)) ([700d338](https://www.github.com/aeternity/ae_mdw/commit/700d338fb8410c758899d29213794974fa385a41))
+
+
+### Testing
+
+* add unit tests to Db.Channel module ([#1232](https://www.github.com/aeternity/ae_mdw/issues/1232)) ([3f657de](https://www.github.com/aeternity/ae_mdw/commit/3f657def6bea01ae38ebaf6af0cfcf99ddfe888b))
+* add unit tests to tx controller and context ([#1235](https://www.github.com/aeternity/ae_mdw/issues/1235)) ([5bb5b1d](https://www.github.com/aeternity/ae_mdw/commit/5bb5b1d5bcb499ce993afe9cc70dca74b76f9d97))
+
 ### [1.41.4](https://www.github.com/aeternity/ae_mdw/compare/v1.41.3...v1.41.4) (2023-03-10)
 
 
