@@ -89,6 +89,11 @@ defmodule AeMdw.Application do
         {tx_field_types, put_in(tx_fields[type], fields), put_in(tx_ids[type], ids)}
       end)
 
+    tx_ids_values =
+      Enum.into(tx_ids, %{}, fn {type, field_ids} ->
+        {type, Map.values(field_ids)}
+      end)
+
     id_field_type_map =
       Enum.reduce(tx_ids, %{}, fn {type, ids_map}, acc ->
         for {field, pos} <- ids_map,
@@ -119,6 +124,7 @@ defmodule AeMdw.Application do
         tx_type: Util.inverse(type_name_map),
         tx_fields: tx_fields,
         tx_ids: tx_ids,
+        tx_ids_values: tx_ids_values,
         id_prefix: id_prefix_type_map,
         id_field_type: id_field_type_map |> Enum.concat([{[:_], nil}]),
         id_fields: [{[], MapSet.new(id_fields)}],

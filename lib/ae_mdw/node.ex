@@ -195,6 +195,11 @@ defmodule AeMdw.Node do
     %{}
   end
 
+  @spec tx_ids_values(atom()) :: [non_neg_integer()]
+  def tx_ids_values(_tx_type) do
+    []
+  end
+
   @spec tx_mod(module()) :: module()
   def tx_mod(_arg) do
     :foo

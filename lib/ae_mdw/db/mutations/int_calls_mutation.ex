@@ -65,20 +65,20 @@ defmodule AeMdw.Db.IntCallsMutation do
         |> State.put(Model.FnameGrpIntContractCall, m_fname_grp_call)
 
       tx_type
-      |> Node.tx_ids()
-      |> Enum.reduce(state2, fn {_field, pos}, state ->
-        pk = Validate.id!(elem(tx, pos))
-        m_id_call = Model.id_int_contract_call(index: {pk, pos, call_txi, local_idx})
+      |> Node.tx_ids_values()
+      |> Enum.reduce(state2, fn field_pos, state ->
+        pk = Validate.id!(elem(tx, field_pos))
+        m_id_call = Model.id_int_contract_call(index: {pk, field_pos, call_txi, local_idx})
 
         m_grp_id_call =
-          Model.grp_id_int_contract_call(index: {create_txi, pk, pos, call_txi, local_idx})
+          Model.grp_id_int_contract_call(index: {create_txi, pk, field_pos, call_txi, local_idx})
 
         m_id_fname_call =
-          Model.id_fname_int_contract_call(index: {pk, fname, pos, call_txi, local_idx})
+          Model.id_fname_int_contract_call(index: {pk, fname, field_pos, call_txi, local_idx})
 
         m_grp_id_fname_call =
           Model.grp_id_fname_int_contract_call(
-            index: {create_txi, pk, fname, pos, call_txi, local_idx}
+            index: {create_txi, pk, fname, field_pos, call_txi, local_idx}
           )
 
         state

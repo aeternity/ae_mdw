@@ -264,10 +264,8 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     {tx_type, naked_tx} = :aetx.specialize_type(wrapped_tx)
 
     tx_type
-    |> AeMdw.Node.tx_ids()
-    |> Map.values()
+    |> AeMdw.Node.tx_ids_values()
     |> Enum.map(&elem(naked_tx, &1))
-    |> Enum.map(&AeMdw.Validate.id!/1)
     |> Enum.uniq()
   end
 
