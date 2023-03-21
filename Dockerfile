@@ -22,7 +22,7 @@ ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
 FROM ${BUILDER_IMAGE} as builder
 
 # install build dependencies
-RUN apt-get update -y && apt-get install -y build-essential git curl libncurses5 libsodium-dev jq libgmp10 python3 python3-yaml \
+RUN apt-get update -y && apt-get install -y build-essential git sed curl libncurses5 libsodium-dev jq libgmp10 python3 python3-yaml \
     && ldconfig \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -48,6 +48,7 @@ RUN curl -L --output aeternity.tar.gz ${NODE_URL} && tar -C ./local/rel/aeternit
 
 RUN chmod +x ${NODEDIR}/bin/aeternity
 RUN cp -r ./local/rel/aeternity/lib local/
+RUN sed -i 's/{max_skip_body_length, [0-9]\+}/{max_skip_body_length, 10240}/g' ${NODEDIR}/releases/${NODE_VERSION}/sys.config
 
 # Check if the config file is OK
 RUN ${NODEDIR}/bin/aeternity check_config /home/aeternity/aeternity.yaml
