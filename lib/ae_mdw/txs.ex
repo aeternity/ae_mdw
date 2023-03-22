@@ -374,7 +374,7 @@ defmodule AeMdw.Txs do
       end
 
     Enum.flat_map(tx_types, fn tx_type ->
-      poss = tx_type |> Node.tx_ids() |> Map.values() |> Enum.map(&{tx_type, &1})
+      poss = tx_type |> Node.tx_ids_values() |> Enum.map(&{tx_type, &1})
       # nil - for link
       poss = if tx_type in @create_tx_types, do: [{tx_type, nil} | poss], else: poss
 
@@ -544,9 +544,9 @@ defmodule AeMdw.Txs do
 
   defp field_count(state, tx_type, address) do
     tx_type
-    |> Node.tx_ids()
-    |> Enum.map(fn {_field, pos} ->
-      case State.get(state, Model.IdCount, {tx_type, pos, address}) do
+    |> Node.tx_ids_values()
+    |> Enum.map(fn field_pos ->
+      case State.get(state, Model.IdCount, {tx_type, field_pos, address}) do
         {:ok, Model.id_count(count: count)} -> count
         :not_found -> 0
       end

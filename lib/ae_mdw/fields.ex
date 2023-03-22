@@ -62,8 +62,8 @@ defmodule AeMdw.Fields do
     |> Enum.flat_map(fn tx_type ->
       types_pos =
         tx_type
-        |> Node.tx_ids()
-        |> Enum.map(fn {_field, pos} -> {tx_type, pos} end)
+        |> Node.tx_ids_values()
+        |> Enum.map(fn field_pos -> {tx_type, field_pos} end)
 
       if tx_type in @create_tx_types do
         [{tx_type, nil} | types_pos]
