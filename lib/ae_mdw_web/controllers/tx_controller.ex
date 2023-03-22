@@ -9,7 +9,6 @@ defmodule AeMdwWeb.TxController do
   alias AeMdw.Txs
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
-  alias AeMdw.Node
   alias AeMdw.Util
   alias Plug.Conn
 
@@ -77,8 +76,27 @@ defmodule AeMdwWeb.TxController do
   @doc """
   Counts each field for all transaction types where this address is present.
   """
-  def count_id(%Conn{assigns: %{state: state}} = conn, %{"id" => id}),
-    do: handle_input(conn, fn -> conn |> json(id_counts(state, Validate.id!(id))) end)
+  def count_id(%Conn{assigns: %{state: state}} = conn, %{"id" => id, "type_group" => group}) do
+    with {:ok, tx_type_group} <- Validate.tx_group(group),
+         {:ok, pubkey} <- Validate.id(id) do
+      handle_input(conn, fn ->
+        json(conn, count_id_type_group(state, pubkey, tx_type_group))
+      end)
+    end
+  end
+
+  def count_id(%Conn{assigns: %{state: state}} = conn, %{"id" => id, "type" => type}) do
+    with {:ok, tx_type} <- Validate.tx_type(type),
+         {:ok, pubkey} <- Validate.id(id) do
+      handle_input(conn, fn ->
+        json(conn, count_id_type(state, pubkey, tx_type))
+      end)
+    end
+  end
+
+  def count_id(%Conn{assigns: %{state: state}} = conn, %{"id" => id}) do
+    handle_input(conn, fn -> conn |> json(id_counts(state, Validate.id!(id))) end)
+  end
 
   ##########
 
@@ -99,6 +117,25 @@ defmodule AeMdwWeb.TxController do
            counts) ||
           Map.put(counts, tx_type, tx_counts)
     end
+  end
+
+  defp count_id_type(state, pubkey, tx_type) do
+    tx_type
+    |> Node.tx_ids_values()
+    |> Enum.reduce(0, fn field_pos, sum ->
+      case State.get(state, Model.IdCount, {tx_type, field_pos, pubkey}) do
+        :not_found -> sum
+        {:ok, Model.id_count(count: count)} -> sum + count
+      end
+    end)
+  end
+
+  defp count_id_type_group(state, pubkey, tx_type_group) do
+    tx_type_group
+    |> Node.tx_group()
+    |> Enum.reduce(0, fn tx_type, sum ->
+      sum + count_id_type(state, pubkey, tx_type)
+    end)
   end
 
   @spec micro_block_txs(Conn.t(), map()) :: Conn.t()
