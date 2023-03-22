@@ -182,6 +182,7 @@ defmodule AeMdw.Application do
 
     AeMdw.Db.AsyncStore.init()
     AeMdw.Sync.Aex9BalancesCache.init()
+    AeMdw.Sync.WalletRanking.init()
   end
 
   @spec init_public(:contract_cache) :: :ok

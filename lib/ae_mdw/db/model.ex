@@ -29,6 +29,7 @@ defmodule AeMdw.Db.Model do
   @type aex141_meta_info :: {aexn_name(), aexn_symbol(), String.t(), aex141_metadata_type()}
   @type aexn_meta_info :: aex9_meta_info() | aex141_meta_info()
   @type aexn_extensions :: [String.t()]
+  @type block_index :: Blocks.block_index()
 
   @typep height() :: Blocks.height()
   @typep pubkey :: Db.pubkey()
@@ -45,11 +46,12 @@ defmodule AeMdw.Db.Model do
 
   @typep token_id :: AeMdw.Aex141.token_id()
   @typep template_id :: AeMdw.Aex141.template_id()
+
   ################################################################################
 
   # index is timestamp (daylight saving order should be handle case by case)
   @typep timestamp :: pos_integer()
-  @type async_task_type :: :update_aex9_state
+  @type async_task_type :: :update_aex9_state | :store_acc_balance
   @type async_task_index :: {timestamp(), async_task_type()}
   @type async_task_args :: list()
 
@@ -83,13 +85,22 @@ defmodule AeMdw.Db.Model do
   @type migrations() ::
           record(:migrations, index: migrations_index(), inserted_at: non_neg_integer())
 
+  @account_balance_defaults [index: nil, block_index: nil, balance: nil]
+  defrecord :account_balance, @account_balance_defaults
+
+  @type account_balance() ::
+          record(:account_balance,
+            index: pubkey(),
+            block_index: block_index(),
+            balance: amount()
+          )
+
   # txs block index :
   #     index = {kb_index (0..), mb_index}, tx_index = tx_index, hash = block (header) hash
   #     On keyblock boundary: mb_index = -1}
   @block_defaults [index: {-1, -1}, tx_index: nil, hash: <<>>]
   defrecord :block, @block_defaults
 
-  @type block_index() :: Blocks.block_index()
   @type block ::
           record(:block,
             index: block_index(),
@@ -1163,6 +1174,7 @@ defmodule AeMdw.Db.Model do
 
   defp tasks_tables() do
     [
+      AeMdw.Db.Model.AccountBalance,
       AeMdw.Db.Model.AsyncTask,
       AeMdw.Db.Model.AsyncTasks,
       AeMdw.Db.Model.Migrations
@@ -1170,6 +1182,7 @@ defmodule AeMdw.Db.Model do
   end
 
   @spec record(atom()) :: atom()
+  def record(AeMdw.Db.Model.AccountBalance), do: :account_balance
   def record(AeMdw.Db.Model.AsyncTask), do: :async_task
   def record(AeMdw.Db.Model.AsyncTasks), do: :async_tasks
   def record(AeMdw.Db.Model.Migrations), do: :migrations

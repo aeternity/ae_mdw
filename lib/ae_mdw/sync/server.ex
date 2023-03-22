@@ -37,6 +37,8 @@ defmodule AeMdw.Sync.Server do
   alias AeMdw.Db.Status
   alias AeMdw.Db.Sync.Block
   alias AeMdw.Log
+  alias AeMdw.Sync.Transaction
+  alias AeMdw.Sync.WalletRanking
   alias AeMdwWeb.Websocket.Broadcaster
 
   require Logger
@@ -298,13 +300,29 @@ defmodule AeMdw.Sync.Server do
     new_state =
       gens_mutations
       |> Enum.flat_map(fn {_height, blocks_mutations} -> blocks_mutations end)
-      |> Enum.reduce(state, fn {_block_index, _block, block_mutations}, state ->
-        State.commit_db(state, block_mutations, clear_mem?)
+      |> Enum.reduce(state, fn {block_index, block, block_mutations}, state ->
+        state
+        |> maybe_enqueue_accounts_balance(block, block_index)
+        |> State.commit_db(block_mutations, clear_mem?)
       end)
+
+    WalletRanking.prune()
 
     broadcast_blocks(gens_mutations)
 
     new_state
+  end
+
+  defp maybe_enqueue_accounts_balance(state, _block, {_kbi, -1}) do
+    state
+  end
+
+  defp maybe_enqueue_accounts_balance(state, mblock, block_index) do
+    {:ok, mb_hash} = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock))
+
+    State.enqueue(state, :store_acc_balance, [mb_hash, block_index], [
+      micro_block_accounts(mblock)
+    ])
   end
 
   defp exec_mem_mutations(gens_mutations, state) do
@@ -316,7 +334,14 @@ defmodule AeMdw.Sync.Server do
         block_mutations
       end)
 
-    new_state = State.commit_mem(state, all_mutations)
+    WalletRanking.prune()
+
+    new_state =
+      blocks_mutations
+      |> Enum.reduce(state, fn {block_index, block, _block_mutations}, state_acc ->
+        maybe_enqueue_accounts_balance(state_acc, block, block_index)
+      end)
+      |> State.commit_mem(all_mutations)
 
     broadcast_blocks(gens_mutations)
 
@@ -342,5 +367,21 @@ defmodule AeMdw.Sync.Server do
 
       Broadcaster.broadcast_key_block(key_block, :v1, :mdw)
     end)
+  end
+
+  defp micro_block_accounts(micro_block) do
+    pubkeys =
+      micro_block
+      |> :aec_blocks.txs()
+      |> Enum.flat_map(fn signed_tx ->
+        signed_tx
+        |> Transaction.get_ids_from_tx()
+        |> Enum.flat_map(fn
+          {:id, :account, pubkey} -> [pubkey]
+          _other -> []
+        end)
+      end)
+
+    Enum.reduce(pubkeys, MapSet.new(), &MapSet.put(&2, &1))
   end
 end
