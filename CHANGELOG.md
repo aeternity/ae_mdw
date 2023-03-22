@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.41.6](https://www.github.com/aeternity/ae_mdw/compare/v1.41.5...v1.41.6) (2023-03-22)
+
+
+### Miscellaneous
+
+* precompute tx ids ([#1239](https://www.github.com/aeternity/ae_mdw/issues/1239)) ([d29d29e](https://www.github.com/aeternity/ae_mdw/commit/d29d29eecd83ed464510ff0ac8fbd7e2fe1d87cb))
+
 ### [1.41.5](https://www.github.com/aeternity/ae_mdw/compare/v1.41.4...v1.41.5) (2023-03-20)
 
 
