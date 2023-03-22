@@ -79,23 +79,21 @@ defmodule AeMdwWeb.TxController do
   def count_id(%Conn{assigns: %{state: state}} = conn, %{"id" => id, "type_group" => group}) do
     with {:ok, tx_type_group} <- Validate.tx_group(group),
          {:ok, pubkey} <- Validate.id(id) do
-      handle_input(conn, fn ->
-        json(conn, count_id_type_group(state, pubkey, tx_type_group))
-      end)
+      json(conn, count_id_type_group(state, pubkey, tx_type_group))
     end
   end
 
   def count_id(%Conn{assigns: %{state: state}} = conn, %{"id" => id, "type" => type}) do
     with {:ok, tx_type} <- Validate.tx_type(type),
          {:ok, pubkey} <- Validate.id(id) do
-      handle_input(conn, fn ->
-        json(conn, count_id_type(state, pubkey, tx_type))
-      end)
+      json(conn, count_id_type(state, pubkey, tx_type))
     end
   end
 
   def count_id(%Conn{assigns: %{state: state}} = conn, %{"id" => id}) do
-    handle_input(conn, fn -> conn |> json(id_counts(state, Validate.id!(id))) end)
+    with {:ok, pubkey} <- Validate.id(id) do
+      json(conn, id_counts(state, pubkey))
+    end
   end
 
   ##########
