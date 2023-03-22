@@ -1589,8 +1589,10 @@ defmodule AeMdwWeb.TxControllerTest do
                |> get("/v2/txs/count", tx_type: "oracle_register")
                |> json_response(200)
     end
+  end
 
-    test "when filtering by id, it displays the total count for that address", %{
+  describe "count_id" do
+    test "returns the count of transactions involving the id", %{
       conn: conn,
       store: store
     } do
@@ -1613,6 +1615,62 @@ defmodule AeMdwWeb.TxControllerTest do
                |> json_response(200)
     end
 
+    test "returns the count of transactions of a type involving the id", %{
+      conn: conn,
+      store: store
+    } do
+      address = TS.address(0)
+      enc_address = :aeser_api_encoder.encode(:account_pubkey, address)
+
+      store =
+        store
+        |> Store.put(
+          Model.IdCount,
+          Model.id_count(index: {:oracle_extend_tx, 1, address}, count: 10)
+        )
+        |> Store.put(Model.IdCount, Model.id_count(index: {:spend_tx, 1, address}, count: 3))
+        |> Store.put(Model.IdCount, Model.id_count(index: {:spend_tx, 2, address}, count: 2))
+
+      assert 5 =
+               conn
+               |> with_store(store)
+               |> get("/v2/txs/count/#{enc_address}", type: "spend")
+               |> json_response(200)
+    end
+
+    test "returns the count of transactions of a type group involving the id", %{
+      conn: conn,
+      store: store
+    } do
+      address = TS.address(0)
+      enc_address = :aeser_api_encoder.encode(:contract_pubkey, address)
+
+      store =
+        store
+        |> Store.put(
+          Model.IdCount,
+          Model.id_count(index: {:oracle_extend_tx, 1, address}, count: 10)
+        )
+        |> Store.put(
+          Model.IdCount,
+          Model.id_count(index: {:contract_create_tx, 1, address}, count: 3)
+        )
+        |> Store.put(
+          Model.IdCount,
+          Model.id_count(index: {:contract_call_tx, 1, address}, count: 4)
+        )
+        |> Store.put(
+          Model.IdCount,
+          Model.id_count(index: {:contract_call_tx, 3, address}, count: 5)
+        )
+
+      assert 12 =
+               conn
+               |> with_store(store)
+               |> get("/v2/txs/count/#{enc_address}", type_group: "contract")
+               |> json_response(200)
+    end
+
     test "when filtering by invalid type, it displays an error", %{conn: conn} do
       error_msg = "invalid transaction type: oracle_foo"
 
@@ -1628,6 +1686,24 @@ defmodule AeMdwWeb.TxControllerTest do
       assert %{"error" => ^error_msg} =
                conn
                |> get("/v2/txs/count", id: "foo")
+               |> json_response(400)
+    end
+
+    test "when filtering by type and invalid id, it displays an error", %{conn: conn} do
+      error_msg = "invalid id: foo"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> get("/v2/txs/count/foo", type: "oracle_query")
+               |> json_response(400)
+    end
+
+    test "when filtering by group and invalid id, it displays an error", %{conn: conn} do
+      error_msg = "invalid id: foo"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> get("/v2/txs/count/foo", type_group: "oracle")
                |> json_response(400)
     end
 
