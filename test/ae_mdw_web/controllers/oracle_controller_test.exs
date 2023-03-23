@@ -378,5 +378,15 @@ defmodule AeMdwWeb.OracleControllerTest do
                } = oracle3
       end
     end
+
+    test "cursor is invalid, it displays error", %{conn: conn} do
+      oracle_pk = <<1::256>>
+      encoded_oracle_pk = Enc.encode(:oracle_pubkey, oracle_pk)
+
+      assert %{"error" => "invalid cursor: foo"} =
+               conn
+               |> get("/v2/oracles/#{encoded_oracle_pk}/queries", cursor: "foo")
+               |> json_response(400)
+    end
   end
 end

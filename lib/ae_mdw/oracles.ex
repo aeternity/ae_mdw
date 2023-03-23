@@ -68,8 +68,8 @@ defmodule AeMdw.Oracles do
   @spec fetch_oracle_queries(state(), pubkey(), pagination(), range(), cursor() | nil) ::
           {:ok, {cursor() | nil, [oracle_query()], cursor() | nil}} | {:error, Error.t()}
   def fetch_oracle_queries(state, oracle_id, pagination, nil, cursor) do
-    with {:ok, oracle_pk} <- Validate.id(oracle_id, [:oracle_pubkey]) do
-      cursor = deserialize_queries_cursor(cursor, oracle_pk)
+    with {:ok, oracle_pk} <- Validate.id(oracle_id, [:oracle_pubkey]),
+         {:ok, cursor} <- deserialize_queries_cursor(cursor, oracle_pk) do
       key_boundary = {{oracle_pk, Util.min_bin()}, {oracle_pk, Util.max_256bit_bin()}}
 
       {prev_cursor, query_ids, next_cursor} =
@@ -88,12 +88,12 @@ defmodule AeMdw.Oracles do
   def fetch_oracle_queries(_state, _oracle_id, _pagination, _range, _cursor),
     do: {:error, ErrInput.Query.exception(value: "cannot filter by range on this endpoint")}
 
-  defp deserialize_queries_cursor(nil, _oracle_pk), do: nil
+  defp deserialize_queries_cursor(nil, _oracle_pk), do: {:ok, nil}
 
   defp deserialize_queries_cursor(query_id, oracle_pk) do
     case Enc.safe_decode(:oracle_query_id, query_id) do
-      {:ok, query_id} -> {oracle_pk, query_id}
-      {:error, _reason} -> nil
+      {:ok, query_id} -> {:ok, {oracle_pk, query_id}}
+      {:error, _reason} -> {:error, ErrInput.Cursor.exception(value: query_id)}
     end
   end
 
