@@ -3,10 +3,10 @@ defmodule AeMdw.Oracles do
   Context module for dealing with Oracles.
   """
 
-  require AeMdw.Db.Model
-
+  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
   alias AeMdw.Collection
+  alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.State
@@ -16,10 +16,14 @@ defmodule AeMdw.Oracles do
   alias AeMdw.Node.Db
   alias AeMdw.Txs
   alias AeMdw.Util
+  alias AeMdw.Validate
+
+  require Model
 
   @type cursor :: binary()
   # This needs to be an actual type like AeMdw.Db.Oracle.t()
   @type oracle :: term()
+  @type oracle_query() :: map()
   @type pagination :: Collection.direction_limit()
   @type opts() :: Util.opts()
   @type query_id() :: binary()
@@ -33,6 +37,7 @@ defmodule AeMdw.Oracles do
   @table_active_expiration Model.ActiveOracleExpiration
   @table_inactive AeMdw.Db.Model.InactiveOracle
   @table_inactive_expiration Model.InactiveOracleExpiration
+  @table_query Model.OracleQuery
 
   @pagination_params ~w(limit cursor rev direction scope expand tx_hash)
   @states ~w(active inactive)
@@ -58,6 +63,59 @@ defmodule AeMdw.Oracles do
     rescue
       e in ErrInput -> {:error, e}
     end
+  end
+
+  @spec fetch_oracle_queries(state(), pubkey(), pagination(), range(), cursor() | nil) ::
+          {:ok, {cursor() | nil, [oracle_query()], cursor() | nil}} | {:error, Error.t()}
+  def fetch_oracle_queries(state, oracle_id, pagination, nil, cursor) do
+    with {:ok, oracle_pk} <- Validate.id(oracle_id, [:oracle_pubkey]),
+         {:ok, cursor} <- deserialize_queries_cursor(cursor, oracle_pk) do
+      key_boundary = {{oracle_pk, Util.min_bin()}, {oracle_pk, Util.max_256bit_bin()}}
+
+      {prev_cursor, query_ids, next_cursor} =
+        fn direction ->
+          Collection.stream(state, @table_query, direction, key_boundary, cursor)
+        end
+        |> Collection.paginate(pagination)
+
+      queries = Enum.map(query_ids, &render_query(state, &1))
+
+      {:ok,
+       {serialize_queries_cursor(prev_cursor), queries, serialize_queries_cursor(next_cursor)}}
+    end
+  end
+
+  def fetch_oracle_queries(_state, _oracle_id, _pagination, _range, _cursor),
+    do: {:error, ErrInput.Query.exception(value: "cannot filter by range on this endpoint")}
+
+  defp deserialize_queries_cursor(nil, _oracle_pk), do: {:ok, nil}
+
+  defp deserialize_queries_cursor(query_id, oracle_pk) do
+    case Enc.safe_decode(:oracle_query_id, query_id) do
+      {:ok, query_id} -> {:ok, {oracle_pk, query_id}}
+      {:error, _reason} -> {:error, ErrInput.Cursor.exception(value: query_id)}
+    end
+  end
+
+  defp serialize_queries_cursor(nil), do: nil
+
+  defp serialize_queries_cursor({{_oracle_pk, query_id}, is_reversed?}),
+    do: {Enc.encode(:oracle_query_id, query_id), is_reversed?}
+
+  defp render_query(state, {oracle_pk, query_id}) do
+    Model.oracle_query(txi_idx: txi_idx) =
+      State.fetch!(state, Model.OracleQuery, {oracle_pk, query_id})
+
+    {query_tx, tx_hash, tx_type, block_hash} = DBUtil.read_node_tx_details(state, txi_idx)
+
+    %{
+      block_hash: Enc.encode(:micro_block_hash, block_hash),
+      source_tx_hash: Enc.encode(:tx_hash, tx_hash),
+      source_tx_type: Format.type_to_swagger_name(tx_type),
+      query_id: Enc.encode(:oracle_query_id, query_id)
+    }
+    |> Map.merge(:aeo_query_tx.for_client(query_tx))
+    |> update_in(["query"], &Base.encode64(&1, padding: false))
   end
 
   defp convert_param({"state", state}) when state in @states, do: {:state, state}
@@ -125,8 +183,7 @@ defmodule AeMdw.Oracles do
         {:ok, render(state, m_oracle, last_gen, source == Model.ActiveOracle, opts)}
 
       nil ->
-        {:error,
-         ErrInput.NotFound.exception(value: :aeser_api_encoder.encode(:oracle_pubkey, oracle_pk))}
+        {:error, ErrInput.NotFound.exception(value: Enc.encode(:oracle_pubkey, oracle_pk))}
     end
   end
 
@@ -177,12 +234,12 @@ defmodule AeMdw.Oracles do
     query_fee = :aeo_oracles.query_fee(oracle_rec)
 
     %{
-      oracle: :aeser_api_encoder.encode(:oracle_pubkey, pk),
+      oracle: Enc.encode(:oracle_pubkey, pk),
       active: is_active?,
       active_from: register_height,
       expire_height: expire_height,
       register: expand_bi_txi_idx(state, register_bi_txi_idx, opts),
-      register_tx_hash: :aeser_api_encoder.encode(:tx_hash, Txs.txi_to_hash(state, register_txi)),
+      register_tx_hash: Enc.encode(:tx_hash, Txs.txi_to_hash(state, register_txi)),
       extends: Enum.map(extends, &expand_bi_txi_idx(state, &1, opts)),
       query_fee: query_fee,
       format: %{
@@ -198,13 +255,13 @@ defmodule AeMdw.Oracles do
     do: serialize_cursor({{exp_height, oracle_pk}, is_reversed?})
 
   defp serialize_cursor({{exp_height, oracle_pk}, is_reversed?}),
-    do: {"#{exp_height}-#{:aeser_api_encoder.encode(:oracle_pubkey, oracle_pk)}", is_reversed?}
+    do: {"#{exp_height}-#{Enc.encode(:oracle_pubkey, oracle_pk)}", is_reversed?}
 
   defp deserialize_cursor(nil), do: nil
 
   defp deserialize_cursor(cursor_bin) do
     with [_match0, exp_height, encoded_pk] <- Regex.run(~r/(\d+)-(ok_\w+)/, cursor_bin),
-         {:ok, pk} <- :aeser_api_encoder.safe_decode(:oracle_pubkey, encoded_pk) do
+         {:ok, pk} <- Enc.safe_decode(:oracle_pubkey, encoded_pk) do
       {String.to_integer(exp_height), pk}
     else
       _nil_or_error -> nil
@@ -217,7 +274,7 @@ defmodule AeMdw.Oracles do
         Txs.fetch!(state, txi)
 
       Keyword.get(opts, :tx_hash?, false) ->
-        :aeser_api_encoder.encode(:tx_hash, Txs.txi_to_hash(state, txi))
+        Enc.encode(:tx_hash, Txs.txi_to_hash(state, txi))
 
       true ->
         txi

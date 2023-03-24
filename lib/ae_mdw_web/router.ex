@@ -95,8 +95,9 @@ defmodule AeMdwWeb.Router do
           AexnTokenController,
           :aex9_token_balance_history
 
-      get "/oracles/:id", OracleController, :oracle
       get "/oracles", OracleController, :oracles
+      get "/oracles/:id", OracleController, :oracle
+      get "/oracles/:id/queries", OracleController, :oracle_queries
 
       get "/channels", ChannelController, :channels
       get "/channels/:id", ChannelController, :channel
