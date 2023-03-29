@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.42.0](https://www.github.com/aeternity/ae_mdw/compare/v1.41.5...v1.42.0) (2023-03-29)
+
+
+### Features
+
+* add /oracles/:id/queries to list an oracle queries ([#1240](https://www.github.com/aeternity/ae_mdw/issues/1240)) ([f8f2b7d](https://www.github.com/aeternity/ae_mdw/commit/f8f2b7d6e9c4466f00bec8c93a3b4e0154791093))
+* count id txs by type or type group ([#1241](https://www.github.com/aeternity/ae_mdw/issues/1241)) ([dfe86b5](https://www.github.com/aeternity/ae_mdw/commit/dfe86b5a58101a59c0b9501225b5044130d2f5c6))
+* filter inner txs fields with ga_meta type ([#1246](https://www.github.com/aeternity/ae_mdw/issues/1246)) ([12b270e](https://www.github.com/aeternity/ae_mdw/commit/12b270ec887f87a4936fe71f759090aac879805f))
+
+
+### Miscellaneous
+
+* ignore oracle responses that don't have associated query ([#1245](https://www.github.com/aeternity/ae_mdw/issues/1245)) ([2d4db64](https://www.github.com/aeternity/ae_mdw/commit/2d4db6495d7b176d94574e4340991f055fa67af0))
+* precompute tx ids ([#1239](https://www.github.com/aeternity/ae_mdw/issues/1239)) ([d29d29e](https://www.github.com/aeternity/ae_mdw/commit/d29d29eecd83ed464510ff0ac8fbd7e2fe1d87cb))
+
 ### [1.41.5](https://www.github.com/aeternity/ae_mdw/compare/v1.41.4...v1.41.5) (2023-03-20)
 
 
