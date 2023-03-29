@@ -374,7 +374,7 @@ defmodule AeMdw.Txs do
       end
 
     Enum.flat_map(tx_types, fn tx_type ->
-      poss = tx_type |> Node.tx_ids_values() |> Enum.map(&{tx_type, &1})
+      poss = tx_type |> Node.tx_ids_positions() |> Enum.map(&{tx_type, &1})
       # nil - for link
       poss = if tx_type in @create_tx_types, do: [{tx_type, nil} | poss], else: poss
 
@@ -386,9 +386,23 @@ defmodule AeMdw.Txs do
     if field in Node.id_fields() do
       field = String.to_existing_atom(field)
 
-      Enum.map(field_types(field), fn tx_type ->
-        {tx_type, Node.tx_ids(tx_type)[field]}
-      end)
+      field_types =
+        Enum.map(field_types(field), fn tx_type ->
+          {tx_type, Node.tx_ids(tx_type)[field]}
+        end)
+
+      wrapping_tx_field_positions(:ga_meta_tx, field) ++ field_types
+    else
+      raise ErrInput.TxField, value: ":#{field}"
+    end
+  end
+
+  defp extract_transaction_by([type_prefix, field])
+       when type_prefix in ["ga_meta", "paying_for"] do
+    if field in Node.id_fields() do
+      "#{type_prefix}_tx"
+      |> String.to_existing_atom()
+      |> wrapping_tx_field_positions(String.to_existing_atom(field))
     else
       raise ErrInput.TxField, value: ":#{field}"
     end
@@ -544,7 +558,7 @@ defmodule AeMdw.Txs do
 
   defp field_count(state, tx_type, address) do
     tx_type
-    |> Node.tx_ids_values()
+    |> Node.tx_ids_positions()
     |> Enum.map(fn field_pos ->
       case State.get(state, Model.IdCount, {tx_type, field_pos, address}) do
         {:ok, Model.id_count(count: count)} -> count
@@ -552,5 +566,11 @@ defmodule AeMdw.Txs do
       end
     end)
     |> Enum.sum()
+  end
+
+  defp wrapping_tx_field_positions(tx_type, field) do
+    field
+    |> Node.inner_field_positions()
+    |> Enum.map(&{tx_type, &1})
   end
 end

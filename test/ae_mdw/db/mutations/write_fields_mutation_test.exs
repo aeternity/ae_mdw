@@ -65,5 +65,68 @@ defmodule AeMdw.Db.WriteFieldsMuationTest do
                  State.get(state2, Model.Field, field_index2)
       end
     end
+
+    test "indexes inner transaction fields with ga_meta_tx type" do
+      sender_pk = :crypto.strong_rand_bytes(32)
+      recipient_pk = :crypto.strong_rand_bytes(32)
+
+      {:ok, aetx} =
+        :aec_spend_tx.new(%{
+          sender_id: :aeser_id.create(:account, sender_pk),
+          recipient_id: :aeser_id.create(:account, recipient_pk),
+          amount: 123,
+          fee: 456,
+          nonce: 1,
+          payload: ""
+        })
+
+      {:spend_tx, spend_tx} = :aetx.specialize_type(aetx)
+      txi = 123
+
+      state =
+        State.new_mem_state()
+        |> State.commit([
+          WriteFieldsMutation.new(:spend_tx, spend_tx, {100_000, 1}, txi, :ga_meta_tx)
+        ])
+
+      field_index1 = {:ga_meta_tx, AeMdw.Fields.field_pos_mask(:ga_meta_tx, 1), sender_pk, txi}
+      field_index2 = {:ga_meta_tx, AeMdw.Fields.field_pos_mask(:ga_meta_tx, 2), recipient_pk, txi}
+
+      assert State.exists?(state, Model.Field, field_index1)
+      assert State.exists?(state, Model.Field, field_index2)
+    end
+
+    test "indexes inner transaction fields with paying_for type" do
+      sender_pk = :crypto.strong_rand_bytes(32)
+      recipient_pk = :crypto.strong_rand_bytes(32)
+
+      {:ok, aetx} =
+        :aec_spend_tx.new(%{
+          sender_id: :aeser_id.create(:account, sender_pk),
+          recipient_id: :aeser_id.create(:account, recipient_pk),
+          amount: 123,
+          fee: 456,
+          nonce: 1,
+          payload: ""
+        })
+
+      {:spend_tx, spend_tx} = :aetx.specialize_type(aetx)
+      txi = 123
+
+      state =
+        State.new_mem_state()
+        |> State.commit([
+          WriteFieldsMutation.new(:spend_tx, spend_tx, {100_000, 1}, txi, :paying_for_tx)
+        ])
+
+      field_index1 =
+        {:paying_for_tx, AeMdw.Fields.field_pos_mask(:paying_for_tx, 1), sender_pk, txi}
+
+      field_index2 =
+        {:paying_for_tx, AeMdw.Fields.field_pos_mask(:paying_for_tx, 2), recipient_pk, txi}
+
+      assert State.exists?(state, Model.Field, field_index1)
+      assert State.exists?(state, Model.Field, field_index2)
+    end
   end
 end

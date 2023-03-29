@@ -11,11 +11,14 @@ defmodule AeMdw.Fields do
   alias AeMdw.Txs
   alias AeMdw.Util
 
+  import Bitwise
+
   @typep state() :: State.t()
   @typep pubkey() :: Db.pubkey()
   @typep direction() :: Collection.direction()
   @typep txi_scope() :: {Txs.txi(), Txs.txi()} | nil
   @typep cursor() :: Txs.txi() | nil
+  @typep pos() :: non_neg_integer() | nil
 
   @create_tx_types ~w(contract_create_tx channel_create_tx oracle_register_tx ga_attach_tx)a
   @non_owner_fields [
@@ -57,12 +60,17 @@ defmodule AeMdw.Fields do
     |> Collection.merge(direction)
   end
 
+  @spec field_pos_mask(Node.tx_type(), pos()) :: pos()
+  def field_pos_mask(:ga_meta_tx, pos), do: pos <<< 10
+  def field_pos_mask(:paying_for_tx, pos), do: pos <<< 10
+  def field_pos_mask(_tx_type, pos), do: pos
+
   defp tx_types_pos do
     Node.tx_types()
     |> Enum.flat_map(fn tx_type ->
       types_pos =
         tx_type
-        |> Node.tx_ids_values()
+        |> Node.tx_ids_positions()
         |> Enum.map(fn field_pos -> {tx_type, field_pos} end)
 
       if tx_type in @create_tx_types do

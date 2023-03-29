@@ -65,7 +65,7 @@ defmodule AeMdw.Db.IntCallsMutation do
         |> State.put(Model.FnameGrpIntContractCall, m_fname_grp_call)
 
       tx_type
-      |> Node.tx_ids_values()
+      |> Node.tx_ids_positions()
       |> Enum.reduce(state2, fn field_pos, state ->
         pk = Validate.id!(elem(tx, field_pos))
         m_id_call = Model.id_int_contract_call(index: {pk, field_pos, call_txi, local_idx})

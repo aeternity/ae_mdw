@@ -119,7 +119,7 @@ defmodule AeMdwWeb.TxController do
 
   defp count_id_type(state, pubkey, tx_type) do
     tx_type
-    |> Node.tx_ids_values()
+    |> Node.tx_ids_positions()
     |> Enum.reduce(0, fn field_pos, sum ->
       case State.get(state, Model.IdCount, {tx_type, field_pos, pubkey}) do
         :not_found -> sum
