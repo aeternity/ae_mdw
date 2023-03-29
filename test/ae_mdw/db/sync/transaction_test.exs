@@ -11,6 +11,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   alias AeMdw.Db.ChannelCloseMutation
   alias AeMdw.Db.ChannelOpenMutation
   alias AeMdw.Db.ChannelUpdateMutation
+  alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.Sync.Transaction
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
@@ -430,9 +431,6 @@ defmodule AeMdw.Db.Sync.TransactionTest do
           tx: signed_channel_create_tx
         })
 
-      signed_ga_meta_tx = :aetx_sign.new(ga_meta_aetx, [])
-
-      channel_mutation = ChannelOpenMutation.new({block_index, {txi, -1}}, channel_create_tx)
       aega_call = :aega_call.new(ga_id, auth_id, 1, 2, 3, :ok, "")
 
       with_mocks [
@@ -443,7 +441,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
       ] do
         mutations =
           Transaction.transaction_mutations(
-            signed_ga_meta_tx,
+            :aetx_sign.new(ga_meta_aetx, []),
             txi,
             block_index,
             block_hash,
@@ -451,7 +449,19 @@ defmodule AeMdw.Db.Sync.TransactionTest do
             %{}
           )
 
+        channel_mutation = ChannelOpenMutation.new({block_index, {txi, -1}}, channel_create_tx)
+
+        fields_mutation =
+          WriteFieldsMutation.new(
+            :channel_create_tx,
+            channel_create_tx,
+            block_index,
+            txi,
+            :ga_meta_tx
+          )
+
         assert channel_mutation in List.flatten(mutations)
+        assert fields_mutation in List.flatten(mutations)
       end
     end
 

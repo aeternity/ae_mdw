@@ -89,7 +89,22 @@ defmodule AeMdw.Application do
         {tx_field_types, put_in(tx_fields[type], fields), put_in(tx_ids[type], ids)}
       end)
 
-    tx_ids_values =
+    inner_field_positions =
+      tx_ids
+      |> Map.values()
+      |> Enum.flat_map(fn fields_pos_map ->
+        Enum.map(fields_pos_map, fn
+          {:ga_id, pos} -> {:ga_id, pos}
+          {:payer_id, pos} -> {:payer_id, pos}
+          {field, pos} -> {field, AeMdw.Fields.field_pos_mask(:ga_meta_tx, pos)}
+        end)
+      end)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+      |> Enum.into(%{}, fn {field, positions} ->
+        {field, Enum.uniq(positions)}
+      end)
+
+    tx_ids_positions =
       Enum.into(tx_ids, %{}, fn {type, field_ids} ->
         {type, Map.values(field_ids)}
       end)
@@ -124,7 +139,8 @@ defmodule AeMdw.Application do
         tx_type: Util.inverse(type_name_map),
         tx_fields: tx_fields,
         tx_ids: tx_ids,
-        tx_ids_values: tx_ids_values,
+        tx_ids_positions: tx_ids_positions,
+        inner_field_positions: inner_field_positions,
         id_prefix: id_prefix_type_map,
         id_field_type: id_field_type_map |> Enum.concat([{[:_], nil}]),
         id_fields: [{[], MapSet.new(id_fields)}],

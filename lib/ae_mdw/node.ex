@@ -195,8 +195,13 @@ defmodule AeMdw.Node do
     %{}
   end
 
-  @spec tx_ids_values(atom()) :: [non_neg_integer()]
-  def tx_ids_values(_tx_type) do
+  @spec tx_ids_positions(atom()) :: [non_neg_integer()]
+  def tx_ids_positions(_tx_type) do
+    []
+  end
+
+  @spec inner_field_positions(atom()) :: [non_neg_integer()]
+  def inner_field_positions(_tx_field) do
     []
   end
 

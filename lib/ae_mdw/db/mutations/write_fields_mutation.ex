@@ -13,32 +13,41 @@ defmodule AeMdw.Db.WriteFieldsMutation do
 
   require Model
 
+  @typep wrap_tx :: :ga_meta_tx | :paying_for_tx | nil
+
   @derive AeMdw.Db.Mutation
-  defstruct [:type, :tx, :block_index, :txi]
+  defstruct [:type, :tx, :block_index, :txi, :wrap_tx]
 
   @opaque t() :: %__MODULE__{
             type: Node.tx_type(),
             tx: Node.tx(),
             block_index: Blocks.block_index(),
-            txi: Txs.txi()
+            txi: Txs.txi(),
+            wrap_tx: wrap_tx()
           }
 
-  @spec new(Node.tx_type(), Node.tx(), Blocks.block_index(), Txs.txi()) :: t()
-  def new(type, tx, block_index, txi) do
+  @spec new(Node.tx_type(), Node.tx(), Blocks.block_index(), Txs.txi(), wrap_tx()) :: t()
+  def new(type, tx, block_index, txi, wrap_tx \\ nil) do
     %__MODULE__{
       type: type,
       tx: tx,
       block_index: block_index,
-      txi: txi
+      txi: txi,
+      wrap_tx: wrap_tx
     }
   end
 
   @spec execute(t(), State.t()) :: State.t()
-  def execute(%__MODULE__{type: tx_type, tx: tx, block_index: block_index, txi: txi}, state) do
+  def execute(
+        %__MODULE__{type: tx_type, tx: tx, block_index: block_index, txi: txi, wrap_tx: wrap_tx},
+        state
+      ) do
     tx_type
     |> Node.tx_ids()
     |> Enum.reduce(state, fn {field, pos}, state ->
       <<_::256>> = pk = resolve_pubkey(state, elem(tx, pos), tx_type, field, block_index)
+      field_pos = AeMdw.Fields.field_pos_mask(wrap_tx, pos)
+      {tx_type, pos} = if wrap_tx, do: {wrap_tx, field_pos}, else: {tx_type, pos}
       write_field(state, tx_type, pos, pk, txi)
     end)
   end

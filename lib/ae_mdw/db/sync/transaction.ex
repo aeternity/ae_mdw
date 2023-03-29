@@ -389,7 +389,15 @@ defmodule AeMdw.Db.Sync.Transaction do
     ]
   end
 
-  defp tx_mutations(%TxContext{type: :ga_meta_tx, tx: tx, block_hash: block_hash} = tx_ctx) do
+  defp tx_mutations(
+         %TxContext{
+           type: :ga_meta_tx,
+           tx: tx,
+           block_index: block_index,
+           block_hash: block_hash,
+           txi: txi
+         } = tx_ctx
+       ) do
     inner_signed_tx = :aega_meta_tx.tx(tx)
     owner_pk = :aega_meta_tx.origin(tx)
     auth_id = :aega_meta_tx.auth_id(tx)
@@ -407,19 +415,35 @@ defmodule AeMdw.Db.Sync.Transaction do
           tx_hash: tx_hash
       }
 
-      tx_mutations(tx_ctx)
+      [
+        WriteFieldsMutation.new(type, inner_tx, block_index, txi, :ga_meta_tx)
+        | tx_mutations(tx_ctx)
+      ]
     else
       _invalid_ga_call ->
         []
     end
   end
 
-  defp tx_mutations(%TxContext{type: :paying_for_tx, tx: tx} = tx_ctx) do
+  defp tx_mutations(
+         %TxContext{type: :paying_for_tx, block_index: block_index, txi: txi, tx: tx} = tx_ctx
+       ) do
     inner_signed_tx = :aec_paying_for_tx.tx(tx)
-    {type, tx} = :aetx.specialize_type(:aetx_sign.tx(inner_signed_tx))
+    {type, inner_tx} = :aetx.specialize_type(:aetx_sign.tx(inner_signed_tx))
     tx_hash = :aetx_sign.hash(inner_signed_tx)
-    tx_ctx = %TxContext{tx_ctx | signed_tx: inner_signed_tx, type: type, tx: tx, tx_hash: tx_hash}
-    tx_mutations(tx_ctx)
+
+    tx_ctx = %TxContext{
+      tx_ctx
+      | signed_tx: inner_signed_tx,
+        type: type,
+        tx: inner_tx,
+        tx_hash: tx_hash
+    }
+
+    [
+      WriteFieldsMutation.new(type, inner_tx, block_index, txi, :paying_for_tx)
+      | tx_mutations(tx_ctx)
+    ]
   end
 
   defp tx_mutations(_tx_context), do: []
