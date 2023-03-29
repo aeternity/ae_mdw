@@ -21,10 +21,11 @@ defmodule AeMdw.Db.IntTransfer do
   #                 "reward_block" | "reward_dev" | "reward_oracle"
   @type kind() :: binary()
   @type target() :: Db.pubkey()
-  @type ref_txi() :: Txs.txi() | -1
   @type amount() :: pos_integer()
   @type rewards() :: [{target(), amount()}]
 
+  @typep optional_txi_idx() :: Txs.optional_txi_idx()
+  @typep height_optional_txi_idx() :: {Blocks.height(), optional_txi_idx()}
   @typep kind_suffix() :: :lock_name | :spend_name | :refund_name | :earn_oracle | :refund_oracle
 
   @fee_kinds [:lock_name, :spend_name, :refund_name, :earn_oracle, :refund_oracle]
@@ -69,39 +70,46 @@ defmodule AeMdw.Db.IntTransfer do
 
   @spec fee(
           State.t(),
-          Blocks.block_index_txi_pos(),
+          height_optional_txi_idx(),
           kind_suffix(),
           target(),
-          ref_txi(),
+          optional_txi_idx(),
           amount()
         ) :: State.t()
-  def fee(state, {height, txi_pos}, kind, target, ref_txi, amount) when kind in @fee_kinds do
+  def fee(state, {height, opt_txi_idx}, kind, target, ref_txi_idx, amount)
+      when kind in @fee_kinds do
     write(
       state,
-      {height, txi_pos},
+      {height, opt_txi_idx},
       "fee_" <> to_string(kind),
       target,
-      ref_txi,
+      ref_txi_idx,
       amount
     )
   end
 
   @spec write(
           State.t(),
-          Blocks.block_index_txi_pos(),
+          height_optional_txi_idx(),
           kind(),
           target(),
-          ref_txi(),
+          optional_txi_idx(),
           amount()
         ) :: State.t()
-  def write(state, {height, pos_txi}, kind, target_pk, ref_txi, amount) do
+  def write(state, {height, opt_txi_idx}, kind, target_pk, ref_txi_idx, amount) do
     int_tx =
-      Model.int_transfer_tx(index: {{height, pos_txi}, kind, target_pk, ref_txi}, amount: amount)
+      Model.int_transfer_tx(
+        index: {{height, opt_txi_idx}, kind, target_pk, ref_txi_idx},
+        amount: amount
+      )
 
-    kind_tx = Model.kind_int_transfer_tx(index: {kind, {height, pos_txi}, target_pk, ref_txi})
+    kind_tx =
+      Model.kind_int_transfer_tx(index: {kind, {height, opt_txi_idx}, target_pk, ref_txi_idx})
 
     target_kind_tx =
-      Model.target_kind_int_transfer_tx(index: {target_pk, kind, {height, pos_txi}, ref_txi})
+      Model.target_kind_int_transfer_tx(
+        index: {target_pk, kind, {height, opt_txi_idx}, ref_txi_idx}
+      )
 
     state
     |> State.put(Model.IntTransferTx, int_tx)

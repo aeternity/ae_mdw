@@ -148,7 +148,7 @@ defmodule AeMdw.Db.OraclesExpirationMutationTest do
                  Store.get(
                    store,
                    Model.IntTransferTx,
-                   {{height, -1}, "fee_refund_oracle", sender_pk, txi}
+                   {{height, -1}, "fee_refund_oracle", sender_pk, {txi, -1}}
                  )
       end
     end

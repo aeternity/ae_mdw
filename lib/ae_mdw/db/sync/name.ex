@@ -215,7 +215,7 @@ defmodule AeMdw.Db.Sync.Name do
   def expire_auction(state, height, plain_name) do
     {:ok,
      Model.auction_bid(
-       block_index_txi_idx: {{last_bid_height, _mbi} = _block_index, {txi, _idx} = txi_idx},
+       block_index_txi_idx: {{last_bid_height, _mbi} = _block_index, txi_idx},
        owner: owner,
        bids: bids
      )} = cache_through_read(state, Model.AuctionBid, plain_name)
@@ -259,7 +259,7 @@ defmodule AeMdw.Db.Sync.Name do
     |> cache_through_delete(Model.AuctionOwner, {owner, plain_name})
     |> cache_through_delete(Model.AuctionBid, plain_name)
     |> cache_through_delete_inactive(previous)
-    |> IntTransfer.fee({height, -1}, :lock_name, owner, txi, name_fee)
+    |> IntTransfer.fee({height, -1}, :lock_name, owner, txi_idx, name_fee)
     |> State.inc_stat(:names_activated)
     |> State.inc_stat(:auctions_expired)
     |> State.inc_stat(:burned_in_auctions, name_fee)

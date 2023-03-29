@@ -341,7 +341,7 @@ defmodule AeMdw.Db.Sync.Transaction do
          block_index: block_index
        }) do
     [
-      Oracle.response_mutation(tx, block_index, txi)
+      Oracle.response_mutation(tx, block_index, {txi, -1})
     ]
   end
 

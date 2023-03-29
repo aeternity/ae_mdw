@@ -19,7 +19,7 @@ defmodule AeMdw.Util.Encoding do
   def encode_account(nil), do: nil
   def encode_account(pk), do: encode(:account_pubkey, pk)
 
-  @spec encode_to_hash(State.t(), AeMdw.Blocks.txi_pos()) :: String.t()
+  @spec encode_to_hash(State.t(), Txs.txi()) :: String.t()
   def encode_to_hash(state, txi) when txi > 0 do
     tx_hash = Txs.txi_to_hash(state, txi)
     encode(:tx_hash, tx_hash)

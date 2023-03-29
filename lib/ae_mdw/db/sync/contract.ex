@@ -148,8 +148,8 @@ defmodule AeMdw.Db.Sync.Contract do
       {local_idx, "Oracle.register", :oracle_register_tx, _aetx, tx} ->
         Oracle.register_mutations(tx, tx_hash, block_index, {call_txi, local_idx})
 
-      {_local_idx, "Oracle.respond", :oracle_response_tx, _aetx, tx} ->
-        Oracle.response_mutation(tx, block_index, call_txi)
+      {local_idx, "Oracle.respond", :oracle_response_tx, _aetx, tx} ->
+        Oracle.response_mutation(tx, block_index, {call_txi, local_idx})
 
       {local_idx, "Oracle.query", :oracle_query_tx, _aetx, tx} ->
         Oracle.query_mutation(tx, height, {call_txi, local_idx})

@@ -16,6 +16,7 @@ defmodule AeMdw.Db.OracleResponseMutationTest do
       height = Enum.random(1_000..500_000)
       block_index = {height, 1}
       txi = 1_000_000
+      txi2 = 2_000_000
       oracle_pk = TS.oracle_pk(0)
       query_id = TS.oracle_query_id(0)
       sender_pk = TS.address(0)
@@ -25,7 +26,7 @@ defmodule AeMdw.Db.OracleResponseMutationTest do
       mutation =
         OracleResponseMutation.new(
           block_index,
-          txi,
+          {txi2, -1},
           oracle_pk,
           query_id
         )
@@ -46,9 +47,9 @@ defmodule AeMdw.Db.OracleResponseMutationTest do
 
       {:oracle_query_tx, oracle_query_tx} = :aetx.specialize_type(oracle_query_aetx)
 
-      int_key = {{height, txi}, "reward_oracle", oracle_pk, txi}
-      kind_key = {"reward_oracle", {height, txi}, oracle_pk, txi}
-      target_key = {oracle_pk, "reward_oracle", {height, txi}, txi}
+      int_key = {{height, {txi2, -1}}, "reward_oracle", oracle_pk, {txi, -1}}
+      kind_key = {"reward_oracle", {height, {txi2, -1}}, oracle_pk, {txi, -1}}
+      target_key = {oracle_pk, "reward_oracle", {height, {txi2, -1}}, {txi, -1}}
 
       with_mocks [{DbUtil, [], [read_node_tx: fn _state, {^txi, -1} -> oracle_query_tx end]}] do
         store =

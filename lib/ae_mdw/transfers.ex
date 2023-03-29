@@ -4,9 +4,10 @@ defmodule AeMdw.Transfers do
   """
 
   alias :aeser_api_encoder, as: Enc
+  alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
-  alias AeMdw.Db.Util, as: DBUtil
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Collection
   alias AeMdw.Util
@@ -151,8 +152,8 @@ defmodule AeMdw.Transfers do
   end
 
   defp deserialize_scope(state, {:txi, first_txi..last_txi}) do
-    first_gen = DBUtil.txi_to_gen(state, first_txi)
-    last_gen = DBUtil.txi_to_gen(state, last_txi)
+    first_gen = DbUtil.txi_to_gen(state, first_txi)
+    last_gen = DbUtil.txi_to_gen(state, last_txi)
     deserialize_scope(state, {:gen, first_gen..last_gen})
   end
 
@@ -203,16 +204,34 @@ defmodule AeMdw.Transfers do
   defp convert_param(other_param),
     do: raise(ErrInput.Query, value: other_param)
 
-  defp render(state, {{height, _txi}, kind, target_pk, ref_txi} = transfer_key) do
+  defp render(state, {{height, _opt_txi_idx}, kind, target_pk, opt_ref_txi_idx} = transfer_key) do
     m_transfer = State.fetch!(state, Model.IntTransferTx, transfer_key)
     amount = Model.int_transfer_tx(m_transfer, :amount)
+
+    {ref_tx_type, ref_tx_hash, ref_block_hash} =
+      case opt_ref_txi_idx do
+        -1 ->
+          {nil, nil, nil}
+
+        ref_txi_idx ->
+          {_tx, ref_tx_hash, ref_tx_type, ref_block_hash} =
+            DbUtil.read_node_tx_details(state, ref_txi_idx)
+
+          {
+            Enc.encode(:micro_block_hash, ref_block_hash),
+            Enc.encode(:tx_hash, ref_tx_hash),
+            Format.type_to_swagger_name(ref_tx_type)
+          }
+      end
 
     %{
       height: height,
       account_id: Enc.encode(:account_pubkey, target_pk),
       amount: amount,
       kind: kind,
-      ref_txi: (ref_txi >= 0 && ref_txi) || nil
+      ref_tx_hash: ref_tx_hash,
+      ref_tx_type: ref_tx_type,
+      ref_block_hash: ref_block_hash
     }
   end
 
