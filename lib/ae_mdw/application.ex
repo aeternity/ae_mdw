@@ -89,8 +89,6 @@ defmodule AeMdw.Application do
         {tx_field_types, put_in(tx_fields[type], fields), put_in(tx_ids[type], ids)}
       end)
 
-    IO.inspect(tx_ids)
-
     inner_field_positions =
       tx_ids
       |> Map.values()
