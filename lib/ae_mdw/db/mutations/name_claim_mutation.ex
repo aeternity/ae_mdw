@@ -80,7 +80,7 @@ defmodule AeMdw.Db.NameClaimMutation do
           owner_pk: owner_pk,
           name_fee: name_fee,
           lima_or_higher?: lima_or_higher?,
-          txi_idx: {txi, _idx} = txi_idx,
+          txi_idx: txi_idx,
           block_index: {height, _mbi} = block_index,
           timeout: timeout
         },
@@ -166,7 +166,7 @@ defmodule AeMdw.Db.NameClaimMutation do
                   {prev_auction_end, plain_name}
                 )
                 |> IntTransfer.fee(
-                  {height, txi},
+                  {height, txi_idx},
                   :refund_name,
                   prev_owner,
                   prev_txi_idx,
