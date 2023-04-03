@@ -27,6 +27,7 @@ defmodule AeMdw.Txs do
   @type tx :: map()
   @type txi :: non_neg_integer()
   @type txi_idx() :: {txi(), Contract.local_idx() | -1}
+  @type optional_txi_idx() :: txi_idx() | -1
   @type tx_hash() :: <<_::256>>
   @type cursor :: binary()
   @type query ::

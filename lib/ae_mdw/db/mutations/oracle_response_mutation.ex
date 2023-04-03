@@ -18,21 +18,21 @@ defmodule AeMdw.Db.OracleResponseMutation do
   require Logger
 
   @derive AeMdw.Db.Mutation
-  defstruct [:block_index, :txi, :oracle_pk, :query_id]
+  defstruct [:block_index, :txi_idx, :oracle_pk, :query_id]
 
   @typep query_id() :: Oracles.query_id()
   @opaque t() :: %__MODULE__{
             block_index: Blocks.block_index(),
-            txi: Txs.txi(),
+            txi_idx: Txs.txi_idx(),
             oracle_pk: Db.pubkey(),
             query_id: query_id()
           }
 
-  @spec new(Blocks.block_index(), Txs.txi(), Db.pubkey(), query_id()) :: t()
-  def new(block_index, txi, oracle_pk, query_id) do
+  @spec new(Blocks.block_index(), Txs.txi_idx(), Db.pubkey(), query_id()) :: t()
+  def new(block_index, txi_idx, oracle_pk, query_id) do
     %__MODULE__{
       block_index: block_index,
-      txi: txi,
+      txi_idx: txi_idx,
       oracle_pk: oracle_pk,
       query_id: query_id
     }
@@ -42,22 +42,29 @@ defmodule AeMdw.Db.OracleResponseMutation do
   def execute(
         %__MODULE__{
           block_index: {height, _mbi},
-          txi: txi,
+          txi_idx: txi_idx,
           oracle_pk: oracle_pk,
           query_id: query_id
         },
         state
       ) do
     case State.get(state, Model.OracleQuery, {oracle_pk, query_id}) do
-      {:ok, Model.oracle_query(txi_idx: txi_idx)} ->
-        oracle_query_tx = DbUtil.read_node_tx(state, txi_idx)
+      {:ok, Model.oracle_query(txi_idx: query_txi_idx)} ->
+        oracle_query_tx = DbUtil.read_node_tx(state, query_txi_idx)
         fee = :aeo_query_tx.query_fee(oracle_query_tx)
 
-        IntTransfer.write(state, {height, txi}, "reward_oracle", oracle_pk, txi, fee)
+        IntTransfer.write(
+          state,
+          {height, txi_idx},
+          "reward_oracle",
+          oracle_pk,
+          query_txi_idx,
+          fee
+        )
 
       :not_found ->
         Log.info("""
-          [OracleResponseMutation] Oracle response not found on txi #{txi} for #{Enc.encode(:oracle_pubkey, oracle_pk)}
+          [OracleResponseMutation] Oracle response not found on txi #{inspect(txi_idx)} for #{Enc.encode(:oracle_pubkey, oracle_pk)}
           (query #{Enc.encode(:oracle_query_id, query_id)}).
           Probably due to ga_meta transaction not calculating nonce correcctly.
         """)

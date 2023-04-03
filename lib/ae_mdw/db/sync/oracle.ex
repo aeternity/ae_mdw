@@ -54,13 +54,13 @@ defmodule AeMdw.Db.Sync.Oracle do
     OracleQueryMutation.new(oracle_pk, query_id, txi_idx, expiration_height)
   end
 
-  @spec response_mutation(Node.tx(), Blocks.block_index(), Txs.txi()) ::
+  @spec response_mutation(Node.tx(), Blocks.block_index(), Txs.txi_idx()) ::
           OracleResponseMutation.t()
-  def response_mutation(tx, block_index, txi) do
+  def response_mutation(tx, block_index, txi_idx) do
     oracle_pk = :aeo_response_tx.oracle_pubkey(tx)
     query_id = :aeo_response_tx.query_id(tx)
 
-    OracleResponseMutation.new(block_index, txi, oracle_pk, query_id)
+    OracleResponseMutation.new(block_index, txi_idx, oracle_pk, query_id)
   end
 
   @spec extend_mutation(Node.tx(), Blocks.block_index(), Txs.txi_idx()) ::

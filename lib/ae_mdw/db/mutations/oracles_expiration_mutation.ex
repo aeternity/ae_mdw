@@ -50,14 +50,14 @@ defmodule AeMdw.Db.OraclesExpirationMutation do
   end
 
   defp expire_oracle_query(state, height, oracle_pk, query_id) do
-    Model.oracle_query(txi_idx: {query_txi, _idx} = txi_idx) =
+    Model.oracle_query(txi_idx: txi_idx) =
       State.fetch!(state, Model.OracleQuery, {oracle_pk, query_id})
 
     oracle_query_tx = DbUtil.read_node_tx(state, txi_idx)
     fee = :aeo_query_tx.query_fee(oracle_query_tx)
     sender_pk = :aeo_query_tx.sender_pubkey(oracle_query_tx)
 
-    IntTransfer.fee(state, {height, -1}, :refund_oracle, sender_pk, query_txi, fee)
+    IntTransfer.fee(state, {height, -1}, :refund_oracle, sender_pk, txi_idx, fee)
   end
 
   defp expire_oracle(state, height, pubkey) do

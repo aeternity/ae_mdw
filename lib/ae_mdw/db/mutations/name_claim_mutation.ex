@@ -80,7 +80,7 @@ defmodule AeMdw.Db.NameClaimMutation do
           owner_pk: owner_pk,
           name_fee: name_fee,
           lima_or_higher?: lima_or_higher?,
-          txi_idx: {txi, _idx} = txi_idx,
+          txi_idx: txi_idx,
           block_index: {height, _mbi} = block_index,
           timeout: timeout
         },
@@ -121,7 +121,7 @@ defmodule AeMdw.Db.NameClaimMutation do
         |> Name.cache_through_write(Model.ActiveNameExpiration, m_name_exp)
         |> State.put(Model.ActiveNameOwnerDeactivation, m_name_owner_deactivation)
         |> Name.cache_through_delete_inactive(previous)
-        |> IntTransfer.fee({height, txi}, :lock_name, owner_pk, txi, lock_amount)
+        |> IntTransfer.fee({height, txi_idx}, :lock_name, owner_pk, txi_idx, lock_amount)
         |> State.inc_stat(:names_activated)
         |> State.inc_stat(:burned_in_auctions, lock_amount)
 
@@ -138,7 +138,8 @@ defmodule AeMdw.Db.NameClaimMutation do
             bids: &1
           )
 
-        state3 = IntTransfer.fee(state2, {height, txi}, :spend_name, owner_pk, txi, name_fee)
+        state3 =
+          IntTransfer.fee(state2, {height, txi_idx}, :spend_name, owner_pk, txi_idx, name_fee)
 
         {m_bid, state4} =
           case Name.cache_through_read(state, Model.AuctionBid, plain_name) do
@@ -148,7 +149,7 @@ defmodule AeMdw.Db.NameClaimMutation do
 
             {:ok,
              Model.auction_bid(
-               block_index_txi_idx: {_bi, {prev_txi, _prev_idx} = prev_txi_idx},
+               block_index_txi_idx: {_bi, prev_txi_idx},
                expire_height: prev_auction_end,
                owner: prev_owner,
                bids: prev_bids
@@ -165,10 +166,10 @@ defmodule AeMdw.Db.NameClaimMutation do
                   {prev_auction_end, plain_name}
                 )
                 |> IntTransfer.fee(
-                  {height, txi},
+                  {height, txi_idx},
                   :refund_name,
                   prev_owner,
-                  prev_txi,
+                  prev_txi_idx,
                   prev_name_fee
                 )
                 |> State.inc_stat(:locked_in_auctions, name_fee - prev_name_fee)

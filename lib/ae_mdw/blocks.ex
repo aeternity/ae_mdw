@@ -21,8 +21,6 @@ defmodule AeMdw.Blocks do
   @type mbi() :: non_neg_integer()
   @type time() :: non_neg_integer()
   @type block_index() :: {height(), mbi() | -1}
-  @type txi_pos() :: non_neg_integer() | -1
-  @type block_index_txi_pos() :: {height(), txi_pos()}
   @type block_index_txi() :: {block_index(), Txs.txi()}
   @type bi_txi() :: block_index_txi()
   @type bi_txi_idx() :: {block_index(), Txs.txi_idx()}

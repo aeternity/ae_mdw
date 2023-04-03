@@ -874,14 +874,15 @@ defmodule AeMdw.Db.Model do
           record(:grp_id_fname_int_contract_call, index: grp_id_fname_int_contract_call_index())
 
   # int_transfer_tx:
-  #   index: {{height, -1 (generation related transfer OR >=0 txi (tx related transfer)}, kind, target, ref txi}
+  #   index: {{height, -1 (generation related transfer OR >=0 {txi, idx} (tx related transfer)}, kind, target, ref txi}
   @int_transfer_tx_defaults [
     index: {{-1, -1}, nil, <<>>, -1},
     amount: 0
   ]
   defrecord :int_transfer_tx, @int_transfer_tx_defaults
 
-  @type int_transfer_tx_index() :: {bi_txi(), IntTransfer.kind(), pubkey(), txi() | -1}
+  @type int_transfer_tx_index() ::
+          {bi_txi_idx() | {txi_idx() | -1}, IntTransfer.kind(), pubkey(), txi_idx() | -1}
   @type int_transfer_tx() ::
           record(:int_transfer_tx,
             index: int_transfer_tx_index(),
