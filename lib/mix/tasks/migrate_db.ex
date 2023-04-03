@@ -87,7 +87,7 @@ defmodule Mix.Tasks.MigrateDb do
     Log.info("applying version #{version} with #{module}...")
     begin = DateTime.utc_now()
 
-    {:ok, total_count} = apply(module, :run, [state, from_startup?])
+    {:ok, total_count} = module.run(state, from_startup?)
 
     duration = DateTime.diff(DateTime.utc_now(), begin)
     Log.info("total #{total_count} in #{duration} seconds")

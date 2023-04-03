@@ -86,7 +86,8 @@ defmodule AeMdw.Extract do
 
   def tx_types() do
     {:ok,
-     Code.Typespec.fetch_types(:aetx)
+     :aetx
+     |> Code.Typespec.fetch_types()
      |> ok!
      |> Enum.find_value(nil, &tx_type_variants/1)}
   end
@@ -168,8 +169,8 @@ defmodule AeMdw.Extract do
 
   def tx_record_info(tx_type, mod_mapper) do
     mod_name = mod_mapper.(tx_type)
-    mod_code = AbsCode.module(mod_name) |> ok!
-    rec_code = AbsCode.record_fields(mod_code, tx_record(tx_type)) |> ok!
+    mod_code = mod_name |> AbsCode.module() |> ok!
+    rec_code = mod_code |> AbsCode.record_fields(tx_record(tx_type)) |> ok!
 
     {rev_names, ids} =
       rec_code

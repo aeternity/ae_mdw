@@ -272,9 +272,9 @@ defmodule Integration.AeMdwWeb.Aex9ControllerTest do
 
       Model.AexnContract
       |> Database.all_keys()
-      |> Enum.filter(fn {type, _pubkey} -> type == :aex9 end)
-      |> Enum.filter(fn {:aex9, contract_pk} ->
-        Origin.tx_index!(state, {:contract, contract_pk}) < range_txi and
+      |> Enum.filter(fn {type, contract_pk} ->
+        type == :aex9 &&
+          Origin.tx_index!(state, {:contract, contract_pk}) < range_txi and
           encode_contract(contract_pk) not in [
             @big_balance_contract_id1,
             @big_balance_contract_id2,

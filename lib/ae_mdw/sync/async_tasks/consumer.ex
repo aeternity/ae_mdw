@@ -116,7 +116,7 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   defp process(Model.async_task(index: {_ts, type} = index, args: args, extra_args: extra_args)) do
     mod = @type_mod[type]
     done_fn = fn -> Producer.notify_consumed(index, args) end
-    apply(mod, :process, [args ++ extra_args, done_fn])
+    mod.process(args ++ extra_args, done_fn)
     :ok
   end
 
