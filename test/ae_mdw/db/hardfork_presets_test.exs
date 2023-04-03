@@ -88,6 +88,15 @@ defmodule AeMdw.Db.HardforkPresetsTest do
     end
   end
 
+  describe "mint_sum" do
+    test "returns the sum of mintings of a hardfork" do
+      assert HardforkPresets.mint_sum(:genesis) == 89_451_376_822_397_976_634_367_408
+      assert HardforkPresets.mint_sum(:minerva) == 27_051_422_546_127_651_538_826_703
+      assert HardforkPresets.mint_sum(:fortuna) == 72_681_157_406_723_951_132_840_970
+      assert HardforkPresets.mint_sum(:lima) == 57_326_570_459_001_950_946_109_814
+    end
+  end
+
   defp delete_previous_import do
     State.new()
     |> Collection.stream(

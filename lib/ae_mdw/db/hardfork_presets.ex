@@ -7,6 +7,8 @@ defmodule AeMdw.Db.HardforkPresets do
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
 
+  @type hardfork :: :genesis | :minerva | :fortuna | :lima
+
   @doc """
   Imports hardfork migrated accounts.
   """
@@ -22,6 +24,34 @@ defmodule AeMdw.Db.HardforkPresets do
         :ok
     end
   end
+
+  @spec hardfork_height(hardfork()) :: AeMdw.Blocks.height()
+  def hardfork_height(:genesis), do: 0
+
+  def hardfork_height(hardfork) do
+    hf_vsn = :aec_hard_forks.protocol_vsn(hardfork)
+
+    :aec_governance.get_network_id()
+    |> :aec_hard_forks.protocols_from_network_id()
+    |> Map.get(hf_vsn)
+  end
+
+  @spec mint_sum(hardfork()) :: pos_integer
+  def mint_sum(hardfork) do
+    hardfork
+    |> accounts()
+    |> Enum.map(fn {_pk, amount} -> amount end)
+    |> Enum.sum()
+  end
+
+  defp accounts(:genesis), do: :aec_fork_block_settings.genesis_accounts()
+  defp accounts(:minerva), do: :aec_fork_block_settings.minerva_accounts()
+  defp accounts(:fortuna), do: :aec_fork_block_settings.fortuna_accounts()
+
+  defp accounts(:lima),
+    do: :aec_fork_block_settings.lima_accounts() ++ :aec_fork_block_settings.lima_extra_accounts()
+
+  defp accounts(_hf), do: %{}
 
   defp do_import_account_presets() do
     if :aec_governance.get_network_id() in ["ae_uat", "ae_mainnet"] do
@@ -73,15 +103,5 @@ defmodule AeMdw.Db.HardforkPresets do
     |> Enum.map(fn {account_pk, amount} ->
       {kind, account_pk, amount}
     end)
-  end
-
-  defp hardfork_height(:genesis), do: 0
-
-  defp hardfork_height(hardfork) do
-    hf_vsn = :aec_hard_forks.protocol_vsn(hardfork)
-
-    :aec_governance.get_network_id()
-    |> :aec_hard_forks.protocols_from_network_id()
-    |> Map.get(hf_vsn)
   end
 end
