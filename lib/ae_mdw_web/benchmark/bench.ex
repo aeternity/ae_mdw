@@ -50,11 +50,11 @@ defmodule Mix.Tasks.Bench do
   ]
 
   def run(arg) do
-    pids = hd(arg) |> String.to_integer() |> Aggregator.spawn_process()
+    pids = arg |> hd() |> String.to_integer() |> Aggregator.spawn_process()
     info = Aggregator.execute(@default_paths, pids)
 
     Enum.each(info, fn {k, v} ->
-      total_requests = hd(arg) |> String.to_integer()
+      total_requests = arg |> hd() |> String.to_integer()
       status = calculate_status(v[:status])
       total_exec_time = Enum.sum(v[:time]) / 1000
       min = min(v[:time]) / 1000

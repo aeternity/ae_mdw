@@ -60,10 +60,9 @@ defmodule AeMdw.Validate do
       {:error, {_ex, ^name_ident}} = error ->
         ident = ensure_name_suffix(name_ident)
 
-        with {:ok, pk} <- :aens.get_name_hash(ident) do
-          {:ok, pk}
-        else
-          _ -> error
+        case :aens.get_name_hash(ident) do
+          {:ok, pk} -> {:ok, pk}
+          _invalid -> error
         end
     end
   end

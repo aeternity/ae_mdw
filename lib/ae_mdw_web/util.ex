@@ -30,7 +30,7 @@ defmodule AeMdwWeb.Util do
     end
   end
 
-  # credo:disable-for-next-line
+  @spec query_groups(binary()) :: map()
   def query_groups(query_string) do
     query_string
     |> URI.query_decoder()
@@ -44,46 +44,7 @@ defmodule AeMdwWeb.Util do
     end
   end
 
-  # credo:disable-for-next-line
-  def expand_query_group({key, vals}) do
-    vals
-    |> Enum.map(&URI.encode_query(%{key => &1}))
-    |> Enum.join("&")
-  end
-
-  defp url_encode_scope({scope, a..b}),
-    do: "#{scope}/#{a}-#{b}"
-
-  defp path_no_scope([_ | _] = path_info),
-    do:
-      Enum.take_while(
-        path_info,
-        &(!(&1 in ["gen", "txi", "time", "forward", "backward"] || String.contains?(&1, "-")))
-      )
-
-  defp make_link(path_info, scope, query_groups) do
-    path_info = path_no_scope(path_info)
-    scope_info = (scope == nil && []) || [url_encode_scope(scope)]
-    path = "/" <> Enum.join(path_info ++ scope_info, "/")
-
-    query =
-      query_groups
-      |> Enum.map(&expand_query_group/1)
-      |> Enum.join("&")
-
-    case query do
-      "" -> path
-      _query -> path <> "?" <> query
-    end
-  end
-
-  # credo:disable-for-next-line
-  def next_link(path_info, scope, query_groups, limit, page) do
-    next_offset = %{"limit" => [to_string(limit)], "page" => [to_string(page + 1)]}
-    make_link(path_info, scope, Map.merge(query_groups, next_offset))
-  end
-
-  # credo:disable-for-next-line
+  @spec handle_input(Conn.t(), (() -> Conn.t())) :: Conn.t()
   def handle_input(conn, f) do
     try do
       f.()
@@ -106,19 +67,11 @@ defmodule AeMdwWeb.Util do
   defp error_reason_to_status(ErrInput.NotFound), do: :not_found
   defp error_reason_to_status(_err), do: :bad_request
 
-  # credo:disable-for-next-line
-  def user_agent(%Plug.Conn{req_headers: headers}) do
-    case headers |> Enum.find(&(elem(&1, 0) == "user-agent")) do
-      {_, val} -> val
-      nil -> nil
-    end
-  end
-
-  # credo:disable-for-next-line
+  @spec concat(binary(), term()) :: binary()
   def concat(prefix, val),
     do: prefix <> ": " <> ((is_binary(val) && String.printable?(val) && val) || inspect(val))
 
-  # credo:disable-for-next-line
+  @spec prefix_checker(binary()) :: (binary() -> boolean())
   def prefix_checker(prefix) do
     prefix_size = :erlang.size(prefix)
 

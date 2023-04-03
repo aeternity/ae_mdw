@@ -368,7 +368,7 @@ defmodule AeMdw.Txs do
 
         "contract" ->
           # less common at the end and called once
-          Node.tx_group(:contract) ++ [:ga_attach_tx]
+          [:ga_attach_tx | Node.tx_group(:contract)]
 
         _other ->
           Node.tx_group(String.to_existing_atom(type))
