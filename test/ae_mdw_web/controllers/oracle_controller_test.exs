@@ -389,4 +389,247 @@ defmodule AeMdwWeb.OracleControllerTest do
                |> json_response(400)
     end
   end
+
+  describe "oracle_responses" do
+    test "it retrieves all oracle responses", %{conn: conn, store: store} do
+      height = 707
+      oracle_pk = <<1::256>>
+      oracle_pk2 = <<2::256>>
+      query_id1 = <<3::256>>
+      query_id2 = <<4::256>>
+      query_id3 = <<5::256>>
+      query_id4 = <<6::256>>
+      account_pk1 = <<7::256>>
+      account_pk2 = <<8::256>>
+      oracle_id = :aeser_id.create(:oracle, oracle_pk)
+      account_id1 = :aeser_id.create(:account, account_pk1)
+      account_id2 = :aeser_id.create(:account, account_pk2)
+      encoded_account_id1 = Enc.encode(:account_pubkey, account_pk1)
+      encoded_account_id2 = Enc.encode(:account_pubkey, account_pk2)
+      encoded_oracle_pk = Enc.encode(:oracle_pubkey, oracle_pk)
+      encoded_query_id1 = Enc.encode(:oracle_query_id, query_id1)
+      encoded_query_id2 = Enc.encode(:oracle_query_id, query_id2)
+      encoded_query_id3 = Enc.encode(:oracle_query_id, query_id3)
+      txi_idx1 = {789, -1}
+      tx_hash1 = <<10::256>>
+      txi_idx2 = {791, 3}
+      tx_hash2 = <<11::256>>
+      txi_idx3 = {799, -1}
+      tx_hash3 = <<12::256>>
+      block_hash1 = <<13::256>>
+      txi_idx4 = {989, -1}
+      tx_hash4 = <<14::256>>
+      txi_idx5 = {991, 3}
+      tx_hash5 = <<15::256>>
+      txi_idx6 = {999, -1}
+      tx_hash6 = <<16::256>>
+      block_hash2 = <<17::256>>
+
+      {:ok, oracle_query_aetx1} =
+        :aeo_query_tx.new(%{
+          sender_id: account_id1,
+          nonce: 1,
+          oracle_id: oracle_id,
+          query: "query-1",
+          query_fee: 11,
+          query_ttl: {:delta, 111},
+          response_ttl: {:delta, 1_111},
+          fee: 11_111
+        })
+
+      {:ok, oracle_query_aetx2} =
+        :aeo_query_tx.new(%{
+          sender_id: account_id2,
+          nonce: 2,
+          oracle_id: oracle_id,
+          query: "query-2",
+          query_fee: 22,
+          query_ttl: {:delta, 222},
+          response_ttl: {:delta, 2_222},
+          fee: 22_222
+        })
+
+      {:ok, oracle_query_aetx3} =
+        :aeo_query_tx.new(%{
+          sender_id: account_id1,
+          nonce: 3,
+          oracle_id: oracle_id,
+          query: <<0, 2, 2>>,
+          query_fee: 33,
+          query_ttl: {:delta, 333},
+          response_ttl: {:delta, 3_333},
+          fee: 33_333
+        })
+
+      {:oracle_query_tx, oracle_query_tx1} = :aetx.specialize_type(oracle_query_aetx1)
+      {:oracle_query_tx, oracle_query_tx2} = :aetx.specialize_type(oracle_query_aetx2)
+      {:oracle_query_tx, oracle_query_tx3} = :aetx.specialize_type(oracle_query_aetx3)
+
+      {:ok, oracle_response_aetx1} =
+        :aeo_response_tx.new(%{
+          oracle_id: oracle_id,
+          nonce: 4,
+          query_id: query_id1,
+          response: "response-1",
+          response_ttl: {:delta, 111},
+          fee: 11_111
+        })
+
+      {:ok, oracle_response_aetx2} =
+        :aeo_response_tx.new(%{
+          oracle_id: oracle_id,
+          nonce: 5,
+          query_id: query_id2,
+          response: "response-2",
+          response_ttl: {:delta, 222},
+          fee: 22_222
+        })
+
+      {:ok, oracle_response_aetx3} =
+        :aeo_response_tx.new(%{
+          oracle_id: oracle_id,
+          nonce: 6,
+          query_id: query_id3,
+          response: <<0, 2, 2>>,
+          response_ttl: {:delta, 333},
+          fee: 33_333
+        })
+
+      {:oracle_response_tx, oracle_response_tx1} = :aetx.specialize_type(oracle_response_aetx1)
+      {:oracle_response_tx, oracle_response_tx2} = :aetx.specialize_type(oracle_response_aetx2)
+      {:oracle_response_tx, oracle_response_tx3} = :aetx.specialize_type(oracle_response_aetx3)
+
+      store =
+        store
+        |> Store.put(
+          Model.OracleQuery,
+          Model.oracle_query(index: {oracle_pk, query_id1}, txi_idx: txi_idx1)
+        )
+        |> Store.put(Model.Tx, Model.tx(index: 789, id: tx_hash1))
+        |> Store.put(
+          Model.OracleQuery,
+          Model.oracle_query(index: {oracle_pk, query_id2}, txi_idx: txi_idx2)
+        )
+        |> Store.put(Model.Tx, Model.tx(index: 791, id: tx_hash2))
+        |> Store.put(
+          Model.OracleQuery,
+          Model.oracle_query(index: {oracle_pk, query_id3}, txi_idx: txi_idx3)
+        )
+        |> Store.put(Model.Tx, Model.tx(index: 799, id: tx_hash3))
+        |> Store.put(Model.OracleQuery, Model.oracle_query(index: {oracle_pk2, query_id4}))
+        |> Store.put(
+          Model.TargetKindIntTransferTx,
+          Model.target_kind_int_transfer_tx(
+            index: {oracle_pk, "reward_oracle", {height, txi_idx4}, txi_idx1}
+          )
+        )
+        |> Store.put(
+          Model.TargetKindIntTransferTx,
+          Model.target_kind_int_transfer_tx(
+            index: {oracle_pk, "reward_oracle", {height, txi_idx5}, txi_idx2}
+          )
+        )
+        |> Store.put(
+          Model.TargetKindIntTransferTx,
+          Model.target_kind_int_transfer_tx(
+            index: {oracle_pk, "reward_oracle", {height, txi_idx6}, txi_idx3}
+          )
+        )
+
+      with_mocks [
+        {DbUtil, [:passthrough],
+         [
+           read_node_tx_details: fn
+             _state, ^txi_idx1 ->
+               {oracle_query_tx1, tx_hash1, :oracle_query_tx, block_hash1}
+
+             _state, ^txi_idx2 ->
+               {oracle_query_tx2, tx_hash2, :contract_call_tx, block_hash1}
+
+             _state, ^txi_idx3 ->
+               {oracle_query_tx3, tx_hash3, :oracle_query_tx, block_hash1}
+
+             _state, ^txi_idx4 ->
+               {oracle_response_tx1, tx_hash4, :oracle_response_tx, block_hash2}
+
+             _state, ^txi_idx5 ->
+               {oracle_response_tx2, tx_hash5, :contract_call_tx, block_hash2}
+
+             _state, ^txi_idx6 ->
+               {oracle_response_tx3, tx_hash6, :oracle_response_tx, block_hash2}
+           end
+         ]}
+      ] do
+        assert %{"data" => [response1, response2], "next" => next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/oracles/#{encoded_oracle_pk}/responses",
+                   direction: "forward",
+                   limit: 2
+                 )
+                 |> json_response(200)
+
+        assert %{
+                 "oracle_id" => ^encoded_oracle_pk,
+                 "response" => "cmVzcG9uc2UtMQ",
+                 "query" => %{
+                   "oracle_id" => ^encoded_oracle_pk,
+                   "query_id" => ^encoded_query_id1,
+                   "nonce" => 1,
+                   "query_fee" => 11,
+                   "sender_id" => ^encoded_account_id1,
+                   "source_tx_type" => "OracleQueryTx",
+                   "query" => "cXVlcnktMQ",
+                   "fee" => 11_111
+                 }
+               } = response1
+
+        assert %{
+                 "oracle_id" => ^encoded_oracle_pk,
+                 "response" => "cmVzcG9uc2UtMg",
+                 "query" => %{
+                   "oracle_id" => ^encoded_oracle_pk,
+                   "query_id" => ^encoded_query_id2,
+                   "nonce" => 2,
+                   "query_fee" => 22,
+                   "sender_id" => ^encoded_account_id2,
+                   "source_tx_type" => "ContractCallTx",
+                   "query" => "cXVlcnktMg",
+                   "fee" => 22_222
+                 }
+               } = response2
+
+        assert %{"data" => [response3], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get(next_url)
+                 |> json_response(200)
+
+        assert %{
+                 "oracle_id" => ^encoded_oracle_pk,
+                 "response" => "AAIC",
+                 "query" => %{
+                   "oracle_id" => ^encoded_oracle_pk,
+                   "query_id" => ^encoded_query_id3,
+                   "nonce" => 3,
+                   "query_fee" => 33,
+                   "sender_id" => ^encoded_account_id1,
+                   "source_tx_type" => "OracleQueryTx",
+                   "query" => "AAIC",
+                   "fee" => 33_333
+                 }
+               } = response3
+      end
+    end
+
+    test "cursor is invalid, it displays error", %{conn: conn} do
+      oracle_pk = <<1::256>>
+      encoded_oracle_pk = Enc.encode(:oracle_pubkey, oracle_pk)
+
+      assert %{"error" => "invalid cursor: foo"} =
+               conn
+               |> get("/v2/oracles/#{encoded_oracle_pk}/queries", cursor: "foo")
+               |> json_response(400)
+    end
+  end
 end
