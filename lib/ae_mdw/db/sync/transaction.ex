@@ -81,9 +81,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   def transaction_mutations(signed_tx, txi, block_index, block_hash, mb_time, mb_events) do
     {type, tx} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
     tx_hash = :aetx_sign.hash(signed_tx)
-
     m_tx = Model.tx(index: txi, id: tx_hash, block_index: block_index, time: mb_time)
-    :ets.insert(:tx_sync_cache, {txi, m_tx})
 
     tx_context =
       TxContext.new(

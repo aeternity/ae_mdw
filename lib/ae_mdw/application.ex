@@ -174,8 +174,6 @@ defmodule AeMdw.Application do
   defp init(:aesync), do: Application.ensure_all_started(:aesync)
 
   defp init(:tables) do
-    :tx_sync_cache = :ets.new(:tx_sync_cache, [:named_table, :ordered_set, :public])
-
     {ets_table, ets_expiration} = Broadcaster.ets_config()
     EtsCache.new(ets_table, ets_expiration)
 
