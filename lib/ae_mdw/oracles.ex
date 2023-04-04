@@ -24,6 +24,7 @@ defmodule AeMdw.Oracles do
   # This needs to be an actual type like AeMdw.Db.Oracle.t()
   @type oracle :: term()
   @type oracle_query() :: map()
+  @type oracle_response() :: map()
   @type pagination :: Collection.direction_limit()
   @type opts() :: Util.opts()
   @type query_id() :: binary()
@@ -88,6 +89,44 @@ defmodule AeMdw.Oracles do
   def fetch_oracle_queries(_state, _oracle_id, _pagination, _range, _cursor),
     do: {:error, ErrInput.Query.exception(value: "cannot filter by range on this endpoint")}
 
+  @spec fetch_oracle_responses(state(), pubkey(), pagination(), range(), cursor() | nil) ::
+          {:ok, {cursor() | nil, [oracle_response()], cursor() | nil}} | {:error, Error.t()}
+  def fetch_oracle_responses(state, oracle_id, pagination, range, cursor) do
+    with {:ok, oracle_pk} <- Validate.id(oracle_id, [:oracle_pubkey]),
+         {:ok, cursor} <- deserialize_responses_cursor(cursor, oracle_pk) do
+      key_boundary =
+        case range do
+          nil ->
+            {
+              {oracle_pk, "reward_oracle", {Util.min_int(), -1}, -1},
+              {oracle_pk, "reward_oracle", {Util.max_int(), -1}, -1}
+            }
+
+          first_gen..last_gen ->
+            {
+              {oracle_pk, "reward_oracle", {first_gen, Util.min_int()}, -1},
+              {oracle_pk, "reward_oracle", {last_gen, Util.max_int()}, -1}
+            }
+        end
+
+      {prev_cursor, query_ids, next_cursor} =
+        fn direction ->
+          state
+          |> Collection.stream(Model.TargetKindIntTransferTx, direction, key_boundary, cursor)
+          |> Stream.map(fn {^oracle_pk, "reward_oracle", {height, txi_idx}, ref_txi_idx} ->
+            {height, txi_idx, ref_txi_idx}
+          end)
+        end
+        |> Collection.paginate(pagination)
+
+      responses = Enum.map(query_ids, &render_response(state, &1))
+
+      {:ok,
+       {serialize_responses_cursor(prev_cursor), responses,
+        serialize_responses_cursor(next_cursor)}}
+    end
+  end
+
   defp deserialize_queries_cursor(nil, _oracle_pk), do: {:ok, nil}
 
   defp deserialize_queries_cursor(query_id, oracle_pk) do
@@ -101,6 +140,32 @@ defmodule AeMdw.Oracles do
 
   defp serialize_queries_cursor({{_oracle_pk, query_id}, is_reversed?}),
     do: {Enc.encode(:oracle_query_id, query_id), is_reversed?}
+
+  defp deserialize_responses_cursor(nil, _oracle_pk), do: {:ok, nil}
+
+  defp deserialize_responses_cursor(cursor_bin, oracle_pk) do
+    case Regex.run(~r/\A(\d+)-(\d+)-(\d+)-(\d+)-(\d+)\z/, cursor_bin, capture: :all_but_first) do
+      [height_bin, txi_bin, idx_bin, ref_txi_bin, ref_idx_bin] ->
+        height = String.to_integer(height_bin)
+        txi = String.to_integer(txi_bin)
+        idx = String.to_integer(idx_bin) - 1
+        ref_txi = String.to_integer(ref_txi_bin)
+        ref_idx = String.to_integer(ref_idx_bin) - 1
+
+        {:ok, {oracle_pk, "reward_oracle", {height, {txi, idx}}, {ref_txi, ref_idx}}}
+
+      _invalid_cursor ->
+        {:error, ErrInput.Cursor.exception(value: cursor_bin)}
+    end
+  end
+
+  defp serialize_responses_cursor(nil), do: nil
+
+  defp serialize_responses_cursor({{height, {txi, idx}, {ref_txi, ref_idx}}, is_reversed?}) do
+    bin_cursor = "#{height}-#{txi}-#{idx + 1}-#{ref_txi}-#{ref_idx + 1}"
+
+    {bin_cursor, is_reversed?}
+  end
 
   defp render_query(state, {oracle_pk, query_id}) do
     Model.oracle_query(txi_idx: txi_idx) =
@@ -116,6 +181,22 @@ defmodule AeMdw.Oracles do
     }
     |> Map.merge(:aeo_query_tx.for_client(query_tx))
     |> update_in(["query"], &Base.encode64(&1, padding: false))
+  end
+
+  defp render_response(state, {_height, txi_idx, _ref_txi_idx}) do
+    {response_tx, tx_hash, tx_type, block_hash} = DBUtil.read_node_tx_details(state, txi_idx)
+    query_id = :aeo_response_tx.query_id(response_tx)
+    oracle_pk = :aeo_response_tx.oracle_pubkey(response_tx)
+
+    %{
+      block_hash: Enc.encode(:micro_block_hash, block_hash),
+      source_tx_hash: Enc.encode(:tx_hash, tx_hash),
+      source_tx_type: Format.type_to_swagger_name(tx_type),
+      query_id: Enc.encode(:oracle_query_id, query_id),
+      query: render_query(state, {oracle_pk, query_id})
+    }
+    |> Map.merge(:aeo_response_tx.for_client(response_tx))
+    |> update_in(["response"], &Base.encode64(&1, padding: false))
   end
 
   defp convert_param({"state", state}) when state in @states, do: {:state, state}

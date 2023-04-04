@@ -66,4 +66,17 @@ defmodule AeMdwWeb.OracleController do
         {:error, reason}
     end
   end
+
+  @spec oracle_responses(Conn.t(), map()) :: Conn.t()
+  def oracle_responses(%Conn{assigns: assigns} = conn, %{"id" => oracle_id}) do
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
+
+    case Oracles.fetch_oracle_responses(state, oracle_id, pagination, scope, cursor) do
+      {:ok, {prev_cursor, oracles, next_cursor}} ->
+        Util.paginate(conn, prev_cursor, oracles, next_cursor)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
 end
