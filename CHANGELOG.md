@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.43.0](https://www.github.com/aeternity/ae_mdw/compare/v1.42.0...v1.43.0) (2023-04-05)
+
+
+### Features
+
+* add /oracles/:id/responses nested endpoint ([#1253](https://www.github.com/aeternity/ae_mdw/issues/1253)) ([c3244be](https://www.github.com/aeternity/ae_mdw/commit/c3244be59d35b5081916a18b9ddafb5e2e10c3ea))
+* aexn contracts count endpoints ([#1258](https://www.github.com/aeternity/ae_mdw/issues/1258)) ([87783e1](https://www.github.com/aeternity/ae_mdw/commit/87783e104dca712ff60f4ddb68bf7d6e0d8d9bf3))
+* display int transfers source tx ([#1248](https://www.github.com/aeternity/ae_mdw/issues/1248)) ([89cf780](https://www.github.com/aeternity/ae_mdw/commit/89cf7808539b6bcb81a9e34454ea90f78901aecf))
+
+
+### Bug Fixes
+
+* add lima contracts amount minted to supply ([#1252](https://www.github.com/aeternity/ae_mdw/issues/1252)) ([738bce2](https://www.github.com/aeternity/ae_mdw/commit/738bce26d48eae178e7a98803bd860ab3bf6d0d5))
+
+
+### Miscellaneous
+
+* fix credo `refactor` errors ([#1251](https://www.github.com/aeternity/ae_mdw/issues/1251)) ([f37a226](https://www.github.com/aeternity/ae_mdw/commit/f37a2267683114b783e965da6be4616ee361142a))
+* remove unused tx sync cache ([#1254](https://www.github.com/aeternity/ae_mdw/issues/1254)) ([ab276df](https://www.github.com/aeternity/ae_mdw/commit/ab276df300d38f6438beb4f62b0fcd7650b01447))
+* sum account mintings by network ([#1249](https://www.github.com/aeternity/ae_mdw/issues/1249)) ([9f51f40](https://www.github.com/aeternity/ae_mdw/commit/9f51f406657c73973eabe61ae5564754041aef67))
+
 ## [1.42.0](https://www.github.com/aeternity/ae_mdw/compare/v1.41.5...v1.42.0) (2023-03-29)
 
 
