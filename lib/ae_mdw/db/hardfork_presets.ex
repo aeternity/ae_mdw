@@ -48,8 +48,17 @@ defmodule AeMdw.Db.HardforkPresets do
   defp accounts(:minerva), do: :aec_fork_block_settings.minerva_accounts()
   defp accounts(:fortuna), do: :aec_fork_block_settings.fortuna_accounts()
 
-  defp accounts(:lima),
-    do: :aec_fork_block_settings.lima_accounts() ++ :aec_fork_block_settings.lima_extra_accounts()
+  defp accounts(:lima) do
+    contract_account =
+      :aec_fork_block_settings.lima_contracts()
+      |> Enum.map(fn %{pubkey: pk, amount: amount} ->
+        {pk, amount}
+      end)
+
+    contract_account ++
+      :aec_fork_block_settings.lima_accounts() ++
+      :aec_fork_block_settings.lima_extra_accounts()
+  end
 
   defp accounts(_hf), do: %{}
 
