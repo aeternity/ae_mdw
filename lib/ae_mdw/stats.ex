@@ -28,6 +28,7 @@ defmodule AeMdw.Stats do
   @typep direction() :: Database.direction()
   @typep limit() :: Database.limit()
   @typep range() :: {:gen, Range.t()} | nil
+  @typep aexn_type() :: :aex9 | :aex141
 
   @type nft_stats :: %{nfts_amount: non_neg_integer(), nft_owners: non_neg_integer()}
   @typep template_id() :: AeMdw.Aex141.template_id()
@@ -36,6 +37,8 @@ defmodule AeMdw.Stats do
   @nfts_count_stat :nfts_count
   @nft_owners_count_stat :nft_owners_count
   @nft_template_tokens_stat :nft_template_tokens_count
+  @aex9_count_stat :aex9_count
+  @aex141_count_stat :aex141_count
 
   @spec mutation(height(), Db.key_block(), [Db.micro_block()], txi(), txi(), boolean()) ::
           StatsMutation.t()
@@ -66,6 +69,10 @@ defmodule AeMdw.Stats do
 
   @spec nfts_count_key(pubkey()) :: {atom(), pubkey()}
   def nfts_count_key(contract_pk), do: {@nfts_count_stat, contract_pk}
+
+  @spec aexn_count_key(aexn_type()) :: atom()
+  def aexn_count_key(:aex9), do: @aex9_count_stat
+  def aexn_count_key(:aex141), do: @aex141_count_stat
 
   @spec nft_template_tokens_key(pubkey(), template_id()) :: {atom(), pubkey(), template_id()}
   def nft_template_tokens_key(contract_pk, template_id),

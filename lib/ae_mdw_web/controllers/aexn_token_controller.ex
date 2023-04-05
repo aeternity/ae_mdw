@@ -3,8 +3,11 @@ defmodule AeMdwWeb.AexnTokenController do
 
   alias AeMdw.Aex9
   alias AeMdw.AexnTokens
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Validate
+  alias AeMdw.Stats
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
   alias AeMdwWeb.Util
@@ -15,13 +18,25 @@ defmodule AeMdwWeb.AexnTokenController do
 
   use AeMdwWeb, :controller
 
+  require Model
+
   plug PaginatedPlug, order_by: ~w(name symbol)a
 
   action_fallback(FallbackController)
 
+  @spec aex9_count(Conn.t(), map()) :: Conn.t()
+  def aex9_count(%Conn{assigns: %{state: state}} = conn, _params) do
+    json(conn, %{data: aexn_count(state, :aex9)})
+  end
+
   @spec aex9_contracts(Conn.t(), map()) :: Conn.t()
   def aex9_contracts(%Conn{assigns: assigns, query_params: query_params} = conn, _params) do
     aexn_contracts(conn, assigns, query_params, :aex9)
+  end
+
+  @spec aex141_count(Conn.t(), map()) :: Conn.t()
+  def aex141_count(%Conn{assigns: %{state: state}} = conn, _params) do
+    json(conn, %{data: aexn_count(state, :aex141)})
   end
 
   @spec aex141_contracts(Conn.t(), map()) :: Conn.t()
@@ -96,6 +111,11 @@ defmodule AeMdwWeb.AexnTokenController do
            Aex9.fetch_balance_history(state, contract_pk, account_pk, scope, cursor, pagination) do
       Util.paginate(conn, prev_cursor, balance_history_items, next_cursor)
     end
+  end
+
+  defp aexn_count(state, aexn_type) do
+    Model.stat(payload: count) = State.fetch!(state, Model.Stat, Stats.aexn_count_key(aexn_type))
+    count
   end
 
   defp aexn_contracts(

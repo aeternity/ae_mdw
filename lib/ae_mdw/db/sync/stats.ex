@@ -12,6 +12,7 @@ defmodule AeMdw.Db.Sync.Stats do
 
   @typep pubkey :: AeMdw.Node.Db.pubkey()
   @typep template_id :: AeMdw.Aex141.template_id()
+  @typep aexn_type :: :aex9 | :aex141
 
   @spec update_nft_stats(State.t(), pubkey(), nil | pubkey(), nil | pubkey()) :: State.t()
   def update_nft_stats(state, contract_pk, prev_owner_pk, to_pk) do
@@ -20,6 +21,10 @@ defmodule AeMdw.Db.Sync.Stats do
     |> decrement_collection_owners(contract_pk, prev_owner_pk)
     |> increment_collection_owners(contract_pk, to_pk)
   end
+
+  @spec increment_contract_count(State.t(), aexn_type()) :: State.t()
+  def increment_contract_count(state, aexn_type),
+    do: update_stat_counter(state, Stats.aexn_count_key(aexn_type))
 
   @spec increment_nft_template_tokens(State.t(), pubkey(), template_id()) :: State.t()
   def increment_nft_template_tokens(state, contract_pk, template_id),

@@ -4,6 +4,9 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
   alias AeMdw.Db.AexnCreateContractMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.NullStore
+  alias AeMdw.Db.MemStore
+  alias AeMdw.Stats
   alias AeMdw.Validate
 
   require Model
@@ -51,6 +54,10 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
           )
 
         assert {:ok, ^m_contract_pk} = State.get(state, Model.AexnContract, {:aex9, contract_pk})
+
+        assert {:ok, Model.stat(payload: 1)} =
+                 State.get(state, Model.Stat, Stats.aexn_count_key(:aex9))
+
         assert State.exists?(state, Model.AexnContractName, {:aex9, name, contract_pk})
         assert State.exists?(state, Model.AexnContractSymbol, {:aex9, symbol, contract_pk})
       end
@@ -66,7 +73,11 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       next_height = kbi + 1
       create_txi = txi = 12_361_891
       extensions = ["ext1"]
-      state = State.new()
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
 
       kb_hash = :crypto.strong_rand_bytes(32)
       next_hash = :crypto.strong_rand_bytes(32)
@@ -79,16 +90,17 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
            aex9_balance: fn ^contract_pk, {:micro, ^kbi, ^next_hash} -> {:ok, %{}} end
          ]}
       ] do
-        State.commit(state, [
-          AexnCreateContractMutation.new(
-            :aex9,
-            contract_pk,
-            aex9_meta_info,
-            block_index,
-            create_txi,
-            extensions
-          )
-        ])
+        state =
+          State.commit_mem(state, [
+            AexnCreateContractMutation.new(
+              :aex9,
+              contract_pk,
+              aex9_meta_info,
+              block_index,
+              create_txi,
+              extensions
+            )
+          ])
 
         m_contract_pk =
           Model.aexn_contract(
@@ -105,7 +117,11 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
     end
 
     test "successful for aex141 contract" do
-      state = State.new()
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+
       contract_pk = Validate.id!("ct_2ZpMr6PfL1XzgWosguyUtgr9b2kKeqqGQpwSeXzT28j7f8LJH5")
 
       aex141_meta_info =
@@ -115,16 +131,17 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       block_index = {610_470, 77}
       create_txi = txi = 28_522_602
 
-      State.commit(state, [
-        AexnCreateContractMutation.new(
-          :aex141,
-          contract_pk,
-          aex141_meta_info,
-          block_index,
-          create_txi,
-          extensions
-        )
-      ])
+      state =
+        State.commit_mem(state, [
+          AexnCreateContractMutation.new(
+            :aex141,
+            contract_pk,
+            aex141_meta_info,
+            block_index,
+            create_txi,
+            extensions
+          )
+        ])
 
       m_contract_pk =
         Model.aexn_contract(
