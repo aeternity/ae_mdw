@@ -60,7 +60,11 @@ defmodule AeMdw.Db.Sync.Contract do
     events =
       Enum.filter(
         events,
-        &match?({{:internal_call_tx, _fname}, %{info: aetx}} when is_tuple(aetx), &1)
+        &match?(
+          {{:internal_call_tx, fname}, %{info: aetx}}
+          when is_tuple(aetx) or fname in @contract_create_fnames,
+          &1
+        )
       )
 
     shifted_events = [nil | events]
