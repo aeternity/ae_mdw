@@ -14,6 +14,7 @@ defmodule AeMdwWeb.Router do
     {"/totalstats/", AeMdwWeb.StatsController, :total_stats},
     {"/status", AeMdwWeb.UtilController, :status},
     {"/aex141", AeMdwWeb.AexnTokenController, :aex141_contracts},
+    {"/aex141/count", AeMdwWeb.AexnTokenController, :aex141_count},
     {"/aex141/:contract_id", AeMdwWeb.AexnTokenController, :aex141_contract},
     {"/aex141/:contract_id/owner/:token_id", AeMdwWeb.Aex141Controller, :nft_owner},
     {"/aex141/:contract_id/owners", AeMdwWeb.Aex141Controller, :collection_owners},
@@ -71,6 +72,7 @@ defmodule AeMdwWeb.Router do
       get "/names/:id/transfers", NameController, :name_transfers
 
       get "/aex9", AexnTokenController, :aex9_contracts
+      get "/aex9/count", AexnTokenController, :aex9_count
       get "/aex9/:contract_id", AexnTokenController, :aex9_contract
       get "/aex9/:contract_id/balances", AexnTokenController, :aex9_event_balances
       get "/aex9/:contract_id/balances/:account_id", AexnTokenController, :aex9_token_balance

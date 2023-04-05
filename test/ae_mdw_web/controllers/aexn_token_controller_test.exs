@@ -50,6 +50,13 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       end)
 
     store =
+      Store.put(
+        store,
+        Model.Stat,
+        Model.stat(index: AeMdw.Stats.aexn_count_key(:aex9), payload: 31)
+      )
+
+    store =
       Enum.reduce(300..330, store, fn i, store ->
         meta_info =
           if i < 325 do
@@ -69,6 +76,13 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
         |> Store.put(Model.AexnContractName, m_aexn_name)
         |> Store.put(Model.AexnContractSymbol, m_aexn_symbol)
       end)
+
+    store =
+      Store.put(
+        store,
+        Model.Stat,
+        Model.stat(index: AeMdw.Stats.aexn_count_key(:aex141), payload: 31)
+      )
 
     contract_pk = :crypto.strong_rand_bytes(32)
 
@@ -103,6 +117,13 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       |> Store.put(Model.Block, Model.block(index: {100_002, 2}, hash: <<100_002::256>>))
 
     {:ok, conn: with_store(build_conn(), store), contract_pk: contract_pk}
+  end
+
+  describe "aex9_count" do
+    test "gets the number of aex9 contracts", %{conn: conn} do
+      assert %{"data" => count} = conn |> get("/v2/aex9/count") |> json_response(200)
+      assert count == 31
+    end
   end
 
   describe "aex9_tokens" do
@@ -261,6 +282,13 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn |> get("/v2/aex9", cursor: cursor) |> json_response(400)
+    end
+  end
+
+  describe "aex141_count" do
+    test "gets the number of aex141 contracts", %{conn: conn} do
+      assert %{"data" => count} = conn |> get("/v2/aex141/count") |> json_response(200)
+      assert count == 31
     end
   end
 

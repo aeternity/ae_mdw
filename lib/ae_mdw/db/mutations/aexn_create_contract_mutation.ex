@@ -7,6 +7,7 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.Stats
   alias AeMdw.Sync.Aex9Balances
   alias AeMdw.Txs
 
@@ -75,6 +76,7 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
       create_txi,
       extensions
     )
+    |> Stats.increment_contract_count(aexn_type)
   end
 
   defp write_balances(state, :aex9, contract_pk, block_index, create_txi) do
