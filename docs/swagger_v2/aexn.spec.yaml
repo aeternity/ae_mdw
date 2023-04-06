@@ -142,6 +142,10 @@ schemas:
     description: Response Schema for AEX9 contract
     example:
       decimals: 18
+      extensions: [
+        mintable,
+        burnable
+      ]
       name: testnetAE
       symbol: TTAE
       txi: 11145713
@@ -149,6 +153,9 @@ schemas:
       decimals:
         description: The number of decimals for AEX9 token
         type: integer
+      extensions:
+        description: Extensions implemnted by the contract
+        type: array
       name:
         description: The name of AEX9 token
         type: string
@@ -379,11 +386,11 @@ paths:
         - $ref: '#/components/parameters/DirectionParam'
         - description: meta info field used on sorting
           in: query
-          name: order_by
+          name: by
           required: false
           type: string
           x-example: name | symbol
-        - description: Name or symbol prefix depending on order_by
+        - description: Sorts by name or symbol prefix
           in: query
           name: prefix
           required: false
@@ -626,11 +633,11 @@ paths:
         - $ref: '#/components/parameters/DirectionParam'
         - description: meta info field used on sorting
           in: query
-          name: order_by
+          name: by
           required: false
           type: string
           x-example: name | symbol
-        - description: Name or symbol prefix depending on order_by
+        - description: Sorts by name or symbol
           in: query
           name: prefix
           required: false
