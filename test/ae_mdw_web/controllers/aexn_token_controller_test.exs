@@ -7,6 +7,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.Store
   alias AeMdw.Validate
+  alias AeMdw.Stats
 
   import AeMdw.Util.Encoding, only: [encode_contract: 1, encode_account: 1, encode: 2]
 
@@ -47,6 +48,10 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
         |> Store.put(Model.AexnContract, m_aex9)
         |> Store.put(Model.AexnContractName, m_aexn_name)
         |> Store.put(Model.AexnContractSymbol, m_aexn_symbol)
+        |> Store.put(
+          Model.Stat,
+          Model.stat(index: Stats.aex9_holder_count_key(<<i::256>>), payload: i)
+        )
       end)
 
     store =
@@ -155,10 +160,12 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
                |> get("/v2/aex9", direction: "forward")
                |> json_response(200)
 
-      aex9_names = Enum.map(aex9_tokens, fn %{"name" => name} -> name end)
+      aex9_names = Enum.map(aex9_tokens, & &1["name"])
+      aex9_holders = Enum.map(aex9_tokens, & &1["holders"])
 
       assert @default_limit = length(aex9_tokens)
       assert ^aex9_names = Enum.sort(aex9_names)
+      assert ^aex9_holders = for(i <- 200..209, do: i)
 
       assert %{"data" => next_aex9_tokens, "prev" => prev_aex9_tokens} =
                conn |> get(next) |> json_response(200)

@@ -73,6 +73,42 @@ defmodule AeMdw.Db.Contract do
     State.put(state, Model.Aex9AccountPresence, m_acc_presence)
   end
 
+  @spec aex9_burn_update_holders(state(), pubkey(), integer()) :: state()
+  def aex9_burn_update_holders(state, contract_pk, balance) do
+    if balance <= 0 do
+      SyncStats.decrement_aex9_holders(state, contract_pk)
+    else
+      state
+    end
+  end
+
+  @spec aex9_mint_update_holders(state(), pubkey(), pubkey()) :: state()
+  def aex9_mint_update_holders(state, contract_pk, account_pk) do
+    if State.exists?(state, Model.Aex9AccountPresence, {account_pk, contract_pk}) do
+      state
+    else
+      SyncStats.increment_aex9_holders(state, contract_pk)
+    end
+  end
+
+  @spec aex9_transfer_update_holders(state(), pubkey(), integer(), integer()) :: state()
+  def aex9_transfer_update_holders(state, contract_pk, from_balance, to_prev_amount) do
+    cond do
+      from_balance <= 0 and to_prev_amount > 0 ->
+        SyncStats.decrement_aex9_holders(state, contract_pk)
+
+      from_balance <= 0 ->
+        # decrement and increment
+        state
+
+      to_prev_amount == 0 ->
+        SyncStats.increment_aex9_holders(state, contract_pk)
+
+      true ->
+        state
+    end
+  end
+
   @spec aex9_delete_presence(state(), pubkey(), pubkey()) :: state()
   def aex9_delete_presence(state, account_pk, contract_pk) do
     if State.exists?(state, Model.Aex9AccountPresence, {account_pk, contract_pk}) do
@@ -654,6 +690,7 @@ defmodule AeMdw.Db.Contract do
 
     state
     |> State.put(Model.Aex9EventBalance, m_from)
+    |> aex9_burn_update_holders(contract_pk, from_amount - burn_value)
     |> aex9_write_presence(contract_pk, txi, from_pk)
   end
 
@@ -672,6 +709,7 @@ defmodule AeMdw.Db.Contract do
 
     state
     |> State.put(Model.Aex9EventBalance, m_to)
+    |> aex9_mint_update_holders(contract_pk, to_pk)
     |> aex9_write_presence(contract_pk, txi, to_pk)
   end
 
@@ -700,14 +738,17 @@ defmodule AeMdw.Db.Contract do
           amount: to_amount + transfered_value
         )
 
+      from_balance = from_amount - transfered_value
+
       m_from =
         Model.aex9_event_balance(m_from,
           txi: txi,
           log_idx: log_idx,
-          amount: from_amount - transfered_value
+          amount: from_balance
         )
 
       state
+      |> aex9_transfer_update_holders(contract_pk, from_balance, to_amount)
       |> State.put(Model.Aex9EventBalance, m_from)
       |> State.put(Model.Aex9EventBalance, m_to)
       |> aex9_write_presence(contract_pk, txi, to_pk)
