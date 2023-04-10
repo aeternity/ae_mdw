@@ -26,6 +26,14 @@ defmodule AeMdw.Db.Sync.Stats do
   def increment_contract_count(state, aexn_type),
     do: update_stat_counter(state, Stats.aexn_count_key(aexn_type))
 
+  @spec increment_aex9_holders(State.t(), pubkey()) :: State.t()
+  def increment_aex9_holders(state, contract_pk),
+    do: update_stat_counter(state, Stats.aex9_holder_count_key(contract_pk))
+
+  @spec decrement_aex9_holders(State.t(), pubkey()) :: State.t()
+  def decrement_aex9_holders(state, contract_pk),
+    do: update_stat_counter(state, Stats.aex9_holder_count_key(contract_pk), &(&1 - 1))
+
   @spec increment_nft_template_tokens(State.t(), pubkey(), template_id()) :: State.t()
   def increment_nft_template_tokens(state, contract_pk, template_id),
     do: update_stat_counter(state, Stats.nft_template_tokens_key(contract_pk, template_id))

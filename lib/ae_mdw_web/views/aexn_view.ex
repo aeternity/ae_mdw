@@ -169,14 +169,15 @@ defmodule AeMdwWeb.AexnView do
   #
   # Private functions
   #
-  defp do_render_contract(_state, contract_pk, txi, {name, symbol, decimals}, extensions) do
+  defp do_render_contract(state, contract_pk, txi, {name, symbol, decimals}, extensions) do
     %{
       name: name,
       symbol: symbol,
       decimals: decimals,
       contract_txi: txi,
       contract_id: encode_contract(contract_pk),
-      extensions: extensions
+      extensions: extensions,
+      holders: Stats.fetch_aex9_holders_count(state, contract_pk)
     }
   end
 

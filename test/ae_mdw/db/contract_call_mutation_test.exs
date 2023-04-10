@@ -150,6 +150,8 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           amount: previous_balance
         )
 
+      assert :not_found = Store.get(store, Model.Stat, Stats.aex9_holder_count_key(remote_pk))
+
       store =
         store
         |> Store.put(Model.Aex9EventBalance, m_balance)
@@ -172,6 +174,8 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       assert {:ok, ^m_new_balance} =
                Store.get(store, Model.Aex9EventBalance, {remote_pk, account_pk})
+
+      assert 1 = Stats.fetch_aex9_holders_count(State.new(store), remote_pk)
     end
   end
 
@@ -234,6 +238,10 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         store
         |> Store.put(Model.Aex9EventBalance, m_balance)
         |> Store.put(
+          Model.Stat,
+          Model.stat(index: Stats.aex9_holder_count_key(contract_pk), payload: 1)
+        )
+        |> Store.put(
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
         )
@@ -248,6 +256,88 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       assert {:ok, ^m_new_balance} =
                Store.get(store, Model.Aex9EventBalance, {contract_pk, account_pk})
+
+      assert 1 = Stats.fetch_aex9_holders_count(State.new(store), contract_pk)
+    end
+
+    test "decrement aex9 holder count after a call with full burn log", %{store: store} do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      account_pk = :crypto.strong_rand_bytes(32)
+      amount = Enum.random(100_000_000..999_999_999)
+      height = Enum.random(100_000..999_999)
+      call_txi = Enum.random(100_000_000..999_999_999)
+
+      fun_arg_res = %{
+        arguments: [
+          %{
+            type: :address,
+            value: encode_account(account_pk)
+          },
+          %{
+            type: :int,
+            value: amount
+          }
+        ],
+        function: "other_burn",
+        result: %{type: :unit, value: ""}
+      }
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {
+            contract_pk,
+            [aexn_event_hash(:burn), account_pk, <<amount::256>>],
+            ""
+          }
+        ])
+
+      mutation =
+        ContractCallMutation.new(
+          contract_pk,
+          call_txi,
+          fun_arg_res,
+          call_rec
+        )
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      m_balance =
+        Model.aex9_event_balance(
+          index: {contract_pk, account_pk},
+          txi: call_txi - 1,
+          log_idx: -1,
+          amount: amount
+        )
+
+      store =
+        store
+        |> Store.put(Model.Aex9EventBalance, m_balance)
+        |> Store.put(
+          Model.Stat,
+          Model.stat(index: Stats.aex9_holder_count_key(contract_pk), payload: 1)
+        )
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
+        )
+        |> change_store([mutation])
+
+      m_new_balance =
+        Model.aex9_event_balance(m_balance,
+          txi: call_txi,
+          log_idx: 0,
+          amount: 0
+        )
+
+      assert {:ok, ^m_new_balance} =
+               Store.get(store, Model.Aex9EventBalance, {contract_pk, account_pk})
+
+      assert 0 = Stats.fetch_aex9_holders_count(State.new(store), contract_pk)
     end
   end
 
@@ -460,10 +550,21 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         NullStore.new()
         |> MemStore.new()
         |> State.new()
+        |> State.put(
+          Model.Aex9EventBalance,
+          Model.aex9_event_balance(index: {remote_pk1, from_pk1}, amount: amount1 + 1)
+        )
+        |> State.put(
+          Model.Aex9EventBalance,
+          Model.aex9_event_balance(index: {remote_pk2, from_pk2}, amount: amount2)
+        )
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
         |> State.cache_put(:ct_create_sync_cache, remote_pk1, call_txi - 2)
         |> State.cache_put(:ct_create_sync_cache, remote_pk2, call_txi - 3)
         |> State.commit_mem([mutation])
+
+      assert 1 = Stats.fetch_aex9_holders_count(state, remote_pk1)
+      assert 0 = Stats.fetch_aex9_holders_count(state, remote_pk2)
 
       assert State.exists?(
                state,
