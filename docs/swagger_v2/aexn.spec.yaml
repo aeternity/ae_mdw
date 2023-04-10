@@ -146,6 +146,7 @@ schemas:
         mintable,
         burnable
       ]
+      holders: 12
       name: testnetAE
       symbol: TTAE
       txi: 11145713
@@ -156,6 +157,9 @@ schemas:
       extensions:
         description: Extensions implemnted by the contract
         type: array
+      holders:
+        description: Count of accounts having balance
+        type: integer
       name:
         description: The name of AEX9 token
         type: string
