@@ -3,6 +3,7 @@ defmodule AeMdw.Contracts do
   Context module for dealing with Contracts.
   """
 
+  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Collection
   alias AeMdw.Contract
   alias AeMdw.Db.Format
@@ -19,6 +20,7 @@ defmodule AeMdw.Contracts do
   require Model
 
   @type log() :: Model.contract_log_index()
+  @type contract() :: map()
   @type call() :: map()
   @type cursor() :: binary() | nil
   @type query() :: %{binary() => binary()}
@@ -26,6 +28,7 @@ defmodule AeMdw.Contracts do
   @type event_hash() :: <<_::256>>
   @type log_idx() :: non_neg_integer()
 
+  @typep state() :: State.t()
   @typep reason() :: binary()
   @typep pagination() :: Collection.direction_limit()
   @typep range() :: {:gen, Range.t()} | {:txi, Range.t()} | nil
@@ -53,6 +56,26 @@ defmodule AeMdw.Contracts do
   @min_txi Util.min_int()
   @max_txi Util.max_int()
   @max_blob :binary.list_to_bin(:lists.duplicate(1024, Util.max_256bit_bin()))
+
+  @spec fetch_contracts(state(), pagination(), range(), cursor()) ::
+          {:ok, {cursor(), [contract()], cursor()}} | {:error, reason()}
+  def fetch_contracts(state, pagination, range, cursor) do
+    with {:ok, cursor} <- deserialize_contracts_cursor(cursor) do
+      scope = deserialize_scope(state, range)
+
+      {prev_cursor, contract_keys, next_cursor} =
+        fn direction ->
+          DBUtil.transactions_of_type(state, :contract_create_tx, direction, scope, cursor)
+        end
+        |> Collection.paginate(pagination)
+
+      contracts = Enum.map(contract_keys, &render_contract(state, &1))
+
+      {:ok,
+       {serialize_contracts_cursor(prev_cursor), contracts,
+        serialize_contracts_cursor(next_cursor)}}
+    end
+  end
 
   @spec fetch_logs(State.t(), pagination(), range(), query(), cursor()) ::
           {:ok, cursor(), [log()], cursor()} | {:error, reason()}
@@ -482,6 +505,26 @@ defmodule AeMdw.Contracts do
     Format.to_map(state, call_key, @int_contract_call_table)
   end
 
+  defp render_contract(state, create_txi_idx) do
+    {contract_create_tx, tx_hash, tx_type, block_hash} =
+      DBUtil.read_node_tx_details(state, create_txi_idx)
+
+    contract_pk = :aect_create_tx.contract_pubkey(contract_create_tx)
+
+    encoded_tx =
+      %{
+        block_hash: Enc.encode(:micro_block_hash, block_hash),
+        source_tx_hash: Enc.encode(:tx_hash, tx_hash),
+        source_tx_type: Format.type_to_swagger_name(tx_type)
+      }
+      |> Map.merge(:aect_create_tx.for_client(contract_create_tx))
+
+    %{
+      "contract" => Enc.encode(:contract_pubkey, contract_pk),
+      "create_tx" => encoded_tx
+    }
+  end
+
   defp serialize_logs_cursor(nil), do: nil
 
   defp serialize_logs_cursor({{create_txi, call_txi, event_hash, log_idx}, is_reversed?}) do
@@ -549,4 +592,18 @@ defmodule AeMdw.Contracts do
 
   defp deserialize_cursor_string(event_hash_bin),
     do: Base.decode32(event_hash_bin, padding: false)
+
+  defp serialize_contracts_cursor(nil), do: nil
+
+  defp serialize_contracts_cursor({{txi, local_idx}, is_reversed?}),
+    do: {"#{txi}-#{local_idx + 1}", is_reversed?}
+
+  defp deserialize_contracts_cursor(nil), do: {:ok, nil}
+
+  defp deserialize_contracts_cursor(cursor_bin) do
+    case Regex.run(~r/\A(\d+)-(\d+)\z/, cursor_bin, capture: :all_but_first) do
+      [txi_bin, idx_bin] -> {:ok, {String.to_integer(txi_bin), String.to_integer(idx_bin) - 1}}
+      _invalid_cursor -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
+    end
+  end
 end

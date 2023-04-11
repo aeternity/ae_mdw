@@ -12,6 +12,16 @@ defmodule AeMdwWeb.ContractController do
   plug(PaginatedPlug)
   action_fallback(FallbackController)
 
+  @spec contracts(Conn.t(), map()) :: Conn.t()
+  def contracts(%Conn{assigns: assigns} = conn, _params) do
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
+
+    with {:ok, {prev_cursor, contracts, next_cursor}} <-
+           Contracts.fetch_contracts(state, pagination, scope, cursor) do
+      Util.paginate(conn, prev_cursor, contracts, next_cursor)
+    end
+  end
+
   @spec logs(Conn.t(), map()) :: Conn.t()
   def logs(%Conn{assigns: assigns, query_params: query_params} = conn, _params) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns

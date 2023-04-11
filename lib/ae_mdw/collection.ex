@@ -6,12 +6,13 @@ defmodule AeMdw.Collection do
   alias AeMdw.Database
   alias AeMdw.Db.State
 
+  @typep table() :: Database.table()
+  @typep key() :: Database.key()
+
+  @type cursor() :: Database.cursor()
   @type direction() :: Database.direction()
   @type limit() :: Database.limit()
-  @typep table() :: Database.table()
-  @typep cursor() :: Database.cursor()
-  @typep key() :: Database.key()
-  @typep key_boundary() :: {key(), key()} | nil
+  @type key_boundary() :: {key(), key()} | nil
 
   @type is_reversed?() :: boolean()
   @type has_cursor?() :: boolean()
