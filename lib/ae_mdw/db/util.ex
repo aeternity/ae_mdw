@@ -20,6 +20,11 @@ defmodule AeMdw.Db.Util do
   @typep height() :: Blocks.height()
   @typep txi() :: Txs.txi()
 
+  @tx_types_to_fname %{
+    :contract_create_tx => ~w(Chain.clone Chain.create),
+    :ga_attach_tx => ~w()
+  }
+
   @spec read_tx!(state(), Txs.txi()) :: Model.tx()
   def read_tx!(state, txi), do: State.fetch!(state, Model.Tx, txi)
 
@@ -196,6 +201,55 @@ defmodule AeMdw.Db.Util do
   end
 
   def read_node_tx_details(state, txi), do: read_node_tx_details(state, {txi, -1})
+
+  @spec transactions_of_type(
+          state(),
+          Node.tx_type(),
+          Collection.direction(),
+          Collection.key_boundary(),
+          Collection.cursor()
+        ) :: Enumerable.t()
+  def transactions_of_type(state, tx_type, direction, scope, cursor) do
+    internal_txs =
+      @tx_types_to_fname
+      |> Map.fetch!(tx_type)
+      |> Enum.map(fn fname ->
+        cursor =
+          case cursor do
+            nil -> nil
+            {txi, idx} -> {fname, txi, idx}
+          end
+
+        key_boundary =
+          case scope do
+            nil -> {{fname, Util.min_int(), nil}, {fname, Util.max_int(), nil}}
+            {txi_start, txi_end} -> {{fname, txi_start, 0}, {fname, txi_end, Util.max_int()}}
+          end
+
+        state
+        |> Collection.stream(Model.FnameIntContractCall, direction, key_boundary, cursor)
+        |> Stream.map(fn {^fname, call_txi, local_idx} -> {call_txi, local_idx} end)
+      end)
+
+    cursor =
+      case cursor do
+        nil -> nil
+        {txi, _idx} -> {tx_type, txi}
+      end
+
+    key_boundary =
+      case scope do
+        nil -> {{tx_type, Util.min_int()}, {tx_type, Util.max_int()}}
+        {txi_start, txi_end} -> {{tx_type, txi_start}, {tx_type, txi_end}}
+      end
+
+    raw_txs =
+      state
+      |> Collection.stream(Model.Type, direction, key_boundary, cursor)
+      |> Stream.map(fn {^tx_type, txi} -> {txi, -1} end)
+
+    Collection.merge([raw_txs | internal_txs], direction)
+  end
 
   defp extract_height_hash(state, type, hash) do
     with {:ok, encoded_hash} <- Validate.id(hash),
