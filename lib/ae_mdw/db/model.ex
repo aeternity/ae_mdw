@@ -414,7 +414,7 @@ defmodule AeMdw.Db.Model do
             amount: integer()
           )
   @aex9_contract_balance_defaults [
-    index: {<<>>, <<>>},
+    index: <<>>,
     amount: nil
   ]
   defrecord :aex9_contract_balance, @aex9_contract_balance_defaults

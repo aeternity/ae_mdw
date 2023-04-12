@@ -17,7 +17,7 @@ defmodule AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
     next_mb_hash = :crypto.strong_rand_bytes(32)
 
     Aex9BalancesCache.put(contract_pk, block_index, next_mb_hash, %{
-      {:address, :crypto.strong_rand_bytes(32)} => <<>>
+      {:address, :crypto.strong_rand_bytes(32)} => 10
     })
 
     with_mocks [

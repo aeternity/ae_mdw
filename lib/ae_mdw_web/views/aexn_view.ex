@@ -138,12 +138,6 @@ defmodule AeMdwWeb.AexnView do
         :not_found -> 0
       end
 
-    total_supply =
-      case AeMdw.Node.Db.aex9_total_supply(contract_pk) do
-        {:ok, supply} -> supply
-        {:error, _reason} -> nil
-      end
-
     %{
       name: name,
       symbol: symbol,
@@ -153,7 +147,7 @@ defmodule AeMdwWeb.AexnView do
       extensions: extensions,
       initial_supply: initial_supply,
       event_supply: event_supply,
-      total_supply: total_supply
+      holders: Stats.fetch_aex9_holders_count(state, contract_pk)
     }
   end
 
