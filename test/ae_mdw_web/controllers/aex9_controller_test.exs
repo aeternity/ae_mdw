@@ -25,11 +25,15 @@ defmodule AeMdwWeb.Aex9ControllerTest do
         meta_info = {name, symbol, _decimals} = {"some-AEX9-#{i}", "SAEX9#{i}", i}
         txi = 1_000 - i
         m_aex9 = Model.aexn_contract(index: {:aex9, <<i::256>>}, txi: txi, meta_info: meta_info)
+        m_aex9_supply = Model.aex9_initial_supply(index: <<i::256>>, amount: txi + 10)
+        m_aex9_balance = Model.aex9_contract_balance(index: <<i::256>>, amount: txi + 20)
         m_aexn_name = Model.aexn_contract_name(index: {:aex9, name, <<i::256>>})
         m_aexn_symbol = Model.aexn_contract_symbol(index: {:aex9, symbol, <<i::256>>})
 
         store
         |> Store.put(Model.AexnContract, m_aex9)
+        |> Store.put(Model.Aex9InitialSupply, m_aex9_supply)
+        |> Store.put(Model.Aex9ContractBalance, m_aex9_balance)
         |> Store.put(Model.AexnContractName, m_aexn_name)
         |> Store.put(Model.AexnContractSymbol, m_aexn_symbol)
       end)
@@ -50,10 +54,15 @@ defmodule AeMdwWeb.Aex9ControllerTest do
                                          "symbol" => symbol,
                                          "decimals" => decimals,
                                          "contract_txi" => txi,
-                                         "contract_id" => contract_id
+                                         "contract_id" => contract_id,
+                                         "initial_supply" => initial_supply,
+                                         "event_supply" => event_supply
                                        } ->
                assert is_binary(name) and is_binary(symbol) and is_integer(decimals) and
                         is_integer(txi)
+
+               assert initial_supply == txi + 10
+               assert event_supply == txi + 20
 
                assert match?({:ok, <<_pk::256>>}, Validate.id(contract_id))
              end)

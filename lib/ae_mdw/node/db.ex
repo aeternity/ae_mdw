@@ -189,6 +189,14 @@ defmodule AeMdw.Node.Db do
     end
   end
 
+  @spec aex9_total_supply(pubkey()) :: {:ok, integer()} | {:error, Runner.call_error()}
+  def aex9_total_supply(contract_pk) do
+    case Runner.call_contract(contract_pk, top_height_hash(false), "total_supply", []) do
+      {:ok, supply} -> {:ok, supply}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   @spec aex9_balances!(pubkey()) :: {balances_map(), height_hash()}
   def aex9_balances!(contract_pk),
     do: aex9_balances!(contract_pk, false)

@@ -122,11 +122,61 @@ defmodule AeMdwWeb.AexnView do
         Model.aexn_contract(
           index: {_type, contract_pk},
           txi: txi,
-          meta_info: meta_info,
+          meta_info: {name, symbol, decimals},
           extensions: extensions
         )
       ) do
-    do_render_contract(state, contract_pk, txi, meta_info, extensions)
+    initial_supply =
+      case State.get(state, Model.Aex9InitialSupply, contract_pk) do
+        {:ok, Model.aex9_initial_supply(amount: amount)} -> amount
+        :not_found -> 0
+      end
+
+    event_supply =
+      case State.get(state, Model.Aex9ContractBalance, contract_pk) do
+        {:ok, Model.aex9_contract_balance(amount: amount)} -> amount
+        :not_found -> 0
+      end
+
+    total_supply =
+      case AeMdw.Node.Db.aex9_total_supply(contract_pk) do
+        {:ok, supply} -> supply
+        {:error, _reason} -> nil
+      end
+
+    %{
+      name: name,
+      symbol: symbol,
+      decimals: decimals,
+      contract_txi: txi,
+      contract_id: encode_contract(contract_pk),
+      extensions: extensions,
+      initial_supply: initial_supply,
+      event_supply: event_supply,
+      total_supply: total_supply
+    }
+  end
+
+  def render_contract(
+        state,
+        Model.aexn_contract(
+          index: {_type, contract_pk},
+          txi: txi,
+          meta_info: {name, symbol, base_url, metadata_type},
+          extensions: extensions
+        )
+      ) do
+    %{
+      name: name,
+      symbol: symbol,
+      base_url: base_url,
+      contract_txi: txi,
+      contract_id: encode_contract(contract_pk),
+      metadata_type: metadata_type,
+      extensions: extensions,
+      limits: Aex141.fetch_limits(state, contract_pk)
+    }
+    |> Map.merge(Stats.fetch_nft_stats(state, contract_pk))
   end
 
   @spec render_contracts(State.t(), [Model.aexn_contract()]) :: [aexn_contract()]
@@ -169,38 +219,6 @@ defmodule AeMdwWeb.AexnView do
   #
   # Private functions
   #
-  defp do_render_contract(state, contract_pk, txi, {name, symbol, decimals}, extensions) do
-    %{
-      name: name,
-      symbol: symbol,
-      decimals: decimals,
-      contract_txi: txi,
-      contract_id: encode_contract(contract_pk),
-      extensions: extensions,
-      holders: Stats.fetch_aex9_holders_count(state, contract_pk)
-    }
-  end
-
-  defp do_render_contract(
-         state,
-         contract_pk,
-         txi,
-         {name, symbol, base_url, metadata_type},
-         extensions
-       ) do
-    %{
-      name: name,
-      symbol: symbol,
-      base_url: base_url,
-      contract_txi: txi,
-      contract_id: encode_contract(contract_pk),
-      metadata_type: metadata_type,
-      extensions: extensions,
-      limits: Aex141.fetch_limits(state, contract_pk)
-    }
-    |> Map.merge(Stats.fetch_nft_stats(state, contract_pk))
-  end
-
   defp do_transfer_to_map(
          state,
          {aexn_type, sender_pk, call_txi, recipient_pk, aexn_value, log_idx} = transfer_key

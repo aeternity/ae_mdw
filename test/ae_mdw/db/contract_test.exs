@@ -553,12 +553,15 @@ defmodule AeMdw.Db.ContractTest do
         Contract.aex9_init_event_balances(
           state,
           contract_pk,
-          [{account_pk, 2_000_000}],
+          [{<<1::256>>, 4_000_000}, {account_pk, 2_000_000}],
           create_txi
         )
 
       assert {:ok, Model.aex9_event_balance(txi: ^txi, log_idx: 0, amount: 3_000_000)} =
                State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk})
+
+      assert {:ok, Model.aex9_initial_supply(amount: 6_000_000)} =
+               State.get(state, Model.Aex9InitialSupply, contract_pk)
     end
   end
 

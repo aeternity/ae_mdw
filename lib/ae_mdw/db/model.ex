@@ -389,6 +389,36 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :aex9_event_balance, @aex9_event_balance_defaults
 
+  # AEX9 initial supply:
+  #     index: contract_pk
+  #     amount: float
+  @type aex9_initial_supply_index() :: pubkey()
+  @type aex9_initial_supply ::
+          record(:aex9_initial_supply,
+            index: aex9_initial_supply_index(),
+            amount: integer()
+          )
+  @aex9_initial_supply_defaults [
+    index: {<<>>, <<>>},
+    amount: nil
+  ]
+  defrecord :aex9_initial_supply, @aex9_initial_supply_defaults
+
+  # AEX9 contract balance:
+  #     index: contract_pk
+  #     amount: float
+  @type aex9_contract_balance_index() :: pubkey()
+  @type aex9_contract_balance ::
+          record(:aex9_contract_balance,
+            index: aex9_contract_balance_index(),
+            amount: integer()
+          )
+  @aex9_contract_balance_defaults [
+    index: {<<>>, <<>>},
+    amount: nil
+  ]
+  defrecord :aex9_contract_balance, @aex9_contract_balance_defaults
+
   # AEX9 balance:
   #     index: {contract_pk, account_pk}
   #     block_index: {kbi, mbi},
@@ -1054,6 +1084,8 @@ defmodule AeMdw.Db.Model do
     [
       AeMdw.Db.Model.Aex9Balance,
       AeMdw.Db.Model.Aex9EventBalance,
+      AeMdw.Db.Model.Aex9InitialSupply,
+      AeMdw.Db.Model.Aex9ContractBalance,
       AeMdw.Db.Model.AexnContract,
       AeMdw.Db.Model.AexnContractName,
       AeMdw.Db.Model.AexnContractSymbol,
@@ -1152,6 +1184,8 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.RevOrigin), do: :rev_origin
   def record(AeMdw.Db.Model.Aex9Balance), do: :aex9_balance
   def record(AeMdw.Db.Model.Aex9EventBalance), do: :aex9_event_balance
+  def record(AeMdw.Db.Model.Aex9InitialSupply), do: :aex9_initial_supply
+  def record(AeMdw.Db.Model.Aex9ContractBalance), do: :aex9_contract_balance
   def record(AeMdw.Db.Model.AexnContract), do: :aexn_contract
   def record(AeMdw.Db.Model.AexnContractName), do: :aexn_contract_name
   def record(AeMdw.Db.Model.AexnContractSymbol), do: :aexn_contract_symbol
