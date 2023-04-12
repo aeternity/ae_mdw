@@ -65,7 +65,17 @@ defmodule AeMdw.Contracts do
 
       {prev_cursor, contract_keys, next_cursor} =
         fn direction ->
-          DBUtil.transactions_of_type(state, :contract_create_tx, direction, scope, cursor)
+          contract_create_txs =
+            state
+            |> DBUtil.transactions_of_type(:contract_create_tx, direction, scope, cursor)
+            |> Stream.map(&{&1, :contract_create_tx})
+
+          ga_attach_txs =
+            state
+            |> DBUtil.transactions_of_type(:ga_attach_tx, direction, scope, cursor)
+            |> Stream.map(&{&1, :ga_attach_tx})
+
+          Collection.merge([contract_create_txs, ga_attach_txs], direction)
         end
         |> Collection.paginate(pagination)
 
@@ -505,23 +515,26 @@ defmodule AeMdw.Contracts do
     Format.to_map(state, call_key, @int_contract_call_table)
   end
 
-  defp render_contract(state, create_txi_idx) do
-    {contract_create_tx, tx_hash, tx_type, block_hash} =
+  defp render_contract(state, {create_txi_idx, tx_type}) do
+    {create_tx, tx_hash, source_tx_type, block_hash} =
       DBUtil.read_node_tx_details(state, create_txi_idx)
 
-    contract_pk = :aect_create_tx.contract_pubkey(contract_create_tx)
+    {contract_pk, encoded_tx} =
+      case tx_type do
+        :contract_create_tx ->
+          {:aect_create_tx.contract_pubkey(create_tx), :aect_create_tx.for_client(create_tx)}
 
-    encoded_tx =
-      %{
-        block_hash: Enc.encode(:micro_block_hash, block_hash),
-        source_tx_hash: Enc.encode(:tx_hash, tx_hash),
-        source_tx_type: Format.type_to_swagger_name(tx_type)
-      }
-      |> Map.merge(:aect_create_tx.for_client(contract_create_tx))
+        :ga_attach_tx ->
+          {:aega_attach_tx.contract_pubkey(create_tx), :aega_attach_tx.for_client(create_tx)}
+      end
 
     %{
-      "contract" => Enc.encode(:contract_pubkey, contract_pk),
-      "create_tx" => encoded_tx
+      contract: Enc.encode(:contract_pubkey, contract_pk),
+      block_hash: Enc.encode(:micro_block_hash, block_hash),
+      source_tx_hash: Enc.encode(:tx_hash, tx_hash),
+      source_tx_type: Format.type_to_swagger_name(source_tx_type),
+      create_tx: encoded_tx,
+      create_tx_type: Format.type_to_swagger_name(tx_type)
     }
   end
 
@@ -595,7 +608,8 @@ defmodule AeMdw.Contracts do
 
   defp serialize_contracts_cursor(nil), do: nil
 
-  defp serialize_contracts_cursor({{txi, local_idx}, is_reversed?}),
+  # local_idx is an integer >= -1 (adding 1 to shift to use positive numbers)
+  defp serialize_contracts_cursor({{{txi, local_idx}, _tx_type}, is_reversed?}),
     do: {"#{txi}-#{local_idx + 1}", is_reversed?}
 
   defp deserialize_contracts_cursor(nil), do: {:ok, nil}

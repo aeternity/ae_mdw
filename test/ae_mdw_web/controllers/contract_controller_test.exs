@@ -878,11 +878,12 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
   describe "contracts" do
     test "it returns latests contracts in backwards order", %{conn: conn, store: store} do
-      [txi1, txi2, txi3] = [1, 2, 3]
-      [tx_hash1, tx_hash2, tx_hash3] = [<<1::256>>, <<2::256>>, <<3::256>>]
+      [txi1, txi2, txi3, txi4] = [1, 2, 3, 4]
+      [tx_hash1, tx_hash2, tx_hash3, tx_hash4] = [<<1::256>>, <<2::256>>, <<3::256>>, <<4::256>>]
       enc_tx_hash1 = Enc.encode(:tx_hash, tx_hash1)
       enc_tx_hash2 = Enc.encode(:tx_hash, tx_hash2)
       enc_tx_hash3 = Enc.encode(:tx_hash, tx_hash3)
+      enc_tx_hash4 = Enc.encode(:tx_hash, tx_hash4)
       owner_pk = <<4::256>>
       owner_id = :aeser_id.create(:account, owner_pk)
       enc_owner_id = :aeser_api_encoder.encode(:account_pubkey, owner_pk)
@@ -898,6 +899,8 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
         |> Store.put(Model.Tx, Model.tx(index: txi2, id: tx_hash2))
         |> Store.put(Model.Type, Model.type(index: {:contract_create_tx, txi3}))
         |> Store.put(Model.Tx, Model.tx(index: txi3, id: tx_hash3))
+        |> Store.put(Model.Type, Model.type(index: {:ga_attach_tx, txi4}))
+        |> Store.put(Model.Tx, Model.tx(index: txi4, id: tx_hash4))
 
       block_hash = <<10::256>>
       enc_block_hash = Enc.encode(:micro_block_hash, block_hash)
@@ -950,9 +953,24 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
           ttl: 3_333_333
         })
 
+      {:ok, ga_attach_aetx} =
+        :aega_attach_tx.new(%{
+          owner_id: owner_id,
+          nonce: 4,
+          code: "code-4",
+          auth_fun: "auth-fun",
+          vm_version: 7,
+          abi_version: 4,
+          fee: 44,
+          gas: 44_444,
+          gas_price: 444_444,
+          call_data: <<>>
+        })
+
       {:contract_create_tx, contract_create_tx1} = :aetx.specialize_type(contract_create_aetx1)
       {:contract_create_tx, contract_create_tx2} = :aetx.specialize_type(contract_create_aetx2)
       {:contract_create_tx, contract_create_tx3} = :aetx.specialize_type(contract_create_aetx3)
+      {:ga_attach_tx, ga_attach_tx} = :aetx.specialize_type(ga_attach_aetx)
 
       with_mocks [
         {DbUtil, [:passthrough],
@@ -966,48 +984,61 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
              _state, {^txi3, -1} ->
                {contract_create_tx3, tx_hash3, :contract_create_tx, block_hash}
+
+             _state, {^txi4, -1} ->
+               {ga_attach_tx, tx_hash4, :ga_attach_tx, block_hash}
            end
          ]}
       ] do
-        assert %{"data" => [contract3, contract2], "next" => next_url} =
+        assert %{"data" => [contract4, contract3], "next" => next_url} =
                  conn
                  |> with_store(store)
                  |> get("/v2/contracts", limit: 2)
                  |> json_response(200)
 
         assert %{
+                 "block_hash" => ^enc_block_hash,
+                 "source_tx_hash" => ^enc_tx_hash4,
+                 "source_tx_type" => "GAAttachTx",
+                 "create_tx" => %{
+                   "fee" => 44,
+                   "owner_id" => ^enc_owner_id
+                 }
+               } = contract4
+
+        assert %{
+                 "block_hash" => ^enc_block_hash,
+                 "source_tx_hash" => ^enc_tx_hash3,
+                 "source_tx_type" => "ContractCreateTx",
                  "create_tx" => %{
                    "amount" => 3_333,
-                   "block_hash" => ^enc_block_hash,
-                   "owner_id" => ^enc_owner_id,
-                   "source_tx_hash" => ^enc_tx_hash3,
-                   "source_tx_type" => "ContractCreateTx"
+                   "owner_id" => ^enc_owner_id
                  }
                } = contract3
 
-        assert %{
-                 "create_tx" => %{
-                   "amount" => 2_222,
-                   "block_hash" => ^enc_block_hash,
-                   "owner_id" => ^enc_owner_id,
-                   "source_tx_hash" => ^enc_tx_hash2,
-                   "source_tx_type" => "ContractCallTx"
-                 }
-               } = contract2
-
-        assert %{"data" => [contract1], "next" => nil} =
+        assert %{"data" => [contract2, contract1], "next" => nil} =
                  conn
                  |> with_store(store)
                  |> get(next_url)
                  |> json_response(200)
 
         assert %{
+                 "block_hash" => ^enc_block_hash,
+                 "source_tx_hash" => ^enc_tx_hash2,
+                 "source_tx_type" => "ContractCallTx",
+                 "create_tx" => %{
+                   "amount" => 2_222,
+                   "owner_id" => ^enc_owner_id
+                 }
+               } = contract2
+
+        assert %{
+                 "block_hash" => ^enc_block_hash,
+                 "source_tx_hash" => ^enc_tx_hash1,
+                 "source_tx_type" => "ContractCreateTx",
                  "create_tx" => %{
                    "amount" => 1_111,
-                   "block_hash" => ^enc_block_hash,
-                   "owner_id" => ^enc_owner_id,
-                   "source_tx_hash" => ^enc_tx_hash1,
-                   "source_tx_type" => "ContractCreateTx"
+                   "owner_id" => ^enc_owner_id
                  }
                } = contract1
       end
