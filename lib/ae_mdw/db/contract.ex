@@ -120,6 +120,16 @@ defmodule AeMdw.Db.Contract do
 
   @spec aex9_init_event_balances(state(), pubkey(), [account_balance()], txi()) :: state()
   def aex9_init_event_balances(state, contract_pk, balances, txi) do
+    initial_sum =
+      balances |> Enum.map(fn {_account_pk, initial_amount} -> initial_amount end) |> Enum.sum()
+
+    state =
+      State.put(
+        state,
+        Model.Aex9InitialSupply,
+        Model.aex9_initial_supply(index: contract_pk, amount: initial_sum)
+      )
+
     Enum.reduce(balances, state, fn {account_pk, initial_amount}, state ->
       m_balance =
         case State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk}) do
@@ -691,6 +701,7 @@ defmodule AeMdw.Db.Contract do
     state
     |> State.put(Model.Aex9EventBalance, m_from)
     |> aex9_burn_update_holders(contract_pk, from_amount - burn_value)
+    |> aex9_update_contract_balance(contract_pk, -burn_value)
     |> aex9_write_presence(contract_pk, txi, from_pk)
   end
 
@@ -710,6 +721,7 @@ defmodule AeMdw.Db.Contract do
     state
     |> State.put(Model.Aex9EventBalance, m_to)
     |> aex9_mint_update_holders(contract_pk, to_pk)
+    |> aex9_update_contract_balance(contract_pk, mint_value)
     |> aex9_write_presence(contract_pk, txi, to_pk)
   end
 
@@ -758,6 +770,18 @@ defmodule AeMdw.Db.Contract do
   end
 
   defp update_transfer_balance(state, _type, _pk, _txi, _idx, _args), do: state
+
+  defp aex9_update_contract_balance(state, contract_pk, delta_amount) do
+    State.update(
+      state,
+      Model.Aex9ContractBalance,
+      contract_pk,
+      fn Model.aex9_contract_balance(amount: amount) = m_bal ->
+        Model.aex9_contract_balance(m_bal, amount: amount + delta_amount)
+      end,
+      Model.aex9_contract_balance(index: contract_pk, amount: 0)
+    )
+  end
 
   defp get_aex9_event_balance(state, contract_pk, account_pk) do
     case State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk}) do

@@ -237,6 +237,49 @@ defmodule AeMdw.Db.ContractTest do
                State.get(state, Model.AexnTransfer, {:aex9, account_pk1, txi, account_pk2, 30, 3})
     end
 
+    test "initializes aex9 contract balance" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      account_pk1 = :crypto.strong_rand_bytes(32)
+      height = Enum.random(100_000..999_999)
+      txi = Enum.random(100_000_000..999_999_999)
+
+      call_rec =
+        call_rec("logs", contract_pk, height, nil, [
+          {
+            contract_pk,
+            [aexn_event_hash(:mint), account_pk1, <<1_000::256>>],
+            ""
+          },
+          {
+            contract_pk,
+            [aexn_event_hash(:burn), account_pk1, <<100::256>>],
+            ""
+          },
+          {
+            contract_pk,
+            [aexn_event_hash(:swap), account_pk1, <<200::256>>],
+            ""
+          }
+        ])
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
+        |> Contract.logs_write(txi, txi + 1, call_rec)
+
+      assert Model.aex9_contract_balance(amount: 700) =
+               State.fetch!(state, Model.Aex9ContractBalance, contract_pk)
+    end
+
     test "writes mint and transfer balance when adding liquidity" do
       contract_pk = :crypto.strong_rand_bytes(32)
       remote_pk1 = :crypto.strong_rand_bytes(32)
@@ -553,12 +596,15 @@ defmodule AeMdw.Db.ContractTest do
         Contract.aex9_init_event_balances(
           state,
           contract_pk,
-          [{account_pk, 2_000_000}],
+          [{<<1::256>>, 4_000_000}, {account_pk, 2_000_000}],
           create_txi
         )
 
       assert {:ok, Model.aex9_event_balance(txi: ^txi, log_idx: 0, amount: 3_000_000)} =
                State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk})
+
+      assert {:ok, Model.aex9_initial_supply(amount: 6_000_000)} =
+               State.get(state, Model.Aex9InitialSupply, contract_pk)
     end
   end
 

@@ -102,7 +102,7 @@ defmodule AeMdw.Db.StateTest do
          ]}
       ]) do
         Aex9BalancesCache.put(ct_pk, block_index, @next_hash, %{
-          {:address, :crypto.strong_rand_bytes(32)} => <<>>
+          {:address, :crypto.strong_rand_bytes(32)} => 0
         })
 
         dedup_args = [ct_pk]
