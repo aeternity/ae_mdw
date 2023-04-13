@@ -39,6 +39,7 @@ defmodule AeMdw.Stats do
   @nft_template_tokens_stat :nft_template_tokens_count
   @aex9_count_stat :aex9_count
   @aex9_holder_count_stat :aex9_holder_count
+  @aex9_logs_count_stat :aex9_logs_count
   @aex141_count_stat :aex141_count
 
   @spec mutation(height(), Db.key_block(), [Db.micro_block()], txi(), txi(), boolean()) ::
@@ -77,6 +78,9 @@ defmodule AeMdw.Stats do
 
   @spec aex9_holder_count_key(pubkey()) :: {atom(), pubkey()}
   def aex9_holder_count_key(pubkey), do: {@aex9_holder_count_stat, pubkey}
+
+  @spec aex9_logs_count_key(pubkey()) :: {atom(), pubkey()}
+  def aex9_logs_count_key(pubkey), do: {@aex9_logs_count_stat, pubkey}
 
   @spec nft_template_tokens_key(pubkey(), template_id()) :: {atom(), pubkey(), template_id()}
   def nft_template_tokens_key(contract_pk, template_id),
@@ -203,6 +207,14 @@ defmodule AeMdw.Stats do
   @spec fetch_aex9_holders_count(State.t(), pubkey()) :: integer()
   def fetch_aex9_holders_count(state, contract_pk) do
     case State.get(state, Model.Stat, aex9_holder_count_key(contract_pk)) do
+      {:ok, Model.stat(payload: count)} -> count
+      :not_found -> 0
+    end
+  end
+
+  @spec fetch_aex9_logs_count(State.t(), pubkey()) :: integer()
+  def fetch_aex9_logs_count(state, contract_pk) do
+    case State.get(state, Model.Stat, aex9_logs_count_key(contract_pk)) do
       {:ok, Model.stat(payload: count)} -> count
       :not_found -> 0
     end

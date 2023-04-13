@@ -75,6 +75,7 @@ defmodule AeMdwWeb.Router do
       get "/aex9/count", AexnTokenController, :aex9_count
       get "/aex9/:contract_id", AexnTokenController, :aex9_contract
       get "/aex9/:contract_id/balances", AexnTokenController, :aex9_event_balances
+      get "/aex9/:contract_id/logs-count", AexnTokenController, :aex9_logs_count
       get "/aex9/:contract_id/balances/:account_id", AexnTokenController, :aex9_token_balance
       get "/aex9/account-balances/:account_id", AexnTokenController, :aex9_account_balances
 
