@@ -105,8 +105,10 @@ defmodule AeMdw.Db.Sync.Contract do
     int_calls_mutation = IntCallsMutation.new(contract_pk, call_txi, int_calls)
 
     chain_mutations ++
-      oracle_and_name_mutations(int_calls, block_index, call_txi, call_tx_hash) ++
-      [int_calls_mutation]
+      [
+        int_calls_mutation
+        | oracle_and_name_mutations(int_calls, block_index, call_txi, call_tx_hash)
+      ]
   end
 
   @spec aexn_create_contract_mutation(Db.pubkey(), Blocks.block_index(), Txs.txi()) ::

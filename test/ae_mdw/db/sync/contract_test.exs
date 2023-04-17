@@ -233,6 +233,11 @@ defmodule AeMdw.Db.Sync.ContractTest do
       tx_type = :oracle_register_tx
 
       assert [
+               %IntCallsMutation{
+                 call_txi: ^call_txi,
+                 contract_pk: ^contract_pk,
+                 int_calls: [{0, "Oracle.register", ^tx_type, ^aetx, ^tx}]
+               },
                %WriteMutation{
                  table: Model.Origin,
                  record: Model.origin(index: {^tx_type, ^pubkey, ^call_txi})
@@ -247,12 +252,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
                  tx_type: ^tx_type,
                  txi: ^call_txi
                },
-               %OracleRegisterMutation{oracle_pk: ^pubkey, expire: ^expire},
-               %IntCallsMutation{
-                 call_txi: ^call_txi,
-                 contract_pk: ^contract_pk,
-                 int_calls: [{0, "Oracle.register", ^tx_type, ^aetx, ^tx}]
-               }
+               %OracleRegisterMutation{oracle_pk: ^pubkey, expire: ^expire}
              ] = mutations
     end
 
@@ -291,16 +291,16 @@ defmodule AeMdw.Db.Sync.ContractTest do
 
       assert(
         [
+          %IntCallsMutation{
+            call_txi: ^call_txi,
+            contract_pk: ^contract_pk,
+            int_calls: [{0, "Oracle.extend", :oracle_extend_tx, ^aetx, ^tx}]
+          },
           %OracleExtendMutation{
             oracle_pk: ^pubkey,
             block_index: ^block_index,
             txi_idx: {^call_txi, 0},
             delta_ttl: ^delta_ttl
-          },
-          %IntCallsMutation{
-            call_txi: ^call_txi,
-            contract_pk: ^contract_pk,
-            int_calls: [{0, "Oracle.extend", :oracle_extend_tx, ^aetx, ^tx}]
           }
         ] = mutations
       )
