@@ -52,6 +52,10 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
           Model.Stat,
           Model.stat(index: Stats.aex9_holder_count_key(<<i::256>>), payload: i)
         )
+        |> Store.put(
+          Model.Stat,
+          Model.stat(index: Stats.aex9_logs_count_key(<<i::256>>), payload: i)
+        )
       end)
 
     store =
@@ -128,6 +132,17 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
     test "gets the number of aex9 contracts", %{conn: conn} do
       assert %{"data" => count} = conn |> get("/v2/aex9/count") |> json_response(200)
       assert count == 31
+    end
+  end
+
+  describe "aex9_logs_count" do
+    test "gets the number of aex9 contract logs", %{conn: conn} do
+      contract_id = encode_contract(<<200::256>>)
+
+      assert %{"data" => count} =
+               conn |> get("/v2/aex9/#{contract_id}/logs-count") |> json_response(200)
+
+      assert count == 200
     end
   end
 

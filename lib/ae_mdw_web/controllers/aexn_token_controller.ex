@@ -29,6 +29,13 @@ defmodule AeMdwWeb.AexnTokenController do
     json(conn, %{data: aexn_count(state, :aex9)})
   end
 
+  @spec aex9_logs_count(Conn.t(), map()) :: Conn.t()
+  def aex9_logs_count(%Conn{assigns: %{state: state}} = conn, %{"contract_id" => contract_id}) do
+    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]) do
+      json(conn, %{data: Stats.fetch_aex9_logs_count(state, contract_pk)})
+    end
+  end
+
   @spec aex9_contracts(Conn.t(), map()) :: Conn.t()
   def aex9_contracts(%Conn{assigns: assigns, query_params: query_params} = conn, _params) do
     aexn_contracts(conn, assigns, query_params, :aex9)

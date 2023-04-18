@@ -669,6 +669,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /aex9/count:
+    get:
+      deprecated: false
+      description: Get AEX9 tokens count.
+      operationId: get_aex9_tokens_count
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Returns the number of AEX9 contracts created
+          content:
+            application/json:
+              schema:
+                type: integer
+                description: Amount of contracts
+  /aex9/{contractId}/logs-count:
+    get:
+      deprecated: false
+      description: Get AEX9 token events count.
+      operationId: get_aex9_logs_count
+      parameters:
+        - description: Contract id
+          in: path
+          name: contractId
+          required: true
+          type: string
+          x-example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Returns the number of events emmited so far
+          content:
+            application/json:
+              schema:
+                type: integer
+                description: Amount of log events
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
   /aex9/{contractId}/balances:
     get:
       deprecated: false

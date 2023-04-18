@@ -225,7 +225,10 @@ defmodule AeMdw.Db.Contract do
         aex9_contract_pk != nil ->
           # for parent contracts on contract creation the balance is updated via dry-run to get minted tokens without events
           update_balance? = not (addr == contract_pk and create_txi == txi)
-          write_aex9_records(state2, event_type, {addr, update_balance?}, txi, log_idx, args)
+
+          state2
+          |> SyncStats.increment_aex9_logs(contract_pk)
+          |> write_aex9_records(event_type, {addr, update_balance?}, txi, log_idx, args)
 
         State.exists?(state2, Model.AexnContract, {:aex141, addr}) ->
           write_aex141_records(state2, event_type, addr, txi, log_idx, args)

@@ -6,6 +6,7 @@ defmodule AeMdw.Db.ContractTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
+  alias AeMdw.Stats
 
   import AeMdw.Node.AexnEventFixtures, only: [aexn_event_hash: 1]
   import AeMdw.Node.ContractCallFixtures, only: [call_rec: 3, call_rec: 5]
@@ -237,7 +238,7 @@ defmodule AeMdw.Db.ContractTest do
                State.get(state, Model.AexnTransfer, {:aex9, account_pk1, txi, account_pk2, 30, 3})
     end
 
-    test "initializes aex9 contract balance" do
+    test "initializes aex9 contract balance and counts logs" do
       contract_pk = :crypto.strong_rand_bytes(32)
       account_pk1 = :crypto.strong_rand_bytes(32)
       height = Enum.random(100_000..999_999)
@@ -278,6 +279,8 @@ defmodule AeMdw.Db.ContractTest do
 
       assert Model.aex9_contract_balance(amount: 700) =
                State.fetch!(state, Model.Aex9ContractBalance, contract_pk)
+
+      assert 3 = Stats.fetch_aex9_logs_count(state, contract_pk)
     end
 
     test "writes mint and transfer balance when adding liquidity" do
