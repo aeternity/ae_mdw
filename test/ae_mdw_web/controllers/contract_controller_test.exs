@@ -11,6 +11,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.Origin
   alias AeMdw.Db.Util, as: DbUtil
+  alias AeMdw.Node.Db
   alias AeMdw.Txs
 
   import Mock
@@ -886,7 +887,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       enc_tx_hash4 = Enc.encode(:tx_hash, tx_hash4)
       owner_pk = <<4::256>>
       owner_id = :aeser_id.create(:account, owner_pk)
-      enc_owner_id = :aeser_api_encoder.encode(:account_pubkey, owner_pk)
+      enc_owner_id = Enc.encode(:account_pubkey, owner_pk)
 
       store =
         store
@@ -1041,6 +1042,173 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                    "owner_id" => ^enc_owner_id
                  }
                } = contract1
+      end
+    end
+  end
+
+  describe "contract" do
+    test "when contract is created on an internal call, it returns 200", %{
+      conn: conn,
+      store: store
+    } do
+      txi = 1
+      tx_hash = <<1::256>>
+      enc_tx_hash = Enc.encode(:tx_hash, tx_hash)
+      owner_pk = <<4::256>>
+      owner_id = :aeser_id.create(:account, owner_pk)
+      enc_owner_id = :aeser_api_encoder.encode(:account_pubkey, owner_pk)
+      account_pk = <<5::256>>
+      account_id = :aeser_id.create(:account, account_pk)
+      block_hash = <<10::256>>
+      enc_block_hash = Enc.encode(:micro_block_hash, block_hash)
+
+      {:ok, contract_create_aetx} =
+        :aect_create_tx.new(%{
+          owner_id: owner_id,
+          nonce: 1,
+          code: "code-1",
+          vm_version: 7,
+          abi_version: 3,
+          fee: 11,
+          deposit: 111,
+          amount: 1_111,
+          gas: 11_111,
+          gas_price: 111_111,
+          call_data: <<>>,
+          ttl: 1_111_111
+        })
+
+      {:contract_create_tx, contract_create_tx} = :aetx.specialize_type(contract_create_aetx)
+      contract_pk = :aect_create_tx.contract_pubkey(contract_create_tx)
+      contract_id = :aeser_id.create(:contract, contract_pk)
+      encoded_contract_id = Enc.encode(:contract_pubkey, contract_pk)
+
+      {:ok, contract_call_aetx} =
+        :aect_call_tx.new(%{
+          caller_id: account_id,
+          nonce: 2,
+          contract_id: contract_id,
+          abi_version: 2,
+          fee: 1,
+          amount: 1,
+          gas: 1,
+          gas_price: 1,
+          call_data: ""
+        })
+
+      store =
+        store
+        |> Store.put(Model.Type, Model.type(index: {:contract_call_tx, txi}))
+        |> Store.put(Model.Tx, Model.tx(index: txi, id: tx_hash))
+        |> Store.put(
+          Model.IntContractCall,
+          Model.int_contract_call(index: {txi, 0}, fname: "Chain.clone")
+        )
+        |> Store.put(
+          Model.FnameIntContractCall,
+          Model.fname_int_contract_call(index: {"Chain.clone", txi, 0})
+        )
+        |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, nil, contract_pk, txi}))
+
+      with_mocks [
+        {DbUtil, [:passthrough],
+         [
+           read_node_tx_details: fn _state, {^txi, 0} ->
+             {contract_create_tx, tx_hash, :contract_call_tx, block_hash}
+           end,
+           read_node_tx: fn _state, {^txi, 0} ->
+             contract_create_tx
+           end
+         ]},
+        {Db, [:passthrough],
+         [
+           get_tx: fn ^tx_hash -> :aetx_sign.new(contract_call_aetx, []) end
+         ]}
+      ] do
+        assert %{
+                 "block_hash" => ^enc_block_hash,
+                 "source_tx_hash" => ^enc_tx_hash,
+                 "source_tx_type" => "ContractCallTx",
+                 "create_tx" => %{
+                   "amount" => 1_111,
+                   "owner_id" => ^enc_owner_id
+                 }
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/contracts/#{encoded_contract_id}")
+                 |> json_response(200)
+      end
+    end
+
+    test "when contract is created in a raw tx, it returns 200", %{
+      conn: conn,
+      store: store
+    } do
+      txi = 1
+      tx_hash = <<1::256>>
+      enc_tx_hash = Enc.encode(:tx_hash, tx_hash)
+      owner_pk = <<4::256>>
+      owner_id = :aeser_id.create(:account, owner_pk)
+      enc_owner_id = :aeser_api_encoder.encode(:account_pubkey, owner_pk)
+      contract_pk = <<5::256>>
+      encoded_contract_id = Enc.encode(:contract_pubkey, contract_pk)
+
+      store =
+        store
+        |> Store.put(Model.Type, Model.type(index: {:contract_create_tx, txi}))
+        |> Store.put(Model.Tx, Model.tx(index: txi, id: tx_hash))
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, txi})
+        )
+
+      block_hash = <<10::256>>
+      enc_block_hash = Enc.encode(:micro_block_hash, block_hash)
+
+      {:ok, contract_create_aetx} =
+        :aect_create_tx.new(%{
+          owner_id: owner_id,
+          nonce: 1,
+          code: "code-1",
+          vm_version: 7,
+          abi_version: 3,
+          fee: 11,
+          deposit: 111,
+          amount: 1_111,
+          gas: 11_111,
+          gas_price: 111_111,
+          call_data: <<>>,
+          ttl: 1_111_111
+        })
+
+      {:contract_create_tx, contract_create_tx} = :aetx.specialize_type(contract_create_aetx)
+
+      with_mocks [
+        {DbUtil, [:passthrough],
+         [
+           read_node_tx_details: fn _state, {^txi, -1} ->
+             {contract_create_tx, tx_hash, :contract_create_tx, block_hash}
+           end
+         ]},
+        {Db, [:passthrough],
+         [
+           get_tx: fn ^tx_hash -> :aetx_sign.new(contract_create_aetx, []) end
+         ]}
+      ] do
+        assert %{
+                 "block_hash" => ^enc_block_hash,
+                 "source_tx_hash" => ^enc_tx_hash,
+                 "source_tx_type" => "ContractCreateTx",
+                 "create_tx" => %{
+                   "amount" => 1_111,
+                   "owner_id" => ^enc_owner_id
+                 }
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/contracts/#{encoded_contract_id}")
+                 |> json_response(200)
       end
     end
   end

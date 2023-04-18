@@ -22,6 +22,13 @@ defmodule AeMdwWeb.ContractController do
     end
   end
 
+  @spec contract(Conn.t(), map()) :: Conn.t()
+  def contract(%Conn{assigns: %{state: state}} = conn, %{"id" => contract_id}) do
+    with {:ok, contract} <- Contracts.fetch_contract(state, contract_id) do
+      json(conn, contract)
+    end
+  end
+
   @spec logs(Conn.t(), map()) :: Conn.t()
   def logs(%Conn{assigns: assigns, query_params: query_params} = conn, _params) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns

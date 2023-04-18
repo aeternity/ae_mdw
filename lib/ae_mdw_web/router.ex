@@ -107,6 +107,7 @@ defmodule AeMdwWeb.Router do
       get "/channels/:id", ChannelController, :channel
 
       get "/contracts", ContractController, :contracts
+      get "/contracts/:id", ContractController, :contract
 
       get "/accounts/:id/activities", ActivityController, :account_activities
 
