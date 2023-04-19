@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.44.0](https://www.github.com/aeternity/ae_mdw/compare/v1.43.0...v1.44.0) (2023-04-18)
+
+
+### Features
+
+* add /contracts endpoint to list contracts ([#1263](https://www.github.com/aeternity/ae_mdw/issues/1263)) ([c07fc64](https://www.github.com/aeternity/ae_mdw/commit/c07fc647857a173d9f9e2c86971494b9dacdcb64))
+* track aex9 contract supplies ([#1265](https://www.github.com/aeternity/ae_mdw/issues/1265)) ([789f578](https://www.github.com/aeternity/ae_mdw/commit/789f57853a0af097a3090984baeed87f614ed20c))
+* track aex9 logs count ([#1266](https://www.github.com/aeternity/ae_mdw/issues/1266)) ([b5b042e](https://www.github.com/aeternity/ae_mdw/commit/b5b042edf2ede83bdebde633c65e38c79c7847f7))
+* track aex9 token holders count per contract ([#1260](https://www.github.com/aeternity/ae_mdw/issues/1260)) ([732b37b](https://www.github.com/aeternity/ae_mdw/commit/732b37b160609d102eaa61eb825b84604a4d530a))
+
+
+### Bug Fixes
+
+* adjust the order for contract call event mutations ([#1267](https://www.github.com/aeternity/ae_mdw/issues/1267)) ([b4edb22](https://www.github.com/aeternity/ae_mdw/commit/b4edb22694f0ec8b9d9ec3d380893af5af4517d9))
+
+
+### Miscellaneous
+
+* update aex9 response with holders ([#1262](https://www.github.com/aeternity/ae_mdw/issues/1262)) ([7986309](https://www.github.com/aeternity/ae_mdw/commit/7986309aa5dbf3a0998227cbd5b9c2f853402c6d))
+
 ## [1.43.0](https://www.github.com/aeternity/ae_mdw/compare/v1.42.0...v1.43.0) (2023-04-05)
 
 
