@@ -1122,7 +1122,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
          ]},
         {Db, [:passthrough],
          [
-           get_tx: fn ^tx_hash -> :aetx_sign.new(contract_call_aetx, []) end
+           get_signed_tx: fn ^tx_hash -> :aetx_sign.new(contract_call_aetx, []) end
          ]}
       ] do
         assert %{
@@ -1193,7 +1193,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
          ]},
         {Db, [:passthrough],
          [
-           get_tx: fn ^tx_hash -> :aetx_sign.new(contract_create_aetx, []) end
+           get_signed_tx: fn ^tx_hash -> :aetx_sign.new(contract_create_aetx, []) end
          ]}
       ] do
         assert %{
