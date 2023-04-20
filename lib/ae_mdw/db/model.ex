@@ -912,7 +912,7 @@ defmodule AeMdw.Db.Model do
   defrecord :int_transfer_tx, @int_transfer_tx_defaults
 
   @type int_transfer_tx_index() ::
-          {bi_txi_idx() | {txi_idx() | -1}, IntTransfer.kind(), pubkey(), txi_idx() | -1}
+          {{bi_txi_idx(), txi_idx() | -1}, IntTransfer.kind(), pubkey(), txi_idx() | -1}
   @type int_transfer_tx() ::
           record(:int_transfer_tx,
             index: int_transfer_tx_index(),
