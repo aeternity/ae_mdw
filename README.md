@@ -124,6 +124,8 @@ GET /v2/txs/count/:id                  - counts of transactions per transaction 
 
 GET /v2/accounts/:id/activities        - transactions, internal contract calls, AEX-N and internal transfers involving an account
 
+GET /v2/contracts                         - contracts
+GET /v2/contracts/:id                     - contract by id
 GET /v2/contracts/logs                    - contract logs
 GET /v2/contracts/call                    - contract calls
 
@@ -2869,6 +2871,68 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/names/ssup.test/updates?limit=1" 
 ---
 
 ## Contracts
+
+### `/v2/contracts`
+
+Paginatable list of all non-preset contracts, filterable by scope.
+
+```
+curl -s "https://mainnet.aeternity.io/mdw/v2/contracts?limit=1" | jq '.'
+{
+  "data" : [
+    {
+      "block_hash" : "mh_2sEDNcQaZwpU4qUZGPX3zV7BruQvzQ4qnYpo4VWaPU6sQfjDqJ",
+      "contract" : "ct_D4ZxQD9wXRXYkT7EQd5SiGmySJziEGJSGyDBqH9SwYMsnH4JX",
+      "create_tx" : {
+        "abi_version" : 3,
+        "amount" : 0,
+        "call_data" : "cb_KxFE1kQfGwphxkNE",
+        "code" : "cb_+GlGA6ANexG+yJOtFvI0ogpw4uOHJDVScNPobxeyUDr10xHM08C4PKH+RNZEHwA3AQc3ABoGggABAz/+iKBvXwA3AQcHFiQAggCWLwIRRNZEHxFpbml0EYigb18RY2FsY4IvAIU3LjEuMAAZ1+t2",
+        "deposit" : 0,
+        "fee" : 78540000000000,
+        "gas" : 76,
+        "gas_price" : 1000000000,
+        "nonce" : 27,
+        "owner_id" : "ak_2oGsfHFUww8cv7Tsc73FJcKWLFmn25Mk1rF68aTxwhwREecrs8",
+        "ttl" : 0,
+        "vm_version" : 7
+      },
+      "source_tx_hash" : "th_ZyorKqF8kUac4KFcRcEVeHXsnQ6vfMZei98gekvBwuSdjtEuZ",
+      "source_tx_type" : "ContractCreateTx"
+    }
+  ],
+  "next" : "/v2/contracts?cursor=40835756-0&limit=1",
+  "prev" : null
+}
+```
+
+### `/v2/contracts/:id`
+
+Get a single contract.
+
+```
+$ curl -s "http://mainnet.aeternity.io/mdw/v2/contracts/ct_D4ZxQD9wXRXYkT7EQd5SiGmySJziEGJSGyDBqH9SwYMsnH4JX" | jq '.'
+{
+  "block_hash" : "mh_2sEDNcQaZwpU4qUZGPX3zV7BruQvzQ4qnYpo4VWaPU6sQfjDqJ",
+  "contract" : "ct_D4ZxQD9wXRXYkT7EQd5SiGmySJziEGJSGyDBqH9SwYMsnH4JX",
+  "create_tx" : {
+    "abi_version" : 3,
+    "amount" : 0,
+    "call_data" : "cb_KxFE1kQfGwphxkNE",
+    "code" : "cb_+GlGA6ANexG+yJOtFvI0ogpw4uOHJDVScNPobxeyUDr10xHM08C4PKH+RNZEHwA3AQc3ABoGggABAz/+iKBvXwA3AQcHFiQAggCWLwIRRNZEHxFpbml0EYigb18RY2FsY4IvAIU3LjEuMAAZ1+t2",
+    "deposit" : 0,
+    "fee" : 78540000000000,
+    "gas" : 76,
+    "gas_price" : 1000000000,
+    "nonce" : 27,
+    "owner_id" : "ak_2oGsfHFUww8cv7Tsc73FJcKWLFmn25Mk1rF68aTxwhwREecrs8",
+    "ttl" : 0,
+    "vm_version" : 7
+  },
+  "source_tx_hash" : "th_ZyorKqF8kUac4KFcRcEVeHXsnQ6vfMZei98gekvBwuSdjtEuZ",
+  "source_tx_type" : "ContractCreateTx"
+}
+```
 
 ### `/v2/contracts/logs`
 

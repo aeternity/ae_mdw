@@ -13,6 +13,7 @@ defmodule AeMdw.Contracts do
   alias AeMdw.Db.Stream.Query.Parser
   alias AeMdw.Db.Util, as: DBUtil
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Node.Db
   alias AeMdw.Txs
   alias AeMdw.Util
   alias AeMdw.Validate
@@ -138,6 +139,38 @@ defmodule AeMdw.Contracts do
     |> Stream.take_while(fn {call_txi, _local_txi} -> call_txi == txi end)
     |> Stream.map(&State.fetch!(state, @int_contract_call_table, &1))
     |> Stream.filter(&match?(Model.int_contract_call(fname: ^fname), &1))
+  end
+
+  @spec fetch_contract(State.t(), binary()) :: {:ok, contract()} | {:error, reason()}
+  def fetch_contract(state, contract_id) do
+    with {:ok, pubkey} <- Validate.id(contract_id, [:contract_pubkey]),
+         {:ok, txi} when txi >= 0 <- Origin.tx_index(state, {:contract, pubkey}) do
+      Model.tx(id: tx_hash) = State.fetch!(state, Model.Tx, txi)
+      signed_tx = Db.get_signed_tx(tx_hash)
+      {outer_tx_type, _tx} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
+
+      {txi_idx, tx_type} =
+        if outer_tx_type == :contract_call_tx do
+          local_idx =
+            ~w(Chain.create Chain.clone Call.clone)
+            |> Enum.map(&fetch_int_contract_calls(state, txi, &1))
+            |> Stream.concat()
+            |> Enum.find_value(fn Model.int_contract_call(index: {^txi, local_idx}) ->
+              create_tx = DBUtil.read_node_tx(state, {txi, local_idx})
+
+              :aect_create_tx.contract_pubkey(create_tx) == pubkey && local_idx
+            end)
+
+          {{txi, local_idx}, :contract_create_tx}
+        else
+          {{txi, -1}, outer_tx_type}
+        end
+
+      {:ok, render_contract(state, {txi_idx, tx_type})}
+    else
+      {:error, reason} -> {:error, reason}
+      _preset_or_not_found -> {:error, ErrInput.NotFound.exception(value: contract_id)}
+    end
   end
 
   defp build_logs_pagination(%{data_prefix: data_prefix}, state, scope, cursor) do
@@ -533,8 +566,7 @@ defmodule AeMdw.Contracts do
       block_hash: Enc.encode(:micro_block_hash, block_hash),
       source_tx_hash: Enc.encode(:tx_hash, tx_hash),
       source_tx_type: Format.type_to_swagger_name(source_tx_type),
-      create_tx: encoded_tx,
-      create_tx_type: Format.type_to_swagger_name(tx_type)
+      create_tx: encoded_tx
     }
   end
 
