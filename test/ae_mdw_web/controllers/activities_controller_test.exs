@@ -373,13 +373,13 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(
           Model.TargetKindIntTransferTx,
           Model.target_kind_int_transfer_tx(
-            index: {account_pk, "reward_oracle", {height, txi1}, txi1}
+            index: {account_pk, "reward_oracle", {height, {txi1, -1}}, {txi1, -1}}
           )
         )
         |> Store.put(
           Model.IntTransferTx,
           Model.int_transfer_tx(
-            index: {{height, txi1}, "reward_oracle", account_pk, txi1},
+            index: {{height, {txi1, -1}}, "reward_oracle", account_pk, {txi1, -1}},
             amount: 10
           )
         )
@@ -387,13 +387,13 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(
           Model.TargetKindIntTransferTx,
           Model.target_kind_int_transfer_tx(
-            index: {account_pk, "fee_lock_name", {height, txi2}, txi2}
+            index: {account_pk, "fee_lock_name", {height, {txi2, -1}}, {txi2, -1}}
           )
         )
         |> Store.put(
           Model.IntTransferTx,
           Model.int_transfer_tx(
-            index: {{height, txi2}, "fee_lock_name", account_pk, txi2},
+            index: {{height, {txi2, -1}}, "fee_lock_name", account_pk, {txi2, -1}},
             amount: 20
           )
         )
@@ -401,26 +401,26 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(
           Model.TargetKindIntTransferTx,
           Model.target_kind_int_transfer_tx(
-            index: {account_pk, "fee_lock_name", {height, txi3}, txi3}
+            index: {account_pk, "fee_lock_name", {height, {txi3, -1}}, {txi3, -1}}
           )
         )
         |> Store.put(
           Model.IntTransferTx,
           Model.int_transfer_tx(
-            index: {{height, txi3}, "fee_lock_name", account_pk, txi3},
+            index: {{height, {txi3, -1}}, "fee_lock_name", account_pk, {txi3, -1}},
             amount: 30
           )
         )
         |> Store.put(
           Model.TargetKindIntTransferTx,
           Model.target_kind_int_transfer_tx(
-            index: {account_pk, "fee_lock_name", {height2, -1}, txi4}
+            index: {account_pk, "fee_lock_name", {height2, -1}, {txi4, -1}}
           )
         )
         |> Store.put(
           Model.IntTransferTx,
           Model.int_transfer_tx(
-            index: {{height2, -1}, "fee_lock_name", account_pk, txi4},
+            index: {{height2, -1}, "fee_lock_name", account_pk, {txi4, -1}},
             amount: 40
           )
         )
@@ -497,13 +497,13 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(
           Model.TargetKindIntTransferTx,
           Model.target_kind_int_transfer_tx(
-            index: {account_pk, "reward_oracle", {height, txi1}, txi1}
+            index: {account_pk, "reward_oracle", {height, {txi1, -1}}, {txi1, -1}}
           )
         )
         |> Store.put(
           Model.IntTransferTx,
           Model.int_transfer_tx(
-            index: {{height, txi1}, "reward_oracle", account_pk, txi1},
+            index: {{height, {txi1, -1}}, "reward_oracle", account_pk, {txi1, -1}},
             amount: 10
           )
         )
@@ -511,13 +511,13 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(
           Model.TargetKindIntTransferTx,
           Model.target_kind_int_transfer_tx(
-            index: {account_pk, "fee_lock_name", {height, txi2}, txi2}
+            index: {account_pk, "fee_lock_name", {height, {txi2, -1}}, {txi2, -1}}
           )
         )
         |> Store.put(
           Model.IntTransferTx,
           Model.int_transfer_tx(
-            index: {{height, txi2}, "fee_lock_name", account_pk, txi2},
+            index: {{height, {txi2, -1}}, "fee_lock_name", account_pk, {txi2, -1}},
             amount: 20
           )
         )
@@ -538,13 +538,13 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(
           Model.TargetKindIntTransferTx,
           Model.target_kind_int_transfer_tx(
-            index: {account_pk, "fee_lock_name", {height + 2, txi3}, txi3}
+            index: {account_pk, "fee_spend_name", {height + 2, {txi3, -1}}, {txi3, -1}}
           )
         )
         |> Store.put(
           Model.IntTransferTx,
           Model.int_transfer_tx(
-            index: {{height + 2, txi3}, "fee_lock_name", account_pk, txi3},
+            index: {{height + 2, {txi3, -1}}, "fee_spend_name", account_pk, {txi3, -1}},
             amount: 40
           )
         )
@@ -606,7 +606,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                "height" => 400,
                "type" => "InternalTransferEvent",
                "block_hash" => ^enc_mb_hash3,
-               "payload" => %{"kind" => "fee_lock_name", "amount" => 40}
+               "payload" => %{"kind" => "fee_spend_name", "amount" => 40}
              } = activity4
 
       assert %{"data" => ^data} = conn |> with_store(store) |> get(prev_url) |> json_response(200)

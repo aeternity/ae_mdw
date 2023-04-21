@@ -40,7 +40,7 @@ defmodule AeMdw.Activities do
            | {:int_contract_call, non_neg_integer()}
            | {:aexn, AexnTokens.aexn_type(), Db.pubkey(), Db.pubkey(), non_neg_integer(),
               non_neg_integer()}
-           | {:int_transfer, IntTransfer.kind(), Txs.txi()}
+           | {:int_transfer, Txs.optional_txi_idx(), IntTransfer.kind(), Txs.optional_txi_idx()}
            | {:claim, Contract.local_idx()}
   @typep activity_type() :: String.t()
 
@@ -371,13 +371,13 @@ defmodule AeMdw.Activities do
           {first_gen, last_gen} ->
             {
               {account_pk, kind, {first_gen, -1}, @min_int},
-              {account_pk, kind, {last_gen, -1}, @max_int}
+              {account_pk, kind, {last_gen, @max_int}, {@max_int, @max_int}}
             }
 
           nil ->
             {
               {account_pk, kind, {@min_int, -1}, @min_int},
-              {account_pk, kind, {@max_int, -1}, @max_int}
+              {account_pk, kind, {@max_int, @max_int}, {@max_int, @max_int}}
             }
         end
 
@@ -389,9 +389,9 @@ defmodule AeMdw.Activities do
 
       state
       |> Collection.stream(Model.TargetKindIntTransferTx, direction, key_boundary, cursor)
-      |> Stream.filter(&match?({^account_pk, ^kind, {_height, -1}, _ref_txi}, &1))
-      |> Stream.map(fn {^account_pk, ^kind, {height, -1}, ref_txi} ->
-        {height, {:int_transfer, kind, ref_txi}}
+      |> Stream.filter(&match?({^account_pk, ^kind, {_height, -1}, _opt_ref_txi}, &1))
+      |> Stream.map(fn {^account_pk, ^kind, {height, -1}, opt_ref_txi_idx} ->
+        {height, {:int_transfer, -1, kind, opt_ref_txi_idx}}
       end)
     end)
     |> Collection.merge(direction)
@@ -425,28 +425,33 @@ defmodule AeMdw.Activities do
           {first_gen, last_gen} ->
             {
               {account_pk, kind, {first_gen, 0}, @min_int},
-              {account_pk, kind, {last_gen, @max_int}, @max_int}
+              {account_pk, kind, {last_gen, @max_int}, {@max_int, @max_int}}
             }
 
           nil ->
             {
               {account_pk, kind, {@min_int, 0}, @min_int},
-              {account_pk, kind, {@max_int, @max_int}, @max_int}
+              {account_pk, kind, {@max_int, {@max_int, @max_int}}, {@max_int, @max_int}}
             }
         end
 
       cursor =
         case gen_cursor do
-          nil -> nil
-          gen when direction == :forward -> {account_pk, kind, {gen, @min_int}, @min_int}
-          gen when direction == :backward -> {account_pk, kind, {gen, @max_int}, @max_int}
+          nil ->
+            nil
+
+          gen when direction == :forward ->
+            {account_pk, kind, {gen, @min_int}, @min_int}
+
+          gen when direction == :backward ->
+            {account_pk, kind, {gen, {@max_int, @max_int}}, {@max_int, @max_int}}
         end
 
       state
       |> Collection.stream(Model.TargetKindIntTransferTx, direction, key_boundary, cursor)
       |> Stream.reject(&match?({^account_pk, ^kind, {_height, -1}, _ref_txi}, &1))
-      |> Stream.map(fn {^account_pk, ^kind, {_height, txi}, ref_txi} ->
-        {txi, {:int_transfer, kind, ref_txi}}
+      |> Stream.map(fn {^account_pk, ^kind, {_height, {txi, _idx} = txi_idx}, opt_ref_txi_idx} ->
+        {txi, {:int_transfer, txi_idx, kind, opt_ref_txi_idx}}
       end)
     end)
     |> Collection.merge(direction)
@@ -676,11 +681,22 @@ defmodule AeMdw.Activities do
     {"InternalContractCallEvent", payload}
   end
 
-  defp render_payload(state, account_pk, height, txi, {:int_transfer, kind, ref_txi}) do
-    transfer_key = {{height, txi}, kind, account_pk, ref_txi}
+  defp render_payload(
+         state,
+         account_pk,
+         height,
+         _txi,
+         {:int_transfer, opt_txi_idx, kind, opt_ref_txi_idx}
+       ) do
+    transfer_key = {{height, opt_txi_idx}, kind, account_pk, opt_ref_txi_idx}
     m_transfer = State.fetch!(state, Model.IntTransferTx, transfer_key)
     amount = Model.int_transfer_tx(m_transfer, :amount)
-    ref_tx_hash = if ref_txi >= 0, do: Enc.encode(:tx_hash, Txs.txi_to_hash(state, ref_txi))
+
+    ref_tx_hash =
+      case opt_ref_txi_idx do
+        -1 -> nil
+        {txi, _idx} -> Enc.encode(:tx_hash, Txs.txi_to_hash(state, txi))
+      end
 
     payload = %{
       amount: amount,
