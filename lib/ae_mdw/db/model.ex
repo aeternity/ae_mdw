@@ -85,14 +85,13 @@ defmodule AeMdw.Db.Model do
   @type migrations() ::
           record(:migrations, index: migrations_index(), inserted_at: non_neg_integer())
 
-  @account_balance_defaults [index: nil, block_index: nil, balance: nil]
-  defrecord :account_balance, @account_balance_defaults
+  @balance_account_defaults [index: nil]
+  defrecord :balance_account, @balance_account_defaults
 
-  @type account_balance() ::
-          record(:account_balance,
-            index: pubkey(),
-            block_index: block_index(),
-            balance: amount()
+  @type balance_account_index() :: {non_neg_integer(), pubkey()}
+  @type balance_account() ::
+          record(:balance_account,
+            index: {amount(), pubkey()}
           )
 
   # txs block index :
@@ -1174,7 +1173,7 @@ defmodule AeMdw.Db.Model do
 
   defp tasks_tables() do
     [
-      AeMdw.Db.Model.AccountBalance,
+      AeMdw.Db.Model.BalanceAccount,
       AeMdw.Db.Model.AsyncTask,
       AeMdw.Db.Model.AsyncTasks,
       AeMdw.Db.Model.Migrations
@@ -1182,7 +1181,7 @@ defmodule AeMdw.Db.Model do
   end
 
   @spec record(atom()) :: atom()
-  def record(AeMdw.Db.Model.AccountBalance), do: :account_balance
+  def record(AeMdw.Db.Model.BalanceAccount), do: :balance_account
   def record(AeMdw.Db.Model.AsyncTask), do: :async_task
   def record(AeMdw.Db.Model.AsyncTasks), do: :async_tasks
   def record(AeMdw.Db.Model.Migrations), do: :migrations

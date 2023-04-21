@@ -38,7 +38,6 @@ defmodule AeMdw.Sync.Server do
   alias AeMdw.Db.Sync.Block
   alias AeMdw.Log
   alias AeMdw.Sync.Transaction
-  alias AeMdw.Sync.WalletRanking
   alias AeMdwWeb.Websocket.Broadcaster
 
   require Logger
@@ -306,8 +305,6 @@ defmodule AeMdw.Sync.Server do
         |> State.commit_db(block_mutations, clear_mem?)
       end)
 
-    WalletRanking.prune()
-
     broadcast_blocks(gens_mutations)
 
     new_state
@@ -333,8 +330,6 @@ defmodule AeMdw.Sync.Server do
       Enum.flat_map(blocks_mutations, fn {_block_index, _block, block_mutations} ->
         block_mutations
       end)
-
-    WalletRanking.prune()
 
     new_state =
       blocks_mutations
