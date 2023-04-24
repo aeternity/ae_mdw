@@ -13,6 +13,7 @@ defmodule AeMdw.Sync.AsyncStoreServer do
   alias AeMdw.Db.AsyncStore
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.State
+  alias AeMdw.Sync.AsyncTasks.WealthRank
 
   @spec start_link([]) :: GenServer.on_start()
   def start_link([]) do
@@ -50,12 +51,16 @@ defmodule AeMdw.Sync.AsyncStoreServer do
 
   @impl GenServer
   def handle_call({:write_store, db_state1}, _from, state) do
+    {top_keys, store} = WealthRank.prune_balance_ranking(AsyncStore.instance())
+
     db_state2 =
-      AsyncStore.instance()
+      store
       |> AsyncStore.mutations()
       |> Enum.reduce(db_state1, &Mutation.execute/2)
 
     AsyncStore.clear(AsyncStore.instance())
+
+    _store = WealthRank.restore_ranking(AsyncStore.instance(), top_keys)
 
     {:reply, db_state2, state}
   end

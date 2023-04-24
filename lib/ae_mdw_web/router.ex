@@ -114,6 +114,7 @@ defmodule AeMdwWeb.Router do
       get "/deltastats", StatsController, :delta_stats
       get "/stats", StatsController, :stats
       get "/minerstats", StatsController, :miners
+      get "/wealth", WealthController, :wealth
 
       get "/api", UtilController, :static_file,
         assigns: %{filepath: "static/swagger/swagger_v2.yaml"}
