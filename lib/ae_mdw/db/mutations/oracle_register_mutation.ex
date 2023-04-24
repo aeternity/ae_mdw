@@ -51,7 +51,11 @@ defmodule AeMdw.Db.OracleRegisterMutation do
           {nil, state}
 
         {previous, Model.InactiveOracle} ->
-          state2 = SyncOracle.cache_through_delete_inactive(state, previous)
+          state2 =
+            state
+            |> SyncOracle.cache_through_delete_inactive(previous)
+            |> State.inc_stat(:old_oracles_registered)
+
           {previous, state2}
 
         {previous, Model.ActiveOracle} ->

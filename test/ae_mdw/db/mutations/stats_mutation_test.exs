@@ -312,5 +312,65 @@ defmodule AeMdw.Db.StatsMutationTest do
         assert_called(State.put(state, Model.TotalStat, expected_total))
       end
     end
+
+    test "with all_cached? = true, it increments inactive oracles only when it was a new one" do
+      height = 1000
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.inc_stat(:oracles_expired, 5)
+        |> State.inc_stat(:new_oracles_expired, 4)
+        |> State.inc_stat(:old_oracles_registered, 1)
+
+      mutation = StatsMutation.new(height, "", 0, 0, 0, true)
+
+      expected_delta =
+        Model.delta_stat(
+          index: height,
+          auctions_started: 0,
+          names_activated: 0,
+          names_expired: 0,
+          names_revoked: 0,
+          oracles_registered: 0,
+          oracles_expired: 5,
+          contracts_created: 0,
+          block_reward: 0,
+          dev_reward: 0
+        )
+
+      expected_total =
+        Model.total_stat(
+          index: height + 1,
+          block_reward: 0,
+          dev_reward: 0,
+          total_supply: 0,
+          active_auctions: 0,
+          active_names: 0,
+          inactive_names: 0,
+          active_oracles: 0,
+          inactive_oracles: 3,
+          contracts: 0
+        )
+
+      state = State.put(state, Model.TotalStat, Model.total_stat(index: height))
+
+      with_mocks [
+        {State, [:passthrough],
+         [
+           get: fn
+             _state, Model.TotalStat, ^height -> {:ok, Model.total_stat()}
+             _state, Model.Stat, _key -> :not_found
+           end
+         ]},
+        {State, [:passthrough], put: fn state, _tab, _record -> state end}
+      ] do
+        assert StatsMutation.execute(mutation, state)
+
+        assert_called(State.put(state, Model.DeltaStat, expected_delta))
+        assert_called(State.put(state, Model.TotalStat, expected_total))
+      end
+    end
   end
 end
