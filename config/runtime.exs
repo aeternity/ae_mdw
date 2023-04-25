@@ -5,6 +5,8 @@ env = config_env()
 # Chain
 config :aecore, network_id: System.get_env("NETWORK_ID", "ae_mainnet")
 
+config :ae_mdw, :wealth_rank_size, String.to_integer(System.get_env("WEALTH_RANK_SIZE", "200"))
+
 #
 # Telemetry
 #

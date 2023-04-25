@@ -11,7 +11,6 @@ defmodule AeMdw.Sync.AsyncTasks.WealthRank do
   require Model
 
   @table :async_wealth_rank
-  @rank_size 100
 
   @typep pubkey :: AeMdw.Node.Db.pubkey()
   @opaque key :: {integer, pubkey()}
@@ -52,7 +51,7 @@ defmodule AeMdw.Sync.AsyncTasks.WealthRank do
   @spec prune_balance_ranking(AsyncStore.t()) :: {[key()], AsyncStore.t()}
   def prune_balance_ranking(store) do
     keys = balance_accounts(store)
-    top_keys = Enum.take(keys, @rank_size)
+    top_keys = Enum.take(keys, rank_size_config())
 
     cleared_store = Enum.reduce(keys, store, &AsyncStore.delete(&2, Model.BalanceAccount, &1))
     :ets.delete_all_objects(@table)
@@ -68,6 +67,15 @@ defmodule AeMdw.Sync.AsyncTasks.WealthRank do
     Enum.reduce(keys, store, fn key, store ->
       AsyncStore.put(store, Model.BalanceAccount, Model.balance_account(index: key))
     end)
+  end
+
+  @spec rank_size_config :: integer()
+  def rank_size_config do
+    with nil <- :persistent_term.get({__MODULE__, :rank_size}, nil) do
+      rank_size = Application.fetch_env!(:ae_mdw, :wealth_rank_size)
+      :persistent_term.put({__MODULE__, :rank_size}, rank_size)
+      rank_size
+    end
   end
 
   defp balance_accounts(store) do
