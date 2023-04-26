@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.45.1](https://www.github.com/aeternity/ae_mdw/compare/v1.45.0...v1.45.1) (2023-04-26)
+
+
+### Bug Fixes
+
+* consider existing oracles on inactive ones count ([#1274](https://www.github.com/aeternity/ae_mdw/issues/1274)) ([8f51484](https://www.github.com/aeternity/ae_mdw/commit/8f514843e8d5d472602e646b06a03100510d0d64))
+
 ## [1.45.0](https://www.github.com/aeternity/ae_mdw/compare/v1.44.0...v1.45.0) (2023-04-24)
 
 
