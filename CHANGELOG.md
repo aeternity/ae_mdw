@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.45.0](https://www.github.com/aeternity/ae_mdw/compare/v1.44.0...v1.45.0) (2023-04-24)
+
+
+### Features
+
+* add contracts detail page ([#1269](https://www.github.com/aeternity/ae_mdw/issues/1269)) ([b9f2bb7](https://www.github.com/aeternity/ae_mdw/commit/b9f2bb757774ee295653dd47bd3e9dac20b27cb6))
+* wealth endpoint ([#1273](https://www.github.com/aeternity/ae_mdw/issues/1273)) ([7d5164d](https://www.github.com/aeternity/ae_mdw/commit/7d5164db5ff794a50ac7fab9fdb19cf17778f000))
+
+
+### Bug Fixes
+
+* adapt activities to new int transfers format ([#1270](https://www.github.com/aeternity/ae_mdw/issues/1270)) ([c1b0903](https://www.github.com/aeternity/ae_mdw/commit/c1b0903224b8994dbd3a9a9dc6f8bb63f32a363a))
+
 ## [1.44.0](https://www.github.com/aeternity/ae_mdw/compare/v1.43.0...v1.44.0) (2023-04-18)
 
 
