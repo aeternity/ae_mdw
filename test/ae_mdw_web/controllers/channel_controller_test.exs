@@ -1,8 +1,10 @@
 defmodule AeMdwWeb.ChannelControllerTest do
   use AeMdwWeb.ConnCase, async: false
 
+  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.TestSamples, as: TS
 
   import Mock
@@ -50,8 +52,11 @@ defmodule AeMdwWeb.ChannelControllerTest do
         {AeMdw.Db.Util, [:passthrough],
          [
            read_node_tx_details: fn
-             _state, {1_000, -1} -> {:tx, tx_hash, :channel_withdraw_tx, block_hash}
-             _state, {2_000, -1} -> {:tx, tx_hash, :channel_close_mutual_tx, block_hash}
+             _state, {1_000, -1} ->
+               {:tx, :channel_withdraw_tx, tx_hash, :channel_withdraw_tx, block_hash}
+
+             _state, {2_000, -1} ->
+               {:tx, :channel_close_mutual_tx, tx_hash, :channel_close_mutual_tx, block_hash}
            end
          ]},
         {:aec_chain, [:passthrough],
@@ -178,8 +183,11 @@ defmodule AeMdwWeb.ChannelControllerTest do
         {AeMdw.Db.Util, [:passthrough],
          [
            read_node_tx_details: fn
-             _state, {1_000, -1} -> {:tx, tx_hash, :channel_withdraw_tx, block_hash}
-             _state, {2_000, -1} -> {:tx, tx_hash, :channel_close_mutual_tx, block_hash}
+             _state, {1_000, -1} ->
+               {:tx, :channel_withdraw_tx, tx_hash, :channel_withdraw_tx, block_hash}
+
+             _state, {2_000, -1} ->
+               {:tx, :channel_close_mutual_tx, tx_hash, :channel_close_mutual_tx, block_hash}
            end
          ]},
         {:aec_chain, [:passthrough],
@@ -312,8 +320,12 @@ defmodule AeMdwWeb.ChannelControllerTest do
         {AeMdw.Db.Util, [:passthrough],
          [
            read_node_tx_details: fn
-             _state, {1_000, -1} -> {:tx, tx_hash, :channel_withdraw_tx, update_block_hash}
-             _state, {2_000, -1} -> {:tx, tx_hash, :channel_close_mutual_tx, update_block_hash}
+             _state, {1_000, -1} ->
+               {:tx, :channel_withdraw_tx, tx_hash, :channel_withdraw_tx, update_block_hash}
+
+             _state, {2_000, -1} ->
+               {:tx, :channel_close_mutual_tx, tx_hash, :channel_close_mutual_tx,
+                update_block_hash}
            end,
            micro_block_height_index: fn _state, ^micro_block_hash -> {:ok, 599_999, 1} end
          ]}
@@ -404,6 +416,167 @@ defmodule AeMdwWeb.ChannelControllerTest do
                conn
                |> with_store(store)
                |> get("/v2/channels/#{encode(:channel, channel_pk)}", block_hash: "kh_123")
+               |> json_response(400)
+    end
+  end
+
+  describe "channel_updates" do
+    test "returns a channel's updates", %{conn: conn, store: store} do
+      [txi_idx1, txi_idx2, txi_idx3] = [{1, -1}, {2, 0}, {3, -1}]
+      updates = [{{3, 0}, txi_idx3}, {{4, 0}, txi_idx2}, {{1, 0}, txi_idx1}]
+      channel_pk = <<1::256>>
+      account_pk1 = <<7::256>>
+      account_pk2 = <<8::256>>
+      channel_id = :aeser_id.create(:channel, channel_pk)
+      account_id1 = :aeser_id.create(:account, account_pk1)
+      account_id2 = :aeser_id.create(:account, account_pk2)
+      encoded_account_id1 = Enc.encode(:account_pubkey, account_pk1)
+      encoded_account_id2 = Enc.encode(:account_pubkey, account_pk2)
+      encoded_channel_pk = Enc.encode(:channel, channel_pk)
+      tx_hash1 = <<10::256>>
+      tx_hash2 = <<11::256>>
+      tx_hash3 = <<12::256>>
+      block_hash = <<13::256>>
+
+      {:ok, state_hash} =
+        :aeser_api_encoder.safe_decode(
+          :state,
+          "st_Wwxms0IVM7PPCHpeOXWeeZZm8h5p/SuqZL7IHIbr3CqtlCL+"
+        )
+
+      channel =
+        Model.channel(
+          index: channel_pk,
+          updates: updates
+        )
+
+      store = Store.put(store, Model.ActiveChannel, channel)
+
+      {:ok, channel_deposit_aetx1} =
+        :aesc_deposit_tx.new(%{
+          channel_id: channel_id,
+          from_id: account_id1,
+          amount: 1,
+          ttl: 11,
+          fee: 111,
+          state_hash: state_hash,
+          round: 1_111,
+          nonce: 11_111
+        })
+
+      {:ok, channel_settle_aetx2} =
+        :aesc_settle_tx.new(%{
+          channel_id: channel_id,
+          from_id: account_id2,
+          initiator_amount_final: 2,
+          responder_amount_final: 22,
+          fee: 222,
+          nonce: 2_222
+        })
+
+      {:ok, channel_deposit_aetx3} =
+        :aesc_deposit_tx.new(%{
+          channel_id: channel_id,
+          from_id: account_id2,
+          amount: 3,
+          ttl: 33,
+          fee: 333,
+          state_hash: state_hash,
+          round: 3_333,
+          nonce: 33_333
+        })
+
+      {:channel_deposit_tx, channel_deposit_tx1} = :aetx.specialize_type(channel_deposit_aetx1)
+      {:channel_settle_tx, channel_settle_tx2} = :aetx.specialize_type(channel_settle_aetx2)
+      {:channel_deposit_tx, channel_deposit_tx3} = :aetx.specialize_type(channel_deposit_aetx3)
+
+      with_mocks [
+        {DbUtil, [:passthrough],
+         [
+           read_node_tx_details: fn
+             _state, ^txi_idx1 ->
+               {channel_deposit_tx1, :channel_deposit_tx, tx_hash1, :channel_deposit_tx,
+                block_hash}
+
+             _state, ^txi_idx2 ->
+               {channel_settle_tx2, :channel_settle_tx, tx_hash2, :contract_call_tx, block_hash}
+
+             _state, ^txi_idx3 ->
+               {channel_deposit_tx3, :channel_deposit_tx, tx_hash3, :channel_deposit_tx,
+                block_hash}
+           end
+         ]}
+      ] do
+        assert %{"data" => [update3, update2] = updates, "next" => next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/channels/#{encode(:channel, channel_pk)}/updates", limit: 2)
+                 |> json_response(200)
+
+        assert %{
+                 "source_tx_type" => "ChannelDepositTx",
+                 "tx" => %{
+                   "channel_id" => ^encoded_channel_pk,
+                   "nonce" => 33_333,
+                   "from_id" => ^encoded_account_id2,
+                   "fee" => 333
+                 }
+               } = update3
+
+        assert %{
+                 "source_tx_type" => "ContractCallTx",
+                 "tx" => %{
+                   "channel_id" => ^encoded_channel_pk,
+                   "nonce" => 2_222,
+                   "from_id" => ^encoded_account_id2,
+                   "fee" => 222
+                 }
+               } = update2
+
+        assert %{"data" => [update1], "prev" => prev_url} =
+                 conn
+                 |> with_store(store)
+                 |> get(next_url)
+                 |> json_response(200)
+
+        assert %{
+                 "source_tx_type" => "ChannelDepositTx",
+                 "tx" => %{
+                   "channel_id" => ^encoded_channel_pk,
+                   "nonce" => 11_111,
+                   "from_id" => ^encoded_account_id1,
+                   "fee" => 111
+                 }
+               } = update1
+
+        assert %{"data" => ^updates} =
+                 conn
+                 |> with_store(store)
+                 |> get(prev_url)
+                 |> json_response(200)
+      end
+    end
+
+    test "returns error when channel is not found", %{conn: conn, store: store} do
+      channel_pk = :crypto.strong_rand_bytes(32)
+      encoded_channel_id = encode(:channel, channel_pk)
+      error_msg = "not found: #{encoded_channel_id}"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> with_store(store)
+               |> get("/v2/channels/#{encoded_channel_id}/updates")
+               |> json_response(404)
+    end
+
+    test "returns error when channel id is invalid", %{conn: conn, store: store} do
+      invalid_id = "foo"
+      error_msg = "invalid id: #{invalid_id}"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> with_store(store)
+               |> get("/v2/channels/#{invalid_id}/updates")
                |> json_response(400)
     end
   end

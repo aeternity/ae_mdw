@@ -25,15 +25,30 @@ defmodule AeMdw.Channels do
   @typep type_block_hash() :: {Db.hash_type(), Db.hash()}
   @typep pagination() :: Collection.direction_limit()
   @typep range() :: {:gen, Range.t()} | nil
-  @typep cursor() :: Collection.pagination_cursor()
+  @typep cursor() :: binary()
+  @typep pagination_cursor() :: Collection.pagination_cursor()
 
   @type channel() :: map()
+  @type channel_update() :: map()
 
   @table_active Model.ActiveChannel
   @table_activation Model.ActiveChannelActivation
 
+  @channel_tx_mod %{
+    :channel_create_tx => :aesc_create_tx,
+    :channel_close_solo_tx => :aesc_close_solo_tx,
+    :channel_close_mutual_tx => :aesc_close_mutual_tx,
+    :channel_settle_tx => :aesc_settle_tx,
+    :channel_deposit_tx => :aesc_deposit_tx,
+    :channel_withdraw_tx => :aesc_widthdraw_tx,
+    :channel_set_delegates_tx => :aesc_set_delegates_tx,
+    :channel_force_progress_tx => :aesc_force_progress_tx,
+    :channel_slash_tx => :aesc_slash_tx,
+    :channel_snapshot_solo_tx => :aesc_snapshot_solo_tx
+  }
+
   @spec fetch_active_channels(state(), pagination(), range(), cursor()) ::
-          {:ok, cursor(), [channel()], cursor()} | {:error, Error.t()}
+          {:ok, pagination_cursor(), [channel()], pagination_cursor()} | {:error, Error.t()}
   def fetch_active_channels(state, pagination, range, cursor) do
     with {:ok, cursor} <- deserialize_cursor(cursor) do
       scope = deserialize_scope(range)
@@ -63,13 +78,29 @@ defmodule AeMdw.Channels do
   @spec fetch_channel(state(), pubkey(), type_block_hash() | nil) ::
           {:ok, channel()} | {:error, Error.t()}
   def fetch_channel(state, channel_pk, type_block_hash \\ nil) do
-    case locate(state, channel_pk) do
-      {:ok, m_channel, source} ->
-        is_active? = source == Model.ActiveChannel
-        {:ok, render_channel(state, m_channel, is_active?, type_block_hash)}
+    with {:ok, m_channel, source} <- locate(state, channel_pk) do
+      is_active? = source == Model.ActiveChannel
+      {:ok, render_channel(state, m_channel, is_active?, type_block_hash)}
+    end
+  end
 
-      :not_found ->
-        {:error, ErrInput.NotFound.exception(value: encode(:channel, channel_pk))}
+  @spec fetch_channel_updates(state(), binary(), pagination(), range(), cursor()) ::
+          {:ok, {pagination_cursor(), [channel_update()], pagination_cursor()}}
+          | {:error, Error.t()}
+  def fetch_channel_updates(state, channel_id, pagination, range, cursor) do
+    with {:ok, channel_pk} <- Validate.id(channel_id, [:channel]),
+         {:ok, Model.channel(updates: updates), _source} <- locate(state, channel_pk),
+         {:ok, cursor} <- deserialize_nested_cursor(cursor) do
+      {prev_cursor, updates_txi_idx, next_cursor} =
+        state
+        |> build_nested_streamer(updates, range, cursor)
+        |> Collection.paginate(pagination)
+
+      channels_updates = Enum.map(updates_txi_idx, &render_update(state, channel_id, &1))
+
+      {:ok,
+       {serialize_nested_cursor(prev_cursor), channels_updates,
+        serialize_nested_cursor(next_cursor)}}
     end
   end
 
@@ -80,8 +111,10 @@ defmodule AeMdw.Channels do
   end
 
   defp locate(state, channel_pk) do
+    reason = ErrInput.NotFound.exception(value: encode(:channel, channel_pk))
+
     [Model.ActiveChannel, Model.InactiveChannel]
-    |> Enum.find_value(:not_found, fn table ->
+    |> Enum.find_value({:error, reason}, fn table ->
       case State.get(state, table, channel_pk) do
         {:ok, channel} -> {:ok, channel, table}
         :not_found -> false
@@ -99,6 +132,39 @@ defmodule AeMdw.Channels do
   defp build_streamer(state, scope, cursor) do
     fn direction ->
       Collection.stream(state, @table_activation, direction, scope, cursor)
+    end
+  end
+
+  defp build_nested_streamer(state, updates, range, cursor) do
+    updates = Enum.map(updates, fn {_bi, txi_idx} -> txi_idx end)
+
+    updates =
+      case range do
+        nil ->
+          updates
+
+        {:gen, first_gen..last_gen} ->
+          first_txi = DbUtil.first_gen_to_txi(state, first_gen)
+          last_txi = DbUtil.last_gen_to_txi(state, last_gen)
+
+          updates
+          |> Enum.drop_while(fn {txi, _idx} -> txi > last_txi end)
+          |> Enum.take_while(fn {txi, _idx} -> txi < first_txi end)
+      end
+
+    fn direction ->
+      updates =
+        case cursor do
+          nil -> updates
+          cursor when direction == :forward -> Enum.take_while(updates, &(&1 >= cursor))
+          cursor when direction == :backward -> Enum.drop_while(updates, &(&1 > cursor))
+        end
+
+      if direction == :forward do
+        Enum.reverse(updates)
+      else
+        updates
+      end
     end
   end
 
@@ -124,7 +190,7 @@ defmodule AeMdw.Channels do
        ) do
     {{last_updated_height, _mbi} = update_block_index, txi_idx} = last_updated_bi_txi_idx
 
-    {_claim_aetx, tx_hash, tx_type, update_block_hash} =
+    {_update_aetx, _inner_tx_type, tx_hash, tx_type, update_block_hash} =
       DbUtil.read_node_tx_details(state, txi_idx)
 
     channel = %{
@@ -155,6 +221,36 @@ defmodule AeMdw.Channels do
         Map.put(channel, :amount, amount)
     end
   end
+
+  defp render_update(state, channel_id, txi_idx) do
+    {update_tx, inner_tx_type, tx_hash, tx_type, block_hash} =
+      DbUtil.read_node_tx_details(state, txi_idx)
+
+    update_mod = Map.fetch!(@channel_tx_mod, inner_tx_type)
+
+    %{
+      channel: channel_id,
+      tx_type: Format.type_to_swagger_name(inner_tx_type),
+      block_hash: Enc.encode(:micro_block_hash, block_hash),
+      source_tx_hash: Enc.encode(:tx_hash, tx_hash),
+      source_tx_type: Format.type_to_swagger_name(tx_type),
+      tx: update_mod.for_client(update_tx)
+    }
+  end
+
+  defp deserialize_nested_cursor(nil), do: {:ok, nil}
+
+  defp deserialize_nested_cursor(cursor_bin) do
+    case Regex.run(~r/\A(\d+)-(\d+)\z/, cursor_bin, capture: :all_but_first) do
+      [txi, idx] -> {:ok, {String.to_integer(txi), String.to_integer(idx) - 1}}
+      _invalid -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
+    end
+  end
+
+  defp serialize_nested_cursor(nil), do: nil
+
+  defp serialize_nested_cursor({{txi, idx}, is_reversed?}),
+    do: {"#{txi}-#{idx + 1}", is_reversed?}
 
   defp deserialize_cursor(nil), do: {:ok, nil}
 

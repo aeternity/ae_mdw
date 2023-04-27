@@ -214,7 +214,7 @@ defmodule AeMdw.Transfers do
           {nil, nil, nil}
 
         ref_txi_idx ->
-          {_tx, ref_tx_hash, ref_tx_type, ref_block_hash} =
+          {_tx, _inner_tx_type, ref_tx_hash, ref_tx_type, ref_block_hash} =
             DbUtil.read_node_tx_details(state, ref_txi_idx)
 
           {

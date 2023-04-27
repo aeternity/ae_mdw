@@ -549,7 +549,7 @@ defmodule AeMdw.Contracts do
   end
 
   defp render_contract(state, {create_txi_idx, tx_type}) do
-    {create_tx, tx_hash, source_tx_type, block_hash} =
+    {create_tx, _inner_tx_type, tx_hash, source_tx_type, block_hash} =
       DBUtil.read_node_tx_details(state, create_txi_idx)
 
     {contract_pk, encoded_tx} =

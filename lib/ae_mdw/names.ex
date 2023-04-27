@@ -601,7 +601,8 @@ defmodule AeMdw.Names do
   end
 
   defp render_claim(state, {{height, _mbi}, txi_idx}) do
-    {claim_aetx, tx_hash, tx_type, block_hash} = DbUtil.read_node_tx_details(state, txi_idx)
+    {claim_aetx, :name_claim_tx, tx_hash, tx_type, block_hash} =
+      DbUtil.read_node_tx_details(state, txi_idx)
 
     %{
       height: height,
@@ -614,7 +615,8 @@ defmodule AeMdw.Names do
   end
 
   defp render_update(state, {{height, _mbi}, txi_idx}) do
-    {update_aetx, tx_hash, tx_type, block_hash} = DbUtil.read_node_tx_details(state, txi_idx)
+    {update_aetx, :name_update_tx, tx_hash, tx_type, block_hash} =
+      DbUtil.read_node_tx_details(state, txi_idx)
 
     %{
       height: height,
@@ -627,7 +629,8 @@ defmodule AeMdw.Names do
   end
 
   defp render_transfer(state, {{height, _mbi}, txi_idx}) do
-    {transfer_aetx, tx_hash, tx_type, block_hash} = DbUtil.read_node_tx_details(state, txi_idx)
+    {transfer_aetx, :name_transfer_tx, tx_hash, tx_type, block_hash} =
+      DbUtil.read_node_tx_details(state, txi_idx)
 
     %{
       height: height,
