@@ -363,12 +363,14 @@ defmodule AeMdw.Db.Contract do
         log_idx: log_idx
       )
 
-    if State.exists?(state, Model.Aex9BalanceAccount, {contract_pk, old_amount, pubkey}) do
-      State.delete(state, Model.Aex9BalanceAccount, {contract_pk, old_amount, pubkey})
-    else
-      state
-    end
-    |> State.put(Model.Aex9BalanceAccount, m_from_account)
+    state =
+      if State.exists?(state, Model.Aex9BalanceAccount, {contract_pk, old_amount, pubkey}) do
+        State.delete(state, Model.Aex9BalanceAccount, {contract_pk, old_amount, pubkey})
+      else
+        state
+      end
+
+    State.put(state, Model.Aex9BalanceAccount, m_from_account)
   end
 
   defp transfer_aex141_ownership(

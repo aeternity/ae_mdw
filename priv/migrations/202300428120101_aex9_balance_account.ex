@@ -24,9 +24,16 @@ defmodule AeMdw.Migrations.Aex9BalanceAccount do
       |> Enum.map(fn Model.aex9_event_balance(
                        index: {contract_pk, account_pk},
                        txi: txi,
+                       log_idx: log_idx,
                        amount: amount
                      ) ->
-        m_bal_acc = Model.aex9_balance_account(index: {contract_pk, amount, account_pk}, txi: txi)
+        m_bal_acc =
+          Model.aex9_balance_account(
+            index: {contract_pk, amount, account_pk},
+            txi: txi,
+            log_idx: log_idx
+          )
+
         WriteMutation.new(Model.Aex9BalanceAccount, m_bal_acc)
       end)
 

@@ -184,7 +184,8 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       m_new_balance_acc =
         Model.aex9_balance_account(
           index: {remote_pk, new_amount, account_pk},
-          txi: call_txi
+          txi: call_txi,
+          log_idx: 0
         )
 
       assert {:ok, ^m_new_balance} =
@@ -291,7 +292,8 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       m_new_balance_acc =
         Model.aex9_balance_account(
           index: {contract_pk, 100_000, account_pk},
-          txi: call_txi
+          txi: call_txi,
+          log_idx: 0
         )
 
       assert {:ok, ^m_new_balance} =
@@ -625,7 +627,11 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       new_amount1 = from_amount1 - amount1
 
       m_bal_acc =
-        Model.aex9_balance_account(index: {remote_pk1, new_amount1, from_pk1}, txi: call_txi)
+        Model.aex9_balance_account(
+          index: {remote_pk1, new_amount1, from_pk1},
+          txi: call_txi,
+          log_idx: 0
+        )
 
       assert {:ok, ^m_bal_acc} =
                State.get(state, Model.Aex9BalanceAccount, {remote_pk1, new_amount1, from_pk1})
