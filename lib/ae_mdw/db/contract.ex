@@ -145,9 +145,15 @@ defmodule AeMdw.Db.Contract do
             Model.aex9_event_balance(m_balance, amount: initial_amount + amount)
         end
 
+      amount = Model.aex9_event_balance(m_balance, :amount)
+
+      m_bal_account =
+        Model.aex9_balance_account(index: {contract_pk, amount, account_pk}, txi: txi)
+
       state
       |> aex9_write_presence(contract_pk, txi, account_pk)
       |> State.put(Model.Aex9EventBalance, m_balance)
+      |> State.put(Model.Aex9BalanceAccount, m_bal_account)
     end)
   end
 
@@ -341,6 +347,30 @@ defmodule AeMdw.Db.Contract do
   #
   # Private functions
   #
+  defp aex9_update_balance_account(
+         state,
+         contract_pk,
+         old_amount,
+         new_amount,
+         pubkey,
+         txi,
+         log_idx
+       ) do
+    m_from_account =
+      Model.aex9_balance_account(
+        index: {contract_pk, new_amount, pubkey},
+        txi: txi,
+        log_idx: log_idx
+      )
+
+    if State.exists?(state, Model.Aex9BalanceAccount, {contract_pk, old_amount, pubkey}) do
+      State.delete(state, Model.Aex9BalanceAccount, {contract_pk, old_amount, pubkey})
+    else
+      state
+    end
+    |> State.put(Model.Aex9BalanceAccount, m_from_account)
+  end
+
   defp transfer_aex141_ownership(
          state,
          contract_pk,
@@ -694,15 +724,18 @@ defmodule AeMdw.Db.Contract do
     Model.aex9_event_balance(amount: from_amount) =
       m_from = get_aex9_event_balance(state, contract_pk, from_pk)
 
+    new_amount = from_amount - burn_value
+
     m_from =
       Model.aex9_event_balance(m_from,
         txi: txi,
         log_idx: log_idx,
-        amount: from_amount - burn_value
+        amount: new_amount
       )
 
     state
     |> State.put(Model.Aex9EventBalance, m_from)
+    |> aex9_update_balance_account(contract_pk, from_amount, new_amount, from_pk, txi, log_idx)
     |> aex9_burn_update_holders(contract_pk, from_amount - burn_value)
     |> aex9_update_contract_balance(contract_pk, -burn_value)
     |> aex9_write_presence(contract_pk, txi, from_pk)
@@ -714,15 +747,18 @@ defmodule AeMdw.Db.Contract do
     Model.aex9_event_balance(amount: to_amount) =
       m_to = get_aex9_event_balance(state, contract_pk, to_pk)
 
+    new_amount = to_amount + mint_value
+
     m_to =
       Model.aex9_event_balance(m_to,
         txi: txi,
         log_idx: log_idx,
-        amount: to_amount + mint_value
+        amount: new_amount
       )
 
     state
     |> State.put(Model.Aex9EventBalance, m_to)
+    |> aex9_update_balance_account(contract_pk, to_amount, new_amount, to_pk, txi, log_idx)
     |> aex9_mint_update_holders(contract_pk, to_pk)
     |> aex9_update_contract_balance(contract_pk, mint_value)
     |> aex9_write_presence(contract_pk, txi, to_pk)
@@ -746,26 +782,37 @@ defmodule AeMdw.Db.Contract do
       Model.aex9_event_balance(amount: to_amount) =
         m_to = get_aex9_event_balance(state, contract_pk, to_pk)
 
+      new_to_amount = to_amount + transfered_value
+
       m_to =
         Model.aex9_event_balance(m_to,
           txi: txi,
           log_idx: log_idx,
-          amount: to_amount + transfered_value
+          amount: new_to_amount
         )
 
-      from_balance = from_amount - transfered_value
+      new_from_amount = from_amount - transfered_value
 
       m_from =
         Model.aex9_event_balance(m_from,
           txi: txi,
           log_idx: log_idx,
-          amount: from_balance
+          amount: new_from_amount
         )
 
       state
-      |> aex9_transfer_update_holders(contract_pk, from_balance, to_amount)
+      |> aex9_transfer_update_holders(contract_pk, new_from_amount, to_amount)
       |> State.put(Model.Aex9EventBalance, m_from)
       |> State.put(Model.Aex9EventBalance, m_to)
+      |> aex9_update_balance_account(
+        contract_pk,
+        from_amount,
+        new_from_amount,
+        from_pk,
+        txi,
+        log_idx
+      )
+      |> aex9_update_balance_account(contract_pk, to_amount, new_to_amount, to_pk, txi, log_idx)
       |> aex9_write_presence(contract_pk, txi, to_pk)
     else
       state

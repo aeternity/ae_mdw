@@ -20,7 +20,7 @@ defmodule AeMdwWeb.AexnTokenController do
 
   require Model
 
-  plug PaginatedPlug, order_by: ~w(name symbol)a
+  plug PaginatedPlug, order_by: ~w(name symbol pubkey amount)a
 
   action_fallback(FallbackController)
 
@@ -66,12 +66,14 @@ defmodule AeMdwWeb.AexnTokenController do
     %{
       state: state,
       cursor: cursor,
-      pagination: pagination
+      pagination: pagination,
+      order_by: order_by
     } = assigns
 
     with {:ok, contract_pk} <- validate_aex9(contract_id),
+         {:ok, order_by} <- validate_balances_order_by(order_by),
          {:ok, prev_cursor, balance_keys, next_cursor} <-
-           Aex9.fetch_event_balances(state, contract_pk, pagination, cursor) do
+           Aex9.fetch_event_balances(state, contract_pk, pagination, cursor, order_by) do
       balances = Enum.map(balance_keys, &render_event_balance(state, &1))
 
       Util.paginate(conn, prev_cursor, balances, next_cursor)
@@ -153,6 +155,16 @@ defmodule AeMdwWeb.AexnTokenController do
          {:ok, m_aexn} <- AexnTokens.fetch_contract(state, {aexn_type, contract_pk}) do
       json(conn, render_contract(state, m_aexn))
     end
+  end
+
+  defp validate_balances_order_by(:name), do: {:ok, :pubkey}
+
+  defp validate_balances_order_by(order_by) when order_by in [:amount, :pubkey] do
+    {:ok, order_by}
+  end
+
+  defp validate_balances_order_by(order_by) do
+    {:error, ErrInput.Query.exception(value: order_by)}
   end
 
   defp validate_block_hash(nil), do: {:ok, nil}

@@ -150,11 +150,18 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           amount: previous_balance
         )
 
+      m_balance_acc =
+        Model.aex9_balance_account(
+          index: {remote_pk, previous_balance, account_pk},
+          txi: call_txi - 1
+        )
+
       assert :not_found = Store.get(store, Model.Stat, Stats.aex9_holder_count_key(remote_pk))
 
       store =
         store
         |> Store.put(Model.Aex9EventBalance, m_balance)
+        |> Store.put(Model.Aex9BalanceAccount, m_balance_acc)
         |> Store.put(
           Model.Field,
           Model.field(index: {:contract_create_tx, nil, contract_pk, call_txi - 1})
@@ -165,15 +172,33 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         )
         |> change_store([mutation])
 
+      new_amount = previous_balance + amount
+
       m_new_balance =
         Model.aex9_event_balance(m_balance,
           txi: call_txi,
           log_idx: 0,
-          amount: previous_balance + amount
+          amount: new_amount
+        )
+
+      m_new_balance_acc =
+        Model.aex9_balance_account(
+          index: {remote_pk, new_amount, account_pk},
+          txi: call_txi
         )
 
       assert {:ok, ^m_new_balance} =
                Store.get(store, Model.Aex9EventBalance, {remote_pk, account_pk})
+
+      assert {:ok, ^m_new_balance_acc} =
+               Store.get(store, Model.Aex9BalanceAccount, {remote_pk, new_amount, account_pk})
+
+      assert :not_found =
+               Store.get(
+                 store,
+                 Model.Aex9BalanceAccount,
+                 {remote_pk, previous_balance, account_pk}
+               )
 
       assert 1 = Stats.fetch_aex9_holders_count(State.new(store), remote_pk)
     end
@@ -226,17 +251,26 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       type_info = {:fcode, functions, nil, nil}
       AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
+      previous_balance = amount + 100_000
+
       m_balance =
         Model.aex9_event_balance(
           index: {contract_pk, account_pk},
           txi: call_txi - 1,
           log_idx: -1,
-          amount: amount + 100_000
+          amount: previous_balance
+        )
+
+      m_balance_acc =
+        Model.aex9_balance_account(
+          index: {contract_pk, previous_balance, account_pk},
+          txi: call_txi - 1
         )
 
       store =
         store
         |> Store.put(Model.Aex9EventBalance, m_balance)
+        |> Store.put(Model.Aex9BalanceAccount, m_balance_acc)
         |> Store.put(
           Model.Stat,
           Model.stat(index: Stats.aex9_holder_count_key(contract_pk), payload: 1)
@@ -254,8 +288,24 @@ defmodule AeMdw.Db.ContractCallMutationTest do
           amount: 100_000
         )
 
+      m_new_balance_acc =
+        Model.aex9_balance_account(
+          index: {contract_pk, 100_000, account_pk},
+          txi: call_txi
+        )
+
       assert {:ok, ^m_new_balance} =
                Store.get(store, Model.Aex9EventBalance, {contract_pk, account_pk})
+
+      assert {:ok, ^m_new_balance_acc} =
+               Store.get(store, Model.Aex9BalanceAccount, {contract_pk, 100_000, account_pk})
+
+      assert :not_found =
+               Store.get(
+                 store,
+                 Model.Aex9BalanceAccount,
+                 {contract_pk, previous_balance, account_pk}
+               )
 
       assert 1 = Stats.fetch_aex9_holders_count(State.new(store), contract_pk)
     end
@@ -546,13 +596,19 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       AeMdw.EtsCache.put(AeMdw.Contract, remote_pk1, {type_info, nil, nil})
       AeMdw.EtsCache.put(AeMdw.Contract, remote_pk2, {type_info, nil, nil})
 
+      from_amount1 = amount1 + 1
+
       state =
         NullStore.new()
         |> MemStore.new()
         |> State.new()
         |> State.put(
           Model.Aex9EventBalance,
-          Model.aex9_event_balance(index: {remote_pk1, from_pk1}, amount: amount1 + 1)
+          Model.aex9_event_balance(index: {remote_pk1, from_pk1}, amount: from_amount1)
+        )
+        |> State.put(
+          Model.Aex9BalanceAccount,
+          Model.aex9_balance_account(index: {remote_pk1, from_amount1, from_pk1})
         )
         |> State.put(
           Model.Aex9EventBalance,
@@ -565,6 +621,16 @@ defmodule AeMdw.Db.ContractCallMutationTest do
 
       assert 1 = Stats.fetch_aex9_holders_count(state, remote_pk1)
       assert 0 = Stats.fetch_aex9_holders_count(state, remote_pk2)
+
+      new_amount1 = from_amount1 - amount1
+
+      m_bal_acc =
+        Model.aex9_balance_account(index: {remote_pk1, new_amount1, from_pk1}, txi: call_txi)
+
+      assert {:ok, ^m_bal_acc} =
+               State.get(state, Model.Aex9BalanceAccount, {remote_pk1, new_amount1, from_pk1})
+
+      refute State.exists?(state, Model.Aex9BalanceAccount, {remote_pk1, from_amount1, from_pk1})
 
       assert State.exists?(
                state,
