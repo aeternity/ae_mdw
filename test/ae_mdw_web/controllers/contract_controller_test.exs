@@ -989,7 +989,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                 block_hash}
 
              _state, {^txi4, -1} ->
-               {ga_attach_tx, :contract_create_tx, tx_hash4, :ga_attach_tx, block_hash}
+               {ga_attach_tx, :ga_attach_tx, tx_hash4, :ga_attach_tx, block_hash}
            end
          ]}
       ] do
