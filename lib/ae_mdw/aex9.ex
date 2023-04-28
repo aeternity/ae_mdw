@@ -34,6 +34,7 @@ defmodule AeMdw.Aex9 do
   @typep account_balance_cursor() :: binary()
   @typep history_cursor() :: binary()
   @typep range() :: {:gen, Range.t()}
+  @typep order_by() :: :pubkey | :amount
 
   @type amounts :: map()
 
@@ -66,19 +67,39 @@ defmodule AeMdw.Aex9 do
     end
   end
 
-  @spec fetch_event_balances(State.t(), pubkey(), pagination(), balances_cursor() | nil) ::
+  @spec fetch_event_balances(
+          State.t(),
+          pubkey(),
+          pagination(),
+          balances_cursor() | nil,
+          order_by()
+        ) ::
           {:ok, balances_cursor() | nil, [{pubkey(), pubkey()}], balances_cursor() | nil}
           | {:error, Error.t()}
-  def fetch_event_balances(state, contract_pk, pagination, cursor) do
+  def fetch_event_balances(state, contract_pk, pagination, cursor, :pubkey) do
     key_boundary = {{contract_pk, <<>>}, {contract_pk, Util.max_256bit_bin()}}
-    cursor_key = deserialize_event_balances_cursor(contract_pk, cursor)
 
-    {prev_cursor, balance_keys, next_cursor} =
-      (&Collection.stream(state, Model.Aex9EventBalance, &1, key_boundary, cursor_key))
-      |> Collection.paginate(pagination)
+    with {:ok, cursor_key} <- deserialize_event_balances_cursor(contract_pk, cursor) do
+      {prev_cursor, balance_keys, next_cursor} =
+        (&Collection.stream(state, Model.Aex9EventBalance, &1, key_boundary, cursor_key))
+        |> Collection.paginate(pagination)
 
-    {:ok, serialize_event_balances_cursor(prev_cursor), balance_keys,
-     serialize_event_balances_cursor(next_cursor)}
+      {:ok, serialize_event_balances_cursor(prev_cursor), balance_keys,
+       serialize_event_balances_cursor(next_cursor)}
+    end
+  end
+
+  def fetch_event_balances(state, contract_pk, pagination, cursor, :amount) do
+    key_boundary = {{contract_pk, -1, <<>>}, {contract_pk, nil, <<>>}}
+
+    with {:ok, cursor_key} <- deserialize_balance_account_cursor(contract_pk, cursor) do
+      {prev_cursor, balance_keys, next_cursor} =
+        (&Collection.stream(state, Model.Aex9BalanceAccount, &1, key_boundary, cursor_key))
+        |> Collection.paginate(pagination)
+
+      {:ok, serialize_balance_account_cursor(prev_cursor), balance_keys,
+       serialize_balance_account_cursor(next_cursor)}
+    end
   end
 
   @spec fetch_balance(pubkey(), pubkey(), height_hash() | nil) ::
@@ -270,12 +291,31 @@ defmodule AeMdw.Aex9 do
     {encode_account(account_pk), is_reversed?}
   end
 
-  defp deserialize_event_balances_cursor(_contract_pk, nil), do: nil
+  defp deserialize_event_balances_cursor(_contract_pk, nil), do: {:ok, nil}
 
   defp deserialize_event_balances_cursor(contract_pk, account_pk) do
     case Validate.id(account_pk, [:account_pubkey]) do
-      {:ok, account_pk} -> {contract_pk, account_pk}
-      {:error, _reason} -> nil
+      {:ok, account_pk} -> {:ok, {contract_pk, account_pk}}
+      {:error, _reason} -> {:error, ErrInput.Cursor.exception(value: account_pk)}
+    end
+  end
+
+  defp serialize_balance_account_cursor(nil), do: nil
+
+  defp serialize_balance_account_cursor({{_contract_pk, amount, account_pk}, is_reversed?}) do
+    {"#{amount}|#{encode_account(account_pk)}", is_reversed?}
+  end
+
+  defp deserialize_balance_account_cursor(_contract_pk, nil), do: {:ok, nil}
+
+  defp deserialize_balance_account_cursor(contract_pk, cursor) do
+    with [amount, account_pk] <- String.split(cursor, "|"),
+         {amount_int, ""} <- Integer.parse(amount),
+         {:ok, account_pk} <- Validate.id(account_pk, [:account_pubkey]) do
+      {:ok, {contract_pk, amount_int, account_pk}}
+    else
+      _error ->
+        {:error, ErrInput.Cursor.exception(value: cursor)}
     end
   end
 end

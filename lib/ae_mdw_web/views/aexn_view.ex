@@ -95,25 +95,20 @@ defmodule AeMdwWeb.AexnView do
     }
   end
 
-  @spec render_event_balance(State.t(), {pubkey(), pubkey()}) :: aex9_event_balance()
+  @spec render_event_balance(State.t(), {pubkey(), pubkey()} | {pubkey(), integer(), pubkey()}) ::
+          aex9_event_balance()
   def render_event_balance(state, {contract_pk, account_pk}) do
     Model.aex9_event_balance(txi: txi, log_idx: log_idx, amount: amount) =
       State.fetch!(state, Model.Aex9EventBalance, {contract_pk, account_pk})
 
-    Model.tx(id: tx_hash, block_index: block_index) = State.fetch!(state, Model.Tx, txi)
+    do_render_event_balance(state, contract_pk, account_pk, txi, log_idx, amount)
+  end
 
-    Model.block(index: {height, _mbi}, hash: block_hash) =
-      State.fetch!(state, Model.Block, block_index)
+  def render_event_balance(state, {contract_pk, amount, account_pk}) do
+    Model.aex9_balance_account(txi: txi, log_idx: log_idx) =
+      State.fetch!(state, Model.Aex9BalanceAccount, {contract_pk, amount, account_pk})
 
-    %{
-      contract_id: encode_contract(contract_pk),
-      account_id: encode_account(account_pk),
-      block_hash: encode_block(:micro, block_hash),
-      height: height,
-      last_tx_hash: encode(:tx_hash, tx_hash),
-      last_log_idx: log_idx,
-      amount: amount
-    }
+    do_render_event_balance(state, contract_pk, account_pk, txi, log_idx, amount)
   end
 
   @spec render_contract(State.t(), Model.aexn_contract()) :: aexn_contract()
@@ -213,6 +208,23 @@ defmodule AeMdwWeb.AexnView do
   #
   # Private functions
   #
+  defp do_render_event_balance(state, contract_pk, account_pk, txi, log_idx, amount) do
+    Model.tx(id: tx_hash, block_index: block_index) = State.fetch!(state, Model.Tx, txi)
+
+    Model.block(index: {height, _mbi}, hash: block_hash) =
+      State.fetch!(state, Model.Block, block_index)
+
+    %{
+      contract_id: encode_contract(contract_pk),
+      account_id: encode_account(account_pk),
+      block_hash: encode_block(:micro, block_hash),
+      height: height,
+      last_tx_hash: encode(:tx_hash, tx_hash),
+      last_log_idx: log_idx,
+      amount: amount
+    }
+  end
+
   defp do_transfer_to_map(
          state,
          {aexn_type, sender_pk, call_txi, recipient_pk, aexn_value, log_idx} = transfer_key

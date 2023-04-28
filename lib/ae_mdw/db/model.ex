@@ -399,6 +399,24 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :aex9_event_balance, @aex9_event_balance_defaults
 
+  # AEX9 balance account:
+  #     index: {contract_pk, amount, account_pk}
+  #     txi: call txi
+  #     log_idx: event log index
+  @type aex9_balance_account_index() :: {pubkey(), integer(), pubkey()}
+  @type aex9_balance_account ::
+          record(:aex9_balance_account,
+            index: aex9_balance_account_index(),
+            txi: txi(),
+            log_idx: log_idx() | -1
+          )
+  @aex9_balance_account_defaults [
+    index: {<<>>, -1, <<>>},
+    txi: -1,
+    log_idx: -1
+  ]
+  defrecord :aex9_balance_account, @aex9_balance_account_defaults
+
   # AEX9 initial supply:
   #     index: contract_pk
   #     amount: float
@@ -1093,6 +1111,7 @@ defmodule AeMdw.Db.Model do
   defp contract_tables() do
     [
       AeMdw.Db.Model.Aex9Balance,
+      AeMdw.Db.Model.Aex9BalanceAccount,
       AeMdw.Db.Model.Aex9EventBalance,
       AeMdw.Db.Model.Aex9InitialSupply,
       AeMdw.Db.Model.Aex9ContractBalance,
@@ -1195,6 +1214,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Origin), do: :origin
   def record(AeMdw.Db.Model.RevOrigin), do: :rev_origin
   def record(AeMdw.Db.Model.Aex9Balance), do: :aex9_balance
+  def record(AeMdw.Db.Model.Aex9BalanceAccount), do: :aex9_balance_account
   def record(AeMdw.Db.Model.Aex9EventBalance), do: :aex9_event_balance
   def record(AeMdw.Db.Model.Aex9InitialSupply), do: :aex9_initial_supply
   def record(AeMdw.Db.Model.Aex9ContractBalance), do: :aex9_contract_balance

@@ -324,21 +324,23 @@ schemas:
       - range
     title: Response for AEX-9 account balance accross a range of heights
     type: object
-  Aex9ContractBalancesResponse:
+  Aex9ContractBalanceResponse:
     description: Response Schema for AEX9 contract balances responses
     example:
-      amounts:
-        ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6: 4050000000000
-        ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK: 8100000000000
-        ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4: 81000000000000
-        ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48: 4.999999999990685e+25
+      account_id: ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6
+      amount: 4050000000000
       contract_id: ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA
       block_hash: kh_bkyFuxj3W9yY8Tmuiq3KSCVHaTP3vMzHt4pZ6y1QcQEzyAf5i
       height: 618127
+      last_tx_hash: th_KTTTudTgSAZrHJQVwW4AF6XD1ksQbpyHXWfgmL2kSGvNk14CU,
+      last_log_idx: 1
     properties:
-      amounts:
-        description: The balance mapped to accounts
-        type: object
+      account_id:
+        description: The wallet pubkey 
+        type: string
+      amount:
+        description: The balance amount 
+        type: integer
       block_hash:
         description: The block hash, indicating a state of a balance for that block
         type: integer
@@ -348,11 +350,20 @@ schemas:
       height:
         description: The block height, indicating a state of a balance for that block height
         type: integer
+      last_tx_hash:
+        description: The hash of the last transaction that changed the balance
+        type: string
+      last_log_idx:
+        description: The index of the event log that changed the balance
+        type: integer
     required:
-      - amounts
+      - account_id
+      - amount
       - block_hash
       - contract_id
       - height
+      - last_tx_hash
+      - last_log_idx
     title: Response for AEX-9 contract balances
     type: object
 
@@ -724,6 +735,12 @@ paths:
           required: true
           type: string
           x-example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
+        - description: Order by
+          in: query
+          name: by
+          required: false
+          type: string
+          x-example: amount
       produces:
         - application/json
       responses:
@@ -738,7 +755,7 @@ paths:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Aex9ContractBalancesResponse'
+                          $ref: '#/components/schemas/Aex9ContractBalanceResponse'
                   - $ref: '#/components/schemas/PaginatedResponse'
         '400':
           description: Bad request

@@ -125,7 +125,37 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       |> Store.put(Model.Block, Model.block(index: {100_001, 1}, hash: <<100_001::256>>))
       |> Store.put(Model.Block, Model.block(index: {100_002, 2}, hash: <<100_002::256>>))
 
-    {:ok, conn: with_store(build_conn(), store), contract_pk: contract_pk}
+    contract_pk2 = :crypto.strong_rand_bytes(32)
+
+    functions =
+      AeMdw.Node.aex9_signatures()
+      |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+    type_info = {:fcode, functions, nil, nil}
+    AeMdw.EtsCache.put(AeMdw.Contract, contract_pk2, {type_info, nil, nil})
+
+    store =
+      1..20
+      |> Enum.reduce(store, fn i, store ->
+        account_pk = <<1_000 + i::256>>
+        txi = 1_000_000 + i
+
+        m_balance =
+          Model.aex9_balance_account(
+            index: {contract_pk2, 1_000_000 - i, account_pk},
+            txi: txi,
+            log_idx: i
+          )
+
+        block_index = if i > 10, do: {100_001, 1}, else: {100_002, 2}
+
+        store
+        |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>, block_index: block_index))
+        |> Store.put(Model.Aex9BalanceAccount, m_balance)
+      end)
+
+    {:ok,
+     conn: with_store(build_conn(), store), contract_pk: contract_pk, contract_pk2: contract_pk2}
   end
 
   describe "aex9_count" do
@@ -625,6 +655,47 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
                  Validate.id!(block_hash) == <<height::256>> and height in [100_001, 100_002] and
                  Validate.id!(last_tx_hash) == <<1_000_000 + i::256>> and
                  last_log_idx == i and amount == 1_000_000 - i
+             end)
+
+      assert @default_limit = length(balances)
+
+      assert %{"data" => next_balances, "prev" => prev} = conn |> get(next) |> json_response(200)
+
+      assert Enum.all?(next_balances, fn %{"contract_id" => ct_id} -> ct_id == contract_id end)
+
+      assert @default_limit = length(next_balances)
+      assert List.last(balances)["account_id"] < List.first(next_balances)["account_id"]
+
+      assert %{"data" => ^balances} = conn |> get(prev) |> json_response(200)
+    end
+
+    test "gets descending balances for a contract sorted by amount", %{
+      conn: conn,
+      contract_pk2: contract_pk2
+    } do
+      contract_id = encode_contract(contract_pk2)
+
+      assert %{"data" => balances, "next" => next} =
+               conn
+               |> get("/v2/aex9/#{contract_id}/balances", by: "amount")
+               |> json_response(200)
+
+      assert Enum.each(Enum.with_index(balances, 1), fn {balance, i} ->
+               %{
+                 "contract_id" => ct_id,
+                 "account_id" => account_id,
+                 "block_hash" => block_hash,
+                 "height" => height,
+                 "last_tx_hash" => last_tx_hash,
+                 "last_log_idx" => last_log_idx,
+                 "amount" => amount
+               } = balance
+
+               assert ct_id == contract_id
+               assert Validate.id!(account_id) == <<1_000 + i::256>>
+               assert Validate.id!(block_hash) == <<height::256>> and height in [100_001, 100_002]
+               assert Validate.id!(last_tx_hash) == <<1_000_000 + i::256>>
+               assert last_log_idx == i and amount == 1_000_000 - i
              end)
 
       assert @default_limit = length(balances)
