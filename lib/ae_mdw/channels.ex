@@ -93,7 +93,7 @@ defmodule AeMdw.Channels do
          {:ok, cursor} <- deserialize_nested_cursor(cursor) do
       {prev_cursor, updates_txi_idx, next_cursor} =
         state
-        |> build_nested_streamer(updates, range, cursor)
+        |> build_nested_filter(updates, range, cursor)
         |> Collection.paginate(pagination)
 
       channels_updates = Enum.map(updates_txi_idx, &render_update(state, channel_id, &1))
@@ -135,7 +135,7 @@ defmodule AeMdw.Channels do
     end
   end
 
-  defp build_nested_streamer(state, updates, range, cursor) do
+  defp build_nested_filter(state, updates, range, cursor) do
     updates = Enum.map(updates, fn {_bi, txi_idx} -> txi_idx end)
 
     updates =
