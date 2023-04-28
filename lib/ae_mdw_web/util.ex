@@ -100,6 +100,13 @@ defmodule AeMdwWeb.Util do
     Controller.json(conn, %{"data" => data, "next" => next_uri, "prev" => prev_uri})
   end
 
+  @spec paginate(
+          Conn.t(),
+          {Collection.pagination_cursor(), Enumerable.t(), Collection.pagination_cursor()}
+        ) :: Conn.t()
+  def paginate(conn, {prev_cursor, data, next_cursor}),
+    do: paginate(conn, prev_cursor, data, next_cursor)
+
   defp encode_cursor(_path, _query_params, nil), do: nil
 
   defp encode_cursor(path, query_params, {cursor, is_reversed?}) do

@@ -326,9 +326,14 @@ defmodule AeMdwWeb.OracleControllerTest do
         {DbUtil, [:passthrough],
          [
            read_node_tx_details: fn
-             _state, ^txi_idx1 -> {oracle_query_tx1, tx_hash1, :oracle_query_tx, block_hash}
-             _state, ^txi_idx2 -> {oracle_query_tx2, tx_hash2, :contract_call_tx, block_hash}
-             _state, ^txi_idx3 -> {oracle_query_tx3, tx_hash3, :oracle_query_tx, block_hash}
+             _state, ^txi_idx1 ->
+               {oracle_query_tx1, :oracle_query_tx, tx_hash1, :oracle_query_tx, block_hash}
+
+             _state, ^txi_idx2 ->
+               {oracle_query_tx2, :oracle_query_tx, tx_hash2, :contract_call_tx, block_hash}
+
+             _state, ^txi_idx3 ->
+               {oracle_query_tx3, :oracle_query_tx, tx_hash3, :oracle_query_tx, block_hash}
            end
          ]}
       ] do
@@ -541,22 +546,25 @@ defmodule AeMdwWeb.OracleControllerTest do
          [
            read_node_tx_details: fn
              _state, ^txi_idx1 ->
-               {oracle_query_tx1, tx_hash1, :oracle_query_tx, block_hash1}
+               {oracle_query_tx1, :oracle_query_tx, tx_hash1, :oracle_query_tx, block_hash1}
 
              _state, ^txi_idx2 ->
-               {oracle_query_tx2, tx_hash2, :contract_call_tx, block_hash1}
+               {oracle_query_tx2, :oracle_query_tx, tx_hash2, :contract_call_tx, block_hash1}
 
              _state, ^txi_idx3 ->
-               {oracle_query_tx3, tx_hash3, :oracle_query_tx, block_hash1}
+               {oracle_query_tx3, :oracle_query_tx, tx_hash3, :oracle_query_tx, block_hash1}
 
              _state, ^txi_idx4 ->
-               {oracle_response_tx1, tx_hash4, :oracle_response_tx, block_hash2}
+               {oracle_response_tx1, :oracle_response_tx, tx_hash4, :oracle_response_tx,
+                block_hash2}
 
              _state, ^txi_idx5 ->
-               {oracle_response_tx2, tx_hash5, :contract_call_tx, block_hash2}
+               {oracle_response_tx2, :oracle_response_tx, tx_hash5, :contract_call_tx,
+                block_hash2}
 
              _state, ^txi_idx6 ->
-               {oracle_response_tx3, tx_hash6, :oracle_response_tx, block_hash2}
+               {oracle_response_tx3, :oracle_response_tx, tx_hash6, :oracle_response_tx,
+                block_hash2}
            end
          ]}
       ] do

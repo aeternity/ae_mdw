@@ -32,6 +32,16 @@ defmodule AeMdwWeb.ChannelController do
     end
   end
 
+  @spec channel_updates(Conn.t(), map()) :: Conn.t()
+  def channel_updates(%Conn{assigns: assigns} = conn, %{"id" => id}) do
+    %{state: state, pagination: pagination, scope: scope, cursor: cursor} = assigns
+
+    with {:ok, paginated_updates} <-
+           Channels.fetch_channel_updates(state, id, pagination, scope, cursor) do
+      Util.paginate(conn, paginated_updates)
+    end
+  end
+
   defp valid_optional_block_hash?(nil), do: {:ok, nil}
 
   defp valid_optional_block_hash?(block_hash) do

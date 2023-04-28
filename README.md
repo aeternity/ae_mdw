@@ -145,6 +145,7 @@ GET /v2/oracles/:id                     - oracle information by hash
 
 GET /v2/channels                        - active channels ordered by activation height
 GET /v2/channels/:id                    - active or inactive channel
+GET /v2/channels/:id/updates            - displays all updates done to a channel
 
 GET /v2/transfers                        - internal transfers from the top of the chain
 
@@ -3805,6 +3806,40 @@ $ curl -s "https://testnet.aeternity.io/mdw/v2/channels/ch_2ZBf9AJ3wr25YzdZb1sQr
   "responder_amount": 2e+18,
   "round": 8,
   "solo_round": 0
+}
+```
+
+### `/v2/channels/:id/updates`
+
+Returns a paginated list of updates done to a channel.
+
+```
+$ curl -s "https://testnet.aeternity.io/mdw/v2/channels/ch_2ZBf9AJ3wr25YzdZb1sQrDALEQ1ZDKwwUhtVXoZiNKbheuesqs/updates?limit=1" | jq '.'
+{
+  "data": [
+    {
+      "block_hash": "mh_2QuuJR9TC7Pnq2o8myDgEQWnRxbCtYwenLLGrk1Xr1VmjF5ozt",
+      "source_tx_hash": "th_2YHpkkn9ojgKF8amcJiaLCPR46JZg9He6T73MRHdM21Nj2QSWn",
+      "source_tx_type": "ChannelCreateTx",
+      "tx" => {
+        "channel": "ch_2ZBf9AJ3wr25YzdZb1sQrDALEQ1ZDKwwUhtVXoZiNKbheuesqs",
+        "tx_type": "ChannelCreateTx",
+        "channel_reserve": 1,
+        "delegate_ids": [],
+        "fee": 17500000000000,
+        "initiator_amount": 20000000000000,
+        "initiator_id": "ak_vx8HkCzRHrqpCAyQ7TFBtfTqBimkcTFcJC1amez5vtCzdu2oN",
+        "lock_period": 1,
+        "nonce": 7,
+        "responder_amount": 1,
+        "responder_id": "ak_2dxvgsogiBDWXvZSzTghv5MoXLfkFGiEynDC5Cn8k2M2s325Ki",
+        "state_hash": "st_fav83CO2VqFQTOayQE3Z3Xhj1NTbFHNcve7KWjemmES0s7tK",
+        "ttl": 0
+      }
+    }
+  ],
+  "next": "/v2/channels/ch_2ZBf9AJ3wr25YzdZb1sQrDALEQ1ZDKwwUhtVXoZiNKbheuesqs/updates?cursor=9155-0&limit=1",
+  "prev": null
 }
 ```
 

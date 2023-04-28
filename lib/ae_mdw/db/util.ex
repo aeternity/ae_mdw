@@ -164,26 +164,26 @@ defmodule AeMdw.Db.Util do
 
   @spec read_node_tx(state(), Txs.txi_idx()) :: Node.tx()
   def read_node_tx(state, txi_idx) do
-    {tx, _tx_hash, _tx_type, _block_hash} = read_node_tx_details(state, txi_idx)
+    {tx, _inner_type, _tx_hash, _tx_type, _block_hash} = read_node_tx_details(state, txi_idx)
     tx
   end
 
   @spec read_node_tx_details(state(), Txs.txi_idx()) ::
-          {Node.tx(), Txs.tx_hash(), Node.tx_type(), Blocks.block_hash()}
+          {Node.tx(), Node.tx_type(), Txs.tx_hash(), Node.tx_type(), Blocks.block_hash()}
   def read_node_tx_details(state, {txi, -1}) do
     Model.tx(id: tx_hash) = State.fetch!(state, Model.Tx, txi)
     {block_hash, tx_type, _signed_tx, tx_rec} = Db.get_tx_data(tx_hash)
 
     if tx_type in [:ga_meta_tx, :paying_for_tx] do
-      {_type, tx} =
+      {inner_type, tx} =
         tx_type
         |> InnerTx.signed_tx(tx_rec)
         |> :aetx_sign.tx()
         |> :aetx.specialize_type()
 
-      {tx, tx_hash, tx_type, block_hash}
+      {tx, inner_type, tx_hash, tx_type, block_hash}
     else
-      {tx_rec, tx_hash, tx_type, block_hash}
+      {tx_rec, tx_type, tx_hash, tx_type, block_hash}
     end
   end
 
@@ -195,9 +195,9 @@ defmodule AeMdw.Db.Util do
 
     {block_hash, tx_type, _signed_tx, _tx_rec} = Db.get_tx_data(tx_hash)
 
-    {_type, tx} = :aetx.specialize_type(aetx)
+    {inner_type, tx} = :aetx.specialize_type(aetx)
 
-    {tx, tx_hash, tx_type, block_hash}
+    {tx, inner_type, tx_hash, tx_type, block_hash}
   end
 
   def read_node_tx_details(state, txi), do: read_node_tx_details(state, {txi, -1})
@@ -278,10 +278,10 @@ defmodule AeMdw.Db.Util do
   @spec call_account_pk(state(), txi()) :: Db.pubkey()
   def call_account_pk(state, call_txi) do
     case read_node_tx_details(state, {call_txi, -1}) do
-      {tx, _tx_hash, :contract_call_tx, _block_hash} ->
+      {tx, _inner_type, _tx_hash, :contract_call_tx, _block_hash} ->
         tx |> :aect_call_tx.caller_id() |> :aeser_id.specialize(:account)
 
-      {tx, _tx_hash, :contract_create_tx, _block_hash} ->
+      {tx, _inner_type, _tx_hash, :contract_create_tx, _block_hash} ->
         tx |> :aect_create_tx.owner_id() |> :aeser_id.specialize(:account)
     end
   end

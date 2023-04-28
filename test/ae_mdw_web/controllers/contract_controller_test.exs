@@ -978,16 +978,18 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
          [
            read_node_tx_details: fn
              _state, {^txi1, -1} ->
-               {contract_create_tx1, tx_hash1, :contract_create_tx, block_hash}
+               {contract_create_tx1, :contract_create_tx, tx_hash1, :contract_create_tx,
+                block_hash}
 
              _state, {^txi2, 0} ->
-               {contract_create_tx2, tx_hash2, :contract_call_tx, block_hash}
+               {contract_create_tx2, :contract_create_tx, tx_hash2, :contract_call_tx, block_hash}
 
              _state, {^txi3, -1} ->
-               {contract_create_tx3, tx_hash3, :contract_create_tx, block_hash}
+               {contract_create_tx3, :contract_create_tx, tx_hash3, :contract_create_tx,
+                block_hash}
 
              _state, {^txi4, -1} ->
-               {ga_attach_tx, tx_hash4, :ga_attach_tx, block_hash}
+               {ga_attach_tx, :ga_attach_tx, tx_hash4, :ga_attach_tx, block_hash}
            end
          ]}
       ] do
@@ -1114,7 +1116,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
         {DbUtil, [:passthrough],
          [
            read_node_tx_details: fn _state, {^txi, 0} ->
-             {contract_create_tx, tx_hash, :contract_call_tx, block_hash}
+             {contract_create_tx, :contract_create_tx, tx_hash, :contract_call_tx, block_hash}
            end,
            read_node_tx: fn _state, {^txi, 0} ->
              contract_create_tx
@@ -1188,7 +1190,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
         {DbUtil, [:passthrough],
          [
            read_node_tx_details: fn _state, {^txi, -1} ->
-             {contract_create_tx, tx_hash, :contract_create_tx, block_hash}
+             {contract_create_tx, :contract_create_tx, tx_hash, :contract_create_tx, block_hash}
            end
          ]},
         {Db, [:passthrough],
