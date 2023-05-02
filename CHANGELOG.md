@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.46.1](https://www.github.com/aeternity/ae_mdw/compare/v1.46.0...v1.46.1) (2023-05-02)
+
+
+### Miscellaneous
+
+* show last applied migration ([#1287](https://www.github.com/aeternity/ae_mdw/issues/1287)) ([0f72b8a](https://www.github.com/aeternity/ae_mdw/commit/0f72b8a2293bc428caca3d9ad5d3bc668085c250))
+
 ## [1.46.0](https://www.github.com/aeternity/ae_mdw/compare/v1.45.0...v1.46.0) (2023-05-02)
 
 
