@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.46.0](https://www.github.com/aeternity/ae_mdw/compare/v1.45.0...v1.46.0) (2023-05-02)
+
+
+### Features
+
+* add channels updates nested endpoint ([#1277](https://www.github.com/aeternity/ae_mdw/issues/1277)) ([5230feb](https://www.github.com/aeternity/ae_mdw/commit/5230feb3ba3dd421044fba8c12ada16db2d526d5))
+* sort aex9 balance per amount ([#1280](https://www.github.com/aeternity/ae_mdw/issues/1280)) ([2f886e9](https://www.github.com/aeternity/ae_mdw/commit/2f886e9c06cba13cbeba58d0d40e1a231fe59e22))
+
+
+### Bug Fixes
+
+* consider existing oracles on inactive ones count ([#1274](https://www.github.com/aeternity/ae_mdw/issues/1274)) ([8f51484](https://www.github.com/aeternity/ae_mdw/commit/8f514843e8d5d472602e646b06a03100510d0d64))
+
+
+### Refactorings
+
+* commit migration instead of direct db write ([#1286](https://www.github.com/aeternity/ae_mdw/issues/1286)) ([5fdc504](https://www.github.com/aeternity/ae_mdw/commit/5fdc504c64e0884c0dacdebdb740ffb1c81065ef))
+
 ## [1.45.0](https://www.github.com/aeternity/ae_mdw/compare/v1.44.0...v1.45.0) (2023-04-24)
 
 
