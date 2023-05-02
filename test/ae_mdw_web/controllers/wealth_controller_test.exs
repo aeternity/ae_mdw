@@ -1,4 +1,4 @@
-defmodule AeMdwWeb.UtilControllerTest do
+defmodule AeMdwWeb.WealthControllerTest do
   @moduledoc false
 
   use AeMdwWeb.ConnCase
