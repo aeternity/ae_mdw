@@ -2,6 +2,7 @@ defmodule AeMdw.Db.Status do
   @moduledoc """
   Database sync status from Mdw and local Node.
   """
+  alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util
@@ -60,7 +61,14 @@ defmodule AeMdw.Db.Status do
     async_tasks_counters = Stats.counters()
     gens_per_minute = get_gens_per_min()
 
+    last_migration =
+      case Database.last_key(Model.Migrations) do
+        {:ok, version} -> version
+        :none -> nil
+      end
+
     %{
+      mdw_last_migration: last_migration,
       mdw_version: to_string(version),
       mdw_revision: :persistent_term.get({:ae_mdw, :build_revision}),
       mdw_height: mdw_height,
