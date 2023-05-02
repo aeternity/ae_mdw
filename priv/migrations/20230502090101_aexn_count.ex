@@ -5,6 +5,7 @@ defmodule AeMdw.Migrations.AexnCount do
 
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.WriteMutation
   alias AeMdw.Collection
   alias AeMdw.Util
   alias AeMdw.Stats
@@ -33,16 +34,18 @@ defmodule AeMdw.Migrations.AexnCount do
       )
       |> Enum.count()
 
-    _state =
-      state
-      |> State.put(
+    mutations = [
+      WriteMutation.new(
         Model.Stat,
         Model.stat(index: Stats.aexn_count_key(:aex9), payload: aex9_count)
-      )
-      |> State.put(
+      ),
+      WriteMutation.new(
         Model.Stat,
         Model.stat(index: Stats.aexn_count_key(:aex141), payload: aex141_count)
       )
+    ]
+
+    _state = State.commit(state, mutations)
 
     {:ok, 2}
   end
