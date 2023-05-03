@@ -57,6 +57,11 @@ defmodule AeMdw.Db.NameClaimMutationTest do
       Model.owner(index: {owner_pk, plain_name})
     )
 
+    Database.dirty_write(
+      Model.InactiveNameOwnerDeactivation,
+      Model.owner(index: {owner_pk, 199, plain_name})
+    )
+
     state = State.new()
 
     with_mocks [

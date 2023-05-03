@@ -349,6 +349,7 @@ defmodule AeMdw.Db.Sync.Name do
     |> cache_through_delete(Model.InactiveName, plain_name)
     |> cache_through_delete(Model.InactiveNameOwner, {owner_pk, plain_name})
     |> cache_through_delete(Model.InactiveNameExpiration, {expire, plain_name})
+    |> cache_through_delete(Model.InactiveNameOwnerDeactivation, {owner_pk, expire, plain_name})
   end
 
   defp plain_name!(state, name_hash) do
