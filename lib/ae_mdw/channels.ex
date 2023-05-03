@@ -40,7 +40,7 @@ defmodule AeMdw.Channels do
     :channel_close_mutual_tx => :aesc_close_mutual_tx,
     :channel_settle_tx => :aesc_settle_tx,
     :channel_deposit_tx => :aesc_deposit_tx,
-    :channel_withdraw_tx => :aesc_widthdraw_tx,
+    :channel_withdraw_tx => :aesc_withdraw_tx,
     :channel_set_delegates_tx => :aesc_set_delegates_tx,
     :channel_force_progress_tx => :aesc_force_progress_tx,
     :channel_slash_tx => :aesc_slash_tx,
