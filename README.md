@@ -9,6 +9,7 @@
 - [Setup](#setup)
   - [Database snapshot](#database-snapshot)
   - [Docker Configuration](#docker-configuration)
+  - [Genesis accounts](#genesis-accounts)
   - [Docker setup for local dev](#docker-setup-for-local-dev)
   - [Tools for local development](#tools-for-local-development)
 - [Hosted infrastructure](#hosted-infrastructure)
@@ -74,6 +75,20 @@ If you are running your own build, on dev environment, with `docker-compose-dev.
 For docker hub images, you can create a volume to copy your local `/home/aeternity/aeternity.yaml` by uncommenting it on `docker-compose.yml`.
 
 You may also redefine other Aeternity node configurations. More information regarding configuration can be found [here](https://docs.aeternity.io/en/stable/configuration/)
+
+### Genesis accounts
+
+In case you want to setup different accounts on testnet with initial balance you can add this volume to `docker-compose-dev.yml`:
+
+`- ${PWD}/accounts_test.json:/home/aeternity/node/local/rel/aeternity/data/aecore/.genesis/accounts_test.json`
+
+An example of `accounts_test.json` is:
+
+```
+{
+   "ak_2a1j2Mk9YSmC1gioUq4PWRm3bsv887MbuRVwyv4KaUGoR1eiKi": 10000000000000000000000000000000
+}
+```
 
 ### Docker setup for local dev
 
