@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.46.2](https://www.github.com/aeternity/ae_mdw/compare/v1.46.1...v1.46.2) (2023-05-03)
+
+
+### Bug Fixes
+
+* set proper migrations path on mix release ([#1289](https://www.github.com/aeternity/ae_mdw/issues/1289)) ([cf6d4fa](https://www.github.com/aeternity/ae_mdw/commit/cf6d4fa221e79e2d141ef48d9deb8f4e530204fa))
+
 ### [1.46.1](https://www.github.com/aeternity/ae_mdw/compare/v1.46.0...v1.46.1) (2023-05-02)
 
 
