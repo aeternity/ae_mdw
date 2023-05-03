@@ -1,5 +1,13 @@
 # Changelog
 
+### [1.46.3](https://www.github.com/aeternity/ae_mdw/compare/v1.46.2...v1.46.3) (2023-05-03)
+
+
+### Bug Fixes
+
+* delete inactive name owner deactivation records when activated ([#1296](https://www.github.com/aeternity/ae_mdw/issues/1296)) ([79e4242](https://www.github.com/aeternity/ae_mdw/commit/79e4242b66e8bc3170d8c5438dc62c4ca8684c6e))
+* set correct node module for channel withdraw ([#1298](https://www.github.com/aeternity/ae_mdw/issues/1298)) ([592faae](https://www.github.com/aeternity/ae_mdw/commit/592faae7c149bca96b414c3d90401b9e64e1a961))
+
 ### [1.46.2](https://www.github.com/aeternity/ae_mdw/compare/v1.46.1...v1.46.2) (2023-05-03)
 
 
