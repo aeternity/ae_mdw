@@ -66,7 +66,7 @@ defmodule AeMdw.Migrations.ReindexIntTransfersWithNewFormat do
            })
          ]}
       end)
-      |> Stream.chunk_every(100)
+      |> Stream.chunk_every(10_000)
       |> Enum.reduce({state, 0}, fn [{first_height, _mutations} | _rest] = height_mutations,
                                     {state, count} ->
         mutations = Enum.flat_map(height_mutations, &elem(&1, 1))
