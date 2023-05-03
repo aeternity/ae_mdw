@@ -15,7 +15,7 @@ defmodule Mix.Tasks.MigrateDb do
 
   @version_len 14
 
-  @migrations_code_path "priv/migrations/*.ex"
+  @migrations_code_path "migrations/*.ex"
 
   # ignore for Code.compile_file/1
   @dialyzer {:no_return, run: 1}
@@ -60,8 +60,8 @@ defmodule Mix.Tasks.MigrateDb do
   end
 
   @spec list_new_migrations(integer()) :: [{integer(), String.t()}]
-  defp list_new_migrations(current_version) do
-    @migrations_code_path
+  def list_new_migrations(current_version) do
+    "#{:code.priv_dir(:ae_mdw)}/#{@migrations_code_path}"
     |> Path.wildcard()
     |> Enum.map(fn path ->
       version =
