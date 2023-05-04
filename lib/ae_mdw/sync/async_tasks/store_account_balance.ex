@@ -25,9 +25,10 @@ defmodule AeMdw.Sync.AsyncTasks.StoreAccountBalance do
              accounts_tree <- :aec_trees.accounts(trees),
              balances <- get_balances(accounts_tree, account_set) do
           update_balances(balances)
-          done_fn.()
         end
       end)
+
+    done_fn.()
 
     if time_delta / @milisecs > @log_threshold_ms do
       Log.info("[store_account_balance] #{inspect(block_index)} after #{time_delta / @milisecs}s")
