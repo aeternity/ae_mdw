@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.46.4](https://www.github.com/aeternity/ae_mdw/compare/v1.46.3...v1.46.4) (2023-05-04)
+
+
+### Bug Fixes
+
+* delete async task if block is not found ([#1299](https://www.github.com/aeternity/ae_mdw/issues/1299)) ([6b4d3d7](https://www.github.com/aeternity/ae_mdw/commit/6b4d3d7bdd0d7859e9733e63d96105006aa5f301))
+
 ### [1.46.3](https://www.github.com/aeternity/ae_mdw/compare/v1.46.2...v1.46.3) (2023-05-03)
 
 
