@@ -13,6 +13,7 @@ defmodule AeMdw.Sync.AsyncTasks.WealthRank do
   @table :async_wealth_rank
 
   @typep pubkey :: AeMdw.Node.Db.pubkey()
+  @typep balances :: [{pubkey(), integer()}]
   @opaque key :: {integer, pubkey()}
 
   @spec init() :: :ok
@@ -21,51 +22,30 @@ defmodule AeMdw.Sync.AsyncTasks.WealthRank do
     :ok
   end
 
-  @spec init_wealth_store() :: :ok
-  def init_wealth_store do
-    async_store = AsyncStore.instance()
-
-    State.new()
-    |> Collection.stream(Model.BalanceAccount, :backward, nil, {nil, nil})
-    |> Enum.each(
-      &AsyncStore.put(async_store, Model.BalanceAccount, Model.balance_account(index: &1))
-    )
-
-    :ok
-  end
-
-  @spec insert(pubkey(), integer()) :: :ok
-  def insert(pubkey, balance) do
-    :ets.insert(@table, {pubkey, balance})
-    :ok
-  end
-
-  @spec get_balance(pubkey()) :: integer() | nil
-  def get_balance(pubkey) do
-    case :ets.lookup(@table, pubkey) do
-      [{^pubkey, balance}] -> balance
-      [] -> nil
-    end
-  end
-
   @spec prune_balance_ranking(AsyncStore.t()) :: {[key()], AsyncStore.t()}
   def prune_balance_ranking(store) do
-    keys = balance_accounts(store)
+    keys =
+      store
+      |> balance_accounts()
+      |> Enum.reduce(%{}, fn {amount, pubkey}, acc -> Map.put_new(acc, pubkey, amount) end)
+      |> Enum.map(fn {pubkey, amount} -> {amount, pubkey} end)
+      |> Enum.sort_by(fn {amount, _pubkey} -> amount end, :desc)
+
     top_keys = Enum.take(keys, rank_size_config())
 
     cleared_store = Enum.reduce(keys, store, &AsyncStore.delete(&2, Model.BalanceAccount, &1))
     :ets.delete_all_objects(@table)
 
     {top_keys,
-     Enum.reduce(top_keys, cleared_store, fn key, store ->
-       AsyncStore.put(store, Model.BalanceAccount, Model.balance_account(index: key))
+     Enum.reduce(top_keys, cleared_store, fn {amount, pubkey}, store ->
+       insert(store, pubkey, amount)
      end)}
   end
 
   @spec restore_ranking(AsyncStore.t(), [key()]) :: AsyncStore.t()
   def restore_ranking(store, keys) do
-    Enum.reduce(keys, store, fn key, store ->
-      AsyncStore.put(store, Model.BalanceAccount, Model.balance_account(index: key))
+    Enum.reduce(keys, store, fn {amount, pubkey}, store ->
+      insert(store, pubkey, amount)
     end)
   end
 
@@ -75,6 +55,51 @@ defmodule AeMdw.Sync.AsyncTasks.WealthRank do
       rank_size = Application.fetch_env!(:ae_mdw, :wealth_rank_size)
       :persistent_term.put({__MODULE__, :rank_size}, rank_size)
       rank_size
+    end
+  end
+
+  @spec update_balances(balances()) :: :ok
+  def update_balances(balances) do
+    async_store =
+      if AsyncStore.next(AsyncStore.instance(), Model.BalanceAccount, nil) == :none do
+        init_wealth_store()
+      else
+        AsyncStore.instance()
+      end
+
+    _store =
+      Enum.reduce(balances, async_store, fn {account_pk, balance}, store ->
+        with old_balance when old_balance != nil <- get_balance(account_pk) do
+          AsyncStore.delete(store, Model.BalanceAccount, {old_balance, account_pk})
+        end
+
+        insert(async_store, account_pk, balance)
+      end)
+
+    :ok
+  end
+
+  defp init_wealth_store do
+    async_store = AsyncStore.instance()
+
+    State.new()
+    |> Collection.stream(Model.BalanceAccount, :backward, nil, {nil, nil})
+    |> Enum.reduce(async_store, fn {amount, pubkey}, store ->
+      insert(store, pubkey, amount)
+    end)
+  end
+
+  defp insert(async_store, pubkey, balance) do
+    :ets.insert(@table, {pubkey, balance})
+
+    record = Model.balance_account(index: {balance, pubkey})
+    AsyncStore.put(async_store, Model.BalanceAccount, record)
+  end
+
+  defp get_balance(pubkey) do
+    case :ets.lookup(@table, pubkey) do
+      [{^pubkey, balance}] -> balance
+      [] -> nil
     end
   end
 
