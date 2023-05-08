@@ -25,13 +25,23 @@ defmodule AeMdw.Migrations.DedupBalanceAccount do
 
     state
     |> Collection.stream(Model.Block, :forward, nil, {1, -1})
-    |> Stream.filter(fn {_kb, mbi} ->
+    |> Stream.filter(fn {kb, mbi} ->
+      if mbi != -1, do: IO.puts("height #{kb} mbi #{mbi}")
+
       mbi == -1
     end)
     |> Stream.map(&State.fetch!(state, Model.Block, &1))
     |> Stream.flat_map(&AeMdw.Node.Db.get_micro_blocks(Model.block(&1, :hash)))
     |> Stream.map(&micro_block_balances/1)
-    |> Enum.each(&WealthRank.update_balances/1)
+    |> Stream.with_index()
+    |> Enum.each(fn {balances, index} ->
+      _res =
+        if rem(index, 1000) == 0 do
+          WealthRank.prune_balance_ranking(AsyncStore.instance())
+        end
+
+      WealthRank.update_balances(balances)
+    end)
 
     {top_keys, _store} = WealthRank.prune_balance_ranking(AsyncStore.instance())
 
