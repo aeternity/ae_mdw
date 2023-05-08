@@ -16,7 +16,7 @@ case $1 in
     ;;
 
   "docker-shell")
-    docker-compose -f docker-compose-dev.yml run --rm --workdir=/app --entrypoint="" --service-ports ae_mdw /bin/bash
+    docker-compose -f docker-compose-dev.yml run --rm --workdir=/app --entrypoint="" --use-aliases --service-ports ae_mdw /bin/bash
     ;;
 
   "test-integration")
@@ -26,4 +26,7 @@ case $1 in
   "test")
     MIX_ENV=test elixir --sname $NAME -S mix test $2
     ;;
+
+  "docker-sdk")
+    docker-compose -f docker-compose-dev.yml run --rm node_sdk /bin/bash
 esac

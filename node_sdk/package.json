@@ -1,0 +1,16 @@
+{
+  "name": "node-sdk",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "exec-sdk": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@aeternity/aepp-sdk": "^13.0.0",
+    "node-fetch": "2.6.1"
+  }
+}

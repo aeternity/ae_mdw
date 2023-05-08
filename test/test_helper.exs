@@ -1,7 +1,7 @@
 config = ExUnit.configuration()
 included_tests = Keyword.fetch!(config, :include)
 
-if :integration not in included_tests and :iteration not in included_tests do
+if Enum.all?(~w(integration iteration devmode)a, &(&1 not in included_tests)) do
   IO.puts("Stopping :aecore..")
   Application.stop(:aecore)
 

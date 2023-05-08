@@ -1,0 +1,28 @@
+%% -*- mode: erlang; erlang-indent-level: 4; indent-tabs-mode: nil -*-
+{application, aeplugin_dev_mode,
+ [{description, "Basic AE node plugin for 'dev mode'"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {mod, {aeplugin_dev_mode_app, []}},
+  {start_phases, [{check_config, []}]},
+  {applications, [kernel, stdlib, aecore, ebip39, eaex10, epbkdf2, ec_utils, aedevmode]},
+  {env,
+   [{'$setup_hooks',
+     [{normal,
+       [
+        %% We run our hook AFTER core check_env hooks have completed
+        {111, {aeplugin_dev_mode_app, check_env, []}}
+       ]}
+     ]},
+    {'$app_ctrl',
+     [{modify,
+       [
+        {roles, [{basic, [join]}]}
+       ]}
+     ]}
+   ]},
+  {modules, []},
+  {licenses, ["ISC"]},
+  {links, ["https://github.com/aeterity/aeternity",
+           "https://github.com/aeternity/aep_dev_mode"]}
+ ]}.

@@ -4996,6 +4996,15 @@ The database has to be fully synced. Then, run the tests with:
 elixir --sname aeternity@localhost -S mix test.integration
 ```
 
+### Devmode tests
+
+These tests allow you to create your own transactions using the devmode (plus the JS SDK). To add newer tests you need to:
+
+1. Add the transactions creation on `node_sdk/index.js`.
+2. Run the JavaScript file using `docker-compose -f docker-compose-dev.yml run node_sdk node index.js`.
+3. Add new devmode tests under the `test/devmode/` directory.
+4. Run tests using `./scripts/test-devmode.sh`.
+
 ## CI
 
 #### Actions

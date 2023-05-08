@@ -1,0 +1,50 @@
+sync:
+    port: 3015
+    log_peer_connection_count_interval: 6000000
+
+http:
+    external:
+        port: 3013
+    internal:
+        port: 3113
+
+websocket:
+    channel:
+        port: 3014
+
+mining:
+    autostart: false
+    beneficiary: "ak_2KxrhnEKxYRdngG3CzgVztsCpe1fSL3HDHcF5yDCNqqZ3VvVu7"
+    beneficiary_reward_delay: 2
+    strictly_follow_top: true
+
+chain:
+    persist: true
+    consensus:
+      "0":
+        name: "on_demand" # keeping the old config style at first to stay backwards compatible
+        type: "on_demand"
+
+fork_management:
+  network_id: ae_dev
+
+system:
+  # plugin_path: /home/aeternity/node/plugins
+  dev_mode: true
+  plugins:
+    - name: ae_plugin_dev_mode
+      config: # keeping the old config style at first to stay backwards compatible
+        # workspace_name: plugindev
+        keyblock_interval: 0
+        microblock_interval: 0
+        auto_emit_microblocks: true
+
+dev_mode:
+  keyblock_interval: 0
+  microblock_interval: 0
+  auto_emit_microblocks: true
+
+logging:
+  # Controls the overload protection in the logs.
+  hwm: 50
+  level: debug

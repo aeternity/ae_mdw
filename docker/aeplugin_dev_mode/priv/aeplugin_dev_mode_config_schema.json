@@ -1,0 +1,20 @@
+{
+    "$schema" : "http://json-schema.org/draft-04/schema#",
+    "type" : "object",
+    "properties" : {
+        "prefunded_accounts" : {
+            "description" : "When not using a synced Chain Database, devmode gives you a set of prefunded accounts",
+            "type" : "array",
+            "default" : []
+        },
+        "workspace_path" : {
+            "description": "Where to store plugin-specific data",
+            "type" : "string"
+        },
+        "workspace_name" : {
+            "description" : "Name for separating different configurations. Default: ''",
+            "type" : "string",
+            "default" : ""
+        }
+    }
+}
