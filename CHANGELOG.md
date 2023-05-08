@@ -1,5 +1,17 @@
 # Changelog
 
+### [1.46.5](https://www.github.com/aeternity/ae_mdw/compare/v1.46.4...v1.46.5) (2023-05-08)
+
+
+### Bug Fixes
+
+* update account balance ([#1303](https://www.github.com/aeternity/ae_mdw/issues/1303)) ([dee9a63](https://www.github.com/aeternity/ae_mdw/commit/dee9a632af374d862737b4f7e6fe36dee0dd2002))
+
+
+### Miscellaneous
+
+* prune wealth migration ([#1305](https://www.github.com/aeternity/ae_mdw/issues/1305)) ([21209ed](https://www.github.com/aeternity/ae_mdw/commit/21209ed72282a9162b94be5bafb252d2b16c55b6))
+
 ### [1.46.4](https://www.github.com/aeternity/ae_mdw/compare/v1.46.3...v1.46.4) (2023-05-04)
 
 
