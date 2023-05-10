@@ -38,6 +38,8 @@ defmodule AeMdw.Application do
 
     :ok = AeMdw.Db.RocksDb.open()
 
+    dedup_pending_async_tasks()
+
     children = [
       AeMdw.APM.Telemetry,
       AeMdwWeb.Supervisor,
@@ -220,6 +222,10 @@ defmodule AeMdw.Application do
   @impl Application
   def config_change(changed, _new, removed) do
     AeMdwWeb.Endpoint.config_change(changed, removed)
+    :ok
+  end
+
+  defp dedup_pending_async_tasks() do
     :ok
   end
 end
