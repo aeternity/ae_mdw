@@ -316,10 +316,13 @@ defmodule AeMdw.Sync.Server do
 
   defp maybe_enqueue_accounts_balance(state, mblock, block_index) do
     {:ok, mb_hash} = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock))
+    accounts_set = micro_block_accounts(mblock)
 
-    State.enqueue(state, :store_acc_balance, [mb_hash, block_index], [
-      micro_block_accounts(mblock)
-    ])
+    if MapSet.size(accounts_set) > 0 do
+      State.enqueue(state, :store_acc_balance, [mb_hash, block_index], [accounts_set])
+    else
+      state
+    end
   end
 
   defp exec_mem_mutations(gens_mutations, state) do

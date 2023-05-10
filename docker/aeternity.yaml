@@ -28,4 +28,4 @@ chain:
         history: 500
 
 fork_management:
-    network_id: ae_uat
+    network_id: ae_mainnet
