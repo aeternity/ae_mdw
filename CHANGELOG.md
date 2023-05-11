@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.46.6](https://www.github.com/aeternity/ae_mdw/compare/v1.46.5...v1.46.6) (2023-05-11)
+
+
+### Miscellaneous
+
+* clear done in memory async tasks ([#1310](https://www.github.com/aeternity/ae_mdw/issues/1310)) ([200be59](https://www.github.com/aeternity/ae_mdw/commit/200be59ce872ab2726f5fff33bb90d12102d21a2))
+
 ### [1.46.5](https://www.github.com/aeternity/ae_mdw/compare/v1.46.4...v1.46.5) (2023-05-08)
 
 
