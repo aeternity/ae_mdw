@@ -17,6 +17,7 @@ defmodule AeMdw.Db.State do
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Sync.AsyncTasks.Consumer
   alias AeMdw.Sync.AsyncTasks.Producer
+  alias AeMdw.Db.ClearDoneAsyncTasksMutation
 
   defstruct [:store, :stats, :cache, :jobs]
 
@@ -55,7 +56,7 @@ defmodule AeMdw.Db.State do
       TxnDbStore.transaction(fn store ->
         state2 = %__MODULE__{state | store: store}
 
-        [mutations, AsyncStoreMutation.new()]
+        [mutations, ClearDoneAsyncTasksMutation.new(), AsyncStoreMutation.new()]
         |> List.flatten()
         |> Enum.reject(&is_nil/1)
         |> Enum.reduce(state2, &Mutation.execute/2)

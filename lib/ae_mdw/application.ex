@@ -203,6 +203,11 @@ defmodule AeMdw.Application do
     :ok
   end
 
+  def start_phase(:dedup_accounts, _start_type, []) do
+    AeMdw.Sync.AsyncTasks.WealthRank.dedup_pending_accounts()
+    :ok
+  end
+
   def start_phase(:start_sync, _start_type, []) do
     if Application.fetch_env!(:ae_mdw, :sync) do
       Watcher.start_sync()
