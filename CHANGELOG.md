@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.46.7](https://www.github.com/aeternity/ae_mdw/compare/v1.46.6...v1.46.7) (2023-05-11)
+
+
+### Miscellaneous
+
+* check if record exists on delete keys mutation ([#1312](https://www.github.com/aeternity/ae_mdw/issues/1312)) ([1c0ff5e](https://www.github.com/aeternity/ae_mdw/commit/1c0ff5e4cea199cfca4550750eea2cc51769cb7a))
+
 ### [1.46.6](https://www.github.com/aeternity/ae_mdw/compare/v1.46.5...v1.46.6) (2023-05-11)
 
 
