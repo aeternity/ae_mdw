@@ -296,13 +296,14 @@ defmodule AeMdw.Sync.Server do
   end
 
   defp exec_db_mutations(gens_mutations, state, clear_mem?) do
+    blocks_mutations =
+      Enum.flat_map(gens_mutations, fn {_height, blocks_mutations} -> blocks_mutations end)
+
+    enqueue_state = maybe_enqueue_accounts_balance(state, blocks_mutations)
+
     new_state =
-      gens_mutations
-      |> Enum.flat_map(fn {_height, blocks_mutations} -> blocks_mutations end)
-      |> Enum.reduce(state, fn {block_index, block, block_mutations}, state ->
-        state
-        |> maybe_enqueue_accounts_balance(block, block_index)
-        |> State.commit_db(block_mutations, clear_mem?)
+      Enum.reduce(blocks_mutations, enqueue_state, fn {_bi, _block, block_mutations}, state ->
+        State.commit_db(state, block_mutations, clear_mem?)
       end)
 
     broadcast_blocks(gens_mutations)
@@ -310,16 +311,33 @@ defmodule AeMdw.Sync.Server do
     new_state
   end
 
-  defp maybe_enqueue_accounts_balance(state, _block, {_kbi, -1}) do
-    state
+  defp maybe_enqueue_accounts_balance(state, block_mutations) do
+    accounts_set =
+      Enum.reduce(block_mutations, MapSet.new(), fn
+        {{_height, -1}, _block, _mutations}, set ->
+          set
+
+        {_block_index, mblock, _mutations}, set ->
+          MapSet.union(set, micro_block_accounts(mblock))
+      end)
+
+    if MapSet.size(accounts_set) > 0 do
+      {block_index, mb_hash} = last_microblock(block_mutations)
+      State.enqueue(state, :store_acc_balance, [mb_hash, block_index], [accounts_set])
+    else
+      state
+    end
   end
 
-  defp maybe_enqueue_accounts_balance(state, mblock, block_index) do
+  defp last_microblock(block_mutations) do
+    {block_index, mblock, _mutations} =
+      block_mutations
+      |> Enum.filter(fn {{_height, mbi}, _block, _mutations} -> mbi != -1 end)
+      |> Enum.max_by(fn {block_index, _block, _mutations} -> block_index end)
+
     {:ok, mb_hash} = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock))
 
-    State.enqueue(state, :store_acc_balance, [mb_hash, block_index], [
-      micro_block_accounts(mblock)
-    ])
+    {block_index, mb_hash}
   end
 
   defp exec_mem_mutations(gens_mutations, state) do
@@ -332,10 +350,8 @@ defmodule AeMdw.Sync.Server do
       end)
 
     new_state =
-      blocks_mutations
-      |> Enum.reduce(state, fn {block_index, block, _block_mutations}, state_acc ->
-        maybe_enqueue_accounts_balance(state_acc, block, block_index)
-      end)
+      state
+      |> maybe_enqueue_accounts_balance(blocks_mutations)
       |> State.commit_mem(all_mutations)
 
     broadcast_blocks(gens_mutations)

@@ -15,6 +15,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
   @added_tab :async_tasks_added
   @pending_tab :async_tasks_pending
   @processing_tab :async_tasks_processing
+  @done_tab :async_tasks_done
 
   @minutes_expire 60
 
@@ -23,6 +24,7 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
     EtsCache.new(@added_tab, @minutes_expire)
     @pending_tab = :ets.new(@pending_tab, [:named_table, :ordered_set, :public])
     @processing_tab = :ets.new(@processing_tab, [:named_table, :set, :public])
+    @done_tab = :ets.new(@done_tab, [:named_table, :set, :public])
     :ok
   end
 
@@ -110,8 +112,23 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
     Database.dirty_delete(Model.AsyncTask, task_index)
     :ets.delete(@processing_tab, task_index)
     :ets.delete(@pending_tab, {task_type, args})
+    # cannot set to done the in memory
+    :ets.insert(@done_tab, {task_index})
 
     :ok
+  end
+
+  @spec clear_done(Model.async_task_index()) :: :ok
+  def clear_done(task_index) do
+    :ets.delete(@done_tab, task_index)
+    :ok
+  end
+
+  @spec list_done() :: [Model.async_task_index()]
+  def list_done do
+    @done_tab
+    |> :ets.tab2list()
+    |> Enum.map(fn {task_index} -> task_index end)
   end
 
   #
