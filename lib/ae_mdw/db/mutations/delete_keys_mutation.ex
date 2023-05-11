@@ -25,7 +25,15 @@ defmodule AeMdw.Db.DeleteKeysMutation do
   @spec execute(t(), State.t()) :: State.t()
   def execute(%__MODULE__{tables_keys: tables_keys}, state) do
     Enum.reduce(tables_keys, state, fn {table, keys}, state ->
-      Enum.reduce(keys, state, &State.delete(&2, table, &1))
+      Enum.reduce(keys, state, &safe_delete(&2, table, &1))
     end)
+  end
+
+  defp safe_delete(state, table, key) do
+    if State.exists?(state, table, key) do
+      State.delete(state, table, key)
+    else
+      state
+    end
   end
 end

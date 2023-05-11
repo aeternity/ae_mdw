@@ -109,7 +109,6 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
 
   @spec set_done(Model.async_task_index(), Model.async_task_args()) :: :ok
   def set_done({_ts, task_type} = task_index, args) do
-    Database.dirty_delete(Model.AsyncTask, task_index)
     :ets.delete(@processing_tab, task_index)
     :ets.delete(@pending_tab, {task_type, args})
     # cannot set to done the in memory
