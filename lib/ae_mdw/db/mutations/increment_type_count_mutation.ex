@@ -1,4 +1,4 @@
-defmodule AeMdw.Db.IncreaseTypeCountMutation do
+defmodule AeMdw.Db.IncrementTypeCountMutation do
   @moduledoc """
   Adds one to the type count.
   """
