@@ -43,3 +43,11 @@ config :logger_json, :backend,
   json_encoder: Jason,
   metadata_formatter: LoggerJSON.Plug.MetadataFormatters.DatadogLogger,
   formatter: LoggerJSON.Formatters.DatadogLogger
+
+# Custom events formatting
+config :ae_mdw, AeMdwWeb.LogsView,
+  custom_events_args: %{
+    "Listing" => %{0 => :contract_pubkey},
+    "Offer" => %{1 => :contract_pubkey},
+    "Trade" => %{2 => :contract_pubkey}
+  }

@@ -1,4 +1,4 @@
-defmodule AeMdwWeb.AexnLogView do
+defmodule AeMdwWeb.LogsView do
   @moduledoc false
 
   alias AeMdw.AexnContracts
@@ -11,8 +11,10 @@ defmodule AeMdwWeb.AexnLogView do
 
   require Model
 
-  @spec render_log(State.t(), AeMdw.Contracts.log(), boolean()) :: map()
-  def render_log(state, {create_txi, call_txi, event_hash, log_idx}, encode_args?) do
+  @type opts :: %{aexn_args: boolean(), custom_args: boolean()}
+
+  @spec render_log(State.t(), AeMdw.Contracts.log(), opts()) :: map()
+  def render_log(state, {create_txi, call_txi, event_hash, log_idx}, encode_args) do
     {contract_tx_hash, ct_pk} =
       if create_txi == -1 do
         {nil, Origin.pubkey(state, {:contract_call, call_txi})}
@@ -28,7 +30,7 @@ defmodule AeMdwWeb.AexnLogView do
     Model.contract_log(args: args, data: data, ext_contract: ext_contract) =
       State.fetch!(state, Model.ContractLog, {create_txi, call_txi, event_hash, log_idx})
 
-    event_name = AexnContracts.event_name(event_hash)
+    event_name = AexnContracts.event_name(event_hash) || get_custom_event_name(event_hash)
 
     state
     |> render_remote_log_fields(ext_contract)
@@ -38,7 +40,7 @@ defmodule AeMdwWeb.AexnLogView do
       contract_id: encode_contract(ct_pk),
       call_txi: call_txi,
       call_tx_hash: encode(:tx_hash, call_tx_hash),
-      args: format_args(event_name, args, encode_args?),
+      args: format_args(event_name, args, encode_args),
       data: maybe_encode_base64(data),
       event_hash: Base.hex_encode32(event_hash),
       event_name: event_name,
@@ -83,19 +85,19 @@ defmodule AeMdwWeb.AexnLogView do
     if String.valid?(data), do: data, else: Base.encode64(data)
   end
 
-  defp format_args(event_name, [account, <<token_id::256>>], true)
+  defp format_args(event_name, [account, <<token_id::256>>], %{aexn_args: true})
        when event_name in ["Burn", "Mint", "Swap"] do
     [encode_account(account), token_id]
   end
 
-  defp format_args("Transfer", [from, to, <<token_id::256>>], true) do
+  defp format_args("Transfer", [from, to, <<token_id::256>>], %{aexn_args: true}) do
     [encode_account(from), encode_account(to), token_id]
   end
 
   defp format_args(
          "TemplateMint",
          [account, <<template_id::256>>, <<token_id::256>>],
-         true
+         %{aexn_args: true}
        ) do
     [encode_account(account), template_id, token_id]
   end
@@ -103,12 +105,39 @@ defmodule AeMdwWeb.AexnLogView do
   defp format_args(
          "TemplateMint",
          [account, <<template_id::256>>, <<token_id::256>>, edition_serial],
-         true
+         %{aexn_args: true}
        ) do
     [encode_account(account), template_id, token_id, edition_serial]
   end
 
-  defp format_args(_event_name, args, _bool_val) do
+  defp format_args(event_name, args, %{custom_args: true}) do
+    case :persistent_term.get({__MODULE__, event_name}, nil) do
+      nil ->
+        Enum.map(args, fn <<topic::256>> -> to_string(topic) end)
+
+      custom_args_config ->
+        encode_custom_args(args, custom_args_config)
+    end
+  end
+
+  defp format_args(_event_name, args, _format_opts) do
     Enum.map(args, fn <<topic::256>> -> to_string(topic) end)
+  end
+
+  defp encode_custom_args(args, custom_args_config) do
+    Enum.with_index(args, fn arg, i ->
+      case Map.get(custom_args_config, i) do
+        nil ->
+          <<topic::256>> = arg
+          to_string(topic)
+
+        type ->
+          encode(type, arg)
+      end
+    end)
+  end
+
+  defp get_custom_event_name(event_hash) do
+    :persistent_term.get({__MODULE__, event_hash}, nil)
   end
 end
