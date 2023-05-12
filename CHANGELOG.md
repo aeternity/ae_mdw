@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.46.8](https://www.github.com/aeternity/ae_mdw/compare/v1.46.7...v1.46.8) (2023-05-12)
+
+
+### Miscellaneous
+
+* rename update_type_count file to match module ([#1315](https://www.github.com/aeternity/ae_mdw/issues/1315)) ([a5b0bac](https://www.github.com/aeternity/ae_mdw/commit/a5b0bac422b521221c6d6ab798f0c402d0715776))
+
 ### [1.46.7](https://www.github.com/aeternity/ae_mdw/compare/v1.46.6...v1.46.7) (2023-05-11)
 
 
