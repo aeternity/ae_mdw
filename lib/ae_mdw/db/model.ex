@@ -675,6 +675,17 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :evt_contract_log, @evt_contract_log_defaults
 
+  @type ctevt_contract_log_index() :: {Contract.event_hash(), txi(), txi(), non_neg_integer()}
+  @type ctevt_contract_log() :: record(:ctevt_contract_log, index: evt_contract_log_index())
+
+  # ctevt contract log:
+  #     index: {event hash, create txi, call txi, log idx}
+  @ctevt_contract_log_defaults [
+    index: {nil, -1, -1, -1},
+    unused: nil
+  ]
+  defrecord :ctevt_contract_log, @ctevt_contract_log_defaults
+
   @type evt_contract_log_index() :: {Contract.event_hash(), txi(), txi(), non_neg_integer()}
   @type evt_contract_log() :: record(:evt_contract_log, index: evt_contract_log_index())
 
@@ -1133,6 +1144,7 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.ContractLog,
       AeMdw.Db.Model.DataContractLog,
       AeMdw.Db.Model.EvtContractLog,
+      AeMdw.Db.Model.CtEvtContractLog,
       AeMdw.Db.Model.IdxContractLog,
       AeMdw.Db.Model.IntContractCall,
       AeMdw.Db.Model.GrpIntContractCall,
@@ -1236,6 +1248,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.ContractLog), do: :contract_log
   def record(AeMdw.Db.Model.DataContractLog), do: :data_contract_log
   def record(AeMdw.Db.Model.EvtContractLog), do: :evt_contract_log
+  def record(AeMdw.Db.Model.CtEvtContractLog), do: :ctevt_contract_log
   def record(AeMdw.Db.Model.IdxContractLog), do: :idx_contract_log
   def record(AeMdw.Db.Model.IntContractCall), do: :int_contract_call
   def record(AeMdw.Db.Model.GrpIntContractCall), do: :grp_int_contract_call

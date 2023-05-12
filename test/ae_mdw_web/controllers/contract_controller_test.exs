@@ -20,8 +20,9 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
   @default_limit 10
 
-  @evt1_hash :crypto.strong_rand_bytes(32)
-  @evt2_ctor_name "evt2_hash"
+  @evt1_ctor_name "Transfer"
+  @evt1_hash :aec_hash.blake2b_256_hash(@evt1_ctor_name)
+  @evt2_ctor_name "evt2_name"
   @evt2_hash :aec_hash.blake2b_256_hash(@evt2_ctor_name)
   @event_hashes [Base.hex_encode32(@evt1_hash), Base.hex_encode32(@evt2_hash)]
 
@@ -488,6 +489,69 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                  micro_index == @log_mbi and
                  block_hash == encode(:micro_block_hash, @log_block_hash)
              end)
+    end
+
+    test "returns contract logs filtered by contract and event", %{
+      conn: conn,
+      store: store,
+      contract_pk: contract_pk
+    } do
+      contract_id = encode_contract(contract_pk)
+
+      assert %{"data" => logs, "next" => next} =
+               conn
+               |> with_store(store)
+               |> get(
+                 "/v2/contracts/logs",
+                 contract: contract_id,
+                 event: @evt1_ctor_name,
+                 direction: :forward
+               )
+               |> json_response(200)
+
+      assert @default_limit = length(logs)
+      assert ^logs = Enum.sort_by(logs, & &1["call_txi"])
+      assert hd(logs)["call_txi"] == @first_log_txi + @mixed_logs_amount
+
+      assert Enum.all?(logs, fn %{
+                                  "contract_id" => ct_id,
+                                  "call_txi" => call_txi,
+                                  "height" => height,
+                                  "event_hash" => event_hash,
+                                  "event_name" => event_name,
+                                  "micro_index" => micro_index,
+                                  "block_hash" => block_hash
+                                } ->
+               ct_id == contract_id and call_txi in @log_txis and height == @log_kbi and
+                 event_hash == Base.hex_encode32(@evt1_hash) and event_name == @evt1_ctor_name and
+                 micro_index == @log_mbi and
+                 block_hash == encode(:micro_block_hash, @log_block_hash)
+             end)
+
+      assert %{"data" => next_logs, "prev" => prev_logs} =
+               conn |> with_store(store) |> get(next) |> json_response(200)
+
+      assert @default_limit = length(next_logs)
+      assert ^next_logs = Enum.sort_by(next_logs, & &1["call_txi"])
+      assert hd(next_logs)["call_txi"] == @first_log_txi + @mixed_logs_amount + 10
+
+      assert Enum.all?(next_logs, fn %{
+                                       "contract_id" => ct_id,
+                                       "call_txi" => call_txi,
+                                       "height" => height,
+                                       "event_hash" => event_hash,
+                                       "event_name" => event_name,
+                                       "micro_index" => micro_index,
+                                       "block_hash" => block_hash
+                                     } ->
+               ct_id == contract_id and call_txi in @log_txis and height == @log_kbi and
+                 event_hash == Base.hex_encode32(@evt1_hash) and event_name == @evt1_ctor_name and
+                 micro_index == @log_mbi and
+                 block_hash == encode(:micro_block_hash, @log_block_hash)
+             end)
+
+      assert %{"data" => ^logs} =
+               conn |> with_store(store) |> get(prev_logs) |> json_response(200)
     end
   end
 
@@ -1250,6 +1314,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
         m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, idx})
         m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, idx})
+        m_ctevt_log = Model.ctevt_contract_log(index: {evt_hash, txi, create_txi, idx})
         m_idx_log = Model.idx_contract_log(index: {txi, idx, create_txi, evt_hash})
 
         store
@@ -1269,6 +1334,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
         |> Store.put(Model.ContractLog, m_log)
         |> Store.put(Model.DataContractLog, m_data_log)
         |> Store.put(Model.EvtContractLog, m_evt_log)
+        |> Store.put(Model.CtEvtContractLog, m_ctevt_log)
         |> Store.put(Model.IdxContractLog, m_idx_log)
       end)
 
@@ -1292,6 +1358,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
         m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, idx})
         m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, idx})
+        m_ctevt_log = Model.ctevt_contract_log(index: {evt_hash, create_txi, txi, idx})
         m_idx_log = Model.idx_contract_log(index: {txi, idx, create_txi, evt_hash})
 
         store
@@ -1303,6 +1370,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
         |> Store.put(Model.ContractLog, m_log)
         |> Store.put(Model.DataContractLog, m_data_log)
         |> Store.put(Model.EvtContractLog, m_evt_log)
+        |> Store.put(Model.CtEvtContractLog, m_ctevt_log)
         |> Store.put(Model.IdxContractLog, m_idx_log)
       end)
 
@@ -1345,6 +1413,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
         m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, idx})
         m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, idx})
+        m_ctevt_log = Model.ctevt_contract_log(index: {evt_hash, txi, create_txi, idx})
         m_idx_log = Model.idx_contract_log(index: {txi, idx, create_txi, evt_hash})
 
         store
@@ -1352,6 +1421,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
         |> Store.put(Model.ContractLog, m_log)
         |> Store.put(Model.DataContractLog, m_data_log)
         |> Store.put(Model.EvtContractLog, m_evt_log)
+        |> Store.put(Model.CtEvtContractLog, m_ctevt_log)
         |> Store.put(Model.IdxContractLog, m_idx_log)
       end)
 
@@ -1398,6 +1468,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
         m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, idx})
         m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, idx})
+        m_ctevt_log = Model.ctevt_contract_log(index: {evt_hash, txi, create_txi, idx})
         m_idx_log = Model.idx_contract_log(index: {txi, idx, create_txi, evt_hash})
 
         store
@@ -1405,6 +1476,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
         |> Store.put(Model.ContractLog, m_log)
         |> Store.put(Model.DataContractLog, m_data_log)
         |> Store.put(Model.EvtContractLog, m_evt_log)
+        |> Store.put(Model.CtEvtContractLog, m_ctevt_log)
         |> Store.put(Model.IdxContractLog, m_idx_log)
       end)
 
