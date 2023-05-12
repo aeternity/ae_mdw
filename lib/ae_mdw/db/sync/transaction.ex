@@ -10,7 +10,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.ContractCreateMutation
   alias AeMdw.Db.ContractCreateCacheMutation
-  alias AeMdw.Db.IncreaseTypeCountMutation
+  alias AeMdw.Db.IncrementTypeCountMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.NameRevokeMutation
   alias AeMdw.Db.NameTransferMutation
@@ -98,7 +98,7 @@ defmodule AeMdw.Db.Sync.Transaction do
     [
       WriteMutation.new(Model.Tx, m_tx),
       WriteMutation.new(Model.Type, Model.type(index: {type, txi})),
-      IncreaseTypeCountMutation.new(type),
+      IncrementTypeCountMutation.new(type),
       WriteMutation.new(Model.Time, Model.time(index: {mb_time, txi})),
       WriteFieldsMutation.new(type, tx, block_index, txi)
       | tx_mutations(tx_context)
