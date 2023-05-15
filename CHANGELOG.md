@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.47.1](https://www.github.com/aeternity/ae_mdw/compare/v1.47.0...v1.47.1) (2023-05-15)
+
+
+### Miscellaneous
+
+* update node to 6.8.1 ([#1223](https://www.github.com/aeternity/ae_mdw/issues/1223)) ([f96f56c](https://www.github.com/aeternity/ae_mdw/commit/f96f56c6405917d9a662e2f2195c745bff3d3646))
+
 ## [1.47.0](https://www.github.com/aeternity/ae_mdw/compare/v1.46.7...v1.47.0) (2023-05-15)
 
 
