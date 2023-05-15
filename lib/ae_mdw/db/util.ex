@@ -22,7 +22,8 @@ defmodule AeMdw.Db.Util do
 
   @tx_types_to_fname %{
     :contract_create_tx => ~w(Chain.clone Chain.create),
-    :ga_attach_tx => ~w()
+    :ga_attach_tx => ~w(),
+    :oracle_response_tx => ~w(Oracle.respond)
   }
 
   @spec read_tx!(state(), Txs.txi()) :: Model.tx()

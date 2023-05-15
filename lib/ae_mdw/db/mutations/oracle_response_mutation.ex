@@ -49,18 +49,14 @@ defmodule AeMdw.Db.OracleResponseMutation do
         state
       ) do
     case State.get(state, Model.OracleQuery, {oracle_pk, query_id}) do
-      {:ok, Model.oracle_query(txi_idx: query_txi_idx)} ->
+      {:ok, Model.oracle_query(txi_idx: query_txi_idx) = oracle_query} ->
         oracle_query_tx = DbUtil.read_node_tx(state, query_txi_idx)
         fee = :aeo_query_tx.query_fee(oracle_query_tx)
+        oracle_query = Model.oracle_query(oracle_query, response_txi_idx: txi_idx)
 
-        IntTransfer.write(
-          state,
-          {height, txi_idx},
-          "reward_oracle",
-          oracle_pk,
-          query_txi_idx,
-          fee
-        )
+        state
+        |> IntTransfer.write({height, txi_idx}, "reward_oracle", oracle_pk, query_txi_idx, fee)
+        |> State.put(Model.OracleQuery, oracle_query)
 
       :not_found ->
         Log.info("""

@@ -332,7 +332,8 @@ defmodule AeMdw.Db.Model do
   #   index = {oracle_pk, query_id}
   @oracle_query_defaults [
     index: nil,
-    txi_idx: nil
+    txi_idx: nil,
+    response_txi_idx: nil
   ]
   defrecord :oracle_query, @oracle_query_defaults
 
@@ -340,7 +341,8 @@ defmodule AeMdw.Db.Model do
   @type oracle_query() ::
           record(:oracle_query,
             index: oracle_query_index(),
-            txi_idx: txi_idx()
+            txi_idx: txi_idx(),
+            response_txi_idx: txi_idx() | nil
           )
 
   # oracle_query_expiration
