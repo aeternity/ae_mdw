@@ -9,6 +9,8 @@ defmodule AeMdw.Migrations.IndexOracleQueriesResponses do
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
 
+  @dialyzer {:nowarn_function, {:run, 2}}
+
   require Model
 
   @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
