@@ -69,6 +69,7 @@ defmodule AeMdw.Db.ContractTest do
              )
 
       assert State.exists?(state, Model.EvtContractLog, {evt_hash0, call_txi, create_txi, 0})
+      assert State.exists?(state, Model.CtEvtContractLog, {evt_hash0, create_txi, call_txi, 0})
       assert State.exists?(state, Model.IdxContractLog, {call_txi, 0, create_txi, evt_hash0})
 
       m_log1 =
@@ -89,6 +90,7 @@ defmodule AeMdw.Db.ContractTest do
              )
 
       assert State.exists?(state, Model.EvtContractLog, {evt_hash1, call_txi, create_txi, 1})
+      assert State.exists?(state, Model.CtEvtContractLog, {evt_hash1, create_txi, call_txi, 1})
       assert State.exists?(state, Model.IdxContractLog, {call_txi, 1, create_txi, evt_hash1})
     end
 
@@ -152,6 +154,7 @@ defmodule AeMdw.Db.ContractTest do
              )
 
       assert State.exists?(state, Model.EvtContractLog, {evt_hash0, call_txi, create_txi, 0})
+      assert State.exists?(state, Model.CtEvtContractLog, {evt_hash0, create_txi, call_txi, 0})
       assert State.exists?(state, Model.IdxContractLog, {call_txi, 0, create_txi, evt_hash0})
 
       m_log =
@@ -183,6 +186,7 @@ defmodule AeMdw.Db.ContractTest do
              )
 
       assert State.exists?(state, Model.EvtContractLog, {evt_hash1, call_txi, create_txi, 1})
+      assert State.exists?(state, Model.CtEvtContractLog, {evt_hash1, create_txi, call_txi, 1})
       assert State.exists?(state, Model.IdxContractLog, {call_txi, 1, create_txi, evt_hash1})
     end
 

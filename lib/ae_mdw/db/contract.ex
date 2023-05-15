@@ -211,6 +211,7 @@ defmodule AeMdw.Db.Contract do
 
       m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, log_idx})
       m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, log_idx})
+      m_ctevt_log = Model.ctevt_contract_log(index: {evt_hash, create_txi, txi, log_idx})
       m_idx_log = Model.idx_contract_log(index: {txi, log_idx, create_txi, evt_hash})
 
       state2 =
@@ -218,6 +219,7 @@ defmodule AeMdw.Db.Contract do
         |> State.put(Model.ContractLog, m_log)
         |> State.put(Model.DataContractLog, m_data_log)
         |> State.put(Model.EvtContractLog, m_evt_log)
+        |> State.put(Model.CtEvtContractLog, m_ctevt_log)
         |> State.put(Model.IdxContractLog, m_idx_log)
         |> maybe_index_remote_log(contract_pk, txi, log)
 
@@ -662,10 +664,12 @@ defmodule AeMdw.Db.Contract do
       )
 
     m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, remote_contract_txi, idx})
+    m_ctevt_log = Model.ctevt_contract_log(index: {evt_hash, remote_contract_txi, txi, idx})
 
     state
     |> State.put(Model.ContractLog, m_log_remote)
     |> State.put(Model.EvtContractLog, m_evt_log)
+    |> State.put(Model.CtEvtContractLog, m_ctevt_log)
   end
 
   defp write_aexn_transfer(
