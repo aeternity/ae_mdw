@@ -3,11 +3,21 @@ defmodule AeMdw.Db.Sync.InnerTx do
   Returns inner tx when outer is :ga_meta_tx and :payinfo_for_tx.
   """
 
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.WriteMutation
   alias AeMdw.Node
+  alias AeMdw.Txs
+
+  require Model
 
   @typep wrapper_type() :: :ga_meta_tx | :paying_for_tx
 
   @spec signed_tx(wrapper_type(), Node.tx()) :: Node.signed_tx()
   def signed_tx(:ga_meta_tx, wrapper_tx), do: :aega_meta_tx.tx(wrapper_tx)
   def signed_tx(:paying_for_tx, wrapper_tx), do: :aec_paying_for_tx.tx(wrapper_tx)
+
+  @spec tx_type_mutation(Node.tx_type(), Txs.txi()) :: WriteMutation.t()
+  def tx_type_mutation(inner_type, txi) do
+    WriteMutation.new(Model.InnerType, Model.type(index: {inner_type, txi}))
+  end
 end

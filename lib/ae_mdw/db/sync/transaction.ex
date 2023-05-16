@@ -15,6 +15,7 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.NameRevokeMutation
   alias AeMdw.Db.NameTransferMutation
   alias AeMdw.Db.Sync.Contract, as: SyncContract
+  alias AeMdw.Db.Sync.InnerTx
   alias AeMdw.Db.Sync.Name, as: SyncName
   alias AeMdw.Db.Sync.Oracle
   alias AeMdw.Db.Sync.Origin
@@ -414,7 +415,8 @@ defmodule AeMdw.Db.Sync.Transaction do
       }
 
       [
-        WriteFieldsMutation.new(type, inner_tx, block_index, txi, :ga_meta_tx)
+        WriteFieldsMutation.new(type, inner_tx, block_index, txi, :ga_meta_tx),
+        InnerTx.tx_type_mutation(type, txi)
         | tx_mutations(tx_ctx)
       ]
     else
@@ -439,7 +441,8 @@ defmodule AeMdw.Db.Sync.Transaction do
     }
 
     [
-      WriteFieldsMutation.new(type, inner_tx, block_index, txi, :paying_for_tx)
+      WriteFieldsMutation.new(type, inner_tx, block_index, txi, :paying_for_tx),
+      InnerTx.tx_type_mutation(type, txi)
       | tx_mutations(tx_ctx)
     ]
   end
