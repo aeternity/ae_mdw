@@ -21,6 +21,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
 
   @typep source() :: :node | :mdw
   @typep version() :: Subscriptions.version()
+  @typep count() :: integer() | nil
 
   @block_subs %{
     key: "KeyBlocks",
@@ -36,14 +37,14 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   @spec ets_config() :: {EtsCache.table(), EtsCache.expiration()}
   def ets_config(), do: {@hashes_table, @expiration_minutes}
 
-  @spec broadcast_key_block(Db.key_block(), version(), source()) :: :ok
-  def broadcast_key_block(block, version, source) do
+  @spec broadcast_key_block(Db.key_block(), version(), source(), count()) :: :ok
+  def broadcast_key_block(block, version, source, mb_count) do
     header = :aec_blocks.to_header(block)
     {:ok, hash} = :aec_headers.hash_header(header)
 
     if not already_processed?({:key, version, hash, source}) do
       if Subscriptions.has_subscribers?(source, version, "KeyBlocks") do
-        GenServer.cast(__MODULE__, {:broadcast_key_block, header, source, version})
+        GenServer.cast(__MODULE__, {:broadcast_key_block, header, source, version, mb_count})
       end
 
       set_processed({:key, version, hash, source})
@@ -61,7 +62,8 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
       versions = get_subscribed_versions("MicroBlocks", source)
 
       if Enum.any?(versions) do
-        GenServer.cast(__MODULE__, {:broadcast_micro_block, header, source, versions})
+        txs_count = length(:aec_blocks.txs(block))
+        GenServer.cast(__MODULE__, {:broadcast_micro_block, header, source, versions, txs_count})
       end
 
       set_processed({:micro, hash, source})
@@ -88,15 +90,15 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   end
 
   @impl GenServer
-  def handle_cast({:broadcast_key_block, header, source, version}, state) do
-    _result = do_broadcast_block(header, source, version)
+  def handle_cast({:broadcast_key_block, header, source, version, mb_count}, state) do
+    _result = do_broadcast_block(header, source, version, mb_count)
 
     {:noreply, state}
   end
 
   @impl GenServer
-  def handle_cast({:broadcast_micro_block, header, source, versions}, state) do
-    Enum.each(versions, &do_broadcast_block(header, source, &1))
+  def handle_cast({:broadcast_micro_block, header, source, versions, txs_count}, state) do
+    Enum.each(versions, &do_broadcast_block(header, source, &1, txs_count))
 
     {:noreply, state}
   end
@@ -116,12 +118,13 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
   #
   # Private functions
   #
-  defp do_broadcast_block(header, source, version) do
+  defp do_broadcast_block(header, source, version, count) do
     type = :aec_headers.type(header)
     channel = Map.fetch!(@block_subs, type)
 
     with {:ok, block} <- serialize_block(header, type, source, version) do
       block
+      |> add_counter(type, count)
       |> encode_message(channel, source)
       |> broadcast(channel, source, version)
     end
@@ -141,6 +144,9 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     prev_block_type = Db.prev_block_type(header)
     {:ok, :aec_headers.serialize_for_client(header, prev_block_type)}
   end
+
+  defp add_counter(ser_block, :key, count), do: Map.put(ser_block, :micro_blocks_count, count)
+  defp add_counter(ser_block, :micro, count), do: Map.put(ser_block, :transactions_count, count)
 
   defp do_broadcast_txs(block, source, version) do
     tx_pids = Subscriptions.subscribers(source, version, "Transactions")

@@ -433,7 +433,7 @@ defmodule Integration.AeMdwWeb.WebsocketTest do
       assert_receive [^recipient_id], 200
 
       {key_block, micro_blocks} = get_blocks(state, 311_860)
-      Broadcaster.broadcast_key_block(key_block, :v1, :mdw)
+      Broadcaster.broadcast_key_block(key_block, :v1, :mdw, 0)
       Process.send_after(client1, {:kb, self()}, 100)
 
       kb_payload = @key_block_mdw
@@ -475,16 +475,16 @@ defmodule Integration.AeMdwWeb.WebsocketTest do
       assert_receive ["KeyBlocks", "MicroBlocks", "Transactions", ^recipient_id], 200
 
       {key_block, micro_blocks} = get_blocks(state, 311_860)
-      Broadcaster.broadcast_key_block(key_block, :v1, :mdw)
-      Broadcaster.broadcast_key_block(key_block, :v1, :mdw)
-      Broadcaster.broadcast_key_block(key_block, :v1, :mdw)
+      Broadcaster.broadcast_key_block(key_block, :v1, :mdw, 0)
+      Broadcaster.broadcast_key_block(key_block, :v1, :mdw, 0)
+      Broadcaster.broadcast_key_block(key_block, :v1, :mdw, 0)
       Process.send_after(client, {:kb, self()}, 100)
 
       kb_payload = @key_block_mdw
       kb_payload_node = @key_block_node
       assert_receive ^kb_payload, 300
-      Broadcaster.broadcast_key_block(key_block, :v1, :node)
-      Broadcaster.broadcast_key_block(key_block, :v1, :node)
+      Broadcaster.broadcast_key_block(key_block, :v1, :node, nil)
+      Broadcaster.broadcast_key_block(key_block, :v1, :node, nil)
       Process.send_after(client, {:kb, self()}, 100)
       assert_receive ^kb_payload_node, 300
 
