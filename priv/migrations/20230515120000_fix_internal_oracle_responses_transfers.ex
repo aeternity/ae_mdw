@@ -87,7 +87,9 @@ defmodule AeMdw.Migrations.FixInternalOracleResponsesTransfers do
         old_txi_idx
 
       _contract_call_details ->
-        {:ok, {^fname, ^txi, idx}} = State.next(state, Model.FnameContractCall, {fname, txi, -1})
+        {:ok, {^fname, ^txi, idx}} =
+          State.next(state, Model.FnameIntContractCall, {fname, txi, -1})
+
         {txi, idx}
     end
   end
