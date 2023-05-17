@@ -25,8 +25,6 @@ defmodule AeMdw.Db.Sync.Contract do
 
   @type call_record() :: tuple()
 
-  @contract_create_fnames ~w(Chain.create Chain.clone Call.clone)
-
   @spec child_contract_mutations(
           Contract.fun_arg_res_or_error(),
           Blocks.block_index(),
@@ -57,16 +55,6 @@ defmodule AeMdw.Db.Sync.Contract do
           Mutation.t()
         ]
   def events_mutations(events, block_index, call_txi, call_tx_hash, contract_pk) do
-    events =
-      Enum.filter(
-        events,
-        &match?(
-          {{:internal_call_tx, fname}, %{info: aetx}}
-          when is_tuple(aetx) or fname in @contract_create_fnames,
-          &1
-        )
-      )
-
     shifted_events = [nil | events]
 
     # This function relies on a property that every Chain.clone and Chain.create
@@ -75,8 +63,10 @@ defmodule AeMdw.Db.Sync.Contract do
     {chain_events, non_chain_events} =
       shifted_events
       |> Enum.zip(events)
-      |> Enum.split_with(fn {_prev_event, {{:internal_call_tx, fname}, _info}} ->
-        fname in @contract_create_fnames
+      |> Enum.split_with(fn
+        {_prev_event, {{:internal_call_tx, "Chain.create"}, _info}} -> true
+        {_prev_event, {{:internal_call_tx, "Chain.clone"}, _info}} -> true
+        {_prev_event, {{:internal_call_tx, _fname}, _info}} -> false
       end)
 
     chain_mutations =
