@@ -297,7 +297,7 @@ defmodule AeMdw.Contracts do
          cursor
        ) do
     cursor =
-      with {call_txi, local_idx, create_txi, _pk, fname, _pos} <- cursor do
+      with {call_txi, local_idx, _create_txi, _pk, fname, _pos} <- cursor do
         {fname, create_txi, call_txi, local_idx}
       end
 
