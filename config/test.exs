@@ -44,7 +44,7 @@ config :logger_json, :backend,
   metadata_formatter: LoggerJSON.Plug.MetadataFormatters.DatadogLogger,
   formatter: LoggerJSON.Formatters.DatadogLogger
 
-# Custom events formatting
+# Custom events rendering
 config :ae_mdw, AeMdwWeb.LogsView,
   custom_events_args: %{
     "Listing" => %{0 => :contract_pubkey},
