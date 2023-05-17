@@ -939,6 +939,62 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       assert %{"data" => ^calls} =
                conn |> with_store(store) |> get(prev_calls) |> json_response(200)
     end
+
+    test "returns internal calls filtered by function and contract", %{
+      conn: conn,
+      contract_pk: contract_pk,
+      store: store
+    } do
+      fname_prefix = "Chain.sp"
+      contract_id = encode_contract(contract_pk)
+      create_txi = Origin.tx_index!(State.new(store), {:contract, contract_pk})
+
+      assert %{"data" => calls, "next" => next} =
+               conn
+               |> with_store(store)
+               |> get("/v2/contracts/calls", function: fname_prefix, contract: contract_id)
+               |> json_response(200)
+
+      assert Enum.each(calls, fn %{
+                                   "function" => function,
+                                   "call_txi" => call_txi,
+                                   "contract_txi" => contract_txi,
+                                   "height" => height,
+                                   "micro_index" => micro_index,
+                                   "block_hash" => block_hash
+                                 } ->
+               assert String.starts_with?(function, fname_prefix)
+               assert call_txi in @call_txis and contract_txi == create_txi
+               assert height == @call_kbi
+
+               assert micro_index == @call_mbi and
+                        assert(block_hash == encode(:micro_block_hash, @call_block_hash))
+             end)
+
+      assert 10 = length(calls)
+
+      assert %{"data" => next_calls, "prev" => prev_calls} =
+               conn |> with_store(store) |> get(next) |> json_response(200)
+
+      assert Enum.each(next_calls, fn %{
+                                        "function" => function,
+                                        "call_txi" => call_txi,
+                                        "contract_txi" => contract_txi,
+                                        "height" => height,
+                                        "micro_index" => micro_index,
+                                        "block_hash" => block_hash
+                                      } ->
+               assert String.starts_with?(function, fname_prefix)
+               assert call_txi in @call_txis and contract_txi == create_txi
+               assert height == @call_kbi
+
+               assert micro_index == @call_mbi and
+                        assert(block_hash == encode(:micro_block_hash, @call_block_hash))
+             end)
+
+      assert %{"data" => ^calls} =
+               conn |> with_store(store) |> get(prev_calls) |> json_response(200)
+    end
   end
 
   describe "contracts" do

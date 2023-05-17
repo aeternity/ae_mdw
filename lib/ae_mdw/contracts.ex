@@ -42,6 +42,7 @@ defmodule AeMdw.Contracts do
   @int_contract_call_table Model.IntContractCall
   @grp_int_contract_call_table Model.GrpIntContractCall
   @fname_int_contract_call_table Model.FnameIntContractCall
+  @fname_grp_contract_call_table Model.FnameGrpIntContractCall
   @id_int_contract_call_table Model.IdIntContractCall
   @grp_id_int_contract_call_table Model.GrpIdIntContractCall
 
@@ -120,8 +121,7 @@ defmodule AeMdw.Contracts do
       {prev_cursor, calls, next_cursor} =
         query
         |> Map.drop(@pagination_params)
-        |> Enum.map(&convert_param(state, &1))
-        |> Enum.sort()
+        |> Enum.into(%{}, &convert_param(state, &1))
         |> build_calls_pagination(state, scope, cursor)
         |> Collection.paginate(pagination)
 
@@ -290,7 +290,36 @@ defmodule AeMdw.Contracts do
     end
   end
 
-  defp build_calls_pagination([fname: fname_prefix], state, scope, cursor) do
+  defp build_calls_pagination(
+         %{create_txi: create_txi, fname: fname_prefix},
+         state,
+         scope,
+         cursor
+       ) do
+    cursor =
+      with {call_txi, local_idx, create_txi, _pk, fname, _pos} <- cursor do
+        {fname, create_txi, call_txi, local_idx}
+      end
+
+    fnames =
+      fname_prefix
+      |> Stream.unfold(fn prefix ->
+        case State.next(state, @fname_int_contract_call_table, {prefix, @min_txi, @min_idx}) do
+          {:ok, {next_fname, _txi, _idx}} -> {next_fname, next_fname <> @max_256bit_bin}
+          :none -> nil
+        end
+      end)
+      |> Stream.take_while(&String.starts_with?(&1, fname_prefix))
+      |> Enum.to_list()
+
+    fn direction ->
+      fnames
+      |> Enum.map(&build_calls_grp_fname_stream(state, &1, direction, scope, cursor, create_txi))
+      |> Collection.merge(direction)
+    end
+  end
+
+  defp build_calls_pagination(%{fname: fname_prefix}, state, scope, cursor) do
     cursor =
       with {call_txi, local_idx, _create_txi, _pk, fname, _pos} <- cursor do
         {fname, call_txi, local_idx}
@@ -315,46 +344,7 @@ defmodule AeMdw.Contracts do
   end
 
   defp build_calls_pagination(
-         [create_txi: create_txi],
-         state,
-         {first_call_txi, last_call_txi},
-         cursor
-       ) do
-    key_boundary = {{create_txi, first_call_txi, @min_idx}, {create_txi, last_call_txi, @max_idx}}
-
-    cursor =
-      with {call_txi, local_idx, _create_txi, _pk, _fname, _pos} <- cursor do
-        {create_txi, call_txi, local_idx}
-      end
-
-    fn direction ->
-      state
-      |> Collection.stream(@grp_int_contract_call_table, direction, key_boundary, cursor)
-      |> Stream.map(fn {create_txi, call_txi, local_idx} ->
-        {call_txi, local_idx, create_txi, @min_pubkey, @min_fname, @min_id_pos}
-      end)
-    end
-  end
-
-  defp build_calls_pagination([], state, {first_call_txi, last_call_txi}, cursor) do
-    key_boundary = {{first_call_txi, @min_idx}, {last_call_txi, @max_idx}}
-
-    cursor =
-      with {call_txi, local_idx, _create_txi, _pk, _fname, _pos} <- cursor do
-        {call_txi, local_idx}
-      end
-
-    fn direction ->
-      state
-      |> Collection.stream(@int_contract_call_table, direction, key_boundary, cursor)
-      |> Stream.map(fn {call_txi, local_idx} ->
-        {call_txi, local_idx, @min_txi, @min_pubkey, @min_fname, @min_id_pos}
-      end)
-    end
-  end
-
-  defp build_calls_pagination(
-         [create_txi: create_txi, type_pos: {pos_types, pk}],
+         %{create_txi: create_txi, type_pos: {pos_types, pk}},
          state,
          {first_call_txi, last_call_txi},
          cursor
@@ -387,7 +377,29 @@ defmodule AeMdw.Contracts do
   end
 
   defp build_calls_pagination(
-         [type_pos: {pos_types, pk}],
+         %{create_txi: create_txi},
+         state,
+         {first_call_txi, last_call_txi},
+         cursor
+       ) do
+    key_boundary = {{create_txi, first_call_txi, @min_idx}, {create_txi, last_call_txi, @max_idx}}
+
+    cursor =
+      with {call_txi, local_idx, _create_txi, _pk, _fname, _pos} <- cursor do
+        {create_txi, call_txi, local_idx}
+      end
+
+    fn direction ->
+      state
+      |> Collection.stream(@grp_int_contract_call_table, direction, key_boundary, cursor)
+      |> Stream.map(fn {create_txi, call_txi, local_idx} ->
+        {call_txi, local_idx, create_txi, @min_pubkey, @min_fname, @min_id_pos}
+      end)
+    end
+  end
+
+  defp build_calls_pagination(
+         %{type_pos: {pos_types, pk}},
          state,
          {first_call_txi, last_call_txi},
          cursor
@@ -413,6 +425,24 @@ defmodule AeMdw.Contracts do
       |> Collection.merge(direction)
       |> Stream.map(fn {pk, call_txi, local_idx, pos} ->
         {call_txi, local_idx, @min_txi, pk, @min_fname, pos}
+      end)
+    end
+  end
+
+  defp build_calls_pagination(query, state, {first_call_txi, last_call_txi}, cursor)
+       when map_size(query) == 0 do
+    key_boundary = {{first_call_txi, @min_idx}, {last_call_txi, @max_idx}}
+
+    cursor =
+      with {call_txi, local_idx, _create_txi, _pk, _fname, _pos} <- cursor do
+        {call_txi, local_idx}
+      end
+
+    fn direction ->
+      state
+      |> Collection.stream(@int_contract_call_table, direction, key_boundary, cursor)
+      |> Stream.map(fn {call_txi, local_idx} ->
+        {call_txi, local_idx, @min_txi, @min_pubkey, @min_fname, @min_id_pos}
       end)
     end
   end
@@ -445,6 +475,26 @@ defmodule AeMdw.Contracts do
     end)
     |> Stream.map(fn {pk, pos, call_txi, local_idx} ->
       {pk, call_txi, local_idx, pos}
+    end)
+  end
+
+  defp build_calls_grp_fname_stream(
+         state,
+         fname,
+         direction,
+         {first_txi, last_txi},
+         cursor,
+         create_txi
+       ) do
+    key_boundary = {
+      {fname, create_txi, first_txi, @min_idx},
+      {fname, create_txi, last_txi, @max_idx}
+    }
+
+    state
+    |> Collection.stream(@fname_grp_contract_call_table, direction, key_boundary, cursor)
+    |> Stream.map(fn {^fname, ^create_txi, call_txi, local_idx} ->
+      {call_txi, local_idx, create_txi, @min_pubkey, fname, @min_id_pos}
     end)
   end
 
