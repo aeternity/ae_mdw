@@ -35,6 +35,7 @@ defmodule AeMdw.Application do
     init(:aecore_services)
     init(:aesync)
     init(:tables)
+    init(:formatters)
 
     :ok = AeMdw.Db.RocksDb.open()
 
@@ -183,6 +184,19 @@ defmodule AeMdw.Application do
 
     AeMdw.Db.AsyncStore.init()
     AeMdw.Sync.Aex9BalancesCache.init()
+  end
+
+  defp init(:formatters) do
+    with [custom_events_args: custom_args] <- Application.get_env(:ae_mdw, AeMdwWeb.LogsView) do
+      :persistent_term.put({AeMdwWeb.LogsView, :custom_events_args}, true)
+
+      Enum.each(custom_args, fn {event_name, index_map} ->
+        :persistent_term.put({AeMdwWeb.LogsView, event_name}, index_map)
+
+        event_hash = :aec_hash.blake2b_256_hash(event_name)
+        :persistent_term.put({AeMdwWeb.LogsView, event_hash}, event_name)
+      end)
+    end
   end
 
   @spec init_public(:contract_cache) :: :ok
