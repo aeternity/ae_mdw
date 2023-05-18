@@ -1101,6 +1101,7 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.Block,
       AeMdw.Db.Model.Time,
       AeMdw.Db.Model.Type,
+      AeMdw.Db.Model.InnerType,
       AeMdw.Db.Model.TypeCount,
       AeMdw.Db.Model.Field,
       AeMdw.Db.Model.IdCount,
@@ -1222,6 +1223,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Block), do: :block
   def record(AeMdw.Db.Model.Time), do: :time
   def record(AeMdw.Db.Model.Type), do: :type
+  def record(AeMdw.Db.Model.InnerType), do: :type
   def record(AeMdw.Db.Model.TypeCount), do: :type_count
   def record(AeMdw.Db.Model.Field), do: :field
   def record(AeMdw.Db.Model.IdCount), do: :id_count

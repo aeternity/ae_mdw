@@ -249,7 +249,12 @@ defmodule AeMdw.Db.Util do
       |> Collection.stream(Model.Type, direction, key_boundary, cursor)
       |> Stream.map(fn {^tx_type, txi} -> {txi, -1} end)
 
-    Collection.merge([raw_txs | internal_txs], direction)
+    inner_txs =
+      state
+      |> Collection.stream(Model.InnerType, direction, key_boundary, cursor)
+      |> Stream.map(fn {^tx_type, txi} -> {txi, -1} end)
+
+    Collection.merge([raw_txs, inner_txs | internal_txs], direction)
   end
 
   defp extract_height_hash(state, type, hash) do

@@ -11,6 +11,7 @@ defmodule AeMdw.Contracts do
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
   alias AeMdw.Db.Stream.Query.Parser
+  alias AeMdw.Db.Sync.InnerTx
   alias AeMdw.Db.Util, as: DBUtil
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db
@@ -68,17 +69,13 @@ defmodule AeMdw.Contracts do
 
       {prev_cursor, contract_keys, next_cursor} =
         fn direction ->
-          contract_create_txs =
+          ~w(contract_create_tx ga_attach_tx)a
+          |> Enum.map(fn tx_type ->
             state
-            |> DBUtil.transactions_of_type(:contract_create_tx, direction, scope, cursor)
-            |> Stream.map(&{&1, :contract_create_tx})
-
-          ga_attach_txs =
-            state
-            |> DBUtil.transactions_of_type(:ga_attach_tx, direction, scope, cursor)
-            |> Stream.map(&{&1, :ga_attach_tx})
-
-          Collection.merge([contract_create_txs, ga_attach_txs], direction)
+            |> DBUtil.transactions_of_type(tx_type, direction, scope, cursor)
+            |> Stream.map(&{&1, tx_type})
+          end)
+          |> Collection.merge(direction)
         end
         |> Collection.paginate(pagination)
 
@@ -579,6 +576,15 @@ defmodule AeMdw.Contracts do
 
         :ga_attach_tx ->
           {:aega_attach_tx.contract_pubkey(create_tx), :aega_attach_tx.for_client(create_tx)}
+
+        tx_type when tx_type in ~w(paying_for_tx ga_meta_tx)a ->
+          {:contract_create_tx, create_tx} =
+            tx_type
+            |> InnerTx.signed_tx(create_tx)
+            |> :aetx_sign.tx()
+            |> :aetx.specialize_type()
+
+          {:aect_create_tx.contract_pubkey(create_tx), :aect_create_tx.for_client(create_tx)}
       end
 
     %{
