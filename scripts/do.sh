@@ -1,6 +1,11 @@
 NAME="aeternity@localhost"
 
 case $1 in
+  "volumes")
+    mkdir -p data/mnesia data/mdw.db
+    chown -R 1000 data
+    ;;
+    
   "shell")
     mix local.hex --force && mix local.rebar --force && mix deps.get
     iex --sname $NAME -S mix phx.server

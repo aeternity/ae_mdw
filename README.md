@@ -8,7 +8,8 @@
 - [Prerequisites](#prerequisites)
 - [Setup](#setup)
   - [Database snapshot](#database-snapshot)
-  - [Docker Configuration](#docker-configuration)
+  - [Node Configuration](#node-configuration)
+  - [Volumes Configuration](#volumes-configuration)
   - [Genesis accounts](#genesis-accounts)
   - [Docker setup for local dev](#docker-setup-for-local-dev)
   - [Tools for local development](#tools-for-local-development)
@@ -64,7 +65,7 @@ You can check on `/status` page that the `node_height` is higher than 600000.
 
 In case you want to use it on testnet or for development purposes please follow the instructions bellow.
 
-### Docker configuration
+### Node configuration
 
 The middleware runs along with an Aeternity Node on the same docker container and BEAM VM instance.
 
@@ -75,6 +76,16 @@ If you are running your own build, on dev environment, with `docker-compose-dev.
 For docker hub images, you can create a volume to copy your local `/home/aeternity/aeternity.yaml` by uncommenting it on `docker-compose.yml`.
 
 You may also redefine other Aeternity node configurations. More information regarding configuration can be found [here](https://docs.aeternity.io/en/stable/configuration/)
+
+### Volumes configuration
+
+The `aeternity/ae_mdw` docker image runs with unprivileged user (uid=1000).
+
+Therefore permissions should be given when mapping the `data/mnesia` and/or `data/mdw.db` volumes:
+```
+mkdir -p data/mnesia data/mdw.db
+chown -R 1000 data
+```
 
 ### Genesis accounts
 
