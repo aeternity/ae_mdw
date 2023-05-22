@@ -69,7 +69,9 @@ defmodule AeMdw.Db.RocksDb do
       end)
     else
       {:error, reason} ->
-        Log.error("Failed to open database! path=#{data_dir()}, reason=#{inspect(reason)}")
+        error_msg = "Failed to open database! path=#{data_dir()}, reason=#{inspect(reason)}"
+        IO.puts("ERROR: #{error_msg}")
+        Log.error(error_msg)
         :error
     end
   end
