@@ -35,11 +35,24 @@ defmodule AeMdw.Migrations.FixInternalOracleResponsesTransfers do
             {{height, old_response_txi_idx}, @kind, target_pk, old_query_txi_idx}
           )
 
-        response_txi_idx =
+        {:ok, response_txi_idx} =
           correct_txi_idx(state, old_response_txi_idx, "Oracle.respond", :oracle_response_tx)
 
         query_txi_idx =
-          correct_txi_idx(state, old_query_txi_idx, "Oracle.query", :oracle_query_tx)
+          case correct_txi_idx(state, old_query_txi_idx, "Oracle.query", :oracle_query_tx) do
+            {:ok, query_txi_idx} ->
+              query_txi_idx
+
+            :invalid ->
+              response_tx = DbUtil.read_node_tx(state, response_txi_idx)
+              oracle_pk = :aeo_response_tx.oracle_pubkey(response_tx)
+              query_id = :aeo_response_tx.query_id(response_tx)
+
+              Model.oracle_query(txi_idx: txi_idx) =
+                State.fetch!(state, Model.OracleQuery, {oracle_pk, query_id})
+
+              txi_idx
+          end
 
         int_transfer =
           Model.int_transfer_tx(
@@ -84,13 +97,13 @@ defmodule AeMdw.Migrations.FixInternalOracleResponsesTransfers do
   defp correct_txi_idx(state, {txi, _idx} = old_txi_idx, fname, tx_type) do
     case DbUtil.read_node_tx_details(state, old_txi_idx) do
       {_tx, ^tx_type, _hash, _tx_type, _block_hash} ->
-        old_txi_idx
+        {:ok, old_txi_idx}
 
       _contract_call_details ->
-        {:ok, {^fname, ^txi, idx}} =
-          State.next(state, Model.FnameIntContractCall, {fname, txi, -1})
-
-        {txi, idx}
+        case State.next(state, Model.FnameIntContractCall, {fname, txi, -1}) do
+          {:ok, {^fname, ^txi, idx}} -> {:ok, {txi, idx}}
+          _invalid_txi_idx -> :invalid
+        end
     end
   end
 end
