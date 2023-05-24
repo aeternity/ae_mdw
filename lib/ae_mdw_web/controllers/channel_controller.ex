@@ -16,7 +16,7 @@ defmodule AeMdwWeb.ChannelController do
     %{state: state, pagination: pagination, scope: scope, cursor: cursor} = assigns
 
     with {:ok, prev_cursor, channels, next_cursor} <-
-           Channels.fetch_active_channels(state, pagination, scope, cursor) do
+           Channels.fetch_channels(state, pagination, scope, cursor) do
       Util.paginate(conn, prev_cursor, channels, next_cursor)
     end
   end
