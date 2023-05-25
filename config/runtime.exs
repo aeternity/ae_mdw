@@ -29,12 +29,13 @@ if env != :test do
     cache_static_manifest: "priv/static/cache_manifest.json"
 
   ws_port = String.to_integer(System.get_env("WS_PORT") || "4001")
+  timeout_opts = [inactivity_timeout: 30 * 60_000, idle_timeout: 30 * 60_000]
 
   config :ae_mdw, AeMdwWeb.WebsocketEndpoint,
     http: [
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: ws_port,
-      protocol_options: protocol_opts
+      protocol_options: protocol_opts ++ timeout_opts
     ]
 end
 
