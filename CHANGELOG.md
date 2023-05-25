@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.48.0](https://www.github.com/aeternity/ae_mdw/compare/v1.47.0...v1.48.0) (2023-05-25)
+
+
+### Features
+
+* add counters to ws block broadcast ([#1325](https://www.github.com/aeternity/ae_mdw/issues/1325)) ([fcb44a9](https://www.github.com/aeternity/ae_mdw/commit/fcb44a937c4bf5ad8bdf2c19dea79dbf93cac4cd))
+* encode custom event args ([#1327](https://www.github.com/aeternity/ae_mdw/issues/1327)) ([775b663](https://www.github.com/aeternity/ae_mdw/commit/775b66314dfa6957f47048bbbd585597bacbf73a))
+* filter internal calls by contract and function ([#1330](https://www.github.com/aeternity/ae_mdw/issues/1330)) ([1495ddb](https://www.github.com/aeternity/ae_mdw/commit/1495ddb24742a14323afb387a11239a1ce4d67b4))
+* include oracle responses on oracle queries endpoints ([#1314](https://www.github.com/aeternity/ae_mdw/issues/1314)) ([7c6fb6f](https://www.github.com/aeternity/ae_mdw/commit/7c6fb6ffb17c5cbb9dd780020051ac0d4d6e8691))
+* index inner contract creations for /contracts endpoint ([#1326](https://www.github.com/aeternity/ae_mdw/issues/1326)) ([3767186](https://www.github.com/aeternity/ae_mdw/commit/3767186f653a763ef85cd219b096ed63d0c256ba))
+
+
+### Bug Fixes
+
+* handle old oracle responses when migrating int transfers ([#1339](https://www.github.com/aeternity/ae_mdw/issues/1339)) ([f835ef3](https://www.github.com/aeternity/ae_mdw/commit/f835ef3333073f262906a7058ecebf71703b8f5f))
+* reindex reward_oracle int transfers ([#1323](https://www.github.com/aeternity/ae_mdw/issues/1323)) ([1b6133c](https://www.github.com/aeternity/ae_mdw/commit/1b6133c8eb995c5b5c52d5d749cb7cbd5c41473c))
+* rename OracleResponses migration table ([#1329](https://www.github.com/aeternity/ae_mdw/issues/1329)) ([91ecf94](https://www.github.com/aeternity/ae_mdw/commit/91ecf94055ee1d800993a6d725100642fbead61a))
+
+
+### Miscellaneous
+
+* increase inactivity timeout ([#1342](https://www.github.com/aeternity/ae_mdw/issues/1342)) ([db0da2c](https://www.github.com/aeternity/ae_mdw/commit/db0da2c2e8ee32af67c45ea270efd137cba016d2))
+* let docket volumes be optional ([#1334](https://www.github.com/aeternity/ae_mdw/issues/1334)) ([1fe2817](https://www.github.com/aeternity/ae_mdw/commit/1fe2817116d414bd77d5f20678c049ef59f600f0))
+* revert "chore: update node to 6.8.1 ([#1223](https://www.github.com/aeternity/ae_mdw/issues/1223))" ([#1328](https://www.github.com/aeternity/ae_mdw/issues/1328)) ([6fa3873](https://www.github.com/aeternity/ae_mdw/commit/6fa3873f37419b081c4dad6717bb52914afac01d))
+* update node to 6.8.1 ([#1223](https://www.github.com/aeternity/ae_mdw/issues/1223)) ([f96f56c](https://www.github.com/aeternity/ae_mdw/commit/f96f56c6405917d9a662e2f2195c745bff3d3646))
+
 ## [1.47.0](https://www.github.com/aeternity/ae_mdw/compare/v1.46.7...v1.47.0) (2023-05-15)
 
 
