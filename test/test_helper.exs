@@ -13,10 +13,7 @@ if :integration not in included_tests and :iteration not in included_tests do
   alias AeMdw.Db.RocksDb
 
   :ok = RocksDb.close()
-  dir = Application.fetch_env!(:ae_mdw, RocksDb)[:data_dir]
-  {:ok, _} = File.rm_rf(dir)
-  System.cmd("sync", [])
-  :ok = RocksDb.open()
+  :ok = RocksDb.open(true)
 end
 
 ExUnit.start()

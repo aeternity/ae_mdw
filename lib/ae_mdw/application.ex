@@ -37,7 +37,8 @@ defmodule AeMdw.Application do
     init(:tables)
     init(:formatters)
 
-    :ok = AeMdw.Db.RocksDb.open()
+    persist = Application.get_env(:aecore, :persist, true)
+    :ok = AeMdw.Db.RocksDb.open(!persist)
 
     children = [
       AeMdw.APM.Telemetry,
