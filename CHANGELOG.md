@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.48.1](https://www.github.com/aeternity/ae_mdw/compare/v1.48.0...v1.48.1) (2023-05-29)
+
+
+### Bug Fixes
+
+* rename OracleQueries migration to run after ContractLogs ([#1353](https://www.github.com/aeternity/ae_mdw/issues/1353)) ([8feb46f](https://www.github.com/aeternity/ae_mdw/commit/8feb46f7f9914f3258fef01599c582b2cee97b9a))
+
 ## [1.48.0](https://www.github.com/aeternity/ae_mdw/compare/v1.47.0...v1.48.0) (2023-05-25)
 
 
