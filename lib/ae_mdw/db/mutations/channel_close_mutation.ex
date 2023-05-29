@@ -42,5 +42,9 @@ defmodule AeMdw.Db.ChannelCloseMutation do
       Model.InactiveChannel,
       Model.channel(channel, amount: old_amount - released_amount)
     )
+    |> State.put(
+      Model.InactiveChannelActivation,
+      Model.activation(index: {active_height, channel_pk})
+    )
   end
 end

@@ -32,7 +32,9 @@ defmodule AeMdw.Channels do
   @type channel_update() :: map()
 
   @table_active Model.ActiveChannel
-  @table_activation Model.ActiveChannelActivation
+  @table_active_activation Model.ActiveChannelActivation
+  @table_inactive Model.InactiveChannel
+  @table_inactive_activation Model.InactiveChannelActivation
 
   @channel_tx_mod %{
     :channel_create_tx => :aesc_create_tx,
@@ -47,9 +49,9 @@ defmodule AeMdw.Channels do
     :channel_snapshot_solo_tx => :aesc_snapshot_solo_tx
   }
 
-  @spec fetch_active_channels(state(), pagination(), range(), cursor()) ::
+  @spec fetch_channels(state(), pagination(), range(), cursor()) ::
           {:ok, pagination_cursor(), [channel()], pagination_cursor()} | {:error, Error.t()}
-  def fetch_active_channels(state, pagination, range, cursor) do
+  def fetch_channels(state, pagination, range, cursor) do
     with {:ok, cursor} <- deserialize_cursor(cursor) do
       scope = deserialize_scope(range)
 
@@ -58,7 +60,7 @@ defmodule AeMdw.Channels do
         |> build_streamer(scope, cursor)
         |> Collection.paginate(pagination)
 
-      channels = render_active_channels(state, expiration_keys)
+      channels = render_channels(state, expiration_keys)
 
       {:ok, serialize_cursor(prev_cursor), channels, serialize_cursor(next_cursor)}
     end
@@ -79,7 +81,7 @@ defmodule AeMdw.Channels do
           {:ok, channel()} | {:error, Error.t()}
   def fetch_channel(state, channel_pk, type_block_hash \\ nil) do
     with {:ok, m_channel, source} <- locate(state, channel_pk) do
-      is_active? = source == Model.ActiveChannel
+      is_active? = source == @table_active
       {:ok, render_channel(state, m_channel, is_active?, type_block_hash)}
     end
   end
@@ -131,7 +133,13 @@ defmodule AeMdw.Channels do
 
   defp build_streamer(state, scope, cursor) do
     fn direction ->
-      Collection.stream(state, @table_activation, direction, scope, cursor)
+      [@table_active_activation, @table_inactive_activation]
+      |> Enum.map(fn table ->
+        state
+        |> Collection.stream(table, direction, scope, cursor)
+        |> Stream.map(&{&1, table})
+      end)
+      |> Collection.merge(direction)
     end
   end
 
@@ -168,10 +176,12 @@ defmodule AeMdw.Channels do
     end
   end
 
-  defp render_active_channels(state, keys) do
-    Enum.map(keys, fn {_exp, channel_pk} ->
-      m_channel = State.fetch!(state, @table_active, channel_pk)
-      render_channel(state, m_channel, true)
+  defp render_channels(state, keys) do
+    Enum.map(keys, fn {{_exp, channel_pk}, source} ->
+      is_active? = source == @table_active_activation
+      table = if is_active?, do: @table_active, else: @table_inactive
+      m_channel = State.fetch!(state, table, channel_pk)
+      render_channel(state, m_channel, is_active?)
     end)
   end
 
@@ -266,7 +276,7 @@ defmodule AeMdw.Channels do
 
   defp serialize_cursor(nil), do: nil
 
-  defp serialize_cursor({{height, channel_pk}, is_reversed?}),
+  defp serialize_cursor({{{height, channel_pk}, _source}, is_reversed?}),
     do: {"#{height}-#{Enc.encode(:channel, channel_pk)}", is_reversed?}
 
   defp deserialize_scope({:gen, first_gen..last_gen}) do

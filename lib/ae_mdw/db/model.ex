@@ -1118,7 +1118,8 @@ defmodule AeMdw.Db.Model do
     [
       AeMdw.Db.Model.ActiveChannel,
       AeMdw.Db.Model.ActiveChannelActivation,
-      AeMdw.Db.Model.InactiveChannel
+      AeMdw.Db.Model.InactiveChannel,
+      AeMdw.Db.Model.InactiveChannelActivation
     ]
   end
 
@@ -1292,6 +1293,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.ActiveChannel), do: :channel
   def record(AeMdw.Db.Model.ActiveChannelActivation), do: :activation
   def record(AeMdw.Db.Model.InactiveChannel), do: :channel
+  def record(AeMdw.Db.Model.InactiveChannelActivation), do: :activation
   def record(AeMdw.Db.Model.IntTransferTx), do: :int_transfer_tx
   def record(AeMdw.Db.Model.KindIntTransferTx), do: :kind_int_transfer_tx
   def record(AeMdw.Db.Model.TargetKindIntTransferTx), do: :target_kind_int_transfer_tx

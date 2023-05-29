@@ -13,21 +13,28 @@ defmodule AeMdwWeb.ChannelControllerTest do
   require Model
 
   describe "channels" do
-    test "it returns active channels", %{conn: conn, store: store} do
-      channel_pk1 = TS.channel_pk(0)
-      channel_pk2 = TS.channel_pk(1)
-      initiator_pk = TS.address(0)
-      responder_pk = TS.address(1)
-      tx_hash = <<Enum.random(1_000..9_999)::256>>
+    test "it returns active and inactive channels", %{conn: conn, store: store} do
+      channel_pk1 = <<0::256>>
+      channel_pk2 = <<1::256>>
+      channel_pk3 = <<2::256>>
+      initiator_pk = <<3::256>>
+      responder_pk = <<4::256>>
+      tx_hash = <<5::256>>
+      block_hash = <<6::256>>
       enc_tx_hash = encode(:tx_hash, tx_hash)
-      tx_type1 = "ChannelWithdrawTx"
-      tx_type2 = "ChannelCloseMutualTx"
+      channel_id1 = encode(:channel, channel_pk1)
+      channel_id2 = encode(:channel, channel_pk2)
+      channel_id3 = encode(:channel, channel_pk3)
+      initiator = encode_account(initiator_pk)
+      responder = encode_account(responder_pk)
 
       {:ok, state_hash} =
         :aeser_api_encoder.safe_decode(
           :state,
           "st_Wwxms0IVM7PPCHpeOXWeeZZm8h5p/SuqZL7IHIbr3CqtlCL+"
         )
+
+      encoded_state_hash = encode(:state, state_hash)
 
       m_channel1 =
         Model.channel(
@@ -46,7 +53,12 @@ defmodule AeMdwWeb.ChannelControllerTest do
           updates: [{{500_000, 1}, {2_000, -1}}]
         )
 
-      block_hash = <<Enum.random(1_000..9_999)::256>>
+      m_channel3 =
+        Model.channel(m_channel1,
+          index: channel_pk3,
+          active: 3,
+          updates: [{{600_000, 1}, {3_000, -1}}]
+        )
 
       with_mocks [
         {AeMdw.Db.Util, [:passthrough],
@@ -57,6 +69,9 @@ defmodule AeMdwWeb.ChannelControllerTest do
 
              _state, {2_000, -1} ->
                {:tx, :channel_close_mutual_tx, tx_hash, :channel_close_mutual_tx, block_hash}
+
+             _state, {3_000, -1} ->
+               {:tx, :channel_deposit_tx, tx_hash, :channel_deposit_tx, block_hash}
            end
          ]},
         {:aec_chain, [:passthrough],
@@ -81,15 +96,31 @@ defmodule AeMdwWeb.ChannelControllerTest do
           |> Store.put(Model.ActiveChannel, m_channel2)
           |> Store.put(Model.ActiveChannelActivation, Model.activation(index: {1, channel_pk1}))
           |> Store.put(Model.ActiveChannelActivation, Model.activation(index: {2, channel_pk2}))
+          |> Store.put(Model.InactiveChannel, m_channel3)
+          |> Store.put(Model.InactiveChannelActivation, Model.activation(index: {3, channel_pk3}))
 
-        assert %{"data" => [channel2, channel1]} =
-                 conn |> with_store(store) |> get("/v2/channels") |> json_response(200)
+        assert %{"data" => [channel3, channel2] = channels, "next" => next_url} =
+                 conn |> with_store(store) |> get("/v2/channels", limit: 2) |> json_response(200)
 
-        channel_id1 = encode(:channel, channel_pk1)
-        channel_id2 = encode(:channel, channel_pk2)
-        initiator = encode_account(initiator_pk)
-        responder = encode_account(responder_pk)
-        state_hash = encode(:state, state_hash)
+        assert %{
+                 "channel" => ^channel_id3,
+                 "active" => false,
+                 "amount" => 8_000_000,
+                 "last_updated_height" => 600_000,
+                 "last_updated_tx_hash" => ^enc_tx_hash,
+                 "last_updated_tx_type" => "ChannelDepositTx",
+                 "updates_count" => 1,
+                 "responder" => ^responder,
+                 "initiator" => ^initiator,
+                 "channel_reserve" => 500_000,
+                 "initiator_amount" => 3_400_000,
+                 "responder_amount" => 3_600_000,
+                 "round" => 1,
+                 "solo_round" => 2,
+                 "lock_period" => 3,
+                 "locked_until" => 500_003,
+                 "state_hash" => ^encoded_state_hash
+               } = channel3
 
         assert %{
                  "channel" => ^channel_id2,
@@ -97,7 +128,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
                  "amount" => 8_000_000,
                  "last_updated_height" => 500_000,
                  "last_updated_tx_hash" => ^enc_tx_hash,
-                 "last_updated_tx_type" => ^tx_type2,
+                 "last_updated_tx_type" => "ChannelCloseMutualTx",
                  "updates_count" => 1,
                  "responder" => ^responder,
                  "initiator" => ^initiator,
@@ -108,8 +139,11 @@ defmodule AeMdwWeb.ChannelControllerTest do
                  "solo_round" => 2,
                  "lock_period" => 3,
                  "locked_until" => 500_003,
-                 "state_hash" => ^state_hash
+                 "state_hash" => ^encoded_state_hash
                } = channel2
+
+        assert %{"data" => [channel1], "prev" => prev_url} =
+                 conn |> with_store(store) |> get(next_url) |> json_response(200)
 
         assert %{
                  "channel" => ^channel_id1,
@@ -117,7 +151,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
                  "amount" => 9_000_000,
                  "last_updated_height" => 500_000,
                  "last_updated_tx_hash" => ^enc_tx_hash,
-                 "last_updated_tx_type" => ^tx_type1,
+                 "last_updated_tx_type" => "ChannelWithdrawTx",
                  "updates_count" => 1,
                  "responder" => ^responder,
                  "initiator" => ^initiator,
@@ -128,8 +162,11 @@ defmodule AeMdwWeb.ChannelControllerTest do
                  "solo_round" => 2,
                  "lock_period" => 3,
                  "locked_until" => 500_003,
-                 "state_hash" => ^state_hash
+                 "state_hash" => ^encoded_state_hash
                } = channel1
+
+        assert %{"data" => ^channels} =
+                 conn |> with_store(store) |> get(prev_url) |> json_response(200)
       end
     end
 
