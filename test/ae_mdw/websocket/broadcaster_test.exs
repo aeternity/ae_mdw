@@ -237,7 +237,8 @@ defmodule AeMdw.Websocket.BroadcasterTest do
             "block_height" => 0,
             "block_hash" => mb_hash
           },
-          "subscription" => "Object"
+          "subscription" => "Object",
+          "target" => alice_id
         }
 
         Broadcaster.broadcast_txs(block0, :node)
@@ -313,7 +314,8 @@ defmodule AeMdw.Websocket.BroadcasterTest do
             "block_height" => 2,
             "block_hash" => mb_hash
           },
-          "subscription" => "Object"
+          "subscription" => "Object",
+          "target" => name_id
         }
 
         Broadcaster.broadcast_txs(block2, :node)

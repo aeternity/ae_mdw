@@ -166,11 +166,18 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
         |> encode_message("Transactions", source)
         |> broadcast_tx(tx_pids)
 
-        obj_msg = encode_message(mdw_tx, "Object", source)
+        base_obj_msg = %{"payload" => mdw_tx, "subscription" => "Object", "source" => source}
 
         tx
         |> get_ids_from_tx()
-        |> Enum.each(&broadcast(obj_msg, &1, source, version))
+        |> Enum.each(fn {:id, id_type, pubkey} ->
+          id = id_type |> encode_type() |> encode(pubkey)
+
+          base_obj_msg
+          |> Map.put("target", id)
+          |> Jason.encode!()
+          |> broadcast(id, source, version)
+        end)
       end
     end)
   end
@@ -287,4 +294,9 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
     Subscriptions.has_subscribers?(source, version, "Transactions") ||
       Subscriptions.has_object_subscribers?(source, version)
   end
+
+  defp encode_type(:account), do: :account_pubkey
+  defp encode_type(:contract), do: :contract_pubkey
+  defp encode_type(:oracle), do: :oracle_pubkey
+  defp encode_type(id_type), do: id_type
 end
