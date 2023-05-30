@@ -219,7 +219,7 @@ defmodule AeMdw.Application do
   end
 
   def start_phase(:dedup_accounts, _start_type, []) do
-    AeMdw.Sync.AsyncTasks.WealthRank.dedup_pending_accounts()
+    AeMdw.Sync.AsyncTasks.WealthRankAccounts.dedup_pending_accounts()
     :ok
   end
 
