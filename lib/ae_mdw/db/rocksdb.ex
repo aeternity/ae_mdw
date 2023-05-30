@@ -54,9 +54,9 @@ defmodule AeMdw.Db.RocksDb do
   Opens an optimistic transaction database with multiple column families in order to allow transactions
   across multiple tables.
   """
-  @spec open() :: :ok
-  def open() do
-    with :ok <- create_dir_if_missing(),
+  @spec open(boolean()) :: :ok
+  def open(delete_existing?) do
+    with :ok <- create_dir_if_missing(delete_existing?),
          {:ok, db_ref, cf_ref_list} <- open_db() do
       # keep db handle
       :persistent_term.put({__MODULE__, :db_ref}, db_ref)
@@ -189,8 +189,14 @@ defmodule AeMdw.Db.RocksDb do
   #
   # Private functions
   #
-  defp create_dir_if_missing() do
+  defp create_dir_if_missing(delete_existing?) do
     if File.exists?(data_dir()) do
+      if delete_existing? do
+        "#{data_dir()}/*"
+        |> Path.wildcard()
+        |> Enum.each(&File.rm_rf!(&1))
+      end
+
       :ok
     else
       File.mkdir(data_dir())
