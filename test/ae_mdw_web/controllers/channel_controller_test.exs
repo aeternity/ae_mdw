@@ -170,6 +170,95 @@ defmodule AeMdwWeb.ChannelControllerTest do
       end
     end
 
+    test "when filtering by state=inactive, it returns inactive channels only", %{
+      conn: conn,
+      store: store
+    } do
+      channel_pk1 = <<0::256>>
+      channel_pk2 = <<1::256>>
+      channel_pk3 = <<2::256>>
+      initiator_pk = <<3::256>>
+      responder_pk = <<4::256>>
+      tx_hash = <<5::256>>
+      block_hash = <<6::256>>
+      enc_tx_hash = encode(:tx_hash, tx_hash)
+      channel_id3 = encode(:channel, channel_pk3)
+      initiator = encode_account(initiator_pk)
+      responder = encode_account(responder_pk)
+
+      {:ok, state_hash} =
+        :aeser_api_encoder.safe_decode(
+          :state,
+          "st_Wwxms0IVM7PPCHpeOXWeeZZm8h5p/SuqZL7IHIbr3CqtlCL+"
+        )
+
+      encoded_state_hash = encode(:state, state_hash)
+
+      m_channel3 =
+        Model.channel(
+          index: channel_pk3,
+          active: 3,
+          initiator: initiator_pk,
+          responder: responder_pk,
+          state_hash: state_hash,
+          updates: [{{600_000, 1}, {3_000, -1}}]
+        )
+
+      store =
+        store
+        |> Store.put(Model.ActiveChannelActivation, Model.activation(index: {1, channel_pk1}))
+        |> Store.put(Model.ActiveChannelActivation, Model.activation(index: {2, channel_pk2}))
+        |> Store.put(Model.InactiveChannel, m_channel3)
+        |> Store.put(Model.InactiveChannelActivation, Model.activation(index: {3, channel_pk3}))
+
+      with_mocks [
+        {AeMdw.Db.Util, [:passthrough],
+         [
+           read_node_tx_details: fn _state, {3_000, -1} ->
+             {:tx, :channel_deposit_tx, tx_hash, :channel_deposit_tx, block_hash}
+           end
+         ]},
+        {:aec_chain, [:passthrough],
+         get_channel_at_hash: fn pubkey, ^block_hash ->
+           amount = 8_000_000
+
+           {:ok,
+            {:channel, {:id, :channel, pubkey}, {:id, :account, initiator_pk},
+             {:id, :account, responder_pk}, %{initiator: [], responder: []}, amount, 3_400_000,
+             3_600_000, 500_000, :basic, :basic,
+             <<13, 54, 141, 196, 223, 107, 172, 150, 198, 45, 62, 102, 159, 21, 123, 151, 241,
+               235, 20, 175, 223, 198, 242, 127, 137, 194, 129, 204, 227, 139, 197, 132>>, 1, 2,
+             3, 500_003, 3}}
+         end}
+      ] do
+        assert %{"data" => [channel3], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/channels", state: "inactive")
+                 |> json_response(200)
+
+        assert %{
+                 "channel" => ^channel_id3,
+                 "active" => false,
+                 "amount" => 8_000_000,
+                 "last_updated_height" => 600_000,
+                 "last_updated_tx_hash" => ^enc_tx_hash,
+                 "last_updated_tx_type" => "ChannelDepositTx",
+                 "updates_count" => 1,
+                 "responder" => ^responder,
+                 "initiator" => ^initiator,
+                 "channel_reserve" => 500_000,
+                 "initiator_amount" => 3_400_000,
+                 "responder_amount" => 3_600_000,
+                 "round" => 1,
+                 "solo_round" => 2,
+                 "lock_period" => 3,
+                 "locked_until" => 500_003,
+                 "state_hash" => ^encoded_state_hash
+               } = channel3
+      end
+    end
+
     test "when no channels, it returns empty data", %{conn: conn, store: store} do
       assert %{"data" => []} =
                conn |> with_store(store) |> get("/v2/channels") |> json_response(200)

@@ -25,6 +25,7 @@ defmodule AeMdw.Channels do
   @typep type_block_hash() :: {Db.hash_type(), Db.hash()}
   @typep pagination() :: Collection.direction_limit()
   @typep range() :: {:gen, Range.t()} | nil
+  @typep query() :: map()
   @typep cursor() :: binary()
   @typep pagination_cursor() :: Collection.pagination_cursor()
 
@@ -35,6 +36,8 @@ defmodule AeMdw.Channels do
   @table_active_activation Model.ActiveChannelActivation
   @table_inactive Model.InactiveChannel
   @table_inactive_activation Model.InactiveChannelActivation
+
+  @states ~w(active inactive)
 
   @channel_tx_mod %{
     :channel_create_tx => :aesc_create_tx,
@@ -49,20 +52,23 @@ defmodule AeMdw.Channels do
     :channel_snapshot_solo_tx => :aesc_snapshot_solo_tx
   }
 
-  @spec fetch_channels(state(), pagination(), range(), cursor()) ::
-          {:ok, pagination_cursor(), [channel()], pagination_cursor()} | {:error, Error.t()}
-  def fetch_channels(state, pagination, range, cursor) do
-    with {:ok, cursor} <- deserialize_cursor(cursor) do
+  @spec fetch_channels(state(), pagination(), range(), query(), cursor()) ::
+          {:ok, {pagination_cursor(), [channel()], pagination_cursor()}}
+          | {:error, Error.t()}
+  def fetch_channels(state, pagination, range, query, cursor) do
+    with {:ok, cursor} <- deserialize_cursor(cursor),
+         {:ok, filters} <- convert_params(query) do
       scope = deserialize_scope(range)
 
       {prev_cursor, expiration_keys, next_cursor} =
-        state
-        |> build_streamer(scope, cursor)
+        filters
+        |> Map.new()
+        |> build_streamer(state, scope, cursor)
         |> Collection.paginate(pagination)
 
       channels = render_channels(state, expiration_keys)
 
-      {:ok, serialize_cursor(prev_cursor), channels, serialize_cursor(next_cursor)}
+      {:ok, {serialize_cursor(prev_cursor), channels, serialize_cursor(next_cursor)}}
     end
   end
 
@@ -131,14 +137,28 @@ defmodule AeMdw.Channels do
     |> Enum.count()
   end
 
-  defp build_streamer(state, scope, cursor) do
+  defp build_streamer(%{state: "active"}, state, scope, cursor) do
     fn direction ->
-      [@table_active_activation, @table_inactive_activation]
-      |> Enum.map(fn table ->
-        state
-        |> Collection.stream(table, direction, scope, cursor)
-        |> Stream.map(&{&1, table})
-      end)
+      state
+      |> Collection.stream(@table_active_activation, direction, scope, cursor)
+      |> Stream.map(&{&1, @table_active_activation})
+    end
+  end
+
+  defp build_streamer(%{state: "inactive"}, state, scope, cursor) do
+    fn direction ->
+      state
+      |> Collection.stream(@table_inactive_activation, direction, scope, cursor)
+      |> Stream.map(&{&1, @table_inactive_activation})
+    end
+  end
+
+  defp build_streamer(_query, state, scope, cursor) do
+    fn direction ->
+      [
+        build_streamer(%{state: "active"}, state, scope, cursor).(direction),
+        build_streamer(%{state: "inactive"}, state, scope, cursor).(direction)
+      ]
       |> Collection.merge(direction)
     end
   end
@@ -317,4 +337,17 @@ defmodule AeMdw.Channels do
   defp get_block_index(state, :micro, block_hash) do
     DbUtil.micro_block_height_index(state, block_hash)
   end
+
+  defp convert_params(query) do
+    Enum.reduce_while(query, {:ok, []}, fn param, {:ok, filters} ->
+      case convert_param(param) do
+        {:ok, filter} -> {:cont, {:ok, [filter | filters]}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  defp convert_param({"state", val}) when val in @states, do: {:ok, {:state, val}}
+
+  defp convert_param(other_param), do: {:error, ErrInput.Query.exception(value: other_param)}
 end

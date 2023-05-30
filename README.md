@@ -3768,6 +3768,8 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/oracles?state=active&limit=1&expa
 
 Returns active channels ordered by the txi of the last update.
 
+These can also be filtered by `state=active` or `state=inactive`.
+
 Besides the participants balances it includes some fields intrinsic to the channel such as:
 - the reserve deposited in the channel for paying fees and assuring refunds;
 - lock parameters, in case of individual actions; and

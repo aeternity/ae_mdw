@@ -13,11 +13,11 @@ defmodule AeMdwWeb.ChannelController do
 
   @spec channels(Conn.t(), map()) :: Conn.t()
   def channels(%Conn{assigns: assigns} = conn, _params) do
-    %{state: state, pagination: pagination, scope: scope, cursor: cursor} = assigns
+    %{state: state, pagination: pagination, scope: scope, query: query, cursor: cursor} = assigns
 
-    with {:ok, prev_cursor, channels, next_cursor} <-
-           Channels.fetch_channels(state, pagination, scope, cursor) do
-      Util.paginate(conn, prev_cursor, channels, next_cursor)
+    with {:ok, paginated_channels} <-
+           Channels.fetch_channels(state, pagination, scope, query, cursor) do
+      Util.paginate(conn, paginated_channels)
     end
   end
 
