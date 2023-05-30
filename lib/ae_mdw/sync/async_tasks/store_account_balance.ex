@@ -28,7 +28,9 @@ defmodule AeMdw.Sync.AsyncTasks.StoreAccountBalance do
     done_fn.()
 
     if time_delta / @milisecs > @log_threshold_ms do
-      Log.info("[store_account_balance] #{inspect(block_index)} after #{time_delta / @milisecs}s")
+      Log.info(
+        "[store_account_balance] #{inspect(block_index)} after #{time_delta / @milisecs}ms"
+      )
     end
 
     :ok
