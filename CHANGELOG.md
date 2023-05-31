@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.49.0](https://www.github.com/aeternity/ae_mdw/compare/v1.48.1...v1.49.0) (2023-05-31)
+
+
+### Features
+
+* add support for node 6.8.1 back ([#1335](https://www.github.com/aeternity/ae_mdw/issues/1335)) ([4284e63](https://www.github.com/aeternity/ae_mdw/commit/4284e63b9888056bc482b7b2f10f7ef5ebd31f9e))
+* add target to ws object msg ([#1341](https://www.github.com/aeternity/ae_mdw/issues/1341)) ([11d53ac](https://www.github.com/aeternity/ae_mdw/commit/11d53ace77fa9fb909924b57ed4dcea1b19f0d2c))
+* allow filtering channels by active/inactive ([#1367](https://www.github.com/aeternity/ae_mdw/issues/1367)) ([c303cce](https://www.github.com/aeternity/ae_mdw/commit/c303cce348626bad3884abcc93ec04070bec4871))
+* include inactive channels on channels listing ([#1340](https://www.github.com/aeternity/ae_mdw/issues/1340)) ([95bfa1e](https://www.github.com/aeternity/ae_mdw/commit/95bfa1e6c0237879ae07c1a5687b6b6511d905bd))
+
+
+### Bug Fixes
+
+* adjust printed unit on store_account_balance log ([#1368](https://www.github.com/aeternity/ae_mdw/issues/1368)) ([cc601f1](https://www.github.com/aeternity/ae_mdw/commit/cc601f1874ccaa41553551a909adc8cb11bcd934))
+
+
+### Miscellaneous
+
+* apply Node persist config ([#1343](https://www.github.com/aeternity/ae_mdw/issues/1343)) ([eb58bf3](https://www.github.com/aeternity/ae_mdw/commit/eb58bf3b62068d781c1dc1ca167487ea19725528))
+* track internal calls for wealth ([#1369](https://www.github.com/aeternity/ae_mdw/issues/1369)) ([ca2fff8](https://www.github.com/aeternity/ae_mdw/commit/ca2fff8f1e6cd402a5571eb9f9022d3a60119946))
+* use count id by type also on /count ([#1370](https://www.github.com/aeternity/ae_mdw/issues/1370)) ([83eaf77](https://www.github.com/aeternity/ae_mdw/commit/83eaf775e0d8e73ad5f9f1fac15c9b29a89ddad2))
+
 ### [1.48.1](https://www.github.com/aeternity/ae_mdw/compare/v1.48.0...v1.48.1) (2023-05-29)
 
 
