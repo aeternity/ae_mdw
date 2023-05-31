@@ -62,33 +62,32 @@ defmodule AeMdw.Txs do
     count(state, nil, params)
   end
 
-  def count(state, nil, %{"type" => tx_type}) do
-    case Validate.tx_type(tx_type) do
-      {:ok, tx_type} ->
-        case State.get(state, Model.TypeCount, tx_type) do
-          {:ok, Model.type_count(count: count)} -> {:ok, count}
-          :not_found -> {:ok, 0}
-        end
+  def count(state, nil, %{"id" => id, "type" => tx_type}) do
+    with {:ok, address} <- Validate.id(id),
+         {:ok, tx_type} <- Validate.tx_type(tx_type) do
+      {:ok, count_id_type(state, address, tx_type)}
+    end
+  end
 
-      {:error, reason} ->
-        {:error, reason}
+  def count(state, nil, %{"type" => tx_type}) do
+    with {:ok, tx_type} <- Validate.tx_type(tx_type) do
+      case State.get(state, Model.TypeCount, tx_type) do
+        {:ok, Model.type_count(count: count)} -> {:ok, count}
+        :not_found -> {:ok, 0}
+      end
     end
   end
 
   def count(state, nil, %{"id" => id}) do
-    case Validate.id(id) do
-      {:ok, address} ->
-        total_count =
-          Node.tx_types()
-          |> Enum.map(fn tx_type ->
-            field_count(state, tx_type, address)
-          end)
-          |> Enum.sum()
+    with {:ok, address} <- Validate.id(id) do
+      total_count =
+        Node.tx_types()
+        |> Enum.map(fn tx_type ->
+          count_id_type(state, address, tx_type)
+        end)
+        |> Enum.sum()
 
-        {:ok, total_count}
-
-      {:error, reason} ->
-        {:error, reason}
+      {:ok, total_count}
     end
   end
 
@@ -105,6 +104,48 @@ defmodule AeMdw.Txs do
     do:
       {:error,
        ErrInput.Query.exception(value: "can't query by multiple filters and/or invalid filters")}
+
+  @spec count_id_type(State.t(), binary(), atom()) :: non_neg_integer()
+  def count_id_type(state, pubkey, tx_type) do
+    tx_type
+    |> Node.tx_ids_positions()
+    |> Enum.reduce(0, fn field_pos, sum ->
+      case State.get(state, Model.IdCount, {tx_type, field_pos, pubkey}) do
+        :not_found -> sum
+        {:ok, Model.id_count(count: count)} -> sum + count
+      end
+    end)
+  end
+
+  @spec count_id_type_group(State.t(), binary(), atom()) :: non_neg_integer()
+  def count_id_type_group(state, pubkey, tx_type_group) do
+    tx_type_group
+    |> Node.tx_group()
+    |> Enum.reduce(0, fn tx_type, sum ->
+      sum + count_id_type(state, pubkey, tx_type)
+    end)
+  end
+
+  @spec id_counts(State.t(), binary()) :: map()
+  def id_counts(state, <<_::256>> = pk) do
+    Enum.reduce(Node.tx_types(), %{}, fn tx_type, counts ->
+      tx_counts =
+        tx_type
+        |> Node.tx_ids()
+        |> Enum.reduce(%{}, fn {field, pos}, tx_counts ->
+          case State.get(state, Model.IdCount, {tx_type, pos, pk}) do
+            :not_found -> tx_counts
+            {:ok, Model.id_count(count: count)} -> Map.put(tx_counts, field, count)
+          end
+        end)
+
+      if map_size(tx_counts) == 0 do
+        counts
+      else
+        Map.put(counts, tx_type, tx_counts)
+      end
+    end)
+  end
 
   @spec fetch_txs(
           State.t(),
@@ -555,18 +596,6 @@ defmodule AeMdw.Txs do
       _other_field ->
         base_types
     end
-  end
-
-  defp field_count(state, tx_type, address) do
-    tx_type
-    |> Node.tx_ids_positions()
-    |> Enum.map(fn field_pos ->
-      case State.get(state, Model.IdCount, {tx_type, field_pos, address}) do
-        {:ok, Model.id_count(count: count)} -> count
-        :not_found -> 0
-      end
-    end)
-    |> Enum.sum()
   end
 
   defp wrapping_tx_field_positions(tx_type, field) do
