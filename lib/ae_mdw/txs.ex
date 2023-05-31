@@ -42,6 +42,8 @@ defmodule AeMdw.Txs do
   @typep pagination :: Collection.direction_limit()
   @typep range :: {:gen, Range.t()} | {:txi, Range.t()} | nil
   @typep page_cursor() :: Collection.pagination_cursor()
+  @typep pubkey :: Node.Db.pubkey()
+  @typep tx_type :: Node.tx_type()
 
   @table Tx
   @type_table Type
@@ -105,7 +107,7 @@ defmodule AeMdw.Txs do
       {:error,
        ErrInput.Query.exception(value: "can't query by multiple filters and/or invalid filters")}
 
-  @spec count_id_type(State.t(), binary(), atom()) :: non_neg_integer()
+  @spec count_id_type(State.t(), pubkey(), tx_type()) :: non_neg_integer()
   def count_id_type(state, pubkey, tx_type) do
     tx_type
     |> Node.tx_ids_positions()
@@ -117,7 +119,7 @@ defmodule AeMdw.Txs do
     end)
   end
 
-  @spec count_id_type_group(State.t(), binary(), atom()) :: non_neg_integer()
+  @spec count_id_type_group(State.t(), pubkey(), tx_type()) :: non_neg_integer()
   def count_id_type_group(state, pubkey, tx_type_group) do
     tx_type_group
     |> Node.tx_group()
@@ -126,23 +128,15 @@ defmodule AeMdw.Txs do
     end)
   end
 
-  @spec id_counts(State.t(), binary()) :: map()
-  def id_counts(state, <<_::256>> = pk) do
+  @spec id_counts(State.t(), pubkey()) :: %{tx_type() => non_neg_integer()}
+  def id_counts(state, pubkey) do
     Enum.reduce(Node.tx_types(), %{}, fn tx_type, counts ->
-      tx_counts =
-        tx_type
-        |> Node.tx_ids()
-        |> Enum.reduce(%{}, fn {field, pos}, tx_counts ->
-          case State.get(state, Model.IdCount, {tx_type, pos, pk}) do
-            :not_found -> tx_counts
-            {:ok, Model.id_count(count: count)} -> Map.put(tx_counts, field, count)
-          end
-        end)
+      field_counts = tx_count_per_field(state, tx_type, pubkey)
 
-      if map_size(tx_counts) == 0 do
+      if map_size(field_counts) == 0 do
         counts
       else
-        Map.put(counts, tx_type, tx_counts)
+        Map.put(counts, tx_type, field_counts)
       end
     end)
   end
@@ -596,6 +590,17 @@ defmodule AeMdw.Txs do
       _other_field ->
         base_types
     end
+  end
+
+  defp tx_count_per_field(state, tx_type, pubkey) do
+    tx_type
+    |> Node.tx_ids()
+    |> Enum.reduce(%{}, fn {field, pos}, tx_counts ->
+      case State.get(state, Model.IdCount, {tx_type, pos, pubkey}) do
+        :not_found -> tx_counts
+        {:ok, Model.id_count(count: count)} -> Map.put(tx_counts, field, count)
+      end
+    end)
   end
 
   defp wrapping_tx_field_positions(tx_type, field) do
