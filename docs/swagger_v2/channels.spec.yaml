@@ -53,14 +53,14 @@ schemas:
         type: integer
         description: Amount owned by responder
         example: 4500000000000000000
-      round: 
+      round:
         type: integer
         description: Round after last transaction
         example: 1
-      solo_round: 
+      solo_round:
         type: integer
         description: Round of last solo transaction
-        example: 0  
+        example: 0
       state_hash:
         type: string
         description: The hash of the current channel state
@@ -69,7 +69,7 @@ schemas:
         type: string
         description: The amount of times the channel's been updated by any of the channel transactions
         example: 2
-  
+
 paths:
   /channels:
     get:
@@ -80,6 +80,16 @@ paths:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'
+        - name: state
+          in: query
+          description: Exclusively filter by active/inactive channels.
+          required: false
+          schema:
+            type: string
+            enum:
+            - active
+            - inactive
+            example: inactive
       responses:
         '200':
           description: Returns paginated channels
