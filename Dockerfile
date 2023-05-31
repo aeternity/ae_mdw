@@ -40,7 +40,7 @@ WORKDIR /home/aeternity/node
 
 # Download, and unzip latest aeternity release archive
 ENV NODEROOT=/home/aeternity/node/local
-ARG NODE_VERSION=6.7.0
+ARG NODE_VERSION=6.8.1
 ARG NODE_URL=https://github.com/aeternity/aeternity/releases/download/v${NODE_VERSION}/aeternity-v${NODE_VERSION}-ubuntu-x86_64.tar.gz
 ENV NODEDIR=/home/aeternity/node/local/rel/aeternity
 RUN mkdir -p ./local/rel/aeternity/data/mnesia

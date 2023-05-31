@@ -447,7 +447,7 @@ defmodule AeMdw.Contract do
       {:ok, _, _, events} =
         :aec_block_micro_candidate.apply_block_txs_strict(txs_taken, trees_in, env)
 
-      Enum.reverse(events)
+      events
     else
       []
     end
