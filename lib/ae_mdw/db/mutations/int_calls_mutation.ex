@@ -19,11 +19,11 @@ defmodule AeMdw.Db.IntCallsMutation do
 
   @typep int_call() ::
            {Contract.local_idx(), Contract.fname(), Node.tx_type(), Node.tx(), Node.aetx()}
-  @opaque t() :: %__MODULE__{
-            contract_pk: Db.pubkey(),
-            call_txi: Txs.txi(),
-            int_calls: [int_call()]
-          }
+  @type t() :: %__MODULE__{
+          contract_pk: Db.pubkey(),
+          call_txi: Txs.txi(),
+          int_calls: [int_call()]
+        }
 
   @spec new(Db.pubkey(), Txs.txi(), [int_call()]) :: t()
   def new(contract_pk, call_txi, int_calls) do

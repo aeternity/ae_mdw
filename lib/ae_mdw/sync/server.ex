@@ -37,7 +37,7 @@ defmodule AeMdw.Sync.Server do
   alias AeMdw.Db.Status
   alias AeMdw.Db.Sync.Block
   alias AeMdw.Log
-  alias AeMdw.Sync.Transaction
+  alias AeMdw.Sync.AsyncTasks.WealthRankAccounts
   alias AeMdwWeb.Websocket.Broadcaster
 
   require Logger
@@ -317,8 +317,8 @@ defmodule AeMdw.Sync.Server do
         {{_height, -1}, _block, _mutations}, set ->
           set
 
-        {_block_index, mblock, _mutations}, set ->
-          MapSet.union(set, micro_block_accounts(mblock))
+        {_block_index, mblock, mutations}, set ->
+          MapSet.union(set, WealthRankAccounts.micro_block_accounts(mblock, mutations))
       end)
 
     if MapSet.size(accounts_set) > 0 do
@@ -379,21 +379,5 @@ defmodule AeMdw.Sync.Server do
 
       Broadcaster.broadcast_key_block(key_block, :v1, :mdw, mbs_count)
     end)
-  end
-
-  defp micro_block_accounts(micro_block) do
-    pubkeys =
-      micro_block
-      |> :aec_blocks.txs()
-      |> Enum.flat_map(fn signed_tx ->
-        signed_tx
-        |> Transaction.get_ids_from_tx()
-        |> Enum.flat_map(fn
-          {:id, :account, pubkey} -> [pubkey]
-          _other -> []
-        end)
-      end)
-
-    Enum.reduce(pubkeys, MapSet.new(), &MapSet.put(&2, &1))
   end
 end
