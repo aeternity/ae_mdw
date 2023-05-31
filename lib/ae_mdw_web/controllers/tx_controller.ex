@@ -5,7 +5,6 @@ defmodule AeMdwWeb.TxController do
   alias AeMdw.Node
   alias AeMdw.Validate
   alias AeMdw.Db.Model
-  alias AeMdw.Db.State
   alias AeMdw.Txs
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
@@ -66,9 +65,8 @@ defmodule AeMdwWeb.TxController do
   Counts all transactions for a given scope, type or address.
   """
   def count(%Conn{assigns: %{state: state, scope: scope, query: query}} = conn, _params) do
-    case Txs.count(state, scope, query) do
-      {:ok, count} -> json(conn, count)
-      {:error, reason} -> {:error, reason}
+    with {:ok, count} <- Txs.count(state, scope, query) do
+      json(conn, count)
     end
   end
 
@@ -79,61 +77,21 @@ defmodule AeMdwWeb.TxController do
   def count_id(%Conn{assigns: %{state: state}} = conn, %{"id" => id, "type_group" => group}) do
     with {:ok, tx_type_group} <- Validate.tx_group(group),
          {:ok, pubkey} <- Validate.id(id) do
-      json(conn, count_id_type_group(state, pubkey, tx_type_group))
+      json(conn, Txs.count_id_type_group(state, pubkey, tx_type_group))
     end
   end
 
   def count_id(%Conn{assigns: %{state: state}} = conn, %{"id" => id, "type" => type}) do
     with {:ok, tx_type} <- Validate.tx_type(type),
          {:ok, pubkey} <- Validate.id(id) do
-      json(conn, count_id_type(state, pubkey, tx_type))
+      json(conn, Txs.count_id_type(state, pubkey, tx_type))
     end
   end
 
   def count_id(%Conn{assigns: %{state: state}} = conn, %{"id" => id}) do
     with {:ok, pubkey} <- Validate.id(id) do
-      json(conn, id_counts(state, pubkey))
+      json(conn, Txs.id_counts(state, pubkey))
     end
-  end
-
-  ##########
-
-  @spec id_counts(State.t(), binary()) :: map()
-  defp id_counts(state, <<_::256>> = pk) do
-    for tx_type <- Node.tx_types(), reduce: %{} do
-      counts ->
-        tx_counts =
-          for {field, pos} <- Node.tx_ids(tx_type), reduce: %{} do
-            tx_counts ->
-              case State.get(state, Model.IdCount, {tx_type, pos, pk}) do
-                :not_found -> tx_counts
-                {:ok, Model.id_count(count: count)} -> Map.put(tx_counts, field, count)
-              end
-          end
-
-        (map_size(tx_counts) == 0 &&
-           counts) ||
-          Map.put(counts, tx_type, tx_counts)
-    end
-  end
-
-  defp count_id_type(state, pubkey, tx_type) do
-    tx_type
-    |> Node.tx_ids_positions()
-    |> Enum.reduce(0, fn field_pos, sum ->
-      case State.get(state, Model.IdCount, {tx_type, field_pos, pubkey}) do
-        :not_found -> sum
-        {:ok, Model.id_count(count: count)} -> sum + count
-      end
-    end)
-  end
-
-  defp count_id_type_group(state, pubkey, tx_type_group) do
-    tx_type_group
-    |> Node.tx_group()
-    |> Enum.reduce(0, fn tx_type, sum ->
-      sum + count_id_type(state, pubkey, tx_type)
-    end)
   end
 
   @spec micro_block_txs(Conn.t(), map()) :: Conn.t()

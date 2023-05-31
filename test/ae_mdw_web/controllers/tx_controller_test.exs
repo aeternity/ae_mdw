@@ -1589,6 +1589,29 @@ defmodule AeMdwWeb.TxControllerTest do
                |> get("/v2/txs/count", tx_type: "oracle_register")
                |> json_response(200)
     end
+
+    test "returns the count of transactions of an account filtered by type", %{
+      conn: conn,
+      store: store
+    } do
+      address = TS.address(0)
+      account_id = encode_account(address)
+
+      store =
+        store
+        |> Store.put(
+          Model.IdCount,
+          Model.id_count(index: {:oracle_extend_tx, 1, address}, count: 10)
+        )
+        |> Store.put(Model.IdCount, Model.id_count(index: {:spend_tx, 1, address}, count: 3))
+        |> Store.put(Model.IdCount, Model.id_count(index: {:spend_tx, 2, address}, count: 2))
+
+      assert 5 =
+               conn
+               |> with_store(store)
+               |> get("/v2/txs/count", id: account_id, type: "spend")
+               |> json_response(200)
+    end
   end
 
   describe "count_id" do
