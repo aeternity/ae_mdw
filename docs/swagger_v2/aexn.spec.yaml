@@ -954,6 +954,7 @@ paths:
         - application/json
       responses:
         '200':
+          description: Account balance history on a token contract
           content:
             application/json:
               schema:
