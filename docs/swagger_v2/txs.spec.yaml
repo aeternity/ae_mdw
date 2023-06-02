@@ -20,6 +20,8 @@ schemas:
       signatures:
         description: The signatures
         type: array
+        items:
+          type: string
       tx:
         description: The transaction
         type: object

@@ -35,6 +35,8 @@ schemas:
       extensions:
         description: Extensions implemented by the contract
         type: array
+        items:
+          type: string
       limits:
         description: Limit for amount of tokens or templates
         type: object
@@ -157,6 +159,8 @@ schemas:
       extensions:
         description: Extensions implemnted by the contract
         type: array
+        items:
+          type: string
       holders:
         description: Count of accounts having balance
         type: integer
@@ -252,77 +256,6 @@ schemas:
       - contract_id
       - block_hash
     title: Response for AEX-9 account balance
-    type: object
-  Aex9BalanceRangeResponse:
-    description: Response Schema for AEX9 balance responses on a height range
-    example:
-      account_id: ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4
-      contract_id: ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA
-      range: [
-        {
-          "amount": 81000000000000,
-          "block_hash": "kh_hKWfy4UdKH8hoMyFj9rQ6ayXvgtu77Uug26pbmnBqtQJPh7rR",
-          "height": 618120
-        },
-        {
-          "amount": 81000000000000,
-          "block_hash": "kh_2q9T7NZAM6sawyJfDpX3Zih1m7XzzZo82bfznXFDvokfmbvoS9",
-          "height": 618121
-        }
-      ]
-    properties:
-      account_id:
-        description: The name of AEX9 token
-        type: string
-      contract_id:
-        description: The contract id of given token
-        type: integer
-      range:
-        description: The balance amount for each height
-        type: array
-    required:
-      - contract_id
-      - account_id
-      - range
-    title: Response for AEX-9 account balance accross a range of heights
-    type: object
-  Aex9BalancesRangeResponse:
-    description: Response Schema for AEX9 balances response(s) on a height range
-    example:
-      contract_id: ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA
-      range: [
-        {
-          "amounts": {
-            "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6": 4050000000000,
-            "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK": 8100000000000,
-            "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4": 81000000000000,
-            "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48": 4.999999999990685e+25
-          },
-          "block_hash": "kh_hKWfy4UdKH8hoMyFj9rQ6ayXvgtu77Uug26pbmnBqtQJPh7rR",
-          "height": 618120
-        },
-        {
-          "amounts": {
-            "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6": 4050000000000,
-            "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK": 8100000000000,
-            "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4": 81000000000000,
-            "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48": 4.999999999990685e+25
-          },
-          "block_hash": "kh_2q9T7NZAM6sawyJfDpX3Zih1m7XzzZo82bfznXFDvokfmbvoS9",
-          "height": 618121
-        }
-      ]
-    properties:
-      contract_id:
-        description: The contract id of given token
-        type: integer
-      range:
-        description: The amounts for each height
-        type: array
-    required:
-      - contract_id
-      - range
-    title: Response for AEX-9 account balance accross a range of heights
     type: object
   Aex9ContractBalanceResponse:
     description: Response Schema for AEX9 contract balances responses
