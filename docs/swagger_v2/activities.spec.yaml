@@ -57,7 +57,6 @@ schemas:
           - reward_dev
           - reward_block
           - fee_refund_oracle
-          - fee_lock_name
           - fee_refund_name
           - fee_spend_name
           - reward_oracle

@@ -122,6 +122,7 @@ schemas:
           previous:
             $ref: '#/components/schemas/Auction'
           status:
+            type: string
             enum:
               - auction
   NameClaim:
@@ -267,6 +268,7 @@ paths:
                             - type: object
                               properties:
                                 status:
+                                  type: string
                                   enum:
                                     - auction
                                     - active

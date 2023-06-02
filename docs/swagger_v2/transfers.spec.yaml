@@ -12,6 +12,7 @@ schemas:
         type: integer
         example: 610158
       kind:
+        type: string
         enum:
           - reward_dev
           - reward_block

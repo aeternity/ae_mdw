@@ -61,6 +61,7 @@ paths:
           schema:
             type: array
             items:
+              type: string
               enum:
                 - channel_close_mutual
                 - channel_close_solo
