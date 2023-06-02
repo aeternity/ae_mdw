@@ -1,0 +1,96 @@
+schemas:
+  Status:
+    type: object
+    properties:
+      mdw_async_tasks:
+        type: object
+        properties:
+          long_tasks:
+            type: number
+            example: 1
+          producer_buffer:
+            type: number
+            example: 2
+          total_pending:
+            type: number
+            example: 3
+        required:
+          - long_tasks
+          - producer_buffer
+          - total_pending
+      mdw_gens_per_minute:
+        description: The approximate number of generations synced per minute on middleware
+        type: number
+        example: 54.75
+      mdw_height:
+        description: The top generation up to which the middleware was synced
+        type: number
+        example: 564291
+      mdw_last_migration:
+        description: The last middleware migration ran
+        type: number
+        example: 20230519120000
+      mdw_revision:
+        description: The middleware's git revision of the latest commit applied
+        type: string
+        example: 2d3ae3d
+      mdw_synced:
+        description: true if middleware was synced up to the latest node block
+        type: boolean
+        example: true
+      mdw_syncing:
+        description: true if middleware is syncing (i.e. it didn't stop due to an error)
+        type: boolean
+        example: true
+      mdw_version:
+        description: The middleware's version
+        type: string
+        example: 1.49.0
+      node_height:
+        description: The node generation of the last block synced
+        type: number
+        example: 391040
+      node_progress:
+        description: The percentage of generations synced on the node
+        type: number
+        example: "98.67"
+      node_revision:
+        description: The node's git revision of the latest commit applied
+        type: string
+        example: a42c1b1e84dabdad350005213a2a9334113a6832
+      node_syncing:
+        desciption: If true, the node is still processing additional blocks to reach the latest one
+        type: boolean
+        example: true
+      node_version:
+        description: The node's version
+        type: string
+        example: "6.8.1"
+    required:
+      - mdw_async_tasks
+      - mdw_gens_per_minute
+      - mdw_height
+      - mdw_last_migration
+      - mdw_revision
+      - mdw_synced
+      - mdw_syncing
+      - mdw_tx_index
+      - mdw_version
+      - node_height
+      - node_progress
+      - node_revision
+      - node_syncing
+      - node_version
+
+paths:
+  /status:
+    get:
+      description: Gets the current syncing status of both middleware and the node
+      operationId: getStatus
+      responses:
+        '200':
+          description: Returns a map of status items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
