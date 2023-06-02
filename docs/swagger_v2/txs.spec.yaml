@@ -212,7 +212,7 @@ paths:
       parameters:
       - name: tx_type
         description: Type of a transaction
-        in: path
+        in: query
         required: false
         schema:
           type: string
