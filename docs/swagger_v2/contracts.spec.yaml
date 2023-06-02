@@ -116,21 +116,28 @@ paths:
           required: false
           schema:
             type: string
-            example: "Transfer"
+            example: Transfer
         - name: function
           in: query
           description: Prefix of the contract called function
           required: false
           schema:
             type: string
-            example: "mint"
+            example: mint
+        - name: function_prefix
+          in: query
+          description: Prefix of the contract called function
+          required: false
+          schema:
+            type: string
+            example: put
         - name: data
           in: query
           description: Data prefix from the contract call
           required: false
           schema:
             type: string
-            example: "AB"
+            example: AB
         - name: aexn-args
           in: query
           description: Indicates to format args when event is AEX-N
