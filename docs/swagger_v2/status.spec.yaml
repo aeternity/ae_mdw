@@ -59,7 +59,7 @@ schemas:
         type: string
         example: a42c1b1e84dabdad350005213a2a9334113a6832
       node_syncing:
-        desciption: If true, the node is still processing additional blocks to reach the latest one
+        description: If true, the node is still processing additional blocks to reach the latest one
         type: boolean
         example: true
       node_version:
