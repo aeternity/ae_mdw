@@ -1,6 +1,7 @@
 schemas:
   ContractCall:
     description: ContractCall
+    type: object
     properties:
       block_hash:
         type: string
@@ -49,6 +50,7 @@ schemas:
         example: 2
   ContractLog:
     description: ContractLog
+    type: object
     properties:
       args:
         type: array
@@ -146,7 +148,7 @@ paths:
           required: false
           schema:
             type: boolean
-            example: true                
+            example: true
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'

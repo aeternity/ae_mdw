@@ -1,6 +1,7 @@
 schemas:
   DeltaStat:
     description: DeltaStat
+    type: object
     properties:
       height:
         description: The generation

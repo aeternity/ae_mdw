@@ -1,7 +1,66 @@
 schemas:
   Aex9TransferEvent:
     description: AEx9 Transfer
+    type: object
     properties:
+      amount:
+        type: integer
+        example: 9975080
+      block_height:
+        type: integer
+        example: 534443
+      contract_id:
+        type: string
+        example: "ct_2t7TnocFw7oCYSS7g2yGutZMpGEJta6dq2DTX38SmuqmwtN6Ch"
+      log_idx:
+        type: integer
+        example: 0
+      micro_index:
+        type: integer
+        example: 4
+      micro_time:
+        type: integer
+        example: 1640350612991
+      recipient_id:
+        type: string
+        example: "ak_kFZkYQMsU47oQsTxEimTybAWUozSVmCXJBNZwetEr87hG3M1z"
+      sender_id:
+        type: string
+        example: "ak_psy8tRXPzGxh6975H7K6XQcMFVsdrxJMt7YkzMY8oUTevutzw"
+      tx_hash:
+        type: string
+        example: "th_2Zfo2ALfRkKQxEaUj3HhcUGyMrTqYpDMgr2u15fPanYD1d55kz"
+  Aex141TransferEvent:
+    description: AEx141 Transfer
+    type: object
+    properties:
+      block_height:
+        type: string
+        example: 653289
+      contract_id:
+        type: string
+        example: "ct_2MFbjHcaFJXqLH9WrSZcX6EjbWKPhos1fv8nqXfPLoHMV1qVZz"
+      log_idx:
+        type: integer
+        example: 0
+      micro_index:
+        type: integer
+        example: 125
+      micro_time:
+        type: integer
+        example: 1662654259282
+      recipient_id:
+        type: string
+        example: "ak_uTWegpfN6UjA4yz8X4ZVRi9xKEYeXHJDRZcRryTsRHAFoBpLa"
+      sender_id:
+        type: string
+        example: "ak_11111111111111111111111111111111273Yts"
+      token_id:
+        type: integer
+        example: 1
+      tx_hash:
+        type: string
+        example: "th_2FciwUNyT7WRGee35KnNMhuoLFSCyiquVLFP3kATjwrFJh4Cfh"
   NameClaimEvent:
     description: Name claim
     properties:
@@ -11,8 +70,12 @@ schemas:
       tx:
         description: The claim transaction (internal or not)
         type: object
+    required:
+    - tx_hash
+    - tx
   InternalContractCallEvent:
     description: Contract call made inside of a contract call or contract create transaction
+    type: object
     properties:
       contract_tx_hash:
         description: The contract creation transaction hash
@@ -38,8 +101,17 @@ schemas:
       block_hash:
         description: The micro block hash in which the transaction happened
         type: string
+    required:
+    - contract_tx_hash
+    - contract_id
+    - function
+    - internal_tx
+    - height
+    - micro_index
+    - block_hash
   InternalTransferEvent:
     description: Internal transfer
+    type: object
     properties:
       amount:
         description: The amount of AE tokens
@@ -64,9 +136,18 @@ schemas:
       ref_tx_hash:
         description: The transaction hash of a transaction related to the internal transfer
         type: string
+    required:
+    - amount
+    - kind
+    - ref_tx_hash
   Activity:
     description: Activity related to an account
+    type: object
     properties:
+      block_hash:
+        description: The block hash
+        type: string
+        example: mh_2voSWMaC6hmhyCc8qZ7AxmenrK2CkqKeUg4bkFA8gcRTd4RwVB
       height:
         description: The block height
         type: integer
@@ -109,6 +190,11 @@ schemas:
           - $ref: '#/components/schemas/Aex141TransferEvent'
           - $ref: '#/components/schemas/InternalContractCallEvent'
           - $ref: '#/components/schemas/InternalTransferEvent'
+    required:
+      - block_hash
+      - height
+      - type
+      - payload
 paths:
   /accounts/{id}/activities:
     get:
