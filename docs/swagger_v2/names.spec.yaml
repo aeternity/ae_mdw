@@ -19,7 +19,7 @@ schemas:
             items:
               type: integer
             example: [4793600, 4792073, 4780558, 4750560]
-            expire_height:
+          expire_height:
             type: integer
             example: 362026
           ownership:

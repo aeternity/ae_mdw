@@ -61,7 +61,6 @@ schemas:
           - fee_refund_name
           - fee_spend_name
           - reward_oracle
-          - fee_lock_name
       ref_tx_hash:
         description: The transaction hash of a transaction related to the internal transfer
         type: string
@@ -104,7 +103,7 @@ schemas:
           - PayingForTxEvent
       payload:
         type: object
-        enum:
+        oneOf:
           - $ref: '#/components/schemas/Tx'
           - $ref: '#/components/schemas/Aex9TransferEvent'
           - $ref: '#/components/schemas/Aex141TransferEvent'
