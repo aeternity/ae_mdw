@@ -37,8 +37,8 @@ defmodule AeMdwWeb.Websocket.ChainListener do
   def handle_info({:gproc_ps_event, :top_changed, %{info: %{block_type: :key} = info}}, state) do
     case :aec_chain.get_key_block_by_height(info.height) do
       {:ok, block} ->
-        Broadcaster.broadcast_key_block(block, :v1, :node, nil)
-        Broadcaster.broadcast_key_block(block, :v2, :node, nil)
+        Broadcaster.broadcast_key_block(block, :v1, :node, nil, nil)
+        Broadcaster.broadcast_key_block(block, :v2, :node, nil, nil)
 
       {:error, _rsn} ->
         Log.warn("gproc_ps_event with block not found: block_hash = #{inspect(info.block_hash)}")

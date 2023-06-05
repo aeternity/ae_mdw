@@ -29,7 +29,7 @@ defmodule AeMdw.EtsCache do
   @spec all(table()) :: [tuple()]
   def all(table), do: :ets.tab2list(table)
 
-  @spec get(table(), key()) :: val() | nil
+  @spec get(table(), key()) :: {val(), integer()} | nil
   def get(table, key) do
     case :ets.lookup(table, key) do
       [{_, val, insert_time}] ->

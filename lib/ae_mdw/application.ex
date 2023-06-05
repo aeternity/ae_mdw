@@ -15,7 +15,7 @@ defmodule AeMdw.Application do
   alias AeMdw.NodeHelper
   alias AeMdw.Sync.Watcher
   alias AeMdw.Util
-  alias AeMdwWeb.Websocket.Broadcaster
+  alias AeMdwWeb.Websocket.BroadcasterCache
 
   require Model
 
@@ -176,8 +176,7 @@ defmodule AeMdw.Application do
   defp init(:aesync), do: Application.ensure_all_started(:aesync)
 
   defp init(:tables) do
-    {ets_table, ets_expiration} = Broadcaster.ets_config()
-    EtsCache.new(ets_table, ets_expiration)
+    BroadcasterCache.init()
 
     AeMdw.Sync.AsyncTasks.Stats.init()
     AeMdw.Sync.AsyncTasks.Store.init()
