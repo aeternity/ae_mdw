@@ -38,6 +38,7 @@ components:
   schemas:
     ErrorResponse:
       description: Error response from the API
+      type: object
       example:
         error: 'invalid id: th_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZF'
       properties:
@@ -50,6 +51,7 @@ components:
       type: object
     NotFoundResponse:
       description: Resource not found on the API
+      type: object
       example:
         error: 'not found: th_2Twp3pJeVuwQ7cMSdPQRfpAUWwdMiwx6coVMpRaNSuzFRnDZF'
       properties:
@@ -61,10 +63,13 @@ components:
       title: Not found response
       type: object
     PaginatedResponse:
+      type: object
       properties:
         next:
           type: string
           example: '/blocks?cursor=123'
+          nullable: true
         prev:
           type: string
           example: '/blocks?cursor=234'
+          nullable: true

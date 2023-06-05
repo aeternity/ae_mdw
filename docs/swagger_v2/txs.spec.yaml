@@ -1,6 +1,7 @@
 schemas:
   Tx:
     description: Transaction
+    type: object
     properties:
       block_hash:
         description: The block hash

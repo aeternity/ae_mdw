@@ -1,6 +1,7 @@
 schemas:
   Name:
     description: Name
+    type: object
     properties:
       active:
         type: boolean
@@ -61,6 +62,7 @@ schemas:
         example: name
   Auction:
     description: Auction
+    type: object
     properties:
       active:
         type: boolean
@@ -127,6 +129,7 @@ schemas:
               - auction
   NameClaim:
     description: Name Claim
+    type: object
     properties:
       block_hash:
         type: string
@@ -149,6 +152,7 @@ schemas:
           version: 2
   NameTransfer:
     description: Name Transfer
+    type: object
     properties:
       block_hash:
         type: string
@@ -169,6 +173,7 @@ schemas:
           version: 1
   NameUpdate:
     description: Name Update
+    type: object
     properties:
       block_hash:
         type: string
