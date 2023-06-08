@@ -508,17 +508,29 @@ defmodule AeMdwWeb.OracleControllerTest do
         store
         |> Store.put(
           Model.OracleQuery,
-          Model.oracle_query(index: {oracle_pk, query_id1}, txi_idx: txi_idx1)
+          Model.oracle_query(
+            index: {oracle_pk, query_id1},
+            txi_idx: txi_idx1,
+            response_txi_idx: txi_idx4
+          )
         )
         |> Store.put(Model.Tx, Model.tx(index: 789, id: tx_hash1))
         |> Store.put(
           Model.OracleQuery,
-          Model.oracle_query(index: {oracle_pk, query_id2}, txi_idx: txi_idx2)
+          Model.oracle_query(
+            index: {oracle_pk, query_id2},
+            txi_idx: txi_idx2,
+            response_txi_idx: txi_idx5
+          )
         )
         |> Store.put(Model.Tx, Model.tx(index: 791, id: tx_hash2))
         |> Store.put(
           Model.OracleQuery,
-          Model.oracle_query(index: {oracle_pk, query_id3}, txi_idx: txi_idx3)
+          Model.oracle_query(
+            index: {oracle_pk, query_id3},
+            txi_idx: txi_idx3,
+            response_txi_idx: txi_idx6
+          )
         )
         |> Store.put(Model.Tx, Model.tx(index: 799, id: tx_hash3))
         |> Store.put(Model.OracleQuery, Model.oracle_query(index: {oracle_pk2, query_id4}))
