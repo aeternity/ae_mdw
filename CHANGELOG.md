@@ -1,5 +1,22 @@
 # Changelog
 
+### [1.49.1](https://www.github.com/aeternity/ae_mdw/compare/v1.49.0...v1.49.1) (2023-06-08)
+
+
+### Bug Fixes
+
+* remove circular rendering on Oracles.render_query/2 ([#1383](https://www.github.com/aeternity/ae_mdw/issues/1383)) ([021e988](https://www.github.com/aeternity/ae_mdw/commit/021e988c5bcd5f80355c2a0ba18a96b1bb05a2b0))
+
+
+### Miscellaneous
+
+* add function parameter alias to contract logs ([#1374](https://www.github.com/aeternity/ae_mdw/issues/1374)) ([25ece54](https://www.github.com/aeternity/ae_mdw/commit/25ece54adf2f8eb71079512ed51d35a4e5869ddc))
+
+
+### Testing
+
+* remove mock from contracts sync ([#1379](https://www.github.com/aeternity/ae_mdw/issues/1379)) ([ef46747](https://www.github.com/aeternity/ae_mdw/commit/ef467473f202ebffcb68634ab2bd5195f4a9f1e3))
+
 ## [1.49.0](https://www.github.com/aeternity/ae_mdw/compare/v1.48.1...v1.49.0) (2023-05-31)
 
 
