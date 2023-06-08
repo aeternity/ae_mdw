@@ -1,6 +1,8 @@
 import Config
 
-config :ae_mdw, build_revision: String.trim(File.read!("AEMDW_REVISION"))
+# Stat
+{revision, 0} = System.cmd("git", ["log", "-1", "--format=%h"])
+config :ae_mdw, build_revision: String.trim(revision)
 
 # Logging
 config :logger,

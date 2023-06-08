@@ -1,10 +1,12 @@
 defmodule AeMdw.MixProject do
   use Mix.Project
 
+  @version "1.48.1"
+
   def project() do
     [
       app: :ae_mdw,
-      version: "1.48.1",
+      version: @version,
       elixir: "~> 1.10",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -109,6 +111,20 @@ defmodule AeMdw.MixProject do
         coveralls: :test,
         "test.integration": :test,
         "test.iteration": :test
+      ],
+      releases: [
+        ae_mdw: fn ->
+          if is_nil(System.get_env("INCLUDE_LOCAL_NODE")) do
+            []
+          else
+            [
+              steps: [&build_node/1, &copy_node/1, :assemble, :tar, &remove_node/1],
+              overlays: ["node-tmp"],
+              version: "v" <> @version <> "-" <> to_string(:erlang.system_info(:system_architecture))
+            ]
+          end
+
+        end
       ]
     ]
   end
@@ -184,4 +200,47 @@ defmodule AeMdw.MixProject do
       ]
     ]
   end
+
+  defp build_node(release) do
+    node_path = node_build_root()
+    IO.inspect(node_path, label: "Building node in directory")
+    {_, 0} = System.cmd("make", ["prod-package"], cd: node_path)
+    release
+  end
+
+  defp copy_node(release) do
+    tar_file = node_tar_file()
+    File.rm_rf("node-tmp")
+    File.mkdir_p("node-tmp/local/rel/aeternity/data/mnesia")
+    IO.inspect(tar_file, label: "Using aeternity release")
+    :erl_tar.extract(tar_file, [:compressed, {:cwd, "node-tmp/local/rel/aeternity"}])
+    release
+  end
+
+  defp remove_node(release) do
+    File.rm_rf("node-tmp")
+    release
+  end
+
+  defp node_build_root() do
+    System.get_env("NODE_BUILD_ROOT", "../aeternity/")
+  end
+
+  defp node_tar_file() do
+    reldir = Path.join(node_build_root(), "_build/prod/rel/aeternity")
+    files = File.ls!(reldir)
+    tar_file = latest_tar_file(files, reldir)
+    Path.join(reldir, tar_file)
+  end
+
+  defp latest_tar_file(files, reldir) do
+    files
+    |> Enum.filter(fn file -> String.ends_with?(file, ".tar.gz") end)
+    |> Enum.filter(fn file -> String.starts_with?(file, "aeternity") end)
+    |> Enum.map(fn file -> {file, File.lstat!(Path.join(reldir, file))} end)
+    |> Enum.sort(fn {_, f1}, {_, f2} -> f1.ctime > f2.ctime end)
+    |> Enum.map(fn {file, _} -> file end)
+    |> List.first()
+  end
+
 end
