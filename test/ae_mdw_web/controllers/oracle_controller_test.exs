@@ -223,7 +223,9 @@ defmodule AeMdwWeb.OracleControllerTest do
 
       with_mocks [
         {Oracle, [], [oracle_tree!: fn ^block_hash -> :aeo_state_tree.empty() end]},
-        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]}
+        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
+        {:aec_db, [], [get_block: fn ^block_hash -> :block end]},
+        {:aec_blocks, [], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => [oracle2, oracle1], "next" => nil} =
                  conn
