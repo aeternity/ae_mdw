@@ -15,6 +15,7 @@ defmodule AeMdw.AexnContracts do
   @type event_name() :: String.t()
   @typep pubkey :: NodeDb.pubkey()
   @typep height :: AeMdw.Blocks.height()
+  @typep aexn_meta_info :: AeMdw.Db.Model.aexn_meta_info()
 
   @max_height AeMdw.Util.max_int()
   @aex141_extensions_hash <<222, 10, 63, 194>>
@@ -116,6 +117,11 @@ defmodule AeMdw.AexnContracts do
   def event_name(event_hash) do
     Node.aexn_event_names()
     |> Map.get(event_hash)
+  end
+
+  @spec valid_meta_info?(aexn_meta_info()) :: boolean()
+  def valid_meta_info?(meta_info) do
+    elem(meta_info, 0) not in [:format_error, :out_of_gas_error]
   end
 
   #

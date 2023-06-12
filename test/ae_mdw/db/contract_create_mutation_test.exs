@@ -27,7 +27,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
       with_mocks [
         {
           AexnContracts,
-          [],
+          [:passthrough],
           [
             is_aex9?: fn ct_pk -> ct_pk == contract_pk end,
             call_meta_info: fn _type, ct_pk -> ct_pk == contract_pk && {:ok, meta_info} end,
@@ -75,7 +75,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
       with_mocks [
         {
           AexnContracts,
-          [],
+          [:passthrough],
           [
             is_aex9?: fn ct_pk -> ct_pk == contract_pk end,
             call_meta_info: fn _type, ct_pk -> ct_pk == contract_pk && {:ok, meta_info} end,
@@ -183,7 +183,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
            is_contract?: fn ct_pk -> ct_pk == contract_pk end,
            get_init_call_rec: fn _tx, _hash -> call_rec end
          ]},
-        {AexnContracts, [],
+        {AexnContracts, [:passthrough],
          [
            is_aex9?: fn _pk -> false end,
            call_meta_info: fn _type, ^contract_pk ->
