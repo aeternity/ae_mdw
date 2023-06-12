@@ -111,7 +111,7 @@ public keys in transaction fields. These counts are used for optimization of
 transaction queries.
 
 When constructing detailed replies to the requests, Middleware often looks into
-data belonging to the AE node's Merkle-Patricia Trees.
+data belonging to the AE node's Merkle-Patricia Tries.
 
 ### Plain data indices
 
