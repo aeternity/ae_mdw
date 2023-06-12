@@ -5,7 +5,6 @@ defmodule AeMdwWeb.OracleControllerTest do
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Db.Model.ActiveOracleExpiration
-  alias AeMdw.Db.Model.InactiveOracleExpiration
   alias AeMdw.Db.Model.Block
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.Store
@@ -18,81 +17,168 @@ defmodule AeMdwWeb.OracleControllerTest do
   require Model
 
   describe "oracles" do
-    test "it retrieves active oracles first", %{conn: conn} do
-      Model.oracle(index: pk) = oracle = TS.oracle()
-      encoded_pk = :aeser_api_encoder.encode(:oracle_pubkey, pk)
-      last_gen = TS.last_gen()
+    test "it retrieves active oracles first", %{conn: conn, store: store} do
+      Model.oracle(index: oracle_pk1) = oracle = TS.oracle()
+      oracle_pk2 = <<0::256>>
+      block_hash1 = <<1::256>>
+      tx_hash1 = <<2::256>>
+      last_gen = 1000
+      last_time = 123
+      expiration1 = 1002
+      expiration2 = 1004
+      encoded_pk1 = :aeser_api_encoder.encode(:oracle_pubkey, oracle_pk1)
+      encoded_pk2 = :aeser_api_encoder.encode(:oracle_pubkey, oracle_pk2)
+      expiration_time1 = last_time + (expiration1 - last_gen) * 180_000
+      expiration_time2 = last_time + (expiration2 - last_gen) * 180_000
+
+      store =
+        store
+        |> Store.put(
+          Model.ActiveOracleExpiration,
+          Model.expiration(index: {expiration1, oracle_pk1})
+        )
+        |> Store.put(
+          Model.ActiveOracleExpiration,
+          Model.expiration(index: {expiration2, oracle_pk2})
+        )
+        |> Store.put(Model.Block, Model.block(index: {last_gen, -1}, hash: block_hash1))
+        |> Store.put(Model.ActiveOracle, Model.oracle(oracle, expire: expiration1))
+        |> Store.put(
+          Model.ActiveOracle,
+          Model.oracle(oracle, index: oracle_pk2, expire: expiration2)
+        )
+        |> Store.put(Model.Tx, Model.tx(index: 8916, id: tx_hash1))
 
       with_mocks [
-        {Database, [],
-         [
-           prev_key: fn ActiveOracleExpiration, {exp, plain_name} ->
-             {:ok, {exp - 1, "a#{plain_name}"}}
-           end,
-           last_key: fn
-             Block -> {:ok, last_gen}
-             ActiveOracleExpiration -> {:ok, TS.oracle_expiration_key(1)}
-             InactiveOracleExpiration -> :none
-           end,
-           get: fn
-             Model.ActiveOracle, _pk -> {:ok, oracle}
-             Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash(0))}
-           end
-         ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
-        {Blocks, [], [block_hash: fn _state, _height -> "asd" end]}
+        {:aec_db, [], [get_block: fn ^block_hash1 -> :block end]},
+        {:aec_blocks, [], [time_in_msecs: fn :block -> last_time end]}
       ] do
-        assert %{"data" => [oracle1 | _rest] = oracles, "next" => next_uri} =
+        assert %{"data" => [oracle2, oracle1], "next" => nil} =
                  conn
+                 |> with_store(store)
                  |> get("/oracles")
                  |> json_response(200)
 
-        assert 10 = length(oracles)
-        assert %{"oracle" => ^encoded_pk} = oracle1
+        assert %{"oracle" => ^encoded_pk2, "approximate_expiration_time" => ^expiration_time2} =
+                 oracle2
 
-        assert %URI{
-                 path: "/oracles",
-                 query: _query
-               } = URI.parse(next_uri)
+        assert %{"oracle" => ^encoded_pk1, "approximate_expiration_time" => ^expiration_time1} =
+                 oracle1
       end
     end
 
-    test "it retrieves both active and inactive when length(active) < limit", %{conn: conn} do
-      Model.oracle(index: pk) = oracle = TS.oracle()
-      encoded_pk = :aeser_api_encoder.encode(:oracle_pubkey, pk)
+    test "it retrieves both active and inactive when length(active) < limit", %{
+      conn: conn,
+      store: store
+    } do
+      Model.oracle(index: oracle_pk1) = oracle = TS.oracle()
+      [oracle_pk2, oracle_pk3, oracle_pk4] = [<<1::256>>, <<2::256>>, <<3::256>>]
+      [expiration1, expiration2, expiration3, expiration4] = [50, 51, 2000, 3000]
+      block_hash1 = <<4::256>>
+      block_hash2 = <<5::256>>
+      block_hash3 = <<6::256>>
+      tx_hash1 = <<7::256>>
+      last_gen = 1000
+      last_time = 123
+      [block_time1, block_time2] = [111, 222]
+      expiration_time1 = block_time1
+      expiration_time2 = block_time2
+      expiration_time3 = last_time + (expiration3 - last_gen) * 180_000
+      expiration_time4 = last_time + (expiration4 - last_gen) * 180_000
+      encoded_pk1 = :aeser_api_encoder.encode(:oracle_pubkey, oracle_pk1)
+      encoded_pk2 = :aeser_api_encoder.encode(:oracle_pubkey, oracle_pk2)
+      encoded_pk3 = :aeser_api_encoder.encode(:oracle_pubkey, oracle_pk3)
+      encoded_pk4 = :aeser_api_encoder.encode(:oracle_pubkey, oracle_pk4)
+
+      store =
+        store
+        |> Store.put(
+          Model.InactiveOracleExpiration,
+          Model.expiration(index: {expiration1, oracle_pk1})
+        )
+        |> Store.put(
+          Model.InactiveOracleExpiration,
+          Model.expiration(index: {expiration2, oracle_pk2})
+        )
+        |> Store.put(
+          Model.ActiveOracleExpiration,
+          Model.expiration(index: {expiration3, oracle_pk3})
+        )
+        |> Store.put(
+          Model.ActiveOracleExpiration,
+          Model.expiration(index: {expiration4, oracle_pk4})
+        )
+        |> Store.put(Model.Block, Model.block(index: {last_gen, -1}, hash: block_hash3))
+        |> Store.put(Model.Block, Model.block(index: {expiration1 - 1, -1}, hash: block_hash1))
+        |> Store.put(Model.Block, Model.block(index: {expiration2 - 1, -1}, hash: block_hash2))
+        |> Store.put(Model.Block, Model.block(index: {expiration1, -1}, hash: block_hash1))
+        |> Store.put(Model.Block, Model.block(index: {expiration2, -1}, hash: block_hash2))
+        |> Store.put(Model.InactiveOracle, Model.oracle(oracle, expire: expiration1))
+        |> Store.put(
+          Model.InactiveOracle,
+          Model.oracle(oracle, index: oracle_pk2, expire: expiration2)
+        )
+        |> Store.put(
+          Model.ActiveOracle,
+          Model.oracle(oracle, index: oracle_pk3, expire: expiration3)
+        )
+        |> Store.put(
+          Model.ActiveOracle,
+          Model.oracle(oracle, index: oracle_pk4, expire: expiration4)
+        )
+        |> Store.put(Model.Tx, Model.tx(index: 8916, id: tx_hash1))
 
       with_mocks [
-        {Database, [],
-         [
-           next_key: fn _tab, _key -> :none end,
-           prev_key: fn
-             ActiveOracleExpiration, {0, _plain_name} -> :none
-             ActiveOracleExpiration, {exp, "a"} -> {:ok, {exp - 1, "a"}}
-             InactiveOracleExpiration, {0, "b"} -> :none
-             InactiveOracleExpiration, {exp, "b"} -> {:ok, {exp - 1, "b"}}
-           end,
-           last_key: fn
-             Block -> {:ok, TS.last_gen()}
-             ActiveOracleExpiration -> {:ok, {1, "a"}}
-             InactiveOracleExpiration -> {:ok, {1, "b"}}
-           end,
-           get: fn
-             Model.InactiveOracle, _oracle_pk -> {:ok, oracle}
-             Model.ActiveOracle, _oracle_pk -> {:ok, oracle}
-             Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash(0))}
-           end
-         ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
-        {Blocks, [], [block_hash: fn _state, _height -> "asd" end]}
+        {:aec_db, [],
+         [
+           get_block: fn
+             ^block_hash1 -> :block1
+             ^block_hash2 -> :block2
+             ^block_hash3 -> :block3
+           end
+         ]},
+        {:aec_blocks, [],
+         [
+           time_in_msecs: fn
+             :block1 -> block_time1
+             :block2 -> block_time2
+             :block3 -> last_time
+           end
+         ]}
       ] do
-        assert %{"data" => [oracle1, _oracle2, _oracle3, _oracle4], "next" => nil} =
+        assert %{"data" => [oracle1, oracle2, oracle3, oracle4], "next" => nil} =
                  conn
-                 |> get("/oracles")
+                 |> with_store(store)
+                 |> get("/oracles", direction: "forward")
                  |> json_response(200)
 
-        assert %{"oracle" => ^encoded_pk} = oracle1
+        assert %{
+                 "active" => false,
+                 "oracle" => ^encoded_pk1,
+                 "approximate_expiration_time" => ^expiration_time1
+               } = oracle1
+
+        assert %{
+                 "active" => false,
+                 "oracle" => ^encoded_pk2,
+                 "approximate_expiration_time" => ^expiration_time2
+               } = oracle2
+
+        assert %{
+                 "active" => true,
+                 "oracle" => ^encoded_pk3,
+                 "approximate_expiration_time" => ^expiration_time3
+               } = oracle3
+
+        assert %{
+                 "active" => true,
+                 "oracle" => ^encoded_pk4,
+                 "approximate_expiration_time" => ^expiration_time4
+               } = oracle4
       end
     end
 
@@ -168,6 +254,7 @@ defmodule AeMdwWeb.OracleControllerTest do
       key2 = TS.oracle_expiration_key(2)
       Model.oracle(index: pk) = oracle = TS.oracle()
       encoded_pk = :aeser_api_encoder.encode(:oracle_pubkey, pk)
+      block_hash = <<0::256>>
 
       with_mocks [
         {Database, [],
@@ -179,6 +266,7 @@ defmodule AeMdwWeb.OracleControllerTest do
            get: fn
              Model.ActiveOracle, _oracle_pk -> {:ok, oracle}
              Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash(0))}
+             Model.Block, _block_index -> {:ok, Model.block(hash: block_hash)}
            end,
            next_key: fn _tab, _key -> :none end,
            prev_key: fn
@@ -188,7 +276,9 @@ defmodule AeMdwWeb.OracleControllerTest do
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
-        {Blocks, [], [block_hash: fn _state, _height -> "asd" end]}
+        {Blocks, [], [block_hash: fn _state, _height -> "asd" end]},
+        {:aec_db, [], [get_block: fn ^block_hash -> :block1 end]},
+        {:aec_blocks, [], [time_in_msecs: fn :block1 -> 123 end]}
       ] do
         assert %{"data" => [oracle1, _oracle2], "next" => nil} =
                  conn
@@ -205,24 +295,28 @@ defmodule AeMdwWeb.OracleControllerTest do
       expiration_key = {next_cursor_exp, next_cursor_pk} = TS.oracle_expiration_key(0)
       next_cursor_pk_encoded = :aeser_api_encoder.encode(:oracle_pubkey, next_cursor_pk)
       next_cursor_query_value = "#{next_cursor_exp}-#{next_cursor_pk_encoded}"
+      block_hash = <<0::256>>
 
       with_mocks [
         {Database, [],
          [
            last_key: fn
-             Block -> {:ok, TS.last_gen()}
-             ActiveOracleExpiration -> {:ok, expiration_key}
+             Model.Block -> {:ok, TS.last_gen()}
+             Model.ActiveOracleExpiration -> {:ok, expiration_key}
            end,
-           next_key: fn ActiveOracleExpiration, _key -> {:ok, expiration_key} end,
-           prev_key: fn ActiveOracleExpiration, _key -> {:ok, expiration_key} end,
+           next_key: fn Model.ActiveOracleExpiration, _key -> {:ok, expiration_key} end,
+           prev_key: fn Model.ActiveOracleExpiration, _key -> {:ok, expiration_key} end,
            get: fn
              Model.ActiveOracle, _oracle_pk -> {:ok, TS.oracle()}
              Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash(0))}
+             Model.Block, _block_index -> {:ok, Model.block(hash: block_hash)}
            end
          ]},
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
-        {Blocks, [], [block_hash: fn _state, _height -> "asd" end]}
+        {Blocks, [], [block_hash: fn _state, _height -> "asd" end]},
+        {:aec_db, [], [get_block: fn ^block_hash -> :block1 end]},
+        {:aec_blocks, [], [time_in_msecs: fn :block1 -> 123 end]}
       ] do
         assert %{"next" => next_uri} = conn |> get("/oracles/active") |> json_response(200)
 
