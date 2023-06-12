@@ -3,6 +3,7 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
   Maps a contract to its AEX9 or AEX141 token info.
   """
 
+  alias AeMdw.AexnContracts
   alias AeMdw.Blocks
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
@@ -68,6 +69,7 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
         state
       ) do
     state
+    |> maybe_increment_contract_count(aexn_type, aexn_meta_info)
     |> write_balances(aexn_type, contract_pk, block_index, create_txi)
     |> Contract.aexn_creation_write(
       aexn_type,
@@ -76,7 +78,14 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
       create_txi,
       extensions
     )
-    |> Stats.increment_contract_count(aexn_type)
+  end
+
+  defp maybe_increment_contract_count(state, aexn_type, aexn_meta_info) do
+    if AexnContracts.valid_meta_info?(aexn_meta_info) do
+      Stats.increment_contract_count(state, aexn_type)
+    else
+      state
+    end
   end
 
   defp write_balances(state, :aex9, contract_pk, block_index, create_txi) do

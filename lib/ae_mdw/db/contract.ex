@@ -48,12 +48,10 @@ defmodule AeMdw.Db.Contract do
 
     state2 = State.put(state, Model.AexnContract, m_contract_pk)
 
-    name = elem(aexn_meta_info, 0)
-    symbol = elem(aexn_meta_info, 1)
+    if AexnContracts.valid_meta_info?(aexn_meta_info) do
+      name = elem(aexn_meta_info, 0)
+      symbol = elem(aexn_meta_info, 1)
 
-    if name in [:format_error, :out_of_gas_error] do
-      state2
-    else
       m_contract_name =
         Model.aexn_contract_name(index: {aexn_type, sort_field_truncate(name), contract_pk})
 
@@ -63,6 +61,8 @@ defmodule AeMdw.Db.Contract do
       state2
       |> State.put(Model.AexnContractName, m_contract_name)
       |> State.put(Model.AexnContractSymbol, m_contract_sym)
+    else
+      state2
     end
   end
 
