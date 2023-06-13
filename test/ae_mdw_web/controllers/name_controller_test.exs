@@ -1,5 +1,5 @@
 defmodule AeMdwWeb.NameControllerTest do
-  use AeMdwWeb.ConnCase
+  use AeMdwWeb.ConnCase, async: false
 
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Model
