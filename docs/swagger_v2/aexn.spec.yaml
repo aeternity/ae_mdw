@@ -84,8 +84,8 @@ schemas:
         limit_log_idx: 0,
         limit_tx_hash: th_KTTTudTgSAZrHJQVwW4AF6XD1ksQbpyHXWfgmL2kSGvNk14CU,
         supply: 1,
-        limit_log_idx: 0,
-        limit_tx_hash: th_erpNZJTuvRfKPafcRvkJ7ddCu9GBSQoY12QVs5pdCTm6eCDwr
+        supply_log_idx: 0,
+        supply_tx_hash: th_erpNZJTuvRfKPafcRvkJ7ddCu9GBSQoY12QVs5pdCTm6eCDwr
       }
       log_idx: 0
       template_id: 1
@@ -314,8 +314,6 @@ paths:
           schema:
             type: string
             example: ct_22NTeTHfqVXLChCMCy3eAAj3hGW2nuNUwHhQ1zRX3k4iZKq8Ru
-      produces:
-        - application/json
       responses:
         '200':
           description: Returns AEX-141 information by contract id
@@ -351,8 +349,6 @@ paths:
           schema:
             type: string
             example: mycolle
-      produces:
-        - application/json
       responses:
         '200':
           description: Returns paginated AEX-141 contracts
@@ -393,8 +389,6 @@ paths:
           schema:
             type: integer
             example: 2
-      produces:
-        - application/json
       responses:
         '200':
           description: Owner account of the NFT
@@ -424,8 +418,6 @@ paths:
           schema:
             type: string
             example: ct_22NTeTHfqVXLChCMCy3eAAj3hGW2nuNUwHhQ1zRX3k4iZKq8Ru
-      produces:
-        - application/json
       responses:
         '200':
           description: Returns paginated AEX-141 contracts
@@ -461,8 +453,6 @@ paths:
           schema:
             type: string
             example: ct_22NTeTHfqVXLChCMCy3eAAj3hGW2nuNUwHhQ1zRX3k4iZKq8Ru
-      produces:
-        - application/json
       responses:
         '200':
           description: Returns paginated AEX-141 templates
@@ -505,8 +495,6 @@ paths:
           schema:
             type: integer
             example: 8
-      produces:
-        - application/json
       responses:
         '200':
           description: Returns paginated AEX-141 template tokens
@@ -541,8 +529,6 @@ paths:
           required: true
           type: string
           x-example: ak_vTGaRAuGXPLhvNexrbzmHJ2MDv9JS2Ky7u2v469o6weaZ2Cgw
-      produces:
-        - application/json
       responses:
         '200':
           description: Returns paginated AEX-141 tokens
@@ -575,8 +561,6 @@ paths:
           required: true
           type: string
           x-example: ct_okiZvxvjrQvBuYcbB1EHkLi3bCtKthFHQVPk3GmKvei7fVrHo
-      produces:
-        - application/json
       responses:
         '200':
           description: Returns AEX-9 information by contract id
@@ -608,8 +592,6 @@ paths:
           required: false
           type: string
           x-example: AA
-      produces:
-        - application/json
       responses:
         '200':
           description: Returns paginated AEX-9 tokens
@@ -635,8 +617,6 @@ paths:
       deprecated: false
       description: Get AEX9 tokens count.
       operationId: get_aex9_tokens_count
-      produces:
-        - application/json
       responses:
         '200':
           description: Returns the number of AEX9 contracts created
@@ -657,8 +637,6 @@ paths:
           required: true
           type: string
           x-example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
-      produces:
-        - application/json
       responses:
         '200':
           description: Returns the number of events emmited so far
@@ -693,8 +671,6 @@ paths:
           required: false
           type: string
           x-example: amount
-      produces:
-        - application/json
       responses:
         '200':
           description: Returns paginated contract balances
@@ -739,8 +715,6 @@ paths:
           required: true
           type: string
           x-example: mh_2EPBrw8PUhZMgVPVMopcG8GYsNS7e9itic8kcWxKBZPkDxVYds
-      produces:
-        - application/json
       responses:
         '200':
           description: Returns a the balance of an account on a contract
@@ -766,8 +740,6 @@ paths:
           required: true
           type: string
           x-example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2
-      produces:
-        - application/json
       responses:
         '200':
           description: Returns all the balances of an account
@@ -797,8 +769,6 @@ paths:
           required: true
           type: string
           x-example: ak_1ADSaLCnFnWpbq6t8wJhUJn6ombZwgewPxe7MCaJTfGLKDkbw
-      produces:
-        - application/json
       responses:
         '200':
           description: Returns paginated AEX-9 transfers of a sender
@@ -833,8 +803,6 @@ paths:
           required: true
           type: string
           x-example: ak_2meHkLcAoZPrQj7P5WjFyJJRLJqRtv43z1QEbpcS1gHs9W8Q3g
-      produces:
-        - application/json
       responses:
         '200':
           description: Returns paginated AEX-9 transfers of a recipient
@@ -875,8 +843,6 @@ paths:
           required: true
           type: string
           x-example: ak_psy8tRXPzGxh6975H7K6XQcMFVsdrxJMt7YkzMY8oUTevutzw
-      produces:
-        - application/json
       responses:
         '200':
           description: Returns paginated AEX-9 transfers between two accounts
@@ -918,8 +884,6 @@ paths:
           required: true
           type: string
           x-example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2
-      produces:
-        - application/json
       responses:
         '200':
           description: Account balance history on a token contract
