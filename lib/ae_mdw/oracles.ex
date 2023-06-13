@@ -333,7 +333,7 @@ defmodule AeMdw.Oracles do
       active: is_active?,
       active_from: register_height,
       expire_height: expire_height,
-      approximate_expiration_time:
+      approximate_expire_time:
         DBUtil.height_to_time(state, expire_height, last_gen, last_micro_time),
       register: expand_bi_txi_idx(state, register_bi_txi_idx, opts),
       register_tx_hash: Enc.encode(:tx_hash, Txs.txi_to_hash(state, register_txi)),

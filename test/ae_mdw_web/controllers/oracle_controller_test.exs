@@ -61,10 +61,10 @@ defmodule AeMdwWeb.OracleControllerTest do
                  |> get("/oracles")
                  |> json_response(200)
 
-        assert %{"oracle" => ^encoded_pk2, "approximate_expiration_time" => ^expiration_time2} =
+        assert %{"oracle" => ^encoded_pk2, "approximate_expire_time" => ^expiration_time2} =
                  oracle2
 
-        assert %{"oracle" => ^encoded_pk1, "approximate_expiration_time" => ^expiration_time1} =
+        assert %{"oracle" => ^encoded_pk1, "approximate_expire_time" => ^expiration_time1} =
                  oracle1
       end
     end
@@ -159,25 +159,25 @@ defmodule AeMdwWeb.OracleControllerTest do
         assert %{
                  "active" => false,
                  "oracle" => ^encoded_pk1,
-                 "approximate_expiration_time" => ^expiration_time1
+                 "approximate_expire_time" => ^expiration_time1
                } = oracle1
 
         assert %{
                  "active" => false,
                  "oracle" => ^encoded_pk2,
-                 "approximate_expiration_time" => ^expiration_time2
+                 "approximate_expire_time" => ^expiration_time2
                } = oracle2
 
         assert %{
                  "active" => true,
                  "oracle" => ^encoded_pk3,
-                 "approximate_expiration_time" => ^expiration_time3
+                 "approximate_expire_time" => ^expiration_time3
                } = oracle3
 
         assert %{
                  "active" => true,
                  "oracle" => ^encoded_pk4,
-                 "approximate_expiration_time" => ^expiration_time4
+                 "approximate_expire_time" => ^expiration_time4
                } = oracle4
       end
     end
