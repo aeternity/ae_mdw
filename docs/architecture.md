@@ -4,10 +4,30 @@ The new Aeternity Middleware is a complete rewrite of the legacy middleware.
 
 ## Goals
 
-* Improve the sync speed rapidly
-* Make middleware lean, fast and easy to develop and deploy
-* Reliable retrieving of information in batches (pagination)
-* Allow complex search queries over history of transactions
+* **Versioned API**: Implement a versioning strategy for the API to ensure
+  backward compatibility and allow for future updates without breaking existing
+  integrations. This helps to manage changes and provide a stable interface for
+  clients.
+* **Rapid Sync Speed**: Optimize the sync process to achieve faster data
+  synchronization. This can involve improving algorithms, utilizing parallel
+  processing, optimizing database queries, or implementing efficient caching
+  mechanisms. By reducing sync times, you can provide real-time or near real-time
+  data updates to users.
+* **Lean, Fast, and Easy Development and Deployment**: Focus on improving the
+  middleware's performance, reducing resource consumption, and enhancing its
+  development and deployment process. Employ efficient coding practices,
+  utilize lightweight frameworks, and automate deployment pipelines to streamline
+  development and ensure faster, hassle-free deployments.
+* **Reliable Paginated Retrieval**: Enhance the API endpoints to support reliable
+  paginated retrieval of information. Implement mechanisms such as cursor-based
+  pagination or offset-based pagination to allow clients to retrieve data in
+  manageable chunks, improving performance and preventing overwhelming large
+  result sets.
+* **Complex Search Queries**: Enable the ability to perform complex search queries
+  across multiple endpoints. Implement advanced search capabilities, such as
+  filtering, sorting, and aggregations, to empower users to retrieve specific and
+  relevant information from the middleware. This can be achieved by integrating
+  powerful search engines or implementing custom search functionalities.
 
 Implementation keeping these goals in mind should result in a middleware usable
 as a data source for the frontend, as well as a generic service component in any
@@ -55,10 +75,10 @@ The Middleware keeps track of several distinct types of information:
 
 * Plain data indices - blocks, transactions and ids (public keys) inside
   transactions - keyed by integers or tuples of integers
-* Objects with lifecycle - names and oracles - keyed by strings or hashes
+* Objects with lifecycle - names, oracles and channels - keyed by strings or hashes
 * Supporting information - origin of objects and data, valency of public keys,
   name ownership and pointers
-* Feature specific information - contract logs, events and calls, AEX9 (token)
+* Feature specific information - contract logs, events and calls, AEx9 and AEx141 (token)
   support
 
 All DB tables used by Middleware are of type `ordered_set`. All keys of the
@@ -77,12 +97,12 @@ object.
 For each new generation, the sync process needs to check if some objects
 expired.
 
-The lifecycle model of names are oracles have the following states:
+The lifecycle model of names, oracles and channels have the following states:
 
-* Claimed (after claim/register transaction, extended by update/extend
-  transaction)
-* Expired (happens automatically after time period (or, for names via revoke
-  transaction))
+* `active` - after claim/create/register transaction, extended by update/extend
+  transaction
+* `inactive` - happens automatically after time period (or, for names via revoke
+  or close transactions)
 
 Supporting information is needed for quick resolving of the origin (of name,
 oracle, contract or channel) or database invalidations in case of chain fork
@@ -120,7 +140,7 @@ This ensures ordering of both key and micro blocks as per Erlang's term order.
 
 The database model of the table record is defined as:
 
-```
+```elixir
 defrecord :block,
   [index: {-1, -1}, # {key_block_index, micro_block_index}
   tx_index: nil, # first transaction index in this block
@@ -141,7 +161,7 @@ Specialized indices like time, type or field are not unique on their own, so for
 the purpose of ensuring uniqueness of specialized index entries, transaction
 index is part of the key. The database model of the table record is defined as:
 
-```
+```elixir
 defrecord :tx,
   [index: -1, # transaction index value
   id: <<>>, # transaction hash for lookup into AE node DB
@@ -153,7 +173,7 @@ The table holding these records is `Model.Tx`.
 
 The id/hash of the transaction is used for fetching the transaction details.
 
-Since the transaction index is integer, it's easy to see which transaction
+Since the transaction index is an integer, it's easy to see which transaction
 precedes or succeeds another transaction. Transaction index also allows us to
 specify a scope (`start_index..end_index`) in the queries to state what we are
 interested in.
@@ -166,7 +186,7 @@ it.
 
 The database model of the table record is defined as:
 
-```
+```elixir
 defrecord :time,
   [index: {-1, -1}, # as {micro block milliseconds, transaction index}
   unused: nil # unused as RocksDB value
@@ -186,7 +206,7 @@ with multiple types or type groups.
 
 The database model of the table record is defined as:
 
-```
+```elixir
 defrecord :type,
   [index: {nil, -1}, # as {transaction type, transaction index}
   unused: nil] # unused as RocksDB value
@@ -220,7 +240,7 @@ in an active state are called "epochs".
 The state changes are tracked via manipulating of expiration table records
 stored in object specific tables, defined as:
 
-```
+```elixir
 defrecord :expiration,
   [index: {nil, nil}, # {expiration height, object identifier}
   value: nil] # possible metadata
@@ -232,11 +252,10 @@ removing the object from one table, and inserting it into another. This way we
 can conveniently list objects of specific state, and have them sorted
 lexicographically where it makes sense (e.g. names).
 
-For invalidation purposes, a lot of information in objects takes the shape named
-as `bi_txi`: `{{key block index, micro block index}, transaction index}`
-
-`bi_txi` allows us to quickly check if a particular transaction should be
-reverted (by comparing the key block index with invalidation height).
+A lot of information in objects takes the shape named as `bi_txi_idx`, composed of
+`{block_index, txi_idx}` where the block index is `{key block index, micro block index}`
+and the `txi_idx` is composed of `{transaction index, contract call index}` where the
+contract call index is `-1` is the raw transaction (no contract call) is being referenced.
 
 ##### Names
 
@@ -246,20 +265,26 @@ states changed:
 * `Model.AuctionExpiration`
 * `Model.ActiveNameExpiration`
 * `Model.InactiveNameExpiration`
+* `Model.ActiveOracleExpiration`
+* `Model.InactiveOracleExpiration`
+* `Model.OracleQueryExpiration`
 
 The auction table record has following definition:
 
-```
+```elixir
 defrecord :auction_bid,
-  # {name, bi_txi, expire height, owner, previous bids [bi_txi, ..]}
-  [index: {nil, {{nil, nil}, nil}, nil, nil, nil},
-  unused: nil]
+  # ame, bi_txi, expire height, owner, previous bids [bi_txi, ..]}
+  [index: plain_name(),
+   block_index_txi_idx: bi_txi_idx(),
+   expire_height: height(),
+   owner: pubkey(),
+   bids: [bi_txi_idx()]]
 ```
 
 The name table records represent both active and inactive names, depending on
 the table there are stored:
 
-```
+```elixir
 defrecord :name,
   [index: nil, # plain name
   active: nil, # height from which name became active
@@ -290,7 +315,7 @@ states changed:
 The oracle table records represent both active and inactive oracles, depending
 on the table there are stored in:
 
-```
+```elixir
 defrecord :oracle,
   [index: nil, # public key of the oracle
   active: nil, # height from which the oracle became active
@@ -318,13 +343,13 @@ between transactions and the created objects.
 
 The origin table record has the following definition:
 
-```
+```elixir
 defrecord :origin,
   [index: {nil, nil, nil}, # {tx type, object pubkey, tx index}
   tx_id: nil] # transaction hash
-  The records are stored in the Model.Origin table.
-  For the query execution logic and invalidations, rev_origin table record is needed:
-  defrecord :rev_origin,
+  # The records are stored in the Model.Origin table.
+  # For the query execution logic and invalidations, rev_origin table record is needed:
+defrecord :rev_origin,
   [index: {nil, nil, nil}, # {tx index, tx type, object pubkey}
   unused: nil]
 ```
@@ -346,7 +371,7 @@ transaction fields to match.
 
 For illustration, a typical spend transaction looks as follows:
 
-```
+```elixir
 %{
   block_hash: <<201, 228, 14t6, …>>,
   block_height: 322515,
@@ -376,7 +401,7 @@ spend transaction representation, having the fields: [`sender_id`,
 The field table record allowing us to quickly operate on this information is
 defined as:
 
-```
+```elixir
 defrecord :field,
   # {tx_type, tx_field_pos, object_pubkey, tx_index}
   [index: {nil, -1, nil, -1},
@@ -384,7 +409,6 @@ defrecord :field,
 ```
 
 Records of this shape are stored in the `Model.Field` table.
-
 
 When the query contains more than one transaction field to match, we have
 several ways to search for the result. The role of the query optimizer is to
@@ -394,7 +418,7 @@ transaction fields.
 
 Below is the definition of the table records keeping this information:
 
-```
+```elixir
 defrecord :id_count,
   [index: {nil, nil, nil}, # {tx type, field position, object pubkey}
   count: 0] # valency
@@ -414,7 +438,7 @@ public key.
 
 The table record is defined as:
 
-```
+```elixir
 defrecord :owner,
   [index: {pubkey, object}, # {owner pubkey, object pubkey}
   unused: nil]
@@ -423,170 +447,162 @@ defrecord :owner,
 Another table - `Model.Pointee` - holds answers to queries on who (which account
 public key) points to a name. The table record are defined as:
 
-```
+```elixir
 defrecord :pointee,
   # {pointer value (name), {block index, tx index}, pointer key}
   [index: {nil, {{nil, nil}, nil}, nil},
   unused: nil]
 ```
 
+## State and Store
+
+On the latest version, a new concept called [`State`](lib/ae_mdw/db/state.ex)
+has been introduced. This concept serves as a declarative representation of the
+Middleware state, encompassing all the models and their key-value records in a
+sorted manner.
+
+The `State` is defined alongside its internal component called
+[`Store`](lib/ae_mdw/db/store.ex). The purpose of the `Store` is to provide an
+interface for getting, putting, and deleting values. This abstraction allows
+for flexibility in defining various types of storage that may be needed. Here
+are some examples:
+
+  * [`DbStore`](lib/ae_mdw/db/db_store.ex): This implementation directly
+    interacts with RocksDb, performing queries and storing data without relying
+    on a transaction.
+  * [`TxsDbStore`](lib/ae_mdw/db/txn_db_store.ex): This implementation
+    encapsulates all operations within a `RocksDb` transaction.
+  * [`MemStore`](lib/ae_mdw/db/mem_store.ex): This implementation stores
+    operations in memory using a Map data structure.
+  * [`NullStore`](test/support/ae_mdw/db/null_store.ex): This implementation
+    does not return any results or store anything, primarily used for testing
+    purposes.
+
+By utilizing this functional abstraction, it becomes easier to perform
+in-memory syncing for a specific range (e.g., the last 10 generations) while
+retaining the rest of the data in a persistent storage system like RocksDb.
+This approach allows for efficient data management and synchronization,
+leveraging the benefits of both in-memory and persistent storage solutions.
+
 ## Syncing
 
 The goal of the syncing process is to translate AE node data to actionable
 middleware data which allows querying.
 
-The syncing process listens to the AE node `top_changed` event and if the new
-block is a key block extending the main chain, synchronizes the latest
-generation.
+The syncing process (`AeMdw.Sync.Watcher`) listens to the AE node `top_changed`
+event which references a new block added on the main chain. For every block
+added, a new message is sent to the syncing server process
+(`AeMdw.Sync.Server`) for it to be processed accordingly.
 
-This results in a middleware data being one generation behind the current AE
-node generation. Theoretically we could synchronize data after every micro
-block, but since checking if a block is in the main chain is costly and micro
-forks happen quite often, synchronizing with a key block granularity is a
-reasonable compromise.
+Synchronization happens in two steps:
 
-The synchronization happens in two steps:
+First, the **top state of the chain is compared** to the top state of the
+middleware to decide on which blocks to synchronize next. Once decided which
+generations are going to be synced next **mutations** are built for each of the
+key/micro blocks of these generations. Secondly, the mutations are then
+executed.
 
-### 1. Assigning indices to the key and micro blocks
+In order to be able to synchronize and invalidate forks data fast, the
+middleware stores the output of the sync data in two separate places:
 
-AE node's database keeps a tree shaped history of the evolution of the
-chain. The main "trunk" of this tree - selected collectively by the difficulty
-of the proof of work - represents the main chain. This main chain is linked
-together by pointing to the previous top key block - by it's hash code of the
-key block header.
+* All data generated from the genesis up to 10 generations before the top block
+  is stored in RocksDb tables (this is done using `AeMdw.Db.TxnDbStore`).
+* Data from the last 10 generations is stored in memory using the
+  `AeMdw.Db.MemStore`, this occurs almost instantly.
 
-But hash codes, on their own, don't keep information about the order of the key
-blocks in the chain history, nor do the micro blocks keep information about
-their order within the same generation.
+```
+...---- First n - 10 gens -----> <-------------- Top 10 gens ----------------->
++-----+----+----+---------+-----+---------+----+----+----+-----+------+----+---
+| ... K(n-11) | M0 | M1 | | ... | K(n-10) | M0 | M1 | M2 | ... | K(n) | M0 | M1
++-----+----+----+---------+-----+---------+----+----+----+-----+------+----+---
+...--- Synced into Rocksdb ----> <----------- Synced into memory ------------->
+```
 
-Since it's very useful to provide the abstraction of a linear history to the
-user, the Middleware follows the "previous" links of the key blocks and assigns
-them a "key block index", equal to the height (or, generation) of the key block.
+Every time any of the last 10 genenerations change (via forks or new blocks
+added), the new generations needed to be added onto the database are first
+processed (if any), and then the new in-memory generations are processed.
 
-Each generation contains a set of micro blocks which hold the actual chain
-transactions. We can sort this set of micro blocks in a similar way - by
-following "previous" links - and assign them their order inside the
-generation. This number would be an index starting from 0.
+When retrieving data through the endpoints, the `MemStore` is first queried,
+and the results are merged with the data stored on the `DbStore`.
 
-Key block index and micro block index form a "block index" (as tuple `{kbi,
-mbi}`) - an unique, comparable index, identifying any block.
+### Mutations
 
-A micro block index of a key block is set to `-1`. This way a key block for the
-generation is placed before its micro blocks.
+Mutations are meant to be a single, atomic database change. The most basic
+mutation would be the `WriteMutation`, which simply writes a new record on a
+table. More complex use cases are needed when you need to read from the
+database to calculate the changes needed to be performed.
 
-### 2. Index and manage transaction data and objects
+Here's an example of a `WriteMutation` usage:
 
-The second phase of synchronization of a generation serially executes several
-steps.
+```elixir
+tx = Model.tx(index: 1, id: <<0, 21, 30>>, block_index: {1, 10}, time: 1_000_000)
+mutation = WriteMutation.new(Model.Tx, tx)
 
-#### Execute lifecycle simulation
+state = State.new()
+State.commit(state, [mutation])
+```
 
-With each new generation, middleware needs to check if there are objects with a
-lifecycle - names or oracles - which need to move to another state. If there are
-some, these transitions are executed - on the database level as moving an object
-record from one table to another.
+### Sync Server states and transitions
 
-#### Assign indices to transactions
+The `Sync.Server` was built to be a `GenStateMachine`, which has the following
+states:
 
-Similarly as blocks, transaction hash on its own doesn't provide information
-regarding the order of the transaction in the whole chain history. Since we want
-to provide the abstraction of a linear sequence of transactions, we need to
-index the transaction with a non-negative integer which would uniquely identify
-it.
+* `:idle` - There's nothing to process yet.
+* `:stopped` - The server failed too many times, it is now in a stopped state
+  and will retry later.
+* `{:syncing_db, ref}` - There's a new `Task` with reference `ref` which is
+  syncing changes and writing them to the database.
+* `{:syncing_mem, ref}` - There's a new `Task` with reference `ref` which is
+  syncing changes and writing them to memory.
 
-![Sample chain](sample_chain.png)
+While in any state, if any new updates to the node change arrives
+(`new_height`) the internal state of the `Server` is updated, and a
+`check_sync` event is triggered.
 
-#### Fill transaction feature tables
+While in `idle` state, if a `check_sync` event arrives, it is processed
+accordingly:
 
-This is the step where we fill the tables. Each transaction has multiple
-properties we want to query, and these properties are written into several
-tables - type, time, fields with public keys and id count, possibly also
-origin. If the transaction modifies an object with a lifecycle, additional
-tables are filled - either origin table and supporting expiration tables, or
-plain name table with pointees and name expiration tables.
+* If there's at least 1 generation which should belong to the database but has
+  not yet been synced, it spawns an new `Task` to store these changes and
+  enters into `{:syncing_db, ref}` state. When the task is done, it triggers
+  a `:done` event.
+* If there's at least 1 key or micro block that is not yet part of the memmory,
+  it spawns a new `Task` to store these changes and enters into
+  `{:syncing_mem, ref}` state. When the task is done it triggers a `:done`
+  event.
 
-### Detecting forks
+Visualization of the different `Server` states:
 
-When a new key block extends the chain, but that key block's "previous" link
-doesn't point to a last key block of the main chain, a fork happens:
+![Sync Server](syncserver.png)
 
-In the image above, the main chain consists of key blocks `A <- B <- C <- D`
-(the arrows represent "previous" links).
-
-A new key block `F` is a fork, because it doesn't point to `D` - which was the
-last key block - but to a `B`, seen earlier. The new main chain is then `A <- B
-<- F`.
-
-In this situation we need to remove a part of the middleware data which was
-added after key block `B` - invalidate generations `B` and `C`.
-
-### Invalidations
-
-The goal of the invalidations is to modify the Middleware DB tables so that
-after the invalidations, the DB state is as it would have been if the fork
-didn't happen. Or, in other words - travel back in time to the point before the
-fork.
-
-The need to perform invalidations stems from Middleware's promise to provide a
-linear transaction history - from first to last transaction - without
-alternative histories. When the fork happens, the history after the fork isn't
-valid anymore and needs to be erased.
-
-There are three approaches for invalidations, each applied to a different type
-of data we need to manage.
-
-#### Plain removal of table records
-
-Block data in Model.Block and transaction data in tables `Model.Tx`,
-`Model.Type`, `Model.Time`, `Model.Field`, `Model.Origin`, `Model.RevOrigin` are
-simply deleted, and id counts in `Model.IdCount` are decreased.
-
-#### Lifecycle model simulation
-
-A more complex approach is needed for names and oracles. Several facts make this
-non-trivial:
-
-* objects can have different states at each block height
-* objects may have several versions under the same identifier
-* name objects can exist in two states simultaneously - inactive and in auction
-
-Due to this complexity, the algorithm needs to determine:
-
-* in what state(s) was the represented object at the time of the fork - what to
-  delete
-* in what state(s), and which version of the object is valid at the time we
-  rollback to - what to write
-
-#### Do nothing
-
-`Model.PlainName` doesn't require any invalidations. This table keeps the
-mapping of name hashes to plain names, and removing this mapping isn't worth the
-effort. The assumption is that once a user finds out the name claim request
-didn't land in the main chain, the request will be retried and exactly the same
-record would be inserted again
+###
 
 ## Database searching
 
-All the functionality described above - database design, syncing,
-invalidations - has one goal, to keep database records in a shape usable for
-performing queries over transactions and additionally over lifecycle objects -
-names and oracles.
+All the functionality described above - database design, syncing  - has one
+goal, to keep database records in a shape usable for performing queries over
+transactions and additionally over lifecycle objects - names, channels and
+ oracles.
 
 ### Object state query engine
 
-Both name and oracle querying works conceptually in the same way. These objects
-can be in several states - "inactive", "active", and in case of name also "in
-auction". Objects in the same state are represented by two tables:
+Name, oracle and channels querying works conceptually in the same way. These
+objects can be in several states - "inactive", "active", and in case of name
+also "in auction". Objects in the same state are represented by these tables:
 
 * Object table, keyed by identifier of the object (plain name for names and
   public key for oracles), e.g. `Model.InactiveName`, `Model.InactiveOracle`,
-  `Model.ActiveName`, `Model.ActiveOracle`, `Model.AuctionBid`.
+  `Model.ActiveName`, `Model.ActiveOracle`, `Model.AuctionBid`,
+  `Model.ActiveChannel`, `Model.InactiveChannel`.
 * Expiration table, keyed by tuple `{expiration height, identifier}`, e.g.
   `Model.InactiveNameExpiration`, `Model.InactiveOracleExpiration`,
   `Model.ActiveNameExpiration`, `Model.ActiveOracleExpiration`,
   `Model.AuctionExpiration`.
+* Activation tables, keyed by the tuple `{activation height, identifier}`, e.g.
+  `Model.ActiveNameActivation`, `Model.InactiveNameActivation`,
+  `Model.ActiveChannelActivation`.
 
-Both types of tables are sorted. This allows listing of names in any state
+All these types of tables are sorted. This allows listing of names in any state
 either by expiration date or plain name. Since listing of oracles by sorted
 public keys doesn't make much sense, although technically possible, oracles are
 listed by their expiration only. Since there aren't any filtering or selection
@@ -610,23 +626,6 @@ The query engine doesn't provide collecting or counting or additional processing
 of the results - it's only goal is to return a stream of results, which can be
 suspended and it's continuation stored and resumed later.
 
-For collecting or counting or any other processing of the elements we can use
-the standard Elixir's `Enum` and `Stream` functions.
-
-#### Scope
-
-Scope determines the direction of generation of the results with starting and
-endpoint points.
-
-Following options are supported:
-
-* `:forward` - from beginning (genesis) to the end
-* `:backward` - from end (top of chain) to the beginning
-* `{:gen, a..b}` - from generation `a` to `b` (forward if `a < b`, backward
-  otherwise)
-* `{:txi, a..b}` - from transaction index a to b (forward if `a < b`, backward
-  otherwise)
-
 #### Clauses
 
 Without clauses, the query engine returns transactions in requested scope and
@@ -643,109 +642,88 @@ The values are either transaction types (for `:type` and `:type_group`), plain
 names (for `:name`) or identifiers - encoded public keys of accounts, contracts,
 oracles and channels (for fields).
 
-#### Logic combination
+## Paginated endpoints and streams
 
-The query and result domains are fixed, therefore we can simplify the query
-language by making the logic combinations among clauses implicit.
+Middleware acts as an indexing tool of the Node to provide users more useful and
+friendlier information. This is done mostly by indexing data that can then be
+queried through endpoints that provide a list of results.
 
-Since a transaction has exactly one type, the logic combination between type
-constraints is OR. By listing several type constraints, we can construct any set
-of transaction types we admit in the result. Adding more type constraints makes
-the result set larger.
-
-All other clauses - with generic ids and fields - are combined with AND. Adding
-more id and field clauses makes the result set smaller.
-
-Some examples of implicit logic combination:
-
-* `DBS.map(:backward, :raw, type: :spend, type: :paying_for)`
-  * return spend or paying for transactions
-* `DBS.map(:backward, :raw, type_group: :channel, type_group: :contract)`
-  * return any channel or any contract related transactions
-* `DBS.map(:backward, :json, contract: "ct_2...", caller_id: "ak_H...")`
-  * return transactions for given `contract` and `caller_id`
-
-With implicit logic combinations we can drop grouping of the clauses with
-parenthesis, which is useful as we want to parse these clauses as HTTP query
-parameters.
-
-Outside of query parsing dictated by a flat sequence of clauses represented as
-HTTP parameters, the query engine also provides OR combination among sets of
-clauses.
-
-This combination is useful for advanced queries, merging disjoint sets of
-transactions coming out from each top level set of clauses.
-
-Example of this query:
+Since the amount of results for these endpoints is unlimited and can ultimately
+be a large number, all endpoints (since v2) are paginated by using cursors. A
+**cursor** is a reference to the next record that should be returned on the
+paginated list, and it should contain any information needed to reference it
+(numbers, string, etc). This cursor is included as a query parameter and
+returned on the `prev` and `next` URL of any paginated endpoint. The result
+of the endpoint should end up looking like this:
 
 ```
-DBS.map(:backward, :raw,
-  {:or, [["name_claim.account_id": "ak_H..."],
-        ["name_transfer.recipient_id": "ak_C"]]})
+{
+  "data": [
+    record1,
+    record2,
+    ...
+  ],
+  "next": "/v2/...?cursor=<cursor-next>"
+  "prev": "/v2/...?cursor=<cursor-prev>"
+}
 ```
 
-### Streaming batches
+### Internal representation
 
-A call to `DBS.map`:
+Internally, for all paginated endpoints, a stream is built that would then be
+accesed to return the list of results. This is done by using regular
+[`Elixir Streams`](https://hexdocs.pm/elixir/1.12/Stream.html), usually built
+by using the `Collection.stream/3` or `Collection.stream/5` functions.
 
-```
-iex> DBS.map(:backward, :raw)
-#Function<55.119101820/2 in Stream.resource/3>
-```
+`Collection.stream(state, table, direction, scope, cursor)` iterates over the
+keys provided by the state on that specific table, where:
+* `state` is the [`State`](lib/ae_mdw/db/state.ex) object which requires a
+  [`Store`](lib/ae_mdw/db/store.ex) to be initialized.
+* `table` is the atom specifying the table name.
+* `direction` is either `forward` or `backward`.
+* `scope` is either `nil` or a tuple of two values `{first_key, last_key}`, this
+  has to be provided in forward order (e.g. `first_key <= last_key` always).
+* `cursor` is the initial key to start iterating from. If `nil` it will begin
+  from the first element of the `scope`.
 
-returns a stream function. This example in particular, when forced, returns a
-list of all transactions in history. We can force collection to list via
-`Enum.to_list/1` or count the number of entries via `Enum.count/1`. If we force
-the stream above it would take several hours. Since Middleware endpoints support
-pagination - listing of batches on demand, we need to manage the results stream
-in a fashion where we are able to both pull from the stream and store its
-continuation for future pulling.
+An example of its usage is the following:
 
-We can achieve this effect via `StreamSplit` library:
+```elixir
+state = State.new()
+stream = Collection.stream(state, Model.Tx, :forward, {200, 400}, 300)
+Enum.take(stream, 4) # => [200, 201, 202, 203]
 
-```
-iex> {res, cont} = 1..1000 |> StreamSplit.take_and_drop(10)
-{[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-%StreamSplit{
-  continuation: #Function<0.121244055/1 in Enumerable.Range.reduce/5>,
-  stream: #Function<55.119101820/2 in Stream.resource/3>
-}}
-
-iex> {res, cont} = cont |> StreamSplit.take_and_drop(10)
-{[11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-%StreamSplit{
-  continuation: #Function<0.121244055/1 in Enumerable.Range.reduce/5>,
-  stream: #Function<55.119101820/2 in Stream.resource/3>
-}}
+stream = Collection.stream(state, Model.ActiveName, :backward, nil, "c.chain")
+Enum.take(stream, 4) # => ["c.chain", "ba.chain", "b.chain"]
 ```
 
-The range `1..1000` returns a stream, similar to the one from `DBS.map`. Via
-calling `StreamSplit.take_and_drop/2` we can pull the elements, and store the
-continuation of the stream for later.
+In the first example, it iterates over the table `Model.Tx` where the keys are
+a consecutive list of `txi` values. It begins at txi 300, iterating over values
+up until 400.
 
-We use a similar mechanism to storing the continuations for HTTP endpoints
-requests.
+`Collection.stream(state, table, cursor)` is a shorthand for
+`Collection.stream(state, table, :forward, nil, cursor)`.
 
-#### Continuation identification
+#### Scope and direction
 
-When the client asks for another page of results of the query, we need to pick
-the correct continuation. For this purpose, we need to identify which
-continuation to use from those already stored.
+All endpoints that are paginated allow you to specify query parameters to scope
+and order the results presented. This is done via the `direction` and `scope`
+query parameter.
 
-We identify the continuation by normalizing the query parameters, sorting them,
-and removing the parameters `page` (which page we ask for) and `limit` (how many
-entries we want in the reply).
+Direction determines the order of the results, and it can be either
+`direction=forward`  or `direction=backward`.
 
-From `page` and `limit`, we can compute the `offset` - nth entry to continue
-from. These normalized and sorted query parameters along with `offset` form a
-continuation key. If the continuation table has a value for this key, it's the
-continuation to use for generating another batch. Once a continuation is used
-for pulling a next batch, the next continuation of the same query with updated
-offset is stored to the continuation table.
+Scope allows to specify a range of generations endpoint points. The following
+values are supported:
 
-With this approach, we are able to determine if a rogue client doesn't want to
-DDOS the Middleware by selecting millions of transactions and skipping hundreds
-of thousands to generate a reply.
+* `scope=gen:<a>-<b>` - from generation `a` to `b` (forward if `a < b`,
+  backward otherwise). This is represented as `{:gen, a..b}` internally.
+* `scope=txi:<a>-<b>` - from transaction index a to b (forward if `a < b`,
+  backward otherwise). Represented as `{:txi, a..b}` internally. This last one
+  is DEPRECATED, to avoid exposing internal information like `txi`, which is
+  not a concept used in the node.
+
+
 
 ## Appendix - reasons for a new Middleware
 
