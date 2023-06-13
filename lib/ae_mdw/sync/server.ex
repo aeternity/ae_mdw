@@ -395,6 +395,7 @@ defmodule AeMdw.Sync.Server do
         |> Enum.sum()
 
       BroadcasterCache.put_txs_count(kb_hash, count)
+      count
     end
   end
 end
