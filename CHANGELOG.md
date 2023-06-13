@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.50.1](https://www.github.com/aeternity/ae_mdw/compare/v1.50.0...v1.50.1) (2023-06-13)
+
+
+### Bug Fixes
+
+* return txs count after cache ([#1394](https://www.github.com/aeternity/ae_mdw/issues/1394)) ([38baa36](https://www.github.com/aeternity/ae_mdw/commit/38baa362f033417c0a9ee7f8fb0be7301c6ffb89))
+
 ## [1.50.0](https://www.github.com/aeternity/ae_mdw/compare/v1.49.1...v1.50.0) (2023-06-13)
 
 
