@@ -39,6 +39,7 @@ defmodule AeMdw.Sync.Server do
   alias AeMdw.Log
   alias AeMdw.Sync.AsyncTasks.WealthRankAccounts
   alias AeMdwWeb.Websocket.Broadcaster
+  alias AeMdwWeb.Websocket.BroadcasterCache
 
   require Logger
 
@@ -370,14 +371,30 @@ defmodule AeMdw.Sync.Server do
       {mbs_mutations, [{{^height, -1}, key_block, _mutations}]} = Enum.split(blocks_mutations, -1)
 
       mbs_count = length(mbs_mutations)
-      Broadcaster.broadcast_key_block(key_block, :v2, :mdw, mbs_count)
+      {:ok, kb_hash} = key_block |> :aec_blocks.to_key_header() |> :aec_headers.hash_header()
+      txs_count = get_txs_count(kb_hash, mbs_mutations)
+
+      Broadcaster.broadcast_key_block(key_block, :v2, :mdw, mbs_count, txs_count)
 
       Enum.each(mbs_mutations, fn {_block_index, micro_block, _mutations} ->
         Broadcaster.broadcast_micro_block(micro_block, :mdw)
         Broadcaster.broadcast_txs(micro_block, :mdw)
       end)
 
-      Broadcaster.broadcast_key_block(key_block, :v1, :mdw, mbs_count)
+      Broadcaster.broadcast_key_block(key_block, :v1, :mdw, mbs_count, txs_count)
     end)
+  end
+
+  defp get_txs_count(kb_hash, mbs_mutations) do
+    with nil <- BroadcasterCache.get_txs_count(kb_hash) do
+      count =
+        mbs_mutations
+        |> Enum.map(fn {_block_index, micro_block, _mutations} ->
+          length(:aec_blocks.txs(micro_block))
+        end)
+        |> Enum.sum()
+
+      BroadcasterCache.put_txs_count(kb_hash, count)
+    end
   end
 end

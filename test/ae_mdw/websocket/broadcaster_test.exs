@@ -386,15 +386,20 @@ defmodule AeMdw.Websocket.BroadcasterTest do
     %{hash: kb_hash1, height: 1, block: block1} = blocks[:kb1]
     %{hash: kb_hash2, height: 2, block: block2} = blocks[:kb2]
 
-    Broadcaster.broadcast_key_block(block0, version, source, 2)
+    Broadcaster.broadcast_key_block(block0, version, source, 2, 3)
 
     assert_websocket_receive(clients, :kb, %{
-      "payload" => %{"hash" => kb_hash0, "height" => 0, "micro_blocks_count" => 2},
+      "payload" => %{
+        "hash" => kb_hash0,
+        "height" => 0,
+        "micro_blocks_count" => 2,
+        "transactions_count" => 3
+      },
       "source" => to_string(source),
       "subscription" => "KeyBlocks"
     })
 
-    Broadcaster.broadcast_key_block(block1, version, source, 3)
+    Broadcaster.broadcast_key_block(block1, version, source, 3, nil)
 
     assert_websocket_receive(clients, :kb, %{
       "payload" => %{"hash" => kb_hash1, "height" => 1, "micro_blocks_count" => 3},
@@ -402,19 +407,19 @@ defmodule AeMdw.Websocket.BroadcasterTest do
       "subscription" => "KeyBlocks"
     })
 
-    Broadcaster.broadcast_key_block(block2, version, source, 4)
+    Broadcaster.broadcast_key_block(block2, version, source, 4, nil)
 
     assert_websocket_receive(clients, :kb, %{
       "payload" => %{"hash" => kb_hash2, "height" => 2, "micro_blocks_count" => 4}
     })
 
-    Broadcaster.broadcast_key_block(block0, version, source, 2)
+    Broadcaster.broadcast_key_block(block0, version, source, 2, nil)
 
     assert_websocket_receive(clients, :kb, %{
       "payload" => %{"hash" => kb_hash2, "height" => 2, "micro_blocks_count" => 4}
     })
 
-    Broadcaster.broadcast_key_block(block1, version, source, 3)
+    Broadcaster.broadcast_key_block(block1, version, source, 3, nil)
 
     assert_websocket_receive(clients, :kb, %{
       "payload" => %{"hash" => kb_hash2, "height" => 2, "micro_blocks_count" => 4}
