@@ -19,12 +19,15 @@ defmodule AeMdw.Db.Util do
   @typep state() :: State.t()
   @typep height() :: Blocks.height()
   @typep txi() :: Txs.txi()
+  @typep time() :: Blocks.time()
 
   @tx_types_to_fname %{
     :contract_create_tx => ~w(Chain.clone Chain.create),
     :ga_attach_tx => ~w(),
     :oracle_response_tx => ~w(Oracle.respond)
   }
+
+  @approximate_key_block_rate 3 * 60 * 1_000
 
   @spec read_tx!(state(), Txs.txi()) :: Model.tx()
   def read_tx!(state, txi), do: State.fetch!(state, Model.Tx, txi)
@@ -47,6 +50,19 @@ defmodule AeMdw.Db.Util do
     case State.prev(state, Model.Block, nil) do
       {:ok, {height, _mbi}} -> height
       :none -> raise RuntimeError, message: "can't get last key for table Model.Block"
+    end
+  end
+
+  @spec last_gen_and_time(state()) :: {Blocks.height(), Blocks.time()}
+  def last_gen_and_time(state) do
+    case State.prev(state, Model.Block, nil) do
+      {:ok, {height, _mbi}} ->
+        Model.block(hash: block_hash) = State.fetch!(state, Model.Block, {height, -1})
+
+        {height, block_time(block_hash)}
+
+      :none ->
+        raise RuntimeError, message: "can't get last key for table Model.Block"
     end
   end
 
@@ -290,5 +306,21 @@ defmodule AeMdw.Db.Util do
       {tx, _inner_type, _tx_hash, :contract_create_tx, _block_hash} ->
         tx |> :aect_create_tx.owner_id() |> :aeser_id.specialize(:account)
     end
+  end
+
+  @spec height_to_time(state(), height(), height(), time()) :: time()
+  def height_to_time(state, height, last_height, _last_micro_time) when height <= last_height do
+    Model.block(hash: block_hash) = State.fetch!(state, Model.Block, {height, -1})
+
+    block_time(block_hash)
+  end
+
+  def height_to_time(_state, height, last_height, last_micro_time),
+    do: last_micro_time + (height - last_height) * @approximate_key_block_rate
+
+  defp block_time(block_hash) do
+    block_hash
+    |> :aec_db.get_block()
+    |> :aec_blocks.time_in_msecs()
   end
 end

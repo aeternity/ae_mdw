@@ -270,11 +270,11 @@ defmodule AeMdw.Oracles do
 
   @spec fetch(state(), pubkey(), opts()) :: {:ok, oracle()} | {:error, Error.t()}
   def fetch(state, oracle_pk, opts) do
-    last_gen = DBUtil.last_gen(state)
+    {last_gen, last_time} = DBUtil.last_gen_and_time(state)
 
     case Oracle.locate(state, oracle_pk) do
       {m_oracle, source} ->
-        {:ok, render(state, m_oracle, last_gen, source == Model.ActiveOracle, opts)}
+        {:ok, render(state, m_oracle, last_gen, last_time, source == Model.ActiveOracle, opts)}
 
       nil ->
         {:error, ErrInput.NotFound.exception(value: Enc.encode(:oracle_pubkey, oracle_pk))}
@@ -282,7 +282,7 @@ defmodule AeMdw.Oracles do
   end
 
   defp render_list(state, oracles_exp_source_keys, opts) do
-    last_gen = DBUtil.last_gen(state)
+    {last_gen, last_time} = DBUtil.last_gen_and_time(state)
 
     Enum.map(oracles_exp_source_keys, fn {{_exp, oracle_pk}, source} ->
       is_active? = source == @table_active_expiration
@@ -290,18 +290,18 @@ defmodule AeMdw.Oracles do
       oracle =
         State.fetch!(state, if(is_active?, do: @table_active, else: @table_inactive), oracle_pk)
 
-      render(state, oracle, last_gen, is_active?, opts)
+      render(state, oracle, last_gen, last_time, is_active?, opts)
     end)
   end
 
   defp render_list(state, oracles_exp_keys, is_active?, opts) do
-    last_gen = DBUtil.last_gen(state)
+    {last_gen, last_time} = DBUtil.last_gen_and_time(state)
 
     oracles_exp_keys
     |> Enum.map(fn {_exp, oracle_pk} ->
       State.fetch!(state, if(is_active?, do: @table_active, else: @table_inactive), oracle_pk)
     end)
-    |> Enum.map(&render(state, &1, last_gen, is_active?, opts))
+    |> Enum.map(&render(state, &1, last_gen, last_time, is_active?, opts))
   end
 
   defp render(
@@ -315,6 +315,7 @@ defmodule AeMdw.Oracles do
            previous: _previous
          ),
          last_gen,
+         last_micro_time,
          is_active?,
          opts
        ) do
@@ -332,6 +333,8 @@ defmodule AeMdw.Oracles do
       active: is_active?,
       active_from: register_height,
       expire_height: expire_height,
+      approximate_expire_time:
+        DBUtil.height_to_time(state, expire_height, last_gen, last_micro_time),
       register: expand_bi_txi_idx(state, register_bi_txi_idx, opts),
       register_tx_hash: Enc.encode(:tx_hash, Txs.txi_to_hash(state, register_txi)),
       extends: Enum.map(extends, &expand_bi_txi_idx(state, &1, opts)),
