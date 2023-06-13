@@ -1,5 +1,13 @@
 # Changelog
 
+### [1.49.2](https://www.github.com/aeternity/ae_mdw/compare/v1.49.1...v1.49.2) (2023-06-13)
+
+
+### Miscellaneous
+
+* add transactions count to websocket keyblock ([#1382](https://www.github.com/aeternity/ae_mdw/issues/1382)) ([490d379](https://www.github.com/aeternity/ae_mdw/commit/490d379b1869463eda060849ea2f693471f94a84))
+* count only aexn contracts with valid meta info ([#1387](https://www.github.com/aeternity/ae_mdw/issues/1387)) ([a7f0f84](https://www.github.com/aeternity/ae_mdw/commit/a7f0f84e252ce7eb1e6dd4d2a4ad19d36f184c0d))
+
 ### [1.49.1](https://www.github.com/aeternity/ae_mdw/compare/v1.49.0...v1.49.1) (2023-06-08)
 
 
