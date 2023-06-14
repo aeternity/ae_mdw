@@ -1,5 +1,17 @@
 # Changelog
 
+### [1.50.2](https://www.github.com/aeternity/ae_mdw/compare/v1.50.1...v1.50.2) (2023-06-14)
+
+
+### Bug Fixes
+
+* consider all oracles expirations ([#1397](https://www.github.com/aeternity/ae_mdw/issues/1397)) ([8ed0a7b](https://www.github.com/aeternity/ae_mdw/commit/8ed0a7bd8fb819c7fb135374398d96f3e7300f84))
+
+
+### Testing
+
+* fix intermittent test failures due to async mocking ([#1396](https://www.github.com/aeternity/ae_mdw/issues/1396)) ([6e7f310](https://www.github.com/aeternity/ae_mdw/commit/6e7f3103b5be6ba121dcc98633de143c9eb7e859))
+
 ### [1.50.1](https://www.github.com/aeternity/ae_mdw/compare/v1.50.0...v1.50.1) (2023-06-13)
 
 
