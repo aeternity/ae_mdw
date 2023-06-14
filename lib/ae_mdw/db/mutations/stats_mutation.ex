@@ -202,7 +202,6 @@ defmodule AeMdw.Db.StatsMutation do
 
     token_supply_delta = AeMdw.Node.token_supply_delta(height - 1)
     auctions_expired = get(state, :auctions_expired, 0)
-    new_oracles_expired = get(state, :new_oracles_expired, 0)
     old_oracles_registered = get(state, :old_oracles_registered, 0)
 
     Model.total_stat(
@@ -214,8 +213,7 @@ defmodule AeMdw.Db.StatsMutation do
       active_names: max(0, prev_active_names + names_activated - (names_expired + names_revoked)),
       inactive_names: prev_inactive_names + names_expired + names_revoked,
       active_oracles: max(0, prev_active_oracles + oracles_registered - oracles_expired),
-      inactive_oracles:
-        max(0, prev_inactive_oracles - old_oracles_registered + new_oracles_expired),
+      inactive_oracles: max(0, prev_inactive_oracles - old_oracles_registered + oracles_expired),
       contracts: prev_contracts + contracts_created,
       locked_in_auctions: prev_locked_in_auctions + locked_in_auctions,
       burned_in_auctions: prev_burned_in_acutions + burned_in_auctions,

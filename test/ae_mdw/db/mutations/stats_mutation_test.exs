@@ -320,8 +320,7 @@ defmodule AeMdw.Db.StatsMutationTest do
         NullStore.new()
         |> MemStore.new()
         |> State.new()
-        |> State.inc_stat(:oracles_expired, 5)
-        |> State.inc_stat(:new_oracles_expired, 4)
+        |> State.inc_stat(:oracles_expired, 3)
         |> State.inc_stat(:old_oracles_registered, 1)
 
       mutation = StatsMutation.new(height, "", 0, 0, 0, true)
@@ -334,7 +333,7 @@ defmodule AeMdw.Db.StatsMutationTest do
           names_expired: 0,
           names_revoked: 0,
           oracles_registered: 0,
-          oracles_expired: 5,
+          oracles_expired: 3,
           contracts_created: 0,
           block_reward: 0,
           dev_reward: 0
@@ -350,7 +349,7 @@ defmodule AeMdw.Db.StatsMutationTest do
           active_names: 0,
           inactive_names: 0,
           active_oracles: 0,
-          inactive_oracles: 3,
+          inactive_oracles: 2,
           contracts: 0
         )
 

@@ -78,7 +78,6 @@ defmodule AeMdw.Db.OraclesExpirationMutation do
           |> SyncOracle.cache_through_write(Model.InactiveOracleExpiration, m_exp)
           |> SyncOracle.cache_through_delete(Model.ActiveOracle, pubkey)
           |> State.inc_stat(:oracles_expired)
-          |> maybe_increment_new_oracles_expired(Model.oracle(m_oracle, :previous) == nil)
         else
           Log.warn("[#{height}] ignored old oracle expiration for #{oracle_id}")
           state2
@@ -88,13 +87,5 @@ defmodule AeMdw.Db.OraclesExpirationMutation do
         Log.warn("[#{height}] ignored oracle expiration for #{oracle_id}")
         state2
     end
-  end
-
-  defp maybe_increment_new_oracles_expired(state, true) do
-    State.inc_stat(state, :new_oracles_expired)
-  end
-
-  defp maybe_increment_new_oracles_expired(state, false) do
-    state
   end
 end
