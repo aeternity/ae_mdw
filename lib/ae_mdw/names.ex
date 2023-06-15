@@ -392,6 +392,8 @@ defmodule AeMdw.Names do
 
   @spec fetch_previous_list(state(), plain_name()) :: [name()]
   def fetch_previous_list(state, plain_name) do
+    {last_gen, last_micro_time} = DbUtil.last_gen_and_time(state)
+
     case State.get(state, @table_inactive, plain_name) do
       {:ok, name} ->
         name
@@ -400,7 +402,7 @@ defmodule AeMdw.Names do
             nil
 
           Model.name(previous: previous) = name ->
-            {render_name_info(state, name, []), previous}
+            {render_name_info(state, name, last_gen, last_micro_time, []), previous}
         end)
         |> Enum.to_list()
 
@@ -418,28 +420,38 @@ defmodule AeMdw.Names do
   end
 
   defp render_height_list(state, names_tables_keys, opts) do
-    Enum.map(names_tables_keys, fn {{_exp, plain_name}, source} ->
-      render(state, plain_name, source == :active, opts)
-    end)
+    names_tables_keys =
+      names_tables_keys
+      |> Enum.map(fn {{_exp, plain_name}, source} -> {plain_name, source} end)
+
+    render_names_list(state, names_tables_keys, opts)
   end
 
   defp render_names_list(state, names_tables_keys, opts) do
+    {last_gen, last_micro_time} = DbUtil.last_gen_and_time(state)
+
     Enum.map(names_tables_keys, fn {plain_name, source} ->
-      render(state, plain_name, source == :active, opts)
+      render(state, plain_name, source == :active, last_gen, last_micro_time, opts)
     end)
   end
 
   defp render_search_list(state, names_tables_keys, opts) do
+    {last_gen, last_micro_time} = DbUtil.last_gen_and_time(state)
+
     Enum.map(names_tables_keys, fn
       {plain_name, :auction} ->
         %{"type" => "auction", "payload" => AuctionBids.fetch!(state, plain_name, opts)}
 
       {plain_name, source} ->
-        %{"type" => "name", "payload" => render(state, plain_name, source == :active, opts)}
+        %{
+          "type" => "name",
+          "payload" =>
+            render(state, plain_name, source == :active, last_gen, last_micro_time, opts)
+        }
     end)
   end
 
-  defp render(state, plain_name, is_active?, opts) do
+  defp render(state, plain_name, is_active?, last_gen, last_micro_time, opts) do
     name =
       State.fetch!(state, if(is_active?, do: @table_active, else: @table_inactive), plain_name)
 
@@ -465,8 +477,8 @@ defmodule AeMdw.Names do
       auction: auction_bid && auction_bid.info,
       status: to_string(status),
       active: is_active?,
-      info: render_name_info(state, name, opts),
-      previous: render_previous(state, name, opts)
+      info: render_name_info(state, name, last_gen, last_micro_time, opts),
+      previous: render_previous(state, name, last_gen, last_micro_time, opts)
     }
   end
 
@@ -481,11 +493,14 @@ defmodule AeMdw.Names do
            revoke: revoke,
            auction_timeout: auction_timeout
          ) = name,
+         last_gen,
+         last_micro_time,
          opts
        ) do
     %{
       active_from: active,
       expire_height: expire,
+      approximate_expire_time: DbUtil.height_to_time(state, expire, last_gen, last_micro_time),
       claims: Enum.map(claims, &expand_txi_idx(state, &1, opts)),
       updates: Enum.map(updates, &expand_txi_idx(state, &1, opts)),
       transfers: Enum.map(transfers, &expand_txi_idx(state, &1, opts)),
@@ -591,13 +606,13 @@ defmodule AeMdw.Names do
     {serialize_nested_cursor(prev_cursor), bi_txi_idxs, serialize_nested_cursor(next_cursor)}
   end
 
-  defp render_previous(state, name, opts) do
+  defp render_previous(state, name, last_gen, last_micro_time, opts) do
     name
     |> Stream.unfold(fn
       Model.name(previous: nil) -> nil
       Model.name(previous: previous) -> {previous, previous}
     end)
-    |> Enum.map(&render_name_info(state, &1, opts))
+    |> Enum.map(&render_name_info(state, &1, last_gen, last_micro_time, opts))
   end
 
   defp render_claim(state, {{height, _mbi}, txi_idx}) do
