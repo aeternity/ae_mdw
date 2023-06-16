@@ -1,5 +1,5 @@
 defmodule AeMdwWeb.Aex9ControllerTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
 
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
