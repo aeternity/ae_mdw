@@ -6,7 +6,8 @@ defmodule AeMdw.Util do
   alias AeMdw.Collection
   alias AeMdw.Db.State
 
-  @max_name_bin String.duplicate("z", 128)
+  # (U+10FFFD) “􏿽”
+  @max_name_bin String.duplicate("􏿽", 100)
 
   @type opt() :: {:expand?, boolean()} | {:top?, boolean()}
   @type opts() :: [opt()]
