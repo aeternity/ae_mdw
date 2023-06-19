@@ -14,8 +14,7 @@ config :git_hooks,
       verbose: true,
       tasks: [
         "mix compile --all-warnings --warnings-as-errors",
-        "elixir --sname aeternity@localhost -S mix test"
-        # "mix credo --strict",
+        "mix credo diff --strict"
       ]
     ]
   ]
