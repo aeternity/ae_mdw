@@ -165,9 +165,10 @@ defmodule AeMdw.MixProject do
 
   defp aliases do
     %{
-      test: ["test --exclude integration"],
+      test: ["test --exclude integration --exclude devmode"],
       "test.integration": ["test --only integration"],
-      "test.iteration": ["test --only iteration"]
+      "test.iteration": ["test --only iteration"],
+      "test.devmode": ["test --only devmode"]
     }
   end
 

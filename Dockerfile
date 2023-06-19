@@ -39,6 +39,8 @@ RUN BUILD_REV="$(git log -1 --format=%h)" && echo $BUILD_REV > /home/aeternity/n
 WORKDIR /home/aeternity/node
 
 # Download, and unzip latest aeternity release archive
+ARG DEV_MODE="false"
+ENV DEV_MODE=${DEV_MODE}
 ENV NODEROOT=/home/aeternity/node/local
 ARG NODE_VERSION=6.8.1
 ARG NODE_URL=https://github.com/aeternity/aeternity/releases/download/v${NODE_VERSION}/aeternity-v${NODE_VERSION}-ubuntu-x86_64.tar.gz
@@ -92,6 +94,11 @@ COPY config/runtime.exs config/
 RUN mix run --no-start -e 'IO.puts(Mix.Project.config[:version])' >AEMDW_VERSION
 RUN scripts/swagger-docs.py >priv/static/swagger/swagger_v2.yaml
 
+# Install devmode
+COPY docker/aeplugin_dev_mode aeplugin_dev_mode
+RUN ./scripts/install-devmode.sh
+
+# Copy release
 COPY rel rel
 ENV RELEASE_NODE=aeternity@localhost
 ENV RELEASE_DISTRIBUTION=name
@@ -125,6 +132,7 @@ ENV AETERNITY_CONFIG=/home/aeternity/aeternity.yaml
 COPY --from=builder /home/aeternity/node/ae_mdw/_build/${MIX_ENV}/rel/ae_mdw ./
 COPY --from=builder /home/aeternity/node/local ./local
 COPY ./docker/aeternity.yaml /home/aeternity/aeternity.yaml
+COPY ./docker/aeternity-dev.yaml /home/aeternity/aeternity-dev.yaml
 COPY ./docker/healthcheck.sh /home/aeternity/healthcheck.sh
 RUN chmod +x /home/aeternity/healthcheck.sh
 

@@ -45,3 +45,6 @@ VERSION
 /config/dev.tools.exs
 
 /scripts/.check_endpoints_tmp.json
+
+/node_sdk/node_modules/
+/node_sdk/output.json
