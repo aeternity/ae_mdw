@@ -14,11 +14,12 @@ defmodule AeMdw.NodeHelper do
 
   @spec token_supply_delta() :: list()
   def token_supply_delta() do
-    [
-      {HardforkPresets.hardfork_height(:genesis), HardforkPresets.mint_sum(:genesis)},
-      {HardforkPresets.hardfork_height(:minerva), HardforkPresets.mint_sum(:minerva)},
-      {HardforkPresets.hardfork_height(:fortuna), HardforkPresets.mint_sum(:fortuna)},
-      {HardforkPresets.hardfork_height(:lima), HardforkPresets.mint_sum(:lima)}
-    ]
+    :aec_hard_forks.protocols()
+    |> Map.keys()
+    |> Enum.sort()
+    |> Enum.map(fn proto ->
+      proto_vsn = :aec_hard_forks.protocol_vsn_name(proto)
+      {HardforkPresets.hardfork_height(proto_vsn), HardforkPresets.mint_sum(proto_vsn)}
+    end)
   end
 end
