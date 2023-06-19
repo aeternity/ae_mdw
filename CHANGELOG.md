@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.51.0](https://www.github.com/aeternity/ae_mdw/compare/v1.50.1...v1.51.0) (2023-06-19)
+
+
+### Features
+
+* add approximate_expiration_time to names ([#1399](https://www.github.com/aeternity/ae_mdw/issues/1399)) ([4be56fc](https://www.github.com/aeternity/ae_mdw/commit/4be56fc33a94ff7ac689fb3311714a5bffa03781))
+
+
+### Bug Fixes
+
+* consider all oracles expirations ([#1397](https://www.github.com/aeternity/ae_mdw/issues/1397)) ([8ed0a7b](https://www.github.com/aeternity/ae_mdw/commit/8ed0a7bd8fb819c7fb135374398d96f3e7300f84))
+* include aexn contracts with special chars ([#1402](https://www.github.com/aeternity/ae_mdw/issues/1402)) ([a72fe7b](https://www.github.com/aeternity/ae_mdw/commit/a72fe7beb747699d082c6b894e12e2c8dd89df34))
+* run aex9 count migration ([#1405](https://www.github.com/aeternity/ae_mdw/issues/1405)) ([3102d8a](https://www.github.com/aeternity/ae_mdw/commit/3102d8ab268f533a27fc61b2d2a1a47fbf281449))
+
+
+### Testing
+
+* add async:false to more test modules ([#1401](https://www.github.com/aeternity/ae_mdw/issues/1401)) ([ee7de9b](https://www.github.com/aeternity/ae_mdw/commit/ee7de9bf405907fa40e1fa312234e8abfb0971c2))
+* fix intermittent test failures due to async mocking ([#1396](https://www.github.com/aeternity/ae_mdw/issues/1396)) ([6e7f310](https://www.github.com/aeternity/ae_mdw/commit/6e7f3103b5be6ba121dcc98633de143c9eb7e859))
+* integrate devmode and SDK for custom test txs ([#1306](https://www.github.com/aeternity/ae_mdw/issues/1306)) ([1b6000a](https://www.github.com/aeternity/ae_mdw/commit/1b6000a9d01283103d466401cabcb77511b34bd0))
+
 ### [1.50.1](https://www.github.com/aeternity/ae_mdw/compare/v1.50.0...v1.50.1) (2023-06-13)
 
 
