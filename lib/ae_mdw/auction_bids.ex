@@ -6,7 +6,7 @@ defmodule AeMdw.AuctionBids do
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
-  alias AeMdw.Database
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Collection
   alias AeMdw.Names
   alias AeMdw.Txs
@@ -23,7 +23,7 @@ defmodule AeMdw.AuctionBids do
   @typep order_by :: :expiration | :name
   @typep plain_name() :: Names.plain_name()
   @typep prefix() :: plain_name()
-  @typep direction() :: Database.direction()
+  @typep direction() :: State.direction()
   @typep pagination() :: Collection.direction_limit()
   @typep names_scope() :: {prefix(), prefix()}
 
@@ -40,21 +40,30 @@ defmodule AeMdw.AuctionBids do
   @spec fetch(state(), plain_name(), opts()) :: {:ok, auction_bid()} | :not_found
   def fetch(state, plain_name, opts) do
     case State.get(state, @table, plain_name) do
-      {:ok, auction_bid} -> {:ok, render(state, auction_bid, opts)}
-      :not_found -> :not_found
+      {:ok, auction_bid} ->
+        {last_gen, last_micro_time} = DbUtil.last_gen_and_time(state)
+
+        {:ok, render(state, auction_bid, last_gen, last_micro_time, opts)}
+
+      :not_found ->
+        :not_found
     end
   end
 
   @spec fetch_auctions(state(), pagination(), order_by(), cursor() | nil, boolean()) ::
           {cursor() | nil, [auction_bid()], cursor() | nil}
   def fetch_auctions(state, pagination, :name, cursor, opts) do
+    {last_gen, last_micro_time} = DbUtil.last_gen_and_time(state)
+
     {prev_cursor, auction_bids, next_cursor} =
       Collection.paginate(&Collection.stream(state, @table, &1, nil, cursor), pagination)
 
-    {prev_cursor, Enum.map(auction_bids, &fetch!(state, &1, opts)), next_cursor}
+    {prev_cursor, Enum.map(auction_bids, &render(state, &1, last_gen, last_micro_time, opts)),
+     next_cursor}
   end
 
   def fetch_auctions(state, pagination, :expiration, cursor, opts) do
+    {last_gen, last_micro_time} = DbUtil.last_gen_and_time(state)
     cursor = deserialize_exp_cursor(cursor)
 
     {prev_cursor, exp_keys, next_cursor} =
@@ -64,7 +73,9 @@ defmodule AeMdw.AuctionBids do
       )
 
     auction_bids =
-      Enum.map(exp_keys, fn {_exp, plain_name} -> fetch!(state, plain_name, opts) end)
+      Enum.map(exp_keys, fn {_exp, plain_name} ->
+        render(state, plain_name, last_gen, last_micro_time, opts)
+      end)
 
     {serialize_exp_cursor(prev_cursor), auction_bids, serialize_exp_cursor(next_cursor)}
   end
@@ -77,6 +88,12 @@ defmodule AeMdw.AuctionBids do
     |> Stream.take_while(&String.starts_with?(&1, prefix))
   end
 
+  defp render(state, plain_name, last_gen, last_micro_time, opts) when is_binary(plain_name) do
+    auction_bid = State.fetch!(state, @table, plain_name)
+
+    render(state, auction_bid, last_gen, last_micro_time, opts)
+  end
+
   defp render(
          state,
          Model.auction_bid(
@@ -84,6 +101,8 @@ defmodule AeMdw.AuctionBids do
            expire_height: expire_height,
            bids: [last_bid | _rest_bids] = bids
          ),
+         last_gen,
+         last_micro_time,
          _opts
        ) do
     last_bid = Txs.fetch!(state, bi_txi_idx_txi(last_bid))
@@ -95,6 +114,8 @@ defmodule AeMdw.AuctionBids do
       active: false,
       info: %{
         auction_end: expire_height,
+        approximate_expire_time:
+          DbUtil.height_to_time(state, expire_height, last_gen, last_micro_time),
         last_bid: put_in(last_bid, ["tx", "ttl"], name_ttl),
         bids: Enum.map(bids, &bi_txi_idx_txi/1)
       },
