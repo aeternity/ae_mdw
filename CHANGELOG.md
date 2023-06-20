@@ -1,5 +1,14 @@
 # Changelog
 
+### [1.51.1](https://www.github.com/aeternity/ae_mdw/compare/v1.51.0...v1.51.1) (2023-06-20)
+
+
+### Miscellaneous
+
+* include credo and leave test for dev shell ([#1406](https://www.github.com/aeternity/ae_mdw/issues/1406)) ([2e41a79](https://www.github.com/aeternity/ae_mdw/commit/2e41a794af47df37c71d7fcf8a9b6c6ee6339c21))
+* remove dev docker compose warning ([#1408](https://www.github.com/aeternity/ae_mdw/issues/1408)) ([3245573](https://www.github.com/aeternity/ae_mdw/commit/3245573c646bcc8bbf9bae954876897a830dbc45))
+* return nil for invalid amount of aex9 holders ([#1409](https://www.github.com/aeternity/ae_mdw/issues/1409)) ([03ae588](https://www.github.com/aeternity/ae_mdw/commit/03ae58875edd3277cc777c6aef8daac3f5ae7fd5))
+
 ## [1.51.0](https://www.github.com/aeternity/ae_mdw/compare/v1.50.1...v1.51.0) (2023-06-19)
 
 
