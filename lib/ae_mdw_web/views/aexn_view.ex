@@ -133,6 +133,11 @@ defmodule AeMdwWeb.AexnView do
         :not_found -> 0
       end
 
+    num_holders =
+      with num when num < 0 <- Stats.fetch_aex9_holders_count(state, contract_pk) do
+        nil
+      end
+
     %{
       name: name,
       symbol: symbol,
@@ -142,7 +147,7 @@ defmodule AeMdwWeb.AexnView do
       extensions: extensions,
       initial_supply: initial_supply,
       event_supply: event_supply,
-      holders: Stats.fetch_aex9_holders_count(state, contract_pk)
+      holders: num_holders
     }
   end
 
