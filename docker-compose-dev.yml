@@ -8,7 +8,7 @@ services:
         MIX_ENV: dev
         RUNNER_IMAGE: "hexpm/elixir:1.13.4-erlang-23.3.4.18-debian-bullseye-20220801"
         USER: root
-    image: aeternity/ae_mdw_dev${IMAGE_NAME_SUFFIX}:latest
+    image: aeternity/ae_mdw_dev${IMAGE_NAME_SUFFIX:-}:latest
     ports:
       - "4000:4000" #MDW's default port
       - "4001:4001" #MDW's websocket default port
