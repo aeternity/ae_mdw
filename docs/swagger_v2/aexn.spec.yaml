@@ -162,7 +162,7 @@ schemas:
         items:
           type: string
       holders:
-        description: Count of accounts having balance
+        description: Count of accounts having balance (nil when contract is not complaint)
         type: integer
       name:
         description: The name of AEX9 token

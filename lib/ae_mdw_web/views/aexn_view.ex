@@ -135,7 +135,7 @@ defmodule AeMdwWeb.AexnView do
 
     num_holders =
       with num when num < 0 <- Stats.fetch_aex9_holders_count(state, contract_pk) do
-        "NA"
+        nil
       end
 
     %{
