@@ -898,6 +898,9 @@ defmodule AeMdwWeb.NameControllerTest do
   describe "auctions" do
     test "get auctions with default limit", %{conn: conn, store: store} do
       key_hash = <<0::256>>
+      kb_time = 123
+      last_gen = 4
+      approx_expire_time4 = kb_time + (4 - last_gen) * 180_000
 
       store =
         1..21
@@ -908,15 +911,16 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.auction_bid(
               index: plain_name,
               block_index_txi_idx: {{0, 1}, {0, -1}},
-              expire_height: 0,
+              expire_height: i,
               bids: [{{2, 3}, {4, -1}}]
             )
 
           store
           |> Store.put(Model.AuctionBid, auction)
           |> Store.put(Model.AuctionExpiration, Model.expiration(index: {i, plain_name}))
+          |> Store.put(Model.Block, Model.block(index: {i, -1}, hash: key_hash))
         end)
-        |> Store.put(Model.Block, Model.block(index: {4, -1}, hash: key_hash))
+        |> Store.put(Model.Block, Model.block(index: {last_gen, -1}, hash: key_hash))
 
       with_mocks [
         {Txs, [],
@@ -928,15 +932,24 @@ defmodule AeMdwWeb.NameControllerTest do
            proto_vsn: fn _height -> 1 end
          ]},
         {:aec_db, [], [get_block: fn _block_hash -> :block end]},
-        {:aec_blocks, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_blocks, [], [time_in_msecs: fn :block -> kb_time end]}
       ] do
         assert %{"data" => auction_bids, "next" => next} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/names/auctions")
+                 |> get("/v2/names/auctions", direction: "forward")
                  |> json_response(200)
 
         assert @default_limit = length(auction_bids)
+        refute is_nil(next)
+
+        assert %{
+                 "info" => %{"approximate_expire_time" => 123}
+               } = Enum.at(auction_bids, 0)
+
+        assert %{
+                 "info" => %{"approximate_expire_time" => ^approx_expire_time4}
+               } = Enum.at(auction_bids, 4)
 
         assert %{"data" => auction_bids2} =
                  conn
@@ -974,6 +987,7 @@ defmodule AeMdwWeb.NameControllerTest do
           |> Store.put(Model.AuctionBid, auction)
           |> Store.put(Model.AuctionExpiration, Model.expiration(index: {i, plain_name}))
         end)
+        |> Store.put(Model.Block, Model.block(index: {0, -1}, hash: key_hash))
         |> Store.put(Model.Block, Model.block(index: {4, -1}, hash: key_hash))
 
       with_mocks [
@@ -988,11 +1002,15 @@ defmodule AeMdwWeb.NameControllerTest do
         {:aec_db, [], [get_block: fn _block_hash -> :block end]},
         {:aec_blocks, [], [time_in_msecs: fn :block -> 123 end]}
       ] do
-        assert %{"data" => auctions} =
+        assert %{"data" => [auction_bid1 | _rest] = auctions} =
                  conn
                  |> with_store(store)
                  |> get("/v2/names/auctions", by: by, direction: direction, limit: limit)
                  |> json_response(200)
+
+        assert %{
+                 "info" => %{"approximate_expire_time" => 123}
+               } = auction_bid1
 
         assert ^limit = length(auctions)
       end
