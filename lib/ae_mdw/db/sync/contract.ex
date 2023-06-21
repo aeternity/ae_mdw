@@ -2,6 +2,7 @@ defmodule AeMdw.Db.Sync.Contract do
   @moduledoc """
   Saves contract indexed state for creation, calls and events.
   """
+  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
   alias AeMdw.Contract
   alias AeMdw.AexnContracts
@@ -49,6 +50,7 @@ defmodule AeMdw.Db.Sync.Contract do
 
   @spec events_mutations(
           [Contract.event()],
+          Blocks.block_hash(),
           Blocks.block_index(),
           Txs.txi(),
           Txs.tx_hash(),
@@ -56,7 +58,7 @@ defmodule AeMdw.Db.Sync.Contract do
         ) :: [
           Mutation.t()
         ]
-  def events_mutations(events, block_index, call_txi, call_tx_hash, contract_pk) do
+  def events_mutations(events, block_hash, block_index, call_txi, call_tx_hash, contract_pk) do
     events =
       Enum.filter(
         events,
@@ -67,44 +69,27 @@ defmodule AeMdw.Db.Sync.Contract do
         )
       )
 
-    shifted_events = [nil | events]
-
-    # This function relies on a property that every Chain.clone and Chain.create
-    # always have a previous Call.amount transaction which tranfers tokens
-    # from the original contract to the newly created contract.
-    {chain_events, non_chain_events} =
-      shifted_events
+    int_calls =
+      [nil | events]
       |> Enum.zip(events)
-      |> Enum.split_with(fn {_prev_event, {{:internal_call_tx, fname}, _info}} ->
-        fname in @contract_create_fnames
-      end)
-
-    chain_mutations =
-      Enum.flat_map(chain_events, fn
-        {prev_event, {{:internal_call_tx, _fname}, _info}} ->
+      |> Enum.map(fn
+        {prev_event, {{:internal_call_tx, fname}, _info}} when fname in @contract_create_fnames ->
+          # Chain.* and Call.* events don't contain the transaction in the event info, can't be indexed as an internal call
+          # so this function relies on a property that every Chain.clone and Chain.create
+          # always have a previous Call.amount transaction which tranfers tokens
+          # from the original contract to the newly created contract.
           {{:internal_call_tx, "Call.amount"}, %{info: aetx}} = prev_event
           {:spend_tx, tx} = :aetx.specialize_type(aetx)
+          sender_id = :aec_spend_tx.sender_id(tx)
           recipient_id = :aec_spend_tx.recipient_id(tx)
+          total_amount = :aec_spend_tx.amount(tx)
           {:account, contract_pk} = :aeser_id.specialize(recipient_id)
 
-          [
-            aexn_create_contract_mutation(contract_pk, block_index, call_txi),
-            ContractCreateCacheMutation.new(contract_pk, call_txi)
-            | SyncOrigin.origin_mutations(
-                :contract_call_tx,
-                nil,
-                contract_pk,
-                call_txi,
-                call_tx_hash
-              )
-          ]
-      end)
+          {fname, create_contract_create_aetx(block_hash, contract_pk, sender_id, total_amount)}
 
-    # Chain.* events don't contain the transaction in the event info, can't be indexed as an internal call
-    # Oracle.query events don't have the right nonce (it's hard-coded to 0), which generates an invalid query_id
-    int_calls =
-      non_chain_events
-      |> Enum.map(fn {_prev_event, {{:internal_call_tx, fname}, %{info: tx}}} -> {fname, tx} end)
+        {_prev_event, {{:internal_call_tx, fname}, %{info: tx}}} ->
+          {fname, tx}
+      end)
       |> Enum.with_index()
       |> Enum.map(fn {{fname, aetx}, local_idx} ->
         {tx_type, tx} = :aetx.specialize_type(aetx)
@@ -112,13 +97,10 @@ defmodule AeMdw.Db.Sync.Contract do
         {local_idx, fname, tx_type, aetx, tx}
       end)
 
-    int_calls_mutation = IntCallsMutation.new(contract_pk, call_txi, int_calls)
-
-    chain_mutations ++
-      [
-        int_calls_mutation
-        | oracle_and_name_mutations(int_calls, block_index, call_txi, call_tx_hash)
-      ]
+    [
+      IntCallsMutation.new(contract_pk, call_txi, int_calls)
+      | events_tx_mutations(int_calls, block_index, call_txi, call_tx_hash)
+    ]
   end
 
   @spec aexn_create_contract_mutation(Db.pubkey(), Blocks.block_index(), Txs.txi()) ::
@@ -152,7 +134,7 @@ defmodule AeMdw.Db.Sync.Contract do
     end
   end
 
-  defp oracle_and_name_mutations(int_calls, {height, _mbi} = block_index, call_txi, tx_hash) do
+  defp events_tx_mutations(int_calls, {height, _mbi} = block_index, call_txi, tx_hash) do
     Enum.map(int_calls, fn
       {local_idx, "Oracle.extend", :oracle_extend_tx, _aetx, tx} ->
         Oracle.extend_mutation(tx, block_index, {call_txi, local_idx})
@@ -186,8 +168,73 @@ defmodule AeMdw.Db.Sync.Contract do
       {local_idx, "Channel.settle", :channel_settle_tx, _aetx, tx} ->
         Channels.settle_mutations({block_index, {call_txi, local_idx}}, tx)
 
+      {_local_idx, fname, :contract_create_tx, _aetx, tx} when fname in @contract_create_fnames ->
+        contract_pk = :aect_create_tx.contract_pubkey(tx)
+
+        [
+          aexn_create_contract_mutation(contract_pk, block_index, call_txi),
+          ContractCreateCacheMutation.new(contract_pk, call_txi)
+          | SyncOrigin.origin_mutations(
+              :contract_call_tx,
+              nil,
+              contract_pk,
+              call_txi,
+              tx_hash
+            )
+        ]
+
       {_local_idx, _fname, _tx_type, _aetx, _tx} ->
         []
     end)
+  end
+
+  defp create_contract_create_aetx(block_hash, contract_pk, owner_id, initial_amount) do
+    {:ok, contract} = :aec_chain.get_contract(contract_pk)
+    deposit = :aect_contracts.deposit(contract)
+    abi_version = :aect_contracts.abi_version(contract)
+    vm_version = :aect_contracts.vm_version(contract)
+    code = retrieve_code(contract)
+    {_tag, owner_pk} = :aeser_id.specialize(owner_id)
+    owner_nonce = Db.nonce_at_block(block_hash, owner_pk)
+    nonce_tries = owner_nonce..(owner_nonce - 100)
+
+    nonce =
+      Enum.find(
+        nonce_tries,
+        &(:aect_contracts.compute_contract_pubkey(owner_pk, &1) == contract_pk)
+      )
+
+    unless nonce do
+      raise "nonce not found for #{Enc.encode(:contract_pubkey, contract_pk)} owner #{Enc.encode(:account_pubkey, owner_pk)}"
+    end
+
+    {:ok, contract_create_aetx} =
+      :aect_create_tx.new(%{
+        owner_id: owner_id,
+        nonce: nonce,
+        code: code,
+        vm_version: vm_version,
+        abi_version: abi_version,
+        deposit: deposit,
+        amount: initial_amount - deposit,
+        gas: 0,
+        gas_price: 0,
+        call_data: "",
+        fee: 0
+      })
+
+    contract_create_aetx
+  end
+
+  defp retrieve_code(contract) do
+    case :aect_contracts.code(contract) do
+      {:code, code} ->
+        code
+
+      {:ref, id} ->
+        {_tag, contract_pk} = :aeser_id.specialize(id)
+        {:ok, contract} = :aec_chain.get_contract(contract_pk)
+        retrieve_code(contract)
+    end
   end
 end
