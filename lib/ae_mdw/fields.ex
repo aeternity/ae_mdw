@@ -29,6 +29,9 @@ defmodule AeMdw.Fields do
     {:spend_tx, 2}
   ]
 
+  @base_wraptx_field_pos 1 <<< 10
+  @base_mdw_field_pos 1 <<< 15
+
   @spec account_fields_stream(state(), pubkey(), direction(), txi_scope(), cursor(), boolean()) ::
           Enumerable.t()
   def account_fields_stream(state, account_pk, direction, txi_scope, cursor, ownership_only?) do
@@ -61,9 +64,12 @@ defmodule AeMdw.Fields do
   end
 
   @spec field_pos_mask(Node.tx_type(), pos()) :: pos()
-  def field_pos_mask(:ga_meta_tx, pos), do: pos <<< 10
-  def field_pos_mask(:paying_for_tx, pos), do: pos <<< 10
+  def field_pos_mask(:ga_meta_tx, pos), do: pos - 1 + @base_wraptx_field_pos
+  def field_pos_mask(:paying_for_tx, pos), do: pos - 1 + @base_wraptx_field_pos
   def field_pos_mask(_tx_type, pos), do: pos
+
+  @spec mdw_field_pos(String.t()) :: pos()
+  def mdw_field_pos("entrypoint"), do: @base_mdw_field_pos
 
   defp tx_types_pos do
     Node.tx_types()

@@ -14,6 +14,7 @@ defmodule AeMdw.Txs do
   alias AeMdw.Db.Model.Type
   alias AeMdw.Db.Name
   alias AeMdw.Db.State
+  alias AeMdw.Db.Stream.Query.Parser
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
@@ -418,12 +419,16 @@ defmodule AeMdw.Txs do
     end)
   end
 
+  defp extract_transaction_by(["entrypoint"]) do
+    [{:contract_call_tx, AeMdw.Fields.mdw_field_pos("entrypoint")}]
+  end
+
   defp extract_transaction_by([field]) do
     if field in Node.id_fields() do
       field = String.to_existing_atom(field)
 
       field_types =
-        Enum.map(field_types(field), fn tx_type ->
+        Enum.map(Parser.field_types(field), fn tx_type ->
           {tx_type, Node.tx_ids(tx_type)[field]}
         end)
 
@@ -450,7 +455,7 @@ defmodule AeMdw.Txs do
         tx_type = String.to_existing_atom("#{type_prefix}_tx")
         tx_field = String.to_existing_atom(field)
 
-        if MapSet.member?(field_types(tx_field), tx_type) do
+        if MapSet.member?(Parser.field_types(tx_field), tx_type) do
           [{tx_type, Node.tx_ids(tx_type)[tx_field]}]
         else
           raise ErrInput.TxField, value: ":#{field}"
@@ -567,29 +572,6 @@ defmodule AeMdw.Txs do
       {_tx_type, _pos}, acc ->
         acc
     end)
-  end
-
-  defp field_types(field) do
-    base_types = Node.tx_field_types(field)
-
-    case field do
-      :contract_id ->
-        base_types
-        |> MapSet.put(:contract_create_tx)
-        |> MapSet.put(:ga_attach_tx)
-
-      :channel_id ->
-        MapSet.put(base_types, :channel_create_tx)
-
-      :oracle_id ->
-        MapSet.put(base_types, :oracle_register_tx)
-
-      :name_id ->
-        MapSet.put(base_types, :name_claim_tx)
-
-      _other_field ->
-        base_types
-    end
   end
 
   defp tx_count_per_field(state, tx_type, pubkey) do
