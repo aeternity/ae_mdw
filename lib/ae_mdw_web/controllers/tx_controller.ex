@@ -5,6 +5,7 @@ defmodule AeMdwWeb.TxController do
   alias AeMdw.Node
   alias AeMdw.Validate
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Stream.Query.Parser
   alias AeMdw.Txs
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
@@ -135,8 +136,10 @@ defmodule AeMdwWeb.TxController do
     end
   end
 
+  defp extract_group("entrypoint", val, group), do: {:ok, MapSet.put(group, {"entrypoint", val})}
+
   defp extract_group(key, val, group) do
-    {_is_base_id?, validator} = AeMdw.Db.Stream.Query.Parser.classify_ident(key)
+    validator = Parser.classify_ident(key)
 
     try do
       {:ok, MapSet.put(group, {key, validator.(val)})}

@@ -765,6 +765,7 @@ The types for freestanding fields are:
 - channel_id - channel_close_mutual, channel_close_solo, channel_deposit, channel_force_progress, channel_offchain, channel_settle, channel_slash, channel_snapshot_solo, channel_withdraw
 - commitment_id - name_preclaim
 - contract_id - contract_call
+- entrypoint - contract_call
 - from_id - channel_close_mutual, channel_close_solo, channel_deposit, channel_force_progress, channel_settle, channel_slash, channel_snapshot_solo
 - ga_id - ga_meta
 - initiator_id - channel_create

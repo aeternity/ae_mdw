@@ -6,6 +6,7 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.AexnContracts
   alias AeMdw.Collection
   alias AeMdw.Contract
+  alias AeMdw.Fields
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
@@ -190,7 +191,12 @@ defmodule AeMdw.Db.Contract do
         return: return
       )
 
-    State.put(state, Model.ContractCall, m_call)
+    field_pos = Fields.mdw_field_pos("entrypoint")
+    m_entrypoint_field = Model.field(index: {:contract_call_tx, field_pos, fname, txi})
+
+    state
+    |> State.put(Model.ContractCall, m_call)
+    |> State.put(Model.Field, m_entrypoint_field)
   end
 
   @spec logs_write(state(), txi(), txi(), Contract.call()) :: state()

@@ -152,6 +152,13 @@ paths:
           required: false
           schema:
             type: string
+        - name: entrypoint
+          description: Entrypoint of a contract call
+          example: put_listing
+          in: query
+          required: false
+          schema:
+            type: string
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'

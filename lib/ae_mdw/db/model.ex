@@ -146,7 +146,7 @@ defmodule AeMdw.Db.Model do
   @type type_count() :: record(:type_count, index: type_count_index(), count: non_neg_integer())
 
   # txs fields      :
-  #     index = {tx_type, tx_field_pos, object_pubkey, tx_index},
+  #     index = {tx_type, tx_field_pos, object_pubkey | binary, tx_index},
   @field_defaults [index: {nil, -1, nil, -1}, unused: nil]
   defrecord :field, @field_defaults
 

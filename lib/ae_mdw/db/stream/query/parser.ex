@@ -6,13 +6,13 @@ defmodule AeMdw.Db.Stream.Query.Parser do
 
   @type validate_func :: (String.t() -> binary())
 
-  @spec classify_ident(String.t()) :: {false, validate_func()} | {true, validate_func()}
-  def classify_ident("account"), do: {false, &Validate.id!(&1, [:account_pubkey])}
-  def classify_ident("contract"), do: {false, &Validate.id!(&1, [:contract_pubkey])}
-  def classify_ident("channel"), do: {false, &Validate.id!(&1, [:channel])}
-  def classify_ident("oracle"), do: {false, &Validate.id!(&1, [:oracle_pubkey])}
-  def classify_ident("name"), do: {false, &Validate.name_id!/1}
-  def classify_ident(_ident), do: {true, &Validate.id!/1}
+  @spec classify_ident(String.t()) :: validate_func()
+  def classify_ident("account"), do: &Validate.id!(&1, [:account_pubkey])
+  def classify_ident("contract"), do: &Validate.id!(&1, [:contract_pubkey])
+  def classify_ident("channel"), do: &Validate.id!(&1, [:channel])
+  def classify_ident("oracle"), do: &Validate.id!(&1, [:oracle_pubkey])
+  def classify_ident("name"), do: &Validate.name_id!/1
+  def classify_ident(_ident), do: &Validate.id!/1
 
   @spec parse_field(String.t()) :: map()
   def parse_field(field) do
@@ -32,9 +32,8 @@ defmodule AeMdw.Db.Stream.Query.Parser do
     end
   end
 
-  defp add_pos(acc, type, field), do: Map.put(acc, type, [AE.tx_ids(type)[field]])
-
-  defp field_types(field) do
+  @spec field_types(atom()) :: MapSet.t()
+  def field_types(field) do
     base_types = AE.tx_field_types(field)
 
     case field do
@@ -56,4 +55,6 @@ defmodule AeMdw.Db.Stream.Query.Parser do
         base_types
     end
   end
+
+  defp add_pos(acc, type, field), do: Map.put(acc, type, [AE.tx_ids(type)[field]])
 end
