@@ -101,7 +101,7 @@ jobs:
         id: plt-cache
         with:
           path: priv/plts
-          key: plts-v13-${{ hashFiles('mix.lock') }}
+          key: plts-v14-${{ hashFiles('mix.lock') }}
 
       - name: Mdw Setup
         uses: ./.github/actions/mdw-setup
