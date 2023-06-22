@@ -193,7 +193,7 @@ defmodule AeMdw.Db.Sync.Contract do
     deposit = :aect_contracts.deposit(contract)
     abi_version = :aect_contracts.abi_version(contract)
     vm_version = :aect_contracts.vm_version(contract)
-    code = retrieve_code(contract)
+    {:ok, code} = Contract.get_code(contract)
     {_tag, owner_pk} = :aeser_id.specialize(owner_id)
     owner_nonce = Db.nonce_at_block(block_hash, owner_pk)
     nonce_tries = owner_nonce..(owner_nonce - 100)
@@ -224,17 +224,5 @@ defmodule AeMdw.Db.Sync.Contract do
       })
 
     contract_create_aetx
-  end
-
-  defp retrieve_code(contract) do
-    case :aect_contracts.code(contract) do
-      {:code, code} ->
-        code
-
-      {:ref, id} ->
-        {_tag, contract_pk} = :aeser_id.specialize(id)
-        {:ok, contract} = :aec_chain.get_contract(contract_pk)
-        retrieve_code(contract)
-    end
   end
 end
