@@ -2,16 +2,14 @@ const {Universal, Node, MemoryAccount, Crypto, AeSdk, CompilerHttp, hash, encode
 const fetch = require('node-fetch')
 const fs = require('fs')
 
-const exampleSource = `
-contract Example =
-  entrypoint example(x : int) = x
-`
+const COMPILER_URL = 'https://v7.compiler.aepps.com'
 
 const factorySource = `
 contract Example =
   entrypoint example(x : int) = x
 main contract Factory =
   stateful entrypoint create() =
+    Chain.create() : Example
     Chain.create() : Example
 `
 
@@ -47,15 +45,26 @@ const main = async () => {
   const aeSdk = new AeSdk({
     nodes: [{ name: 'devnet', instance: node }],
     accounts: [account],
-    onCompiler: new CompilerHttp('https://latest.compiler.aepps.com')
+    onCompiler: new CompilerHttp(COMPILER_URL)
   });
+  const factoryContract = await aeSdk.initializeContract({ sourceCode: factorySource });
 
   // Use client here..
   await emitKb()
   const spend = await aeSdk.spend(100000, accounts[1]);
   await emitKb()
 
-  console.log(spend)
+  const contractCreate = await factoryContract.$deploy([]);
+  console.log(contractCreate)
+
+  const contract1 = contractCreate.result.contractId;
+
+  const contractCall = await factoryContract.create();
+  const contract2 = contractCall.decodedResult;
+
+  output.contracts = [contract1, contract2];
+
+  await emitKb()
 
   fs.writeFileSync('output.json', JSON.stringify(output));
 };

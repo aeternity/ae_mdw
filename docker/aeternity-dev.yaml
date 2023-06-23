@@ -7,6 +7,8 @@ http:
         port: 3013
     internal:
         port: 3113
+    endpoints:
+      dry-run: true
 
 websocket:
     channel:
