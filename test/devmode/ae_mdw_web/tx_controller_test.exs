@@ -7,6 +7,7 @@ defmodule Devmode.AeMdwWeb.TxControllerTest do
 
   setup_all do
     Watcher.start_sync()
+    Process.sleep(2_000)
   end
 
   describe "tx" do
