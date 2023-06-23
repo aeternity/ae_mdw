@@ -110,7 +110,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
           amount: 1_000 - 222,
           gas: 0,
           gas_price: 0,
-          call_data: <<>>,
+          call_data: <<43, 17, 68, 214, 68, 31, 59, 36, 2, 0>>,
           ttl: 0
         })
 
@@ -136,7 +136,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
           amount: 1_000 - 444,
           gas: 0,
           gas_price: 0,
-          call_data: <<>>,
+          call_data: <<43, 17, 68, 214, 68, 31, 59, 36, 2, 0>>,
           ttl: 0
         })
 
