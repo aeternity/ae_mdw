@@ -170,8 +170,8 @@ defmodule AeMdw.Db.Sync.ContractTest do
           call_tx_hash
         )
 
-      contract1 = :aect_contracts.new(contract_pk, nonce, %{vm: 7, abi: 3}, "code-2", 222)
-      contract2 = :aect_contracts.new(contract_pk, nonce + 1, %{vm: 7, abi: 3}, "code-4", 444)
+      contract1 = :aect_contracts.new(owner_pk, nonce, %{vm: 7, abi: 3}, "code-2", 222)
+      contract2 = :aect_contracts.new(owner_pk, nonce + 1, %{vm: 7, abi: 3}, "code-4", 444)
 
       with_mocks [
         {:aec_chain, [],
@@ -181,7 +181,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
              ^contract_pk2 -> {:ok, contract2}
            end
          ]},
-        {Db, [], [nonce_at_block: fn ^block_hash, ^owner_pk -> nonce + 1 end]},
+        {Db, [], [nonce_at_block: fn ^block_hash, ^owner_pk -> nonce end]},
         {AexnContracts, [],
          [
            is_aex9?: fn _contract_pk -> false end,
@@ -236,7 +236,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
          }}
       ]
 
-      contract = :aect_contracts.new(aex9_contract_pk, 1, %{vm: 7, abi: 3}, "code-2", 0)
+      contract = :aect_contracts.new(owner_pk, 1, %{vm: 7, abi: 3}, "code-2", 0)
 
       with_mocks [
         {AexnContracts, [],

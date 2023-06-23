@@ -80,12 +80,11 @@ defmodule AeMdw.Db.Sync.Contract do
           # from the original contract to the newly created contract.
           {{:internal_call_tx, "Call.amount"}, %{info: aetx}} = prev_event
           {:spend_tx, tx} = :aetx.specialize_type(aetx)
-          sender_id = :aec_spend_tx.sender_id(tx)
           recipient_id = :aec_spend_tx.recipient_id(tx)
           total_amount = :aec_spend_tx.amount(tx)
           {:account, contract_pk} = :aeser_id.specialize(recipient_id)
-
-          {fname, create_contract_create_aetx(block_hash, contract_pk, sender_id, total_amount)}
+          nonce_tries = length(events)
+          {fname, create_contract_create_aetx(block_hash, contract_pk, total_amount, nonce_tries)}
 
         {_prev_event, {{:internal_call_tx, fname}, %{info: tx}}} ->
           {fname, tx}
@@ -188,15 +187,16 @@ defmodule AeMdw.Db.Sync.Contract do
     end)
   end
 
-  defp create_contract_create_aetx(block_hash, contract_pk, owner_id, initial_amount) do
+  defp create_contract_create_aetx(block_hash, contract_pk, initial_amount, nonce_tries) do
     {:ok, contract} = :aec_chain.get_contract(contract_pk)
+    owner_id = :aect_contracts.owner_id(contract)
     deposit = :aect_contracts.deposit(contract)
     abi_version = :aect_contracts.abi_version(contract)
     vm_version = :aect_contracts.vm_version(contract)
     {:ok, code} = Contract.get_code(contract)
     {_tag, owner_pk} = :aeser_id.specialize(owner_id)
     owner_nonce = Db.nonce_at_block(block_hash, owner_pk)
-    nonce_tries = owner_nonce..(owner_nonce - 100)
+    nonce_tries = owner_nonce..(owner_nonce + nonce_tries)
 
     nonce =
       Enum.find(
@@ -219,7 +219,7 @@ defmodule AeMdw.Db.Sync.Contract do
         amount: initial_amount - deposit,
         gas: 0,
         gas_price: 0,
-        call_data: "",
+        call_data: <<43, 17, 68, 214, 68, 31, 59, 36, 2, 0>>,
         fee: 0
       })
 
