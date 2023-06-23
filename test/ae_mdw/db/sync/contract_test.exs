@@ -13,14 +13,14 @@ defmodule AeMdw.Db.Sync.ContractTest do
   alias AeMdw.Db.OracleExtendMutation
   alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.WriteMutation
-  alias AeMdw.Validate
+  alias AeMdw.Node.Db
 
   import AeMdw.Node.ContractEventsFixtures
   import Mock
 
   require Model
 
-  describe "events_mutations/4" do
+  describe "events_mutations/5" do
     test "it creates an internal call for each event that's not Chain.create/clone" do
       call_txi = 3
 
@@ -66,7 +66,9 @@ defmodule AeMdw.Db.Sync.ContractTest do
       ]
 
       mutation = IntCallsMutation.new(contract_pk, call_txi, int_calls)
-      mutations = SyncContract.events_mutations(events, {0, 0}, call_txi, <<>>, contract_pk)
+
+      mutations =
+        SyncContract.events_mutations(events, <<0::256>>, {0, 0}, call_txi, <<>>, contract_pk)
 
       assert mutation in List.flatten(mutations)
     end
@@ -74,44 +76,87 @@ defmodule AeMdw.Db.Sync.ContractTest do
     test "it creates an Field record for each Chain.create/clone event, using the next Call.amount event" do
       call_txi = Enum.random(100_000..999_999)
       call_tx_hash = :crypto.strong_rand_bytes(32)
+      block_hash = <<0::256>>
+      owner_pk = <<2::256>>
+      owner_id = :aeser_id.create(:account, owner_pk)
+      nonce = 2
 
       contract_pk =
         <<44, 102, 253, 22, 212, 89, 216, 54, 106, 220, 2, 78, 65, 149, 128, 184, 42, 187, 24,
           251, 165, 15, 161, 139, 112, 108, 233, 167, 103, 44, 158, 24>>
 
+      contract_pk1 = :aect_contracts.compute_contract_pubkey(owner_pk, nonce)
+      contract_pk2 = :aect_contracts.compute_contract_pubkey(owner_pk, nonce + 1)
+
       {:ok, tx_1} =
         :aec_spend_tx.new(%{
-          sender_id: :aeser_id.create(:account, <<1::256>>),
-          recipient_id: :aeser_id.create(:account, contract_pk),
-          amount: 123,
+          sender_id: :aeser_id.create(:account, owner_pk),
+          recipient_id: :aeser_id.create(:account, contract_pk1),
+          amount: 1_000,
           fee: 456,
           nonce: 1,
           payload: <<>>
         })
 
       {:ok, tx_2} =
+        :aect_create_tx.new(%{
+          owner_id: owner_id,
+          nonce: nonce,
+          code: "code-2",
+          vm_version: 7,
+          abi_version: 3,
+          fee: 0,
+          deposit: 222,
+          amount: 1_000 - 222,
+          gas: 0,
+          gas_price: 0,
+          call_data: <<43, 17, 68, 214, 68, 31, 59, 36, 2, 0>>,
+          ttl: 0
+        })
+
+      {:ok, tx_3} =
         :aec_spend_tx.new(%{
-          sender_id: :aeser_id.create(:account, <<2::256>>),
-          recipient_id: :aeser_id.create(:account, contract_pk),
-          amount: 123,
+          sender_id: :aeser_id.create(:account, owner_pk),
+          recipient_id: :aeser_id.create(:account, contract_pk2),
+          amount: 1_000,
           fee: 456,
           nonce: 2,
           payload: <<>>
         })
 
+      {:ok, tx_4} =
+        :aect_create_tx.new(%{
+          owner_id: owner_id,
+          nonce: nonce + 1,
+          code: "code-4",
+          vm_version: 7,
+          abi_version: 3,
+          fee: 0,
+          deposit: 444,
+          amount: 1_000 - 444,
+          gas: 0,
+          gas_price: 0,
+          call_data: <<43, 17, 68, 214, 68, 31, 59, 36, 2, 0>>,
+          ttl: 0
+        })
+
       events = [
         {{:internal_call_tx, "Call.amount"}, %{info: tx_1}},
         {{:internal_call_tx, "Chain.create"}, %{info: :error}},
-        {{:internal_call_tx, "Call.amount"}, %{info: tx_2}},
+        {{:internal_call_tx, "Call.amount"}, %{info: tx_3}},
         {{:internal_call_tx, "Chain.clone"}, %{info: :error}}
       ]
 
       {tx_type1, tx_rec1} = :aetx.specialize_type(tx_1)
       {tx_type2, tx_rec2} = :aetx.specialize_type(tx_2)
+      {tx_type3, tx_rec3} = :aetx.specialize_type(tx_3)
+      {tx_type4, tx_rec4} = :aetx.specialize_type(tx_4)
 
       int_calls = [
         {0, "Call.amount", tx_type1, tx_1, tx_rec1},
-        {1, "Call.amount", tx_type2, tx_2, tx_rec2}
+        {1, "Chain.create", tx_type2, tx_2, tx_rec2},
+        {2, "Call.amount", tx_type3, tx_3, tx_rec3},
+        {3, "Chain.clone", tx_type4, tx_4, tx_rec4}
       ]
 
       mutation = IntCallsMutation.new(contract_pk, call_txi, int_calls)
@@ -120,31 +165,62 @@ defmodule AeMdw.Db.Sync.ContractTest do
         SyncOrigin.origin_mutations(
           :contract_call_tx,
           nil,
-          contract_pk,
+          contract_pk1,
           call_txi,
           call_tx_hash
         )
 
-      mutations =
-        SyncContract.events_mutations(events, {0, 0}, call_txi, call_tx_hash, contract_pk)
+      contract1 = :aect_contracts.new(owner_pk, nonce, %{vm: 7, abi: 3}, "code-2", 222)
+      contract2 = :aect_contracts.new(owner_pk, nonce + 1, %{vm: 7, abi: 3}, "code-4", 444)
 
-      assert mutation in List.flatten(mutations)
-      assert Enum.all?(contract_mutations, &(&1 in mutations))
+      with_mocks [
+        {:aec_chain, [],
+         [
+           get_contract: fn
+             ^contract_pk1 -> {:ok, contract1}
+             ^contract_pk2 -> {:ok, contract2}
+           end
+         ]},
+        {Db, [], [nonce_at_block: fn ^block_hash, ^owner_pk -> nonce end]},
+        {AexnContracts, [],
+         [
+           is_aex9?: fn _contract_pk -> false end,
+           has_aex141_signatures?: fn _height, _contract_pk -> false end
+         ]}
+      ] do
+        mutations =
+          events
+          |> SyncContract.events_mutations(
+            block_hash,
+            {0, 0},
+            call_txi,
+            call_tx_hash,
+            contract_pk
+          )
+          |> List.flatten()
+
+        assert mutation in mutations
+        assert Enum.all?(contract_mutations, &(&1 in mutations))
+      end
     end
 
     test "create aex9 contract with Chain.clone" do
-      aex9_contract_pk = Validate.id!("ct_2n7xLuQPWWw8Yj8yXPyrhZz3nucu2Cpjg7FxnoTmuVTgGAsUbJ")
+      block_hash = <<0::256>>
+
+      owner_pk =
+        <<119, 188, 109, 120, 250, 56, 247, 180, 131, 241, 75, 129, 38, 118, 119, 224, 142, 113,
+          227, 78, 233, 147, 100, 188, 163, 26, 145, 253, 121, 183, 62, 80>>
+
+      nonce = 2
+      aex9_contract_pk = :aect_contracts.compute_contract_pubkey(owner_pk, nonce)
 
       tx_events = [
         {{:internal_call_tx, "Call.amount"},
          %{
            info:
              {:aetx, :spend_tx, :aec_spend_tx, 88,
-              {:spend_tx,
-               {:id, :account,
-                <<119, 188, 109, 120, 250, 56, 247, 180, 131, 241, 75, 129, 38, 118, 119, 224,
-                  142, 113, 227, 78, 233, 147, 100, 188, 163, 26, 145, 253, 121, 183, 62, 80>>},
-               {:id, :account, aex9_contract_pk}, 0, 0, 0, 0, "Call.amount"}},
+              {:spend_tx, {:id, :account, owner_pk}, {:id, :account, aex9_contract_pk}, 0, 0, 0,
+               0, "Call.amount"}},
            tx_hash:
              <<50, 175, 183, 105, 50, 158, 138, 149, 125, 12, 47, 89, 117, 207, 2, 97, 50, 90,
                155, 225, 217, 103, 11, 202, 211, 247, 57, 189, 103, 224, 171, 230>>,
@@ -160,6 +236,8 @@ defmodule AeMdw.Db.Sync.ContractTest do
          }}
       ]
 
+      contract = :aect_contracts.new(owner_pk, 1, %{vm: 7, abi: 3}, "code-2", 0)
+
       with_mocks [
         {AexnContracts, [],
          [
@@ -169,11 +247,14 @@ defmodule AeMdw.Db.Sync.ContractTest do
                do: {:ok, {"TestAEX9-A vs Wrapped Aeternity", "TAEX9-A/WAE", 18}}
            end,
            call_extensions: fn _type, _pk -> {:ok, []} end
-         ]}
+         ]},
+        {Db, [], [nonce_at_block: fn ^block_hash, ^owner_pk -> nonce end]},
+        {:aec_chain, [], [get_contract: fn ^aex9_contract_pk -> {:ok, contract} end]}
       ] do
         mutations =
           SyncContract.events_mutations(
             tx_events,
+            block_hash,
             {554_178, 13},
             25_866_736,
             <<2::256>>,
@@ -196,7 +277,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
       event_mutations =
         "AENS.transfer"
         |> contract_events()
-        |> SyncContract.events_mutations(block_index, call_txi, <<>>, -1)
+        |> SyncContract.events_mutations(<<0::256>>, block_index, call_txi, <<>>, -1)
         |> List.flatten()
 
       assert Enum.any?(event_mutations, fn
@@ -218,7 +299,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
       event_mutations =
         "AENS.update"
         |> contract_events()
-        |> SyncContract.events_mutations(block_index, call_txi, <<>>, -1)
+        |> SyncContract.events_mutations(<<0::256>>, block_index, call_txi, <<>>, -1)
         |> List.flatten()
 
       assert Enum.any?(event_mutations, fn
@@ -262,6 +343,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
       mutations =
         [{{:internal_call_tx, "Oracle.register"}, %{info: aetx}}]
         |> SyncContract.events_mutations(
+          <<0::256>>,
           {sync_height, 0},
           call_txi,
           call_tx_hash,
@@ -320,6 +402,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
       mutations =
         [{{:internal_call_tx, "Oracle.extend"}, %{info: aetx}}]
         |> SyncContract.events_mutations(
+          <<0::256>>,
           block_index,
           call_txi,
           call_tx_hash,

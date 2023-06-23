@@ -50,6 +50,8 @@ defmodule AeMdw.Contract do
         }
   @type fun_arg_res_or_error :: fun_arg_res() | {:error, any()}
   @type local_idx :: non_neg_integer()
+  @type code() :: binary()
+  @opaque aecontract() :: tuple()
   @typep pubkey :: DBN.pubkey()
   @typep tx :: Node.tx()
   @typep signed_tx :: Node.signed_tx()
@@ -159,20 +161,18 @@ defmodule AeMdw.Contract do
   def function_hash(name),
     do: :binary.part(:aec_hash.blake2b_256_hash(name), 0, 4)
 
-  ##########
-
-  defp get_code(contract) do
+  @spec get_code(aecontract()) :: {:ok, code()} | {:error, term()}
+  def get_code(contract) do
     case :aect_contracts.code(contract) do
-      {:code, ser_code} ->
-        {:ok, ser_code}
+      {:code, code} ->
+        {:ok, code}
 
-      {:ref, {:id, :contract, pubkey}} ->
-        case :aec_chain.get_contract(pubkey) do
-          {:ok, contract} ->
-            get_code(contract)
+      {:ref, id} ->
+        {_tag, contract_pk} = :aeser_id.specialize(id)
 
-          error ->
-            error
+        case :aec_chain.get_contract(contract_pk) do
+          {:ok, contract} -> get_code(contract)
+          {:error, reason} -> {:error, reason}
         end
     end
   end
