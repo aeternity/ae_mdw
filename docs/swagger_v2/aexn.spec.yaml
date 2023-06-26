@@ -143,6 +143,10 @@ schemas:
   Aex9Response:
     description: Response Schema for AEX9 contract
     example:
+      contract_id: ct_2TZsPKT5wyahqFrzp8YX7DfXQapQ4Qk65yn3sHbifU9Db9hoav
+      contract_txi: 12361891
+      initial_supply: 1e+28
+      event_supply: 0
       decimals: 18
       extensions: [
         mintable,
@@ -153,6 +157,18 @@ schemas:
       symbol: TTAE
       txi: 11145713
     properties:
+      contract_id:
+        description: Id of the contract of the AEX9 tokens
+        type: string
+      contract_txi:
+        description: Index of transaction that created the contract
+        type: integer
+      initial_supply:
+        description: Token supply right after contract's creation
+        type: integer
+      event_supply:
+        description: Token supply updated on event basis (Mint, Burn, Swap)
+        type: integer
       decimals:
         description: The number of decimals for AEX9 token
         type: integer
@@ -165,19 +181,20 @@ schemas:
         description: Count of accounts having balance (nil when contract is not complaint)
         type: integer
       name:
-        description: The name of AEX9 token
+        description: Name of AEX9 token
         type: string
       symbol:
-        description: The symbol of AEX9 token
+        description: Symbol of AEX9 token
         type: string
-      txi:
-        description: The transaction index of contract create transction
-        type: integer
     required:
+      - contract_id
+      - contract_txi
       - decimals
       - symbol
       - name
-      - txi
+      - holders
+      - initial_supply
+      - event_supply
     title: Aex9Response
     type: object
   Aex9TransferResponse:
@@ -230,31 +247,58 @@ schemas:
   Aex9BalanceResponse:
     description: Response Schema for AEX9 balance responses
     example:
-      account_id: ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48
       amount: 4.999999999990685e+25
+      decimals: 18
       block_hash: kh_2QevaXY7ULF5kTLsddwMzzZmBYWPgfaQbg2Y8maZDLKJaPhwDJ
       contract_id: ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA
       height: 351666
+      token_name: BBA
+      token_symbol: BBA
+      tx_hash: th_27V4UmRhyeSuPEDieXVuAdE3v42dDnLzPY6uism1bFhHCPfWKv
+      tx_index: 10848881
+      tx_type: contract_create_tx
     properties:
-      account_id:
-        description: The account present on a AEX9
-        type: string
       amount:
-        description: The amount of AEX9 token
+        description: Amount of AEX9 token
         type: integer
       block_hash:
-        description: The block hash, indicating a state of a balance for that block
+        description: Block hash, indicating a state of a balance for that block
         type: integer
       contract_id:
-        description: The contract id of given token
-        type: integer
+        description: Contract id of AEX9 token
+        type: string
+      decimals:
+        description: Number of decimals of AEX9 token
+        type: integer  
       height:
-        description: The block height, indicating a state of a balance for that block height
+        description: Block height, indicating a state of a balance for that block height
         type: integer
+      token_name:
+        description: Name of AEX9 token
+        type: string
+      token_symbol:
+        description: Symbol of AEX9 token
+        type: string
+      tx_hash:
+        description: Transaction hash, indicating a state of a balance for that block height
+        type: string
+      tx_index:
+        description: Transaction index, indicating a state of a balance for that block height
+        type: integer
+      tx_type:
+        description: Transaction type, indicating a state of a balance for that block height
+        type: string    
     required:
-      - account_id
-      - contract_id
+      - amount
       - block_hash
+      - contract_id
+      - decimals
+      - height
+      - token_name
+      - token_symbol
+      - tx_hash
+      - tx_index
+      - tx_type
     title: Response for AEX-9 account balance
     type: object
   Aex9ContractBalanceResponse:
@@ -721,7 +765,18 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Aex9BalanceResponse"
+                allOf:
+                  - type: object
+                    properties:
+                      account:
+                        description: The account present on a AEX9
+                        type: string
+                      amount:
+                        description: The amount of AEX9 token
+                        type: integer
+                      contract:
+                        description: The contract id of given token
+                        type: string
         '400':
           description: Bad request
           content:
@@ -745,10 +800,14 @@ paths:
           description: Returns all the balances of an account
           content:
             application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Aex9BalanceResponse"
+              allOf:
+                - $ref: '#/components/schemas/PaginatedResponse'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Aex9BalanceResponse'
         '400':
           description: Bad request
           content:
@@ -893,11 +952,18 @@ paths:
                 allOf:
                   - type: object
                     properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/Aex9BalanceResponse'
-                  - $ref: '#/components/schemas/PaginatedResponse'
+                      account:
+                        description: The account present on a AEX9
+                        type: string
+                      amount:
+                        description: The amount of AEX9 token
+                        type: integer
+                      contract:
+                        description: The contract id of given token
+                        type: string
+                      height:
+                        description: The block height, indicating a state of a balance for that block height
+                        type: integer
         '400':
           description: Bad request
           content:
