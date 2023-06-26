@@ -258,6 +258,9 @@ defmodule AeMdw.Node.Db do
     end
   end
 
+  @spec get_block(Blocks.block_hash()) :: key_block() | micro_block()
+  def get_block(block_hash), do: :aec_db.get_block(block_hash)
+
   defp block_accounts_tree(mb_hash) do
     {:value, micro_block} = :aec_db.find_block(mb_hash)
     header = :aec_blocks.to_header(micro_block)

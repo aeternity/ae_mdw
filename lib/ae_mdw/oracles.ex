@@ -174,9 +174,12 @@ defmodule AeMdw.Oracles do
     {query_tx, :oracle_query_tx, tx_hash, tx_type, block_hash} =
       DBUtil.read_node_tx_details(state, txi_idx)
 
+    block_time = block_hash |> Db.get_block() |> :aec_blocks.time_in_msecs()
+
     query =
       %{
         block_hash: Enc.encode(:micro_block_hash, block_hash),
+        block_time: block_time,
         source_tx_hash: Enc.encode(:tx_hash, tx_hash),
         source_tx_type: Format.type_to_swagger_name(tx_type),
         query_id: Enc.encode(:oracle_query_id, query_id)
@@ -201,8 +204,11 @@ defmodule AeMdw.Oracles do
     query_id = :aeo_response_tx.query_id(response_tx)
     oracle_pk = :aeo_response_tx.oracle_pubkey(response_tx)
 
+    block_time = block_hash |> Db.get_block() |> :aec_blocks.time_in_msecs()
+
     %{
       block_hash: Enc.encode(:micro_block_hash, block_hash),
+      block_time: block_time,
       source_tx_hash: Enc.encode(:tx_hash, tx_hash),
       source_tx_type: Format.type_to_swagger_name(tx_type),
       query_id: Enc.encode(:oracle_query_id, query_id),

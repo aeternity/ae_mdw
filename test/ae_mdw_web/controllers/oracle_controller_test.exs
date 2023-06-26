@@ -431,7 +431,9 @@ defmodule AeMdwWeb.OracleControllerTest do
              _state, ^txi_idx3 ->
                {oracle_query_tx3, :oracle_query_tx, tx_hash3, :oracle_query_tx, block_hash}
            end
-         ]}
+         ]},
+        {:aec_db, [], [get_block: fn _block_hash -> :block end]},
+        {:aec_blocks, [], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => [oracle1, oracle2], "next" => next_url} =
                  conn
@@ -447,7 +449,8 @@ defmodule AeMdwWeb.OracleControllerTest do
                  "sender_id" => ^encoded_account_id1,
                  "source_tx_type" => "OracleQueryTx",
                  "query" => "cXVlcnktMQ",
-                 "fee" => 11_111
+                 "fee" => 11_111,
+                 "block_time" => 123
                } = oracle1
 
         assert %{
@@ -458,7 +461,8 @@ defmodule AeMdwWeb.OracleControllerTest do
                  "sender_id" => ^encoded_account_id2,
                  "source_tx_type" => "ContractCallTx",
                  "query" => "cXVlcnktMg",
-                 "fee" => 22_222
+                 "fee" => 22_222,
+                 "block_time" => 123
                } = oracle2
 
         assert %{"data" => [oracle3], "next" => nil} =
@@ -674,7 +678,9 @@ defmodule AeMdwWeb.OracleControllerTest do
                {oracle_response_tx3, :oracle_response_tx, tx_hash6, :oracle_response_tx,
                 block_hash2}
            end
-         ]}
+         ]},
+        {:aec_db, [], [get_block: fn _key_hash -> :block end]},
+        {:aec_blocks, [], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => [response1, response2], "next" => next_url} =
                  conn
@@ -688,6 +694,7 @@ defmodule AeMdwWeb.OracleControllerTest do
         assert %{
                  "oracle_id" => ^encoded_oracle_pk,
                  "response" => "cmVzcG9uc2UtMQ",
+                 "block_time" => 123,
                  "query" => %{
                    "oracle_id" => ^encoded_oracle_pk,
                    "query_id" => ^encoded_query_id1,
@@ -703,6 +710,7 @@ defmodule AeMdwWeb.OracleControllerTest do
         assert %{
                  "oracle_id" => ^encoded_oracle_pk,
                  "response" => "cmVzcG9uc2UtMg",
+                 "block_time" => 123,
                  "query" => %{
                    "oracle_id" => ^encoded_oracle_pk,
                    "query_id" => ^encoded_query_id2,
