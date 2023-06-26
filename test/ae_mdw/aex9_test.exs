@@ -107,6 +107,7 @@ defmodule AeMdw.Aex9Test do
                     contract_id: encode_contract(contract_pk),
                     amount: amount,
                     block_hash: encode(:micro_block_hash, <<111::256>>),
+                    decimals: 18,
                     height: 11,
                     token_name: "name",
                     token_symbol: "symbol",

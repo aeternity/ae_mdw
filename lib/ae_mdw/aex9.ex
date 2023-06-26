@@ -160,12 +160,12 @@ defmodule AeMdw.Aex9 do
         (&Collection.stream(state, Model.Aex9AccountPresence, &1, scope, cursor))
         |> Collection.paginate(pagination)
 
-      account_presences =
+      account_balances =
         Enum.map(account_presence_keys, fn {^account_pk, contract_pk} ->
           {:ok, {amount, _height_hash}} =
             Db.aex9_balance(contract_pk, account_pk, type_height_hash)
 
-          Model.aexn_contract(txi: create_txi, meta_info: {name, symbol, _dec}) =
+          Model.aexn_contract(txi: create_txi, meta_info: {name, symbol, dec}) =
             State.fetch!(state, Model.AexnContract, {:aex9, contract_pk})
 
           Model.aex9_account_presence(txi: call_txi) =
@@ -186,12 +186,13 @@ defmodule AeMdw.Aex9 do
             tx_type: tx_type,
             height: height,
             amount: amount,
+            decimals: dec,
             token_symbol: symbol,
             token_name: name
           }
         end)
 
-      {:ok, serialize_account_balance_cursor(prev_cursor), account_presences,
+      {:ok, serialize_account_balance_cursor(prev_cursor), account_balances,
        serialize_account_balance_cursor(next_cursor)}
     end
   end

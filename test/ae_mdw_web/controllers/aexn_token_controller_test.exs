@@ -154,8 +154,28 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
         |> Store.put(Model.Aex9BalanceAccount, m_balance)
       end)
 
+    account_pk = :crypto.strong_rand_bytes(32)
+
+    store =
+      Enum.reduce(200..230, store, fn i, store ->
+        txi = 1_000_000 + i
+
+        m_presence =
+          Model.aex9_account_presence(
+            index: {account_pk, <<i::256>>},
+            txi: txi
+          )
+
+        store
+        |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>, block_index: {100_001, 1}))
+        |> Store.put(Model.Aex9AccountPresence, m_presence)
+      end)
+
     {:ok,
-     conn: with_store(build_conn(), store), contract_pk: contract_pk, contract_pk2: contract_pk2}
+     conn: with_store(build_conn(), store),
+     account_pk: account_pk,
+     contract_pk: contract_pk,
+     contract_pk2: contract_pk2}
   end
 
   describe "aex9_count" do
@@ -854,6 +874,74 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       assert %{"error" => ^error_msg} =
                conn
                |> get("/v2/aex9/#{contract_id}/balances/#{account_id}")
+               |> json_response(400)
+    end
+  end
+
+  describe "aex9_account_balances" do
+    test "gets account balance of multiple contracts", %{conn: conn, account_pk: account_pk} do
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           aex9_balance: fn <<contract_pk::256>>, ^account_pk, _type_hash ->
+             amount = contract_pk
+             {:ok, {amount, <<1::256>>}}
+           end
+         ]}
+      ] do
+        account_id = encode_account(account_pk)
+
+        assert %{"data" => balances, "next" => next} =
+                 conn
+                 |> get("/v2/aex9/account-balances/#{account_id}")
+                 |> json_response(200)
+
+        assert Enum.all?(Enum.with_index(balances), fn {balance, i} ->
+                 %{
+                   "amount" => amount,
+                   "contract_id" => contract_id,
+                   "decimals" => decimals,
+                   "block_hash" => block_hash,
+                   "height" => height,
+                   "token_name" => token_name,
+                   "token_symbol" => token_symbol,
+                   "tx_hash" => tx_hash,
+                   "tx_index" => tx_index,
+                   "tx_type" => "contract_call_tx"
+                 } = balance
+
+                 id = 230 - i
+
+                 if id < 225, do: assert(token_symbol == "SAEX9#{id}")
+
+                 Validate.id!(contract_id) == <<id::256>> and
+                   Validate.id!(block_hash) == <<height::256>> and height in [100_001, 100_002] and
+                   Validate.id!(tx_hash) == <<1_000_000 + id::256>> and
+                   token_name == "some-AEX9-#{id}" and
+                   tx_index == 1_000_000 + id and decimals == id and amount == id
+               end)
+
+        assert @default_limit = length(balances)
+        assert Enum.sort_by(balances, & &1["contract_id"], :desc) == balances
+
+        assert %{"data" => next_balances, "prev" => prev} =
+                 conn |> get(next) |> json_response(200)
+
+        assert @default_limit = length(next_balances)
+        assert List.last(balances)["contract_id"] > List.first(next_balances)["contract_id"]
+
+        assert %{"data" => ^balances} = conn |> get(prev) |> json_response(200)
+      end
+    end
+
+    test "returns error for invalid account id", %{conn: conn} do
+      account_id = "ak_invalid_id"
+
+      error_msg = "invalid id: #{account_id}"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> get("/v2/aex9/account-balances/#{account_id}")
                |> json_response(400)
     end
   end
