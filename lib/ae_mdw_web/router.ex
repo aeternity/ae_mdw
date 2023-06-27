@@ -121,8 +121,7 @@ defmodule AeMdwWeb.Router do
       get "/minerstats", StatsController, :miners
       get "/wealth", WealthController, :wealth
 
-      get "/api", UtilController, :static_file,
-        assigns: %{filepath: "static/swagger/swagger_v2.yaml"}
+      get "/api", UtilController, :static_file, assigns: %{filepath: "static/swagger/swagger_v2"}
 
       scope "/swagger" do
         get "/", SwaggerForward, :index_v2
@@ -215,8 +214,7 @@ defmodule AeMdwWeb.Router do
       end
     end
 
-    get "/api", UtilController, :static_file,
-      assigns: %{filepath: "static/swagger/swagger_v1.yaml"}
+    get "/api", UtilController, :static_file, assigns: %{filepath: "static/swagger/swagger_v1"}
 
     match :*, "/*path", UtilController, :no_route
   end
