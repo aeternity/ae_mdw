@@ -1,6 +1,7 @@
 defmodule AeMdw.MixProject do
   use Mix.Project
 
+  @spec project() :: Keyword.t()
   def project() do
     [
       app: :ae_mdw,
@@ -116,6 +117,7 @@ defmodule AeMdw.MixProject do
   # Configuration for the OTP application.
   #
   # Type `mix help compile.app` for more information.
+  @spec application() :: Keyword.t()
   def application() do
     [
       mod: {AeMdw.Application, []},
@@ -126,7 +128,7 @@ defmodule AeMdw.MixProject do
 
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_), do: ["lib", "priv/migrations"]
+  defp elixirc_paths(_env), do: ["lib", "priv/migrations"]
 
   # Specifies your project dependencies.
   defp deps() do

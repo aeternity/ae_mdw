@@ -30,7 +30,8 @@
           "apps/*/src/",
           "apps/*/test/",
           "apps/*/web/",
-          "priv/migrations/"
+          "priv/migrations/",
+          "mix.exs"
         ],
         excluded: [~r"/_build/", ~r"/deps/", ~r"/node_modules/"]
       },
