@@ -6,6 +6,7 @@ defmodule AeMdwWeb.UtilController do
 
   alias AeMdw.Db.Status
   alias AeMdw.Error.Input
+  alias AeMdwWeb.Util
   alias Plug.Conn
 
   @spec status(Conn.t(), map()) :: Conn.t()
@@ -14,12 +15,20 @@ defmodule AeMdwWeb.UtilController do
 
   @spec no_route(Conn.t(), map()) :: Conn.t()
   def no_route(conn, _params),
-    do: AeMdwWeb.Util.send_error(conn, Input.NotFound, "no such route")
+    do: Util.send_error(conn, Input.NotFound, "no such route")
 
   @spec static_file(Conn.t(), map()) :: Conn.t()
-  def static_file(%Conn{assigns: %{filepath: filepath}} = conn, _params) do
-    filepath = Path.join(:code.priv_dir(:ae_mdw), filepath)
+  def static_file(
+        %Conn{assigns: %{filepath: filepath}, query_params: query_params} = conn,
+        _params
+      ) do
+    format = Map.get(query_params, "format", "yaml")
+    filepath = Path.join(:code.priv_dir(:ae_mdw), "#{filepath}.#{format}")
 
-    send_file(conn, 200, filepath)
+    if File.exists?(filepath) do
+      send_file(conn, 200, filepath)
+    else
+      Util.send_error(conn, Input.NotFound, "no such route")
+    end
   end
 end

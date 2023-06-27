@@ -2,20 +2,22 @@
 
 import yaml
 import os
+import json
 from glob import glob
 from pathlib import Path
 
 SWAGGER_DOCS_DIR = 'docs/swagger_v2/'
 MDW_VERSION_FILE = 'AEMDW_VERSION'
+SWAGGER_OUTPUT_DIR = 'priv/static/swagger'
 
 # Read YAML file
 schemas = {}
 paths = {}
-base_yaml = None
+swagger = None
 mdw_version = None
 
 with open(os.path.join(SWAGGER_DOCS_DIR, 'base.yaml')) as base_stream:
-    base_yaml = yaml.safe_load(base_stream)
+    swagger = yaml.safe_load(base_stream)
 
 with open(MDW_VERSION_FILE) as mdw_version_file:
     mdw_version = mdw_version_file.read().strip()
@@ -26,9 +28,12 @@ for filepath in Path(SWAGGER_DOCS_DIR).glob("*.spec.yaml"):
         schemas = {**schemas, **data_loaded['schemas']}
         paths = {**paths, **data_loaded['paths']}
 
-base_yaml['paths'] = paths
-base_yaml['components']['schemas'] = {**base_yaml['components']['schemas'], **schemas}
-base_yaml['info']['version'] = mdw_version
+swagger['paths'] = paths
+swagger['components']['schemas'] = {**swagger['components']['schemas'], **schemas}
+swagger['info']['version'] = mdw_version
 
-# Output YAML
-print(yaml.dump(base_yaml, default_flow_style=False, allow_unicode=True))
+with open(os.path.join(SWAGGER_OUTPUT_DIR, "swagger_v2.yaml"), 'w') as yamlfile:
+  yamlfile.write(yaml.dump(swagger, default_flow_style=False, allow_unicode=True))
+
+with open(os.path.join(SWAGGER_OUTPUT_DIR, "swagger_v2.json"), 'w') as jsonfile:
+  json.dump(swagger, jsonfile, indent=2)
