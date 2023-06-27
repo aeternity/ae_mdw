@@ -608,8 +608,10 @@ paths:
       responses:
         '200':
           description: Returns AEX-9 information by contract id
-          schema:
-            $ref: '#/components/schemas/Aex9Response'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Aex9Response'
         '400':
           description: Bad request
           content:
