@@ -73,3 +73,6 @@ components:
           type: string
           example: '/blocks?cursor=234'
           nullable: true
+      required:
+        - next
+        - prev
