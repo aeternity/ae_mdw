@@ -13,10 +13,7 @@ defmodule Devmode.AeMdwWeb.ContractControllerTest do
 
   describe "calls" do
     test "it gets a contract's calls", %{conn: conn} do
-      %{
-        "accounts" => [sender_address, recipient_address | _rest],
-        "contracts" => [contract1, contract2 | _rest2]
-      } = DevmodeHelpers.output()
+      %{"contracts" => [contract1 | _rest2]} = DevmodeHelpers.output()
 
       assert %{"data" => [amount_call, chain_create_call | _rest]} =
                conn
