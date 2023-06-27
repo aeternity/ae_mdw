@@ -6,13 +6,13 @@ schemas:
         type: object
         properties:
           long_tasks:
-            type: number
+            type: integer
             example: 1
           producer_buffer:
-            type: number
+            type: integer
             example: 2
           total_pending:
-            type: number
+            type: integer
             example: 3
         required:
           - long_tasks
@@ -24,11 +24,11 @@ schemas:
         example: 54.75
       mdw_height:
         description: The top generation up to which the middleware was synced
-        type: number
+        type: integer
         example: 564291
       mdw_last_migration:
         description: The last middleware migration ran
-        type: number
+        type: integer
         example: 20230519120000
       mdw_revision:
         description: The middleware's git revision of the latest commit applied
@@ -52,12 +52,12 @@ schemas:
         example: 1.49.0
       node_height:
         description: The node generation of the last block synced
-        type: number
+        type: integer
         example: 391040
       node_progress:
         description: The percentage of generations synced on the node
         type: number
-        example: "98.67"
+        example: 98.67
       node_revision:
         description: The node's git revision of the latest commit applied
         type: string
