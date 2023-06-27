@@ -63,6 +63,7 @@ schemas:
         example: "th_2FciwUNyT7WRGee35KnNMhuoLFSCyiquVLFP3kATjwrFJh4Cfh"
   NameClaimEvent:
     description: Name claim
+    type: object
     properties:
       tx_hash:
         description: The hash of the transaction (either a name claim or a contract call transaction)
