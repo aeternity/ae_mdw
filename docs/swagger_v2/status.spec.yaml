@@ -42,6 +42,10 @@ schemas:
         description: true if middleware is syncing (i.e. it didn't stop due to an error)
         type: boolean
         example: true
+      mdw_tx_index:
+        description: index of the latest synced transaction
+        type: integer
+        example: 45208121
       mdw_version:
         description: The middleware's version
         type: string
