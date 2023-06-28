@@ -13,23 +13,27 @@ defmodule AeMdw.BlocksTest do
 
   describe "blocks_mutations/4" do
     test "returns the mutations for a generation with many transactions" do
+      # credo:disable-for-next-line
       accounts = Map.new(0..100, fn i -> {String.to_atom("user#{i}"), 100_000_000} end)
 
       first_microblock = {
         :mb0,
         List.flatten(
           Enum.map(1..30, fn i ->
+            # credo:disable-for-next-line
             tx_tag = String.to_atom("tx#{i}")
             user = String.to_existing_atom("user#{i}")
             name = "name#{i}.chain"
             {tx_tag, name_tx(:name_claim_tx, user, name)}
           end) ++
             Enum.map(31..40, fn i ->
+              # credo:disable-for-next-line
               tx_tag = String.to_atom("tx#{i}")
               user = String.to_existing_atom("user#{i}")
               {tx_tag, tx(:oracle_register_tx, user, %{})}
             end) ++
             Enum.map(41..100, fn i ->
+              # credo:disable-for-next-line
               tx_tag = String.to_atom("tx#{i}")
               user = String.to_existing_atom("user#{i}")
               {tx_tag, spend_tx(user, user, 1_000)}
@@ -39,6 +43,7 @@ defmodule AeMdw.BlocksTest do
 
       microblocks =
         Enum.map(1..10, fn i ->
+          # credo:disable-for-next-line
           mb_tag = String.to_atom("mb#{i}")
           user = String.to_existing_atom("user#{i}")
           oracle_id = :aeser_id.create(:oracle, <<i::256>>)
@@ -53,7 +58,7 @@ defmodule AeMdw.BlocksTest do
               tx2: {:oracle_query_tx, user, oracle_id, %{}}
             ] ++
               Enum.map(3..50, fn i ->
-                tx_tag = String.to_atom("tx#{i}")
+                tx_tag = String.to_existing_atom("tx#{i}")
                 user = String.to_existing_atom("user#{i}")
                 {tx_tag, spend_tx(user, user, 1_000)}
               end)

@@ -16,17 +16,10 @@ defmodule AeMdw.Sync.MutationsCache do
 
   @spec get_mbs_mutations(hash()) :: {[Mutation.t()], AeMdw.Txs.txi()} | nil
   def get_mbs_mutations(mb_hash) do
-    {time, result} =
-      :timer.tc(fn ->
-        case :ets.lookup(@hashes_table, mb_hash) do
-          [{^mb_hash, mutations_txi}] -> mutations_txi
-          [] -> nil
-        end
-      end)
-
-    if div(time, 1000) > 10, do: IO.inspect(div(time, 1000), label: :mbs_lookup)
-
-    result
+    case :ets.lookup(@hashes_table, mb_hash) do
+      [{^mb_hash, mutations_txi}] -> mutations_txi
+      [] -> nil
+    end
   end
 
   @spec put_mbs_mutations(hash(), {[Mutation.t()], AeMdw.Txs.txi()}) :: :ok
