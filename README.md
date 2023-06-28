@@ -258,12 +258,15 @@ GET /status                              - middleware status
 
 ## OpenAPI specs
 
-There are two files providing a swagger specificiation of the endpoints for respective api versions:
+The swagger specificiation of the endpoints can be downloaded from:
 
-- https://petstore.swagger.io/?url=https://mainnet.aeternity.io/mdw/api
-- https://petstore.swagger.io/?url=https://mainnet.aeternity.io/mdw/v2/api
+- https://testnet.aeternity.io/mdw/v2/api/
 
-This npm package can be used for a self-hosted app to visualize these specs:
+It can be visualized on a swagger UI at:
+
+- https://testnet.aeternity.io/mdw/swagger
+
+This npm package can be also used for a self-hosted app to visualize these specs:
 https://www.npmjs.com/package/swagger-ui
 
 ## Pagination
