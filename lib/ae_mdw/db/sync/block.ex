@@ -25,6 +25,7 @@ defmodule AeMdw.Db.Sync.Block do
   alias AeMdw.Db.Sync.Transaction
   alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.Mutation
+  alias AeMdw.Sync.MutationsCache
   alias AeMdw.Log
   alias AeMdw.Node, as: AE
   alias AeMdw.Node.Db
@@ -110,18 +111,27 @@ defmodule AeMdw.Db.Sync.Block do
     end)
   end
 
-  defp micro_block_mutations(mblock, mbi, txi) do
+  defp micro_block_mutations(mblock, mbi, first_txi) do
+    {:ok, mb_hash} = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock))
+
+    with nil <- MutationsCache.get_mbs_mutations(mb_hash) do
+      mutations_txi = process_micro_block_mutations(mblock, mb_hash, mbi, first_txi)
+      MutationsCache.put_mbs_mutations(mb_hash, mutations_txi)
+      mutations_txi
+    end
+  end
+
+  defp process_micro_block_mutations(mblock, mb_hash, mbi, first_txi) do
     height = :aec_blocks.height(mblock)
     mb_time = :aec_blocks.time_in_msecs(mblock)
-    {:ok, mb_hash} = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock))
     mb_txs = :aec_blocks.txs(mblock)
     events = AeMdw.Contract.get_grouped_events(mblock)
-    mb_model = Model.block(index: {height, mbi}, tx_index: txi, hash: mb_hash)
+    mb_model = Model.block(index: {height, mbi}, tx_index: first_txi, hash: mb_hash)
     block_mutation = WriteMutation.new(Model.Block, mb_model)
 
     mutations =
       mb_txs
-      |> Enum.with_index(txi)
+      |> Enum.with_index(first_txi)
       |> Enum.reduce([block_mutation], fn {signed_tx, txi}, mutations ->
         transaction_mutations =
           Transaction.transaction_mutations(
@@ -136,7 +146,7 @@ defmodule AeMdw.Db.Sync.Block do
         mutations ++ transaction_mutations
       end)
 
-    {mutations, txi + length(mb_txs)}
+    {mutations, first_txi + length(mb_txs)}
   end
 
   @spec last_synced_mbi(State.t(), Blocks.height()) :: {:ok, Blocks.mbi()} | :none

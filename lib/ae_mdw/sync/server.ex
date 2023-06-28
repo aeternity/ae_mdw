@@ -40,6 +40,7 @@ defmodule AeMdw.Sync.Server do
   alias AeMdw.Sync.AsyncTasks.WealthRankAccounts
   alias AeMdwWeb.Websocket.Broadcaster
   alias AeMdwWeb.Websocket.BroadcasterCache
+  alias AeMdw.Sync.MutationsCache
 
   require Logger
 
@@ -260,6 +261,8 @@ defmodule AeMdw.Sync.Server do
         :timer.tc(fn ->
           Block.blocks_mutations(from_height, from_mbi, from_txi, to_height)
         end)
+
+      MutationsCache.clear()
 
       {exec_time, new_state} =
         :timer.tc(fn -> exec_db_mutations(gens_mutations, db_state, clear_mem?) end)

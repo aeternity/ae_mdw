@@ -433,7 +433,7 @@ defmodule Integration.AeMdwWeb.WebsocketTest do
       assert_receive [^recipient_id], 200
 
       {key_block, micro_blocks} = get_blocks(state, 311_860)
-      Broadcaster.broadcast_key_block(key_block, :v1, :mdw, 0)
+      Broadcaster.broadcast_key_block(key_block, :v1, :mdw, 0, 0)
       Process.send_after(client1, {:kb, self()}, 100)
 
       kb_payload = @key_block_mdw

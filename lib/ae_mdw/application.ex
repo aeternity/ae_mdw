@@ -16,6 +16,7 @@ defmodule AeMdw.Application do
   alias AeMdw.Sync.Watcher
   alias AeMdw.Util
   alias AeMdwWeb.Websocket.BroadcasterCache
+  alias AeMdw.Sync.MutationsCache
 
   require Model
 
@@ -177,6 +178,7 @@ defmodule AeMdw.Application do
 
   defp init(:tables) do
     BroadcasterCache.init()
+    MutationsCache.init()
 
     AeMdw.Sync.AsyncTasks.Stats.init()
     AeMdw.Sync.AsyncTasks.Store.init()
