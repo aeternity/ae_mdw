@@ -38,9 +38,9 @@ defmodule AeMdw.Sync.Server do
   alias AeMdw.Db.Sync.Block
   alias AeMdw.Log
   alias AeMdw.Sync.AsyncTasks.WealthRankAccounts
+  alias AeMdw.Sync.MutationsCache
   alias AeMdwWeb.Websocket.Broadcaster
   alias AeMdwWeb.Websocket.BroadcasterCache
-  alias AeMdw.Sync.MutationsCache
 
   require Logger
 
@@ -75,6 +75,7 @@ defmodule AeMdw.Sync.Server do
   @mem_gens 10
   @max_sync_gens 6
   @task_supervisor __MODULE__.TaskSupervsor
+  @internal_check_sync [{:next_event, :internal, :check_sync}]
 
   @spec task_supervisor() :: atom()
   def task_supervisor, do: @task_supervisor
@@ -116,17 +117,14 @@ defmodule AeMdw.Sync.Server do
   @spec handle_event(:internal, internal_event(), state(), state_data()) ::
           :gen_statem.event_handler_result(state())
   def handle_event(:cast, {:new_height, chain_height, chain_hash}, :initialized, state_data) do
-    actions = [{:next_event, :internal, :check_sync}]
-
     {:next_state, :idle,
-     %__MODULE__{state_data | chain_height: chain_height, chain_hash: chain_hash}, actions}
+     %__MODULE__{state_data | chain_height: chain_height, chain_hash: chain_hash},
+     @internal_check_sync}
   end
 
   def handle_event(:cast, {:new_height, chain_height, chain_hash}, _state, state_data) do
-    actions = [{:next_event, :internal, :check_sync}]
-
     {:keep_state, %__MODULE__{state_data | chain_height: chain_height, chain_hash: chain_hash},
-     actions}
+     @internal_check_sync}
   end
 
   def handle_event(
@@ -168,8 +166,6 @@ defmodule AeMdw.Sync.Server do
   def handle_event(:internal, :check_sync, _state, _data), do: :keep_state_and_data
 
   def handle_event(:info, {ref, new_db_state}, {:syncing_db, ref}, state_data) do
-    actions = [{:next_event, :internal, :check_sync}]
-
     new_state_data = %__MODULE__{
       state_data
       | mem_hash: State.height(new_db_state),
@@ -178,15 +174,13 @@ defmodule AeMdw.Sync.Server do
 
     Process.demonitor(ref, [:flush])
 
-    {:next_state, :idle, new_state_data, actions}
+    {:next_state, :idle, new_state_data, @internal_check_sync}
   end
 
   def handle_event(:info, {ref, mem_hash}, {:syncing_mem, ref}, state_data) do
-    actions = [{:next_event, :internal, :check_sync}]
-
     new_state_data = %__MODULE__{state_data | mem_hash: mem_hash}
 
-    {:next_state, :idle, new_state_data, actions}
+    {:next_state, :idle, new_state_data, @internal_check_sync}
   end
 
   def handle_event({:call, from}, :syncing?, state, _data) do
@@ -197,9 +191,7 @@ defmodule AeMdw.Sync.Server do
   end
 
   def handle_event(:cast, :restart_sync, :stopped, state_data) do
-    actions = [{:next_event, :internal, :check_sync}]
-
-    {:next_state, :idle, %__MODULE__{state_data | restarts: 0}, actions}
+    {:next_state, :idle, %__MODULE__{state_data | restarts: 0}, @internal_check_sync}
   end
 
   def handle_event(:info, {:DOWN, _ref, :process, _pid, :normal}, _state, _state_data),
@@ -214,9 +206,7 @@ defmodule AeMdw.Sync.Server do
       when restarts < @max_restarts do
     Log.info("DB Sync.Server error: #{inspect(reason)}")
 
-    actions = [{:next_event, :internal, :check_sync}]
-
-    {:next_state, :idle, %__MODULE__{state_data | restarts: restarts + 1}, actions}
+    {:next_state, :idle, %__MODULE__{state_data | restarts: restarts + 1}, @internal_check_sync}
   end
 
   def handle_event(
@@ -228,9 +218,7 @@ defmodule AeMdw.Sync.Server do
       when restarts < @max_restarts do
     Log.info("Mem Sync.Server error: #{inspect(reason)}")
 
-    actions = [{:next_event, :internal, :check_sync}]
-
-    {:next_state, :idle, %__MODULE__{state_data | restarts: restarts + 1}, actions}
+    {:next_state, :idle, %__MODULE__{state_data | restarts: restarts + 1}, @internal_check_sync}
   end
 
   def handle_event(:info, {:DOWN, _ref, :process, _pid, reason}, _state, state_data) do
