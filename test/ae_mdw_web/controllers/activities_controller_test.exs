@@ -969,8 +969,9 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
              ^tx_hash3 ->
                {"", :name_claim_tx, :aetx_sign.new(aetx3, []), tx3}
            end,
-           get_block_time: fn _block_hash ->
-             456
+           get_block_time: fn
+             ^mb_hash2 -> 456
+             ^mb_hash1 -> 123
            end
          ]}
       ] do
@@ -988,6 +989,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "payload" => %{
                    "source_tx_hash" => ^encoded_tx_hash3,
                    "source_tx_type" => "NameClaimTx",
+                   "micro_time" => 30,
                    "tx" => %{
                      "account_id" => ^account,
                      "fee" => 333_333,
@@ -1008,6 +1010,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "payload" => %{
                    "source_tx_hash" => ^encoded_tx_hash2,
                    "source_tx_type" => "NameClaimTx",
+                   "micro_time" => 20,
                    "tx" => %{
                      "account_id" => ^account,
                      "fee" => 222_222,
@@ -1030,10 +1033,11 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "height" => ^height1,
                  "type" => "NameClaimEvent",
                  "block_hash" => ^enc_mb_hash1,
-                 "block_time" => 456,
+                 "block_time" => 123,
                  "payload" => %{
                    "source_tx_hash" => ^encoded_tx_hash1,
                    "source_tx_type" => "NameClaimTx",
+                   "micro_time" => 10,
                    "tx" => %{
                      "account_id" => ^account,
                      "fee" => 111_111,

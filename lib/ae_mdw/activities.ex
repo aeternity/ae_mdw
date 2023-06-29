@@ -663,10 +663,13 @@ defmodule AeMdw.Activities do
   end
 
   defp render_payload(state, _account_pk, _height, txi, {:claim, local_idx}) do
+    Model.tx(time: micro_time) = State.fetch!(state, Model.Tx, txi)
+
     {claim_aetx, :name_claim_tx, tx_hash, tx_type, _block_hash} =
       DbUtil.read_node_tx_details(state, {txi, local_idx})
 
     payload = %{
+      micro_time: micro_time,
       source_tx_hash: Enc.encode(:tx_hash, tx_hash),
       source_tx_type: Format.type_to_swagger_name(tx_type),
       tx: :aens_claim_tx.for_client(claim_aetx)
