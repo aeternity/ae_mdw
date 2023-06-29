@@ -60,6 +60,9 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
          [
            get_tx_data: fn _tx_hash ->
              {"", :spend_tx, aetx, tx}
+           end,
+           get_block_time: fn _block_hash ->
+             456
            end
          ]},
         {:aec_db, [], [get_header: fn _block_hash -> :header end]},
@@ -74,6 +77,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{
                  "height" => ^height,
                  "block_hash" => ^enc_mb_hash,
+                 "block_time" => 456,
                  "type" => "ContractCallTxEvent",
                  "payload" => %{"micro_index" => ^mbi}
                } = tx1
@@ -81,6 +85,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{
                  "height" => ^height,
                  "block_hash" => ^enc_mb_hash,
+                 "block_time" => 456,
                  "type" => "ContractCallTxEvent",
                  "payload" => %{"micro_index" => ^mbi}
                } = tx2
@@ -137,6 +142,9 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
              "hash2" ->
                {"", :spend_tx, aetx, tx}
+           end,
+           get_block_time: fn _block_hash ->
+             456
            end
          ]},
         {:aec_db, [], [get_header: fn _block_hash -> :header end]},
@@ -151,6 +159,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{
                  "height" => ^height,
                  "block_hash" => ^enc_mb_hash,
+                 "block_time" => 456,
                  "type" => "ContractCallTxEvent",
                  "payload" => %{"micro_index" => ^mbi}
                } = tx1
@@ -158,6 +167,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{
                  "height" => ^height,
                  "block_hash" => ^enc_mb_hash,
+                 "block_time" => 456,
                  "type" => "ContractCallTxEvent",
                  "payload" => %{"micro_index" => ^mbi}
                } = tx2
@@ -233,6 +243,9 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
              "hash2" ->
                {"", :spend_tx, aetx, tx}
+           end,
+           get_block_time: fn _block_hash ->
+             456
            end
          ]},
         {:aec_db, [], [get_header: fn _block_hash -> :header end]},
@@ -248,12 +261,14 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{
                  "height" => ^height,
                  "block_hash" => ^enc_mb_hash,
+                 "block_time" => 456,
                  "type" => "InternalContractCallEvent"
                } = tx1
 
         assert %{
                  "height" => ^height,
                  "block_hash" => ^enc_mb_hash,
+                 "block_time" => 456,
                  "type" => "InternalContractCallEvent"
                } = tx2
 
@@ -323,6 +338,9 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
              "hash2" ->
                {"", :spend_tx, aetx, tx}
+           end,
+           get_block_time: fn _block_hash ->
+             456
            end
          ]},
         {:aec_db, [], [get_header: fn _block_hash -> :header end]},
@@ -338,12 +356,14 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{
                  "height" => ^height,
                  "block_hash" => ^enc_mb_hash,
+                 "block_time" => 456,
                  "type" => "InternalContractCallEvent"
                } = tx1
 
         assert %{
                  "height" => ^height,
                  "block_hash" => ^enc_mb_hash,
+                 "block_time" => 456,
                  "type" => "InternalContractCallEvent"
                } = tx2
 
@@ -431,49 +451,62 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(Model.Block, Model.block(index: {height, 1}, hash: mb_hash2))
         |> Store.put(Model.Block, Model.block(index: {height2, -1}, hash: kb_hash2))
 
-      assert %{"prev" => nil, "data" => [activity1, activity2] = data, "next" => next_url} =
-               conn
-               |> with_store(store)
-               |> get("/v2/accounts/#{account}/activities", direction: "forward", limit: 2)
-               |> json_response(200)
+      with_mocks [
+        {Db, [:passthrough],
+         [
+           get_block_time: fn _block_hash ->
+             456
+           end
+         ]}
+      ] do
+        assert %{"prev" => nil, "data" => [activity1, activity2] = data, "next" => next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/accounts/#{account}/activities", direction: "forward", limit: 2)
+                 |> json_response(200)
 
-      assert %{
-               "height" => ^height,
-               "block_hash" => ^enc_mb_hash1,
-               "type" => "InternalTransferEvent",
-               "payload" => %{
-                 "kind" => "reward_oracle",
-                 "amount" => 10
-               }
-             } = activity1
+        assert %{
+                 "height" => ^height,
+                 "block_hash" => ^enc_mb_hash1,
+                 "type" => "InternalTransferEvent",
+                 "payload" => %{
+                   "kind" => "reward_oracle",
+                   "amount" => 10
+                 }
+               } = activity1
 
-      assert %{
-               "height" => ^height,
-               "type" => "InternalTransferEvent",
-               "block_hash" => ^enc_mb_hash2,
-               "payload" => %{
-                 "kind" => "fee_lock_name",
-                 "amount" => 20
-               }
-             } = activity2
+        assert %{
+                 "height" => ^height,
+                 "type" => "InternalTransferEvent",
+                 "block_hash" => ^enc_mb_hash2,
+                 "payload" => %{
+                   "kind" => "fee_lock_name",
+                   "amount" => 20
+                 }
+               } = activity2
 
-      assert %{"prev" => prev_url, "data" => [activity3, activity4], "next" => nil} =
-               conn
-               |> with_store(store)
-               |> get(next_url)
-               |> json_response(200)
+        assert %{"prev" => prev_url, "data" => [activity3, activity4], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get(next_url)
+                 |> json_response(200)
 
-      assert %{"height" => 398, "type" => "InternalTransferEvent", "payload" => %{"amount" => 30}} =
-               activity3
+        assert %{
+                 "height" => 398,
+                 "type" => "InternalTransferEvent",
+                 "payload" => %{"amount" => 30}
+               } = activity3
 
-      assert %{
-               "height" => 399,
-               "block_hash" => ^enc_kb_hash2,
-               "type" => "InternalTransferEvent",
-               "payload" => %{"kind" => "fee_lock_name", "amount" => 40}
-             } = activity4
+        assert %{
+                 "height" => 399,
+                 "block_hash" => ^enc_kb_hash2,
+                 "type" => "InternalTransferEvent",
+                 "payload" => %{"kind" => "fee_lock_name", "amount" => 40}
+               } = activity4
 
-      assert %{"data" => ^data} = conn |> with_store(store) |> get(prev_url) |> json_response(200)
+        assert %{"data" => ^data} =
+                 conn |> with_store(store) |> get(prev_url) |> json_response(200)
+      end
     end
 
     test "when it has both gen-based and tx-based int transfers", %{conn: conn} do
@@ -556,60 +589,70 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(Model.Block, Model.block(index: {height, 1}, hash: mb_hash2))
         |> Store.put(Model.Block, Model.block(index: {height + 2, 0}, hash: mb_hash3))
 
-      assert %{
-               "prev" => nil,
-               "data" => [activity1, activity2, activity3] = data,
-               "next" => next_url
-             } =
-               conn
-               |> with_store(store)
-               |> get("/v2/accounts/#{account}/activities", direction: "forward", limit: 3)
-               |> json_response(200)
+      with_mocks [
+        {Db, [:passthrough],
+         [
+           get_block_time: fn _block_hash ->
+             456
+           end
+         ]}
+      ] do
+        assert %{
+                 "prev" => nil,
+                 "data" => [activity1, activity2, activity3] = data,
+                 "next" => next_url
+               } =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/accounts/#{account}/activities", direction: "forward", limit: 3)
+                 |> json_response(200)
 
-      assert %{
-               "height" => ^height,
-               "type" => "InternalTransferEvent",
-               "block_hash" => ^enc_mb_hash1,
-               "payload" => %{
-                 "kind" => "reward_oracle",
-                 "amount" => 10
-               }
-             } = activity1
+        assert %{
+                 "height" => ^height,
+                 "type" => "InternalTransferEvent",
+                 "block_hash" => ^enc_mb_hash1,
+                 "payload" => %{
+                   "kind" => "reward_oracle",
+                   "amount" => 10
+                 }
+               } = activity1
 
-      assert %{
-               "height" => ^height,
-               "type" => "InternalTransferEvent",
-               "block_hash" => ^enc_mb_hash2,
-               "payload" => %{
-                 "kind" => "fee_lock_name",
-                 "amount" => 20
-               }
-             } = activity2
+        assert %{
+                 "height" => ^height,
+                 "type" => "InternalTransferEvent",
+                 "block_hash" => ^enc_mb_hash2,
+                 "payload" => %{
+                   "kind" => "fee_lock_name",
+                   "amount" => 20
+                 }
+               } = activity2
 
-      assert %{
-               "height" => 399,
-               "type" => "InternalTransferEvent",
-               "block_hash" => ^enc_kb_hash2,
-               "payload" => %{
-                 "kind" => "reward_dev",
-                 "amount" => 30
-               }
-             } = activity3
+        assert %{
+                 "height" => 399,
+                 "type" => "InternalTransferEvent",
+                 "block_hash" => ^enc_kb_hash2,
+                 "payload" => %{
+                   "kind" => "reward_dev",
+                   "amount" => 30
+                 }
+               } = activity3
 
-      assert %{"prev" => prev_url, "data" => [activity4], "next" => nil} =
-               conn
-               |> with_store(store)
-               |> get(next_url)
-               |> json_response(200)
+        assert %{"prev" => prev_url, "data" => [activity4], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get(next_url)
+                 |> json_response(200)
 
-      assert %{
-               "height" => 400,
-               "type" => "InternalTransferEvent",
-               "block_hash" => ^enc_mb_hash3,
-               "payload" => %{"kind" => "fee_spend_name", "amount" => 40}
-             } = activity4
+        assert %{
+                 "height" => 400,
+                 "type" => "InternalTransferEvent",
+                 "block_hash" => ^enc_mb_hash3,
+                 "payload" => %{"kind" => "fee_spend_name", "amount" => 40}
+               } = activity4
 
-      assert %{"data" => ^data} = conn |> with_store(store) |> get(prev_url) |> json_response(200)
+        assert %{"data" => ^data} =
+                 conn |> with_store(store) |> get(prev_url) |> json_response(200)
+      end
     end
 
     test "when activities contain aexn tokens, it returns them as AexnEvent", %{conn: conn} do
@@ -664,42 +707,51 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(Model.Block, Model.block(index: {height2, -1}, hash: kb_hash2))
         |> Store.put(Model.Block, Model.block(index: {height2, 0}, hash: mb_hash2))
 
-      assert %{"prev" => nil, "data" => [activity1, activity2], "next" => next_url} =
-               conn
-               |> with_store(store)
-               |> get("/v2/accounts/#{account}/activities", direction: "forward", limit: 2)
-               |> json_response(200)
+      with_mocks [
+        {Db, [:passthrough],
+         [
+           get_block_time: fn _block_hash ->
+             456
+           end
+         ]}
+      ] do
+        assert %{"prev" => nil, "data" => [activity1, activity2], "next" => next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/accounts/#{account}/activities", direction: "forward", limit: 2)
+                 |> json_response(200)
 
-      assert %{
-               "height" => ^height1,
-               "type" => "Aex9TransferEvent",
-               "block_hash" => ^enc_mb_hash1,
-               "payload" => %{
-                 "amount" => 1,
-                 "log_idx" => 1,
-                 "sender_id" => ^account,
-                 "recipient_id" => ^another_account,
-                 "tx_hash" => ^tx1_encoded
-               }
-             } = activity1
+        assert %{
+                 "height" => ^height1,
+                 "type" => "Aex9TransferEvent",
+                 "block_hash" => ^enc_mb_hash1,
+                 "payload" => %{
+                   "amount" => 1,
+                   "log_idx" => 1,
+                   "sender_id" => ^account,
+                   "recipient_id" => ^another_account,
+                   "tx_hash" => ^tx1_encoded
+                 }
+               } = activity1
 
-      assert %{
-               "height" => ^height2,
-               "type" => "Aex141TransferEvent",
-               "block_hash" => ^enc_mb_hash2,
-               "payload" => %{
-                 "sender_id" => ^another_account,
-                 "recipient_id" => ^account,
-                 "token_id" => 2,
-                 "log_idx" => 2,
-                 "tx_hash" => ^tx2_encoded
-               }
-             } = activity2
+        assert %{
+                 "height" => ^height2,
+                 "type" => "Aex141TransferEvent",
+                 "block_hash" => ^enc_mb_hash2,
+                 "payload" => %{
+                   "sender_id" => ^another_account,
+                   "recipient_id" => ^account,
+                   "token_id" => 2,
+                   "log_idx" => 2,
+                   "tx_hash" => ^tx2_encoded
+                 }
+               } = activity2
 
-      assert %URI{query: query} = URI.parse(next_url)
+        assert %URI{query: query} = URI.parse(next_url)
 
-      assert %{"cursor" => _cursor, "direction" => "forward", "limit" => "2"} =
-               URI.decode_query(query)
+        assert %{"cursor" => _cursor, "direction" => "forward", "limit" => "2"} =
+                 URI.decode_query(query)
+      end
     end
 
     test "when backwards and when activities contain aexn tokens, it returns them as AexnEvent",
@@ -750,55 +802,64 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(Model.Block, Model.block(index: {height2, -1}, hash: kb_hash2))
         |> Store.put(Model.Block, Model.block(index: {height2, 0}, hash: mb_hash2))
 
-      assert %{"prev" => nil, "data" => [activity1, activity2], "next" => next_url} =
-               conn
-               |> with_store(store)
-               |> get("/v2/accounts/#{account}/activities", limit: 2)
-               |> json_response(200)
+      with_mocks [
+        {Db, [:passthrough],
+         [
+           get_block_time: fn _block_hash ->
+             456
+           end
+         ]}
+      ] do
+        assert %{"prev" => nil, "data" => [activity1, activity2], "next" => next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/accounts/#{account}/activities", limit: 2)
+                 |> json_response(200)
 
-      assert %{
-               "height" => ^height2,
-               "block_hash" => ^enc_mb_hash2,
-               "type" => "Aex9TransferEvent",
-               "payload" => %{
-                 "sender_id" => ^another_account,
-                 "recipient_id" => ^account,
-                 "amount" => 3,
-                 "log_idx" => 3
-               }
-             } = activity1
+        assert %{
+                 "height" => ^height2,
+                 "block_hash" => ^enc_mb_hash2,
+                 "type" => "Aex9TransferEvent",
+                 "payload" => %{
+                   "sender_id" => ^another_account,
+                   "recipient_id" => ^account,
+                   "amount" => 3,
+                   "log_idx" => 3
+                 }
+               } = activity1
 
-      assert %{
-               "height" => ^height2,
-               "block_hash" => ^enc_mb_hash2,
-               "type" => "Aex141TransferEvent",
-               "payload" => %{
-                 "sender_id" => ^another_account,
-                 "recipient_id" => ^account,
-                 "token_id" => 2,
-                 "log_idx" => 2
-               }
-             } = activity2
+        assert %{
+                 "height" => ^height2,
+                 "block_hash" => ^enc_mb_hash2,
+                 "type" => "Aex141TransferEvent",
+                 "payload" => %{
+                   "sender_id" => ^another_account,
+                   "recipient_id" => ^account,
+                   "token_id" => 2,
+                   "log_idx" => 2
+                 }
+               } = activity2
 
-      assert %{"prev" => prev_url, "data" => [activity3], "next" => nil} =
-               conn
-               |> with_store(store)
-               |> get(next_url)
-               |> json_response(200)
+        assert %{"prev" => prev_url, "data" => [activity3], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get(next_url)
+                 |> json_response(200)
 
-      assert %{
-               "height" => ^height1,
-               "block_hash" => ^enc_mb_hash1,
-               "type" => "Aex9TransferEvent",
-               "payload" => %{
-                 "sender_id" => ^account,
-                 "recipient_id" => ^another_account,
-                 "amount" => 1,
-                 "log_idx" => 1
-               }
-             } = activity3
+        assert %{
+                 "height" => ^height1,
+                 "block_hash" => ^enc_mb_hash1,
+                 "type" => "Aex9TransferEvent",
+                 "payload" => %{
+                   "sender_id" => ^account,
+                   "recipient_id" => ^another_account,
+                   "amount" => 1,
+                   "log_idx" => 1
+                 }
+               } = activity3
 
-      refute is_nil(prev_url)
+        refute is_nil(prev_url)
+      end
     end
 
     test "when the account is a name hash, it includes all the name claims", %{conn: conn} do
@@ -907,6 +968,10 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
              ^tx_hash3 ->
                {"", :name_claim_tx, :aetx_sign.new(aetx3, []), tx3}
+           end,
+           get_block_time: fn
+             ^mb_hash2 -> 456
+             ^mb_hash1 -> 123
            end
          ]}
       ] do
@@ -920,6 +985,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "height" => ^height2,
                  "type" => "NameClaimEvent",
                  "block_hash" => ^enc_mb_hash2,
+                 "block_time" => 456,
                  "payload" => %{
                    "source_tx_hash" => ^encoded_tx_hash3,
                    "source_tx_type" => "NameClaimTx",
@@ -940,6 +1006,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "height" => ^height2,
                  "type" => "NameClaimEvent",
                  "block_hash" => ^enc_mb_hash2,
+                 "block_time" => 456,
                  "payload" => %{
                    "source_tx_hash" => ^encoded_tx_hash2,
                    "source_tx_type" => "NameClaimTx",
@@ -966,6 +1033,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "height" => ^height1,
                  "type" => "NameClaimEvent",
                  "block_hash" => ^enc_mb_hash1,
+                 "block_time" => 123,
                  "payload" => %{
                    "source_tx_hash" => ^encoded_tx_hash1,
                    "source_tx_type" => "NameClaimTx",
@@ -1137,6 +1205,9 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
              "tx-hash2" -> {"", :spend_tx, spend1_aetx, spend1_tx}
              "tx-hash4" -> {"", :contract_call_tx, contract_call4_aetx, contract_call4_tx}
              "tx-hash5" -> {"", :contract_call_tx, contract_call5_aetx, contract_call5_tx}
+           end,
+           get_block_time: fn _block_hash ->
+             456
            end
          ]},
         {Txs, [], fetch!: fn _state, _txi -> %{} end},
@@ -1152,6 +1223,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         assert %{
                  "height" => ^height,
                  "block_hash" => ^enc_mb_hash,
+                 "block_time" => 456,
                  "type" => "ContractCallTxEvent",
                  "payload" => %{}
                } = tx1
@@ -1266,37 +1338,46 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(Model.Block, Model.block(index: {height2, -1}, hash: kb_hash2))
         |> Store.put(Model.Block, Model.block(index: {height2, 0}, hash: mb_hash2))
 
-      assert %{"prev" => nil, "data" => [activity1, activity2]} =
-               conn
-               |> with_store(store)
-               |> get("/v2/accounts/#{account}/activities", direction: "forward", type: "aex9")
-               |> json_response(200)
+      with_mocks [
+        {Db, [:passthrough],
+         [
+           get_block_time: fn _block_hash ->
+             456
+           end
+         ]}
+      ] do
+        assert %{"prev" => nil, "data" => [activity1, activity2]} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/accounts/#{account}/activities", direction: "forward", type: "aex9")
+                 |> json_response(200)
 
-      assert %{
-               "height" => ^height1,
-               "type" => "Aex9TransferEvent",
-               "block_hash" => ^enc_mb_hash1,
-               "payload" => %{
-                 "amount" => 1,
-                 "log_idx" => 1,
-                 "sender_id" => ^account,
-                 "recipient_id" => ^another_account,
-                 "tx_hash" => ^tx1_encoded
-               }
-             } = activity1
+        assert %{
+                 "height" => ^height1,
+                 "type" => "Aex9TransferEvent",
+                 "block_hash" => ^enc_mb_hash1,
+                 "payload" => %{
+                   "amount" => 1,
+                   "log_idx" => 1,
+                   "sender_id" => ^account,
+                   "recipient_id" => ^another_account,
+                   "tx_hash" => ^tx1_encoded
+                 }
+               } = activity1
 
-      assert %{
-               "height" => ^height2,
-               "type" => "Aex9TransferEvent",
-               "block_hash" => ^enc_mb_hash2,
-               "payload" => %{
-                 "sender_id" => ^another_account,
-                 "recipient_id" => ^account,
-                 "amount" => 3,
-                 "log_idx" => 3,
-                 "tx_hash" => ^tx3_encoded
-               }
-             } = activity2
+        assert %{
+                 "height" => ^height2,
+                 "type" => "Aex9TransferEvent",
+                 "block_hash" => ^enc_mb_hash2,
+                 "payload" => %{
+                   "sender_id" => ^another_account,
+                   "recipient_id" => ^account,
+                   "amount" => 3,
+                   "log_idx" => 3,
+                   "tx_hash" => ^tx3_encoded
+                 }
+               } = activity2
+      end
     end
   end
 
