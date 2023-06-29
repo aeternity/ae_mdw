@@ -571,8 +571,9 @@ paths:
           in: path
           name: accountId
           required: true
-          type: string
-          x-example: ak_vTGaRAuGXPLhvNexrbzmHJ2MDv9JS2Ky7u2v469o6weaZ2Cgw
+          schema:
+            type: string
+            x-example: ak_vTGaRAuGXPLhvNexrbzmHJ2MDv9JS2Ky7u2v469o6weaZ2Cgw
       responses:
         '200':
           description: Returns paginated AEX-141 tokens
@@ -603,8 +604,9 @@ paths:
           in: path
           name: id
           required: true
-          type: string
-          x-example: ct_okiZvxvjrQvBuYcbB1EHkLi3bCtKthFHQVPk3GmKvei7fVrHo
+          schema:
+            type: string
+            x-example: ct_okiZvxvjrQvBuYcbB1EHkLi3bCtKthFHQVPk3GmKvei7fVrHo
       responses:
         '200':
           description: Returns AEX-9 information by contract id
@@ -630,14 +632,16 @@ paths:
           in: query
           name: by
           required: false
-          type: string
-          x-example: name | symbol
+          schema:
+            type: string
+            x-example: name | symbol
         - description: Sorts by name or symbol
           in: query
           name: prefix
           required: false
-          type: string
-          x-example: AA
+          schema:
+            type: string
+            x-example: AA
       responses:
         '200':
           description: Returns paginated AEX-9 tokens
@@ -681,8 +685,9 @@ paths:
           in: path
           name: contractId
           required: true
-          type: string
-          x-example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
+          schema:
+            type: string
+            x-example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
       responses:
         '200':
           description: Returns the number of events emmited so far
@@ -709,14 +714,16 @@ paths:
           in: path
           name: contractId
           required: true
-          type: string
-          x-example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
+          schema:
+            type: string
+            x-example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
         - description: Order by
           in: query
           name: by
           required: false
-          type: string
-          x-example: amount
+          schema:
+            type: string
+            x-example: amount
       responses:
         '200':
           description: Returns paginated contract balances
@@ -747,20 +754,23 @@ paths:
           in: path
           name: contractId
           required: true
-          type: string
-          x-example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
+          schema:
+            type: string
+            x-example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
         - description: Account id
           in: path
           name: accountId
           required: true
-          type: string
-          x-example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2
+          schema:
+            type: string
+            x-example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2
         - description: Block hash
           in: query
           name: hash
           required: true
-          type: string
-          x-example: mh_2EPBrw8PUhZMgVPVMopcG8GYsNS7e9itic8kcWxKBZPkDxVYds
+          schema:
+            type: string
+            x-example: mh_2EPBrw8PUhZMgVPVMopcG8GYsNS7e9itic8kcWxKBZPkDxVYds
       responses:
         '200':
           description: Returns a the balance of an account on a contract
@@ -795,8 +805,9 @@ paths:
           in: path
           name: account_id
           required: true
-          type: string
-          x-example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2
+          schema:
+            type: string
+            x-example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2
       responses:
         '200':
           description: Returns all the balances of an account
@@ -828,8 +839,9 @@ paths:
           in: path
           name: id
           required: true
-          type: string
-          x-example: ak_1ADSaLCnFnWpbq6t8wJhUJn6ombZwgewPxe7MCaJTfGLKDkbw
+          schema:
+            type: string
+            x-example: ak_1ADSaLCnFnWpbq6t8wJhUJn6ombZwgewPxe7MCaJTfGLKDkbw
       responses:
         '200':
           description: Returns paginated AEX-9 transfers of a sender
@@ -862,8 +874,9 @@ paths:
           in: path
           name: id
           required: true
-          type: string
-          x-example: ak_2meHkLcAoZPrQj7P5WjFyJJRLJqRtv43z1QEbpcS1gHs9W8Q3g
+          schema:
+            type: string
+            x-example: ak_2meHkLcAoZPrQj7P5WjFyJJRLJqRtv43z1QEbpcS1gHs9W8Q3g
       responses:
         '200':
           description: Returns paginated AEX-9 transfers of a recipient
@@ -896,14 +909,16 @@ paths:
           in: path
           name: sender
           required: true
-          type: string
-          x-example: ak_17qFR9Zp6CbX9ZZrEYd5155KHGAsfbY1YZ2UsRpjH6WJc8Pk1
+          schema:
+            type: string
+            x-example: ak_17qFR9Zp6CbX9ZZrEYd5155KHGAsfbY1YZ2UsRpjH6WJc8Pk1
         - description: Recipient account id
           in: path
           name: recipient
           required: true
-          type: string
-          x-example: ak_psy8tRXPzGxh6975H7K6XQcMFVsdrxJMt7YkzMY8oUTevutzw
+          schema:
+            type: string
+            x-example: ak_psy8tRXPzGxh6975H7K6XQcMFVsdrxJMt7YkzMY8oUTevutzw
       responses:
         '200':
           description: Returns paginated AEX-9 transfers between two accounts
@@ -937,14 +952,16 @@ paths:
           in: path
           name: contractId
           required: true
-          type: string
-          x-example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
+          schema:
+            type: string
+            x-example: ct_uGk1rkSdccPKXLzS259vdrJGTWAY9sfgVYspv6QYomxvWZWBM
         - description: Account id
           in: path
           name: accountId
           required: true
-          type: string
-          x-example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2
+          schema:
+            type: string
+            x-example: ak_152krtQsp2T3ApcFv7B21FFXkjXnsps3VBfhJeyNF1tHh6mB2
       responses:
         '200':
           description: Account balance history on a token contract
