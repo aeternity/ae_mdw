@@ -66,7 +66,9 @@ defmodule AeMdwWeb.BlockchainSim do
             end
 
           nil ->
-            []
+            [
+              {:aec_chain, [:passthrough], genesis_block: fn -> mock_blocks[0][:block] end}
+            ]
         end
 
       pf_mocks =
