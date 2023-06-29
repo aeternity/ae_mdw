@@ -1,4 +1,4 @@
-defmodule AeMdw.Sync.BlockTest do
+defmodule AeMdw.Db.Sync.BlockTest do
   use ExUnit.Case
 
   alias AeMdw.Db.Model
