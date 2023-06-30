@@ -1,5 +1,39 @@
 # Changelog
 
+## [1.52.0](https://www.github.com/aeternity/ae_mdw/compare/v1.51.0...v1.52.0) (2023-06-30)
+
+
+### Features
+
+* add block_time to all activities ([#1432](https://www.github.com/aeternity/ae_mdw/issues/1432)) ([b769250](https://www.github.com/aeternity/ae_mdw/commit/b769250668f1cabd2b3483cd1d2c6b382a0bd42b))
+* add micro block time to oracle nested resources ([#1419](https://www.github.com/aeternity/ae_mdw/issues/1419)) ([de3db7c](https://www.github.com/aeternity/ae_mdw/commit/de3db7cb7bce408b5ed1cf0797dcbc2390613f1d))
+* add support for swagger using JSON format ([#1420](https://www.github.com/aeternity/ae_mdw/issues/1420)) ([79618f9](https://www.github.com/aeternity/ae_mdw/commit/79618f90932bd527424bc2f8c748d815d693c1c9))
+* cache mem sync mutations ([#1431](https://www.github.com/aeternity/ae_mdw/issues/1431)) ([5a8a36c](https://www.github.com/aeternity/ae_mdw/commit/5a8a36c8cf86b193ca524830eec20d7c3b550fcb))
+* display approximate expiration time for auctions ([#1403](https://www.github.com/aeternity/ae_mdw/issues/1403)) ([208f414](https://www.github.com/aeternity/ae_mdw/commit/208f4148db7bd6a662af922b4e5c827cf39c4a9c))
+* filter contract calls by entrypoint ([#1413](https://www.github.com/aeternity/ae_mdw/issues/1413)) ([409ed52](https://www.github.com/aeternity/ae_mdw/commit/409ed52a413b1b663f3a91e778cc01a88688eb91))
+
+
+### Bug Fixes
+
+* create contract call event tx when Chain events ([#1412](https://www.github.com/aeternity/ae_mdw/issues/1412)) ([53c22c3](https://www.github.com/aeternity/ae_mdw/commit/53c22c3a609e0df01288b301c67f4da3b24d585b))
+
+
+### Testing
+
+* add devmode Contract.create call test ([#1415](https://www.github.com/aeternity/ae_mdw/issues/1415)) ([ba930f6](https://www.github.com/aeternity/ae_mdw/commit/ba930f6b57dbb14cd199e872f3af6da8c71f3261))
+
+
+### Miscellaneous
+
+* add decimals to account balances ([#1417](https://www.github.com/aeternity/ae_mdw/issues/1417)) ([1c42754](https://www.github.com/aeternity/ae_mdw/commit/1c4275460b0a9902976969691e390220dad539dc))
+* add migration for entrypoint ([#1433](https://www.github.com/aeternity/ae_mdw/issues/1433)) ([565dfa3](https://www.github.com/aeternity/ae_mdw/commit/565dfa327f196a9609986e955ca0d427e5db1898))
+* add mix files to credo checks ([#1423](https://www.github.com/aeternity/ae_mdw/issues/1423)) ([f0ba7b4](https://www.github.com/aeternity/ae_mdw/commit/f0ba7b49f6874cab8eaa1d81f653fd741ff0500e))
+* include credo and leave test for dev shell ([#1406](https://www.github.com/aeternity/ae_mdw/issues/1406)) ([2e41a79](https://www.github.com/aeternity/ae_mdw/commit/2e41a794af47df37c71d7fcf8a9b6c6ee6339c21))
+* remove dev docker compose warning ([#1408](https://www.github.com/aeternity/ae_mdw/issues/1408)) ([3245573](https://www.github.com/aeternity/ae_mdw/commit/3245573c646bcc8bbf9bae954876897a830dbc45))
+* remove swagger ui ([#1430](https://www.github.com/aeternity/ae_mdw/issues/1430)) ([b4adf6b](https://www.github.com/aeternity/ae_mdw/commit/b4adf6bbe5d5c864a00ada42882ef0463715a0c2))
+* return nil for invalid amount of aex9 holders ([#1409](https://www.github.com/aeternity/ae_mdw/issues/1409)) ([03ae588](https://www.github.com/aeternity/ae_mdw/commit/03ae58875edd3277cc777c6aef8daac3f5ae7fd5))
+* update aexn parameters to OAS3 ([#1434](https://www.github.com/aeternity/ae_mdw/issues/1434)) ([1da6406](https://www.github.com/aeternity/ae_mdw/commit/1da64069d5e820a3553b7e1078195023419d141c))
+
 ## [1.51.0](https://www.github.com/aeternity/ae_mdw/compare/v1.50.1...v1.51.0) (2023-06-19)
 
 
