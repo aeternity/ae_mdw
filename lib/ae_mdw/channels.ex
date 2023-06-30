@@ -229,6 +229,7 @@ defmodule AeMdw.Channels do
       responder: encode_account(responder_pk),
       state_hash: encode(:state, state_hash),
       last_updated_height: last_updated_height,
+      approximate_last_updated_time: DbUtil.block_time(update_block_hash),
       last_updated_tx_hash: encode(:tx_hash, tx_hash),
       last_updated_tx_type: Format.type_to_swagger_name(tx_type),
       updates_count: length(updates),

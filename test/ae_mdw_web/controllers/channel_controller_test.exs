@@ -72,6 +72,9 @@ defmodule AeMdwWeb.ChannelControllerTest do
 
              _state, {3_000, -1} ->
                {:tx, :channel_deposit_tx, tx_hash, :channel_deposit_tx, block_hash}
+           end,
+           block_time: fn ^block_hash ->
+             456
            end
          ]},
         {:aec_chain, [:passthrough],
@@ -107,6 +110,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
                  "active" => false,
                  "amount" => 8_000_000,
                  "last_updated_height" => 600_000,
+                 "approximate_last_updated_time" => 456,
                  "last_updated_tx_hash" => ^enc_tx_hash,
                  "last_updated_tx_type" => "ChannelDepositTx",
                  "updates_count" => 1,
@@ -129,6 +133,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
                  "last_updated_height" => 500_000,
                  "last_updated_tx_hash" => ^enc_tx_hash,
                  "last_updated_tx_type" => "ChannelCloseMutualTx",
+                 "approximate_last_updated_time" => 456,
                  "updates_count" => 1,
                  "responder" => ^responder,
                  "initiator" => ^initiator,
@@ -152,6 +157,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
                  "last_updated_height" => 500_000,
                  "last_updated_tx_hash" => ^enc_tx_hash,
                  "last_updated_tx_type" => "ChannelWithdrawTx",
+                 "approximate_last_updated_time" => 456,
                  "updates_count" => 1,
                  "responder" => ^responder,
                  "initiator" => ^initiator,
@@ -216,7 +222,8 @@ defmodule AeMdwWeb.ChannelControllerTest do
          [
            read_node_tx_details: fn _state, {3_000, -1} ->
              {:tx, :channel_deposit_tx, tx_hash, :channel_deposit_tx, block_hash}
-           end
+           end,
+           block_time: fn ^block_hash -> 456 end
          ]},
         {:aec_chain, [:passthrough],
          get_channel_at_hash: fn pubkey, ^block_hash ->
@@ -244,6 +251,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
                  "last_updated_height" => 600_000,
                  "last_updated_tx_hash" => ^enc_tx_hash,
                  "last_updated_tx_type" => "ChannelDepositTx",
+                 "approximate_last_updated_time" => 456,
                  "updates_count" => 1,
                  "responder" => ^responder,
                  "initiator" => ^initiator,
@@ -314,7 +322,8 @@ defmodule AeMdwWeb.ChannelControllerTest do
 
              _state, {2_000, -1} ->
                {:tx, :channel_close_mutual_tx, tx_hash, :channel_close_mutual_tx, block_hash}
-           end
+           end,
+           block_time: fn ^block_hash -> 456 end
          ]},
         {:aec_chain, [:passthrough],
          get_channel_at_hash: fn pubkey, ^block_hash ->
@@ -350,6 +359,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
                  "last_updated_height" => 600_000,
                  "last_updated_tx_hash" => ^enc_tx_hash,
                  "last_updated_tx_type" => ^tx_type1,
+                 "approximate_last_updated_time" => 456,
                  "updates_count" => 1,
                  "responder" => ^responder,
                  "initiator" => ^initiator,
@@ -376,6 +386,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
                  "last_updated_height" => 600_000,
                  "last_updated_tx_hash" => ^enc_tx_hash,
                  "last_updated_tx_type" => ^tx_type2,
+                 "approximate_last_updated_time" => 456,
                  "updates_count" => 1,
                  "responder" => ^responder,
                  "initiator" => ^initiator,
@@ -453,7 +464,8 @@ defmodule AeMdwWeb.ChannelControllerTest do
                {:tx, :channel_close_mutual_tx, tx_hash, :channel_close_mutual_tx,
                 update_block_hash}
            end,
-           micro_block_height_index: fn _state, ^micro_block_hash -> {:ok, 599_999, 1} end
+           micro_block_height_index: fn _state, ^micro_block_hash -> {:ok, 599_999, 1} end,
+           block_time: fn ^update_block_hash -> 456 end
          ]}
       ] do
         store =
@@ -474,6 +486,7 @@ defmodule AeMdwWeb.ChannelControllerTest do
                  "last_updated_height" => 600_000,
                  "last_updated_tx_hash" => ^enc_tx_hash,
                  "last_updated_tx_type" => ^tx_type1,
+                 "approximate_last_updated_time" => 456,
                  "updates_count" => 1,
                  "responder" => ^responder,
                  "initiator" => ^initiator,
