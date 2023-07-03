@@ -188,12 +188,11 @@ defmodule AeMdw.Db.Sync.Contract do
   end
 
   defp create_contract_create_aetx(block_hash, contract_pk, initial_amount, nonce_tries) do
-    {:ok, contract} = :aec_chain.get_contract(contract_pk)
+    {:ok, contract, code} = :aec_chain.get_contract_with_code(contract_pk)
     owner_id = :aect_contracts.owner_id(contract)
     deposit = :aect_contracts.deposit(contract)
     abi_version = :aect_contracts.abi_version(contract)
     vm_version = :aect_contracts.vm_version(contract)
-    {:ok, code} = Contract.get_code(contract)
     {_tag, owner_pk} = :aeser_id.specialize(owner_id)
     owner_nonce = Db.nonce_at_block(block_hash, owner_pk)
     nonce_tries = owner_nonce..(owner_nonce + nonce_tries)

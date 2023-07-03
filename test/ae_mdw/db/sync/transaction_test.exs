@@ -4,7 +4,6 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   alias AeMdw.Node, as: AE
 
   alias AeMdw.AexnContracts
-  alias AeMdw.Database
   alias AeMdw.Contract
   alias AeMdw.DryRun.Runner
   alias AeMdw.Db.AexnCreateContractMutation
@@ -13,8 +12,10 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   alias AeMdw.Db.ChannelUpdateMutation
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.Sync.Transaction
+  alias AeMdw.Db.MemStore
+  alias AeMdw.Db.NullStore
+  alias AeMdw.Db.Store
   alias AeMdw.Db.Model
-  alias AeMdw.Db.State
   alias AeMdw.EtsCache
   alias AeMdw.Validate
   alias AeMdw.TestSamples, as: TS
@@ -22,6 +23,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, spend_tx: 3]
   import AeMdw.Node.ContractCallFixtures
   import AeMdw.Node.AeTxFixtures
+  import AeMdw.TestUtil, only: [change_store: 2]
   import Mock
 
   require Model
@@ -36,8 +38,6 @@ defmodule AeMdw.Db.Sync.TransactionTest do
 
   describe "sync_transaction spend_tx" do
     test "when receiver and sender ids are different" do
-      state = State.new()
-
       with_blockchain %{alice: 10_000, bob: 20_000},
         mb1: [
           t1: spend_tx(:alice, :bob, 5_000)
@@ -57,22 +57,23 @@ defmodule AeMdw.Db.Sync.TransactionTest do
             %{}
           )
 
-        State.commit(state, txn_mutations)
+        store =
+          NullStore.new()
+          |> MemStore.new()
+          |> change_store(txn_mutations)
 
         {sender_pk, recipient_pk} = pubkeys_from_tx(signed_tx)
         assert sender_pk != recipient_pk
 
         assert {:spend_tx, _pos, ^sender_pk, ^txi} =
-                 query_spend_tx_field_index(sender_pk, @sender_id_pos)
+                 query_spend_tx_field_index(store, sender_pk, @sender_id_pos)
 
         assert {:spend_tx, _pos, ^recipient_pk, ^txi} =
-                 query_spend_tx_field_index(recipient_pk, @recipient_id_pos)
+                 query_spend_tx_field_index(store, recipient_pk, @recipient_id_pos)
       end
     end
 
     test "when receiver and sender ids are the same" do
-      state = State.new()
-
       with_blockchain %{alice: 10_000},
         mb1: [
           t1: spend_tx(:alice, :alice, 5_000)
@@ -92,16 +93,19 @@ defmodule AeMdw.Db.Sync.TransactionTest do
             %{}
           )
 
-        State.commit(state, txn_mutations)
+        store =
+          NullStore.new()
+          |> MemStore.new()
+          |> change_store(txn_mutations)
 
         {sender_pk, recipient_pk} = pubkeys_from_tx(signed_tx)
         assert sender_pk == recipient_pk
 
         assert {:spend_tx, _pos, ^sender_pk, ^txi} =
-                 query_spend_tx_field_index(sender_pk, @sender_id_pos)
+                 query_spend_tx_field_index(store, sender_pk, @sender_id_pos)
 
         assert {:spend_tx, _pos, ^recipient_pk, ^txi} =
-                 query_spend_tx_field_index(recipient_pk, @recipient_id_pos)
+                 query_spend_tx_field_index(store, recipient_pk, @recipient_id_pos)
       end
     end
   end
@@ -595,8 +599,8 @@ defmodule AeMdw.Db.Sync.TransactionTest do
     {sender_pk, recipient_pk}
   end
 
-  defp query_spend_tx_field_index(pubkey, pos) do
-    {:ok, index} = Database.prev_key(Model.Field, {:spend_tx, pos, pubkey, nil})
+  defp query_spend_tx_field_index(store, pubkey, pos) do
+    {:ok, index} = Store.prev(store, Model.Field, {:spend_tx, pos, pubkey, nil})
     index
   end
 end

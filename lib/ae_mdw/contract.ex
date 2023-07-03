@@ -79,8 +79,9 @@ defmodule AeMdw.Contract do
         {:ok, info}
 
       nil ->
-        with {:ok, contract} <- :aec_chain.get_contract(pubkey),
-             {:ok, ser_code} <- get_code(contract) do
+        # when contract init fails, contract_create_tx stays on chain
+        # but contract isn't stored in contract store
+        with {:ok, _contract, ser_code} <- :aec_chain.get_contract_with_code(pubkey) do
           code_map = :aeser_contract_code.deserialize(ser_code)
           # might be stripped
           compiler_version = Map.get(code_map, :compiler_version)
@@ -99,11 +100,6 @@ defmodule AeMdw.Contract do
           EtsCache.put(@tab, pubkey, info)
 
           {:ok, info}
-        else
-          {:error, reason} ->
-            # contract's init can fail, contract_create_tx stays on chain
-            # but contract isn't stored in contract store
-            {:error, reason}
         end
     end
   end
@@ -160,22 +156,6 @@ defmodule AeMdw.Contract do
   @spec function_hash(String.t()) :: function_hash()
   def function_hash(name),
     do: :binary.part(:aec_hash.blake2b_256_hash(name), 0, 4)
-
-  @spec get_code(aecontract()) :: {:ok, code()} | {:error, term()}
-  def get_code(contract) do
-    case :aect_contracts.code(contract) do
-      {:code, code} ->
-        {:ok, code}
-
-      {:ref, id} ->
-        {_tag, contract_pk} = :aeser_id.specialize(id)
-
-        case :aec_chain.get_contract(contract_pk) do
-          {:ok, contract} -> get_code(contract)
-          {:error, reason} -> {:error, reason}
-        end
-    end
-  end
 
   defp decode_call_data(contract, call_data),
     do: decode_call_data(contract, call_data, &id/1)
