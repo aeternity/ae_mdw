@@ -318,7 +318,8 @@ defmodule AeMdw.Db.Util do
   def height_to_time(_state, height, last_height, last_micro_time),
     do: last_micro_time + (height - last_height) * @approximate_key_block_rate
 
-  defp block_time(block_hash) do
+  @spec block_time(Blocks.block_hash()) :: time()
+  def block_time(block_hash) do
     block_hash
     |> :aec_db.get_block()
     |> :aec_blocks.time_in_msecs()
