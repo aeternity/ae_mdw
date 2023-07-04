@@ -1,5 +1,5 @@
 defmodule AeMdw.Sync.AsyncTasks.ProducerTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
 
   alias AeMdw.Database
   alias AeMdw.Db.Model

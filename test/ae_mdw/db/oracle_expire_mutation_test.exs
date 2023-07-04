@@ -1,5 +1,5 @@
 defmodule AeMdw.Db.OraclesExpirationMutationTest do
-  use AeMdw.Db.MutationCase
+  use AeMdw.Db.MutationCase, async: false
 
   alias AeMdw.Db.Model
   alias AeMdw.Db.OraclesExpirationMutation

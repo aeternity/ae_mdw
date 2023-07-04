@@ -1,5 +1,5 @@
 defmodule AeMdwWeb.Plugs.RequestSpanTest do
-  use AeMdwWeb.ConnCase
+  use AeMdwWeb.ConnCase, async: false
 
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store

@@ -1,5 +1,5 @@
 defmodule AeMdw.Db.AexnCreateContractMutationTest do
-  use AeMdw.Db.MutationCase
+  use AeMdw.Db.MutationCase, async: false
 
   alias AeMdw.Db.AexnCreateContractMutation
   alias AeMdw.Db.Model
