@@ -174,11 +174,11 @@ defmodule AeMdw.Db.Sync.ContractTest do
       contract2 = :aect_contracts.new(owner_pk, nonce + 1, %{vm: 7, abi: 3}, "code-4", 444)
 
       with_mocks [
-        {:aec_chain, [],
+        {:aec_chain, [:passthrough],
          [
-           get_contract: fn
-             ^contract_pk1 -> {:ok, contract1}
-             ^contract_pk2 -> {:ok, contract2}
+           get_contract_with_code: fn
+             ^contract_pk1 -> {:ok, contract1, "code-2"}
+             ^contract_pk2 -> {:ok, contract2, "code-4"}
            end
          ]},
         {Db, [], [nonce_at_block: fn ^block_hash, ^owner_pk -> nonce end]},
@@ -249,7 +249,8 @@ defmodule AeMdw.Db.Sync.ContractTest do
            call_extensions: fn _type, _pk -> {:ok, []} end
          ]},
         {Db, [], [nonce_at_block: fn ^block_hash, ^owner_pk -> nonce end]},
-        {:aec_chain, [], [get_contract: fn ^aex9_contract_pk -> {:ok, contract} end]}
+        {:aec_chain, [:passthrough],
+         [get_contract_with_code: fn ^aex9_contract_pk -> {:ok, contract, "code-2"} end]}
       ] do
         mutations =
           SyncContract.events_mutations(
