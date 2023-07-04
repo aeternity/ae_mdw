@@ -813,14 +813,15 @@ paths:
           description: Returns all the balances of an account
           content:
             application/json:
-              allOf:
-                - $ref: '#/components/schemas/PaginatedResponse'
-                - type: object
-                  properties:
-                    data:
-                      type: array
-                      items:
-                        $ref: '#/components/schemas/Aex9BalanceResponse'
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Aex9BalanceResponse'
         '400':
           description: Bad request
           content:
