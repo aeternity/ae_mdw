@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.52.1](https://www.github.com/aeternity/ae_mdw/compare/v1.52.0...v1.52.1) (2023-07-04)
+
+
+### Refactorings
+
+* use same get code logic from node ([#1436](https://www.github.com/aeternity/ae_mdw/issues/1436)) ([d7ab68e](https://www.github.com/aeternity/ae_mdw/commit/d7ab68ec39dca2f070c1116a55f7ec13df58d042))
+
 ## [1.52.0](https://www.github.com/aeternity/ae_mdw/compare/v1.51.0...v1.52.0) (2023-06-30)
 
 
