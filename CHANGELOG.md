@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.53.0](https://www.github.com/aeternity/ae_mdw/compare/v1.52.0...v1.53.0) (2023-07-05)
+
+
+### Features
+
+* add channels last updated time ([#1435](https://www.github.com/aeternity/ae_mdw/issues/1435)) ([d922851](https://www.github.com/aeternity/ae_mdw/commit/d922851ed9430d440d6c4830955ec19a8ae27168))
+
+
+### Refactorings
+
+* use same get code logic from node ([#1436](https://www.github.com/aeternity/ae_mdw/issues/1436)) ([d7ab68e](https://www.github.com/aeternity/ae_mdw/commit/d7ab68ec39dca2f070c1116a55f7ec13df58d042))
+
+
+### Testing
+
+* add async: false to all test that mock modules ([#1440](https://www.github.com/aeternity/ae_mdw/issues/1440)) ([6a1fc14](https://www.github.com/aeternity/ae_mdw/commit/6a1fc14b3c1f38f41cfb908b39492b844c8c4d07))
+
+
+### Miscellaneous
+
+* stream generations mutations ([#1444](https://www.github.com/aeternity/ae_mdw/issues/1444)) ([b46803d](https://www.github.com/aeternity/ae_mdw/commit/b46803d93511aeb76cfae9a5c457b07cf5380ef4))
+
 ## [1.52.0](https://www.github.com/aeternity/ae_mdw/compare/v1.51.0...v1.52.0) (2023-06-30)
 
 
