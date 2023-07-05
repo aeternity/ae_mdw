@@ -49,11 +49,11 @@ defmodule AeMdw.Db.Sync.Block do
           Txs.txi(),
           Blocks.height() | Blocks.block_hash()
         ) ::
-          {[height_mutations()], Txs.txi()}
+          Enumerable.t()
   def blocks_mutations(from_height, from_mbi, from_txi, to_height_or_hash) do
     from_height
     |> Db.get_blocks_per_height(to_height_or_hash)
-    |> Enum.flat_map_reduce(from_txi, fn {key_block, micro_blocks, next_kb_hash}, txi ->
+    |> Stream.transform(from_txi, fn {key_block, micro_blocks, next_kb_hash}, txi ->
       height = :aec_blocks.height(key_block)
       kb_header = :aec_blocks.to_key_header(key_block)
       {:ok, kb_hash} = :aec_headers.hash_header(kb_header)
