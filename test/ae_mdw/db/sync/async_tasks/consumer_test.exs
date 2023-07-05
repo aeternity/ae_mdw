@@ -1,5 +1,5 @@
 defmodule AeMdw.Sync.AsyncTasks.ConsumerTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
 
   alias AeMdw.AsyncTaskTestUtil
   alias AeMdw.Sync.Aex9BalancesCache

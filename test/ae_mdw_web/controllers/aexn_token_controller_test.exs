@@ -1,5 +1,5 @@
 defmodule AeMdwWeb.AexnTokenControllerTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
 
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model

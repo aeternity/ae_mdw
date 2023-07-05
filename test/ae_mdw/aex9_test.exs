@@ -1,5 +1,5 @@
 defmodule AeMdw.Aex9Test do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
 
   alias AeMdw.Aex9
   alias AeMdw.Db.Model

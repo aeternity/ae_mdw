@@ -1,5 +1,5 @@
 defmodule AeMdw.Db.NameClaimMutationTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
 
   alias AeMdw.Database
   alias AeMdw.Db.NameClaimMutation
