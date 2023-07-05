@@ -1,5 +1,5 @@
 defmodule AeMdwWeb.LogsViewTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
 
   alias AeMdw.Contracts
   alias AeMdw.Db.Contract
@@ -10,7 +10,9 @@ defmodule AeMdwWeb.LogsViewTest do
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.Store
   alias AeMdw.Db.State
+  alias AeMdw.Db.Util, as: DbUtil
 
+  import Mock
   import AeMdw.Util.Encoding
   import AeMdw.Node.AexnEventFixtures, only: [aexn_event_hash: 1]
   import AeMdw.Node.ContractCallFixtures, only: [call_rec: 5]
@@ -93,38 +95,42 @@ defmodule AeMdwWeb.LogsViewTest do
     } do
       state = State.new(store)
 
-      Enum.each(logs, fn {create_txi, txi, evt_hash, log_idx} = contract_log_index ->
-        %{
-          contract_txi: ^create_txi,
-          contract_tx_hash: contract_tx_hash,
-          contract_id: contract_id,
-          call_txi: ^txi,
-          call_tx_hash: call_tx_hash,
-          args: args,
-          data: data,
-          event_hash: event_hash,
-          event_name: event_name,
-          height: height,
-          micro_index: mbi,
-          block_hash: mb_hash,
-          log_idx: ^log_idx
-        } =
-          store
-          |> State.new()
-          |> LogsView.render_log(contract_log_index, %{aexn_args: true})
+      with_mocks [
+        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+      ] do
+        Enum.each(logs, fn {create_txi, txi, evt_hash, log_idx} = contract_log_index ->
+          %{
+            contract_txi: ^create_txi,
+            contract_tx_hash: contract_tx_hash,
+            contract_id: contract_id,
+            call_txi: ^txi,
+            call_tx_hash: call_tx_hash,
+            args: args,
+            data: data,
+            event_hash: event_hash,
+            event_name: event_name,
+            height: height,
+            micro_index: mbi,
+            block_hash: mb_hash,
+            log_idx: ^log_idx
+          } =
+            store
+            |> State.new()
+            |> LogsView.render_log(contract_log_index, %{aexn_args: true})
 
-        assert contract_id == encode_contract(Origin.pubkey(state, {:contract, create_txi}))
-        assert contract_tx_hash == encode_to_hash(state, create_txi)
-        assert call_tx_hash == encode_to_hash(state, txi)
-        assert_args(event_name, account1_pk, account2_pk, tokens, args)
-        assert data == "0x" <> Integer.to_string(txi, 16)
-        assert Base.hex_decode32!(event_hash) == evt_hash
-        event_type = String.to_existing_atom(Macro.underscore(event_name))
-        assert evt_hash == aexn_event_hash(event_type)
-        assert height == @height
-        assert mbi == @mbi
-        assert mb_hash == encode(:micro_block_hash, @mb_hash)
-      end)
+          assert contract_id == encode_contract(Origin.pubkey(state, {:contract, create_txi}))
+          assert contract_tx_hash == encode_to_hash(state, create_txi)
+          assert call_tx_hash == encode_to_hash(state, txi)
+          assert_args(event_name, account1_pk, account2_pk, tokens, args)
+          assert data == "0x" <> Integer.to_string(txi, 16)
+          assert Base.hex_decode32!(event_hash) == evt_hash
+          event_type = String.to_existing_atom(Macro.underscore(event_name))
+          assert evt_hash == aexn_event_hash(event_type)
+          assert height == @height
+          assert mbi == @mbi
+          assert mb_hash == encode(:micro_block_hash, @mb_hash)
+        end)
+      end
     end
 
     test "formats logs from aex141 events", %{
@@ -137,39 +143,43 @@ defmodule AeMdwWeb.LogsViewTest do
     } do
       state = State.new(store)
 
-      Enum.each(logs, fn {create_txi, txi, evt_hash, log_idx} = contract_log_index ->
-        %{
-          contract_txi: ^create_txi,
-          contract_tx_hash: contract_tx_hash,
-          contract_id: contract_id,
-          call_txi: ^txi,
-          call_tx_hash: call_tx_hash,
-          args: args,
-          data: data,
-          event_hash: event_hash,
-          event_name: event_name,
-          height: height,
-          micro_index: mbi,
-          block_hash: mb_hash,
-          log_idx: ^log_idx
-        } =
-          store
-          |> State.new()
-          |> LogsView.render_log(contract_log_index, %{aexn_args: true})
+      with_mocks [
+        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+      ] do
+        Enum.each(logs, fn {create_txi, txi, evt_hash, log_idx} = contract_log_index ->
+          %{
+            contract_txi: ^create_txi,
+            contract_tx_hash: contract_tx_hash,
+            contract_id: contract_id,
+            call_txi: ^txi,
+            call_tx_hash: call_tx_hash,
+            args: args,
+            data: data,
+            event_hash: event_hash,
+            event_name: event_name,
+            height: height,
+            micro_index: mbi,
+            block_hash: mb_hash,
+            log_idx: ^log_idx
+          } =
+            store
+            |> State.new()
+            |> LogsView.render_log(contract_log_index, %{aexn_args: true})
 
-        assert contract_id == encode_contract(Origin.pubkey(state, {:contract, create_txi}))
-        assert contract_tx_hash == encode_to_hash(state, create_txi)
-        assert call_tx_hash == encode_to_hash(state, txi)
-        assert_args(event_name, account1_pk, account2_pk, tokens, args)
-        assert_template_args(event_name, account1_pk, templates, tokens, args)
-        assert data == "0x" <> Integer.to_string(txi, 16)
-        assert Base.hex_decode32!(event_hash) == evt_hash
-        event_type = String.to_existing_atom(Macro.underscore(event_name))
-        assert evt_hash == aexn_event_hash(event_type)
-        assert height == @height
-        assert mbi == @mbi
-        assert mb_hash == encode(:micro_block_hash, @mb_hash)
-      end)
+          assert contract_id == encode_contract(Origin.pubkey(state, {:contract, create_txi}))
+          assert contract_tx_hash == encode_to_hash(state, create_txi)
+          assert call_tx_hash == encode_to_hash(state, txi)
+          assert_args(event_name, account1_pk, account2_pk, tokens, args)
+          assert_template_args(event_name, account1_pk, templates, tokens, args)
+          assert data == "0x" <> Integer.to_string(txi, 16)
+          assert Base.hex_decode32!(event_hash) == evt_hash
+          event_type = String.to_existing_atom(Macro.underscore(event_name))
+          assert evt_hash == aexn_event_hash(event_type)
+          assert height == @height
+          assert mbi == @mbi
+          assert mb_hash == encode(:micro_block_hash, @mb_hash)
+        end)
+      end
     end
 
     test "formats logs from custom events", %{
@@ -207,38 +217,42 @@ defmodule AeMdwWeb.LogsViewTest do
 
       state = State.new(store)
 
-      Enum.each(logs, fn {create_txi, txi, evt_hash, log_idx} = contract_log_index ->
-        %{
-          contract_txi: ^create_txi,
-          contract_tx_hash: contract_tx_hash,
-          contract_id: contract_id,
-          call_txi: ^txi,
-          call_tx_hash: call_tx_hash,
-          args: args,
-          data: data,
-          event_hash: event_hash,
-          event_name: event_name,
-          height: height,
-          micro_index: mbi,
-          block_hash: mb_hash,
-          log_idx: ^log_idx
-        } =
-          store
-          |> State.new()
-          |> LogsView.render_log(contract_log_index, %{custom_args: true})
+      with_mocks [
+        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+      ] do
+        Enum.each(logs, fn {create_txi, txi, evt_hash, log_idx} = contract_log_index ->
+          %{
+            contract_txi: ^create_txi,
+            contract_tx_hash: contract_tx_hash,
+            contract_id: contract_id,
+            call_txi: ^txi,
+            call_tx_hash: call_tx_hash,
+            args: args,
+            data: data,
+            event_hash: event_hash,
+            event_name: event_name,
+            height: height,
+            micro_index: mbi,
+            block_hash: mb_hash,
+            log_idx: ^log_idx
+          } =
+            store
+            |> State.new()
+            |> LogsView.render_log(contract_log_index, %{custom_args: true})
 
-        assert args == expected_args[event_name]
+          assert args == expected_args[event_name]
 
-        assert contract_id == encode_contract(Origin.pubkey(state, {:contract, create_txi}))
-        assert contract_tx_hash == encode_to_hash(state, create_txi)
-        assert call_tx_hash == encode_to_hash(state, txi)
-        assert data == "0x" <> Integer.to_string(txi, 16)
-        assert event_name in ["Listing", "Offer", "Trade"]
-        assert Base.hex_decode32!(event_hash) == evt_hash
-        assert height == @height
-        assert mbi == @mbi
-        assert mb_hash == encode(:micro_block_hash, @mb_hash)
-      end)
+          assert contract_id == encode_contract(Origin.pubkey(state, {:contract, create_txi}))
+          assert contract_tx_hash == encode_to_hash(state, create_txi)
+          assert call_tx_hash == encode_to_hash(state, txi)
+          assert data == "0x" <> Integer.to_string(txi, 16)
+          assert event_name in ["Listing", "Offer", "Trade"]
+          assert Base.hex_decode32!(event_hash) == evt_hash
+          assert height == @height
+          assert mbi == @mbi
+          assert mb_hash == encode(:micro_block_hash, @mb_hash)
+        end)
+      end
     end
 
     test "renders logs with remote calls" do
@@ -290,76 +304,80 @@ defmodule AeMdwWeb.LogsViewTest do
         )
         |> Contract.logs_write(create_txi, call_txi, call_rec)
 
-      assert {:ok, _prev, [log1, log2], _next} =
-               Contracts.fetch_logs(state, {:forward, false, 100, false}, nil, %{}, nil)
+      with_mocks [
+        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+      ] do
+        assert {:ok, _prev, [log1, log2], _next} =
+                 Contracts.fetch_logs(state, {:forward, false, 100, false}, nil, %{}, nil)
 
-      contract_id = encode_contract(contract_pk)
-      contract_tx_hash = encode_to_hash(state, create_txi)
-      remote_id = encode_contract(remote_pk)
-      remote_tx_hash = encode_to_hash(state, remote_txi)
+        contract_id = encode_contract(contract_pk)
+        contract_tx_hash = encode_to_hash(state, create_txi)
+        remote_id = encode_contract(remote_pk)
+        remote_tx_hash = encode_to_hash(state, remote_txi)
 
-      call_tx_hash = encode_to_hash(state, call_txi)
-      mb_hash = encode(:micro_block_hash, block_hash)
+        call_tx_hash = encode_to_hash(state, call_txi)
+        mb_hash = encode(:micro_block_hash, block_hash)
 
-      event_hash0 = Base.hex_encode32(evt_hash0)
-      event_hash1 = Base.hex_encode32(evt_hash1)
+        event_hash0 = Base.hex_encode32(evt_hash0)
+        event_hash1 = Base.hex_encode32(evt_hash1)
 
-      assert %{
-               contract_id: ^contract_id,
-               contract_tx_hash: ^contract_tx_hash,
-               call_txi: ^call_txi,
-               call_tx_hash: ^call_tx_hash,
-               event_hash: ^event_hash0,
-               height: ^height,
-               micro_index: ^mbi,
-               block_hash: ^mb_hash,
-               log_idx: 0,
-               ext_caller_contract_txi: -1,
-               ext_caller_contract_tx_hash: nil,
-               ext_caller_contract_id: nil,
-               parent_contract_id: nil
-             } = LogsView.render_log(state, log1, %{})
+        assert %{
+                 contract_id: ^contract_id,
+                 contract_tx_hash: ^contract_tx_hash,
+                 call_txi: ^call_txi,
+                 call_tx_hash: ^call_tx_hash,
+                 event_hash: ^event_hash0,
+                 height: ^height,
+                 micro_index: ^mbi,
+                 block_hash: ^mb_hash,
+                 log_idx: 0,
+                 ext_caller_contract_txi: -1,
+                 ext_caller_contract_tx_hash: nil,
+                 ext_caller_contract_id: nil,
+                 parent_contract_id: nil
+               } = LogsView.render_log(state, log1, %{})
 
-      assert %{
-               contract_id: ^contract_id,
-               contract_tx_hash: ^contract_tx_hash,
-               call_txi: ^call_txi,
-               call_tx_hash: ^call_tx_hash,
-               event_hash: ^event_hash1,
-               height: ^height,
-               micro_index: ^mbi,
-               block_hash: ^mb_hash,
-               log_idx: 1,
-               ext_caller_contract_txi: ^remote_txi,
-               ext_caller_contract_tx_hash: ^remote_tx_hash,
-               ext_caller_contract_id: ^remote_id,
-               parent_contract_id: nil
-             } = LogsView.render_log(state, log2, %{})
+        assert %{
+                 contract_id: ^contract_id,
+                 contract_tx_hash: ^contract_tx_hash,
+                 call_txi: ^call_txi,
+                 call_tx_hash: ^call_tx_hash,
+                 event_hash: ^event_hash1,
+                 height: ^height,
+                 micro_index: ^mbi,
+                 block_hash: ^mb_hash,
+                 log_idx: 1,
+                 ext_caller_contract_txi: ^remote_txi,
+                 ext_caller_contract_tx_hash: ^remote_tx_hash,
+                 ext_caller_contract_id: ^remote_id,
+                 parent_contract_id: nil
+               } = LogsView.render_log(state, log2, %{})
 
-      assert {:ok, _prev, [log3], _next} =
-               Contracts.fetch_logs(
-                 state,
-                 {:forward, false, 100, false},
-                 nil,
-                 %{"contract" => remote_id},
-                 nil
-               )
+        assert {:ok, _prev, [log3], _next} =
+                 Contracts.fetch_logs(
+                   state,
+                   {:forward, false, 100, false},
+                   nil,
+                   %{"contract" => remote_id},
+                   nil
+                 )
 
-      assert %{
-               contract_id: ^remote_id,
-               contract_tx_hash: ^remote_tx_hash,
-               call_txi: ^call_txi,
-               call_tx_hash: ^call_tx_hash,
-               event_hash: ^event_hash1,
-               height: ^height,
-               micro_index: ^mbi,
-               block_hash: ^mb_hash,
-               log_idx: 1,
-               ext_caller_contract_txi: -1,
-               ext_caller_contract_tx_hash: nil,
-               ext_caller_contract_id: nil,
-               parent_contract_id: ^contract_id
-             } = LogsView.render_log(state, log3, %{})
+        assert %{
+                 contract_id: ^remote_id,
+                 contract_tx_hash: ^remote_tx_hash,
+                 call_txi: ^call_txi,
+                 call_tx_hash: ^call_tx_hash,
+                 event_hash: ^event_hash1,
+                 height: ^height,
+                 micro_index: ^mbi,
+                 block_hash: ^mb_hash,
+                 log_idx: 1,
+                 ext_caller_contract_txi: -1,
+                 ext_caller_contract_tx_hash: nil,
+                 ext_caller_contract_id: nil,
+                 parent_contract_id: ^contract_id
+               } = LogsView.render_log(state, log3, %{})
+      end
     end
   end
 

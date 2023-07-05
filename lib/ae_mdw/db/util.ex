@@ -20,6 +20,7 @@ defmodule AeMdw.Db.Util do
   @typep height() :: Blocks.height()
   @typep txi() :: Txs.txi()
   @typep time() :: Blocks.time()
+  @typep block_index() :: Blocks.block_index()
 
   @tx_types_to_fname %{
     :contract_create_tx => ~w(Chain.clone Chain.create),
@@ -317,6 +318,13 @@ defmodule AeMdw.Db.Util do
 
   def height_to_time(_state, height, last_height, last_micro_time),
     do: last_micro_time + (height - last_height) * @approximate_key_block_rate
+
+  @spec block_index_to_time(state(), block_index()) :: time()
+  def block_index_to_time(state, block_index) do
+    Model.block(hash: block_hash) = State.fetch!(state, Model.Block, block_index)
+
+    block_time(block_hash)
+  end
 
   @spec block_time(Blocks.block_hash()) :: time()
   def block_time(block_hash) do
