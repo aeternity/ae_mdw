@@ -70,8 +70,8 @@ defmodule AeMdw.Db.Sync.BlockTest do
         last_mb_hash = AeMdw.Validate.id!(last_mb_hash)
 
         assert mem1 = :ets.info(:sync_hashes, :memory)
-        assert {height_blocks, txi} = Block.blocks_mutations(0, 0, 0, last_mb_hash)
-        assert {^height_blocks, ^txi} = Block.blocks_mutations(0, 0, 0, last_mb_hash)
+        assert height_blocks = 0 |> Block.blocks_mutations(0, 0, last_mb_hash) |> Enum.to_list()
+        assert ^height_blocks = 0 |> Block.blocks_mutations(0, 0, last_mb_hash) |> Enum.to_list()
         assert length(height_blocks) == 11
         assert mem2 = :ets.info(:sync_hashes, :memory)
         assert mem2 > mem1

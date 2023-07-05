@@ -245,17 +245,14 @@ defmodule AeMdw.Sync.Server do
       end
 
     spawn_task(fn ->
-      {mutations_time, {gens_mutations, _next_txi}} =
-        :timer.tc(fn ->
-          Block.blocks_mutations(from_height, from_mbi, from_txi, to_height)
-        end)
-
-      MutationsCache.clear()
+      gens_mutations = Block.blocks_mutations(from_height, from_mbi, from_txi, to_height)
 
       {exec_time, new_state} =
         :timer.tc(fn -> exec_db_mutations(gens_mutations, db_state, clear_mem?) end)
 
-      gens_per_min = (to_height + 1 - from_height) * 60_000_000 / (mutations_time + exec_time)
+      MutationsCache.clear()
+
+      gens_per_min = (to_height + 1 - from_height) * 60_000_000 / exec_time
       Status.set_gens_per_min(gens_per_min)
 
       new_state
@@ -273,15 +270,8 @@ defmodule AeMdw.Sync.Server do
           :none -> -1
         end
 
-      {mutations_time, {gens_mutations, _next_txi}} =
-        :timer.tc(fn ->
-          Block.blocks_mutations(from_height, from_mbi, from_txi, last_hash)
-        end)
-
-      {exec_time, _new_state} = :timer.tc(fn -> exec_mem_mutations(gens_mutations, mem_state) end)
-
-      gens_per_min = length(gens_mutations) * 60_000_000 / (mutations_time + exec_time)
-      Status.set_gens_per_min(gens_per_min)
+      gens_mutations = Block.blocks_mutations(from_height, from_mbi, from_txi, last_hash)
+      _new_state = exec_mem_mutations(gens_mutations, mem_state)
 
       last_hash
     end)
