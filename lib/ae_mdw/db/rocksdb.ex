@@ -28,7 +28,7 @@ defmodule AeMdw.Db.RocksDb do
   # see https://github.com/facebook/rocksdb/wiki/Space-Tuning
   @block_size 4 * 1024
   @block_cache_size 32 * 1024 * 1024
-  @write_buffer_size 32 * 1024 * 1024
+  @write_buffer_size 64 * 1024 * 1024
 
   @db_options [
     create_if_missing: true,
@@ -44,7 +44,7 @@ defmodule AeMdw.Db.RocksDb do
     block_based_table_options: [
       block_size: @block_size,
       block_cache_size: @block_cache_size,
-      cache_index_and_filter_blocks: true,
+      cache_index_and_filter_blocks: false,
       format_version: 5
     ],
     merge_operator: :erlang_merge_operator
