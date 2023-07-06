@@ -40,6 +40,7 @@ defmodule AeMdwWeb.LogsView do
       contract_id: encode_contract(ct_pk),
       call_txi: call_txi,
       call_tx_hash: encode(:tx_hash, call_tx_hash),
+      block_time: DBUtil.block_time(block_hash),
       args: format_args(event_name, args, encode_args),
       data: maybe_encode_base64(data),
       event_hash: Base.hex_encode32(event_hash),

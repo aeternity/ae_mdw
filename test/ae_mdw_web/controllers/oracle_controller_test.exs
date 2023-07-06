@@ -18,10 +18,17 @@ defmodule AeMdwWeb.OracleControllerTest do
 
   describe "oracles" do
     test "it retrieves active oracles first", %{conn: conn, store: store} do
-      Model.oracle(index: oracle_pk1) = oracle = TS.oracle()
+      Model.oracle(index: oracle_pk1) =
+        oracle =
+        Model.oracle(
+          TS.oracle(),
+          register: {{999, 0}, {2000, -1}}
+        )
+
       oracle_pk2 = <<0::256>>
       block_hash1 = <<1::256>>
       tx_hash1 = <<2::256>>
+      tx_hash2 = <<3::256>>
       last_gen = 1000
       last_time = 123
       expiration1 = 1002
@@ -48,6 +55,8 @@ defmodule AeMdwWeb.OracleControllerTest do
           Model.oracle(oracle, index: oracle_pk2, expire: expiration2)
         )
         |> Store.put(Model.Tx, Model.tx(index: 8916, id: tx_hash1))
+        |> Store.put(Model.Block, Model.block(index: {999, 0}, hash: block_hash1))
+        |> Store.put(Model.Tx, Model.tx(index: 2000, id: tx_hash2))
 
       with_mocks [
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
@@ -61,8 +70,11 @@ defmodule AeMdwWeb.OracleControllerTest do
                  |> get("/oracles")
                  |> json_response(200)
 
-        assert %{"oracle" => ^encoded_pk2, "approximate_expire_time" => ^expiration_time2} =
-                 oracle2
+        assert %{
+                 "oracle" => ^encoded_pk2,
+                 "approximate_expire_time" => ^expiration_time2,
+                 "register_time" => 123
+               } = oracle2
 
         assert %{"oracle" => ^encoded_pk1, "approximate_expire_time" => ^expiration_time1} =
                  oracle1
@@ -73,7 +85,13 @@ defmodule AeMdwWeb.OracleControllerTest do
       conn: conn,
       store: store
     } do
-      Model.oracle(index: oracle_pk1) = oracle = TS.oracle()
+      Model.oracle(index: oracle_pk1) =
+        oracle =
+        Model.oracle(
+          TS.oracle(),
+          register: {{0, -1}, {8916, -1}}
+        )
+
       [oracle_pk2, oracle_pk3, oracle_pk4] = [<<1::256>>, <<2::256>>, <<3::256>>]
       [expiration1, expiration2, expiration3, expiration4] = [50, 51, 2000, 3000]
       block_hash1 = <<4::256>>
@@ -110,6 +128,7 @@ defmodule AeMdwWeb.OracleControllerTest do
           Model.ActiveOracleExpiration,
           Model.expiration(index: {expiration4, oracle_pk4})
         )
+        |> Store.put(Model.Block, Model.block(index: {0, -1}, hash: block_hash1))
         |> Store.put(Model.Block, Model.block(index: {last_gen, -1}, hash: block_hash3))
         |> Store.put(Model.Block, Model.block(index: {expiration1 - 1, -1}, hash: block_hash1))
         |> Store.put(Model.Block, Model.block(index: {expiration2 - 1, -1}, hash: block_hash2))
@@ -159,25 +178,29 @@ defmodule AeMdwWeb.OracleControllerTest do
         assert %{
                  "active" => false,
                  "oracle" => ^encoded_pk1,
-                 "approximate_expire_time" => ^expiration_time1
+                 "approximate_expire_time" => ^expiration_time1,
+                 "register_time" => 111
                } = oracle1
 
         assert %{
                  "active" => false,
                  "oracle" => ^encoded_pk2,
-                 "approximate_expire_time" => ^expiration_time2
+                 "approximate_expire_time" => ^expiration_time2,
+                 "register_time" => 111
                } = oracle2
 
         assert %{
                  "active" => true,
                  "oracle" => ^encoded_pk3,
-                 "approximate_expire_time" => ^expiration_time3
+                 "approximate_expire_time" => ^expiration_time3,
+                 "register_time" => 111
                } = oracle3
 
         assert %{
                  "active" => true,
                  "oracle" => ^encoded_pk4,
-                 "approximate_expire_time" => ^expiration_time4
+                 "approximate_expire_time" => ^expiration_time4,
+                 "register_time" => 111
                } = oracle4
       end
     end
@@ -216,6 +239,7 @@ defmodule AeMdwWeb.OracleControllerTest do
         |> Store.put(Model.ActiveOracleExpiration, Model.expiration(index: oracle_exp2))
         |> Store.put(Model.ActiveOracle, oracle1)
         |> Store.put(Model.ActiveOracle, oracle2)
+        |> Store.put(Model.Block, Model.block(index: {0, -1}, hash: block_hash))
         |> Store.put(Model.Block, Model.block(index: {exp_height1, -1}, hash: block_hash))
         |> Store.put(Model.Block, Model.block(index: {exp_height2, -1}, hash: block_hash))
         |> Store.put(Model.Block, Model.block(index: {exp_height1 - 1, -1}, hash: block_hash))
@@ -233,11 +257,18 @@ defmodule AeMdwWeb.OracleControllerTest do
                  |> get("/oracles", tx_hash: "true", limit: 2)
                  |> json_response(200)
 
-        assert %{"register_tx_hash" => register_hash, "extends" => [extends_hash]} = oracle1
+        assert %{
+                 "register_tx_hash" => register_hash,
+                 "extends" => [extends_hash],
+                 "register_time" => 123
+               } = oracle1
+
         assert {:ok, ^register_tx_hash1} = Enc.safe_decode(:tx_hash, register_hash)
         assert {:ok, ^extends_tx_hash} = Enc.safe_decode(:tx_hash, extends_hash)
 
-        assert %{"register_tx_hash" => register_hash, "extends" => []} = oracle2
+        assert %{"register_tx_hash" => register_hash, "extends" => [], "register_time" => 123} =
+                 oracle2
+
         assert {:ok, ^register_tx_hash2} = Enc.safe_decode(:tx_hash, register_hash)
       end
     end

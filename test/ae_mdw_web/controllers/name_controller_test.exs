@@ -921,6 +921,7 @@ defmodule AeMdwWeb.NameControllerTest do
           |> Store.put(Model.Block, Model.block(index: {i, -1}, hash: key_hash))
         end)
         |> Store.put(Model.Block, Model.block(index: {last_gen, -1}, hash: key_hash))
+        |> Store.put(Model.Block, Model.block(index: {0, 1}, hash: key_hash))
 
       with_mocks [
         {Txs, [],
@@ -989,6 +990,7 @@ defmodule AeMdwWeb.NameControllerTest do
         end)
         |> Store.put(Model.Block, Model.block(index: {0, -1}, hash: key_hash))
         |> Store.put(Model.Block, Model.block(index: {4, -1}, hash: key_hash))
+        |> Store.put(Model.Block, Model.block(index: {0, 1}, hash: key_hash))
 
       with_mocks [
         {Txs, [],

@@ -315,7 +315,8 @@ defmodule AeMdw.Oracles do
            index: pk,
            expire: expire_height,
            register:
-             {{register_height, _mbi}, {register_txi, _register_idx}} = register_bi_txi_idx,
+             {{register_height, _mbi} = register_bi, {register_txi, _register_idx}} =
+               register_bi_txi_idx,
            extends: extends,
            previous: _previous
          ),
@@ -337,6 +338,7 @@ defmodule AeMdw.Oracles do
       oracle: Enc.encode(:oracle_pubkey, pk),
       active: is_active?,
       active_from: register_height,
+      register_time: DBUtil.block_index_to_time(state, register_bi),
       expire_height: expire_height,
       approximate_expire_time:
         DBUtil.height_to_time(state, expire_height, last_gen, last_micro_time),

@@ -89,153 +89,165 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       aex9_contract_pk: aex9_contract_pk,
       aex141_contract_pk: aex141_contract_pk
     } do
-      assert %{"data" => logs, "next" => nil} =
-               conn
-               |> with_store(store)
-               |> get("/v2/contracts/logs?limit=100&aexn-args=true")
-               |> json_response(200)
+      with_mocks [
+        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+      ] do
+        assert %{"data" => logs, "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/contracts/logs?limit=100&aexn-args=true")
+                 |> json_response(200)
 
-      assert @mixed_logs_amount + @contract_logs_amount + length(@aex9_events) +
-               length(@aex141_events) + 1 == length(logs)
+        assert @mixed_logs_amount + @contract_logs_amount + length(@aex9_events) +
+                 length(@aex141_events) + 1 == length(logs)
 
-      state = State.new(store)
+        state = State.new(store)
 
-      contracts_txi = [
-        Origin.tx_index!(state, {:contract, contract_pk}),
-        Origin.tx_index!(state, {:contract, aex9_contract_pk}),
-        Origin.tx_index!(state, {:contract, aex141_contract_pk})
-      ]
+        contracts_txi = [
+          Origin.tx_index!(state, {:contract, contract_pk}),
+          Origin.tx_index!(state, {:contract, aex9_contract_pk}),
+          Origin.tx_index!(state, {:contract, aex141_contract_pk})
+        ]
 
-      Enum.each(logs, fn %{
-                           "contract_txi" => create_txi,
-                           "contract_tx_hash" => contract_tx_hash,
-                           "contract_id" => contract_id,
-                           "ext_caller_contract_txi" => create_txi,
-                           "ext_caller_contract_tx_hash" => contract_tx_hash,
-                           "ext_caller_contract_id" => contract_id,
-                           "parent_contract_id" => nil,
-                           "call_txi" => call_txi,
-                           "call_tx_hash" => call_tx_hash,
-                           "args" => args,
-                           "data" => data,
-                           "event_hash" => event_hash,
-                           "event_name" => event_name,
-                           "height" => height,
-                           "micro_index" => micro_index,
-                           "block_hash" => block_hash,
-                           "log_idx" => log_idx
-                         } ->
-        assert create_txi == call_txi - 100 or create_txi in contracts_txi
-        assert contract_tx_hash == encode(:tx_hash, Txs.txi_to_hash(state, create_txi))
-        assert contract_id == encode_contract(Origin.pubkey(state, {:contract, create_txi}))
-        assert call_tx_hash == encode(:tx_hash, Txs.txi_to_hash(state, call_txi))
+        Enum.each(logs, fn %{
+                             "contract_txi" => create_txi,
+                             "contract_tx_hash" => contract_tx_hash,
+                             "contract_id" => contract_id,
+                             "ext_caller_contract_txi" => create_txi,
+                             "ext_caller_contract_tx_hash" => contract_tx_hash,
+                             "ext_caller_contract_id" => contract_id,
+                             "parent_contract_id" => nil,
+                             "call_txi" => call_txi,
+                             "call_tx_hash" => call_tx_hash,
+                             "args" => args,
+                             "data" => data,
+                             "event_hash" => event_hash,
+                             "event_name" => event_name,
+                             "height" => height,
+                             "micro_index" => micro_index,
+                             "block_hash" => block_hash,
+                             "log_idx" => log_idx
+                           } ->
+          assert create_txi == call_txi - 100 or create_txi in contracts_txi
+          assert contract_tx_hash == encode(:tx_hash, Txs.txi_to_hash(state, create_txi))
+          assert contract_id == encode_contract(Origin.pubkey(state, {:contract, create_txi}))
+          assert call_tx_hash == encode(:tx_hash, Txs.txi_to_hash(state, call_txi))
 
-        if event_name == "Burn" do
-          [account, value] = args
-          assert String.starts_with?(account, "ak") and value == call_txi
-        else
-          assert args == [to_string(call_txi)]
-        end
+          if event_name == "Burn" do
+            [account, value] = args
+            assert String.starts_with?(account, "ak") and value == call_txi
+          else
+            assert args == [to_string(call_txi)]
+          end
 
-        assert data == "0x" <> Integer.to_string(call_txi, 16)
+          assert data == "0x" <> Integer.to_string(call_txi, 16)
 
-        assert event_hash in @event_hashes or event_name in @aex9_events or
-                 event_name in @aex141_events
+          assert event_hash in @event_hashes or event_name in @aex9_events or
+                   event_name in @aex141_events
 
-        assert height == @log_kbi
-        assert micro_index == @log_mbi
-        assert block_hash == encode(:micro_block_hash, @log_block_hash)
-        assert log_idx == rem(call_txi, 5)
-      end)
+          assert height == @log_kbi
+          assert micro_index == @log_mbi
+          assert block_hash == encode(:micro_block_hash, @log_block_hash)
+          assert log_idx == rem(call_txi, 5)
+        end)
+      end
     end
 
     test "returns paginated contract logs by desc call txi", %{conn: conn, store: store} do
-      assert %{"data" => logs, "next" => next} =
-               conn
-               |> with_store(store)
-               |> get("/v2/contracts/logs")
-               |> json_response(200)
+      with_mocks [
+        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+      ] do
+        assert %{"data" => logs, "next" => next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/contracts/logs")
+                 |> json_response(200)
 
-      assert @default_limit = length(logs)
-      assert ^logs = Enum.sort_by(logs, & &1["call_txi"], :desc)
-      assert hd(logs)["call_txi"] == @last_log_txi
+        assert @default_limit = length(logs)
+        assert ^logs = Enum.sort_by(logs, & &1["call_txi"], :desc)
+        assert hd(logs)["call_txi"] == @last_log_txi
 
-      Enum.each(logs, fn %{
-                           "call_txi" => call_txi,
-                           "height" => height,
-                           "micro_index" => micro_index,
-                           "block_hash" => block_hash
-                         } ->
-        assert call_txi in @log_txis
-        assert height == @log_kbi
-        assert micro_index == @log_mbi
-        assert block_hash == encode(:micro_block_hash, @log_block_hash)
-      end)
+        Enum.each(logs, fn %{
+                             "call_txi" => call_txi,
+                             "height" => height,
+                             "micro_index" => micro_index,
+                             "block_hash" => block_hash
+                           } ->
+          assert call_txi in @log_txis
+          assert height == @log_kbi
+          assert micro_index == @log_mbi
+          assert block_hash == encode(:micro_block_hash, @log_block_hash)
+        end)
 
-      assert %{"data" => next_logs, "prev" => prev_logs} =
-               conn |> with_store(store) |> get(next) |> json_response(200)
+        assert %{"data" => next_logs, "prev" => prev_logs} =
+                 conn |> with_store(store) |> get(next) |> json_response(200)
 
-      assert @default_limit = length(next_logs)
-      assert ^next_logs = Enum.sort_by(next_logs, & &1["call_txi"], :desc)
-      assert hd(next_logs)["call_txi"] == @last_log_txi - 10
+        assert @default_limit = length(next_logs)
+        assert ^next_logs = Enum.sort_by(next_logs, & &1["call_txi"], :desc)
+        assert hd(next_logs)["call_txi"] == @last_log_txi - 10
 
-      assert Enum.all?(next_logs, fn %{
-                                       "call_txi" => call_txi,
-                                       "height" => height,
-                                       "micro_index" => micro_index,
-                                       "block_hash" => block_hash
-                                     } ->
-               call_txi in @log_txis and height == @log_kbi and
-                 micro_index == @log_mbi and
-                 block_hash == encode(:micro_block_hash, @log_block_hash)
-             end)
+        assert Enum.all?(next_logs, fn %{
+                                         "call_txi" => call_txi,
+                                         "height" => height,
+                                         "micro_index" => micro_index,
+                                         "block_hash" => block_hash
+                                       } ->
+                 call_txi in @log_txis and height == @log_kbi and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
 
-      assert %{"data" => ^logs} =
-               conn |> with_store(store) |> get(prev_logs) |> json_response(200)
+        assert %{"data" => ^logs} =
+                 conn |> with_store(store) |> get(prev_logs) |> json_response(200)
+      end
     end
 
     test "returns paginated contract logs by asc call txi", %{conn: conn, store: store} do
-      assert %{"data" => logs, "next" => next} =
-               conn
-               |> with_store(store)
-               |> get("/v2/contracts/logs", direction: :forward)
-               |> json_response(200)
+      with_mocks [
+        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+      ] do
+        assert %{"data" => logs, "next" => next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/contracts/logs", direction: :forward)
+                 |> json_response(200)
 
-      assert @default_limit = length(logs)
-      assert ^logs = Enum.sort_by(logs, & &1["call_txi"])
-      assert hd(logs)["call_txi"] == @first_log_txi
+        assert @default_limit = length(logs)
+        assert ^logs = Enum.sort_by(logs, & &1["call_txi"])
+        assert hd(logs)["call_txi"] == @first_log_txi
 
-      assert Enum.all?(logs, fn %{
-                                  "call_txi" => call_txi,
-                                  "height" => height,
-                                  "micro_index" => micro_index,
-                                  "block_hash" => block_hash
-                                } ->
-               call_txi in @log_txis and height == @log_kbi and
-                 micro_index == @log_mbi and
-                 block_hash == encode(:micro_block_hash, @log_block_hash)
-             end)
+        assert Enum.all?(logs, fn %{
+                                    "call_txi" => call_txi,
+                                    "height" => height,
+                                    "micro_index" => micro_index,
+                                    "block_hash" => block_hash
+                                  } ->
+                 call_txi in @log_txis and height == @log_kbi and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
 
-      assert %{"data" => next_logs, "prev" => prev_logs} =
-               conn |> with_store(store) |> get(next) |> json_response(200)
+        assert %{"data" => next_logs, "prev" => prev_logs} =
+                 conn |> with_store(store) |> get(next) |> json_response(200)
 
-      assert @default_limit = length(next_logs)
-      assert ^next_logs = Enum.sort_by(next_logs, & &1["call_txi"])
-      assert hd(next_logs)["call_txi"] == @first_log_txi + 10
+        assert @default_limit = length(next_logs)
+        assert ^next_logs = Enum.sort_by(next_logs, & &1["call_txi"])
+        assert hd(next_logs)["call_txi"] == @first_log_txi + 10
 
-      assert Enum.all?(next_logs, fn %{
-                                       "call_txi" => call_txi,
-                                       "height" => height,
-                                       "micro_index" => micro_index,
-                                       "block_hash" => block_hash
-                                     } ->
-               call_txi in @log_txis and height == @log_kbi and
-                 micro_index == @log_mbi and
-                 block_hash == encode(:micro_block_hash, @log_block_hash)
-             end)
+        assert Enum.all?(next_logs, fn %{
+                                         "call_txi" => call_txi,
+                                         "height" => height,
+                                         "micro_index" => micro_index,
+                                         "block_hash" => block_hash
+                                       } ->
+                 call_txi in @log_txis and height == @log_kbi and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
 
-      assert %{"data" => ^logs} =
-               conn |> with_store(store) |> get(prev_logs) |> json_response(200)
+        assert %{"data" => ^logs} =
+                 conn |> with_store(store) |> get(prev_logs) |> json_response(200)
+      end
     end
 
     test "returns contract logs filtered by contract", %{
@@ -245,49 +257,53 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
     } do
       contract_id = encode_contract(contract_pk)
 
-      assert %{"data" => logs, "next" => next} =
-               conn
-               |> with_store(store)
-               |> get("/v2/contracts/logs", contract: contract_id, direction: :forward)
-               |> json_response(200)
+      with_mocks [
+        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+      ] do
+        assert %{"data" => logs, "next" => next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/contracts/logs", contract: contract_id, direction: :forward)
+                 |> json_response(200)
 
-      assert @default_limit = length(logs)
-      assert ^logs = Enum.sort_by(logs, & &1["call_txi"])
-      assert hd(logs)["call_txi"] == @first_log_txi + @mixed_logs_amount
+        assert @default_limit = length(logs)
+        assert ^logs = Enum.sort_by(logs, & &1["call_txi"])
+        assert hd(logs)["call_txi"] == @first_log_txi + @mixed_logs_amount
 
-      assert Enum.all?(logs, fn %{
-                                  "contract_id" => ct_id,
-                                  "call_txi" => call_txi,
-                                  "height" => height,
-                                  "micro_index" => micro_index,
-                                  "block_hash" => block_hash
-                                } ->
-               ct_id == contract_id and call_txi in @log_txis and height == @log_kbi and
-                 micro_index == @log_mbi and
-                 block_hash == encode(:micro_block_hash, @log_block_hash)
-             end)
+        assert Enum.all?(logs, fn %{
+                                    "contract_id" => ct_id,
+                                    "call_txi" => call_txi,
+                                    "height" => height,
+                                    "micro_index" => micro_index,
+                                    "block_hash" => block_hash
+                                  } ->
+                 ct_id == contract_id and call_txi in @log_txis and height == @log_kbi and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
 
-      assert %{"data" => next_logs, "prev" => prev_logs} =
-               conn |> with_store(store) |> get(next) |> json_response(200)
+        assert %{"data" => next_logs, "prev" => prev_logs} =
+                 conn |> with_store(store) |> get(next) |> json_response(200)
 
-      assert @default_limit = length(next_logs)
-      assert ^next_logs = Enum.sort_by(next_logs, & &1["call_txi"])
-      assert hd(next_logs)["call_txi"] == @first_log_txi + @mixed_logs_amount + 10
+        assert @default_limit = length(next_logs)
+        assert ^next_logs = Enum.sort_by(next_logs, & &1["call_txi"])
+        assert hd(next_logs)["call_txi"] == @first_log_txi + @mixed_logs_amount + 10
 
-      assert Enum.all?(next_logs, fn %{
-                                       "contract_id" => ct_id,
-                                       "call_txi" => call_txi,
-                                       "height" => height,
-                                       "micro_index" => micro_index,
-                                       "block_hash" => block_hash
-                                     } ->
-               ct_id == contract_id and call_txi in @log_txis and height == @log_kbi and
-                 micro_index == @log_mbi and
-                 block_hash == encode(:micro_block_hash, @log_block_hash)
-             end)
+        assert Enum.all?(next_logs, fn %{
+                                         "contract_id" => ct_id,
+                                         "call_txi" => call_txi,
+                                         "height" => height,
+                                         "micro_index" => micro_index,
+                                         "block_hash" => block_hash
+                                       } ->
+                 ct_id == contract_id and call_txi in @log_txis and height == @log_kbi and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
 
-      assert %{"data" => ^logs} =
-               conn |> with_store(store) |> get(prev_logs) |> json_response(200)
+        assert %{"data" => ^logs} =
+                 conn |> with_store(store) |> get(prev_logs) |> json_response(200)
+      end
     end
 
     test "returns logs with event names for AEX-9 events", %{
@@ -297,27 +313,31 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
     } do
       contract_id = encode_contract(contract_pk)
 
-      assert %{"data" => logs} =
-               conn
-               |> with_store(store)
-               |> get("/v2/contracts/logs", contract: contract_id, direction: :forward)
-               |> json_response(200)
+      with_mocks [
+        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+      ] do
+        assert %{"data" => logs} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/contracts/logs", contract: contract_id, direction: :forward)
+                 |> json_response(200)
 
-      assert length(logs) == length(@aex9_events)
+        assert length(logs) == length(@aex9_events)
 
-      assert Enum.all?(logs, fn %{
-                                  "contract_id" => ct_id,
-                                  "height" => height,
-                                  "micro_index" => micro_index,
-                                  "block_hash" => block_hash,
-                                  "event_hash" => event_hash,
-                                  "event_name" => event_name
-                                } ->
-               ct_id == contract_id and height == @log_kbi and micro_index == @log_mbi and
-                 block_hash == encode(:micro_block_hash, @log_block_hash) and
-                 event_hash == Base.hex_encode32(:aec_hash.blake2b_256_hash(event_name)) and
-                 event_name in @aex9_events
-             end)
+        assert Enum.all?(logs, fn %{
+                                    "contract_id" => ct_id,
+                                    "height" => height,
+                                    "micro_index" => micro_index,
+                                    "block_hash" => block_hash,
+                                    "event_hash" => event_hash,
+                                    "event_name" => event_name
+                                  } ->
+                 ct_id == contract_id and height == @log_kbi and micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash) and
+                   event_hash == Base.hex_encode32(:aec_hash.blake2b_256_hash(event_name)) and
+                   event_name in @aex9_events
+               end)
+      end
     end
 
     test "returns logs with event names for AEX-141 events", %{
@@ -327,27 +347,31 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
     } do
       contract_id = encode_contract(contract_pk)
 
-      assert %{"data" => logs} =
-               conn
-               |> with_store(store)
-               |> get("/v2/contracts/logs", contract: contract_id, direction: :forward)
-               |> json_response(200)
+      with_mocks [
+        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+      ] do
+        assert %{"data" => logs} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/contracts/logs", contract: contract_id, direction: :forward)
+                 |> json_response(200)
 
-      assert length(logs) == length(@aex141_events)
+        assert length(logs) == length(@aex141_events)
 
-      assert Enum.all?(logs, fn %{
-                                  "contract_id" => ct_id,
-                                  "height" => height,
-                                  "micro_index" => micro_index,
-                                  "block_hash" => block_hash,
-                                  "event_hash" => event_hash,
-                                  "event_name" => event_name
-                                } ->
-               ct_id == contract_id and height == @log_kbi and micro_index == @log_mbi and
-                 block_hash == encode(:micro_block_hash, @log_block_hash) and
-                 event_hash == Base.hex_encode32(:aec_hash.blake2b_256_hash(event_name)) and
-                 event_name in @aex141_events
-             end)
+        assert Enum.all?(logs, fn %{
+                                    "contract_id" => ct_id,
+                                    "height" => height,
+                                    "micro_index" => micro_index,
+                                    "block_hash" => block_hash,
+                                    "event_hash" => event_hash,
+                                    "event_name" => event_name
+                                  } ->
+                 ct_id == contract_id and height == @log_kbi and micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash) and
+                   event_hash == Base.hex_encode32(:aec_hash.blake2b_256_hash(event_name)) and
+                   event_name in @aex141_events
+               end)
+      end
     end
 
     test "returns contract logs filtered by data", %{
@@ -356,51 +380,55 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
     } do
       data_prefix = "0x#{Integer.to_string(@first_log_txi, 16)}" |> String.slice(0, 5)
 
-      assert %{"data" => logs, "next" => next} =
-               conn
-               |> with_store(store)
-               |> get("/v2/contracts/logs", data: data_prefix, direction: :forward)
-               |> json_response(200)
+      with_mocks [
+        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+      ] do
+        assert %{"data" => logs, "next" => next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/contracts/logs", data: data_prefix, direction: :forward)
+                 |> json_response(200)
 
-      assert @default_limit = length(logs)
-      assert ^logs = Enum.sort_by(logs, & &1["call_txi"])
-      assert hd(logs)["call_txi"] == @first_log_txi
+        assert @default_limit = length(logs)
+        assert ^logs = Enum.sort_by(logs, & &1["call_txi"])
+        assert hd(logs)["call_txi"] == @first_log_txi
 
-      assert Enum.all?(logs, fn %{
-                                  "data" => data,
-                                  "call_txi" => call_txi,
-                                  "height" => height,
-                                  "micro_index" => micro_index,
-                                  "block_hash" => block_hash
-                                } ->
-               String.starts_with?(data, data_prefix) and call_txi in @log_txis and
-                 height == @log_kbi and
-                 micro_index == @log_mbi and
-                 block_hash == encode(:micro_block_hash, @log_block_hash)
-             end)
+        assert Enum.all?(logs, fn %{
+                                    "data" => data,
+                                    "call_txi" => call_txi,
+                                    "height" => height,
+                                    "micro_index" => micro_index,
+                                    "block_hash" => block_hash
+                                  } ->
+                 String.starts_with?(data, data_prefix) and call_txi in @log_txis and
+                   height == @log_kbi and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
 
-      assert %{"data" => next_logs, "prev" => prev_logs} =
-               conn |> with_store(store) |> get(next) |> json_response(200)
+        assert %{"data" => next_logs, "prev" => prev_logs} =
+                 conn |> with_store(store) |> get(next) |> json_response(200)
 
-      assert @default_limit = length(next_logs)
-      assert ^next_logs = Enum.sort_by(next_logs, & &1["call_txi"])
-      assert hd(next_logs)["call_txi"] == @first_log_txi + 10
+        assert @default_limit = length(next_logs)
+        assert ^next_logs = Enum.sort_by(next_logs, & &1["call_txi"])
+        assert hd(next_logs)["call_txi"] == @first_log_txi + 10
 
-      assert Enum.all?(next_logs, fn %{
-                                       "data" => data,
-                                       "call_txi" => call_txi,
-                                       "height" => height,
-                                       "micro_index" => micro_index,
-                                       "block_hash" => block_hash
-                                     } ->
-               String.starts_with?(data, data_prefix) and call_txi in @log_txis and
-                 height == @log_kbi and
-                 micro_index == @log_mbi and
-                 block_hash == encode(:micro_block_hash, @log_block_hash)
-             end)
+        assert Enum.all?(next_logs, fn %{
+                                         "data" => data,
+                                         "call_txi" => call_txi,
+                                         "height" => height,
+                                         "micro_index" => micro_index,
+                                         "block_hash" => block_hash
+                                       } ->
+                 String.starts_with?(data, data_prefix) and call_txi in @log_txis and
+                   height == @log_kbi and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
 
-      assert %{"data" => ^logs} =
-               conn |> with_store(store) |> get(prev_logs) |> json_response(200)
+        assert %{"data" => ^logs} =
+                 conn |> with_store(store) |> get(prev_logs) |> json_response(200)
+      end
     end
 
     test "returns contract logs filtered by data of a contract", %{
@@ -414,81 +442,89 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       data_prefix = ("0x" <> Integer.to_string(first_txi, 16)) |> String.slice(0, 6)
       limit = 6
 
-      assert %{"data" => logs, "next" => next} =
-               conn
-               |> with_store(store)
-               |> get("/v2/contracts/logs", data: data_prefix, direction: :forward, limit: 6)
-               |> json_response(200)
+      with_mocks [
+        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+      ] do
+        assert %{"data" => logs, "next" => next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/contracts/logs", data: data_prefix, direction: :forward, limit: 6)
+                 |> json_response(200)
 
-      assert length(logs) == limit
-      assert ^logs = Enum.sort_by(logs, & &1["call_txi"])
-      assert hd(logs)["call_txi"] == first_txi
+        assert length(logs) == limit
+        assert ^logs = Enum.sort_by(logs, & &1["call_txi"])
+        assert hd(logs)["call_txi"] == first_txi
 
-      assert Enum.all?(logs, fn %{
-                                  "data" => data,
-                                  "contract_id" => ct_id,
-                                  "call_txi" => call_txi,
-                                  "height" => height,
-                                  "micro_index" => micro_index,
-                                  "block_hash" => block_hash
-                                } ->
-               String.starts_with?(data, data_prefix) and ct_id == contract_id and
-                 call_txi in @log_txis and height == @log_kbi and
-                 micro_index == @log_mbi and
-                 block_hash == encode(:micro_block_hash, @log_block_hash)
-             end)
+        assert Enum.all?(logs, fn %{
+                                    "data" => data,
+                                    "contract_id" => ct_id,
+                                    "call_txi" => call_txi,
+                                    "height" => height,
+                                    "micro_index" => micro_index,
+                                    "block_hash" => block_hash
+                                  } ->
+                 String.starts_with?(data, data_prefix) and ct_id == contract_id and
+                   call_txi in @log_txis and height == @log_kbi and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
 
-      assert %{"data" => next_logs, "prev" => prev_logs} =
-               conn |> with_store(store) |> get(next) |> json_response(200)
+        assert %{"data" => next_logs, "prev" => prev_logs} =
+                 conn |> with_store(store) |> get(next) |> json_response(200)
 
-      assert length(next_logs) == limit
-      assert ^next_logs = Enum.sort_by(next_logs, & &1["call_txi"])
-      assert hd(next_logs)["call_txi"] == hd(logs)["call_txi"] + limit
+        assert length(next_logs) == limit
+        assert ^next_logs = Enum.sort_by(next_logs, & &1["call_txi"])
+        assert hd(next_logs)["call_txi"] == hd(logs)["call_txi"] + limit
 
-      assert Enum.all?(next_logs, fn %{
-                                       "data" => data,
-                                       "call_txi" => call_txi,
-                                       "height" => height,
-                                       "micro_index" => micro_index,
-                                       "block_hash" => block_hash
-                                     } ->
-               String.starts_with?(data, data_prefix) and call_txi in @log_txis and
-                 height == @log_kbi and
-                 micro_index == @log_mbi and
-                 block_hash == encode(:micro_block_hash, @log_block_hash)
-             end)
+        assert Enum.all?(next_logs, fn %{
+                                         "data" => data,
+                                         "call_txi" => call_txi,
+                                         "height" => height,
+                                         "micro_index" => micro_index,
+                                         "block_hash" => block_hash
+                                       } ->
+                 String.starts_with?(data, data_prefix) and call_txi in @log_txis and
+                   height == @log_kbi and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
 
-      assert %{"data" => ^logs} =
-               conn |> with_store(store) |> get(prev_logs) |> json_response(200)
+        assert %{"data" => ^logs} =
+                 conn |> with_store(store) |> get(prev_logs) |> json_response(200)
+      end
     end
 
     test "returns contract logs filtered by event", %{
       conn: conn,
       store: store
     } do
-      assert %{"data" => logs} =
-               conn
-               |> with_store(store)
-               |> get("/v2/contracts/logs", event: @evt2_ctor_name, direction: :forward)
-               |> json_response(200)
+      with_mocks [
+        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+      ] do
+        assert %{"data" => logs} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/contracts/logs", event: @evt2_ctor_name, direction: :forward)
+                 |> json_response(200)
 
-      assert @default_limit = length(logs)
-      assert ^logs = Enum.sort_by(logs, & &1["call_txi"])
-      assert hd(logs)["call_txi"] == @first_log_txi + @evt1_amount
+        assert @default_limit = length(logs)
+        assert ^logs = Enum.sort_by(logs, & &1["call_txi"])
+        assert hd(logs)["call_txi"] == @first_log_txi + @evt1_amount
 
-      assert Enum.all?(logs, fn %{
-                                  "event_hash" => event_hash,
-                                  "event_name" => nil,
-                                  "call_txi" => call_txi,
-                                  "height" => height,
-                                  "micro_index" => micro_index,
-                                  "block_hash" => block_hash
-                                } ->
-               event_hash == Base.hex_encode32(@evt2_hash) and
-                 call_txi in @log_txis and height == @log_kbi and
-                 micro_index == @log_mbi and
-                 block_hash == encode(:micro_block_hash, @log_block_hash)
-             end)
+        assert Enum.all?(logs, fn %{
+                                    "event_hash" => event_hash,
+                                    "event_name" => nil,
+                                    "call_txi" => call_txi,
+                                    "height" => height,
+                                    "micro_index" => micro_index,
+                                    "block_hash" => block_hash
+                                  } ->
+                 event_hash == Base.hex_encode32(@evt2_hash) and
+                   call_txi in @log_txis and height == @log_kbi and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
+      end
     end
 
     test "returns contract logs filtered by contract and event", %{
@@ -498,60 +534,64 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
     } do
       contract_id = encode_contract(contract_pk)
 
-      assert %{"data" => logs, "next" => next} =
-               conn
-               |> with_store(store)
-               |> get(
-                 "/v2/contracts/logs",
-                 contract: contract_id,
-                 event: @evt1_ctor_name,
-                 direction: :forward
-               )
-               |> json_response(200)
+      with_mocks [
+        {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
+      ] do
+        assert %{"data" => logs, "next" => next} =
+                 conn
+                 |> with_store(store)
+                 |> get(
+                   "/v2/contracts/logs",
+                   contract: contract_id,
+                   event: @evt1_ctor_name,
+                   direction: :forward
+                 )
+                 |> json_response(200)
 
-      assert @default_limit = length(logs)
-      assert ^logs = Enum.sort_by(logs, & &1["call_txi"])
-      assert hd(logs)["call_txi"] == @first_log_txi + @mixed_logs_amount
+        assert @default_limit = length(logs)
+        assert ^logs = Enum.sort_by(logs, & &1["call_txi"])
+        assert hd(logs)["call_txi"] == @first_log_txi + @mixed_logs_amount
 
-      assert Enum.all?(logs, fn %{
-                                  "contract_id" => ct_id,
-                                  "call_txi" => call_txi,
-                                  "height" => height,
-                                  "event_hash" => event_hash,
-                                  "event_name" => event_name,
-                                  "micro_index" => micro_index,
-                                  "block_hash" => block_hash
-                                } ->
-               ct_id == contract_id and call_txi in @log_txis and height == @log_kbi and
-                 event_hash == Base.hex_encode32(@evt1_hash) and event_name == @evt1_ctor_name and
-                 micro_index == @log_mbi and
-                 block_hash == encode(:micro_block_hash, @log_block_hash)
-             end)
+        assert Enum.all?(logs, fn %{
+                                    "contract_id" => ct_id,
+                                    "call_txi" => call_txi,
+                                    "height" => height,
+                                    "event_hash" => event_hash,
+                                    "event_name" => event_name,
+                                    "micro_index" => micro_index,
+                                    "block_hash" => block_hash
+                                  } ->
+                 ct_id == contract_id and call_txi in @log_txis and height == @log_kbi and
+                   event_hash == Base.hex_encode32(@evt1_hash) and event_name == @evt1_ctor_name and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
 
-      assert %{"data" => next_logs, "prev" => prev_logs} =
-               conn |> with_store(store) |> get(next) |> json_response(200)
+        assert %{"data" => next_logs, "prev" => prev_logs} =
+                 conn |> with_store(store) |> get(next) |> json_response(200)
 
-      assert @default_limit = length(next_logs)
-      assert ^next_logs = Enum.sort_by(next_logs, & &1["call_txi"])
-      assert hd(next_logs)["call_txi"] == @first_log_txi + @mixed_logs_amount + 10
+        assert @default_limit = length(next_logs)
+        assert ^next_logs = Enum.sort_by(next_logs, & &1["call_txi"])
+        assert hd(next_logs)["call_txi"] == @first_log_txi + @mixed_logs_amount + 10
 
-      assert Enum.all?(next_logs, fn %{
-                                       "contract_id" => ct_id,
-                                       "call_txi" => call_txi,
-                                       "height" => height,
-                                       "event_hash" => event_hash,
-                                       "event_name" => event_name,
-                                       "micro_index" => micro_index,
-                                       "block_hash" => block_hash
-                                     } ->
-               ct_id == contract_id and call_txi in @log_txis and height == @log_kbi and
-                 event_hash == Base.hex_encode32(@evt1_hash) and event_name == @evt1_ctor_name and
-                 micro_index == @log_mbi and
-                 block_hash == encode(:micro_block_hash, @log_block_hash)
-             end)
+        assert Enum.all?(next_logs, fn %{
+                                         "contract_id" => ct_id,
+                                         "call_txi" => call_txi,
+                                         "height" => height,
+                                         "event_hash" => event_hash,
+                                         "event_name" => event_name,
+                                         "micro_index" => micro_index,
+                                         "block_hash" => block_hash
+                                       } ->
+                 ct_id == contract_id and call_txi in @log_txis and height == @log_kbi and
+                   event_hash == Base.hex_encode32(@evt1_hash) and event_name == @evt1_ctor_name and
+                   micro_index == @log_mbi and
+                   block_hash == encode(:micro_block_hash, @log_block_hash)
+               end)
 
-      assert %{"data" => ^logs} =
-               conn |> with_store(store) |> get(prev_logs) |> json_response(200)
+        assert %{"data" => ^logs} =
+                 conn |> with_store(store) |> get(prev_logs) |> json_response(200)
+      end
     end
   end
 

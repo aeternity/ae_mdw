@@ -98,6 +98,7 @@ defmodule AeMdw.AuctionBids do
          state,
          Model.auction_bid(
            index: plain_name,
+           block_index_txi_idx: {block_index, _txi_idx},
            expire_height: expire_height,
            bids: [last_bid | _rest_bids] = bids
          ),
@@ -112,6 +113,7 @@ defmodule AeMdw.AuctionBids do
       name: plain_name,
       status: "auction",
       active: false,
+      activation_time: DbUtil.block_index_to_time(state, block_index),
       info: %{
         auction_end: expire_height,
         approximate_expire_time:
