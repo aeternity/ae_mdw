@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.54.0](https://www.github.com/aeternity/ae_mdw/compare/v1.53.0...v1.54.0) (2023-07-06)
+
+
+### Features
+
+* add further block times to different endpoints ([#1442](https://www.github.com/aeternity/ae_mdw/issues/1442)) ([0636068](https://www.github.com/aeternity/ae_mdw/commit/06360686d0be79a7f2c81c5311f2281739415efa))
+
 ## [1.53.0](https://www.github.com/aeternity/ae_mdw/compare/v1.52.0...v1.53.0) (2023-07-05)
 
 
