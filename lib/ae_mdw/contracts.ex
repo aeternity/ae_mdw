@@ -50,9 +50,7 @@ defmodule AeMdw.Contracts do
   @pagination_params ~w(limit cursor rev direction scope tx_hash)
 
   @min_fname Util.min_bin()
-  @min_hash Util.min_bin()
   @max_256bit_bin Util.max_256bit_bin()
-  @max_hash Util.max_256bit_bin()
   @min_idx Util.min_int()
   @max_idx Util.max_int()
   @min_pubkey Util.min_bin()
@@ -178,21 +176,22 @@ defmodule AeMdw.Contracts do
          cursor
        ) do
     key_boundary = {
-      {data_prefix, first_call_txi, @min_txi, @min_hash, @min_idx},
-      {data_prefix <> @max_blob, last_call_txi, @max_txi, @max_hash, @max_idx}
+      {data_prefix, first_call_txi, @min_txi, @min_idx},
+      {data_prefix <> @max_blob, last_call_txi, @max_txi, @max_idx}
     }
 
     cursor =
-      with {create_txi, call_txi, event_hash, log_idx} = index <- cursor do
-        Model.contract_log(data: data) = State.fetch!(state, @contract_log_table, index)
-        {data, call_txi, create_txi, event_hash, log_idx}
+      with {create_txi, call_txi, log_idx} <- cursor do
+        key = {create_txi, call_txi, log_idx}
+        Model.contract_log(data: data) = State.fetch!(state, @contract_log_table, key)
+        {data, call_txi, create_txi, log_idx}
       end
 
     fn direction ->
       state
       |> Collection.stream(@data_contract_log_table, direction, key_boundary, cursor)
-      |> Stream.map(fn {_data, call_txi, create_txi, event_hash, log_idx} ->
-        {create_txi, call_txi, event_hash, log_idx}
+      |> Stream.map(fn {_data, call_txi, create_txi, log_idx} ->
+        {create_txi, call_txi, log_idx}
       end)
     end
   end
@@ -209,35 +208,15 @@ defmodule AeMdw.Contracts do
     }
 
     cursor =
-      with {create_txi, call_txi, event_hash, log_idx} <- cursor do
+      with {create_txi, call_txi, log_idx} <- cursor do
         {event_hash, create_txi, call_txi, log_idx}
       end
 
     fn direction ->
       state
       |> Collection.stream(@ctevt_contract_log_table, direction, key_boundary, cursor)
-      |> Stream.map(fn {event_hash, create_txi, call_txi, log_idx} ->
-        {create_txi, call_txi, event_hash, log_idx}
-      end)
-    end
-  end
-
-  defp build_logs_pagination(
-         %{create_txi: create_txi},
-         state,
-         {first_call_txi, last_call_txi},
-         cursor
-       ) do
-    key_boundary = {
-      {create_txi, first_call_txi, @min_hash, @min_idx},
-      {create_txi, last_call_txi, @max_hash, @max_idx}
-    }
-
-    fn direction ->
-      state
-      |> Collection.stream(@contract_log_table, direction, key_boundary, cursor)
-      |> Stream.map(fn {create_txi, call_txi, even_hash, log_idx} ->
-        {create_txi, call_txi, even_hash, log_idx}
+      |> Stream.map(fn {_hash, create_txi, call_txi, log_idx} ->
+        {create_txi, call_txi, log_idx}
       end)
     end
   end
@@ -254,35 +233,55 @@ defmodule AeMdw.Contracts do
     }
 
     cursor =
-      with {create_txi, call_txi, event_hash, log_idx} <- cursor do
+      with {create_txi, call_txi, log_idx} <- cursor do
         {event_hash, call_txi, create_txi, log_idx}
       end
 
     fn direction ->
       state
       |> Collection.stream(@evt_contract_log_table, direction, key_boundary, cursor)
-      |> Stream.map(fn {event_hash, call_txi, create_txi, log_idx} ->
-        {create_txi, call_txi, event_hash, log_idx}
+      |> Stream.map(fn {_hash, call_txi, create_txi, log_idx} ->
+        {create_txi, call_txi, log_idx}
+      end)
+    end
+  end
+
+  defp build_logs_pagination(
+         %{create_txi: create_txi},
+         state,
+         {first_call_txi, last_call_txi},
+         cursor
+       ) do
+    key_boundary = {
+      {create_txi, first_call_txi, @min_idx},
+      {create_txi, last_call_txi, @max_idx}
+    }
+
+    fn direction ->
+      state
+      |> Collection.stream(@contract_log_table, direction, key_boundary, cursor)
+      |> Stream.map(fn {create_txi, call_txi, log_idx} ->
+        {create_txi, call_txi, log_idx}
       end)
     end
   end
 
   defp build_logs_pagination(_query, state, {first_call_txi, last_call_txi}, cursor) do
     key_boundary = {
-      {first_call_txi, @min_txi, @min_hash, @min_idx},
-      {last_call_txi, @max_txi, @max_hash, @max_idx}
+      {first_call_txi, @min_txi, @min_idx},
+      {last_call_txi, @max_txi, @max_idx}
     }
 
     cursor =
-      with {create_txi, call_txi, event_hash, log_idx} <- cursor do
-        {call_txi, log_idx, create_txi, event_hash}
+      with {create_txi, call_txi, log_idx} <- cursor do
+        {call_txi, log_idx, create_txi}
       end
 
     fn direction ->
       state
       |> Collection.stream(@idx_contract_log_table, direction, key_boundary, cursor)
-      |> Stream.map(fn {call_txi, log_idx, create_txi, event_hash} ->
-        {create_txi, call_txi, event_hash, log_idx}
+      |> Stream.map(fn {call_txi, log_idx, create_txi} ->
+        {create_txi, call_txi, log_idx}
       end)
     end
   end
@@ -602,10 +601,8 @@ defmodule AeMdw.Contracts do
 
   defp serialize_logs_cursor(nil), do: nil
 
-  defp serialize_logs_cursor({{create_txi, call_txi, event_hash, log_idx}, is_reversed?}) do
-    event_hash = Base.encode32(event_hash)
-
-    {Base.hex_encode32("#{create_txi}$#{call_txi}$#{event_hash}$#{log_idx}",
+  defp serialize_logs_cursor({{create_txi, call_txi, log_idx}, is_reversed?}) do
+    {Base.hex_encode32("#{create_txi}$#{call_txi}$#{log_idx}",
        padding: false
      ), is_reversed?}
   end
@@ -614,13 +611,12 @@ defmodule AeMdw.Contracts do
 
   defp deserialize_logs_cursor(cursor_bin) do
     with {:ok, decoded_cursor} <- Base.hex_decode32(cursor_bin, padding: false),
-         [create_txi_bin, call_txi_bin, event_hash_bin, log_idx_bin] <-
+         [create_txi_bin, call_txi_bin, log_idx_bin] <-
            String.split(decoded_cursor, "$"),
          {:ok, create_txi} <- deserialize_cursor_int(create_txi_bin),
          {:ok, call_txi} <- deserialize_cursor_int(call_txi_bin),
-         {:ok, event_hash} <- deserialize_cursor_string(event_hash_bin),
          {:ok, log_idx} <- deserialize_cursor_int(log_idx_bin) do
-      {create_txi, call_txi, event_hash, log_idx}
+      {create_txi, call_txi, log_idx}
     else
       _invalid_cursor -> nil
     end

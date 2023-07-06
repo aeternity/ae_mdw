@@ -14,7 +14,7 @@ defmodule AeMdwWeb.LogsView do
   @type opts :: %{aexn_args: boolean(), custom_args: boolean()}
 
   @spec render_log(State.t(), AeMdw.Contracts.log(), opts()) :: map()
-  def render_log(state, {create_txi, call_txi, event_hash, log_idx}, encode_args) do
+  def render_log(state, {create_txi, call_txi, log_idx}, encode_args) do
     {contract_tx_hash, ct_pk} =
       if create_txi == -1 do
         {nil, Origin.pubkey(state, {:contract_call, call_txi})}
@@ -27,8 +27,8 @@ defmodule AeMdwWeb.LogsView do
 
     Model.block(hash: block_hash) = DBUtil.read_block!(state, {height, micro_index})
 
-    Model.contract_log(args: args, data: data, ext_contract: ext_contract) =
-      State.fetch!(state, Model.ContractLog, {create_txi, call_txi, event_hash, log_idx})
+    Model.contract_log(args: args, data: data, ext_contract: ext_contract, hash: event_hash) =
+      State.fetch!(state, Model.ContractLog, {create_txi, call_txi, log_idx})
 
     event_name = AexnContracts.event_name(event_hash) || get_custom_event_name(event_hash)
 
