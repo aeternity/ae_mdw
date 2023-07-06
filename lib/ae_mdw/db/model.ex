@@ -636,37 +636,40 @@ defmodule AeMdw.Db.Model do
           )
 
   # contract log:
-  #     index: {create txi, call txi, event hash, log idx}
+  #     index: {create txi, call txi, log idx}
   #     ext_contract: nil || ext_contract_pk
-  #     args: []
-  #     data: ""
+  #     args: [topic]
+  #     data: raw log data binary
+  #     event hash: <<_::256>>
   @contract_log_defaults [
-    index: {-1, -1, nil, -1},
+    index: {-1, -1, -1},
     ext_contract: nil,
     args: [],
-    data: ""
+    data: "",
+    hash: <<0::256>>
   ]
   defrecord :contract_log, @contract_log_defaults
 
-  @type contract_log_index() :: {txi(), txi(), Contract.event_hash(), non_neg_integer()}
+  @type contract_log_index() :: {txi(), txi(), non_neg_integer()}
   @type contract_log() ::
           record(:contract_log,
             index: contract_log_index(),
             ext_contract: pubkey() | nil | {:parent_contract_pk, pubkey()},
             args: [term()],
-            data: DbContract.log_data()
+            data: DbContract.log_data(),
+            hash: Contract.event_hash()
           )
 
   # data contract log:
-  #     index: {data, call txi, create txi, event hash, log idx}
+  #     index: {data, call txi, create txi, log idx}
   @data_contract_log_defaults [
-    index: {nil, -1, -1, nil, -1},
+    index: {nil, -1, -1, -1},
     unused: nil
   ]
   defrecord :data_contract_log, @data_contract_log_defaults
 
   @type data_contract_log_index() ::
-          {DbContract.log_data(), txi(), txi(), Contract.event_hash(), non_neg_integer()}
+          {DbContract.log_data(), txi(), txi(), non_neg_integer()}
   @type data_contract_log() :: record(:data_contract_log, index: data_contract_log_index())
 
   # evt contract log:
@@ -692,14 +695,14 @@ defmodule AeMdw.Db.Model do
   @type evt_contract_log() :: record(:evt_contract_log, index: evt_contract_log_index())
 
   # idx contract log:
-  #     index: {call txi, log idx, create_txi, event hash}
+  #     index: {call txi, log idx, create_txi}
   @idx_contract_log_defaults [
-    index: {-1, -1, -1, <<>>},
+    index: {-1, -1, -1},
     unused: nil
   ]
   defrecord :idx_contract_log, @idx_contract_log_defaults
 
-  @type idx_contract_log_index() :: {txi(), non_neg_integer(), txi(), Contracts.event_hash()}
+  @type idx_contract_log_index() :: {txi(), non_neg_integer(), txi()}
   @type idx_contract_log() :: record(:idx_contract_log, index: idx_contract_log_index())
 
   # aex9 transfer:

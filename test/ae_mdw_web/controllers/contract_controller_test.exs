@@ -1442,16 +1442,17 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
         m_log =
           Model.contract_log(
-            index: {create_txi, txi, evt_hash, idx},
+            index: {create_txi, txi, idx},
             ext_contract: contract_pk,
             args: [<<txi::256>>],
-            data: data
+            data: data,
+            hash: evt_hash
           )
 
-        m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, idx})
+        m_data_log = Model.data_contract_log(index: {data, txi, create_txi, idx})
         m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, idx})
         m_ctevt_log = Model.ctevt_contract_log(index: {evt_hash, txi, create_txi, idx})
-        m_idx_log = Model.idx_contract_log(index: {txi, idx, create_txi, evt_hash})
+        m_idx_log = Model.idx_contract_log(index: {txi, idx, create_txi})
 
         store
         |> Store.put(
@@ -1486,16 +1487,17 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
         m_log =
           Model.contract_log(
-            index: {create_txi, txi, evt_hash, idx},
+            index: {create_txi, txi, idx},
             ext_contract: contract_pk,
             args: [<<txi::256>>],
-            data: data
+            data: data,
+            hash: evt_hash
           )
 
-        m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, idx})
+        m_data_log = Model.data_contract_log(index: {data, txi, create_txi, idx})
         m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, idx})
         m_ctevt_log = Model.ctevt_contract_log(index: {evt_hash, create_txi, txi, idx})
-        m_idx_log = Model.idx_contract_log(index: {txi, idx, create_txi, evt_hash})
+        m_idx_log = Model.idx_contract_log(index: {txi, idx, create_txi})
 
         store
         |> Store.put(
@@ -1541,16 +1543,17 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
         m_log =
           Model.contract_log(
-            index: {create_txi, txi, evt_hash, idx},
+            index: {create_txi, txi, idx},
             ext_contract: aex9_contract_pk,
             args: fake_args,
-            data: data
+            data: data,
+            hash: evt_hash
           )
 
-        m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, idx})
+        m_data_log = Model.data_contract_log(index: {data, txi, create_txi, idx})
         m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, idx})
         m_ctevt_log = Model.ctevt_contract_log(index: {evt_hash, txi, create_txi, idx})
-        m_idx_log = Model.idx_contract_log(index: {txi, idx, create_txi, evt_hash})
+        m_idx_log = Model.idx_contract_log(index: {txi, idx, create_txi})
 
         store
         |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>, block_index: block_index2))
@@ -1596,16 +1599,17 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
 
         m_log =
           Model.contract_log(
-            index: {create_txi, txi, evt_hash, idx},
+            index: {create_txi, txi, idx},
             ext_contract: aex141_contract_pk,
             args: fake_args,
-            data: data
+            data: data,
+            hash: evt_hash
           )
 
-        m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, idx})
+        m_data_log = Model.data_contract_log(index: {data, txi, create_txi, idx})
         m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, idx})
         m_ctevt_log = Model.ctevt_contract_log(index: {evt_hash, txi, create_txi, idx})
-        m_idx_log = Model.idx_contract_log(index: {txi, idx, create_txi, evt_hash})
+        m_idx_log = Model.idx_contract_log(index: {txi, idx, create_txi})
 
         store
         |> Store.put(Model.Tx, Model.tx(index: txi, id: <<txi::256>>, block_index: block_index2))

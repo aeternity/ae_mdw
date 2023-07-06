@@ -98,7 +98,7 @@ defmodule AeMdwWeb.LogsViewTest do
       with_mocks [
         {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
       ] do
-        Enum.each(logs, fn {create_txi, txi, evt_hash, log_idx} = contract_log_index ->
+        Enum.each(logs, fn {create_txi, txi, log_idx} = contract_log_index ->
           %{
             contract_txi: ^create_txi,
             contract_tx_hash: contract_tx_hash,
@@ -123,9 +123,8 @@ defmodule AeMdwWeb.LogsViewTest do
           assert call_tx_hash == encode_to_hash(state, txi)
           assert_args(event_name, account1_pk, account2_pk, tokens, args)
           assert data == "0x" <> Integer.to_string(txi, 16)
-          assert Base.hex_decode32!(event_hash) == evt_hash
           event_type = String.to_existing_atom(Macro.underscore(event_name))
-          assert evt_hash == aexn_event_hash(event_type)
+          assert event_hash == Base.hex_encode32(aexn_event_hash(event_type))
           assert height == @height
           assert mbi == @mbi
           assert mb_hash == encode(:micro_block_hash, @mb_hash)
@@ -146,7 +145,7 @@ defmodule AeMdwWeb.LogsViewTest do
       with_mocks [
         {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
       ] do
-        Enum.each(logs, fn {create_txi, txi, evt_hash, log_idx} = contract_log_index ->
+        Enum.each(logs, fn {create_txi, txi, log_idx} = contract_log_index ->
           %{
             contract_txi: ^create_txi,
             contract_tx_hash: contract_tx_hash,
@@ -172,9 +171,8 @@ defmodule AeMdwWeb.LogsViewTest do
           assert_args(event_name, account1_pk, account2_pk, tokens, args)
           assert_template_args(event_name, account1_pk, templates, tokens, args)
           assert data == "0x" <> Integer.to_string(txi, 16)
-          assert Base.hex_decode32!(event_hash) == evt_hash
           event_type = String.to_existing_atom(Macro.underscore(event_name))
-          assert evt_hash == aexn_event_hash(event_type)
+          assert event_hash == Base.hex_encode32(aexn_event_hash(event_type))
           assert height == @height
           assert mbi == @mbi
           assert mb_hash == encode(:micro_block_hash, @mb_hash)
@@ -220,7 +218,7 @@ defmodule AeMdwWeb.LogsViewTest do
       with_mocks [
         {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
       ] do
-        Enum.each(logs, fn {create_txi, txi, evt_hash, log_idx} = contract_log_index ->
+        Enum.each(logs, fn {create_txi, txi, log_idx} = contract_log_index ->
           %{
             contract_txi: ^create_txi,
             contract_tx_hash: contract_tx_hash,
@@ -229,7 +227,6 @@ defmodule AeMdwWeb.LogsViewTest do
             call_tx_hash: call_tx_hash,
             args: args,
             data: data,
-            event_hash: event_hash,
             event_name: event_name,
             height: height,
             micro_index: mbi,
@@ -247,7 +244,6 @@ defmodule AeMdwWeb.LogsViewTest do
           assert call_tx_hash == encode_to_hash(state, txi)
           assert data == "0x" <> Integer.to_string(txi, 16)
           assert event_name in ["Listing", "Offer", "Trade"]
-          assert Base.hex_decode32!(event_hash) == evt_hash
           assert height == @height
           assert mbi == @mbi
           assert mb_hash == encode(:micro_block_hash, @mb_hash)
@@ -466,19 +462,20 @@ defmodule AeMdwWeb.LogsViewTest do
       evt_hash = aexn_event_hash(event)
       data = "0x" <> Integer.to_string(txi, 16)
       idx = rem(txi, 10)
-      contract_log_index = {create_txi, txi, evt_hash, idx}
+      contract_log_index = {create_txi, txi, idx}
 
       m_log =
         Model.contract_log(
           index: contract_log_index,
           args: args,
-          data: data
+          data: data,
+          hash: evt_hash
         )
 
-      m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, idx})
+      m_data_log = Model.data_contract_log(index: {data, txi, create_txi, idx})
       m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, idx})
       m_ctevt_log = Model.ctevt_contract_log(index: {evt_hash, txi, create_txi, idx})
-      m_idx_log = Model.idx_contract_log(index: {txi, idx, create_txi, evt_hash})
+      m_idx_log = Model.idx_contract_log(index: {txi, idx, create_txi})
 
       store =
         store
@@ -523,18 +520,20 @@ defmodule AeMdwWeb.LogsViewTest do
       evt_hash = :aec_hash.blake2b_256_hash(event_name)
       data = "0x" <> Integer.to_string(txi, 16)
       idx = rem(txi, 10)
-      contract_log_index = {create_txi, txi, evt_hash, idx}
+      contract_log_index = {create_txi, txi, idx}
 
       m_log =
         Model.contract_log(
           index: contract_log_index,
           args: args,
-          data: data
+          data: data,
+          hash: evt_hash
         )
 
-      m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, idx})
+      m_data_log = Model.data_contract_log(index: {data, txi, create_txi, idx})
       m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, idx})
-      m_idx_log = Model.idx_contract_log(index: {txi, idx, create_txi, evt_hash})
+      m_ctevt_log = Model.ctevt_contract_log(index: {evt_hash, txi, create_txi, idx})
+      m_idx_log = Model.idx_contract_log(index: {txi, idx, create_txi})
 
       store =
         store
@@ -542,6 +541,7 @@ defmodule AeMdwWeb.LogsViewTest do
         |> Store.put(Model.ContractLog, m_log)
         |> Store.put(Model.DataContractLog, m_data_log)
         |> Store.put(Model.EvtContractLog, m_evt_log)
+        |> Store.put(Model.CtEvtContractLog, m_ctevt_log)
         |> Store.put(Model.IdxContractLog, m_idx_log)
 
       {contract_log_index, store}

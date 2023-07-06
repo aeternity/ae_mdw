@@ -53,45 +53,45 @@ defmodule AeMdw.Db.ContractTest do
 
       m_log0 =
         Model.contract_log(
-          index: {create_txi, call_txi, evt_hash0, 0},
+          index: {create_txi, call_txi, 0},
           ext_contract: nil,
           args: args0,
-          data: data0
+          data: data0,
+          hash: evt_hash0
         )
 
-      assert {:ok, ^m_log0} =
-               State.get(state, Model.ContractLog, {create_txi, call_txi, evt_hash0, 0})
+      assert {:ok, ^m_log0} = State.get(state, Model.ContractLog, {create_txi, call_txi, 0})
 
       assert State.exists?(
                state,
                Model.DataContractLog,
-               {data0, call_txi, create_txi, evt_hash0, 0}
+               {data0, call_txi, create_txi, 0}
              )
 
       assert State.exists?(state, Model.EvtContractLog, {evt_hash0, call_txi, create_txi, 0})
       assert State.exists?(state, Model.CtEvtContractLog, {evt_hash0, create_txi, call_txi, 0})
-      assert State.exists?(state, Model.IdxContractLog, {call_txi, 0, create_txi, evt_hash0})
+      assert State.exists?(state, Model.IdxContractLog, {call_txi, 0, create_txi})
 
       m_log1 =
         Model.contract_log(
-          index: {create_txi, call_txi, evt_hash1, 1},
+          index: {create_txi, call_txi, 1},
           ext_contract: nil,
           args: args1,
-          data: data1
+          data: data1,
+          hash: evt_hash1
         )
 
-      assert {:ok, ^m_log1} =
-               State.get(state, Model.ContractLog, {create_txi, call_txi, evt_hash1, 1})
+      assert {:ok, ^m_log1} = State.get(state, Model.ContractLog, {create_txi, call_txi, 1})
 
       assert State.exists?(
                state,
                Model.DataContractLog,
-               {data1, call_txi, create_txi, evt_hash1, 1}
+               {data1, call_txi, create_txi, 1}
              )
 
       assert State.exists?(state, Model.EvtContractLog, {evt_hash1, call_txi, create_txi, 1})
       assert State.exists?(state, Model.CtEvtContractLog, {evt_hash1, create_txi, call_txi, 1})
-      assert State.exists?(state, Model.IdxContractLog, {call_txi, 1, create_txi, evt_hash1})
+      assert State.exists?(state, Model.IdxContractLog, {call_txi, 1, create_txi})
     end
 
     test "indexes log for both parent and remote contracts" do
@@ -136,58 +136,58 @@ defmodule AeMdw.Db.ContractTest do
 
       m_log0 =
         Model.contract_log(
-          index: {create_txi, call_txi, evt_hash0, 0},
+          index: {create_txi, call_txi, 0},
           ext_contract: nil,
           args: args0,
-          data: data0
+          data: data0,
+          hash: evt_hash0
         )
 
-      assert {:ok, ^m_log0} =
-               State.get(state, Model.ContractLog, {create_txi, call_txi, evt_hash0, 0})
+      assert {:ok, ^m_log0} = State.get(state, Model.ContractLog, {create_txi, call_txi, 0})
 
-      refute State.exists?(state, Model.ContractLog, {remote_txi, call_txi, evt_hash0, 0})
+      refute State.exists?(state, Model.ContractLog, {remote_txi, call_txi, 0})
 
       assert State.exists?(
                state,
                Model.DataContractLog,
-               {data0, call_txi, create_txi, evt_hash0, 0}
+               {data0, call_txi, create_txi, 0}
              )
 
       assert State.exists?(state, Model.EvtContractLog, {evt_hash0, call_txi, create_txi, 0})
       assert State.exists?(state, Model.CtEvtContractLog, {evt_hash0, create_txi, call_txi, 0})
-      assert State.exists?(state, Model.IdxContractLog, {call_txi, 0, create_txi, evt_hash0})
+      assert State.exists?(state, Model.IdxContractLog, {call_txi, 0, create_txi})
 
       m_log =
         Model.contract_log(
-          index: {create_txi, call_txi, evt_hash1, 1},
+          index: {create_txi, call_txi, 1},
           ext_contract: remote_pk,
           args: args1,
-          data: data1
+          data: data1,
+          hash: evt_hash1
         )
 
       m_log_remote =
         Model.contract_log(
-          index: {remote_txi, call_txi, evt_hash1, 1},
+          index: {remote_txi, call_txi, 1},
           ext_contract: {:parent_contract_pk, contract_pk},
           args: args1,
-          data: data1
+          data: data1,
+          hash: evt_hash1
         )
 
-      assert {:ok, ^m_log} =
-               State.get(state, Model.ContractLog, {create_txi, call_txi, evt_hash1, 1})
+      assert {:ok, ^m_log} = State.get(state, Model.ContractLog, {create_txi, call_txi, 1})
 
-      assert {:ok, ^m_log_remote} =
-               State.get(state, Model.ContractLog, {remote_txi, call_txi, evt_hash1, 1})
+      assert {:ok, ^m_log_remote} = State.get(state, Model.ContractLog, {remote_txi, call_txi, 1})
 
       assert State.exists?(
                state,
                Model.DataContractLog,
-               {data1, call_txi, create_txi, evt_hash1, 1}
+               {data1, call_txi, create_txi, 1}
              )
 
       assert State.exists?(state, Model.EvtContractLog, {evt_hash1, call_txi, create_txi, 1})
       assert State.exists?(state, Model.CtEvtContractLog, {evt_hash1, create_txi, call_txi, 1})
-      assert State.exists?(state, Model.IdxContractLog, {call_txi, 1, create_txi, evt_hash1})
+      assert State.exists?(state, Model.IdxContractLog, {call_txi, 1, create_txi})
     end
 
     test "does not update aex9 event balance on contract creation" do

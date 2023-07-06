@@ -209,16 +209,17 @@ defmodule AeMdw.Db.Contract do
     |> Enum.reduce(state, fn {{addr, [evt_hash | args], data}, log_idx} = log, state ->
       m_log =
         Model.contract_log(
-          index: {create_txi, txi, evt_hash, log_idx},
+          index: {create_txi, txi, log_idx},
           ext_contract: (addr != contract_pk && addr) || nil,
           args: args,
-          data: data
+          data: data,
+          hash: evt_hash
         )
 
-      m_data_log = Model.data_contract_log(index: {data, txi, create_txi, evt_hash, log_idx})
+      m_data_log = Model.data_contract_log(index: {data, txi, create_txi, log_idx})
       m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, create_txi, log_idx})
       m_ctevt_log = Model.ctevt_contract_log(index: {evt_hash, create_txi, txi, log_idx})
-      m_idx_log = Model.idx_contract_log(index: {txi, log_idx, create_txi, evt_hash})
+      m_idx_log = Model.idx_contract_log(index: {txi, log_idx, create_txi})
 
       state2 =
         state
@@ -663,10 +664,11 @@ defmodule AeMdw.Db.Contract do
     # on called log: ext_contract = {:parent_contract_pk, caller contract_pk}
     m_log_remote =
       Model.contract_log(
-        index: {remote_contract_txi, txi, evt_hash, idx},
+        index: {remote_contract_txi, txi, idx},
         ext_contract: {:parent_contract_pk, contract_pk},
         args: args,
-        data: data
+        data: data,
+        hash: evt_hash
       )
 
     m_evt_log = Model.evt_contract_log(index: {evt_hash, txi, remote_contract_txi, idx})

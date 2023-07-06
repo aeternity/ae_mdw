@@ -49,8 +49,8 @@ defmodule AeMdw.ContractsTest do
       assert {:ok, _prev, [log1, log2], _next} =
                Contracts.fetch_logs(state, {:forward, false, 100, false}, nil, %{}, nil)
 
-      assert {create_txi, call_txi, evt_hash0, 0} == log1
-      assert {create_txi, call_txi, evt_hash1, 1} == log2
+      assert {create_txi, call_txi, 0} == log1
+      assert {create_txi, call_txi, 1} == log2
     end
   end
 end
