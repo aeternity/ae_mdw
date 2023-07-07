@@ -149,6 +149,10 @@ schemas:
         description: The block hash
         type: string
         example: mh_2voSWMaC6hmhyCc8qZ7AxmenrK2CkqKeUg4bkFA8gcRTd4RwVB
+      block_time:
+        description: The time in which the block happened
+        type: integer
+        example: 1587577771376
       height:
         description: The block height
         type: integer
