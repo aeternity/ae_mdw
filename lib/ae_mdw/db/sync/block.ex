@@ -25,6 +25,7 @@ defmodule AeMdw.Db.Sync.Block do
   alias AeMdw.Db.Sync.Transaction
   alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.Mutation
+  alias AeMdw.Db.TypeCountersMutation
   alias AeMdw.Sync.MutationsCache
   alias AeMdw.Log
   alias AeMdw.Node, as: AE
@@ -130,11 +131,11 @@ defmodule AeMdw.Db.Sync.Block do
     mb_model = Model.block(index: {height, mbi}, tx_index: first_txi, hash: mb_hash)
     block_mutation = WriteMutation.new(Model.Block, mb_model)
 
-    {ts, mutations} =
+    {ts, {txs_mutations, type_counters}} =
       :timer.tc(fn ->
         mb_txs
         |> Enum.with_index(first_txi)
-        |> Enum.reduce([block_mutation], fn {signed_tx, txi}, mutations ->
+        |> Enum.map_reduce(%{}, fn {signed_tx, txi}, type_counters ->
           transaction_mutations =
             Transaction.transaction_mutations(
               signed_tx,
@@ -145,11 +146,16 @@ defmodule AeMdw.Db.Sync.Block do
               events
             )
 
-          mutations ++ transaction_mutations
+          {type, _tx} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
+
+          {transaction_mutations, Map.update(type_counters, type, 1, &(&1 + 1))}
         end)
       end)
 
+    type_counters_mutation = TypeCountersMutation.new(type_counters)
     _sum = :ets.update_counter(:sync_profiling, {:txs, height}, ts, {{:txs, height}, 0})
+
+    mutations = [block_mutation, type_counters_mutation | txs_mutations]
 
     {mutations, first_txi + length(mb_txs)}
   end
