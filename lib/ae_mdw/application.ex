@@ -180,6 +180,8 @@ defmodule AeMdw.Application do
     BroadcasterCache.init()
     MutationsCache.init()
 
+    _table = :ets.new(:sync_profiling, [:named_table, :set, :public])
+
     AeMdw.Sync.AsyncTasks.Stats.init()
     AeMdw.Sync.AsyncTasks.Store.init()
     AeMdw.Sync.AsyncTasks.WealthRank.init()

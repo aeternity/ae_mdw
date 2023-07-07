@@ -125,26 +125,31 @@ defmodule AeMdw.Db.Sync.Block do
     height = :aec_blocks.height(mblock)
     mb_time = :aec_blocks.time_in_msecs(mblock)
     mb_txs = :aec_blocks.txs(mblock)
-    events = AeMdw.Contract.get_grouped_events(mblock)
+    {ts, events} = :timer.tc(fn -> AeMdw.Contract.get_grouped_events(mblock) end)
+    _sum = :ets.update_counter(:sync_profiling, {:dryrun, height}, ts, {{:dryrun, height}, 0})
     mb_model = Model.block(index: {height, mbi}, tx_index: first_txi, hash: mb_hash)
     block_mutation = WriteMutation.new(Model.Block, mb_model)
 
-    mutations =
-      mb_txs
-      |> Enum.with_index(first_txi)
-      |> Enum.reduce([block_mutation], fn {signed_tx, txi}, mutations ->
-        transaction_mutations =
-          Transaction.transaction_mutations(
-            signed_tx,
-            txi,
-            {height, mbi},
-            mb_hash,
-            mb_time,
-            events
-          )
+    {ts, mutations} =
+      :timer.tc(fn ->
+        mb_txs
+        |> Enum.with_index(first_txi)
+        |> Enum.reduce([block_mutation], fn {signed_tx, txi}, mutations ->
+          transaction_mutations =
+            Transaction.transaction_mutations(
+              signed_tx,
+              txi,
+              {height, mbi},
+              mb_hash,
+              mb_time,
+              events
+            )
 
-        mutations ++ transaction_mutations
+          mutations ++ transaction_mutations
+        end)
       end)
+
+    _sum = :ets.update_counter(:sync_profiling, {:txs, height}, ts, {{:txs, height}, 0})
 
     {mutations, first_txi + length(mb_txs)}
   end
