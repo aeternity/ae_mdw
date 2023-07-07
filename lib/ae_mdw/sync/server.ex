@@ -322,19 +322,16 @@ defmodule AeMdw.Sync.Server do
     {block_index, mb_hash}
   end
 
-  defp exec_mem_mutations(gens_mutations, state) do
-    blocks_mutations =
-      Enum.flat_map(gens_mutations, fn {_height, blocks_mutations} -> blocks_mutations end)
-
-    all_mutations =
-      Enum.flat_map(blocks_mutations, fn {_block_index, _block, block_mutations} ->
-        block_mutations
-      end)
-
+  defp exec_mem_mutations(gens_mutations, initial_state) do
     new_state =
-      state
-      |> maybe_enqueue_accounts_balance(blocks_mutations)
-      |> State.commit_mem(all_mutations)
+      Enum.reduce(gens_mutations, initial_state, fn {_height, gen_mutations}, state ->
+        blocks_mutations =
+          Enum.map(gen_mutations, fn {_block_index, _block, mutations} -> mutations end)
+
+        state
+        |> maybe_enqueue_accounts_balance(gen_mutations)
+        |> State.commit_mem(blocks_mutations)
+      end)
 
     broadcast_blocks(gens_mutations)
 
