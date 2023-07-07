@@ -17,7 +17,7 @@ defmodule AeMdw.ContractsTest do
     test "lists logs sorted by call txi and log index" do
       {height, _mbi} = block_index = {100_000, 11}
       contract_pk = :crypto.strong_rand_bytes(32)
-      <<evt_hash_bigger_int::256>> = evt_hash0 = aexn_event_hash(:transfer)
+      <<evt_hash_bigger_int::256>> = aexn_event_hash(:transfer)
       evt_hash1 = <<evt_hash_bigger_int - 1::256>>
       extra_logs = [{contract_pk, [evt_hash1, <<3::256>>, <<4::256>>, <<1::256>>], <<>>}]
       call_rec = call_rec("transfer", contract_pk, height, contract_pk, extra_logs)

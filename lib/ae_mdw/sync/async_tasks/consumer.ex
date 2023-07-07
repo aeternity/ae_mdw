@@ -89,7 +89,7 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
         end
       )
 
-    Log.info("[#{inspect(task.ref)}] #{inspect(m_task)}")
+    Log.info("[task_run] #{inspect(Model.async_task(m_task, :index))}")
 
     task
   end

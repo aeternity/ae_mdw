@@ -277,25 +277,30 @@ defmodule AeMdw.Sync.Server do
     end)
   end
 
-  defp exec_db_mutations(gens_mutations, state, clear_mem?) do
-    blocks_mutations =
-      Enum.flat_map(gens_mutations, fn {_height, blocks_mutations} -> blocks_mutations end)
+  defp exec_db_mutations(gens_mutations, initial_state, clear_mem?) do
+    gens_mutations
+    |> Enum.reduce(initial_state, fn {height, blocks_mutations}, state ->
+      {ts, new_state} = :timer.tc(fn -> exec_db_height(state, blocks_mutations, clear_mem?) end)
 
-    enqueue_state = maybe_enqueue_accounts_balance(state, blocks_mutations)
+      mutations = Enum.map(blocks_mutations, &elem(&1, 2))
+      :ok = profile_sync("sync_db", height, ts, mutations)
 
-    new_state =
-      Enum.reduce(blocks_mutations, enqueue_state, fn {_bi, _block, block_mutations}, state ->
-        State.commit_db(state, block_mutations, clear_mem?)
-      end)
-
-    broadcast_blocks(gens_mutations)
-
-    new_state
+      new_state
+    end)
+    |> tap(fn _state -> broadcast_blocks(gens_mutations) end)
   end
 
-  defp maybe_enqueue_accounts_balance(state, block_mutations) do
+  defp exec_db_height(state, blocks_mutations, clear_mem?) do
+    enqueue_state = maybe_enqueue_accounts_balance(state, blocks_mutations)
+
+    Enum.reduce(blocks_mutations, enqueue_state, fn {_bi, _block, block_mutations}, state ->
+      State.commit_db(state, block_mutations, clear_mem?)
+    end)
+  end
+
+  defp maybe_enqueue_accounts_balance(state, gen_mutations) do
     accounts_set =
-      Enum.reduce(block_mutations, MapSet.new(), fn
+      Enum.reduce(gen_mutations, MapSet.new(), fn
         {{_height, -1}, _block, _mutations}, set ->
           set
 
@@ -304,16 +309,16 @@ defmodule AeMdw.Sync.Server do
       end)
 
     if MapSet.size(accounts_set) > 0 do
-      {block_index, mb_hash} = last_microblock(block_mutations)
+      {block_index, mb_hash} = last_microblock(gen_mutations)
       State.enqueue(state, :store_acc_balance, [mb_hash, block_index], [accounts_set])
     else
       state
     end
   end
 
-  defp last_microblock(block_mutations) do
+  defp last_microblock(blocks_mutations) do
     {block_index, mblock, _mutations} =
-      block_mutations
+      blocks_mutations
       |> Enum.filter(fn {{_height, mbi}, _block, _mutations} -> mbi != -1 end)
       |> Enum.max_by(fn {block_index, _block, _mutations} -> block_index end)
 
@@ -324,18 +329,30 @@ defmodule AeMdw.Sync.Server do
 
   defp exec_mem_mutations(gens_mutations, initial_state) do
     new_state =
-      Enum.reduce(gens_mutations, initial_state, fn {_height, gen_mutations}, state ->
-        blocks_mutations =
-          Enum.map(gen_mutations, fn {_block_index, _block, mutations} -> mutations end)
+      Enum.reduce(gens_mutations, initial_state, fn {height, gen_mutations}, state ->
+        {ts, {commited_state, mutations}} =
+          :timer.tc(fn -> exec_mem_height(state, gen_mutations) end)
 
-        state
-        |> maybe_enqueue_accounts_balance(gen_mutations)
-        |> State.commit_mem(blocks_mutations)
+        :ok = profile_sync("sync_mem", height, ts, mutations)
+
+        commited_state
       end)
 
     broadcast_blocks(gens_mutations)
 
     new_state
+  end
+
+  defp exec_mem_height(state, gen_mutations) do
+    blocks_mutations =
+      Enum.map(gen_mutations, fn {_block_index, _block, mutations} -> mutations end)
+
+    new_state =
+      state
+      |> maybe_enqueue_accounts_balance(gen_mutations)
+      |> State.commit_mem(blocks_mutations)
+
+    {new_state, blocks_mutations}
   end
 
   defp spawn_task(fun) do
@@ -375,5 +392,29 @@ defmodule AeMdw.Sync.Server do
       BroadcasterCache.put_txs_count(kb_hash, count)
       count
     end
+  end
+
+  defp profile_sync(sync_type, height, exec_ts, mutations) do
+    with [{_key, dryrun_ts}] <- :ets.lookup(:sync_profiling, {:dryrun, height}),
+         [{_key, txs_ts}] <- :ets.lookup(:sync_profiling, {:txs, height}) do
+      true = :ets.delete(:sync_profiling, {:dryrun, height - 1})
+      true = :ets.delete(:sync_profiling, {:txs, height - 1})
+
+      mutations_map =
+        mutations
+        |> List.flatten()
+        |> Enum.frequencies_by(fn
+          nil -> nil
+          %mod{} -> mod
+        end)
+
+      mutations_count = length(mutations)
+
+      Log.info(
+        "[#{sync_type}] height=#{height}, exec=#{div(exec_ts, 1_000)}ms, txs=#{div(txs_ts, 1_000)}ms, dryrun=#{div(dryrun_ts, 1_000)}ms, mutations={#{mutations_count}, #{inspect(mutations_map)}}"
+      )
+    end
+
+    :ok
   end
 end
