@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.54.1](https://www.github.com/aeternity/ae_mdw/compare/v1.54.0...v1.54.1) (2023-07-07)
+
+
+### Miscellaneous
+
+* log mem and db sync profiling ([#1449](https://www.github.com/aeternity/ae_mdw/issues/1449)) ([bde081d](https://www.github.com/aeternity/ae_mdw/commit/bde081d1d8ee0c324a873003d0ddbe333736c620))
+
 ## [1.54.0](https://www.github.com/aeternity/ae_mdw/compare/v1.53.0...v1.54.0) (2023-07-06)
 
 
