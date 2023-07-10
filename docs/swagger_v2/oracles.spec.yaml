@@ -12,6 +12,7 @@ schemas:
       oracle: ok_R7cQfVN15F5ek1wBSYaMRjW2XbMRKx7VDQQmbtwxspjZQvmPM
       query_fee: 20000
       register: 11023
+      register_time: 1587577771376
     properties:
       active:
         description: The oracle active status
@@ -21,6 +22,9 @@ schemas:
         type: integer
       expire_height:
         description: The block height when the oracle expires
+        type: integer
+      register_time:
+        description: The block time in which the oracle was registered
         type: integer
       extends:
         description: The tx indexes when the oracle has been extended

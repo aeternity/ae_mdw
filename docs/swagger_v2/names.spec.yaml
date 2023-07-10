@@ -15,6 +15,9 @@ schemas:
           active_from:
             type: integer
             example: 163282
+          activation_time:
+            type: integer
+            example: 1587577771376
           claims:
             type: array
             items:

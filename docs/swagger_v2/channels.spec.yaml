@@ -31,12 +31,16 @@ schemas:
         example: 4500000000000000000
       last_updated_height:
         type: string
-        description: The last height in which the channel was updated
+        description: The last height in which the channel was updated on chain
         example: 141956
       last_updated_tx_type:
         type: string
         description: The transaction type of the last transaction that updated the channel
         example: ChannelDepositTx
+      last_updated_time:
+        type: integer
+        description: The block time in which the channel was last updated
+        example: 1587577771376
       lock_period:
         description: Amount of heights locked after a solo closing
         example: 10
