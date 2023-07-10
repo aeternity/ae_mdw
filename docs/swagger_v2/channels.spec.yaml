@@ -31,7 +31,7 @@ schemas:
         example: 4500000000000000000
       last_updated_height:
         type: string
-        description: The last height in which the channel was updated
+        description: The last height in which the channel was updated on chain
         example: 141956
       last_updated_tx_type:
         type: string
