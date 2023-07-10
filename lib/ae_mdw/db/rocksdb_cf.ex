@@ -173,8 +173,8 @@ defmodule AeMdw.Db.RocksDbCF do
         record_type = Model.record(table)
 
         record =
-          value
-          |> decode_value()
+          record_type
+          |> decode_value(value)
           |> Tuple.insert_at(0, index)
           |> Tuple.insert_at(0, record_type)
 
@@ -201,8 +201,8 @@ defmodule AeMdw.Db.RocksDbCF do
         record_type = Model.record(table)
 
         record =
-          value
-          |> decode_value()
+          record_type
+          |> decode_value(value)
           |> Tuple.insert_at(0, index)
           |> Tuple.insert_at(0, record_type)
 
@@ -274,6 +274,10 @@ defmodule AeMdw.Db.RocksDbCF do
 
   defp encode_record_value({_record_name, _key, nil}), do: ""
 
+  defp encode_record_value({:contract_log, _key, ext_contract, args, data, hash}) do
+    :erlang.term_to_binary({ext_contract, args, data, hash})
+  end
+
   defp encode_record_value(record) do
     record
     |> Tuple.delete_at(0)
@@ -281,8 +285,9 @@ defmodule AeMdw.Db.RocksDbCF do
     |> :sext.encode()
   end
 
-  defp decode_value(""), do: {nil}
-  defp decode_value(value), do: :sext.decode(value)
+  defp decode_value(_type, ""), do: {nil}
+  defp decode_value(:contract_log, value), do: :erlang.binary_to_term(value)
+  defp decode_value(_type, value), do: :sext.decode(value)
 
   defp do_iterator_move(it, action) do
     case :rocksdb.iterator_move(it, action) do

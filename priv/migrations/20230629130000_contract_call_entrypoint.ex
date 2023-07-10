@@ -48,7 +48,6 @@ defmodule AeMdw.Migrations.ContractCallEntrypoint do
       write_mutations =
         tasks
         |> Task.await_many(60_000 * 30)
-        |> IO.inspect()
         |> List.flatten()
 
       _state = State.commit(state, write_mutations)
