@@ -1,21 +1,45 @@
 defmodule AeMdw.Migrations.EventLogsHash do
   # credo:disable-for-this-file
   @moduledoc """
-  Reindex logs moving the hash out of the key.
+  Reindex logs to move the hash out of the key and use built-in encoding for the value part of the records.
   """
 
-  require Logger
+  alias AeMdw.Db.RocksDb
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.WriteMutation
-  alias AeMdw.Db.DeleteKeysMutation
   alias AeMdw.Db.State
 
   require Model
+  require Logger
 
-  @range_size 500_000
+  @range_size 200_000
 
   @dialyzer :no_return
+
+  defmodule DeleteKeysMutation do
+    @moduledoc false
+    alias AeMdw.Db.Model
+    alias AeMdw.Db.State
+    alias AeMdw.Db.RocksDb
+
+    require Model
+
+    @derive AeMdw.Db.Mutation
+    defstruct [:args]
+
+    def new(args) do
+      %__MODULE__{args: args}
+    end
+
+    def execute(%__MODULE__{args: [log_key, data_log_key, idx_log_key]}, state) do
+      txn = Map.get(state.store, :txn)
+      :ok = RocksDb.delete(txn, Model.ContractLog, :sext.encode(log_key))
+      :ok = RocksDb.delete(txn, Model.DataContractLog, :sext.encode(data_log_key))
+      :ok = RocksDb.delete(txn, Model.IdxContractLog, :sext.encode(idx_log_key))
+      state
+    end
+  end
 
   @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
   def run(state, _from_start?) do
@@ -71,8 +95,7 @@ defmodule AeMdw.Migrations.EventLogsHash do
         |> Enum.flat_map(fn {call_txi, log_idx, create_txi, evt_hash} = idx_log_key ->
           log_key = {create_txi, call_txi, evt_hash, log_idx}
 
-          {:contract_log, ^log_key, ext_contract, args, data} =
-            State.fetch!(state, Model.ContractLog, log_key)
+          {:contract_log, ^log_key, ext_contract, args, data} = fetch_old!(log_key)
 
           m_log =
             Model.contract_log(
@@ -86,12 +109,10 @@ defmodule AeMdw.Migrations.EventLogsHash do
           m_data_log = Model.data_contract_log(index: {data, call_txi, create_txi, log_idx})
           m_idx_log = Model.idx_contract_log(index: {call_txi, log_idx, create_txi})
 
+          data_log_key = {data, call_txi, create_txi, evt_hash, log_idx}
+
           [
-            DeleteKeysMutation.new(%{
-              Model.ContractLog => [log_key],
-              Model.DataContractLog => [{data, call_txi, create_txi, evt_hash, log_idx}],
-              Model.IdxContractLog => [idx_log_key]
-            }),
+            DeleteKeysMutation.new([log_key, data_log_key, idx_log_key]),
             WriteMutation.new(Model.ContractLog, m_log),
             WriteMutation.new(Model.DataContractLog, m_data_log),
             WriteMutation.new(Model.IdxContractLog, m_idx_log)
@@ -108,5 +129,17 @@ defmodule AeMdw.Migrations.EventLogsHash do
   def log(msg) do
     Logger.info(msg)
     IO.puts(msg)
+  end
+
+  defp fetch_old!(index) do
+    key = :sext.encode(index)
+
+    {:ok, value} = RocksDb.get(Model.ContractLog, key)
+    record_type = Model.record(Model.ContractLog)
+
+    value
+    |> :sext.decode()
+    |> Tuple.insert_at(0, index)
+    |> Tuple.insert_at(0, record_type)
   end
 end
