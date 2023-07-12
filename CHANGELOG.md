@@ -1,5 +1,25 @@
 # Changelog
 
+### [1.54.2](https://www.github.com/aeternity/ae_mdw/compare/v1.54.1...v1.54.2) (2023-07-12)
+
+
+### Bug Fixes
+
+* only bootstrap accounts for configured hardforks ([#1404](https://www.github.com/aeternity/ae_mdw/issues/1404)) ([7b24e15](https://www.github.com/aeternity/ae_mdw/commit/7b24e156dc96be0136c70fb48d673edc6b73e65c))
+
+
+### Testing
+
+* leave controller tests to coverage ([#1451](https://www.github.com/aeternity/ae_mdw/issues/1451)) ([d2ba17a](https://www.github.com/aeternity/ae_mdw/commit/d2ba17aa6742636845482cc9c91259ffa9a0cf24))
+
+
+### Miscellaneous
+
+* compact type increment counts mutations into a single one ([#1453](https://www.github.com/aeternity/ae_mdw/issues/1453)) ([1b5f77e](https://www.github.com/aeternity/ae_mdw/commit/1b5f77efbf34c8efb79c7f9f1b370c0876809cd5))
+* encode event logs within a single migration ([#1457](https://www.github.com/aeternity/ae_mdw/issues/1457)) ([3f53f9a](https://www.github.com/aeternity/ae_mdw/commit/3f53f9a4b6ed4e3083462c1ac696d90f03aaa922))
+* keep cache after switching from db to mem commit ([#1458](https://www.github.com/aeternity/ae_mdw/issues/1458)) ([9e41cd8](https://www.github.com/aeternity/ae_mdw/commit/9e41cd8f01c519e38297f70e03fb292c0ee5322e))
+* use builtin term to binary for values ([#1456](https://www.github.com/aeternity/ae_mdw/issues/1456)) ([a257442](https://www.github.com/aeternity/ae_mdw/commit/a257442b72c283276e6bb70b39656b68806737ba))
+
 ### [1.54.1](https://www.github.com/aeternity/ae_mdw/compare/v1.54.0...v1.54.1) (2023-07-07)
 
 
