@@ -4,33 +4,28 @@ defmodule AeMdw.Sync.MutationsCache do
   """
 
   alias AeMdw.Db.Mutation
+  alias AeMdw.EtsCache
 
   @hashes_table :sync_hashes
+  @expiration_minutes 120
 
   @typep hash :: AeMdw.Blocks.block_hash()
 
   @spec init() :: :ok
   def init do
-    :ets.new(@hashes_table, [:named_table, :set, :public])
+    EtsCache.new(@hashes_table, @expiration_minutes)
   end
 
   @spec get_mbs_mutations(hash()) :: {[Mutation.t()], AeMdw.Txs.txi()} | nil
   def get_mbs_mutations(mb_hash) do
-    case :ets.lookup(@hashes_table, mb_hash) do
-      [{^mb_hash, mutations_txi}] -> mutations_txi
-      [] -> nil
+    with {mutations_txi, _time} <- EtsCache.get(@hashes_table, mb_hash) do
+      mutations_txi
     end
   end
 
   @spec put_mbs_mutations(hash(), {[Mutation.t()], AeMdw.Txs.txi()}) :: :ok
   def put_mbs_mutations(mb_hash, mutations_txi) do
-    :ets.insert(@hashes_table, {mb_hash, mutations_txi})
-    :ok
-  end
-
-  @spec clear() :: :ok
-  def clear do
-    :ets.delete_all_objects(@hashes_table)
+    EtsCache.put(@hashes_table, mb_hash, mutations_txi)
     :ok
   end
 end

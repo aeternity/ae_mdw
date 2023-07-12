@@ -38,7 +38,6 @@ defmodule AeMdw.Sync.Server do
   alias AeMdw.Db.Sync.Block
   alias AeMdw.Log
   alias AeMdw.Sync.AsyncTasks.WealthRankAccounts
-  alias AeMdw.Sync.MutationsCache
   alias AeMdwWeb.Websocket.Broadcaster
   alias AeMdwWeb.Websocket.BroadcasterCache
 
@@ -250,8 +249,6 @@ defmodule AeMdw.Sync.Server do
       {exec_time, new_state} =
         :timer.tc(fn -> exec_db_mutations(gens_mutations, db_state, clear_mem?) end)
 
-      MutationsCache.clear()
-
       gens_per_min = (to_height + 1 - from_height) * 60_000_000 / exec_time
       Status.set_gens_per_min(gens_per_min)
 
@@ -271,7 +268,7 @@ defmodule AeMdw.Sync.Server do
         end
 
       gens_mutations = Block.blocks_mutations(from_height, from_mbi, from_txi, last_hash)
-      _new_state = exec_mem_mutations(gens_mutations, mem_state)
+      _new_state = exec_mem_mutations(mem_state, gens_mutations, from_height)
 
       last_hash
     end)
@@ -282,8 +279,7 @@ defmodule AeMdw.Sync.Server do
     |> Enum.reduce(initial_state, fn {height, blocks_mutations}, state ->
       {ts, new_state} = :timer.tc(fn -> exec_db_height(state, blocks_mutations, clear_mem?) end)
 
-      mutations = Enum.map(blocks_mutations, &elem(&1, 2))
-      :ok = profile_sync("sync_db", height, ts, mutations)
+      :ok = profile_sync("sync_db", height, ts, blocks_mutations)
 
       new_state
     end)
@@ -327,16 +323,41 @@ defmodule AeMdw.Sync.Server do
     {block_index, mb_hash}
   end
 
-  defp exec_mem_mutations(gens_mutations, initial_state) do
-    new_state =
-      Enum.reduce(gens_mutations, initial_state, fn {height, gen_mutations}, state ->
-        {ts, {commited_state, mutations}} =
-          :timer.tc(fn -> exec_mem_height(state, gen_mutations) end)
+  defp exec_mem_mutations(empty_state, gens_mutations, from_height) do
+    # start syncing from memory, then anticipates commit to avoid committing only after 10 gens
+    if from_height == AeMdw.Db.Util.synced_height(State.mem_state()) do
+      Enum.reduce(gens_mutations, empty_state, fn {height, gen_mutations}, state ->
+        {ts, commited_state} = :timer.tc(fn -> exec_mem_height(state, gen_mutations) end)
 
-        :ok = profile_sync("sync_mem", height, ts, mutations)
+        :ok = profile_sync("sync_mem", height, ts, gen_mutations)
 
         commited_state
       end)
+    else
+      exec_all_mem_mutations(empty_state, gens_mutations)
+    end
+  end
+
+  defp exec_all_mem_mutations(state, gens_mutations) do
+    blocks_mutations =
+      Enum.flat_map(gens_mutations, fn {_height, blocks_mutations} -> blocks_mutations end)
+
+    all_mutations =
+      Enum.flat_map(blocks_mutations, fn {_block_index, _block, block_mutations} ->
+        block_mutations
+      end)
+
+    {{height, _mbi}, _block, _mutations} = List.last(blocks_mutations)
+    Log.info("[sync_mem] exec until height=#{height}")
+
+    {ts, new_state} =
+      :timer.tc(fn ->
+        state
+        |> maybe_enqueue_accounts_balance(blocks_mutations)
+        |> State.commit_mem(all_mutations)
+      end)
+
+    :ok = profile_sync("sync_mem", height, ts, blocks_mutations)
 
     broadcast_blocks(gens_mutations)
 
@@ -347,12 +368,9 @@ defmodule AeMdw.Sync.Server do
     blocks_mutations =
       Enum.map(gen_mutations, fn {_block_index, _block, mutations} -> mutations end)
 
-    new_state =
-      state
-      |> maybe_enqueue_accounts_balance(gen_mutations)
-      |> State.commit_mem(blocks_mutations)
-
-    {new_state, blocks_mutations}
+    state
+    |> maybe_enqueue_accounts_balance(gen_mutations)
+    |> State.commit_mem(blocks_mutations)
   end
 
   defp spawn_task(fun) do
@@ -394,7 +412,9 @@ defmodule AeMdw.Sync.Server do
     end
   end
 
-  defp profile_sync(sync_type, height, exec_ts, mutations) do
+  defp profile_sync(sync_type, height, exec_ts, blocks_mutations) do
+    mutations = Enum.map(blocks_mutations, &elem(&1, 2))
+
     with [{_key, dryrun_ts}] <- :ets.lookup(:sync_profiling, {:dryrun, height}),
          [{_key, txs_ts}] <- :ets.lookup(:sync_profiling, {:txs, height}) do
       true = :ets.delete(:sync_profiling, {:dryrun, height - 1})
