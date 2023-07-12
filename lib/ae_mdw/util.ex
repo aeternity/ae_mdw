@@ -9,8 +9,7 @@ defmodule AeMdw.Util do
   # (U+10FFFD) “􏿽”
   @max_name_bin String.duplicate("􏿽", 100)
 
-  @type opt() :: {:expand?, boolean()} | {:top?, boolean()}
-  @type opts() :: [opt()]
+  @type opts() :: [{atom(), boolean()}]
 
   @spec expand?(opts()) :: boolean()
   def expand?(opts), do: Keyword.get(opts, :expand?, false)

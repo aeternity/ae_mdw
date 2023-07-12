@@ -64,10 +64,19 @@ defmodule AeMdwWeb.NameController do
     %{state: state, pagination: pagination, cursor: cursor, opts: opts, order_by: order_by} =
       assigns
 
-    {prev_cursor, auction_bids, next_cursor} =
-      AuctionBids.fetch_auctions(state, pagination, order_by, cursor, opts)
+    paginated_auctions =
+      AuctionBids.fetch_auctions(state, pagination, order_by, cursor, [{:render_v3?, true} | opts])
 
-    Util.paginate(conn, prev_cursor, auction_bids, next_cursor)
+    Util.paginate(conn, paginated_auctions)
+  end
+
+  @spec auctions_v2(Conn.t(), map()) :: Conn.t()
+  def auctions_v2(%Conn{assigns: assigns} = conn, _params) do
+    %{state: state, pagination: pagination, cursor: cursor, opts: opts, order_by: order_by} =
+      assigns
+
+    paginated_auctions = AuctionBids.fetch_auctions(state, pagination, order_by, cursor, opts)
+    Util.paginate(conn, paginated_auctions)
   end
 
   @spec inactive_names(Conn.t(), map()) :: Conn.t()
@@ -82,11 +91,8 @@ defmodule AeMdwWeb.NameController do
     } = assigns
 
     case Names.fetch_inactive_names(state, pagination, scope, order_by, cursor, opts) do
-      {:ok, prev_cursor, names, next_cursor} ->
-        Util.paginate(conn, prev_cursor, names, next_cursor)
-
-      {:error, reason} ->
-        Util.send_error(conn, :bad_request, reason)
+      {:ok, pagianted_names} -> Util.paginate(conn, pagianted_names)
+      {:error, reason} -> Util.send_error(conn, :bad_request, reason)
     end
   end
 
@@ -102,16 +108,33 @@ defmodule AeMdwWeb.NameController do
     } = assigns
 
     case Names.fetch_active_names(state, pagination, scope, order_by, cursor, opts) do
-      {:ok, prev_cursor, names, next_cursor} ->
-        Util.paginate(conn, prev_cursor, names, next_cursor)
-
-      {:error, reason} ->
-        Util.send_error(conn, :bad_request, reason)
+      {:ok, paginated_names} -> Util.paginate(conn, paginated_names)
+      {:error, reason} -> Util.send_error(conn, :bad_request, reason)
     end
   end
 
   @spec names(Conn.t(), map()) :: Conn.t()
-  def names(%Conn{assigns: assigns, query_params: query} = conn, _params) do
+  def names(%Conn{assigns: assigns} = conn, _params) do
+    %{
+      state: state,
+      pagination: pagination,
+      cursor: cursor,
+      opts: opts,
+      order_by: order_by,
+      scope: scope,
+      query: query
+    } = assigns
+
+    with {:ok, paginated_names} <-
+           Names.fetch_names(state, pagination, scope, order_by, query, cursor, [
+             {:render_v3?, true} | opts
+           ]) do
+      Util.paginate(conn, paginated_names)
+    end
+  end
+
+  @spec names_v2(Conn.t(), map()) :: Conn.t()
+  def names_v2(%Conn{assigns: assigns, query_params: query} = conn, _params) do
     %{
       state: state,
       pagination: pagination,
@@ -122,11 +145,8 @@ defmodule AeMdwWeb.NameController do
     } = assigns
 
     case Names.fetch_names(state, pagination, scope, order_by, query, cursor, opts) do
-      {:ok, prev_cursor, names, next_cursor} ->
-        Util.paginate(conn, prev_cursor, names, next_cursor)
-
-      {:error, reason} ->
-        Util.send_error(conn, :bad_request, reason)
+      {:ok, paginated_names} -> Util.paginate(conn, paginated_names)
+      {:error, reason} -> Util.send_error(conn, :bad_request, reason)
     end
   end
 

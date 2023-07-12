@@ -3,6 +3,7 @@ defmodule AeMdwWeb.Router do
   use Plug.ErrorHandler
 
   alias AeMdwWeb.Plugs.StatePlug
+  alias AeMdwWeb.Plugs.VersioningPlug
   alias AeMdwWeb.Plugs.RequestSpan
 
   @shared_routes [
@@ -21,7 +22,8 @@ defmodule AeMdwWeb.Router do
     {"/aex141/:contract_id/templates", AeMdwWeb.Aex141Controller, :collection_templates},
     {"/aex141/:contract_id/templates/:template_id/tokens", AeMdwWeb.Aex141Controller,
      :collection_template_tokens},
-    {"/aex141/owned-nfts/:account_id", AeMdwWeb.Aex141Controller, :owned_nfts}
+    {"/aex141/owned-nfts/:account_id", AeMdwWeb.Aex141Controller, :owned_nfts},
+    {"/names/auctions", AeMdwWeb.NameController, :auctions_v2}
   ]
 
   pipeline :api do
@@ -29,6 +31,7 @@ defmodule AeMdwWeb.Router do
     plug StatePlug
     plug Plug.RequestId
     plug RequestSpan
+    plug VersioningPlug
   end
 
   pipeline :browser do
@@ -41,6 +44,12 @@ defmodule AeMdwWeb.Router do
 
   scope "/", AeMdwWeb do
     pipe_through :api
+
+    scope "/v3" do
+      get "/names", NameController, :names
+      get "/names/auctions", NameController, :auctions
+      get "/names/:name/bids", NameController, :bids
+    end
 
     scope "/v2" do
       Enum.each(@shared_routes, fn {path, controller, fun} ->
@@ -63,9 +72,8 @@ defmodule AeMdwWeb.Router do
       get "/names/:id/auction", NameController, :auction
       get "/names/:id/pointers", NameController, :pointers
       get "/names/:id/pointees", NameController, :pointees
-      get "/names/auctions", NameController, :auctions
       get "/names/search", NameController, :search
-      get "/names", NameController, :names
+      get "/names", NameController, :names_v2
       get "/names/:id", NameController, :name
       get "/names/:id/claims", NameController, :name_claims
       get "/names/:id/updates", NameController, :name_updates
@@ -141,8 +149,7 @@ defmodule AeMdwWeb.Router do
     get "/name/pointees/:id", NameController, :pointees
     get "/name/:id", NameController, :name
     get "/names/search/:prefix", NameController, :search_v1
-    get "/names/auctions", NameController, :auctions
-    get "/names/auctions/:scope_type/:range", NameController, :auctions
+    get "/names/auctions/:scope_type/:range", NameController, :auctions_v2
     get "/names/inactive", NameController, :inactive_names
     get "/names/inactive/:scope_type/:range", NameController, :inactive_names
     get "/names/active", NameController, :active_names

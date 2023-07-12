@@ -50,21 +50,31 @@ defmodule AeMdw.AuctionBids do
     end
   end
 
-  @spec fetch_auctions(state(), pagination(), order_by(), cursor() | nil, boolean()) ::
+  @spec fetch_auctions(state(), pagination(), order_by(), cursor() | nil, opts()) ::
           {cursor() | nil, [auction_bid()], cursor() | nil}
   def fetch_auctions(state, pagination, :name, cursor, opts) do
     {last_gen, last_micro_time} = DbUtil.last_gen_and_time(state)
+    render_v3? = Keyword.get(opts, :render_v3?, false)
 
     {prev_cursor, auction_bids, next_cursor} =
       Collection.paginate(&Collection.stream(state, @table, &1, nil, cursor), pagination)
 
-    {prev_cursor, Enum.map(auction_bids, &render(state, &1, last_gen, last_micro_time, opts)),
-     next_cursor}
+    auction_bids =
+      Enum.map(auction_bids, fn plain_name ->
+        if render_v3? do
+          render(state, plain_name, last_gen, last_micro_time, opts)
+        else
+          render_v2(state, plain_name, last_gen, last_micro_time, opts)
+        end
+      end)
+
+    {prev_cursor, auction_bids, next_cursor}
   end
 
   def fetch_auctions(state, pagination, :expiration, cursor, opts) do
     {last_gen, last_micro_time} = DbUtil.last_gen_and_time(state)
     cursor = deserialize_exp_cursor(cursor)
+    render_v3? = Keyword.get(opts, :render_v3?, false)
 
     {prev_cursor, exp_keys, next_cursor} =
       Collection.paginate(
@@ -74,7 +84,11 @@ defmodule AeMdw.AuctionBids do
 
     auction_bids =
       Enum.map(exp_keys, fn {_exp, plain_name} ->
-        render(state, plain_name, last_gen, last_micro_time, opts)
+        if render_v3? do
+          render(state, plain_name, last_gen, last_micro_time, opts)
+        else
+          render_v2(state, plain_name, last_gen, last_micro_time, opts)
+        end
       end)
 
     {serialize_exp_cursor(prev_cursor), auction_bids, serialize_exp_cursor(next_cursor)}
@@ -95,6 +109,37 @@ defmodule AeMdw.AuctionBids do
   end
 
   defp render(
+         state,
+         Model.auction_bid(
+           index: plain_name,
+           block_index_txi_idx: {block_index, _txi_idx},
+           expire_height: expire_height,
+           bids: [last_bid | _rest_bids]
+         ),
+         last_gen,
+         last_micro_time,
+         _opts
+       ) do
+    last_bid = Txs.fetch!(state, bi_txi_idx_txi(last_bid))
+    name_ttl = Names.expire_after(expire_height)
+
+    %{
+      name: plain_name,
+      activation_time: DbUtil.block_index_to_time(state, block_index),
+      auction_end: expire_height,
+      approximate_expire_time:
+        DbUtil.height_to_time(state, expire_height, last_gen, last_micro_time),
+      last_bid: put_in(last_bid, ["tx", "ttl"], name_ttl)
+    }
+  end
+
+  defp render_v2(state, plain_name, last_gen, last_micro_time, opts) when is_binary(plain_name) do
+    auction_bid = State.fetch!(state, @table, plain_name)
+
+    render_v2(state, auction_bid, last_gen, last_micro_time, opts)
+  end
+
+  defp render_v2(
          state,
          Model.auction_bid(
            index: plain_name,
