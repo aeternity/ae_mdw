@@ -120,7 +120,11 @@ defmodule AeMdw.AuctionBids do
          last_micro_time,
          _opts
        ) do
-    last_bid = Txs.fetch!(state, bi_txi_idx_txi(last_bid))
+    last_bid =
+      state
+      |> Txs.fetch!(bi_txi_idx_txi(last_bid))
+      |> Map.delete("tx_index")
+
     name_ttl = Names.expire_after(expire_height)
 
     %{

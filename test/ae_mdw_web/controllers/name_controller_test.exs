@@ -926,7 +926,7 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Txs, [],
          [
-           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
+           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}, "tx_index" => 122} end
          ]},
         {Db, [],
          [
@@ -946,8 +946,11 @@ defmodule AeMdwWeb.NameControllerTest do
 
         assert %{
                  "name" => "1.chain",
-                 "approximate_expire_time" => 123
+                 "approximate_expire_time" => 123,
+                 "last_bid" => last_bid
                } = Enum.at(auction_bids, 0)
+
+        refute Map.has_key?(last_bid, "tx_index")
 
         assert %{
                  "name" => "5.chain",
