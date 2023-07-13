@@ -5,6 +5,7 @@ defmodule AeMdw.Sync.Supervisor do
 
   use Supervisor
 
+  alias AeMdw.Sync.MemStoreCreator
   alias AeMdw.Sync.Server
   alias AeMdw.Sync.Watcher
   alias AeMdw.Sync.AsyncStoreServer
@@ -17,6 +18,7 @@ defmodule AeMdw.Sync.Supervisor do
   @impl true
   def init(_args) do
     children = [
+      MemStoreCreator,
       Server,
       Watcher,
       AsyncStoreServer,

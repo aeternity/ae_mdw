@@ -2,7 +2,7 @@ defmodule AeMdw.Db.MemStore do
   @moduledoc """
   Store implementation with operations reading/writing in-memory.
 
-  Uses a GbTree implementation for fast access to the keys, plus, being able to
+  Uses a SortedTable for hashed access to the keys, plus, being able to
   iterate over them both forwards and backwards.
 
   Fallbacks to a different Store implementation that can be configured when
@@ -10,8 +10,9 @@ defmodule AeMdw.Db.MemStore do
   """
 
   alias AeMdw.Database
+  alias AeMdw.Db.Model
   alias AeMdw.Db.Store
-  alias AeMdw.Util.GbTree
+  alias AeMdw.Util.SortedTable
 
   @derive AeMdw.Db.Store
   defstruct [:fallback_store, :tables]
@@ -21,23 +22,31 @@ defmodule AeMdw.Db.MemStore do
   @typep table() :: Database.table()
   @opaque t() :: %__MODULE__{
             fallback_store: Store.t(),
-            tables: %{table() => GbTree.t()}
+            tables: %{table() => SortedTable.t()}
           }
 
   @spec new(Store.t()) :: t()
-  def new(store), do: %__MODULE__{fallback_store: store, tables: %{}}
+  def new(store), do: %__MODULE__{fallback_store: store, tables: new_tables()}
+
+  @spec delete_store(Store.t()) :: :ok
+  def delete_store(%__MODULE__{tables: tables}),
+    do: Enum.each(tables, fn {_name, t} -> SortedTable.delete(t) end)
 
   @spec put(t(), table(), record()) :: t()
-  def put(%__MODULE__{tables: tables} = store, table, record) do
+  def put(%__MODULE__{tables: tables} = store, table_name, record) do
     key = elem(record, 1)
-    new_tables = insert_or_update(tables, table, key, {:added, record})
 
-    %__MODULE__{store | tables: new_tables}
+    table =
+      tables
+      |> get_table(table_name)
+      |> SortedTable.insert(key, {:added, record})
+
+    %__MODULE__{store | tables: Map.put(tables, table_name, table)}
   end
 
   @spec get(t(), table(), key()) :: {:ok, record()} | :not_found
   def get(%__MODULE__{tables: tables, fallback_store: fallback_store}, table, key) do
-    case GbTree.lookup(get_tree(tables, table), key) do
+    case SortedTable.lookup(get_table(tables, table), key) do
       {:ok, {:added, record}} -> {:ok, record}
       {:ok, :deleted} -> :not_found
       :not_found -> Store.get(fallback_store, table, key)
@@ -45,39 +54,27 @@ defmodule AeMdw.Db.MemStore do
   end
 
   @spec delete(t(), table(), key()) :: t()
-  def delete(%__MODULE__{tables: tables} = store, table, key) do
-    tree = get_tree(tables, table)
+  def delete(%__MODULE__{tables: tables} = store, table_name, key) do
+    table = get_table(tables, table_name)
 
-    tree2 =
-      case GbTree.lookup(tree, key) do
-        {:ok, {:added, _record}} -> GbTree.delete(tree, key)
-        _deleted_or_not_found -> GbTree.insert(tree, key, :deleted)
+    table2 =
+      case SortedTable.lookup(table, key) do
+        {:ok, {:added, _record}} -> SortedTable.delete(table, key)
+        _deleted_or_not_found -> SortedTable.insert(table, key, :deleted)
       end
 
-    %__MODULE__{store | tables: Map.put(tables, table, tree2)}
+    %__MODULE__{store | tables: Map.put(tables, table_name, table2)}
   end
 
   @spec count_keys(t(), table()) :: non_neg_integer()
-  def count_keys(%__MODULE__{tables: tables, fallback_store: fallback_store}, table) do
-    count = Store.count_keys(fallback_store, table)
-
-    case Map.fetch(tables, table) do
-      {:ok, tab} ->
-        tab
-        |> GbTree.stream_forward()
-        |> Enum.reduce(count, fn
-          {_key, {:added, _record}}, count -> count + 1
-          {_key, :deleted}, count -> count - 1
-        end)
-
-      :error ->
-        count
-    end
+  def count_keys(%__MODULE__{tables: tables, fallback_store: fallback_store}, table_name) do
+    count = Store.count_keys(fallback_store, table_name)
+    count + SortedTable.count(get_table(tables, table_name))
   end
 
   @spec next(t(), table(), key() | nil) :: {:ok, key()} | :none
   def next(%__MODULE__{fallback_store: fallback_store, tables: tables} = store, table, key) do
-    case {Store.next(fallback_store, table, key), GbTree.next(get_tree(tables, table), key)} do
+    case {Store.next(fallback_store, table, key), SortedTable.next(get_table(tables, table), key)} do
       {:none, :none} -> :none
       {{:ok, key}, :none} -> {:ok, key}
       {:none, {:ok, key, :deleted}} -> next(store, table, key)
@@ -91,7 +88,7 @@ defmodule AeMdw.Db.MemStore do
 
   @spec prev(t(), table(), key() | nil) :: {:ok, key()} | :none
   def prev(%__MODULE__{fallback_store: fallback_store, tables: tables} = store, table, key) do
-    case {Store.prev(fallback_store, table, key), GbTree.prev(get_tree(tables, table), key)} do
+    case {Store.prev(fallback_store, table, key), SortedTable.prev(get_table(tables, table), key)} do
       {:none, :none} -> :none
       {{:ok, key}, :none} -> {:ok, key}
       {:none, {:ok, key, :deleted}} -> prev(store, table, key)
@@ -103,14 +100,11 @@ defmodule AeMdw.Db.MemStore do
     end
   end
 
-  defp get_tree(tables, table), do: Map.get(tables, table, GbTree.new())
+  defp get_table(tables, table_name), do: Map.fetch!(tables, table_name)
 
-  defp insert_or_update(tables, table, key, value) do
-    table2 =
-      tables
-      |> Map.get(table, GbTree.new())
-      |> GbTree.insert(key, value)
-
-    Map.put(tables, table, table2)
+  defp new_tables() do
+    Map.new(Model.column_families(), fn table_name ->
+      {table_name, SortedTable.new()}
+    end)
   end
 end

@@ -9,7 +9,6 @@ defmodule AeMdw.Db.State do
   alias AeMdw.Database
   alias AeMdw.Db.AsyncStoreMutation
   alias AeMdw.Db.DbStore
-  alias AeMdw.Db.MemStore
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
@@ -17,6 +16,7 @@ defmodule AeMdw.Db.State do
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Sync.AsyncTasks.Consumer
   alias AeMdw.Sync.AsyncTasks.Producer
+  alias AeMdw.Sync.MemStoreCreator
   alias AeMdw.Db.ClearDoneAsyncTasksMutation
 
   defstruct [:store, :stats, :cache, :jobs]
@@ -96,16 +96,23 @@ defmodule AeMdw.Db.State do
     %__MODULE__{state2 | jobs: %{}}
   end
 
-  @spec mem_state() :: t()
-  def mem_state do
-    case :persistent_term.get(@state_pm_key, :none) do
-      :none -> new_mem_state()
-      state -> state
+  @spec init_mem_state() :: :ok
+  def init_mem_state do
+    with :none <- :persistent_term.get(@state_pm_key, :none) do
+      :persistent_term.put(@state_pm_key, create_mem_state())
     end
+
+    :ok
   end
 
-  @spec new_mem_state() :: t()
-  def new_mem_state, do: new(MemStore.new(DbStore.new()))
+  @spec mem_state() :: t()
+  def mem_state, do: :persistent_term.get(@state_pm_key)
+
+  @spec create_mem_state() :: t()
+  def create_mem_state, do: new(MemStoreCreator.create())
+
+  @spec delete_mem_state(t()) :: :ok
+  def delete_mem_state(state), do: MemStoreCreator.delete(state.store)
 
   Enum.each(Model.column_families(), fn table_name ->
     @spec put(t(), unquote(table_name), Model.unquote(Model.record(table_name))()) :: t()

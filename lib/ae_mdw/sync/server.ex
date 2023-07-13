@@ -52,7 +52,7 @@ defmodule AeMdw.Sync.Server do
            | :idle
            | :stopped
            | {:syncing_db, reference()}
-           | {:syncing_mem, reference()}
+           | {:syncing_mem, reference(), State.t()}
   @typep state_data() :: %__MODULE__{
            chain_height: height(),
            chain_hash: hash(),
@@ -153,9 +153,13 @@ defmodule AeMdw.Sync.Server do
         {:next_state, {:syncing_db, ref}, state_data}
 
       db_height >= max_db_height and mem_hash != chain_hash ->
-        ref = spawn_mem_sync(db_height, chain_hash)
+        old_mem_state = State.mem_state()
 
-        {:next_state, {:syncing_mem, ref}, state_data}
+        ref =
+          State.create_mem_state()
+          |> spawn_mem_sync(db_height, chain_hash)
+
+        {:next_state, {:syncing_mem, ref, old_mem_state}, state_data}
 
       true ->
         :keep_state_and_data
@@ -176,9 +180,9 @@ defmodule AeMdw.Sync.Server do
     {:next_state, :idle, new_state_data, @internal_check_sync}
   end
 
-  def handle_event(:info, {ref, mem_hash}, {:syncing_mem, ref}, state_data) do
+  def handle_event(:info, {ref, mem_hash}, {:syncing_mem, ref, old_mem_state}, state_data) do
     new_state_data = %__MODULE__{state_data | mem_hash: mem_hash}
-
+    :ok = State.delete_mem_state(old_mem_state)
     {:next_state, :idle, new_state_data, @internal_check_sync}
   end
 
@@ -256,9 +260,8 @@ defmodule AeMdw.Sync.Server do
     end)
   end
 
-  defp spawn_mem_sync(from_height, last_hash) do
+  defp spawn_mem_sync(mem_state, from_height, last_hash) do
     spawn_task(fn ->
-      mem_state = State.new_mem_state()
       from_txi = Block.next_txi(mem_state)
 
       from_mbi =

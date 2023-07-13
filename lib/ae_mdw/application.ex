@@ -10,6 +10,7 @@ defmodule AeMdw.Application do
   """
   alias AeMdw.Contract
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.EtsCache
   alias AeMdw.Extract
   alias AeMdw.NodeHelper
@@ -227,6 +228,8 @@ defmodule AeMdw.Application do
   end
 
   def start_phase(:start_sync, _start_type, []) do
+    :ok = State.init_mem_state()
+
     if Application.fetch_env!(:ae_mdw, :sync) do
       Watcher.start_sync()
     end
