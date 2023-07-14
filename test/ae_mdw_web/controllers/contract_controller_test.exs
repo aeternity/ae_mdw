@@ -1,5 +1,5 @@
 defmodule AeMdwWeb.Controllers.ContractControllerTest do
-  use AeMdwWeb.ConnCase, async: false
+  use AeMdwWeb.ConnCase
   @moduletag skip_store: true
 
   alias :aeser_api_encoder, as: Enc
