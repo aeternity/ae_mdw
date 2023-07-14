@@ -6,7 +6,8 @@ defmodule AeMdw.Sync.MemStoreCreator do
 
   alias AeMdw.Db.DbStore
   alias AeMdw.Db.MemStore
-  alias AeMdw.Db.Store
+
+  @max_mem_sync_secs 120
 
   @spec start_link([]) :: GenServer.on_start()
   def start_link([]), do: GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
@@ -22,20 +23,18 @@ defmodule AeMdw.Sync.MemStoreCreator do
     GenServer.call(__MODULE__, :create)
   end
 
-  @spec delete(Store.t()) :: :ok
-  def delete(mem_store) do
-    GenServer.cast(__MODULE__, {:delete, mem_store})
-  end
-
   @impl true
-  def handle_call(:create, _from, list) do
+  def handle_call(:create, _from, prev_stores) do
+    {old_stores, new_ones} =
+      prev_stores
+      |> Enum.split_with(fn %{time: time} ->
+        System.monotonic_time(:second) - time > @max_mem_sync_secs
+      end)
+
+    Enum.each(old_stores, &MemStore.delete_store(&1.store))
+
     new_store = MemStore.new(DbStore.new())
-    {:reply, new_store, [new_store | list]}
-  end
 
-  @impl true
-  def handle_cast({:delete, store}, list) do
-    MemStore.delete_store(store)
-    {:noreply, list -- [store]}
+    {:reply, new_store, [%{store: new_store, time: System.monotonic_time(:second)} | new_ones]}
   end
 end

@@ -96,23 +96,17 @@ defmodule AeMdw.Db.State do
     %__MODULE__{state2 | jobs: %{}}
   end
 
-  @spec init_mem_state() :: :ok
-  def init_mem_state do
-    with :none <- :persistent_term.get(@state_pm_key, :none) do
-      :persistent_term.put(@state_pm_key, create_mem_state())
-    end
-
-    :ok
-  end
-
   @spec mem_state() :: t()
-  def mem_state, do: :persistent_term.get(@state_pm_key)
+  def mem_state do
+    with :none <- :persistent_term.get(@state_pm_key, :none) do
+      new_state = create_mem_state()
+      :persistent_term.put(@state_pm_key, new_state)
+      new_state
+    end
+  end
 
   @spec create_mem_state() :: t()
   def create_mem_state, do: new(MemStoreCreator.create())
-
-  @spec delete_mem_state(t()) :: :ok
-  def delete_mem_state(state), do: MemStoreCreator.delete(state.store)
 
   Enum.each(Model.column_families(), fn table_name ->
     @spec put(t(), unquote(table_name), Model.unquote(Model.record(table_name))()) :: t()
