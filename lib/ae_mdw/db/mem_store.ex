@@ -68,8 +68,18 @@ defmodule AeMdw.Db.MemStore do
 
   @spec count_keys(t(), table()) :: non_neg_integer()
   def count_keys(%__MODULE__{tables: tables, fallback_store: fallback_store}, table_name) do
-    count = Store.count_keys(fallback_store, table_name)
-    count + SortedTable.count(get_table(tables, table_name))
+    count_db = Store.count_keys(fallback_store, table_name)
+
+    count_mem =
+      tables
+      |> get_table(table_name)
+      |> SortedTable.stream_forward()
+      |> Enum.count(fn {key, value} ->
+        value != :deleted and
+          :not_found == Store.get(fallback_store, table_name, key)
+      end)
+
+    count_db + count_mem
   end
 
   @spec next(t(), table(), key() | nil) :: {:ok, key()} | :none

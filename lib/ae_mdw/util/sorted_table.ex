@@ -47,7 +47,7 @@ defmodule AeMdw.Util.SortedTable do
 
   @spec next(t(), key() | nil) :: {:ok, key(), value()} | :none
   def next(t, key) do
-    case :ets.next(t, key || 0) do
+    case :ets.next(t, key || -1) do
       @eot -> :none
       key -> {:ok, key, :ets.lookup_element(t, key, 2)}
     end
@@ -61,6 +61,11 @@ defmodule AeMdw.Util.SortedTable do
     end
   end
 
-  @spec count(t()) :: non_neg_integer()
-  def count(t), do: :ets.info(t, :size)
+  @spec stream_forward(t()) :: Enumerable.t()
+  def stream_forward(t) do
+    Stream.unfold(next(t, -1), fn
+      :none -> nil
+      {:ok, key, value} -> {{key, value}, next(t, key)}
+    end)
+  end
 end
