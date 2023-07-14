@@ -26,8 +26,7 @@ defmodule AeMdw.Sync.MemStoreCreator do
   @impl true
   def handle_call(:create, _from, prev_stores) do
     {old_stores, new_ones} =
-      prev_stores
-      |> Enum.split_with(fn %{time: time} ->
+      Enum.split_with(prev_stores, fn %{time: time} ->
         System.monotonic_time(:second) - time > @max_mem_sync_secs
       end)
 
