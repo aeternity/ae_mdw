@@ -1,14 +1,16 @@
 defmodule AeMdw.Db.WriteFieldsMuationTest do
   use ExUnit.Case, async: false
 
-  alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
-  alias AeMdw.Db.State
+  alias AeMdw.Db.Store
+  alias AeMdw.Db.MemStore
+  alias AeMdw.Db.NullStore
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Validate
 
   import Mock
+  import AeMdw.TestUtil, only: [change_store: 2]
 
   require Model
 
@@ -17,7 +19,7 @@ defmodule AeMdw.Db.WriteFieldsMuationTest do
   @fake_mb "mh_2XGZtE8jxUs2NymKHsytkaLLrk6KY2t2w1FjJxtAUqYZn8Wsdd"
 
   describe "execute/1" do
-    test "when tx_type = :spend_tx and id is a name, it fetches the block from the state" do
+    test "when tx_type = :spend_tx and id is a name, it fetches the block from the store" do
       block_index = {12, 3}
       block_hash = Validate.id!(@fake_mb)
       block = Model.block(index: block_index, hash: block_hash)
@@ -42,27 +44,28 @@ defmodule AeMdw.Db.WriteFieldsMuationTest do
 
       {:spend_tx, spend_tx} = :aetx.specialize_type(aetx)
 
-      Database.dirty_write(Model.Block, block)
-
-      state = State.new()
+      store =
+        NullStore.new()
+        |> MemStore.new()
+        |> Store.put(Model.Block, block)
 
       mutation = WriteFieldsMutation.new(:spend_tx, spend_tx, block_index, txi)
 
       with_mocks [
         {Name, [],
          [
-           ptr_resolve!: fn _state, _block_index, _name_hash, _key ->
+           ptr_resolve!: fn _store, _block_index, _name_hash, _key ->
              Validate.id!(@fake_account2)
            end
          ]}
       ] do
-        state2 = State.commit(state, [mutation])
+        store2 = change_store(store, [mutation])
 
         assert {:ok, Model.field(index: ^field_index1)} =
-                 State.get(state2, Model.Field, field_index1)
+                 Store.get(store2, Model.Field, field_index1)
 
         assert {:ok, Model.field(index: ^field_index2)} =
-                 State.get(state2, Model.Field, field_index2)
+                 Store.get(store2, Model.Field, field_index2)
       end
     end
 
@@ -83,17 +86,18 @@ defmodule AeMdw.Db.WriteFieldsMuationTest do
       {:spend_tx, spend_tx} = :aetx.specialize_type(aetx)
       txi = 123
 
-      state =
-        State.new_mem_state()
-        |> State.commit([
+      store =
+        NullStore.new()
+        |> MemStore.new()
+        |> change_store([
           WriteFieldsMutation.new(:spend_tx, spend_tx, {100_000, 1}, txi, :ga_meta_tx)
         ])
 
       field_index1 = {:ga_meta_tx, AeMdw.Fields.field_pos_mask(:ga_meta_tx, 1), sender_pk, txi}
       field_index2 = {:ga_meta_tx, AeMdw.Fields.field_pos_mask(:ga_meta_tx, 2), recipient_pk, txi}
 
-      assert State.exists?(state, Model.Field, field_index1)
-      assert State.exists?(state, Model.Field, field_index2)
+      refute :not_found == Store.get(store, Model.Field, field_index1)
+      refute :not_found == Store.get(store, Model.Field, field_index2)
     end
 
     test "indexes inner transaction fields with paying_for type" do
@@ -113,9 +117,10 @@ defmodule AeMdw.Db.WriteFieldsMuationTest do
       {:spend_tx, spend_tx} = :aetx.specialize_type(aetx)
       txi = 123
 
-      state =
-        State.new_mem_state()
-        |> State.commit([
+      store =
+        NullStore.new()
+        |> MemStore.new()
+        |> change_store([
           WriteFieldsMutation.new(:spend_tx, spend_tx, {100_000, 1}, txi, :paying_for_tx)
         ])
 
@@ -125,8 +130,8 @@ defmodule AeMdw.Db.WriteFieldsMuationTest do
       field_index2 =
         {:paying_for_tx, AeMdw.Fields.field_pos_mask(:paying_for_tx, 2), recipient_pk, txi}
 
-      assert State.exists?(state, Model.Field, field_index1)
-      assert State.exists?(state, Model.Field, field_index2)
+      refute :not_found == Store.get(store, Model.Field, field_index1)
+      refute :not_found == Store.get(store, Model.Field, field_index2)
     end
   end
 end

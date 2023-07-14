@@ -4,6 +4,9 @@ defmodule AeMdw.Aex9Test do
   alias AeMdw.Aex9
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.Store
+  alias AeMdw.Db.MemStore
+  alias AeMdw.Db.NullStore
   alias AeMdw.Db.AsyncStore
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.UpdateAex9StateMutation
@@ -78,9 +81,10 @@ defmodule AeMdw.Aex9Test do
            end
          ]}
       ] do
-        state =
-          State.new_mem_state()
-          |> State.put(
+        store =
+          NullStore.new()
+          |> MemStore.new()
+          |> Store.put(
             Model.AexnContract,
             Model.aexn_contract(
               index: {:aex9, contract_pk},
@@ -88,15 +92,15 @@ defmodule AeMdw.Aex9Test do
               meta_info: {"name", "symbol", 18}
             )
           )
-          |> State.put(
+          |> Store.put(
             Model.Aex9AccountPresence,
             Model.aex9_account_presence(index: {account_pk, contract_pk}, txi: 100)
           )
-          |> State.put(
+          |> Store.put(
             Model.Tx,
             Model.tx(index: 100, id: <<101::256>>, block_index: {11, 0})
           )
-          |> State.put(
+          |> Store.put(
             Model.Block,
             Model.block(index: {11, 0}, hash: <<111::256>>)
           )
@@ -118,7 +122,7 @@ defmodule AeMdw.Aex9Test do
                 ],
                 nil} ==
                  Aex9.fetch_account_balances(
-                   state,
+                   State.new(store),
                    account_pk,
                    nil,
                    {:forward, false, 10, false}
