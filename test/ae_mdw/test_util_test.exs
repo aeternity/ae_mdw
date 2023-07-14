@@ -12,7 +12,7 @@ defmodule AeMdw.TestUtilTest do
 
   describe "change_store" do
     test "raises exception when model table is not declared" do
-      assert_raise ArgumentError, fn ->
+      assert_raise KeyError, fn ->
         NullStore.new()
         |> MemStore.new()
         |> change_store([WriteMutation.new(Model.UnknownTable, Model.name(index: "foo"))])
