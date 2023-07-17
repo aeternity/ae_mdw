@@ -7,7 +7,7 @@ defmodule AeMdw.Sync.MemStoreCreator do
   alias AeMdw.Db.DbStore
   alias AeMdw.Db.MemStore
 
-  @max_mem_sync_secs 120
+  @max_mem_sync_secs Application.compile_env!(:ae_mdw, :max_mem_sync_secs)
 
   @spec start_link([]) :: GenServer.on_start()
   def start_link([]), do: GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
