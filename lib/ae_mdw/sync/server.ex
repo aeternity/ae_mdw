@@ -38,6 +38,7 @@ defmodule AeMdw.Sync.Server do
   alias AeMdw.Db.Sync.Block
   alias AeMdw.Log
   alias AeMdw.Sync.AsyncTasks.WealthRankAccounts
+  alias AeMdw.Sync.MemStoreCreator
   alias AeMdwWeb.Websocket.Broadcaster
   alias AeMdwWeb.Websocket.BroadcasterCache
 
@@ -267,7 +268,9 @@ defmodule AeMdw.Sync.Server do
         end
 
       gens_mutations = Block.blocks_mutations(from_height, from_mbi, from_txi, last_hash)
-      _new_state = exec_mem_mutations(mem_state, gens_mutations, from_height)
+      new_state = exec_mem_mutations(mem_state, gens_mutations, from_height)
+
+      :ok = MemStoreCreator.commit(new_state.store)
 
       last_hash
     end)

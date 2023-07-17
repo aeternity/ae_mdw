@@ -7,15 +7,13 @@ defmodule AeMdw.Sync.MemStoreCreator do
   alias AeMdw.Db.DbStore
   alias AeMdw.Db.MemStore
 
-  @max_mem_sync_secs Application.compile_env!(:ae_mdw, :max_mem_sync_secs)
-
   @spec start_link([]) :: GenServer.on_start()
   def start_link([]), do: GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
 
   @impl true
-  @spec init(:ok) :: {:ok, []}
+  @spec init(:ok) :: {:ok, {nil, nil, []}}
   def init(:ok) do
-    {:ok, []}
+    {:ok, {nil, nil, []}}
   end
 
   @spec create() :: MemStore.t()
@@ -23,17 +21,28 @@ defmodule AeMdw.Sync.MemStoreCreator do
     GenServer.call(__MODULE__, :create)
   end
 
+  @spec commit(MemStore.t()) :: :ok
+  def commit(mem_store) do
+    GenServer.cast(__MODULE__, {:commit, mem_store})
+  end
+
   @impl true
-  def handle_call(:create, _from, prev_stores) do
-    {old_stores, new_ones} =
-      Enum.split_with(prev_stores, fn %{time: time} ->
-        System.monotonic_time(:second) - time > @max_mem_sync_secs
-      end)
+  def handle_call(:create, _from, {endpoint_store, prev_endpoint_store, sync_stores}) do
+    new_sync_store = MemStore.new(DbStore.new())
+    sync_stores = [new_sync_store | sync_stores]
+    {:reply, new_sync_store, {endpoint_store, prev_endpoint_store, sync_stores}}
+  end
 
-    Enum.each(old_stores, &MemStore.delete_store(&1.store))
+  @impl true
+  def handle_cast({:commit, mem_store}, {endpoint_store, prev_endpoint_store, sync_stores}) do
+    if prev_endpoint_store, do: MemStore.delete_store(prev_endpoint_store)
 
-    new_store = MemStore.new(DbStore.new())
+    Enum.each(sync_stores, fn store ->
+      if store not in [mem_store, endpoint_store, prev_endpoint_store] do
+        MemStore.delete_store(store)
+      end
+    end)
 
-    {:reply, new_store, [%{store: new_store, time: System.monotonic_time(:second)} | new_ones]}
+    {:noreply, {mem_store, endpoint_store, []}}
   end
 end

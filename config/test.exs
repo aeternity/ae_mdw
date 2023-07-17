@@ -2,8 +2,7 @@ import Config
 
 # Sync
 config :ae_mdw,
-  sync: false,
-  max_mem_sync_secs: 600
+  sync: false
 
 # Telemetry
 config :ae_mdw, TelemetryMetricsStatsd,
