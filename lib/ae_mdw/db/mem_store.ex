@@ -28,7 +28,7 @@ defmodule AeMdw.Db.MemStore do
   @spec new(Store.t()) :: t()
   def new(store), do: %__MODULE__{fallback_store: store, tables: new_tables()}
 
-  @spec delete_store(Store.t()) :: :ok
+  @spec delete_store(t()) :: :ok
   def delete_store(%__MODULE__{tables: tables}),
     do: Enum.each(tables, fn {_name, t} -> SortedTable.delete(t) end)
 
@@ -74,9 +74,19 @@ defmodule AeMdw.Db.MemStore do
       tables
       |> get_table(table_name)
       |> SortedTable.stream_forward()
-      |> Enum.count(fn {key, value} ->
-        value != :deleted and
-          :not_found == Store.get(fallback_store, table_name, key)
+      |> Enum.reduce(0, fn {key, value}, count ->
+        new_key? = :not_found == Store.get(fallback_store, table_name, key)
+
+        cond do
+          value == :deleted and not new_key? ->
+            count - 1
+
+          value != :deleted and new_key? ->
+            count + 1
+
+          true ->
+            count
+        end
       end)
 
     count_db + count_mem

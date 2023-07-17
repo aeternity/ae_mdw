@@ -57,8 +57,7 @@ defmodule AeMdw.Db.MemStoreTest do
         |> Store.delete(Model.Block, {5, 0})
         |> Store.delete(Model.Block, {4, 0})
 
-      # 4 + 1 deleted on fallback which is a logical deletion
-      assert 5 = Store.count_keys(mem_store2, Model.Block)
+      assert 4 = Store.count_keys(mem_store2, Model.Block)
 
       assert {:ok, Model.block(index: {3, 0}, hash: :val3)} =
                Store.get(mem_store2, Model.Block, {3, 0})
