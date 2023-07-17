@@ -38,6 +38,7 @@ defmodule AeMdw.Sync.Server do
   alias AeMdw.Db.Sync.Block
   alias AeMdw.Log
   alias AeMdw.Sync.AsyncTasks.WealthRankAccounts
+  alias AeMdw.Sync.MemStoreCreator
   alias AeMdwWeb.Websocket.Broadcaster
   alias AeMdwWeb.Websocket.BroadcasterCache
 
@@ -178,7 +179,6 @@ defmodule AeMdw.Sync.Server do
 
   def handle_event(:info, {ref, mem_hash}, {:syncing_mem, ref}, state_data) do
     new_state_data = %__MODULE__{state_data | mem_hash: mem_hash}
-
     {:next_state, :idle, new_state_data, @internal_check_sync}
   end
 
@@ -258,7 +258,7 @@ defmodule AeMdw.Sync.Server do
 
   defp spawn_mem_sync(from_height, last_hash) do
     spawn_task(fn ->
-      mem_state = State.new_mem_state()
+      mem_state = State.create_mem_state()
       from_txi = Block.next_txi(mem_state)
 
       from_mbi =
@@ -268,7 +268,9 @@ defmodule AeMdw.Sync.Server do
         end
 
       gens_mutations = Block.blocks_mutations(from_height, from_mbi, from_txi, last_hash)
-      _new_state = exec_mem_mutations(mem_state, gens_mutations, from_height)
+      new_state = exec_mem_mutations(mem_state, gens_mutations, from_height)
+
+      :ok = MemStoreCreator.commit(new_state.store)
 
       last_hash
     end)

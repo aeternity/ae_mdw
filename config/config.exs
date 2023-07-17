@@ -13,7 +13,7 @@ config :ae_plugin,
 
 config :ae_mdw,
   sync: true,
-  contract_cache_expiration_minutes: 1440
+  contract_cache_expiration_minutes: 60
 
 # Endpoints
 config :ae_mdw, AeMdwWeb.Endpoint,

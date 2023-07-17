@@ -1,9 +1,12 @@
 defmodule AeMdw.Db.MemStoreTest do
   use ExUnit.Case
 
+  alias AeMdw.Db.Model
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.Store
+
+  require Model
 
   describe "when empty fallback" do
     test "it behaves like a key-value sorted store" do
@@ -11,22 +14,24 @@ defmodule AeMdw.Db.MemStoreTest do
 
       mem_store2 =
         mem_store
-        |> Store.put(:table, {:record, :key4, :val4})
-        |> Store.put(:table, {:record, :key1, :val1})
-        |> Store.put(:table, {:record, :key3, :old_val})
-        |> Store.put(:table, {:record, :key3, :val3})
-        |> Store.put(:table, {:record, :key2, :val1})
-        |> Store.delete(:table, :key2)
+        |> Store.put(Model.Block, Model.block(index: {4, 0}, hash: :val4))
+        |> Store.put(Model.Block, Model.block(index: {1, 0}, hash: :val1))
+        |> Store.put(Model.Block, Model.block(index: {3, 0}, hash: :old_val))
+        |> Store.put(Model.Block, Model.block(index: {3, 0}, hash: :val3))
+        |> Store.put(Model.Block, Model.block(index: {2, 0}, hash: :val1))
+        |> Store.delete(Model.Block, {2, 0})
 
-      assert 3 = Store.count_keys(mem_store2, :table)
+      assert 3 = Store.count_keys(mem_store2, Model.Block)
 
-      assert {:ok, {:record, :key3, :val3}} = Store.get(mem_store2, :table, :key3)
-      assert :not_found = Store.get(mem_store2, :table, :key2)
+      assert {:ok, Model.block(index: {3, 0}, hash: :val3)} =
+               Store.get(mem_store2, Model.Block, {3, 0})
 
-      assert :none = Store.next(mem_store2, :table, :key4)
-      assert {:ok, :key4} = Store.prev(mem_store2, :table, nil)
-      assert :none = Store.prev(mem_store2, :table, :key1)
-      assert {:ok, :key1} = Store.prev(mem_store2, :table, :key3)
+      assert :not_found = Store.get(mem_store2, Model.Block, {2, 0})
+
+      assert :none = Store.next(mem_store2, Model.Block, {4, 0})
+      assert {:ok, {4, 0}} = Store.prev(mem_store2, Model.Block, nil)
+      assert :none = Store.prev(mem_store2, Model.Block, {1, 0})
+      assert {:ok, {1, 0}} = Store.prev(mem_store2, Model.Block, {3, 0})
     end
   end
 
@@ -36,36 +41,40 @@ defmodule AeMdw.Db.MemStoreTest do
 
       fallback_store2 =
         fallback_store
-        |> Store.put(:table, {:record, :key2, :val2})
-        |> Store.put(:table, {:record, :key4, :val4})
-        |> Store.put(:table, {:record, :key6, :val6})
+        |> Store.put(Model.Block, Model.block(index: {2, 0}, hash: :val2))
+        |> Store.put(Model.Block, Model.block(index: {4, 0}, hash: :val4))
+        |> Store.put(Model.Block, Model.block(index: {6, 0}, hash: :val6))
 
       mem_store = MemStore.new(fallback_store2)
 
+      assert 3 = Store.count_keys(mem_store, Model.Block)
+
       mem_store2 =
         mem_store
-        |> Store.put(:table, {:record, :key3, :val3})
-        |> Store.put(:table, {:record, :key5, :val5})
-        |> Store.put(:table, {:record, :key7, :val7})
-        |> Store.delete(:table, :key5)
-        |> Store.delete(:table, :key4)
+        |> Store.put(Model.Block, Model.block(index: {3, 0}, hash: :val3))
+        |> Store.put(Model.Block, Model.block(index: {5, 0}, hash: :val5))
+        |> Store.put(Model.Block, Model.block(index: {7, 0}, hash: :val7))
+        |> Store.delete(Model.Block, {5, 0})
+        |> Store.delete(Model.Block, {4, 0})
 
-      # store_keys = [:key2, :key3, :key6, :key7]
+      assert 4 = Store.count_keys(mem_store2, Model.Block)
 
-      assert 4 = Store.count_keys(mem_store2, :table)
+      assert {:ok, Model.block(index: {3, 0}, hash: :val3)} =
+               Store.get(mem_store2, Model.Block, {3, 0})
 
-      assert {:ok, {:record, :key3, :val3}} = Store.get(mem_store2, :table, :key3)
-      assert {:ok, {:record, :key2, :val2}} = Store.get(mem_store2, :table, :key2)
-      assert :not_found = Store.get(mem_store2, :table, :key4)
-      assert :not_found = Store.get(mem_store2, :table, :key5)
+      assert {:ok, Model.block(index: {2, 0}, hash: :val2)} =
+               Store.get(mem_store2, Model.Block, {2, 0})
 
-      assert {:ok, :key6} = Store.next(mem_store2, :table, :key3)
-      assert {:ok, :key6} = Store.next(mem_store2, :table, :key4)
-      assert {:ok, :key6} = Store.next(mem_store2, :table, :key5)
-      assert {:ok, :key7} = Store.prev(mem_store2, :table, nil)
-      assert :none = Store.prev(mem_store2, :table, :key1)
-      assert :none = Store.prev(mem_store2, :table, :key2)
-      assert {:ok, :key2} = Store.prev(mem_store2, :table, :key3)
+      assert :not_found = Store.get(mem_store2, Model.Block, {4, 0})
+      assert :not_found = Store.get(mem_store2, Model.Block, {5, 0})
+
+      assert {:ok, {6, 0}} = Store.next(mem_store2, Model.Block, {3, 0})
+      assert {:ok, {6, 0}} = Store.next(mem_store2, Model.Block, {4, 0})
+      assert {:ok, {6, 0}} = Store.next(mem_store2, Model.Block, {5, 0})
+      assert {:ok, {7, 0}} = Store.prev(mem_store2, Model.Block, nil)
+      assert :none = Store.prev(mem_store2, Model.Block, {1, 0})
+      assert :none = Store.prev(mem_store2, Model.Block, {2, 0})
+      assert {:ok, {2, 0}} = Store.prev(mem_store2, Model.Block, {3, 0})
     end
   end
 end

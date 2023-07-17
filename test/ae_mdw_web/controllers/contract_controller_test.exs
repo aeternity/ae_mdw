@@ -1,5 +1,5 @@
 defmodule AeMdwWeb.Controllers.ContractControllerTest do
-  use AeMdwWeb.ConnCase, async: false
+  use AeMdwWeb.ConnCase
   @moduletag skip_store: true
 
   alias :aeser_api_encoder, as: Enc
@@ -1038,7 +1038,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
   end
 
   describe "contracts" do
-    test "it returns latests contracts in backwards order", %{conn: conn, store: store} do
+    test "it returns latests contracts in backwards order", %{conn: conn} do
       [txi1, txi2, txi3, txi4, txi5] = [1, 2, 3, 4, 5]
 
       [tx_hash1, tx_hash2, tx_hash3, tx_hash4, tx_hash5] = [
@@ -1059,18 +1059,20 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       enc_owner_id = Enc.encode(:account_pubkey, owner_pk)
 
       store =
-        store
+        NullStore.new()
+        |> MemStore.new()
+        |> Store.put(Model.Block, Model.block(index: {100, 0}))
         |> Store.put(Model.Type, Model.type(index: {:contract_create_tx, txi1}))
-        |> Store.put(Model.Tx, Model.tx(index: txi1, id: tx_hash1))
+        |> Store.put(Model.Tx, Model.tx(index: txi1, id: tx_hash1, block_index: {100, 0}))
         |> Store.put(
           Model.FnameIntContractCall,
           Model.fname_int_contract_call(index: {"Chain.clone", txi2, 0})
         )
-        |> Store.put(Model.Tx, Model.tx(index: txi2, id: tx_hash2))
+        |> Store.put(Model.Tx, Model.tx(index: txi2, id: tx_hash2, block_index: {100, 0}))
         |> Store.put(Model.Type, Model.type(index: {:contract_create_tx, txi3}))
-        |> Store.put(Model.Tx, Model.tx(index: txi3, id: tx_hash3))
+        |> Store.put(Model.Tx, Model.tx(index: txi3, id: tx_hash3, block_index: {100, 0}))
         |> Store.put(Model.Type, Model.type(index: {:ga_attach_tx, txi4}))
-        |> Store.put(Model.Tx, Model.tx(index: txi4, id: tx_hash4))
+        |> Store.put(Model.Tx, Model.tx(index: txi4, id: tx_hash4, block_index: {100, 0}))
         |> Store.put(Model.InnerType, Model.type(index: {:contract_create_tx, txi5}))
 
       block_hash = <<10::256>>
@@ -1249,19 +1251,32 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
   end
 
   describe "contract" do
-    test "when contract is created on an internal call, it returns 200", %{
-      conn: conn,
-      store: store
-    } do
+    test "when contract is created on an internal call, it returns 200", %{conn: conn} do
       txi = 1
       tx_hash = <<1::256>>
+      block_hash = <<100::256>>
+
+      store =
+        NullStore.new()
+        |> MemStore.new()
+        |> Store.put(Model.Block, Model.block(index: {100, 0}, hash: block_hash))
+        |> Store.put(Model.Type, Model.type(index: {:contract_call_tx, txi}))
+        |> Store.put(Model.Tx, Model.tx(index: txi, id: tx_hash))
+        |> Store.put(
+          Model.IntContractCall,
+          Model.int_contract_call(index: {txi, 0}, fname: "Chain.clone")
+        )
+        |> Store.put(
+          Model.FnameIntContractCall,
+          Model.fname_int_contract_call(index: {"Chain.clone", txi, 0})
+        )
+
       enc_tx_hash = Enc.encode(:tx_hash, tx_hash)
       owner_pk = <<4::256>>
       owner_id = :aeser_id.create(:account, owner_pk)
       enc_owner_id = :aeser_api_encoder.encode(:account_pubkey, owner_pk)
       account_pk = <<5::256>>
       account_id = :aeser_id.create(:account, account_pk)
-      block_hash = <<10::256>>
       enc_block_hash = Enc.encode(:micro_block_hash, block_hash)
 
       {:ok, contract_create_aetx} =
@@ -1299,18 +1314,11 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
         })
 
       store =
-        store
-        |> Store.put(Model.Type, Model.type(index: {:contract_call_tx, txi}))
-        |> Store.put(Model.Tx, Model.tx(index: txi, id: tx_hash))
-        |> Store.put(
-          Model.IntContractCall,
-          Model.int_contract_call(index: {txi, 0}, fname: "Chain.clone")
+        Store.put(
+          store,
+          Model.Field,
+          Model.field(index: {:contract_call_tx, nil, contract_pk, txi})
         )
-        |> Store.put(
-          Model.FnameIntContractCall,
-          Model.fname_int_contract_call(index: {"Chain.clone", txi, 0})
-        )
-        |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, nil, contract_pk, txi}))
 
       with_mocks [
         {DbUtil, [:passthrough],
@@ -1343,10 +1351,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       end
     end
 
-    test "when contract is created in a raw tx, it returns 200", %{
-      conn: conn,
-      store: store
-    } do
+    test "when contract is created in a raw tx, it returns 200", %{conn: conn} do
       txi = 1
       tx_hash = <<1::256>>
       enc_tx_hash = Enc.encode(:tx_hash, tx_hash)
@@ -1357,7 +1362,8 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
       encoded_contract_id = Enc.encode(:contract_pubkey, contract_pk)
 
       store =
-        store
+        NullStore.new()
+        |> MemStore.new()
         |> Store.put(Model.Type, Model.type(index: {:contract_create_tx, txi}))
         |> Store.put(Model.Tx, Model.tx(index: txi, id: tx_hash))
         |> Store.put(

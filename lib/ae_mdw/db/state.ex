@@ -9,7 +9,6 @@ defmodule AeMdw.Db.State do
   alias AeMdw.Database
   alias AeMdw.Db.AsyncStoreMutation
   alias AeMdw.Db.DbStore
-  alias AeMdw.Db.MemStore
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
@@ -17,6 +16,7 @@ defmodule AeMdw.Db.State do
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Sync.AsyncTasks.Consumer
   alias AeMdw.Sync.AsyncTasks.Producer
+  alias AeMdw.Sync.MemStoreCreator
   alias AeMdw.Db.ClearDoneAsyncTasksMutation
 
   defstruct [:store, :stats, :cache, :jobs]
@@ -98,14 +98,15 @@ defmodule AeMdw.Db.State do
 
   @spec mem_state() :: t()
   def mem_state do
-    case :persistent_term.get(@state_pm_key, :none) do
-      :none -> new_mem_state()
-      state -> state
+    with :none <- :persistent_term.get(@state_pm_key, :none) do
+      new_state = create_mem_state()
+      :persistent_term.put(@state_pm_key, new_state)
+      new_state
     end
   end
 
-  @spec new_mem_state() :: t()
-  def new_mem_state, do: new(MemStore.new(DbStore.new()))
+  @spec create_mem_state() :: t()
+  def create_mem_state, do: new(MemStoreCreator.create())
 
   Enum.each(Model.column_families(), fn table_name ->
     @spec put(t(), unquote(table_name), Model.unquote(Model.record(table_name))()) :: t()
