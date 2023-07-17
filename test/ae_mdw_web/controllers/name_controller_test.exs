@@ -926,6 +926,77 @@ defmodule AeMdwWeb.NameControllerTest do
       with_mocks [
         {Txs, [],
          [
+           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}, "tx_index" => 122} end
+         ]},
+        {Db, [],
+         [
+           proto_vsn: fn _height -> 1 end
+         ]},
+        {:aec_db, [], [get_block: fn _block_hash -> :block end]},
+        {:aec_blocks, [], [time_in_msecs: fn :block -> kb_time end]}
+      ] do
+        assert %{"data" => auction_bids, "next" => next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/names/auctions", direction: "forward")
+                 |> json_response(200)
+
+        assert @default_limit = length(auction_bids)
+        refute is_nil(next)
+
+        assert %{
+                 "name" => "1.chain",
+                 "approximate_expire_time" => 123,
+                 "last_bid" => last_bid
+               } = Enum.at(auction_bids, 0)
+
+        refute Map.has_key?(last_bid, "tx_index")
+
+        assert %{
+                 "name" => "5.chain",
+                 "approximate_expire_time" => ^approx_expire_time4
+               } = Enum.at(auction_bids, 4)
+
+        assert %{"data" => auction_bids2} =
+                 conn
+                 |> with_store(store)
+                 |> get(next)
+                 |> json_response(200)
+
+        assert @default_limit = length(auction_bids2)
+      end
+    end
+
+    test "when v2, it gets auctions with default limit", %{conn: conn, store: store} do
+      key_hash = <<0::256>>
+      kb_time = 123
+      last_gen = 4
+      approx_expire_time4 = kb_time + (4 - last_gen) * 180_000
+
+      store =
+        1..21
+        |> Enum.reduce(store, fn i, store ->
+          plain_name = "#{i}.chain"
+
+          auction =
+            Model.auction_bid(
+              index: plain_name,
+              block_index_txi_idx: {{0, 1}, {0, -1}},
+              expire_height: i,
+              bids: [{{2, 3}, {4, -1}}]
+            )
+
+          store
+          |> Store.put(Model.AuctionBid, auction)
+          |> Store.put(Model.AuctionExpiration, Model.expiration(index: {i, plain_name}))
+          |> Store.put(Model.Block, Model.block(index: {i, -1}, hash: key_hash))
+        end)
+        |> Store.put(Model.Block, Model.block(index: {last_gen, -1}, hash: key_hash))
+        |> Store.put(Model.Block, Model.block(index: {0, 1}, hash: key_hash))
+
+      with_mocks [
+        {Txs, [],
+         [
            fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
         {Db, [],
@@ -1043,6 +1114,59 @@ defmodule AeMdwWeb.NameControllerTest do
       conn: conn,
       store: store
     } do
+      key_hash = <<0::256>>
+
+      store =
+        1..11
+        |> Enum.reduce(store, fn i, store ->
+          plain_name = "#{i}.chain"
+
+          name =
+            Model.name(
+              index: plain_name,
+              active: true,
+              expire: 1,
+              claims: [{{0, 0}, {0, -1}}],
+              updates: [],
+              transfers: [],
+              revoke: {{0, 0}, {0, -1}},
+              auction_timeout: 1
+            )
+
+          store
+          |> Store.put(Model.ActiveName, name)
+          |> Store.put(Model.ActiveNameExpiration, Model.expiration(index: {i, plain_name}))
+          |> Store.put(Model.Block, Model.block(index: {i, -1}, hash: key_hash))
+        end)
+
+      with_mocks [
+        {Txs, [],
+         [
+           fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
+         ]},
+        {Name, [],
+         [
+           pointers: fn _state, _mnme -> %{} end,
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end
+         ]},
+        {:aec_db, [], [get_block: fn _block_hash -> :block end]},
+        {:aec_blocks, [], [time_in_msecs: fn :block -> 123 end]}
+      ] do
+        assert %{"data" => names, "next" => _next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v3/names")
+                 |> json_response(200)
+
+        assert @default_limit = length(names)
+      end
+    end
+
+    test "on v2, it gets active and inactive names, except those in auction, with default limit",
+         %{
+           conn: conn,
+           store: store
+         } do
       key_hash = <<0::256>>
 
       store =

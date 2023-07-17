@@ -14,6 +14,8 @@ period = String.to_integer(System.get_env("TELEMETRY_POLLER_PERIOD") || "10000")
 
 config :ae_mdw, AeMdw.APM.TelemetryPoller, period: period
 
+config :ae_mdw, enable_v3?: env in ~w(dev test)a
+
 # Endpoint
 if env != :test do
   port = String.to_integer(System.get_env("PORT") || "4000")

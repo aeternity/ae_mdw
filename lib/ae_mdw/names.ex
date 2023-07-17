@@ -68,7 +68,7 @@ defmodule AeMdw.Names do
   @max_bin Util.max_256bit_bin()
 
   @spec fetch_names(state(), pagination(), range(), order_by(), query(), cursor() | nil, opts()) ::
-          {:ok, page_cursor(), [name()], page_cursor()} | {:error, reason()}
+          {:ok, {page_cursor(), [name()], page_cursor()}} | {:error, reason()}
   def fetch_names(state, pagination, range, order_by, query, cursor, opts)
       when order_by in [:activation, :expiration, :deactivation] do
     cursor = deserialize_height_cursor(cursor)
@@ -82,8 +82,9 @@ defmodule AeMdw.Names do
         |> build_height_streamer(state, scope, cursor)
         |> Collection.paginate(pagination)
 
-      {:ok, serialize_height_cursor(prev_cursor), render_height_list(state, height_keys, opts),
-       serialize_height_cursor(next_cursor)}
+      {:ok,
+       {serialize_height_cursor(prev_cursor), render_height_list(state, height_keys, opts),
+        serialize_height_cursor(next_cursor)}}
     rescue
       e in ErrInput ->
         {:error, e.message}
@@ -101,8 +102,9 @@ defmodule AeMdw.Names do
         |> build_name_streamer(state, cursor)
         |> Collection.paginate(pagination)
 
-      {:ok, serialize_name_cursor(prev_cursor), render_names_list(state, name_keys, opts),
-       serialize_name_cursor(next_cursor)}
+      {:ok,
+       {serialize_name_cursor(prev_cursor), render_names_list(state, name_keys, opts),
+        serialize_name_cursor(next_cursor)}}
     rescue
       e in ErrInput ->
         {:error, e.message}
@@ -344,12 +346,12 @@ defmodule AeMdw.Names do
   end
 
   @spec fetch_active_names(state(), pagination(), range(), order_by(), cursor(), opts()) ::
-          {:ok, page_cursor(), [name()], page_cursor()} | {:error, reason()}
+          {:ok, {page_cursor(), [name()], page_cursor()}} | {:error, reason()}
   def fetch_active_names(state, pagination, range, order_by, cursor, opts),
     do: fetch_names(state, pagination, range, order_by, %{"state" => "active"}, cursor, opts)
 
   @spec fetch_inactive_names(state(), pagination(), range(), order_by(), cursor(), opts()) ::
-          {:ok, page_cursor(), [name()], page_cursor()} | {:error, reason()}
+          {:ok, {page_cursor(), [name()], page_cursor()}} | {:error, reason()}
   def fetch_inactive_names(state, pagination, range, order_by, cursor, opts),
     do: fetch_names(state, pagination, range, order_by, %{"state" => "inactive"}, cursor, opts)
 
@@ -452,6 +454,50 @@ defmodule AeMdw.Names do
   end
 
   defp render(state, plain_name, is_active?, last_gen, last_micro_time, opts) do
+    if Keyword.get(opts, :render_v3?, false) do
+      render_v3(state, plain_name, is_active?, last_gen, last_micro_time, opts)
+    else
+      render_v2(state, plain_name, is_active?, last_gen, last_micro_time, opts)
+    end
+  end
+
+  defp render_v3(state, plain_name, is_active?, last_gen, last_micro_time, opts) do
+    Model.name(active: active, expire: expire, revoke: revoke, auction_timeout: auction_timeout) =
+      name =
+      State.fetch!(state, if(is_active?, do: @table_active, else: @table_inactive), plain_name)
+
+    name_hash =
+      case :aens.get_name_hash(plain_name) do
+        {:ok, name_id_bin} -> Enc.encode(:name, name_id_bin)
+        _error -> nil
+      end
+
+    {status, auction_bid} =
+      case AuctionBids.fetch(state, plain_name, opts) do
+        {:ok, auction_bid} ->
+          {_version, auction_bid} = pop_in(auction_bid, [:last_bid, "tx", "version"])
+          {"auction", auction_bid}
+
+        :not_found ->
+          {"name", nil}
+      end
+
+    %{
+      name: plain_name,
+      hash: name_hash,
+      auction: auction_bid,
+      status: status,
+      active: is_active?,
+      active_from: active,
+      expire_height: expire,
+      approximate_expire_time: DbUtil.height_to_time(state, expire, last_gen, last_micro_time),
+      revoke: revoke && expand_txi_idx(state, revoke, opts),
+      auction_timeout: auction_timeout,
+      ownership: render_ownership(state, name)
+    }
+  end
+
+  defp render_v2(state, plain_name, is_active?, last_gen, last_micro_time, opts) do
     name =
       State.fetch!(state, if(is_active?, do: @table_active, else: @table_inactive), plain_name)
 
