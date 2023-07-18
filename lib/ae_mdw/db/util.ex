@@ -240,7 +240,7 @@ defmodule AeMdw.Db.Util do
 
         key_boundary =
           case scope do
-            nil -> {{fname, Util.min_int(), nil}, {fname, Util.max_int(), nil}}
+            nil -> {{fname, Util.min_int(), 0}, {fname, Util.max_int(), Util.max_int()}}
             {txi_start, txi_end} -> {{fname, txi_start, 0}, {fname, txi_end, Util.max_int()}}
           end
 

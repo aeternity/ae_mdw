@@ -1,7 +1,8 @@
 import Config
 
 # Sync
-config :ae_mdw, sync: false
+config :ae_mdw,
+  sync: false
 
 # Telemetry
 config :ae_mdw, TelemetryMetricsStatsd,

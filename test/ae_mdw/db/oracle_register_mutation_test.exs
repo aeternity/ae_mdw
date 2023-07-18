@@ -131,7 +131,7 @@ defmodule AeMdw.Db.OracleRegisterMutationTest do
         )
 
       assert :not_found = Store.get(store, Model.InactiveOracle, pubkey)
-      assert :not_found = Store.get(store, Model.Oracle, pubkey)
+      assert :not_found = Store.get(store, Model.ActiveOracle, pubkey)
 
       store = change_store(store, [mutation])
 

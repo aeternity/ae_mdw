@@ -34,6 +34,7 @@ VERSION
 *~
 
 # Local dev-only files
+data
 /data/
 /test_data.db/
 
