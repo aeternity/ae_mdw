@@ -194,8 +194,7 @@ defmodule AeMdw.Db.Model do
     index: nil,
     block_index_txi_idx: nil,
     expire_height: nil,
-    owner: nil,
-    bids: []
+    owner: nil
   ]
   defrecord :auction_bid, @auction_bid_defaults
 
@@ -205,8 +204,7 @@ defmodule AeMdw.Db.Model do
             index: auction_bid_index(),
             block_index_txi_idx: bi_txi_idx(),
             expire_height: Blocks.height(),
-            owner: pubkey(),
-            bids: [bi_txi_idx()]
+            owner: pubkey()
           )
 
   # activation:
@@ -234,22 +232,15 @@ defmodule AeMdw.Db.Model do
   #     index = plain_name,
   #     active = height                    #
   #     expire = height                    #
-  #     claims =  [{block_index, txi}]     #
-  #     updates = [{block_index, txi}]     #
-  #     transfers = [{block_index, txi}]   #
   #     revoke = {block_index, txi} | nil  #
   #     auction_timeout = int              # 0 if not auctioned
   #     owner = pubkey                     #
-  #     previous = m_name | nil            # previus epoch of the same name
   #
   #     (other info (pointers, owner) is from looking up last update tx)
   @name_defaults [
     index: nil,
     active: nil,
     expire: nil,
-    claims: [],
-    updates: [],
-    transfers: [],
     revoke: nil,
     auction_timeout: 0,
     owner: nil,
@@ -263,9 +254,6 @@ defmodule AeMdw.Db.Model do
             index: name_index(),
             active: Blocks.height(),
             expire: Blocks.height(),
-            claims: [bi_txi_idx()],
-            updates: [bi_txi_idx()],
-            transfers: [bi_txi_idx()],
             revoke: bi_txi_idx() | nil,
             auction_timeout: non_neg_integer(),
             owner: pubkey(),
@@ -295,6 +283,38 @@ defmodule AeMdw.Db.Model do
 
   @type pointee_index() :: {pubkey(), bi_txi_idx(), pubkey()}
   @type pointee() :: record(:pointee, index: pointee_index())
+
+  # auction_bid_claim :
+  #     index = {plain_name, auction_bid_expiration_height, txi_idx}
+  @auction_bid_claim_defaults [index: nil, unused: nil]
+  defrecord :auction_bid_claim, @auction_bid_claim_defaults
+
+  @type auction_bid_claim_index() :: {auction_bid_index(), height(), txi_idx()}
+  @type auction_bid_claim() :: record(:auction_bid_claim, index: auction_bid_claim_index())
+
+  # name_claim :
+  #     index = {plain_name, name_activation_height, txi_idx}
+  @name_claim_defaults [index: nil, unused: nil]
+  defrecord :name_claim, @name_claim_defaults
+
+  @type name_claim_index() :: {name_index(), height(), txi_idx()}
+  @type name_claim() :: record(:name_claim, index: name_claim_index())
+
+  # name_update :
+  #     index = {plain_name, name_activation_height, txi_idx}
+  @name_update_defaults [index: nil, unused: nil]
+  defrecord :name_update, @name_update_defaults
+
+  @type name_update_index() :: {name_index(), height(), txi_idx()}
+  @type name_update() :: record(:name_update, index: name_update_index())
+
+  # name_transfer :
+  #     index = {plain_name, name_activation_height, txi_idx}
+  @name_transfer_defaults [index: nil, unused: nil]
+  defrecord :name_transfer, @name_transfer_defaults
+
+  @type name_transfer_index() :: {name_index(), height(), txi_idx()}
+  @type name_transfer() :: record(:name_transfer, index: name_transfer_index())
 
   # in 2 tables: active_oracle, inactive_oracle
   #
@@ -1186,7 +1206,11 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.ActiveNameOwner,
       AeMdw.Db.Model.ActiveNameOwnerDeactivation,
       AeMdw.Db.Model.InactiveNameOwnerDeactivation,
-      AeMdw.Db.Model.InactiveNameOwner
+      AeMdw.Db.Model.InactiveNameOwner,
+      AeMdw.Db.Model.NameClaim,
+      AeMdw.Db.Model.NameUpdate,
+      AeMdw.Db.Model.NameTransfer,
+      AeMdw.Db.Model.AuctionBidClaim
     ]
   end
 
@@ -1287,6 +1311,10 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.InactiveNameOwner), do: :owner
   def record(AeMdw.Db.Model.ActiveNameOwnerDeactivation), do: :owner_deactivation
   def record(AeMdw.Db.Model.InactiveNameOwnerDeactivation), do: :owner_deactivation
+  def record(AeMdw.Db.Model.AuctionBidClaim), do: :auction_bid_claim
+  def record(AeMdw.Db.Model.NameClaim), do: :name_claim
+  def record(AeMdw.Db.Model.NameUpdate), do: :name_update
+  def record(AeMdw.Db.Model.NameTransfer), do: :name_transfer
   def record(AeMdw.Db.Model.ActiveOracleExpiration), do: :expiration
   def record(AeMdw.Db.Model.InactiveOracleExpiration), do: :expiration
   def record(AeMdw.Db.Model.ActiveOracle), do: :oracle

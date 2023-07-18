@@ -5,6 +5,7 @@ defmodule AeMdw.AuctionBids do
 
   alias AeMdw.Collection
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Name
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Collection
@@ -113,16 +114,21 @@ defmodule AeMdw.AuctionBids do
          Model.auction_bid(
            index: plain_name,
            block_index_txi_idx: {block_index, _txi_idx},
-           expire_height: expire_height,
-           bids: [last_bid | _rest_bids]
+           expire_height: expire_height
          ),
          last_gen,
          last_micro_time,
          _opts
        ) do
+    last_bid_txi =
+      state
+      |> Name.stream_nested_resource(Model.AuctionBidClaim, plain_name)
+      |> Enum.at(0)
+      |> elem(0)
+
     last_bid =
       state
-      |> Txs.fetch!(bi_txi_idx_txi(last_bid))
+      |> Txs.fetch!(last_bid_txi)
       |> Map.delete("tx_index")
 
     name_ttl = Names.expire_after(expire_height)
@@ -148,14 +154,23 @@ defmodule AeMdw.AuctionBids do
          Model.auction_bid(
            index: plain_name,
            block_index_txi_idx: {block_index, _txi_idx},
-           expire_height: expire_height,
-           bids: [last_bid | _rest_bids] = bids
+           expire_height: expire_height
          ),
          last_gen,
          last_micro_time,
          _opts
        ) do
-    last_bid = Txs.fetch!(state, bi_txi_idx_txi(last_bid))
+    [{last_bid_txi, _last_bid_idx} | _rest] =
+      bids =
+      state
+      |> Name.stream_nested_resource(Model.AuctionBidClaim, plain_name)
+      |> Enum.to_list()
+
+    last_bid =
+      state
+      |> Txs.fetch!(last_bid_txi)
+      |> Map.delete("tx_index")
+
     name_ttl = Names.expire_after(expire_height)
 
     %{
@@ -168,13 +183,13 @@ defmodule AeMdw.AuctionBids do
         approximate_expire_time:
           DbUtil.height_to_time(state, expire_height, last_gen, last_micro_time),
         last_bid: put_in(last_bid, ["tx", "ttl"], name_ttl),
-        bids: Enum.map(bids, &bi_txi_idx_txi/1)
+        bids: Enum.map(bids, &txi_idx_txi/1)
       },
       previous: Names.fetch_previous_list(state, plain_name)
     }
   end
 
-  defp bi_txi_idx_txi({{_height, _mbi}, {txi, _idx}}), do: txi
+  defp txi_idx_txi({txi, _idx}), do: txi
 
   defp serialize_exp_cursor(nil), do: nil
 

@@ -287,23 +287,17 @@ defmodule AeMdw.Activities do
   defp build_name_claims_stream(state, direction, name_hash, txi_scope, txi_cursor) do
     with {:ok, Model.plain_name(value: plain_name)} <-
            State.get(state, Model.PlainName, name_hash),
-         {record, _source} <- Name.locate(state, plain_name) do
-      {current_claims, prev_name} =
-        case record do
-          Model.auction_bid(bids: bids) -> {bids, nil}
-          Model.name(claims: claims, previous: previous) -> {claims, previous}
-        end
-
+         {_record, source} <- Name.locate(state, plain_name) do
       claims =
-        prev_name
-        |> Stream.unfold(fn
-          nil -> nil
-          Model.name(claims: claims, previous: previous) -> {claims, previous}
-        end)
-        |> Enum.to_list()
-        |> List.flatten()
+        case source do
+          Model.AuctionBid ->
+            Name.stream_nested_resource(state, Model.AuctionBidClaim, plain_name)
 
-      claims = current_claims |> Enum.concat(claims) |> Enum.reverse()
+          _name_table ->
+            Name.stream_nested_resource(state, Model.NameClaim, plain_name)
+        end
+        |> Enum.to_list()
+        |> Enum.reverse()
 
       claims =
         case txi_scope do
@@ -312,8 +306,8 @@ defmodule AeMdw.Activities do
 
           {first_txi, last_txi} ->
             claims
-            |> Enum.drop_while(fn {_block_index, {txi, _idx}} -> txi < first_txi end)
-            |> Enum.take_while(fn {_block_index, {txi, _idx}} -> txi < last_txi end)
+            |> Enum.drop_while(fn {txi, _idx} -> txi < first_txi end)
+            |> Enum.take_while(fn {txi, _idx} -> txi < last_txi end)
         end
 
       claims = if direction == :forward, do: claims, else: Enum.reverse(claims)
@@ -325,12 +319,12 @@ defmodule AeMdw.Activities do
 
           _txi_cursor ->
             Enum.drop_while(claims, fn
-              {_block_index, {txi, _idx}} when direction == :forward -> txi < txi_cursor
-              {_block_index, {txi, _idx}} when direction == :backward -> txi > txi_cursor
+              {txi, _idx} when direction == :forward -> txi < txi_cursor
+              {txi, _idx} when direction == :backward -> txi > txi_cursor
             end)
         end
 
-      Stream.map(claims, fn {_block_index, {txi, idx}} -> {txi, {:claim, idx}} end)
+      Stream.map(claims, fn {txi, idx} -> {txi, {:claim, idx}} end)
     else
       :not_found -> []
       nil -> []

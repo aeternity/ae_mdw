@@ -24,7 +24,7 @@ defmodule AeMdw.Db.NameTest do
           148, 88, 102, 186, 208, 87, 101, 78, 111, 189, 5, 144, 101>>
 
       non_string_pointer_key64 = Base.encode64(non_string_pointer_key)
-
+      active_height = 123
       tx_hash = :crypto.strong_rand_bytes(32)
 
       with_mocks [
@@ -59,6 +59,7 @@ defmodule AeMdw.Db.NameTest do
             Model.Tx,
             Model.tx(index: 2, id: tx_hash, block_index: {1, 1})
           )
+          |> Store.put(Model.NameUpdate, Model.name_update(index: {name, active_height, {2, -1}}))
 
         pointers_map = %{
           non_string_pointer_key64 => Format.enc_id(pointer_id),
@@ -68,10 +69,7 @@ defmodule AeMdw.Db.NameTest do
         assert ^pointers_map =
                  Name.pointers(
                    State.new(store),
-                   Model.name(
-                     index: name,
-                     updates: [{{1, 1}, {2, -1}}]
-                   )
+                   Model.name(index: name, active: active_height)
                  )
       end
     end
@@ -82,8 +80,8 @@ defmodule AeMdw.Db.NameTest do
       channel_id = :aeser_id.create(:channel, <<2::256>>)
       custom_string_pointer_key = "family_pubkey"
       custom_string_pointer_key64 = Base.encode64(custom_string_pointer_key)
-
       tx_hash = :crypto.strong_rand_bytes(32)
+      active_height = 123
 
       with_mocks [
         {AeMdw.Node.Db, [:passthrough],
@@ -117,6 +115,7 @@ defmodule AeMdw.Db.NameTest do
             Model.Tx,
             Model.tx(index: 2, id: tx_hash, block_index: {1, 1})
           )
+          |> Store.put(Model.NameUpdate, Model.name_update(index: {name, active_height, {2, -1}}))
 
         pointers_map = %{
           custom_string_pointer_key64 => Format.enc_id(pointer_id),
@@ -126,10 +125,7 @@ defmodule AeMdw.Db.NameTest do
         assert ^pointers_map =
                  Name.pointers(
                    State.new(store),
-                   Model.name(
-                     index: name,
-                     updates: [{{1, 1}, {2, -1}}]
-                   )
+                   Model.name(index: name, active: active_height)
                  )
       end
     end

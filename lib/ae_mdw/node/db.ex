@@ -28,7 +28,7 @@ defmodule AeMdw.Node.Db do
   end
 
   @spec get_blocks_per_height(Blocks.height(), Blocks.block_hash() | Blocks.height()) :: [
-          {Blocks.height(), [micro_block()], Blocks.block_hash()}
+          {Blocks.height(), [micro_block()], Blocks.block_hash() | nil}
         ]
   def get_blocks_per_height(from_height, block_hash) when is_binary(block_hash),
     do: get_blocks_per_height(from_height, block_hash, nil)

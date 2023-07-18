@@ -1021,6 +1021,7 @@ defmodule AeMdwWeb.TxControllerTest do
     test "returns a spend_tx with inactive name recipient", %{conn: conn, store: store} do
       plain_name = "aliceinchains.chain"
       {:ok, name_hash} = :aens.get_name_hash(plain_name)
+      active_height = 123
 
       with_blockchain %{alice: 10_000, auctioneer: 10_000},
         mb: [
@@ -1047,7 +1048,11 @@ defmodule AeMdwWeb.TxControllerTest do
           |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: plain_name))
           |> Store.put(
             Model.InactiveName,
-            Model.name(index: plain_name, updates: [{{0, 0}, {1, 0}}])
+            Model.name(index: plain_name, active: active_height)
+          )
+          |> Store.put(
+            Model.NameUpdate,
+            Model.name_update(index: {plain_name, active_height, {1, -1}})
           )
           |> Store.put(Model.Block, Model.block(index: {0, -1}, tx_index: 1))
           |> Store.put(Model.Block, Model.block(index: {0, 0}, tx_index: 2))
@@ -1080,6 +1085,8 @@ defmodule AeMdwWeb.TxControllerTest do
       plain_name2 = "aliceinchains2.chain"
       {:ok, name_hash1} = :aens.get_name_hash(plain_name1)
       {:ok, name_hash2} = :aens.get_name_hash(plain_name2)
+      active_height1 = 123
+      active_height2 = 124
 
       with_blockchain %{alice: 10_000, bob: 10_000},
         mb: [
@@ -1119,17 +1126,23 @@ defmodule AeMdwWeb.TxControllerTest do
             Model.ActiveName,
             Model.name(
               index: plain_name1,
-              updates: [],
-              previous: Model.name(index: plain_name1, updates: [{{0, 0}, {998, -1}}])
+              previous: Model.name(index: plain_name1, active: active_height1)
             )
+          )
+          |> Store.put(
+            Model.NameUpdate,
+            Model.name_update(index: {plain_name1, active_height1, {998, -1}})
           )
           |> Store.put(
             Model.ActiveName,
             Model.name(
               index: plain_name2,
-              updates: [{{0, 0}, 1002}],
-              previous: Model.name(index: plain_name2, updates: [{{0, 0}, {999, -1}}])
+              previous: Model.name(index: plain_name2, active: active_height2)
             )
+          )
+          |> Store.put(
+            Model.NameUpdate,
+            Model.name_update(index: {plain_name2, active_height2, {999, -1}})
           )
           |> Store.put(Model.Block, Model.block(index: {0, -1}, tx_index: 998))
           |> Store.put(Model.Block, Model.block(index: {0, 0}, tx_index: 998))

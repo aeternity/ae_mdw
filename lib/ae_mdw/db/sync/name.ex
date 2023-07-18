@@ -2,6 +2,7 @@ defmodule AeMdw.Db.Sync.Name do
   @moduledoc false
 
   alias AeMdw.Blocks
+  alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.Mutation
   alias AeMdw.Names
@@ -14,6 +15,7 @@ defmodule AeMdw.Db.Sync.Name do
   alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Txs
+  alias AeMdw.Util
   alias AeMdw.Validate
 
   require Model
@@ -122,10 +124,8 @@ defmodule AeMdw.Db.Sync.Name do
   def update(state, name_hash, update_type, pointers, txi_idx, {height, _mbi} = bi) do
     plain_name = plain_name!(state, name_hash)
 
-    Model.name(expire: old_expire, owner: owner_pk, updates: updates) =
+    Model.name(active: active, expire: old_expire, owner: owner_pk) =
       m_name = cache_through_read!(state, Model.ActiveName, plain_name)
-
-    updates = [{bi, txi_idx} | updates]
 
     state2 =
       Enum.reduce(pointers, state, fn ptr, state ->
@@ -133,10 +133,11 @@ defmodule AeMdw.Db.Sync.Name do
 
         cache_through_write(state, Model.Pointee, m_pointee)
       end)
+      |> State.put(Model.NameUpdate, Model.name_update(index: {plain_name, active, txi_idx}))
 
     case update_type do
       {:update_expiration, new_expire} ->
-        new_m_name = Model.name(m_name, expire: new_expire, updates: updates)
+        new_m_name = Model.name(m_name, expire: new_expire)
         new_m_name_exp = Model.expiration(index: {new_expire, plain_name})
 
         m_name_owner_deactivation =
@@ -153,16 +154,14 @@ defmodule AeMdw.Db.Sync.Name do
         |> cache_through_write(Model.ActiveName, new_m_name)
 
       :expire ->
-        new_m_name = Model.name(m_name, expire: height, updates: updates)
+        new_m_name = Model.name(m_name, expire: height)
 
         state2
         |> deactivate_name(height, old_expire, new_m_name)
         |> State.inc_stat(:names_expired)
 
       :update ->
-        m_name = Model.name(m_name, updates: updates)
-
-        cache_through_write(state2, Model.ActiveName, m_name)
+        state
     end
   end
 
@@ -172,12 +171,12 @@ defmodule AeMdw.Db.Sync.Name do
     plain_name = plain_name!(state, name_hash)
 
     m_name = cache_through_read!(state, Model.ActiveName, plain_name)
-    Model.name(owner: old_owner, expire: expire) = m_name
+    Model.name(active: active, owner: old_owner, expire: expire) = m_name
 
-    transfers = [{block_index, txi_idx} | Model.name(m_name, :transfers)]
-    m_name = Model.name(m_name, transfers: transfers, owner: new_owner)
+    m_name = Model.name(m_name, active: active, owner: new_owner)
     m_owner = Model.owner(index: {new_owner, plain_name})
     m_name_owner_deactivation = Model.owner_deactivation(index: {new_owner, expire, plain_name})
+    name_transfer = Model.name_transfer(index: {plain_name, active, {block_index, txi_idx}})
 
     state
     |> cache_through_delete(Model.ActiveNameOwner, {old_owner, plain_name})
@@ -185,6 +184,7 @@ defmodule AeMdw.Db.Sync.Name do
     |> cache_through_write(Model.ActiveNameOwner, m_owner)
     |> cache_through_write(Model.ActiveName, m_name)
     |> cache_through_write(Model.ActiveNameOwnerDeactivation, m_name_owner_deactivation)
+    |> State.put(Model.NameTransfer, name_transfer)
   end
 
   @spec revoke(State.t(), Names.name_hash(), Txs.txi_idx(), Blocks.block_index()) :: State.t()
@@ -216,8 +216,7 @@ defmodule AeMdw.Db.Sync.Name do
     {:ok,
      Model.auction_bid(
        block_index_txi_idx: {{last_bid_height, _mbi} = _block_index, txi_idx},
-       owner: owner,
-       bids: bids
+       owner: owner
      )} = cache_through_read(state, Model.AuctionBid, plain_name)
 
     previous =
@@ -233,7 +232,6 @@ defmodule AeMdw.Db.Sync.Name do
         index: plain_name,
         active: height,
         expire: expire,
-        claims: bids,
         auction_timeout: height - last_bid_height,
         owner: owner,
         previous: previous
@@ -250,6 +248,13 @@ defmodule AeMdw.Db.Sync.Name do
       |> :aens_claim_tx.name_fee()
 
     state
+    |> Collection.stream(Model.AuctionBidClaim, {plain_name, Util.min_int()})
+    |> Stream.take_while(&match?({^plain_name, _txi_idx}, &1))
+    |> Enum.reduce(state, fn {^plain_name, expire_height, claim_txi_idx}, state ->
+      state
+      |> State.put(Model.NameClaim, Model.name_claim(index: {plain_name, height, claim_txi_idx}))
+      |> State.delete(Model.AuctionBidClaim, {plain_name, expire_height, claim_txi_idx})
+    end)
     |> cache_through_write(Model.ActiveName, m_name)
     |> cache_through_write(Model.ActiveNameOwner, m_owner)
     |> cache_through_write(Model.ActiveNameActivation, m_name_activation)

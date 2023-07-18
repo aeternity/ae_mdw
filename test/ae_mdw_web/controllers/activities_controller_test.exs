@@ -926,14 +926,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
       {:name_claim_tx, tx3} = :aetx.specialize_type(aetx3)
 
-      name =
-        Model.name(
-          index: plain_name,
-          claims: [{{height2, 0}, {txi3, -1}}, {{height2, 0}, {txi2, -1}}],
-          updates: [],
-          transfers: [],
-          previous: Model.name(claims: [{{height1, 0}, {txi1, -1}}])
-        )
+      previous_name = Model.name(index: plain_name, active: height1)
+      name = Model.name(index: plain_name, active: height2, previous: previous_name)
 
       store =
         empty_store()
@@ -955,6 +949,9 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(Model.Block, Model.block(index: {height2, 0}, hash: mb_hash2))
         |> Store.put(Model.Block, Model.block(index: {height1, -1}, hash: kb_hash1))
         |> Store.put(Model.Block, Model.block(index: {height2, -1}, hash: kb_hash2))
+        |> Store.put(Model.NameClaim, Model.name_claim(index: {plain_name, height2, {txi3, -1}}))
+        |> Store.put(Model.NameClaim, Model.name_claim(index: {plain_name, height2, {txi2, -1}}))
+        |> Store.put(Model.NameClaim, Model.name_claim(index: {plain_name, height1, {txi1, -1}}))
 
       with_mocks [
         {Db, [],
