@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.55.0](https://www.github.com/aeternity/ae_mdw/compare/v1.54.2...v1.55.0) (2023-07-18)
+
+
+### Features
+
+* add v3 initial endpoints for names/auctions ([#1459](https://www.github.com/aeternity/ae_mdw/issues/1459)) ([f6e0bb4](https://www.github.com/aeternity/ae_mdw/commit/f6e0bb4d42483b0928c0ba1cc93f0c57996eb1ad))
+
+
+### Testing
+
+* rewrite some mem tests with store ([#1462](https://www.github.com/aeternity/ae_mdw/issues/1462)) ([7982211](https://www.github.com/aeternity/ae_mdw/commit/79822113ebe0bc4f826643a04f27460c4445025c))
+
 ### [1.54.2](https://www.github.com/aeternity/ae_mdw/compare/v1.54.1...v1.54.2) (2023-07-12)
 
 
