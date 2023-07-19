@@ -11,6 +11,6 @@
   "license": "ISC",
   "dependencies": {
     "@aeternity/aepp-sdk": "^13.0.0",
-    "node-fetch": "2.6.1"
+    "node-fetch": "2.6.7"
   }
 }
