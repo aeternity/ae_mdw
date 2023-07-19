@@ -128,7 +128,8 @@ defmodule AeMdw.Db.Sync.Name do
       m_name = cache_through_read!(state, Model.ActiveName, plain_name)
 
     state2 =
-      Enum.reduce(pointers, state, fn ptr, state ->
+      pointers
+      |> Enum.reduce(state, fn ptr, state ->
         m_pointee = Model.pointee(index: pointee_key(ptr, {bi, txi_idx}))
 
         cache_through_write(state, Model.Pointee, m_pointee)

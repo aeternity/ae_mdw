@@ -296,6 +296,9 @@ defmodule AeMdw.Activities do
           _name_table ->
             Name.stream_nested_resource(state, Model.NameClaim, plain_name)
         end
+
+      claims =
+        claims
         |> Enum.to_list()
         |> Enum.reverse()
 

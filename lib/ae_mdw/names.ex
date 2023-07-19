@@ -151,21 +151,21 @@ defmodule AeMdw.Names do
   @spec fetch_name_updates(state(), binary(), pagination(), range(), cursor()) ::
           {:ok, {page_cursor(), [update()], page_cursor()}} | {:error, Error.t()}
   def fetch_name_updates(state, plain_name_or_hash, pagination, scope, cursor) do
-    with {:ok, Model.name(index: plain_name, active: active)} <-
-           locate_name_or_auction(state, plain_name_or_hash) do
-      {prev_cursor, updates, next_cursor} =
-        paginate_nested_resource(
-          state,
-          Model.NameUpdate,
-          plain_name,
-          active,
-          scope,
-          cursor,
-          pagination
-        )
+    case locate_name_or_auction(state, plain_name_or_hash) do
+      {:ok, Model.name(index: plain_name, active: active)} ->
+        {prev_cursor, updates, next_cursor} =
+          paginate_nested_resource(
+            state,
+            Model.NameUpdate,
+            plain_name,
+            active,
+            scope,
+            cursor,
+            pagination
+          )
 
-      {:ok, {prev_cursor, Enum.map(updates, &render_update(state, &1)), next_cursor}}
-    else
+        {:ok, {prev_cursor, Enum.map(updates, &render_update(state, &1)), next_cursor}}
+
       {:ok, Model.auction_bid()} ->
         {:error, ErrInput.NotFound.exception(value: plain_name_or_hash)}
 
@@ -177,21 +177,21 @@ defmodule AeMdw.Names do
   @spec fetch_name_transfers(state(), binary(), pagination(), range(), cursor() | nil) ::
           {:ok, {page_cursor(), [update()], page_cursor()}} | {:error, Error.t()}
   def fetch_name_transfers(state, plain_name_or_hash, pagination, scope, cursor) do
-    with {:ok, Model.name(index: plain_name, active: active)} <-
-           locate_name_or_auction(state, plain_name_or_hash) do
-      {prev_cursor, updates, next_cursor} =
-        paginate_nested_resource(
-          state,
-          Model.NameTransfer,
-          plain_name,
-          active,
-          scope,
-          cursor,
-          pagination
-        )
+    case locate_name_or_auction(state, plain_name_or_hash) do
+      {:ok, Model.name(index: plain_name, active: active)} ->
+        {prev_cursor, updates, next_cursor} =
+          paginate_nested_resource(
+            state,
+            Model.NameTransfer,
+            plain_name,
+            active,
+            scope,
+            cursor,
+            pagination
+          )
 
-      {:ok, {prev_cursor, Enum.map(updates, &render_transfer(state, &1)), next_cursor}}
-    else
+        {:ok, {prev_cursor, Enum.map(updates, &render_transfer(state, &1)), next_cursor}}
+
       {:ok, Model.auction_bid()} ->
         {:error, ErrInput.NotFound.exception(value: plain_name_or_hash)}
 
