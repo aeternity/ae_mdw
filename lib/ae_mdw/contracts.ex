@@ -148,7 +148,7 @@ defmodule AeMdw.Contracts do
       {txi_idx, tx_type} =
         if outer_tx_type == :contract_call_tx do
           local_idx =
-            ~w(Chain.create Chain.clone Call.clone)
+            ~w(Chain.create Chain.clone Call.create Call.clone)
             |> Enum.map(&fetch_int_contract_calls(state, txi, &1))
             |> Stream.concat()
             |> Enum.find_value(fn Model.int_contract_call(index: {^txi, local_idx}) ->
