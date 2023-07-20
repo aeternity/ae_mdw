@@ -32,6 +32,7 @@ defmodule AeMdw.Db.Name do
   @typep nested_table() ::
            Model.NameClaim | Model.NameTransfer | Model.NameUpdate | Model.AuctionBidClaim
 
+  @min_int Util.min_int()
   @max_int Util.max_int()
 
   @spec plain_name(State.t(), binary()) :: {:ok, String.t()} | nil
@@ -121,17 +122,25 @@ defmodule AeMdw.Db.Name do
 
   @spec stream_nested_resource(state(), nested_table(), plain_name()) :: Enumerable.t()
   def stream_nested_resource(state, table, plain_name) do
+    key_boundary = {
+      {plain_name, @min_int, {@min_int, @min_int}},
+      {plain_name, @max_int, {@max_int, @max_int}}
+    }
+
     state
-    |> Collection.stream(table, :backward, nil, {plain_name, @max_int, {@max_int, @max_int}})
-    |> Stream.take_while(&match?({^plain_name, _height, _txi_idx}, &1))
+    |> Collection.stream(table, :backward, key_boundary, nil)
     |> Stream.map(fn {^plain_name, _height, txi_idx} -> txi_idx end)
   end
 
   @spec stream_nested_resource(state(), nested_table(), plain_name(), height()) :: Enumerable.t()
   def stream_nested_resource(state, table, plain_name, height) do
+    key_boundary = {
+      {plain_name, height, {@min_int, @min_int}},
+      {plain_name, height, {@max_int, @max_int}}
+    }
+
     state
-    |> Collection.stream(table, :backward, nil, {plain_name, @max_int, {@max_int, @max_int}})
-    |> Stream.take_while(&match?({^plain_name, ^height, _txi_idx}, &1))
+    |> Collection.stream(table, :backward, key_boundary, nil)
     |> Stream.map(fn {^plain_name, ^height, txi_idx} -> txi_idx end)
   end
 
@@ -187,9 +196,7 @@ defmodule AeMdw.Db.Name do
         update_txi_idx =
           state
           |> stream_nested_resource(Model.NameUpdate, plain_name)
-          |> Stream.drop_while(
-            &match?({^plain_name, _height, {txi, _idx}} when txi > time_reference_txi, &1)
-          )
+          |> Stream.drop_while(&match?({txi, _idx} when txi > time_reference_txi, &1))
           |> Enum.at(0)
 
         if update_txi_idx do
