@@ -120,10 +120,7 @@ defmodule AeMdw.AuctionBids do
          last_micro_time,
          _opts
        ) do
-    {last_bid_txi, _last_bid_idx} =
-      state
-      |> Name.stream_nested_resource(Model.AuctionBidClaim, plain_name)
-      |> Enum.at(0)
+    {last_bid_txi, _last_bid_idx} = last_bid_claim(state, plain_name)
 
     last_bid =
       state
@@ -202,5 +199,11 @@ defmodule AeMdw.AuctionBids do
       [_match0, exp_height, name] -> {String.to_integer(exp_height), name}
       nil -> nil
     end
+  end
+
+  defp last_bid_claim(state, plain_name) do
+    state
+    |> Name.stream_nested_resource(Model.AuctionBidClaim, plain_name)
+    |> Enum.at(0)
   end
 end

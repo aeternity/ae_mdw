@@ -166,7 +166,7 @@ defmodule AeMdw.Db.Name do
   def ownership(state, Model.name(index: plain_name, active: active, owner: owner)) do
     max_txi_idx = {@max_int, @max_int}
 
-    case Enum.at(stream_nested_resource(state, Model.NameTransfer, plain_name, active), 0) do
+    case last_transfer(state, plain_name, active) do
       nil ->
         pubkey = :aeser_id.create(:account, owner)
 
@@ -287,6 +287,12 @@ defmodule AeMdw.Db.Name do
   defp last_update(state, plain_name, height) do
     state
     |> stream_nested_resource(Model.NameUpdate, plain_name, height)
+    |> Enum.at(0)
+  end
+
+  defp last_transfer(state, plain_name, height) do
+    state
+    |> stream_nested_resource(Model.NameTransfer, plain_name, height)
     |> Enum.at(0)
   end
 end
