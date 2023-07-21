@@ -1,9 +1,9 @@
 defmodule AeMdw.Db.NameUpdateMutationTest do
-  use ExUnit.Case
+  use AeMdw.Db.MutationCase
 
-  alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.Store
   alias AeMdw.Db.NameUpdateMutation
 
   require Model
@@ -11,7 +11,7 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
   import AeMdw.Node.AeTxFixtures
 
   describe "update" do
-    test "deactives a name by ttl 0" do
+    test "deactives a name by ttl 0", %{store: store} do
       owner_pk = <<123_456::256>>
       plain_name = "update-tll-0.test"
       tx = new_aens_update_tx(owner_pk, plain_name, 0)
@@ -27,38 +27,34 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
           index: plain_name,
           active: active_from,
           expire: expire,
-          claims: [{{active_from, 0}, {123, -1}}],
-          updates: [],
-          transfers: [],
           revoke: nil,
           owner: owner_pk,
           previous: nil
         )
 
-      Database.dirty_write(
-        Model.PlainName,
-        Model.plain_name(index: name_hash, value: plain_name)
-      )
-
-      Database.dirty_write(Model.ActiveName, active_name)
-
-      Database.dirty_write(
-        Model.ActiveNameActivation,
-        Model.activation(index: {active_from, plain_name})
-      )
-
-      Database.dirty_write(
-        Model.ActiveNameExpiration,
-        Model.expiration(index: {expire, plain_name})
-      )
-
-      Database.dirty_write(Model.ActiveNameOwner, Model.owner(index: {owner_pk, plain_name}))
+      state =
+        store
+        |> Store.put(
+          Model.PlainName,
+          Model.plain_name(index: name_hash, value: plain_name)
+        )
+        |> Store.put(Model.ActiveName, active_name)
+        |> Store.put(
+          Model.ActiveNameActivation,
+          Model.activation(index: {active_from, plain_name})
+        )
+        |> Store.put(
+          Model.ActiveNameExpiration,
+          Model.expiration(index: {expire, plain_name})
+        )
+        |> Store.put(Model.ActiveNameOwner, Model.owner(index: {owner_pk, plain_name}))
+        |> State.new()
 
       block_index = {update_height, 0}
       txi = 124
 
       state2 =
-        State.commit_mem(State.new(), [
+        State.commit_mem(state, [
           NameUpdateMutation.new(name_hash, :expire, pointers, {txi, -1}, block_index)
         ])
 
@@ -67,7 +63,7 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
                 index: ^plain_name,
                 expire: ^update_height,
                 owner: ^owner_pk,
-                updates: [{^block_index, {^txi, -1}}],
+                active: active,
                 revoke: nil
               )} = State.get(state2, Model.InactiveName, plain_name)
 
@@ -77,9 +73,10 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
       refute State.exists?(state2, Model.ActiveNameExpiration, {expire, plain_name})
       assert State.exists?(state2, Model.InactiveNameExpiration, {update_height, plain_name})
       assert State.exists?(state2, Model.InactiveNameOwner, {owner_pk, plain_name})
+      assert State.exists?(state2, Model.NameUpdate, {plain_name, active, {txi, -1}})
     end
 
-    test "extends a name by a delta ttl > 0" do
+    test "extends a name by a delta ttl > 0", %{store: store} do
       owner_pk = <<123_456::256>>
       delta_ttl = 121
       plain_name = "update-tll#{delta_ttl}.test"
@@ -96,39 +93,35 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
           index: plain_name,
           active: active_from,
           expire: expire,
-          claims: [{{active_from, 0}, {1234, -1}}],
-          updates: [],
-          transfers: [],
           revoke: nil,
           owner: owner_pk,
           previous: nil
         )
 
-      Database.dirty_write(
-        Model.PlainName,
-        Model.plain_name(index: :aens_update_tx.name_hash(tx), value: plain_name)
-      )
-
-      Database.dirty_write(Model.ActiveName, active_name)
-
-      Database.dirty_write(
-        Model.ActiveNameActivation,
-        Model.activation(index: {active_from, plain_name})
-      )
-
-      Database.dirty_write(
-        Model.ActiveNameExpiration,
-        Model.expiration(index: {expire, plain_name})
-      )
-
-      Database.dirty_write(Model.ActiveNameOwner, Model.owner(index: {owner_pk, plain_name}))
+      state =
+        store
+        |> Store.put(
+          Model.PlainName,
+          Model.plain_name(index: :aens_update_tx.name_hash(tx), value: plain_name)
+        )
+        |> Store.put(Model.ActiveName, active_name)
+        |> Store.put(
+          Model.ActiveNameActivation,
+          Model.activation(index: {active_from, plain_name})
+        )
+        |> Store.put(
+          Model.ActiveNameExpiration,
+          Model.expiration(index: {expire, plain_name})
+        )
+        |> Store.put(Model.ActiveNameOwner, Model.owner(index: {owner_pk, plain_name}))
+        |> State.new()
 
       new_expire = update_height + delta_ttl
       block_index = {update_height, 0}
       txi = 2234
 
       state2 =
-        State.commit_mem(State.new(), [
+        State.commit_mem(state, [
           NameUpdateMutation.new(
             name_hash,
             {:update_expiration, new_expire},
@@ -143,7 +136,6 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
                 index: ^plain_name,
                 expire: ^new_expire,
                 owner: ^owner_pk,
-                updates: [{^block_index, {^txi, -1}}],
                 revoke: nil
               )} = State.get(state2, Model.ActiveName, plain_name)
 
@@ -154,6 +146,7 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
       refute State.exists?(state2, Model.ActiveNameExpiration, {expire, plain_name})
       refute State.exists?(state2, Model.InactiveNameExpiration, {update_height, plain_name})
       refute State.exists?(state2, Model.InactiveNameOwner, {owner_pk, plain_name})
+      assert State.exists?(state2, Model.NameUpdate, {plain_name, active_from, {txi, -1}})
     end
   end
 end

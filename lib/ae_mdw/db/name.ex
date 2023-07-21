@@ -18,6 +18,7 @@ defmodule AeMdw.Db.Name do
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Names
+  alias AeMdw.Util
   alias AeMdw.Validate
 
   require Model
@@ -25,7 +26,14 @@ defmodule AeMdw.Db.Name do
   import AeMdw.Util
 
   @typep pubkey :: Db.pubkey()
+  @typep plain_name :: Names.plain_name()
+  @typep height :: Blocks.height()
   @typep state() :: State.t()
+  @typep nested_table() ::
+           Model.NameClaim | Model.NameTransfer | Model.NameUpdate | Model.AuctionBidClaim
+
+  @min_int Util.min_int()
+  @max_int Util.max_int()
 
   @spec plain_name(State.t(), binary()) :: {:ok, String.t()} | nil
   def plain_name(state, name_hash) do
@@ -112,40 +120,69 @@ defmodule AeMdw.Db.Name do
     end
   end
 
-  @spec pointers(state(), Model.name()) :: map()
-  def pointers(_state, Model.name(updates: [])), do: %{}
+  @spec stream_nested_resource(state(), nested_table(), plain_name()) :: Enumerable.t()
+  def stream_nested_resource(state, table, plain_name) do
+    key_boundary = {
+      {plain_name, @min_int, {@min_int, @min_int}},
+      {plain_name, @max_int, {@max_int, @max_int}}
+    }
 
-  def pointers(state, Model.name(updates: [{_block_index, txi_idx} | _rest_updates])) do
     state
-    |> DbUtil.read_node_tx(txi_idx)
-    |> :aens_update_tx.pointers()
-    |> Enum.into(%{}, &pointer_kv_raw/1)
-    |> Format.encode_pointers()
+    |> Collection.stream(table, :backward, key_boundary, nil)
+    |> Stream.map(fn {^plain_name, _height, txi_idx} -> txi_idx end)
+  end
+
+  @spec stream_nested_resource(state(), nested_table(), plain_name(), height()) :: Enumerable.t()
+  def stream_nested_resource(state, table, plain_name, height) do
+    key_boundary = {
+      {plain_name, height, {@min_int, @min_int}},
+      {plain_name, height, {@max_int, @max_int}}
+    }
+
+    state
+    |> Collection.stream(table, :backward, key_boundary, nil)
+    |> Stream.map(fn {^plain_name, ^height, txi_idx} -> txi_idx end)
+  end
+
+  @spec pointers(state(), Model.name()) :: map()
+  def pointers(state, Model.name(index: plain_name, active: active)) do
+    case last_update(state, plain_name, active) do
+      nil ->
+        %{}
+
+      txi_idx ->
+        state
+        |> DbUtil.read_node_tx(txi_idx)
+        |> :aens_update_tx.pointers()
+        |> Enum.into(%{}, &pointer_kv_raw/1)
+        |> Format.encode_pointers()
+    end
   end
 
   @spec ownership(state(), Model.name()) :: %{
           current: Format.aeser_id(),
           original: Format.aeser_id()
         }
-  def ownership(_state, Model.name(transfers: [], owner: owner)) do
-    pubkey = :aeser_id.create(:account, owner)
+  def ownership(state, Model.name(index: plain_name, active: active, owner: owner)) do
+    max_txi_idx = {@max_int, @max_int}
 
-    %{original: pubkey, current: pubkey}
-  end
+    case last_transfer(state, plain_name, active) do
+      nil ->
+        pubkey = :aeser_id.create(:account, owner)
 
-  def ownership(
-        state,
-        Model.name(
-          claims: [{_block_index, last_claim_txi_idx} | _rest_claims],
-          owner: owner
-        )
-      ) do
-    orig_owner =
-      state
-      |> DbUtil.read_node_tx(last_claim_txi_idx)
-      |> :aens_claim_tx.account_id()
+        %{original: pubkey, current: pubkey}
 
-    %{original: orig_owner, current: :aeser_id.create(:account, owner)}
+      _transfer_txi_idx ->
+        {:ok, {^plain_name, ^active, last_claim_txi_idx}} =
+          State.prev(state, Model.NameClaim, {plain_name, active, max_txi_idx})
+
+        orig_owner =
+          state
+          |> DbUtil.read_node_tx(last_claim_txi_idx)
+          |> :aens_claim_tx.account_id()
+
+        %{original: orig_owner, current: :aeser_id.create(:account, owner)}
+    end
   end
 
   @spec account_pointer_at(state(), Names.plain_name(), AeMdw.Txs.txi()) ::
@@ -155,8 +192,18 @@ defmodule AeMdw.Db.Name do
       nil ->
         {:error, :name_not_found}
 
-      {m_name, _module} ->
-        pointee_at(state, m_name, time_reference_txi)
+      {_m_name, _module} ->
+        update_txi_idx =
+          state
+          |> stream_nested_resource(Model.NameUpdate, plain_name)
+          |> Stream.drop_while(&match?({txi, _idx} when txi > time_reference_txi, &1))
+          |> Enum.at(0)
+
+        if update_txi_idx do
+          {:ok, fetch_account_pointee(state, update_txi_idx)}
+        else
+          {:error, {:pointee_not_found, plain_name, time_reference_txi}}
+        end
     end
   end
 
@@ -224,41 +271,28 @@ defmodule AeMdw.Db.Name do
     |> :aec_trees.ns()
   end
 
-  defp pointee_at(state, Model.name(index: name, updates: updates, previous: previous), ref_txi)
-       when previous != nil do
-    case List.last(updates) do
-      {_block, {update_txi, _log_idx}} when ref_txi >= update_txi ->
-        pointee_at(state, Model.name(index: name, updates: updates), ref_txi)
+  defp fetch_account_pointee(state, update_txi_idx) do
+    {update_aetx, :name_update_tx, _tx_hash, _tx_type, _update_block_hash} =
+      DbUtil.read_node_tx_details(state, update_txi_idx)
 
-      _nil_or_older ->
-        pointee_at(state, previous, ref_txi)
-    end
-  end
-
-  defp pointee_at(state, Model.name(index: name, updates: updates), ref_txi) do
-    updates
-    |> find_update_txi_before(ref_txi)
-    |> case do
-      nil ->
-        {:error, {:pointee_not_found, name, ref_txi}}
-
-      update_txi ->
-        {:ok, fetch_account_pointee(state, update_txi)}
-    end
-  end
-
-  defp find_update_txi_before(updates, ref_txi) do
-    Enum.find_value(updates, fn {_block_height, {update_txi, _log_idx}} ->
-      if update_txi <= ref_txi, do: update_txi
+    update_aetx
+    |> :aens_update_tx.pointers()
+    |> Enum.find_value(fn pointer ->
+      if :aens_pointer.key(pointer) == "account_pubkey" do
+        :aeser_api_encoder.encode(:id_hash, :aens_pointer.id(pointer))
+      end
     end)
   end
 
-  defp fetch_account_pointee(state, update_txi) do
+  defp last_update(state, plain_name, height) do
     state
-    |> Format.to_raw_map(DbUtil.read_tx!(state, update_txi))
-    |> get_in([:tx, :pointers])
-    |> Enum.find_value(fn %{key: key, id: pointee_id} ->
-      if key == "account_pubkey", do: pointee_id
-    end)
+    |> stream_nested_resource(Model.NameUpdate, plain_name, height)
+    |> Enum.at(0)
+  end
+
+  defp last_transfer(state, plain_name, height) do
+    state
+    |> stream_nested_resource(Model.NameTransfer, plain_name, height)
+    |> Enum.at(0)
   end
 end

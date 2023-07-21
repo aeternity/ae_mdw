@@ -28,6 +28,8 @@ defmodule AeMdw.Db.Format do
 
   def bi_txi_idx_txi({{_height, _mbi}, {txi, _idx}}), do: txi
 
+  def txi_idx_txi({txi, _idx}), do: txi
+
   def to_raw_map(_state, {{height, mbi}, txi}),
     do: %{block_height: height, micro_index: mbi, tx_index: txi}
 
@@ -517,21 +519,23 @@ defmodule AeMdw.Db.Format do
   defp name_info_to_raw_map(
          state,
          Model.name(
+           index: plain_name,
            active: active_h,
            expire: expire_h,
-           claims: cs,
-           updates: us,
-           transfers: ts,
            revoke: revoke,
            auction_timeout: auction_tm
          ) = name
        ) do
+    cs = Name.stream_nested_resource(state, Model.NameClaim, plain_name, active_h)
+    us = Name.stream_nested_resource(state, Model.NameUpdate, plain_name, active_h)
+    ts = Name.stream_nested_resource(state, Model.NameTransfer, plain_name, active_h)
+
     %{
       active_from: active_h,
       expire_height: expire_h,
-      claims: Enum.map(cs, &bi_txi_idx_txi/1),
-      updates: Enum.map(us, &bi_txi_idx_txi/1),
-      transfers: Enum.map(ts, &bi_txi_idx_txi/1),
+      claims: Enum.map(cs, &txi_idx_txi/1),
+      updates: Enum.map(us, &txi_idx_txi/1),
+      transfers: Enum.map(ts, &txi_idx_txi/1),
       revoke: (revoke && bi_txi_idx_txi(revoke)) || nil,
       auction_timeout: auction_tm,
       pointers: Name.pointers(state, name),
@@ -541,15 +545,13 @@ defmodule AeMdw.Db.Format do
 
   defp auction_bid(
          state,
-         Model.auction_bid(
-           index: plain,
-           expire_height: auction_end,
-           bids: [{_bi, {txi, _idx}} | _rest_bids] = bids
-         ),
+         Model.auction_bid(index: plain, expire_height: auction_end),
          key,
          tx_fmt,
          info_fmt
        ) do
+    bids = Name.stream_nested_resource(state, Model.AuctionBidClaim, plain, auction_end)
+    {txi, _idx} = Enum.at(bids, 0)
     last_bid = tx_fmt.(DbUtil.read_tx!(state, txi))
     name_ttl = Names.expire_after(auction_end)
     keys = if Map.has_key?(last_bid, "tx"), do: ["tx", "ttl"], else: [:tx, :ttl]
@@ -562,7 +564,7 @@ defmodule AeMdw.Db.Format do
       key.(:info) => %{
         key.(:auction_end) => auction_end,
         key.(:last_bid) => last_bid,
-        key.(:bids) => Enum.map(bids, &bi_txi_idx_txi/1)
+        key.(:bids) => Enum.map(bids, &txi_idx_txi/1)
       },
       key.(:previous) =>
         case Name.locate(state, plain) do

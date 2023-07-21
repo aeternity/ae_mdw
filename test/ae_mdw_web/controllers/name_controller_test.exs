@@ -66,9 +66,6 @@ defmodule AeMdwWeb.NameControllerTest do
               index: alice_name,
               owner: alice_pk,
               active: active_from,
-              claims: [{{10, 0}, {1, -1}}],
-              transfers: [{{10, 0}, {12, -1}}],
-              updates: [{{10, 0}, {2, -1}}],
               expire: expire1
             )
           )
@@ -78,11 +75,29 @@ defmodule AeMdwWeb.NameControllerTest do
               index: bob_name,
               owner: bob_pk,
               active: active_from,
-              claims: [{{10, 1}, {3, -1}}],
-              transfers: [{{10, 0}, {14, -1}}],
-              updates: [{{10, 2}, {4, -1}}],
               expire: expire2
             )
+          )
+          |> Store.put(
+            Model.NameClaim,
+            Model.name_claim(index: {alice_name, active_from, {1, -1}})
+          )
+          |> Store.put(
+            Model.NameTransfer,
+            Model.name_transfer(index: {alice_name, active_from, {12, -1}})
+          )
+          |> Store.put(
+            Model.NameUpdate,
+            Model.name_update(index: {alice_name, active_from, {2, -1}})
+          )
+          |> Store.put(Model.NameClaim, Model.name_claim(index: {bob_name, active_from, {3, -1}}))
+          |> Store.put(
+            Model.NameTransfer,
+            Model.name_transfer(index: {bob_name, active_from, {14, -1}})
+          )
+          |> Store.put(
+            Model.NameUpdate,
+            Model.name_update(index: {bob_name, active_from, {4, -1}})
           )
           |> Store.put(
             Model.ActiveNameExpiration,
@@ -187,9 +202,6 @@ defmodule AeMdwWeb.NameControllerTest do
               index: plain_name,
               active: expire - 10,
               expire: expire,
-              claims: [{{expire - 10, 0}, {0, -1}}],
-              updates: [],
-              transfers: [],
               revoke: nil,
               auction_timeout: 1
             )
@@ -212,7 +224,8 @@ defmodule AeMdwWeb.NameControllerTest do
         {Name, [],
          [
            pointers: fn _state, _mname -> %{} end,
-           ownership: fn _state, _mname -> %{current: nil, original: nil} end
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end,
+           stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
         {:aec_db, [], [get_block: fn ^key_hash -> :block end]},
         {:aec_blocks, [], [time_in_msecs: fn :block -> 123 end]}
@@ -266,9 +279,6 @@ defmodule AeMdwWeb.NameControllerTest do
               index: "#{i}.chain",
               active: true,
               expire: 1,
-              claims: [{{0, 0}, {0, -1}}],
-              updates: [],
-              transfers: [],
               revoke: {{0, 0}, {0, -1}},
               auction_timeout: 1
             )
@@ -286,7 +296,8 @@ defmodule AeMdwWeb.NameControllerTest do
         {Name, [],
          [
            pointers: fn _state, _mname -> %{} end,
-           ownership: fn _state, _mname -> %{current: nil, original: nil} end
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end,
+           stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
         {:aec_db, [], [get_block: fn ^key_hash -> :block end]},
         {:aec_blocks, [], [time_in_msecs: fn :block -> 123 end]}
@@ -329,9 +340,6 @@ defmodule AeMdwWeb.NameControllerTest do
           index: plain_name,
           active: true,
           expire: 1,
-          claims: [{{0, 0}, {0, -1}}],
-          updates: [{{1, 2}, {3, -1}}],
-          transfers: [],
           revoke: {{0, 0}, {0, -1}},
           auction_timeout: 1
         )
@@ -353,7 +361,8 @@ defmodule AeMdwWeb.NameControllerTest do
         {Name, [],
          [
            pointers: fn _state, _mname -> %{} end,
-           ownership: fn _state, _mname -> %{current: nil, original: nil} end
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end,
+           stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
         {:aec_db, [], [get_block: fn ^key_hash -> :block end]},
         {:aec_blocks, [], [time_in_msecs: fn :block -> 123 end]}
@@ -412,12 +421,13 @@ defmodule AeMdwWeb.NameControllerTest do
               index: alice_name,
               owner: alice_pk,
               active: active_from,
-              claims: [{{10, 0}, {1, -1}}],
               revoke: {{10, 0}, {2, -1}},
-              transfers: [],
-              updates: [],
               expire: expire1
             )
+          )
+          |> Store.put(
+            Model.NameClaim,
+            Model.name_claim(index: {alice_name, active_from, {1, -1}})
           )
           |> Store.put(
             Model.InactiveName,
@@ -425,13 +435,15 @@ defmodule AeMdwWeb.NameControllerTest do
               index: bob_name,
               owner: bob_pk,
               active: active_from,
-              claims: [{{10, 1}, {3, -1}}],
               revoke: {{10, 2}, {5, -1}},
-              transfers: [],
-              updates: [{{10, 2}, {4, -1}}],
               expire: expire2
             )
           )
+          |> Store.put(
+            Model.NameUpdate,
+            Model.name_update(index: {bob_name, active_from, {4, -1}})
+          )
+          |> Store.put(Model.NameClaim, Model.name_claim(index: {bob_name, active_from, {3, -1}}))
           |> Store.put(
             Model.InactiveNameExpiration,
             Model.expiration(index: {2, alice_name})
@@ -527,9 +539,6 @@ defmodule AeMdwWeb.NameControllerTest do
               index: plain_name,
               active: true,
               expire: 1,
-              claims: [{{0, 0}, {0, -1}}],
-              updates: [],
-              transfers: [],
               revoke: {{0, 0}, {0, -1}},
               auction_timeout: 1
             )
@@ -548,7 +557,8 @@ defmodule AeMdwWeb.NameControllerTest do
         {Name, [],
          [
            pointers: fn _state, _mname -> %{} end,
-           ownership: fn _state, _mname -> %{current: nil, original: nil} end
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end,
+           stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
         {:aec_db, [], [get_block: fn ^key_hash -> :block end]},
         {:aec_blocks, [], [time_in_msecs: fn :block -> 123 end]}
@@ -585,9 +595,6 @@ defmodule AeMdwWeb.NameControllerTest do
               index: plain_name,
               active: true,
               expire: 1,
-              claims: [{{0, 0}, {0, -1}}],
-              updates: [],
-              transfers: [],
               revoke: {{0, 0}, {0, -1}},
               auction_timeout: 1
             )
@@ -608,7 +615,8 @@ defmodule AeMdwWeb.NameControllerTest do
           [],
           [
             pointers: fn _state, _mnme -> %{} end,
-            ownership: fn _state, _mname -> %{current: nil, original: nil} end
+            ownership: fn _state, _mname -> %{current: nil, original: nil} end,
+            stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
           ]
         },
         {:aec_db, [], [get_block: fn ^key_hash -> :block end]},
@@ -638,9 +646,6 @@ defmodule AeMdwWeb.NameControllerTest do
         Model.name(
           active: false,
           expire: 1,
-          claims: [{{0, 0}, {0, -1}}],
-          updates: [],
-          transfers: [],
           revoke: {{0, 0}, {0, -1}},
           auction_timeout: 1
         )
@@ -658,7 +663,8 @@ defmodule AeMdwWeb.NameControllerTest do
         {Name, [],
          [
            pointers: fn _state, _mnme -> %{} end,
-           ownership: fn _state, _mname -> %{current: nil, original: nil} end
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end,
+           stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
         {:aec_db, [], [get_block: fn _block_hash -> :block end]},
         {:aec_blocks, [], [time_in_msecs: fn :block -> 123 end]}
@@ -709,14 +715,21 @@ defmodule AeMdwWeb.NameControllerTest do
           Model.auction_bid(
             index: plain_name,
             block_index_txi_idx: {{0, 0}, {1, -1}},
-            expire_height: 0,
-            bids: [{{0, 1}, {2, -1}}, {{0, 0}, {1, -1}}]
+            expire_height: 0
           )
 
         store =
           store
           |> Store.put(Model.AuctionExpiration, Model.expiration(index: expiration_key))
           |> Store.put(Model.AuctionBid, m_auction)
+          |> Store.put(
+            Model.AuctionBidClaim,
+            Model.auction_bid_claim(index: {plain_name, 0, {1, -1}})
+          )
+          |> Store.put(
+            Model.AuctionBidClaim,
+            Model.auction_bid_claim(index: {plain_name, 0, {2, -1}})
+          )
           |> Store.put(Model.Tx, Model.tx(index: 1, id: :aetx_sign.hash(tx1)))
           |> Store.put(Model.Tx, Model.tx(index: 2, id: :aetx_sign.hash(tx2)))
 
@@ -773,14 +786,21 @@ defmodule AeMdwWeb.NameControllerTest do
           Model.auction_bid(
             index: plain_name,
             block_index_txi_idx: {{0, 0}, {1, -1}},
-            expire_height: 0,
-            bids: [{{0, 1}, {2, -1}}, {{0, 0}, {1, -1}}]
+            expire_height: 0
           )
 
         store =
           store
           |> Store.put(Model.AuctionExpiration, Model.expiration(index: expiration_key))
           |> Store.put(Model.AuctionBid, m_auction)
+          |> Store.put(
+            Model.AuctionBidClaim,
+            Model.auction_bid_claim(index: {plain_name, 0, {2, -1}})
+          )
+          |> Store.put(
+            Model.AuctionBidClaim,
+            Model.auction_bid_claim(index: {plain_name, 0, {1, -1}})
+          )
           |> Store.put(Model.Tx, Model.tx(index: 1, id: :aetx_sign.hash(tx1)))
           |> Store.put(Model.Tx, Model.tx(index: 2, id: :aetx_sign.hash(tx2)))
           |> Store.put(Model.Block, Model.block(index: {3, -1}, hash: key_hash))
@@ -865,9 +885,6 @@ defmodule AeMdwWeb.NameControllerTest do
           index: plain_name,
           active: active_from,
           expire: expire,
-          claims: [{{active_from, 0}, {123, -1}}],
-          updates: [],
-          transfers: [],
           revoke: nil,
           owner: owner_pk,
           previous: nil
@@ -911,14 +928,17 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.auction_bid(
               index: plain_name,
               block_index_txi_idx: {{0, 1}, {0, -1}},
-              expire_height: i,
-              bids: [{{2, 3}, {4, -1}}]
+              expire_height: i
             )
 
           store
           |> Store.put(Model.AuctionBid, auction)
           |> Store.put(Model.AuctionExpiration, Model.expiration(index: {i, plain_name}))
           |> Store.put(Model.Block, Model.block(index: {i, -1}, hash: key_hash))
+          |> Store.put(
+            Model.AuctionBidClaim,
+            Model.auction_bid_claim(index: {plain_name, i, {4, -1}})
+          )
         end)
         |> Store.put(Model.Block, Model.block(index: {last_gen, -1}, hash: key_hash))
         |> Store.put(Model.Block, Model.block(index: {0, 1}, hash: key_hash))
@@ -982,13 +1002,16 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.auction_bid(
               index: plain_name,
               block_index_txi_idx: {{0, 1}, {0, -1}},
-              expire_height: i,
-              bids: [{{2, 3}, {4, -1}}]
+              expire_height: i
             )
 
           store
           |> Store.put(Model.AuctionBid, auction)
           |> Store.put(Model.AuctionExpiration, Model.expiration(index: {i, plain_name}))
+          |> Store.put(
+            Model.AuctionBidClaim,
+            Model.auction_bid_claim(index: {plain_name, i, {4, -1}})
+          )
           |> Store.put(Model.Block, Model.block(index: {i, -1}, hash: key_hash))
         end)
         |> Store.put(Model.Block, Model.block(index: {last_gen, -1}, hash: key_hash))
@@ -1051,13 +1074,16 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.auction_bid(
               index: plain_name,
               block_index_txi_idx: {{0, 1}, {0, -1}},
-              expire_height: 0,
-              bids: [{{2, 3}, {4, -1}}]
+              expire_height: 0
             )
 
           store
           |> Store.put(Model.AuctionBid, auction)
           |> Store.put(Model.AuctionExpiration, Model.expiration(index: {i, plain_name}))
+          |> Store.put(
+            Model.AuctionBidClaim,
+            Model.auction_bid_claim(index: {plain_name, 0, {4, -1}})
+          )
         end)
         |> Store.put(Model.Block, Model.block(index: {0, -1}, hash: key_hash))
         |> Store.put(Model.Block, Model.block(index: {4, -1}, hash: key_hash))
@@ -1126,9 +1152,6 @@ defmodule AeMdwWeb.NameControllerTest do
               index: plain_name,
               active: true,
               expire: 1,
-              claims: [{{0, 0}, {0, -1}}],
-              updates: [],
-              transfers: [],
               revoke: {{0, 0}, {0, -1}},
               auction_timeout: 1
             )
@@ -1179,9 +1202,6 @@ defmodule AeMdwWeb.NameControllerTest do
               index: plain_name,
               active: true,
               expire: 1,
-              claims: [{{0, 0}, {0, -1}}],
-              updates: [],
-              transfers: [],
               revoke: {{0, 0}, {0, -1}},
               auction_timeout: 1
             )
@@ -1232,9 +1252,6 @@ defmodule AeMdwWeb.NameControllerTest do
               index: plain_name,
               active: true,
               expire: 1,
-              claims: [{{0, 0}, {0, -1}}],
-              updates: [],
-              transfers: [],
               revoke: {{0, 0}, {0, -1}},
               auction_timeout: 1
             )
@@ -1253,7 +1270,8 @@ defmodule AeMdwWeb.NameControllerTest do
         {Name, [],
          [
            pointers: fn _state, _mname -> %{} end,
-           ownership: fn _state, _mname -> %{current: nil, original: nil} end
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end,
+           stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
         {:aec_db, [], [get_block: fn _block_hash -> :block end]},
         {:aec_blocks, [], [time_in_msecs: fn :block -> 123 end]}
@@ -1287,9 +1305,6 @@ defmodule AeMdwWeb.NameControllerTest do
           index: first_name,
           active: false,
           expire: 3,
-          claims: [{{2, 0}, {0, -1}}],
-          updates: [],
-          transfers: [],
           revoke: nil,
           owner: owner_pk,
           auction_timeout: 1
@@ -1329,7 +1344,8 @@ defmodule AeMdwWeb.NameControllerTest do
         {Name, [],
          [
            pointers: fn _state, _mnme -> %{} end,
-           ownership: fn _state, _mname -> %{current: nil, original: nil} end
+           ownership: fn _state, _mname -> %{current: nil, original: nil} end,
+           stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]},
         {:aec_db, [], [get_block: fn _block_hash -> :block end]},
         {:aec_blocks, [], [time_in_msecs: fn :block -> 123 end]}
@@ -1377,9 +1393,6 @@ defmodule AeMdwWeb.NameControllerTest do
               index: plain_name,
               active: Enum.random(1000..9999),
               expire: 1,
-              claims: [{{0, 0}, {0, -1}}],
-              updates: [],
-              transfers: [],
               revoke: {{0, 0}, {0, -1}},
               auction_timeout: 1
             )
@@ -1429,8 +1442,7 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.name(
               index: plain_name,
               active: i,
-              expire: i + 10,
-              claims: [{{i, 0}, {0, -1}}]
+              expire: i + 10
             )
 
           store
@@ -1480,9 +1492,6 @@ defmodule AeMdwWeb.NameControllerTest do
           index: first_name,
           active: false,
           expire: 3,
-          claims: [{{2, 0}, {0, -1}}],
-          updates: [],
-          transfers: [],
           revoke: nil,
           owner: owner_pk,
           auction_timeout: 1
@@ -1553,9 +1562,6 @@ defmodule AeMdwWeb.NameControllerTest do
           index: first_name,
           active: false,
           expire: 3,
-          claims: [{{2, 0}, {0, -1}}],
-          updates: [],
-          transfers: [],
           revoke: nil,
           owner: owner_pk,
           auction_timeout: 1
@@ -1650,8 +1656,6 @@ defmodule AeMdwWeb.NameControllerTest do
               index: name,
               owner: alice_pk,
               active: active_from,
-              claims: [{{1, 1}, {1, -1}}],
-              updates: [{{1, 1}, {2, -1}}],
               expire: expire
             )
           )
@@ -1663,6 +1667,8 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.Tx,
             Model.tx(index: 2, id: :aetx_sign.hash(tx2), block_index: {1, 1})
           )
+          |> Store.put(Model.NameClaim, Model.name_claim(index: {name, active_from, {1, -1}}))
+          |> Store.put(Model.NameUpdate, Model.name_update(index: {name, active_from, {2, -1}}))
 
         assert %{
                  "name" => ^name,
@@ -1698,6 +1704,7 @@ defmodule AeMdwWeb.NameControllerTest do
       buyer_id = encode(:account_pubkey, buyer_pk)
       owner_id = encode(:account_pubkey, owner_pk)
       plain_name = "gametaclaimed.chain"
+      active_height = 10
 
       {:ok, name_claim_tx} =
         :aens_claim_tx.new(%{
@@ -1721,15 +1728,21 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.name(
               index: plain_name,
               owner: owner_pk,
-              active: 10,
-              claims: [{{1, 1}, {1, -1}}],
-              transfers: [{{1, 1}, {2, -1}}],
+              active: active_height,
               expire: 10_000
             )
           )
           |> Store.put(
             Model.Tx,
             Model.tx(index: 1, id: :aetx_sign.hash(tx), block_index: {1, 1})
+          )
+          |> Store.put(
+            Model.NameTransfer,
+            Model.name_transfer(index: {plain_name, active_height, {2, -1}})
+          )
+          |> Store.put(
+            Model.NameClaim,
+            Model.name_claim(index: {plain_name, active_height, {1, -1}})
           )
 
         assert %{
@@ -1783,8 +1796,6 @@ defmodule AeMdwWeb.NameControllerTest do
               index: plain_name,
               owner: owner_pk,
               active: 10,
-              claims: [{{1, 1}, {1, -1}}],
-              transfers: [{{1, 1}, {2, -1}}],
               expire: 10_000
             )
           )
@@ -1792,6 +1803,8 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.Tx,
             Model.tx(index: 1, id: :aetx_sign.hash(tx), block_index: {1, 1})
           )
+          |> Store.put(Model.NameClaim, Model.name_claim(index: {plain_name, 10, {1, -1}}))
+          |> Store.put(Model.NameTransfer, Model.name_transfer(index: {plain_name, 10, {2, -1}}))
 
         assert %{
                  "name" => ^plain_name,
@@ -1840,7 +1853,6 @@ defmodule AeMdwWeb.NameControllerTest do
               index: name,
               owner: alice_pk,
               active: active_from,
-              claims: [{{10, 1}, {claim_txi, -1}}],
               expire: expire
             )
           )
@@ -1848,9 +1860,16 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.AuctionBid,
             Model.auction_bid(
               index: name,
-              expire_height: bid_expire,
-              bids: [{{1, 1}, {bid_txi, -1}}]
+              expire_height: bid_expire
             )
+          )
+          |> Store.put(
+            Model.NameClaim,
+            Model.name_claim(index: {name, active_from, {claim_txi, -1}})
+          )
+          |> Store.put(
+            Model.AuctionBidClaim,
+            Model.auction_bid_claim(index: {name, bid_expire, {bid_txi, -1}})
           )
           |> Store.put(Model.AuctionOwner, Model.owner(index: {alice_pk, name}))
           |> Store.put(Model.AuctionExpiration, Model.expiration(index: {bid_expire, name}))
@@ -1898,7 +1917,8 @@ defmodule AeMdwWeb.NameControllerTest do
            end,
            locate_bid: fn _state, ^name -> nil end,
            pointers: fn _state, _name_model -> %{} end,
-           ownership: fn _state, _name -> %{original: <<>>, current: <<>>} end
+           ownership: fn _state, _name -> %{original: <<>>, current: <<>>} end,
+           stream_nested_resource: fn _state, _table, _plain_name, _active -> [] end
          ]}
       ] do
         assert %{"active" => true, "name" => ^name} =
@@ -1920,6 +1940,7 @@ defmodule AeMdwWeb.NameControllerTest do
     test "get pointers for valid given name", %{conn: conn, store: store} do
       name = "wwwbeaconoidcom.chain"
       {:ok, name_hash} = :aens.get_name_hash(name)
+      active_height = 3
 
       with_blockchain %{alice: 1_000},
         mb: [
@@ -1936,7 +1957,8 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.tx(index: 2, block_index: {0, 0}, id: :aetx_sign.hash(tx2))
           )
           |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: name))
-          |> Store.put(Model.ActiveName, Model.name(index: name, updates: [{{0, 0}, {2, -1}}]))
+          |> Store.put(Model.ActiveName, Model.name(index: name, active: active_height))
+          |> Store.put(Model.NameUpdate, Model.name_update(index: {name, active_height, {2, -1}}))
 
         {:id, :account, alice_pk} = accounts[:alice]
         alice_id = encode(:account_pubkey, alice_pk)
@@ -1959,6 +1981,7 @@ defmodule AeMdwWeb.NameControllerTest do
     } do
       name = "wwwbeaconoidcom.chain"
       {:ok, name_hash} = :aens.get_name_hash(name)
+      active_height = 3
 
       with_blockchain %{alice: 1_000},
         mb: [
@@ -1976,8 +1999,9 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.tx(index: 2, block_index: {0, 0}, id: :aetx_sign.hash(tx2))
           )
           |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: name))
-          |> Store.put(Model.ActiveName, Model.name(index: name, updates: [{{0, 0}, {2, 0}}]))
+          |> Store.put(Model.ActiveName, Model.name(index: name, active: active_height))
           |> Store.put(Model.IntContractCall, Model.int_contract_call(index: {2, 0}, tx: aetx2))
+          |> Store.put(Model.NameUpdate, Model.name_update(index: {name, active_height, {2, 0}}))
 
         {:id, :account, alice_pk} = accounts[:alice]
         alice_id = encode(:account_pubkey, alice_pk)
@@ -2267,6 +2291,7 @@ defmodule AeMdwWeb.NameControllerTest do
       contract_pk = TS.address(1)
       contract_id = :aeser_id.create(:contract, contract_pk)
       plain_name = "asd.chain"
+      plain_name2 = "asd2.chain"
       call_txi = 567
       tx1_hash_enc = Enc.encode(:tx_hash, <<0::256>>)
 
@@ -2289,7 +2314,7 @@ defmodule AeMdwWeb.NameControllerTest do
         :aens_claim_tx.new(%{
           account_id: account_id,
           nonce: 111,
-          name: plain_name,
+          name: plain_name2,
           name_salt: 1_111,
           name_fee: 11_111,
           fee: 111_111,
@@ -2304,9 +2329,15 @@ defmodule AeMdwWeb.NameControllerTest do
         |> name_claims_store(plain_name)
         |> Store.put(Model.IntContractCall, int_contract_call)
 
-      {:ok, name} = Store.get(store, Model.ActiveName, plain_name)
-      name = Model.name(name, claims: [{{123, 0}, {call_txi, 1}}])
-      store = Store.put(store, Model.ActiveName, name)
+      {:ok, Model.name(active: active) = name} = Store.get(store, Model.ActiveName, plain_name)
+
+      store =
+        store
+        |> Store.put(Model.ActiveName, Model.name(name, index: plain_name2))
+        |> Store.put(
+          Model.NameClaim,
+          Model.name_claim(index: {plain_name2, active, {call_txi, 1}})
+        )
 
       with_mocks [
         {Db, [],
@@ -2320,7 +2351,7 @@ defmodule AeMdwWeb.NameControllerTest do
         assert %{"data" => [claim1]} =
                  conn
                  |> with_store(store)
-                 |> get("/v2/names/#{plain_name}/claims", limit: 1, direction: "forward")
+                 |> get("/v2/names/#{plain_name2}/claims", limit: 1, direction: "forward")
                  |> json_response(200)
 
         assert %{
@@ -2328,7 +2359,7 @@ defmodule AeMdwWeb.NameControllerTest do
                  "source_tx_hash" => ^tx1_hash_enc,
                  "source_tx_type" => "ContractCallTx",
                  "internal_source" => true,
-                 "tx" => %{"fee" => 111_111, "name" => ^plain_name}
+                 "tx" => %{"fee" => 111_111, "name" => ^plain_name2}
                } = claim1
       end
     end
@@ -2526,28 +2557,62 @@ defmodule AeMdwWeb.NameControllerTest do
   end
 
   defp name_claims_store(store, plain_name) do
-    claim_bi_txi_1 = {{123, 0}, {567, -1}}
-    claim_bi_txi_2 = {{123, 0}, {678, -1}}
-    claim_bi_txi_3 = {{124, 1}, {788, -1}}
+    claim_txi_idx1 = {567, -1}
+    claim_txi_idx2 = {678, -1}
+    claim_txi_idx3 = {788, -1}
+    active_height = 3
 
     name =
       Model.name(
         index: plain_name,
-        active: false,
+        active: active_height,
         expire: 3,
-        claims: [claim_bi_txi_3, claim_bi_txi_2, claim_bi_txi_1],
-        updates: [claim_bi_txi_3, claim_bi_txi_2, claim_bi_txi_1],
-        transfers: [claim_bi_txi_3, claim_bi_txi_2, claim_bi_txi_1],
         revoke: nil,
         auction_timeout: 1
       )
 
     store
     |> Store.put(Model.ActiveName, name)
-    |> Store.put(Model.Tx, Model.tx(index: 567, id: <<0::256>>))
-    |> Store.put(Model.Tx, Model.tx(index: 678, id: <<1::256>>))
-    |> Store.put(Model.Tx, Model.tx(index: 788, id: <<2::256>>))
+    |> Store.put(Model.Tx, Model.tx(index: 567, block_index: {123, 0}, id: <<0::256>>))
+    |> Store.put(Model.Tx, Model.tx(index: 678, block_index: {123, 0}, id: <<1::256>>))
+    |> Store.put(Model.Tx, Model.tx(index: 788, block_index: {124, 1}, id: <<2::256>>))
     |> Store.put(Model.Block, Model.block(index: {123, 0}, hash: "mb1-hash"))
     |> Store.put(Model.Block, Model.block(index: {124, 1}, hash: "mb2-hash"))
+    |> Store.put(
+      Model.NameClaim,
+      Model.name_claim(index: {plain_name, active_height, claim_txi_idx1})
+    )
+    |> Store.put(
+      Model.NameClaim,
+      Model.name_claim(index: {plain_name, active_height, claim_txi_idx2})
+    )
+    |> Store.put(
+      Model.NameClaim,
+      Model.name_claim(index: {plain_name, active_height, claim_txi_idx3})
+    )
+    |> Store.put(
+      Model.NameTransfer,
+      Model.name_transfer(index: {plain_name, active_height, claim_txi_idx1})
+    )
+    |> Store.put(
+      Model.NameTransfer,
+      Model.name_transfer(index: {plain_name, active_height, claim_txi_idx2})
+    )
+    |> Store.put(
+      Model.NameTransfer,
+      Model.name_transfer(index: {plain_name, active_height, claim_txi_idx3})
+    )
+    |> Store.put(
+      Model.NameUpdate,
+      Model.name_update(index: {plain_name, active_height, claim_txi_idx1})
+    )
+    |> Store.put(
+      Model.NameUpdate,
+      Model.name_update(index: {plain_name, active_height, claim_txi_idx2})
+    )
+    |> Store.put(
+      Model.NameUpdate,
+      Model.name_update(index: {plain_name, active_height, claim_txi_idx3})
+    )
   end
 end

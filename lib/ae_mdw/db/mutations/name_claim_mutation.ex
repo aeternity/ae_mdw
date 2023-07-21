@@ -101,7 +101,6 @@ defmodule AeMdw.Db.NameClaimMutation do
             index: plain_name,
             active: height,
             expire: expire,
-            claims: [{block_index, txi_idx}],
             owner: owner_pk,
             previous: previous,
             auction_timeout: 0
@@ -114,6 +113,8 @@ defmodule AeMdw.Db.NameClaimMutation do
         m_name_owner_deactivation =
           Model.owner_deactivation(index: {owner_pk, expire, plain_name})
 
+        name_claim = Model.name_claim(index: {plain_name, height, txi_idx})
+
         state2
         |> Name.cache_through_write(Model.ActiveName, m_name)
         |> Name.cache_through_write(Model.ActiveNameOwner, m_owner)
@@ -124,63 +125,61 @@ defmodule AeMdw.Db.NameClaimMutation do
         |> IntTransfer.fee({height, txi_idx}, :lock_name, owner_pk, txi_idx, lock_amount)
         |> State.inc_stat(:names_activated)
         |> State.inc_stat(:burned_in_auctions, lock_amount)
+        |> State.put(Model.NameClaim, name_claim)
 
       timeout ->
         auction_end = height + timeout
         m_auction_exp = Model.expiration(index: {auction_end, plain_name})
 
-        make_m_bid =
-          &Model.auction_bid(
+        m_auction_bid =
+          Model.auction_bid(
             index: plain_name,
             block_index_txi_idx: {block_index, txi_idx},
             expire_height: auction_end,
-            owner: owner_pk,
-            bids: &1
+            owner: owner_pk
           )
+
+        auction_claim = Model.auction_bid_claim(index: {plain_name, auction_end, txi_idx})
 
         state3 =
           IntTransfer.fee(state2, {height, txi_idx}, :spend_name, owner_pk, txi_idx, name_fee)
 
-        {m_bid, state4} =
-          case Name.cache_through_read(state, Model.AuctionBid, plain_name) do
+        state4 =
+          case Name.cache_through_read(state3, Model.AuctionBid, plain_name) do
             nil ->
-              state4 = State.inc_stat(state3, :auctions_started)
-              {make_m_bid.([{block_index, txi_idx}]), state4}
+              State.inc_stat(state3, :auctions_started)
 
             {:ok,
              Model.auction_bid(
                block_index_txi_idx: {_bi, prev_txi_idx},
                expire_height: prev_auction_end,
-               owner: prev_owner,
-               bids: prev_bids
+               owner: prev_owner
              )} ->
               prev_name_claim_tx = DbUtil.read_node_tx(state, prev_txi_idx)
               prev_name_fee = :aens_claim_tx.name_fee(prev_name_claim_tx)
 
-              state4 =
-                state3
-                |> Name.cache_through_delete(Model.AuctionBid, plain_name)
-                |> Name.cache_through_delete(Model.AuctionOwner, {prev_owner, plain_name})
-                |> Name.cache_through_delete(
-                  Model.AuctionExpiration,
-                  {prev_auction_end, plain_name}
-                )
-                |> IntTransfer.fee(
-                  {height, txi_idx},
-                  :refund_name,
-                  prev_owner,
-                  prev_txi_idx,
-                  prev_name_fee
-                )
-                |> State.inc_stat(:locked_in_auctions, name_fee - prev_name_fee)
-
-              {make_m_bid.([{block_index, txi_idx} | prev_bids]), state4}
+              state3
+              |> Name.cache_through_delete(Model.AuctionBid, plain_name)
+              |> Name.cache_through_delete(Model.AuctionOwner, {prev_owner, plain_name})
+              |> Name.cache_through_delete(
+                Model.AuctionExpiration,
+                {prev_auction_end, plain_name}
+              )
+              |> IntTransfer.fee(
+                {height, txi_idx},
+                :refund_name,
+                prev_owner,
+                prev_txi_idx,
+                prev_name_fee
+              )
+              |> State.inc_stat(:locked_in_auctions, name_fee - prev_name_fee)
           end
 
         state4
-        |> Name.cache_through_write(Model.AuctionBid, m_bid)
+        |> Name.cache_through_write(Model.AuctionBid, m_auction_bid)
         |> Name.cache_through_write(Model.AuctionOwner, m_owner)
         |> Name.cache_through_write(Model.AuctionExpiration, m_auction_exp)
+        |> State.put(Model.AuctionBidClaim, auction_claim)
     end
   end
 end
