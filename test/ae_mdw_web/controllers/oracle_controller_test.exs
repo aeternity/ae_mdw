@@ -61,8 +61,8 @@ defmodule AeMdwWeb.OracleControllerTest do
       with_mocks [
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
-        {:aec_db, [], [get_block: fn ^block_hash1 -> :block end]},
-        {:aec_blocks, [], [time_in_msecs: fn :block -> last_time end]}
+        {:aec_db, [], [get_header: fn ^block_hash1 -> :block end]},
+        {:aec_headers, [], [time_in_msecs: fn :block -> last_time end]}
       ] do
         assert %{"data" => [oracle2, oracle1], "next" => nil} =
                  conn
@@ -154,13 +154,13 @@ defmodule AeMdwWeb.OracleControllerTest do
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
         {:aec_db, [],
          [
-           get_block: fn
+           get_header: fn
              ^block_hash1 -> :block1
              ^block_hash2 -> :block2
              ^block_hash3 -> :block3
            end
          ]},
-        {:aec_blocks, [],
+        {:aec_headers, [],
          [
            time_in_msecs: fn
              :block1 -> block_time1
@@ -248,8 +248,8 @@ defmodule AeMdwWeb.OracleControllerTest do
       with_mocks [
         {Oracle, [], [oracle_tree!: fn ^block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
-        {:aec_db, [], [get_block: fn ^block_hash -> :block end]},
-        {:aec_blocks, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_db, [], [get_header: fn ^block_hash -> :block end]},
+        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => [oracle2, oracle1], "next" => nil} =
                  conn
@@ -310,8 +310,8 @@ defmodule AeMdwWeb.OracleControllerTest do
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
         {Blocks, [], [block_hash: fn _state, _height -> "asd" end]},
-        {:aec_db, [], [get_block: fn ^block_hash -> :block1 end]},
-        {:aec_blocks, [], [time_in_msecs: fn :block1 -> 123 end]}
+        {:aec_db, [], [get_header: fn ^block_hash -> :block1 end]},
+        {:aec_headers, [], [time_in_msecs: fn :block1 -> 123 end]}
       ] do
         assert %{"data" => [oracle1, _oracle2], "next" => nil} =
                  conn
@@ -348,8 +348,8 @@ defmodule AeMdwWeb.OracleControllerTest do
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
         {Blocks, [], [block_hash: fn _state, _height -> "asd" end]},
-        {:aec_db, [], [get_block: fn ^block_hash -> :block1 end]},
-        {:aec_blocks, [], [time_in_msecs: fn :block1 -> 123 end]}
+        {:aec_db, [], [get_header: fn ^block_hash -> :block1 end]},
+        {:aec_headers, [], [time_in_msecs: fn :block1 -> 123 end]}
       ] do
         assert %{"next" => next_uri} = conn |> get("/oracles/active") |> json_response(200)
 
@@ -463,8 +463,8 @@ defmodule AeMdwWeb.OracleControllerTest do
                {oracle_query_tx3, :oracle_query_tx, tx_hash3, :oracle_query_tx, block_hash}
            end
          ]},
-        {:aec_db, [], [get_block: fn _block_hash -> :block end]},
-        {:aec_blocks, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_db, [], [get_header: fn _block_hash -> :block end]},
+        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => [oracle1, oracle2], "next" => next_url} =
                  conn
@@ -710,8 +710,8 @@ defmodule AeMdwWeb.OracleControllerTest do
                 block_hash2}
            end
          ]},
-        {:aec_db, [], [get_block: fn _key_hash -> :block end]},
-        {:aec_blocks, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_db, [], [get_header: fn _key_hash -> :block end]},
+        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
       ] do
         assert %{"data" => [response1, response2], "next" => next_url} =
                  conn
