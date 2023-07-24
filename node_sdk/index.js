@@ -10,7 +10,13 @@ contract Example =
 main contract Factory =
   stateful entrypoint create() =
     Chain.create() : Example
-    Chain.create() : Example
+`
+const cloneSource = `
+contract Example =
+  entrypoint example(x : int) = x
+main contract CloneFactory =
+  stateful entrypoint clone(template : Example) =
+    Chain.clone(ref = template) : Example
 `
 
 const accounts = [
@@ -48,6 +54,7 @@ const main = async () => {
     onCompiler: new CompilerHttp(COMPILER_URL)
   });
   const factoryContract = await aeSdk.initializeContract({ sourceCode: factorySource });
+  const cloneFactoryContract = await aeSdk.initializeContract({ sourceCode: cloneSource });
 
   // Use client here..
   await emitKb()
@@ -56,13 +63,19 @@ const main = async () => {
 
   const contractCreate = await factoryContract.$deploy([]);
   console.log(contractCreate)
-
   const contract1 = contractCreate.result.contractId;
 
-  const contractCall = await factoryContract.create();
-  const contract2 = contractCall.decodedResult;
+  const contractCall1 = await factoryContract.create();
+  const innerContract1 = contractCall1.decodedResult;
 
-  output.contracts = [contract1, contract2];
+  const contractClone = await cloneFactoryContract.$deploy([]);
+  console.log(contractClone)
+  const contract2 = contractClone.result.contractId;
+
+  const contractCall2 = await cloneFactoryContract.clone(innerContract1);
+  const innerContract2 = contractCall2.decodedResult;
+
+  output.contracts = [contract1, innerContract1, contract2, innerContract2];
 
   await emitKb()
 

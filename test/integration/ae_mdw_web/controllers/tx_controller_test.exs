@@ -1003,7 +1003,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
       assert Enum.any?(blocks_with_nm, fn %{"tx" => tx, "tx_index" => tx_index} ->
                assert {:ok, plain_name} = Validate.plain_name(state, tx["recipient_id"])
-               assert {Model.name(active: active), source} = Name.locate(state, plain_name)
+               assert {Model.name(active: active), _source} = Name.locate(state, plain_name)
 
                name_updates =
                  state |> Name.stream_nested_resource(plain_name, active) |> Enum.to_list()
@@ -1814,7 +1814,7 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
 
     assert Enum.any?(blocks_with_nm, fn %{"tx" => tx, "tx_index" => tx_index} ->
              assert {:ok, plain_name} = Validate.plain_name(state, tx["recipient_id"])
-             assert {Model.name(active: active), source} = Name.locate(state, plain_name)
+             assert {Model.name(active: active), _source} = Name.locate(state, plain_name)
 
              name_updates =
                state |> Name.stream_nested_resource(plain_name, active) |> Enum.to_list()
