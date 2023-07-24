@@ -100,7 +100,7 @@ defmodule AeMdw.Db.Format do
 
   @spec encode_pointers(list() | map()) :: %{iodata() => String.t()}
   def encode_pointers(pointers) when is_map(pointers) do
-    Map.new(%{}, fn {key, id} -> {maybe_base64_pointer_key(key), enc_id(id)} end)
+    Map.new(pointers, fn {key, id} -> {maybe_base64_pointer_key(key), enc_id(id)} end)
   end
 
   def encode_pointers(pointers) do
@@ -473,7 +473,7 @@ defmodule AeMdw.Db.Format do
     do: x
 
   def map_raw_values(m, f) when is_map(m),
-    do: m |> Enum.map(fn {k, v} -> {to_string(k), map_raw_values(v, f)} end) |> Enum.into(%{})
+    do: Map.new(m, fn {k, v} -> {to_string(k), map_raw_values(v, f)} end)
 
   def map_raw_values(l, f) when is_list(l),
     do: l |> Enum.map(&map_raw_values(&1, f))
