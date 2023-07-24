@@ -67,19 +67,19 @@ defmodule AeMdw.Node do
   @spec aex9_signatures :: %{method_hash() => method_signature()}
   def aex9_signatures do
     Contract.aex9_signatures()
-    |> Enum.into(%{}, fn {k, v} -> {Contract.function_hash(k), v} end)
+    |> map_by_function_hash()
   end
 
   @spec aex141_signatures :: %{method_hash() => method_signature()}
   def aex141_signatures do
     Contract.aex141_signatures()
-    |> Enum.into(%{}, fn {k, v} -> {Contract.function_hash(k), v} end)
+    |> map_by_function_hash()
   end
 
   @spec previous_aex141_signatures :: %{method_hash() => method_signature()}
   def previous_aex141_signatures do
     Contract.previous_aex141_signatures()
-    |> Enum.into(%{}, fn {k, v} -> {Contract.function_hash(k), v} end)
+    |> map_by_function_hash()
   end
 
   @spec aexn_event_hash_types() :: %{Contracts.event_hash() => aexn_event_type()}
@@ -104,7 +104,7 @@ defmodule AeMdw.Node do
   @spec aexn_event_names() :: %{Contracts.event_hash() => AexnContracts.event_name()}
   def aexn_event_names() do
     aexn_event_hash_types()
-    |> Enum.into(%{}, fn {hash, atom} ->
+    |> Map.new(fn {hash, atom} ->
       {hash, Macro.camelize("#{atom}")}
     end)
   end
@@ -232,5 +232,9 @@ defmodule AeMdw.Node do
 
   @spec type_id(atom()) :: atom()
   def type_id(_arg) do
+  end
+
+  defp map_by_function_hash(signatures) do
+    Map.new(signatures, fn {k, v} -> {Contract.function_hash(k), v} end)
   end
 end

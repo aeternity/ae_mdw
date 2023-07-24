@@ -78,7 +78,7 @@ defmodule AeMdw.Names do
       {prev_cursor, height_keys, next_cursor} =
         query
         |> Map.drop(@pagination_params)
-        |> Enum.into(%{}, &convert_param/1)
+        |> Map.new(&convert_param/1)
         |> build_height_streamer(state, scope, cursor)
         |> Collection.paginate(pagination)
 
@@ -98,7 +98,7 @@ defmodule AeMdw.Names do
       {prev_cursor, name_keys, next_cursor} =
         query
         |> Map.drop(@pagination_params)
-        |> Enum.into(%{}, &convert_param/1)
+        |> Map.new(&convert_param/1)
         |> build_name_streamer(state, cursor)
         |> Collection.paginate(pagination)
 

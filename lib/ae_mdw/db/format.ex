@@ -45,7 +45,7 @@ defmodule AeMdw.Db.Format do
       tx_type
       |> AeMdw.Node.tx_fields()
       |> Enum.with_index(1)
-      |> Enum.into(%{}, fn {field, pos} ->
+      |> Map.new(fn {field, pos} ->
         {field, elem(tx_rec, pos)}
       end)
       |> Map.put(:type, tx_type)
@@ -100,7 +100,7 @@ defmodule AeMdw.Db.Format do
 
   @spec encode_pointers(list() | map()) :: %{iodata() => String.t()}
   def encode_pointers(pointers) when is_map(pointers) do
-    Enum.into(pointers, %{}, fn {key, id} -> {maybe_base64_pointer_key(key), enc_id(id)} end)
+    Map.new(%{}, fn {key, id} -> {maybe_base64_pointer_key(key), enc_id(id)} end)
   end
 
   def encode_pointers(pointers) do

@@ -154,7 +154,7 @@ defmodule AeMdw.Db.Name do
         state
         |> DbUtil.read_node_tx(txi_idx)
         |> :aens_update_tx.pointers()
-        |> Enum.into(%{}, &pointer_kv_raw/1)
+        |> Map.new(&pointer_kv_raw/1)
         |> Format.encode_pointers()
     end
   end
@@ -259,8 +259,7 @@ defmodule AeMdw.Db.Name do
     state
     |> Collection.stream(tab, {key, ""})
     |> Stream.take_while(&match?({^key, _val}, &1))
-    |> Stream.map(fn {_key, val} -> val end)
-    |> Enum.to_list()
+    |> Enum.map(fn {_key, val} -> val end)
   end
 
   defp ns_tree!(state, block_index) do

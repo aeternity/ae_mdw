@@ -53,8 +53,7 @@ defmodule AeMdw.Oracles do
       {prev_cursor, expiration_keys, next_cursor} =
         query
         |> Map.drop(@pagination_params)
-        |> Enum.map(&convert_param/1)
-        |> Map.new()
+        |> Map.new(&convert_param/1)
         |> build_streamer(state, scope, cursor)
         |> Collection.paginate(pagination)
 

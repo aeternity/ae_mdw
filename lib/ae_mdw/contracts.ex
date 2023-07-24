@@ -95,7 +95,7 @@ defmodule AeMdw.Contracts do
       {prev_cursor, logs, next_cursor} =
         query
         |> Map.drop(@pagination_params)
-        |> Enum.into(%{}, &convert_param(state, &1))
+        |> Map.new(&convert_param(state, &1))
         |> build_logs_pagination(state, scope, cursor)
         |> Collection.paginate(pagination)
 
@@ -116,7 +116,7 @@ defmodule AeMdw.Contracts do
       {prev_cursor, calls, next_cursor} =
         query
         |> Map.drop(@pagination_params)
-        |> Enum.into(%{}, &convert_param(state, &1))
+        |> Map.new(&convert_param(state, &1))
         |> build_calls_pagination(state, scope, cursor)
         |> Collection.paginate(pagination)
 
@@ -305,8 +305,7 @@ defmodule AeMdw.Contracts do
           :none -> nil
         end
       end)
-      |> Stream.take_while(&String.starts_with?(&1, fname_prefix))
-      |> Enum.to_list()
+      |> Enum.take_while(&String.starts_with?(&1, fname_prefix))
 
     fn direction ->
       fnames
@@ -329,8 +328,7 @@ defmodule AeMdw.Contracts do
           :none -> nil
         end
       end)
-      |> Stream.take_while(&String.starts_with?(&1, fname_prefix))
-      |> Enum.to_list()
+      |> Enum.take_while(&String.starts_with?(&1, fname_prefix))
 
     fn direction ->
       fnames
