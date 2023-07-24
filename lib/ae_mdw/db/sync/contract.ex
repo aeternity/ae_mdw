@@ -89,7 +89,7 @@ defmodule AeMdw.Db.Sync.Contract do
         {_prev_event, {{:internal_call_tx, fname}, %{info: tx}}} ->
           {fname, tx}
       end)
-      |> Enum.with_index(fn {{fname, aetx}, local_idx} ->
+      |> Enum.with_index(fn {fname, aetx}, local_idx ->
         {tx_type, tx} = :aetx.specialize_type(aetx)
 
         {local_idx, fname, tx_type, aetx, tx}

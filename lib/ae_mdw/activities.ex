@@ -334,7 +334,7 @@ defmodule AeMdw.Activities do
   defp build_gens_stream(gen_activities, direction) do
     Stream.flat_map(gen_activities, fn [{height, _data} | _rest] = chunk ->
       gen_events =
-        Enum.with_index(chunk, fn {{^height, data}, local_idx} ->
+        Enum.with_index(chunk, fn {^height, data}, local_idx ->
           {{height, -1, local_idx}, data}
         end)
 
@@ -637,7 +637,7 @@ defmodule AeMdw.Activities do
       txi_events =
         chunk
         |> Enum.sort()
-        |> Enum.with_index(fn {{^txi, data}, local_idx} -> {{height, txi, local_idx}, data} end)
+        |> Enum.with_index(fn {^txi, data}, local_idx -> {{height, txi, local_idx}, data} end)
 
       if direction == :forward do
         txi_events
