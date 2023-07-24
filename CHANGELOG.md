@@ -1,5 +1,24 @@
 # Changelog
 
+### [1.55.1](https://www.github.com/aeternity/ae_mdw/compare/v1.55.0...v1.55.1) (2023-07-24)
+
+
+### Bug Fixes
+
+* add missing fname contract creation call ([#1465](https://www.github.com/aeternity/ae_mdw/issues/1465)) ([af3546f](https://www.github.com/aeternity/ae_mdw/commit/af3546fcb213ed57675f8032af66698b67a536c2))
+
+
+### Miscellaneous
+
+* **deps:** bump node-fetch from 2.6.1 to 2.6.7 in /node_sdk ([#1466](https://www.github.com/aeternity/ae_mdw/issues/1466)) ([3ff5a6c](https://www.github.com/aeternity/ae_mdw/commit/3ff5a6c62ebc21666fa27ab0a6f5f79df90c3b2f))
+* **deps:** bump semver from 6.3.0 to 6.3.1 in /node_sdk ([#1460](https://www.github.com/aeternity/ae_mdw/issues/1460)) ([abcec9e](https://www.github.com/aeternity/ae_mdw/commit/abcec9eb554ff23916f320f994ce564c075955f3))
+* move nested name records to individual tables ([#1464](https://www.github.com/aeternity/ae_mdw/issues/1464)) ([72d064b](https://www.github.com/aeternity/ae_mdw/commit/72d064b41544971c0a77b618a6d23a098249ae34))
+
+
+### Testing
+
+* add devmode test for Chain.clone calls ([#1468](https://www.github.com/aeternity/ae_mdw/issues/1468)) ([57d31ff](https://www.github.com/aeternity/ae_mdw/commit/57d31ff2f7a5f4e41e90f206fb4b9bb8b4c6c2dd))
+
 ## [1.55.0](https://www.github.com/aeternity/ae_mdw/compare/v1.54.2...v1.55.0) (2023-07-18)
 
 
