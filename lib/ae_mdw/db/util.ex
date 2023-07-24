@@ -329,7 +329,7 @@ defmodule AeMdw.Db.Util do
   @spec block_time(Blocks.block_hash()) :: time()
   def block_time(block_hash) do
     block_hash
-    |> :aec_db.get_block()
-    |> :aec_blocks.time_in_msecs()
+    |> :aec_db.get_header()
+    |> :aec_headers.time_in_msecs()
   end
 end
