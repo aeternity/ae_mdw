@@ -252,9 +252,9 @@ defmodule AeMdw.Blocks do
         state
         |> Collection.stream(@table, :backward, nil, {gen, Util.max_int()})
         |> Stream.take_while(&match?({^gen, _mb_index}, &1))
-        |> Enum.map(fn key -> State.fetch!(state, @table, key) end)
         |> Enum.reverse()
-        |> Enum.map(fn Model.block(hash: hash) ->
+        |> Enum.map(fn block_index ->
+          Model.block(hash: hash) = State.fetch!(state, @table, block_index)
           header = :aec_db.get_header(hash)
 
           :aec_headers.serialize_for_client(header, Db.prev_block_type(header))
@@ -298,8 +298,7 @@ defmodule AeMdw.Blocks do
       txs =
         blocks_txs
         |> Map.get(mb_hash, [])
-        |> Enum.map(fn %{"hash" => tx_hash} = tx -> {tx_hash, tx} end)
-        |> Map.new()
+        |> Map.new(fn %{"hash" => tx_hash} = tx -> {tx_hash, tx} end)
 
       micro_block = Map.put(micro_block, "transactions", txs)
 

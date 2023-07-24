@@ -4,6 +4,8 @@ defmodule AeMdwWeb.NameControllerTest do
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
+  alias AeMdw.Db.MemStore
+  alias AeMdw.Db.NullStore
   alias AeMdw.Db.Store
   alias AeMdw.Node.Db
   alias AeMdw.Validate
@@ -2057,14 +2059,41 @@ defmodule AeMdwWeb.NameControllerTest do
   describe "owned_by" do
     test "get active names for given account/owner", %{conn: conn} do
       id = "ak_2VMBcnJQgzQQeQa6SgCgufYiRqgvoY9dXHR11ixqygWnWGfSah"
-      owner_id = Validate.id!(id)
+      owner_pk = Validate.id!(id)
+      plain_name = "ownername"
 
-      with_mocks [
-        {Name, [], [owned_by: fn _state, ^owner_id, true -> %{names: [], top_bids: []} end]}
-      ] do
-        assert %{"active" => [], "top_bid" => []} =
-                 conn |> get("/names/owned_by/#{id}") |> json_response(200)
-      end
+      store =
+        NullStore.new()
+        |> MemStore.new()
+        |> Store.put(
+          Model.ActiveNameOwner,
+          Model.owner(index: {owner_pk, plain_name})
+        )
+        |> Store.put(
+          Model.ActiveName,
+          Model.name(
+            index: plain_name,
+            active: 100,
+            expire: 200,
+            owner: owner_pk,
+            previous: nil,
+            auction_timeout: 0
+          )
+        )
+
+      assert %{"active" => active_names, "top_bid" => []} =
+               conn |> with_store(store) |> get("/names/owned_by/#{id}") |> json_response(200)
+
+      assert %{
+               "active" => true,
+               "info" => %{
+                 "active_from" => 100,
+                 "expire_height" => 200,
+                 "ownership" => %{"current" => ^id}
+               },
+               "name" => ^plain_name,
+               "status" => "name"
+             } = hd(active_names)
     end
 
     test "get inactive names for given account/owner", %{conn: conn} do

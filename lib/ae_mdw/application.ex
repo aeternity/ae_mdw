@@ -103,12 +103,12 @@ defmodule AeMdw.Application do
         end)
       end)
       |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-      |> Enum.into(%{}, fn {field, positions} ->
+      |> Map.new(fn {field, positions} ->
         {field, Enum.uniq(positions)}
       end)
 
     tx_ids_positions =
-      Enum.into(tx_ids, %{}, fn {type, field_ids} ->
+      Map.new(tx_ids, fn {type, field_ids} ->
         {type, Map.values(field_ids)}
       end)
 

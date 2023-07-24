@@ -50,7 +50,7 @@ defmodule AeMdw.Aex9 do
       |> Collection.stream(Model.Aex9EventBalance, {contract_pk, <<>>})
       |> Stream.take_while(&match?({^contract_pk, _address}, &1))
       |> Stream.map(&State.fetch!(state, Model.Aex9EventBalance, &1))
-      |> Enum.into(%{}, fn Model.aex9_event_balance(index: {_ct_pk, account_pk}, amount: amount) ->
+      |> Map.new(fn Model.aex9_event_balance(index: {_ct_pk, account_pk}, amount: amount) ->
         {{:address, account_pk}, amount}
       end)
       |> case do

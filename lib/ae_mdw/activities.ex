@@ -297,10 +297,7 @@ defmodule AeMdw.Activities do
             Name.stream_nested_resource(state, Model.NameClaim, plain_name)
         end
 
-      claims =
-        claims
-        |> Enum.to_list()
-        |> Enum.reverse()
+      claims = Enum.reverse(claims)
 
       claims =
         case txi_scope do
@@ -337,9 +334,9 @@ defmodule AeMdw.Activities do
   defp build_gens_stream(gen_activities, direction) do
     Stream.flat_map(gen_activities, fn [{height, _data} | _rest] = chunk ->
       gen_events =
-        chunk
-        |> Enum.with_index()
-        |> Enum.map(fn {{^height, data}, local_idx} -> {{height, -1, local_idx}, data} end)
+        Enum.with_index(chunk, fn {^height, data}, local_idx ->
+          {{height, -1, local_idx}, data}
+        end)
 
       if direction == :forward do
         gen_events
@@ -640,8 +637,7 @@ defmodule AeMdw.Activities do
       txi_events =
         chunk
         |> Enum.sort()
-        |> Enum.with_index()
-        |> Enum.map(fn {{^txi, data}, local_idx} -> {{height, txi, local_idx}, data} end)
+        |> Enum.with_index(fn {^txi, data}, local_idx -> {{height, txi, local_idx}, data} end)
 
       if direction == :forward do
         txi_events
