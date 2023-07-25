@@ -69,10 +69,13 @@ defmodule AeMdwWeb.Aex141Controller do
   end
 
   @spec nft_owner(Conn.t(), map()) :: Conn.t()
-  def nft_owner(conn, %{"contract_id" => contract_id, "token_id" => token_id}) do
+  def nft_owner(%Conn{assigns: %{state: state}} = conn, %{
+        "contract_id" => contract_id,
+        "token_id" => token_id
+      }) do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
          {:int, {token_id, ""}} <- {:int, Integer.parse(token_id)},
-         {:ok, account_pk} <- Aex141.fetch_nft_owner(contract_pk, token_id) do
+         {:ok, account_pk} <- Aex141.fetch_nft_owner(state, contract_pk, token_id) do
       json(conn, %{data: encode_account(account_pk)})
     else
       :error ->

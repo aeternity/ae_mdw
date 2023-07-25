@@ -48,14 +48,21 @@ defmodule AeMdw.Aex141 do
   @template_tokens_table Model.NftTemplateToken
   @owners_table Model.NftTokenOwner
 
-  @spec fetch_nft_owner(pubkey(), token_id()) :: {:ok, pubkey()} | {:error, Error.t()}
-  def fetch_nft_owner(contract_pk, token_id) do
-    case AexnContracts.call_contract(contract_pk, "owner", [token_id]) do
-      {:ok, {:variant, [0, 1], 1, {{:address, account_pk}}}} ->
-        {:ok, account_pk}
+  @spec fetch_nft_owner(State.t(), pubkey(), token_id()) :: {:ok, pubkey()} | {:error, Error.t()}
+  def fetch_nft_owner(state, contract_pk, token_id) do
+    with true <- State.exists?(state, Model.AexnContract, {:aex141, contract_pk}),
+         {:ok, {:variant, [0, 1], 1, {{:address, account_pk}}}} <-
+           AexnContracts.call_contract(contract_pk, "owner", [token_id]) do
+      {:ok, account_pk}
+    else
+      false ->
+        {:error, ErrInput.NotAex141.exception(value: encode_contract(contract_pk))}
+
+      {:ok, _other} ->
+        {:error, ErrInput.ContractReturn.exception(value: encode_contract(contract_pk))}
 
       :error ->
-        {:error, ErrInput.ContractReturn.exception(value: encode_contract(contract_pk))}
+        {:error, ErrInput.ContractDryRun.exception(value: encode_contract(contract_pk))}
     end
   end
 
