@@ -607,9 +607,10 @@ defmodule AeMdw.Names do
   defp deserialize_name_cursor(nil), do: nil
 
   defp deserialize_name_cursor(cursor_bin) do
-    case Regex.run(~r/\A([\w\.]+\.chain)\z/, cursor_bin) do
-      [_match0, name] -> name
-      nil -> nil
+    if Regex.match?(~r/\A[-\w\.]+\z/, cursor_bin) do
+      cursor_bin
+    else
+      nil
     end
   end
 
