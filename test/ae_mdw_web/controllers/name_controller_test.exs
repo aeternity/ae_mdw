@@ -22,7 +22,7 @@ defmodule AeMdwWeb.NameControllerTest do
 
   setup _ do
     height_name =
-      for i <- 100..121, into: %{}, do: {i, "name#{Enum.random(1_000_000..9_999_999)}.chain"}
+      for i <- 100..121, into: %{}, do: {i, "name-#{Enum.random(1_000_000..9_999_999)}.chain"}
 
     {:ok, height_name: height_name}
   end
@@ -304,13 +304,26 @@ defmodule AeMdwWeb.NameControllerTest do
         {:aec_db, [], [get_header: fn ^key_hash -> :block end]},
         {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
       ] do
-        assert %{"data" => names} =
+        assert %{"data" => names, "next" => next_url} =
                  conn
                  |> with_store(store)
                  |> get("/v2/names", state: "active", by: by, direction: direction, limit: limit)
                  |> json_response(200)
 
+        plain_names = Enum.map(names, fn %{"name" => name} -> name end)
         assert ^limit = length(names)
+        assert ^plain_names = Enum.sort(plain_names)
+
+        assert %{"data" => names2} =
+                 conn
+                 |> with_store(store)
+                 |> get(next_url)
+                 |> json_response(200)
+
+        plain_names2 = Enum.map(names2, fn %{"name" => name} -> name end)
+        assert ^limit = length(names2)
+        assert ^plain_names2 = Enum.sort(plain_names2)
+        assert List.last(plain_names) <= Enum.at(plain_names2, 0)
       end
     end
 
