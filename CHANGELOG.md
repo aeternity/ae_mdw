@@ -1,5 +1,23 @@
 # Changelog
 
+### [1.55.2](https://www.github.com/aeternity/ae_mdw/compare/v1.55.1...v1.55.2) (2023-07-26)
+
+
+### Bug Fixes
+
+* allow using hyphen on name cursors ([#1476](https://www.github.com/aeternity/ae_mdw/issues/1476)) ([c6bcaeb](https://www.github.com/aeternity/ae_mdw/commit/c6bcaebb22a251ab4a5ff19551e55e39b67b8fa6)), closes [#1473](https://www.github.com/aeternity/ae_mdw/issues/1473)
+* rename AuctionBidBid to BidClaim ([#1474](https://www.github.com/aeternity/ae_mdw/issues/1474)) ([372c60d](https://www.github.com/aeternity/ae_mdw/commit/372c60d147caf983bc2e819785f171cc2958271d))
+
+
+### Refactorings
+
+* create map or list directly ([#1469](https://www.github.com/aeternity/ae_mdw/issues/1469)) ([750c266](https://www.github.com/aeternity/ae_mdw/commit/750c266dbbc42879acce03b9a2db0e292b2f9535))
+
+
+### Miscellaneous
+
+* allow nft owner call for hackaton contracts ([#1472](https://www.github.com/aeternity/ae_mdw/issues/1472)) ([9b6d56f](https://www.github.com/aeternity/ae_mdw/commit/9b6d56f1c42dd37e6351585d7c03227ad2aeb50d))
+
 ### [1.55.1](https://www.github.com/aeternity/ae_mdw/compare/v1.55.0...v1.55.1) (2023-07-24)
 
 
