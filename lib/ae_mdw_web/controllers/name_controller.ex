@@ -79,6 +79,16 @@ defmodule AeMdwWeb.NameController do
     Util.paginate(conn, paginated_auctions)
   end
 
+  @spec auction_claims(Conn.t(), map()) :: Conn.t()
+  def auction_claims(%Conn{assigns: assigns} = conn, %{"id" => name_id}) do
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
+
+    with {:ok, paginated_bids} <-
+           Names.fetch_auction_claims(state, name_id, pagination, scope, cursor) do
+      Util.paginate(conn, paginated_bids)
+    end
+  end
+
   @spec inactive_names(Conn.t(), map()) :: Conn.t()
   def inactive_names(%Conn{assigns: assigns} = conn, _params) do
     %{
