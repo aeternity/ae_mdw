@@ -130,7 +130,7 @@ defmodule AeMdw.Names do
             {plain_name, Model.NameClaim, active}
 
           Model.auction_bid(index: plain_name, expire_height: expire_height) ->
-            {plain_name, Model.AuctionBidBid, expire_height}
+            {plain_name, Model.AuctionBidClaim, expire_height}
         end
 
       {prev_cursor, claims, next_cursor} =
