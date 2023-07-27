@@ -24,7 +24,7 @@ defmodule AeMdw.Error do
   def to_string(Input.Expired, x), do: concat("expired", x)
   def to_string(Input.NotAex9, x), do: concat("not AEX9 contract", x)
   def to_string(Input.NotAex141, x), do: concat("not AEX141 contract", x)
-  def to_string(Input.ContractReturn, x), do: concat("invalid return of contract", x)
+  def to_string(Input.ContractReturn, x), do: concat("invalid contract return", x)
   def to_string(Input.ContractDryRun, x), do: concat("error calling contract", x)
   def to_string(Input.Aex9BalanceNotAvailable, x), do: concat("balance is not available", x)
   def to_string(Input.Base64, x), do: concat("invalid base64 encoding", x)

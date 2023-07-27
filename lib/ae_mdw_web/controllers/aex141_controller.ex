@@ -68,6 +68,24 @@ defmodule AeMdwWeb.Aex141Controller do
     end
   end
 
+  @spec nft_metadata(Conn.t(), map()) :: Conn.t()
+  def nft_metadata(%Conn{assigns: %{state: state}} = conn, %{
+        "contract_id" => contract_id,
+        "token_id" => token_id
+      }) do
+    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
+         {:int, {token_id, ""}} <- {:int, Integer.parse(token_id)},
+         {:ok, metadata} <- Aex141.fetch_nft_metadata(state, contract_pk, token_id) do
+      json(conn, %{data: metadata})
+    else
+      {:error, reason} ->
+        {:error, reason}
+
+      _token_not_found ->
+        {:error, ErrInput.NotFound.exception(value: token_id)}
+    end
+  end
+
   @spec nft_owner(Conn.t(), map()) :: Conn.t()
   def nft_owner(%Conn{assigns: %{state: state}} = conn, %{
         "contract_id" => contract_id,
