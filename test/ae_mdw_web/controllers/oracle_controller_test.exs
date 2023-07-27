@@ -436,17 +436,17 @@ defmodule AeMdwWeb.OracleControllerTest do
           Model.OracleQuery,
           Model.oracle_query(index: {oracle_pk, query_id1}, txi_idx: txi_idx1)
         )
-        |> Store.put(Model.Tx, Model.tx(index: 789, id: tx_hash1))
+        |> Store.put(Model.Tx, Model.tx(index: 789, block_index: {1, 2}, id: tx_hash1))
         |> Store.put(
           Model.OracleQuery,
           Model.oracle_query(index: {oracle_pk, query_id2}, txi_idx: txi_idx2)
         )
-        |> Store.put(Model.Tx, Model.tx(index: 791, id: tx_hash2))
+        |> Store.put(Model.Tx, Model.tx(index: 791, block_index: {2, 2}, id: tx_hash2))
         |> Store.put(
           Model.OracleQuery,
           Model.oracle_query(index: {oracle_pk, query_id3}, txi_idx: txi_idx3)
         )
-        |> Store.put(Model.Tx, Model.tx(index: 799, id: tx_hash3))
+        |> Store.put(Model.Tx, Model.tx(index: 799, block_index: {3, 2}, id: tx_hash3))
         |> Store.put(Model.OracleQuery, Model.oracle_query(index: {oracle_pk2, query_id4}))
 
       with_mocks [
@@ -645,7 +645,8 @@ defmodule AeMdwWeb.OracleControllerTest do
             response_txi_idx: txi_idx4
           )
         )
-        |> Store.put(Model.Tx, Model.tx(index: 789, id: tx_hash1))
+        |> Store.put(Model.Tx, Model.tx(index: 789, block_index: {1, 2}, id: tx_hash1))
+        |> Store.put(Model.Tx, Model.tx(index: 989, block_index: {2, 1}))
         |> Store.put(
           Model.OracleQuery,
           Model.oracle_query(
@@ -654,7 +655,8 @@ defmodule AeMdwWeb.OracleControllerTest do
             response_txi_idx: txi_idx5
           )
         )
-        |> Store.put(Model.Tx, Model.tx(index: 791, id: tx_hash2))
+        |> Store.put(Model.Tx, Model.tx(index: 791, block_index: {2, 2}, id: tx_hash2))
+        |> Store.put(Model.Tx, Model.tx(index: 991, block_index: {2, 3}))
         |> Store.put(
           Model.OracleQuery,
           Model.oracle_query(
@@ -663,7 +665,8 @@ defmodule AeMdwWeb.OracleControllerTest do
             response_txi_idx: txi_idx6
           )
         )
-        |> Store.put(Model.Tx, Model.tx(index: 799, id: tx_hash3))
+        |> Store.put(Model.Tx, Model.tx(index: 799, block_index: {2, 5}, id: tx_hash3))
+        |> Store.put(Model.Tx, Model.tx(index: 999, block_index: {3, 0}))
         |> Store.put(Model.OracleQuery, Model.oracle_query(index: {oracle_pk2, query_id4}))
         |> Store.put(
           Model.TargetKindIntTransferTx,
@@ -726,7 +729,9 @@ defmodule AeMdwWeb.OracleControllerTest do
                  "oracle_id" => ^encoded_oracle_pk,
                  "response" => "cmVzcG9uc2UtMQ",
                  "block_time" => 123,
+                 "height" => 2,
                  "query" => %{
+                   "height" => 1,
                    "oracle_id" => ^encoded_oracle_pk,
                    "query_id" => ^encoded_query_id1,
                    "nonce" => 1,
@@ -742,7 +747,9 @@ defmodule AeMdwWeb.OracleControllerTest do
                  "oracle_id" => ^encoded_oracle_pk,
                  "response" => "cmVzcG9uc2UtMg",
                  "block_time" => 123,
+                 "height" => 2,
                  "query" => %{
+                   "height" => 2,
                    "oracle_id" => ^encoded_oracle_pk,
                    "query_id" => ^encoded_query_id2,
                    "nonce" => 2,
@@ -763,7 +770,9 @@ defmodule AeMdwWeb.OracleControllerTest do
         assert %{
                  "oracle_id" => ^encoded_oracle_pk,
                  "response" => "AAIC",
+                 "height" => 3,
                  "query" => %{
+                   "height" => 2,
                    "oracle_id" => ^encoded_oracle_pk,
                    "query_id" => ^encoded_query_id3,
                    "nonce" => 3,

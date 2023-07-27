@@ -167,8 +167,10 @@ defmodule AeMdw.Oracles do
   end
 
   defp render_query(state, {oracle_pk, query_id}, include_response?) do
-    Model.oracle_query(txi_idx: txi_idx, response_txi_idx: response_txi_idx) =
+    Model.oracle_query(txi_idx: {txi, _idx} = txi_idx, response_txi_idx: response_txi_idx) =
       State.fetch!(state, Model.OracleQuery, {oracle_pk, query_id})
+
+    Model.tx(block_index: {height, _mbi}) = State.fetch!(state, Model.Tx, txi)
 
     {query_tx, :oracle_query_tx, tx_hash, tx_type, block_hash} =
       DBUtil.read_node_tx_details(state, txi_idx)
@@ -177,6 +179,7 @@ defmodule AeMdw.Oracles do
 
     query =
       %{
+        height: height,
         block_hash: Enc.encode(:micro_block_hash, block_hash),
         block_time: block_time,
         source_tx_hash: Enc.encode(:tx_hash, tx_hash),
@@ -196,15 +199,18 @@ defmodule AeMdw.Oracles do
   defp render_response(state, {_height, txi_idx, _ref_txi_idx}),
     do: render_response(state, txi_idx)
 
-  defp render_response(state, txi_idx) do
+  defp render_response(state, {txi, _idx} = txi_idx) do
     {response_tx, :oracle_response_tx, tx_hash, tx_type, block_hash} =
       DBUtil.read_node_tx_details(state, txi_idx)
+
+    Model.tx(block_index: {height, _mbi}) = State.fetch!(state, Model.Tx, txi)
 
     query_id = :aeo_response_tx.query_id(response_tx)
     oracle_pk = :aeo_response_tx.oracle_pubkey(response_tx)
     block_time = Db.get_block_time(block_hash)
 
     %{
+      height: height,
       block_hash: Enc.encode(:micro_block_hash, block_hash),
       block_time: block_time,
       source_tx_hash: Enc.encode(:tx_hash, tx_hash),

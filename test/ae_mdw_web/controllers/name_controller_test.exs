@@ -2718,8 +2718,8 @@ defmodule AeMdwWeb.NameControllerTest do
         |> Store.put(Model.Tx, Model.tx(index: 567, block_index: {123, 0}, id: <<0::256>>))
         |> Store.put(Model.Tx, Model.tx(index: 678, block_index: {123, 0}, id: <<1::256>>))
         |> Store.put(Model.Tx, Model.tx(index: 788, block_index: {124, 1}, id: <<2::256>>))
-        |> Store.put(Model.Block, Model.block(index: {123, 0}, hash: "mb1-hash"))
-        |> Store.put(Model.Block, Model.block(index: {124, 1}, hash: "mb2-hash"))
+        |> Store.put(Model.Block, Model.block(index: {123, 0}, hash: <<0::256>>))
+        |> Store.put(Model.Block, Model.block(index: {124, 1}, hash: <<1::256>>))
         |> Store.put(
           Model.AuctionBidClaim,
           Model.auction_bid_claim(index: {plain_name, expire_height, claim_txi_idx1})
