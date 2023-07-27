@@ -732,8 +732,14 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.AuctionBidClaim,
             Model.auction_bid_claim(index: {plain_name, 0, {2, -1}})
           )
-          |> Store.put(Model.Tx, Model.tx(index: 1, id: :aetx_sign.hash(tx1)))
-          |> Store.put(Model.Tx, Model.tx(index: 2, id: :aetx_sign.hash(tx2)))
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 1, block_index: {0, 1}, id: :aetx_sign.hash(tx1))
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 2, block_index: {1, 0}, id: :aetx_sign.hash(tx2))
+          )
 
         {:id, :account, bob_pk} = accounts[:bob]
         bob_id = encode(:account_pubkey, bob_pk)
@@ -803,8 +809,14 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.AuctionBidClaim,
             Model.auction_bid_claim(index: {plain_name, 0, {1, -1}})
           )
-          |> Store.put(Model.Tx, Model.tx(index: 1, id: :aetx_sign.hash(tx1)))
-          |> Store.put(Model.Tx, Model.tx(index: 2, id: :aetx_sign.hash(tx2)))
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 1, id: :aetx_sign.hash(tx1), block_index: {0, 1})
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 2, id: :aetx_sign.hash(tx2), block_index: {1, 0})
+          )
           |> Store.put(Model.Block, Model.block(index: {3, -1}, hash: key_hash))
 
         {:id, :account, alice_pk} = accounts[:alice]
