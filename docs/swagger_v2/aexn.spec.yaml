@@ -574,6 +574,13 @@ paths:
           schema:
             type: string
             x-example: ak_vTGaRAuGXPLhvNexrbzmHJ2MDv9JS2Ky7u2v469o6weaZ2Cgw
+        - description: Collection contract pubkey
+          in: query
+          name: contract
+          required: false
+          schema:
+            type: string
+            x-example: ct_2oq4kSd4j1VkkbupueXLdHwYEJdY8Ntzvp1FFkMB1gYyXkYPcV
       responses:
         '200':
           description: Returns paginated AEX-141 tokens
