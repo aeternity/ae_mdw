@@ -375,6 +375,85 @@ defmodule AeMdwWeb.Aex141ControllerTest do
     end
   end
 
+  describe "nft_metadata" do
+    test "returns the url of a nft metadata", %{conn: conn} do
+      contract_id = encode_contract(<<1_411::256>>)
+      url = "ipfs://1234567890/1"
+
+      with_mocks [
+        {AexnContracts, [],
+         [
+           call_contract: fn _pk, "metadata", [_token_id] ->
+             metadata = {:variant, [1, 1], 0, {url}}
+             {:ok, {:variant, [0, 1], 1, {metadata}}}
+           end
+         ]}
+      ] do
+        assert %{"data" => %{"url" => ^url}} =
+                 conn |> get("/aex141/#{contract_id}/metadata/#{123}") |> json_response(200)
+      end
+    end
+
+    test "returns the metadata map of a nft", %{conn: conn} do
+      contract_id = encode_contract(<<1_411::256>>)
+      token_id = Enum.random(1000..9999)
+
+      map = %{
+        "description" => "Friendly Creature that enjoys living longer.",
+        "external_url" => "https://aeternitycreatures.io/3",
+        "image" => "https://storage.googleapis.com/aecreatures/media/3.png",
+        "name" => "Methuselah",
+        "attributes" => %{"age" => 969, "hair" => "white"}
+      }
+
+      with_mocks [
+        {AexnContracts, [:passthrough],
+         [
+           call_contract: fn _pk, "metadata", [^token_id] ->
+             metadata = {:variant, [1, 1], 1, {map}}
+             {:ok, {:variant, [0, 1], 1, {metadata}}}
+           end
+         ]}
+      ] do
+        assert %{"data" => %{"map" => ^map}} =
+                 conn |> get("/aex141/#{contract_id}/metadata/#{token_id}") |> json_response(200)
+      end
+    end
+
+    test "returns an error when not an aex141 contract", %{conn: conn} do
+      non_existent_id = "ct_y7gojSY8rXW6tztE9Ftqe3kmNrqEXsREiPwGCeG3MJL38jkFo"
+      error_msg = "not AEX141 contract: #{non_existent_id}"
+
+      assert %{"error" => ^error_msg} =
+               conn |> get("/aex141/#{non_existent_id}/metadata/#{123}") |> json_response(400)
+    end
+
+    test "returns an error when token doesn't exist", %{conn: conn} do
+      contract_id = encode_contract(<<1_411::256>>)
+      token_id = Enum.random(1000..9999)
+      error_msg = "invalid contract return: \"foo\""
+
+      with_mocks [
+        {AexnContracts, [:passthrough],
+         [
+           call_contract: fn _pk, "metadata", [^token_id] -> {:ok, "foo"} end
+         ]}
+      ] do
+        assert %{"error" => ^error_msg} =
+                 conn |> get("/aex141/#{contract_id}/metadata/#{token_id}") |> json_response(400)
+      end
+    end
+
+    test "when token is invalid, it returns an error", %{conn: conn} do
+      contract_id = "ct_y7gojSY8rXW6tztE9Ftqe3kmNrqEXsREiPwGCeG3MJL38jkFo"
+      token_id = "123abc"
+      error_msg = "not found: #{token_id}"
+
+      assert %{"error" => ^error_msg} =
+               conn |> get("/aex141/#{contract_id}/metadata/#{token_id}") |> json_response(404)
+    end
+  end
+
   describe "nft_owner" do
     test "returns the account that owns a nft", %{conn: conn} do
       contract_id = encode_contract(<<1_411::256>>)
@@ -406,13 +485,13 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
     test "returns an error when token doesn't exist", %{conn: conn} do
       contract_id = encode_contract(<<1_411::256>>)
-      error_msg = "invalid return of contract: #{contract_id}"
+      error_msg = "invalid contract return: \"foo\""
 
       with_mocks [
         {AexnContracts, [],
          [
            is_aex141?: fn pk -> pk == <<1_411::256>> end,
-           call_contract: fn _pk, "owner", [_token_id] -> {:ok, nil} end
+           call_contract: fn _pk, "owner", [_token_id] -> {:ok, "foo"} end
          ]}
       ] do
         assert %{"error" => ^error_msg} =
