@@ -433,9 +433,8 @@ defmodule AeMdw.Contract do
 
     if txs_taken != [] do
       header = :aec_blocks.to_header(micro_block)
-      {:ok, hash} = :aec_headers.hash_header(header)
       consensus = :aec_headers.consensus_module(header)
-      node = {:node, header, hash, :micro}
+      node = :aec_chain_state.wrap_block(micro_block)
       time = :aec_block_insertion.node_time(node)
       prev_hash = :aec_block_insertion.node_prev_hash(node)
       prev_key_hash = :aec_block_insertion.node_prev_key_hash(node)

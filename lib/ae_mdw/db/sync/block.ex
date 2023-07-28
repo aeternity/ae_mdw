@@ -95,7 +95,7 @@ defmodule AeMdw.Db.Sync.Block do
       block_rewards_mutation =
         if height >= AE.min_block_reward_height() and
              :aec_consensus_hc != :aec_consensus.get_genesis_consensus_module() do
-          IntTransfer.block_rewards_mutations(height, kb_header, kb_hash)
+          IntTransfer.block_rewards_mutations(key_block)
         end
 
       gen_mutations = [

@@ -10,10 +10,11 @@ if Enum.all?(~w(integration iteration devmode)a, &(&1 not in included_tests)) do
   :ets.insert(:counters, {:kbi, 0})
 
   # reset database
-  alias AeMdw.Db.RocksDb
+  :ok = AeMdw.Db.RocksDb.close()
+  :ok = AeMdw.Db.RocksDb.open(true)
 
-  :ok = RocksDb.close()
-  :ok = RocksDb.open(true)
+  # init for tests without sync
+  :persistent_term.put({:aec_db, :backend_module}, "rocksdb")
 end
 
 ExUnit.start()

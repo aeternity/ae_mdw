@@ -27,21 +27,24 @@ defmodule AeMdw.Db.IntTransfer do
   @typep optional_txi_idx() :: Txs.optional_txi_idx()
   @typep height_optional_txi_idx() :: {Blocks.height(), optional_txi_idx()}
   @typep kind_suffix() :: :lock_name | :spend_name | :refund_name | :earn_oracle | :refund_oracle
+  @opaque key_block() :: tuple()
 
   @fee_kinds [:lock_name, :spend_name, :refund_name, :earn_oracle, :refund_oracle]
 
   @reward_block_kind "reward_block"
   @reward_dev_kind "reward_dev"
 
-  @spec block_rewards_mutations(Blocks.height(), Blocks.key_header(), Blocks.block_hash()) :: [
+  @spec block_rewards_mutations(key_block()) :: [
           Mutation.t()
         ]
-  def block_rewards_mutations(height, key_header, key_hash) do
+  def block_rewards_mutations(key_block) do
+    height = :aec_blocks.height(key_block)
     delay = :aec_governance.beneficiary_reward_delay()
     dev_benefs = Enum.map(:aec_dev_reward.beneficiaries(), &elem(&1, 0))
 
     {devs_rewards, miners_rewards} =
-      {:node, key_header, key_hash, :key}
+      key_block
+      |> :aec_chain_state.wrap_block()
       |> :aec_chain_state.grant_fees(:aec_trees.new(), delay, false, nil)
       |> :aec_trees.accounts()
       |> :aeu_mtrees.to_list()

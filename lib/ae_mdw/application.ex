@@ -69,7 +69,7 @@ defmodule AeMdw.Application do
 
   defp init(:meta) do
     {:ok, chain_state_code} = Extract.AbsCode.module(:aec_chain_state)
-    [:header, :hash, :type] = NodeHelper.record_keys(chain_state_code, :node)
+    [:header, :hash, :type | _txs] = NodeHelper.record_keys(chain_state_code, :node)
 
     {:ok, aetx_code} = Extract.AbsCode.module(:aetx)
     {:ok, aeser_code} = Extract.AbsCode.module(:aeser_api_encoder)
