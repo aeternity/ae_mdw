@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.56.0](https://www.github.com/aeternity/ae_mdw/compare/v1.55.1...v1.56.0) (2023-07-28)
+
+
+### Features
+
+* add auction-only claims v3 endpoint ([#1475](https://www.github.com/aeternity/ae_mdw/issues/1475)) ([5f91ff6](https://www.github.com/aeternity/ae_mdw/commit/5f91ff6daaf6181409f96c5c2d2dac17a31f3e61))
+* detect AEX-n meta info ([#1482](https://www.github.com/aeternity/ae_mdw/issues/1482)) ([33579e4](https://www.github.com/aeternity/ae_mdw/commit/33579e427273e9c95a3ed4d9ac7cd46f6d9a7871))
+* filter owned nfts by collection ([#1481](https://www.github.com/aeternity/ae_mdw/issues/1481)) ([721fbd2](https://www.github.com/aeternity/ae_mdw/commit/721fbd23d701505f115a53173466fb08e71f3995))
+* nft metadata endpoint ([#1478](https://www.github.com/aeternity/ae_mdw/issues/1478)) ([dbe6d0c](https://www.github.com/aeternity/ae_mdw/commit/dbe6d0c2f36abd925452a3f9e58e0acfac7b4657))
+
+
+### Bug Fixes
+
+* allow using hyphen on name cursors ([#1476](https://www.github.com/aeternity/ae_mdw/issues/1476)) ([c6bcaeb](https://www.github.com/aeternity/ae_mdw/commit/c6bcaebb22a251ab4a5ff19551e55e39b67b8fa6)), closes [#1473](https://www.github.com/aeternity/ae_mdw/issues/1473)
+* rename AuctionBidBid to BidClaim ([#1474](https://www.github.com/aeternity/ae_mdw/issues/1474)) ([372c60d](https://www.github.com/aeternity/ae_mdw/commit/372c60d147caf983bc2e819785f171cc2958271d))
+
+
+### Refactorings
+
+* create map or list directly ([#1469](https://www.github.com/aeternity/ae_mdw/issues/1469)) ([750c266](https://www.github.com/aeternity/ae_mdw/commit/750c266dbbc42879acce03b9a2db0e292b2f9535))
+
+
+### Miscellaneous
+
+* allow nft owner call for hackaton contracts ([#1472](https://www.github.com/aeternity/ae_mdw/issues/1472)) ([9b6d56f](https://www.github.com/aeternity/ae_mdw/commit/9b6d56f1c42dd37e6351585d7c03227ad2aeb50d))
+
 ### [1.55.1](https://www.github.com/aeternity/ae_mdw/compare/v1.55.0...v1.55.1) (2023-07-24)
 
 
