@@ -126,7 +126,8 @@ defmodule AeMdwWeb.Router do
       get "/minerstats", StatsController, :miners
       get "/wealth", WealthController, :wealth
 
-      get "/api", UtilController, :static_file, assigns: %{filepath: "static/swagger/swagger_v2"}
+      get "/api", UtilController, :static_file,
+        assigns: %{filepath: "static/swagger/swagger_v2.json"}
     end
 
     Enum.each(@shared_routes, fn {path, controller, fun} ->
@@ -214,7 +215,7 @@ defmodule AeMdwWeb.Router do
       end
     end
 
-    get "/api", UtilController, :static_file, assigns: %{filepath: "static/swagger/swagger_v1"}
+    get "/api", UtilController, :static_file, assigns: %{filepath: "static/swagger/swagger.json"}
 
     match :*, "/*path", UtilController, :no_route
   end
