@@ -71,13 +71,14 @@ defmodule AeMdw.Aex141 do
     end
   end
 
-  @spec fetch_owned_nfts(State.t(), pubkey(), cursor(), pagination()) ::
+  @spec fetch_owned_nfts(State.t(), pubkey(), pubkey(), cursor(), pagination()) ::
           {:ok, {page_cursor(), [nft()], page_cursor()}} | {:error, Error.t()}
-  def fetch_owned_nfts(state, account_pk, cursor, pagination) do
-    with {:ok, cursor_key} <- deserialize_cursor(@ownership_table, cursor) do
+  def fetch_owned_nfts(state, account_pk, contract_pk, cursor, pagination) do
+    with {:ok, cursor_key} <- deserialize_cursor(@ownership_table, cursor),
+         cursor_key <- update_cursor(cursor_key, account_pk, contract_pk) do
       {prev_cursor_key, nfts, next_cursor_key} =
         state
-        |> build_streamer(@ownership_table, cursor_key, account_pk)
+        |> build_streamer(@ownership_table, cursor_key, account_pk, contract_pk)
         |> Collection.paginate(pagination)
 
       {:ok,
@@ -176,6 +177,16 @@ defmodule AeMdw.Aex141 do
   #
   # Private function
   #
+  defp build_streamer(state, Model.NftOwnership, cursor_key, account_pk, contract_pk) do
+    key_boundary =
+      {{account_pk, contract_pk || <<>>, 0},
+       {account_pk, contract_pk || Util.max_256bit_bin(), Util.max_int()}}
+
+    fn direction ->
+      Collection.stream(state, Model.NftOwnership, direction, key_boundary, cursor_key)
+    end
+  end
+
   defp build_streamer(state, Model.NftTemplateToken, cursor_key, {contract_pk, template_id}) do
     key_boundary = {{contract_pk, template_id, -1}, {contract_pk, template_id, nil}}
 
@@ -185,20 +196,7 @@ defmodule AeMdw.Aex141 do
   end
 
   defp build_streamer(state, table, cursor_key, pubkey) do
-    key_boundary =
-      case table do
-        Model.NftOwnership ->
-          {
-            {pubkey, <<>>, nil},
-            {pubkey, Util.max_256bit_bin(), Util.max_int()}
-          }
-
-        Model.NftTemplate ->
-          {{pubkey, Util.min_256bit_int()}, {pubkey, nil}}
-
-        Model.NftTokenOwner ->
-          {{pubkey, Util.min_256bit_int()}, {pubkey, nil}}
-      end
+    key_boundary = {{pubkey, Util.min_256bit_int()}, {pubkey, nil}}
 
     fn direction ->
       Collection.stream(state, table, direction, key_boundary, cursor_key)
@@ -282,6 +280,22 @@ defmodule AeMdw.Aex141 do
         {:error, ErrInput.ContractReturn.exception(value: inspect(mismatch))}
     end
   end
+
+  defp update_cursor(nil, _account_pk, _contract_pk), do: nil
+
+  defp update_cursor({account_pk, _contract_pk, _token} = cursor_key, account_pk, nil),
+    do: cursor_key
+
+  defp update_cursor({account_pk, contract_pk, _token} = cursor_key, account_pk, contract_pk),
+    do: cursor_key
+
+  defp update_cursor({account_pk, _contract_pk1, _token}, account_pk, contract_pk2),
+    do: {account_pk, contract_pk2, 0}
+
+  defp update_cursor({_account_pk1, _contract_pk, _token}, account_pk2, contract_pk),
+    do: {account_pk2, contract_pk || <<>>, 0}
+
+  defp update_cursor(cursor_key, _account_pk, _contract_pk), do: cursor_key
 
   defp render_owned_nfs(nfts) do
     Enum.map(nfts, fn {owner_pk, contract_pk, token_id} ->

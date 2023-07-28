@@ -20,6 +20,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
   @owner_pk1 :crypto.strong_rand_bytes(32)
   @owner_pk2 :crypto.strong_rand_bytes(32)
+  @contract_owner_pk1 <<1_413::256>>
   @default_limit 10
 
   setup_all _context do
@@ -53,7 +54,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
         |> Store.put(Model.NftTokenOwner, m_token_owner)
       end)
 
-    contract_pk = <<1_413::256>>
+    contract_pk = @contract_owner_pk1
 
     store =
       Enum.reduce(1_413_001..1_413_040, store, fn j, store ->
@@ -94,7 +95,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
           |> Store.put(Model.Tx, Model.tx(index: txi + 100, id: <<txi + 100::256>>))
           |> Store.put(Model.Tx, Model.tx(index: txi + 200, id: <<txi + 200::256>>))
 
-        if token_id != 1_413_010 do
+        if token_id != 10 do
           store
           |> Store.put(Model.NftOwnership, m_ownership)
           |> Store.put(Model.NftOwnerToken, m_owner_token)
@@ -528,14 +529,15 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       assert @default_limit = length(nfts)
       assert ^nfts = Enum.sort(nfts, :desc)
 
-      assert Enum.any?(nfts, fn %{"owner_id" => owner_id} -> owner_id == account_id end)
+      assert Enum.all?(nfts, &(&1["owner_id"] == account_id))
 
       assert %{"data" => next_nfts, "prev" => prev_nfts} = conn |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_nfts)
       assert ^next_nfts = Enum.sort(next_nfts, :desc)
 
-      assert Enum.any?(next_nfts, fn %{"owner_id" => owner_id} -> owner_id == account_id end)
+      refute Enum.any?(nfts, &(&1["token_id"] == 10))
+      assert Enum.all?(next_nfts, &(&1["owner_id"] == account_id))
 
       assert %{"data" => ^nfts} = conn |> get(prev_nfts) |> json_response(200)
     end
@@ -551,24 +553,83 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       assert @default_limit = length(nfts)
       assert ^nfts = Enum.sort(nfts)
 
-      contract_ids = [encode_contract(<<1_412::256>>), encode_contract(<<1_413::256>>)]
+      refute Enum.any?(nfts, &(&1["token_id"] == 10))
+      assert Enum.all?(nfts, &(&1["owner_id"] == account_id))
 
-      assert Enum.any?(nfts, fn %{"owner_id" => owner_id, "contract_id" => ct_id} ->
-               owner_id == account_id and ct_id in contract_ids
-             end)
-
-      refute Enum.any?(nfts, fn %{"token_id" => token_id} -> token_id == 1_413_010 end)
+      assert Enum.all?(
+               [encode_contract(<<1_412::256>>), encode_contract(<<1_413::256>>)],
+               fn ct_id -> Enum.any?(nfts, &(&1["contract_id"] == ct_id)) end
+             )
 
       assert %{"data" => next_nfts, "prev" => prev_nfts} = conn |> get(next) |> json_response(200)
 
       assert @default_limit = length(next_nfts)
       assert ^next_nfts = Enum.sort(next_nfts)
 
-      assert Enum.any?(next_nfts, fn %{"owner_id" => owner_id, "contract_id" => ct_id} ->
-               owner_id == account_id and ct_id in contract_ids
+      assert Enum.all?(next_nfts, &(&1["owner_id"] == account_id))
+
+      assert %{"data" => ^nfts} = conn |> get(prev_nfts) |> json_response(200)
+    end
+
+    test "returns a backward list of nfts owned by an account on a collection", %{conn: conn} do
+      account_id = encode_account(@owner_pk1)
+      contract_id = encode_contract(@contract_owner_pk1)
+
+      assert %{"data" => nfts, "next" => next} =
+               conn
+               |> get("/aex141/owned-nfts/#{account_id}", contract: contract_id)
+               |> json_response(200)
+
+      assert @default_limit = length(nfts)
+      assert ^nfts = Enum.sort(nfts, :desc)
+
+      assert Enum.all?(nfts, fn %{"owner_id" => owner_id, "contract_id" => ^contract_id} ->
+               owner_id == account_id
              end)
 
-      refute Enum.any?(nfts, fn %{"token_id" => token_id} -> token_id == 1_413_010 end)
+      assert %{"data" => next_nfts, "prev" => prev_nfts} = conn |> get(next) |> json_response(200)
+
+      assert length(next_nfts) == @default_limit - 1
+      assert ^next_nfts = Enum.sort(next_nfts, :desc)
+
+      assert Enum.all?(next_nfts, fn %{"owner_id" => owner_id, "contract_id" => ^contract_id} ->
+               owner_id == account_id
+             end)
+
+      assert %{"data" => ^nfts} = conn |> get(prev_nfts) |> json_response(200)
+    end
+
+    test "returns a forward list of collection nfts owned by an account on a collection", %{
+      conn: conn
+    } do
+      account_id = encode_account(@owner_pk1)
+      contract_id = encode_contract(@contract_owner_pk1)
+
+      assert %{"data" => nfts, "next" => next} =
+               conn
+               |> get("/aex141/owned-nfts/#{account_id}",
+                 direction: :forward,
+                 contract: contract_id
+               )
+               |> json_response(200)
+
+      assert @default_limit = length(nfts)
+      assert ^nfts = Enum.sort(nfts)
+
+      refute Enum.any?(nfts, &(&1["token_id"] == 10))
+      assert Enum.all?(nfts, &(&1["owner_id"] == account_id and &1["contract_id"] == contract_id))
+
+      assert %{"data" => next_nfts, "prev" => prev_nfts} = conn |> get(next) |> json_response(200)
+
+      assert length(next_nfts) == @default_limit - 1
+      assert ^next_nfts = Enum.sort(next_nfts)
+
+      assert Enum.all?(
+               next_nfts,
+               &(&1["owner_id"] == account_id and &1["contract_id"] == contract_id)
+             )
+
+      assert Enum.all?(next_nfts, &(&1["token_id"] > 20))
 
       assert %{"data" => ^nfts} = conn |> get(prev_nfts) |> json_response(200)
     end
@@ -610,7 +671,8 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                                   "token_id" => token_id
                                 } ->
                ct_id == contract_id and
-                 assert owner_id in owner_ids and token_id in 1..10
+                 assert owner_id in owner_ids and
+                          assert(token_id in 1..11)
              end)
 
       assert %{"data" => next_nfts, "prev" => prev_nfts} = conn |> get(next) |> json_response(200)
@@ -623,7 +685,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
                                        "owner_id" => owner_id,
                                        "token_id" => token_id
                                      } ->
-               ct_id == contract_id and owner_id in owner_ids and token_id in 11..20
+               ct_id == contract_id and owner_id in owner_ids and token_id in 12..21
              end)
 
       assert %{"data" => ^nfts} = conn |> get(prev_nfts) |> json_response(200)
