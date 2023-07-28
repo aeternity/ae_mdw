@@ -97,7 +97,7 @@ defmodule AeMdw.Db.Model do
   # txs block index :
   #     index = {kb_index (0..), mb_index}, tx_index = tx_index, hash = block (header) hash
   #     On keyblock boundary: mb_index = -1}
-  @block_defaults [index: {-1, -1}, tx_index: nil, hash: <<>>]
+  @block_defaults [index: nil, tx_index: nil, hash: nil]
   defrecord :block, @block_defaults
 
   @type block ::
@@ -109,7 +109,7 @@ defmodule AeMdw.Db.Model do
 
   # txs table :
   #     index = tx_index (0..), id = tx_id, block_index = {kbi, mbi}
-  @tx_defaults [index: -1, id: <<>>, block_index: {-1, -1}, time: -1]
+  @tx_defaults [index: nil, id: nil, block_index: nil, time: nil]
   defrecord :tx, @tx_defaults
 
   @type tx_index() :: txi()

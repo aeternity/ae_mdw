@@ -15,7 +15,7 @@ defmodule AeMdw.AuctionBids do
 
   require Model
 
-  @type cursor :: binary()
+  @type cursor :: binary() | nil
   # This needs to be an actual type like AeMdw.Db.Name.t()
   @type auction_bid() :: term()
 
@@ -51,8 +51,8 @@ defmodule AeMdw.AuctionBids do
     end
   end
 
-  @spec fetch_auctions(state(), pagination(), order_by(), cursor() | nil, opts()) ::
-          {cursor() | nil, [auction_bid()], cursor() | nil}
+  @spec fetch_auctions(state(), pagination(), order_by(), cursor(), opts()) ::
+          {cursor(), [auction_bid()], cursor()}
   def fetch_auctions(state, pagination, :name, cursor, opts) do
     {last_gen, last_micro_time} = DbUtil.last_gen_and_time(state)
     render_v3? = Keyword.get(opts, :render_v3?, false)

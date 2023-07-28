@@ -39,9 +39,9 @@ defmodule AeMdwWeb.TxControllerTest do
         store =
           store
           |> Store.put(Model.Type, Model.type(index: {:oracle_register_tx, 1}))
-          |> Store.put(Model.Tx, Model.tx(index: 1, id: tx_hash1))
+          |> Store.put(Model.Tx, Model.tx(index: 1, id: tx_hash1, block_index: {0, 0}))
           |> Store.put(Model.Type, Model.type(index: {:oracle_register_tx, 2}))
-          |> Store.put(Model.Tx, Model.tx(index: 2, id: tx_hash2))
+          |> Store.put(Model.Tx, Model.tx(index: 2, id: tx_hash2, block_index: {0, 0}))
           |> Store.put(Model.Type, Model.type(index: {:spend_tx, 3}))
 
         assert %{"data" => [tx1], "next" => next_url} =
@@ -95,13 +95,13 @@ defmodule AeMdwWeb.TxControllerTest do
 
         store =
           store
-          |> Store.put(Model.Tx, Model.tx(index: txi1, id: tx_hash1))
+          |> Store.put(Model.Tx, Model.tx(index: txi1, id: tx_hash1, block_index: {0, 0}))
           |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 1, alice_pk, txi1}))
           |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 3, oracle_pk, txi1}))
-          |> Store.put(Model.Tx, Model.tx(index: txi2, id: tx_hash2))
+          |> Store.put(Model.Tx, Model.tx(index: txi2, id: tx_hash2, block_index: {0, 0}))
           |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 1, alice_pk, txi2}))
           |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 3, oracle_pk, txi2}))
-          |> Store.put(Model.Tx, Model.tx(index: txi3, id: tx_hash3))
+          |> Store.put(Model.Tx, Model.tx(index: txi3, id: tx_hash3, block_index: {0, 0}))
           |> Store.put(Model.Field, Model.field(index: {:spend_tx, 1, alice_pk, txi3}))
 
         assert %{"data" => [tx1], "next" => next_url} =
@@ -158,7 +158,7 @@ defmodule AeMdwWeb.TxControllerTest do
         store =
           store
           |> Store.put(Model.Type, Model.type(index: {:oracle_register_tx, 1}))
-          |> Store.put(Model.Tx, Model.tx(index: 1, id: tx_hash1))
+          |> Store.put(Model.Tx, Model.tx(index: 1, id: tx_hash1, block_index: {0, 0}))
           |> Store.put(Model.Block, Model.block(index: {first_gen, -1}, tx_index: 1))
           |> Store.put(Model.Type, Model.type(index: {:oracle_register_tx, 2}))
           |> Store.put(Model.Type, Model.type(index: {:spend_tx, 3}))
@@ -208,11 +208,11 @@ defmodule AeMdwWeb.TxControllerTest do
 
         store =
           store
-          |> Store.put(Model.Tx, Model.tx(index: txi1, id: tx_hash1))
+          |> Store.put(Model.Tx, Model.tx(index: txi1, id: tx_hash1, block_index: {0, 0}))
           |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 1, alice_pk, txi1}))
-          |> Store.put(Model.Tx, Model.tx(index: txi2, id: tx_hash2))
+          |> Store.put(Model.Tx, Model.tx(index: txi2, id: tx_hash2, block_index: {0, 0}))
           |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 1, alice_pk, txi2}))
-          |> Store.put(Model.Tx, Model.tx(index: txi3, id: tx_hash3))
+          |> Store.put(Model.Tx, Model.tx(index: txi3, id: tx_hash3, block_index: {0, 0}))
           |> Store.put(Model.Field, Model.field(index: {:spend_tx, 1, alice_pk, txi3}))
 
         assert %{"data" => [tx1], "next" => next_url} =
@@ -283,11 +283,11 @@ defmodule AeMdwWeb.TxControllerTest do
 
         store =
           store
-          |> Store.put(Model.Tx, Model.tx(index: txi1, id: tx_hash1))
+          |> Store.put(Model.Tx, Model.tx(index: txi1, id: tx_hash1, block_index: {0, 0}))
           |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 1, alice_pk, txi1}))
-          |> Store.put(Model.Tx, Model.tx(index: txi2, id: tx_hash2))
+          |> Store.put(Model.Tx, Model.tx(index: txi2, id: tx_hash2, block_index: {0, 0}))
           |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 1, alice_pk, txi2}))
-          |> Store.put(Model.Tx, Model.tx(index: txi3, id: tx_hash3))
+          |> Store.put(Model.Tx, Model.tx(index: txi3, id: tx_hash3, block_index: {0, 0}))
           |> Store.put(Model.Field, Model.field(index: {:spend_tx, 1, alice_pk, txi3}))
           |> Store.put(Model.Field, Model.field(index: {:spend_tx, 2, bob_pk, txi3}))
 
@@ -339,12 +339,12 @@ defmodule AeMdwWeb.TxControllerTest do
 
         store =
           store
-          |> Store.put(Model.Tx, Model.tx(index: txi1, id: tx_hash1))
+          |> Store.put(Model.Tx, Model.tx(index: txi1, id: tx_hash1, block_index: {0, 0}))
           |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 1, alice_pk, txi1}))
-          |> Store.put(Model.Tx, Model.tx(index: txi2, id: tx_hash2))
+          |> Store.put(Model.Tx, Model.tx(index: txi2, id: tx_hash2, block_index: {0, 0}))
           |> Store.put(Model.Block, Model.block(index: {first_gen, -1}, tx_index: txi1))
           |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 1, alice_pk, txi2}))
-          |> Store.put(Model.Tx, Model.tx(index: txi3, id: tx_hash3))
+          |> Store.put(Model.Tx, Model.tx(index: txi3, id: tx_hash3, block_index: {0, 0}))
           |> Store.put(Model.Field, Model.field(index: {:spend_tx, 1, alice_pk, txi3}))
           |> Store.put(Model.Block, Model.block(index: {last_gen + 1, -1}, tx_index: txi2))
 
@@ -371,7 +371,6 @@ defmodule AeMdwWeb.TxControllerTest do
     end
 
     test "it filters by field", %{conn: conn, store: store} do
-      TODO
       oracle_pk = TS.address(1)
       oracle_id = :aeser_id.create(:oracle, oracle_pk)
       txi1 = 123
@@ -397,12 +396,12 @@ defmodule AeMdwWeb.TxControllerTest do
 
         store =
           store
-          |> Store.put(Model.Tx, Model.tx(index: txi1, id: tx_hash1))
+          |> Store.put(Model.Tx, Model.tx(index: txi1, id: tx_hash1, block_index: {0, 0}))
           |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 1, alice_pk, txi1}))
-          |> Store.put(Model.Tx, Model.tx(index: txi2, id: tx_hash2))
+          |> Store.put(Model.Tx, Model.tx(index: txi2, id: tx_hash2, block_index: {0, 0}))
           |> Store.put(Model.Block, Model.block(index: {first_gen, -1}, tx_index: txi1))
           |> Store.put(Model.Field, Model.field(index: {:oracle_query_tx, 1, alice_pk, txi2}))
-          |> Store.put(Model.Tx, Model.tx(index: txi3, id: tx_hash3))
+          |> Store.put(Model.Tx, Model.tx(index: txi3, id: tx_hash3, block_index: {0, 0}))
           |> Store.put(Model.Field, Model.field(index: {:spend_tx, 1, alice_pk, txi3}))
           |> Store.put(Model.Block, Model.block(index: {last_gen + 1, -1}, tx_index: txi2))
           |> Store.put(Model.IdCount, Model.id_count(index: {:spend_tx, 1, alice_pk}, count: 1))

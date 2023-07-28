@@ -148,6 +148,32 @@ defmodule AeMdw.Names do
     end
   end
 
+  @spec fetch_auction_claims(state(), binary(), pagination(), range(), cursor() | nil) ::
+          {:ok, {page_cursor(), [claim()], page_cursor()}} | {:error, Error.t()}
+  def fetch_auction_claims(state, plain_name_or_hash, pagination, scope, cursor) do
+    case locate_name_or_auction(state, plain_name_or_hash) do
+      {:ok, Model.auction_bid(index: plain_name, expire_height: expire_height)} ->
+        {prev_cursor, claims, next_cursor} =
+          paginate_nested_resource(
+            state,
+            Model.AuctionBidClaim,
+            plain_name,
+            expire_height,
+            scope,
+            cursor,
+            pagination
+          )
+
+        {:ok, {prev_cursor, Enum.map(claims, &render_claim(state, &1)), next_cursor}}
+
+      {:error, reason} ->
+        {:error, reason}
+
+      {:ok, Model.name()} ->
+        {:error, ErrInput.NotFound.exception(value: plain_name_or_hash)}
+    end
+  end
+
   @spec fetch_name_updates(state(), binary(), pagination(), range(), cursor()) ::
           {:ok, {page_cursor(), [update()], page_cursor()}} | {:error, Error.t()}
   def fetch_name_updates(state, plain_name_or_hash, pagination, scope, cursor) do

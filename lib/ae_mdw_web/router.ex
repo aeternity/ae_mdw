@@ -49,7 +49,7 @@ defmodule AeMdwWeb.Router do
     scope "/v3" do
       get "/names", NameController, :names
       get "/names/auctions", NameController, :auctions
-      get "/names/:name/bids", NameController, :bids
+      get "/names/auctions/:id/claims", NameController, :auction_claims
     end
 
     scope "/v2" do

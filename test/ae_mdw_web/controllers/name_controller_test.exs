@@ -745,8 +745,14 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.AuctionBidClaim,
             Model.auction_bid_claim(index: {plain_name, 0, {2, -1}})
           )
-          |> Store.put(Model.Tx, Model.tx(index: 1, id: :aetx_sign.hash(tx1)))
-          |> Store.put(Model.Tx, Model.tx(index: 2, id: :aetx_sign.hash(tx2)))
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 1, block_index: {0, 1}, id: :aetx_sign.hash(tx1))
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 2, block_index: {1, 0}, id: :aetx_sign.hash(tx2))
+          )
 
         {:id, :account, bob_pk} = accounts[:bob]
         bob_id = encode(:account_pubkey, bob_pk)
@@ -816,8 +822,14 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.AuctionBidClaim,
             Model.auction_bid_claim(index: {plain_name, 0, {1, -1}})
           )
-          |> Store.put(Model.Tx, Model.tx(index: 1, id: :aetx_sign.hash(tx1)))
-          |> Store.put(Model.Tx, Model.tx(index: 2, id: :aetx_sign.hash(tx2)))
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 1, id: :aetx_sign.hash(tx1), block_index: {0, 1})
+          )
+          |> Store.put(
+            Model.Tx,
+            Model.tx(index: 2, id: :aetx_sign.hash(tx2), block_index: {1, 0})
+          )
           |> Store.put(Model.Block, Model.block(index: {3, -1}, hash: key_hash))
 
         {:id, :account, alice_pk} = accounts[:alice]
@@ -2706,6 +2718,119 @@ defmodule AeMdwWeb.NameControllerTest do
                |> with_store(store)
                |> get("/v2/names/#{non_existent_name}/updates")
                |> json_response(404)
+    end
+  end
+
+  describe "bids" do
+    test "it returns all of the auction claims in forward order", %{conn: conn, store: store} do
+      account_pk = TS.address(0)
+      account_id = :aeser_id.create(:account, account_pk)
+      plain_name = "asd.chain"
+      expire_height = 1000
+      claim_txi_idx1 = {567, -1}
+      claim_txi_idx2 = {678, -1}
+      claim_txi_idx3 = {788, -1}
+
+      auction_bid =
+        Model.auction_bid(
+          index: plain_name,
+          expire_height: expire_height
+        )
+
+      store =
+        store
+        |> Store.put(Model.AuctionBid, auction_bid)
+        |> Store.put(Model.Tx, Model.tx(index: 567, block_index: {123, 0}, id: <<0::256>>))
+        |> Store.put(Model.Tx, Model.tx(index: 678, block_index: {123, 0}, id: <<1::256>>))
+        |> Store.put(Model.Tx, Model.tx(index: 788, block_index: {124, 1}, id: <<2::256>>))
+        |> Store.put(Model.Block, Model.block(index: {123, 0}, hash: <<0::256>>))
+        |> Store.put(Model.Block, Model.block(index: {124, 1}, hash: <<1::256>>))
+        |> Store.put(
+          Model.AuctionBidClaim,
+          Model.auction_bid_claim(index: {plain_name, expire_height, claim_txi_idx1})
+        )
+        |> Store.put(
+          Model.AuctionBidClaim,
+          Model.auction_bid_claim(index: {plain_name, expire_height, claim_txi_idx2})
+        )
+        |> Store.put(
+          Model.AuctionBidClaim,
+          Model.auction_bid_claim(index: {plain_name, expire_height, claim_txi_idx3})
+        )
+
+      conn = with_store(conn, store)
+
+      {:ok, aetx1} =
+        :aens_claim_tx.new(%{
+          account_id: account_id,
+          nonce: 111,
+          name: plain_name,
+          name_salt: 1_111,
+          name_fee: 11_111,
+          fee: 111_111,
+          ttl: 1_111_111
+        })
+
+      {:name_claim_tx, tx1} = :aetx.specialize_type(aetx1)
+
+      {:ok, aetx2} =
+        :aens_claim_tx.new(%{
+          account_id: account_id,
+          nonce: 222,
+          name: plain_name,
+          name_salt: 2_222,
+          name_fee: 22_222,
+          fee: 222_222,
+          ttl: 2_222_222
+        })
+
+      {:name_claim_tx, tx2} = :aetx.specialize_type(aetx2)
+
+      {:ok, aetx3} =
+        :aens_claim_tx.new(%{
+          account_id: account_id,
+          nonce: 333,
+          name: plain_name,
+          name_salt: 3_333,
+          name_fee: 33_333,
+          fee: 333_333,
+          ttl: 3_333_333
+        })
+
+      {:name_claim_tx, tx3} = :aetx.specialize_type(aetx3)
+
+      with_mocks [
+        {Db, [],
+         [
+           get_tx_data: fn
+             <<0::256>> ->
+               {"", :name_claim_tx, :aetx_sign.new(aetx1, []), tx1}
+
+             <<1::256>> ->
+               {"", :name_claim_tx, :aetx_sign.new(aetx2, []), tx2}
+
+             <<2::256>> ->
+               {"", :name_claim_tx, :aetx_sign.new(aetx3, []), tx3}
+           end
+         ]}
+      ] do
+        assert %{"data" => [claim1, claim2] = claims, "next" => next_url} =
+                 conn
+                 |> get("/v3/names/auctions/#{plain_name}/claims", limit: 2, direction: "forward")
+                 |> json_response(200)
+
+        refute is_nil(next_url)
+        assert %{"height" => 123, "tx" => %{"fee" => 111_111}} = claim1
+        assert %{"height" => 123, "tx" => %{"fee" => 222_222}} = claim2
+
+        assert %{"data" => [claim3], "prev" => prev_url} =
+                 conn |> get(next_url) |> json_response(200)
+
+        refute is_nil(prev_url)
+        assert %{"height" => 124, "tx" => %{"fee" => 333_333}} = claim3
+
+        assert %{"data" => ^claims} = conn |> get(prev_url) |> json_response(200)
+      end
     end
   end
 
