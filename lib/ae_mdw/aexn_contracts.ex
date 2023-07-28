@@ -143,20 +143,70 @@ defmodule AeMdw.AexnContracts do
     end
   end
 
-  defp decode_meta_info(:aex9, {_name, _symbol, _decimals} = meta_info), do: meta_info
+  defp decode_meta_info(:aex9, {name, symbol, decimals} = meta_info)
+       when name > symbol and is_integer(decimals),
+       do: meta_info
 
-  defp decode_meta_info(:aex141, {name, symbol, variant_url, variant_type}) do
-    url =
-      case variant_url do
-        {:variant, [0, 1], 1, {url}} -> url
-        {:variant, [0, 1], 1, url} -> url
-        _other -> nil
-      end
+  defp decode_meta_info(:aex9, {symbol, name, decimals}) when is_integer(decimals),
+    do: {name, symbol, decimals}
 
-    metadata_type = decode_metadata_type(variant_type)
+  defp decode_meta_info(:aex9, {name, decimals, symbol})
+       when name > symbol and is_integer(decimals),
+       do: {name, symbol, decimals}
 
-    {name, symbol, url, metadata_type}
-  end
+  defp decode_meta_info(:aex9, {symbol, decimals, name}) when is_integer(decimals),
+    do: {name, symbol, decimals}
+
+  defp decode_meta_info(:aex9, {decimals, name, symbol})
+       when name > symbol and is_integer(decimals),
+       do: {name, symbol, decimals}
+
+  defp decode_meta_info(:aex9, {decimals, symbol, name}) when is_integer(decimals),
+    do: {name, symbol, decimals}
+
+  defp decode_meta_info(:aex141, {name, symbol, variant1, variant2})
+       when name > symbol and is_tuple(variant1) and is_tuple(variant2),
+       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
+
+  defp decode_meta_info(:aex141, {name, variant1, symbol, variant2})
+       when name > symbol and is_tuple(variant1) and is_tuple(variant2),
+       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
+
+  defp decode_meta_info(:aex141, {name, variant1, variant2, symbol})
+       when name > symbol and is_tuple(variant1) and is_tuple(variant2),
+       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
+
+  defp decode_meta_info(:aex141, {variant1, name, variant2, symbol})
+       when name > symbol and is_tuple(variant1) and is_tuple(variant2),
+       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
+
+  defp decode_meta_info(:aex141, {variant1, variant2, name, symbol})
+       when name > symbol and is_tuple(variant1) and is_tuple(variant2),
+       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
+
+  defp decode_meta_info(:aex141, {symbol, name, variant1, variant2})
+       when is_tuple(variant1) and is_tuple(variant2),
+       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
+
+  defp decode_meta_info(:aex141, {symbol, variant1, name, variant2})
+       when is_tuple(variant1) and is_tuple(variant2),
+       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
+
+  defp decode_meta_info(:aex141, {symbol, variant1, variant2, name})
+       when is_tuple(variant1) and is_tuple(variant2),
+       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
+
+  defp decode_meta_info(:aex141, {variant1, symbol, name, variant2})
+       when is_tuple(variant1) and is_tuple(variant2),
+       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
+
+  defp decode_meta_info(:aex141, {variant1, symbol, variant2, name})
+       when is_tuple(variant1) and is_tuple(variant2),
+       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
+
+  defp decode_meta_info(:aex141, {variant1, variant2, symbol, name})
+       when is_tuple(variant1) and is_tuple(variant2),
+       do: decode_aex141_meta_info(name, symbol, variant1, variant2)
 
   defp decode_meta_info(aexn_type, _unknown), do: format_error_meta_info(aexn_type)
 
@@ -170,6 +220,29 @@ defmodule AeMdw.AexnContracts do
       {:variant, [0, 0, 0], 1, {}} -> :object_id
       {:variant, [0, 0, 0], 2, {}} -> :map
       _other -> :unknown
+    end
+  end
+
+  defp decode_aex141_meta_info(name, symbol, variant1, variant2) do
+    {variant_url, variant_type} = get_aex141_variants(variant1, variant2)
+
+    url =
+      case variant_url do
+        {:variant, [0, 1], 1, {url}} -> url
+        {:variant, [0, 1], 1, url} -> url
+        _other -> nil
+      end
+
+    metadata_type = decode_metadata_type(variant_type)
+
+    {name, symbol, url, metadata_type}
+  end
+
+  defp get_aex141_variants(variant1, variant2) do
+    if match?({:variant, [0, 1], _idx, _url}, variant1) do
+      {variant1, variant2}
+    else
+      {variant2, variant1}
     end
   end
 

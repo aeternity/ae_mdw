@@ -1,5 +1,5 @@
 defmodule AeMdw.AexnContractsTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case
 
   alias AeMdw.AexnContracts
 
@@ -10,7 +10,7 @@ defmodule AeMdw.AexnContractsTest do
                %{}}
 
   describe "call_meta_info/2" do
-    test "succeeds with aex9 meta_info" do
+    test "succeeds with regular aex9 meta_info" do
       contract_pk = :crypto.strong_rand_bytes(32)
 
       with_mocks [
@@ -23,6 +23,86 @@ defmodule AeMdw.AexnContractsTest do
          ]}
       ] do
         assert {:ok, {"name", "SYMBOL", 18}} = AexnContracts.call_meta_info(:aex9, contract_pk)
+      end
+    end
+
+    test "succeeds with rearranged aex9 meta_info 1" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+             meta_info_tuple = {"Abc", 18, "ABC"}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        assert {:ok, {"Abc", "ABC", 18}} = AexnContracts.call_meta_info(:aex9, contract_pk)
+      end
+    end
+
+    test "succeeds with rearranged aex9 meta_info 2" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+             meta_info_tuple = {"ABC", "Abc", 18}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        assert {:ok, {"Abc", "ABC", 18}} = AexnContracts.call_meta_info(:aex9, contract_pk)
+      end
+    end
+
+    test "succeeds with rearranged aex9 meta_info 3" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+             meta_info_tuple = {"ABC", 18, "Abc"}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        assert {:ok, {"Abc", "ABC", 18}} = AexnContracts.call_meta_info(:aex9, contract_pk)
+      end
+    end
+
+    test "succeeds with rearranged aex9 meta_info 4" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+             meta_info_tuple = {18, "Abc", "ABC"}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        assert {:ok, {"Abc", "ABC", 18}} = AexnContracts.call_meta_info(:aex9, contract_pk)
+      end
+    end
+
+    test "succeeds with rearranged aex9 meta_info 5" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+             meta_info_tuple = {18, "ABC", "Abc"}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        assert {:ok, {"Abc", "ABC", 18}} = AexnContracts.call_meta_info(:aex9, contract_pk)
       end
     end
 
@@ -46,7 +126,45 @@ defmodule AeMdw.AexnContractsTest do
       end
     end
 
-    test "succeeds with nft standard meta info" do
+    test "succeeds with nft standard meta info without base url" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+             variant_url = {:variant, [0, 1], 0, {}}
+             variant_type = {:variant, [0, 0, 0], 2, {}}
+             meta_info_tuple = {"name", "SYMBOL", variant_url, variant_type}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        assert {:ok, {"name", "SYMBOL", nil, :map}} =
+                 AexnContracts.call_meta_info(:aex141, contract_pk)
+      end
+    end
+
+    test "succeeds with nft standard meta info with base url" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+             variant_url = {:variant, [0, 1], 1, "http://baseurl"}
+             variant_type = {:variant, [0, 0, 0], 2, {}}
+             meta_info_tuple = {"name", "SYMBOL", variant_url, variant_type}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        assert {:ok, {"name", "SYMBOL", "http://baseurl", :map}} =
+                 AexnContracts.call_meta_info(:aex141, contract_pk)
+      end
+    end
+
+    test "succeeds with nft rearranged meta info 1" do
       contract_pk = :crypto.strong_rand_bytes(32)
 
       with_mocks [
@@ -55,7 +173,64 @@ defmodule AeMdw.AexnContractsTest do
            call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
              variant_url = {:variant, [0, 1], 0, ""}
              variant_type = {:variant, [0, 0, 0], 2, {}}
-             meta_info_tuple = {"name", "SYMBOL", variant_url, variant_type}
+             meta_info_tuple = {"name", variant_url, "SYMBOL", variant_type}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        assert {:ok, {"name", "SYMBOL", nil, :map}} =
+                 AexnContracts.call_meta_info(:aex141, contract_pk)
+      end
+    end
+
+    test "succeeds with nft rearranged meta info 2" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+             variant_url = {:variant, [0, 1], 0, ""}
+             variant_type = {:variant, [0, 0, 0], 2, {}}
+             meta_info_tuple = {"name", variant_url, variant_type, "SYMBOL"}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        assert {:ok, {"name", "SYMBOL", nil, :map}} =
+                 AexnContracts.call_meta_info(:aex141, contract_pk)
+      end
+    end
+
+    test "succeeds with nft rearranged meta info 3" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+             variant_url = {:variant, [0, 1], 0, ""}
+             variant_type = {:variant, [0, 0, 0], 2, {}}
+             meta_info_tuple = {"SYMBOL", "name", variant_url, variant_type}
+             {:ok, {:tuple, meta_info_tuple}}
+           end
+         ]}
+      ] do
+        assert {:ok, {"name", "SYMBOL", nil, :map}} =
+                 AexnContracts.call_meta_info(:aex141, contract_pk)
+      end
+    end
+
+    test "succeeds with nft rearranged meta info 4" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+
+      with_mocks [
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+             variant_url = {:variant, [0, 1], 0, ""}
+             variant_type = {:variant, [0, 0, 0], 2, {}}
+             meta_info_tuple = {"SYMBOL", variant_url, variant_type, "name"}
              {:ok, {:tuple, meta_info_tuple}}
            end
          ]}
