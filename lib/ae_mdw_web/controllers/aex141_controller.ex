@@ -124,10 +124,9 @@ defmodule AeMdwWeb.Aex141Controller do
   end
 
   defp validate_optional_pubkey(params, param_name) do
-    case params |> Map.get(param_name) |> Validate.id() do
-      {:ok, pubkey} -> {:ok, pubkey}
-      {:error, {AeMdw.Error.Input.Id, nil}} -> {:ok, nil}
-      {:error, reason} -> {:error, reason}
+    case Map.fetch(params, param_name) do
+      {:ok, id} -> Validate.id(id)
+      :error -> {:ok, nil}
     end
   end
 end
