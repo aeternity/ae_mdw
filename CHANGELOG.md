@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.56.1](https://www.github.com/aeternity/ae_mdw/compare/v1.56.0...v1.56.1) (2023-07-28)
+
+
+### Bug Fixes
+
+* handle empty stats ([#1484](https://www.github.com/aeternity/ae_mdw/issues/1484)) ([1a0e211](https://www.github.com/aeternity/ae_mdw/commit/1a0e2119fe9a91f9477c11efc2e14ea902942696))
+
 ## [1.56.0](https://www.github.com/aeternity/ae_mdw/compare/v1.55.1...v1.56.0) (2023-07-28)
 
 
