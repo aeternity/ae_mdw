@@ -8,6 +8,7 @@ defmodule AeMdw.Stats do
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.StatsMutation
+  alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Database
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
@@ -167,11 +168,11 @@ defmodule AeMdw.Stats do
 
   @spec fetch_delta_stat!(State.t(), height()) :: delta_stat()
   def fetch_delta_stat!(state, height),
-    do: render_delta_stat(State.fetch!(state, Model.DeltaStat, height))
+    do: render_delta_stat(state, State.fetch!(state, Model.DeltaStat, height))
 
   @spec fetch_total_stat!(State.t(), height()) :: total_stat()
   def fetch_total_stat!(state, height),
-    do: render_total_stat(State.fetch!(state, Model.TotalStat, height))
+    do: render_total_stat(state, State.fetch!(state, Model.TotalStat, height))
 
   @spec fetch_nft_stats(State.t(), pubkey()) :: nft_stats()
   def fetch_nft_stats(state, contract_pk) do
@@ -243,6 +244,7 @@ defmodule AeMdw.Stats do
   defp render_total_stats(state, gens), do: Enum.map(gens, &fetch_total_stat!(state, &1))
 
   defp render_delta_stat(
+         state,
          Model.delta_stat(
            index: height,
            auctions_started: auctions_started,
@@ -276,11 +278,13 @@ defmodule AeMdw.Stats do
       burned_in_auctions: burned_in_auctions,
       channels_opened: channels_opened,
       channels_closed: channels_closed,
-      locked_in_channels: locked_in_channels
+      locked_in_channels: locked_in_channels,
+      last_tx_hash: fetch_last_tx_hash!(state, height)
     }
   end
 
   defp render_total_stat(
+         state,
          Model.total_stat(
            index: height,
            active_auctions: active_auctions,
@@ -312,7 +316,8 @@ defmodule AeMdw.Stats do
       locked_in_auctions: locked_in_auctions,
       burned_in_auctions: burned_in_auctions,
       open_channels: open_channels,
-      locked_in_channels: locked_in_channels
+      locked_in_channels: locked_in_channels,
+      last_tx_hash: fetch_last_tx_hash!(state, height)
     }
   end
 
@@ -332,4 +337,26 @@ defmodule AeMdw.Stats do
 
   defp deserialize_scope(nil, last_gen), do: {1, last_gen}
   defp deserialize_scope({:gen, first..last}, _last_gen), do: {max(first, 1), last}
+
+  defp fetch_last_tx_hash!(state, height) do
+    case State.get(state, Model.Block, {height + 1, -1}) do
+      {:ok, Model.block(tx_index: 0)} ->
+        nil
+
+      {:ok, Model.block(tx_index: tx_index)} ->
+        Model.tx(id: tx_hash) = State.fetch!(state, Model.Tx, tx_index - 1)
+
+        Enc.encode(:tx_hash, tx_hash)
+
+      :not_found ->
+        case DbUtil.last_txi(state) do
+          {:ok, txi} ->
+            Model.tx(id: tx_hash) = State.fetch!(state, Model.Tx, txi)
+            Enc.encode(:tx_hash, tx_hash)
+
+          :none ->
+            nil
+        end
+    end
+  end
 end
