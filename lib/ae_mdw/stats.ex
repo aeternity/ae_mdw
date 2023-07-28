@@ -116,22 +116,16 @@ defmodule AeMdw.Stats do
   @spec fetch_delta_stats(State.t(), direction(), range(), cursor(), limit()) ::
           {cursor(), [delta_stat()], cursor()}
   def fetch_delta_stats(state, direction, range, cursor, limit) do
-    {:ok, last_gen} = State.prev(state, Model.DeltaStat, nil)
-
-    range =
-      case range do
-        nil -> {1, last_gen}
-        {:gen, first..last} -> {max(first, 1), last}
-      end
-
     cursor = deserialize_cursor(cursor)
 
-    case Util.build_gen_pagination(cursor, direction, range, limit, last_gen) do
-      {:ok, prev_cursor, range, next_cursor} ->
-        {serialize_cursor(prev_cursor), render_delta_stats(state, range),
-         serialize_cursor(next_cursor)}
-
-      :error ->
+    with {:ok, last_gen} <- State.prev(state, Model.DeltaStat, nil),
+         scope <- deserialize_scope(range, last_gen),
+         {:ok, prev_cursor, range, next_cursor} <-
+           Util.build_gen_pagination(cursor, direction, scope, limit, last_gen) do
+      {serialize_cursor(prev_cursor), render_delta_stats(state, range),
+       serialize_cursor(next_cursor)}
+    else
+      _error_or_none ->
         {nil, [], nil}
     end
   end
@@ -139,22 +133,16 @@ defmodule AeMdw.Stats do
   @spec fetch_total_stats(State.t(), direction(), range(), cursor(), limit()) ::
           {cursor(), [total_stat()], cursor()}
   def fetch_total_stats(state, direction, range, cursor, limit) do
-    {:ok, last_gen} = State.prev(state, Model.DeltaStat, nil)
-
-    range =
-      case range do
-        nil -> {1, last_gen}
-        {:gen, first..last} -> {max(first, 1), last}
-      end
-
     cursor = deserialize_cursor(cursor)
 
-    case Util.build_gen_pagination(cursor, direction, range, limit, last_gen) do
-      {:ok, prev_cursor, range, next_cursor} ->
-        {serialize_cursor(prev_cursor), render_total_stats(state, range),
-         serialize_cursor(next_cursor)}
-
-      :error ->
+    with {:ok, last_gen} <- State.prev(state, Model.DeltaStat, nil),
+         scope <- deserialize_scope(range, last_gen),
+         {:ok, prev_cursor, range, next_cursor} <-
+           Util.build_gen_pagination(cursor, direction, scope, limit, last_gen) do
+      {serialize_cursor(prev_cursor), render_total_stats(state, range),
+       serialize_cursor(next_cursor)}
+    else
+      _error_or_none ->
         {nil, [], nil}
     end
   end
@@ -341,4 +329,7 @@ defmodule AeMdw.Stats do
       :error -> nil
     end
   end
+
+  defp deserialize_scope(nil, last_gen), do: {1, last_gen}
+  defp deserialize_scope({:gen, first..last}, _last_gen), do: {max(first, 1), last}
 end
