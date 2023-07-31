@@ -32,8 +32,5 @@ swagger['paths'] = paths
 swagger['components']['schemas'] = {**swagger['components']['schemas'], **schemas}
 swagger['info']['version'] = mdw_version
 
-with open(os.path.join(SWAGGER_OUTPUT_DIR, "swagger_v2.yaml"), 'w') as yamlfile:
-  yamlfile.write(yaml.dump(swagger, default_flow_style=False, allow_unicode=True))
-
 with open(os.path.join(SWAGGER_OUTPUT_DIR, "swagger_v2.json"), 'w') as jsonfile:
   json.dump(swagger, jsonfile, indent=2)

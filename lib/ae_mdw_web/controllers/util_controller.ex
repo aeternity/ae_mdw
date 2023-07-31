@@ -18,12 +18,8 @@ defmodule AeMdwWeb.UtilController do
     do: Util.send_error(conn, Input.NotFound, "no such route")
 
   @spec static_file(Conn.t(), map()) :: Conn.t()
-  def static_file(
-        %Conn{assigns: %{filepath: filepath}, query_params: query_params} = conn,
-        _params
-      ) do
-    format = Map.get(query_params, "format", "yaml")
-    filepath = Path.join(:code.priv_dir(:ae_mdw), "#{filepath}.#{format}")
+  def static_file(%Conn{assigns: %{filepath: filepath}} = conn, _params) do
+    filepath = Path.join(:code.priv_dir(:ae_mdw), filepath)
 
     if File.exists?(filepath) do
       send_file(conn, 200, filepath)
