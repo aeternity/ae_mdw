@@ -6,10 +6,16 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
   alias AeMdw.Db.Store
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.NullStore
+  alias AeMdw.Db.Origin
 
   import AeMdw.Util.Encoding, only: [encode_contract: 1, encode_account: 1]
 
   require Model
+
+  setup_all _context do
+    :persistent_term.put({Origin, :hardforks_contracts}, [])
+    :ok
+  end
 
   @contract_pk1 :crypto.strong_rand_bytes(32)
   @contract_pk2 :crypto.strong_rand_bytes(32)

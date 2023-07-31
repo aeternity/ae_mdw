@@ -9,12 +9,14 @@ defmodule AeMdw.Db.Origin do
   alias AeMdw.Node.Db
   alias AeMdw.Txs
   alias AeMdw.Util
+  alias AeMdw.Validate
 
   require Model
 
   import AeMdw.Util
 
   @contract_creation_types ~w(contract_create_tx contract_call_tx ga_attach_tx)a
+  @iris_protocol "5"
 
   @typep contract_locator() :: {:contract, Txs.txi()} | {:contract_call, Txs.txi()}
   @typep creation_txi_locator() :: {:contract, Db.pubkey()}
@@ -50,7 +52,7 @@ defmodule AeMdw.Db.Origin do
     with :error <- field_txi(state, :contract_create_tx, nil, pk),
          :error <- field_txi(state, :contract_call_tx, nil, pk),
          :error <- field_txi(state, :ga_attach_tx, nil, pk) do
-      case Enum.find_index(preset_contracts(), &match?(^pk, &1)) do
+      case Enum.find_index(hardforks_contracts(), &match?(^pk, &1)) do
         nil -> :not_found
         index -> {:ok, -index - 1}
       end
@@ -81,7 +83,7 @@ defmodule AeMdw.Db.Origin do
 
   @spec pubkey(State.t(), contract_locator()) :: Contract.id() | nil
   def pubkey(_state, {:contract, txi}) when txi < 0 do
-    preset_contracts()
+    hardforks_contracts()
     |> Enum.at(abs(txi) - 1)
   end
 
@@ -128,8 +130,34 @@ defmodule AeMdw.Db.Origin do
     |> Enum.count()
   end
 
-  defp preset_contracts do
-    :aec_fork_block_settings.lima_contracts()
-    |> Enum.map(fn %{pubkey: pubkey} -> pubkey end)
+  defp hardforks_contracts do
+    with nil <- :persistent_term.get({__MODULE__, :hardforks_contracts}, nil) do
+      lima_contracts =
+        :aec_fork_block_settings.lima_contracts()
+        |> Enum.map(fn %{pubkey: pubkey} -> pubkey end)
+
+      contracts = lima_contracts ++ hc_contracts()
+      :persistent_term.put({__MODULE__, :hardforks_contracts}, contracts)
+      contracts
+    end
+  end
+
+  defp hc_contracts do
+    with {:ok, {hardfork_key, _hf_val}} <-
+           :aeu_env.find_config(["chain", "hard_forks"], [
+             :user_config,
+             :schema_default,
+             {:value, {@iris_protocol, 0}}
+           ]),
+         {protocol, ""} <- Integer.parse(hardfork_key),
+         {:ok, hc_contracts_json} <-
+           :aec_fork_block_settings.hc_seed_contracts(protocol, :aec_governance.get_network_id()) do
+      hc_contracts_json
+      |> Enum.find_value(fn {item, list} -> if item == "contracts", do: list end)
+      |> Enum.map(&(Map.get(&1, "pubkey") || Map.fetch!(&1, "contract_pubkey")))
+      |> Enum.map(&Validate.id!/1)
+    else
+      _error_missing -> []
+    end
   end
 end
