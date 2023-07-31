@@ -1384,6 +1384,5 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
     end
   end
 
-  # defp dir(5), do: :filename.join(:aeu_env.data_dir(:aecore), ".iris")
   defp empty_store, do: NullStore.new() |> MemStore.new()
 end
