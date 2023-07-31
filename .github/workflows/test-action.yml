@@ -42,7 +42,10 @@ jobs:
         uses: ./.github/actions/node-setup
 
       - name: Execute coverage
-        run: elixir --sname aeternity@localhost -S mix coveralls
+        run: |
+          mkdir $NODEROOT/rel/aeternity/data/aecore/.iris/
+          cp docker/test_contracts.json $NODEROOT/rel/aeternity/data/aecore/.iris/ae_mainnet_contracts.json
+          elixir --sname aeternity@localhost -S mix coveralls
 
   lint:
     name: Automated linting

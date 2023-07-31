@@ -8,6 +8,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.Store
+  alias AeMdw.Db.Origin
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
   alias AeMdw.Txs
@@ -15,6 +16,11 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
   import Mock
 
   require Model
+
+  setup_all _context do
+    :persistent_term.put({Origin, :hardforks_contracts}, [])
+    :ok
+  end
 
   describe "account_activities" do
     test "it returns all transaction events that have the account on any field", %{conn: conn} do
@@ -1378,5 +1384,6 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
     end
   end
 
+  # defp dir(5), do: :filename.join(:aeu_env.data_dir(:aecore), ".iris")
   defp empty_store, do: NullStore.new() |> MemStore.new()
 end

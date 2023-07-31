@@ -7,7 +7,10 @@ defmodule AeMdw.Db.OriginTest do
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
   alias AeMdw.Db.Store
+  alias AeMdw.Validate
   alias AeMdw.TestSamples, as: TS
+
+  import Mock
 
   require Model
 
@@ -19,17 +22,56 @@ defmodule AeMdw.Db.OriginTest do
       contract_pk4 = TS.contract_pk(3)
       contract_pk5 = TS.contract_pk(4)
 
+      with_mocks [{Origin, [], hardforks_contracts: fn -> [] end}] do
+        state =
+          NullStore.new()
+          |> MemStore.new()
+          |> Store.put(
+            Model.Origin,
+            Model.origin(index: {:contract_create_tx, contract_pk1, 123})
+          )
+          |> Store.put(
+            Model.Origin,
+            Model.origin(index: {:contract_create_tx, contract_pk2, 123})
+          )
+          |> Store.put(
+            Model.Origin,
+            Model.origin(index: {:contract_create_tx, contract_pk3, 123})
+          )
+          |> Store.put(Model.Origin, Model.origin(index: {:contract_call_tx, contract_pk4, 123}))
+          |> Store.put(Model.Origin, Model.origin(index: {:ga_attach_tx, contract_pk5, 123}))
+          |> State.new()
+
+        assert 5 = Origin.count_contracts(state)
+      end
+    end
+  end
+
+  describe "tx_index/2" do
+    test "returns relative index of hardfork contracts" do
       state =
         NullStore.new()
         |> MemStore.new()
-        |> Store.put(Model.Origin, Model.origin(index: {:contract_create_tx, contract_pk1, 123}))
-        |> Store.put(Model.Origin, Model.origin(index: {:contract_create_tx, contract_pk2, 123}))
-        |> Store.put(Model.Origin, Model.origin(index: {:contract_create_tx, contract_pk3, 123}))
-        |> Store.put(Model.Origin, Model.origin(index: {:contract_call_tx, contract_pk4, 123}))
-        |> Store.put(Model.Origin, Model.origin(index: {:ga_attach_tx, contract_pk5, 123}))
         |> State.new()
 
-      assert 5 = Origin.count_contracts(state)
+      contract_id = "ct_KJgjAXMtRF68AbT5A2aC9fTk8PA4WFv26cFSY27fXs6FtYQHK"
+      :persistent_term.put({Origin, :hardforks_contracts}, nil)
+
+      with_mocks [
+        {:aec_fork_block_settings, [],
+         [
+           lima_contracts: fn ->
+             [%{pubkey: "ct_eJhrbPPS4V97VLKEVbSCJFpdA4uyXiZujQyLqMFoYV88TzDe6", amount: 100}]
+           end,
+           hc_seed_contracts: fn 5, "ae_uat" ->
+             {:ok, [{"calls", []}, {"contracts", [%{"pubkey" => contract_id}]}]}
+           end
+         ]}
+      ] do
+        assert -2 = Origin.tx_index!(state, {:contract, Validate.id!(contract_id)})
+
+        :persistent_term.put({Origin, :hardforks_contracts}, [])
+      end
     end
   end
 end
