@@ -129,22 +129,22 @@ defmodule AeMdw.Node.Db do
 
   @spec get_tx_data(binary()) ::
           {Blocks.block_hash(), Node.tx_type(), Node.signed_tx(), Node.tx()}
-  def get_tx_data(<<_::256>> = tx_hash) do
+  def get_tx_data(<<_pk::256>> = tx_hash) do
     {block_hash, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
     {type, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
     {block_hash, type, signed_tx, tx_rec}
   end
 
   @spec get_tx(binary()) :: Node.tx()
-  def get_tx(<<_::256>> = tx_hash) do
-    {_, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
-    {_, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
+  def get_tx(<<_pk::256>> = tx_hash) do
+    {_block_hash, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
+    {_type, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
     tx_rec
   end
 
   @spec get_signed_tx(binary()) :: tuple()
-  def get_signed_tx(<<_::256>> = tx_hash) do
-    {_, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
+  def get_signed_tx(<<_pk::256>> = tx_hash) do
+    {_block_hash, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
     signed_tx
   end
 
@@ -158,7 +158,7 @@ defmodule AeMdw.Node.Db do
   def top_height_hash(true = _the_very_top?) do
     {type, header} =
       case :aec_chain.top_block() do
-        {:mic_block, header, _txs, _} -> {:micro, header}
+        {:mic_block, header, _txs, _pof} -> {:micro, header}
         {:key_block, header} -> {:key, header}
       end
 

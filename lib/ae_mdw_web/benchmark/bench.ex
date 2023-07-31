@@ -90,8 +90,8 @@ defmodule Mix.Tasks.Bench do
     end)
   end
 
-  defp percentile([], _), do: nil
-  defp percentile([x], _), do: x
+  defp percentile([], _n), do: nil
+  defp percentile([x], _n), do: x
 
   defp percentile(list, n) when is_list(list) and is_number(n) do
     s = Enum.sort(list)
@@ -119,7 +119,7 @@ defmodule Mix.Tasks.Bench do
       200, acc ->
         %{acc | successful_requests: acc[:successful_requests] + 1}
 
-      _, acc ->
+      _status, acc ->
         %{acc | failed_requests: acc[:failed_requests] + 1}
     end)
   end

@@ -11,7 +11,7 @@ defmodule Integration.AeMdwWeb.UtilControllerTest do
     test "get middleware status", %{conn: conn} do
       state = State.new()
       {:ok, top_kb} = :aec_chain.top_key_block()
-      {_, _, node_vsn} = Application.started_applications() |> List.keyfind(:aecore, 0)
+      {_app, _desc, node_vsn} = Application.started_applications() |> List.keyfind(:aecore, 0)
       node_height = :aec_blocks.height(top_kb)
       {:ok, mdw_tx_index} = DbUtil.last_txi(state)
 

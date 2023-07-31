@@ -22,7 +22,7 @@ defmodule AeMdwWeb.Benchmark.Aggregator do
     end
   end
 
-  def extract_values([], _, acc), do: acc
+  def extract_values([], _key, acc), do: acc
 
   def extract_values([h | t], key, acc) do
     time = h[key].time
