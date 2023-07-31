@@ -113,19 +113,6 @@ defmodule AeMdw.Db.Origin do
       count_by_tx_type(state, :ga_attach_tx)
   end
 
-  @spec hardforks_contracts :: list(Db.pubkey())
-  def hardforks_contracts do
-    with nil <- :persistent_term.get({__MODULE__, :hardforks_contracts}, nil) do
-      lima_contracts =
-        :aec_fork_block_settings.lima_contracts()
-        |> Enum.map(fn %{pubkey: pubkey} -> pubkey end)
-
-      contracts = lima_contracts ++ hc_contracts()
-      :persistent_term.put({__MODULE__, :hardforks_contracts}, contracts)
-      contracts
-    end
-  end
-
   #
   # Private functions
   #
@@ -141,6 +128,18 @@ defmodule AeMdw.Db.Origin do
     |> Collection.stream(Model.Origin, {tx_type, Util.min_bin(), nil})
     |> Stream.take_while(&match?({^tx_type, _pubkey, _txi}, &1))
     |> Enum.count()
+  end
+
+  defp hardforks_contracts do
+    with nil <- :persistent_term.get({__MODULE__, :hardforks_contracts}, nil) do
+      lima_contracts =
+        :aec_fork_block_settings.lima_contracts()
+        |> Enum.map(fn %{pubkey: pubkey} -> pubkey end)
+
+      contracts = lima_contracts ++ hc_contracts()
+      :persistent_term.put({__MODULE__, :hardforks_contracts}, contracts)
+      contracts
+    end
   end
 
   defp hc_contracts do
