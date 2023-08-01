@@ -227,6 +227,22 @@ defmodule AeMdw.Oracles do
   defp convert_param(other_param),
     do: raise(ErrInput.Query, value: other_param)
 
+  defp build_streamer(%{state: "active"}, state, scope, cursor) do
+    fn direction ->
+      state
+      |> Collection.stream(@table_active_expiration, direction, scope, cursor)
+      |> Stream.map(fn key -> {key, @table_active_expiration} end)
+    end
+  end
+
+  defp build_streamer(%{state: "inactive"}, state, scope, cursor) do
+    fn direction ->
+      state
+      |> Collection.stream(@table_inactive_expiration, direction, scope, cursor)
+      |> Stream.map(fn key -> {key, @table_inactive_expiration} end)
+    end
+  end
+
   defp build_streamer(%{}, state, scope, cursor) do
     fn direction ->
       active_stream =

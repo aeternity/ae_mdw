@@ -71,12 +71,19 @@ paths:
       description: Get multiple oracles.
       operationId: get_oracles
       parameters:
+        - name: state
+          in: query
+          description: oracle state (active or inactive)
+          required: false
+          schema:
+            type: string
+            example: active
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/ScopeParam'
         - $ref: '#/components/parameters/DirectionParam'
       responses:
         '200':
-          description: Returns paginatinated oracles
+          description: Returns paginated oracles
           content:
             application/json:
               schema:

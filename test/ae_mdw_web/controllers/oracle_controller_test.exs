@@ -81,6 +81,141 @@ defmodule AeMdwWeb.OracleControllerTest do
       end
     end
 
+    test "it retrieves only active oracles", %{conn: conn, store: store} do
+      oracle_pk1 = :crypto.strong_rand_bytes(32)
+      oracle_pk2 = :crypto.strong_rand_bytes(32)
+      oracle_pk3 = :crypto.strong_rand_bytes(32)
+      last_gen = 1000
+      last_time = 123
+      expiration2 = 1002
+      expiration3 = 1004
+      expiration_time2 = last_time + (expiration2 - last_gen) * 180_000
+      expiration_time3 = last_time + (expiration3 - last_gen) * 180_000
+
+      oracle1 = Model.oracle(index: oracle_pk1, expire: 999, register: {{900, 0}, {1000, -1}})
+
+      oracle2 =
+        Model.oracle(index: oracle_pk2, expire: expiration2, register: {{999, 0}, {2000, -1}})
+
+      oracle3 =
+        Model.oracle(index: oracle_pk3, expire: expiration3, register: {{999, 0}, {2001, -1}})
+
+      store =
+        store
+        |> Store.put(
+          Model.InactiveOracleExpiration,
+          Model.expiration(index: {999, oracle_pk1})
+        )
+        |> Store.put(
+          Model.ActiveOracleExpiration,
+          Model.expiration(index: {expiration2, oracle_pk2})
+        )
+        |> Store.put(
+          Model.ActiveOracleExpiration,
+          Model.expiration(index: {expiration3, oracle_pk3})
+        )
+        |> Store.put(Model.Block, Model.block(index: {999, 0}, hash: <<999::256>>))
+        |> Store.put(Model.Block, Model.block(index: {last_gen, -1}, hash: <<1000::256>>))
+        |> Store.put(Model.InactiveOracle, oracle1)
+        |> Store.put(Model.ActiveOracle, oracle2)
+        |> Store.put(Model.ActiveOracle, oracle3)
+        |> Store.put(Model.Tx, Model.tx(index: 1000, id: <<1::256>>, block_index: {900, 0}))
+        |> Store.put(Model.Tx, Model.tx(index: 2000, id: <<2::256>>, block_index: {999, 0}))
+        |> Store.put(Model.Tx, Model.tx(index: 2001, id: <<3::256>>, block_index: {999, 0}))
+
+      with_mocks [
+        {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
+        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
+        {:aec_db, [], [get_header: fn <<height::256>> when height in 999..1000 -> :block end]},
+        {:aec_headers, [], [time_in_msecs: fn :block -> last_time end]}
+      ] do
+        encoded_pk2 = :aeser_api_encoder.encode(:oracle_pubkey, oracle_pk2)
+        encoded_pk3 = :aeser_api_encoder.encode(:oracle_pubkey, oracle_pk3)
+
+        assert %{"data" => [oracle3, oracle2], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get("/oracles", state: "active")
+                 |> json_response(200)
+
+        assert %{
+                 "oracle" => ^encoded_pk3,
+                 "approximate_expire_time" => ^expiration_time3,
+                 "register_time" => 123
+               } = oracle3
+
+        assert %{
+                 "oracle" => ^encoded_pk2,
+                 "approximate_expire_time" => ^expiration_time2,
+                 "register_time" => 123
+               } = oracle2
+      end
+    end
+
+    test "it retrieves only inactive oracles", %{conn: conn, store: store} do
+      oracle_pk1 = :crypto.strong_rand_bytes(32)
+      oracle_pk2 = :crypto.strong_rand_bytes(32)
+      oracle_pk3 = :crypto.strong_rand_bytes(32)
+      last_time = 123
+
+      oracle1 = Model.oracle(index: oracle_pk1, expire: 999, register: {{900, 0}, {1000, -1}})
+      oracle2 = Model.oracle(index: oracle_pk2, expire: 999, register: {{900, 0}, {1001, -1}})
+      oracle3 = Model.oracle(index: oracle_pk3, expire: 1100, register: {{999, 0}, {2001, -1}})
+
+      store =
+        store
+        |> Store.put(
+          Model.InactiveOracleExpiration,
+          Model.expiration(index: {999, oracle_pk1})
+        )
+        |> Store.put(
+          Model.InactiveOracleExpiration,
+          Model.expiration(index: {999, oracle_pk2})
+        )
+        |> Store.put(
+          Model.ActiveOracleExpiration,
+          Model.expiration(index: {1100, oracle_pk3})
+        )
+        |> Store.put(Model.Block, Model.block(index: {900, 0}, hash: <<900::256>>))
+        |> Store.put(Model.Block, Model.block(index: {998, -1}, hash: <<998::256>>))
+        |> Store.put(Model.Block, Model.block(index: {999, -1}, hash: <<998::256>>))
+        |> Store.put(Model.Block, Model.block(index: {999, 0}, hash: <<999::256>>))
+        |> Store.put(Model.Block, Model.block(index: {1000, -1}, hash: <<1000::256>>))
+        |> Store.put(Model.InactiveOracle, oracle1)
+        |> Store.put(Model.InactiveOracle, oracle2)
+        |> Store.put(Model.ActiveOracle, oracle3)
+        |> Store.put(Model.Tx, Model.tx(index: 1000, id: <<1::256>>, block_index: {900, 0}))
+        |> Store.put(Model.Tx, Model.tx(index: 1001, id: <<2::256>>, block_index: {900, 0}))
+        |> Store.put(Model.Tx, Model.tx(index: 2001, id: <<3::256>>, block_index: {999, 0}))
+
+      with_mocks [
+        {Oracle, [:passthrough], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
+        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
+        {:aec_db, [:passthrough],
+         [get_header: fn <<height::256>> when height in 900..1000 -> :block end]},
+        {:aec_headers, [:passthrough], [time_in_msecs: fn :block -> last_time end]}
+      ] do
+        encoded_pk2 = :aeser_api_encoder.encode(:oracle_pubkey, oracle_pk2)
+        encoded_pk1 = :aeser_api_encoder.encode(:oracle_pubkey, oracle_pk1)
+
+        assert %{"data" => [oracle2, oracle1], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get("/oracles", state: "inactive")
+                 |> json_response(200)
+
+        assert %{
+                 "oracle" => ^encoded_pk2,
+                 "approximate_expire_time" => ^last_time
+               } = oracle2
+
+        assert %{
+                 "oracle" => ^encoded_pk1,
+                 "approximate_expire_time" => ^last_time
+               } = oracle1
+      end
+    end
+
     test "it retrieves both active and inactive when length(active) < limit", %{
       conn: conn,
       store: store
