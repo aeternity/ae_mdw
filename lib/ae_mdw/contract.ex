@@ -34,7 +34,10 @@ defmodule AeMdw.Contract do
   # for balances or balance
   @type serialized_call :: map()
   # fcode or aevm info
-  @type type_info :: {:fcode, map(), map(), map()} | list()
+  @type fhash() :: binary()
+  @type is_payable() :: boolean()
+  @type type_info ::
+          {:fcode, map(), map(), map()} | [{fhash(), fname(), is_payable(), binary(), binary()}]
   @type compiler_vsn :: String.t()
   @type source_hash :: <<_::256>>
   @type ct_info :: {type_info(), compiler_vsn(), source_hash()}
@@ -160,7 +163,7 @@ defmodule AeMdw.Contract do
   defp decode_call_data(contract, call_data),
     do: decode_call_data(contract, call_data, &id/1)
 
-  defp decode_call_data({:fcode, _, _, _} = fate_info, call_data, mapper) do
+  defp decode_call_data({:fcode, _funs, _syms, _annotations} = fate_info, call_data, mapper) do
     {:tuple, {fun_hash, {:tuple, tup_args}}} = :aeb_fate_encoding.deserialize(call_data)
 
     # sample fun_hash not matching: <<74, 202, 20, 78, 108, 15, 83, 141, 70, 92, 69, 235, 191, 127, 43, 123, 21, 80, 189, 1, 86, 76, 125, 166, 246, 81, 67, 150, 69, 95, 156, 6>>
@@ -176,26 +179,38 @@ defmodule AeMdw.Contract do
   defp decode_call_data([_ | _] = aevm_info, call_data, mapper) do
     {:ok, fun_hash} = :aeb_aevm_abi.get_function_hash_from_calldata(call_data)
     {:ok, fun_name} = :aeb_aevm_abi.function_name_from_type_hash(fun_hash, aevm_info)
-    {:ok, arg_type, _} = :aeb_aevm_abi.typereps_from_type_hash(fun_hash, aevm_info)
-    {:ok, {_, vm_args}} = :aeb_heap.from_binary({:tuple, [:word, arg_type]}, call_data)
+    {:ok, arg_type, _type_rep} = :aeb_aevm_abi.typereps_from_type_hash(fun_hash, aevm_info)
+    {:ok, {_arg_type, vm_args}} = :aeb_heap.from_binary({:tuple, [:word, arg_type]}, call_data)
     {fun_name, aevm_val({arg_type, vm_args}, mapper)}
   end
 
   defp decode_call_result(_info, _fun_name, :error, value, mapper),
     do: mapper.(%{error: [value]})
 
-  defp decode_call_result({:fcode, _, _, _}, _fun_name, :revert, value, mapper),
-    do: mapper.(%{abort: [:aeb_fate_encoding.deserialize(value)]})
+  defp decode_call_result(
+         {:fcode, _functions, _symbols, _annotations},
+         _fun_name,
+         :revert,
+         value,
+         mapper
+       ),
+       do: mapper.(%{abort: [:aeb_fate_encoding.deserialize(value)]})
 
-  defp decode_call_result([_ | _], _fun_name, :revert, value, mapper),
+  defp decode_call_result([_arg_type, _ret_type], _fun_name, :revert, value, mapper),
     do: mapper.(%{abort: [ok!(:aeb_heap.from_binary(:string, value))]})
 
-  defp decode_call_result({:fcode, _, _, _}, _fun_name, :ok, value, mapper),
-    do: fate_val(:aeb_fate_encoding.deserialize(value), mapper)
+  defp decode_call_result(
+         {:fcode, _functions, _symbols, _annotations},
+         _fun_name,
+         :ok,
+         value,
+         mapper
+       ),
+       do: fate_val(:aeb_fate_encoding.deserialize(value), mapper)
 
-  defp decode_call_result([_ | _] = info, fun_name, :ok, value, mapper) do
+  defp decode_call_result([_arg_type | _ret_type] = info, fun_name, :ok, value, mapper) do
     {:ok, hash} = :aeb_aevm_abi.type_hash_from_function_name(fun_name, info)
-    {:ok, _, res_type} = :aeb_aevm_abi.typereps_from_type_hash(hash, info)
+    {:ok, _type_rep, res_type} = :aeb_aevm_abi.typereps_from_type_hash(hash, info)
     {:ok, vm_res} = :aeb_heap.from_binary(res_type, value)
     aevm_val({res_type, vm_res}, mapper)
   end
@@ -365,7 +380,7 @@ defmodule AeMdw.Contract do
   defp fate_val(x, f) when is_map(x),
     do: f.({:map, Enum.map(x, fn {k, v} -> %{key: fate_val(k, f), val: fate_val(v, f)} end)})
 
-  defp fate_val({:variant, _, tag, args}, f),
+  defp fate_val({:variant, _bytecode, tag, args}, f),
     do: f.({:variant, [tag | Enum.map(tuple_to_list(args), &fate_val(&1, f))]})
 
   defp aevm_val({:word, x}, f) when is_integer(x), do: f.({:word, x})
@@ -424,7 +439,7 @@ defmodule AeMdw.Contract do
       trees_in = consensus.state_pre_transform_micro_node(node, trees_in)
       env = :aetx_env.tx_env_from_key_header(prev_key_header, prev_key_hash, time, prev_hash)
 
-      {:ok, _, _, events} =
+      {:ok, _sigs, _trees, events} =
         :aec_block_micro_candidate.apply_block_txs_strict(txs_taken, trees_in, env)
 
       events

@@ -4,19 +4,19 @@ defmodule AeMdw.Validate do
   alias :aeser_api_encoder, as: Enc
 
   # returns pubkey
-  def id(<<_::256>> = id),
+  def id(<<_pk::256>> = id),
     do: {:ok, id}
 
-  def id(<<_prefix::2-binary, "_", _::binary>> = id) do
+  def id(<<_prefix::2-binary, "_", _pk::binary>> = id) do
     try do
       {_id_type, pk} = Enc.decode(id)
       {:ok, pk}
     rescue
-      _ -> {:error, {ErrInput.Id, id}}
+      _error -> {:error, {ErrInput.Id, id}}
     end
   end
 
-  def id({:id, _, <<_::256>> = pk}),
+  def id({:id, _tag, <<_pk::256>> = pk}),
     do: {:ok, pk}
 
   def id(id),
@@ -24,7 +24,7 @@ defmodule AeMdw.Validate do
 
   def id!(id), do: unwrap!(&id/1, id)
 
-  def id(<<prefix::2-binary, "_", _::binary>> = ident, [_ | _] = allowed_types) do
+  def id(<<prefix::2-binary, "_", _pk::binary>> = ident, [_type1 | _rest_types] = allowed_types) do
     case prefix in AE.id_prefixes() do
       true ->
         case Enc.safe_decode({:id_hash, allowed_types}, ident) do
@@ -40,13 +40,13 @@ defmodule AeMdw.Validate do
     end
   end
 
-  def id({:id, hash_type, <<_::256>> = pk} = id, [_ | _] = allowed_types),
+  def id({:id, hash_type, <<_pk::256>> = pk} = id, [_type1 | _rest_types] = allowed_types),
     do: (AE.id_type(hash_type) in allowed_types && {:ok, pk}) || {:error, {ErrInput.Id, id}}
 
-  def id(<<_::256>> = pk, [_ | _] = _allowed_types),
+  def id(<<_pk::256>> = pk, [_type1 | _rest_types] = _allowed_types),
     do: {:ok, pk}
 
-  def id(id, _),
+  def id(id, _allowed_types),
     do: {:error, {ErrInput.Id, id}}
 
   def id!(id, allowed_types), do: unwrap!(&id(&1, allowed_types), id)
@@ -77,7 +77,7 @@ defmodule AeMdw.Validate do
           nil -> {:error, {ErrInput.NotFound, name_ident}}
         end
 
-      _ ->
+      _error ->
         ok? = is_binary(name_ident) and name_ident != "" and String.printable?(name_ident)
 
         case ok? do
@@ -141,7 +141,7 @@ defmodule AeMdw.Validate do
   def nonneg_int(s) when is_binary(s) do
     case Integer.parse(s, 10) do
       {i, ""} when i >= 0 -> {:ok, i}
-      _ -> {:error, {ErrInput.NonnegInt, s}}
+      _error_or_invalid -> {:error, {ErrInput.NonnegInt, s}}
     end
   end
 
@@ -155,7 +155,7 @@ defmodule AeMdw.Validate do
     map_nni = fn s, f ->
       case nonneg_int(s) do
         {:ok, i} -> f.(i)
-        _ -> {:error, {ErrInput.BlockIndex, x}}
+        _error -> {:error, {ErrInput.BlockIndex, x}}
       end
     end
 
@@ -165,14 +165,14 @@ defmodule AeMdw.Validate do
              {:ok, mbi} <- map_nni.(mbi, &{:ok, &1}) do
           {:ok, {kbi, mbi}}
         else
-          _ ->
+          _invalid ->
             {:error, {ErrInput.BlockIndex, x}}
         end
 
       [kbi | rem] when rem in [[], ["-1"]] ->
         map_nni.(kbi, &{:ok, {&1, -1}})
 
-      _ ->
+      _invalid ->
         {:error, {ErrInput.BlockIndex, x}}
     end
   end

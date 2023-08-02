@@ -1,3 +1,4 @@
+# credo:disable-for-this-file Credo.Check.Consistency.UnusedVariableNames
 defmodule AeMdw.Extract do
   @moduledoc "currently we require that AE node is compiled with debug_info"
 
