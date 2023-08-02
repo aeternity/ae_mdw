@@ -1,275 +1,352 @@
 defmodule AeMdwWeb.OracleControllerTest do
-  use AeMdwWeb.ConnCase, async: false
+  use AeMdwWeb.ConnCase
+  @moduletag skip_store: true
 
   alias :aeser_api_encoder, as: Enc
-  alias AeMdw.Blocks
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Model.ActiveOracleExpiration
-  alias AeMdw.Db.Model.Block
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.Store
   alias AeMdw.Db.Util, as: DbUtil
-  alias AeMdw.Database
+  alias AeMdw.Sync.MemStoreCreator
   alias AeMdw.TestSamples, as: TS
 
   import Mock
 
   require Model
 
+  @last_gen 1000
+  @exp0 950
+  @exp1 951
+  @exp2 952
+  @exp3 1101
+  @exp4 1102
+
+  @last_time 1_690_001_000
+
+  # height -> time
+  @node_times %{
+    900 => 1_690_000_900,
+    950 => 1_690_000_950,
+    951 => 1_690_000_951,
+    952 => 1_690_000_952,
+    953 => 1_690_000_953,
+    999 => @last_time,
+    1000 => @last_time,
+    1101 => @last_time + (1101 - @last_gen) * 180_000,
+    1102 => @last_time + (1102 - @last_gen) * 180_000
+  }
+
+  setup_all do
+    store = MemStoreCreator.create()
+    oracle_pk1 = :crypto.strong_rand_bytes(32)
+    oracle_pk2 = :crypto.strong_rand_bytes(32)
+    oracle_pk3 = :crypto.strong_rand_bytes(32)
+    oracle_pk4 = :crypto.strong_rand_bytes(32)
+
+    register_h1 = 901
+    register_h2 = 902
+    register_h3 = 991
+    register_h4 = 992
+
+    inactive_oracles =
+      for i <- 1..18,
+          do:
+            Model.oracle(
+              index: :crypto.strong_rand_bytes(32),
+              expire: @exp0,
+              register: {{register_h1, 0}, {1000 + i, -1}}
+            )
+
+    oracle1 =
+      Model.oracle(index: oracle_pk1, expire: @exp1, register: {{register_h1, 0}, {1019, -1}})
+
+    oracle2 =
+      Model.oracle(index: oracle_pk2, expire: @exp2, register: {{register_h2, 0}, {1020, -1}})
+
+    oracle1 = Model.oracle(oracle1, extends: [{{register_h2, 0}, {1021, -1}}])
+
+    oracle3 =
+      Model.oracle(index: oracle_pk3, expire: @exp3, register: {{register_h3, 0}, {2001, -1}})
+
+    oracle4 =
+      Model.oracle(index: oracle_pk4, expire: @exp4, register: {{register_h4, 0}, {2002, -1}})
+
+    store =
+      inactive_oracles
+      |> Enum.reduce(store, fn Model.oracle(index: pk, expire: exp), store ->
+        Store.put(
+          store,
+          Model.InactiveOracleExpiration,
+          Model.expiration(index: {exp, pk})
+        )
+      end)
+      |> Store.put(
+        Model.InactiveOracleExpiration,
+        Model.expiration(index: {@exp1, oracle_pk1})
+      )
+      |> Store.put(
+        Model.InactiveOracleExpiration,
+        Model.expiration(index: {@exp2, oracle_pk2})
+      )
+      |> Store.put(
+        Model.ActiveOracleExpiration,
+        Model.expiration(index: {@exp3, oracle_pk3})
+      )
+      |> Store.put(
+        Model.ActiveOracleExpiration,
+        Model.expiration(index: {@exp4, oracle_pk4})
+      )
+      |> Store.put(Model.Block, Model.block(index: {900, 0}, hash: <<900::256>>))
+      |> Store.put(Model.Block, Model.block(index: {901, 0}, hash: <<901::256>>))
+      |> Store.put(Model.Block, Model.block(index: {902, 0}, hash: <<902::256>>))
+      |> Store.put(Model.Block, Model.block(index: {949, -1}, hash: <<949::256>>))
+      |> Store.put(Model.Block, Model.block(index: {950, -1}, hash: <<950::256>>))
+      |> Store.put(Model.Block, Model.block(index: {951, -1}, hash: <<951::256>>))
+      |> Store.put(Model.Block, Model.block(index: {952, -1}, hash: <<952::256>>))
+      |> Store.put(Model.Block, Model.block(index: {991, 0}, hash: <<991::256>>))
+      |> Store.put(Model.Block, Model.block(index: {992, 0}, hash: <<992::256>>))
+      |> Store.put(Model.Block, Model.block(index: {1000, -1}, hash: <<1000::256>>))
+      |> Store.put(Model.InactiveOracle, oracle1)
+      |> Store.put(Model.InactiveOracle, oracle2)
+      |> Store.put(Model.ActiveOracle, oracle3)
+      |> Store.put(Model.ActiveOracle, oracle4)
+      |> tap(fn store ->
+        Enum.reduce(
+          inactive_oracles,
+          store,
+          &Store.put(&2, Model.InactiveOracle, &1)
+        )
+      end)
+      |> tap(fn store ->
+        Enum.reduce(1..21, store, fn i, store ->
+          txi = 1000 + i
+
+          Store.put(
+            store,
+            Model.Tx,
+            Model.tx(index: txi, id: <<txi::256>>, block_index: {900, 0})
+          )
+        end)
+      end)
+      |> Store.put(Model.Tx, Model.tx(index: 2001, id: <<2001::256>>, block_index: {990, 0}))
+      |> Store.put(Model.Tx, Model.tx(index: 2002, id: <<2002::256>>, block_index: {990, 0}))
+
+    encoded_pks =
+      for pk <- [oracle_pk1, oracle_pk2, oracle_pk3, oracle_pk4],
+          do: :aeser_api_encoder.encode(:oracle_pubkey, pk)
+
+    {:ok,
+     store: store,
+     inactive_oracles: [oracle_pk1, oracle_pk2],
+     active_oracles: [oracle_pk3, oracle_pk4],
+     register_times: [
+       @node_times[register_h1],
+       @node_times[register_h2],
+       @node_times[register_h3],
+       @node_times[register_h4]
+     ],
+     expiration_times: [
+       @node_times[@exp1],
+       @node_times[@exp2],
+       @node_times[@exp3],
+       @node_times[@exp4]
+     ],
+     encoded_pks: encoded_pks}
+  end
+
   describe "oracles" do
-    test "it retrieves active oracles first", %{conn: conn, store: store} do
-      Model.oracle(index: oracle_pk1) =
-        oracle =
-        Model.oracle(
-          TS.oracle(),
-          register: {{999, 0}, {2000, -1}}
-        )
-
-      oracle_pk2 = <<0::256>>
-      block_hash1 = <<1::256>>
-      tx_hash1 = <<2::256>>
-      tx_hash2 = <<3::256>>
-      last_gen = 1000
-      last_time = 123
-      expiration1 = 1002
-      expiration2 = 1004
-      encoded_pk1 = :aeser_api_encoder.encode(:oracle_pubkey, oracle_pk1)
-      encoded_pk2 = :aeser_api_encoder.encode(:oracle_pubkey, oracle_pk2)
-      expiration_time1 = last_time + (expiration1 - last_gen) * 180_000
-      expiration_time2 = last_time + (expiration2 - last_gen) * 180_000
-
-      store =
-        store
-        |> Store.put(
-          Model.ActiveOracleExpiration,
-          Model.expiration(index: {expiration1, oracle_pk1})
-        )
-        |> Store.put(
-          Model.ActiveOracleExpiration,
-          Model.expiration(index: {expiration2, oracle_pk2})
-        )
-        |> Store.put(Model.Block, Model.block(index: {last_gen, -1}, hash: block_hash1))
-        |> Store.put(Model.ActiveOracle, Model.oracle(oracle, expire: expiration1))
-        |> Store.put(
-          Model.ActiveOracle,
-          Model.oracle(oracle, index: oracle_pk2, expire: expiration2)
-        )
-        |> Store.put(Model.Tx, Model.tx(index: 8916, id: tx_hash1))
-        |> Store.put(Model.Block, Model.block(index: {999, 0}, hash: block_hash1))
-        |> Store.put(Model.Tx, Model.tx(index: 2000, id: tx_hash2))
-
-      with_mocks [
-        {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
-        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
-        {:aec_db, [], [get_header: fn ^block_hash1 -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> last_time end]}
-      ] do
-        assert %{"data" => [oracle2, oracle1], "next" => nil} =
-                 conn
-                 |> with_store(store)
-                 |> get("/oracles")
-                 |> json_response(200)
-
-        assert %{
-                 "oracle" => ^encoded_pk2,
-                 "approximate_expire_time" => ^expiration_time2,
-                 "register_time" => 123
-               } = oracle2
-
-        assert %{"oracle" => ^encoded_pk1, "approximate_expire_time" => ^expiration_time1} =
-                 oracle1
-      end
-    end
-
-    test "it retrieves both active and inactive when length(active) < limit", %{
+    test "it retrieves active oracles first", %{
       conn: conn,
-      store: store
+      store: store,
+      register_times: [reg_time1, reg_time2, reg_time3, reg_time4],
+      expiration_times: [exp_time1, exp_time2, exp_time3, exp_time4],
+      encoded_pks: [id1, id2, id3, id4]
     } do
-      Model.oracle(index: oracle_pk1) =
-        oracle =
-        Model.oracle(
-          TS.oracle(),
-          register: {{0, -1}, {8916, -1}}
-        )
-
-      [oracle_pk2, oracle_pk3, oracle_pk4] = [<<1::256>>, <<2::256>>, <<3::256>>]
-      [expiration1, expiration2, expiration3, expiration4] = [50, 51, 2000, 3000]
-      block_hash1 = <<4::256>>
-      block_hash2 = <<5::256>>
-      block_hash3 = <<6::256>>
-      tx_hash1 = <<7::256>>
-      last_gen = 1000
-      last_time = 123
-      [block_time1, block_time2] = [111, 222]
-      expiration_time1 = block_time1
-      expiration_time2 = block_time2
-      expiration_time3 = last_time + (expiration3 - last_gen) * 180_000
-      expiration_time4 = last_time + (expiration4 - last_gen) * 180_000
-      encoded_pk1 = :aeser_api_encoder.encode(:oracle_pubkey, oracle_pk1)
-      encoded_pk2 = :aeser_api_encoder.encode(:oracle_pubkey, oracle_pk2)
-      encoded_pk3 = :aeser_api_encoder.encode(:oracle_pubkey, oracle_pk3)
-      encoded_pk4 = :aeser_api_encoder.encode(:oracle_pubkey, oracle_pk4)
-
-      store =
-        store
-        |> Store.put(
-          Model.InactiveOracleExpiration,
-          Model.expiration(index: {expiration1, oracle_pk1})
-        )
-        |> Store.put(
-          Model.InactiveOracleExpiration,
-          Model.expiration(index: {expiration2, oracle_pk2})
-        )
-        |> Store.put(
-          Model.ActiveOracleExpiration,
-          Model.expiration(index: {expiration3, oracle_pk3})
-        )
-        |> Store.put(
-          Model.ActiveOracleExpiration,
-          Model.expiration(index: {expiration4, oracle_pk4})
-        )
-        |> Store.put(Model.Block, Model.block(index: {0, -1}, hash: block_hash1))
-        |> Store.put(Model.Block, Model.block(index: {last_gen, -1}, hash: block_hash3))
-        |> Store.put(Model.Block, Model.block(index: {expiration1 - 1, -1}, hash: block_hash1))
-        |> Store.put(Model.Block, Model.block(index: {expiration2 - 1, -1}, hash: block_hash2))
-        |> Store.put(Model.Block, Model.block(index: {expiration1, -1}, hash: block_hash1))
-        |> Store.put(Model.Block, Model.block(index: {expiration2, -1}, hash: block_hash2))
-        |> Store.put(Model.InactiveOracle, Model.oracle(oracle, expire: expiration1))
-        |> Store.put(
-          Model.InactiveOracle,
-          Model.oracle(oracle, index: oracle_pk2, expire: expiration2)
-        )
-        |> Store.put(
-          Model.ActiveOracle,
-          Model.oracle(oracle, index: oracle_pk3, expire: expiration3)
-        )
-        |> Store.put(
-          Model.ActiveOracle,
-          Model.oracle(oracle, index: oracle_pk4, expire: expiration4)
-        )
-        |> Store.put(Model.Tx, Model.tx(index: 8916, id: tx_hash1))
-
       with_mocks [
         {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
         {:aec_db, [],
-         [
-           get_header: fn
-             ^block_hash1 -> :block1
-             ^block_hash2 -> :block2
-             ^block_hash3 -> :block3
-           end
-         ]},
-        {:aec_headers, [],
-         [
-           time_in_msecs: fn
-             :block1 -> block_time1
-             :block2 -> block_time2
-             :block3 -> last_time
-           end
-         ]}
+         [get_header: fn <<height::256>> when height in 900..1000 -> <<height::256>> end]},
+        {:aec_headers, [], [time_in_msecs: fn <<height::256>> -> @node_times[height] end]}
       ] do
-        assert %{"data" => [oracle1, oracle2, oracle3, oracle4], "next" => nil} =
+        assert %{"data" => [oracle4, oracle3, oracle2, oracle1], "next" => _next} =
                  conn
                  |> with_store(store)
-                 |> get("/oracles", direction: "forward")
+                 |> get("/oracles", limit: 4)
                  |> json_response(200)
 
         assert %{
-                 "active" => false,
-                 "oracle" => ^encoded_pk1,
-                 "approximate_expire_time" => ^expiration_time1,
-                 "register_time" => 111
-               } = oracle1
+                 "oracle" => ^id4,
+                 "approximate_expire_time" => ^exp_time4,
+                 "register_time" => ^reg_time4
+               } = oracle4
 
         assert %{
-                 "active" => false,
-                 "oracle" => ^encoded_pk2,
-                 "approximate_expire_time" => ^expiration_time2,
-                 "register_time" => 111
-               } = oracle2
-
-        assert %{
-                 "active" => true,
-                 "oracle" => ^encoded_pk3,
-                 "approximate_expire_time" => ^expiration_time3,
-                 "register_time" => 111
+                 "oracle" => ^id3,
+                 "approximate_expire_time" => ^exp_time3,
+                 "register_time" => ^reg_time3
                } = oracle3
 
         assert %{
-                 "active" => true,
-                 "oracle" => ^encoded_pk4,
-                 "approximate_expire_time" => ^expiration_time4,
-                 "register_time" => 111
+                 "oracle" => ^id2,
+                 "approximate_expire_time" => ^exp_time2,
+                 "register_time" => ^reg_time2
+               } = oracle2
+
+        assert %{
+                 "oracle" => ^id1,
+                 "approximate_expire_time" => ^exp_time1,
+                 "register_time" => ^reg_time1
+               } = oracle1
+      end
+    end
+
+    test "it retrieves only active oracles", %{
+      conn: conn,
+      store: store,
+      register_times: [_rt1, _rt2, reg_time3, reg_time4],
+      expiration_times: [_et1, _et2, exp_time3, exp_time4],
+      encoded_pks: [_id1, _id2, id3, id4]
+    } do
+      with_mocks [
+        {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
+        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
+        {:aec_db, [],
+         [get_header: fn <<height::256>> when height in 900..1000 -> <<height::256>> end]},
+        {:aec_headers, [], [time_in_msecs: fn <<height::256>> -> @node_times[height] end]}
+      ] do
+        assert %{"data" => [oracle4, oracle3], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get("/oracles", state: "active")
+                 |> json_response(200)
+
+        assert %{
+                 "oracle" => ^id4,
+                 "approximate_expire_time" => ^exp_time4,
+                 "register_time" => ^reg_time4
                } = oracle4
+
+        assert %{
+                 "oracle" => ^id3,
+                 "approximate_expire_time" => ^exp_time3,
+                 "register_time" => ^reg_time3
+               } = oracle3
+
+        assert %{"data" => [^oracle4, ^oracle3], "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get("/oracles/active")
+                 |> json_response(200)
+      end
+    end
+
+    test "it retrieves only inactive oracles", %{
+      conn: conn,
+      store: store,
+      register_times: [reg_time1, reg_time2 | _],
+      expiration_times: [exp_time1, exp_time2 | _],
+      encoded_pks: [id1, id2 | _]
+    } do
+      with_mocks [
+        {Oracle, [:passthrough], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
+        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
+        {:aec_db, [],
+         [get_header: fn <<height::256>> when height in 900..1000 -> <<height::256>> end]},
+        {:aec_headers, [], [time_in_msecs: fn <<height::256>> -> @node_times[height] end]}
+      ] do
+        assert %{"data" => [oracle2, oracle1], "next" => _next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/oracles", state: "inactive", limit: 2)
+                 |> json_response(200)
+
+        assert %{
+                 "oracle" => ^id2,
+                 "approximate_expire_time" => ^exp_time2,
+                 "register_time" => ^reg_time2
+               } = oracle2
+
+        assert %{
+                 "oracle" => ^id1,
+                 "approximate_expire_time" => ^exp_time1,
+                 "register_time" => ^reg_time1
+               } = oracle1
+
+        assert %{"data" => [^oracle2, ^oracle1], "next" => _next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/oracles/inactive", limit: 2)
+                 |> json_response(200)
+      end
+    end
+
+    test "paginates forward when there are more than limit", %{
+      conn: conn,
+      store: store,
+      encoded_pks: [id1, id2 | _]
+    } do
+      with_mocks [
+        {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
+        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
+        {:aec_db, [],
+         [get_header: fn <<height::256>> when height in 900..1000 -> <<height::256>> end]},
+        {:aec_headers, [], [time_in_msecs: fn <<height::256>> -> @node_times[height] end]}
+      ] do
+        assert %{"data" => data, "next" => next} =
+                 conn
+                 |> with_store(store)
+                 |> get("/oracles/inactive", direction: "forward")
+                 |> json_response(200)
+
+        assert %{"data" => next_data, "prev" => prev, "next" => nil} =
+                 conn
+                 |> with_store(store)
+                 |> get(next)
+                 |> json_response(200)
+
+        assert [id1, id2] == next_data |> Enum.drop(8) |> Enum.map(& &1["oracle"])
+
+        assert %{"data" => ^data} =
+                 conn
+                 |> with_store(store)
+                 |> get(prev)
+                 |> json_response(200)
       end
     end
 
     test "it displays tx hashes when tx_hash=true", %{conn: conn, store: store} do
-      register_tx1 = Model.tx(index: register_txi1, id: register_tx_hash1) = TS.tx(0)
-      register_tx2 = Model.tx(index: register_txi2, id: register_tx_hash2) = TS.tx(1)
-      extends_tx = Model.tx(index: extends_txi, id: extends_tx_hash) = TS.tx(2)
-      oracle_exp1 = {exp_height1, oracle_pk1} = TS.oracle_expiration_key(0)
-      oracle_exp2 = {exp_height2, oracle_pk2} = TS.oracle_expiration_key(1)
-
-      oracle1 =
-        Model.oracle(TS.oracle(),
-          index: oracle_pk1,
-          register: {{0, -1}, {register_txi1, -1}},
-          expire: exp_height1,
-          extends: [{{0, -1}, {extends_txi, -1}}]
-        )
-
-      oracle2 =
-        Model.oracle(TS.oracle(),
-          index: oracle_pk2,
-          register: {{0, -1}, {register_txi2, -1}},
-          expire: exp_height2,
-          extends: []
-        )
-
-      block_hash = TS.key_block_hash(0)
-
-      store =
-        store
-        |> Store.put(Model.Tx, register_tx1)
-        |> Store.put(Model.Tx, register_tx2)
-        |> Store.put(Model.Tx, extends_tx)
-        |> Store.put(Model.ActiveOracleExpiration, Model.expiration(index: oracle_exp1))
-        |> Store.put(Model.ActiveOracleExpiration, Model.expiration(index: oracle_exp2))
-        |> Store.put(Model.ActiveOracle, oracle1)
-        |> Store.put(Model.ActiveOracle, oracle2)
-        |> Store.put(Model.Block, Model.block(index: {0, -1}, hash: block_hash))
-        |> Store.put(Model.Block, Model.block(index: {exp_height1, -1}, hash: block_hash))
-        |> Store.put(Model.Block, Model.block(index: {exp_height2, -1}, hash: block_hash))
-        |> Store.put(Model.Block, Model.block(index: {exp_height1 - 1, -1}, hash: block_hash))
-        |> Store.put(Model.Block, Model.block(index: {exp_height2 - 1, -1}, hash: block_hash))
-
       with_mocks [
-        {Oracle, [], [oracle_tree!: fn ^block_hash -> :aeo_state_tree.empty() end]},
+        {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
         {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
-        {:aec_db, [], [get_header: fn ^block_hash -> :block end]},
-        {:aec_headers, [], [time_in_msecs: fn :block -> 123 end]}
+        {:aec_db, [],
+         [get_header: fn <<height::256>> when height in 900..1000 -> <<height::256>> end]},
+        {:aec_headers, [], [time_in_msecs: fn <<height::256>> -> @node_times[height] end]}
       ] do
-        assert %{"data" => [oracle2, oracle1], "next" => nil} =
+        assert %{"data" => [oracle2, oracle1], "next" => next_uri} =
                  conn
                  |> with_store(store)
-                 |> get("/oracles", tx_hash: "true", limit: 2)
+                 |> get("/oracles", tx_hash: "true", state: "inactive", limit: 2)
                  |> json_response(200)
 
         assert %{
-                 "register_tx_hash" => register_hash,
-                 "extends" => [extends_hash],
-                 "register_time" => 123
+                 "register_tx_hash" => register_tx_hash,
+                 "extends" => [extends_tx_hash]
                } = oracle1
 
-        assert {:ok, ^register_tx_hash1} = Enc.safe_decode(:tx_hash, register_hash)
-        assert {:ok, ^extends_tx_hash} = Enc.safe_decode(:tx_hash, extends_hash)
+        assert ^register_tx_hash = Enc.encode(:tx_hash, <<1019::256>>)
+        assert ^extends_tx_hash = Enc.encode(:tx_hash, <<1021::256>>)
 
-        assert %{"register_tx_hash" => register_hash, "extends" => [], "register_time" => 123} =
-                 oracle2
+        assert %{"register_tx_hash" => register_tx_hash, "extends" => []} = oracle2
 
-        assert {:ok, ^register_tx_hash2} = Enc.safe_decode(:tx_hash, register_hash)
+        assert ^register_tx_hash = Enc.encode(:tx_hash, <<1020::256>>)
+
+        assert %URI{
+                 path: "/oracles",
+                 query: query
+               } = URI.parse(next_uri)
+
+        assert %{"cursor" => <<"950-", _rest::binary>>} = URI.decode_query(query)
       end
     end
 
@@ -278,88 +355,6 @@ defmodule AeMdwWeb.OracleControllerTest do
                conn
                |> get("/oracles", tx_hash: "true", expand: "true")
                |> json_response(400)
-    end
-  end
-
-  describe "active_oracles" do
-    test "it retrieves all active oracles backwards by default", %{conn: conn} do
-      key1 = TS.oracle_expiration_key(1)
-      key2 = TS.oracle_expiration_key(2)
-      Model.oracle(index: pk) = oracle = TS.oracle()
-      encoded_pk = :aeser_api_encoder.encode(:oracle_pubkey, pk)
-      block_hash = <<0::256>>
-
-      with_mocks [
-        {Database, [],
-         [
-           last_key: fn
-             Block -> {:ok, TS.last_gen()}
-             ActiveOracleExpiration -> {:ok, key1}
-           end,
-           get: fn
-             Model.ActiveOracle, _oracle_pk -> {:ok, oracle}
-             Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash(0))}
-             Model.Block, _block_index -> {:ok, Model.block(hash: block_hash)}
-           end,
-           next_key: fn _tab, _key -> :none end,
-           prev_key: fn
-             _tab, ^key1 -> {:ok, key2}
-             _tab, ^key2 -> :none
-           end
-         ]},
-        {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
-        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
-        {Blocks, [], [block_hash: fn _state, _height -> "asd" end]},
-        {:aec_db, [], [get_header: fn ^block_hash -> :block1 end]},
-        {:aec_headers, [], [time_in_msecs: fn :block1 -> 123 end]}
-      ] do
-        assert %{"data" => [oracle1, _oracle2], "next" => nil} =
-                 conn
-                 |> get("/oracles/active")
-                 |> json_response(200)
-
-        assert %{"oracle" => ^encoded_pk} = oracle1
-
-        assert_called(Database.last_key(Block))
-      end
-    end
-
-    test "it provides a 'next' cursor when more than limit of 10", %{conn: conn} do
-      expiration_key = {next_cursor_exp, next_cursor_pk} = TS.oracle_expiration_key(0)
-      next_cursor_pk_encoded = :aeser_api_encoder.encode(:oracle_pubkey, next_cursor_pk)
-      next_cursor_query_value = "#{next_cursor_exp}-#{next_cursor_pk_encoded}"
-      block_hash = <<0::256>>
-
-      with_mocks [
-        {Database, [],
-         [
-           last_key: fn
-             Model.Block -> {:ok, TS.last_gen()}
-             Model.ActiveOracleExpiration -> {:ok, expiration_key}
-           end,
-           next_key: fn Model.ActiveOracleExpiration, _key -> {:ok, expiration_key} end,
-           prev_key: fn Model.ActiveOracleExpiration, _key -> {:ok, expiration_key} end,
-           get: fn
-             Model.ActiveOracle, _oracle_pk -> {:ok, TS.oracle()}
-             Model.Tx, _txi -> {:ok, Model.tx(id: TS.tx_hash(0))}
-             Model.Block, _block_index -> {:ok, Model.block(hash: block_hash)}
-           end
-         ]},
-        {Oracle, [], [oracle_tree!: fn _block_hash -> :aeo_state_tree.empty() end]},
-        {:aeo_state_tree, [:passthrough], [get_oracle: fn _pk, _tree -> TS.core_oracle() end]},
-        {Blocks, [], [block_hash: fn _state, _height -> "asd" end]},
-        {:aec_db, [], [get_header: fn ^block_hash -> :block1 end]},
-        {:aec_headers, [], [time_in_msecs: fn :block1 -> 123 end]}
-      ] do
-        assert %{"next" => next_uri} = conn |> get("/oracles/active") |> json_response(200)
-
-        assert %URI{
-                 path: "/oracles/active",
-                 query: query
-               } = URI.parse(next_uri)
-
-        assert %{"cursor" => ^next_cursor_query_value} = URI.decode_query(query)
-      end
     end
   end
 
