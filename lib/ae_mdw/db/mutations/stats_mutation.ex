@@ -17,6 +17,8 @@ defmodule AeMdw.Db.StatsMutation do
   alias AeMdw.Txs
   alias AeMdw.Util
 
+  import AeMdw.Db.Sync.ObjectKeys
+
   require Model
 
   @derive AeMdw.Db.Mutation
@@ -169,11 +171,6 @@ defmodule AeMdw.Db.StatsMutation do
          height,
          Model.delta_stat(
            auctions_started: auctions_started,
-           names_activated: names_activated,
-           names_expired: names_expired,
-           names_revoked: names_revoked,
-           oracles_registered: oracles_registered,
-           oracles_expired: oracles_expired,
            contracts_created: contracts_created,
            block_reward: inc_block_reward,
            dev_reward: inc_dev_reward,
@@ -189,10 +186,6 @@ defmodule AeMdw.Db.StatsMutation do
       dev_reward: prev_dev_reward,
       total_supply: prev_total_supply,
       active_auctions: prev_active_auctions,
-      active_names: prev_active_names,
-      inactive_names: prev_inactive_names,
-      active_oracles: prev_active_oracles,
-      inactive_oracles: prev_inactive_oracles,
       contracts: prev_contracts,
       locked_in_auctions: prev_locked_in_auctions,
       burned_in_auctions: prev_burned_in_acutions,
@@ -202,7 +195,6 @@ defmodule AeMdw.Db.StatsMutation do
 
     token_supply_delta = AeMdw.Node.token_supply_delta(height - 1)
     auctions_expired = get(state, :auctions_expired, 0)
-    old_oracles_registered = get(state, :old_oracles_registered, 0)
 
     Model.total_stat(
       index: height,
@@ -210,10 +202,10 @@ defmodule AeMdw.Db.StatsMutation do
       dev_reward: prev_dev_reward + inc_dev_reward,
       total_supply: prev_total_supply + token_supply_delta + inc_block_reward + inc_dev_reward,
       active_auctions: max(0, prev_active_auctions + auctions_started - auctions_expired),
-      active_names: max(0, prev_active_names + names_activated - (names_expired + names_revoked)),
-      inactive_names: prev_inactive_names + names_expired + names_revoked,
-      active_oracles: max(0, prev_active_oracles + oracles_registered - oracles_expired),
-      inactive_oracles: max(0, prev_inactive_oracles - old_oracles_registered + oracles_expired),
+      active_names: count_active_names(),
+      inactive_names: count_inactive_names(),
+      active_oracles: count_active_oracles(),
+      inactive_oracles: count_inactive_oracles(),
       contracts: prev_contracts + contracts_created,
       locked_in_auctions: prev_locked_in_auctions + locked_in_auctions,
       burned_in_auctions: prev_burned_in_acutions + burned_in_auctions,

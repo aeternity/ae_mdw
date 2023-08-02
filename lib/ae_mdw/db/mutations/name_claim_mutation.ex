@@ -8,6 +8,7 @@ defmodule AeMdw.Db.NameClaimMutation do
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Name
+  alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Names
   alias AeMdw.Node.Db
@@ -108,6 +109,8 @@ defmodule AeMdw.Db.NameClaimMutation do
         lock_amount = (lima_or_higher? && name_fee) || :aec_governance.name_claim_locked_fee()
 
         name_claim = Model.name_claim(index: {plain_name, height, txi_idx})
+
+        ObjectKeys.put_active_name(plain_name)
 
         state2
         |> Name.put_active(m_name)

@@ -17,6 +17,7 @@ defmodule AeMdw.Application do
   alias AeMdw.Util
   alias AeMdwWeb.Websocket.BroadcasterCache
   alias AeMdw.Sync.MutationsCache
+  alias AeMdw.Db.Sync.ObjectKeys
 
   require Model
 
@@ -179,6 +180,7 @@ defmodule AeMdw.Application do
   defp init(:tables) do
     BroadcasterCache.init()
     MutationsCache.init()
+    ObjectKeys.init()
 
     _table = :ets.new(:sync_profiling, [:named_table, :set, :public])
 

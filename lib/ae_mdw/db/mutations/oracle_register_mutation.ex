@@ -8,6 +8,7 @@ defmodule AeMdw.Db.OracleRegisterMutation do
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.Sync.Oracle, as: SyncOracle
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.Node.Db
   alias AeMdw.Txs
 
@@ -55,6 +56,8 @@ defmodule AeMdw.Db.OracleRegisterMutation do
         register: {block_index, txi_idx},
         previous: previous
       )
+
+    ObjectKeys.put_active_oracle(oracle_pk)
 
     SyncOracle.put_active(state2, m_oracle)
   end
