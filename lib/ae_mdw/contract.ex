@@ -196,7 +196,7 @@ defmodule AeMdw.Contract do
        ),
        do: mapper.(%{abort: [:aeb_fate_encoding.deserialize(value)]})
 
-  defp decode_call_result([_arg_type, _ret_type], _fun_name, :revert, value, mapper),
+  defp decode_call_result([_arg_type | _ret_type], _fun_name, :revert, value, mapper),
     do: mapper.(%{abort: [ok!(:aeb_heap.from_binary(:string, value))]})
 
   defp decode_call_result(
