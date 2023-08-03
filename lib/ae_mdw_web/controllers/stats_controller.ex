@@ -8,7 +8,10 @@ defmodule AeMdwWeb.StatsController do
   alias AeMdwWeb.Util
   alias Plug.Conn
 
-  plug(PaginatedPlug)
+  @statistics_limit 1_000
+
+  plug PaginatedPlug when action not in ~w(transactions_statistics)a
+  plug PaginatedPlug, [max_limit: @statistics_limit] when action in ~w(transactions_statistics)a
   action_fallback(FallbackController)
 
   @spec stats_v1(Conn.t(), map()) :: Conn.t()
@@ -71,5 +74,15 @@ defmodule AeMdwWeb.StatsController do
     {prev_cursor, miners, next_cursor} = Miners.fetch_miners(state, pagination, cursor)
 
     Util.paginate(conn, prev_cursor, miners, next_cursor)
+  end
+
+  @spec transactions_statistics(Conn.t(), map()) :: Conn.t()
+  def transactions_statistics(%Conn{assigns: assigns} = conn, _params) do
+    %{state: state, pagination: pagination, scope: scope, cursor: cursor} = assigns
+
+    {:ok, {prev_cursor, statistics, next_cursor}} =
+      Stats.fetch_transactions_statistics(state, pagination, scope, cursor)
+
+    Util.paginate(conn, prev_cursor, statistics, next_cursor)
   end
 end

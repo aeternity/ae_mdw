@@ -11,6 +11,7 @@ defmodule AeMdw.Db.Model do
   alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Oracles
+  alias AeMdw.Stats
   alias AeMdw.Txs
 
   require Record
@@ -1093,6 +1094,19 @@ defmodule AeMdw.Db.Model do
   @stat_defaults [:index, :payload]
   defrecord :stat, @stat_defaults
 
+  @statistic_defaults [
+    index: nil,
+    count: nil
+  ]
+  defrecord :statistic, @statistic_defaults
+
+  @type statistic_index() :: {Stats.statistic_tag(), Stats.interval(), Stats.interval_start()}
+  @type statistic ::
+          record(:statistic,
+            index: statistic_index(),
+            count: pos_integer()
+          )
+
   @type stat_index() :: atom() | {atom(), pubkey()} | {atom(), pubkey(), template_id()}
   @type stat() :: record(:stat, index: stat_index(), payload: term())
 
@@ -1229,7 +1243,8 @@ defmodule AeMdw.Db.Model do
     [
       AeMdw.Db.Model.DeltaStat,
       AeMdw.Db.Model.TotalStat,
-      AeMdw.Db.Model.Stat
+      AeMdw.Db.Model.Stat,
+      AeMdw.Db.Model.Statistic
     ]
   end
 
@@ -1331,5 +1346,6 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.DeltaStat), do: :delta_stat
   def record(AeMdw.Db.Model.TotalStat), do: :total_stat
   def record(AeMdw.Db.Model.Stat), do: :stat
+  def record(AeMdw.Db.Model.Statistic), do: :statistic
   def record(AeMdw.Db.Model.Miner), do: :miner
 end

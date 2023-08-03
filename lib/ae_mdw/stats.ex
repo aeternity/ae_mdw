@@ -5,6 +5,7 @@ defmodule AeMdw.Stats do
 
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
+  alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.StatsMutation
@@ -13,6 +14,7 @@ defmodule AeMdw.Stats do
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db
+  alias AeMdw.Node
   alias AeMdw.Util
 
   require Model
@@ -22,6 +24,7 @@ defmodule AeMdw.Stats do
   @type total_stat() :: map()
   @type cursor() :: binary() | nil
   @type tps() :: non_neg_integer()
+  @type statistic() :: map()
 
   @typep txi() :: Blocks.height()
   @typep pubkey() :: Db.pubkey()
@@ -30,9 +33,16 @@ defmodule AeMdw.Stats do
   @typep limit() :: Database.limit()
   @typep range() :: {:gen, Range.t()} | nil
   @typep aexn_type() :: :aex9 | :aex141
+  @typep pagination() :: Collection.direction_limit()
+  @typep pagination_cursor() :: Collection.pagination_cursor()
 
   @type nft_stats :: %{nfts_amount: non_neg_integer(), nft_owners: non_neg_integer()}
   @typep template_id() :: AeMdw.Aex141.template_id()
+
+  @type statistic_tag() :: {:transactions, Node.tx_type() | :all}
+  @type interval() :: :day | :week | :month
+  @type interval_start() :: non_neg_integer()
+
   @tps_stat_key :max_tps
   @miners_count_stat_key :miners_count
   @nfts_count_stat :nfts_count
@@ -206,6 +216,64 @@ defmodule AeMdw.Stats do
     case State.get(state, Model.Stat, aex9_logs_count_key(contract_pk)) do
       {:ok, Model.stat(payload: count)} -> count
       :not_found -> 0
+    end
+  end
+
+  @spec fetch_transactions_statistics(State.t(), pagination(), range(), cursor()) ::
+          {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}}
+  def fetch_transactions_statistics(state, pagination, range, cursor) do
+    cursor = deserialize_statistic_cursor(cursor)
+
+    {prev_cursor, statistics_keys, next_cursor} =
+      state
+      |> build_transactions_statistics_streamer(range, cursor)
+      |> Collection.paginate(pagination)
+
+    statistics = Enum.map(statistics_keys, &render_statistic(state, &1))
+
+    {:ok,
+     {serialize_statistics_cursor(prev_cursor), statistics,
+      serialize_statistics_cursor(next_cursor)}}
+  end
+
+  defp build_transactions_statistics_streamer(state, _scope, cursor) do
+    cursor =
+      case cursor do
+        nil -> nil
+        interval_start -> {{:transactions, :all}, :day, interval_start}
+      end
+
+    key_boundary = {
+      {{:transactions, :all}, :day, Util.min_int()},
+      {{:transactions, :all}, :day, Util.max_int()}
+    }
+
+    fn direction ->
+      Collection.stream(state, Model.Statistic, direction, key_boundary, cursor)
+    end
+  end
+
+  defp render_statistic(state, {{:transactions, :all}, :day, interval_start} = statistic_key) do
+    Model.statistic(count: count) = State.fetch!(state, Model.Statistic, statistic_key)
+
+    %{
+      start_date: interval_start * 24 * 3_600 * 1_000,
+      end_date: (interval_start + 1) * 24 * 3_600 * 1_000,
+      count: count
+    }
+  end
+
+  defp serialize_statistics_cursor(nil), do: nil
+
+  defp serialize_statistics_cursor({{{:transactions, :all}, :day, interval_start}, is_reversed?}),
+    do: {"#{interval_start}", is_reversed?}
+
+  defp deserialize_statistic_cursor(nil), do: nil
+
+  defp deserialize_statistic_cursor(cursor_bin) do
+    case Integer.parse(cursor_bin) do
+      {interval_start, ""} -> interval_start
+      _error_or_invalid -> nil
     end
   end
 
