@@ -21,10 +21,13 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.Mutation
+  alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Txs
   alias __MODULE__.TxContext
+
+  import AeMdw.Util.Encoding, only: [encode_contract: 1]
 
   require Model
 
@@ -145,6 +148,7 @@ defmodule AeMdw.Db.Sync.Transaction do
         ]
       ])
     else
+      Log.error("Contract not found=#{encode_contract(contract_pk)}}")
       mutations
     end
   end

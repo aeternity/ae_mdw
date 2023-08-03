@@ -130,16 +130,26 @@ defmodule AeMdw.Node.Db do
   @spec get_tx_data(binary()) ::
           {Blocks.block_hash(), Node.tx_type(), Node.signed_tx(), Node.tx()}
   def get_tx_data(<<_pk::256>> = tx_hash) do
-    {block_hash, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
-    {type, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
-    {block_hash, type, signed_tx, tx_rec}
+    case :aec_db.find_tx_with_location(tx_hash) do
+      {block_hash, signed_tx} ->
+        {type, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
+        {block_hash, type, signed_tx, tx_rec}
+
+      :none ->
+        nil
+    end
   end
 
   @spec get_tx(binary()) :: Node.tx()
   def get_tx(<<_pk::256>> = tx_hash) do
-    {_block_hash, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
-    {_type, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
-    tx_rec
+    case :aec_db.find_tx_with_location(tx_hash) do
+      {_block_hash, signed_tx} ->
+        {_type, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
+        tx_rec
+
+      :none ->
+        nil
+    end
   end
 
   @spec get_signed_tx(binary()) :: tuple()
