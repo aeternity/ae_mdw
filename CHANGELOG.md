@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.57.0](https://www.github.com/aeternity/ae_mdw/compare/v1.56.0...v1.57.0) (2023-08-03)
+
+
+### Features
+
+* include last tx hash on delta/total stats ([#1486](https://www.github.com/aeternity/ae_mdw/issues/1486)) ([b1dd02d](https://www.github.com/aeternity/ae_mdw/commit/b1dd02d06b8ebafb42cc651edeb7fde41e4fdc6b))
+* index Hyperchains seed contracts ([#1489](https://www.github.com/aeternity/ae_mdw/issues/1489)) ([231b169](https://www.github.com/aeternity/ae_mdw/commit/231b1694e69fc8cab4f1c341fcf9d90712652351))
+
+
+### Bug Fixes
+
+* filter oracle by state param ([#1491](https://www.github.com/aeternity/ae_mdw/issues/1491)) ([e26a2a7](https://www.github.com/aeternity/ae_mdw/commit/e26a2a7d2357ab38e0161b9ad238cde411c5a7f4))
+* handle empty stats ([#1484](https://www.github.com/aeternity/ae_mdw/issues/1484)) ([1a0e211](https://www.github.com/aeternity/ae_mdw/commit/1a0e2119fe9a91f9477c11efc2e14ea902942696))
+* restructure pattern-match for decode_call_result ([#1495](https://www.github.com/aeternity/ae_mdw/issues/1495)) ([d2ecbb1](https://www.github.com/aeternity/ae_mdw/commit/d2ecbb17a1bac2d98969b48a34a6b4952d699c35))
+
+
+### Miscellaneous
+
+* log and reindex aexn ([#1494](https://www.github.com/aeternity/ae_mdw/issues/1494)) ([0440a7f](https://www.github.com/aeternity/ae_mdw/commit/0440a7f02ab4abe29f4d8d5d24c183485ae2af99))
+* remove all consistency credo warnings ([#1490](https://www.github.com/aeternity/ae_mdw/issues/1490)) ([b58b278](https://www.github.com/aeternity/ae_mdw/commit/b58b278c6b009acedb8298272ff5ec9aad9f34a7))
+
 ## [1.56.0](https://www.github.com/aeternity/ae_mdw/compare/v1.55.1...v1.56.0) (2023-07-28)
 
 
