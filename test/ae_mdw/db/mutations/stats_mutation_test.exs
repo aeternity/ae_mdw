@@ -20,6 +20,15 @@ defmodule AeMdw.Db.StatsMutationTest do
 
     Enum.each(1..4, fn i -> ObjectKeys.put_active_name("names#{i}.chain") end)
     Enum.each(1..3, fn i -> ObjectKeys.put_inactive_name("names#{i}-inactive.chain") end)
+
+    {:ok,
+     total_stat:
+       Model.total_stat(
+         inactive_oracles: 6,
+         active_oracles: 5,
+         active_names: 4,
+         inactive_names: 3
+       )}
   end
 
   describe "new_mutation/2 with all_cached? = false" do
@@ -55,26 +64,13 @@ defmodule AeMdw.Db.StatsMutationTest do
       {:ok, m_total_stat} = State.get(state, Model.TotalStat, height + 1)
 
       assert Model.delta_stat(m_delta_stat, :dev_reward) == 0
-      assert Model.delta_stat(m_delta_stat, :auctions_started) >= 0
-      assert Model.delta_stat(m_delta_stat, :names_activated) >= 0
-      assert Model.delta_stat(m_delta_stat, :names_expired) >= 0
-      assert Model.delta_stat(m_delta_stat, :names_revoked) >= 0
-      assert Model.delta_stat(m_delta_stat, :oracles_registered) >= 0
-      assert Model.delta_stat(m_delta_stat, :oracles_expired) >= 0
-      assert Model.delta_stat(m_delta_stat, :contracts_created) >= 0
+      assert Model.delta_stat(m_delta_stat, :block_reward) == @first_block_reward
 
+      assert Model.total_stat(m_total_stat, :dev_reward) == 0
       assert Model.total_stat(m_total_stat, :block_reward) == @first_block_reward
 
       assert Model.total_stat(m_total_stat, :total_supply) ==
                @initial_token_offer + @first_block_reward
-
-      assert Model.total_stat(m_total_stat, :dev_reward) == 0
-      assert Model.total_stat(m_total_stat, :active_names) >= 0
-      assert Model.total_stat(m_total_stat, :inactive_names) >= 0
-      assert Model.total_stat(m_total_stat, :active_auctions) >= 0
-      assert Model.total_stat(m_total_stat, :inactive_oracles) >= 0
-      assert Model.total_stat(m_total_stat, :active_oracles) >= 0
-      assert Model.total_stat(m_total_stat, :contracts) >= 0
     end
   end
 
@@ -104,19 +100,19 @@ defmodule AeMdw.Db.StatsMutationTest do
       {:ok, m_delta_stat} = State.get(state, Model.DeltaStat, height)
       {:ok, m_total_stat} = State.get(state, Model.TotalStat, height + 1)
 
-      assert Model.total_stat(m_total_stat, :block_reward) == @first_block_reward
+      assert Model.delta_stat(m_delta_stat, :block_reward) == @first_block_reward
+
       assert Model.total_stat(m_total_stat, :dev_reward) == 0
+      assert Model.total_stat(m_total_stat, :block_reward) == @first_block_reward
 
       assert Model.total_stat(m_total_stat, :total_supply) ==
                @initial_token_offer + @first_block_reward
-
-      assert Model.delta_stat(m_delta_stat, :block_reward) == @first_block_reward
     end
   end
 
   describe "execute/2" do
-    test "with all_cached? = false, on 1st block reward it stores the stat using database counts" do
-      height = 21
+    test "with all_cached? = false, gets stat using database counts", %{total_stat: m_total_stat} do
+      height = 100
       mutation = StatsMutation.new(height, "", 0, 0, 0, false)
 
       expected_delta =
@@ -133,19 +129,7 @@ defmodule AeMdw.Db.StatsMutationTest do
           dev_reward: 0
         )
 
-      expected_total =
-        Model.total_stat(
-          index: height + 1,
-          block_reward: 0,
-          dev_reward: 0,
-          total_supply: 0,
-          active_auctions: 5,
-          active_names: 4,
-          inactive_names: 3,
-          active_oracles: 5,
-          inactive_oracles: 6,
-          contracts: 0
-        )
+      expected_total = Model.total_stat(m_total_stat, index: height + 1, active_auctions: 5)
 
       state =
         NullStore.new()
@@ -199,8 +183,10 @@ defmodule AeMdw.Db.StatsMutationTest do
       assert ^expected_total = State.fetch!(state, Model.TotalStat, height + 1)
     end
 
-    test "with all_cached? = true, it increments oracles and names total stats based on keys" do
-      height = 1000
+    test "with all_cached? = true, it increments oracles and names total stats based on keys", %{
+      total_stat: m_total_stat
+    } do
+      height = 200
 
       state =
         NullStore.new()
@@ -213,6 +199,8 @@ defmodule AeMdw.Db.StatsMutationTest do
         |> State.inc_stat(:names_activated, 4)
         |> State.inc_stat(:names_expired, 2)
         |> State.inc_stat(:names_revoked)
+        |> State.inc_stat(:dev_reward, 123)
+        |> State.inc_stat(:contracts_created)
 
       mutation = StatsMutation.new(height, "", 0, 0, 0, true)
 
@@ -225,23 +213,17 @@ defmodule AeMdw.Db.StatsMutationTest do
           names_revoked: 1,
           oracles_registered: 5,
           oracles_expired: 6,
-          contracts_created: 0,
+          contracts_created: 1,
           block_reward: 0,
-          dev_reward: 0
+          dev_reward: 123
         )
 
       expected_total =
-        Model.total_stat(
+        Model.total_stat(m_total_stat,
           index: height + 1,
-          block_reward: 0,
-          dev_reward: 0,
-          total_supply: 0,
-          active_auctions: 0,
-          active_names: 4,
-          inactive_names: 3,
-          active_oracles: 5,
-          inactive_oracles: 6,
-          contracts: 0
+          contracts: 1,
+          dev_reward: 123,
+          total_supply: 123
         )
 
       state = StatsMutation.execute(mutation, state)
