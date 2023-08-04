@@ -3,6 +3,10 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
   Counts the keys of active and inactive Names and Oracles
   """
 
+  alias AeMdw.Db.Model
+  alias AeMdw.Db.State
+  alias AeMdw.Log
+
   @typep pubkey :: AeMdw.Node.Db.pubkey()
 
   @active_names_table :active_names
@@ -10,13 +14,36 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
   @inactive_names_table :inactive_names
   @inactive_oracles_table :inactive_oracles
   @opts [:named_table, :set, :public]
+  @init_timeout 300_000
 
-  @spec init() :: :ok
-  def init do
+  @spec init(State.t()) :: :ok
+  def init(state) do
     _tid1 = :ets.new(@active_names_table, @opts)
     _tid2 = :ets.new(@inactive_names_table, @opts)
     _tid3 = :ets.new(@active_oracles_table, @opts)
     _tid4 = :ets.new(@inactive_oracles_table, @opts)
+
+    {ts, _} =
+      :timer.tc(fn ->
+        [
+          Task.async(fn ->
+            :ets.insert(@active_names_table, all_records(state, Model.ActiveName))
+          end),
+          Task.async(fn ->
+            :ets.insert(@inactive_names_table, all_records(state, Model.InactiveName))
+          end),
+          Task.async(fn ->
+            :ets.insert(@active_oracles_table, all_records(state, Model.ActiveOracle))
+          end),
+          Task.async(fn ->
+            :ets.insert(@inactive_oracles_table, all_records(state, Model.InactiveOracle))
+          end)
+        ]
+        |> Task.await_many(@init_timeout)
+      end)
+
+    Log.info("Loaded object keys in #{div(ts, 1_000)}ms")
+
     :ok
   end
 
@@ -63,4 +90,15 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
   defp put(table, key), do: :ets.insert(table, {key})
   defp del(table, key), do: :ets.delete(table, key)
   defp count(table), do: :ets.info(table, :size)
+
+  defp all_records(state, table) do
+    nil
+    |> Stream.unfold(fn prev_key ->
+      case State.next(state, table, prev_key) do
+        :none -> nil
+        {:ok, key} -> {key, key}
+      end
+    end)
+    |> Enum.map(&{&1})
+  end
 end

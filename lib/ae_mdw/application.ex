@@ -42,6 +42,8 @@ defmodule AeMdw.Application do
     persist = Application.get_env(:aecore, :persist, true)
     :ok = AeMdw.Db.RocksDb.open(!persist)
 
+    ObjectKeys.init(AeMdw.Db.State.new())
+
     children = [
       AeMdw.APM.Telemetry,
       AeMdwWeb.Supervisor,
@@ -180,7 +182,6 @@ defmodule AeMdw.Application do
   defp init(:tables) do
     BroadcasterCache.init()
     MutationsCache.init()
-    ObjectKeys.init()
 
     _table = :ets.new(:sync_profiling, [:named_table, :set, :public])
 

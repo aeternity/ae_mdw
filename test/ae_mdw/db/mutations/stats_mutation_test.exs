@@ -21,14 +21,7 @@ defmodule AeMdw.Db.StatsMutationTest do
     Enum.each(1..4, fn i -> ObjectKeys.put_active_name("names#{i}.chain") end)
     Enum.each(1..3, fn i -> ObjectKeys.put_inactive_name("names#{i}-inactive.chain") end)
 
-    {:ok,
-     total_stat:
-       Model.total_stat(
-         inactive_oracles: 6,
-         active_oracles: 5,
-         active_names: 4,
-         inactive_names: 3
-       )}
+    :ok
   end
 
   describe "new_mutation/2 with all_cached? = false" do
@@ -111,7 +104,7 @@ defmodule AeMdw.Db.StatsMutationTest do
   end
 
   describe "execute/2" do
-    test "with all_cached? = false, gets stat using database counts", %{total_stat: m_total_stat} do
+    test "with all_cached? = false, gets stat using database counts" do
       height = 100
       mutation = StatsMutation.new(height, "", 0, 0, 0, false)
 
@@ -129,7 +122,15 @@ defmodule AeMdw.Db.StatsMutationTest do
           dev_reward: 0
         )
 
-      expected_total = Model.total_stat(m_total_stat, index: height + 1, active_auctions: 5)
+      expected_total =
+        Model.total_stat(
+          index: height + 1,
+          active_auctions: 5,
+          inactive_oracles: ObjectKeys.count_inactive_oracles(),
+          active_oracles: ObjectKeys.count_active_oracles(),
+          active_names: ObjectKeys.count_active_names(),
+          inactive_names: ObjectKeys.count_inactive_names()
+        )
 
       state =
         NullStore.new()
@@ -183,9 +184,7 @@ defmodule AeMdw.Db.StatsMutationTest do
       assert ^expected_total = State.fetch!(state, Model.TotalStat, height + 1)
     end
 
-    test "with all_cached? = true, it increments oracles and names total stats based on keys", %{
-      total_stat: m_total_stat
-    } do
+    test "with all_cached? = true, it increments oracles and names total stats based on keys" do
       height = 200
 
       state =
@@ -219,11 +218,15 @@ defmodule AeMdw.Db.StatsMutationTest do
         )
 
       expected_total =
-        Model.total_stat(m_total_stat,
+        Model.total_stat(
           index: height + 1,
           contracts: 1,
           dev_reward: 123,
-          total_supply: 123
+          total_supply: 123,
+          inactive_oracles: ObjectKeys.count_inactive_oracles(),
+          active_oracles: ObjectKeys.count_active_oracles(),
+          active_names: ObjectKeys.count_active_names(),
+          inactive_names: ObjectKeys.count_inactive_names()
         )
 
       state = StatsMutation.execute(mutation, state)
