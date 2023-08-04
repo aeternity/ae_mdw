@@ -78,11 +78,11 @@ defmodule AeMdwWeb.StatsController do
 
   @spec transactions_statistics(Conn.t(), map()) :: Conn.t()
   def transactions_statistics(%Conn{assigns: assigns} = conn, _params) do
-    %{state: state, pagination: pagination, scope: scope, cursor: cursor} = assigns
+    %{state: state, pagination: pagination, query: query, scope: scope, cursor: cursor} = assigns
 
-    {:ok, {prev_cursor, statistics, next_cursor}} =
-      Stats.fetch_transactions_statistics(state, pagination, scope, cursor)
-
-    Util.paginate(conn, prev_cursor, statistics, next_cursor)
+    with {:ok, paginated_statistics} <-
+           Stats.fetch_transactions_statistics(state, pagination, query, scope, cursor) do
+      Util.paginate(conn, paginated_statistics)
+    end
   end
 end

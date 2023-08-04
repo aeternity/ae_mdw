@@ -96,6 +96,7 @@ defmodule AeMdw.MixProject do
           :aeu_env,
           :aeu_info,
           :aeu_mtrees,
+          :aeu_time,
           :app_ctrl,
           :app_ctrl_server,
           :enacl,
