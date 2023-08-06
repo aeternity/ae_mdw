@@ -178,8 +178,9 @@ defmodule AeMdwWeb.BlockchainSim do
       find_block: fn hash ->
         find_block(hash, mock_blocks)
       end,
-      find_header: fn _hash ->
-        {:value, mock_blocks[:mb] |> :aec_blocks.to_header()}
+      find_header: fn hash ->
+        {:value, block} = find_block(hash, mock_blocks)
+        {:value, :aec_blocks.to_header(block)}
       end,
       find_tx_location: fn _tx_hash ->
         header = mock_blocks[:mb] |> :aec_blocks.to_header()

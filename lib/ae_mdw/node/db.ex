@@ -258,7 +258,14 @@ defmodule AeMdw.Node.Db do
     end
   end
 
-  @spec get_block_time(Blocks.block_hash()) :: key_block() | micro_block()
+  @spec find_block_height(Blocks.block_hash()) :: {:ok, Blocks.height()} | :none
+  def find_block_height(block_hash) do
+    with {:value, header} <- :aec_db.find_header(block_hash) do
+      {:ok, :aec_headers.height(header)}
+    end
+  end
+
+  @spec get_block_time(Blocks.block_hash()) :: Blocks.time()
   def get_block_time(block_hash),
     do: block_hash |> :aec_db.get_header() |> :aec_headers.time_in_msecs()
 

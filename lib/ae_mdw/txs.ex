@@ -488,9 +488,7 @@ defmodule AeMdw.Txs do
     encoded_tx_hash = :aeser_api_encoder.encode(:tx_hash, tx_hash)
 
     with mb_hash when is_binary(mb_hash) <- :aec_db.find_tx_location(tx_hash),
-         {:ok, mb_header} <- :aec_chain.get_header(mb_hash) do
-      mb_height = :aec_headers.height(mb_header)
-
+         {:ok, mb_height} <- Node.Db.find_block_height(mb_hash) do
       state
       |> Blocks.fetch_txis_from_gen(mb_height)
       |> Stream.map(&State.fetch!(state, @table, &1))

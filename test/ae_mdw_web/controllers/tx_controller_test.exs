@@ -490,7 +490,6 @@ defmodule AeMdwWeb.TxControllerTest do
              ^tx_hash4 -> mb_hash
            end
          ]},
-        {:aec_chain, [], [get_header: fn ^mb_hash -> {:ok, :header} end]},
         {:aec_headers, [], [height: fn :header -> 1 end]}
       ] do
         assert %{"error" => _error_msg} = conn |> get("/tx/#{enc_tx_hash1}") |> json_response(404)
@@ -1372,8 +1371,8 @@ defmodule AeMdwWeb.TxControllerTest do
          find_tx_location: fn tx_hash when tx_hash in [tx_hash1, tx_hash2, tx_hash3] ->
            mb_hash
          end,
+         find_header: fn ^mb_hash -> {:value, mb_header} end,
          get_header: fn ^mb_hash -> mb_header end},
-        {:aec_chain, [:passthrough], [get_header: fn ^mb_hash -> {:ok, mb_header} end]},
         {:aec_headers, [:passthrough], [height: fn ^mb_header -> 0 end]}
       ] do
         store =
@@ -1532,8 +1531,8 @@ defmodule AeMdwWeb.TxControllerTest do
          find_tx_location: fn tx_hash when tx_hash in [tx_hash1, tx_hash2, tx_hash3] ->
            mb_hash
          end,
+         find_header: fn ^mb_hash -> {:value, mb_header} end,
          get_header: fn ^mb_hash -> mb_header end},
-        {:aec_chain, [:passthrough], [get_header: fn ^mb_hash -> {:ok, mb_header} end]},
         {:aec_headers, [:passthrough], [height: fn ^mb_header -> 0 end]}
       ] do
         store =
@@ -1880,7 +1879,11 @@ defmodule AeMdwWeb.TxControllerTest do
            type: fn :header -> :micro end,
            height: fn :header -> height end
          ]},
-        {Db, [], [get_reverse_micro_blocks: fn ^mb_hash -> [] end]},
+        {Db, [],
+         [
+           get_reverse_micro_blocks: fn ^mb_hash -> [] end,
+           find_block_height: fn ^mb_hash -> {:ok, height} end
+         ]},
         {Format, [],
          [
            to_map: fn
@@ -1925,7 +1928,11 @@ defmodule AeMdwWeb.TxControllerTest do
            type: fn :header -> :micro end,
            height: fn :header -> height end
          ]},
-        {Db, [], [get_reverse_micro_blocks: fn ^mb_hash -> [] end]},
+        {Db, [],
+         [
+           get_reverse_micro_blocks: fn ^mb_hash -> [] end,
+           find_block_height: fn ^mb_hash -> {:ok, height} end
+         ]},
         {Format, [],
          [
            to_map: fn
@@ -1981,7 +1988,11 @@ defmodule AeMdwWeb.TxControllerTest do
            type: fn :header -> :micro end,
            height: fn :header -> 1 end
          ]},
-        {Db, [], [get_reverse_micro_blocks: fn ^mb_hash -> [] end]}
+        {Db, [],
+         [
+           get_reverse_micro_blocks: fn ^mb_hash -> [] end,
+           find_block_height: fn ^mb_hash -> {:ok, 999_999} end
+         ]}
       ] do
         assert %{"error" => ^error_msg} =
                  conn
