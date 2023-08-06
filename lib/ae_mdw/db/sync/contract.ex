@@ -30,17 +30,19 @@ defmodule AeMdw.Db.Sync.Contract do
 
   @spec child_contract_mutations(
           Contract.fun_arg_res_or_error(),
+          Blocks.block_hash(),
           Blocks.block_index(),
           Txs.txi(),
           Txs.tx_hash()
         ) :: [Mutation.t()]
-  def child_contract_mutations({:error, _any}, _block_index, _txi_idx, _tx_hash), do: []
+  def child_contract_mutations({:error, _any}, _block_hash, _block_index, _txi_idx, _tx_hash),
+    do: []
 
-  def child_contract_mutations(%{result: fun_result}, block_index, txi, tx_hash) do
+  def child_contract_mutations(%{result: fun_result}, block_hash, block_index, txi, tx_hash) do
     with %{type: :contract, value: contract_id} <- fun_result,
          {:ok, contract_pk} <- Validate.id(contract_id) do
       [
-        aexn_create_contract_mutation(contract_pk, block_index, txi)
+        aexn_create_contract_mutation(contract_pk, block_hash, block_index, txi)
         | SyncOrigin.origin_mutations(:contract_call_tx, nil, contract_pk, txi, tx_hash)
       ]
     else
@@ -97,13 +99,18 @@ defmodule AeMdw.Db.Sync.Contract do
 
     [
       IntCallsMutation.new(contract_pk, call_txi, int_calls)
-      | events_tx_mutations(int_calls, block_index, call_txi, call_tx_hash)
+      | events_tx_mutations(int_calls, block_index, block_hash, call_txi, call_tx_hash)
     ]
   end
 
-  @spec aexn_create_contract_mutation(Db.pubkey(), Blocks.block_index(), Txs.txi()) ::
+  @spec aexn_create_contract_mutation(
+          Db.pubkey(),
+          Blocks.block_hash(),
+          Blocks.block_index(),
+          Txs.txi()
+        ) ::
           nil | AexnCreateContractMutation.t()
-  def aexn_create_contract_mutation(contract_pk, {height, _mbi} = block_index, txi) do
+  def aexn_create_contract_mutation(contract_pk, block_hash, {height, _mbi} = block_index, txi) do
     aexn_type =
       cond do
         AexnContracts.is_aex9?(contract_pk) -> :aex9
@@ -113,7 +120,7 @@ defmodule AeMdw.Db.Sync.Contract do
 
     with true <- aexn_type != nil,
          {:ok, aexn_extensions} <- AexnContracts.call_extensions(aexn_type, contract_pk),
-         {:ok, aexn_meta_info} <- AexnContracts.call_meta_info(aexn_type, contract_pk) do
+         {:ok, aexn_meta_info} <- AexnContracts.call_meta_info(aexn_type, contract_pk, block_hash) do
       if aexn_type == :aex9 or
            (aexn_type == :aex141 and
               AexnContracts.has_valid_aex141_extensions?(aexn_extensions, contract_pk)) do
@@ -132,7 +139,7 @@ defmodule AeMdw.Db.Sync.Contract do
     end
   end
 
-  defp events_tx_mutations(int_calls, {height, _mbi} = block_index, call_txi, tx_hash) do
+  defp events_tx_mutations(int_calls, {height, _mbi} = block_index, block_hash, call_txi, tx_hash) do
     Enum.map(int_calls, fn
       {local_idx, "Oracle.extend", :oracle_extend_tx, _aetx, tx} ->
         Oracle.extend_mutation(tx, block_index, {call_txi, local_idx})
@@ -170,7 +177,7 @@ defmodule AeMdw.Db.Sync.Contract do
         contract_pk = :aect_create_tx.contract_pubkey(tx)
 
         [
-          aexn_create_contract_mutation(contract_pk, block_index, call_txi),
+          aexn_create_contract_mutation(contract_pk, block_hash, block_index, call_txi),
           ContractCreateCacheMutation.new(contract_pk, call_txi)
           | SyncOrigin.origin_mutations(
               :contract_call_tx,
