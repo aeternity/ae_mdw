@@ -42,7 +42,7 @@ defmodule AeMdw.Stats do
   @typep template_id() :: AeMdw.Aex141.template_id()
 
   @type statistic_tag() :: {:transactions, Node.tx_type() | :all}
-  @type interval() :: :day | :week | :month
+  @type interval_by() :: :day | :week | :month
   @type interval_start() :: non_neg_integer()
 
   @tps_stat_key :max_tps

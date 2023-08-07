@@ -1100,7 +1100,7 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :statistic, @statistic_defaults
 
-  @type statistic_index() :: {Stats.statistic_tag(), Stats.interval(), Stats.interval_start()}
+  @type statistic_index() :: {Stats.statistic_tag(), Stats.interval_by(), Stats.interval_start()}
   @type statistic ::
           record(:statistic,
             index: statistic_index(),
