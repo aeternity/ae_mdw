@@ -23,10 +23,10 @@ defmodule AeMdw.Migrations.ReindexAexN do
       )
       |> Stream.map(&State.fetch!(state, Model.Tx, elem(&1, 1)))
       |> Enum.flat_map(fn Model.tx(index: txi, block_index: block_index, id: hash) ->
-        with tx_rec when tx_rec != nil <- Node.Db.get_tx(hash),
+        with {block_hash, _type, _signed_tx, tx_rec} <- Node.Db.get_tx_data(hash),
              contract_pk <- :aect_create_tx.contract_pubkey(tx_rec),
              true <- not already_indexed(state, contract_pk) do
-          [Sync.Contract.aexn_create_contract_mutation(contract_pk, block_index, txi)]
+          [Sync.Contract.aexn_create_contract_mutation(contract_pk, block_hash, block_index, txi)]
         else
           _bool ->
             []

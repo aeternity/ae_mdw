@@ -16,12 +16,13 @@ defmodule AeMdw.AexnContracts do
   @typep height :: AeMdw.Blocks.height()
   @typep block_hash :: Node.Db.hash()
   @typep height_hash :: Node.Db.height_hash()
+  @typep type_info :: Contract.type_info()
   @typep aexn_meta_info :: AeMdw.Db.Model.aexn_meta_info()
 
-  @max_height AeMdw.Util.max_int()
+  @aex9_extensions_hash <<49, 192, 141, 115>>
   @aex141_extensions_hash <<222, 10, 63, 194>>
 
-  @spec is_aex9?(pubkey() | Contract.type_info()) :: boolean()
+  @spec is_aex9?(pubkey() | type_info()) :: boolean()
   def is_aex9?(pubkey) when is_binary(pubkey) do
     case Contract.get_info(pubkey) do
       {:ok, {type_info, _compiler_vsn, _source_hash}} -> is_aex9?(type_info)
@@ -36,41 +37,17 @@ defmodule AeMdw.AexnContracts do
 
   def is_aex9?(_no_fcode), do: false
 
-  @spec is_aex141?(pubkey()) :: boolean()
-  def is_aex141?(pubkey) when is_binary(pubkey) do
-    with {:ok, {type_info, _compiler_vsn, _source_hash}} <- Contract.get_info(pubkey),
-         true <- valid_aex141_signatures?(@max_height, type_info),
-         {:ok, extensions} <- get_aex141_extensions(type_info, pubkey) do
-      has_valid_aex141_extensions?(extensions, type_info)
-    else
-      _error_or_false ->
-        false
-    end
+  @spec has_aex141_signatures?(height(), type_info()) :: boolean()
+  def has_aex141_signatures?(height, {:fcode, functions, _hash_names, _code}) do
+    signatures = :aec_governance.get_network_id() |> get_aex141_signatures(height)
+
+    has_all_signatures?(signatures, functions) and valid_aex141_metadata?(functions)
   end
 
-  @spec has_aex141_signatures?(height(), pubkey()) :: boolean()
-  def has_aex141_signatures?(height, pubkey) do
-    case Contract.get_info(pubkey) do
-      {:ok, {type_info, _compiler_vsn, _source_hash}} ->
-        valid_aex141_signatures?(height, type_info)
+  def has_aex141_signatures?(_height, _no_fcode), do: false
 
-      {:error, _reason} ->
-        false
-    end
-  end
-
-  @spec has_valid_aex141_extensions?(Model.aexn_extensions(), pubkey() | Contract.type_info()) ::
+  @spec has_valid_aex141_extensions?(Model.aexn_extensions(), Contract.type_info()) ::
           boolean()
-  def has_valid_aex141_extensions?(extensions, pubkey) when is_binary(pubkey) do
-    case Contract.get_info(pubkey) do
-      {:ok, {type_info, _compiler_vsn, _source_hash}} ->
-        has_valid_aex141_extensions?(extensions, type_info)
-
-      {:error, _reason} ->
-        false
-    end
-  end
-
   def has_valid_aex141_extensions?(extensions, {:fcode, functions, _hash_names, _code}) do
     Enum.all?(extensions, &valid_aex141_extension?(&1, functions))
   end
@@ -83,21 +60,28 @@ defmodule AeMdw.AexnContracts do
       {:ok, {:tuple, meta_info_tuple}} ->
         {:ok, decode_meta_info(aexn_type, meta_info_tuple)}
 
-      :error ->
+      {:error, reason} when reason in [:contract_does_not_exist, :block_not_found] ->
+        :error
+
+      {:error, _reason} ->
         {:ok, call_error_meta_info(aexn_type)}
     end
   end
 
-  @spec call_extensions(Model.aexn_type(), pubkey()) :: {:ok, Model.aexn_extensions()} | :error
-  def call_extensions(aexn_type, pubkey) do
+  @spec get_extensions(Model.aexn_type(), pubkey(), type_info()) ::
+          {:ok, Model.aexn_extensions()} | :error
+  def get_extensions(aexn_type, pubkey, type_info) do
     case aexn_type do
-      :aex9 -> call_contract(pubkey, "aex9_extensions")
-      :aex141 -> call_contract(pubkey, "aex141_extensions")
+      :aex9 ->
+        do_get_extensions(pubkey, @aex9_extensions_hash, "aex9_extensions", type_info)
+
+      :aex141 ->
+        do_get_extensions(pubkey, @aex141_extensions_hash, "aex141_extensions", type_info)
     end
   end
 
   @spec call_contract(pubkey(), Contract.method_name(), Contract.method_args()) ::
-          {:ok, any()} | :error
+          {:ok, any()} | {:error, Runner.call_error()}
   def call_contract(contract_pk, method, args \\ []) do
     call_contract(contract_pk, method, args, Node.Db.top_height_hash(false))
   end
@@ -108,7 +92,7 @@ defmodule AeMdw.AexnContracts do
           Contract.method_args(),
           block_hash() | height_hash()
         ) ::
-          {:ok, any()} | :error
+          {:ok, any()} | {:error, term()}
   def call_contract(contract_pk, method, args, mb_hash) when is_binary(mb_hash) do
     case Node.Db.find_block_height(mb_hash) do
       {:ok, height} ->
@@ -116,14 +100,14 @@ defmodule AeMdw.AexnContracts do
 
       :none ->
         Log.warn("#{method} call error for #{encode_contract(contract_pk)}: block not found")
-        :error
+        {:error, :block_not_found}
     end
   end
 
   def call_contract(contract_pk, method, args, height_hash) do
-    with {:error, call_error} <- Runner.call_contract(contract_pk, height_hash, method, args) do
-      Log.warn("#{method} call error for #{encode_contract(contract_pk)}: #{inspect(call_error)}")
-      :error
+    with {:error, reason} <- Runner.call_contract(contract_pk, height_hash, method, args) do
+      Log.warn("#{method} call error for #{encode_contract(contract_pk)}: #{inspect(reason)}")
+      {:error, reason}
     end
   end
 
@@ -141,16 +125,20 @@ defmodule AeMdw.AexnContracts do
   #
   # Private functions
   #
-  defp get_aex141_extensions(
-         {:fcode, %{@aex141_extensions_hash => function}, _hash_names, %{}},
-         pubkey
+  defp do_get_extensions(
+         pubkey,
+         extensions_hash,
+         extensions_function,
+         {:fcode, functions, _hash_names, _hash}
        ) do
-    case function do
+    case Map.get(functions, extensions_hash) do
       {[], {[], {:list, :string}}, %{0 => [RETURNR: {:immediate, extensions}]}} ->
         {:ok, extensions}
 
       {[], {[], {:list, :string}}, _other_code} ->
-        call_contract(pubkey, "aex141_extensions")
+        with {:error, _reason} <- call_contract(pubkey, extensions_function) do
+          :error
+        end
 
       _mismatch ->
         :error
@@ -275,14 +263,6 @@ defmodule AeMdw.AexnContracts do
       match?({_code, ^type, _body}, Map.get(functions, hash))
     end)
   end
-
-  defp valid_aex141_signatures?(height, {:fcode, functions, _hash_names, _code}) do
-    signatures = :aec_governance.get_network_id() |> get_aex141_signatures(height)
-
-    has_all_signatures?(signatures, functions) and valid_aex141_metadata?(functions)
-  end
-
-  defp valid_aex141_signatures?(_height, _no_fcode), do: false
 
   # checked height aproximate to aex141 spec update
   defp get_aex141_signatures("ae_uat", height) when height < 673_800 do

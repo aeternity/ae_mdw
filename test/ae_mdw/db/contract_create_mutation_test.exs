@@ -1,5 +1,5 @@
 defmodule AeMdw.Db.ContractCreateMutationTest do
-  use AeMdw.Db.MutationCase, async: false
+  use AeMdw.Db.MutationCase
 
   import AeMdw.Node.AexnEventFixtures, only: [aexn_event_hash: 1]
   import AeMdw.Node.ContractCallFixtures
@@ -8,19 +8,18 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
   alias AeMdw.AexnContracts
   alias AeMdw.Contract
   alias AeMdw.Db.ContractCreateMutation
-  alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
-  alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Contract, as: SyncContract
   alias AeMdw.Db.Sync.Origin
-  alias AeMdw.DryRun.Runner
   alias AeMdw.Stats
+
+  import AeMdw.AexnFixtures
 
   require Model
 
   describe "execute" do
-    test "creates contract having aex9 log" do
+    test "creates contract having aex9 log", %{store: store} do
       contract_pk = :crypto.strong_rand_bytes(32)
       meta_info = {"aex9t", "AEX9t", 18}
 
@@ -28,64 +27,58 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
         {
           AexnContracts,
           [:passthrough],
-          [
-            is_aex9?: fn ct_pk -> ct_pk == contract_pk end,
-            call_meta_info: fn _type, ^contract_pk, <<0::256>> -> {:ok, meta_info} end,
-            call_extensions: fn _type, _pk -> {:ok, []} end
-          ]
+          call_meta_info: fn _type, ^contract_pk, <<0::256>> -> {:ok, meta_info} end
         }
       ] do
         {height, _mbi} = block_index = {492_393, 0}
-        create_txi1 = 21_608_343
+        create_txi = Enum.random(10_000_000..99_999_999)
         call_rec1 = call_rec("transfer", contract_pk, height, contract_pk)
 
+        put_aex9_info(contract_pk)
+
         state1 =
-          NullStore.new()
-          |> MemStore.new()
+          store
           |> State.new()
           |> State.commit_mem([
-            ContractCreateMutation.new(create_txi1, call_rec1),
+            ContractCreateMutation.new(create_txi, call_rec1),
             SyncContract.aexn_create_contract_mutation(
               contract_pk,
               <<0::256>>,
               block_index,
-              create_txi1
+              create_txi
             ),
             Origin.origin_mutations(
               :contract_create_tx,
               nil,
               contract_pk,
-              create_txi1,
+              create_txi,
               :crypto.strong_rand_bytes(32)
             )
           ])
 
         assert 1 == State.get_stat(state1, :contracts_created, 0)
-        assert {:ok, ^create_txi1} = State.cache_get(state1, :ct_create_sync_cache, contract_pk)
+        assert {:ok, ^create_txi} = State.cache_get(state1, :ct_create_sync_cache, contract_pk)
       end
     end
 
-    test "creates contract having aex9 balances" do
+    test "creates contract having aex9 balances", %{store: store} do
       contract_pk = :crypto.strong_rand_bytes(32)
       account_pk1 = :crypto.strong_rand_bytes(32)
       account_pk2 = :crypto.strong_rand_bytes(32)
       amount1 = Enum.random(1_000_000..9_999_999)
       amount2 = Enum.random(1_000_000..9_999_999)
 
-      meta_info = {"aex9t", "AEX9t", 18}
-      {height, mbi} = block_index = {492_393, 0}
+      height = Enum.random(100_000..999_999)
       next_height = height + 1
+      mbi = 0
+      block_index = {height, mbi}
       kb_hash = :crypto.strong_rand_bytes(32)
 
       with_mocks [
         {
           AexnContracts,
           [:passthrough],
-          [
-            is_aex9?: fn ct_pk -> ct_pk == contract_pk end,
-            call_meta_info: fn _type, ^contract_pk, <<0::256>> -> {:ok, meta_info} end,
-            call_extensions: fn _type, _pk -> {:ok, []} end
-          ]
+          call_meta_info: fn _type, ^contract_pk, <<0::256>> -> {:ok, {"", "", 18}} end
         },
         {AeMdw.Node.Db, [:passthrough],
          [
@@ -100,8 +93,6 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
            end
          ]}
       ] do
-        create_txi = 21_608_343
-
         call_rec =
           call_rec("logs", contract_pk, height, nil, [
             {
@@ -111,18 +102,25 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
             }
           ])
 
+        put_aex9_info(contract_pk)
+        create_txi = 21_608_343
+
+        aexn_create_mutation =
+          SyncContract.aexn_create_contract_mutation(
+            contract_pk,
+            <<0::256>>,
+            block_index,
+            create_txi
+          )
+
+        assert aexn_create_mutation != nil
+
         state =
-          NullStore.new()
-          |> MemStore.new()
+          store
           |> State.new()
           |> State.commit_mem([
+            aexn_create_mutation,
             ContractCreateMutation.new(create_txi, call_rec),
-            SyncContract.aexn_create_contract_mutation(
-              contract_pk,
-              <<0::256>>,
-              block_index,
-              create_txi
-            ),
             Origin.origin_mutations(
               :contract_create_tx,
               nil,
@@ -157,16 +155,16 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
       end
     end
 
-    test "add nfts ownerships after mint logs" do
+    test "add nfts ownerships after mint logs", %{store: store} do
       contract_pk = :crypto.strong_rand_bytes(32)
       to_pk1 = :crypto.strong_rand_bytes(32)
       to_pk2 = :crypto.strong_rand_bytes(32)
-      height = Enum.random(100_000..999_999)
-      block_index = {height, 1}
-      create_txi = Enum.random(10_000_000..99_999_999)
       token_id1 = Enum.random(1_000..10_000)
       token_id2 = Enum.random(10_001..20_000)
       token_id3 = Enum.random(20_001..30_000)
+      height = 700_001
+      block_index = {height, 1}
+      create_txi = Enum.random(10_000_000..99_999_999)
 
       call_rec =
         :aect_call.new(
@@ -188,29 +186,22 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
         )
 
       with_mocks [
-        {Contract, [],
+        {Contract, [:passthrough],
          [
-           is_contract?: fn ct_pk -> ct_pk == contract_pk end,
            get_init_call_rec: fn _tx, _hash -> call_rec end
          ]},
         {AexnContracts, [:passthrough],
          [
-           is_aex9?: fn _pk -> false end,
            call_meta_info: fn _type, ^contract_pk, <<0::256>> ->
              {:ok, {"test1", "TEST1", "http://some-fake-url", :url}}
-           end,
-           has_aex141_signatures?: fn _height, pk -> pk == contract_pk end,
-           call_extensions: fn :aex141, _pk -> {:ok, ["mintable"]} end,
-           has_valid_aex141_extensions?: fn _extensions, ^contract_pk -> true end
-         ]},
-        {Runner, [],
-         [
-           call_contract: fn ^contract_pk, _hash, "extensions", [] -> {:ok, ["mintable"]} end
+           end
          ]}
       ] do
+        type_info = unique_nfts_contract_fcode(extensions: ["mintable"])
+        AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
         state =
-          NullStore.new()
-          |> MemStore.new()
+          store
           |> State.new()
           |> State.commit_mem([
             SyncContract.aexn_create_contract_mutation(
@@ -257,9 +248,8 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
     test "inits token limit", %{store: store} do
       contract_pk = :crypto.strong_rand_bytes(32)
       token_limit = Enum.random(1_000..9_999)
-      height = Enum.random(100_000..999_999)
+      height = Enum.random(700_000..999_999)
       create_txi = Enum.random(10_000_000..99_999_999)
-      extensions = ["mintable_limit"]
 
       valid_event = {
         contract_pk,
@@ -290,19 +280,14 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
          ]},
         {AexnContracts, [:passthrough],
          [
-           is_aex9?: fn ^contract_pk -> false end,
            call_meta_info: fn _type, ^contract_pk, <<0::256>> ->
              {:ok, {"test1", "TEST1", "http://some-fake-url", :url}}
-           end,
-           has_aex141_signatures?: fn _height, ^contract_pk -> true end,
-           call_extensions: fn :aex141, _pk -> {:ok, extensions} end,
-           has_valid_aex141_extensions?: fn _extensions, ^contract_pk -> true end
-         ]},
-        {Runner, [:passthrough],
-         [
-           call_contract: fn ^contract_pk, _hash, "extensions", [] -> {:ok, extensions} end
+           end
          ]}
       ] do
+        type_info = unique_nfts_contract_fcode(extensions: ["mintable"])
+        AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
         mutations = [
           SyncContract.aexn_create_contract_mutation(
             contract_pk,
@@ -322,7 +307,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
 
         store = change_store(store, [mutations])
 
-        assert {:ok, Model.aexn_contract(extensions: ^extensions)} =
+        assert {:ok, Model.aexn_contract(extensions: ["mintable"])} =
                  Store.get(store, Model.AexnContract, {:aex141, contract_pk})
 
         assert {:ok,
@@ -334,9 +319,9 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
     test "inits template limit", %{store: store} do
       contract_pk = :crypto.strong_rand_bytes(32)
       template_limit = Enum.random(100..999)
-      height = Enum.random(100_000..999_999)
+      block_hash = :crypto.strong_rand_bytes(32)
       create_txi = Enum.random(10_000_000..99_999_999)
-      extensions = ["mintable_template_limit"]
+      height = 700_000
 
       valid_event = {
         contract_pk,
@@ -362,31 +347,30 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
       with_mocks [
         {Contract, [:passthrough],
          [
-           is_contract?: fn ^contract_pk -> true end,
-           get_init_call_rec: fn _tx, _hash -> call_rec end
+           get_init_call_rec: fn _tx, ^block_hash -> call_rec end
          ]},
         {AexnContracts, [:passthrough],
          [
-           is_aex9?: fn ^contract_pk -> false end,
-           call_meta_info: fn _type, ^contract_pk, <<0::256>> ->
+           call_meta_info: fn _type, ^contract_pk, ^block_hash ->
              {:ok, {"test1", "TEST1", "http://some-fake-url", :url}}
-           end,
-           has_aex141_signatures?: fn _height, ^contract_pk -> true end,
-           call_extensions: fn :aex141, _pk -> {:ok, extensions} end,
-           has_valid_aex141_extensions?: fn _extensions, ^contract_pk -> true end
-         ]},
-        {Runner, [:passthrough],
-         [
-           call_contract: fn ^contract_pk, _hash, "extensions", [] -> {:ok, extensions} end
+           end
          ]}
       ] do
-        mutations = [
+        type_info = unique_nfts_contract_fcode(extensions: ["mintable"])
+        AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+
+        aexn_create_mutation =
           SyncContract.aexn_create_contract_mutation(
             contract_pk,
-            <<0::256>>,
+            block_hash,
             {height, 0},
             create_txi
-          ),
+          )
+
+        assert aexn_create_mutation != nil
+
+        mutations = [
+          aexn_create_mutation,
           Origin.origin_mutations(
             :contract_create_tx,
             nil,
@@ -399,7 +383,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
 
         store = change_store(store, [mutations])
 
-        assert {:ok, Model.aexn_contract(extensions: ^extensions)} =
+        assert {:ok, Model.aexn_contract(extensions: ["mintable"])} =
                  Store.get(store, Model.AexnContract, {:aex141, contract_pk})
 
         assert {:ok,

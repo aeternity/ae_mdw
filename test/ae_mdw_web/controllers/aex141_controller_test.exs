@@ -461,10 +461,9 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       account_pk = :crypto.strong_rand_bytes(32)
 
       with_mocks [
-        {AexnContracts, [],
+        {AexnContracts, [:passthrough],
          [
-           is_aex141?: fn pk -> pk == <<1_411::256>> end,
-           call_contract: fn _pk, "owner", [_token_id] ->
+           call_contract: fn <<1_411::256>>, "owner", [_token_id] ->
              {:ok, {:variant, [0, 1], 1, {{:address, account_pk}}}}
            end
          ]}
@@ -489,10 +488,9 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       error_msg = "invalid contract return: \"foo\""
 
       with_mocks [
-        {AexnContracts, [],
+        {AexnContracts, [:passthrough],
          [
-           is_aex141?: fn pk -> pk == <<1_411::256>> end,
-           call_contract: fn _pk, "owner", [_token_id] -> {:ok, "foo"} end
+           call_contract: fn <<1_411::256>>, "owner", [_token_id] -> {:ok, "foo"} end
          ]}
       ] do
         assert %{"error" => ^error_msg} =

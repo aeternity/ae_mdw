@@ -5,7 +5,6 @@ defmodule AeMdw.Db.Sync.TransactionTest do
 
   alias AeMdw.AexnContracts
   alias AeMdw.Contract
-  alias AeMdw.DryRun.Runner
   alias AeMdw.Db.AexnCreateContractMutation
   alias AeMdw.Db.ChannelCloseMutation
   alias AeMdw.Db.ChannelOpenMutation
@@ -16,13 +15,13 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.Store
   alias AeMdw.Db.Model
-  alias AeMdw.EtsCache
   alias AeMdw.Validate
   alias AeMdw.TestSamples, as: TS
 
   import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, spend_tx: 3]
   import AeMdw.Node.ContractCallFixtures
   import AeMdw.Node.AeTxFixtures
+  import AeMdw.AexnFixtures
   import AeMdw.TestUtil, only: [change_store: 2]
   import Mock
 
@@ -32,9 +31,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   @recipient_id_pos AE.tx_ids(:spend_tx).recipient_id
   @very_high_txi 100_000_000_000
   @create_pair_hash <<38, 76, 208, 75>>
-  @aex141_mint_signature %{
-    <<207, 221, 154, 162>> => {[:address, {:variant, [tuple: [], tuple: [:string]]}], :integer}
-  }
+  @latest_aex141_height 673_801
 
   describe "sync_transaction spend_tx" do
     test "when receiver and sender ids are different" do
@@ -125,7 +122,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
       child_contract_pk = Validate.id!(fun_args_res("create_pair")[:result][:value])
 
       with_mocks [
-        {Contract, [],
+        {Contract, [:passthrough],
          [
            call_tx_info: fn _tx, ^contract_pk, _block_hash ->
              {
@@ -134,13 +131,13 @@ defmodule AeMdw.Db.Sync.TransactionTest do
              }
            end
          ]},
-        {AexnContracts, [],
+        {AexnContracts, [:passthrough],
          [
-           is_aex9?: fn pk -> pk == child_contract_pk end,
-           call_meta_info: fn _type, _pk, ^block_hash -> {:ok, aex9_meta_info} end,
-           call_extensions: fn _type, _pk -> {:ok, []} end
+           call_meta_info: fn _type, _pk, ^block_hash -> {:ok, aex9_meta_info} end
          ]}
       ] do
+        put_aex9_info(child_contract_pk)
+
         mutations =
           signed_tx
           |> Transaction.transaction_mutations(
@@ -172,7 +169,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
     test "creates mintable aex141 contract on :contract_create_tx" do
       signed_tx = signed_tx(:contract_create_tx, :aex141)
       txi = 28_522_602
-      block_index = {610_470, 77}
+      block_index = {@latest_aex141_height, 77}
       block_hash = :crypto.strong_rand_bytes(32)
       mb_time = 1_653_918_598_237
       mb_events = %{}
@@ -183,9 +180,9 @@ defmodule AeMdw.Db.Sync.TransactionTest do
       aex141_meta_info = {"test-nft#{number}", "test-nft#{number}", "http://some-fake-url", :url}
 
       with_mocks [
-        {Contract, [],
+        {Contract, [:passthrough],
          [
-           is_contract?: fn ct_pk -> ct_pk == contract_pk end,
+           is_contract?: fn ^contract_pk -> true end,
            get_init_call_rec: fn _tx, _hash ->
              :aect_call.new(
                :aeser_id.create(:account, <<2::256>>),
@@ -196,17 +193,9 @@ defmodule AeMdw.Db.Sync.TransactionTest do
              )
            end
          ]},
-        {AexnContracts, [],
+        {AexnContracts, [:passthrough],
          [
-           is_aex9?: fn _pk -> false end,
-           call_meta_info: fn _type, _pk, ^block_hash -> {:ok, aex141_meta_info} end,
-           has_aex141_signatures?: fn _height, pk -> pk == contract_pk end,
-           call_extensions: fn :aex141, _pk -> {:ok, ["mintable"]} end,
-           has_valid_aex141_extensions?: fn _extensions, _pk -> true end
-         ]},
-        {Runner, [],
-         [
-           call_contract: fn _pk, _hash, "extensions", [] -> {:ok, ["mintable"]} end
+           call_meta_info: fn _type, _pk, ^block_hash -> {:ok, aex141_meta_info} end
          ]}
       ] do
         mutations =
@@ -240,7 +229,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
     test "creates aex141 contract without error meta_info on :contract_create_tx" do
       signed_tx = signed_tx(:contract_create_tx, :aex141)
       txi = 28_522_603
-      block_index = {610_470, 78}
+      block_index = {@latest_aex141_height, 78}
       block_hash = :crypto.strong_rand_bytes(32)
       mb_time = 1_653_918_598_237
       mb_events = %{}
@@ -250,9 +239,9 @@ defmodule AeMdw.Db.Sync.TransactionTest do
       aex141_meta_info = {:error, :error, nil, nil}
 
       with_mocks [
-        {Contract, [],
+        {Contract, [:passthrough],
          [
-           is_contract?: fn ct_pk -> ct_pk == contract_pk end,
+           is_contract?: fn ^contract_pk -> true end,
            get_init_call_rec: fn _tx, _hash ->
              :aect_call.new(
                :aeser_id.create(:account, <<2::256>>),
@@ -263,17 +252,9 @@ defmodule AeMdw.Db.Sync.TransactionTest do
              )
            end
          ]},
-        {AexnContracts, [],
+        {AexnContracts, [:passthrough],
          [
-           is_aex9?: fn _pk -> false end,
-           call_meta_info: fn _type, _pk, ^block_hash -> {:ok, aex141_meta_info} end,
-           has_aex141_signatures?: fn _height, pk -> pk == contract_pk end,
-           call_extensions: fn :aex141, _pk -> {:ok, ["mintable"]} end,
-           has_valid_aex141_extensions?: fn _extensions, _pk -> true end
-         ]},
-        {Runner, [],
-         [
-           call_contract: fn _pk, _hash, "extensions", [] -> {:ok, ["mintable"]} end
+           call_meta_info: fn _type, _pk, ^block_hash -> {:ok, aex141_meta_info} end
          ]}
       ] do
         mutations =
@@ -566,14 +547,11 @@ defmodule AeMdw.Db.Sync.TransactionTest do
     {_mod, tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
     {_id_tag, contract_pk} = tx |> :aect_call_tx.contract_id() |> :aeser_id.specialize()
 
-    functions =
-      %{
-        @create_pair_hash => "create_pair"
-      }
-      |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+    extra_functions = %{
+      @create_pair_hash => "create_pair"
+    }
 
-    type_info = {:fcode, functions, nil, nil}
-    EtsCache.put(Contract, contract_pk, {type_info, nil, nil})
+    put_aex9_info(contract_pk, extra_functions)
 
     contract_pk
   end
@@ -581,14 +559,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   defp setup_contract_on_create(signed_tx) do
     {_mod, tx} = :aetx.specialize_callback(:aetx_sign.tx(signed_tx))
     contract_pk = :aect_create_tx.contract_pubkey(tx)
-
-    functions =
-      @aex141_mint_signature
-      |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
-
-    type_info = {:fcode, functions, nil, nil}
-    EtsCache.put(Contract, contract_pk, {type_info, nil, nil})
-
+    put_mintable_aex141(contract_pk, ["mintable"])
     contract_pk
   end
 
