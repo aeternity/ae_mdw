@@ -7,14 +7,15 @@ defmodule AeMdw.AexnContracts do
   alias AeMdw.Db.Model
   alias AeMdw.DryRun.Runner
   alias AeMdw.Node
-  alias AeMdw.Node.Db, as: NodeDb
   alias AeMdw.Log
 
   import AeMdw.Util.Encoding, only: [encode_contract: 1]
 
   @type event_name() :: String.t()
-  @typep pubkey :: NodeDb.pubkey()
+  @typep pubkey :: Node.Db.pubkey()
   @typep height :: AeMdw.Blocks.height()
+  @typep block_hash :: Node.Db.hash()
+  @typep height_hash :: Node.Db.height_hash()
   @typep aexn_meta_info :: AeMdw.Db.Model.aexn_meta_info()
 
   @max_height AeMdw.Util.max_int()
@@ -76,9 +77,9 @@ defmodule AeMdw.AexnContracts do
 
   def has_valid_aex141_extensions?(_extensions, _no_fcode), do: false
 
-  @spec call_meta_info(Model.aexn_type(), pubkey()) :: {:ok, Model.aexn_meta_info()}
-  def call_meta_info(aexn_type, contract_pk) do
-    case call_contract(contract_pk, "meta_info", []) do
+  @spec call_meta_info(Model.aexn_type(), pubkey(), block_hash()) :: {:ok, Model.aexn_meta_info()}
+  def call_meta_info(aexn_type, contract_pk, mb_hash) do
+    case call_contract(contract_pk, "meta_info", [], mb_hash) do
       {:ok, {:tuple, meta_info_tuple}} ->
         {:ok, decode_meta_info(aexn_type, meta_info_tuple)}
 
@@ -98,18 +99,31 @@ defmodule AeMdw.AexnContracts do
   @spec call_contract(pubkey(), Contract.method_name(), Contract.method_args()) ::
           {:ok, any()} | :error
   def call_contract(contract_pk, method, args \\ []) do
-    top_hash = NodeDb.top_height_hash(false)
+    call_contract(contract_pk, method, args, Node.Db.top_height_hash(false))
+  end
 
-    case Runner.call_contract(contract_pk, top_hash, method, args) do
-      {:ok, return} ->
-        {:ok, return}
+  @spec call_contract(
+          pubkey(),
+          Contract.method_name(),
+          Contract.method_args(),
+          block_hash() | height_hash()
+        ) ::
+          {:ok, any()} | :error
+  def call_contract(contract_pk, method, args, mb_hash) when is_binary(mb_hash) do
+    case Node.Db.find_block_height(mb_hash) do
+      {:ok, height} ->
+        call_contract(contract_pk, method, args, {:micro, height, mb_hash})
 
-      {:error, call_error} ->
-        Log.warn(
-          "#{method} call error for #{encode_contract(contract_pk)}: #{inspect(call_error)}"
-        )
-
+      :none ->
+        Log.warn("#{method} call error for #{encode_contract(contract_pk)}: block not found")
         :error
+    end
+  end
+
+  def call_contract(contract_pk, method, args, height_hash) do
+    with {:error, call_error} <- Runner.call_contract(contract_pk, height_hash, method, args) do
+      Log.warn("#{method} call error for #{encode_contract(contract_pk)}: #{inspect(call_error)}")
+      :error
     end
   end
 
