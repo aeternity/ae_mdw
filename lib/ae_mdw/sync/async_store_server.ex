@@ -33,7 +33,7 @@ defmodule AeMdw.Sync.AsyncStoreServer do
 
   @spec write_async_store(State.t()) :: State.t()
   def write_async_store(db_state) do
-    GenServer.call(__MODULE__, {:write_store, db_state})
+    GenServer.call(__MODULE__, {:write_store, db_state}, 60_000)
   end
 
   @impl GenServer
