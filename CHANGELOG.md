@@ -1,5 +1,15 @@
 # Changelog
 
+### [1.57.1](https://www.github.com/aeternity/ae_mdw/compare/v1.57.0...v1.57.1) (2023-08-07)
+
+
+### Miscellaneous
+
+* add v2 yaml file back to the static directory ([#1499](https://www.github.com/aeternity/ae_mdw/issues/1499)) ([c2bb9da](https://www.github.com/aeternity/ae_mdw/commit/c2bb9da74662c691e42bfcd180659bb97f6fa24d))
+* disable cache for DB block mutations ([#1507](https://www.github.com/aeternity/ae_mdw/issues/1507)) ([2e2413f](https://www.github.com/aeternity/ae_mdw/commit/2e2413f01e861c0e0e091793082c0b6bc7e22d72))
+* get block height finding the header ([#1501](https://www.github.com/aeternity/ae_mdw/issues/1501)) ([0251aae](https://www.github.com/aeternity/ae_mdw/commit/0251aae9715f5008418ec0bca47ec76f1267628f))
+* use aexn extensions from byte code ([#1508](https://www.github.com/aeternity/ae_mdw/issues/1508)) ([35ff502](https://www.github.com/aeternity/ae_mdw/commit/35ff5024d6c4bc64d0e3130801328fb16bb9c6fa))
+
 ## [1.57.0](https://www.github.com/aeternity/ae_mdw/compare/v1.56.0...v1.57.0) (2023-08-03)
 
 
