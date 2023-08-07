@@ -111,19 +111,14 @@ defmodule AeMdw.Db.Sync.Contract do
         ) ::
           nil | AexnCreateContractMutation.t()
   def aexn_create_contract_mutation(contract_pk, block_hash, {height, _mbi} = block_index, txi) do
-    aexn_type =
-      cond do
-        AexnContracts.is_aex9?(contract_pk) -> :aex9
-        AexnContracts.has_aex141_signatures?(height, contract_pk) -> :aex141
-        true -> nil
-      end
-
-    with true <- aexn_type != nil,
-         {:ok, aexn_extensions} <- AexnContracts.call_extensions(aexn_type, contract_pk),
+    with {:ok, {type_info, _compiler_vsn, _source_hash}} <- Contract.get_info(contract_pk),
+         aexn_type when aexn_type != nil <- get_aexn_type(height, type_info),
+         {:ok, aexn_extensions} <-
+           AexnContracts.get_extensions(aexn_type, contract_pk, type_info),
          {:ok, aexn_meta_info} <- AexnContracts.call_meta_info(aexn_type, contract_pk, block_hash) do
       if aexn_type == :aex9 or
            (aexn_type == :aex141 and
-              AexnContracts.has_valid_aex141_extensions?(aexn_extensions, contract_pk)) do
+              AexnContracts.has_valid_aex141_extensions?(aexn_extensions, type_info)) do
         AexnCreateContractMutation.new(
           aexn_type,
           contract_pk,
@@ -134,8 +129,19 @@ defmodule AeMdw.Db.Sync.Contract do
         )
       end
     else
-      _false_or_notfound ->
+      _error_or_nil ->
         nil
+    end
+  end
+
+  #
+  # Private functions
+  #
+  defp get_aexn_type(height, type_info) do
+    cond do
+      AexnContracts.is_aex9?(type_info) -> :aex9
+      AexnContracts.has_aex141_signatures?(height, type_info) -> :aex141
+      true -> nil
     end
   end
 

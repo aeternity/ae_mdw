@@ -16,6 +16,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
   alias AeMdw.Node.Db
 
   import AeMdw.Node.ContractEventsFixtures
+  import AeMdw.AexnFixtures
   import Mock
 
   require Model
@@ -181,13 +182,15 @@ defmodule AeMdw.Db.Sync.ContractTest do
              ^contract_pk2 -> {:ok, contract2, "code-4"}
            end
          ]},
-        {Db, [], [nonce_at_block: fn ^block_hash, ^owner_pk -> nonce end]},
-        {AexnContracts, [],
+        {Db, [],
          [
-           is_aex9?: fn _contract_pk -> false end,
-           has_aex141_signatures?: fn _height, _contract_pk -> false end
+           nonce_at_block: fn ^block_hash, ^owner_pk -> nonce end,
+           find_block_height: fn ^block_hash -> {:ok, 0} end
          ]}
       ] do
+        put_aex9_info(contract_pk1)
+        put_aex9_info(contract_pk2)
+
         mutations =
           events
           |> SyncContract.events_mutations(
@@ -239,18 +242,18 @@ defmodule AeMdw.Db.Sync.ContractTest do
       contract = :aect_contracts.new(owner_pk, 1, %{vm: 7, abi: 3}, "code-2", 0)
 
       with_mocks [
-        {AexnContracts, [],
+        {AexnContracts, [:passthrough],
          [
-           is_aex9?: fn ct_pk -> ct_pk == aex9_contract_pk end,
-           call_meta_info: fn _type, _pk, ^block_hash ->
+           call_meta_info: fn _type, ^aex9_contract_pk, ^block_hash ->
              {:ok, {"TestAEX9-A vs Wrapped Aeternity", "TAEX9-A/WAE", 18}}
-           end,
-           call_extensions: fn _type, _pk -> {:ok, []} end
+           end
          ]},
         {Db, [], [nonce_at_block: fn ^block_hash, ^owner_pk -> nonce end]},
         {:aec_chain, [:passthrough],
          [get_contract_with_code: fn ^aex9_contract_pk -> {:ok, contract, "code-2"} end]}
       ] do
+        put_aex9_info(aex9_contract_pk)
+
         mutations =
           SyncContract.events_mutations(
             tx_events,

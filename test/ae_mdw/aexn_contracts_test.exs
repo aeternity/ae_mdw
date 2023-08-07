@@ -4,10 +4,9 @@ defmodule AeMdw.AexnContractsTest do
   alias AeMdw.AexnContracts
 
   import Mock
+  import AeMdw.AexnFixtures
 
-  @wrong_burn {[], {[:integer], :boolean}, %{}}
-  @wrong_mint {[], {[:address, :string, {:variant, [tuple: [], tuple: [:string]]}], :integer},
-               %{}}
+  defp max_height, do: AeMdw.Util.max_int()
 
   describe "call_meta_info/2" do
     test "succeeds with regular aex9 meta_info" do
@@ -376,27 +375,93 @@ defmodule AeMdw.AexnContractsTest do
                  AexnContracts.call_meta_info(:aex141, contract_pk, mb_hash)
       end
     end
+
+    test "returns error when block is not found" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      assert :error = AexnContracts.call_meta_info(:aex141, contract_pk, <<0::256>>)
+    end
+
+    test "returns error when contract does not exist" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      mb_hash = :crypto.strong_rand_bytes(32)
+
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn ^mb_hash -> {:ok, 123} end
+         ]},
+        {AeMdw.DryRun.Runner, [:passthrough],
+         [
+           call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
+             {:error, :contract_does_not_exist}
+           end
+         ]}
+      ] do
+        assert :error = AexnContracts.call_meta_info(:aex141, contract_pk, mb_hash)
+      end
+    end
   end
 
-  describe "is_aex141?/1" do
-    test "returns true for a immediate mintable" do
-      contract_pk = :crypto.strong_rand_bytes(32)
-      type_info = unique_nfts_contract_fcode(extensions: ["mintable"])
-      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+  describe "has_valid_aex141_extensions?/3" do
+    test "returns for a immediate mintable" do
+      extensions = ["mintable"]
+      type_info = unique_nfts_contract_fcode(extensions: extensions)
 
-      assert AexnContracts.is_aex141?(contract_pk)
+      assert AexnContracts.has_valid_aex141_extensions?(extensions, type_info)
     end
 
     test "returns true for immediate mintable and burnable" do
-      contract_pk = :crypto.strong_rand_bytes(32)
-      type_info = unique_nfts_contract_fcode(extensions: ["mintable", "burnable"])
-      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+      extensions = ["mintable", "burnable"]
+      type_info = unique_nfts_contract_fcode(extensions: extensions)
 
-      assert AexnContracts.is_aex141?(contract_pk)
+      assert AexnContracts.has_valid_aex141_extensions?(extensions, type_info)
     end
 
-    test "returns true for not immediate mintable" do
+    test "returns false for different mintable" do
+      extensions = ["mintable", "burnable"]
+      type_info = unique_nfts_contract_fcode(wrong_mint: true, extensions: extensions)
+
+      refute AexnContracts.has_valid_aex141_extensions?(extensions, type_info)
+    end
+
+    test "returns false for different burnable" do
+      extensions = ["mintable", "burnable"]
+      type_info = unique_nfts_contract_fcode(wrong_burn: true, extensions: extensions)
+
+      refute AexnContracts.has_valid_aex141_extensions?(extensions, type_info)
+    end
+  end
+
+  describe "has_aex141_signatures?/2" do
+    test "returns true for new nft contracts" do
+      assert max_height() |> AexnContracts.has_aex141_signatures?(unique_nfts_contract_fcode())
+    end
+
+    test "returns true for previous base nft at previous spec" do
+      assert AexnContracts.has_aex141_signatures?(600_000, base_nft_fcode())
+    end
+
+    test "returns false for incomplete previous base nft at previous spec" do
+      refute AexnContracts.has_aex141_signatures?(600_000, incomplete_base_nft_fcode())
+    end
+
+    test "returns false for previous base nft" do
+      refute max_height() |> AexnContracts.has_aex141_signatures?(base_nft_fcode())
+    end
+  end
+
+  describe "get_extensions/3" do
+    test "returns for immediate mintable" do
       contract_pk = :crypto.strong_rand_bytes(32)
+      extensions = ["mintable", "burnable"]
+      type_info = unique_nfts_contract_fcode(extensions: extensions)
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
+      assert {:ok, ^extensions} = AexnContracts.get_extensions(:aex141, contract_pk, type_info)
+    end
+
+    test "returns for not immediate mintable" do
+      contract_pk = :crypto.strong_rand_bytes(32)
+      extensions = ["mintable"]
       type_info = unique_nfts_contract_fcode(not_immediate: true)
       AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
@@ -404,237 +469,19 @@ defmodule AeMdw.AexnContractsTest do
         {AeMdw.DryRun.Runner, [:passthrough],
          [
            call_contract: fn ^contract_pk, _hash, "aex141_extensions", [] ->
-             {:ok, ["mintable"]}
+             {:ok, extensions}
            end
          ]}
       ] do
-        assert AexnContracts.is_aex141?(contract_pk)
+        assert {:ok, ^extensions} = AexnContracts.get_extensions(:aex141, contract_pk, type_info)
       end
     end
 
-    test "returns false for different not immediate mintable" do
+    test "returns error when contract does not exist" do
       contract_pk = :crypto.strong_rand_bytes(32)
-      type_info = unique_nfts_contract_fcode(wrong_mint: true, not_immediate: true)
-      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
-
-      with_mocks [
-        {AeMdw.DryRun.Runner, [:passthrough],
-         [
-           call_contract: fn ^contract_pk, _hash, "aex141_extensions", [] ->
-             {:ok, ["mintable"]}
-           end
-         ]}
-      ] do
-        refute AexnContracts.is_aex141?(contract_pk)
-      end
+      type_info = unique_nfts_contract_fcode(not_immediate: true)
+      assert :error = AexnContracts.get_extensions(:aex141, contract_pk, type_info)
     end
-
-    test "returns false for different mintable" do
-      contract_pk = :crypto.strong_rand_bytes(32)
-
-      type_info =
-        unique_nfts_contract_fcode(wrong_mint: true, extensions: ["mintable", "burnable"])
-
-      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
-
-      refute AexnContracts.is_aex141?(contract_pk)
-    end
-
-    test "returns false for different burnable" do
-      contract_pk = :crypto.strong_rand_bytes(32)
-
-      type_info =
-        unique_nfts_contract_fcode(wrong_burn: true, extensions: ["mintable", "burnable"])
-
-      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
-
-      refute AexnContracts.is_aex141?(contract_pk)
-    end
-  end
-
-  describe "has_aex141_signatures?/2" do
-    test "returns true for new nft contracts" do
-      contract_pk = :crypto.strong_rand_bytes(32)
-      type_info = unique_nfts_contract_fcode()
-      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
-
-      assert AeMdw.Util.max_int() |> AexnContracts.has_aex141_signatures?(contract_pk)
-    end
-
-    test "returns true for previous base nft at previous spec" do
-      contract_pk = :crypto.strong_rand_bytes(32)
-      type_info = base_nft_fcode()
-      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
-
-      assert AexnContracts.has_aex141_signatures?(600_000, contract_pk)
-    end
-
-    test "returns false for incomplete previous base nft at previous spec" do
-      contract_pk = :crypto.strong_rand_bytes(32)
-      type_info = incomplete_base_nft_fcode()
-      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
-
-      refute AexnContracts.has_aex141_signatures?(600_000, contract_pk)
-    end
-
-    test "returns false for previous base nft" do
-      contract_pk = :crypto.strong_rand_bytes(32)
-      type_info = base_nft_fcode()
-      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
-
-      refute AeMdw.Util.max_int() |> AexnContracts.has_aex141_signatures?(contract_pk)
-    end
-  end
-
-  defp unique_nfts_contract_fcode(opts \\ []) do
-    wrong_burn = Keyword.get(opts, :wrong_burn, false)
-    wrong_mint = Keyword.get(opts, :wrong_mint, false)
-    not_immediate = Keyword.get(opts, :not_immediate, false)
-    immediate_extensions = Keyword.get(opts, :extensions, [])
-
-    functions = %{
-      <<4, 167, 206, 191>> => {[:private], {[:boolean], :string}, %{}},
-      <<15, 89, 34, 233>> => {[], {[:address, :address], :boolean}, %{}},
-      <<20, 55, 180, 56>> =>
-        {[],
-         {[],
-          {:tuple,
-           [
-             :string,
-             :string,
-             {:variant, [tuple: [], tuple: [:string]]},
-             {:variant, [tuple: [], tuple: [], tuple: []]}
-           ]}}, %{}},
-      <<39, 89, 45, 234>> => {[], {[:integer], {:variant, [tuple: [], tuple: [:address]]}}, %{}},
-      <<54, 189, 143, 3>> => {[:private], {[], {:map, {:tvar, 0}, {:tuple, []}}}, %{}},
-      <<66, 213, 125, 105>> => {[:private], {[], {:tuple, []}}, %{}},
-      <<68, 214, 68, 31>> => {[], {[:string, :string], {:tuple, []}}, %{}},
-      <<72, 150, 48, 41>> => {[:private], {[:integer], :address}, %{}},
-      <<99, 148, 233, 122>> =>
-        {[],
-         {[:integer],
-          {:variant,
-           [
-             tuple: [],
-             tuple: [variant: [tuple: [:string], tuple: [{:map, :string, :string}]]]
-           ]}}, %{}},
-      <<101, 165, 224, 15>> =>
-        {[:private],
-         {[
-            variant: [
-              tuple: [:address, :integer],
-              tuple: [:address, :address, :integer],
-              tuple: [:address, :address, :integer, :string],
-              tuple: [:address, :address, :string],
-              tuple: [:address, :integer]
-            ]
-          ], {:tuple, []}}, %{}},
-      <<102, 66, 227, 51>> => {[], {[:integer, :address], :boolean}, %{}},
-      <<104, 18, 102, 160>> => {[], {[:address, :integer, :boolean], {:tuple, []}}, %{}},
-      <<116, 218, 90, 49>> =>
-        {[:private],
-         {[{:tvar, 0}, {:map, {:tvar, 0}, {:tuple, []}}], {:map, {:tvar, 0}, {:tuple, []}}}, %{}},
-      <<132, 161, 93, 161>> =>
-        {[], {[:address, :integer, {:variant, [tuple: [], tuple: [:string]]}], {:tuple, []}}, %{}},
-      <<146, 113, 210, 58>> => {[:private], {[:integer], {:tuple, []}}, %{}},
-      <<160, 2, 139, 120>> =>
-        {[:private], {[tuple: [:string, :any], list: {:tvar, 0}], {:list, {:tvar, 1}}}, %{}},
-      <<160, 55, 105, 6>> =>
-        {[:private], {[{:map, {:tvar, 0}, {:tuple, []}}], {:list, {:tvar, 0}}}, %{}},
-      <<162, 103, 192, 75>> => {[], {[:address, :boolean], {:tuple, []}}, %{}},
-      <<170, 192, 194, 134>> => {[:private], {[:string], :integer}, %{}},
-      <<177, 239, 193, 123>> => {[], {[:integer], {:tuple, []}}, %{}},
-      <<180, 140, 22, 132>> =>
-        {[], {[:address], {:variant, [tuple: [], tuple: [:integer]]}}, %{}},
-      <<184, 120, 21, 14>> =>
-        {[:private],
-         {[:address, :integer, {:variant, [tuple: [], tuple: [:string]]}],
-          {:tuple, [:boolean, :boolean]}}, %{}},
-      <<207, 221, 154, 162>> =>
-        {[],
-         {[
-            :address,
-            {:variant,
-             [
-               tuple: [],
-               tuple: [variant: [tuple: [:string], tuple: [{:map, :string, :string}]]]
-             ]},
-            {:variant, [tuple: [], tuple: [:string]]}
-          ], :integer}, %{}},
-      <<208, 195, 108, 184>> =>
-        {[:private],
-         {[{:tvar, 0}, {:map, {:tvar, 0}, {:tuple, []}}], {:map, {:tvar, 0}, {:tuple, []}}}, %{}},
-      <<219, 99, 117, 168>> => {[], {[], :integer}, %{}},
-      <<222, 10, 63, 194>> => {[], {[], {:list, :string}}, %{}},
-      <<227, 243, 60, 8>> => {[:private], {[tuple: [tvar: 0, tvar: 1]], {:tvar, 0}}, %{}},
-      <<234, 175, 198, 221>> => {[], {[:address], {:list, :integer}}, %{}},
-      <<254, 174, 164, 250>> =>
-        {[], {[:integer], {:variant, [tuple: [], tuple: [:address]]}}, %{}},
-      <<255, 232, 237, 108>> => {[:private], {[:any, :any], :any}, %{}}
-    }
-
-    hash_names = %{
-      <<4, 167, 206, 191>> => ".Utils.bool_to_string",
-      <<15, 89, 34, 233>> => "is_approved_for_all",
-      <<20, 55, 180, 56>> => "meta_info",
-      <<39, 89, 45, 234>> => "get_approved",
-      <<54, 189, 143, 3>> => ".Set.new",
-      <<66, 213, 125, 105>> => ".CollectionUniqueNFTs.require_contract_owner",
-      <<68, 214, 68, 31>> => "init",
-      <<72, 150, 48, 41>> => ".CollectionUniqueNFTs.require_authorized",
-      <<99, 148, 233, 122>> => "metadata",
-      <<101, 165, 224, 15>> => "Chain.event",
-      <<102, 66, 227, 51>> => "is_approved",
-      <<104, 18, 102, 160>> => "approve",
-      <<116, 218, 90, 49>> => ".Set.delete",
-      <<132, 161, 93, 161>> => "transfer",
-      <<146, 113, 210, 58>> => ".CollectionUniqueNFTs.remove_approval",
-      <<160, 2, 139, 120>> => ".List.map",
-      <<160, 55, 105, 6>> => ".Set.to_list",
-      <<162, 103, 192, 75>> => "approve_all",
-      <<170, 192, 194, 134>> => ".String.length",
-      <<177, 239, 193, 123>> => "burn",
-      <<180, 140, 22, 132>> => "balance",
-      <<184, 120, 21, 14>> => ".CollectionUniqueNFTs.invoke_nft_receiver",
-      <<207, 221, 154, 162>> => "mint",
-      <<208, 195, 108, 184>> => ".Set.insert",
-      <<219, 99, 117, 168>> => "total_supply",
-      <<222, 10, 63, 194>> => "aex141_extensions",
-      <<227, 243, 60, 8>> => ".Pair.fst",
-      <<234, 175, 198, 221>> => "get_owned_tokens",
-      <<254, 174, 164, 250>> => "owner",
-      <<255, 232, 237, 108>> => ".^2793"
-    }
-
-    functions =
-      if wrong_burn do
-        Map.put(functions, <<177, 239, 193, 123>>, @wrong_burn)
-      else
-        functions
-      end
-
-    functions =
-      if wrong_mint do
-        Map.put(functions, <<207, 221, 154, 162>>, @wrong_mint)
-      else
-        functions
-      end
-
-    aex141_extensions_code =
-      if not_immediate do
-        %{0 => [CALL: {:immediate, <<1, 2, 3, 4>>}]}
-      else
-        %{0 => [RETURNR: {:immediate, immediate_extensions}]}
-      end
-
-    functions =
-      Map.put(
-        functions,
-        <<222, 10, 63, 194>>,
-        {[], {[], {:list, :string}}, aex141_extensions_code}
-      )
-
-    {:fcode, functions, hash_names, %{}}
   end
 
   defp incomplete_base_nft_fcode do

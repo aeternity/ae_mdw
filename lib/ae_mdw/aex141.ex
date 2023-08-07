@@ -260,7 +260,7 @@ defmodule AeMdw.Aex141 do
       false ->
         {:error, ErrInput.NotAex141.exception(value: encode_contract(contract_pk))}
 
-      :error ->
+      {:error, _reason} ->
         {:error, ErrInput.ContractDryRun.exception(value: encode_contract(contract_pk))}
 
       {:ok, unknown_return} ->

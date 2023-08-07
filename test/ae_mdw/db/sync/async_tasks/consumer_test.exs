@@ -12,7 +12,8 @@ defmodule AeMdw.Sync.AsyncTasks.ConsumerTest do
 
   test "enqueue and dequeue with failed task" do
     contract_pk = :crypto.strong_rand_bytes(32)
-    {kbi, mbi} = block_index = {543_210, 10}
+    next_height = Enum.random(100_000..999_999)
+    block_index = {next_height - 1, 10}
     kb_hash = :crypto.strong_rand_bytes(32)
     next_mb_hash = :crypto.strong_rand_bytes(32)
 
@@ -21,14 +22,13 @@ defmodule AeMdw.Sync.AsyncTasks.ConsumerTest do
     })
 
     with_mocks [
-      {AeMdw.Node.Db, [],
+      {AeMdw.Node.Db, [:passthrough],
        [
-         get_key_block_hash: fn height ->
-           assert height == kbi + 1
+         get_key_block_hash: fn ^next_height ->
            Process.sleep(1_000)
            kb_hash
          end,
-         get_next_hash: fn ^kb_hash, ^mbi -> next_mb_hash end
+         get_next_hash: fn ^kb_hash, _mbi -> next_mb_hash end
        ]}
     ] do
       AsyncTasks.Supervisor.start_link([])
