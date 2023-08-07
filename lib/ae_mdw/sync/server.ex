@@ -244,7 +244,7 @@ defmodule AeMdw.Sync.Server do
       end
 
     spawn_task(fn ->
-      gens_mutations = Block.blocks_mutations(from_height, from_mbi, from_txi, to_height)
+      gens_mutations = Block.blocks_mutations(from_height, from_mbi, from_txi, to_height, false)
 
       {exec_time, new_state} =
         :timer.tc(fn -> exec_db_mutations(gens_mutations, db_state, clear_mem?) end)
@@ -267,7 +267,7 @@ defmodule AeMdw.Sync.Server do
           :none -> -1
         end
 
-      gens_mutations = Block.blocks_mutations(from_height, from_mbi, from_txi, last_hash)
+      gens_mutations = Block.blocks_mutations(from_height, from_mbi, from_txi, last_hash, true)
       new_state = exec_mem_mutations(mem_state, gens_mutations, from_height)
 
       :ok = MemStoreCreator.commit(new_state.store)

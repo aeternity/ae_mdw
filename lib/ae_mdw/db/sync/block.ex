@@ -48,10 +48,11 @@ defmodule AeMdw.Db.Sync.Block do
           Blocks.height(),
           Blocks.mbi(),
           Txs.txi(),
-          Blocks.height() | Blocks.block_hash()
+          Blocks.height() | Blocks.block_hash(),
+          boolean()
         ) ::
           Enumerable.t()
-  def blocks_mutations(from_height, from_mbi, from_txi, to_height_or_hash) do
+  def blocks_mutations(from_height, from_mbi, from_txi, to_height_or_hash, use_cache? \\ true) do
     from_height
     |> Db.get_blocks_per_height(to_height_or_hash)
     |> Stream.transform(from_txi, fn {key_block, micro_blocks, next_kb_hash}, txi ->
@@ -73,7 +74,7 @@ defmodule AeMdw.Db.Sync.Block do
 
       {micro_blocks_gens, txi} =
         Enum.map_reduce(pending_micro_blocks, txi, fn {micro_block, mbi}, txi ->
-          {mutations, txi} = micro_block_mutations(micro_block, mbi, txi)
+          {mutations, txi} = micro_block_mutations(micro_block, mbi, txi, use_cache?)
 
           {{{height, mbi}, micro_block, mutations}, txi}
         end)
@@ -112,7 +113,13 @@ defmodule AeMdw.Db.Sync.Block do
     end)
   end
 
-  defp micro_block_mutations(mblock, mbi, first_txi) do
+  defp micro_block_mutations(mblock, mbi, first_txi, false = _use_cache?) do
+    {:ok, mb_hash} = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock))
+
+    process_micro_block_mutations(mblock, mb_hash, mbi, first_txi)
+  end
+
+  defp micro_block_mutations(mblock, mbi, first_txi, true = _use_cache?) do
     {:ok, mb_hash} = :aec_headers.hash_header(:aec_blocks.to_micro_header(mblock))
 
     with nil <- MutationsCache.get_mbs_mutations(mb_hash) do
