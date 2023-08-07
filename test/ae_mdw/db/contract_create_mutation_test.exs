@@ -30,7 +30,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
           [:passthrough],
           [
             is_aex9?: fn ct_pk -> ct_pk == contract_pk end,
-            call_meta_info: fn _type, ct_pk -> ct_pk == contract_pk && {:ok, meta_info} end,
+            call_meta_info: fn _type, ^contract_pk, <<0::256>> -> {:ok, meta_info} end,
             call_extensions: fn _type, _pk -> {:ok, []} end
           ]
         }
@@ -45,7 +45,12 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
           |> State.new()
           |> State.commit_mem([
             ContractCreateMutation.new(create_txi1, call_rec1),
-            SyncContract.aexn_create_contract_mutation(contract_pk, block_index, create_txi1),
+            SyncContract.aexn_create_contract_mutation(
+              contract_pk,
+              <<0::256>>,
+              block_index,
+              create_txi1
+            ),
             Origin.origin_mutations(
               :contract_create_tx,
               nil,
@@ -78,7 +83,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
           [:passthrough],
           [
             is_aex9?: fn ct_pk -> ct_pk == contract_pk end,
-            call_meta_info: fn _type, ct_pk -> ct_pk == contract_pk && {:ok, meta_info} end,
+            call_meta_info: fn _type, ^contract_pk, <<0::256>> -> {:ok, meta_info} end,
             call_extensions: fn _type, _pk -> {:ok, []} end
           ]
         },
@@ -112,7 +117,12 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
           |> State.new()
           |> State.commit_mem([
             ContractCreateMutation.new(create_txi, call_rec),
-            SyncContract.aexn_create_contract_mutation(contract_pk, block_index, create_txi),
+            SyncContract.aexn_create_contract_mutation(
+              contract_pk,
+              <<0::256>>,
+              block_index,
+              create_txi
+            ),
             Origin.origin_mutations(
               :contract_create_tx,
               nil,
@@ -186,7 +196,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
         {AexnContracts, [:passthrough],
          [
            is_aex9?: fn _pk -> false end,
-           call_meta_info: fn _type, ^contract_pk ->
+           call_meta_info: fn _type, ^contract_pk, <<0::256>> ->
              {:ok, {"test1", "TEST1", "http://some-fake-url", :url}}
            end,
            has_aex141_signatures?: fn _height, pk -> pk == contract_pk end,
@@ -203,7 +213,12 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
           |> MemStore.new()
           |> State.new()
           |> State.commit_mem([
-            SyncContract.aexn_create_contract_mutation(contract_pk, block_index, create_txi),
+            SyncContract.aexn_create_contract_mutation(
+              contract_pk,
+              <<0::256>>,
+              block_index,
+              create_txi
+            ),
             Origin.origin_mutations(
               :contract_create_tx,
               nil,
@@ -276,7 +291,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
         {AexnContracts, [:passthrough],
          [
            is_aex9?: fn ^contract_pk -> false end,
-           call_meta_info: fn _type, ^contract_pk ->
+           call_meta_info: fn _type, ^contract_pk, <<0::256>> ->
              {:ok, {"test1", "TEST1", "http://some-fake-url", :url}}
            end,
            has_aex141_signatures?: fn _height, ^contract_pk -> true end,
@@ -289,7 +304,12 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
          ]}
       ] do
         mutations = [
-          SyncContract.aexn_create_contract_mutation(contract_pk, {height, 0}, create_txi),
+          SyncContract.aexn_create_contract_mutation(
+            contract_pk,
+            <<0::256>>,
+            {height, 0},
+            create_txi
+          ),
           Origin.origin_mutations(
             :contract_create_tx,
             nil,
@@ -348,7 +368,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
         {AexnContracts, [:passthrough],
          [
            is_aex9?: fn ^contract_pk -> false end,
-           call_meta_info: fn _type, ^contract_pk ->
+           call_meta_info: fn _type, ^contract_pk, <<0::256>> ->
              {:ok, {"test1", "TEST1", "http://some-fake-url", :url}}
            end,
            has_aex141_signatures?: fn _height, ^contract_pk -> true end,
@@ -361,7 +381,12 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
          ]}
       ] do
         mutations = [
-          SyncContract.aexn_create_contract_mutation(contract_pk, {height, 0}, create_txi),
+          SyncContract.aexn_create_contract_mutation(
+            contract_pk,
+            <<0::256>>,
+            {height, 0},
+            create_txi
+          ),
           Origin.origin_mutations(
             :contract_create_tx,
             nil,

@@ -205,7 +205,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
     end
 
     test "create aex9 contract with Chain.clone" do
-      block_hash = <<0::256>>
+      block_hash = :crypto.strong_rand_bytes(32)
 
       owner_pk =
         <<119, 188, 109, 120, 250, 56, 247, 180, 131, 241, 75, 129, 38, 118, 119, 224, 142, 113,
@@ -242,9 +242,8 @@ defmodule AeMdw.Db.Sync.ContractTest do
         {AexnContracts, [],
          [
            is_aex9?: fn ct_pk -> ct_pk == aex9_contract_pk end,
-           call_meta_info: fn _type, ct_pk ->
-             if ct_pk == aex9_contract_pk,
-               do: {:ok, {"TestAEX9-A vs Wrapped Aeternity", "TAEX9-A/WAE", 18}}
+           call_meta_info: fn _type, _pk, ^block_hash ->
+             {:ok, {"TestAEX9-A vs Wrapped Aeternity", "TAEX9-A/WAE", 18}}
            end,
            call_extensions: fn _type, _pk -> {:ok, []} end
          ]},

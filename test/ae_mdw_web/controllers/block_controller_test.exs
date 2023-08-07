@@ -13,6 +13,8 @@ defmodule AeMdwWeb.BlockControllerTest do
 
   require Model
 
+  @hashes List.flatten(for i <- 0..2, do: [TS.key_block_hash(i), TS.micro_block_hash(i)])
+
   describe "key-blocks" do
     test "it gets all key blocks with the appropriate micro_blocks_count", %{
       conn: conn,
@@ -43,7 +45,11 @@ defmodule AeMdwWeb.BlockControllerTest do
 
       with_mocks [
         {:aec_db, [], [get_header: fn ^hash -> :header end]},
-        {AeMdw.Node.Db, [], [prev_block_type: fn :header -> :micro end]},
+        {AeMdw.Node.Db, [],
+         [
+           prev_block_type: fn :header -> :micro end,
+           find_block_height: fn hash when hash in @hashes -> {:ok, kbi} end
+         ]},
         {:aec_headers, [], [serialize_for_client: fn :header, :micro -> %{height: kbi} end]}
       ] do
         assert %{"data" => [block]} =
@@ -81,7 +87,11 @@ defmodule AeMdwWeb.BlockControllerTest do
 
       with_mocks [
         {:aec_db, [], [get_header: fn ^hash -> :header end]},
-        {AeMdw.Node.Db, [], [prev_block_type: fn :header -> :micro end]},
+        {AeMdw.Node.Db, [],
+         [
+           prev_block_type: fn :header -> :micro end,
+           find_block_height: fn hash when hash in @hashes -> {:ok, kbi} end
+         ]},
         {:aec_headers, [], [serialize_for_client: fn :header, :micro -> %{height: kbi} end]}
       ] do
         assert %{"data" => [block]} =
@@ -128,7 +138,11 @@ defmodule AeMdwWeb.BlockControllerTest do
         {:aec_db, [], [get_header: fn _mb_hash -> :header end]},
         {:aec_chain, [], [get_block: fn ^hash -> {:ok, :block} end]},
         {:aec_blocks, [], [to_header: fn :block -> :header end]},
-        {AeMdw.Node.Db, [], [prev_block_type: fn :header -> :micro end]},
+        {AeMdw.Node.Db, [],
+         [
+           prev_block_type: fn :header -> :micro end,
+           find_block_height: fn hash when hash in @hashes -> {:ok, kbi} end
+         ]},
         {:aec_headers, [],
          [
            type: fn :header -> :key end,
@@ -164,6 +178,9 @@ defmodule AeMdwWeb.BlockControllerTest do
       encoded_hash = Enc.encode(:key_block_hash, decoded_hash)
       error_msg = "not found: #{encoded_hash}"
 
+      store =
+        Store.put(store, Model.Block, Model.block(index: {0, -1}, hash: TS.key_block_hash(0)))
+
       with_mocks [
         {:aec_chain, [], [get_block: fn ^decoded_hash -> :error end]}
       ] do
@@ -193,7 +210,11 @@ defmodule AeMdwWeb.BlockControllerTest do
       with_mocks [
         {:aec_db, [], [get_header: fn ^decoded_hash -> :header end]},
         {:aec_headers, [], [serialize_for_client: fn :header, :micro -> %{height: kbi} end]},
-        {AeMdw.Node.Db, [], [prev_block_type: fn :header -> :micro end]}
+        {AeMdw.Node.Db, [],
+         [
+           prev_block_type: fn :header -> :micro end,
+           find_block_height: fn hash when hash in @hashes -> {:ok, kbi} end
+         ]}
       ] do
         assert %{
                  "height" => ^kbi,
@@ -235,7 +256,11 @@ defmodule AeMdwWeb.BlockControllerTest do
            serialize_for_client: fn :header, :micro -> %{height: kbi} end,
            type: fn :header -> :key end
          ]},
-        {AeMdw.Node.Db, [], [prev_block_type: fn :header -> :micro end]}
+        {AeMdw.Node.Db, [],
+         [
+           prev_block_type: fn :header -> :micro end,
+           find_block_height: fn hash when hash in @hashes -> {:ok, kbi} end
+         ]}
       ] do
         assert %{
                  "height" => ^kbi,
@@ -298,7 +323,8 @@ defmodule AeMdwWeb.BlockControllerTest do
         {AeMdw.Node.Db, [],
          [
            prev_block_type: fn :header -> :key end,
-           get_reverse_micro_blocks: fn ^decoded_hash -> [] end
+           get_reverse_micro_blocks: fn ^decoded_hash -> [] end,
+           find_block_height: fn hash when hash in @hashes -> {:ok, kbi} end
          ]}
       ] do
         assert %{
@@ -349,7 +375,8 @@ defmodule AeMdwWeb.BlockControllerTest do
         {AeMdw.Node.Db, [],
          [
            prev_block_type: fn :header -> :key end,
-           get_reverse_micro_blocks: fn ^decoded_hash -> [] end
+           get_reverse_micro_blocks: fn ^decoded_hash -> [] end,
+           find_block_height: fn hash when hash in @hashes -> {:ok, kbi} end
          ]}
       ] do
         assert %{

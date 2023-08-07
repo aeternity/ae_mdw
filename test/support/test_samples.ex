@@ -1,9 +1,10 @@
 defmodule AeMdw.TestSamples do
+  @moduledoc false
+
   alias AeMdw.Oracles
-
-  require AeMdw.Db.Model
-
   alias AeMdw.Db.Model
+
+  require Model
 
   @spec oracle_expiration_key(non_neg_integer()) :: binary()
   def oracle_expiration_key(n) do
@@ -106,7 +107,12 @@ defmodule AeMdw.TestSamples do
 
   @spec tx(non_neg_integer()) :: Model.tx()
   def tx(n) do
-    Model.tx(index: n * 200, id: tx_hash(n))
+    Model.tx(
+      index: n * 200,
+      id: tx_hash(n),
+      block_index: {0, 0},
+      time: DateTime.utc_now() |> DateTime.to_unix()
+    )
   end
 
   @spec key_block_hash(non_neg_integer()) :: Blocks.block_hash()

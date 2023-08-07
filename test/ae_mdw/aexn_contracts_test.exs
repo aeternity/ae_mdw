@@ -12,108 +12,149 @@ defmodule AeMdw.AexnContractsTest do
   describe "call_meta_info/2" do
     test "succeeds with regular aex9 meta_info" do
       contract_pk = :crypto.strong_rand_bytes(32)
+      mb_hash = <<Enum.random(100_000..999_999)::256>>
 
       with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn ^mb_hash -> {:ok, 123} end
+         ]},
         {AeMdw.DryRun.Runner, [:passthrough],
          [
-           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+           call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              meta_info_tuple = {"name", "SYMBOL", 18}
              {:ok, {:tuple, meta_info_tuple}}
            end
          ]}
       ] do
-        assert {:ok, {"name", "SYMBOL", 18}} = AexnContracts.call_meta_info(:aex9, contract_pk)
+        assert {:ok, {"name", "SYMBOL", 18}} =
+                 AexnContracts.call_meta_info(:aex9, contract_pk, mb_hash)
       end
     end
 
     test "succeeds with rearranged aex9 meta_info 1" do
       contract_pk = :crypto.strong_rand_bytes(32)
+      mb_hash = <<Enum.random(100_000..999_999)>>
 
       with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn ^mb_hash -> {:ok, 123} end
+         ]},
         {AeMdw.DryRun.Runner, [:passthrough],
          [
-           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+           call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              meta_info_tuple = {"Abc", 18, "ABC"}
              {:ok, {:tuple, meta_info_tuple}}
            end
          ]}
       ] do
-        assert {:ok, {"Abc", "ABC", 18}} = AexnContracts.call_meta_info(:aex9, contract_pk)
+        assert {:ok, {"Abc", "ABC", 18}} =
+                 AexnContracts.call_meta_info(:aex9, contract_pk, mb_hash)
       end
     end
 
     test "succeeds with rearranged aex9 meta_info 2" do
       contract_pk = :crypto.strong_rand_bytes(32)
+      mb_hash = <<Enum.random(100_000..999_999)::256>>
 
       with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn ^mb_hash -> {:ok, 123} end
+         ]},
         {AeMdw.DryRun.Runner, [:passthrough],
          [
-           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+           call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              meta_info_tuple = {"ABC", "Abc", 18}
              {:ok, {:tuple, meta_info_tuple}}
            end
          ]}
       ] do
-        assert {:ok, {"Abc", "ABC", 18}} = AexnContracts.call_meta_info(:aex9, contract_pk)
+        assert {:ok, {"Abc", "ABC", 18}} =
+                 AexnContracts.call_meta_info(:aex9, contract_pk, mb_hash)
       end
     end
 
     test "succeeds with rearranged aex9 meta_info 3" do
       contract_pk = :crypto.strong_rand_bytes(32)
+      mb_hash = <<Enum.random(100_000..999_999)::256>>
 
       with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn ^mb_hash -> {:ok, 123} end
+         ]},
         {AeMdw.DryRun.Runner, [:passthrough],
          [
-           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+           call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              meta_info_tuple = {"ABC", 18, "Abc"}
              {:ok, {:tuple, meta_info_tuple}}
            end
          ]}
       ] do
-        assert {:ok, {"Abc", "ABC", 18}} = AexnContracts.call_meta_info(:aex9, contract_pk)
+        assert {:ok, {"Abc", "ABC", 18}} =
+                 AexnContracts.call_meta_info(:aex9, contract_pk, mb_hash)
       end
     end
 
     test "succeeds with rearranged aex9 meta_info 4" do
       contract_pk = :crypto.strong_rand_bytes(32)
+      mb_hash = <<Enum.random(100_000..999_999)::256>>
 
       with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn ^mb_hash -> {:ok, 123} end
+         ]},
         {AeMdw.DryRun.Runner, [:passthrough],
          [
-           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+           call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              meta_info_tuple = {18, "Abc", "ABC"}
              {:ok, {:tuple, meta_info_tuple}}
            end
          ]}
       ] do
-        assert {:ok, {"Abc", "ABC", 18}} = AexnContracts.call_meta_info(:aex9, contract_pk)
+        assert {:ok, {"Abc", "ABC", 18}} =
+                 AexnContracts.call_meta_info(:aex9, contract_pk, mb_hash)
       end
     end
 
     test "succeeds with rearranged aex9 meta_info 5" do
       contract_pk = :crypto.strong_rand_bytes(32)
+      mb_hash = <<Enum.random(100_000..999_999)::256>>
 
       with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn ^mb_hash -> {:ok, 123} end
+         ]},
         {AeMdw.DryRun.Runner, [:passthrough],
          [
-           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+           call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              meta_info_tuple = {18, "ABC", "Abc"}
              {:ok, {:tuple, meta_info_tuple}}
            end
          ]}
       ] do
-        assert {:ok, {"Abc", "ABC", 18}} = AexnContracts.call_meta_info(:aex9, contract_pk)
+        assert {:ok, {"Abc", "ABC", 18}} =
+                 AexnContracts.call_meta_info(:aex9, contract_pk, mb_hash)
       end
     end
 
     test "succeeds with meta info from previous nft draft (hackaton)" do
       contract_pk = :crypto.strong_rand_bytes(32)
+      mb_hash = <<Enum.random(100_000..999_999)::256>>
       base_url = "https://some-base-url.com"
 
       with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn ^mb_hash -> {:ok, 123} end
+         ]},
         {AeMdw.DryRun.Runner, [:passthrough],
          [
-           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+           call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              variant_url = {:variant, [0, 1], 1, base_url}
              variant_type = {:variant, [0, 0, 0, 0], 0, {}}
              meta_info_tuple = {"name", "SYMBOL", variant_url, variant_type}
@@ -122,17 +163,22 @@ defmodule AeMdw.AexnContractsTest do
          ]}
       ] do
         assert {:ok, {"name", "SYMBOL", ^base_url, :url}} =
-                 AexnContracts.call_meta_info(:aex141, contract_pk)
+                 AexnContracts.call_meta_info(:aex141, contract_pk, mb_hash)
       end
     end
 
     test "succeeds with nft standard meta info without base url" do
       contract_pk = :crypto.strong_rand_bytes(32)
+      mb_hash = <<Enum.random(100_000..999_999)::256>>
 
       with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn ^mb_hash -> {:ok, 123} end
+         ]},
         {AeMdw.DryRun.Runner, [:passthrough],
          [
-           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+           call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              variant_url = {:variant, [0, 1], 0, {}}
              variant_type = {:variant, [0, 0, 0], 2, {}}
              meta_info_tuple = {"name", "SYMBOL", variant_url, variant_type}
@@ -141,17 +187,22 @@ defmodule AeMdw.AexnContractsTest do
          ]}
       ] do
         assert {:ok, {"name", "SYMBOL", nil, :map}} =
-                 AexnContracts.call_meta_info(:aex141, contract_pk)
+                 AexnContracts.call_meta_info(:aex141, contract_pk, mb_hash)
       end
     end
 
     test "succeeds with nft standard meta info with base url" do
       contract_pk = :crypto.strong_rand_bytes(32)
+      mb_hash = <<Enum.random(100_000..999_999)::256>>
 
       with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn ^mb_hash -> {:ok, 123} end
+         ]},
         {AeMdw.DryRun.Runner, [:passthrough],
          [
-           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+           call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              variant_url = {:variant, [0, 1], 1, "http://baseurl"}
              variant_type = {:variant, [0, 0, 0], 2, {}}
              meta_info_tuple = {"name", "SYMBOL", variant_url, variant_type}
@@ -160,17 +211,22 @@ defmodule AeMdw.AexnContractsTest do
          ]}
       ] do
         assert {:ok, {"name", "SYMBOL", "http://baseurl", :map}} =
-                 AexnContracts.call_meta_info(:aex141, contract_pk)
+                 AexnContracts.call_meta_info(:aex141, contract_pk, mb_hash)
       end
     end
 
     test "succeeds with nft rearranged meta info 1" do
       contract_pk = :crypto.strong_rand_bytes(32)
+      mb_hash = <<Enum.random(100_000..999_999)::256>>
 
       with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn ^mb_hash -> {:ok, 123} end
+         ]},
         {AeMdw.DryRun.Runner, [:passthrough],
          [
-           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+           call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              variant_url = {:variant, [0, 1], 0, ""}
              variant_type = {:variant, [0, 0, 0], 2, {}}
              meta_info_tuple = {"name", variant_url, "SYMBOL", variant_type}
@@ -179,17 +235,22 @@ defmodule AeMdw.AexnContractsTest do
          ]}
       ] do
         assert {:ok, {"name", "SYMBOL", nil, :map}} =
-                 AexnContracts.call_meta_info(:aex141, contract_pk)
+                 AexnContracts.call_meta_info(:aex141, contract_pk, mb_hash)
       end
     end
 
     test "succeeds with nft rearranged meta info 2" do
       contract_pk = :crypto.strong_rand_bytes(32)
+      mb_hash = <<Enum.random(100_000..999_999)::256>>
 
       with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn ^mb_hash -> {:ok, 123} end
+         ]},
         {AeMdw.DryRun.Runner, [:passthrough],
          [
-           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+           call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              variant_url = {:variant, [0, 1], 0, ""}
              variant_type = {:variant, [0, 0, 0], 2, {}}
              meta_info_tuple = {"name", variant_url, variant_type, "SYMBOL"}
@@ -198,17 +259,22 @@ defmodule AeMdw.AexnContractsTest do
          ]}
       ] do
         assert {:ok, {"name", "SYMBOL", nil, :map}} =
-                 AexnContracts.call_meta_info(:aex141, contract_pk)
+                 AexnContracts.call_meta_info(:aex141, contract_pk, mb_hash)
       end
     end
 
     test "succeeds with nft rearranged meta info 3" do
       contract_pk = :crypto.strong_rand_bytes(32)
+      mb_hash = <<Enum.random(100_000..999_999)::256>>
 
       with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn ^mb_hash -> {:ok, 123} end
+         ]},
         {AeMdw.DryRun.Runner, [:passthrough],
          [
-           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+           call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              variant_url = {:variant, [0, 1], 0, ""}
              variant_type = {:variant, [0, 0, 0], 2, {}}
              meta_info_tuple = {"SYMBOL", "name", variant_url, variant_type}
@@ -217,17 +283,22 @@ defmodule AeMdw.AexnContractsTest do
          ]}
       ] do
         assert {:ok, {"name", "SYMBOL", nil, :map}} =
-                 AexnContracts.call_meta_info(:aex141, contract_pk)
+                 AexnContracts.call_meta_info(:aex141, contract_pk, mb_hash)
       end
     end
 
     test "succeeds with nft rearranged meta info 4" do
       contract_pk = :crypto.strong_rand_bytes(32)
+      mb_hash = <<Enum.random(100_000..999_999)::256>>
 
       with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn ^mb_hash -> {:ok, 123} end
+         ]},
         {AeMdw.DryRun.Runner, [:passthrough],
          [
-           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+           call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              variant_url = {:variant, [0, 1], 0, ""}
              variant_type = {:variant, [0, 0, 0], 2, {}}
              meta_info_tuple = {"SYMBOL", variant_url, variant_type, "name"}
@@ -236,17 +307,22 @@ defmodule AeMdw.AexnContractsTest do
          ]}
       ] do
         assert {:ok, {"name", "SYMBOL", nil, :map}} =
-                 AexnContracts.call_meta_info(:aex141, contract_pk)
+                 AexnContracts.call_meta_info(:aex141, contract_pk, mb_hash)
       end
     end
 
     test "returns :unknown metadata type when does not comply to nft standard" do
       contract_pk = :crypto.strong_rand_bytes(32)
+      mb_hash = <<Enum.random(100_000..999_999)::256>>
 
       with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn ^mb_hash -> {:ok, 123} end
+         ]},
         {AeMdw.DryRun.Runner, [:passthrough],
          [
-           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+           call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              variant_url = {:variant, [0, 1], 0, ""}
              variant_type = {:variant, [0, 0], 0, {}}
              meta_info_tuple = {"name", "SYMBOL", variant_url, variant_type}
@@ -255,39 +331,49 @@ defmodule AeMdw.AexnContractsTest do
          ]}
       ] do
         assert {:ok, {"name", "SYMBOL", nil, :unknown}} =
-                 AexnContracts.call_meta_info(:aex141, contract_pk)
+                 AexnContracts.call_meta_info(:aex141, contract_pk, mb_hash)
       end
     end
 
     test "returns format error values when tuple format is unexpected" do
       contract_pk = :crypto.strong_rand_bytes(32)
+      mb_hash = <<Enum.random(100_000..999_999)::256>>
 
       with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn ^mb_hash -> {:ok, 123} end
+         ]},
         {AeMdw.DryRun.Runner, [:passthrough],
          [
-           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+           call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              {:ok, {:tuple, {"name", "symbol"}}}
            end
          ]}
       ] do
         assert {:ok, {:format_error, :format_error, nil}} =
-                 AexnContracts.call_meta_info(:aex9, contract_pk)
+                 AexnContracts.call_meta_info(:aex9, contract_pk, mb_hash)
       end
     end
 
     test "returns out of gas error when call_contract fails" do
       contract_pk = :crypto.strong_rand_bytes(32)
+      mb_hash = <<Enum.random(100_000..999_999)::256>>
 
       with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           find_block_height: fn ^mb_hash -> {:ok, 123} end
+         ]},
         {AeMdw.DryRun.Runner, [:passthrough],
          [
-           call_contract: fn ^contract_pk, _hash, "meta_info", [] ->
+           call_contract: fn ^contract_pk, {:micro, 123, ^mb_hash}, "meta_info", [] ->
              {:error, :dry_run_error}
            end
          ]}
       ] do
         assert {:ok, {:out_of_gas_error, :out_of_gas_error, :out_of_gas_error, nil}} =
-                 AexnContracts.call_meta_info(:aex141, contract_pk)
+                 AexnContracts.call_meta_info(:aex141, contract_pk, mb_hash)
       end
     end
   end
