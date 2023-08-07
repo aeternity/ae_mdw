@@ -59,8 +59,8 @@ defmodule AeMdw.Db.Sync.Stats do
         &(&1 - 1)
       )
 
-  @spec statistics_mutations(time(), type_counts()) :: StatisticsMutation.t() | nil
-  def statistics_mutations(time, type_counts) do
+  @spec txs_statistics_mutations(time(), type_counts()) :: StatisticsMutation.t() | nil
+  def txs_statistics_mutations(time, type_counts) do
     total_count =
       Enum.reduce(type_counts, 0, fn {_tx_type, increment}, acc -> acc + increment end)
 

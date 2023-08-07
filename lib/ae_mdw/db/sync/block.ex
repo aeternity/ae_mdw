@@ -153,7 +153,7 @@ defmodule AeMdw.Db.Sync.Block do
         end)
       end)
 
-    statistics_mutations = SyncStats.statistics_mutations(mb_time, type_counters)
+    statistics_mutations = SyncStats.txs_statistics_mutations(mb_time, type_counters)
     type_counters_mutation = TypeCountersMutation.new(type_counters)
     _sum = :ets.update_counter(:sync_profiling, {:txs, height}, ts, {{:txs, height}, 0})
 
