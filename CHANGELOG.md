@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.57.2](https://www.github.com/aeternity/ae_mdw/compare/v1.57.1...v1.57.2) (2023-08-07)
+
+
+### Bug Fixes
+
+* increase timeout of call affected by migration ([#1509](https://www.github.com/aeternity/ae_mdw/issues/1509)) ([f65fa1b](https://www.github.com/aeternity/ae_mdw/commit/f65fa1b9be772333ecb481f6558f698a800b61ab))
+
 ### [1.57.1](https://www.github.com/aeternity/ae_mdw/compare/v1.57.0...v1.57.1) (2023-08-07)
 
 
