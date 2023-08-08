@@ -110,7 +110,7 @@ defmodule AeMdw.Db.NameClaimMutation do
 
         name_claim = Model.name_claim(index: {plain_name, height, txi_idx})
 
-        ObjectKeys.put_active_name(plain_name)
+        ObjectKeys.put_active_name(state, plain_name)
 
         state2
         |> Name.put_active(m_name)

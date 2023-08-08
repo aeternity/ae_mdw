@@ -9,6 +9,7 @@ defmodule AeMdw.Db.State do
   alias AeMdw.Database
   alias AeMdw.Db.AsyncStoreMutation
   alias AeMdw.Db.DbStore
+  alias AeMdw.Db.MemStore
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
@@ -45,6 +46,18 @@ defmodule AeMdw.Db.State do
   @spec new(Store.t()) :: t()
   def new(store \\ DbStore.new()),
     do: %__MODULE__{store: store, stats: %{}, cache: %{}, jobs: %{}}
+
+  @spec has_memory_store?(t()) :: t()
+  def has_memory_store?(state), do: is_struct(state.store, MemStore)
+
+  @spec without_fallback(t()) :: t()
+  def without_fallback(%__MODULE__{store: store} = state) do
+    if is_struct(store, MemStore) do
+      %{state | store: MemStore.without_fallback(store)}
+    else
+      state
+    end
+  end
 
   @spec height(t()) :: height()
   def height(state), do: DbUtil.synced_height(state)

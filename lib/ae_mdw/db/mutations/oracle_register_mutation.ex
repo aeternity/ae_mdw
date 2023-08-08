@@ -57,7 +57,7 @@ defmodule AeMdw.Db.OracleRegisterMutation do
         previous: previous
       )
 
-    ObjectKeys.put_active_oracle(oracle_pk)
+    ObjectKeys.put_active_oracle(state, oracle_pk)
 
     SyncOracle.put_active(state2, m_oracle)
   end

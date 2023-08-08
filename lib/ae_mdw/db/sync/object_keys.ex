@@ -1,6 +1,6 @@
 defmodule AeMdw.Db.Sync.ObjectKeys do
   @moduledoc """
-  Counts the keys of active and inactive Names and Oracles
+  Counts active and inactive names and oracles deduplicating on memory and persisted keys.
   """
 
   alias AeMdw.Db.Model
@@ -9,10 +9,19 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
 
   @typep pubkey :: AeMdw.Node.Db.pubkey()
 
+  # commited keys
   @active_names_table :active_names
   @active_oracles_table :active_oracles
   @inactive_names_table :inactive_names
   @inactive_oracles_table :inactive_oracles
+
+  @store_tables %{
+    @active_names_table => Model.ActiveName,
+    @inactive_names_table => Model.InactiveName,
+    @active_oracles_table => Model.ActiveOracle,
+    @inactive_oracles_table => Model.InactiveOracle
+  }
+
   @opts [:named_table, :set, :public]
   @init_timeout 300_000
 
@@ -47,58 +56,97 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
     :ok
   end
 
-  @spec put_active_name(String.t()) :: :ok
-  def put_active_name(name) do
-    put(@active_names_table, name)
-    del(@inactive_names_table, name)
+  @spec put_active_name(State.t(), String.t()) :: :ok
+  def put_active_name(state, name) do
+    if not State.has_memory_store?(state) do
+      put(@active_names_table, name)
+      del(@inactive_names_table, name)
+    end
+
     :ok
   end
 
-  @spec put_inactive_name(String.t()) :: :ok
-  def put_inactive_name(name) do
-    put(@inactive_names_table, name)
-    del(@active_names_table, name)
+  @spec put_inactive_name(State.t(), String.t()) :: :ok
+  def put_inactive_name(state, name) do
+    if not State.has_memory_store?(state) do
+      put(@inactive_names_table, name)
+      del(@active_names_table, name)
+    end
+
     :ok
   end
 
-  @spec count_active_names() :: non_neg_integer()
-  def count_active_names, do: count(@active_names_table)
+  @spec put_active_oracle(State.t(), pubkey()) :: :ok
+  def put_active_oracle(state, oracle) do
+    if not State.has_memory_store?(state) do
+      put(@active_oracles_table, oracle)
+      del(@inactive_oracles_table, oracle)
+    end
 
-  @spec count_inactive_names() :: non_neg_integer()
-  def count_inactive_names, do: count(@inactive_names_table)
-
-  @spec put_active_oracle(pubkey()) :: :ok
-  def put_active_oracle(oracle) do
-    put(@active_oracles_table, oracle)
-    del(@inactive_oracles_table, oracle)
     :ok
   end
 
-  @spec put_inactive_oracle(pubkey()) :: :ok
-  def put_inactive_oracle(oracle) do
-    put(@inactive_oracles_table, oracle)
-    del(@active_oracles_table, oracle)
+  @spec put_inactive_oracle(State.t(), pubkey()) :: :ok
+  def put_inactive_oracle(state, oracle) do
+    if not State.has_memory_store?(state) do
+      put(@inactive_oracles_table, oracle)
+      del(@active_oracles_table, oracle)
+    end
+
     :ok
   end
 
-  @spec count_active_oracles() :: non_neg_integer()
-  def count_active_oracles, do: count(@active_oracles_table)
+  @spec count_active_names(State.t()) :: non_neg_integer()
+  def count_active_names(state), do: count(state, @active_names_table)
 
-  @spec count_inactive_oracles() :: non_neg_integer()
-  def count_inactive_oracles, do: count(@inactive_oracles_table)
+  @spec count_inactive_names(State.t()) :: non_neg_integer()
+  def count_inactive_names(state), do: count(state, @inactive_names_table)
 
-  defp put(table, key), do: :ets.insert(table, {key})
-  defp del(table, key), do: :ets.delete(table, key)
-  defp count(table), do: :ets.info(table, :size)
+  @spec count_active_oracles(State.t()) :: non_neg_integer()
+  def count_active_oracles(state), do: count(state, @active_oracles_table)
 
-  defp all_records(state, table) do
-    nil
-    |> Stream.unfold(fn prev_key ->
+  @spec count_inactive_oracles(State.t()) :: non_neg_integer()
+  def count_inactive_oracles(state), do: count(state, @inactive_oracles_table)
+
+  defp put(table, key) do
+    :ets.insert(table, {key})
+  end
+
+  defp del(table, key) do
+    :ets.delete(table, key)
+  end
+
+  defp count(state, table) do
+    memory_only_keys =
+      state
+      |> list_keys(table)
+      |> Enum.count(&(not :ets.member(table, &1)))
+
+    commited_keys = :ets.info(table, :size)
+
+    memory_only_keys + commited_keys
+  end
+
+  defp list_keys(state, table) do
+    model_table = @store_tables[table]
+
+    if State.has_memory_store?(state) do
+      state
+      |> State.without_fallback()
+      |> all_keys(model_table)
+    else
+      all_keys(state, model_table)
+    end
+  end
+
+  defp all_keys(state, table) do
+    Stream.unfold(nil, fn prev_key ->
       case State.next(state, table, prev_key) do
         :none -> nil
         {:ok, key} -> {key, key}
       end
     end)
-    |> Enum.map(&{&1})
   end
+
+  defp all_records(state, table), do: state |> all_keys(table) |> Enum.map(&{&1})
 end

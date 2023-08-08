@@ -9,6 +9,7 @@ defmodule AeMdw.Db.MemStore do
   building this store.
   """
 
+  alias AeMdw.Db.NullStore
   alias AeMdw.Database
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
@@ -31,6 +32,10 @@ defmodule AeMdw.Db.MemStore do
   @spec delete_store(t()) :: :ok
   def delete_store(%__MODULE__{tables: tables}),
     do: Enum.each(tables, fn {_name, t} -> SortedTable.delete(t) end)
+
+  @spec without_fallback(t()) :: t()
+  def without_fallback(%{tables: tables}),
+    do: %__MODULE__{fallback_store: NullStore.new(), tables: tables}
 
   @spec put(t(), table(), record()) :: t()
   def put(%__MODULE__{tables: tables} = store, table_name, record) do
