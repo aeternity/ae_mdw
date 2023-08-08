@@ -15,7 +15,6 @@ defmodule AeMdw.Db.Sync.Name do
   alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Txs
-  alias AeMdw.Util
   alias AeMdw.Validate
 
   require Model
@@ -249,12 +248,12 @@ defmodule AeMdw.Db.Sync.Name do
       |> :aens_claim_tx.name_fee()
 
     state
-    |> Collection.stream(Model.AuctionBidClaim, {plain_name, Util.min_int()})
-    |> Stream.take_while(&match?({^plain_name, _txi_idx}, &1))
-    |> Enum.reduce(state, fn {^plain_name, expire_height, claim_txi_idx}, state ->
+    |> Collection.stream(Model.AuctionBidClaim, {plain_name, height, nil})
+    |> Stream.take_while(&match?({^plain_name, ^height, _txi_idx}, &1))
+    |> Enum.reduce(state, fn {^plain_name, ^height, claim_txi_idx}, state ->
       state
       |> State.put(Model.NameClaim, Model.name_claim(index: {plain_name, height, claim_txi_idx}))
-      |> State.delete(Model.AuctionBidClaim, {plain_name, expire_height, claim_txi_idx})
+      |> State.delete(Model.AuctionBidClaim, {plain_name, height, claim_txi_idx})
     end)
     |> cache_through_write(Model.ActiveName, m_name)
     |> cache_through_write(Model.ActiveNameOwner, m_owner)
