@@ -10,6 +10,7 @@ defmodule AeMdw.Db.Sync.NameTest do
   alias AeMdw.Db.Sync.Name
   alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.NameUpdateMutation
+  alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
 
   import Mock
@@ -331,6 +332,63 @@ defmodule AeMdw.Db.Sync.NameTest do
                Model.ActiveNameOwnerDeactivation,
                {owner, new_expire, plain_name}
              )
+    end
+  end
+
+  describe "expire_auction/3" do
+    test "it creates new NameClaim records using the AuctionBidClaims" do
+      plain_name = TS.plain_name(0)
+      height = 125
+      txi_idx1 = {123, -1}
+      txi_idx2 = {124, 0}
+
+      auction_bid =
+        Model.auction_bid(
+          index: plain_name,
+          block_index_txi_idx: {{1, 2}, {3, -1}},
+          expire_height: height,
+          owner: <<0::256>>
+        )
+
+      tx_hash = <<1::256>>
+
+      {:ok, claim_aetx} =
+        :aens_claim_tx.new(%{
+          account_id: :aeser_id.create(:account, <<0::256>>),
+          nonce: 1,
+          name: plain_name,
+          name_salt: 123_456,
+          name_fee: 123,
+          fee: 5_000
+        })
+
+      {:name_claim_tx, claim_tx} = :aetx.specialize_type(claim_aetx)
+
+      state =
+        empty_store()
+        |> Store.put(Model.AuctionBid, auction_bid)
+        |> Store.put(
+          Model.AuctionBidClaim,
+          Model.name_claim(index: {plain_name, height, txi_idx1})
+        )
+        |> Store.put(
+          Model.AuctionBidClaim,
+          Model.name_claim(index: {plain_name, height, txi_idx2})
+        )
+        |> Store.put(Model.Tx, Model.tx(index: 3, id: tx_hash))
+        |> State.new()
+
+      with_mocks [
+        {Db, [:passthrough],
+         [get_tx_data: fn ^tx_hash -> {<<456::256>>, :name_claim_tx, :signed_tx, claim_tx} end]}
+      ] do
+        state = Name.expire_auction(state, height, plain_name)
+
+        assert State.exists?(state, Model.NameClaim, {plain_name, height, txi_idx1})
+        refute State.exists?(state, Model.AuctionBidClaim, {plain_name, height, txi_idx1})
+        assert State.exists?(state, Model.NameClaim, {plain_name, height, txi_idx2})
+        refute State.exists?(state, Model.AuctionBidClaim, {plain_name, height, txi_idx2})
+      end
     end
   end
 
