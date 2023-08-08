@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.57.3](https://www.github.com/aeternity/ae_mdw/compare/v1.57.2...v1.57.3) (2023-08-08)
+
+
+### Bug Fixes
+
+* fix auction bids expiring index ([#1512](https://www.github.com/aeternity/ae_mdw/issues/1512)) ([74cdb9e](https://www.github.com/aeternity/ae_mdw/commit/74cdb9e1691b42d8f6dc0213184d6b42f6c59f80))
+
 ### [1.57.2](https://www.github.com/aeternity/ae_mdw/compare/v1.57.1...v1.57.2) (2023-08-07)
 
 
