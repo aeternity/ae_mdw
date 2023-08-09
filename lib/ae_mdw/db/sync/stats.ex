@@ -3,8 +3,11 @@ defmodule AeMdw.Db.Sync.Stats do
   Update general and per contract stats during the syncing process.
   """
 
+  alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Db.StatisticsMutation
+  alias AeMdw.Node
   alias AeMdw.Stats
   alias AeMdw.Util
 
@@ -13,6 +16,11 @@ defmodule AeMdw.Db.Sync.Stats do
   @typep pubkey :: AeMdw.Node.Db.pubkey()
   @typep template_id :: AeMdw.Aex141.template_id()
   @typep aexn_type :: :aex9 | :aex141
+  @typep time() :: Blocks.time()
+  @typep type_counts() :: %{Node.tx_type() => pos_integer()}
+
+  @start_unix 1_970
+  @seconds_per_day 3_600 * 24
 
   @spec update_nft_stats(State.t(), pubkey(), nil | pubkey(), nil | pubkey()) :: State.t()
   def update_nft_stats(state, contract_pk, prev_owner_pk, to_pk) do
@@ -50,6 +58,44 @@ defmodule AeMdw.Db.Sync.Stats do
         Stats.nft_template_tokens_key(contract_pk, template_id),
         &(&1 - 1)
       )
+
+  @spec txs_statistics_mutations(time(), type_counts()) :: StatisticsMutation.t() | nil
+  def txs_statistics_mutations(time, type_counts) do
+    total_count =
+      Enum.reduce(type_counts, 0, fn {_tx_type, increment}, acc -> acc + increment end)
+
+    if total_count > 0 do
+      time
+      |> time_intervals()
+      |> Enum.flat_map(fn {interval, interval_start} ->
+        tx_type_statistics =
+          Enum.map(type_counts, fn {tx_type, count} ->
+            {{{:transactions, tx_type}, interval, interval_start}, count}
+          end)
+
+        total_statistic = {{{:transactions, :all}, interval, interval_start}, total_count}
+
+        [total_statistic | tx_type_statistics]
+      end)
+      |> StatisticsMutation.new()
+    else
+      nil
+    end
+  end
+
+  defp time_intervals(time) do
+    seconds = div(time, 1_000)
+    %DateTime{year: year, month: month} = DateTime.from_unix!(seconds)
+    day_start = div(seconds, @seconds_per_day)
+    week_start = div(day_start, 7)
+    month_start = (year - @start_unix) * 12 + month
+
+    [
+      {:day, day_start},
+      {:week, week_start},
+      {:month, month_start}
+    ]
+  end
 
   defp increment_collection_nfts(state, contract_pk, nil),
     do: update_stat_counter(state, Stats.nfts_count_key(contract_pk))

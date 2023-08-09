@@ -9,6 +9,7 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
   @typep opt() ::
            {:order_by, [atom()]}
            | {:txi_scope?, boolean()}
+           | {:max_limit, pos_integer()}
   @type opts() :: [opt()]
 
   @scope_types %{
@@ -30,9 +31,10 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
   @spec call(Conn.t(), opts()) :: Conn.t()
   def call(%Conn{params: params, query_params: query_params} = conn, opts) do
     txi_scope? = Keyword.get(opts, :txi_scope?, true)
+    max_limit = Keyword.get(opts, :max_limit, @max_limit)
 
     with {:ok, direction, scope} <- extract_direction_and_scope(params, txi_scope?),
-         {:ok, limit} <- extract_limit(params),
+         {:ok, limit} <- extract_limit(params, max_limit),
          {:ok, is_reversed?} <- extract_is_reversed(params),
          {:ok, order_by} <- extract_order_by(params, opts),
          {:ok, page} <- extract_page(params),
@@ -151,12 +153,12 @@ defmodule AeMdwWeb.Plugs.PaginatedPlug do
 
   defp extract_range(range), do: {:error, "invalid range: #{range}"}
 
-  defp extract_limit(params) do
+  defp extract_limit(params, max_limit) do
     limit_bin = Map.get(params, "limit", "#{@default_limit}")
 
     case Integer.parse(limit_bin) do
-      {limit, ""} when limit <= @max_limit and limit > 0 -> {:ok, limit}
-      {limit, ""} when limit > @max_limit -> {:error, "limit too large: #{limit}"}
+      {limit, ""} when limit <= max_limit and limit > 0 -> {:ok, limit}
+      {limit, ""} when limit > max_limit -> {:error, "limit too large: #{limit}"}
       {_limit, _rest} -> {:error, "invalid limit: #{limit_bin}"}
       :error -> {:error, "invalid limit: #{limit_bin}"}
     end

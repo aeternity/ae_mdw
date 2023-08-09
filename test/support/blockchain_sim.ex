@@ -343,7 +343,7 @@ defmodule AeMdwWeb.BlockchainSim do
        <<>>,
        <<>>,
        Map.values(mock_txs),
-       System.system_time(),
+       :aeu_time.now_in_msecs(),
        :no_fraud,
        0
      ), mock_txs}

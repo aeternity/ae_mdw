@@ -23,6 +23,7 @@ defmodule AeMdw.Db.Sync.Block do
   alias AeMdw.Db.OraclesExpirationMutation
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Transaction
+  alias AeMdw.Db.Sync.Stats, as: SyncStats
   alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.TypeCountersMutation
@@ -159,10 +160,11 @@ defmodule AeMdw.Db.Sync.Block do
         end)
       end)
 
+    statistics_mutations = SyncStats.txs_statistics_mutations(mb_time, type_counters)
     type_counters_mutation = TypeCountersMutation.new(type_counters)
     _sum = :ets.update_counter(:sync_profiling, {:txs, height}, ts, {{:txs, height}, 0})
 
-    mutations = [block_mutation, type_counters_mutation | txs_mutations]
+    mutations = [block_mutation, type_counters_mutation, statistics_mutations | txs_mutations]
 
     {mutations, first_txi + length(mb_txs)}
   end

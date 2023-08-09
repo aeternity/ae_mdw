@@ -5,6 +5,7 @@ defmodule AeMdw.Stats do
 
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
+  alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.StatsMutation
@@ -13,7 +14,9 @@ defmodule AeMdw.Stats do
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db
+  alias AeMdw.Node
   alias AeMdw.Util
+  alias AeMdw.Validate
 
   require Model
 
@@ -22,6 +25,7 @@ defmodule AeMdw.Stats do
   @type total_stat() :: map()
   @type cursor() :: binary() | nil
   @type tps() :: non_neg_integer()
+  @type statistic() :: map()
 
   @typep txi() :: Blocks.height()
   @typep pubkey() :: Db.pubkey()
@@ -30,9 +34,17 @@ defmodule AeMdw.Stats do
   @typep limit() :: Database.limit()
   @typep range() :: {:gen, Range.t()} | nil
   @typep aexn_type() :: :aex9 | :aex141
+  @typep query() :: map()
+  @typep pagination() :: Collection.direction_limit()
+  @typep pagination_cursor() :: Collection.pagination_cursor()
 
   @type nft_stats :: %{nfts_amount: non_neg_integer(), nft_owners: non_neg_integer()}
   @typep template_id() :: AeMdw.Aex141.template_id()
+
+  @type statistic_tag() :: {:transactions, Node.tx_type() | :all}
+  @type interval_by() :: :day | :week | :month
+  @type interval_start() :: non_neg_integer()
+
   @tps_stat_key :max_tps
   @miners_count_stat_key :miners_count
   @nfts_count_stat :nfts_count
@@ -42,6 +54,8 @@ defmodule AeMdw.Stats do
   @aex9_holder_count_stat :aex9_holder_count
   @aex9_logs_count_stat :aex9_logs_count
   @aex141_count_stat :aex141_count
+
+  @ms_per_day 24 * 3_600 * 1_000
 
   @spec mutation(height(), Db.key_block(), [Db.micro_block()], txi(), txi(), boolean()) ::
           StatsMutation.t()
@@ -206,6 +220,87 @@ defmodule AeMdw.Stats do
     case State.get(state, Model.Stat, aex9_logs_count_key(contract_pk)) do
       {:ok, Model.stat(payload: count)} -> count
       :not_found -> 0
+    end
+  end
+
+  @spec fetch_transactions_statistics(State.t(), pagination(), query(), range(), cursor()) ::
+          {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}}
+  def fetch_transactions_statistics(state, pagination, query, range, cursor) do
+    with {:ok, query} <- convert_params(query),
+         {:ok, cursor} <- deserialize_statistic_cursor(cursor) do
+      {prev_cursor, statistics_keys, next_cursor} =
+        state
+        |> build_transactions_statistics_streamer(query, range, cursor)
+        |> Collection.paginate(pagination)
+
+      statistics = Enum.map(statistics_keys, &render_statistic(state, &1))
+
+      {:ok,
+       {serialize_statistics_cursor(prev_cursor), statistics,
+        serialize_statistics_cursor(next_cursor)}}
+    end
+  end
+
+  defp build_transactions_statistics_streamer(state, query, _scope, cursor) do
+    tx_tag = Keyword.get(query, :tx_type, :all)
+
+    cursor =
+      case cursor do
+        nil -> nil
+        interval_start -> {{:transactions, tx_tag}, :day, interval_start}
+      end
+
+    key_boundary = {
+      {{:transactions, tx_tag}, :day, Util.min_int()},
+      {{:transactions, tx_tag}, :day, Util.max_int()}
+    }
+
+    fn direction ->
+      Collection.stream(state, Model.Statistic, direction, key_boundary, cursor)
+    end
+  end
+
+  defp render_statistic(state, {{:transactions, _tx_tag}, :day, interval_start} = statistic_key) do
+    Model.statistic(count: count) = State.fetch!(state, Model.Statistic, statistic_key)
+
+    %{
+      start_date: interval_start * @ms_per_day,
+      end_date: (interval_start + 1) * @ms_per_day,
+      count: count
+    }
+  end
+
+  defp convert_params(query) do
+    Enum.reduce_while(query, {:ok, []}, fn param, {:ok, filters} ->
+      case convert_param(param) do
+        {:ok, filter} -> {:cont, {:ok, [filter | filters]}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  defp convert_param({"tx_type", val}) do
+    case Validate.tx_type(val) do
+      {:ok, tx_type} -> {:ok, {:tx_type, tx_type}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp convert_param({key, val}), do: {:error, ErrInput.Query.exception(value: "#{key}=#{val}")}
+
+  defp serialize_statistics_cursor(nil), do: nil
+
+  defp serialize_statistics_cursor(
+         {{{:transactions, _tx_type}, :day, interval_start}, is_reversed?}
+       ),
+       do: {"#{interval_start}", is_reversed?}
+
+  defp deserialize_statistic_cursor(nil), do: {:ok, nil}
+
+  defp deserialize_statistic_cursor(cursor_bin) do
+    case Integer.parse(cursor_bin) do
+      {interval_start, ""} -> {:ok, interval_start}
+      _error_or_invalid -> {:error, ErrInput.Cursor.exception(value: cursor_bin)}
     end
   end
 
