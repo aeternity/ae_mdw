@@ -28,7 +28,7 @@ defmodule AeMdw.Migrations.FixUnindexedAuctionBids do
         end
       end)
 
-    mutations = [DeleteKeysMutation.new(delete_keys) | mutations]
+    mutations = [DeleteKeysMutation.new(%{Model.AuctionBidClaim => delete_keys}) | mutations]
 
     _state = State.commit(state, mutations)
 
