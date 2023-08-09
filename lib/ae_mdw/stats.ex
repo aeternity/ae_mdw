@@ -56,6 +56,14 @@ defmodule AeMdw.Stats do
   @aex141_count_stat :aex141_count
 
   @ms_per_day 24 * 3_600 * 1_000
+  @ms_per_week @ms_per_day * 7
+  @start_unix 1_970
+
+  @interval_by_mapping %{
+    "day" => :day,
+    "week" => :week,
+    "month" => :month
+  }
 
   @spec mutation(height(), Db.key_block(), [Db.micro_block()], txi(), txi(), boolean()) ::
           StatsMutation.t()
@@ -243,21 +251,42 @@ defmodule AeMdw.Stats do
 
   defp build_transactions_statistics_streamer(state, query, _scope, cursor) do
     tx_tag = Keyword.get(query, :tx_type, :all)
+    interval_by = Keyword.get(query, :interval_by, :day)
 
     cursor =
       case cursor do
         nil -> nil
-        interval_start -> {{:transactions, tx_tag}, :day, interval_start}
+        interval_start -> {{:transactions, tx_tag}, interval_by, interval_start}
       end
 
     key_boundary = {
-      {{:transactions, tx_tag}, :day, Util.min_int()},
-      {{:transactions, tx_tag}, :day, Util.max_int()}
+      {{:transactions, tx_tag}, interval_by, Util.min_int()},
+      {{:transactions, tx_tag}, interval_by, Util.max_int()}
     }
 
     fn direction ->
       Collection.stream(state, Model.Statistic, direction, key_boundary, cursor)
     end
+  end
+
+  defp render_statistic(state, {{:transactions, _tx_tag}, :month, interval_start} = statistic_key) do
+    Model.statistic(count: count) = State.fetch!(state, Model.Statistic, statistic_key)
+
+    %{
+      start_date: months_to_unix(interval_start),
+      end_date: months_to_unix(interval_start + 1),
+      count: count
+    }
+  end
+
+  defp render_statistic(state, {{:transactions, _tx_tag}, :week, interval_start} = statistic_key) do
+    Model.statistic(count: count) = State.fetch!(state, Model.Statistic, statistic_key)
+
+    %{
+      start_date: interval_start * @ms_per_week,
+      end_date: (interval_start + 1) * @ms_per_week,
+      count: count
+    }
   end
 
   defp render_statistic(state, {{:transactions, _tx_tag}, :day, interval_start} = statistic_key) do
@@ -286,12 +315,19 @@ defmodule AeMdw.Stats do
     end
   end
 
+  defp convert_param({"interval_by", val}) do
+    case Map.fetch(@interval_by_mapping, val) do
+      {:ok, interval_by} -> {:ok, {:interval_by, interval_by}}
+      :error -> {:error, ErrInput.Query.exception(value: val)}
+    end
+  end
+
   defp convert_param({key, val}), do: {:error, ErrInput.Query.exception(value: "#{key}=#{val}")}
 
   defp serialize_statistics_cursor(nil), do: nil
 
   defp serialize_statistics_cursor(
-         {{{:transactions, _tx_type}, :day, interval_start}, is_reversed?}
+         {{{:transactions, _tx_type}, _interval_by, interval_start}, is_reversed?}
        ),
        do: {"#{interval_start}", is_reversed?}
 
@@ -453,5 +489,14 @@ defmodule AeMdw.Stats do
             nil
         end
     end
+  end
+
+  defp months_to_unix(months) do
+    year = div(months, 12)
+    month = rem(months, 12) + 1
+    date = Date.new!(@start_unix + year, month, 1)
+    time = Time.new!(0, 0, 0)
+    datetime = DateTime.new!(date, time)
+    DateTime.to_unix(datetime, :millisecond)
   end
 end

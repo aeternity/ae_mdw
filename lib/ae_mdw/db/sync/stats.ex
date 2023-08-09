@@ -88,7 +88,7 @@ defmodule AeMdw.Db.Sync.Stats do
     %DateTime{year: year, month: month} = DateTime.from_unix!(seconds)
     day_start = div(seconds, @seconds_per_day)
     week_start = div(day_start, 7)
-    month_start = (year - @start_unix) * 12 + month
+    month_start = (year - @start_unix) * 12 + month - 1
 
     [
       {:day, day_start},

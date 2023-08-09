@@ -27,9 +27,9 @@ defmodule AeMdw.Db.Sync.StatsTest do
           {{{:transactions, :all}, :week, 0}, 19},
           {{{:transactions, :oracle_register_tx}, :week, 0}, 18},
           {{{:transactions, :spend_tx}, :week, 0}, 1},
-          {{{:transactions, :all}, :month, 1}, 19},
-          {{{:transactions, :oracle_register_tx}, :month, 1}, 18},
-          {{{:transactions, :spend_tx}, :month, 1}, 1}
+          {{{:transactions, :all}, :month, 0}, 19},
+          {{{:transactions, :oracle_register_tx}, :month, 0}, 18},
+          {{{:transactions, :spend_tx}, :month, 0}, 1}
         ])
 
       mutation2 =
@@ -40,9 +40,9 @@ defmodule AeMdw.Db.Sync.StatsTest do
           {{{:transactions, :all}, :week, 52}, 19},
           {{{:transactions, :oracle_register_tx}, :week, 52}, 18},
           {{{:transactions, :spend_tx}, :week, 52}, 1},
-          {{{:transactions, :all}, :month, 13}, 19},
-          {{{:transactions, :oracle_register_tx}, :month, 13}, 18},
-          {{{:transactions, :spend_tx}, :month, 13}, 1}
+          {{{:transactions, :all}, :month, 12}, 19},
+          {{{:transactions, :oracle_register_tx}, :month, 12}, 18},
+          {{{:transactions, :spend_tx}, :month, 12}, 1}
         ])
 
       assert ^mutation1 = Stats.txs_statistics_mutations(time1, type_counts)
