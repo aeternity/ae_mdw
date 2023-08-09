@@ -8,6 +8,7 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
   alias AeMdw.Db.State
   alias AeMdw.Log
 
+  import AeMdw.Util, only: [max_name_bin: 0, max_256bit_bin: 0]
   @typep pubkey :: AeMdw.Node.Db.pubkey()
 
   # commited keys
@@ -23,8 +24,18 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
     @inactive_oracles_table => Model.InactiveOracle
   }
 
+  @name_halves [
+    {"", "g" <> max_name_bin()},
+    {"h", max_name_bin()}
+  ]
+
+  @oracles_halves [
+    {<<0::256>>, <<trunc(:math.pow(2, 31))::256>>},
+    {<<trunc(:math.pow(2, 31)) + 1::256>>, max_256bit_bin()}
+  ]
+
   @opts [:named_table, :set, :public]
-  @init_timeout 300_000
+  @init_timeout 180_000
 
   @spec init(State.t()) :: :ok
   def init(state) do
@@ -33,23 +44,48 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
     _tid3 = :ets.new(@active_oracles_table, @opts)
     _tid4 = :ets.new(@inactive_oracles_table, @opts)
 
-    {ts, _} =
+    {ts, :ok} =
       :timer.tc(fn ->
-        [
-          Task.async(fn ->
-            :ets.insert(@active_names_table, all_records(state, Model.ActiveName))
-          end),
-          Task.async(fn ->
-            :ets.insert(@inactive_names_table, all_records(state, Model.InactiveName))
-          end),
-          Task.async(fn ->
-            :ets.insert(@active_oracles_table, all_records(state, Model.ActiveOracle))
-          end),
-          Task.async(fn ->
-            :ets.insert(@inactive_oracles_table, all_records(state, Model.InactiveOracle))
-          end)
-        ]
-        |> Task.await_many(@init_timeout)
+        _ok_list1 =
+          [
+            Enum.map(
+              @name_halves,
+              &Task.async(fn ->
+                :ets.insert(@active_names_table, load_records(state, Model.ActiveName, &1))
+              end)
+            ),
+            Enum.map(
+              @name_halves,
+              &Task.async(fn ->
+                :ets.insert(@inactive_names_table, load_records(state, Model.InactiveName, &1))
+              end)
+            )
+          ]
+          |> List.flatten()
+          |> Task.await_many(@init_timeout)
+
+        _ok_list2 =
+          [
+            Enum.map(
+              @oracles_halves,
+              &Task.async(fn ->
+                :ets.insert(@active_oracles_table, load_records(state, Model.ActiveOracle, &1))
+              end)
+            ),
+            Enum.map(
+              @oracles_halves,
+              &Task.async(fn ->
+                :ets.insert(
+                  @inactive_oracles_table,
+                  load_records(state, Model.InactiveOracle, &1)
+                )
+              end)
+            )
+          ]
+          |> List.flatten()
+          |> Task.await_many(@init_timeout)
+
+        :ok
       end)
 
     Log.info("Loaded object keys in #{div(ts, 1_000)}ms")
@@ -142,5 +178,6 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
 
   defp stream_all_keys(state, table), do: Collection.stream(state, table, nil)
 
-  defp all_records(state, table), do: state |> stream_all_keys(table) |> Enum.map(&{&1})
+  defp load_records(state, table, key_boundary),
+    do: state |> Collection.stream(table, key_boundary) |> Enum.map(&{&1})
 end
