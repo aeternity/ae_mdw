@@ -47,7 +47,7 @@ defmodule AeMdw.Db.State do
   def new(store \\ DbStore.new()),
     do: %__MODULE__{store: store, stats: %{}, cache: %{}, jobs: %{}}
 
-  @spec has_memory_store?(t()) :: t()
+  @spec has_memory_store?(t()) :: boolean()
   def has_memory_store?(state), do: is_struct(state.store, MemStore)
 
   @spec without_fallback(t()) :: t()

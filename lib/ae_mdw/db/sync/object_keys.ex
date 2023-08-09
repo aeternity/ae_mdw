@@ -3,6 +3,7 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
   Counts active and inactive names and oracles deduplicating on memory and persisted keys.
   """
 
+  alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Log
@@ -10,10 +11,10 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
   @typep pubkey :: AeMdw.Node.Db.pubkey()
 
   # commited keys
-  @active_names_table :active_names
-  @active_oracles_table :active_oracles
-  @inactive_names_table :inactive_names
-  @inactive_oracles_table :inactive_oracles
+  @active_names_table :db_active_names
+  @active_oracles_table :db_active_oracles
+  @inactive_names_table :db_inactive_names
+  @inactive_oracles_table :db_inactive_oracles
 
   @store_tables %{
     @active_names_table => Model.ActiveName,
@@ -133,20 +134,13 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
     if State.has_memory_store?(state) do
       state
       |> State.without_fallback()
-      |> all_keys(model_table)
+      |> stream_all_keys(model_table)
     else
-      all_keys(state, model_table)
+      stream_all_keys(state, model_table)
     end
   end
 
-  defp all_keys(state, table) do
-    Stream.unfold(nil, fn prev_key ->
-      case State.next(state, table, prev_key) do
-        :none -> nil
-        {:ok, key} -> {key, key}
-      end
-    end)
-  end
+  defp stream_all_keys(state, table), do: Collection.stream(state, table, nil)
 
-  defp all_records(state, table), do: state |> all_keys(table) |> Enum.map(&{&1})
+  defp all_records(state, table), do: state |> stream_all_keys(table) |> Enum.map(&{&1})
 end
