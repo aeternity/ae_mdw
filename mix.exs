@@ -122,7 +122,13 @@ defmodule AeMdw.MixProject do
   def application() do
     [
       mod: {AeMdw.Application, []},
-      start_phases: [migrate_db: [], hardforks_presets: [], dedup_accounts: [], start_sync: []],
+      start_phases: [
+        migrate_db: [],
+        hardforks_presets: [],
+        dedup_accounts: [],
+        load_obj_keys: [],
+        start_sync: []
+      ],
       extra_applications: [:logger, :runtime_tools]
     ]
   end

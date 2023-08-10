@@ -42,8 +42,6 @@ defmodule AeMdw.Application do
     persist = Application.get_env(:aecore, :persist, true)
     :ok = AeMdw.Db.RocksDb.open(!persist)
 
-    ObjectKeys.init(AeMdw.Db.State.new())
-
     children = [
       AeMdw.APM.Telemetry,
       AeMdwWeb.Supervisor,
@@ -227,6 +225,10 @@ defmodule AeMdw.Application do
   def start_phase(:dedup_accounts, _start_type, []) do
     AeMdw.Sync.AsyncTasks.WealthRankAccounts.dedup_pending_accounts()
     :ok
+  end
+
+  def start_phase(:load_obj_keys, _start_type, []) do
+    ObjectKeys.init(AeMdw.Db.State.new())
   end
 
   def start_phase(:start_sync, _start_type, []) do

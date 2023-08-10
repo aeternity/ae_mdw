@@ -29,13 +29,13 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
     {"h", max_name_bin()}
   ]
 
-  @oracles_halves [
+  @oracle_halves [
     {<<0::256>>, <<trunc(:math.pow(2, 31))::256>>},
     {<<trunc(:math.pow(2, 31)) + 1::256>>, max_256bit_bin()}
   ]
 
   @opts [:named_table, :set, :public]
-  @init_timeout 180_000
+  @init_timeout 300_000
 
   @spec init(State.t()) :: :ok
   def init(state) do
@@ -46,49 +46,11 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
 
     {ts, :ok} =
       :timer.tc(fn ->
-        _ok_list1 =
-          [
-            Enum.map(
-              @name_halves,
-              &Task.async(fn ->
-                :ets.insert(@active_names_table, load_records(state, Model.ActiveName, &1))
-              end)
-            ),
-            Enum.map(
-              @name_halves,
-              &Task.async(fn ->
-                :ets.insert(@inactive_names_table, load_records(state, Model.InactiveName, &1))
-              end)
-            )
-          ]
-          |> List.flatten()
-          |> Task.await_many(@init_timeout)
-
-        _ok_list2 =
-          [
-            Enum.map(
-              @oracles_halves,
-              &Task.async(fn ->
-                :ets.insert(@active_oracles_table, load_records(state, Model.ActiveOracle, &1))
-              end)
-            ),
-            Enum.map(
-              @oracles_halves,
-              &Task.async(fn ->
-                :ets.insert(
-                  @inactive_oracles_table,
-                  load_records(state, Model.InactiveOracle, &1)
-                )
-              end)
-            )
-          ]
-          |> List.flatten()
-          |> Task.await_many(@init_timeout)
-
-        :ok
+        :ok = load_tables(state, @name_halves, @active_names_table, @inactive_names_table)
+        :ok = load_tables(state, @oracle_halves, @active_oracles_table, @inactive_oracles_table)
       end)
 
-    Log.info("Loaded object keys in #{div(ts, 1_000)}ms")
+    Log.info("Loaded object keys in #{div(ts, 1_000_000)} secs")
 
     :ok
   end
@@ -178,6 +140,28 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
 
   defp stream_all_keys(state, table), do: Collection.stream(state, table, nil)
 
-  defp load_records(state, table, key_boundary),
-    do: state |> Collection.stream(table, key_boundary) |> Enum.map(&{&1})
+  defp load_tables(state, key_boundaries, active_table, inactive_table) do
+    true =
+      key_boundaries
+      |> Enum.flat_map(
+        &[
+          Task.async(fn -> load_records(state, active_table, &1) end),
+          Task.async(fn -> load_records(state, inactive_table, &1) end)
+        ]
+      )
+      |> Task.await_many(@init_timeout)
+      |> Enum.all?(&(&1 == :ok))
+
+    :ok
+  end
+
+  defp load_records(state, table, key_boundary) do
+    records =
+      state
+      |> Collection.stream(@store_tables[table], key_boundary)
+      |> Enum.map(&{&1})
+
+    :ets.insert(table, records)
+    :ok
+  end
 end
