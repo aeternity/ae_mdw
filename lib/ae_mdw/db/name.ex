@@ -44,8 +44,10 @@ defmodule AeMdw.Db.Name do
   end
 
   @spec plain_name!(State.t(), binary()) :: String.t()
-  def plain_name!(state, name_hash),
-    do: Model.plain_name(State.fetch!(state, Model.PlainName, name_hash), :value)
+  def plain_name!(state, name_hash) do
+    Model.plain_name(value: plain_name) = State.fetch!(state, Model.PlainName, name_hash)
+    plain_name
+  end
 
   @spec ptr_resolve!(state(), Blocks.block_index(), binary(), String.t()) :: binary()
   def ptr_resolve!(state, block_index, name_hash, key) do
@@ -237,7 +239,7 @@ defmodule AeMdw.Db.Name do
           DbUtil.read_node_tx_details(state, txi_idx)
 
         name_hash = :aens_update_tx.name_hash(name_update_tx)
-        Model.plain_name(value: plain_name) = State.fetch!(state, Model.PlainName, name_hash)
+        plain_name = plain_name!(state, name_hash)
 
         case locate(state, plain_name) do
           {_bid_key, Model.AuctionBid} ->
