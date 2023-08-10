@@ -204,8 +204,24 @@ defmodule AeMdw.Db.RocksDb do
   end
 
   defp open_db() do
+    with {:error, {:db_open, _reason}} <- do_open_db(),
+         [_atom | _list] = drop_tables <-
+           Application.fetch_env!(:ae_mdw, __MODULE__)[:drop_tables],
+         {:ok, db_ref, cf_list} <- do_open_db(drop_tables) do
+      cf_list
+      |> Enum.drop(length(cf_list) - length(drop_tables))
+      |> Enum.each(&:rocksdb.drop_column_family(db_ref, &1))
+
+      :rocksdb.close(db_ref)
+
+      do_open_db()
+    end
+  end
+
+  defp do_open_db(tables_drop \\ []) do
     cf_descriptors =
-      all_cf_names()
+      tables_drop
+      |> all_cf_names()
       |> Enum.map(fn cf_name ->
         {Atom.to_charlist(cf_name), @cf_options}
       end)
@@ -215,8 +231,8 @@ defmodule AeMdw.Db.RocksDb do
     |> :rocksdb.open_optimistic_transaction_db(@db_options, cf_descriptors)
   end
 
-  defp all_cf_names() do
-    [:default | Model.column_families()]
+  defp all_cf_names(tables_drop \\ []) do
+    [:default | Model.column_families()] ++ tables_drop
   end
 
   defp db_ref(), do: :persistent_term.get({__MODULE__, :db_ref})

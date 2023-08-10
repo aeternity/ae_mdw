@@ -72,12 +72,6 @@ defmodule AeMdw.Db.Model do
             extra_args: async_task_args()
           )
 
-  @async_tasks_defaults [index: {-1, nil}, args: nil]
-  defrecord :async_tasks, @async_tasks_defaults
-
-  @type async_tasks_index() :: async_task_index()
-  @type async_tasks() :: record(:async_task, index: async_task_index(), args: async_task_args())
-
   # index is version like 20210826171900 in 20210826171900_reindex_remote_logs.ex
   @migrations_defaults [index: -1, inserted_at: nil]
   defrecord :migrations, @migrations_defaults
@@ -470,22 +464,6 @@ defmodule AeMdw.Db.Model do
   ]
   defrecord :aex9_contract_balance, @aex9_contract_balance_defaults
 
-  # AEX9 balance:
-  #     index: {contract_pk, account_pk}
-  #     block_index: {kbi, mbi},
-  #     txi: call txi,
-  #     amount: float
-  @type aex9_balance_index() :: {pubkey(), pubkey()}
-  @type aex9_balance ::
-          record(:aex9_balance,
-            index: aex9_balance_index(),
-            block_index: {Blocks.height(), Blocks.mbi()},
-            txi: txi(),
-            amount: integer()
-          )
-  @aex9_balance_defaults [index: {<<>>, <<>>}, block_index: {-1, -1}, txi: nil, amount: nil]
-  defrecord :aex9_balance, @aex9_balance_defaults
-
   # AEX-N contract:
   #     index: {type, pubkey} where type = :aex9, :aex141, ...
   #     txi: txi
@@ -726,50 +704,6 @@ defmodule AeMdw.Db.Model do
   @type idx_contract_log_index() :: {txi(), non_neg_integer(), txi()}
   @type idx_contract_log() :: record(:idx_contract_log, index: idx_contract_log_index())
 
-  # aex9 transfer:
-  #    index: {from pk, call txi, to pk, amount, log idx}
-  @aex9_transfer_defaults [
-    index: {nil, -1, nil, -1, -1},
-    unused: nil
-  ]
-  defrecord :aex9_transfer, @aex9_transfer_defaults
-
-  @type aex9_transfer_index() :: {pubkey(), txi(), pubkey(), amount(), non_neg_integer()}
-  @type aex9_transfer() :: record(:aex9_transfer, index: aex9_transfer_index())
-
-  # rev aex9 transfer:
-  #    index: {to pk, call txi, from pk, amount, log idx}
-  @rev_aex9_transfer_defaults [
-    index: {nil, -1, nil, -1, -1},
-    unused: nil
-  ]
-  defrecord :rev_aex9_transfer, @rev_aex9_transfer_defaults
-
-  @type rev_aex9_transfer_index() :: {pubkey(), txi(), pubkey(), amount(), non_neg_integer()}
-  @type rev_aex9_transfer() :: record(:rev_aex9_transfer, index: rev_aex9_transfer_index())
-
-  # aex9 pair transfer:
-  #    index: {from pk, to pk, call txi, amount, log idx}
-  @aex9_pair_transfer_defaults [
-    index: {nil, nil, -1, -1, -1},
-    unused: nil
-  ]
-  defrecord :aex9_pair_transfer, @aex9_pair_transfer_defaults
-
-  @type aex9_pair_transfer_index() :: {pubkey(), pubkey(), txi(), amount(), non_neg_integer()}
-  @type aex9_pair_transfer() :: record(:aex9_pair_transfer, index: aex9_pair_transfer_index())
-
-  # idx aex9 transfer:
-  #    index: {call txi, log idx, from pk, to pk, amount}
-  @idx_aex9_transfer_defaults [
-    index: {-1, -1, nil, nil, -1},
-    unused: nil
-  ]
-  defrecord :idx_aex9_transfer, @idx_aex9_transfer_defaults
-
-  @type idx_aex9_transfer_index() :: {txi(), non_neg_integer(), pubkey(), pubkey(), amount()}
-  @type idx_aex9_transfer() :: record(:idx_aex9_transfer, index: idx_aex9_transfer_index())
-
   # aexn transfer:
   #    index: {:aex9 | :aex141, from pk, call txi, to pk, amount | token_id, log idx}
   @aexn_transfer_defaults [
@@ -848,18 +782,6 @@ defmodule AeMdw.Db.Model do
             index: aex9_account_presence_index(),
             txi: txi()
           )
-
-  # idx_aex9_account_presence:
-  #    index: {create or call txi, account pk, contract pk}
-  @idx_aex9_account_presence_defaults [
-    index: {-1, nil, nil},
-    unused: nil
-  ]
-  defrecord :idx_aex9_account_presence, @idx_aex9_account_presence_defaults
-
-  @type idx_aex9_account_presence_index() :: {txi(), pubkey(), pubkey()}
-  @type idx_aex9_account_presence() ::
-          record(:idx_aex9_account_presence, index: idx_aex9_account_presence_index())
 
   # int_contract_call:
   #    index: {call txi, local idx}
@@ -1162,7 +1084,6 @@ defmodule AeMdw.Db.Model do
 
   defp contract_tables() do
     [
-      AeMdw.Db.Model.Aex9Balance,
       AeMdw.Db.Model.Aex9BalanceAccount,
       AeMdw.Db.Model.Aex9EventBalance,
       AeMdw.Db.Model.Aex9InitialSupply,
@@ -1175,12 +1096,7 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.AexnPairTransfer,
       AeMdw.Db.Model.AexnContractFromTransfer,
       AeMdw.Db.Model.AexnContractToTransfer,
-      AeMdw.Db.Model.Aex9Transfer,
-      AeMdw.Db.Model.RevAex9Transfer,
-      AeMdw.Db.Model.Aex9PairTransfer,
-      AeMdw.Db.Model.IdxAex9Transfer,
       AeMdw.Db.Model.Aex9AccountPresence,
-      AeMdw.Db.Model.IdxAex9AccountPresence,
       AeMdw.Db.Model.ContractCall,
       AeMdw.Db.Model.ContractLog,
       AeMdw.Db.Model.DataContractLog,
@@ -1252,7 +1168,6 @@ defmodule AeMdw.Db.Model do
     [
       AeMdw.Db.Model.BalanceAccount,
       AeMdw.Db.Model.AsyncTask,
-      AeMdw.Db.Model.AsyncTasks,
       AeMdw.Db.Model.Migrations
     ]
   end
@@ -1260,7 +1175,6 @@ defmodule AeMdw.Db.Model do
   @spec record(atom()) :: atom()
   def record(AeMdw.Db.Model.BalanceAccount), do: :balance_account
   def record(AeMdw.Db.Model.AsyncTask), do: :async_task
-  def record(AeMdw.Db.Model.AsyncTasks), do: :async_tasks
   def record(AeMdw.Db.Model.Migrations), do: :migrations
   def record(AeMdw.Db.Model.Tx), do: :tx
   def record(AeMdw.Db.Model.Block), do: :block
@@ -1272,7 +1186,6 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.IdCount), do: :id_count
   def record(AeMdw.Db.Model.Origin), do: :origin
   def record(AeMdw.Db.Model.RevOrigin), do: :rev_origin
-  def record(AeMdw.Db.Model.Aex9Balance), do: :aex9_balance
   def record(AeMdw.Db.Model.Aex9BalanceAccount), do: :aex9_balance_account
   def record(AeMdw.Db.Model.Aex9EventBalance), do: :aex9_event_balance
   def record(AeMdw.Db.Model.Aex9InitialSupply), do: :aex9_initial_supply
@@ -1285,12 +1198,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.AexnPairTransfer), do: :aexn_pair_transfer
   def record(AeMdw.Db.Model.AexnContractFromTransfer), do: :aexn_contract_from_transfer
   def record(AeMdw.Db.Model.AexnContractToTransfer), do: :aexn_contract_to_transfer
-  def record(AeMdw.Db.Model.Aex9Transfer), do: :aex9_transfer
-  def record(AeMdw.Db.Model.RevAex9Transfer), do: :rev_aex9_transfer
-  def record(AeMdw.Db.Model.Aex9PairTransfer), do: :aex9_pair_transfer
-  def record(AeMdw.Db.Model.IdxAex9Transfer), do: :idx_aex9_transfer
   def record(AeMdw.Db.Model.Aex9AccountPresence), do: :aex9_account_presence
-  def record(AeMdw.Db.Model.IdxAex9AccountPresence), do: :idx_aex9_account_presence
   def record(AeMdw.Db.Model.ContractCall), do: :contract_call
   def record(AeMdw.Db.Model.ContractLog), do: :contract_log
   def record(AeMdw.Db.Model.DataContractLog), do: :data_contract_log
