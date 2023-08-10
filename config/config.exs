@@ -1,9 +1,21 @@
 import Config
 
 # Database
+alias AeMdw.Db.Model
+
 node_root = System.get_env("NODEROOT", "../aeternity/_build/local/")
 
-config :ae_mdw, AeMdw.Db.RocksDb, data_dir: "#{node_root}/rel/aeternity/data/mdw.db"
+config :ae_mdw, AeMdw.Db.RocksDb,
+  data_dir: "#{node_root}/rel/aeternity/data/mdw.db",
+  drop_tables: [
+    Model.AsyncTasks,
+    Model.Aex9Balance,
+    Model.Aex9Transfer,
+    Model.RevAex9Transfer,
+    Model.Aex9PairTransfer,
+    Model.IdxAex9Transfer,
+    Model.IdxAex9AccountPresence
+  ]
 
 # Sync
 config :ae_plugin,
