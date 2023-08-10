@@ -1,4 +1,25 @@
 schemas:
+  Contract:
+    description: Contract creation info
+    type: object
+    properties:
+      aexn_type:
+        type: string
+        example: aex9
+      block_hash:
+        type: string
+        example: mh_mZ15v6q3eF8mUBVQ6shmWz6AXGvufMDTfcG9DXYY9uADuenHg
+      source_tx_hash:
+        type: string
+        example: th_hRMgnKsDZonTx9FStnAtdimPJxuZrFdZdZoYagzTfisLZALqG
+      source_tx_type:
+        type: string
+        example: ContractCreateTx
+      create_tx:
+        type: object
+        example:
+          amount: 25123
+          owner_id: ak_7wqP18AHzyoqymwGaqQp8G2UpzBCggYiq7CZdJiB71VUsLpR4 
   ContractCall:
     description: ContractCall
     type: object
@@ -101,6 +122,38 @@ schemas:
         nullable: true
         example: null
 paths:
+  /contracts/{id}:
+    get:
+      deprecated: false
+      description: Gets contract creation info.
+      operationId: get_contract.
+      parameters:
+        - name: id
+          in: path
+          description: Contract that emitted the logs
+          required: true
+          schema:
+            type: string
+            example: ct_M6MNwGLtMQ4j3m8pzQz9uF38nMfjCCVaiQ8fvTAU6DEsCocD5
+      responses:
+        '200':
+          description: Returns single contract
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundResponse'
   /contracts/logs:
     get:
       deprecated: false
