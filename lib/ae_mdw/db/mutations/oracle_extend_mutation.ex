@@ -6,8 +6,6 @@ defmodule AeMdw.Db.OracleExtendMutation do
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Oracle
-  alias AeMdw.Db.Sync.Oracle, as: SyncOracle
   alias AeMdw.Db.State
   alias AeMdw.Log
   alias AeMdw.Node.Db
@@ -45,7 +43,7 @@ defmodule AeMdw.Db.OracleExtendMutation do
         },
         state
       ) do
-    case Oracle.cache_through_read(state, Model.ActiveOracle, oracle_pk) do
+    case State.get(state, Model.ActiveOracle, oracle_pk) do
       {:ok, Model.oracle(expire: old_expire, extends: extends) = m_oracle} ->
         new_expire = old_expire + delta_ttl
         extends = [{block_index, txi_idx} | extends]
@@ -53,11 +51,11 @@ defmodule AeMdw.Db.OracleExtendMutation do
         m_oracle = Model.oracle(m_oracle, expire: new_expire, extends: extends)
 
         state
-        |> SyncOracle.cache_through_delete(Model.ActiveOracleExpiration, {old_expire, oracle_pk})
-        |> SyncOracle.cache_through_write(Model.ActiveOracleExpiration, m_exp)
-        |> SyncOracle.cache_through_write(Model.ActiveOracle, m_oracle)
+        |> State.delete(Model.ActiveOracleExpiration, {old_expire, oracle_pk})
+        |> State.put(Model.ActiveOracleExpiration, m_exp)
+        |> State.put(Model.ActiveOracle, m_oracle)
 
-      nil ->
+      :not_found ->
         Log.warn("[#{height}] invalid extend for oracle #{Enc.encode(:oracle_pubkey, oracle_pk)}")
         state
     end

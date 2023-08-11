@@ -45,31 +45,7 @@ defmodule AeMdw.Db.OracleRegisterMutation do
         },
         state
       ) do
-    {previous, state2} =
-      case Oracle.locate(state, oracle_pk) do
-        nil ->
-          {nil, state}
-
-        {previous, Model.InactiveOracle} ->
-          state2 =
-            state
-            |> SyncOracle.cache_through_delete_inactive(previous)
-            |> State.inc_stat(:old_oracles_registered)
-
-          {previous, state2}
-
-        {previous, Model.ActiveOracle} ->
-          Model.oracle(index: pubkey, expire: old_expire) = previous
-
-          state2 =
-            SyncOracle.cache_through_delete(
-              state,
-              Model.ActiveOracleExpiration,
-              {old_expire, pubkey}
-            )
-
-          {previous, state2}
-      end
+    {previous, state2} = delete_existing(state, oracle_pk)
 
     m_oracle =
       Model.oracle(
@@ -80,11 +56,30 @@ defmodule AeMdw.Db.OracleRegisterMutation do
         previous: previous
       )
 
-    m_exp_new = Model.expiration(index: {expire, oracle_pk})
+    SyncOracle.put_active(state2, m_oracle)
+  end
 
-    state2
-    |> SyncOracle.cache_through_write(Model.ActiveOracle, m_oracle)
-    |> SyncOracle.cache_through_write(Model.ActiveOracleExpiration, m_exp_new)
-    |> State.inc_stat(:oracles_registered)
+  defp delete_existing(state, oracle_pk) do
+    case Oracle.locate(state, oracle_pk) do
+      nil ->
+        {nil, state}
+
+      {previous, Model.InactiveOracle} ->
+        state2 = SyncOracle.delete_inactive(state, previous)
+
+        {previous, state2}
+
+      {previous, Model.ActiveOracle} ->
+        Model.oracle(index: pubkey, expire: old_expire) = previous
+
+        state2 =
+          State.delete(
+            state,
+            Model.ActiveOracleExpiration,
+            {old_expire, pubkey}
+          )
+
+        {previous, state2}
+    end
   end
 end
