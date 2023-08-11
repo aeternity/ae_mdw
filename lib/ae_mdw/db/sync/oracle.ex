@@ -14,7 +14,6 @@ defmodule AeMdw.Db.Sync.Oracle do
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Origin
   alias AeMdw.Node
-  alias AeMdw.Node.Db
   alias AeMdw.Txs
   alias AeMdw.Validate
 
@@ -22,8 +21,6 @@ defmodule AeMdw.Db.Sync.Oracle do
 
   @typep height() :: Blocks.height()
   @typep txi_idx() :: Txs.txi_idx()
-  @typep pubkey :: Db.pubkey()
-  @typep cache_key :: pubkey() | {pos_integer(), pubkey()}
   @typep state :: State.t()
 
   @spec register_mutations(Node.tx(), Txs.tx_hash(), Blocks.block_index(), Txs.txi_idx()) :: [
@@ -72,28 +69,33 @@ defmodule AeMdw.Db.Sync.Oracle do
     OracleExtendMutation.new(block_index, txi_idx, oracle_pk, delta_ttl)
   end
 
-  @spec cache_through_write(state(), atom(), tuple()) :: state()
-  def cache_through_write(state, table, record) do
+  @spec delete_inactive(state(), Model.oracle()) :: state()
+  def delete_inactive(state, Model.oracle(index: pubkey, expire: height)) do
     state
-    |> State.cache_put(:oracle_sync_cache, {table, elem(record, 1)}, record)
-    |> State.put(table, record)
+    |> State.delete(Model.InactiveOracle, pubkey)
+    |> State.delete(Model.InactiveOracleExpiration, {height, pubkey})
   end
 
-  @spec cache_through_delete(state(), atom(), cache_key()) :: state()
-  def cache_through_delete(state, table, key) do
+  @spec expire_oracle(state(), Model.oracle()) :: state()
+  def expire_oracle(state, Model.oracle(index: pubkey, expire: height) = m_oracle) do
+    m_exp = Model.expiration(index: {height, pubkey})
+
     state
-    |> State.cache_delete(:oracle_sync_cache, {table, key})
-    |> State.delete(table, key)
+    |> State.put(Model.InactiveOracle, m_oracle)
+    |> State.put(Model.InactiveOracleExpiration, m_exp)
+    |> State.delete(Model.ActiveOracle, pubkey)
+    |> State.delete(Model.ActiveOracleExpiration, {height, pubkey})
+    |> State.inc_stat(:oracles_expired)
   end
 
-  @spec cache_through_delete_inactive(state(), Model.oracle()) :: state()
-  def cache_through_delete_inactive(state, m_oracle) do
-    pubkey = Model.oracle(m_oracle, :index)
-    expire = Model.oracle(m_oracle, :expire)
+  @spec put_active(state(), Model.oracle()) :: state()
+  def put_active(state, Model.oracle(index: pubkey, expire: height) = m_oracle) do
+    m_exp = Model.expiration(index: {height, pubkey})
 
     state
-    |> cache_through_delete(Model.InactiveOracle, pubkey)
-    |> cache_through_delete(Model.InactiveOracleExpiration, {expire, pubkey})
+    |> State.put(Model.ActiveOracle, m_oracle)
+    |> State.put(Model.ActiveOracleExpiration, m_exp)
+    |> State.inc_stat(:oracles_registered)
   end
 
   @doc """

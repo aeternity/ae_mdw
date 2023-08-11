@@ -13,7 +13,6 @@ defmodule AeMdw.Db.OraclesExpirationMutation do
   alias AeMdw.Collection
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Oracle
   alias AeMdw.Db.Sync.Oracle, as: SyncOracle
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
@@ -63,29 +62,18 @@ defmodule AeMdw.Db.OraclesExpirationMutation do
   defp expire_oracle(state, height, pubkey) do
     oracle_id = Enc.encode(:oracle_pubkey, pubkey)
 
-    state2 =
-      SyncOracle.cache_through_delete(state, Model.ActiveOracleExpiration, {height, pubkey})
-
-    case Oracle.cache_through_read(state2, Model.ActiveOracle, pubkey) do
+    case State.get(state, Model.ActiveOracle, pubkey) do
       {:ok, m_oracle} ->
         if height == Model.oracle(m_oracle, :expire) do
-          m_exp = Model.expiration(index: {height, pubkey})
-
-          Log.info("[#{height}] inactivated oracle #{oracle_id}")
-
-          state2
-          |> SyncOracle.cache_through_write(Model.InactiveOracle, m_oracle)
-          |> SyncOracle.cache_through_write(Model.InactiveOracleExpiration, m_exp)
-          |> SyncOracle.cache_through_delete(Model.ActiveOracle, pubkey)
-          |> State.inc_stat(:oracles_expired)
+          SyncOracle.expire_oracle(state, m_oracle)
         else
           Log.warn("[#{height}] ignored old oracle expiration for #{oracle_id}")
-          state2
+          state
         end
 
-      nil ->
+      :not_found ->
         Log.warn("[#{height}] ignored oracle expiration for #{oracle_id}")
-        state2
+        state
     end
   end
 end

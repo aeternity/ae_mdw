@@ -2,7 +2,6 @@ defmodule AeMdw.Db.Oracle do
   @moduledoc """
   Cache through operations for active and inactive oracles.
   """
-  alias AeMdw.Blocks
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Node.Db
@@ -10,41 +9,26 @@ defmodule AeMdw.Db.Oracle do
   require Model
 
   @typep pubkey :: Db.pubkey()
-  @typep cache_key :: pubkey() | {pos_integer(), pubkey()}
   @typep state :: State.t()
 
   @spec locate(state(), pubkey()) ::
           {Model.oracle(), Model.ActiveOracle | Model.InactiveOracle} | nil
   def locate(state, pubkey) do
-    case cache_through_read(state, Model.ActiveOracle, pubkey) do
+    case State.get(state, Model.ActiveOracle, pubkey) do
       {:ok, m_oracle} ->
         {m_oracle, Model.ActiveOracle}
 
-      nil ->
-        with {:ok, m_oracle} <- cache_through_read(state, Model.InactiveOracle, pubkey) do
-          {m_oracle, Model.InactiveOracle}
-        end
-    end
-  end
-
-  @spec cache_through_read(state(), atom(), cache_key()) :: {:ok, Model.oracle()} | nil
-  def cache_through_read(state, table, key) do
-    case State.cache_get(state, table, key) do
-      {:ok, record} ->
-        {:ok, record}
-
       :not_found ->
-        case State.get(state, table, key) do
-          {:ok, record} -> {:ok, record}
+        case State.get(state, Model.InactiveOracle, pubkey) do
+          {:ok, m_oracle} -> {m_oracle, Model.InactiveOracle}
           :not_found -> nil
         end
     end
   end
 
-  @spec oracle_tree!(Blocks.block_hash()) :: tuple()
+  @spec oracle_tree!(Db.hash()) :: tuple()
   def oracle_tree!(block_hash) do
-    block_hash
-    |> :aec_db.get_block_state()
-    |> :aec_trees.oracles()
+    {:value, trees} = :aec_db.find_block_state_partial(block_hash, true, [:oracles])
+    :aec_trees.oracles(trees)
   end
 end
