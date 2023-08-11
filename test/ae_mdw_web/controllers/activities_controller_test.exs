@@ -185,6 +185,80 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       end
     end
 
+    test "when the account belongs to more than one field, it dedeups them", %{conn: conn} do
+      account_pk = TS.address(0)
+      next_account_pk = TS.address(1)
+      account = Enc.encode(:account_pubkey, account_pk)
+      account_id = :aeser_id.create(:account, account_pk)
+      height = 398
+      mbi = 2
+      kb_hash = TS.key_block_hash(0)
+      mb_hash = TS.micro_block_hash(0)
+      enc_mb_hash = Enc.encode(:micro_block_hash, mb_hash)
+
+      {:ok, aetx} =
+        :aec_spend_tx.new(%{
+          sender_id: account_id,
+          recipient_id: account_id,
+          amount: 2,
+          fee: 3,
+          nonce: 4,
+          payload: ""
+        })
+
+      {:spend_tx, tx} = :aetx.specialize_type(aetx)
+
+      store =
+        empty_store()
+        |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 1}))
+        |> Store.put(Model.Tx, Model.tx(index: 1, block_index: {height, mbi}))
+        |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 2, account_pk, 1}))
+        |> Store.put(Model.Field, Model.field(index: {:contract_call_tx, 1, account_pk, 2}))
+        |> Store.put(Model.Tx, Model.tx(index: 2, block_index: {height, mbi}))
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, next_account_pk, 4})
+        )
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, hash: kb_hash))
+        |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
+
+      with_mocks [
+        {Db, [],
+         [
+           get_tx_data: fn _tx_hash ->
+             {"", :spend_tx, aetx, tx}
+           end,
+           get_block_time: fn _block_hash ->
+             456
+           end
+         ]},
+        {:aec_db, [], [get_header: fn _block_hash -> :header end]},
+        {:aetx_sign, [], [serialize_for_client: fn :header, ^aetx -> %{} end]}
+      ] do
+        assert %{"prev" => nil, "data" => [tx2, tx1], "next" => _next_url} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/accounts/#{account}/activities")
+                 |> json_response(200)
+
+        assert %{
+                 "height" => ^height,
+                 "block_hash" => ^enc_mb_hash,
+                 "block_time" => 456,
+                 "type" => "ContractCallTxEvent",
+                 "payload" => %{"micro_index" => ^mbi}
+               } = tx1
+
+        assert %{
+                 "height" => ^height,
+                 "block_hash" => ^enc_mb_hash,
+                 "block_time" => 456,
+                 "type" => "ContractCallTxEvent",
+                 "payload" => %{"micro_index" => ^mbi}
+               } = tx2
+      end
+    end
+
     test "when it has int contract calls internally", %{conn: conn} do
       contract_pk = TS.address(0)
       contract = Enc.encode(:contract_pubkey, contract_pk)

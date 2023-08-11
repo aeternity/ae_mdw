@@ -539,6 +539,7 @@ defmodule AeMdw.Activities do
   defp build_txs_stream(state, direction, account_pk, txi_scope, txi_cursor, ownership_only?) do
     state
     |> Fields.account_fields_stream(account_pk, direction, txi_scope, txi_cursor, ownership_only?)
+    |> Stream.dedup_by(fn {txi, _tx_type, _tx_field_pos} -> txi end)
     |> Stream.map(fn {txi, tx_type, tx_field_pos} -> {txi, {:field, tx_type, tx_field_pos}} end)
   end
 
