@@ -55,8 +55,9 @@ defmodule AeMdw.Stats do
   @aex9_logs_count_stat :aex9_logs_count
   @aex141_count_stat :aex141_count
 
-  @ms_per_day 24 * 3_600 * 1_000
-  @ms_per_week @ms_per_day * 7
+  @seconds_per_day 24 * 3_600
+  @days_per_week 7
+
   @start_unix 1_970
 
   @interval_by_mapping %{
@@ -273,8 +274,8 @@ defmodule AeMdw.Stats do
     Model.statistic(count: count) = State.fetch!(state, Model.Statistic, statistic_key)
 
     %{
-      start_date: months_to_unix(interval_start),
-      end_date: months_to_unix(interval_start + 1),
+      start_date: months_to_iso(interval_start),
+      end_date: months_to_iso(interval_start + 1),
       count: count
     }
   end
@@ -283,8 +284,8 @@ defmodule AeMdw.Stats do
     Model.statistic(count: count) = State.fetch!(state, Model.Statistic, statistic_key)
 
     %{
-      start_date: interval_start * @ms_per_week,
-      end_date: (interval_start + 1) * @ms_per_week,
+      start_date: days_to_iso(interval_start * @days_per_week),
+      end_date: days_to_iso((interval_start + 1) * @days_per_week),
       count: count
     }
   end
@@ -293,8 +294,8 @@ defmodule AeMdw.Stats do
     Model.statistic(count: count) = State.fetch!(state, Model.Statistic, statistic_key)
 
     %{
-      start_date: interval_start * @ms_per_day,
-      end_date: (interval_start + 1) * @ms_per_day,
+      start_date: days_to_iso(interval_start),
+      end_date: days_to_iso(interval_start + 1),
       count: count
     }
   end
@@ -491,12 +492,19 @@ defmodule AeMdw.Stats do
     end
   end
 
-  defp months_to_unix(months) do
+  defp months_to_iso(months) do
     year = div(months, 12)
     month = rem(months, 12) + 1
-    date = Date.new!(@start_unix + year, month, 1)
-    time = Time.new!(0, 0, 0)
-    datetime = DateTime.new!(date, time)
-    DateTime.to_unix(datetime, :millisecond)
+
+    (@start_unix + year)
+    |> Date.new!(month, 1)
+    |> Date.to_iso8601()
+  end
+
+  defp days_to_iso(days) do
+    (days * @seconds_per_day)
+    |> DateTime.from_unix!()
+    |> DateTime.to_date()
+    |> Date.to_iso8601()
   end
 end
