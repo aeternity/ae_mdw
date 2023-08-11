@@ -1352,32 +1352,15 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
     end
 
     test "when contract is created in a raw tx, it returns 200", %{conn: conn} do
-      txi = 1
-      tx_hash = <<1::256>>
-      enc_tx_hash = Enc.encode(:tx_hash, tx_hash)
-      owner_pk = <<4::256>>
+      nonce = 1
+      owner_pk = :crypto.strong_rand_bytes(32)
       owner_id = :aeser_id.create(:account, owner_pk)
       enc_owner_id = :aeser_api_encoder.encode(:account_pubkey, owner_pk)
-      contract_pk = <<5::256>>
-      encoded_contract_id = Enc.encode(:contract_pubkey, contract_pk)
-
-      store =
-        NullStore.new()
-        |> MemStore.new()
-        |> Store.put(Model.Type, Model.type(index: {:contract_create_tx, txi}))
-        |> Store.put(Model.Tx, Model.tx(index: txi, id: tx_hash))
-        |> Store.put(
-          Model.Field,
-          Model.field(index: {:contract_create_tx, nil, contract_pk, txi})
-        )
-
-      block_hash = <<10::256>>
-      enc_block_hash = Enc.encode(:micro_block_hash, block_hash)
 
       {:ok, contract_create_aetx} =
         :aect_create_tx.new(%{
           owner_id: owner_id,
-          nonce: 1,
+          nonce: nonce,
           code: "code-1",
           vm_version: 7,
           abi_version: 3,
@@ -1391,6 +1374,26 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
         })
 
       {:contract_create_tx, contract_create_tx} = :aetx.specialize_type(contract_create_aetx)
+      contract_pk = :aect_contracts.compute_contract_pubkey(owner_pk, nonce)
+      encoded_contract_id = Enc.encode(:contract_pubkey, contract_pk)
+
+      txi = Enum.random(100_000_000..999_999_999)
+      tx_hash = <<txi::256>>
+      enc_tx_hash = Enc.encode(:tx_hash, tx_hash)
+
+      store =
+        NullStore.new()
+        |> MemStore.new()
+        |> Store.put(Model.AexnContract, Model.aexn_contract(index: {:aex9, contract_pk}))
+        |> Store.put(Model.Type, Model.type(index: {:contract_create_tx, txi}))
+        |> Store.put(Model.Tx, Model.tx(index: txi, id: tx_hash))
+        |> Store.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, contract_pk, txi})
+        )
+
+      block_hash = :crypto.strong_rand_bytes(32)
+      enc_block_hash = Enc.encode(:micro_block_hash, block_hash)
 
       with_mocks [
         {DbUtil, [:passthrough],
@@ -1405,6 +1408,7 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
          ]}
       ] do
         assert %{
+                 "aexn_type" => "aex9",
                  "block_hash" => ^enc_block_hash,
                  "source_tx_hash" => ^enc_tx_hash,
                  "source_tx_type" => "ContractCreateTx",

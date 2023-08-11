@@ -169,6 +169,9 @@ defmodule AeMdw.Contracts do
     end
   end
 
+  #
+  # Private functions
+  #
   defp build_logs_pagination(
          %{data_prefix: data_prefix},
          state,
@@ -589,12 +592,21 @@ defmodule AeMdw.Contracts do
       end
 
     %{
+      aexn_type: get_aexn_type(state, contract_pk),
       contract: Enc.encode(:contract_pubkey, contract_pk),
       block_hash: Enc.encode(:micro_block_hash, block_hash),
       source_tx_hash: Enc.encode(:tx_hash, tx_hash),
       source_tx_type: Format.type_to_swagger_name(source_tx_type),
       create_tx: encoded_tx
     }
+  end
+
+  defp get_aexn_type(state, contract_pk) do
+    cond do
+      State.exists?(state, Model.AexnContract, {:aex9, contract_pk}) -> :aex9
+      State.exists?(state, Model.AexnContract, {:aex141, contract_pk}) -> :aex141
+      true -> nil
+    end
   end
 
   defp serialize_logs_cursor(nil), do: nil
