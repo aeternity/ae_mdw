@@ -13,11 +13,10 @@ defmodule AeMdw.Db.StatsMutation do
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Oracle
+  alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.Stats
   alias AeMdw.Txs
   alias AeMdw.Util
-
-  import AeMdw.Db.Sync.ObjectKeys
 
   require Model
 
@@ -202,10 +201,10 @@ defmodule AeMdw.Db.StatsMutation do
       dev_reward: prev_dev_reward + inc_dev_reward,
       total_supply: prev_total_supply + token_supply_delta + inc_block_reward + inc_dev_reward,
       active_auctions: max(0, prev_active_auctions + auctions_started - auctions_expired),
-      active_names: count_active_names(state),
-      inactive_names: count_inactive_names(state),
-      active_oracles: count_active_oracles(state),
-      inactive_oracles: count_inactive_oracles(state),
+      active_names: ObjectKeys.count_active_names(state),
+      inactive_names: ObjectKeys.count_inactive_names(state),
+      active_oracles: ObjectKeys.count_active_oracles(state),
+      inactive_oracles: ObjectKeys.count_inactive_oracles(state),
       contracts: prev_contracts + contracts_created,
       locked_in_auctions: prev_locked_in_auctions + locked_in_auctions,
       burned_in_auctions: prev_burned_in_acutions + burned_in_auctions,

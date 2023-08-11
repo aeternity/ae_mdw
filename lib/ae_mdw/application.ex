@@ -10,6 +10,7 @@ defmodule AeMdw.Application do
   """
   alias AeMdw.Contract
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.EtsCache
   alias AeMdw.Extract
   alias AeMdw.NodeHelper
@@ -228,7 +229,7 @@ defmodule AeMdw.Application do
   end
 
   def start_phase(:load_obj_keys, _start_type, []) do
-    ObjectKeys.init(AeMdw.Db.State.new())
+    ObjectKeys.init(State.new())
   end
 
   def start_phase(:start_sync, _start_type, []) do
