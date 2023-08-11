@@ -219,21 +219,26 @@ defmodule AeMdwWeb.StatsControllerTest do
     start_interval1 = 0
     start_interval2 = 12
     start_interval3 = 24
+    start_interval4 = 36
     st1_index = {{:transactions, :all}, :month, start_interval1}
     st2_index = {{:transactions, :all}, :month, start_interval2}
     st3_index = {{:transactions, :all}, :month, start_interval3}
+    st4_index = {{:transactions, :all}, :month, start_interval4}
     {:ok, start_date1, _offset} = DateTime.from_iso8601("1970-01-01T00:00:00Z")
     {:ok, start_date2, _offset} = DateTime.from_iso8601("1971-01-01T00:00:00Z")
     {:ok, start_date3, _offset} = DateTime.from_iso8601("1972-01-01T00:00:00Z")
+    {:ok, start_date4, _offset} = DateTime.from_iso8601("1973-01-01T00:00:00Z")
     start_time1 = DateTime.to_unix(start_date1) * 1_000
     start_time2 = DateTime.to_unix(start_date2) * 1_000
     start_time3 = DateTime.to_unix(start_date3) * 1_000
+    start_time4 = DateTime.to_unix(start_date4) * 1_000
 
     store =
       store
       |> Store.put(Model.Statistic, Model.statistic(index: st1_index, count: 1))
       |> Store.put(Model.Statistic, Model.statistic(index: st2_index, count: 5))
       |> Store.put(Model.Statistic, Model.statistic(index: st3_index, count: 3))
+      |> Store.put(Model.Statistic, Model.statistic(index: st4_index, count: 8))
 
     conn = with_store(conn, store)
 
@@ -242,15 +247,16 @@ defmodule AeMdwWeb.StatsControllerTest do
              |> get("/v3/statistics/transactions", limit: 2, interval_by: "month")
              |> json_response(200)
 
-    assert %{"start_date" => ^start_time3, "count" => 3} = st1
-    assert %{"start_date" => ^start_time2, "count" => 5} = st2
+    assert %{"start_date" => ^start_time4, "count" => 8} = st1
+    assert %{"start_date" => ^start_time3, "count" => 3} = st2
 
-    assert %{"prev" => prev_url, "data" => [st3]} =
+    assert %{"prev" => prev_url, "data" => [st3, st4]} =
              conn
              |> get(next_url)
              |> json_response(200)
 
-    assert %{"start_date" => ^start_time1, "count" => 1} = st3
+    assert %{"start_date" => ^start_time2, "count" => 5} = st3
+    assert %{"start_date" => ^start_time1, "count" => 1} = st4
 
     assert %{"data" => ^statistics} =
              conn
