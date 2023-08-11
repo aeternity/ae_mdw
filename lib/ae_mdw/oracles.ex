@@ -118,7 +118,7 @@ defmodule AeMdw.Oracles do
         end
         |> Collection.paginate(pagination)
 
-      responses = Enum.map(query_ids, &render_response(state, &1))
+      responses = Enum.map(query_ids, &render_response(state, &1, true))
 
       {:ok,
        {serialize_responses_cursor(prev_cursor), responses,
@@ -190,16 +190,20 @@ defmodule AeMdw.Oracles do
       |> update_in(["query"], &Base.encode64(&1, padding: false))
 
     if include_response? do
-      Map.put(query, :response, response_txi_idx && render_response(state, response_txi_idx))
+      Map.put(
+        query,
+        :response,
+        response_txi_idx && render_response(state, response_txi_idx, false)
+      )
     else
       query
     end
   end
 
-  defp render_response(state, {_height, txi_idx, _ref_txi_idx}),
-    do: render_response(state, txi_idx)
+  defp render_response(state, {_height, txi_idx, _ref_txi_idx}, include_query?),
+    do: render_response(state, txi_idx, include_query?)
 
-  defp render_response(state, {txi, _idx} = txi_idx) do
+  defp render_response(state, {txi, _idx} = txi_idx, include_query?) do
     {response_tx, :oracle_response_tx, tx_hash, tx_type, block_hash} =
       DBUtil.read_node_tx_details(state, txi_idx)
 
@@ -209,17 +213,23 @@ defmodule AeMdw.Oracles do
     oracle_pk = :aeo_response_tx.oracle_pubkey(response_tx)
     block_time = Db.get_block_time(block_hash)
 
-    %{
-      height: height,
-      block_hash: Enc.encode(:micro_block_hash, block_hash),
-      block_time: block_time,
-      source_tx_hash: Enc.encode(:tx_hash, tx_hash),
-      source_tx_type: Format.type_to_swagger_name(tx_type),
-      query_id: Enc.encode(:oracle_query_id, query_id),
-      query: render_query(state, {oracle_pk, query_id}, false)
-    }
-    |> Map.merge(:aeo_response_tx.for_client(response_tx))
-    |> update_in(["response"], &Base.encode64(&1, padding: false))
+    response =
+      %{
+        height: height,
+        block_hash: Enc.encode(:micro_block_hash, block_hash),
+        block_time: block_time,
+        source_tx_hash: Enc.encode(:tx_hash, tx_hash),
+        source_tx_type: Format.type_to_swagger_name(tx_type),
+        query_id: Enc.encode(:oracle_query_id, query_id)
+      }
+      |> Map.merge(:aeo_response_tx.for_client(response_tx))
+      |> update_in(["response"], &Base.encode64(&1, padding: false))
+
+    if include_query? do
+      Map.put(response, :query, render_query(state, {oracle_pk, query_id}, false))
+    else
+      response
+    end
   end
 
   defp convert_param({"state", state}) when state in @states, do: {:state, state}
