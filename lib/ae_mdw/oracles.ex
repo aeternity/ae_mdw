@@ -348,8 +348,11 @@ defmodule AeMdw.Oracles do
        ) do
     kbi = min(expire_height - 1, last_gen)
 
-    block_hash = Blocks.block_hash(state, kbi)
-    oracle_tree = AeMdw.Db.Oracle.oracle_tree!(block_hash)
+    oracle_tree =
+      state
+      |> Blocks.block_hash(kbi)
+      |> AeMdw.Db.Oracle.oracle_tree!()
+
     oracle_rec = :aeo_state_tree.get_oracle(pk, oracle_tree)
     query_format = :aeo_oracles.query_format(oracle_rec)
     response_format = :aeo_oracles.response_format(oracle_rec)

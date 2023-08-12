@@ -10,6 +10,7 @@ defmodule AeMdw.Application do
   """
   alias AeMdw.Contract
   alias AeMdw.Db.Model
+  alias AeMdw.Db.State
   alias AeMdw.EtsCache
   alias AeMdw.Extract
   alias AeMdw.NodeHelper
@@ -17,6 +18,7 @@ defmodule AeMdw.Application do
   alias AeMdw.Util
   alias AeMdwWeb.Websocket.BroadcasterCache
   alias AeMdw.Sync.MutationsCache
+  alias AeMdw.Db.Sync.ObjectKeys
 
   require Model
 
@@ -224,6 +226,10 @@ defmodule AeMdw.Application do
   def start_phase(:dedup_accounts, _start_type, []) do
     AeMdw.Sync.AsyncTasks.WealthRankAccounts.dedup_pending_accounts()
     :ok
+  end
+
+  def start_phase(:load_obj_keys, _start_type, []) do
+    ObjectKeys.init(State.new())
   end
 
   def start_phase(:start_sync, _start_type, []) do

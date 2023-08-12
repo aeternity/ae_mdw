@@ -15,6 +15,7 @@ defmodule AeMdw.Db.OraclesExpirationMutation do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Sync.Oracle, as: SyncOracle
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Log
 
@@ -37,6 +38,7 @@ defmodule AeMdw.Db.OraclesExpirationMutation do
       |> Collection.stream(Model.ActiveOracleExpiration, {height, <<>>})
       |> Stream.take_while(&match?({^height, _pk}, &1))
       |> Enum.reduce(state, fn {^height, pubkey}, state ->
+        ObjectKeys.put_inactive_oracle(state, pubkey)
         expire_oracle(state, height, pubkey)
       end)
 
