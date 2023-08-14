@@ -11,11 +11,7 @@ defmodule AeMdw.Db.NameRevokeMutationTest do
   test "revoke a active name", %{store: store} do
     plain_name = "revoke.test"
 
-    name_hash =
-      case :aens.get_name_hash(plain_name) do
-        {:ok, name_id_bin} -> :aeser_api_encoder.encode(:name, name_id_bin)
-        _error -> nil
-      end
+    {:ok, name_hash} = :aens.get_name_hash(plain_name)
 
     revoke_height = 3
     revoke_block_index = {revoke_height, 0}
@@ -45,9 +41,10 @@ defmodule AeMdw.Db.NameRevokeMutationTest do
       |> State.new()
 
     state2 =
-      State.commit_mem(state, [
-        NameRevokeMutation.new(name_hash, revoke_txi_idx, revoke_block_index)
-      ])
+      NameRevokeMutation.execute(
+        NameRevokeMutation.new(name_hash, revoke_txi_idx, revoke_block_index),
+        state
+      )
 
     refute State.exists?(state2, Model.ActiveName, plain_name)
     refute State.exists?(state2, Model.ActiveNameOwner, {owner_pk, plain_name})

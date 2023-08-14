@@ -4,8 +4,9 @@ defmodule AeMdw.Db.NameRevokeMutation do
   """
 
   alias AeMdw.Blocks
+  alias AeMdw.Db.Name
   alias AeMdw.Db.State
-  alias AeMdw.Db.Sync.Name
+  alias AeMdw.Db.Sync
   alias AeMdw.Names
   alias AeMdw.Txs
 
@@ -32,6 +33,10 @@ defmodule AeMdw.Db.NameRevokeMutation do
         %__MODULE__{name_hash: name_hash, txi_idx: txi_idx, block_index: block_index},
         state
       ) do
-    Name.revoke(state, name_hash, txi_idx, block_index)
+    plain_name = Name.plain_name!(state, name_hash)
+
+    Sync.ObjectKeys.put_inactive_name(state, plain_name)
+
+    Sync.Name.revoke(state, plain_name, txi_idx, block_index)
   end
 end
