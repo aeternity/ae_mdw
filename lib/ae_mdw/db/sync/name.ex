@@ -154,10 +154,8 @@ defmodule AeMdw.Db.Sync.Name do
     |> State.put(Model.NameTransfer, name_transfer)
   end
 
-  @spec revoke(State.t(), Names.name_hash(), Txs.txi_idx(), Blocks.block_index()) :: State.t()
-  def revoke(state, name_hash, txi_idx, {height, _mbi} = bi) do
-    plain_name = Name.plain_name!(state, name_hash)
-
+  @spec revoke(State.t(), Names.plain_name(), Txs.txi_idx(), Blocks.block_index()) :: State.t()
+  def revoke(state, plain_name, txi_idx, {height, _mbi} = bi) do
     Model.name(expire: expiration) = m_name = State.fetch!(state, Model.ActiveName, plain_name)
 
     m_name = Model.name(m_name, revoke: {bi, txi_idx})
