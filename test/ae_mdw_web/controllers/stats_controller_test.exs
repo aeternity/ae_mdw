@@ -7,8 +7,6 @@ defmodule AeMdwWeb.StatsControllerTest do
 
   require Model
 
-  @ms_per_day 24 * 3_600 * 1_000
-
   describe "total_stats" do
     test "it includes last_tx_hash", %{conn: conn, store: store} do
       tx_hash = <<0::256>>
@@ -77,15 +75,9 @@ defmodule AeMdwWeb.StatsControllerTest do
       conn: conn,
       store: store
     } do
-      start_interval1 = 1_000
-      start_interval2 = 2_000
-      start_interval3 = 3_000
-      st1_index = {{:transactions, :all}, :day, start_interval1}
-      st2_index = {{:transactions, :all}, :day, start_interval2}
-      st3_index = {{:transactions, :all}, :day, start_interval3}
-      start_time1 = start_interval1 * @ms_per_day
-      start_time2 = start_interval2 * @ms_per_day
-      start_time3 = start_interval3 * @ms_per_day
+      st1_index = {{:transactions, :all}, :day, 1_000}
+      st2_index = {{:transactions, :all}, :day, 2_000}
+      st3_index = {{:transactions, :all}, :day, 3_000}
 
       store =
         store
@@ -100,15 +92,15 @@ defmodule AeMdwWeb.StatsControllerTest do
                |> get("/v3/statistics/transactions", limit: 2)
                |> json_response(200)
 
-      assert %{"start_date" => ^start_time3, "count" => 3} = st1
-      assert %{"start_date" => ^start_time2, "count" => 5} = st2
+      assert %{"start_date" => "1978-03-20", "count" => 3} = st1
+      assert %{"start_date" => "1975-06-24", "count" => 5} = st2
 
       assert %{"prev" => prev_url, "data" => [st3]} =
                conn
                |> get(next_url)
                |> json_response(200)
 
-      assert %{"start_date" => ^start_time1, "count" => 1} = st3
+      assert %{"start_date" => "1972-09-27", "count" => 1} = st3
 
       assert %{"data" => ^statistics} =
                conn
@@ -117,18 +109,11 @@ defmodule AeMdwWeb.StatsControllerTest do
     end
 
     test "it returns the count of transactions filtered by a tx type", %{conn: conn, store: store} do
-      unused_start_interval = 500
-      start_interval1 = 1_000
-      start_interval2 = 2_000
-      start_interval3 = 3_000
-      start_time1 = start_interval1 * @ms_per_day
-      start_time2 = start_interval2 * @ms_per_day
-      start_time3 = start_interval3 * @ms_per_day
-      st1_index = {{:transactions, :all}, :day, unused_start_interval}
-      st2_index = {{:transactions, :oracle_register_tx}, :day, unused_start_interval}
-      st3_index = {{:transactions, :spend_tx}, :day, start_interval1}
-      st4_index = {{:transactions, :spend_tx}, :day, start_interval2}
-      st5_index = {{:transactions, :spend_tx}, :day, start_interval3}
+      st1_index = {{:transactions, :all}, :day, 500}
+      st2_index = {{:transactions, :oracle_register_tx}, :day, 500}
+      st3_index = {{:transactions, :spend_tx}, :day, 1_000}
+      st4_index = {{:transactions, :spend_tx}, :day, 2_000}
+      st5_index = {{:transactions, :spend_tx}, :day, 3_000}
 
       store =
         store
@@ -149,20 +134,99 @@ defmodule AeMdwWeb.StatsControllerTest do
                )
                |> json_response(200)
 
-      assert %{"start_date" => ^start_time1, "count" => 1} = st1
-      assert %{"start_date" => ^start_time2, "count" => 5} = st2
+      assert %{"start_date" => "1972-09-27", "count" => 1} = st1
+      assert %{"start_date" => "1975-06-24", "count" => 5} = st2
 
       assert %{"prev" => prev_url, "data" => [st3]} =
                conn
                |> get(next_url)
                |> json_response(200)
 
-      assert %{"start_date" => ^start_time3, "count" => 3} = st3
+      assert %{"start_date" => "1978-03-20", "count" => 3} = st3
 
       assert %{"data" => ^statistics} =
                conn
                |> get(prev_url)
                |> json_response(200)
     end
+  end
+
+  test "when interval_by = week, it returns the count of transactions for the latest weekly periods",
+       %{
+         conn: conn,
+         store: store
+       } do
+    st1_index = {{:transactions, :all}, :week, 0}
+    st2_index = {{:transactions, :all}, :week, 1_000}
+    st3_index = {{:transactions, :all}, :week, 2_000}
+
+    store =
+      store
+      |> Store.put(Model.Statistic, Model.statistic(index: st1_index, count: 1))
+      |> Store.put(Model.Statistic, Model.statistic(index: st2_index, count: 5))
+      |> Store.put(Model.Statistic, Model.statistic(index: st3_index, count: 3))
+
+    conn = with_store(conn, store)
+
+    assert %{"prev" => nil, "data" => [st1, st2] = statistics, "next" => next_url} =
+             conn
+             |> get("/v3/statistics/transactions", limit: 2, interval_by: "week")
+             |> json_response(200)
+
+    assert %{"start_date" => "2008-05-01", "count" => 3} = st1
+    assert %{"start_date" => "1989-03-02", "count" => 5} = st2
+
+    assert %{"prev" => prev_url, "data" => [st3]} =
+             conn
+             |> get(next_url)
+             |> json_response(200)
+
+    assert %{"start_date" => "1970-01-01", "count" => 1} = st3
+
+    assert %{"data" => ^statistics} =
+             conn
+             |> get(prev_url)
+             |> json_response(200)
+  end
+
+  test "when interval_by = month, it returns the count of transactions for the latest monthly periods",
+       %{
+         conn: conn,
+         store: store
+       } do
+    st1_index = {{:transactions, :all}, :month, 0}
+    st2_index = {{:transactions, :all}, :month, 12}
+    st3_index = {{:transactions, :all}, :month, 24}
+    st4_index = {{:transactions, :all}, :month, 36}
+
+    store =
+      store
+      |> Store.put(Model.Statistic, Model.statistic(index: st1_index, count: 1))
+      |> Store.put(Model.Statistic, Model.statistic(index: st2_index, count: 5))
+      |> Store.put(Model.Statistic, Model.statistic(index: st3_index, count: 3))
+      |> Store.put(Model.Statistic, Model.statistic(index: st4_index, count: 8))
+
+    conn = with_store(conn, store)
+
+    assert %{"prev" => nil, "data" => [st1, st2] = statistics, "next" => next_url} =
+             conn
+             |> get("/v3/statistics/transactions", limit: 2, interval_by: "month")
+             |> json_response(200)
+
+    assert %{"start_date" => "1973-01-01", "count" => 8} = st1
+    assert %{"start_date" => "1972-01-01", "count" => 3} = st2
+
+    assert %{"prev" => prev_url, "data" => [st3, st4]} =
+             conn
+             |> get(next_url)
+             |> json_response(200)
+
+    assert %{"start_date" => "1971-01-01", "count" => 5} = st3
+    assert %{"start_date" => "1970-01-01", "count" => 1} = st4
+
+    assert %{"data" => ^statistics} =
+             conn
+             |> get(prev_url)
+             |> json_response(200)
   end
 end
