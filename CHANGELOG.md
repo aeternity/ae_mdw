@@ -1,5 +1,35 @@
 # Changelog
 
+## [1.58.0](https://www.github.com/aeternity/ae_mdw/compare/v1.57.2...v1.58.0) (2023-08-14)
+
+
+### Features
+
+* add drop tables config ([#1517](https://www.github.com/aeternity/ae_mdw/issues/1517)) ([c7331ec](https://www.github.com/aeternity/ae_mdw/commit/c7331ec8cbc0eeb2b0bee9cb9815f534464d926f))
+* add statistics and /statistics/transactions endpoint ([#1496](https://www.github.com/aeternity/ae_mdw/issues/1496)) ([a52e2cb](https://www.github.com/aeternity/ae_mdw/commit/a52e2cb34673601e50bcba8d9cb2825109df3f9b))
+* add week/month interval filter on statistics ([#1516](https://www.github.com/aeternity/ae_mdw/issues/1516)) ([a269518](https://www.github.com/aeternity/ae_mdw/commit/a2695187ff2b5602f16c34981a2c1c4c8fd64f38))
+
+
+### Bug Fixes
+
+* dedup txs activities when present on several fields ([#1521](https://www.github.com/aeternity/ae_mdw/issues/1521)) ([5617a37](https://www.github.com/aeternity/ae_mdw/commit/5617a3759e899efc308e1fa2265b106ba45fee38))
+* fix auction bids expiring index ([#1512](https://www.github.com/aeternity/ae_mdw/issues/1512)) ([74cdb9e](https://www.github.com/aeternity/ae_mdw/commit/74cdb9e1691b42d8f6dc0213184d6b42f6c59f80))
+* put revoked name key for counting ([#1524](https://www.github.com/aeternity/ae_mdw/issues/1524)) ([dc866bb](https://www.github.com/aeternity/ae_mdw/commit/dc866bbebeb196cb3016afe197f1036cc7aa3c2e))
+* use map for DeleteKeysMutation ([#1515](https://www.github.com/aeternity/ae_mdw/issues/1515)) ([a9a0e9e](https://www.github.com/aeternity/ae_mdw/commit/a9a0e9e11545469d6364ce548f405b545fff9653))
+
+
+### Refactorings
+
+* remove name cache ([#1519](https://www.github.com/aeternity/ae_mdw/issues/1519)) ([1a01b5e](https://www.github.com/aeternity/ae_mdw/commit/1a01b5e7ee7ccb12521abd6b02cde387b005d603))
+
+
+### Miscellaneous
+
+* add aexn type to contracts response ([#1518](https://www.github.com/aeternity/ae_mdw/issues/1518)) ([c99958b](https://www.github.com/aeternity/ae_mdw/commit/c99958b7840372ff83eecf6a36a28bde300cfaa3))
+* add healthcheck on all swagger v2 endoints ([#1525](https://www.github.com/aeternity/ae_mdw/issues/1525)) ([ae9a51f](https://www.github.com/aeternity/ae_mdw/commit/ae9a51fc5cbce9462a060d0528b4f7d4e1986e25))
+* count names and oracles from keys ([#1493](https://www.github.com/aeternity/ae_mdw/issues/1493)) ([1c3bd78](https://www.github.com/aeternity/ae_mdw/commit/1c3bd78b85da300697bbdbbf6fc34d419daab444))
+* fetch only oracles tree ([#1520](https://www.github.com/aeternity/ae_mdw/issues/1520)) ([d151f25](https://www.github.com/aeternity/ae_mdw/commit/d151f25c50c970ded95e273dcde29373031bfb7d))
+
 ### [1.57.2](https://www.github.com/aeternity/ae_mdw/compare/v1.57.1...v1.57.2) (2023-08-07)
 
 
