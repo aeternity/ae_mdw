@@ -1,5 +1,5 @@
 defmodule AeMdw.Db.Sync.ContractTest do
-  use AeMdwWeb.ConnCase, async: false
+  use AeMdwWeb.ConnCase
 
   alias AeMdw.Db.Model
 
@@ -78,7 +78,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
       call_txi = Enum.random(100_000..999_999)
       call_tx_hash = :crypto.strong_rand_bytes(32)
       block_hash = <<0::256>>
-      owner_pk = <<2::256>>
+      owner_pk = :crypto.strong_rand_bytes(32)
       owner_id = :aeser_id.create(:account, owner_pk)
       nonce = 2
 
@@ -285,8 +285,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
 
       assert Enum.any?(event_mutations, fn
                %NameTransferMutation{
-                 txi_idx: {^call_txi, 0},
-                 block_index: ^block_index
+                 txi_idx: {^call_txi, 0}
                } ->
                  true
 

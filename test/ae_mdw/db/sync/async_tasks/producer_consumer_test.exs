@@ -44,7 +44,7 @@ defmodule AeMdw.Sync.AsyncTasks.ProducerConsumerTest do
         only_new: true
       )
 
-      AsyncTaskTestUtil.wakeup_consumers()
+      AsyncTaskTestUtil.wakeup_consumer(2)
 
       assert Enum.any?(1..20, fn _i ->
                Process.sleep(50)

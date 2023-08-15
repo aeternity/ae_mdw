@@ -114,7 +114,7 @@ defmodule AeMdw.Db.StateTest do
         |> State.enqueue(:update_aex9_state, dedup_args, extra_args)
         |> State.commit_mem([])
 
-        AsyncTaskTestUtil.wakeup_consumers()
+        AsyncTaskTestUtil.wakeup_consumer(1)
 
         assert {task_index, _time} =
                  AeMdw.EtsCache.get(

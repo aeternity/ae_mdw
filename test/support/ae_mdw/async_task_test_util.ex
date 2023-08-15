@@ -8,23 +8,8 @@ defmodule AeMdw.AsyncTaskTestUtil do
 
   require Model
 
-  @spec wakeup_consumers() :: :ok
-  def wakeup_consumers do
-    AsyncTasks.Supervisor.start_link([])
-    Process.sleep(100)
-
-    AsyncTasks.Supervisor
-    |> Supervisor.which_children()
-    |> Enum.filter(fn {id, _pid, _type, _mod} ->
-      is_binary(id) and String.starts_with?(id, "Elixir.AeMdw.Sync.AsyncTasks.Consumer")
-    end)
-    |> Enum.each(fn {_id, consumer_pid, _type, _mod} ->
-      Process.send(consumer_pid, :demand, [:noconnect])
-    end)
-  end
-
-  @spec wakeup_consumer() :: pid()
-  def wakeup_consumer do
+  @spec wakeup_consumer(pos_integer()) :: pid()
+  def wakeup_consumer(index) do
     AsyncTasks.Supervisor.start_link([])
     Process.sleep(100)
 
@@ -32,7 +17,7 @@ defmodule AeMdw.AsyncTaskTestUtil do
       AsyncTasks.Supervisor
       |> Supervisor.which_children()
       |> Enum.find(fn {id, _pid, _type, _mod} ->
-        is_binary(id) and String.starts_with?(id, "Elixir.AeMdw.Sync.AsyncTasks.Consumer")
+        id == "Elixir.AeMdw.Sync.AsyncTasks.Consumer#{index}"
       end)
 
     Process.send(consumer_pid, :demand, [:noconnect])
