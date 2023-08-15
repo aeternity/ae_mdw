@@ -295,6 +295,14 @@ defmodule AeMdw.Db.Model do
   @type name_claim_index() :: {name_index(), height(), txi_idx()}
   @type name_claim() :: record(:name_claim, index: name_claim_index())
 
+  # name_revoke :
+  #     index = {plain_name, name_activation_height, txi_idx}
+  @name_revoke_defaults [index: nil, unused: nil]
+  defrecord :name_revoke, @name_revoke_defaults
+
+  @type name_revoke_index() :: {name_index(), height(), txi_idx()}
+  @type name_revoke() :: record(:name_revoke, index: name_revoke_index())
+
   # name_update :
   #     index = {plain_name, name_activation_height, txi_idx}
   @name_update_defaults [index: nil, unused: nil]
@@ -1138,6 +1146,7 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.InactiveNameOwnerDeactivation,
       AeMdw.Db.Model.InactiveNameOwner,
       AeMdw.Db.Model.NameClaim,
+      AeMdw.Db.Model.NameRevoke,
       AeMdw.Db.Model.NameUpdate,
       AeMdw.Db.Model.NameTransfer,
       AeMdw.Db.Model.AuctionBidClaim
@@ -1236,6 +1245,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.InactiveNameOwnerDeactivation), do: :owner_deactivation
   def record(AeMdw.Db.Model.AuctionBidClaim), do: :auction_bid_claim
   def record(AeMdw.Db.Model.NameClaim), do: :name_claim
+  def record(AeMdw.Db.Model.NameRevoke), do: :name_revoke
   def record(AeMdw.Db.Model.NameUpdate), do: :name_update
   def record(AeMdw.Db.Model.NameTransfer), do: :name_transfer
   def record(AeMdw.Db.Model.ActiveOracleExpiration), do: :expiration

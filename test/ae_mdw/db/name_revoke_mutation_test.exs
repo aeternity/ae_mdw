@@ -10,7 +10,6 @@ defmodule AeMdw.Db.NameRevokeMutationTest do
 
   test "revoke a active name", %{store: store} do
     plain_name = "revoke.test"
-
     {:ok, name_hash} = :aens.get_name_hash(plain_name)
 
     revoke_height = 3
@@ -56,6 +55,8 @@ defmodule AeMdw.Db.NameRevokeMutationTest do
              Model.ActiveNameOwnerDeactivation,
              {owner_pk, expire, plain_name}
            )
+
+    # assert State.exists?(state2, Model.NameRevoke, {plain_name, active_from, revoke_txi_idx})
 
     assert {:ok,
             Model.name(

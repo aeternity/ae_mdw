@@ -28,8 +28,10 @@ defmodule AeMdw.Db.Name do
   @typep pubkey :: Db.pubkey()
   @typep plain_name :: Names.plain_name()
   @typep height :: Blocks.height()
-  @typep state() :: State.t()
-  @typep nested_table() ::
+  @typep txi_idx :: AeMdw.Txs.txi_idx()
+  @typep state :: State.t()
+  @typep direction :: :backward | :forward
+  @typep nested_table ::
            Model.NameClaim | Model.NameTransfer | Model.NameUpdate | Model.AuctionBidClaim
 
   @min_int Util.min_int()
@@ -144,6 +146,24 @@ defmodule AeMdw.Db.Name do
     state
     |> Collection.stream(table, :backward, key_boundary, nil)
     |> Stream.map(fn {^plain_name, ^height, txi_idx} -> txi_idx end)
+  end
+
+  @spec stream_nested_resource(
+          state(),
+          nested_table(),
+          direction(),
+          plain_name(),
+          {plain_name(), height(), txi_idx()} | nil
+        ) :: Enumerable.t()
+  def stream_nested_resource(state, table, direction, plain_name, cursor) do
+    key_boundary = {
+      {plain_name, @min_int, {@min_int, @min_int}},
+      {plain_name, @max_int, {@max_int, @max_int}}
+    }
+
+    state
+    |> Collection.stream(table, direction, key_boundary, cursor)
+    |> Stream.map(fn {^plain_name, height, txi_idx} -> {{height, txi_idx}, table} end)
   end
 
   @spec pointers(state(), Model.name()) :: map()

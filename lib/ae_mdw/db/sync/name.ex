@@ -159,8 +159,11 @@ defmodule AeMdw.Db.Sync.Name do
     Model.name(expire: expiration) = m_name = State.fetch!(state, Model.ActiveName, plain_name)
 
     m_name = Model.name(m_name, revoke: {bi, txi_idx})
+    m_revoke = Model.name_revoke(index: {plain_name, height, txi_idx})
 
-    deactivate_name(state, height, expiration, m_name, :names_revoked)
+    state
+    |> State.put(Model.NameRevoke, m_revoke)
+    |> deactivate_name(height, expiration, m_name, :names_revoked)
   end
 
   @spec expire_name(state(), Blocks.height(), Names.plain_name()) :: state()
