@@ -110,14 +110,14 @@ defmodule AeMdwWeb.OracleControllerTest do
       |> Store.put(Model.InactiveOracle, oracle2)
       |> Store.put(Model.ActiveOracle, oracle3)
       |> Store.put(Model.ActiveOracle, oracle4)
-      |> tap(fn store ->
+      |> then(fn store ->
         Enum.reduce(
           inactive_oracles,
           store,
           &Store.put(&2, Model.InactiveOracle, &1)
         )
       end)
-      |> tap(fn store ->
+      |> then(fn store ->
         Enum.reduce(1..21, store, fn i, store ->
           txi = 1000 + i
 

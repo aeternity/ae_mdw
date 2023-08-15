@@ -285,7 +285,7 @@ defmodule AeMdw.Sync.Server do
 
       new_state
     end)
-    |> tap(fn _state -> broadcast_blocks(gens_mutations) end)
+    |> then(fn _state -> broadcast_blocks(gens_mutations) end)
   end
 
   defp exec_db_height(state, blocks_mutations, clear_mem?) do
