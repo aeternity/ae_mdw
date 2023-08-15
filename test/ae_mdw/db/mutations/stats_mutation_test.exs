@@ -126,7 +126,7 @@ defmodule AeMdw.Db.StatsMutationTest do
             contracts: 1
           )
         )
-        |> tap(fn store ->
+        |> then(fn store ->
           Enum.reduce(1..7, store, fn i, store ->
             Store.put(
               store,
@@ -139,7 +139,7 @@ defmodule AeMdw.Db.StatsMutationTest do
           Model.InactiveOracleExpiration,
           Model.expiration(index: {height - 1, <<7::256>>})
         )
-        |> tap(fn store ->
+        |> then(fn store ->
           Enum.reduce(2..7, store, fn i, store ->
             Store.put(
               store,
@@ -148,7 +148,7 @@ defmodule AeMdw.Db.StatsMutationTest do
             )
           end)
         end)
-        |> tap(fn store ->
+        |> then(fn store ->
           Enum.reduce(1..6, store, fn _i, store ->
             Store.put(
               store,
@@ -157,12 +157,12 @@ defmodule AeMdw.Db.StatsMutationTest do
             )
           end)
         end)
-        |> tap(fn store ->
+        |> then(fn store ->
           Enum.reduce(1..5, store, fn i, store ->
             Store.put(store, Model.ActiveName, Model.name(index: "name#{i}-active.chain"))
           end)
         end)
-        |> tap(fn store ->
+        |> then(fn store ->
           Enum.reduce(1..5, store, fn i, store ->
             Store.put(
               store,
