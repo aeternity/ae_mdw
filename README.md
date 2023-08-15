@@ -63,7 +63,7 @@ To start a docker container on mainnet, simply run: `docker-compose up`.
 
 You can check on `/status` page that the `node_height` is higher than 600000.
 
-In case you want to use it on testnet or for development purposes please follow the instructions bellow.
+In case you want to use it on testnet or for development purposes please follow the instructions below.
 
 ### Node configuration
 
@@ -258,7 +258,7 @@ GET /status                              - middleware status
 
 ## OpenAPI specs
 
-The swagger specificiation of the endpoints can be downloaded from:
+The swagger specification of the endpoints can be downloaded from:
 
 - https://testnet.aeternity.io/mdw/v2/api/
 
@@ -273,13 +273,13 @@ https://www.npmjs.com/package/swagger-ui
 
 The application does not support paginated page-based endpoints. Instead, a
 cursor-based pagination is offered. This means that in order to traverse through
-a list of pages for any of the pagianted endpoints, either the `next` or `prev`
+a list of pages for any of the paginated endpoints, either the `next` or `prev`
 field from the current page has to be used instead.
 
 Asking for an arbitrary page, without first retrieving it from the `next` or
 `prev` field **is not supported**.
 
-The paginated endpoints return JSON in the follwing format:
+The paginated endpoints return JSON in the following format:
 
 ```
 {
@@ -369,7 +369,7 @@ of transactions in the reply than `10` (max `100`).
 
 ### Scope
 
-The `scope` paramter specifies the time period to look for transactions matching the criteria:
+The `scope` parameter specifies the time period to look for transactions matching the criteria:
 
 - `gen:A-B`   - from generation A to B (forward if A < B, backward otherwise)
 - `txi:A-B`   - from transaction index A to B (forward if A < B, backward otherwise)
@@ -420,7 +420,7 @@ Querying for transactions via `/v2/txs` endpoint supports 3 kinds of parameters 
 
 Types of transactions in the resulting set can be constrained by providing `type` and/or `type_group` parameter.
 The query allows providing of multiple type & type_group parameters - they form a union of admissible types.
-(In the other words - they are combined with `OR`.)
+(In other words - they are combined with `OR`.)
 
 Supported types:
 
@@ -858,7 +858,7 @@ If `type` or `type_group` is provided, the transaction in the result set must be
 
 #### Examples
 
-transactions where each transaction contains both accounts, no matter at which field:
+transactions where each transaction contains both accounts, no matter in which field:
 ```
 $ curl -s "https://mainnet.aeternity.io/mdw/v2/txs?account=ak_24jcHLTZQfsou7NvomRJ1hKEnjyNqbYSq2Az7DmyrAyUHPq8uR&account=ak_zUQikTiUMNxfKwuAfQVMPkaxdPsXP8uAxnfn6TkZKZCtmRcUD&limit=1" | jq '.'
 {
@@ -1503,9 +1503,9 @@ $ curl -s https://mainnet.aeternity.io/mdw/v2/key-blocks/123
 
 ### `/v2/blocks/:kbi/:mbi` [DEPRECATED]
 
-Micro block are identified by height and sequence id (order) withing the generation, starting from 0.
+Micro blocks are identified by height and sequence id (order) within the generation, starting from 0.
 
-Since this endpoint is **deprecated**, it is adviced to use `/v2/key-blocks/:kbi/micro-blocks` instead.
+Since this endpoint is **deprecated**, it is advised to use `/v2/key-blocks/:kbi/micro-blocks` instead.
 
 ```
 $ curl -s "https://mainnet.aeternity.io/mdw/v2/blocks/300000/0" | jq '.'
@@ -1661,7 +1661,7 @@ Due to this reason, all name endpoints except `name/pointers` and `name/pointees
 
 ### `/v2/names`
 
-Names can be filtered by state, which can containe the following values:
+Names can be filtered by state, which can contain the following values:
 
 - `inactive` - for listing `inactive` names (expired or revoked)
 - `active` - for listing `active` names
@@ -1669,7 +1669,7 @@ Names can be filtered by state, which can containe the following values:
 
 They support ordering via parameters `by` (with value `activation`, `deactivation` or `name`), and `direction` (with value `forward` or `backward`).
 
-Using the `by=activation` requires `state=active` and includes only sucessfully claimed names (those in auction won't appear yet).
+Using the `by=activation` requires `state=active` and includes only successfully claimed names (those in auction won't appear yet).
 
 Using the `by=deactivation` means for inactive names that they are sorted by the height of deactivation, whether the name had expired or had been revoked.
 For active names it means they are sorted by expiration height.
@@ -2449,7 +2449,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/names/auctions?by=expiration&dire
 300636
 ```
 
-Or, ordered by name, from the begining:
+Or, ordered by name, from the beginning:
 
 ```
 $ curl -s "https://mainnet.aeternity.io/mdw/v2/names/auctions?by=name&direction=forward&limit=100" | jq '.data [] .name'
@@ -3001,7 +3001,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?direction=forward&
 
 The attributes returned on each object are the following:
 
-- `args` - a list of event constructor arguments as big integers. Contract bytecode doesn't contain metadata describing the types of the contract events. As a result, we can only report the binary blobs to the user, which can be either a integer (probably denoting an amount or counter), or public key.
+- `args` - a list of event constructor arguments as big integers. Contract bytecode doesn't contain metadata describing the types of the contract events. As a result, we can only report the binary blobs to the user, which can be either an integer (probably denoting an amount or counter), or public key.
   The integer can be converted to public key (256-bits) binary in Elixir (or Erlang) shell:
   ```
   iex(aeternity@localhost)3> <<32049452134983951870486158652299990269658301415986031571975774292043131948665 :: 256>>
@@ -3021,7 +3021,7 @@ The attributes returned on each object are the following:
 
 - `event_hash` - base32hex encoded blake2b hash of the name of the event constructor
   The source of the contract in question has one of the event log constructors named "TipReceived".
-  It's encoded hash can be retrieved as:
+  Its encoded hash can be retrieved as:
   ```
   iex(aeternity@localhost)11> Base.hex_encode32(:aec_hash.blake2b_256_hash("TipReceived"))
   "MVGUQ861EKRNBCGUC35711P9M2HSVQHG5N39CE5CCIUQ7AGK7UU0===="
@@ -3136,7 +3136,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?scope=gen:250109&l
 }
 ```
 
-Listing contract logs from transaction index 15000000 downto 5000000 - e.g. backwards (note descending call_txi):
+Listing contract logs from transaction index 15000000 down to 5000000 - e.g. backwards (note descending call_txi):
 
 ```
 $ curl -s "https://mainnet.aeternity.io/mdw/v2/contracts/logs?scope=txi:15000000-5000000&limit=2" | jq '.'
@@ -4285,7 +4285,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/aex9/balances/account/ak_CNcf2oywqbg
 ]
 ```
 
-The `top` parameter at this endpoint, when present, can show the most up to date balance as a result of contract call, but can't show a account balance of freshly created AEX9 contract.
+The `top` parameter at this endpoint, when present, can show the most up to date balance as a result of contract call, but can't show an account balance of freshly created AEX9 contract.
 
 The awareness that the contract is created by some account comes from syncing, which is inherently one generation behind the top of the chain.
 
@@ -4696,7 +4696,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/deltastats?limit=1" | jq '.'
 
 ### `/v2/totalstats`
 
-Aggregated (sumarized) statistics are also available, showing the total sum of rewards and the token supply:
+Aggregated (summarized) statistics are also available, showing the total sum of rewards and the token supply:
 
 ```
 $ curl -s "https://mainnet.aeternity.io/mdw/v2/totalstats?gen:421454-0&limit=1" | jq '.'
@@ -4713,7 +4713,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/totalstats?gen:421454-0&limit=1" 
 }
 ```
 
-These endpoints allows pagination, with typical `forward/backward` direction or scope denoted by `gen/from-to`.
+These endpoints allow pagination, with typical `forward/backward` direction or scope denoted by `gen/from-to`.
 
 ### `/v2/minerstats`
 
@@ -4736,7 +4736,7 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/minerstats?limit=1" | jq '.'
 
 ## Activities
 
-Inteded for being able to display all events in which a specific account is related to in any way.
+Intended for being able to display all events in which a specific account is related to in any way.
 
 An activity event occurs when there's any change in the blockchain related to a specific account. It is not the same as the log events which occur when executing a contract.
 
@@ -4745,7 +4745,7 @@ An activity event occurs when there's any change in the blockchain related to a 
 Paginated list of events related to the `:id` account.
 
 Each activity contains 3 values:
-- `height` - The height in which the event ocurred
+- `height` - The height in which the event occurred
 - `type` - The type of event.
 - `payload` - An object whose structure depends on the type of event.
 
@@ -4755,7 +4755,7 @@ Transaction events can also be `InternalContractCallEvent` which represent trans
 
 Optionally the `owned_only=true` parameter might be used to return only activities initiated by the account.
 
-Additionally, activities can be filter by any of these types using `?type=<type>` query parameter:
+Additionally, activities can be filtered by any of these types using `?type=<type>` query parameter:
 
 * `transactions` - Transactions containing the account in any of the transaction fields
 * `aexn` - AExN (aex9 and aex141) activities
@@ -4978,11 +4978,11 @@ Actual chain data is wrapped in a JSON structure identifying the subscription to
 ```
 
 When the `source` is "node" it means that the Node is synching the block or transaction (not yet indexed by AeMdw).
-If it's "mdw", it indicates that it's already avaiable through AeMdw Api.
+If it's "mdw", it indicates that it's already available through AeMdw Api.
 
 ### `/v2/websocket`
 
-The V2 websocket interface behaves the same way as the V1 interface, but when the published message has source `mdw` it returns the renderered representation of the object as it would be rendered by the middleware (e.g. the returned object for the `Transactions` subscription will be the same object as returned by the `/v2/txs` endpoint).
+The V2 websocket interface behaves the same way as the V1 interface, but when the published message has source `mdw` it returns the rendered representation of the object as it would be rendered by the middleware (e.g. the returned object for the `Transactions` subscription will be the same object as returned by the `/v2/txs` endpoint).
 
 ## Tests
 
@@ -5029,7 +5029,7 @@ On merge to master:
 In order to anticipate some of these checks one might run `mix git_hooks.install`.
 This installs pre_commit and pre_push checks as defined by `config :git_hooks` in `dev.tools.exs`.
 
-If sure about the change, if it was for example in a integration test case and it was already tested and formatted,
+If sure about the change, if it was for example in an integration test case and it was already tested and formatted,
 one can use `git push --no-verify` to bypass the hook.
 
 ## Auto-generated Documentation
