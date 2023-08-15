@@ -20,7 +20,7 @@ case $1 in
     ;;
 
   "test-integration")
-    elixir --sname $NAME -S mix test.integration
+    elixir --sname $NAME -S mix test.integration $2
     ;;
 
   "test")
