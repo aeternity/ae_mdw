@@ -43,7 +43,7 @@ defmodule AeMdw.Sync.AsyncTasks.ConsumerTest do
         only_new: true
       )
 
-      consumer_pid = AsyncTaskTestUtil.wakeup_consumer()
+      consumer_pid = AsyncTaskTestUtil.wakeup_consumer(2)
 
       task_pid1 =
         Enum.reduce_while(1..100, nil, fn _i, _acc ->
@@ -57,10 +57,15 @@ defmodule AeMdw.Sync.AsyncTasks.ConsumerTest do
 
       Process.exit(task_pid1, :kill)
 
-      assert Enum.any?(1..100, fn _i ->
+      assert Enum.reduce_while(1..100, false, fn _i, _acc ->
+               Process.sleep(10)
+
                case :sys.get_state(consumer_pid) do
-                 %{task: %Task{pid: task_pid2}} -> task_pid2 != task_pid1
-                 _no_task -> false
+                 %{task: %Task{pid: task_pid}} when task_pid == task_pid1 ->
+                   {:cont, false}
+
+                 _no_task ->
+                   {:halt, true}
                end
              end)
     end
