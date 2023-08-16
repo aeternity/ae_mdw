@@ -2,13 +2,28 @@ defmodule AeMdw.TestUtil do
   @moduledoc """
   Test helper functions imported by default on all tests.
   """
-
-  alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Collection
   alias AeMdw.Database
   alias AeMdw.Db.Mutation
-  alias AeMdw.Db.State
   alias AeMdw.Db.MemStore
+  alias AeMdw.Db.NullStore
+  alias AeMdw.Db.State
+  alias AeMdw.Error.Input, as: ErrInput
   alias Plug.Conn
+
+  @type key :: term()
+
+  @spec empty_store() :: MemStore.t()
+  def empty_store, do: MemStore.new(NullStore.new())
+
+  @spec empty_state() :: State.t()
+  def empty_state, do: State.new(empty_store())
+
+  Enum.each(AeMdw.Db.Model.column_families(), fn table ->
+    @spec all_keys(State.t(), unquote(table)) :: [key()]
+  end)
+
+  def all_keys(state, table), do: state |> Collection.stream(table, nil) |> Enum.to_list()
 
   @spec handle_input((() -> Conn.t())) :: Conn.t() | String.t()
   def handle_input(f) do

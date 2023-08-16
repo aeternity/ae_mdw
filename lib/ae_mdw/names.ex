@@ -438,6 +438,13 @@ defmodule AeMdw.Names do
           ),
           Name.stream_nested_resource(
             state,
+            Model.NameExpired,
+            direction,
+            plain_name,
+            cursor
+          ),
+          Name.stream_nested_resource(
+            state,
             Model.NameRevoke,
             direction,
             plain_name,

@@ -13,6 +13,7 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdw.Txs
 
   import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, name_tx: 3, tx: 3]
+  import AeMdw.Db.ModelFixtures, only: [new_name: 0]
   import AeMdw.Util.Encoding
 
   import Mock
@@ -22,7 +23,7 @@ defmodule AeMdwWeb.NameControllerTest do
   @default_limit 10
 
   setup _ do
-    height_name = for i <- 100..121, into: %{}, do: {i, unique_name()}
+    height_name = for i <- 100..121, into: %{}, do: {i, new_name()}
 
     {:ok, height_name: height_name}
   end
@@ -2727,7 +2728,7 @@ defmodule AeMdwWeb.NameControllerTest do
       account_id = :aeser_id.create(:account, account_pk)
       recipient_pk = TS.address(1)
       recipient_id = :aeser_id.create(:account, recipient_pk)
-      plain_name = unique_name()
+      plain_name = new_name()
       {:ok, name_hash} = :aens.get_name_hash(plain_name)
       name_id = :aeser_id.create(:name, name_hash)
       kbi1 = 7
@@ -3125,7 +3126,7 @@ defmodule AeMdwWeb.NameControllerTest do
 
     store
     |> Store.put(Model.ActiveName, name)
-    |> tap(fn store ->
+    |> then(fn store ->
       Enum.reduce(0..3, store, fn i, store ->
         Store.put(
           store,
@@ -3134,7 +3135,7 @@ defmodule AeMdwWeb.NameControllerTest do
         )
       end)
     end)
-    |> tap(fn store ->
+    |> then(fn store ->
       Enum.reduce(0..2, store, fn i, store ->
         Store.put(
           store,
@@ -3143,12 +3144,12 @@ defmodule AeMdwWeb.NameControllerTest do
         )
       end)
     end)
-    |> tap(fn store ->
+    |> then(fn store ->
       Enum.reduce(0..2, store, fn i, store ->
         Store.put(store, Model.Block, Model.block(index: {kbi + i, 0}, hash: "mb#{i}-hash"))
       end)
     end)
-    |> tap(fn store ->
+    |> then(fn store ->
       Enum.reduce(claims, store, fn txi_idx, store ->
         Store.put(
           store,
@@ -3157,7 +3158,7 @@ defmodule AeMdwWeb.NameControllerTest do
         )
       end)
     end)
-    |> tap(fn store ->
+    |> then(fn store ->
       Enum.reduce(updates, store, fn txi_idx, store ->
         Store.put(
           store,
@@ -3235,6 +3236,4 @@ defmodule AeMdwWeb.NameControllerTest do
       Model.name_update(index: {plain_name, active_height, claim_txi_idx3})
     )
   end
-
-  defp unique_name, do: "name-#{System.unique_integer([:positive])}.chain"
 end

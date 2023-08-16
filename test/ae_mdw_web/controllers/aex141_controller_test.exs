@@ -2,15 +2,13 @@ defmodule AeMdwWeb.Aex141ControllerTest do
   use ExUnit.Case, async: false
 
   alias AeMdw.AexnContracts
-  alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
-  alias AeMdw.Db.NullStore
   alias AeMdw.Db.Store
   alias AeMdw.Stats
   alias AeMdw.Validate
 
   import AeMdw.Util.Encoding, only: [encode_contract: 1, encode_account: 1]
-  import AeMdw.TestUtil, only: [with_store: 2]
+  import AeMdw.TestUtil, only: [empty_store: 0, with_store: 2]
   import Mock
 
   import Phoenix.ConnTest
@@ -24,12 +22,8 @@ defmodule AeMdwWeb.Aex141ControllerTest do
   @default_limit 10
 
   setup_all _context do
-    empty_store =
-      NullStore.new()
-      |> MemStore.new()
-
     store =
-      Enum.reduce(1_411..1_414, empty_store, fn i, store ->
+      Enum.reduce(1_411..1_414, empty_store(), fn i, store ->
         meta_info = {"some-nft-#{i}", "SAEX#{i}", "http://some-url.com", :url}
         txi = 1_000 + i
 

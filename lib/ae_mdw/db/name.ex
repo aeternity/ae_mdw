@@ -32,7 +32,12 @@ defmodule AeMdw.Db.Name do
   @typep state :: State.t()
   @typep direction :: :backward | :forward
   @typep nested_table ::
-           Model.NameClaim | Model.NameTransfer | Model.NameUpdate | Model.AuctionBidClaim
+           Model.NameClaim
+           | Model.NameTransfer
+           | Model.NameUpdate
+           | Model.NameExpired
+           | Model.NameRevoke
+           | Model.AuctionBidClaim
 
   @min_int Util.min_int()
   @max_int Util.max_int()
