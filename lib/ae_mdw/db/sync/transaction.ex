@@ -372,11 +372,10 @@ defmodule AeMdw.Db.Sync.Transaction do
   defp tx_mutations(%TxContext{
          type: :name_transfer_tx,
          tx: tx,
-         txi: txi,
-         block_index: block_index
+         txi: txi
        }) do
     [
-      NameTransferMutation.new(tx, {txi, -1}, block_index)
+      NameTransferMutation.new(tx, {txi, -1})
     ]
   end
 

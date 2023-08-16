@@ -78,7 +78,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
       call_txi = Enum.random(100_000..999_999)
       call_tx_hash = :crypto.strong_rand_bytes(32)
       block_hash = :crypto.strong_rand_bytes(32)
-      owner_pk = :crypto.strong_rand_bytes(32)
+      owner_pk = <<1::256>>
       owner_id = :aeser_id.create(:account, owner_pk)
       nonce = 2
 

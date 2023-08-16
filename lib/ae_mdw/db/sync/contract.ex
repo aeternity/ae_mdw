@@ -166,7 +166,7 @@ defmodule AeMdw.Db.Sync.Contract do
         Name.update_mutations(tx, {call_txi, local_idx}, block_index, true)
 
       {local_idx, "AENS.transfer", :name_transfer_tx, _aetx, tx} ->
-        NameTransferMutation.new(tx, {call_txi, local_idx}, block_index)
+        NameTransferMutation.new(tx, {call_txi, local_idx})
 
       {local_idx, "AENS.revoke", :name_revoke_tx, _aetx, tx} ->
         tx
