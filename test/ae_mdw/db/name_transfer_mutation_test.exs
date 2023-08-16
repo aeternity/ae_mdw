@@ -53,6 +53,6 @@ defmodule AeMdw.Db.NameTransferMutationTest do
         state1
       )
 
-    state2 = Name.transfer(state2, name_hash, new_owner, transfer_txi_idx)
+    state2 = Name.transfer(state2, name_hash, recipient_pk, transfer_txi_idx)
   end
 end

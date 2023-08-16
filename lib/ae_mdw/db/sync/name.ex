@@ -132,9 +132,9 @@ defmodule AeMdw.Db.Sync.Name do
     end
   end
 
-  @spec transfer(State.t(), Names.name_hash(), Db.pubkey(), Txs.txi_idx(), Blocks.block_index()) ::
+  @spec transfer(State.t(), Names.name_hash(), Db.pubkey(), Txs.txi_idx()) ::
           State.t()
-  def transfer(state, name_hash, new_owner, txi_idx, block_index) do
+  def transfer(state, name_hash, new_owner, txi_idx) do
     plain_name = Name.plain_name!(state, name_hash)
 
     m_name = State.fetch!(state, Model.ActiveName, plain_name)
@@ -143,23 +143,24 @@ defmodule AeMdw.Db.Sync.Name do
     m_name = Model.name(m_name, active: active, owner: new_owner)
     m_owner = Model.owner(index: {new_owner, plain_name})
     m_name_owner_deactivation = Model.owner_deactivation(index: {new_owner, expire, plain_name})
-    name_transfer = Model.name_transfer(index: {plain_name, active, {block_index, txi_idx}})
+    name_transfer = Model.name_transfer(index: {plain_name, active, txi_idx})
 
     state
+    |> State.put(Model.NameTransfer, name_transfer)
     |> State.delete(Model.ActiveNameOwner, {old_owner, plain_name})
     |> State.delete(Model.ActiveNameOwnerDeactivation, {old_owner, expire, plain_name})
     |> State.put(Model.ActiveNameOwner, m_owner)
     |> State.put(Model.ActiveName, m_name)
     |> State.put(Model.ActiveNameOwnerDeactivation, m_name_owner_deactivation)
-    |> State.put(Model.NameTransfer, name_transfer)
   end
 
   @spec revoke(State.t(), Names.plain_name(), Txs.txi_idx(), Blocks.block_index()) :: State.t()
   def revoke(state, plain_name, txi_idx, {height, _mbi} = bi) do
-    Model.name(expire: expiration) = m_name = State.fetch!(state, Model.ActiveName, plain_name)
+    Model.name(active: active_height, expire: expiration) =
+      m_name = State.fetch!(state, Model.ActiveName, plain_name)
 
     m_name = Model.name(m_name, revoke: {bi, txi_idx})
-    m_revoke = Model.name_revoke(index: {plain_name, height, txi_idx})
+    m_revoke = Model.name_revoke(index: {plain_name, active_height, txi_idx})
 
     state
     |> State.put(Model.NameRevoke, m_revoke)
@@ -168,9 +169,12 @@ defmodule AeMdw.Db.Sync.Name do
 
   @spec expire_name(state(), Blocks.height(), Names.plain_name()) :: state()
   def expire_name(state, height, plain_name) do
-    Model.name(expire: expiration) = m_name = State.fetch!(state, Model.ActiveName, plain_name)
+    Model.name(active: active, expire: expiration) =
+      m_name = State.fetch!(state, Model.ActiveName, plain_name)
 
-    deactivate_name(state, height, expiration, m_name, :names_expired)
+    state
+    |> State.put(Model.NameExpired, Model.name_expired(index: {plain_name, active, {nil, -1}}))
+    |> deactivate_name(height, expiration, m_name, :names_expired)
   end
 
   @spec expire_auction(state(), Blocks.height(), Names.plain_name()) :: state()

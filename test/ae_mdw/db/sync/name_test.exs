@@ -272,7 +272,8 @@ defmodule AeMdw.Db.Sync.NameTest do
       active_from = 100_001
       expire = active_from + 10
 
-      m_name = Model.name(index: plain_name, active: active_from, expire: expire, owner: old_owner)
+      m_name =
+        Model.name(index: plain_name, active: active_from, expire: expire, owner: old_owner)
 
       state =
         empty_state()
@@ -282,13 +283,13 @@ defmodule AeMdw.Db.Sync.NameTest do
       state = Name.transfer(state, name_hash, new_owner, transfer_txi_idx)
 
       assert State.exists?(
-             state,
-             Model.NameTransfer,
-             {plain_name, active_from, transfer_txi_idx}
-           )
+               state,
+               Model.NameTransfer,
+               {plain_name, active_from, transfer_txi_idx}
+             )
 
       assert Model.name(m_name, owner: new_owner) ==
-              State.fetch!(state, Model.ActiveName, plain_name)
+               State.fetch!(state, Model.ActiveName, plain_name)
 
       refute State.exists?(state, Model.InactiveName, plain_name)
 
@@ -299,16 +300,16 @@ defmodule AeMdw.Db.Sync.NameTest do
       assert State.exists?(state, Model.ActiveNameExpiration, {expire, plain_name})
 
       assert State.exists?(
-              state,
-              Model.ActiveNameOwnerDeactivation,
-              {new_owner, expire, plain_name}
-            )
+               state,
+               Model.ActiveNameOwnerDeactivation,
+               {new_owner, expire, plain_name}
+             )
 
       refute State.exists?(
-              state,
-              Model.ActiveNameOwnerDeactivation,
-              {old_owner, expire, plain_name}
-            )
+               state,
+               Model.ActiveNameOwnerDeactivation,
+               {old_owner, expire, plain_name}
+             )
     end
   end
 
