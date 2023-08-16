@@ -351,6 +351,58 @@ defmodule AeMdw.Db.Sync.NameTest do
     end
   end
 
+  describe "revoke/4" do
+    test "puts a name revoke, deletes active name, creates inactive one" do
+      plain_name = new_name()
+      owner_pk = TS.address(0)
+      active_from = 100_000
+      expire = active_from + 10
+      revoke_height = expire - 1
+      revoke_block_index = {revoke_height, 0}
+      revoke_txi_idx = {1_000_000, -1}
+
+      m_name =
+        Model.name(
+          index: plain_name,
+          active: active_from,
+          expire: expire,
+          owner: owner_pk,
+          revoke: nil
+        )
+
+      state =
+        empty_state()
+        |> Name.put_active(m_name)
+
+      state = Name.revoke(state, plain_name, revoke_txi_idx, revoke_block_index)
+
+      assert State.exists?(state, Model.NameRevoke, {plain_name, active_from, revoke_txi_idx})
+
+      refute State.exists?(state, Model.ActiveName, plain_name)
+      refute State.exists?(state, Model.ActiveNameOwner, {owner_pk, plain_name})
+      refute State.exists?(state, Model.ActiveNameActivation, {active_from, plain_name})
+      refute State.exists?(state, Model.ActiveNameExpiration, {expire, plain_name})
+
+      refute State.exists?(
+               state,
+               Model.ActiveNameOwnerDeactivation,
+               {owner_pk, expire, plain_name}
+             )
+
+      assert {:ok, Model.name(m_name, revoke: {revoke_block_index, revoke_txi_idx})} ==
+               State.get(state, Model.InactiveName, plain_name)
+
+      assert State.exists?(state, Model.InactiveNameExpiration, {revoke_height, plain_name})
+      assert State.exists?(state, Model.InactiveNameOwner, {owner_pk, plain_name})
+
+      assert State.exists?(
+               state,
+               Model.InactiveNameOwnerDeactivation,
+               {owner_pk, revoke_height, plain_name}
+             )
+    end
+  end
+
   describe "expire_auction/3" do
     test "it creates new NameClaim records using the AuctionBidClaims" do
       plain_name = TS.plain_name(0)

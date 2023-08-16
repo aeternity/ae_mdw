@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.NameTransferMutationTest do
   use AeMdw.Db.MutationCase
 
+  alias AeMdw.Db.Sync.Name
   alias AeMdw.Db.NameTransferMutation
 
   require Model
@@ -8,9 +9,8 @@ defmodule AeMdw.Db.NameTransferMutationTest do
   test "transfers an active name" do
     plain_name = "transfer.test"
     {:ok, name_hash} = :aens.get_name_hash(plain_name)
-    active_height = System.unique_integer([:positive])
-    transfer_height = active_height + 1
-    transfer_txi_idx = {System.unique_integer([:positive]), -1}
+    active_height = 100_000
+    transfer_txi_idx = {100_000_000, -1}
     expire = active_height + 2
     owner_pk = TS.address(0)
     recipient_pk = TS.address(1)
@@ -25,9 +25,9 @@ defmodule AeMdw.Db.NameTransferMutationTest do
 
     {:name_transfer_tx, tx} =
       %{
-        account_id: :aeser_id.create(:name, name_hash),
+        account_id: :aeser_id.create(:account, owner_pk),
         nonce: 111,
-        name_id: :aeser_id.create(:account, owner_pk),
+        name_id: :aeser_id.create(:name, name_hash),
         recipient_id: :aeser_id.create(:account, recipient_pk),
         fee: 1_111,
         ttl: 11_111
@@ -54,5 +54,7 @@ defmodule AeMdw.Db.NameTransferMutationTest do
       )
 
     state2 = Name.transfer(state2, name_hash, recipient_pk, transfer_txi_idx)
+
+    assert_same(state1, state2)
   end
 end
