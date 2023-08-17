@@ -11,9 +11,9 @@ defmodule AeMdw.Sync.MemStoreCreator do
   def start_link([]), do: GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
 
   @impl true
-  @spec init(:ok) :: {:ok, {nil, nil, []}}
+  @spec init(:ok) :: {:ok, %{commited: nil, stores: []}}
   def init(:ok) do
-    {:ok, {nil, nil, []}}
+    {:ok, %{commited: nil, stores: []}}
   end
 
   @spec create() :: MemStore.t()
@@ -27,22 +27,39 @@ defmodule AeMdw.Sync.MemStoreCreator do
   end
 
   @impl true
-  def handle_call(:create, _from, {endpoint_store, prev_endpoint_store, sync_stores}) do
-    new_sync_store = MemStore.new(DbStore.new())
-    sync_stores = [new_sync_store | sync_stores]
-    {:reply, new_sync_store, {endpoint_store, prev_endpoint_store, sync_stores}}
+  def handle_call(:create, _from, %{stores: stores} = state) do
+    sync_store = MemStore.new(DbStore.new())
+    created_at = System.monotonic_time(:second)
+    stores = [%{store: sync_store, created_at: created_at} | stores]
+
+    {:reply, sync_store, %{state | stores: stores}}
   end
 
   @impl true
-  def handle_cast({:commit, mem_store}, {endpoint_store, prev_endpoint_store, sync_stores}) do
-    if prev_endpoint_store, do: MemStore.delete_store(prev_endpoint_store)
+  def handle_cast({:commit, mem_store}, %{commited: endpoint_store, stores: stores}) do
+    now = System.monotonic_time(:second)
 
-    Enum.each(sync_stores, fn store ->
-      if store not in [mem_store, endpoint_store, prev_endpoint_store] do
-        MemStore.delete_store(store)
-      end
-    end)
+    {keep_stores, expired_stores} =
+      Enum.split_with(stores, fn %{store: store, created_at: created_at} ->
+        store in [mem_store, endpoint_store] or not expired?(now - created_at)
+      end)
 
-    {:noreply, {mem_store, endpoint_store, []}}
+    Enum.each(expired_stores, fn %{store: store} -> MemStore.delete_store(store) end)
+
+    {:noreply, %{commited: mem_store, stores: keep_stores}}
+  end
+
+  # Some legacy V1 endpoints might fetch transaction data from multiple blocks.
+  # `:memstore_lifetime_secs` config allows endpoints to use past mem stores until it's expiration
+  defp expired?(elapsed_time) do
+    case :persistent_term.get({__MODULE__, :memstore_lifetime_secs}, nil) do
+      nil ->
+        lifetime_secs = Application.fetch_env!(:ae_mdw, :memstore_lifetime_secs)
+        :persistent_term.put({__MODULE__, :memstore_lifetime_secs}, lifetime_secs)
+        elapsed_time > lifetime_secs
+
+      lifetime_secs ->
+        elapsed_time > lifetime_secs
+    end
   end
 end
