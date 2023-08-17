@@ -125,9 +125,7 @@ defmodule AeMdw.Names do
   @spec fetch_name_history(state(), pagination(), plain_name(), cursor()) ::
           {:ok, {page_cursor(), [history_item()], page_cursor()}} | {:error, reason()}
   def fetch_name_history(state, plain_name, pagination, cursor) do
-    try do
-      cursor = deserialize_history_cursor(plain_name, cursor)
-
+    with {:ok, cursor} <- deserialize_history_cursor(plain_name, cursor) do
       {prev_cursor, history_keys, next_cursor} =
         state
         |> build_history_streamer(plain_name, cursor)
@@ -139,9 +137,6 @@ defmodule AeMdw.Names do
          Enum.map(history_keys, &render_nested_resource(state, &1)),
          serialize_history_cursor(plain_name, next_cursor)
        }}
-    rescue
-      e in ErrInput ->
-        {:error, e.message}
     end
   end
 
@@ -427,46 +422,18 @@ defmodule AeMdw.Names do
 
   defp build_history_streamer(state, plain_name, cursor) do
     fn direction ->
-      Collection.merge(
-        [
-          Name.stream_nested_resource(
-            state,
-            Model.NameClaim,
-            direction,
-            plain_name,
-            cursor
-          ),
-          Name.stream_nested_resource(
-            state,
-            Model.NameExpired,
-            direction,
-            plain_name,
-            cursor
-          ),
-          Name.stream_nested_resource(
-            state,
-            Model.NameRevoke,
-            direction,
-            plain_name,
-            cursor
-          ),
-          Name.stream_nested_resource(
-            state,
-            Model.NameUpdate,
-            direction,
-            plain_name,
-            cursor
-          ),
-          Name.stream_nested_resource(
-            state,
-            Model.NameTransfer,
-            direction,
-            plain_name,
-            cursor
-          )
-        ],
-        direction
-      )
+      [Model.NameClaim, Model.NameUpdate, Model.NameTransfer, Model.NameRevoke, Model.NameExpired]
+      |> Enum.map(fn table ->
+        key_boundary = {
+          {plain_name, @min_int, {@min_int, @min_int}},
+          {plain_name, @max_int, {@max_int, @max_int}}
+        }
+
+        state
+        |> Collection.stream(table, direction, key_boundary, cursor)
+        |> Stream.map(fn {^plain_name, height, txi_idx} -> {height, txi_idx, table} end)
+      end)
+      |> Collection.merge(direction)
     end
   end
 
@@ -737,15 +704,15 @@ defmodule AeMdw.Names do
     {Base.encode64(cursor_bin, padding: false), is_reversed?}
   end
 
-  defp deserialize_history_cursor(_name, nil), do: nil
+  defp deserialize_history_cursor(_name, nil), do: {:ok, nil}
 
   defp deserialize_history_cursor(name, cursor_str) do
     with {:ok, cursor_bin} <- Base.decode64(cursor_str, padding: false),
          {^name, _height, _txi_idx} = name_op <- :erlang.binary_to_term(cursor_bin) do
-      name_op
+      {:ok, name_op}
     else
       _invalid ->
-        raise(ErrInput.Cursor, value: cursor_str)
+        {:error, ErrInput.Cursor.exception(value: cursor_str)}
     end
   end
 
