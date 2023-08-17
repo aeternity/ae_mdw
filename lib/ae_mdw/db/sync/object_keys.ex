@@ -118,7 +118,7 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
   defp count(state, table) do
     memory_only_keys =
       state
-      |> list_keys(table)
+      |> list_mem_keys(table)
       |> Enum.count(&(not :ets.member(table, &1)))
 
     commited_keys = :ets.info(table, :size)
@@ -126,7 +126,7 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
     memory_only_keys + commited_keys
   end
 
-  defp list_keys(state, table) do
+  defp list_mem_keys(state, table) do
     model_table = @store_tables[table]
 
     if State.has_memory_store?(state) do
@@ -134,7 +134,7 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
       |> State.without_fallback()
       |> stream_all_keys(model_table)
     else
-      stream_all_keys(state, model_table)
+      []
     end
   end
 
