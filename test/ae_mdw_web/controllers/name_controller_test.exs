@@ -2848,6 +2848,16 @@ defmodule AeMdwWeb.NameControllerTest do
                  |> get("/v2/names/#{plain_name}/history", limit: 5)
                  |> json_response(200)
 
+        assert %{
+                 "data" => ^history,
+                 "next" => next_url_hash
+               } =
+                 conn
+                 |> get("/v2/names/#{encode(:name, name_hash)}/history", limit: 5)
+                 |> json_response(200)
+
+        assert URI.parse(next_url).query == URI.parse(next_url_hash).query
+
         refute is_nil(next_url)
 
         assert %{
@@ -3248,8 +3258,9 @@ defmodule AeMdwWeb.NameControllerTest do
     revoke = {504, -1}
     claim2 = {601, -1}
     update2 = {602, -1}
+    {:ok, name_hash} = :aens.get_name_hash(plain_name)
 
-    name =
+    m_name =
       Model.name(
         index: plain_name,
         active: active_from2,
@@ -3259,7 +3270,8 @@ defmodule AeMdwWeb.NameControllerTest do
       )
 
     store
-    |> Store.put(Model.ActiveName, name)
+    |> Store.put(Model.ActiveName, m_name)
+    |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: plain_name))
     |> Store.put(Model.NameClaim, Model.name_claim(index: {plain_name, active_from1, claim1}))
     |> Store.put(Model.NameUpdate, Model.name_update(index: {plain_name, active_from1, update1}))
     |> Store.put(

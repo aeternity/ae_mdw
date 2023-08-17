@@ -124,8 +124,10 @@ defmodule AeMdw.Names do
 
   @spec fetch_name_history(state(), pagination(), plain_name(), cursor()) ::
           {:ok, {page_cursor(), [history_item()], page_cursor()}} | {:error, reason()}
-  def fetch_name_history(state, plain_name, pagination, cursor) do
-    with {:ok, cursor} <- deserialize_history_cursor(plain_name, cursor) do
+  def fetch_name_history(state, plain_name_or_hash, pagination, cursor) do
+    with {:ok, name_or_auction} <- locate_name_or_auction(state, plain_name_or_hash),
+         plain_name <- get_index(name_or_auction),
+         {:ok, cursor} <- deserialize_history_cursor(plain_name, cursor) do
       {prev_cursor, history_keys, next_cursor} =
         state
         |> build_history_streamer(plain_name, cursor)
@@ -848,11 +850,17 @@ defmodule AeMdw.Names do
   defp convert_param(other_param),
     do: raise(ErrInput.Query, value: other_param)
 
+  defp get_index(Model.auction_bid(index: plain_name)), do: plain_name
+  defp get_index(Model.name(index: plain_name)), do: plain_name
+
   defp locate_name_or_auction(state, plain_name_or_hash) do
     plain_name =
-      case State.get(state, Model.PlainName, plain_name_or_hash) do
-        {:ok, Model.plain_name(value: plain_name)} -> plain_name
-        :not_found -> plain_name_or_hash
+      with {:ok, hash_bin} <- Validate.id(plain_name_or_hash),
+           {:ok, Model.plain_name(value: plain_name)} <-
+             State.get(state, Model.PlainName, hash_bin) do
+        plain_name
+      else
+        _no_hash -> plain_name_or_hash
       end
 
     case Name.locate(state, plain_name) do
