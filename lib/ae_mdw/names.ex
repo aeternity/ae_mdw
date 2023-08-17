@@ -426,14 +426,7 @@ defmodule AeMdw.Names do
     fn direction ->
       [Model.NameClaim, Model.NameUpdate, Model.NameTransfer, Model.NameRevoke, Model.NameExpired]
       |> Enum.map(fn table ->
-        key_boundary = {
-          {plain_name, @min_int, {@min_int, @min_int}},
-          {plain_name, @max_int, {@max_int, @max_int}}
-        }
-
-        state
-        |> Collection.stream(table, direction, key_boundary, cursor)
-        |> Stream.map(fn {^plain_name, height, txi_idx} -> {height, txi_idx, table} end)
+        Name.stream_nested_resource(state, table, direction, plain_name, cursor)
       end)
       |> Collection.merge(direction)
     end
