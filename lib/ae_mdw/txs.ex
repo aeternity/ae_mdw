@@ -110,23 +110,30 @@ defmodule AeMdw.Txs do
 
   @spec count_id_type(State.t(), pubkey(), tx_type()) :: non_neg_integer()
   def count_id_type(state, pubkey, tx_type) do
-    tx_type
-    |> Node.tx_ids_positions()
-    |> Enum.reduce(0, fn field_pos, sum ->
-      case State.get(state, Model.IdCount, {tx_type, field_pos, pubkey}) do
-        :not_found -> sum
-        {:ok, Model.id_count(count: count)} -> sum + count
-      end
-    end)
+    {count, repeated_count} =
+      tx_type
+      |> Node.tx_ids_positions()
+      |> Enum.reduce({0, 0}, fn field_pos, {count_acc, repeated_acc} ->
+        case State.get(state, Model.IdCount, {tx_type, field_pos, pubkey}) do
+          :not_found ->
+            {count_acc, repeated_acc}
+
+          {:ok, Model.id_count(count: count)} ->
+            repeated_count = repeated_count(state, tx_type, field_pos, pubkey)
+
+            {count_acc + count, repeated_acc + repeated_count}
+        end
+      end)
+
+    count - div(repeated_count, 2)
   end
 
   @spec count_id_type_group(State.t(), pubkey(), tx_type()) :: non_neg_integer()
   def count_id_type_group(state, pubkey, tx_type_group) do
     tx_type_group
     |> Node.tx_group()
-    |> Enum.reduce(0, fn tx_type, sum ->
-      sum + count_id_type(state, pubkey, tx_type)
-    end)
+    |> Stream.map(&count_id_type(state, pubkey, &1))
+    |> Enum.sum()
   end
 
   @spec id_counts(State.t(), pubkey()) :: %{tx_type() => non_neg_integer()}
@@ -587,5 +594,12 @@ defmodule AeMdw.Txs do
     field
     |> Node.inner_field_positions()
     |> Enum.map(&{tx_type, &1})
+  end
+
+  defp repeated_count(state, tx_type, field_pos, pubkey) do
+    case State.get(state, Model.DupIdCount, {tx_type, field_pos, pubkey}) do
+      {:ok, Model.id_count(count: repeated_count)} -> repeated_count
+      :not_found -> 0
+    end
   end
 end
