@@ -173,7 +173,10 @@ defmodule AeMdw.Db.Sync.Name do
       m_name = State.fetch!(state, Model.ActiveName, plain_name)
 
     state
-    |> State.put(Model.NameExpired, Model.name_expired(index: {plain_name, active, {nil, -1}}))
+    |> State.put(
+      Model.NameExpired,
+      Model.name_expired(index: {plain_name, active, {nil, height}})
+    )
     |> deactivate_name(height, expiration, m_name, :names_expired)
   end
 

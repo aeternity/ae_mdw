@@ -483,7 +483,7 @@ defmodule AeMdw.Db.Sync.NameTest do
         |> Name.put_active(m_name)
 
       state1 = Name.expire_name(state1, expire, plain_name)
-      state2 = State.put(state2, Model.NameExpired, {plain_name, active_from, {nil, -1}})
+      state2 = State.put(state2, Model.NameExpired, {plain_name, active_from, {nil, expire}})
       state2 = Name.deactivate_name(state2, expire, expire, m_name, :names_expired)
 
       assert_same(state1, state2)

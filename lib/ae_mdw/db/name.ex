@@ -168,7 +168,7 @@ defmodule AeMdw.Db.Name do
 
     state
     |> Collection.stream(table, direction, key_boundary, cursor)
-    |> Stream.map(fn {^plain_name, height, txi_idx} -> {{height, txi_idx}, table} end)
+    |> Stream.map(fn {^plain_name, height, txi_idx} -> {height, txi_idx, table} end)
   end
 
   @spec pointers(state(), Model.name()) :: map()

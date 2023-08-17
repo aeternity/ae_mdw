@@ -296,11 +296,11 @@ defmodule AeMdw.Db.Model do
   @type name_claim() :: record(:name_claim, index: name_claim_index())
 
   # name_expired :
-  #     index = {plain_name, name_activation_height, {nil, -1}}
+  #     index = {plain_name, name_activation_height, {nil, expiration_height}}
   @name_expired_defaults [index: nil, unused: nil]
   defrecord :name_expired, @name_expired_defaults
 
-  @type name_expired_index() :: {name_index(), height(), {nil, -1}}
+  @type name_expired_index() :: {name_index(), height(), {nil, height()}}
   @type name_expired() :: record(:name_expired, index: name_expired_index())
 
   # name_revoke :
