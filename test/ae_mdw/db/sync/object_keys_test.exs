@@ -88,7 +88,7 @@ defmodule AeMdw.Db.Sync.ObjectKeysTest do
     assert 4 == ObjectKeys.count_active_oracles(empty_mem_state)
 
     TxnDbStore.transaction(fn store ->
-      state =
+      txn_state =
         store
         |> State.new()
         |> State.put(Model.InactiveName, Model.name(index: "name-i1"))
@@ -100,14 +100,21 @@ defmodule AeMdw.Db.Sync.ObjectKeysTest do
         |> State.put(Model.ActiveOracle, Model.oracle(index: <<14::256>>))
         |> State.put(Model.ActiveOracle, Model.oracle(index: <<25::256>>))
 
-      assert 1 + 1 == ObjectKeys.count_inactive_names(state)
-      assert 2 + 1 == ObjectKeys.count_active_names(state)
-      assert 3 + 1 == ObjectKeys.count_inactive_oracles(state)
-      assert 4 + 1 == ObjectKeys.count_active_oracles(state)
+      # counts only on memory
+      assert 1 == ObjectKeys.count_inactive_names(txn_state)
+      assert 2 == ObjectKeys.count_active_names(txn_state)
+      assert 3 == ObjectKeys.count_inactive_oracles(txn_state)
+      assert 4 == ObjectKeys.count_active_oracles(txn_state)
+
+      ObjectKeys.put_inactive_name(txn_state, "name-i12")
+      ObjectKeys.put_active_name(txn_state, "name-a12")
+      ObjectKeys.put_inactive_oracle(txn_state, <<22::256>>)
+      ObjectKeys.put_active_oracle(txn_state, <<25::256>>)
     end)
 
     db_state = State.new()
 
+    # counts cached + on memory
     assert 1 + 1 == ObjectKeys.count_inactive_names(db_state)
     assert 2 + 1 == ObjectKeys.count_active_names(db_state)
     assert 3 + 1 == ObjectKeys.count_inactive_oracles(db_state)
