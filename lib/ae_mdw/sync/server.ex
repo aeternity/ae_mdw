@@ -277,15 +277,19 @@ defmodule AeMdw.Sync.Server do
   end
 
   defp exec_db_mutations(gens_mutations, initial_state, clear_mem?) do
-    gens_mutations
-    |> Enum.reduce(initial_state, fn {height, blocks_mutations}, state ->
-      {ts, new_state} = :timer.tc(fn -> exec_db_height(state, blocks_mutations, clear_mem?) end)
+    new_state =
+      gens_mutations
+      |> Enum.reduce(initial_state, fn {height, blocks_mutations}, state ->
+        {ts, new_state} = :timer.tc(fn -> exec_db_height(state, blocks_mutations, clear_mem?) end)
 
-      :ok = profile_sync("sync_db", height, ts, blocks_mutations)
+        :ok = profile_sync("sync_db", height, ts, blocks_mutations)
 
-      new_state
-    end)
-    |> then(fn _state -> broadcast_blocks(gens_mutations) end)
+        new_state
+      end)
+
+    broadcast_blocks(gens_mutations)
+
+    new_state
   end
 
   defp exec_db_height(state, blocks_mutations, clear_mem?) do
