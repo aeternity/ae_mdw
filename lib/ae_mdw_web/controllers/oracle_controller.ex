@@ -42,15 +42,19 @@ defmodule AeMdwWeb.OracleController do
   end
 
   @spec oracles(Conn.t(), map()) :: Conn.t()
-  def oracles(%Conn{assigns: assigns, query_params: query_params} = conn, _params) do
-    %{state: state, pagination: pagination, cursor: cursor, opts: opts, scope: scope} = assigns
+  def oracles(%Conn{assigns: assigns} = conn, _params) do
+    %{
+      state: state,
+      pagination: pagination,
+      cursor: cursor,
+      opts: opts,
+      scope: scope,
+      query: query
+    } = assigns
 
-    case Oracles.fetch_oracles(state, pagination, scope, query_params, cursor, opts) do
-      {:ok, prev_cursor, oracles, next_cursor} ->
-        Util.paginate(conn, prev_cursor, oracles, next_cursor)
-
-      {:error, reason} ->
-        {:error, reason}
+    with {:ok, prev_cursor, oracles, next_cursor} <-
+           Oracles.fetch_oracles(state, pagination, scope, query, cursor, opts) do
+      Util.paginate(conn, prev_cursor, oracles, next_cursor)
     end
   end
 
@@ -58,12 +62,9 @@ defmodule AeMdwWeb.OracleController do
   def oracle_queries(%Conn{assigns: assigns} = conn, %{"id" => oracle_id}) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
 
-    case Oracles.fetch_oracle_queries(state, oracle_id, pagination, scope, cursor) do
-      {:ok, {prev_cursor, oracles, next_cursor}} ->
-        Util.paginate(conn, prev_cursor, oracles, next_cursor)
-
-      {:error, reason} ->
-        {:error, reason}
+    with {:ok, paginated_queries} <-
+           Oracles.fetch_oracle_queries(state, oracle_id, pagination, scope, cursor) do
+      Util.paginate(conn, paginated_queries)
     end
   end
 
@@ -71,12 +72,9 @@ defmodule AeMdwWeb.OracleController do
   def oracle_responses(%Conn{assigns: assigns} = conn, %{"id" => oracle_id}) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
 
-    case Oracles.fetch_oracle_responses(state, oracle_id, pagination, scope, cursor) do
-      {:ok, {prev_cursor, oracles, next_cursor}} ->
-        Util.paginate(conn, prev_cursor, oracles, next_cursor)
-
-      {:error, reason} ->
-        {:error, reason}
+    with {:ok, paginated_responses} <-
+           Oracles.fetch_oracle_responses(state, oracle_id, pagination, scope, cursor) do
+      Util.paginate(conn, paginated_responses)
     end
   end
 end

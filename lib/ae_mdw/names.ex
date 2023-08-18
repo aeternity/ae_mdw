@@ -60,7 +60,6 @@ defmodule AeMdw.Names do
   @table_inactive_expiration Model.InactiveNameExpiration
   @table_inactive_owner Model.InactiveNameOwner
 
-  @pagination_params ~w(limit cursor rev direction scope tx_hash expand)
   @states ~w(active inactive)
   @all_lifecycles ~w(active inactive auction)a
 
@@ -76,37 +75,40 @@ defmodule AeMdw.Names do
     cursor = deserialize_height_cursor(cursor)
     scope = deserialize_scope(range)
 
-    {prev_cursor, height_keys, next_cursor} =
-      query
-      |> Map.drop(@pagination_params)
-      |> Map.new(&convert_param/1)
-      |> build_height_streamer(state, scope, cursor)
-      |> Collection.paginate(pagination)
+    with {:ok, filters} <- Util.convert_params(query, &convert_param/1),
+         :ok <- validate_params(filters, order_by) do
+      {prev_cursor, height_keys, next_cursor} =
+        filters
+        |> Map.new()
+        |> build_height_streamer(state, order_by, scope, cursor)
+        |> Collection.paginate(pagination)
 
-    {:ok,
-     {
-       serialize_height_cursor(prev_cursor),
-       render_height_list(state, height_keys, opts),
-       serialize_height_cursor(next_cursor)
-     }}
+      {:ok,
+       {
+         serialize_height_cursor(prev_cursor),
+         render_height_list(state, height_keys, opts),
+         serialize_height_cursor(next_cursor)
+       }}
+    end
   end
 
   def fetch_names(state, pagination, nil, :name, query, cursor, opts) do
     cursor = deserialize_name_cursor(cursor)
 
-    {prev_cursor, name_keys, next_cursor} =
-      query
-      |> Map.drop(@pagination_params)
-      |> Map.new(&convert_param/1)
-      |> build_name_streamer(state, cursor)
-      |> Collection.paginate(pagination)
+    with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
+      {prev_cursor, name_keys, next_cursor} =
+        filters
+        |> Map.new()
+        |> build_name_streamer(state, cursor)
+        |> Collection.paginate(pagination)
 
-    {:ok,
-     {
-       serialize_name_cursor(prev_cursor),
-       render_names_list(state, name_keys, opts),
-       serialize_name_cursor(next_cursor)
-     }}
+      {:ok,
+       {
+         serialize_name_cursor(prev_cursor),
+         render_names_list(state, name_keys, opts),
+         serialize_name_cursor(next_cursor)
+       }}
+    end
   end
 
   def fetch_names(_state, _pagination, _range, :name, _query, _cursor, _opts) do
@@ -310,7 +312,13 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp build_height_streamer(%{owned_by: owner_pk, state: "active"}, state, scope, cursor) do
+  defp build_height_streamer(
+         %{owned_by: owner_pk, state: "active"},
+         state,
+         _order_by,
+         scope,
+         cursor
+       ) do
     key_boundary = serialize_owner_deactivation_key_boundary(owner_pk, scope)
     cursor = serialize_owner_deactivation_cursor(owner_pk, cursor)
 
@@ -323,7 +331,13 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp build_height_streamer(%{owned_by: owner_pk, state: "inactive"}, state, scope, cursor) do
+  defp build_height_streamer(
+         %{owned_by: owner_pk, state: "inactive"},
+         state,
+         _order_by,
+         scope,
+         cursor
+       ) do
     key_boundary = serialize_owner_deactivation_key_boundary(owner_pk, scope)
     cursor = serialize_owner_deactivation_cursor(owner_pk, cursor)
 
@@ -336,7 +350,7 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp build_height_streamer(%{owned_by: owner_pk}, state, scope, cursor) do
+  defp build_height_streamer(%{owned_by: owner_pk}, state, _order_by, scope, cursor) do
     key_boundary = serialize_owner_deactivation_key_boundary(owner_pk, scope)
     cursor = serialize_owner_deactivation_cursor(owner_pk, cursor)
 
@@ -366,7 +380,7 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp build_height_streamer(%{state: "active", by: "activation"}, state, scope, cursor) do
+  defp build_height_streamer(%{state: "active"}, state, :activation, scope, cursor) do
     fn direction ->
       state
       |> Collection.stream(@table_activation, direction, scope, cursor)
@@ -374,7 +388,7 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp build_height_streamer(%{state: "active"}, state, scope, cursor) do
+  defp build_height_streamer(%{state: "active"}, state, _order_by, scope, cursor) do
     fn direction ->
       state
       |> Collection.stream(@table_active_expiration, direction, scope, cursor)
@@ -382,7 +396,7 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp build_height_streamer(%{state: "inactive"}, state, scope, cursor) do
+  defp build_height_streamer(%{state: "inactive"}, state, _order_by, scope, cursor) do
     fn direction ->
       state
       |> Collection.stream(@table_inactive_expiration, direction, scope, cursor)
@@ -390,11 +404,7 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp build_height_streamer(%{by: "activation"}, _state, _scope, _cursor) do
-    raise(ErrInput.Query, value: "can only order by activation when filtering active names")
-  end
-
-  defp build_height_streamer(_query, state, scope, cursor) do
+  defp build_height_streamer(_query, state, _order_by, scope, cursor) do
     fn direction ->
       active_stream =
         state
@@ -824,15 +834,15 @@ defmodule AeMdw.Names do
 
   defp deserialize_scope(_nil_or_txis_scope), do: nil
 
-  defp convert_param({"owned_by", account_id}) when is_binary(account_id),
-    do: {:owned_by, Validate.id!(account_id, [:account_pubkey])}
+  defp convert_param({"owned_by", account_id}) when is_binary(account_id) do
+    with {:ok, pubkey} <- Validate.id(account_id, [:account_pubkey]) do
+      {:ok, {:owned_by, pubkey}}
+    end
+  end
 
-  defp convert_param({"state", state}) when state in @states, do: {:state, state}
+  defp convert_param({"state", state}) when state in @states, do: {:ok, {:state, state}}
 
-  defp convert_param({"by", by}), do: {:by, by}
-
-  defp convert_param(other_param),
-    do: raise(ErrInput.Query, value: other_param)
+  defp convert_param(other_param), do: {:error, ErrInput.Query.exception(value: other_param)}
 
   defp get_index(Model.auction_bid(index: plain_name)), do: plain_name
   defp get_index(Model.name(index: plain_name)), do: plain_name
@@ -866,4 +876,19 @@ defmodule AeMdw.Names do
       _error_or_invalid -> nil
     end
   end
+
+  defp validate_params(filters, :activation) do
+    case Keyword.get(filters, :state) do
+      "active" ->
+        :ok
+
+      _state ->
+        {:error,
+         ErrInput.Query.exception(
+           value: "can only order by activation when filtering active names"
+         )}
+    end
+  end
+
+  defp validate_params(_filters, _order_by), do: :ok
 end

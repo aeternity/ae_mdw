@@ -40,7 +40,6 @@ defmodule AeMdw.Oracles do
   @table_inactive_expiration Model.InactiveOracleExpiration
   @table_query Model.OracleQuery
 
-  @pagination_params ~w(limit cursor rev direction scope expand tx_hash)
   @states ~w(active inactive)
 
   @spec fetch_oracles(state(), pagination(), range(), query(), cursor() | nil, opts()) ::
@@ -49,19 +48,16 @@ defmodule AeMdw.Oracles do
     cursor = deserialize_cursor(cursor)
     scope = deserialize_scope(range)
 
-    try do
+    with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
       {prev_cursor, expiration_keys, next_cursor} =
-        query
-        |> Map.drop(@pagination_params)
-        |> Map.new(&convert_param/1)
+        filters
+        |> Map.new()
         |> build_streamer(state, scope, cursor)
         |> Collection.paginate(pagination)
 
       oracles = render_list(state, expiration_keys, opts)
 
       {:ok, serialize_cursor(prev_cursor), oracles, serialize_cursor(next_cursor)}
-    rescue
-      e in ErrInput -> {:error, e}
     end
   end
 
@@ -232,10 +228,9 @@ defmodule AeMdw.Oracles do
     end
   end
 
-  defp convert_param({"state", state}) when state in @states, do: {:state, state}
+  defp convert_param({"state", state}) when state in @states, do: {:ok, {:state, state}}
 
-  defp convert_param(other_param),
-    do: raise(ErrInput.Query, value: other_param)
+  defp convert_param(other_param), do: {:error, ErrInput.Query.exception(value: other_param)}
 
   defp build_streamer(%{state: "active"}, state, scope, cursor) do
     fn direction ->

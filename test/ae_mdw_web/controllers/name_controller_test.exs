@@ -1658,6 +1658,14 @@ defmodule AeMdwWeb.NameControllerTest do
       assert %{"error" => ^error} =
                conn |> get("/names?by=#{by}&direction=#{direction}") |> json_response(400)
     end
+
+    test "renders error when parameter owned_by is not an address", %{conn: conn} do
+      owned_by = "invalid_address"
+      error = "invalid id: #{owned_by}"
+
+      assert %{"error" => ^error} =
+               conn |> get("/names?owned_by=#{owned_by}") |> json_response(400)
+    end
   end
 
   describe "name" do

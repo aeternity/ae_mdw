@@ -13,6 +13,7 @@ defmodule AeMdw.Contracts do
   alias AeMdw.Db.Stream.Query.Parser
   alias AeMdw.Db.Sync.InnerTx
   alias AeMdw.Db.Util, as: DBUtil
+  alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db
   alias AeMdw.Txs
@@ -46,8 +47,6 @@ defmodule AeMdw.Contracts do
   @fname_grp_contract_call_table Model.FnameGrpIntContractCall
   @id_int_contract_call_table Model.IdIntContractCall
   @grp_id_int_contract_call_table Model.GrpIdIntContractCall
-
-  @pagination_params ~w(limit cursor rev direction scope tx_hash)
 
   @min_fname Util.min_bin()
   @max_256bit_bin Util.max_256bit_bin()
@@ -86,43 +85,47 @@ defmodule AeMdw.Contracts do
   end
 
   @spec fetch_logs(State.t(), pagination(), range(), query(), cursor()) ::
-          {cursor(), [log()], cursor()}
+          {:ok, {cursor(), [log()], cursor()}} | {:error, Error.t()}
   def fetch_logs(state, pagination, range, query, cursor) do
     cursor = deserialize_logs_cursor(cursor)
     scope = deserialize_scope(state, range)
 
-    {prev_cursor, logs, next_cursor} =
-      query
-      |> Map.drop(@pagination_params)
-      |> Map.new(&convert_param(state, &1))
-      |> build_logs_pagination(state, scope, cursor)
-      |> Collection.paginate(pagination)
+    with {:ok, filters} <- Util.convert_params(query, &convert_param(state, &1)) do
+      {prev_cursor, logs, next_cursor} =
+        filters
+        |> Map.new()
+        |> build_logs_pagination(state, scope, cursor)
+        |> Collection.paginate(pagination)
 
-    {
-      serialize_logs_cursor(prev_cursor),
-      logs,
-      serialize_logs_cursor(next_cursor)
-    }
+      {:ok,
+       {
+         serialize_logs_cursor(prev_cursor),
+         logs,
+         serialize_logs_cursor(next_cursor)
+       }}
+    end
   end
 
   @spec fetch_calls(State.t(), pagination(), range(), query(), cursor()) ::
-          {cursor(), [call()], cursor()}
+          {:ok, {cursor(), [call()], cursor()}} | {:error, Error.t()}
   def fetch_calls(state, pagination, range, query, cursor) do
     cursor = deserialize_calls_cursor(cursor)
     scope = deserialize_scope(state, range)
 
-    {prev_cursor, calls, next_cursor} =
-      query
-      |> Map.drop(@pagination_params)
-      |> Map.new(&convert_param(state, &1))
-      |> build_calls_pagination(state, scope, cursor)
-      |> Collection.paginate(pagination)
+    with {:ok, filters} <- Util.convert_params(query, &convert_param(state, &1)) do
+      {prev_cursor, calls, next_cursor} =
+        filters
+        |> Map.new()
+        |> build_calls_pagination(state, scope, cursor)
+        |> Collection.paginate(pagination)
 
-    {
-      serialize_calls_cursor(prev_cursor),
-      Enum.map(calls, &render_call(state, &1)),
-      serialize_calls_cursor(next_cursor)
-    }
+      {:ok,
+       {
+         serialize_calls_cursor(prev_cursor),
+         Enum.map(calls, &render_call(state, &1)),
+         serialize_calls_cursor(next_cursor)
+       }}
+    end
   end
 
   @spec fetch_int_contract_calls(State.t(), Txs.txi(), Contract.fname()) :: Enumerable.t()
@@ -501,22 +504,23 @@ defmodule AeMdw.Contracts do
   end
 
   defp convert_param(state, {"contract_id", contract_id}),
-    do: {:create_txi, create_txi!(state, contract_id)}
+    do: {:ok, {:create_txi, create_txi!(state, contract_id)}}
 
   defp convert_param(state, {"contract", contract_id}),
-    do: {:create_txi, create_txi!(state, contract_id)}
+    do: {:ok, {:create_txi, create_txi!(state, contract_id)}}
 
-  defp convert_param(_state, {"data", data}), do: {:data_prefix, URI.decode(data)}
+  defp convert_param(_state, {"data", data}), do: {:ok, {:data_prefix, URI.decode(data)}}
 
   defp convert_param(_state, {"event", ctor_name}),
-    do: {:event_hash, :aec_hash.blake2b_256_hash(ctor_name)}
+    do: {:ok, {:event_hash, :aec_hash.blake2b_256_hash(ctor_name)}}
 
-  defp convert_param(_state, {"function", fname}) when byte_size(fname) > 0, do: {:fname, fname}
+  defp convert_param(_state, {"function", fname}) when byte_size(fname) > 0,
+    do: {:ok, {:fname, fname}}
 
   defp convert_param(state, {"function_prefix", fname}),
-    do: convert_param(state, {"function", fname})
+    do: {:ok, convert_param(state, {"function", fname})}
 
-  defp convert_param(_state, {"aexn-args", _}), do: {:ignore, nil}
+  defp convert_param(_state, {"aexn-args", _}), do: {:ok, {:ignore, nil}}
 
   defp convert_param(_state, {id_key, id_val}) do
     pos_types =
@@ -525,10 +529,8 @@ defmodule AeMdw.Contracts do
       |> Enum.flat_map(fn {tx_type, positions} -> Enum.map(positions, &{&1, tx_type}) end)
       |> Enum.group_by(fn {pos, _tx_type} -> pos end, fn {_pos, tx_type} -> tx_type end)
 
-    {:type_pos, {pos_types, Validate.id!(id_val)}}
+    {:ok, {:type_pos, {pos_types, Validate.id!(id_val)}}}
   end
-
-  defp convert_param(_state, other), do: raise(ErrInput.Query, value: other)
 
   defp deserialize_scope(_state, nil), do: {@min_txi, @max_txi}
 

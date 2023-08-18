@@ -37,8 +37,8 @@ defmodule AeMdwWeb.AexnTokenController do
   end
 
   @spec aex9_contracts(Conn.t(), map()) :: Conn.t()
-  def aex9_contracts(%Conn{assigns: assigns, query_params: query_params} = conn, _params) do
-    aexn_contracts(conn, assigns, query_params, :aex9)
+  def aex9_contracts(%Conn{assigns: assigns} = conn, _params) do
+    aexn_contracts(conn, assigns, :aex9)
   end
 
   @spec aex141_count(Conn.t(), map()) :: Conn.t()
@@ -47,8 +47,8 @@ defmodule AeMdwWeb.AexnTokenController do
   end
 
   @spec aex141_contracts(Conn.t(), map()) :: Conn.t()
-  def aex141_contracts(%Conn{assigns: assigns, query_params: query_params} = conn, _params) do
-    aexn_contracts(conn, assigns, query_params, :aex141)
+  def aex141_contracts(%Conn{assigns: assigns} = conn, _params) do
+    aexn_contracts(conn, assigns, :aex141)
   end
 
   @spec aex9_contract(Conn.t(), map()) :: Conn.t()
@@ -132,17 +132,17 @@ defmodule AeMdwWeb.AexnTokenController do
          %{
            pagination: pagination,
            cursor: cursor,
-           order_by: order_by
+           order_by: order_by,
+           query: query
          },
-         query_params,
          aexn_type
        ) do
-    with {:ok, prev_cursor, aexn_contracts, next_cursor} <-
+    with {:ok, {prev_cursor, aexn_contracts, next_cursor}} <-
            AexnTokens.fetch_contracts(
              state,
              pagination,
              aexn_type,
-             query_params,
+             query,
              order_by,
              cursor
            ) do

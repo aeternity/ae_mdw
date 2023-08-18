@@ -30,30 +30,25 @@ defmodule AeMdwWeb.ContractController do
   end
 
   @spec logs(Conn.t(), map()) :: Conn.t()
-  def logs(%Conn{assigns: assigns, query_params: query_params} = conn, _params) do
-    %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
+  def logs(%Conn{assigns: assigns} = conn, _params) do
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope, query: query} = assigns
 
-    case valid_args_params(query_params) do
-      {:ok, encode_args} ->
-        {prev_cursor, logs, next_cursor} =
-          Contracts.fetch_logs(state, pagination, scope, query_params, cursor)
+    with {:ok, encode_args} <- valid_args_params(query),
+         {:ok, {prev_cursor, logs, next_cursor}} <-
+           Contracts.fetch_logs(state, pagination, scope, query, cursor) do
+      logs = Enum.map(logs, &LogsView.render_log(state, &1, encode_args))
 
-        logs = Enum.map(logs, &LogsView.render_log(state, &1, encode_args))
-
-        Util.paginate(conn, prev_cursor, logs, next_cursor)
-
-      {:error, :invalid_args_params} ->
-        {:error,
-         ErrInput.Query.exception(value: "aexn-args and custom-args should be true or false")}
+      Util.paginate(conn, prev_cursor, logs, next_cursor)
     end
   end
 
   @spec calls(Conn.t(), map()) :: Conn.t()
-  def calls(%Conn{assigns: assigns, query_params: query_params} = conn, _params) do
-    %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
+  def calls(%Conn{assigns: assigns} = conn, _params) do
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope, query: query} = assigns
 
-    calls = Contracts.fetch_calls(state, pagination, scope, query_params, cursor)
-    Util.paginate(conn, calls)
+    with {:ok, calls} <- Contracts.fetch_calls(state, pagination, scope, query, cursor) do
+      Util.paginate(conn, calls)
+    end
   end
 
   defp valid_args_params(query_params) do
@@ -69,7 +64,8 @@ defmodule AeMdwWeb.ContractController do
 
       {:ok, encode_args}
     else
-      {:error, :invalid_args_params}
+      {:error,
+       ErrInput.Query.exception(value: "aexn-args and custom-args should be true or false")}
     end
   end
 end
