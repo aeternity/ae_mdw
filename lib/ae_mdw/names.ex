@@ -24,6 +24,7 @@ defmodule AeMdw.Names do
 
   @type cursor() :: binary() | nil
   @type page_cursor() :: Collection.pagination_cursor()
+  @type reason :: ErrInput.t()
   # This needs to be an actual type like AeMdw.Db.Name.t()
   @type name :: term()
   @type history_item :: claim() | update() | transfer() | revoke()
@@ -44,7 +45,6 @@ defmodule AeMdw.Names do
   @typep order_by :: :expiration | :name
   @typep pagination :: Collection.direction_limit()
   @typep range :: {:gen, Range.t()} | nil
-  @typep reason :: binary()
   @typep lifecycle() :: :active | :inactive | :auction
   @typep prefix() :: plain_name()
   @typep opts() :: Util.opts()
@@ -76,50 +76,41 @@ defmodule AeMdw.Names do
     cursor = deserialize_height_cursor(cursor)
     scope = deserialize_scope(range)
 
-    try do
-      {prev_cursor, height_keys, next_cursor} =
-        query
-        |> Map.drop(@pagination_params)
-        |> Map.new(&convert_param/1)
-        |> build_height_streamer(state, scope, cursor)
-        |> Collection.paginate(pagination)
+    {prev_cursor, height_keys, next_cursor} =
+      query
+      |> Map.drop(@pagination_params)
+      |> Map.new(&convert_param/1)
+      |> build_height_streamer(state, scope, cursor)
+      |> Collection.paginate(pagination)
 
-      {:ok,
-       {serialize_height_cursor(prev_cursor), render_height_list(state, height_keys, opts),
-        serialize_height_cursor(next_cursor)}}
-    rescue
-      e in ErrInput ->
-        {:error, e.message}
-    end
+    {:ok,
+     {
+       serialize_height_cursor(prev_cursor),
+       render_height_list(state, height_keys, opts),
+       serialize_height_cursor(next_cursor)
+     }}
   end
 
   def fetch_names(state, pagination, nil, :name, query, cursor, opts) do
     cursor = deserialize_name_cursor(cursor)
 
-    try do
-      {prev_cursor, name_keys, next_cursor} =
-        query
-        |> Map.drop(@pagination_params)
-        |> Map.new(&convert_param/1)
-        |> build_name_streamer(state, cursor)
-        |> Collection.paginate(pagination)
+    {prev_cursor, name_keys, next_cursor} =
+      query
+      |> Map.drop(@pagination_params)
+      |> Map.new(&convert_param/1)
+      |> build_name_streamer(state, cursor)
+      |> Collection.paginate(pagination)
 
-      {:ok,
-       {serialize_name_cursor(prev_cursor), render_names_list(state, name_keys, opts),
-        serialize_name_cursor(next_cursor)}}
-    rescue
-      e in ErrInput ->
-        {:error, e.message}
-    end
+    {:ok,
+     {
+       serialize_name_cursor(prev_cursor),
+       render_names_list(state, name_keys, opts),
+       serialize_name_cursor(next_cursor)
+     }}
   end
 
   def fetch_names(_state, _pagination, _range, :name, _query, _cursor, _opts) do
-    try do
-      raise(ErrInput.Query, value: "can't scope names sorted by name")
-    rescue
-      e in ErrInput ->
-        {:error, e.message}
-    end
+    {:error, ErrInput.Query.exception(value: "can't scope names sorted by name")}
   end
 
   @spec fetch_name_history(state(), pagination(), plain_name(), cursor()) ::

@@ -15,13 +15,12 @@ defmodule AeMdw.Transfers do
 
   require Model
 
-  @type cursor :: {binary(), Collection.is_reversed?()}
+  @type cursor :: {binary(), Collection.is_reversed?()} | nil
   @type transfer :: term()
   @type query :: %{binary() => binary()}
 
   @typep pagination :: Collection.direction_limit()
   @typep range :: {:gen, Range.t()} | {:txi, Range.t()} | nil
-  @typep reason :: binary()
 
   @pagination_params ~w(limit cursor rev direction scope tx_hash)
 
@@ -33,26 +32,24 @@ defmodule AeMdw.Transfers do
   @target_kind_int_transfer_tx_table Model.TargetKindIntTransferTx
   @kind_int_transfer_tx_table Model.KindIntTransferTx
 
-  @spec fetch_transfers(State.t(), pagination(), range(), query(), cursor() | nil) ::
-          {:ok, cursor() | nil, [transfer()], cursor() | nil} | {:error, reason()}
+  @spec fetch_transfers(State.t(), pagination(), range(), query(), cursor()) ::
+          {cursor(), [transfer()], cursor()}
   def fetch_transfers(state, pagination, range, query, cursor) do
     cursor = deserialize_cursor(cursor)
     scope = deserialize_scope(state, range)
 
-    try do
-      {prev_cursor, transfers, next_cursor} =
-        query
-        |> Map.drop(@pagination_params)
-        |> Map.new(&convert_param/1)
-        |> build_streamer(state, scope, cursor)
-        |> Collection.paginate(pagination)
+    {prev_cursor, transfers, next_cursor} =
+      query
+      |> Map.drop(@pagination_params)
+      |> Map.new(&convert_param/1)
+      |> build_streamer(state, scope, cursor)
+      |> Collection.paginate(pagination)
 
-      {:ok, serialize_cursor(prev_cursor), Enum.map(transfers, &render(state, &1)),
-       serialize_cursor(next_cursor)}
-    rescue
-      e in ErrInput ->
-        {:error, e.message}
-    end
+    {
+      serialize_cursor(prev_cursor),
+      Enum.map(transfers, &render(state, &1)),
+      serialize_cursor(next_cursor)
+    }
   end
 
   # Retrieves transfers within the {account, kind_prefix_*, gen_txi, X} range.

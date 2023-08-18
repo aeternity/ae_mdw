@@ -16,9 +16,9 @@ defmodule AeMdwWeb.ContractController do
   def contracts(%Conn{assigns: assigns} = conn, _params) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
 
-    with {:ok, {prev_cursor, contracts, next_cursor}} <-
+    with {:ok, contracts} <-
            Contracts.fetch_contracts(state, pagination, scope, cursor) do
-      Util.paginate(conn, prev_cursor, contracts, next_cursor)
+      Util.paginate(conn, contracts)
     end
   end
 
@@ -33,19 +33,18 @@ defmodule AeMdwWeb.ContractController do
   def logs(%Conn{assigns: assigns, query_params: query_params} = conn, _params) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
 
-    with {:ok, encode_args} <- valid_args_params(query_params),
-         {:ok, prev_cursor, logs, next_cursor} <-
-           Contracts.fetch_logs(state, pagination, scope, query_params, cursor) do
-      logs = Enum.map(logs, &LogsView.render_log(state, &1, encode_args))
+    case valid_args_params(query_params) do
+      {:ok, encode_args} ->
+        {prev_cursor, logs, next_cursor} =
+          Contracts.fetch_logs(state, pagination, scope, query_params, cursor)
 
-      Util.paginate(conn, prev_cursor, logs, next_cursor)
-    else
+        logs = Enum.map(logs, &LogsView.render_log(state, &1, encode_args))
+
+        Util.paginate(conn, prev_cursor, logs, next_cursor)
+
       {:error, :invalid_args_params} ->
         {:error,
          ErrInput.Query.exception(value: "aexn-args and custom-args should be true or false")}
-
-      {:error, reason} ->
-        Util.send_error(conn, :bad_request, reason)
     end
   end
 
@@ -53,13 +52,8 @@ defmodule AeMdwWeb.ContractController do
   def calls(%Conn{assigns: assigns, query_params: query_params} = conn, _params) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
 
-    case Contracts.fetch_calls(state, pagination, scope, query_params, cursor) do
-      {:ok, prev_cursor, calls, next_cursor} ->
-        Util.paginate(conn, prev_cursor, calls, next_cursor)
-
-      {:error, reason} ->
-        Util.send_error(conn, :bad_request, reason)
-    end
+    calls = Contracts.fetch_calls(state, pagination, scope, query_params, cursor)
+    Util.paginate(conn, calls)
   end
 
   defp valid_args_params(query_params) do
