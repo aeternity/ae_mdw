@@ -15,7 +15,7 @@ defmodule AeMdw.Transfers do
 
   require Model
 
-  @type cursor :: {binary(), Collection.is_reversed?()}
+  @type cursor :: {binary(), Collection.is_reversed?()} | nil
   @type transfer :: term()
   @type query :: %{binary() => binary()}
 
@@ -32,8 +32,8 @@ defmodule AeMdw.Transfers do
   @target_kind_int_transfer_tx_table Model.TargetKindIntTransferTx
   @kind_int_transfer_tx_table Model.KindIntTransferTx
 
-  @spec fetch_transfers(State.t(), pagination(), range(), query(), cursor() | nil) ::
-          {:ok, {cursor() | nil, [transfer()], cursor() | nil}}
+  @spec fetch_transfers(State.t(), pagination(), range(), query(), cursor()) ::
+          {cursor(), [transfer()], cursor()}
   def fetch_transfers(state, pagination, range, query, cursor) do
     cursor = deserialize_cursor(cursor)
     scope = deserialize_scope(state, range)
@@ -45,9 +45,11 @@ defmodule AeMdw.Transfers do
       |> build_streamer(state, scope, cursor)
       |> Collection.paginate(pagination)
 
-    {:ok,
-     {serialize_cursor(prev_cursor), Enum.map(transfers, &render(state, &1)),
-      serialize_cursor(next_cursor)}}
+    {
+      serialize_cursor(prev_cursor),
+      Enum.map(transfers, &render(state, &1)),
+      serialize_cursor(next_cursor)
+    }
   end
 
   # Retrieves transfers within the {account, kind_prefix_*, gen_txi, X} range.

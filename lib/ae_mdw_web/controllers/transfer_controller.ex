@@ -12,8 +12,7 @@ defmodule AeMdwWeb.TransferController do
   def transfers(%Conn{assigns: assigns, query_params: query_params} = conn, _params) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
 
-    state
-    |> Transfers.fetch_transfers(pagination, scope, query_params, cursor)
-    |> then(fn {:ok, transfers} -> Util.paginate(conn, transfers) end)
+    transfers = Transfers.fetch_transfers(state, pagination, scope, query_params, cursor)
+    Util.paginate(conn, transfers)
   end
 end

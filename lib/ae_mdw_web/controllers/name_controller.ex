@@ -241,8 +241,8 @@ defmodule AeMdwWeb.NameController do
       scope: scope
     } = assigns
 
-    with {:ok, names} <- Names.fetch_name_updates(state, name_id, pagination, scope, cursor) do
-      Util.paginate(conn, names)
+    with {:ok, updates} <- Names.fetch_name_updates(state, name_id, pagination, scope, cursor) do
+      Util.paginate(conn, updates)
     end
   end
 
