@@ -4679,15 +4679,22 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/deltastats?limit=1" | jq '.'
 {
   "data": [
     {
-      "active_auctions": 1249,
-      "active_names": 1754,
-      "active_oracles": 9,
-      "block_reward": 97460926597753680000000000,
-      "contracts": 1368,
-      "dev_reward": 7359459527973738000000000,
-      "height": 419208,
-      "inactive_names": 538056,
-      "inactive_oracles": 18
+      "auctions_started": 0,
+      "block_reward": 0,
+      "burned_in_auctions": 0,
+      "channels_closed": 0,
+      "channels_opened": 0,
+      "contracts_created": 0,
+      "dev_reward": 0,
+      "height": 1,
+      "last_tx_hash": "th_2FHxDzpQMRTiRfpYRV3eCcsheHr1sjf9waxk7z6JDTVcgqZRXR",
+      "locked_in_auctions": 0,
+      "locked_in_channels": 0,
+      "names_activated": 0,
+      "names_expired": 0,
+      "names_revoked": 0,
+      "oracles_expired": 0,
+      "oracles_registered": 0
     }
   ],
   "next": "/v2/deltastats?scope=gen:419209-0&limit=1&cursor=419208"
@@ -4703,10 +4710,21 @@ $ curl -s "https://mainnet.aeternity.io/mdw/v2/totalstats?gen:421454-0&limit=1" 
 {
   "data": [
     {
-      "height": 421453,
-      "sum_block_reward": 2.575586328292814e+31,
-      "sum_dev_reward": 1425114681800906500000000000000,
-      "total_token_supply": 2.718122171075295e+31
+      "active_auctions": 0,
+      "active_names": 0,
+      "active_oracles": 0,
+      "burned_in_auctions": 0,
+      "contracts": 0,
+      "height": 421454,
+      "inactive_names": 0,
+      "inactive_oracles": 0,
+      "last_tx_hash": "th_2FHxDzpQMRTiRfpYRV3eCcsheHr1sjf9waxk7z6JDTVcgqZRXR",
+      "locked_in_auctions": 0,
+      "locked_in_channels": 0,
+      "open_channels": 0,
+      "sum_block_reward": 0,
+      "sum_dev_reward": 0,
+      "total_token_supply": 8.945137682239798e+25
     }
   ],
   "next": "/v2/totalstats?scope=gen:421454-0&limit=1&cursor=42152"

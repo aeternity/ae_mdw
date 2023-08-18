@@ -33,6 +33,9 @@ schemas:
       oracles_registered:
         description: The number of oracles registered
         type: integer
+      last_tx_hash:
+        description: The last transaction hash for this height
+        type: string
     example:
       auctions_started: 0
       block_reward: 269973000000000000000
@@ -44,6 +47,7 @@ schemas:
       names_revoked: 0
       oracles_expired: 0
       oracles_registered: 0
+      last_tx_hash: th_2FHxDzpQMRTiRfpYRV3eCcsheHr1sjf9waxk7z6JDTVcgqZRXR
   TotalStat:
     type: object
     description: TotalStat
@@ -78,6 +82,9 @@ schemas:
       oracles_registered:
         description: The number of oracles registered
         type: integer
+      last_tx_hash:
+        description: The last transaction hash for this height
+        type: string
     example:
       auctions_started: 0
       block_reward: 269973000000000000000
@@ -89,7 +96,7 @@ schemas:
       names_revoked: 0
       oracles_expired: 0
       oracles_registered: 0
-
+      last_tx_hash: th_2FHxDzpQMRTiRfpYRV3eCcsheHr1sjf9waxk7z6JDTVcgqZRXR
 paths:
   /deltastats:
     get:
