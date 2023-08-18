@@ -77,6 +77,7 @@ defmodule AeMdwWeb.Router do
       get "/names/search", NameController, :search
       get "/names", NameController, :names_v2
       get "/names/:id", NameController, :name
+      get "/names/:id/history", NameController, :name_history
       get "/names/:id/claims", NameController, :name_claims
       get "/names/:id/updates", NameController, :name_updates
       get "/names/:id/transfers", NameController, :name_transfers

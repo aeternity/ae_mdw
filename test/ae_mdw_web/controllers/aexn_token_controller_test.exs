@@ -3,15 +3,13 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
-  alias AeMdw.Db.NullStore
-  alias AeMdw.Db.MemStore
   alias AeMdw.Db.Store
   alias AeMdw.Validate
   alias AeMdw.Stats
 
   import AeMdw.Util.Encoding, only: [encode_contract: 1, encode_account: 1, encode: 2]
 
-  import AeMdw.TestUtil, only: [with_store: 2]
+  import AeMdw.TestUtil, only: [empty_store: 0, with_store: 2]
 
   import Phoenix.ConnTest
   @endpoint AeMdwWeb.Endpoint
@@ -25,12 +23,8 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
   @aex141_token_id encode_contract(<<311::256>>)
 
   setup_all _context do
-    empty_store =
-      NullStore.new()
-      |> MemStore.new()
-
     store =
-      Enum.reduce(200..230, empty_store, fn i, store ->
+      Enum.reduce(200..230, empty_store(), fn i, store ->
         meta_info =
           if i < 225 do
             {"some-AEX9-#{i}", "SAEX9#{i}", i}

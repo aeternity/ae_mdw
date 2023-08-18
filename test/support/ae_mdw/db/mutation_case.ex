@@ -7,9 +7,19 @@ defmodule AeMdw.Db.MutationCase do
 
   using do
     quote do
+      alias AeMdw.TestSamples, as: TS
+      alias AeMdw.Db.Model
+      alias AeMdw.Db.State
+      alias AeMdw.Db.Store
+
       import AeMdw.TestUtil
 
-      alias AeMdw.Db.Store
+      defp assert_same(state1, state2) do
+        Model.column_families()
+        |> Enum.all?(fn table ->
+          all_keys(state1, table) == all_keys(state2, table)
+        end)
+      end
     end
   end
 

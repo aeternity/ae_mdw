@@ -26,9 +26,11 @@ defmodule AeMdw.Names do
   @type page_cursor() :: Collection.pagination_cursor()
   # This needs to be an actual type like AeMdw.Db.Name.t()
   @type name :: term()
+  @type history_item :: claim() | update() | transfer() | revoke()
   @type claim() :: map()
   @type update() :: map()
   @type transfer() :: map()
+  @type revoke() :: map()
   @type plain_name() :: String.t()
   @type name_hash() :: binary()
   @type name_fee() :: non_neg_integer()
@@ -120,6 +122,26 @@ defmodule AeMdw.Names do
     end
   end
 
+  @spec fetch_name_history(state(), pagination(), plain_name(), cursor()) ::
+          {:ok, {page_cursor(), [history_item()], page_cursor()}} | {:error, reason()}
+  def fetch_name_history(state, plain_name_or_hash, pagination, cursor) do
+    with {:ok, name_or_auction} <- locate_name_or_auction(state, plain_name_or_hash),
+         plain_name <- get_index(name_or_auction),
+         {:ok, cursor} <- deserialize_history_cursor(plain_name, cursor) do
+      {prev_cursor, history_keys, next_cursor} =
+        state
+        |> build_history_streamer(plain_name, cursor)
+        |> Collection.paginate(pagination)
+
+      {:ok,
+       {
+         serialize_history_cursor(plain_name, prev_cursor),
+         Enum.map(history_keys, &render_nested_resource(state, &1)),
+         serialize_history_cursor(plain_name, next_cursor)
+       }}
+    end
+  end
+
   @spec fetch_name_claims(state(), binary(), pagination(), range(), cursor() | nil) ::
           {:ok, {page_cursor(), [claim()], page_cursor()}} | {:error, Error.t()}
   def fetch_name_claims(state, plain_name_or_hash, pagination, scope, cursor) do
@@ -144,7 +166,7 @@ defmodule AeMdw.Names do
           pagination
         )
 
-      {:ok, {prev_cursor, Enum.map(claims, &render_claim(state, &1)), next_cursor}}
+      {:ok, {prev_cursor, Enum.map(claims, &render_nested_resource(state, &1)), next_cursor}}
     end
   end
 
@@ -164,7 +186,7 @@ defmodule AeMdw.Names do
             pagination
           )
 
-        {:ok, {prev_cursor, Enum.map(claims, &render_claim(state, &1)), next_cursor}}
+        {:ok, {prev_cursor, Enum.map(claims, &render_nested_resource(state, &1)), next_cursor}}
 
       {:error, reason} ->
         {:error, reason}
@@ -190,7 +212,7 @@ defmodule AeMdw.Names do
             pagination
           )
 
-        {:ok, {prev_cursor, Enum.map(updates, &render_update(state, &1)), next_cursor}}
+        {:ok, {prev_cursor, Enum.map(updates, &render_nested_resource(state, &1)), next_cursor}}
 
       {:ok, Model.auction_bid()} ->
         {:error, ErrInput.NotFound.exception(value: plain_name_or_hash)}
@@ -216,7 +238,7 @@ defmodule AeMdw.Names do
             pagination
           )
 
-        {:ok, {prev_cursor, Enum.map(updates, &render_transfer(state, &1)), next_cursor}}
+        {:ok, {prev_cursor, Enum.map(updates, &render_nested_resource(state, &1)), next_cursor}}
 
       {:ok, Model.auction_bid()} ->
         {:error, ErrInput.NotFound.exception(value: plain_name_or_hash)}
@@ -397,6 +419,16 @@ defmodule AeMdw.Names do
         :forward -> Stream.concat(inactive_stream, active_stream)
         :backward -> Stream.concat(active_stream, inactive_stream)
       end
+    end
+  end
+
+  defp build_history_streamer(state, plain_name, cursor) do
+    fn direction ->
+      [Model.NameClaim, Model.NameUpdate, Model.NameTransfer, Model.NameRevoke, Model.NameExpired]
+      |> Enum.map(fn table ->
+        Name.stream_nested_resource(state, table, direction, plain_name, cursor)
+      end)
+      |> Collection.merge(direction)
     end
   end
 
@@ -660,6 +692,25 @@ defmodule AeMdw.Names do
     end
   end
 
+  defp serialize_history_cursor(_name, nil), do: nil
+
+  defp serialize_history_cursor(name, {{height, txi_idx, _table}, is_reversed?}) do
+    cursor_bin = :erlang.term_to_binary({name, height, txi_idx})
+    {Base.encode64(cursor_bin, padding: false), is_reversed?}
+  end
+
+  defp deserialize_history_cursor(_name, nil), do: {:ok, nil}
+
+  defp deserialize_history_cursor(name, cursor_str) do
+    with {:ok, cursor_bin} <- Base.decode64(cursor_str, padding: false),
+         {^name, _height, _txi_idx} = name_op <- :erlang.binary_to_term(cursor_bin) do
+      {:ok, name_op}
+    else
+      _invalid ->
+        {:error, ErrInput.Cursor.exception(value: cursor_str)}
+    end
+  end
+
   defp expand_txi_idx(state, {_bi, {txi, idx}}, opts) do
     expand_txi_idx(state, {txi, idx}, opts)
   end
@@ -711,7 +762,7 @@ defmodule AeMdw.Names do
       fn direction ->
         state
         |> Collection.stream(table, direction, key_boundary, cursor)
-        |> Stream.map(fn {_plain_name, _height, txi_idx} -> txi_idx end)
+        |> Stream.map(fn {_plain_name, height, txi_idx} -> {height, txi_idx, table} end)
       end
       |> Collection.paginate(pagination)
 
@@ -727,51 +778,36 @@ defmodule AeMdw.Names do
     |> Enum.map(&render_name_info(state, &1, last_gen, last_micro_time, opts))
   end
 
-  defp render_claim(state, {txi, _idx} = txi_idx) do
-    {claim_aetx, :name_claim_tx, tx_hash, tx_type, block_hash} =
-      DbUtil.read_node_tx_details(state, txi_idx)
-
-    Model.tx(block_index: {height, _mbi}) = State.fetch!(state, Model.Tx, txi)
-
+  defp render_nested_resource(_state, {active_from, {nil, height}, Model.NameExpired}) do
     %{
-      height: height,
-      block_hash: Enc.encode(:micro_block_hash, block_hash),
-      source_tx_hash: Enc.encode(:tx_hash, tx_hash),
-      source_tx_type: Format.type_to_swagger_name(tx_type),
-      internal_source: tx_type != :name_claim_tx,
-      tx: :aens_claim_tx.for_client(claim_aetx)
+      active_from: active_from,
+      expired_at: height
     }
   end
 
-  defp render_update(state, {txi, _idx} = txi_idx) do
-    {update_aetx, :name_update_tx, tx_hash, tx_type, block_hash} =
+  defp render_nested_resource(state, {active_from, {txi, _idx} = txi_idx, table}) do
+    {tx_type, tx_mod} =
+      case table do
+        Model.AuctionBidClaim -> {:name_claim_tx, :aens_claim_tx}
+        Model.NameClaim -> {:name_claim_tx, :aens_claim_tx}
+        Model.NameRevoke -> {:name_revoke_tx, :aens_revoke_tx}
+        Model.NameUpdate -> {:name_update_tx, :aens_update_tx}
+        Model.NameTransfer -> {:name_transfer_tx, :aens_transfer_tx}
+      end
+
+    {aetx, ^tx_type, tx_hash, chain_tx_type, block_hash} =
       DbUtil.read_node_tx_details(state, txi_idx)
 
     Model.tx(block_index: {height, _mbi}) = State.fetch!(state, Model.Tx, txi)
 
     %{
+      active_from: active_from,
       height: height,
       block_hash: Enc.encode(:micro_block_hash, block_hash),
       source_tx_hash: Enc.encode(:tx_hash, tx_hash),
-      source_tx_type: Format.type_to_swagger_name(tx_type),
-      internal_source: tx_type != :name_update_tx,
-      tx: :aens_update_tx.for_client(update_aetx)
-    }
-  end
-
-  defp render_transfer(state, {txi, _idx} = txi_idx) do
-    {transfer_aetx, :name_transfer_tx, tx_hash, tx_type, block_hash} =
-      DbUtil.read_node_tx_details(state, txi_idx)
-
-    Model.tx(block_index: {height, _mbi}) = State.fetch!(state, Model.Tx, txi)
-
-    %{
-      height: height,
-      block_hash: Enc.encode(:micro_block_hash, block_hash),
-      source_tx_hash: Enc.encode(:tx_hash, tx_hash),
-      source_tx_type: Format.type_to_swagger_name(tx_type),
-      internal_source: tx_type != :name_transfer_tx,
-      tx: :aens_transfer_tx.for_client(transfer_aetx)
+      source_tx_type: Format.type_to_swagger_name(chain_tx_type),
+      internal_source: chain_tx_type != tx_type,
+      tx: tx_mod.for_client(aetx)
     }
   end
 
@@ -807,11 +843,17 @@ defmodule AeMdw.Names do
   defp convert_param(other_param),
     do: raise(ErrInput.Query, value: other_param)
 
+  defp get_index(Model.auction_bid(index: plain_name)), do: plain_name
+  defp get_index(Model.name(index: plain_name)), do: plain_name
+
   defp locate_name_or_auction(state, plain_name_or_hash) do
     plain_name =
-      case State.get(state, Model.PlainName, plain_name_or_hash) do
-        {:ok, Model.plain_name(value: plain_name)} -> plain_name
-        :not_found -> plain_name_or_hash
+      with {:ok, hash_bin} <- Validate.id(plain_name_or_hash),
+           {:ok, Model.plain_name(value: plain_name)} <-
+             State.get(state, Model.PlainName, hash_bin) do
+        plain_name
+      else
+        _no_hash -> plain_name_or_hash
       end
 
     case Name.locate(state, plain_name) do
@@ -822,7 +864,8 @@ defmodule AeMdw.Names do
 
   defp serialize_nested_cursor(nil), do: nil
 
-  defp serialize_nested_cursor({{txi, idx}, is_reverse?}), do: {"#{txi}-#{idx + 1}", is_reverse?}
+  defp serialize_nested_cursor({{_height, {txi, idx}, _table}, is_reverse?}),
+    do: {"#{txi}-#{idx + 1}", is_reverse?}
 
   defp deserialize_nested_cursor(nil), do: nil
 

@@ -160,6 +160,20 @@ defmodule AeMdwWeb.NameController do
     end
   end
 
+  @spec name_history(Conn.t(), map()) :: Conn.t()
+  def name_history(%Conn{assigns: assigns} = conn, %{"id" => name_or_hash}) do
+    %{
+      state: state,
+      pagination: pagination,
+      cursor: cursor
+    } = assigns
+
+    with {:ok, paginated_history} <-
+           Names.fetch_name_history(state, name_or_hash, pagination, cursor) do
+      Util.paginate(conn, paginated_history)
+    end
+  end
+
   @spec search_v1(Conn.t(), map()) :: Conn.t()
   def search_v1(%Conn{assigns: %{state: state, opts: opts}} = conn, %{"prefix" => prefix}) do
     handle_input(conn, fn ->
@@ -200,12 +214,9 @@ defmodule AeMdwWeb.NameController do
       scope: scope
     } = assigns
 
-    case Names.fetch_name_claims(state, name_id, pagination, scope, cursor) do
-      {:ok, {prev_cursor, names, next_cursor}} ->
-        Util.paginate(conn, prev_cursor, names, next_cursor)
-
-      {:error, reason} ->
-        {:error, reason}
+    with {:ok, paginated_claims} <-
+           Names.fetch_name_claims(state, name_id, pagination, scope, cursor) do
+      Util.paginate(conn, paginated_claims)
     end
   end
 
@@ -218,12 +229,9 @@ defmodule AeMdwWeb.NameController do
       scope: scope
     } = assigns
 
-    case Names.fetch_name_transfers(state, name_id, pagination, scope, cursor) do
-      {:ok, {prev_cursor, names, next_cursor}} ->
-        Util.paginate(conn, prev_cursor, names, next_cursor)
-
-      {:error, reason} ->
-        {:error, reason}
+    with {:ok, paginated_transfers} <-
+           Names.fetch_name_transfers(state, name_id, pagination, scope, cursor) do
+      Util.paginate(conn, paginated_transfers)
     end
   end
 
@@ -236,12 +244,9 @@ defmodule AeMdwWeb.NameController do
       scope: scope
     } = assigns
 
-    case Names.fetch_name_updates(state, name_id, pagination, scope, cursor) do
-      {:ok, {prev_cursor, names, next_cursor}} ->
-        Util.paginate(conn, prev_cursor, names, next_cursor)
-
-      {:error, reason} ->
-        {:error, reason}
+    with {:ok, paginated_updates} <-
+           Names.fetch_name_updates(state, name_id, pagination, scope, cursor) do
+      Util.paginate(conn, paginated_updates)
     end
   end
 
