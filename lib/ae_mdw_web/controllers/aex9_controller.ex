@@ -210,7 +210,7 @@ defmodule AeMdwWeb.Aex9Controller do
   defp by_names_reply(%Conn{assigns: %{state: state}} = conn, params) do
     pagination = {:forward, false, 32_000, false}
 
-    with {:ok, {_prev_cursor, aex9_tokens, _next_cursor}} <-
+    with {:ok, _prev_cursor, aex9_tokens, _next_cursor} <-
            AexnTokens.fetch_contracts(state, pagination, :aex9, params, :name, nil) do
       json(conn, render_contracts(state, aex9_tokens))
     end
@@ -219,7 +219,7 @@ defmodule AeMdwWeb.Aex9Controller do
   defp by_symbols_reply(%Conn{assigns: %{state: state}} = conn, params) do
     pagination = {:forward, false, 32_000, false}
 
-    with {:ok, {_prev_cursor, aex9_tokens, _next_cursor}} <-
+    with {:ok, _prev_cursor, aex9_tokens, _next_cursor} <-
            AexnTokens.fetch_contracts(state, pagination, :aex9, params, :symbol, nil) do
       json(conn, render_contracts(state, aex9_tokens))
     end
