@@ -100,10 +100,9 @@ defmodule AeMdwWeb.NameController do
       scope: scope
     } = assigns
 
-    case Names.fetch_inactive_names(state, pagination, scope, order_by, cursor, opts) do
-      {:ok, pagianted_names} -> Util.paginate(conn, pagianted_names)
-      {:error, reason} -> Util.send_error(conn, :bad_request, reason)
-    end
+    state
+    |> Names.fetch_inactive_names(pagination, scope, order_by, cursor, opts)
+    |> then(fn {:ok, names} -> Util.paginate(conn, names) end)
   end
 
   @spec active_names(Conn.t(), map()) :: Conn.t()
@@ -117,10 +116,9 @@ defmodule AeMdwWeb.NameController do
       scope: scope
     } = assigns
 
-    case Names.fetch_active_names(state, pagination, scope, order_by, cursor, opts) do
-      {:ok, paginated_names} -> Util.paginate(conn, paginated_names)
-      {:error, reason} -> Util.send_error(conn, :bad_request, reason)
-    end
+    state
+    |> Names.fetch_active_names(pagination, scope, order_by, cursor, opts)
+    |> then(fn {:ok, names} -> Util.paginate(conn, names) end)
   end
 
   @spec names(Conn.t(), map()) :: Conn.t()
@@ -135,12 +133,11 @@ defmodule AeMdwWeb.NameController do
       query: query
     } = assigns
 
-    with {:ok, paginated_names} <-
-           Names.fetch_names(state, pagination, scope, order_by, query, cursor, [
-             {:render_v3?, true} | opts
-           ]) do
-      Util.paginate(conn, paginated_names)
-    end
+    state
+    |> Names.fetch_names(pagination, scope, order_by, query, cursor, [
+      {:render_v3?, true} | opts
+    ])
+    |> then(fn {:ok, names} -> Util.paginate(conn, names) end)
   end
 
   @spec names_v2(Conn.t(), map()) :: Conn.t()
@@ -154,10 +151,9 @@ defmodule AeMdwWeb.NameController do
       scope: scope
     } = assigns
 
-    case Names.fetch_names(state, pagination, scope, order_by, query, cursor, opts) do
-      {:ok, paginated_names} -> Util.paginate(conn, paginated_names)
-      {:error, reason} -> Util.send_error(conn, :bad_request, reason)
-    end
+    state
+    |> Names.fetch_names(pagination, scope, order_by, query, cursor, opts)
+    |> then(fn {:ok, names} -> Util.paginate(conn, names) end)
   end
 
   @spec search_v1(Conn.t(), map()) :: Conn.t()

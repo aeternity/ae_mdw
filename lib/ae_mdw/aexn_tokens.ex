@@ -44,7 +44,7 @@ defmodule AeMdw.AexnTokens do
   end
 
   @spec fetch_contracts(State.t(), pagination(), aexn_type(), query(), order_by(), cursor() | nil) ::
-          {:ok, cursor() | nil, [Model.aexn_contract()], cursor() | nil} | {:error, Error.t()}
+          {:ok, cursor() | nil, [Model.aexn_contract()], cursor() | nil}
   def fetch_contracts(state, pagination, aexn_type, query, order_by, cursor) do
     with {:ok, cursor} <- deserialize_aexn_cursor(cursor) do
       sorted_table = if order_by == :name, do: @aexn_name_table, else: @aexn_symbol_table

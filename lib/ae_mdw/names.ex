@@ -68,7 +68,7 @@ defmodule AeMdw.Names do
   @max_bin Util.max_256bit_bin()
 
   @spec fetch_names(state(), pagination(), range(), order_by(), query(), cursor() | nil, opts()) ::
-          {:ok, {page_cursor(), [name()], page_cursor()}} | {:error, reason()}
+          {:ok, {page_cursor(), [name()], page_cursor()}}
   def fetch_names(state, pagination, range, order_by, query, cursor, opts)
       when order_by in [:activation, :expiration, :deactivation] do
     cursor = deserialize_height_cursor(cursor)
@@ -386,7 +386,7 @@ defmodule AeMdw.Names do
   end
 
   @spec fetch_active_names(state(), pagination(), range(), order_by(), cursor(), opts()) ::
-          {:ok, {page_cursor(), [name()], page_cursor()}} | {:error, reason()}
+          {:ok, {page_cursor(), [name()], page_cursor()}}
   def fetch_active_names(state, pagination, range, order_by, cursor, opts),
     do: fetch_names(state, pagination, range, order_by, %{"state" => "active"}, cursor, opts)
 
