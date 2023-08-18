@@ -16,9 +16,9 @@ defmodule AeMdwWeb.ContractController do
   def contracts(%Conn{assigns: assigns} = conn, _params) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
 
-    with {:ok, {prev_cursor, contracts, next_cursor}} <-
+    with {:ok, contracts} <-
            Contracts.fetch_contracts(state, pagination, scope, cursor) do
-      Util.paginate(conn, prev_cursor, contracts, next_cursor)
+      Util.paginate(conn, contracts)
     end
   end
 
