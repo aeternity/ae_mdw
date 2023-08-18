@@ -44,7 +44,7 @@ defmodule AeMdw.AexnTokens do
   end
 
   @spec fetch_contracts(State.t(), pagination(), aexn_type(), query(), order_by(), cursor() | nil) ::
-          {:ok, cursor() | nil, [Model.aexn_contract()], cursor() | nil}
+          {:ok, {cursor() | nil, [Model.aexn_contract()], cursor() | nil}} | {:error, Error.t()}
   def fetch_contracts(state, pagination, aexn_type, query, order_by, cursor) do
     with {:ok, cursor} <- deserialize_aexn_cursor(cursor) do
       sorted_table = if order_by == :name, do: @aexn_name_table, else: @aexn_symbol_table
@@ -57,8 +57,9 @@ defmodule AeMdw.AexnTokens do
         |> build_tokens_streamer(state, aexn_type, sorted_table, cursor)
         |> Collection.paginate(pagination)
 
-      {:ok, serialize_aexn_cursor(order_by, prev_record), aexn_contracts,
-       serialize_aexn_cursor(order_by, next_record)}
+      {:ok,
+       {serialize_aexn_cursor(order_by, prev_record), aexn_contracts,
+        serialize_aexn_cursor(order_by, next_record)}}
     end
   end
 

@@ -5,6 +5,7 @@ defmodule AeMdwWeb.Router do
   alias AeMdwWeb.Plugs.StatePlug
   alias AeMdwWeb.Plugs.VersioningPlug
   alias AeMdwWeb.Plugs.RequestSpan
+  alias AeMdwWeb.Util
 
   @shared_routes [
     {"/txs/count", AeMdwWeb.TxController, :count},
@@ -224,15 +225,15 @@ defmodule AeMdwWeb.Router do
   @impl Plug.ErrorHandler
   def handle_errors(%{query_params: query_params} = conn, %{
         kind: :error,
-        reason: %AeMdw.Error.Input{} = reason
+        reason: %AeMdw.Error.Input{reason: reason, message: message} = input_error
       }) do
     :telemetry.execute([:ae_mdw, :error], %{status: 400}, %{
       request_path: conn.request_path,
       query_params: query_params,
-      reason: inspect(reason)
+      reason: inspect(input_error)
     })
 
-    send_resp(conn, 400, reason.message)
+    Util.send_error(conn, reason, message)
   end
 
   def handle_errors(%{status: 500, query_params: query_params} = conn, %{

@@ -137,7 +137,7 @@ defmodule AeMdwWeb.AexnTokenController do
          query_params,
          aexn_type
        ) do
-    with {:ok, prev_cursor, aexn_contracts, next_cursor} <-
+    with {:ok, aexn_contracts} <-
            AexnTokens.fetch_contracts(
              state,
              pagination,
@@ -146,7 +146,7 @@ defmodule AeMdwWeb.AexnTokenController do
              order_by,
              cursor
            ) do
-      Util.paginate(conn, prev_cursor, render_contracts(state, aexn_contracts), next_cursor)
+      Util.paginate(conn, aexn_contracts)
     end
   end
 
