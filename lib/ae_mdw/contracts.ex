@@ -137,11 +137,9 @@ defmodule AeMdw.Contracts do
   @spec fetch_contract(State.t(), binary()) :: {:ok, contract()} | {:error, reason()}
   def fetch_contract(state, contract_id) do
     with {:ok, pubkey} <- Validate.id(contract_id, [:contract_pubkey]),
-         {:ok, txi} when txi >= 0 <- Origin.tx_index(state, {:contract, pubkey}) do
-      Model.tx(id: tx_hash) = State.fetch!(state, Model.Tx, txi)
-      signed_tx = Db.get_signed_tx(tx_hash)
-      {outer_tx_type, _tx} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
-
+         {:ok, txi} when txi >= 0 <- Origin.tx_index(state, {:contract, pubkey}),
+         Model.tx(id: tx_hash) <- State.fetch!(state, Model.Tx, txi),
+         {outer_tx_type, _tx} <- Db.get_tx(tx_hash) do
       {txi_idx, tx_type} =
         if outer_tx_type == :contract_call_tx do
           local_idx =

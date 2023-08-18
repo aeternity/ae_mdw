@@ -13,6 +13,8 @@ defmodule AeMdwWeb.NameControllerTest do
   alias AeMdw.Txs
 
   import AeMdwWeb.BlockchainSim, only: [with_blockchain: 3, name_tx: 3, tx: 3]
+  import AeMdw.Db.ModelFixtures, only: [new_name: 0]
+  import AeMdw.Util.Encoding
 
   import Mock
 
@@ -21,8 +23,7 @@ defmodule AeMdwWeb.NameControllerTest do
   @default_limit 10
 
   setup _ do
-    height_name =
-      for i <- 100..121, into: %{}, do: {i, "name-#{Enum.random(1_000_000..9_999_999)}.chain"}
+    height_name = for i <- 100..121, into: %{}, do: {i, new_name()}
 
     {:ok, height_name: height_name}
   end
@@ -2721,6 +2722,422 @@ defmodule AeMdwWeb.NameControllerTest do
     end
   end
 
+  describe "name_history" do
+    test "returns all the name operations in backward order", %{conn: conn, store: store} do
+      account_pk = TS.address(0)
+      account_id = :aeser_id.create(:account, account_pk)
+      recipient_pk = TS.address(1)
+      recipient_id = :aeser_id.create(:account, recipient_pk)
+      plain_name = new_name()
+      {:ok, name_hash} = :aens.get_name_hash(plain_name)
+      name_id = :aeser_id.create(:name, name_hash)
+
+      active_from1 = 5
+      kbi1 = 7
+      active_from2 = 8
+      kbi2 = 8
+      expired_at = 7 + 10
+
+      store =
+        name_history_store(store, active_from1, active_from2, kbi1, kbi2, expired_at, plain_name)
+
+      conn = with_store(conn, store)
+
+      {:ok, claim_aetx1} =
+        :aens_claim_tx.new(%{
+          account_id: account_id,
+          nonce: 11,
+          name: plain_name,
+          name_salt: 1_111,
+          name_fee: 11_111,
+          fee: 111_111,
+          ttl: 1_111_111
+        })
+
+      {:ok, update_aetx1} =
+        :aens_update_tx.new(%{
+          account_id: account_id,
+          nonce: 12,
+          name_id: name_id,
+          name_ttl: 1_111,
+          pointers: [],
+          client_ttl: 11_111,
+          fee: 111_111
+        })
+
+      {:ok, transfer_aetx} =
+        :aens_transfer_tx.new(%{
+          account_id: account_id,
+          nonce: 13,
+          name_id: name_id,
+          recipient_id: recipient_id,
+          fee: 1_111,
+          ttl: 11_111
+        })
+
+      {:ok, revoke_aetx} =
+        :aens_revoke_tx.new(%{
+          account_id: account_id,
+          nonce: 14,
+          name_id: name_id,
+          fee: 1_111
+        })
+
+      {:ok, claim_aetx2} =
+        :aens_claim_tx.new(%{
+          account_id: account_id,
+          nonce: 21,
+          name: plain_name,
+          name_salt: 2_222,
+          name_fee: 22_222,
+          fee: 222_222,
+          ttl: 2_222_222
+        })
+
+      {:ok, update_aetx2} =
+        :aens_update_tx.new(%{
+          account_id: account_id,
+          nonce: 22,
+          name_id: name_id,
+          name_ttl: 2_222,
+          pointers: [],
+          client_ttl: 22_222,
+          fee: 222_222
+        })
+
+      with_mocks [
+        {Db, [:passthrough],
+         [
+           get_tx_data: fn
+             <<501::256>> ->
+               {:name_claim_tx, tx} = :aetx.specialize_type(claim_aetx1)
+               {"", :name_claim_tx, :aetx_sign.new(claim_aetx1, []), tx}
+
+             <<502::256>> ->
+               {:name_update_tx, tx} = :aetx.specialize_type(update_aetx1)
+               {"", :name_update_tx, :aetx_sign.new(update_aetx1, []), tx}
+
+             <<503::256>> ->
+               {:name_transfer_tx, tx} = :aetx.specialize_type(transfer_aetx)
+               {"", :name_transfer_tx, :aetx_sign.new(transfer_aetx, []), tx}
+
+             <<504::256>> ->
+               {:name_revoke_tx, tx} = :aetx.specialize_type(revoke_aetx)
+               {"", :name_revoke_tx, :aetx_sign.new(revoke_aetx, []), tx}
+
+             <<601::256>> ->
+               {:name_claim_tx, tx} = :aetx.specialize_type(claim_aetx2)
+               {"", :name_claim_tx, :aetx_sign.new(claim_aetx2, []), tx}
+
+             <<602::256>> ->
+               {:name_update_tx, tx} = :aetx.specialize_type(update_aetx2)
+               {"", :name_update_tx, :aetx_sign.new(update_aetx2, []), tx}
+           end
+         ]}
+      ] do
+        [claim1_hash, update1_hash, transfer_hash, revoke_hash] =
+          for i <- 1..4, do: Enc.encode(:tx_hash, <<500 + i::256>>)
+
+        [claim2_hash, update2_hash] = for i <- 1..2, do: Enc.encode(:tx_hash, <<600 + i::256>>)
+
+        assert %{
+                 "data" => [expired, update2, claim2, revoke, transfer] = history,
+                 "next" => next_url
+               } =
+                 conn
+                 |> get("/v2/names/#{plain_name}/history", limit: 5)
+                 |> json_response(200)
+
+        assert %{
+                 "data" => ^history,
+                 "next" => next_url_hash
+               } =
+                 conn
+                 |> get("/v2/names/#{encode(:name, name_hash)}/history", limit: 5)
+                 |> json_response(200)
+
+        assert URI.parse(next_url).query == URI.parse(next_url_hash).query
+
+        refute is_nil(next_url)
+
+        assert %{
+                 "active_from" => ^kbi2,
+                 "expired_at" => ^expired_at
+               } = expired
+
+        assert %{
+                 "active_from" => ^active_from2,
+                 "height" => ^kbi2,
+                 "source_tx_type" => "NameUpdateTx",
+                 "source_tx_hash" => ^update2_hash,
+                 "internal_source" => false,
+                 "tx" => %{"nonce" => 22}
+               } = update2
+
+        assert %{
+                 "active_from" => ^active_from2,
+                 "height" => ^kbi2,
+                 "source_tx_type" => "NameClaimTx",
+                 "source_tx_hash" => ^claim2_hash,
+                 "internal_source" => false,
+                 "tx" => %{"nonce" => 21}
+               } = claim2
+
+        assert %{
+                 "active_from" => ^active_from1,
+                 "height" => ^kbi1,
+                 "source_tx_type" => "NameRevokeTx",
+                 "source_tx_hash" => ^revoke_hash,
+                 "internal_source" => false,
+                 "tx" => %{"nonce" => 14}
+               } = revoke
+
+        recipient = encode_account(recipient_pk)
+
+        assert %{
+                 "active_from" => ^active_from1,
+                 "height" => ^kbi1,
+                 "source_tx_type" => "NameTransferTx",
+                 "source_tx_hash" => ^transfer_hash,
+                 "internal_source" => false,
+                 "tx" => %{"nonce" => 13, "recipient_id" => ^recipient}
+               } = transfer
+
+        assert %{"data" => [update1, claim1], "prev" => prev_url} =
+                 conn |> get(next_url) |> json_response(200)
+
+        refute is_nil(prev_url)
+
+        assert %{
+                 "active_from" => ^active_from1,
+                 "height" => ^kbi1,
+                 "source_tx_type" => "NameUpdateTx",
+                 "source_tx_hash" => ^update1_hash,
+                 "internal_source" => false,
+                 "tx" => %{"nonce" => 12}
+               } = update1
+
+        assert %{
+                 "active_from" => ^active_from1,
+                 "height" => ^kbi1,
+                 "source_tx_type" => "NameClaimTx",
+                 "source_tx_hash" => ^claim1_hash,
+                 "internal_source" => false,
+                 "tx" => %{"nonce" => 11}
+               } = claim1
+
+        assert %{"data" => ^history} = conn |> get(prev_url) |> json_response(200)
+      end
+    end
+
+    test "returns all the name operations in forward order", %{conn: conn, store: store} do
+      account_pk = TS.address(0)
+      account_id = :aeser_id.create(:account, account_pk)
+      recipient_pk = TS.address(1)
+      recipient_id = :aeser_id.create(:account, recipient_pk)
+      plain_name = new_name()
+      {:ok, name_hash} = :aens.get_name_hash(plain_name)
+      name_id = :aeser_id.create(:name, name_hash)
+      active_from1 = 5
+      kbi1 = 7
+      active_from2 = 8
+      kbi2 = 8
+      expired_at = 7 + 10
+
+      store =
+        name_history_store(store, active_from1, active_from2, kbi1, kbi2, expired_at, plain_name)
+
+      conn = with_store(conn, store)
+
+      {:ok, claim_aetx1} =
+        :aens_claim_tx.new(%{
+          account_id: account_id,
+          nonce: 11,
+          name: plain_name,
+          name_salt: 1_111,
+          name_fee: 11_111,
+          fee: 111_111,
+          ttl: 1_111_111
+        })
+
+      {:ok, update_aetx1} =
+        :aens_update_tx.new(%{
+          account_id: account_id,
+          nonce: 12,
+          name_id: name_id,
+          name_ttl: 1_111,
+          pointers: [],
+          client_ttl: 11_111,
+          fee: 111_111
+        })
+
+      {:ok, transfer_aetx} =
+        :aens_transfer_tx.new(%{
+          account_id: account_id,
+          nonce: 13,
+          name_id: name_id,
+          recipient_id: recipient_id,
+          fee: 1_111,
+          ttl: 11_111
+        })
+
+      {:ok, revoke_aetx} =
+        :aens_revoke_tx.new(%{
+          account_id: account_id,
+          nonce: 14,
+          name_id: name_id,
+          fee: 1_111
+        })
+
+      {:ok, claim_aetx2} =
+        :aens_claim_tx.new(%{
+          account_id: account_id,
+          nonce: 21,
+          name: plain_name,
+          name_salt: 2_222,
+          name_fee: 22_222,
+          fee: 222_222,
+          ttl: 2_222_222
+        })
+
+      {:ok, update_aetx2} =
+        :aens_update_tx.new(%{
+          account_id: account_id,
+          nonce: 22,
+          name_id: name_id,
+          name_ttl: 2_222,
+          pointers: [],
+          client_ttl: 22_222,
+          fee: 222_222
+        })
+
+      with_mocks [
+        {Db, [:passthrough],
+         [
+           get_tx_data: fn
+             <<501::256>> ->
+               {:name_claim_tx, tx} = :aetx.specialize_type(claim_aetx1)
+               {"", :name_claim_tx, :aetx_sign.new(claim_aetx1, []), tx}
+
+             <<502::256>> ->
+               {:name_update_tx, tx} = :aetx.specialize_type(update_aetx1)
+               {"", :name_update_tx, :aetx_sign.new(update_aetx1, []), tx}
+
+             <<503::256>> ->
+               {:name_transfer_tx, tx} = :aetx.specialize_type(transfer_aetx)
+               {"", :name_transfer_tx, :aetx_sign.new(transfer_aetx, []), tx}
+
+             <<504::256>> ->
+               {:name_revoke_tx, tx} = :aetx.specialize_type(revoke_aetx)
+               {"", :name_revoke_tx, :aetx_sign.new(revoke_aetx, []), tx}
+
+             <<601::256>> ->
+               {:name_claim_tx, tx} = :aetx.specialize_type(claim_aetx2)
+               {"", :name_claim_tx, :aetx_sign.new(claim_aetx2, []), tx}
+
+             <<602::256>> ->
+               {:name_update_tx, tx} = :aetx.specialize_type(update_aetx2)
+               {"", :name_update_tx, :aetx_sign.new(update_aetx2, []), tx}
+           end
+         ]}
+      ] do
+        [claim1_hash, update1_hash, transfer_hash, revoke_hash] =
+          for i <- 1..4, do: Enc.encode(:tx_hash, <<500 + i::256>>)
+
+        [claim2_hash, update2_hash] = for i <- 1..2, do: Enc.encode(:tx_hash, <<600 + i::256>>)
+
+        assert %{
+                 "data" => [claim1, update1, transfer, revoke] = history,
+                 "next" => next_url
+               } =
+                 conn
+                 |> get("/v2/names/#{plain_name}/history", direction: "forward", limit: 4)
+                 |> json_response(200)
+
+        refute is_nil(next_url)
+
+        assert %{
+                 "active_from" => ^active_from1,
+                 "height" => ^kbi1,
+                 "source_tx_type" => "NameClaimTx",
+                 "source_tx_hash" => ^claim1_hash,
+                 "internal_source" => false,
+                 "tx" => %{"nonce" => 11}
+               } = claim1
+
+        assert %{
+                 "active_from" => ^active_from1,
+                 "height" => ^kbi1,
+                 "source_tx_type" => "NameUpdateTx",
+                 "source_tx_hash" => ^update1_hash,
+                 "internal_source" => false,
+                 "tx" => %{"nonce" => 12}
+               } = update1
+
+        recipient = encode_account(recipient_pk)
+
+        assert %{
+                 "active_from" => ^active_from1,
+                 "height" => ^kbi1,
+                 "source_tx_type" => "NameTransferTx",
+                 "source_tx_hash" => ^transfer_hash,
+                 "internal_source" => false,
+                 "tx" => %{"nonce" => 13, "recipient_id" => ^recipient}
+               } = transfer
+
+        assert %{
+                 "active_from" => ^active_from1,
+                 "height" => ^kbi1,
+                 "source_tx_type" => "NameRevokeTx",
+                 "source_tx_hash" => ^revoke_hash,
+                 "internal_source" => false,
+                 "tx" => %{"nonce" => 14}
+               } = revoke
+
+        assert %{"data" => [claim2, update2, expired], "prev" => prev_url} =
+                 conn |> get(next_url) |> json_response(200)
+
+        refute is_nil(prev_url)
+
+        assert %{
+                 "active_from" => ^active_from2,
+                 "height" => ^kbi2,
+                 "source_tx_type" => "NameClaimTx",
+                 "source_tx_hash" => ^claim2_hash,
+                 "internal_source" => false,
+                 "tx" => %{"nonce" => 21}
+               } = claim2
+
+        assert %{
+                 "active_from" => ^active_from2,
+                 "height" => ^kbi2,
+                 "source_tx_type" => "NameUpdateTx",
+                 "source_tx_hash" => ^update2_hash,
+                 "internal_source" => false,
+                 "tx" => %{"nonce" => 22}
+               } = update2
+
+        assert %{
+                 "active_from" => ^kbi2,
+                 "expired_at" => ^expired_at
+               } = expired
+
+        assert %{"data" => ^history} = conn |> get(prev_url) |> json_response(200)
+      end
+    end
+
+    test "it returns 404 when name doesn't exist", %{conn: conn, store: store} do
+      non_existent_name = "asd.chain"
+      error_msg = "not found: #{non_existent_name}"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> with_store(store)
+               |> get("/v2/names/#{non_existent_name}/updates")
+               |> json_response(404)
+    end
+  end
+
   describe "bids" do
     test "it returns all of the auction claims in forward order", %{conn: conn, store: store} do
       account_pk = TS.address(0)
@@ -2832,6 +3249,65 @@ defmodule AeMdwWeb.NameControllerTest do
         assert %{"data" => ^claims} = conn |> get(prev_url) |> json_response(200)
       end
     end
+  end
+
+  defp name_history_store(store, active_from1, active_from2, kbi1, kbi2, expired_at, plain_name) do
+    claim1 = {501, -1}
+    update1 = {502, -1}
+    transfer = {503, -1}
+    revoke = {504, -1}
+    claim2 = {601, -1}
+    update2 = {602, -1}
+    {:ok, name_hash} = :aens.get_name_hash(plain_name)
+
+    m_name =
+      Model.name(
+        index: plain_name,
+        active: active_from2,
+        expire: expired_at,
+        revoke: nil,
+        auction_timeout: 1
+      )
+
+    store
+    |> Store.put(Model.ActiveName, m_name)
+    |> Store.put(Model.PlainName, Model.plain_name(index: name_hash, value: plain_name))
+    |> Store.put(Model.NameClaim, Model.name_claim(index: {plain_name, active_from1, claim1}))
+    |> Store.put(Model.NameUpdate, Model.name_update(index: {plain_name, active_from1, update1}))
+    |> Store.put(
+      Model.NameTransfer,
+      Model.name_transfer(index: {plain_name, active_from1, transfer})
+    )
+    |> Store.put(
+      Model.NameRevoke,
+      Model.name_transfer(index: {plain_name, active_from1, revoke})
+    )
+    |> Store.put(Model.NameClaim, Model.name_claim(index: {plain_name, active_from2, claim2}))
+    |> Store.put(Model.NameUpdate, Model.name_update(index: {plain_name, active_from2, update2}))
+    |> Store.put(
+      Model.NameExpired,
+      Model.name_expired(index: {plain_name, active_from2, {nil, expired_at}})
+    )
+    |> then(fn store ->
+      Enum.reduce(0..3, store, fn i, store ->
+        Store.put(
+          store,
+          Model.Tx,
+          Model.tx(index: 501 + i, block_index: {kbi1, i}, id: <<501 + i::256>>)
+        )
+      end)
+    end)
+    |> then(fn store ->
+      Enum.reduce(0..2, store, fn i, store ->
+        Store.put(
+          store,
+          Model.Tx,
+          Model.tx(index: 601 + i, block_index: {kbi2, i}, id: <<601 + i::256>>)
+        )
+      end)
+    end)
+    |> Store.put(Model.Block, Model.block(index: {kbi1, 0}, hash: "mb#{kbi1}-hash"))
+    |> Store.put(Model.Block, Model.block(index: {kbi2, 0}, hash: "mb#{kbi2}-hash"))
   end
 
   defp name_claims_store(store, plain_name) do

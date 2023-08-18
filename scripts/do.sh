@@ -24,6 +24,7 @@ case $1 in
     ;;
 
   "test")
+    rm -rf test_data.db
     MIX_ENV=test elixir --sname $NAME -S mix test $2
     ;;
 

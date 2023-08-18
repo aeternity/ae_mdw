@@ -4,33 +4,34 @@ defmodule AeMdw.Db.Sync.IdCounter do
   """
 
   alias AeMdw.Db.Model
+  alias AeMdw.Node
+  alias AeMdw.Node.Db
   alias AeMdw.Db.State
 
   require Model
 
-  @spec incr_count(State.t(), Model.id_count_index()) :: State.t()
-  def incr_count(state, {_tx_type, _pos, _pk} = field_key) do
-    update_count(state, field_key, 1)
-  end
+  @typep pubkey() :: Db.pubkey()
 
-  @spec update_count(State.t(), Model.id_count_index(), integer()) :: State.t()
-  def update_count(state, {_tx_type, _pos, _pk} = field_key, delta) do
-    case State.get(state, Model.IdCount, field_key) do
-      :not_found ->
-        model = Model.id_count(index: field_key, count: 0)
-        write_count(state, model, 1)
+  @spec incr_count(State.t(), Node.tx_type(), non_neg_integer(), pubkey(), boolean()) :: State.t()
+  def incr_count(state, tx_type, pos, pk, is_repeated?) do
+    state = incr_id_count(state, Model.IdCount, {tx_type, pos, pk})
 
-      {:ok, model} ->
-        write_count(state, model, delta)
+    if is_repeated? do
+      incr_id_count(state, Model.DupIdCount, {tx_type, pos, pk})
+    else
+      state
     end
   end
 
-  #
-  # Private
-  #
-  @spec write_count(State.t(), Model.id_count(), integer()) :: State.t()
-  defp write_count(state, Model.id_count(count: total) = model, delta) do
-    model = Model.id_count(model, count: total + delta)
-    State.put(state, Model.IdCount, model)
+  defp incr_id_count(state, table, field_key) do
+    State.update(
+      state,
+      table,
+      field_key,
+      fn
+        Model.id_count(count: count) = id_count -> Model.id_count(id_count, count: count + 1)
+      end,
+      Model.id_count(index: field_key, count: 0)
+    )
   end
 end

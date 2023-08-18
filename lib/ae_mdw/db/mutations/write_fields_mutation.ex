@@ -5,6 +5,7 @@ defmodule AeMdw.Db.WriteFieldsMutation do
 
   alias AeMdw.Blocks
   alias AeMdw.Db.State
+  alias AeMdw.Fields
   alias AeMdw.Node
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
@@ -44,20 +45,28 @@ defmodule AeMdw.Db.WriteFieldsMutation do
       ) do
     tx_type
     |> Node.tx_ids()
-    |> Enum.reduce(state, fn {field, pos}, state ->
-      <<_pk::256>> = pk = resolve_pubkey(state, elem(tx, pos), tx_type, field, block_index)
-      field_pos = AeMdw.Fields.field_pos_mask(wrap_tx, pos)
+    |> Enum.map(fn {field, pos} ->
+      pk = resolve_pubkey(state, elem(tx, pos), tx_type, field, block_index)
+      field_pos = Fields.field_pos_mask(wrap_tx, pos)
       {tx_type, pos} = if wrap_tx, do: {wrap_tx, field_pos}, else: {tx_type, pos}
-      write_field(state, tx_type, pos, pk, txi)
+
+      {tx_type, pos, pk}
     end)
-  end
+    |> Enum.group_by(fn {_tx_type, _pos, pk} -> pk end)
+    |> Enum.flat_map(fn {pk, field_indexes} ->
+      is_repeated? = length(field_indexes) > 1
 
-  defp write_field(state, tx_type, pos, pubkey, txi) do
-    m_field = Model.field(index: {tx_type, pos, pubkey, txi})
+      Enum.map(field_indexes, fn {tx_type, pos, ^pk} ->
+        {tx_type, pos, pk, is_repeated?}
+      end)
+    end)
+    |> Enum.reduce(state, fn {tx_type, pos, pk, is_repeated?}, state ->
+      m_field = Model.field(index: {tx_type, pos, pk, txi})
 
-    state
-    |> State.put(Model.Field, m_field)
-    |> IdCounter.incr_count({tx_type, pos, pubkey})
+      state
+      |> State.put(Model.Field, m_field)
+      |> IdCounter.incr_count(tx_type, pos, pk, is_repeated?)
+    end)
   end
 
   defp resolve_pubkey(state, id, :spend_tx, :recipient_id, block_index) do

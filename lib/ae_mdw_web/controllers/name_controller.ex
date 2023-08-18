@@ -160,6 +160,20 @@ defmodule AeMdwWeb.NameController do
     end
   end
 
+  @spec name_history(Conn.t(), map()) :: Conn.t()
+  def name_history(%Conn{assigns: assigns} = conn, %{"id" => name_or_hash}) do
+    %{
+      state: state,
+      pagination: pagination,
+      cursor: cursor
+    } = assigns
+
+    with {:ok, paginated_history} <-
+           Names.fetch_name_history(state, name_or_hash, pagination, cursor) do
+      Util.paginate(conn, paginated_history)
+    end
+  end
+
   @spec search_v1(Conn.t(), map()) :: Conn.t()
   def search_v1(%Conn{assigns: %{state: state, opts: opts}} = conn, %{"prefix" => prefix}) do
     handle_input(conn, fn ->

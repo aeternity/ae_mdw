@@ -153,7 +153,7 @@ defmodule AeMdw.Db.Model do
   @id_count_defaults [index: {nil, nil, nil}, count: 0]
   defrecord :id_count, @id_count_defaults
 
-  @type id_count_index() :: {atom(), non_neg_integer(), pubkey()}
+  @type id_count_index() :: {tx_type(), non_neg_integer(), pubkey()}
   @type id_count() :: record(:id_count, index: id_count_index(), count: non_neg_integer())
 
   # object origin :
@@ -294,6 +294,22 @@ defmodule AeMdw.Db.Model do
 
   @type name_claim_index() :: {name_index(), height(), txi_idx()}
   @type name_claim() :: record(:name_claim, index: name_claim_index())
+
+  # name_expired :
+  #     index = {plain_name, name_activation_height, {nil, expiration_height}}
+  @name_expired_defaults [index: nil, unused: nil]
+  defrecord :name_expired, @name_expired_defaults
+
+  @type name_expired_index() :: {name_index(), height(), {nil, height()}}
+  @type name_expired() :: record(:name_expired, index: name_expired_index())
+
+  # name_revoke :
+  #     index = {plain_name, name_activation_height, txi_idx}
+  @name_revoke_defaults [index: nil, unused: nil]
+  defrecord :name_revoke, @name_revoke_defaults
+
+  @type name_revoke_index() :: {name_index(), height(), txi_idx()}
+  @type name_revoke() :: record(:name_revoke, index: name_revoke_index())
 
   # name_update :
   #     index = {plain_name, name_activation_height, txi_idx}
@@ -1064,6 +1080,7 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.TypeCount,
       AeMdw.Db.Model.Field,
       AeMdw.Db.Model.IdCount,
+      AeMdw.Db.Model.DupIdCount,
       AeMdw.Db.Model.Origin,
       AeMdw.Db.Model.RevOrigin,
       AeMdw.Db.Model.IntTransferTx,
@@ -1138,6 +1155,8 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.InactiveNameOwnerDeactivation,
       AeMdw.Db.Model.InactiveNameOwner,
       AeMdw.Db.Model.NameClaim,
+      AeMdw.Db.Model.NameExpired,
+      AeMdw.Db.Model.NameRevoke,
       AeMdw.Db.Model.NameUpdate,
       AeMdw.Db.Model.NameTransfer,
       AeMdw.Db.Model.AuctionBidClaim
@@ -1184,6 +1203,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.TypeCount), do: :type_count
   def record(AeMdw.Db.Model.Field), do: :field
   def record(AeMdw.Db.Model.IdCount), do: :id_count
+  def record(AeMdw.Db.Model.DupIdCount), do: :id_count
   def record(AeMdw.Db.Model.Origin), do: :origin
   def record(AeMdw.Db.Model.RevOrigin), do: :rev_origin
   def record(AeMdw.Db.Model.Aex9BalanceAccount), do: :aex9_balance_account
@@ -1236,6 +1256,8 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.InactiveNameOwnerDeactivation), do: :owner_deactivation
   def record(AeMdw.Db.Model.AuctionBidClaim), do: :auction_bid_claim
   def record(AeMdw.Db.Model.NameClaim), do: :name_claim
+  def record(AeMdw.Db.Model.NameExpired), do: :name_expired
+  def record(AeMdw.Db.Model.NameRevoke), do: :name_revoke
   def record(AeMdw.Db.Model.NameUpdate), do: :name_update
   def record(AeMdw.Db.Model.NameTransfer), do: :name_transfer
   def record(AeMdw.Db.Model.ActiveOracleExpiration), do: :expiration

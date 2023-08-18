@@ -4,9 +4,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Db.Format
-  alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
-  alias AeMdw.Db.NullStore
   alias AeMdw.Db.Store
   alias AeMdw.Db.Origin
   alias AeMdw.Node.Db
@@ -1457,6 +1455,4 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       end
     end
   end
-
-  defp empty_store, do: NullStore.new() |> MemStore.new()
 end

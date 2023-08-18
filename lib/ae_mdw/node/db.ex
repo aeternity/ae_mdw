@@ -140,22 +140,15 @@ defmodule AeMdw.Node.Db do
     end
   end
 
-  @spec get_tx(binary()) :: Node.tx()
+  @spec get_tx(binary()) :: {Node.tx_type(), Node.tx()}
   def get_tx(<<_pk::256>> = tx_hash) do
     case :aec_db.find_tx_with_location(tx_hash) do
       {_block_hash, signed_tx} ->
-        {_type, tx_rec} = :aetx.specialize_type(:aetx_sign.tx(signed_tx))
-        tx_rec
+        :aetx.specialize_type(:aetx_sign.tx(signed_tx))
 
       :none ->
         nil
     end
-  end
-
-  @spec get_signed_tx(binary()) :: tuple()
-  def get_signed_tx(<<_pk::256>> = tx_hash) do
-    {_block_hash, signed_tx} = :aec_db.find_tx_with_location(tx_hash)
-    signed_tx
   end
 
   @spec top_height_hash(boolean()) :: height_hash()

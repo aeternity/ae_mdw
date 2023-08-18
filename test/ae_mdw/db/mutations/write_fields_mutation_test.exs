@@ -4,9 +4,11 @@ defmodule AeMdw.Db.WriteFieldsMuationTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Db.Store
+  alias AeMdw.Db.State
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.WriteFieldsMutation
+  alias AeMdw.Fields
   alias AeMdw.Validate
 
   import Mock
@@ -93,8 +95,8 @@ defmodule AeMdw.Db.WriteFieldsMuationTest do
           WriteFieldsMutation.new(:spend_tx, spend_tx, {100_000, 1}, txi, :ga_meta_tx)
         ])
 
-      field_index1 = {:ga_meta_tx, AeMdw.Fields.field_pos_mask(:ga_meta_tx, 1), sender_pk, txi}
-      field_index2 = {:ga_meta_tx, AeMdw.Fields.field_pos_mask(:ga_meta_tx, 2), recipient_pk, txi}
+      field_index1 = {:ga_meta_tx, Fields.field_pos_mask(:ga_meta_tx, 1), sender_pk, txi}
+      field_index2 = {:ga_meta_tx, Fields.field_pos_mask(:ga_meta_tx, 2), recipient_pk, txi}
 
       refute :not_found == Store.get(store, Model.Field, field_index1)
       refute :not_found == Store.get(store, Model.Field, field_index2)
@@ -124,14 +126,67 @@ defmodule AeMdw.Db.WriteFieldsMuationTest do
           WriteFieldsMutation.new(:spend_tx, spend_tx, {100_000, 1}, txi, :paying_for_tx)
         ])
 
-      field_index1 =
-        {:paying_for_tx, AeMdw.Fields.field_pos_mask(:paying_for_tx, 1), sender_pk, txi}
+      field_index1 = {:paying_for_tx, Fields.field_pos_mask(:paying_for_tx, 1), sender_pk, txi}
 
-      field_index2 =
-        {:paying_for_tx, AeMdw.Fields.field_pos_mask(:paying_for_tx, 2), recipient_pk, txi}
+      field_index2 = {:paying_for_tx, Fields.field_pos_mask(:paying_for_tx, 2), recipient_pk, txi}
 
       refute :not_found == Store.get(store, Model.Field, field_index1)
       refute :not_found == Store.get(store, Model.Field, field_index2)
+    end
+
+    test "increments counters for each field, including dups" do
+      sender_pk = :crypto.strong_rand_bytes(32)
+      recipient_pk = :crypto.strong_rand_bytes(32)
+      [txi1, txi2] = [123, 124]
+
+      {:ok, aetx1} =
+        :aec_spend_tx.new(%{
+          sender_id: :aeser_id.create(:account, sender_pk),
+          recipient_id: :aeser_id.create(:account, recipient_pk),
+          amount: 123,
+          fee: 456,
+          nonce: 1,
+          payload: ""
+        })
+
+      {:spend_tx, spend_tx1} = :aetx.specialize_type(aetx1)
+
+      {:ok, aetx2} =
+        :aec_spend_tx.new(%{
+          sender_id: :aeser_id.create(:account, sender_pk),
+          recipient_id: :aeser_id.create(:account, sender_pk),
+          amount: 123,
+          fee: 456,
+          nonce: 1,
+          payload: ""
+        })
+
+      {:spend_tx, spend_tx2} = :aetx.specialize_type(aetx2)
+
+      state =
+        NullStore.new()
+        |> MemStore.new()
+        |> State.new()
+        |> State.commit_mem([
+          WriteFieldsMutation.new(:spend_tx, spend_tx1, {100_000, 1}, txi1, nil),
+          WriteFieldsMutation.new(:spend_tx, spend_tx2, {100_000, 1}, txi2, nil)
+        ])
+
+      field_index1 = {:spend_tx, Fields.field_pos_mask(:spend_tx, 1), sender_pk, txi1}
+      field_index2 = {:spend_tx, Fields.field_pos_mask(:spend_tx, 2), recipient_pk, txi1}
+      field_index3 = {:spend_tx, Fields.field_pos_mask(:spend_tx, 1), sender_pk, txi2}
+      field_index4 = {:spend_tx, Fields.field_pos_mask(:spend_tx, 2), sender_pk, txi2}
+      id_count_index1 = {:spend_tx, Fields.field_pos_mask(:spend_tx, 1), sender_pk}
+      id_count_index2 = {:spend_tx, Fields.field_pos_mask(:spend_tx, 2), sender_pk}
+
+      assert {:ok, _field} = State.get(state, Model.Field, field_index1)
+      assert {:ok, _field} = State.get(state, Model.Field, field_index2)
+      assert {:ok, _field} = State.get(state, Model.Field, field_index3)
+      assert {:ok, _field} = State.get(state, Model.Field, field_index4)
+      assert {:ok, Model.id_count(count: 2)} = State.get(state, Model.IdCount, id_count_index1)
+      assert {:ok, Model.id_count(count: 1)} = State.get(state, Model.DupIdCount, id_count_index1)
+      assert {:ok, Model.id_count(count: 1)} = State.get(state, Model.IdCount, id_count_index2)
+      assert {:ok, Model.id_count(count: 1)} = State.get(state, Model.DupIdCount, id_count_index2)
     end
   end
 end

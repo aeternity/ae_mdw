@@ -24,4 +24,7 @@ defmodule AeMdw.Db.ModelFixtures do
 
   @spec new_name() :: String.t()
   def new_name, do: "name-#{System.unique_integer([:positive])}.chain"
+
+  @spec new_hash() :: <<_::256>>
+  def new_hash, do: :crypto.strong_rand_bytes(32)
 end

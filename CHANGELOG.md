@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.59.0](https://www.github.com/aeternity/ae_mdw/compare/v1.58.0...v1.59.0) (2023-08-18)
+
+
+### Features
+
+* add name history endpoint ([#1527](https://www.github.com/aeternity/ae_mdw/issues/1527)) ([637a744](https://www.github.com/aeternity/ae_mdw/commit/637a744805e9fb8334f2383f91f4726dafbec665))
+
+
+### Bug Fixes
+
+* expire memory stores based on v1 heavy endpoints ([#1536](https://www.github.com/aeternity/ae_mdw/issues/1536)) ([6d0691b](https://www.github.com/aeternity/ae_mdw/commit/6d0691bab2e81dc042be9fac3aa848142ad01013))
+* fix some readme typos ([#1530](https://www.github.com/aeternity/ae_mdw/issues/1530)) ([ad287ec](https://www.github.com/aeternity/ae_mdw/commit/ad287ec35378247667d0c7b3cadd3baad5ba3b11))
+* ignore field/transaction counts when they are duplicated in the transaction ([#1535](https://www.github.com/aeternity/ae_mdw/issues/1535)) ([77d387b](https://www.github.com/aeternity/ae_mdw/commit/77d387beadbab4af0c97de74d8393c47048965a4))
+* return db state after broadcasting ([#1534](https://www.github.com/aeternity/ae_mdw/issues/1534)) ([e90667a](https://www.github.com/aeternity/ae_mdw/commit/e90667a99c971f776e7cf1e101a572706195a0b8))
+
+
+### Testing
+
+* isolate async test cases ([#1531](https://www.github.com/aeternity/ae_mdw/issues/1531)) ([34a04d5](https://www.github.com/aeternity/ae_mdw/commit/34a04d5523749d7d58653ebc11eb353c889320d5))
+
+
+### Miscellaneous
+
+* count object keys only from memory ([#1533](https://www.github.com/aeternity/ae_mdw/issues/1533)) ([aed582b](https://www.github.com/aeternity/ae_mdw/commit/aed582b6592a1dc47085111045049352498bed1e))
+* remove old mocked websocket tests ([#1526](https://www.github.com/aeternity/ae_mdw/issues/1526)) ([dd75063](https://www.github.com/aeternity/ae_mdw/commit/dd75063011c86ee46d7d393a0d7dbc5d18c87c56))
+* use functional single item pipe ([#1529](https://www.github.com/aeternity/ae_mdw/issues/1529)) ([dad0822](https://www.github.com/aeternity/ae_mdw/commit/dad0822cdeae1b5a67c714c37f6d2e320d4f16b1))
+
 ## [1.58.0](https://www.github.com/aeternity/ae_mdw/compare/v1.57.2...v1.58.0) (2023-08-14)
 
 
