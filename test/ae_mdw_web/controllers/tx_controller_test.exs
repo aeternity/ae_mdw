@@ -1752,6 +1752,31 @@ defmodule AeMdwWeb.TxControllerTest do
                |> json_response(200)
     end
 
+    test "returns the count of transactions involving the id without counting duplicates", %{
+      conn: conn,
+      store: store
+    } do
+      address = TS.address(0)
+      enc_address = :aeser_api_encoder.encode(:account_pubkey, address)
+
+      store =
+        store
+        |> Store.put(Model.IdCount, Model.id_count(index: {:spend_tx, 1, address}, count: 3))
+        |> Store.put(Model.IdCount, Model.id_count(index: {:spend_tx, 2, address}, count: 2))
+        |> Store.put(Model.DupIdCount, Model.id_count(index: {:spend_tx, 1, address}, count: 1))
+        |> Store.put(Model.DupIdCount, Model.id_count(index: {:spend_tx, 2, address}, count: 1))
+        |> Store.put(
+          Model.IdCount,
+          Model.id_count(index: {:oracle_extend_tx, 1, address}, count: 10)
+        )
+
+      assert 14 =
+               conn
+               |> with_store(store)
+               |> get("/v2/txs/count", id: enc_address)
+               |> json_response(200)
+    end
+
     test "returns the count of transactions of a type involving the id", %{
       conn: conn,
       store: store
