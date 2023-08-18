@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.59.1](https://www.github.com/aeternity/ae_mdw/compare/v1.59.0...v1.59.1) (2023-08-18)
+
+
+### Miscellaneous
+
+* return bad request for input exceptions ([#1537](https://www.github.com/aeternity/ae_mdw/issues/1537)) ([77909cd](https://www.github.com/aeternity/ae_mdw/commit/77909cd59661c274eb36a07aecea231e697a8ad6))
+
 ## [1.59.0](https://www.github.com/aeternity/ae_mdw/compare/v1.58.0...v1.59.0) (2023-08-18)
 
 
