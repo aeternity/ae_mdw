@@ -24,6 +24,7 @@ defmodule AeMdw.Names do
 
   @type cursor() :: binary() | nil
   @type page_cursor() :: Collection.pagination_cursor()
+  @type reason :: ErrInput.t()
   # This needs to be an actual type like AeMdw.Db.Name.t()
   @type name :: term()
   @type claim() :: map()
@@ -67,7 +68,7 @@ defmodule AeMdw.Names do
   @max_bin Util.max_256bit_bin()
 
   @spec fetch_names(state(), pagination(), range(), order_by(), query(), cursor() | nil, opts()) ::
-          {page_cursor(), [name()], page_cursor()}
+          {:ok, {page_cursor(), [name()], page_cursor()}} | {:error, reason()}
   def fetch_names(state, pagination, range, order_by, query, cursor, opts)
       when order_by in [:activation, :expiration, :deactivation] do
     cursor = deserialize_height_cursor(cursor)
@@ -80,11 +81,12 @@ defmodule AeMdw.Names do
       |> build_height_streamer(state, scope, cursor)
       |> Collection.paginate(pagination)
 
-    {
-      serialize_height_cursor(prev_cursor),
-      render_height_list(state, height_keys, opts),
-      serialize_height_cursor(next_cursor)
-    }
+    {:ok,
+     {
+       serialize_height_cursor(prev_cursor),
+       render_height_list(state, height_keys, opts),
+       serialize_height_cursor(next_cursor)
+     }}
   end
 
   def fetch_names(state, pagination, nil, :name, query, cursor, opts) do
@@ -98,8 +100,11 @@ defmodule AeMdw.Names do
       |> Collection.paginate(pagination)
 
     {:ok,
-     {serialize_name_cursor(prev_cursor), render_names_list(state, name_keys, opts),
-      serialize_name_cursor(next_cursor)}}
+     {
+       serialize_name_cursor(prev_cursor),
+       render_names_list(state, name_keys, opts),
+       serialize_name_cursor(next_cursor)
+     }}
   end
 
   def fetch_names(_state, _pagination, _range, :name, _query, _cursor, _opts) do
@@ -387,12 +392,12 @@ defmodule AeMdw.Names do
   end
 
   @spec fetch_active_names(state(), pagination(), range(), order_by(), cursor(), opts()) ::
-          {page_cursor(), [name()], page_cursor()}
+          {:ok, {page_cursor(), [name()], page_cursor()}} | {:error, reason()}
   def fetch_active_names(state, pagination, range, order_by, cursor, opts),
     do: fetch_names(state, pagination, range, order_by, %{"state" => "active"}, cursor, opts)
 
   @spec fetch_inactive_names(state(), pagination(), range(), order_by(), cursor(), opts()) ::
-          {page_cursor(), [name()], page_cursor()}
+          {:ok, {page_cursor(), [name()], page_cursor()}} | {:error, reason()}
   def fetch_inactive_names(state, pagination, range, order_by, cursor, opts),
     do: fetch_names(state, pagination, range, order_by, %{"state" => "inactive"}, cursor, opts)
 

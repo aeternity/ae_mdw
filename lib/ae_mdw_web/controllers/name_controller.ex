@@ -132,8 +132,10 @@ defmodule AeMdwWeb.NameController do
     } = assigns
 
     opts = [{:render_v3?, true} | opts]
-    names = Names.fetch_names(state, pagination, scope, order_by, query, cursor, opts)
-    Util.paginate(conn, names)
+
+    state
+    |> Names.fetch_names(pagination, scope, order_by, query, cursor, opts)
+    |> then(fn {:ok, names} -> Util.paginate(conn, names) end)
   end
 
   @spec names_v2(Conn.t(), map()) :: Conn.t()
@@ -147,8 +149,9 @@ defmodule AeMdwWeb.NameController do
       scope: scope
     } = assigns
 
-    names = Names.fetch_names(state, pagination, scope, order_by, query, cursor, opts)
-    Util.paginate(conn, names)
+    state
+    |> Names.fetch_names(pagination, scope, order_by, query, cursor, opts)
+    |> then(fn {:ok, names} -> Util.paginate(conn, names) end)
   end
 
   @spec search_v1(Conn.t(), map()) :: Conn.t()
