@@ -39,20 +39,15 @@ defmodule AeMdw.Transfers do
     cursor = deserialize_cursor(cursor)
     scope = deserialize_scope(state, range)
 
-    try do
-      {prev_cursor, transfers, next_cursor} =
-        query
-        |> Map.drop(@pagination_params)
-        |> Map.new(&convert_param/1)
-        |> build_streamer(state, scope, cursor)
-        |> Collection.paginate(pagination)
+    {prev_cursor, transfers, next_cursor} =
+      query
+      |> Map.drop(@pagination_params)
+      |> Map.new(&convert_param/1)
+      |> build_streamer(state, scope, cursor)
+      |> Collection.paginate(pagination)
 
-      {:ok, serialize_cursor(prev_cursor), Enum.map(transfers, &render(state, &1)),
-       serialize_cursor(next_cursor)}
-    rescue
-      e in ErrInput ->
-        {:error, e.message}
-    end
+    {:ok, serialize_cursor(prev_cursor), Enum.map(transfers, &render(state, &1)),
+     serialize_cursor(next_cursor)}
   end
 
   # Retrieves transfers within the {account, kind_prefix_*, gen_txi, X} range.

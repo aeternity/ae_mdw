@@ -46,27 +46,23 @@ defmodule AeMdw.AexnTokens do
   @spec fetch_contracts(State.t(), pagination(), aexn_type(), query(), order_by(), cursor() | nil) ::
           {:ok, cursor() | nil, [Model.aexn_contract()], cursor() | nil} | {:error, Error.t()}
   def fetch_contracts(state, pagination, aexn_type, query, order_by, cursor) do
-    try do
-      sorted_table = if order_by == :name, do: @aexn_name_table, else: @aexn_symbol_table
+    case deserialize_aexn_cursor(cursor) do
+      {:ok, cursor} ->
+        sorted_table = if order_by == :name, do: @aexn_name_table, else: @aexn_symbol_table
 
-      case deserialize_aexn_cursor(cursor) do
-        {:ok, cursor} ->
-          {prev_record, aexn_contracts, next_record} =
-            query
-            |> Map.drop(@pagination_params)
-            |> validate_params()
-            |> Enum.into(%{prefix: ""}, &convert_param/1)
-            |> build_tokens_streamer(state, aexn_type, sorted_table, cursor)
-            |> Collection.paginate(pagination)
+        {prev_record, aexn_contracts, next_record} =
+          query
+          |> Map.drop(@pagination_params)
+          |> validate_params()
+          |> Enum.into(%{prefix: ""}, &convert_param/1)
+          |> build_tokens_streamer(state, aexn_type, sorted_table, cursor)
+          |> Collection.paginate(pagination)
 
-          {:ok, serialize_aexn_cursor(order_by, prev_record), aexn_contracts,
-           serialize_aexn_cursor(order_by, next_record)}
+        {:ok, serialize_aexn_cursor(order_by, prev_record), aexn_contracts,
+         serialize_aexn_cursor(order_by, next_record)}
 
-        {:error, reason} ->
-          {:error, reason}
-      end
-    rescue
-      e in ErrInput -> {:error, e}
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
