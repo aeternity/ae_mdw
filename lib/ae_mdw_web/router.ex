@@ -222,6 +222,19 @@ defmodule AeMdwWeb.Router do
   end
 
   @impl Plug.ErrorHandler
+  def handle_errors(%{query_params: query_params} = conn, %{
+        kind: :error,
+        reason: %AeMdw.Error.Input{} = reason
+      }) do
+    :telemetry.execute([:ae_mdw, :error], %{status: 400}, %{
+      request_path: conn.request_path,
+      query_params: query_params,
+      reason: inspect(reason)
+    })
+
+    send_resp(conn, 400, reason.message)
+  end
+
   def handle_errors(%{status: 500, query_params: query_params} = conn, %{
         kind: :error,
         reason: reason
