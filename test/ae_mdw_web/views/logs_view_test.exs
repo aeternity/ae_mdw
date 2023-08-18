@@ -303,7 +303,7 @@ defmodule AeMdwWeb.LogsViewTest do
       with_mocks [
         {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
       ] do
-        assert {:ok, _prev, [log1, log2], _next} =
+        assert {_prev, [log1, log2], _next} =
                  Contracts.fetch_logs(state, {:forward, false, 100, false}, nil, %{}, nil)
 
         contract_id = encode_contract(contract_pk)
@@ -349,7 +349,7 @@ defmodule AeMdwWeb.LogsViewTest do
                  parent_contract_id: nil
                } = LogsView.render_log(state, log2, %{})
 
-        assert {:ok, _prev, [log3], _next} =
+        assert {_prev, [log3], _next} =
                  Contracts.fetch_logs(
                    state,
                    {:forward, false, 100, false},

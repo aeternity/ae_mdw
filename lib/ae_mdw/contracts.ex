@@ -86,7 +86,7 @@ defmodule AeMdw.Contracts do
   end
 
   @spec fetch_logs(State.t(), pagination(), range(), query(), cursor()) ::
-          {:ok, cursor(), [log()], cursor()} | {:error, reason()}
+          {cursor(), [log()], cursor()}
   def fetch_logs(state, pagination, range, query, cursor) do
     cursor = deserialize_logs_cursor(cursor)
     scope = deserialize_scope(state, range)
@@ -98,11 +98,15 @@ defmodule AeMdw.Contracts do
       |> build_logs_pagination(state, scope, cursor)
       |> Collection.paginate(pagination)
 
-    {:ok, serialize_logs_cursor(prev_cursor), logs, serialize_logs_cursor(next_cursor)}
+    {
+      serialize_logs_cursor(prev_cursor),
+      logs,
+      serialize_logs_cursor(next_cursor)
+    }
   end
 
   @spec fetch_calls(State.t(), pagination(), range(), query(), cursor()) ::
-          {:ok, {cursor(), [call()], cursor()}}
+          {cursor(), [call()], cursor()}
   def fetch_calls(state, pagination, range, query, cursor) do
     cursor = deserialize_calls_cursor(cursor)
     scope = deserialize_scope(state, range)
@@ -114,9 +118,11 @@ defmodule AeMdw.Contracts do
       |> build_calls_pagination(state, scope, cursor)
       |> Collection.paginate(pagination)
 
-    {:ok,
-     {serialize_calls_cursor(prev_cursor), Enum.map(calls, &render_call(state, &1)),
-      serialize_calls_cursor(next_cursor)}}
+    {
+      serialize_calls_cursor(prev_cursor),
+      Enum.map(calls, &render_call(state, &1)),
+      serialize_calls_cursor(next_cursor)
+    }
   end
 
   @spec fetch_int_contract_calls(State.t(), Txs.txi(), Contract.fname()) :: Enumerable.t()

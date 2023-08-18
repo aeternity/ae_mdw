@@ -42,7 +42,6 @@ defmodule AeMdw.Names do
   @typep order_by :: :expiration | :name
   @typep pagination :: Collection.direction_limit()
   @typep range :: {:gen, Range.t()} | nil
-  @typep reason :: binary()
   @typep lifecycle() :: :active | :inactive | :auction
   @typep prefix() :: plain_name()
   @typep opts() :: Util.opts()
@@ -68,7 +67,7 @@ defmodule AeMdw.Names do
   @max_bin Util.max_256bit_bin()
 
   @spec fetch_names(state(), pagination(), range(), order_by(), query(), cursor() | nil, opts()) ::
-          {:ok, {page_cursor(), [name()], page_cursor()}}
+          {page_cursor(), [name()], page_cursor()}
   def fetch_names(state, pagination, range, order_by, query, cursor, opts)
       when order_by in [:activation, :expiration, :deactivation] do
     cursor = deserialize_height_cursor(cursor)
@@ -81,9 +80,11 @@ defmodule AeMdw.Names do
       |> build_height_streamer(state, scope, cursor)
       |> Collection.paginate(pagination)
 
-    {:ok,
-     {serialize_height_cursor(prev_cursor), render_height_list(state, height_keys, opts),
-      serialize_height_cursor(next_cursor)}}
+    {
+      serialize_height_cursor(prev_cursor),
+      render_height_list(state, height_keys, opts),
+      serialize_height_cursor(next_cursor)
+    }
   end
 
   def fetch_names(state, pagination, nil, :name, query, cursor, opts) do
@@ -386,12 +387,12 @@ defmodule AeMdw.Names do
   end
 
   @spec fetch_active_names(state(), pagination(), range(), order_by(), cursor(), opts()) ::
-          {:ok, {page_cursor(), [name()], page_cursor()}}
+          {page_cursor(), [name()], page_cursor()}
   def fetch_active_names(state, pagination, range, order_by, cursor, opts),
     do: fetch_names(state, pagination, range, order_by, %{"state" => "active"}, cursor, opts)
 
   @spec fetch_inactive_names(state(), pagination(), range(), order_by(), cursor(), opts()) ::
-          {:ok, {page_cursor(), [name()], page_cursor()}} | {:error, reason()}
+          {page_cursor(), [name()], page_cursor()}
   def fetch_inactive_names(state, pagination, range, order_by, cursor, opts),
     do: fetch_names(state, pagination, range, order_by, %{"state" => "inactive"}, cursor, opts)
 
