@@ -52,7 +52,6 @@ defmodule AeMdw.AexnTokens do
 
       {prev_record, aexn_contracts, next_record} =
         filters
-        |> Map.new()
         |> build_tokens_streamer(state, aexn_type, sorted_table, cursor)
         |> Collection.paginate(pagination)
 

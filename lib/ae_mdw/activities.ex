@@ -119,8 +119,8 @@ defmodule AeMdw.Activities do
               nil -> {nil, nil, nil}
             end
 
-          ownership_only? = Keyword.get(filters, :ownership_only?, false)
-          stream_types = Keyword.get(filters, :stream_types)
+          ownership_only? = Map.get(filters, :ownership_only?, false)
+          stream_types = Map.get(filters, :stream_types)
 
           gens_stream =
             %{

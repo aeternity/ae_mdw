@@ -79,7 +79,6 @@ defmodule AeMdw.Names do
          :ok <- validate_params(filters, order_by) do
       {prev_cursor, height_keys, next_cursor} =
         filters
-        |> Map.new()
         |> build_height_streamer(state, order_by, scope, cursor)
         |> Collection.paginate(pagination)
 
@@ -98,7 +97,6 @@ defmodule AeMdw.Names do
     with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
       {prev_cursor, name_keys, next_cursor} =
         filters
-        |> Map.new()
         |> build_name_streamer(state, cursor)
         |> Collection.paginate(pagination)
 
@@ -878,7 +876,7 @@ defmodule AeMdw.Names do
   end
 
   defp validate_params(filters, :activation) do
-    case Keyword.get(filters, :state) do
+    case Map.get(filters, :state) do
       "active" ->
         :ok
 

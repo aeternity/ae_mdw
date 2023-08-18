@@ -51,7 +51,6 @@ defmodule AeMdw.Oracles do
     with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
       {prev_cursor, expiration_keys, next_cursor} =
         filters
-        |> Map.new()
         |> build_streamer(state, scope, cursor)
         |> Collection.paginate(pagination)
 

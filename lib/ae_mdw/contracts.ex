@@ -93,7 +93,6 @@ defmodule AeMdw.Contracts do
     with {:ok, filters} <- Util.convert_params(query, &convert_param(state, &1)) do
       {prev_cursor, logs, next_cursor} =
         filters
-        |> Map.new()
         |> build_logs_pagination(state, scope, cursor)
         |> Collection.paginate(pagination)
 
@@ -115,7 +114,6 @@ defmodule AeMdw.Contracts do
     with {:ok, filters} <- Util.convert_params(query, &convert_param(state, &1)) do
       {prev_cursor, calls, next_cursor} =
         filters
-        |> Map.new()
         |> build_calls_pagination(state, scope, cursor)
         |> Collection.paginate(pagination)
 
@@ -504,10 +502,13 @@ defmodule AeMdw.Contracts do
   end
 
   defp convert_param(state, {"contract_id", contract_id}),
-    do: {:ok, {:create_txi, create_txi!(state, contract_id)}}
+    do: convert_param(state, {"contract", contract_id})
 
-  defp convert_param(state, {"contract", contract_id}),
-    do: {:ok, {:create_txi, create_txi!(state, contract_id)}}
+  defp convert_param(state, {"contract", contract_id}) do
+    with {:ok, create_txi} <- create_txi(state, contract_id) do
+      {:ok, {:create_txi, create_txi}}
+    end
+  end
 
   defp convert_param(_state, {"data", data}), do: {:ok, {:data_prefix, URI.decode(data)}}
 
@@ -523,13 +524,15 @@ defmodule AeMdw.Contracts do
   defp convert_param(_state, {"aexn-args", _}), do: {:ok, {:ignore, nil}}
 
   defp convert_param(_state, {id_key, id_val}) do
-    pos_types =
-      id_key
-      |> Parser.parse_field()
-      |> Enum.flat_map(fn {tx_type, positions} -> Enum.map(positions, &{&1, tx_type}) end)
-      |> Enum.group_by(fn {pos, _tx_type} -> pos end, fn {_pos, tx_type} -> tx_type end)
+    with {:ok, pubkey} <- Validate.id(id_val) do
+      pos_types =
+        id_key
+        |> Parser.parse_field()
+        |> Enum.flat_map(fn {tx_type, positions} -> Enum.map(positions, &{&1, tx_type}) end)
+        |> Enum.group_by(fn {pos, _tx_type} -> pos end, fn {_pos, tx_type} -> tx_type end)
 
-    {:ok, {:type_pos, {pos_types, Validate.id!(id_val)}}}
+      {:ok, {:type_pos, {pos_types, pubkey}}}
+    end
   end
 
   defp deserialize_scope(_state, nil), do: {@min_txi, @max_txi}
@@ -542,12 +545,13 @@ defmodule AeMdw.Contracts do
 
   defp deserialize_scope(_state, {:txi, first_txi..last_txi}), do: {first_txi, last_txi}
 
-  defp create_txi!(state, contract_id) do
-    pk = Validate.id!(contract_id)
-
-    case Origin.tx_index(state, {:contract, pk}) do
-      {:ok, txi} -> txi
-      :not_found -> raise ErrInput.Id, value: contract_id
+  defp create_txi(state, contract_id) do
+    with {:ok, pk} <- Validate.id(contract_id),
+         {:ok, txi} <- Origin.tx_index(state, {:contract, pk}) do
+      {:ok, txi}
+    else
+      {:error, reason} -> {:error, reason}
+      :not_found -> {:error, ErrInput.Id.exception(value: contract_id)}
     end
   end
 

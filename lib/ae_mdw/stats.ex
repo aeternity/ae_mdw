@@ -251,8 +251,8 @@ defmodule AeMdw.Stats do
   end
 
   defp build_transactions_statistics_streamer(state, query, _scope, cursor) do
-    tx_tag = Keyword.get(query, :tx_type, :all)
-    interval_by = Keyword.get(query, :interval_by, :day)
+    tx_tag = Map.get(query, :tx_type, :all)
+    interval_by = Map.get(query, :interval_by, :day)
 
     cursor =
       case cursor do

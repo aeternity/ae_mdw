@@ -62,7 +62,6 @@ defmodule AeMdw.Channels do
 
       {prev_cursor, expiration_keys, next_cursor} =
         filters
-        |> Map.new()
         |> build_streamer(state, scope, cursor)
         |> Collection.paginate(pagination)
 
