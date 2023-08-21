@@ -23,7 +23,7 @@ defmodule AeMdw.Migrations.ContractCallEntrypoint do
       end
 
     if tx_count > 0 do
-      {:ok, last_txi} = State.prev(state, Model.Tx, nil) |> IO.inspect()
+      {:ok, last_txi} = State.prev(state, Model.Tx, nil)
 
       count =
         last_txi
