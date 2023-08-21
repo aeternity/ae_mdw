@@ -12,7 +12,6 @@ defmodule AeMdw.Db.Format do
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Log
   alias AeMdw.Names
-  alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Txs
   alias AeMdw.Db.Sync.InnerTx
@@ -643,32 +642,4 @@ defmodule AeMdw.Db.Format do
       "responder_id" => encode_account(responder_pk)
     })
   end
-
-  # Once we move to 6.7+ we can use :aetx.type_to_swagger_name/1
-  @spec type_to_swagger_name(Node.tx_type()) :: String.t()
-  def type_to_swagger_name(:spend_tx), do: "SpendTx"
-  def type_to_swagger_name(:oracle_register_tx), do: "OracleRegisterTx"
-  def type_to_swagger_name(:oracle_extend_tx), do: "OracleExtendTx"
-  def type_to_swagger_name(:oracle_query_tx), do: "OracleQueryTx"
-  def type_to_swagger_name(:oracle_response_tx), do: "OracleRespondTx"
-  def type_to_swagger_name(:name_preclaim_tx), do: "NamePreclaimTx"
-  def type_to_swagger_name(:name_claim_tx), do: "NameClaimTx"
-  def type_to_swagger_name(:name_transfer_tx), do: "NameTransferTx"
-  def type_to_swagger_name(:name_update_tx), do: "NameUpdateTx"
-  def type_to_swagger_name(:name_revoke_tx), do: "NameRevokeTx"
-  def type_to_swagger_name(:contract_call_tx), do: "ContractCallTx"
-  def type_to_swagger_name(:contract_create_tx), do: "ContractCreateTx"
-  def type_to_swagger_name(:ga_attach_tx), do: "GAAttachTx"
-  def type_to_swagger_name(:ga_meta_tx), do: "GAMetaTx"
-  def type_to_swagger_name(:paying_for_tx), do: "PayingForTx"
-  def type_to_swagger_name(:channel_create_tx), do: "ChannelCreateTx"
-  def type_to_swagger_name(:channel_deposit_tx), do: "ChannelDepositTx"
-  def type_to_swagger_name(:channel_withdraw_tx), do: "ChannelWithdrawTx"
-  def type_to_swagger_name(:channel_force_progress_tx), do: "ChannelForceProgressTx"
-  def type_to_swagger_name(:channel_close_solo_tx), do: "ChannelCloseSoloTx"
-  def type_to_swagger_name(:channel_close_mutual_tx), do: "ChannelCloseMutualTx"
-  def type_to_swagger_name(:channel_slash_tx), do: "ChannelSlashTx"
-  def type_to_swagger_name(:channel_settle_tx), do: "ChannelSettleTx"
-  def type_to_swagger_name(:channel_snapshot_solo_tx), do: "ChannelSnapshotSoloTx"
-  def type_to_swagger_name(:channel_set_delegates_tx), do: "ChannelSetDelegatesTx"
 end

@@ -6,13 +6,13 @@ defmodule AeMdw.Oracles do
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
   alias AeMdw.Collection
-  alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Oracle
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DBUtil
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Txs
   alias AeMdw.Util
@@ -183,7 +183,7 @@ defmodule AeMdw.Oracles do
         block_hash: Enc.encode(:micro_block_hash, block_hash),
         block_time: block_time,
         source_tx_hash: Enc.encode(:tx_hash, tx_hash),
-        source_tx_type: Format.type_to_swagger_name(tx_type),
+        source_tx_type: Node.tx_name(tx_type),
         query_id: Enc.encode(:oracle_query_id, query_id)
       }
       |> Map.merge(:aeo_query_tx.for_client(query_tx))
@@ -219,7 +219,7 @@ defmodule AeMdw.Oracles do
         block_hash: Enc.encode(:micro_block_hash, block_hash),
         block_time: block_time,
         source_tx_hash: Enc.encode(:tx_hash, tx_hash),
-        source_tx_type: Format.type_to_swagger_name(tx_type),
+        source_tx_type: Node.tx_name(tx_type),
         query_id: Enc.encode(:oracle_query_id, query_id)
       }
       |> Map.merge(:aeo_response_tx.for_client(response_tx))

@@ -14,6 +14,7 @@ defmodule AeMdw.Contracts do
   alias AeMdw.Db.Sync.InnerTx
   alias AeMdw.Db.Util, as: DBUtil
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Txs
   alias AeMdw.Util
@@ -591,7 +592,7 @@ defmodule AeMdw.Contracts do
       contract: Enc.encode(:contract_pubkey, contract_pk),
       block_hash: Enc.encode(:micro_block_hash, block_hash),
       source_tx_hash: Enc.encode(:tx_hash, tx_hash),
-      source_tx_type: Format.type_to_swagger_name(source_tx_type),
+      source_tx_type: Node.tx_name(source_tx_type),
       create_tx: encoded_tx
     }
   end

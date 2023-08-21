@@ -17,6 +17,7 @@ defmodule AeMdw.Names do
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Txs
   alias AeMdw.Util
@@ -777,16 +778,16 @@ defmodule AeMdw.Names do
   end
 
   defp render_nested_resource(state, {active_from, {txi, _idx} = txi_idx, table}) do
-    {tx_type, tx_mod} =
+    tx_type =
       case table do
-        Model.AuctionBidClaim -> {:name_claim_tx, :aens_claim_tx}
-        Model.NameClaim -> {:name_claim_tx, :aens_claim_tx}
-        Model.NameRevoke -> {:name_revoke_tx, :aens_revoke_tx}
-        Model.NameUpdate -> {:name_update_tx, :aens_update_tx}
-        Model.NameTransfer -> {:name_transfer_tx, :aens_transfer_tx}
+        Model.AuctionBidClaim -> :name_claim_tx
+        Model.NameClaim -> :name_claim_tx
+        Model.NameRevoke -> :name_revoke_tx
+        Model.NameUpdate -> :name_update_tx
+        Model.NameTransfer -> :name_transfer_tx
       end
 
-    {aetx, ^tx_type, tx_hash, chain_tx_type, block_hash} =
+    {tx_rec, ^tx_type, tx_hash, chain_tx_type, block_hash} =
       DbUtil.read_node_tx_details(state, txi_idx)
 
     Model.tx(block_index: {height, _mbi}) = State.fetch!(state, Model.Tx, txi)
@@ -796,9 +797,9 @@ defmodule AeMdw.Names do
       height: height,
       block_hash: Enc.encode(:micro_block_hash, block_hash),
       source_tx_hash: Enc.encode(:tx_hash, tx_hash),
-      source_tx_type: Format.type_to_swagger_name(chain_tx_type),
+      source_tx_type: Node.tx_name(chain_tx_type),
       internal_source: chain_tx_type != tx_type,
-      tx: tx_mod.for_client(aetx)
+      tx: Node.tx_mod(tx_type).for_client(tx_rec)
     }
   end
 
