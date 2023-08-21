@@ -23,18 +23,17 @@ defmodule AeMdw.Migrations.ContractCallEntrypoint do
       end
 
     if tx_count > 0 do
-      num_tasks = System.schedulers_online() * 4
-      amount_per_task = trunc(:math.ceil(tx_count / num_tasks))
-      IO.puts("num_tasks=#{num_tasks} amount_per_task=#{amount_per_task}")
+      {:ok, last_txi} = State.prev(state, Model.Tx, nil)
 
-      tasks =
-        Enum.map(0..(num_tasks - 1), fn i ->
-          cursor = {:contract_call_tx, i * amount_per_task}
-          boundary = {cursor, {:contract_call_tx, (i + 1) * amount_per_task}}
+      count =
+        last_txi
+        |> txi_ranges()
+        |> Task.async_stream(
+          fn first_txi..last_txi ->
+            boundary = {{:contract_call_tx, first_txi}, {:contract_call_tx, last_txi}}
 
-          Task.async(fn ->
             state
-            |> Collection.stream(Model.Type, :forward, boundary, cursor)
+            |> Collection.stream(Model.Type, :forward, boundary, nil)
             |> Stream.map(fn {:contract_call_tx, txi} ->
               field_pos = Fields.mdw_field_pos("entrypoint")
               fname = get_function_name(state, txi)
@@ -42,19 +41,37 @@ defmodule AeMdw.Migrations.ContractCallEntrypoint do
               WriteMutation.new(Model.Field, m_entrypoint_field)
             end)
             |> Enum.to_list()
-          end)
+          end,
+          timeout: :infinity,
+          ordered: false
+        )
+        |> Stream.map(fn
+          {:ok, []} ->
+            0
+
+          {:ok, mutations} ->
+            _state = State.commit(state, mutations)
+            length(mutations)
         end)
+        |> Enum.sum()
 
-      write_mutations =
-        tasks
-        |> Task.await_many(60_000 * 30)
-        |> List.flatten()
-
-      _state = State.commit(state, write_mutations)
-      {:ok, length(write_mutations)}
+      {:ok, count}
     else
       {:ok, 0}
     end
+  end
+
+  defp txi_ranges(last_txi) do
+    0
+    |> Stream.unfold(fn range_first ->
+      if range_first do
+        range_last = min(range_first + 5_000, last_txi)
+        next = if range_last < last_txi, do: range_last + 1
+
+        {range_first..range_last, next}
+      end
+    end)
+    |> Enum.to_list()
   end
 
   def get_function_name(state, txi) do
