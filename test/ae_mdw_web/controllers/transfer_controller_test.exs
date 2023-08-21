@@ -105,5 +105,13 @@ defmodule AeMdwWeb.TransferControllerTest do
 
       assert %{"error" => ^error_msg} = json_response(conn, 400)
     end
+
+    test "renders error when the account is invalid", %{conn: conn} do
+      invalid_account = "invalid"
+      error_msg = "invalid id: #{invalid_account}"
+      conn = get(conn, "/v2/transfers", account: invalid_account)
+
+      assert %{"error" => ^error_msg} = json_response(conn, 400)
+    end
   end
 end
