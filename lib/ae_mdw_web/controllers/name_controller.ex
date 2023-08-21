@@ -144,14 +144,15 @@ defmodule AeMdwWeb.NameController do
   end
 
   @spec names_v2(Conn.t(), map()) :: Conn.t()
-  def names_v2(%Conn{assigns: assigns, query_params: query} = conn, _params) do
+  def names_v2(%Conn{assigns: assigns} = conn, _params) do
     %{
       state: state,
       pagination: pagination,
       cursor: cursor,
       opts: opts,
       order_by: order_by,
-      scope: scope
+      scope: scope,
+      query: query
     } = assigns
 
     with {:ok, names} <-

@@ -46,7 +46,7 @@ defmodule AeMdw.ContractsTest do
         |> State.cache_put(:ct_create_sync_cache, contract_pk, create_txi)
         |> Contract.logs_write(create_txi, call_txi, call_rec)
 
-      assert {_prev, [log1, log2], _next} =
+      assert {:ok, {_prev, [log1, log2], _next}} =
                Contracts.fetch_logs(state, {:forward, false, 100, false}, nil, %{}, nil)
 
       assert {create_txi, call_txi, 0} == log1

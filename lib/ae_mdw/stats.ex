@@ -235,7 +235,7 @@ defmodule AeMdw.Stats do
   @spec fetch_transactions_statistics(State.t(), pagination(), query(), range(), cursor()) ::
           {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}}
   def fetch_transactions_statistics(state, pagination, query, range, cursor) do
-    with {:ok, query} <- convert_params(query),
+    with {:ok, query} <- Util.convert_params(query, &convert_param/1),
          {:ok, cursor} <- deserialize_statistic_cursor(cursor) do
       {prev_cursor, statistics_keys, next_cursor} =
         state
@@ -251,8 +251,8 @@ defmodule AeMdw.Stats do
   end
 
   defp build_transactions_statistics_streamer(state, query, _scope, cursor) do
-    tx_tag = Keyword.get(query, :tx_type, :all)
-    interval_by = Keyword.get(query, :interval_by, :day)
+    tx_tag = Map.get(query, :tx_type, :all)
+    interval_by = Map.get(query, :interval_by, :day)
 
     cursor =
       case cursor do
@@ -298,15 +298,6 @@ defmodule AeMdw.Stats do
       end_date: days_to_iso(interval_start + 1),
       count: count
     }
-  end
-
-  defp convert_params(query) do
-    Enum.reduce_while(query, {:ok, []}, fn param, {:ok, filters} ->
-      case convert_param(param) do
-        {:ok, filter} -> {:cont, {:ok, [filter | filters]}}
-        {:error, reason} -> {:halt, {:error, reason}}
-      end
-    end)
   end
 
   defp convert_param({"tx_type", val}) do

@@ -57,12 +57,11 @@ defmodule AeMdw.Channels do
           | {:error, Error.t()}
   def fetch_channels(state, pagination, range, query, cursor) do
     with {:ok, cursor} <- deserialize_cursor(cursor),
-         {:ok, filters} <- convert_params(query) do
+         {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
       scope = deserialize_scope(range)
 
       {prev_cursor, expiration_keys, next_cursor} =
         filters
-        |> Map.new()
         |> build_streamer(state, scope, cursor)
         |> Collection.paginate(pagination)
 
@@ -337,15 +336,6 @@ defmodule AeMdw.Channels do
 
   defp get_block_index(state, :micro, block_hash) do
     DbUtil.micro_block_height_index(state, block_hash)
-  end
-
-  defp convert_params(query) do
-    Enum.reduce_while(query, {:ok, []}, fn param, {:ok, filters} ->
-      case convert_param(param) do
-        {:ok, filter} -> {:cont, {:ok, [filter | filters]}}
-        {:error, reason} -> {:halt, {:error, reason}}
-      end
-    end)
   end
 
   defp convert_param({"state", val}) when val in @states, do: {:ok, {:state, val}}

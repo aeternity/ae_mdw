@@ -97,7 +97,7 @@ defmodule AeMdw.Activities do
   def fetch_account_activities(state, account, pagination, range, query, cursor) do
     with {:ok, account_pk} <- Validate.id(account),
          {:ok, cursor} <- deserialize_cursor(cursor),
-         {:ok, filters} <- convert_params(query) do
+         {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
       {prev_cursor, activities_locators_data, next_cursor} =
         fn direction ->
           {gen_scope, txi_scope} =
@@ -119,8 +119,8 @@ defmodule AeMdw.Activities do
               nil -> {nil, nil, nil}
             end
 
-          ownership_only? = Keyword.get(filters, :ownership_only?, false)
-          stream_types = Keyword.get(filters, :stream_types)
+          ownership_only? = Map.get(filters, :ownership_only?, false)
+          stream_types = Map.get(filters, :stream_types)
 
           gens_stream =
             %{
@@ -757,15 +757,6 @@ defmodule AeMdw.Activities do
       nil ->
         {:error, ErrInput.Cursor.exception(value: cursor)}
     end
-  end
-
-  defp convert_params(query) do
-    Enum.reduce_while(query, {:ok, []}, fn param, {:ok, filters} ->
-      case convert_param(param) do
-        {:ok, filter} -> {:cont, {:ok, [filter | filters]}}
-        {:error, reason} -> {:halt, {:error, reason}}
-      end
-    end)
   end
 
   defp convert_param({"owned_only", val}), do: {:ok, {:ownership_only?, val != "false"}}

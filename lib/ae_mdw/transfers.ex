@@ -8,6 +8,7 @@ defmodule AeMdw.Transfers do
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
+  alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Collection
   alias AeMdw.Util
@@ -22,8 +23,6 @@ defmodule AeMdw.Transfers do
   @typep pagination :: Collection.direction_limit()
   @typep range :: {:gen, Range.t()} | {:txi, Range.t()} | nil
 
-  @pagination_params ~w(limit cursor rev direction scope tx_hash)
-
   @hardforks_accounts ~w(accounts_genesis accounts_minerva accounts_fortuna accounts_lima)
   @kinds ~w(fee_lock_name fee_refund_name fee_spend_name reward_block reward_dev reward_oracle) ++
            @hardforks_accounts
@@ -33,23 +32,24 @@ defmodule AeMdw.Transfers do
   @kind_int_transfer_tx_table Model.KindIntTransferTx
 
   @spec fetch_transfers(State.t(), pagination(), range(), query(), cursor()) ::
-          {cursor(), [transfer()], cursor()}
+          {:ok, {cursor(), [transfer()], cursor()}} | {:error, Error.t()}
   def fetch_transfers(state, pagination, range, query, cursor) do
     cursor = deserialize_cursor(cursor)
     scope = deserialize_scope(state, range)
 
-    {prev_cursor, transfers, next_cursor} =
-      query
-      |> Map.drop(@pagination_params)
-      |> Map.new(&convert_param/1)
-      |> build_streamer(state, scope, cursor)
-      |> Collection.paginate(pagination)
+    with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
+      {prev_cursor, transfers, next_cursor} =
+        filters
+        |> build_streamer(state, scope, cursor)
+        |> Collection.paginate(pagination)
 
-    {
-      serialize_cursor(prev_cursor),
-      Enum.map(transfers, &render(state, &1)),
-      serialize_cursor(next_cursor)
-    }
+      {:ok,
+       {
+         serialize_cursor(prev_cursor),
+         Enum.map(transfers, &render(state, &1)),
+         serialize_cursor(next_cursor)
+       }}
+    end
   end
 
   # Retrieves transfers within the {account, kind_prefix_*, gen_txi, X} range.
@@ -191,14 +191,17 @@ defmodule AeMdw.Transfers do
     end
   end
 
-  defp convert_param({"account", account_id}) when is_binary(account_id),
-    do: {:account_pk, Validate.id!(account_id, [:account_pubkey])}
+  defp convert_param({"account", account_id}) when is_binary(account_id) do
+    with {:ok, pubkey} <- Validate.id(account_id, [:account_pubkey]) do
+      {:ok, {:account_pk, pubkey}}
+    end
+  end
 
   defp convert_param({"kind", kind_prefix}) when is_binary(kind_prefix),
-    do: {:kind_prefix, kind_prefix}
+    do: {:ok, {:kind_prefix, kind_prefix}}
 
   defp convert_param(other_param),
-    do: raise(ErrInput.Query, value: other_param)
+    do: {:error, ErrInput.Query.exception(value: other_param)}
 
   defp render(state, {{height, _opt_txi_idx}, kind, target_pk, opt_ref_txi_idx} = transfer_key) do
     m_transfer = State.fetch!(state, Model.IntTransferTx, transfer_key)

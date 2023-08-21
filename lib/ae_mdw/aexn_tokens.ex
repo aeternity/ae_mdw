@@ -24,7 +24,6 @@ defmodule AeMdw.AexnTokens do
   @typep order_by() :: :name | :symbol
   @typep query :: %{binary() => binary()}
 
-  @pagination_params ~w(limit cursor rev direction by scope)
   @max_sort_field_length 100
 
   @aexn_table Model.AexnContract
@@ -44,21 +43,21 @@ defmodule AeMdw.AexnTokens do
   end
 
   @spec fetch_contracts(State.t(), pagination(), aexn_type(), query(), order_by(), cursor() | nil) ::
-          {:ok, cursor() | nil, [Model.aexn_contract()], cursor() | nil} | {:error, Error.t()}
+          {:ok, {cursor() | nil, [Model.aexn_contract()], cursor() | nil}} | {:error, Error.t()}
   def fetch_contracts(state, pagination, aexn_type, query, order_by, cursor) do
-    with {:ok, cursor} <- deserialize_aexn_cursor(cursor) do
+    with {:ok, cursor} <- deserialize_aexn_cursor(cursor),
+         {:ok, params} <- validate_params(query),
+         {:ok, filters} <- Util.convert_params(params, &convert_param/1) do
       sorted_table = if order_by == :name, do: @aexn_name_table, else: @aexn_symbol_table
 
       {prev_record, aexn_contracts, next_record} =
-        query
-        |> Map.drop(@pagination_params)
-        |> validate_params()
-        |> Enum.into(%{prefix: ""}, &convert_param/1)
+        filters
         |> build_tokens_streamer(state, aexn_type, sorted_table, cursor)
         |> Collection.paginate(pagination)
 
-      {:ok, serialize_aexn_cursor(order_by, prev_record), aexn_contracts,
-       serialize_aexn_cursor(order_by, next_record)}
+      {:ok,
+       {serialize_aexn_cursor(order_by, prev_record), aexn_contracts,
+        serialize_aexn_cursor(order_by, next_record)}}
     end
   end
 
@@ -82,6 +81,9 @@ defmodule AeMdw.AexnTokens do
     do_build_tokens_streamer(state, table, cursor, scope)
   end
 
+  defp build_tokens_streamer(_filters, state, type, table, cursor),
+    do: build_tokens_streamer(%{prefix: ""}, state, type, table, cursor)
+
   defp do_build_tokens_streamer(state, table, cursor, scope) do
     fn direction ->
       state
@@ -92,18 +94,18 @@ defmodule AeMdw.AexnTokens do
     end
   end
 
-  defp validate_params(%{"prefix" => _, "exact" => _}),
-    do: raise(ErrInput.Query, value: "can't use both `prefix` and `exact` parameters")
+  defp validate_params(%{"prefix" => _prefix, "exact" => _exact}),
+    do:
+      {:error, ErrInput.Query.exception(value: "can't use both `prefix` and `exact` parameters")}
 
-  defp validate_params(params), do: params
+  defp validate_params(params), do: {:ok, params}
 
-  defp convert_param({"prefix", prefix}) when is_binary(prefix), do: {:prefix, prefix}
+  defp convert_param({"prefix", prefix}) when is_binary(prefix), do: {:ok, {:prefix, prefix}}
 
   defp convert_param({"exact", field_value}) when is_binary(field_value),
-    do: {:exact, field_value}
+    do: {:ok, {:exact, field_value}}
 
-  defp convert_param(other_param),
-    do: raise(ErrInput.Query, value: other_param)
+  defp convert_param(other_param), do: {:error, ErrInput.Query.exception(value: other_param)}
 
   defp serialize_aexn_cursor(_order_by, nil), do: nil
 
