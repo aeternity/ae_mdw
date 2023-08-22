@@ -4,13 +4,13 @@ defmodule AeMdw.Transfers do
   """
 
   alias :aeser_api_encoder, as: Enc
-  alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Collection
+  alias AeMdw.Node
   alias AeMdw.Util
   alias AeMdw.Validate
 
@@ -219,7 +219,7 @@ defmodule AeMdw.Transfers do
           {
             Enc.encode(:micro_block_hash, ref_block_hash),
             Enc.encode(:tx_hash, ref_tx_hash),
-            Format.type_to_swagger_name(ref_tx_type)
+            Node.tx_name(ref_tx_type)
           }
       end
 

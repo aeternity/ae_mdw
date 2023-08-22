@@ -5,12 +5,12 @@ defmodule AeMdw.Channels do
 
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Collection
-  alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdw.Node
   alias AeMdw.Node.Db
   alias AeMdw.Txs
   alias AeMdw.Util
@@ -38,19 +38,6 @@ defmodule AeMdw.Channels do
   @table_inactive_activation Model.InactiveChannelActivation
 
   @states ~w(active inactive)
-
-  @channel_tx_mod %{
-    :channel_create_tx => :aesc_create_tx,
-    :channel_close_solo_tx => :aesc_close_solo_tx,
-    :channel_close_mutual_tx => :aesc_close_mutual_tx,
-    :channel_settle_tx => :aesc_settle_tx,
-    :channel_deposit_tx => :aesc_deposit_tx,
-    :channel_withdraw_tx => :aesc_withdraw_tx,
-    :channel_set_delegates_tx => :aesc_set_delegates_tx,
-    :channel_force_progress_tx => :aesc_force_progress_tx,
-    :channel_slash_tx => :aesc_slash_tx,
-    :channel_snapshot_solo_tx => :aesc_snapshot_solo_tx
-  }
 
   @spec fetch_channels(state(), pagination(), range(), query(), cursor()) ::
           {:ok, {pagination_cursor(), [channel()], pagination_cursor()}}
@@ -230,7 +217,7 @@ defmodule AeMdw.Channels do
       last_updated_height: last_updated_height,
       last_updated_time: DbUtil.block_time(update_block_hash),
       last_updated_tx_hash: encode(:tx_hash, tx_hash),
-      last_updated_tx_type: Format.type_to_swagger_name(tx_type),
+      last_updated_tx_type: Node.tx_name(tx_type),
       updates_count: length(updates),
       active: is_active?
     }
@@ -256,14 +243,14 @@ defmodule AeMdw.Channels do
     {update_tx, inner_tx_type, tx_hash, tx_type, block_hash} =
       DbUtil.read_node_tx_details(state, txi_idx)
 
-    update_mod = Map.fetch!(@channel_tx_mod, inner_tx_type)
+    update_mod = Node.tx_mod(inner_tx_type)
 
     %{
       channel: channel_id,
-      tx_type: Format.type_to_swagger_name(inner_tx_type),
+      tx_type: Node.tx_name(inner_tx_type),
       block_hash: Enc.encode(:micro_block_hash, block_hash),
       source_tx_hash: Enc.encode(:tx_hash, tx_hash),
-      source_tx_type: Format.type_to_swagger_name(tx_type),
+      source_tx_type: Node.tx_name(tx_type),
       tx: update_mod.for_client(update_tx)
     }
   end

@@ -665,7 +665,7 @@ defmodule AeMdw.Activities do
     payload = %{
       micro_time: micro_time,
       source_tx_hash: Enc.encode(:tx_hash, tx_hash),
-      source_tx_type: Format.type_to_swagger_name(tx_type),
+      source_tx_type: Node.tx_name(tx_type),
       tx: :aens_claim_tx.for_client(claim_aetx)
     }
 
