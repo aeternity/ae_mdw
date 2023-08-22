@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.60.0](https://www.github.com/aeternity/ae_mdw/compare/v1.59.1...v1.60.0) (2023-08-22)
+
+
+### Features
+
+* include aexn meta info on aexn activties ([#1546](https://www.github.com/aeternity/ae_mdw/issues/1546)) ([66a54d8](https://www.github.com/aeternity/ae_mdw/commit/66a54d842798113f78ca55ba3328b9cdcc58d778))
+
+
+### Bug Fixes
+
+* index entrypoints with proper cursor ([#1543](https://www.github.com/aeternity/ae_mdw/issues/1543)) ([47f9fc5](https://www.github.com/aeternity/ae_mdw/commit/47f9fc5b6ee85e0010e59df978cde8812b755221))
+* load aex141 contract for aex141 activities ([#1548](https://www.github.com/aeternity/ae_mdw/issues/1548)) ([4703a08](https://www.github.com/aeternity/ae_mdw/commit/4703a08a671046c13873a6c2149a0ac66972ff85))
+
+
+### Miscellaneous
+
+* remove dup mgiration since it takes too long for testnet ([#1542](https://www.github.com/aeternity/ae_mdw/issues/1542)) ([7515310](https://www.github.com/aeternity/ae_mdw/commit/75153101a7cb218af1c5767125b9b9b6c955aa59))
+* unify convert_params usage into util function ([#1541](https://www.github.com/aeternity/ae_mdw/issues/1541)) ([f6bb850](https://www.github.com/aeternity/ae_mdw/commit/f6bb850621ef8234e2b4f4a56e16a95908dabb17))
+* use extracted tx mod and name ([#1545](https://www.github.com/aeternity/ae_mdw/issues/1545)) ([eeb9d55](https://www.github.com/aeternity/ae_mdw/commit/eeb9d55bdfc6d19d4135f9a5c977a47eb9003c2c))
+
 ### [1.59.1](https://www.github.com/aeternity/ae_mdw/compare/v1.59.0...v1.59.1) (2023-08-18)
 
 
