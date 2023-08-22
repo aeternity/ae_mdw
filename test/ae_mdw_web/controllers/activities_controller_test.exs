@@ -805,6 +805,10 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
           Model.AexnContract,
           Model.aexn_contract(index: {:aex9, contract_pk}, meta_info: meta_info)
         )
+        |> Store.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex141, contract_pk}, meta_info: meta_info)
+        )
 
       with_mocks [
         {Db, [:passthrough],

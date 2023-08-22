@@ -750,7 +750,7 @@ defmodule AeMdw.Activities do
       |> Util.map_rename(:recipient, :recipient_id)
 
     Model.aexn_contract(meta_info: {name, symbol, _decimals}) =
-      State.fetch!(state, Model.AexnContract, {:aex9, Validate.id!(contract_id)})
+      State.fetch!(state, Model.AexnContract, {:aex141, Validate.id!(contract_id)})
 
     payload =
       payload
