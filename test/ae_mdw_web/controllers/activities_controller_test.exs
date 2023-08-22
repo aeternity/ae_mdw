@@ -754,36 +754,57 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       enc_mb_hash1 = Enc.encode(:micro_block_hash, mb_hash1)
       mb_hash2 = TS.key_block_hash(1)
       enc_mb_hash2 = Enc.encode(:micro_block_hash, mb_hash2)
+      contract_pk = <<100::256>>
+      meta_info = {"AEXName", "AEXSymbol", 10}
 
       store =
         empty_store()
         |> Store.put(
           Model.AexnTransfer,
-          Model.aexn_transfer(index: {:aex9, account_pk, txi1, another_account_pk, 1, 1})
+          Model.aexn_transfer(
+            index: {:aex9, account_pk, txi1, another_account_pk, 1, 1},
+            contract_pk: contract_pk
+          )
         )
         |> Store.put(Model.Tx, Model.tx(index: txi1, block_index: {height1, 0}, id: tx1_hash))
         |> Store.put(
           Model.RevAexnTransfer,
-          Model.aexn_transfer(index: {:aex141, account_pk, txi2, another_account_pk, 2, 2})
+          Model.aexn_transfer(
+            index: {:aex141, account_pk, txi2, another_account_pk, 2, 2},
+            contract_pk: contract_pk
+          )
         )
         |> Store.put(
           Model.AexnTransfer,
-          Model.aexn_transfer(index: {:aex141, another_account_pk, txi2, account_pk, 2, 2})
+          Model.aexn_transfer(
+            index: {:aex141, another_account_pk, txi2, account_pk, 2, 2},
+            contract_pk: contract_pk
+          )
         )
         |> Store.put(Model.Tx, Model.tx(index: txi2, block_index: {height2, 0}, id: tx2_hash))
         |> Store.put(
           Model.RevAexnTransfer,
-          Model.aexn_transfer(index: {:aex9, account_pk, txi3, another_account_pk, 3, 3})
+          Model.aexn_transfer(
+            index: {:aex9, account_pk, txi3, another_account_pk, 3, 3},
+            contract_pk: contract_pk
+          )
         )
         |> Store.put(
           Model.AexnTransfer,
-          Model.aexn_transfer(index: {:aex9, another_account_pk, txi3, account_pk, 3, 3})
+          Model.aexn_transfer(
+            index: {:aex9, another_account_pk, txi3, account_pk, 3, 3},
+            contract_pk: contract_pk
+          )
         )
         |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height2, 0}, id: tx3_hash))
         |> Store.put(Model.Block, Model.block(index: {height1, -1}, hash: kb_hash1))
         |> Store.put(Model.Block, Model.block(index: {height1, 0}, hash: mb_hash1))
         |> Store.put(Model.Block, Model.block(index: {height2, -1}, hash: kb_hash2))
         |> Store.put(Model.Block, Model.block(index: {height2, 0}, hash: mb_hash2))
+        |> Store.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, meta_info: meta_info)
+        )
 
       with_mocks [
         {Db, [:passthrough],
@@ -849,36 +870,61 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       enc_mb_hash1 = Enc.encode(:micro_block_hash, mb_hash1)
       mb_hash2 = TS.micro_block_hash(1)
       enc_mb_hash2 = Enc.encode(:micro_block_hash, mb_hash2)
+      contract_pk = <<100::256>>
+      meta_info = {"AEXName", "AEXSymbol", 10}
 
       store =
         empty_store()
         |> Store.put(
           Model.AexnTransfer,
-          Model.aexn_transfer(index: {:aex9, account_pk, txi1, another_account_pk, 1, 1})
+          Model.aexn_transfer(
+            index: {:aex9, account_pk, txi1, another_account_pk, 1, 1},
+            contract_pk: contract_pk
+          )
         )
         |> Store.put(Model.Tx, Model.tx(index: txi1, block_index: {height1, 0}, id: "hash1"))
         |> Store.put(
           Model.RevAexnTransfer,
-          Model.aexn_transfer(index: {:aex141, account_pk, txi2, another_account_pk, 2, 2})
+          Model.aexn_transfer(
+            index: {:aex141, account_pk, txi2, another_account_pk, 2, 2},
+            contract_pk: contract_pk
+          )
         )
         |> Store.put(
           Model.AexnTransfer,
-          Model.aexn_transfer(index: {:aex141, another_account_pk, txi2, account_pk, 2, 2})
+          Model.aexn_transfer(
+            index: {:aex141, another_account_pk, txi2, account_pk, 2, 2},
+            contract_pk: contract_pk
+          )
         )
         |> Store.put(Model.Tx, Model.tx(index: txi2, block_index: {height2, 0}, id: "hash2"))
         |> Store.put(
           Model.RevAexnTransfer,
-          Model.aexn_transfer(index: {:aex9, account_pk, txi3, another_account_pk, 3, 3})
+          Model.aexn_transfer(
+            index: {:aex9, account_pk, txi3, another_account_pk, 3, 3},
+            contract_pk: contract_pk
+          )
         )
         |> Store.put(
           Model.AexnTransfer,
-          Model.aexn_transfer(index: {:aex9, another_account_pk, txi3, account_pk, 3, 3})
+          Model.aexn_transfer(
+            index: {:aex9, another_account_pk, txi3, account_pk, 3, 3},
+            contract_pk: contract_pk
+          )
         )
         |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height2, 0}, id: "hash3"))
         |> Store.put(Model.Block, Model.block(index: {height1, -1}, hash: kb_hash1))
         |> Store.put(Model.Block, Model.block(index: {height1, 0}, hash: mb_hash1))
         |> Store.put(Model.Block, Model.block(index: {height2, -1}, hash: kb_hash2))
         |> Store.put(Model.Block, Model.block(index: {height2, 0}, hash: mb_hash2))
+        |> Store.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, meta_info: meta_info)
+        )
+        |> Store.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex141, contract_pk}, meta_info: meta_info)
+        )
 
       with_mocks [
         {Db, [:passthrough],
@@ -1181,6 +1227,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       kb_hash = TS.key_block_hash(0)
       mb_hash = TS.micro_block_hash(0)
       enc_mb_hash = Enc.encode(:micro_block_hash, mb_hash)
+      contract_pk = <<100::256>>
+      meta_info = {"AEXName", "AEXSymbol", 10}
 
       {:ok, contract_call1_aetx} =
         :aect_call_tx.new(%{
@@ -1253,23 +1301,36 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(Model.Block, Model.block(index: {height, mbi}, hash: mb_hash))
         |> Store.put(
           Model.AexnTransfer,
-          Model.aexn_transfer(index: {:aex9, account_pk, 4, next_account_pk, 1, 1})
+          Model.aexn_transfer(
+            index: {:aex9, account_pk, 4, next_account_pk, 1, 1},
+            contract_pk: contract_pk
+          )
         )
         |> Store.put(Model.Tx, Model.tx(index: 4, block_index: {height, mbi}, id: "tx-hash4"))
         |> Store.put(
           # Skipped
           Model.RevAexnTransfer,
-          Model.aexn_transfer(index: {:aex141, account_pk, 5, next_account_pk, 2, 2})
+          Model.aexn_transfer(
+            index: {:aex141, account_pk, 5, next_account_pk, 2, 2},
+            contract_pk: contract_pk
+          )
         )
         |> Store.put(
           Model.AexnTransfer,
-          Model.aexn_transfer(index: {:aex141, next_account_pk, 5, account_pk, 2, 2})
+          Model.aexn_transfer(
+            index: {:aex141, next_account_pk, 5, account_pk, 2, 2},
+            contract_pk: contract_pk
+          )
         )
         |> Store.put(Model.Tx, Model.tx(index: 5, block_index: {height, mbi}, id: "tx-hash5"))
         |> Store.put(
           # Skipped
           Model.TargetKindIntTransferTx,
           Model.target_kind_int_transfer_tx(index: {account_pk, "reward_oracle", {height, 6}, 6})
+        )
+        |> Store.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, meta_info: meta_info)
         )
 
       with_mocks [
@@ -1382,12 +1443,17 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       enc_mb_hash1 = Enc.encode(:micro_block_hash, mb_hash1)
       mb_hash2 = TS.key_block_hash(1)
       enc_mb_hash2 = Enc.encode(:micro_block_hash, mb_hash2)
+      contract_pk = <<100::256>>
+      meta_info = {"AEXName", "AEXSymbol", 10}
 
       store =
         empty_store()
         |> Store.put(
           Model.AexnTransfer,
-          Model.aexn_transfer(index: {:aex9, account_pk, txi1, another_account_pk, 1, 1})
+          Model.aexn_transfer(
+            index: {:aex9, account_pk, txi1, another_account_pk, 1, 1},
+            contract_pk: contract_pk
+          )
         )
         |> Store.put(Model.Tx, Model.tx(index: txi1, block_index: {height1, 0}, id: tx1_hash))
         |> Store.put(
@@ -1396,7 +1462,10 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         )
         |> Store.put(
           Model.AexnTransfer,
-          Model.aexn_transfer(index: {:aex141, another_account_pk, txi2, account_pk, 2, 2})
+          Model.aexn_transfer(
+            index: {:aex141, another_account_pk, txi2, account_pk, 2, 2},
+            contract_pk: contract_pk
+          )
         )
         |> Store.put(Model.Tx, Model.tx(index: txi2, block_index: {height2, 0}, id: tx2_hash))
         |> Store.put(
@@ -1405,13 +1474,20 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         )
         |> Store.put(
           Model.AexnTransfer,
-          Model.aexn_transfer(index: {:aex9, another_account_pk, txi3, account_pk, 3, 3})
+          Model.aexn_transfer(
+            index: {:aex9, another_account_pk, txi3, account_pk, 3, 3},
+            contract_pk: contract_pk
+          )
         )
         |> Store.put(Model.Tx, Model.tx(index: txi3, block_index: {height2, 0}, id: tx3_hash))
         |> Store.put(Model.Block, Model.block(index: {height1, -1}, hash: kb_hash1))
         |> Store.put(Model.Block, Model.block(index: {height1, 0}, hash: mb_hash1))
         |> Store.put(Model.Block, Model.block(index: {height2, -1}, hash: kb_hash2))
         |> Store.put(Model.Block, Model.block(index: {height2, 0}, hash: mb_hash2))
+        |> Store.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, meta_info: meta_info)
+        )
 
       with_mocks [
         {Db, [:passthrough],
@@ -1449,7 +1525,10 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                    "recipient_id" => ^account,
                    "amount" => 3,
                    "log_idx" => 3,
-                   "tx_hash" => ^tx3_encoded
+                   "tx_hash" => ^tx3_encoded,
+                   "token_symbol" => "AEXSymbol",
+                   "token_name" => "AEXName",
+                   "decimals" => 10
                  }
                } = activity2
       end

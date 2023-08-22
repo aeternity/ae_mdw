@@ -715,11 +715,21 @@ defmodule AeMdw.Activities do
          {:aexn, :aex9, from_pk, to_pk, value, index}
        ) do
     payload =
+      %{contract_id: contract_id} =
       state
       |> AexnView.sender_transfer_to_map({:aex9, from_pk, txi, to_pk, value, index})
       |> Map.delete(:call_txi)
       |> Util.map_rename(:sender, :sender_id)
       |> Util.map_rename(:recipient, :recipient_id)
+
+    Model.aexn_contract(meta_info: {name, symbol, decimals}) =
+      State.fetch!(state, Model.AexnContract, {:aex9, Validate.id!(contract_id)})
+
+    payload =
+      payload
+      |> Map.put(:token_symbol, symbol)
+      |> Map.put(:token_name, name)
+      |> Map.put(:decimals, decimals)
 
     {"Aex9TransferEvent", payload}
   end
@@ -732,11 +742,20 @@ defmodule AeMdw.Activities do
          {:aexn, :aex141, from_pk, to_pk, value, index}
        ) do
     payload =
+      %{contract_id: contract_id} =
       state
       |> AexnView.sender_transfer_to_map({:aex141, from_pk, txi, to_pk, value, index})
       |> Map.delete(:call_txi)
       |> Util.map_rename(:sender, :sender_id)
       |> Util.map_rename(:recipient, :recipient_id)
+
+    Model.aexn_contract(meta_info: {name, symbol, _decimals}) =
+      State.fetch!(state, Model.AexnContract, {:aex9, Validate.id!(contract_id)})
+
+    payload =
+      payload
+      |> Map.put(:token_symbol, symbol)
+      |> Map.put(:token_name, name)
 
     {"Aex141TransferEvent", payload}
   end
