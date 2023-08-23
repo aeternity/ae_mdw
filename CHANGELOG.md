@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.61.0](https://www.github.com/aeternity/ae_mdw/compare/v1.60.0...v1.61.0) (2023-08-23)
+
+
+### Features
+
+* query active entities (e.g auctions) ([#1551](https://www.github.com/aeternity/ae_mdw/issues/1551)) ([23b1927](https://www.github.com/aeternity/ae_mdw/commit/23b19274c65d6b104a33ffd0c1d545a9259ea293))
+
 ## [1.60.0](https://www.github.com/aeternity/ae_mdw/compare/v1.59.1...v1.60.0) (2023-08-22)
 
 
