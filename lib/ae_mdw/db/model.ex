@@ -44,6 +44,8 @@ defmodule AeMdw.Db.Model do
   @typep query_id() :: Oracles.query_id()
   @typep amount() :: non_neg_integer()
   @typep fname() :: Contract.fname()
+  @typep call_tx_args :: Contract.call_tx_args()
+  @typep call_tx_res :: Contract.call_tx_res()
 
   @typep token_id :: AeMdw.Aex141.token_id()
   @typep template_id :: AeMdw.Aex141.template_id()
@@ -645,9 +647,31 @@ defmodule AeMdw.Db.Model do
           record(:contract_call,
             index: contract_call_index(),
             fun: fname(),
-            args: [term()],
-            result: term(),
+            args: call_tx_args(),
+            result: call_tx_res(),
             return: term()
+          )
+
+  # entity:
+  #     index: {name, call txi, create txi}
+  @entity_defaults [index: {"", -1, -1}]
+  defrecord :entity, @entity_defaults
+
+  @type entity_index() :: {String.t(), txi(), txi()}
+  @type entity() ::
+          record(:entity,
+            index: entity_index()
+          )
+
+  # contract_entity:
+  #     index: {name, create txi, call txi}
+  @contract_entity_defaults [index: {"", -1, -1}]
+  defrecord :contract_entity, @contract_entity_defaults
+
+  @type contract_entity_index() :: {txi(), txi()}
+  @type contract_entity() ::
+          record(:contract_entity,
+            index: entity_index()
           )
 
   # contract log:
@@ -1115,6 +1139,8 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.AexnContractToTransfer,
       AeMdw.Db.Model.Aex9AccountPresence,
       AeMdw.Db.Model.ContractCall,
+      AeMdw.Db.Model.ActiveEntity,
+      AeMdw.Db.Model.ContractEntity,
       AeMdw.Db.Model.ContractLog,
       AeMdw.Db.Model.DataContractLog,
       AeMdw.Db.Model.EvtContractLog,
@@ -1220,6 +1246,8 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.AexnContractToTransfer), do: :aexn_contract_to_transfer
   def record(AeMdw.Db.Model.Aex9AccountPresence), do: :aex9_account_presence
   def record(AeMdw.Db.Model.ContractCall), do: :contract_call
+  def record(AeMdw.Db.Model.ActiveEntity), do: :entity
+  def record(AeMdw.Db.Model.ContractEntity), do: :contract_entity
   def record(AeMdw.Db.Model.ContractLog), do: :contract_log
   def record(AeMdw.Db.Model.DataContractLog), do: :data_contract_log
   def record(AeMdw.Db.Model.EvtContractLog), do: :evt_contract_log

@@ -10,6 +10,7 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.ActiveEntities
   alias AeMdw.Db.Sync.Stats, as: SyncStats
   alias AeMdw.Log
   alias AeMdw.Node
@@ -25,6 +26,9 @@ defmodule AeMdw.Db.Contract do
   @typep pubkey :: Db.pubkey()
   @typep state :: State.t()
   @typep txi :: AeMdw.Txs.txi()
+
+  @typep call_tx_args :: Contract.call_tx_args()
+  @typep call_tx_res :: Contract.call_tx_res()
 
   @type log_data() :: binary()
   @type rev_aex9_contract_key :: {pos_integer(), String.t(), String.t(), pos_integer()}
@@ -179,7 +183,7 @@ defmodule AeMdw.Db.Contract do
   def call_write(state, create_txi, txi, {:error, detail}),
     do: call_write(state, create_txi, txi, "<unknown>", nil, :invalid, inspect(detail))
 
-  @spec call_write(state(), txi(), txi(), String.t(), list() | nil, any(), any()) ::
+  @spec call_write(state(), txi(), txi(), String.t(), call_tx_args(), call_tx_res(), any()) ::
           state()
   def call_write(state, create_txi, txi, fname, args, result, return) do
     m_call =
@@ -197,6 +201,7 @@ defmodule AeMdw.Db.Contract do
     state
     |> State.put(Model.ContractCall, m_call)
     |> State.put(Model.Field, m_entrypoint_field)
+    |> ActiveEntities.track(result, create_txi, txi, fname, args)
   end
 
   @spec logs_write(state(), txi(), txi(), Contract.call()) :: state()
