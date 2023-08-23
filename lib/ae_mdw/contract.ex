@@ -43,8 +43,8 @@ defmodule AeMdw.Contract do
   @type ct_info :: {type_info(), compiler_vsn(), source_hash()}
   @type function_hash :: <<_::32>>
   @type method_name :: binary()
-  @type method_args :: list()
-  @type method_signature :: {method_args(), any()}
+  @type method_args :: [%{type: String.t(), value: term()}] | nil
+  @type method_signature :: {list(), atom() | tuple()}
   @type fun_arg_res :: %{
           function: method_name(),
           arguments: method_args(),

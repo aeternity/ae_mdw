@@ -27,6 +27,18 @@ config :phoenix, :plug_init_mode, :runtime
 {revision, 0} = System.cmd("git", ["log", "-1", "--format=%h"])
 config :ae_mdw, build_revision: String.trim(revision)
 
+# Local active entities
+config :ae_mdw, AeMdw.Entities,
+  nft_auction: %{
+    initial: "put_listing",
+    final: ["cancel_listing", "accept_offer"]
+  }
+
+config :ae_mdw, AeMdw.EntityCalls,
+  put_listing: ["address", "int", "int"],
+  cancel_listing: ["address", "int"],
+  accept_offer: ["address", "int"]
+
 # Local custom events rendering
 config :ae_mdw, AeMdwWeb.LogsView,
   custom_events_args: %{

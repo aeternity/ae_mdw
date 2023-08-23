@@ -72,6 +72,8 @@ defmodule AeMdwWeb.Router do
       get "/txs", TxController, :txs
       get "/txs/:hash_or_index", TxController, :tx
 
+      get "/entities/:id", ActiveEntityController, :active_entities
+
       get "/names/:id/auction", NameController, :auction
       get "/names/:id/pointers", NameController, :pointers
       get "/names/:id/pointees", NameController, :pointees

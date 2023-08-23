@@ -650,6 +650,28 @@ defmodule AeMdw.Db.Model do
             return: term()
           )
 
+  # entity:
+  #     index: {name, call txi, create txi}
+  @entity_defaults [index: {"", -1, -1}]
+  defrecord :entity, @entity_defaults
+
+  @type entity_index() :: {String.t(), txi(), txi()}
+  @type entity() ::
+          record(:entity,
+            index: entity_index()
+          )
+
+  # contract_entity:
+  #     index: {name, create txi, call txi}
+  @contract_entity_defaults [index: {"", -1, -1}]
+  defrecord :contract_entity, @contract_entity_defaults
+
+  @type contract_entity_index() :: {txi(), txi()}
+  @type contract_entity() ::
+          record(:contract_entity,
+            index: entity_index()
+          )
+
   # contract log:
   #     index: {create txi, call txi, log idx}
   #     ext_contract: nil || ext_contract_pk
@@ -1115,6 +1137,8 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.AexnContractToTransfer,
       AeMdw.Db.Model.Aex9AccountPresence,
       AeMdw.Db.Model.ContractCall,
+      AeMdw.Db.Model.ActiveEntity,
+      AeMdw.Db.Model.ContractEntity,
       AeMdw.Db.Model.ContractLog,
       AeMdw.Db.Model.DataContractLog,
       AeMdw.Db.Model.EvtContractLog,
@@ -1220,6 +1244,8 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.AexnContractToTransfer), do: :aexn_contract_to_transfer
   def record(AeMdw.Db.Model.Aex9AccountPresence), do: :aex9_account_presence
   def record(AeMdw.Db.Model.ContractCall), do: :contract_call
+  def record(AeMdw.Db.Model.ActiveEntity), do: :entity
+  def record(AeMdw.Db.Model.ContractEntity), do: :contract_entity
   def record(AeMdw.Db.Model.ContractLog), do: :contract_log
   def record(AeMdw.Db.Model.DataContractLog), do: :data_contract_log
   def record(AeMdw.Db.Model.EvtContractLog), do: :evt_contract_log
