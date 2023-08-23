@@ -69,9 +69,7 @@ defmodule AeMdw.Contracts do
         fn direction ->
           ~w(contract_create_tx ga_attach_tx)a
           |> Enum.map(fn tx_type ->
-            state
-            |> DBUtil.transactions_of_type(tx_type, direction, scope, cursor)
-            |> Stream.map(&{&1, tx_type})
+            DBUtil.transactions_of_type(state, tx_type, direction, scope, cursor)
           end)
           |> Collection.merge(direction)
         end
@@ -139,27 +137,8 @@ defmodule AeMdw.Contracts do
   @spec fetch_contract(State.t(), binary()) :: {:ok, contract()} | {:error, reason()}
   def fetch_contract(state, contract_id) do
     with {:ok, pubkey} <- Validate.id(contract_id, [:contract_pubkey]),
-         {:ok, txi} when txi >= 0 <- Origin.tx_index(state, {:contract, pubkey}),
-         Model.tx(id: tx_hash) <- State.fetch!(state, Model.Tx, txi),
-         {outer_tx_type, _tx} <- Db.get_tx(tx_hash) do
-      {txi_idx, tx_type} =
-        if outer_tx_type == :contract_call_tx do
-          local_idx =
-            ~w(Chain.create Chain.clone Call.create Call.clone)
-            |> Enum.map(&fetch_int_contract_calls(state, txi, &1))
-            |> Stream.concat()
-            |> Enum.find_value(fn Model.int_contract_call(index: {^txi, local_idx}) ->
-              create_tx = DBUtil.read_node_tx(state, {txi, local_idx})
-
-              :aect_create_tx.contract_pubkey(create_tx) == pubkey && local_idx
-            end)
-
-          {{txi, local_idx}, :contract_create_tx}
-        else
-          {{txi, -1}, outer_tx_type}
-        end
-
-      {:ok, render_contract(state, {txi_idx, tx_type})}
+         txi_idx <- get_contract_txi_idx(state, pubkey) do
+      {:ok, render_contract(state, txi_idx)}
     else
       {:error, reason} -> {:error, reason}
       _preset_or_not_found -> {:error, ErrInput.NotFound.exception(value: contract_id)}
@@ -169,6 +148,28 @@ defmodule AeMdw.Contracts do
   #
   # Private functions
   #
+  defp get_contract_txi_idx(state, pubkey) do
+    with {:ok, txi} when txi >= 0 <- Origin.tx_index(state, {:contract, pubkey}),
+         Model.tx(id: tx_hash) <- State.fetch!(state, Model.Tx, txi),
+         {outer_tx_type, _tx} <- Db.get_tx(tx_hash) do
+      if outer_tx_type == :contract_call_tx do
+        local_idx =
+          ~w(Chain.create Chain.clone Call.create Call.clone)
+          |> Enum.map(&fetch_int_contract_calls(state, txi, &1))
+          |> Stream.concat()
+          |> Enum.find_value(fn Model.int_contract_call(index: {^txi, local_idx}) ->
+            create_tx = DBUtil.read_node_tx(state, {txi, local_idx})
+
+            :aect_create_tx.contract_pubkey(create_tx) == pubkey && local_idx
+          end)
+
+        {txi, local_idx}
+      else
+        {txi, -1}
+      end
+    end
+  end
+
   defp build_logs_pagination(
          %{data_prefix: data_prefix},
          state,
@@ -571,12 +572,12 @@ defmodule AeMdw.Contracts do
     Format.to_map(state, call_key, @int_contract_call_table)
   end
 
-  defp render_contract(state, {create_txi_idx, tx_type}) do
-    {create_tx, _inner_tx_type, tx_hash, source_tx_type, block_hash} =
+  defp render_contract(state, create_txi_idx) do
+    {create_tx, inner_tx_type, tx_hash, source_tx_type, block_hash} =
       DBUtil.read_node_tx_details(state, create_txi_idx)
 
     {contract_pk, encoded_tx} =
-      case tx_type do
+      case inner_tx_type do
         :contract_create_tx ->
           {:aect_create_tx.contract_pubkey(create_tx), :aect_create_tx.for_client(create_tx)}
 
@@ -679,7 +680,7 @@ defmodule AeMdw.Contracts do
   defp serialize_contracts_cursor(nil), do: nil
 
   # local_idx is an integer >= -1 (adding 1 to shift to use positive numbers)
-  defp serialize_contracts_cursor({{{txi, local_idx}, _tx_type}, is_reversed?}),
+  defp serialize_contracts_cursor({{txi, local_idx}, is_reversed?}),
     do: {"#{txi}-#{local_idx + 1}", is_reversed?}
 
   defp deserialize_contracts_cursor(nil), do: {:ok, nil}
