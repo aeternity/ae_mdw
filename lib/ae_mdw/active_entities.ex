@@ -113,7 +113,6 @@ defmodule AeMdw.ActiveEntities do
       State.fetch!(state, Model.ContractCall, {create_txi, txi})
 
     Model.tx(block_index: {height, _mbi}) = State.fetch!(state, Model.Tx, txi)
-    # contract_pk = Origin.pubkey!(state, {:contract, create_txi})
 
     node_tx = Node.tx_mod(tx_type).for_client(tx_rec)
 

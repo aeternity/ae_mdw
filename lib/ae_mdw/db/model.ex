@@ -44,6 +44,8 @@ defmodule AeMdw.Db.Model do
   @typep query_id() :: Oracles.query_id()
   @typep amount() :: non_neg_integer()
   @typep fname() :: Contract.fname()
+  @typep call_tx_args :: Contract.call_tx_args()
+  @typep call_tx_res :: Contract.call_tx_res()
 
   @typep token_id :: AeMdw.Aex141.token_id()
   @typep template_id :: AeMdw.Aex141.template_id()
@@ -645,8 +647,8 @@ defmodule AeMdw.Db.Model do
           record(:contract_call,
             index: contract_call_index(),
             fun: fname(),
-            args: [term()],
-            result: term(),
+            args: call_tx_args(),
+            result: call_tx_res(),
             return: term()
           )
 
