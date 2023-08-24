@@ -10,7 +10,7 @@ defmodule AeMdw.Sync.AsyncTasks.Migrate do
 
   require Model
 
-  @spec process([MigrateWork.migration()], done_fn :: fun()) :: :ok
+  @spec process([Migration.t()], done_fn :: fun()) :: :ok
   def process(migrations, done_fn) do
     Enum.each(migrations, fn %Migration{mutations_mfa: {module, mutations_fn, params}} ->
       module

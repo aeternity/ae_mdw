@@ -7,6 +7,8 @@ defmodule AeMdw.Sync.AsyncTasks.MigrateWork do
     @moduledoc """
     Mutation module, function and arguments to be executed.
     """
+    @type t :: %__MODULE__{mutations_mfa: {atom(), atom(), list()}}
+
     defstruct mutations_mfa: {nil, nil, []}
   end
 
