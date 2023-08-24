@@ -55,8 +55,8 @@ defmodule AeMdw.Sync.AsyncTasks.Store do
     :ok
   end
 
-  @spec next_unprocessed(pending_key() | {nil, nil}) :: Model.async_task_record() | nil
-  def next_unprocessed(next_key \\ {nil, nil}) do
+  @spec next_unprocessed(pending_key() | {}) :: Model.async_task_record() | nil
+  def next_unprocessed(next_key \\ {}) do
     case :ets.next(@pending_tab, next_key) do
       :"$end_of_table" ->
         nil
