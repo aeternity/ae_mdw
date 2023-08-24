@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.62.0](https://www.github.com/aeternity/ae_mdw/compare/v1.61.0...v1.62.0) (2023-08-24)
+
+
+### Features
+
+* add block statistics endpoint ([#1558](https://www.github.com/aeternity/ae_mdw/issues/1558)) ([3d0c86a](https://www.github.com/aeternity/ae_mdw/commit/3d0c86a94b69a55011f7af64fb4dbca614f62d7b))
+* enable async migrations ([#1557](https://www.github.com/aeternity/ae_mdw/issues/1557)) ([7f62111](https://www.github.com/aeternity/ae_mdw/commit/7f62111d3d36b8a6e36cfc1f704f9f6bba02d80c))
+
+
+### Bug Fixes
+
+* use inner tx type to render contract creation ([#1554](https://www.github.com/aeternity/ae_mdw/issues/1554)) ([5fd3bd3](https://www.github.com/aeternity/ae_mdw/commit/5fd3bd344b38deb04e6c043ad6a5cc308a0d26e4))
+
+
+### Miscellaneous
+
+* prepare wealth to be updated on block basis ([#1556](https://www.github.com/aeternity/ae_mdw/issues/1556)) ([f3ea4b4](https://www.github.com/aeternity/ae_mdw/commit/f3ea4b4478cb92004db8c9f1813fd484c2d45feb))
+
 ## [1.61.0](https://www.github.com/aeternity/ae_mdw/compare/v1.60.0...v1.61.0) (2023-08-23)
 
 
