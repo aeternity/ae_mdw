@@ -11,6 +11,8 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
   require Model
   require Logger
 
+  @type task_type :: Model.async_task_type()
+
   @spec start_link(any()) :: GenServer.on_start()
   def start_link(_args) do
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
@@ -22,7 +24,7 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
     {:ok, :no_state}
   end
 
-  @spec enqueue(atom(), list(), list(), only_new: boolean()) :: :ok
+  @spec enqueue(task_type(), list(), list(), only_new: boolean()) :: :ok
   def enqueue(task_type, dedup_args, extra_args, only_new: only_new) do
     task_index = {System.system_time(), task_type}
     m_task = Model.async_task(index: task_index, args: dedup_args, extra_args: extra_args)
@@ -37,7 +39,10 @@ defmodule AeMdw.Sync.AsyncTasks.Producer do
 
   @spec dequeue() :: nil | Model.async_task_record()
   def dequeue() do
-    m_task = Store.next_unprocessed()
+    m_task =
+      Store.next_unprocessed({:store_acc_balance, []}) ||
+        Store.next_unprocessed({:update_aex9_state, []}) ||
+        Store.next_unprocessed()
 
     if m_task do
       Store.count_unprocessed()

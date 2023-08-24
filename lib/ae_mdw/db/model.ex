@@ -54,7 +54,7 @@ defmodule AeMdw.Db.Model do
 
   # index is timestamp (daylight saving order should be handle case by case)
   @typep timestamp :: pos_integer()
-  @type async_task_type :: :update_aex9_state | :store_acc_balance
+  @type async_task_type :: :update_aex9_state | :store_acc_balance | :migrate
   @type async_task_index :: {timestamp(), async_task_type()}
   @type async_task_args :: list()
 

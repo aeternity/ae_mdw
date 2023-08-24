@@ -11,6 +11,7 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
   alias AeMdw.Sync.AsyncTasks.TaskSupervisor
   alias AeMdw.Sync.AsyncTasks.UpdateAex9State
   alias AeMdw.Sync.AsyncTasks.StoreAccountBalance
+  alias AeMdw.Sync.AsyncTasks.Migrate
 
   require Model
   require Logger
@@ -19,7 +20,8 @@ defmodule AeMdw.Sync.AsyncTasks.Consumer do
 
   @type_mod %{
     update_aex9_state: UpdateAex9State,
-    store_acc_balance: StoreAccountBalance
+    store_acc_balance: StoreAccountBalance,
+    migrate: Migrate
   }
 
   @type task_type() :: Model.async_task_type()
