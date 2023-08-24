@@ -85,4 +85,14 @@ defmodule AeMdwWeb.StatsController do
       Util.paginate(conn, paginated_statistics)
     end
   end
+
+  @spec blocks_statistics(Conn.t(), map()) :: Conn.t()
+  def blocks_statistics(%Conn{assigns: assigns} = conn, _params) do
+    %{state: state, pagination: pagination, query: query, scope: scope, cursor: cursor} = assigns
+
+    with {:ok, paginated_statistics} <-
+           Stats.fetch_blocks_statistics(state, pagination, query, scope, cursor) do
+      Util.paginate(conn, paginated_statistics)
+    end
+  end
 end

@@ -5,10 +5,14 @@ defmodule AeMdw.Db.Sync.Stats do
 
   alias AeMdw.Blocks
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Mutation
   alias AeMdw.Db.State
+  alias AeMdw.Db.StatsMutation
   alias AeMdw.Db.StatisticsMutation
   alias AeMdw.Node
+  alias AeMdw.Node.Db
   alias AeMdw.Stats
+  alias AeMdw.Txs
   alias AeMdw.Util
 
   require Model
@@ -18,6 +22,8 @@ defmodule AeMdw.Db.Sync.Stats do
   @typep aexn_type :: :aex9 | :aex141
   @typep time() :: Blocks.time()
   @typep type_counts() :: %{Node.tx_type() => pos_integer()}
+  @typep height() :: Blocks.height()
+  @typep txi() :: Txs.txi()
 
   @start_unix 1_970
   @seconds_per_day 3_600 * 24
@@ -59,28 +65,72 @@ defmodule AeMdw.Db.Sync.Stats do
         &(&1 - 1)
       )
 
-  @spec txs_statistics_mutations(time(), type_counts()) :: StatisticsMutation.t() | nil
-  def txs_statistics_mutations(time, type_counts) do
-    total_count =
-      Enum.reduce(type_counts, 0, fn {_tx_type, increment}, acc -> acc + increment end)
+  @spec key_block_mutations(height(), Db.key_block(), [Db.micro_block()], txi(), txi(), boolean()) ::
+          [Mutation.t()]
+  def key_block_mutations(height, key_block, micro_blocks, from_txi, next_txi, starting_from_mb0?) do
+    header = :aec_blocks.to_header(key_block)
+    time = :aec_headers.time_in_msecs(header)
+    {:ok, key_hash} = :aec_headers.hash_header(header)
 
-    if total_count > 0 do
+    statistics =
       time
       |> time_intervals()
       |> Enum.flat_map(fn {interval, interval_start} ->
-        tx_type_statistics =
-          Enum.map(type_counts, fn {tx_type, count} ->
-            {{{:transactions, tx_type}, interval, interval_start}, count}
-          end)
-
-        total_statistic = {{{:transactions, :all}, interval, interval_start}, total_count}
-
-        [total_statistic | tx_type_statistics]
+        [
+          {{{:blocks, :key}, interval, interval_start}, 1},
+          {{{:blocks, :all}, interval, interval_start}, 1}
+        ]
       end)
-      |> StatisticsMutation.new()
-    else
-      nil
-    end
+
+    {_last_time, total_time, total_txs} =
+      Enum.reduce(micro_blocks, {time, 0, 0}, fn micro_block, {last_time, time_acc, count_acc} ->
+        header = :aec_blocks.to_header(micro_block)
+        time = :aec_headers.time_in_msecs(header)
+        count = length(:aec_blocks.txs(micro_block))
+
+        {time, time_acc + time - last_time, count_acc + count}
+      end)
+
+    tps = if total_time > 0, do: round(total_txs * 100_000 / total_time) / 100, else: 0
+
+    [
+      StatsMutation.new(height, key_hash, from_txi, next_txi, tps, starting_from_mb0?),
+      StatisticsMutation.new(statistics)
+    ]
+  end
+
+  @spec micro_block_mutations(time(), type_counts()) :: StatisticsMutation.t() | nil
+  def micro_block_mutations(time, type_counts) do
+    intervals = time_intervals(time)
+
+    total_count =
+      Enum.reduce(type_counts, 0, fn {_tx_type, increment}, acc -> acc + increment end)
+
+    mb_statistics =
+      Enum.flat_map(intervals, fn {interval, interval_start} ->
+        [
+          {{{:blocks, :micro}, interval, interval_start}, 1},
+          {{{:blocks, :all}, interval, interval_start}, 1}
+        ]
+      end)
+
+    txs_statistics =
+      if total_count > 0 do
+        Enum.flat_map(intervals, fn {interval, interval_start} ->
+          tx_type_statistics =
+            Enum.map(type_counts, fn {tx_type, count} ->
+              {{{:transactions, tx_type}, interval, interval_start}, count}
+            end)
+
+          total_statistic = {{{:transactions, :all}, interval, interval_start}, total_count}
+
+          [total_statistic | tx_type_statistics]
+        end)
+      else
+        []
+      end
+
+    StatisticsMutation.new(mb_statistics ++ txs_statistics)
   end
 
   defp time_intervals(time) do

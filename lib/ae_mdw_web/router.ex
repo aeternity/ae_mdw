@@ -52,6 +52,7 @@ defmodule AeMdwWeb.Router do
       get "/names/auctions", NameController, :auctions
       get "/names/auctions/:id/claims", NameController, :auction_claims
       get "/statistics/transactions", StatsController, :transactions_statistics
+      get "/statistics/blocks", StatsController, :blocks_statistics
     end
 
     scope "/v2" do
