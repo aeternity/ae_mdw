@@ -8,7 +8,6 @@ defmodule AeMdw.Stats do
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
-  alias AeMdw.Db.StatsMutation
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Database
   alias AeMdw.Error
@@ -27,7 +26,6 @@ defmodule AeMdw.Stats do
   @type tps() :: non_neg_integer()
   @type statistic() :: map()
 
-  @typep txi() :: Blocks.height()
   @typep pubkey() :: Db.pubkey()
   @typep height() :: Blocks.height()
   @typep direction() :: Database.direction()
@@ -65,27 +63,6 @@ defmodule AeMdw.Stats do
     "week" => :week,
     "month" => :month
   }
-
-  @spec mutation(height(), Db.key_block(), [Db.micro_block()], txi(), txi(), boolean()) ::
-          StatsMutation.t()
-  def mutation(height, key_block, micro_blocks, from_txi, next_txi, starting_from_mb0?) do
-    header = :aec_blocks.to_header(key_block)
-    time = :aec_headers.time_in_msecs(header)
-    {:ok, key_hash} = :aec_headers.hash_header(header)
-
-    {_last_time, total_time, total_txs} =
-      Enum.reduce(micro_blocks, {time, 0, 0}, fn micro_block, {last_time, time_acc, count_acc} ->
-        header = :aec_blocks.to_header(micro_block)
-        time = :aec_headers.time_in_msecs(header)
-        count = length(:aec_blocks.txs(micro_block))
-
-        {time, time_acc + time - last_time, count_acc + count}
-      end)
-
-    tps = if total_time > 0, do: round(total_txs * 100_000 / total_time) / 100, else: 0
-
-    StatsMutation.new(height, key_hash, from_txi, next_txi, tps, starting_from_mb0?)
-  end
 
   @spec max_tps_key() :: atom()
   def max_tps_key, do: @tps_stat_key
@@ -235,11 +212,28 @@ defmodule AeMdw.Stats do
   @spec fetch_transactions_statistics(State.t(), pagination(), query(), range(), cursor()) ::
           {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}}
   def fetch_transactions_statistics(state, pagination, query, range, cursor) do
-    with {:ok, query} <- Util.convert_params(query, &convert_param/1),
-         {:ok, cursor} <- deserialize_statistic_cursor(cursor) do
+    with {:ok, filters} <- Util.convert_params(query, &convert_transactions_param/1) do
+      tx_tag = Map.get(filters, :tx_type, :all)
+
+      fetch_statistics(state, pagination, filters, range, cursor, {:transactions, tx_tag})
+    end
+  end
+
+  @spec fetch_blocks_statistics(State.t(), pagination(), query(), range(), cursor()) ::
+          {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}}
+  def fetch_blocks_statistics(state, pagination, query, range, cursor) do
+    with {:ok, filters} <- Util.convert_params(query, &convert_blocks_param/1) do
+      type_tag = Map.get(filters, :block_type, :all)
+
+      fetch_statistics(state, pagination, filters, range, cursor, {:blocks, type_tag})
+    end
+  end
+
+  defp fetch_statistics(state, pagination, filters, range, cursor, tag) do
+    with {:ok, cursor} <- deserialize_statistic_cursor(cursor) do
       {prev_cursor, statistics_keys, next_cursor} =
         state
-        |> build_transactions_statistics_streamer(query, range, cursor)
+        |> build_statistics_streamer(tag, filters, range, cursor)
         |> Collection.paginate(pagination)
 
       statistics = Enum.map(statistics_keys, &render_statistic(state, &1))
@@ -250,27 +244,22 @@ defmodule AeMdw.Stats do
     end
   end
 
-  defp build_transactions_statistics_streamer(state, query, _scope, cursor) do
-    tx_tag = Map.get(query, :tx_type, :all)
-    interval_by = Map.get(query, :interval_by, :day)
+  defp build_statistics_streamer(state, tag, filters, _scope, cursor) do
+    interval_by = Map.get(filters, :interval_by, :day)
+    key_boundary = {{tag, interval_by, Util.min_int()}, {tag, interval_by, Util.max_int()}}
 
     cursor =
       case cursor do
         nil -> nil
-        interval_start -> {{:transactions, tx_tag}, interval_by, interval_start}
+        interval_start -> {tag, interval_by, interval_start}
       end
-
-    key_boundary = {
-      {{:transactions, tx_tag}, interval_by, Util.min_int()},
-      {{:transactions, tx_tag}, interval_by, Util.max_int()}
-    }
 
     fn direction ->
       Collection.stream(state, Model.Statistic, direction, key_boundary, cursor)
     end
   end
 
-  defp render_statistic(state, {{:transactions, _tx_tag}, :month, interval_start} = statistic_key) do
+  defp render_statistic(state, {_tag, :month, interval_start} = statistic_key) do
     Model.statistic(count: count) = State.fetch!(state, Model.Statistic, statistic_key)
 
     %{
@@ -280,7 +269,7 @@ defmodule AeMdw.Stats do
     }
   end
 
-  defp render_statistic(state, {{:transactions, _tx_tag}, :week, interval_start} = statistic_key) do
+  defp render_statistic(state, {_tag, :week, interval_start} = statistic_key) do
     Model.statistic(count: count) = State.fetch!(state, Model.Statistic, statistic_key)
 
     %{
@@ -290,7 +279,7 @@ defmodule AeMdw.Stats do
     }
   end
 
-  defp render_statistic(state, {{:transactions, _tx_tag}, :day, interval_start} = statistic_key) do
+  defp render_statistic(state, {_tag, :day, interval_start} = statistic_key) do
     Model.statistic(count: count) = State.fetch!(state, Model.Statistic, statistic_key)
 
     %{
@@ -300,12 +289,18 @@ defmodule AeMdw.Stats do
     }
   end
 
-  defp convert_param({"tx_type", val}) do
+  defp convert_blocks_param({"type", "key"}), do: {:ok, {:block_type, :key}}
+  defp convert_blocks_param({"type", "micro"}), do: {:ok, {:block_type, :micro}}
+  defp convert_blocks_param(param), do: convert_param(param)
+
+  defp convert_transactions_param({"tx_type", val}) do
     case Validate.tx_type(val) do
       {:ok, tx_type} -> {:ok, {:tx_type, tx_type}}
       {:error, reason} -> {:error, reason}
     end
   end
+
+  defp convert_transactions_param(param), do: convert_param(param)
 
   defp convert_param({"interval_by", val}) do
     case Map.fetch(@interval_by_mapping, val) do
@@ -318,10 +313,8 @@ defmodule AeMdw.Stats do
 
   defp serialize_statistics_cursor(nil), do: nil
 
-  defp serialize_statistics_cursor(
-         {{{:transactions, _tx_type}, _interval_by, interval_start}, is_reversed?}
-       ),
-       do: {"#{interval_start}", is_reversed?}
+  defp serialize_statistics_cursor({{_tag, _interval_by, interval_start}, is_reversed?}),
+    do: {"#{interval_start}", is_reversed?}
 
   defp deserialize_statistic_cursor(nil), do: {:ok, nil}
 
