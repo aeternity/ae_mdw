@@ -235,15 +235,17 @@ defmodule AeMdwWeb.StatsControllerTest do
       conn: conn,
       store: store
     } do
-      st1_index = {{:blocks, :all}, :day, 1_000}
-      st2_index = {{:blocks, :all}, :day, 2_000}
-      st3_index = {{:blocks, :all}, :day, 3_000}
+      st1_index = {{:blocks, :all}, :day, 1}
+      st2_index = {{:blocks, :all}, :day, 365}
+      st3_index = {{:blocks, :all}, :day, 366}
+      st4_index = {{:blocks, :all}, :day, 730}
 
       store =
         store
         |> Store.put(Model.Statistic, Model.statistic(index: st1_index, count: 1))
         |> Store.put(Model.Statistic, Model.statistic(index: st2_index, count: 5))
         |> Store.put(Model.Statistic, Model.statistic(index: st3_index, count: 3))
+        |> Store.put(Model.Statistic, Model.statistic(index: st4_index, count: 2))
 
       conn = with_store(conn, store)
 
@@ -252,15 +254,16 @@ defmodule AeMdwWeb.StatsControllerTest do
                |> get("/v3/statistics/blocks", limit: 2)
                |> json_response(200)
 
-      assert %{"start_date" => "1978-03-20", "count" => 3} = st1
-      assert %{"start_date" => "1975-06-24", "count" => 5} = st2
+      assert %{"start_date" => "1972-01-01", "count" => 2} = st1
+      assert %{"start_date" => "1971-01-02", "count" => 3} = st2
 
-      assert %{"prev" => prev_url, "data" => [st3]} =
+      assert %{"prev" => prev_url, "data" => [st3, st4]} =
                conn
                |> get(next_url)
                |> json_response(200)
 
-      assert %{"start_date" => "1972-09-27", "count" => 1} = st3
+      assert %{"start_date" => "1971-01-01", "count" => 5} = st3
+      assert %{"start_date" => "1970-01-02", "count" => 1} = st4
 
       assert %{"data" => ^statistics} =
                conn
@@ -271,9 +274,9 @@ defmodule AeMdwWeb.StatsControllerTest do
     test "it returns the count of blocks filtered by a block type", %{conn: conn, store: store} do
       st1_index = {{:blocks, :all}, :day, 500}
       st2_index = {{:blocks, :key}, :day, 500}
-      st3_index = {{:blocks, :micro}, :day, 1_000}
-      st4_index = {{:blocks, :micro}, :day, 2_000}
-      st5_index = {{:blocks, :micro}, :day, 3_000}
+      st3_index = {{:blocks, :micro}, :day, 1}
+      st4_index = {{:blocks, :micro}, :day, 2}
+      st5_index = {{:blocks, :micro}, :day, 366}
 
       store =
         store
@@ -294,15 +297,15 @@ defmodule AeMdwWeb.StatsControllerTest do
                )
                |> json_response(200)
 
-      assert %{"start_date" => "1972-09-27", "count" => 1} = st1
-      assert %{"start_date" => "1975-06-24", "count" => 5} = st2
+      assert %{"start_date" => "1970-01-02", "count" => 1} = st1
+      assert %{"start_date" => "1970-01-03", "count" => 5} = st2
 
       assert %{"prev" => prev_url, "data" => [st3]} =
                conn
                |> get(next_url)
                |> json_response(200)
 
-      assert %{"start_date" => "1978-03-20", "count" => 3} = st3
+      assert %{"start_date" => "1971-01-02", "count" => 3} = st3
 
       assert %{"data" => ^statistics} =
                conn
@@ -347,5 +350,15 @@ defmodule AeMdwWeb.StatsControllerTest do
              conn
              |> get(prev_url)
              |> json_response(200)
+  end
+
+  test "when block type is invalid, it returns an error", %{conn: conn} do
+    block_type = "foo"
+    error_msg = "invalid query: type=#{block_type}"
+
+    assert %{"error" => ^error_msg} =
+             conn
+             |> get("/v3/statistics/blocks", type: block_type)
+             |> json_response(400)
   end
 end
