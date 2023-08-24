@@ -12,9 +12,5 @@ defmodule AeMdw.Sync.AsyncTasks.MigrateWork do
     defstruct mutations_mfa: {nil, nil, []}
   end
 
-  @type migration :: %Migration{
-          mutations_mfa: {module(), atom(), list()}
-        }
-
-  @callback process([migration], done_fn :: fun()) :: :ok
+  @callback process([Migration.t()], done_fn :: fun()) :: :ok
 end
