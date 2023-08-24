@@ -3,50 +3,12 @@ defmodule AeMdw.Sync.AsyncTasks.WealthRankAccounts do
 
   @typep micro_block :: term()
 
-  alias AeMdw.Collection
   alias AeMdw.Db.Model
-  alias AeMdw.Db.State
   alias AeMdw.Db.Mutation
   alias AeMdw.Db.IntCallsMutation
-  alias AeMdw.Db.DeleteKeysMutation
-  alias AeMdw.Db.WriteMutation
   alias AeMdw.Sync.Transaction
 
   require Model
-
-  @spec dedup_pending_accounts() :: :ok
-  def dedup_pending_accounts do
-    state = State.new()
-
-    {delete_keys, pubkeys_set} =
-      state
-      |> Collection.stream(Model.AsyncTask, nil)
-      |> Stream.filter(fn {_ts, type} -> type == :store_acc_balance end)
-      |> Stream.map(&State.fetch!(state, Model.AsyncTask, &1))
-      |> Enum.map_reduce(MapSet.new(), fn
-        Model.async_task(index: index, extra_args: []), acc ->
-          {index, acc}
-
-        Model.async_task(index: index, extra_args: [extra_args]), acc ->
-          {index, MapSet.union(acc, extra_args)}
-      end)
-
-    with args when args != [] <- last_mb(state, nil) do
-      task_index = {System.system_time(), :store_acc_balance}
-      m_task = Model.async_task(index: task_index, args: args, extra_args: [pubkeys_set])
-
-      State.commit_db(
-        state,
-        [
-          DeleteKeysMutation.new(%{Model.AsyncTask => delete_keys}),
-          WriteMutation.new(Model.AsyncTask, m_task)
-        ],
-        false
-      )
-    end
-
-    :ok
-  end
 
   @spec micro_block_accounts(micro_block(), [Mutation.t()]) :: MapSet.t()
   def micro_block_accounts(micro_block, mutations) do
@@ -92,19 +54,5 @@ defmodule AeMdw.Sync.AsyncTasks.WealthRankAccounts do
       {:id, :account, pubkey} -> [pubkey]
       _other -> []
     end)
-  end
-
-  defp last_mb(state, key) do
-    case State.prev(state, Model.Block, key) do
-      {:ok, {_height, -1} = prev_key} ->
-        last_mb(state, prev_key)
-
-      {:ok, block_index} ->
-        Model.block(hash: mb_hash) = State.fetch!(state, Model.Block, block_index)
-        [mb_hash, block_index]
-
-      :none ->
-        []
-    end
   end
 end
