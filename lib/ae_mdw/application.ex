@@ -223,11 +223,6 @@ defmodule AeMdw.Application do
     :ok
   end
 
-  def start_phase(:dedup_accounts, _start_type, []) do
-    AeMdw.Sync.AsyncTasks.WealthRankAccounts.dedup_pending_accounts()
-    :ok
-  end
-
   def start_phase(:load_obj_keys, _start_type, []) do
     ObjectKeys.init(State.new())
   end
