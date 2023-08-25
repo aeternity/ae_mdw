@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.62.1](https://www.github.com/aeternity/ae_mdw/compare/v1.62.0...v1.62.1) (2023-08-25)
+
+
+### Miscellaneous
+
+* count holders based on events ([#1561](https://www.github.com/aeternity/ae_mdw/issues/1561)) ([4c0d4ee](https://www.github.com/aeternity/ae_mdw/commit/4c0d4ee656dc3d195634d9ed0e20d0959b253bfa))
+
 ## [1.62.0](https://www.github.com/aeternity/ae_mdw/compare/v1.61.0...v1.62.0) (2023-08-24)
 
 
