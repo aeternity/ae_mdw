@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.62.2](https://www.github.com/aeternity/ae_mdw/compare/v1.62.1...v1.62.2) (2023-08-25)
+
+
+### Miscellaneous
+
+* enable nft marketplaces tracking ([#1563](https://www.github.com/aeternity/ae_mdw/issues/1563)) ([e1b27cb](https://www.github.com/aeternity/ae_mdw/commit/e1b27cba055e9e829e0b3cd3e9f511803f0facc3))
+
 ### [1.62.1](https://www.github.com/aeternity/ae_mdw/compare/v1.62.0...v1.62.1) (2023-08-25)
 
 
