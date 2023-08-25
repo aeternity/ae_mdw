@@ -14,6 +14,7 @@ defmodule AeMdwWeb.ActiveEntityControllerTest do
   @caller_pk1 :crypto.strong_rand_bytes(32)
   @block_hash :crypto.strong_rand_bytes(32)
   @txi_base Enum.random(10_000_000..99_999_999)
+  @price Enum.random(100_000_000..999_999_999)
 
   @nft_contract "ct_2AfnEfCSZCTEkxL5Yoi4Yfq6fF7YapHRaFKDJK3THMXMBspp5z"
   @default_limit 10
@@ -32,8 +33,9 @@ defmodule AeMdwWeb.ActiveEntityControllerTest do
       m_contract_entity = Model.contract_entity(index: {"nft_auction", create_txi, call_txi})
 
       args = [
-        %{type: "address", value: @nft_contract},
-        %{type: "integer", value: i}
+        %{type: :contract, value: @nft_contract},
+        %{type: :int, value: i},
+        %{type: :int, value: @price}
       ]
 
       m_call =
@@ -117,8 +119,9 @@ defmodule AeMdwWeb.ActiveEntityControllerTest do
           assert <<@txi_base + i + 1::256>> == Validate.id!(tx_hash)
 
           assert args == [
-                   %{"type" => "address", "value" => @nft_contract},
-                   %{"type" => "integer", "value" => i + 1}
+                   %{"type" => "contract", "value" => @nft_contract},
+                   %{"type" => "int", "value" => i + 1},
+                   %{"type" => "int", "value" => @price}
                  ]
         end)
 
@@ -150,8 +153,9 @@ defmodule AeMdwWeb.ActiveEntityControllerTest do
           assert <<@txi_base + i + 1::256>> == Validate.id!(tx_hash)
 
           assert args == [
-                   %{"type" => "address", "value" => @nft_contract},
-                   %{"type" => "integer", "value" => i + 1}
+                   %{"type" => "contract", "value" => @nft_contract},
+                   %{"type" => "int", "value" => i + 1},
+                   %{"type" => "int", "value" => @price}
                  ]
         end)
 
@@ -197,8 +201,9 @@ defmodule AeMdwWeb.ActiveEntityControllerTest do
           assert <<@txi_base + i + 1::256>> == Validate.id!(tx_hash)
 
           assert args == [
-                   %{"type" => "address", "value" => @nft_contract},
-                   %{"type" => "integer", "value" => i + 1}
+                   %{"type" => "contract", "value" => @nft_contract},
+                   %{"type" => "int", "value" => i + 1},
+                   %{"type" => "int", "value" => @price}
                  ]
         end)
 
@@ -230,8 +235,9 @@ defmodule AeMdwWeb.ActiveEntityControllerTest do
           assert <<@txi_base + i + 1::256>> == Validate.id!(tx_hash)
 
           assert args == [
-                   %{"type" => "address", "value" => @nft_contract},
-                   %{"type" => "integer", "value" => i + 1}
+                   %{"type" => "contract", "value" => @nft_contract},
+                   %{"type" => "int", "value" => i + 1},
+                   %{"type" => "int", "value" => @price}
                  ]
         end)
 
@@ -280,8 +286,9 @@ defmodule AeMdwWeb.ActiveEntityControllerTest do
           assert <<@txi_base + i::256>> == Validate.id!(tx_hash)
 
           assert args == [
-                   %{"type" => "address", "value" => @nft_contract},
-                   %{"type" => "integer", "value" => i}
+                   %{"type" => "contract", "value" => @nft_contract},
+                   %{"type" => "int", "value" => i},
+                   %{"type" => "int", "value" => @price}
                  ]
         end)
 
@@ -313,8 +320,9 @@ defmodule AeMdwWeb.ActiveEntityControllerTest do
           assert <<@txi_base + i::256>> == Validate.id!(tx_hash)
 
           assert args == [
-                   %{"type" => "address", "value" => @nft_contract},
-                   %{"type" => "integer", "value" => i}
+                   %{"type" => "contract", "value" => @nft_contract},
+                   %{"type" => "int", "value" => i},
+                   %{"type" => "int", "value" => @price}
                  ]
         end)
 
@@ -363,8 +371,9 @@ defmodule AeMdwWeb.ActiveEntityControllerTest do
           assert <<@txi_base + i + 1::256>> == Validate.id!(tx_hash)
 
           assert args == [
-                   %{"type" => "address", "value" => @nft_contract},
-                   %{"type" => "integer", "value" => i + 1}
+                   %{"type" => "contract", "value" => @nft_contract},
+                   %{"type" => "int", "value" => i + 1},
+                   %{"type" => "int", "value" => @price}
                  ]
         end)
 
@@ -396,8 +405,9 @@ defmodule AeMdwWeb.ActiveEntityControllerTest do
           assert <<@txi_base + i + 1::256>> == Validate.id!(tx_hash)
 
           assert args == [
-                   %{"type" => "address", "value" => @nft_contract},
-                   %{"type" => "integer", "value" => i + 1}
+                   %{"type" => "contract", "value" => @nft_contract},
+                   %{"type" => "int", "value" => i + 1},
+                   %{"type" => "int", "value" => @price}
                  ]
         end)
 

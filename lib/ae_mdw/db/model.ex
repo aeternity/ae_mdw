@@ -663,12 +663,25 @@ defmodule AeMdw.Db.Model do
             index: entity_index()
           )
 
+  # entity_args:
+  #     index: {name, create txi, args}
+  #     txi: initial txi
+  @entity_args_defaults [index: {"", -1, []}, txi: -1]
+  defrecord :entity_args, @entity_args_defaults
+
+  @type entity_args_index() :: {String.t(), txi(), list()}
+  @type entity_args() ::
+          record(:entity_args,
+            index: entity_args_index(),
+            txi: txi()
+          )
+
   # contract_entity:
   #     index: {name, create txi, call txi}
   @contract_entity_defaults [index: {"", -1, -1}]
   defrecord :contract_entity, @contract_entity_defaults
 
-  @type contract_entity_index() :: {txi(), txi()}
+  @type contract_entity_index() :: {String.t(), txi(), txi()}
   @type contract_entity() ::
           record(:contract_entity,
             index: entity_index()
@@ -1140,6 +1153,7 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.Aex9AccountPresence,
       AeMdw.Db.Model.ContractCall,
       AeMdw.Db.Model.ActiveEntity,
+      AeMdw.Db.Model.ActiveEntityArgs,
       AeMdw.Db.Model.ContractEntity,
       AeMdw.Db.Model.ContractLog,
       AeMdw.Db.Model.DataContractLog,
@@ -1247,6 +1261,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.Aex9AccountPresence), do: :aex9_account_presence
   def record(AeMdw.Db.Model.ContractCall), do: :contract_call
   def record(AeMdw.Db.Model.ActiveEntity), do: :entity
+  def record(AeMdw.Db.Model.ActiveEntityArgs), do: :entity_args
   def record(AeMdw.Db.Model.ContractEntity), do: :contract_entity
   def record(AeMdw.Db.Model.ContractLog), do: :contract_log
   def record(AeMdw.Db.Model.DataContractLog), do: :data_contract_log
