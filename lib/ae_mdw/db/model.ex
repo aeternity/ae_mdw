@@ -672,7 +672,8 @@ defmodule AeMdw.Db.Model do
   @type entity_args_index() :: {String.t(), txi(), list()}
   @type entity_args() ::
           record(:entity_args,
-            index: entity_args_index()
+            index: entity_args_index(),
+            txi: txi()
           )
 
   # contract_entity:

@@ -23,7 +23,7 @@ defmodule AeMdw.Db.Sync.ActiveEntities do
                  |> Map.merge(final_transitions)
                end)
 
-  @entity_fname_args_types :ae_mdw |> Application.compile_env(AeMdw.EntityCalls, []) |> Map.new()
+  @entity_fname_args_types Application.compile_env(:ae_mdw, AeMdw.EntityCalls, %{})
 
   @spec track(State.t(), result(), txi(), txi(), entrypoint(), args()) :: State.t()
   def track(state, result, create_txi, txi, fname, args) do
