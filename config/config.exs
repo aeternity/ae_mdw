@@ -60,4 +60,17 @@ config :logger_json, :backend, json_encoder: Jason
 # API
 config :phoenix, :json_library, Jason
 
+# active entities
+config :ae_mdw, AeMdw.Entities,
+  nft_auction: %{
+    initial: "put_listing",
+    final: ["cancel_listing", "accept_offer"]
+  }
+
+config :ae_mdw, AeMdw.EntityCalls, %{
+  "put_listing" => [:contract, :int, :int],
+  "cancel_listing" => [:contract, :int],
+  "accept_offer" => [:contract, :int]
+}
+
 import_config "#{Mix.env()}.exs"
