@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.62.3](https://www.github.com/aeternity/ae_mdw/compare/v1.62.2...v1.62.3) (2023-08-25)
+
+
+### Bug Fixes
+
+* match entity using nft collection and token id ([#1565](https://www.github.com/aeternity/ae_mdw/issues/1565)) ([43eed29](https://www.github.com/aeternity/ae_mdw/commit/43eed29808f23aac44f80db52aee77ddffac3432))
+
 ### [1.62.2](https://www.github.com/aeternity/ae_mdw/compare/v1.62.1...v1.62.2) (2023-08-25)
 
 
