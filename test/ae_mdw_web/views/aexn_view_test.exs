@@ -41,7 +41,7 @@ defmodule AeMdwWeb.AexnViewTest do
                contract_txi: ^txi,
                contract_id: ^contract_id,
                extensions: ^extensions,
-               holders: nil
+               holders: 0
              } = AexnView.render_contract(state, m_aex9)
     end
   end

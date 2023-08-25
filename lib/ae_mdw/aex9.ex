@@ -102,6 +102,16 @@ defmodule AeMdw.Aex9 do
     end
   end
 
+  @spec fetch_holders_count(State.t(), pubkey()) :: non_neg_integer()
+  def fetch_holders_count(state, contract_pk) do
+    key_boundary = {{contract_pk, <<>>}, {contract_pk, Util.max_256bit_bin()}}
+
+    state
+    |> Collection.stream(Model.Aex9EventBalance, :forward, key_boundary, nil)
+    |> Stream.map(&State.fetch!(state, Model.Aex9EventBalance, &1))
+    |> Enum.count(fn Model.aex9_event_balance(amount: amount) -> amount > 0 end)
+  end
+
   @spec fetch_balance(pubkey(), pubkey(), height_hash() | nil) ::
           {:ok, aex9_balance()} | {:error, Error.t()}
   def fetch_balance(contract_pk, account_pk, height_hash) do
