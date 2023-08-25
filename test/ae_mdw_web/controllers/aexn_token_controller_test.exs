@@ -42,10 +42,15 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
         |> Store.put(Model.AexnContract, m_aex9)
         |> Store.put(Model.AexnContractName, m_aexn_name)
         |> Store.put(Model.AexnContractSymbol, m_aexn_symbol)
-        |> Store.put(
-          Model.Stat,
-          Model.stat(index: Stats.aex9_holder_count_key(<<i::256>>), payload: i)
-        )
+        |> then(fn store ->
+          Enum.reduce(1..i, store, fn _i, store ->
+            Store.put(
+              store,
+              Model.Aex9EventBalance,
+              Model.aex9_event_balance(index: {<<i::256>>, :crypto.strong_rand_bytes(32)})
+            )
+          end)
+        end)
         |> Store.put(
           Model.Stat,
           Model.stat(index: Stats.aex9_logs_count_key(<<i::256>>), payload: i)

@@ -8,6 +8,7 @@ defmodule AeMdwWeb.AexnView do
   alias AeMdw.Db.Util
   alias AeMdw.Node.Db, as: NodeDb
   alias AeMdw.Stats
+  alias AeMdw.Aex9
   alias AeMdw.Aex141
   alias AeMdw.Txs
 
@@ -133,10 +134,7 @@ defmodule AeMdwWeb.AexnView do
         :not_found -> 0
       end
 
-    num_holders =
-      with num when num < 0 <- Stats.fetch_aex9_holders_count(state, contract_pk) do
-        nil
-      end
+    num_holders = Aex9.fetch_holders_count(state, contract_pk)
 
     %{
       name: name,

@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.ContractCallMutationTest do
   use AeMdw.Db.MutationCase, async: false
 
+  alias AeMdw.Aex9
   alias AeMdw.Db.ContractCallMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.MemStore
@@ -201,7 +202,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                  {remote_pk, previous_balance, account_pk}
                )
 
-      assert 1 = Stats.fetch_aex9_holders_count(State.new(store), remote_pk)
+      assert 1 = Aex9.fetch_holders_count(State.new(store), remote_pk)
     end
   end
 
@@ -309,7 +310,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                  {contract_pk, previous_balance, account_pk}
                )
 
-      assert 1 = Stats.fetch_aex9_holders_count(State.new(store), contract_pk)
+      assert 1 = Aex9.fetch_holders_count(State.new(store), contract_pk)
     end
 
     test "decrement aex9 holder count after a call with full burn log", %{store: store} do
@@ -389,7 +390,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
       assert {:ok, ^m_new_balance} =
                Store.get(store, Model.Aex9EventBalance, {contract_pk, account_pk})
 
-      assert 0 = Stats.fetch_aex9_holders_count(State.new(store), contract_pk)
+      assert 0 = Aex9.fetch_holders_count(State.new(store), contract_pk)
     end
   end
 
@@ -619,10 +620,8 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         |> State.cache_put(:ct_create_sync_cache, contract_pk, call_txi - 1)
         |> State.cache_put(:ct_create_sync_cache, remote_pk1, call_txi - 2)
         |> State.cache_put(:ct_create_sync_cache, remote_pk2, call_txi - 3)
-        |> State.commit_mem([mutation])
 
-      assert 1 = Stats.fetch_aex9_holders_count(state, remote_pk1)
-      assert 0 = Stats.fetch_aex9_holders_count(state, remote_pk2)
+      state = ContractCallMutation.execute(mutation, state)
 
       new_amount1 = from_amount1 - amount1
 
@@ -637,6 +636,21 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                State.get(state, Model.Aex9BalanceAccount, {remote_pk1, new_amount1, from_pk1})
 
       refute State.exists?(state, Model.Aex9BalanceAccount, {remote_pk1, from_amount1, from_pk1})
+
+      assert {:ok, Model.aex9_event_balance(amount: ^new_amount1)} =
+               State.get(state, Model.Aex9EventBalance, {remote_pk1, from_pk1})
+
+      assert {:ok, Model.aex9_event_balance(amount: ^amount1)} =
+               State.get(state, Model.Aex9EventBalance, {remote_pk1, to_pk1})
+
+      assert {:ok, Model.aex9_event_balance(amount: 0)} =
+               State.get(state, Model.Aex9EventBalance, {remote_pk2, from_pk2})
+
+      assert {:ok, Model.aex9_event_balance(amount: ^amount2)} =
+               State.get(state, Model.Aex9EventBalance, {remote_pk2, to_pk2})
+
+      assert 2 = Aex9.fetch_holders_count(state, remote_pk1)
+      assert 1 = Aex9.fetch_holders_count(state, remote_pk2)
 
       assert State.exists?(
                state,
@@ -1571,7 +1585,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
         )
         |> change_store([mutation])
 
-      assert -1 = Stats.fetch_aex9_holders_count(State.new(store), contract_pk)
+      assert 0 = Aex9.fetch_holders_count(State.new(store), contract_pk)
     end
   end
 
