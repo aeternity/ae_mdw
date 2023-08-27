@@ -22,6 +22,7 @@ defmodule AeMdw.Contracts do
   alias AeMdw.Validate
 
   require Model
+  require Contract
 
   @type log() :: Model.contract_log_index()
   @type contract() :: map()
@@ -154,7 +155,7 @@ defmodule AeMdw.Contracts do
          {outer_tx_type, _tx} <- Db.get_tx(tx_hash) do
       if outer_tx_type == :contract_call_tx do
         local_idx =
-          ~w(Chain.create Chain.clone Call.create Call.clone)
+          Contract.contract_create_fnames()
           |> Enum.map(&fetch_int_contract_calls(state, txi, &1))
           |> Stream.concat()
           |> Enum.find_value(fn Model.int_contract_call(index: {^txi, local_idx}) ->

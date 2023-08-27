@@ -11,6 +11,7 @@ defmodule AeMdw.Contract do
   import :erlang, only: [tuple_to_list: 1]
 
   import AeMdw.Util
+  import AeMdw.Util.Encoding, only: [encode_contract: 1, encode: 2]
 
   @tab __MODULE__
 
@@ -62,9 +63,13 @@ defmodule AeMdw.Contract do
   @typep signed_tx :: Node.signed_tx()
   @typep block_hash :: <<_::256>>
 
-  ################################################################################
-  @spec encode(atom(), binary()) :: String.t()
-  defdelegate encode(type, val), to: :aeser_api_encoder
+  @contract_create_fnames ~w(Chain.create Chain.clone Call.create Call.clone)
+
+  defmacro contract_create_fnames do
+    quote do
+      unquote(@contract_create_fnames)
+    end
+  end
 
   @spec table() :: atom()
   def table(), do: @tab
@@ -292,6 +297,7 @@ defmodule AeMdw.Contract do
     {compiler_vsn, source_hash} = compilation_info(contract_pk)
 
     call_details = %{
+      "contract_id" => encode_contract(contract_pk),
       "args" => contract_init_args(contract_pk, tx_rec),
       "compiler_version" => compiler_vsn,
       "source_hash" => source_hash && Base.encode64(source_hash)

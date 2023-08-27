@@ -17,6 +17,7 @@ defmodule AeMdw.Db.Format do
   alias AeMdw.Db.Sync.InnerTx
 
   require Model
+  require Contract
 
   import AeMdw.Util
   import AeMdw.Util.Encoding, only: [encode_account: 1]
@@ -228,10 +229,8 @@ defmodule AeMdw.Db.Format do
   end
 
   def to_map(state, {call_txi, local_idx}, Model.IntContractCall) do
-    m_call = State.fetch!(state, Model.IntContractCall, {call_txi, local_idx})
-
-    create_txi = Model.int_contract_call(m_call, :create_txi)
-    fname = Model.int_contract_call(m_call, :fname)
+    Model.int_contract_call(create_txi: create_txi, fname: fname, tx: tx) =
+      State.fetch!(state, Model.IntContractCall, {call_txi, local_idx})
 
     ct_pk =
       case Origin.pubkey(state, {:contract, create_txi}) do
@@ -251,16 +250,14 @@ defmodule AeMdw.Db.Format do
         {create_txi, Enc.encode(:tx_hash, Txs.txi_to_hash(state, create_txi))}
       end
 
-    tx = Model.int_contract_call(m_call, :tx)
-    {tx_type, tx_rec} = :aetx.specialize_type(tx)
     serialized_tx = :aetx.serialize_for_client(tx)
 
     encoded_tx =
-      case tx_type do
-        :contact_call_tx ->
+      case :aetx.specialize_type(tx) do
+        {:contact_call_tx, _tx_rec} ->
           serialized_tx
 
-        _tx_type ->
+        {tx_type, tx_rec} ->
           signed_tx = :aetx_sign.new(tx, [])
           custom_encode(state, tx_type, serialized_tx, tx_rec, signed_tx, call_txi, block_hash)
       end
