@@ -23,10 +23,9 @@ defmodule AeMdw.Db.Sync.Contract do
   alias AeMdw.Txs
 
   require Model
+  require Contract
 
   @type call_record() :: tuple()
-
-  @contract_create_fnames ~w(Chain.create Chain.clone Call.create Call.clone)
 
   @spec child_contract_mutations(
           Contract.fun_arg_res_or_error(),
@@ -66,7 +65,7 @@ defmodule AeMdw.Db.Sync.Contract do
         events,
         &match?(
           {{:internal_call_tx, fname}, %{info: aetx}}
-          when is_tuple(aetx) or fname in @contract_create_fnames,
+          when is_tuple(aetx) or fname in Contract.contract_create_fnames(),
           &1
         )
       )
@@ -75,7 +74,8 @@ defmodule AeMdw.Db.Sync.Contract do
       [nil | events]
       |> Enum.zip(events)
       |> Enum.map(fn
-        {prev_event, {{:internal_call_tx, fname}, _info}} when fname in @contract_create_fnames ->
+        {prev_event, {{:internal_call_tx, fname}, _info}}
+        when fname in Contract.contract_create_fnames() ->
           # Chain.* and Call.* events don't contain the transaction in the event info, can't be indexed as an internal call
           # so this function relies on a property that every Chain.clone and Chain.create
           # always have a previous Call.amount transaction which tranfers tokens
@@ -179,7 +179,8 @@ defmodule AeMdw.Db.Sync.Contract do
       {local_idx, "Channel.settle", :channel_settle_tx, _aetx, tx} ->
         Channels.settle_mutations({block_index, {call_txi, local_idx}}, tx)
 
-      {_local_idx, fname, :contract_create_tx, _aetx, tx} when fname in @contract_create_fnames ->
+      {_local_idx, fname, :contract_create_tx, _aetx, tx}
+      when fname in Contract.contract_create_fnames() ->
         contract_pk = :aect_create_tx.contract_pubkey(tx)
 
         [
