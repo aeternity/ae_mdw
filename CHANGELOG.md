@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.62.4](https://www.github.com/aeternity/ae_mdw/compare/v1.62.3...v1.62.4) (2023-08-27)
+
+
+### Miscellaneous
+
+* add contract_id to create internal calls ([#1567](https://www.github.com/aeternity/ae_mdw/issues/1567)) ([8d783bd](https://www.github.com/aeternity/ae_mdw/commit/8d783bd48d3412c52e80895b121db646b1d5750b))
+
 ### [1.62.3](https://www.github.com/aeternity/ae_mdw/compare/v1.62.2...v1.62.3) (2023-08-25)
 
 
