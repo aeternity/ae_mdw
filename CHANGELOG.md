@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.62.5](https://www.github.com/aeternity/ae_mdw/compare/v1.62.4...v1.62.5) (2023-08-30)
+
+
+### Bug Fixes
+
+* handle aex141 templates without tokens count ([#1569](https://www.github.com/aeternity/ae_mdw/issues/1569)) ([5b0d867](https://www.github.com/aeternity/ae_mdw/commit/5b0d867ba6919bb877b68cd2fd448dc295961b90))
+
 ### [1.62.4](https://www.github.com/aeternity/ae_mdw/compare/v1.62.3...v1.62.4) (2023-08-27)
 
 
