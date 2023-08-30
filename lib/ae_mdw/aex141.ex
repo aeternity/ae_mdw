@@ -367,10 +367,9 @@ defmodule AeMdw.Aex141 do
   end
 
   defp render_template_edition_supply(state, contract_pk, template_id) do
-    {:ok, Model.stat(payload: amount)} =
-      State.get(state, Model.Stat, Stats.nft_template_tokens_key(contract_pk, template_id))
-
-    with {:ok, {^contract_pk, ^template_id, _token_id} = prev_key} <-
+    with {:ok, Model.stat(payload: amount)} <-
+           State.get(state, Model.Stat, Stats.nft_template_tokens_key(contract_pk, template_id)),
+         {:ok, {^contract_pk, ^template_id, _token_id} = prev_key} <-
            State.prev(state, Model.NftTemplateToken, {contract_pk, template_id, nil}),
          {:ok, Model.nft_template_token(txi: txi, log_idx: log_idx)} <-
            State.get(state, Model.NftTemplateToken, prev_key) do
