@@ -40,7 +40,7 @@ defmodule AeMdw.Aex9Test do
         async_state
       )
 
-      assert balances == Aex9.fetch_balances(State.new(), contract_pk, false)
+      assert {:ok, ^balances} = Aex9.fetch_balances(State.new(), contract_pk, false)
     end
   end
 

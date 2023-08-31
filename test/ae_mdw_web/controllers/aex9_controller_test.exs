@@ -353,4 +353,26 @@ defmodule AeMdwWeb.Aex9ControllerTest do
       end
     end
   end
+
+  test "when not a contract id, it returns 400", %{conn: conn} do
+    oracle_pk = :crypto.strong_rand_bytes(32)
+    encoded_oracle_pk = :aeser_api_encoder.encode(:oracle_pubkey, oracle_pk)
+    error_msg = "invalid id: #{encoded_oracle_pk}"
+
+    assert %{"error" => ^error_msg} =
+             conn
+             |> get("/aex9/balances/#{encoded_oracle_pk}")
+             |> json_response(400)
+  end
+
+  test "when not aex9 contract, it returns 400", %{conn: conn} do
+    contract_pk = :crypto.strong_rand_bytes(32)
+    encoded_contract_pk = :aeser_api_encoder.encode(:contract_pubkey, contract_pk)
+    error_msg = "not AEX9 contract: #{encoded_contract_pk}"
+
+    assert %{"error" => ^error_msg} =
+             conn
+             |> get("/aex9/balances/#{encoded_contract_pk}")
+             |> json_response(400)
+  end
 end

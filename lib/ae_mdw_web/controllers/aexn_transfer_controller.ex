@@ -30,7 +30,7 @@ defmodule AeMdwWeb.AexnTransferController do
   plug(PaginatedPlug)
   action_fallback(FallbackController)
 
-  @spec transfers_from_v1(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec transfers_from_v1(Conn.t(), map()) :: Conn.t()
   def transfers_from_v1(conn, %{"sender" => sender_id}),
     do:
       handle_input(
@@ -40,7 +40,7 @@ defmodule AeMdwWeb.AexnTransferController do
         end
       )
 
-  @spec transfers_to_v1(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec transfers_to_v1(Conn.t(), map()) :: Conn.t()
   def transfers_to_v1(conn, %{"recipient" => recipient_id}),
     do:
       handle_input(
@@ -50,7 +50,7 @@ defmodule AeMdwWeb.AexnTransferController do
         end
       )
 
-  @spec transfers_from_to_v1(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec transfers_from_to_v1(Conn.t(), map()) :: Conn.t()
   def transfers_from_to_v1(conn, %{"sender" => sender_id, "recipient" => recipient_id}),
     do:
       handle_input(
@@ -61,27 +61,27 @@ defmodule AeMdwWeb.AexnTransferController do
         end
       )
 
-  @spec aex9_transfers_from(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec aex9_transfers_from(Conn.t(), map()) :: Conn.t()
   def aex9_transfers_from(conn, %{"sender" => sender_id}) do
     transfers_from_reply(conn, :aex9, sender_id)
   end
 
-  @spec aex9_transfers_to(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec aex9_transfers_to(Conn.t(), map()) :: Conn.t()
   def aex9_transfers_to(conn, %{"recipient" => recipient_id}) do
     transfers_to_reply(conn, :aex9, recipient_id)
   end
 
-  @spec aex9_transfers_from_to(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec aex9_transfers_from_to(Conn.t(), map()) :: Conn.t()
   def aex9_transfers_from_to(conn, %{"sender" => sender_id, "recipient" => recipient_id}) do
     transfers_pair_reply(conn, :aex9, sender_id, recipient_id)
   end
 
-  @spec aex141_transfers(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec aex141_transfers(Conn.t(), map()) :: Conn.t()
   def aex141_transfers(conn, %{"contract_id" => contract_id}) do
     contract_transfers_reply(conn, contract_id, {:from, nil})
   end
 
-  @spec aex141_transfers_from(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec aex141_transfers_from(Conn.t(), map()) :: Conn.t()
   def aex141_transfers_from(conn, %{"contract_id" => contract_id, "sender" => sender_id}) do
     with {:ok, sender_pk} <- Validate.id(sender_id, [:account_pubkey]) do
       contract_transfers_reply(conn, contract_id, {:from, sender_pk})
@@ -96,7 +96,7 @@ defmodule AeMdwWeb.AexnTransferController do
     transfers_from_reply(conn, :aex141, sender_id)
   end
 
-  @spec aex141_transfers_to(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec aex141_transfers_to(Conn.t(), map()) :: Conn.t()
   def aex141_transfers_to(conn, %{"contract_id" => contract_id, "recipient" => recipient_id}) do
     with {:ok, recipient_pk} <- Validate.id(recipient_id, [:account_pubkey]) do
       contract_transfers_reply(conn, contract_id, {:to, recipient_pk})
@@ -111,7 +111,7 @@ defmodule AeMdwWeb.AexnTransferController do
     transfers_to_reply(conn, :aex141, recipient_id)
   end
 
-  @spec aex141_transfers_from_to(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  @spec aex141_transfers_from_to(Conn.t(), map()) :: Conn.t()
   def aex141_transfers_from_to(conn, %{"sender" => sender_id, "recipient" => recipient_id}) do
     transfers_pair_reply(conn, :aex141, sender_id, recipient_id)
   end
@@ -136,16 +136,15 @@ defmodule AeMdwWeb.AexnTransferController do
     %{pagination: pagination, cursor: cursor, state: state} = assigns
 
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
-         {:ok, create_txi} <- Origin.tx_index(state, {:contract, contract_pk}) do
-      {prev_cursor, transfers_keys, next_cursor} =
-        AexnTransfers.fetch_contract_transfers(
-          state,
-          create_txi,
-          tagged_account_pk,
-          pagination,
-          cursor
-        )
-
+         {:ok, create_txi} <- Origin.tx_index(state, {:contract, contract_pk}),
+         {:ok, {prev_cursor, transfers_keys, next_cursor}} <-
+           AexnTransfers.fetch_contract_transfers(
+             state,
+             create_txi,
+             tagged_account_pk,
+             pagination,
+             cursor
+           ) do
       data = Enum.map(transfers_keys, &contract_transfer_to_map(state, filter_by, &1))
 
       paginate(conn, prev_cursor, data, next_cursor)
@@ -159,7 +158,7 @@ defmodule AeMdwWeb.AexnTransferController do
     %{pagination: pagination, cursor: cursor, state: state} = assigns
 
     with {:ok, sender_pk} <- Validate.id(sender_id, [:account_pubkey]) do
-      {prev_cursor, transfers_keys, next_cursor} =
+      {:ok, {prev_cursor, transfers_keys, next_cursor}} =
         AexnTransfers.fetch_sender_transfers(state, aexn_type, sender_pk, pagination, cursor)
 
       data = Enum.map(transfers_keys, &sender_transfer_to_map(state, &1))
@@ -171,16 +170,15 @@ defmodule AeMdwWeb.AexnTransferController do
   defp transfers_to_reply(%Conn{assigns: assigns} = conn, aexn_type, recipient_id) do
     %{pagination: pagination, cursor: cursor, state: state} = assigns
 
-    with {:ok, recipient_pk} <- Validate.id(recipient_id, [:account_pubkey]) do
-      {prev_cursor, transfers_keys, next_cursor} =
-        AexnTransfers.fetch_recipient_transfers(
-          state,
-          aexn_type,
-          recipient_pk,
-          pagination,
-          cursor
-        )
-
+    with {:ok, recipient_pk} <- Validate.id(recipient_id, [:account_pubkey]),
+         {:ok, {prev_cursor, transfers_keys, next_cursor}} <-
+           AexnTransfers.fetch_recipient_transfers(
+             state,
+             aexn_type,
+             recipient_pk,
+             pagination,
+             cursor
+           ) do
       data = Enum.map(transfers_keys, &recipient_transfer_to_map(state, &1))
 
       paginate(conn, prev_cursor, data, next_cursor)
@@ -191,17 +189,16 @@ defmodule AeMdwWeb.AexnTransferController do
     %{pagination: pagination, cursor: cursor, state: state} = assigns
 
     with {:ok, sender_pk} <- Validate.id(sender_id, [:account_pubkey]),
-         {:ok, recipient_pk} <- Validate.id(recipient_id, [:account_pubkey]) do
-      {prev_cursor, transfers_keys, next_cursor} =
-        AexnTransfers.fetch_pair_transfers(
-          state,
-          aexn_type,
-          sender_pk,
-          recipient_pk,
-          pagination,
-          cursor
-        )
-
+         {:ok, recipient_pk} <- Validate.id(recipient_id, [:account_pubkey]),
+         {:ok, {prev_cursor, transfers_keys, next_cursor}} <-
+           AexnTransfers.fetch_pair_transfers(
+             state,
+             aexn_type,
+             sender_pk,
+             recipient_pk,
+             pagination,
+             cursor
+           ) do
       data = Enum.map(transfers_keys, &pair_transfer_to_map(state, &1))
 
       paginate(conn, prev_cursor, data, next_cursor)

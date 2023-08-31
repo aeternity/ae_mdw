@@ -158,27 +158,37 @@ defmodule AeMdw.Txs do
           add_spendtx_details?()
         ) :: {:ok, page_cursor(), [tx()], page_cursor()} | {:error, Error.t()}
   def fetch_txs(state, pagination, range, query, cursor, add_spendtx_details?) do
-    ids = query |> Map.get(:ids, MapSet.new()) |> MapSet.to_list()
-    types = query |> Map.get(:types, MapSet.new()) |> MapSet.to_list()
-    cursor = deserialize_cursor(cursor)
+    ids_fields =
+      query
+      |> Map.get(:ids, MapSet.new())
+      |> MapSet.to_list()
+      |> Enum.reduce_while({:ok, []}, fn {field, id}, {:ok, acc} ->
+        case extract_transaction_by(String.split(field, ".")) do
+          {:ok, fields} -> {:cont, {:ok, [{id, fields} | acc]}}
+          {:error, reason} -> {:halt, {:error, reason}}
+        end
+      end)
 
-    scope =
-      case range do
-        {:gen, first_gen..last_gen} ->
-          {DbUtil.first_gen_to_txi(state, first_gen), DbUtil.last_gen_to_txi(state, last_gen)}
+    with {:ok, ids_fields} <- ids_fields do
+      types = query |> Map.get(:types, MapSet.new()) |> MapSet.to_list()
+      cursor = deserialize_cursor(cursor)
 
-        {:txi, first_txi..last_txi} ->
-          {first_txi, last_txi}
+      scope =
+        case range do
+          {:gen, first_gen..last_gen} ->
+            {DbUtil.first_gen_to_txi(state, first_gen), DbUtil.last_gen_to_txi(state, last_gen)}
 
-        nil ->
-          nil
-      end
+          {:txi, first_txi..last_txi} ->
+            {first_txi, last_txi}
 
-    try do
+          nil ->
+            nil
+        end
+
       {prev_cursor, txis, next_cursor} =
         fn direction ->
           state
-          |> build_streams(ids, types, scope, cursor, direction)
+          |> build_streams(ids_fields, types, scope, cursor, direction)
           |> Collection.merge(direction)
         end
         |> Collection.paginate(pagination)
@@ -186,9 +196,6 @@ defmodule AeMdw.Txs do
       txs = Enum.map(txis, &fetch!(state, &1, add_spendtx_details?))
 
       {:ok, serialize_cursor(prev_cursor), txs, serialize_cursor(next_cursor)}
-    rescue
-      e in ErrInput ->
-        {:error, e}
     end
   end
 
@@ -339,14 +346,9 @@ defmodule AeMdw.Txs do
   #      the keys {:spend_tx, 1, B, X} and {:spend_tx, 2, B, X}, {:oracle_query_tx, 1, B, X} and
   #      {:oracle_query_tx, 3, B, X} for any value of X, filtering out all those transactions that
   #      do not include A in them.
-  defp build_streams(state, ids, types, scope, cursor, direction) do
+  defp build_streams(state, ids_fields, types, scope, cursor, direction) do
     extract_txi = fn {_tx_type, _field_pos, _id, tx_index} -> tx_index end
     initial_cursor = if direction == :backward, do: cursor, else: cursor || 0
-
-    ids_fields =
-      Enum.map(ids, fn {field, id} ->
-        {id, extract_transaction_by(String.split(field, "."))}
-      end)
 
     {[{_id, initial_fields}], ids_fields_rest} = Enum.split(ids_fields, 1)
 
@@ -417,17 +419,18 @@ defmodule AeMdw.Txs do
           Node.tx_group(String.to_existing_atom(type))
       end
 
-    Enum.flat_map(tx_types, fn tx_type ->
-      poss = tx_type |> Node.tx_ids_positions() |> Enum.map(&{tx_type, &1})
-      # nil - for link
-      poss = if tx_type in @create_tx_types, do: [{tx_type, nil} | poss], else: poss
+    {:ok,
+     Enum.flat_map(tx_types, fn tx_type ->
+       poss = tx_type |> Node.tx_ids_positions() |> Enum.map(&{tx_type, &1})
+       # nil - for link
+       poss = if tx_type in @create_tx_types, do: [{tx_type, nil} | poss], else: poss
 
-      if tx_type == :contract_create_tx, do: [{:contract_call_tx, nil} | poss], else: poss
-    end)
+       if tx_type == :contract_create_tx, do: [{:contract_call_tx, nil} | poss], else: poss
+     end)}
   end
 
   defp extract_transaction_by(["entrypoint"]) do
-    [{:contract_call_tx, AeMdw.Fields.mdw_field_pos("entrypoint")}]
+    {:ok, [{:contract_call_tx, AeMdw.Fields.mdw_field_pos("entrypoint")}]}
   end
 
   defp extract_transaction_by([field]) do
@@ -439,20 +442,21 @@ defmodule AeMdw.Txs do
           {tx_type, Node.tx_ids(tx_type)[field]}
         end)
 
-      wrapping_tx_field_positions(:ga_meta_tx, field) ++ field_types
+      {:ok, wrapping_tx_field_positions(:ga_meta_tx, field) ++ field_types}
     else
-      raise ErrInput.TxField, value: ":#{field}"
+      {:error, ErrInput.TxField.exception(value: ":#{field}")}
     end
   end
 
   defp extract_transaction_by([type_prefix, field])
        when type_prefix in ["ga_meta", "paying_for"] do
     if field in Node.id_fields() do
-      "#{type_prefix}_tx"
-      |> String.to_existing_atom()
-      |> wrapping_tx_field_positions(String.to_existing_atom(field))
+      {:ok,
+       "#{type_prefix}_tx"
+       |> String.to_existing_atom()
+       |> wrapping_tx_field_positions(String.to_existing_atom(field))}
     else
-      raise ErrInput.TxField, value: ":#{field}"
+      {:error, ErrInput.TxField.exception(value: ":#{field}")}
     end
   end
 
@@ -463,21 +467,21 @@ defmodule AeMdw.Txs do
         tx_field = String.to_existing_atom(field)
 
         if MapSet.member?(Parser.field_types(tx_field), tx_type) do
-          [{tx_type, Node.tx_ids(tx_type)[tx_field]}]
+          {:ok, [{tx_type, Node.tx_ids(tx_type)[tx_field]}]}
         else
-          raise ErrInput.TxField, value: ":#{field}"
+          {:error, ErrInput.TxField.exception(value: ":#{field}")}
         end
 
       type_prefix not in Node.tx_prefixes() ->
-        raise ErrInput.TxType, value: type_prefix
+        {:error, ErrInput.TxType.exception(value: type_prefix)}
 
       true ->
-        raise ErrInput.TxField, value: ":#{type_prefix}"
+        {:error, ErrInput.TxField.exception(value: ":#{type_prefix}")}
     end
   end
 
   defp extract_transaction_by(invalid_field) do
-    raise ErrInput.TxField, value: ":#{Enum.join(invalid_field, ".")}"
+    {:error, ErrInput.TxField.exception(value: ":#{Enum.join(invalid_field, ".")}")}
   end
 
   @spec fetch!(State.t(), txi(), add_spendtx_details?()) :: tx()
