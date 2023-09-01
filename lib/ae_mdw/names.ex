@@ -598,6 +598,7 @@ defmodule AeMdw.Names do
       case AuctionBids.fetch(state, plain_name, opts) do
         {:ok, auction_bid} ->
           {_version, auction_bid} = pop_in(auction_bid, [:info, :last_bid, "tx", "version"])
+
           {:auction, auction_bid}
 
         :not_found ->
