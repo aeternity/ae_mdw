@@ -726,6 +726,8 @@ defmodule AeMdwWeb.NameControllerTest do
           tx2: name_tx(:name_claim_tx, :bob, plain_name)
         ] do
         %{tx1: tx1, tx2: tx2} = transactions
+        %{mb0: %{block: mb0}} = blocks
+        {:ok, hash0} = mb0 |> :aec_blocks.to_header() |> :aec_headers.hash_header()
 
         m_auction =
           Model.auction_bid(
@@ -754,6 +756,8 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.Tx,
             Model.tx(index: 2, block_index: {1, 0}, id: :aetx_sign.hash(tx2))
           )
+          |> Store.put(Model.Block, Model.block(index: {0, -1}, hash: hash0))
+          |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: hash0))
 
         {:id, :account, bob_pk} = accounts[:bob]
         bob_id = encode(:account_pubkey, bob_pk)
@@ -831,6 +835,7 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.Tx,
             Model.tx(index: 2, id: :aetx_sign.hash(tx2), block_index: {1, 0})
           )
+          |> Store.put(Model.Block, Model.block(index: {0, -1}, hash: key_hash))
           |> Store.put(Model.Block, Model.block(index: {3, -1}, hash: key_hash))
 
         {:id, :account, alice_pk} = accounts[:alice]
@@ -1870,7 +1875,9 @@ defmodule AeMdwWeb.NameControllerTest do
         mb: [
           tx: name_tx(:name_claim_tx, :alice, name)
         ] do
-        %{txs: [tx]} = blocks[:mb]
+        %{txs: [tx], block: mb_block} = blocks[:mb]
+        {:ok, mb_hash} = mb_block |> :aec_blocks.to_header() |> :aec_headers.hash_header()
+        block_time = mb_block |> :aec_blocks.to_header() |> :aec_headers.time_in_msecs()
         {:id, :account, alice_pk} = accounts[:alice]
         owner_id = encode(:account_pubkey, alice_pk)
         active_from = 10
@@ -1913,11 +1920,19 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.Tx,
             Model.tx(index: bid_txi, id: :aetx_sign.hash(tx), block_index: {1, 1})
           )
+          |> Store.put(
+            Model.Block,
+            Model.block(index: {bid_expire, -1}, hash: mb_hash, tx_index: 2)
+          )
 
         assert %{
                  "name" => ^name,
                  "active" => false,
-                 "auction" => %{"auction_end" => ^bid_expire, "bids" => [^bid_txi]},
+                 "auction" => %{
+                   "auction_end" => ^bid_expire,
+                   "bids" => [^bid_txi],
+                   "approximate_auction_end_time" => ^block_time
+                 },
                  "info" => %{
                    "active_from" => ^active_from,
                    "auction_timeout" => 0,

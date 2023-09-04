@@ -552,12 +552,15 @@ defmodule AeMdw.Db.Format do
     name_ttl = Names.expire_after(auction_end)
     keys = if Map.has_key?(last_bid, "tx"), do: ["tx", "ttl"], else: [:tx, :ttl]
     last_bid = put_in(last_bid, keys, name_ttl)
+    {last_gen, last_micro_time} = DbUtil.last_gen_and_time(state)
+    auction_end_time = DbUtil.height_to_time(state, auction_end, last_gen, last_micro_time)
 
     %{
       key.(:name) => plain,
       key.(:status) => :auction,
       key.(:active) => false,
       key.(:info) => %{
+        key.(:approximate_auction_end_time) => auction_end_time,
         key.(:auction_end) => auction_end,
         key.(:last_bid) => last_bid,
         key.(:bids) => Enum.map(bids, &txi_idx_txi/1)
