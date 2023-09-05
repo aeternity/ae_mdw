@@ -1,8 +1,9 @@
 defmodule AeMdw.ContractsTest do
   use ExUnit.Case
 
+  alias AeMdw.Contract
   alias AeMdw.Contracts
-  alias AeMdw.Db.Contract
+  alias AeMdw.Db.Contract, as: DbContract
   alias AeMdw.Db.IntCallsMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
@@ -11,6 +12,7 @@ defmodule AeMdw.ContractsTest do
   import AeMdw.Node.ContractCallFixtures, only: [call_rec: 5]
   import AeMdw.TestUtil, only: [empty_state: 0]
   import AeMdw.Util.Encoding
+  import Mock
 
   require Model
 
@@ -43,7 +45,7 @@ defmodule AeMdw.ContractsTest do
           Model.rev_origin(index: {create_txi, :contract_create_tx, contract_pk})
         )
         |> State.cache_put(:ct_create_sync_cache, contract_pk, create_txi)
-        |> Contract.logs_write(create_txi, call_txi, call_rec)
+        |> DbContract.logs_write(create_txi, call_txi, call_rec)
 
       assert {:ok, {_prev, [log1, log2], _next}} =
                Contracts.fetch_logs(state, {:forward, false, 100, false}, nil, %{}, nil)
@@ -107,30 +109,44 @@ defmodule AeMdw.ContractsTest do
           Model.tx(index: call_txi, id: <<call_txi::256>>, block_index: block_index)
         )
 
-      state =
-        IntCallsMutation.execute(
-          IntCallsMutation.new(contract_pk, call_txi, int_calls),
-          state
-        )
+      with_mocks [
+        {Contract, [:passthrough],
+         [
+           get_init_call_details: fn tx_rec, ^block_hash ->
+             contract_id =
+               tx_rec
+               |> :aect_create_tx.contract_pubkey()
+               |> encode_contract()
 
-      assert {:ok, {_prev, [call1, call2], _next}} =
-               Contracts.fetch_calls(state, {:forward, false, 100, false}, nil, %{}, nil)
+             %{"contract_id" => contract_id}
+           end
+         ]}
+      ] do
+        state =
+          IntCallsMutation.execute(
+            IntCallsMutation.new(contract_pk, call_txi, int_calls),
+            state
+          )
 
-      contract_id = encode_contract(contract_pk)
+        assert {:ok, {_prev, [call1, call2], _next}} =
+                 Contracts.fetch_calls(state, {:forward, false, 100, false}, nil, %{}, nil)
 
-      assert %{
-               local_idx: 0,
-               call_txi: ^call_txi,
-               contract_txi: ^create_txi,
-               internal_tx: %{"contract_id" => ^contract_id}
-             } = call1
+        contract_id = encode_contract(contract_pk)
 
-      assert %{
-               local_idx: 1,
-               call_txi: ^call_txi,
-               contract_txi: ^create_txi,
-               internal_tx: %{"contract_id" => ^contract_id}
-             } = call2
+        assert %{
+                 local_idx: 0,
+                 call_txi: ^call_txi,
+                 contract_txi: ^create_txi,
+                 internal_tx: %{"contract_id" => ^contract_id}
+               } = call1
+
+        assert %{
+                 local_idx: 1,
+                 call_txi: ^call_txi,
+                 contract_txi: ^create_txi,
+                 internal_tx: %{"contract_id" => ^contract_id}
+               } = call2
+      end
     end
   end
 end

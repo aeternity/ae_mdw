@@ -2,6 +2,8 @@ name: Dockerhub Pipeline
 
 on:
   push:
+    branches:
+      - develop
     tags:
       - v*
 
@@ -17,13 +19,18 @@ jobs:
         with:
           fetch-depth: 100
 
+      - name: Extract branch name
+        shell: bash
+        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+        id: extract_branch
+
       - name: Extract metadata for docker
         id: meta
         uses: docker/metadata-action@v4
         with:
           images: aeternity/ae_mdw
           tags: |
-            type=raw,value=master,enable={{is_default_branch}}
+            type=raw,value=${{ steps.extract_branch.outputs.branch }},enable=true
             type=sha,prefix=,enable={{is_default_branch}}
             type=semver,pattern={{version}},enable=true
 
