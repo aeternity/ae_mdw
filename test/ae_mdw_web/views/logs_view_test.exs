@@ -395,6 +395,25 @@ defmodule AeMdwWeb.LogsViewTest do
     assert token_id == tokens["Transfer"]
   end
 
+  defp assert_args("Allowance", account1_pk, account2_pk, tokens, [from, to, token_id]) do
+    assert from == encode_account(account1_pk)
+    assert to == encode_account(account2_pk)
+    assert token_id == tokens["Allowance"]
+  end
+
+  defp assert_args("Approval", account1_pk, account2_pk, tokens, [from, to, token_id, bool]) do
+    assert from == encode_account(account1_pk)
+    assert to == encode_account(account2_pk)
+    assert token_id == tokens["Approval"]
+    assert bool == "true"
+  end
+
+  defp assert_args("ApprovalForAll", account1_pk, account2_pk, _tokens, [from, to, bool]) do
+    assert from == encode_account(account1_pk)
+    assert to == encode_account(account2_pk)
+    assert bool == "true"
+  end
+
   defp assert_args(_event_name, _account1_pk, _account2_pk, _tokens, _args), do: :ok
 
   defp assert_template_args("TemplateCreation" = event, _account1_pk, templates, _tokens, [
