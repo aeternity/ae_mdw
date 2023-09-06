@@ -14,7 +14,7 @@ defmodule AeMdwWeb.LogsView do
   @type opts :: %{aexn_args: boolean(), custom_args: boolean()}
 
   @spec render_log(State.t(), AeMdw.Contracts.log(), opts()) :: map()
-  def render_log(state, {create_txi, call_txi, log_idx}, encode_args) do
+  def render_log(state, {create_txi, call_txi, log_idx} = index, encode_args) do
     {contract_tx_hash, ct_pk} =
       if create_txi == -1 do
         {nil, Origin.pubkey(state, {:contract_call, call_txi})}
@@ -28,7 +28,7 @@ defmodule AeMdwWeb.LogsView do
     Model.block(hash: block_hash) = DBUtil.read_block!(state, {height, micro_index})
 
     Model.contract_log(args: args, data: data, ext_contract: ext_contract, hash: event_hash) =
-      State.fetch!(state, Model.ContractLog, {create_txi, call_txi, log_idx})
+      read_log(state, index)
 
     event_name = AexnContracts.event_name(event_hash) || get_custom_event_name(event_hash)
 
@@ -154,5 +154,22 @@ defmodule AeMdwWeb.LogsView do
 
   defp get_custom_event_name(event_hash) do
     :persistent_term.get({__MODULE__, event_hash}, nil)
+  end
+
+  defp read_log(state, index) do
+    table = Model.ContractLog
+
+    try do
+      State.fetch!(state, table, index)
+    rescue
+      ArgumentError ->
+        {:ok, value} = AeMdw.Db.RocksDb.get(table, :sext.encode(index))
+        record_type = Model.record(table)
+
+        value
+        |> :sext.decode()
+        |> Tuple.insert_at(0, index)
+        |> Tuple.insert_at(0, record_type)
+    end
   end
 end
