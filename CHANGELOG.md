@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.63.0](https://www.github.com/aeternity/ae_mdw/compare/v1.62.5...v1.63.0) (2023-09-06)
+
+
+### Features
+
+* add approximate_auction_end_time to auctions ([#1573](https://www.github.com/aeternity/ae_mdw/issues/1573)) ([dc0aecc](https://www.github.com/aeternity/ae_mdw/commit/dc0aeccf3c5059f94b69489bf445939fd4c602d0))
+
+
+### Bug Fixes
+
+* render sext encoded log ([#1579](https://www.github.com/aeternity/ae_mdw/issues/1579)) ([798a523](https://www.github.com/aeternity/ae_mdw/commit/798a523014b291b8b9182acf1ef4c3dc89b20813))
+
+
+### Miscellaneous
+
+* add allowance and approval events ([#1575](https://www.github.com/aeternity/ae_mdw/issues/1575)) ([d44e047](https://www.github.com/aeternity/ae_mdw/commit/d44e047faa2d1bb7c883a12139682eeab27df746))
+* enable V3 routes for all envs ([#1578](https://www.github.com/aeternity/ae_mdw/issues/1578)) ([121cd28](https://www.github.com/aeternity/ae_mdw/commit/121cd28e8173578f7ce0b2af4e95ba5c4230e5b3))
+* upgrade to node 6.11 ([#1483](https://www.github.com/aeternity/ae_mdw/issues/1483)) ([dc4d90d](https://www.github.com/aeternity/ae_mdw/commit/dc4d90d3cdcefc1eafdb7f222343e4971f36f4cf))
+
 ### [1.62.5](https://www.github.com/aeternity/ae_mdw/compare/v1.62.4...v1.62.5) (2023-08-30)
 
 
