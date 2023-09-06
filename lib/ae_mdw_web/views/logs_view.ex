@@ -86,6 +86,20 @@ defmodule AeMdwWeb.LogsView do
     if String.valid?(data), do: data, else: Base.encode64(data)
   end
 
+  defp format_args("Allowance", [account1, account2, <<amount::256>>], %{aexn_args: true}) do
+    [encode_account(account1), encode_account(account2), amount]
+  end
+
+  defp format_args("Approval", [account1, account2, <<token_id::256>>, enable], %{aexn_args: true})
+       when enable in ["true", "false"] do
+    [encode_account(account1), encode_account(account2), token_id, enable]
+  end
+
+  defp format_args("ApprovalForAll", [account1, account2, enable], %{aexn_args: true})
+       when enable in ["true", "false"] do
+    [encode_account(account1), encode_account(account2), enable]
+  end
+
   defp format_args(event_name, [account, <<token_id::256>>], %{aexn_args: true})
        when event_name in ["Burn", "Mint", "Swap"] do
     [encode_account(account), token_id]

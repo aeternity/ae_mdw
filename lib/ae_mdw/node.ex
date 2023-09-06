@@ -47,7 +47,10 @@ defmodule AeMdw.Node do
   @opaque aect_call :: tuple()
 
   @type aexn_event_type ::
-          :burn
+          :allowance
+          | :approval
+          | :approval_for_all
+          | :burn
           | :mint
           | :swap
           | :edition_limit
@@ -84,21 +87,30 @@ defmodule AeMdw.Node do
 
   @spec aexn_event_hash_types() :: %{Contracts.event_hash() => aexn_event_type()}
   def aexn_event_hash_types() do
-    %{
-      :aec_hash.blake2b_256_hash("Burn") => :burn,
-      :aec_hash.blake2b_256_hash("Mint") => :mint,
-      :aec_hash.blake2b_256_hash("Swap") => :swap,
-      :aec_hash.blake2b_256_hash("EditionLimit") => :edition_limit,
-      :aec_hash.blake2b_256_hash("EditionLimitDecrease") => :edition_limit_decrease,
-      :aec_hash.blake2b_256_hash("TemplateCreation") => :template_creation,
-      :aec_hash.blake2b_256_hash("TemplateDeletion") => :template_deletion,
-      :aec_hash.blake2b_256_hash("TemplateMint") => :template_mint,
-      :aec_hash.blake2b_256_hash("TemplateLimit") => :template_limit,
-      :aec_hash.blake2b_256_hash("TemplateLimitDecrease") => :template_limit_decrease,
-      :aec_hash.blake2b_256_hash("TokenLimit") => :token_limit,
-      :aec_hash.blake2b_256_hash("TokenLimitDecrease") => :token_limit_decrease,
-      :aec_hash.blake2b_256_hash("Transfer") => :transfer
-    }
+    Map.new(
+      [
+        :allowance,
+        :approval,
+        :approval_for_all,
+        :burn,
+        :mint,
+        :swap,
+        :edition_limit,
+        :edition_limit_decrease,
+        :template_creation,
+        :template_deletion,
+        :template_mint,
+        :template_limit,
+        :template_limit_decrease,
+        :token_limit,
+        :token_limit_decrease,
+        :transfer
+      ],
+      fn event_type ->
+        event_name = event_type |> to_string() |> Macro.camelize()
+        {:aec_hash.blake2b_256_hash(event_name), event_type}
+      end
+    )
   end
 
   @spec aexn_event_names() :: %{Contracts.event_hash() => AexnContracts.event_name()}

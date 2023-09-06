@@ -29,6 +29,9 @@ defmodule AeMdwWeb.LogsViewTest do
     account2_pk = :crypto.strong_rand_bytes(32)
 
     tokens = %{
+      "Allowance" => Enum.random(100..999),
+      "Approval" => Enum.random(100..999),
+      "ApprovalForAll" => Enum.random(100..999),
       "Burn" => Enum.random(100..999),
       "Mint" => Enum.random(100..999),
       "Swap" => Enum.random(100..999),
@@ -37,6 +40,7 @@ defmodule AeMdwWeb.LogsViewTest do
     }
 
     aex9_event_args = %{
+      allowance: [account1_pk, account2_pk, <<tokens["Allowance"]::256>>],
       burn: [account1_pk, <<tokens["Burn"]::256>>],
       mint: [account1_pk, <<tokens["Mint"]::256>>],
       swap: [account1_pk, <<tokens["Swap"]::256>>],
@@ -57,6 +61,8 @@ defmodule AeMdwWeb.LogsViewTest do
     }
 
     aex141_event_args = %{
+      approval: [account1_pk, account2_pk, <<tokens["Approval"]::256>>, "true"],
+      approval_for_all: [account1_pk, account2_pk, "true"],
       burn: [account1_pk, <<tokens["Burn"]::256>>],
       mint: [account1_pk, <<tokens["Mint"]::256>>],
       transfer: [account1_pk, account2_pk, <<tokens["Transfer"]::256>>],
@@ -387,6 +393,25 @@ defmodule AeMdwWeb.LogsViewTest do
     assert from == encode_account(account1_pk)
     assert to == encode_account(account2_pk)
     assert token_id == tokens["Transfer"]
+  end
+
+  defp assert_args("Allowance", account1_pk, account2_pk, tokens, [from, to, token_id]) do
+    assert from == encode_account(account1_pk)
+    assert to == encode_account(account2_pk)
+    assert token_id == tokens["Allowance"]
+  end
+
+  defp assert_args("Approval", account1_pk, account2_pk, tokens, [from, to, token_id, bool]) do
+    assert from == encode_account(account1_pk)
+    assert to == encode_account(account2_pk)
+    assert token_id == tokens["Approval"]
+    assert bool == "true"
+  end
+
+  defp assert_args("ApprovalForAll", account1_pk, account2_pk, _tokens, [from, to, bool]) do
+    assert from == encode_account(account1_pk)
+    assert to == encode_account(account2_pk)
+    assert bool == "true"
   end
 
   defp assert_args(_event_name, _account1_pk, _account2_pk, _tokens, _args), do: :ok
