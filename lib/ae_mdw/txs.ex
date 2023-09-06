@@ -20,6 +20,7 @@ defmodule AeMdw.Txs do
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Log
   alias AeMdw.Node
+  alias AeMdw.Util
   alias AeMdw.Validate
 
   require Logger
@@ -158,20 +159,10 @@ defmodule AeMdw.Txs do
           add_spendtx_details?()
         ) :: {:ok, page_cursor(), [tx()], page_cursor()} | {:error, Error.t()}
   def fetch_txs(state, pagination, range, query, cursor, add_spendtx_details?) do
-    ids_fields =
-      query
-      |> Map.get(:ids, MapSet.new())
-      |> MapSet.to_list()
-      |> Enum.reduce_while({:ok, []}, fn {field, id}, {:ok, acc} ->
-        case extract_transaction_by(String.split(field, ".")) do
-          {:ok, fields} -> {:cont, {:ok, [{id, fields} | acc]}}
-          {:error, reason} -> {:halt, {:error, reason}}
-        end
-      end)
-
-    with {:ok, ids_fields} <- ids_fields do
+    with {:ok, ids_fields} <- extract_ids_fields(query) do
       types = query |> Map.get(:types, MapSet.new()) |> MapSet.to_list()
       cursor = deserialize_cursor(cursor)
+      ids_fields = Enum.to_list(ids_fields)
 
       scope =
         case range do
@@ -605,5 +596,16 @@ defmodule AeMdw.Txs do
       {:ok, Model.id_count(count: repeated_count)} -> repeated_count
       :not_found -> 0
     end
+  end
+
+  defp extract_ids_fields(query) do
+    query
+    |> Map.get(:ids, MapSet.new())
+    |> Util.convert_params(fn {field, id} ->
+      case extract_transaction_by(String.split(field, ".")) do
+        {:ok, fields} -> {:ok, {id, fields}}
+        {:error, reason} -> {:error, reason}
+      end
+    end)
   end
 end

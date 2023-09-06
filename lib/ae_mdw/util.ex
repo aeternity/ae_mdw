@@ -171,8 +171,8 @@ defmodule AeMdw.Util do
   end
 
   @spec convert_params(
-          map(),
-          ({binary(), binary()} -> {:ok, {atom(), term()}} | {:error, term()})
+          Enumerable.t(),
+          ({binary(), binary()} -> {:ok, {term(), term()}} | {:error, term()})
         ) :: {:ok, map()} | {:error, term()}
   def convert_params(params, convert_param_fn) do
     Enum.reduce_while(params, {:ok, %{}}, fn param, {:ok, filters} ->
