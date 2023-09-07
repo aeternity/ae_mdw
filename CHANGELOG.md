@@ -1,5 +1,13 @@
 # Changelog
 
+### [1.63.1](https://www.github.com/aeternity/ae_mdw/compare/v1.63.0...v1.63.1) (2023-09-07)
+
+
+### Miscellaneous
+
+* add functional error responses and tests cases for it ([#1571](https://www.github.com/aeternity/ae_mdw/issues/1571)) ([5a3bd21](https://www.github.com/aeternity/ae_mdw/commit/5a3bd21f1d410833b92014ac7eb915575a44795a))
+* ensure suffix on name history ([#1582](https://www.github.com/aeternity/ae_mdw/issues/1582)) ([e2faf61](https://www.github.com/aeternity/ae_mdw/commit/e2faf616f56ec2efdb3062219a2b44acddfcc4fb))
+
 ## [1.63.0](https://www.github.com/aeternity/ae_mdw/compare/v1.62.5...v1.63.0) (2023-09-06)
 
 
