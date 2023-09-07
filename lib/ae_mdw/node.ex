@@ -12,6 +12,7 @@ defmodule AeMdw.Node do
   alias AeMdw.Contract
   alias AeMdw.Contracts
 
+  @type tx_group :: :channel | :contract | :ga | :name | :oracle | :paying | :spend
   @type tx_type ::
           :spend_tx
           | :oracle_register_tx

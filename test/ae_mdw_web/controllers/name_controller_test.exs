@@ -2863,6 +2863,8 @@ defmodule AeMdwWeb.NameControllerTest do
 
         [claim2_hash, update2_hash] = for i <- 1..2, do: Enc.encode(:tx_hash, <<600 + i::256>>)
 
+        plain_name = String.replace(plain_name, ".chain", "")
+
         assert %{
                  "data" => [expired, update2, claim2, revoke, transfer] = history,
                  "next" => next_url

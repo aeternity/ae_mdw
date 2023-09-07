@@ -169,8 +169,10 @@ defmodule AeMdwWeb.NameController do
       cursor: cursor
     } = assigns
 
+    name_or_hash = Validate.ensure_name_suffix(name_or_hash)
+
     with {:ok, paginated_history} <-
-           Names.fetch_name_history(state, name_or_hash, pagination, cursor) do
+           Names.fetch_name_history(state, pagination, name_or_hash, cursor) do
       Util.paginate(conn, paginated_history)
     end
   end
