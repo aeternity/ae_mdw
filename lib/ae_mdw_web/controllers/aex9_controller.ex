@@ -54,7 +54,7 @@ defmodule AeMdwWeb.Aex9Controller do
   @spec balance(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def balance(conn, %{"contract_id" => contract_id, "account_id" => account_id}) do
     with {:ok, contract_pk} <- ensure_aex9_contract_pk(contract_id),
-         {:ok, account_pk} <- Validate.id!(account_id, [:account_pubkey]) do
+         {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]) do
       balance_reply(conn, contract_pk, account_pk)
     end
   end
@@ -125,7 +125,7 @@ defmodule AeMdwWeb.Aex9Controller do
         "blockhash" => hash,
         "account_id" => account_id
       }) do
-    with {:ok, account_pk} <- Validate.id!(account_id, [:account_pubkey]),
+    with {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
          {:ok, hash} <- Validate.id(hash),
          block_index when block_index != nil <- Util.block_hash_to_bi(state, hash) do
       account_balances_reply(conn, account_pk, block_index)

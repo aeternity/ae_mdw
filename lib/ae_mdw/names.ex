@@ -116,7 +116,7 @@ defmodule AeMdw.Names do
 
   @spec fetch_name_history(state(), pagination(), plain_name(), cursor()) ::
           {:ok, {page_cursor(), [history_item()], page_cursor()}} | {:error, reason()}
-  def fetch_name_history(state, plain_name_or_hash, pagination, cursor) do
+  def fetch_name_history(state, pagination, plain_name_or_hash, cursor) do
     with {:ok, name_or_auction} <- locate_name_or_auction(state, plain_name_or_hash),
          plain_name <- get_index(name_or_auction),
          {:ok, cursor} <- deserialize_history_cursor(plain_name, cursor) do
