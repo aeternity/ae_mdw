@@ -6,6 +6,7 @@ defmodule AeMdw.AexnTransfers do
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Util
 
@@ -43,7 +44,7 @@ defmodule AeMdw.AexnTransfers do
           pagination(),
           cursor() | nil
         ) ::
-          contract_paginated_transfers()
+          {:ok, contract_paginated_transfers()} | {:error, Error.t()}
   def fetch_contract_transfers(state, contract_txi, {filter_by, account_pk}, pagination, cursor) do
     table =
       if filter_by == :from,
@@ -61,7 +62,7 @@ defmodule AeMdw.AexnTransfers do
   end
 
   @spec fetch_sender_transfers(State.t(), aexn_type(), pubkey(), pagination(), cursor() | nil) ::
-          account_paginated_transfers()
+          {:ok, account_paginated_transfers()} | {:error, Error.t()}
   def fetch_sender_transfers(state, aexn_type, sender_pk, pagination, cursor) do
     paginate_transfers(
       state,
@@ -74,7 +75,7 @@ defmodule AeMdw.AexnTransfers do
   end
 
   @spec fetch_recipient_transfers(State.t(), aexn_type(), pubkey(), pagination(), cursor() | nil) ::
-          account_paginated_transfers()
+          {:ok, account_paginated_transfers()} | {:error, Error.t()}
   def fetch_recipient_transfers(state, aexn_type, recipient_pk, pagination, cursor) do
     paginate_transfers(
       state,
@@ -94,7 +95,7 @@ defmodule AeMdw.AexnTransfers do
           pagination(),
           cursor() | nil
         ) ::
-          pair_paginated_transfers()
+          {:ok, pair_paginated_transfers()} | {:error, Error.t()}
   def fetch_pair_transfers(
         state,
         aexn_type,
@@ -124,20 +125,21 @@ defmodule AeMdw.AexnTransfers do
          cursor,
          account_pk_or_pair_pks
        ) do
-    cursor_key = deserialize_cursor(cursor)
+    with {:ok, cursor_key} <- deserialize_cursor(cursor) do
+      key_boundary = key_boundary(aexn_type_or_txi, account_pk_or_pair_pks)
 
-    key_boundary = key_boundary(aexn_type_or_txi, account_pk_or_pair_pks)
+      {prev_cursor_key, transfer_keys, next_cursor_key} =
+        state
+        |> build_streamer(table, cursor_key, key_boundary)
+        |> Collection.paginate(pagination)
 
-    {prev_cursor_key, transfer_keys, next_cursor_key} =
-      state
-      |> build_streamer(table, cursor_key, key_boundary)
-      |> Collection.paginate(pagination)
-
-    {
-      serialize_cursor(prev_cursor_key),
-      transfer_keys,
-      serialize_cursor(next_cursor_key)
-    }
+      {:ok,
+       {
+         serialize_cursor(prev_cursor_key),
+         transfer_keys,
+         serialize_cursor(next_cursor_key)
+       }}
+    end
   end
 
   defp build_streamer(state, table, cursor_key, key_boundary) do
@@ -151,7 +153,7 @@ defmodule AeMdw.AexnTransfers do
   defp serialize_cursor({cursor, is_reversed?}),
     do: {cursor |> :erlang.term_to_binary() |> Base.encode64(), is_reversed?}
 
-  defp deserialize_cursor(nil), do: nil
+  defp deserialize_cursor(nil), do: {:ok, nil}
 
   defp deserialize_cursor(<<cursor_bin64::binary>>) do
     with {:ok, cursor_bin} <- Base.decode64(cursor_bin64),
@@ -166,10 +168,10 @@ defmodule AeMdw.AexnTransfers do
                   {_type_or_pk, <<_pk1::256>>, <<_pk2::256>>, _txi, _amount, _idx},
                   cursor_term
                 )) do
-      cursor_term
+      {:ok, cursor_term}
     else
       _invalid ->
-        raise ErrInput.Cursor, value: cursor_bin64
+        {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
     end
   end
 

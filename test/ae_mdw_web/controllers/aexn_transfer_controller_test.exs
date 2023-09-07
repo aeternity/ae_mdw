@@ -742,6 +742,18 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       assert %{"error" => ^error_msg} =
                conn |> get("/v2/aex141/transfers/#{invalid_id}") |> json_response(400)
     end
+
+    test "returns bad request when cursor is invalid", %{conn: conn, store: store} do
+      contract_id = encode_contract(@contract_pk2)
+      invalid_cursor = "foo"
+      error_msg = "invalid cursor: #{invalid_cursor}"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> with_store(store)
+               |> get("/v2/aex141/transfers/#{contract_id}", cursor: invalid_cursor)
+               |> json_response(400)
+    end
   end
 
   defp aex9_valid_sender_transfer?(sender_id, %{

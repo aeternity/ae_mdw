@@ -1,5 +1,6 @@
 defmodule AeMdw.Db.Stream.Query.Parser do
   @moduledoc false
+  alias AeMdw.Error
   alias AeMdw.Node, as: AE
   alias AeMdw.Validate
   alias AeMdw.Error.Input, as: ErrInput
@@ -14,21 +15,31 @@ defmodule AeMdw.Db.Stream.Query.Parser do
   def classify_ident("name"), do: &Validate.name_id!/1
   def classify_ident(_ident), do: &Validate.id!/1
 
-  @spec parse_field(String.t()) :: map()
+  @spec parse_field(String.t()) :: {:ok, map()} | {:error, Error.t()}
   def parse_field(field) do
     case String.split(field, ["."]) do
       [field] ->
-        field = Validate.tx_field!(field)
-        for tx_type <- field_types(field), reduce: %{}, do: (acc -> add_pos(acc, tx_type, field))
+        with {:ok, field} <- Validate.tx_field(field) do
+          tx_types_poss =
+            for tx_type <- field_types(field),
+                reduce: %{},
+                do: (acc -> add_pos(acc, tx_type, field))
+
+          {:ok, tx_types_poss}
+        end
 
       [type_no_suffix, field] ->
-        tx_type = Validate.tx_type!(type_no_suffix)
-        field = Validate.tx_field!(field)
-        tx_type in field_types(field) || raise ErrInput.TxField, value: field
-        add_pos(%{}, tx_type, field)
+        with {:ok, tx_type} <- Validate.tx_type(type_no_suffix),
+             {:ok, field} <- Validate.tx_field(field) do
+          if tx_type in field_types(field) do
+            {:ok, add_pos(%{}, tx_type, field)}
+          else
+            {:error, ErrInput.TxField.exception(value: field)}
+          end
+        end
 
       _invalid ->
-        raise ErrInput.TxField, value: field
+        {:error, ErrInput.TxField.exception(value: field)}
     end
   end
 

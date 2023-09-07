@@ -105,9 +105,6 @@ defmodule AeMdw.Validate do
     end
   end
 
-  def tx_type!(type),
-    do: unwrap!(&tx_type/1, type)
-
   def tx_group(group) when is_atom(group),
     do: (group in AE.tx_groups() && {:ok, group}) || {:error, {ErrInput.TxGroup, group}}
 
@@ -119,9 +116,6 @@ defmodule AeMdw.Validate do
         {:error, ErrInput.TxGroup.exception(value: group)}
     end
   end
-
-  def tx_group!(group),
-    do: unwrap!(&tx_group/1, group)
 
   def tx_field(field) when is_binary(field),
     do:
@@ -135,9 +129,6 @@ defmodule AeMdw.Validate do
   def tx_field(field),
     do: {:error, ErrInput.TxField.exception(value: field)}
 
-  def tx_field!(field),
-    do: unwrap!(&tx_field/1, field)
-
   def nonneg_int(s) when is_binary(s) do
     case Integer.parse(s, 10) do
       {i, ""} when i >= 0 -> {:ok, i}
@@ -147,9 +138,6 @@ defmodule AeMdw.Validate do
 
   def nonneg_int(x) when is_integer(x) and x >= 0, do: {:ok, x}
   def nonneg_int(x), do: {:error, {ErrInput.NonnegInt, x}}
-
-  def nonneg_int!(x),
-    do: unwrap!(&nonneg_int/1, x)
 
   def block_index(x) when is_binary(x) do
     map_nni = fn s, f ->
@@ -176,35 +164,6 @@ defmodule AeMdw.Validate do
         {:error, {ErrInput.BlockIndex, x}}
     end
   end
-
-  def block_index!(x),
-    do: unwrap!(&block_index/1, x)
-
-  def base64(x) when is_binary(x) do
-    case Base.decode64(x) do
-      {:ok, bin} ->
-        {:ok, bin}
-
-      :error ->
-        {:error, {ErrInput.Base64, x}}
-    end
-  end
-
-  def base64!(x) when is_binary(x),
-    do: unwrap!(&base64/1, x)
-
-  def hex32(x) when is_binary(x) do
-    case Base.hex_decode32(x) do
-      {:ok, bin} ->
-        {:ok, bin}
-
-      :error ->
-        {:error, {ErrInput.Hex32, x}}
-    end
-  end
-
-  def hex32!(x) when is_binary(x),
-    do: unwrap!(&hex32/1, x)
 
   defp unwrap!(validator, value) do
     case validator.(value) do

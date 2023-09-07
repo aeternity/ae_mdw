@@ -38,7 +38,7 @@ defmodule AeMdw.Aex9 do
 
   @type amounts :: map()
 
-  @spec fetch_balances(State.t(), pubkey(), boolean()) :: amounts()
+  @spec fetch_balances(State.t(), pubkey(), boolean()) :: {:ok, amounts()} | {:error, Error.t()}
   def fetch_balances(state, contract_pk, top?) do
     if top? do
       {amounts, _height} = Db.aex9_balances!(contract_pk, true)
@@ -55,14 +55,16 @@ defmodule AeMdw.Aex9 do
       end)
       |> case do
         amounts when map_size(amounts) == 0 ->
-          raise ErrInput.Aex9BalanceNotAvailable,
-            value: "contract #{encode_contract(contract_pk)}"
+          {:error,
+           ErrInput.Aex9BalanceNotAvailable.exception(
+             value: "contract #{encode_contract(contract_pk)}"
+           )}
 
         %{{:address, <<>>} => nil} = amounts when map_size(amounts) == 1 ->
-          %{}
+          {:ok, %{}}
 
         amounts ->
-          Map.delete(amounts, {:address, <<>>})
+          {:ok, Map.delete(amounts, {:address, <<>>})}
       end
     end
   end

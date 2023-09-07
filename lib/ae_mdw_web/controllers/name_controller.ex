@@ -176,15 +176,18 @@ defmodule AeMdwWeb.NameController do
   end
 
   @spec search_v1(Conn.t(), map()) :: Conn.t()
-  def search_v1(%Conn{assigns: %{state: state, opts: opts}} = conn, %{"prefix" => prefix}) do
-    handle_input(conn, fn ->
-      params = Map.put(query_groups(conn.query_string), "prefix", [prefix])
+  def search_v1(%Conn{assigns: %{state: state, opts: opts}, query_string: query_string} = conn, %{
+        "prefix" => prefix
+      }) do
+    params =
+      query_string
+      |> query_groups()
+      |> Map.put("prefix", [prefix])
+      |> Map.delete("expand")
 
-      json(
-        conn,
-        Enum.to_list(do_prefix_stream(state, validate_search_params!(params), opts))
-      )
-    end)
+    with {:ok, search_params} <- convert_params(params, &convert_search_param/1) do
+      json(conn, Enum.to_list(do_prefix_stream(state, search_params, opts)))
+    end
   end
 
   @spec search(Conn.t(), map()) :: Conn.t()
@@ -252,7 +255,7 @@ defmodule AeMdwWeb.NameController do
   defp name_reply(%Conn{assigns: %{state: state}} = conn, plain_name, opts) do
     case Name.locate(state, plain_name) do
       {info, source} -> json(conn, Format.to_map(state, info, source, expand?(opts)))
-      nil -> raise ErrInput.NotFound, value: plain_name
+      nil -> {:error, ErrInput.NotFound.exception(value: plain_name)}
     end
   end
 
@@ -262,10 +265,10 @@ defmodule AeMdwWeb.NameController do
         json(conn, Name.pointers(state, m_name))
 
       {_m_name, Model.InactiveName} ->
-        raise ErrInput.Expired, value: plain_name
+        {:error, ErrInput.Expired.exception(value: plain_name)}
 
       _no_match? ->
-        raise ErrInput.NotFound, value: plain_name
+        {:error, ErrInput.NotFound.exception(value: plain_name)}
     end
   end
 
@@ -279,11 +282,13 @@ defmodule AeMdwWeb.NameController do
   end
 
   defp auction_reply(%Conn{assigns: %{state: state}} = conn, plain_name, opts) do
-    map_some(
-      Name.locate_bid(state, plain_name),
-      &json(conn, Format.to_map(state, &1, Model.AuctionBid, expand?(opts)))
-    ) ||
-      raise ErrInput.NotFound, value: plain_name
+    case Name.locate_bid(state, plain_name) do
+      nil ->
+        {:error, ErrInput.NotFound.exception(value: plain_name)}
+
+      auction_bid ->
+        json(conn, Format.to_map(state, auction_bid, Model.AuctionBid, expand?(opts)))
+    end
   end
 
   defp owned_by_reply(%Conn{assigns: %{state: state}} = conn, owner_pk, opts, active?) do
@@ -324,8 +329,11 @@ defmodule AeMdwWeb.NameController do
 
   ##########
 
-  defp do_prefix_stream(state, {prefix, lifecycles}, opts) do
-    streams = Enum.map(lifecycles, &prefix_stream(state, &1, prefix, opts))
+  defp do_prefix_stream(state, %{prefix: prefix} = filters, opts) do
+    streams =
+      filters
+      |> Map.get(:lifecycles, ~w(active inactive auction)a)
+      |> Enum.map(&prefix_stream(state, &1, prefix, opts))
 
     case streams do
       [single] -> single
@@ -335,23 +343,31 @@ defmodule AeMdwWeb.NameController do
 
   ##########
 
-  defp validate_search_params!(params),
-    do: do_validate_search_params!(Map.delete(params, "expand"))
+  defp convert_search_param({"prefix", prefix}), do: {:ok, {:prefix, [prefix]}}
 
-  defp do_validate_search_params!(%{"prefix" => [prefix], "only" => [_ | _] = lifecycles}) do
-    {prefix,
-     lifecycles
-     |> Enum.map(fn
-       "auction" -> :auction
-       "active" -> :active
-       "inactive" -> :inactive
-       invalid -> raise ErrInput.Query, value: "name lifecycle #{invalid}"
-     end)
-     |> Enum.uniq()}
+  defp convert_search_param({"only", [_lifecycle | _rest] = lifecycles}) do
+    lifecycles
+    |> Enum.reduce_while({:ok, []}, fn
+      "auction", {:ok, acc} ->
+        {:cont, [:auction | acc]}
+
+      "active", {:ok, acc} ->
+        {:cont, [:active | acc]}
+
+      "inactive", {:ok, acc} ->
+        {:cont, [:inactive | acc]}
+
+      invalid, _acc ->
+        {:halt, {:error, ErrInput.Query.exception(value: "name lifecycle #{invalid}")}}
+    end)
+    |> case do
+      {:ok, lifecycles} -> {:ok, {:lifecycles, Enum.uniq(lifecycles)}}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
-  defp do_validate_search_params!(%{"prefix" => [prefix]}),
-    do: {prefix, [:auction, :active, :inactive]}
+  defp convert_search_param({key, val}),
+    do: {:error, ErrInput.Query.exception(value: "#{key}=#{val}")}
 
   ##########
 

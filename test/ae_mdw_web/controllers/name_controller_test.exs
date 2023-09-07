@@ -3274,6 +3274,26 @@ defmodule AeMdwWeb.NameControllerTest do
     end
   end
 
+  describe "search_v1" do
+    test "it returns error when invalid lifecycle", %{conn: conn} do
+      error_msg = "invalid query: name lifecycle foo"
+
+      %{"error" => ^error_msg} =
+        conn
+        |> get("/names/search/foo", only: "foo")
+        |> json_response(400)
+    end
+
+    test "it returns error when invalid filter", %{conn: conn} do
+      error_msg = "invalid query: foo=bar"
+
+      %{"error" => ^error_msg} =
+        conn
+        |> get("/names/search/foo", foo: "bar")
+        |> json_response(400)
+    end
+  end
+
   defp name_history_store(store, active_from1, active_from2, kbi1, kbi2, expired_at, plain_name) do
     claim1 = {501, -1}
     update1 = {502, -1}

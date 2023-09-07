@@ -52,18 +52,12 @@ defmodule AeMdwWeb.Aex9Controller do
     do: handle_input(conn, fn -> by_symbols_reply(conn, params) end)
 
   @spec balance(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def balance(conn, %{"contract_id" => contract_id, "account_id" => account_id}),
-    do:
-      handle_input(
-        conn,
-        fn ->
-          balance_reply(
-            conn,
-            ensure_aex9_contract_pk!(contract_id),
-            Validate.id!(account_id, [:account_pubkey])
-          )
-        end
-      )
+  def balance(conn, %{"contract_id" => contract_id, "account_id" => account_id}) do
+    with {:ok, contract_pk} <- ensure_aex9_contract_pk(contract_id),
+         {:ok, account_pk} <- Validate.id!(account_id, [:account_pubkey]) do
+      balance_reply(conn, contract_pk, account_pk)
+    end
+  end
 
   @spec balance_range(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def balance_range(%Conn{assigns: %{state: state}} = conn, %{
@@ -117,38 +111,28 @@ defmodule AeMdwWeb.Aex9Controller do
         "height" => height,
         "account_id" => account_id
       }) do
-    handle_input(
-      conn,
-      fn ->
-        height = Validate.nonneg_int!(height)
-
-        if nil == Util.block_txi(state, {height, -1}) do
-          raise ErrInput.BlockIndex, value: {height, -1}
-        end
-
-        account_pk = Validate.id!(account_id, [:account_pubkey])
-
-        account_balances_reply(conn, account_pk, {height, -1})
-      end
-    )
+    with {:ok, height} <- Validate.nonneg_int(height),
+         txi when txi != nil <- Util.block_txi(state, {height, -1}),
+         {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]) do
+      account_balances_reply(conn, account_pk, {height, -1})
+    else
+      {:error, reason} -> {:error, reason}
+      nil -> ErrInput.BlockIndex.exception(value: {height, -1})
+    end
   end
 
   def balances(%Conn{assigns: %{state: state}} = conn, %{
         "blockhash" => hash,
         "account_id" => account_id
       }) do
-    handle_input(
-      conn,
-      fn ->
-        account_pk = Validate.id!(account_id, [:account_pubkey])
-
-        block_index =
-          Util.block_hash_to_bi(state, Validate.id!(hash)) ||
-            raise ErrInput.Id, value: hash
-
-        account_balances_reply(conn, account_pk, block_index)
-      end
-    )
+    with {:ok, account_pk} <- Validate.id!(account_id, [:account_pubkey]),
+         {:ok, hash} <- Validate.id(hash),
+         block_index when block_index != nil <- Util.block_hash_to_bi(state, hash) do
+      account_balances_reply(conn, account_pk, block_index)
+    else
+      {:error, reason} -> {:error, reason}
+      nil -> ErrInput.Id.exception(value: hash)
+    end
   end
 
   def balances(conn, %{"account_id" => account_id}),
@@ -161,8 +145,13 @@ defmodule AeMdwWeb.Aex9Controller do
         end
       )
 
-  def balances(conn, %{"contract_id" => contract_id}),
-    do: handle_input(conn, fn -> balances_reply(conn, ensure_aex9_contract_pk!(contract_id)) end)
+  def balances(%Conn{assigns: %{state: state, opts: opts}} = conn, %{"contract_id" => contract_id}) do
+    with {:ok, contract_pk} <- ensure_aex9_contract_pk(contract_id),
+         {:ok, amounts} <- Aex9.fetch_balances(state, contract_pk, top?(opts)) do
+      hash_tuple = DBN.top_height_hash(top?(opts))
+      json(conn, balances_to_map({amounts, hash_tuple}, contract_pk))
+    end
+  end
 
   @spec balances_range(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def balances_range(%Conn{assigns: %{state: state}} = conn, %{
@@ -324,12 +313,6 @@ defmodule AeMdwWeb.Aex9Controller do
     json(conn, balances)
   end
 
-  defp balances_reply(%Conn{assigns: %{state: state, opts: opts}} = conn, contract_pk) do
-    amounts = Aex9.fetch_balances(state, contract_pk, top?(opts))
-    hash_tuple = DBN.top_height_hash(top?(opts))
-    json(conn, balances_to_map({amounts, hash_tuple}, contract_pk))
-  end
-
   defp balances_range_reply(conn, contract_pk, range) do
     json(
       conn,
@@ -339,7 +322,7 @@ defmodule AeMdwWeb.Aex9Controller do
           map_balances_range(
             range,
             fn type_height_hash ->
-              {amounts, _} = DBN.aex9_balances!(contract_pk, type_height_hash)
+              {amounts, _height_hash} = DBN.aex9_balances!(contract_pk, type_height_hash)
               {:amounts, normalize_balances(amounts)}
             end
           )
@@ -348,7 +331,7 @@ defmodule AeMdwWeb.Aex9Controller do
   end
 
   defp balances_for_hash_reply(conn, contract_pk, {_type, _height, _hash} = height_hash) do
-    {amounts, _} = DBN.aex9_balances!(contract_pk, height_hash)
+    {amounts, _height_hash} = DBN.aex9_balances!(contract_pk, height_hash)
     json(conn, balances_to_map({amounts, height_hash}, contract_pk))
   end
 
@@ -371,10 +354,14 @@ defmodule AeMdwWeb.Aex9Controller do
     end
   end
 
-  defp ensure_aex9_contract_pk!(ct_ident) do
-    pk = Validate.id!(ct_ident, [:contract_pubkey])
-    AexnContracts.is_aex9?(pk) || raise ErrInput.NotAex9, value: ct_ident
-    pk
+  defp ensure_aex9_contract_pk(ct_ident) do
+    with {:ok, pk} <- Validate.id(ct_ident, [:contract_pubkey]) do
+      if AexnContracts.is_aex9?(pk) do
+        {:ok, pk}
+      else
+        {:error, ErrInput.NotAex9.exception(value: ct_ident)}
+      end
+    end
   end
 
   defp ensure_aex9_contract_at_block(state, ct_id, block_hash) when is_binary(block_hash) do
@@ -402,12 +389,12 @@ defmodule AeMdwWeb.Aex9Controller do
 
       :not_found ->
         # if not yet synced by Mdw but present on Node
-        ct_pk = Validate.id!(ct_id)
-
-        if AexnContracts.is_aex9?(ct_pk) do
-          {:ok, ct_pk}
-        else
-          {:error, ErrInput.NotAex9.exception(value: ct_id)}
+        with {:ok, ct_pk} <- Validate.id(ct_id) do
+          if AexnContracts.is_aex9?(ct_pk) do
+            {:ok, ct_pk}
+          else
+            {:error, ErrInput.NotAex9.exception(value: ct_id)}
+          end
         end
     end
   end

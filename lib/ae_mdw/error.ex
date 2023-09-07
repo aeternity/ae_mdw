@@ -27,8 +27,6 @@ defmodule AeMdw.Error do
   def to_string(Input.ContractReturn, x), do: concat("invalid contract return", x)
   def to_string(Input.ContractDryRun, x), do: concat("error calling contract", x)
   def to_string(Input.Aex9BalanceNotAvailable, x), do: concat("balance is not available", x)
-  def to_string(Input.Base64, x), do: concat("invalid base64 encoding", x)
-  def to_string(Input.Hex32, x), do: concat("invalid hex32 encoding", x)
   def to_string(Input.RangeTooBig, x), do: concat("invalid range", x)
 
   defmodule Input do
@@ -53,8 +51,6 @@ defmodule AeMdw.Error do
             | __MODULE__.ContractReturn
             | __MODULE__.ContractDryRun
             | __MODULE__.Aex9BalanceNotAvailable
-            | __MODULE__.Base64
-            | __MODULE__.Hex32
             | __MODULE__.RangeTooBig
     @type message() :: binary()
     @type t() :: %__MODULE__{
@@ -78,8 +74,6 @@ defmodule AeMdw.Error do
     defexception!(ContractReturn)
     defexception!(ContractDryRun)
     defexception!(Aex9BalanceNotAvailable)
-    defexception!(Base64)
-    defexception!(Hex32)
     defexception!(RangeTooBig)
   end
 end

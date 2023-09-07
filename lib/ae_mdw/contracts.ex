@@ -443,9 +443,6 @@ defmodule AeMdw.Contracts do
     end
   end
 
-  defp build_calls_pagination(query, _scope, _state, _cursor),
-    do: raise(ErrInput.Query, value: query)
-
   defp build_grp_id_calls_stream(state, direction, scope, cursor, tx_types) do
     state
     |> Collection.stream(@grp_id_int_contract_call_table, direction, scope, cursor)
@@ -527,10 +524,10 @@ defmodule AeMdw.Contracts do
   defp convert_param(_state, {"aexn-args", _}), do: {:ok, {:ignore, nil}}
 
   defp convert_param(_state, {id_key, id_val}) do
-    with {:ok, pubkey} <- Validate.id(id_val) do
+    with {:ok, pubkey} <- Validate.id(id_val),
+         {:ok, tx_types_positions} <- Parser.parse_field(id_key) do
       pos_types =
-        id_key
-        |> Parser.parse_field()
+        tx_types_positions
         |> Enum.flat_map(fn {tx_type, positions} -> Enum.map(positions, &{&1, tx_type}) end)
         |> Enum.group_by(fn {pos, _tx_type} -> pos end, fn {_pos, tx_type} -> tx_type end)
 

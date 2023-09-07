@@ -1775,7 +1775,11 @@ defmodule Integration.AeMdwWeb.TxControllerTest do
     end
   end
 
-  defp transform_tx_type(type), do: type |> Validate.tx_type!() |> AeMdw.Node.tx_name()
+  defp transform_tx_type(type) do
+    {:ok, tx_type} = Validate.tx_type(type)
+
+    AeMdw.Node.tx_name(tx_type)
+  end
 
   defp get_txs_types_by_tx_group(tx_group) do
     tx_group
