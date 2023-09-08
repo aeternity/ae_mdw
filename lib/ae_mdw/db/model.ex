@@ -529,17 +529,20 @@ defmodule AeMdw.Db.Model do
           record(:aexn_contract_symbol, index: aexn_contract_symbol_index())
 
   # AEX-N meta info sorted by txi_idx:
-  #     index: {type, {txi, idx}, pubkey}
-  #     unused: nil
+  #     index: {type, {txi, idx}}
+  #     contract: pubkey
   @aexn_contract_creation_defaults [
-    index: {nil, {-1, -1}, nil},
-    unused: nil
+    index: {nil, {-1, -1}},
+    contract_pk: <<>>
   ]
   defrecord :aexn_contract_creation, @aexn_contract_creation_defaults
 
-  @type aexn_contract_creation_index() :: {aexn_type(), txi_idx(), pubkey()}
+  @type aexn_contract_creation_index() :: {aexn_type(), txi_idx()}
   @type aexn_contract_creation() ::
-          record(:aexn_contract_creation, index: aexn_contract_creation_index())
+          record(:aexn_contract_creation,
+            index: aexn_contract_creation_index(),
+            contract_pk: pubkey()
+          )
 
   # AEX-141 owner tokens
   #     index: {owner pubkey, contract pubkey, token_id}, template_id: integer()

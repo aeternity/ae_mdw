@@ -68,6 +68,24 @@ defmodule AeMdw.AexnTokens do
     end
   end
 
+  defp build_tokens_streamer(_filters, state, type, @aexn_creation_table, cursor) do
+    key_boundary = {
+      {type, {0, Util.max_int()}},
+      {type, {Util.max_int(), Util.max_int()}}
+    }
+
+    fn direction ->
+      state
+      |> Collection.stream(@aexn_creation_table, direction, key_boundary, cursor)
+      |> Stream.map(fn {aexn_type, txi_idx} ->
+        Model.aexn_contract_creation(contract_pk: pubkey) =
+          State.fetch!(state, @aexn_creation_table, {aexn_type, txi_idx})
+
+        State.fetch!(state, @aexn_table, {aexn_type, pubkey})
+      end)
+    end
+  end
+
   defp build_tokens_streamer(%{exact: exact}, state, type, table, cursor) do
     scope = {
       {type, exact, <<>>},
@@ -86,18 +104,6 @@ defmodule AeMdw.AexnTokens do
     }
 
     do_build_tokens_streamer(state, table, cursor, scope)
-  end
-
-  defp build_tokens_streamer(_filters, state, type, @aexn_creation_table, cursor) do
-    key_boundary =
-      {{type, {0, Util.max_int()}, <<>>}, {type, {Util.max_int(), Util.max_int()}, <<>>}}
-
-    do_build_tokens_streamer(
-      state,
-      @aexn_creation_table,
-      cursor,
-      key_boundary
-    )
   end
 
   defp build_tokens_streamer(_filters, state, type, table, cursor),
@@ -130,9 +136,9 @@ defmodule AeMdw.AexnTokens do
 
   defp serialize_aexn_cursor(
          :creation,
-         {Model.aexn_contract(index: {type, pubkey}, txi_idx: txi_idx), is_reversed?}
+         {Model.aexn_contract(index: {type, _pubkey}, txi_idx: txi_idx), is_reversed?}
        ) do
-    cursor = {type, txi_idx, pubkey} |> :erlang.term_to_binary() |> Base.encode64(padding: false)
+    cursor = {type, txi_idx} |> :erlang.term_to_binary() |> Base.encode64(padding: false)
 
     {cursor, is_reversed?}
   end
@@ -167,9 +173,12 @@ defmodule AeMdw.AexnTokens do
   end
 
   defp is_valid_cursor_term?({type, name_symbol_creation, pubkey})
-       when type in [:aex9, :aex141] and
-              (is_binary(name_symbol_creation) or is_tuple(name_symbol_creation)) do
+       when type in [:aex9, :aex141] and is_binary(name_symbol_creation) do
     match?({:ok, _pk}, Validate.id(pubkey, [:contract_pubkey]))
+  end
+
+  defp is_valid_cursor_term?({type, {txi, idx}}) when type in [:aex9, :aex141] do
+    txi > 0 and idx >= -1
   end
 
   defp is_valid_cursor_term?(_other_term), do: false

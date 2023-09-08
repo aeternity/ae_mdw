@@ -58,7 +58,8 @@ defmodule AeMdw.Db.Contract do
       name = elem(aexn_meta_info, 0)
       symbol = elem(aexn_meta_info, 1)
 
-      m_contract_creation = Model.aexn_contract_creation(index: {aexn_type, txi_idx, contract_pk})
+      m_contract_creation =
+        Model.aexn_contract_creation(index: {aexn_type, txi_idx}, contract_pk: contract_pk)
 
       m_contract_name =
         Model.aexn_contract_name(index: {aexn_type, sort_field_truncate(name), contract_pk})

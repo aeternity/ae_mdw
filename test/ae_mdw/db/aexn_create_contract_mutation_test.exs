@@ -56,8 +56,8 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
         assert {:ok, Model.stat(payload: 1)} =
                  Store.get(store, Model.Stat, Stats.aexn_count_key(:aex9))
 
-        refute :not_found ==
-                 Store.get(store, Model.AexnContractCreation, {:aex9, {txi, 0}, contract_pk})
+        assert {:ok, Model.aexn_contract_creation(contract_pk: ^contract_pk)} =
+                 Store.get(store, Model.AexnContractCreation, {:aex9, {txi, 0}})
 
         refute :not_found == Store.get(store, Model.AexnContractName, {:aex9, name, contract_pk})
 
@@ -113,8 +113,8 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
 
         assert {:ok, ^m_contract_pk} = Store.get(store, Model.AexnContract, {:aex9, contract_pk})
 
-        refute :not_found ==
-                 Store.get(store, Model.AexnContractCreation, {:aex9, {txi, -1}, contract_pk})
+        assert {:ok, Model.aexn_contract_creation(contract_pk: ^contract_pk)} =
+                 Store.get(store, Model.AexnContractCreation, {:aex9, {txi, -1}})
 
         refute :not_found ==
                  Store.get(store, Model.AexnContractName, {:aex9, truncated_name, contract_pk})
@@ -159,8 +159,8 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
 
       assert {:ok, ^m_contract_pk} = Store.get(store, Model.AexnContract, {:aex141, contract_pk})
 
-      refute :not_found ==
-               Store.get(store, Model.AexnContractCreation, {:aex141, {txi, 0}, contract_pk})
+      assert {:ok, Model.aexn_contract_creation(contract_pk: ^contract_pk)} =
+               Store.get(store, Model.AexnContractCreation, {:aex141, {txi, 0}})
 
       refute :not_found == Store.get(store, Model.AexnContractName, {:aex141, name, contract_pk})
 
@@ -204,8 +204,8 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
 
       assert {:ok, ^m_contract_pk} = Store.get(store, Model.AexnContract, {:aex141, contract_pk})
 
-      refute :not_found ==
-               Store.get(store, Model.AexnContractCreation, {:aex141, {txi, -1}, contract_pk})
+      assert {:ok, Model.aexn_contract_creation(contract_pk: ^contract_pk)} =
+               Store.get(store, Model.AexnContractCreation, {:aex141, {txi, -1}})
 
       refute :not_found == Store.get(store, Model.AexnContractName, {:aex141, name, contract_pk})
 

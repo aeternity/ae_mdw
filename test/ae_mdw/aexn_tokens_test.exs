@@ -127,11 +127,11 @@ defmodule AeMdw.AexnTokensTest do
         |> State.put(Model.AexnContract, m2)
         |> State.put(
           Model.AexnContractCreation,
-          Model.aexn_contract_creation(index: {:aex9, {txi1, -1}, contract_pk1})
+          Model.aexn_contract_creation(index: {:aex9, {txi1, -1}}, contract_pk: contract_pk1)
         )
         |> State.put(
           Model.AexnContractCreation,
-          Model.aexn_contract_creation(index: {:aex9, {txi2, -1}, contract_pk2})
+          Model.aexn_contract_creation(index: {:aex9, {txi2, -1}}, contract_pk: contract_pk2)
         )
         |> State.put(
           Model.AexnContractName,
@@ -179,11 +179,11 @@ defmodule AeMdw.AexnTokensTest do
         |> State.put(Model.AexnContract, m2)
         |> State.put(
           Model.AexnContractCreation,
-          Model.aexn_contract_creation(index: {:aex141, {txi1, -1}, contract_pk1})
+          Model.aexn_contract_creation(index: {:aex141, {txi1, -1}}, contract_pk: contract_pk1)
         )
         |> State.put(
           Model.AexnContractCreation,
-          Model.aexn_contract_creation(index: {:aex141, {txi2, -1}, contract_pk2})
+          Model.aexn_contract_creation(index: {:aex141, {txi2, -1}}, contract_pk: contract_pk2)
         )
         |> State.put(
           Model.AexnContractName,

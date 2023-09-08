@@ -295,7 +295,9 @@ defmodule AeMdwWeb.Aex141ControllerTest do
 
           m_aexn_name = Model.aexn_contract_name(index: {:aex141, name, <<i::256>>})
           m_aexn_symbol = Model.aexn_contract_symbol(index: {:aex141, symbol, <<i::256>>})
-          m_aexn_tx = Model.aexn_contract_creation(index: {:aex141, {txi, -1}, <<i::256>>})
+
+          m_aexn_tx =
+            Model.aexn_contract_creation(index: {:aex141, {txi, -1}}, contract_pk: <<i::256>>)
 
           store
           |> Store.put(Model.AexnContract, m_aex141)
