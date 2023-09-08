@@ -117,7 +117,7 @@ defmodule AeMdwWeb.AexnView do
         state,
         Model.aexn_contract(
           index: {_type, contract_pk},
-          txi: txi,
+          txi_idx: {txi, _idx},
           meta_info: {name, symbol, decimals},
           extensions: extensions
         )
@@ -153,7 +153,7 @@ defmodule AeMdwWeb.AexnView do
         state,
         Model.aexn_contract(
           index: {_type, contract_pk},
-          txi: txi,
+          txi_idx: {txi, _idx},
           meta_info: {name, symbol, base_url, metadata_type},
           extensions: extensions
         )

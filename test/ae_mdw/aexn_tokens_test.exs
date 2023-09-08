@@ -9,6 +9,7 @@ defmodule AeMdw.AexnTokensTest do
   alias AeMdw.Validate
 
   import AeMdw.Util.Encoding, only: [encode_contract: 1]
+  import AeMdw.TestUtil, only: [empty_state: 0]
   import AeMdwWeb.AexnView
 
   require Model
@@ -24,7 +25,7 @@ defmodule AeMdw.AexnTokensTest do
       m_aexn =
         Model.aexn_contract(
           index: {:aex9, contract_pk},
-          txi: txi,
+          txi_idx: {txi, -1},
           meta_info: aex9_meta_info,
           extensions: extensions
         )
@@ -58,7 +59,7 @@ defmodule AeMdw.AexnTokensTest do
       m_aexn =
         Model.aexn_contract(
           index: {:aex141, contract_pk},
-          txi: txi,
+          txi_idx: {txi, -1},
           meta_info: aex141_meta_info,
           extensions: extensions
         )
@@ -94,6 +95,112 @@ defmodule AeMdw.AexnTokensTest do
 
       assert {:error, %ErrInput{reason: ErrInput.NotFound}} =
                AexnTokens.fetch_contract(State.new(), {:aex141, contract_pk})
+    end
+  end
+
+  describe "fetch_contracts/1" do
+    test "returns AEX-9 contracts sorted by creation" do
+      contract_pk1 = <<2::256>>
+      contract_pk2 = <<1::256>>
+      txi1 = 123_456_788
+      txi2 = 123_456_789
+
+      m1 =
+        Model.aexn_contract(
+          index: {:aex9, contract_pk1},
+          txi_idx: {txi1, -1},
+          meta_info: {"TokenB1", "TKB1", 18},
+          extensions: ["extB1"]
+        )
+
+      m2 =
+        Model.aexn_contract(
+          index: {:aex9, contract_pk2},
+          txi_idx: {txi2, -1},
+          meta_info: {"TokenA1", "TKA1", 18},
+          extensions: ["extA1"]
+        )
+
+      state =
+        empty_state()
+        |> State.put(Model.AexnContract, m1)
+        |> State.put(Model.AexnContract, m2)
+        |> State.put(
+          Model.AexnContractCreation,
+          Model.aexn_contract_creation(index: {:aex9, {txi1, -1}}, contract_pk: contract_pk1)
+        )
+        |> State.put(
+          Model.AexnContractCreation,
+          Model.aexn_contract_creation(index: {:aex9, {txi2, -1}}, contract_pk: contract_pk2)
+        )
+        |> State.put(
+          Model.AexnContractName,
+          Model.aexn_contract_name(index: {:aex9, "TokenB1", contract_pk1})
+        )
+        |> State.put(
+          Model.AexnContractName,
+          Model.aexn_contract_name(index: {:aex9, "TokenA1", contract_pk2})
+        )
+
+      pagination = {:forward, false, 10, false}
+
+      assert {:ok, {nil, [^m2, ^m1], nil}} =
+               AexnTokens.fetch_contracts(state, pagination, :aex9, %{}, :name, nil)
+
+      assert {:ok, {nil, [^m1, ^m2], nil}} =
+               AexnTokens.fetch_contracts(state, pagination, :aex9, %{}, :creation, nil)
+    end
+
+    test "returns AEX-141 contracts sorted by creation" do
+      contract_pk1 = <<2::256>>
+      contract_pk2 = <<1::256>>
+      txi1 = 123_456_788
+      txi2 = 123_456_789
+
+      m1 =
+        Model.aexn_contract(
+          index: {:aex141, contract_pk1},
+          txi_idx: {txi1, -1},
+          meta_info: {"TokenB1", "TKB1", "", :url},
+          extensions: ["extB1"]
+        )
+
+      m2 =
+        Model.aexn_contract(
+          index: {:aex141, contract_pk2},
+          txi_idx: {txi2, -1},
+          meta_info: {"TokenA1", "TKA1", "", :url},
+          extensions: ["extA1"]
+        )
+
+      state =
+        empty_state()
+        |> State.put(Model.AexnContract, m1)
+        |> State.put(Model.AexnContract, m2)
+        |> State.put(
+          Model.AexnContractCreation,
+          Model.aexn_contract_creation(index: {:aex141, {txi1, -1}}, contract_pk: contract_pk1)
+        )
+        |> State.put(
+          Model.AexnContractCreation,
+          Model.aexn_contract_creation(index: {:aex141, {txi2, -1}}, contract_pk: contract_pk2)
+        )
+        |> State.put(
+          Model.AexnContractName,
+          Model.aexn_contract_name(index: {:aex141, "TokenB1", contract_pk1})
+        )
+        |> State.put(
+          Model.AexnContractName,
+          Model.aexn_contract_name(index: {:aex141, "TokenA1", contract_pk2})
+        )
+
+      pagination = {:forward, false, 10, false}
+
+      assert {:ok, {nil, [^m2, ^m1], nil}} =
+               AexnTokens.fetch_contracts(state, pagination, :aex141, %{}, :name, nil)
+
+      assert {:ok, {nil, [^m1, ^m2], nil}} =
+               AexnTokens.fetch_contracts(state, pagination, :aex141, %{}, :creation, nil)
     end
   end
 end

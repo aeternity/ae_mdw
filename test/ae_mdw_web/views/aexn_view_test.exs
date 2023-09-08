@@ -29,7 +29,7 @@ defmodule AeMdwWeb.AexnViewTest do
       m_aex9 =
         Model.aexn_contract(
           index: {:aex9, contract_pk},
-          txi: txi,
+          txi_idx: {txi, -1},
           meta_info: aex9_meta_info,
           extensions: extensions
         )

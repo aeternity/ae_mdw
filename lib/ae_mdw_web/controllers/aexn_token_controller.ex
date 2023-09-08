@@ -20,7 +20,7 @@ defmodule AeMdwWeb.AexnTokenController do
 
   require Model
 
-  plug PaginatedPlug, order_by: ~w(name symbol pubkey amount)a
+  plug PaginatedPlug, order_by: ~w(name symbol creation pubkey amount)a
 
   action_fallback(FallbackController)
 

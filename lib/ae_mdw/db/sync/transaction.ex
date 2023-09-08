@@ -136,7 +136,12 @@ defmodule AeMdw.Db.Sync.Transaction do
 
       aexn_create_contract_mutation =
         if call_rec != nil and :ok == :aect_call.return_type(call_rec) do
-          SyncContract.aexn_create_contract_mutation(contract_pk, block_hash, block_index, txi)
+          SyncContract.aexn_create_contract_mutation(
+            contract_pk,
+            block_hash,
+            block_index,
+            {txi, -1}
+          )
         end
 
       Enum.concat([
@@ -169,19 +174,6 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     {fun_arg_res, call_rec} = Contract.call_tx_info(tx, contract_pk, block_hash)
 
-    child_mutations =
-      if call_rec != nil and :aect_call.return_type(call_rec) == :ok do
-        SyncContract.child_contract_mutations(
-          fun_arg_res,
-          block_hash,
-          block_index,
-          txi,
-          tx_hash
-        )
-      else
-        []
-      end
-
     events_mutations =
       SyncContract.events_mutations(
         tx_events,
@@ -193,7 +185,6 @@ defmodule AeMdw.Db.Sync.Transaction do
       )
 
     Enum.concat([
-      child_mutations,
       events_mutations,
       [
         ContractCallMutation.new(

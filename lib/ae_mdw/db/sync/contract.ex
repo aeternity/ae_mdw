@@ -19,35 +19,12 @@ defmodule AeMdw.Db.Sync.Contract do
   alias AeMdw.Db.Sync.Name
   alias AeMdw.Db.Sync.Oracle
   alias AeMdw.Node.Db
-  alias AeMdw.Validate
   alias AeMdw.Txs
 
   require Model
   require Contract
 
   @type call_record() :: tuple()
-
-  @spec child_contract_mutations(
-          Contract.fun_arg_res_or_error(),
-          Blocks.block_hash(),
-          Blocks.block_index(),
-          Txs.txi(),
-          Txs.tx_hash()
-        ) :: [Mutation.t()]
-  def child_contract_mutations({:error, _any}, _block_hash, _block_index, _txi_idx, _tx_hash),
-    do: []
-
-  def child_contract_mutations(%{result: fun_result}, block_hash, block_index, txi, tx_hash) do
-    with %{type: :contract, value: contract_id} <- fun_result,
-         {:ok, contract_pk} <- Validate.id(contract_id) do
-      [
-        aexn_create_contract_mutation(contract_pk, block_hash, block_index, txi)
-        | SyncOrigin.origin_mutations(:contract_call_tx, nil, contract_pk, txi, tx_hash)
-      ]
-    else
-      _no_child_contract -> []
-    end
-  end
 
   @spec events_mutations(
           [Contract.event()],
@@ -107,10 +84,15 @@ defmodule AeMdw.Db.Sync.Contract do
           Db.pubkey(),
           Blocks.block_hash(),
           Blocks.block_index(),
-          Txs.txi()
+          Txs.txi_idx()
         ) ::
           nil | AexnCreateContractMutation.t()
-  def aexn_create_contract_mutation(contract_pk, block_hash, {height, _mbi} = block_index, txi) do
+  def aexn_create_contract_mutation(
+        contract_pk,
+        block_hash,
+        {height, _mbi} = block_index,
+        txi_idx
+      ) do
     with {:ok, {type_info, _compiler_vsn, _source_hash}} <- Contract.get_info(contract_pk),
          aexn_type when aexn_type != nil <- get_aexn_type(height, type_info),
          {:ok, aexn_extensions} <-
@@ -124,7 +106,7 @@ defmodule AeMdw.Db.Sync.Contract do
           contract_pk,
           aexn_meta_info,
           block_index,
-          txi,
+          txi_idx,
           aexn_extensions
         )
       end
@@ -179,12 +161,17 @@ defmodule AeMdw.Db.Sync.Contract do
       {local_idx, "Channel.settle", :channel_settle_tx, _aetx, tx} ->
         Channels.settle_mutations({block_index, {call_txi, local_idx}}, tx)
 
-      {_local_idx, fname, :contract_create_tx, _aetx, tx}
+      {local_idx, fname, :contract_create_tx, _aetx, tx}
       when fname in Contract.contract_create_fnames() ->
         contract_pk = :aect_create_tx.contract_pubkey(tx)
 
         [
-          aexn_create_contract_mutation(contract_pk, block_hash, block_index, call_txi),
+          aexn_create_contract_mutation(
+            contract_pk,
+            block_hash,
+            block_index,
+            {call_txi, local_idx}
+          ),
           ContractCreateCacheMutation.new(contract_pk, call_txi)
           | SyncOrigin.origin_mutations(
               :contract_call_tx,

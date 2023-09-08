@@ -17,7 +17,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       aex9_meta_info = {name, symbol, _decimals} = {"911058", "SPH", 18}
       {kbi, mbi} = block_index = {Enum.random(1..999_999), 99}
       next_height = kbi + 1
-      create_txi = txi = 12_361_891
+      txi = 12_361_891
       extensions = ["ext1"]
 
       kb_hash = :crypto.strong_rand_bytes(32)
@@ -38,7 +38,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
               contract_pk,
               aex9_meta_info,
               block_index,
-              create_txi,
+              {txi, 0},
               extensions
             )
           ])
@@ -46,7 +46,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
         m_contract_pk =
           Model.aexn_contract(
             index: {:aex9, contract_pk},
-            txi: txi,
+            txi_idx: {txi, 0},
             meta_info: aex9_meta_info,
             extensions: extensions
           )
@@ -55,6 +55,9 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
 
         assert {:ok, Model.stat(payload: 1)} =
                  Store.get(store, Model.Stat, Stats.aexn_count_key(:aex9))
+
+        assert {:ok, Model.aexn_contract_creation(contract_pk: ^contract_pk)} =
+                 Store.get(store, Model.AexnContractCreation, {:aex9, {txi, 0}})
 
         refute :not_found == Store.get(store, Model.AexnContractName, {:aex9, name, contract_pk})
 
@@ -71,7 +74,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       aex9_meta_info = {bigger_name, symbol, 18}
       {kbi, mbi} = block_index = {271_305, 99}
       next_height = kbi + 1
-      create_txi = txi = 12_361_891
+      txi = 12_361_891
       extensions = ["ext1"]
 
       kb_hash = :crypto.strong_rand_bytes(32)
@@ -92,7 +95,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
               contract_pk,
               aex9_meta_info,
               block_index,
-              create_txi,
+              {txi, -1},
               extensions
             )
           ])
@@ -100,7 +103,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
         m_contract_pk =
           Model.aexn_contract(
             index: {:aex9, contract_pk},
-            txi: txi,
+            txi_idx: {txi, -1},
             meta_info: aex9_meta_info,
             extensions: extensions
           )
@@ -109,6 +112,9 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
                  Store.get(store, Model.Stat, Stats.aexn_count_key(:aex9))
 
         assert {:ok, ^m_contract_pk} = Store.get(store, Model.AexnContract, {:aex9, contract_pk})
+
+        assert {:ok, Model.aexn_contract_creation(contract_pk: ^contract_pk)} =
+                 Store.get(store, Model.AexnContractCreation, {:aex9, {txi, -1}})
 
         refute :not_found ==
                  Store.get(store, Model.AexnContractName, {:aex9, truncated_name, contract_pk})
@@ -126,7 +132,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
 
       extensions = ["ext1", "ext2"]
       block_index = {610_470, 77}
-      create_txi = txi = 28_522_602
+      txi = 28_522_602
 
       store =
         change_store(store, [
@@ -135,7 +141,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
             contract_pk,
             aex141_meta_info,
             block_index,
-            create_txi,
+            {txi, 0},
             extensions
           )
         ])
@@ -143,7 +149,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       m_contract_pk =
         Model.aexn_contract(
           index: {:aex141, contract_pk},
-          txi: txi,
+          txi_idx: {txi, 0},
           meta_info: aex141_meta_info,
           extensions: extensions
         )
@@ -152,6 +158,10 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
                Store.get(store, Model.Stat, Stats.aexn_count_key(:aex141))
 
       assert {:ok, ^m_contract_pk} = Store.get(store, Model.AexnContract, {:aex141, contract_pk})
+
+      assert {:ok, Model.aexn_contract_creation(contract_pk: ^contract_pk)} =
+               Store.get(store, Model.AexnContractCreation, {:aex141, {txi, 0}})
+
       refute :not_found == Store.get(store, Model.AexnContractName, {:aex141, name, contract_pk})
 
       refute :not_found ==
@@ -167,7 +177,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
 
       extensions = ["ext1", "ext2"]
       block_index = {610_470, 77}
-      create_txi = txi = 28_522_602
+      txi = 28_522_602
 
       store =
         change_store(store, [
@@ -176,7 +186,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
             contract_pk,
             aex141_meta_info,
             block_index,
-            create_txi,
+            {txi, -1},
             extensions
           )
         ])
@@ -184,7 +194,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       m_contract_pk =
         Model.aexn_contract(
           index: {:aex141, contract_pk},
-          txi: txi,
+          txi_idx: {txi, -1},
           meta_info: aex141_meta_info,
           extensions: extensions
         )
@@ -193,6 +203,10 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
                Store.get(store, Model.Stat, Stats.aexn_count_key(:aex141))
 
       assert {:ok, ^m_contract_pk} = Store.get(store, Model.AexnContract, {:aex141, contract_pk})
+
+      assert {:ok, Model.aexn_contract_creation(contract_pk: ^contract_pk)} =
+               Store.get(store, Model.AexnContractCreation, {:aex141, {txi, -1}})
+
       refute :not_found == Store.get(store, Model.AexnContractName, {:aex141, name, contract_pk})
 
       refute :not_found ==
@@ -209,7 +223,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
 
       extensions = ["ext1", "ext2"]
       block_index = {610_470, 77}
-      create_txi = txi = 28_522_602
+      txi = 28_522_602
 
       store =
         change_store(store, [
@@ -218,7 +232,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
             contract_pk,
             aex141_meta_info,
             block_index,
-            create_txi,
+            {txi, -1},
             extensions
           )
         ])
@@ -226,7 +240,7 @@ defmodule AeMdw.Db.AexnCreateContractMutationTest do
       m_contract_pk =
         Model.aexn_contract(
           index: {:aex141, contract_pk},
-          txi: txi,
+          txi_idx: {txi, -1},
           meta_info: aex141_meta_info,
           extensions: extensions
         )

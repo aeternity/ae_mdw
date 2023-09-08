@@ -490,13 +490,13 @@ defmodule AeMdw.Db.Model do
   @type aexn_contract ::
           record(:aexn_contract,
             index: aexn_contract_index(),
-            txi: txi(),
+            txi_idx: txi_idx(),
             meta_info: aexn_meta_info(),
             extensions: aexn_extensions()
           )
   @aexn_contract_defaults [
-    index: nil,
-    txi: -1,
+    index: {},
+    txi_idx: {-1, -1},
     meta_info: nil,
     extensions: []
   ]
@@ -527,6 +527,22 @@ defmodule AeMdw.Db.Model do
   @type aexn_contract_symbol_index() :: {aexn_type(), aexn_symbol(), pubkey()}
   @type aexn_contract_symbol() ::
           record(:aexn_contract_symbol, index: aexn_contract_symbol_index())
+
+  # AEX-N meta info sorted by txi_idx:
+  #     index: {type, {txi, idx}}
+  #     contract: pubkey
+  @aexn_contract_creation_defaults [
+    index: {nil, {-1, -1}},
+    contract_pk: <<>>
+  ]
+  defrecord :aexn_contract_creation, @aexn_contract_creation_defaults
+
+  @type aexn_contract_creation_index() :: {aexn_type(), txi_idx()}
+  @type aexn_contract_creation() ::
+          record(:aexn_contract_creation,
+            index: aexn_contract_creation_index(),
+            contract_pk: pubkey()
+          )
 
   # AEX-141 owner tokens
   #     index: {owner pubkey, contract pubkey, token_id}, template_id: integer()
@@ -1143,6 +1159,7 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.Aex9InitialSupply,
       AeMdw.Db.Model.Aex9ContractBalance,
       AeMdw.Db.Model.AexnContract,
+      AeMdw.Db.Model.AexnContractCreation,
       AeMdw.Db.Model.AexnContractName,
       AeMdw.Db.Model.AexnContractSymbol,
       AeMdw.Db.Model.AexnTransfer,
@@ -1253,6 +1270,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.AexnContract), do: :aexn_contract
   def record(AeMdw.Db.Model.AexnContractName), do: :aexn_contract_name
   def record(AeMdw.Db.Model.AexnContractSymbol), do: :aexn_contract_symbol
+  def record(AeMdw.Db.Model.AexnContractCreation), do: :aexn_contract_creation
   def record(AeMdw.Db.Model.AexnTransfer), do: :aexn_transfer
   def record(AeMdw.Db.Model.RevAexnTransfer), do: :rev_aexn_transfer
   def record(AeMdw.Db.Model.AexnPairTransfer), do: :aexn_pair_transfer

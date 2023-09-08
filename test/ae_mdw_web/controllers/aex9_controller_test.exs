@@ -24,7 +24,14 @@ defmodule AeMdwWeb.Aex9ControllerTest do
       Enum.reduce(100..125, MemStore.new(NullStore.new()), fn i, store ->
         meta_info = {name, symbol, _decimals} = {"some-AEX9-#{i}", "SAEX9#{i}", i}
         txi = 1_000 - i
-        m_aex9 = Model.aexn_contract(index: {:aex9, <<i::256>>}, txi: txi, meta_info: meta_info)
+
+        m_aex9 =
+          Model.aexn_contract(
+            index: {:aex9, <<i::256>>},
+            txi_idx: {txi, -1},
+            meta_info: meta_info
+          )
+
         m_aex9_supply = Model.aex9_initial_supply(index: <<i::256>>, amount: txi + 10)
         m_aex9_balance = Model.aex9_contract_balance(index: <<i::256>>, amount: txi + 20)
         m_aexn_name = Model.aexn_contract_name(index: {:aex9, name, <<i::256>>})

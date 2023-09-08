@@ -26,7 +26,14 @@ defmodule AeMdw.Migrations.ReindexAexN do
         with {block_hash, _type, _signed_tx, tx_rec} <- Node.Db.get_tx_data(hash),
              contract_pk <- :aect_create_tx.contract_pubkey(tx_rec),
              true <- not already_indexed(state, contract_pk) do
-          [Sync.Contract.aexn_create_contract_mutation(contract_pk, block_hash, block_index, txi)]
+          [
+            Sync.Contract.aexn_create_contract_mutation(
+              contract_pk,
+              block_hash,
+              block_index,
+              {txi, -1}
+            )
+          ]
         else
           _bool ->
             []
