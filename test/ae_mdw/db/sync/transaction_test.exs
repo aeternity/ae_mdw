@@ -15,6 +15,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   alias AeMdw.Db.NullStore
   alias AeMdw.Db.Store
   alias AeMdw.Db.Model
+  alias AeMdw.Node
   alias AeMdw.Validate
   alias AeMdw.TestSamples, as: TS
 
@@ -110,16 +111,36 @@ defmodule AeMdw.Db.Sync.TransactionTest do
   describe "transaction_mutations/6" do
     test "creates aex9 contract on :contract_call_tx" do
       signed_tx = signed_tx(:contract_call_tx, :aex9_create)
+      tx_hash = :aetx_sign.hash(signed_tx)
       txi = 31_215_242
       block_index = {577_695, 6}
       block_hash = :crypto.strong_rand_bytes(32)
       mb_time = 1_648_465_667_388
-      mb_events = %{}
 
       # setup contract
       contract_pk = setup_contract_on_call(signed_tx)
+      nonce = 1
+      child_contract_pk = :aect_contracts.compute_contract_pubkey(contract_pk, nonce)
       aex9_meta_info = {"TestAEX9-B vs TestAEX9-A", "TAEX9-B/TAEX9-A", 18}
-      child_contract_pk = Validate.id!(fun_args_res("create_pair")[:result][:value])
+
+      mb_events =
+        %{
+          sender_id: :aeser_id.create(:account, contract_pk),
+          recipient_id: :aeser_id.create(:account, child_contract_pk),
+          amount: 2_000_000_000,
+          fee: 456,
+          nonce: 2,
+          payload: <<>>
+        }
+        |> :aec_spend_tx.new()
+        |> then(fn {:ok, spend_aetx} ->
+          %{
+            tx_hash => [
+              {{:internal_call_tx, "Call.amount"}, %{info: spend_aetx}},
+              {{:internal_call_tx, "Call.clone"}, %{info: :error}}
+            ]
+          }
+        end)
 
       with_mocks [
         {Contract, [:passthrough],
@@ -134,7 +155,13 @@ defmodule AeMdw.Db.Sync.TransactionTest do
         {AexnContracts, [:passthrough],
          [
            call_meta_info: fn _type, _pk, ^block_hash -> {:ok, aex9_meta_info} end
-         ]}
+         ]},
+        {Node.Db, [:passthrough], nonce_at_block: fn ^block_hash, _owner_pk -> 1 end},
+        {:aec_chain, [:passthrough],
+         get_contract_with_code: fn ^child_contract_pk ->
+           version = %{vm: 7, abi: 3}
+           {:ok, :aect_contracts.new(contract_pk, nonce, version, "code", 1_000_000_000), "code"}
+         end}
       ] do
         put_aex9_info(child_contract_pk)
 
@@ -155,10 +182,10 @@ defmodule AeMdw.Db.Sync.TransactionTest do
                    aexn_meta_info: ^aex9_meta_info,
                    block_index: ^block_index,
                    contract_pk: ^child_contract_pk,
-                   create_txi: ^txi,
+                   txi_idx: txi_idx,
                    extensions: []
                  } ->
-                   true
+                   txi_idx == {txi, 1}
 
                  _mutation ->
                    false
@@ -215,10 +242,10 @@ defmodule AeMdw.Db.Sync.TransactionTest do
                    aexn_meta_info: ^aex141_meta_info,
                    block_index: ^block_index,
                    contract_pk: ^contract_pk,
-                   create_txi: ^txi,
+                   txi_idx: txi_idx,
                    extensions: ["mintable"]
                  } ->
-                   true
+                   txi_idx == {txi, -1}
 
                  %{} ->
                    false
@@ -274,10 +301,10 @@ defmodule AeMdw.Db.Sync.TransactionTest do
                    aexn_meta_info: ^aex141_meta_info,
                    block_index: ^block_index,
                    contract_pk: ^contract_pk,
-                   create_txi: ^txi,
+                   txi_idx: txi_idx,
                    extensions: ["mintable"]
                  } ->
-                   true
+                   txi_idx == {txi, -1}
 
                  %{} ->
                    false

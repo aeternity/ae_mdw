@@ -177,7 +177,7 @@ defmodule AeMdw.Aex9 do
           {:ok, {amount, _height_hash}} =
             Db.aex9_balance(contract_pk, account_pk, type_height_hash)
 
-          Model.aexn_contract(txi: create_txi, meta_info: {name, symbol, dec}) =
+          Model.aexn_contract(txi_idx: {create_txi, _idx}, meta_info: {name, symbol, dec}) =
             State.fetch!(state, Model.AexnContract, {:aex9, contract_pk})
 
           Model.aex9_account_presence(txi: call_txi) =

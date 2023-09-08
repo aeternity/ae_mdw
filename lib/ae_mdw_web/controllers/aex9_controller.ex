@@ -376,7 +376,7 @@ defmodule AeMdwWeb.Aex9Controller do
 
   defp ensure_aex9_contract_at_block(state, ct_id, block_index) do
     with {:ok, ct_pk} <- Validate.id(ct_id, [:contract_pubkey]),
-         {:ok, Model.aexn_contract(txi: txi)} <-
+         {:ok, Model.aexn_contract(txi_idx: {txi, _idx})} <-
            State.get(state, Model.AexnContract, {:aex9, ct_pk}) do
       if txi < Util.block_txi(state, block_index) do
         {:ok, ct_pk}

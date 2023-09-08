@@ -45,7 +45,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
               contract_pk,
               <<0::256>>,
               block_index,
-              create_txi
+              {create_txi, -1}
             ),
             Origin.origin_mutations(
               :contract_create_tx,
@@ -110,7 +110,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
             contract_pk,
             <<0::256>>,
             block_index,
-            create_txi
+            {create_txi, -1}
           )
 
         assert aexn_create_mutation != nil
@@ -208,7 +208,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
               contract_pk,
               <<0::256>>,
               block_index,
-              create_txi
+              {create_txi, -1}
             ),
             Origin.origin_mutations(
               :contract_create_tx,
@@ -293,7 +293,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
             contract_pk,
             <<0::256>>,
             {height, 0},
-            create_txi
+            {create_txi, -1}
           ),
           Origin.origin_mutations(
             :contract_create_tx,
@@ -364,7 +364,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
             contract_pk,
             block_hash,
             {height, 0},
-            create_txi
+            {create_txi, -1}
           )
 
         assert aexn_create_mutation != nil

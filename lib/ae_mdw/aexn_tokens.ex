@@ -10,6 +10,7 @@ defmodule AeMdw.AexnTokens do
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Node.Db
   alias AeMdw.Util
+  alias AeMdw.Validate
 
   import AeMdw.Util.Encoding, only: [encode_contract: 1]
   import AeMdwWeb.Helpers.AexnHelper, only: [sort_field_truncate: 1]
@@ -21,7 +22,7 @@ defmodule AeMdw.AexnTokens do
   @type cursor :: binary()
 
   @typep pagination :: Collection.direction_limit()
-  @typep order_by() :: :name | :symbol
+  @typep order_by() :: :name | :symbol | :creation
   @typep query :: %{binary() => binary()}
 
   @max_sort_field_length 100
@@ -29,6 +30,12 @@ defmodule AeMdw.AexnTokens do
   @aexn_table Model.AexnContract
   @aexn_name_table Model.AexnContractName
   @aexn_symbol_table Model.AexnContractSymbol
+  @aexn_creation_table Model.AexnContractCreation
+  @sorting_table %{
+    name: @aexn_name_table,
+    symbol: @aexn_symbol_table,
+    creation: @aexn_creation_table
+  }
 
   @spec fetch_contract(State.t(), {aexn_type(), Db.pubkey()}) ::
           {:ok, Model.aexn_contract()} | {:error, Error.t()}
@@ -48,11 +55,11 @@ defmodule AeMdw.AexnTokens do
     with {:ok, cursor} <- deserialize_aexn_cursor(cursor),
          {:ok, params} <- validate_params(query),
          {:ok, filters} <- Util.convert_params(params, &convert_param/1) do
-      sorted_table = if order_by == :name, do: @aexn_name_table, else: @aexn_symbol_table
+      sorting_table = Map.get(@sorting_table, order_by)
 
       {prev_record, aexn_contracts, next_record} =
         filters
-        |> build_tokens_streamer(state, aexn_type, sorted_table, cursor)
+        |> build_tokens_streamer(state, aexn_type, sorting_table, cursor)
         |> Collection.paginate(pagination)
 
       {:ok,
@@ -79,6 +86,18 @@ defmodule AeMdw.AexnTokens do
     }
 
     do_build_tokens_streamer(state, table, cursor, scope)
+  end
+
+  defp build_tokens_streamer(_filters, state, type, @aexn_creation_table, cursor) do
+    key_boundary =
+      {{type, {0, Util.max_int()}, <<>>}, {type, {Util.max_int(), Util.max_int()}, <<>>}}
+
+    do_build_tokens_streamer(
+      state,
+      @aexn_creation_table,
+      cursor,
+      key_boundary
+    )
   end
 
   defp build_tokens_streamer(_filters, state, type, table, cursor),
@@ -110,18 +129,32 @@ defmodule AeMdw.AexnTokens do
   defp serialize_aexn_cursor(_order_by, nil), do: nil
 
   defp serialize_aexn_cursor(
+         :creation,
+         {Model.aexn_contract(index: {type, pubkey}, txi_idx: txi_idx), is_reversed?}
+       ) do
+    cursor = {type, txi_idx, pubkey} |> :erlang.term_to_binary() |> Base.encode64(padding: false)
+
+    {cursor, is_reversed?}
+  end
+
+  defp serialize_aexn_cursor(
          order_by,
          {Model.aexn_contract(index: {type, pubkey}, meta_info: meta_info), is_reversed?}
        ) do
     sort_field_value = if order_by == :name, do: elem(meta_info, 0), else: elem(meta_info, 1)
-    cursor = {type, sort_field_truncate(sort_field_value), pubkey}
-    {cursor |> :erlang.term_to_binary() |> Base.encode64(), is_reversed?}
+
+    cursor =
+      {type, sort_field_truncate(sort_field_value), pubkey}
+      |> :erlang.term_to_binary()
+      |> Base.encode64(padding: false)
+
+    {cursor, is_reversed?}
   end
 
   defp deserialize_aexn_cursor(nil), do: {:ok, nil}
 
   defp deserialize_aexn_cursor(cursor_bin64) do
-    with {:ok, cursor_bin} <- Base.decode64(cursor_bin64),
+    with {:ok, cursor_bin} <- Base.decode64(cursor_bin64, padding: false),
          cursor_term <- :erlang.binary_to_term(cursor_bin),
          true <- is_valid_cursor_term?(cursor_term) do
       {:ok, cursor_term}
@@ -133,9 +166,11 @@ defmodule AeMdw.AexnTokens do
     ArgumentError -> {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
   end
 
-  defp is_valid_cursor_term?({type, name_symbol, pubkey})
-       when type in [:aex9, :aex141] and is_binary(name_symbol) and is_binary(pubkey),
-       do: true
+  defp is_valid_cursor_term?({type, name_symbol_creation, pubkey})
+       when type in [:aex9, :aex141] and
+              (is_binary(name_symbol_creation) or is_tuple(name_symbol_creation)) do
+    match?({:ok, _pk}, Validate.id(pubkey, [:contract_pubkey]))
+  end
 
   defp is_valid_cursor_term?(_other_term), do: false
 end

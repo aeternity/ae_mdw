@@ -374,7 +374,7 @@ paths:
   /aex141:
     get:
       deprecated: false
-      description: Get AEX141 contracts sorted by name or symbol.
+      description: Get AEX141 contracts sorted by creation time, name or symbol.
       operationId: get_sorted_aex141_contracts
       parameters:
         - $ref: '#/components/parameters/LimitParam'
@@ -385,7 +385,7 @@ paths:
           required: false
           schema:
             type: string
-            example: name
+            enum: [creation, name, symbol]
         - description: Sorts by name or symbol prefix
           in: query
           name: prefix
@@ -630,7 +630,7 @@ paths:
   /aex9:
     get:
       deprecated: false
-      description: Get AEX9 tokens sorted by name or symbol.
+      description: Get AEX9 tokens sorted by creation time, name or symbol.
       operationId: get_sorted_aex9_tokens
       parameters:
         - $ref: '#/components/parameters/LimitParam'
@@ -641,7 +641,7 @@ paths:
           required: false
           schema:
             type: string
-            x-example: name | symbol
+            enum: [creation, name, symbol]
         - description: Sorts by name or symbol
           in: query
           name: prefix

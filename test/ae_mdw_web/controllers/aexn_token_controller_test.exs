@@ -34,12 +34,21 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
         {name, symbol, _decimals} = meta_info
         txi = 2_000 - i
-        m_aex9 = Model.aexn_contract(index: {:aex9, <<i::256>>}, txi: txi, meta_info: meta_info)
+
+        m_aex9 =
+          Model.aexn_contract(
+            index: {:aex9, <<i::256>>},
+            txi_idx: {txi, -1},
+            meta_info: meta_info
+          )
+
+        m_aexn_creation = Model.aexn_contract_creation(index: {:aex9, {txi, -1}, <<i::256>>})
         m_aexn_name = Model.aexn_contract_name(index: {:aex9, name, <<i::256>>})
         m_aexn_symbol = Model.aexn_contract_symbol(index: {:aex9, symbol, <<i::256>>})
 
         store
         |> Store.put(Model.AexnContract, m_aex9)
+        |> Store.put(Model.AexnContractCreation, m_aexn_creation)
         |> Store.put(Model.AexnContractName, m_aexn_name)
         |> Store.put(Model.AexnContractSymbol, m_aexn_symbol)
         |> then(fn store ->
@@ -75,14 +84,23 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
         {name, symbol, _url, _type} = meta_info
         txi = 3_000 - i
-        m_aexn = Model.aexn_contract(index: {:aex141, <<i::256>>}, txi: txi, meta_info: meta_info)
+
+        m_aexn =
+          Model.aexn_contract(
+            index: {:aex141, <<i::256>>},
+            txi_idx: {txi, -1},
+            meta_info: meta_info
+          )
+
         m_aexn_name = Model.aexn_contract_name(index: {:aex141, name, <<i::256>>})
         m_aexn_symbol = Model.aexn_contract_symbol(index: {:aex141, symbol, <<i::256>>})
+        m_aexn_creation = Model.aexn_contract_creation(index: {:aex141, {txi, -1}, <<i::256>>})
 
         store
         |> Store.put(Model.AexnContract, m_aexn)
         |> Store.put(Model.AexnContractName, m_aexn_name)
         |> Store.put(Model.AexnContractSymbol, m_aexn_symbol)
+        |> Store.put(Model.AexnContractCreation, m_aexn_creation)
       end)
 
     store =
@@ -196,6 +214,50 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
   end
 
   describe "aex9_tokens" do
+    test "gets aex9 tokens backwards by creation", %{conn: conn} do
+      assert %{"data" => aex9_tokens, "next" => next} =
+               conn |> get("/v2/aex9", by: "creation") |> json_response(200)
+
+      aex9_txs = aex9_tokens |> Enum.map(& &1["contract_txi"]) |> Enum.reverse()
+
+      assert @default_limit = length(aex9_tokens)
+      assert ^aex9_txs = Enum.sort(aex9_txs)
+
+      assert %{"data" => next_aex9_tokens, "prev" => prev_aex9_tokens} =
+               conn |> get(next) |> json_response(200)
+
+      next_aex9_txs = next_aex9_tokens |> Enum.map(& &1["contract_txi"]) |> Enum.reverse()
+
+      assert @default_limit = length(next_aex9_tokens)
+      assert ^next_aex9_txs = Enum.sort(next_aex9_txs)
+      assert Enum.at(aex9_txs, @default_limit - 1) >= Enum.at(next_aex9_txs, 0)
+
+      assert %{"data" => ^aex9_tokens} = conn |> get(prev_aex9_tokens) |> json_response(200)
+    end
+
+    test "gets aex9 tokens forwards by creation", %{conn: conn} do
+      assert %{"data" => aex9_tokens, "next" => next} =
+               conn
+               |> get("/v2/aex9", direction: "forward", by: "creation")
+               |> json_response(200)
+
+      aex9_txs = Enum.map(aex9_tokens, & &1["contract_txi"])
+
+      assert @default_limit = length(aex9_tokens)
+      assert ^aex9_txs = Enum.sort(aex9_txs)
+
+      assert %{"data" => next_aex9_tokens, "prev" => prev_aex9_tokens} =
+               conn |> get(next) |> json_response(200)
+
+      next_aex9_txs = Enum.map(next_aex9_tokens, & &1["contract_txi"])
+
+      assert @default_limit = length(next_aex9_tokens)
+      assert ^next_aex9_txs = Enum.sort(next_aex9_txs)
+      assert Enum.at(aex9_txs, @default_limit - 1) <= Enum.at(next_aex9_txs, 0)
+
+      assert %{"data" => ^aex9_tokens} = conn |> get(prev_aex9_tokens) |> json_response(200)
+    end
+
     test "gets aex9 tokens backwards by name", %{conn: conn} do
       assert %{"data" => aex9_tokens, "next" => next} =
                conn |> get("/v2/aex9") |> json_response(200)
@@ -485,6 +547,50 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       assert %{"data" => ^aex141_tokens} = conn |> get(prev_aex141_tokens) |> json_response(200)
     end
 
+    test "gets aex141 tokens backwards by creation", %{conn: conn} do
+      assert %{"data" => aex141_tokens, "next" => next} =
+               conn |> get("/v2/aex141", by: "creation") |> json_response(200)
+
+      aex141_txs = aex141_tokens |> Enum.map(& &1["contract_txi"]) |> Enum.reverse()
+
+      assert @default_limit = length(aex141_tokens)
+      assert ^aex141_txs = Enum.sort(aex141_txs)
+
+      assert %{"data" => next_aex141_tokens, "prev" => prev_aex141_tokens} =
+               conn |> get(next) |> json_response(200)
+
+      next_aex141_txs = next_aex141_tokens |> Enum.map(& &1["contract_txi"]) |> Enum.reverse()
+
+      assert @default_limit = length(next_aex141_tokens)
+      assert ^next_aex141_txs = Enum.sort(next_aex141_txs)
+      assert Enum.at(aex141_txs, @default_limit - 1) >= Enum.at(next_aex141_txs, 0)
+
+      assert %{"data" => ^aex141_tokens} = conn |> get(prev_aex141_tokens) |> json_response(200)
+    end
+
+    test "gets aex141 tokens forwards by creation", %{conn: conn} do
+      assert %{"data" => aex141_tokens, "next" => next} =
+               conn
+               |> get("/v2/aex141", direction: "forward", by: "creation")
+               |> json_response(200)
+
+      aex141_txs = Enum.map(aex141_tokens, & &1["contract_txi"])
+
+      assert @default_limit = length(aex141_tokens)
+      assert ^aex141_txs = Enum.sort(aex141_txs)
+
+      assert %{"data" => next_aex141_tokens, "prev" => prev_aex141_tokens} =
+               conn |> get(next) |> json_response(200)
+
+      next_aex141_txs = Enum.map(next_aex141_tokens, & &1["contract_txi"])
+
+      assert @default_limit = length(next_aex141_tokens)
+      assert ^next_aex141_txs = Enum.sort(next_aex141_txs)
+      assert Enum.at(aex141_txs, @default_limit - 1) <= Enum.at(next_aex141_txs, 0)
+
+      assert %{"data" => ^aex141_tokens} = conn |> get(prev_aex141_tokens) |> json_response(200)
+    end
+
     test "gets aex141 tokens filtered by symbol prefix", %{conn: conn} do
       prefix = "NFT"
 
@@ -547,7 +653,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
           :aex9,
           aexn_meta_info,
           contract_pk,
-          12_345_678,
+          {12_345_678, -1},
           [
             "ext1",
             "ext2"
@@ -574,7 +680,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
           :aex9,
           aexn_meta_info,
           contract_pk,
-          12_345_678,
+          {12_345_678, -1},
           ["ext1"]
         )
 
@@ -625,7 +731,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
           :aex141,
           aexn_meta_info,
           contract_pk,
-          12_345_678,
+          {12_345_678, -1},
           [
             "ext1",
             "ext2"

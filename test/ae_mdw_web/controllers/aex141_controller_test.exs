@@ -28,7 +28,11 @@ defmodule AeMdwWeb.Aex141ControllerTest do
         txi = 1_000 + i
 
         m_aex141 =
-          Model.aexn_contract(index: {:aex141, <<i::256>>}, txi: txi, meta_info: meta_info)
+          Model.aexn_contract(
+            index: {:aex141, <<i::256>>},
+            txi_idx: {txi, -1},
+            meta_info: meta_info
+          )
 
         Store.put(store, Model.AexnContract, m_aex141)
       end)
@@ -173,7 +177,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       m_aex141 =
         Model.aexn_contract(
           index: {:aex141, ct_pk},
-          txi: txi,
+          txi_idx: {txi, -1},
           meta_info: meta_info,
           extensions: extensions
         )
@@ -233,7 +237,7 @@ defmodule AeMdwWeb.Aex141ControllerTest do
       m_aex141 =
         Model.aexn_contract(
           index: {:aex141, ct_pk},
-          txi: txi,
+          txi_idx: {txi, -1},
           meta_info: meta_info,
           extensions: extensions
         )
@@ -283,15 +287,21 @@ defmodule AeMdwWeb.Aex141ControllerTest do
           txi = 1_000 + i
 
           m_aex141 =
-            Model.aexn_contract(index: {:aex141, <<i::256>>}, txi: txi, meta_info: meta_info)
+            Model.aexn_contract(
+              index: {:aex141, <<i::256>>},
+              txi_idx: {txi, -1},
+              meta_info: meta_info
+            )
 
           m_aexn_name = Model.aexn_contract_name(index: {:aex141, name, <<i::256>>})
           m_aexn_symbol = Model.aexn_contract_symbol(index: {:aex141, symbol, <<i::256>>})
+          m_aexn_tx = Model.aexn_contract_creation(index: {:aex141, {txi, -1}, <<i::256>>})
 
           store
           |> Store.put(Model.AexnContract, m_aex141)
           |> Store.put(Model.AexnContractName, m_aexn_name)
           |> Store.put(Model.AexnContractSymbol, m_aexn_symbol)
+          |> Store.put(Model.AexnContractCreation, m_aexn_tx)
         end)
 
       {:ok, conn: with_store(conn, store)}

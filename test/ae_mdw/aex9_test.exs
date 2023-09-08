@@ -88,7 +88,7 @@ defmodule AeMdw.Aex9Test do
             Model.AexnContract,
             Model.aexn_contract(
               index: {:aex9, contract_pk},
-              txi: 100,
+              txi_idx: {100, -1},
               meta_info: {"name", "symbol", 18}
             )
           )

@@ -180,7 +180,7 @@ defmodule AeMdw.Db.StateTest do
               ct_pk,
               {"mem_aex9", "mem_aex9", 18},
               block_index,
-              call_txi,
+              {call_txi, -1},
               []
             )
           end)

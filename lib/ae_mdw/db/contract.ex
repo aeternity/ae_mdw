@@ -26,6 +26,7 @@ defmodule AeMdw.Db.Contract do
   @typep pubkey :: Db.pubkey()
   @typep state :: State.t()
   @typep txi :: AeMdw.Txs.txi()
+  @typep txi_idx :: AeMdw.Txs.txi_idx()
 
   @typep call_tx_args :: Contract.call_tx_args()
   @typep call_tx_res :: Contract.call_tx_res()
@@ -39,14 +40,14 @@ defmodule AeMdw.Db.Contract do
           Model.aexn_type(),
           Model.aexn_meta_info(),
           pubkey(),
-          integer(),
+          txi_idx(),
           Model.aexn_extensions()
         ) :: state()
-  def aexn_creation_write(state, aexn_type, aexn_meta_info, contract_pk, txi, extensions) do
+  def aexn_creation_write(state, aexn_type, aexn_meta_info, contract_pk, txi_idx, extensions) do
     m_contract_pk =
       Model.aexn_contract(
         index: {aexn_type, contract_pk},
-        txi: txi,
+        txi_idx: txi_idx,
         meta_info: aexn_meta_info,
         extensions: extensions
       )
@@ -57,6 +58,8 @@ defmodule AeMdw.Db.Contract do
       name = elem(aexn_meta_info, 0)
       symbol = elem(aexn_meta_info, 1)
 
+      m_contract_creation = Model.aexn_contract_creation(index: {aexn_type, txi_idx, contract_pk})
+
       m_contract_name =
         Model.aexn_contract_name(index: {aexn_type, sort_field_truncate(name), contract_pk})
 
@@ -66,12 +69,13 @@ defmodule AeMdw.Db.Contract do
       state2
       |> State.put(Model.AexnContractName, m_contract_name)
       |> State.put(Model.AexnContractSymbol, m_contract_sym)
+      |> State.put(Model.AexnContractCreation, m_contract_creation)
     else
       state2
     end
   end
 
-  @spec aex9_write_presence(state(), pubkey(), integer(), pubkey()) :: state()
+  @spec aex9_write_presence(state(), pubkey(), txi(), pubkey()) :: state()
   def aex9_write_presence(state, contract_pk, txi, account_pk) do
     m_acc_presence = Model.aex9_account_presence(index: {account_pk, contract_pk}, txi: txi)
 
@@ -162,7 +166,7 @@ defmodule AeMdw.Db.Contract do
     end)
   end
 
-  @spec call_write(state(), integer(), integer(), Contract.fun_arg_res_or_error()) :: state()
+  @spec call_write(state(), txi(), txi(), Contract.fun_arg_res_or_error()) :: state()
   def call_write(state, create_txi, txi, %{
         function: fname,
         arguments: args,
@@ -269,7 +273,7 @@ defmodule AeMdw.Db.Contract do
     end
   end
 
-  @spec call_fun_arg_res(State.t(), pubkey(), integer()) :: Contract.fun_arg_res()
+  @spec call_fun_arg_res(State.t(), pubkey(), txi()) :: Contract.fun_arg_res()
   def call_fun_arg_res(state, contract_pk, call_txi) do
     create_txi = Origin.tx_index!(state, {:contract, contract_pk})
     m_call = State.fetch!(state, Model.ContractCall, {create_txi, call_txi})

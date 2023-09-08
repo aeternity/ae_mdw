@@ -279,7 +279,9 @@ defmodule Integration.AeMdwWeb.BlockControllerTest do
     mbi = Map.get(req, "mbi", "-1")
 
     (kbi <> "/" <> mbi)
-    |> Validate.block_index!()
-    |> get_block()
+    |> Validate.block_index()
+    |> then(fn {:ok, bi} ->
+      get_block(bi)
+    end)
   end
 end

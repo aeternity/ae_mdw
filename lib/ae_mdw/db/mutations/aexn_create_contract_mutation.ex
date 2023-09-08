@@ -18,7 +18,7 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
     :contract_pk,
     :aexn_meta_info,
     :block_index,
-    :create_txi,
+    :txi_idx,
     :extensions
   ]
 
@@ -33,7 +33,7 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
             contract_pk: pubkey(),
             aexn_meta_info: aexn_meta_info(),
             block_index: Blocks.block_index(),
-            create_txi: Txs.txi(),
+            txi_idx: Txs.txi_idx(),
             extensions: Model.aexn_extensions()
           }
 
@@ -42,16 +42,16 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
           pubkey(),
           aexn_meta_info(),
           Blocks.block_index(),
-          Txs.txi(),
+          Txs.txi_idx(),
           Model.aexn_extensions()
         ) :: t()
-  def new(aexn_type, contract_pk, aexn_meta_info, block_index, create_txi, extensions) do
+  def new(aexn_type, contract_pk, aexn_meta_info, block_index, txi_idx, extensions) do
     %__MODULE__{
       aexn_type: aexn_type,
       contract_pk: contract_pk,
       aexn_meta_info: aexn_meta_info,
       block_index: block_index,
-      create_txi: create_txi,
+      txi_idx: txi_idx,
       extensions: extensions
     }
   end
@@ -63,19 +63,19 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
           contract_pk: contract_pk,
           aexn_meta_info: aexn_meta_info,
           block_index: block_index,
-          create_txi: create_txi,
+          txi_idx: {txi, _idx} = txi_idx,
           extensions: extensions
         },
         state
       ) do
     state
     |> maybe_increment_contract_count(aexn_type, aexn_meta_info)
-    |> write_balances(aexn_type, contract_pk, block_index, create_txi)
+    |> write_balances(aexn_type, contract_pk, block_index, txi)
     |> Contract.aexn_creation_write(
       aexn_type,
       aexn_meta_info,
       contract_pk,
-      create_txi,
+      txi_idx,
       extensions
     )
   end
@@ -88,18 +88,18 @@ defmodule AeMdw.Db.AexnCreateContractMutation do
     end
   end
 
-  defp write_balances(state, :aex9, contract_pk, block_index, create_txi) do
+  defp write_balances(state, :aex9, contract_pk, block_index, txi_idx) do
     task = Task.async(Aex9Balances, :get_balances, [contract_pk, block_index])
 
     case Task.yield(task, @dry_run_timeout) || Task.shutdown(task) do
       {:ok, {:ok, balances, _no_purge}} ->
-        Contract.aex9_init_event_balances(state, contract_pk, balances, create_txi)
+        Contract.aex9_init_event_balances(state, contract_pk, balances, txi_idx)
 
       {:ok, _dry_run_error} ->
         state
 
       nil ->
-        State.enqueue(state, :update_aex9_state, [contract_pk], [block_index, create_txi])
+        State.enqueue(state, :update_aex9_state, [contract_pk], [block_index, txi_idx])
     end
   end
 
