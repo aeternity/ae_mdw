@@ -361,4 +361,21 @@ defmodule AeMdwWeb.StatsControllerTest do
              |> get("/v3/statistics/blocks", type: block_type)
              |> json_response(400)
   end
+
+  test "when limit is less than 1000, it doesn't return an error", %{conn: conn} do
+    assert %{"data" => _data} =
+             conn
+             |> get("/v3/statistics/blocks", limit: 1000)
+             |> json_response(200)
+
+    assert %{"data" => _data} =
+             conn
+             |> get("/v3/statistics/blocks", limit: 301)
+             |> json_response(200)
+
+    assert %{"error" => "limit too large: 1001"} =
+             conn
+             |> get("/v3/statistics/blocks", limit: 1001)
+             |> json_response(400)
+  end
 end
