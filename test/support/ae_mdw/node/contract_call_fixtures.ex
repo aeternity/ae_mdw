@@ -374,13 +374,12 @@ defmodule AeMdw.Node.ContractCallFixtures do
         1_000_000_000
       )
 
-    :aect_call.set_log(
-      [
-        {event_pk, [aexn_event_hash(:transfer), <<1::256>>, <<2::256>>, <<10_000::256>>], <<>>}
-      ] ++
-        extra_logs,
-      call
-    )
+    [
+      {event_pk, [aexn_event_hash(:transfer), <<1::256>>, <<2::256>>, <<10_000::256>>], <<>>}
+      | extra_logs
+    ]
+    |> Enum.reverse()
+    |> :aect_call.set_log(call)
   end
 
   def call_rec("logs", contract_pk, height, nil, logs) do
@@ -394,7 +393,9 @@ defmodule AeMdw.Node.ContractCallFixtures do
         1_000_000_000
       )
 
-    :aect_call.set_log(logs, call)
+    logs
+    |> Enum.reverse()
+    |> :aect_call.set_log(call)
   end
 
   def call_rec("remote_log", contract_pk, height, remote_pk, extra_logs) do

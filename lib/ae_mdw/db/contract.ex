@@ -212,9 +212,10 @@ defmodule AeMdw.Db.Contract do
   @spec logs_write(state(), txi(), txi(), Contract.call()) :: state()
   def logs_write(state, create_txi, txi, call_rec) do
     contract_pk = :aect_call.contract_pubkey(call_rec)
-    raw_logs = :aect_call.log(call_rec)
 
-    raw_logs
+    call_rec
+    |> :aect_call.log()
+    |> Enum.reverse()
     |> Enum.with_index()
     |> Enum.reduce(state, fn {{addr, [evt_hash | args], data}, log_idx} = log, state ->
       m_log =
