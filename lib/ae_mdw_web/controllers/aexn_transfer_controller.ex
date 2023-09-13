@@ -13,7 +13,6 @@ defmodule AeMdwWeb.AexnTransferController do
   alias AeMdwWeb.Plugs.PaginatedPlug
   alias Plug.Conn
 
-  import AeMdw.Db.Contract, only: [get_aexn_type: 2]
   import AeMdwWeb.Util, only: [handle_input: 2, paginate: 4]
   import AeMdwWeb.AexnView
 
@@ -201,7 +200,7 @@ defmodule AeMdwWeb.AexnTransferController do
 
   defp validate_aexn_type(state, contract_id) do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]) do
-      case get_aexn_type(state, contract_pk) do
+      case Contract.get_aexn_type(state, contract_pk) do
         nil -> {:error, ErrInput.NotFound.exception(value: contract_id)}
         aexn_type -> {:ok, aexn_type, contract_pk}
       end

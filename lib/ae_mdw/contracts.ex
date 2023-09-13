@@ -6,6 +6,7 @@ defmodule AeMdw.Contracts do
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Collection
   alias AeMdw.Contract
+  alias AeMdw.Db.Contract, as: DbContract
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Origin
@@ -20,8 +21,6 @@ defmodule AeMdw.Contracts do
   alias AeMdw.Txs
   alias AeMdw.Util
   alias AeMdw.Validate
-
-  import AeMdw.Db.Contract, only: [get_aexn_type: 2]
 
   require Model
   require Contract
@@ -595,7 +594,7 @@ defmodule AeMdw.Contracts do
       end
 
     %{
-      aexn_type: get_aexn_type(state, contract_pk),
+      aexn_type: DbContract.get_aexn_type(state, contract_pk),
       contract: Enc.encode(:contract_pubkey, contract_pk),
       block_hash: Enc.encode(:micro_block_hash, block_hash),
       source_tx_hash: Enc.encode(:tx_hash, tx_hash),
