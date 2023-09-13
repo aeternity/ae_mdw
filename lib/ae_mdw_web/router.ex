@@ -94,6 +94,14 @@ defmodule AeMdwWeb.Router do
       get "/aex9/:contract_id/balances/:account_id", AexnTokenController, :aex9_token_balance
       get "/aex9/account-balances/:account_id", AexnTokenController, :aex9_account_balances
 
+      get "/aex9/:contract_id/transfers-from/:sender",
+          AexnTransferController,
+          :aex9_contract_transfers
+
+      get "/aex9/:contract_id/transfers-to/:recipient",
+          AexnTransferController,
+          :aex9_contract_transfers
+
       get "/aex9/transfers/from/:sender", AexnTransferController, :aex9_transfers_from
       get "/aex9/transfers/to/:recipient", AexnTransferController, :aex9_transfers_to
 

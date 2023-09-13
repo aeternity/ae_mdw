@@ -2,27 +2,19 @@ defmodule AeMdwWeb.AexnTransferController do
   @moduledoc """
   AEX-n transfer endpoints.
   """
-
   use AeMdwWeb, :controller
 
   alias AeMdw.AexnTransfers
   alias AeMdw.Db.Contract
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Origin
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Validate
-
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
-
   alias Plug.Conn
 
-  import AeMdwWeb.Util,
-    only: [
-      handle_input: 2,
-      paginate: 4
-    ]
-
+  import AeMdw.Db.Contract, only: [get_aexn_type: 2]
+  import AeMdwWeb.Util, only: [handle_input: 2, paginate: 4]
   import AeMdwWeb.AexnView
 
   require Model
@@ -61,6 +53,15 @@ defmodule AeMdwWeb.AexnTransferController do
         end
       )
 
+  @spec aex9_contract_transfers(Conn.t(), map()) :: Conn.t()
+  def aex9_contract_transfers(conn, %{"contract_id" => contract_id, "sender" => sender_id}) do
+    contract_transfers_reply(conn, contract_id, {:from, sender_id})
+  end
+
+  def aex9_contract_transfers(conn, %{"contract_id" => contract_id, "recipient" => recipient_id}) do
+    contract_transfers_reply(conn, contract_id, {:to, recipient_id})
+  end
+
   @spec aex9_transfers_from(Conn.t(), map()) :: Conn.t()
   def aex9_transfers_from(conn, %{"sender" => sender_id}) do
     transfers_from_reply(conn, :aex9, sender_id)
@@ -83,9 +84,7 @@ defmodule AeMdwWeb.AexnTransferController do
 
   @spec aex141_transfers_from(Conn.t(), map()) :: Conn.t()
   def aex141_transfers_from(conn, %{"contract_id" => contract_id, "sender" => sender_id}) do
-    with {:ok, sender_pk} <- Validate.id(sender_id, [:account_pubkey]) do
-      contract_transfers_reply(conn, contract_id, {:from, sender_pk})
-    end
+    contract_transfers_reply(conn, contract_id, {:from, sender_id})
   end
 
   def aex141_transfers_from(conn, %{"contract" => contract_id} = params) do
@@ -98,9 +97,7 @@ defmodule AeMdwWeb.AexnTransferController do
 
   @spec aex141_transfers_to(Conn.t(), map()) :: Conn.t()
   def aex141_transfers_to(conn, %{"contract_id" => contract_id, "recipient" => recipient_id}) do
-    with {:ok, recipient_pk} <- Validate.id(recipient_id, [:account_pubkey]) do
-      contract_transfers_reply(conn, contract_id, {:to, recipient_pk})
-    end
+    contract_transfers_reply(conn, contract_id, {:to, recipient_id})
   end
 
   def aex141_transfers_to(conn, %{"contract" => contract_id} = params) do
@@ -131,26 +128,23 @@ defmodule AeMdwWeb.AexnTransferController do
   defp contract_transfers_reply(
          %Conn{assigns: assigns} = conn,
          contract_id,
-         {filter_by, _pk} = tagged_account_pk
+         {filter_by, account_id}
        ) do
     %{pagination: pagination, cursor: cursor, state: state} = assigns
 
-    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
-         {:ok, create_txi} <- Origin.tx_index(state, {:contract, contract_pk}),
+    with {:ok, account_pk} <- Validate.optional_id(account_id, [:account_pubkey]),
+         {:ok, aexn_type, contract_pk} <- validate_aexn_type(state, contract_id),
          {:ok, {prev_cursor, transfers_keys, next_cursor}} <-
            AexnTransfers.fetch_contract_transfers(
              state,
-             create_txi,
-             tagged_account_pk,
+             contract_pk,
+             {filter_by, account_pk},
              pagination,
              cursor
            ) do
-      data = Enum.map(transfers_keys, &contract_transfer_to_map(state, filter_by, &1))
+      data = Enum.map(transfers_keys, &contract_transfer_to_map(state, aexn_type, filter_by, &1))
 
       paginate(conn, prev_cursor, data, next_cursor)
-    else
-      :not_found -> {:error, ErrInput.NotFound.exception(value: contract_id)}
-      error -> error
     end
   end
 
@@ -202,6 +196,15 @@ defmodule AeMdwWeb.AexnTransferController do
       data = Enum.map(transfers_keys, &pair_transfer_to_map(state, &1))
 
       paginate(conn, prev_cursor, data, next_cursor)
+    end
+  end
+
+  defp validate_aexn_type(state, contract_id) do
+    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]) do
+      case get_aexn_type(state, contract_pk) do
+        nil -> {:error, ErrInput.NotFound.exception(value: contract_id)}
+        aexn_type -> {:ok, aexn_type, contract_pk}
+      end
     end
   end
 end

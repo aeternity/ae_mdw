@@ -7,14 +7,13 @@ defmodule AeMdw.Validate do
   alias :aeser_api_encoder, as: Enc
 
   @typep pubkey :: AE.Db.pubkey()
-  @typep name_id :: binary()
-  @typep name :: pubkey() | name_id() | {:id, atom(), pubkey()}
+  @typep id :: String.t() | {:id, atom(), pubkey()}
   @typep tx_type :: AE.tx_type()
   @typep tx_group :: AE.tx_group()
   @typep tx_field :: atom()
   @type block_index :: AeMdw.Blocks.block_index()
 
-  @spec id(name()) :: {:ok, pubkey()} | {:error, {ErrInput.Id, binary()}}
+  @spec id(id()) :: {:ok, pubkey()} | {:error, {ErrInput.Id, binary()}}
   def id(<<_pk::256>> = id),
     do: {:ok, id}
 
@@ -33,10 +32,10 @@ defmodule AeMdw.Validate do
   def id(id),
     do: {:error, {ErrInput.Id, id}}
 
-  @spec id!(name()) :: pubkey()
+  @spec id!(id()) :: pubkey()
   def id!(id), do: unwrap!(&id/1, id)
 
-  @spec id(name(), [atom()]) :: {:ok, pubkey()} | {:error, {ErrInput.Id, binary()}}
+  @spec id(id(), [atom()]) :: {:ok, pubkey()} | {:error, {ErrInput.Id, binary()}}
   def id(<<prefix::2-binary, "_", _pk::binary>> = ident, [_type1 | _rest_types] = allowed_types) do
     case prefix in AE.id_prefixes() do
       true ->
@@ -62,10 +61,14 @@ defmodule AeMdw.Validate do
   def id(id, _allowed_types),
     do: {:error, {ErrInput.Id, id}}
 
-  @spec id!(name(), [atom()]) :: pubkey()
+  @spec id!(id(), [atom()]) :: pubkey()
   def id!(id, allowed_types), do: unwrap!(&id(&1, allowed_types), id)
 
-  @spec name_id(name()) :: {:ok, pubkey()} | {:error, {ErrInput.Id, name()}}
+  @spec optional_id(id() | nil, [atom()]) :: {:ok, pubkey() | nil} | {:error, {ErrInput.Id, id()}}
+  def optional_id(nil, _types), do: {:ok, nil}
+  def optional_id(id, allowed_types), do: id(id, allowed_types)
+
+  @spec name_id(id()) :: {:ok, pubkey()} | {:error, {ErrInput.Id, id()}}
   def name_id(name_ident) do
     with {:error, {_ex, ^name_ident}} = error <- id(name_ident) do
       ident = ensure_name_suffix(name_ident)
@@ -77,10 +80,11 @@ defmodule AeMdw.Validate do
     end
   end
 
-  @spec name_id!(name()) :: pubkey()
+  @spec name_id!(id()) :: pubkey()
   def name_id!(name_ident), do: unwrap!(&name_id/1, name_ident)
 
-  @spec plain_name(State.t(), name()) :: {:ok, pubkey()} | {:error, {ErrInput.t(), name()}}
+  @spec plain_name(State.t(), String.t()) ::
+          {:ok, pubkey()} | {:error, {ErrInput.t(), String.t()}}
   def plain_name(state, name_ident) do
     case id(name_ident) do
       {:ok, name_hash} ->
@@ -98,7 +102,7 @@ defmodule AeMdw.Validate do
     end
   end
 
-  @spec plain_name!(State.t(), name()) :: pubkey()
+  @spec plain_name!(State.t(), String.t()) :: pubkey()
   def plain_name!(state, name_ident), do: unwrap!(&plain_name(state, &1), name_ident)
 
   @spec tx_type(tx_type() | binary()) :: {:ok, tx_type()} | {:error, ErrInput.t()}

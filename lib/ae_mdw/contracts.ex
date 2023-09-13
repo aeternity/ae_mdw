@@ -21,6 +21,8 @@ defmodule AeMdw.Contracts do
   alias AeMdw.Util
   alias AeMdw.Validate
 
+  import AeMdw.Db.Contract, only: [get_aexn_type: 2]
+
   require Model
   require Contract
 
@@ -600,14 +602,6 @@ defmodule AeMdw.Contracts do
       source_tx_type: Node.tx_name(source_tx_type),
       create_tx: encoded_tx
     }
-  end
-
-  defp get_aexn_type(state, contract_pk) do
-    cond do
-      State.exists?(state, Model.AexnContract, {:aex9, contract_pk}) -> :aex9
-      State.exists?(state, Model.AexnContract, {:aex141, contract_pk}) -> :aex141
-      true -> nil
-    end
   end
 
   defp serialize_logs_cursor(nil), do: nil
