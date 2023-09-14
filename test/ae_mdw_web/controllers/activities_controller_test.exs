@@ -3,13 +3,14 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
   @moduletag skip_store: true
 
   alias :aeser_api_encoder, as: Enc
+  alias AeMdw.Contract
+  alias AeMdw.Db.Contract, as: DbContract
   alias AeMdw.Db.Format
   alias AeMdw.Db.Model
   alias AeMdw.Db.Store
   alias AeMdw.Db.Origin
   alias AeMdw.Node.Db
   alias AeMdw.TestSamples, as: TS
-  alias AeMdw.Txs
 
   import Mock
 
@@ -1231,7 +1232,6 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       kb_hash = TS.key_block_hash(0)
       mb_hash = TS.micro_block_hash(0)
       enc_mb_hash = Enc.encode(:micro_block_hash, mb_hash)
-      contract_pk = <<100::256>>
       meta_info = {"AEXName", "AEXSymbol", 10}
 
       {:ok, contract_call1_aetx} =
@@ -1350,9 +1350,28 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
              456
            end
          ]},
-        {Txs, [], fetch!: fn _state, _txi -> %{} end},
+        {DbContract, [],
+         [
+           call_fun_arg_res: fn _state, ^contract_pk, _txi ->
+             %{
+               function: "fun",
+               arguments: [],
+               result: :ok,
+               return: :ok
+             }
+           end,
+           get_aexn_type: fn _state, ^contract_pk -> :aex9 end
+         ]},
+        {Contract, [],
+         call_rec: fn _signed_tx, ^contract_pk, _block_hash -> {:error, :nocallrec} end},
         {:aec_db, [], [get_header: fn _block_hash -> :header end]},
-        {:aetx_sign, [], [serialize_for_client: fn :header, _aetx -> %{} end]}
+        {:aetx_sign, [],
+         [
+           serialize_for_client: fn :header, aetx ->
+             {mod, tx_rec} = :aetx.specialize_callback(aetx)
+             %{"tx" => mod.for_client(tx_rec)}
+           end
+         ]}
       ] do
         assert %{"prev" => nil, "data" => [tx1, tx2, tx3], "next" => _next_url} =
                  conn
@@ -1365,7 +1384,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
                  "block_hash" => ^enc_mb_hash,
                  "block_time" => 456,
                  "type" => "ContractCallTxEvent",
-                 "payload" => %{}
+                 "payload" => %{"tx" => %{"aexn_type" => "aex9"}}
                } = tx1
 
         assert %{

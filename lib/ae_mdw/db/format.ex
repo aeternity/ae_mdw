@@ -3,6 +3,7 @@ defmodule AeMdw.Db.Format do
   alias AeMdw.Node, as: AE
   alias :aeser_api_encoder, as: Enc
 
+  alias AeMdw.Db.Contract, as: DbContract
   alias AeMdw.Contract
   alias AeMdw.Channels
   alias AeMdw.Db.Model
@@ -387,7 +388,7 @@ defmodule AeMdw.Db.Format do
     add_inner_tx_details(state, :paying_for_tx, tx, tx_rec, txi, block_hash)
   end
 
-  defp custom_encode(_state, :contract_create_tx, tx, tx_rec, _signed_tx, _txi, block_hash) do
+  defp custom_encode(state, :contract_create_tx, tx, tx_rec, _signed_tx, _txi, block_hash) do
     init_call_details = Contract.get_init_call_details(tx_rec, block_hash)
 
     encoded_details =
@@ -395,7 +396,11 @@ defmodule AeMdw.Db.Format do
       |> Map.take(["args", "return_type", "return_value"])
       |> encode_raw_values()
 
-    Map.merge(tx, Map.merge(init_call_details, encoded_details))
+    aexn_type = DbContract.get_aexn_type(state, :aect_create_tx.contract_pubkey(tx_rec))
+
+    tx
+    |> Map.put("aexn_type", aexn_type)
+    |> Map.merge(Map.merge(init_call_details, encoded_details))
   end
 
   defp custom_encode(state, :contract_call_tx, tx, tx_rec, signed_tx, txi, block_hash) do
@@ -403,12 +408,19 @@ defmodule AeMdw.Db.Format do
 
     fun_arg_res =
       state
-      |> AeMdw.Db.Contract.call_fun_arg_res(contract_pk, txi)
+      |> DbContract.call_fun_arg_res(contract_pk, txi)
       |> encode_raw_values()
 
-    call_info = format_call_info(signed_tx, contract_pk, block_hash, txi)
-    call_details = Map.merge(call_info, fun_arg_res)
-    Map.merge(tx, call_details)
+    call_details =
+      signed_tx
+      |> format_call_info(contract_pk, block_hash, txi)
+      |> Map.merge(fun_arg_res)
+
+    aexn_type = DbContract.get_aexn_type(state, contract_pk)
+
+    tx
+    |> Map.put("aexn_type", aexn_type)
+    |> Map.merge(call_details)
   end
 
   defp custom_encode(_state, :channel_create_tx, tx, _tx_rec, signed_tx, _txi, _block_hash) do
