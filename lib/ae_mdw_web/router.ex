@@ -53,6 +53,10 @@ defmodule AeMdwWeb.Router do
       get "/names/auctions/:id/claims", NameController, :auction_claims
       get "/statistics/transactions", StatsController, :transactions_statistics
       get "/statistics/blocks", StatsController, :blocks_statistics
+
+      get "/aex9/:contract_id/transfers",
+          AexnTransferController,
+          :aex9_contract_transfers
     end
 
     scope "/v2" do
@@ -93,14 +97,6 @@ defmodule AeMdwWeb.Router do
       get "/aex9/:contract_id/logs-count", AexnTokenController, :aex9_logs_count
       get "/aex9/:contract_id/balances/:account_id", AexnTokenController, :aex9_token_balance
       get "/aex9/account-balances/:account_id", AexnTokenController, :aex9_account_balances
-
-      get "/aex9/:contract_id/transfers-from/:sender",
-          AexnTransferController,
-          :aex9_contract_transfers
-
-      get "/aex9/:contract_id/transfers-to/:recipient",
-          AexnTransferController,
-          :aex9_contract_transfers
 
       get "/aex9/transfers/from/:sender", AexnTransferController, :aex9_transfers_from
       get "/aex9/transfers/to/:recipient", AexnTransferController, :aex9_transfers_to

@@ -53,12 +53,23 @@ defmodule AeMdwWeb.AexnTransferController do
       )
 
   @spec aex9_contract_transfers(Conn.t(), map()) :: Conn.t()
-  def aex9_contract_transfers(conn, %{"contract_id" => contract_id, "sender" => sender_id}) do
-    contract_transfers_reply(conn, contract_id, {:from, sender_id})
+  def aex9_contract_transfers(
+        conn,
+        %{"contract_id" => contract_id, "sender" => sender_id} = params
+      ) do
+    if Map.has_key?(params, "recipient") do
+      {:error, {ErrInput.Query, "set either a recipient or a sender"}}
+    else
+      contract_transfers_reply(conn, contract_id, {:from, sender_id}, true)
+    end
   end
 
   def aex9_contract_transfers(conn, %{"contract_id" => contract_id, "recipient" => recipient_id}) do
-    contract_transfers_reply(conn, contract_id, {:to, recipient_id})
+    contract_transfers_reply(conn, contract_id, {:to, recipient_id}, true)
+  end
+
+  def aex9_contract_transfers(_conn, %{"contract_id" => _contract_id}) do
+    {:error, {ErrInput.Query, "sender or recipient param is required"}}
   end
 
   @spec aex9_transfers_from(Conn.t(), map()) :: Conn.t()
@@ -127,7 +138,8 @@ defmodule AeMdwWeb.AexnTransferController do
   defp contract_transfers_reply(
          %Conn{assigns: assigns} = conn,
          contract_id,
-         {filter_by, account_id}
+         {filter_by, account_id},
+         v3? \\ false
        ) do
     %{pagination: pagination, cursor: cursor, state: state} = assigns
 
@@ -141,7 +153,8 @@ defmodule AeMdwWeb.AexnTransferController do
              pagination,
              cursor
            ) do
-      data = Enum.map(transfers_keys, &contract_transfer_to_map(state, aexn_type, filter_by, &1))
+      data =
+        Enum.map(transfers_keys, &contract_transfer_to_map(state, aexn_type, filter_by, &1, v3?))
 
       paginate(conn, prev_cursor, data, next_cursor)
     end

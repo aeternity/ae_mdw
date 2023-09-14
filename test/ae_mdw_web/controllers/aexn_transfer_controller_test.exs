@@ -356,7 +356,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       assert %{"data" => aex9_transfers, "next" => next} =
                conn
                |> with_store(store)
-               |> get("/v2/aex9/#{contract_id}/transfers-from/#{sender_id}")
+               |> get("/v3/aex9/#{contract_id}/transfers", sender: sender_id)
                |> json_response(200)
 
       assert @default_limit = length(aex9_transfers)
@@ -390,7 +390,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       assert %{"data" => aex9_transfers, "next" => next} =
                conn
                |> with_store(store)
-               |> get("/v2/aex9/#{contract_id}/transfers-from/#{sender_id}", direction: "forward")
+               |> get("/v3/aex9/#{contract_id}/transfers", direction: "forward", sender: sender_id)
                |> json_response(200)
 
       assert @default_limit = length(aex9_transfers)
@@ -416,7 +416,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       assert %{"prev" => nil, "data" => [], "next" => nil} =
                conn
                |> with_store(store)
-               |> get("/v2/aex9/#{contract_id}/transfers-from/#{account_id_without_transfer}")
+               |> get("/v3/aex9/#{contract_id}/transfers", sender: account_id_without_transfer)
                |> json_response(200)
     end
 
@@ -427,7 +427,22 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/aex9/#{invalid_id}/transfers-from/#{account_id}")
+               |> get("/v3/aex9/#{invalid_id}/transfers", sender: account_id)
+               |> json_response(400)
+    end
+
+    test "returns bad request when both sender and recipient params are used", %{conn: conn} do
+      contract_id = encode_contract(@aex9_pk1)
+      account_id1 = encode_account(@from_pk1)
+      account_id2 = encode_account(@from_pk2)
+      error_msg = "invalid query: set either a recipient or a sender"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> get("/v3/aex9/#{contract_id}/transfers",
+                 sender: account_id1,
+                 recipient: account_id2
+               )
                |> json_response(400)
     end
   end
@@ -440,7 +455,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       assert %{"data" => aex9_transfers, "next" => next} =
                conn
                |> with_store(store)
-               |> get("/v2/aex9/#{contract_id}/transfers-to/#{recipient_id}")
+               |> get("/v3/aex9/#{contract_id}/transfers", recipient: recipient_id)
                |> json_response(200)
 
       assert @default_limit = length(aex9_transfers)
@@ -474,7 +489,10 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       assert %{"data" => aex9_transfers, "next" => next} =
                conn
                |> with_store(store)
-               |> get("/v2/aex9/#{contract_id}/transfers-to/#{recipient_id}", direction: "forward")
+               |> get("/v3/aex9/#{contract_id}/transfers",
+                 direction: "forward",
+                 recipient: recipient_id
+               )
                |> json_response(200)
 
       assert @default_limit = length(aex9_transfers)
@@ -508,7 +526,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       assert %{"prev" => nil, "data" => [], "next" => nil} =
                conn
                |> with_store(store)
-               |> get("/v2/aex9/#{contract_id}/transfers-to/#{account_id_without_transfer}")
+               |> get("/v3/aex9/#{contract_id}/transfers", recipient: account_id_without_transfer)
                |> json_response(200)
     end
 
@@ -519,7 +537,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
 
       assert %{"error" => ^error_msg} =
                conn
-               |> get("/v2/aex9/#{invalid_id}/transfers-to/#{account_id}")
+               |> get("/v3/aex9/#{invalid_id}/transfers", recipient: account_id)
                |> json_response(400)
     end
   end
@@ -950,7 +968,6 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
          %{
            "sender" => sender,
            "recipient" => recipient,
-           "call_txi" => call_txi,
            "log_idx" => log_idx,
            "amount" => amount,
            "contract_id" => contract_id
@@ -964,7 +981,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
         contract_id in @contracts
       end
 
-    sender == sender_id and recipient in @recipients and call_txi in @txi_range and
+    sender == sender_id and recipient in @recipients and
       log_idx in @log_index_range and amount in @aex9_amount_range and valid_contract?
   end
 
@@ -973,7 +990,6 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
          %{
            "sender" => sender,
            "recipient" => recipient,
-           "call_txi" => call_txi,
            "log_idx" => log_idx,
            "amount" => amount,
            "contract_id" => contract_id
@@ -987,7 +1003,7 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
         contract_id in @contracts
       end
 
-    sender in @senders and recipient == recipient_id and call_txi in @txi_range and
+    sender in @senders and recipient == recipient_id and
       log_idx in @log_index_range and amount in @aex9_amount_range and valid_contract?
   end
 
