@@ -5,10 +5,13 @@ defmodule AeMdw.AexnTransfers do
 
   alias AeMdw.Collection
   alias AeMdw.Db.Model
+  alias AeMdw.Db.Origin
   alias AeMdw.Db.State
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Util
+
+  import AeMdw.Util.Encoding, only: [encode_contract: 1]
 
   require Model
 
@@ -39,26 +42,32 @@ defmodule AeMdw.AexnTransfers do
 
   @spec fetch_contract_transfers(
           State.t(),
-          AeMdw.Txs.txi(),
+          pubkey(),
           {:from | :to, pubkey() | nil},
           pagination(),
           cursor() | nil
         ) ::
           {:ok, contract_paginated_transfers()} | {:error, Error.t()}
-  def fetch_contract_transfers(state, contract_txi, {filter_by, account_pk}, pagination, cursor) do
-    table =
-      if filter_by == :from,
-        do: Model.AexnContractFromTransfer,
-        else: Model.AexnContractToTransfer
+  def fetch_contract_transfers(state, contract_pk, {filter_by, account_pk}, pagination, cursor) do
+    case Origin.tx_index(state, {:contract, contract_pk}) do
+      {:ok, create_txi} ->
+        table =
+          if filter_by == :from,
+            do: Model.AexnContractFromTransfer,
+            else: Model.AexnContractToTransfer
 
-    paginate_transfers(
-      state,
-      contract_txi,
-      pagination,
-      table,
-      cursor,
-      account_pk
-    )
+        paginate_transfers(
+          state,
+          create_txi,
+          pagination,
+          table,
+          cursor,
+          account_pk
+        )
+
+      :not_found ->
+        {:error, ErrInput.NotFound.exception(value: encode_contract(contract_pk))}
+    end
   end
 
   @spec fetch_sender_transfers(State.t(), aexn_type(), pubkey(), pagination(), cursor() | nil) ::

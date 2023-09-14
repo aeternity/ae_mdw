@@ -191,21 +191,40 @@ defmodule AeMdwWeb.AexnView do
   def pair_transfer_to_map(state, {type, sender_pk, recipient_pk, call_txi, amount, log_idx}),
     do: do_transfer_to_map(state, {type, sender_pk, call_txi, recipient_pk, amount, log_idx})
 
-  @spec contract_transfer_to_map(State.t(), :from | :to, contract_transfer_key()) :: map()
+  @spec contract_transfer_to_map(
+          State.t(),
+          Model.aexn_type(),
+          :from | :to,
+          contract_transfer_key(),
+          boolean()
+        ) ::
+          map()
   def contract_transfer_to_map(
         state,
+        aexn_type,
         :from,
-        {_create_txi, sender_pk, call_txi, recipient_pk, token_id, log_idx}
+        {_create_txi, sender_pk, call_txi, recipient_pk, token_id, log_idx},
+        v3?
       ) do
-    do_transfer_to_map(state, {:aex141, sender_pk, call_txi, recipient_pk, token_id, log_idx})
+    do_transfer_to_map(
+      state,
+      {aexn_type, sender_pk, call_txi, recipient_pk, token_id, log_idx},
+      v3?
+    )
   end
 
   def contract_transfer_to_map(
         state,
+        aexn_type,
         :to,
-        {_create_txi, recipient_pk, call_txi, sender_pk, token_id, log_idx}
+        {_create_txi, recipient_pk, call_txi, sender_pk, token_id, log_idx},
+        v3?
       ) do
-    do_transfer_to_map(state, {:aex141, sender_pk, call_txi, recipient_pk, token_id, log_idx})
+    do_transfer_to_map(
+      state,
+      {aexn_type, sender_pk, call_txi, recipient_pk, token_id, log_idx},
+      v3?
+    )
   end
 
   #
@@ -230,7 +249,8 @@ defmodule AeMdwWeb.AexnView do
 
   defp do_transfer_to_map(
          state,
-         {aexn_type, sender_pk, call_txi, recipient_pk, aexn_value, log_idx} = transfer_key
+         {aexn_type, sender_pk, call_txi, recipient_pk, aexn_value, log_idx} = transfer_key,
+         v3? \\ false
        ) do
     Model.aexn_transfer(contract_pk: contract_pk) =
       State.fetch!(state, Model.AexnTransfer, transfer_key)
@@ -238,20 +258,26 @@ defmodule AeMdwWeb.AexnView do
     Model.tx(id: hash, block_index: {kbi, mbi}, time: micro_time) = Util.read_tx!(state, call_txi)
     aexn_key = if aexn_type == :aex9, do: :amount, else: :token_id
 
-    Map.put(
-      %{
-        sender: encode_account(sender_pk),
-        recipient: encode_account(recipient_pk),
-        call_txi: call_txi,
-        log_idx: log_idx,
-        block_height: kbi,
-        micro_index: mbi,
-        micro_time: micro_time,
-        contract_id: encode_contract(contract_pk),
-        tx_hash: :aeser_api_encoder.encode(:tx_hash, hash)
-      },
-      aexn_key,
-      aexn_value
-    )
+    json =
+      Map.put(
+        %{
+          sender: encode_account(sender_pk),
+          recipient: encode_account(recipient_pk),
+          log_idx: log_idx,
+          block_height: kbi,
+          micro_index: mbi,
+          micro_time: micro_time,
+          contract_id: encode_contract(contract_pk),
+          tx_hash: :aeser_api_encoder.encode(:tx_hash, hash)
+        },
+        aexn_key,
+        aexn_value
+      )
+
+    if v3? do
+      json
+    else
+      Map.put(json, :call_txi, call_txi)
+    end
   end
 end

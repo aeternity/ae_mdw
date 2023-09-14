@@ -35,6 +35,15 @@ defmodule AeMdw.Db.Contract do
   @type rev_aex9_contract_key :: {pos_integer(), String.t(), String.t(), pos_integer()}
   @type account_balance :: {pubkey(), integer()}
 
+  @spec get_aexn_type(State.t(), pubkey()) :: Model.aexn_type() | nil
+  def get_aexn_type(state, contract_pk) do
+    cond do
+      State.exists?(state, Model.AexnContract, {:aex9, contract_pk}) -> :aex9
+      State.exists?(state, Model.AexnContract, {:aex141, contract_pk}) -> :aex141
+      true -> nil
+    end
+  end
+
   @spec aexn_creation_write(
           state(),
           Model.aexn_type(),
@@ -719,26 +728,23 @@ defmodule AeMdw.Db.Contract do
     |> State.put(Model.AexnTransfer, m_transfer)
     |> State.put(Model.RevAexnTransfer, m_rev_transfer)
     |> State.put(Model.AexnPairTransfer, m_pair_transfer)
-    |> index_contract_transfer(aexn_type, contract_pk, txi, log_idx, transfer)
+    |> index_contract_transfer(contract_pk, txi, log_idx, transfer)
     |> update_transfer_balance(aexn_type, {contract_pk, update_balance?}, txi, log_idx, transfer)
   end
 
   defp write_aexn_transfer(state, _type, _pk, _txi, _log_idx, _args), do: state
 
-  defp index_contract_transfer(state, :aex9, _pk, _txi, _i, _transfer), do: state
-
-  defp index_contract_transfer(state, :aex141, contract_pk, txi, i, [
+  defp index_contract_transfer(state, contract_pk, txi, i, [
          from_pk,
          to_pk,
-         <<token_id::256>>
+         <<value::256>>
        ]) do
     create_txi = Origin.tx_index!(state, {:contract, contract_pk})
 
     m_ct_from =
-      Model.aexn_contract_from_transfer(index: {create_txi, from_pk, txi, to_pk, token_id, i})
+      Model.aexn_contract_from_transfer(index: {create_txi, from_pk, txi, to_pk, value, i})
 
-    m_ct_to =
-      Model.aexn_contract_to_transfer(index: {create_txi, to_pk, txi, from_pk, token_id, i})
+    m_ct_to = Model.aexn_contract_to_transfer(index: {create_txi, to_pk, txi, from_pk, value, i})
 
     state
     |> State.put(Model.AexnContractFromTransfer, m_ct_from)
