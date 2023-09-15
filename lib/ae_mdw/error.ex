@@ -12,6 +12,7 @@ defmodule AeMdw.Error do
 
   @spec to_string(Input.reason(), value()) :: Input.message()
   def to_string(Input.Id, x), do: concat("invalid id", x)
+  def to_string(Input.Hash, x), do: concat("invalid hash", x)
   def to_string(Input.BlockIndex, x), do: concat("invalid block index", x)
   def to_string(Input.NonnegInt, x), do: concat("invalid non-negative integer", x)
   def to_string(Input.TxField, x), do: concat("invalid transaction field", x)
@@ -37,6 +38,7 @@ defmodule AeMdw.Error do
 
     @type reason() ::
             __MODULE__.Id
+            | __MODULE__.Hash
             | __MODULE__.BlockIndex
             | __MODULE__.NonnegInt
             | __MODULE__.TxField

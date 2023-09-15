@@ -159,6 +159,73 @@ defmodule AeMdw.Txs do
           add_spendtx_details?()
         ) :: {:ok, page_cursor(), [tx()], page_cursor()} | {:error, Error.t()}
   def fetch_txs(state, pagination, range, query, cursor, add_spendtx_details?) do
+    with {:ok, streamer} <- txs_streamer(state, range, query, cursor) do
+      do_fetch_txs(state, streamer, pagination, add_spendtx_details?)
+    end
+  end
+
+  @spec count_micro_block_txs(state(), binary(), query()) ::
+          {:ok, non_neg_integer()} | {:error, Error.t()}
+  def count_micro_block_txs(state, hash, query) do
+    with {:ok, streamer} <- micro_block_txs_streamer(state, hash, query) do
+      {:ok, Enum.count(streamer.(:forward))}
+    end
+  end
+
+  @spec fetch_micro_block_txs(state(), binary(), query(), pagination(), cursor() | nil) ::
+          {:ok, page_cursor(), [tx()], page_cursor()} | {:error, Error.t()}
+  def fetch_micro_block_txs(state, hash, query, pagination, cursor) do
+    with {:ok, streamer} <- micro_block_txs_streamer(state, hash, query, cursor) do
+      do_fetch_txs(state, streamer, pagination)
+    end
+  end
+
+  @spec txi_to_hash(state(), txi()) :: tx_hash()
+  def txi_to_hash(state, txi) do
+    Model.tx(id: tx_hash) = State.fetch!(state, @table, txi)
+
+    tx_hash
+  end
+
+  #
+  # Streams txs of a microblock
+  #
+  defp do_fetch_txs(state, streamer, pagination, add_spendtx_details? \\ true) do
+    {prev_cursor, txis, next_cursor} = Collection.paginate(streamer, pagination)
+
+    txs = Enum.map(txis, &fetch!(state, &1, add_spendtx_details?))
+
+    {:ok, serialize_cursor(prev_cursor), txs, serialize_cursor(next_cursor)}
+  end
+
+  defp micro_block_txs_streamer(state, hash, query, cursor \\ nil) do
+    with {:ok, height, mbi} <- DbUtil.micro_block_height_index(state, hash),
+         {:ok, Model.block(tx_index: first_txi)} <- State.get(state, Model.Block, {height, mbi}) do
+      last_txi =
+        case State.next(state, Model.Block, {height, mbi}) do
+          {:ok, next_key} ->
+            Model.block(tx_index: next_txi) = State.fetch!(state, Model.Block, next_key)
+            next_txi - 1
+
+          :none ->
+            {:ok, last_txi} = State.prev(state, Model.Tx, nil)
+            last_txi
+        end
+
+      txs_streamer(state, {:txi, first_txi..last_txi}, query, cursor)
+    else
+      {:error, reason} -> {:error, reason}
+      :not_found -> {:error, ErrInput.NotFound.exception(value: hash)}
+    end
+  end
+
+  #
+  # Streams txs on a range satisfying the criteria from the query filters
+  #
+  defp txs_streamer(_state, {:txi, first..last}, _query, _cursor) when first > last,
+    do: {:ok, fn _direction -> [] end}
+
+  defp txs_streamer(state, range, query, cursor) do
     with {:ok, ids_fields} <- extract_ids_fields(query) do
       types = query |> Map.get(:types, MapSet.new()) |> MapSet.to_list()
       cursor = deserialize_cursor(cursor)
@@ -176,52 +243,14 @@ defmodule AeMdw.Txs do
             nil
         end
 
-      {prev_cursor, txis, next_cursor} =
-        fn direction ->
-          state
-          |> build_streams(ids_fields, types, scope, cursor, direction)
-          |> Collection.merge(direction)
-        end
-        |> Collection.paginate(pagination)
-
-      txs = Enum.map(txis, &fetch!(state, &1, add_spendtx_details?))
-
-      {:ok, serialize_cursor(prev_cursor), txs, serialize_cursor(next_cursor)}
-    end
-  end
-
-  @spec fetch_micro_block_txs(state(), binary(), pagination(), cursor() | nil) ::
-          {:ok, page_cursor(), [tx()], page_cursor()} | {:error, Error.t()}
-  def fetch_micro_block_txs(state, hash, pagination, cursor) do
-    with {:ok, height, mbi} <- DbUtil.micro_block_height_index(state, hash),
-         {:ok, Model.block(tx_index: first_txi)} <- State.get(state, Model.Block, {height, mbi}) do
-      last_txi =
-        case State.next(state, Model.Block, {height, mbi}) do
-          {:ok, next_key} ->
-            Model.block(tx_index: next_txi) = State.fetch!(state, Model.Block, next_key)
-            next_txi - 1
-
-          :none ->
-            {:ok, last_txi} = State.prev(state, Model.Tx, nil)
-            last_txi
-        end
-
-      if first_txi <= last_txi do
-        fetch_txs(state, pagination, {:txi, first_txi..last_txi}, %{}, cursor, false)
-      else
-        {:ok, nil, [], nil}
+      streamer = fn direction ->
+        state
+        |> build_streams(ids_fields, types, scope, cursor, direction)
+        |> Collection.merge(direction)
       end
-    else
-      {:error, reason} -> {:error, reason}
-      :not_found -> {:error, ErrInput.NotFound.exception(value: hash)}
+
+      {:ok, streamer}
     end
-  end
-
-  @spec txi_to_hash(state(), txi()) :: tx_hash()
-  def txi_to_hash(state, txi) do
-    Model.tx(id: tx_hash) = State.fetch!(state, @table, txi)
-
-    tx_hash
   end
 
   # The purpose of this function is to generate the streams that will be then used as input for

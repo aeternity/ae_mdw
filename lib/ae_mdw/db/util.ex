@@ -161,7 +161,7 @@ defmodule AeMdw.Db.Util do
         {:error, ErrInput.NotFound.exception(value: hash_or_kbi)}
 
       :error ->
-        with {:ok, height, _hash} <- extract_height_hash(state, hash_or_kbi) do
+        with {:ok, height, _hash} <- extract_block_height(state, hash_or_kbi, :key_block_hash) do
           {:ok, height}
         end
     end
@@ -170,7 +170,7 @@ defmodule AeMdw.Db.Util do
   @spec micro_block_height_index(state(), binary()) ::
           {:ok, Blocks.height(), Blocks.mbi()} | {:error, Error.t()}
   def micro_block_height_index(state, mb_hash) do
-    with {:ok, height, decoded_hash} <- extract_height_hash(state, mb_hash) do
+    with {:ok, height, decoded_hash} <- extract_block_height(state, mb_hash, :micro_block_hash) do
       mbi =
         decoded_hash
         |> Db.get_reverse_micro_blocks()
@@ -274,8 +274,8 @@ defmodule AeMdw.Db.Util do
     Collection.merge([raw_txs, inner_txs | internal_txs], direction)
   end
 
-  defp extract_height_hash(state, encoded_hash) do
-    with {:ok, hash} <- Validate.id(encoded_hash),
+  defp extract_block_height(state, encoded_hash, type) do
+    with {:ok, hash} <- Validate.hash(encoded_hash, type),
          last_gen <- last_gen(state),
          {:ok, height} when height <= last_gen <- Node.Db.find_block_height(hash) do
       {:ok, height, hash}

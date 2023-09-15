@@ -1833,6 +1833,107 @@ defmodule AeMdwWeb.TxControllerTest do
                |> json_response(200)
     end
 
+    test "returns the count of txs from a micro-block", %{conn: conn, store: store} do
+      mb_hash = TS.micro_block_hash(0)
+      tx1_hash = TS.tx_hash(0)
+      tx2_hash = TS.tx_hash(1)
+      tx3_hash = TS.tx_hash(2)
+      encoded_mb_hash = encode(:micro_block_hash, mb_hash)
+      height = 5
+
+      store =
+        store
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, tx_index: 10))
+        |> Store.put(Model.Block, Model.block(index: {height, 0}, tx_index: 10))
+        |> Store.put(Model.Block, Model.block(index: {height + 1, -1}, tx_index: 13))
+        |> Store.put(Model.Tx, Model.tx(index: 10, id: tx1_hash))
+        |> Store.put(Model.Tx, Model.tx(index: 11, id: tx2_hash))
+        |> Store.put(Model.Tx, Model.tx(index: 12, id: tx3_hash))
+
+      with_mocks [
+        {:aec_chain, [], get_block: fn ^mb_hash -> {:ok, :block} end},
+        {:aec_blocks, [], to_header: fn :block -> :header end},
+        {:aec_headers, [], height: fn :header -> height end},
+        {Db, [],
+         [
+           get_reverse_micro_blocks: fn ^mb_hash -> [] end,
+           find_block_height: fn ^mb_hash -> {:ok, height} end
+         ]}
+      ] do
+        assert %{"data" => 3} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs/count", mb_hash: encoded_mb_hash)
+                 |> json_response(200)
+      end
+    end
+
+    test "returns the count of txs of a type from a micro-block", %{conn: conn, store: store} do
+      mb_hash = TS.micro_block_hash(0)
+      tx1_hash = TS.tx_hash(0)
+      tx2_hash = TS.tx_hash(1)
+      tx3_hash = TS.tx_hash(2)
+      encoded_mb_hash = encode(:micro_block_hash, mb_hash)
+      height = 5
+
+      store =
+        store
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, tx_index: 10))
+        |> Store.put(Model.Block, Model.block(index: {height, 0}, tx_index: 10))
+        |> Store.put(Model.Block, Model.block(index: {height + 1, -1}, tx_index: 13))
+        |> Store.put(Model.Type, Model.type(index: {:contract_call_tx, 10}))
+        |> Store.put(Model.Type, Model.type(index: {:contract_create_tx, 11}))
+        |> Store.put(Model.Type, Model.type(index: {:contract_call_tx, 12}))
+        |> Store.put(Model.Tx, Model.tx(index: 10, id: tx1_hash))
+        |> Store.put(Model.Tx, Model.tx(index: 11, id: tx2_hash))
+        |> Store.put(Model.Tx, Model.tx(index: 12, id: tx3_hash))
+
+      with_mocks [
+        {:aec_chain, [], get_block: fn ^mb_hash -> {:ok, :block} end},
+        {:aec_blocks, [], to_header: fn :block -> :header end},
+        {:aec_headers, [], height: fn :header -> height end},
+        {Db, [],
+         [
+           get_reverse_micro_blocks: fn ^mb_hash -> [] end,
+           find_block_height: fn ^mb_hash -> {:ok, height} end
+         ]}
+      ] do
+        assert %{"data" => 2} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs/count", mb_hash: encoded_mb_hash, type: "contract_call")
+                 |> json_response(200)
+      end
+    end
+
+    test "returns 404 if mb exists on node but not yet on the mdw", %{
+      conn: conn,
+      store: store
+    } do
+      mb_hash = TS.micro_block_hash(0)
+      encoded_mb_hash = encode(:micro_block_hash, mb_hash)
+      error_msg = "not found: #{encoded_mb_hash}"
+
+      store = Store.put(store, Model.Block, Model.block(index: {3, 0}, tx_index: 10))
+
+      with_mocks [
+        {:aec_chain, [], get_block: fn ^mb_hash -> {:ok, :block} end},
+        {:aec_blocks, [], to_header: fn :block -> :header end},
+        {:aec_headers, [], height: fn :header -> 1 end},
+        {Db, [],
+         [
+           get_reverse_micro_blocks: fn ^mb_hash -> [] end,
+           find_block_height: fn ^mb_hash -> {:ok, 999_999} end
+         ]}
+      ] do
+        assert %{"error" => ^error_msg} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/txs/count", mb_hash: encoded_mb_hash)
+                 |> json_response(404)
+      end
+    end
+
     test "when filtering by invalid type, it displays an error", %{conn: conn} do
       error_msg = "invalid transaction type: oracle_foo"
 
@@ -1881,12 +1982,12 @@ defmodule AeMdwWeb.TxControllerTest do
   end
 
   describe "micro_block_txs" do
-    test "it returns the list of txs from a single mb by mb_hash", %{conn: conn, store: store} do
+    test "returns the list of txs from a mb", %{conn: conn, store: store} do
       mb_hash = TS.micro_block_hash(0)
       tx1_hash = TS.tx_hash(0)
       tx2_hash = TS.tx_hash(1)
       encoded_mb_hash = encode(:micro_block_hash, mb_hash)
-      height = 4
+      height = 9
 
       store =
         store
@@ -1897,13 +1998,9 @@ defmodule AeMdwWeb.TxControllerTest do
         |> Store.put(Model.Tx, Model.tx(index: 11, id: tx2_hash))
 
       with_mocks [
-        {:aec_chain, [], [get_block: fn ^mb_hash -> {:ok, :block} end]},
-        {:aec_blocks, [], [to_header: fn :block -> :header end]},
-        {:aec_headers, [],
-         [
-           type: fn :header -> :micro end,
-           height: fn :header -> height end
-         ]},
+        {:aec_chain, [], get_block: fn ^mb_hash -> {:ok, :block} end},
+        {:aec_blocks, [], to_header: fn :block -> :header end},
+        {:aec_headers, [], height: fn :header -> height end},
         {Db, [],
          [
            get_reverse_micro_blocks: fn ^mb_hash -> [] end,
@@ -1912,19 +2009,61 @@ defmodule AeMdwWeb.TxControllerTest do
         {Format, [],
          [
            to_map: fn
-             _state, Model.tx(id: ^tx1_hash) -> %{a: 1}
-             _state, Model.tx(id: ^tx2_hash) -> %{b: 2}
+             _state, Model.tx(index: txi, id: ^tx1_hash) ->
+               %{"tx" => %{"type" => "SomeTx"}, "tx_index" => txi}
+
+             _state, Model.tx(index: txi, id: ^tx2_hash) ->
+               %{"tx" => %{"type" => "SomeTx"}, "tx_index" => txi}
            end
          ]}
       ] do
-        assert %{"data" => [tx2, tx1]} =
+        assert %{"data" => [%{"tx_index" => 11}, %{"tx_index" => 10}]} =
                  conn
                  |> with_store(store)
                  |> get("/v2/micro-blocks/#{encoded_mb_hash}/txs")
                  |> json_response(200)
+      end
+    end
 
-        assert %{"a" => 1} = tx1
-        assert %{"b" => 2} = tx2
+    test "returns the list of txs from a mb filtered by type", %{conn: conn, store: store} do
+      mb_hash = TS.micro_block_hash(0)
+      tx1_hash = TS.tx_hash(0)
+      tx2_hash = TS.tx_hash(1)
+      encoded_mb_hash = encode(:micro_block_hash, mb_hash)
+      height = 9
+
+      store =
+        store
+        |> Store.put(Model.Block, Model.block(index: {height, -1}, tx_index: 10))
+        |> Store.put(Model.Block, Model.block(index: {height, 0}, tx_index: 10))
+        |> Store.put(Model.Block, Model.block(index: {height + 1, -1}, tx_index: 12))
+        |> Store.put(Model.Type, Model.type(index: {:contract_call_tx, 10}))
+        |> Store.put(Model.Type, Model.type(index: {:contract_create_tx, 11}))
+        |> Store.put(Model.Tx, Model.tx(index: 10, id: tx1_hash))
+        |> Store.put(Model.Tx, Model.tx(index: 11, id: tx2_hash))
+
+      with_mocks [
+        {:aec_chain, [], get_block: fn ^mb_hash -> {:ok, :block} end},
+        {:aec_blocks, [], to_header: fn :block -> :header end},
+        {:aec_headers, [], height: fn :header -> height end},
+        {Db, [],
+         [
+           get_reverse_micro_blocks: fn ^mb_hash -> [] end,
+           find_block_height: fn ^mb_hash -> {:ok, height} end
+         ]},
+        {Format, [],
+         [
+           to_map: fn
+             _state, Model.tx(index: txi, id: ^tx1_hash) ->
+               %{"tx" => %{"type" => "ContractCallTx"}, "tx_index" => txi}
+           end
+         ]}
+      ] do
+        assert %{"data" => [%{"tx_index" => 10}]} =
+                 conn
+                 |> with_store(store)
+                 |> get("/v2/micro-blocks/#{encoded_mb_hash}/txs", type: "contract_call")
+                 |> json_response(200)
       end
     end
 
@@ -1936,7 +2075,7 @@ defmodule AeMdwWeb.TxControllerTest do
       tx1_hash = TS.tx_hash(0)
       tx2_hash = TS.tx_hash(1)
       encoded_mb_hash = encode(:micro_block_hash, mb_hash)
-      height = 4
+      height = 11
 
       store =
         store
@@ -1946,13 +2085,9 @@ defmodule AeMdwWeb.TxControllerTest do
         |> Store.put(Model.Tx, Model.tx(index: 11, id: tx2_hash))
 
       with_mocks [
-        {:aec_chain, [], [get_block: fn ^mb_hash -> {:ok, :block} end]},
-        {:aec_blocks, [], [to_header: fn :block -> :header end]},
-        {:aec_headers, [],
-         [
-           type: fn :header -> :micro end,
-           height: fn :header -> height end
-         ]},
+        {:aec_chain, [], get_block: fn ^mb_hash -> {:ok, :block} end},
+        {:aec_blocks, [], to_header: fn :block -> :header end},
+        {:aec_headers, [], height: fn :header -> height end},
         {Db, [],
          [
            get_reverse_micro_blocks: fn ^mb_hash -> [] end,
@@ -1961,19 +2096,19 @@ defmodule AeMdwWeb.TxControllerTest do
         {Format, [],
          [
            to_map: fn
-             _state, Model.tx(id: ^tx1_hash) -> %{a: 1}
-             _state, Model.tx(id: ^tx2_hash) -> %{b: 2}
+             _state, Model.tx(index: txi, id: ^tx1_hash) ->
+               %{"tx" => %{"type" => "SomeTx"}, "tx_index" => txi}
+
+             _state, Model.tx(index: txi, id: ^tx2_hash) ->
+               %{"tx" => %{"type" => "SomeTx"}, "tx_index" => txi}
            end
          ]}
       ] do
-        assert %{"data" => [tx2, tx1]} =
+        assert %{"data" => [%{"tx_index" => 11}, %{"tx_index" => 10}]} =
                  conn
                  |> with_store(store)
                  |> get("/v2/micro-blocks/#{encoded_mb_hash}/txs")
                  |> json_response(200)
-
-        assert %{"a" => 1} = tx1
-        assert %{"b" => 2} = tx2
       end
     end
 
@@ -2006,13 +2141,9 @@ defmodule AeMdwWeb.TxControllerTest do
       store = Store.put(store, Model.Block, Model.block(index: {3, 0}, tx_index: 10))
 
       with_mocks [
-        {:aec_chain, [], [get_block: fn ^mb_hash -> {:ok, :block} end]},
-        {:aec_blocks, [], [to_header: fn :block -> :header end]},
-        {:aec_headers, [],
-         [
-           type: fn :header -> :micro end,
-           height: fn :header -> 1 end
-         ]},
+        {:aec_chain, [], get_block: fn ^mb_hash -> {:ok, :block} end},
+        {:aec_blocks, [], to_header: fn :block -> :header end},
+        {:aec_headers, [], height: fn :header -> 1 end},
         {Db, [],
          [
            get_reverse_micro_blocks: fn ^mb_hash -> [] end,
