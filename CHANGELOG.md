@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.64.0](https://www.github.com/aeternity/ae_mdw/compare/v1.63.0...v1.64.0) (2023-09-18)
+
+
+### Features
+
+* count microblock txs ([#1594](https://www.github.com/aeternity/ae_mdw/issues/1594)) ([3539e95](https://www.github.com/aeternity/ae_mdw/commit/3539e95b5e8fb03532d991a6231d8a55571ff4de))
+* index and query aex9 transfers by contract and account ([#1587](https://www.github.com/aeternity/ae_mdw/issues/1587)) ([0806849](https://www.github.com/aeternity/ae_mdw/commit/0806849eeed61e0277eb756b872edecafd3f6c83))
+* sort aexn contracts by creation ([#1583](https://www.github.com/aeternity/ae_mdw/issues/1583)) ([daa4e53](https://www.github.com/aeternity/ae_mdw/commit/daa4e533944f9f5908f233c73a6397950c9a7ddc))
+
+
+### Bug Fixes
+
+* display only the current auction bids for a name ([#1589](https://www.github.com/aeternity/ae_mdw/issues/1589)) ([1e29e46](https://www.github.com/aeternity/ae_mdw/commit/1e29e46ce6c83b3c247ae8318a31597f24961c26))
+* enable 1000 limit on block statistics endpoint ([#1586](https://www.github.com/aeternity/ae_mdw/issues/1586)) ([610ba26](https://www.github.com/aeternity/ae_mdw/commit/610ba261c2653b4555cfbb9fbca7fad2859bb691))
+
+
+### Miscellaneous
+
+* add aexn_type to contract txs ([#1591](https://www.github.com/aeternity/ae_mdw/issues/1591)) ([6fbf370](https://www.github.com/aeternity/ae_mdw/commit/6fbf3701cf4ba072cbd4f497b48ad56b5d5baddf))
+* add functional error responses and tests cases for it ([#1571](https://www.github.com/aeternity/ae_mdw/issues/1571)) ([5a3bd21](https://www.github.com/aeternity/ae_mdw/commit/5a3bd21f1d410833b92014ac7eb915575a44795a))
+* ensure suffix on name history ([#1582](https://www.github.com/aeternity/ae_mdw/issues/1582)) ([e2faf61](https://www.github.com/aeternity/ae_mdw/commit/e2faf616f56ec2efdb3062219a2b44acddfcc4fb))
+* reverse call logs ([#1585](https://www.github.com/aeternity/ae_mdw/issues/1585)) ([67ea069](https://www.github.com/aeternity/ae_mdw/commit/67ea069e907037facb2bfd4d70247f5071ba24f9))
+
 ## [1.63.0](https://www.github.com/aeternity/ae_mdw/compare/v1.62.5...v1.63.0) (2023-09-06)
 
 
