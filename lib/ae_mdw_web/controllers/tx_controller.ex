@@ -63,11 +63,21 @@ defmodule AeMdwWeb.TxController do
 
   @spec count(Conn.t(), map()) :: Conn.t()
   @doc """
-  Counts all transactions for a given scope, type or address.
+  Counts all transactions for a given scope, type, address or micro-block (along with types).
   """
   def count(%Conn{assigns: %{state: state, scope: scope, query: query}} = conn, _params) do
-    with {:ok, count} <- Txs.count(state, scope, query) do
-      json(conn, count)
+    {mb_hash, query} = Map.pop(query, "mb_hash")
+
+    if mb_hash != nil do
+      with :ok <- validate_without_scope(scope),
+           {:ok, query} <- extract_query(query),
+           {:ok, count} <- Txs.count_micro_block_txs(state, mb_hash, query) do
+        json(conn, %{data: count})
+      end
+    else
+      with {:ok, count} <- Txs.count(state, scope, query) do
+        json(conn, count)
+      end
     end
   end
 
@@ -96,11 +106,15 @@ defmodule AeMdwWeb.TxController do
   end
 
   @spec micro_block_txs(Conn.t(), map()) :: Conn.t()
-  def micro_block_txs(%Conn{assigns: assigns} = conn, %{"hash" => hash}) do
-    %{state: state, pagination: pagination, cursor: cursor} = assigns
+  def micro_block_txs(%Conn{assigns: assigns, query_params: query_params} = conn, %{
+        "hash" => hash
+      }) do
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
 
-    with {:ok, prev_cursor, txs, next_cursor} <-
-           Txs.fetch_micro_block_txs(state, hash, pagination, cursor) do
+    with :ok <- validate_without_scope(scope),
+         {:ok, query} <- extract_query(query_params),
+         {:ok, prev_cursor, txs, next_cursor} <-
+           Txs.fetch_micro_block_txs(state, hash, query, pagination, cursor) do
       paginate(conn, prev_cursor, txs, next_cursor)
     end
   end
@@ -148,4 +162,7 @@ defmodule AeMdwWeb.TxController do
         {:error, err}
     end
   end
+
+  defp validate_without_scope(nil), do: :ok
+  defp validate_without_scope(_scope), do: {:error, {ErrInput.Query, "scope not allowed"}}
 end

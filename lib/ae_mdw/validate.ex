@@ -7,11 +7,21 @@ defmodule AeMdw.Validate do
   alias :aeser_api_encoder, as: Enc
 
   @typep pubkey :: AE.Db.pubkey()
+  @typep hash_str :: String.t()
+  @typep hash_type :: :micro_block_hash | :key_block_hash
+  @typep hash :: AE.Db.hash()
   @typep id :: String.t() | {:id, atom(), pubkey()}
   @typep tx_type :: AE.tx_type()
   @typep tx_group :: AE.tx_group()
   @typep tx_field :: atom()
   @type block_index :: AeMdw.Blocks.block_index()
+
+  @spec hash(hash_str(), hash_type()) :: {:ok, hash()} | {:error, {ErrInput.Hash, binary()}}
+  def hash(hash_str, type) do
+    with {:error, :invalid_encoding} <- Enc.safe_decode(type, hash_str) do
+      {:error, {ErrInput.Hash, hash_str}}
+    end
+  end
 
   @spec id(id()) :: {:ok, pubkey()} | {:error, {ErrInput.Id, binary()}}
   def id(<<_pk::256>> = id),
