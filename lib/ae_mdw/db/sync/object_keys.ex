@@ -1,14 +1,32 @@
 defmodule AeMdw.Db.Sync.ObjectKeys do
   @moduledoc """
-  Counts active and inactive names and oracles deduplicating on memory and persisted keys.
+  Counts active and inactive names and oracles.
+
+  Persisted initial keys are loaded by staged parallel tasks for faster loading.
+
+  It deduplicates new on memory compared with persisted keys and the counting itself
+  is performed in constant time by table sizes.
   """
+
+  use GenStateMachine
 
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias AeMdw.Sync.Server, as: SyncServer
   alias AeMdw.Log
 
   import AeMdw.Util, only: [max_name_bin: 0, max_256bit_bin: 0]
+
+  require Logger
+
+  defstruct start_datetime: nil, tasks: MapSet.new()
+
+  @typep state() :: :waiting | :loading_names | :loading_oracles | :finished
+  @typep state_data() :: %__MODULE__{}
+  @typep cast_event() :: :start_loading
+  @typep reason() :: term()
+  @typep info_event() :: {reference(), :ok} | {:DOWN, reference(), :process, pid(), reason()}
   @typep pubkey :: AeMdw.Node.Db.pubkey()
 
   # commited keys
@@ -35,24 +53,81 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
   ]
 
   @opts [:named_table, :set, :public]
-  @init_timeout 300_000
 
-  @spec init(State.t()) :: :ok
-  def init(state) do
+  @spec start_link(GenServer.options()) :: :gen_statem.start_ret()
+  def start_link(_opts), do: GenStateMachine.start_link(__MODULE__, :ok, name: __MODULE__)
+
+  @impl true
+  @spec init(:ok) :: :gen_statem.init_result(state())
+  def init(:ok) do
     _tid1 = :ets.new(@active_names_table, @opts)
     _tid2 = :ets.new(@inactive_names_table, @opts)
     _tid3 = :ets.new(@active_oracles_table, @opts)
     _tid4 = :ets.new(@inactive_oracles_table, @opts)
 
-    {ts, :ok} =
-      :timer.tc(fn ->
-        :ok = load_tables(state, @name_halves, @active_names_table, @inactive_names_table)
-        :ok = load_tables(state, @oracle_halves, @active_oracles_table, @inactive_oracles_table)
-      end)
+    {:ok, :waiting, %__MODULE__{}}
+  end
 
-    Log.info("Loaded object keys in #{div(ts, 1_000_000)} secs")
+  @spec start() :: :ok
+  def start do
+    GenStateMachine.cast(__MODULE__, :start_loading)
+  end
 
-    :ok
+  @impl true
+  @spec handle_event(:cast, cast_event(), state(), state_data()) ::
+          :gen_statem.event_handler_result(state())
+  @spec handle_event(:info, info_event(), state(), state_data()) ::
+          :gen_statem.event_handler_result(state())
+  def handle_event(:cast, :start_loading, :waiting, state_data) do
+    tasks =
+      @name_halves
+      |> load_tables_tasks(@active_names_table, @inactive_names_table)
+      |> MapSet.new(fn task -> task.ref end)
+
+    {:next_state, :loading_names,
+     %{state_data | tasks: tasks, start_datetime: NaiveDateTime.utc_now()}}
+  end
+
+  def handle_event(:info, {ref, :ok}, :loading_names, %{tasks: tasks} = state_data) do
+    Process.demonitor(ref, [:flush])
+    tasks = MapSet.delete(tasks, ref)
+
+    if MapSet.size(tasks) == 0 do
+      tasks =
+        @oracle_halves
+        |> load_tables_tasks(@active_oracles_table, @inactive_oracles_table)
+        |> MapSet.new(fn task -> task.ref end)
+
+      {:next_state, :loading_oracles, %{state_data | tasks: tasks}}
+    else
+      {:keep_state, %{state_data | tasks: tasks}}
+    end
+  end
+
+  def handle_event(
+        :info,
+        {ref, :ok},
+        :loading_oracles,
+        %{tasks: tasks, start_datetime: start_datetime} = state_data
+      ) do
+    Process.demonitor(ref, [:flush])
+    tasks = MapSet.delete(tasks, ref)
+
+    if MapSet.size(tasks) == 0 do
+      duration = NaiveDateTime.diff(NaiveDateTime.utc_now(), start_datetime, :second)
+      Log.info("Loaded object keys in #{duration} secs")
+
+      SyncServer.start_sync()
+
+      {:next_state, :finished, %{state_data | tasks: MapSet.new()}, :hibernate}
+    else
+      {:keep_state, %{state_data | tasks: tasks}}
+    end
+  end
+
+  def handle_event(:info, {:DOWN, _ref, :process, _pid, _reason}, _state, state_data) do
+    GenStateMachine.stop(__MODULE__, :shutdown)
+    {:keep_state, state_data}
   end
 
   @spec put_active_name(State.t(), String.t()) :: :ok
@@ -140,19 +215,16 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
 
   defp stream_all_keys(state, table), do: Collection.stream(state, table, nil)
 
-  defp load_tables(state, key_boundaries, active_table, inactive_table) do
-    true =
-      key_boundaries
-      |> Enum.flat_map(
-        &[
-          Task.async(fn -> load_records(state, active_table, &1) end),
-          Task.async(fn -> load_records(state, inactive_table, &1) end)
-        ]
-      )
-      |> Task.await_many(@init_timeout)
-      |> Enum.all?(&(&1 == :ok))
+  defp load_tables_tasks(key_boundaries, active_table, inactive_table) do
+    state = State.new()
 
-    :ok
+    key_boundaries
+    |> Enum.flat_map(&[{active_table, &1}, {inactive_table, &1}])
+    |> Enum.map(fn {table, key_boundary} ->
+      Task.Supervisor.async_nolink(SyncServer.task_supervisor(), fn ->
+        load_records(state, table, key_boundary)
+      end)
+    end)
   end
 
   defp load_records(state, table, key_boundary) do
