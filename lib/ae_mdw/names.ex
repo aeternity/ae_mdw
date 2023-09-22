@@ -482,22 +482,13 @@ defmodule AeMdw.Names do
   @spec fetch_previous_list(state(), plain_name()) :: [name()]
   def fetch_previous_list(state, plain_name) do
     {last_gen, last_micro_time} = DbUtil.last_gen_and_time(state)
+    key_boundary = {{plain_name, @min_int}, {plain_name, @max_int}}
 
-    case State.get(state, @table_inactive, plain_name) do
-      {:ok, name} ->
-        name
-        |> Stream.unfold(fn
-          nil ->
-            nil
-
-          Model.name(previous: previous) = name ->
-            {render_name_info(state, name, last_gen, last_micro_time, []), previous}
-        end)
-        |> Enum.to_list()
-
-      :not_found ->
-        []
-    end
+    state
+    |> Collection.stream(Model.PreviousName, :backward, key_boundary, nil)
+    |> Enum.map(fn Model.previous_name(name: name) ->
+      render_name_info(state, name, last_gen, last_micro_time, [])
+    end)
   end
 
   @spec revoke_or_expire_height(Model.name()) :: Blocks.height()
@@ -612,7 +603,7 @@ defmodule AeMdw.Names do
       status: to_string(status),
       active: is_active?,
       info: render_name_info(state, name, last_gen, last_micro_time, opts),
-      previous: render_previous(state, name, last_gen, last_micro_time, opts)
+      previous: render_previous(state, plain_name, last_gen, last_micro_time, opts)
     }
   end
 
@@ -770,13 +761,14 @@ defmodule AeMdw.Names do
     {serialize_nested_cursor(prev_cursor), bi_txi_idxs, serialize_nested_cursor(next_cursor)}
   end
 
-  defp render_previous(state, name, last_gen, last_micro_time, opts) do
-    name
-    |> Stream.unfold(fn
-      Model.name(previous: nil) -> nil
-      Model.name(previous: previous) -> {previous, previous}
+  defp render_previous(state, plain_name, last_gen, last_micro_time, opts) do
+    key_boundary = {{plain_name, @min_int}, {plain_name, @max_int}}
+
+    state
+    |> Collection.stream(Model.PreviousName, :backward, key_boundary, nil)
+    |> Enum.map(fn Model.previous_name(name: name) ->
+      render_name_info(state, name, last_gen, last_micro_time, opts)
     end)
-    |> Enum.map(&render_name_info(state, &1, last_gen, last_micro_time, opts))
   end
 
   defp render_nested_resource(_state, {active_from, {nil, height}, Model.NameExpired}) do

@@ -11,25 +11,14 @@ defmodule AeMdw.Db.NamesExpirationMutationTest do
     test "inactivates a name that has just expired", %{store: store} do
       plain_name = "some-active-name"
       sync_height = 100_000
-
-      m_previous =
-        Model.name(
-          index: plain_name,
-          active: sync_height - 10_000,
-          expire: sync_height - 1_000,
-          owner: <<1::256>>,
-          previous: nil
-        )
-
       active_height = sync_height - 5_000
 
       m_name =
-        Model.name(m_previous,
+        Model.name(
           index: plain_name,
           active: active_height,
           expire: sync_height,
-          owner: <<2::256>>,
-          previous: m_previous
+          owner: <<2::256>>
         )
 
       m_exp = Model.expiration(index: {sync_height, plain_name})
@@ -62,8 +51,7 @@ defmodule AeMdw.Db.NamesExpirationMutationTest do
           index: plain_name,
           active: active_height,
           expire: sync_height + 1,
-          owner: <<2::256>>,
-          previous: nil
+          owner: <<2::256>>
         )
 
       m_exp = Model.expiration(index: {sync_height + 1, plain_name})
@@ -93,8 +81,7 @@ defmodule AeMdw.Db.NamesExpirationMutationTest do
           index: plain_name,
           active: active_height,
           expire: sync_height - 1,
-          owner: <<2::256>>,
-          previous: nil
+          owner: <<2::256>>
         )
 
       m_exp = Model.expiration(index: {sync_height - 1, plain_name})

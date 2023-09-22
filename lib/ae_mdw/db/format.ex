@@ -6,24 +6,27 @@ defmodule AeMdw.Db.Format do
   alias AeMdw.Db.Contract, as: DbContract
   alias AeMdw.Contract
   alias AeMdw.Channels
+  alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
   alias AeMdw.Db.Origin
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.InnerTx
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Log
   alias AeMdw.Names
   alias AeMdw.Node.Db
   alias AeMdw.Txs
-  alias AeMdw.Db.Sync.InnerTx
+  alias AeMdw.Util
 
   require Model
-  require Contract
 
   import AeMdw.Util
   import AeMdw.Util.Encoding, only: [encode_account: 1]
 
   @type aeser_id() :: {:id, atom(), binary()}
+  @max_int Util.max_int()
+  @min_int Util.min_int()
 
   ##########
 
@@ -68,10 +71,8 @@ defmodule AeMdw.Db.Format do
   def to_raw_map(state, auction_bid, Model.AuctionBid),
     do: auction_bid(state, auction_bid, & &1, &to_raw_map(state, &1), & &1)
 
-  def to_raw_map(state, m_name, source) when elem(m_name, 0) == :name do
-    plain_name = Model.name(m_name, :index)
-    succ = &Model.name(&1, :previous)
-    prev = chase(succ.(m_name), succ)
+  def to_raw_map(state, Model.name(index: plain_name) = m_name, source) do
+    previous = previous_list(state, plain_name)
 
     name_hash =
       case :aens.get_name_hash(plain_name) do
@@ -95,7 +96,7 @@ defmodule AeMdw.Db.Format do
       status: to_string(status),
       active: source == Model.ActiveName,
       info: name_info_to_raw_map(state, m_name),
-      previous: Enum.map(prev, &name_info_to_raw_map(state, &1))
+      previous: previous
     }
   end
 
@@ -553,12 +554,12 @@ defmodule AeMdw.Db.Format do
 
   defp auction_bid(
          state,
-         Model.auction_bid(index: plain, expire_height: auction_end),
+         Model.auction_bid(index: plain_name, expire_height: auction_end),
          key,
          tx_fmt,
          info_fmt
        ) do
-    bids = Name.stream_nested_resource(state, Model.AuctionBidClaim, plain, auction_end)
+    bids = Name.stream_nested_resource(state, Model.AuctionBidClaim, plain_name, auction_end)
     {txi, _idx} = Enum.at(bids, 0)
     last_bid = tx_fmt.(DbUtil.read_tx!(state, txi))
     name_ttl = Names.expire_after(auction_end)
@@ -568,7 +569,7 @@ defmodule AeMdw.Db.Format do
     auction_end_time = DbUtil.height_to_time(state, auction_end, last_gen, last_micro_time)
 
     %{
-      key.(:name) => plain,
+      key.(:name) => plain_name,
       key.(:status) => :auction,
       key.(:active) => false,
       key.(:info) => %{
@@ -578,14 +579,9 @@ defmodule AeMdw.Db.Format do
         key.(:bids) => Enum.map(bids, &txi_idx_txi/1)
       },
       key.(:previous) =>
-        case Name.locate(state, plain) do
-          {m_name, Model.InactiveName} ->
-            succ = &Model.name(&1, :previous)
-            Enum.map(chase(m_name, succ), &info_fmt.(name_info_to_raw_map(state, &1)))
-
-          _ ->
-            []
-        end
+        state
+        |> previous_list(plain_name)
+        |> Enum.map(info_fmt)
     }
   end
 
@@ -653,5 +649,13 @@ defmodule AeMdw.Db.Format do
       "initiator_id" => encode_account(initiator_pk),
       "responder_id" => encode_account(responder_pk)
     })
+  end
+
+  defp previous_list(state, plain_name) do
+    key_boundary = {{plain_name, @min_int}, {plain_name, @max_int}}
+
+    state
+    |> Collection.stream(Model.PreviousName, :backward, key_boundary, nil)
+    |> Enum.map(fn Model.previous_name(name: name) -> name_info_to_raw_map(state, name) end)
   end
 end

@@ -240,8 +240,7 @@ defmodule AeMdw.Db.Model do
     expire: nil,
     revoke: nil,
     auction_timeout: 0,
-    owner: nil,
-    previous: nil
+    owner: nil
   ]
   defrecord :name, @name_defaults
 
@@ -253,8 +252,25 @@ defmodule AeMdw.Db.Model do
             expire: Blocks.height(),
             revoke: bi_txi_idx() | nil,
             auction_timeout: non_neg_integer(),
-            owner: pubkey(),
-            previous: record(:name) | nil
+            owner: pubkey()
+          )
+
+  # previous_name:
+  #     index = {plain_name, active_height},
+  #     name = name
+  #
+  #     (other info (pointers, owner) is from looking up last update tx)
+  @previous_name_defaults [
+    index: nil,
+    name: nil
+  ]
+  defrecord :previous_name, @previous_name_defaults
+
+  @type previous_name_index() :: {Names.plain_name(), Blocks.height()}
+  @type previous_name ::
+          record(:previous_name,
+            index: previous_name_index(),
+            name: name()
           )
 
   # owner: (updated via name claim/transfer)
@@ -1206,6 +1222,7 @@ defmodule AeMdw.Db.Model do
       AeMdw.Db.Model.InactiveNameExpiration,
       AeMdw.Db.Model.ActiveName,
       AeMdw.Db.Model.InactiveName,
+      AeMdw.Db.Model.PreviousName,
       AeMdw.Db.Model.AuctionOwner,
       AeMdw.Db.Model.ActiveNameOwner,
       AeMdw.Db.Model.ActiveNameOwnerDeactivation,
@@ -1310,6 +1327,7 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.InactiveNameExpiration), do: :expiration
   def record(AeMdw.Db.Model.ActiveName), do: :name
   def record(AeMdw.Db.Model.InactiveName), do: :name
+  def record(AeMdw.Db.Model.PreviousName), do: :previous_name
   def record(AeMdw.Db.Model.AuctionOwner), do: :owner
   def record(AeMdw.Db.Model.ActiveNameOwner), do: :owner
   def record(AeMdw.Db.Model.InactiveNameOwner), do: :owner

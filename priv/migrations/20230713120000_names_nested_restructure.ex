@@ -1,3 +1,19 @@
+defmodule AeMdw.Migrations.NamesNestedRestructure.OldName do
+  @moduledoc false
+
+  require Record
+
+  Record.defrecord(:name,
+    index: nil,
+    active: nil,
+    expire: nil,
+    revoke: nil,
+    auction_timeout: nil,
+    owner: nil,
+    previous: nil
+  )
+end
+
 defmodule AeMdw.Migrations.NamesNestedRestructure do
   @moduledoc """
   Re-indexes names and auctions nested references into separate tables.
@@ -7,9 +23,11 @@ defmodule AeMdw.Migrations.NamesNestedRestructure do
   alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
+  alias __MODULE__.OldName
 
   require Model
   require Record
+  require OldName
 
   Record.defrecord(:auction_bid,
     index: nil,
@@ -144,7 +162,7 @@ defmodule AeMdw.Migrations.NamesNestedRestructure do
     {:ok, new_previous, previous_mutations} = restructure_record(previous, source)
 
     new_record =
-      Model.name(
+      OldName.name(
         index: plain_name,
         active: active,
         expire: expire,

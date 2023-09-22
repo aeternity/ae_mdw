@@ -1,9 +1,25 @@
+defmodule AeMdw.Migrations.NameExpired.OldName do
+  @moduledoc false
+  require Record
+
+  Record.defrecord(:name,
+    index: nil,
+    active: nil,
+    expire: nil,
+    revoke: nil,
+    auction_timeout: nil,
+    owner: nil,
+    previous: nil
+  )
+end
+
 defmodule AeMdw.Migrations.NameExpired do
   # credo:disable-for-this-file
   @moduledoc """
   Index name expirations.
   """
 
+  alias __MODULE__.OldName
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.WriteMutation
@@ -11,6 +27,8 @@ defmodule AeMdw.Migrations.NameExpired do
   alias AeMdw.Log
 
   require Model
+  require Record
+  require OldName
 
   import AeMdw.Util, only: [max_int: 0]
 
@@ -69,8 +87,8 @@ defmodule AeMdw.Migrations.NameExpired do
 
   def filter_expired(stream) do
     stream
-    |> Stream.reject(&is_nil(Model.name(&1, :previous)))
-    |> Stream.map(&Model.name(&1, :previous))
-    |> Stream.filter(&is_nil(Model.name(&1, :revoke)))
+    |> Stream.reject(&is_nil(OldName.name(&1, :previous)))
+    |> Stream.map(&OldName.name(&1, :previous))
+    |> Stream.filter(&is_nil(OldName.name(&1, :revoke)))
   end
 end

@@ -1122,10 +1122,7 @@ defmodule AeMdwWeb.TxControllerTest do
           |> Store.put(Model.PlainName, Model.plain_name(index: name_hash2, value: plain_name2))
           |> Store.put(
             Model.ActiveName,
-            Model.name(
-              index: plain_name1,
-              previous: Model.name(index: plain_name1, active: active_height1)
-            )
+            Model.name(index: plain_name1)
           )
           |> Store.put(
             Model.NameUpdate,
@@ -1133,10 +1130,7 @@ defmodule AeMdwWeb.TxControllerTest do
           )
           |> Store.put(
             Model.ActiveName,
-            Model.name(
-              index: plain_name2,
-              previous: Model.name(index: plain_name2, active: active_height2)
-            )
+            Model.name(index: plain_name2)
           )
           |> Store.put(
             Model.NameUpdate,

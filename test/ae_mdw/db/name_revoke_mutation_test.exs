@@ -24,8 +24,7 @@ defmodule AeMdw.Db.NameRevokeMutationTest do
         active: active_height,
         expire: expire,
         revoke: nil,
-        owner: owner_pk,
-        previous: nil
+        owner: owner_pk
       )
 
     state1 =

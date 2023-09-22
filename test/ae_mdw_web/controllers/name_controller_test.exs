@@ -919,8 +919,7 @@ defmodule AeMdwWeb.NameControllerTest do
           active: active_from,
           expire: expire,
           revoke: nil,
-          owner: owner_pk,
-          previous: nil
+          owner: owner_pk
         )
 
       store =
@@ -2125,7 +2124,6 @@ defmodule AeMdwWeb.NameControllerTest do
             active: 100,
             expire: 200,
             owner: owner_pk,
-            previous: nil,
             auction_timeout: 0
           )
         )

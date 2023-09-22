@@ -31,6 +31,11 @@ defmodule AeMdw.Sync.AsyncStoreServer do
     GenServer.cast(__MODULE__, {:write_mutations, async_mutations, done_fn})
   end
 
+  @spec write_mutations_without_async([Mutation.t()], fun()) :: :ok
+  def write_mutations_without_async(async_mutations, done_fn) do
+    GenServer.cast(__MODULE__, {:write_mutations_without_async, async_mutations, done_fn})
+  end
+
   @spec write_async_store(State.t()) :: State.t()
   def write_async_store(db_state) do
     GenServer.call(__MODULE__, {:write_store, db_state}, 60_000)
@@ -43,6 +48,14 @@ defmodule AeMdw.Sync.AsyncStoreServer do
     mutations
     |> Enum.reject(&is_nil/1)
     |> Enum.each(&Mutation.execute(&1, async_state))
+
+    done_fn.()
+
+    {:noreply, state}
+  end
+
+  def handle_cast({:write_mutations_without_async, mutations, done_fn}, state) do
+    _new_state = State.commit_db_without_async(State.new(), mutations)
 
     done_fn.()
 

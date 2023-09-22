@@ -15,7 +15,7 @@ defmodule AeMdw.Sync.AsyncTasks.Migrate do
     Enum.each(migrations, fn %Migration{mutations_mfa: {module, mutations_fn, params}} ->
       module
       |> apply(mutations_fn, params)
-      |> AsyncStoreServer.write_mutations(done_fn)
+      |> AsyncStoreServer.write_mutations_without_async(done_fn)
     end)
 
     :ok

@@ -28,8 +28,7 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
           active: active_from,
           expire: expire,
           revoke: nil,
-          owner: owner_pk,
-          previous: nil
+          owner: owner_pk
         )
 
       state =
@@ -94,8 +93,7 @@ defmodule AeMdw.Db.NameUpdateMutationTest do
           active: active_from,
           expire: expire,
           revoke: nil,
-          owner: owner_pk,
-          previous: nil
+          owner: owner_pk
         )
 
       state =
