@@ -10,7 +10,6 @@ defmodule AeMdw.Application do
   """
   alias AeMdw.Contract
   alias AeMdw.Db.Model
-  alias AeMdw.Db.State
   alias AeMdw.EtsCache
   alias AeMdw.Extract
   alias AeMdw.NodeHelper
@@ -193,7 +192,7 @@ defmodule AeMdw.Application do
   end
 
   defp init(:formatters) do
-    with [custom_events_args: custom_args] <- Application.get_env(:ae_mdw, AeMdwWeb.LogsView) do
+    with [custom_events_args: custom_args] <- Application.get_env(:ae_mdw, AeMdwWeb.LogsView, :ok) do
       :persistent_term.put({AeMdwWeb.LogsView, :custom_events_args}, true)
 
       Enum.each(custom_args, fn {event_name, index_map} ->
@@ -224,7 +223,7 @@ defmodule AeMdw.Application do
   end
 
   def start_phase(:load_obj_keys, _start_type, []) do
-    ObjectKeys.init(State.new())
+    ObjectKeys.start()
   end
 
   def start_phase(:start_sync, _start_type, []) do

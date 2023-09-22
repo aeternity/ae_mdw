@@ -6,13 +6,18 @@ defmodule AeMdw.Sync.Server do
   State machine diagram:
 
                    ┌───────────┐
-                   │initialized│
+                   |  waiting  |
                    └─────┬─────┘
-                         │new_height(h)
+                         │ :start
+                         ▼
+                   ┌───────────┐
+                   │  started  │
+                   └─────┬─────┘
+                         │ new_height(h)
                          ├──────────────────────────────┐
                          │                              │
                          │                ┌───────────┐ │done_db(new_state)
-                         ▼             ┌►│syncing_db ├─┤
+                         ▼             ┌► │syncing_db ├─┤
    -new_height(h)┌──► ┌──┴─┐check_sync()│ └───────────┘ │
                  │    │idle├────────────┤               │
                  └─── └────┘            │ ┌───────────┐ │done_mem(new_state)
@@ -49,7 +54,8 @@ defmodule AeMdw.Sync.Server do
   @typep height() :: Blocks.height()
   @typep hash() :: Blocks.block_hash()
   @typep state() ::
-           :initialized
+           :waiting
+           | :started
            | :idle
            | :stopped
            | {:syncing_db, reference()}
@@ -61,7 +67,7 @@ defmodule AeMdw.Sync.Server do
            mem_hash: height(),
            restarts: non_neg_integer()
          }
-  @typep cast_event() :: {:new_height, height(), hash()} | :restart_sync
+  @typep cast_event() :: {:new_height, height(), hash()} | :start_sync | :restart_sync
   @typep internal_event() :: :check_sync
   @typep call_event() :: :syncing?
   @typep reason() :: term()
@@ -82,6 +88,9 @@ defmodule AeMdw.Sync.Server do
 
   @spec start_link(GenServer.options()) :: :gen_statem.start_ret()
   def start_link(_opts), do: GenStateMachine.start_link(__MODULE__, [], name: __MODULE__)
+
+  @spec start_sync() :: :ok
+  def start_sync, do: GenStateMachine.cast(__MODULE__, :start_sync)
 
   @spec new_height(height(), hash()) :: :ok
   def new_height(height, hash), do: GenStateMachine.cast(__MODULE__, {:new_height, height, hash})
@@ -104,7 +113,7 @@ defmodule AeMdw.Sync.Server do
       restarts: 0
     }
 
-    {:ok, :initialized, state_data}
+    {:ok, :waiting, state_data}
   end
 
   @impl true
@@ -116,7 +125,16 @@ defmodule AeMdw.Sync.Server do
           :gen_statem.event_handler_result(state())
   @spec handle_event(:internal, internal_event(), state(), state_data()) ::
           :gen_statem.event_handler_result(state())
-  def handle_event(:cast, {:new_height, chain_height, chain_hash}, :initialized, state_data) do
+  def handle_event(:cast, :start_sync, :waiting, state_data) do
+    {:next_state, :started, state_data, @internal_check_sync}
+  end
+
+  def handle_event(:cast, {:new_height, chain_height, chain_hash}, :waiting, state_data) do
+    {:keep_state, %__MODULE__{state_data | chain_height: chain_height, chain_hash: chain_hash},
+     @internal_check_sync}
+  end
+
+  def handle_event(:cast, {:new_height, chain_height, chain_hash}, :started, state_data) do
     {:next_state, :idle,
      %__MODULE__{state_data | chain_height: chain_height, chain_hash: chain_hash},
      @internal_check_sync}
@@ -180,13 +198,6 @@ defmodule AeMdw.Sync.Server do
   def handle_event(:info, {ref, mem_hash}, {:syncing_mem, ref}, state_data) do
     new_state_data = %__MODULE__{state_data | mem_hash: mem_hash}
     {:next_state, :idle, new_state_data, @internal_check_sync}
-  end
-
-  def handle_event({:call, from}, :syncing?, state, _data) do
-    syncing? = state != :initialized and state != :stopped
-    actions = [{:reply, from, syncing?}]
-
-    {:keep_state_and_data, actions}
   end
 
   def handle_event(:cast, :restart_sync, :stopped, state_data) do

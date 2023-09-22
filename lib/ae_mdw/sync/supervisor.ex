@@ -5,6 +5,7 @@ defmodule AeMdw.Sync.Supervisor do
 
   use Supervisor
 
+  alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.Sync.MemStoreCreator
   alias AeMdw.Sync.Server
   alias AeMdw.Sync.Watcher
@@ -18,6 +19,7 @@ defmodule AeMdw.Sync.Supervisor do
   @impl true
   def init(_args) do
     children = [
+      ObjectKeys,
       MemStoreCreator,
       Server,
       Watcher,
