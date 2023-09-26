@@ -4,8 +4,8 @@ defmodule AeMdw.Db.Sync.NameTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Store
-  alias AeMdw.Db.Sync.Origin
   alias AeMdw.Db.Sync.Name
+  alias AeMdw.Db.OriginMutation
   alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.NameUpdateMutation
   alias AeMdw.Node.Db
@@ -60,8 +60,8 @@ defmodule AeMdw.Db.Sync.NameTest do
             txi_idx,
             block_index,
             timeout
-          )
-          | Origin.origin_mutations(:name_claim_tx, nil, name_hash, txi, tx_hash)
+          ),
+          OriginMutation.new(:name_claim_tx, name_hash, txi, tx_hash)
         ]
 
         assert ^mutations = Name.name_claim_mutations(tx_rec, tx_hash, block_index, txi_idx)
@@ -105,8 +105,8 @@ defmodule AeMdw.Db.Sync.NameTest do
             {txi, -1},
             block_index,
             0
-          )
-          | Origin.origin_mutations(:name_claim_tx, nil, name_hash, txi, tx_hash)
+          ),
+          OriginMutation.new(:name_claim_tx, name_hash, txi, tx_hash)
         ]
 
         assert ^mutations = Name.name_claim_mutations(tx_rec, tx_hash, block_index, {txi, -1})

@@ -8,10 +8,10 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
   alias AeMdw.AexnContracts
   alias AeMdw.Contract
   alias AeMdw.Db.ContractCreateMutation
+  alias AeMdw.Db.OriginMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Contract, as: SyncContract
-  alias AeMdw.Db.Sync.Origin
   alias AeMdw.Stats
 
   import AeMdw.AexnFixtures
@@ -47,9 +47,8 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
               block_index,
               {create_txi, -1}
             ),
-            Origin.origin_mutations(
+            OriginMutation.new(
               :contract_create_tx,
-              nil,
               contract_pk,
               create_txi,
               :crypto.strong_rand_bytes(32)
@@ -121,9 +120,8 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
           |> State.commit_mem([
             aexn_create_mutation,
             ContractCreateMutation.new(create_txi, call_rec),
-            Origin.origin_mutations(
+            OriginMutation.new(
               :contract_create_tx,
-              nil,
               contract_pk,
               create_txi,
               :crypto.strong_rand_bytes(32)
@@ -210,9 +208,8 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
               block_index,
               {create_txi, -1}
             ),
-            Origin.origin_mutations(
+            OriginMutation.new(
               :contract_create_tx,
-              nil,
               contract_pk,
               create_txi,
               :crypto.strong_rand_bytes(32)
@@ -275,7 +272,7 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
       with_mocks [
         {Contract, [:passthrough],
          [
-           is_contract?: fn ^contract_pk -> true end,
+           exists?: fn ^contract_pk -> true end,
            get_init_call_rec: fn _tx, _hash -> call_rec end
          ]},
         {AexnContracts, [:passthrough],
@@ -295,9 +292,8 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
             {height, 0},
             {create_txi, -1}
           ),
-          Origin.origin_mutations(
+          OriginMutation.new(
             :contract_create_tx,
-            nil,
             contract_pk,
             create_txi,
             :crypto.strong_rand_bytes(32)
@@ -371,9 +367,8 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
 
         mutations = [
           aexn_create_mutation,
-          Origin.origin_mutations(
+          OriginMutation.new(
             :contract_create_tx,
-            nil,
             contract_pk,
             create_txi,
             :crypto.strong_rand_bytes(32)

@@ -1,8 +1,8 @@
 defmodule AeMdw.Db.Sync.OracleTest do
   use ExUnit.Case
 
+  alias AeMdw.Db.OriginMutation
   alias AeMdw.Db.Model
-  alias AeMdw.Db.Sync.Origin
   alias AeMdw.Db.Sync.Oracle
   alias AeMdw.Db.OracleExtendMutation
   alias AeMdw.Db.OracleRegisterMutation
@@ -35,7 +35,7 @@ defmodule AeMdw.Db.Sync.OracleTest do
       {_mod, tx_rec} = :aetx.specialize_callback(aetx)
 
       mutations = [
-        Origin.origin_mutations(:oracle_register_tx, nil, pubkey, txi, tx_hash),
+        OriginMutation.new(:oracle_register_tx, pubkey, txi, tx_hash),
         OracleRegisterMutation.new(pubkey, block_index, expire, txi_idx)
       ]
 

@@ -11,13 +11,13 @@ defmodule AeMdw.Db.Sync.Transaction do
   alias AeMdw.Db.ContractCreateMutation
   alias AeMdw.Db.ContractCreateCacheMutation
   alias AeMdw.Db.Model
+  alias AeMdw.Db.OriginMutation
   alias AeMdw.Db.NameRevokeMutation
   alias AeMdw.Db.NameTransferMutation
   alias AeMdw.Db.Sync.Contract, as: SyncContract
   alias AeMdw.Db.Sync.InnerTx
   alias AeMdw.Db.Sync.Name, as: SyncName
   alias AeMdw.Db.Sync.Oracle
-  alias AeMdw.Db.Sync.Origin
   alias AeMdw.Db.WriteFieldsMutation
   alias AeMdw.Db.WriteMutation
   alias AeMdw.Db.Mutation
@@ -119,9 +119,9 @@ defmodule AeMdw.Db.Sync.Transaction do
        }) do
     contract_pk = :aect_create_tx.contract_pubkey(tx)
 
-    mutations = Origin.origin_mutations(:contract_create_tx, nil, contract_pk, txi, tx_hash)
+    origin_mutation = OriginMutation.new(:contract_create_tx, contract_pk, txi, tx_hash)
 
-    if Contract.is_contract?(contract_pk) do
+    if Contract.exists?(contract_pk) do
       call_rec = Contract.get_init_call_rec(tx, block_hash)
 
       events_mutations =
@@ -144,17 +144,15 @@ defmodule AeMdw.Db.Sync.Transaction do
           )
         end
 
-      Enum.concat([
-        mutations,
-        events_mutations,
-        [
-          aexn_create_contract_mutation,
-          ContractCreateMutation.new(txi, call_rec)
-        ]
-      ])
+      [
+        origin_mutation,
+        aexn_create_contract_mutation,
+        ContractCreateMutation.new(txi, call_rec)
+        | events_mutations
+      ]
     else
       Log.error("Contract not found=#{encode_contract(contract_pk)}}")
-      mutations
+      [origin_mutation]
     end
   end
 
@@ -209,7 +207,7 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     [
       Channels.open_mutations({block_index, {txi, -1}}, tx),
-      Origin.origin_mutations(:channel_create_tx, nil, channel_pk, txi, tx_hash)
+      OriginMutation.new(:channel_create_tx, channel_pk, txi, tx_hash)
     ]
   end
 
@@ -293,7 +291,7 @@ defmodule AeMdw.Db.Sync.Transaction do
         do: ContractCreateCacheMutation.new(contract_pk, txi)
 
     [
-      Origin.origin_mutations(:ga_attach_tx, nil, contract_pk, txi, tx_hash),
+      OriginMutation.new(:ga_attach_tx, contract_pk, txi, tx_hash),
       stat_mutation
     ]
   end

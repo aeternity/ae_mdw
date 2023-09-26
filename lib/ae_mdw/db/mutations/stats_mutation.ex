@@ -10,7 +10,6 @@ defmodule AeMdw.Db.StatsMutation do
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
-  alias AeMdw.Db.Origin
   alias AeMdw.Db.State
   alias AeMdw.Db.Sync.Oracle
   alias AeMdw.Db.Sync.ObjectKeys
@@ -129,7 +128,7 @@ defmodule AeMdw.Db.StatsMutation do
         end
       end)
 
-    all_contracts_count = Origin.count_contracts(state)
+    all_contracts_count = ObjectKeys.count_contracts(state)
 
     oracles_expired_count =
       state
