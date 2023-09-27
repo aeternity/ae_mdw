@@ -486,7 +486,8 @@ defmodule AeMdw.Names do
 
     state
     |> Collection.stream(Model.PreviousName, :backward, key_boundary, nil)
-    |> Enum.map(fn Model.previous_name(name: name) ->
+    |> Enum.map(fn previous_index ->
+      Model.previous_name(name: name) = State.fetch!(state, Model.PreviousName, previous_index)
       render_name_info(state, name, last_gen, last_micro_time, [])
     end)
   end

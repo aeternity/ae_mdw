@@ -84,21 +84,6 @@ defmodule AeMdw.Db.State do
     %__MODULE__{new_state | store: prev_store, jobs: %{}}
   end
 
-  @spec commit_db_without_async(t(), [Mutation.t()]) :: t()
-  def commit_db_without_async(%__MODULE__{store: prev_store} = state, mutations) do
-    new_state =
-      TxnDbStore.transaction(fn store ->
-        state2 = %__MODULE__{state | store: store}
-
-        mutations
-        |> List.flatten()
-        |> Enum.reject(&is_nil/1)
-        |> Enum.reduce(state2, &Mutation.execute/2)
-      end)
-
-    %__MODULE__{new_state | store: prev_store}
-  end
-
   @spec commit_db(t(), [Mutation.t()], boolean()) :: t()
   def commit_db(state, mutations, clear_mem? \\ true) do
     state2 = commit(state, mutations, clear_mem?)
