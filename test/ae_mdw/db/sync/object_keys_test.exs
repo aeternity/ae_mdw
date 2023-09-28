@@ -18,7 +18,6 @@ defmodule AeMdw.Db.Sync.ObjectKeysTest do
     :ets.delete_all_objects(:db_inactive_names)
     :ets.delete_all_objects(:db_active_oracles)
     :ets.delete_all_objects(:db_inactive_oracles)
-    :ets.delete_all_objects(:db_contracts)
 
     txn_state = State.new(%TxnDbStore{})
     ObjectKeys.put_inactive_name(txn_state, "name-i1")
@@ -31,9 +30,14 @@ defmodule AeMdw.Db.Sync.ObjectKeysTest do
     ObjectKeys.put_active_oracle(txn_state, <<15::256>>)
     ObjectKeys.put_active_oracle(txn_state, <<16::256>>)
     ObjectKeys.put_active_oracle(txn_state, <<17::256>>)
-    ObjectKeys.put_contract(txn_state, <<18::256>>)
-    ObjectKeys.put_contract(txn_state, <<19::256>>)
-    ObjectKeys.put_contract(txn_state, <<20::256>>)
+
+    State.put(State.new(), Model.TotalStat, Model.total_stat(index: 0, contracts: 3))
+
+    on_exit(fn ->
+      State.delete(State.new(), Model.TotalStat, 0)
+    end)
+
+    :ok
   end
 
   test "returns sum counting commited and memory keys" do
@@ -65,11 +69,8 @@ defmodule AeMdw.Db.Sync.ObjectKeysTest do
       |> Store.put(Model.ActiveOracle, Model.oracle(index: <<14::256>>))
       |> Store.put(Model.ActiveOracle, Model.oracle(index: <<24::256>>))
       |> Store.put(Model.Origin, Model.origin(index: {:contract_create_tx, <<18::256>>, 1_001}))
-      |> Store.put(Model.Origin, Model.origin(index: {:contract_create_tx, <<28::256>>, 1_011}))
       |> Store.put(Model.Origin, Model.origin(index: {:contract_call_tx, <<19::256>>, 1_002}))
-      |> Store.put(Model.Origin, Model.origin(index: {:contract_call_tx, <<29::256>>, 1_012}))
       |> Store.put(Model.Origin, Model.origin(index: {:ga_attach_tx, <<20::256>>, 1_003}))
-      |> Store.put(Model.Origin, Model.origin(index: {:ga_attach_tx, <<30::256>>, 1_013}))
       |> State.new()
 
     assert 1 + 1 == ObjectKeys.count_inactive_names(state)
@@ -100,12 +101,7 @@ defmodule AeMdw.Db.Sync.ObjectKeysTest do
         |> State.put(Model.InactiveOracle, Model.oracle(index: <<22::256>>))
         |> State.put(Model.ActiveOracle, Model.oracle(index: <<14::256>>))
         |> State.put(Model.ActiveOracle, Model.oracle(index: <<25::256>>))
-        |> State.put(Model.Origin, Model.origin(index: {:contract_create_tx, <<18::256>>, 1_001}))
-        |> State.put(Model.Origin, Model.origin(index: {:contract_create_tx, <<28::256>>, 1_011}))
-        |> State.put(Model.Origin, Model.origin(index: {:contract_call_tx, <<19::256>>, 1_002}))
-        |> State.put(Model.Origin, Model.origin(index: {:contract_call_tx, <<29::256>>, 1_012}))
-        |> State.put(Model.Origin, Model.origin(index: {:ga_attach_tx, <<20::256>>, 1_003}))
-        |> State.put(Model.Origin, Model.origin(index: {:ga_attach_tx, <<30::256>>, 1_013}))
+        |> State.put(Model.TotalStat, Model.total_stat(index: 1, contracts: 6))
 
       # counts only on memory
       assert 1 == ObjectKeys.count_inactive_names(txn_state)
@@ -118,9 +114,6 @@ defmodule AeMdw.Db.Sync.ObjectKeysTest do
       ObjectKeys.put_active_name(txn_state, "name-a12")
       ObjectKeys.put_inactive_oracle(txn_state, <<22::256>>)
       ObjectKeys.put_active_oracle(txn_state, <<25::256>>)
-      ObjectKeys.put_contract(txn_state, <<28::256>>)
-      ObjectKeys.put_contract(txn_state, <<29::256>>)
-      ObjectKeys.put_contract(txn_state, <<30::256>>)
     end)
 
     db_state = State.new()
@@ -130,25 +123,21 @@ defmodule AeMdw.Db.Sync.ObjectKeysTest do
     assert 2 + 1 == ObjectKeys.count_active_names(db_state)
     assert 3 + 1 == ObjectKeys.count_inactive_oracles(db_state)
     assert 4 + 1 == ObjectKeys.count_active_oracles(db_state)
-    assert 3 + 3 == ObjectKeys.count_contracts(db_state)
+    assert 6 == ObjectKeys.count_contracts(db_state)
 
     # cleanup
     State.delete(db_state, Model.InactiveName, "name-i12")
     State.delete(db_state, Model.ActiveName, "name-a12")
     State.delete(db_state, Model.InactiveOracle, <<22::256>>)
     State.delete(db_state, Model.ActiveOracle, <<25::256>>)
-    State.delete(db_state, Model.Origin, {:contract_create_tx, <<28::256>>, 1_011})
-    State.delete(db_state, Model.Origin, {:contract_call_tx, <<29::256>>, 1_012})
-    State.delete(db_state, Model.Origin, {:ga_attach_tx, <<30::256>>, 1_013})
+    State.delete(db_state, Model.TotalStat, 1)
   end
 
-  test "count performs better and stream counting" do
+  test "count performs better than stream counting" do
     # setup
     TxnDbStore.transaction(fn store ->
       Enum.reduce(1_001..11_001, State.new(store), fn i, acc ->
-        pubkey = <<i::256>>
-        ObjectKeys.put_contract(acc, pubkey)
-        State.put(acc, Model.Origin, Model.origin(index: {:contract_create_tx, pubkey, i}))
+        State.put(acc, Model.Origin, Model.origin(index: {:contract_create_tx, <<i::256>>, i}))
       end)
     end)
 
@@ -168,9 +157,7 @@ defmodule AeMdw.Db.Sync.ObjectKeysTest do
     # cleanup
     TxnDbStore.transaction(fn store ->
       Enum.reduce(1_001..11_001, State.new(store), fn i, acc ->
-        pubkey = <<i::256>>
-        :ets.delete(:db_contracts, pubkey)
-        State.delete(acc, Model.Origin, {:contract_create_tx, pubkey, i})
+        State.delete(acc, Model.Origin, {:contract_create_tx, <<i::256>>, i})
       end)
     end)
   end

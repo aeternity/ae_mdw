@@ -2,7 +2,6 @@ defmodule AeMdw.Db.Sync.Contract do
   @moduledoc """
   Saves contract indexed state for creation, calls and events.
   """
-  alias AeMdw.Db.OriginMutation
   alias :aeser_api_encoder, as: Enc
   alias AeMdw.Blocks
   alias AeMdw.Contract
@@ -16,6 +15,7 @@ defmodule AeMdw.Db.Sync.Contract do
   alias AeMdw.Db.Sync.Oracle
   alias AeMdw.Db.AexnCreateContractMutation
   alias AeMdw.Db.ContractCreateCacheMutation
+  alias AeMdw.Db.Sync.Origin, as: SyncOrigin
   alias AeMdw.Db.Sync.Name
   alias AeMdw.Db.Sync.Oracle
   alias AeMdw.Node.Db
@@ -172,8 +172,14 @@ defmodule AeMdw.Db.Sync.Contract do
             block_index,
             {call_txi, local_idx}
           ),
-          ContractCreateCacheMutation.new(contract_pk, call_txi),
-          OriginMutation.new(:contract_call_tx, contract_pk, call_txi, tx_hash)
+          ContractCreateCacheMutation.new(contract_pk, call_txi)
+          | SyncOrigin.origin_mutations(
+              :contract_call_tx,
+              nil,
+              contract_pk,
+              call_txi,
+              tx_hash
+            )
         ]
 
       {_local_idx, _fname, _tx_type, _aetx, _tx} ->

@@ -10,8 +10,8 @@ defmodule AeMdw.Db.Sync.Name do
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.NameClaimMutation
   alias AeMdw.Db.NameUpdateMutation
-  alias AeMdw.Db.OriginMutation
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.Origin
   alias AeMdw.Db.Util, as: DbUtil
   alias AeMdw.Node
   alias AeMdw.Node.Db
@@ -47,8 +47,8 @@ defmodule AeMdw.Db.Sync.Name do
         txi_idx,
         block_index,
         timeout
-      ),
-      OriginMutation.new(:name_claim_tx, name_hash, txi, tx_hash)
+      )
+      | Origin.origin_mutations(:name_claim_tx, nil, name_hash, txi, tx_hash)
     ]
   end
 

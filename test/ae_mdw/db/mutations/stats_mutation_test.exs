@@ -108,7 +108,6 @@ defmodule AeMdw.Db.StatsMutationTest do
 
   describe "execute/2" do
     test "with all_cached? = false, computes stat counting state keys" do
-      :ets.delete_all_objects(:db_contracts)
       height = 100
       mutation = StatsMutation.new(height, "", 0, 0, 0, false)
 

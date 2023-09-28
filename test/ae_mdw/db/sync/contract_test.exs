@@ -7,11 +7,12 @@ defmodule AeMdw.Db.Sync.ContractTest do
   alias AeMdw.Db.AexnCreateContractMutation
   alias AeMdw.Db.IntCallsMutation
   alias AeMdw.Db.Sync.Contract, as: SyncContract
-  alias AeMdw.Db.OriginMutation
+  alias AeMdw.Db.Sync.Origin, as: SyncOrigin
   alias AeMdw.Db.NameTransferMutation
   alias AeMdw.Db.NameUpdateMutation
   alias AeMdw.Db.OracleExtendMutation
   alias AeMdw.Db.OracleRegisterMutation
+  alias AeMdw.Db.WriteMutation
   alias AeMdw.Node.Db
 
   import AeMdw.Node.ContractEventsFixtures
@@ -161,9 +162,10 @@ defmodule AeMdw.Db.Sync.ContractTest do
 
       mutation = IntCallsMutation.new(contract_pk, call_txi, int_calls)
 
-      contract_mutation =
-        OriginMutation.new(
+      contract_mutations =
+        SyncOrigin.origin_mutations(
           :contract_call_tx,
+          nil,
           contract_pk1,
           call_txi,
           call_tx_hash
@@ -201,7 +203,7 @@ defmodule AeMdw.Db.Sync.ContractTest do
           |> List.flatten()
 
         assert mutation in mutations
-        assert contract_mutation in mutations
+        assert Enum.all?(contract_mutations, &(&1 in mutations))
       end
     end
 
@@ -360,11 +362,19 @@ defmodule AeMdw.Db.Sync.ContractTest do
                  contract_pk: ^contract_pk,
                  int_calls: [{0, "Oracle.register", ^tx_type, ^aetx, ^tx}]
                },
-               %OriginMutation{
-                 tx_type: ^tx_type,
+               %WriteMutation{
+                 table: Model.Origin,
+                 record: Model.origin(index: {^tx_type, ^pubkey, ^call_txi})
+               },
+               %WriteMutation{
+                 table: Model.RevOrigin,
+                 record: Model.rev_origin(index: {^call_txi, ^tx_type, ^pubkey})
+               },
+               %AeMdw.Db.WriteFieldMutation{
+                 pos: nil,
                  pubkey: ^pubkey,
-                 txi: ^call_txi,
-                 tx_hash: ^call_tx_hash
+                 tx_type: ^tx_type,
+                 txi: ^call_txi
                },
                %OracleRegisterMutation{oracle_pk: ^pubkey, expire: ^expire}
              ] = mutations

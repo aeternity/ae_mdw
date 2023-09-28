@@ -3,7 +3,6 @@ defmodule AeMdw.Db.Sync.Oracle do
   Synchronize mdw database with oracle chain state.
   """
 
-  alias AeMdw.Db.OriginMutation
   alias AeMdw.Blocks
   alias AeMdw.Collection
   alias AeMdw.Db.Model
@@ -13,6 +12,7 @@ defmodule AeMdw.Db.Sync.Oracle do
   alias AeMdw.Db.OracleRegisterMutation
   alias AeMdw.Db.OracleResponseMutation
   alias AeMdw.Db.State
+  alias AeMdw.Db.Sync.Origin
   alias AeMdw.Node
   alias AeMdw.Txs
   alias AeMdw.Validate
@@ -32,7 +32,7 @@ defmodule AeMdw.Db.Sync.Oracle do
     expire = height + delta_ttl
 
     [
-      OriginMutation.new(:oracle_register_tx, oracle_pk, txi, tx_hash),
+      Origin.origin_mutations(:oracle_register_tx, nil, oracle_pk, txi, tx_hash),
       OracleRegisterMutation.new(oracle_pk, block_index, expire, txi_idx)
     ]
   end
