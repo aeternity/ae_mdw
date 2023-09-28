@@ -971,6 +971,13 @@ defmodule AeMdwWeb.NameControllerTest do
             Model.AuctionBidClaim,
             Model.auction_bid_claim(index: {plain_name, i, {4, -1}})
           )
+          |> Store.put(
+            Model.PreviousName,
+            Model.previous_name(
+              index: {i, plain_name},
+              name: Model.name(index: plain_name)
+            )
+          )
         end)
         |> Store.put(Model.Block, Model.block(index: {last_gen, -1}, hash: key_hash))
         |> Store.put(Model.Block, Model.block(index: {0, 1}, hash: key_hash))
