@@ -13,7 +13,6 @@ defmodule AeMdw.Db.NameClaimMutation do
   alias AeMdw.Names
   alias AeMdw.Node.Db
   alias AeMdw.Txs
-  alias AeMdw.Util
 
   require Logger
   require Model
@@ -93,7 +92,6 @@ defmodule AeMdw.Db.NameClaimMutation do
 
     case timeout do
       0 ->
-        previous = Util.ok_nil(State.get(state, Model.InactiveName, plain_name))
         expire = Names.expire_after(height)
 
         m_name =
@@ -102,7 +100,6 @@ defmodule AeMdw.Db.NameClaimMutation do
             active: height,
             expire: expire,
             owner: owner_pk,
-            previous: previous,
             auction_timeout: 0
           )
 
@@ -115,7 +112,7 @@ defmodule AeMdw.Db.NameClaimMutation do
         state2
         |> Name.put_active(m_name)
         |> State.put(Model.NameClaim, name_claim)
-        |> Name.delete_inactive(previous)
+        |> Name.delete_inactive(plain_name)
         |> IntTransfer.fee({height, txi_idx}, :lock_name, owner_pk, txi_idx, lock_amount)
         |> State.inc_stat(:burned_in_auctions, lock_amount)
 

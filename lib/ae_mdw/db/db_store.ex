@@ -5,6 +5,9 @@ defmodule AeMdw.Db.DbStore do
   """
 
   alias AeMdw.Database
+  alias AeMdw.Db.Model
+
+  require Model
 
   @derive AeMdw.Db.Store
   defstruct []
@@ -25,6 +28,25 @@ defmodule AeMdw.Db.DbStore do
   end
 
   @spec get(t(), table(), key()) :: {:ok, record()} | :not_found
+  # Temp fix for old names format
+  def get(_store, table, key) when table in [Model.ActiveName, Model.InactiveName] do
+    case Database.get(table, key) do
+      {:ok, {:name, plain_name, active, expire, revoke, auction_timeout, owner, _previous}} ->
+        {:ok,
+         Model.name(
+           index: plain_name,
+           active: active,
+           expire: expire,
+           revoke: revoke,
+           auction_timeout: auction_timeout,
+           owner: owner
+         )}
+
+      other ->
+        other
+    end
+  end
+
   def get(_store, table, key), do: Database.get(table, key)
 
   @spec delete(t(), table(), key()) :: t()

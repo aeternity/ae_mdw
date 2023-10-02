@@ -1055,8 +1055,7 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
 
       {:name_claim_tx, tx3} = :aetx.specialize_type(aetx3)
 
-      previous_name = Model.name(index: plain_name, active: height1)
-      name = Model.name(index: plain_name, active: height2, previous: previous_name)
+      name = Model.name(index: plain_name, active: height2)
 
       store =
         empty_store()

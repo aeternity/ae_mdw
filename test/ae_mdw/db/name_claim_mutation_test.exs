@@ -38,8 +38,7 @@ defmodule AeMdw.Db.NameClaimMutationTest do
         index: plain_name,
         active: old_claim_height,
         expire: 199,
-        owner: owner_pk,
-        previous: nil
+        owner: owner_pk
       )
 
     state =

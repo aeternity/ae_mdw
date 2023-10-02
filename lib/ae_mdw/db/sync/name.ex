@@ -22,6 +22,7 @@ defmodule AeMdw.Db.Sync.Name do
 
   @type update_type() :: {:update_expiration, Blocks.height()} | :expire | :update
 
+  @typep plain_name() :: Names.plain_name()
   @typep state :: State.t()
   @typep deactivate_stat :: :names_expired | :names_revoked
 
@@ -187,12 +188,6 @@ defmodule AeMdw.Db.Sync.Name do
       owner: owner
     ) = State.fetch!(state, Model.AuctionBid, plain_name)
 
-    previous =
-      case State.get(state, Model.InactiveName, plain_name) do
-        {:ok, inactive_name} -> inactive_name
-        :not_found -> nil
-      end
-
     expire = Names.expire_after(height)
 
     m_name =
@@ -201,8 +196,7 @@ defmodule AeMdw.Db.Sync.Name do
         active: height,
         expire: expire,
         auction_timeout: height - last_bid_height,
-        owner: owner,
-        previous: previous
+        owner: owner
       )
 
     name_fee =
@@ -222,7 +216,7 @@ defmodule AeMdw.Db.Sync.Name do
     |> State.delete(Model.AuctionExpiration, {height, plain_name})
     |> State.delete(Model.AuctionOwner, {owner, plain_name})
     |> State.delete(Model.AuctionBid, plain_name)
-    |> delete_inactive(previous)
+    |> delete_inactive(plain_name)
     |> IntTransfer.fee({height, -1}, :lock_name, owner, txi_idx, name_fee)
     |> State.inc_stat(:auctions_expired)
     |> State.inc_stat(:burned_in_auctions, name_fee)
@@ -277,20 +271,23 @@ defmodule AeMdw.Db.Sync.Name do
     |> State.inc_stat(reason)
   end
 
-  @spec delete_inactive(state(), nil | Model.name()) :: state()
-  def delete_inactive(state, nil), do: state
+  @spec delete_inactive(state(), plain_name()) :: state()
+  def delete_inactive(state, plain_name) do
+    case State.get(state, Model.InactiveName, plain_name) do
+      {:ok, Model.name(active: active, owner: owner_pk) = name} ->
+        expire = Names.revoke_or_expire_height(name)
+        prev_name = Model.previous_name(index: {plain_name, active}, name: name)
 
-  def delete_inactive(
-        state,
-        Model.name(index: plain_name, owner: owner_pk) = m_name
-      ) do
-    expire = Names.revoke_or_expire_height(m_name)
+        state
+        |> State.delete(Model.InactiveName, plain_name)
+        |> State.delete(Model.InactiveNameOwner, {owner_pk, plain_name})
+        |> State.delete(Model.InactiveNameExpiration, {expire, plain_name})
+        |> State.delete(Model.InactiveNameOwnerDeactivation, {owner_pk, expire, plain_name})
+        |> State.put(Model.PreviousName, prev_name)
 
-    state
-    |> State.delete(Model.InactiveName, plain_name)
-    |> State.delete(Model.InactiveNameOwner, {owner_pk, plain_name})
-    |> State.delete(Model.InactiveNameExpiration, {expire, plain_name})
-    |> State.delete(Model.InactiveNameOwnerDeactivation, {owner_pk, expire, plain_name})
+      :not_found ->
+        state
+    end
   end
 
   defp delete_active(

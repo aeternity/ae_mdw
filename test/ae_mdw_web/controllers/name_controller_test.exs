@@ -919,8 +919,7 @@ defmodule AeMdwWeb.NameControllerTest do
           active: active_from,
           expire: expire,
           revoke: nil,
-          owner: owner_pk,
-          previous: nil
+          owner: owner_pk
         )
 
       store =
@@ -971,6 +970,13 @@ defmodule AeMdwWeb.NameControllerTest do
           |> Store.put(
             Model.AuctionBidClaim,
             Model.auction_bid_claim(index: {plain_name, i, {4, -1}})
+          )
+          |> Store.put(
+            Model.PreviousName,
+            Model.previous_name(
+              index: {i, plain_name},
+              name: Model.name(index: plain_name)
+            )
           )
         end)
         |> Store.put(Model.Block, Model.block(index: {last_gen, -1}, hash: key_hash))
@@ -2125,7 +2131,6 @@ defmodule AeMdwWeb.NameControllerTest do
             active: 100,
             expire: 200,
             owner: owner_pk,
-            previous: nil,
             auction_timeout: 0
           )
         )
