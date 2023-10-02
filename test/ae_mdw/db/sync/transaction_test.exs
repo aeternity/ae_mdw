@@ -209,7 +209,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
       with_mocks [
         {Contract, [:passthrough],
          [
-           is_contract?: fn ^contract_pk -> true end,
+           exists?: fn ^contract_pk -> true end,
            get_init_call_rec: fn _tx, _hash ->
              :aect_call.new(
                :aeser_id.create(:account, <<2::256>>),
@@ -268,7 +268,7 @@ defmodule AeMdw.Db.Sync.TransactionTest do
       with_mocks [
         {Contract, [:passthrough],
          [
-           is_contract?: fn ^contract_pk -> true end,
+           exists?: fn ^contract_pk -> true end,
            get_init_call_rec: fn _tx, _hash ->
              :aect_call.new(
                :aeser_id.create(:account, <<2::256>>),

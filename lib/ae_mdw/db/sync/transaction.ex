@@ -121,7 +121,7 @@ defmodule AeMdw.Db.Sync.Transaction do
 
     mutations = Origin.origin_mutations(:contract_create_tx, nil, contract_pk, txi, tx_hash)
 
-    if Contract.is_contract?(contract_pk) do
+    if Contract.exists?(contract_pk) do
       call_rec = Contract.get_init_call_rec(tx, block_hash)
 
       events_mutations =
