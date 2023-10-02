@@ -23,7 +23,7 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
 
   defstruct start_datetime: nil, tasks: MapSet.new()
 
-  @typep state() :: :waiting | :loading_names | :loading_oracles | :loading_contracts | :finished
+  @typep state() :: :waiting | :loading_names | :loading_oracles | :finished
   @typep state_data() :: %__MODULE__{}
   @typep cast_event() :: :start_loading
   @typep reason() :: term()
