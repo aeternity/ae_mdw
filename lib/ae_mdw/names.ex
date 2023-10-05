@@ -424,7 +424,14 @@ defmodule AeMdw.Names do
 
   defp build_history_streamer(state, plain_name, cursor) do
     fn direction ->
-      [Model.NameClaim, Model.NameUpdate, Model.NameTransfer, Model.NameRevoke, Model.NameExpired]
+      [
+        Model.AuctionBidClaim,
+        Model.NameClaim,
+        Model.NameUpdate,
+        Model.NameTransfer,
+        Model.NameRevoke,
+        Model.NameExpired
+      ]
       |> Enum.map(fn table ->
         Name.stream_nested_resource(state, table, direction, plain_name, cursor)
       end)
