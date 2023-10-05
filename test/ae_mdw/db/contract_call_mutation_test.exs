@@ -321,7 +321,7 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                Store.get(
                  store,
                  Model.AexnTransfer,
-                 {:aex9, account_pk, call_txi, <<0::256>>, amount, 0}
+                 {:aex9, account_pk, call_txi, nil, amount, 0}
                )
 
       assert 1 = Aex9.fetch_holders_count(State.new(store), contract_pk)
