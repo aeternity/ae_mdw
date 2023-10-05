@@ -63,7 +63,6 @@ defmodule Mix.Tasks.MigrateDb do
   def list_new_migrations(current_version) do
     "#{:code.priv_dir(:ae_mdw)}/#{@migrations_code_path}"
     |> Path.wildcard()
-    |> Enum.reject(&String.contains?(&1, "support"))
     |> Enum.map(fn path ->
       version =
         path

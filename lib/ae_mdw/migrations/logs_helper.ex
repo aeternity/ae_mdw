@@ -11,9 +11,9 @@ defmodule AeMdw.Migrations.LogsHelper do
   @typep optional_txi :: non_neg_integer() | nil
   @typep optional_idx :: non_neg_integer() | nil
   @typep event_boundary :: {
-    {hash(), optional_txi, optional_txi, optional_idx},
-    {hash(), optional_txi, optional_txi, optional_idx}
-  }
+           {hash(), optional_txi, optional_txi, optional_idx},
+           {hash(), optional_txi, optional_txi, optional_idx}
+         }
 
   @doc """
   Returns a list of boundaries for Model.EvtContractLog.
@@ -51,7 +51,9 @@ defmodule AeMdw.Migrations.LogsHelper do
 
   defp txi_ranges(state, evt_hash, first_txi, last_txi, max_range_len) do
     Stream.unfold(first_txi, fn
-      nil -> nil
+      nil ->
+        nil
+
       range_first ->
         case State.next(state, Model.EvtContractLog, {evt_hash, range_first, 0, 0}) do
           {:ok, {^evt_hash, next_txi, _create_txi, _idx}} ->
