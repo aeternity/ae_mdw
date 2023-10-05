@@ -202,6 +202,13 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                  {remote_pk, previous_balance, account_pk}
                )
 
+      assert {:ok, Model.aexn_transfer(contract_pk: ^remote_pk)} =
+               Store.get(
+                 store,
+                 Model.AexnTransfer,
+                 {:aex9, remote_pk, call_txi, account_pk, amount, 0}
+               )
+
       assert 1 = Aex9.fetch_holders_count(State.new(store), remote_pk)
     end
   end
@@ -308,6 +315,13 @@ defmodule AeMdw.Db.ContractCallMutationTest do
                  store,
                  Model.Aex9BalanceAccount,
                  {contract_pk, previous_balance, account_pk}
+               )
+
+      assert {:ok, Model.aexn_transfer(contract_pk: ^contract_pk)} =
+               Store.get(
+                 store,
+                 Model.AexnTransfer,
+                 {:aex9, account_pk, call_txi, <<0::256>>, amount, 0}
                )
 
       assert 1 = Aex9.fetch_holders_count(State.new(store), contract_pk)
