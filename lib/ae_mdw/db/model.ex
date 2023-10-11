@@ -798,7 +798,7 @@ defmodule AeMdw.Db.Model do
   defrecord :aexn_transfer, @aexn_transfer_defaults
 
   @type aexn_transfer_index() ::
-          {aexn_type(), pubkey(), txi(), pubkey(), amount(), non_neg_integer()}
+          {aexn_type(), pubkey(), txi(), pubkey() | nil, amount(), non_neg_integer()}
   @type aexn_transfer() ::
           record(:aexn_transfer, index: aexn_transfer_index(), contract_pk: pubkey())
 
