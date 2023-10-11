@@ -262,7 +262,7 @@ defmodule AeMdwWeb.AexnView do
       Map.put(
         %{
           sender: encode_account(sender_pk),
-          recipient: encode_account(recipient_pk),
+          recipient: recipient_pk && encode_account(recipient_pk),
           log_idx: log_idx,
           block_height: kbi,
           micro_index: mbi,

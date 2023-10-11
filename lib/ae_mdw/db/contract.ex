@@ -764,8 +764,15 @@ defmodule AeMdw.Db.Contract do
         amount: new_amount
       )
 
+    m_transfer =
+      Model.aexn_transfer(
+        index: {:aex9, from_pk, txi, nil, burn_value, log_idx},
+        contract_pk: contract_pk
+      )
+
     state
     |> State.put(Model.Aex9EventBalance, m_from)
+    |> State.put(Model.AexnTransfer, m_transfer)
     |> aex9_update_balance_account(contract_pk, from_amount, new_amount, from_pk, txi, log_idx)
     |> aex9_burn_update_holders(contract_pk, from_amount - burn_value)
     |> aex9_update_contract_balance(contract_pk, -burn_value)
@@ -787,8 +794,15 @@ defmodule AeMdw.Db.Contract do
         amount: new_amount
       )
 
+    m_transfer =
+      Model.aexn_transfer(
+        index: {:aex9, contract_pk, txi, to_pk, mint_value, log_idx},
+        contract_pk: contract_pk
+      )
+
     state
     |> State.put(Model.Aex9EventBalance, m_to)
+    |> State.put(Model.AexnTransfer, m_transfer)
     |> aex9_update_balance_account(contract_pk, to_amount, new_amount, to_pk, txi, log_idx)
     |> aex9_mint_update_holders(contract_pk, to_pk)
     |> aex9_update_contract_balance(contract_pk, mint_value)
