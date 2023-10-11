@@ -1,5 +1,20 @@
 # Changelog
 
+### [1.64.1](https://www.github.com/aeternity/ae_mdw/compare/v1.64.0...v1.64.1) (2023-10-11)
+
+
+### Bug Fixes
+
+* update holders and contract balance on init ([#1606](https://www.github.com/aeternity/ae_mdw/issues/1606)) ([ead1621](https://www.github.com/aeternity/ae_mdw/commit/ead16210b4afaf4af938944da8dcfd4c01cfa635))
+
+
+### Miscellaneous
+
+* add open auction bids to name history ([#1601](https://www.github.com/aeternity/ae_mdw/issues/1601)) ([d3f0651](https://www.github.com/aeternity/ae_mdw/commit/d3f06519cecc13a0519dc60b1fcc6265af06128b))
+* index aex9 mint and burn as transfer ([#1605](https://www.github.com/aeternity/ae_mdw/issues/1605)) ([d5bc9f0](https://www.github.com/aeternity/ae_mdw/commit/d5bc9f0c24f039eb8220a64058896d027d844ab0))
+* move previous names into separate table ([#1598](https://www.github.com/aeternity/ae_mdw/issues/1598)) ([f9c0116](https://www.github.com/aeternity/ae_mdw/commit/f9c011613a0906334621e52877f29844a63cddf5))
+* offloads app startup by async keys loading ([#1596](https://www.github.com/aeternity/ae_mdw/issues/1596)) ([cb07826](https://www.github.com/aeternity/ae_mdw/commit/cb07826e2f0d7b384fb5c3bd069ae0e0eb99ae75))
+
 ## [1.64.0](https://www.github.com/aeternity/ae_mdw/compare/v1.63.0...v1.64.0) (2023-09-18)
 
 
