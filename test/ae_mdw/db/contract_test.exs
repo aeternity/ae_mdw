@@ -1,6 +1,7 @@
 defmodule AeMdw.Db.ContractTest do
   use ExUnit.Case, async: false
 
+  alias AeMdw.Aex9
   alias AeMdw.Db.Contract
   alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
@@ -612,6 +613,11 @@ defmodule AeMdw.Db.ContractTest do
 
       assert {:ok, Model.aex9_initial_supply(amount: 6_000_000)} =
                State.get(state, Model.Aex9InitialSupply, contract_pk)
+
+      assert Model.aex9_contract_balance(amount: 6_000_000) =
+               State.fetch!(state, Model.Aex9ContractBalance, contract_pk)
+
+      assert 2 == Aex9.fetch_holders_count(state, contract_pk)
     end
   end
 
