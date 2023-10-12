@@ -246,7 +246,9 @@ defmodule AeMdw.Stats do
 
   defp build_statistics_streamer(state, tag, filters, _scope, cursor) do
     interval_by = Map.get(filters, :interval_by, :day)
-    key_boundary = {{tag, interval_by, Util.min_int()}, {tag, interval_by, Util.max_int()}}
+    min_date = filters |> Map.get(:min_start_date) |> to_interval(interval_by, Util.min_int())
+    max_date = filters |> Map.get(:max_start_date) |> to_interval(interval_by, Util.max_int())
+    key_boundary = {{tag, interval_by, min_date}, {tag, interval_by, max_date}}
 
     cursor =
       case cursor do
@@ -309,7 +311,18 @@ defmodule AeMdw.Stats do
     end
   end
 
+  defp convert_param({"min_start_date", val}), do: convert_date(:min_start_date, val)
+
+  defp convert_param({"max_start_date", val}), do: convert_date(:max_start_date, val)
+
   defp convert_param({key, val}), do: {:error, ErrInput.Query.exception(value: "#{key}=#{val}")}
+
+  defp convert_date(key, val) do
+    case Date.from_iso8601(val) do
+      {:ok, date} -> {:ok, {key, date}}
+      {:error, _reason} -> {:error, ErrInput.Query.exception(value: "#{key}=#{val}")}
+    end
+  end
 
   defp serialize_statistics_cursor(nil), do: nil
 
@@ -490,5 +503,24 @@ defmodule AeMdw.Stats do
     |> DateTime.from_unix!()
     |> DateTime.to_date()
     |> Date.to_iso8601()
+  end
+
+  defp to_interval(nil, _interval_by, default), do: default
+
+  defp to_interval(date, interval_by, _default) do
+    seconds = date |> DateTime.new!(Time.new!(0, 0, 0)) |> DateTime.to_unix()
+    day_start = div(seconds, @seconds_per_day)
+
+    case interval_by do
+      :day ->
+        day_start
+
+      :week ->
+        div(day_start, 7)
+
+      :month ->
+        %DateTime{year: year, month: month} = DateTime.from_unix!(seconds)
+        (year - @start_unix) * 12 + month - 1
+    end
   end
 end
