@@ -312,6 +312,35 @@ defmodule AeMdwWeb.StatsControllerTest do
                |> get(prev_url)
                |> json_response(200)
     end
+
+    test "it returns the count of blocks filtered by a min/max date", %{conn: conn, store: store} do
+      st1_index = {{:blocks, :all}, :day, 0}
+      st2_index = {{:blocks, :all}, :day, 1}
+      st3_index = {{:blocks, :all}, :day, 2}
+      st4_index = {{:blocks, :all}, :day, 3}
+
+      store =
+        store
+        |> Store.put(Model.Statistic, Model.statistic(index: st1_index, count: 1))
+        |> Store.put(Model.Statistic, Model.statistic(index: st2_index, count: 2))
+        |> Store.put(Model.Statistic, Model.statistic(index: st3_index, count: 3))
+        |> Store.put(Model.Statistic, Model.statistic(index: st4_index, count: 4))
+
+      conn = with_store(conn, store)
+
+      assert %{"prev" => nil, "data" => [st1, st2], "next" => nil} =
+               conn
+               |> get("/v3/statistics/blocks",
+                 limit: 2,
+                 min_start_date: "1970-01-02",
+                 max_start_date: "1970-01-03",
+                 direction: "forward"
+               )
+               |> json_response(200)
+
+      assert %{"start_date" => "1970-01-02", "count" => 2} = st1
+      assert %{"start_date" => "1970-01-03", "count" => 3} = st2
+    end
   end
 
   test "when interval_by = week, it returns the count of blocks for the latest weekly periods",
