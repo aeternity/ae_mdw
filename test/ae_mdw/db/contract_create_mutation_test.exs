@@ -19,46 +19,25 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
   require Model
 
   describe "execute" do
-    test "creates contract having aex9 log", %{store: store} do
+    test "creates contract having aex9 log" do
       contract_pk = :crypto.strong_rand_bytes(32)
-      meta_info = {"aex9t", "AEX9t", 18}
 
-      with_mocks [
-        {
-          AexnContracts,
-          [:passthrough],
-          call_meta_info: fn _type, ^contract_pk, <<0::256>> -> {:ok, meta_info} end
-        }
-      ] do
-        {height, _mbi} = block_index = {492_393, 0}
-        create_txi = Enum.random(10_000_000..99_999_999)
-        call_rec1 = call_rec("transfer", contract_pk, height, contract_pk)
+      {height, _mbi} = {492_393, 0}
+      create_txi = Enum.random(10_000_000..99_999_999)
+      call_rec1 = call_rec("transfer", contract_pk, height, contract_pk)
 
-        put_aex9_info(contract_pk)
+      state1 =
+        State.put(
+          empty_state(),
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {create_txi, -1})
+        )
 
-        state1 =
-          store
-          |> State.new()
-          |> State.commit_mem([
-            ContractCreateMutation.new(create_txi, call_rec1),
-            SyncContract.aexn_create_contract_mutation(
-              contract_pk,
-              <<0::256>>,
-              block_index,
-              {create_txi, -1}
-            ),
-            Origin.origin_mutations(
-              :contract_create_tx,
-              nil,
-              contract_pk,
-              create_txi,
-              :crypto.strong_rand_bytes(32)
-            )
-          ])
+      state2 =
+        ContractCreateMutation.execute(ContractCreateMutation.new(create_txi, call_rec1), state1)
 
-        assert 1 == State.get_stat(state1, :contracts_created, 0)
-        assert {:ok, ^create_txi} = State.cache_get(state1, :ct_create_sync_cache, contract_pk)
-      end
+      assert 1 == State.get_stat(state2, :contracts_created, 0)
+      assert {:ok, ^create_txi} = State.cache_get(state2, :ct_create_sync_cache, contract_pk)
     end
 
     test "creates contract having aex9 balances", %{store: store} do
@@ -119,15 +98,15 @@ defmodule AeMdw.Db.ContractCreateMutationTest do
           store
           |> State.new()
           |> State.commit_mem([
-            aexn_create_mutation,
-            ContractCreateMutation.new(create_txi, call_rec),
             Origin.origin_mutations(
               :contract_create_tx,
               nil,
               contract_pk,
               create_txi,
               :crypto.strong_rand_bytes(32)
-            )
+            ),
+            aexn_create_mutation,
+            ContractCreateMutation.new(create_txi, call_rec)
           ])
 
         m_balance1 =

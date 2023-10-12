@@ -3,14 +3,13 @@ defmodule AeMdw.Db.ContractTest do
 
   alias AeMdw.Aex9
   alias AeMdw.Db.Contract
-  alias AeMdw.Db.MemStore
   alias AeMdw.Db.Model
-  alias AeMdw.Db.NullStore
   alias AeMdw.Db.State
   alias AeMdw.Stats
 
   import AeMdw.Node.AexnEventFixtures, only: [aexn_event_hash: 1]
   import AeMdw.Node.ContractCallFixtures, only: [call_rec: 3, call_rec: 5]
+  import AeMdw.TestUtil, only: [empty_state: 0]
 
   require Model
 
@@ -46,9 +45,7 @@ defmodule AeMdw.Db.ContractTest do
       create_txi = call_txi - 1
 
       state =
-        NullStore.new()
-        |> MemStore.new()
-        |> State.new()
+        empty_state()
         |> State.cache_put(:ct_create_sync_cache, contract_pk, create_txi)
         |> Contract.logs_write(create_txi, call_txi, call_rec)
 
@@ -128,9 +125,7 @@ defmodule AeMdw.Db.ContractTest do
       remote_txi = call_txi - 2
 
       state =
-        NullStore.new()
-        |> MemStore.new()
-        |> State.new()
+        empty_state()
         |> State.cache_put(:ct_create_sync_cache, contract_pk, create_txi)
         |> State.cache_put(:ct_create_sync_cache, remote_pk, remote_txi)
         |> Contract.logs_write(create_txi, call_txi, call_rec)
@@ -191,7 +186,7 @@ defmodule AeMdw.Db.ContractTest do
       assert State.exists?(state, Model.IdxContractLog, {call_txi, 1, create_txi})
     end
 
-    test "does not update aex9 event balance on contract creation" do
+    test "does not update aex9 event balance on contract create transaction" do
       contract_pk = :crypto.strong_rand_bytes(32)
       account_pk1 = :crypto.strong_rand_bytes(32)
       account_pk2 = :crypto.strong_rand_bytes(32)
@@ -230,10 +225,12 @@ defmodule AeMdw.Db.ContractTest do
       AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
       state =
-        NullStore.new()
-        |> MemStore.new()
-        |> State.new()
+        empty_state()
         |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
+        |> State.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {txi, -1})
+        )
         |> Contract.logs_write(txi, txi, call_rec)
 
       assert :not_found == State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk1})
@@ -241,6 +238,62 @@ defmodule AeMdw.Db.ContractTest do
 
       refute :not_found ==
                State.get(state, Model.AexnTransfer, {:aex9, account_pk1, txi, account_pk2, 30, 3})
+    end
+
+    test "does not update aex9 event balance on contract created by event" do
+      contract_pk1 = :crypto.strong_rand_bytes(32)
+      contract_pk2 = :crypto.strong_rand_bytes(32)
+      account_pk1 = :crypto.strong_rand_bytes(32)
+      account_pk2 = :crypto.strong_rand_bytes(32)
+      height = Enum.random(100_000..999_999)
+      create_txi1 = Enum.random(100_000_000..999_999_999)
+      txi = create_txi1 + 1
+      create_txi2 = txi
+
+      call_rec =
+        call_rec("logs", contract_pk1, height, nil, [
+          {
+            contract_pk2,
+            [aexn_event_hash(:mint), account_pk1, <<2_000_000::256>>],
+            ""
+          },
+          {
+            contract_pk2,
+            [aexn_event_hash(:transfer), account_pk1, account_pk2, <<1_000_000::256>>],
+            ""
+          }
+        ])
+
+      functions =
+        AeMdw.Node.aex9_signatures()
+        |> Enum.into(%{}, fn {hash, type} -> {hash, {nil, type, nil}} end)
+
+      type_info = {:fcode, functions, nil, nil}
+      AeMdw.EtsCache.put(AeMdw.Contract, contract_pk2, {type_info, nil, nil})
+
+      state =
+        empty_state()
+        |> State.cache_put(:ct_create_sync_cache, contract_pk1, create_txi1)
+        |> State.cache_put(:ct_create_sync_cache, contract_pk2, create_txi2)
+        |> State.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk1}, txi_idx: {create_txi1, -1})
+        )
+        |> State.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk2}, txi_idx: {create_txi2, -1})
+        )
+        |> Contract.logs_write(create_txi1, txi, call_rec)
+
+      assert :not_found == State.get(state, Model.Aex9EventBalance, {contract_pk2, account_pk1})
+      assert :not_found == State.get(state, Model.Aex9EventBalance, {contract_pk2, account_pk2})
+
+      refute :not_found ==
+               State.get(
+                 state,
+                 Model.AexnTransfer,
+                 {:aex9, account_pk1, txi, account_pk2, 1_000_000, 1}
+               )
     end
 
     test "initializes aex9 contract balance and counts logs" do
@@ -276,10 +329,12 @@ defmodule AeMdw.Db.ContractTest do
       AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
       state =
-        NullStore.new()
-        |> MemStore.new()
-        |> State.new()
+        empty_state()
         |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
+        |> State.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {txi, -1})
+        )
         |> Contract.logs_write(txi, txi + 1, call_rec)
 
       assert Model.aex9_contract_balance(amount: 700) =
@@ -315,12 +370,22 @@ defmodule AeMdw.Db.ContractTest do
       txi = Enum.random(100_000_000..999_999_999)
 
       state =
-        NullStore.new()
-        |> MemStore.new()
-        |> State.new()
-        |> State.cache_put(:ct_create_sync_cache, contract_pk, txi - 1)
-        |> State.cache_put(:ct_create_sync_cache, remote_pk1, txi)
-        |> State.cache_put(:ct_create_sync_cache, remote_pk2, txi)
+        empty_state()
+        |> State.cache_put(:ct_create_sync_cache, contract_pk, txi - 2)
+        |> State.cache_put(:ct_create_sync_cache, remote_pk1, txi - 1)
+        |> State.cache_put(:ct_create_sync_cache, remote_pk2, txi - 1)
+        |> State.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {txi - 2, -1})
+        )
+        |> State.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, remote_pk1}, txi_idx: {txi - 1, -1})
+        )
+        |> State.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, remote_pk2}, txi_idx: {txi - 1, -1})
+        )
         |> Contract.logs_write(txi - 1, txi, call_rec)
 
       assert {:ok, Model.aex9_event_balance(amount: ^mint_amount)} =
@@ -359,10 +424,12 @@ defmodule AeMdw.Db.ContractTest do
       AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
       state =
-        NullStore.new()
-        |> MemStore.new()
-        |> State.new()
+        empty_state()
         |> State.cache_put(:ct_create_sync_cache, contract_pk, txi - 1)
+        |> State.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {txi - 1, -1})
+        )
         |> Contract.logs_write(txi - 1, txi, call_rec)
 
       assert {:ok, Model.aex9_event_balance(amount: -2_000_000)} =
@@ -414,9 +481,11 @@ defmodule AeMdw.Db.ContractTest do
       create_txi = txi - 1
 
       state =
-        NullStore.new()
-        |> MemStore.new()
-        |> State.new()
+        empty_state()
+        |> State.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {create_txi, -1})
+        )
         |> State.cache_put(:ct_create_sync_cache, contract_pk, create_txi)
 
       {state, _txi} =
@@ -467,9 +536,11 @@ defmodule AeMdw.Db.ContractTest do
       AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
       state =
-        NullStore.new()
-        |> MemStore.new()
-        |> State.new()
+        empty_state()
+        |> State.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {txi, -1})
+        )
         |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
         |> Contract.logs_write(txi, txi, call_rec)
 
@@ -551,9 +622,7 @@ defmodule AeMdw.Db.ContractTest do
       AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
       state =
-        NullStore.new()
-        |> MemStore.new()
-        |> State.new()
+        empty_state()
         |> State.cache_put(:ct_create_sync_cache, contract_pk, txi)
         |> State.put(Model.AexnContract, Model.aexn_contract(index: {:aex141, contract_pk}))
         |> Contract.logs_write(txi, txi, call_rec)
@@ -591,10 +660,12 @@ defmodule AeMdw.Db.ContractTest do
       AeMdw.EtsCache.put(AeMdw.Contract, contract_pk, {type_info, nil, nil})
 
       state =
-        NullStore.new()
-        |> MemStore.new()
-        |> State.new()
+        empty_state()
         |> State.cache_put(:ct_create_sync_cache, contract_pk, create_txi)
+        |> State.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, contract_pk}, txi_idx: {create_txi, -1})
+        )
         |> Contract.logs_write(create_txi, txi, call_rec)
 
       assert {:ok, Model.aex9_event_balance(txi: ^txi, log_idx: 0, amount: 1_000_000)} =

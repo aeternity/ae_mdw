@@ -22,6 +22,7 @@ defmodule AeMdw.Db.Contract do
   require Record
 
   import AeMdwWeb.Helpers.AexnHelper, only: [sort_field_truncate: 1]
+  import AeMdw.Util.Encoding, only: [encode_contract: 1]
 
   @typep pubkey :: Db.pubkey()
   @typep state :: State.t()
@@ -266,8 +267,9 @@ defmodule AeMdw.Db.Contract do
 
       cond do
         aex9_contract_pk != nil ->
-          # for parent contracts on contract creation the balance is updated via dry-run to get minted tokens without events
-          update_balance? = not (addr == contract_pk and create_txi == txi)
+          # for parent contracts on contract creation or for child contracts on contract calls,
+          # the balance is updated via dry-run to get minted tokens without events
+          update_balance? = not is_contract_creation?(state, addr, txi)
 
           state2
           |> SyncStats.increment_aex9_logs(contract_pk)
@@ -886,6 +888,17 @@ defmodule AeMdw.Db.Contract do
     case State.get(state, Model.Aex9EventBalance, {contract_pk, account_pk}) do
       {:ok, m_balance} -> m_balance
       :not_found -> Model.aex9_event_balance(index: {contract_pk, account_pk}, amount: 0)
+    end
+  end
+
+  defp is_contract_creation?(state, contract_pk, txi) do
+    case State.get(state, Model.AexnContract, {:aex9, contract_pk}) do
+      {:ok, Model.aexn_contract(txi_idx: {contract_txi, _idx})} ->
+        contract_txi == txi
+
+      :not_found ->
+        Log.error("[is_contract_creation?] Contract #{encode_contract(contract_pk)} not found")
+        false
     end
   end
 end
