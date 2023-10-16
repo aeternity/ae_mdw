@@ -9,7 +9,10 @@ defmodule AeMdw.Application do
   Then it starts the supervision tree for the Async tasks, Websocket broadcasting and API endpoints.
   """
   alias AeMdw.Contract
+  alias AeMdw.Db.HardforkPresets
   alias AeMdw.Db.Model
+  alias AeMdw.Db.RocksDb
+  alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.EtsCache
   alias AeMdw.Extract
   alias AeMdw.NodeHelper
@@ -17,7 +20,8 @@ defmodule AeMdw.Application do
   alias AeMdw.Util
   alias AeMdwWeb.Websocket.BroadcasterCache
   alias AeMdw.Sync.MutationsCache
-  alias AeMdw.Db.Sync.ObjectKeys
+  alias AeMdw.Sync.Server, as: SyncServer
+  alias AeMdw.Sync.SyncingQueue
 
   require Model
 
@@ -40,7 +44,7 @@ defmodule AeMdw.Application do
     init(:formatters)
 
     persist = Application.get_env(:aecore, :persist, true)
-    :ok = AeMdw.Db.RocksDb.open(!persist)
+    :ok = RocksDb.open(!persist)
 
     children = [
       AeMdw.APM.Telemetry,
@@ -218,7 +222,7 @@ defmodule AeMdw.Application do
   end
 
   def start_phase(:hardforks_presets, _start_type, []) do
-    AeMdw.Db.HardforkPresets.import_account_presets()
+    HardforkPresets.import_account_presets()
     :ok
   end
 
@@ -228,7 +232,10 @@ defmodule AeMdw.Application do
 
   def start_phase(:start_sync, _start_type, []) do
     if Application.fetch_env!(:ae_mdw, :sync) do
-      Watcher.start_sync()
+      SyncingQueue.enqueue(fn ->
+        SyncServer.start_sync()
+        Watcher.start_sync()
+      end)
     end
 
     :ok
@@ -236,7 +243,7 @@ defmodule AeMdw.Application do
 
   @impl Application
   def stop(_state) do
-    :ok = AeMdw.Db.RocksDb.close()
+    :ok = RocksDb.close()
   end
 
   # Tell Phoenix to update the endpoint configuration whenever the application is updated.

@@ -8,11 +8,6 @@ defmodule AeMdw.Sync.Server do
                    ┌───────────┐
                    |  waiting  |
                    └─────┬─────┘
-                         │ :start
-                         ▼
-                   ┌───────────┐
-                   │  started  │
-                   └─────┬─────┘
                          │ new_height(h)
                          ├──────────────────────────────┐
                          │                              │
@@ -55,7 +50,6 @@ defmodule AeMdw.Sync.Server do
   @typep hash() :: Blocks.block_hash()
   @typep state() ::
            :waiting
-           | :started
            | :idle
            | :stopped
            | {:syncing_db, reference()}
@@ -126,17 +120,11 @@ defmodule AeMdw.Sync.Server do
   @spec handle_event(:internal, internal_event(), state(), state_data()) ::
           :gen_statem.event_handler_result(state())
   def handle_event(:cast, :start_sync, :waiting, state_data) do
-    {:next_state, :started, state_data, @internal_check_sync}
+    {:next_state, :idle, state_data}
   end
 
   def handle_event(:cast, {:new_height, chain_height, chain_hash}, :waiting, state_data) do
     {:keep_state, %__MODULE__{state_data | chain_height: chain_height, chain_hash: chain_hash},
-     @internal_check_sync}
-  end
-
-  def handle_event(:cast, {:new_height, chain_height, chain_hash}, :started, state_data) do
-    {:next_state, :idle,
-     %__MODULE__{state_data | chain_height: chain_height, chain_hash: chain_hash},
      @internal_check_sync}
   end
 

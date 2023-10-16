@@ -8,6 +8,7 @@ defmodule Mix.Tasks.MigrateDb do
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Log
+  alias AeMdw.Sync.SyncingQueue
 
   require Model
 
@@ -16,10 +17,6 @@ defmodule Mix.Tasks.MigrateDb do
   @version_len 14
 
   @migrations_code_path "migrations/*.ex"
-
-  # ignore for Code.compile_file/1
-  @dialyzer {:no_return, run: 1}
-  @dialyzer {:no_return, apply_migration!: 2}
 
   def run(from_startup?) when is_boolean(from_startup?), do: run([to_string(from_startup?)])
 
@@ -87,7 +84,19 @@ defmodule Mix.Tasks.MigrateDb do
     Log.info("applying version #{version} with #{module}...")
     begin = DateTime.utc_now()
 
-    {:ok, total_count} = module.run(state, from_startup?)
+    {:ok, total_count} =
+      case module.run(state, from_startup?) do
+        {:ok, total_count} ->
+          {:ok, total_count}
+
+        {:async, async_migrations} ->
+          count =
+            async_migrations
+            |> Stream.each(&SyncingQueue.push(&1))
+            |> Enum.count()
+
+          {:ok, count}
+      end
 
     duration = DateTime.diff(DateTime.utc_now(), begin)
     Log.info("total #{total_count} in #{duration} seconds")
