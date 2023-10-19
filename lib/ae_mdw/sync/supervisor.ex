@@ -5,9 +5,9 @@ defmodule AeMdw.Sync.Supervisor do
 
   use Supervisor
 
-  alias AeMdw.Db.Sync.ObjectKeys
   alias AeMdw.Sync.MemStoreCreator
   alias AeMdw.Sync.Server
+  alias AeMdw.Sync.SyncingQueue
   alias AeMdw.Sync.Watcher
   alias AeMdw.Sync.AsyncStoreServer
 
@@ -19,9 +19,9 @@ defmodule AeMdw.Sync.Supervisor do
   @impl true
   def init(_args) do
     children = [
-      ObjectKeys,
       MemStoreCreator,
       Server,
+      SyncingQueue,
       Watcher,
       AsyncStoreServer,
       {Task.Supervisor, name: Server.task_supervisor()}
