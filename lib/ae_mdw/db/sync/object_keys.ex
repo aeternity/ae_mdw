@@ -8,8 +8,6 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
   is performed in constant time by table sizes.
   """
 
-  use GenStateMachine
-
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State

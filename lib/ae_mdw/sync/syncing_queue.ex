@@ -49,6 +49,8 @@ defmodule AeMdw.Sync.SyncingQueue do
   end
 
   @impl true
+  def handle_cast(:complete, {[], _task_ref}), do: {:noreply, {[], nil}}
+
   def handle_cast(:complete, {queue, _task_ref}) do
     new_state =
       {queue, nil}
