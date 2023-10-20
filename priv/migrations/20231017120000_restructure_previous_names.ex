@@ -1,5 +1,4 @@
 defmodule AeMdw.Migrations.RestructurePreviousNames do
-  # credo:disable-for-this-file
   @moduledoc """
   Index aexn contracts by creation.
   """
@@ -42,25 +41,30 @@ defmodule AeMdw.Migrations.RestructurePreviousNames do
     )
   end
 
-  @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
+  @spec run(State.t(), boolean()) :: {:async, Enumerable.t()}
   def run(state, _from_start?) do
-    count =
+    tasks =
       [
         Model.ActiveName,
         Model.InactiveName
       ]
-      |> Enum.map(fn table ->
-        state
-        |> Collection.stream(table, nil)
-        |> Stream.map(&{&1, table})
-      end)
-      |> Collection.merge(:forward)
-      |> Stream.map(fn {plain_name, table} -> State.fetch!(state, table, plain_name) end)
-      |> Stream.map(fn
-        Model.name() ->
-          []
+      |> Enum.map(fn table -> fn -> restructure_names(state, table) end end)
 
-        name(previous: previous) ->
+    {:async, tasks}
+  end
+
+  defp restructure_names(state, table) do
+    state
+    |> Collection.stream(table, nil)
+    |> Stream.map(fn plain_name ->
+      {State.fetch!(state, table, plain_name), table}
+    end)
+    |> Stream.map(fn
+      {Model.name(), _table} ->
+        []
+
+      {name(previous: previous) = name, table} ->
+        previous_mutations =
           previous
           |> Stream.unfold(fn
             nil ->
@@ -76,15 +80,13 @@ defmodule AeMdw.Migrations.RestructurePreviousNames do
               {prev_name, previous}
           end)
           |> Enum.map(&WriteMutation.new(Model.PreviousName, &1))
-      end)
-      |> Stream.chunk_every(1_000)
-      |> Stream.map(fn mutations ->
-        _new_state = State.commit(state, mutations)
 
-        length(mutations)
-      end)
-      |> Enum.sum()
-
-    {:ok, count}
+        [WriteMutation.new(table, transform_name(name)) | previous_mutations]
+    end)
+    |> Stream.chunk_every(1_000)
+    |> Stream.map(fn mutations ->
+      fn -> State.commit(state, mutations) end
+    end)
+    |> Stream.run()
   end
 end
