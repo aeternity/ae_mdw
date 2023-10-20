@@ -194,7 +194,7 @@ defmodule AeMdwWeb.AexnView do
   @spec contract_transfer_to_map(
           State.t(),
           Model.aexn_type(),
-          :from | :to,
+          :from | :to | nil,
           contract_transfer_key(),
           boolean()
         ) ::
@@ -218,6 +218,20 @@ defmodule AeMdwWeb.AexnView do
         aexn_type,
         :to,
         {_create_txi, recipient_pk, call_txi, sender_pk, token_id, log_idx},
+        v3?
+      ) do
+    do_transfer_to_map(
+      state,
+      {aexn_type, sender_pk, call_txi, recipient_pk, token_id, log_idx},
+      v3?
+    )
+  end
+
+  def contract_transfer_to_map(
+        state,
+        aexn_type,
+        nil,
+        {_create_txi, call_txi, sender_pk, recipient_pk, token_id, log_idx},
         v3?
       ) do
     do_transfer_to_map(

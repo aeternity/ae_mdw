@@ -68,6 +68,10 @@ defmodule AeMdwWeb.AexnTransferController do
     contract_transfers_reply(conn, contract_id, {:to, recipient_id}, true)
   end
 
+  def aex9_contract_transfers(conn, %{"contract_id" => contract_id, "account" => account_id}) do
+    contract_transfers_reply(conn, contract_id, {nil, account_id}, true)
+  end
+
   def aex9_contract_transfers(_conn, %{"contract_id" => _contract_id}) do
     {:error, {ErrInput.Query, "sender or recipient param is required"}}
   end
