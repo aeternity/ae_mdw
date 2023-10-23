@@ -17,19 +17,22 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
   @aex141_pk2 :crypto.strong_rand_bytes(32)
   @aex9_pk1 :crypto.strong_rand_bytes(32)
   @aex9_pk2 :crypto.strong_rand_bytes(32)
+  @aex9_pk3 :crypto.strong_rand_bytes(32)
   @contracts [
     encode_contract(@aex141_pk1),
     encode_contract(@aex141_pk2),
     encode_contract(@aex9_pk1),
-    encode_contract(@aex9_pk2)
+    encode_contract(@aex9_pk2),
+    encode_contract(@aex9_pk3)
   ]
 
+  @account_pk :crypto.strong_rand_bytes(32)
   @from_pk1 :crypto.strong_rand_bytes(32)
   @from_pk2 :crypto.strong_rand_bytes(32)
   @to_pk1 :crypto.strong_rand_bytes(32)
   @to_pk2 :crypto.strong_rand_bytes(32)
-  @senders [encode_account(@from_pk1), encode_account(@from_pk2)]
-  @recipients [encode_account(@to_pk1), encode_account(@to_pk2)]
+  @senders [encode_account(@from_pk1), encode_account(@from_pk2), encode_account(@account_pk)]
+  @recipients [encode_account(@to_pk1), encode_account(@to_pk2), encode_account(@account_pk)]
 
   @default_limit 10
   @aexn_type_sample 1_000
@@ -45,42 +48,66 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       |> Kernel.++(List.duplicate(:aex141, @aexn_type_sample))
       |> Enum.with_index()
       |> Enum.reduce(empty_store(), fn {aexn_type, i}, store ->
-        {from_pk, to_pk, contract_pk, create_txi} =
+        {from_pk, to_pk, contract_pk} =
           cond do
             i <= 20 or (i > @aexn_type_sample and i <= @aexn_type_sample + 20) ->
               if aexn_type == :aex141 do
-                {@from_pk1, @to_pk1, @aex141_pk1, 10_000_001}
+                {@from_pk1, @to_pk1, @aex141_pk1}
               else
-                {@from_pk1, @to_pk1, @aex9_pk1, 10_000_002}
+                {@from_pk1, @to_pk1, @aex9_pk1}
               end
 
             i <= 40 or (i > @aexn_type_sample and i <= @aexn_type_sample + 40) ->
               if aexn_type == :aex141 do
-                {@from_pk1, @to_pk2, @aex141_pk2, 10_000_003}
+                {@from_pk1, @to_pk2, @aex141_pk2}
               else
-                {@from_pk1, @to_pk2, @aex9_pk2, 10_000_004}
+                {@from_pk1, @to_pk2, @aex9_pk2}
               end
 
             i <= 60 or (i > @aexn_type_sample and i <= @aexn_type_sample + 60) ->
               if aexn_type == :aex141 do
-                {@from_pk2, @to_pk1, @aex141_pk1, 10_000_001}
+                {@from_pk2, @to_pk1, @aex141_pk1}
               else
-                {@from_pk2, @to_pk1, @aex9_pk1, 10_000_002}
+                {@from_pk2, @to_pk1, @aex9_pk1}
               end
 
             i <= 80 or (i > @aexn_type_sample and i <= @aexn_type_sample + 80) ->
               if aexn_type == :aex141 do
-                {@from_pk2, @to_pk2, @aex141_pk2, 10_000_003}
+                {@from_pk2, @to_pk2, @aex141_pk2}
               else
-                {@from_pk2, @to_pk2, @aex9_pk2, 10_000_004}
+                {@from_pk2, @to_pk2, @aex9_pk2}
+              end
+
+            i <= 100 or (i > @aexn_type_sample and i <= @aexn_type_sample + 100) ->
+              if aexn_type == :aex141 do
+                {@from_pk1, @to_pk1, @aex141_pk1}
+              else
+                {@account_pk, @to_pk1, @aex9_pk3}
+              end
+
+            i <= 120 or (i > @aexn_type_sample and i <= @aexn_type_sample + 120) ->
+              if aexn_type == :aex141 do
+                {@from_pk1, @to_pk1, @aex141_pk1}
+              else
+                {@from_pk1, @account_pk, @aex9_pk3}
               end
 
             true ->
               {:crypto.strong_rand_bytes(32), :crypto.strong_rand_bytes(32),
-               :crypto.strong_rand_bytes(32), 10_000_005}
+               :crypto.strong_rand_bytes(32)}
           end
 
-        txi = Enum.random(@txi_range)
+        create_txi =
+          case contract_pk do
+            @aex141_pk1 -> 10_000_001
+            @aex9_pk1 -> 10_000_002
+            @aex141_pk2 -> 10_000_003
+            @aex9_pk2 -> 10_000_004
+            @aex9_pk3 -> 10_000_005
+            _other -> 10_000_006
+          end
+
+        txi = 10_000_100 + i
 
         value =
           if aexn_type == :aex9,
@@ -344,6 +371,108 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
       assert %{"error" => ^error_msg} =
                conn
                |> get("/v2/aex9/transfers/from-to/#{invalid_id}/#{encode_account(@to_pk1)}")
+               |> json_response(400)
+    end
+  end
+
+  describe "aex9_contract_transfers" do
+    test "gets transfers sorted by desc txi", %{conn: conn, store: store} do
+      contract_id = encode_contract(@aex9_pk3)
+      account_id = encode_account(@account_pk)
+
+      assert %{"data" => aex9_transfers, "next" => next} =
+               conn
+               |> with_store(store)
+               |> get("/v3/aex9/#{contract_id}/transfers", account: account_id)
+               |> json_response(200)
+
+      assert @default_limit = length(aex9_transfers)
+      assert ^aex9_transfers = Enum.sort_by(aex9_transfers, & &1["call_txi"], :desc)
+
+      assert Enum.all?(
+               aex9_transfers,
+               &aex9_valid_account_transfer?(account_id, &1, contract_id)
+             )
+
+      assert %{"data" => next_aex9_transfers, "prev" => prev} =
+               conn |> with_store(store) |> get(next) |> json_response(200)
+
+      assert @default_limit = length(next_aex9_transfers)
+      assert ^next_aex9_transfers = Enum.sort_by(next_aex9_transfers, & &1["call_txi"], :desc)
+      assert List.first(next_aex9_transfers)["call_txi"] <= List.last(aex9_transfers)["call_txi"]
+
+      assert Enum.all?(
+               next_aex9_transfers,
+               &aex9_valid_account_transfer?(account_id, &1, contract_id)
+             )
+
+      assert %{"data" => ^aex9_transfers} =
+               conn |> with_store(store) |> get(prev) |> json_response(200)
+    end
+
+    test "gets transfers sorted by asc txi", %{conn: conn, store: store} do
+      contract_id = encode_contract(@aex9_pk3)
+      account_id = encode_account(@account_pk)
+
+      assert %{"data" => aex9_transfers, "next" => next} =
+               conn
+               |> with_store(store)
+               |> get("/v3/aex9/#{contract_id}/transfers",
+                 direction: "forward",
+                 account: account_id
+               )
+               |> json_response(200)
+
+      assert @default_limit = length(aex9_transfers)
+      assert ^aex9_transfers = Enum.sort_by(aex9_transfers, & &1["call_txi"])
+      assert Enum.all?(aex9_transfers, &aex9_valid_account_transfer?(account_id, &1))
+
+      assert %{"data" => next_aex9_transfers, "prev" => prev} =
+               conn |> with_store(store) |> get(next) |> json_response(200)
+
+      assert @default_limit = length(next_aex9_transfers)
+      assert ^next_aex9_transfers = Enum.sort_by(next_aex9_transfers, & &1["call_txi"])
+      assert List.first(next_aex9_transfers)["call_txi"] >= List.last(aex9_transfers)["call_txi"]
+      assert Enum.all?(next_aex9_transfers, &aex9_valid_account_transfer?(account_id, &1))
+
+      assert %{"data" => ^aex9_transfers} =
+               conn |> with_store(store) |> get(prev) |> json_response(200)
+    end
+
+    test "returns empty list when no transfer exists", %{conn: conn, store: store} do
+      contract_id = encode_contract(@aex9_pk1)
+      account_id_without_transfer = encode_account(:crypto.strong_rand_bytes(32))
+
+      assert %{"prev" => nil, "data" => [], "next" => nil} =
+               conn
+               |> with_store(store)
+               |> get("/v3/aex9/#{contract_id}/transfers", account: account_id_without_transfer)
+               |> json_response(200)
+    end
+
+    test "returns bad request when sender id is invalid", %{conn: conn} do
+      invalid_id = "ct_InvalidId"
+      error_msg = "invalid id: #{invalid_id}"
+      account_id = encode_account(@from_pk1)
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> get("/v3/aex9/#{invalid_id}/transfers", account: account_id)
+               |> json_response(400)
+    end
+
+    test "returns bad request when both sender and recipient params are used", %{conn: conn} do
+      contract_id = encode_contract(@aex9_pk1)
+      account_id1 = encode_account(@from_pk1)
+      account_id2 = encode_account(@from_pk2)
+      error_msg = "invalid query: set either a recipient or a sender"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> get("/v3/aex9/#{contract_id}/transfers",
+                 sender: account_id1,
+                 recipient: account_id2
+               )
                |> json_response(400)
     end
   end
@@ -961,6 +1090,28 @@ defmodule AeMdwWeb.AexnTransferControllerTest do
                |> get("/v2/aex141/transfers/#{contract_id}", cursor: invalid_cursor)
                |> json_response(400)
     end
+  end
+
+  defp aex9_valid_account_transfer?(
+         account_id,
+         %{
+           "sender" => sender,
+           "recipient" => recipient,
+           "log_idx" => log_idx,
+           "amount" => amount,
+           "contract_id" => contract_id
+         },
+         req_contract_id \\ nil
+       ) do
+    valid_contract? =
+      if req_contract_id do
+        contract_id == req_contract_id
+      else
+        contract_id in @contracts
+      end
+
+    (account_id == sender or account_id == recipient) and
+      log_idx in @log_index_range and amount in @aex9_amount_range and valid_contract?
   end
 
   defp aex9_valid_sender_transfer?(

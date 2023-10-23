@@ -27,7 +27,7 @@ defmodule AeMdw.AexnTransfers do
   @type pair_transfer_key ::
           {:aex9 | :aex141, pubkey(), pubkey(), txi(), pos_integer(), non_neg_integer()}
   @type contract_transfer_key ::
-          {pubkey(), pubkey(), txi(), pubkey(), pos_integer(), non_neg_integer()}
+          {txi(), txi(), pubkey(), pubkey(), pos_integer(), non_neg_integer()}
 
   @type cursor :: binary()
   @typep page_cursor :: Collection.pagination_cursor()
@@ -43,11 +43,35 @@ defmodule AeMdw.AexnTransfers do
   @spec fetch_contract_transfers(
           State.t(),
           pubkey(),
-          {:from | :to, pubkey() | nil},
+          {:from | :to | nil, pubkey()},
           pagination(),
           cursor() | nil
         ) ::
           {:ok, contract_paginated_transfers()} | {:error, Error.t()}
+  def fetch_contract_transfers(state, contract_pk, {nil, account_pk}, pagination, cursor) do
+    case Origin.tx_index(state, {:contract, contract_pk}) do
+      {:ok, create_txi} ->
+        with {:ok, cursors} <- deserialize_account_cursors(state, cursor) do
+          key_boundary = key_boundary(create_txi, account_pk)
+
+          {prev_cursor_key, transfer_keys, next_cursor_key} =
+            state
+            |> build_streamer(cursors, key_boundary)
+            |> Collection.paginate(pagination)
+
+          {:ok,
+           {
+             serialize_cursor(prev_cursor_key),
+             transfer_keys,
+             serialize_cursor(next_cursor_key)
+           }}
+        end
+
+      :not_found ->
+        {:error, ErrInput.NotFound.exception(value: encode_contract(contract_pk))}
+    end
+  end
+
   def fetch_contract_transfers(state, contract_pk, {filter_by, account_pk}, pagination, cursor) do
     case Origin.tx_index(state, {:contract, contract_pk}) do
       {:ok, create_txi} ->
@@ -151,6 +175,36 @@ defmodule AeMdw.AexnTransfers do
     end
   end
 
+  defp build_streamer(state, {from_cursor_key, to_cursor_key}, key_boundary) do
+    fn direction ->
+      Collection.merge(
+        [
+          state
+          |> Collection.stream(
+            Model.AexnContractFromTransfer,
+            direction,
+            key_boundary,
+            from_cursor_key
+          )
+          |> Stream.map(fn {create_txi, sender_pk, call_txi, recipient_pk, value, log_idx} ->
+            {create_txi, call_txi, sender_pk, recipient_pk, value, log_idx}
+          end),
+          state
+          |> Collection.stream(
+            Model.AexnContractToTransfer,
+            direction,
+            key_boundary,
+            to_cursor_key
+          )
+          |> Stream.map(fn {create_txi, recipient_pk, call_txi, sender_pk, value, log_idx} ->
+            {create_txi, call_txi, sender_pk, recipient_pk, value, log_idx}
+          end)
+        ],
+        direction
+      )
+    end
+  end
+
   defp build_streamer(state, table, cursor_key, key_boundary) do
     fn direction ->
       Collection.stream(state, table, direction, key_boundary, cursor_key)
@@ -176,11 +230,38 @@ defmodule AeMdw.AexnTransfers do
                 match?(
                   {_type_or_pk, <<_pk1::256>>, <<_pk2::256>>, _txi, _amount, _idx},
                   cursor_term
+                ) or
+                match?(
+                  {_type_or_pk, _txi, <<_pk1::256>>, <<_pk2::256>>, _amount, _idx},
+                  cursor_term
                 )) do
       {:ok, cursor_term}
     else
       _invalid ->
         {:error, ErrInput.Cursor.exception(value: cursor_bin64)}
+    end
+  end
+
+  defp deserialize_account_cursors(_state, nil), do: {:ok, {nil, nil}}
+
+  defp deserialize_account_cursors(state, cursor_bin) do
+    with {:ok, cursor} <- deserialize_cursor(cursor_bin) do
+      {create_txi, call_txi, pk1, pk2, token_id, log_idx} = cursor
+      cursor = {create_txi, pk1, call_txi, pk2, token_id, log_idx}
+
+      if State.exists?(state, Model.AexnContractFromTransfer, cursor) do
+        {:ok,
+         {
+           cursor,
+           {create_txi, pk2, call_txi, pk1, token_id, log_idx}
+         }}
+      else
+        {:ok,
+         {
+           cursor,
+           cursor
+         }}
+      end
     end
   end
 
