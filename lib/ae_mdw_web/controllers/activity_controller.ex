@@ -14,7 +14,7 @@ defmodule AeMdwWeb.ActivityController do
   def account_activities(%Conn{assigns: assigns} = conn, %{"id" => account}) do
     %{state: state, pagination: pagination, cursor: cursor, query: query, scope: scope} = assigns
 
-    with {:ok, prev_cursor, activities, next_cursor} <-
+    with {:ok, paginated_activities} <-
            Activities.fetch_account_activities(
              state,
              account,
@@ -23,7 +23,7 @@ defmodule AeMdwWeb.ActivityController do
              query,
              cursor
            ) do
-      Util.paginate(conn, prev_cursor, activities, next_cursor)
+      Util.paginate(conn, paginated_activities)
     end
   end
 end

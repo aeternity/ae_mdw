@@ -8,6 +8,7 @@ defmodule AeMdw.Collection do
 
   @typep table() :: Database.table()
   @typep key() :: Database.key()
+  @typep record() :: Database.record()
 
   @type cursor() :: Database.cursor()
   @type direction() :: Database.direction()
@@ -17,21 +18,26 @@ defmodule AeMdw.Collection do
   @type is_reversed?() :: boolean()
   @type has_cursor?() :: boolean()
   @type direction_limit() :: {direction(), is_reversed?(), limit(), has_cursor?()}
-  @type pagination_cursor() :: {cursor(), is_reversed?()} | nil
+  @type pagination_cursor() :: {binary(), is_reversed?()} | nil
   @type stream_fn() :: (direction() -> Enumerable.t())
 
   @doc """
   Paginates a list or stream or records into a list of items and it's next cursor (if
   any).
   """
-  @spec paginate(stream_fn(), direction_limit()) ::
+  @spec paginate(stream_fn(), direction_limit(), (record() -> term()), (key() -> binary())) ::
           {pagination_cursor(), Enumerable.t(), pagination_cursor()}
-  def paginate(stream_fn, {direction, false, limit, has_cursor?}) do
+  def paginate(
+        stream_fn,
+        {direction, false, limit, has_cursor?},
+        render_record_fn,
+        serialize_cursor_fn
+      ) do
     prev_cursor =
       if has_cursor? do
         case Enum.at(stream_fn.(opposite_dir(direction)), 1) do
           nil -> nil
-          cursor -> {cursor, true}
+          cursor -> {serialize_cursor_fn.(cursor), true}
         end
       end
 
@@ -40,14 +46,28 @@ defmodule AeMdw.Collection do
     |> Stream.take(limit + 1)
     |> Enum.split(limit)
     |> case do
-      {records, []} -> {prev_cursor, records, nil}
-      {records, [next_cursor]} -> {prev_cursor, records, {next_cursor, false}}
+      {records, []} ->
+        {prev_cursor, Enum.map(records, render_record_fn), nil}
+
+      {records, [next_cursor]} ->
+        {prev_cursor, Enum.map(records, render_record_fn),
+         {serialize_cursor_fn.(next_cursor), false}}
     end
   end
 
-  def paginate(stream_fn, {direction, true, limit, has_cursor?}) do
+  def paginate(
+        stream_fn,
+        {direction, true, limit, has_cursor?},
+        serialize_record_fn,
+        serialize_cursor_fn
+      ) do
     {prev_cursor, records, next_cursor} =
-      paginate(stream_fn, {opposite_dir(direction), false, limit, has_cursor?})
+      paginate(
+        stream_fn,
+        {opposite_dir(direction), false, limit, has_cursor?},
+        serialize_record_fn,
+        serialize_cursor_fn
+      )
 
     {reverse_cursor(next_cursor), Enum.reverse(records), reverse_cursor(prev_cursor)}
   end

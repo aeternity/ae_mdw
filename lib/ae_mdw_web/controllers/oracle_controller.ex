@@ -25,20 +25,18 @@ defmodule AeMdwWeb.OracleController do
   def inactive_oracles(%Conn{assigns: assigns} = conn, _params) do
     %{state: state, pagination: pagination, cursor: cursor, opts: opts} = assigns
 
-    {prev_cursor, oracles, next_cursor} =
-      Oracles.fetch_inactive_oracles(state, pagination, cursor, opts)
+    paginated_oracles = Oracles.fetch_inactive_oracles(state, pagination, cursor, opts)
 
-    Util.paginate(conn, prev_cursor, oracles, next_cursor)
+    Util.paginate(conn, paginated_oracles)
   end
 
   @spec active_oracles(Conn.t(), map()) :: Conn.t()
   def active_oracles(%Conn{assigns: assigns} = conn, _params) do
     %{state: state, pagination: pagination, cursor: cursor, opts: opts} = assigns
 
-    {prev_cursor, oracles, next_cursor} =
-      Oracles.fetch_active_oracles(state, pagination, cursor, opts)
+    paginated_oracles = Oracles.fetch_active_oracles(state, pagination, cursor, opts)
 
-    Util.paginate(conn, prev_cursor, oracles, next_cursor)
+    Util.paginate(conn, paginated_oracles)
   end
 
   @spec oracles(Conn.t(), map()) :: Conn.t()
@@ -52,9 +50,9 @@ defmodule AeMdwWeb.OracleController do
       query: query
     } = assigns
 
-    with {:ok, prev_cursor, oracles, next_cursor} <-
+    with {:ok, paginated_oracles} <-
            Oracles.fetch_oracles(state, pagination, scope, query, cursor, opts) do
-      Util.paginate(conn, prev_cursor, oracles, next_cursor)
+      Util.paginate(conn, paginated_oracles)
     end
   end
 

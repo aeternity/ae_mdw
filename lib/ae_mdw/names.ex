@@ -78,17 +78,18 @@ defmodule AeMdw.Names do
 
     with {:ok, filters} <- Util.convert_params(query, &convert_param/1),
          :ok <- validate_params(filters, order_by) do
-      {prev_cursor, height_keys, next_cursor} =
+      last_micro_time = DbUtil.last_gen_and_time(state)
+
+      paginated_names =
         filters
         |> build_height_streamer(state, order_by, scope, cursor)
-        |> Collection.paginate(pagination)
+        |> Collection.paginate(
+          pagination,
+          &render_exp_height_name(state, &1, last_micro_time, opts),
+          &serialize_height_cursor/1
+        )
 
-      {:ok,
-       {
-         serialize_height_cursor(prev_cursor),
-         render_height_list(state, height_keys, opts),
-         serialize_height_cursor(next_cursor)
-       }}
+      {:ok, paginated_names}
     end
   end
 
@@ -96,17 +97,18 @@ defmodule AeMdw.Names do
     cursor = deserialize_name_cursor(cursor)
 
     with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
-      {prev_cursor, name_keys, next_cursor} =
+      last_micro_time = DbUtil.last_gen_and_time(state)
+
+      paginated_names =
         filters
         |> build_name_streamer(state, cursor)
-        |> Collection.paginate(pagination)
+        |> Collection.paginate(
+          pagination,
+          &render_plain_name(state, &1, last_micro_time, opts),
+          &serialize_name_cursor/1
+        )
 
-      {:ok,
-       {
-         serialize_name_cursor(prev_cursor),
-         render_names_list(state, name_keys, opts),
-         serialize_name_cursor(next_cursor)
-       }}
+      {:ok, paginated_names}
     end
   end
 
@@ -120,17 +122,16 @@ defmodule AeMdw.Names do
     with {:ok, name_or_auction} <- locate_name_or_auction(state, plain_name_or_hash),
          plain_name <- get_index(name_or_auction),
          {:ok, cursor} <- deserialize_history_cursor(plain_name, cursor) do
-      {prev_cursor, history_keys, next_cursor} =
+      paginated_history =
         state
         |> build_history_streamer(plain_name, cursor)
-        |> Collection.paginate(pagination)
+        |> Collection.paginate(
+          pagination,
+          &render_nested_resource(state, &1),
+          &serialize_history_cursor(plain_name, &1)
+        )
 
-      {:ok,
-       {
-         serialize_history_cursor(plain_name, prev_cursor),
-         Enum.map(history_keys, &render_nested_resource(state, &1)),
-         serialize_history_cursor(plain_name, next_cursor)
-       }}
+      {:ok, paginated_history}
     end
   end
 
@@ -458,32 +459,33 @@ defmodule AeMdw.Names do
   def search_names(state, lifecycles, prefix, pagination, cursor, opts) do
     cursor = deserialize_name_cursor(cursor)
     scope = {prefix, prefix <> Util.max_256bit_bin()}
+    last_micro_time = DbUtil.last_gen_and_time(state)
 
-    {prev_cursor, name_keys, next_cursor} =
-      fn direction ->
-        lifecycles
-        |> Enum.map(fn
-          :active ->
-            state
-            |> Collection.stream(@table_active, direction, scope, cursor)
-            |> Stream.map(&{&1, :active})
+    fn direction ->
+      lifecycles
+      |> Enum.map(fn
+        :active ->
+          state
+          |> Collection.stream(@table_active, direction, scope, cursor)
+          |> Stream.map(&{&1, :active})
 
-          :inactive ->
-            state
-            |> Collection.stream(@table_inactive, direction, scope, cursor)
-            |> Stream.map(&{&1, :inactive})
+        :inactive ->
+          state
+          |> Collection.stream(@table_inactive, direction, scope, cursor)
+          |> Stream.map(&{&1, :inactive})
 
-          :auction ->
-            state
-            |> AuctionBids.auctions_stream(prefix, direction, scope, cursor)
-            |> Stream.map(&{&1, :auction})
-        end)
-        |> Collection.merge(direction)
-      end
-      |> Collection.paginate(pagination)
-
-    {serialize_name_cursor(prev_cursor), render_search_list(state, name_keys, opts),
-     serialize_name_cursor(next_cursor)}
+        :auction ->
+          state
+          |> AuctionBids.auctions_stream(prefix, direction, scope, cursor)
+          |> Stream.map(&{&1, :auction})
+      end)
+      |> Collection.merge(direction)
+    end
+    |> Collection.paginate(
+      pagination,
+      &render_search(state, &1, last_micro_time, opts),
+      &serialize_name_cursor/1
+    )
   end
 
   @spec fetch_previous_list(state(), plain_name()) :: [name()]
@@ -507,47 +509,32 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp render_height_list(state, names_tables_keys, opts) do
-    names_tables_keys =
-      names_tables_keys
-      |> Enum.map(fn {{_exp, plain_name}, source} -> {plain_name, source} end)
+  defp render_exp_height_name(state, {{_exp, plain_name}, source}, last_micro_time, opts),
+    do: render(state, plain_name, source == :active, last_micro_time, opts)
 
-    render_names_list(state, names_tables_keys, opts)
+  defp render_plain_name(state, {plain_name, source}, last_micro_time, opts),
+    do: render(state, plain_name, source == :active, last_micro_time, opts)
+
+  defp render_search(state, {plain_name, :auction}, _last_micro_time, opts) do
+    %{"type" => "auction", "payload" => AuctionBids.fetch!(state, plain_name, opts)}
   end
 
-  defp render_names_list(state, names_tables_keys, opts) do
-    {last_gen, last_micro_time} = DbUtil.last_gen_and_time(state)
-
-    Enum.map(names_tables_keys, fn {plain_name, source} ->
-      render(state, plain_name, source == :active, last_gen, last_micro_time, opts)
-    end)
+  defp render_search(state, {plain_name, source}, last_micro_time, opts) do
+    %{
+      "type" => "name",
+      "payload" => render(state, plain_name, source == :active, last_micro_time, opts)
+    }
   end
 
-  defp render_search_list(state, names_tables_keys, opts) do
-    {last_gen, last_micro_time} = DbUtil.last_gen_and_time(state)
-
-    Enum.map(names_tables_keys, fn
-      {plain_name, :auction} ->
-        %{"type" => "auction", "payload" => AuctionBids.fetch!(state, plain_name, opts)}
-
-      {plain_name, source} ->
-        %{
-          "type" => "name",
-          "payload" =>
-            render(state, plain_name, source == :active, last_gen, last_micro_time, opts)
-        }
-    end)
-  end
-
-  defp render(state, plain_name, is_active?, last_gen, last_micro_time, opts) do
+  defp render(state, plain_name, is_active?, last_micro_time, opts) do
     if Keyword.get(opts, :render_v3?, false) do
-      render_v3(state, plain_name, is_active?, last_gen, last_micro_time, opts)
+      render_v3(state, plain_name, is_active?, last_micro_time, opts)
     else
-      render_v2(state, plain_name, is_active?, last_gen, last_micro_time, opts)
+      render_v2(state, plain_name, is_active?, last_micro_time, opts)
     end
   end
 
-  defp render_v3(state, plain_name, is_active?, last_gen, last_micro_time, opts) do
+  defp render_v3(state, plain_name, is_active?, {last_gen, last_micro_time}, opts) do
     Model.name(active: active, expire: expire, revoke: revoke, auction_timeout: auction_timeout) =
       name =
       State.fetch!(state, if(is_active?, do: @table_active, else: @table_inactive), plain_name)
@@ -583,7 +570,7 @@ defmodule AeMdw.Names do
     }
   end
 
-  defp render_v2(state, plain_name, is_active?, last_gen, last_micro_time, opts) do
+  defp render_v2(state, plain_name, is_active?, {last_gen, last_micro_time}, opts) do
     name =
       State.fetch!(state, if(is_active?, do: @table_active, else: @table_inactive), plain_name)
 
@@ -655,12 +642,9 @@ defmodule AeMdw.Names do
     }
   end
 
-  defp serialize_name_cursor(nil), do: nil
+  defp serialize_name_cursor({name, _tab}), do: serialize_name_cursor(name)
 
-  defp serialize_name_cursor({{name, _tab}, is_reversed?}),
-    do: serialize_name_cursor({name, is_reversed?})
-
-  defp serialize_name_cursor({name, is_reversed?}), do: {name, is_reversed?}
+  defp serialize_name_cursor(name), do: name
 
   defp deserialize_name_cursor(nil), do: nil
 
@@ -672,13 +656,11 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp serialize_height_cursor(nil), do: nil
+  defp serialize_height_cursor({{height, name}, _tab}),
+    do: serialize_height_cursor({height, name})
 
-  defp serialize_height_cursor({{{height, name}, _tab}, is_reversed?}),
-    do: serialize_height_cursor({{height, name}, is_reversed?})
-
-  defp serialize_height_cursor({{height, name}, is_reversed?}),
-    do: {Base.encode64(:erlang.term_to_binary({height, name}), padding: false), is_reversed?}
+  defp serialize_height_cursor({height, name}),
+    do: Base.encode64(:erlang.term_to_binary({height, name}), padding: false)
 
   defp deserialize_height_cursor(nil), do: nil
 
@@ -692,11 +674,10 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp serialize_history_cursor(_name, nil), do: nil
-
-  defp serialize_history_cursor(name, {{height, txi_idx, _table}, is_reversed?}) do
-    cursor_bin = :erlang.term_to_binary({name, height, txi_idx})
-    {Base.encode64(cursor_bin, padding: false), is_reversed?}
+  defp serialize_history_cursor(name, {height, txi_idx, _table}) do
+    {name, height, txi_idx}
+    |> :erlang.term_to_binary()
+    |> Base.encode64(padding: false)
   end
 
   defp deserialize_history_cursor(_name, nil), do: {:ok, nil}
@@ -758,15 +739,12 @@ defmodule AeMdw.Names do
         txi_idx -> {plain_name, nested_height, txi_idx}
       end
 
-    {prev_cursor, bi_txi_idxs, next_cursor} =
-      fn direction ->
-        state
-        |> Collection.stream(table, direction, key_boundary, cursor)
-        |> Stream.map(fn {_plain_name, height, txi_idx} -> {height, txi_idx, table} end)
-      end
-      |> Collection.paginate(pagination)
-
-    {serialize_nested_cursor(prev_cursor), bi_txi_idxs, serialize_nested_cursor(next_cursor)}
+    fn direction ->
+      state
+      |> Collection.stream(table, direction, key_boundary, cursor)
+      |> Stream.map(fn {_plain_name, height, txi_idx} -> {height, txi_idx, table} end)
+    end
+    |> Collection.paginate(pagination, & &1, &serialize_nested_cursor/1)
   end
 
   defp render_previous(state, plain_name, last_gen, last_micro_time, opts) do
@@ -863,10 +841,7 @@ defmodule AeMdw.Names do
     end
   end
 
-  defp serialize_nested_cursor(nil), do: nil
-
-  defp serialize_nested_cursor({{_height, {txi, idx}, _table}, is_reverse?}),
-    do: {"#{txi}-#{idx + 1}", is_reverse?}
+  defp serialize_nested_cursor({_height, {txi, idx}, _table}), do: "#{txi}-#{idx + 1}"
 
   defp deserialize_nested_cursor(nil), do: nil
 

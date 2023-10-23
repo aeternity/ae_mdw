@@ -10,11 +10,10 @@ defmodule AeMdwWeb.TxController do
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
   alias AeMdw.Util
+  alias AeMdwWeb.Util, as: WebUtil
   alias Plug.Conn
 
   require Model
-
-  import AeMdwWeb.Util
 
   @type_query_params ~w(type type_group)
   @pagination_param_keys ~w(limit page cursor expand direction scope_type range by rev scope tx_hash)
@@ -52,9 +51,9 @@ defmodule AeMdwWeb.TxController do
     add_spendtx_details? = Map.has_key?(params, "account")
 
     with {:ok, query} <- extract_query(query_params),
-         {:ok, prev_cursor, txs, next_cursor} <-
+         {:ok, paginated_txs} <-
            Txs.fetch_txs(state, pagination, scope, query, cursor, add_spendtx_details?) do
-      paginate(conn, prev_cursor, txs, next_cursor)
+      WebUtil.paginate(conn, paginated_txs)
     else
       {:error, reason} when is_binary(reason) -> {:error, ErrInput.Query.exception(value: reason)}
       {:error, reason} -> {:error, reason}
@@ -113,9 +112,8 @@ defmodule AeMdwWeb.TxController do
 
     with :ok <- validate_without_scope(scope),
          {:ok, query} <- extract_query(query_params),
-         {:ok, prev_cursor, txs, next_cursor} <-
-           Txs.fetch_micro_block_txs(state, hash, query, pagination, cursor) do
-      paginate(conn, prev_cursor, txs, next_cursor)
+         {:ok, paginated_txs} <- Txs.fetch_micro_block_txs(state, hash, query, pagination, cursor) do
+      WebUtil.paginate(conn, paginated_txs)
     end
   end
 

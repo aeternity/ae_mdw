@@ -231,16 +231,16 @@ defmodule AeMdw.Stats do
 
   defp fetch_statistics(state, pagination, filters, range, cursor, tag) do
     with {:ok, cursor} <- deserialize_statistic_cursor(cursor) do
-      {prev_cursor, statistics_keys, next_cursor} =
+      paginated_statistics =
         state
         |> build_statistics_streamer(tag, filters, range, cursor)
-        |> Collection.paginate(pagination)
+        |> Collection.paginate(
+          pagination,
+          &render_statistic(state, &1),
+          &serialize_statistics_cursor/1
+        )
 
-      statistics = Enum.map(statistics_keys, &render_statistic(state, &1))
-
-      {:ok,
-       {serialize_statistics_cursor(prev_cursor), statistics,
-        serialize_statistics_cursor(next_cursor)}}
+      {:ok, paginated_statistics}
     end
   end
 
@@ -324,10 +324,7 @@ defmodule AeMdw.Stats do
     end
   end
 
-  defp serialize_statistics_cursor(nil), do: nil
-
-  defp serialize_statistics_cursor({{_tag, _interval_by, interval_start}, is_reversed?}),
-    do: {"#{interval_start}", is_reversed?}
+  defp serialize_statistics_cursor({_tag, _interval_by, interval_start}), do: "#{interval_start}"
 
   defp deserialize_statistic_cursor(nil), do: {:ok, nil}
 

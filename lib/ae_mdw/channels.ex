@@ -47,14 +47,12 @@ defmodule AeMdw.Channels do
          {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
       scope = deserialize_scope(range)
 
-      {prev_cursor, expiration_keys, next_cursor} =
+      paginated_channels =
         filters
         |> build_streamer(state, scope, cursor)
-        |> Collection.paginate(pagination)
+        |> Collection.paginate(pagination, &render_exp_channel(state, &1), &serialize_cursor/1)
 
-      channels = render_channels(state, expiration_keys)
-
-      {:ok, {serialize_cursor(prev_cursor), channels, serialize_cursor(next_cursor)}}
+      {:ok, paginated_channels}
     end
   end
 
@@ -85,16 +83,16 @@ defmodule AeMdw.Channels do
     with {:ok, channel_pk} <- Validate.id(channel_id, [:channel]),
          {:ok, Model.channel(updates: updates), _source} <- locate(state, channel_pk),
          {:ok, cursor} <- deserialize_nested_cursor(cursor) do
-      {prev_cursor, updates_txi_idx, next_cursor} =
+      paginated_updates =
         state
         |> build_nested_filter(updates, range, cursor)
-        |> Collection.paginate(pagination)
+        |> Collection.paginate(
+          pagination,
+          &render_update(state, channel_id, &1),
+          &serialize_nested_cursor/1
+        )
 
-      channels_updates = Enum.map(updates_txi_idx, &render_update(state, channel_id, &1))
-
-      {:ok,
-       {serialize_nested_cursor(prev_cursor), channels_updates,
-        serialize_nested_cursor(next_cursor)}}
+      {:ok, paginated_updates}
     end
   end
 
@@ -182,13 +180,11 @@ defmodule AeMdw.Channels do
     end
   end
 
-  defp render_channels(state, keys) do
-    Enum.map(keys, fn {{_exp, channel_pk}, source} ->
-      is_active? = source == @table_active_activation
-      table = if is_active?, do: @table_active, else: @table_inactive
-      m_channel = State.fetch!(state, table, channel_pk)
-      render_channel(state, m_channel, is_active?)
-    end)
+  defp render_exp_channel(state, {{_exp, channel_pk}, source}) do
+    is_active? = source == @table_active_activation
+    table = if is_active?, do: @table_active, else: @table_inactive
+    m_channel = State.fetch!(state, table, channel_pk)
+    render_channel(state, m_channel, is_active?)
   end
 
   defp render_channel(
@@ -264,10 +260,7 @@ defmodule AeMdw.Channels do
     end
   end
 
-  defp serialize_nested_cursor(nil), do: nil
-
-  defp serialize_nested_cursor({{txi, idx}, is_reversed?}),
-    do: {"#{txi}-#{idx + 1}", is_reversed?}
+  defp serialize_nested_cursor({txi, idx}), do: "#{txi}-#{idx + 1}"
 
   defp deserialize_cursor(nil), do: {:ok, nil}
 
@@ -281,10 +274,8 @@ defmodule AeMdw.Channels do
     end
   end
 
-  defp serialize_cursor(nil), do: nil
-
-  defp serialize_cursor({{{height, channel_pk}, _source}, is_reversed?}),
-    do: {"#{height}-#{Enc.encode(:channel, channel_pk)}", is_reversed?}
+  defp serialize_cursor({{height, channel_pk}, _source}),
+    do: "#{height}-#{Enc.encode(:channel, channel_pk)}"
 
   defp deserialize_scope({:gen, first_gen..last_gen}) do
     {{first_gen, Util.min_bin()}, {last_gen, Util.max_256bit_bin()}}

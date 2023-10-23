@@ -43,20 +43,23 @@ defmodule AeMdw.Oracles do
   @states ~w(active inactive)
 
   @spec fetch_oracles(state(), pagination(), range(), query(), cursor() | nil, opts()) ::
-          {:ok, cursor() | nil, [oracle()], cursor() | nil} | {:error, Error.t()}
+          {:ok, {cursor() | nil, [oracle()], cursor() | nil}} | {:error, Error.t()}
   def fetch_oracles(state, pagination, range, query, cursor, opts) do
     cursor = deserialize_cursor(cursor)
     scope = deserialize_scope(range)
+    last_gen_time = DBUtil.last_gen_and_time(state)
 
     with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
-      {prev_cursor, expiration_keys, next_cursor} =
+      paginated_oracles =
         filters
         |> build_streamer(state, scope, cursor)
-        |> Collection.paginate(pagination)
+        |> Collection.paginate(
+          pagination,
+          &render(state, &1, last_gen_time, opts),
+          &serialize_cursor/1
+        )
 
-      oracles = render_list(state, expiration_keys, opts)
-
-      {:ok, serialize_cursor(prev_cursor), oracles, serialize_cursor(next_cursor)}
+      {:ok, paginated_oracles}
     end
   end
 
@@ -67,16 +70,17 @@ defmodule AeMdw.Oracles do
          {:ok, cursor} <- deserialize_queries_cursor(cursor, oracle_pk) do
       key_boundary = {{oracle_pk, Util.min_bin()}, {oracle_pk, Util.max_256bit_bin()}}
 
-      {prev_cursor, query_ids, next_cursor} =
+      paginated_queries =
         fn direction ->
           Collection.stream(state, @table_query, direction, key_boundary, cursor)
         end
-        |> Collection.paginate(pagination)
+        |> Collection.paginate(
+          pagination,
+          &render_query(state, &1, true),
+          &serialize_queries_cursor/1
+        )
 
-      queries = Enum.map(query_ids, &render_query(state, &1, true))
-
-      {:ok,
-       {serialize_queries_cursor(prev_cursor), queries, serialize_queries_cursor(next_cursor)}}
+      {:ok, paginated_queries}
     end
   end
 
@@ -103,7 +107,7 @@ defmodule AeMdw.Oracles do
             }
         end
 
-      {prev_cursor, query_ids, next_cursor} =
+      paginated_responses =
         fn direction ->
           state
           |> Collection.stream(Model.TargetKindIntTransferTx, direction, key_boundary, cursor)
@@ -111,13 +115,13 @@ defmodule AeMdw.Oracles do
             {height, txi_idx, ref_txi_idx}
           end)
         end
-        |> Collection.paginate(pagination)
+        |> Collection.paginate(
+          pagination,
+          &render_response(state, &1, true),
+          &serialize_responses_cursor/1
+        )
 
-      responses = Enum.map(query_ids, &render_response(state, &1, true))
-
-      {:ok,
-       {serialize_responses_cursor(prev_cursor), responses,
-        serialize_responses_cursor(next_cursor)}}
+      {:ok, paginated_responses}
     end
   end
 
@@ -130,10 +134,8 @@ defmodule AeMdw.Oracles do
     end
   end
 
-  defp serialize_queries_cursor(nil), do: nil
-
-  defp serialize_queries_cursor({{_oracle_pk, query_id}, is_reversed?}),
-    do: {Enc.encode(:oracle_query_id, query_id), is_reversed?}
+  defp serialize_queries_cursor({_oracle_pk, query_id}),
+    do: Enc.encode(:oracle_query_id, query_id)
 
   defp deserialize_responses_cursor(nil, _oracle_pk), do: {:ok, nil}
 
@@ -153,13 +155,8 @@ defmodule AeMdw.Oracles do
     end
   end
 
-  defp serialize_responses_cursor(nil), do: nil
-
-  defp serialize_responses_cursor({{height, {txi, idx}, {ref_txi, ref_idx}}, is_reversed?}) do
-    bin_cursor = "#{height}-#{txi}-#{idx + 1}-#{ref_txi}-#{ref_idx + 1}"
-
-    {bin_cursor, is_reversed?}
-  end
+  defp serialize_responses_cursor({height, {txi, idx}, {ref_txi, ref_idx}}),
+    do: "#{height}-#{txi}-#{idx + 1}-#{ref_txi}-#{ref_idx + 1}"
 
   defp render_query(state, {oracle_pk, query_id}, include_response?) do
     Model.oracle_query(txi_idx: {txi, _idx} = txi_idx, response_txi_idx: response_txi_idx) =
@@ -270,68 +267,54 @@ defmodule AeMdw.Oracles do
           {cursor() | nil, [oracle()], cursor() | nil}
   def fetch_active_oracles(state, pagination, cursor, opts) do
     cursor = deserialize_cursor(cursor)
+    last_gen_time = DBUtil.last_gen_and_time(state)
 
-    {prev_cursor, exp_keys, next_cursor} =
-      Collection.paginate(
-        &Collection.stream(state, @table_active_expiration, &1, nil, cursor),
-        pagination
-      )
-
-    oracles = render_list(state, exp_keys, true, opts)
-
-    {serialize_cursor(prev_cursor), oracles, serialize_cursor(next_cursor)}
+    Collection.paginate(
+      &Collection.stream(state, @table_active_expiration, &1, nil, cursor),
+      pagination,
+      &render(state, &1, true, last_gen_time, opts),
+      &serialize_cursor/1
+    )
   end
 
   @spec fetch_inactive_oracles(state(), pagination(), cursor() | nil, opts()) ::
           {cursor() | nil, [oracle()], cursor() | nil}
   def fetch_inactive_oracles(state, pagination, cursor, opts) do
     cursor = deserialize_cursor(cursor)
+    last_gen_time = DBUtil.last_gen_and_time(state)
 
-    {prev_cursor, exp_keys, next_cursor} =
-      Collection.paginate(
-        &Collection.stream(state, @table_inactive_expiration, &1, nil, cursor),
-        pagination
-      )
-
-    oracles = render_list(state, exp_keys, false, opts)
-
-    {serialize_cursor(prev_cursor), oracles, serialize_cursor(next_cursor)}
+    Collection.paginate(
+      &Collection.stream(state, @table_inactive_expiration, &1, nil, cursor),
+      pagination,
+      &render(state, &1, false, last_gen_time, opts),
+      &serialize_cursor/1
+    )
   end
 
   @spec fetch(state(), pubkey(), opts()) :: {:ok, oracle()} | {:error, Error.t()}
   def fetch(state, oracle_pk, opts) do
-    {last_gen, last_time} = DBUtil.last_gen_and_time(state)
+    last_gen_time = DBUtil.last_gen_and_time(state)
 
     case Oracle.locate(state, oracle_pk) do
       {m_oracle, source} ->
-        {:ok, render(state, m_oracle, last_gen, last_time, source == Model.ActiveOracle, opts)}
+        {:ok, render(state, m_oracle, source == Model.ActiveOracle, last_gen_time, opts)}
 
       nil ->
         {:error, ErrInput.NotFound.exception(value: Enc.encode(:oracle_pubkey, oracle_pk))}
     end
   end
 
-  defp render_list(state, oracles_exp_source_keys, opts) do
-    {last_gen, last_time} = DBUtil.last_gen_and_time(state)
+  defp render(state, {{exp, oracle_pk}, source}, last_gen_time, opts) do
+    is_active? = source == @table_active_expiration
 
-    Enum.map(oracles_exp_source_keys, fn {{_exp, oracle_pk}, source} ->
-      is_active? = source == @table_active_expiration
-
-      oracle =
-        State.fetch!(state, if(is_active?, do: @table_active, else: @table_inactive), oracle_pk)
-
-      render(state, oracle, last_gen, last_time, is_active?, opts)
-    end)
+    render(state, {exp, oracle_pk}, is_active?, last_gen_time, opts)
   end
 
-  defp render_list(state, oracles_exp_keys, is_active?, opts) do
-    {last_gen, last_time} = DBUtil.last_gen_and_time(state)
-
-    oracles_exp_keys
-    |> Enum.map(fn {_exp, oracle_pk} ->
+  defp render(state, {_exp, oracle_pk}, is_active?, last_gen_time, opts) do
+    oracle =
       State.fetch!(state, if(is_active?, do: @table_active, else: @table_inactive), oracle_pk)
-    end)
-    |> Enum.map(&render(state, &1, last_gen, last_time, is_active?, opts))
+
+    render(state, oracle, is_active?, last_gen_time, opts)
   end
 
   defp render(
@@ -345,9 +328,8 @@ defmodule AeMdw.Oracles do
            extends: extends,
            previous: _previous
          ),
-         last_gen,
-         last_micro_time,
          is_active?,
+         {last_gen, last_micro_time},
          opts
        ) do
     kbi = min(expire_height - 1, last_gen)
@@ -381,13 +363,11 @@ defmodule AeMdw.Oracles do
     }
   end
 
-  defp serialize_cursor(nil), do: nil
+  defp serialize_cursor({{exp_height, oracle_pk}, _tab}),
+    do: serialize_cursor({exp_height, oracle_pk})
 
-  defp serialize_cursor({{{exp_height, oracle_pk}, _tab}, is_reversed?}),
-    do: serialize_cursor({{exp_height, oracle_pk}, is_reversed?})
-
-  defp serialize_cursor({{exp_height, oracle_pk}, is_reversed?}),
-    do: {"#{exp_height}-#{Enc.encode(:oracle_pubkey, oracle_pk)}", is_reversed?}
+  defp serialize_cursor({exp_height, oracle_pk}),
+    do: "#{exp_height}-#{Enc.encode(:oracle_pubkey, oracle_pk)}"
 
   defp deserialize_cursor(nil), do: nil
 
