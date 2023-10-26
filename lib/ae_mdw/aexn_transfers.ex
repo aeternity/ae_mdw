@@ -54,17 +54,12 @@ defmodule AeMdw.AexnTransfers do
         with {:ok, cursors} <- deserialize_account_cursors(state, cursor) do
           key_boundary = key_boundary(create_txi, account_pk)
 
-          {prev_cursor_key, transfer_keys, next_cursor_key} =
+          paginated_transfers =
             state
             |> build_streamer(cursors, key_boundary)
-            |> Collection.paginate(pagination)
+            |> Collection.paginate(pagination, & &1, &serialize_cursor/1)
 
-          {:ok,
-           {
-             serialize_cursor(prev_cursor_key),
-             transfer_keys,
-             serialize_cursor(next_cursor_key)
-           }}
+          {:ok, paginated_transfers}
         end
 
       :not_found ->
