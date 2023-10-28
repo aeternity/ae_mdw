@@ -35,11 +35,12 @@ defmodule AeMdw.Stats do
   @typep query() :: map()
   @typep pagination() :: Collection.direction_limit()
   @typep pagination_cursor() :: Collection.pagination_cursor()
+  @typep reason() :: Error.t()
 
   @type nft_stats :: %{nfts_amount: non_neg_integer(), nft_owners: non_neg_integer()}
   @typep template_id() :: AeMdw.Aex141.template_id()
 
-  @type statistic_tag() :: {:transactions, Node.tx_type() | :all}
+  @type statistic_tag() :: {:transactions, Node.tx_type() | :all} | :names_activated
   @type interval_by() :: :day | :week | :month
   @type interval_start() :: non_neg_integer()
 
@@ -220,12 +221,20 @@ defmodule AeMdw.Stats do
   end
 
   @spec fetch_blocks_statistics(State.t(), pagination(), query(), range(), cursor()) ::
-          {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}}
+          {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}} | {:error, reason()}
   def fetch_blocks_statistics(state, pagination, query, range, cursor) do
     with {:ok, filters} <- Util.convert_params(query, &convert_blocks_param/1) do
       type_tag = Map.get(filters, :block_type, :all)
 
       fetch_statistics(state, pagination, filters, range, cursor, {:blocks, type_tag})
+    end
+  end
+
+  @spec fetch_names_statistics(State.t(), pagination(), query(), range(), cursor()) ::
+          {:ok, {pagination_cursor(), [statistic()], pagination_cursor()}} | {:error, reason()}
+  def fetch_names_statistics(state, pagination, query, range, cursor) do
+    with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
+      fetch_statistics(state, pagination, filters, range, cursor, :names_activated)
     end
   end
 
