@@ -24,6 +24,11 @@ defmodule AeMdwWeb.LogsViewTest do
   @mb_hash :crypto.strong_rand_bytes(32)
   @limit 101
 
+  @dex_events ["PairCreated", "SwapTokens"]
+  @dex_pair_pk :crypto.strong_rand_bytes(32)
+  @dex_token1_pk :crypto.strong_rand_bytes(32)
+  @dex_token2_pk :crypto.strong_rand_bytes(32)
+
   setup_all _context do
     account1_pk = :crypto.strong_rand_bytes(32)
     account2_pk = :crypto.strong_rand_bytes(32)
@@ -51,6 +56,11 @@ defmodule AeMdwWeb.LogsViewTest do
       NullStore.new()
       |> MemStore.new()
       |> logs_setup(aex9_event_args)
+
+    {dex_logs, store} =
+      logs_setup(store, %{
+        pair_created: [@dex_pair_pk, @dex_token1_pk, @dex_token2_pk]
+      })
 
     templates = %{
       "TemplateCreation" => Enum.random(100..999),
@@ -83,6 +93,7 @@ defmodule AeMdwWeb.LogsViewTest do
     [
       store: store,
       aex9_logs: aex9_logs,
+      dex_logs: dex_logs,
       aex141_logs: aex141_logs,
       account1_pk: account1_pk,
       account2_pk: account2_pk,
@@ -94,6 +105,7 @@ defmodule AeMdwWeb.LogsViewTest do
   describe "render_log/3" do
     test "formats logs from aex9 events", %{
       aex9_logs: logs,
+      dex_logs: dex_logs,
       account1_pk: account1_pk,
       account2_pk: account2_pk,
       tokens: tokens,
@@ -104,7 +116,7 @@ defmodule AeMdwWeb.LogsViewTest do
       with_mocks [
         {DbUtil, [:passthrough], [block_time: fn _block_hash -> 123 end]}
       ] do
-        Enum.each(logs, fn {create_txi, txi, log_idx} = contract_log_index ->
+        Enum.each(logs ++ dex_logs, fn {create_txi, txi, log_idx} = contract_log_index ->
           %{
             contract_txi: ^create_txi,
             contract_tx_hash: contract_tx_hash,
@@ -127,7 +139,13 @@ defmodule AeMdwWeb.LogsViewTest do
           assert contract_id == encode_contract(Origin.pubkey(state, {:contract, create_txi}))
           assert contract_tx_hash == encode_to_hash(state, create_txi)
           assert call_tx_hash == encode_to_hash(state, txi)
-          assert_args(event_name, account1_pk, account2_pk, tokens, args)
+
+          if event_name in @dex_events do
+            assert_dex_args(event_name, args)
+          else
+            assert_args(event_name, account1_pk, account2_pk, tokens, args)
+          end
+
           assert data == "0x" <> Integer.to_string(txi, 16)
           event_type = String.to_existing_atom(Macro.underscore(event_name))
           assert event_hash == Base.hex_encode32(aexn_event_hash(event_type))
@@ -381,6 +399,12 @@ defmodule AeMdwWeb.LogsViewTest do
                } = LogsView.render_log(state, log3, %{})
       end
     end
+  end
+
+  defp assert_dex_args("PairCreated", [pair_pk, token1_pk, token2_pk]) do
+    assert pair_pk == encode_contract(@dex_pair_pk)
+    assert token1_pk == encode_contract(@dex_token1_pk)
+    assert token2_pk == encode_contract(@dex_token2_pk)
   end
 
   defp assert_args(event_name, account1_pk, _account2_pk, tokens, [account, token_id])

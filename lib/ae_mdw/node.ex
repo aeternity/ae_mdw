@@ -88,38 +88,44 @@ defmodule AeMdw.Node do
 
   @spec aexn_event_hash_types() :: %{Contracts.event_hash() => aexn_event_type()}
   def aexn_event_hash_types() do
-    Map.new(
-      [
-        :allowance,
-        :approval,
-        :approval_for_all,
-        :burn,
-        :mint,
-        :swap,
-        :edition_limit,
-        :edition_limit_decrease,
-        :template_creation,
-        :template_deletion,
-        :template_mint,
-        :template_limit,
-        :template_limit_decrease,
-        :token_limit,
-        :token_limit_decrease,
-        :transfer
-      ],
-      fn event_type ->
-        event_name = event_type |> to_string() |> Macro.camelize()
-        {:aec_hash.blake2b_256_hash(event_name), event_type}
-      end
-    )
+    map_event_hash_to_type([
+      :allowance,
+      :approval,
+      :approval_for_all,
+      :burn,
+      :mint,
+      :swap,
+      :edition_limit,
+      :edition_limit_decrease,
+      :template_creation,
+      :template_deletion,
+      :template_mint,
+      :template_limit,
+      :template_limit_decrease,
+      :token_limit,
+      :token_limit_decrease,
+      :transfer
+    ])
   end
 
   @spec aexn_event_names() :: %{Contracts.event_hash() => AexnContracts.event_name()}
   def aexn_event_names() do
     aexn_event_hash_types()
-    |> Map.new(fn {hash, atom} ->
-      {hash, Macro.camelize("#{atom}")}
-    end)
+    |> map_event_hash_to_name()
+  end
+
+  @spec dex_event_hash_types() :: %{Contracts.event_hash() => aexn_event_type()}
+  def dex_event_hash_types() do
+    map_event_hash_to_type([
+      :pair_created,
+      :swap_tokens
+    ])
+  end
+
+  @spec dex_event_names() :: %{Contracts.event_hash() => AexnContracts.event_name()}
+  def dex_event_names() do
+    dex_event_hash_types()
+    |> map_event_hash_to_name()
   end
 
   @spec hdr_fields(:key | :micro) :: [atom()]
@@ -249,5 +255,18 @@ defmodule AeMdw.Node do
 
   defp map_by_function_hash(signatures) do
     Map.new(signatures, fn {k, v} -> {Contract.function_hash(k), v} end)
+  end
+
+  defp map_event_hash_to_type(events) do
+    Map.new(events, fn event_type ->
+      event_name = event_type |> to_string() |> Macro.camelize()
+      {:aec_hash.blake2b_256_hash(event_name), event_type}
+    end)
+  end
+
+  defp map_event_hash_to_name(events) do
+    Map.new(events, fn {hash, type} ->
+      {hash, Macro.camelize("#{type}")}
+    end)
   end
 end

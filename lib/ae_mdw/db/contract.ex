@@ -15,6 +15,7 @@ defmodule AeMdw.Db.Contract do
   alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Node.Db
+  alias AeMdw.Sync.DexCache
 
   require Ex2ms
   require Log
@@ -35,6 +36,11 @@ defmodule AeMdw.Db.Contract do
   @type log_data() :: binary()
   @type rev_aex9_contract_key :: {pos_integer(), String.t(), String.t(), pos_integer()}
   @type account_balance :: {pubkey(), integer()}
+
+  @dex_factory_pubkeys Application.compile_env(:ae_mdw, :dex_factories)
+
+  @spec dex_factory_pubkey :: pubkey()
+  def dex_factory_pubkey, do: Map.get(@dex_factory_pubkeys, :aec_governance.get_network_id())
 
   @spec get_aexn_type(State.t(), pubkey()) :: Model.aexn_type() | nil
   def get_aexn_type(state, contract_pk) do
@@ -262,10 +268,13 @@ defmodule AeMdw.Db.Contract do
       aex9_contract_pk = which_aex9_contract_pubkey(contract_pk, addr)
 
       event_type =
-        Node.aexn_event_hash_types()
-        |> Map.get(evt_hash)
+        Map.get(Node.aexn_event_hash_types(), evt_hash) ||
+          Map.get(Node.dex_event_hash_types(), evt_hash)
 
       cond do
+        is_dex_event?(evt_hash) and addr == dex_factory_pubkey() ->
+          track_dex_event(event_type, args)
+
         aex9_contract_pk != nil ->
           # for parent contracts on contract creation or for child contracts on contract calls,
           # the balance is updated via dry-run to get minted tokens without events
@@ -386,6 +395,10 @@ defmodule AeMdw.Db.Contract do
   #
   # Private functions
   #
+  defp track_dex_event(:pair_created, [pair_pk, token1, token2]) do
+    DexCache.add_pair(pair_pk, token1, token2)
+  end
+
   defp aex9_update_balance_account(
          state,
          contract_pk,
@@ -901,4 +914,6 @@ defmodule AeMdw.Db.Contract do
         false
     end
   end
+
+  defp is_dex_event?(evt_hash), do: Map.has_key?(Node.dex_event_hash_types(), evt_hash)
 end

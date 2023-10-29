@@ -20,7 +20,9 @@ defmodule AeMdw.Node.AexnEventFixtures do
     :template_limit_decrease,
     :token_limit,
     :token_limit_decrease,
-    :transfer
+    :transfer,
+    :pair_created,
+    :swap_tokens
   ]
 
   @spec aexn_event_hash(aexn_event_type()) :: [event_hash()]

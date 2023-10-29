@@ -6,12 +6,15 @@ defmodule AeMdw.Db.ContractTest do
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
   alias AeMdw.Stats
+  alias AeMdw.Sync.DexCache
 
   import AeMdw.Node.AexnEventFixtures, only: [aexn_event_hash: 1]
   import AeMdw.Node.ContractCallFixtures, only: [call_rec: 3, call_rec: 5]
   import AeMdw.TestUtil, only: [empty_state: 0]
 
   require Model
+
+  @dex_factory_pk Application.compile_env(:ae_mdw, :dex_factories)["ae_mainnet"]
 
   describe "logs_write" do
     test "indexes logs without remote call" do
@@ -184,6 +187,29 @@ defmodule AeMdw.Db.ContractTest do
       assert State.exists?(state, Model.EvtContractLog, {evt_hash1, call_txi, create_txi, 1})
       assert State.exists?(state, Model.CtEvtContractLog, {evt_hash1, create_txi, call_txi, 1})
       assert State.exists?(state, Model.IdxContractLog, {call_txi, 1, create_txi})
+    end
+
+    test "tracks dex pair creations" do
+      dex_pair_pk = :crypto.strong_rand_bytes(32)
+      dex_token1_pk = :crypto.strong_rand_bytes(32)
+      dex_token2_pk = :crypto.strong_rand_bytes(32)
+      height = Enum.random(100_000..999_999)
+      txi = Enum.random(100_000_000..999_999_999)
+
+      call_rec =
+        call_rec("logs", @dex_factory_pk, height, nil, [
+          {
+            @dex_factory_pk,
+            [aexn_event_hash(:pair_created), dex_pair_pk, dex_token1_pk, dex_token2_pk],
+            ""
+          }
+        ])
+
+      empty_state()
+      |> Contract.logs_write(txi, txi + 1, call_rec)
+
+      assert %{pair: dex_pair_pk, token1: dex_token1_pk, token2: dex_token2_pk} ==
+               DexCache.get_pair(dex_pair_pk)
     end
 
     test "does not update aex9 event balance on contract create transaction" do

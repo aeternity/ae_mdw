@@ -113,8 +113,7 @@ defmodule AeMdw.AexnContracts do
 
   @spec event_name(AeMdw.Contracts.event_hash()) :: event_name() | nil
   def event_name(event_hash) do
-    Node.aexn_event_names()
-    |> Map.get(event_hash)
+    Map.get(Node.aexn_event_names(), event_hash) || Map.get(Node.dex_event_names(), event_hash)
   end
 
   @spec valid_meta_info?(aexn_meta_info()) :: boolean()
