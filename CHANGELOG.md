@@ -1,5 +1,15 @@
 # Changelog
 
+### [1.65.1](https://www.github.com/aeternity/ae_mdw/compare/v1.65.0...v1.65.1) (2023-10-30)
+
+
+### Miscellaneous
+
+* add syncing queue for async syncing requirements ([#1610](https://www.github.com/aeternity/ae_mdw/issues/1610)) ([6d89854](https://www.github.com/aeternity/ae_mdw/commit/6d8985484da387702aed80187b92424cd76379c1))
+* filter all aex9 contract account transfers ([#1618](https://www.github.com/aeternity/ae_mdw/issues/1618)) ([6d65207](https://www.github.com/aeternity/ae_mdw/commit/6d65207e951e3c887d50bf411c7bf9332d775d37))
+* make names restructuring migration async ([#1617](https://www.github.com/aeternity/ae_mdw/issues/1617)) ([9355e30](https://www.github.com/aeternity/ae_mdw/commit/9355e30a020bc2864aee18cef0c8854b2e394f37))
+* unify pagination returns and cursor serialization ([#1619](https://www.github.com/aeternity/ae_mdw/issues/1619)) ([0c17998](https://www.github.com/aeternity/ae_mdw/commit/0c179987c7dbe0a03684f6edacbb92ae3858086d))
+
 ## [1.65.0](https://www.github.com/aeternity/ae_mdw/compare/v1.64.0...v1.65.0) (2023-10-12)
 
 
