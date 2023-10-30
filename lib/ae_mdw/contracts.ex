@@ -67,7 +67,7 @@ defmodule AeMdw.Contracts do
     with {:ok, cursor} <- deserialize_contracts_cursor(cursor) do
       scope = deserialize_scope(state, range)
 
-      {prev_cursor, contract_keys, next_cursor} =
+      paginated_contracts =
         fn direction ->
           ~w(contract_create_tx ga_attach_tx)a
           |> Enum.map(fn tx_type ->
@@ -75,13 +75,13 @@ defmodule AeMdw.Contracts do
           end)
           |> Collection.merge(direction)
         end
-        |> Collection.paginate(pagination)
+        |> Collection.paginate(
+          pagination,
+          &render_contract(state, &1),
+          &serialize_contracts_cursor/1
+        )
 
-      contracts = Enum.map(contract_keys, &render_contract(state, &1))
-
-      {:ok,
-       {serialize_contracts_cursor(prev_cursor), contracts,
-        serialize_contracts_cursor(next_cursor)}}
+      {:ok, paginated_contracts}
     end
   end
 
@@ -92,17 +92,12 @@ defmodule AeMdw.Contracts do
     scope = deserialize_scope(state, range)
 
     with {:ok, filters} <- Util.convert_params(query, &convert_param(state, &1)) do
-      {prev_cursor, logs, next_cursor} =
+      paginated_logs =
         filters
         |> build_logs_pagination(state, scope, cursor)
-        |> Collection.paginate(pagination)
+        |> Collection.paginate(pagination, & &1, &serialize_logs_cursor/1)
 
-      {:ok,
-       {
-         serialize_logs_cursor(prev_cursor),
-         logs,
-         serialize_logs_cursor(next_cursor)
-       }}
+      {:ok, paginated_logs}
     end
   end
 
@@ -113,17 +108,12 @@ defmodule AeMdw.Contracts do
     scope = deserialize_scope(state, range)
 
     with {:ok, filters} <- Util.convert_params(query, &convert_param(state, &1)) do
-      {prev_cursor, calls, next_cursor} =
+      paginated_calls =
         filters
         |> build_calls_pagination(state, scope, cursor)
-        |> Collection.paginate(pagination)
+        |> Collection.paginate(pagination, &render_call(state, &1), &serialize_calls_cursor/1)
 
-      {:ok,
-       {
-         serialize_calls_cursor(prev_cursor),
-         Enum.map(calls, &render_call(state, &1)),
-         serialize_calls_cursor(next_cursor)
-       }}
+      {:ok, paginated_calls}
     end
   end
 
@@ -603,13 +593,8 @@ defmodule AeMdw.Contracts do
     }
   end
 
-  defp serialize_logs_cursor(nil), do: nil
-
-  defp serialize_logs_cursor({{create_txi, call_txi, log_idx}, is_reversed?}) do
-    {Base.hex_encode32("#{create_txi}$#{call_txi}$#{log_idx}",
-       padding: false
-     ), is_reversed?}
-  end
+  defp serialize_logs_cursor({create_txi, call_txi, log_idx}),
+    do: Base.hex_encode32("#{create_txi}$#{call_txi}$#{log_idx}", padding: false)
 
   defp deserialize_logs_cursor(nil), do: nil
 
@@ -626,18 +611,13 @@ defmodule AeMdw.Contracts do
     end
   end
 
-  defp serialize_calls_cursor(nil), do: nil
-
-  defp serialize_calls_cursor({{call_txi, local_idx, create_txi, pk, fname, pos}, is_reversed?}) do
+  defp serialize_calls_cursor({call_txi, local_idx, create_txi, pk, fname, pos}) do
     pk = Base.encode32(pk, padding: false)
     fname = Base.encode32(fname, padding: false)
 
-    {
-      Base.hex_encode32("#{call_txi}$#{local_idx}$#{create_txi}$#{pk}$#{fname}$#{pos}",
-        padding: false
-      ),
-      is_reversed?
-    }
+    Base.hex_encode32("#{call_txi}$#{local_idx}$#{create_txi}$#{pk}$#{fname}$#{pos}",
+      padding: false
+    )
   end
 
   defp deserialize_calls_cursor(nil), do: nil
@@ -668,11 +648,8 @@ defmodule AeMdw.Contracts do
   defp deserialize_cursor_string(event_hash_bin),
     do: Base.decode32(event_hash_bin, padding: false)
 
-  defp serialize_contracts_cursor(nil), do: nil
-
   # local_idx is an integer >= -1 (adding 1 to shift to use positive numbers)
-  defp serialize_contracts_cursor({{txi, local_idx}, is_reversed?}),
-    do: {"#{txi}-#{local_idx + 1}", is_reversed?}
+  defp serialize_contracts_cursor({txi, local_idx}), do: "#{txi}-#{local_idx + 1}"
 
   defp deserialize_contracts_cursor(nil), do: {:ok, nil}
 

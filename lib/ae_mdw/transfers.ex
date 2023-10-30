@@ -16,7 +16,7 @@ defmodule AeMdw.Transfers do
 
   require Model
 
-  @type cursor :: {binary(), Collection.is_reversed?()} | nil
+  @type cursor :: Collection.pagination_cursor()
   @type transfer :: term()
   @type query :: %{binary() => binary()}
 
@@ -38,17 +38,12 @@ defmodule AeMdw.Transfers do
     scope = deserialize_scope(state, range)
 
     with {:ok, filters} <- Util.convert_params(query, &convert_param/1) do
-      {prev_cursor, transfers, next_cursor} =
+      paginated_transfers =
         filters
         |> build_streamer(state, scope, cursor)
-        |> Collection.paginate(pagination)
+        |> Collection.paginate(pagination, &render(state, &1), &serialize_cursor/1)
 
-      {:ok,
-       {
-         serialize_cursor(prev_cursor),
-         Enum.map(transfers, &render(state, &1)),
-         serialize_cursor(next_cursor)
-       }}
+      {:ok, paginated_transfers}
     end
   end
 
@@ -234,14 +229,9 @@ defmodule AeMdw.Transfers do
     }
   end
 
-  defp serialize_cursor(nil), do: nil
-
-  defp serialize_cursor({{{gen, txi}, kind, account_pk, ref_txi}, is_reversed?}) do
+  defp serialize_cursor({{gen, txi}, kind, account_pk, ref_txi}) do
     account_pk = Base.encode32(account_pk, padding: false)
 
-    {
-      Base.hex_encode32("#{gen},#{txi}$#{kind}$#{account_pk}$#{ref_txi}", padding: false),
-      is_reversed?
-    }
+    Base.hex_encode32("#{gen},#{txi}$#{kind}$#{account_pk}$#{ref_txi}", padding: false)
   end
 end

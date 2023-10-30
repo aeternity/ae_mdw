@@ -57,14 +57,12 @@ defmodule AeMdw.AexnTokens do
          {:ok, filters} <- Util.convert_params(params, &convert_param/1) do
       sorting_table = Map.get(@sorting_table, order_by)
 
-      {prev_record, aexn_contracts, next_record} =
+      paginated_aexn_contracts =
         filters
         |> build_tokens_streamer(state, aexn_type, sorting_table, cursor)
-        |> Collection.paginate(pagination)
+        |> Collection.paginate(pagination, & &1, &serialize_aexn_cursor(order_by, &1))
 
-      {:ok,
-       {serialize_aexn_cursor(order_by, prev_record), aexn_contracts,
-        serialize_aexn_cursor(order_by, next_record)}}
+      {:ok, paginated_aexn_contracts}
     end
   end
 
@@ -132,29 +130,24 @@ defmodule AeMdw.AexnTokens do
 
   defp convert_param(other_param), do: {:error, ErrInput.Query.exception(value: other_param)}
 
-  defp serialize_aexn_cursor(_order_by, nil), do: nil
-
   defp serialize_aexn_cursor(
          :creation,
-         {Model.aexn_contract(index: {type, _pubkey}, txi_idx: txi_idx), is_reversed?}
+         Model.aexn_contract(index: {type, _pubkey}, txi_idx: txi_idx)
        ) do
-    cursor = {type, txi_idx} |> :erlang.term_to_binary() |> Base.encode64(padding: false)
-
-    {cursor, is_reversed?}
+    {type, txi_idx}
+    |> :erlang.term_to_binary()
+    |> Base.encode64(padding: false)
   end
 
   defp serialize_aexn_cursor(
          order_by,
-         {Model.aexn_contract(index: {type, pubkey}, meta_info: meta_info), is_reversed?}
+         Model.aexn_contract(index: {type, pubkey}, meta_info: meta_info)
        ) do
     sort_field_value = if order_by == :name, do: elem(meta_info, 0), else: elem(meta_info, 1)
 
-    cursor =
-      {type, sort_field_truncate(sort_field_value), pubkey}
-      |> :erlang.term_to_binary()
-      |> Base.encode64(padding: false)
-
-    {cursor, is_reversed?}
+    {type, sort_field_truncate(sort_field_value), pubkey}
+    |> :erlang.term_to_binary()
+    |> Base.encode64(padding: false)
   end
 
   defp deserialize_aexn_cursor(nil), do: {:ok, nil}

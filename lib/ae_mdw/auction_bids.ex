@@ -42,9 +42,9 @@ defmodule AeMdw.AuctionBids do
   def fetch(state, plain_name, opts) do
     case State.get(state, @table, plain_name) do
       {:ok, auction_bid} ->
-        {last_gen, last_micro_time} = DbUtil.last_gen_and_time(state)
+        last_micro_time = DbUtil.last_gen_and_time(state)
 
-        {:ok, render(state, auction_bid, last_gen, last_micro_time, opts)}
+        {:ok, render(state, auction_bid, last_micro_time, opts)}
 
       :not_found ->
         :not_found
@@ -54,45 +54,26 @@ defmodule AeMdw.AuctionBids do
   @spec fetch_auctions(state(), pagination(), order_by(), cursor(), opts()) ::
           {cursor(), [auction_bid()], cursor()}
   def fetch_auctions(state, pagination, :name, cursor, opts) do
-    {last_gen, last_micro_time} = DbUtil.last_gen_and_time(state)
-    render_v3? = Keyword.get(opts, :render_v3?, false)
+    last_micro_time = DbUtil.last_gen_and_time(state)
 
-    {prev_cursor, auction_bids, next_cursor} =
-      Collection.paginate(&Collection.stream(state, @table, &1, nil, cursor), pagination)
-
-    auction_bids =
-      Enum.map(auction_bids, fn plain_name ->
-        if render_v3? do
-          render(state, plain_name, last_gen, last_micro_time, opts)
-        else
-          render_v2(state, plain_name, last_gen, last_micro_time, opts)
-        end
-      end)
-
-    {prev_cursor, auction_bids, next_cursor}
+    Collection.paginate(
+      &Collection.stream(state, @table, &1, nil, cursor),
+      pagination,
+      &render(state, &1, last_micro_time, opts),
+      & &1
+    )
   end
 
   def fetch_auctions(state, pagination, :expiration, cursor, opts) do
-    {last_gen, last_micro_time} = DbUtil.last_gen_and_time(state)
+    last_micro_time = DbUtil.last_gen_and_time(state)
     cursor = deserialize_exp_cursor(cursor)
-    render_v3? = Keyword.get(opts, :render_v3?, false)
 
-    {prev_cursor, exp_keys, next_cursor} =
-      Collection.paginate(
-        &Collection.stream(state, @table_expiration, &1, nil, cursor),
-        pagination
-      )
-
-    auction_bids =
-      Enum.map(exp_keys, fn {_exp, plain_name} ->
-        if render_v3? do
-          render(state, plain_name, last_gen, last_micro_time, opts)
-        else
-          render_v2(state, plain_name, last_gen, last_micro_time, opts)
-        end
-      end)
-
-    {serialize_exp_cursor(prev_cursor), auction_bids, serialize_exp_cursor(next_cursor)}
+    Collection.paginate(
+      &Collection.stream(state, @table_expiration, &1, nil, cursor),
+      pagination,
+      &render(state, &1, last_micro_time, opts),
+      &serialize_exp_cursor/1
+    )
   end
 
   @spec auctions_stream(state(), prefix(), direction(), names_scope(), cursor()) ::
@@ -103,21 +84,33 @@ defmodule AeMdw.AuctionBids do
     |> Stream.take_while(&String.starts_with?(&1, prefix))
   end
 
-  defp render(state, plain_name, last_gen, last_micro_time, opts) when is_binary(plain_name) do
-    auction_bid = State.fetch!(state, @table, plain_name)
+  defp render(state, {_exp, plain_name}, last_micro_time, opts),
+    do: render(state, plain_name, last_micro_time, opts)
 
-    render(state, auction_bid, last_gen, last_micro_time, opts)
+  defp render(state, plain_name, last_micro_time, opts) do
+    render_v3? = Keyword.get(opts, :render_v3?, false)
+
+    if render_v3? do
+      render_v3(state, plain_name, last_micro_time, opts)
+    else
+      render_v2(state, plain_name, last_micro_time, opts)
+    end
   end
 
-  defp render(
+  defp render_v3(state, plain_name, last_micro_time, opts) when is_binary(plain_name) do
+    auction_bid = State.fetch!(state, @table, plain_name)
+
+    render(state, auction_bid, last_micro_time, opts)
+  end
+
+  defp render_v3(
          state,
          Model.auction_bid(
            index: plain_name,
            block_index_txi_idx: {block_index, _txi_idx},
            expire_height: expire_height
          ),
-         last_gen,
-         last_micro_time,
+         {last_gen, last_micro_time},
          _opts
        ) do
     {last_bid_txi, _last_bid_idx} = last_bid_claim(state, plain_name)
@@ -139,10 +132,10 @@ defmodule AeMdw.AuctionBids do
     }
   end
 
-  defp render_v2(state, plain_name, last_gen, last_micro_time, opts) when is_binary(plain_name) do
+  defp render_v2(state, plain_name, last_micro_time, opts) when is_binary(plain_name) do
     auction_bid = State.fetch!(state, @table, plain_name)
 
-    render_v2(state, auction_bid, last_gen, last_micro_time, opts)
+    render_v2(state, auction_bid, last_micro_time, opts)
   end
 
   defp render_v2(
@@ -152,8 +145,7 @@ defmodule AeMdw.AuctionBids do
            block_index_txi_idx: {block_index, _txi_idx},
            expire_height: expire_height
          ),
-         last_gen,
-         last_micro_time,
+         {last_gen, last_micro_time},
          _opts
        ) do
     [{last_bid_txi, _last_bid_idx} | _rest] =
@@ -187,10 +179,7 @@ defmodule AeMdw.AuctionBids do
 
   defp txi_idx_txi({txi, _idx}), do: txi
 
-  defp serialize_exp_cursor(nil), do: nil
-
-  defp serialize_exp_cursor({{exp_height, name}, is_reversed?}),
-    do: {"#{exp_height}-#{name}", is_reversed?}
+  defp serialize_exp_cursor({exp_height, name}), do: "#{exp_height}-#{name}"
 
   defp deserialize_exp_cursor(nil), do: nil
 

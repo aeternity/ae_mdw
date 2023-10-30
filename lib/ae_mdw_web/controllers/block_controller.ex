@@ -97,9 +97,9 @@ defmodule AeMdwWeb.BlockController do
       cursor: cursor
     } = assigns
 
-    with {:ok, prev_cursor, micro_blocks, next_cursor} <-
+    with {:ok, paginated_blocks} <-
            Blocks.fetch_key_block_micro_blocks(state, hash_or_kbi, pagination, cursor) do
-      WebUtil.paginate(conn, prev_cursor, micro_blocks, next_cursor)
+      WebUtil.paginate(conn, paginated_blocks)
     end
   end
 

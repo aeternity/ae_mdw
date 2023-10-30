@@ -54,17 +54,12 @@ defmodule AeMdw.AexnTransfers do
         with {:ok, cursors} <- deserialize_account_cursors(state, cursor) do
           key_boundary = key_boundary(create_txi, account_pk)
 
-          {prev_cursor_key, transfer_keys, next_cursor_key} =
+          paginated_transfers =
             state
             |> build_streamer(cursors, key_boundary)
-            |> Collection.paginate(pagination)
+            |> Collection.paginate(pagination, & &1, &serialize_cursor/1)
 
-          {:ok,
-           {
-             serialize_cursor(prev_cursor_key),
-             transfer_keys,
-             serialize_cursor(next_cursor_key)
-           }}
+          {:ok, paginated_transfers}
         end
 
       :not_found ->
@@ -161,17 +156,12 @@ defmodule AeMdw.AexnTransfers do
     with {:ok, cursor_key} <- deserialize_cursor(cursor) do
       key_boundary = key_boundary(aexn_type_or_txi, account_pk_or_pair_pks)
 
-      {prev_cursor_key, transfer_keys, next_cursor_key} =
+      paginated_transfers =
         state
         |> build_streamer(table, cursor_key, key_boundary)
-        |> Collection.paginate(pagination)
+        |> Collection.paginate(pagination, & &1, &serialize_cursor/1)
 
-      {:ok,
-       {
-         serialize_cursor(prev_cursor_key),
-         transfer_keys,
-         serialize_cursor(next_cursor_key)
-       }}
+      {:ok, paginated_transfers}
     end
   end
 
@@ -211,10 +201,7 @@ defmodule AeMdw.AexnTransfers do
     end
   end
 
-  defp serialize_cursor(nil), do: nil
-
-  defp serialize_cursor({cursor, is_reversed?}),
-    do: {cursor |> :erlang.term_to_binary() |> Base.encode64(), is_reversed?}
+  defp serialize_cursor(cursor), do: cursor |> :erlang.term_to_binary() |> Base.encode64()
 
   defp deserialize_cursor(nil), do: {:ok, nil}
 

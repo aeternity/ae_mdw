@@ -18,7 +18,7 @@ defmodule AeMdw.ActiveEntities do
 
   import AeMdw.Util.Encoding
 
-  @type cursor :: {binary(), Collection.is_reversed?()} | nil
+  @type cursor :: Collection.pagination_cursor()
   @type entity :: term()
   @type query :: %{binary() => binary()}
 
@@ -38,17 +38,12 @@ defmodule AeMdw.ActiveEntities do
 
     with {:ok, cursor} <- deserialize_cursor(cursor),
          {:ok, filters} <- Util.convert_params(query, &convert_param(state, &1)) do
-      {prev_cursor, entities, next_cursor} =
+      paginated_entities =
         filters
         |> build_streamer(state, scope, cursor)
-        |> Collection.paginate(pagination)
+        |> Collection.paginate(pagination, &render(state, &1), &serialize_cursor/1)
 
-      {:ok,
-       {
-         serialize_cursor(prev_cursor),
-         Enum.map(entities, &render(state, &1)),
-         serialize_cursor(next_cursor)
-       }}
+      {:ok, paginated_entities}
     end
   end
 
@@ -152,14 +147,9 @@ defmodule AeMdw.ActiveEntities do
     end
   end
 
-  defp serialize_cursor(nil), do: nil
-
-  defp serialize_cursor({{entity, txi, create_txi}, is_reversed?}) do
-    {
-      {entity, txi, create_txi}
-      |> :erlang.term_to_binary()
-      |> Base.hex_encode32(padding: false),
-      is_reversed?
-    }
+  defp serialize_cursor({entity, txi, create_txi}) do
+    {entity, txi, create_txi}
+    |> :erlang.term_to_binary()
+    |> Base.hex_encode32(padding: false)
   end
 end

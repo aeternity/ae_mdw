@@ -93,7 +93,7 @@ defmodule AeMdw.Activities do
   * `{{30, -1, 2}, {:int_transfer, address, kind, ref_txi}}` - Where an internal transfer of kind `kind` ocurred to the given `address`.
   """
   @spec fetch_account_activities(state(), binary(), pagination(), range(), query(), cursor()) ::
-          {:ok, activity() | nil, [activity()], activity() | nil} | {:error, Error.t()}
+          {:ok, {activity() | nil, [activity()], activity() | nil}} | {:error, Error.t()}
   def fetch_account_activities(state, account, pagination, range, query, cursor) do
     with {:ok, account_pk} <- Validate.id(account),
          {:ok, cursor} <- deserialize_cursor(cursor),
@@ -227,11 +227,11 @@ defmodule AeMdw.Activities do
             stream
           end
         end
-        |> Collection.paginate(pagination)
+        |> Collection.paginate(pagination, & &1, &serialize_cursor/1)
 
       events = render_activities(state, account_pk, activities_locators_data)
 
-      {:ok, serialize_cursor(prev_cursor), events, serialize_cursor(next_cursor)}
+      {:ok, {prev_cursor, events, next_cursor}}
     end
   end
 
@@ -761,10 +761,8 @@ defmodule AeMdw.Activities do
     {"Aex141TransferEvent", payload}
   end
 
-  defp serialize_cursor(nil), do: nil
-
-  defp serialize_cursor({{{height, txi, local_idx}, _data}, is_reversed?}),
-    do: {"#{height}-#{txi + 1}-#{local_idx}", is_reversed?}
+  defp serialize_cursor({{height, txi, local_idx}, _data}),
+    do: "#{height}-#{txi + 1}-#{local_idx}"
 
   defp deserialize_cursor(nil), do: {:ok, nil}
 

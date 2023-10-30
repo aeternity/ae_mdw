@@ -21,13 +21,9 @@ defmodule AeMdw.Miners do
   def fetch_miners(state, pagination, cursor) do
     cursor = deserialize_cursor(cursor)
 
-    {prev_cursor, miners, next_cursor} =
-      state
-      |> build_streamer(cursor)
-      |> Collection.paginate(pagination)
-
-    {serialize_cursor(prev_cursor), Enum.map(miners, &fetch_miner!(state, &1)),
-     serialize_cursor(next_cursor)}
+    state
+    |> build_streamer(cursor)
+    |> Collection.paginate(pagination, &fetch_miner!(state, &1), &serialize_cursor/1)
   end
 
   @spec fetch_miner!(state(), pubkey()) :: miner()
@@ -48,10 +44,7 @@ defmodule AeMdw.Miners do
     }
   end
 
-  defp serialize_cursor(nil), do: nil
-
-  defp serialize_cursor({miner_pk, is_reversed?}),
-    do: {Enc.encode(:account_pubkey, miner_pk), is_reversed?}
+  defp serialize_cursor(miner_pk), do: Enc.encode(:account_pubkey, miner_pk)
 
   defp deserialize_cursor(nil), do: nil
 

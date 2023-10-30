@@ -84,13 +84,13 @@ defmodule AeMdw.Blocks do
           Collection.direction_limit(),
           cursor() | nil
         ) ::
-          {:ok, page_cursor(), [block()], page_cursor()} | {:error, Error.t()}
+          {:ok, {page_cursor(), [block()], page_cursor()}} | {:error, Error.t()}
   def fetch_key_block_micro_blocks(state, hash_or_kbi, pagination, cursor) do
     with {:ok, cursor} <- deserialize_cursor_err(cursor),
          {:ok, height} <- DbUtil.key_block_height(state, hash_or_kbi) do
       cursor = if cursor, do: {height, cursor}
 
-      {prev_cursor, mbis, next_cursor} =
+      paginated_blocks =
         fn direction ->
           state
           |> Collection.stream(
@@ -101,10 +101,13 @@ defmodule AeMdw.Blocks do
           )
           |> Stream.map(fn {_height, mbi} -> mbi end)
         end
-        |> Collection.paginate(pagination)
+        |> Collection.paginate(
+          pagination,
+          &render_micro_block(state, height, &1),
+          &serialize_cursor/1
+        )
 
-      {:ok, serialize_cursor(prev_cursor), render_micro_blocks(state, height, mbis),
-       serialize_cursor(next_cursor)}
+      {:ok, paginated_blocks}
     end
   end
 
@@ -214,9 +217,6 @@ defmodule AeMdw.Blocks do
     |> Map.put(:micro_blocks_count, mbi_count)
     |> Map.put(:transactions_count, txs_count)
   end
-
-  defp render_micro_blocks(state, height, mbis),
-    do: Enum.map(mbis, &render_micro_block(state, height, &1))
 
   defp render_micro_block(state, height, mbi) do
     Model.block(tx_index: first_tx_index, hash: mb_hash) =

@@ -157,10 +157,10 @@ defmodule AeMdw.Txs do
           query(),
           cursor() | nil,
           add_spendtx_details?()
-        ) :: {:ok, page_cursor(), [tx()], page_cursor()} | {:error, Error.t()}
+        ) :: {:ok, {page_cursor(), [tx()], page_cursor()}} | {:error, Error.t()}
   def fetch_txs(state, pagination, range, query, cursor, add_spendtx_details?) do
     with {:ok, streamer} <- txs_streamer(state, range, query, cursor) do
-      do_fetch_txs(state, streamer, pagination, add_spendtx_details?)
+      {:ok, paginate_txs(state, streamer, pagination, add_spendtx_details?)}
     end
   end
 
@@ -173,10 +173,10 @@ defmodule AeMdw.Txs do
   end
 
   @spec fetch_micro_block_txs(state(), binary(), query(), pagination(), cursor() | nil) ::
-          {:ok, page_cursor(), [tx()], page_cursor()} | {:error, Error.t()}
+          {:ok, {page_cursor(), [tx()], page_cursor()}} | {:error, Error.t()}
   def fetch_micro_block_txs(state, hash, query, pagination, cursor) do
     with {:ok, streamer} <- micro_block_txs_streamer(state, hash, query, cursor) do
-      do_fetch_txs(state, streamer, pagination)
+      {:ok, paginate_txs(state, streamer, pagination)}
     end
   end
 
@@ -190,12 +190,13 @@ defmodule AeMdw.Txs do
   #
   # Streams txs of a microblock
   #
-  defp do_fetch_txs(state, streamer, pagination, add_spendtx_details? \\ true) do
-    {prev_cursor, txis, next_cursor} = Collection.paginate(streamer, pagination)
-
-    txs = Enum.map(txis, &fetch!(state, &1, add_spendtx_details?))
-
-    {:ok, serialize_cursor(prev_cursor), txs, serialize_cursor(next_cursor)}
+  defp paginate_txs(state, streamer, pagination, add_spendtx_details? \\ true) do
+    Collection.paginate(
+      streamer,
+      pagination,
+      &fetch!(state, &1, add_spendtx_details?),
+      &serialize_cursor/1
+    )
   end
 
   defp micro_block_txs_streamer(state, hash, query, cursor \\ nil) do
@@ -576,9 +577,7 @@ defmodule AeMdw.Txs do
     end
   end
 
-  defp serialize_cursor(nil), do: nil
-
-  defp serialize_cursor({txi, is_reversed?}), do: {Integer.to_string(txi), is_reversed?}
+  defp serialize_cursor(txi), do: Integer.to_string(txi)
 
   defp deserialize_cursor(nil), do: nil
 

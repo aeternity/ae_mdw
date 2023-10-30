@@ -105,22 +105,23 @@ defmodule AeMdw.Aex9Test do
             Model.block(index: {11, 0}, hash: <<111::256>>)
           )
 
-        assert {:ok, nil,
-                [
-                  %{
-                    contract_id: encode_contract(contract_pk),
-                    amount: amount,
-                    block_hash: encode(:micro_block_hash, <<111::256>>),
-                    decimals: 18,
-                    height: 11,
-                    token_name: "name",
-                    token_symbol: "symbol",
-                    tx_hash: encode(:tx_hash, <<101::256>>),
-                    tx_index: 100,
-                    tx_type: :contract_create_tx
-                  }
-                ],
-                nil} ==
+        assert {:ok,
+                {nil,
+                 [
+                   %{
+                     contract_id: encode_contract(contract_pk),
+                     amount: amount,
+                     block_hash: encode(:micro_block_hash, <<111::256>>),
+                     decimals: 18,
+                     height: 11,
+                     token_name: "name",
+                     token_symbol: "symbol",
+                     tx_hash: encode(:tx_hash, <<101::256>>),
+                     tx_index: 100,
+                     tx_type: :contract_create_tx
+                   }
+                 ],
+                 nil}} ==
                  Aex9.fetch_account_balances(
                    State.new(store),
                    account_pk,

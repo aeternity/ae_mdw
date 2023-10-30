@@ -76,18 +76,17 @@ defmodule AeMdw.Aex9 do
           balances_cursor() | nil,
           order_by()
         ) ::
-          {:ok, balances_cursor() | nil, [{pubkey(), pubkey()}], balances_cursor() | nil}
+          {:ok, {balances_cursor() | nil, [{pubkey(), pubkey()}], balances_cursor() | nil}}
           | {:error, Error.t()}
   def fetch_event_balances(state, contract_pk, pagination, cursor, :pubkey) do
     key_boundary = {{contract_pk, <<>>}, {contract_pk, Util.max_256bit_bin()}}
 
     with {:ok, cursor_key} <- deserialize_event_balances_cursor(contract_pk, cursor) do
-      {prev_cursor, balance_keys, next_cursor} =
+      paginated_balances =
         (&Collection.stream(state, Model.Aex9EventBalance, &1, key_boundary, cursor_key))
-        |> Collection.paginate(pagination)
+        |> Collection.paginate(pagination, & &1, &serialize_event_balances_cursor/1)
 
-      {:ok, serialize_event_balances_cursor(prev_cursor), balance_keys,
-       serialize_event_balances_cursor(next_cursor)}
+      {:ok, paginated_balances}
     end
   end
 
@@ -95,12 +94,11 @@ defmodule AeMdw.Aex9 do
     key_boundary = {{contract_pk, -1, <<>>}, {contract_pk, nil, <<>>}}
 
     with {:ok, cursor_key} <- deserialize_balance_account_cursor(contract_pk, cursor) do
-      {prev_cursor, balance_keys, next_cursor} =
+      paginated_balances =
         (&Collection.stream(state, Model.Aex9BalanceAccount, &1, key_boundary, cursor_key))
-        |> Collection.paginate(pagination)
+        |> Collection.paginate(pagination, & &1, &serialize_balance_account_cursor/1)
 
-      {:ok, serialize_balance_account_cursor(prev_cursor), balance_keys,
-       serialize_balance_account_cursor(next_cursor)}
+      {:ok, paginated_balances}
     end
   end
 
@@ -160,52 +158,23 @@ defmodule AeMdw.Aex9 do
           account_balance_cursor(),
           pagination()
         ) ::
-          {:ok, account_balance_cursor() | nil, [account_balance()],
-           account_balance_cursor() | nil}
+          {:ok,
+           {account_balance_cursor() | nil, [account_balance()], account_balance_cursor() | nil}}
           | {:error, Error.t()}
   def fetch_account_balances(state, account_pk, cursor, pagination) do
     with {:ok, cursor} <- deserialize_account_balance_cursor(cursor) do
       type_height_hash = Db.top_height_hash(true)
       scope = {{account_pk, <<>>}, {account_pk, Util.max_256bit_bin()}}
 
-      {prev_cursor, account_presence_keys, next_cursor} =
+      paginated_account_balances =
         (&Collection.stream(state, Model.Aex9AccountPresence, &1, scope, cursor))
-        |> Collection.paginate(pagination)
+        |> Collection.paginate(
+          pagination,
+          &render_account_balance(state, type_height_hash, &1),
+          &serialize_account_balance_cursor/1
+        )
 
-      account_balances =
-        Enum.map(account_presence_keys, fn {^account_pk, contract_pk} ->
-          {:ok, {amount, _height_hash}} =
-            Db.aex9_balance(contract_pk, account_pk, type_height_hash)
-
-          Model.aexn_contract(txi_idx: {create_txi, _idx}, meta_info: {name, symbol, dec}) =
-            State.fetch!(state, Model.AexnContract, {:aex9, contract_pk})
-
-          Model.aex9_account_presence(txi: call_txi) =
-            State.fetch!(state, Model.Aex9AccountPresence, {account_pk, contract_pk})
-
-          Model.tx(id: tx_hash, block_index: {height, _mbi} = block_index) =
-            State.fetch!(state, Model.Tx, call_txi)
-
-          Model.block(hash: block_hash) = State.fetch!(state, Model.Block, block_index)
-
-          tx_type = if create_txi == call_txi, do: :contract_create_tx, else: :contract_call_tx
-
-          %{
-            contract_id: encode_contract(contract_pk),
-            block_hash: encode(:micro_block_hash, block_hash),
-            tx_hash: encode(:tx_hash, tx_hash),
-            tx_index: call_txi,
-            tx_type: tx_type,
-            height: height,
-            amount: amount,
-            decimals: dec,
-            token_symbol: symbol,
-            token_name: name
-          }
-        end)
-
-      {:ok, serialize_account_balance_cursor(prev_cursor), account_balances,
-       serialize_account_balance_cursor(next_cursor)}
+      {:ok, paginated_account_balances}
     end
   end
 
@@ -217,7 +186,7 @@ defmodule AeMdw.Aex9 do
           history_cursor(),
           pagination()
         ) ::
-          {:ok, history_cursor() | nil, [aex9_balance_history_item()], history_cursor() | nil}
+          {:ok, {history_cursor() | nil, [aex9_balance_history_item()], history_cursor() | nil}}
           | {:error, Error.t()}
   def fetch_balance_history(state, contract_pk, account_pk, range, cursor, pagination) do
     with {:ok, cursor} <- deserialize_history_cursor(cursor) do
@@ -234,18 +203,20 @@ defmodule AeMdw.Aex9 do
         _dir -> first_gen..last_gen
       end
 
-      {prev_cursor, gens, next_cursor} = Collection.paginate(streamer, pagination)
+      paginated_history =
+        Collection.paginate(
+          streamer,
+          pagination,
+          &render_balance_history_item(contract_pk, account_pk, &1),
+          & &1
+        )
 
-      balance_items = Enum.map(gens, &render_balance_history_item(contract_pk, account_pk, &1))
-
-      {:ok, prev_cursor, balance_items, next_cursor}
+      {:ok, paginated_history}
     end
   end
 
-  defp serialize_account_balance_cursor(nil), do: nil
-
-  defp serialize_account_balance_cursor({cursor, is_reversed?}),
-    do: {cursor |> :erlang.term_to_binary() |> Base.encode64(padding: false), is_reversed?}
+  defp serialize_account_balance_cursor(cursor),
+    do: cursor |> :erlang.term_to_binary() |> Base.encode64(padding: false)
 
   defp deserialize_account_balance_cursor(nil), do: {:ok, nil}
 
@@ -289,6 +260,36 @@ defmodule AeMdw.Aex9 do
     Map.put(balance, :height, gen)
   end
 
+  defp render_account_balance(state, type_height_hash, {account_pk, contract_pk}) do
+    {:ok, {amount, _height_hash}} = Db.aex9_balance(contract_pk, account_pk, type_height_hash)
+
+    Model.aexn_contract(txi_idx: {create_txi, _idx}, meta_info: {name, symbol, dec}) =
+      State.fetch!(state, Model.AexnContract, {:aex9, contract_pk})
+
+    Model.aex9_account_presence(txi: call_txi) =
+      State.fetch!(state, Model.Aex9AccountPresence, {account_pk, contract_pk})
+
+    Model.tx(id: tx_hash, block_index: {height, _mbi} = block_index) =
+      State.fetch!(state, Model.Tx, call_txi)
+
+    Model.block(hash: block_hash) = State.fetch!(state, Model.Block, block_index)
+
+    tx_type = if create_txi == call_txi, do: :contract_create_tx, else: :contract_call_tx
+
+    %{
+      contract_id: encode_contract(contract_pk),
+      block_hash: encode(:micro_block_hash, block_hash),
+      tx_hash: encode(:tx_hash, tx_hash),
+      tx_index: call_txi,
+      tx_type: tx_type,
+      height: height,
+      amount: amount,
+      decimals: dec,
+      token_symbol: symbol,
+      token_name: name
+    }
+  end
+
   defp deserialize_history_cursor(nil), do: {:ok, nil}
 
   defp deserialize_history_cursor(cursor) do
@@ -298,11 +299,7 @@ defmodule AeMdw.Aex9 do
     end
   end
 
-  defp serialize_event_balances_cursor(nil), do: nil
-
-  defp serialize_event_balances_cursor({{_contract_pk, account_pk}, is_reversed?}) do
-    {encode_account(account_pk), is_reversed?}
-  end
+  defp serialize_event_balances_cursor({_contract_pk, account_pk}), do: encode_account(account_pk)
 
   defp deserialize_event_balances_cursor(_contract_pk, nil), do: {:ok, nil}
 
@@ -313,11 +310,8 @@ defmodule AeMdw.Aex9 do
     end
   end
 
-  defp serialize_balance_account_cursor(nil), do: nil
-
-  defp serialize_balance_account_cursor({{_contract_pk, amount, account_pk}, is_reversed?}) do
-    {"#{amount}|#{encode_account(account_pk)}", is_reversed?}
-  end
+  defp serialize_balance_account_cursor({_contract_pk, amount, account_pk}),
+    do: "#{amount}|#{encode_account(account_pk)}"
 
   defp deserialize_balance_account_cursor(_contract_pk, nil), do: {:ok, nil}
 

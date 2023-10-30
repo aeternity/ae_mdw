@@ -72,11 +72,11 @@ defmodule AeMdwWeb.AexnTokenController do
 
     with {:ok, contract_pk} <- validate_aex9(contract_id),
          {:ok, order_by} <- validate_balances_order_by(order_by),
-         {:ok, prev_cursor, balance_keys, next_cursor} <-
+         {:ok, {prev_cursor, balance_keys, next_cursor}} <-
            Aex9.fetch_event_balances(state, contract_pk, pagination, cursor, order_by) do
       balances = Enum.map(balance_keys, &render_event_balance(state, &1))
 
-      Util.paginate(conn, prev_cursor, balances, next_cursor)
+      Util.paginate(conn, {prev_cursor, balances, next_cursor})
     end
   end
 
@@ -101,9 +101,9 @@ defmodule AeMdwWeb.AexnTokenController do
     %{state: state, pagination: pagination, cursor: cursor} = assigns
 
     with {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
-         {:ok, prev_cursor, account_balances, next_cursor} <-
+         {:ok, {prev_cursor, account_balances, next_cursor}} <-
            Aex9.fetch_account_balances(state, account_pk, cursor, pagination) do
-      Util.paginate(conn, prev_cursor, account_balances, next_cursor)
+      Util.paginate(conn, {prev_cursor, account_balances, next_cursor})
     end
   end
 
@@ -116,9 +116,9 @@ defmodule AeMdwWeb.AexnTokenController do
 
     with {:ok, contract_pk} <- validate_aex9(contract_id),
          {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
-         {:ok, prev_cursor, balance_history_items, next_cursor} <-
+         {:ok, {prev_cursor, balance_history_items, next_cursor}} <-
            Aex9.fetch_balance_history(state, contract_pk, account_pk, scope, cursor, pagination) do
-      Util.paginate(conn, prev_cursor, balance_history_items, next_cursor)
+      Util.paginate(conn, {prev_cursor, balance_history_items, next_cursor})
     end
   end
 
@@ -146,7 +146,7 @@ defmodule AeMdwWeb.AexnTokenController do
              order_by,
              cursor
            ) do
-      Util.paginate(conn, prev_cursor, render_contracts(state, aexn_contracts), next_cursor)
+      Util.paginate(conn, {prev_cursor, render_contracts(state, aexn_contracts), next_cursor})
     end
   end
 
