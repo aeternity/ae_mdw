@@ -73,4 +73,16 @@ config :ae_mdw, AeMdw.EntityCalls, %{
   "accept_offer" => [:contract, :int]
 }
 
+# dex
+config :ae_mdw, :dex_factories, %{
+  # "ct_2mfj3FoZxnhkSw5RZMcP8BfPoB1QR4QiYGNCdkAvLZ1zfF6paW"
+  "ae_mainnet" =>
+    <<233, 30, 151, 180, 233, 65, 226, 183, 109, 12, 219, 231, 56, 176, 122, 108, 140, 46, 55,
+      120, 136, 137, 108, 10, 214, 208, 33, 75, 126, 14, 243, 174>>,
+  # "ct_NhbxN8wg8NLkGuzwRNDQhMDKSKBwDAQgxQawK7tkigi2aC7i9"
+  "ae_uat" =>
+    <<49, 69, 201, 179, 64, 73, 251, 153, 205, 37, 147, 13, 132, 58, 150, 207, 81, 149, 186, 147,
+      107, 208, 117, 185, 160, 135, 239, 247, 134, 40, 7, 80>>
+}
+
 import_config "#{Mix.env()}.exs"

@@ -125,7 +125,7 @@ defmodule AeMdw.MixProject do
       start_phases: [
         migrate_db: [],
         hardforks_presets: [],
-        load_obj_keys: [],
+        load: [],
         start_sync: []
       ],
       extra_applications: [:logger, :runtime_tools]

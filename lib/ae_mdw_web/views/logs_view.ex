@@ -105,6 +105,10 @@ defmodule AeMdwWeb.LogsView do
     [encode_account(account), token_id]
   end
 
+  defp format_args("PairCreated", [pair_pk, token1, token2], %{aexn_args: true}) do
+    [encode_contract(pair_pk), encode_contract(token1), encode_contract(token2)]
+  end
+
   defp format_args("Transfer", [from, to, <<token_id::256>>], %{aexn_args: true}) do
     [encode_account(from), encode_account(to), token_id]
   end

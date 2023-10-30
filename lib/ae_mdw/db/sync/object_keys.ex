@@ -46,8 +46,8 @@ defmodule AeMdw.Db.Sync.ObjectKeys do
 
   @opts [:named_table, :set, :public]
 
-  @spec start() :: :ok
-  def start() do
+  @spec load() :: :ok
+  def load do
     _tid1 = :ets.new(@active_names_table, @opts)
     _tid2 = :ets.new(@inactive_names_table, @opts)
     _tid3 = :ets.new(@active_oracles_table, @opts)

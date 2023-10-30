@@ -19,6 +19,7 @@ defmodule AeMdw.Application do
   alias AeMdw.Sync.Watcher
   alias AeMdw.Util
   alias AeMdwWeb.Websocket.BroadcasterCache
+  alias AeMdw.Sync.DexCache
   alias AeMdw.Sync.MutationsCache
   alias AeMdw.Sync.Server, as: SyncServer
   alias AeMdw.Sync.SyncingQueue
@@ -163,6 +164,8 @@ defmodule AeMdw.Application do
         aex9_signatures: [{[], AeMdw.Node.aex9_signatures()}],
         aexn_event_hash_types: [{[], AeMdw.Node.aexn_event_hash_types()}],
         aexn_event_names: [{[], AeMdw.Node.aexn_event_names()}],
+        dex_event_hash_types: [{[], AeMdw.Node.dex_event_hash_types()}],
+        dex_event_names: [{[], AeMdw.Node.dex_event_names()}],
         aex141_signatures: [{[], AeMdw.Node.aex141_signatures()}],
         previous_aex141_signatures: [{[], AeMdw.Node.previous_aex141_signatures()}],
         height_proto: [{[], AeMdw.Node.height_proto()}],
@@ -226,8 +229,9 @@ defmodule AeMdw.Application do
     :ok
   end
 
-  def start_phase(:load_obj_keys, _start_type, []) do
-    ObjectKeys.start()
+  def start_phase(:load, _start_type, []) do
+    ObjectKeys.load()
+    DexCache.load()
   end
 
   def start_phase(:start_sync, _start_type, []) do
