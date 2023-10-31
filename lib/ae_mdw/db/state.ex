@@ -233,6 +233,10 @@ defmodule AeMdw.Db.State do
   @spec clear_stats(t()) :: t()
   def clear_stats(state), do: %__MODULE__{state | stats: %{}}
 
+  @spec clear_stat(t(), stat_name()) :: t()
+  def clear_stat(%__MODULE__{stats: stats} = state, name),
+    do: %__MODULE__{state | stats: Map.delete(stats, name)}
+
   @spec cache_put(t(), cache_name(), term(), term()) :: t()
   def cache_put(%__MODULE__{cache: cache} = state, cache_name, key, value) do
     %__MODULE__{

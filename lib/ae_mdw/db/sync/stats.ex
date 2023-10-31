@@ -24,6 +24,7 @@ defmodule AeMdw.Db.Sync.Stats do
   @typep type_counts() :: %{Node.tx_type() => pos_integer()}
   @typep height() :: Blocks.height()
   @typep txi() :: Txs.txi()
+  @typep interval_by() :: Stats.interval_by()
 
   @start_unix 1_970
   @seconds_per_day 3_600 * 24
@@ -133,7 +134,8 @@ defmodule AeMdw.Db.Sync.Stats do
     StatisticsMutation.new(mb_statistics ++ txs_statistics)
   end
 
-  defp time_intervals(time) do
+  @spec time_intervals(time()) :: [{interval_by(), time()}]
+  def time_intervals(time) do
     seconds = div(time, 1_000)
     %DateTime{year: year, month: month} = DateTime.from_unix!(seconds)
     day_start = div(seconds, @seconds_per_day)

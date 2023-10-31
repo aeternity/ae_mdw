@@ -16,6 +16,7 @@ defmodule AeMdw.Db.Sync.Block do
   """
 
   alias AeMdw.Blocks
+  alias AeMdw.Db.BlockStatisticsMutation
   alias AeMdw.Db.Model
   alias AeMdw.Db.IntTransfer
   alias AeMdw.Db.KeyBlockMutation
@@ -144,6 +145,7 @@ defmodule AeMdw.Db.Sync.Block do
     _sum = :ets.update_counter(:sync_profiling, {:dryrun, height}, ts, {{:dryrun, height}, 0})
     mb_model = Model.block(index: {height, mbi}, tx_index: first_txi, hash: mb_hash)
     block_mutation = WriteMutation.new(Model.Block, mb_model)
+    block_stats_mutation = BlockStatisticsMutation.new(mb_time)
 
     {ts, {txs_mutations, type_counters}} =
       :timer.tc(fn ->
@@ -170,7 +172,12 @@ defmodule AeMdw.Db.Sync.Block do
     type_counters_mutation = TypeCountersMutation.new(type_counters)
     _sum = :ets.update_counter(:sync_profiling, {:txs, height}, ts, {{:txs, height}, 0})
 
-    mutations = [block_mutation, type_counters_mutation, statistics_mutations | txs_mutations]
+    mutations = [
+      block_mutation,
+      block_stats_mutation,
+      type_counters_mutation,
+      statistics_mutations | txs_mutations
+    ]
 
     {mutations, first_txi + length(mb_txs)}
   end

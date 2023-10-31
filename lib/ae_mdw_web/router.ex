@@ -53,6 +53,7 @@ defmodule AeMdwWeb.Router do
       get "/names/auctions/:id/claims", NameController, :auction_claims
       get "/statistics/transactions", StatsController, :transactions_statistics
       get "/statistics/blocks", StatsController, :blocks_statistics
+      get "/statistics/names", StatsController, :names_statistics
 
       get "/aex9/:contract_id/transfers",
           AexnTransferController,

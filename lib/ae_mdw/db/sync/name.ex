@@ -240,6 +240,7 @@ defmodule AeMdw.Db.Sync.Name do
     |> State.put(Model.ActiveNameExpiration, m_expiration)
     |> State.put(Model.ActiveNameOwnerDeactivation, m_owner_deactivation)
     |> State.inc_stat(:names_activated)
+    |> State.inc_stat(:micro_block_names_activated)
   end
 
   @spec deactivate_name(
