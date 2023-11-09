@@ -159,7 +159,8 @@ defmodule AeMdw.Stats do
        %{
          max_transactions_per_second: tps,
          max_transactions_per_second_block_hash: Enc.encode(:key_block_hash, tps_block_hash),
-         miners_count: miners_count
+         miners_count: miners_count,
+         last_24hs_transactions: last_24hs_txs_count(state)
        }}
     else
       :not_found ->
@@ -492,6 +493,18 @@ defmodule AeMdw.Stats do
           :none ->
             nil
         end
+    end
+  end
+
+  defp last_24hs_txs_count(state) do
+    case State.next(state, Model.Time, {:aeu_time.now_in_msecs() - 1, -1}) do
+      {:ok, {_time, first_tx_index}} ->
+        {:ok, last_tx_index} = State.prev(state, Model.Tx, nil)
+
+        last_tx_index - first_tx_index
+
+      :none ->
+        0
     end
   end
 
