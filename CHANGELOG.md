@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.66.0](https://www.github.com/aeternity/ae_mdw/compare/v1.65.0...v1.66.0) (2023-11-09)
+
+
+### Features
+
+* add last 24 hours transactions count ([#1623](https://www.github.com/aeternity/ae_mdw/issues/1623)) ([82a7943](https://www.github.com/aeternity/ae_mdw/commit/82a7943b2d5963aff83111963dc14eb95330980b))
+* add name activation statistics ([#1620](https://www.github.com/aeternity/ae_mdw/issues/1620)) ([a1a0af5](https://www.github.com/aeternity/ae_mdw/commit/a1a0af5b9671d6c6e9fe2c335e4153f022907600))
+* track dex pair creations ([#1621](https://www.github.com/aeternity/ae_mdw/issues/1621)) ([1156a98](https://www.github.com/aeternity/ae_mdw/commit/1156a9898bec3d26826642b243998bcf568412d4))
+
+
+### Miscellaneous
+
+* add syncing queue for async syncing requirements ([#1610](https://www.github.com/aeternity/ae_mdw/issues/1610)) ([6d89854](https://www.github.com/aeternity/ae_mdw/commit/6d8985484da387702aed80187b92424cd76379c1))
+* filter all aex9 contract account transfers ([#1618](https://www.github.com/aeternity/ae_mdw/issues/1618)) ([6d65207](https://www.github.com/aeternity/ae_mdw/commit/6d65207e951e3c887d50bf411c7bf9332d775d37))
+* make names restructuring migration async ([#1617](https://www.github.com/aeternity/ae_mdw/issues/1617)) ([9355e30](https://www.github.com/aeternity/ae_mdw/commit/9355e30a020bc2864aee18cef0c8854b2e394f37))
+* unify pagination returns and cursor serialization ([#1619](https://www.github.com/aeternity/ae_mdw/issues/1619)) ([0c17998](https://www.github.com/aeternity/ae_mdw/commit/0c179987c7dbe0a03684f6edacbb92ae3858086d))
+
 ## [1.65.0](https://www.github.com/aeternity/ae_mdw/compare/v1.64.0...v1.65.0) (2023-10-12)
 
 
