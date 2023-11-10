@@ -212,6 +212,9 @@ defmodule AeMdw.Db.Contract do
   def call_write(state, create_txi, txi, {:error, detail}),
     do: call_write(state, create_txi, txi, "<unknown>", nil, :invalid, inspect(detail))
 
+  def call_write(state, create_txi, txi, :error),
+    do: call_write(state, create_txi, txi, "<unknown>", nil, :invalid, "error")
+
   @spec call_write(state(), txi(), txi(), String.t(), call_tx_args(), call_tx_res(), any()) ::
           state()
   def call_write(state, create_txi, txi, fname, args, result, return) do
