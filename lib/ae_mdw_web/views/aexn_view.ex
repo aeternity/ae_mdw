@@ -10,6 +10,7 @@ defmodule AeMdwWeb.AexnView do
   alias AeMdw.Stats
   alias AeMdw.Aex9
   alias AeMdw.Aex141
+  alias AeMdw.Sync.DexCache
   alias AeMdw.Txs
 
   require Model
@@ -239,6 +240,24 @@ defmodule AeMdwWeb.AexnView do
       {aexn_type, sender_pk, call_txi, recipient_pk, token_id, log_idx},
       v3?
     )
+  end
+
+  @spec render_swap(State.t(), Model.dex_account_swap_tokens()) :: map()
+  def render_swap(state, {caller_pk, create_txi, txi, log_idx}) do
+    Model.dex_account_swap_tokens(to: to_pk, amounts: amounts) =
+      State.fetch!(state, Model.DexAccountSwapTokens, {caller_pk, create_txi, txi, log_idx})
+
+    %{token1: token1_symbol, token2: token2_symbol} = DexCache.get_pair_symbols(create_txi)
+
+    %{
+      caller: encode_account(caller_pk),
+      to_account: encode_account(to_pk),
+      from_token: token1_symbol,
+      to_token: token2_symbol,
+      tx_hash: encode_to_hash(state, txi),
+      log_idx: log_idx,
+      amounts: amounts
+    }
   end
 
   #

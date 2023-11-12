@@ -189,12 +189,14 @@ defmodule AeMdw.Db.ContractTest do
       assert State.exists?(state, Model.IdxContractLog, {call_txi, 1, create_txi})
     end
 
-    test "tracks dex pair creations" do
+    test "tracks dex pair creations and dex swaps" do
       dex_pair_pk = :crypto.strong_rand_bytes(32)
       dex_token1_pk = :crypto.strong_rand_bytes(32)
       dex_token2_pk = :crypto.strong_rand_bytes(32)
       height = Enum.random(100_000..999_999)
-      txi = Enum.random(100_000_000..999_999_999)
+      call_txi = Enum.random(100_000_000..999_999_999)
+      create_token1_txi = call_txi - 2
+      create_pair_txi = call_txi - 1
 
       call_rec =
         call_rec("logs", @dex_factory_pk, height, nil, [
@@ -205,11 +207,58 @@ defmodule AeMdw.Db.ContractTest do
           }
         ])
 
-      empty_state()
-      |> Contract.logs_write(txi, txi + 1, call_rec)
+      state =
+        empty_state()
+        |> State.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, dex_token1_pk}, meta_info: {"name1", "S1", 18})
+        )
+        |> State.put(
+          Model.AexnContract,
+          Model.aexn_contract(index: {:aex9, dex_token2_pk}, meta_info: {"name2", "S1", 18})
+        )
+        |> State.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, dex_token1_pk, create_token1_txi})
+        )
+        |> State.put(
+          Model.Field,
+          Model.field(index: {:contract_create_tx, nil, dex_pair_pk, create_pair_txi})
+        )
+        |> Contract.logs_write(create_pair_txi, call_txi, call_rec)
 
-      assert %{pair: dex_pair_pk, token1: dex_token1_pk, token2: dex_token2_pk} ==
+      assert %{token1: dex_token1_pk, token2: dex_token2_pk} ==
                DexCache.get_pair(dex_pair_pk)
+
+      account1_pk = :crypto.strong_rand_bytes(32)
+      account2_pk = :crypto.strong_rand_bytes(32)
+
+      call_rec2 =
+        call_rec("logs", dex_pair_pk, height, nil, [
+          {
+            dex_pair_pk,
+            [aexn_event_hash(:swap_tokens), account1_pk, account2_pk],
+            "123|456"
+          }
+        ])
+
+      call_txi = call_txi + 1
+      log_idx = 0
+
+      state = Contract.logs_write(state, call_txi - 2, call_txi, call_rec2)
+
+      assert {:ok, Model.dex_account_swap_tokens(amounts: [123, 456], to: ^account2_pk)} =
+               State.get(
+                 state,
+                 Model.DexAccountSwapTokens,
+                 {account1_pk, create_token1_txi, call_txi, log_idx}
+               )
+
+      assert State.exists?(
+               state,
+               Model.DexContractSwapTokens,
+               {create_token1_txi, account1_pk, call_txi, log_idx}
+             )
     end
 
     test "does not update aex9 event balance on contract create transaction" do

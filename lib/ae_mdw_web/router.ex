@@ -58,6 +58,8 @@ defmodule AeMdwWeb.Router do
       get "/aex9/:contract_id/transfers",
           AexnTransferController,
           :aex9_contract_transfers
+
+      get "/dex/swaps", DexController, :swaps
     end
 
     scope "/v2" do

@@ -275,9 +275,11 @@ defmodule AeMdw.Db.Contract do
           Map.get(Node.dex_event_hash_types(), evt_hash)
 
       cond do
-        is_dex_event?(evt_hash) and addr == dex_factory_pubkey() ->
-          track_dex_event(event_type, args)
-          state
+        event_type == :pair_created ->
+          write_pair_created(state, addr, args)
+
+        event_type == :swap_tokens ->
+          write_swap_tokens(state, addr, txi, log_idx, args, data)
 
         aex9_contract_pk != nil ->
           # for parent contracts on contract creation or for child contracts on contract calls,
@@ -399,9 +401,48 @@ defmodule AeMdw.Db.Contract do
   #
   # Private functions
   #
-  defp track_dex_event(:pair_created, [pair_pk, token1, token2]) do
-    DexCache.add_pair(pair_pk, token1, token2)
+  defp write_pair_created(state, contract_pk, [pair_pk, token1, token2]) do
+    if contract_pk == dex_factory_pubkey() do
+      DexCache.add_pair(state, pair_pk, token1, token2)
+    end
+
+    state
   end
+
+  defp write_pair_created(state, _contract_pk, _args), do: state
+
+  defp write_swap_tokens(state, contract_pk, txi, idx, [from, to], amounts) do
+    with true <- String.printable?(amounts) || :amounts_not_printable,
+         %{token1: token1_pk} <- DexCache.get_pair(contract_pk) || :pair_not_found,
+         {:ok, create_txi} <- Origin.tx_index(state, {:contract, token1_pk}) do
+      amounts = amounts |> String.split("|") |> Enum.map(&String.to_integer/1)
+
+      state
+      |> State.put(
+        Model.DexAccountSwapTokens,
+        Model.dex_account_swap_tokens(
+          index: {from, create_txi, txi, idx},
+          to: to,
+          amounts: amounts
+        )
+      )
+      |> State.put(
+        Model.DexContractSwapTokens,
+        Model.dex_contract_swap_tokens(index: {create_txi, from, txi, idx})
+      )
+    else
+      reason ->
+        reason = if reason == :not_found, do: :tx_index_not_found, else: reason
+
+        Log.warn(
+          "[write_swap_tokens] contract not found #{inspect(contract_pk)}, reason=#{reason}"
+        )
+
+        state
+    end
+  end
+
+  defp write_swap_tokens(state, _pk, _txi, _idx, _args, _amounts), do: state
 
   defp aex9_update_balance_account(
          state,
@@ -918,6 +959,4 @@ defmodule AeMdw.Db.Contract do
         false
     end
   end
-
-  defp is_dex_event?(evt_hash), do: Map.has_key?(Node.dex_event_hash_types(), evt_hash)
 end
