@@ -18,7 +18,7 @@ defmodule AeMdwWeb.ActiveEntityController do
 
     with {:ok, entities} <-
            ActiveEntities.fetch_entities(state, pagination, scope, query, cursor) do
-      Util.paginate(conn, entities)
+      Util.render(conn, entities)
     end
   end
 end

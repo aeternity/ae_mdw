@@ -16,7 +16,7 @@ defmodule AeMdwWeb.TransferController do
 
     with {:ok, paginated_transfers} <-
            Transfers.fetch_transfers(state, pagination, scope, query, cursor) do
-      Util.paginate(conn, paginated_transfers)
+      Util.render(conn, paginated_transfers)
     end
   end
 end

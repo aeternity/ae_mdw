@@ -67,7 +67,7 @@ defmodule AeMdwWeb.NameController do
     paginated_auctions =
       AuctionBids.fetch_auctions(state, pagination, order_by, cursor, [{:render_v3?, true} | opts])
 
-    Util.paginate(conn, paginated_auctions)
+    Util.render(conn, paginated_auctions)
   end
 
   @spec auctions_v2(Conn.t(), map()) :: Conn.t()
@@ -76,7 +76,7 @@ defmodule AeMdwWeb.NameController do
       assigns
 
     paginated_auctions = AuctionBids.fetch_auctions(state, pagination, order_by, cursor, opts)
-    Util.paginate(conn, paginated_auctions)
+    Util.render(conn, paginated_auctions)
   end
 
   @spec auction_claims(Conn.t(), map()) :: Conn.t()
@@ -85,7 +85,7 @@ defmodule AeMdwWeb.NameController do
 
     with {:ok, paginated_bids} <-
            Names.fetch_auction_claims(state, name_id, pagination, scope, cursor) do
-      Util.paginate(conn, paginated_bids)
+      Util.render(conn, paginated_bids)
     end
   end
 
@@ -102,7 +102,7 @@ defmodule AeMdwWeb.NameController do
 
     with {:ok, names} <-
            Names.fetch_inactive_names(state, pagination, scope, order_by, cursor, opts) do
-      Util.paginate(conn, names)
+      Util.render(conn, names)
     end
   end
 
@@ -119,7 +119,7 @@ defmodule AeMdwWeb.NameController do
 
     with {:ok, names} <-
            Names.fetch_active_names(state, pagination, scope, order_by, cursor, opts) do
-      Util.paginate(conn, names)
+      Util.render(conn, names)
     end
   end
 
@@ -139,7 +139,7 @@ defmodule AeMdwWeb.NameController do
 
     with {:ok, names} <-
            Names.fetch_names(state, pagination, scope, order_by, query, cursor, opts) do
-      Util.paginate(conn, names)
+      Util.render(conn, names)
     end
   end
 
@@ -157,7 +157,7 @@ defmodule AeMdwWeb.NameController do
 
     with {:ok, names} <-
            Names.fetch_names(state, pagination, scope, order_by, query, cursor, opts) do
-      Util.paginate(conn, names)
+      Util.render(conn, names)
     end
   end
 
@@ -173,7 +173,7 @@ defmodule AeMdwWeb.NameController do
 
     with {:ok, paginated_history} <-
            Names.fetch_name_history(state, pagination, name_or_hash, cursor) do
-      Util.paginate(conn, paginated_history)
+      Util.render(conn, paginated_history)
     end
   end
 
@@ -207,7 +207,7 @@ defmodule AeMdwWeb.NameController do
 
     names = Names.search_names(state, lifecycles, prefix, pagination, cursor, opts)
 
-    Util.paginate(conn, names)
+    Util.render(conn, names)
   end
 
   @spec name_claims(Conn.t(), map()) :: Conn.t()
@@ -220,7 +220,7 @@ defmodule AeMdwWeb.NameController do
     } = assigns
 
     with {:ok, claims} <- Names.fetch_name_claims(state, name_id, pagination, scope, cursor) do
-      Util.paginate(conn, claims)
+      Util.render(conn, claims)
     end
   end
 
@@ -234,7 +234,7 @@ defmodule AeMdwWeb.NameController do
     } = assigns
 
     with {:ok, transfers} <- Names.fetch_name_transfers(state, name_id, pagination, scope, cursor) do
-      Util.paginate(conn, transfers)
+      Util.render(conn, transfers)
     end
   end
 
@@ -248,7 +248,7 @@ defmodule AeMdwWeb.NameController do
     } = assigns
 
     with {:ok, updates} <- Names.fetch_name_updates(state, name_id, pagination, scope, cursor) do
-      Util.paginate(conn, updates)
+      Util.render(conn, updates)
     end
   end
 

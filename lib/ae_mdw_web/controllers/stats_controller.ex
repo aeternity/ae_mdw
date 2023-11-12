@@ -30,7 +30,7 @@ defmodule AeMdwWeb.StatsController do
     {prev_cursor, stats, next_cursor} =
       Stats.fetch_stats_v1(state, direction, scope, cursor, limit)
 
-    Util.paginate(conn, prev_cursor, stats, next_cursor)
+    Util.render(conn, prev_cursor, stats, next_cursor)
   end
 
   @spec delta_stats(Conn.t(), map()) :: Conn.t()
@@ -45,7 +45,7 @@ defmodule AeMdwWeb.StatsController do
     {prev_cursor, stats, next_cursor} =
       Stats.fetch_delta_stats(state, direction, scope, cursor, limit)
 
-    Util.paginate(conn, prev_cursor, stats, next_cursor)
+    Util.render(conn, prev_cursor, stats, next_cursor)
   end
 
   @spec total_stats(Conn.t(), map()) :: Conn.t()
@@ -60,7 +60,7 @@ defmodule AeMdwWeb.StatsController do
     {prev_cursor, stats, next_cursor} =
       Stats.fetch_total_stats(state, direction, scope, cursor, limit)
 
-    Util.paginate(conn, prev_cursor, stats, next_cursor)
+    Util.render(conn, prev_cursor, stats, next_cursor)
   end
 
   @spec stats(Conn.t(), map()) :: Conn.t()
@@ -77,7 +77,7 @@ defmodule AeMdwWeb.StatsController do
 
     {prev_cursor, miners, next_cursor} = Miners.fetch_miners(state, pagination, cursor)
 
-    Util.paginate(conn, prev_cursor, miners, next_cursor)
+    Util.render(conn, prev_cursor, miners, next_cursor)
   end
 
   @spec transactions_statistics(Conn.t(), map()) :: Conn.t()
@@ -86,7 +86,7 @@ defmodule AeMdwWeb.StatsController do
 
     with {:ok, paginated_statistics} <-
            Stats.fetch_transactions_statistics(state, pagination, query, scope, cursor) do
-      Util.paginate(conn, paginated_statistics)
+      Util.render(conn, paginated_statistics)
     end
   end
 
@@ -96,7 +96,7 @@ defmodule AeMdwWeb.StatsController do
 
     with {:ok, paginated_statistics} <-
            Stats.fetch_blocks_statistics(state, pagination, query, scope, cursor) do
-      Util.paginate(conn, paginated_statistics)
+      Util.render(conn, paginated_statistics)
     end
   end
 
@@ -106,7 +106,7 @@ defmodule AeMdwWeb.StatsController do
 
     with {:ok, paginated_statistics} <-
            Stats.fetch_names_statistics(state, pagination, query, scope, cursor) do
-      Util.paginate(conn, paginated_statistics)
+      Util.render(conn, paginated_statistics)
     end
   end
 end

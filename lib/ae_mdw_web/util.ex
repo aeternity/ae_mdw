@@ -4,10 +4,13 @@ defmodule AeMdwWeb.Util do
   """
 
   alias AeMdw.Collection
+  alias AeMdw.Database
   alias AeMdw.Validate
   alias AeMdw.Error.Input, as: ErrInput
   alias Phoenix.Controller
   alias Plug.Conn
+
+  @type render_json_fn :: (Database.key() -> map()) | (Database.record() -> map())
 
   @spec parse_range(binary()) :: {:ok, Range.t()} | {:error, binary}
   def parse_range(range) do
@@ -82,13 +85,13 @@ defmodule AeMdwWeb.Util do
     end
   end
 
-  @spec paginate(
+  @spec render(
           Conn.t(),
           Collection.pagination_cursor(),
           Enumerable.t(),
           Collection.pagination_cursor()
         ) :: Conn.t()
-  def paginate(
+  def render(
         %Conn{request_path: path, query_params: query_params} = conn,
         prev_cursor,
         data,
@@ -100,12 +103,22 @@ defmodule AeMdwWeb.Util do
     Controller.json(conn, %{"data" => data, "next" => next_uri, "prev" => prev_uri})
   end
 
-  @spec paginate(
+  @spec render(
+          Conn.t(),
+          {Collection.pagination_cursor(), Enumerable.t(), Collection.pagination_cursor()},
+          render_json_fn()
+        ) :: Conn.t()
+  def render(conn, {prev_cursor, data_list, next_cursor}, render_json_fn) do
+    data = Enum.map(data_list, render_json_fn)
+    render(conn, prev_cursor, data, next_cursor)
+  end
+
+  @spec render(
           Conn.t(),
           {Collection.pagination_cursor(), Enumerable.t(), Collection.pagination_cursor()}
         ) :: Conn.t()
-  def paginate(conn, {prev_cursor, data, next_cursor}),
-    do: paginate(conn, prev_cursor, data, next_cursor)
+  def render(conn, {prev_cursor, data, next_cursor}),
+    do: render(conn, prev_cursor, data, next_cursor)
 
   defp encode_cursor(_path, _query_params, nil), do: nil
 
