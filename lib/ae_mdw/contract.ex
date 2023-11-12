@@ -54,7 +54,7 @@ defmodule AeMdw.Contract do
           result: call_tx_res(),
           return: any()
         }
-  @type fun_arg_res_or_error :: fun_arg_res() | {:error, any()}
+  @type fun_arg_res_or_error :: fun_arg_res() | {:error, any()} | :error
   @type local_idx :: non_neg_integer()
   @type code() :: binary()
   @opaque aecontract() :: tuple()
@@ -239,24 +239,24 @@ defmodule AeMdw.Contract do
 
     case :aec_chain.get_contract_call(contract_pk, call_id, block_hash) do
       {:ok, call} ->
-        try do
-          {fun, args} = decode_call_data(type_info, call_data, &to_map/1)
-          fun = to_string(fun)
+        case :aect_call.return_value(call) do
+          :ok ->
+            {fun, args} = decode_call_data(type_info, call_data, &to_map/1)
+            fun = to_string(fun)
 
-          res_type = :aect_call.return_type(call)
-          res_val = :aect_call.return_value(call)
-          result = decode_call_result(type_info, fun, res_type, res_val, &to_map/1)
+            res_type = :aect_call.return_type(call)
+            result = decode_call_result(type_info, fun, res_type, :ok, &to_map/1)
 
-          fun_arg_res = %{
-            function: fun,
-            arguments: args,
-            result: result
-          }
+            fun_arg_res = %{
+              function: fun,
+              arguments: args,
+              result: result
+            }
 
-          {fun_arg_res, call}
-        catch
-          _exception, {:badmatch, match_err} ->
-            {{:error, match_err}, call}
+            {fun_arg_res, call}
+
+          _error_or_invalid ->
+            {:error, call}
         end
 
       {:error, reason} ->
