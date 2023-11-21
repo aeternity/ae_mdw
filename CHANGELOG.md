@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.66.1](https://www.github.com/aeternity/ae_mdw/compare/v1.66.0...v1.66.1) (2023-11-12)
+
+
+### Bug Fixes
+
+* ignore errored contract calls fun_arg_res when syncing ([#1625](https://www.github.com/aeternity/ae_mdw/issues/1625)) ([c3e8814](https://www.github.com/aeternity/ae_mdw/commit/c3e8814343aee96e2a5f8cc314598871c2e925a9))
+
 ## [1.66.0](https://www.github.com/aeternity/ae_mdw/compare/v1.65.0...v1.66.0) (2023-11-09)
 
 
