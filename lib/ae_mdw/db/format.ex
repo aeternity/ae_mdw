@@ -656,6 +656,7 @@ defmodule AeMdw.Db.Format do
 
     state
     |> Collection.stream(Model.PreviousName, :backward, key_boundary, nil)
+    |> Stream.map(&State.fetch!(state, Model.PreviousName, &1))
     |> Enum.map(fn Model.previous_name(name: name) -> name_info_to_raw_map(state, name) end)
   end
 end
