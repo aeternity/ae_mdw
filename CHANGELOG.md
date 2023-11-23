@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.66.2](https://www.github.com/aeternity/ae_mdw/compare/v1.66.1...v1.66.2) (2023-11-23)
+
+
+### Bug Fixes
+
+* fetch previous names before rendering them ([#1630](https://www.github.com/aeternity/ae_mdw/issues/1630)) ([65c2678](https://www.github.com/aeternity/ae_mdw/commit/65c2678c42e5bdce72ae2e40d73ff33fe3fc79e5))
+
 ### [1.66.1](https://www.github.com/aeternity/ae_mdw/compare/v1.66.0...v1.66.1) (2023-11-12)
 
 
