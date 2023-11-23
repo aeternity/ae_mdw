@@ -85,7 +85,7 @@ defmodule AeMdw.Migrations.RestructurePreviousNames do
               name(index: plain_name, active: active, previous: previous) = name ->
                 prev_name =
                   Model.previous_name(
-                    transform_name(name),
+                    name: transform_name(name),
                     index: {plain_name, active}
                   )
 

@@ -354,7 +354,7 @@ defmodule AeMdwWeb.NameControllerTest do
       name =
         Model.name(
           index: plain_name,
-          active: true,
+          active: 1,
           expire: 1,
           revoke: {{0, 0}, {0, -1}},
           auction_timeout: 1
@@ -366,6 +366,7 @@ defmodule AeMdwWeb.NameControllerTest do
         |> Store.put(Model.ActiveName, name)
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: key_hash))
         |> Store.put(Model.Block, Model.block(index: {4, -1}, hash: key_hash))
+        |> Store.put(Model.PreviousName, Model.previous_name(index: {plain_name, 0}, name: name))
 
       with_mocks [
         {Txs, [],

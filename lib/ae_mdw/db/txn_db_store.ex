@@ -38,26 +38,6 @@ defmodule AeMdw.Db.TxnDbStore do
   end
 
   @spec get(t(), table(), key()) :: {:ok, record()} | :not_found
-  # Temp fix for old names format
-  def get(%__MODULE__{txn: txn}, table, key)
-      when table in [Model.ActiveName, Model.InactiveName] do
-    case Database.dirty_fetch(txn, table, key) do
-      {:ok, {:name, plain_name, active, expire, revoke, auction_timeout, owner, _previous}} ->
-        {:ok,
-         Model.name(
-           index: plain_name,
-           active: active,
-           expire: expire,
-           revoke: revoke,
-           auction_timeout: auction_timeout,
-           owner: owner
-         )}
-
-      other ->
-        other
-    end
-  end
-
   def get(%__MODULE__{txn: txn}, table, key), do: Database.dirty_fetch(txn, table, key)
 
   @spec delete(t(), table(), key()) :: t()
