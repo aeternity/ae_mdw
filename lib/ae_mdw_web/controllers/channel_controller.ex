@@ -17,7 +17,7 @@ defmodule AeMdwWeb.ChannelController do
 
     with {:ok, paginated_channels} <-
            Channels.fetch_channels(state, pagination, scope, query, cursor) do
-      Util.paginate(conn, paginated_channels)
+      Util.render(conn, paginated_channels)
     end
   end
 
@@ -38,7 +38,7 @@ defmodule AeMdwWeb.ChannelController do
 
     with {:ok, paginated_updates} <-
            Channels.fetch_channel_updates(state, id, pagination, scope, cursor) do
-      Util.paginate(conn, paginated_updates)
+      Util.render(conn, paginated_updates)
     end
   end
 

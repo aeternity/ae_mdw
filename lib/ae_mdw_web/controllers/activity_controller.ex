@@ -23,7 +23,7 @@ defmodule AeMdwWeb.ActivityController do
              query,
              cursor
            ) do
-      Util.paginate(conn, paginated_activities)
+      Util.render(conn, paginated_activities)
     end
   end
 end

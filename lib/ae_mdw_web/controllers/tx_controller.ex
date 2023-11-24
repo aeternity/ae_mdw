@@ -53,7 +53,7 @@ defmodule AeMdwWeb.TxController do
     with {:ok, query} <- extract_query(query_params),
          {:ok, paginated_txs} <-
            Txs.fetch_txs(state, pagination, scope, query, cursor, add_spendtx_details?) do
-      WebUtil.paginate(conn, paginated_txs)
+      WebUtil.render(conn, paginated_txs)
     else
       {:error, reason} when is_binary(reason) -> {:error, ErrInput.Query.exception(value: reason)}
       {:error, reason} -> {:error, reason}
@@ -113,7 +113,7 @@ defmodule AeMdwWeb.TxController do
     with :ok <- validate_without_scope(scope),
          {:ok, query} <- extract_query(query_params),
          {:ok, paginated_txs} <- Txs.fetch_micro_block_txs(state, hash, query, pagination, cursor) do
-      WebUtil.paginate(conn, paginated_txs)
+      WebUtil.render(conn, paginated_txs)
     end
   end
 

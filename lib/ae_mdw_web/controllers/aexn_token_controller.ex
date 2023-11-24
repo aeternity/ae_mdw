@@ -76,7 +76,7 @@ defmodule AeMdwWeb.AexnTokenController do
            Aex9.fetch_event_balances(state, contract_pk, pagination, cursor, order_by) do
       balances = Enum.map(balance_keys, &render_event_balance(state, &1))
 
-      Util.paginate(conn, {prev_cursor, balances, next_cursor})
+      Util.render(conn, {prev_cursor, balances, next_cursor})
     end
   end
 
@@ -103,7 +103,7 @@ defmodule AeMdwWeb.AexnTokenController do
     with {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
          {:ok, {prev_cursor, account_balances, next_cursor}} <-
            Aex9.fetch_account_balances(state, account_pk, cursor, pagination) do
-      Util.paginate(conn, {prev_cursor, account_balances, next_cursor})
+      Util.render(conn, {prev_cursor, account_balances, next_cursor})
     end
   end
 
@@ -118,7 +118,7 @@ defmodule AeMdwWeb.AexnTokenController do
          {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
          {:ok, {prev_cursor, balance_history_items, next_cursor}} <-
            Aex9.fetch_balance_history(state, contract_pk, account_pk, scope, cursor, pagination) do
-      Util.paginate(conn, {prev_cursor, balance_history_items, next_cursor})
+      Util.render(conn, {prev_cursor, balance_history_items, next_cursor})
     end
   end
 
@@ -137,7 +137,7 @@ defmodule AeMdwWeb.AexnTokenController do
          },
          aexn_type
        ) do
-    with {:ok, {prev_cursor, aexn_contracts, next_cursor}} <-
+    with {:ok, paginated_contracts} <-
            AexnTokens.fetch_contracts(
              state,
              pagination,
@@ -146,7 +146,7 @@ defmodule AeMdwWeb.AexnTokenController do
              order_by,
              cursor
            ) do
-      Util.paginate(conn, {prev_cursor, render_contracts(state, aexn_contracts), next_cursor})
+      Util.render(conn, paginated_contracts, &render_contract(state, &1))
     end
   end
 

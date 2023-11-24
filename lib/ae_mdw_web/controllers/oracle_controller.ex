@@ -27,7 +27,7 @@ defmodule AeMdwWeb.OracleController do
 
     paginated_oracles = Oracles.fetch_inactive_oracles(state, pagination, cursor, opts)
 
-    Util.paginate(conn, paginated_oracles)
+    Util.render(conn, paginated_oracles)
   end
 
   @spec active_oracles(Conn.t(), map()) :: Conn.t()
@@ -36,7 +36,7 @@ defmodule AeMdwWeb.OracleController do
 
     paginated_oracles = Oracles.fetch_active_oracles(state, pagination, cursor, opts)
 
-    Util.paginate(conn, paginated_oracles)
+    Util.render(conn, paginated_oracles)
   end
 
   @spec oracles(Conn.t(), map()) :: Conn.t()
@@ -52,7 +52,7 @@ defmodule AeMdwWeb.OracleController do
 
     with {:ok, paginated_oracles} <-
            Oracles.fetch_oracles(state, pagination, scope, query, cursor, opts) do
-      Util.paginate(conn, paginated_oracles)
+      Util.render(conn, paginated_oracles)
     end
   end
 
@@ -62,7 +62,7 @@ defmodule AeMdwWeb.OracleController do
 
     with {:ok, paginated_queries} <-
            Oracles.fetch_oracle_queries(state, oracle_id, pagination, scope, cursor) do
-      Util.paginate(conn, paginated_queries)
+      Util.render(conn, paginated_queries)
     end
   end
 
@@ -72,7 +72,7 @@ defmodule AeMdwWeb.OracleController do
 
     with {:ok, paginated_responses} <-
            Oracles.fetch_oracle_responses(state, oracle_id, pagination, scope, cursor) do
-      Util.paginate(conn, paginated_responses)
+      Util.render(conn, paginated_responses)
     end
   end
 end

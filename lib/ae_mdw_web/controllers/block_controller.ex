@@ -1,13 +1,14 @@
 defmodule AeMdwWeb.BlockController do
   use AeMdwWeb, :controller
 
+  import AeMdw.Util, only: [parse_int: 1]
+
   alias AeMdw.Blocks
   alias AeMdw.Validate
-  alias AeMdw.Util
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
-  alias AeMdwWeb.Util, as: WebUtil
+  alias AeMdwWeb.Util
   alias Plug.Conn
 
   plug(PaginatedPlug)
@@ -42,7 +43,7 @@ defmodule AeMdwWeb.BlockController do
   """
   @spec block_v1(Conn.t(), map()) :: Conn.t()
   def block_v1(%Conn{assigns: %{state: state}} = conn, %{"hash_or_kbi" => hash_or_kbi} = params) do
-    case Util.parse_int(hash_or_kbi) do
+    case parse_int(hash_or_kbi) do
       {:ok, _kbi} ->
         blocki(conn, Map.put(params, "kbi", hash_or_kbi))
 
@@ -79,7 +80,7 @@ defmodule AeMdwWeb.BlockController do
     {prev_cursor, blocks, next_cursor} =
       Blocks.fetch_key_blocks(state, direction, scope, cursor, limit)
 
-    WebUtil.paginate(conn, prev_cursor, blocks, next_cursor)
+    Util.render(conn, prev_cursor, blocks, next_cursor)
   end
 
   @spec key_block(Conn.t(), map()) :: Conn.t()
@@ -99,7 +100,7 @@ defmodule AeMdwWeb.BlockController do
 
     with {:ok, paginated_blocks} <-
            Blocks.fetch_key_block_micro_blocks(state, hash_or_kbi, pagination, cursor) do
-      WebUtil.paginate(conn, paginated_blocks)
+      Util.render(conn, paginated_blocks)
     end
   end
 
@@ -125,7 +126,7 @@ defmodule AeMdwWeb.BlockController do
     {prev_cursor, blocks, next_cursor} =
       Blocks.fetch_blocks(state, direction, scope, cursor, limit, false)
 
-    WebUtil.paginate(conn, prev_cursor, blocks, next_cursor)
+    Util.render(conn, prev_cursor, blocks, next_cursor)
   end
 
   @doc """
@@ -143,6 +144,6 @@ defmodule AeMdwWeb.BlockController do
     {prev_cursor, blocks, next_cursor} =
       Blocks.fetch_blocks(state, direction, scope, cursor, limit, true)
 
-    WebUtil.paginate(conn, prev_cursor, blocks, next_cursor)
+    Util.render(conn, prev_cursor, blocks, next_cursor)
   end
 end

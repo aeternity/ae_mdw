@@ -18,7 +18,7 @@ defmodule AeMdwWeb.ContractController do
 
     with {:ok, contracts} <-
            Contracts.fetch_contracts(state, pagination, scope, cursor) do
-      Util.paginate(conn, contracts)
+      Util.render(conn, contracts)
     end
   end
 
@@ -38,7 +38,7 @@ defmodule AeMdwWeb.ContractController do
            Contracts.fetch_logs(state, pagination, scope, query, cursor) do
       logs = Enum.map(logs, &LogsView.render_log(state, &1, encode_args))
 
-      Util.paginate(conn, prev_cursor, logs, next_cursor)
+      Util.render(conn, prev_cursor, logs, next_cursor)
     end
   end
 
@@ -47,7 +47,7 @@ defmodule AeMdwWeb.ContractController do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope, query: query} = assigns
 
     with {:ok, calls} <- Contracts.fetch_calls(state, pagination, scope, query, cursor) do
-      Util.paginate(conn, calls)
+      Util.render(conn, calls)
     end
   end
 

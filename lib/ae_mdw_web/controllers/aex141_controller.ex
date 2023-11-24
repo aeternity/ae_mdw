@@ -10,7 +10,7 @@ defmodule AeMdwWeb.Aex141Controller do
   alias AeMdw.Validate
   alias AeMdwWeb.FallbackController
   alias AeMdwWeb.Plugs.PaginatedPlug
-  alias AeMdwWeb.Util, as: WebUtil
+  alias AeMdwWeb.Util
 
   alias Plug.Conn
 
@@ -30,7 +30,7 @@ defmodule AeMdwWeb.Aex141Controller do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
          {:ok, {prev_cursor, nft_owners, next_cursor}} <-
            Aex141.fetch_collection_owners(state, contract_pk, cursor, pagination) do
-      WebUtil.paginate(conn, prev_cursor, nft_owners, next_cursor)
+      Util.render(conn, prev_cursor, nft_owners, next_cursor)
     end
   end
 
@@ -43,9 +43,9 @@ defmodule AeMdwWeb.Aex141Controller do
     } = assigns
 
     with {:ok, contract_pk} <- Validate.id(contract_id),
-         {:ok, {prev_cursor, templates, next_cursor}} <-
+         {:ok, paginated_templates} <-
            Aex141.fetch_templates(state, contract_pk, cursor, pagination) do
-      WebUtil.paginate(conn, prev_cursor, templates, next_cursor)
+      Util.render(conn, paginated_templates)
     end
   end
 
@@ -62,9 +62,9 @@ defmodule AeMdwWeb.Aex141Controller do
 
     with {:ok, contract_pk} <- Validate.id(contract_id),
          {template_id, ""} <- Integer.parse(template_id),
-         {:ok, {prev_cursor, template_tokens, next_cursor}} <-
+         {:ok, paginated_tokens} <-
            Aex141.fetch_template_tokens(state, contract_pk, template_id, cursor, pagination) do
-      WebUtil.paginate(conn, prev_cursor, template_tokens, next_cursor)
+      Util.render(conn, paginated_tokens)
     end
   end
 
@@ -119,7 +119,7 @@ defmodule AeMdwWeb.Aex141Controller do
          {:ok, contract_pk} <- validate_optional_pubkey(params, "contract"),
          {:ok, {prev_cursor, nfts, next_cursor}} <-
            Aex141.fetch_owned_nfts(state, account_pk, contract_pk, cursor, pagination) do
-      WebUtil.paginate(conn, prev_cursor, nfts, next_cursor)
+      Util.render(conn, prev_cursor, nfts, next_cursor)
     end
   end
 
