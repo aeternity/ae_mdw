@@ -1,5 +1,17 @@
 # Changelog
 
+### [1.66.3](https://www.github.com/aeternity/ae_mdw/compare/v1.66.2...v1.66.3) (2023-11-27)
+
+
+### Bug Fixes
+
+* use last gen status regardless of transaction index ([#1637](https://www.github.com/aeternity/ae_mdw/issues/1637)) ([07bd70a](https://www.github.com/aeternity/ae_mdw/commit/07bd70a5aa328ca0f8668700dcefab2b2b8bca78))
+
+
+### Miscellaneous
+
+* generalize json/view rendering ([#1627](https://www.github.com/aeternity/ae_mdw/issues/1627)) ([fdcf633](https://www.github.com/aeternity/ae_mdw/commit/fdcf6334e0b4591c82ae5454fe74e4dccae5be39))
+
 ### [1.66.2](https://www.github.com/aeternity/ae_mdw/compare/v1.66.1...v1.66.2) (2023-11-23)
 
 
