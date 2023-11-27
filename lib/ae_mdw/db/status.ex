@@ -81,15 +81,19 @@ defmodule AeMdw.Db.Status do
   end
 
   defp safe_mdw_tx_index_and_height(state) do
-    case Util.last_txi(state) do
-      {:ok, last_txi} ->
-        mdw_height = Util.synced_height(state)
+    mdw_height =
+      case Util.synced_height(state) do
+        -1 -> 0
+        height -> height
+      end
 
-        {last_txi, mdw_height}
+    last_txi =
+      case Util.last_txi(state) do
+        {:ok, last_txi} -> last_txi
+        :none -> 0
+      end
 
-      :none ->
-        {0, 0}
-    end
+    {last_txi, mdw_height}
   end
 
   defp calculate_gens_per_min(0, gens_per_min), do: gens_per_min
