@@ -562,6 +562,8 @@ defmodule AeMdw.Names do
       status: status,
       active: is_active?,
       active_from: active,
+      approximate_activation_time:
+        DbUtil.height_to_time(state, active, last_gen, last_micro_time),
       expire_height: expire,
       approximate_expire_time: DbUtil.height_to_time(state, expire, last_gen, last_micro_time),
       revoke: revoke && expand_txi_idx(state, revoke, opts),
