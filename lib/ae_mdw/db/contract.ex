@@ -277,6 +277,7 @@ defmodule AeMdw.Db.Contract do
       cond do
         is_dex_event?(evt_hash) and addr == dex_factory_pubkey() ->
           track_dex_event(event_type, args)
+          state
 
         aex9_contract_pk != nil ->
           # for parent contracts on contract creation or for child contracts on contract calls,
