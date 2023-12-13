@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.66.4](https://www.github.com/aeternity/ae_mdw/compare/v1.66.3...v1.66.4) (2023-12-13)
+
+
+### Miscellaneous
+
+* update node version to most recent 6.12.0 ([#1643](https://www.github.com/aeternity/ae_mdw/issues/1643)) ([da8e284](https://www.github.com/aeternity/ae_mdw/commit/da8e2844775bd19b6b3361c7f6f3ef5b2bd98f13))
+
 ### [1.66.3](https://www.github.com/aeternity/ae_mdw/compare/v1.66.2...v1.66.3) (2023-11-27)
 
 
