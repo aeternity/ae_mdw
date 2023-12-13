@@ -104,7 +104,7 @@ defmodule AeMdw.Blocks do
         |> Collection.paginate(
           pagination,
           &render_micro_block(state, height, &1),
-          &serialize_cursor/1
+          &serialize_micro_cursor/1
         )
 
       {:ok, paginated_blocks}
@@ -306,9 +306,9 @@ defmodule AeMdw.Blocks do
     end)
   end
 
-  defp serialize_cursor(nil), do: nil
+  defp serialize_micro_cursor(mbi), do: Integer.to_string(mbi)
 
-  defp serialize_cursor({gen, is_reversed?}), do: {Integer.to_string(gen), is_reversed?}
+  defp serialize_cursor(nil), do: nil
 
   defp serialize_cursor(gen), do: {Integer.to_string(gen), false}
 
