@@ -239,13 +239,13 @@ defmodule AeMdw.Contract do
 
     case :aec_chain.get_contract_call(contract_pk, call_id, block_hash) do
       {:ok, call} ->
-        case :aect_call.return_value(call) do
+        case :aect_call.return_type(call) do
           :ok ->
             {fun, args} = decode_call_data(type_info, call_data, &to_map/1)
             fun = to_string(fun)
 
-            res_type = :aect_call.return_type(call)
-            result = decode_call_result(type_info, fun, res_type, :ok, &to_map/1)
+            res_val = :aect_call.return_value(call)
+            result = decode_call_result(type_info, fun, :ok, res_val, &to_map/1)
 
             fun_arg_res = %{
               function: fun,
