@@ -538,10 +538,12 @@ defmodule AeMdw.Db.Format do
     cs = Name.stream_nested_resource(state, Model.NameClaim, plain_name, active_h)
     us = Name.stream_nested_resource(state, Model.NameUpdate, plain_name, active_h)
     ts = Name.stream_nested_resource(state, Model.NameTransfer, plain_name, active_h)
+    {last_gen, last_micro_time} = DbUtil.last_gen_and_time(state)
 
     %{
       active_from: active_h,
       expire_height: expire_h,
+      approximate_expire_time: DbUtil.height_to_time(state, expire_h, last_gen, last_micro_time),
       claims: Enum.map(cs, &txi_idx_txi/1),
       updates: Enum.map(us, &txi_idx_txi/1),
       transfers: Enum.map(ts, &txi_idx_txi/1),
