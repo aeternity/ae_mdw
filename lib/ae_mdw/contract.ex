@@ -54,7 +54,7 @@ defmodule AeMdw.Contract do
           result: call_tx_res(),
           return: any()
         }
-  @type fun_arg_res_or_error :: fun_arg_res() | {:error, any()} | :error
+  @type fun_arg_res_or_error :: fun_arg_res() | {:error, any()}
   @type local_idx :: non_neg_integer()
   @type code() :: binary()
   @opaque aecontract() :: tuple()
@@ -191,21 +191,6 @@ defmodule AeMdw.Contract do
     {fun_name, aevm_val({arg_type, vm_args}, mapper)}
   end
 
-  defp decode_call_result(_info, _fun_name, :error, value, mapper),
-    do: mapper.(%{error: [value]})
-
-  defp decode_call_result(
-         {:fcode, _functions, _symbols, _annotations},
-         _fun_name,
-         :revert,
-         value,
-         mapper
-       ),
-       do: mapper.(%{abort: [:aeb_fate_encoding.deserialize(value)]})
-
-  defp decode_call_result([_arg_type | _ret_type], _fun_name, :revert, value, mapper),
-    do: mapper.(%{abort: [ok!(:aeb_heap.from_binary(:string, value))]})
-
   defp decode_call_result(
          {:fcode, _functions, _symbols, _annotations},
          _fun_name,
@@ -213,13 +198,16 @@ defmodule AeMdw.Contract do
          value,
          mapper
        ),
-       do: fate_val(:aeb_fate_encoding.deserialize(value), mapper)
+       do: {:ok, fate_val(:aeb_fate_encoding.deserialize(value), mapper)}
 
   defp decode_call_result([_arg_type | _ret_type] = info, fun_name, :ok, value, mapper) do
     {:ok, hash} = :aeb_aevm_abi.type_hash_from_function_name(fun_name, info)
     {:ok, _type_rep, res_type} = :aeb_aevm_abi.typereps_from_type_hash(hash, info)
-    {:ok, vm_res} = :aeb_heap.from_binary(res_type, value)
-    aevm_val({res_type, vm_res}, mapper)
+
+    case :aeb_heap.from_binary(res_type, value) do
+      {:ok, vm_res} -> {:ok, aevm_val({res_type, vm_res}, mapper)}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   @spec call_rec(signed_tx(), DBN.pubkey(), block_hash()) :: {:ok, call()} | {:error, atom()}
@@ -245,7 +233,12 @@ defmodule AeMdw.Contract do
             fun = to_string(fun)
 
             res_val = :aect_call.return_value(call)
-            result = decode_call_result(type_info, fun, :ok, res_val, &to_map/1)
+
+            result =
+              case decode_call_result(type_info, fun, :ok, res_val, &to_map/1) do
+                {:ok, result} -> result
+                {:error, reason} -> "error decoding: #{inspect(reason)}"
+              end
 
             fun_arg_res = %{
               function: fun,
