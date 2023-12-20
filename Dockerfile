@@ -102,6 +102,7 @@ RUN ./scripts/install-devmode.sh
 COPY rel rel
 ENV RELEASE_NODE=aeternity@localhost
 ENV RELEASE_DISTRIBUTION=name
+RUN mix phx.digest
 RUN mix release
 
 # start a new build stage so that the final image will only contain
