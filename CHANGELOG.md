@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.67.0](https://www.github.com/aeternity/ae_mdw/compare/v1.66.4...v1.67.0) (2023-12-20)
+
+
+### Features
+
+* add names approximate time on expire/activation ([#1639](https://www.github.com/aeternity/ae_mdw/issues/1639)) ([a64d2b1](https://www.github.com/aeternity/ae_mdw/commit/a64d2b135059abb931f544755b5984370b9d9e5f))
+
+
+### Bug Fixes
+
+* always return state on contract logs write ([#1645](https://www.github.com/aeternity/ae_mdw/issues/1645)) ([2875c61](https://www.github.com/aeternity/ae_mdw/commit/2875c617b38e0ca8a1c02342fd040ea6c6e4a0eb))
+* check return_type instead of ret_value for errors ([#1648](https://www.github.com/aeternity/ae_mdw/issues/1648)) ([3d26843](https://www.github.com/aeternity/ae_mdw/commit/3d26843a7b28253fc0c6511c074ad94efa10e343))
+* handle micro-block cursor properly ([#1646](https://www.github.com/aeternity/ae_mdw/issues/1646)) ([5f3b91d](https://www.github.com/aeternity/ae_mdw/commit/5f3b91d5f2dcfe164fca1d9d58b5476b2b15d9ad))
+
+
+### Miscellaneous
+
+* add cache manifest building on docker build ([#1640](https://www.github.com/aeternity/ae_mdw/issues/1640)) ([28e0531](https://www.github.com/aeternity/ae_mdw/commit/28e0531ecc4a9569af2262b5be373d28ba669cc0))
+
 ### [1.66.4](https://www.github.com/aeternity/ae_mdw/compare/v1.66.3...v1.66.4) (2023-12-13)
 
 
