@@ -497,7 +497,7 @@ defmodule AeMdw.Stats do
   end
 
   defp last_24hs_txs_count(state) do
-    case State.next(state, Model.Time, {:aeu_time.now_in_msecs() - 1, -1}) do
+    case State.next(state, Model.Time, {:aeu_time.now_in_msecs() - @seconds_per_day * 1_000, -1}) do
       {:ok, {_time, first_tx_index}} ->
         {:ok, last_tx_index} = State.prev(state, Model.Tx, nil)
 
