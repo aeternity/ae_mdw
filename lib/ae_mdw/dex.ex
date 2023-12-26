@@ -3,8 +3,6 @@ defmodule AeMdw.Dex do
   Search for DEX swaps.
   """
 
-  import AeMdwWeb.AexnView, only: [render_swap: 2]
-
   alias AeMdw.Collection
   alias AeMdw.Db.Model
   alias AeMdw.Db.State
