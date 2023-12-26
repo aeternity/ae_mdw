@@ -56,13 +56,13 @@ defmodule AeMdw.Dex do
     end
   end
 
-  defp build_streamer(state, table = @account_swaps_table, boundary, cursor) do
+  defp build_streamer(state, @account_swaps_table = table, boundary, cursor) do
     fn direction ->
       Collection.stream(state, table, direction, boundary, cursor)
     end
   end
 
-  defp build_streamer(state, table = @contract_swaps_table, boundary, cursor) do
+  defp build_streamer(state, @contract_swaps_table = table, boundary, cursor) do
     fn direction ->
       state
       |> Collection.stream(table, direction, boundary, cursor)
