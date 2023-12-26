@@ -432,14 +432,6 @@ defmodule AeMdw.Db.Contract do
       )
     else
       reason ->
-        reason = 
-          case reason do
-            false -> :invalid_amounts
-            nil -> :pair_not_found
-            :not_found -> :txi_not_found
-            _other -> reason
-          end
-
         Log.warn(
           "[write_swap_tokens] contract not found #{inspect(contract_pk)}, reason=#{reason}"
         )
