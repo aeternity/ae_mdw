@@ -412,8 +412,8 @@ defmodule AeMdw.Db.Contract do
   defp write_pair_created(state, _contract_pk, _args), do: state
 
   defp write_swap_tokens(state, contract_pk, txi, idx, [from, to], amounts) do
-    with true <- String.printable?(amounts) || :amounts_not_printable,
-         %{token1: token1_pk} <- DexCache.get_pair(contract_pk) || :pair_not_found,
+    with true <- String.printable?(amounts),
+         %{token1: token1_pk} <- DexCache.get_pair(contract_pk),
          {:ok, create_txi} <- Origin.tx_index(state, {:contract, token1_pk}) do
       amounts = amounts |> String.split("|") |> Enum.map(&String.to_integer/1)
 
@@ -432,7 +432,13 @@ defmodule AeMdw.Db.Contract do
       )
     else
       reason ->
-        reason = if reason == :not_found, do: :tx_index_not_found, else: reason
+        reason = 
+          case reason do
+            false -> :invalid_amounts
+            nil -> :pair_not_found
+            :not_found -> :txi_not_found
+            _other -> reason
+          end
 
         Log.warn(
           "[write_swap_tokens] contract not found #{inspect(contract_pk)}, reason=#{reason}"
