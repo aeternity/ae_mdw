@@ -29,7 +29,7 @@ defmodule AeMdw.Dex do
   @typep page_cursor :: Collection.pagination_cursor()
 
   @spec fetch_account_swaps(State.t(), account_query(), pagination(), cursor()) ::
-          {:ok, paginated_swaps()} | {:error, Error.t()}
+          {:ok, paginated_account_swaps()} | {:error, Error.t()}
   def fetch_account_swaps(state, query, pagination, cursor) do
     with {:ok, cursor} <- deserialize_account_cursor(cursor) do
       state
@@ -40,7 +40,7 @@ defmodule AeMdw.Dex do
   end
 
   @spec fetch_contract_swaps(State.t(), pubkey(), pagination(), cursor()) ::
-          {:ok, paginated_swaps()} | {:error, Error.t()}
+          {:ok, paginated_contract_swaps()} | {:error, Error.t()}
   def fetch_contract_swaps(state, create_txi, pagination, cursor) do
     with {:ok, cursor} <- deserialize_contract_cursor(cursor) do
       state
