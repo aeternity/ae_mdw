@@ -40,7 +40,7 @@ defmodule AeMdw.Dex do
     with {:ok, cursor} <- deserialize_account_cursor(cursor) do
       state
       |> build_streamer(@account_swaps_table, key_boundary(query), cursor)
-      |> Collection.paginate(pagination, &render_swap(state, &1), &serialize_cursor/1)
+      |> Collection.paginate(pagination, & &1, &serialize_cursor/1)
       |> then(fn paginated_swaps -> {:ok, paginated_swaps} end)
     end
   end
@@ -51,7 +51,7 @@ defmodule AeMdw.Dex do
     with {:ok, cursor} <- deserialize_contract_cursor(cursor) do
       state
       |> build_streamer(@contract_swaps_table, key_boundary(create_txi), cursor)
-      |> Collection.paginate(pagination, &render_swap(state, &1), &serialize_cursor/1)
+      |> Collection.paginate(pagination, & &1, &serialize_cursor/1)
       |> then(fn paginated_swaps -> {:ok, paginated_swaps} end)
     end
   end
