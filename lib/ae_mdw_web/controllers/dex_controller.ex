@@ -44,7 +44,6 @@ defmodule AeMdwWeb.DexController do
     end
   end
 
-  @spec swaps(Conn.t(), map()) :: Conn.t()
   def swaps(%Conn{assigns: assigns} = conn, %{"from_symbol" => token_symbol}) do
     %{state: state, pagination: pagination, cursor: cursor} = assigns
 
