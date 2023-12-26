@@ -4,6 +4,8 @@ defmodule AeMdwWeb.DexController do
   """
   use AeMdwWeb, :controller
 
+  import AeMdwWeb.AexnView, only: [render_swap: 2]
+
   alias AeMdw.Dex
   alias AeMdw.Db.Model
   alias AeMdw.Error.Input, as: ErrInput
@@ -30,7 +32,7 @@ defmodule AeMdwWeb.DexController do
          {:ok, create_txi} <- validate_token(token_symbol),
          {:ok, swaps} <-
            Dex.fetch_account_swaps(state, {account_pk, create_txi}, pagination, cursor) do
-      Util.render(conn, swaps)
+      Util.render(conn, swaps, &render_swap(state, &1))
     end
   end
 
@@ -40,7 +42,7 @@ defmodule AeMdwWeb.DexController do
 
     with {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
          {:ok, swaps} <- Dex.fetch_account_swaps(state, account_pk, pagination, cursor) do
-      Util.render(conn, swaps)
+      Util.render(conn, swaps, &render_swap(state, &1))
     end
   end
 
