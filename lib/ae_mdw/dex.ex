@@ -16,16 +16,12 @@ defmodule AeMdw.Dex do
   @contract_swaps_table Model.DexContractSwapTokens
 
   @typep pubkey :: AeMdw.Node.Db.pubkey()
-  @type swap :: %{
-          caller: pubkey(),
-          to: pubkey(),
-          token_from: String.t(),
-          token_to: String.t(),
-          amounts: list(integer())
-        }
 
-  @type paginated_swaps ::
-          {page_cursor(), [swap()], page_cursor()}
+  @typep paginated_account_swaps ::
+          {page_cursor(), [Model.dex_account_swap_tokens_index()], page_cursor()}
+  
+  @typep paginated_contract_swaps ::
+          {page_cursor(), [Model.dex_contract_swap_tokens_index()], page_cursor()}
 
   @typep account_query :: pubkey() | {pubkey(), integer()}
   @typep cursor :: binary()
