@@ -52,6 +52,7 @@ defmodule AeMdwWeb.AexnView do
   @typep account_transfer_key :: AeMdw.AexnTransfers.transfer_key()
   @typep pair_transfer_key :: AeMdw.AexnTransfers.pair_transfer_key()
   @typep contract_transfer_key :: AeMdw.AexnTransfers.contract_transfer_key()
+  @typep swap_key :: Model.dex_account_swap_tokens_index() |   Model.dex_contract_swap_tokens_index()
 
   @spec balance_to_map(State.t(), {non_neg_integer(), non_neg_integer(), pubkey()}) ::
           map()
@@ -242,8 +243,8 @@ defmodule AeMdwWeb.AexnView do
     )
   end
 
-  @spec render_swap(State.t(), Model.dex_account_swap_tokens_index()) :: map()
-  def render_swap(state, {caller_pk, create_txi, txi, log_idx}) do
+  @spec render_swap(State.t(), swap_key()) :: map()
+  def render_swap(state, {<<_pk:256>> = caller_pk, create_txi, txi, log_idx}) do
     Model.dex_account_swap_tokens(to: to_pk, amounts: amounts) =
       State.fetch!(state, Model.DexAccountSwapTokens, {caller_pk, create_txi, txi, log_idx})
 
@@ -259,6 +260,10 @@ defmodule AeMdwWeb.AexnView do
       amounts: amounts
     }
   end
+
+  def render_swap(state, {create_txi, caller_pk, txi, log_idx}) do     
+    render_swap(state, {caller_pk, create_txi, txi, log_idx})
+  end   
 
   #
   # Private functions
