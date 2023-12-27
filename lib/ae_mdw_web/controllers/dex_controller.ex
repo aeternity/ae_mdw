@@ -50,7 +50,7 @@ defmodule AeMdwWeb.DexController do
 
     with {:ok, create_txi} <- validate_token(token_symbol),
          {:ok, swaps} <- Dex.fetch_contract_swaps(state, create_txi, pagination, cursor) do
-      Util.render(conn, swaps)
+      Util.render(conn, swaps, &render_swap(state, &1))
     end
   end
 
