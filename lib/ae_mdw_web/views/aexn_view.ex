@@ -244,7 +244,7 @@ defmodule AeMdwWeb.AexnView do
   end
 
   @spec render_swap(State.t(), swap_key()) :: map()
-  def render_swap(state, {<<_pk:256>> = caller_pk, create_txi, txi, log_idx}) do
+  def render_swap(state, {<<_pk::256>> = caller_pk, create_txi, txi, log_idx}) do
     Model.dex_account_swap_tokens(to: to_pk, amounts: amounts) =
       State.fetch!(state, Model.DexAccountSwapTokens, {caller_pk, create_txi, txi, log_idx})
 
