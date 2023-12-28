@@ -17,7 +17,7 @@ defmodule AeMdw.Sync.DexCache do
   @tokens_table :dex_tokens
 
   @typep pubkey :: AeMdw.Node.Db.pubkey()
-  @type pair_map :: %{pair: pubkey(), token1: pubkey(), token2: pubkey()}
+  @type pair_map :: %{token1: pubkey(), token2: pubkey()}
   @type pair_symbols :: %{token1: String.t(), token2: String.t()}
 
   @spec load :: :ok
@@ -78,7 +78,7 @@ defmodule AeMdw.Sync.DexCache do
         nil
 
       [{^contract_pk, token1_pk, token2_pk}] ->
-        %{pair: contract_pk, token1: token1_pk, token2: token2_pk}
+        %{token1: token1_pk, token2: token2_pk}
     end
   end
 
