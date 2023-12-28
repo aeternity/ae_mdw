@@ -1,5 +1,17 @@
 # Changelog
 
+### [1.67.1](https://www.github.com/aeternity/ae_mdw/compare/v1.67.0...v1.67.1) (2023-12-28)
+
+
+### Bug Fixes
+
+* pick starting transaction from 24hs ago for counting ([#1652](https://www.github.com/aeternity/ae_mdw/issues/1652)) ([b7a073d](https://www.github.com/aeternity/ae_mdw/commit/b7a073d564d3f0fa9eec8fb0e92bed3b66b9c86f))
+
+
+### Miscellaneous
+
+* index name statistics using key blocks ([#1658](https://www.github.com/aeternity/ae_mdw/issues/1658)) ([f21c3e0](https://www.github.com/aeternity/ae_mdw/commit/f21c3e0620edee798d0a3820a0544d219bc71e98))
+
 ## [1.67.0](https://www.github.com/aeternity/ae_mdw/compare/v1.66.4...v1.67.0) (2023-12-20)
 
 
