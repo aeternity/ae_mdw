@@ -18,10 +18,10 @@ defmodule AeMdw.Dex do
   @typep pubkey :: AeMdw.Node.Db.pubkey()
 
   @typep paginated_account_swaps ::
-          {page_cursor(), [Model.dex_account_swap_tokens_index()], page_cursor()}
-  
+           {page_cursor(), [Model.dex_account_swap_tokens_index()], page_cursor()}
+
   @typep paginated_contract_swaps ::
-          {page_cursor(), [Model.dex_contract_swap_tokens_index()], page_cursor()}
+           {page_cursor(), [Model.dex_contract_swap_tokens_index()], page_cursor()}
 
   @typep account_query :: pubkey() | {pubkey(), integer()}
   @typep cursor :: binary()
