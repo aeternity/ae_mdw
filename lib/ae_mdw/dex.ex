@@ -9,6 +9,7 @@ defmodule AeMdw.Dex do
   alias AeMdw.Error
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Util
+  alias AeMdw.Txs
 
   require Model
 
@@ -27,6 +28,7 @@ defmodule AeMdw.Dex do
   @typep cursor :: binary()
   @typep pagination :: Collection.direction_limit()
   @typep page_cursor :: Collection.pagination_cursor()
+  @typep txi() :: Txs.txi()
 
   @spec fetch_account_swaps(State.t(), account_query(), pagination(), cursor()) ::
           {:ok, paginated_account_swaps()} | {:error, Error.t()}
@@ -39,7 +41,7 @@ defmodule AeMdw.Dex do
     end
   end
 
-  @spec fetch_contract_swaps(State.t(), pubkey(), pagination(), cursor()) ::
+  @spec fetch_contract_swaps(State.t(), txi(), pagination(), cursor()) ::
           {:ok, paginated_contract_swaps()} | {:error, Error.t()}
   def fetch_contract_swaps(state, create_txi, pagination, cursor) do
     with {:ok, cursor} <- deserialize_contract_cursor(cursor) do

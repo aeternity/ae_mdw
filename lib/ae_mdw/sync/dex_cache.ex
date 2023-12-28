@@ -78,7 +78,7 @@ defmodule AeMdw.Sync.DexCache do
         nil
 
       [{^contract_pk, token1_pk, token2_pk}] ->
-        %{token1: token1_pk, token2: token2_pk}
+        %{pair: contract_pk, token1: token1_pk, token2: token2_pk}
     end
   end
 
