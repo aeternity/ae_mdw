@@ -429,6 +429,36 @@ defmodule AeMdw.Db.Model do
             updates: [bi_txi_idx()]
           )
 
+  # DEX swap tokens indexed by account:
+  #     index: {create_txi, account_pk, txi, log_idx}
+  #     to: address
+  #     amount: integer
+  @type dex_account_swap_tokens_index() :: {pubkey(), integer(), integer(), integer()}
+  @type dex_account_swap_tokens ::
+          record(:dex_account_swap_tokens,
+            index: dex_account_swap_tokens_index(),
+            to: pubkey(),
+            amounts: list(integer())
+          )
+  @dex_account_swap_tokens_defaults [
+    index: {<<>>, -1, -1, -1},
+    to: <<>>,
+    amounts: [-1, -1, -1, -1]
+  ]
+  defrecord :dex_account_swap_tokens, @dex_account_swap_tokens_defaults
+
+  # DEX swap tokens indexed by contract:
+  #     index: {create_txi, account_pk, txi, log_idx}
+  @type dex_contract_swap_tokens_index() :: {integer(), pubkey(), integer(), integer()}
+  @type dex_contract_swap_tokens ::
+          record(:dex_contract_swap_tokens,
+            index: dex_contract_swap_tokens_index()
+          )
+  @dex_contract_swap_tokens_defaults [
+    index: {-1, <<>>, -1, -1}
+  ]
+  defrecord :dex_contract_swap_tokens, @dex_contract_swap_tokens_defaults
+
   # AEX9 event balance:
   #     index: {contract_pk, account_pk}
   #     txi: call txi,
@@ -1170,6 +1200,8 @@ defmodule AeMdw.Db.Model do
 
   defp contract_tables() do
     [
+      AeMdw.Db.Model.DexAccountSwapTokens,
+      AeMdw.Db.Model.DexContractSwapTokens,
       AeMdw.Db.Model.Aex9BalanceAccount,
       AeMdw.Db.Model.Aex9EventBalance,
       AeMdw.Db.Model.Aex9InitialSupply,
@@ -1280,6 +1312,8 @@ defmodule AeMdw.Db.Model do
   def record(AeMdw.Db.Model.DupIdCount), do: :id_count
   def record(AeMdw.Db.Model.Origin), do: :origin
   def record(AeMdw.Db.Model.RevOrigin), do: :rev_origin
+  def record(AeMdw.Db.Model.DexAccountSwapTokens), do: :dex_account_swap_tokens
+  def record(AeMdw.Db.Model.DexContractSwapTokens), do: :dex_contract_swap_tokens
   def record(AeMdw.Db.Model.Aex9BalanceAccount), do: :aex9_balance_account
   def record(AeMdw.Db.Model.Aex9EventBalance), do: :aex9_event_balance
   def record(AeMdw.Db.Model.Aex9InitialSupply), do: :aex9_initial_supply

@@ -13,13 +13,18 @@ defmodule AeMdw.Sync.DexCache do
   require Model
 
   @pairs_table :dex_pairs
+  @pairs_symbols_table :dex_pairs_symbols
+  @tokens_table :dex_tokens
 
   @typep pubkey :: AeMdw.Node.Db.pubkey()
-  @typep pair_map :: %{pair: pubkey(), token1: pubkey(), token2: pubkey()}
+  @type pair_map :: %{token1: pubkey(), token2: pubkey()}
+  @type pair_symbols :: %{token1: String.t(), token2: String.t()}
 
   @spec load :: :ok
   def load() do
-    _table = :ets.new(@pairs_table, [:public, :set, :named_table])
+    Enum.each([@pairs_table, @pairs_symbols_table, @tokens_table], fn table ->
+      _table = :ets.new(table, [:public, :set, :named_table])
+    end)
 
     SyncingQueue.push(&do_load/0)
   end
@@ -43,7 +48,7 @@ defmodule AeMdw.Sync.DexCache do
           event_hash == pair_created_event_hash
         end)
         |> Enum.each(fn Model.contract_log(args: [pair_pk, token1_pk, token2_pk]) ->
-          add_pair(pair_pk, token1_pk, token2_pk)
+          add_pair(state, pair_pk, token1_pk, token2_pk)
         end)
 
       :not_found ->
@@ -51,9 +56,18 @@ defmodule AeMdw.Sync.DexCache do
     end
   end
 
-  @spec add_pair(pubkey(), pubkey(), pubkey()) :: :ok
-  def add_pair(contract_pk, token1, token2) do
-    :ets.insert(@pairs_table, {contract_pk, token1, token2})
+  @spec add_pair(State.t(), pubkey(), pubkey(), pubkey()) :: :ok
+  def add_pair(state, contract_pk, token1_pk, token2_pk) do
+    with {:ok, Model.aexn_contract(meta_info: {_name, symbol1, _dec})} <-
+           State.get(state, Model.AexnContract, {:aex9, token1_pk}),
+         {:ok, Model.aexn_contract(meta_info: {_name, symbol2, _dec})} <-
+           State.get(state, Model.AexnContract, {:aex9, token2_pk}),
+         {:ok, pair_create_txi} <- Origin.tx_index(state, {:contract, contract_pk}) do
+      :ets.insert(@tokens_table, {symbol1, pair_create_txi})
+      :ets.insert(@pairs_table, {contract_pk, token1_pk, token2_pk})
+      :ets.insert(@pairs_symbols_table, {pair_create_txi, symbol1, symbol2})
+    end
+
     :ok
   end
 
@@ -63,8 +77,30 @@ defmodule AeMdw.Sync.DexCache do
       [] ->
         nil
 
-      [{contract_pk, token1, token2}] ->
-        %{pair: contract_pk, token1: token1, token2: token2}
+      [{^contract_pk, token1_pk, token2_pk}] ->
+        %{token1: token1_pk, token2: token2_pk}
+    end
+  end
+
+  @spec get_pair_symbols(pubkey()) :: pair_symbols() | nil
+  def get_pair_symbols(create_txi) do
+    case :ets.lookup(@pairs_symbols_table, create_txi) do
+      [] ->
+        nil
+
+      [{^create_txi, token1_symbol, token2_symbol}] ->
+        %{token1: token1_symbol, token2: token2_symbol}
+    end
+  end
+
+  @spec get_token_pair_txi(String.t()) :: pos_integer() | nil
+  def get_token_pair_txi(token_symbol) do
+    case :ets.lookup(@tokens_table, token_symbol) do
+      [] ->
+        nil
+
+      [{^token_symbol, create_txi}] ->
+        create_txi
     end
   end
 

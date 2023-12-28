@@ -26,7 +26,10 @@ defmodule AeMdwWeb.ConnCase do
       import Plug.Conn
       import Phoenix.ConnTest
       import AeMdw.TestUtil
+
       alias AeMdwWeb.Router.Helpers, as: Routes
+      alias AeMdw.Db.State
+      alias AeMdw.Validate
 
       import AeMdw.Util.Encoding
 
