@@ -11,13 +11,14 @@ defmodule AeMdw.Migrations.IndexNameStatistics do
   require Model
 
   @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
-  def run(state, _from_start?) do
-    top_height =
-      case State.prev(state, Model.DeltaStat, nil) do
-        {:ok, top_height} -> top_height
-        :none -> 0
-      end
+  def run(state, from_start?) do
+    case State.prev(state, Model.DeltaStat, nil) do
+      {:ok, top_height} -> run(state, from_start?, top_height)
+      :none -> {:ok, 0}
+    end
+  end
 
+  defp run(state, _from_start?, top_height) do
     count =
       0..top_height
       |> Stream.map(&State.fetch!(state, Model.DeltaStat, &1))
