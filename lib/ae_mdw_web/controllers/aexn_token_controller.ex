@@ -20,6 +20,8 @@ defmodule AeMdwWeb.AexnTokenController do
 
   require Model
 
+  @endpoint_timeout Application.compile_env(:ae_mdw, :endpoint_timeout)
+
   plug PaginatedPlug, order_by: ~w(name symbol creation pubkey amount)a
 
   action_fallback(FallbackController)
@@ -100,10 +102,19 @@ defmodule AeMdwWeb.AexnTokenController do
   def aex9_account_balances(%Conn{assigns: assigns} = conn, %{"account_id" => account_id}) do
     %{state: state, pagination: pagination, cursor: cursor} = assigns
 
-    with {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
-         {:ok, {prev_cursor, account_balances, next_cursor}} <-
-           Aex9.fetch_account_balances(state, account_pk, cursor, pagination) do
-      Util.render(conn, {prev_cursor, account_balances, next_cursor})
+    with {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]) do
+      fn -> Aex9.fetch_account_balances(state, account_pk, cursor, pagination) end
+      |> Task.async()
+      |> Task.yield(@endpoint_timeout)
+      |> case do
+        {:ok, {:ok, {prev_cursor, account_balances, next_cursor}}} ->
+          Util.render(conn, {prev_cursor, account_balances, next_cursor})
+
+        nil ->
+          conn
+          |> put_status(503)
+          |> json(%{error: :timeout})
+      end
     end
   end
 

@@ -2,7 +2,8 @@ import Config
 
 # Sync
 config :ae_mdw,
-  sync: false
+  sync: false,
+  endpoint_timeout: 500
 
 # Telemetry
 config :ae_mdw, TelemetryMetricsStatsd,
