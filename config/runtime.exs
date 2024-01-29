@@ -15,7 +15,7 @@ period = String.to_integer(System.get_env("TELEMETRY_POLLER_PERIOD") || "10000")
 config :ae_mdw, AeMdw.APM.TelemetryPoller, period: period
 
 config :ae_mdw, :enable_v3?, true
-config :ae_mdw, memstore_lifetime_secs: 15
+config :ae_mdw, memstore_lifetime_secs: 60
 
 # Endpoint
 if env != :test do

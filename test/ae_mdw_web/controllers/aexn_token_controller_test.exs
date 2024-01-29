@@ -988,6 +988,25 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
   end
 
   describe "aex9_account_balances" do
+    test "returns timeout", %{conn: conn, account_pk: account_pk} do
+      with_mocks [
+        {AeMdw.Node.Db, [:passthrough],
+         [
+           aex9_balance: fn <<contract_pk::256>>, ^account_pk, _type_hash ->
+             Process.sleep(1_000)
+             {:ok, {contract_pk, <<1::256>>}}
+           end
+         ]}
+      ] do
+        account_id = encode_account(account_pk)
+
+        assert %{"error" => "timeout"} =
+                 conn
+                 |> get("/v2/aex9/account-balances/#{account_id}")
+                 |> json_response(503)
+      end
+    end
+
     test "gets account balance of multiple contracts", %{conn: conn, account_pk: account_pk} do
       with_mocks [
         {AeMdw.Node.Db, [:passthrough],
