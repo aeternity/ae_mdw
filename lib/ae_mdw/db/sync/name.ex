@@ -184,6 +184,7 @@ defmodule AeMdw.Db.Sync.Name do
   @spec expire_auction(state(), Blocks.height(), Names.plain_name()) :: state()
   def expire_auction(state, height, plain_name) do
     Model.auction_bid(
+      start_height: start_height,
       block_index_txi_idx: {{last_bid_height, _mbi} = _block_index, txi_idx},
       owner: owner
     ) = State.fetch!(state, Model.AuctionBid, plain_name)
@@ -205,12 +206,12 @@ defmodule AeMdw.Db.Sync.Name do
       |> :aens_claim_tx.name_fee()
 
     state
-    |> Collection.stream(Model.AuctionBidClaim, {plain_name, height, nil})
-    |> Stream.take_while(&match?({^plain_name, ^height, _txi_idx}, &1))
-    |> Enum.reduce(state, fn {^plain_name, ^height, claim_txi_idx}, state ->
+    |> Collection.stream(Model.AuctionBidClaim, {plain_name, start_height, nil})
+    |> Stream.take_while(&match?({^plain_name, ^start_height, _txi_idx}, &1))
+    |> Enum.reduce(state, fn {^plain_name, ^start_height, claim_txi_idx}, state ->
       state
       |> State.put(Model.NameClaim, Model.name_claim(index: {plain_name, height, claim_txi_idx}))
-      |> State.delete(Model.AuctionBidClaim, {plain_name, height, claim_txi_idx})
+      |> State.delete(Model.AuctionBidClaim, {plain_name, start_height, claim_txi_idx})
     end)
     |> put_active(m_name)
     |> State.delete(Model.AuctionExpiration, {height, plain_name})

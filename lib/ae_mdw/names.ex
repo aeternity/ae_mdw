@@ -144,8 +144,8 @@ defmodule AeMdw.Names do
           Model.name(index: plain_name, active: active) ->
             {plain_name, Model.NameClaim, active}
 
-          Model.auction_bid(index: plain_name, expire_height: expire_height) ->
-            {plain_name, Model.AuctionBidClaim, expire_height}
+          Model.auction_bid(index: plain_name, start_height: start_height) ->
+            {plain_name, Model.AuctionBidClaim, start_height}
         end
 
       {prev_cursor, claims, next_cursor} =

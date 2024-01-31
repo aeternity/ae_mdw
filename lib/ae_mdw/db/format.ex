@@ -556,12 +556,16 @@ defmodule AeMdw.Db.Format do
 
   defp auction_bid(
          state,
-         Model.auction_bid(index: plain_name, expire_height: auction_end),
+         Model.auction_bid(
+           index: plain_name,
+           start_height: start_height,
+           expire_height: auction_end
+         ),
          key,
          tx_fmt,
          info_fmt
        ) do
-    bids = Name.stream_nested_resource(state, Model.AuctionBidClaim, plain_name, auction_end)
+    bids = Name.stream_nested_resource(state, Model.AuctionBidClaim, plain_name, start_height)
     {txi, _idx} = Enum.at(bids, 0)
     last_bid = tx_fmt.(DbUtil.read_tx!(state, txi))
     name_ttl = Names.expire_after(auction_end)
