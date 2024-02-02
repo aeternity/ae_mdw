@@ -116,6 +116,23 @@ defmodule AeMdw.Names do
     {:error, ErrInput.Query.exception(value: "can't scope names sorted by name")}
   end
 
+  @spec fetch_name(state(), plain_name() | name_hash(), opts()) ::
+          {:ok, name()} | {:error, Error.t()}
+  def fetch_name(state, plain_name_or_hash, opts) do
+    case locate_name_or_auction_source(state, plain_name_or_hash) do
+      {:ok, _auction_bid, Model.AuctionBid} ->
+        {:error, ErrInput.NotFound.exception(value: plain_name_or_hash)}
+
+      {:ok, Model.name(index: plain_name), source} ->
+        last_micro_time = DbUtil.last_gen_and_time(state)
+
+        {:ok, render_plain_name(state, {plain_name, source}, last_micro_time, opts)}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   @spec fetch_name_history(state(), pagination(), plain_name(), cursor()) ::
           {:ok, {page_cursor(), [history_item()], page_cursor()}} | {:error, reason()}
   def fetch_name_history(state, pagination, plain_name_or_hash, cursor) do
@@ -513,7 +530,14 @@ defmodule AeMdw.Names do
     do: render(state, plain_name, source == :active, last_micro_time, opts)
 
   defp render_plain_name(state, {plain_name, source}, last_micro_time, opts),
-    do: render(state, plain_name, source == :active, last_micro_time, opts)
+    do:
+      render(
+        state,
+        plain_name,
+        source == :active || source == Model.ActiveName,
+        last_micro_time,
+        opts
+      )
 
   defp render_search(state, {plain_name, :auction}, _last_micro_time, opts) do
     %{"type" => "auction", "payload" => AuctionBids.fetch!(state, plain_name, opts)}
@@ -829,6 +853,13 @@ defmodule AeMdw.Names do
   defp get_index(Model.name(index: plain_name)), do: plain_name
 
   defp locate_name_or_auction(state, plain_name_or_hash) do
+    with {:ok, name_or_auction, _source} <-
+           locate_name_or_auction_source(state, plain_name_or_hash) do
+      {:ok, name_or_auction}
+    end
+  end
+
+  defp locate_name_or_auction_source(state, plain_name_or_hash) do
     plain_name =
       with {:ok, hash_bin} <- Validate.id(plain_name_or_hash),
            {:ok, Model.plain_name(value: plain_name)} <-
@@ -839,7 +870,7 @@ defmodule AeMdw.Names do
       end
 
     case Name.locate(state, plain_name) do
-      {name_or_auction, _source} -> {:ok, name_or_auction}
+      {name_or_auction, source} -> {:ok, name_or_auction, source}
       nil -> {:error, ErrInput.NotFound.exception(value: plain_name_or_hash)}
     end
   end

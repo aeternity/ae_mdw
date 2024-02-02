@@ -50,7 +50,9 @@ defmodule AeMdwWeb.Router do
     scope "/v3" do
       get "/names", NameController, :names
       get "/names/auctions", NameController, :auctions
+      get "/names/auctions/:id", NameController, :auction
       get "/names/auctions/:id/claims", NameController, :auction_claims
+      get "/names/:id", NameController, :name
       get "/statistics/transactions", StatsController, :transactions_statistics
       get "/statistics/blocks", StatsController, :blocks_statistics
       get "/statistics/names", StatsController, :names_statistics
@@ -82,12 +84,12 @@ defmodule AeMdwWeb.Router do
 
       get "/entities/:id", ActiveEntityController, :active_entities
 
-      get "/names/:id/auction", NameController, :auction
+      get "/names/:id/auction", NameController, :auction_v2
       get "/names/:id/pointers", NameController, :pointers
       get "/names/:id/pointees", NameController, :pointees
       get "/names/search", NameController, :search
       get "/names", NameController, :names_v2
-      get "/names/:id", NameController, :name
+      get "/names/:id", NameController, :name_v2
       get "/names/:id/history", NameController, :name_history
       get "/names/:id/claims", NameController, :name_claims
       get "/names/:id/updates", NameController, :name_updates
@@ -159,7 +161,7 @@ defmodule AeMdwWeb.Router do
     get "/txs/:direction", TxController, :txs
     get "/txs/:scope_type/:range", TxController, :txs
 
-    get "/name/auction/:id", NameController, :auction
+    get "/name/auction/:id", NameController, :auction_v2
     get "/name/pointers/:id", NameController, :pointers
     get "/name/pointees/:id", NameController, :pointees
     get "/name/:id", NameController, :name

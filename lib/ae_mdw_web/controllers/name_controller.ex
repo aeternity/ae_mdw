@@ -29,8 +29,8 @@ defmodule AeMdwWeb.NameController do
   }
   @lifecycles Map.keys(@lifecycles_map)
 
-  @spec auction(Conn.t(), map()) :: Conn.t()
-  def auction(%Conn{assigns: %{state: state, opts: opts}} = conn, %{"id" => ident}),
+  @spec auction_v2(Conn.t(), map()) :: Conn.t()
+  def auction_v2(%Conn{assigns: %{state: state, opts: opts}} = conn, %{"id" => ident}),
     do:
       handle_input(conn, fn ->
         auction_reply(conn, Validate.plain_name!(state, ident), opts)
@@ -45,7 +45,25 @@ defmodule AeMdwWeb.NameController do
     do: handle_input(conn, fn -> pointees_reply(conn, Validate.name_id!(ident)) end)
 
   @spec name(Conn.t(), map()) :: Conn.t()
-  def name(%Conn{assigns: %{state: state, opts: opts}} = conn, %{"id" => ident}),
+  def name(%Conn{assigns: %{state: state, opts: opts}} = conn, %{"id" => ident}) do
+    opts = [{:render_v3?, true} | opts]
+
+    with {:ok, name} <- Names.fetch_name(state, ident, opts) do
+      json(conn, name)
+    end
+  end
+
+  @spec auction(Conn.t(), map()) :: Conn.t()
+  def auction(%Conn{assigns: %{state: state, opts: opts}} = conn, %{"id" => ident}) do
+    opts = [{:render_v3?, true} | opts]
+
+    with {:ok, auction_bid} <- AuctionBids.fetch(state, ident, opts) do
+      json(conn, auction_bid)
+    end
+  end
+
+  @spec name_v2(Conn.t(), map()) :: Conn.t()
+  def name_v2(%Conn{assigns: %{state: state, opts: opts}} = conn, %{"id" => ident}),
     do:
       handle_input(conn, fn ->
         name_reply(conn, Validate.plain_name!(state, ident), opts)
