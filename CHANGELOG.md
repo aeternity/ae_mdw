@@ -1,5 +1,14 @@
 # Changelog
 
+### [1.68.1](https://www.github.com/aeternity/ae_mdw/compare/v1.68.0...v1.68.1) (2024-02-02)
+
+
+### Bug Fixes
+
+* handle heavy endpoint timeout ([#1673](https://www.github.com/aeternity/ae_mdw/issues/1673)) ([91d29a8](https://www.github.com/aeternity/ae_mdw/commit/91d29a8123ad5b8529449a6ac2acf46a92ed29c4))
+* ignore 0-gen db for name stats ([#1663](https://www.github.com/aeternity/ae_mdw/issues/1663)) ([4bc5776](https://www.github.com/aeternity/ae_mdw/commit/4bc5776f30519dee863e72d83d3937870fd94874))
+* include all auction claims when closing up an auction ([#1674](https://www.github.com/aeternity/ae_mdw/issues/1674)) ([9ac9c87](https://www.github.com/aeternity/ae_mdw/commit/9ac9c873bc76128af40ce61a526175bc3eade7ba))
+
 ## [1.68.0](https://www.github.com/aeternity/ae_mdw/compare/v1.67.0...v1.68.0) (2023-12-28)
 
 
