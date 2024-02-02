@@ -148,16 +148,14 @@ defmodule AeMdw.Db.NameClaimMutation do
                block_index_txi_idx: {_bi, prev_txi_idx},
                expire_height: prev_auction_end,
                owner: prev_owner
-             )} ->
+             ) = auction_bid} ->
               prev_name_claim_tx = DbUtil.read_node_tx(state, prev_txi_idx)
               prev_name_fee = :aens_claim_tx.name_fee(prev_name_claim_tx)
 
               auction_claim = Model.auction_bid_claim(index: {plain_name, start_height, txi_idx})
 
               m_auction_bid =
-                Model.auction_bid(
-                  index: plain_name,
-                  start_height: start_height,
+                Model.auction_bid(auction_bid,
                   block_index_txi_idx: {block_index, txi_idx},
                   expire_height: auction_end,
                   owner: owner_pk
