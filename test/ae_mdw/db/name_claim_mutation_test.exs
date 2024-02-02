@@ -123,12 +123,12 @@ defmodule AeMdw.Db.NameClaimMutationTest do
     assert {:ok,
             Model.auction_bid(
               index: ^plain_name,
-              expire_height: expire_height,
+              start_height: ^claim_height,
               owner: ^owner_pk
             )} = State.get(state, Model.AuctionBid, plain_name)
 
     assert State.exists?(state, Model.AuctionOwner, {owner_pk, plain_name})
     assert State.exists?(state, Model.AuctionExpiration, {claim_height + timeout, plain_name})
-    assert State.exists?(state, Model.AuctionBidClaim, {plain_name, expire_height, txi_idx})
+    assert State.exists?(state, Model.AuctionBidClaim, {plain_name, claim_height, txi_idx})
   end
 end

@@ -189,6 +189,7 @@ defmodule AeMdw.Db.Model do
   #     index = {plain_name, {block_index, txi}, expire_height = height, owner = pk, prev_bids = []}
   @auction_bid_defaults [
     index: nil,
+    start_height: nil,
     block_index_txi_idx: nil,
     expire_height: nil,
     owner: nil
@@ -199,6 +200,7 @@ defmodule AeMdw.Db.Model do
   @type auction_bid ::
           record(:auction_bid,
             index: auction_bid_index(),
+            start_height: Blocks.height(),
             block_index_txi_idx: bi_txi_idx(),
             expire_height: Blocks.height(),
             owner: pubkey()

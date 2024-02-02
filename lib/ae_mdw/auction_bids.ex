@@ -143,6 +143,7 @@ defmodule AeMdw.AuctionBids do
          Model.auction_bid(
            index: plain_name,
            block_index_txi_idx: {block_index, _txi_idx},
+           start_height: start_height,
            expire_height: expire_height
          ),
          {last_gen, last_micro_time},
@@ -151,7 +152,7 @@ defmodule AeMdw.AuctionBids do
     [{last_bid_txi, _last_bid_idx} | _rest] =
       bids =
       state
-      |> Name.stream_nested_resource(Model.AuctionBidClaim, plain_name, expire_height)
+      |> Name.stream_nested_resource(Model.AuctionBidClaim, plain_name, start_height)
       |> Enum.to_list()
 
     last_bid =

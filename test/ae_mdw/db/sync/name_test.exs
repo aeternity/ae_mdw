@@ -413,6 +413,7 @@ defmodule AeMdw.Db.Sync.NameTest do
       auction_bid =
         Model.auction_bid(
           index: plain_name,
+          start_height: height,
           block_index_txi_idx: {{1, 2}, {3, -1}},
           expire_height: height,
           owner: <<0::256>>
