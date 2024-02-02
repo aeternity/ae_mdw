@@ -167,13 +167,13 @@ defmodule AeMdw.Names do
           {:ok, {page_cursor(), [claim()], page_cursor()}} | {:error, Error.t()}
   def fetch_auction_claims(state, plain_name_or_hash, pagination, scope, cursor) do
     case locate_name_or_auction(state, plain_name_or_hash) do
-      {:ok, Model.auction_bid(index: plain_name, expire_height: expire_height)} ->
+      {:ok, Model.auction_bid(index: plain_name, start_height: start_height)} ->
         {prev_cursor, claims, next_cursor} =
           paginate_nested_resource(
             state,
             Model.AuctionBidClaim,
             plain_name,
-            expire_height,
+            start_height,
             scope,
             cursor,
             pagination

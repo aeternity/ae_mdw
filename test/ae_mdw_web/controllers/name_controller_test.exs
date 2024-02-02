@@ -1043,9 +1043,9 @@ defmodule AeMdwWeb.NameControllerTest do
           auction =
             Model.auction_bid(
               index: plain_name,
-              start_height: 0,
+              start_height: i,
               block_index_txi_idx: {{0, 1}, {0, -1}},
-              expire_height: i
+              expire_height: i + 1
             )
 
           store
@@ -3256,7 +3256,7 @@ defmodule AeMdwWeb.NameControllerTest do
       account_pk = TS.address(0)
       account_id = :aeser_id.create(:account, account_pk)
       plain_name = "asd.chain"
-      expire_height = 1000
+      start_height = 500
       claim_txi_idx1 = {567, -1}
       claim_txi_idx2 = {678, -1}
       claim_txi_idx3 = {788, -1}
@@ -3264,7 +3264,7 @@ defmodule AeMdwWeb.NameControllerTest do
       auction_bid =
         Model.auction_bid(
           index: plain_name,
-          expire_height: expire_height
+          start_height: start_height
         )
 
       store =
@@ -3277,15 +3277,15 @@ defmodule AeMdwWeb.NameControllerTest do
         |> Store.put(Model.Block, Model.block(index: {124, 1}, hash: <<1::256>>))
         |> Store.put(
           Model.AuctionBidClaim,
-          Model.auction_bid_claim(index: {plain_name, expire_height, claim_txi_idx1})
+          Model.auction_bid_claim(index: {plain_name, start_height, claim_txi_idx1})
         )
         |> Store.put(
           Model.AuctionBidClaim,
-          Model.auction_bid_claim(index: {plain_name, expire_height, claim_txi_idx2})
+          Model.auction_bid_claim(index: {plain_name, start_height, claim_txi_idx2})
         )
         |> Store.put(
           Model.AuctionBidClaim,
-          Model.auction_bid_claim(index: {plain_name, expire_height, claim_txi_idx3})
+          Model.auction_bid_claim(index: {plain_name, start_height, claim_txi_idx3})
         )
 
       conn = with_store(conn, store)
