@@ -22,9 +22,9 @@ defmodule AeMdw.Sync.DexCache do
 
   @spec load :: :ok
   def load() do
-    Enum.each([@pairs_table, @pairs_symbols_table, @tokens_table], fn table ->
-      _table = :ets.new(table, [:public, :set, :named_table])
-    end)
+    [@pairs_table, @pairs_symbols_table, @tokens_table]
+    |> Enum.filter(&(:ets.info(&1, :name) == :undefined))
+    |> Enum.each(&:ets.new(&1, [:named_table, :set, :public]))
 
     SyncingQueue.push(&do_load/0)
   end
