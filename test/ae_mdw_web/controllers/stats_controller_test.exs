@@ -409,19 +409,20 @@ defmodule AeMdwWeb.StatsControllerTest do
   end
 
   describe "stats" do
-    test "it counts last 24hs transactions", %{conn: conn, store: store} do
+    test "it counts last 24hs transactions and 48hs comparison trend", %{conn: conn, store: store} do
       now = :aeu_time.now_in_msecs()
       msecs_per_day = 3_600 * 24 * 1_000
       delay = 10
 
       store =
         store
-        |> Store.put(Model.Tx, Model.tx(index: 20))
+        |> Store.put(Model.Tx, Model.tx(index: 21))
         |> Store.put(Model.Time, Model.time(index: {now - msecs_per_day + delay, 7}))
+        |> Store.put(Model.Time, Model.time(index: {now - msecs_per_day * 2 + delay, 0}))
         |> Store.put(Model.Stat, Model.stat(index: :miners_count, payload: 2))
         |> Store.put(Model.Stat, Model.stat(index: :max_tps, payload: {2, <<0::256>>}))
 
-      assert %{"last_24hs_transactions" => 13} =
+      assert %{"last_24hs_transactions" => 14, "transactions_trend" => 0.5} =
                conn
                |> with_store(store)
                |> get("/v2/stats")
