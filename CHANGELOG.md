@@ -1,5 +1,13 @@
 # Changelog
 
+### [1.68.2](https://www.github.com/aeternity/ae_mdw/compare/v1.68.1...v1.68.2) (2024-02-08)
+
+
+### Miscellaneous
+
+* migrate dex swap tokens ([#1675](https://www.github.com/aeternity/ae_mdw/issues/1675)) ([3afe25e](https://www.github.com/aeternity/ae_mdw/commit/3afe25ed977b82992b20416d2f9170c430e33242))
+* update swagger.json schemes value ([#1679](https://www.github.com/aeternity/ae_mdw/issues/1679)) ([7983ed1](https://www.github.com/aeternity/ae_mdw/commit/7983ed16dbdc3f2b8e9e8ec44b594a593ab1ca01))
+
 ### [1.68.1](https://www.github.com/aeternity/ae_mdw/compare/v1.68.0...v1.68.1) (2024-02-02)
 
 
