@@ -756,7 +756,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       mb_hash2 = TS.key_block_hash(1)
       enc_mb_hash2 = Enc.encode(:micro_block_hash, mb_hash2)
       contract_pk = <<100::256>>
-      meta_info = {"AEXName", "AEXSymbol", 10}
+      meta_info_aex9 = {"AE9Name", "AEXSymbol", 10}
+      meta_info_aex141 = {"AE141Name", "AEXSymbol", "http://foo.com", 10}
 
       store =
         empty_store()
@@ -804,11 +805,11 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(Model.Block, Model.block(index: {height2, 0}, hash: mb_hash2))
         |> Store.put(
           Model.AexnContract,
-          Model.aexn_contract(index: {:aex9, contract_pk}, meta_info: meta_info)
+          Model.aexn_contract(index: {:aex9, contract_pk}, meta_info: meta_info_aex9)
         )
         |> Store.put(
           Model.AexnContract,
-          Model.aexn_contract(index: {:aex141, contract_pk}, meta_info: meta_info)
+          Model.aexn_contract(index: {:aex141, contract_pk}, meta_info: meta_info_aex141)
         )
 
       with_mocks [
@@ -876,7 +877,8 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
       mb_hash2 = TS.micro_block_hash(1)
       enc_mb_hash2 = Enc.encode(:micro_block_hash, mb_hash2)
       contract_pk = <<100::256>>
-      meta_info = {"AEXName", "AEXSymbol", 10}
+      meta_info_aex9 = {"AEx9Name", "AEXSymbol", 10}
+      meta_info_aex141 = {"AEx141Name", "AEXSymbol", "http://foo.com", 10}
 
       store =
         empty_store()
@@ -924,11 +926,11 @@ defmodule AeMdwWeb.ActivitiesControllerTest do
         |> Store.put(Model.Block, Model.block(index: {height2, 0}, hash: mb_hash2))
         |> Store.put(
           Model.AexnContract,
-          Model.aexn_contract(index: {:aex9, contract_pk}, meta_info: meta_info)
+          Model.aexn_contract(index: {:aex9, contract_pk}, meta_info: meta_info_aex9)
         )
         |> Store.put(
           Model.AexnContract,
-          Model.aexn_contract(index: {:aex141, contract_pk}, meta_info: meta_info)
+          Model.aexn_contract(index: {:aex141, contract_pk}, meta_info: meta_info_aex141)
         )
 
       with_mocks [
