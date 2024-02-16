@@ -155,12 +155,15 @@ defmodule AeMdw.Stats do
            State.get(state, Model.Stat, @tps_stat_key),
          {:ok, Model.stat(payload: miners_count)} <-
            State.get(state, Model.Stat, @miners_count_stat_key) do
+      {last_24hs_txs_count, trend} = last_24hs_txs_count_and_trend(state)
+
       {:ok,
        %{
          max_transactions_per_second: tps,
          max_transactions_per_second_block_hash: Enc.encode(:key_block_hash, tps_block_hash),
          miners_count: miners_count,
-         last_24hs_transactions: last_24hs_txs_count(state)
+         last_24hs_transactions: last_24hs_txs_count,
+         transactions_trend: trend
        }}
     else
       :not_found ->
@@ -496,15 +499,24 @@ defmodule AeMdw.Stats do
     end
   end
 
-  defp last_24hs_txs_count(state) do
-    case State.next(state, Model.Time, {:aeu_time.now_in_msecs() - @seconds_per_day * 1_000, -1}) do
-      {:ok, {_time, first_tx_index}} ->
-        {:ok, last_tx_index} = State.prev(state, Model.Tx, nil)
+  defp last_24hs_txs_count_and_trend(state) do
+    time_24hs_ago = :aeu_time.now_in_msecs() - @seconds_per_day * 1_000
 
-        last_tx_index - first_tx_index
+    case State.next(state, Model.Time, {time_24hs_ago, -1}) do
+      {:ok, {_time, tx_index_24hs_ago}} ->
+        {:ok, last_tx_index} = State.prev(state, Model.Tx, nil)
+        time_48hs_ago = time_24hs_ago - @seconds_per_day * 1_000
+
+        {:ok, {_time, tx_index_48hs_ago}} = State.next(state, Model.Time, time_48hs_ago)
+
+        txs_count_24hs = last_tx_index - tx_index_24hs_ago
+        txs_count_48hs = tx_index_24hs_ago - tx_index_48hs_ago
+        trend = Float.round((txs_count_24hs - txs_count_48hs) / txs_count_24hs, 2)
+
+        {txs_count_24hs, trend}
 
       :none ->
-        0
+        {0, 0}
     end
   end
 
