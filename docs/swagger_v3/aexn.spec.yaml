@@ -269,7 +269,7 @@ schemas:
         type: string
       decimals:
         description: Number of decimals of AEX9 token
-        type: integer  
+        type: integer
       height:
         description: Block height, indicating a state of a balance for that block height
         type: integer
@@ -287,7 +287,7 @@ schemas:
         type: integer
       tx_type:
         description: Transaction type, indicating a state of a balance for that block height
-        type: string    
+        type: string
     required:
       - amount
       - block_hash
@@ -313,10 +313,10 @@ schemas:
       last_log_idx: 1
     properties:
       account_id:
-        description: The wallet pubkey 
+        description: The wallet pubkey
         type: string
       amount:
-        description: The balance amount 
+        description: The balance amount
         type: integer
       block_hash:
         description: The block hash, indicating a state of a balance for that block
@@ -600,7 +600,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'                            
+                $ref: '#/components/schemas/ErrorResponse'
   /aex9/{id}:
     get:
       deprecated: false
@@ -829,118 +829,6 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/Aex9BalanceResponse'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  /aex9/transfers/from/{id}:
-    get:
-      deprecated: false
-      description: Get AEX9 transfers filtered by sender.
-      operationId: get_aex9_sender_transfers
-      parameters:
-        - $ref: '#/components/parameters/LimitParam'
-        - $ref: '#/components/parameters/DirectionParam'
-        - description: Sender account id
-          in: path
-          name: id
-          required: true
-          schema:
-            type: string
-            x-example: ak_1ADSaLCnFnWpbq6t8wJhUJn6ombZwgewPxe7MCaJTfGLKDkbw
-      responses:
-        '200':
-          description: Returns paginated AEX-9 transfers of a sender
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/Aex9TransferResponse'
-                  - $ref: '#/components/schemas/PaginatedResponse'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  /aex9/transfers/to/{id}:
-    get:
-      deprecated: false
-      description: Get AEX9 transfers filtered by recipient.
-      operationId: get_aex9_recipient_transfers
-      parameters:
-        - $ref: '#/components/parameters/LimitParam'
-        - $ref: '#/components/parameters/DirectionParam'
-        - description: Recipient account id
-          in: path
-          name: id
-          required: true
-          schema:
-            type: string
-            x-example: ak_2meHkLcAoZPrQj7P5WjFyJJRLJqRtv43z1QEbpcS1gHs9W8Q3g
-      responses:
-        '200':
-          description: Returns paginated AEX-9 transfers of a recipient
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/Aex9TransferResponse'
-                  - $ref: '#/components/schemas/PaginatedResponse'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  /aex9/transfers/from-to/{sender}/{recipient}:
-    get:
-      deprecated: false
-      description: Get AEX9 transfers filtered by sender and recipient.
-      operationId: get_aex9_pair_transfers
-      parameters:
-        - $ref: '#/components/parameters/LimitParam'
-        - $ref: '#/components/parameters/DirectionParam'
-        - description: Sender account id
-          in: path
-          name: sender
-          required: true
-          schema:
-            type: string
-            x-example: ak_17qFR9Zp6CbX9ZZrEYd5155KHGAsfbY1YZ2UsRpjH6WJc8Pk1
-        - description: Recipient account id
-          in: path
-          name: recipient
-          required: true
-          schema:
-            type: string
-            x-example: ak_psy8tRXPzGxh6975H7K6XQcMFVsdrxJMt7YkzMY8oUTevutzw
-      responses:
-        '200':
-          description: Returns paginated AEX-9 transfers between two accounts
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/Aex9TransferResponse'
-                  - $ref: '#/components/schemas/PaginatedResponse'
         '400':
           description: Bad request
           content:

@@ -6,7 +6,7 @@ import json
 from glob import glob
 from pathlib import Path
 
-SWAGGER_DOCS_DIR = 'docs/swagger_v2/'
+SWAGGER_DOCS_DIR = 'docs/swagger_v3/'
 MDW_VERSION_FILE = 'AEMDW_VERSION'
 SWAGGER_OUTPUT_DIR = 'priv/static/swagger'
 
@@ -32,8 +32,8 @@ swagger['paths'] = paths
 swagger['components']['schemas'] = {**swagger['components']['schemas'], **schemas}
 swagger['info']['version'] = mdw_version
 
-with open(os.path.join(SWAGGER_OUTPUT_DIR, "swagger_v2.json"), 'w') as jsonfile:
+with open(os.path.join(SWAGGER_OUTPUT_DIR, "swagger_v3.json"), 'w') as jsonfile:
   json.dump(swagger, jsonfile, indent=2)
 
-with open(os.path.join(SWAGGER_OUTPUT_DIR, "swagger_v2.yaml"), 'w') as yamlfile:
+with open(os.path.join(SWAGGER_OUTPUT_DIR, "swagger_v3.yaml"), 'w') as yamlfile:
   yamlfile.write(yaml.dump(swagger, default_flow_style=False, allow_unicode=True))

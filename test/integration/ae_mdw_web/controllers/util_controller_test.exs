@@ -52,16 +52,24 @@ defmodule Integration.AeMdwWeb.UtilControllerTest do
   end
 
   describe "static_file" do
-    test "gets v1/v2 swagger files from priv directory", %{conn: conn} do
-      assert <<"basePath: ", _rest::binary>> =
+    test "gets v1/v2/v3 swagger files from priv directory", %{conn: conn} do
+      assert %{"paths" => _paths, "definitions" => _definitions} =
                conn
                |> get("/api")
                |> response(200)
+               |> Jason.decode!()
 
-      assert <<"basePath: ", _rest::binary>> =
+      assert %{"paths" => _paths, "components" => _components} =
                conn
                |> get("/v2/api")
                |> response(200)
+               |> Jason.decode!()
+
+      assert %{} =
+               conn
+               |> get("/v3/api")
+               |> response(200)
+               |> Jason.decode!()
     end
   end
 end

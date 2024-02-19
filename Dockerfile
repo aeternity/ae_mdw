@@ -92,7 +92,7 @@ COPY config/runtime.exs config/
 
 # Generate swagger V2 file
 RUN mix run --no-start -e 'IO.puts(Mix.Project.config[:version])' >AEMDW_VERSION
-RUN scripts/swagger-docs.py >priv/static/swagger/swagger_v2.yaml
+RUN scripts/swagger-docs.py >priv/static/swagger/swagger_v3.yaml
 
 # Install devmode
 COPY docker/aeplugin_dev_mode aeplugin_dev_mode

@@ -5,8 +5,8 @@ info:
   version: '0.0'
 
 servers:
-  - url: '/mdw/v2'
-    description: 'V2 version path'
+  - url: '/mdw/v3'
+    description: 'V3 version path'
 
 components:
   parameters:

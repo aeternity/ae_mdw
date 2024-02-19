@@ -24,6 +24,13 @@ defmodule AeMdwWeb.TxController do
   ##########
 
   @spec tx(Conn.t(), map()) :: Conn.t()
+  def tx(%Conn{assigns: %{state: state}} = conn, %{"hash" => hash}) do
+    with {:ok, tx_hash} <- Validate.id(hash),
+         {:ok, tx} <- Txs.fetch(state, tx_hash) do
+      json(conn, tx)
+    end
+  end
+
   def tx(%Conn{assigns: %{state: state}} = conn, %{"hash_or_index" => hash_or_index} = params) do
     case Util.parse_int(hash_or_index) do
       {:ok, _txi} ->
