@@ -23,8 +23,6 @@ defmodule AeMdw.Db.Name do
 
   require Model
 
-  import AeMdw.Util
-
   @typep direction :: :forward | :backward
   @typep pubkey :: Db.pubkey()
   @typep plain_name :: Names.plain_name()
@@ -57,11 +55,29 @@ defmodule AeMdw.Db.Name do
     plain_name
   end
 
-  @spec ptr_resolve!(state(), Blocks.block_index(), binary(), String.t()) :: binary()
-  def ptr_resolve!(state, block_index, name_hash, key) do
-    key
-    |> :aens.resolve_hash(name_hash, ns_tree!(state, block_index))
-    |> map_ok!(&Validate.id!/1)
+  @spec ptr_resolve(state(), Blocks.block_index(), binary()) ::
+          {:ok, binary()} | {:error, :name_revoked}
+  def ptr_resolve(state, block_index, name_hash) do
+    with {:ok, account_id} <-
+           :aens.resolve_hash("account_pubkey", name_hash, ns_tree!(state, block_index)) do
+      {:ok, Validate.id(account_id)}
+    end
+  end
+
+  @spec last_update_pointee_pubkey(state(), binary()) :: binary()
+  def last_update_pointee_pubkey(state, name_id) do
+    with {:ok, name_hash} <- Validate.id(name_id),
+         {:ok, Model.plain_name(value: plain_name)} <-
+           State.get(state, Model.PlainName, name_hash),
+         {m_name, _source} <- locate(state, plain_name) do
+      state
+      |> pointers(m_name)
+      |> case do
+        %{"account_pubkey" => account_id} -> account_id
+        map -> map |> Map.to_list() |> hd() |> elem(1)
+      end
+      |> Validate.id!()
+    end
   end
 
   @spec owned_by(state(), owner_pk :: pubkey(), active? :: boolean()) :: %{

@@ -6,6 +6,7 @@ defmodule AeMdw.Db.WriteFieldsMutation do
   alias AeMdw.Blocks
   alias AeMdw.Db.State
   alias AeMdw.Fields
+  alias AeMdw.Log
   alias AeMdw.Node
   alias AeMdw.Db.Model
   alias AeMdw.Db.Name
@@ -70,11 +71,15 @@ defmodule AeMdw.Db.WriteFieldsMutation do
   end
 
   defp resolve_pubkey(state, id, :spend_tx, :recipient_id, block_index) do
-    case :aeser_id.specialize(id) do
-      {:name, name_hash} ->
-        Name.ptr_resolve!(state, block_index, name_hash, "account_pubkey")
+    with {:name, name_hash} <- :aeser_id.specialize(id),
+         {:ok, account_pk} <- Name.ptr_resolve(state, block_index, name_hash) do
+      account_pk
+    else
+      {:error, :name_revoked} ->
+        Log.warn("Revoked name used on spend! id: #{id}, block_index: #{block_index}")
+        Name.last_update_pointee_pubkey(state, id)
 
-      {_tag, pk} ->
+      {_pk_type, pk} ->
         pk
     end
   end
