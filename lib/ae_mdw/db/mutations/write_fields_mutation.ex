@@ -76,7 +76,10 @@ defmodule AeMdw.Db.WriteFieldsMutation do
       account_pk
     else
       {:error, :name_revoked} ->
-        Log.warn("Revoked name used on spend! id: #{id}, block_index: #{block_index}")
+        Log.warn(
+          "Revoked name used on spend! id: #{inspect(id)}, block_index: #{inspect(block_index)}"
+        )
+
         Name.last_update_pointee_pubkey(state, id)
 
       {_pk_type, pk} ->
