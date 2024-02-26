@@ -1932,7 +1932,7 @@ defmodule AeMdwWeb.NameControllerTest do
     end
 
     test "get name info by encoded hash ", %{conn: conn, store: store} do
-      hash = <<0::256>>
+      hash = <<789::256>>
       name = "some-name.chain"
       owner_pk = <<1::256>>
       owner_id = :aeser_id.create(:account, owner_pk)
