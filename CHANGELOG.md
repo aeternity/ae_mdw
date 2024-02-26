@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.69.0](https://www.github.com/aeternity/ae_mdw/compare/v1.68.2...v1.69.0) (2024-02-26)
+
+
+### Features
+
+* add v3 name and auction detail endpoint ([#1677](https://www.github.com/aeternity/ae_mdw/issues/1677)) ([6b145dc](https://www.github.com/aeternity/ae_mdw/commit/6b145dc4b3133b0fc3cd27a65411c48a4a723e9e))
+* include 48hs transactions count trend on stats ([#1680](https://www.github.com/aeternity/ae_mdw/issues/1680)) ([1bb6d13](https://www.github.com/aeternity/ae_mdw/commit/1bb6d13e28fa372b614ce62361909de1b59f6dfa))
+
+
+### Bug Fixes
+
+* restructure aex141 activities meta_info match ([#1681](https://www.github.com/aeternity/ae_mdw/issues/1681)) ([4f55387](https://www.github.com/aeternity/ae_mdw/commit/4f55387c1a7d95378321e7c170cbc149649572ac))
+* skip node call on empty db ([#1685](https://www.github.com/aeternity/ae_mdw/issues/1685)) ([02a9eaf](https://www.github.com/aeternity/ae_mdw/commit/02a9eaff736c6091fea08c063df31a240d3f537a))
+* sync spend with revoked name ([#1684](https://www.github.com/aeternity/ae_mdw/issues/1684)) ([f9f8c4d](https://www.github.com/aeternity/ae_mdw/commit/f9f8c4df4154dd2a626f2c20e69921d41fa9f4e0))
+
 ### [1.68.2](https://www.github.com/aeternity/ae_mdw/compare/v1.68.1...v1.68.2) (2024-02-08)
 
 
