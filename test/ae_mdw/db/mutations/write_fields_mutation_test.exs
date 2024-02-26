@@ -56,8 +56,8 @@ defmodule AeMdw.Db.WriteFieldsMuationTest do
       with_mocks [
         {Name, [],
          [
-           ptr_resolve!: fn _store, _block_index, _name_hash, _key ->
-             Validate.id!(@fake_account2)
+           ptr_resolve: fn _store, _block_index, _name_hash ->
+             {:ok, Validate.id!(@fake_account2)}
            end
          ]}
       ] do
