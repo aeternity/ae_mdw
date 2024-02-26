@@ -1423,6 +1423,29 @@ defmodule AeMdwWeb.Controllers.ContractControllerTest do
                  |> json_response(200)
       end
     end
+
+    test "when contract id is invalid", %{conn: conn, store: store} do
+      invalid_contract_id = "asdasdsa"
+      error_msg = "invalid id: #{invalid_contract_id}"
+
+      %{"error" => ^error_msg} =
+        conn
+        |> with_store(store)
+        |> get("/v2/contracts/#{invalid_contract_id}")
+        |> json_response(400)
+    end
+
+    test "when contract is not found", %{conn: conn, store: store} do
+      contract_pk = <<190_283::256>>
+      contract_id = Enc.encode(:contract_pubkey, contract_pk)
+      error_msg = "not found: #{contract_id}"
+
+      %{"error" => ^error_msg} =
+        conn
+        |> with_store(store)
+        |> get("/v2/contracts/#{contract_id}")
+        |> json_response(404)
+    end
   end
 
   defp logs_setup(store, contract_pk, aex9_contract_pk, aex141_contract_pk) do
