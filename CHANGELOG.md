@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.69.1](https://www.github.com/aeternity/ae_mdw/compare/v1.69.0...v1.69.1) (2024-02-26)
+
+
+### Bug Fixes
+
+* logging revoked name on sped ([#1686](https://www.github.com/aeternity/ae_mdw/issues/1686)) ([302202a](https://www.github.com/aeternity/ae_mdw/commit/302202ab67e9ff7eb062033a8d0173b00d64c40b))
+
 ## [1.69.0](https://www.github.com/aeternity/ae_mdw/compare/v1.68.2...v1.69.0) (2024-02-26)
 
 
