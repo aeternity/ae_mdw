@@ -17,7 +17,13 @@ defmodule AeMdw.Migrations.DexEvents do
 
   @spec run(State.t(), boolean()) :: {:ok, non_neg_integer()}
   def run(state, _from_start?) do
-    pair_pubkeys_set = load_pairs() |> MapSet.new()
+    pair_pubkeys_set =
+      if State.next(state, Model.Field, nil) == :none do
+        MapSet.new()
+      else
+        load_pairs()
+        |> MapSet.new()
+      end
 
     mutations =
       state
