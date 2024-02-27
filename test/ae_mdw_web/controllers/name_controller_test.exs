@@ -1205,9 +1205,10 @@ defmodule AeMdwWeb.NameControllerTest do
           |> Store.put(Model.ActiveNameExpiration, Model.expiration(index: {i, plain_name}))
           |> Store.put(Model.Block, Model.block(index: {i, -1}, hash: key_hash))
         end)
+        |> Store.put(Model.Tx, Model.tx(index: 0, id: <<123::256>>))
 
       with_mocks [
-        {Txs, [],
+        {Txs, [:passthrough],
          [
            fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
@@ -1261,7 +1262,7 @@ defmodule AeMdwWeb.NameControllerTest do
          [
            fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
-        {Name, [],
+        {Name, [:passthrough],
          [
            pointers: fn _state, _mnme -> %{} end,
            ownership: fn _state, _mname -> %{current: nil, original: nil} end
@@ -1444,13 +1445,14 @@ defmodule AeMdwWeb.NameControllerTest do
           Store.put(store, Model.ActiveName, name)
         end)
         |> Store.put(Model.Block, Model.block(index: {1, -1}, hash: key_hash))
+        |> Store.put(Model.Tx, Model.tx(index: 0, id: <<123::256>>))
 
       with_mocks [
-        {Txs, [],
+        {Txs, [:passthrough],
          [
            fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
-        {Name, [],
+        {Name, [:passthrough],
          [
            pointers: fn _state, _mnme -> %{} end,
            ownership: fn _state, _mname -> %{current: nil, original: nil} end
@@ -1500,7 +1502,7 @@ defmodule AeMdwWeb.NameControllerTest do
          [
            fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
-        {Name, [],
+        {Name, [:passthrough],
          [
            pointers: fn _state, _mnme -> %{} end,
            ownership: fn _state, _mname -> %{current: nil, original: nil} end
@@ -1561,7 +1563,7 @@ defmodule AeMdwWeb.NameControllerTest do
          [
            fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
-        {Name, [],
+        {Name, [:passthrough],
          [
            pointers: fn _state, _mnme -> %{} end,
            ownership: fn _state, _mname ->
@@ -1633,7 +1635,7 @@ defmodule AeMdwWeb.NameControllerTest do
          [
            fetch!: fn _state, _hash -> %{"tx" => %{"account_id" => <<>>}} end
          ]},
-        {Name, [],
+        {Name, [:passthrough],
          [
            pointers: fn _state, _mnme -> %{} end,
            ownership: fn _state, _mname ->
@@ -1726,8 +1728,7 @@ defmodule AeMdwWeb.NameControllerTest do
         assert %{
                  "name" => ^name,
                  "active" => true,
-                 "auction" => nil,
-                 "status" => "name"
+                 "auction" => nil
                } =
                  conn
                  |> with_store(store)
@@ -1787,8 +1788,7 @@ defmodule AeMdwWeb.NameControllerTest do
         assert %{
                  "name" => ^plain_name,
                  "active" => true,
-                 "auction" => nil,
-                 "status" => "name"
+                 "auction" => nil
                } =
                  conn
                  |> with_store(store)
@@ -1840,8 +1840,7 @@ defmodule AeMdwWeb.NameControllerTest do
         assert %{
                  "name" => ^plain_name,
                  "active" => true,
-                 "auction" => nil,
-                 "status" => "name"
+                 "auction" => nil
                } =
                  conn
                  |> with_store(store)
@@ -1921,8 +1920,7 @@ defmodule AeMdwWeb.NameControllerTest do
                  "auction" => %{
                    "auction_end" => ^bid_expire,
                    "approximate_expire_time" => ^block_time
-                 },
-                 "status" => "auction"
+                 }
                } =
                  conn
                  |> with_store(store)
