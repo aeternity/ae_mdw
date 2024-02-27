@@ -48,20 +48,76 @@ defmodule AeMdwWeb.Router do
     pipe_through :api
 
     scope "/v3" do
+      get "/key-blocks", BlockController, :key_blocks
+      get "/key-blocks/:hash_or_kbi", BlockController, :key_block
+      get "/key-blocks/:hash_or_kbi/micro-blocks", BlockController, :key_block_micro_blocks
+      get "/micro-blocks/:hash", BlockController, :micro_block
+      get "/micro-blocks/:hash/txs", TxController, :micro_block_txs
+
+      get "/transactions", TxController, :txs
+      get "/transactions/:hash", TxController, :tx
+
+      get "/oracles", OracleController, :oracles
+      get "/oracles/:id", OracleController, :oracle
+      get "/oracles/:id/queries", OracleController, :oracle_queries
+      get "/oracles/:id/responses", OracleController, :oracle_responses
+
+      get "/channels", ChannelController, :channels
+      get "/channels/:id", ChannelController, :channel
+      get "/channels/:id/updates", ChannelController, :channel_updates
+
+      get "/contracts", ContractController, :contracts
+      get "/contracts/:id", ContractController, :contract
+
+      get "/accounts/:id/activities", ActivityController, :account_activities
+
+      get "/deltastats", StatsController, :delta_stats
+      get "/stats", StatsController, :stats
+      get "/minerstats", StatsController, :miners
+
       get "/names", NameController, :names
       get "/names/auctions", NameController, :auctions
       get "/names/auctions/:id", NameController, :auction
       get "/names/auctions/:id/claims", NameController, :auction_claims
       get "/names/:id", NameController, :name
+      get "/names/:id/pointers", NameController, :pointers
+      get "/names/:id/pointees", NameController, :pointees
+      get "/names/:id/claims", NameController, :name_claims
+      get "/names/:id/updates", NameController, :name_updates
+      get "/names/:id/transfers", NameController, :name_transfers
+      get "/names/:id/history", NameController, :name_history
+
       get "/statistics/transactions", StatsController, :transactions_statistics
       get "/statistics/blocks", StatsController, :blocks_statistics
       get "/statistics/names", StatsController, :names_statistics
 
-      get "/aex9/:contract_id/transfers",
-          AexnTransferController,
-          :aex9_contract_transfers
+      get "/transactions/count", TxController, :count
+      get "/transactions/count/:id", TxController, :count_id
 
+      get "/transfers", TransferController, :transfers
+      get "/contracts/logs", ContractController, :logs
+      get "/contracts/calls", ContractController, :calls
+      get "/totalstats/", StatsController, :total_stats
+      get "/status", UtilController, :status
+      get "/aex141", AexnTokenController, :aex141_contracts
+      get "/aex141/count", AexnTokenController, :aex141_count
+      get "/aex141/:contract_id", AexnTokenController, :aex141_contract
+      get "/aex141/:contract_id/owner/:token_id", Aex141Controller, :nft_owner
+      get "/aex141/:contract_id/metadata/:token_id", Aex141Controller, :nft_metadata
+      get "/aex141/:contract_id/owners", Aex141Controller, :collection_owners
+      get "/aex141/:contract_id/templates", Aex141Controller, :collection_templates
+
+      get "/aex141/:contract_id/templates/:template_id/tokens",
+          Aex141Controller,
+          :collection_template_tokens
+
+      get "/aex141/owned-nfts/:account_id", Aex141Controller, :owned_nfts
+
+      get "/aex9/:contract_id/transfers", AexnTransferController, :aex9_contract_transfers
       get "/dex/swaps", DexController, :swaps
+
+      get "/api", UtilController, :static_file,
+        assigns: %{filepath: "static/swagger/swagger_v3.json"}
     end
 
     scope "/v2" do

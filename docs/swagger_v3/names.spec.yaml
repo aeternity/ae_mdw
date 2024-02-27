@@ -250,44 +250,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /names/search:
-    get:
-      deprecated: false
-      description: Get multiple names.
-      operationId: search_names
-      parameters:
-        - $ref: '#/components/parameters/LimitParam'
-        - $ref: '#/components/parameters/ScopeParam'
-        - $ref: '#/components/parameters/DirectionParam'
-      responses:
-        '200':
-          description: Returns paginated active/inactive names and auctions
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          allOf:
-                            - $ref: '#/components/schemas/Name'
-                            - type: object
-                              properties:
-                                status:
-                                  type: string
-                                  enum:
-                                    - auction
-                                    - active
-                                    - inactive
-                  - $ref: '#/components/schemas/PaginatedResponse'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
   /names/auctions:
     get:
       deprecated: false

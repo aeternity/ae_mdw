@@ -1,5 +1,5 @@
 schemas:
-  Tx:
+  Transaction:
     description: Transaction
     type: object
     properties:
@@ -23,12 +23,9 @@ schemas:
         type: array
         items:
           type: string
-      tx:
+      transaction:
         description: The transaction
         type: object
-      tx_index:
-        description: The transaction index
-        type: integer
     example:
       block_hash: mh_ufiYLdN8am8fBxMnb6xq2K4MQKo4eFSCF5bgixq4EzKMtDUXP
       block_height: 1
@@ -37,7 +34,7 @@ schemas:
       micro_time: 1543375246712
       signatures:
         - sg_Fipyxq5f3JS9CB3AQVCw1v9skqNBw1cdfe5W3h1t2MkviU19GQckERQZkqkaXWKowdTUvr7B1QbtWdHjJHQcZApwVDdP9
-      tx:
+      transaction:
         amount: 150425
         fee: 101014
         nonce: 1
@@ -46,13 +43,12 @@ schemas:
         sender_id: ak_26dopN3U2zgfJG4Ao4J4ZvLTf5mqr7WAgLAq6WxjxuSapZhQg5
         type: SpendTx
         version: 1
-      tx_index: 0
 paths:
-  /txs:
+  /transactions:
     get:
       deprecated: false
       description: Get multiple transactions.
-      operationId: get_txs
+      operationId: get_transactions
       parameters:
         - name: type
           description: The transaction type. The query allows providing of multiple type parameters. [More info](https://github.com/aeternity/ae_mdw#types)
@@ -175,7 +171,7 @@ paths:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Tx'
+                          $ref: '#/components/schemas/Transaction'
                   - $ref: '#/components/schemas/PaginatedResponse'
         '400':
           description: Bad request
@@ -183,15 +179,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /txs/{hash_or_index}:
+  /transactions/{hash_or_index}:
     get:
       deprecated: false
       description: Get a single transaction.
-      operationId: get_tx
+      operationId: get_transaction
       parameters:
-        - name: hash_or_index
+        - name: hash
           in: path
-          description: The transaction encoded hash or index (txi)
+          description: The transaction encoded hash
           required: true
           schema:
             type: string
@@ -202,7 +198,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Tx'
+                $ref: '#/components/schemas/Transaction'
         '400':
           description: Bad request
           content:
@@ -215,11 +211,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotFoundResponse'
-  /txs/count:
+  /transactions/count:
     get:
       deprecated: false
       description: Get count of transactions at the latest height.
-      operationId: get_tx_count
+      operationId: get_transactions_count
       parameters:
       - name: tx_type
         description: Type of a transaction
@@ -245,11 +241,11 @@ paths:
                 description: The transactions count
                 example: 15479090
                 type: integer
-  /txs/count/{id}:
+  /transactions/count/{id}:
     get:
       deprecated: false
       description: Get transactions count and its type for given aeternity ID.
-      operationId: get_tx_count_by_id
+      operationId: get_transaction_count_by_id
       parameters:
         - description: The ID of the address/name/oracle/etc
           in: path
@@ -281,79 +277,79 @@ paths:
                 properties:
                   channel_close_mutual_tx:
                     type: object
-                    description: The channel close mutual txs count
+                    description: The channel close mutual transactions count
                   channel_close_solo_tx:
                     type: object
-                    description: The channel close solo txs count
+                    description: The channel close solo transactions count
                   channel_create_tx:
                     type: object
-                    description: The channel create txs count
+                    description: The channel create transactions count
                   channel_deposit_tx:
                     type: object
-                    description: The channel deposit txs count
+                    description: The channel deposit transactions count
                   channel_force_progress_tx:
                     type: integer
-                    description: The channel force progress txs count
+                    description: The channel force progress transactions count
                   channel_offchain_tx:
                     type: object
-                    description: The channel offchain txs count
+                    description: The channel offchain transactions count
                   channel_settle_tx:
                     type: object
-                    description: The channel settle txs count
+                    description: The channel settle transactions count
                   channel_slash_tx:
                     type: object
-                    description: The channel slash txs count
+                    description: The channel slash transactions count
                   channel_snapshot_solo_tx:
                     type: object
-                    description: The channel snapshot solo txs count
+                    description: The channel snapshot solo transactions count
                   channel_withdraw_tx:
                     type: object
-                    description: The channel withdraw txs count
+                    description: The channel withdraw transactions count
                   contract_call_tx:
                     type: object
-                    description: The contract call txs count
+                    description: The contract call transactions count
                   contract_create_tx:
                     type: object
-                    description: The contract create txs count
+                    description: The contract create transactions count
                   ga_attach_tx:
                     type: object
-                    description: The ga attach txs count
+                    description: The ga attach transactions count
                   ga_meta_tx:
                     type: object
-                    description: The ga meta txs count
+                    description: The ga meta transactions count
                   name_claim_tx:
                     type: object
-                    description: The name claim txs count
+                    description: The name claim transactions count
                   name_preclaim_tx:
                     type: object
-                    description: The name preclaim txs count
+                    description: The name preclaim transactions count
                   name_revoke_tx:
                     type: object
-                    description: The name revoke txs count
+                    description: The name revoke transactions count
                   name_transfer_tx:
                     type: integer
-                    description: The name transfer txs count
+                    description: The name transfer transactions count
                   name_update_tx:
                     type: object
-                    description: The name update txs count
+                    description: The name update transactions count
                   oracle_extend_tx:
                     type: object
-                    description: The oracle extend txs count
+                    description: The oracle extend transactions count
                   oracle_query_tx:
                     type: object
-                    description: The oracle query txs count
+                    description: The oracle query transactions count
                   oracle_register_tx:
                     type: object
-                    description: The oracle register txs count
+                    description: The oracle register transactions count
                   oracle_response_tx:
                     type: object
-                    description: The oracle response txs count
+                    description: The oracle response transactions count
                   paying_for_tx:
                     type: object
-                    description: The paying for txs count
+                    description: The paying for transactions count
                   spend_tx:
                     type: object
-                    description: The spend txs count
+                    description: The spend transactions count
         '400':
           description: Bad request
           content:
