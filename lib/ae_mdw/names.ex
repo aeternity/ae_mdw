@@ -563,27 +563,28 @@ defmodule AeMdw.Names do
       name =
       State.fetch!(state, if(is_active?, do: @table_active, else: @table_inactive), plain_name)
 
+    opts = [{:expand?, false}, {:tx_hash?, true} | opts]
+
     name_hash =
       case :aens.get_name_hash(plain_name) do
         {:ok, name_id_bin} -> Enc.encode(:name, name_id_bin)
         _error -> nil
       end
 
-    {status, auction_bid} =
+    auction_bid =
       case AuctionBids.fetch(state, plain_name, opts) do
         {:ok, auction_bid} ->
           {_version, auction_bid} = pop_in(auction_bid, [:last_bid, "tx", "version"])
-          {"auction", auction_bid}
+          auction_bid
 
         :not_found ->
-          {"name", nil}
+          nil
       end
 
     %{
       name: plain_name,
       hash: name_hash,
       auction: auction_bid,
-      status: status,
       active: is_active?,
       active_from: active,
       approximate_activation_time:

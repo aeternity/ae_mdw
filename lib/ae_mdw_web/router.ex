@@ -228,8 +228,8 @@ defmodule AeMdwWeb.Router do
     get "/names/active", NameController, :active_names
     get "/names/active/:scope_type/:range", NameController, :active_names
     get "/names/owned_by/:id", NameController, :owned_by
-    get "/names", NameController, :names
-    get "/names/:scope_type/:range", NameController, :names
+    get "/names", NameController, :names_v2
+    get "/names/:scope_type/:range", NameController, :names_v2
 
     get "/aex9/transfers/from/:sender", AexnTransferController, :transfers_from_v1
     get "/aex9/transfers/to/:recipient", AexnTransferController, :transfers_to_v1
