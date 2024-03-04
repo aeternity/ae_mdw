@@ -147,7 +147,7 @@ defmodule AeMdw.Db.Origin do
       :aec_fork_block_settings.hc_seed_contracts(@iris_protocol, :aec_governance.get_network_id())
 
     hc_contracts_json
-    |> Map.get("contracts", [])
+    |> Enum.find_value([], fn {item, list} -> if item == "contracts", do: list end)
     |> Enum.map(&(Map.get(&1, "pubkey") || Map.fetch!(&1, "contract_pubkey")))
     |> Enum.map(&Validate.id!/1)
   end
