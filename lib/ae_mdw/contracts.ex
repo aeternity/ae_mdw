@@ -129,7 +129,7 @@ defmodule AeMdw.Contracts do
   @spec fetch_contract(State.t(), binary()) :: {:ok, contract()} | {:error, reason()}
   def fetch_contract(state, contract_id) do
     with {:ok, pubkey} <- Validate.id(contract_id, [:contract_pubkey]),
-         txi_idx <- get_contract_txi_idx(state, pubkey) do
+         {:ok, txi_idx} <- get_contract_txi_idx(state, pubkey) do
       {:ok, render_contract(state, txi_idx)}
     else
       {:error, reason} -> {:error, reason}
@@ -155,9 +155,9 @@ defmodule AeMdw.Contracts do
             :aect_create_tx.contract_pubkey(create_tx) == pubkey && local_idx
           end)
 
-        {txi, local_idx}
+        {:ok, {txi, local_idx}}
       else
-        {txi, -1}
+        {:ok, {txi, -1}}
       end
     end
   end
