@@ -65,6 +65,12 @@ defmodule AeMdw.Db.OriginTest do
         |> State.new()
 
       with_mocks [
+        {:aeu_env, [:passthrough],
+         [
+           find_config: fn ["chain", "hard_forks"], [:user_config] ->
+             {:ok, %{"5" => 0}}
+           end
+         ]},
         {:aec_fork_block_settings, [],
          [
            lima_contracts: fn ->

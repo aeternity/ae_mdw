@@ -143,21 +143,23 @@ defmodule AeMdw.Db.Origin do
   end
 
   defp hc_contracts do
-    case :aeu_env.find_config(["chain", "hard_forks"], [:user_config]) do
-      {:ok, _hardfork_map} ->
-        {:ok, hc_contracts_json} =
-          :aec_fork_block_settings.hc_seed_contracts(
-            @iris_protocol,
-            :aec_governance.get_network_id()
-          )
+    if isis_hardfork?() do
+      {:ok, hc_contracts_json} =
+        :aec_fork_block_settings.hc_seed_contracts(
+          @iris_protocol,
+          :aec_governance.get_network_id()
+        )
 
-        hc_contracts_json
-        |> Enum.find_value([], fn {item, list} -> if item == "contracts", do: list end)
-        |> Enum.map(&(Map.get(&1, "pubkey") || Map.fetch!(&1, "contract_pubkey")))
-        |> Enum.map(&Validate.id!/1)
-
-      :undefined ->
-        []
+      hc_contracts_json
+      |> Enum.find_value([], fn {item, list} -> if item == "contracts", do: list end)
+      |> Enum.map(&(Map.get(&1, "pubkey") || Map.fetch!(&1, "contract_pubkey")))
+      |> Enum.map(&Validate.id!/1)
+    else
+      []
     end
+  end
+
+  defp isis_hardfork? do
+    match?({:ok, _hardfork_map}, :aeu_env.find_config(["chain", "hard_forks"], [:user_config]))
   end
 end
