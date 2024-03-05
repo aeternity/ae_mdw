@@ -149,7 +149,7 @@ defmodule AeMdwWeb.Aex9Controller do
     with {:ok, contract_pk} <- ensure_aex9_contract_pk(contract_id),
          {:ok, amounts} <- Aex9.fetch_balances(state, contract_pk, top?(opts)) do
       hash_tuple = DBN.top_height_hash(top?(opts))
-      json(conn, balances_to_map({amounts, hash_tuple}, contract_pk))
+      format_json(conn, balances_to_map({amounts, hash_tuple}, contract_pk))
     end
   end
 
@@ -192,7 +192,7 @@ defmodule AeMdwWeb.Aex9Controller do
   defp by_contract_reply(%Conn{assigns: %{state: state}} = conn, contract_id) do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
          {:ok, m_aex9} <- AexnTokens.fetch_contract(state, {:aex9, contract_pk}) do
-      json(conn, %{data: render_contract(state, m_aex9)})
+      format_json(conn, %{data: render_contract(state, m_aex9)})
     end
   end
 
@@ -201,7 +201,7 @@ defmodule AeMdwWeb.Aex9Controller do
 
     with {:ok, {_prev_cursor, aex9_tokens, _next_cursor}} <-
            AexnTokens.fetch_contracts(state, pagination, :aex9, params, :name, nil) do
-      json(conn, render_contracts(state, aex9_tokens))
+      format_json(conn, render_contracts(state, aex9_tokens))
     end
   end
 
@@ -210,7 +210,7 @@ defmodule AeMdwWeb.Aex9Controller do
 
     with {:ok, {_prev_cursor, aex9_tokens, _next_cursor}} <-
            AexnTokens.fetch_contracts(state, pagination, :aex9, params, :symbol, nil) do
-      json(conn, render_contracts(state, aex9_tokens))
+      format_json(conn, render_contracts(state, aex9_tokens))
     end
   end
 
@@ -234,11 +234,11 @@ defmodule AeMdwWeb.Aex9Controller do
         end
       end
 
-    json(conn, balance_to_map({amount, {type, height, hash}}, contract_pk, account_pk))
+    format_json(conn, balance_to_map({amount, {type, height, hash}}, contract_pk, account_pk))
   end
 
   defp balance_range_reply(conn, contract_pk, account_pk, range) do
-    json(
+    format_json(
       conn,
       %{
         contract_id: encode_contract(contract_pk),
@@ -262,7 +262,7 @@ defmodule AeMdwWeb.Aex9Controller do
          {_type, _height, _hash} = height_hash
        ) do
     {:ok, {amount, _}} = DBN.aex9_balance(contract_pk, account_pk, height_hash)
-    json(conn, balance_to_map({amount, height_hash}, contract_pk, account_pk))
+    format_json(conn, balance_to_map({amount, height_hash}, contract_pk, account_pk))
   end
 
   defp account_balances_reply(%Conn{assigns: %{state: state}} = conn, account_pk) do
@@ -282,7 +282,7 @@ defmodule AeMdwWeb.Aex9Controller do
       |> Enum.sort_by(fn {_amount, call_txi, _contract_pk} -> call_txi end, :desc)
       |> Enum.map(&balance_to_map(state, &1))
 
-    json(conn, balances)
+    format_json(conn, balances)
   end
 
   defp account_balances_reply(
@@ -310,11 +310,11 @@ defmodule AeMdwWeb.Aex9Controller do
       end)
       |> Enum.map(&balance_to_map(state, &1))
 
-    json(conn, balances)
+    format_json(conn, balances)
   end
 
   defp balances_range_reply(conn, contract_pk, range) do
-    json(
+    format_json(
       conn,
       %{
         contract_id: encode_contract(contract_pk),
@@ -332,7 +332,7 @@ defmodule AeMdwWeb.Aex9Controller do
 
   defp balances_for_hash_reply(conn, contract_pk, {_type, _height, _hash} = height_hash) do
     {amounts, _height_hash} = DBN.aex9_balances!(contract_pk, height_hash)
-    json(conn, balances_to_map({amounts, height_hash}, contract_pk))
+    format_json(conn, balances_to_map({amounts, height_hash}, contract_pk))
   end
 
   defp validate_range(range) do

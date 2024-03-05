@@ -25,7 +25,7 @@ defmodule AeMdwWeb.BlockController do
       {:ok, kbi} ->
         case Blocks.fetch_blocks(state, :forward, {:gen, kbi..kbi}, nil, 1, true) do
           {_prev_cursor, [block], _next_cursor} ->
-            json(conn, block)
+            format_json(conn, block)
 
           {nil, [], nil} ->
             {:error, ErrInput.NotFound.exception(value: hash_or_kbi)}
@@ -33,7 +33,7 @@ defmodule AeMdwWeb.BlockController do
 
       {:error, _reason} ->
         with {:ok, block} <- Blocks.fetch(state, hash_or_kbi) do
-          json(conn, block)
+          format_json(conn, block)
         end
     end
   end
@@ -49,7 +49,7 @@ defmodule AeMdwWeb.BlockController do
 
       :error ->
         case Blocks.fetch(state, hash_or_kbi) do
-          {:ok, block} -> json(conn, block)
+          {:ok, block} -> format_json(conn, block)
           {:error, reason} -> {:error, reason}
         end
     end
@@ -64,7 +64,7 @@ defmodule AeMdwWeb.BlockController do
 
     with {:ok, block_index} <- Validate.block_index(kbi <> "/" <> mbi),
          {:ok, block} <- Blocks.fetch(state, block_index) do
-      json(conn, block)
+      format_json(conn, block)
     end
   end
 
@@ -86,7 +86,7 @@ defmodule AeMdwWeb.BlockController do
   @spec key_block(Conn.t(), map()) :: Conn.t()
   def key_block(%Conn{assigns: %{state: state}} = conn, %{"hash_or_kbi" => hash_or_kbi}) do
     with {:ok, block} <- Blocks.fetch_key_block(state, hash_or_kbi) do
-      json(conn, block)
+      format_json(conn, block)
     end
   end
 
@@ -107,7 +107,7 @@ defmodule AeMdwWeb.BlockController do
   @spec micro_block(Conn.t(), map()) :: Conn.t()
   def micro_block(%Conn{assigns: %{state: state}} = conn, %{"hash" => hash}) do
     with {:ok, block} <- Blocks.fetch_micro_block(state, hash) do
-      json(conn, block)
+      format_json(conn, block)
     end
   end
 

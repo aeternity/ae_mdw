@@ -6,6 +6,6 @@ defmodule AeMdwWeb.WealthController do
 
   @spec wealth(Conn.t(), map()) :: Conn.t()
   def wealth(%Conn{} = conn, _params) do
-    json(conn, Wealth.fetch_balances())
+    format_json(conn, Wealth.fetch_balances())
   end
 end

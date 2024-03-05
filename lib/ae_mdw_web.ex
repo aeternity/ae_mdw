@@ -23,6 +23,7 @@ defmodule AeMdwWeb do
 
       import Plug.Conn
       import AeMdwWeb.Gettext
+      import AeMdwWeb.Helpers.JSONHelper
       alias AeMdwWeb.Router.Helpers, as: Routes
     end
   end

@@ -17,7 +17,7 @@ defmodule AeMdwWeb.OracleController do
   def oracle(%Conn{assigns: %{state: state, opts: opts}} = conn, %{"id" => id}) do
     with {:ok, oracle_pk} <- Validate.id(id, [:oracle_pubkey]),
          {:ok, oracle} <- Oracles.fetch(state, oracle_pk, opts) do
-      json(conn, oracle)
+      format_json(conn, oracle)
     end
   end
 

@@ -49,7 +49,7 @@ defmodule AeMdwWeb.NameController do
     opts = [{:render_v3?, true} | opts]
 
     with {:ok, name} <- Names.fetch_name(state, ident, opts) do
-      json(conn, name)
+      format_json(conn, name)
     end
   end
 
@@ -58,7 +58,7 @@ defmodule AeMdwWeb.NameController do
     opts = [{:render_v3?, true} | opts]
 
     with {:ok, auction_bid} <- AuctionBids.fetch(state, ident, opts) do
-      json(conn, auction_bid)
+      format_json(conn, auction_bid)
     end
   end
 
@@ -206,7 +206,7 @@ defmodule AeMdwWeb.NameController do
       |> Map.delete("expand")
 
     with {:ok, search_params} <- convert_params(params, &convert_search_param/1) do
-      json(conn, Enum.to_list(do_prefix_stream(state, search_params, opts)))
+      format_json(conn, Enum.to_list(do_prefix_stream(state, search_params, opts)))
     end
   end
 
@@ -274,7 +274,7 @@ defmodule AeMdwWeb.NameController do
 
   defp name_reply(%Conn{assigns: %{state: state}} = conn, plain_name, opts) do
     case Name.locate(state, plain_name) do
-      {info, source} -> json(conn, Format.to_map(state, info, source, expand?(opts)))
+      {info, source} -> format_json(conn, Format.to_map(state, info, source, expand?(opts)))
       nil -> {:error, ErrInput.NotFound.exception(value: plain_name)}
     end
   end
@@ -282,7 +282,7 @@ defmodule AeMdwWeb.NameController do
   defp pointers_reply(%Conn{assigns: %{state: state}} = conn, plain_name) do
     case Name.locate(state, plain_name) do
       {m_name, Model.ActiveName} ->
-        json(conn, Name.pointers(state, m_name))
+        format_json(conn, Name.pointers(state, m_name))
 
       {_m_name, Model.InactiveName} ->
         {:error, ErrInput.Expired.exception(value: plain_name)}
@@ -295,7 +295,7 @@ defmodule AeMdwWeb.NameController do
   defp pointees_reply(%Conn{assigns: %{state: state}} = conn, pubkey) do
     {active, inactive} = Name.pointees(state, pubkey)
 
-    json(conn, %{
+    format_json(conn, %{
       "active" => Format.map_raw_values(active, &Format.to_json/1),
       "inactive" => Format.map_raw_values(inactive, &Format.to_json/1)
     })
@@ -307,7 +307,7 @@ defmodule AeMdwWeb.NameController do
         {:error, ErrInput.NotFound.exception(value: plain_name)}
 
       auction_bid ->
-        json(conn, Format.to_map(state, auction_bid, Model.AuctionBid, expand?(opts)))
+        format_json(conn, Format.to_map(state, auction_bid, Model.AuctionBid, expand?(opts)))
     end
   end
 
@@ -339,11 +339,11 @@ defmodule AeMdwWeb.NameController do
 
       top_bids = jsons.(query_res.top_bids, Model.AuctionBid, locator)
 
-      json(conn, %{"active" => names, "top_bid" => top_bids})
+      format_json(conn, %{"active" => names, "top_bid" => top_bids})
     else
       names = jsons.(query_res.names, Model.InactiveName, &Name.locate(state, &1))
 
-      json(conn, %{"inactive" => names})
+      format_json(conn, %{"inactive" => names})
     end
   end
 

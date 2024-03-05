@@ -11,7 +11,7 @@ defmodule AeMdwWeb.UtilController do
 
   @spec status(Conn.t(), map()) :: Conn.t()
   def status(%Conn{assigns: %{state: state}} = conn, _params),
-    do: json(conn, Status.node_and_mdw_status(state))
+    do: format_json(conn, Status.node_and_mdw_status(state))
 
   @spec no_route(Conn.t(), map()) :: Conn.t()
   def no_route(conn, _params),

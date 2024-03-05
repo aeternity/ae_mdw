@@ -4,6 +4,7 @@ defmodule AeMdwWeb.Router do
 
   alias AeMdwWeb.Plugs.StatePlug
   alias AeMdwWeb.Plugs.VersioningPlug
+  alias AeMdwWeb.Plugs.JSONFormatterPlug
   alias AeMdwWeb.Plugs.RequestSpan
   alias AeMdwWeb.Util
 
@@ -31,6 +32,7 @@ defmodule AeMdwWeb.Router do
   pipeline :api do
     plug :accepts, ["json"]
     plug StatePlug
+    plug JSONFormatterPlug
     plug Plug.RequestId
     plug RequestSpan
     plug VersioningPlug

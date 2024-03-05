@@ -66,7 +66,7 @@ defmodule AeMdwWeb.StatsController do
   @spec stats(Conn.t(), map()) :: Conn.t()
   def stats(%Conn{assigns: %{state: state}} = conn, _params) do
     case Stats.fetch_stats(state) do
-      {:ok, stats} -> json(conn, stats)
+      {:ok, stats} -> format_json(conn, stats)
       {:error, reason} -> {:error, reason}
     end
   end

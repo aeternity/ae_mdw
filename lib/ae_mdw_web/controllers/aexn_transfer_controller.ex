@@ -136,7 +136,7 @@ defmodule AeMdwWeb.AexnTransferController do
       |> Contract.aex9_search_transfers(query)
       |> Enum.map(&transfer_to_map_fn.(state, &1))
 
-    json(conn, transfers)
+    format_json(conn, transfers)
   end
 
   defp contract_transfers_reply(

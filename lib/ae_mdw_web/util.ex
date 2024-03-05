@@ -7,6 +7,7 @@ defmodule AeMdwWeb.Util do
   alias AeMdw.Database
   alias AeMdw.Validate
   alias AeMdw.Error.Input, as: ErrInput
+  alias AeMdwWeb.Helpers.JSONHelper
   alias Phoenix.Controller
   alias Plug.Conn
 
@@ -62,9 +63,9 @@ defmodule AeMdwWeb.Util do
     status = error_reason_to_status(reason)
 
     conn
-    |> Plug.Conn.put_status(status)
-    |> Plug.Conn.put_resp_content_type("application/json")
-    |> Phoenix.Controller.json(%{"error" => message})
+    |> Conn.put_status(status)
+    |> Conn.put_resp_content_type("application/json")
+    |> Controller.json(%{"error" => message})
   end
 
   defp error_reason_to_status(ErrInput.NotFound), do: :not_found
@@ -100,7 +101,7 @@ defmodule AeMdwWeb.Util do
     prev_uri = encode_cursor(path, query_params, prev_cursor)
     next_uri = encode_cursor(path, query_params, next_cursor)
 
-    Controller.json(conn, %{"data" => data, "next" => next_uri, "prev" => prev_uri})
+    JSONHelper.format_json(conn, %{"data" => data, "next" => next_uri, "prev" => prev_uri})
   end
 
   @spec render(
