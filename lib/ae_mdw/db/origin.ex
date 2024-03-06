@@ -16,7 +16,7 @@ defmodule AeMdw.Db.Origin do
   import AeMdw.Util
 
   @contract_creation_types ~w(contract_create_tx contract_call_tx ga_attach_tx)a
-  @iris_protocol "5"
+  @iris_protocol 5
 
   @typep contract_locator() :: {:contract, Txs.txi()} | {:contract_call, Txs.txi()}
   @typep creation_txi_locator() :: {:contract, Db.pubkey()}
@@ -143,21 +143,23 @@ defmodule AeMdw.Db.Origin do
   end
 
   defp hc_contracts do
-    with {:ok, {hardfork_key, _hf_val}} <-
-           :aeu_env.find_config(["chain", "hard_forks"], [
-             :user_config,
-             :schema_default,
-             {:value, {@iris_protocol, 0}}
-           ]),
-         {protocol, ""} <- Integer.parse(hardfork_key),
-         {:ok, hc_contracts_json} <-
-           :aec_fork_block_settings.hc_seed_contracts(protocol, :aec_governance.get_network_id()) do
+    if isis_hardfork?() do
+      {:ok, hc_contracts_json} =
+        :aec_fork_block_settings.hc_seed_contracts(
+          @iris_protocol,
+          :aec_governance.get_network_id()
+        )
+
       hc_contracts_json
-      |> Enum.find_value(fn {item, list} -> if item == "contracts", do: list end)
+      |> Enum.find_value([], fn {item, list} -> if item == "contracts", do: list end)
       |> Enum.map(&(Map.get(&1, "pubkey") || Map.fetch!(&1, "contract_pubkey")))
       |> Enum.map(&Validate.id!/1)
     else
-      _error_missing -> []
+      []
     end
+  end
+
+  defp isis_hardfork? do
+    match?({:ok, _hardfork_map}, :aeu_env.find_config(["chain", "hard_forks"], [:user_config]))
   end
 end
