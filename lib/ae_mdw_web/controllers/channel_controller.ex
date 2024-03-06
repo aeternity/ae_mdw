@@ -28,7 +28,7 @@ defmodule AeMdwWeb.ChannelController do
     with {:ok, channel_pk} <- Validate.id(id, [:channel]),
          {:ok, type_block_hash} <- valid_optional_block_hash?(block_hash),
          {:ok, channel} <- Channels.fetch_channel(state, channel_pk, type_block_hash) do
-      json(conn, channel)
+      format_json(conn, channel)
     end
   end
 

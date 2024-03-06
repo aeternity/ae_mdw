@@ -28,13 +28,13 @@ defmodule AeMdwWeb.AexnTokenController do
 
   @spec aex9_count(Conn.t(), map()) :: Conn.t()
   def aex9_count(%Conn{assigns: %{state: state}} = conn, _params) do
-    json(conn, %{data: aexn_count(state, :aex9)})
+    format_json(conn, %{data: aexn_count(state, :aex9)})
   end
 
   @spec aex9_logs_count(Conn.t(), map()) :: Conn.t()
   def aex9_logs_count(%Conn{assigns: %{state: state}} = conn, %{"contract_id" => contract_id}) do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]) do
-      json(conn, %{data: Stats.fetch_aex9_logs_count(state, contract_pk)})
+      format_json(conn, %{data: Stats.fetch_aex9_logs_count(state, contract_pk)})
     end
   end
 
@@ -45,7 +45,7 @@ defmodule AeMdwWeb.AexnTokenController do
 
   @spec aex141_count(Conn.t(), map()) :: Conn.t()
   def aex141_count(%Conn{assigns: %{state: state}} = conn, _params) do
-    json(conn, %{data: aexn_count(state, :aex141)})
+    format_json(conn, %{data: aexn_count(state, :aex141)})
   end
 
   @spec aex141_contracts(Conn.t(), map()) :: Conn.t()
@@ -94,7 +94,7 @@ defmodule AeMdwWeb.AexnTokenController do
          {:ok, account_pk} <- Validate.id(account_id, [:account_pubkey]),
          {:ok, height_hash} <- validate_block_hash(Map.get(query_params, "hash")),
          {:ok, balance} <- Aex9.fetch_balance(contract_pk, account_pk, height_hash) do
-      json(conn, balance)
+      format_json(conn, balance)
     end
   end
 
@@ -113,7 +113,7 @@ defmodule AeMdwWeb.AexnTokenController do
         nil ->
           conn
           |> put_status(503)
-          |> json(%{error: :timeout})
+          |> format_json(%{error: :timeout})
       end
     end
   end
@@ -164,7 +164,7 @@ defmodule AeMdwWeb.AexnTokenController do
   defp aexn_contract(%Conn{assigns: %{state: state}} = conn, contract_id, aexn_type) do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
          {:ok, m_aexn} <- AexnTokens.fetch_contract(state, {aexn_type, contract_pk}) do
-      json(conn, render_contract(state, m_aexn))
+      format_json(conn, render_contract(state, m_aexn))
     end
   end
 

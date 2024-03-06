@@ -25,7 +25,7 @@ defmodule AeMdwWeb.ContractController do
   @spec contract(Conn.t(), map()) :: Conn.t()
   def contract(%Conn{assigns: %{state: state}} = conn, %{"id" => contract_id}) do
     with {:ok, contract} <- Contracts.fetch_contract(state, contract_id) do
-      json(conn, contract)
+      format_json(conn, contract)
     end
   end
 

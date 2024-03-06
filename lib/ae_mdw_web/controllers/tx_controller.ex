@@ -27,7 +27,7 @@ defmodule AeMdwWeb.TxController do
   def tx(%Conn{assigns: %{state: state}} = conn, %{"hash" => hash}) do
     with {:ok, tx_hash} <- Validate.id(hash),
          {:ok, tx} <- Txs.fetch(state, tx_hash) do
-      json(conn, tx)
+      format_json(conn, tx)
     end
   end
 
@@ -39,7 +39,7 @@ defmodule AeMdwWeb.TxController do
       :error ->
         with {:ok, tx_hash} <- Validate.id(hash_or_index),
              {:ok, tx} <- Txs.fetch(state, tx_hash) do
-          json(conn, tx)
+          format_json(conn, tx)
         end
     end
   end
@@ -48,7 +48,7 @@ defmodule AeMdwWeb.TxController do
   def txi(%Conn{assigns: %{state: state}} = conn, %{"index" => index}) do
     with {:ok, txi} <- Validate.nonneg_int(index),
          {:ok, tx} <- Txs.fetch(state, txi) do
-      json(conn, tx)
+      format_json(conn, tx)
     end
   end
 
@@ -78,11 +78,11 @@ defmodule AeMdwWeb.TxController do
       with :ok <- validate_without_scope(scope),
            {:ok, query} <- extract_query(query),
            {:ok, count} <- Txs.count_micro_block_txs(state, mb_hash, query) do
-        json(conn, %{data: count})
+        format_json(conn, %{data: count})
       end
     else
       with {:ok, count} <- Txs.count(state, scope, query) do
-        json(conn, count)
+        format_json(conn, count)
       end
     end
   end
@@ -94,20 +94,20 @@ defmodule AeMdwWeb.TxController do
   def count_id(%Conn{assigns: %{state: state}} = conn, %{"id" => id, "type_group" => group}) do
     with {:ok, tx_type_group} <- Validate.tx_group(group),
          {:ok, pubkey} <- Validate.id(id) do
-      json(conn, Txs.count_id_type_group(state, pubkey, tx_type_group))
+      format_json(conn, Txs.count_id_type_group(state, pubkey, tx_type_group))
     end
   end
 
   def count_id(%Conn{assigns: %{state: state}} = conn, %{"id" => id, "type" => type}) do
     with {:ok, tx_type} <- Validate.tx_type(type),
          {:ok, pubkey} <- Validate.id(id) do
-      json(conn, Txs.count_id_type(state, pubkey, tx_type))
+      format_json(conn, Txs.count_id_type(state, pubkey, tx_type))
     end
   end
 
   def count_id(%Conn{assigns: %{state: state}} = conn, %{"id" => id}) do
     with {:ok, pubkey} <- Validate.id(id) do
-      json(conn, Txs.id_counts(state, pubkey))
+      format_json(conn, Txs.id_counts(state, pubkey))
     end
   end
 

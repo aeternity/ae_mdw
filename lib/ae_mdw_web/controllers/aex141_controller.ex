@@ -76,7 +76,7 @@ defmodule AeMdwWeb.Aex141Controller do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
          {:int, {token_id, ""}} <- {:int, Integer.parse(token_id)},
          {:ok, metadata} <- Aex141.fetch_nft_metadata(state, contract_pk, token_id) do
-      json(conn, %{data: metadata})
+      format_json(conn, %{data: metadata})
     else
       {:error, reason} ->
         {:error, reason}
@@ -94,7 +94,7 @@ defmodule AeMdwWeb.Aex141Controller do
     with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
          {:int, {token_id, ""}} <- {:int, Integer.parse(token_id)},
          {:ok, account_pk} <- Aex141.fetch_nft_owner(state, contract_pk, token_id) do
-      json(conn, %{data: encode_account(account_pk)})
+      format_json(conn, %{data: encode_account(account_pk)})
     else
       :error ->
         {:error, ErrInput.NotFound.exception(value: token_id)}
