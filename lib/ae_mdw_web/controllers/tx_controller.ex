@@ -26,7 +26,7 @@ defmodule AeMdwWeb.TxController do
   @spec tx(Conn.t(), map()) :: Conn.t()
   def tx(%Conn{assigns: %{state: state}} = conn, %{"hash" => hash}) do
     with {:ok, tx_hash} <- Validate.id(hash),
-         {:ok, tx} <- Txs.fetch(state, tx_hash) do
+         {:ok, tx} <- Txs.fetch(state, tx_hash, add_spendtx_details?: true, render_v3?: true) do
       format_json(conn, tx)
     end
   end
@@ -38,7 +38,28 @@ defmodule AeMdwWeb.TxController do
 
       :error ->
         with {:ok, tx_hash} <- Validate.id(hash_or_index),
-             {:ok, tx} <- Txs.fetch(state, tx_hash) do
+             {:ok, tx} <- Txs.fetch(state, tx_hash, add_spendtx_details?: true, render_v3?: true) do
+          format_json(conn, tx)
+        end
+    end
+  end
+
+  @spec tx_v2(Conn.t(), map()) :: Conn.t()
+  def tx_v2(%Conn{assigns: %{state: state}} = conn, %{"hash" => hash}) do
+    with {:ok, tx_hash} <- Validate.id(hash),
+         {:ok, tx} <- Txs.fetch(state, tx_hash, add_spendtx_details?: true) do
+      format_json(conn, tx)
+    end
+  end
+
+  def tx_v2(%Conn{assigns: %{state: state}} = conn, %{"hash_or_index" => hash_or_index} = params) do
+    case Util.parse_int(hash_or_index) do
+      {:ok, _txi} ->
+        txi(conn, Map.put(params, "index", hash_or_index))
+
+      :error ->
+        with {:ok, tx_hash} <- Validate.id(hash_or_index),
+             {:ok, tx} <- Txs.fetch(state, tx_hash, add_spendtx_details?: true) do
           format_json(conn, tx)
         end
     end
@@ -47,7 +68,7 @@ defmodule AeMdwWeb.TxController do
   @spec txi(Conn.t(), map()) :: Conn.t()
   def txi(%Conn{assigns: %{state: state}} = conn, %{"index" => index}) do
     with {:ok, txi} <- Validate.nonneg_int(index),
-         {:ok, tx} <- Txs.fetch(state, txi) do
+         {:ok, tx} <- Txs.fetch(state, txi, add_spendtx_details?: true) do
       format_json(conn, tx)
     end
   end
@@ -55,11 +76,25 @@ defmodule AeMdwWeb.TxController do
   @spec txs(Conn.t(), map()) :: Conn.t()
   def txs(%Conn{assigns: assigns, query_params: query_params} = conn, params) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
-    add_spendtx_details? = Map.has_key?(params, "account")
+    opts = [add_spendtx_details?: Map.has_key?(params, "account")]
 
     with {:ok, query} <- extract_query(query_params),
          {:ok, paginated_txs} <-
-           Txs.fetch_txs(state, pagination, scope, query, cursor, add_spendtx_details?) do
+           Txs.fetch_txs(state, pagination, scope, query, cursor, [{:render_v3?, true} | opts]) do
+      WebUtil.render(conn, paginated_txs)
+    else
+      {:error, reason} when is_binary(reason) -> {:error, ErrInput.Query.exception(value: reason)}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @spec txs_v2(Conn.t(), map()) :: Conn.t()
+  def txs_v2(%Conn{assigns: assigns, query_params: query_params} = conn, params) do
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
+    opts = [add_spendtx_details?: Map.has_key?(params, "account")]
+
+    with {:ok, query} <- extract_query(query_params),
+         {:ok, paginated_txs} <- Txs.fetch_txs(state, pagination, scope, query, cursor, opts) do
       WebUtil.render(conn, paginated_txs)
     else
       {:error, reason} when is_binary(reason) -> {:error, ErrInput.Query.exception(value: reason)}
@@ -113,6 +148,20 @@ defmodule AeMdwWeb.TxController do
 
   @spec micro_block_txs(Conn.t(), map()) :: Conn.t()
   def micro_block_txs(%Conn{assigns: assigns, query_params: query_params} = conn, %{
+        "hash" => hash
+      }) do
+    %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns
+
+    with :ok <- validate_without_scope(scope),
+         {:ok, query} <- extract_query(query_params),
+         {:ok, paginated_txs} <-
+           Txs.fetch_micro_block_txs(state, hash, query, pagination, cursor, render_v3?: true) do
+      WebUtil.render(conn, paginated_txs)
+    end
+  end
+
+  @spec micro_block_txs_v2(Conn.t(), map()) :: Conn.t()
+  def micro_block_txs_v2(%Conn{assigns: assigns, query_params: query_params} = conn, %{
         "hash" => hash
       }) do
     %{state: state, pagination: pagination, cursor: cursor, scope: scope} = assigns

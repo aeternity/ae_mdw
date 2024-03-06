@@ -302,7 +302,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotFoundResponse'
-  /micro-blocks/{hash}/txs:
+  /micro-blocks/{hash}/transactions:
     get:
       deprecated: false
       description: Get a micro block transactions
@@ -327,7 +327,7 @@ paths:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Tx'
+                          $ref: '#/components/schemas/Transaction'
                   - $ref: '#/components/schemas/PaginatedResponse'
         '400':
           description: Bad request

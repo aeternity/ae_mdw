@@ -182,7 +182,7 @@ defmodule AeMdwWeb.Websocket.Broadcaster do
 
   defp serialize_tx(tx, {:state, state}) do
     tx_hash = :aetx_sign.hash(tx)
-    Txs.fetch(state, tx_hash, true)
+    Txs.fetch(state, tx_hash, add_spendtx_details?: true)
   end
 
   defp serialize_tx(tx, {:block, block}) do

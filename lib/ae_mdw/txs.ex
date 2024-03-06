@@ -20,6 +20,7 @@ defmodule AeMdw.Txs do
   alias AeMdw.Error.Input, as: ErrInput
   alias AeMdw.Log
   alias AeMdw.Node
+  alias AeMdw.Node.Db
   alias AeMdw.Util
   alias AeMdw.Validate
 
@@ -38,13 +39,14 @@ defmodule AeMdw.Txs do
             ids: term()
           }
           | %{}
-  @type add_spendtx_details?() :: boolean()
+  @type opt() :: {:add_spendtx_details?, boolean()} | {:render_v3?, boolean()}
+  @type opts() :: [opt()]
 
   @typep state() :: State.t()
   @typep pagination :: Collection.direction_limit()
   @typep range :: {:gen, Range.t()} | {:txi, Range.t()} | nil
   @typep page_cursor() :: Collection.pagination_cursor()
-  @typep pubkey :: Node.Db.pubkey()
+  @typep pubkey :: Db.pubkey()
   @typep tx_type :: Node.tx_type()
 
   @table Tx
@@ -156,11 +158,11 @@ defmodule AeMdw.Txs do
           range(),
           query(),
           cursor() | nil,
-          add_spendtx_details?()
+          opts()
         ) :: {:ok, {page_cursor(), [tx()], page_cursor()}} | {:error, Error.t()}
-  def fetch_txs(state, pagination, range, query, cursor, add_spendtx_details?) do
+  def fetch_txs(state, pagination, range, query, cursor, opts) do
     with {:ok, streamer} <- txs_streamer(state, range, query, cursor) do
-      {:ok, paginate_txs(state, streamer, pagination, add_spendtx_details?)}
+      {:ok, paginate_txs(state, streamer, pagination, opts)}
     end
   end
 
@@ -172,11 +174,11 @@ defmodule AeMdw.Txs do
     end
   end
 
-  @spec fetch_micro_block_txs(state(), binary(), query(), pagination(), cursor() | nil) ::
+  @spec fetch_micro_block_txs(state(), binary(), query(), pagination(), cursor() | nil, opts()) ::
           {:ok, {page_cursor(), [tx()], page_cursor()}} | {:error, Error.t()}
-  def fetch_micro_block_txs(state, hash, query, pagination, cursor) do
+  def fetch_micro_block_txs(state, hash, query, pagination, cursor, opts \\ []) do
     with {:ok, streamer} <- micro_block_txs_streamer(state, hash, query, cursor) do
-      {:ok, paginate_txs(state, streamer, pagination)}
+      {:ok, paginate_txs(state, streamer, pagination, opts)}
     end
   end
 
@@ -190,14 +192,8 @@ defmodule AeMdw.Txs do
   #
   # Streams txs of a microblock
   #
-  defp paginate_txs(state, streamer, pagination, add_spendtx_details? \\ true) do
-    Collection.paginate(
-      streamer,
-      pagination,
-      &fetch!(state, &1, add_spendtx_details?),
-      &serialize_cursor/1
-    )
-  end
+  defp paginate_txs(state, streamer, pagination, opts),
+    do: Collection.paginate(streamer, pagination, &fetch!(state, &1, opts), &serialize_cursor/1)
 
   defp micro_block_txs_streamer(state, hash, query, cursor \\ nil) do
     with {:ok, height, mbi} <- DbUtil.micro_block_height_index(state, hash),
@@ -505,29 +501,26 @@ defmodule AeMdw.Txs do
     {:error, ErrInput.TxField.exception(value: ":#{Enum.join(invalid_field, ".")}")}
   end
 
-  @spec fetch!(State.t(), txi(), add_spendtx_details?()) :: tx()
-  def fetch!(state, txi, add_spendtx_details? \\ false) do
-    {:ok, tx} = fetch(state, txi, add_spendtx_details?)
+  @spec fetch!(State.t(), txi(), opts()) :: tx()
+  def fetch!(state, txi, opts \\ []) do
+    {:ok, tx} = fetch(state, txi, opts)
 
     tx
   end
 
-  @spec fetch(State.t(), txi() | tx_hash(), add_spendtx_details?()) ::
-          {:ok, tx()} | {:error, Error.t()}
-  def fetch(state, tx_hash, add_spendtx_details? \\ true)
-
-  def fetch(state, tx_hash, add_spendtx_details?) when is_binary(tx_hash) do
+  @spec fetch(State.t(), txi() | tx_hash(), opts()) :: {:ok, tx()} | {:error, Error.t()}
+  def fetch(state, tx_hash, opts) when is_binary(tx_hash) do
     encoded_tx_hash = :aeser_api_encoder.encode(:tx_hash, tx_hash)
 
     with mb_hash when is_binary(mb_hash) <- :aec_db.find_tx_location(tx_hash),
-         {:ok, mb_height} <- Node.Db.find_block_height(mb_hash) do
+         {:ok, mb_height} <- Db.find_block_height(mb_hash) do
       state
       |> Blocks.fetch_txis_from_gen(mb_height)
       |> Stream.map(&State.fetch!(state, @table, &1))
       |> Enum.find_value(
         {:error, ErrInput.NotFound.exception(value: encoded_tx_hash)},
         fn
-          Model.tx(id: ^tx_hash) = tx -> {:ok, render(state, tx, add_spendtx_details?)}
+          Model.tx(id: ^tx_hash) = tx -> {:ok, render(state, tx, opts)}
           _tx -> nil
         end
       )
@@ -537,21 +530,35 @@ defmodule AeMdw.Txs do
     end
   end
 
-  def fetch(state, txi, add_spendtx_details?) do
+  def fetch(state, txi, opts) do
     case State.get(state, @table, txi) do
-      {:ok, tx} -> {:ok, render(state, tx, add_spendtx_details?)}
+      {:ok, tx} -> {:ok, render(state, tx, opts)}
       :not_found -> {:error, ErrInput.NotFound.exception(value: txi)}
     end
   end
 
-  defp render(state, tx, add_spendtx_details?) do
+  defp render(state, tx, opts) do
+    if Keyword.get(opts, :render_v3?, false) do
+      render_v3(state, tx)
+    else
+      render_v2(state, tx, opts)
+    end
+  end
+
+  defp render_v2(state, tx, opts) do
     rendered_tx = Format.to_map(state, tx)
 
-    if add_spendtx_details? do
+    if Keyword.get(opts, :add_spendtx_details?, false) do
       maybe_add_spendtx_details(state, rendered_tx)
     else
       rendered_tx
     end
+  end
+
+  defp render_v3(state, tx) do
+    state
+    |> render_v2(tx, add_spendtx_details?: true)
+    |> Map.delete("tx_index")
   end
 
   defp maybe_add_spendtx_details(state, %{"tx" => block_tx, "tx_index" => tx_index} = block) do
