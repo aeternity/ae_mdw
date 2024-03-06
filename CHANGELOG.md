@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.70.0](https://www.github.com/aeternity/ae_mdw/compare/v1.69.1...v1.70.0) (2024-03-06)
+
+
+### Features
+
+* add remaining v3 routes without the ones deprecated ([#1683](https://www.github.com/aeternity/ae_mdw/issues/1683)) ([62065cc](https://www.github.com/aeternity/ae_mdw/commit/62065ccc183c32558fd7c26360aae8a5e4ff3920))
+* allow encoding ints as strings via query parameter ([#1694](https://www.github.com/aeternity/ae_mdw/issues/1694)) ([f459a04](https://www.github.com/aeternity/ae_mdw/commit/f459a0414cfcd5285fbaf9aa1e79bfbbee69b73d))
+
+
+### Bug Fixes
+
+* process HC seed contracts with the correct format ([#1691](https://www.github.com/aeternity/ae_mdw/issues/1691)) ([9f5e850](https://www.github.com/aeternity/ae_mdw/commit/9f5e850706535f07c052e1b7811c88d53dc3a17f))
+* return 404 when contract is not found ([#1687](https://www.github.com/aeternity/ae_mdw/issues/1687)) ([4bb632d](https://www.github.com/aeternity/ae_mdw/commit/4bb632d2879896a026d488aa068776204ceb62ff))
+
 ### [1.69.1](https://www.github.com/aeternity/ae_mdw/compare/v1.69.0...v1.69.1) (2024-02-26)
 
 
