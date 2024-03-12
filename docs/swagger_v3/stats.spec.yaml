@@ -97,6 +97,36 @@ schemas:
       oracles_expired: 0
       oracles_registered: 0
       last_tx_hash: th_2FHxDzpQMRTiRfpYRV3eCcsheHr1sjf9waxk7z6JDTVcgqZRXR
+  Statistic:
+    type: object
+    description: Statistic
+    properties:
+      count:
+        description: The statistic count
+        type: integer
+      start_date:
+        description: The statistic start date
+        type: string
+      end_date:
+        description: The statistic end date (not taken into account)
+        type: string
+    example:
+      count: 7701
+      end_date: "2024-02-29"
+      start_date: "2024-02-28"
+  Miner:
+    type: object
+    description: Miner
+    properties:
+      miner:
+        description: The miner (beneficiary) address
+        type: string
+      total_reward:
+        description: The accumulated reward on the miner (beneficiary) address
+        type: integer
+    example:
+      miner: ak_2whjDhTTmbN13vU7gAUsRbosBhmycho4h8LqHVqKwyGofDetQ9
+      total_reward: 945000000000000000000
 paths:
   /deltastats:
     get:
@@ -149,6 +179,210 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/TotalStat'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /minerstats:
+    get:
+      deprecated: false
+      description: Get miners list with total rewards obtained through mining.
+      operationId: get_minerstats
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns paginated total stats per generation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Miner'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /statistics/blocks:
+    get:
+      deprecated: false
+      description: Get total blocks count statistics.
+      operationId: get_blocks_statistics
+      parameters:
+        - name: interval_by
+          description: The interval in which to return the statistics.
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - day
+              - week
+              - month
+            example: week
+        - name: min_start_date
+          description: The minimum start date in YYYY-MM-DD format.
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "2023-01-01"
+        - name: max_start_date
+          description: The maximum start date in YYYY-MM-DD format.
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "2024-01-01"
+        - name: type
+          description: The type of block.
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - key
+              - micro
+            example: micro
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns paginated total stats per generation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Statistic'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /statistics/transactions:
+    get:
+      deprecated: false
+      description: Get total transactions count statistics.
+      operationId: get_transactions_statistics
+      parameters:
+        - name: interval_by
+          description: The interval in which to return the statistics.
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - day
+              - week
+              - month
+            example: week
+        - name: min_start_date
+          description: The minimum start date in YYYY-MM-DD format.
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "2023-01-01"
+        - name: max_start_date
+          description: The maximum start date in YYYY-MM-DD format.
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "2024-01-01"
+        - name: tx_type
+          description: The type of the transactions
+          in: query
+          required: false
+          schema:
+            type: string
+            x-example: contract_call
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns paginated total stats per generation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Statistic'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /statistics/names:
+    get:
+      deprecated: false
+      description: Get total names count statistics.
+      operationId: get_names_statistics
+      parameters:
+        - name: interval_by
+          description: The interval in which to return the statistics.
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - day
+              - week
+              - month
+            example: week
+        - name: min_start_date
+          description: The minimum start date in YYYY-MM-DD format.
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "2023-01-01"
+        - name: max_start_date
+          description: The maximum start date in YYYY-MM-DD format.
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "2024-01-01"
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/DirectionParam'
+      responses:
+        '200':
+          description: Returns paginated total stats per generation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Statistic'
                   - $ref: '#/components/schemas/PaginatedResponse'
         '400':
           description: Bad request
