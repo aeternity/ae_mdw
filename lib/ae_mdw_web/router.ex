@@ -3,7 +3,7 @@ defmodule AeMdwWeb.Router do
   use Plug.ErrorHandler
 
   alias AeMdwWeb.Plugs.StatePlug
-  alias AeMdwWeb.Plugs.VersioningPlug
+  alias AeMdwWeb.Plugs.DeprecationLoggerPlug
   alias AeMdwWeb.Plugs.JSONFormatterPlug
   alias AeMdwWeb.Plugs.RequestSpan
   alias AeMdwWeb.Util
@@ -35,7 +35,7 @@ defmodule AeMdwWeb.Router do
     plug JSONFormatterPlug
     plug Plug.RequestId
     plug RequestSpan
-    plug VersioningPlug
+    plug DeprecationLoggerPlug
   end
 
   pipeline :browser do
