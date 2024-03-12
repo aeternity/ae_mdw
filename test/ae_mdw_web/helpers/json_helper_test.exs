@@ -17,11 +17,9 @@ defmodule AeMdwWeb.Helpers.JSONHelperTest do
     } do
       assert [%{"a" => "1"}] =
                conn
-               |> put_query(%{"int-as-string" => "true"})
+               |> Conn.assign(:int_as_string, true)
                |> JSONHelper.format_json([%{a: 1}])
                |> json_response(200)
     end
   end
-
-  defp put_query(conn, query), do: %Conn{conn | params: query, query_params: query}
 end

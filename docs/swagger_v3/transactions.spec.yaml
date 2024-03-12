@@ -179,7 +179,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /transactions/{hash_or_index}:
+  /transactions/{hash}:
     get:
       deprecated: false
       description: Get a single transaction.

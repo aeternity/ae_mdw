@@ -54,7 +54,7 @@ defmodule AeMdwWeb.Router do
       get "/key-blocks/:hash_or_kbi", BlockController, :key_block
       get "/key-blocks/:hash_or_kbi/micro-blocks", BlockController, :key_block_micro_blocks
       get "/micro-blocks/:hash", BlockController, :micro_block
-      get "/micro-blocks/:hash/txs", TxController, :micro_block_txs
+      get "/micro-blocks/:hash/transactions", TxController, :micro_block_txs
 
       get "/transactions", TxController, :txs
       get "/transactions/:hash", TxController, :tx
@@ -135,10 +135,10 @@ defmodule AeMdwWeb.Router do
       get "/key-blocks/:hash_or_kbi", BlockController, :key_block
       get "/key-blocks/:hash_or_kbi/micro-blocks", BlockController, :key_block_micro_blocks
       get "/micro-blocks/:hash", BlockController, :micro_block
-      get "/micro-blocks/:hash/txs", TxController, :micro_block_txs
+      get "/micro-blocks/:hash/txs", TxController, :micro_block_txs_v2
 
-      get "/txs", TxController, :txs
-      get "/txs/:hash_or_index", TxController, :tx
+      get "/txs", TxController, :txs_v2
+      get "/txs/:hash_or_index", TxController, :tx_v2
 
       get "/entities/:id", ActiveEntityController, :active_entities
 
@@ -214,10 +214,10 @@ defmodule AeMdwWeb.Router do
     get "/blocki/:kbi", BlockController, :blocki
     get "/blocki/:kbi/:mbi", BlockController, :blocki
 
-    get "/tx/:hash_or_index", TxController, :tx
+    get "/tx/:hash_or_index", TxController, :tx_v2
     get "/txi/:index", TxController, :txi
-    get "/txs/:direction", TxController, :txs
-    get "/txs/:scope_type/:range", TxController, :txs
+    get "/txs/:direction", TxController, :txs_v2
+    get "/txs/:scope_type/:range", TxController, :txs_v2
 
     get "/name/auction/:id", NameController, :auction_v2
     get "/name/pointers/:id", NameController, :pointers

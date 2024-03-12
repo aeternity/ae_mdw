@@ -190,7 +190,7 @@ schemas:
       payload:
         type: object
         oneOf:
-          - $ref: '#/components/schemas/Tx'
+          - $ref: '#/components/schemas/Transaction'
           - $ref: '#/components/schemas/Aex9TransferEvent'
           - $ref: '#/components/schemas/Aex141TransferEvent'
           - $ref: '#/components/schemas/InternalContractCallEvent'
