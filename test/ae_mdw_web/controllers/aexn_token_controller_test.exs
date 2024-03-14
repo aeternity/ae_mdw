@@ -420,6 +420,13 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       assert %{"error" => ^error_msg} =
                conn |> get("/v2/aex9", cursor: cursor) |> json_response(400)
     end
+
+    test "when invalid order by", %{conn: conn} do
+      assert %{"error" => "invalid query: by=pubkey"} =
+               conn
+               |> get("/v2/aex9", by: "pubkey")
+               |> json_response(400)
+    end
   end
 
   describe "aex141_count" do
@@ -864,6 +871,15 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       assert List.last(balances)["account_id"] > List.first(next_balances)["account_id"]
 
       assert %{"data" => ^balances} = conn |> get(prev_balances) |> json_response(200)
+    end
+
+    test "when invalid order by", %{conn: conn, contract_pk: contract_pk} do
+      contract_id = encode_contract(contract_pk)
+
+      assert %{"error" => "invalid query: by=foo"} =
+               conn
+               |> get("/v2/aex9/#{contract_id}/balances", by: "foo")
+               |> json_response(400)
     end
   end
 

@@ -55,7 +55,7 @@ defmodule AeMdw.AexnTokens do
     with {:ok, cursor} <- deserialize_aexn_cursor(cursor),
          {:ok, params} <- validate_params(query),
          {:ok, filters} <- Util.convert_params(params, &convert_param/1) do
-      sorting_table = Map.get(@sorting_table, order_by)
+      sorting_table = Map.fetch!(@sorting_table, order_by)
 
       paginated_aexn_contracts =
         filters
