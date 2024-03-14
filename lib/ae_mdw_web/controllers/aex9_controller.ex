@@ -378,7 +378,9 @@ defmodule AeMdwWeb.Aex9Controller do
     with {:ok, ct_pk} <- Validate.id(ct_id, [:contract_pubkey]),
          {:ok, Model.aexn_contract(txi_idx: {txi, _idx})} <-
            State.get(state, Model.AexnContract, {:aex9, ct_pk}) do
-      if txi < Util.block_txi(state, block_index) do
+      Model.tx(block_index: contract_block_index) = State.fetch!(state, Model.Tx, txi)
+
+      if contract_block_index <= block_index do
         {:ok, ct_pk}
       else
         {:error, ErrInput.NotFound.exception(value: ct_id)}
