@@ -3,6 +3,7 @@ defmodule AeMdw.Aex9 do
   Context module for dealing with Blocks.
   """
 
+  alias :aeser_api_encoder, as: Enc
   alias AeMdw.Collection
   alias AeMdw.Db.AsyncStore
   alias AeMdw.Db.Model
@@ -35,6 +36,7 @@ defmodule AeMdw.Aex9 do
   @typep history_cursor() :: binary()
   @typep range() :: {:gen, Range.t()}
   @typep order_by() :: :pubkey | :amount
+  @typep query() :: map()
 
   @type amounts :: map()
 
@@ -74,32 +76,84 @@ defmodule AeMdw.Aex9 do
           pubkey(),
           pagination(),
           balances_cursor() | nil,
-          order_by()
+          order_by(),
+          query()
         ) ::
           {:ok, {balances_cursor() | nil, [{pubkey(), pubkey()}], balances_cursor() | nil}}
           | {:error, Error.t()}
-  def fetch_event_balances(state, contract_pk, pagination, cursor, :pubkey) do
-    key_boundary = {{contract_pk, <<>>}, {contract_pk, Util.max_256bit_bin()}}
-
-    with {:ok, cursor_key} <- deserialize_event_balances_cursor(contract_pk, cursor) do
+  def fetch_event_balances(state, contract_id, pagination, cursor, :pubkey, query) do
+    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
+         {:ok, cursor} <- deserialize_event_balances_cursor(cursor),
+         {:ok, filters} <- Util.convert_params(query, &convert_param/1),
+         {:ok, creation_txi} <- get_aex9_contract(state, contract_pk),
+         {:ok, streamer} <-
+           event_balances_streamer(state, contract_pk, creation_txi, cursor, filters) do
       paginated_balances =
-        (&Collection.stream(state, Model.Aex9EventBalance, &1, key_boundary, cursor_key))
-        |> Collection.paginate(pagination, & &1, &serialize_event_balances_cursor/1)
+        Collection.paginate(
+          streamer,
+          pagination,
+          &render_aex9_balance(state, contract_id, &1),
+          &serialize_event_balances_cursor/1
+        )
+
+      {:ok, paginated_balances}
+    else
+      {:error, reason} -> {:error, reason}
+      :not_found -> {:error, ErrInput.NotFound.exception(value: contract_id)}
+    end
+  end
+
+  def fetch_event_balances(state, contract_id, pagination, cursor, :amount, _query) do
+    with {:ok, contract_pk} <- Validate.id(contract_id, [:contract_pubkey]),
+         {:ok, cursor_key} <- deserialize_balance_account_cursor(contract_pk, cursor) do
+      key_boundary = {{contract_pk, -1, <<>>}, {contract_pk, nil, <<>>}}
+
+      paginated_balances =
+        (&Collection.stream(state, Model.Aex9BalanceAccount, &1, key_boundary, cursor_key))
+        |> Collection.paginate(
+          pagination,
+          &render_aex9_balance(state, contract_id, &1),
+          &serialize_balance_account_cursor/1
+        )
 
       {:ok, paginated_balances}
     end
   end
 
-  def fetch_event_balances(state, contract_pk, pagination, cursor, :amount) do
-    key_boundary = {{contract_pk, -1, <<>>}, {contract_pk, nil, <<>>}}
+  defp event_balances_streamer(state, contract_pk, creation_txi, cursor, %{block_hash: block_hash}) do
+    with {:ok, {height, mbi}} <- ensure_contract_at_block(state, creation_txi, block_hash) do
+      block_type = if mbi == -1, do: :key, else: :micro
+      {amounts, _height_hash} = Db.aex9_balances!(contract_pk, {block_type, height, block_hash})
 
-    with {:ok, cursor_key} <- deserialize_balance_account_cursor(contract_pk, cursor) do
-      paginated_balances =
-        (&Collection.stream(state, Model.Aex9BalanceAccount, &1, key_boundary, cursor_key))
-        |> Collection.paginate(pagination, & &1, &serialize_balance_account_cursor/1)
+      amounts =
+        amounts
+        |> Enum.map(fn {{:address, pk}, amount} -> {pk, amount} end)
+        |> Enum.sort()
 
-      {:ok, paginated_balances}
+      {:ok,
+       fn
+         :forward when not is_nil(cursor) ->
+           Enum.drop_while(amounts, fn {pk, _amount} -> pk < cursor end)
+
+         :backward when not is_nil(cursor) ->
+           amounts
+           |> Enum.reverse()
+           |> Enum.drop_while(fn {pk, _amount} -> pk > cursor end)
+
+         :backward ->
+           Enum.reverse(amounts)
+
+         :forward ->
+           amounts
+       end}
     end
+  end
+
+  defp event_balances_streamer(state, contract_pk, _creation_txi, cursor, _query) do
+    key_boundary = {{contract_pk, <<>>}, {contract_pk, Util.max_256bit_bin()}}
+    cursor = if cursor, do: {contract_pk, cursor}, else: nil
+
+    {:ok, &Collection.stream(state, Model.Aex9EventBalance, &1, key_boundary, cursor)}
   end
 
   @spec fetch_holders_count(State.t(), pubkey()) :: non_neg_integer()
@@ -301,12 +355,12 @@ defmodule AeMdw.Aex9 do
 
   defp serialize_event_balances_cursor({_contract_pk, account_pk}), do: encode_account(account_pk)
 
-  defp deserialize_event_balances_cursor(_contract_pk, nil), do: {:ok, nil}
+  defp deserialize_event_balances_cursor(nil), do: {:ok, nil}
 
-  defp deserialize_event_balances_cursor(contract_pk, account_pk) do
-    case Validate.id(account_pk, [:account_pubkey]) do
-      {:ok, account_pk} -> {:ok, {contract_pk, account_pk}}
-      {:error, _reason} -> {:error, ErrInput.Cursor.exception(value: account_pk)}
+  defp deserialize_event_balances_cursor(account_id) do
+    case Validate.id(account_id, [:account_pubkey]) do
+      {:ok, account_pk} -> {:ok, account_pk}
+      {:error, _reason} -> {:error, ErrInput.Cursor.exception(value: account_id)}
     end
   end
 
@@ -324,5 +378,70 @@ defmodule AeMdw.Aex9 do
       _error ->
         {:error, ErrInput.Cursor.exception(value: cursor)}
     end
+  end
+
+  defp convert_param({"block_hash", block_hash}) when is_binary(block_hash) do
+    case Validate.hash(block_hash, :key_block_hash) do
+      {:ok, hash} ->
+        {:ok, {:block_hash, hash}}
+
+      {:error, _error} ->
+        with {:ok, hash} <- Validate.hash(block_hash, :micro_block_hash) do
+          {:ok, {:block_hash, hash}}
+        end
+    end
+  end
+
+  defp convert_param(other_param), do: {:error, ErrInput.Query.exception(value: other_param)}
+
+  defp get_aex9_contract(state, contract_pk) do
+    case State.get(state, Model.AexnContract, {:aex9, contract_pk}) do
+      {:ok, Model.aexn_contract(txi_idx: {txi, _idx})} -> {:ok, txi}
+      :not_found -> :not_found
+    end
+  end
+
+  defp ensure_contract_at_block(state, creation_txi, block_hash) do
+    with block_index when block_index != nil <- DbUtil.block_hash_to_bi(state, block_hash),
+         Model.tx(block_index: contract_block_index) when contract_block_index <= block_index <-
+           State.fetch!(state, Model.Tx, creation_txi) do
+      {:ok, block_index}
+    else
+      _error_or_not_found -> :not_found
+    end
+  end
+
+  defp render_aex9_balance(state, contract_id, {contract_pk, account_pk})
+       when is_binary(account_pk) do
+    Model.aex9_event_balance(amount: amount) =
+      State.fetch!(state, Model.Aex9EventBalance, {contract_pk, account_pk})
+
+    render_aex9_balance(state, contract_id, {contract_pk, amount, account_pk})
+  end
+
+  defp render_aex9_balance(state, contract_id, {contract_pk, amount, account_pk}) do
+    Model.aex9_balance_account(txi: txi, log_idx: log_idx) =
+      State.fetch!(state, Model.Aex9BalanceAccount, {contract_pk, amount, account_pk})
+
+    Model.tx(id: tx_hash, block_index: block_index) = State.fetch!(state, Model.Tx, txi)
+
+    Model.block(index: {height, _mbi}, hash: block_hash) =
+      State.fetch!(state, Model.Block, block_index)
+
+    %{
+      contract_id: contract_id,
+      account_id: Enc.encode(:account_pubkey, account_pk),
+      block_hash: Enc.encode(:micro_block_hash, block_hash),
+      height: height,
+      last_tx_hash: Enc.encode(:tx_hash, tx_hash),
+      last_log_idx: log_idx,
+      amount: amount
+    }
+  end
+
+  defp render_aex9_balance(state, contract_id, {account_pk, amount}) do
+    state
+    |> render_aex9_balance(contract_id, {Validate.id!(contract_id), account_pk})
+    |> Map.put(:amount, amount)
   end
 end

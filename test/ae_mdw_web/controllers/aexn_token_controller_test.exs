@@ -34,16 +34,17 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
         {name, symbol, _decimals} = meta_info
         txi = 2_000 - i
+        contract_pk = <<i::256>>
 
         m_aex9 =
           Model.aexn_contract(
-            index: {:aex9, <<i::256>>},
+            index: {:aex9, contract_pk},
             txi_idx: {txi, -1},
             meta_info: meta_info
           )
 
         m_aexn_creation =
-          Model.aexn_contract_creation(index: {:aex9, {txi, -1}}, contract_pk: <<i::256>>)
+          Model.aexn_contract_creation(index: {:aex9, {txi, -1}}, contract_pk: contract_pk)
 
         m_aexn_name = Model.aexn_contract_name(index: {:aex9, name, <<i::256>>})
         m_aexn_symbol = Model.aexn_contract_symbol(index: {:aex9, symbol, <<i::256>>})
@@ -54,14 +55,39 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
         |> Store.put(Model.AexnContractName, m_aexn_name)
         |> Store.put(Model.AexnContractSymbol, m_aexn_symbol)
         |> then(fn store ->
-          Enum.reduce(1..i, store, fn _i, store ->
-            Store.put(
-              store,
+          Enum.reduce(1..i, store, fn i2, store ->
+            balance_txi = 1_000_000 + i2
+            account_pk = <<1_000 + i2::256>>
+            amount = 1_000_000 - i2
+
+            store
+            |> Store.put(
               Model.Aex9EventBalance,
-              Model.aex9_event_balance(index: {<<i::256>>, :crypto.strong_rand_bytes(32)})
+              Model.aex9_event_balance(
+                index: {contract_pk, account_pk},
+                txi: balance_txi,
+                amount: amount
+              )
+            )
+            |> Store.put(
+              Model.Tx,
+              Model.tx(index: balance_txi, id: <<balance_txi::256>>, block_index: {i2, -1})
+            )
+            |> Store.put(
+              Model.Block,
+              Model.block(index: {i2, -1}, hash: <<0::256>>)
+            )
+            |> Store.put(
+              Model.Aex9BalanceAccount,
+              Model.aex9_balance_account(
+                index: {contract_pk, amount, account_pk},
+                txi: balance_txi,
+                log_idx: i2
+              )
             )
           end)
         end)
+        |> Store.put(Model.Tx, Model.tx(index: txi))
         |> Store.put(
           Model.Stat,
           Model.stat(index: Stats.aex9_logs_count_key(<<i::256>>), payload: i)
@@ -295,7 +321,7 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
       assert @default_limit = length(aex9_tokens)
       assert ^aex9_names = Enum.sort(aex9_names)
-      assert ^aex9_holders = for(i <- 200..209, do: i)
+      assert ^aex9_holders = Enum.to_list(200..209)
 
       assert %{"data" => next_aex9_tokens, "prev" => prev_aex9_tokens} =
                conn |> get(next) |> json_response(200)
@@ -765,10 +791,9 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
 
   describe "aex9_event_balances" do
     test "gets ascending event balances for a contract", %{
-      conn: conn,
-      contract_pk: contract_pk
+      conn: conn
     } do
-      contract_id = encode_contract(contract_pk)
+      contract_id = encode_contract(<<200::256>>)
 
       assert %{"data" => balances, "next" => next} =
                conn
@@ -846,11 +871,8 @@ defmodule AeMdwWeb.AexnTokenControllerTest do
       assert %{"data" => ^balances} = conn |> get(prev) |> json_response(200)
     end
 
-    test "gets event balances for a contract with limit", %{
-      conn: conn,
-      contract_pk: contract_pk
-    } do
-      contract_id = encode_contract(contract_pk)
+    test "gets event balances for a contract with limit", %{conn: conn} do
+      contract_id = encode_contract(<<200::256>>)
       limit = 8
 
       assert %{"data" => balances, "next" => next} =
