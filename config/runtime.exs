@@ -42,6 +42,26 @@ if env != :test do
     ]
 end
 
+# Logging
+
+log_level =
+  case System.get_env("LOG_LEVEL") do
+    "emergency" -> :emergency
+    "alert" -> :alert
+    "critical" -> :critical
+    "error" -> :error
+    "warning" -> :warning
+    "notice" -> :notice
+    "info" -> :info
+    "debug" -> :debug
+    _ -> nil
+  end
+
+if not is_nil(log_level) do
+  config :logger,
+    level: log_level
+end
+
 if env in [:test, :prod] do
   if System.get_env("ENABLE_TELEMETRY", "false") in ["true", "1"] do
     {:ok, hostname} = :inet.gethostname()
@@ -57,7 +77,7 @@ if env in [:test, :prod] do
 
   if System.get_env("ENABLE_JSON_LOG", "false") in ["true", "1"] do
     config :logger,
-      level: :info,
+      level: log_level || :info,
       backends: [LoggerJSON]
 
     formatter = System.get_env("JSON_LOG_FORMAT", "datadog")
