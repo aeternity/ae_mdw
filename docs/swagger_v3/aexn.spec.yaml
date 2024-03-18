@@ -731,6 +731,13 @@ paths:
           schema:
             type: string
             x-example: amount
+        - description: Block hash
+          in: query
+          name: block_hash
+          required: false
+          schema:
+            type: string
+            example: mh_22uNd2u5ogsFCua2kU3fSag758fTcwJ4kKJwvHpRVedeKwFRHc
       responses:
         '200':
           description: Returns paginated contract balances

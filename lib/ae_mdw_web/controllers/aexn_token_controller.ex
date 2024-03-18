@@ -73,15 +73,13 @@ defmodule AeMdwWeb.AexnTokenController do
       state: state,
       cursor: cursor,
       pagination: pagination,
-      order_by: order_by
+      order_by: order_by,
+      query: query
     } = assigns
 
-    with {:ok, contract_pk} <- validate_aex9(contract_id),
-         {:ok, {prev_cursor, balance_keys, next_cursor}} <-
-           Aex9.fetch_event_balances(state, contract_pk, pagination, cursor, order_by) do
-      balances = Enum.map(balance_keys, &render_event_balance(state, &1))
-
-      Util.render(conn, {prev_cursor, balances, next_cursor})
+    with {:ok, paginated_balances} <-
+           Aex9.fetch_event_balances(state, contract_id, pagination, cursor, order_by, query) do
+      Util.render(conn, paginated_balances)
     end
   end
 
