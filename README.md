@@ -4184,75 +4184,72 @@ $ curl -s "https://mainnet.aeternity.io/mdw/aex9/balances/hash/kh_2Ya2fM9brRoBQp
 }
 ```
 
-### AEX9 contract balances at height or range of heights
+### AEX9 contract balances
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balances/gen/350580/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/aex9/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA/balances" | jq '.'
 {
-  "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
-  "range": [
+  "data" : [
     {
-      "amounts": {
-        "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6": 4050000000000,
-        "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK": 8100000000000,
-        "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4": 81000000000000,
-        "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48": 49999999999906850000000000
-      },
-      "block_hash": "kh_2Jv6ZekDGipPQWrZKitdqtbxgx6bGUMNvkSPmi8pvpheGynKLu",
-      "height": 350580
+      "account_id" : "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK",
+      "amount" : 8100000000000,
+      "block_hash" : "mh_2TwVRHgyXpQpjT5Z44BJQexijf6rtweypDGK3mtCZWnBFGxTV7",
+      "contract_id" : "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
+      "height" : 335293,
+      "last_log_idx" : 1,
+      "last_tx_hash" : "th_YkRFtLNgT9eZqfuFAihSt14L1GCHxiNSS44h2B5wiNSfvBSc5"
+    },
+    {
+      "account_id" : "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6",
+      "amount" : 4050000000000,
+      "block_hash" : "mh_2TwVRHgyXpQpjT5Z44BJQexijf6rtweypDGK3mtCZWnBFGxTV7",
+      "contract_id" : "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
+      "height" : 335293,
+      "last_log_idx" : 2,
+      "last_tx_hash" : "th_YkRFtLNgT9eZqfuFAihSt14L1GCHxiNSS44h2B5wiNSfvBSc5"
+    },
+    {
+      "account_id" : "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48",
+      "amount" : "49999999999906850000000000",
+      "block_hash" : "mh_2TwVRHgyXpQpjT5Z44BJQexijf6rtweypDGK3mtCZWnBFGxTV7",
+      "contract_id" : "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
+      "height" : 335293,
+      "last_log_idx" : 2,
+      "last_tx_hash" : "th_YkRFtLNgT9eZqfuFAihSt14L1GCHxiNSS44h2B5wiNSfvBSc5"
+    },
+    {
+      "account_id" : "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4",
+      "amount" : 81000000000000,
+      "block_hash" : "mh_2TwVRHgyXpQpjT5Z44BJQexijf6rtweypDGK3mtCZWnBFGxTV7",
+      "contract_id" : "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
+      "height" : 335293,
+      "last_log_idx" : 0,
+      "last_tx_hash" : "th_YkRFtLNgT9eZqfuFAihSt14L1GCHxiNSS44h2B5wiNSfvBSc5"
     }
-  ]
+  ],
+  "next" : null,
+  "prev" : null
 }
 ```
 
-Or, with range:
+Or, at a specific block-height:
 
 ```
-$ curl -s "https://mainnet.aeternity.io/mdw/aex9/balances/gen/350600-350603/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA" | jq '.'
+$ curl -s "https://mainnet.aeternity.io/mdw/v2/aex9/ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA/balances?block_hash=mh_hmHyBsn6D5p5d8mttyT7Pc82NCySB9yVmUQhBV2EqNepsnDtv" | jq '.'
 {
-  "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
-  "range": [
+  "data": [
     {
-      "amounts": {
-        "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6": 4050000000000,
-        "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK": 8100000000000,
-        "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4": 81000000000000,
-        "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48": 49999999999906850000000000
-      },
-      "block_hash": "kh_wCXiE3TTbQSCboPictnY7KXH5qmm8kjUoWHJNNqM25H4BWSW8",
-      "height": 350600
-    },
-    {
-      "amounts": {
-        "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6": 4050000000000,
-        "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK": 8100000000000,
-        "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4": 81000000000000,
-        "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48": 49999999999906850000000000
-      },
-      "block_hash": "kh_wGwxc8bMfLZqSAXDGLAv7XeFs9afNxGGZ2jpBRvMQ9pWj14pj",
-      "height": 350601
-    },
-    {
-      "amounts": {
-        "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6": 4050000000000,
-        "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK": 8100000000000,
-        "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4": 81000000000000,
-        "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48": 49999999999906850000000000
-      },
-      "block_hash": "kh_avZRszDXggtiVk8oMCjZmd92JVga6Ng6BRAtuPPdaj2ntZwN6",
-      "height": 350602
-    },
-    {
-      "amounts": {
-        "ak_2MHJv6JcdcfpNvu4wRDZXWzq8QSxGbhUfhMLR7vUPzRFYsDFw6": 4050000000000,
-        "ak_2Xu6d6W4UJBWyvBVJQRHASbQHQ1vjBA7d1XUeY8SwwgzssZVHK": 8100000000000,
-        "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4": 81000000000000,
-        "ak_Yc8Lr64xGiBJfm2Jo8RQpR1gwTY8KMqqXk8oWiVC9esG8ce48": 49999999999906850000000000
-      },
-      "block_hash": "kh_2QBikn2KuxBgbBdzJBmbydmW5dRNHEDdCKU8Psb19MuWuNLZwf",
-      "height": 350603
+      "account_id": "ak_CNcf2oywqbgmVg3FfKdbHQJfB959wrVwqfzSpdWVKZnep7nj4",
+      "amount": 5e+25,
+      "block_hash": "mh_2TwVRHgyXpQpjT5Z44BJQexijf6rtweypDGK3mtCZWnBFGxTV7",
+      "contract_id": "ct_RDRJC5EySx4TcLtGRWYrXfNgyWzEDzssThJYPd9kdLeS5ECaA",
+      "height": 335293,
+      "last_log_idx": 0,
+      "last_tx_hash": "th_YkRFtLNgT9eZqfuFAihSt14L1GCHxiNSS44h2B5wiNSfvBSc5"
     }
-  ]
+  ],
+  "next": null,
+  "prev": null
 }
 ```
 
