@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.71.0](https://www.github.com/aeternity/ae_mdw/compare/v1.70.0...v1.71.0) (2024-03-19)
+
+
+### Features
+
+* allow getting block-specific AEx9 balances ([#1701](https://www.github.com/aeternity/ae_mdw/issues/1701)) ([db4f45d](https://www.github.com/aeternity/ae_mdw/commit/db4f45d7a1aea46485cfa37a07b50c8447f7b12d))
+* allow logger level configuration ([#1700](https://www.github.com/aeternity/ae_mdw/issues/1700)) ([75d945e](https://www.github.com/aeternity/ae_mdw/commit/75d945ecccc10b47b9ed8b910ff07d1826ce0799))
+
+
+### Bug Fixes
+
+* allow same creation block to be used on by-hash aex9 balances ([#1697](https://www.github.com/aeternity/ae_mdw/issues/1697)) ([797b1ef](https://www.github.com/aeternity/ae_mdw/commit/797b1efc7d45c48a3819d21221de014d22a84231))
+* handle invalid hashes error ([#1705](https://www.github.com/aeternity/ae_mdw/issues/1705)) ([fae0967](https://www.github.com/aeternity/ae_mdw/commit/fae0967320b00944f33731980f51e55095e4c08e))
+* use endpoint-specific ordering validation ([#1699](https://www.github.com/aeternity/ae_mdw/issues/1699)) ([3a214d9](https://www.github.com/aeternity/ae_mdw/commit/3a214d983d5376f2c383e9a8b1a144f595b0a067))
+
+
+### Miscellaneous
+
+* add logs message on deprecated routes ([#1696](https://www.github.com/aeternity/ae_mdw/issues/1696)) ([4f80b8b](https://www.github.com/aeternity/ae_mdw/commit/4f80b8b4f0b6aa2ede4867ab34b9530ceb4ffbc2))
+* restructure v3 routes and remove tx_index ([#1695](https://www.github.com/aeternity/ae_mdw/issues/1695)) ([bc10039](https://www.github.com/aeternity/ae_mdw/commit/bc10039a22dc3e5a69f76e8b7a398b46a01c20cb))
+
 ## [1.70.0](https://www.github.com/aeternity/ae_mdw/compare/v1.69.1...v1.70.0) (2024-03-06)
 
 
