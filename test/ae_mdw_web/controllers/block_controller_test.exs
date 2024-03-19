@@ -191,6 +191,16 @@ defmodule AeMdwWeb.BlockControllerTest do
                  |> json_response(404)
       end
     end
+
+    test "when key block hash is invalid, it returns 400", %{conn: conn} do
+      encoded_hash = "asdadads"
+      error_msg = "invalid hash: #{encoded_hash}"
+
+      assert %{"error" => ^error_msg} =
+               conn
+               |> get("/v2/key-blocks/#{encoded_hash}/micro-blocks")
+               |> json_response(400)
+    end
   end
 
   describe "key-block" do

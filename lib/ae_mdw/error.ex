@@ -61,6 +61,7 @@ defmodule AeMdw.Error do
           }
 
     defexception!(Id)
+    defexception!(Hash)
     defexception!(BlockIndex)
     defexception!(NonnegInt)
     defexception!(TxField)
